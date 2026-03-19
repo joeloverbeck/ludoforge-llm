@@ -9,12 +9,26 @@ import {
   createRng,
   initialState,
   type AgentPolicyCatalog,
+  type AgentPolicyExpr,
+  type AgentPolicyLiteral,
+  type CompiledAgentPolicyRef,
   type GameDef,
   type Move,
   type ActionDef,
 } from '../../../src/kernel/index.js';
 
 const phaseId = asPhaseId('main');
+const literal = (value: AgentPolicyLiteral): AgentPolicyExpr => ({
+  kind: 'literal',
+  value,
+});
+const refExpr = (ref: CompiledAgentPolicyRef): AgentPolicyExpr => ({ kind: 'ref', ref });
+const opExpr = (op: Extract<AgentPolicyExpr, { readonly kind: 'op' }>['op'], ...args: AgentPolicyExpr[]): AgentPolicyExpr => ({
+  kind: 'op',
+  op,
+  args,
+});
+const paramExpr = (id: string): AgentPolicyExpr => ({ kind: 'param', id });
 
 function createAction(id: string, params: ActionDef['params'] = []): ActionDef {
   return {
@@ -134,7 +148,7 @@ function createCatalog(
         currentMargin: {
           type: 'number',
           costClass: 'state',
-          expr: { ref: 'victory.currentMargin.us' },
+          expr: refExpr({ kind: 'surface', phase: 'current', family: 'victoryCurrentMargin', id: 'currentMargin', seatToken: 'us' }),
           dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
         },
         ...(overrides.stateFeatures ?? {}),
@@ -143,13 +157,13 @@ function createCatalog(
         isPass: {
           type: 'boolean',
           costClass: 'candidate',
-          expr: { ref: 'candidate.isPass' },
+          expr: refExpr({ kind: 'candidateIntrinsic', intrinsic: 'isPass' }),
           dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
         },
         isEvent: {
           type: 'boolean',
           costClass: 'candidate',
-          expr: { eq: [{ ref: 'candidate.actionId' }, 'event'] },
+          expr: opExpr('eq', refExpr({ kind: 'candidateIntrinsic', intrinsic: 'actionId' }), literal('event')),
           dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
         },
         ...(overrides.candidateFeatures ?? {}),
@@ -159,8 +173,8 @@ function createCatalog(
           type: 'number',
           costClass: 'candidate',
           op: 'max',
-          of: { ref: 'feature.currentMargin' },
-          where: { not: { ref: 'feature.isPass' } },
+          of: refExpr({ kind: 'library', refKind: 'stateFeature', id: 'currentMargin' }),
+          where: opExpr('not', refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'isPass' })),
           dependencies: {
             parameters: [],
             stateFeatures: ['currentMargin'],
@@ -174,9 +188,15 @@ function createCatalog(
         dropPassWhenMarginExists: {
           costClass: 'candidate',
           when: {
-            and: [
-              { ref: 'feature.isPass' },
-              { gt: [{ ref: 'aggregate.bestNonPassMargin' }, { param: 'passFloor' }] },
+            kind: 'op',
+            op: 'and',
+            args: [
+              refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'isPass' }),
+              opExpr(
+                'gt',
+                refExpr({ kind: 'library', refKind: 'aggregate', id: 'bestNonPassMargin' }),
+                paramExpr('passFloor'),
+              ),
             ],
           },
           dependencies: {
@@ -192,8 +212,8 @@ function createCatalog(
       scoreTerms: {
         preferEvents: {
           costClass: 'candidate',
-          weight: 10,
-          value: { boolToNumber: { ref: 'feature.isEvent' } },
+          weight: literal(10),
+          value: opExpr('boolToNumber', refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'isEvent' })),
           dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['isEvent'], aggregates: [] },
         },
         ...(overrides.scoreTerms ?? {}),
@@ -287,7 +307,7 @@ describe('policy-eval', () => {
         pruningRules: {
           pruneEverything: {
             costClass: 'candidate',
-            when: true,
+            when: literal(true),
             dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
             onEmpty: 'skipRule',
           },
@@ -323,7 +343,7 @@ describe('policy-eval', () => {
         pruningRules: {
           pruneEverything: {
             costClass: 'candidate',
-            when: true,
+            when: literal(true),
             dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
             onEmpty: 'error',
           },
@@ -363,33 +383,33 @@ describe('policy-eval', () => {
           projectedMargin: {
             type: 'number',
             costClass: 'preview',
-            expr: { ref: 'preview.var.global.usMargin' },
+            expr: refExpr({ kind: 'surface', phase: 'preview', family: 'globalVar', id: 'usMargin' }),
             dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
           },
           maskedProjectedStanding: {
             type: 'number',
             costClass: 'preview',
-            expr: { ref: 'preview.victory.currentMargin.us' },
+            expr: refExpr({ kind: 'surface', phase: 'preview', family: 'victoryCurrentMargin', id: 'currentMargin', seatToken: 'us' }),
             dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
           },
         },
         scoreTerms: {
           preferProjectedMargin: {
             costClass: 'preview',
-            weight: 1,
-            value: { ref: 'feature.projectedMargin' },
+            weight: literal(1),
+            value: refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'projectedMargin' }),
             dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['projectedMargin'], aggregates: [] },
           },
           reinforceProjectedMargin: {
             costClass: 'preview',
-            weight: 1,
-            value: { ref: 'feature.projectedMargin' },
+            weight: literal(1),
+            value: refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'projectedMargin' }),
             dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['projectedMargin'], aggregates: [] },
           },
           ignoreMaskedStanding: {
             costClass: 'preview',
-            weight: 1,
-            value: { ref: 'feature.maskedProjectedStanding' },
+            weight: literal(1),
+            value: refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'maskedProjectedStanding' }),
             unknownAs: 0,
             dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['maskedProjectedStanding'], aggregates: [] },
           },
@@ -430,15 +450,15 @@ describe('policy-eval', () => {
           unsupportedMetric: {
             type: 'number',
             costClass: 'state',
-            expr: { ref: 'metric.boardPressure' },
+            expr: refExpr({ kind: 'surface', phase: 'current', family: 'derivedMetric', id: 'boardPressure' }),
             dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
           },
         },
         scoreTerms: {
           preferMetric: {
             costClass: 'state',
-            weight: 1,
-            value: { ref: 'feature.unsupportedMetric' },
+            weight: literal(1),
+            value: refExpr({ kind: 'library', refKind: 'stateFeature', id: 'unsupportedMetric' }),
             dependencies: { parameters: [], stateFeatures: ['unsupportedMetric'], candidateFeatures: [], aggregates: [] },
           },
         },
@@ -472,27 +492,27 @@ describe('policy-eval', () => {
           cardMatch: {
             type: 'boolean',
             costClass: 'candidate',
-            expr: { eq: [{ ref: 'candidate.param.eventCardId' }, 'card-2'] },
+            expr: opExpr('eq', refExpr({ kind: 'candidateParam', id: 'eventCardId' }), literal('card-2')),
             dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
           },
           targetCount: {
             type: 'number',
             costClass: 'candidate',
-            expr: { coalesce: [{ ref: 'candidate.param.targetCount' }, 0] },
+            expr: opExpr('coalesce', refExpr({ kind: 'candidateParam', id: 'targetCount' }), literal(0)),
             dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
           },
         },
         scoreTerms: {
           preferMatchingCard: {
             costClass: 'candidate',
-            weight: 5,
-            value: { boolToNumber: { ref: 'feature.cardMatch' } },
+            weight: literal(5),
+            value: opExpr('boolToNumber', refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'cardMatch' })),
             dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['cardMatch'], aggregates: [] },
           },
           preferHigherTargetCount: {
             costClass: 'candidate',
-            weight: 1,
-            value: { ref: 'feature.targetCount' },
+            weight: literal(1),
+            value: refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'targetCount' }),
             dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['targetCount'], aggregates: [] },
           },
         },
@@ -539,15 +559,15 @@ describe('policy-eval', () => {
           targetsZoneA: {
             type: 'boolean',
             costClass: 'candidate',
-            expr: { in: ['zone-a', { ref: 'candidate.param.$targets' }] },
+            expr: opExpr('in', literal('zone-a'), refExpr({ kind: 'candidateParam', id: '$targets' })),
             dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
           },
         },
         scoreTerms: {
           preferZoneA: {
             costClass: 'candidate',
-            weight: 1,
-            value: { boolToNumber: { ref: 'feature.targetsZoneA' } },
+            weight: literal(1),
+            value: opExpr('boolToNumber', refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'targetsZoneA' })),
             dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['targetsZoneA'], aggregates: [] },
           },
         },

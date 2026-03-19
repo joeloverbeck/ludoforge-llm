@@ -7,12 +7,26 @@ import {
   asPhaseId,
   asPlayerId,
   initialState,
+  type CompiledAgentPolicyRef,
   type GameDef,
   type Move,
   type PlayerObservation,
 } from '../../../src/kernel/index.js';
 
 const phaseId = asPhaseId('main');
+const previewScoreRef: Extract<CompiledAgentPolicyRef, { readonly kind: 'surface' }> = {
+  kind: 'surface',
+  phase: 'preview',
+  family: 'globalVar',
+  id: 'score',
+};
+const previewMarginRef: Extract<CompiledAgentPolicyRef, { readonly kind: 'surface' }> = {
+  kind: 'surface',
+  phase: 'preview',
+  family: 'victoryCurrentMargin',
+  id: 'currentMargin',
+  seatToken: 'us',
+};
 
 function createDef(): GameDef {
   return {
@@ -128,8 +142,8 @@ describe('policy-preview', () => {
       },
     });
 
-    assert.equal(runtime.resolveNumericRef(candidate, 'preview.var.global.score'), 4);
-    assert.equal(runtime.resolveNumericRef(candidate, 'preview.var.global.score'), 4);
+    assert.equal(runtime.resolveNumericRef(candidate, previewScoreRef), 4);
+    assert.equal(runtime.resolveNumericRef(candidate, previewScoreRef), 4);
     assert.equal(probeCalls, 1);
     assert.equal(applyCalls, 1);
     assert.equal(observationCalls, 1);
@@ -155,7 +169,7 @@ describe('policy-preview', () => {
       },
     });
 
-    assert.equal(runtime.resolveNumericRef(candidate, 'preview.var.global.score'), undefined);
+    assert.equal(runtime.resolveNumericRef(candidate, previewScoreRef), undefined);
     assert.equal(applyCalls, 0);
   });
 
@@ -183,7 +197,7 @@ describe('policy-preview', () => {
       },
     });
 
-    assert.equal(runtime.resolveNumericRef(candidate, 'preview.var.global.score'), undefined);
+    assert.equal(runtime.resolveNumericRef(candidate, previewScoreRef), undefined);
   });
 
   it('keeps safe preview refs available while masking unsafe refs when hidden sampling remains', () => {
@@ -210,7 +224,7 @@ describe('policy-preview', () => {
       },
     });
 
-    assert.equal(runtime.resolveNumericRef(candidate, 'preview.var.global.score'), 9);
-    assert.equal(runtime.resolveNumericRef(candidate, 'preview.victory.currentMargin.us'), undefined);
+    assert.equal(runtime.resolveNumericRef(candidate, previewScoreRef), 9);
+    assert.equal(runtime.resolveNumericRef(candidate, previewMarginRef), undefined);
   });
 });

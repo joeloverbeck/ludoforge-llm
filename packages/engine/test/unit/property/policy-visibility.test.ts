@@ -11,10 +11,15 @@ import {
   createRng,
   initialState,
   type AgentPolicyCatalog,
+  type AgentPolicyExpr,
+  type AgentPolicyLiteral,
+  type CompiledAgentPolicyRef,
   type GameDef,
 } from '../../../src/kernel/index.js';
 
 const phaseId = asPhaseId('main');
+const literal = (value: AgentPolicyLiteral): AgentPolicyExpr => ({ kind: 'literal', value });
+const refExpr = (ref: CompiledAgentPolicyRef): AgentPolicyExpr => ({ kind: 'ref', ref });
 
 function createCatalog(): AgentPolicyCatalog {
   return {
@@ -51,7 +56,7 @@ function createCatalog(): AgentPolicyCatalog {
         projectedMargin: {
           type: 'number',
           costClass: 'preview',
-          expr: { ref: 'preview.var.global.usMargin' },
+          expr: refExpr({ kind: 'surface', phase: 'preview', family: 'globalVar', id: 'usMargin' }),
           dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
         },
       },
@@ -60,8 +65,8 @@ function createCatalog(): AgentPolicyCatalog {
       scoreTerms: {
         preferProjectedMargin: {
           costClass: 'preview',
-          weight: 1,
-          value: { ref: 'feature.projectedMargin' },
+          weight: literal(1),
+          value: refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'projectedMargin' }),
           dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['projectedMargin'], aggregates: [] },
         },
       },

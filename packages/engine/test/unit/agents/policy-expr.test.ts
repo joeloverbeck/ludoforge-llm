@@ -2,7 +2,15 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { analyzePolicyExpr } from '../../../src/agents/policy-expr.js';
-import type { CompiledAgentParameterDef } from '../../../src/kernel/types.js';
+import type { AgentPolicyExpr, AgentPolicyLiteral, CompiledAgentParameterDef, CompiledAgentPolicyRef } from '../../../src/kernel/types.js';
+
+const literal = (value: AgentPolicyLiteral): AgentPolicyExpr => ({ kind: 'literal', value });
+const refExpr = (ref: CompiledAgentPolicyRef): AgentPolicyExpr => ({ kind: 'ref', ref });
+const opExpr = (op: Extract<AgentPolicyExpr, { readonly kind: 'op' }>['op'], ...args: AgentPolicyExpr[]): AgentPolicyExpr => ({
+  kind: 'op',
+  op,
+  args,
+});
 
 function createContext(parameterDefs: Readonly<Record<string, CompiledAgentParameterDef>> = {}) {
   return {
@@ -10,21 +18,35 @@ function createContext(parameterDefs: Readonly<Record<string, CompiledAgentParam
     resolveRef(refPath: string) {
       switch (refPath) {
         case 'candidate.isPass':
-          return { type: 'boolean' as const, costClass: 'candidate' as const };
+          return {
+            type: 'boolean' as const,
+            costClass: 'candidate' as const,
+            ref: { kind: 'candidateIntrinsic' as const, intrinsic: 'isPass' as const },
+          };
         case 'candidate.param.eventCardId':
-          return { type: 'id' as const, costClass: 'candidate' as const };
+          return {
+            type: 'id' as const,
+            costClass: 'candidate' as const,
+            ref: { kind: 'candidateParam' as const, id: 'eventCardId' },
+          };
         case 'candidate.param.$targets':
-          return { type: 'idList' as const, costClass: 'candidate' as const };
+          return {
+            type: 'idList' as const,
+            costClass: 'candidate' as const,
+            ref: { kind: 'candidateParam' as const, id: '$targets' },
+          };
         case 'feature.currentMargin':
           return {
             type: 'number' as const,
             costClass: 'state' as const,
+            ref: { kind: 'library' as const, refKind: 'stateFeature' as const, id: 'currentMargin' },
             dependency: { kind: 'stateFeatures' as const, id: 'currentMargin' },
           };
         case 'aggregate.bestProjectedMargin':
           return {
             type: 'number' as const,
             costClass: 'preview' as const,
+            ref: { kind: 'library' as const, refKind: 'aggregate' as const, id: 'bestProjectedMargin' },
             dependency: { kind: 'aggregates' as const, id: 'bestProjectedMargin' },
           };
         default:
@@ -52,6 +74,12 @@ describe('policy-expr analysis', () => {
 
     assert.deepEqual(diagnostics, []);
     assert.deepEqual(analysis, {
+      expr: opExpr(
+        'if',
+        refExpr({ kind: 'candidateIntrinsic', intrinsic: 'isPass' }),
+        refExpr({ kind: 'library', refKind: 'stateFeature', id: 'currentMargin' }),
+        opExpr('coalesce', refExpr({ kind: 'library', refKind: 'aggregate', id: 'bestProjectedMargin' }), literal(0)),
+      ),
       valueType: 'number',
       costClass: 'preview',
       dependencies: {
@@ -86,6 +114,7 @@ describe('policy-expr analysis', () => {
     );
 
     assert.deepEqual(diagnostics, []);
+    assert.deepEqual(analysis?.expr, opExpr('in', literal('play-event'), { kind: 'param', id: 'preferredActions' }));
     assert.equal(analysis?.valueType, 'boolean');
     assert.deepEqual(analysis?.dependencies.parameters, ['preferredActions']);
   });
@@ -100,6 +129,7 @@ describe('policy-expr analysis', () => {
     );
 
     assert.deepEqual(diagnostics, []);
+    assert.deepEqual(analysis?.expr, opExpr('eq', refExpr({ kind: 'candidateParam', id: 'eventCardId' }), literal('card-2')));
     assert.equal(analysis?.valueType, 'boolean');
     assert.equal(analysis?.costClass, 'candidate');
   });
@@ -114,6 +144,7 @@ describe('policy-expr analysis', () => {
     );
 
     assert.deepEqual(diagnostics, []);
+    assert.deepEqual(analysis?.expr, opExpr('in', literal('zone-a'), refExpr({ kind: 'candidateParam', id: '$targets' })));
     assert.equal(analysis?.valueType, 'boolean');
     assert.equal(analysis?.costClass, 'candidate');
   });

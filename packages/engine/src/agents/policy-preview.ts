@@ -7,9 +7,9 @@ import { derivePlayerObservation } from '../kernel/observation.js';
 import { applyMove, probeMoveViability, type MoveViabilityProbeResult } from '../kernel/apply-move.js';
 import { buildSeatResolutionIndex, resolvePlayerIndexForSeatValue, type SeatResolutionIndex } from '../kernel/identity.js';
 import type { PlayerId } from '../kernel/branded.js';
-import type { GameDef, GameState, Move, RngState } from '../kernel/types.js';
+import type { CompiledAgentPolicyRef, GameDef, GameState, Move, RngState } from '../kernel/types.js';
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
-import { isSurfaceVisibilityAccessible, resolvePolicySurfaceRef } from './policy-surface.js';
+import { getPolicySurfaceVisibility, isSurfaceVisibilityAccessible } from './policy-surface.js';
 
 export interface PolicyPreviewCandidate {
   readonly move: Move;
@@ -44,7 +44,10 @@ export interface CreatePolicyPreviewRuntimeInput {
 }
 
 export interface PolicyPreviewRuntime {
-  resolveNumericRef(candidate: PolicyPreviewCandidate, refPath: string): number | undefined;
+  resolveNumericRef(
+    candidate: PolicyPreviewCandidate,
+    ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'surface' }>,
+  ): number | undefined;
 }
 
 interface VictorySurface {
@@ -81,53 +84,51 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
   const seatResolutionIndex = buildSeatResolutionIndex(input.def, input.state.playerCount);
 
   return {
-    resolveNumericRef(candidate: PolicyPreviewCandidate, refPath: string): number | undefined {
-      if (!refPath.startsWith('preview.')) {
-        return undefined;
-      }
+    resolveNumericRef(candidate, ref) {
       const preview = getPreviewOutcome(candidate);
       if (preview.kind !== 'ready') {
         return undefined;
       }
-      const nestedPath = refPath.slice('preview.'.length);
-      const resolved = input.def.agents === undefined ? null : resolvePolicySurfaceRef(input.def.agents.surfaceVisibility, nestedPath);
-      if (resolved === null) {
+      const visibility = input.def.agents === undefined ? null : getPolicySurfaceVisibility(input.def.agents.surfaceVisibility, ref);
+      if (visibility === null) {
         return undefined;
       }
-      const resolvedSeatId = resolved.seatToken === undefined
+      const resolvedSeatId = ref.seatToken === undefined
         ? undefined
-        : resolveSeatToken(input.def, preview.state, resolved.seatToken, input.seatId);
-      if (!isSurfaceVisibilityAccessible(resolved.visibility.preview.visibility, input.seatId, resolvedSeatId)) {
+        : resolveSeatToken(input.def, preview.state, ref.seatToken, input.seatId);
+      if (!isSurfaceVisibilityAccessible(visibility.preview.visibility, input.seatId, resolvedSeatId)) {
         return undefined;
       }
-      if (preview.requiresHiddenSampling && !resolved.visibility.preview.allowWhenHiddenSampling) {
+      if (preview.requiresHiddenSampling && !visibility.preview.allowWhenHiddenSampling) {
         return undefined;
       }
-      if (resolved.family === 'derivedMetric') {
-        const metricId = nestedPath.slice('metric.'.length);
-        const cachedValue = preview.metricCache.get(metricId);
+      if (ref.family === 'derivedMetric') {
+        const cachedValue = preview.metricCache.get(ref.id);
         if (cachedValue !== undefined) {
           return cachedValue;
         }
-        const value = deps.computeDerivedMetricValue(input.def, preview.state, metricId);
-        preview.metricCache.set(metricId, value);
+        const value = deps.computeDerivedMetricValue(input.def, preview.state, ref.id);
+        preview.metricCache.set(ref.id, value);
         return value;
       }
-      if (resolved.family === 'globalVar') {
-        const variableId = nestedPath.slice('var.global.'.length);
-        const value = preview.state.globalVars[variableId];
+      if (ref.family === 'globalVar') {
+        const value = preview.state.globalVars[ref.id];
         return typeof value === 'number' ? value : undefined;
       }
-      if (resolved.family === 'perPlayerVar') {
-        return resolveSeatVarRef(input.def, preview.state, nestedPath, input.seatId, seatResolutionIndex);
+      if (ref.family === 'perPlayerVar') {
+        return resolveSeatVarRef(input.def, preview.state, ref, input.seatId, seatResolutionIndex);
       }
-      if (resolved.family === 'victoryCurrentMargin') {
-        const seatToken = nestedPath.slice('victory.currentMargin.'.length);
-        return getVictorySurface(input.def, preview).marginBySeat.get(resolveSeatToken(input.def, preview.state, seatToken, input.seatId));
+      if (ref.family === 'victoryCurrentMargin') {
+        if (ref.seatToken === undefined) {
+          return undefined;
+        }
+        return getVictorySurface(input.def, preview).marginBySeat.get(resolveSeatToken(input.def, preview.state, ref.seatToken, input.seatId));
       }
-      if (resolved.family === 'victoryCurrentRank') {
-        const seatToken = nestedPath.slice('victory.currentRank.'.length);
-        return getVictorySurface(input.def, preview).rankBySeat.get(resolveSeatToken(input.def, preview.state, seatToken, input.seatId));
+      if (ref.family === 'victoryCurrentRank') {
+        if (ref.seatToken === undefined) {
+          return undefined;
+        }
+        return getVictorySurface(input.def, preview).rankBySeat.get(resolveSeatToken(input.def, preview.state, ref.seatToken, input.seatId));
       }
       return undefined;
     },
@@ -172,24 +173,18 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
 function resolveSeatVarRef(
   def: GameDef,
   state: GameState,
-  refPath: string,
+  ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'surface' }>,
   seatId: string,
   seatResolutionIndex: SeatResolutionIndex,
 ): number | undefined {
-  const parts = refPath.split('.');
-  if (parts.length !== 4) {
+  if (ref.family !== 'perPlayerVar' || ref.seatToken === undefined) {
     return undefined;
   }
-  const seatToken = parts[2];
-  const variableId = parts[3];
-  if (seatToken === undefined || variableId === undefined) {
-    return undefined;
-  }
-  const playerIndex = resolvePlayerIndexForSeatValue(resolveSeatToken(def, state, seatToken, seatId), seatResolutionIndex);
+  const playerIndex = resolvePlayerIndexForSeatValue(resolveSeatToken(def, state, ref.seatToken, seatId), seatResolutionIndex);
   if (playerIndex === null) {
     return undefined;
   }
-  const value = state.perPlayerVars[playerIndex]?.[variableId];
+  const value = state.perPlayerVars[playerIndex]?.[ref.id];
   return typeof value === 'number' ? value : undefined;
 }
 

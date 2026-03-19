@@ -566,14 +566,93 @@ const CompiledAgentCandidateParamDefSchema = z
   })
   .strict();
 
+const AgentPolicyLiteralSchema = z.union([
+  NumberSchema,
+  BooleanSchema,
+  StringSchema,
+  z.null(),
+  z.array(StringSchema),
+]);
+
+const CompiledAgentPolicyRefSchema = z.union([
+  z.object({
+    kind: z.literal('library'),
+    refKind: z.union([z.literal('stateFeature'), z.literal('candidateFeature'), z.literal('aggregate')]),
+    id: StringSchema,
+  }).strict(),
+  z.object({
+    kind: z.literal('surface'),
+    phase: z.union([z.literal('current'), z.literal('preview')]),
+    family: z.union([
+      z.literal('globalVar'),
+      z.literal('perPlayerVar'),
+      z.literal('derivedMetric'),
+      z.literal('victoryCurrentMargin'),
+      z.literal('victoryCurrentRank'),
+    ]),
+    id: StringSchema,
+    seatToken: StringSchema.optional(),
+  }).strict(),
+  z.object({
+    kind: z.literal('candidateIntrinsic'),
+    intrinsic: z.union([z.literal('actionId'), z.literal('stableMoveKey'), z.literal('isPass')]),
+  }).strict(),
+  z.object({
+    kind: z.literal('candidateParam'),
+    id: StringSchema,
+  }).strict(),
+  z.object({
+    kind: z.literal('seatIntrinsic'),
+    intrinsic: z.union([z.literal('self'), z.literal('active')]),
+  }).strict(),
+  z.object({
+    kind: z.literal('turnIntrinsic'),
+    intrinsic: z.union([z.literal('phaseId'), z.literal('stepId'), z.literal('round')]),
+  }).strict(),
+]);
+
 const AgentPolicyExprSchema: z.ZodTypeAny = z.lazy(() =>
   z.union([
-    StringSchema,
-    NumberSchema,
-    BooleanSchema,
-    z.null(),
-    z.array(AgentPolicyExprSchema),
-    z.record(StringSchema, AgentPolicyExprSchema),
+    z.object({
+      kind: z.literal('literal'),
+      value: AgentPolicyLiteralSchema,
+    }).strict(),
+    z.object({
+      kind: z.literal('param'),
+      id: StringSchema,
+    }).strict(),
+    z.object({
+      kind: z.literal('ref'),
+      ref: CompiledAgentPolicyRefSchema,
+    }).strict(),
+    z.object({
+      kind: z.literal('op'),
+      op: z.union([
+        z.literal('abs'),
+        z.literal('add'),
+        z.literal('and'),
+        z.literal('boolToNumber'),
+        z.literal('clamp'),
+        z.literal('coalesce'),
+        z.literal('div'),
+        z.literal('eq'),
+        z.literal('gt'),
+        z.literal('gte'),
+        z.literal('if'),
+        z.literal('in'),
+        z.literal('lt'),
+        z.literal('lte'),
+        z.literal('max'),
+        z.literal('min'),
+        z.literal('mul'),
+        z.literal('ne'),
+        z.literal('neg'),
+        z.literal('not'),
+        z.literal('or'),
+        z.literal('sub'),
+      ]),
+      args: z.array(AgentPolicyExprSchema),
+    }).strict(),
   ]),
 );
 

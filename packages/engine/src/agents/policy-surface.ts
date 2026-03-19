@@ -1,26 +1,25 @@
 import type {
   AgentPolicySurfaceVisibilityClass,
+  CompiledAgentPolicyRef,
   CompiledAgentPolicySurfaceCatalog,
   CompiledAgentPolicySurfaceVisibility,
 } from '../kernel/types.js';
 
-export interface ResolvedPolicySurfaceRef {
-  readonly type: 'number';
-  readonly family: 'globalVar' | 'perPlayerVar' | 'derivedMetric' | 'victoryCurrentMargin' | 'victoryCurrentRank';
-  readonly id: string;
-  readonly seatToken?: string;
+export interface ResolvedPolicySurfaceRef extends Extract<CompiledAgentPolicyRef, { readonly kind: 'surface' }> {
   readonly visibility: CompiledAgentPolicySurfaceVisibility;
 }
 
-export function resolvePolicySurfaceRef(
+export function parseAuthoredPolicySurfaceRef(
   catalog: CompiledAgentPolicySurfaceCatalog,
   refPath: string,
+  phase: 'current' | 'preview',
 ): ResolvedPolicySurfaceRef | null {
   if (refPath.startsWith('var.global.')) {
     const variableId = refPath.slice('var.global.'.length);
     const visibility = catalog.globalVars[variableId];
     return visibility === undefined ? null : {
-      type: 'number',
+      kind: 'surface',
+      phase,
       family: 'globalVar',
       id: variableId,
       visibility,
@@ -39,7 +38,8 @@ export function resolvePolicySurfaceRef(
     }
     const visibility = catalog.perPlayerVars[variableId];
     return visibility === undefined ? null : {
-      type: 'number',
+      kind: 'surface',
+      phase,
       family: 'perPlayerVar',
       id: variableId,
       seatToken,
@@ -51,7 +51,8 @@ export function resolvePolicySurfaceRef(
     const metricId = refPath.slice('metric.'.length);
     const visibility = catalog.derivedMetrics[metricId];
     return visibility === undefined ? null : {
-      type: 'number',
+      kind: 'surface',
+      phase,
       family: 'derivedMetric',
       id: metricId,
       visibility,
@@ -64,7 +65,8 @@ export function resolvePolicySurfaceRef(
       return null;
     }
     return {
-      type: 'number',
+      kind: 'surface',
+      phase,
       family: 'victoryCurrentMargin',
       id: 'currentMargin',
       seatToken,
@@ -78,7 +80,8 @@ export function resolvePolicySurfaceRef(
       return null;
     }
     return {
-      type: 'number',
+      kind: 'surface',
+      phase,
       family: 'victoryCurrentRank',
       id: 'currentRank',
       seatToken,
@@ -87,6 +90,24 @@ export function resolvePolicySurfaceRef(
   }
 
   return null;
+}
+
+export function getPolicySurfaceVisibility(
+  catalog: CompiledAgentPolicySurfaceCatalog,
+  ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'surface' }>,
+): CompiledAgentPolicySurfaceVisibility | null {
+  switch (ref.family) {
+    case 'globalVar':
+      return catalog.globalVars[ref.id] ?? null;
+    case 'perPlayerVar':
+      return catalog.perPlayerVars[ref.id] ?? null;
+    case 'derivedMetric':
+      return catalog.derivedMetrics[ref.id] ?? null;
+    case 'victoryCurrentMargin':
+      return catalog.victory.currentMargin;
+    case 'victoryCurrentRank':
+      return catalog.victory.currentRank;
+  }
 }
 
 export function isSurfaceVisibilityAccessible(

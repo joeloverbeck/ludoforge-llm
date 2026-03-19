@@ -259,6 +259,57 @@ describe('top-level runtime schemas', () => {
     assert.equal(result.success, true);
   });
 
+  it('rejects legacy compiled agent expr string-ref shapes', () => {
+    const result = GameDefSchema.safeParse({
+      ...minimalGameDef,
+      agents: {
+        schemaVersion: 2,
+        catalogFingerprint: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+        surfaceVisibility: {
+          globalVars: {},
+          perPlayerVars: {},
+          derivedMetrics: {},
+          victory: {
+            currentMargin: {
+              current: 'hidden',
+              preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+            },
+            currentRank: {
+              current: 'hidden',
+              preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+            },
+          },
+        },
+        parameterDefs: {},
+        candidateParamDefs: {},
+        library: {
+          stateFeatures: {
+            legacy: {
+              type: 'number',
+              costClass: 'state',
+              expr: { ref: 'victory.currentMargin.us' },
+              dependencies: {
+                parameters: [],
+                stateFeatures: [],
+                candidateFeatures: [],
+                aggregates: [],
+              },
+            },
+          },
+          candidateFeatures: {},
+          candidateAggregates: {},
+          pruningRules: {},
+          scoreTerms: {},
+          tieBreakers: {},
+        },
+        profiles: {},
+        bindingsBySeat: {},
+      },
+    });
+
+    assert.equal(result.success, false);
+  });
+
   it('rejects GameDef.agents catalogs missing fingerprint metadata', () => {
     const result = GameDefSchema.safeParse({
       ...minimalGameDef,

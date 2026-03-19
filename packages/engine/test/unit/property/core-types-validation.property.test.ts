@@ -106,4 +106,53 @@ describe('core-types validation property-style checks', () => {
       assert.deepEqual(next, first);
     }
   });
+
+  it('rejects legacy compiled policy string refs after JSON round-trip', () => {
+    const base = readGameDefFixture('minimal-valid.json');
+    const legacyAgentsDef = {
+      ...base,
+      metadata: { ...base.metadata, id: 'fixture-minimal-legacy-agents' },
+      agents: {
+        schemaVersion: 2,
+        catalogFingerprint: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+        surfaceVisibility: {
+          globalVars: {},
+          perPlayerVars: {},
+          derivedMetrics: {},
+          victory: {
+            currentMargin: {
+              current: 'hidden',
+              preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+            },
+            currentRank: {
+              current: 'hidden',
+              preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+            },
+          },
+        },
+        parameterDefs: {},
+        candidateParamDefs: {},
+        library: {
+          stateFeatures: {
+            legacy: {
+              type: 'number',
+              costClass: 'state',
+              expr: { ref: 'victory.currentMargin.us' },
+              dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+            },
+          },
+          candidateFeatures: {},
+          candidateAggregates: {},
+          pruningRules: {},
+          scoreTerms: {},
+          tieBreakers: {},
+        },
+        profiles: {},
+        bindingsBySeat: {},
+      },
+    } as const;
+
+    const parsed = GameDefSchema.safeParse(parseRoundTrip(legacyAgentsDef as unknown as GameDef));
+    assert.equal(parsed.success, false);
+  });
 });

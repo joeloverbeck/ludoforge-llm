@@ -3,6 +3,16 @@ import { describe, it } from 'node:test';
 
 import { compileGameSpecToGameDef, createEmptyGameSpecDoc, validateGameSpec } from '../../src/cnl/index.js';
 import type { GameSpecDoc } from '../../src/cnl/game-spec-doc.js';
+import type { AgentPolicyExpr, AgentPolicyLiteral, CompiledAgentPolicyRef } from '../../src/kernel/types.js';
+
+const literal = (value: AgentPolicyLiteral): AgentPolicyExpr => ({ kind: 'literal', value });
+const refExpr = (ref: CompiledAgentPolicyRef): AgentPolicyExpr => ({ kind: 'ref', ref });
+const opExpr = (op: Extract<AgentPolicyExpr, { readonly kind: 'op' }>['op'], ...args: AgentPolicyExpr[]): AgentPolicyExpr => ({
+  kind: 'op',
+  op,
+  args,
+});
+const paramExpr = (id: string): AgentPolicyExpr => ({ kind: 'param', id });
 
 function createCompileReadyDoc() {
   return {
@@ -218,7 +228,7 @@ describe('agents authoring surface', () => {
         currentMargin: {
           type: 'number',
           costClass: 'state',
-          expr: { ref: 'victory.currentMargin.us' },
+          expr: refExpr({ kind: 'surface', phase: 'current', family: 'victoryCurrentMargin', id: 'currentMargin', seatToken: 'us' }),
           dependencies: {
             parameters: [],
             stateFeatures: [],
@@ -231,7 +241,7 @@ describe('agents authoring surface', () => {
         isPass: {
           type: 'boolean',
           costClass: 'candidate',
-          expr: { ref: 'candidate.isPass' },
+          expr: refExpr({ kind: 'candidateIntrinsic', intrinsic: 'isPass' }),
           dependencies: {
             parameters: [],
             stateFeatures: [],
@@ -242,12 +252,11 @@ describe('agents authoring surface', () => {
         projectedMargin: {
           type: 'number',
           costClass: 'candidate',
-          expr: {
-            add: [
-              { ref: 'feature.currentMargin' },
-              { boolToNumber: { ref: 'feature.isPass' } },
-            ],
-          },
+          expr: opExpr(
+            'add',
+            refExpr({ kind: 'library', refKind: 'stateFeature', id: 'currentMargin' }),
+            opExpr('boolToNumber', refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'isPass' })),
+          ),
           dependencies: {
             parameters: [],
             stateFeatures: ['currentMargin'],
@@ -261,8 +270,8 @@ describe('agents authoring surface', () => {
           type: 'number',
           costClass: 'candidate',
           op: 'max',
-          of: { ref: 'feature.projectedMargin' },
-          where: { not: { ref: 'feature.isPass' } },
+          of: refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'projectedMargin' }),
+          where: opExpr('not', refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'isPass' })),
           dependencies: {
             parameters: [],
             stateFeatures: [],
@@ -274,12 +283,15 @@ describe('agents authoring surface', () => {
       pruningRules: {
         dropPassWhenStrongerMoveExists: {
           costClass: 'candidate',
-          when: {
-            and: [
-              { ref: 'feature.isPass' },
-              { gt: [{ ref: 'aggregate.bestProjectedMargin' }, { param: 'passFloor' }] },
-            ],
-          },
+          when: opExpr(
+            'and',
+            refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'isPass' }),
+            opExpr(
+              'gt',
+              refExpr({ kind: 'library', refKind: 'aggregate', id: 'bestProjectedMargin' }),
+              paramExpr('passFloor'),
+            ),
+          ),
           dependencies: {
             parameters: ['passFloor'],
             stateFeatures: [],
@@ -292,8 +304,8 @@ describe('agents authoring surface', () => {
       scoreTerms: {
         preferEvents: {
           costClass: 'candidate',
-          weight: 1,
-          value: { boolToNumber: { ref: 'feature.isPass' } },
+          weight: literal(1),
+          value: opExpr('boolToNumber', refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'isPass' })),
           dependencies: {
             parameters: [],
             stateFeatures: [],

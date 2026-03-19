@@ -1,5 +1,5 @@
 import { fingerprintPolicyIr } from '../agents/policy-ir.js';
-import { resolvePolicySurfaceRef } from '../agents/policy-surface.js';
+import { parseAuthoredPolicySurfaceRef } from '../agents/policy-surface.js';
 import { analyzePolicyExpr, type AnalyzePolicyExprContext, type ResolvedPolicyRef } from '../agents/policy-expr.js';
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import { collectChoiceBindingSpecs } from '../kernel/move-runtime-bindings.js';
@@ -9,7 +9,6 @@ import type {
   AgentParameterValue,
   AgentPolicyCatalog,
   AgentPolicyCostClass,
-  AgentPolicyExpr,
   AgentPolicySurfaceVisibilityClass,
   AgentPolicyValueType,
   CompiledAgentAggregate,
@@ -1015,7 +1014,7 @@ class AgentLibraryCompiler {
     return {
       type: analysis.valueType,
       costClass: analysis.costClass,
-      expr: def.expr as AgentPolicyExpr,
+      expr: analysis.expr,
       dependencies: analysis.dependencies,
     };
   }
@@ -1082,8 +1081,8 @@ class AgentLibraryCompiler {
       type: resultType,
       costClass: maxCostClass(ofAnalysis.costClass, whereAnalysis?.costClass ?? 'state'),
       op,
-      of: def.of as AgentPolicyExpr,
-      ...(def.where === undefined ? {} : { where: def.where as AgentPolicyExpr }),
+      of: ofAnalysis.expr,
+      ...(def.where === undefined ? {} : { where: whereAnalysis!.expr }),
       dependencies,
     };
     this.compiled.candidateAggregates[aggregateId] = compiled;
@@ -1121,7 +1120,7 @@ class AgentLibraryCompiler {
     }
     const compiled: CompiledAgentPruningRule = {
       costClass: when.costClass,
-      when: def.when as AgentPolicyExpr,
+      when: when.expr,
       dependencies: when.dependencies,
       onEmpty: def.onEmpty ?? 'skipRule',
     };
@@ -1188,9 +1187,9 @@ class AgentLibraryCompiler {
     }
     const compiled: CompiledAgentScoreTerm = {
       costClass: maxCostClass(maxCostClass(weight.costClass, value.costClass), when?.costClass ?? 'state'),
-      ...(def.when === undefined ? {} : { when: def.when as AgentPolicyExpr }),
-      weight: def.weight as AgentPolicyExpr,
-      value: def.value as AgentPolicyExpr,
+      ...(def.when === undefined ? {} : { when: when!.expr }),
+      weight: weight.expr,
+      value: value.expr,
       ...(def.unknownAs === undefined ? {} : { unknownAs: def.unknownAs }),
       ...(def.clamp === undefined ? {} : { clamp: def.clamp }),
       dependencies: mergeDependencies([when?.dependencies ?? emptyDependencies(), weight.dependencies, value.dependencies]),
@@ -1234,7 +1233,7 @@ class AgentLibraryCompiler {
     const compiled: CompiledAgentTieBreaker = {
       kind,
       costClass: value?.costClass ?? 'state',
-      ...(def.value === undefined ? {} : { value: def.value as AgentPolicyExpr }),
+      ...(def.value === undefined ? {} : { value: value!.expr }),
       ...(def.order === undefined ? {} : { order: [...def.order] }),
       dependencies: value?.dependencies ?? emptyDependencies(),
     };
@@ -1265,6 +1264,7 @@ class AgentLibraryCompiler {
         return {
           type: feature.type,
           costClass: feature.costClass,
+          ref: { kind: 'library', refKind: 'stateFeature', id: featureId },
           dependency: { kind: 'stateFeatures', id: featureId },
         };
       }
@@ -1288,6 +1288,7 @@ class AgentLibraryCompiler {
         return {
           type: compiled.type,
           costClass: compiled.costClass,
+          ref: { kind: 'library', refKind: 'candidateFeature', id: featureId },
           dependency: { kind: 'candidateFeatures', id: featureId },
         };
       }
@@ -1299,6 +1300,7 @@ class AgentLibraryCompiler {
         return {
           type: compiled.type,
           costClass: compiled.costClass,
+          ref: { kind: 'library', refKind: 'stateFeature', id: featureId },
           dependency: { kind: 'stateFeatures', id: featureId },
         };
       }
@@ -1325,6 +1327,7 @@ class AgentLibraryCompiler {
       return {
         type: aggregate.type,
         costClass: aggregate.costClass,
+        ref: { kind: 'library', refKind: 'aggregate', id: aggregateId },
         dependency: { kind: 'aggregates', id: aggregateId },
       };
     }
@@ -1333,25 +1336,43 @@ class AgentLibraryCompiler {
   }
 
   private resolveRuntimeRef(scope: LibraryRefScope, refPath: string, path: string): ResolvedPolicyRef | null {
-    if (refPath === 'seat.self' || refPath === 'seat.active' || refPath === 'turn.phaseId' || refPath === 'turn.stepId') {
-      return { type: 'id', costClass: 'state' };
+    if (refPath === 'seat.self' || refPath === 'seat.active') {
+      return {
+        type: 'id',
+        costClass: 'state',
+        ref: { kind: 'seatIntrinsic', intrinsic: refPath === 'seat.self' ? 'self' : 'active' },
+      };
+    }
+    if (refPath === 'turn.phaseId' || refPath === 'turn.stepId') {
+      return {
+        type: 'id',
+        costClass: 'state',
+        ref: { kind: 'turnIntrinsic', intrinsic: refPath === 'turn.phaseId' ? 'phaseId' : 'stepId' },
+      };
     }
     if (refPath === 'turn.round') {
-      return { type: 'number', costClass: 'state' };
+      return { type: 'number', costClass: 'state', ref: { kind: 'turnIntrinsic', intrinsic: 'round' } };
     }
     if (refPath === 'candidate.actionId' || refPath === 'candidate.stableMoveKey') {
       if (scope === 'stateFeature') {
         this.reportUnknownLibraryRef(refPath, path);
         return null;
       }
-      return { type: 'id', costClass: 'candidate' };
+      return {
+        type: 'id',
+        costClass: 'candidate',
+        ref: {
+          kind: 'candidateIntrinsic',
+          intrinsic: refPath === 'candidate.actionId' ? 'actionId' : 'stableMoveKey',
+        },
+      };
     }
     if (refPath === 'candidate.isPass') {
       if (scope === 'stateFeature') {
         this.reportUnknownLibraryRef(refPath, path);
         return null;
       }
-      return { type: 'boolean', costClass: 'candidate' };
+      return { type: 'boolean', costClass: 'candidate', ref: { kind: 'candidateIntrinsic', intrinsic: 'isPass' } };
     }
     if (refPath.startsWith('candidate.param.')) {
       if (scope === 'stateFeature') {
@@ -1371,6 +1392,7 @@ class AgentLibraryCompiler {
       return {
         type: candidateParamDef.type,
         costClass: 'candidate',
+        ref: { kind: 'candidateParam', id: candidateParamPath },
       };
     }
 
@@ -1381,7 +1403,7 @@ class AgentLibraryCompiler {
 
     const surfaceResolved = this.resolveSurfaceRuntimeRef(refPath, path, false);
     if (surfaceResolved !== null) {
-      return { type: 'number', costClass: 'state' };
+      return { type: 'number', costClass: 'state', ref: surfaceResolved.ref };
     }
 
     this.reportUnknownLibraryRef(refPath, path);
@@ -1403,8 +1425,9 @@ class AgentLibraryCompiler {
       return null;
     }
     const nestedPath = refPath.slice('preview.'.length);
-    if (this.resolveSurfaceRuntimeRef(nestedPath, path, true) !== null) {
-      return { type: 'number', costClass: 'preview' };
+    const resolved = this.resolveSurfaceRuntimeRef(nestedPath, path, true);
+    if (resolved !== null) {
+      return { type: 'number', costClass: 'preview', ref: resolved.ref };
     }
     this.reportUnknownLibraryRef(refPath, path);
     return null;
@@ -1414,19 +1437,27 @@ class AgentLibraryCompiler {
     refPath: string,
     path: string,
     preview: boolean,
-  ): ResolvedPolicyRef | null {
-    const resolved = resolvePolicySurfaceRef(this.surfaceVisibility, refPath);
+  ): { readonly ref: ResolvedPolicyRef['ref'] } | null {
+    const resolved = parseAuthoredPolicySurfaceRef(this.surfaceVisibility, refPath, preview ? 'preview' : 'current');
     if (resolved === null) {
       return null;
     }
     if (!this.validateResolvedSurfaceRef(resolved, path, refPath, preview)) {
       return null;
     }
-    return { type: 'number', costClass: preview ? 'preview' : 'state' };
+    return {
+      ref: {
+        kind: 'surface',
+        phase: resolved.phase,
+        family: resolved.family,
+        id: resolved.id,
+        ...(resolved.seatToken === undefined ? {} : { seatToken: resolved.seatToken }),
+      },
+    };
   }
 
   private validateResolvedSurfaceRef(
-    resolved: NonNullable<ReturnType<typeof resolvePolicySurfaceRef>>,
+    resolved: NonNullable<ReturnType<typeof parseAuthoredPolicySurfaceRef>>,
     path: string,
     refPath: string,
     preview: boolean,

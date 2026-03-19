@@ -298,13 +298,84 @@ export type AgentParameterValue = number | boolean | string | readonly string[];
 export type AgentPolicyValueType = 'number' | 'boolean' | 'id' | 'idList';
 export type AgentPolicyCostClass = 'state' | 'candidate' | 'preview';
 export type AgentPolicySurfaceVisibilityClass = 'public' | 'seatVisible' | 'hidden';
+export type AgentPolicyLiteral = number | boolean | string | null | readonly string[];
+export type AgentPolicyOperator =
+  | 'abs'
+  | 'add'
+  | 'and'
+  | 'boolToNumber'
+  | 'clamp'
+  | 'coalesce'
+  | 'div'
+  | 'eq'
+  | 'gt'
+  | 'gte'
+  | 'if'
+  | 'in'
+  | 'lt'
+  | 'lte'
+  | 'max'
+  | 'min'
+  | 'mul'
+  | 'ne'
+  | 'neg'
+  | 'not'
+  | 'or'
+  | 'sub';
+export type CompiledAgentPolicyLibraryRefKind = 'stateFeature' | 'candidateFeature' | 'aggregate';
+export type CompiledAgentPolicySurfaceRefFamily =
+  | 'globalVar'
+  | 'perPlayerVar'
+  | 'derivedMetric'
+  | 'victoryCurrentMargin'
+  | 'victoryCurrentRank';
+export type CompiledAgentPolicyRef =
+  | {
+      readonly kind: 'library';
+      readonly refKind: CompiledAgentPolicyLibraryRefKind;
+      readonly id: string;
+    }
+  | {
+      readonly kind: 'surface';
+      readonly phase: 'current' | 'preview';
+      readonly family: CompiledAgentPolicySurfaceRefFamily;
+      readonly id: string;
+      readonly seatToken?: string;
+    }
+  | {
+      readonly kind: 'candidateIntrinsic';
+      readonly intrinsic: 'actionId' | 'stableMoveKey' | 'isPass';
+    }
+  | {
+      readonly kind: 'candidateParam';
+      readonly id: string;
+    }
+  | {
+      readonly kind: 'seatIntrinsic';
+      readonly intrinsic: 'self' | 'active';
+    }
+  | {
+      readonly kind: 'turnIntrinsic';
+      readonly intrinsic: 'phaseId' | 'stepId' | 'round';
+    };
 export type AgentPolicyExpr =
-  | string
-  | number
-  | boolean
-  | null
-  | readonly AgentPolicyExpr[]
-  | { readonly [key: string]: AgentPolicyExpr };
+  | {
+      readonly kind: 'literal';
+      readonly value: AgentPolicyLiteral;
+    }
+  | {
+      readonly kind: 'param';
+      readonly id: string;
+    }
+  | {
+      readonly kind: 'ref';
+      readonly ref: CompiledAgentPolicyRef;
+    }
+  | {
+      readonly kind: 'op';
+      readonly op: AgentPolicyOperator;
+      readonly args: readonly AgentPolicyExpr[];
+    };
 
 export interface CompiledAgentPolicySurfacePreviewVisibility {
   readonly visibility: AgentPolicySurfaceVisibilityClass;

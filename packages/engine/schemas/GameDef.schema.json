@@ -1602,6 +1602,9 @@
           "type": "number",
           "const": 1
         },
+        "catalogFingerprint": {
+          "type": "string"
+        },
         "parameterDefs": {
           "type": "object",
           "propertyNames": {
@@ -2266,6 +2269,9 @@
           "additionalProperties": {
             "type": "object",
             "properties": {
+              "fingerprint": {
+                "type": "string"
+              },
               "params": {
                 "type": "object",
                 "propertyNames": {
@@ -2351,6 +2357,7 @@
               }
             },
             "required": [
+              "fingerprint",
               "params",
               "use",
               "plan"
@@ -2370,6 +2377,7 @@
       },
       "required": [
         "schemaVersion",
+        "catalogFingerprint",
         "parameterDefs",
         "library",
         "profiles",

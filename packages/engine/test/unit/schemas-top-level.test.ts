@@ -193,6 +193,7 @@ describe('top-level runtime schemas', () => {
       ...minimalGameDef,
       agents: {
         schemaVersion: 1,
+        catalogFingerprint: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
         parameterDefs: {
           passFloor: {
             type: 'number',
@@ -213,6 +214,7 @@ describe('top-level runtime schemas', () => {
         },
         profiles: {
           baseline: {
+            fingerprint: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
             params: {
               passFloor: 0.5,
             },
@@ -235,6 +237,44 @@ describe('top-level runtime schemas', () => {
     });
 
     assert.equal(result.success, true);
+  });
+
+  it('rejects GameDef.agents catalogs missing fingerprint metadata', () => {
+    const result = GameDefSchema.safeParse({
+      ...minimalGameDef,
+      agents: {
+        schemaVersion: 1,
+        parameterDefs: {},
+        library: {
+          stateFeatures: {},
+          candidateFeatures: {},
+          candidateAggregates: {},
+          pruningRules: {},
+          scoreTerms: {},
+          tieBreakers: {},
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              scoreTerms: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+            plan: {
+              stateFeatures: [],
+              candidateFeatures: [],
+              candidateAggregates: [],
+            },
+          },
+        },
+        bindingsBySeat: {
+          us: 'baseline',
+        },
+      },
+    });
+
+    assert.equal(result.success, false);
   });
 
   it('parses valid map payload contracts with typed tracks and marker lattices', () => {

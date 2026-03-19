@@ -589,6 +589,7 @@ const CompiledAgentLibraryIndexSchema = z
 
 const CompiledAgentProfileSchema = z
   .object({
+    fingerprint: StringSchema,
     params: z.record(StringSchema, AgentParameterValueSchema),
     use: z
       .object({
@@ -610,6 +611,7 @@ const CompiledAgentProfileSchema = z
 const AgentPolicyCatalogSchema = z
   .object({
     schemaVersion: z.literal(1),
+    catalogFingerprint: StringSchema,
     parameterDefs: z.record(StringSchema, CompiledAgentParameterDefSchema),
     library: CompiledAgentLibraryIndexSchema,
     profiles: z.record(StringSchema, CompiledAgentProfileSchema),

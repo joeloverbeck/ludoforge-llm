@@ -1,3 +1,4 @@
+import { fingerprintPolicyIr } from '../agents/policy-ir.js';
 import { analyzePolicyExpr, type AnalyzePolicyExprContext, type ResolvedPolicyRef } from '../agents/policy-expr.js';
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import type {
@@ -35,6 +36,7 @@ type ProfileUseKey = keyof CompiledAgentProfile['use'];
 type AggregateOp = 'max' | 'min' | 'count' | 'any' | 'all' | 'rankDense' | 'rankOrdinal';
 type TieBreakerKind = 'higherExpr' | 'lowerExpr' | 'preferredEnumOrder' | 'preferredIdOrder' | 'rng' | 'stableMoveKey';
 type LibraryRefScope = 'stateFeature' | 'candidateFeature' | 'aggregate' | 'rule' | 'scoreTerm' | 'tieBreaker';
+type LoweredAgentProfile = Omit<CompiledAgentProfile, 'fingerprint'>;
 
 const AGENT_PARAMETER_TYPES: readonly AgentParameterType[] = ['number', 'integer', 'boolean', 'enum', 'idOrder'];
 const POLICY_VALUE_TYPES: readonly AgentPolicyValueType[] = ['number', 'boolean', 'id', 'idList'];
@@ -64,16 +66,37 @@ export function lowerAgents(
   const parameterDefs = lowerParameterDefs(agents.parameters, diagnostics);
   const libraryCompiler = new AgentLibraryCompiler(agents.library, parameterDefs, diagnostics);
   const library = libraryCompiler.compile();
-  const profiles = lowerProfiles(agents.profiles, agents.library, library, parameterDefs, diagnostics);
+  const profiles = addProfileFingerprints(
+    lowerProfiles(agents.profiles, agents.library, library, parameterDefs, diagnostics),
+  );
   const bindingsBySeat = lowerBindings(agents.bindings, profiles, diagnostics, options);
-
-  return {
+  const catalogWithoutFingerprint = {
     schemaVersion: 1,
     parameterDefs,
     library,
     profiles,
     bindingsBySeat,
+  } satisfies Omit<AgentPolicyCatalog, 'catalogFingerprint'>;
+
+  return {
+    ...catalogWithoutFingerprint,
+    catalogFingerprint: fingerprintPolicyIr(catalogWithoutFingerprint),
   } satisfies AgentPolicyCatalog;
+}
+
+function addProfileFingerprints(
+  profiles: Readonly<Record<string, LoweredAgentProfile>>,
+): AgentPolicyCatalog['profiles'] {
+  const fingerprinted: Record<string, CompiledAgentProfile> = {};
+
+  for (const [profileId, profile] of Object.entries(profiles)) {
+    fingerprinted[profileId] = {
+      ...profile,
+      fingerprint: fingerprintPolicyIr(profile),
+    };
+  }
+
+  return fingerprinted;
 }
 
 function lowerParameterDefs(
@@ -190,8 +213,8 @@ function lowerProfiles(
   library: CompiledAgentLibraryIndex,
   parameterDefs: AgentPolicyCatalog['parameterDefs'],
   diagnostics: Diagnostic[],
-): AgentPolicyCatalog['profiles'] {
-  const compiled: Record<string, CompiledAgentProfile> = {};
+): Record<string, LoweredAgentProfile> {
+  const compiled: Record<string, LoweredAgentProfile> = {};
 
   for (const [profileId, profileDef] of Object.entries(profiles ?? {})) {
     const compiledProfile = lowerProfile(profileId, profileDef, authoredLibrary, library, parameterDefs, diagnostics);
@@ -210,7 +233,7 @@ function lowerProfile(
   library: CompiledAgentLibraryIndex,
   parameterDefs: AgentPolicyCatalog['parameterDefs'],
   diagnostics: Diagnostic[],
-): CompiledAgentProfile | null {
+): LoweredAgentProfile | null {
   const path = `doc.agents.profiles.${profileId}`;
   const compiledParams: Record<string, AgentParameterValue> = {};
   let hasError = false;

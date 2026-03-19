@@ -136,157 +136,322 @@ describe('agents authoring surface', () => {
 
     assert.equal(result.gameDef === null, false);
     assert.equal(result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
-    assert.deepEqual(result.gameDef?.agents, {
-      schemaVersion: 1,
-      parameterDefs: {
-        passFloor: {
-          type: 'number',
-          required: false,
-          tunable: true,
-          default: 0.25,
-          min: -5,
-          max: 5,
-        },
-        mode: {
-          type: 'enum',
-          required: false,
-          tunable: false,
-          default: 'safe',
-          values: ['safe', 'bold'],
-        },
-        tieOrder: {
-          type: 'idOrder',
-          required: false,
-          tunable: false,
-          default: ['projected', 'stable'],
-          allowedIds: ['projected', 'stable'],
-        },
+    const agents = result.gameDef?.agents;
+    assert.ok(agents !== undefined);
+    const baselineProfile = agents.profiles.baseline;
+    assert.ok(baselineProfile !== undefined);
+    assert.match(agents.catalogFingerprint, /^[0-9a-f]{64}$/u);
+    assert.match(baselineProfile.fingerprint, /^[0-9a-f]{64}$/u);
+    assert.deepEqual(agents.parameterDefs, {
+      passFloor: {
+        type: 'number',
+        required: false,
+        tunable: true,
+        default: 0.25,
+        min: -5,
+        max: 5,
       },
-      library: {
-        stateFeatures: {
-          currentMargin: {
-            type: 'number',
-            costClass: 'state',
-            expr: { ref: 'victory.currentMargin.us' },
-            dependencies: {
-              parameters: [],
-              stateFeatures: [],
-              candidateFeatures: [],
-              aggregates: [],
-            },
-          },
-        },
-        candidateFeatures: {
-          isPass: {
-            type: 'boolean',
-            costClass: 'candidate',
-            expr: { ref: 'candidate.isPass' },
-            dependencies: {
-              parameters: [],
-              stateFeatures: [],
-              candidateFeatures: [],
-              aggregates: [],
-            },
-          },
-          projectedMargin: {
-            type: 'number',
-            costClass: 'candidate',
-            expr: {
-              add: [
-                { ref: 'feature.currentMargin' },
-                { boolToNumber: { ref: 'feature.isPass' } },
-              ],
-            },
-            dependencies: {
-              parameters: [],
-              stateFeatures: ['currentMargin'],
-              candidateFeatures: ['isPass'],
-              aggregates: [],
-            },
-          },
-        },
-        candidateAggregates: {
-          bestProjectedMargin: {
-            type: 'number',
-            costClass: 'candidate',
-            op: 'max',
-            of: { ref: 'feature.projectedMargin' },
-            where: { not: { ref: 'feature.isPass' } },
-            dependencies: {
-              parameters: [],
-              stateFeatures: [],
-              candidateFeatures: ['isPass', 'projectedMargin'],
-              aggregates: [],
-            },
-          },
-        },
-        pruningRules: {
-          dropPassWhenStrongerMoveExists: {
-            costClass: 'candidate',
-            when: {
-              and: [
-                { ref: 'feature.isPass' },
-                { gt: [{ ref: 'aggregate.bestProjectedMargin' }, { param: 'passFloor' }] },
-              ],
-            },
-            dependencies: {
-              parameters: ['passFloor'],
-              stateFeatures: [],
-              candidateFeatures: ['isPass'],
-              aggregates: ['bestProjectedMargin'],
-            },
-            onEmpty: 'skipRule',
-          },
-        },
-        scoreTerms: {
-          preferEvents: {
-            costClass: 'candidate',
-            weight: 1,
-            value: { boolToNumber: { ref: 'feature.isPass' } },
-            dependencies: {
-              parameters: [],
-              stateFeatures: [],
-              candidateFeatures: ['isPass'],
-              aggregates: [],
-            },
-          },
-        },
-        tieBreakers: {
-          stableMoveKey: {
-            kind: 'stableMoveKey',
-            costClass: 'state',
-            dependencies: {
-              parameters: [],
-              stateFeatures: [],
-              candidateFeatures: [],
-              aggregates: [],
-            },
-          },
-        },
+      mode: {
+        type: 'enum',
+        required: false,
+        tunable: false,
+        default: 'safe',
+        values: ['safe', 'bold'],
       },
-      profiles: {
-        baseline: {
-          params: {
-            passFloor: 0.5,
-            mode: 'bold',
-            tieOrder: ['stable', 'projected'],
-          },
-          use: {
-            pruningRules: ['dropPassWhenStrongerMoveExists'],
-            scoreTerms: ['preferEvents'],
-            tieBreakers: ['stableMoveKey'],
-          },
-          plan: {
-            stateFeatures: ['currentMargin'],
-            candidateFeatures: ['isPass', 'projectedMargin'],
-            candidateAggregates: ['bestProjectedMargin'],
-          },
-        },
-      },
-      bindingsBySeat: {
-        us: 'baseline',
+      tieOrder: {
+        type: 'idOrder',
+        required: false,
+        tunable: false,
+        default: ['projected', 'stable'],
+        allowedIds: ['projected', 'stable'],
       },
     });
+    assert.deepEqual(agents.library, {
+      stateFeatures: {
+        currentMargin: {
+          type: 'number',
+          costClass: 'state',
+          expr: { ref: 'victory.currentMargin.us' },
+          dependencies: {
+            parameters: [],
+            stateFeatures: [],
+            candidateFeatures: [],
+            aggregates: [],
+          },
+        },
+      },
+      candidateFeatures: {
+        isPass: {
+          type: 'boolean',
+          costClass: 'candidate',
+          expr: { ref: 'candidate.isPass' },
+          dependencies: {
+            parameters: [],
+            stateFeatures: [],
+            candidateFeatures: [],
+            aggregates: [],
+          },
+        },
+        projectedMargin: {
+          type: 'number',
+          costClass: 'candidate',
+          expr: {
+            add: [
+              { ref: 'feature.currentMargin' },
+              { boolToNumber: { ref: 'feature.isPass' } },
+            ],
+          },
+          dependencies: {
+            parameters: [],
+            stateFeatures: ['currentMargin'],
+            candidateFeatures: ['isPass'],
+            aggregates: [],
+          },
+        },
+      },
+      candidateAggregates: {
+        bestProjectedMargin: {
+          type: 'number',
+          costClass: 'candidate',
+          op: 'max',
+          of: { ref: 'feature.projectedMargin' },
+          where: { not: { ref: 'feature.isPass' } },
+          dependencies: {
+            parameters: [],
+            stateFeatures: [],
+            candidateFeatures: ['isPass', 'projectedMargin'],
+            aggregates: [],
+          },
+        },
+      },
+      pruningRules: {
+        dropPassWhenStrongerMoveExists: {
+          costClass: 'candidate',
+          when: {
+            and: [
+              { ref: 'feature.isPass' },
+              { gt: [{ ref: 'aggregate.bestProjectedMargin' }, { param: 'passFloor' }] },
+            ],
+          },
+          dependencies: {
+            parameters: ['passFloor'],
+            stateFeatures: [],
+            candidateFeatures: ['isPass'],
+            aggregates: ['bestProjectedMargin'],
+          },
+          onEmpty: 'skipRule',
+        },
+      },
+      scoreTerms: {
+        preferEvents: {
+          costClass: 'candidate',
+          weight: 1,
+          value: { boolToNumber: { ref: 'feature.isPass' } },
+          dependencies: {
+            parameters: [],
+            stateFeatures: [],
+            candidateFeatures: ['isPass'],
+            aggregates: [],
+          },
+        },
+      },
+      tieBreakers: {
+        stableMoveKey: {
+          kind: 'stableMoveKey',
+          costClass: 'state',
+          dependencies: {
+            parameters: [],
+            stateFeatures: [],
+            candidateFeatures: [],
+            aggregates: [],
+          },
+        },
+      },
+    });
+    assert.deepEqual(baselineProfile.params, {
+      passFloor: 0.5,
+      mode: 'bold',
+      tieOrder: ['stable', 'projected'],
+    });
+    assert.deepEqual(baselineProfile.use, {
+      pruningRules: ['dropPassWhenStrongerMoveExists'],
+      scoreTerms: ['preferEvents'],
+      tieBreakers: ['stableMoveKey'],
+    });
+    assert.deepEqual(baselineProfile.plan, {
+      stateFeatures: ['currentMargin'],
+      candidateFeatures: ['isPass', 'projectedMargin'],
+      candidateAggregates: ['bestProjectedMargin'],
+    });
+    assert.deepEqual(agents.bindingsBySeat, {
+      us: 'baseline',
+    });
+  });
+
+  it('keeps catalog and profile fingerprints stable across equivalent authored insertion order', () => {
+    const baseDoc = {
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: {
+        parameters: {
+          mode: {
+            type: 'enum' as const,
+            default: 'safe',
+            values: ['safe', 'bold'],
+          },
+          passFloor: {
+            type: 'number' as const,
+            default: 0.25,
+            min: -5,
+            max: 5,
+            tunable: true,
+          },
+        },
+        library: {
+          candidateFeatures: {
+            projectedMargin: {
+              type: 'number' as const,
+              expr: {
+                add: [
+                  { ref: 'feature.currentMargin' },
+                  { boolToNumber: { ref: 'feature.isPass' } },
+                ],
+              },
+            },
+            isPass: {
+              type: 'boolean' as const,
+              expr: { ref: 'candidate.isPass' },
+            },
+          },
+          stateFeatures: {
+            currentMargin: {
+              type: 'number' as const,
+              expr: { ref: 'victory.currentMargin.us' },
+            },
+          },
+          scoreTerms: {
+            preferEvents: {
+              weight: 1,
+              value: { boolToNumber: { ref: 'feature.isPass' } },
+            },
+          },
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey' as const,
+            },
+          },
+          pruningRules: {},
+          candidateAggregates: {},
+        },
+        profiles: {
+          baseline: {
+            params: {
+              passFloor: 0.5,
+              mode: 'bold',
+            },
+            use: {
+              pruningRules: [],
+              scoreTerms: ['preferEvents'],
+              tieBreakers: ['stableMoveKey'],
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      },
+    };
+    const reorderedDoc = {
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: {
+        bindings: {
+          us: 'baseline',
+        },
+        profiles: {
+          baseline: {
+            params: {
+              mode: 'bold',
+              passFloor: 0.5,
+            },
+            use: {
+              tieBreakers: ['stableMoveKey'],
+              scoreTerms: ['preferEvents'],
+              pruningRules: [],
+            },
+          },
+        },
+        library: {
+          candidateAggregates: {},
+          pruningRules: {},
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey' as const,
+            },
+          },
+          scoreTerms: {
+            preferEvents: {
+              value: { boolToNumber: { ref: 'feature.isPass' } },
+              weight: 1,
+            },
+          },
+          stateFeatures: {
+            currentMargin: {
+              expr: { ref: 'victory.currentMargin.us' },
+              type: 'number' as const,
+            },
+          },
+          candidateFeatures: {
+            isPass: {
+              expr: { ref: 'candidate.isPass' },
+              type: 'boolean' as const,
+            },
+            projectedMargin: {
+              expr: {
+                add: [
+                  { ref: 'feature.currentMargin' },
+                  { boolToNumber: { ref: 'feature.isPass' } },
+                ],
+              },
+              type: 'number' as const,
+            },
+          },
+        },
+        parameters: {
+          passFloor: {
+            max: 5,
+            tunable: true,
+            min: -5,
+            default: 0.25,
+            type: 'number' as const,
+          },
+          mode: {
+            values: ['safe', 'bold'],
+            default: 'safe',
+            type: 'enum' as const,
+          },
+        },
+      },
+    };
+
+    const first = compileGameSpecToGameDef(baseDoc);
+    const second = compileGameSpecToGameDef(reorderedDoc);
+
+    assert.equal(first.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
+    assert.equal(second.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
+    const firstAgents = first.gameDef?.agents;
+    const secondAgents = second.gameDef?.agents;
+    assert.ok(firstAgents !== undefined);
+    assert.ok(secondAgents !== undefined);
+    const firstBaselineProfile = firstAgents.profiles.baseline;
+    const secondBaselineProfile = secondAgents.profiles.baseline;
+    assert.ok(firstBaselineProfile !== undefined);
+    assert.ok(secondBaselineProfile !== undefined);
+    assert.equal(firstAgents.catalogFingerprint, secondAgents.catalogFingerprint);
+    assert.equal(
+      firstBaselineProfile.fingerprint,
+      secondBaselineProfile.fingerprint,
+    );
   });
 
   it('rejects malformed collection shapes, inline profile logic, and non-map bindings in validation and compile flows', () => {

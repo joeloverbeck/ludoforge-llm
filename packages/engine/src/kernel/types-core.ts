@@ -358,6 +358,7 @@ export interface CompiledAgentLibraryIndex {
 }
 
 export interface CompiledAgentProfile {
+  readonly fingerprint: string;
   readonly params: Readonly<Record<string, AgentParameterValue>>;
   readonly use: {
     readonly pruningRules: readonly string[];
@@ -373,6 +374,7 @@ export interface CompiledAgentProfile {
 
 export interface AgentPolicyCatalog {
   readonly schemaVersion: 1;
+  readonly catalogFingerprint: string;
   readonly parameterDefs: Readonly<Record<string, CompiledAgentParameterDef>>;
   readonly library: CompiledAgentLibraryIndex;
   readonly profiles: Readonly<Record<string, CompiledAgentProfile>>;

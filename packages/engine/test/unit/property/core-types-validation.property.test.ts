@@ -20,6 +20,42 @@ describe('core-types validation property-style checks', () => {
         ...base,
         constants: { bonus: 1 },
       },
+      {
+        ...base,
+        metadata: { ...base.metadata, id: 'fixture-minimal-agents' },
+        agents: {
+          schemaVersion: 1,
+          catalogFingerprint: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+          parameterDefs: {},
+          library: {
+            stateFeatures: {},
+            candidateFeatures: {},
+            candidateAggregates: {},
+            pruningRules: {},
+            scoreTerms: {},
+            tieBreakers: {},
+          },
+          profiles: {
+            baseline: {
+              fingerprint: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
+              params: {},
+              use: {
+                pruningRules: [],
+                scoreTerms: [],
+                tieBreakers: ['stableMoveKey'],
+              },
+              plan: {
+                stateFeatures: [],
+                candidateFeatures: [],
+                candidateAggregates: [],
+              },
+            },
+          },
+          bindingsBySeat: {
+            us: 'baseline',
+          },
+        },
+      },
     ];
 
     validDefs.forEach((def) => {

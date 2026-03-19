@@ -2,7 +2,9 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { PolicyAgent } from '../../../src/agents/policy-agent.js';
+import { createTemplateChooseOneAction, createTemplateChooseOneProfile } from '../../helpers/agent-template-fixtures.js';
 import {
+  type ActionPipelineDef,
   asActionId,
   asPhaseId,
   asPlayerId,
@@ -110,7 +112,7 @@ function createCatalog(): AgentPolicyCatalog {
   };
 }
 
-function createDef(): GameDef {
+function createDef(overrides: Partial<GameDef> = {}): GameDef {
   return {
     metadata: { id: 'policy-agent', players: { min: 2, max: 2 } },
     constants: {},
@@ -149,7 +151,61 @@ function createDef(): GameDef {
     ],
     triggers: [],
     terminal: { conditions: [] },
+    ...overrides,
   };
+}
+
+function createTemplateDef(): GameDef {
+  const actionId = asActionId('op1');
+  const templateAction = createTemplateChooseOneAction(actionId, phaseId);
+  const templateProfile = createTemplateChooseOneProfile(actionId);
+
+  return createDef({
+    metadata: { id: 'policy-agent-template', players: { min: 2, max: 2 } },
+    actions: [templateAction],
+    actionPipelines: [templateProfile] as readonly ActionPipelineDef[],
+    agents: {
+      ...createCatalog(),
+      library: {
+        ...createCatalog().library,
+        candidateFeatures: {
+          prefersGamma: {
+            type: 'boolean',
+            costClass: 'candidate',
+            expr: opExpr('eq', refExpr({ kind: 'candidateParam', id: '$target' }), literal('gamma')),
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          },
+        },
+        scoreTerms: {
+          preferGamma: {
+            costClass: 'candidate',
+            weight: literal(10),
+            value: opExpr('boolToNumber', refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'prefersGamma' })),
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['prefersGamma'], aggregates: [] },
+          },
+        },
+      },
+      profiles: {
+        passive: {
+          fingerprint: 'passive-fingerprint',
+          params: {},
+          use: {
+            pruningRules: [],
+            scoreTerms: ['preferGamma'],
+            tieBreakers: ['stableMoveKey'],
+          },
+          plan: {
+            stateFeatures: [],
+            candidateFeatures: ['prefersGamma'],
+            candidateAggregates: [],
+          },
+        },
+      },
+      candidateParamDefs: {
+        '$target': { type: 'id' },
+      },
+    },
+  });
 }
 
 function createInput(def: GameDef): Parameters<PolicyAgent['chooseMove']>[0] {
@@ -168,6 +224,13 @@ function createInput(def: GameDef): Parameters<PolicyAgent['chooseMove']>[0] {
 }
 
 describe('PolicyAgent', () => {
+  it('rejects invalid completionsPerTemplate config', () => {
+    assert.throws(
+      () => new PolicyAgent({ completionsPerTemplate: 0 }),
+      /PolicyAgent completionsPerTemplate must be a positive safe integer/,
+    );
+  });
+
   it('resolves the bound seat profile and returns a legal move', () => {
     const def = createDef();
     const agent = new PolicyAgent();
@@ -218,5 +281,31 @@ describe('PolicyAgent', () => {
     assert.equal(result.agentDecision.emergencyFallback, true);
     assert.equal(result.agentDecision.failure?.code, 'PROFILE_MISSING');
     assert.equal(result.agentDecision.selectedStableMoveKey !== null, true);
+  });
+
+  it('completes template moves before policy evaluation', () => {
+    const def = createTemplateDef();
+    const state = initialState(def, 7, 2).state;
+    const agent = new PolicyAgent();
+
+    const result = agent.chooseMove({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      legalMoves: [{ actionId: asActionId('op1'), params: {} }],
+      rng: createRng(42n),
+    });
+
+    assert.equal(result.move.actionId, asActionId('op1'));
+    const target = result.move.params['$target'];
+    assert.ok(
+      target === 'alpha' || target === 'beta' || target === 'gamma',
+      `selected target "${String(target)}" should be one of the enum options`,
+    );
+    assert.equal(result.agentDecision?.kind, 'policy');
+    if (result.agentDecision?.kind !== 'policy') {
+      assert.fail('expected policy decision trace');
+    }
+    assert.equal(result.agentDecision.emergencyFallback, false);
   });
 });

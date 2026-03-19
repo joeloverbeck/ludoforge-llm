@@ -11,4 +11,5 @@ imports:
   - ./fire-in-the-lake/41-content-event-decks.md
   - ./fire-in-the-lake/90-terminal.md
   - ./fire-in-the-lake/91-victory-standings.md
+  - ./fire-in-the-lake/92-agents.md
 ```

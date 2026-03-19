@@ -1,7 +1,7 @@
 import { toMoveIdentityKey } from '../kernel/move-identity.js';
-import type { Agent, Move } from '../kernel/types.js';
-import { completeTemplateMove } from '../kernel/move-completion.js';
+import type { Agent } from '../kernel/types.js';
 import { pickRandom, selectStochasticFallback } from './agent-move-selection.js';
+import { preparePlayableMoves } from './prepare-playable-moves.js';
 
 export class RandomAgent implements Agent {
   chooseMove(input: Parameters<Agent['chooseMove']>[0]): ReturnType<Agent['chooseMove']> {
@@ -9,20 +9,7 @@ export class RandomAgent implements Agent {
       throw new Error('RandomAgent.chooseMove called with empty legalMoves');
     }
 
-    const completedMoves: Move[] = [];
-    const stochasticMoves: Move[] = [];
-    let rng = input.rng;
-
-    for (const move of input.legalMoves) {
-      const result = completeTemplateMove(input.def, input.state, move, rng, input.runtime);
-      if (result.kind === 'completed') {
-        completedMoves.push(result.move);
-        rng = result.rng;
-      } else if (result.kind === 'stochasticUnresolved') {
-        stochasticMoves.push(result.move);
-        rng = result.rng;
-      }
-    }
+    const { completedMoves, stochasticMoves, rng } = preparePlayableMoves(input);
 
     if (completedMoves.length === 0 && stochasticMoves.length > 0) {
       const fallback = selectStochasticFallback(stochasticMoves, rng);

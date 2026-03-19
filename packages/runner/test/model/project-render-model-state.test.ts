@@ -20,6 +20,7 @@ import {
 
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 import { serializeChoiceValueIdentity } from '../../src/model/choice-value-utils.js';
+import { createAgentSeatController, createHumanSeatController } from '../../src/seat/seat-controller.js';
 import type { RenderContext } from '../../src/store/store-types.js';
 import { deriveProjectedRenderModel, type DerivedProjection } from './helpers/derive-projected-render-model.js';
 
@@ -135,7 +136,7 @@ function makeRenderContext(
     partialMove: null,
     choiceStack: [],
     playerSeats: new Map(
-      Array.from({ length: playerCount }, (_unused, player) => [asPlayerId(player), 'human' as const]),
+      Array.from({ length: playerCount }, (_unused, player) => [asPlayerId(player), createHumanSeatController()]),
     ),
     terminal: null,
     ...overrides,
@@ -658,9 +659,9 @@ describe('projectRenderModel state metadata', () => {
       state,
       def,
       makeRenderContext(state.playerCount, asPlayerId(0), {
-        playerSeats: new Map([
-          [asPlayerId(0), 'human'],
-          [asPlayerId(1), 'ai-random'],
+        playerSeats: new Map<ReturnType<typeof asPlayerId>, ReturnType<typeof createHumanSeatController> | ReturnType<typeof createAgentSeatController>>([
+          [asPlayerId(0), createHumanSeatController()],
+          [asPlayerId(1), createAgentSeatController({ kind: 'builtin', builtinId: 'random' })],
         ]),
       }),
     );

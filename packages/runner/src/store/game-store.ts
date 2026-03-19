@@ -6,6 +6,7 @@ import type {
   ChoicePendingRequest,
   EffectTraceEntry,
   GameDef,
+  GameDefRuntime,
   GameState,
   LegalMoveEnumerationResult,
   Move,
@@ -14,20 +15,31 @@ import type {
   TerminalResult,
   TriggerLogEntry,
 } from '@ludoforge/engine/runtime';
-import { asPlayerId } from '@ludoforge/engine/runtime';
+import { asPlayerId, createGameDefRuntime, type Rng } from '@ludoforge/engine/runtime';
 
 import { deriveRunnerFrame } from '../model/derive-runner-frame.js';
 import { projectRenderModel } from '../model/project-render-model.js';
 import type { RunnerFrame, RunnerProjectionBundle } from '../model/runner-frame.js';
 import type { RenderModel } from '../model/render-model.js';
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
-import type { PlayerSeatConfig } from '../session/session-types.js';
+import {
+  isAgentSeatController,
+  isHumanSeatController,
+  normalizeSeatController,
+  type PlayerSeatConfig,
+  type SeatController,
+} from '../seat/seat-controller.js';
 import { assertLifecycleTransition, lifecycleFromTerminal, type GameLifecycle } from './lifecycle-transition.js';
-import type { PartialChoice, PlayerSeat, RenderContext } from './store-types.js';
+import type { PartialChoice, RenderContext } from './store-types.js';
 import type { AnimationDetailLevel, AnimationPlaybackSpeed } from '../animation/animation-types.js';
-import { resolveAiPlaybackDelayMs, resolveAiSeat, selectAiMove, type AiPlaybackSpeed } from './ai-move-policy.js';
+import {
+  createAgentRngByPlayer,
+  resolveAiPlaybackDelayMs,
+  selectAgentMove,
+  type AiPlaybackSpeed,
+} from './ai-move-policy.js';
 import type { GameWorkerAPI, OperationStamp, WorkerError } from '../worker/game-worker-api.js';
-import type { AgentDecisionTrace, TraceBus } from '@ludoforge/engine/trace';
+import type { TraceBus } from '@ludoforge/engine/trace';
 import { getOrComputeLayout } from '../layout/layout-cache.js';
 import type { WorldLayoutModel } from '../layout/world-layout-model.js';
 
@@ -56,7 +68,7 @@ interface GameStoreState {
   readonly aiPlaybackSpeed: AiPlaybackSpeed;
   readonly aiPlaybackAutoSkip: boolean;
   readonly aiSkipRequestToken: number;
-  readonly playerSeats: ReadonlyMap<PlayerId, PlayerSeat>;
+  readonly playerSeats: ReadonlyMap<PlayerId, SeatController>;
   readonly appliedMoveEvent: AppliedMoveEvent | null;
   readonly appliedMoveSequence: number;
   readonly activePhaseBanner: string | null;
@@ -86,7 +98,7 @@ export interface OrchestrationDiagnostic {
 export interface AppliedMoveEvent {
   readonly sequence: number;
   readonly actorId: PlayerId;
-  readonly actorSeat: PlayerSeat | 'unknown';
+  readonly actorController: SeatController | 'unknown';
   readonly move: Move;
 }
 
@@ -137,7 +149,7 @@ interface RenderDerivationInputs {
   readonly selectedAction: ActionId | null;
   readonly partialMove: Move | null;
   readonly choiceStack: readonly PartialChoice[];
-  readonly playerSeats: ReadonlyMap<PlayerId, PlayerSeat>;
+  readonly playerSeats: ReadonlyMap<PlayerId, SeatController>;
   readonly terminal: TerminalResult | null;
 }
 
@@ -246,7 +258,7 @@ function resetSessionState(): Pick<
     selectedAction: null,
     partialMove: null,
     choiceStack: [],
-    playerSeats: new Map<PlayerId, PlayerSeat>(),
+    playerSeats: new Map<PlayerId, SeatController>(),
     appliedMoveEvent: null,
     appliedMoveSequence: 0,
     worldLayout: null,
@@ -262,7 +274,7 @@ function buildInitSuccessState(
   lifecycle: GameLifecycle,
   setupTrace: readonly EffectTraceEntry[],
 ): Partial<MutableGameStoreState> {
-  const humanSeat = playerConfig.find((seat) => seat.type === 'human');
+  const humanSeat = playerConfig.find((seat) => isHumanSeatController(seat.controller));
   return {
     gameDef: def,
     gameState,
@@ -334,7 +346,7 @@ function buildAppliedMoveEventPatch(
     appliedMoveEvent: {
       sequence,
       actorId,
-      actorSeat: state.playerSeats.get(actorId) ?? 'unknown',
+      actorController: state.playerSeats.get(actorId) ?? 'unknown',
       move,
     },
   };
@@ -397,24 +409,6 @@ function toChoiceValidationError(issue: ChoiceValidationIssue): WorkerError {
   };
 }
 
-function buildUncompletableTemplateDiagnostic(
-  sequence: number,
-  move: Move,
-  activePlayerID: PlayerId | null,
-  legalMoveCount: number,
-): OrchestrationDiagnostic {
-  return {
-    sequence,
-    code: 'UNCOMPLETABLE_TEMPLATE_MOVE',
-    message: `AI selected legal template move "${move.actionId}" but completion returned null.`,
-    details: {
-      actionId: move.actionId,
-      activePlayerID,
-      legalMoveCount,
-    },
-  };
-}
-
 function validateChoiceSubmission(
   pendingType: ChoicePendingRequest['type'],
   actionType: ChoiceActionType,
@@ -464,10 +458,10 @@ function validatePendingChoiceType(
 
 function buildPlayerSeatsFromConfig(
   playerConfig: readonly PlayerSeatConfig[],
-): ReadonlyMap<PlayerId, PlayerSeat> {
-  const seats = new Map<PlayerId, PlayerSeat>();
+): ReadonlyMap<PlayerId, SeatController> {
+  const seats = new Map<PlayerId, SeatController>();
   for (const seat of playerConfig) {
-    seats.set(asPlayerId(seat.playerId), seat.type);
+    seats.set(asPlayerId(seat.playerId), normalizeSeatController(seat.controller));
   }
   return seats;
 }
@@ -481,7 +475,7 @@ function validatePlayerConfig(
   if (count < min || count > max) {
     throw new Error(`Player config length ${count} outside allowed range [${min}, ${max}].`);
   }
-  if (!playerConfig.some((seat) => seat.type === 'human')) {
+  if (!playerConfig.some((seat) => isHumanSeatController(seat.controller))) {
     throw new Error('Player config must include at least one human seat.');
   }
 }
@@ -609,6 +603,8 @@ export function createGameStore(
       let sessionEpoch = 0;
       let operationToken = 0;
       let activeOperation: OperationContext | null = null;
+      let gameRuntime: GameDefRuntime | null = null;
+      let agentRngByPlayer = new Map<PlayerId, Rng>();
 
       const isCurrentOperation = (operation: OperationContext): boolean => {
         return activeOperation?.epoch === operation.epoch && activeOperation.token === operation.token;
@@ -617,6 +613,8 @@ export function createGameStore(
       const beginOperation = (kind: OperationKind): OperationContext => {
         if (kind === 'init') {
           sessionEpoch += 1;
+          gameRuntime = null;
+          agentRngByPlayer = new Map<PlayerId, Rng>();
         }
         operationToken += 1;
         const operation: OperationContext = {
@@ -813,95 +811,71 @@ export function createGameStore(
         });
       };
 
-      const MAX_AI_ILLEGAL_RETRIES = 3;
-
       const resolveSingleAiStep = async (ctx: OperationContext): Promise<AiStepOutcome> => {
         const state = get();
         if (state.gameLifecycle === 'terminal') {
           return 'terminal';
         }
-        if (state.renderModel === null) {
+        if (state.renderModel === null || state.gameDef === null || state.gameState === null || gameRuntime === null) {
           return 'no-op';
         }
         if (isHumanTurn(state.renderModel)) {
           return 'human-turn';
         }
 
-        let legalMoveResult = state.legalMoveResult ?? await bridge.enumerateLegalMoves();
-        const activeSeat = resolveAiSeat(state.playerSeats.get(state.renderModel.activePlayerID));
-
-        const aiSelection = selectAiMove(activeSeat, legalMoveResult.moves);
-        if (aiSelection === null) {
-          guardSetAndDerive(ctx, { legalMoveResult, error: null });
-          return 'no-legal-moves';
+        const activePlayerId = state.renderModel.activePlayerID;
+        const activeController = state.playerSeats.get(activePlayerId);
+        if (!isAgentSeatController(activeController)) {
+          return 'human-turn';
         }
-        let selectedMove: Move = aiSelection.move;
-        let candidateCount: number = aiSelection.candidateCount;
-        let selectedIndex: number = aiSelection.selectedIndex;
 
-        let templateMoveResult = await bridge.applyTemplateMove(selectedMove, undefined, toOperationStamp(ctx));
-        if (templateMoveResult.outcome === 'uncompletable') {
-          const nextDiagnosticSequence = state.orchestrationDiagnosticSequence + 1;
+        const legalMoveResult = state.legalMoveResult ?? await bridge.enumerateLegalMoves();
+        const agentRng = agentRngByPlayer.get(activePlayerId);
+        if (agentRng === undefined) {
           guardSetAndDerive(ctx, {
             legalMoveResult,
-            orchestrationDiagnosticSequence: nextDiagnosticSequence,
-            orchestrationDiagnostic: buildUncompletableTemplateDiagnostic(
-              nextDiagnosticSequence,
-              selectedMove,
-              state.renderModel?.activePlayerID ?? null,
-              legalMoveResult.moves.length,
-            ),
-            error: null,
-          });
-          return 'uncompletable-template';
-        }
-
-        // Defense-in-depth: retry with fresh legal moves on illegal outcome
-        if (templateMoveResult.outcome === 'illegal') {
-          for (let retry = 0; retry < MAX_AI_ILLEGAL_RETRIES; retry += 1) {
-            const freshLegalMoveResult = await bridge.enumerateLegalMoves();
-            const retrySelection = selectAiMove(activeSeat, freshLegalMoveResult.moves);
-            if (retrySelection === null) {
-              guardSetAndDerive(ctx, { legalMoveResult: freshLegalMoveResult, error: null });
-              return 'no-legal-moves';
-            }
-            legalMoveResult = freshLegalMoveResult;
-            selectedMove = retrySelection.move;
-            candidateCount = retrySelection.candidateCount;
-            selectedIndex = retrySelection.selectedIndex;
-            templateMoveResult = await bridge.applyTemplateMove(selectedMove, undefined, toOperationStamp(ctx));
-            if (templateMoveResult.outcome !== 'illegal') {
-              break;
-            }
-          }
-        }
-
-        if (templateMoveResult.outcome === 'illegal') {
-          guardSetAndDerive(ctx, {
-            legalMoveResult,
-            error: templateMoveResult.error,
+            error: toWorkerError(`Missing agent RNG for player ${String(activePlayerId)}.`),
           });
           return 'illegal-template';
         }
 
-        if (templateMoveResult.outcome === 'uncompletable') {
-          const nextDiagnosticSequence = state.orchestrationDiagnosticSequence + 1;
+        let aiSelection: ReturnType<typeof selectAgentMove>;
+        try {
+          aiSelection = selectAgentMove({
+            controller: activeController,
+            def: state.gameDef,
+            state: state.gameState,
+            playerId: activePlayerId,
+            legalMoves: legalMoveResult.moves,
+            rng: agentRng,
+            runtime: gameRuntime,
+          });
+        } catch (error) {
           guardSetAndDerive(ctx, {
             legalMoveResult,
-            orchestrationDiagnosticSequence: nextDiagnosticSequence,
-            orchestrationDiagnostic: buildUncompletableTemplateDiagnostic(
-              nextDiagnosticSequence,
-              selectedMove,
-              state.renderModel?.activePlayerID ?? null,
-              legalMoveResult.moves.length,
-            ),
-            error: null,
+            error: toWorkerError(error),
           });
-          return 'uncompletable-template';
+          return 'illegal-template';
         }
 
-        const completedMove = templateMoveResult.move;
-        const result = templateMoveResult.result;
+        if (aiSelection === null) {
+          guardSetAndDerive(ctx, { legalMoveResult, error: null });
+          return 'no-legal-moves';
+        }
+        agentRngByPlayer.set(activePlayerId, aiSelection.rng);
+
+        let result;
+        try {
+          result = await bridge.applyMove(aiSelection.move, undefined, toOperationStamp(ctx));
+        } catch (error) {
+          guardSetAndDerive(ctx, {
+            legalMoveResult,
+            error: toWorkerError(error),
+          });
+          return 'illegal-template';
+        }
+
+        const completedMove = aiSelection.move;
         const mutationInputs = await deriveMutationInputs(result.state);
         const appliedMovePatch = buildAppliedMoveEventPatch(state, completedMove);
         const lifecycle = assertLifecycleTransition(
@@ -925,16 +899,7 @@ export function createGameStore(
         }
         options?.onMoveApplied?.(completedMove);
 
-        if (options?.traceBus !== undefined) {
-          const agentDecision: AgentDecisionTrace = {
-            kind: 'builtin',
-            agent: {
-              kind: 'builtin',
-              builtinId: activeSeat === 'ai-greedy' ? 'greedy' : 'random',
-            },
-            candidateCount,
-            selectedIndex,
-          };
+        if (options?.traceBus !== undefined && aiSelection.agentDecision !== undefined) {
           const tracePlayer = state.renderModel.activePlayerID;
           const tracePlayerName = state.renderModel.players.find((p) => p.id === tracePlayer)?.displayName;
           options.traceBus.emit({
@@ -949,7 +914,7 @@ export function createGameStore(
             ...(result.conditionTrace !== undefined ? { conditionTrace: result.conditionTrace } : {}),
             ...(result.decisionTrace !== undefined ? { decisionTrace: result.decisionTrace } : {}),
             ...(result.selectorTrace !== undefined ? { selectorTrace: result.selectorTrace } : {}),
-            agentDecision,
+            agentDecision: aiSelection.agentDecision,
           });
 
           if (mutationInputs.terminal !== null) {
@@ -966,7 +931,7 @@ export function createGameStore(
 
       return {
         ...INITIAL_STATE,
-        playerSeats: new Map<PlayerId, PlayerSeat>(),
+        playerSeats: new Map<PlayerId, SeatController>(),
 
         async initGame(def, seed, playerConfig) {
           validatePlayerConfig(playerConfig, def);
@@ -982,6 +947,8 @@ export function createGameStore(
             const { state: gameState, setupTrace } = await bridge.init(def, seed, { playerCount: playerConfig.length }, toOperationStamp(operation));
             const legalMoveResult = await bridge.enumerateLegalMoves();
             const terminal = await bridge.terminalResult();
+            gameRuntime = createGameDefRuntime(def);
+            agentRngByPlayer = new Map(createAgentRngByPlayer(seed, gameState.playerCount));
             const lifecycle = assertLifecycleTransition(
               get().gameLifecycle,
               lifecycleFromTerminal(terminal),
@@ -1023,6 +990,8 @@ export function createGameStore(
             const gameState = await bridge.getState();
             const legalMoveResult = await bridge.enumerateLegalMoves();
             const terminal = await bridge.terminalResult();
+            gameRuntime = createGameDefRuntime(def);
+            agentRngByPlayer = new Map(createAgentRngByPlayer(seed, gameState.playerCount));
             const lifecycle = assertLifecycleTransition(
               get().gameLifecycle,
               lifecycleFromTerminal(terminal),

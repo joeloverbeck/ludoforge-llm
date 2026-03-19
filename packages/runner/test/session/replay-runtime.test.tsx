@@ -5,6 +5,7 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { asActionId } from '@ludoforge/engine/runtime';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { createHumanSeatController } from '../../src/seat/seat-controller.js';
 import type { SessionState } from '../../src/session/session-types.js';
 import { useReplayRuntime } from '../../src/session/replay-runtime.js';
 
@@ -180,7 +181,7 @@ describe('useReplayRuntime', () => {
         gameId: 'fitl',
         seed: 17,
         moveHistory: [],
-        playerConfig: [{ playerId: 1, type: 'human' as const }],
+        playerConfig: [{ playerId: 1, controller: createHumanSeatController() }],
       },
     }));
 
@@ -199,7 +200,7 @@ describe('useReplayRuntime', () => {
         gameId: 'fitl',
         seed: 17,
         moveHistory: [{ actionId: asActionId('move:a'), params: {} }],
-        playerConfig: [{ playerId: 1, type: 'human' as const }],
+        playerConfig: [{ playerId: 1, controller: createHumanSeatController() }],
       },
     }));
 
@@ -222,7 +223,7 @@ describe('useReplayRuntime', () => {
         gameId: 'fitl',
         seed: 17,
         moveHistory: [],
-        playerConfig: [{ playerId: 1, type: 'human' as const }],
+        playerConfig: [{ playerId: 1, controller: createHumanSeatController() }],
       },
     }));
 
@@ -245,7 +246,7 @@ describe('useReplayRuntime', () => {
         gameId: 'fitl',
         seed: 17,
         moveHistory: [],
-        playerConfig: [{ playerId: 1, type: 'human' as const }],
+        playerConfig: [{ playerId: 1, controller: createHumanSeatController() }],
       },
     }));
 
@@ -269,7 +270,7 @@ describe('useReplayRuntime', () => {
         gameId: 'fitl',
         seed: 17,
         moveHistory: [],
-        playerConfig: [{ playerId: 1, type: 'human' as const }],
+        playerConfig: [{ playerId: 1, controller: createHumanSeatController() }],
       },
     }));
 

@@ -5,6 +5,7 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { asActionId } from '@ludoforge/engine/runtime';
 
+import { createHumanSeatController } from '../../src/seat/seat-controller.js';
 import type { SessionState } from '../../src/session/session-types.js';
 import { useActiveGameRuntime } from '../../src/session/active-game-runtime.js';
 
@@ -113,7 +114,7 @@ describe('useActiveGameRuntime', () => {
         screen: 'activeGame',
         gameId: 'fitl',
         seed: 17,
-        playerConfig: [{ playerId: 1, type: 'human' }],
+        playerConfig: [{ playerId: 1, controller: createHumanSeatController() }],
         initialMoveHistory: [],
       },
       onMoveApplied,
@@ -141,7 +142,7 @@ describe('useActiveGameRuntime', () => {
         screen: 'activeGame',
         gameId: 'fitl',
         seed: 17,
-        playerConfig: [{ playerId: 1, type: 'human' }],
+        playerConfig: [{ playerId: 1, controller: createHumanSeatController() }],
         initialMoveHistory: moveHistory,
       },
     }));
@@ -153,7 +154,7 @@ describe('useActiveGameRuntime', () => {
     expect(testDoubles.initGameFromHistory).toHaveBeenCalledWith(
       { metadata: { id: 'fitl' } },
       17,
-      [{ playerId: 1, type: 'human' }],
+      [{ playerId: 1, controller: createHumanSeatController() }],
       moveHistory,
     );
   });
@@ -164,7 +165,7 @@ describe('useActiveGameRuntime', () => {
         screen: 'activeGame',
         gameId: 'fitl',
         seed: 17,
-        playerConfig: [{ playerId: 1, type: 'human' }],
+        playerConfig: [{ playerId: 1, controller: createHumanSeatController() }],
         initialMoveHistory: [],
       },
     }));
@@ -186,7 +187,7 @@ describe('useActiveGameRuntime', () => {
         screen: 'activeGame',
         gameId: 'fitl',
         seed: 17,
-        playerConfig: [{ playerId: 1, type: 'human' }],
+        playerConfig: [{ playerId: 1, controller: createHumanSeatController() }],
         initialMoveHistory: [],
       },
     }));

@@ -5,6 +5,7 @@ import { asActionId, asPlayerId, initialState, type AttributeValue, type ChoiceP
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 import { deriveRunnerFrame } from '../../src/model/derive-runner-frame.js';
 import { projectRenderModel } from '../../src/model/project-render-model.js';
+import { createHumanSeatController } from '../../src/seat/seat-controller.js';
 import type { RenderContext } from '../../src/store/store-types.js';
 
 const asDecisionKey = (value: string): DecisionKey => value as DecisionKey;
@@ -66,8 +67,8 @@ function makeContext(overrides: Partial<RenderContext> = {}): RenderContext {
     partialMove: null,
     choiceStack: [],
     playerSeats: new Map([
-      [asPlayerId(0), 'human'],
-      [asPlayerId(1), 'human'],
+      [asPlayerId(0), createHumanSeatController()],
+      [asPlayerId(1), createHumanSeatController()],
     ]),
     terminal: null,
     ...overrides,

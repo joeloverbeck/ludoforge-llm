@@ -8,6 +8,7 @@ import type {
 } from '@ludoforge/engine/runtime';
 import { asActionId, asPlayerId } from '@ludoforge/engine/runtime';
 
+import { createAgentSeatController, createHumanSeatController } from '../../src/seat/seat-controller.js';
 import type { PartialChoice, RenderContext } from '../../src/store/store-types';
 
 const asDecisionKey = (value: string): DecisionKey => value as DecisionKey;
@@ -59,14 +60,14 @@ describe('store-types', () => {
       selectedAction: asActionId('play-card'),
       partialMove: { actionId: asActionId('play-card'), params: {} },
       choiceStack: [],
-      playerSeats: new Map([
-        [asPlayerId(0), 'human'],
-        [asPlayerId(1), 'ai-random'],
+      playerSeats: new Map<ReturnType<typeof asPlayerId>, ReturnType<typeof createHumanSeatController> | ReturnType<typeof createAgentSeatController>>([
+        [asPlayerId(0), createHumanSeatController()],
+        [asPlayerId(1), createAgentSeatController({ kind: 'builtin', builtinId: 'random' })],
       ]),
       terminal,
     };
 
-    expect(context.playerSeats.get(asPlayerId(0))).toBe('human');
+    expect(context.playerSeats.get(asPlayerId(0))).toEqual(createHumanSeatController());
     expectTypeOf(context).toMatchTypeOf<RenderContext>();
   });
 });

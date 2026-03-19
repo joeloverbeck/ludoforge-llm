@@ -16,6 +16,7 @@ import {
   type TerminalResult,
   type Token,
 } from '@ludoforge/engine/runtime';
+import { isHumanSeatController } from '../seat/seat-controller.js';
 
 import type {
   RunnerAction,
@@ -1120,7 +1121,7 @@ function derivePlayers(
     const faction = factionByPlayer.get(playerId) ?? null;
     return {
       id: playerId,
-      isHuman: context.playerSeats.get(playerId) === 'human',
+      isHuman: isHumanSeatController(context.playerSeats.get(playerId)),
       isActive: playerId === state.activePlayer,
       isEliminated: state.perPlayerVars[index]?.eliminated === true,
       factionId: faction,

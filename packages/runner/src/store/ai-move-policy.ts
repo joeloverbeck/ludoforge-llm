@@ -1,14 +1,38 @@
-import type { Move } from '@ludoforge/engine/runtime';
+import { createAgent, normalizeAgentDescriptor } from '@ludoforge/engine/agents';
+import type {
+  AgentDecisionTrace,
+  AgentDescriptor,
+  GameDef,
+  GameDefRuntime,
+  GameState,
+  Move,
+  PlayerId,
+  Rng,
+} from '@ludoforge/engine/runtime';
+import { createRng } from '@ludoforge/engine/runtime';
 
-import type { PlayerSeat } from './store-types.js';
+import {
+  isAgentSeatController,
+  normalizeSeatController,
+  type SeatController,
+} from '../seat/seat-controller.js';
 
-export type AiSeat = Extract<PlayerSeat, 'ai-random' | 'ai-greedy'>;
 export type AiPlaybackSpeed = '1x' | '2x' | '4x';
 
-export interface AiMoveSelectionResult {
+export interface AgentMoveSelectionResult {
   readonly move: Move;
-  readonly selectedIndex: number;
-  readonly candidateCount: number;
+  readonly rng: Rng;
+  readonly agentDecision?: AgentDecisionTrace;
+}
+
+export interface SelectAgentMoveInput {
+  readonly controller: SeatController;
+  readonly def: GameDef;
+  readonly state: GameState;
+  readonly playerId: PlayerId;
+  readonly legalMoves: readonly Move[];
+  readonly rng: Rng;
+  readonly runtime: GameDefRuntime;
 }
 
 const MIN_RANDOM = 0;
@@ -19,6 +43,7 @@ const SPEED_MULTIPLIERS: Readonly<Record<AiPlaybackSpeed, number>> = {
   '2x': 2,
   '4x': 4,
 };
+const AGENT_RNG_MIX = 0x9e3779b97f4a7c15n;
 
 function clampRandom(value: number): number {
   if (!Number.isFinite(value)) {
@@ -27,38 +52,49 @@ function clampRandom(value: number): number {
   return Math.min(MAX_RANDOM, Math.max(MIN_RANDOM, value));
 }
 
-export function selectAiMove(
-  seat: AiSeat,
-  legalMoves: readonly Move[],
-  random: () => number = Math.random,
-): AiMoveSelectionResult | null {
-  if (legalMoves.length === 0) {
+export function resolveAgentDescriptor(controller: SeatController | undefined): AgentDescriptor {
+  const normalized = normalizeSeatController(controller);
+  if (!isAgentSeatController(normalized)) {
+    throw new Error('Cannot resolve an agent descriptor for a human-controlled seat.');
+  }
+  return normalizeAgentDescriptor(normalized.agent);
+}
+
+export function selectAgentMove(input: SelectAgentMoveInput): AgentMoveSelectionResult | null {
+  if (input.legalMoves.length === 0) {
     return null;
   }
 
-  if (seat === 'ai-greedy') {
-    return {
-      move: legalMoves[0]!,
-      selectedIndex: 0,
-      candidateCount: legalMoves.length,
-    };
-  }
-
-  const normalized = clampRandom(random());
-  const index = Math.floor(normalized * legalMoves.length);
-  const move = legalMoves[index] ?? legalMoves[0]!;
-  return {
-    move,
-    selectedIndex: index,
-    candidateCount: legalMoves.length,
-  };
+  const descriptor = resolveAgentDescriptor(input.controller);
+  const agent = createAgent(descriptor);
+  return agent.chooseMove({
+    def: input.def,
+    state: input.state,
+    playerId: input.playerId,
+    legalMoves: input.legalMoves,
+    rng: input.rng,
+    runtime: input.runtime,
+  });
 }
 
-export function resolveAiSeat(seat: PlayerSeat | undefined): AiSeat {
-  if (seat === 'ai-greedy') {
-    return 'ai-greedy';
+export function createAgentRngByPlayer(seed: number, playerCount: number): ReadonlyMap<PlayerId, Rng> {
+  return new Map(
+    Array.from(
+      { length: playerCount },
+      (_unused, playerIndex) => {
+        const playerId = playerIndex as PlayerId;
+        return [playerId, createRng(BigInt(seed) ^ (BigInt(playerIndex + 1) * AGENT_RNG_MIX))] as const;
+      },
+    ),
+  );
+}
+
+export function selectRandomIndex(length: number, random: () => number = Math.random): number {
+  if (length <= 0) {
+    throw new Error('length must be greater than zero');
   }
-  return 'ai-random';
+  const normalized = clampRandom(random());
+  return Math.floor(normalized * length);
 }
 
 export function resolveAiPlaybackDelayMs(speed: AiPlaybackSpeed, baseDelayMs = BASE_STEP_DELAY_MS): number {

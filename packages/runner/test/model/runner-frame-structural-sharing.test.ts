@@ -11,6 +11,7 @@ import {
 } from '@ludoforge/engine/runtime';
 
 import { deriveRunnerFrame } from '../../src/model/derive-runner-frame.js';
+import { createHumanSeatController } from '../../src/seat/seat-controller.js';
 import type { RenderContext } from '../../src/store/store-types.js';
 
 function compileFixture(): GameDef {
@@ -82,8 +83,8 @@ function makeContext(overrides: Partial<RenderContext> = {}): RenderContext {
     partialMove: null,
     choiceStack: [],
     playerSeats: new Map([
-      [asPlayerId(0), 'human' as const],
-      [asPlayerId(1), 'human' as const],
+      [asPlayerId(0), createHumanSeatController()],
+      [asPlayerId(1), createHumanSeatController()],
     ]),
     terminal: null,
     ...overrides,

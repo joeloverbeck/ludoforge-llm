@@ -4,6 +4,7 @@ import type { StoreApi } from 'zustand';
 import type { WorldLayoutModel } from '../layout/world-layout-model.js';
 import type { RenderModel } from '../model/render-model.js';
 import type { AppliedMoveEvent, GameStore } from '../store/game-store.js';
+import { isAgentSeatController } from '../seat/seat-controller.js';
 import { formatIdAsDisplayName } from '../utils/format-display-name.js';
 
 const PLAYER_ANNOUNCEMENT_Y_OFFSET = 72;
@@ -93,7 +94,7 @@ export function resolveActionAnnouncementSpec(
   worldLayout: WorldLayoutModel | null,
   event: AppliedMoveEvent,
 ): PresentationActionAnnouncementSpec | null {
-  if (!isAiSeat(event.actorSeat)) {
+  if (!isAiSeat(event.actorController)) {
     return null;
   }
   if (renderModel === null || worldLayout === null) {
@@ -116,8 +117,8 @@ export function resolveActionAnnouncementSpec(
   };
 }
 
-function isAiSeat(seat: AppliedMoveEvent['actorSeat']): boolean {
-  return seat !== 'human' && seat !== 'unknown';
+function isAiSeat(controller: AppliedMoveEvent['actorController']): boolean {
+  return controller !== 'unknown' && isAgentSeatController(controller);
 }
 
 function formatMoveSummary(move: Move): string {

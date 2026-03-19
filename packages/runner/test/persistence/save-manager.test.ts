@@ -8,6 +8,7 @@ import {
   type RunnerPersistenceDatabase,
   type SavedGameRecord,
 } from '../../src/persistence/game-db.js';
+import { createAgentSeatController, createHumanSeatController } from '../../src/seat/seat-controller.js';
 import { deleteSavedGame, listSavedGames, loadGame, saveGame } from '../../src/persistence/save-manager.js';
 
 const MOVE_A: Move = {
@@ -40,8 +41,8 @@ function createBaseRecord(overrides: Partial<Omit<SavedGameRecord, 'id'>> = {}):
     seed: 42,
     moveHistory: [MOVE_A, MOVE_B],
     playerConfig: [
-      { playerId: 0, type: 'human' },
-      { playerId: 1, type: 'ai-random' },
+      { playerId: 0, controller: createHumanSeatController() },
+      { playerId: 1, controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }) },
     ],
     playerId: 0,
     moveCount: 2,

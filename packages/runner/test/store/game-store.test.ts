@@ -14,6 +14,7 @@ import {
 } from '@ludoforge/engine/runtime';
 
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
+import { createAgentSeatController, createHumanSeatController } from '../../src/seat/seat-controller.js';
 import { createGameStore } from '../../src/store/game-store.js';
 import { createGameWorker, type GameWorkerAPI, type WorkerError } from '../../src/worker/game-worker-api.js';
 import { CHOOSE_MIXED_TEST_DEF, CHOOSE_N_TEST_DEF, CHOOSE_ONE_TEST_DEF } from '../worker/test-fixtures.js';
@@ -22,8 +23,13 @@ import type { PlayerSeatConfig } from '../../src/session/session-types.js';
 const asDecisionKey = (value: string): DecisionKey => value as DecisionKey;
 
 const TWO_PLAYER_CONFIG: readonly PlayerSeatConfig[] = [
-  { playerId: 0, type: 'human' },
-  { playerId: 1, type: 'ai-random' },
+  { playerId: 0, controller: createHumanSeatController() },
+  { playerId: 1, controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }) },
+];
+
+const GREEDY_TWO_PLAYER_CONFIG: readonly PlayerSeatConfig[] = [
+  { playerId: 0, controller: createHumanSeatController() },
+  { playerId: 1, controller: createAgentSeatController({ kind: 'builtin', builtinId: 'greedy' }) },
 ];
 
 type ChoiceScalar = Exclude<Move['params'][string], readonly unknown[]>;
@@ -557,7 +563,7 @@ describe('createGameStore', () => {
     expect(store.getState().appliedMoveEvent).toEqual({
       sequence: 1,
       actorId: asPlayerId(0),
-      actorSeat: 'human',
+      actorController: createHumanSeatController(),
       move: { actionId: asActionId('tick'), params: {} },
     });
   });
@@ -648,21 +654,17 @@ describe('createGameStore', () => {
       .fn<GameWorkerAPI['enumerateLegalMoves']>()
       .mockResolvedValueOnce({ moves: [aiMove], warnings: [] })
       .mockResolvedValue({ moves: [aiMove], warnings: [] });
-    const applyTemplateMove = vi.fn<GameWorkerAPI['applyTemplateMove']>(async () => ({
-      outcome: 'applied',
-      move: aiMove,
-      result: {
-        state: humanState,
-        effectTrace: [],
-        triggerFirings: [],
-        warnings: [],
-      },
+    const applyMove = vi.fn<GameWorkerAPI['applyMove']>(async () => ({
+      state: humanState,
+      effectTrace: [],
+      triggerFirings: [],
+      warnings: [],
     }));
     const bridge = createBridgeStub({
       init: () => ({ state: aiState, setupTrace: [] }),
       enumerateLegalMoves,
       terminalResult: () => null,
-      applyTemplateMove,
+      applyMove,
     });
     const store = createStoreWithDefaultVisuals(bridge);
 
@@ -675,7 +677,7 @@ describe('createGameStore', () => {
     await store.getState().resolveAiTurn();
 
     const afterResolve = store.getState();
-    expect(applyTemplateMove).toHaveBeenCalledTimes(1);
+    expect(applyMove).toHaveBeenCalledTimes(1);
     expect(afterResolve.gameState?.globalVars.round).toBe(1);
     expect(afterResolve.renderModel?.activePlayerID).toEqual(asPlayerId(0));
     expect(afterResolve.renderModel?.players.find((player) => player.id === asPlayerId(0))?.isHuman).toBe(true);
@@ -708,7 +710,7 @@ describe('createGameStore', () => {
     expect(store.getState().renderModel).toBeNull();
   });
 
-  it('resolveAiTurn uses seat policy to select AI move', async () => {
+  it('resolveAiTurn uses seat controller descriptors to select AI move', async () => {
     const def = compileStoreFixture(8);
     const aiState: GameState = {
       ...initialState(def, 31, 2).state,
@@ -716,37 +718,28 @@ describe('createGameStore', () => {
     };
     const moveA: Move = { actionId: asActionId('tick'), params: { pick: 'a' } };
     const moveB: Move = { actionId: asActionId('tick'), params: { pick: 'b' } };
-    const applyTemplateMove = vi.fn<GameWorkerAPI['applyTemplateMove']>(async (move) => ({
-      outcome: 'applied',
-      move,
-      result: {
-        state: {
-          ...aiState,
-          activePlayer: asPlayerId(0),
-        },
-        effectTrace: [],
-        triggerFirings: [],
-        warnings: [],
+    const applyMove = vi.fn<GameWorkerAPI['applyMove']>(async () => ({
+      state: {
+        ...aiState,
+        activePlayer: asPlayerId(0),
       },
+      effectTrace: [],
+      triggerFirings: [],
+      warnings: [],
     }));
     const bridge = createBridgeStub({
       init: () => ({ state: aiState, setupTrace: [] }),
       enumerateLegalMoves: () => ({ moves: [moveA, moveB], warnings: [] }),
       terminalResult: () => null,
-      applyTemplateMove,
+      applyMove,
     });
     const store = createStoreWithDefaultVisuals(bridge);
-    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.9);
 
-    try {
-      await store.getState().initGame(def, 31, TWO_PLAYER_CONFIG);
-      await store.getState().resolveAiTurn();
-    } finally {
-      randomSpy.mockRestore();
-    }
+    await store.getState().initGame(def, 31, GREEDY_TWO_PLAYER_CONFIG);
+    await store.getState().resolveAiTurn();
 
-    expect(applyTemplateMove).toHaveBeenCalledTimes(1);
-    expect(applyTemplateMove.mock.calls[0]?.[0]).toEqual(moveB);
+    expect(applyMove).toHaveBeenCalledTimes(1);
+    expect(applyMove.mock.calls[0]?.[0]).toEqual(moveA);
   });
 
   it('resolveAiTurn preserves state when AI turn has no legal moves', async () => {
@@ -775,41 +768,26 @@ describe('createGameStore', () => {
     expect(store.getState().error).toBeNull();
   });
 
-  it('resolveAiTurn exits on uncompletable template move with diagnostic error', async () => {
+  it('resolveAiTurn preserves state and surfaces selection errors', async () => {
     const def = compileStoreFixture(8);
     const aiState: GameState = {
       ...initialState(def, 30, 2).state,
       activePlayer: asPlayerId(1),
     };
-    const templateMove: Move = { actionId: asActionId('tick'), params: {} };
-    const applyTemplateMove = vi.fn<GameWorkerAPI['applyTemplateMove']>(async () => ({ outcome: 'uncompletable' }));
-    const applyMove = vi.fn<GameWorkerAPI['applyMove']>(async () => {
-      throw new Error('applyMove should not be called for AI template application');
-    });
     const bridge = createBridgeStub({
       init: () => ({ state: aiState, setupTrace: [] }),
-      enumerateLegalMoves: () => ({ moves: [templateMove], warnings: [] }),
+      enumerateLegalMoves: () => ({ moves: [{ actionId: asActionId('tick'), params: {} }], warnings: [] }),
       terminalResult: () => null,
-      applyTemplateMove,
-      applyMove,
     });
     const store = createStoreWithDefaultVisuals(bridge);
 
-    await store.getState().initGame(def, 30, TWO_PLAYER_CONFIG);
+    await store.getState().initGame(def, 30, [{ playerId: 0, controller: createHumanSeatController() }, { playerId: 1, controller: createAgentSeatController() }]);
     await store.getState().resolveAiTurn();
 
-    expect(applyTemplateMove).toHaveBeenCalledTimes(1);
-    expect(applyMove).not.toHaveBeenCalled();
     expect(store.getState().gameState).toEqual(aiState);
     expect(store.getState().renderModel?.activePlayerID).toEqual(asPlayerId(1));
-    expect(store.getState().error).toBeNull();
-    expect(store.getState().orchestrationDiagnostic).toMatchObject({
-      code: 'UNCOMPLETABLE_TEMPLATE_MOVE',
-      message: expect.stringContaining('completion returned null'),
-      details: expect.objectContaining({
-        actionId: asActionId('tick'),
-        activePlayerID: asPlayerId(1),
-      }),
+    expect(store.getState().error).toMatchObject({
+      code: 'INTERNAL_ERROR',
     });
   });
 
@@ -828,21 +806,17 @@ describe('createGameStore', () => {
       activePlayer: asPlayerId(1),
     };
     const aiMove: Move = { actionId: asActionId('tick'), params: {} };
-    const applyTemplateMove = vi.fn<GameWorkerAPI['applyTemplateMove']>(async () => ({
-      outcome: 'applied',
-      move: aiMove,
-      result: {
-        state: stillAiState,
-        effectTrace: [],
-        triggerFirings: [],
-        warnings: [],
-      },
+    const applyMove = vi.fn<GameWorkerAPI['applyMove']>(async () => ({
+      state: stillAiState,
+      effectTrace: [],
+      triggerFirings: [],
+      warnings: [],
     }));
     const bridge = createBridgeStub({
       init: () => ({ state: aiState, setupTrace: [] }),
       enumerateLegalMoves: () => ({ moves: [aiMove], warnings: [] }),
       terminalResult: () => null,
-      applyTemplateMove,
+      applyMove,
     });
     const store = createStoreWithDefaultVisuals(bridge);
 
@@ -850,7 +824,7 @@ describe('createGameStore', () => {
     const outcome = await store.getState().resolveAiStep();
 
     expect(outcome).toBe('advanced');
-    expect(applyTemplateMove).toHaveBeenCalledTimes(1);
+    expect(applyMove).toHaveBeenCalledTimes(1);
     expect(store.getState().renderModel?.activePlayerID).toEqual(asPlayerId(1));
   });
 
@@ -869,21 +843,17 @@ describe('createGameStore', () => {
       activePlayer: asPlayerId(1),
     };
     const aiMove: Move = { actionId: asActionId('tick'), params: {} };
-    const applyTemplateMove = vi.fn<GameWorkerAPI['applyTemplateMove']>(async () => ({
-      outcome: 'applied',
-      move: aiMove,
-      result: {
-        state: stillAiState,
-        effectTrace: [],
-        triggerFirings: [],
-        warnings: [],
-      },
+    const applyMove = vi.fn<GameWorkerAPI['applyMove']>(async () => ({
+      state: stillAiState,
+      effectTrace: [],
+      triggerFirings: [],
+      warnings: [],
     }));
     const bridge = createBridgeStub({
       init: () => ({ state: aiState, setupTrace: [] }),
       enumerateLegalMoves: () => ({ moves: [aiMove], warnings: [] }),
       terminalResult: () => null,
-      applyTemplateMove,
+      applyMove,
     });
     const onMoveApplied = vi.fn<(move: Move) => void>();
     const store = createStoreWithDefaultVisuals(bridge, onMoveApplied);
@@ -898,7 +868,7 @@ describe('createGameStore', () => {
     expect(store.getState().appliedMoveEvent).toEqual({
       sequence: 1,
       actorId: asPlayerId(1),
-      actorSeat: 'ai-random',
+      actorController: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }),
       move: aiMove,
     });
   });
@@ -937,21 +907,6 @@ describe('createGameStore', () => {
       },
       terminalResult: () => null,
       legalChoices: () => ({ kind: 'complete', complete: true }),
-      applyTemplateMove: (move) => {
-        if ('ai' in move.params) {
-          currentState = afterAi;
-        }
-        return {
-          outcome: 'applied',
-          move,
-          result: {
-            state: currentState,
-            effectTrace: [],
-            triggerFirings: [],
-            warnings: [],
-          },
-        };
-      },
       applyMove: (move) => {
         if ('ai' in move.params) {
           currentState = afterAi;
@@ -987,7 +942,7 @@ describe('createGameStore', () => {
     expect(store.getState().appliedMoveEvent).toEqual({
       sequence: 3,
       actorId: asPlayerId(0),
-      actorSeat: 'human',
+      actorController: createHumanSeatController(),
       move: humanMove,
     });
   });
@@ -1002,7 +957,7 @@ describe('createGameStore', () => {
     expect(store.getState().error).toBeNull();
   });
 
-  it('resolveAiStep executes AI template moves through applyTemplateMove', async () => {
+  it('resolveAiStep executes completed AI moves through applyMove', async () => {
     const def = compileStoreFixture(8);
     const aiState: GameState = {
       ...initialState(def, 60, 2).state,
@@ -1013,26 +968,17 @@ describe('createGameStore', () => {
       globalVars: { ...aiState.globalVars, round: 1 },
       activePlayer: asPlayerId(0),
     };
-    const templateMove: Move = { actionId: asActionId('tick'), params: {} };
-    const completedMove: Move = { actionId: asActionId('tick'), params: { filled: 'yes' } };
-    const applyTemplateMove = vi.fn<GameWorkerAPI['applyTemplateMove']>(async () => ({
-      outcome: 'applied',
-      move: completedMove,
-      result: {
-        state: completedState,
-        effectTrace: [],
-        triggerFirings: [],
-        warnings: [],
-      },
+    const completedMove: Move = { actionId: asActionId('tick'), params: {} };
+    const applyMove = vi.fn<GameWorkerAPI['applyMove']>(async () => ({
+      state: completedState,
+      effectTrace: [],
+      triggerFirings: [],
+      warnings: [],
     }));
-    const applyMove = vi.fn<GameWorkerAPI['applyMove']>(async () => {
-      throw new Error('applyMove should not be called for AI template execution path');
-    });
     const bridge = createBridgeStub({
       init: () => ({ state: aiState, setupTrace: [] }),
-      enumerateLegalMoves: () => ({ moves: [templateMove], warnings: [] }),
+      enumerateLegalMoves: () => ({ moves: [completedMove], warnings: [] }),
       terminalResult: () => null,
-      applyTemplateMove,
       applyMove,
     });
     const store = createStoreWithDefaultVisuals(bridge);
@@ -1041,70 +987,54 @@ describe('createGameStore', () => {
     const outcome = await store.getState().resolveAiStep();
 
     expect(outcome).toBe('advanced');
-    expect(applyTemplateMove).toHaveBeenCalledTimes(1);
-    expect(applyTemplateMove).toHaveBeenCalledWith(templateMove, undefined, expect.any(Object));
-    expect(applyMove).not.toHaveBeenCalled();
+    expect(applyMove).toHaveBeenCalledTimes(1);
+    expect(applyMove).toHaveBeenCalledWith(completedMove, undefined, expect.any(Object));
   });
 
-  it('resolveAiStep returns uncompletable-template when applyTemplateMove returns uncompletable', async () => {
+  it('resolveAiStep returns illegal-template when agent selection fails', async () => {
     const def = compileStoreFixture(8);
     const aiState: GameState = {
       ...initialState(def, 61, 2).state,
       activePlayer: asPlayerId(1),
     };
-    const templateMove: Move = { actionId: asActionId('tick'), params: {} };
-    const applyTemplateMove = vi.fn<GameWorkerAPI['applyTemplateMove']>(async () => ({ outcome: 'uncompletable' }));
     const applyMove = vi.fn<GameWorkerAPI['applyMove']>(async () => {
-      throw new Error('applyMove should not be called when AI template execution is uncompletable');
+      throw new Error('applyMove should not be called when agent selection fails');
     });
     const bridge = createBridgeStub({
       init: () => ({ state: aiState, setupTrace: [] }),
-      enumerateLegalMoves: () => ({ moves: [templateMove], warnings: [] }),
+      enumerateLegalMoves: () => ({ moves: [{ actionId: asActionId('unknown-action'), params: {} }], warnings: [] }),
       terminalResult: () => null,
-      applyTemplateMove,
       applyMove,
     });
     const store = createStoreWithDefaultVisuals(bridge);
 
-    await store.getState().initGame(def, 61, TWO_PLAYER_CONFIG);
+    await store.getState().initGame(def, 61, GREEDY_TWO_PLAYER_CONFIG);
     const outcome = await store.getState().resolveAiStep();
 
-    expect(outcome).toBe('uncompletable-template');
-    expect(applyTemplateMove).toHaveBeenCalledTimes(1);
+    expect(outcome).toBe('illegal-template');
     expect(applyMove).not.toHaveBeenCalled();
-    expect(store.getState().error).toBeNull();
-    expect(store.getState().orchestrationDiagnostic).toMatchObject({
-      code: 'UNCOMPLETABLE_TEMPLATE_MOVE',
-      message: expect.stringContaining('completion returned null'),
-      details: expect.objectContaining({
-        actionId: asActionId('tick'),
-        activePlayerID: asPlayerId(1),
-      }),
+    expect(store.getState().error).toMatchObject({
+      code: 'INTERNAL_ERROR',
     });
   });
 
-  it('resolveAiStep returns illegal-template and stores worker error when applyTemplateMove returns illegal', async () => {
+  it('resolveAiStep returns illegal-template and stores worker error when applyMove fails', async () => {
     const def = compileStoreFixture(8);
     const aiState: GameState = {
       ...initialState(def, 62, 2).state,
       activePlayer: asPlayerId(1),
     };
-    const templateMove: Move = { actionId: asActionId('tick'), params: {} };
-    const applyTemplateMove = vi.fn<GameWorkerAPI['applyTemplateMove']>(async () => ({
-      outcome: 'illegal',
-      error: {
-        code: 'ILLEGAL_MOVE',
-        message: 'forced illegal template move',
-      },
-    }));
+    const aiMove: Move = { actionId: asActionId('tick'), params: {} };
     const applyMove = vi.fn<GameWorkerAPI['applyMove']>(async () => {
-      throw new Error('applyMove should not be called when applyTemplateMove returns illegal');
+      throw {
+        code: 'ILLEGAL_MOVE',
+        message: 'forced illegal move',
+      } satisfies WorkerError;
     });
     const bridge = createBridgeStub({
       init: () => ({ state: aiState, setupTrace: [] }),
-      enumerateLegalMoves: () => ({ moves: [templateMove], warnings: [] }),
+      enumerateLegalMoves: () => ({ moves: [aiMove], warnings: [] }),
       terminalResult: () => null,
-      applyTemplateMove,
       applyMove,
     });
     const store = createStoreWithDefaultVisuals(bridge);
@@ -1113,13 +1043,11 @@ describe('createGameStore', () => {
     const outcome = await store.getState().resolveAiStep();
 
     expect(outcome).toBe('illegal-template');
-    // 1 initial attempt + 3 retries with fresh legal moves (all return illegal)
-    expect(applyTemplateMove).toHaveBeenCalledTimes(4);
-    expect(applyMove).not.toHaveBeenCalled();
+    expect(applyMove).toHaveBeenCalledTimes(1);
     expect(store.getState().gameState).toEqual(aiState);
     expect(store.getState().error).toMatchObject({
       code: 'ILLEGAL_MOVE',
-      message: 'forced illegal template move',
+      message: 'forced illegal move',
     });
   });
 
@@ -1583,10 +1511,10 @@ describe('createGameStore', () => {
     });
     const store = createStoreWithDefaultVisuals(bridge);
     const fourPlayerConfig: readonly PlayerSeatConfig[] = [
-      { playerId: 0, type: 'human' },
-      { playerId: 1, type: 'ai-random' },
-      { playerId: 2, type: 'ai-greedy' },
-      { playerId: 3, type: 'ai-random' },
+      { playerId: 0, controller: createHumanSeatController() },
+      { playerId: 1, controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }) },
+      { playerId: 2, controller: createAgentSeatController({ kind: 'builtin', builtinId: 'greedy' }) },
+      { playerId: 3, controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }) },
     ];
 
     await store.getState().initGame(fourPlayerDef, 40, fourPlayerConfig);
@@ -1595,7 +1523,7 @@ describe('createGameStore', () => {
     expect(initSpy.mock.calls[0]?.[2]).toEqual({ playerCount: 4 });
   });
 
-  it('initGame with ai-greedy seats builds correct playerSeats map', async () => {
+  it('initGame with builtin greedy seats builds correct playerSeats map', async () => {
     const def = compileStoreFixture(5);
     const bridge = createBridgeStub({
       init: (_d, _s, options) => initialState(def, 41, options?.playerCount),
@@ -1604,15 +1532,15 @@ describe('createGameStore', () => {
     });
     const store = createStoreWithDefaultVisuals(bridge);
     const mixedConfig: readonly PlayerSeatConfig[] = [
-      { playerId: 0, type: 'human' },
-      { playerId: 1, type: 'ai-greedy' },
+      { playerId: 0, controller: createHumanSeatController() },
+      { playerId: 1, controller: createAgentSeatController({ kind: 'builtin', builtinId: 'greedy' }) },
     ];
 
     await store.getState().initGame(def, 41, mixedConfig);
 
     const seats = store.getState().playerSeats;
-    expect(seats.get(asPlayerId(0))).toBe('human');
-    expect(seats.get(asPlayerId(1))).toBe('ai-greedy');
+    expect(seats.get(asPlayerId(0))).toEqual(createHumanSeatController());
+    expect(seats.get(asPlayerId(1))).toEqual(createAgentSeatController({ kind: 'builtin', builtinId: 'greedy' }));
   });
 
   it('initGame rejects playerConfig below min', async () => {
@@ -1620,7 +1548,7 @@ describe('createGameStore', () => {
     const bridge = createBridgeStub({});
     const store = createStoreWithDefaultVisuals(bridge);
     const tooFew: readonly PlayerSeatConfig[] = [
-      { playerId: 0, type: 'human' },
+      { playerId: 0, controller: createHumanSeatController() },
     ];
 
     await expect(store.getState().initGame(def, 42, tooFew)).rejects.toThrow(/outside allowed range/u);
@@ -1631,9 +1559,9 @@ describe('createGameStore', () => {
     const bridge = createBridgeStub({});
     const store = createStoreWithDefaultVisuals(bridge);
     const tooMany: readonly PlayerSeatConfig[] = [
-      { playerId: 0, type: 'human' },
-      { playerId: 1, type: 'ai-random' },
-      { playerId: 2, type: 'ai-random' },
+      { playerId: 0, controller: createHumanSeatController() },
+      { playerId: 1, controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }) },
+      { playerId: 2, controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }) },
     ];
 
     await expect(store.getState().initGame(def, 43, tooMany)).rejects.toThrow(/outside allowed range/u);
@@ -1658,8 +1586,8 @@ describe('createGameStore', () => {
     const bridge = createBridgeStub({});
     const store = createStoreWithDefaultVisuals(bridge);
     const noHuman: readonly PlayerSeatConfig[] = [
-      { playerId: 0, type: 'ai-random' },
-      { playerId: 1, type: 'ai-greedy' },
+      { playerId: 0, controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }) },
+      { playerId: 1, controller: createAgentSeatController({ kind: 'builtin', builtinId: 'greedy' }) },
     ];
 
     await expect(store.getState().initGame(def, 44, noHuman)).rejects.toThrow(/at least one human seat/u);

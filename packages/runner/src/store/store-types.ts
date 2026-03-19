@@ -8,8 +8,7 @@ import type {
   PlayerId,
   TerminalResult,
 } from '@ludoforge/engine/runtime';
-
-export type PlayerSeat = 'human' | 'ai-random' | 'ai-greedy';
+import type { SeatController } from '../seat/seat-controller.js';
 
 /** One step in the progressive choice breadcrumb. */
 export interface PartialChoice {
@@ -26,6 +25,6 @@ export interface RenderContext {
   readonly selectedAction: ActionId | null;
   readonly partialMove: Move | null;
   readonly choiceStack: readonly PartialChoice[];
-  readonly playerSeats: ReadonlyMap<PlayerId, PlayerSeat>;
+  readonly playerSeats: ReadonlyMap<PlayerId, SeatController>;
   readonly terminal: TerminalResult | null;
 }

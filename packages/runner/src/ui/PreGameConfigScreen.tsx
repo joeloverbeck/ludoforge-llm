@@ -1,9 +1,16 @@
 import { type ReactElement, useMemo, useState } from 'react';
+import type { AgentDescriptor } from '@ludoforge/engine/runtime';
 
 import type { BootstrapDescriptor } from '../bootstrap/bootstrap-registry.js';
 import { createVisualConfigProvider } from '../config/visual-config-loader.js';
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
-import type { PlayerSeatConfig } from '../session/session-types.js';
+import {
+  createAgentSeatController,
+  createHumanSeatController,
+  isHumanSeatController,
+  type PlayerSeatConfig,
+  type SeatController,
+} from '../seat/seat-controller.js';
 import { formatIdAsDisplayName } from '../utils/format-display-name.js';
 import styles from './PreGameConfigScreen.module.css';
 
@@ -14,12 +21,18 @@ interface PreGameConfigScreenProps {
   readonly onBack: () => void;
 }
 
-type SeatType = PlayerSeatConfig['type'];
+type ControllerKind = SeatController['kind'];
+type AgentMode = 'policy' | 'builtin:greedy' | 'builtin:random';
 
-const SEAT_OPTIONS: ReadonlyArray<{ readonly value: SeatType; readonly label: string }> = [
+const CONTROLLER_KIND_OPTIONS: ReadonlyArray<{ readonly value: ControllerKind; readonly label: string }> = [
   { value: 'human', label: 'Human' },
-  { value: 'ai-greedy', label: 'AI - Greedy' },
-  { value: 'ai-random', label: 'AI - Random' },
+  { value: 'agent', label: 'Agent' },
+];
+
+const AGENT_MODE_OPTIONS: ReadonlyArray<{ readonly value: AgentMode; readonly label: string }> = [
+  { value: 'policy', label: 'Authored Policy' },
+  { value: 'builtin:greedy', label: 'Built-in Greedy' },
+  { value: 'builtin:random', label: 'Built-in Random' },
 ];
 
 export function PreGameConfigScreen({ gameId, descriptor, onStartGame, onBack }: PreGameConfigScreenProps): ReactElement {
@@ -28,7 +41,7 @@ export function PreGameConfigScreen({ gameId, descriptor, onStartGame, onBack }:
   const initialPlayerCount = clampPlayerCount(playerMin, playerMin, playerMax);
 
   const [playerCount, setPlayerCount] = useState<number>(initialPlayerCount);
-  const [seatTypes, setSeatTypes] = useState<readonly SeatType[]>(() => buildSeatTypes(initialPlayerCount));
+  const [seatControllers, setSeatControllers] = useState<readonly SeatController[]>(() => buildSeatControllers(initialPlayerCount));
   const [seedInput, setSeedInput] = useState('');
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
 
@@ -38,23 +51,33 @@ export function PreGameConfigScreen({ gameId, descriptor, onStartGame, onBack }:
   function handlePlayerCountChange(nextCountRaw: string): void {
     const nextCount = clampPlayerCount(parseInteger(nextCountRaw, playerCount), playerMin, playerMax);
     setPlayerCount(nextCount);
-    setSeatTypes((current) => resizeSeatTypes(current, nextCount));
+    setSeatControllers((current) => resizeSeatControllers(current, nextCount));
   }
 
-  function handleSeatTypeChange(seatIndex: number, nextType: SeatType): void {
-    setSeatTypes((current) => {
+  function handleControllerKindChange(seatIndex: number, nextKind: ControllerKind): void {
+    setSeatControllers((current) => {
       const next = current.slice(0, playerCount);
-      next[seatIndex] = nextType;
+      next[seatIndex] = nextKind === 'human'
+        ? createHumanSeatController()
+        : createAgentSeatController();
+      return next;
+    });
+  }
+
+  function handleAgentModeChange(seatIndex: number, nextMode: AgentMode): void {
+    setSeatControllers((current) => {
+      const next = current.slice(0, playerCount);
+      next[seatIndex] = createAgentSeatController(parseAgentMode(nextMode));
       return next;
     });
   }
 
   function handleStartGame(): void {
-    const playerConfig = seatTypes
+    const playerConfig = seatControllers
       .slice(0, playerCount)
-      .map((type, seatIndex) => ({ playerId: seatIndex, type } satisfies PlayerSeatConfig));
+      .map((controller, seatIndex) => ({ playerId: seatIndex, controller } satisfies PlayerSeatConfig));
 
-    if (!playerConfig.some((seat) => seat.type === 'human')) {
+    if (!playerConfig.some((seat) => isHumanSeatController(seat.controller))) {
       setValidationMessage('At least one seat must be Human.');
       return;
     }
@@ -90,23 +113,38 @@ export function PreGameConfigScreen({ gameId, descriptor, onStartGame, onBack }:
 
       <section aria-label="Seat assignments" className={styles.seats}>
         {Array.from({ length: playerCount }, (_, seatIndex) => {
-          const seatType = seatTypes[seatIndex] ?? 'ai-greedy';
+          const controller = seatControllers[seatIndex] ?? createAgentSeatController();
           return (
             <div key={seatIndex} className={styles.seatRow} data-testid={`pre-game-seat-row-${seatIndex}`}>
               <span data-testid={`pre-game-seat-label-${seatIndex}`}>
                 {resolveSeatLabel(seatIndex, factionIds, visualConfigProvider)}
               </span>
               <select
-                data-testid={`pre-game-seat-type-${seatIndex}`}
-                value={seatType}
+                data-testid={`pre-game-seat-kind-${seatIndex}`}
+                value={controller.kind}
                 onChange={(event) => {
-                  handleSeatTypeChange(seatIndex, event.currentTarget.value as SeatType);
+                  handleControllerKindChange(seatIndex, event.currentTarget.value as ControllerKind);
                 }}
               >
-                {SEAT_OPTIONS.map((option) => (
+                {CONTROLLER_KIND_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>{option.label}</option>
                 ))}
               </select>
+              {controller.kind !== 'agent'
+                ? null
+                : (
+                  <select
+                    data-testid={`pre-game-seat-agent-${seatIndex}`}
+                    value={formatAgentMode(controller.agent)}
+                    onChange={(event) => {
+                      handleAgentModeChange(seatIndex, event.currentTarget.value as AgentMode);
+                    }}
+                  >
+                    {AGENT_MODE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                )}
             </div>
           );
         })}
@@ -165,16 +203,36 @@ function resolveSeatLabel(
     ?? formatIdAsDisplayName(factionId);
 }
 
-function buildSeatTypes(playerCount: number): readonly SeatType[] {
-  return Array.from({ length: playerCount }, (_, index) => (index === 0 ? 'human' : 'ai-greedy'));
+function buildSeatControllers(playerCount: number): readonly SeatController[] {
+  return Array.from({ length: playerCount }, (_, index) => (index === 0 ? createHumanSeatController() : createAgentSeatController()));
 }
 
-function resizeSeatTypes(current: readonly SeatType[], playerCount: number): readonly SeatType[] {
+function resizeSeatControllers(current: readonly SeatController[], playerCount: number): readonly SeatController[] {
   const next = current.slice(0, playerCount);
   while (next.length < playerCount) {
-    next.push(next.length === 0 ? 'human' : 'ai-greedy');
+    next.push(next.length === 0 ? createHumanSeatController() : createAgentSeatController());
   }
   return next;
+}
+
+function parseAgentMode(mode: AgentMode): AgentDescriptor {
+  switch (mode) {
+    case 'policy':
+      return { kind: 'policy' };
+    case 'builtin:greedy':
+      return { kind: 'builtin', builtinId: 'greedy' };
+    case 'builtin:random':
+      return { kind: 'builtin', builtinId: 'random' };
+    default:
+      throw new Error(`Unsupported agent mode: ${String(mode)}`);
+  }
+}
+
+function formatAgentMode(agent: AgentDescriptor): AgentMode {
+  if (agent.kind === 'policy') {
+    return 'policy';
+  }
+  return `builtin:${agent.builtinId}`;
 }
 
 function parseSeedValue(raw: string): number | null {

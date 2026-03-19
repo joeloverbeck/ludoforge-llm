@@ -4,6 +4,7 @@ import { createElement } from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { createHumanSeatController } from '../../src/seat/seat-controller.js';
 const testDoubles = vi.hoisted(() => ({
   listSavedGames: vi.fn(),
   loadGame: vi.fn(),
@@ -56,7 +57,7 @@ describe('LoadGameDialog', () => {
       timestamp: 1735689600000,
       seed: 17,
       moveHistory: [{ actionId: 'tick', params: {} }],
-      playerConfig: [{ playerId: 1, type: 'human' }],
+      playerConfig: [{ playerId: 1, controller: createHumanSeatController() }],
       playerId: 1,
       moveCount: 1,
       isTerminal: id === 'save-2',

@@ -5,6 +5,10 @@ import type { ReactNode } from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { createHumanSeatController, type PlayerSeatConfig } from '../../src/seat/seat-controller.js';
+
+type TestPlayerConfig = ReadonlyArray<PlayerSeatConfig>;
+
 interface SessionStoreState {
   readonly sessionState:
     | { readonly screen: 'gameSelection' }
@@ -13,17 +17,17 @@ interface SessionStoreState {
       readonly screen: 'activeGame';
       readonly gameId: string;
       readonly seed: number;
-      readonly playerConfig: ReadonlyArray<{ readonly playerId: number; readonly type: 'human' | 'ai-random' | 'ai-greedy' }>;
+      readonly playerConfig: TestPlayerConfig;
       readonly initialMoveHistory: readonly unknown[];
     }
-    | { readonly screen: 'replay'; readonly gameId: string; readonly seed: number; readonly moveHistory: readonly unknown[]; readonly playerConfig: ReadonlyArray<{ readonly playerId: number; readonly type: 'human' | 'ai-random' | 'ai-greedy' }> };
+    | { readonly screen: 'replay'; readonly gameId: string; readonly seed: number; readonly moveHistory: readonly unknown[]; readonly playerConfig: TestPlayerConfig };
   readonly unsavedChanges: boolean;
   readonly moveAccumulator: readonly unknown[];
   selectGame(gameId: string): void;
-  startGame(seed: number, playerConfig: ReadonlyArray<{ readonly playerId: number; readonly type: 'human' | 'ai-random' | 'ai-greedy' }>): void;
-  resumeGame(gameId: string, seed: number, playerConfig: ReadonlyArray<{ readonly playerId: number; readonly type: 'human' | 'ai-random' | 'ai-greedy' }>, moveHistory: readonly unknown[]): void;
+  startGame(seed: number, playerConfig: TestPlayerConfig): void;
+  resumeGame(gameId: string, seed: number, playerConfig: TestPlayerConfig, moveHistory: readonly unknown[]): void;
   returnToMenu(): void;
-  startReplay(gameId: string, seed: number, moveHistory: readonly unknown[], playerConfig: ReadonlyArray<{ readonly playerId: number; readonly type: 'human' | 'ai-random' | 'ai-greedy' }>): void;
+  startReplay(gameId: string, seed: number, moveHistory: readonly unknown[], playerConfig: TestPlayerConfig): void;
   newGame(): void;
   recordMove(move: unknown): void;
   markSaved(): void;
@@ -285,7 +289,7 @@ vi.mock('../../src/ui/LoadGameDialog.js', () => ({
       gameId: string;
       seed: number;
       moveHistory: readonly unknown[];
-      playerConfig: ReadonlyArray<{ readonly playerId: number; readonly type: 'human' | 'ai-random' | 'ai-greedy' }>;
+      playerConfig: TestPlayerConfig;
       isTerminal: boolean;
     }) => void;
     readonly onReplay: (record: { gameId: string; seed: number; moveHistory: readonly unknown[] }) => void;
@@ -299,7 +303,7 @@ vi.mock('../../src/ui/LoadGameDialog.js', () => ({
             gameId: 'fitl',
             seed: 17,
             moveHistory: [{ actionId: 'tick', params: {} }],
-            playerConfig: [{ playerId: 1, type: 'human' }],
+            playerConfig: [{ playerId: 1, controller: createHumanSeatController() }],
             isTerminal: false,
           }),
         }, 'resume-loaded'),
@@ -408,7 +412,7 @@ describe('App', () => {
       gameId: 'fitl',
       seed: 17,
       moveHistory: [{ actionId: 'tick', params: {} }],
-      playerConfig: [{ playerId: 1, type: 'human' }],
+      playerConfig: [{ playerId: 1, controller: createHumanSeatController() }],
       isTerminal: false,
     });
     testDoubles.deleteSavedGame.mockResolvedValue(undefined);
@@ -459,7 +463,7 @@ describe('App', () => {
         screen: 'activeGame',
         gameId: 'fitl',
         seed: 17,
-        playerConfig: [{ playerId: 1, type: 'human' }],
+        playerConfig: [{ playerId: 1, controller: createHumanSeatController() }],
         initialMoveHistory: [],
       },
       unsavedChanges: true,
@@ -486,7 +490,7 @@ describe('App', () => {
         screen: 'activeGame',
         gameId: 'fitl',
         seed: 17,
-        playerConfig: [{ playerId: 1, type: 'human' }],
+        playerConfig: [{ playerId: 1, controller: createHumanSeatController() }],
         initialMoveHistory: [],
       },
       unsavedChanges: false,
@@ -520,7 +524,7 @@ describe('App', () => {
       screen: 'activeGame',
       gameId: 'fitl',
       seed: 17,
-      playerConfig: [{ playerId: 1, type: 'human' }],
+      playerConfig: [{ playerId: 1, controller: createHumanSeatController() }],
       initialMoveHistory: [{ actionId: 'tick', params: {} }],
     });
   });
@@ -530,7 +534,7 @@ describe('App', () => {
       gameId: 'fitl',
       seed: 17,
       moveHistory: [{ actionId: 'tick', params: {} }],
-      playerConfig: [{ playerId: 1, type: 'human' }],
+      playerConfig: [{ playerId: 1, controller: createHumanSeatController() }],
       isTerminal: true,
     });
 

@@ -14,13 +14,15 @@ After the showdown surface model exists, `ShowdownOverlay` must stop deriving it
 
 1. [`packages/runner/src/ui/ShowdownOverlay.tsx`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/src/ui/ShowdownOverlay.tsx) currently derives rankings directly from `renderModel.playerVars`, `renderModel.zones`, and `renderModel.tokens`.
 2. Test helpers and UI tests such as [`packages/runner/test/ui/ShowdownOverlay.test.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/test/ui/ShowdownOverlay.test.ts) and [`packages/runner/test/ui/helpers/render-model-fixture.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/test/ui/helpers/render-model-fixture.ts) currently assume those generic fields are sufficient to build the overlay.
-3. Once table overlays and showdown both consume explicit surfaces, `RenderModel.globalVars` and `RenderModel.playerVars` should be removed if no remaining non-surface consumer truly requires them.
+3. In current production code, `ShowdownOverlay` is the only live runner consumer still deriving presentation semantics from `RenderModel.playerVars` / `globalVars`; table overlays now consume `RunnerProjectionBundle.source` through a dedicated projector instead of reading `RenderModel`.
+4. Once showdown consumes `surfaces.showdown`, `RenderModel.globalVars` and `RenderModel.playerVars` should be removed if no remaining non-surface consumer truly requires them. The internal projection source remains valid; the public render-model bags do not.
 
 ## Architecture Check
 
 1. UI components should render explicit surface contracts only; this keeps semantic derivation and presentation wiring out of React components.
 2. Deleting the generic var bags after migration is cleaner than preserving them as tempting escape hatches for future surfaces.
 3. The cleanup remains runner-only and does not move any game-specific presentation knowledge into engine/runtime code.
+4. This ticket should delete public render-model leakage only after the showdown projector exists; it must not pull world-layout or anchored-surface concerns back into `RenderModel`.
 
 ## What to Change
 
@@ -66,6 +68,7 @@ Add tests that prove:
 ## Out of Scope
 
 - Adding new surface types beyond table overlays and showdown
+- Introducing or revising the world-layout contract for anchored canvas surfaces
 - Reworking unrelated UI panels that already consume explicit non-surface render-model fields
 - Changing showdown copy, styling, or CSS beyond what is required to bind the new data contract
 - Modifying engine compilation, kernel logic, or game rules
@@ -87,6 +90,7 @@ Add tests that prove:
 1. `ShowdownOverlay` must not inspect `playerVars`, `globalVars`, zone prefixes, or raw token groupings to derive showdown semantics after this ticket.
 2. `RenderModel` must expose explicit surfaces rather than generic raw-data bags for special UI surfaces.
 3. Deletion is real deletion: no backwards-compatibility aliases, duplicate fields, or shadow getters may remain.
+4. `RunnerProjectionSource` may still retain low-level semantic facts needed for internal projectors; this ticket only deletes the public render-model leakage once its consumers are gone.
 
 ## Test Plan
 

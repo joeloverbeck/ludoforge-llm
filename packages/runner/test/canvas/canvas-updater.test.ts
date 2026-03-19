@@ -280,6 +280,12 @@ function createViewportMock(): ViewportResult {
 }
 
 const TEST_VISUAL_CONFIG_PROVIDER = new VisualConfigProvider(null);
+const TEST_TABLE_OVERLAY_PROVIDER = new VisualConfigProvider({
+  version: 1,
+  tableOverlays: {
+    items: [{ kind: 'globalVar', varName: 'pot', label: 'Pot', position: 'tableCenter' }],
+  },
+});
 const TEST_TOKEN_RENDER_STYLE_PROVIDER = new VisualConfigTokenRenderStyleProvider(TEST_VISUAL_CONFIG_PROVIDER);
 
 describe('createCanvasUpdater', () => {
@@ -418,7 +424,7 @@ describe('createCanvasUpdater', () => {
     ]);
   });
 
-  it('updates table overlays when variable state changes even if zones/tokens/adjacencies are unchanged', () => {
+  it('updates table overlays when projected overlay output changes even if zones/tokens/adjacencies are unchanged', () => {
     const model = makeRenderModel({
       globalVars: [asVar('pot', 10)],
     });
@@ -431,8 +437,8 @@ describe('createCanvasUpdater', () => {
     const updater = createCanvasUpdater({
       store: store as unknown as StoreApi<GameStore>,
       positionStore,
-      visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
-      tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
+      visualConfigProvider: TEST_TABLE_OVERLAY_PROVIDER,
+      tokenRenderStyleProvider: new VisualConfigTokenRenderStyleProvider(TEST_TABLE_OVERLAY_PROVIDER),
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
       tokenRenderer: renderers.tokenRenderer,
@@ -451,6 +457,44 @@ describe('createCanvasUpdater', () => {
     });
 
     expect(renderers.tableOverlayRenderer.update).toHaveBeenCalledTimes(1);
+    expect(renderers.zoneRenderer.update).not.toHaveBeenCalled();
+    expect(renderers.adjacencyRenderer.update).not.toHaveBeenCalled();
+    expect(renderers.tokenRenderer.update).not.toHaveBeenCalled();
+  });
+
+  it('does not update table overlays when unrelated raw vars change but projected overlay nodes stay the same', () => {
+    const model = makeRenderModel({
+      globalVars: [asVar('pot', 10), asVar('round', 1)],
+    });
+    const store = createCanvasTestStore({ renderModel: model, animationPlaying: false });
+    const positionStore = createPositionStore(['zone:a']);
+
+    const renderers = createRendererMocks();
+    const viewport = createViewportMock();
+
+    const updater = createCanvasUpdater({
+      store: store as unknown as StoreApi<GameStore>,
+      positionStore,
+      visualConfigProvider: TEST_TABLE_OVERLAY_PROVIDER,
+      tokenRenderStyleProvider: new VisualConfigTokenRenderStyleProvider(TEST_TABLE_OVERLAY_PROVIDER),
+      zoneRenderer: renderers.zoneRenderer,
+      adjacencyRenderer: renderers.adjacencyRenderer,
+      tokenRenderer: renderers.tokenRenderer,
+      tableOverlayRenderer: renderers.tableOverlayRenderer,
+      viewport,
+    });
+
+    updater.start();
+    expect(renderers.tableOverlayRenderer.update).toHaveBeenCalledTimes(1);
+    vi.clearAllMocks();
+
+    store.setState({
+      renderModel: makeRenderModel({
+        globalVars: [asVar('pot', 10), asVar('round', 2)],
+      }),
+    });
+
+    expect(renderers.tableOverlayRenderer.update).not.toHaveBeenCalled();
     expect(renderers.zoneRenderer.update).not.toHaveBeenCalled();
     expect(renderers.adjacencyRenderer.update).not.toHaveBeenCalled();
     expect(renderers.tokenRenderer.update).not.toHaveBeenCalled();

@@ -2,11 +2,8 @@ import type { StoreApi } from 'zustand';
 
 import type {
   RunnerAdjacency,
-  RunnerFrame,
   RunnerProjectionBundle,
-  RunnerProjectionSource,
   RunnerToken,
-  RunnerVariable,
   RunnerZone,
 } from '../model/runner-frame.js';
 import type { GameStore } from '../store/game-store';
@@ -24,6 +21,10 @@ import type {
 } from './renderers/renderer-types';
 import type { ViewportResult } from './viewport-setup';
 import { buildPresentationScene } from '../presentation/presentation-scene.js';
+import {
+  projectTableOverlaySurface,
+  tableOverlaySurfaceNodesEqual,
+} from '../presentation/project-table-overlay-surface.js';
 
 interface CanvasSnapshotSelectorResult {
   readonly zones: readonly RunnerZone[];
@@ -81,10 +82,19 @@ export function createCanvasUpdater(deps: CanvasUpdaterDeps): CanvasUpdater {
   let animationPlaying = store.getState().animationPlaying;
   let queuedSnapshot: CanvasSnapshotSelectorResult | null = null;
 
+  const resolveOverlaySurface = (
+    runnerProjection: RunnerProjectionBundle | null | undefined = latestRunnerProjection,
+  ): ReturnType<typeof projectTableOverlaySurface> => projectTableOverlaySurface({
+    projection: runnerProjection ?? null,
+    positions: latestPositionSnapshot.positions,
+    visualConfigProvider: deps.visualConfigProvider,
+  });
+
   const applySnapshot = (_snapshot: CanvasSnapshotSelectorResult): void => {
+    const overlays = resolveOverlaySurface();
     const scene = buildPresentationScene({
       runnerFrame: latestRunnerProjection?.frame ?? null,
-      projectionSource: latestRunnerProjection?.source ?? null,
+      overlays,
       positions: latestPositionSnapshot.positions,
       visualConfigProvider: deps.visualConfigProvider,
       tokenRenderStyleProvider: deps.tokenRenderStyleProvider,
@@ -127,16 +137,13 @@ export function createCanvasUpdater(deps: CanvasUpdaterDeps): CanvasUpdater {
           if (animationPlaying) {
             return;
           }
-          const scene = buildPresentationScene({
-            runnerFrame: runnerProjection?.frame ?? null,
-            projectionSource: runnerProjection?.source ?? null,
-            positions: latestPositionSnapshot.positions,
-            visualConfigProvider: deps.visualConfigProvider,
-            tokenRenderStyleProvider: deps.tokenRenderStyleProvider,
-            interactionHighlights: latestInteractionHighlights,
-          });
-          deps.tableOverlayRenderer?.update(scene.overlays);
-        }, { equalityFn: projectionBundlesOverlayEqual }),
+          deps.tableOverlayRenderer?.update(resolveOverlaySurface(runnerProjection));
+        }, {
+          equalityFn: (prev, next) => tableOverlaySurfaceNodesEqual(
+            resolveOverlaySurface(prev),
+            resolveOverlaySurface(next),
+          ),
+        }),
       );
 
       unsubscribeCallbacks.push(
@@ -225,84 +232,4 @@ function canvasSnapshotsEqual(prev: CanvasSnapshotSelectorResult, next: CanvasSn
     && tokensVisuallyEqual(prev.tokens, next.tokens)
     && adjacenciesVisuallyEqual(prev.adjacencies, next.adjacencies)
   );
-}
-
-function projectionBundlesOverlayEqual(
-  prev: RunnerProjectionBundle | null | undefined,
-  next: RunnerProjectionBundle | null | undefined,
-): boolean {
-  if (prev === next) {
-    return true;
-  }
-  if (prev == null || next == null) {
-    return false;
-  }
-
-  return (
-    variablesEqual(prev.source.globalVars, next.source.globalVars)
-    && playerVarsEqual(prev.source.playerVars, next.source.playerVars)
-    && playersEqual(prev.frame.players, next.frame.players)
-  );
-}
-
-function variablesEqual(prev: readonly RunnerVariable[], next: readonly RunnerVariable[]): boolean {
-  if (prev.length !== next.length) {
-    return false;
-  }
-
-  for (let index = 0; index < prev.length; index += 1) {
-    const prevVar = prev[index];
-    const nextVar = next[index];
-    if (prevVar === undefined || nextVar === undefined) {
-      return false;
-    }
-    if (prevVar.name !== nextVar.name || prevVar.value !== nextVar.value) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-function playerVarsEqual(
-  prev: RunnerProjectionSource['playerVars'],
-  next: RunnerProjectionSource['playerVars'],
-): boolean {
-  if (prev.size !== next.size) {
-    return false;
-  }
-
-  for (const [playerId, vars] of prev.entries()) {
-    const candidate = next.get(playerId);
-    if (candidate === undefined) {
-      return false;
-    }
-    if (!variablesEqual(vars, candidate)) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-function playersEqual(prev: RunnerFrame['players'], next: RunnerFrame['players']): boolean {
-  if (prev.length !== next.length) {
-    return false;
-  }
-
-  for (let index = 0; index < prev.length; index += 1) {
-    const prevPlayer = prev[index];
-    const nextPlayer = next[index];
-    if (prevPlayer === undefined || nextPlayer === undefined) {
-      return false;
-    }
-    if (
-      prevPlayer.id !== nextPlayer.id
-      || prevPlayer.isEliminated !== nextPlayer.isEliminated
-    ) {
-      return false;
-    }
-  }
-
-  return true;
 }

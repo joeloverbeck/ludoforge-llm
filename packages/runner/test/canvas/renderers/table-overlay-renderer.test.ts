@@ -4,9 +4,9 @@ import type { Container } from 'pixi.js';
 
 import { VisualConfigProvider } from '../../../src/config/visual-config-provider';
 import { createTableOverlayRenderer } from '../../../src/canvas/renderers/table-overlay-renderer';
-import { resolveOverlayNodes } from '../../../src/presentation/presentation-scene.js';
 import type { RenderModel, RenderVariable, RenderZone } from '../../../src/model/render-model';
 import type { RunnerFrame, RunnerProjectionSource } from '../../../src/model/runner-frame.js';
+import { projectTableOverlaySurface } from '../../../src/presentation/project-table-overlay-surface.js';
 
 const {
   MockContainer,
@@ -219,11 +219,16 @@ function updateRenderer(
   renderModel: RenderModel | null,
   positions: ReadonlyMap<string, { x: number; y: number }>,
 ): void {
-  renderer.update(
-    renderModel === null
-      ? []
-      : resolveOverlayNodes(toRunnerFrame(renderModel), toRunnerProjectionSource(renderModel), renderModel.zones, positions, provider),
-  );
+  renderer.update(projectTableOverlaySurface({
+    projection: renderModel === null
+      ? null
+      : {
+          frame: toRunnerFrame(renderModel),
+          source: toRunnerProjectionSource(renderModel),
+        },
+    positions,
+    visualConfigProvider: provider,
+  }));
 }
 
 function toRunnerFrame(renderModel: RenderModel): RunnerFrame {

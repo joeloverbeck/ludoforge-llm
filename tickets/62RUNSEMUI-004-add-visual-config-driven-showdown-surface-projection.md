@@ -15,12 +15,14 @@ The runner has no visual-config contract for showdown surfaces. `ShowdownOverlay
 1. [`packages/runner/src/config/visual-config-types.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/src/config/visual-config-types.ts) currently supports `tableOverlays` and `phaseBanners`, but not a showdown surface section.
 2. [`data/games/texas-holdem/visual-config.yaml`](/home/joeloverbeck/projects/ludoforge-llm/data/games/texas-holdem/visual-config.yaml) already contains the presentation facts a showdown projector needs conceptually, but they are implicit in current zone/var naming rather than declared under a dedicated surface contract.
 3. Validation coverage already exists in [`packages/runner/test/config/visual-config-schema.test.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/test/config/visual-config-schema.test.ts), [`packages/runner/test/config/visual-config-provider.test.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/test/config/visual-config-provider.test.ts), and [`packages/runner/test/config/validate-visual-config-refs.test.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/test/config/validate-visual-config-refs.test.ts).
+4. Unlike table overlays, showdown projection does not depend on world-space layout anchors. It remains a good fit for `projectRenderModel(...)` and should not wait on the layout/world-contract work.
 
 ## Architecture Check
 
 1. A dedicated showdown config section is cleaner than keeping hidden conventions in React component code.
 2. The config remains presentation-only: selectors, labels, display order, and visibility conditions belong here; scoring math and rules logic do not.
 3. No hardcoded Texas Hold’em fallback should remain in the projector once config support exists.
+4. Because showdown is not world-anchor-dependent, projecting it into `RenderModel.surfaces.showdown` is still the right architecture even after Spec 62’s layout/world split.
 
 ## What to Change
 
@@ -70,6 +72,7 @@ Add the showdown surface section to Texas Hold’em visual config and update any
 ## Out of Scope
 
 - Refactoring the React `ShowdownOverlay` component itself
+- Introducing the explicit world-layout contract for anchored canvas surfaces
 - Deleting `RenderModel.playerVars` or `RenderModel.globalVars`
 - Adding non-showdown runner surface DSLs
 - Changing gameplay rules, winner calculation, or move legality

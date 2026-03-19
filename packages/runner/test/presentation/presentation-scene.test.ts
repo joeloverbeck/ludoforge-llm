@@ -4,7 +4,8 @@ import { describe, expect, it } from 'vitest';
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 import { VisualConfigTokenRenderStyleProvider } from '../../src/canvas/renderers/token-render-style-provider.js';
 import { buildPresentationScene } from '../../src/presentation/presentation-scene.js';
-import type { RunnerFrame, RunnerProjectionSource, RunnerVariable, RunnerZone } from '../../src/model/runner-frame.js';
+import type { RunnerFrame, RunnerZone } from '../../src/model/runner-frame.js';
+import type { TableOverlaySurfaceNode } from '../../src/presentation/project-table-overlay-surface.js';
 
 function makeZone(
   id: string,
@@ -26,10 +27,6 @@ function makeZone(
     metadata: {},
     ...overrides,
   };
-}
-
-function asVar(name: string, value: number | boolean): RunnerVariable {
-  return { name, value };
 }
 
 function makeRunnerFrame(overrides: Partial<RunnerFrame> = {}): RunnerFrame {
@@ -66,17 +63,6 @@ function makeRunnerFrame(overrides: Partial<RunnerFrame> = {}): RunnerFrame {
   };
 }
 
-function makeProjectionSource(overrides: Partial<RunnerProjectionSource> = {}): RunnerProjectionSource {
-  return {
-    globalVars: [],
-    playerVars: new Map([
-      [asPlayerId(0), []],
-      [asPlayerId(1), []],
-    ]),
-    ...overrides,
-  };
-}
-
 describe('buildPresentationScene', () => {
   const positions = new Map([
     ['shared:center', { x: 0, y: 0 }],
@@ -86,39 +72,54 @@ describe('buildPresentationScene', () => {
     ['zone:b', { x: 250, y: 50 }],
   ]);
 
-  it('resolves overlay nodes from runner frame, positions, and visual config before renderer mutation', () => {
-    const provider = new VisualConfigProvider({
-      version: 1,
-      tableOverlays: {
-        playerSeatAnchorZones: ['seat:0', 'seat:1'],
-        items: [
-          { kind: 'globalVar', varName: 'pot', label: 'Pot', position: 'tableCenter', offsetY: 40 },
-          { kind: 'perPlayerVar', varName: 'bet', label: 'Bet', position: 'playerSeat', offsetY: -20 },
-          { kind: 'marker', varName: 'dealerSeat', label: 'D', position: 'playerSeat', offsetX: -30 },
-        ],
+  it('renders preprojected overlay nodes before renderer mutation', () => {
+    const provider = new VisualConfigProvider({ version: 1 });
+    const overlays: readonly TableOverlaySurfaceNode[] = [
+      {
+        key: 'overlay:0',
+        type: 'text',
+        text: 'Pot: 42',
+        point: { x: 0, y: 40 },
+        style: { color: '#f8fafc', fontSize: 12, fontFamily: 'monospace' },
+        signature: 'text:pot',
       },
-    });
+      {
+        key: 'overlay:1:player:0',
+        type: 'text',
+        text: 'Bet: 5',
+        point: { x: -100, y: 80 },
+        style: { color: '#f8fafc', fontSize: 12, fontFamily: 'monospace' },
+        signature: 'text:bet:0',
+      },
+      {
+        key: 'overlay:2',
+        type: 'marker',
+        point: { x: 70, y: 100 },
+        style: {
+          color: '#fbbf24',
+          shape: 'circle',
+          label: 'D',
+          fontSize: 11,
+          fontFamily: 'monospace',
+          textColor: '#111827',
+        },
+        signature: 'marker:dealer',
+      },
+    ];
 
     const scene = buildPresentationScene({
       runnerFrame: makeRunnerFrame(),
-      projectionSource: makeProjectionSource({
-        globalVars: [asVar('pot', 42), asVar('dealerSeat', 1)],
-        playerVars: new Map([
-          [asPlayerId(0), [asVar('bet', 5)]],
-          [asPlayerId(1), [asVar('bet', 9)]],
-        ]),
-      }),
+      overlays,
       positions,
       visualConfigProvider: provider,
       tokenRenderStyleProvider: new VisualConfigTokenRenderStyleProvider(provider),
       interactionHighlights: { zoneIDs: [], tokenIDs: [] },
     });
 
-    expect(scene.overlays).toHaveLength(4);
+    expect(scene.overlays).toHaveLength(3);
     expect(scene.overlays[0]).toMatchObject({ type: 'text', text: 'Pot: 42' });
     expect(scene.overlays[1]).toMatchObject({ type: 'text', text: 'Bet: 5' });
-    expect(scene.overlays[2]).toMatchObject({ type: 'text', text: 'Bet: 9' });
-    expect(scene.overlays[3]).toMatchObject({ type: 'marker' });
+    expect(scene.overlays[2]).toMatchObject({ type: 'marker' });
   });
 
   it('derives zone scene nodes from visual config instead of semantic frame zone visuals', () => {
@@ -140,7 +141,7 @@ describe('buildPresentationScene', () => {
 
     const scene = buildPresentationScene({
       runnerFrame,
-      projectionSource: makeProjectionSource(),
+      overlays: [],
       positions,
       visualConfigProvider: provider,
       tokenRenderStyleProvider: new VisualConfigTokenRenderStyleProvider(provider),
@@ -183,7 +184,7 @@ describe('buildPresentationScene', () => {
           makeZone('zone:b', { country: 'southVietnam' }),
         ],
       }),
-      projectionSource: makeProjectionSource(),
+      overlays: [],
       positions,
       visualConfigProvider: provider,
       tokenRenderStyleProvider: new VisualConfigTokenRenderStyleProvider(provider),
@@ -207,7 +208,7 @@ describe('buildPresentationScene', () => {
           { id: 'token:1', type: 'troop', zoneID: 'shared:center', ownerID: asPlayerId(0), factionId: null, faceUp: true, properties: {}, isSelectable: false, isSelected: false },
         ],
       }),
-      projectionSource: makeProjectionSource(),
+      overlays: [],
       positions,
       visualConfigProvider: provider,
       tokenRenderStyleProvider: new VisualConfigTokenRenderStyleProvider(provider),
@@ -256,7 +257,7 @@ describe('buildPresentationScene', () => {
           { id: 'token:3', type: 'support', zoneID: 'zone:a', ownerID: asPlayerId(0), factionId: null, faceUp: true, properties: {}, isSelectable: false, isSelected: false },
         ],
       }),
-      projectionSource: makeProjectionSource(),
+      overlays: [],
       positions,
       visualConfigProvider: provider,
       tokenRenderStyleProvider: new VisualConfigTokenRenderStyleProvider(provider),

@@ -28,7 +28,7 @@ function createCompileReadyDoc() {
 }
 
 describe('agents authoring surface', () => {
-  it('lowers valid authored agent parameters, profiles, and bindings into GameDef.agents', () => {
+  it('lowers valid authored policy library items into a typed GameDef.agents catalog', () => {
     const result = compileGameSpecToGameDef({
       ...createCompileReadyDoc(),
       agents: {
@@ -52,12 +52,49 @@ describe('agents authoring surface', () => {
           },
         },
         library: {
+          stateFeatures: {
+            currentMargin: {
+              type: 'number',
+              expr: { ref: 'victory.currentMargin.us' },
+            },
+          },
+          candidateFeatures: {
+            isPass: {
+              type: 'boolean',
+              expr: { ref: 'candidate.isPass' },
+            },
+            projectedMargin: {
+              type: 'number',
+              expr: {
+                add: [
+                  { ref: 'feature.currentMargin' },
+                  { boolToNumber: { ref: 'feature.isPass' } },
+                ],
+              },
+            },
+          },
+          candidateAggregates: {
+            bestProjectedMargin: {
+              op: 'max',
+              of: { ref: 'feature.projectedMargin' },
+              where: { not: { ref: 'feature.isPass' } },
+            },
+          },
           pruningRules: {
             dropPassWhenStrongerMoveExists: {
               when: {
-                and: [{ ref: 'candidate.isPass' }, { gt: [{ ref: 'aggregate.bestNonPassProjectedMargin' }, { param: 'passFloor' }] }],
+                and: [
+                  { ref: 'feature.isPass' },
+                  { gt: [{ ref: 'aggregate.bestProjectedMargin' }, { param: 'passFloor' }] },
+                ],
               },
               onEmpty: 'skipRule',
+            },
+          },
+          scoreTerms: {
+            preferEvents: {
+              weight: 1,
+              value: { boolToNumber: { ref: 'feature.isPass' } },
             },
           },
           tieBreakers: {
@@ -75,7 +112,7 @@ describe('agents authoring surface', () => {
             },
             use: {
               pruningRules: ['dropPassWhenStrongerMoveExists'],
-              scoreTerms: [],
+              scoreTerms: ['preferEvents'],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -114,6 +151,108 @@ describe('agents authoring surface', () => {
           allowedIds: ['projected', 'stable'],
         },
       },
+      library: {
+        stateFeatures: {
+          currentMargin: {
+            type: 'number',
+            costClass: 'state',
+            expr: { ref: 'victory.currentMargin.us' },
+            dependencies: {
+              parameters: [],
+              stateFeatures: [],
+              candidateFeatures: [],
+              aggregates: [],
+            },
+          },
+        },
+        candidateFeatures: {
+          isPass: {
+            type: 'boolean',
+            costClass: 'candidate',
+            expr: { ref: 'candidate.isPass' },
+            dependencies: {
+              parameters: [],
+              stateFeatures: [],
+              candidateFeatures: [],
+              aggregates: [],
+            },
+          },
+          projectedMargin: {
+            type: 'number',
+            costClass: 'candidate',
+            expr: {
+              add: [
+                { ref: 'feature.currentMargin' },
+                { boolToNumber: { ref: 'feature.isPass' } },
+              ],
+            },
+            dependencies: {
+              parameters: [],
+              stateFeatures: ['currentMargin'],
+              candidateFeatures: ['isPass'],
+              aggregates: [],
+            },
+          },
+        },
+        candidateAggregates: {
+          bestProjectedMargin: {
+            type: 'number',
+            costClass: 'candidate',
+            op: 'max',
+            of: { ref: 'feature.projectedMargin' },
+            where: { not: { ref: 'feature.isPass' } },
+            dependencies: {
+              parameters: [],
+              stateFeatures: [],
+              candidateFeatures: ['isPass', 'projectedMargin'],
+              aggregates: [],
+            },
+          },
+        },
+        pruningRules: {
+          dropPassWhenStrongerMoveExists: {
+            costClass: 'candidate',
+            when: {
+              and: [
+                { ref: 'feature.isPass' },
+                { gt: [{ ref: 'aggregate.bestProjectedMargin' }, { param: 'passFloor' }] },
+              ],
+            },
+            dependencies: {
+              parameters: ['passFloor'],
+              stateFeatures: [],
+              candidateFeatures: ['isPass'],
+              aggregates: ['bestProjectedMargin'],
+            },
+            onEmpty: 'skipRule',
+          },
+        },
+        scoreTerms: {
+          preferEvents: {
+            costClass: 'candidate',
+            weight: 1,
+            value: { boolToNumber: { ref: 'feature.isPass' } },
+            dependencies: {
+              parameters: [],
+              stateFeatures: [],
+              candidateFeatures: ['isPass'],
+              aggregates: [],
+            },
+          },
+        },
+        tieBreakers: {
+          stableMoveKey: {
+            kind: 'stableMoveKey',
+            costClass: 'state',
+            dependencies: {
+              parameters: [],
+              stateFeatures: [],
+              candidateFeatures: [],
+              aggregates: [],
+            },
+          },
+        },
+      },
       profiles: {
         baseline: {
           params: {
@@ -123,8 +262,13 @@ describe('agents authoring surface', () => {
           },
           use: {
             pruningRules: ['dropPassWhenStrongerMoveExists'],
-            scoreTerms: [],
+            scoreTerms: ['preferEvents'],
             tieBreakers: ['stableMoveKey'],
+          },
+          plan: {
+            stateFeatures: ['currentMargin'],
+            candidateFeatures: ['isPass', 'projectedMargin'],
+            candidateAggregates: ['bestProjectedMargin'],
           },
         },
       },
@@ -209,11 +353,6 @@ describe('agents authoring surface', () => {
           },
         },
         library: {
-          pruningRules: {
-            keepAll: {
-              when: false,
-            },
-          },
           tieBreakers: {
             stableMoveKey: {
               kind: 'stableMoveKey',
@@ -228,7 +367,7 @@ describe('agents authoring surface', () => {
               tieOrder: ['stable', 'stable'],
             },
             use: {
-              pruningRules: ['keepAll'],
+              pruningRules: [],
               scoreTerms: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -247,21 +386,52 @@ describe('agents authoring surface', () => {
     assert.ok(compiled.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_AGENT_PROFILE_PARAM_VALUE_INVALID' && diagnostic.path === 'doc.agents.profiles.baseline.params.tieOrder'));
   });
 
-  it('rejects missing required parameters, duplicate profile list entries, unknown library ids, and unknown binding profiles', () => {
+  it('rejects policy dependency cycles and semantic expression violations', () => {
     const compiled = compileGameSpecToGameDef({
       ...createCompileReadyDoc(),
       agents: {
         parameters: {
-          requiredBias: {
-            type: 'integer',
-            min: 0,
-            max: 3,
+          mode: {
+            type: 'enum',
+            default: 'safe',
+            values: ['safe', 'bold'],
           },
         },
         library: {
-          pruningRules: {
-            keepAll: {
-              when: false,
+          stateFeatures: {
+            loopA: {
+              type: 'number',
+              expr: { add: [{ ref: 'feature.loopB' }, 1] },
+            },
+            loopB: {
+              type: 'number',
+              expr: { add: [{ ref: 'feature.loopA' }, 1] },
+            },
+          },
+          candidateFeatures: {
+            isPass: {
+              type: 'boolean',
+              expr: { ref: 'candidate.isPass' },
+            },
+            badPreview: {
+              type: 'number',
+              expr: { ref: 'preview.preview.metric.fake' },
+            },
+            badCandidateParam: {
+              type: 'id',
+              expr: { ref: 'candidate.param.mode.extra' },
+            },
+          },
+          candidateAggregates: {
+            badAggregate: {
+              op: 'max',
+              of: { ref: 'feature.isPass' },
+            },
+          },
+          scoreTerms: {
+            divideByZero: {
+              weight: 1,
+              value: { div: [1, 0] },
             },
           },
           tieBreakers: {
@@ -274,22 +444,23 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: ['keepAll', 'keepAll'],
-              scoreTerms: [],
-              tieBreakers: ['stableMoveKey', 'unknownTieBreaker'],
+              pruningRules: [],
+              scoreTerms: ['divideByZero'],
+              tieBreakers: ['stableMoveKey'],
             },
           },
         },
         bindings: {
-          us: 'missing-profile',
+          us: 'baseline',
         },
       },
     });
 
     assert.equal(compiled.gameDef, null);
-    assert.ok(compiled.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_AGENT_PROFILE_PARAM_MISSING' && diagnostic.path === 'doc.agents.profiles.baseline.params'));
-    assert.ok(compiled.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_AGENT_PROFILE_USE_DUPLICATE_ID' && diagnostic.path === 'doc.agents.profiles.baseline.use.pruningRules.1'));
-    assert.ok(compiled.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_AGENT_PROFILE_USE_UNKNOWN_ID' && diagnostic.path === 'doc.agents.profiles.baseline.use.tieBreakers.1'));
-    assert.ok(compiled.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_AGENT_BINDING_UNKNOWN_PROFILE' && diagnostic.path === 'doc.agents.bindings.us'));
+    assert.ok(compiled.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_AGENT_DEPENDENCY_CYCLE' && diagnostic.path === 'doc.agents.library.stateFeatures.loopA'));
+    assert.ok(compiled.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_AGENT_POLICY_PREVIEW_NESTED' && diagnostic.path === 'doc.agents.library.candidateFeatures.badPreview.expr.ref'));
+    assert.ok(compiled.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_AGENT_CANDIDATE_PARAM_REF_INVALID' && diagnostic.path === 'doc.agents.library.candidateFeatures.badCandidateParam.expr.ref'));
+    assert.ok(compiled.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_AGENT_AGGREGATE_INPUT_INVALID' && diagnostic.path === 'doc.agents.library.candidateAggregates.badAggregate.of'));
+    assert.ok(compiled.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_AGENT_POLICY_DIVIDE_BY_ZERO' && diagnostic.path === 'doc.agents.library.scoreTerms.divideByZero.value'));
   });
 });

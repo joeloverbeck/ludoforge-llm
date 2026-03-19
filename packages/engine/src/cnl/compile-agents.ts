@@ -1,10 +1,22 @@
+import { analyzePolicyExpr, type AnalyzePolicyExprContext, type ResolvedPolicyRef } from '../agents/policy-expr.js';
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import type {
   AgentParameterType,
   AgentParameterValue,
   AgentPolicyCatalog,
+  AgentPolicyCostClass,
+  AgentPolicyExpr,
+  AgentPolicyValueType,
+  CompiledAgentAggregate,
+  CompiledAgentCandidateFeature,
+  CompiledAgentDependencyRefs,
+  CompiledAgentLibraryIndex,
   CompiledAgentParameterDef,
   CompiledAgentProfile,
+  CompiledAgentPruningRule,
+  CompiledAgentScoreTerm,
+  CompiledAgentStateFeature,
+  CompiledAgentTieBreaker,
   GameDef,
 } from '../kernel/types.js';
 import type {
@@ -13,12 +25,28 @@ import type {
   GameSpecAgentParameterType,
   GameSpecAgentProfileDef,
   GameSpecAgentsSection,
+  GameSpecCandidateFeatureDef,
+  GameSpecStateFeatureDef,
+  GameSpecTieBreakerDef,
 } from './game-spec-doc.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 
 type ProfileUseKey = keyof CompiledAgentProfile['use'];
+type AggregateOp = 'max' | 'min' | 'count' | 'any' | 'all' | 'rankDense' | 'rankOrdinal';
+type TieBreakerKind = 'higherExpr' | 'lowerExpr' | 'preferredEnumOrder' | 'preferredIdOrder' | 'rng' | 'stableMoveKey';
+type LibraryRefScope = 'stateFeature' | 'candidateFeature' | 'aggregate' | 'rule' | 'scoreTerm' | 'tieBreaker';
 
 const AGENT_PARAMETER_TYPES: readonly AgentParameterType[] = ['number', 'integer', 'boolean', 'enum', 'idOrder'];
+const POLICY_VALUE_TYPES: readonly AgentPolicyValueType[] = ['number', 'boolean', 'id', 'idList'];
+const AGGREGATE_OPS = new Set<AggregateOp>(['max', 'min', 'count', 'any', 'all', 'rankDense', 'rankOrdinal']);
+const TIE_BREAKER_KINDS = new Set<TieBreakerKind>([
+  'higherExpr',
+  'lowerExpr',
+  'preferredEnumOrder',
+  'preferredIdOrder',
+  'rng',
+  'stableMoveKey',
+]);
 
 export function lowerAgents(
   agents: GameSpecAgentsSection | null,
@@ -29,12 +57,15 @@ export function lowerAgents(
   }
 
   const parameterDefs = lowerParameterDefs(agents.parameters, diagnostics);
-  const profiles = lowerProfiles(agents.profiles, agents.library, parameterDefs, diagnostics);
+  const libraryCompiler = new AgentLibraryCompiler(agents.library, parameterDefs, diagnostics);
+  const library = libraryCompiler.compile();
+  const profiles = lowerProfiles(agents.profiles, agents.library, library, parameterDefs, diagnostics);
   const bindingsBySeat = lowerBindings(agents.bindings, profiles, diagnostics);
 
   return {
     schemaVersion: 1,
     parameterDefs,
+    library,
     profiles,
     bindingsBySeat,
   } satisfies AgentPolicyCatalog;
@@ -150,14 +181,15 @@ function lowerParameterDef(
 
 function lowerProfiles(
   profiles: GameSpecAgentsSection['profiles'],
-  library: GameSpecAgentLibrary | undefined,
+  authoredLibrary: GameSpecAgentLibrary | undefined,
+  library: CompiledAgentLibraryIndex,
   parameterDefs: AgentPolicyCatalog['parameterDefs'],
   diagnostics: Diagnostic[],
 ): AgentPolicyCatalog['profiles'] {
   const compiled: Record<string, CompiledAgentProfile> = {};
 
   for (const [profileId, profileDef] of Object.entries(profiles ?? {})) {
-    const compiledProfile = lowerProfile(profileId, profileDef, library, parameterDefs, diagnostics);
+    const compiledProfile = lowerProfile(profileId, profileDef, authoredLibrary, library, parameterDefs, diagnostics);
     if (compiledProfile !== null) {
       compiled[profileId] = compiledProfile;
     }
@@ -169,7 +201,8 @@ function lowerProfiles(
 function lowerProfile(
   profileId: string,
   profileDef: GameSpecAgentProfileDef,
-  library: GameSpecAgentLibrary | undefined,
+  authoredLibrary: GameSpecAgentLibrary | undefined,
+  library: CompiledAgentLibraryIndex,
   parameterDefs: AgentPolicyCatalog['parameterDefs'],
   diagnostics: Diagnostic[],
 ): CompiledAgentProfile | null {
@@ -223,18 +256,21 @@ function lowerProfile(
   }
 
   const use = {
-    pruningRules: lowerProfileUseIds(profileId, 'pruningRules', profileDef.use.pruningRules, library?.pruningRules, diagnostics),
-    scoreTerms: lowerProfileUseIds(profileId, 'scoreTerms', profileDef.use.scoreTerms, library?.scoreTerms, diagnostics),
-    tieBreakers: lowerProfileUseIds(profileId, 'tieBreakers', profileDef.use.tieBreakers, library?.tieBreakers, diagnostics),
+    pruningRules: lowerProfileUseIds(profileId, 'pruningRules', profileDef.use.pruningRules, authoredLibrary?.pruningRules, diagnostics),
+    scoreTerms: lowerProfileUseIds(profileId, 'scoreTerms', profileDef.use.scoreTerms, authoredLibrary?.scoreTerms, diagnostics),
+    tieBreakers: lowerProfileUseIds(profileId, 'tieBreakers', profileDef.use.tieBreakers, authoredLibrary?.tieBreakers, diagnostics),
   } satisfies CompiledAgentProfile['use'];
 
-  if (hasError || diagnosticsContainProfileUseErrors(profileId, diagnostics)) {
+  const plan = buildProfilePlan(profileId, use, library, diagnostics);
+
+  if (hasError || diagnosticsContainProfileUseErrors(profileId, diagnostics) || plan === null) {
     return null;
   }
 
   return {
     params: compiledParams,
     use,
+    plan,
   };
 }
 
@@ -242,7 +278,7 @@ function lowerProfileUseIds(
   profileId: string,
   key: ProfileUseKey,
   authoredIds: readonly string[] | undefined,
-  libraryBucket: Readonly<Record<string, unknown>> | undefined,
+  authoredLibraryBucket: Readonly<Record<string, unknown>> | undefined,
   diagnostics: Diagnostic[],
 ): readonly string[] {
   const path = `doc.agents.profiles.${profileId}.use.${key}`;
@@ -261,7 +297,7 @@ function lowerProfileUseIds(
       continue;
     }
 
-    if (libraryBucket?.[id] === undefined) {
+    if (authoredLibraryBucket?.[id] === undefined) {
       diagnostics.push({
         code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PROFILE_USE_UNKNOWN_ID,
         path: `${path}.${index}`,
@@ -277,6 +313,146 @@ function lowerProfileUseIds(
   }
 
   return lowered;
+}
+
+function buildProfilePlan(
+  profileId: string,
+  use: CompiledAgentProfile['use'],
+  library: CompiledAgentLibraryIndex,
+  diagnostics: Diagnostic[],
+): CompiledAgentProfile['plan'] | null {
+  const stateFeatures: string[] = [];
+  const candidateFeatures: string[] = [];
+  const candidateAggregates: string[] = [];
+  const stateSeen = new Set<string>();
+  const candidateSeen = new Set<string>();
+  const aggregateSeen = new Set<string>();
+  let hasError = false;
+
+  const visitStateFeature = (featureId: string): void => {
+    if (stateSeen.has(featureId)) {
+      return;
+    }
+    const feature = library.stateFeatures[featureId];
+    if (feature === undefined) {
+      hasError = true;
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PROFILE_USE_UNKNOWN_ID,
+        path: `doc.agents.profiles.${profileId}`,
+        severity: 'error',
+        message: `Profile "${profileId}" depends on invalid state feature "${featureId}".`,
+        suggestion: 'Fix the referenced library entry so it compiles successfully.',
+      });
+      return;
+    }
+    for (const dependencyId of feature.dependencies.stateFeatures) {
+      visitStateFeature(dependencyId);
+    }
+    stateSeen.add(featureId);
+    stateFeatures.push(featureId);
+  };
+
+  const visitCandidateFeature = (featureId: string): void => {
+    if (candidateSeen.has(featureId)) {
+      return;
+    }
+    const feature = library.candidateFeatures[featureId];
+    if (feature === undefined) {
+      hasError = true;
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PROFILE_USE_UNKNOWN_ID,
+        path: `doc.agents.profiles.${profileId}`,
+        severity: 'error',
+        message: `Profile "${profileId}" depends on invalid candidate feature "${featureId}".`,
+        suggestion: 'Fix the referenced library entry so it compiles successfully.',
+      });
+      return;
+    }
+    for (const dependencyId of feature.dependencies.stateFeatures) {
+      visitStateFeature(dependencyId);
+    }
+    for (const dependencyId of feature.dependencies.candidateFeatures) {
+      visitCandidateFeature(dependencyId);
+    }
+    candidateSeen.add(featureId);
+    candidateFeatures.push(featureId);
+  };
+
+  const visitAggregate = (aggregateId: string): void => {
+    if (aggregateSeen.has(aggregateId)) {
+      return;
+    }
+    const aggregate = library.candidateAggregates[aggregateId];
+    if (aggregate === undefined) {
+      hasError = true;
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PROFILE_USE_UNKNOWN_ID,
+        path: `doc.agents.profiles.${profileId}`,
+        severity: 'error',
+        message: `Profile "${profileId}" depends on invalid candidate aggregate "${aggregateId}".`,
+        suggestion: 'Fix the referenced library entry so it compiles successfully.',
+      });
+      return;
+    }
+    for (const dependencyId of aggregate.dependencies.stateFeatures) {
+      visitStateFeature(dependencyId);
+    }
+    for (const dependencyId of aggregate.dependencies.candidateFeatures) {
+      visitCandidateFeature(dependencyId);
+    }
+    for (const dependencyId of aggregate.dependencies.aggregates) {
+      visitAggregate(dependencyId);
+    }
+    aggregateSeen.add(aggregateId);
+    candidateAggregates.push(aggregateId);
+  };
+
+  const addDependencies = (dependencies: CompiledAgentDependencyRefs): void => {
+    for (const featureId of dependencies.stateFeatures) {
+      visitStateFeature(featureId);
+    }
+    for (const featureId of dependencies.candidateFeatures) {
+      visitCandidateFeature(featureId);
+    }
+    for (const aggregateId of dependencies.aggregates) {
+      visitAggregate(aggregateId);
+    }
+  };
+
+  for (const ruleId of use.pruningRules) {
+    const rule = library.pruningRules[ruleId];
+    if (rule === undefined) {
+      hasError = true;
+      continue;
+    }
+    addDependencies(rule.dependencies);
+  }
+  for (const scoreTermId of use.scoreTerms) {
+    const scoreTerm = library.scoreTerms[scoreTermId];
+    if (scoreTerm === undefined) {
+      hasError = true;
+      continue;
+    }
+    addDependencies(scoreTerm.dependencies);
+  }
+  for (const tieBreakerId of use.tieBreakers) {
+    const tieBreaker = library.tieBreakers[tieBreakerId];
+    if (tieBreaker === undefined) {
+      hasError = true;
+      continue;
+    }
+    addDependencies(tieBreaker.dependencies);
+  }
+
+  if (hasError) {
+    return null;
+  }
+
+  return {
+    stateFeatures,
+    candidateFeatures,
+    candidateAggregates,
+  };
 }
 
 function lowerBindings(
@@ -302,6 +478,634 @@ function lowerBindings(
   }
 
   return compiled;
+}
+
+class AgentLibraryCompiler {
+  private readonly authoredLibrary: GameSpecAgentLibrary;
+  private readonly compiled: {
+    readonly stateFeatures: Record<string, CompiledAgentStateFeature>;
+    readonly candidateFeatures: Record<string, CompiledAgentCandidateFeature>;
+    readonly candidateAggregates: Record<string, CompiledAgentAggregate>;
+    readonly pruningRules: Record<string, CompiledAgentPruningRule>;
+    readonly scoreTerms: Record<string, CompiledAgentScoreTerm>;
+    readonly tieBreakers: Record<string, CompiledAgentTieBreaker>;
+  };
+
+  private readonly stateFeatureStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
+  private readonly candidateFeatureStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
+  private readonly aggregateStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
+  private readonly pruningRuleStatus = new Map<string, 'done' | 'failed'>();
+  private readonly scoreTermStatus = new Map<string, 'done' | 'failed'>();
+  private readonly tieBreakerStatus = new Map<string, 'done' | 'failed'>();
+
+  private readonly stateFeatureStack: string[] = [];
+  private readonly candidateFeatureStack: string[] = [];
+  private readonly aggregateStack: string[] = [];
+
+  constructor(
+    authoredLibrary: GameSpecAgentLibrary | undefined,
+    private readonly parameterDefs: Readonly<Record<string, CompiledAgentParameterDef>>,
+    private readonly diagnostics: Diagnostic[],
+  ) {
+    this.authoredLibrary = authoredLibrary ?? {};
+    this.compiled = {
+      stateFeatures: {},
+      candidateFeatures: {},
+      candidateAggregates: {},
+      pruningRules: {},
+      scoreTerms: {},
+      tieBreakers: {},
+    };
+  }
+
+  compile(): CompiledAgentLibraryIndex {
+    this.validateFeatureNamespaceCollisions();
+
+    for (const featureId of Object.keys(this.authoredLibrary.stateFeatures ?? {})) {
+      this.compileStateFeature(featureId);
+    }
+    for (const featureId of Object.keys(this.authoredLibrary.candidateFeatures ?? {})) {
+      this.compileCandidateFeature(featureId);
+    }
+    for (const aggregateId of Object.keys(this.authoredLibrary.candidateAggregates ?? {})) {
+      this.compileAggregate(aggregateId);
+    }
+    for (const ruleId of Object.keys(this.authoredLibrary.pruningRules ?? {})) {
+      this.compilePruningRule(ruleId);
+    }
+    for (const scoreTermId of Object.keys(this.authoredLibrary.scoreTerms ?? {})) {
+      this.compileScoreTerm(scoreTermId);
+    }
+    for (const tieBreakerId of Object.keys(this.authoredLibrary.tieBreakers ?? {})) {
+      this.compileTieBreaker(tieBreakerId);
+    }
+
+    return this.compiled;
+  }
+
+  private validateFeatureNamespaceCollisions(): void {
+    const stateIds = new Set(Object.keys(this.authoredLibrary.stateFeatures ?? {}));
+    for (const candidateId of Object.keys(this.authoredLibrary.candidateFeatures ?? {})) {
+      if (!stateIds.has(candidateId)) {
+        continue;
+      }
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_REF_UNKNOWN,
+        path: `doc.agents.library.candidateFeatures.${candidateId}`,
+        severity: 'error',
+        message: `Feature id "${candidateId}" is defined in both stateFeatures and candidateFeatures, which makes feature refs ambiguous.`,
+        suggestion: 'Use distinct ids across stateFeatures and candidateFeatures.',
+      });
+    }
+  }
+
+  private compileStateFeature(featureId: string): CompiledAgentStateFeature | null {
+    const status = this.stateFeatureStatus.get(featureId);
+    if (status === 'done') {
+      return this.compiled.stateFeatures[featureId] ?? null;
+    }
+    if (status === 'failed') {
+      return null;
+    }
+    if (status === 'compiling') {
+      this.reportCycle('stateFeatures', featureId, this.stateFeatureStack);
+      this.stateFeatureStatus.set(featureId, 'failed');
+      return null;
+    }
+
+    const def = this.authoredLibrary.stateFeatures?.[featureId];
+    if (def === undefined) {
+      this.reportUnknownLibraryRef(`feature.${featureId}`, `doc.agents.library.stateFeatures.${featureId}`);
+      this.stateFeatureStatus.set(featureId, 'failed');
+      return null;
+    }
+
+    this.stateFeatureStatus.set(featureId, 'compiling');
+    this.stateFeatureStack.push(featureId);
+    const result = this.analyzeFeatureDefinition(
+      'stateFeature',
+      featureId,
+      def,
+      `doc.agents.library.stateFeatures.${featureId}`,
+    );
+    this.stateFeatureStack.pop();
+    this.stateFeatureStatus.set(featureId, result === null ? 'failed' : 'done');
+    if (result !== null) {
+      this.compiled.stateFeatures[featureId] = result;
+    }
+    return result;
+  }
+
+  private compileCandidateFeature(featureId: string): CompiledAgentCandidateFeature | null {
+    const status = this.candidateFeatureStatus.get(featureId);
+    if (status === 'done') {
+      return this.compiled.candidateFeatures[featureId] ?? null;
+    }
+    if (status === 'failed') {
+      return null;
+    }
+    if (status === 'compiling') {
+      this.reportCycle('candidateFeatures', featureId, this.candidateFeatureStack);
+      this.candidateFeatureStatus.set(featureId, 'failed');
+      return null;
+    }
+
+    const def = this.authoredLibrary.candidateFeatures?.[featureId];
+    if (def === undefined) {
+      this.reportUnknownLibraryRef(`feature.${featureId}`, `doc.agents.library.candidateFeatures.${featureId}`);
+      this.candidateFeatureStatus.set(featureId, 'failed');
+      return null;
+    }
+
+    this.candidateFeatureStatus.set(featureId, 'compiling');
+    this.candidateFeatureStack.push(featureId);
+    const result = this.analyzeFeatureDefinition(
+      'candidateFeature',
+      featureId,
+      def,
+      `doc.agents.library.candidateFeatures.${featureId}`,
+    );
+    this.candidateFeatureStack.pop();
+    this.candidateFeatureStatus.set(featureId, result === null ? 'failed' : 'done');
+    if (result !== null) {
+      this.compiled.candidateFeatures[featureId] = result;
+    }
+    return result;
+  }
+
+  private analyzeFeatureDefinition(
+    scope: 'stateFeature' | 'candidateFeature',
+    featureId: string,
+    def: GameSpecStateFeatureDef | GameSpecCandidateFeatureDef,
+    path: string,
+  ): CompiledAgentStateFeature | CompiledAgentCandidateFeature | null {
+    const context = this.createExprContext(scope);
+    const analysis = analyzePolicyExpr(def.expr, context, this.diagnostics, `${path}.expr`);
+    if (analysis === null) {
+      return null;
+    }
+
+    const declaredType = normalizeDeclaredPolicyValueType(def.type, `${path}.type`, this.diagnostics);
+    if (declaredType !== null && declaredType !== analysis.valueType) {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_TYPE_INVALID,
+        path: `${path}.type`,
+        severity: 'error',
+        message: `Feature "${featureId}" declares type "${declaredType}" but its expression compiles to "${analysis.valueType}".`,
+        suggestion: 'Fix the expression or update the declared type so they match.',
+      });
+      return null;
+    }
+    if (!isPolicyValueType(analysis.valueType)) {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_TYPE_INVALID,
+        path: `${path}.expr`,
+        severity: 'error',
+        message: `Feature "${featureId}" does not resolve to a concrete scalar policy type.`,
+        suggestion: 'Coalesce unknown values or return a concrete number, boolean, id, or id list.',
+      });
+      return null;
+    }
+
+    return {
+      type: analysis.valueType,
+      costClass: analysis.costClass,
+      expr: def.expr as AgentPolicyExpr,
+      dependencies: analysis.dependencies,
+    };
+  }
+
+  private compileAggregate(aggregateId: string): CompiledAgentAggregate | null {
+    const status = this.aggregateStatus.get(aggregateId);
+    if (status === 'done') {
+      return this.compiled.candidateAggregates[aggregateId] ?? null;
+    }
+    if (status === 'failed') {
+      return null;
+    }
+    if (status === 'compiling') {
+      this.reportCycle('candidateAggregates', aggregateId, this.aggregateStack);
+      this.aggregateStatus.set(aggregateId, 'failed');
+      return null;
+    }
+
+    const def = this.authoredLibrary.candidateAggregates?.[aggregateId];
+    if (def === undefined) {
+      this.reportUnknownLibraryRef(`aggregate.${aggregateId}`, `doc.agents.library.candidateAggregates.${aggregateId}`);
+      this.aggregateStatus.set(aggregateId, 'failed');
+      return null;
+    }
+
+    this.aggregateStatus.set(aggregateId, 'compiling');
+    this.aggregateStack.push(aggregateId);
+    const context = this.createExprContext('aggregate');
+    const ofAnalysis = analyzePolicyExpr(def.of, context, this.diagnostics, `doc.agents.library.candidateAggregates.${aggregateId}.of`);
+    const whereAnalysis = def.where === undefined
+      ? null
+      : analyzePolicyExpr(def.where, context, this.diagnostics, `doc.agents.library.candidateAggregates.${aggregateId}.where`);
+    this.aggregateStack.pop();
+
+    if (ofAnalysis === null || (def.where !== undefined && whereAnalysis === null)) {
+      this.aggregateStatus.set(aggregateId, 'failed');
+      return null;
+    }
+    if (whereAnalysis !== null && whereAnalysis.valueType !== 'boolean') {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_TYPE_INVALID,
+        path: `doc.agents.library.candidateAggregates.${aggregateId}.where`,
+        severity: 'error',
+        message: `Aggregate "${aggregateId}" where clauses must compile to boolean.`,
+        suggestion: 'Use a boolean predicate in aggregate.where.',
+      });
+      this.aggregateStatus.set(aggregateId, 'failed');
+      return null;
+    }
+
+    const op = normalizeAggregateOp(def.op, `doc.agents.library.candidateAggregates.${aggregateId}.op`, this.diagnostics);
+    if (op === null) {
+      this.aggregateStatus.set(aggregateId, 'failed');
+      return null;
+    }
+    const resultType = inferAggregateResultType(op, ofAnalysis.valueType, `doc.agents.library.candidateAggregates.${aggregateId}.of`, this.diagnostics);
+    if (resultType === null) {
+      this.aggregateStatus.set(aggregateId, 'failed');
+      return null;
+    }
+
+    const dependencies = mergeDependencies([ofAnalysis.dependencies, whereAnalysis?.dependencies ?? emptyDependencies()]);
+    const compiled: CompiledAgentAggregate = {
+      type: resultType,
+      costClass: maxCostClass(ofAnalysis.costClass, whereAnalysis?.costClass ?? 'state'),
+      op,
+      of: def.of as AgentPolicyExpr,
+      ...(def.where === undefined ? {} : { where: def.where as AgentPolicyExpr }),
+      dependencies,
+    };
+    this.compiled.candidateAggregates[aggregateId] = compiled;
+    this.aggregateStatus.set(aggregateId, 'done');
+    return compiled;
+  }
+
+  private compilePruningRule(ruleId: string): CompiledAgentPruningRule | null {
+    const status = this.pruningRuleStatus.get(ruleId);
+    if (status === 'done') {
+      return this.compiled.pruningRules[ruleId] ?? null;
+    }
+    if (status === 'failed') {
+      return null;
+    }
+    const def = this.authoredLibrary.pruningRules?.[ruleId];
+    if (def === undefined) {
+      this.pruningRuleStatus.set(ruleId, 'failed');
+      return null;
+    }
+    const context = this.createExprContext('rule');
+    const when = analyzePolicyExpr(def.when, context, this.diagnostics, `doc.agents.library.pruningRules.${ruleId}.when`);
+    if (when === null || when.valueType !== 'boolean') {
+      if (when !== null) {
+        this.diagnostics.push({
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_TYPE_INVALID,
+          path: `doc.agents.library.pruningRules.${ruleId}.when`,
+          severity: 'error',
+          message: `Pruning rule "${ruleId}" when clauses must compile to boolean.`,
+          suggestion: 'Use a boolean policy expression for pruningRule.when.',
+        });
+      }
+      this.pruningRuleStatus.set(ruleId, 'failed');
+      return null;
+    }
+    const compiled: CompiledAgentPruningRule = {
+      costClass: when.costClass,
+      when: def.when as AgentPolicyExpr,
+      dependencies: when.dependencies,
+      onEmpty: def.onEmpty ?? 'skipRule',
+    };
+    this.compiled.pruningRules[ruleId] = compiled;
+    this.pruningRuleStatus.set(ruleId, 'done');
+    return compiled;
+  }
+
+  private compileScoreTerm(scoreTermId: string): CompiledAgentScoreTerm | null {
+    const status = this.scoreTermStatus.get(scoreTermId);
+    if (status === 'done') {
+      return this.compiled.scoreTerms[scoreTermId] ?? null;
+    }
+    if (status === 'failed') {
+      return null;
+    }
+    const def = this.authoredLibrary.scoreTerms?.[scoreTermId];
+    if (def === undefined) {
+      this.scoreTermStatus.set(scoreTermId, 'failed');
+      return null;
+    }
+    const context = this.createExprContext('scoreTerm');
+    const when = def.when === undefined
+      ? null
+      : analyzePolicyExpr(def.when, context, this.diagnostics, `doc.agents.library.scoreTerms.${scoreTermId}.when`);
+    const weight = analyzePolicyExpr(def.weight, context, this.diagnostics, `doc.agents.library.scoreTerms.${scoreTermId}.weight`);
+    const value = analyzePolicyExpr(def.value, context, this.diagnostics, `doc.agents.library.scoreTerms.${scoreTermId}.value`);
+    if (weight === null || value === null || (def.when !== undefined && when === null)) {
+      this.scoreTermStatus.set(scoreTermId, 'failed');
+      return null;
+    }
+    if (when !== null && when.valueType !== 'boolean') {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_TYPE_INVALID,
+        path: `doc.agents.library.scoreTerms.${scoreTermId}.when`,
+        severity: 'error',
+        message: `Score term "${scoreTermId}" when clauses must compile to boolean.`,
+        suggestion: 'Use a boolean policy expression for scoreTerm.when.',
+      });
+      this.scoreTermStatus.set(scoreTermId, 'failed');
+      return null;
+    }
+    if (weight.valueType !== 'number' || value.valueType !== 'number') {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_TYPE_INVALID,
+        path: `doc.agents.library.scoreTerms.${scoreTermId}`,
+        severity: 'error',
+        message: `Score term "${scoreTermId}" weight and value must both compile to number.`,
+        suggestion: 'Use numeric policy expressions for scoreTerm.weight and scoreTerm.value.',
+      });
+      this.scoreTermStatus.set(scoreTermId, 'failed');
+      return null;
+    }
+    if (def.clamp !== undefined && def.clamp.min !== undefined && def.clamp.max !== undefined && def.clamp.min > def.clamp.max) {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+        path: `doc.agents.library.scoreTerms.${scoreTermId}.clamp`,
+        severity: 'error',
+        message: `Score term "${scoreTermId}" clamp min must be less than or equal to max.`,
+        suggestion: 'Swap or correct the clamp bounds so min <= max.',
+      });
+      this.scoreTermStatus.set(scoreTermId, 'failed');
+      return null;
+    }
+    const compiled: CompiledAgentScoreTerm = {
+      costClass: maxCostClass(maxCostClass(weight.costClass, value.costClass), when?.costClass ?? 'state'),
+      ...(def.when === undefined ? {} : { when: def.when as AgentPolicyExpr }),
+      weight: def.weight as AgentPolicyExpr,
+      value: def.value as AgentPolicyExpr,
+      ...(def.unknownAs === undefined ? {} : { unknownAs: def.unknownAs }),
+      ...(def.clamp === undefined ? {} : { clamp: def.clamp }),
+      dependencies: mergeDependencies([when?.dependencies ?? emptyDependencies(), weight.dependencies, value.dependencies]),
+    };
+    this.compiled.scoreTerms[scoreTermId] = compiled;
+    this.scoreTermStatus.set(scoreTermId, 'done');
+    return compiled;
+  }
+
+  private compileTieBreaker(tieBreakerId: string): CompiledAgentTieBreaker | null {
+    const status = this.tieBreakerStatus.get(tieBreakerId);
+    if (status === 'done') {
+      return this.compiled.tieBreakers[tieBreakerId] ?? null;
+    }
+    if (status === 'failed') {
+      return null;
+    }
+    const def = this.authoredLibrary.tieBreakers?.[tieBreakerId];
+    if (def === undefined) {
+      this.tieBreakerStatus.set(tieBreakerId, 'failed');
+      return null;
+    }
+    const kind = normalizeTieBreakerKind(def.kind, `doc.agents.library.tieBreakers.${tieBreakerId}.kind`, this.diagnostics);
+    if (kind === null) {
+      this.tieBreakerStatus.set(tieBreakerId, 'failed');
+      return null;
+    }
+    const context = this.createExprContext('tieBreaker');
+    const value = def.value === undefined
+      ? null
+      : analyzePolicyExpr(def.value, context, this.diagnostics, `doc.agents.library.tieBreakers.${tieBreakerId}.value`);
+    if (def.value !== undefined && value === null) {
+      this.tieBreakerStatus.set(tieBreakerId, 'failed');
+      return null;
+    }
+    if (!validateTieBreakerDefinition(kind, value, def, tieBreakerId, this.diagnostics)) {
+      this.tieBreakerStatus.set(tieBreakerId, 'failed');
+      return null;
+    }
+
+    const compiled: CompiledAgentTieBreaker = {
+      kind,
+      costClass: value?.costClass ?? 'state',
+      ...(def.value === undefined ? {} : { value: def.value as AgentPolicyExpr }),
+      ...(def.order === undefined ? {} : { order: [...def.order] }),
+      dependencies: value?.dependencies ?? emptyDependencies(),
+    };
+    this.compiled.tieBreakers[tieBreakerId] = compiled;
+    this.tieBreakerStatus.set(tieBreakerId, 'done');
+    return compiled;
+  }
+
+  private createExprContext(scope: LibraryRefScope): AnalyzePolicyExprContext {
+    return {
+      parameterDefs: this.parameterDefs,
+      resolveRef: (refPath: string, path: string) => this.resolveRef(scope, refPath, path),
+    };
+  }
+
+  private resolveRef(scope: LibraryRefScope, refPath: string, path: string): ResolvedPolicyRef | null {
+    if (refPath.startsWith('feature.')) {
+      const featureId = refPath.slice('feature.'.length);
+      if (featureId.length === 0) {
+        this.reportUnknownLibraryRef(refPath, path);
+        return null;
+      }
+      if (scope === 'stateFeature') {
+        const feature = this.compileStateFeature(featureId);
+        if (feature === null) {
+          return null;
+        }
+        return {
+          type: feature.type,
+          costClass: feature.costClass,
+          dependency: { kind: 'stateFeatures', id: featureId },
+        };
+      }
+      const stateFeature = this.authoredLibrary.stateFeatures?.[featureId];
+      const candidateFeature = this.authoredLibrary.candidateFeatures?.[featureId];
+      if (stateFeature !== undefined && candidateFeature !== undefined) {
+        this.diagnostics.push({
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_REF_UNKNOWN,
+          path,
+          severity: 'error',
+          message: `feature.${featureId} is ambiguous because it exists in both stateFeatures and candidateFeatures.`,
+          suggestion: 'Use distinct feature ids across state and candidate scopes.',
+        });
+        return null;
+      }
+      if (candidateFeature !== undefined) {
+        const compiled = this.compileCandidateFeature(featureId);
+        if (compiled === null) {
+          return null;
+        }
+        return {
+          type: compiled.type,
+          costClass: compiled.costClass,
+          dependency: { kind: 'candidateFeatures', id: featureId },
+        };
+      }
+      if (stateFeature !== undefined) {
+        const compiled = this.compileStateFeature(featureId);
+        if (compiled === null) {
+          return null;
+        }
+        return {
+          type: compiled.type,
+          costClass: compiled.costClass,
+          dependency: { kind: 'stateFeatures', id: featureId },
+        };
+      }
+      this.reportUnknownLibraryRef(refPath, path);
+      return null;
+    }
+
+    if (refPath.startsWith('aggregate.')) {
+      if (scope === 'stateFeature' || scope === 'candidateFeature') {
+        this.diagnostics.push({
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_REF_UNKNOWN,
+          path,
+          severity: 'error',
+          message: `Feature expressions may not depend on aggregate refs ("${refPath}").`,
+          suggestion: 'Reference only runtime refs, parameters, and allowed feature refs inside feature expressions.',
+        });
+        return null;
+      }
+      const aggregateId = refPath.slice('aggregate.'.length);
+      const aggregate = this.compileAggregate(aggregateId);
+      if (aggregate === null) {
+        return null;
+      }
+      return {
+        type: aggregate.type,
+        costClass: aggregate.costClass,
+        dependency: { kind: 'aggregates', id: aggregateId },
+      };
+    }
+
+    return this.resolveRuntimeRef(scope, refPath, path);
+  }
+
+  private resolveRuntimeRef(scope: LibraryRefScope, refPath: string, path: string): ResolvedPolicyRef | null {
+    if (refPath === 'seat.self' || refPath === 'seat.active' || refPath === 'turn.phaseId' || refPath === 'turn.stepId') {
+      return { type: 'id', costClass: 'state' };
+    }
+    if (refPath === 'turn.round') {
+      return { type: 'number', costClass: 'state' };
+    }
+    if (refPath === 'candidate.actionId' || refPath === 'candidate.stableMoveKey') {
+      if (scope === 'stateFeature') {
+        this.reportUnknownLibraryRef(refPath, path);
+        return null;
+      }
+      return { type: 'id', costClass: 'candidate' };
+    }
+    if (refPath === 'candidate.isPass') {
+      if (scope === 'stateFeature') {
+        this.reportUnknownLibraryRef(refPath, path);
+        return null;
+      }
+      return { type: 'boolean', costClass: 'candidate' };
+    }
+    if (refPath.startsWith('candidate.param.')) {
+      if (scope === 'stateFeature') {
+        this.reportInvalidCandidateParamRef(refPath, path);
+        return null;
+      }
+      const candidateParamPath = refPath.slice('candidate.param.'.length);
+      if (candidateParamPath.length === 0 || candidateParamPath.includes('.')) {
+        this.reportInvalidCandidateParamRef(refPath, path);
+        return null;
+      }
+      const parameterDef = this.parameterDefs[candidateParamPath];
+      if (parameterDef === undefined) {
+        this.reportInvalidCandidateParamRef(refPath, path);
+        return null;
+      }
+      return {
+        type: parameterTypeToPolicyValueType(parameterDef.type),
+        costClass: 'candidate',
+        dependency: { kind: 'parameters', id: candidateParamPath },
+      };
+    }
+
+    const previewResolved = this.resolvePreviewRuntimeRef(scope, refPath, path);
+    if (previewResolved !== null) {
+      return previewResolved;
+    }
+
+    if (
+      refPath.startsWith('metric.')
+      || refPath.startsWith('victory.currentMargin.')
+      || refPath.startsWith('victory.currentRank.')
+      || refPath.startsWith('var.global.')
+      || refPath.startsWith('var.seat.')
+    ) {
+      return { type: 'number', costClass: 'state' };
+    }
+
+    this.reportUnknownLibraryRef(refPath, path);
+    return null;
+  }
+
+  private resolvePreviewRuntimeRef(scope: LibraryRefScope, refPath: string, path: string): ResolvedPolicyRef | null {
+    if (!refPath.startsWith('preview.')) {
+      return null;
+    }
+    if (scope === 'stateFeature') {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_PREVIEW_NESTED,
+        path,
+        severity: 'error',
+        message: `State features may not use preview refs ("${refPath}").`,
+        suggestion: 'Limit preview usage to candidate-level library items and later evaluation stages.',
+      });
+      return null;
+    }
+    const nestedPath = refPath.slice('preview.'.length);
+    if (
+      nestedPath.startsWith('metric.')
+      || nestedPath.startsWith('victory.currentMargin.')
+      || nestedPath.startsWith('victory.currentRank.')
+      || nestedPath.startsWith('var.global.')
+      || nestedPath.startsWith('var.seat.')
+    ) {
+      return { type: 'number', costClass: 'preview' };
+    }
+    this.reportUnknownLibraryRef(refPath, path);
+    return null;
+  }
+
+  private reportCycle(category: string, entryId: string, stack: readonly string[]): void {
+    this.diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_DEPENDENCY_CYCLE,
+      path: `doc.agents.library.${category}.${entryId}`,
+      severity: 'error',
+      message: `Agent policy dependency cycle detected: ${[...stack, entryId].join(' -> ')}.`,
+      suggestion: 'Break the cycle so each policy library item depends on an acyclic graph.',
+    });
+  }
+
+  private reportUnknownLibraryRef(refPath: string, path: string): void {
+    this.diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_REF_UNKNOWN,
+      path,
+      severity: 'error',
+      message: `Policy expression references unknown or unsupported ref "${refPath}".`,
+      suggestion: 'Use declared parameters, named feature/aggregate refs, or the approved policy-visible runtime surface.',
+    });
+  }
+
+  private reportInvalidCandidateParamRef(refPath: string, path: string): void {
+    this.diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_CANDIDATE_PARAM_REF_INVALID,
+      path,
+      severity: 'error',
+      message: `Invalid candidate param ref "${refPath}".`,
+      suggestion: 'Use exactly candidate.param.<parameterId> with a declared agents parameter id.',
+    });
+  }
 }
 
 function normalizeParameterValue(
@@ -482,8 +1286,195 @@ function normalizeStringList(
   return normalized;
 }
 
+function normalizeDeclaredPolicyValueType(
+  value: unknown,
+  path: string,
+  diagnostics: Diagnostic[],
+): AgentPolicyValueType | null {
+  if (value === undefined) {
+    return null;
+  }
+  if (typeof value === 'string' && isPolicyValueType(value)) {
+    return value;
+  }
+  diagnostics.push({
+    code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_TYPE_INVALID,
+    path,
+    severity: 'error',
+    message: `Unsupported declared policy type "${String(value)}".`,
+    suggestion: `Use one of: ${POLICY_VALUE_TYPES.join(', ')}.`,
+  });
+  return null;
+}
+
+function normalizeAggregateOp(
+  value: unknown,
+  path: string,
+  diagnostics: Diagnostic[],
+): AggregateOp | null {
+  if (typeof value === 'string' && AGGREGATE_OPS.has(value as AggregateOp)) {
+    return value as AggregateOp;
+  }
+  diagnostics.push({
+    code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_AGGREGATE_INPUT_INVALID,
+    path,
+    severity: 'error',
+    message: `Unsupported candidate aggregate op "${String(value)}".`,
+    suggestion: 'Use one of: max, min, count, any, all, rankDense, or rankOrdinal.',
+  });
+  return null;
+}
+
+function inferAggregateResultType(
+  op: AggregateOp,
+  inputType: string,
+  path: string,
+  diagnostics: Diagnostic[],
+): AgentPolicyValueType | null {
+  switch (op) {
+    case 'max':
+    case 'min':
+      if (inputType === 'number') {
+        return 'number';
+      }
+      break;
+    case 'count':
+      return 'number';
+    case 'any':
+    case 'all':
+      if (inputType === 'boolean') {
+        return 'boolean';
+      }
+      break;
+    case 'rankDense':
+    case 'rankOrdinal':
+      if (inputType === 'number' || inputType === 'id') {
+        return 'number';
+      }
+      break;
+  }
+  diagnostics.push({
+    code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_AGGREGATE_INPUT_INVALID,
+    path,
+    severity: 'error',
+    message: `Aggregate op "${op}" does not accept "${inputType}" inputs.`,
+    suggestion: 'Use a supported aggregate op for the input expression type.',
+  });
+  return null;
+}
+
+function normalizeTieBreakerKind(
+  value: unknown,
+  path: string,
+  diagnostics: Diagnostic[],
+): TieBreakerKind | null {
+  if (typeof value === 'string' && TIE_BREAKER_KINDS.has(value as TieBreakerKind)) {
+    return value as TieBreakerKind;
+  }
+  diagnostics.push({
+    code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_TIE_BREAKER_INVALID,
+    path,
+    severity: 'error',
+    message: `Unsupported tie-breaker kind "${String(value)}".`,
+    suggestion: 'Use one of: higherExpr, lowerExpr, preferredEnumOrder, preferredIdOrder, rng, stableMoveKey.',
+  });
+  return null;
+}
+
+function validateTieBreakerDefinition(
+  kind: TieBreakerKind,
+  valueAnalysis: { readonly valueType: string } | null,
+  def: GameSpecTieBreakerDef,
+  tieBreakerId: string,
+  diagnostics: Diagnostic[],
+): boolean {
+  const path = `doc.agents.library.tieBreakers.${tieBreakerId}`;
+  const requiresValue = kind === 'higherExpr' || kind === 'lowerExpr' || kind === 'preferredEnumOrder' || kind === 'preferredIdOrder';
+  if (requiresValue && valueAnalysis === null) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_TIE_BREAKER_INVALID,
+      path: `${path}.value`,
+      severity: 'error',
+      message: `Tie-breaker "${tieBreakerId}" kind "${kind}" requires a value expression.`,
+      suggestion: 'Provide tieBreaker.value for expression-based or order-based tie-breakers.',
+    });
+    return false;
+  }
+  if (!requiresValue && def.value !== undefined) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_TIE_BREAKER_INVALID,
+      path: `${path}.value`,
+      severity: 'error',
+      message: `Tie-breaker "${tieBreakerId}" kind "${kind}" does not accept a value expression.`,
+      suggestion: 'Remove tieBreaker.value for this kind.',
+    });
+    return false;
+  }
+  if ((kind === 'preferredEnumOrder' || kind === 'preferredIdOrder') && valueAnalysis?.valueType !== 'id') {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_TIE_BREAKER_INVALID,
+      path: `${path}.value`,
+      severity: 'error',
+      message: `Tie-breaker "${tieBreakerId}" kind "${kind}" requires an id-valued expression.`,
+      suggestion: 'Use an id or enum-like expression for the tie-breaker value.',
+    });
+    return false;
+  }
+  if ((kind === 'higherExpr' || kind === 'lowerExpr') && valueAnalysis !== null && valueAnalysis.valueType === 'idList') {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_TIE_BREAKER_INVALID,
+      path: `${path}.value`,
+      severity: 'error',
+      message: `Tie-breaker "${tieBreakerId}" kind "${kind}" may not compare id lists.`,
+      suggestion: 'Use a scalar number, boolean, or id expression.',
+    });
+    return false;
+  }
+  if (kind === 'preferredEnumOrder' || kind === 'preferredIdOrder') {
+    const order = normalizeStringList(def.order, `${path}.order`, 'values', diagnostics);
+    if (order === null) {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_TIE_BREAKER_INVALID,
+        path: `${path}.order`,
+        severity: 'error',
+        message: `Tie-breaker "${tieBreakerId}" kind "${kind}" requires a non-empty unique order list.`,
+        suggestion: 'Provide a unique ordered list of ids for the tie-breaker order.',
+      });
+      return false;
+    }
+  } else if (def.order !== undefined) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_TIE_BREAKER_INVALID,
+      path: `${path}.order`,
+      severity: 'error',
+      message: `Tie-breaker "${tieBreakerId}" kind "${kind}" does not accept an order list.`,
+      suggestion: 'Remove tieBreaker.order for this kind.',
+    });
+    return false;
+  }
+  return true;
+}
+
 function isAgentParameterType(value: unknown): value is AgentParameterType {
   return typeof value === 'string' && AGENT_PARAMETER_TYPES.includes(value as AgentParameterType);
+}
+
+function isPolicyValueType(value: unknown): value is AgentPolicyValueType {
+  return typeof value === 'string' && POLICY_VALUE_TYPES.includes(value as AgentPolicyValueType);
+}
+
+function parameterTypeToPolicyValueType(type: CompiledAgentParameterDef['type']): AgentPolicyValueType {
+  switch (type) {
+    case 'number':
+    case 'integer':
+      return 'number';
+    case 'boolean':
+      return 'boolean';
+    case 'enum':
+      return 'id';
+    case 'idOrder':
+      return 'idList';
+  }
 }
 
 function diagnosticsContainProfileUseErrors(profileId: string, diagnostics: readonly Diagnostic[]): boolean {
@@ -492,4 +1483,36 @@ function diagnosticsContainProfileUseErrors(profileId: string, diagnostics: read
       diagnostic.path.startsWith(`doc.agents.profiles.${profileId}.use.`)
       && diagnostic.severity === 'error',
   );
+}
+
+function mergeDependencies(dependencies: readonly CompiledAgentDependencyRefs[]): CompiledAgentDependencyRefs {
+  return {
+    parameters: uniqueSorted(dependencies.flatMap((entry) => entry.parameters)),
+    stateFeatures: uniqueSorted(dependencies.flatMap((entry) => entry.stateFeatures)),
+    candidateFeatures: uniqueSorted(dependencies.flatMap((entry) => entry.candidateFeatures)),
+    aggregates: uniqueSorted(dependencies.flatMap((entry) => entry.aggregates)),
+  };
+}
+
+function emptyDependencies(): CompiledAgentDependencyRefs {
+  return {
+    parameters: [],
+    stateFeatures: [],
+    candidateFeatures: [],
+    aggregates: [],
+  };
+}
+
+function uniqueSorted(values: readonly string[]): readonly string[] {
+  return [...new Set(values)].sort();
+}
+
+function maxCostClass(left: AgentPolicyCostClass, right: AgentPolicyCostClass): AgentPolicyCostClass {
+  if (left === 'preview' || right === 'preview') {
+    return 'preview';
+  }
+  if (left === 'candidate' || right === 'candidate') {
+    return 'candidate';
+  }
+  return 'state';
 }

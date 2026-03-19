@@ -203,6 +203,14 @@ describe('top-level runtime schemas', () => {
             max: 5,
           },
         },
+        library: {
+          stateFeatures: {},
+          candidateFeatures: {},
+          candidateAggregates: {},
+          pruningRules: {},
+          scoreTerms: {},
+          tieBreakers: {},
+        },
         profiles: {
           baseline: {
             params: {
@@ -212,6 +220,11 @@ describe('top-level runtime schemas', () => {
               pruningRules: [],
               scoreTerms: [],
               tieBreakers: ['stableMoveKey'],
+            },
+            plan: {
+              stateFeatures: [],
+              candidateFeatures: [],
+              candidateAggregates: [],
             },
           },
         },

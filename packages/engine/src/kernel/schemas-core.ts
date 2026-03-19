@@ -483,6 +483,110 @@ const CompiledAgentParameterDefSchema = z
   })
   .strict();
 
+const AgentPolicyExprSchema: z.ZodTypeAny = z.lazy(() =>
+  z.union([
+    StringSchema,
+    NumberSchema,
+    BooleanSchema,
+    z.null(),
+    z.array(AgentPolicyExprSchema),
+    z.record(StringSchema, AgentPolicyExprSchema),
+  ]),
+);
+
+const AgentPolicyValueTypeSchema = z.union([
+  z.literal('number'),
+  z.literal('boolean'),
+  z.literal('id'),
+  z.literal('idList'),
+]);
+
+const AgentPolicyCostClassSchema = z.union([
+  z.literal('state'),
+  z.literal('candidate'),
+  z.literal('preview'),
+]);
+
+const CompiledAgentDependencyRefsSchema = z
+  .object({
+    parameters: z.array(StringSchema),
+    stateFeatures: z.array(StringSchema),
+    candidateFeatures: z.array(StringSchema),
+    aggregates: z.array(StringSchema),
+  })
+  .strict();
+
+const CompiledAgentStateFeatureSchema = z
+  .object({
+    type: AgentPolicyValueTypeSchema,
+    costClass: AgentPolicyCostClassSchema,
+    expr: AgentPolicyExprSchema,
+    dependencies: CompiledAgentDependencyRefsSchema,
+  })
+  .strict();
+
+const CompiledAgentCandidateFeatureSchema = z
+  .object({
+    type: AgentPolicyValueTypeSchema,
+    costClass: AgentPolicyCostClassSchema,
+    expr: AgentPolicyExprSchema,
+    dependencies: CompiledAgentDependencyRefsSchema,
+  })
+  .strict();
+
+const CompiledAgentAggregateSchema = z
+  .object({
+    type: AgentPolicyValueTypeSchema,
+    costClass: AgentPolicyCostClassSchema,
+    op: StringSchema,
+    of: AgentPolicyExprSchema,
+    where: AgentPolicyExprSchema.optional(),
+    dependencies: CompiledAgentDependencyRefsSchema,
+  })
+  .strict();
+
+const CompiledAgentPruningRuleSchema = z
+  .object({
+    costClass: AgentPolicyCostClassSchema,
+    when: AgentPolicyExprSchema,
+    dependencies: CompiledAgentDependencyRefsSchema,
+    onEmpty: z.union([z.literal('skipRule'), z.literal('error')]),
+  })
+  .strict();
+
+const CompiledAgentScoreTermSchema = z
+  .object({
+    costClass: AgentPolicyCostClassSchema,
+    when: AgentPolicyExprSchema.optional(),
+    weight: AgentPolicyExprSchema,
+    value: AgentPolicyExprSchema,
+    unknownAs: NumberSchema.optional(),
+    clamp: z.object({ min: NumberSchema.optional(), max: NumberSchema.optional() }).strict().optional(),
+    dependencies: CompiledAgentDependencyRefsSchema,
+  })
+  .strict();
+
+const CompiledAgentTieBreakerSchema = z
+  .object({
+    kind: StringSchema,
+    costClass: AgentPolicyCostClassSchema,
+    value: AgentPolicyExprSchema.optional(),
+    order: z.array(StringSchema).optional(),
+    dependencies: CompiledAgentDependencyRefsSchema,
+  })
+  .strict();
+
+const CompiledAgentLibraryIndexSchema = z
+  .object({
+    stateFeatures: z.record(StringSchema, CompiledAgentStateFeatureSchema),
+    candidateFeatures: z.record(StringSchema, CompiledAgentCandidateFeatureSchema),
+    candidateAggregates: z.record(StringSchema, CompiledAgentAggregateSchema),
+    pruningRules: z.record(StringSchema, CompiledAgentPruningRuleSchema),
+    scoreTerms: z.record(StringSchema, CompiledAgentScoreTermSchema),
+    tieBreakers: z.record(StringSchema, CompiledAgentTieBreakerSchema),
+  })
+  .strict();
+
 const CompiledAgentProfileSchema = z
   .object({
     params: z.record(StringSchema, AgentParameterValueSchema),
@@ -493,6 +597,13 @@ const CompiledAgentProfileSchema = z
         tieBreakers: z.array(StringSchema),
       })
       .strict(),
+    plan: z
+      .object({
+        stateFeatures: z.array(StringSchema),
+        candidateFeatures: z.array(StringSchema),
+        candidateAggregates: z.array(StringSchema),
+      })
+      .strict(),
   })
   .strict();
 
@@ -500,6 +611,7 @@ const AgentPolicyCatalogSchema = z
   .object({
     schemaVersion: z.literal(1),
     parameterDefs: z.record(StringSchema, CompiledAgentParameterDefSchema),
+    library: CompiledAgentLibraryIndexSchema,
     profiles: z.record(StringSchema, CompiledAgentProfileSchema),
     bindingsBySeat: z.record(StringSchema, StringSchema),
   })

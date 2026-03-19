@@ -2,11 +2,12 @@ import { create, type StoreApi, type UseBoundStore } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import type {
   ActionId,
+  AgentDecisionTrace,
+  ApplyMoveResult,
   ChoiceIllegalRequest,
   ChoicePendingRequest,
   EffectTraceEntry,
   GameDef,
-  GameDefRuntime,
   GameState,
   LegalMoveEnumerationResult,
   Move,
@@ -15,7 +16,7 @@ import type {
   TerminalResult,
   TriggerLogEntry,
 } from '@ludoforge/engine/runtime';
-import { asPlayerId, createGameDefRuntime, type Rng } from '@ludoforge/engine/runtime';
+import { asPlayerId } from '@ludoforge/engine/runtime';
 
 import { deriveRunnerFrame } from '../model/derive-runner-frame.js';
 import { projectRenderModel } from '../model/project-render-model.js';
@@ -23,7 +24,6 @@ import type { RunnerFrame, RunnerProjectionBundle } from '../model/runner-frame.
 import type { RenderModel } from '../model/render-model.js';
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import {
-  isAgentSeatController,
   isHumanSeatController,
   normalizeSeatController,
   type PlayerSeatConfig,
@@ -33,11 +33,10 @@ import { assertLifecycleTransition, lifecycleFromTerminal, type GameLifecycle } 
 import type { PartialChoice, RenderContext } from './store-types.js';
 import type { AnimationDetailLevel, AnimationPlaybackSpeed } from '../animation/animation-types.js';
 import {
-  createAgentRngByPlayer,
   resolveAiPlaybackDelayMs,
-  selectAgentMove,
   type AiPlaybackSpeed,
 } from './ai-move-policy.js';
+import { createAgentTurnOrchestrator, type AgentTurnOrchestrator } from './agent-turn-orchestrator.js';
 import type { GameWorkerAPI, OperationStamp, WorkerError } from '../worker/game-worker-api.js';
 import type { TraceBus } from '@ludoforge/engine/trace';
 import { getOrComputeLayout } from '../layout/layout-cache.js';
@@ -160,6 +159,7 @@ interface MutationTransitionInputs {
 }
 
 interface CreateGameStoreOptions {
+  readonly agentTurnOrchestrator?: AgentTurnOrchestrator;
   readonly onMoveApplied?: (move: Move) => void;
   readonly traceBus?: TraceBus;
 }
@@ -487,14 +487,6 @@ function buildMove(actionId: ActionId, choices: readonly PartialChoice[]): Move 
   };
 }
 
-function isHumanTurn(renderModel: RenderModel | null): boolean {
-  if (renderModel === null) {
-    return false;
-  }
-  const activePlayer = renderModel.players.find((player) => player.id === renderModel.activePlayerID);
-  return activePlayer?.isHuman === true;
-}
-
 function toRenderContext(inputs: RenderDerivationInputs): RenderContext | null {
   if (inputs.playerID === null) {
     return null;
@@ -593,18 +585,55 @@ function materializeNextState(current: GameStore, patch: Partial<MutableGameStor
   };
 }
 
+function emitMoveAppliedTrace(
+  traceBus: TraceBus,
+  state: Pick<GameStoreState, 'playerID' | 'renderModel'>,
+  mutationInputs: MutationTransitionInputs,
+  move: Move,
+  result: ApplyMoveResult,
+  agentDecision?: AgentDecisionTrace,
+): void {
+  const tracePlayer = state.renderModel?.activePlayerID ?? state.playerID;
+  if (tracePlayer === null || tracePlayer === undefined) {
+    return;
+  }
+
+  const tracePlayerName = state.renderModel?.players.find((player) => player.id === tracePlayer)?.displayName;
+  traceBus.emit({
+    kind: 'move-applied',
+    turnCount: mutationInputs.gameState.turnCount,
+    player: tracePlayer,
+    ...(tracePlayerName !== undefined ? { seatId: tracePlayerName } : {}),
+    move,
+    deltas: [],
+    triggerFirings: result.triggerFirings,
+    effectTrace: result.effectTrace ?? [],
+    ...(result.conditionTrace !== undefined ? { conditionTrace: result.conditionTrace } : {}),
+    ...(result.decisionTrace !== undefined ? { decisionTrace: result.decisionTrace } : {}),
+    ...(result.selectorTrace !== undefined ? { selectorTrace: result.selectorTrace } : {}),
+    ...(agentDecision === undefined ? {} : { agentDecision }),
+  });
+
+  if (mutationInputs.terminal !== null) {
+    traceBus.emit({
+      kind: 'game-terminal',
+      result: mutationInputs.terminal,
+      turnCount: mutationInputs.gameState.turnCount,
+    });
+  }
+}
+
 export function createGameStore(
   bridge: GameWorkerAPI,
   visualConfigProvider: VisualConfigProvider,
   options?: CreateGameStoreOptions,
 ): UseBoundStore<StoreApi<GameStore>> {
+  const agentTurnOrchestrator = options?.agentTurnOrchestrator ?? createAgentTurnOrchestrator();
   return create<GameStore>()(
     subscribeWithSelector((set, get) => {
       let sessionEpoch = 0;
       let operationToken = 0;
       let activeOperation: OperationContext | null = null;
-      let gameRuntime: GameDefRuntime | null = null;
-      let agentRngByPlayer = new Map<PlayerId, Rng>();
 
       const isCurrentOperation = (operation: OperationContext): boolean => {
         return activeOperation?.epoch === operation.epoch && activeOperation.token === operation.token;
@@ -613,8 +642,7 @@ export function createGameStore(
       const beginOperation = (kind: OperationKind): OperationContext => {
         if (kind === 'init') {
           sessionEpoch += 1;
-          gameRuntime = null;
-          agentRngByPlayer = new Map<PlayerId, Rng>();
+          agentTurnOrchestrator.resetSession();
         }
         operationToken += 1;
         const operation: OperationContext = {
@@ -816,57 +844,42 @@ export function createGameStore(
         if (state.gameLifecycle === 'terminal') {
           return 'terminal';
         }
-        if (state.renderModel === null || state.gameDef === null || state.gameState === null || gameRuntime === null) {
+        if (state.renderModel === null || state.gameDef === null || state.gameState === null) {
           return 'no-op';
-        }
-        if (isHumanTurn(state.renderModel)) {
-          return 'human-turn';
         }
 
         const activePlayerId = state.renderModel.activePlayerID;
         const activeController = state.playerSeats.get(activePlayerId);
-        if (!isAgentSeatController(activeController)) {
+        const legalMoveResult = state.legalMoveResult ?? await bridge.enumerateLegalMoves();
+        const aiStep = agentTurnOrchestrator.resolveStep({
+          controller: activeController,
+          def: state.gameDef,
+          legalMoves: legalMoveResult.moves,
+          playerId: activePlayerId,
+          state: state.gameState,
+        });
+
+        if (aiStep.kind === 'no-session') {
+          return 'no-op';
+        }
+        if (aiStep.kind === 'human-turn') {
           return 'human-turn';
         }
-
-        const legalMoveResult = state.legalMoveResult ?? await bridge.enumerateLegalMoves();
-        const agentRng = agentRngByPlayer.get(activePlayerId);
-        if (agentRng === undefined) {
+        if (aiStep.kind === 'illegal-template') {
           guardSetAndDerive(ctx, {
             legalMoveResult,
-            error: toWorkerError(`Missing agent RNG for player ${String(activePlayerId)}.`),
+            error: toWorkerError(aiStep.error),
           });
           return 'illegal-template';
         }
-
-        let aiSelection: ReturnType<typeof selectAgentMove>;
-        try {
-          aiSelection = selectAgentMove({
-            controller: activeController,
-            def: state.gameDef,
-            state: state.gameState,
-            playerId: activePlayerId,
-            legalMoves: legalMoveResult.moves,
-            rng: agentRng,
-            runtime: gameRuntime,
-          });
-        } catch (error) {
-          guardSetAndDerive(ctx, {
-            legalMoveResult,
-            error: toWorkerError(error),
-          });
-          return 'illegal-template';
-        }
-
-        if (aiSelection === null) {
+        if (aiStep.kind === 'no-legal-moves') {
           guardSetAndDerive(ctx, { legalMoveResult, error: null });
           return 'no-legal-moves';
         }
-        agentRngByPlayer.set(activePlayerId, aiSelection.rng);
 
         let result;
         try {
-          result = await bridge.applyMove(aiSelection.move, undefined, toOperationStamp(ctx));
+          result = await bridge.applyMove(aiStep.move, undefined, toOperationStamp(ctx));
         } catch (error) {
           guardSetAndDerive(ctx, {
             legalMoveResult,
@@ -875,7 +888,7 @@ export function createGameStore(
           return 'illegal-template';
         }
 
-        const completedMove = aiSelection.move;
+        const completedMove = aiStep.move;
         const mutationInputs = await deriveMutationInputs(result.state);
         const appliedMovePatch = buildAppliedMoveEventPatch(state, completedMove);
         const lifecycle = assertLifecycleTransition(
@@ -899,31 +912,8 @@ export function createGameStore(
         }
         options?.onMoveApplied?.(completedMove);
 
-        if (options?.traceBus !== undefined && aiSelection.agentDecision !== undefined) {
-          const tracePlayer = state.renderModel.activePlayerID;
-          const tracePlayerName = state.renderModel.players.find((p) => p.id === tracePlayer)?.displayName;
-          options.traceBus.emit({
-            kind: 'move-applied',
-            turnCount: mutationInputs.gameState.turnCount,
-            player: tracePlayer,
-            ...(tracePlayerName !== undefined ? { seatId: tracePlayerName } : {}),
-            move: completedMove,
-            deltas: [],
-            triggerFirings: result.triggerFirings,
-            effectTrace: result.effectTrace ?? [],
-            ...(result.conditionTrace !== undefined ? { conditionTrace: result.conditionTrace } : {}),
-            ...(result.decisionTrace !== undefined ? { decisionTrace: result.decisionTrace } : {}),
-            ...(result.selectorTrace !== undefined ? { selectorTrace: result.selectorTrace } : {}),
-            agentDecision: aiSelection.agentDecision,
-          });
-
-          if (mutationInputs.terminal !== null) {
-            options.traceBus.emit({
-              kind: 'game-terminal',
-              result: mutationInputs.terminal,
-              turnCount: mutationInputs.gameState.turnCount,
-            });
-          }
+        if (options?.traceBus !== undefined && aiStep.agentDecision !== undefined) {
+          emitMoveAppliedTrace(options.traceBus, state, mutationInputs, completedMove, result, aiStep.agentDecision);
         }
 
         return 'advanced';
@@ -947,8 +937,7 @@ export function createGameStore(
             const { state: gameState, setupTrace } = await bridge.init(def, seed, { playerCount: playerConfig.length }, toOperationStamp(operation));
             const legalMoveResult = await bridge.enumerateLegalMoves();
             const terminal = await bridge.terminalResult();
-            gameRuntime = createGameDefRuntime(def);
-            agentRngByPlayer = new Map(createAgentRngByPlayer(seed, gameState.playerCount));
+            agentTurnOrchestrator.initializeSession({ def, seed, playerCount: gameState.playerCount });
             const lifecycle = assertLifecycleTransition(
               get().gameLifecycle,
               lifecycleFromTerminal(terminal),
@@ -990,8 +979,7 @@ export function createGameStore(
             const gameState = await bridge.getState();
             const legalMoveResult = await bridge.enumerateLegalMoves();
             const terminal = await bridge.terminalResult();
-            gameRuntime = createGameDefRuntime(def);
-            agentRngByPlayer = new Map(createAgentRngByPlayer(seed, gameState.playerCount));
+            agentTurnOrchestrator.initializeSession({ def, seed, playerCount: gameState.playerCount });
             const lifecycle = assertLifecycleTransition(
               get().gameLifecycle,
               lifecycleFromTerminal(terminal),
@@ -1007,6 +995,7 @@ export function createGameStore(
         },
 
         hydrateFromReplayStep(gameState, legalMoveResult, terminal, effectTrace, triggerFirings) {
+          agentTurnOrchestrator.resetSession();
           const lifecycle = assertLifecycleTransition(
             get().gameLifecycle,
             lifecycleFromTerminal(terminal),
@@ -1025,6 +1014,7 @@ export function createGameStore(
         },
 
         reportBootstrapFailure(error) {
+          agentTurnOrchestrator.resetSession();
           const lifecycle = assertLifecycleTransition(get().gameLifecycle, 'idle', 'reportBootstrapFailure');
           setAndDerive(buildInitFailureState(error, lifecycle));
         },
@@ -1102,29 +1092,7 @@ export function createGameStore(
               options?.onMoveApplied?.(move);
 
               if (options?.traceBus !== undefined) {
-                const humanTracePlayer = state.renderModel?.activePlayerID ?? state.playerID!;
-                const humanTracePlayerName = state.renderModel?.players.find((p) => p.id === humanTracePlayer)?.displayName;
-                options.traceBus.emit({
-                  kind: 'move-applied',
-                  turnCount: mutationInputs.gameState.turnCount,
-                  player: humanTracePlayer,
-                  ...(humanTracePlayerName !== undefined ? { seatId: humanTracePlayerName } : {}),
-                  move,
-                  deltas: [],
-                  triggerFirings: result.triggerFirings,
-                  effectTrace: result.effectTrace ?? [],
-                  ...(result.conditionTrace !== undefined ? { conditionTrace: result.conditionTrace } : {}),
-                  ...(result.decisionTrace !== undefined ? { decisionTrace: result.decisionTrace } : {}),
-                  ...(result.selectorTrace !== undefined ? { selectorTrace: result.selectorTrace } : {}),
-                });
-
-                if (mutationInputs.terminal !== null) {
-                  options.traceBus.emit({
-                    kind: 'game-terminal',
-                    result: mutationInputs.terminal,
-                    turnCount: mutationInputs.gameState.turnCount,
-                  });
-                }
+                emitMoveAppliedTrace(options.traceBus, state, mutationInputs, move, result);
               }
             }
           });

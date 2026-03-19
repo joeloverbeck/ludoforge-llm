@@ -16,6 +16,7 @@ import {
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 import { createAgentSeatController, createHumanSeatController } from '../../src/seat/seat-controller.js';
 import { createGameStore } from '../../src/store/game-store.js';
+import type { AgentTurnOrchestrator } from '../../src/store/agent-turn-orchestrator.js';
 import { createGameWorker, type GameWorkerAPI, type WorkerError } from '../../src/worker/game-worker-api.js';
 import { CHOOSE_MIXED_TEST_DEF, CHOOSE_N_TEST_DEF, CHOOSE_ONE_TEST_DEF } from '../worker/test-fixtures.js';
 import type { PlayerSeatConfig } from '../../src/session/session-types.js';
@@ -138,11 +139,17 @@ function pickOneOption(store: ReturnType<typeof createGameStore>): ChoiceScalar 
   return asChoiceScalar(pending.options[0]!.value, 'pending');
 }
 
-function createStoreWithDefaultVisuals(bridge: GameWorkerAPI, onMoveApplied?: (move: Move) => void) {
+function createStoreWithDefaultVisuals(
+  bridge: GameWorkerAPI,
+  options?: {
+    readonly agentTurnOrchestrator?: AgentTurnOrchestrator;
+    readonly onMoveApplied?: (move: Move) => void;
+  },
+) {
   return createGameStore(
     bridge,
     new VisualConfigProvider(null),
-    onMoveApplied === undefined ? undefined : { onMoveApplied },
+    options,
   );
 }
 
@@ -551,7 +558,7 @@ describe('createGameStore', () => {
     const def = compileStoreFixture(5);
     const bridge = createGameWorker();
     const onMoveApplied = vi.fn<(move: Move) => void>();
-    const store = createStoreWithDefaultVisuals(bridge, onMoveApplied);
+    const store = createStoreWithDefaultVisuals(bridge, { onMoveApplied });
     await store.getState().initGame(def, 16, TWO_PLAYER_CONFIG);
     await store.getState().selectAction(asActionId('tick'));
 
@@ -856,7 +863,7 @@ describe('createGameStore', () => {
       applyMove,
     });
     const onMoveApplied = vi.fn<(move: Move) => void>();
-    const store = createStoreWithDefaultVisuals(bridge, onMoveApplied);
+    const store = createStoreWithDefaultVisuals(bridge, { onMoveApplied });
 
     await store.getState().initGame(def, 37, TWO_PLAYER_CONFIG);
     const outcome = await store.getState().resolveAiStep();
@@ -924,7 +931,7 @@ describe('createGameStore', () => {
       },
     });
     const onMoveApplied = vi.fn<(move: Move) => void>();
-    const store = createStoreWithDefaultVisuals(bridge, onMoveApplied);
+    const store = createStoreWithDefaultVisuals(bridge, { onMoveApplied });
 
     await store.getState().initGame(def, 44, TWO_PLAYER_CONFIG);
     await store.getState().selectAction(asActionId('tick'));
@@ -955,6 +962,54 @@ describe('createGameStore', () => {
 
     expect(outcome).toBe('no-op');
     expect(store.getState().error).toBeNull();
+  });
+
+  it('resolveAiStep delegates AI selection through the orchestrator boundary', async () => {
+    const def = compileStoreFixture(8);
+    const aiState: GameState = {
+      ...initialState(def, 63, 2).state,
+      activePlayer: asPlayerId(1),
+    };
+    const completedMove: Move = { actionId: asActionId('tick'), params: { delegated: true } };
+    const orchestrator: AgentTurnOrchestrator = {
+      resetSession: vi.fn(),
+      initializeSession: vi.fn(),
+      resolveStep: vi.fn<AgentTurnOrchestrator['resolveStep']>(() => ({
+        kind: 'selected-move',
+        move: completedMove,
+      })),
+    };
+    const applyMove = vi.fn<GameWorkerAPI['applyMove']>(async (_move) => ({
+      state: {
+        ...aiState,
+        activePlayer: asPlayerId(0),
+        globalVars: { ...aiState.globalVars, round: 1 },
+      },
+      effectTrace: [],
+      triggerFirings: [],
+      warnings: [],
+    }));
+    const bridge = createBridgeStub({
+      init: () => ({ state: aiState, setupTrace: [] }),
+      enumerateLegalMoves: () => ({ moves: [{ actionId: asActionId('tick'), params: {} }], warnings: [] }),
+      terminalResult: () => null,
+      applyMove,
+    });
+    const store = createStoreWithDefaultVisuals(bridge, { agentTurnOrchestrator: orchestrator });
+
+    await store.getState().initGame(def, 63, TWO_PLAYER_CONFIG);
+    const outcome = await store.getState().resolveAiStep();
+
+    expect(outcome).toBe('advanced');
+    expect(orchestrator.initializeSession).toHaveBeenCalledWith({ def, seed: 63, playerCount: 2 });
+    expect(orchestrator.resolveStep).toHaveBeenCalledWith({
+      controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }),
+      def,
+      legalMoves: [{ actionId: asActionId('tick'), params: {} }],
+      playerId: asPlayerId(1),
+      state: aiState,
+    });
+    expect(applyMove).toHaveBeenCalledWith(completedMove, undefined, expect.any(Object));
   });
 
   it('resolveAiStep executes completed AI moves through applyMove', async () => {

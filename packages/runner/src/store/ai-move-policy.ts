@@ -9,7 +9,6 @@ import type {
   PlayerId,
   Rng,
 } from '@ludoforge/engine/runtime';
-import { createRng } from '@ludoforge/engine/runtime';
 
 import {
   isAgentSeatController,
@@ -43,8 +42,6 @@ const SPEED_MULTIPLIERS: Readonly<Record<AiPlaybackSpeed, number>> = {
   '2x': 2,
   '4x': 4,
 };
-const AGENT_RNG_MIX = 0x9e3779b97f4a7c15n;
-
 function clampRandom(value: number): number {
   if (!Number.isFinite(value)) {
     return MIN_RANDOM;
@@ -75,18 +72,6 @@ export function selectAgentMove(input: SelectAgentMoveInput): AgentMoveSelection
     rng: input.rng,
     runtime: input.runtime,
   });
-}
-
-export function createAgentRngByPlayer(seed: number, playerCount: number): ReadonlyMap<PlayerId, Rng> {
-  return new Map(
-    Array.from(
-      { length: playerCount },
-      (_unused, playerIndex) => {
-        const playerId = playerIndex as PlayerId;
-        return [playerId, createRng(BigInt(seed) ^ (BigInt(playerIndex + 1) * AGENT_RNG_MIX))] as const;
-      },
-    ),
-  );
 }
 
 export function selectRandomIndex(length: number, random: () => number = Math.random): number {

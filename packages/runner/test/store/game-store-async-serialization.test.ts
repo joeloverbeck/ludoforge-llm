@@ -372,4 +372,36 @@ describe('createGameStore async serialization', () => {
     expect(state.error).toBeNull();
     expect(state.gameLifecycle).toBe('playing');
   });
+
+  it('stale resolveAiStep completion after newer initGame does not mutate the new session', async () => {
+    const def = compileCounterFixture(5);
+    const aiConfig: readonly PlayerSeatConfig[] = [
+      { playerId: 0, controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }) },
+      { playerId: 1, controller: createHumanSeatController() },
+    ];
+    const bridge = createGameWorker();
+    const store = createStoreWithDefaultVisuals(bridge);
+    await store.getState().initGame(def, 70, aiConfig);
+
+    const baseApplyMove = bridge.applyMove.bind(bridge);
+    const gate = createDeferred<void>();
+    vi.spyOn(bridge, 'applyMove').mockImplementationOnce(async (move, options, stamp) => {
+      await gate.promise;
+      return await baseApplyMove(move, options, stamp);
+    });
+
+    const staleResolve = store.getState().resolveAiStep();
+    const newerInit = store.getState().initGame(def, 71, P0_HUMAN_CONFIG);
+
+    gate.resolve();
+    await Promise.all([staleResolve, newerInit]);
+
+    const state = store.getState();
+    expect(state.playerID).toEqual(asPlayerId(0));
+    expect(state.gameState).toEqual(initialState(def, 71).state);
+    expect(state.gameState?.globalVars.round).toBe(0);
+    expect(state.renderModel?.activePlayerID).toEqual(asPlayerId(0));
+    expect(state.loading).toBe(false);
+    expect(state.error).toBeNull();
+  });
 });

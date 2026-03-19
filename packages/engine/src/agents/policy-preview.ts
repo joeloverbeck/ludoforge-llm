@@ -1,7 +1,8 @@
 import { computeDerivedMetricValue } from '../kernel/derived-values.js';
 import { derivePlayerObservation } from '../kernel/observation.js';
-import { applyMove, probeMoveViability, type MoveViabilityProbeResult } from '../kernel/apply-move.js';
+import { applyMove } from '../kernel/apply-move.js';
 import { buildSeatResolutionIndex, resolvePlayerIndexForSeatValue, type SeatResolutionIndex } from '../kernel/identity.js';
+import { classifyPlayableMoveCandidate, type PlayableCandidateClassification } from '../kernel/playable-candidate.js';
 import type { PlayerId } from '../kernel/branded.js';
 import type {
   CompiledAgentPolicyPreviewSurfaceRef,
@@ -25,12 +26,12 @@ export interface PolicyPreviewCandidate {
 }
 
 export interface PolicyPreviewDependencies {
-  readonly probeMoveViability?: (
+  readonly classifyPlayableMoveCandidate?: (
     def: GameDef,
     state: GameState,
     move: Move,
     runtime?: GameDefRuntime,
-  ) => MoveViabilityProbeResult;
+  ) => PlayableCandidateClassification;
   readonly applyMove?: (
     def: GameDef,
     state: GameState,
@@ -72,7 +73,7 @@ type PreviewOutcome =
     };
 
 const defaultDependencies = {
-  probeMoveViability,
+  classifyPlayableMoveCandidate,
   applyMove,
   derivePlayerObservation,
   computeDerivedMetricValue,
@@ -147,19 +148,25 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
       return cached;
     }
 
-    const viability = deps.probeMoveViability(input.def, input.state, candidate.move, input.runtime);
-    const outcome = classifyPreviewOutcome(candidate.move, viability);
+    const classification = deps.classifyPlayableMoveCandidate(input.def, input.state, candidate.move, input.runtime);
+    const outcome = classifyPreviewOutcome(classification);
     cache.set(candidate.stableMoveKey, outcome);
     return outcome;
   }
 
-  function classifyPreviewOutcome(move: Move, viability: MoveViabilityProbeResult): PreviewOutcome {
-    if (!viability.viable || !viability.complete) {
+  function classifyPreviewOutcome(classification: PlayableCandidateClassification): PreviewOutcome {
+    if (classification.kind !== 'playableComplete') {
       return { kind: 'unknown', reason: 'unresolved' };
     }
 
     try {
-      const previewState = deps.applyMove(input.def, input.state, move, undefined, input.runtime).state;
+      const previewState = deps.applyMove(
+        input.def,
+        input.state,
+        classification.move,
+        undefined,
+        input.runtime,
+      ).state;
       if (!rngStatesEqual(previewState.rng, input.state.rng)) {
         return { kind: 'unknown', reason: 'random' };
       }

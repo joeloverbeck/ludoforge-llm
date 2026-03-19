@@ -117,9 +117,9 @@ describe('policy-preview', () => {
       playerId: asPlayerId(0),
       seatId: 'us',
       dependencies: {
-        probeMoveViability: () => {
+        classifyPlayableMoveCandidate: () => {
           probeCalls += 1;
-          return { viable: true, complete: true, move: candidate.move, warnings: [] };
+          return { kind: 'playableComplete', move: candidate.move, warnings: [] };
         },
         applyMove: () => {
           applyCalls += 1;
@@ -158,7 +158,7 @@ describe('policy-preview', () => {
       playerId: asPlayerId(0),
       seatId: 'us',
       dependencies: {
-        probeMoveViability: () => ({ viable: true, complete: false, move: candidate.move, warnings: [] }),
+        classifyPlayableMoveCandidate: () => ({ kind: 'rejected', move: candidate.move, rejection: 'notDecisionComplete' }),
         applyMove: () => {
           applyCalls += 1;
           return { state };
@@ -181,7 +181,7 @@ describe('policy-preview', () => {
       playerId: asPlayerId(0),
       seatId: 'us',
       dependencies: {
-        probeMoveViability: () => ({ viable: true, complete: true, move: candidate.move, warnings: [] }),
+        classifyPlayableMoveCandidate: () => ({ kind: 'playableComplete', move: candidate.move, warnings: [] }),
         applyMove: () => ({
           state: {
             ...state,
@@ -208,7 +208,7 @@ describe('policy-preview', () => {
       playerId: asPlayerId(0),
       seatId: 'us',
       dependencies: {
-        probeMoveViability: () => ({ viable: true, complete: true, move: candidate.move, warnings: [] }),
+        classifyPlayableMoveCandidate: () => ({ kind: 'playableComplete', move: candidate.move, warnings: [] }),
         applyMove: () => ({
           state: {
             ...state,

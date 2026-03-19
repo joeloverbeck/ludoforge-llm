@@ -1,6 +1,5 @@
 import { legalChoicesEvaluate } from '../kernel/legal-choices.js';
-import { completeTemplateMove } from '../kernel/move-completion.js';
-import { probeMoveViability } from '../kernel/apply-move.js';
+import { evaluatePlayableMoveCandidate } from '../kernel/playable-candidate.js';
 import type { Agent, Move, Rng } from '../kernel/types.js';
 
 export interface PreparePlayableMovesOptions {
@@ -30,23 +29,19 @@ export function preparePlayableMoves(
 
     const attempts = choiceState.kind === 'pending' ? pendingTemplateCompletions : 1;
     for (let attempt = 0; attempt < attempts; attempt += 1) {
-      const result = completeTemplateMove(input.def, input.state, move, rng, input.runtime);
-      if (result.kind === 'completed') {
-        const viability = probeMoveViability(input.def, input.state, result.move, input.runtime);
-        if (viability.viable && viability.complete) {
-          completedMoves.push(result.move);
-        }
-        rng = result.rng;
+      const result = evaluatePlayableMoveCandidate(input.def, input.state, move, rng, input.runtime);
+      rng = result.rng;
+      if (result.kind === 'playableComplete') {
+        completedMoves.push(result.move);
         continue;
       }
-      if (result.kind === 'stochasticUnresolved') {
-        const viability = probeMoveViability(input.def, input.state, result.move, input.runtime);
-        if (viability.viable) {
-          stochasticMoves.push(result.move);
-        }
-        rng = result.rng;
+      if (result.kind === 'playableStochastic') {
+        stochasticMoves.push(result.move);
+        break;
       }
-      break;
+      if (result.rejection === 'completionUnsatisfiable') {
+        break;
+      }
     }
   }
 

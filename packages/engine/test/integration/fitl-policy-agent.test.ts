@@ -5,8 +5,10 @@ import { PolicyAgent } from '../../src/agents/policy-agent.js';
 import {
   applyMove,
   assertValidatedGameDef,
+  classifyPlayableMoveCandidate,
   createRng,
   createGameDefRuntime,
+  evaluatePlayableMoveCandidate,
   initialState,
   legalMoves,
   probeMoveViability,
@@ -47,6 +49,13 @@ describe('FITL policy agent integration', () => {
     }
     assert.equal(rawEventViability.complete, false);
 
+    const rawEventCandidate = evaluatePlayableMoveCandidate(def, state, rawEventMove, createRng(7n), runtime);
+    assert.equal(
+      rawEventCandidate.kind === 'playableComplete' || rawEventCandidate.kind === 'playableStochastic',
+      true,
+      'expected shared evaluator to produce a playable candidate classification for the raw event template',
+    );
+
     const agent = new PolicyAgent();
     const selected = agent.chooseMove({
       def,
@@ -63,6 +72,8 @@ describe('FITL policy agent integration', () => {
       assert.fail('expected the selected move to be viable');
     }
     assert.equal(selectedViability.complete, true);
+    const selectedCandidate = classifyPlayableMoveCandidate(def, state, selected.move, runtime);
+    assert.equal(selectedCandidate.kind, 'playableComplete');
     assert.doesNotThrow(() => applyMove(def, state, selected.move, undefined, runtime));
     assert.equal(selected.agentDecision?.kind, 'policy');
     if (selected.agentDecision?.kind !== 'policy') {

@@ -52,6 +52,29 @@ describe('VisualConfigProvider', () => {
     expect(provider.getCardAnimation()).toBeNull();
   });
 
+  it('runner chrome top bar resolves to runner-owned defaults when omitted', () => {
+    const provider = new VisualConfigProvider({ version: 1 });
+
+    expect(provider.getRunnerChromeTopBar()).toEqual({
+      statusAlignment: 'center',
+    });
+  });
+
+  it('runner chrome top bar resolves configured presentation overrides', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      runnerChrome: {
+        topBar: {
+          statusAlignment: 'start',
+        },
+      },
+    });
+
+    expect(provider.getRunnerChromeTopBar()).toEqual({
+      statusAlignment: 'start',
+    });
+  });
+
   it('table overlays return configured value or null', () => {
     const withOverlays = new VisualConfigProvider({
       version: 1,

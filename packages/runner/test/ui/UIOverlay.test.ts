@@ -44,6 +44,24 @@ describe('UIOverlay', () => {
     expect(html).toContain('top status');
   });
 
+  it('consumes top-bar presentation hints for top status alignment', () => {
+    const centeredHtml = renderToStaticMarkup(
+      createElement(UIOverlay, {
+        topBarPresentation: { statusAlignment: 'center' },
+        topStatusContent: createElement('div', null, 'centered status'),
+      }),
+    );
+    const startAlignedHtml = renderToStaticMarkup(
+      createElement(UIOverlay, {
+        topBarPresentation: { statusAlignment: 'start' },
+        topStatusContent: createElement('div', null, 'start status'),
+      }),
+    );
+
+    expect(centeredHtml).toContain('data-top-status-alignment="center"');
+    expect(startAlignedHtml).toContain('data-top-status-alignment="start"');
+  });
+
   it('renders provided topSessionContent in top session region', () => {
     const html = renderToStaticMarkup(
       createElement(UIOverlay, {
@@ -98,6 +116,7 @@ describe('UIOverlay', () => {
       topRegion: expect.any(String),
       topBar: expect.any(String),
       topStatus: expect.any(String),
+      topStatusStartAligned: expect.any(String),
       topSession: expect.any(String),
       scoringBar: expect.any(String),
       leftPanel: expect.any(String),

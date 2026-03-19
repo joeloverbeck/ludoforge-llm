@@ -41,6 +41,9 @@ interface CapturedGameCanvasProps {
 interface CapturedUIOverlayProps {
   readonly topStatusContent?: ReactNode;
   readonly topSessionContent?: ReactNode;
+  readonly topBarPresentation?: {
+    readonly statusAlignment: 'center' | 'start';
+  };
   readonly scoringBarContent?: ReactNode;
   readonly leftPanelContent?: ReactNode;
   readonly sidePanelContent?: ReactNode;
@@ -472,6 +475,37 @@ describe('GameContainer', () => {
     expect(html).toContain('data-testid="session-save-button"');
     expect(html).toContain('data-testid="session-load-button"');
     expect(html).toContain('data-testid="session-quit-button"');
+  });
+
+  it('passes runnerChrome top-bar presentation hints from the visual config provider into UIOverlay', () => {
+    testDoubles.uiOverlayProps = null;
+    renderToStaticMarkup(
+      createElement(GameContainer, {
+        bridge: TEST_BRIDGE,
+        store: createContainerStore({
+          gameLifecycle: 'playing',
+          error: null,
+        }),
+        visualConfigProvider: new VisualConfigProvider({
+          version: 1,
+          runnerChrome: {
+            topBar: {
+              statusAlignment: 'start',
+            },
+          },
+        }),
+      }),
+    );
+
+    const overlayProps = testDoubles.uiOverlayProps as CapturedUIOverlayProps | null;
+    expect(overlayProps).not.toBeNull();
+    if (overlayProps === null) {
+      throw new Error('Expected UIOverlay props to be captured.');
+    }
+
+    expect(overlayProps.topBarPresentation).toEqual({
+      statusAlignment: 'start',
+    });
   });
 
   it('renders GameCanvas and UIOverlay when lifecycle is terminal', () => {

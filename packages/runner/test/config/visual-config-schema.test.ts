@@ -180,6 +180,19 @@ describe('VisualConfigSchema', () => {
     expect(result.success).toBe(true);
   });
 
+  it('accepts runnerChrome top-bar presentation hints', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      runnerChrome: {
+        topBar: {
+          statusAlignment: 'start',
+        },
+      },
+    });
+
+    expect(result.success).toBe(true);
+  });
+
   it('parses edges config when present', () => {
     const result = VisualConfigSchema.safeParse({
       version: 1,
@@ -194,6 +207,20 @@ describe('VisualConfigSchema', () => {
 
   it('rejects invalid version', () => {
     const result = VisualConfigSchema.safeParse({ version: 2 });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects behavior-encoding fields under runnerChrome topBar', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      runnerChrome: {
+        topBar: {
+          statusAlignment: 'center',
+          menuItems: ['playback'],
+        },
+      },
+    });
+
     expect(result.success).toBe(false);
   });
 

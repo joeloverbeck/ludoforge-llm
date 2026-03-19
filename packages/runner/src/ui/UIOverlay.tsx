@@ -1,10 +1,12 @@
 import type { ReactElement, ReactNode } from 'react';
 
+import type { ResolvedRunnerChromeTopBar } from '../config/visual-config-provider.js';
 import styles from './UIOverlay.module.css';
 
 interface UIOverlayProps {
   readonly topStatusContent?: ReactNode;
   readonly topSessionContent?: ReactNode;
+  readonly topBarPresentation?: ResolvedRunnerChromeTopBar;
   readonly scoringBarContent?: ReactNode;
   readonly leftPanelContent?: ReactNode;
   readonly sidePanelContent?: ReactNode;
@@ -15,17 +17,26 @@ interface UIOverlayProps {
 export function UIOverlay({
   topStatusContent,
   topSessionContent,
+  topBarPresentation,
   scoringBarContent,
   leftPanelContent,
   sidePanelContent,
   bottomBarContent,
   floatingContent,
 }: UIOverlayProps): ReactElement {
+  const topStatusClassName = topBarPresentation?.statusAlignment === 'start'
+    ? `${styles.topStatus} ${styles.topStatusStartAligned}`
+    : styles.topStatus;
+
   return (
     <div className={styles.overlay} data-testid="ui-overlay">
       <div className={styles.topRegion}>
         <div className={styles.topBar} data-testid="ui-overlay-top">
-          <div className={styles.topStatus} data-testid="ui-overlay-top-status">
+          <div
+            className={topStatusClassName}
+            data-testid="ui-overlay-top-status"
+            data-top-status-alignment={topBarPresentation?.statusAlignment ?? 'center'}
+          >
             {topStatusContent}
           </div>
           <div className={styles.topSession} data-testid="ui-overlay-top-session">

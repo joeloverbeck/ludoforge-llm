@@ -37,6 +37,7 @@ import type {
   VariablesConfig,
   VictoryTooltipBreakdown,
   VisualConfig,
+  RunnerChromeTopBarStatusAlignment,
   ZoneTokenLayout,
 } from './visual-config-types.js';
 
@@ -116,6 +117,10 @@ export interface ResolvedZoneHighlightPolicy {
   readonly enabled: boolean;
   readonly includeKinds: readonly ZoneHighlightSourceKind[];
   readonly moveEndpoints: ZoneHighlightMoveEndpoints;
+}
+
+export interface ResolvedRunnerChromeTopBar {
+  readonly statusAlignment: RunnerChromeTopBarStatusAlignment;
 }
 
 export class VisualConfigProvider {
@@ -363,6 +368,12 @@ export class VisualConfigProvider {
 
   getVariablesConfig(): VariablesConfig | null {
     return this.config?.variables ?? null;
+  }
+
+  getRunnerChromeTopBar(): ResolvedRunnerChromeTopBar {
+    return {
+      statusAlignment: this.config?.runnerChrome?.topBar?.statusAlignment ?? 'center',
+    };
   }
 
   getLayoutHints(): LayoutHints | null {

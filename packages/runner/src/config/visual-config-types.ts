@@ -470,6 +470,16 @@ const ActionGroupPolicySchema = z.object({
   hide: z.array(z.string()).optional(),
 });
 
+const RunnerChromeTopBarStatusAlignmentSchema = z.enum(['center', 'start']);
+
+const RunnerChromeTopBarSchema = z.object({
+  statusAlignment: RunnerChromeTopBarStatusAlignmentSchema.optional(),
+}).strict();
+
+const RunnerChromeConfigSchema = z.object({
+  topBar: RunnerChromeTopBarSchema.optional(),
+}).strict();
+
 export const VisualConfigSchema = z.object({
   version: z.literal(1),
   layout: LayoutConfigSchema.optional(),
@@ -489,6 +499,7 @@ export const VisualConfigSchema = z.object({
   victoryStandings: VictoryStandingsVisualSchema.optional(),
   actionGroupPolicy: ActionGroupPolicySchema.optional(),
   regions: RegionBoundaryConfigSchema.optional(),
+  runnerChrome: RunnerChromeConfigSchema.optional(),
 });
 
 export type LayoutMode = z.infer<typeof LayoutModeSchema>;
@@ -554,4 +565,7 @@ export type ActionGroupPolicy = z.infer<typeof ActionGroupPolicySchema>;
 export type RegionBorderStyle = z.infer<typeof RegionBorderStyleSchema>;
 export type RegionStyle = z.infer<typeof RegionStyleSchema>;
 export type RegionBoundaryConfig = z.infer<typeof RegionBoundaryConfigSchema>;
+export type RunnerChromeTopBarStatusAlignment = z.infer<typeof RunnerChromeTopBarStatusAlignmentSchema>;
+export type RunnerChromeTopBarConfig = z.infer<typeof RunnerChromeTopBarSchema>;
+export type RunnerChromeConfig = z.infer<typeof RunnerChromeConfigSchema>;
 export type VisualConfig = z.infer<typeof VisualConfigSchema>;

@@ -402,6 +402,7 @@ export function GameContainer({
         <UIOverlay
           leftPanelContent={renderOverlayRegionPanels(OVERLAY_REGION_PANELS.left, overlayPanelProps)}
           scoringBarContent={<VictoryStandingsBar store={store} />}
+          topBarPresentation={visualConfigProvider.getRunnerChromeTopBar()}
           topStatusContent={topStatusContent}
           topSessionContent={topSessionContent}
           sidePanelContent={sidePanelContent}

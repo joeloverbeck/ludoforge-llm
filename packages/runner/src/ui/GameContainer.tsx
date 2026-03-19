@@ -108,6 +108,22 @@ export function resolveTooltipAnchorState(hoverAnchor: HoverAnchor | null): Tool
   };
 }
 
+function useActionSurfaceRevision(renderModel: GameStore['renderModel']): number {
+  const surfaceStateRef = useRef<{ readonly renderModel: GameStore['renderModel']; readonly revision: number }>({
+    renderModel: null,
+    revision: 0,
+  });
+
+  if (surfaceStateRef.current.renderModel !== renderModel) {
+    surfaceStateRef.current = {
+      renderModel,
+      revision: surfaceStateRef.current.revision + 1,
+    };
+  }
+
+  return surfaceStateRef.current.revision;
+}
+
 export function GameContainer({
   store,
   bridge,
@@ -150,6 +166,7 @@ export function GameContainer({
     onActionHoverEnd,
     onTooltipPointerEnter,
     onTooltipPointerLeave,
+    invalidateActionTooltip,
   } = useActionTooltip(bridge);
   const {
     cardTooltipState,
@@ -199,6 +216,17 @@ export function GameContainer({
   const bottomBarKind = readOnlyMode
     ? ('hidden' as const)
     : deriveBottomBarState(renderModel).kind;
+  const actionSurfaceRevision = useActionSurfaceRevision(renderModel);
+
+  useEffect(() => {
+    const hoveredSourceKey = actionTooltipState.sourceKey;
+    if (hoveredSourceKey === null) {
+      return;
+    }
+    if (bottomBarKind !== 'actions' || hoveredSourceKey.surfaceRevision !== actionSurfaceRevision) {
+      invalidateActionTooltip();
+    }
+  }, [actionSurfaceRevision, actionTooltipState.sourceKey, bottomBarKind, invalidateActionTooltip]);
 
   const onHoverAnchorChange = useCallback((anchor: HoverAnchor | null): void => {
     setHoverAnchor(anchor);
@@ -275,6 +303,7 @@ export function GameContainer({
           <>
             <ActionToolbar
               store={store}
+              surfaceRevision={actionSurfaceRevision}
               onActionHoverStart={onActionHoverStart}
               onActionHoverEnd={onActionHoverEnd}
             />

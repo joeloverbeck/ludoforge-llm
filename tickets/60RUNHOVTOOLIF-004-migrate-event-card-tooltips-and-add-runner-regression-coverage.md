@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — runner-only
-**Deps**: `specs/60-runner-hover-tooltip-lifecycle.md`, `archive/tickets/60RUNHOVTOOLIF/60RUNHOVTOOLIF-001-add-shared-hover-popover-session-controller.md`, `tickets/60RUNHOVTOOLIF-002-centralize-floating-anchor-resolution-and-safe-render-gating.md`, `tickets/60RUNHOVTOOLIF-003-invalidate-action-tooltips-on-action-surface-lifecycle-changes.md`
+**Deps**: `specs/60-runner-hover-tooltip-lifecycle.md`, `archive/tickets/60RUNHOVTOOLIF/60RUNHOVTOOLIF-001-add-shared-hover-popover-session-controller.md`, `archive/tickets/60RUNHOVTOOLIF/60RUNHOVTOOLIF-002-centralize-floating-anchor-resolution-and-safe-render-gating.md`, `archive/tickets/60RUNHOVTOOLIF/60RUNHOVTOOLIF-003-invalidate-action-tooltips-on-action-surface-lifecycle-changes.md`
 
 ## Problem
 

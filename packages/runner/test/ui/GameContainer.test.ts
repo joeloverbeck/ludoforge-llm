@@ -54,7 +54,8 @@ interface CapturedUIOverlayProps {
 
 interface CapturedActionToolbarProps {
   readonly store: unknown;
-  readonly onActionHoverStart?: (actionId: string, element: HTMLElement) => void;
+  readonly surfaceRevision: number;
+  readonly onActionHoverStart?: (sourceKey: { readonly actionId: string }, element: HTMLElement) => void;
   readonly onActionHoverEnd?: () => void;
 }
 
@@ -71,11 +72,15 @@ const testDoubles = vi.hoisted(() => ({
   actionToolbarProps: null as CapturedActionToolbarProps | null,
   actionTooltipProps: null as CapturedActionTooltipProps | null,
   actionTooltipHookState: {
-    actionId: null as string | null,
+    sourceKey: null as { readonly actionId: string; readonly surfaceRevision: number } | null,
     description: null as unknown,
     loading: false,
     anchorElement: null as HTMLElement | null,
+    status: 'idle' as const,
+    interactionOwner: null as null,
+    revision: 0,
   },
+  invalidateActionTooltip: vi.fn(),
 }));
 const TEST_VISUAL_CONFIG_PROVIDER = new VisualConfigProvider(null);
 const TEST_BRIDGE = {} as unknown as GameBridge;
@@ -179,6 +184,9 @@ vi.mock('../../src/ui/useActionTooltip.js', () => ({
     tooltipState: testDoubles.actionTooltipHookState,
     onActionHoverStart: vi.fn(),
     onActionHoverEnd: vi.fn(),
+    onTooltipPointerEnter: vi.fn(),
+    onTooltipPointerLeave: vi.fn(),
+    invalidateActionTooltip: testDoubles.invalidateActionTooltip,
   }),
 }));
 
@@ -948,10 +956,13 @@ describe('GameContainer', () => {
   it('passes onActionHoverStart and onActionHoverEnd to ActionToolbar', () => {
     testDoubles.actionToolbarProps = null;
     testDoubles.actionTooltipHookState = {
-      actionId: null,
+      sourceKey: null,
       description: null,
       loading: false,
       anchorElement: null,
+      status: 'idle',
+      interactionOwner: null,
+      revision: 0,
     };
 
     renderToStaticMarkup(
@@ -971,6 +982,7 @@ describe('GameContainer', () => {
     if (capturedProps === null) {
       throw new Error('Expected ActionToolbar props to be captured.');
     }
+    expect(capturedProps.surfaceRevision).toEqual(expect.any(Number));
     expect(capturedProps.onActionHoverStart).toEqual(expect.any(Function));
     expect(capturedProps.onActionHoverEnd).toEqual(expect.any(Function));
   });
@@ -978,10 +990,13 @@ describe('GameContainer', () => {
   it('does not render ActionTooltip when tooltip state has no description', () => {
     testDoubles.actionTooltipProps = null;
     testDoubles.actionTooltipHookState = {
-      actionId: null,
+      sourceKey: null,
       description: null,
       loading: false,
       anchorElement: null,
+      status: 'idle',
+      interactionOwner: null,
+      revision: 0,
     };
 
     const html = renderToStaticMarkup(
@@ -1004,10 +1019,16 @@ describe('GameContainer', () => {
     testDoubles.actionTooltipProps = null;
     const fakeAnchor = {} as HTMLElement;
     testDoubles.actionTooltipHookState = {
-      actionId: 'pass',
+      sourceKey: {
+        actionId: 'pass',
+        surfaceRevision: 1,
+      },
       description: { sections: [], limitUsage: [] },
       loading: false,
       anchorElement: fakeAnchor,
+      status: 'visible',
+      interactionOwner: 'source',
+      revision: 1,
     };
 
     const html = renderToStaticMarkup(
@@ -1035,10 +1056,16 @@ describe('GameContainer', () => {
   it('does not render ActionTooltip when bottom bar is not in actions mode even with tooltip state', () => {
     testDoubles.actionTooltipProps = null;
     testDoubles.actionTooltipHookState = {
-      actionId: 'pass',
+      sourceKey: {
+        actionId: 'pass',
+        surfaceRevision: 1,
+      },
       description: { sections: [], limitUsage: [] },
       loading: false,
       anchorElement: {} as HTMLElement,
+      status: 'visible',
+      interactionOwner: 'source',
+      revision: 1,
     };
 
     // AI turn → bottomBarState is 'aiTurn', not 'actions'

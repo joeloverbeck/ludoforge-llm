@@ -4,6 +4,7 @@ import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { GameBridge } from '../../src/bridge/game-bridge.js';
+import type { ActionTooltipSourceKey } from '../../src/ui/action-tooltip-source-key.js';
 import { useActionTooltip } from '../../src/ui/useActionTooltip.js';
 
 function createMockBridge(describeActionImpl?: (...args: unknown[]) => unknown): GameBridge {
@@ -14,6 +15,19 @@ function createMockBridge(describeActionImpl?: (...args: unknown[]) => unknown):
 
 function createAnchorElement(): HTMLElement {
   return document.createElement('button');
+}
+
+function createSourceKey(
+  actionId: string,
+  overrides: Partial<ActionTooltipSourceKey> = {},
+): ActionTooltipSourceKey {
+  return {
+    playerId: 0,
+    groupKey: 'core',
+    actionId,
+    surfaceRevision: 1,
+    ...overrides,
+  };
 }
 
 describe('useActionTooltip', () => {
@@ -32,7 +46,7 @@ describe('useActionTooltip', () => {
     const { result } = renderHook(() => useActionTooltip(bridge));
 
     act(() => {
-      result.current.onActionHoverStart('action-1', createAnchorElement());
+      result.current.onActionHoverStart(createSourceKey('action-1'), createAnchorElement());
     });
 
     act(() => {
@@ -57,7 +71,7 @@ describe('useActionTooltip', () => {
     const { result } = renderHook(() => useActionTooltip(bridge));
 
     act(() => {
-      result.current.onActionHoverStart('action-1', createAnchorElement());
+      result.current.onActionHoverStart(createSourceKey('action-1'), createAnchorElement());
     });
 
     await act(async () => {
@@ -65,7 +79,7 @@ describe('useActionTooltip', () => {
     });
 
     expect(describeAction).toHaveBeenCalledTimes(1);
-    expect(describeAction).toHaveBeenCalledWith('action-1', undefined);
+    expect(describeAction).toHaveBeenCalledWith('action-1', { actorPlayer: 0 });
   });
 
   it('discards stale response when hovering a new action before previous resolves', async () => {
@@ -92,7 +106,7 @@ describe('useActionTooltip', () => {
 
     // Hover action A
     act(() => {
-      result.current.onActionHoverStart('action-A', createAnchorElement());
+      result.current.onActionHoverStart(createSourceKey('action-A', { surfaceRevision: 1 }), createAnchorElement());
     });
 
     await act(async () => {
@@ -101,7 +115,7 @@ describe('useActionTooltip', () => {
 
     // Hover action B before A resolves
     act(() => {
-      result.current.onActionHoverStart('action-B', createAnchorElement());
+      result.current.onActionHoverStart(createSourceKey('action-B', { surfaceRevision: 2 }), createAnchorElement());
     });
 
     await act(async () => {
@@ -113,7 +127,7 @@ describe('useActionTooltip', () => {
       resolveFirst(null);
     });
 
-    expect(result.current.tooltipState.actionId).toBe('action-B');
+    expect(result.current.tooltipState.sourceKey?.actionId).toBe('action-B');
     expect(result.current.tooltipState.description).toBeNull();
 
     // Resolve second — should update
@@ -121,7 +135,7 @@ describe('useActionTooltip', () => {
       resolveSecond(secondResult);
     });
 
-    expect(result.current.tooltipState.actionId).toBe('action-B');
+    expect(result.current.tooltipState.sourceKey?.actionId).toBe('action-B');
     expect(result.current.tooltipState.description).toEqual(secondResult);
     expect(result.current.tooltipState.loading).toBe(false);
   });
@@ -136,7 +150,7 @@ describe('useActionTooltip', () => {
     const { result } = renderHook(() => useActionTooltip(bridge));
 
     act(() => {
-      result.current.onActionHoverStart('action-1', createAnchorElement());
+      result.current.onActionHoverStart(createSourceKey('action-1'), createAnchorElement());
     });
 
     await act(async () => {
@@ -152,7 +166,7 @@ describe('useActionTooltip', () => {
       vi.advanceTimersByTime(200);
     });
 
-    expect(result.current.tooltipState.actionId).toBeNull();
+    expect(result.current.tooltipState.sourceKey).toBeNull();
     expect(result.current.tooltipState.description).toBeNull();
     expect(result.current.tooltipState.loading).toBe(false);
     expect(result.current.tooltipState.anchorElement).toBeNull();
@@ -171,7 +185,7 @@ describe('useActionTooltip', () => {
     const { result } = renderHook(() => useActionTooltip(bridge));
 
     act(() => {
-      result.current.onActionHoverStart('action-1', createAnchorElement());
+      result.current.onActionHoverStart(createSourceKey('action-1'), createAnchorElement());
     });
 
     expect(result.current.tooltipState.loading).toBe(false);
@@ -196,7 +210,7 @@ describe('useActionTooltip', () => {
     const { result } = renderHook(() => useActionTooltip(bridge));
 
     act(() => {
-      result.current.onActionHoverStart('action-1', createAnchorElement());
+      result.current.onActionHoverStart(createSourceKey('action-1'), createAnchorElement());
     });
 
     await act(async () => {
@@ -205,7 +219,7 @@ describe('useActionTooltip', () => {
 
     expect(result.current.tooltipState.description).toBeNull();
     expect(result.current.tooltipState.loading).toBe(false);
-    expect(result.current.tooltipState.actionId).toBe('action-1');
+    expect(result.current.tooltipState.sourceKey?.actionId).toBe('action-1');
   });
 
   it('normalizes empty description to null', async () => {
@@ -216,7 +230,7 @@ describe('useActionTooltip', () => {
     const { result } = renderHook(() => useActionTooltip(bridge));
 
     act(() => {
-      result.current.onActionHoverStart('action-1', createAnchorElement());
+      result.current.onActionHoverStart(createSourceKey('action-1'), createAnchorElement());
     });
 
     await act(async () => {
@@ -236,7 +250,7 @@ describe('useActionTooltip', () => {
     const { result } = renderHook(() => useActionTooltip(bridge));
 
     act(() => {
-      result.current.onActionHoverStart('action-1', createAnchorElement());
+      result.current.onActionHoverStart(createSourceKey('action-1'), createAnchorElement());
     });
 
     await act(async () => {
@@ -244,7 +258,7 @@ describe('useActionTooltip', () => {
     });
 
     expect(result.current.tooltipState.loading).toBe(false);
-    expect(result.current.tooltipState.actionId).toBe('action-1');
+    expect(result.current.tooltipState.sourceKey?.actionId).toBe('action-1');
   });
 
   it('keeps tooltip visible during grace period when pointer enters tooltip', async () => {
@@ -257,7 +271,7 @@ describe('useActionTooltip', () => {
     const { result } = renderHook(() => useActionTooltip(bridge));
 
     act(() => {
-      result.current.onActionHoverStart('action-1', createAnchorElement());
+      result.current.onActionHoverStart(createSourceKey('action-1'), createAnchorElement());
     });
 
     await act(async () => {
@@ -281,7 +295,7 @@ describe('useActionTooltip', () => {
 
     // Tooltip should still be visible
     expect(result.current.tooltipState.description).not.toBeNull();
-    expect(result.current.tooltipState.actionId).toBe('action-1');
+    expect(result.current.tooltipState.sourceKey?.actionId).toBe('action-1');
     expect(result.current.tooltipState.interactionOwner).toBe('popover');
   });
 
@@ -295,7 +309,7 @@ describe('useActionTooltip', () => {
     const { result } = renderHook(() => useActionTooltip(bridge));
 
     act(() => {
-      result.current.onActionHoverStart('action-1', createAnchorElement());
+      result.current.onActionHoverStart(createSourceKey('action-1'), createAnchorElement());
     });
 
     await act(async () => {
@@ -320,7 +334,7 @@ describe('useActionTooltip', () => {
       vi.advanceTimersByTime(200);
     });
 
-    expect(result.current.tooltipState.actionId).toBeNull();
+    expect(result.current.tooltipState.sourceKey).toBeNull();
     expect(result.current.tooltipState.description).toBeNull();
     expect(result.current.tooltipState.status).toBe('idle');
   });
@@ -335,7 +349,7 @@ describe('useActionTooltip', () => {
     const { result } = renderHook(() => useActionTooltip(bridge));
 
     act(() => {
-      result.current.onActionHoverStart('action-1', createAnchorElement());
+      result.current.onActionHoverStart(createSourceKey('action-1'), createAnchorElement());
     });
 
     await act(async () => {
@@ -349,7 +363,7 @@ describe('useActionTooltip', () => {
 
     // Re-enter same button during grace
     act(() => {
-      result.current.onActionHoverStart('action-1', createAnchorElement());
+      result.current.onActionHoverStart(createSourceKey('action-1', { surfaceRevision: 2 }), createAnchorElement());
     });
 
     // Grace period expires — should NOT dismiss because we re-entered
@@ -357,7 +371,7 @@ describe('useActionTooltip', () => {
       vi.advanceTimersByTime(200);
     });
 
-    expect(result.current.tooltipState.actionId).toBe('action-1');
+    expect(result.current.tooltipState.sourceKey?.actionId).toBe('action-1');
   });
 
   it('dismisses via grace period after moving from hovered tooltip to a different action button', async () => {
@@ -369,7 +383,7 @@ describe('useActionTooltip', () => {
     const { result } = renderHook(() => useActionTooltip(bridge));
 
     act(() => {
-      result.current.onActionHoverStart('action-A', createAnchorElement());
+      result.current.onActionHoverStart(createSourceKey('action-A', { surfaceRevision: 1 }), createAnchorElement());
     });
 
     await act(async () => {
@@ -379,14 +393,14 @@ describe('useActionTooltip', () => {
     act(() => {
       result.current.onActionHoverEnd();
       result.current.onTooltipPointerEnter();
-      result.current.onActionHoverStart('action-B', createAnchorElement());
+      result.current.onActionHoverStart(createSourceKey('action-B', { surfaceRevision: 2 }), createAnchorElement());
     });
 
     await act(async () => {
       vi.advanceTimersByTime(200);
     });
 
-    expect(result.current.tooltipState.actionId).toBe('action-B');
+    expect(result.current.tooltipState.sourceKey?.actionId).toBe('action-B');
 
     act(() => {
       result.current.onActionHoverEnd();
@@ -396,7 +410,7 @@ describe('useActionTooltip', () => {
       vi.advanceTimersByTime(200);
     });
 
-    expect(result.current.tooltipState.actionId).toBeNull();
+    expect(result.current.tooltipState.sourceKey).toBeNull();
     expect(result.current.tooltipState.description).toBeNull();
   });
 
@@ -409,7 +423,7 @@ describe('useActionTooltip', () => {
     const { result } = renderHook(() => useActionTooltip(bridge));
 
     act(() => {
-      result.current.onActionHoverStart('action-1', createAnchorElement());
+      result.current.onActionHoverStart(createSourceKey('action-1'), createAnchorElement());
     });
 
     await act(async () => {
@@ -425,7 +439,7 @@ describe('useActionTooltip', () => {
       vi.advanceTimersByTime(200);
     });
 
-    expect(result.current.tooltipState.actionId).toBe('action-1');
+    expect(result.current.tooltipState.sourceKey?.actionId).toBe('action-1');
     expect(result.current.tooltipState.description).not.toBeNull();
   });
 
@@ -450,7 +464,7 @@ describe('useActionTooltip', () => {
     const { result } = renderHook(() => useActionTooltip(bridge));
 
     act(() => {
-      result.current.onActionHoverStart('action-1', createAnchorElement());
+      result.current.onActionHoverStart(createSourceKey('action-1'), createAnchorElement());
     });
 
     await act(async () => {
@@ -465,8 +479,34 @@ describe('useActionTooltip', () => {
       resolveDescribe(description);
     });
 
-    expect(result.current.tooltipState.actionId).toBeNull();
+    expect(result.current.tooltipState.sourceKey).toBeNull();
     expect(result.current.tooltipState.description).toBeNull();
     expect(result.current.tooltipState.status).toBe('idle');
+  });
+
+  it('uses structured source metadata when loading action descriptions', async () => {
+    const describeAction = vi.fn(async () => null);
+    const bridge = createMockBridge(describeAction);
+    const { result } = renderHook(() => useActionTooltip(bridge));
+
+    act(() => {
+      result.current.onActionHoverStart(createSourceKey('action-9', {
+        playerId: 3,
+        groupKey: 'special',
+        surfaceRevision: 9,
+      }), createAnchorElement());
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(200);
+    });
+
+    expect(describeAction).toHaveBeenCalledWith('action-9', { actorPlayer: 3 });
+    expect(result.current.tooltipState.sourceKey).toEqual({
+      playerId: 3,
+      groupKey: 'special',
+      actionId: 'action-9',
+      surfaceRevision: 9,
+    });
   });
 });

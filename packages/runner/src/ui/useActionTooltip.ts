@@ -3,11 +3,12 @@ import { useCallback } from 'react';
 import type { AnnotatedActionDescription } from '@ludoforge/engine/runtime';
 
 import type { GameBridge } from '../bridge/game-bridge.js';
+import type { ActionTooltipSourceKey } from './action-tooltip-source-key.js';
 import { hasDisplayableContent } from './has-displayable-content.js';
 import { useHoverPopoverSession } from './useHoverPopoverSession.js';
 
 export interface ActionTooltipState {
-  readonly actionId: string | null;
+  readonly sourceKey: ActionTooltipSourceKey | null;
   readonly description: AnnotatedActionDescription | null;
   readonly loading: boolean;
   readonly anchorElement: HTMLElement | null;
@@ -16,38 +17,30 @@ export interface ActionTooltipState {
   readonly revision: number;
 }
 
-interface ActionTooltipSource {
-  readonly actionId: string;
-  readonly actorPlayer: number | undefined;
-}
-
 export function useActionTooltip(bridge: GameBridge): {
   readonly tooltipState: ActionTooltipState;
-  readonly onActionHoverStart: (actionId: string, element: HTMLElement, actorPlayer?: number) => void;
+  readonly onActionHoverStart: (sourceKey: ActionTooltipSourceKey, element: HTMLElement) => void;
   readonly onActionHoverEnd: () => void;
   readonly onTooltipPointerEnter: () => void;
   readonly onTooltipPointerLeave: () => void;
   readonly invalidateActionTooltip: () => void;
   readonly dismissActionTooltip: () => void;
 } {
-  const session = useHoverPopoverSession<ActionTooltipSource, AnnotatedActionDescription | null>({
+  const session = useHoverPopoverSession<ActionTooltipSourceKey, AnnotatedActionDescription | null>({
     loadContent: async (source) => {
-      const context = source.actorPlayer != null ? { actorPlayer: source.actorPlayer } : undefined;
+      const context = source.playerId != null ? { actorPlayer: source.playerId } : undefined;
       const result = await bridge.describeAction(source.actionId, context);
       return result != null && hasDisplayableContent(result) ? result : null;
     },
   });
 
-  const onActionHoverStart = useCallback((actionId: string, element: HTMLElement, actorPlayer?: number) => {
-    session.startHover({
-      actionId,
-      actorPlayer,
-    }, element);
+  const onActionHoverStart = useCallback((sourceKey: ActionTooltipSourceKey, element: HTMLElement) => {
+    session.startHover(sourceKey, element);
   }, [session]);
 
   return {
     tooltipState: {
-      actionId: session.source?.actionId ?? null,
+      sourceKey: session.source,
       description: session.content,
       loading: session.loading,
       anchorElement: session.anchorElement,

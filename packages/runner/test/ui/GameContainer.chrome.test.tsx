@@ -4,11 +4,26 @@ import { createElement } from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createStore, type StoreApi } from 'zustand/vanilla';
+import { asPlayerId } from '@ludoforge/engine/runtime';
 
 import type { GameBridge } from '../../src/bridge/game-bridge.js';
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 import type { GameStore } from '../../src/store/game-store.js';
 import { GameContainer } from '../../src/ui/GameContainer.js';
+import { makeRenderModelFixture as makeRenderModel } from './helpers/render-model-fixture.js';
+
+const testDoubles = vi.hoisted(() => ({
+  actionTooltipState: {
+    sourceKey: null as { readonly actionId: string; readonly surfaceRevision: number } | null,
+    description: null as unknown,
+    loading: false,
+    anchorElement: null as HTMLElement | null,
+    status: 'idle' as const,
+    interactionOwner: null as null,
+    revision: 0,
+  },
+  invalidateActionTooltip: vi.fn(),
+}));
 
 vi.mock('../../src/canvas/GameCanvas.js', () => ({
   GameCanvas: () => createElement('div', { 'data-testid': 'game-canvas' }),
@@ -108,14 +123,12 @@ vi.mock('../../src/ui/useEventLogEntries.js', () => ({
 
 vi.mock('../../src/ui/useActionTooltip.js', () => ({
   useActionTooltip: () => ({
-    tooltipState: {
-      description: null,
-      anchorElement: null,
-    },
+    tooltipState: testDoubles.actionTooltipState,
     onActionHoverStart: vi.fn(),
     onActionHoverEnd: vi.fn(),
     onTooltipPointerEnter: vi.fn(),
     onTooltipPointerLeave: vi.fn(),
+    invalidateActionTooltip: testDoubles.invalidateActionTooltip,
   }),
 }));
 
@@ -157,8 +170,44 @@ function createContainerStore(overrides: Partial<GameStore> = {}): StoreApi<Game
   } as unknown as GameStore));
 }
 
+function makeActionRenderModel(overrides: Partial<NonNullable<GameStore['renderModel']>> = {}): NonNullable<GameStore['renderModel']> {
+  return makeRenderModel({
+    actionGroups: [{
+      groupKey: 'core',
+      groupName: 'Core',
+      actions: [{ actionId: 'pass', displayName: 'Pass', isAvailable: true }],
+    }],
+    ...overrides,
+  });
+}
+
+function setVisibleActionTooltipState(surfaceRevision: number): void {
+  testDoubles.actionTooltipState = {
+    sourceKey: {
+      actionId: 'pass',
+      surfaceRevision,
+    },
+    description: { sections: [{ kind: 'group', label: 'Test', children: [] }], limitUsage: [] },
+    loading: false,
+    anchorElement: document.createElement('button'),
+    status: 'visible',
+    interactionOwner: 'source',
+    revision: surfaceRevision,
+  };
+}
+
 afterEach(() => {
   cleanup();
+  testDoubles.invalidateActionTooltip.mockReset();
+  testDoubles.actionTooltipState = {
+    sourceKey: null,
+    description: null,
+    loading: false,
+    anchorElement: null,
+    status: 'idle',
+    interactionOwner: null,
+    revision: 0,
+  };
 });
 
 describe('GameContainer chrome state', () => {
@@ -307,5 +356,90 @@ describe('GameContainer chrome state', () => {
       expect(screen.getByTestId('event-log-toggle-button').textContent).toBe('Hide Log');
       expect(screen.queryByTestId('settings-menu')).toBeNull();
     });
+  });
+
+  it('invalidates action tooltips when the action surface lifecycle changes', async () => {
+    const lifecycleScenarios = [
+      {
+        name: 'action-surface transition while staying in actions',
+        nextRenderModel: makeActionRenderModel({
+          actionGroups: [{
+            groupKey: 'special',
+            groupName: 'Special',
+            actions: [{ actionId: 'trade', displayName: 'Trade', isAvailable: true }],
+          }],
+        }),
+      },
+      {
+        name: 'move confirm surface rebuild',
+        nextRenderModel: makeActionRenderModel(),
+      },
+      {
+        name: 'move cancel surface rebuild',
+        nextRenderModel: makeActionRenderModel(),
+      },
+      {
+        name: 'undo surface rebuild',
+        nextRenderModel: makeActionRenderModel(),
+      },
+      {
+        name: 'active-player change',
+        nextRenderModel: makeActionRenderModel({
+          activePlayerID: asPlayerId(1),
+          players: [
+            {
+              id: asPlayerId(0),
+              displayName: 'Player 0',
+              isHuman: true,
+              isActive: false,
+              isEliminated: false,
+              factionId: null,
+            },
+            {
+              id: asPlayerId(1),
+              displayName: 'Player 1',
+              isHuman: true,
+              isActive: true,
+              isEliminated: false,
+              factionId: null,
+            },
+          ],
+        }),
+      },
+      {
+        name: 'transition out of actions',
+        nextRenderModel: makeActionRenderModel({
+          choiceUi: { kind: 'confirmReady' },
+        }),
+      },
+    ] as const;
+
+    for (const scenario of lifecycleScenarios) {
+      setVisibleActionTooltipState(1);
+      const rendered = render(createElement(GameContainer, {
+        bridge: TEST_BRIDGE,
+        store: createContainerStore({
+          renderModel: makeActionRenderModel(),
+        }),
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+      }));
+
+      expect(testDoubles.invalidateActionTooltip, `Expected no eager invalidation for ${scenario.name}.`).not.toHaveBeenCalled();
+
+      rendered.rerender(createElement(GameContainer, {
+        bridge: TEST_BRIDGE,
+        store: createContainerStore({
+          renderModel: scenario.nextRenderModel,
+        }),
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+      }));
+
+      await waitFor(() => {
+        expect(testDoubles.invalidateActionTooltip, `Expected invalidation for ${scenario.name}.`).toHaveBeenCalledTimes(1);
+      });
+
+      rendered.unmount();
+      testDoubles.invalidateActionTooltip.mockReset();
+    }
   });
 });

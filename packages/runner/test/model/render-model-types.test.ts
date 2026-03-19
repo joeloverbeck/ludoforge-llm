@@ -56,18 +56,6 @@ describe('render-model types', () => {
       playerVars: new Map<PlayerId, readonly { readonly name: string; readonly value: number | boolean; readonly displayName: string }[]>([
         [playerZero, [{ name: 'money', value: 3, displayName: 'Money' }]],
       ]),
-      globalMarkers: [{ id: 'threat', displayName: 'Threat', state: 'low', possibleStates: ['low', 'high'] }],
-      tracks: [
-        {
-          id: 'tempo',
-          displayName: 'Tempo',
-          scope: 'global',
-          seat: null,
-          min: 0,
-          max: 10,
-          currentValue: 4,
-        },
-      ],
       activeEffects: [
         {
           id: 'effect:1',
@@ -165,6 +153,8 @@ describe('render-model types', () => {
     };
 
     expect(model.zones).toHaveLength(1);
+    expect('globalMarkers' in (model as object)).toBe(false);
+    expect('tracks' in (model as object)).toBe(false);
     expectTypeOf(model).toMatchTypeOf<RenderModel>();
   });
 

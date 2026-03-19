@@ -54,14 +54,6 @@ export function projectRenderModel(
         })),
       ]),
     ),
-    globalMarkers: frame.globalMarkers.map((marker) => ({
-      ...marker,
-      displayName: formatIdAsDisplayName(marker.id),
-    })),
-    tracks: frame.tracks.map((track) => ({
-      ...track,
-      displayName: formatIdAsDisplayName(track.id),
-    })),
     activeEffects: frame.activeEffects.map((effect) => ({
       id: effect.id,
       displayName: effect.sourceCardTitle,

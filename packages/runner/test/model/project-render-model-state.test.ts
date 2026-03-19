@@ -333,7 +333,7 @@ function withStateMetadata(baseDef: GameDef, baseState: GameState): { readonly d
 }
 
 describe('projectRenderModel state metadata', () => {
-  it('derives global/player vars and space/global markers with lattice states', () => {
+  it('derives global/player vars that still power surviving runner surfaces', () => {
     const baseDef = compileFixture();
     const baseState = initialState(baseDef, 5, 2).state;
     const { def, state } = withStateMetadata(baseDef, baseState);
@@ -352,37 +352,12 @@ describe('projectRenderModel state metadata', () => {
       { name: 'eligible', value: false, displayName: 'Eligible' },
       { name: 'support', value: 2, displayName: 'Support' },
     ]);
+    expect('globalMarkers' in (model as object)).toBe(false);
+    expect('tracks' in (model as object)).toBe(false);
 
     expect(model.zones.find((zone) => zone.id === 'table:none')?.markers).toEqual([
       { id: 'status', displayName: 'Status', state: 'fortified', possibleStates: [] },
       { id: 'terror', displayName: 'Terror', state: 'high', possibleStates: ['none', 'low', 'high'] },
-    ]);
-    expect(model.globalMarkers).toEqual([
-      { id: 'support', displayName: 'Support', state: 'high', possibleStates: ['low', 'high'] },
-      { id: 'threat_level', displayName: 'Threat Level', state: 'low', possibleStates: [] },
-    ]);
-  });
-
-  it('keeps unknown marker states while retaining known lattice state domains', () => {
-    const baseDef = compileFixture();
-    const baseState = initialState(baseDef, 50, 2).state;
-    const { def, state: stateWithMetadata } = withStateMetadata(baseDef, baseState);
-    const state: GameState = {
-      ...stateWithMetadata,
-      globalMarkers: {
-        support: 'unexpected-state',
-      },
-    };
-
-    const model = deriveModel(state, def, makeRenderContext(state.playerCount));
-
-    expect(model.globalMarkers).toEqual([
-      {
-        id: 'support',
-        displayName: 'Support',
-        state: 'unexpected-state',
-        possibleStates: ['low', 'high'],
-      },
     ]);
   });
 
@@ -392,49 +367,10 @@ describe('projectRenderModel state metadata', () => {
 
     const model = deriveModel(state, def, makeRenderContext(state.playerCount));
 
-    expect(model.globalMarkers).toEqual([]);
     expect(model.activeEffects).toEqual([]);
     expect(model.eventDecks).toEqual([]);
     expect(model.interruptStack).toEqual([]);
     expect(model.isInInterrupt).toBe(false);
-  });
-
-  it('derives tracks for global and faction scopes with safe fallback', () => {
-    const baseDef = compileFixture();
-    const baseState = initialState(baseDef, 7, 2).state;
-    const { def, state } = withStateMetadata(baseDef, baseState);
-
-    const model = deriveModel(state, def, makeRenderContext(state.playerCount));
-
-    expect(model.tracks).toEqual([
-      {
-        id: 'round',
-        displayName: 'Round',
-        scope: 'global',
-        seat: null,
-        min: 0,
-        max: 20,
-        currentValue: 3,
-      },
-      {
-        id: 'support',
-        displayName: 'Support',
-        scope: 'seat',
-        seat: 'us',
-        min: 0,
-        max: 100,
-        currentValue: 7,
-      },
-      {
-        id: 'momentum',
-        displayName: 'Momentum',
-        scope: 'seat',
-        seat: 'arvn',
-        min: 3,
-        max: 9,
-        currentValue: 3,
-      },
-    ]);
   });
 
   it('derives active effects, interrupt stack, and event deck metadata', () => {
@@ -566,7 +502,7 @@ describe('projectRenderModel state metadata', () => {
     ]);
   });
 
-  it('projects global markers and active effects in deterministic source order/key order', () => {
+  it('projects active effects in deterministic source order/key order without reviving dead fields', () => {
     const baseDef = compileFixture();
     const baseState = initialState(baseDef, 81, 2).state;
     const { def, state: stateWithMetadata } = withStateMetadata(baseDef, baseState);
@@ -596,10 +532,7 @@ describe('projectRenderModel state metadata', () => {
 
     const model = deriveModel(state, def, makeRenderContext(state.playerCount));
 
-    expect(model.globalMarkers).toEqual([
-      { id: 'alpha', displayName: 'Alpha', state: 'low', possibleStates: [] },
-      { id: 'zeta', displayName: 'Zeta', state: 'high', possibleStates: [] },
-    ]);
+    expect('globalMarkers' in (model as object)).toBe(false);
     expect(model.activeEffects.map((effect) => effect.id)).toEqual(['effect-b', 'effect-a']);
   });
 

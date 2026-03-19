@@ -87,6 +87,18 @@ describe('runner frame / render model boundary', () => {
     expect('visual' in (reserve as object)).toBe(false);
   });
 
+  it('does not expose dead global-markers or tracks fields on the frame/model boundary', () => {
+    const def = compileFixture();
+    const state = initialState(def, 1, 2).state;
+    const frame = deriveRunnerFrame(state, def, makeContext());
+    const renderModel = projectRenderModel(frame, new VisualConfigProvider(null));
+
+    expect('globalMarkers' in (frame as object)).toBe(false);
+    expect('tracks' in (frame as object)).toBe(false);
+    expect('globalMarkers' in (renderModel as object)).toBe(false);
+    expect('tracks' in (renderModel as object)).toBe(false);
+  });
+
   it('applies hidden-zone filtering and labels only in render-model projection', () => {
     const def = compileFixture();
     const state = initialState(def, 1, 2).state;
@@ -119,6 +131,7 @@ describe('runner frame / render model boundary', () => {
 
     expect(renderModel.zones.map((zone) => zone.id)).toEqual(['table:none']);
     expect(renderModel.zones[0]?.displayName).toBe('Center Table');
+    expect(renderModel.globalVars).toEqual([{ name: 'tick', value: 0, displayName: 'Tick' }]);
     expect(renderModel.choiceUi.kind).toBe('discreteOne');
     if (renderModel.choiceUi.kind === 'discreteOne') {
       expect(renderModel.choiceUi.options.map((option) => option.displayName)).toEqual(['Center Table', 'Reserve None']);

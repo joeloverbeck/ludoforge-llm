@@ -46,8 +46,6 @@ function makeRunnerFrame(overrides: Partial<RunnerFrame> = {}): RunnerFrame {
       [asPlayerId(0), []],
       [asPlayerId(1), []],
     ]),
-    globalMarkers: [],
-    tracks: [],
     activeEffects: [],
     players: [
       { id: asPlayerId(0), isHuman: true, isActive: true, isEliminated: false, factionId: null },

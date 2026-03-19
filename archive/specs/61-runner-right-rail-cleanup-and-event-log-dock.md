@@ -1,6 +1,6 @@
 # Spec 61: Runner Right-Rail Cleanup and Event Log Dock
 
-**Status**: Draft
+**Status**: ✅ COMPLETED
 **Priority**: P2
 **Complexity**: M
 **Dependencies**: Spec 60 (Runner Control Surface and Settings Menu), current `packages/runner` overlay architecture, current `data/games/*/visual-config.yaml` schema/provider boundary
@@ -314,3 +314,21 @@ Using the FITL visual app:
 - No backwards compatibility.
 - Existing `visual-config.yaml` files using the removed `variables` section must be updated or fail schema validation.
 - No compatibility adapter should preserve the removed placeholder widgets or their config model.
+
+## Outcome
+
+- Completion date: 2026-03-19
+- What actually changed:
+  - Implemented the explicit bottom overlay region split, including a dedicated `bottomRightDockContent` region for runner-owned utility surfaces.
+  - Moved `EventLogPanel` out of the right rail and into the new bottom-right dock while preserving runner-owned toggle/collapse behavior.
+  - Deleted the placeholder `VariablesPanel`, `Scoreboard`, and `GlobalMarkersBar` surfaces and removed their right-rail registration.
+  - Removed the placeholder-only `visual-config.variables` contract and tightened schema/provider validation so deleted surfaces are not silently accepted.
+  - Audited runner projection cleanup and removed dead `globalMarkers` / `tracks` fields while preserving `globalVars` / `playerVars` because live production surfaces still consume them.
+- Deviations from original plan:
+  - The spec’s cleanup clause originally named `globalVars`, `playerVars`, `globalMarkers`, and `tracks` as suspect placeholder-oriented projections. The delivered architecture kept `globalVars` and `playerVars` after evidence showed they still power real surfaces.
+  - The long-term architectural follow-on is now split into Spec 62, which defines how to replace remaining generic variable-bag UI consumption with explicit surface projectors and visual-config-driven surface contracts.
+- Verification results:
+  - `pnpm -F @ludoforge/runner test` passed after the final Spec 61 cleanup (`162` files, `1612` tests).
+  - `pnpm -F @ludoforge/runner typecheck` passed.
+  - `pnpm -F @ludoforge/runner lint` passed.
+  - `pnpm run check:ticket-deps` passed.

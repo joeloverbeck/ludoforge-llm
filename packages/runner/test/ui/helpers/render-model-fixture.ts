@@ -12,8 +12,6 @@ export function makeRenderModelFixture(
     tokens: [],
     globalVars: [],
     playerVars: new Map<PlayerId, readonly { readonly name: string; readonly value: number | boolean; readonly displayName: string }[]>(),
-    globalMarkers: [],
-    tracks: [],
     activeEffects: [],
     players: [
       {

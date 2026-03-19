@@ -61,8 +61,6 @@ function makeRenderModel(overrides: Partial<RenderModel> = {}): RenderModel {
     tokens: [makeToken()],
     globalVars: [],
     playerVars: new Map(),
-    globalMarkers: [],
-    tracks: [],
     activeEffects: [],
     players: [
       {
@@ -176,8 +174,6 @@ function toRunnerFrame(renderModel: RenderModel): RunnerFrame {
     tokens: renderModel.tokens,
     globalVars: renderModel.globalVars.map(({ name, value }) => ({ name, value })),
     playerVars: new Map(Array.from(renderModel.playerVars.entries()).map(([playerId, vars]) => [playerId, vars.map(({ name, value }) => ({ name, value }))])),
-    globalMarkers: renderModel.globalMarkers.map(({ id, state, possibleStates }) => ({ id, state, possibleStates })),
-    tracks: renderModel.tracks.map(({ id, scope, seat, min, max, currentValue }) => ({ id, scope, seat, min, max, currentValue })),
     activeEffects: renderModel.activeEffects.map((effect) => ({
       id: effect.id,
       sourceCardId: effect.id,

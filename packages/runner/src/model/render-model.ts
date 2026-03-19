@@ -37,8 +37,6 @@ export interface RenderModel {
   readonly tokens: readonly RenderToken[];
   readonly globalVars: readonly RenderVariable[];
   readonly playerVars: ReadonlyMap<PlayerId, readonly RenderVariable[]>;
-  readonly globalMarkers: readonly RenderGlobalMarker[];
-  readonly tracks: readonly RenderTrack[];
   readonly activeEffects: readonly RenderLastingEffect[];
   readonly players: readonly RenderPlayer[];
   readonly activePlayerID: PlayerId;
@@ -107,23 +105,6 @@ export interface RenderMarker {
   readonly displayName: string;
   readonly state: string;
   readonly possibleStates: readonly string[];
-}
-
-export interface RenderGlobalMarker {
-  readonly id: string;
-  readonly displayName: string;
-  readonly state: string;
-  readonly possibleStates: readonly string[];
-}
-
-export interface RenderTrack {
-  readonly id: string;
-  readonly displayName: string;
-  readonly scope: 'global' | 'seat';
-  readonly seat: string | null;
-  readonly min: number;
-  readonly max: number;
-  readonly currentValue: number;
 }
 
 export interface RenderLastingEffect {

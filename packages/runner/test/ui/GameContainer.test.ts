@@ -209,8 +209,6 @@ function makeRenderModel(overrides: Partial<NonNullable<GameStore['renderModel']
     tokens: [],
     globalVars: [],
     playerVars: new Map(),
-    globalMarkers: [],
-    tracks: [],
     activeEffects: [],
     players: [
       {

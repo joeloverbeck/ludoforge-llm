@@ -8,7 +8,6 @@ import {
   type Move,
   type DecisionKey,
   type MoveParamValue,
-  type NumericTrackDef,
   parseDecisionKey,
   type PlayerId,
   type RevealGrant,
@@ -30,14 +29,12 @@ import type {
   RunnerEventCard,
   RunnerEventDeck,
   RunnerFrame,
-  RunnerGlobalMarker,
   RunnerLastingEffect,
   RunnerLastingEffectAttribute,
   RunnerMarker,
   RunnerPlayer,
   RunnerRuntimeEligibleFaction,
   RunnerToken,
-  RunnerTrack,
   RunnerVariable,
   RunnerZone,
 } from './runner-frame.js';
@@ -51,9 +48,7 @@ const OWNER_ZONE_ID_PATTERN = /^.+:(\d+)$/;
 
 interface StaticRenderDerivation {
   readonly markerStatesById: ReadonlyMap<string, readonly string[]>;
-  readonly globalMarkerStatesById: ReadonlyMap<string, readonly string[]>;
   readonly cardTitleById: ReadonlyMap<string, string>;
-  readonly trackDefs: readonly NumericTrackDef[];
   readonly eventDecks: readonly GameDefEventDeckProjection[];
   readonly playedCardZoneId: string | null;
   readonly lookaheadCardZoneId: string | null;
@@ -106,8 +101,6 @@ export function deriveRunnerFrame(
   const adjacencies = deriveAdjacencies(def, zones, highlightedAdjacencyKeys);
   const globalVars = deriveGlobalVars(state);
   const playerVars = derivePlayerVars(state);
-  const globalMarkers = deriveGlobalMarkers(state, staticDerivation.globalMarkerStatesById);
-  const tracks = deriveTracks(state, staticDerivation.trackDefs);
   const activeEffects = deriveActiveEffects(state, staticDerivation.cardTitleById);
   const interruptStack = state.interruptPhaseStack ?? [];
   const eventDecks = deriveEventDecks(state, staticDerivation.eventDecks, staticDerivation.playedCardZoneId, staticDerivation.lookaheadCardZoneId);
@@ -126,8 +119,6 @@ export function deriveRunnerFrame(
     tokens,
     globalVars,
     playerVars,
-    globalMarkers,
-    tracks,
     activeEffects,
     players,
     activePlayerID: state.activePlayer,
@@ -354,9 +345,7 @@ function deriveStaticRenderDerivation(def: GameDef): StaticRenderDerivation {
 
   return {
     markerStatesById: buildMarkerStatesById(def.markerLattices),
-    globalMarkerStatesById: buildMarkerStatesById(def.globalMarkerLattices),
     cardTitleById,
-    trackDefs: def.tracks ?? [],
     eventDecks,
     playedCardZoneId,
     lookaheadCardZoneId,
@@ -417,50 +406,6 @@ function deriveZoneMarkers(
       state: markerState,
       possibleStates: markerStatesById.get(id) ?? [],
     }));
-}
-
-function deriveGlobalMarkers(
-  state: GameState,
-  statesById: ReadonlyMap<string, readonly string[]>,
-): readonly RunnerGlobalMarker[] {
-  return Object.entries(state.globalMarkers ?? {})
-    .sort(([left], [right]) => left.localeCompare(right))
-    .map(([id, markerState]) => ({
-      id,
-      state: markerState,
-      possibleStates: statesById.get(id) ?? [],
-    }));
-}
-
-function deriveTracks(state: GameState, trackDefs: readonly NumericTrackDef[]): readonly RunnerTrack[] {
-  return trackDefs.map((track) => ({
-    id: track.id,
-    scope: track.scope,
-    seat: track.seat ?? null,
-    min: track.min,
-    max: track.max,
-    currentValue: resolveTrackValue(state, track),
-  }));
-}
-
-function resolveTrackValue(state: GameState, track: NumericTrackDef): number {
-  if (track.scope === 'global') {
-    const value = state.globalVars[track.id];
-    return typeof value === 'number' ? value : track.min;
-  }
-
-  const seat = track.seat;
-  if (seat === undefined || state.turnOrderState.type !== 'cardDriven') {
-    return track.min;
-  }
-
-  const playerIndex = state.turnOrderState.runtime.seatOrder.indexOf(seat);
-  if (!Number.isInteger(playerIndex) || playerIndex < 0 || playerIndex >= state.playerCount) {
-    return track.min;
-  }
-
-  const value = state.perPlayerVars[playerIndex]?.[track.id];
-  return typeof value === 'number' ? value : track.min;
 }
 
 function deriveActiveEffects(

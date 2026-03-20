@@ -6,22 +6,24 @@ import type { GameDef, SpaceMarkerLatticeDef, ZoneDef } from './types.js';
 
 const zoneMapCache = new WeakMap<readonly ZoneDef[], ReadonlyMap<string, ZoneDef>>();
 
-/**
- * Returns a cached `Map<zoneId, ZoneDef>` for the given GameDef.
- * The map is built once per unique `def.zones` array reference and cached via WeakMap.
- */
-export function getZoneMap(def: GameDef): ReadonlyMap<string, ZoneDef> {
-  let map = zoneMapCache.get(def.zones);
+function getZoneMapFromArray(zones: readonly ZoneDef[]): ReadonlyMap<string, ZoneDef> {
+  let map = zoneMapCache.get(zones);
   if (map === undefined) {
     const built = new Map<string, ZoneDef>();
-    for (const zone of def.zones) {
+    for (const zone of zones) {
       built.set(zone.id, zone);
     }
     map = built;
-    zoneMapCache.set(def.zones, map);
+    zoneMapCache.set(zones, map);
   }
   return map;
 }
+
+export function getZoneMap(def: GameDef): ReadonlyMap<string, ZoneDef> {
+  return getZoneMapFromArray(def.zones);
+}
+
+export { getZoneMapFromArray };
 
 const latticeMapCache = new WeakMap<readonly SpaceMarkerLatticeDef[], ReadonlyMap<string, SpaceMarkerLatticeDef>>();
 

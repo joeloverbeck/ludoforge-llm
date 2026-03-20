@@ -1,5 +1,6 @@
 import type { StackingConstraint, Token, ZoneDef } from './types.js';
 import { attributeValueEquals } from './attribute-value-equals.js';
+import { getZoneMapFromArray } from './def-lookup.js';
 
 export interface StackingViolation {
   readonly constraintId: string;
@@ -72,7 +73,7 @@ export function checkStackingConstraints(
     return [];
   }
 
-  const zone = zones.find((z) => z.id === zoneId);
+  const zone = getZoneMapFromArray(zones).get(zoneId);
   if (zone === undefined) {
     return [];
   }

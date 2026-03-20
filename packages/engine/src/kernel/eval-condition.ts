@@ -101,8 +101,8 @@ export function evalCondition(cond: ConditionAST, ctx: ReadContext): boolean {
     case 'adjacent': {
       const leftZoneId = resolveSingleZoneSel(cond.left, ctx);
       const rightZoneId = resolveSingleZoneSel(cond.right, ctx);
-      const neighbors = ctx.adjacencyGraph.neighbors[String(leftZoneId)] ?? [];
-      return neighbors.includes(rightZoneId);
+      const neighborSet = ctx.adjacencyGraph.neighborSets[String(leftZoneId)];
+      return neighborSet !== undefined && neighborSet.has(rightZoneId);
     }
 
     case 'connected': {

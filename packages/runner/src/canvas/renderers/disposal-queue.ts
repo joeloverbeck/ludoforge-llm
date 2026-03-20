@@ -12,9 +12,15 @@ export interface DisposalQueueOptions {
   readonly scheduleFlush?: (callback: () => void) => void;
 }
 
+function scheduleAfterTwoAnimationFrames(callback: () => void): void {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(callback);
+  });
+}
+
 export function createDisposalQueue(options?: DisposalQueueOptions): DisposalQueue {
   const pending = new Set<Container>();
-  const schedule = options?.scheduleFlush ?? ((fn: () => void) => requestAnimationFrame(fn));
+  const schedule = options?.scheduleFlush ?? scheduleAfterTwoAnimationFrames;
   let flushScheduled = false;
   let destroyed = false;
 

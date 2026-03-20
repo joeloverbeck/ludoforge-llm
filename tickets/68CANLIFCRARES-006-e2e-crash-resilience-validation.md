@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — runner-only
-**Deps**: archive/tickets/RUNPRESLIFE/68CANLIFCRARES-001-remove-texture-null-from-neutralize-and-fallback.md, tickets/68CANLIFCRARES-002-double-raf-disposal-queue.md, tickets/68CANLIFCRARES-003-ticker-error-fence.md, tickets/68CANLIFCRARES-004-store-lifecycle-crash-states.md, tickets/68CANLIFCRARES-005-canvas-crash-observer-and-recovery-wiring.md
+**Deps**: archive/tickets/RUNPRESLIFE/68CANLIFCRARES-001-remove-texture-null-from-neutralize-and-fallback.md, archive/tickets/RUNPRESLIFE/68CANLIFCRARES-002-double-raf-disposal-queue.md, tickets/68CANLIFCRARES-003-ticker-error-fence.md, tickets/68CANLIFCRARES-004-store-lifecycle-crash-states.md, tickets/68CANLIFCRARES-005-canvas-crash-observer-and-recovery-wiring.md
 
 ## Problem
 

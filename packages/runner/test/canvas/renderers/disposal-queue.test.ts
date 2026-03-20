@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { MockContainer } = vi.hoisted(() => {
   class MockPoint {
@@ -73,6 +73,38 @@ import { createDisposalQueue, type DisposalQueue } from '../../../src/canvas/ren
 function createQueueWithSyncFlush(): DisposalQueue {
   return createDisposalQueue({ scheduleFlush: (fn: () => void) => fn() });
 }
+
+class ManualRafScheduler {
+  private readonly callbacks: Array<FrameRequestCallback> = [];
+
+  requestAnimationFrame = vi.fn((callback: FrameRequestCallback): number => {
+    this.callbacks.push(callback);
+    return this.callbacks.length;
+  });
+
+  flushNextFrame(now = 0): void {
+    const frameCallbacks = this.callbacks.splice(0);
+    for (const callback of frameCallbacks) {
+      callback(now);
+    }
+  }
+}
+
+let originalRequestAnimationFrame: typeof globalThis.requestAnimationFrame | undefined;
+let manualRaf: ManualRafScheduler;
+
+beforeEach(() => {
+  originalRequestAnimationFrame = globalThis.requestAnimationFrame;
+  manualRaf = new ManualRafScheduler();
+});
+
+afterEach(() => {
+  if (originalRequestAnimationFrame === undefined) {
+    delete (globalThis as { requestAnimationFrame?: typeof globalThis.requestAnimationFrame }).requestAnimationFrame;
+    return;
+  }
+  globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+});
 
 describe('createDisposalQueue', () => {
   it('enqueue removes from parent and sets visible/renderable to false', () => {
@@ -204,6 +236,37 @@ describe('createDisposalQueue', () => {
     scheduledFn!();
     expect(c1.destroyed).toBe(true);
     expect(c2.destroyed).toBe(true);
+  });
+
+  it('default schedule defers destroy by two animation frames', () => {
+    globalThis.requestAnimationFrame = manualRaf.requestAnimationFrame;
+    const queue = createDisposalQueue();
+    const container = new MockContainer();
+
+    queue.enqueue(container as unknown as Container);
+
+    expect(container.destroyed).toBe(false);
+    expect(manualRaf.requestAnimationFrame).toHaveBeenCalledTimes(1);
+
+    manualRaf.flushNextFrame();
+
+    expect(container.destroyed).toBe(false);
+    expect(manualRaf.requestAnimationFrame).toHaveBeenCalledTimes(2);
+
+    manualRaf.flushNextFrame();
+
+    expect(container.destroyed).toBe(true);
+  });
+
+  it('containers are not destroyed after a single RAF tick with the default schedule', () => {
+    globalThis.requestAnimationFrame = manualRaf.requestAnimationFrame;
+    const queue = createDisposalQueue();
+    const container = new MockContainer();
+
+    queue.enqueue(container as unknown as Container);
+    manualRaf.flushNextFrame();
+
+    expect(container.destroyed).toBe(false);
   });
 
   it('destroy() synchronously flushes remaining items', () => {

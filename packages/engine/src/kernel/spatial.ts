@@ -6,6 +6,7 @@ import type { ConditionAST, GameState, Token, ZoneDef } from './types.js';
 
 export interface AdjacencyGraph {
   readonly neighbors: Readonly<Record<string, readonly ZoneId[]>>;
+  readonly neighborSets: Readonly<Record<string, ReadonlySet<ZoneId>>>;
   readonly zoneCount: number;
 }
 
@@ -46,14 +47,17 @@ export function buildAdjacencyGraph(zones: readonly ZoneDef[]): AdjacencyGraph {
 
   const sortedZoneIds = [...normalizedNeighbors.keys()].sort((left, right) => left.localeCompare(right));
   const neighbors: Record<string, readonly ZoneId[]> = {};
+  const neighborSets: Record<string, ReadonlySet<ZoneId>> = {};
 
   sortedZoneIds.forEach((zoneId) => {
     const entries = normalizedNeighbors.get(zoneId) ?? new Set<ZoneId>();
     neighbors[zoneId] = [...entries].sort((left, right) => left.localeCompare(right));
+    neighborSets[zoneId] = entries;
   });
 
   const result: AdjacencyGraph = {
     neighbors,
+    neighborSets,
     zoneCount: zones.length,
   };
   adjacencyGraphCache.set(zones, result);

@@ -1,4 +1,5 @@
 import { asTokenId } from './branded.js';
+import { getZoneMap } from './def-lookup.js';
 import { evalCondition } from './eval-condition.js';
 import { evalValue } from './eval-value.js';
 import { emitTrace } from './execution-collector.js';
@@ -358,7 +359,7 @@ export const applyMoveToken = (effect: Extract<EffectAST, { readonly moveToken: 
   }
 
   const tokenTypeDef = ctx.def.tokenTypes.find((tt) => tt.id === occurrence.token.type);
-  const destinationZoneDef = ctx.def.zones.find((z) => z.id === toZoneId);
+  const destinationZoneDef = getZoneMap(ctx.def).get(toZoneId);
   const resetToken = applyZoneEntryResets(occurrence.token, tokenTypeDef, destinationZoneDef);
 
   const destinationAfter = [
@@ -696,7 +697,7 @@ export const applyDraw = (effect: Extract<EffectAST, { readonly draw: unknown }>
     return { state: ctx.state, rng: ctx.rng, emittedEvents: [] };
   }
 
-  const zoneDef = ctx.def.zones.find(z => z.id === fromZoneId);
+  const zoneDef = getZoneMap(ctx.def).get(fromZoneId);
   const behavior = zoneDef?.behavior;
   let currentState = ctx.state;
   let currentRng = ctx.rng;
@@ -784,7 +785,7 @@ export const applyDraw = (effect: Extract<EffectAST, { readonly draw: unknown }>
   }
 
   const destinationTokens = currentState.zones[toZoneId]!;
-  const drawDestZoneDef = ctx.def.zones.find((z) => z.id === toZoneId);
+  const drawDestZoneDef = getZoneMap(ctx.def).get(toZoneId);
   const resetDrawnTokens = movedTokens.map((token) => {
     const ttd = ctx.def.tokenTypes.find((tt) => tt.id === token.type);
     return applyZoneEntryResets(token, ttd, drawDestZoneDef);
@@ -893,7 +894,7 @@ export const applyMoveAll = (effect: Extract<EffectAST, { readonly moveAll: unkn
     sourceAfter = [];
   }
 
-  const moveAllDestZoneDef = ctx.def.zones.find((z) => z.id === toZoneId);
+  const moveAllDestZoneDef = getZoneMap(ctx.def).get(toZoneId);
   const resetMovedTokens = movedTokens.map((token) => {
     const ttd = ctx.def.tokenTypes.find((tt) => tt.id === token.type);
     return applyZoneEntryResets(token, ttd, moveAllDestZoneDef);

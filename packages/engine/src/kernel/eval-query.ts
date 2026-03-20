@@ -33,6 +33,7 @@ import { foldTokenFilterExpr } from './token-filter-expr-utils.js';
 import { planAssetRowsLookup } from './runtime-table-lookup-plan.js';
 import { hasTokenRuntimeShapeKeys } from './token-shape.js';
 import { getTokenStateIndex } from './token-state-index.js';
+import { getZoneMap } from './def-lookup.js';
 import type { AssetRowPredicate, NumericValueExpr, OptionsQuery, Token, TokenFilterExpr } from './types.js';
 
 type AssetRow = Readonly<Record<string, unknown>>;
@@ -319,7 +320,7 @@ function resolveCapturedSequenceZonesQuery(
 
 function applyTokenFilter(tokens: readonly Token[], filter: TokenFilterExpr, ctx: ReadContext): readonly Token[] {
   const tokenStateIndex = getTokenStateIndex(ctx.state);
-  const zoneDefById = new Map(ctx.def.zones.map((zone) => [zone.id, zone] as const));
+  const zoneDefById = getZoneMap(ctx.def);
   return filterTokensByExpr(
     tokens,
     filter,

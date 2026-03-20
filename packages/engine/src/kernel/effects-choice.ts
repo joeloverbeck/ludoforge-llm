@@ -1,3 +1,4 @@
+import { getLatticeMap } from './def-lookup.js';
 import { evalQuery } from './eval-query.js';
 import { evalCondition } from './eval-condition.js';
 import { evalValue } from './eval-value.js';
@@ -491,7 +492,7 @@ const resolveEffectBindings = (ctx: EffectContext): Readonly<Record<string, unkn
 };
 
 const resolveMarkerLattice = (ctx: EffectContext, markerId: string, effectType: string): NonNullable<EffectContext['def']['markerLattices']>[number] => {
-  const lattice = ctx.def.markerLattices?.find((l) => l.id === markerId);
+  const lattice = getLatticeMap(ctx.def)?.get(markerId);
   if (lattice === undefined) {
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `Unknown marker lattice: ${markerId}`, {
       effectType,

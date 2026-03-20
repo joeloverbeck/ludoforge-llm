@@ -1,3 +1,4 @@
+import { getLatticeMap, getZoneMap } from './def-lookup.js';
 import { resolveMapSpaceId, resolveSinglePlayerSel, resolveSingleZoneSel } from './resolve-selectors.js';
 import { resolveScopedVarNameExprValue } from './scoped-var-name-resolution.js';
 import type { ReadContext } from './eval-context.js';
@@ -386,7 +387,7 @@ export function resolveRef(ref: Reference, ctx: ReadContext): number | boolean |
       return state;
     }
 
-    const lattice = ctx.def.markerLattices?.find((candidate) => candidate.id === ref.marker);
+    const lattice = getLatticeMap(ctx.def)?.get(ref.marker);
     if (lattice !== undefined) {
       return lattice.defaultState;
     }
@@ -422,7 +423,7 @@ export function resolveRef(ref: Reference, ctx: ReadContext): number | boolean |
 
   if (ref.ref === 'zoneProp') {
     const zoneId = resolveMapSpaceId(ref.zone, ctx);
-    const zoneDef = ctx.def.zones.find((zone) => zone.id === String(zoneId));
+    const zoneDef = getZoneMap(ctx.def).get(String(zoneId));
     if (zoneDef === undefined) {
       throw zonePropNotFoundError(`Zone not found: ${String(zoneId)}`, {
         reference: ref,

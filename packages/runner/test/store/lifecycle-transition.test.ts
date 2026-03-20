@@ -13,9 +13,16 @@ describe('lifecycle-transition', () => {
       ['initializing', 'terminal'],
       ['playing', 'initializing'],
       ['playing', 'playing'],
+      ['playing', 'canvasCrashed'],
       ['playing', 'terminal'],
+      ['canvasCrashed', 'canvasCrashed'],
+      ['canvasCrashed', 'reinitializing'],
+      ['reinitializing', 'reinitializing'],
+      ['reinitializing', 'playing'],
+      ['reinitializing', 'terminal'],
       ['terminal', 'initializing'],
       ['terminal', 'playing'],
+      ['terminal', 'canvasCrashed'],
       ['terminal', 'terminal'],
     ];
 
@@ -27,7 +34,11 @@ describe('lifecycle-transition', () => {
   it('rejects invalid lifecycle transitions', () => {
     const rejected: ReadonlyArray<readonly [GameLifecycle, GameLifecycle]> = [
       ['idle', 'playing'],
+      ['idle', 'canvasCrashed'],
       ['idle', 'terminal'],
+      ['canvasCrashed', 'playing'],
+      ['canvasCrashed', 'terminal'],
+      ['reinitializing', 'canvasCrashed'],
     ];
 
     for (const [from, to] of rejected) {

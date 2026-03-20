@@ -243,7 +243,12 @@ export function GameContainer({
     );
   }
 
-  if (gameLifecycle === 'idle' || gameLifecycle === 'initializing') {
+  if (
+    gameLifecycle === 'idle'
+    || gameLifecycle === 'initializing'
+    || gameLifecycle === 'canvasCrashed'
+    || gameLifecycle === 'reinitializing'
+  ) {
     return (
       <div className={styles.container}>
         <LoadingState />

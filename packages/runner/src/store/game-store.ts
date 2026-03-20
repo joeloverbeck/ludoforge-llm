@@ -134,6 +134,9 @@ interface GameStoreActions {
   reportPlaybackDiagnostic(message: string): void;
   clearOrchestrationDiagnostic(): void;
   clearError(): void;
+  reportCanvasCrash(): void;
+  beginCanvasRecovery(): void;
+  canvasRecovered(): void;
   setActivePhaseBanner(phase: string | null): void;
 }
 
@@ -1230,6 +1233,43 @@ export function createGameStore(
 
         clearError() {
           set({ error: null });
+        },
+
+        reportCanvasCrash() {
+          const lifecycle = get().gameLifecycle;
+          if (lifecycle !== 'playing' && lifecycle !== 'terminal') {
+            return;
+          }
+
+          set({
+            gameLifecycle: assertLifecycleTransition(lifecycle, 'canvasCrashed', 'reportCanvasCrash'),
+          });
+        },
+
+        beginCanvasRecovery() {
+          const lifecycle = get().gameLifecycle;
+          if (lifecycle !== 'canvasCrashed') {
+            return;
+          }
+
+          set({
+            gameLifecycle: assertLifecycleTransition(lifecycle, 'reinitializing', 'beginCanvasRecovery'),
+          });
+        },
+
+        canvasRecovered() {
+          const state = get();
+          if (state.gameLifecycle !== 'reinitializing') {
+            return;
+          }
+
+          set({
+            gameLifecycle: assertLifecycleTransition(
+              state.gameLifecycle,
+              lifecycleFromTerminal(state.terminal),
+              'canvasRecovered',
+            ),
+          });
         },
 
         setActivePhaseBanner(phase) {

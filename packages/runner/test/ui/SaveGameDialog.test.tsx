@@ -104,6 +104,9 @@ function createGameStoreFixture(playerId: number | null, lifecycle: GameStore['g
     requestAnimationSkipCurrent: vi.fn(),
     reportPlaybackDiagnostic: vi.fn(),
     clearOrchestrationDiagnostic: vi.fn(),
+    reportCanvasCrash: vi.fn(),
+    beginCanvasRecovery: vi.fn(),
+    canvasRecovered: vi.fn(),
     setActivePhaseBanner: vi.fn(),
     clearError: vi.fn(),
   }));

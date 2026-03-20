@@ -36,8 +36,10 @@ describe('installTickerErrorFence', () => {
     tickMock.mockImplementationOnce(() => {
       throw failure;
     });
+    const onCrash = vi.fn();
 
     const fence = installTickerErrorFence(app, {
+      onCrash,
       logger: { warn: vi.fn() },
     });
 
@@ -45,6 +47,7 @@ describe('installTickerErrorFence', () => {
       ticker._tick();
     }).not.toThrow();
     expect(stopMock).not.toHaveBeenCalled();
+    expect(onCrash).not.toHaveBeenCalled();
 
     fence.destroy();
   });

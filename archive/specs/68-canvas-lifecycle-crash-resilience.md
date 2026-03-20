@@ -1,6 +1,6 @@
 # Spec 68 — Canvas Display Object Lifecycle & Crash Resilience
 
-**Status**: Draft
+**Status**: COMPLETED
 **Priority**: High (crash blocks gameplay)
 **Depends on**: None (standalone fix)
 
@@ -283,3 +283,21 @@ The GameCanvas component observes these transitions to tear down and re-create t
 - Rewriting the animation system to avoid container sharing between GSAP and the reconciler.
 - Adding persistent crash telemetry or error reporting infrastructure.
 - Handling WebGL context loss (separate failure mode, separate spec).
+
+## Outcome
+
+- Completion date: 2026-03-20
+- What actually changed:
+  - removed unsafe `_texture` nulling during neutralization
+  - moved disposal to a double-RAF queue before destroy
+  - added ticker-fence containment plus crash escalation
+  - added store crash lifecycle states and `GameCanvas`-driven runtime recovery
+  - hardened validation with recovery remount/state-preservation tests and explicit transient-error containment coverage
+- Deviations from original plan:
+  - recovery shipped through `canvas-crash-recovery.ts` plus `GameCanvas` remount orchestration rather than a dedicated `canvas-crash-observer.ts` file
+  - validation was implemented by strengthening existing Vitest suites instead of adding a separate pseudo-E2E harness
+- Verification results:
+  - `pnpm -F @ludoforge/runner exec vitest run test/canvas/GameCanvas.recovery.test.tsx test/canvas/ticker-error-fence.test.ts`
+  - `pnpm -F @ludoforge/runner test`
+  - `pnpm -F @ludoforge/runner typecheck`
+  - `pnpm -F @ludoforge/runner lint`

@@ -17,6 +17,9 @@ interface MockRuntime {
 interface RecoveryHarnessState {
   readonly gameLifecycle: GameStore['gameLifecycle'];
   readonly terminal: GameStore['terminal'];
+  readonly gameDef: GameStore['gameDef'];
+  readonly gameState: GameStore['gameState'];
+  readonly renderModel: GameStore['renderModel'];
   reportCanvasCrash(): void;
   beginCanvasRecovery(): void;
   canvasRecovered(): void;
@@ -58,13 +61,22 @@ function createRecoveryStore(
   terminal: GameStore['terminal'] = null,
 ): {
   store: StoreApi<RecoveryHarnessState>;
+  sessionSnapshot: Pick<RecoveryHarnessState, 'gameDef' | 'gameState' | 'renderModel'>;
+  lifecycleTransitions: GameStore['gameLifecycle'][];
   reportCanvasCrash: ReturnType<typeof vi.fn>;
   beginCanvasRecovery: ReturnType<typeof vi.fn>;
   canvasRecovered: ReturnType<typeof vi.fn>;
 } {
+  const sessionSnapshot = {
+    gameDef: { id: 'def:fixture' } as unknown as GameStore['gameDef'],
+    gameState: { id: 'state:fixture' } as unknown as GameStore['gameState'],
+    renderModel: { id: 'render:fixture' } as unknown as GameStore['renderModel'],
+  };
+  const lifecycleTransitions: GameStore['gameLifecycle'][] = [terminal === null ? 'playing' : 'terminal'];
   const store = createStore<RecoveryHarnessState>()(() => ({
     gameLifecycle: terminal === null ? 'playing' : 'terminal',
     terminal,
+    ...sessionSnapshot,
     reportCanvasCrash: () => {
       reportCanvasCrash();
     },
@@ -77,16 +89,22 @@ function createRecoveryStore(
   }));
   const reportCanvasCrash = vi.fn(() => {
     store.setState({ gameLifecycle: 'canvasCrashed' });
+    lifecycleTransitions.push('canvasCrashed');
   });
   const beginCanvasRecovery = vi.fn(() => {
     store.setState({ gameLifecycle: 'reinitializing' });
+    lifecycleTransitions.push('reinitializing');
   });
   const canvasRecovered = vi.fn(() => {
-    store.setState({ gameLifecycle: terminal === null ? 'playing' : 'terminal' });
+    const lifecycle = terminal === null ? 'playing' : 'terminal';
+    store.setState({ gameLifecycle: lifecycle });
+    lifecycleTransitions.push(lifecycle);
   });
 
   return {
     store,
+    sessionSnapshot,
+    lifecycleTransitions,
     reportCanvasCrash,
     beginCanvasRecovery,
     canvasRecovered,
@@ -140,7 +158,7 @@ describe('GameCanvas recovery', () => {
     expect(onError).toHaveBeenCalledWith(failure);
   });
 
-  it('re-mounts the runtime after crash recovery', async () => {
+  it('re-mounts the runtime after crash recovery and preserves store session state', async () => {
     const firstRuntime = createRuntime();
     const secondRuntime = createRuntime();
     runtimeModuleDoubles.createGameCanvasRuntime
@@ -168,7 +186,18 @@ describe('GameCanvas recovery', () => {
     await waitFor(() => {
       expect(runtimeModuleDoubles.createGameCanvasRuntime).toHaveBeenCalledTimes(2);
       expect(firstRuntime.destroy).toHaveBeenCalledTimes(1);
+      expect(storeFixture.store.getState().gameLifecycle).toBe('playing');
     });
+
+    expect(storeFixture.lifecycleTransitions).toEqual([
+      'playing',
+      'canvasCrashed',
+      'reinitializing',
+      'playing',
+    ]);
+    expect(storeFixture.store.getState().gameDef).toBe(storeFixture.sessionSnapshot.gameDef);
+    expect(storeFixture.store.getState().gameState).toBe(storeFixture.sessionSnapshot.gameState);
+    expect(storeFixture.store.getState().renderModel).toBe(storeFixture.sessionSnapshot.renderModel);
   });
 
   it('calls canvasRecovered after successful recovery mount', async () => {
@@ -201,5 +230,75 @@ describe('GameCanvas recovery', () => {
       expect(storeFixture.canvasRecovered).toHaveBeenCalledTimes(1);
       expect(storeFixture.store.getState().gameLifecycle).toBe('terminal');
     });
+
+    expect(storeFixture.lifecycleTransitions).toEqual([
+      'terminal',
+      'canvasCrashed',
+      'reinitializing',
+      'terminal',
+    ]);
+  });
+
+  it('supports repeated crash recovery cycles without mutating preserved store session state', async () => {
+    const firstRuntime = createRuntime();
+    const secondRuntime = createRuntime();
+    const thirdRuntime = createRuntime();
+    runtimeModuleDoubles.createGameCanvasRuntime
+      .mockResolvedValueOnce(firstRuntime)
+      .mockResolvedValueOnce(secondRuntime)
+      .mockResolvedValueOnce(thirdRuntime);
+    const storeFixture = createRecoveryStore();
+
+    render(createElement(GameCanvas, {
+      store: storeFixture.store as unknown as StoreApi<GameStore>,
+      visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+    }));
+
+    await waitFor(() => {
+      expect(runtimeModuleDoubles.createGameCanvasRuntime).toHaveBeenCalledTimes(1);
+    });
+
+    const firstCall = runtimeModuleDoubles.createGameCanvasRuntime.mock.calls[0]![0] as {
+      onError?: (error: unknown) => void;
+    };
+
+    act(() => {
+      firstCall.onError?.(new Error('first crash'));
+    });
+
+    await waitFor(() => {
+      expect(runtimeModuleDoubles.createGameCanvasRuntime).toHaveBeenCalledTimes(2);
+      expect(firstRuntime.destroy).toHaveBeenCalledTimes(1);
+    });
+
+    const secondCall = runtimeModuleDoubles.createGameCanvasRuntime.mock.calls[1]![0] as {
+      onError?: (error: unknown) => void;
+    };
+
+    act(() => {
+      secondCall.onError?.(new Error('second crash'));
+    });
+
+    await waitFor(() => {
+      expect(runtimeModuleDoubles.createGameCanvasRuntime).toHaveBeenCalledTimes(3);
+      expect(secondRuntime.destroy).toHaveBeenCalledTimes(1);
+      expect(storeFixture.canvasRecovered).toHaveBeenCalledTimes(2);
+    });
+
+    expect(thirdRuntime.destroy).not.toHaveBeenCalled();
+    expect(storeFixture.reportCanvasCrash).toHaveBeenCalledTimes(2);
+    expect(storeFixture.beginCanvasRecovery).toHaveBeenCalledTimes(2);
+    expect(storeFixture.lifecycleTransitions).toEqual([
+      'playing',
+      'canvasCrashed',
+      'reinitializing',
+      'playing',
+      'canvasCrashed',
+      'reinitializing',
+      'playing',
+    ]);
+    expect(storeFixture.store.getState().gameDef).toBe(storeFixture.sessionSnapshot.gameDef);
+    expect(storeFixture.store.getState().gameState).toBe(storeFixture.sessionSnapshot.gameState);
+    expect(storeFixture.store.getState().renderModel).toBe(storeFixture.sessionSnapshot.renderModel);
   });
 });

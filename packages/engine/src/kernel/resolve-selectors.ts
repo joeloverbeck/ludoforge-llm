@@ -13,9 +13,11 @@ import {
   selectorCardinalityPlayerResolvedContext,
   selectorCardinalityZoneResolvedContext,
 } from './selector-cardinality-context.js';
-import type { PlayerSel, ZoneSel } from './types.js';
+import type { PlayerSel, ZoneDef, ZoneSel } from './types.js';
 
 const OWNER_SPEC_SEPARATOR = ':';
+
+const zoneIdListCache = new WeakMap<readonly ZoneDef[], readonly ZoneId[]>();
 
 function listPlayers(ctx: Pick<ReadContext, 'state'>): readonly PlayerId[] {
   return Array.from({ length: ctx.state.playerCount }, (_, index) => asPlayerId(index));
@@ -75,7 +77,13 @@ function parseOwnerSpec(ownerSpec: string): PlayerSel | null {
 }
 
 function listZoneIds(ctx: Pick<ReadContext, 'def'>): readonly ZoneId[] {
-  return sortAndDedupeZones(ctx.def.zones.map((zone) => zone.id));
+  const cached = zoneIdListCache.get(ctx.def.zones);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const result = sortAndDedupeZones(ctx.def.zones.map((zone) => zone.id));
+  zoneIdListCache.set(ctx.def.zones, result);
+  return result;
 }
 
 function listZoneCandidatesByBase(zoneBase: string, ctx: Pick<ReadContext, 'def'>): readonly ZoneId[] {

@@ -1,6 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import { PolicyAgent } from '../../../src/agents/policy-agent.js';
 import { evaluatePolicyMove } from '../../../src/agents/policy-eval.js';
 import {
   asActionId,
@@ -120,6 +121,28 @@ function permutations<T>(items: readonly T[]): T[][] {
 }
 
 describe('policy determinism', () => {
+  it('always returns one of the provided legal moves', () => {
+    const def = createDef();
+    const state = initialState(def, 99, 2).state;
+    const legalMoves: readonly Move[] = [
+      { actionId: asActionId('beta'), params: {} },
+      { actionId: asActionId('gamma'), params: {} },
+    ];
+
+    const result = evaluatePolicyMove({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      legalMoves,
+      rng: createRng(42n),
+    });
+
+    assert.deepEqual(
+      legalMoves.some((candidate) => candidate.actionId === result.move.actionId && deepEqualParams(candidate.params, result.move.params)),
+      true,
+    );
+  });
+
   it('keeps rng tie-break selection stable across legalMove permutations with the same seed', () => {
     const def = createDef();
     const state = initialState(def, 99, 2).state;
@@ -146,4 +169,64 @@ describe('policy determinism', () => {
       assert.deepEqual(result.metadata.canonicalOrder, first.metadata.canonicalOrder);
     }
   });
+
+  it('replays the same decision and metadata for the same input seed', () => {
+    const def = createDef();
+    const state = initialState(def, 13, 2).state;
+    const legalMoves: readonly Move[] = [
+      { actionId: asActionId('gamma'), params: {} },
+      { actionId: asActionId('alpha'), params: {} },
+      { actionId: asActionId('beta'), params: {} },
+    ];
+
+    const run = () =>
+      evaluatePolicyMove({
+        def,
+        state,
+        playerId: asPlayerId(0),
+        legalMoves,
+        rng: createRng(17n),
+      });
+
+    const first = run();
+    const second = run();
+
+    assert.deepEqual(second.move, first.move);
+    assert.deepEqual(second.rng, first.rng);
+    assert.deepEqual(second.metadata, first.metadata);
+  });
+
+  it('keeps emergency fallback legal when evaluation cannot resolve a requested profile', () => {
+    const def = createDef();
+    const state = initialState(def, 99, 2).state;
+    const legalMoves: readonly Move[] = [
+      { actionId: asActionId('alpha'), params: {} },
+      { actionId: asActionId('beta'), params: {} },
+      { actionId: asActionId('gamma'), params: {} },
+    ];
+    const agent = new PolicyAgent({ profileId: 'missing-profile' });
+
+    const result = agent.chooseMove({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      legalMoves,
+      rng: createRng(42n),
+    });
+
+    assert.deepEqual(
+      legalMoves.some((candidate) => candidate.actionId === result.move.actionId && deepEqualParams(candidate.params, result.move.params)),
+      true,
+    );
+    assert.equal(result.agentDecision?.kind, 'policy');
+    if (result.agentDecision?.kind !== 'policy') {
+      assert.fail('expected policy trace metadata');
+    }
+    assert.equal(result.agentDecision.emergencyFallback, true);
+    assert.equal(result.agentDecision.failure?.code, 'PROFILE_MISSING');
+  });
 });
+
+function deepEqualParams(left: Move['params'], right: Move['params']): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}

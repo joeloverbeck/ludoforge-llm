@@ -5,7 +5,8 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GameDef } from '@ludoforge/engine/runtime';
 
-import { GameCanvas, createGameCanvasRuntime, createScopedLifecycleCallback } from '../../src/canvas/GameCanvas';
+import { GameCanvas } from '../../src/canvas/GameCanvas';
+import { createGameCanvasRuntime, createScopedLifecycleCallback } from '../../src/canvas/game-canvas-runtime.js';
 import type { CoordinateBridge } from '../../src/canvas/coordinate-bridge';
 import type { GameStore } from '../../src/store/game-store';
 import type { DiagnosticBuffer } from '../../src/animation/diagnostic-buffer.js';

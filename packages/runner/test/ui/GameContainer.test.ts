@@ -326,7 +326,7 @@ describe('GameContainer', () => {
     expect(html).not.toContain('data-testid="ui-overlay"');
   });
 
-  it('renders LoadingState when lifecycle is canvasCrashed', () => {
+  it('keeps GameCanvas mounted when lifecycle is canvasCrashed', () => {
     const html = renderToStaticMarkup(
       createElement(GameContainer, {
         bridge: TEST_BRIDGE,
@@ -338,12 +338,11 @@ describe('GameContainer', () => {
       }),
     );
 
-    expect(html).toContain('Loading game...');
-    expect(html).not.toContain('data-testid="game-canvas"');
-    expect(html).not.toContain('data-testid="ui-overlay"');
+    expect(html).toContain('data-testid="game-canvas"');
+    expect(html).toContain('data-testid="ui-overlay"');
   });
 
-  it('renders LoadingState when lifecycle is reinitializing', () => {
+  it('keeps GameCanvas mounted when lifecycle is reinitializing', () => {
     const html = renderToStaticMarkup(
       createElement(GameContainer, {
         bridge: TEST_BRIDGE,
@@ -355,9 +354,8 @@ describe('GameContainer', () => {
       }),
     );
 
-    expect(html).toContain('Loading game...');
-    expect(html).not.toContain('data-testid="game-canvas"');
-    expect(html).not.toContain('data-testid="ui-overlay"');
+    expect(html).toContain('data-testid="game-canvas"');
+    expect(html).toContain('data-testid="ui-overlay"');
   });
 
   it('renders ErrorState when error is non-null', () => {

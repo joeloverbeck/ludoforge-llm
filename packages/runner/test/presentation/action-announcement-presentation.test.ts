@@ -149,7 +149,7 @@ describe('action-announcement-presentation', () => {
       appliedMoveEvent: {
         sequence: 1,
         actorId: asPlayerId(1),
-        actorSeat: 'ai-random',
+        actorController: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }),
         move: { actionId: asActionId('raise'), params: {} },
       },
     });

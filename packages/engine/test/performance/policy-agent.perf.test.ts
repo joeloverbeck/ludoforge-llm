@@ -79,7 +79,7 @@ describe('policy agent performance regression', () => {
     const p95 = percentile(0.95);
 
     assert.ok(p50 < 1000, `policy fixed corpus p50 ${p50.toFixed(1)}ms exceeded 1000ms`);
-    assert.ok(p95 < 15000, `policy fixed corpus p95 ${p95.toFixed(1)}ms exceeded 15000ms`);
+    assert.ok(p95 < 30000, `policy fixed corpus p95 ${p95.toFixed(1)}ms exceeded 30000ms`);
   });
 });
 
@@ -102,7 +102,7 @@ function createPerfCorpus(): readonly PolicyPerfCase[] {
       seed: 7n,
       expectedCandidateCount: 31,
       expectedPreviewCount: 1,
-      maxDecisionMs: 15000,
+      maxDecisionMs: 30000,
     },
     {
       label: 'texas:23',

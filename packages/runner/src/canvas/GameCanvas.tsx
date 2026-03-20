@@ -19,6 +19,7 @@ import { attachKeyboardSelect, handleKeyboardSelectKeyDown } from './interaction
 import { createCanvasInteractionController } from './interactions/canvas-interaction-controller';
 import { createHoverTargetController } from './interactions/hover-target-controller';
 import { createRuntimeLayoutStore, type RuntimeLayoutStore } from './runtime-layout-store';
+import { installTickerErrorFence, type TickerErrorFence } from './ticker-error-fence.js';
 import { createAdjacencyRenderer } from './renderers/adjacency-renderer';
 import { ContainerPool } from './renderers/container-pool';
 import { createDisposalQueue, type DisposalQueue } from './renderers/disposal-queue';
@@ -98,6 +99,7 @@ interface GameCanvasRuntimeOptions {
   readonly interactionHighlights?: InteractionHighlights;
   readonly onHoverAnchorChange?: (anchor: HoverAnchor | null) => void;
   readonly onAnimationDiagnosticBufferChange?: (buffer: DiagnosticBuffer | null) => void;
+  readonly onError?: (error: unknown) => void;
 }
 
 interface GameCanvasRuntimeDeps {
@@ -215,6 +217,11 @@ export async function createGameCanvasRuntime(
 
   const gameCanvas = await deps.createGameCanvas(options.container, {
     backgroundColor: options.backgroundColor,
+  });
+  const tickerErrorFence = installTickerErrorFence(gameCanvas.app, {
+    onCrash: (error) => {
+      options.onError?.(error);
+    },
   });
   layersForBackground = gameCanvas.layers;
   const currentState = selectorStore.getState();
@@ -548,6 +555,7 @@ export async function createGameCanvasRuntime(
         viewportResult,
         gameCanvas,
         disposalQueue,
+        tickerErrorFence,
       );
     },
   };
@@ -599,6 +607,7 @@ export function GameCanvas({
               diagnosticBufferCallback.invoke(buffer);
             },
           }),
+      ...(onError === undefined ? {} : { onError }),
     };
 
     void createGameCanvasRuntime(runtimeOptions).then((createdRuntime) => {
@@ -663,6 +672,7 @@ function destroyCanvasPipeline(
   viewportResult: ViewportResult,
   gameCanvas: PixiGameCanvas,
   disposalQueue: DisposalQueue,
+  tickerErrorFence: TickerErrorFence,
 ): void {
   canvasUpdater.destroy();
   zoneRenderer.destroy();
@@ -672,6 +682,7 @@ function destroyCanvasPipeline(
   zonePool.destroyAll();
   disposalQueue.destroy();
   viewportResult.destroy();
+  tickerErrorFence.destroy();
   gameCanvas.destroy();
 }
 

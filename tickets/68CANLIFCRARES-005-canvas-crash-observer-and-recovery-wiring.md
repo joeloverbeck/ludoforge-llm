@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — runner-only
-**Deps**: tickets/68CANLIFCRARES-003-ticker-error-fence.md, tickets/68CANLIFCRARES-004-store-lifecycle-crash-states.md
+**Deps**: archive/tickets/RUNPRESLIFE/68CANLIFCRARES-003-ticker-error-fence-and-runtime-crash-reporting.md, tickets/68CANLIFCRARES-004-store-lifecycle-crash-states.md
 
 ## Problem
 

@@ -187,6 +187,10 @@ function createRuntimeFixture() {
   const gameCanvas = {
     app: {
       stage: {} as never,
+      ticker: {
+        _tick: vi.fn(),
+        stop: vi.fn(),
+      },
       renderer: {
         screen: { width: 1024, height: 768 },
         events: {} as never,
@@ -1164,6 +1168,8 @@ describe('createGameCanvasRuntime', () => {
       fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
     );
 
+    first.destroy();
+
     const second = await createGameCanvasRuntime(
       {
         container: {} as HTMLElement,
@@ -1174,7 +1180,6 @@ describe('createGameCanvasRuntime', () => {
       fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
     );
 
-    first.destroy();
     second.destroy();
 
     expect(fixture.canvasUpdater.start).toHaveBeenCalledTimes(2);
@@ -1219,5 +1224,61 @@ describe('createGameCanvasRuntime', () => {
     expect(warn.mock.calls[0]?.[0]).toContain('Animation controller initialization failed');
 
     runtime.destroy();
+  });
+
+  it('installs a ticker error fence and restores the original ticker callback on destroy', async () => {
+    const fixture = createRuntimeFixture();
+    const store = createRuntimeStore(makeRenderModel(['zone:a']));
+    const originalTick = fixture.gameCanvas.app.ticker._tick;
+
+    const runtime = await createGameCanvasRuntime(
+      {
+        container: {} as HTMLElement,
+        store: store as unknown as StoreApi<GameStore>,
+        backgroundColor: 0x222222,
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+      },
+      fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
+    );
+
+    expect(fixture.gameCanvas.app.ticker._tick).not.toBe(originalTick);
+
+    runtime.destroy();
+
+    expect(fixture.gameCanvas.app.ticker._tick).toBe(originalTick);
+  });
+
+  it('forwards fatal ticker failures to onError after the crash threshold is reached', async () => {
+    const fixture = createRuntimeFixture();
+    const store = createRuntimeStore(makeRenderModel(['zone:a']));
+    const onError = vi.fn();
+    const failure = new Error('ticker exploded');
+    const originalTick = fixture.gameCanvas.app.ticker._tick;
+    originalTick.mockImplementation(() => {
+      throw failure;
+    });
+
+    await createGameCanvasRuntime(
+      {
+        container: {} as HTMLElement,
+        store: store as unknown as StoreApi<GameStore>,
+        backgroundColor: 0x333333,
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+        onError,
+      },
+      fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
+    );
+
+    const wrappedTick = fixture.gameCanvas.app.ticker._tick as (...args: unknown[]) => unknown;
+
+    expect(() => {
+      wrappedTick();
+      wrappedTick();
+      wrappedTick();
+    }).not.toThrow();
+
+    expect(fixture.gameCanvas.app.ticker.stop).toHaveBeenCalledTimes(1);
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onError).toHaveBeenCalledWith(failure);
   });
 });

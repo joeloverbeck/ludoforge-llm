@@ -1,4 +1,5 @@
 import type { ReadContext } from './eval-context.js';
+import { getLatticeMap, getZoneMap } from './def-lookup.js';
 import { missingVarError, typeMismatchError, zonePropNotFoundError } from './eval-error.js';
 import { booleanArityMessage, isNonEmptyArray } from './boolean-arity-policy.js';
 import { evalValue } from './eval-value.js';
@@ -116,7 +117,7 @@ export function evalCondition(cond: ConditionAST, ctx: ReadContext): boolean {
 
     case 'zonePropIncludes': {
       const zoneId = resolveMapSpaceId(cond.zone, ctx);
-      const zoneDef = ctx.def.zones.find((zone) => zone.id === String(zoneId));
+      const zoneDef = getZoneMap(ctx.def).get(String(zoneId));
       if (zoneDef === undefined) {
         throw zonePropNotFoundError(`Zone not found: ${String(zoneId)}`, {
           condition: cond,
@@ -175,7 +176,7 @@ export function evalCondition(cond: ConditionAST, ctx: ReadContext): boolean {
         });
       }
 
-      const lattice = ctx.def.markerLattices?.find((candidate) => candidate.id === cond.marker);
+      const lattice = getLatticeMap(ctx.def)?.get(cond.marker);
       if (lattice === undefined) {
         throw missingVarError(`Marker lattice not found: ${cond.marker}`, {
           condition: cond,
@@ -202,7 +203,7 @@ export function evalCondition(cond: ConditionAST, ctx: ReadContext): boolean {
         });
       }
 
-      const lattice = ctx.def.markerLattices?.find((candidate) => candidate.id === cond.marker);
+      const lattice = getLatticeMap(ctx.def)?.get(cond.marker);
       if (lattice === undefined) {
         throw missingVarError(`Marker lattice not found: ${cond.marker}`, {
           condition: cond,

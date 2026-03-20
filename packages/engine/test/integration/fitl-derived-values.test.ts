@@ -198,17 +198,38 @@ const FITL_OPPOSITION_CONFIG: MarkerWeightConfig = {
 
 const FITL_DERIVED_METRICS_CONTEXT: Pick<GameDef, 'derivedMetrics'> = {
   derivedMetrics: [
-    { id: 'fitl-marker-total', computation: 'markerTotal', requirements: [{ key: 'population', expectedType: 'number' }] },
+    {
+      id: 'fitl-marker-total',
+      computation: 'markerTotal',
+      requirements: [{ key: 'population', expectedType: 'number' }],
+      runtime: {
+        kind: 'markerTotal',
+        markerId: 'supportOpposition',
+        markerConfig: FITL_SUPPORT_CONFIG,
+        defaultMarkerState: 'neutral',
+      },
+    },
     {
       id: 'fitl-controlled-population',
       computation: 'controlledPopulation',
       requirements: [{ key: 'population', expectedType: 'number' }],
+      runtime: {
+        kind: 'controlledPopulation',
+        controlFn: 'coin',
+        seatGroupConfig: FITL_FACTION_CONFIG,
+      },
     },
     {
       id: 'fitl-total-econ',
       computation: 'totalEcon',
       zoneFilter: { category: ['loc'] },
       requirements: [{ key: 'econ', expectedType: 'number' }],
+      runtime: {
+        kind: 'totalEcon',
+        controlFn: 'coin',
+        seatGroupConfig: FITL_FACTION_CONFIG,
+        blockedByTokenTypes: ['terror'],
+      },
     },
   ],
 };

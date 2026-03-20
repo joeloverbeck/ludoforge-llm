@@ -1,8 +1,12 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import type {
   AgentPolicyCostClass,
+  AgentPolicyExpr,
+  AgentPolicyLiteral,
+  AgentPolicyOperator,
   AgentPolicyValueType,
   CompiledAgentDependencyRefs,
+  CompiledAgentPolicyRef,
   CompiledAgentParameterDef,
 } from '../kernel/types.js';
 import type { GameSpecPolicyExpr } from '../cnl/game-spec-doc.js';
@@ -13,6 +17,7 @@ type InternalPolicyValueType = AgentPolicyValueType | 'unknown';
 export interface ResolvedPolicyRef {
   readonly type: AgentPolicyValueType;
   readonly costClass: AgentPolicyCostClass;
+  readonly ref: CompiledAgentPolicyRef;
   readonly dependency?: {
     readonly kind: keyof CompiledAgentDependencyRefs;
     readonly id: string;
@@ -25,6 +30,7 @@ export interface AnalyzePolicyExprContext {
 }
 
 export interface PolicyExprAnalysis {
+  readonly expr: AgentPolicyExpr;
   readonly valueType: InternalPolicyValueType;
   readonly costClass: AgentPolicyCostClass;
   readonly dependencies: CompiledAgentDependencyRefs;
@@ -93,20 +99,20 @@ export function analyzePolicyExpr(
   path: string,
 ): PolicyExprAnalysis | null {
   if (expr === null) {
-    return createAnalysis('unknown', 'state', true);
+    return createLiteralAnalysis(null, 'unknown', 'state', true);
   }
   if (typeof expr === 'number') {
-    return createAnalysis('number', 'state', expr === 0);
+    return createLiteralAnalysis(expr, 'number', 'state', expr === 0);
   }
   if (typeof expr === 'boolean') {
-    return createAnalysis('boolean', 'state', false);
+    return createLiteralAnalysis(expr, 'boolean', 'state', false);
   }
   if (typeof expr === 'string') {
-    return createAnalysis('id', 'state', false);
+    return createLiteralAnalysis(expr, 'id', 'state', false);
   }
   if (Array.isArray(expr)) {
     if (expr.every((entry) => typeof entry === 'string')) {
-      return createAnalysis('idList', 'state', false);
+      return createLiteralAnalysis(expr, 'idList', 'state', false);
     }
     diagnostics.push({
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
@@ -226,6 +232,7 @@ function analyzeParamExpr(
     return null;
   }
   return {
+    expr: { kind: 'param', id: expr },
     valueType: parameterTypeToValueType(parameterDef.type),
     costClass: 'state',
     dependencies: { parameters: [expr], stateFeatures: [], candidateFeatures: [], aggregates: [] },
@@ -267,41 +274,16 @@ function analyzeRefExpr(
   if (resolved.dependency !== undefined) {
     switch (resolved.dependency.kind) {
       case 'parameters':
-        return {
-          valueType: resolved.type,
-          costClass: resolved.costClass,
-          dependencies: { ...dependencies, parameters: [resolved.dependency.id] },
-          isStaticallyZero: false,
-        };
+        return withResolvedRef(resolved, { ...dependencies, parameters: [resolved.dependency.id] });
       case 'stateFeatures':
-        return {
-          valueType: resolved.type,
-          costClass: resolved.costClass,
-          dependencies: { ...dependencies, stateFeatures: [resolved.dependency.id] },
-          isStaticallyZero: false,
-        };
+        return withResolvedRef(resolved, { ...dependencies, stateFeatures: [resolved.dependency.id] });
       case 'candidateFeatures':
-        return {
-          valueType: resolved.type,
-          costClass: resolved.costClass,
-          dependencies: { ...dependencies, candidateFeatures: [resolved.dependency.id] },
-          isStaticallyZero: false,
-        };
+        return withResolvedRef(resolved, { ...dependencies, candidateFeatures: [resolved.dependency.id] });
       case 'aggregates':
-        return {
-          valueType: resolved.type,
-          costClass: resolved.costClass,
-          dependencies: { ...dependencies, aggregates: [resolved.dependency.id] },
-          isStaticallyZero: false,
-        };
+        return withResolvedRef(resolved, { ...dependencies, aggregates: [resolved.dependency.id] });
     }
   }
-  return {
-    valueType: resolved.type,
-    costClass: resolved.costClass,
-    dependencies,
-    isStaticallyZero: false,
-  };
+  return withResolvedRef(resolved, dependencies);
 }
 
 function analyzeNumericListOperator(
@@ -339,7 +321,7 @@ function analyzeNumericListOperator(
     : operator === 'add'
       ? analyzed.every((entry) => entry.isStaticallyZero)
       : false;
-  return mergeAnalyses('number', analyzed, isZero);
+  return compileOperatorAnalysis(operator as AgentPolicyOperator, 'number', analyzed, isZero);
 }
 
 function analyzeUnaryNumericOperator(
@@ -363,10 +345,7 @@ function analyzeUnaryNumericOperator(
     });
     return null;
   }
-  return {
-    ...analyzed,
-    valueType: 'number',
-  };
+  return compileOperatorAnalysis(operator as AgentPolicyOperator, 'number', [analyzed], analyzed.isStaticallyZero);
 }
 
 function analyzeEqualityOperator(
@@ -396,7 +375,7 @@ function analyzeEqualityOperator(
     });
     return null;
   }
-  return mergeAnalyses('boolean', analyzed, false);
+  return compileOperatorAnalysis(operator as AgentPolicyOperator, 'boolean', analyzed, false);
 }
 
 function analyzeNumericComparisonOperator(
@@ -417,7 +396,7 @@ function analyzeNumericComparisonOperator(
   if (!requireType(analyzed, 'number', diagnostics, path, `${operator} requires number operands.`)) {
     return null;
   }
-  return mergeAnalyses('boolean', analyzed, false);
+  return compileOperatorAnalysis(operator as AgentPolicyOperator, 'boolean', analyzed, false);
 }
 
 function analyzeBooleanListOperator(
@@ -439,7 +418,7 @@ function analyzeBooleanListOperator(
   if (!requireType(analyzed, 'boolean', diagnostics, path, `${operator} requires boolean operands.`)) {
     return null;
   }
-  return mergeAnalyses('boolean', analyzed, false);
+  return compileOperatorAnalysis(operator as AgentPolicyOperator, 'boolean', analyzed, false);
 }
 
 function analyzeUnaryBooleanOperator(
@@ -463,10 +442,7 @@ function analyzeUnaryBooleanOperator(
     });
     return null;
   }
-  return {
-    ...analyzed,
-    valueType: 'boolean',
-  };
+  return compileOperatorAnalysis(operator as AgentPolicyOperator, 'boolean', [analyzed], false);
 }
 
 function analyzeIfOperator(
@@ -509,7 +485,7 @@ function analyzeIfOperator(
     });
     return null;
   }
-  return mergeAnalyses(resultType, [condition, whenTrue, whenFalse], false);
+  return compileOperatorAnalysis('if', resultType, [condition, whenTrue, whenFalse], false);
 }
 
 function analyzeInOperator(
@@ -547,7 +523,7 @@ function analyzeInOperator(
     });
     return null;
   }
-  return mergeAnalyses('boolean', [left, right], false);
+  return compileOperatorAnalysis('in', 'boolean', [left, right], false);
 }
 
 function analyzeCoalesceOperator(
@@ -591,7 +567,7 @@ function analyzeCoalesceOperator(
     });
     return null;
   }
-  return mergeAnalyses(resultType, analyzed, analyzed.every((entry) => entry.isStaticallyZero));
+  return compileOperatorAnalysis('coalesce', resultType, analyzed, analyzed.every((entry) => entry.isStaticallyZero));
 }
 
 function analyzeClampOperator(
@@ -611,7 +587,7 @@ function analyzeClampOperator(
   if (!requireType(analyzed, 'number', diagnostics, path, 'clamp requires number operands.')) {
     return null;
   }
-  return mergeAnalyses('number', analyzed, analyzed[0]?.isStaticallyZero === true);
+  return compileOperatorAnalysis('clamp', 'number', analyzed, analyzed[0]?.isStaticallyZero === true);
 }
 
 function analyzeBoolToNumberOperator(
@@ -634,11 +610,7 @@ function analyzeBoolToNumberOperator(
     });
     return null;
   }
-  return {
-    ...analyzed,
-    valueType: 'number',
-    isStaticallyZero: false,
-  };
+  return compileOperatorAnalysis('boolToNumber', 'number', [analyzed], false);
 }
 
 function analyzeChildExpressions(
@@ -711,12 +683,14 @@ function requireType(
   return false;
 }
 
-function createAnalysis(
+function createLiteralAnalysis(
+  value: AgentPolicyLiteral,
   valueType: InternalPolicyValueType,
   costClass: AgentPolicyCostClass,
   isStaticallyZero: boolean,
 ): PolicyExprAnalysis {
   return {
+    expr: { kind: 'literal', value },
     valueType,
     costClass,
     dependencies: emptyDependencies(),
@@ -724,12 +698,45 @@ function createAnalysis(
   };
 }
 
+function compileOperatorAnalysis(
+  operator: AgentPolicyOperator,
+  valueType: InternalPolicyValueType,
+  analyses: readonly PolicyExprAnalysis[],
+  isStaticallyZero: boolean,
+): PolicyExprAnalysis {
+  return mergeAnalyses(
+    {
+      kind: 'op',
+      op: operator,
+      args: analyses.map((entry) => entry.expr),
+    },
+    valueType,
+    analyses,
+    isStaticallyZero,
+  );
+}
+
+function withResolvedRef(
+  resolved: ResolvedPolicyRef,
+  dependencies: CompiledAgentDependencyRefs,
+): PolicyExprAnalysis {
+  return {
+    expr: { kind: 'ref', ref: resolved.ref },
+    valueType: resolved.type,
+    costClass: resolved.costClass,
+    dependencies,
+    isStaticallyZero: false,
+  };
+}
+
 function mergeAnalyses(
+  expr: AgentPolicyExpr,
   valueType: InternalPolicyValueType,
   analyses: readonly PolicyExprAnalysis[],
   isStaticallyZero: boolean,
 ): PolicyExprAnalysis {
   return {
+    expr,
     valueType,
     costClass: analyses.reduce<AgentPolicyCostClass>((highest, entry) => maxCostClass(highest, entry.costClass), 'state'),
     dependencies: mergeDependencies(analyses.map((entry) => entry.dependencies)),

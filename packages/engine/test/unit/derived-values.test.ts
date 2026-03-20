@@ -12,6 +12,7 @@ import {
   getPopulationMultiplier,
   computeTotalSupport,
   computeTotalOpposition,
+  computeDerivedMetricValue,
   isSabotaged,
   computeTotalEcon,
   sumControlledPopulation,
@@ -110,17 +111,38 @@ const OPPOSITION_CONFIG: MarkerWeightConfig = {
 
 const DERIVED_METRICS_CONTEXT: Pick<GameDef, 'derivedMetrics'> = {
   derivedMetrics: [
-    { id: 'marker-total', computation: 'markerTotal', requirements: [{ key: 'population', expectedType: 'number' }] },
+    {
+      id: 'marker-total',
+      computation: 'markerTotal',
+      requirements: [{ key: 'population', expectedType: 'number' }],
+      runtime: {
+        kind: 'markerTotal',
+        markerId: 'support',
+        markerConfig: SUPPORT_CONFIG,
+        defaultMarkerState: 'neutral',
+      },
+    },
     {
       id: 'controlled-pop',
       computation: 'controlledPopulation',
       requirements: [{ key: 'population', expectedType: 'number' }],
+      runtime: {
+        kind: 'controlledPopulation',
+        controlFn: 'coin',
+        seatGroupConfig: DEFAULT_FACTION_CONFIG,
+      },
     },
     {
       id: 'total-econ',
       computation: 'totalEcon',
       zoneFilter: { category: ['loc'] },
       requirements: [{ key: 'econ', expectedType: 'number' }],
+      runtime: {
+        kind: 'totalEcon',
+        controlFn: 'coin',
+        seatGroupConfig: DEFAULT_FACTION_CONFIG,
+        blockedByTokenTypes: ['terror'],
+      },
     },
   ],
 };
@@ -469,6 +491,38 @@ describe('computeTotalEcon', () => {
     });
 
     assert.equal(computeTotalEcon(DERIVED_METRICS_CONTEXT, state, spacesWithMissingProvinceEcon, DEFAULT_FACTION_CONFIG, 'terror'), 2);
+  });
+});
+
+describe('computeDerivedMetricValue', () => {
+  const gameDef = {
+    ...({} as GameDef),
+    zones: [
+      makeSpace({ id: 'city-a', category: 'city', population: 3, econ: 0 }),
+      makeSpace({ id: 'loc-a', category: 'loc', population: 0, econ: 2 }),
+    ],
+    derivedMetrics: DERIVED_METRICS_CONTEXT.derivedMetrics,
+  } as GameDef;
+
+  it('resolves markerTotal metrics from executable runtime metadata', () => {
+    const state = {
+      ...makeState({}),
+      markers: {
+        support: {
+          'city-a': 'activeSupport',
+        },
+      },
+    };
+
+    assert.equal(computeDerivedMetricValue(gameDef, state, 'marker-total'), 6);
+  });
+
+  it('resolves totalEcon metrics through shared runtime data', () => {
+    const state = makeState({
+      'loc-a': [makeFactionToken('t1', 'US')],
+    });
+
+    assert.equal(computeDerivedMetricValue(gameDef, state, 'total-econ'), 2);
   });
 });
 

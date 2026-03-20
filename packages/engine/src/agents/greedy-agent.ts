@@ -1,9 +1,9 @@
 import { applyMove } from '../kernel/apply-move.js';
-import { legalChoicesEvaluate } from '../kernel/legal-choices.js';
-import { completeTemplateMove } from '../kernel/move-completion.js';
-import type { Agent, Move, Rng } from '../kernel/types.js';
+import { toMoveIdentityKey } from '../kernel/move-identity.js';
+import type { Agent, Move } from '../kernel/types.js';
 import { evaluateState } from './evaluate-state.js';
 import { pickRandom, selectStochasticFallback } from './agent-move-selection.js';
+import { preparePlayableMoves } from './prepare-playable-moves.js';
 import { selectCandidatesDeterministically } from './select-candidates.js';
 
 const DEFAULT_COMPLETIONS_PER_TEMPLATE = 5;
@@ -40,36 +40,22 @@ export class GreedyAgent implements Agent {
       throw new Error('GreedyAgent.chooseMove called with empty legalMoves');
     }
 
-    // Expand template moves into concrete candidates
-    const expandedMoves: Move[] = [];
-    const stochasticMoves: Move[] = [];
-    let rng: Rng = input.rng;
-
-    for (const move of input.legalMoves) {
-      const choiceState = legalChoicesEvaluate(input.def, input.state, move, undefined, input.runtime);
-      if (choiceState.kind === 'illegal') {
-        continue;
-      }
-
-      const attempts = choiceState.kind === 'pending' ? this.completionsPerTemplate : 1;
-      for (let i = 0; i < attempts; i += 1) {
-        const result = completeTemplateMove(input.def, input.state, move, rng, input.runtime);
-        if (result.kind === 'completed') {
-          expandedMoves.push(result.move);
-          rng = result.rng;
-        } else if (result.kind === 'stochasticUnresolved') {
-          stochasticMoves.push(result.move);
-          rng = result.rng;
-          break;
-        } else {
-          // Unsatisfiable — skip all remaining attempts.
-          break;
-        }
-      }
-    }
+    const { completedMoves: expandedMoves, stochasticMoves, rng } = preparePlayableMoves(input, {
+      pendingTemplateCompletions: this.completionsPerTemplate,
+    });
 
     if (expandedMoves.length === 0 && stochasticMoves.length > 0) {
-      return selectStochasticFallback(stochasticMoves, rng);
+      const fallback = selectStochasticFallback(stochasticMoves, rng);
+      return {
+        ...fallback,
+        agentDecision: {
+          kind: 'builtin',
+          agent: { kind: 'builtin', builtinId: 'greedy' },
+          candidateCount: stochasticMoves.length,
+          selectedIndex: stochasticMoves.findIndex((move) => move === fallback.move),
+          selectedStableMoveKey: toMoveIdentityKey(input.def, fallback.move),
+        },
+      };
     }
 
     if (expandedMoves.length === 0) {
@@ -105,10 +91,30 @@ export class GreedyAgent implements Agent {
     }
 
     if (tiedBestMoves.length <= 1) {
-      return { move: bestMove, rng: candidates.rng };
+      return {
+        move: bestMove,
+        rng: candidates.rng,
+        agentDecision: {
+          kind: 'builtin',
+          agent: { kind: 'builtin', builtinId: 'greedy' },
+          candidateCount: candidates.moves.length,
+          selectedIndex: candidates.moves.findIndex((move) => move === bestMove),
+          selectedStableMoveKey: toMoveIdentityKey(input.def, bestMove),
+        },
+      };
     }
 
     const { item: selectedMove, rng: nextRng } = pickRandom(tiedBestMoves, candidates.rng);
-    return { move: selectedMove, rng: nextRng };
+    return {
+      move: selectedMove,
+      rng: nextRng,
+      agentDecision: {
+        kind: 'builtin',
+        agent: { kind: 'builtin', builtinId: 'greedy' },
+        candidateCount: candidates.moves.length,
+        selectedIndex: candidates.moves.findIndex((move) => move === selectedMove),
+        selectedStableMoveKey: toMoveIdentityKey(input.def, selectedMove),
+      },
+    };
   }
 }

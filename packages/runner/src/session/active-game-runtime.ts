@@ -10,6 +10,7 @@ import { listBootstrapDescriptors } from '../bootstrap/bootstrap-registry.js';
 import { resolveBootstrapConfig } from '../bootstrap/resolve-bootstrap-config.js';
 import { createGameStore, type GameStore } from '../store/game-store.js';
 import { createConsoleTraceSubscriber } from '../trace/console-trace-subscriber.js';
+import { isHumanSeatController } from '../seat/seat-controller.js';
 import type { ActiveGameState, SessionState } from './session-types.js';
 
 export interface ActiveGameRuntime {
@@ -28,7 +29,7 @@ export function findBootstrapDescriptorById(gameId: string): BootstrapDescriptor
 }
 
 function buildActiveGameBootstrapSearch(state: ActiveGameState, descriptor: BootstrapDescriptor): string {
-  const humanSeat = state.playerConfig.find((seat) => seat.type === 'human');
+  const humanSeat = state.playerConfig.find((seat) => isHumanSeatController(seat.controller));
   const humanPlayerId = humanSeat?.playerId ?? descriptor.defaultPlayerId;
   return `?game=${encodeURIComponent(descriptor.queryValue)}&seed=${String(state.seed)}&player=${String(humanPlayerId)}`;
 }

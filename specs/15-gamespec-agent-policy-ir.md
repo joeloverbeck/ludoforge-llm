@@ -88,6 +88,8 @@ Do not bake seat bindings into profile definitions. That makes reuse harder, dif
 
 Bindings are keyed by canonical seat ids, never by player index. Validation happens against the resolved seat catalog and selected scenario inputs, not against incidental runtime player ordering.
 
+Canonical seat ids are reusable role identifiers. They are not, by themselves, a runtime-player selector in symmetric games.
+
 ### 3. V1 evaluates concrete legal moves only
 
 V1 policies evaluate the concrete `legalMoves` provided to the agent. That is the candidate set.
@@ -268,7 +270,8 @@ Requirements:
 
 - policy compilation must validate bindings against resolved seat ids, not only `metadata.players.min/max`
 - ambiguous or missing scenario/seat-catalog resolution must prevent policy binding compilation
-- runtime must resolve `seat.self`, `seat.active`, and seat-scoped refs through canonical seat ids, not positional player indexes
+- runtime must resolve profile bindings through canonical seat ids, not positional player indexes
+- per-player policy surfaces that mean "the acting player" or "the active player" must use explicit runtime-player selectors rather than round-tripping through canonical seat ids
 - traces may include both `playerId` and `seatId`, but policy semantics are seat-based
 
 ### New Types
@@ -454,6 +457,8 @@ The candidate set consists only of fully decision-complete concrete legal moves 
 Policies may read authored runtime data only when it is classifiable as public or acting-seat-visible:
 
 - `var.global.<id>`
+- `var.player.self.<id>`
+- `var.player.active.<id>`
 - `var.seat.<seat>.<id>`
 - `metric.<id>`
 - `victory.currentMargin.<seat>`
@@ -465,6 +470,8 @@ Policies may read authored runtime data only when it is classifiable as public o
 Candidate features may read `preview.*` versions of the approved authored state surfaces:
 
 - `preview.var.global.<id>`
+- `preview.var.player.self.<id>`
+- `preview.var.player.active.<id>`
 - `preview.var.seat.<seat>.<id>`
 - `preview.metric.<id>`
 - `preview.victory.currentMargin.<seat>`

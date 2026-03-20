@@ -2626,6 +2626,324 @@
                       }
                     ]
                   }
+                },
+                "agentDecision": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "builtin"
+                        },
+                        "agent": {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "builtin"
+                            },
+                            "builtinId": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "const": "random"
+                                },
+                                {
+                                  "type": "string",
+                                  "const": "greedy"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "builtinId"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "candidateCount": {
+                          "type": "number"
+                        },
+                        "selectedIndex": {
+                          "type": "number"
+                        },
+                        "selectedStableMoveKey": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "agent",
+                        "candidateCount"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "policy"
+                        },
+                        "agent": {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "policy"
+                            },
+                            "profileId": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "kind"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "seatId": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "requestedProfileId": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "resolvedProfileId": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "profileFingerprint": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "initialCandidateCount": {
+                          "type": "number"
+                        },
+                        "selectedStableMoveKey": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "finalScore": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "pruningSteps": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "ruleId": {
+                                "type": "string"
+                              },
+                              "remainingCandidateCount": {
+                                "type": "number"
+                              },
+                              "skippedBecauseEmpty": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "ruleId",
+                              "remainingCandidateCount",
+                              "skippedBecauseEmpty"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "tieBreakChain": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "tieBreakerId": {
+                                "type": "string"
+                              },
+                              "candidateCountBefore": {
+                                "type": "number"
+                              },
+                              "candidateCountAfter": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "tieBreakerId",
+                              "candidateCountBefore",
+                              "candidateCountAfter"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "previewUsage": {
+                          "type": "object",
+                          "properties": {
+                            "evaluatedCandidateCount": {
+                              "type": "number"
+                            },
+                            "refIds": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "unknownRefIds": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          "required": [
+                            "evaluatedCandidateCount",
+                            "refIds",
+                            "unknownRefIds"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "emergencyFallback": {
+                          "type": "boolean"
+                        },
+                        "failure": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string"
+                                },
+                                "message": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "code",
+                                "message"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "candidates": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "actionId": {
+                                "type": "string"
+                              },
+                              "stableMoveKey": {
+                                "type": "string"
+                              },
+                              "score": {
+                                "type": "number"
+                              },
+                              "prunedBy": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "scoreContributions": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "termId": {
+                                      "type": "string"
+                                    },
+                                    "contribution": {
+                                      "type": "number"
+                                    }
+                                  },
+                                  "required": [
+                                    "termId",
+                                    "contribution"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "previewRefIds": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "unknownPreviewRefIds": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              }
+                            },
+                            "required": [
+                              "actionId",
+                              "stableMoveKey",
+                              "score",
+                              "prunedBy"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "agent",
+                        "seatId",
+                        "requestedProfileId",
+                        "resolvedProfileId",
+                        "profileFingerprint",
+                        "initialCandidateCount",
+                        "selectedStableMoveKey",
+                        "finalScore",
+                        "pruningSteps",
+                        "tieBreakChain",
+                        "previewUsage",
+                        "emergencyFallback",
+                        "failure"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
                 }
               },
               "required": [

@@ -5,6 +5,7 @@ import { createGameBridge, type GameBridgeHandle } from '../bridge/game-bridge.j
 import { resolveBootstrapConfig } from '../bootstrap/resolve-bootstrap-config.js';
 import { createReplayController, type ReplayController } from '../replay/replay-controller.js';
 import { createReplayStore, type ReplayStore } from '../replay/replay-store.js';
+import { isHumanSeatController } from '../seat/seat-controller.js';
 import { createGameStore, type GameStore } from '../store/game-store.js';
 import { findBootstrapDescriptorById } from './active-game-runtime.js';
 import type { ReplayState, SessionState } from './session-types.js';
@@ -22,7 +23,7 @@ function buildReplayBootstrapSearch(state: ReplayState): string {
     throw new Error(`Unknown replay descriptor id: ${state.gameId}`);
   }
 
-  const humanSeat = state.playerConfig.find((seat) => seat.type === 'human');
+  const humanSeat = state.playerConfig.find((seat) => isHumanSeatController(seat.controller));
   const humanPlayerId = humanSeat?.playerId ?? descriptor.defaultPlayerId;
   return `?game=${encodeURIComponent(descriptor.queryValue)}&seed=${String(state.seed)}&player=${String(humanPlayerId)}`;
 }

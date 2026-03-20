@@ -46,7 +46,7 @@ describe('createConsoleTraceSubscriber', () => {
     expect(groupEndSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('logs move-applied events with AI decision', () => {
+  it('logs move-applied events with agent decision metadata', () => {
     const subscriber = createConsoleTraceSubscriber();
     const event: TraceEvent = {
       kind: 'move-applied',
@@ -56,8 +56,9 @@ describe('createConsoleTraceSubscriber', () => {
       deltas: [],
       triggerFirings: [],
       effectTrace: [],
-      aiDecision: {
-        seatType: 'ai-greedy',
+      agentDecision: {
+        kind: 'builtin',
+        agent: { kind: 'builtin', builtinId: 'greedy' },
         candidateCount: 7,
         selectedIndex: 0,
       },
@@ -70,10 +71,10 @@ describe('createConsoleTraceSubscriber', () => {
     expect(headerCall).toContain('Turn 3');
     expect(headerCall).toContain('Player 2');
     expect(headerCall).toContain('train');
-    expect(headerCall).toContain('ai-greedy');
+    expect(headerCall).toContain('builtin:greedy');
   });
 
-  it('logs move-applied events without AI decision for human moves', () => {
+  it('logs move-applied events without agent decision metadata for human moves', () => {
     const subscriber = createConsoleTraceSubscriber();
     const event: TraceEvent = {
       kind: 'move-applied',
@@ -91,7 +92,7 @@ describe('createConsoleTraceSubscriber', () => {
 
     expect(groupSpy).toHaveBeenCalled();
     const headerCall = groupSpy.mock.calls[0]?.[0] as string;
-    expect(headerCall).not.toContain('ai-');
+    expect(headerCall).not.toContain('builtin:');
   });
 
   it('logs game-terminal events', () => {

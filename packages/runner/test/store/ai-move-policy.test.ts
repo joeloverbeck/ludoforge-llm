@@ -1,55 +1,95 @@
-import { describe, expect, it, vi } from 'vitest';
-import { asActionId, type Move } from '@ludoforge/engine/runtime';
+import { describe, expect, it } from 'vitest';
+import { compileGameSpecToGameDef, createEmptyGameSpecDoc } from '@ludoforge/engine/cnl';
+import { asActionId, createGameDefRuntime, createRng, initialState, type GameDef, type Move } from '@ludoforge/engine/runtime';
 
-import { resolveAiPlaybackDelayMs, resolveAiSeat, selectAiMove } from '../../src/store/ai-move-policy.js';
+import { createAgentSeatController, createHumanSeatController } from '../../src/seat/seat-controller.js';
+import {
+  resolveAgentDescriptor,
+  resolveAiPlaybackDelayMs,
+  selectAgentMove,
+  selectRandomIndex,
+} from '../../src/store/ai-move-policy.js';
 
 const MOVE_A: Move = { actionId: asActionId('a'), params: {} };
 const MOVE_B: Move = { actionId: asActionId('b'), params: {} };
 const MOVE_C: Move = { actionId: asActionId('c'), params: {} };
 
+function compileFixture(): GameDef {
+  const compiled = compileGameSpecToGameDef({
+    ...createEmptyGameSpecDoc(),
+    metadata: {
+      id: 'runner-ai-move-policy-test',
+      players: { min: 2, max: 2 },
+    },
+    globalVars: [{ name: 'tick', type: 'int', init: 0, min: 0, max: 10 }],
+    turnStructure: { phases: [{ id: 'main' }] },
+    zones: [{ id: 'table', owner: 'none', visibility: 'public', ordering: 'set' }],
+    actions: [
+      { id: 'a', actor: 'active', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] },
+      { id: 'b', actor: 'active', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] },
+      { id: 'c', actor: 'active', executor: 'actor', phase: ['main'], params: [], pre: null, cost: [], effects: [], limits: [] },
+    ],
+    terminal: {
+      conditions: [{ when: { op: '>=', left: { ref: 'gvar', var: 'tick' }, right: 99 }, result: { type: 'draw' } }],
+    },
+  });
+  if (compiled.gameDef === null) {
+    throw new Error(`fixture failed: ${JSON.stringify(compiled.diagnostics)}`);
+  }
+  return compiled.gameDef;
+}
+
 describe('ai-move-policy', () => {
-  it('resolveAiSeat maps unknown/undefined seats to ai-random', () => {
-    expect(resolveAiSeat(undefined)).toBe('ai-random');
-    expect(resolveAiSeat('human')).toBe('ai-random');
-    expect(resolveAiSeat('ai-random')).toBe('ai-random');
+  it('resolveAgentDescriptor defaults missing controllers to authored policy', () => {
+    expect(resolveAgentDescriptor(undefined)).toEqual({ kind: 'policy' });
   });
 
-  it('resolveAiSeat preserves ai-greedy', () => {
-    expect(resolveAiSeat('ai-greedy')).toBe('ai-greedy');
+  it('resolveAgentDescriptor rejects human controllers', () => {
+    expect(() => resolveAgentDescriptor(createHumanSeatController())).toThrow(/human-controlled seat/u);
   });
 
-  it('selectAiMove returns null when there are no legal moves', () => {
-    expect(selectAiMove('ai-random', [])).toBeNull();
-    expect(selectAiMove('ai-greedy', [])).toBeNull();
+  it('selectAgentMove returns null when there are no legal moves', () => {
+    const def = compileFixture();
+    const state = initialState(def, 7, 2).state;
+
+    expect(selectAgentMove({
+      controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }),
+      def,
+      state,
+      playerId: state.activePlayer,
+      legalMoves: [],
+      rng: createRng(7n),
+      runtime: createGameDefRuntime(def),
+    })).toBeNull();
   });
 
-  it('selectAiMove with ai-greedy always picks first legal move', () => {
-    const result = selectAiMove('ai-greedy', [MOVE_A, MOVE_B, MOVE_C]);
+  it('selectAgentMove with builtin greedy emits builtin greedy decision metadata', () => {
+    const def = compileFixture();
+    const state = initialState(def, 7, 2).state;
+
+    const result = selectAgentMove({
+      controller: createAgentSeatController({ kind: 'builtin', builtinId: 'greedy' }),
+      def,
+      state,
+      playerId: state.activePlayer,
+      legalMoves: [MOVE_A, MOVE_B, MOVE_C],
+      rng: createRng(7n),
+      runtime: createGameDefRuntime(def),
+    });
+
     expect(result).not.toBeNull();
-    expect(result!.move).toEqual(MOVE_A);
-    expect(result!.selectedIndex).toBe(0);
-    expect(result!.candidateCount).toBe(3);
+    expect([MOVE_A, MOVE_B, MOVE_C]).toContainEqual(result?.move);
+    expect(result?.agentDecision).toMatchObject({
+      kind: 'builtin',
+      agent: { kind: 'builtin', builtinId: 'greedy' },
+      candidateCount: 3,
+    });
   });
 
-  it('selectAiMove with ai-random picks move by random index deterministically', () => {
-    const random = vi.fn<() => number>().mockReturnValue(0.51);
-    const result = selectAiMove('ai-random', [MOVE_A, MOVE_B, MOVE_C], random);
-
-    expect(random).toHaveBeenCalledTimes(1);
-    expect(result).not.toBeNull();
-    expect(result!.move).toEqual(MOVE_B);
-    expect(result!.selectedIndex).toBe(1);
-    expect(result!.candidateCount).toBe(3);
-  });
-
-  it('selectAiMove clamps invalid random values', () => {
-    const nanResult = selectAiMove('ai-random', [MOVE_A, MOVE_B], () => Number.NaN);
-    const highResult = selectAiMove('ai-random', [MOVE_A, MOVE_B], () => Number.POSITIVE_INFINITY);
-    const aboveOneResult = selectAiMove('ai-random', [MOVE_A, MOVE_B], () => 2);
-
-    expect(nanResult!.move).toEqual(MOVE_A);
-    expect(highResult!.move).toEqual(MOVE_A);
-    expect(aboveOneResult!.move).toEqual(MOVE_B);
+  it('selectRandomIndex clamps invalid random values', () => {
+    expect(selectRandomIndex(2, () => Number.NaN)).toBe(0);
+    expect(selectRandomIndex(2, () => Number.POSITIVE_INFINITY)).toBe(0);
+    expect(selectRandomIndex(2, () => 2)).toBe(1);
   });
 
   it('resolveAiPlaybackDelayMs maps speed tiers to deterministic step delays', () => {

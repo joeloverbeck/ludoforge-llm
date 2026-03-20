@@ -13,6 +13,7 @@ import {
 } from '@ludoforge/engine/runtime';
 
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
+import { createHumanSeatController } from '../../src/seat/seat-controller.js';
 import type { RenderContext } from '../../src/store/store-types.js';
 import { deriveProjectedRenderModel, type DerivedProjection } from './helpers/derive-projected-render-model.js';
 
@@ -132,7 +133,7 @@ function makeRenderContext(
     partialMove: null,
     choiceStack: [],
     playerSeats: new Map(
-      Array.from({ length: playerCount }, (_unused, player) => [asPlayerId(player), 'human' as const]),
+      Array.from({ length: playerCount }, (_unused, player) => [asPlayerId(player), createHumanSeatController()]),
     ),
     terminal: null,
     ...overrides,

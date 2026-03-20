@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, type ReactElement } from 'react';
-import { flip, offset, shift, useFloating, type VirtualElement } from '@floating-ui/react-dom';
+import { useCallback, useMemo, type ReactElement } from 'react';
+import { flip, offset, shift, type VirtualElement } from '@floating-ui/react-dom';
 import type { StoreApi } from 'zustand';
 import { useStore } from 'zustand';
 
@@ -10,6 +10,7 @@ import {
   selectTooltipPayloadSignature,
 } from '../model/tooltip-payload.js';
 import type { GameStore } from '../store/game-store.js';
+import { useResolvedFloatingAnchor } from './useResolvedFloatingAnchor.js';
 import styles from './TooltipLayer.module.css';
 
 interface TooltipLayerProps {
@@ -24,15 +25,6 @@ export function TooltipLayer({ store, hoverTarget, anchorRect }: TooltipLayerPro
     [hoverTarget],
   );
   const payloadSignature = useStore(store, payloadSignatureSelector);
-  const { x, y, strategy, refs, update } = useFloating({
-    placement: 'top',
-    middleware: [offset(10), flip(), shift({ padding: 8 })],
-  });
-  const payload = useMemo(
-    () => selectTooltipPayloadFromStoreState(store.getState(), hoverTarget),
-    [store, hoverTarget, payloadSignature],
-  );
-
   const virtualReference = useMemo<VirtualElement | null>(() => {
     if (anchorRect === null) {
       return null;
@@ -51,19 +43,17 @@ export function TooltipLayer({ store, hoverTarget, anchorRect }: TooltipLayerPro
       }),
     };
   }, [anchorRect]);
+  const { refs, floatingStyle } = useResolvedFloatingAnchor({
+    reference: virtualReference,
+    placement: 'top',
+    middleware: [offset(10), flip(), shift({ padding: 8 })],
+  });
+  const payload = useMemo(
+    () => selectTooltipPayloadFromStoreState(store.getState(), hoverTarget),
+    [store, hoverTarget, payloadSignature],
+  );
 
-  useEffect(() => {
-    refs.setReference(virtualReference);
-  }, [refs, virtualReference]);
-
-  useEffect(() => {
-    if (virtualReference === null) {
-      return;
-    }
-    void update();
-  }, [virtualReference, update]);
-
-  if (hoverTarget === null || anchorRect === null || payload === null) {
+  if (hoverTarget === null || anchorRect === null || payload === null || floatingStyle === null) {
     return null;
   }
 
@@ -72,11 +62,7 @@ export function TooltipLayer({ store, hoverTarget, anchorRect }: TooltipLayerPro
       ref={refs.setFloating}
       className={styles.tooltip}
       data-testid="tooltip-layer"
-      style={{
-        position: strategy,
-        left: x ?? 0,
-        top: y ?? 0,
-      }}
+      style={floatingStyle}
     >
       <h4 className={styles.title}>{payload.title}</h4>
       {payload.rows.map((row) => (

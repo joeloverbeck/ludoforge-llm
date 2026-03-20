@@ -5,6 +5,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { BootstrapDescriptor } from '../../src/bootstrap/bootstrap-registry.js';
+import { createAgentSeatController, createHumanSeatController } from '../../src/seat/seat-controller.js';
 import { PreGameConfigScreen } from '../../src/ui/PreGameConfigScreen.js';
 
 afterEach(() => {
@@ -58,12 +59,20 @@ describe('PreGameConfigScreen', () => {
     expect(screen.getByTestId('pre-game-seat-label-2').textContent).toBe('Player 2');
   });
 
-  it('includes all seat type options', () => {
+  it('includes controller kind options', () => {
     renderScreen();
 
-    const select = screen.getByTestId('pre-game-seat-type-0');
+    const select = screen.getByTestId('pre-game-seat-kind-0');
     const optionLabels = Array.from(select.querySelectorAll('option')).map((option) => option.textContent);
-    expect(optionLabels).toEqual(['Human', 'AI - Greedy', 'AI - Random']);
+    expect(optionLabels).toEqual(['Human', 'Agent']);
+  });
+
+  it('includes explicit agent mode options for agent seats', () => {
+    renderScreen();
+
+    const select = screen.getByTestId('pre-game-seat-agent-1');
+    const optionLabels = Array.from(select.querySelectorAll('option')).map((option) => option.textContent);
+    expect(optionLabels).toEqual(['Authored Policy', 'Built-in Greedy', 'Built-in Random']);
   });
 
   it('uses provided seed when valid and emits PlayerSeatConfig[]', () => {
@@ -71,14 +80,14 @@ describe('PreGameConfigScreen', () => {
     renderScreen({}, onStartGame);
 
     fireEvent.change(screen.getByTestId('pre-game-seed'), { target: { value: '12345' } });
-    fireEvent.change(screen.getByTestId('pre-game-seat-type-1'), { target: { value: 'ai-greedy' } });
+    fireEvent.change(screen.getByTestId('pre-game-seat-agent-1'), { target: { value: 'builtin:greedy' } });
     fireEvent.click(screen.getByTestId('pre-game-start'));
 
     expect(onStartGame).toHaveBeenCalledWith(12345, [
-      { playerId: 0, type: 'human' },
-      { playerId: 1, type: 'ai-greedy' },
-      { playerId: 2, type: 'ai-greedy' },
-      { playerId: 3, type: 'ai-greedy' },
+      { playerId: 0, controller: createHumanSeatController() },
+      { playerId: 1, controller: createAgentSeatController({ kind: 'builtin', builtinId: 'greedy' }) },
+      { playerId: 2, controller: createAgentSeatController() },
+      { playerId: 3, controller: createAgentSeatController() },
     ]);
   });
 
@@ -116,8 +125,9 @@ describe('PreGameConfigScreen', () => {
     const onStartGame = vi.fn();
     renderScreen({}, onStartGame);
 
-    fireEvent.change(screen.getByTestId('pre-game-seat-type-0'), { target: { value: 'ai-random' } });
-    fireEvent.change(screen.getByTestId('pre-game-seat-type-1'), { target: { value: 'ai-greedy' } });
+    fireEvent.change(screen.getByTestId('pre-game-seat-kind-0'), { target: { value: 'agent' } });
+    fireEvent.change(screen.getByTestId('pre-game-seat-agent-0'), { target: { value: 'builtin:random' } });
+    fireEvent.change(screen.getByTestId('pre-game-seat-agent-1'), { target: { value: 'builtin:greedy' } });
     fireEvent.click(screen.getByTestId('pre-game-start'));
 
     expect(screen.getByTestId('pre-game-validation').textContent).toMatch(/At least one seat must be Human/u);

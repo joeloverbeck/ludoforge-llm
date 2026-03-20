@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { asActionId, type Move } from '@ludoforge/engine/runtime';
 
+import { createAgentSeatController, createHumanSeatController } from '../../src/seat/seat-controller.js';
 import { createSessionStore } from '../../src/session/session-store.js';
 import type { PlayerSeatConfig } from '../../src/session/session-types.js';
 
 const PLAYER_CONFIG: readonly PlayerSeatConfig[] = [
-  { playerId: 0, type: 'human' },
-  { playerId: 1, type: 'ai-random' },
+  { playerId: 0, controller: createHumanSeatController() },
+  { playerId: 1, controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }) },
 ];
 
 const MOVE_A: Move = {

@@ -19,6 +19,8 @@ import type {
 const floatingMocks = vi.hoisted(() => ({
   setReference: vi.fn(),
   setFloating: vi.fn(),
+  x: 100 as number | null,
+  y: 50 as number | null,
   offset: vi.fn((value: number) => ({ name: 'offset', options: value })),
   flip: vi.fn(() => ({ name: 'flip' })),
   shift: vi.fn((options: { padding: number }) => ({ name: 'shift', options })),
@@ -32,8 +34,8 @@ vi.mock('@floating-ui/react-dom', () => ({
   useFloating: (options: { middleware?: unknown[] }) => {
     floatingMocks.useFloatingOptions = options;
     return {
-      x: 100,
-      y: 50,
+      x: floatingMocks.x,
+      y: floatingMocks.y,
       strategy: 'absolute' as const,
       refs: {
         setReference: floatingMocks.setReference,
@@ -50,6 +52,12 @@ import { ActionTooltip } from '../../src/ui/ActionTooltip.js';
 /* ------------------------------------------------------------------ */
 
 function makeAnchor(): HTMLElement {
+  const anchor = document.createElement('button');
+  document.body.append(anchor);
+  return anchor;
+}
+
+function makeDetachedAnchor(): HTMLElement {
   return document.createElement('button');
 }
 
@@ -108,8 +116,11 @@ function makeEffectsGroup(): DisplayGroupNode {
 
 afterEach(() => {
   cleanup();
+  document.body.innerHTML = '';
   floatingMocks.setReference.mockClear();
   floatingMocks.setFloating.mockClear();
+  floatingMocks.x = 100;
+  floatingMocks.y = 50;
   floatingMocks.offset.mockClear();
   floatingMocks.flip.mockClear();
   floatingMocks.shift.mockClear();
@@ -263,6 +274,28 @@ describe('ActionTooltip', () => {
     render(createElement(ActionTooltip, { description: desc, anchorElement: anchor }));
 
     expect(floatingMocks.setReference).toHaveBeenCalledWith(anchor);
+  });
+
+  it('does not render when anchorElement is detached', () => {
+    const desc = makeDescription({ sections: [makeEffectsGroup()] });
+    const { container } = render(
+      createElement(ActionTooltip, { description: desc, anchorElement: makeDetachedAnchor() }),
+    );
+
+    expect(screen.queryByTestId('action-tooltip')).toBeNull();
+    expect(container.innerHTML).toBe('');
+  });
+
+  it('does not render when Floating UI coordinates are unresolved', () => {
+    floatingMocks.x = null;
+    const desc = makeDescription({ sections: [makeEffectsGroup()] });
+
+    const { container } = render(
+      createElement(ActionTooltip, { description: desc, anchorElement: makeAnchor() }),
+    );
+
+    expect(screen.queryByTestId('action-tooltip')).toBeNull();
+    expect(container.innerHTML).toBe('');
   });
 
   it('enforces pointer-events: auto via CSS contract', () => {

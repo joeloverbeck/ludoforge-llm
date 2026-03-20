@@ -1157,6 +1157,26 @@ export const validateDerivedMetrics = (
   const zoneIndicesById = new Map(def.zones.map((zone, index) => [zone.id, index] as const));
   for (const [metricIndex, metric] of def.derivedMetrics.entries()) {
     const metricPath = `derivedMetrics[${metricIndex}]`;
+    if (metric.runtime === undefined) {
+      diagnostics.push({
+        code: 'DERIVED_METRIC_RUNTIME_MISSING',
+        path: `${metricPath}.runtime`,
+        severity: 'error',
+        message: `Derived metric "${metric.id}" must declare executable runtime data.`,
+        suggestion: 'Add a runtime block matching the derived metric computation.',
+      });
+      continue;
+    }
+    if (metric.runtime.kind !== metric.computation) {
+      diagnostics.push({
+        code: 'DERIVED_METRIC_RUNTIME_KIND_MISMATCH',
+        path: `${metricPath}.runtime.kind`,
+        severity: 'error',
+        message: `Derived metric "${metric.id}" runtime kind "${metric.runtime.kind}" must match computation "${metric.computation}".`,
+        suggestion: 'Keep computation and runtime.kind aligned.',
+      });
+      continue;
+    }
     if (metric.requirements.length === 0) {
       diagnostics.push({
         code: 'DERIVED_METRIC_REQUIREMENTS_EMPTY',

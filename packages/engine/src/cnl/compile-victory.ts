@@ -171,7 +171,11 @@ export function lowerVictory(
     ranking: rawTerminal.ranking,
   };
 
-  if (rawVictory.checkpoints === undefined) {
+  if (
+    rawVictory.checkpoints === undefined
+    && rawVictory.margins === undefined
+    && rawVictory.ranking === undefined
+  ) {
     return undefined;
   }
 
@@ -179,7 +183,8 @@ export function lowerVictory(
     return undefined;
   }
 
-  if (!Array.isArray(rawVictory.checkpoints)) {
+  let loweredCheckpoints: Array<NonNullable<TerminalEvaluationDef['checkpoints']>[number]> | undefined;
+  if (rawVictory.checkpoints !== undefined && !Array.isArray(rawVictory.checkpoints)) {
     diagnostics.push({
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_REQUIRED_FIELD_MISSING,
       path: 'doc.terminal.checkpoints',
@@ -187,94 +192,93 @@ export function lowerVictory(
       message: 'terminal.checkpoints must be an array when declared.',
       suggestion: 'Declare one or more terminal checkpoint definitions.',
     });
-    return undefined;
-  }
+  } else if (rawVictory.checkpoints !== undefined) {
+    const seenCheckpointIds = new Set<string>();
+    loweredCheckpoints = [];
+    for (const [index, checkpoint] of rawVictory.checkpoints.entries()) {
+      const checkpointPath = `doc.terminal.checkpoints.${index}`;
+      if (!isRecord(checkpoint)) {
+        diagnostics.push({
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_CHECKPOINT_INVALID,
+          path: checkpointPath,
+          severity: 'error',
+          message: 'victory checkpoint entries must be objects.',
+          suggestion: 'Provide checkpoint id/seat/timing/when fields.',
+        });
+        continue;
+      }
 
-  const seenCheckpointIds = new Set<string>();
-  const loweredCheckpoints: Array<NonNullable<TerminalEvaluationDef['checkpoints']>[number]> = [];
-  for (const [index, checkpoint] of rawVictory.checkpoints.entries()) {
-    const checkpointPath = `doc.terminal.checkpoints.${index}`;
-    if (!isRecord(checkpoint)) {
-      diagnostics.push({
-        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_CHECKPOINT_INVALID,
-        path: checkpointPath,
-        severity: 'error',
-        message: 'victory checkpoint entries must be objects.',
-        suggestion: 'Provide checkpoint id/seat/timing/when fields.',
-      });
-      continue;
-    }
+      if (typeof checkpoint.id !== 'string' || checkpoint.id.trim() === '') {
+        diagnostics.push({
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_CHECKPOINT_ID_INVALID,
+          path: `${checkpointPath}.id`,
+          severity: 'error',
+          message: 'victory checkpoint id must be a non-empty string.',
+          suggestion: 'Set checkpoint.id to a stable identifier.',
+        });
+      } else if (seenCheckpointIds.has(checkpoint.id)) {
+        diagnostics.push({
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_CHECKPOINT_DUPLICATE,
+          path: `${checkpointPath}.id`,
+          severity: 'error',
+          message: `Duplicate victory checkpoint id "${checkpoint.id}".`,
+          suggestion: 'Declare each checkpoint id exactly once.',
+        });
+      } else {
+        seenCheckpointIds.add(checkpoint.id);
+      }
 
-    if (typeof checkpoint.id !== 'string' || checkpoint.id.trim() === '') {
-      diagnostics.push({
-        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_CHECKPOINT_ID_INVALID,
-        path: `${checkpointPath}.id`,
-        severity: 'error',
-        message: 'victory checkpoint id must be a non-empty string.',
-        suggestion: 'Set checkpoint.id to a stable identifier.',
-      });
-    } else if (seenCheckpointIds.has(checkpoint.id)) {
-      diagnostics.push({
-        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_CHECKPOINT_DUPLICATE,
-        path: `${checkpointPath}.id`,
-        severity: 'error',
-        message: `Duplicate victory checkpoint id "${checkpoint.id}".`,
-        suggestion: 'Declare each checkpoint id exactly once.',
-      });
-    } else {
-      seenCheckpointIds.add(checkpoint.id);
-    }
+      if (typeof checkpoint.seat !== 'string' || checkpoint.seat.trim() === '') {
+        diagnostics.push({
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_CHECKPOINT_SEAT_INVALID,
+          path: `${checkpointPath}.seat`,
+          severity: 'error',
+          message: 'victory checkpoint seat must be a non-empty string.',
+          suggestion: 'Set checkpoint.seat to a declared seat id.',
+        });
+      }
 
-    if (typeof checkpoint.seat !== 'string' || checkpoint.seat.trim() === '') {
-      diagnostics.push({
-        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_CHECKPOINT_SEAT_INVALID,
-        path: `${checkpointPath}.seat`,
-        severity: 'error',
-        message: 'victory checkpoint seat must be a non-empty string.',
-        suggestion: 'Set checkpoint.seat to a declared seat id.',
-      });
-    }
+      if (checkpoint.timing !== 'duringCoup' && checkpoint.timing !== 'finalCoup') {
+        diagnostics.push({
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_CHECKPOINT_TIMING_INVALID,
+          path: `${checkpointPath}.timing`,
+          severity: 'error',
+          message: 'victory checkpoint timing must be "duringCoup" or "finalCoup".',
+          suggestion: 'Use one of the supported victory checkpoint timings.',
+        });
+      }
 
-    if (checkpoint.timing !== 'duringCoup' && checkpoint.timing !== 'finalCoup') {
-      diagnostics.push({
-        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_CHECKPOINT_TIMING_INVALID,
-        path: `${checkpointPath}.timing`,
-        severity: 'error',
-        message: 'victory checkpoint timing must be "duringCoup" or "finalCoup".',
-        suggestion: 'Use one of the supported victory checkpoint timings.',
-      });
-    }
+      if (!isRecord(checkpoint.when)) {
+        diagnostics.push({
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_CHECKPOINT_WHEN_INVALID,
+          path: `${checkpointPath}.when`,
+          severity: 'error',
+          message: 'victory checkpoint when must be a condition object.',
+          suggestion: 'Set checkpoint.when to a Condition AST object.',
+        });
+        continue;
+      }
 
-    if (!isRecord(checkpoint.when)) {
-      diagnostics.push({
-        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_CHECKPOINT_WHEN_INVALID,
-        path: `${checkpointPath}.when`,
-        severity: 'error',
-        message: 'victory checkpoint when must be a condition object.',
-        suggestion: 'Set checkpoint.when to a Condition AST object.',
-      });
-      continue;
-    }
+      const loweredWhen = lowerConditionNode(checkpoint.when, context, `${checkpointPath}.when`);
+      diagnostics.push(...loweredWhen.diagnostics);
+      if (loweredWhen.value === null) {
+        continue;
+      }
 
-    const loweredWhen = lowerConditionNode(checkpoint.when, context, `${checkpointPath}.when`);
-    diagnostics.push(...loweredWhen.diagnostics);
-    if (loweredWhen.value === null) {
-      continue;
-    }
-
-    if (
-      typeof checkpoint.id === 'string' &&
-      checkpoint.id.trim() !== '' &&
-      typeof checkpoint.seat === 'string' &&
-      checkpoint.seat.trim() !== '' &&
-      (checkpoint.timing === 'duringCoup' || checkpoint.timing === 'finalCoup')
-    ) {
-      loweredCheckpoints.push({
-        id: checkpoint.id,
-        seat: checkpoint.seat,
-        timing: checkpoint.timing,
-        when: loweredWhen.value,
-      });
+      if (
+        typeof checkpoint.id === 'string' &&
+        checkpoint.id.trim() !== '' &&
+        typeof checkpoint.seat === 'string' &&
+        checkpoint.seat.trim() !== '' &&
+        (checkpoint.timing === 'duringCoup' || checkpoint.timing === 'finalCoup')
+      ) {
+        loweredCheckpoints.push({
+          id: checkpoint.id,
+          seat: checkpoint.seat,
+          timing: checkpoint.timing,
+          when: loweredWhen.value,
+        });
+      }
     }
   }
 
@@ -378,7 +382,7 @@ export function lowerVictory(
   }
 
   return {
-    checkpoints: loweredCheckpoints,
+    ...(loweredCheckpoints === undefined ? {} : { checkpoints: loweredCheckpoints }),
     ...(loweredMargins === undefined ? {} : { margins: loweredMargins }),
     ...(rawVictory.ranking === undefined ? {} : { ranking: rawVictory.ranking }),
   };

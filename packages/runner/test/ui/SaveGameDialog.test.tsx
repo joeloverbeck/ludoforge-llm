@@ -6,6 +6,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { asActionId, asPlayerId, type Move } from '@ludoforge/engine/runtime';
 
+import { createHumanSeatController } from '../../src/seat/seat-controller.js';
 import type { GameStore } from '../../src/store/game-store.js';
 import type { SessionStore } from '../../src/session/session-store.js';
 
@@ -28,7 +29,7 @@ function createSessionStoreFixture(moveAccumulator: readonly Move[]): StoreApi<S
       screen: 'activeGame',
       gameId: 'fitl',
       seed: 17,
-      playerConfig: [{ playerId: 1, type: 'human' }],
+      playerConfig: [{ playerId: 1, controller: createHumanSeatController() }],
       initialMoveHistory: [],
     },
     unsavedChanges: true,
@@ -127,7 +128,7 @@ describe('SaveGameDialog', () => {
         screen: 'activeGame',
         gameId: 'fitl',
         seed: 17,
-        playerConfig: [{ playerId: 1, type: 'human' }],
+        playerConfig: [{ playerId: 1, controller: createHumanSeatController() }],
         initialMoveHistory: [],
       },
       sessionStore,
@@ -158,7 +159,7 @@ describe('SaveGameDialog', () => {
         screen: 'activeGame',
         gameId: 'fitl',
         seed: 17,
-        playerConfig: [{ playerId: 1, type: 'human' }],
+        playerConfig: [{ playerId: 1, controller: createHumanSeatController() }],
         initialMoveHistory: [],
       },
       sessionStore,
@@ -178,7 +179,7 @@ describe('SaveGameDialog', () => {
       gameName: 'Fire in the Lake',
       displayName: 'Campaign Night',
       seed: 17,
-      playerConfig: [{ playerId: 1, type: 'human' }],
+      playerConfig: [{ playerId: 1, controller: createHumanSeatController() }],
       playerId: 1,
       moveCount: 1,
       isTerminal: true,

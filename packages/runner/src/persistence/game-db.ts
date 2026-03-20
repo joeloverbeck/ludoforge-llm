@@ -1,7 +1,7 @@
 import Dexie, { type Table } from 'dexie';
 import type { Move } from '@ludoforge/engine/runtime';
 
-import type { PlayerSeatConfig } from '../session/session-types.js';
+import type { PlayerSeatConfig } from '../seat/seat-controller.js';
 
 export interface SavedGameRecord {
   readonly id: string;

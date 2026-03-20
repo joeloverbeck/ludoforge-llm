@@ -4,10 +4,10 @@ import { create, type StoreApi, type UseBoundStore } from 'zustand';
 import type {
   ActiveGameState,
   AppScreen,
-  PlayerSeatConfig,
   PreGameConfigState,
   SessionState,
 } from './session-types.js';
+import type { PlayerSeatConfig } from '../seat/seat-controller.js';
 
 interface SessionStoreState {
   readonly sessionState: SessionState;

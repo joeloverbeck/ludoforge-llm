@@ -36,6 +36,7 @@ describe('useCardTooltip', () => {
     const { result } = renderHook(() => useCardTooltip());
     expect(result.current.cardTooltipState.card).toBeNull();
     expect(result.current.cardTooltipState.anchorElement).toBeNull();
+    expect(result.current.cardTooltipState.status).toBe('idle');
   });
 
   it('shows card after debounce period', () => {
@@ -57,6 +58,7 @@ describe('useCardTooltip', () => {
     // After debounce — card is shown
     expect(result.current.cardTooltipState.card).toBe(card);
     expect(result.current.cardTooltipState.anchorElement).toBe(anchor);
+    expect(result.current.cardTooltipState.status).toBe('visible');
   });
 
   it('does not show card if hover ends before debounce', () => {
@@ -79,6 +81,7 @@ describe('useCardTooltip', () => {
     });
 
     expect(result.current.cardTooltipState.card).toBeNull();
+    expect(result.current.cardTooltipState.status).toBe('idle');
   });
 
   it('keeps tooltip visible when pointer enters tooltip during grace period', () => {
@@ -114,6 +117,7 @@ describe('useCardTooltip', () => {
 
     // Should still be visible
     expect(result.current.cardTooltipState.card).toBe(card);
+    expect(result.current.cardTooltipState.interactionOwner).toBe('popover');
   });
 
   it('dismisses tooltip when pointer leaves tooltip', () => {
@@ -143,5 +147,59 @@ describe('useCardTooltip', () => {
     });
 
     expect(result.current.cardTooltipState.card).toBeNull();
+    expect(result.current.cardTooltipState.status).toBe('idle');
+  });
+
+  it('supports explicit invalidation', () => {
+    const { result } = renderHook(() => useCardTooltip());
+
+    act(() => {
+      result.current.onCardHoverStart(makeCard(), createAnchorElement());
+      vi.advanceTimersByTime(200);
+    });
+
+    act(() => {
+      result.current.invalidateCardTooltip();
+    });
+
+    expect(result.current.cardTooltipState.card).toBeNull();
+    expect(result.current.cardTooltipState.anchorElement).toBeNull();
+    expect(result.current.cardTooltipState.status).toBe('idle');
+  });
+
+  it('supports explicit dismiss after becoming visible', () => {
+    const { result } = renderHook(() => useCardTooltip());
+
+    act(() => {
+      result.current.onCardHoverStart(makeCard(), createAnchorElement());
+      vi.advanceTimersByTime(200);
+    });
+
+    expect(result.current.cardTooltipState.card).not.toBeNull();
+
+    act(() => {
+      result.current.dismissCardTooltip();
+    });
+
+    expect(result.current.cardTooltipState.card).toBeNull();
+    expect(result.current.cardTooltipState.anchorElement).toBeNull();
+    expect(result.current.cardTooltipState.status).toBe('idle');
+  });
+
+  it('replaces a pending hover with the latest hovered card', () => {
+    const { result } = renderHook(() => useCardTooltip());
+    const firstCard = makeCard({ id: 'card-1', title: 'Containment' });
+    const secondCard = makeCard({ id: 'card-2', title: 'Ambush' });
+
+    act(() => {
+      result.current.onCardHoverStart(firstCard, createAnchorElement());
+      vi.advanceTimersByTime(100);
+      result.current.onCardHoverStart(secondCard, createAnchorElement());
+      vi.advanceTimersByTime(200);
+    });
+
+    expect(result.current.cardTooltipState.card).toBe(secondCard);
+    expect(result.current.cardTooltipState.card).not.toBe(firstCard);
+    expect(result.current.cardTooltipState.status).toBe('visible');
   });
 });

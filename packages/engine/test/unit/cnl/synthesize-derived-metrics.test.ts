@@ -53,9 +53,15 @@ describe('synthesizeDerivedMetricsFromStandings', () => {
     const result = synthesizeDerivedMetricsFromStandings(standings, null, []);
     assert.equal(result.length, 1);
     assert.equal(result[0]!.computation, 'markerTotal');
-    assert.equal(result[0]!.id, 'auto:victory:markerTotal');
+    assert.equal(result[0]!.id, 'auto:victory:markerTotal:supportOpposition:activeSupport:passiveSupport');
     assert.deepEqual(result[0]!.zoneFilter, { zoneKinds: ['board'] });
     assert.deepEqual(result[0]!.requirements, [{ key: 'population', expectedType: 'number' }]);
+    assert.deepEqual(result[0]!.runtime, {
+      kind: 'markerTotal',
+      markerId: 'supportOpposition',
+      markerConfig: STUB_MARKER_CONFIG,
+      defaultMarkerState: 'neutral',
+    });
   });
 
   it('produces controlledPopulation metric for controlledPopulationPlusMapBases formula', () => {
@@ -88,6 +94,12 @@ describe('synthesizeDerivedMetricsFromStandings', () => {
         id: 'manual-marker',
         computation: 'markerTotal',
         requirements: [{ key: 'population', expectedType: 'number' }],
+        runtime: {
+          kind: 'markerTotal',
+          markerId: 'supportOpposition',
+          markerConfig: STUB_MARKER_CONFIG,
+          defaultMarkerState: 'neutral',
+        },
       },
     ];
     const result = synthesizeDerivedMetricsFromStandings(standings, manualMetrics, []);
@@ -102,6 +114,11 @@ describe('synthesizeDerivedMetricsFromStandings', () => {
         id: 'manual-pop',
         computation: 'controlledPopulation',
         requirements: [{ key: 'population', expectedType: 'number' }],
+        runtime: {
+          kind: 'controlledPopulation',
+          controlFn: 'coin',
+          seatGroupConfig: STUB_SEAT_GROUP,
+        },
       },
     ];
     const result = synthesizeDerivedMetricsFromStandings(standings, manualMetrics, []);

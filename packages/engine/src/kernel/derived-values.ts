@@ -287,6 +287,65 @@ export function computeTotalEcon(
   return total;
 }
 
+function selectDerivedMetricZones(gameDef: GameDef, metric: DerivedMetricDef): readonly ZoneDef[] {
+  return gameDef.zones.filter((zone) => derivedMetricMatchesZone(metric, zone));
+}
+
+function findDerivedMetric(gameDef: GameDef, metricId: string): DerivedMetricDef {
+  const metric = gameDef.derivedMetrics?.find((entry) => entry.id === metricId);
+  if (metric !== undefined) {
+    return metric;
+  }
+  throw kernelRuntimeError(
+    'DERIVED_VALUE_CONTRACT_MISSING',
+    `Derived metric "${metricId}" is not declared in GameDef.derivedMetrics.`,
+  );
+}
+
+export function computeDerivedMetricValue(
+  gameDef: GameDef,
+  state: GameState,
+  metricId: string,
+): number {
+  const metric = findDerivedMetric(gameDef, metricId);
+  const spaces = selectDerivedMetricZones(gameDef, metric);
+
+  switch (metric.runtime.kind) {
+    case 'markerTotal': {
+      const markerStates = state.markers[metric.runtime.markerId] ?? {};
+      return computeMarkerTotal(
+        gameDef,
+        spaces,
+        markerStates,
+        metric.runtime.markerConfig,
+        metric.runtime.defaultMarkerState,
+      );
+    }
+    case 'controlledPopulation': {
+      const controlFn = metric.runtime.controlFn === 'coin' ? isCoinControlled : isSoloSeatControlled;
+      return sumControlledPopulation(gameDef, state, spaces, controlFn, metric.runtime.seatGroupConfig);
+    }
+    case 'totalEcon': {
+      const controlFn = metric.runtime.controlFn === 'coin' ? isCoinControlled : isSoloSeatControlled;
+      const blockedByTokenTypes = new Set(metric.runtime.blockedByTokenTypes ?? []);
+      let total = 0;
+      for (const space of spaces) {
+        if (!controlFn(state, space.id, metric.runtime.seatGroupConfig)) {
+          continue;
+        }
+        if (blockedByTokenTypes.size > 0) {
+          const tokens = getZoneTokens(state, space.id);
+          if (tokens.some((token) => blockedByTokenTypes.has(token.type))) {
+            continue;
+          }
+        }
+        total += requireNumericZoneAttribute(gameDef, space, 'econ', 'computeTotalEcon', 'totalEcon');
+      }
+      return total;
+    }
+  }
+}
+
 // ─── Victory Marker Building Blocks ──────────────────────────────────────────
 
 /**

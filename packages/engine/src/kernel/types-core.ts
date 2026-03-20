@@ -244,11 +244,37 @@ export interface DerivedMetricRequirement {
   readonly expectedType: 'number';
 }
 
+export interface DerivedMetricMarkerTotalRuntime {
+  readonly kind: 'markerTotal';
+  readonly markerId: string;
+  readonly markerConfig: MarkerWeightConfig;
+  readonly defaultMarkerState?: string;
+}
+
+export interface DerivedMetricControlledPopulationRuntime {
+  readonly kind: 'controlledPopulation';
+  readonly controlFn: 'coin' | 'solo';
+  readonly seatGroupConfig: SeatGroupConfig;
+}
+
+export interface DerivedMetricTotalEconRuntime {
+  readonly kind: 'totalEcon';
+  readonly controlFn: 'coin' | 'solo';
+  readonly seatGroupConfig: SeatGroupConfig;
+  readonly blockedByTokenTypes?: readonly string[];
+}
+
+export type DerivedMetricRuntime =
+  | DerivedMetricMarkerTotalRuntime
+  | DerivedMetricControlledPopulationRuntime
+  | DerivedMetricTotalEconRuntime;
+
 export interface DerivedMetricDef {
   readonly id: string;
   readonly computation: DerivedMetricComputation;
   readonly zoneFilter?: DerivedMetricZoneFilter;
   readonly requirements: readonly DerivedMetricRequirement[];
+  readonly runtime: DerivedMetricRuntime;
 }
 
 export interface VictoryStandingEntry {
@@ -271,13 +297,122 @@ export type AgentParameterType = 'number' | 'integer' | 'boolean' | 'enum' | 'id
 export type AgentParameterValue = number | boolean | string | readonly string[];
 export type AgentPolicyValueType = 'number' | 'boolean' | 'id' | 'idList';
 export type AgentPolicyCostClass = 'state' | 'candidate' | 'preview';
+export type AgentPolicySurfaceVisibilityClass = 'public' | 'seatVisible' | 'hidden';
+export type AgentPolicyLiteral = number | boolean | string | null | readonly string[];
+export type AgentPolicyOperator =
+  | 'abs'
+  | 'add'
+  | 'and'
+  | 'boolToNumber'
+  | 'clamp'
+  | 'coalesce'
+  | 'div'
+  | 'eq'
+  | 'gt'
+  | 'gte'
+  | 'if'
+  | 'in'
+  | 'lt'
+  | 'lte'
+  | 'max'
+  | 'min'
+  | 'mul'
+  | 'ne'
+  | 'neg'
+  | 'not'
+  | 'or'
+  | 'sub';
+export type CompiledAgentPolicyLibraryRefKind = 'stateFeature' | 'candidateFeature' | 'aggregate';
+export type CompiledAgentPolicySurfaceRefFamily =
+  | 'globalVar'
+  | 'perPlayerVar'
+  | 'derivedMetric'
+  | 'victoryCurrentMargin'
+  | 'victoryCurrentRank';
+export type CompiledAgentPolicySurfaceSelector =
+  | {
+      readonly kind: 'role';
+      readonly seatToken: string;
+    }
+  | {
+      readonly kind: 'player';
+      readonly player: 'self' | 'active';
+    };
+export interface CompiledAgentPolicySurfaceRefBase {
+  readonly family: CompiledAgentPolicySurfaceRefFamily;
+  readonly id: string;
+  readonly selector?: CompiledAgentPolicySurfaceSelector;
+}
+export interface CompiledAgentPolicyCurrentSurfaceRef extends CompiledAgentPolicySurfaceRefBase {
+  readonly kind: 'currentSurface';
+}
+export interface CompiledAgentPolicyPreviewSurfaceRef extends CompiledAgentPolicySurfaceRefBase {
+  readonly kind: 'previewSurface';
+}
+export type CompiledAgentPolicySurfaceRef =
+  | CompiledAgentPolicyCurrentSurfaceRef
+  | CompiledAgentPolicyPreviewSurfaceRef;
+export type CompiledAgentPolicyRef =
+  | {
+      readonly kind: 'library';
+      readonly refKind: CompiledAgentPolicyLibraryRefKind;
+      readonly id: string;
+    }
+  | CompiledAgentPolicySurfaceRef
+  | {
+      readonly kind: 'candidateIntrinsic';
+      readonly intrinsic: 'actionId' | 'stableMoveKey' | 'isPass';
+    }
+  | {
+      readonly kind: 'candidateParam';
+      readonly id: string;
+    }
+  | {
+      readonly kind: 'seatIntrinsic';
+      readonly intrinsic: 'self' | 'active';
+    }
+  | {
+      readonly kind: 'turnIntrinsic';
+      readonly intrinsic: 'phaseId' | 'stepId' | 'round';
+    };
 export type AgentPolicyExpr =
-  | string
-  | number
-  | boolean
-  | null
-  | readonly AgentPolicyExpr[]
-  | { readonly [key: string]: AgentPolicyExpr };
+  | {
+      readonly kind: 'literal';
+      readonly value: AgentPolicyLiteral;
+    }
+  | {
+      readonly kind: 'param';
+      readonly id: string;
+    }
+  | {
+      readonly kind: 'ref';
+      readonly ref: CompiledAgentPolicyRef;
+    }
+  | {
+      readonly kind: 'op';
+      readonly op: AgentPolicyOperator;
+      readonly args: readonly AgentPolicyExpr[];
+    };
+
+export interface CompiledAgentPolicySurfacePreviewVisibility {
+  readonly visibility: AgentPolicySurfaceVisibilityClass;
+  readonly allowWhenHiddenSampling: boolean;
+}
+
+export interface CompiledAgentPolicySurfaceVisibility {
+  readonly current: AgentPolicySurfaceVisibilityClass;
+  readonly preview: CompiledAgentPolicySurfacePreviewVisibility;
+}
+
+export interface CompiledAgentPolicySurfaceCatalog {
+  readonly globalVars: Readonly<Record<string, CompiledAgentPolicySurfaceVisibility>>;
+  readonly perPlayerVars: Readonly<Record<string, CompiledAgentPolicySurfaceVisibility>>;
+  readonly derivedMetrics: Readonly<Record<string, CompiledAgentPolicySurfaceVisibility>>;
+  readonly victory: {
+    readonly currentMargin: CompiledAgentPolicySurfaceVisibility;
+    readonly currentRank: CompiledAgentPolicySurfaceVisibility;
+  };
+}
 
 export interface CompiledAgentParameterDef {
   readonly type: AgentParameterType;
@@ -288,6 +423,14 @@ export interface CompiledAgentParameterDef {
   readonly max?: number;
   readonly values?: readonly string[];
   readonly allowedIds?: readonly string[];
+}
+
+export interface CompiledAgentCandidateParamDef {
+  readonly type: AgentPolicyValueType;
+  readonly cardinality?: {
+    readonly kind: 'exact';
+    readonly n: number;
+  };
 }
 
 export interface CompiledAgentDependencyRefs {
@@ -358,6 +501,7 @@ export interface CompiledAgentLibraryIndex {
 }
 
 export interface CompiledAgentProfile {
+  readonly fingerprint: string;
   readonly params: Readonly<Record<string, AgentParameterValue>>;
   readonly use: {
     readonly pruningRules: readonly string[];
@@ -372,8 +516,11 @@ export interface CompiledAgentProfile {
 }
 
 export interface AgentPolicyCatalog {
-  readonly schemaVersion: 1;
+  readonly schemaVersion: 2;
+  readonly catalogFingerprint: string;
+  readonly surfaceVisibility: CompiledAgentPolicySurfaceCatalog;
   readonly parameterDefs: Readonly<Record<string, CompiledAgentParameterDef>>;
+  readonly candidateParamDefs: Readonly<Record<string, CompiledAgentCandidateParamDef>>;
   readonly library: CompiledAgentLibraryIndex;
   readonly profiles: Readonly<Record<string, CompiledAgentProfile>>;
   readonly bindingsBySeat: Readonly<Record<string, string>>;
@@ -1081,6 +1228,86 @@ export interface MoveContext {
   readonly turnFlowWindow?: string;
 }
 
+export type BuiltinAgentId = 'random' | 'greedy';
+
+export interface BuiltinAgentDescriptor {
+  readonly kind: 'builtin';
+  readonly builtinId: BuiltinAgentId;
+}
+
+export interface PolicyAgentDescriptor {
+  readonly kind: 'policy';
+  readonly profileId?: string;
+}
+
+export type AgentDescriptor = BuiltinAgentDescriptor | PolicyAgentDescriptor;
+
+export interface AgentDecisionFailureSummary {
+  readonly code: string;
+  readonly message: string;
+}
+
+export interface AgentDecisionScoreContribution {
+  readonly termId: string;
+  readonly contribution: number;
+}
+
+export interface PolicyCandidateDecisionTrace {
+  readonly actionId: string;
+  readonly stableMoveKey: string;
+  readonly score: number;
+  readonly prunedBy: readonly string[];
+  readonly scoreContributions?: readonly AgentDecisionScoreContribution[];
+  readonly previewRefIds?: readonly string[];
+  readonly unknownPreviewRefIds?: readonly string[];
+}
+
+export interface PolicyPruningStepTrace {
+  readonly ruleId: string;
+  readonly remainingCandidateCount: number;
+  readonly skippedBecauseEmpty: boolean;
+}
+
+export interface PolicyTieBreakStepTrace {
+  readonly tieBreakerId: string;
+  readonly candidateCountBefore: number;
+  readonly candidateCountAfter: number;
+}
+
+export interface PolicyPreviewUsageTrace {
+  readonly evaluatedCandidateCount: number;
+  readonly refIds: readonly string[];
+  readonly unknownRefIds: readonly string[];
+}
+
+export interface BuiltinAgentDecisionTrace {
+  readonly kind: 'builtin';
+  readonly agent: BuiltinAgentDescriptor;
+  readonly candidateCount: number;
+  readonly selectedIndex?: number;
+  readonly selectedStableMoveKey?: string;
+}
+
+export interface PolicyAgentDecisionTrace {
+  readonly kind: 'policy';
+  readonly agent: PolicyAgentDescriptor;
+  readonly seatId: string | null;
+  readonly requestedProfileId: string | null;
+  readonly resolvedProfileId: string | null;
+  readonly profileFingerprint: string | null;
+  readonly initialCandidateCount: number;
+  readonly selectedStableMoveKey: string | null;
+  readonly finalScore: number | null;
+  readonly pruningSteps: readonly PolicyPruningStepTrace[];
+  readonly tieBreakChain: readonly PolicyTieBreakStepTrace[];
+  readonly previewUsage: PolicyPreviewUsageTrace;
+  readonly emergencyFallback: boolean;
+  readonly failure: AgentDecisionFailureSummary | null;
+  readonly candidates?: readonly PolicyCandidateDecisionTrace[];
+}
+
+export type AgentDecisionTrace = BuiltinAgentDecisionTrace | PolicyAgentDecisionTrace;
+
 // ── Execution Options & Collector ─────────────────────────
 
 export interface ExecutionOptions {
@@ -1124,6 +1351,7 @@ export interface MoveLog {
   readonly decisionTrace?: readonly DecisionTraceEntry[];
   readonly selectorTrace?: readonly SelectorTraceEntry[];
   readonly moveContext?: MoveContext;
+  readonly agentDecision?: AgentDecisionTrace;
 }
 
 export interface PlayerScore {
@@ -1229,5 +1457,5 @@ export interface Agent {
     readonly legalMoves: readonly Move[];
     readonly rng: Rng;
     readonly runtime?: import('./gamedef-runtime.js').GameDefRuntime;
-  }): { readonly move: Move; readonly rng: Rng };
+  }): { readonly move: Move; readonly rng: Rng; readonly agentDecision?: AgentDecisionTrace };
 }

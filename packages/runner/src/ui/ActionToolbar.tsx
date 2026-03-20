@@ -3,11 +3,13 @@ import type { StoreApi } from 'zustand';
 import { useStore } from 'zustand';
 
 import type { GameStore } from '../store/game-store.js';
+import type { ActionTooltipSourceKey } from './action-tooltip-source-key.js';
 import styles from './ActionToolbar.module.css';
 
 interface ActionToolbarProps {
   readonly store: StoreApi<GameStore>;
-  readonly onActionHoverStart?: (actionId: string, element: HTMLElement, actorPlayer?: number) => void;
+  readonly surfaceRevision: number;
+  readonly onActionHoverStart?: (sourceKey: ActionTooltipSourceKey, element: HTMLElement) => void;
   readonly onActionHoverEnd?: () => void;
 }
 
@@ -21,7 +23,7 @@ function canRenderToolbar(renderModel: GameStore['renderModel']): boolean {
   return renderModel.actionGroups.some((group) => group.actions.length > 0);
 }
 
-export function ActionToolbar({ store, onActionHoverStart, onActionHoverEnd }: ActionToolbarProps): ReactElement | null {
+export function ActionToolbar({ store, surfaceRevision, onActionHoverStart, onActionHoverEnd }: ActionToolbarProps): ReactElement | null {
   const renderModel = useStore(store, (state) => state.renderModel);
 
   if (!canRenderToolbar(renderModel)) {
@@ -52,7 +54,12 @@ export function ActionToolbar({ store, onActionHoverStart, onActionHoverEnd }: A
                     }
                     void store.getState().selectAction(actionId, action.actionClass);
                   }}
-                  onPointerEnter={(e) => onActionHoverStart?.(action.actionId, e.currentTarget, toolbarModel.activePlayerID != null ? Number(toolbarModel.activePlayerID) : undefined)}
+                  onPointerEnter={(e) => onActionHoverStart?.({
+                    playerId: toolbarModel.activePlayerID != null ? Number(toolbarModel.activePlayerID) : null,
+                    groupKey: group.groupKey,
+                    actionId: action.actionId,
+                    surfaceRevision,
+                  }, e.currentTarget)}
                   onPointerLeave={() => onActionHoverEnd?.()}
                 >
                   <span className={styles.label}>{action.displayName}</span>

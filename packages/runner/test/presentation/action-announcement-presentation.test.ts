@@ -3,6 +3,7 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 import { asActionId, asPlayerId } from '@ludoforge/engine/runtime';
 import { describe, expect, it, vi } from 'vitest';
 
+import { createAgentSeatController, createHumanSeatController } from '../../src/seat/seat-controller.js';
 import {
   createActionAnnouncementPresenter,
   resolveActionAnnouncementSpec,
@@ -64,7 +65,7 @@ describe('action-announcement-presentation', () => {
       {
         sequence: 1,
         actorId: asPlayerId(1),
-        actorSeat: 'ai-random',
+        actorController: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }),
         move: { actionId: asActionId('tick'), params: { amount: 200 } },
       },
     );
@@ -84,7 +85,7 @@ describe('action-announcement-presentation', () => {
       {
         sequence: 1,
         actorId: asPlayerId(1),
-        actorSeat: 'human',
+        actorController: createHumanSeatController(),
         move: { actionId: asActionId('tick'), params: {} },
       },
     );
@@ -94,7 +95,7 @@ describe('action-announcement-presentation', () => {
       {
         sequence: 2,
         actorId: asPlayerId(1),
-        actorSeat: 'ai-random',
+        actorController: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }),
         move: { actionId: asActionId('tick'), params: {} },
       },
     );
@@ -117,7 +118,7 @@ describe('action-announcement-presentation', () => {
       appliedMoveEvent: {
         sequence: 1,
         actorId: asPlayerId(1),
-        actorSeat: 'ai-random',
+        actorController: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }),
         move: { actionId: asActionId('raise'), params: { amount: 200 } },
       },
     });
@@ -148,7 +149,7 @@ describe('action-announcement-presentation', () => {
       appliedMoveEvent: {
         sequence: 1,
         actorId: asPlayerId(1),
-        actorSeat: 'ai-random',
+        actorController: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }),
         move: { actionId: asActionId('raise'), params: {} },
       },
     });

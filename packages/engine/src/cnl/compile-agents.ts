@@ -1,17 +1,24 @@
+import { fingerprintPolicyIr } from '../agents/policy-ir.js';
+import { parseAuthoredPolicySurfaceRef } from '../agents/policy-surface.js';
 import { analyzePolicyExpr, type AnalyzePolicyExprContext, type ResolvedPolicyRef } from '../agents/policy-expr.js';
 import type { Diagnostic } from '../kernel/diagnostics.js';
+import { collectChoiceBindingSpecs } from '../kernel/move-runtime-bindings.js';
+import { inferQueryRuntimeShapes } from '../kernel/query-shape-inference.js';
 import type {
   AgentParameterType,
   AgentParameterValue,
   AgentPolicyCatalog,
   AgentPolicyCostClass,
-  AgentPolicyExpr,
+  AgentPolicySurfaceVisibilityClass,
   AgentPolicyValueType,
   CompiledAgentAggregate,
+  CompiledAgentCandidateParamDef,
   CompiledAgentCandidateFeature,
   CompiledAgentDependencyRefs,
   CompiledAgentLibraryIndex,
   CompiledAgentParameterDef,
+  CompiledAgentPolicySurfaceCatalog,
+  CompiledAgentPolicySurfaceVisibility,
   CompiledAgentProfile,
   CompiledAgentPruningRule,
   CompiledAgentScoreTerm,
@@ -26,6 +33,7 @@ import type {
   GameSpecAgentProfileDef,
   GameSpecAgentsSection,
   GameSpecCandidateFeatureDef,
+  GameSpecPolicySurfaceVisibilityDef,
   GameSpecStateFeatureDef,
   GameSpecTieBreakerDef,
 } from './game-spec-doc.js';
@@ -35,6 +43,7 @@ type ProfileUseKey = keyof CompiledAgentProfile['use'];
 type AggregateOp = 'max' | 'min' | 'count' | 'any' | 'all' | 'rankDense' | 'rankOrdinal';
 type TieBreakerKind = 'higherExpr' | 'lowerExpr' | 'preferredEnumOrder' | 'preferredIdOrder' | 'rng' | 'stableMoveKey';
 type LibraryRefScope = 'stateFeature' | 'candidateFeature' | 'aggregate' | 'rule' | 'scoreTerm' | 'tieBreaker';
+type LoweredAgentProfile = Omit<CompiledAgentProfile, 'fingerprint'>;
 
 const AGENT_PARAMETER_TYPES: readonly AgentParameterType[] = ['number', 'integer', 'boolean', 'enum', 'idOrder'];
 const POLICY_VALUE_TYPES: readonly AgentPolicyValueType[] = ['number', 'boolean', 'id', 'idList'];
@@ -48,27 +57,199 @@ const TIE_BREAKER_KINDS = new Set<TieBreakerKind>([
   'stableMoveKey',
 ]);
 
+export interface LowerAgentsOptions {
+  readonly referenceSeatIds?: readonly string[];
+  readonly playerCountMax?: number;
+  readonly globalVarIds?: readonly string[];
+  readonly perPlayerVarIds?: readonly string[];
+  readonly policyMetricIds?: readonly string[];
+  readonly hasVictoryMargins?: boolean;
+  readonly actionDefs?: GameDef['actions'];
+  readonly actionPipelines?: GameDef['actionPipelines'];
+}
+
 export function lowerAgents(
   agents: GameSpecAgentsSection | null,
   diagnostics: Diagnostic[],
+  options: LowerAgentsOptions = {},
 ): GameDef['agents'] | undefined {
   if (agents === null) {
     return undefined;
   }
 
+  const surfaceVisibility = lowerSurfaceVisibility(agents.visibility, diagnostics, options);
   const parameterDefs = lowerParameterDefs(agents.parameters, diagnostics);
-  const libraryCompiler = new AgentLibraryCompiler(agents.library, parameterDefs, diagnostics);
-  const library = libraryCompiler.compile();
-  const profiles = lowerProfiles(agents.profiles, agents.library, library, parameterDefs, diagnostics);
-  const bindingsBySeat = lowerBindings(agents.bindings, profiles, diagnostics);
-
-  return {
-    schemaVersion: 1,
+  const candidateParamDefs = lowerCandidateParamDefs(options.actionDefs, options.actionPipelines);
+  const libraryCompiler = new AgentLibraryCompiler(
+    agents.library,
+    surfaceVisibility,
     parameterDefs,
+    candidateParamDefs,
+    diagnostics,
+    options,
+  );
+  const library = libraryCompiler.compile();
+  const profiles = addProfileFingerprints(
+    lowerProfiles(agents.profiles, agents.library, library, parameterDefs, diagnostics),
+  );
+  const bindingsBySeat = lowerBindings(agents.bindings, profiles, diagnostics, options);
+  const catalogWithoutFingerprint = {
+    schemaVersion: 2,
+    surfaceVisibility,
+    parameterDefs,
+    candidateParamDefs,
     library,
     profiles,
     bindingsBySeat,
+  } satisfies Omit<AgentPolicyCatalog, 'catalogFingerprint'>;
+
+  return {
+    ...catalogWithoutFingerprint,
+    catalogFingerprint: fingerprintPolicyIr(catalogWithoutFingerprint),
   } satisfies AgentPolicyCatalog;
+}
+
+function lowerSurfaceVisibility(
+  visibility: GameSpecAgentsSection['visibility'],
+  diagnostics: Diagnostic[],
+  options: LowerAgentsOptions,
+): CompiledAgentPolicySurfaceCatalog {
+  return {
+    globalVars: lowerSurfaceVisibilityMap(
+      options.globalVarIds ?? [],
+      visibility?.globalVars,
+      diagnostics,
+      'doc.agents.visibility.globalVars',
+      {
+        current: 'public',
+        preview: { visibility: 'public', allowWhenHiddenSampling: true },
+      },
+    ),
+    perPlayerVars: lowerSurfaceVisibilityMap(
+      options.perPlayerVarIds ?? [],
+      visibility?.perPlayerVars,
+      diagnostics,
+      'doc.agents.visibility.perPlayerVars',
+      {
+        current: 'seatVisible',
+        preview: { visibility: 'seatVisible', allowWhenHiddenSampling: true },
+      },
+    ),
+    derivedMetrics: lowerSurfaceVisibilityMap(
+      options.policyMetricIds ?? [],
+      visibility?.derivedMetrics,
+      diagnostics,
+      'doc.agents.visibility.derivedMetrics',
+      {
+        current: 'hidden',
+        preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+      },
+    ),
+    victory: {
+      currentMargin: lowerSurfaceVisibilityEntry(
+        visibility?.victory?.currentMargin,
+        diagnostics,
+        'doc.agents.visibility.victory.currentMargin',
+        {
+          current: 'hidden',
+          preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+        },
+      ),
+      currentRank: lowerSurfaceVisibilityEntry(
+        visibility?.victory?.currentRank,
+        diagnostics,
+        'doc.agents.visibility.victory.currentRank',
+        {
+          current: 'hidden',
+          preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+        },
+      ),
+    },
+  };
+}
+
+function lowerSurfaceVisibilityMap(
+  knownIds: readonly string[],
+  overrides: Readonly<Record<string, GameSpecPolicySurfaceVisibilityDef>> | undefined,
+  diagnostics: Diagnostic[],
+  path: string,
+  defaults: CompiledAgentPolicySurfaceVisibility,
+): Readonly<Record<string, CompiledAgentPolicySurfaceVisibility>> {
+  const compiled: Record<string, CompiledAgentPolicySurfaceVisibility> = {};
+  const knownIdSet = new Set(knownIds);
+  for (const id of knownIds) {
+    compiled[id] = lowerSurfaceVisibilityEntry(overrides?.[id], diagnostics, `${path}.${id}`, defaults);
+  }
+  for (const overrideId of Object.keys(overrides ?? {})) {
+    if (knownIdSet.has(overrideId)) {
+      continue;
+    }
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_VISIBILITY_SURFACE_UNKNOWN,
+      path: `${path}.${overrideId}`,
+      severity: 'error',
+      message: `Policy visibility override targets unknown surface "${overrideId}".`,
+      suggestion: 'Declare visibility only for authored globalVars, perPlayerVars, or derivedMetrics that exist in the compiled policy surface.',
+    });
+  }
+  return compiled;
+}
+
+function lowerSurfaceVisibilityEntry(
+  entry: GameSpecPolicySurfaceVisibilityDef | undefined,
+  diagnostics: Diagnostic[],
+  path: string,
+  defaults: CompiledAgentPolicySurfaceVisibility,
+): CompiledAgentPolicySurfaceVisibility {
+  const current = normalizeSurfaceVisibilityClass(entry?.current, `${path}.current`, diagnostics) ?? defaults.current;
+  const previewVisibility = normalizeSurfaceVisibilityClass(entry?.preview?.visibility, `${path}.preview.visibility`, diagnostics)
+    ?? current;
+  const allowWhenHiddenSampling = typeof entry?.preview?.allowWhenHiddenSampling === 'boolean'
+    ? entry.preview.allowWhenHiddenSampling
+    : defaults.preview.allowWhenHiddenSampling;
+  return {
+    current,
+    preview: {
+      visibility: previewVisibility,
+      allowWhenHiddenSampling,
+    },
+  };
+}
+
+function normalizeSurfaceVisibilityClass(
+  value: unknown,
+  path: string,
+  diagnostics: Diagnostic[],
+): AgentPolicySurfaceVisibilityClass | null {
+  if (value === undefined) {
+    return null;
+  }
+  if (value === 'public' || value === 'seatVisible' || value === 'hidden') {
+    return value;
+  }
+  diagnostics.push({
+    code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_VISIBILITY_VALUE_INVALID,
+    path,
+    severity: 'error',
+    message: `Policy visibility value "${String(value)}" is invalid.`,
+    suggestion: 'Use one of: public, seatVisible, hidden.',
+  });
+  return null;
+}
+
+function addProfileFingerprints(
+  profiles: Readonly<Record<string, LoweredAgentProfile>>,
+): AgentPolicyCatalog['profiles'] {
+  const fingerprinted: Record<string, CompiledAgentProfile> = {};
+
+  for (const [profileId, profile] of Object.entries(profiles)) {
+    fingerprinted[profileId] = {
+      ...profile,
+      fingerprint: fingerprintPolicyIr(profile),
+    };
+  }
+
+  return fingerprinted;
 }
 
 function lowerParameterDefs(
@@ -85,6 +266,138 @@ function lowerParameterDefs(
   }
 
   return compiled;
+}
+
+function lowerCandidateParamDefs(
+  actions: GameDef['actions'] | undefined,
+  actionPipelines: GameDef['actionPipelines'] | undefined,
+): AgentPolicyCatalog['candidateParamDefs'] {
+  const compiled: Record<string, CompiledAgentCandidateParamDef> = {};
+  if (actions === undefined && actionPipelines === undefined) {
+    return compiled;
+  }
+
+  const candidateParamDefs = new Map<string, CompiledAgentCandidateParamDef | null>();
+  const recordCandidateParamDef = (
+    paramName: string,
+    candidateParamDef: CompiledAgentCandidateParamDef | null,
+  ): void => {
+    const existingDef = candidateParamDefs.get(paramName);
+    if (existingDef === null || candidateParamDef === null) {
+      candidateParamDefs.set(paramName, null);
+      return;
+    }
+    if (existingDef === undefined) {
+      candidateParamDefs.set(paramName, candidateParamDef);
+      return;
+    }
+    if (!candidateParamDefsEqual(existingDef, candidateParamDef)) {
+      candidateParamDefs.set(paramName, null);
+    }
+  };
+
+  for (const action of actions ?? []) {
+    for (const param of action.params) {
+      recordCandidateParamDef(param.name, classifyActionParamCandidateParamDef(param.domain));
+    }
+    for (const choiceSpec of collectChoiceBindingSpecs([...action.cost, ...action.effects])) {
+      if (isDynamicBindingTemplate(choiceSpec.bind)) {
+        continue;
+      }
+      recordCandidateParamDef(choiceSpec.bind, classifyChoiceBindingCandidateParamDef(choiceSpec));
+    }
+  }
+
+  for (const pipeline of actionPipelines ?? []) {
+    for (const choiceSpec of collectChoiceBindingSpecs([
+      ...pipeline.costEffects,
+      ...pipeline.stages.flatMap((stage) => stage.effects),
+    ])) {
+      if (isDynamicBindingTemplate(choiceSpec.bind)) {
+        continue;
+      }
+      recordCandidateParamDef(choiceSpec.bind, classifyChoiceBindingCandidateParamDef(choiceSpec));
+    }
+  }
+
+  for (const [paramName, candidateParamDef] of candidateParamDefs.entries()) {
+    if (candidateParamDef !== null) {
+      compiled[paramName] = candidateParamDef;
+    }
+  }
+
+  return compiled;
+}
+
+function candidateParamDefsEqual(
+  left: CompiledAgentCandidateParamDef,
+  right: CompiledAgentCandidateParamDef,
+): boolean {
+  return left.type === right.type
+    && left.cardinality?.kind === right.cardinality?.kind
+    && left.cardinality?.n === right.cardinality?.n;
+}
+
+function isDynamicBindingTemplate(bind: string): boolean {
+  return /\{[^{}]+\}/.test(bind);
+}
+
+function classifyActionParamCandidateParamDef(
+  domain: GameDef['actions'][number]['params'][number]['domain'],
+): CompiledAgentCandidateParamDef | null {
+  const runtimeShapes = inferQueryRuntimeShapes(domain);
+  if (runtimeShapes.length !== 1) {
+    return null;
+  }
+
+  switch (runtimeShapes[0]) {
+    case 'number':
+      return { type: 'number' };
+    case 'string':
+    case 'token':
+      return { type: 'id' };
+    default:
+      return null;
+  }
+}
+
+function classifyChoiceBindingCandidateParamDef(
+  choiceSpec: ReturnType<typeof collectChoiceBindingSpecs>[number],
+): CompiledAgentCandidateParamDef | null {
+  const runtimeShapes = inferQueryRuntimeShapes(choiceSpec.options);
+  if (runtimeShapes.length !== 1) {
+    return null;
+  }
+
+  if (choiceSpec.kind === 'chooseOne') {
+    switch (runtimeShapes[0]) {
+      case 'number':
+        return { type: 'number' };
+      case 'string':
+      case 'token':
+        return { type: 'id' };
+      default:
+        return null;
+    }
+  }
+
+  if (choiceSpec.n === undefined) {
+    return null;
+  }
+
+  switch (runtimeShapes[0]) {
+    case 'string':
+    case 'token':
+      return {
+        type: 'idList',
+        cardinality: {
+          kind: 'exact',
+          n: choiceSpec.n,
+        },
+      };
+    default:
+      return null;
+  }
 }
 
 function lowerParameterDef(
@@ -185,8 +498,8 @@ function lowerProfiles(
   library: CompiledAgentLibraryIndex,
   parameterDefs: AgentPolicyCatalog['parameterDefs'],
   diagnostics: Diagnostic[],
-): AgentPolicyCatalog['profiles'] {
-  const compiled: Record<string, CompiledAgentProfile> = {};
+): Record<string, LoweredAgentProfile> {
+  const compiled: Record<string, LoweredAgentProfile> = {};
 
   for (const [profileId, profileDef] of Object.entries(profiles ?? {})) {
     const compiledProfile = lowerProfile(profileId, profileDef, authoredLibrary, library, parameterDefs, diagnostics);
@@ -205,7 +518,7 @@ function lowerProfile(
   library: CompiledAgentLibraryIndex,
   parameterDefs: AgentPolicyCatalog['parameterDefs'],
   diagnostics: Diagnostic[],
-): CompiledAgentProfile | null {
+): LoweredAgentProfile | null {
   const path = `doc.agents.profiles.${profileId}`;
   const compiledParams: Record<string, AgentParameterValue> = {};
   let hasError = false;
@@ -459,10 +772,39 @@ function lowerBindings(
   bindings: GameSpecAgentsSection['bindings'],
   profiles: AgentPolicyCatalog['profiles'],
   diagnostics: Diagnostic[],
+  options: LowerAgentsOptions,
 ): AgentPolicyCatalog['bindingsBySeat'] {
   const compiled: Record<string, string> = {};
+  const bindingEntries = Object.entries(bindings ?? {});
+  if (bindingEntries.length === 0) {
+    return compiled;
+  }
 
-  for (const [seatId, profileId] of Object.entries(bindings ?? {})) {
+  if (options.referenceSeatIds === undefined) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_BINDING_SEAT_CATALOG_UNRESOLVED,
+      path: 'doc.agents.bindings',
+      severity: 'error',
+      message: 'agents bindings require resolved canonical seat ids from the selected scenario seatCatalog.',
+      suggestion: 'Add or select a seatCatalog data asset before binding authored policy profiles to seats.',
+    });
+    return compiled;
+  }
+
+  const referenceSeatIds = new Set(options.referenceSeatIds);
+
+  for (const [seatId, profileId] of bindingEntries) {
+    if (!referenceSeatIds.has(seatId)) {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_BINDING_UNKNOWN_SEAT,
+        path: `doc.agents.bindings.${seatId}`,
+        severity: 'error',
+        message: `agents binding references seat "${seatId}", which is absent from the resolved canonical seat ids.`,
+        suggestion: `Use one of the resolved canonical seat ids: ${options.referenceSeatIds.join(', ')}.`,
+      });
+      continue;
+    }
+
     if (profiles[profileId] === undefined) {
       diagnostics.push({
         code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_BINDING_UNKNOWN_PROFILE,
@@ -504,8 +846,11 @@ class AgentLibraryCompiler {
 
   constructor(
     authoredLibrary: GameSpecAgentLibrary | undefined,
+    private readonly surfaceVisibility: CompiledAgentPolicySurfaceCatalog,
     private readonly parameterDefs: Readonly<Record<string, CompiledAgentParameterDef>>,
+    private readonly candidateParamDefs: Readonly<Record<string, CompiledAgentCandidateParamDef>>,
     private readonly diagnostics: Diagnostic[],
+    private readonly options: LowerAgentsOptions,
   ) {
     this.authoredLibrary = authoredLibrary ?? {};
     this.compiled = {
@@ -670,7 +1015,7 @@ class AgentLibraryCompiler {
     return {
       type: analysis.valueType,
       costClass: analysis.costClass,
-      expr: def.expr as AgentPolicyExpr,
+      expr: analysis.expr,
       dependencies: analysis.dependencies,
     };
   }
@@ -737,8 +1082,8 @@ class AgentLibraryCompiler {
       type: resultType,
       costClass: maxCostClass(ofAnalysis.costClass, whereAnalysis?.costClass ?? 'state'),
       op,
-      of: def.of as AgentPolicyExpr,
-      ...(def.where === undefined ? {} : { where: def.where as AgentPolicyExpr }),
+      of: ofAnalysis.expr,
+      ...(def.where === undefined ? {} : { where: whereAnalysis!.expr }),
       dependencies,
     };
     this.compiled.candidateAggregates[aggregateId] = compiled;
@@ -776,7 +1121,7 @@ class AgentLibraryCompiler {
     }
     const compiled: CompiledAgentPruningRule = {
       costClass: when.costClass,
-      when: def.when as AgentPolicyExpr,
+      when: when.expr,
       dependencies: when.dependencies,
       onEmpty: def.onEmpty ?? 'skipRule',
     };
@@ -843,9 +1188,9 @@ class AgentLibraryCompiler {
     }
     const compiled: CompiledAgentScoreTerm = {
       costClass: maxCostClass(maxCostClass(weight.costClass, value.costClass), when?.costClass ?? 'state'),
-      ...(def.when === undefined ? {} : { when: def.when as AgentPolicyExpr }),
-      weight: def.weight as AgentPolicyExpr,
-      value: def.value as AgentPolicyExpr,
+      ...(def.when === undefined ? {} : { when: when!.expr }),
+      weight: weight.expr,
+      value: value.expr,
       ...(def.unknownAs === undefined ? {} : { unknownAs: def.unknownAs }),
       ...(def.clamp === undefined ? {} : { clamp: def.clamp }),
       dependencies: mergeDependencies([when?.dependencies ?? emptyDependencies(), weight.dependencies, value.dependencies]),
@@ -889,7 +1234,7 @@ class AgentLibraryCompiler {
     const compiled: CompiledAgentTieBreaker = {
       kind,
       costClass: value?.costClass ?? 'state',
-      ...(def.value === undefined ? {} : { value: def.value as AgentPolicyExpr }),
+      ...(def.value === undefined ? {} : { value: value!.expr }),
       ...(def.order === undefined ? {} : { order: [...def.order] }),
       dependencies: value?.dependencies ?? emptyDependencies(),
     };
@@ -920,6 +1265,7 @@ class AgentLibraryCompiler {
         return {
           type: feature.type,
           costClass: feature.costClass,
+          ref: { kind: 'library', refKind: 'stateFeature', id: featureId },
           dependency: { kind: 'stateFeatures', id: featureId },
         };
       }
@@ -943,6 +1289,7 @@ class AgentLibraryCompiler {
         return {
           type: compiled.type,
           costClass: compiled.costClass,
+          ref: { kind: 'library', refKind: 'candidateFeature', id: featureId },
           dependency: { kind: 'candidateFeatures', id: featureId },
         };
       }
@@ -954,6 +1301,7 @@ class AgentLibraryCompiler {
         return {
           type: compiled.type,
           costClass: compiled.costClass,
+          ref: { kind: 'library', refKind: 'stateFeature', id: featureId },
           dependency: { kind: 'stateFeatures', id: featureId },
         };
       }
@@ -980,6 +1328,7 @@ class AgentLibraryCompiler {
       return {
         type: aggregate.type,
         costClass: aggregate.costClass,
+        ref: { kind: 'library', refKind: 'aggregate', id: aggregateId },
         dependency: { kind: 'aggregates', id: aggregateId },
       };
     }
@@ -988,25 +1337,43 @@ class AgentLibraryCompiler {
   }
 
   private resolveRuntimeRef(scope: LibraryRefScope, refPath: string, path: string): ResolvedPolicyRef | null {
-    if (refPath === 'seat.self' || refPath === 'seat.active' || refPath === 'turn.phaseId' || refPath === 'turn.stepId') {
-      return { type: 'id', costClass: 'state' };
+    if (refPath === 'seat.self' || refPath === 'seat.active') {
+      return {
+        type: 'id',
+        costClass: 'state',
+        ref: { kind: 'seatIntrinsic', intrinsic: refPath === 'seat.self' ? 'self' : 'active' },
+      };
+    }
+    if (refPath === 'turn.phaseId' || refPath === 'turn.stepId') {
+      return {
+        type: 'id',
+        costClass: 'state',
+        ref: { kind: 'turnIntrinsic', intrinsic: refPath === 'turn.phaseId' ? 'phaseId' : 'stepId' },
+      };
     }
     if (refPath === 'turn.round') {
-      return { type: 'number', costClass: 'state' };
+      return { type: 'number', costClass: 'state', ref: { kind: 'turnIntrinsic', intrinsic: 'round' } };
     }
     if (refPath === 'candidate.actionId' || refPath === 'candidate.stableMoveKey') {
       if (scope === 'stateFeature') {
         this.reportUnknownLibraryRef(refPath, path);
         return null;
       }
-      return { type: 'id', costClass: 'candidate' };
+      return {
+        type: 'id',
+        costClass: 'candidate',
+        ref: {
+          kind: 'candidateIntrinsic',
+          intrinsic: refPath === 'candidate.actionId' ? 'actionId' : 'stableMoveKey',
+        },
+      };
     }
     if (refPath === 'candidate.isPass') {
       if (scope === 'stateFeature') {
         this.reportUnknownLibraryRef(refPath, path);
         return null;
       }
-      return { type: 'boolean', costClass: 'candidate' };
+      return { type: 'boolean', costClass: 'candidate', ref: { kind: 'candidateIntrinsic', intrinsic: 'isPass' } };
     }
     if (refPath.startsWith('candidate.param.')) {
       if (scope === 'stateFeature') {
@@ -1018,15 +1385,15 @@ class AgentLibraryCompiler {
         this.reportInvalidCandidateParamRef(refPath, path);
         return null;
       }
-      const parameterDef = this.parameterDefs[candidateParamPath];
-      if (parameterDef === undefined) {
+      const candidateParamDef = this.candidateParamDefs[candidateParamPath];
+      if (candidateParamDef === undefined) {
         this.reportInvalidCandidateParamRef(refPath, path);
         return null;
       }
       return {
-        type: parameterTypeToPolicyValueType(parameterDef.type),
+        type: candidateParamDef.type,
         costClass: 'candidate',
-        dependency: { kind: 'parameters', id: candidateParamPath },
+        ref: { kind: 'candidateParam', id: candidateParamPath },
       };
     }
 
@@ -1035,14 +1402,9 @@ class AgentLibraryCompiler {
       return previewResolved;
     }
 
-    if (
-      refPath.startsWith('metric.')
-      || refPath.startsWith('victory.currentMargin.')
-      || refPath.startsWith('victory.currentRank.')
-      || refPath.startsWith('var.global.')
-      || refPath.startsWith('var.seat.')
-    ) {
-      return { type: 'number', costClass: 'state' };
+    const surfaceResolved = this.resolveSurfaceRuntimeRef(refPath, path, false);
+    if (surfaceResolved !== null) {
+      return { type: 'number', costClass: 'state', ref: surfaceResolved.ref };
     }
 
     this.reportUnknownLibraryRef(refPath, path);
@@ -1064,17 +1426,94 @@ class AgentLibraryCompiler {
       return null;
     }
     const nestedPath = refPath.slice('preview.'.length);
-    if (
-      nestedPath.startsWith('metric.')
-      || nestedPath.startsWith('victory.currentMargin.')
-      || nestedPath.startsWith('victory.currentRank.')
-      || nestedPath.startsWith('var.global.')
-      || nestedPath.startsWith('var.seat.')
-    ) {
-      return { type: 'number', costClass: 'preview' };
+    const resolved = this.resolveSurfaceRuntimeRef(nestedPath, path, true);
+    if (resolved !== null) {
+      return { type: 'number', costClass: 'preview', ref: resolved.ref };
     }
     this.reportUnknownLibraryRef(refPath, path);
     return null;
+  }
+
+  private resolveSurfaceRuntimeRef(
+    refPath: string,
+    path: string,
+    preview: boolean,
+  ): { readonly ref: ResolvedPolicyRef['ref'] } | null {
+    const resolved = parseAuthoredPolicySurfaceRef(this.surfaceVisibility, refPath, preview ? 'preview' : 'current');
+    if (resolved === null) {
+      return null;
+    }
+    if (!this.validateResolvedSurfaceRef(resolved, path, refPath, preview)) {
+      return null;
+    }
+    return {
+      ref: {
+        kind: resolved.kind,
+        family: resolved.family,
+        id: resolved.id,
+        ...(resolved.selector === undefined ? {} : { selector: resolved.selector }),
+      },
+    };
+  }
+
+  private validateResolvedSurfaceRef(
+    resolved: NonNullable<ReturnType<typeof parseAuthoredPolicySurfaceRef>>,
+    path: string,
+    refPath: string,
+    preview: boolean,
+  ): boolean {
+    if (
+      (resolved.family === 'victoryCurrentMargin' || resolved.family === 'victoryCurrentRank')
+      && this.options.hasVictoryMargins === false
+    ) {
+      this.reportUnknownLibraryRef(refPath, path);
+      return false;
+    }
+    const visibility = preview ? resolved.visibility.preview.visibility : resolved.visibility.current;
+    if (visibility === 'hidden') {
+      this.reportUnknownLibraryRef(refPath, path);
+      return false;
+    }
+    if (resolved.selector?.kind === 'role' && !this.isKnownSeatToken(resolved.selector.seatToken, path, refPath)) {
+      return false;
+    }
+    if (resolved.family === 'perPlayerVar' && resolved.selector?.kind === 'role') {
+      if (resolved.selector.seatToken === 'self' || resolved.selector.seatToken === 'active') {
+        this.diagnostics.push({
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_REF_UNKNOWN,
+          path,
+          severity: 'error',
+          message: `Per-player policy ref "${refPath}" uses seat-scoped "${resolved.selector.seatToken}" where a runtime-player selector is required.`,
+          suggestion: `Use ${preview ? 'preview.' : ''}var.player.${resolved.selector.seatToken}.${resolved.id} for acting-player scoped per-player reads.`,
+        });
+        return false;
+      }
+      if (this.hasPotentialDuplicateRuntimeRoles()) {
+        this.diagnostics.push({
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_REF_UNKNOWN,
+          path,
+          severity: 'error',
+          message: `Per-player policy ref "${refPath}" is ambiguous because this spec can instantiate duplicate runtime players for one canonical seat.`,
+          suggestion: 'Use var.player.self/active for runtime-player reads, or limit the spec so each canonical seat maps to at most one runtime player.',
+        });
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private isKnownSeatToken(seatToken: string, path: string, refPath: string): boolean {
+    if (seatToken === 'self' || seatToken === 'active') {
+      return true;
+    }
+    if (this.options.referenceSeatIds === undefined) {
+      return true;
+    }
+    if (this.options.referenceSeatIds.includes(seatToken)) {
+      return true;
+    }
+    this.reportUnknownLibraryRef(refPath, path);
+    return false;
   }
 
   private reportCycle(category: string, entryId: string, stack: readonly string[]): void {
@@ -1103,9 +1542,17 @@ class AgentLibraryCompiler {
       path,
       severity: 'error',
       message: `Invalid candidate param ref "${refPath}".`,
-      suggestion: 'Use exactly candidate.param.<parameterId> with a declared agents parameter id.',
+      suggestion: 'Use exactly candidate.param.<paramName> for a concrete move param with a policy-visible compiled candidate-param contract.',
     });
   }
+
+  private hasPotentialDuplicateRuntimeRoles(): boolean {
+    if (this.options.playerCountMax === undefined || this.options.referenceSeatIds === undefined) {
+      return false;
+    }
+    return this.options.playerCountMax > this.options.referenceSeatIds.length;
+  }
+
 }
 
 function normalizeParameterValue(
@@ -1463,19 +1910,6 @@ function isPolicyValueType(value: unknown): value is AgentPolicyValueType {
   return typeof value === 'string' && POLICY_VALUE_TYPES.includes(value as AgentPolicyValueType);
 }
 
-function parameterTypeToPolicyValueType(type: CompiledAgentParameterDef['type']): AgentPolicyValueType {
-  switch (type) {
-    case 'number':
-    case 'integer':
-      return 'number';
-    case 'boolean':
-      return 'boolean';
-    case 'enum':
-      return 'id';
-    case 'idOrder':
-      return 'idList';
-  }
-}
 
 function diagnosticsContainProfileUseErrors(profileId: string, diagnostics: readonly Diagnostic[]): boolean {
   return diagnostics.some(

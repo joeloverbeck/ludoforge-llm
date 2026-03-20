@@ -251,6 +251,38 @@ export const ScoringDefSchema = z
   })
   .strict();
 
+export const AgentPolicySurfaceVisibilityClassSchema = z.union([
+  z.literal('public'),
+  z.literal('seatVisible'),
+  z.literal('hidden'),
+]);
+
+export const CompiledAgentPolicySurfacePreviewVisibilitySchema = z
+  .object({
+    visibility: AgentPolicySurfaceVisibilityClassSchema,
+    allowWhenHiddenSampling: BooleanSchema,
+  })
+  .strict();
+
+export const CompiledAgentPolicySurfaceVisibilitySchema = z
+  .object({
+    current: AgentPolicySurfaceVisibilityClassSchema,
+    preview: CompiledAgentPolicySurfacePreviewVisibilitySchema,
+  })
+  .strict();
+
+export const CompiledAgentPolicySurfaceCatalogSchema = z
+  .object({
+    globalVars: z.record(StringSchema, CompiledAgentPolicySurfaceVisibilitySchema),
+    perPlayerVars: z.record(StringSchema, CompiledAgentPolicySurfaceVisibilitySchema),
+    derivedMetrics: z.record(StringSchema, CompiledAgentPolicySurfaceVisibilitySchema),
+    victory: z.object({
+      currentMargin: CompiledAgentPolicySurfaceVisibilitySchema,
+      currentRank: CompiledAgentPolicySurfaceVisibilitySchema,
+    }).strict(),
+  })
+  .strict();
+
 export const TerminalEvaluationDefSchema = z
   .object({
     conditions: z.array(EndConditionSchema),
@@ -338,15 +370,6 @@ export const DerivedMetricRequirementSchema = z
   })
   .strict();
 
-export const DerivedMetricDefSchema = z
-  .object({
-    id: StringSchema,
-    computation: DerivedMetricComputationSchema,
-    zoneFilter: DerivedMetricZoneFilterSchema.optional(),
-    requirements: z.array(DerivedMetricRequirementSchema).min(1),
-  })
-  .strict();
-
 export const MarkerWeightConfigSchema = z
   .object({
     activeState: StringSchema,
@@ -360,6 +383,48 @@ export const SeatGroupConfigSchema = z
     insurgentSeats: z.array(StringSchema),
     soloSeat: StringSchema,
     seatProp: StringSchema,
+  })
+  .strict();
+
+export const DerivedMetricMarkerTotalRuntimeSchema = z
+  .object({
+    kind: z.literal('markerTotal'),
+    markerId: StringSchema,
+    markerConfig: MarkerWeightConfigSchema,
+    defaultMarkerState: StringSchema.optional(),
+  })
+  .strict();
+
+export const DerivedMetricControlledPopulationRuntimeSchema = z
+  .object({
+    kind: z.literal('controlledPopulation'),
+    controlFn: z.union([z.literal('coin'), z.literal('solo')]),
+    seatGroupConfig: SeatGroupConfigSchema,
+  })
+  .strict();
+
+export const DerivedMetricTotalEconRuntimeSchema = z
+  .object({
+    kind: z.literal('totalEcon'),
+    controlFn: z.union([z.literal('coin'), z.literal('solo')]),
+    seatGroupConfig: SeatGroupConfigSchema,
+    blockedByTokenTypes: z.array(StringSchema).optional(),
+  })
+  .strict();
+
+export const DerivedMetricRuntimeSchema = z.discriminatedUnion('kind', [
+  DerivedMetricMarkerTotalRuntimeSchema,
+  DerivedMetricControlledPopulationRuntimeSchema,
+  DerivedMetricTotalEconRuntimeSchema,
+]);
+
+export const DerivedMetricDefSchema = z
+  .object({
+    id: StringSchema,
+    computation: DerivedMetricComputationSchema,
+    zoneFilter: DerivedMetricZoneFilterSchema.optional(),
+    requirements: z.array(DerivedMetricRequirementSchema).min(1),
+    runtime: DerivedMetricRuntimeSchema,
   })
   .strict();
 
@@ -483,14 +548,127 @@ const CompiledAgentParameterDefSchema = z
   })
   .strict();
 
+const CompiledAgentCandidateParamDefSchema = z
+  .object({
+    type: z.union([
+      z.literal('number'),
+      z.literal('boolean'),
+      z.literal('id'),
+      z.literal('idList'),
+    ]),
+    cardinality: z
+      .object({
+        kind: z.literal('exact'),
+        n: z.number().int().nonnegative(),
+      })
+      .strict()
+      .optional(),
+  })
+  .strict();
+
+const AgentPolicyLiteralSchema = z.union([
+  NumberSchema,
+  BooleanSchema,
+  StringSchema,
+  z.null(),
+  z.array(StringSchema),
+]);
+
+const CompiledAgentPolicySurfaceRefBaseSchema = {
+  family: z.union([
+    z.literal('globalVar'),
+    z.literal('perPlayerVar'),
+    z.literal('derivedMetric'),
+    z.literal('victoryCurrentMargin'),
+    z.literal('victoryCurrentRank'),
+  ]),
+  id: StringSchema,
+  selector: z.union([
+    z.object({
+      kind: z.literal('role'),
+      seatToken: StringSchema,
+    }).strict(),
+    z.object({
+      kind: z.literal('player'),
+      player: z.union([z.literal('self'), z.literal('active')]),
+    }).strict(),
+  ]).optional(),
+} as const;
+
+const CompiledAgentPolicyRefSchema = z.union([
+  z.object({
+    kind: z.literal('library'),
+    refKind: z.union([z.literal('stateFeature'), z.literal('candidateFeature'), z.literal('aggregate')]),
+    id: StringSchema,
+  }).strict(),
+  z.object({
+    kind: z.literal('currentSurface'),
+    ...CompiledAgentPolicySurfaceRefBaseSchema,
+  }).strict(),
+  z.object({
+    kind: z.literal('previewSurface'),
+    ...CompiledAgentPolicySurfaceRefBaseSchema,
+  }).strict(),
+  z.object({
+    kind: z.literal('candidateIntrinsic'),
+    intrinsic: z.union([z.literal('actionId'), z.literal('stableMoveKey'), z.literal('isPass')]),
+  }).strict(),
+  z.object({
+    kind: z.literal('candidateParam'),
+    id: StringSchema,
+  }).strict(),
+  z.object({
+    kind: z.literal('seatIntrinsic'),
+    intrinsic: z.union([z.literal('self'), z.literal('active')]),
+  }).strict(),
+  z.object({
+    kind: z.literal('turnIntrinsic'),
+    intrinsic: z.union([z.literal('phaseId'), z.literal('stepId'), z.literal('round')]),
+  }).strict(),
+]);
+
 const AgentPolicyExprSchema: z.ZodTypeAny = z.lazy(() =>
   z.union([
-    StringSchema,
-    NumberSchema,
-    BooleanSchema,
-    z.null(),
-    z.array(AgentPolicyExprSchema),
-    z.record(StringSchema, AgentPolicyExprSchema),
+    z.object({
+      kind: z.literal('literal'),
+      value: AgentPolicyLiteralSchema,
+    }).strict(),
+    z.object({
+      kind: z.literal('param'),
+      id: StringSchema,
+    }).strict(),
+    z.object({
+      kind: z.literal('ref'),
+      ref: CompiledAgentPolicyRefSchema,
+    }).strict(),
+    z.object({
+      kind: z.literal('op'),
+      op: z.union([
+        z.literal('abs'),
+        z.literal('add'),
+        z.literal('and'),
+        z.literal('boolToNumber'),
+        z.literal('clamp'),
+        z.literal('coalesce'),
+        z.literal('div'),
+        z.literal('eq'),
+        z.literal('gt'),
+        z.literal('gte'),
+        z.literal('if'),
+        z.literal('in'),
+        z.literal('lt'),
+        z.literal('lte'),
+        z.literal('max'),
+        z.literal('min'),
+        z.literal('mul'),
+        z.literal('ne'),
+        z.literal('neg'),
+        z.literal('not'),
+        z.literal('or'),
+        z.literal('sub'),
+      ]),
+      args: z.array(AgentPolicyExprSchema),
+    }).strict(),
   ]),
 );
 
@@ -589,6 +767,7 @@ const CompiledAgentLibraryIndexSchema = z
 
 const CompiledAgentProfileSchema = z
   .object({
+    fingerprint: StringSchema,
     params: z.record(StringSchema, AgentParameterValueSchema),
     use: z
       .object({
@@ -609,8 +788,11 @@ const CompiledAgentProfileSchema = z
 
 const AgentPolicyCatalogSchema = z
   .object({
-    schemaVersion: z.literal(1),
+    schemaVersion: z.literal(2),
+    catalogFingerprint: StringSchema,
+    surfaceVisibility: CompiledAgentPolicySurfaceCatalogSchema,
     parameterDefs: z.record(StringSchema, CompiledAgentParameterDefSchema),
+    candidateParamDefs: z.record(StringSchema, CompiledAgentCandidateParamDefSchema),
     library: CompiledAgentLibraryIndexSchema,
     profiles: z.record(StringSchema, CompiledAgentProfileSchema),
     bindingsBySeat: z.record(StringSchema, StringSchema),
@@ -967,6 +1149,87 @@ export const TriggerLogEntrySchema = z.union([
   OperationCompoundStagesReplacedTraceEntrySchema,
 ]);
 
+const AgentDecisionFailureSummarySchema = z
+  .object({
+    code: StringSchema,
+    message: StringSchema,
+  })
+  .strict();
+
+const AgentDecisionScoreContributionSchema = z
+  .object({
+    termId: StringSchema,
+    contribution: NumberSchema,
+  })
+  .strict();
+
+const PolicyCandidateDecisionTraceSchema = z
+  .object({
+    actionId: StringSchema,
+    stableMoveKey: StringSchema,
+    score: NumberSchema,
+    prunedBy: z.array(StringSchema),
+    scoreContributions: z.array(AgentDecisionScoreContributionSchema).optional(),
+    previewRefIds: z.array(StringSchema).optional(),
+    unknownPreviewRefIds: z.array(StringSchema).optional(),
+  })
+  .strict();
+
+const PolicyPruningStepTraceSchema = z
+  .object({
+    ruleId: StringSchema,
+    remainingCandidateCount: NumberSchema,
+    skippedBecauseEmpty: BooleanSchema,
+  })
+  .strict();
+
+const PolicyTieBreakStepTraceSchema = z
+  .object({
+    tieBreakerId: StringSchema,
+    candidateCountBefore: NumberSchema,
+    candidateCountAfter: NumberSchema,
+  })
+  .strict();
+
+const PolicyPreviewUsageTraceSchema = z
+  .object({
+    evaluatedCandidateCount: NumberSchema,
+    refIds: z.array(StringSchema),
+    unknownRefIds: z.array(StringSchema),
+  })
+  .strict();
+
+const AgentDecisionTraceSchema = z.union([
+  z
+    .object({
+      kind: z.literal('builtin'),
+      agent: z.object({ kind: z.literal('builtin'), builtinId: z.union([z.literal('random'), z.literal('greedy')]) }).strict(),
+      candidateCount: NumberSchema,
+      selectedIndex: NumberSchema.optional(),
+      selectedStableMoveKey: StringSchema.optional(),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('policy'),
+      agent: z.object({ kind: z.literal('policy'), profileId: StringSchema.optional() }).strict(),
+      seatId: StringSchema.nullable(),
+      requestedProfileId: StringSchema.nullable(),
+      resolvedProfileId: StringSchema.nullable(),
+      profileFingerprint: StringSchema.nullable(),
+      initialCandidateCount: NumberSchema,
+      selectedStableMoveKey: StringSchema.nullable(),
+      finalScore: NumberSchema.nullable(),
+      pruningSteps: z.array(PolicyPruningStepTraceSchema),
+      tieBreakChain: z.array(PolicyTieBreakStepTraceSchema),
+      previewUsage: PolicyPreviewUsageTraceSchema,
+      emergencyFallback: BooleanSchema,
+      failure: AgentDecisionFailureSummarySchema.nullable(),
+      candidates: z.array(PolicyCandidateDecisionTraceSchema).optional(),
+    })
+    .strict(),
+]);
+
 export const MoveLogSchema = z
   .object({
     stateHash: z.bigint(),
@@ -977,6 +1240,7 @@ export const MoveLogSchema = z
     triggerFirings: z.array(TriggerLogEntrySchema),
     warnings: z.array(RuntimeWarningSchema),
     effectTrace: z.array(EffectTraceEntrySchema).optional(),
+    agentDecision: AgentDecisionTraceSchema.optional(),
   })
   .strict();
 
@@ -1080,6 +1344,7 @@ export const SerializedMoveLogSchema = z
     triggerFirings: z.array(TriggerLogEntrySchema),
     warnings: z.array(RuntimeWarningSchema),
     effectTrace: z.array(EffectTraceEntrySchema).optional(),
+    agentDecision: AgentDecisionTraceSchema.optional(),
   })
   .strict();
 

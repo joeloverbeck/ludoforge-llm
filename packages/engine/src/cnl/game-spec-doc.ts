@@ -372,11 +372,50 @@ export interface GameSpecDerivedMetricRequirement {
   readonly expectedType: 'number';
 }
 
+export interface GameSpecDerivedMetricMarkerTotalRuntime {
+  readonly kind: 'markerTotal';
+  readonly markerId: string;
+  readonly markerConfig: {
+    readonly activeState: string;
+    readonly passiveState: string;
+  };
+  readonly defaultMarkerState?: string;
+}
+
+export interface GameSpecDerivedMetricControlledPopulationRuntime {
+  readonly kind: 'controlledPopulation';
+  readonly controlFn: 'coin' | 'solo';
+  readonly seatGroupConfig: {
+    readonly coinSeats: readonly string[];
+    readonly insurgentSeats: readonly string[];
+    readonly soloSeat: string;
+    readonly seatProp: string;
+  };
+}
+
+export interface GameSpecDerivedMetricTotalEconRuntime {
+  readonly kind: 'totalEcon';
+  readonly controlFn: 'coin' | 'solo';
+  readonly seatGroupConfig: {
+    readonly coinSeats: readonly string[];
+    readonly insurgentSeats: readonly string[];
+    readonly soloSeat: string;
+    readonly seatProp: string;
+  };
+  readonly blockedByTokenTypes?: readonly string[];
+}
+
+export type GameSpecDerivedMetricRuntime =
+  | GameSpecDerivedMetricMarkerTotalRuntime
+  | GameSpecDerivedMetricControlledPopulationRuntime
+  | GameSpecDerivedMetricTotalEconRuntime;
+
 export interface GameSpecDerivedMetricDef {
   readonly id: string;
   readonly computation: GameSpecDerivedMetricComputation;
   readonly zoneFilter?: GameSpecDerivedMetricZoneFilter;
   readonly requirements: readonly GameSpecDerivedMetricRequirement[];
+  readonly runtime: GameSpecDerivedMetricRuntime;
 }
 
 export interface GameSpecCoupPlanPhase {
@@ -472,6 +511,28 @@ export interface GameSpecAgentParameterDef {
   readonly allowedIds?: readonly string[];
 }
 
+export type GameSpecPolicySurfaceVisibilityClass = 'public' | 'seatVisible' | 'hidden';
+
+export interface GameSpecPolicySurfacePreviewVisibilityDef {
+  readonly visibility?: GameSpecPolicySurfaceVisibilityClass;
+  readonly allowWhenHiddenSampling?: boolean;
+}
+
+export interface GameSpecPolicySurfaceVisibilityDef {
+  readonly current?: GameSpecPolicySurfaceVisibilityClass;
+  readonly preview?: GameSpecPolicySurfacePreviewVisibilityDef;
+}
+
+export interface GameSpecAgentVisibilitySection {
+  readonly globalVars?: Readonly<Record<string, GameSpecPolicySurfaceVisibilityDef>>;
+  readonly perPlayerVars?: Readonly<Record<string, GameSpecPolicySurfaceVisibilityDef>>;
+  readonly derivedMetrics?: Readonly<Record<string, GameSpecPolicySurfaceVisibilityDef>>;
+  readonly victory?: {
+    readonly currentMargin?: GameSpecPolicySurfaceVisibilityDef;
+    readonly currentRank?: GameSpecPolicySurfaceVisibilityDef;
+  };
+}
+
 export type GameSpecPolicyExpr =
   | string
   | number
@@ -542,6 +603,7 @@ export type GameSpecSeatPolicyBindings = Readonly<Record<string, string>>;
 
 export interface GameSpecAgentsSection {
   readonly parameters?: Readonly<Record<string, GameSpecAgentParameterDef>>;
+  readonly visibility?: GameSpecAgentVisibilitySection;
   readonly library?: GameSpecAgentLibrary;
   readonly profiles?: Readonly<Record<string, GameSpecAgentProfileDef>>;
   readonly bindings?: GameSpecSeatPolicyBindings;

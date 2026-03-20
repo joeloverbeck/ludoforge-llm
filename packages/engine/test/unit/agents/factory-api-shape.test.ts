@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { createAgent, GreedyAgent, parseAgentSpec, RandomAgent } from '../../../src/agents/index.js';
+import { createAgent, GreedyAgent, parseAgentDescriptor, parseAgentSpec, PolicyAgent, RandomAgent } from '../../../src/agents/index.js';
 import {
   asActionId,
   asPhaseId,
@@ -60,13 +60,13 @@ const stateStub: GameState = {
 const moveStub: Move = { actionId: asActionId('only'), params: {} };
 
 describe('agents factory API shape', () => {
-  it("createAgent('random') returns an object with chooseMove", () => {
-    const agent = createAgent('random');
+  it("createAgent({ kind: 'builtin', builtinId: 'random' }) returns an object with chooseMove", () => {
+    const agent = createAgent({ kind: 'builtin', builtinId: 'random' });
     assert.equal(typeof agent.chooseMove, 'function');
   });
 
-  it("createAgent('random') chooseMove returns the only legal move", () => {
-    const agent = createAgent('random');
+  it("createAgent({ kind: 'builtin', builtinId: 'random' }) chooseMove returns the only legal move", () => {
+    const agent = createAgent({ kind: 'builtin', builtinId: 'random' });
     const result = agent.chooseMove({
       def: defStub,
       state: stateStub,
@@ -77,12 +77,18 @@ describe('agents factory API shape', () => {
     assert.deepEqual(result.move, moveStub);
   });
 
-  it("createAgent('greedy') returns an object with chooseMove", () => {
-    const agent = createAgent('greedy');
+  it("createAgent({ kind: 'builtin', builtinId: 'greedy' }) returns an object with chooseMove", () => {
+    const agent = createAgent({ kind: 'builtin', builtinId: 'greedy' });
     assert.equal(typeof agent.chooseMove, 'function');
   });
 
-  it("createAgent('greedy') chooseMove works for a simple legal move", () => {
+  it("createAgent({ kind: 'policy' }) returns an object with chooseMove", () => {
+    const agent = createAgent({ kind: 'policy' });
+    assert.equal(typeof agent.chooseMove, 'function');
+    assert.equal(agent instanceof PolicyAgent, true);
+  });
+
+  it("createAgent({ kind: 'builtin', builtinId: 'greedy' }) chooseMove works for a simple legal move", () => {
     const def: GameDef = {
       ...defStub,
       actions: [
@@ -101,7 +107,7 @@ phase: [asPhaseId('main')],
     };
     const state = initialState(def, 1, 2).state;
     const moves = legalMoves(def, state);
-    const agent = createAgent('greedy');
+    const agent = createAgent({ kind: 'builtin', builtinId: 'greedy' });
     const result = agent.chooseMove({
       def,
       state,
@@ -112,34 +118,57 @@ phase: [asPhaseId('main')],
     assert.deepEqual(result.move, moves[0]);
   });
 
-  it("createAgent('unknown' as never) throws Unknown agent type", () => {
-    assert.throws(() => createAgent('unknown' as never), /Unknown agent type: unknown/);
+  it("createAgent rejects unknown builtin ids", () => {
+    assert.throws(
+      () => createAgent({ kind: 'builtin', builtinId: 'unknown' as never }),
+      /Unknown builtin agent id: unknown/,
+    );
   });
 
   it('parseAgentSpec export exists and validates count mismatch', () => {
     assert.equal(typeof parseAgentSpec, 'function');
-    assert.throws(() => parseAgentSpec('random', 2), /Agent spec has 1 agents but game needs 2 players/);
+    assert.throws(() => parseAgentSpec('policy', 2), /Agent spec has 1 agents but game needs 2 players/);
   });
 
-  it('parseAgentSpec creates ordered agents from normalized tokens', () => {
-    const agents = parseAgentSpec(' random , GREEDY ', 2);
-    assert.equal(agents.length, 2);
-    assert.equal(agents[0] instanceof RandomAgent, true);
-    assert.equal(agents[1] instanceof GreedyAgent, true);
+  it('parseAgentDescriptor export exists and parses structured text', () => {
+    assert.equal(typeof parseAgentDescriptor, 'function');
+    assert.deepEqual(parseAgentDescriptor('builtin:random'), { kind: 'builtin', builtinId: 'random' });
+  });
+
+  it('parseAgentSpec creates ordered descriptors from normalized tokens', () => {
+    const descriptors = parseAgentSpec(' builtin:random , policy:baseline ', 2);
+    assert.deepEqual(descriptors, [
+      { kind: 'builtin', builtinId: 'random' },
+      { kind: 'policy', profileId: 'baseline' },
+    ]);
   });
 
   it('parseAgentSpec rejects unknown agent names', () => {
-    assert.throws(() => parseAgentSpec('random,smart', 2), /Unknown agent type: smart\. Allowed: random, greedy/);
+    assert.throws(
+      () => parseAgentSpec('builtin:random,builtin:smart', 2),
+      /Unknown builtin agent id: smart\. Allowed: random, greedy/,
+    );
   });
 
   it('parseAgentSpec ignores empty tokens when remaining count matches', () => {
-    const agents = parseAgentSpec('random,,greedy', 2);
-    assert.equal(agents.length, 2);
-    assert.equal(agents[0] instanceof RandomAgent, true);
-    assert.equal(agents[1] instanceof GreedyAgent, true);
+    const descriptors = parseAgentSpec('builtin:random,,builtin:greedy', 2);
+    assert.deepEqual(descriptors, [
+      { kind: 'builtin', builtinId: 'random' },
+      { kind: 'builtin', builtinId: 'greedy' },
+    ]);
   });
 
   it('parseAgentSpec still enforces count after filtering empty tokens', () => {
-    assert.throws(() => parseAgentSpec('random,,greedy', 3), /Agent spec has 2 agents but game needs 3 players/);
+    assert.throws(
+      () => parseAgentSpec('builtin:random,,builtin:greedy', 3),
+      /Agent spec has 2 agents but game needs 3 players/,
+    );
+  });
+
+  it('callers can instantiate parsed descriptors through createAgent', () => {
+    const descriptors = parseAgentSpec('builtin:random,builtin:greedy', 2);
+    const agents = descriptors.map((descriptor) => createAgent(descriptor));
+    assert.equal(agents[0] instanceof RandomAgent, true);
+    assert.equal(agents[1] instanceof GreedyAgent, true);
   });
 });

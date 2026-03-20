@@ -3,6 +3,7 @@ import { compileGameSpecToGameDef, createEmptyGameSpecDoc } from '@ludoforge/eng
 import { asActionId, asPlayerId, initialState, parseDecisionKey, type GameDef, type Move } from '@ludoforge/engine/runtime';
 
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
+import { createAgentSeatController, createHumanSeatController } from '../../src/seat/seat-controller.js';
 import type { PlayerSeatConfig } from '../../src/session/session-types.js';
 import { createGameStore } from '../../src/store/game-store.js';
 import { createGameWorker, type WorkerError } from '../../src/worker/game-worker-api.js';
@@ -98,13 +99,13 @@ function createStoreWithDefaultVisuals(
 }
 
 const P0_HUMAN_CONFIG: readonly PlayerSeatConfig[] = [
-  { playerId: 0, type: 'human' },
-  { playerId: 1, type: 'ai-random' },
+  { playerId: 0, controller: createHumanSeatController() },
+  { playerId: 1, controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }) },
 ];
 
 const P1_HUMAN_CONFIG: readonly PlayerSeatConfig[] = [
-  { playerId: 0, type: 'ai-random' },
-  { playerId: 1, type: 'human' },
+  { playerId: 0, controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }) },
+  { playerId: 1, controller: createHumanSeatController() },
 ];
 
 describe('createGameStore async serialization', () => {
@@ -370,5 +371,37 @@ describe('createGameStore async serialization', () => {
     expect(state.selectedAction).toEqual(asActionId('tick'));
     expect(state.error).toBeNull();
     expect(state.gameLifecycle).toBe('playing');
+  });
+
+  it('stale resolveAiStep completion after newer initGame does not mutate the new session', async () => {
+    const def = compileCounterFixture(5);
+    const aiConfig: readonly PlayerSeatConfig[] = [
+      { playerId: 0, controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }) },
+      { playerId: 1, controller: createHumanSeatController() },
+    ];
+    const bridge = createGameWorker();
+    const store = createStoreWithDefaultVisuals(bridge);
+    await store.getState().initGame(def, 70, aiConfig);
+
+    const baseApplyMove = bridge.applyMove.bind(bridge);
+    const gate = createDeferred<void>();
+    vi.spyOn(bridge, 'applyMove').mockImplementationOnce(async (move, options, stamp) => {
+      await gate.promise;
+      return await baseApplyMove(move, options, stamp);
+    });
+
+    const staleResolve = store.getState().resolveAiStep();
+    const newerInit = store.getState().initGame(def, 71, P0_HUMAN_CONFIG);
+
+    gate.resolve();
+    await Promise.all([staleResolve, newerInit]);
+
+    const state = store.getState();
+    expect(state.playerID).toEqual(asPlayerId(0));
+    expect(state.gameState).toEqual(initialState(def, 71).state);
+    expect(state.gameState?.globalVars.round).toBe(0);
+    expect(state.renderModel?.activePlayerID).toEqual(asPlayerId(0));
+    expect(state.loading).toBe(false);
+    expect(state.error).toBeNull();
   });
 });

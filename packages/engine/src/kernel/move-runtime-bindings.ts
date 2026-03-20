@@ -1,5 +1,20 @@
 import { parseDecisionKey } from './decision-scope.js';
-import type { ActionPipelineDef, EffectAST, Move, MoveParamValue } from './types.js';
+import type { ActionPipelineDef, EffectAST, Move, MoveParamValue, OptionsQuery } from './types.js';
+
+export type ChoiceBindingSpec =
+  | {
+      readonly kind: 'chooseOne';
+      readonly internalDecisionId: string;
+      readonly bind: string;
+      readonly options: OptionsQuery;
+    }
+  | {
+      readonly kind: 'chooseN';
+      readonly internalDecisionId: string;
+      readonly bind: string;
+      readonly options: OptionsQuery;
+      readonly n?: number;
+    };
 
 export const RUNTIME_RESERVED_MOVE_BINDING_NAMES = ['__freeOperation', '__actionClass'] as const;
 export const DEFAULT_MOVE_ACTION_CLASS = 'operation';
@@ -20,22 +35,27 @@ export const deriveDecisionBindingsFromMoveParams = (
   return bindings;
 };
 
-const collectChoiceBindingSpecs = (effects: readonly EffectAST[]): readonly { readonly internalDecisionId: string; readonly bind: string }[] => {
-  const specs: { internalDecisionId: string; bind: string }[] = [];
+export const collectChoiceBindingSpecs = (effects: readonly EffectAST[]): readonly ChoiceBindingSpec[] => {
+  const specs: ChoiceBindingSpec[] = [];
 
   const visitEffects = (nestedEffects: readonly EffectAST[]): void => {
     for (const effect of nestedEffects) {
       if ('chooseOne' in effect) {
         specs.push({
+          kind: 'chooseOne',
           internalDecisionId: effect.chooseOne.internalDecisionId,
           bind: effect.chooseOne.bind,
+          options: effect.chooseOne.options,
         });
         continue;
       }
       if ('chooseN' in effect) {
         specs.push({
+          kind: 'chooseN',
           internalDecisionId: effect.chooseN.internalDecisionId,
           bind: effect.chooseN.bind,
+          options: effect.chooseN.options,
+          ...('n' in effect.chooseN ? { n: effect.chooseN.n } : {}),
         });
         continue;
       }

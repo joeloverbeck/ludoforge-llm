@@ -2,7 +2,33 @@
 
 import { cleanup, render, screen } from '@testing-library/react';
 import { createElement } from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+const floatingMocks = vi.hoisted(() => ({
+  setReference: vi.fn(),
+  setFloating: vi.fn(),
+  x: 120 as number | null,
+  y: 64 as number | null,
+  offset: vi.fn((value: number) => ({ name: 'offset', options: value })),
+  flip: vi.fn(() => ({ name: 'flip' })),
+  shift: vi.fn((options: { padding: number }) => ({ name: 'shift', options })),
+}));
+
+vi.mock('@floating-ui/react-dom', () => ({
+  offset: floatingMocks.offset,
+  flip: floatingMocks.flip,
+  shift: floatingMocks.shift,
+  useFloating: () => ({
+    x: floatingMocks.x,
+    y: floatingMocks.y,
+    strategy: 'absolute' as const,
+    refs: {
+      setReference: floatingMocks.setReference,
+      setFloating: floatingMocks.setFloating,
+    },
+    update: vi.fn(async () => {}),
+  }),
+}));
 
 import type { RenderEventCard } from '../../src/model/render-model.js';
 import { EventCardTooltip } from '../../src/ui/EventCardTooltip.js';
@@ -21,12 +47,26 @@ function makeCard(overrides: Partial<RenderEventCard> = {}): RenderEventCard {
 }
 
 function createAnchorElement(): HTMLElement {
+  const anchor = document.createElement('div');
+  document.body.append(anchor);
+  return anchor;
+}
+
+function createDetachedAnchorElement(): HTMLElement {
   return document.createElement('div');
 }
 
 describe('EventCardTooltip', () => {
   afterEach(() => {
     cleanup();
+    document.body.innerHTML = '';
+    floatingMocks.setReference.mockClear();
+    floatingMocks.setFloating.mockClear();
+    floatingMocks.x = 120;
+    floatingMocks.y = 64;
+    floatingMocks.offset.mockClear();
+    floatingMocks.flip.mockClear();
+    floatingMocks.shift.mockClear();
   });
 
   it('renders card title and order number', () => {
@@ -107,5 +147,27 @@ describe('EventCardTooltip', () => {
 
     expect(screen.getByTestId('event-card-tooltip-title').textContent).toBe('Containment');
     expect(screen.queryByTestId('event-card-tooltip-number')).toBeNull();
+  });
+
+  it('does not render when anchorElement is detached', () => {
+    const { container } = render(createElement(EventCardTooltip, {
+      card: makeCard(),
+      anchorElement: createDetachedAnchorElement(),
+    }));
+
+    expect(screen.queryByTestId('event-card-tooltip')).toBeNull();
+    expect(container.innerHTML).toBe('');
+  });
+
+  it('does not render when Floating UI coordinates are unresolved', () => {
+    floatingMocks.y = null;
+
+    const { container } = render(createElement(EventCardTooltip, {
+      card: makeCard(),
+      anchorElement: createAnchorElement(),
+    }));
+
+    expect(screen.queryByTestId('event-card-tooltip')).toBeNull();
+    expect(container.innerHTML).toBe('');
   });
 });

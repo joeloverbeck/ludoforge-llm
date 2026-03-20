@@ -143,6 +143,7 @@ export const runGame = (
       ...(applied.decisionTrace !== undefined ? { decisionTrace: applied.decisionTrace } : {}),
       ...(applied.selectorTrace !== undefined ? { selectorTrace: applied.selectorTrace } : {}),
       ...(moveContext !== undefined ? { moveContext } : {}),
+      ...(selected.agentDecision !== undefined ? { agentDecision: selected.agentDecision } : {}),
     });
   }
 

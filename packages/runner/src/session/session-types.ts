@@ -1,4 +1,6 @@
 import type { Move } from '@ludoforge/engine/runtime';
+import type { PlayerSeatConfig } from '../seat/seat-controller.js';
+export type { PlayerSeatConfig } from '../seat/seat-controller.js';
 
 export type AppScreen = 'gameSelection' | 'preGameConfig' | 'activeGame' | 'replay';
 
@@ -32,8 +34,3 @@ export type SessionState =
   | PreGameConfigState
   | ActiveGameState
   | ReplayState;
-
-export interface PlayerSeatConfig {
-  readonly playerId: number;
-  readonly type: 'human' | 'ai-random' | 'ai-greedy';
-}

@@ -5,6 +5,7 @@ import type { StoreApi } from 'zustand';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { GameStore } from '../../src/store/game-store.js';
+import type { ActionTooltipSourceKey } from '../../src/ui/action-tooltip-source-key.js';
 import { makeRenderModelFixture as makeRenderModel } from './helpers/render-model-fixture.js';
 
 vi.mock('zustand', () => ({
@@ -108,7 +109,7 @@ describe('ActionToolbar', () => {
       renderModel: makeToolbarRenderModel(),
     });
 
-    const html = renderToStaticMarkup(createElement(ActionToolbar, { store }));
+    const html = renderToStaticMarkup(createElement(ActionToolbar, { store, surfaceRevision: 7 }));
 
     expect(html).toContain('data-testid="action-toolbar"');
     expect(html).toContain('Core');
@@ -122,6 +123,7 @@ describe('ActionToolbar', () => {
       store: createToolbarStore({
         renderModel: makeToolbarRenderModel(),
       }),
+      surfaceRevision: 7,
     });
 
     const disabledButton = findElementByTestId(tree, 'action-core-pass');
@@ -152,6 +154,7 @@ describe('ActionToolbar', () => {
         renderModel: makeToolbarRenderModel({ actionGroups: actionsWithClass }),
         selectAction,
       }),
+      surfaceRevision: 7,
     });
 
     const trainButton = findElementByTestId(tree, 'action-operation-train');
@@ -173,6 +176,7 @@ describe('ActionToolbar', () => {
         renderModel: makeToolbarRenderModel(),
         selectAction,
       }),
+      surfaceRevision: 7,
     });
 
     const moveButton = findElementByTestId(tree, 'action-core-move');
@@ -191,6 +195,7 @@ describe('ActionToolbar', () => {
       store: createToolbarStore({
         renderModel: null,
       }),
+      surfaceRevision: 7,
     });
 
     expect(tree).toBeNull();
@@ -203,6 +208,7 @@ describe('ActionToolbar', () => {
           actionGroups: [{ groupKey: 'empty', groupName: 'Empty', actions: [] }],
         }),
       }),
+      surfaceRevision: 7,
     });
 
     expect(tree).toBeNull();
@@ -214,6 +220,7 @@ describe('ActionToolbar', () => {
         store: createToolbarStore({
           renderModel: makeToolbarRenderModel(),
         }),
+        surfaceRevision: 7,
       }),
     );
 
@@ -227,6 +234,7 @@ describe('ActionToolbar', () => {
         store: createToolbarStore({
           renderModel: makeToolbarRenderModel(),
         }),
+        surfaceRevision: 7,
       }),
     );
 
@@ -241,6 +249,7 @@ describe('ActionToolbar', () => {
       store: createToolbarStore({
         renderModel: makeToolbarRenderModel(),
       }),
+      surfaceRevision: 7,
     });
 
     const buttons = findElementsByType(tree, 'button');
@@ -270,6 +279,7 @@ describe('ActionToolbar', () => {
       store: createToolbarStore({
         renderModel: makeToolbarRenderModel(),
       }),
+      surfaceRevision: 7,
       onActionHoverStart,
       onActionHoverEnd,
     });
@@ -284,7 +294,7 @@ describe('ActionToolbar', () => {
     expect(moveButton.props.onPointerLeave).toEqual(expect.any(Function));
   });
 
-  it('onPointerEnter calls onActionHoverStart with correct actionId', () => {
+  it('onPointerEnter calls onActionHoverStart with structured action identity', () => {
     const onActionHoverStart = vi.fn();
     const onActionHoverEnd = vi.fn();
 
@@ -292,6 +302,7 @@ describe('ActionToolbar', () => {
       store: createToolbarStore({
         renderModel: makeToolbarRenderModel(),
       }),
+      surfaceRevision: 7,
       onActionHoverStart,
       onActionHoverEnd,
     });
@@ -305,7 +316,12 @@ describe('ActionToolbar', () => {
     const fakeElement = {} as HTMLElement;
     moveButton.props.onPointerEnter({ currentTarget: fakeElement });
     expect(onActionHoverStart).toHaveBeenCalledTimes(1);
-    expect(onActionHoverStart).toHaveBeenCalledWith('move', fakeElement, expect.anything());
+    expect(onActionHoverStart).toHaveBeenCalledWith({
+      playerId: 0,
+      groupKey: 'core',
+      actionId: 'move',
+      surfaceRevision: 7,
+    }, fakeElement);
   });
 
   it('onPointerLeave calls onActionHoverEnd', () => {
@@ -316,6 +332,7 @@ describe('ActionToolbar', () => {
       store: createToolbarStore({
         renderModel: makeToolbarRenderModel(),
       }),
+      surfaceRevision: 7,
       onActionHoverStart,
       onActionHoverEnd,
     });
@@ -335,6 +352,7 @@ describe('ActionToolbar', () => {
       store: createToolbarStore({
         renderModel: makeToolbarRenderModel(),
       }),
+      surfaceRevision: 7,
     });
 
     expect(tree).not.toBeNull();
@@ -347,5 +365,33 @@ describe('ActionToolbar', () => {
     // onPointerEnter/onPointerLeave should not throw when callbacks are undefined
     expect(moveButton.props.onPointerEnter).toEqual(expect.any(Function));
     expect(moveButton.props.onPointerLeave).toEqual(expect.any(Function));
+  });
+
+  it('emits structured hover source metadata with stable player, group, action, and surface identity', () => {
+    const onActionHoverStart = vi.fn();
+    const tree = ActionToolbar({
+      store: createToolbarStore({
+        renderModel: makeToolbarRenderModel(),
+      }),
+      surfaceRevision: 42,
+      onActionHoverStart,
+    });
+
+    const moveButton = findElementByTestId(tree, 'action-core-move');
+    expect(moveButton).not.toBeNull();
+    if (moveButton === null || moveButton.props.onPointerEnter === undefined) {
+      throw new Error('Expected move action hover handler.');
+    }
+
+    const currentTarget = {} as HTMLElement;
+    moveButton.props.onPointerEnter({ currentTarget });
+
+    expect(onActionHoverStart).toHaveBeenCalledTimes(1);
+    expect(onActionHoverStart).toHaveBeenCalledWith({
+      playerId: 0,
+      groupKey: 'core',
+      actionId: 'move',
+      surfaceRevision: 42,
+    } satisfies ActionTooltipSourceKey, currentTarget);
   });
 });

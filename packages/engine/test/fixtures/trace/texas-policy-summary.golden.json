@@ -1,0 +1,28 @@
+{
+  "move": {
+    "actionId": "call",
+    "params": {}
+  },
+  "agentDecision": {
+    "kind": "policy",
+    "agent": {
+      "kind": "policy"
+    },
+    "seatId": "neutral",
+    "requestedProfileId": null,
+    "resolvedProfileId": "baseline",
+    "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+    "initialCandidateCount": 12,
+    "selectedStableMoveKey": "call|{}|false|unclassified",
+    "finalScore": 80,
+    "pruningSteps": [],
+    "tieBreakChain": [],
+    "previewUsage": {
+      "evaluatedCandidateCount": 0,
+      "refIds": [],
+      "unknownRefIds": []
+    },
+    "emergencyFallback": false,
+    "failure": null
+  }
+}

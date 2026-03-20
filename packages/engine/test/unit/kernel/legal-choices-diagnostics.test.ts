@@ -110,25 +110,22 @@ describe('legal-choices-diagnostics', () => {
       const { state } = initialState(def, 42, playerCount);
       const runtime = createGameDefRuntime(def);
       const moves = legalMoves(def, state, undefined, runtime);
+      assert.ok(moves.length >= 2, 'need at least 2 moves to test accumulation');
 
       const cst = createClassificationSubphaseTiming();
 
-      // Call for each legal move — timing should accumulate.
-      for (const move of moves) {
-        legalChoicesEvaluate(def, state, move, { classificationSubphaseTiming: cst }, runtime);
-      }
+      // Snapshot after first call.
+      legalChoicesEvaluate(def, state, moves[0]!, { classificationSubphaseTiming: cst }, runtime);
+      const totalAfterFirst = cst.bindingTimeMs + cst.targetEnumTimeMs + cst.predicateTimeMs + cst.pipelineTimeMs;
 
-      // With multiple calls, accumulated values should be >= values from a single call.
-      const singleCst = createClassificationSubphaseTiming();
-      legalChoicesEvaluate(def, state, moves[0]!, { classificationSubphaseTiming: singleCst }, runtime);
+      // Call again — timing should accumulate on top of the first call.
+      legalChoicesEvaluate(def, state, moves[1]!, { classificationSubphaseTiming: cst }, runtime);
+      const totalAfterSecond = cst.bindingTimeMs + cst.targetEnumTimeMs + cst.predicateTimeMs + cst.pipelineTimeMs;
 
-      const totalMulti = cst.bindingTimeMs + cst.targetEnumTimeMs + cst.predicateTimeMs + cst.pipelineTimeMs;
-      const totalSingle = singleCst.bindingTimeMs + singleCst.targetEnumTimeMs + singleCst.predicateTimeMs + singleCst.pipelineTimeMs;
-
-      // Multiple calls accumulate >= single call (with tolerance for timing jitter).
+      // The same accumulator must grow (or stay equal for sub-µs ops) after a second call.
       assert.ok(
-        totalMulti >= totalSingle - 0.01,
-        `multi-call total ${totalMulti.toFixed(4)} should be >= single-call total ${totalSingle.toFixed(4)}`,
+        totalAfterSecond >= totalAfterFirst,
+        `total after 2 calls ${totalAfterSecond.toFixed(4)} should be >= total after 1 call ${totalAfterFirst.toFixed(4)}`,
       );
     });
 

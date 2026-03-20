@@ -33,11 +33,21 @@ All files under `packages/engine/src/` (the entire production codebase).
 ## Immutable System (files the agent MUST NOT modify)
 
 - `campaigns/turn-perf-fitl-combined/harness.sh`
-- All test files under `packages/engine/test/`
+- All test files under `packages/engine/test/` — **except** golden fixture values (see Golden Fixture Exception below)
 - All test helpers under `packages/engine/test/helpers/`
 - Everything under `data/`
 - `package.json`, `pnpm-lock.yaml`, `tsconfig.json`, and all build config
 - `packages/runner/` (runner package)
+
+### Golden Fixture Exception
+
+When a profiled bottleneck is **locked behind golden fixture values** (e.g., hardcoded `stateHash` bigints that pin a slow algorithm), the agent MAY update those fixture values as part of an experiment, provided:
+
+1. The replacement algorithm is **semantically equivalent** — same inputs produce deterministic, unique, collision-resistant hashes; the only change is the computation method.
+2. All tests pass with the updated fixtures (the harness gate still applies).
+3. The experiment description and musings explicitly call out which fixtures were updated and why.
+
+This exception exists because golden fixtures should validate **determinism** (same seed + same moves = same hash), not **a specific hash algorithm's output**. Pinning an inefficient algorithm via fixtures defeats the purpose of this campaign.
 
 ## Constraints
 
@@ -45,7 +55,7 @@ All files under `packages/engine/src/` (the entire production codebase).
 2. No behavioral changes — the kernel must remain deterministic. Same seed + same moves = same state.
 3. No new runtime dependencies.
 4. No changes to public API signatures (exported types, function signatures) that would break tests.
-5. Preserve all existing test contracts — optimizations must be internal (algorithmic, caching, data structure).
+5. Preserve all existing test contracts — optimizations must be internal (algorithmic, caching, data structure). Golden fixture values may be updated per the exception above.
 
 ## Accept/Reject Logic
 

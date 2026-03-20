@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — runner-only
-**Deps**: None (independent module, but logically consumed by 68CANLIFCRARES-005)
+**Deps**: None
 
 ## Problem
 

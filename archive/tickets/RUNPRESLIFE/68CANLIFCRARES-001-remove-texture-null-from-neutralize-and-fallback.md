@@ -1,6 +1,6 @@
 # 68CANLIFCRARES-001: Remove `_texture = null` from neutralizeDisplayObject and safeDestroyDisplayObject fallback
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — runner-only
@@ -20,12 +20,15 @@ The fix: remove the `_texture = null` assignments. The combination of `removeFro
 2. `safeDestroyDisplayObject` fallback at `safe-destroy.ts:73-75` contains the same `_texture = null` pattern — confirmed.
 3. Existing test `neutralizeDisplayObject > nulls out _texture if present` at `safe-destroy.test.ts:319-326` asserts `_texture` IS null — this test must be updated to assert `_texture` is NOT null.
 4. Existing test `safeDestroyDisplayObject fallback hardening > nulls out _texture when destroy() throws` at `safe-destroy.test.ts:251-263` — this test must be updated similarly.
+5. The originally proposed focused command `pnpm -F @ludoforge/runner test -- --reporter=verbose packages/runner/test/canvas/renderers/safe-destroy.test.ts` is inaccurate for this repo. Because `packages/runner/package.json` defines `"test": "vitest run"`, that command forwards an extra `--` token and currently executes the full runner Vitest suite instead of targeting the single file.
+6. `pnpm -F @ludoforge/runner exec vitest run ...` executes from the package root (`packages/runner`), so Vitest file filters must be package-relative. Use `pnpm -F @ludoforge/runner exec vitest run test/canvas/renderers/safe-destroy.test.ts --reporter=verbose` for a true focused run.
 
 ## Architecture Check
 
-1. Removing `_texture = null` is the smallest possible change to stop the crash. `renderable = false` makes PixiJS skip the object in `collectRenderables`, so there is no render-path access to the texture. `destroy()` (called later by the disposal queue) handles texture cleanup properly.
+1. Removing `_texture = null` is architecturally stronger than the current approach, not just smaller. `_texture` is PixiJS private internal state, so mutating it from application code couples the runner to an implementation detail we do not own. Preserving the texture and relying on public visibility/renderability state plus the normal destroy lifecycle is cleaner, more robust across PixiJS upgrades, and easier to reason about.
 2. This change is entirely within the runner canvas layer — no kernel/compiler/game-specific impact.
 3. No aliasing or shims. Pure removal of the offending lines.
+4. This ticket should remain narrowly scoped to removing the private-state mutation and updating its regression coverage. Broader lifecycle changes from Spec 68 such as double-RAF disposal and ticker crash fencing are separate architectural decisions and belong in their follow-up tickets unless this fix proves insufficient.
 
 ## What to Change
 
@@ -90,9 +93,30 @@ if ('_texture' in displayObject) {
 ### New/Modified Tests
 
 1. `packages/runner/test/canvas/renderers/safe-destroy.test.ts` — update two `_texture` tests to assert preservation instead of nulling. Rename test descriptions to reflect new behavior.
+2. `packages/runner/test/canvas/renderers/disposal-queue.test.ts` — add regression coverage that `enqueue()` preserves `_texture` during the deferred-destroy window.
 
 ### Commands
 
-1. `pnpm -F @ludoforge/runner test -- --reporter=verbose packages/runner/test/canvas/renderers/safe-destroy.test.ts`
+1. `pnpm -F @ludoforge/runner exec vitest run test/canvas/renderers/safe-destroy.test.ts --reporter=verbose`
 2. `pnpm -F @ludoforge/runner test`
 3. `pnpm -F @ludoforge/runner typecheck`
+4. `pnpm -F @ludoforge/runner lint`
+
+## Outcome
+
+- Completed: 2026-03-20
+- What actually changed:
+  - Removed `_texture = null` from `neutralizeDisplayObject`.
+  - Removed `_texture = null` from the `safeDestroyDisplayObject` fallback path.
+  - Updated the safe-destroy regression tests to assert `_texture` preservation.
+  - Added disposal-queue regression coverage so the deferred neutralization path also asserts `_texture` preservation before flush.
+  - Corrected the ticket's focused Vitest command to match this repo's actual package-root execution behavior.
+- Deviations from original plan:
+  - Added one extra regression test in `disposal-queue.test.ts` because the crash surface is specifically the deferred-destroy window, not just the helper methods in isolation.
+  - Validation included `pnpm -F @ludoforge/runner lint` in addition to the original test and typecheck commands.
+- Verification results:
+  - `pnpm -F @ludoforge/runner exec vitest run test/canvas/renderers/safe-destroy.test.ts --reporter=verbose` ✅
+  - `pnpm -F @ludoforge/runner exec vitest run test/canvas/renderers/disposal-queue.test.ts --reporter=verbose` ✅
+  - `pnpm -F @ludoforge/runner test` ✅
+  - `pnpm -F @ludoforge/runner typecheck` ✅
+  - `pnpm -F @ludoforge/runner lint` ✅

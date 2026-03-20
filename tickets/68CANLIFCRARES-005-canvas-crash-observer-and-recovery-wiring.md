@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — runner-only
-**Deps**: 68CANLIFCRARES-003 (ticker error fence), 68CANLIFCRARES-004 (store lifecycle crash states)
+**Deps**: tickets/68CANLIFCRARES-003-ticker-error-fence.md, tickets/68CANLIFCRARES-004-store-lifecycle-crash-states.md
 
 ## Problem
 

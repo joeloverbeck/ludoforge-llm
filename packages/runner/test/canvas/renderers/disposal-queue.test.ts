@@ -110,6 +110,17 @@ describe('createDisposalQueue', () => {
     expect(container.children[0]).toBe(child);
   });
 
+  it('enqueue preserves _texture until deferred flush', () => {
+    const queue = createDisposalQueue({ scheduleFlush: () => {} });
+    const container = new MockContainer() as unknown as Container & { _texture?: unknown };
+    const texture = { uid: 17 };
+    container._texture = texture;
+
+    queue.enqueue(container as unknown as Container);
+
+    expect(container._texture).toBe(texture);
+  });
+
   it('flush calls safeDestroyDisplayObject on enqueued items and clears the queue', () => {
     const queue = createDisposalQueue({ scheduleFlush: () => {} });
     const container = new MockContainer();

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — runner-only
-**Deps**: 68CANLIFCRARES-001 (neutralize no longer nulls `_texture`)
+**Deps**: archive/tickets/RUNPRESLIFE/68CANLIFCRARES-001-remove-texture-null-from-neutralize-and-fallback.md
 
 ## Problem
 

@@ -248,9 +248,10 @@ describe('safeDestroyDisplayObject fallback hardening', () => {
     expect(container.children).toHaveLength(0);
   });
 
-  it('nulls out _texture when destroy() throws and _texture exists', () => {
+  it('preserves _texture when destroy() throws and _texture exists', () => {
     const container = new MockContainer() as unknown as Container & { _texture?: unknown };
-    container._texture = { uid: 42 };
+    const texture = { uid: 42 };
+    container._texture = texture;
 
     vi.spyOn(container, 'destroy').mockImplementation(() => {
       throw new TypeError('TexturePoolClass.returnTexture failed');
@@ -259,7 +260,7 @@ describe('safeDestroyDisplayObject fallback hardening', () => {
 
     safeDestroyDisplayObject(container);
 
-    expect(container._texture).toBeNull();
+    expect(container._texture).toBe(texture);
   });
 
   it('sets eventMode to none and interactiveChildren to false when destroy() throws', () => {
@@ -316,12 +317,13 @@ describe('neutralizeDisplayObject', () => {
     expect(container.children[0]).toBe(child);
   });
 
-  it('nulls out _texture if present', () => {
+  it('preserves _texture if present', () => {
     const container = new MockContainer() as unknown as Container & { _texture?: unknown };
-    container._texture = { uid: 99 };
+    const texture = { uid: 99 };
+    container._texture = texture;
 
     neutralizeDisplayObject(container as unknown as Container);
 
-    expect(container._texture).toBeNull();
+    expect(container._texture).toBe(texture);
   });
 });

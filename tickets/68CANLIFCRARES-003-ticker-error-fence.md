@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — runner-only
-**Deps**: None (independent of 001/002, but logically follows them)
+**Deps**: None
 
 ## Problem
 

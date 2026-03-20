@@ -163,7 +163,16 @@ function createRuntimeFixture() {
     }),
   };
 
-  const viewportEvents = {
+  const viewportEvents: {
+    x: number;
+    y: number;
+    scale: { x: number; y: number };
+    on(event: string, listener: () => void): void;
+    off(event: string, listener: () => void): void;
+  } = {
+    x: 0,
+    y: 0,
+    scale: { x: 1, y: 1 },
     on: vi.fn((event: string, listener: () => void) => {
       if (event === 'moved') {
         movedListener = listener;
@@ -177,7 +186,7 @@ function createRuntimeFixture() {
   };
 
   const viewportResult = {
-    viewport: viewportEvents as never,
+    viewport: viewportEvents,
     worldLayers: [],
     updateWorldBounds: vi.fn(),
     destroy: vi.fn(() => {
@@ -191,12 +200,13 @@ function createRuntimeFixture() {
       ticker: {
         _tick: vi.fn(),
         stop: vi.fn(),
+        started: true,
       },
       renderer: {
         screen: { width: 1024, height: 768 },
         events: {} as never,
       },
-      canvas: {} as HTMLCanvasElement,
+      canvas: { isConnected: true } as HTMLCanvasElement,
     },
     layers: {
       boardGroup: {} as never,
@@ -522,6 +532,69 @@ describe('createGameCanvasRuntime', () => {
       zoneIDs: ['zone:a'],
       tokenIDs: ['token:1'],
     });
+
+    runtime.destroy();
+  });
+
+  it('returns viewport and health snapshots while active, then null after destroy', async () => {
+    const fixture = createRuntimeFixture();
+    const store = createRuntimeStore(makeRenderModel(['zone:a']));
+    fixture.viewportResult.viewport.x = 64;
+    fixture.viewportResult.viewport.y = 96;
+    fixture.viewportResult.viewport.scale.x = 1.25;
+    fixture.viewportResult.viewport.scale.y = 1.5;
+
+    const runtime = await createGameCanvasRuntime(
+      {
+        container: {} as HTMLElement,
+        store: store as unknown as StoreApi<GameStore>,
+        backgroundColor: 0x0,
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+      },
+      fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
+    );
+
+    expect(runtime.getViewportSnapshot()).toEqual({
+      x: 64,
+      y: 96,
+      scaleX: 1.25,
+      scaleY: 1.5,
+    });
+    expect(runtime.getHealthStatus()).toEqual({
+      tickerStarted: true,
+      canvasConnected: true,
+    });
+
+    runtime.destroy();
+
+    expect(runtime.getViewportSnapshot()).toBeNull();
+    expect(runtime.getHealthStatus()).toBeNull();
+  });
+
+  it('restores an initial viewport snapshot when provided', async () => {
+    const fixture = createRuntimeFixture();
+    const store = createRuntimeStore(makeRenderModel(['zone:a']));
+
+    const runtime = await createGameCanvasRuntime(
+      {
+        container: {} as HTMLElement,
+        store: store as unknown as StoreApi<GameStore>,
+        backgroundColor: 0x0,
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+        initialViewport: {
+          x: 140,
+          y: 220,
+          scaleX: 2,
+          scaleY: 2.5,
+        },
+      },
+      fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
+    );
+
+    expect(fixture.viewportResult.viewport.x).toBe(140);
+    expect(fixture.viewportResult.viewport.y).toBe(220);
+    expect(fixture.viewportResult.viewport.scale.x).toBe(2);
+    expect(fixture.viewportResult.viewport.scale.y).toBe(2.5);
 
     runtime.destroy();
   });

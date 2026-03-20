@@ -68,8 +68,22 @@ interface SelectorSubscribeStore<TState> extends StoreApi<TState> {
 
 export interface GameCanvasRuntime {
   readonly coordinateBridge: CoordinateBridge;
+  getHealthStatus(): CanvasRuntimeHealthStatus | null;
+  getViewportSnapshot(): ViewportSnapshot | null;
   setInteractionHighlights(highlights: InteractionHighlights): void;
   destroy(): void;
+}
+
+export interface CanvasRuntimeHealthStatus {
+  readonly tickerStarted: boolean;
+  readonly canvasConnected: boolean;
+}
+
+export interface ViewportSnapshot {
+  readonly x: number;
+  readonly y: number;
+  readonly scaleX: number;
+  readonly scaleY: number;
 }
 
 export interface ScopedLifecycleCallback<T> {
@@ -82,6 +96,7 @@ export interface GameCanvasRuntimeOptions {
   readonly store: StoreApi<GameStore>;
   readonly visualConfigProvider: VisualConfigProvider;
   readonly backgroundColor: number;
+  readonly initialViewport?: ViewportSnapshot | null;
   readonly keyboardCoordinator?: KeyboardCoordinator;
   readonly interactionHighlights?: InteractionHighlights;
   readonly onHoverAnchorChange?: (anchor: HoverAnchor | null) => void;
@@ -224,6 +239,7 @@ export async function createGameCanvasRuntime(
 
   const disposalQueue = createDisposalQueue();
   const viewportResult = createViewportResult(deps, gameCanvas, runtimeLayoutStore);
+  applyViewportSnapshot(viewportResult.viewport, options.initialViewport ?? null);
   const zonePool = new ContainerPool();
   let publishHoverAnchor: () => void = () => {};
 
@@ -492,6 +508,28 @@ export async function createGameCanvasRuntime(
 
   return {
     coordinateBridge,
+    getHealthStatus(): CanvasRuntimeHealthStatus | null {
+      if (destroyed) {
+        return null;
+      }
+      const tickerState = gameCanvas.app.ticker as { readonly started?: boolean };
+      const canvasElement = gameCanvas.app.canvas as HTMLCanvasElement & { readonly isConnected?: boolean };
+      return {
+        tickerStarted: tickerState.started !== false,
+        canvasConnected: canvasElement.isConnected !== false,
+      };
+    },
+    getViewportSnapshot(): ViewportSnapshot | null {
+      if (destroyed) {
+        return null;
+      }
+      return {
+        x: viewportResult.viewport.x,
+        y: viewportResult.viewport.y,
+        scaleX: viewportResult.viewport.scale.x,
+        scaleY: viewportResult.viewport.scale.y,
+      };
+    },
     setInteractionHighlights(highlights): void {
       canvasUpdater.setInteractionHighlights(highlights);
     },
@@ -533,6 +571,19 @@ export async function createGameCanvasRuntime(
       );
     },
   };
+}
+
+function applyViewportSnapshot(
+  viewport: ViewportResult['viewport'],
+  snapshot: ViewportSnapshot | null,
+): void {
+  if (snapshot === null) {
+    return;
+  }
+  viewport.x = snapshot.x;
+  viewport.y = snapshot.y;
+  viewport.scale.x = snapshot.scaleX;
+  viewport.scale.y = snapshot.scaleY;
 }
 
 function destroyCanvasPipeline(

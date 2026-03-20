@@ -11750,6 +11750,600 @@
   "turnOrder": {
     "type": "roundRobin"
   },
+  "agents": {
+    "schemaVersion": 2,
+    "surfaceVisibility": {
+      "globalVars": {
+        "pot": {
+          "current": "public",
+          "preview": {
+            "visibility": "public",
+            "allowWhenHiddenSampling": true
+          }
+        },
+        "currentBet": {
+          "current": "public",
+          "preview": {
+            "visibility": "public",
+            "allowWhenHiddenSampling": true
+          }
+        },
+        "lastRaiseSize": {
+          "current": "public",
+          "preview": {
+            "visibility": "public",
+            "allowWhenHiddenSampling": true
+          }
+        },
+        "dealerSeat": {
+          "current": "public",
+          "preview": {
+            "visibility": "public",
+            "allowWhenHiddenSampling": true
+          }
+        },
+        "smallBlind": {
+          "current": "public",
+          "preview": {
+            "visibility": "public",
+            "allowWhenHiddenSampling": true
+          }
+        },
+        "bigBlind": {
+          "current": "public",
+          "preview": {
+            "visibility": "public",
+            "allowWhenHiddenSampling": true
+          }
+        },
+        "ante": {
+          "current": "public",
+          "preview": {
+            "visibility": "public",
+            "allowWhenHiddenSampling": true
+          }
+        },
+        "blindLevel": {
+          "current": "public",
+          "preview": {
+            "visibility": "public",
+            "allowWhenHiddenSampling": true
+          }
+        },
+        "handsPlayed": {
+          "current": "public",
+          "preview": {
+            "visibility": "public",
+            "allowWhenHiddenSampling": true
+          }
+        },
+        "handPhase": {
+          "current": "public",
+          "preview": {
+            "visibility": "public",
+            "allowWhenHiddenSampling": true
+          }
+        },
+        "activePlayers": {
+          "current": "public",
+          "preview": {
+            "visibility": "public",
+            "allowWhenHiddenSampling": true
+          }
+        },
+        "actingPosition": {
+          "current": "public",
+          "preview": {
+            "visibility": "public",
+            "allowWhenHiddenSampling": true
+          }
+        },
+        "bettingClosed": {
+          "current": "public",
+          "preview": {
+            "visibility": "public",
+            "allowWhenHiddenSampling": true
+          }
+        },
+        "preflopBigBlindSeat": {
+          "current": "public",
+          "preview": {
+            "visibility": "public",
+            "allowWhenHiddenSampling": true
+          }
+        },
+        "preflopBigBlindOptionOpen": {
+          "current": "public",
+          "preview": {
+            "visibility": "public",
+            "allowWhenHiddenSampling": true
+          }
+        },
+        "oddChipRemainder": {
+          "current": "public",
+          "preview": {
+            "visibility": "public",
+            "allowWhenHiddenSampling": true
+          }
+        }
+      },
+      "perPlayerVars": {
+        "chipStack": {
+          "current": "seatVisible",
+          "preview": {
+            "visibility": "seatVisible",
+            "allowWhenHiddenSampling": true
+          }
+        },
+        "streetBet": {
+          "current": "seatVisible",
+          "preview": {
+            "visibility": "seatVisible",
+            "allowWhenHiddenSampling": true
+          }
+        },
+        "totalBet": {
+          "current": "seatVisible",
+          "preview": {
+            "visibility": "seatVisible",
+            "allowWhenHiddenSampling": true
+          }
+        },
+        "handActive": {
+          "current": "seatVisible",
+          "preview": {
+            "visibility": "seatVisible",
+            "allowWhenHiddenSampling": true
+          }
+        },
+        "allIn": {
+          "current": "seatVisible",
+          "preview": {
+            "visibility": "seatVisible",
+            "allowWhenHiddenSampling": true
+          }
+        },
+        "actedSinceLastFullRaise": {
+          "current": "seatVisible",
+          "preview": {
+            "visibility": "seatVisible",
+            "allowWhenHiddenSampling": true
+          }
+        },
+        "eliminated": {
+          "current": "seatVisible",
+          "preview": {
+            "visibility": "seatVisible",
+            "allowWhenHiddenSampling": true
+          }
+        },
+        "seatIndex": {
+          "current": "seatVisible",
+          "preview": {
+            "visibility": "seatVisible",
+            "allowWhenHiddenSampling": true
+          }
+        },
+        "showdownScore": {
+          "current": "seatVisible",
+          "preview": {
+            "visibility": "seatVisible",
+            "allowWhenHiddenSampling": true
+          }
+        }
+      },
+      "derivedMetrics": {},
+      "victory": {
+        "currentMargin": {
+          "current": "hidden",
+          "preview": {
+            "visibility": "hidden",
+            "allowWhenHiddenSampling": false
+          }
+        },
+        "currentRank": {
+          "current": "hidden",
+          "preview": {
+            "visibility": "hidden",
+            "allowWhenHiddenSampling": false
+          }
+        }
+      }
+    },
+    "parameterDefs": {},
+    "candidateParamDefs": {
+      "raiseAmount": {
+        "type": "number"
+      }
+    },
+    "library": {
+      "stateFeatures": {},
+      "candidateFeatures": {
+        "isCheck": {
+          "type": "boolean",
+          "costClass": "candidate",
+          "expr": {
+            "kind": "op",
+            "op": "eq",
+            "args": [
+              {
+                "kind": "ref",
+                "ref": {
+                  "kind": "candidateIntrinsic",
+                  "intrinsic": "actionId"
+                }
+              },
+              {
+                "kind": "literal",
+                "value": "check"
+              }
+            ]
+          },
+          "dependencies": {
+            "parameters": [],
+            "stateFeatures": [],
+            "candidateFeatures": [],
+            "aggregates": []
+          }
+        },
+        "isCall": {
+          "type": "boolean",
+          "costClass": "candidate",
+          "expr": {
+            "kind": "op",
+            "op": "eq",
+            "args": [
+              {
+                "kind": "ref",
+                "ref": {
+                  "kind": "candidateIntrinsic",
+                  "intrinsic": "actionId"
+                }
+              },
+              {
+                "kind": "literal",
+                "value": "call"
+              }
+            ]
+          },
+          "dependencies": {
+            "parameters": [],
+            "stateFeatures": [],
+            "candidateFeatures": [],
+            "aggregates": []
+          }
+        },
+        "isRaise": {
+          "type": "boolean",
+          "costClass": "candidate",
+          "expr": {
+            "kind": "op",
+            "op": "eq",
+            "args": [
+              {
+                "kind": "ref",
+                "ref": {
+                  "kind": "candidateIntrinsic",
+                  "intrinsic": "actionId"
+                }
+              },
+              {
+                "kind": "literal",
+                "value": "raise"
+              }
+            ]
+          },
+          "dependencies": {
+            "parameters": [],
+            "stateFeatures": [],
+            "candidateFeatures": [],
+            "aggregates": []
+          }
+        },
+        "isAllIn": {
+          "type": "boolean",
+          "costClass": "candidate",
+          "expr": {
+            "kind": "op",
+            "op": "eq",
+            "args": [
+              {
+                "kind": "ref",
+                "ref": {
+                  "kind": "candidateIntrinsic",
+                  "intrinsic": "actionId"
+                }
+              },
+              {
+                "kind": "literal",
+                "value": "allIn"
+              }
+            ]
+          },
+          "dependencies": {
+            "parameters": [],
+            "stateFeatures": [],
+            "candidateFeatures": [],
+            "aggregates": []
+          }
+        },
+        "isFold": {
+          "type": "boolean",
+          "costClass": "candidate",
+          "expr": {
+            "kind": "op",
+            "op": "eq",
+            "args": [
+              {
+                "kind": "ref",
+                "ref": {
+                  "kind": "candidateIntrinsic",
+                  "intrinsic": "actionId"
+                }
+              },
+              {
+                "kind": "literal",
+                "value": "fold"
+              }
+            ]
+          },
+          "dependencies": {
+            "parameters": [],
+            "stateFeatures": [],
+            "candidateFeatures": [],
+            "aggregates": []
+          }
+        },
+        "raiseAmount": {
+          "type": "number",
+          "costClass": "candidate",
+          "expr": {
+            "kind": "op",
+            "op": "coalesce",
+            "args": [
+              {
+                "kind": "ref",
+                "ref": {
+                  "kind": "candidateParam",
+                  "id": "raiseAmount"
+                }
+              },
+              {
+                "kind": "literal",
+                "value": 0
+              }
+            ]
+          },
+          "dependencies": {
+            "parameters": [],
+            "stateFeatures": [],
+            "candidateFeatures": [],
+            "aggregates": []
+          }
+        }
+      },
+      "candidateAggregates": {},
+      "pruningRules": {},
+      "scoreTerms": {
+        "preferCheck": {
+          "costClass": "candidate",
+          "weight": {
+            "kind": "literal",
+            "value": 100
+          },
+          "value": {
+            "kind": "op",
+            "op": "boolToNumber",
+            "args": [
+              {
+                "kind": "ref",
+                "ref": {
+                  "kind": "library",
+                  "refKind": "candidateFeature",
+                  "id": "isCheck"
+                }
+              }
+            ]
+          },
+          "dependencies": {
+            "parameters": [],
+            "stateFeatures": [],
+            "candidateFeatures": [
+              "isCheck"
+            ],
+            "aggregates": []
+          }
+        },
+        "preferCall": {
+          "costClass": "candidate",
+          "weight": {
+            "kind": "literal",
+            "value": 80
+          },
+          "value": {
+            "kind": "op",
+            "op": "boolToNumber",
+            "args": [
+              {
+                "kind": "ref",
+                "ref": {
+                  "kind": "library",
+                  "refKind": "candidateFeature",
+                  "id": "isCall"
+                }
+              }
+            ]
+          },
+          "dependencies": {
+            "parameters": [],
+            "stateFeatures": [],
+            "candidateFeatures": [
+              "isCall"
+            ],
+            "aggregates": []
+          }
+        },
+        "preferRaise": {
+          "costClass": "candidate",
+          "weight": {
+            "kind": "literal",
+            "value": 60
+          },
+          "value": {
+            "kind": "op",
+            "op": "boolToNumber",
+            "args": [
+              {
+                "kind": "ref",
+                "ref": {
+                  "kind": "library",
+                  "refKind": "candidateFeature",
+                  "id": "isRaise"
+                }
+              }
+            ]
+          },
+          "dependencies": {
+            "parameters": [],
+            "stateFeatures": [],
+            "candidateFeatures": [
+              "isRaise"
+            ],
+            "aggregates": []
+          }
+        },
+        "preferSmallerRaise": {
+          "costClass": "candidate",
+          "weight": {
+            "kind": "literal",
+            "value": -0.001
+          },
+          "value": {
+            "kind": "ref",
+            "ref": {
+              "kind": "library",
+              "refKind": "candidateFeature",
+              "id": "raiseAmount"
+            }
+          },
+          "dependencies": {
+            "parameters": [],
+            "stateFeatures": [],
+            "candidateFeatures": [
+              "raiseAmount"
+            ],
+            "aggregates": []
+          }
+        },
+        "preferAllIn": {
+          "costClass": "candidate",
+          "weight": {
+            "kind": "literal",
+            "value": 40
+          },
+          "value": {
+            "kind": "op",
+            "op": "boolToNumber",
+            "args": [
+              {
+                "kind": "ref",
+                "ref": {
+                  "kind": "library",
+                  "refKind": "candidateFeature",
+                  "id": "isAllIn"
+                }
+              }
+            ]
+          },
+          "dependencies": {
+            "parameters": [],
+            "stateFeatures": [],
+            "candidateFeatures": [
+              "isAllIn"
+            ],
+            "aggregates": []
+          }
+        },
+        "avoidFold": {
+          "costClass": "candidate",
+          "weight": {
+            "kind": "literal",
+            "value": -100
+          },
+          "value": {
+            "kind": "op",
+            "op": "boolToNumber",
+            "args": [
+              {
+                "kind": "ref",
+                "ref": {
+                  "kind": "library",
+                  "refKind": "candidateFeature",
+                  "id": "isFold"
+                }
+              }
+            ]
+          },
+          "dependencies": {
+            "parameters": [],
+            "stateFeatures": [],
+            "candidateFeatures": [
+              "isFold"
+            ],
+            "aggregates": []
+          }
+        }
+      },
+      "tieBreakers": {
+        "stableMoveKey": {
+          "kind": "stableMoveKey",
+          "costClass": "state",
+          "dependencies": {
+            "parameters": [],
+            "stateFeatures": [],
+            "candidateFeatures": [],
+            "aggregates": []
+          }
+        }
+      }
+    },
+    "profiles": {
+      "baseline": {
+        "params": {},
+        "use": {
+          "pruningRules": [],
+          "scoreTerms": [
+            "preferCheck",
+            "preferCall",
+            "preferRaise",
+            "preferSmallerRaise",
+            "preferAllIn",
+            "avoidFold"
+          ],
+          "tieBreakers": [
+            "stableMoveKey"
+          ]
+        },
+        "plan": {
+          "stateFeatures": [],
+          "candidateFeatures": [
+            "isCheck",
+            "isCall",
+            "isRaise",
+            "raiseAmount",
+            "isAllIn",
+            "isFold"
+          ],
+          "candidateAggregates": []
+        },
+        "fingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f"
+      }
+    },
+    "bindingsBySeat": {
+      "neutral": "baseline"
+    },
+    "catalogFingerprint": "9be81cb43ac9b5ae87e18f62d60e94d73359fd5d3b704b3d9574504677b27b33"
+  },
   "actions": [
     {
       "id": "fold",

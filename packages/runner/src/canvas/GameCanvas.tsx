@@ -13,6 +13,7 @@ import {
   createScopedLifecycleCallback,
   type GameCanvasRuntime,
   type GameCanvasRuntimeOptions,
+  type ViewportSnapshot,
 } from './game-canvas-runtime.js';
 
 const DEFAULT_BACKGROUND_COLOR = 0x0b1020;
@@ -55,6 +56,7 @@ export function GameCanvas({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const runtimeRef = useRef<GameCanvasRuntime | null>(null);
   const recoveryPendingRef = useRef(false);
+  const viewportSnapshotRef = useRef<ViewportSnapshot | null>(null);
   const [recoveryRevision, setRecoveryRevision] = useState(0);
 
   useEffect(() => {
@@ -69,7 +71,9 @@ export function GameCanvas({
     const diagnosticBufferCallback = createScopedLifecycleCallback(onAnimationDiagnosticBufferChange);
     const crashRecovery = createCanvasCrashRecovery({
       store,
+      getHealthStatus: () => runtimeRef.current?.getHealthStatus() ?? null,
       onRecoveryNeeded: () => {
+        viewportSnapshotRef.current = runtimeRef.current?.getViewportSnapshot() ?? null;
         recoveryPendingRef.current = true;
         setRecoveryRevision((revision) => revision + 1);
       },
@@ -80,6 +84,7 @@ export function GameCanvas({
       store,
       visualConfigProvider,
       backgroundColor,
+      ...(viewportSnapshotRef.current === null ? {} : { initialViewport: viewportSnapshotRef.current }),
       ...(keyboardCoordinator === undefined ? {} : { keyboardCoordinator }),
       interactionHighlights: interactionHighlights ?? EMPTY_INTERACTION_HIGHLIGHTS,
       ...(onHoverAnchorChange === undefined
@@ -111,6 +116,7 @@ export function GameCanvas({
       runtimeRef.current = createdRuntime;
       if (recoveryPendingRef.current) {
         recoveryPendingRef.current = false;
+        viewportSnapshotRef.current = null;
         store.getState().canvasRecovered();
       }
     }).catch((error: unknown) => {

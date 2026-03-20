@@ -140,6 +140,41 @@ describe('safeDestroyContainer', () => {
   });
 });
 
+describe('neutralizeDisplayObject invariants', () => {
+  it('detaches the root without calling destroy()', () => {
+    const parent = new MockContainer();
+    const container = new MockContainer();
+    parent.addChild(container);
+    const destroySpy = vi.spyOn(container, 'destroy');
+
+    neutralizeDisplayObject(container as unknown as Container);
+
+    expect(parent.children).not.toContain(container);
+    expect(container.parent).toBeNull();
+    expect(container.visible).toBe(false);
+    expect(container.renderable).toBe(false);
+    expect(destroySpy).not.toHaveBeenCalled();
+  });
+
+  it('keeps descendants attached to the detached subtree', () => {
+    const parent = new MockContainer();
+    const container = new MockContainer();
+    const child = new MockContainer();
+    const grandchild = new MockContainer();
+    child.addChild(grandchild);
+    container.addChild(child);
+    parent.addChild(container);
+
+    neutralizeDisplayObject(container as unknown as Container);
+
+    expect(parent.children).not.toContain(container);
+    expect(container.children).toEqual([child]);
+    expect(child.parent).toBe(container);
+    expect(child.children).toEqual([grandchild]);
+    expect(grandchild.parent).toBe(child);
+  });
+});
+
 describe('safeDestroyDisplayObject', () => {
   it('passes destroy options through to destroy()', () => {
     const container = new MockContainer();

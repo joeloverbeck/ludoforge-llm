@@ -6,11 +6,17 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { GameCanvas } from '../../src/canvas/GameCanvas.js';
+import type {
+  CanvasRuntimeHealthStatus,
+  ViewportSnapshot,
+} from '../../src/canvas/game-canvas-runtime.js';
 import type { GameStore } from '../../src/store/game-store.js';
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 
 interface MockRuntime {
   readonly destroy: ReturnType<typeof vi.fn>;
+  readonly getHealthStatus: ReturnType<typeof vi.fn<() => CanvasRuntimeHealthStatus | null>>;
+  readonly getViewportSnapshot: ReturnType<typeof vi.fn<() => ViewportSnapshot | null>>;
   readonly setInteractionHighlights: ReturnType<typeof vi.fn>;
 }
 
@@ -53,6 +59,11 @@ const TEST_VISUAL_CONFIG_PROVIDER = new VisualConfigProvider(null);
 function createRuntime(): MockRuntime {
   return {
     destroy: vi.fn(),
+    getHealthStatus: vi.fn(() => ({
+      tickerStarted: true,
+      canvasConnected: true,
+    })),
+    getViewportSnapshot: vi.fn(() => null),
     setInteractionHighlights: vi.fn(),
   };
 }
@@ -118,6 +129,7 @@ describe('GameCanvas recovery', () => {
 
   afterEach(() => {
     cleanup();
+    vi.useRealTimers();
   });
 
   it('forwards fatal runtime errors into crash recovery', async () => {
@@ -300,5 +312,95 @@ describe('GameCanvas recovery', () => {
     expect(storeFixture.store.getState().gameDef).toBe(storeFixture.sessionSnapshot.gameDef);
     expect(storeFixture.store.getState().gameState).toBe(storeFixture.sessionSnapshot.gameState);
     expect(storeFixture.store.getState().renderModel).toBe(storeFixture.sessionSnapshot.renderModel);
+  });
+
+  it('captures the viewport snapshot before recovery and passes it into the recreated runtime', async () => {
+    const snapshot: ViewportSnapshot = {
+      x: 120,
+      y: 240,
+      scaleX: 1.5,
+      scaleY: 1.5,
+    };
+    const firstRuntime = createRuntime();
+    firstRuntime.getViewportSnapshot.mockReturnValue(snapshot);
+    const secondRuntime = createRuntime();
+    runtimeModuleDoubles.createGameCanvasRuntime
+      .mockResolvedValueOnce(firstRuntime)
+      .mockResolvedValueOnce(secondRuntime);
+    const storeFixture = createRecoveryStore();
+
+    render(createElement(GameCanvas, {
+      store: storeFixture.store as unknown as StoreApi<GameStore>,
+      visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+    }));
+
+    await waitFor(() => {
+      expect(runtimeModuleDoubles.createGameCanvasRuntime).toHaveBeenCalledTimes(1);
+    });
+
+    const firstCall = runtimeModuleDoubles.createGameCanvasRuntime.mock.calls[0]![0] as {
+      onError?: (error: unknown) => void;
+    };
+
+    act(() => {
+      firstCall.onError?.(new Error('boom'));
+    });
+
+    await waitFor(() => {
+      expect(runtimeModuleDoubles.createGameCanvasRuntime).toHaveBeenCalledTimes(2);
+    });
+
+    expect(firstRuntime.getViewportSnapshot).toHaveBeenCalledTimes(1);
+    expect(runtimeModuleDoubles.createGameCanvasRuntime.mock.calls[1]![0]).toMatchObject({
+      initialViewport: snapshot,
+    });
+  });
+
+  it('uses the runtime health getter to trigger heartbeat recovery', async () => {
+    vi.useFakeTimers();
+    const snapshot: ViewportSnapshot = {
+      x: 10,
+      y: 20,
+      scaleX: 2,
+      scaleY: 2,
+    };
+    const firstRuntime = createRuntime();
+    firstRuntime.getViewportSnapshot.mockReturnValue(snapshot);
+    const secondRuntime = createRuntime();
+    runtimeModuleDoubles.createGameCanvasRuntime
+      .mockResolvedValueOnce(firstRuntime)
+      .mockResolvedValueOnce(secondRuntime);
+    const storeFixture = createRecoveryStore();
+
+    act(() => {
+      render(createElement(GameCanvas, {
+        store: storeFixture.store as unknown as StoreApi<GameStore>,
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+      }));
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(runtimeModuleDoubles.createGameCanvasRuntime).toHaveBeenCalledTimes(1);
+
+    firstRuntime.getHealthStatus.mockReturnValue({
+      tickerStarted: false,
+      canvasConnected: true,
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(5000);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(storeFixture.reportCanvasCrash).toHaveBeenCalledTimes(1);
+    expect(storeFixture.beginCanvasRecovery).toHaveBeenCalledTimes(1);
+    expect(runtimeModuleDoubles.createGameCanvasRuntime).toHaveBeenCalledTimes(2);
+    expect(runtimeModuleDoubles.createGameCanvasRuntime.mock.calls[1]![0]).toMatchObject({
+      initialViewport: snapshot,
+    });
   });
 });

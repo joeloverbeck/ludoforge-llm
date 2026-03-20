@@ -142,6 +142,30 @@ describe('createDisposalQueue', () => {
     expect(container.children[0]).toBe(child);
   });
 
+  it('enqueue detaches a deep subtree from the live parent tree while preserving internal ownership until flush', () => {
+    const queue = createDisposalQueue({ scheduleFlush: () => {} });
+    const parent = new MockContainer();
+    const container = new MockContainer();
+    const child = new MockContainer();
+    const grandchild = new MockContainer();
+    child.addChild(grandchild);
+    container.addChild(child);
+    parent.addChild(container);
+
+    queue.enqueue(container as unknown as Container);
+
+    expect(parent.children).toEqual([]);
+    expect(container.children).toEqual([child]);
+    expect(child.parent).toBe(container);
+    expect(child.children).toEqual([grandchild]);
+    expect(grandchild.parent).toBe(child);
+
+    queue.flush();
+
+    expect(container.destroyed).toBe(true);
+    expect(container.children).toEqual([]);
+  });
+
   it('enqueue preserves _texture until deferred flush', () => {
     const queue = createDisposalQueue({ scheduleFlush: () => {} });
     const container = new MockContainer() as unknown as Container & { _texture?: unknown };

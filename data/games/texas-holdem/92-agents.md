@@ -160,20 +160,6 @@ agents:
         tieBreakers:
           - stableMoveKey
 
-    evolved:
-      params: {}
-      use:
-        pruningRules: []
-        scoreTerms:
-          - preferCheck
-          - preferCall
-          - avoidFold
-          - foldWhenBadPotOdds
-          - alwaysRaise
-          - preferLargerRaise
-        tieBreakers:
-          - stableMoveKey
-
   bindings:
     neutral: baseline
 ```

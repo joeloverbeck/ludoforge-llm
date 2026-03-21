@@ -14,6 +14,175 @@ import {
   parseVisualConfigStrict,
   validateVisualConfigRefs,
 } from '../../src/config/validate-visual-config-refs';
+import { resolveConnectionRoutes } from '../../src/presentation/connection-route-resolver';
+
+const EXPECTED_FITL_CONNECTION_ANCHORS = {
+  'an-loc': { x: 420, y: 250 },
+  'ban-me-thuot': { x: 560, y: 220 },
+  'bac-lieu': { x: 360, y: 520 },
+  'chau-doc': { x: 200, y: 420 },
+  'da-lat': { x: 640, y: 360 },
+  'dak-to': { x: 520, y: 60 },
+  'khe-sanh': { x: 360, y: 20 },
+  'long-phu': { x: 420, y: 460 },
+} as const;
+
+const EXPECTED_FITL_CONNECTION_ROUTES = {
+  'loc-ban-me-thuot-da-lat:none': {
+    points: [
+      { kind: 'anchor', anchorId: 'ban-me-thuot' },
+      { kind: 'anchor', anchorId: 'da-lat' },
+    ],
+    segments: [{ kind: 'straight' }],
+  },
+  'loc-cam-ranh-da-lat:none': {
+    points: [
+      { kind: 'zone', zoneId: 'cam-ranh:none' },
+      { kind: 'anchor', anchorId: 'da-lat' },
+    ],
+    segments: [{ kind: 'straight' }],
+  },
+  'loc-can-tho-bac-lieu:none': {
+    points: [
+      { kind: 'zone', zoneId: 'can-tho:none' },
+      { kind: 'anchor', anchorId: 'bac-lieu' },
+    ],
+    segments: [{ kind: 'straight' }],
+  },
+  'loc-can-tho-chau-doc:none': {
+    points: [
+      { kind: 'zone', zoneId: 'can-tho:none' },
+      { kind: 'anchor', anchorId: 'chau-doc' },
+    ],
+    segments: [{ kind: 'straight' }],
+  },
+  'loc-can-tho-long-phu:none': {
+    points: [
+      { kind: 'zone', zoneId: 'can-tho:none' },
+      { kind: 'anchor', anchorId: 'long-phu' },
+    ],
+    segments: [{ kind: 'straight' }],
+  },
+  'loc-da-nang-dak-to:none': {
+    points: [
+      { kind: 'zone', zoneId: 'da-nang:none' },
+      { kind: 'anchor', anchorId: 'dak-to' },
+    ],
+    segments: [{ kind: 'straight' }],
+  },
+  'loc-da-nang-qui-nhon:none': {
+    points: [
+      { kind: 'zone', zoneId: 'da-nang:none' },
+      { kind: 'zone', zoneId: 'qui-nhon:none' },
+    ],
+    segments: [{ kind: 'straight' }],
+  },
+  'loc-hue-da-nang:none': {
+    points: [
+      { kind: 'zone', zoneId: 'da-nang:none' },
+      { kind: 'zone', zoneId: 'hue:none' },
+    ],
+    segments: [
+      { kind: 'quadratic', control: { kind: 'position', x: 480, y: 40 } },
+    ],
+  },
+  'loc-hue-khe-sanh:none': {
+    points: [
+      { kind: 'zone', zoneId: 'hue:none' },
+      { kind: 'anchor', anchorId: 'khe-sanh' },
+    ],
+    segments: [{ kind: 'straight' }],
+  },
+  'loc-kontum-ban-me-thuot:none': {
+    points: [
+      { kind: 'zone', zoneId: 'kontum:none' },
+      { kind: 'anchor', anchorId: 'ban-me-thuot' },
+    ],
+    segments: [{ kind: 'straight' }],
+  },
+  'loc-kontum-dak-to:none': {
+    points: [
+      { kind: 'zone', zoneId: 'kontum:none' },
+      { kind: 'anchor', anchorId: 'dak-to' },
+    ],
+    segments: [{ kind: 'straight' }],
+  },
+  'loc-kontum-qui-nhon:none': {
+    points: [
+      { kind: 'zone', zoneId: 'kontum:none' },
+      { kind: 'zone', zoneId: 'qui-nhon:none' },
+    ],
+    segments: [{ kind: 'straight' }],
+  },
+  'loc-qui-nhon-cam-ranh:none': {
+    points: [
+      { kind: 'zone', zoneId: 'cam-ranh:none' },
+      { kind: 'zone', zoneId: 'qui-nhon:none' },
+    ],
+    segments: [{ kind: 'straight' }],
+  },
+  'loc-saigon-an-loc-ban-me-thuot:none': {
+    points: [
+      { kind: 'zone', zoneId: 'saigon:none' },
+      { kind: 'anchor', anchorId: 'an-loc' },
+      { kind: 'anchor', anchorId: 'ban-me-thuot' },
+    ],
+    segments: [
+      { kind: 'straight' },
+      { kind: 'quadratic', control: { kind: 'position', x: 500, y: 200 } },
+    ],
+  },
+  'loc-saigon-cam-ranh:none': {
+    points: [
+      { kind: 'zone', zoneId: 'cam-ranh:none' },
+      { kind: 'zone', zoneId: 'saigon:none' },
+    ],
+    segments: [{ kind: 'straight' }],
+  },
+  'loc-saigon-can-tho:none': {
+    points: [
+      { kind: 'zone', zoneId: 'can-tho:none' },
+      { kind: 'zone', zoneId: 'saigon:none' },
+    ],
+    segments: [{ kind: 'straight' }],
+  },
+  'loc-saigon-da-lat:none': {
+    points: [
+      { kind: 'zone', zoneId: 'saigon:none' },
+      { kind: 'anchor', anchorId: 'da-lat' },
+    ],
+    segments: [{ kind: 'straight' }],
+  },
+} as const;
+
+const EXPECTED_FITL_SHARED_JUNCTIONS = [
+  {
+    id: 'junction:anchor:ban-me-thuot',
+    connectionIds: [
+      'loc-ban-me-thuot-da-lat:none',
+      'loc-kontum-ban-me-thuot:none',
+      'loc-saigon-an-loc-ban-me-thuot:none',
+    ],
+    position: { x: 560, y: 220 },
+  },
+  {
+    id: 'junction:anchor:da-lat',
+    connectionIds: [
+      'loc-ban-me-thuot-da-lat:none',
+      'loc-cam-ranh-da-lat:none',
+      'loc-saigon-da-lat:none',
+    ],
+    position: { x: 640, y: 360 },
+  },
+  {
+    id: 'junction:anchor:dak-to',
+    connectionIds: [
+      'loc-da-nang-dak-to:none',
+      'loc-kontum-dak-to:none',
+    ],
+    position: { x: 520, y: 60 },
+  },
+] as const;
 
 function repoRootPath(): string {
   const testDir = dirname(fileURLToPath(import.meta.url));
@@ -80,6 +249,7 @@ describe('visual-config.yaml files', () => {
     () => {
     const parsed = VisualConfigSchema.parse(readYaml('data/games/fire-in-the-lake/visual-config.yaml'));
     const fitlGameDef = compileProductionGameDef('data/games/fire-in-the-lake.game-spec.md');
+    const provider = new VisualConfigProvider(parsed);
     const internalScenarioDeckZones = fitlGameDef.zones.filter((zone) => zone.isInternal === true);
 
     const boardZoneIds = new Set(
@@ -177,13 +347,118 @@ describe('visual-config.yaml files', () => {
       },
       {
         match: { category: ['loc'], attributeContains: { terrainTags: 'highway' } },
-        style: { color: '#8b7355' },
+        style: { connectionStyleKey: 'highway' },
       },
       {
         match: { category: ['loc'], attributeContains: { terrainTags: 'mekong' } },
-        style: { color: '#4a7a8c' },
+        style: { connectionStyleKey: 'mekong' },
       },
     ]);
+    expect(parsed.zones?.categoryStyles?.loc).toEqual({
+      shape: 'connection',
+    });
+    expect(parsed.zones?.connectionStyles).toEqual({
+      highway: {
+        strokeWidth: 8,
+        strokeColor: '#8b7355',
+        strokeAlpha: 0.8,
+      },
+      mekong: {
+        strokeWidth: 12,
+        strokeColor: '#4a7a8c',
+        strokeAlpha: 0.9,
+        wavy: true,
+        waveAmplitude: 4,
+        waveFrequency: 0.08,
+      },
+    });
+    expect(parsed.zones?.connectionAnchors).toEqual(EXPECTED_FITL_CONNECTION_ANCHORS);
+    expect(parsed.zones?.connectionRoutes).toEqual(EXPECTED_FITL_CONNECTION_ROUTES);
+
+    const fitlBoardZones = fitlGameDef.zones.filter((zone) => zone.zoneKind === 'board' && zone.isInternal !== true);
+    const fitlLocZones = fitlBoardZones.filter((zone) => zone.category === 'loc');
+    expect(fitlLocZones).toHaveLength(17);
+    expect(provider.getConnectionAnchors()).toEqual(
+      new Map(Object.entries(EXPECTED_FITL_CONNECTION_ANCHORS)),
+    );
+    expect(provider.getConnectionRoutes()).toEqual(
+      new Map(Object.entries(EXPECTED_FITL_CONNECTION_ROUTES)),
+    );
+    for (const zone of fitlLocZones) {
+      const visual = provider.resolveZoneVisual(String(zone.id), zone.category ?? null, zone.attributes ?? {});
+      const terrainTags = Array.isArray(zone.attributes?.terrainTags)
+        ? zone.attributes.terrainTags.filter((tag): tag is string => typeof tag === 'string')
+        : [];
+      expect(visual.shape).toBe('connection');
+      if (terrainTags.includes('highway')) {
+        expect(visual.connectionStyleKey).toBe('highway');
+      }
+      if (terrainTags.includes('mekong')) {
+        expect(visual.connectionStyleKey).toBe('mekong');
+      }
+    }
+
+    const zones = fitlBoardZones.map((zone) => ({
+      id: String(zone.id),
+      displayName: String(zone.id),
+      ownerID: null,
+      isSelectable: false,
+      category: zone.category ?? null,
+      attributes: zone.attributes ?? {},
+      visual: provider.resolveZoneVisual(String(zone.id), zone.category ?? null, zone.attributes ?? {}),
+      render: {
+        fillColor: '#000000',
+        stroke: { color: '#111827', width: 1, alpha: 1 },
+        hiddenStackCount: 0,
+        nameLabel: { text: String(zone.id), x: 0, y: 0, visible: true },
+        markersLabel: { text: '', x: 0, y: 0, visible: false },
+        badge: null,
+      },
+    }));
+    const adjacencies = fitlBoardZones.flatMap((zone) =>
+      (zone.adjacentTo ?? []).map((adjacency) => ({
+        from: String(zone.id),
+        to: String(adjacency.to),
+        category: adjacency.category ?? null,
+        isHighlighted: false,
+      })));
+    const positions = new Map(
+      fitlBoardZones.map((zone, index) => [String(zone.id), { x: index * 10, y: index * 5 }]),
+    );
+    const resolution = resolveConnectionRoutes({
+      zones,
+      adjacencies,
+      positions,
+      routeDefinitions: provider.getConnectionRoutes(),
+      anchorPositions: provider.getConnectionAnchors(),
+    });
+    expect(resolution.connectionRoutes).toHaveLength(17);
+    expect(Object.fromEntries(
+      resolution.connectionRoutes.map((route) => [route.zoneId, {
+        points: route.path.map((point) => (
+          point.kind === 'zone'
+            ? { kind: 'zone', zoneId: point.id }
+            : { kind: 'anchor', anchorId: point.id }
+        )),
+        segments: route.segments.map((segment) => (
+          segment.kind === 'straight'
+            ? { kind: 'straight' }
+            : segment.controlPoint.kind === 'anchor'
+              ? { kind: 'quadratic', control: { kind: 'anchor', anchorId: segment.controlPoint.id } }
+              : {
+                  kind: 'quadratic',
+                  control: {
+                    kind: 'position',
+                    x: segment.controlPoint.position.x,
+                    y: segment.controlPoint.position.y,
+                  },
+                }
+        )),
+      }]),
+    )).toEqual({
+      ...EXPECTED_FITL_CONNECTION_ROUTES,
+    });
+    expect(resolution.junctions).toEqual(EXPECTED_FITL_SHARED_JUNCTIONS);
 
     expect(parsed.tokenTypes?.['us-irregulars']?.shape).toBe('beveled-cylinder');
     expect(parsed.tokenTypes?.['arvn-rangers']?.shape).toBe('beveled-cylinder');

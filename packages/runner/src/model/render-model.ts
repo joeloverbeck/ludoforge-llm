@@ -91,6 +91,7 @@ export interface RenderModel {
   readonly phaseDisplayName: string;
   readonly eventDecks: readonly RenderEventDeck[];
   readonly actionGroups: readonly RenderActionGroup[];
+  readonly hiddenActionsByClass: ReadonlyMap<string, readonly RenderAction[]>;
   readonly choiceBreadcrumb: readonly RenderChoiceStep[];
   readonly choiceContext: RenderChoiceContext | null;
   readonly choiceUi: RenderChoiceUi;

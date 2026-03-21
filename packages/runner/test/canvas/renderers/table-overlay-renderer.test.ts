@@ -179,6 +179,7 @@ function makeRenderModel(overrides: Partial<RenderModel> = {}): RenderModel {
     phaseDisplayName: 'Main',
     eventDecks: [],
     actionGroups: [],
+    hiddenActionsByClass: new Map(),
     choiceBreadcrumb: [],
     choiceContext: null,
     choiceUi: { kind: 'none' },
@@ -208,7 +209,7 @@ function makeZone(overrides: Partial<RenderZone>): RenderZone {
     ownerID: null,
     category: null,
     attributes: {},
-    visual: { shape: 'rectangle', width: 160, height: 100, color: null },
+    visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null },
     metadata: {},
     ...overrides,
   };

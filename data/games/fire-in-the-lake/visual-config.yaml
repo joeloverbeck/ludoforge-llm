@@ -73,9 +73,154 @@ zones:
       width: 360
       height: 220
     loc:
-      shape: line
-      width: 270
-      height: 50
+      shape: connection
+
+  connectionStyles:
+    highway:
+      strokeWidth: 8
+      strokeColor: "#8b7355"
+      strokeAlpha: 0.8
+    mekong:
+      strokeWidth: 12
+      strokeColor: "#4a7a8c"
+      strokeAlpha: 0.9
+      wavy: true
+      waveAmplitude: 4
+      waveFrequency: 0.08
+
+  connectionAnchors:
+    an-loc:
+      x: 420
+      y: 250
+    ban-me-thuot:
+      x: 560
+      y: 220
+    bac-lieu:
+      x: 360
+      y: 520
+    chau-doc:
+      x: 200
+      y: 420
+    da-lat:
+      x: 640
+      y: 360
+    dak-to:
+      x: 520
+      y: 60
+    khe-sanh:
+      x: 360
+      y: 20
+    long-phu:
+      x: 420
+      y: 460
+
+  connectionRoutes:
+    "loc-ban-me-thuot-da-lat:none":
+      points:
+        - { kind: anchor, anchorId: "ban-me-thuot" }
+        - { kind: anchor, anchorId: "da-lat" }
+      segments:
+        - { kind: straight }
+    "loc-cam-ranh-da-lat:none":
+      points:
+        - { kind: zone, zoneId: "cam-ranh:none" }
+        - { kind: anchor, anchorId: "da-lat" }
+      segments:
+        - { kind: straight }
+    "loc-can-tho-bac-lieu:none":
+      points:
+        - { kind: zone, zoneId: "can-tho:none" }
+        - { kind: anchor, anchorId: "bac-lieu" }
+      segments:
+        - { kind: straight }
+    "loc-can-tho-chau-doc:none":
+      points:
+        - { kind: zone, zoneId: "can-tho:none" }
+        - { kind: anchor, anchorId: "chau-doc" }
+      segments:
+        - { kind: straight }
+    "loc-can-tho-long-phu:none":
+      points:
+        - { kind: zone, zoneId: "can-tho:none" }
+        - { kind: anchor, anchorId: "long-phu" }
+      segments:
+        - { kind: straight }
+    "loc-da-nang-dak-to:none":
+      points:
+        - { kind: zone, zoneId: "da-nang:none" }
+        - { kind: anchor, anchorId: "dak-to" }
+      segments:
+        - { kind: straight }
+    "loc-da-nang-qui-nhon:none":
+      points:
+        - { kind: zone, zoneId: "da-nang:none" }
+        - { kind: zone, zoneId: "qui-nhon:none" }
+      segments:
+        - { kind: straight }
+    "loc-hue-da-nang:none":
+      points:
+        - { kind: zone, zoneId: "da-nang:none" }
+        - { kind: zone, zoneId: "hue:none" }
+      segments:
+        - kind: quadratic
+          control: { kind: position, x: 480, y: 40 }
+    "loc-hue-khe-sanh:none":
+      points:
+        - { kind: zone, zoneId: "hue:none" }
+        - { kind: anchor, anchorId: "khe-sanh" }
+      segments:
+        - { kind: straight }
+    "loc-kontum-ban-me-thuot:none":
+      points:
+        - { kind: zone, zoneId: "kontum:none" }
+        - { kind: anchor, anchorId: "ban-me-thuot" }
+      segments:
+        - { kind: straight }
+    "loc-kontum-dak-to:none":
+      points:
+        - { kind: zone, zoneId: "kontum:none" }
+        - { kind: anchor, anchorId: "dak-to" }
+      segments:
+        - { kind: straight }
+    "loc-kontum-qui-nhon:none":
+      points:
+        - { kind: zone, zoneId: "kontum:none" }
+        - { kind: zone, zoneId: "qui-nhon:none" }
+      segments:
+        - { kind: straight }
+    "loc-qui-nhon-cam-ranh:none":
+      points:
+        - { kind: zone, zoneId: "cam-ranh:none" }
+        - { kind: zone, zoneId: "qui-nhon:none" }
+      segments:
+        - { kind: straight }
+    "loc-saigon-an-loc-ban-me-thuot:none":
+      points:
+        - { kind: zone, zoneId: "saigon:none" }
+        - { kind: anchor, anchorId: "an-loc" }
+        - { kind: anchor, anchorId: "ban-me-thuot" }
+      segments:
+        - { kind: straight }
+        - kind: quadratic
+          control: { kind: position, x: 500, y: 200 }
+    "loc-saigon-cam-ranh:none":
+      points:
+        - { kind: zone, zoneId: "cam-ranh:none" }
+        - { kind: zone, zoneId: "saigon:none" }
+      segments:
+        - { kind: straight }
+    "loc-saigon-can-tho:none":
+      points:
+        - { kind: zone, zoneId: "can-tho:none" }
+        - { kind: zone, zoneId: "saigon:none" }
+      segments:
+        - { kind: straight }
+    "loc-saigon-da-lat:none":
+      points:
+        - { kind: zone, zoneId: "saigon:none" }
+        - { kind: anchor, anchorId: "da-lat" }
+      segments:
+        - { kind: straight }
 
   markerBadge:
     markerId: support
@@ -120,13 +265,13 @@ zones:
         attributeContains:
           terrainTags: highway
       style:
-        color: "#8b7355"
+        connectionStyleKey: highway
     - match:
         category: [loc]
         attributeContains:
           terrainTags: mekong
       style:
-        color: "#4a7a8c"
+        connectionStyleKey: mekong
 
   overrides:
     "an-loc:none":
@@ -477,6 +622,8 @@ actionGroupPolicy:
   synthesize:
     - fromClass: operation
       intoGroup: operationPlusSpecialActivity
+      appendTooltipFrom:
+        - specialActivity
   hide:
     - specialActivity
 

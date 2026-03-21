@@ -12,6 +12,7 @@ export const ZoneShapeSchema = z.enum([
   'triangle',
   'line',
   'octagon',
+  'connection',
 ]);
 export const TokenShapeSchema = z.enum([
   'circle',
@@ -91,6 +92,79 @@ const ZoneVisualStyleSchema = z.object({
   width: z.number().optional(),
   height: z.number().optional(),
   color: z.string().optional(),
+  connectionStyleKey: z.string().optional(),
+});
+
+const ConnectionStyleConfigSchema = z.object({
+  strokeWidth: z.number(),
+  strokeColor: z.string(),
+  strokeAlpha: z.number().optional(),
+  wavy: z.boolean().optional(),
+  waveAmplitude: z.number().optional(),
+  waveFrequency: z.number().optional(),
+});
+
+const ConnectionAnchorConfigSchema = z.object({
+  x: z.number(),
+  y: z.number(),
+});
+
+const ZoneConnectionEndpointSchema = z.object({
+  kind: z.literal('zone'),
+  zoneId: z.string(),
+}).strict();
+
+const AnchorConnectionEndpointSchema = z.object({
+  kind: z.literal('anchor'),
+  anchorId: z.string(),
+}).strict();
+
+const ConnectionEndpointSchema = z.discriminatedUnion('kind', [
+  ZoneConnectionEndpointSchema,
+  AnchorConnectionEndpointSchema,
+]);
+
+const ConnectionRouteControlAnchorSchema = z.object({
+  kind: z.literal('anchor'),
+  anchorId: z.string(),
+}).strict();
+
+const ConnectionRouteControlPositionSchema = z.object({
+  kind: z.literal('position'),
+  x: z.number(),
+  y: z.number(),
+}).strict();
+
+const ConnectionRouteControlSchema = z.discriminatedUnion('kind', [
+  ConnectionRouteControlAnchorSchema,
+  ConnectionRouteControlPositionSchema,
+]);
+
+const StraightConnectionRouteSegmentSchema = z.object({
+  kind: z.literal('straight'),
+}).strict();
+
+const QuadraticConnectionRouteSegmentSchema = z.object({
+  kind: z.literal('quadratic'),
+  control: ConnectionRouteControlSchema,
+}).strict();
+
+const ConnectionRouteSegmentSchema = z.discriminatedUnion('kind', [
+  StraightConnectionRouteSegmentSchema,
+  QuadraticConnectionRouteSegmentSchema,
+]);
+
+const ConnectionRouteDefinitionSchema = z.object({
+  points: z.array(ConnectionEndpointSchema).min(2),
+  segments: z.array(ConnectionRouteSegmentSchema),
+}).strict().superRefine((value, context) => {
+  if (value.segments.length !== value.points.length - 1) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['segments'],
+      message: 'connection route segments must contain exactly one segment per consecutive point pair.',
+    });
+  }
 });
 
 const ZoneVisualOverrideSchema = ZoneVisualStyleSchema.extend({
@@ -233,6 +307,9 @@ const ZoneTokenLayoutsSchema = z.object({
 
 const ZonesConfigSchema = z.object({
   categoryStyles: z.record(z.string(), ZoneVisualStyleSchema).optional(),
+  connectionStyles: z.record(z.string(), ConnectionStyleConfigSchema).optional(),
+  connectionAnchors: z.record(z.string(), ConnectionAnchorConfigSchema).optional(),
+  connectionRoutes: z.record(z.string(), ConnectionRouteDefinitionSchema).optional(),
   attributeRules: z.array(AttributeRuleSchema).optional(),
   overrides: z.record(z.string(), ZoneVisualOverrideSchema).optional(),
   layoutRoles: z.record(z.string(), LayoutRoleSchema).optional(),
@@ -472,6 +549,7 @@ const ActionVisualSchema = z.object({
 const ActionGroupSynthesizeEntrySchema = z.object({
   fromClass: z.string(),
   intoGroup: z.string(),
+  appendTooltipFrom: z.array(z.string()).optional(),
 });
 
 const ActionGroupPolicySchema = z.object({
@@ -523,6 +601,18 @@ export type FixedPositionHint = z.infer<typeof FixedPositionHintSchema>;
 export type FactionVisualConfig = z.infer<typeof FactionVisualConfigSchema>;
 export type ZoneVisualStyle = z.infer<typeof ZoneVisualStyleSchema>;
 export type ZoneVisualOverride = z.infer<typeof ZoneVisualOverrideSchema>;
+export type ConnectionStyleConfig = z.infer<typeof ConnectionStyleConfigSchema>;
+export type ConnectionAnchorConfig = z.infer<typeof ConnectionAnchorConfigSchema>;
+export type ZoneConnectionEndpoint = z.infer<typeof ZoneConnectionEndpointSchema>;
+export type AnchorConnectionEndpoint = z.infer<typeof AnchorConnectionEndpointSchema>;
+export type ConnectionEndpoint = z.infer<typeof ConnectionEndpointSchema>;
+export type ConnectionRouteControlAnchor = z.infer<typeof ConnectionRouteControlAnchorSchema>;
+export type ConnectionRouteControlPosition = z.infer<typeof ConnectionRouteControlPositionSchema>;
+export type ConnectionRouteControl = z.infer<typeof ConnectionRouteControlSchema>;
+export type StraightConnectionRouteSegment = z.infer<typeof StraightConnectionRouteSegmentSchema>;
+export type QuadraticConnectionRouteSegment = z.infer<typeof QuadraticConnectionRouteSegmentSchema>;
+export type ConnectionRouteSegment = z.infer<typeof ConnectionRouteSegmentSchema>;
+export type ConnectionRouteDefinition = z.infer<typeof ConnectionRouteDefinitionSchema>;
 export type AttributeRuleMatch = z.infer<typeof AttributeRuleMatchSchema>;
 export type AttributeRule = z.infer<typeof AttributeRuleSchema>;
 export type MarkerBadgeColorEntry = z.infer<typeof MarkerBadgeColorEntrySchema>;

@@ -35,7 +35,7 @@ describe('render-model types', () => {
           ownerID: null,
           category: null,
           attributes: {},
-          visual: { shape: 'rectangle', width: 160, height: 100, color: null },
+          visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null },
           metadata: {},
         },
       ],
@@ -108,6 +108,7 @@ describe('render-model types', () => {
           actions: [{ actionId: 'pass', displayName: 'Pass', isAvailable: true }],
         },
       ],
+      hiddenActionsByClass: new Map(),
       choiceBreadcrumb: [
         {
           decisionKey: asDecisionKey('pick-zone'),
@@ -216,7 +217,7 @@ describe('render-model types', () => {
       ownerID: asPlayerId(0),
       category: null,
       attributes: {},
-      visual: { shape: 'rectangle', width: 160, height: 100, color: null },
+      visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null },
       metadata: {},
     };
 

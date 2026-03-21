@@ -1,3 +1,4 @@
+import type { Container } from 'pixi.js';
 import type { StoreApi } from 'zustand';
 
 import type { KeyboardCoordinator } from '../input/keyboard-coordinator.js';
@@ -16,15 +17,23 @@ import { attachZoneSelectHandlers } from './interactions/zone-select';
 import { createAriaAnnouncer } from './interactions/aria-announcer';
 import { attachKeyboardSelect, handleKeyboardSelectKeyDown } from './interactions/keyboard-select';
 import { createCanvasInteractionController } from './interactions/canvas-interaction-controller';
+import { createHoverStalenessGuard } from './interactions/hover-staleness-guard.js';
 import { createHoverTargetController } from './interactions/hover-target-controller';
 import { createRuntimeLayoutStore, type RuntimeLayoutStore } from './runtime-layout-store';
 import { installTickerErrorFence, type TickerErrorFence } from './ticker-error-fence.js';
 import { createRenderHealthProbe, type RenderHealthProbe } from './render-health-probe.js';
 import { createAdjacencyRenderer } from './renderers/adjacency-renderer';
+import { createConnectionRouteRenderer } from './renderers/connection-route-renderer.js';
 import { ContainerPool } from './renderers/container-pool';
 import { createDisposalQueue, type DisposalQueue } from './renderers/disposal-queue';
 import { VisualConfigTokenRenderStyleProvider } from './renderers/token-render-style-provider';
-import type { AdjacencyRenderer, TableOverlayRenderer, TokenRenderer, ZoneRenderer } from './renderers/renderer-types';
+import type {
+  AdjacencyRenderer,
+  ConnectionRouteRenderer,
+  TableOverlayRenderer,
+  TokenRenderer,
+  ZoneRenderer,
+} from './renderers/renderer-types';
 import { createRegionBoundaryRenderer } from './renderers/region-boundary-renderer.js';
 import { createTableOverlayRenderer } from './renderers/table-overlay-renderer.js';
 import { createTokenRenderer } from './renderers/token-renderer';
@@ -107,6 +116,7 @@ interface GameCanvasRuntimeDeps {
   readonly createRuntimeLayoutStore: typeof createRuntimeLayoutStore;
   readonly createZoneRenderer: typeof createZoneRenderer;
   readonly createAdjacencyRenderer: typeof createAdjacencyRenderer;
+  readonly createConnectionRouteRenderer: typeof createConnectionRouteRenderer;
   readonly createTokenRenderer: typeof createTokenRenderer;
   readonly createTableOverlayRenderer: typeof createTableOverlayRenderer;
   readonly createActionAnnouncementRenderer: typeof createActionAnnouncementRenderer;
@@ -129,6 +139,7 @@ const DEFAULT_RUNTIME_DEPS: GameCanvasRuntimeDeps = {
   createRuntimeLayoutStore,
   createZoneRenderer,
   createAdjacencyRenderer,
+  createConnectionRouteRenderer,
   createTokenRenderer,
   createTableOverlayRenderer,
   createActionAnnouncementRenderer,
@@ -241,17 +252,30 @@ export async function createGameCanvasRuntime(
   const accessibilityContainer = options.container.parentElement ?? options.container;
   const ariaAnnouncer = deps.createAriaAnnouncer(accessibilityContainer);
   const interactionController = createCanvasInteractionController(() => selectorStore.getState(), ariaAnnouncer);
+  const canvasElement = gameCanvas.app.canvas as HTMLCanvasElement;
+  let lastPointerScreenPosition: { x: number; y: number } | null = null;
+  let publishHoverAnchor: () => void = () => {};
+  let stalenessGuard: ReturnType<typeof createHoverStalenessGuard> | null = null;
   const hoverTargetController = createHoverTargetController({
     onTargetChange: () => {
       publishHoverAnchor();
+      stalenessGuard?.onHoverStateChanged();
     },
   });
+  const onCanvasPointerMove = (event: PointerEvent): void => {
+    lastPointerScreenPosition = { x: event.clientX, y: event.clientY };
+  };
+  const onCanvasPointerLeave = (): void => {
+    lastPointerScreenPosition = null;
+    stalenessGuard?.onCanvasPointerLeave();
+  };
+  canvasElement.addEventListener('pointermove', onCanvasPointerMove);
+  canvasElement.addEventListener('pointerleave', onCanvasPointerLeave);
 
   const disposalQueue = createDisposalQueue();
   const viewportResult = createViewportResult(deps, gameCanvas, runtimeLayoutStore);
   applyViewportSnapshot(viewportResult.viewport, options.initialViewport ?? null);
   const zonePool = new ContainerPool();
-  let publishHoverAnchor: () => void = () => {};
 
   const zoneRenderer = deps.createZoneRenderer(gameCanvas.layers.zoneLayer, zonePool, {
     bindSelection: (zoneContainer, zoneId, isSelectable) =>
@@ -276,6 +300,29 @@ export async function createGameCanvasRuntime(
   const adjacencyRenderer = deps.createAdjacencyRenderer(gameCanvas.layers.adjacencyLayer, options.visualConfigProvider, {
     disposalQueue,
   });
+  const connectionRouteRenderer = deps.createConnectionRouteRenderer(
+    gameCanvas.layers.connectionRouteLayer,
+    options.visualConfigProvider,
+    {
+      bindSelection: (routeContainer, zoneId, isSelectable) =>
+        deps.attachZoneSelectHandlers(
+          routeContainer,
+          zoneId,
+          isSelectable,
+          (target) => {
+            interactionController.onSelectTarget(target);
+          },
+          {
+            onHoverEnter: (target) => {
+              hoverTargetController.onHoverEnter(target);
+            },
+            onHoverLeave: (target) => {
+              hoverTargetController.onHoverLeave(target);
+            },
+          },
+        ),
+    },
+  );
 
   const regionBoundaryRenderer = createRegionBoundaryRenderer(gameCanvas.layers.regionLayer);
 
@@ -321,6 +368,7 @@ export async function createGameCanvasRuntime(
     tokenRenderStyleProvider,
     zoneRenderer,
     adjacencyRenderer,
+    connectionRouteRenderer,
     tokenRenderer,
     tableOverlayRenderer,
     regionBoundaryRenderer,
@@ -340,7 +388,10 @@ export async function createGameCanvasRuntime(
       visualConfigProvider: options.visualConfigProvider,
       tokenContainers: () => tokenRenderer.getContainerMap(),
       tokenFaceControllers: () => tokenRenderer.getFaceControllerMap?.() ?? new Map(),
-      zoneContainers: () => zoneRenderer.getContainerMap(),
+      zoneContainers: () => mergeZoneContainerMaps(
+        zoneRenderer.getContainerMap(),
+        connectionRouteRenderer.getContainerMap(),
+      ),
       zonePositions: () => runtimeLayoutStore.getSnapshot(),
       ephemeralParent: () => gameCanvas.layers.effectsGroup,
       disposalQueue,
@@ -474,7 +525,12 @@ export async function createGameCanvasRuntime(
 
   const coordinateBridge = deps.createCoordinateBridge(viewportResult.viewport, gameCanvas.app.canvas);
   const hoverBoundsResolver: HoverBoundsResolver = (target) => {
-    const containers = target.kind === 'zone' ? zoneRenderer.getContainerMap() : tokenRenderer.getContainerMap();
+    const containers = target.kind === 'zone'
+      ? mergeZoneContainerMaps(
+        zoneRenderer.getContainerMap(),
+        connectionRouteRenderer.getContainerMap(),
+      )
+      : tokenRenderer.getContainerMap();
     const container = containers.get(target.id);
     if (container === undefined) {
       return null;
@@ -488,6 +544,24 @@ export async function createGameCanvasRuntime(
     };
   };
   let hoverAnchorVersion = 0;
+  stalenessGuard = createHoverStalenessGuard({
+    getActiveTargets: () => hoverTargetController.getActiveTargets(),
+    removeTarget: (target) => {
+      hoverTargetController.removeTarget(target);
+    },
+    clearAll: () => {
+      hoverTargetController.clearAll();
+    },
+    getPointerScreenPosition: () => lastPointerScreenPosition,
+    getCanvasBounds: () => canvasElement.getBoundingClientRect(),
+    resolveTargetScreenBounds: (target) => {
+      const worldBounds = hoverBoundsResolver(target);
+      if (worldBounds === null) {
+        return null;
+      }
+      return coordinateBridge.canvasBoundsToScreenRect(worldBounds);
+    },
+  });
 
   publishHoverAnchor = (): void => {
     const hoveredTarget = hoverTargetController.getCurrentTarget();
@@ -508,11 +582,14 @@ export async function createGameCanvasRuntime(
       version: hoverAnchorVersion,
     });
   };
-  const viewport = viewportResult.viewport as unknown as {
-    on(event: 'moved', listener: () => void): void;
-    off(event: 'moved', listener: () => void): void;
+  const viewport = viewportResult.viewport;
+  const onViewportMoved = (): void => {
+    publishHoverAnchor();
+    if (viewport.moving === true) {
+      stalenessGuard?.onViewportMoving();
+    }
   };
-  viewport.on('moved', publishHoverAnchor);
+  viewport.on('moved', onViewportMoved);
 
   let destroyed = false;
 
@@ -550,7 +627,10 @@ export async function createGameCanvasRuntime(
       }
       destroyed = true;
 
-      viewport.off('moved', publishHoverAnchor);
+      viewport.off('moved', onViewportMoved);
+      canvasElement.removeEventListener('pointermove', onCanvasPointerMove);
+      canvasElement.removeEventListener('pointerleave', onCanvasPointerLeave);
+      stalenessGuard?.destroy();
       hoverTargetController.destroy();
       options.onHoverAnchorChange?.(null);
       unsubscribeZoneIDs();
@@ -572,6 +652,7 @@ export async function createGameCanvasRuntime(
         canvasUpdater,
         zoneRenderer,
         adjacencyRenderer,
+        connectionRouteRenderer,
         tokenRenderer,
         tableOverlayRenderer,
         zonePool,
@@ -602,6 +683,7 @@ function destroyCanvasPipeline(
   canvasUpdater: CanvasUpdater,
   zoneRenderer: ZoneRenderer,
   adjacencyRenderer: AdjacencyRenderer,
+  connectionRouteRenderer: ConnectionRouteRenderer,
   tokenRenderer: TokenRenderer,
   tableOverlayRenderer: TableOverlayRenderer,
   zonePool: ContainerPool,
@@ -614,6 +696,7 @@ function destroyCanvasPipeline(
   canvasUpdater.destroy();
   zoneRenderer.destroy();
   adjacencyRenderer.destroy();
+  connectionRouteRenderer.destroy();
   tokenRenderer.destroy();
   tableOverlayRenderer.destroy();
   zonePool.destroyAll();
@@ -622,6 +705,16 @@ function destroyCanvasPipeline(
   renderHealthProbe.destroy();
   tickerErrorFence.destroy();
   gameCanvas.destroy();
+}
+
+function mergeZoneContainerMaps(
+  zoneContainers: ReadonlyMap<string, Container>,
+  connectionRouteContainers: ReadonlyMap<string, Container>,
+): ReadonlyMap<string, Container> {
+  return new Map<string, Container>([
+    ...zoneContainers,
+    ...connectionRouteContainers,
+  ]);
 }
 
 function createViewportResult(

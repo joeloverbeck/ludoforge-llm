@@ -14,6 +14,11 @@ import {
 } from './token-presentation.js';
 import type { TokenRenderStyleProvider } from '../canvas/renderers/renderer-types.js';
 import type { TableOverlaySurfaceNode } from './project-table-overlay-surface.js';
+import {
+  resolveConnectionRoutes,
+  type ConnectionRouteNode,
+  type JunctionNode,
+} from './connection-route-resolver.js';
 
 export interface PresentationOverlayPoint {
   readonly x: number;
@@ -87,6 +92,8 @@ export interface PresentationAdjacencyNode {
 
 export interface PresentationScene {
   readonly zones: readonly PresentationZoneNode[];
+  readonly connectionRoutes: readonly ConnectionRouteNode[];
+  readonly junctions: readonly JunctionNode[];
   readonly tokens: readonly PresentationTokenNode[];
   readonly adjacencies: readonly PresentationAdjacencyNode[];
   readonly overlays: readonly PresentationOverlayNode[];
@@ -123,6 +130,8 @@ export function buildPresentationScene(options: BuildPresentationSceneOptions): 
   if (runnerFrame == null) {
     return {
       zones: [],
+      connectionRoutes: [],
+      junctions: [],
       tokens: [],
       adjacencies: [],
       overlays: EMPTY_OVERLAYS,
@@ -133,19 +142,35 @@ export function buildPresentationScene(options: BuildPresentationSceneOptions): 
   const hiddenZones = options.visualConfigProvider.getHiddenZones();
   const sourceZones = runnerFrame.zones.filter((zone) => !hiddenZones.has(zone.id));
   const zones = resolveZoneNodes(sourceZones, options.visualConfigProvider, highlightedZoneIDs);
-  const visibleZoneIDs = new Set(zones.map((zone) => zone.id));
+  const adjacencies = resolveAdjacencyNodes(
+    runnerFrame.adjacencies,
+    new Set(zones.map((zone) => zone.id)),
+  );
+  const connectionResolution = resolveConnectionRoutes({
+    zones,
+    adjacencies,
+    positions: options.positions,
+    routeDefinitions: options.visualConfigProvider.getConnectionRoutes(),
+    anchorPositions: options.visualConfigProvider.getConnectionAnchors(),
+  });
+  const visibleZoneIDs = new Set([
+    ...connectionResolution.filteredZones.map((zone) => zone.id),
+    ...connectionResolution.connectionRoutes.map((route) => route.zoneId),
+  ]);
 
   return {
-    zones,
+    zones: connectionResolution.filteredZones,
+    connectionRoutes: connectionResolution.connectionRoutes,
+    junctions: connectionResolution.junctions,
     tokens: resolvePresentationTokenNodes(
       runnerFrame.tokens.filter((token) => visibleZoneIDs.has(token.zoneID)),
       sourceZones,
       options.tokenRenderStyleProvider,
       highlightedTokenIDs,
     ),
-    adjacencies: resolveAdjacencyNodes(runnerFrame.adjacencies, visibleZoneIDs),
+    adjacencies: connectionResolution.filteredAdjacencies,
     overlays: options.overlays,
-    regions: resolveRegionNodes(zones, options.positions, options.visualConfigProvider),
+    regions: resolveRegionNodes(connectionResolution.filteredZones, options.positions, options.visualConfigProvider),
   };
 }
 

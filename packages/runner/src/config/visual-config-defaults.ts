@@ -6,7 +6,8 @@ export type ZoneShape =
   | 'ellipse'
   | 'triangle'
   | 'line'
-  | 'octagon';
+  | 'octagon'
+  | 'connection';
 
 export type TokenShape =
   | 'circle'

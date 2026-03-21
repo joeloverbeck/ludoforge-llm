@@ -1467,6 +1467,7 @@ describe('projectRenderModel state metadata', () => {
     expect(groupKeys).toContain('specialActivity');
     expect(groupKeys).toContain('Actions');
     expect(groupKeys).not.toContain('operationPlusSpecialActivity');
+    expect(model.hiddenActionsByClass.size).toBe(0);
 
     const saGroup = model.actionGroups.find((g) => g.groupKey === 'specialActivity');
     expect(saGroup?.actions.map((a) => a.actionId)).toEqual(['advise']);
@@ -1509,6 +1510,7 @@ describe('projectRenderModel state metadata', () => {
     expect(opSaActionIds).toContain('train');
     expect(opSaActionIds).toContain('patrol');
     expect(opSaActionIds).not.toContain('advise');
+    expect(model.hiddenActionsByClass.get('specialActivity')?.map((a) => a.actionId)).toEqual(['advise']);
 
     const opGroup = model.actionGroups.find((g) => g.groupKey === 'operation');
     const opActionIds = opGroup?.actions.map((a) => a.actionId) ?? [];
@@ -1519,6 +1521,9 @@ describe('projectRenderModel state metadata', () => {
     expect(opTrainAction?.actionClass).toBe('operation');
     const opsaTrainAction = opSaGroup?.actions.find((a) => a.actionId === 'train');
     expect(opsaTrainAction?.actionClass).toBe('operationPlusSpecialActivity');
+    const hiddenSaAction = model.hiddenActionsByClass.get('specialActivity')?.[0];
+    expect(hiddenSaAction?.displayName).toBe('Advise');
+    expect(hiddenSaAction?.actionClass).toBe('specialActivity');
   });
 
   it('actionGroupPolicy with multiple synthesis targets creates all declared groups', () => {

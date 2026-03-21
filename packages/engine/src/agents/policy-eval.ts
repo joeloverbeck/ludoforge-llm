@@ -143,6 +143,7 @@ class EvaluationContext {
   private readonly candidateFeatureCache = new Map<string, Map<string, PolicyValue>>();
   private readonly aggregateCache = new Map<string, PolicyValue>();
   private readonly runtimeProviders: PolicyRuntimeProviders;
+  private readonly seatId: string;
 
   constructor(
     private readonly input: EvaluatePolicyMoveInput,
@@ -150,6 +151,7 @@ class EvaluationContext {
     seatId: string,
     profile: CompiledAgentProfile,
   ) {
+    this.seatId = seatId;
     const catalog = input.def.agents;
     if (catalog === undefined) {
       throw new PolicyRuntimeError({
@@ -462,6 +464,45 @@ class EvaluationContext {
             return typeof entry === 'boolean' ? (entry ? 1 : 0) : undefined;
           }
         }
+        return undefined;
+      case 'zoneTokenAgg':
+        return this.evaluateZoneTokenAggregate(expr);
+    }
+  }
+
+  private evaluateZoneTokenAggregate(
+    expr: Extract<AgentPolicyExpr, { readonly kind: 'zoneTokenAgg' }>,
+  ): PolicyValue {
+    const ownerSuffix =
+      expr.owner === 'self'
+        ? String(this.input.playerId)
+        : expr.owner === 'active'
+          ? String(this.input.state.activePlayer)
+          : expr.owner;
+    const zoneId = `${expr.zone}:${ownerSuffix}`;
+    const tokens = this.input.state.zones[zoneId];
+    if (tokens === undefined || tokens.length === 0) {
+      return expr.aggOp === 'count' ? 0 : expr.aggOp === 'sum' ? 0 : undefined;
+    }
+    const values: number[] = [];
+    for (const token of tokens) {
+      const val = token.props[expr.prop];
+      if (typeof val === 'number') {
+        values.push(val);
+      }
+    }
+    if (values.length === 0) {
+      return expr.aggOp === 'count' || expr.aggOp === 'sum' ? 0 : undefined;
+    }
+    switch (expr.aggOp) {
+      case 'sum':
+        return values.reduce((acc, v) => acc + v, 0);
+      case 'count':
+        return values.length;
+      case 'min':
+        return Math.min(...values);
+      case 'max':
+        return Math.max(...values);
     }
   }
 

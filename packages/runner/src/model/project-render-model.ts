@@ -71,7 +71,7 @@ export function projectRenderModel(
       ...deck,
       displayName: formatIdAsDisplayName(deck.id),
     })),
-    actionGroups: projectActionGroups(frame.actionGroups, visualConfigProvider),
+    ...projectActionGroups(frame.actionGroups, visualConfigProvider),
     choiceBreadcrumb: frame.choiceBreadcrumb.map((step) => ({
       decisionKey: step.decisionKey,
       name: step.name,
@@ -139,7 +139,7 @@ function projectPlayers(
 function projectActionGroups(
   actionGroups: readonly RunnerActionGroup[],
   visualConfigProvider: VisualConfigProvider,
-): RenderModel['actionGroups'] {
+): Pick<RenderModel, 'actionGroups' | 'hiddenActionsByClass'> {
   const policy = visualConfigProvider.getActionGroupPolicy();
   const hiddenClasses = new Set(policy?.hide ?? []);
   const synthesizeByClass = new Map<string, readonly string[]>();
@@ -149,6 +149,7 @@ function projectActionGroups(
   }
 
   const groups = new Map<string, Map<string, RenderAction>>();
+  const hiddenActionsByClass = new Map<string, RenderAction[]>();
   const ensureGroup = (key: string): Map<string, RenderAction> => {
     if (!groups.has(key)) {
       groups.set(key, new Map());
@@ -160,6 +161,14 @@ function projectActionGroups(
     for (const action of group.actions) {
       const actionClass = action.actionClass ?? (group.groupKey === 'Actions' ? undefined : group.groupKey);
       if (actionClass !== undefined && hiddenClasses.has(actionClass)) {
+        const hiddenActions = hiddenActionsByClass.get(actionClass) ?? [];
+        hiddenActionsByClass.set(actionClass, [
+          ...hiddenActions,
+          {
+            ...action,
+            displayName: visualConfigProvider.getActionDisplayName(action.actionId) ?? formatIdAsDisplayName(action.actionId),
+          },
+        ]);
         continue;
       }
 
@@ -186,11 +195,16 @@ function projectActionGroups(
     }
   }
 
-  return Array.from(groups.entries()).map(([groupKey, actions]) => ({
-    groupKey,
-    groupName: groupKey === 'Actions' ? 'Actions' : formatIdAsDisplayName(groupKey),
-    actions: Array.from(actions.values()),
-  }));
+  return {
+    actionGroups: Array.from(groups.entries()).map(([groupKey, actions]) => ({
+      groupKey,
+      groupName: groupKey === 'Actions' ? 'Actions' : formatIdAsDisplayName(groupKey),
+      actions: Array.from(actions.values()),
+    })),
+    hiddenActionsByClass: new Map(
+      Array.from(hiddenActionsByClass.entries()).map(([actionClass, actions]) => [actionClass, actions] as const),
+    ),
+  };
 }
 
 function projectChoiceContext(
@@ -382,6 +396,7 @@ function isZoneEquivalent(left: RenderZone, right: RenderZone): boolean {
     && left.visual.width === right.visual.width
     && left.visual.height === right.visual.height
     && left.visual.color === right.visual.color
+    && left.visual.connectionStyleKey === right.visual.connectionStyleKey
     && isStringArrayEqual(left.tokenIDs, right.tokenIDs)
     && isMarkerArrayEqual(left.markers, right.markers)
     && isShallowRecordEqual(left.metadata, right.metadata);

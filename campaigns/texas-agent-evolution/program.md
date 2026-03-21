@@ -1,5 +1,19 @@
 # Campaign: texas-agent-evolution
 
+## Bootstrap (run before starting the improvement loop)
+
+If `92-agents.md` does not already contain an `evolved` profile, create one by
+cloning the current `baseline` profile:
+
+1. Copy the `baseline` profile definition verbatim as a new `evolved` profile
+   in the `profiles:` section of `92-agents.md`.
+2. The `evolved` profile is the mutable target — the improvement loop modifies
+   only this profile and its supporting library items.
+3. The `baseline` profile remains unchanged as the control (opponents use it).
+
+This ensures a fresh campaign always starts from the current best baseline and
+evolves against it.
+
 ## Objective
 
 Maximize the win rate of an evolved PolicyAgent playing Texas Hold'em No-Limit
@@ -11,6 +25,14 @@ Win rate = fraction of completed games where the evolved agent finishes 1st
 
 Higher is better. Baseline expectation for an identical-to-baseline policy is
 ~0.25 (25%).
+
+## Campaign Completion
+
+When the campaign ends, the evolved profile's strategy should be promoted to
+baseline: update the `baseline` profile to use the evolved strategy's score
+terms, then remove the `evolved` profile. This makes the winning strategy the
+new standard for future campaigns and for the browser-based game runner (which
+uses the `baseline` profile via seat bindings).
 
 ## Primary Metric
 
@@ -35,15 +57,38 @@ simplification = good.
 - All files under `packages/engine/src/agents/` — policy evaluation, expression
   system, runtime surface, preview, diagnostics, IR
 
+### Agent DSL Infrastructure (advanced — when new expression types, intrinsics,
+  or operators are needed to express a strategy the current DSL cannot)
+
+- Kernel types for agent policy: `packages/engine/src/kernel/types.ts` (agent
+  policy types only — `AgentPolicyExpr`, `AgentPolicyOperator`,
+  `CompiledAgentPolicyRef`, `CompiledAgentTieBreaker`, and related unions/interfaces)
+- Compiler agent section: `packages/engine/src/cnl/compile-agents.ts`
+- Compiler agent validation: `packages/engine/src/cnl/validate-agents.ts`
+- Game spec agent types: `packages/engine/src/cnl/game-spec-doc.ts` (agent-related
+  interfaces only)
+- Schema artifacts: `packages/engine/schemas/` (when type changes require schema
+  updates)
+
 ### Trace Infrastructure (advanced — when observability is insufficient)
 
 - All files under `packages/engine/src/sim/` — simulator, trace, delta
   computation, enrichment
 
+### GameSpec Agent Section (when new DSL features need game-level declarations)
+
+- `data/games/texas-holdem/92-agents.md` — agent library AND visibility config
+- Other GameSpec files under `data/games/texas-holdem/` — ONLY when a DSL
+  extension requires new derived metrics, visibility declarations, or agent-
+  surface configuration that cannot live in 92-agents.md
+
 **Expansion policy**: Focus primarily on the policy YAML (adding features,
 pruning rules, score terms to the `evolved` profile). Extend to engine agent
-code only when the DSL cannot express the needed strategy. Extend to trace code
-only when trace output is insufficient for diagnosing agent behavior.
+code only when the DSL cannot express the needed strategy. Extend to kernel
+types, compiler, and game spec only when a new DSL primitive (operator,
+intrinsic, ref family) is needed — and only touch the agent-policy-related
+type surfaces, not unrelated kernel logic. Extend to trace code only when
+trace output is insufficient for diagnosing agent behavior.
 
 ## Immutable System
 
@@ -51,10 +96,14 @@ only when trace output is insufficient for diagnosing agent behavior.
 - `campaigns/texas-agent-evolution/run-tournament.mjs`
 - All test files under `packages/engine/test/`
 - All test helpers under `packages/engine/test/helpers/`
-- Everything under `packages/engine/src/kernel/` (the game engine itself)
-- Everything under `packages/engine/src/cnl/` (the compiler)
+- Non-agent kernel code: `packages/engine/src/kernel/` EXCEPT agent policy type
+  definitions in `types.ts` (game engine logic, state transitions, eval, effects,
+  spatial — all immutable)
+- Non-agent compiler code: `packages/engine/src/cnl/` EXCEPT `compile-agents.ts`,
+  `validate-agents.ts`, and agent-related interfaces in `game-spec-doc.ts`
 - Everything under `packages/runner/` (the UI runner)
-- All game data except `data/games/texas-holdem/92-agents.md`
+- All game data except `data/games/texas-holdem/92-agents.md` (and other game
+  spec files only when DSL extensions require new declarations)
 - `package.json`, `pnpm-lock.yaml`, `tsconfig.json`, and all build config
 - `docs/FOUNDATIONS.md` (architectural commandments — read for guidance, never modify)
 
@@ -65,13 +114,23 @@ only when trace output is insufficient for diagnosing agent behavior.
    control. Only the `evolved` profile and its supporting library items may be
    added or modified.
 3. No new runtime dependencies.
-4. No changes to public kernel API signatures.
+4. No changes to public kernel API signatures (non-agent APIs).
 5. The game spec (all files except 92-agents.md) must remain unchanged — the
-   game rules are fixed.
+   game rules are fixed. Exception: DSL extensions may add new agent-surface
+   declarations (derived metrics, visibility config) to game spec files when
+   a new primitive requires it.
 6. New library items (features, pruning rules, score terms, aggregates) added
    for the evolved profile must not break existing profiles.
 7. All engine code changes must align with `docs/FOUNDATIONS.md` — engine
    agnosticism, determinism, bounded computation, immutability.
+8. DSL extensions (new operators, intrinsics, ref families) must fully align
+   with `docs/FOUNDATIONS.md`: game-agnostic (no game-specific logic in engine
+   code), deterministic (same inputs = same outputs), bounded computation (no
+   unbounded iteration), and immutable (no state mutation). Extensions add
+   general capabilities (e.g., "aggregate over tokens in a zone"), not
+   game-specific logic (e.g., "compute poker hand rank"). The game-specific
+   usage lives in the YAML, not the engine code. Read FOUNDATIONS.md before
+   designing any DSL extension.
 
 ## Accept/Reject Logic
 

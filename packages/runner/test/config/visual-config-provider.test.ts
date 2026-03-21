@@ -28,6 +28,7 @@ describe('VisualConfigProvider', () => {
       width: 160,
       height: 100,
       color: null,
+      connectionStyleKey: null,
     });
   });
 
@@ -165,6 +166,7 @@ describe('VisualConfigProvider', () => {
       width: 90,
       height: 100,
       color: null,
+      connectionStyleKey: null,
     });
   });
 
@@ -194,6 +196,7 @@ describe('VisualConfigProvider', () => {
       width: 160,
       height: 100,
       color: '#6b5b3e',
+      connectionStyleKey: null,
     });
   });
 
@@ -221,6 +224,7 @@ describe('VisualConfigProvider', () => {
       width: 220,
       height: 100,
       color: '#ffffff',
+      connectionStyleKey: null,
     });
     expect(provider.getZoneLabel('zone:a')).toBe('Zone A');
   });
@@ -249,7 +253,135 @@ describe('VisualConfigProvider', () => {
       width: 160,
       height: 100,
       color: '#0000ff',
+      connectionStyleKey: null,
     });
+  });
+
+  it('resolves connectionStyleKey through category, rule, and override precedence', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      zones: {
+        categoryStyles: {
+          loc: { shape: 'connection', connectionStyleKey: 'highway' },
+        },
+        attributeRules: [
+          {
+            match: {
+              category: ['loc'],
+              attributeContains: { terrainTags: 'mekong' },
+            },
+            style: { connectionStyleKey: 'mekong' },
+          },
+        ],
+        overrides: {
+          'zone:override': { connectionStyleKey: 'override-style' },
+        },
+        connectionStyles: {
+          highway: { strokeWidth: 8, strokeColor: '#8b7355' },
+          mekong: {
+            strokeWidth: 12,
+            strokeColor: '#4a7a8c',
+            wavy: true,
+            waveAmplitude: 4,
+            waveFrequency: 0.08,
+          },
+          'override-style': { strokeWidth: 10, strokeColor: '#123456' },
+        },
+      },
+    });
+
+    expect(provider.resolveZoneVisual('zone:a', 'loc', {})).toEqual({
+      shape: 'connection',
+      width: 160,
+      height: 100,
+      color: null,
+      connectionStyleKey: 'highway',
+    });
+    expect(provider.resolveZoneVisual('zone:b', 'loc', { terrainTags: ['mekong'] })).toEqual({
+      shape: 'connection',
+      width: 160,
+      height: 100,
+      color: null,
+      connectionStyleKey: 'mekong',
+    });
+    expect(provider.resolveZoneVisual('zone:override', 'loc', { terrainTags: ['mekong'] })).toEqual({
+      shape: 'connection',
+      width: 160,
+      height: 100,
+      color: null,
+      connectionStyleKey: 'override-style',
+    });
+    expect(provider.resolveConnectionStyle('highway')).toEqual({
+      strokeWidth: 8,
+      strokeColor: '#8b7355',
+    });
+    expect(provider.resolveConnectionStyle('mekong')).toEqual({
+      strokeWidth: 12,
+      strokeColor: '#4a7a8c',
+      wavy: true,
+      waveAmplitude: 4,
+      waveFrequency: 0.08,
+    });
+    expect(provider.resolveConnectionStyle('missing')).toBeNull();
+  });
+
+  it('returns configured connection anchors and unified routes as deterministic maps', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      zones: {
+        connectionAnchors: {
+          'khe-sanh': { x: 120, y: 80 },
+        },
+        connectionRoutes: {
+          'loc-alpha-beta:none': {
+            points: [
+              { kind: 'zone', zoneId: 'alpha:none' },
+              { kind: 'anchor', anchorId: 'khe-sanh' },
+              { kind: 'zone', zoneId: 'beta:none' },
+            ],
+            segments: [
+              { kind: 'straight' },
+              { kind: 'quadratic', control: { kind: 'position', x: 150, y: 90 } },
+            ],
+          },
+          'loc-beta-gamma:none': {
+            points: [
+              { kind: 'zone', zoneId: 'beta:none' },
+              { kind: 'zone', zoneId: 'gamma:none' },
+            ],
+            segments: [
+              { kind: 'straight' },
+            ],
+          },
+        },
+      },
+    });
+
+    expect(provider.getConnectionAnchors()).toEqual(new Map([
+      ['khe-sanh', { x: 120, y: 80 }],
+    ]));
+    expect(provider.getConnectionRoutes()).toEqual(new Map([
+      ['loc-alpha-beta:none', {
+        points: [
+          { kind: 'zone', zoneId: 'alpha:none' },
+          { kind: 'anchor', anchorId: 'khe-sanh' },
+          { kind: 'zone', zoneId: 'beta:none' },
+        ],
+        segments: [
+          { kind: 'straight' },
+          { kind: 'quadratic', control: { kind: 'position', x: 150, y: 90 } },
+        ],
+      }],
+      ['loc-beta-gamma:none', {
+        points: [
+          { kind: 'zone', zoneId: 'beta:none' },
+          { kind: 'zone', zoneId: 'gamma:none' },
+        ],
+        segments: [
+          { kind: 'straight' },
+        ],
+      }],
+    ]));
   });
 
   it('faction color uses config for known factions and default hash otherwise', () => {

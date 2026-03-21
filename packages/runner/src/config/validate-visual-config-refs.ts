@@ -1,7 +1,11 @@
 import type { GameDef } from '@ludoforge/engine/runtime';
 
 import { VisualConfigProvider } from './visual-config-provider.js';
-import { VisualConfigSchema, type VisualConfig } from './visual-config-types.js';
+import {
+  VisualConfigSchema,
+  type ConnectionRouteDefinition,
+  type VisualConfig,
+} from './visual-config-types.js';
 
 export interface VisualConfigRefValidationContext {
   readonly zoneIds: ReadonlySet<string>;
@@ -15,7 +19,7 @@ export interface VisualConfigRefValidationContext {
 }
 
 export interface VisualConfigRefError {
-  readonly category: 'zone' | 'zoneCategory' | 'tokenType' | 'faction' | 'edge' | 'phase' | 'globalVar' | 'perPlayerVar';
+  readonly category: 'zone' | 'anchor' | 'zoneCategory' | 'tokenType' | 'faction' | 'edge' | 'phase' | 'globalVar' | 'perPlayerVar';
   readonly configPath: string;
   readonly referencedId: string;
   readonly message: string;
@@ -54,8 +58,18 @@ export function validateVisualConfigRefs(
   context: VisualConfigRefValidationContext,
 ): readonly VisualConfigRefError[] {
   const errors: VisualConfigRefError[] = [];
+  const anchorIds = new Set(Object.keys(config.zones?.connectionAnchors ?? {}));
+  const connectionRoutes = config.zones?.connectionRoutes as Readonly<Record<string, ConnectionRouteDefinition>> | undefined;
 
   validateObjectKeys(config.zones?.overrides, context.zoneIds, 'zone', 'zones.overrides', errors);
+  validateObjectKeys(connectionRoutes, context.zoneIds, 'zone', 'zones.connectionRoutes', errors);
+  validateConnectionRoutes(
+    connectionRoutes,
+    context.zoneIds,
+    anchorIds,
+    'zones.connectionRoutes',
+    errors,
+  );
   validateObjectKeys(config.zones?.layoutRoles, context.zoneIds, 'zone', 'zones.layoutRoles', errors);
   validateStringList(config.zones?.hiddenZones, context.zoneIds, 'zone', 'zones.hiddenZones', errors);
   validateStringList(
@@ -149,6 +163,68 @@ function validateShowdownSurface(
     'runnerSurfaces.showdown.playerCards.zones',
     errors,
   );
+}
+
+function validateConnectionRoutes(
+  values: Readonly<Record<string, ConnectionRouteDefinition>> | undefined,
+  knownZoneIds: ReadonlySet<string>,
+  knownAnchorIds: ReadonlySet<string>,
+  path: string,
+  errors: VisualConfigRefError[],
+): void {
+  if (values === undefined) {
+    return;
+  }
+
+  for (const key of Object.keys(values)) {
+    const route = values[key];
+    if (route === undefined) {
+      continue;
+    }
+    for (let index = 0; index < route.points.length; index += 1) {
+      const endpoint = route.points[index];
+      if (endpoint === undefined) {
+        continue;
+      }
+
+      if (endpoint.kind === 'zone') {
+        if (!knownZoneIds.has(endpoint.zoneId)) {
+          errors.push({
+            category: 'zone',
+            configPath: `${path}.${key}.points[${index}].zoneId`,
+            referencedId: endpoint.zoneId,
+            message: 'Unknown zone id',
+          });
+        }
+        continue;
+      }
+
+      if (!knownAnchorIds.has(endpoint.anchorId)) {
+        errors.push({
+          category: 'anchor',
+          configPath: `${path}.${key}.points[${index}].anchorId`,
+          referencedId: endpoint.anchorId,
+          message: 'Unknown anchor id',
+        });
+      }
+    }
+
+    for (let index = 0; index < route.segments.length; index += 1) {
+      const segment = route.segments[index];
+      if (segment === undefined || segment.kind !== 'quadratic' || segment.control.kind !== 'anchor') {
+        continue;
+      }
+
+      if (!knownAnchorIds.has(segment.control.anchorId)) {
+        errors.push({
+          category: 'anchor',
+          configPath: `${path}.${key}.segments[${index}].control.anchorId`,
+          referencedId: segment.control.anchorId,
+          message: 'Unknown anchor id',
+        });
+      }
+    }
+  }
 }
 
 export function validateAndCreateProvider(

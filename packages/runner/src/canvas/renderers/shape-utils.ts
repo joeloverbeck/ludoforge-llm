@@ -120,6 +120,8 @@ export function drawZoneShape(
     case 'line':
       base.roundRect(-width / 2, -height / 2, width, height, options.lineCornerRadius);
       return;
+    case 'connection':
+      return;
     case 'rectangle':
     default:
       base.roundRect(-width / 2, -height / 2, width, height, options.rectangleCornerRadius);

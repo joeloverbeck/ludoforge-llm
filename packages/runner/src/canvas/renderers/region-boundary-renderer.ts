@@ -1,7 +1,8 @@
 import { Container, Graphics, type Text, type TextStyleOptions } from 'pixi.js';
 
 import type { RegionBoundaryRenderer } from './renderer-types';
-import { convexHull, type Point } from '../geometry/convex-hull.js';
+import { convexHull } from '../geometry/convex-hull.js';
+import type { Point2D } from '../geometry/point2d.js';
 import { padHull, roundHullCorners } from '../geometry/hull-padding.js';
 import { drawDashedPolygon } from '../geometry/dashed-polygon.js';
 import type { PresentationRegionNode } from '../../presentation/presentation-scene.js';
@@ -111,14 +112,14 @@ export function createRegionBoundaryRenderer(
 }
 
 interface RegionLabelLayout {
-  readonly centroid: Point;
+  readonly centroid: Point2D;
   readonly axis: LongestAxis;
   readonly targetWidth: number;
 }
 
 function drawRegionGraphics(
   graphics: Graphics,
-  cornerPoints: readonly Point[],
+  cornerPoints: readonly Point2D[],
   style: PresentationRegionNode['style'],
   padding: number,
   cornerRadius: number,
@@ -171,14 +172,14 @@ interface LongestAxis {
  * and return the angle and length of that axis.
  * The angle is normalized so text rendered along it reads left-to-right.
  */
-export function computeLongestAxis(hull: readonly Point[]): LongestAxis {
+export function computeLongestAxis(hull: readonly Point2D[]): LongestAxis {
   if (hull.length <= 1) {
     return { angle: 0, length: 0 };
   }
 
   let maxDistSq = 0;
-  let bestA: Point = hull[0]!;
-  let bestB: Point = hull[0]!;
+  let bestA: Point2D = hull[0]!;
+  let bestB: Point2D = hull[0]!;
 
   for (let i = 0; i < hull.length; i += 1) {
     for (let j = i + 1; j < hull.length; j += 1) {
@@ -214,7 +215,7 @@ export function normalizeAngleForReadability(angle: number): number {
   return angle;
 }
 
-function flattenPoints(points: readonly Point[]): number[] {
+function flattenPoints(points: readonly Point2D[]): number[] {
   const result: number[] = [];
   for (const p of points) {
     result.push(p.x, p.y);
@@ -222,7 +223,7 @@ function flattenPoints(points: readonly Point[]): number[] {
   return result;
 }
 
-function computeCentroid(points: readonly Point[]): Point {
+function computeCentroid(points: readonly Point2D[]): Point2D {
   if (points.length === 0) {
     return { x: 0, y: 0 };
   }

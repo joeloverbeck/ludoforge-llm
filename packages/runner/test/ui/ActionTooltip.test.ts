@@ -127,6 +127,28 @@ afterEach(() => {
   floatingMocks.useFloatingOptions = null;
 });
 
+const COMPANION_GROUPS = [
+  {
+    actionClass: 'specialActivity',
+    groupName: 'Special Activity',
+    actions: [
+      { actionId: 'ambush', displayName: 'Ambush', isAvailable: true, actionClass: 'specialActivity' },
+      { actionId: 'raid', displayName: 'Raid', isAvailable: false, actionClass: 'specialActivity' },
+    ],
+  },
+] as const;
+
+const MULTI_COMPANION_GROUPS = [
+  ...COMPANION_GROUPS,
+  {
+    actionClass: 'bonusAction',
+    groupName: 'Bonus Action',
+    actions: [
+      { actionId: 'rally', displayName: 'Rally', isAvailable: true, actionClass: 'bonusAction' },
+    ],
+  },
+] as const;
+
 /* ------------------------------------------------------------------ */
 /* Tests                                                              */
 /* ------------------------------------------------------------------ */
@@ -382,6 +404,53 @@ describe('ActionTooltip', () => {
     expect(onPointerLeave).toHaveBeenCalledTimes(1);
   });
 
+  it('renders companion actions when legacy tooltip content is shown', () => {
+    const desc = makeDescription({
+      sections: [makeEffectsGroup()],
+    });
+
+    render(createElement(ActionTooltip, {
+      description: desc,
+      anchorElement: makeAnchor(),
+      companionGroups: COMPANION_GROUPS,
+    }));
+
+    const tooltip = screen.getByTestId('action-tooltip');
+    expect(tooltip.textContent).toContain('Effects');
+
+    const companionSection = screen.getByTestId('tooltip-companion-actions');
+    expect(companionSection.textContent).toContain('Special Activity');
+    expect(companionSection.textContent).toContain('Ambush');
+    expect(companionSection.textContent).toContain('Raid');
+  });
+
+  it('does not render companion actions for legacy tooltip content when companion groups are undefined', () => {
+    const desc = makeDescription({
+      sections: [makeEffectsGroup()],
+    });
+
+    render(createElement(ActionTooltip, {
+      description: desc,
+      anchorElement: makeAnchor(),
+    }));
+
+    expect(screen.queryByTestId('tooltip-companion-actions')).toBeNull();
+  });
+
+  it('does not render companion actions for legacy tooltip content when companion groups are empty', () => {
+    const desc = makeDescription({
+      sections: [makeEffectsGroup()],
+    });
+
+    render(createElement(ActionTooltip, {
+      description: desc,
+      anchorElement: makeAnchor(),
+      companionGroups: [],
+    }));
+
+    expect(screen.queryByTestId('tooltip-companion-actions')).toBeNull();
+  });
+
   /* -------------------------------------------------------------- */
   /* Progressive Disclosure (tooltipPayload present)                 */
   /* -------------------------------------------------------------- */
@@ -463,6 +532,54 @@ describe('ActionTooltip', () => {
 
       expect(screen.getByTestId('availability-section')).toBeTruthy();
       expect(screen.getByTestId('availability-section').textContent).toContain('Available');
+    });
+
+    it('renders companion actions when companion groups are provided', () => {
+      const desc = makeDescription({
+        tooltipPayload: makePayload(),
+      });
+
+      render(createElement(ActionTooltip, {
+        description: desc,
+        anchorElement: makeAnchor(),
+        companionGroups: COMPANION_GROUPS,
+      }));
+
+      const companionSection = screen.getByTestId('tooltip-companion-actions');
+      expect(companionSection.textContent).toContain('Special Activity');
+      expect(companionSection.textContent).toContain('Ambush');
+      expect(companionSection.textContent).toContain('Raid');
+      const unavailableItem = Array.from(companionSection.querySelectorAll('li')).find((item) => item.textContent === 'Raid');
+      expect(unavailableItem?.className).toContain('companionUnavailable');
+    });
+
+    it('renders multiple companion groups in declaration order', () => {
+      const desc = makeDescription({
+        tooltipPayload: makePayload(),
+      });
+
+      render(createElement(ActionTooltip, {
+        description: desc,
+        anchorElement: makeAnchor(),
+        companionGroups: MULTI_COMPANION_GROUPS,
+      }));
+
+      const headers = Array.from(screen.getByTestId('tooltip-companion-actions').querySelectorAll('p'));
+      expect(headers.map((header) => header.textContent)).toEqual(['Special Activity', 'Bonus Action']);
+      expect(screen.getByText('Rally')).toBeTruthy();
+    });
+
+    it('does not render companion actions when no companion groups are provided', () => {
+      const desc = makeDescription({
+        tooltipPayload: makePayload(),
+      });
+
+      render(createElement(ActionTooltip, {
+        description: desc,
+        anchorElement: makeAnchor(),
+      }));
+
+      expect(screen.queryByTestId('tooltip-companion-actions')).toBeNull();
     });
 
     it('renders raw AST toggle when sections are present alongside payload', () => {

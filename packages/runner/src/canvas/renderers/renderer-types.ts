@@ -18,6 +18,10 @@ import type {
   PresentationRegionNode,
   PresentationZoneNode,
 } from '../../presentation/presentation-scene.js';
+import type {
+  ConnectionRouteNode,
+  JunctionNode,
+} from '../../presentation/connection-route-resolver.js';
 import type { TableOverlaySurfaceNode } from '../../presentation/project-table-overlay-surface.js';
 import type { PresentationTokenNode } from '../../presentation/token-presentation.js';
 
@@ -50,6 +54,16 @@ export interface AdjacencyRenderer {
     adjacencies: readonly PresentationAdjacencyNode[],
     positions: ReadonlyMap<string, Position>,
   ): void;
+  destroy(): void;
+}
+
+export interface ConnectionRouteRenderer {
+  update(
+    routes: readonly ConnectionRouteNode[],
+    junctions: readonly JunctionNode[],
+    positions: ReadonlyMap<string, Position>,
+  ): void;
+  getContainerMap(): ReadonlyMap<string, Container>;
   destroy(): void;
 }
 

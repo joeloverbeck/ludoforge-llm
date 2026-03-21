@@ -1,9 +1,6 @@
-export interface Point {
-  readonly x: number;
-  readonly y: number;
-}
+import type { Point2D } from './point2d.js';
 
-function cross(o: Point, a: Point, b: Point): number {
+function cross(o: Point2D, a: Point2D, b: Point2D): number {
   return (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
 }
 
@@ -11,7 +8,7 @@ function cross(o: Point, a: Point, b: Point): number {
  * Andrew's monotone chain convex hull algorithm.
  * Returns vertices in counter-clockwise order.
  */
-export function convexHull(points: readonly Point[]): readonly Point[] {
+export function convexHull(points: readonly Point2D[]): readonly Point2D[] {
   if (points.length <= 1) {
     return points;
   }
@@ -25,7 +22,7 @@ export function convexHull(points: readonly Point[]): readonly Point[] {
       : sorted;
   }
 
-  const lower: Point[] = [];
+  const lower: Point2D[] = [];
   for (let i = 0; i < n; i += 1) {
     while (lower.length >= 2 && cross(lower[lower.length - 2]!, lower[lower.length - 1]!, sorted[i]!) <= 0) {
       lower.pop();
@@ -33,7 +30,7 @@ export function convexHull(points: readonly Point[]): readonly Point[] {
     lower.push(sorted[i]!);
   }
 
-  const upper: Point[] = [];
+  const upper: Point2D[] = [];
   for (let i = n - 1; i >= 0; i -= 1) {
     while (upper.length >= 2 && cross(upper[upper.length - 2]!, upper[upper.length - 1]!, sorted[i]!) <= 0) {
       upper.pop();

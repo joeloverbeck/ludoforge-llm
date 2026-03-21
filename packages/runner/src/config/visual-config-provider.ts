@@ -3,6 +3,7 @@ import {
   STROKE_LABEL_FONT_NAME,
   type BitmapFontName,
 } from '../canvas/text/bitmap-font-registry.js';
+import type { Position } from '../spatial/position-types.js';
 import {
   computeDefaultFactionColor,
   DEFAULT_TOKEN_SHAPE,
@@ -44,6 +45,9 @@ import type {
   VisualConfig,
   RunnerChromeTopBarStatusAlignment,
   ZoneTokenLayout,
+  ConnectionAnchorConfig,
+  ConnectionStyleConfig,
+  ConnectionRouteDefinition,
 } from './visual-config-types.js';
 
 export interface ResolvedZoneVisual {
@@ -51,6 +55,7 @@ export interface ResolvedZoneVisual {
   readonly width: number;
   readonly height: number;
   readonly color: string | null;
+  readonly connectionStyleKey: string | null;
 }
 
 export interface ResolvedTokenVisual {
@@ -147,6 +152,7 @@ export class VisualConfigProvider {
       width: DEFAULT_ZONE_WIDTH,
       height: DEFAULT_ZONE_HEIGHT,
       color: null,
+      connectionStyleKey: null,
     };
 
     const categoryStyle = category === null
@@ -163,6 +169,45 @@ export class VisualConfigProvider {
 
     applyZoneStyle(resolved, this.config?.zones?.overrides?.[zoneId]);
     return resolved;
+  }
+
+  resolveConnectionStyle(styleKey: string): ConnectionStyleConfig | null {
+    return this.config?.zones?.connectionStyles?.[styleKey] ?? null;
+  }
+
+  getConnectionRoutes(): ReadonlyMap<string, ConnectionRouteDefinition> {
+    const configured = this.config?.zones?.connectionRoutes;
+    if (configured === undefined) {
+      return EMPTY_CONNECTION_ROUTES;
+    }
+    return new Map(
+      Object.entries(configured).map(([zoneId, route]) => [
+        zoneId,
+        {
+          points: [...route.points],
+          segments: route.segments.map((segment) => (
+            segment.kind === 'straight'
+              ? { kind: 'straight' }
+              : {
+                  kind: 'quadratic',
+                  control: segment.control.kind === 'anchor'
+                    ? { kind: 'anchor', anchorId: segment.control.anchorId }
+                    : { kind: 'position', x: segment.control.x, y: segment.control.y },
+                }
+          )),
+        },
+      ]),
+    );
+  }
+
+  getConnectionAnchors(): ReadonlyMap<string, Position> {
+    const configured = this.config?.zones?.connectionAnchors;
+    if (configured === undefined) {
+      return EMPTY_CONNECTION_ANCHORS;
+    }
+    return new Map(
+      Object.entries(configured).map(([anchorId, anchor]) => [anchorId, normalizeConnectionAnchor(anchor)]),
+    );
   }
 
   getZoneLabel(zoneId: string): string | null {
@@ -459,6 +504,8 @@ export class VisualConfigProvider {
 }
 
 const EMPTY_STRING_SET: ReadonlySet<string> = Object.freeze(new Set<string>());
+const EMPTY_CONNECTION_ROUTES: ReadonlyMap<string, ConnectionRouteDefinition> = Object.freeze(new Map());
+const EMPTY_CONNECTION_ANCHORS: ReadonlyMap<string, Position> = Object.freeze(new Map());
 const DEFAULT_STACK_BADGE_STYLE: ResolvedStackBadgeStyle = Object.freeze({
   fontName: STROKE_LABEL_FONT_NAME,
   fontSize: 10,
@@ -502,13 +549,20 @@ function applyEdgeStyle(
 }
 
 function applyZoneStyle(
-  target: { shape: ZoneShape; width: number; height: number; color: string | null },
+  target: {
+    shape: ZoneShape;
+    width: number;
+    height: number;
+    color: string | null;
+    connectionStyleKey: string | null;
+  },
   source:
     | {
       readonly shape?: ZoneShape | undefined;
       readonly width?: number | undefined;
       readonly height?: number | undefined;
       readonly color?: string | undefined;
+      readonly connectionStyleKey?: string | undefined;
     }
     | undefined,
 ): void {
@@ -526,6 +580,9 @@ function applyZoneStyle(
   }
   if (source.color !== undefined) {
     target.color = source.color;
+  }
+  if (source.connectionStyleKey !== undefined) {
+    target.connectionStyleKey = source.connectionStyleKey;
   }
 }
 
@@ -607,6 +664,13 @@ function normalizeStackBadgeStyle(style: StackBadgeStyle | undefined): ResolvedS
     anchorY: style.anchorY,
     offsetX: style.offsetX,
     offsetY: style.offsetY,
+  };
+}
+
+function normalizeConnectionAnchor(anchor: ConnectionAnchorConfig): Position {
+  return {
+    x: anchor.x,
+    y: anchor.y,
   };
 }
 

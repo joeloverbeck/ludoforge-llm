@@ -361,6 +361,85 @@ describe('VisualConfigSchema', () => {
     expect(result.success).toBe(true);
   });
 
+  it('accepts connection as a valid zone shape and parses unified connection routes', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      zones: {
+        categoryStyles: {
+          loc: { shape: 'connection', connectionStyleKey: 'highway' },
+        },
+        connectionAnchors: {
+          'khe-sanh': { x: 120, y: 80 },
+        },
+        connectionStyles: {
+          highway: {
+            strokeWidth: 8,
+            strokeColor: '#8b7355',
+          },
+          mekong: {
+            strokeWidth: 12,
+            strokeColor: '#4a7a8c',
+            wavy: true,
+            waveAmplitude: 4,
+            waveFrequency: 0.08,
+          },
+        },
+        attributeRules: [
+          {
+            match: {
+              category: ['loc'],
+              attributeContains: { terrainTags: 'mekong' },
+            },
+            style: { connectionStyleKey: 'mekong' },
+          },
+        ],
+        connectionRoutes: {
+          'loc-alpha-beta:none': {
+            points: [
+              { kind: 'zone', zoneId: 'alpha:none' },
+              { kind: 'anchor', anchorId: 'khe-sanh' },
+            ],
+            segments: [
+              { kind: 'quadratic', control: { kind: 'position', x: 90, y: 40 } },
+            ],
+          },
+          'loc-saigon-an-loc-ban-me-thuot:none': {
+            points: [
+              { kind: 'zone', zoneId: 'saigon:none' },
+              { kind: 'anchor', anchorId: 'khe-sanh' },
+              { kind: 'zone', zoneId: 'ban-me-thuot:none' },
+            ],
+            segments: [
+              { kind: 'straight' },
+              { kind: 'quadratic', control: { kind: 'anchor', anchorId: 'khe-sanh' } },
+            ],
+          },
+        },
+      },
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects connection routes with mismatched segment counts', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      zones: {
+        connectionRoutes: {
+          'loc-short:none': {
+            points: [
+              { kind: 'zone', zoneId: 'alpha:none' },
+              { kind: 'zone', zoneId: 'beta:none' },
+            ],
+            segments: [],
+          },
+        },
+      },
+    });
+
+    expect(result.success).toBe(false);
+  });
+
   it('accepts token backSymbol in token type visual style', () => {
     const result = VisualConfigSchema.safeParse({
       version: 1,

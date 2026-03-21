@@ -14,12 +14,18 @@ import {
   type HiddenZoneStackVisual,
 } from './hidden-zone-stack';
 import {
+  createZoneBadgeVisuals,
+  createZoneMarkersLabel,
+  updateZoneBadgeVisuals,
+  updateZoneMarkersLabel,
+  type ZoneBadgeVisuals,
+} from './zone-presentation-visuals.js';
+import {
   ZONE_RENDER_WIDTH as ZONE_WIDTH,
   ZONE_RENDER_HEIGHT as ZONE_HEIGHT,
 } from '../../layout/layout-constants.js';
 import { createManagedBitmapText } from '../text/bitmap-text-runtime.js';
 import {
-  LABEL_FONT_NAME,
   STROKE_LABEL_FONT_NAME,
   type BitmapFontName,
 } from '../text/bitmap-font-registry.js';
@@ -29,13 +35,11 @@ const ZONE_CORNER_RADIUS = 12;
 const LINE_CORNER_RADIUS = 4;
 const LABEL_AREA_HEIGHT = 40;
 
-interface ZoneVisualElements {
+interface ZoneVisualElements extends ZoneBadgeVisuals {
   readonly base: Graphics;
   readonly hiddenStack: HiddenZoneStackVisual;
   readonly nameLabel: BitmapText;
   readonly markersLabel: BitmapText;
-  readonly badgeGraphics: Graphics;
-  readonly badgeLabel: BitmapText;
 }
 
 interface ZoneRendererOptions {
@@ -170,27 +174,8 @@ function createZoneVisualElements(): ZoneVisualElements {
     stroke: { color: '#000000', width: 3 },
     anchor: { x: 0.5, y: 0 },
   });
-  const markersLabel = createBitmapLabel('', 0, 0, 11, {
-    fontName: STROKE_LABEL_FONT_NAME,
-    fill: '#f5f7fa',
-    stroke: { color: '#000000', width: 2 },
-    anchor: { x: 0.5, y: 0 },
-  });
-
-  markersLabel.visible = false;
-
-  const badgeGraphics = new Graphics();
-  badgeGraphics.eventMode = 'none';
-  badgeGraphics.interactiveChildren = false;
-  badgeGraphics.visible = false;
-
-  const badgeLabel = createBitmapLabel('', 0, 0, 10, {
-    fontName: LABEL_FONT_NAME,
-    fill: '#ffffff',
-    anchor: { x: 0.5, y: 0.5 },
-    fontWeight: 'bold',
-  });
-  badgeLabel.visible = false;
+  const markersLabel = createZoneMarkersLabel();
+  const { badgeGraphics, badgeLabel } = createZoneBadgeVisuals();
 
   return {
     base,
@@ -251,10 +236,8 @@ function updateZoneVisuals(
   visuals.nameLabel.text = zone.render.nameLabel.text;
   visuals.nameLabel.position.set(zone.render.nameLabel.x, zone.render.nameLabel.y);
   visuals.nameLabel.visible = zone.render.nameLabel.visible;
-  visuals.markersLabel.text = zone.render.markersLabel.text;
-  visuals.markersLabel.position.set(zone.render.markersLabel.x, zone.render.markersLabel.y);
-  visuals.markersLabel.visible = zone.render.markersLabel.visible;
-  updateMarkerBadge(visuals, zone.render.badge);
+  updateZoneMarkersLabel(visuals.markersLabel, zone.render.markersLabel);
+  updateZoneBadgeVisuals(visuals, zone.render.badge);
 }
 
 function drawZoneBase(base: Graphics, zone: PresentationZoneNode): void {
@@ -276,29 +259,4 @@ function drawZoneBase(base: Graphics, zone: PresentationZoneNode): void {
     width: zone.render.stroke.width,
     alpha: zone.render.stroke.alpha,
   });
-}
-
-function hideBadge(visuals: ZoneVisualElements): void {
-  visuals.badgeGraphics.visible = false;
-  visuals.badgeLabel.visible = false;
-}
-
-function updateMarkerBadge(
-  visuals: ZoneVisualElements,
-  badge: PresentationZoneNode['render']['badge'],
-): void {
-  if (badge === null) {
-    hideBadge(visuals);
-    return;
-  }
-
-  const fillColor = parseHexColor(badge.color);
-  visuals.badgeGraphics.clear();
-  visuals.badgeGraphics.roundRect(badge.x, badge.y, badge.width, badge.height, 4);
-  visuals.badgeGraphics.fill({ color: fillColor ?? 0x6b7280 });
-  visuals.badgeGraphics.visible = true;
-
-  visuals.badgeLabel.text = badge.text;
-  visuals.badgeLabel.position.set(badge.x + badge.width / 2, badge.y + badge.height / 2);
-  visuals.badgeLabel.visible = true;
 }

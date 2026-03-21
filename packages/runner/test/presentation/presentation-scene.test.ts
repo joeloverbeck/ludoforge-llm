@@ -152,7 +152,7 @@ describe('buildPresentationScene', () => {
     expect(scene.zones[0]).toMatchObject({
       id: 'zone:a',
       displayName: 'Configured Zone A',
-      visual: { shape: 'hexagon', width: 120, height: 90, color: '#2a6e3f' },
+      visual: { shape: 'hexagon', width: 120, height: 90, color: '#2a6e3f', connectionStyleKey: null },
       render: { fillColor: '#2a6e3f', nameLabel: { text: 'Configured Zone A' } },
     });
     expect(scene.zones).not.toBe(runnerFrame.zones);
@@ -218,6 +218,247 @@ describe('buildPresentationScene', () => {
 
     expect(scene.zones[0]?.render.stroke).toEqual({ color: '#60a5fa', width: 3, alpha: 1 });
     expect(scene.tokens[0]?.render.stroke).toEqual({ color: '#60a5fa', width: 3, alpha: 1 });
+  });
+
+  it('projects connection-shaped zones into connection routes while keeping route tokens visible', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      zones: {
+        categoryStyles: {
+          province: { shape: 'rectangle', width: 120, height: 90, color: '#2a6e3f' },
+          loc: { shape: 'connection', connectionStyleKey: 'highway' },
+        },
+        connectionStyles: {
+          highway: { strokeWidth: 8, strokeColor: '#8b7355', strokeAlpha: 0.8 },
+        },
+        markerBadge: {
+          markerId: 'support',
+          colorMap: {
+            activeOpposition: { color: '#dc2626', abbreviation: 'AO' },
+          },
+        },
+      },
+    });
+
+    const scene = buildPresentationScene({
+      runnerFrame: makeRunnerFrame({
+        zones: [
+          makeZone('alpha:none', {}, { category: 'province' }),
+          makeZone('beta:none', {}, { category: 'province' }),
+          makeZone('loc-alpha-beta:none', {}, {
+            category: 'loc',
+            markers: [
+              { id: 'support', state: 'activeOpposition', possibleStates: [] },
+              { id: 'sabotage', state: 'sabotage', possibleStates: [] },
+            ],
+          }),
+        ],
+        adjacencies: [
+          { from: 'loc-alpha-beta:none', to: 'alpha:none', category: null, isHighlighted: false },
+          { from: 'loc-alpha-beta:none', to: 'beta:none', category: null, isHighlighted: false },
+        ],
+        tokens: [
+          { id: 'token:route', type: 'troop', zoneID: 'loc-alpha-beta:none', ownerID: asPlayerId(0), factionId: null, faceUp: true, properties: {}, isSelectable: false, isSelected: false },
+        ],
+      }),
+      overlays: [],
+      positions: new Map([
+        ['alpha:none', { x: 0, y: 0 }],
+        ['beta:none', { x: 200, y: 0 }],
+        ['loc-alpha-beta:none', { x: 100, y: 0 }],
+      ]),
+      visualConfigProvider: provider,
+      tokenRenderStyleProvider: new VisualConfigTokenRenderStyleProvider(provider),
+      interactionHighlights: { zoneIDs: [], tokenIDs: [] },
+    });
+
+    expect(scene.zones.map((zone) => zone.id)).toEqual(['alpha:none', 'beta:none']);
+    expect(scene.connectionRoutes).toEqual([
+      expect.objectContaining({
+        zoneId: 'loc-alpha-beta:none',
+        path: [
+          { kind: 'zone', id: 'alpha:none', position: { x: 0, y: 0 } },
+          { kind: 'zone', id: 'beta:none', position: { x: 200, y: 0 } },
+        ],
+        connectionStyleKey: 'highway',
+        zone: expect.objectContaining({
+          render: expect.objectContaining({
+            markersLabel: expect.objectContaining({
+              text: 'Sabotage:sabotage',
+              visible: true,
+            }),
+            badge: {
+              text: 'AO',
+              color: '#dc2626',
+              x: 46,
+              y: 26,
+              width: 30,
+              height: 20,
+            },
+          }),
+        }),
+      }),
+    ]);
+    expect(scene.connectionRoutes[0]).not.toHaveProperty('connectedConnectionIds');
+    expect(scene.adjacencies).toEqual([]);
+    expect(scene.tokens).toEqual([
+      expect.objectContaining({
+        zoneId: 'loc-alpha-beta:none',
+      }),
+    ]);
+  });
+
+  it('uses provider-owned unified route definitions for otherwise ambiguous connection routes', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      zones: {
+        categoryStyles: {
+          province: { shape: 'rectangle', width: 120, height: 90, color: '#2a6e3f' },
+          loc: { shape: 'connection', connectionStyleKey: 'mekong' },
+        },
+        connectionAnchors: {
+          'long-phu': { x: 220, y: -20 },
+        },
+        connectionStyles: {
+          mekong: { strokeWidth: 12, strokeColor: '#4a7a8c', wavy: true, waveAmplitude: 4, waveFrequency: 0.08 },
+        },
+        connectionRoutes: {
+          'loc-can-tho-long-phu:none': {
+            points: [
+              { kind: 'zone', zoneId: 'can-tho:none' },
+              { kind: 'anchor', anchorId: 'long-phu' },
+            ],
+            segments: [
+              { kind: 'quadratic', control: { kind: 'position', x: 120, y: -40 } },
+            ],
+          },
+        },
+      },
+    });
+
+    const scene = buildPresentationScene({
+      runnerFrame: makeRunnerFrame({
+        zones: [
+          makeZone('can-tho:none', {}, { category: 'province' }),
+          makeZone('ba-xuyen:none', {}, { category: 'province' }),
+          makeZone('kien-hoa-vinh-binh:none', {}, { category: 'province' }),
+          makeZone('loc-can-tho-long-phu:none', { terrainTags: ['mekong'] }, { category: 'loc' }),
+        ],
+        adjacencies: [
+          { from: 'loc-can-tho-long-phu:none', to: 'can-tho:none', category: null, isHighlighted: false },
+          { from: 'loc-can-tho-long-phu:none', to: 'ba-xuyen:none', category: null, isHighlighted: false },
+          { from: 'loc-can-tho-long-phu:none', to: 'kien-hoa-vinh-binh:none', category: null, isHighlighted: false },
+        ],
+      }),
+      overlays: [],
+      positions: new Map([
+        ['can-tho:none', { x: 0, y: 0 }],
+        ['ba-xuyen:none', { x: 100, y: 40 }],
+        ['kien-hoa-vinh-binh:none', { x: 200, y: 0 }],
+        ['loc-can-tho-long-phu:none', { x: 100, y: 0 }],
+      ]),
+      visualConfigProvider: provider,
+      tokenRenderStyleProvider: new VisualConfigTokenRenderStyleProvider(provider),
+      interactionHighlights: { zoneIDs: [], tokenIDs: [] },
+    });
+
+    expect(scene.connectionRoutes).toEqual([
+      expect.objectContaining({
+        zoneId: 'loc-can-tho-long-phu:none',
+        path: [
+          { kind: 'zone', id: 'can-tho:none', position: { x: 0, y: 0 } },
+          { kind: 'anchor', id: 'long-phu', position: { x: 220, y: -20 } },
+        ],
+        segments: [
+          {
+            kind: 'quadratic',
+            controlPoint: { kind: 'position', id: null, position: { x: 120, y: -40 } },
+          },
+        ],
+        touchingZoneIds: ['ba-xuyen:none', 'kien-hoa-vinh-binh:none'],
+        connectionStyleKey: 'mekong',
+      }),
+    ]);
+    expect(scene.zones.map((zone) => zone.id)).toEqual([
+      'can-tho:none',
+      'ba-xuyen:none',
+      'kien-hoa-vinh-binh:none',
+    ]);
+  });
+
+  it('threads explicit multi-point connection routes through the scene pipeline', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      zones: {
+        categoryStyles: {
+          province: { shape: 'rectangle', width: 120, height: 90, color: '#2a6e3f' },
+          loc: { shape: 'connection', connectionStyleKey: 'highway' },
+        },
+        connectionAnchors: {
+          'an-loc': { x: 120, y: -20 },
+          'ban-me-thuot': { x: 240, y: -10 },
+        },
+        connectionStyles: {
+          highway: { strokeWidth: 8, strokeColor: '#8b7355' },
+        },
+        connectionRoutes: {
+          'loc-saigon-an-loc-ban-me-thuot:none': {
+            points: [
+              { kind: 'zone', zoneId: 'saigon:none' },
+              { kind: 'anchor', anchorId: 'an-loc' },
+              { kind: 'anchor', anchorId: 'ban-me-thuot' },
+            ],
+            segments: [
+              { kind: 'straight' },
+              { kind: 'quadratic', control: { kind: 'position', x: 180, y: -40 } },
+            ],
+          },
+        },
+      },
+    });
+
+    const scene = buildPresentationScene({
+      runnerFrame: makeRunnerFrame({
+        zones: [
+          makeZone('saigon:none', {}, { category: 'province' }),
+          makeZone('phu-bon:none', {}, { category: 'province' }),
+          makeZone('loc-saigon-an-loc-ban-me-thuot:none', { terrainTags: ['highway'] }, { category: 'loc' }),
+        ],
+        adjacencies: [
+          { from: 'loc-saigon-an-loc-ban-me-thuot:none', to: 'saigon:none', category: null, isHighlighted: false },
+          { from: 'loc-saigon-an-loc-ban-me-thuot:none', to: 'phu-bon:none', category: null, isHighlighted: false },
+        ],
+      }),
+      overlays: [],
+      positions: new Map([
+        ['saigon:none', { x: 0, y: 0 }],
+        ['phu-bon:none', { x: 260, y: 0 }],
+        ['loc-saigon-an-loc-ban-me-thuot:none', { x: 120, y: 0 }],
+      ]),
+      visualConfigProvider: provider,
+      tokenRenderStyleProvider: new VisualConfigTokenRenderStyleProvider(provider),
+      interactionHighlights: { zoneIDs: [], tokenIDs: [] },
+    });
+
+    expect(scene.connectionRoutes).toEqual([
+      expect.objectContaining({
+        zoneId: 'loc-saigon-an-loc-ban-me-thuot:none',
+        path: [
+          { kind: 'zone', id: 'saigon:none', position: { x: 0, y: 0 } },
+          { kind: 'anchor', id: 'an-loc', position: { x: 120, y: -20 } },
+          { kind: 'anchor', id: 'ban-me-thuot', position: { x: 240, y: -10 } },
+        ],
+        segments: [
+          { kind: 'straight' },
+          {
+            kind: 'quadratic',
+            controlPoint: { kind: 'position', id: null, position: { x: 180, y: -40 } },
+          },
+        ],
+        touchingZoneIds: ['phu-bon:none'],
+        connectionStyleKey: 'highway',
+      }),
+    ]);
   });
 
   it('resolves token grouping and offsets before renderer mutation', () => {

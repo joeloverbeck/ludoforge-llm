@@ -205,7 +205,287 @@
     }
   },
   "library": {
-    "stateFeatures": {},
+    "stateFeatures": {
+      "callAmount": {
+        "type": "number",
+        "costClass": "state",
+        "expr": {
+          "kind": "op",
+          "op": "max",
+          "args": [
+            {
+              "kind": "literal",
+              "value": 0
+            },
+            {
+              "kind": "op",
+              "op": "sub",
+              "args": [
+                {
+                  "kind": "ref",
+                  "ref": {
+                    "kind": "currentSurface",
+                    "family": "globalVar",
+                    "id": "currentBet"
+                  }
+                },
+                {
+                  "kind": "ref",
+                  "ref": {
+                    "kind": "currentSurface",
+                    "family": "perPlayerVar",
+                    "id": "streetBet",
+                    "selector": {
+                      "kind": "player",
+                      "player": "self"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": []
+        }
+      },
+      "facingBet": {
+        "type": "boolean",
+        "costClass": "state",
+        "expr": {
+          "kind": "op",
+          "op": "gt",
+          "args": [
+            {
+              "kind": "ref",
+              "ref": {
+                "kind": "library",
+                "refKind": "stateFeature",
+                "id": "callAmount"
+              }
+            },
+            {
+              "kind": "literal",
+              "value": 0
+            }
+          ]
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [
+            "callAmount"
+          ],
+          "candidateFeatures": [],
+          "aggregates": []
+        }
+      },
+      "potOddsFavorable": {
+        "type": "boolean",
+        "costClass": "state",
+        "expr": {
+          "kind": "op",
+          "op": "gte",
+          "args": [
+            {
+              "kind": "ref",
+              "ref": {
+                "kind": "currentSurface",
+                "family": "globalVar",
+                "id": "pot"
+              }
+            },
+            {
+              "kind": "op",
+              "op": "mul",
+              "args": [
+                {
+                  "kind": "op",
+                  "op": "max",
+                  "args": [
+                    {
+                      "kind": "literal",
+                      "value": 1
+                    },
+                    {
+                      "kind": "op",
+                      "op": "sub",
+                      "args": [
+                        {
+                          "kind": "ref",
+                          "ref": {
+                            "kind": "currentSurface",
+                            "family": "globalVar",
+                            "id": "activePlayers"
+                          }
+                        },
+                        {
+                          "kind": "literal",
+                          "value": 1
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "kind": "ref",
+                  "ref": {
+                    "kind": "library",
+                    "refKind": "stateFeature",
+                    "id": "callAmount"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [
+            "callAmount"
+          ],
+          "candidateFeatures": [],
+          "aggregates": []
+        }
+      },
+      "handHighCard": {
+        "type": "number",
+        "costClass": "state",
+        "expr": {
+          "kind": "zoneTokenAgg",
+          "zone": "hand",
+          "owner": "self",
+          "prop": "rank",
+          "aggOp": "max"
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": []
+        }
+      },
+      "handLowCard": {
+        "type": "number",
+        "costClass": "state",
+        "expr": {
+          "kind": "zoneTokenAgg",
+          "zone": "hand",
+          "owner": "self",
+          "prop": "rank",
+          "aggOp": "min"
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": []
+        }
+      },
+      "premiumHand": {
+        "type": "boolean",
+        "costClass": "state",
+        "expr": {
+          "kind": "op",
+          "op": "gte",
+          "args": [
+            {
+              "kind": "ref",
+              "ref": {
+                "kind": "library",
+                "refKind": "stateFeature",
+                "id": "handHighCard"
+              }
+            },
+            {
+              "kind": "literal",
+              "value": 13
+            }
+          ]
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [
+            "handHighCard"
+          ],
+          "candidateFeatures": [],
+          "aggregates": []
+        }
+      },
+      "isDealer": {
+        "type": "boolean",
+        "costClass": "state",
+        "expr": {
+          "kind": "op",
+          "op": "eq",
+          "args": [
+            {
+              "kind": "ref",
+              "ref": {
+                "kind": "currentSurface",
+                "family": "perPlayerVar",
+                "id": "seatIndex",
+                "selector": {
+                  "kind": "player",
+                  "player": "self"
+                }
+              }
+            },
+            {
+              "kind": "ref",
+              "ref": {
+                "kind": "currentSurface",
+                "family": "globalVar",
+                "id": "dealerSeat"
+              }
+            }
+          ]
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": []
+        }
+      },
+      "hasPair": {
+        "type": "boolean",
+        "costClass": "state",
+        "expr": {
+          "kind": "op",
+          "op": "eq",
+          "args": [
+            {
+              "kind": "ref",
+              "ref": {
+                "kind": "library",
+                "refKind": "stateFeature",
+                "id": "handHighCard"
+              }
+            },
+            {
+              "kind": "ref",
+              "ref": {
+                "kind": "library",
+                "refKind": "stateFeature",
+                "id": "handLowCard"
+              }
+            }
+          ]
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [
+            "handHighCard",
+            "handLowCard"
+          ],
+          "candidateFeatures": [],
+          "aggregates": []
+        }
+      }
+    },
     "candidateFeatures": {
       "isCheck": {
         "type": "boolean",
@@ -431,87 +711,6 @@
           "aggregates": []
         }
       },
-      "preferRaise": {
-        "costClass": "candidate",
-        "weight": {
-          "kind": "literal",
-          "value": 60
-        },
-        "value": {
-          "kind": "op",
-          "op": "boolToNumber",
-          "args": [
-            {
-              "kind": "ref",
-              "ref": {
-                "kind": "library",
-                "refKind": "candidateFeature",
-                "id": "isRaise"
-              }
-            }
-          ]
-        },
-        "dependencies": {
-          "parameters": [],
-          "stateFeatures": [],
-          "candidateFeatures": [
-            "isRaise"
-          ],
-          "aggregates": []
-        }
-      },
-      "preferSmallerRaise": {
-        "costClass": "candidate",
-        "weight": {
-          "kind": "literal",
-          "value": -0.001
-        },
-        "value": {
-          "kind": "ref",
-          "ref": {
-            "kind": "library",
-            "refKind": "candidateFeature",
-            "id": "raiseAmount"
-          }
-        },
-        "dependencies": {
-          "parameters": [],
-          "stateFeatures": [],
-          "candidateFeatures": [
-            "raiseAmount"
-          ],
-          "aggregates": []
-        }
-      },
-      "preferAllIn": {
-        "costClass": "candidate",
-        "weight": {
-          "kind": "literal",
-          "value": 40
-        },
-        "value": {
-          "kind": "op",
-          "op": "boolToNumber",
-          "args": [
-            {
-              "kind": "ref",
-              "ref": {
-                "kind": "library",
-                "refKind": "candidateFeature",
-                "id": "isAllIn"
-              }
-            }
-          ]
-        },
-        "dependencies": {
-          "parameters": [],
-          "stateFeatures": [],
-          "candidateFeatures": [
-            "isAllIn"
-          ],
-          "aggregates": []
-        }
-      },
       "avoidFold": {
         "costClass": "candidate",
         "weight": {
@@ -540,6 +739,118 @@
           ],
           "aggregates": []
         }
+      },
+      "foldWhenBadPotOdds": {
+        "costClass": "candidate",
+        "weight": {
+          "kind": "literal",
+          "value": 200
+        },
+        "value": {
+          "kind": "op",
+          "op": "boolToNumber",
+          "args": [
+            {
+              "kind": "op",
+              "op": "and",
+              "args": [
+                {
+                  "kind": "ref",
+                  "ref": {
+                    "kind": "library",
+                    "refKind": "candidateFeature",
+                    "id": "isFold"
+                  }
+                },
+                {
+                  "kind": "ref",
+                  "ref": {
+                    "kind": "library",
+                    "refKind": "stateFeature",
+                    "id": "facingBet"
+                  }
+                },
+                {
+                  "kind": "op",
+                  "op": "not",
+                  "args": [
+                    {
+                      "kind": "ref",
+                      "ref": {
+                        "kind": "library",
+                        "refKind": "stateFeature",
+                        "id": "potOddsFavorable"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [
+            "facingBet",
+            "potOddsFavorable"
+          ],
+          "candidateFeatures": [
+            "isFold"
+          ],
+          "aggregates": []
+        }
+      },
+      "alwaysRaise": {
+        "costClass": "candidate",
+        "weight": {
+          "kind": "literal",
+          "value": 90
+        },
+        "value": {
+          "kind": "op",
+          "op": "boolToNumber",
+          "args": [
+            {
+              "kind": "ref",
+              "ref": {
+                "kind": "library",
+                "refKind": "candidateFeature",
+                "id": "isRaise"
+              }
+            }
+          ]
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [
+            "isRaise"
+          ],
+          "aggregates": []
+        }
+      },
+      "preferLargerRaise": {
+        "costClass": "candidate",
+        "weight": {
+          "kind": "literal",
+          "value": 0.002
+        },
+        "value": {
+          "kind": "ref",
+          "ref": {
+            "kind": "library",
+            "refKind": "candidateFeature",
+            "id": "raiseAmount"
+          }
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [
+            "raiseAmount"
+          ],
+          "aggregates": []
+        }
       }
     },
     "tieBreakers": {
@@ -563,62 +874,35 @@
         "scoreTerms": [
           "preferCheck",
           "preferCall",
-          "preferRaise",
-          "preferSmallerRaise",
-          "preferAllIn",
-          "avoidFold"
+          "avoidFold",
+          "foldWhenBadPotOdds",
+          "alwaysRaise",
+          "preferLargerRaise"
         ],
         "tieBreakers": [
           "stableMoveKey"
         ]
       },
       "plan": {
-        "stateFeatures": [],
+        "stateFeatures": [
+          "callAmount",
+          "facingBet",
+          "potOddsFavorable"
+        ],
         "candidateFeatures": [
           "isCheck",
           "isCall",
+          "isFold",
           "isRaise",
-          "raiseAmount",
-          "isAllIn",
-          "isFold"
+          "raiseAmount"
         ],
         "candidateAggregates": []
       },
-      "fingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f"
-    },
-    "evolved": {
-      "params": {},
-      "use": {
-        "pruningRules": [],
-        "scoreTerms": [
-          "preferCheck",
-          "preferCall",
-          "preferRaise",
-          "preferSmallerRaise",
-          "preferAllIn",
-          "avoidFold"
-        ],
-        "tieBreakers": [
-          "stableMoveKey"
-        ]
-      },
-      "plan": {
-        "stateFeatures": [],
-        "candidateFeatures": [
-          "isCheck",
-          "isCall",
-          "isRaise",
-          "raiseAmount",
-          "isAllIn",
-          "isFold"
-        ],
-        "candidateAggregates": []
-      },
-      "fingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f"
+      "fingerprint": "3739b3746bb662fe33f20837cb9fafa70a0d5881ce86f45498a8b9bc784142f2"
     }
   },
   "bindingsBySeat": {
     "neutral": "baseline"
   },
-  "catalogFingerprint": "51c08ed3a560d5b22cbc68c229bf55c6d510384785771d7de1b068e9ea855d05"
+  "catalogFingerprint": "16e2720f27d9830b043eef21265c0d850852f3127b029a4ecf9cd566b593333c"
 }

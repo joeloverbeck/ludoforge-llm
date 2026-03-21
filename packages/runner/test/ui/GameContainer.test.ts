@@ -62,6 +62,15 @@ interface CapturedActionToolbarProps {
 interface CapturedActionTooltipProps {
   readonly description: unknown;
   readonly anchorElement: HTMLElement;
+  readonly companionGroups?: readonly {
+    readonly actionClass: string;
+    readonly groupName: string;
+    readonly actions: readonly {
+      readonly actionId: string;
+      readonly displayName: string;
+      readonly isAvailable: boolean;
+    }[];
+  }[];
 }
 
 const testDoubles = vi.hoisted(() => ({
@@ -72,7 +81,7 @@ const testDoubles = vi.hoisted(() => ({
   actionToolbarProps: null as CapturedActionToolbarProps | null,
   actionTooltipProps: null as CapturedActionTooltipProps | null,
   actionTooltipHookState: {
-    sourceKey: null as { readonly actionId: string; readonly surfaceRevision: number } | null,
+    sourceKey: null as { readonly actionId: string; readonly groupKey: string; readonly surfaceRevision: number } | null,
     description: null as unknown,
     loading: false,
     anchorElement: null as HTMLElement | null,
@@ -244,6 +253,7 @@ function makeRenderModel(overrides: Partial<NonNullable<GameStore['renderModel']
     phaseDisplayName: 'Main',
     eventDecks: [],
     actionGroups: [{ groupKey: 'core', groupName: 'Core', actions: [{ actionId: 'pass', displayName: 'Pass', isAvailable: true }] }],
+    hiddenActionsByClass: new Map(),
     choiceBreadcrumb: [],
     choiceContext: null,
     choiceUi: { kind: 'none' },
@@ -1052,6 +1062,7 @@ describe('GameContainer', () => {
     const fakeAnchor = {} as HTMLElement;
     testDoubles.actionTooltipHookState = {
       sourceKey: {
+        groupKey: 'core',
         actionId: 'pass',
         surfaceRevision: 1,
       },
@@ -1083,12 +1094,77 @@ describe('GameContainer', () => {
     }
     expect(capturedProps.description).toEqual({ sections: [], limitUsage: [] });
     expect(capturedProps.anchorElement).toBe(fakeAnchor);
+    expect(capturedProps.companionGroups).toEqual([]);
+  });
+
+  it('passes companion groups for synthesized tooltip policies', () => {
+    testDoubles.actionTooltipProps = null;
+    const fakeAnchor = {} as HTMLElement;
+    testDoubles.actionTooltipHookState = {
+      sourceKey: {
+        actionId: 'train',
+        groupKey: 'operationPlusSpecialActivity',
+        surfaceRevision: 1,
+      },
+      description: { sections: [], limitUsage: [] },
+      loading: false,
+      anchorElement: fakeAnchor,
+      status: 'visible',
+      interactionOwner: 'source',
+      revision: 1,
+    };
+
+    renderToStaticMarkup(
+      createElement(GameContainer, {
+        bridge: TEST_BRIDGE,
+        store: createContainerStore({
+          gameLifecycle: 'playing',
+          error: null,
+          renderModel: makeRenderModel({
+            hiddenActionsByClass: new Map([
+              ['specialActivity', [
+                { actionId: 'ambush', displayName: 'Ambush', isAvailable: true, actionClass: 'specialActivity' },
+                { actionId: 'raid', displayName: 'Raid', isAvailable: false, actionClass: 'specialActivity' },
+              ]],
+            ]),
+          }),
+        }),
+        visualConfigProvider: new VisualConfigProvider({
+          version: 1,
+          actionGroupPolicy: {
+            synthesize: [{
+              fromClass: 'operation',
+              intoGroup: 'operationPlusSpecialActivity',
+              appendTooltipFrom: ['specialActivity'],
+            }],
+            hide: ['specialActivity'],
+          },
+        }),
+      }),
+    );
+
+    const capturedProps = testDoubles.actionTooltipProps as CapturedActionTooltipProps | null;
+    expect(capturedProps).not.toBeNull();
+    if (capturedProps === null) {
+      throw new Error('Expected ActionTooltip props to be captured.');
+    }
+    expect(capturedProps.companionGroups).toEqual([
+      {
+        actionClass: 'specialActivity',
+        groupName: 'Special Activity',
+        actions: [
+          { actionId: 'ambush', displayName: 'Ambush', isAvailable: true, actionClass: 'specialActivity' },
+          { actionId: 'raid', displayName: 'Raid', isAvailable: false, actionClass: 'specialActivity' },
+        ],
+      },
+    ]);
   });
 
   it('does not render ActionTooltip when bottom bar is not in actions mode even with tooltip state', () => {
     testDoubles.actionTooltipProps = null;
     testDoubles.actionTooltipHookState = {
       sourceKey: {
+        groupKey: 'core',
         actionId: 'pass',
         surfaceRevision: 1,
       },

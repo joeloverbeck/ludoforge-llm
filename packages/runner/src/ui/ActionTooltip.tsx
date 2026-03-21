@@ -8,6 +8,7 @@ import { ModifiersSection } from './ModifiersSection.js';
 import { AvailabilitySection } from './AvailabilitySection.js';
 import { RawAstToggle } from './RawAstToggle.js';
 import { useResolvedFloatingAnchor } from './useResolvedFloatingAnchor.js';
+import type { TooltipCompanionGroup } from './tooltip-companion-actions.js';
 import styles from './ActionTooltip.module.css';
 
 function capitalize(s: string): string {
@@ -17,11 +18,18 @@ function capitalize(s: string): string {
 interface ActionTooltipProps {
   readonly description: AnnotatedActionDescription;
   readonly anchorElement: HTMLElement;
+  readonly companionGroups?: readonly TooltipCompanionGroup[];
   readonly onPointerEnter?: () => void;
   readonly onPointerLeave?: () => void;
 }
 
-export function ActionTooltip({ description, anchorElement, onPointerEnter, onPointerLeave }: ActionTooltipProps): ReactElement | null {
+export function ActionTooltip({
+  description,
+  anchorElement,
+  companionGroups,
+  onPointerEnter,
+  onPointerLeave,
+}: ActionTooltipProps): ReactElement | null {
   const { refs, floatingStyle } = useResolvedFloatingAnchor({
     reference: anchorElement,
     placement: 'top',
@@ -37,6 +45,25 @@ export function ActionTooltip({ description, anchorElement, onPointerEnter, onPo
   }
 
   const { tooltipPayload } = description;
+  const companionSection = companionGroups !== undefined && companionGroups.length > 0 ? (
+    <div className={styles.companionSection} data-testid="tooltip-companion-actions">
+      {companionGroups.map((group) => (
+        <div key={group.actionClass} className={styles.companionGroup}>
+          <p className={styles.companionHeader}>{group.groupName}</p>
+          <ul className={styles.companionList}>
+            {group.actions.map((action) => (
+              <li
+                key={action.actionId}
+                className={action.isAvailable ? styles.companionAvailable : styles.companionUnavailable}
+              >
+                {action.displayName}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  ) : null;
 
   return (
     <div
@@ -98,6 +125,7 @@ export function ActionTooltip({ description, anchorElement, onPointerEnter, onPo
             />
           )}
           <AvailabilitySection ruleState={tooltipPayload.ruleState} />
+          {companionSection}
           {description.sections.length > 0 && (
             <RawAstToggle sections={description.sections} />
           )}
@@ -116,6 +144,7 @@ export function ActionTooltip({ description, anchorElement, onPointerEnter, onPo
               ))}
             </div>
           )}
+          {companionSection}
         </>
       )}
     </div>

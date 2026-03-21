@@ -11,10 +11,10 @@
     "seatId": "neutral",
     "requestedProfileId": null,
     "resolvedProfileId": "baseline",
-    "profileFingerprint": "deab9b82706e28c26211bdd48c301951ab9487a410b364e445929042b415859f",
+    "profileFingerprint": "3739b3746bb662fe33f20837cb9fafa70a0d5881ce86f45498a8b9bc784142f2",
     "initialCandidateCount": 12,
     "selectedStableMoveKey": "fold|{}|false|unclassified",
-    "finalScore": 70,
+    "finalScore": 100,
     "pruningSteps": [],
     "tieBreakChain": [],
     "previewUsage": {

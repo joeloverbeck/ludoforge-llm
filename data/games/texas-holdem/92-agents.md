@@ -108,18 +108,11 @@ agents:
     pruningRules: {}
 
     scoreTerms:
-      # --- shared terms (used by both profiles) ---
       preferCheck:
         weight: 100
         value:
           boolToNumber:
             ref: feature.isCheck
-      preferSmallerRaise:
-        weight: -0.001
-        value:
-          ref: feature.raiseAmount
-
-      # --- evolved-only terms ---
       preferCall:
         weight: 80
         value:
@@ -148,51 +141,6 @@ agents:
         value:
           ref: feature.raiseAmount
 
-      # --- baseline-only terms ---
-      baselinePreferCall:
-        weight: 55
-        value:
-          boolToNumber:
-            ref: feature.isCall
-      baselinePreferRaise:
-        weight: 50
-        value:
-          boolToNumber:
-            ref: feature.isRaise
-      baselinePreferAllIn:
-        weight: 20
-        value:
-          boolToNumber:
-            ref: feature.isAllIn
-      baselineAvoidFold:
-        weight: -30
-        value:
-          boolToNumber:
-            ref: feature.isFold
-      baselineFoldBadOdds:
-        weight: 100
-        value:
-          boolToNumber:
-            and:
-              - { ref: feature.isFold }
-              - { ref: feature.facingBet }
-              - lt:
-                  - { ref: var.global.pot }
-                  - mul:
-                      - 3
-                      - { ref: feature.callAmount }
-      baselineRaiseGoodOdds:
-        weight: 15
-        value:
-          boolToNumber:
-            and:
-              - { ref: feature.isRaise }
-              - gte:
-                  - { ref: var.global.pot }
-                  - mul:
-                      - 3
-                      - { ref: feature.callAmount }
-
     tieBreakers:
       stableMoveKey:
         kind: stableMoveKey
@@ -204,13 +152,11 @@ agents:
         pruningRules: []
         scoreTerms:
           - preferCheck
-          - baselinePreferCall
-          - baselinePreferRaise
-          - preferSmallerRaise
-          - baselinePreferAllIn
-          - baselineAvoidFold
-          - baselineFoldBadOdds
-          - baselineRaiseGoodOdds
+          - preferCall
+          - avoidFold
+          - foldWhenBadPotOdds
+          - alwaysRaise
+          - preferLargerRaise
         tieBreakers:
           - stableMoveKey
 

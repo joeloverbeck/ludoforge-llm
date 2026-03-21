@@ -682,29 +682,6 @@
           "aggregates": []
         }
       },
-      "preferSmallerRaise": {
-        "costClass": "candidate",
-        "weight": {
-          "kind": "literal",
-          "value": -0.001
-        },
-        "value": {
-          "kind": "ref",
-          "ref": {
-            "kind": "library",
-            "refKind": "candidateFeature",
-            "id": "raiseAmount"
-          }
-        },
-        "dependencies": {
-          "parameters": [],
-          "stateFeatures": [],
-          "candidateFeatures": [
-            "raiseAmount"
-          ],
-          "aggregates": []
-        }
-      },
       "preferCall": {
         "costClass": "candidate",
         "weight": {
@@ -874,269 +851,6 @@
           ],
           "aggregates": []
         }
-      },
-      "baselinePreferCall": {
-        "costClass": "candidate",
-        "weight": {
-          "kind": "literal",
-          "value": 55
-        },
-        "value": {
-          "kind": "op",
-          "op": "boolToNumber",
-          "args": [
-            {
-              "kind": "ref",
-              "ref": {
-                "kind": "library",
-                "refKind": "candidateFeature",
-                "id": "isCall"
-              }
-            }
-          ]
-        },
-        "dependencies": {
-          "parameters": [],
-          "stateFeatures": [],
-          "candidateFeatures": [
-            "isCall"
-          ],
-          "aggregates": []
-        }
-      },
-      "baselinePreferRaise": {
-        "costClass": "candidate",
-        "weight": {
-          "kind": "literal",
-          "value": 50
-        },
-        "value": {
-          "kind": "op",
-          "op": "boolToNumber",
-          "args": [
-            {
-              "kind": "ref",
-              "ref": {
-                "kind": "library",
-                "refKind": "candidateFeature",
-                "id": "isRaise"
-              }
-            }
-          ]
-        },
-        "dependencies": {
-          "parameters": [],
-          "stateFeatures": [],
-          "candidateFeatures": [
-            "isRaise"
-          ],
-          "aggregates": []
-        }
-      },
-      "baselinePreferAllIn": {
-        "costClass": "candidate",
-        "weight": {
-          "kind": "literal",
-          "value": 20
-        },
-        "value": {
-          "kind": "op",
-          "op": "boolToNumber",
-          "args": [
-            {
-              "kind": "ref",
-              "ref": {
-                "kind": "library",
-                "refKind": "candidateFeature",
-                "id": "isAllIn"
-              }
-            }
-          ]
-        },
-        "dependencies": {
-          "parameters": [],
-          "stateFeatures": [],
-          "candidateFeatures": [
-            "isAllIn"
-          ],
-          "aggregates": []
-        }
-      },
-      "baselineAvoidFold": {
-        "costClass": "candidate",
-        "weight": {
-          "kind": "literal",
-          "value": -30
-        },
-        "value": {
-          "kind": "op",
-          "op": "boolToNumber",
-          "args": [
-            {
-              "kind": "ref",
-              "ref": {
-                "kind": "library",
-                "refKind": "candidateFeature",
-                "id": "isFold"
-              }
-            }
-          ]
-        },
-        "dependencies": {
-          "parameters": [],
-          "stateFeatures": [],
-          "candidateFeatures": [
-            "isFold"
-          ],
-          "aggregates": []
-        }
-      },
-      "baselineFoldBadOdds": {
-        "costClass": "candidate",
-        "weight": {
-          "kind": "literal",
-          "value": 100
-        },
-        "value": {
-          "kind": "op",
-          "op": "boolToNumber",
-          "args": [
-            {
-              "kind": "op",
-              "op": "and",
-              "args": [
-                {
-                  "kind": "ref",
-                  "ref": {
-                    "kind": "library",
-                    "refKind": "candidateFeature",
-                    "id": "isFold"
-                  }
-                },
-                {
-                  "kind": "ref",
-                  "ref": {
-                    "kind": "library",
-                    "refKind": "stateFeature",
-                    "id": "facingBet"
-                  }
-                },
-                {
-                  "kind": "op",
-                  "op": "lt",
-                  "args": [
-                    {
-                      "kind": "ref",
-                      "ref": {
-                        "kind": "currentSurface",
-                        "family": "globalVar",
-                        "id": "pot"
-                      }
-                    },
-                    {
-                      "kind": "op",
-                      "op": "mul",
-                      "args": [
-                        {
-                          "kind": "literal",
-                          "value": 3
-                        },
-                        {
-                          "kind": "ref",
-                          "ref": {
-                            "kind": "library",
-                            "refKind": "stateFeature",
-                            "id": "callAmount"
-                          }
-                        }
-                      ]
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        },
-        "dependencies": {
-          "parameters": [],
-          "stateFeatures": [
-            "callAmount",
-            "facingBet"
-          ],
-          "candidateFeatures": [
-            "isFold"
-          ],
-          "aggregates": []
-        }
-      },
-      "baselineRaiseGoodOdds": {
-        "costClass": "candidate",
-        "weight": {
-          "kind": "literal",
-          "value": 15
-        },
-        "value": {
-          "kind": "op",
-          "op": "boolToNumber",
-          "args": [
-            {
-              "kind": "op",
-              "op": "and",
-              "args": [
-                {
-                  "kind": "ref",
-                  "ref": {
-                    "kind": "library",
-                    "refKind": "candidateFeature",
-                    "id": "isRaise"
-                  }
-                },
-                {
-                  "kind": "op",
-                  "op": "gte",
-                  "args": [
-                    {
-                      "kind": "ref",
-                      "ref": {
-                        "kind": "currentSurface",
-                        "family": "globalVar",
-                        "id": "pot"
-                      }
-                    },
-                    {
-                      "kind": "op",
-                      "op": "mul",
-                      "args": [
-                        {
-                          "kind": "literal",
-                          "value": 3
-                        },
-                        {
-                          "kind": "ref",
-                          "ref": {
-                            "kind": "library",
-                            "refKind": "stateFeature",
-                            "id": "callAmount"
-                          }
-                        }
-                      ]
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        },
-        "dependencies": {
-          "parameters": [],
-          "stateFeatures": [
-            "callAmount"
-          ],
-          "candidateFeatures": [
-            "isRaise"
-          ],
-          "aggregates": []
-        }
       }
     },
     "tieBreakers": {
@@ -1159,13 +873,11 @@
         "pruningRules": [],
         "scoreTerms": [
           "preferCheck",
-          "baselinePreferCall",
-          "baselinePreferRaise",
-          "preferSmallerRaise",
-          "baselinePreferAllIn",
-          "baselineAvoidFold",
-          "baselineFoldBadOdds",
-          "baselineRaiseGoodOdds"
+          "preferCall",
+          "avoidFold",
+          "foldWhenBadPotOdds",
+          "alwaysRaise",
+          "preferLargerRaise"
         ],
         "tieBreakers": [
           "stableMoveKey"
@@ -1174,19 +886,19 @@
       "plan": {
         "stateFeatures": [
           "callAmount",
-          "facingBet"
+          "facingBet",
+          "potOddsFavorable"
         ],
         "candidateFeatures": [
           "isCheck",
           "isCall",
+          "isFold",
           "isRaise",
-          "raiseAmount",
-          "isAllIn",
-          "isFold"
+          "raiseAmount"
         ],
         "candidateAggregates": []
       },
-      "fingerprint": "deab9b82706e28c26211bdd48c301951ab9487a410b364e445929042b415859f"
+      "fingerprint": "3739b3746bb662fe33f20837cb9fafa70a0d5881ce86f45498a8b9bc784142f2"
     },
     "evolved": {
       "params": {},
@@ -1225,5 +937,5 @@
   "bindingsBySeat": {
     "neutral": "baseline"
   },
-  "catalogFingerprint": "06ee714c3945cc72354143ec23f86c5ca261bc0a1d00ad0f08df450400e50fd4"
+  "catalogFingerprint": "237d09bd0d47316ee85da36ebe5e6942bea0e03e18c0c739691d623d82d41ea5"
 }

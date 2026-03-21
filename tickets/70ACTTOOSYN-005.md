@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — data file only
-**Deps**: tickets/70ACTTOOSYN-002.md
+**Deps**: archive/tickets/70ACTTOOSYN-002.md
 
 ## Problem
 

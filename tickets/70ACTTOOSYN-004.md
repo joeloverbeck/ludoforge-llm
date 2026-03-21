@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel tooltip-content-planner + tooltip-template-realizer
-**Deps**: tickets/70ACTTOOSYN-003.md
+**Deps**: archive/tickets/70ACTTOOSYN-003.md
 
 ## Problem
 

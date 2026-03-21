@@ -117,7 +117,7 @@ for (let seedOffset = 0; seedOffset < SEED_COUNT; seedOffset++) {
   try {
     const agents = Array.from({ length: PLAYER_COUNT }, (_, i) =>
       i === EVOLVED_SEAT
-        ? new PolicyAgent({ profileId: 'baseline', traceLevel: 'detailed' })
+        ? new PolicyAgent({ profileId: 'evolved', traceLevel: 'detailed' })
         : new PolicyAgent({ profileId: 'baseline' }),
     );
 

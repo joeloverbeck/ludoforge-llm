@@ -1,5 +1,19 @@
 # Campaign: texas-agent-evolution
 
+## Bootstrap (run before starting the improvement loop)
+
+If `92-agents.md` does not already contain an `evolved` profile, create one by
+cloning the current `baseline` profile:
+
+1. Copy the `baseline` profile definition verbatim as a new `evolved` profile
+   in the `profiles:` section of `92-agents.md`.
+2. The `evolved` profile is the mutable target — the improvement loop modifies
+   only this profile and its supporting library items.
+3. The `baseline` profile remains unchanged as the control (opponents use it).
+
+This ensures a fresh campaign always starts from the current best baseline and
+evolves against it.
+
 ## Objective
 
 Maximize the win rate of an evolved PolicyAgent playing Texas Hold'em No-Limit
@@ -11,6 +25,14 @@ Win rate = fraction of completed games where the evolved agent finishes 1st
 
 Higher is better. Baseline expectation for an identical-to-baseline policy is
 ~0.25 (25%).
+
+## Campaign Completion
+
+When the campaign ends, the evolved profile's strategy should be promoted to
+baseline: update the `baseline` profile to use the evolved strategy's score
+terms, then remove the `evolved` profile. This makes the winning strategy the
+new standard for future campaigns and for the browser-based game runner (which
+uses the `baseline` profile via seat bindings).
 
 ## Primary Metric
 

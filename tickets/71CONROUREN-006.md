@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — runner-only
-**Deps**: archive/tickets/71CONROUREN-002.md, tickets/71CONROUREN-005.md
+**Deps**: archive/tickets/71CONROUREN-002.md, archive/tickets/71CONROUREN/71CONROUREN-005.md, tickets/71CONROUREN-007.md
 
 ## Problem
 
@@ -18,10 +18,11 @@ The FITL `visual-config.yaml` still declares LoC zones as `shape: line` (270×50
 4. Attribute rules exist for terrain-based styling (e.g., jungle, mountain) — the same mechanism is used for `connectionStyleKey`.
 5. 17 LoC zones need to transition: 13 highways + 4 mekong river segments.
 6. Zone ID `loc-saigon-an-loc-ban-me-thuot` contains 3 city references — needs explicit `connectionEndpoints` override per spec.
+7. The current connection-route renderer does not yet render connection-zone marker text or badges. FITL migration must not assume sabotage-state visibility survives automatically; that parity work belongs in `71CONROUREN-007`.
 
 ## Architecture Check
 
-1. This is purely a data file change + verification. No code changes. The pipeline from 71CONROUREN-001 through -005 handles everything generically.
+1. This ticket remains a FITL data migration + verification ticket, but it depends on `71CONROUREN-007` for full connection-zone marker presentation parity before manual verification can be considered complete.
 2. Visual config changes are in `data/games/fire-in-the-lake/visual-config.yaml` — game-specific visual data stays in the game's data directory. Aligns with F3 (Visual Separation).
 3. No backwards-compat shims: `shape: line` is replaced by `shape: connection` for the `loc` category. Aligns with F9.
 
@@ -149,6 +150,6 @@ Run `pnpm -F @ludoforge/runner dev`, load FITL, and verify all 10 items from the
 5. Labels are readable, rotated to follow curve direction
 6. Tokens on LoCs cluster at curve midpoints
 7. LoC zones remain selectable (pointer hover, click)
-8. Sabotage badges appear on sabotaged LoCs
+8. Sabotage marker presentation remains visible on sabotaged LoCs after the migration
 9. No adjacency lines from LoC endpoints remain
 10. Non-LoC zones (cities, provinces) render identically to before

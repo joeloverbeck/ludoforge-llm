@@ -48,6 +48,12 @@ const {
 
     hitArea: unknown = null;
 
+    cursor = 'default';
+
+    on = vi.fn((_event: string, _handler: unknown) => this);
+
+    off = vi.fn((_event: string, _handler: unknown) => this);
+
     addChild(...children: HoistedMockContainer[]): void {
       for (const child of children) {
         child.parent = this;
@@ -250,7 +256,7 @@ describe('createConnectionRouteRenderer', () => {
     expect(parent.children).toHaveLength(2);
     const routeRoot = parent.children[0] as InstanceType<typeof MockContainer>;
     const routeCurve = routeRoot.children[0] as InstanceType<typeof MockGraphics>;
-    const midpoint = renderer.getContainerMap().get('loc-alpha-beta:none') as InstanceType<typeof MockContainer>;
+    const midpoint = renderer.getContainerMap().get('loc-alpha-beta:none') as unknown as InstanceType<typeof MockContainer>;
     const label = routeRoot.children[2] as InstanceType<typeof MockText>;
     const junction = parent.children[1] as InstanceType<typeof MockGraphics>;
 
@@ -262,6 +268,42 @@ describe('createConnectionRouteRenderer', () => {
     expect(label.text).toBe('Alpha Beta');
     expect(routeRoot.hitArea).toBeInstanceOf(MockPolygon);
     expect(junction.circleArgs).toEqual([100, 20, 6]);
+  });
+
+  it('binds selection to midpoint containers and cleans bindings on removal and destroy', () => {
+    const parent = new MockContainer();
+    const cleanup = vi.fn();
+    const bindSelection = vi.fn(() => cleanup);
+    const renderer = createConnectionRouteRenderer(
+      parent as unknown as Container,
+      new VisualConfigProvider(null),
+      { bindSelection },
+    );
+
+    renderer.update(
+      [makeRoute({ zone: makeZone({ isSelectable: true }) })],
+      [],
+      new Map([
+        ['alpha:none', { x: 0, y: 0 }],
+        ['beta:none', { x: 200, y: 0 }],
+      ]),
+    );
+
+    expect(bindSelection).toHaveBeenCalledTimes(1);
+    expect(bindSelection).toHaveBeenCalledWith(
+      expect.any(MockContainer),
+      'loc-alpha-beta:none',
+      expect.any(Function),
+    );
+    const bindSelectionCalls = bindSelection.mock.calls as unknown[][];
+    const isSelectable = bindSelectionCalls[0]?.[2] as (() => boolean) | undefined;
+    expect(isSelectable?.()).toBe(true);
+
+    renderer.update([], [], new Map());
+    expect(cleanup).toHaveBeenCalledTimes(1);
+
+    renderer.destroy();
+    expect(cleanup).toHaveBeenCalledTimes(1);
   });
 
   it('renders wavy routes as polylines and uses interaction stroke overrides when present', () => {

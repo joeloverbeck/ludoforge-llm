@@ -140,10 +140,14 @@ function createRuntimeFixture() {
   const zoneContainer = {
     getBounds: vi.fn(() => ({ x: 10, y: 20, width: 180, height: 110 })),
   };
+  const connectionRouteContainer = {
+    getBounds: vi.fn(() => ({ x: 120, y: 140, width: 140, height: 36 })),
+  };
   const tokenContainer = {
     getBounds: vi.fn(() => ({ x: 40, y: 60, width: 28, height: 28 })),
   };
   const zoneContainerMap = new Map([['zone:a', zoneContainer]]);
+  const connectionRouteContainerMap = new Map([['loc-alpha-beta:none', connectionRouteContainer]]);
   const tokenContainerMap = new Map([['token:1', tokenContainer]]);
 
   const zoneRenderer = {
@@ -163,7 +167,7 @@ function createRuntimeFixture() {
 
   const connectionRouteRenderer = {
     update: vi.fn(),
-    getContainerMap: vi.fn(() => new Map()),
+    getContainerMap: vi.fn(() => connectionRouteContainerMap),
     destroy: vi.fn(() => {
       lifecycle.push('connection-route-renderer-destroy');
     }),
@@ -374,7 +378,12 @@ function createRuntimeFixture() {
       return zoneRenderer;
     }),
     createAdjacencyRenderer: vi.fn(() => adjacencyRenderer),
-    createConnectionRouteRenderer: vi.fn(() => connectionRouteRenderer),
+    createConnectionRouteRenderer: vi.fn((_parent, _provider, options: {
+      bindSelection?: (zoneContainer: unknown, zoneId: string, isSelectable: () => boolean) => () => void;
+    } = {}) => {
+      options.bindSelection?.(connectionRouteContainer, 'loc-alpha-beta:none', () => true);
+      return connectionRouteRenderer;
+    }),
     createTokenRenderer: vi.fn((_parent, options: {
       bindSelection?: (tokenContainer: unknown, tokenId: string, isSelectable: () => boolean) => () => void;
       disposalQueue: unknown;
@@ -426,6 +435,7 @@ function createRuntimeFixture() {
     keyboardCleanup,
     zoneContainerMap,
     tokenContainerMap,
+    connectionRouteContainerMap,
     viewportEvents,
     emitViewportMoved: () => {
       movedListener?.();
@@ -573,12 +583,67 @@ describe('createGameCanvasRuntime', () => {
     expect(fixture.createAiPlaybackController).toHaveBeenCalledTimes(1);
     expect(fixture.aiPlaybackController.start).toHaveBeenCalledTimes(1);
     expect(fixture.attachKeyboardSelect).toHaveBeenCalledTimes(1);
-    expect(fixture.attachZoneSelectHandlers).toHaveBeenCalledTimes(1);
+    expect(fixture.attachZoneSelectHandlers).toHaveBeenCalledTimes(2);
     expect(fixture.attachTokenSelectHandlers).toHaveBeenCalledTimes(1);
     expect(fixture.canvasUpdater.start).toHaveBeenCalledTimes(1);
     expect(runtime.coordinateBridge).toBe(fixture.bridge);
     expect(fixture.viewportEvents.on).toHaveBeenCalledWith('moved', expect.any(Function));
     expect(onHoverAnchorChange).not.toHaveBeenCalled();
+
+    runtime.destroy();
+  });
+
+  it('passes merged zone and connection-route containers to animation and hover systems', async () => {
+    const fixture = createRuntimeFixture();
+    const onHoverAnchorChange = vi.fn();
+
+    const runtime = await createGameCanvasRuntime(
+      {
+        container: {} as HTMLElement,
+        store: createRuntimeStore(makeRenderModel(['zone:a', 'loc-alpha-beta:none'])) as unknown as StoreApi<GameStore>,
+        backgroundColor: 0x010101,
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+        onHoverAnchorChange,
+      },
+      fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
+    );
+
+    const animationControllerCalls = fixture.createAnimationController.mock.calls as unknown[][];
+    const animationControllerOptions = animationControllerCalls[0]?.[0] as {
+      zoneContainers: () => ReadonlyMap<string, unknown>;
+    } | undefined;
+    expect(animationControllerOptions?.zoneContainers()).toEqual(new Map([
+      ['zone:a', fixture.zoneContainerMap.get('zone:a')],
+      ['loc-alpha-beta:none', fixture.connectionRouteContainerMap.get('loc-alpha-beta:none')],
+    ]));
+
+    const routeHandlerCall = fixture.attachZoneSelectHandlers.mock.calls[1] as unknown[] | undefined;
+    const routeHoverOptions = routeHandlerCall?.[4] as {
+      onHoverEnter?: (target: { kind: 'zone'; id: string }) => void;
+      onHoverLeave?: (target: { kind: 'zone'; id: string }) => void;
+    } | undefined;
+
+    routeHoverOptions?.onHoverEnter?.({ kind: 'zone', id: 'loc-alpha-beta:none' });
+    await flushMicrotasks();
+    routeHoverOptions?.onHoverLeave?.({ kind: 'zone', id: 'loc-alpha-beta:none' });
+    await flushMicrotasks();
+
+    expect(onHoverAnchorChange).toHaveBeenNthCalledWith(1, {
+      target: { kind: 'zone', id: 'loc-alpha-beta:none' },
+      rect: {
+        x: 100,
+        y: 200,
+        width: 180,
+        height: 110,
+        left: 100,
+        top: 200,
+        right: 280,
+        bottom: 310,
+      },
+      space: 'screen',
+      version: 1,
+    });
+    expect(onHoverAnchorChange).toHaveBeenNthCalledWith(2, null);
 
     runtime.destroy();
   });

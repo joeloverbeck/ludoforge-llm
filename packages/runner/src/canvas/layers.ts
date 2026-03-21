@@ -47,8 +47,8 @@ export function createLayerHierarchy(): LayerHierarchy {
   adjacencyLayer.interactiveChildren = false;
   adjacencyLayer.sortableChildren = true;
 
-  connectionRouteLayer.eventMode = 'none';
-  connectionRouteLayer.interactiveChildren = false;
+  connectionRouteLayer.eventMode = 'passive';
+  connectionRouteLayer.interactiveChildren = true;
   connectionRouteLayer.sortableChildren = true;
 
   backgroundLayer.eventMode = 'none';

@@ -1,3 +1,4 @@
+import type { Container } from 'pixi.js';
 import type { StoreApi } from 'zustand';
 
 import type { KeyboardCoordinator } from '../input/keyboard-coordinator.js';
@@ -302,6 +303,25 @@ export async function createGameCanvasRuntime(
   const connectionRouteRenderer = deps.createConnectionRouteRenderer(
     gameCanvas.layers.connectionRouteLayer,
     options.visualConfigProvider,
+    {
+      bindSelection: (routeContainer, zoneId, isSelectable) =>
+        deps.attachZoneSelectHandlers(
+          routeContainer,
+          zoneId,
+          isSelectable,
+          (target) => {
+            interactionController.onSelectTarget(target);
+          },
+          {
+            onHoverEnter: (target) => {
+              hoverTargetController.onHoverEnter(target);
+            },
+            onHoverLeave: (target) => {
+              hoverTargetController.onHoverLeave(target);
+            },
+          },
+        ),
+    },
   );
 
   const regionBoundaryRenderer = createRegionBoundaryRenderer(gameCanvas.layers.regionLayer);
@@ -368,7 +388,10 @@ export async function createGameCanvasRuntime(
       visualConfigProvider: options.visualConfigProvider,
       tokenContainers: () => tokenRenderer.getContainerMap(),
       tokenFaceControllers: () => tokenRenderer.getFaceControllerMap?.() ?? new Map(),
-      zoneContainers: () => zoneRenderer.getContainerMap(),
+      zoneContainers: () => mergeZoneContainerMaps(
+        zoneRenderer.getContainerMap(),
+        connectionRouteRenderer.getContainerMap(),
+      ),
       zonePositions: () => runtimeLayoutStore.getSnapshot(),
       ephemeralParent: () => gameCanvas.layers.effectsGroup,
       disposalQueue,
@@ -502,7 +525,12 @@ export async function createGameCanvasRuntime(
 
   const coordinateBridge = deps.createCoordinateBridge(viewportResult.viewport, gameCanvas.app.canvas);
   const hoverBoundsResolver: HoverBoundsResolver = (target) => {
-    const containers = target.kind === 'zone' ? zoneRenderer.getContainerMap() : tokenRenderer.getContainerMap();
+    const containers = target.kind === 'zone'
+      ? mergeZoneContainerMaps(
+        zoneRenderer.getContainerMap(),
+        connectionRouteRenderer.getContainerMap(),
+      )
+      : tokenRenderer.getContainerMap();
     const container = containers.get(target.id);
     if (container === undefined) {
       return null;
@@ -677,6 +705,16 @@ function destroyCanvasPipeline(
   renderHealthProbe.destroy();
   tickerErrorFence.destroy();
   gameCanvas.destroy();
+}
+
+function mergeZoneContainerMaps(
+  zoneContainers: ReadonlyMap<string, Container>,
+  connectionRouteContainers: ReadonlyMap<string, Container>,
+): ReadonlyMap<string, Container> {
+  return new Map<string, Container>([
+    ...zoneContainers,
+    ...connectionRouteContainers,
+  ]);
 }
 
 function createViewportResult(

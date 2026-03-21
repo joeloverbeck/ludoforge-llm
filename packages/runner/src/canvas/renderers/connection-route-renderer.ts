@@ -26,6 +26,11 @@ interface ConnectionRouteRendererOptions {
   readonly hitAreaPadding?: number;
   readonly curveSegments?: number;
   readonly wavySegments?: number;
+  readonly bindSelection?: (
+    zoneContainer: Container,
+    zoneId: string,
+    isSelectable: () => boolean,
+  ) => () => void;
 }
 
 interface RouteSlot {
@@ -61,6 +66,8 @@ export function createConnectionRouteRenderer(
   const routeSlots = new Map<string, RouteSlot>();
   const routeContainers = new Map<string, Container>();
   const junctionGraphics = new Map<string, Graphics>();
+  const selectableByRouteId = new Map<string, boolean>();
+  const selectionCleanupByRouteId = new Map<string, () => void>();
 
   const junctionRadius = options.junctionRadius ?? DEFAULT_JUNCTION_RADIUS;
   const defaultCurvature = options.defaultCurvature ?? DEFAULT_CURVATURE;
@@ -82,13 +89,24 @@ export function createConnectionRouteRenderer(
         if (routeById.has(routeId)) {
           continue;
         }
+        selectableByRouteId.delete(routeId);
+        selectionCleanupByRouteId.get(routeId)?.();
+        selectionCleanupByRouteId.delete(routeId);
         destroyRouteSlot(slot);
         routeSlots.delete(routeId);
         routeContainers.delete(routeId);
       }
 
       for (const route of routes) {
-        const slot = getOrCreateRouteSlot(route.zoneId, routeSlots, routeContainers, parentContainer);
+        const slot = getOrCreateRouteSlot(
+          route.zoneId,
+          routeSlots,
+          routeContainers,
+          parentContainer,
+          options.bindSelection,
+          selectableByRouteId,
+          selectionCleanupByRouteId,
+        );
         const fromPosition = positions.get(route.endpointZoneIds[0]);
         const toPosition = positions.get(route.endpointZoneIds[1]);
 
@@ -119,22 +137,25 @@ export function createConnectionRouteRenderer(
         const midpoint = quadraticBezierMidpoint(fromPosition, controlPoint, toPosition);
         const tangent = quadraticBezierMidpointTangent(fromPosition, controlPoint, toPosition);
         const labelRotation = resolveLabelRotation(Math.atan2(tangent.y, tangent.x));
-
-        slot.root.visible = true;
-        slot.root.renderable = true;
-        slot.root.hitArea = new Polygon(flattenPoints(approximateBezierHitPolygon(
+        const hitArea = new Polygon(flattenPoints(approximateBezierHitPolygon(
           fromPosition,
           controlPoint,
           toPosition,
           resolvedStroke.width / 2 + hitAreaPadding,
           curveSegments,
         )));
+
+        slot.root.visible = true;
+        slot.root.renderable = true;
+        slot.root.hitArea = hitArea;
         slot.midpoint.position.set(midpoint.x, midpoint.y);
         slot.midpoint.visible = true;
+        slot.midpoint.hitArea = translatePolygon(hitArea, -midpoint.x, -midpoint.y);
         slot.label.text = route.displayName;
         slot.label.position.set(midpoint.x, midpoint.y);
         slot.label.rotation = labelRotation;
         slot.label.visible = true;
+        selectableByRouteId.set(route.zoneId, route.zone.isSelectable);
       }
 
       const junctionById = new Map(junctions.map((junction) => [junction.id, junction]));
@@ -179,6 +200,11 @@ export function createConnectionRouteRenderer(
         safeDestroyDisplayObject(graphics);
       }
       junctionGraphics.clear();
+      for (const cleanup of selectionCleanupByRouteId.values()) {
+        cleanup();
+      }
+      selectionCleanupByRouteId.clear();
+      selectableByRouteId.clear();
     },
   };
 }
@@ -188,6 +214,9 @@ function getOrCreateRouteSlot(
   routeSlots: Map<string, RouteSlot>,
   routeContainers: Map<string, Container>,
   parentContainer: Container,
+  bindSelection: ConnectionRouteRendererOptions['bindSelection'],
+  selectableByRouteId: Map<string, boolean>,
+  selectionCleanupByRouteId: Map<string, () => void>,
 ): RouteSlot {
   const existing = routeSlots.get(routeId);
   if (existing !== undefined) {
@@ -195,11 +224,11 @@ function getOrCreateRouteSlot(
   }
 
   const root = new Container();
-  root.eventMode = 'none';
-  root.interactiveChildren = false;
+  root.eventMode = 'passive';
+  root.interactiveChildren = true;
   const curve = new Graphics();
   const midpoint = new Container();
-  midpoint.eventMode = 'none';
+  midpoint.eventMode = bindSelection === undefined ? 'none' : 'static';
   midpoint.interactiveChildren = false;
   const label = createManagedBitmapText({
     text: '',
@@ -219,6 +248,16 @@ function getOrCreateRouteSlot(
   const slot: RouteSlot = { root, curve, midpoint, label };
   routeSlots.set(routeId, slot);
   routeContainers.set(routeId, midpoint);
+  if (bindSelection !== undefined) {
+    selectionCleanupByRouteId.set(
+      routeId,
+      bindSelection(
+        midpoint,
+        routeId,
+        () => selectableByRouteId.get(routeId) === true,
+      ),
+    );
+  }
   return slot;
 }
 
@@ -402,6 +441,22 @@ function normalizeAngle(angle: number): number {
 
 function flattenPoints(points: readonly Position[]): number[] {
   return points.flatMap((point) => [point.x, point.y]);
+}
+
+function translatePolygon(polygon: Polygon, dx: number, dy: number): Polygon {
+  const translated: number[] = [];
+  for (let index = 0; index < polygon.points.length; index += 2) {
+    const x = polygon.points[index];
+    const y = polygon.points[index + 1];
+    if (x === undefined || y === undefined) {
+      continue;
+    }
+    translated.push(
+      x + dx,
+      y + dy,
+    );
+  }
+  return new Polygon(translated);
 }
 
 function resolveJunctionColor(

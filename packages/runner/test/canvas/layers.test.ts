@@ -23,6 +23,7 @@ describe('createLayerHierarchy', () => {
 
     expect(layers.boardGroup.eventMode).toBe('passive');
     expect(layers.tokenGroup.eventMode).toBe('passive');
+    expect(layers.connectionRouteLayer.eventMode).toBe('passive');
     expect(layers.zoneLayer.eventMode).toBe('passive');
     expect(layers.effectsGroup.eventMode).toBe('none');
     expect(layers.interfaceGroup.eventMode).toBe('none');

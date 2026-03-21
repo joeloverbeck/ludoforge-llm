@@ -23,6 +23,7 @@ The `HoverStalenessGuard` module (73TOOSTAGUA-002) and the extended `HoverTarget
 5. The `destroy()` function already calls `hoverTargetController.destroy()` and `viewport.off('moved', publishHoverAnchor)` — confirmed.
 6. The canvas element is accessible as `gameCanvas.app.canvas as HTMLCanvasElement` — confirmed (used in `createCoordinateBridge` at line ~475).
 7. The viewport is cast to a typed interface at line ~511 for `on`/`off`; the `moving` property needs a separate type assertion.
+8. Ticket `73TOOSTAGUA-001` completed with `clearAll()`, `getActiveTargets(): readonly HoveredCanvasTarget[]`, and `removeTarget(target: HoveredCanvasTarget)`; runtime wiring should use that domain-level API, not internal keys or maps.
 
 ## Architecture Check
 
@@ -83,7 +84,7 @@ In the existing `viewport.on('moved', ...)` callback:
 
 1. `pnpm -F @ludoforge/runner typecheck` passes (the new import, guard creation, and viewport type assertion compile cleanly)
 2. `pnpm -F @ludoforge/runner lint` passes
-3. All existing `hover-target-controller.test.ts` tests pass (3 original + 6 from 73TOOSTAGUA-001)
+3. All existing `hover-target-controller.test.ts` tests pass (3 original + 5 added in 73TOOSTAGUA-001)
 4. All `hover-staleness-guard.test.ts` tests pass (12 from 73TOOSTAGUA-002)
 5. Full runner test suite passes: `pnpm -F @ludoforge/runner test`
 

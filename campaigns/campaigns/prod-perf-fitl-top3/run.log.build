@@ -1,8 +1,0 @@
-
-> @ludoforge/engine@0.0.0 build /home/joeloverbeck/projects/ludoforge-llm/packages/engine
-> node scripts/run-with-dist-lock.mjs "pnpm run clean && tsc"
-
-
-> @ludoforge/engine@0.0.0 clean /home/joeloverbeck/projects/ludoforge-llm/packages/engine
-> rm -rf dist
-

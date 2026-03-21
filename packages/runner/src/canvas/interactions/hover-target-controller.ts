@@ -7,6 +7,9 @@ interface HoverTargetControllerOptions {
 
 export interface HoverTargetController {
   getCurrentTarget(): HoveredCanvasTarget | null;
+  getActiveTargets(): readonly HoveredCanvasTarget[];
+  clearAll(): void;
+  removeTarget(target: HoveredCanvasTarget): void;
   onHoverEnter(target: HoveredCanvasTarget): void;
   onHoverLeave(target: HoveredCanvasTarget): void;
   destroy(): void;
@@ -42,6 +45,27 @@ export function createHoverTargetController(options: HoverTargetControllerOption
   return {
     getCurrentTarget(): HoveredCanvasTarget | null {
       return currentTarget;
+    },
+    getActiveTargets(): readonly HoveredCanvasTarget[] {
+      return Array.from(activeTargets.values());
+    },
+    clearAll(): void {
+      if (destroyed || activeTargets.size === 0) {
+        return;
+      }
+      activeTargets.clear();
+      schedulePublish();
+    },
+    removeTarget(target: HoveredCanvasTarget): void {
+      if (destroyed) {
+        return;
+      }
+      const key = toTargetKey(target);
+      if (!activeTargets.has(key)) {
+        return;
+      }
+      activeTargets.delete(key);
+      schedulePublish();
     },
     onHoverEnter(target: HoveredCanvasTarget): void {
       if (destroyed) {

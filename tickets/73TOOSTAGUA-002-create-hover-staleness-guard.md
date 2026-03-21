@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — runner-only
-**Deps**: 73TOOSTAGUA-001 (needs `clearAll`, `getActiveTargetCount`, `getActiveTargets`, `removeTarget`)
+**Deps**: 73TOOSTAGUA-001
 
 ## Problem
 
@@ -15,7 +15,8 @@ Canvas tooltips get stuck visible when `pointerleave` events fail to fire (durin
 1. `HoveredCanvasTarget` type is `{ kind: 'zone' | 'token'; id: string }` in `packages/runner/src/canvas/hover-anchor-contract.ts` — confirmed.
 2. `ScreenRect` is already exported from `packages/runner/src/canvas/coordinate-bridge.ts` with `x, y, width, height, left, top, right, bottom` — confirmed.
 3. The spec defines `ScreenRect` in the guard's interface, but the existing `ScreenRect` from `coordinate-bridge.ts` already has those fields. The guard should import and reuse the existing `ScreenRect` type rather than redefining it.
-4. The guard uses `setInterval`/`clearInterval` for the periodic sweep — injecting the timer via deps would complicate the interface for minimal test benefit. Instead, the guard accepts `sweepIntervalMs` and tests use `vi.useFakeTimers()` to control `setInterval`.
+4. Ticket `73TOOSTAGUA-001` was completed with a domain-oriented controller API: `clearAll()`, `getActiveTargets(): readonly HoveredCanvasTarget[]`, and `removeTarget(target: HoveredCanvasTarget)`. The guard should consume that API rather than reconstructing controller internals.
+5. The guard uses `setInterval`/`clearInterval` for the periodic sweep — injecting the timer via deps would complicate the interface for minimal test benefit. Instead, the guard accepts `sweepIntervalMs` and tests use `vi.useFakeTimers()` to control `setInterval`.
 
 ## Architecture Check
 
@@ -42,9 +43,8 @@ New file: `packages/runner/src/canvas/interactions/hover-staleness-guard.ts`
 
 ```typescript
 interface HoverStalenessGuardDeps {
-  readonly getActiveTargetCount: () => number;
-  readonly getActiveTargets: () => ReadonlyMap<string, HoveredCanvasTarget>;
-  readonly removeTarget: (key: string) => void;
+  readonly getActiveTargets: () => readonly HoveredCanvasTarget[];
+  readonly removeTarget: (target: HoveredCanvasTarget) => void;
   readonly clearAll: () => void;
   readonly getPointerScreenPosition: () => { readonly x: number; readonly y: number } | null;
   readonly getCanvasBounds: () => { readonly left: number; readonly top: number; readonly right: number; readonly bottom: number } | null;
@@ -56,8 +56,8 @@ interface HoverStalenessGuardDeps {
 **Behavior**:
 - `onViewportMoving()`: calls `clearAll()` immediately.
 - `onCanvasPointerLeave()`: calls `clearAll()` immediately.
-- `onHoverStateChanged()`: starts sweep interval when `getActiveTargetCount() > 0` and no interval is running; stops interval when count is 0.
-- **Sweep tick**: get pointer position; if `null` or outside canvas bounds, `clearAll()`. Otherwise iterate `getActiveTargets()`, resolve each target's screen bounds, remove any whose bounds do not contain the pointer. A point `(px, py)` is inside `ScreenRect` when `px >= rect.left && px <= rect.right && py >= rect.top && py <= rect.bottom`.
+- `onHoverStateChanged()`: starts sweep interval when `getActiveTargets().length > 0` and no interval is running; stops interval when the snapshot is empty.
+- **Sweep tick**: get pointer position; if `null` or outside canvas bounds, `clearAll()`. Otherwise iterate `getActiveTargets()`, resolve each target's screen bounds, and call `removeTarget(target)` for any entry whose bounds do not contain the pointer. A point `(px, py)` is inside `ScreenRect` when `px >= rect.left && px <= rect.right && py >= rect.top && py <= rect.bottom`.
 - `destroy()`: clear any running interval, mark destroyed, all methods become no-ops.
 
 ### 2. Create comprehensive test suite
@@ -83,14 +83,14 @@ New file: `packages/runner/test/canvas/interactions/hover-staleness-guard.test.t
 
 1. `onViewportMoving()` calls `clearAll()` immediately
 2. `onCanvasPointerLeave()` calls `clearAll()` immediately
-3. `onHoverStateChanged()` starts sweep interval when `getActiveTargetCount() > 0`
-4. `onHoverStateChanged()` stops sweep interval when `getActiveTargetCount()` returns 0
+3. `onHoverStateChanged()` starts sweep interval when `getActiveTargets().length > 0`
+4. `onHoverStateChanged()` stops sweep interval when the active-target snapshot becomes empty
 5. Sweep removes targets whose screen bounds do not contain the pointer position
 6. Sweep calls `clearAll()` when pointer position is `null` (left window)
 7. Sweep calls `clearAll()` when pointer is outside canvas bounds
 8. Sweep keeps targets whose bounds still contain the pointer
 9. `destroy()` clears any running interval (no further sweep ticks)
-10. No sweep runs when `getActiveTargetCount()` is 0 (no unnecessary timers — verify `setInterval` not called)
+10. No sweep runs when `getActiveTargets()` is empty (no unnecessary timers — verify `setInterval` not called)
 11. Multiple rapid `onViewportMoving()` calls are safe (idempotent — `clearAll` called each time but no crash)
 12. After `destroy()`, all methods are no-ops (no `clearAll` calls, no interval starts)
 
@@ -98,7 +98,7 @@ New file: `packages/runner/test/canvas/interactions/hover-staleness-guard.test.t
 
 1. The module has zero imports from PixiJS, DOM APIs, or any browser-only module — only type imports from sibling modules
 2. All external interactions go through the `deps` object — no global state
-3. The sweep interval is only active when `activeTargetCount > 0` (zero idle cost)
+3. The sweep interval is only active when the active-target snapshot is non-empty (zero idle cost)
 4. `resolveTargetScreenBounds` returning `null` for a target causes that target to be removed (treat unresolvable as stale)
 
 ## Test Plan

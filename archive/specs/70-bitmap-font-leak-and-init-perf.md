@@ -1,6 +1,6 @@
 # Spec 70 — BitmapText Font Leak & Initialization Performance
 
-## Status: NOT STARTED
+## Status: ✅ COMPLETED
 
 ## Problem
 
@@ -80,9 +80,15 @@ If violations persist:
 
 **File**: `packages/runner/src/store/game-store.ts`
 
-Move `projectRenderModel()` out of the synchronous Zustand `set()` callback. Keep `deriveRunnerFrame()` and `deriveStoreWorldLayout()` synchronous (required for state consistency), but schedule `projectRenderModel()` via `queueMicrotask()`. This splits the heavy initialization work across two event loop turns.
+Original proposal: move `projectRenderModel()` out of the synchronous Zustand `set()` callback and schedule it via `queueMicrotask()`.
 
-The store state will briefly lack the projected render model between the two microtasks. The canvas updater subscription should handle this gracefully — it already uses equality selectors that will simply see the update arrive on the next tick.
+Final reassessment on 2026-03-21: this mitigation was **not** implemented. After tickets `70BITFONLEA-001`, `70BITFONLEA-002`, `70BITFONLEA-004`, and `70BITFONLEA-005`, the violation warnings no longer reproduced in live Chrome measurement, and the proposed async split was architecturally weaker than the synchronous snapshot model:
+
+- `renderModel` is a first-class derived store artifact consumed by React chrome and trace emission, not only by the canvas updater.
+- Deferring it would publish a partially derived store snapshot where `runnerProjection`, `runnerFrame`, and `worldLayout` were current but `renderModel` was stale or null.
+- `queueMicrotask()` would not create a durable paint boundary; it would add state inconsistency without a strong performance guarantee.
+
+The clean resolution was to keep `setAndDerive()` synchronous and close the mitigation pillar with no code change.
 
 ## Foundations Alignment
 
@@ -135,5 +141,21 @@ The store state will briefly lack the projected render model between the two mic
 
 ### Ticket 3: BITMAPLEAK-003 — Measure and Mitigate Initialization Violations
 - Measure console output after tickets 1–2
-- If violations persist: defer `projectRenderModel()` via `queueMicrotask()`
+- If violations persist: reassess the hot path before changing store architecture
 - Document measurement results
+
+## Outcome
+
+- Completion date: 2026-03-21
+- What actually changed:
+  - Implemented the bitmap-font leak fixes and BitmapText style-churn reductions through the archived `70BITFONLEA-001`, `70BITFONLEA-002`, `70BITFONLEA-004`, and `70BITFONLEA-005` tickets.
+  - Reassessed the initialization-violation mitigation against the current codebase and live Chrome measurement.
+  - Closed the violation-mitigation pillar without production code changes because the Chrome `Violation` warnings no longer reproduced after the earlier fixes.
+- Deviations from original plan:
+  - The spec’s original `queueMicrotask()` deferral idea was rejected during ticket `70BITFONLEA-003` closeout because it would have weakened the store architecture by splitting `renderModel` away from the rest of the derived snapshot.
+  - No new runner store tests were added in the final ticket because no store code changed.
+- Verification results:
+  - Live browser measurement on 2026-03-21 during Fire in the Lake initialization showed no bitmap-font leak warnings and no Chrome `Violation` warnings.
+  - `pnpm -F @ludoforge/runner test` ✅ (`174` files, `1752` tests)
+  - `pnpm turbo typecheck` ✅
+  - `pnpm turbo lint` ✅

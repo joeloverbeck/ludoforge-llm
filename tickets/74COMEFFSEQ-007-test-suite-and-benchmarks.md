@@ -17,6 +17,7 @@ The compiled effect sequences need comprehensive end-to-end testing across both 
 3. The existing `run-profile.mjs` (or similar) benchmark script profiles simulation runs. Must verify location.
 4. `PerfProfiler` with `perfStart`/`perfEnd`/`perfDynEnd` provides timing infrastructure. Confirmed.
 5. Determinism tests use `computeFullHash` to compare states across runs. Confirmed.
+6. A prior investigation suspected the engine default test lane was broken, but sequential verification showed `pnpm -F @ludoforge/engine test` passes after a normal build. The earlier failure came from a concurrent build/test race that cleaned `dist` mid-run, so this ticket does not own harness repair. Corrected.
 
 ## Architecture Check
 
@@ -24,6 +25,7 @@ The compiled effect sequences need comprehensive end-to-end testing across both 
 2. Benchmarks use the existing `PerfProfiler` infrastructure — no new profiling mechanisms needed.
 3. Golden tests compare compiled-path outcomes against known-good interpreter results for specific seeds.
 4. Both games must be tested to prove engine-agnosticism (Foundation 1).
+5. This ticket assumes a stable sequential engine test harness. Any future build/test concurrency hardening should stay separate from compiled-effects benchmark/tests scope so ownership remains clear.
 
 ## What to Change
 

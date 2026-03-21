@@ -299,6 +299,7 @@ describe('buildPresentationScene', () => {
         }),
       }),
     ]);
+    expect(scene.connectionRoutes[0]).not.toHaveProperty('connectedConnectionIds');
     expect(scene.adjacencies).toEqual([]);
     expect(scene.tokens).toEqual([
       expect.objectContaining({

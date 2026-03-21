@@ -92,10 +92,10 @@ describe('resolveConnectionRoutes', () => {
           { kind: 'straight' },
         ],
         touchingZoneIds: [],
-        connectedConnectionIds: [],
         connectionStyleKey: 'highway',
       }),
     ]);
+    expect(result.connectionRoutes[0]).not.toHaveProperty('connectedConnectionIds');
     expect(result.filteredZones.map((zone) => zone.id)).toEqual(['alpha:none', 'beta:none', 'gamma:none']);
     expect(result.filteredAdjacencies).toEqual([makeAdjacency('alpha:none', 'gamma:none')]);
   });
@@ -255,6 +255,8 @@ describe('resolveConnectionRoutes', () => {
       'loc-alpha-beta:none',
       'loc-beta-gamma:none',
     ]);
+    expect(result.connectionRoutes[0]).not.toHaveProperty('connectedConnectionIds');
+    expect(result.connectionRoutes[1]).not.toHaveProperty('connectedConnectionIds');
     expect(result.junctions).toEqual([]);
     expect(result.filteredAdjacencies).toEqual([makeAdjacency('alpha:none', 'gamma:none')]);
   });

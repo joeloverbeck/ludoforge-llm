@@ -238,7 +238,6 @@ function makeRoute(overrides: Partial<ConnectionRouteNode> = {}): ConnectionRout
       },
     ],
     touchingZoneIds: [],
-    connectedConnectionIds: [],
     connectionStyleKey: 'highway',
     zone,
     ...overrides,

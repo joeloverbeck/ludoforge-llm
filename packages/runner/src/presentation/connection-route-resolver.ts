@@ -35,7 +35,6 @@ export interface ConnectionRouteNode {
   readonly path: readonly ResolvedConnectionPoint[];
   readonly segments: readonly ResolvedConnectionRouteSegment[];
   readonly touchingZoneIds: readonly string[];
-  readonly connectedConnectionIds: readonly string[];
   readonly connectionStyleKey: string | null;
   readonly zone: PresentationZoneNode;
 }
@@ -81,9 +80,6 @@ export function resolveConnectionRoutes(
 
     const neighbors = [...(adjacencyIndex.get(zone.id) ?? [])];
     const nonConnectionNeighbors = neighbors.filter((neighborId) => !connectionZoneIds.has(neighborId));
-    const connectedConnectionIds = neighbors
-      .filter((neighborId) => connectionZoneIds.has(neighborId))
-      .sort(compareStrings);
     const resolvedGeometry = resolveRouteGeometry(
       zone.id,
       nonConnectionNeighbors,
@@ -112,7 +108,6 @@ export function resolveConnectionRoutes(
       path: resolvedGeometry.path,
       segments: resolvedGeometry.segments,
       touchingZoneIds,
-      connectedConnectionIds,
       connectionStyleKey: zone.visual.connectionStyleKey,
       zone,
     });

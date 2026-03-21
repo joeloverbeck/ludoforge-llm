@@ -44,6 +44,7 @@ import type {
   VisualConfig,
   RunnerChromeTopBarStatusAlignment,
   ZoneTokenLayout,
+  ConnectionStyleConfig,
 } from './visual-config-types.js';
 
 export interface ResolvedZoneVisual {
@@ -51,6 +52,7 @@ export interface ResolvedZoneVisual {
   readonly width: number;
   readonly height: number;
   readonly color: string | null;
+  readonly connectionStyleKey: string | null;
 }
 
 export interface ResolvedTokenVisual {
@@ -147,6 +149,7 @@ export class VisualConfigProvider {
       width: DEFAULT_ZONE_WIDTH,
       height: DEFAULT_ZONE_HEIGHT,
       color: null,
+      connectionStyleKey: null,
     };
 
     const categoryStyle = category === null
@@ -163,6 +166,10 @@ export class VisualConfigProvider {
 
     applyZoneStyle(resolved, this.config?.zones?.overrides?.[zoneId]);
     return resolved;
+  }
+
+  resolveConnectionStyle(styleKey: string): ConnectionStyleConfig | null {
+    return this.config?.zones?.connectionStyles?.[styleKey] ?? null;
   }
 
   getZoneLabel(zoneId: string): string | null {
@@ -502,13 +509,20 @@ function applyEdgeStyle(
 }
 
 function applyZoneStyle(
-  target: { shape: ZoneShape; width: number; height: number; color: string | null },
+  target: {
+    shape: ZoneShape;
+    width: number;
+    height: number;
+    color: string | null;
+    connectionStyleKey: string | null;
+  },
   source:
     | {
       readonly shape?: ZoneShape | undefined;
       readonly width?: number | undefined;
       readonly height?: number | undefined;
       readonly color?: string | undefined;
+      readonly connectionStyleKey?: string | undefined;
     }
     | undefined,
 ): void {
@@ -526,6 +540,9 @@ function applyZoneStyle(
   }
   if (source.color !== undefined) {
     target.color = source.color;
+  }
+  if (source.connectionStyleKey !== undefined) {
+    target.connectionStyleKey = source.connectionStyleKey;
   }
 }
 

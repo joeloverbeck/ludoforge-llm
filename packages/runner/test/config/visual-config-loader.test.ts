@@ -40,6 +40,7 @@ describe('visual-config-loader', () => {
       width: 160,
       height: 100,
       color: null,
+      connectionStyleKey: null,
     });
   });
 

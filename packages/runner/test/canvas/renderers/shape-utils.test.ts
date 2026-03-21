@@ -96,4 +96,16 @@ describe('shape-utils', () => {
     drawZoneShape(base, 'octagon', { width: 80, height: 40 }, options);
     expect(base.polyArgs).toHaveLength(16);
   });
+
+  it('drawZoneShape treats connection as a no-op', () => {
+    const options = { rectangleCornerRadius: 12, lineCornerRadius: 4 };
+    const base = new MockGraphics();
+
+    drawZoneShape(base, 'connection', { width: 80, height: 40 }, options);
+
+    expect(base.roundRectArgs).toBeNull();
+    expect(base.circleArgs).toBeNull();
+    expect(base.ellipseArgs).toBeNull();
+    expect(base.polyArgs).toBeNull();
+  });
 });

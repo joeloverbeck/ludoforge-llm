@@ -24,6 +24,7 @@ The connection-route resolver and renderer exist but are not wired into the rend
 1. The integration is additive — existing renderers are unaffected. The connection-route renderer is a new optional renderer in the pipeline. Aligns with SOLID (Open/Closed).
 2. Container map merging is a clean composition: `new Map([...zoneMap, ...connectionRouteMap])`. No special casing needed since zone IDs are unique across both maps.
 3. No backwards-compat — new fields are added to `PresentationScene`, new renderer is added to the pipeline.
+4. The pipeline must preserve the resolved visual contract from upstream. Neither `buildPresentationScene()` nor `canvas-updater` should re-run visual-config matching for connection styles; they should pass through `connectionStyleKey` already resolved on zone/route data.
 
 ## What to Change
 
@@ -43,6 +44,7 @@ const connectionResolution = resolveConnectionRoutes(zones, adjacencies, options
 Use `connectionResolution.filteredZones` for region resolution and the returned scene's `zones` field.
 Use `connectionResolution.filteredAdjacencies` for the scene's `adjacencies` field.
 Add `connectionRoutes` and `junctions` from the resolution to the scene.
+Do not add any new connection-style resolution logic here; that stays in `VisualConfigProvider` and is consumed downstream via resolved fields.
 
 ### 3. Add connection-route layer to `game-canvas-runtime.ts`
 
@@ -116,6 +118,7 @@ Add test cases for the new `connectionRoutes` and `junctions` fields in the scen
 3. Container map merge produces unique keys (zone IDs are unique across regular and connection zones)
 4. Canvas layer order is respected: regions < adjacency < connection-routes < zones < tokens
 5. No engine/kernel changes
+6. No duplicate connection-style resolution in presentation or updater layers
 
 ## Test Plan
 

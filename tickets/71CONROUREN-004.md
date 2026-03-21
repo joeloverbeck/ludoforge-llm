@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — runner-only
-**Deps**: archive/tickets/71CONROUREN/71CONROUREN-001.md, tickets/71CONROUREN-002.md, tickets/71CONROUREN-003.md
+**Deps**: archive/tickets/71CONROUREN/71CONROUREN-001.md, archive/tickets/71CONROUREN-002.md, tickets/71CONROUREN-003.md
 
 ## Problem
 
@@ -23,6 +23,7 @@ Connection-route zones need a dedicated PixiJS renderer that draws quadratic Bé
 1. Follows the established renderer pattern — factory function returning an interface with `update()`, `getContainerMap()`, `destroy()`. Aligns with existing architecture.
 2. No game-specific logic in the renderer. Curve drawing, wavy lines, and junction dots are driven entirely by `ConnectionStyleConfig` from visual config. Aligns with F1 and F3.
 3. No backwards-compat — entirely new renderer.
+4. The renderer must not re-run raw config matching. It should consume `route.connectionStyleKey` from the resolved presentation data, then call `visualConfigProvider.resolveConnectionStyle()` exactly once per route as needed.
 
 ## What to Change
 
@@ -58,14 +59,15 @@ export function createConnectionRouteRenderer(
 
 **Per-connection rendering:**
 1. Look up endpoint positions from layout position map
-2. Compute control point via `computeControlPoint()` (from bezier-utils). If two connections share endpoints, offset curvatures in opposite directions
-3. Draw curve:
+2. Resolve the route style from `route.connectionStyleKey` via `visualConfigProvider.resolveConnectionStyle()`. Do not inspect raw zone attributes or re-run attribute-rule logic in the renderer.
+3. Compute control point via `computeControlPoint()` (from bezier-utils). If two connections share endpoints, offset curvatures in opposite directions
+4. Draw curve:
    - Non-wavy (highway): `graphics.moveTo(p0).quadraticCurveTo(cp.x, cp.y, p2.x, p2.y).stroke(style)`
    - Wavy (mekong): sample points along Bézier, apply sine-wave perpendicular displacement, draw as polyline
-4. Hit area: generate polygon via `approximateBezierHitPolygon()`, assign as `container.hitArea`
-5. Midpoint container: invisible `Container` at curve midpoint for token attachment
-6. Label: `BitmapText` at midpoint, rotated to match tangent angle (flip if upside-down)
-7. Selection/highlight strokes: follow zone-renderer pattern
+5. Hit area: generate polygon via `approximateBezierHitPolygon()`, assign as `container.hitArea`
+6. Midpoint container: invisible `Container` at curve midpoint for token attachment
+7. Label: `BitmapText` at midpoint, rotated to match tangent angle (flip if upside-down)
+8. Selection/highlight strokes: follow zone-renderer pattern
 
 **Junction rendering:** filled circle at junction position, colored as average of connecting curves' stroke colors.
 
@@ -117,6 +119,7 @@ Testing approach: mock PixiJS `Container` and `Graphics` (following patterns fro
 2. `getContainerMap()` returns a new map on each call (F7 Immutability)
 3. No game-specific identifiers in the renderer code — all behavior driven by `ConnectionStyleConfig`
 4. No mutation of input data (`ConnectionRouteNode[]`, `JunctionNode[]`, positions map)
+5. No raw visual-config rule matching in the renderer; route styling flows only through `route.connectionStyleKey` + `resolveConnectionStyle()`
 
 ## Test Plan
 

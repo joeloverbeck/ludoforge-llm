@@ -361,6 +361,41 @@ describe('VisualConfigSchema', () => {
     expect(result.success).toBe(true);
   });
 
+  it('accepts connection as a valid zone shape and parses connection styles', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      zones: {
+        categoryStyles: {
+          loc: { shape: 'connection', connectionStyleKey: 'highway' },
+        },
+        connectionStyles: {
+          highway: {
+            strokeWidth: 8,
+            strokeColor: '#8b7355',
+          },
+          mekong: {
+            strokeWidth: 12,
+            strokeColor: '#4a7a8c',
+            wavy: true,
+            waveAmplitude: 4,
+            waveFrequency: 0.08,
+          },
+        },
+        attributeRules: [
+          {
+            match: {
+              category: ['loc'],
+              attributeContains: { terrainTags: 'mekong' },
+            },
+            style: { connectionStyleKey: 'mekong' },
+          },
+        ],
+      },
+    });
+
+    expect(result.success).toBe(true);
+  });
+
   it('accepts token backSymbol in token type visual style', () => {
     const result = VisualConfigSchema.safeParse({
       version: 1,

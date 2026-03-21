@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — runner-only
-**Deps**: tickets/71CONROUREN-002.md
+**Deps**: archive/tickets/71CONROUREN-002.md
 
 ## Problem
 
@@ -28,6 +28,7 @@ This is pure topology logic — no rendering, no PixiJS — fully testable with 
 1. The resolver is a pure function: input = zones + adjacencies + positions → output = connection routes + junctions + filtered zones + filtered adjacencies. No side effects, no PixiJS dependencies. Aligns with F7 (Immutability).
 2. Endpoint inference via zone ID parsing is game-agnostic — any game can name connection zones `<type>-<endpointA>-<endpointB>`. The `connectionEndpoints` override in visual config handles ambiguous cases. Aligns with F1 (Engine Agnosticism).
 3. No backwards-compat — this is entirely new code.
+4. Connection style selection must not be recomputed here. The resolver should treat `zone.visual.connectionStyleKey` as the authoritative resolved result from `VisualConfigProvider` and pass it through unchanged to `ConnectionRouteNode`.
 
 ## What to Change
 
@@ -58,6 +59,7 @@ export function resolveConnectionRoutes(
    - Primary endpoints (2): inferred from zone ID name parsing or `connectionEndpoints` override
    - Touching zones (0+): other non-connection adjacencies
    - Connected connections (0+): other connection zones sharing an edge
+   - Connection style key: copy from `zone.visual.connectionStyleKey`; do not re-run category/attribute matching in the resolver
 4. Detect junctions: when 2+ connection zones share an adjacency edge, create a `JunctionNode` at the centroid of the shared endpoints' positions
 5. Build filtered outputs:
    - `filteredZones`: all zones minus connection zones
@@ -107,6 +109,7 @@ New test file at `packages/runner/test/presentation/connection-route-resolver.te
 2. Every `ConnectionRouteNode.endpointZoneIds` has exactly 2 entries
 3. All returned objects are new — no mutation of input arrays (F7)
 4. No PixiJS imports in the resolver module
+5. No raw visual-config rule matching in the resolver module; `connectionStyleKey` is consumed only from `ResolvedZoneVisual`
 
 ## Test Plan
 

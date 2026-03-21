@@ -12,6 +12,7 @@ export const ZoneShapeSchema = z.enum([
   'triangle',
   'line',
   'octagon',
+  'connection',
 ]);
 export const TokenShapeSchema = z.enum([
   'circle',
@@ -91,6 +92,16 @@ const ZoneVisualStyleSchema = z.object({
   width: z.number().optional(),
   height: z.number().optional(),
   color: z.string().optional(),
+  connectionStyleKey: z.string().optional(),
+});
+
+const ConnectionStyleConfigSchema = z.object({
+  strokeWidth: z.number(),
+  strokeColor: z.string(),
+  strokeAlpha: z.number().optional(),
+  wavy: z.boolean().optional(),
+  waveAmplitude: z.number().optional(),
+  waveFrequency: z.number().optional(),
 });
 
 const ZoneVisualOverrideSchema = ZoneVisualStyleSchema.extend({
@@ -233,6 +244,7 @@ const ZoneTokenLayoutsSchema = z.object({
 
 const ZonesConfigSchema = z.object({
   categoryStyles: z.record(z.string(), ZoneVisualStyleSchema).optional(),
+  connectionStyles: z.record(z.string(), ConnectionStyleConfigSchema).optional(),
   attributeRules: z.array(AttributeRuleSchema).optional(),
   overrides: z.record(z.string(), ZoneVisualOverrideSchema).optional(),
   layoutRoles: z.record(z.string(), LayoutRoleSchema).optional(),
@@ -524,6 +536,7 @@ export type FixedPositionHint = z.infer<typeof FixedPositionHintSchema>;
 export type FactionVisualConfig = z.infer<typeof FactionVisualConfigSchema>;
 export type ZoneVisualStyle = z.infer<typeof ZoneVisualStyleSchema>;
 export type ZoneVisualOverride = z.infer<typeof ZoneVisualOverrideSchema>;
+export type ConnectionStyleConfig = z.infer<typeof ConnectionStyleConfigSchema>;
 export type AttributeRuleMatch = z.infer<typeof AttributeRuleMatchSchema>;
 export type AttributeRule = z.infer<typeof AttributeRuleSchema>;
 export type MarkerBadgeColorEntry = z.infer<typeof MarkerBadgeColorEntrySchema>;

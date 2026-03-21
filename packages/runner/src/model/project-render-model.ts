@@ -396,6 +396,7 @@ function isZoneEquivalent(left: RenderZone, right: RenderZone): boolean {
     && left.visual.width === right.visual.width
     && left.visual.height === right.visual.height
     && left.visual.color === right.visual.color
+    && left.visual.connectionStyleKey === right.visual.connectionStyleKey
     && isStringArrayEqual(left.tokenIDs, right.tokenIDs)
     && isMarkerArrayEqual(left.markers, right.markers)
     && isShallowRecordEqual(left.metadata, right.metadata);

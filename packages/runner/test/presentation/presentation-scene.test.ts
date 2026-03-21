@@ -231,6 +231,12 @@ describe('buildPresentationScene', () => {
         connectionStyles: {
           highway: { strokeWidth: 8, strokeColor: '#8b7355', strokeAlpha: 0.8 },
         },
+        markerBadge: {
+          markerId: 'support',
+          colorMap: {
+            activeOpposition: { color: '#dc2626', abbreviation: 'AO' },
+          },
+        },
       },
     });
 
@@ -239,7 +245,13 @@ describe('buildPresentationScene', () => {
         zones: [
           makeZone('alpha:none', {}, { category: 'province' }),
           makeZone('beta:none', {}, { category: 'province' }),
-          makeZone('loc-alpha-beta:none', {}, { category: 'loc' }),
+          makeZone('loc-alpha-beta:none', {}, {
+            category: 'loc',
+            markers: [
+              { id: 'support', state: 'activeOpposition', possibleStates: [] },
+              { id: 'sabotage', state: 'sabotage', possibleStates: [] },
+            ],
+          }),
         ],
         adjacencies: [
           { from: 'loc-alpha-beta:none', to: 'alpha:none', category: null, isHighlighted: false },
@@ -266,6 +278,22 @@ describe('buildPresentationScene', () => {
         zoneId: 'loc-alpha-beta:none',
         endpointZoneIds: ['alpha:none', 'beta:none'],
         connectionStyleKey: 'highway',
+        zone: expect.objectContaining({
+          render: expect.objectContaining({
+            markersLabel: expect.objectContaining({
+              text: 'Sabotage:sabotage',
+              visible: true,
+            }),
+            badge: {
+              text: 'AO',
+              color: '#dc2626',
+              x: 46,
+              y: 26,
+              width: 30,
+              height: 20,
+            },
+          }),
+        }),
       }),
     ]);
     expect(scene.adjacencies).toEqual([]);

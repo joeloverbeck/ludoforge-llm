@@ -99,6 +99,8 @@ const {
 
     circleArgs: [number, number, number] | null = null;
 
+    roundRectArgs: [number, number, number, number, number] | null = null;
+
     clear(): this {
       this.moveToArgs = null;
       this.quadraticCurveToArgs = null;
@@ -106,6 +108,7 @@ const {
       this.strokeStyle = undefined;
       this.fillStyle = undefined;
       this.circleArgs = null;
+      this.roundRectArgs = null;
       return this;
     }
 
@@ -131,6 +134,11 @@ const {
 
     circle(x: number, y: number, radius: number): this {
       this.circleArgs = [x, y, radius];
+      return this;
+    }
+
+    roundRect(x: number, y: number, width: number, height: number, radius: number): this {
+      this.roundRectArgs = [x, y, width, height, radius];
       return this;
     }
 
@@ -178,6 +186,7 @@ vi.mock('pixi.js', () => ({
 }));
 
 vi.mock('../../../src/canvas/text/bitmap-font-registry', () => ({
+  LABEL_FONT_NAME: 'ludoforge-label',
   STROKE_LABEL_FONT_NAME: 'ludoforge-label-stroke',
 }));
 
@@ -257,7 +266,8 @@ describe('createConnectionRouteRenderer', () => {
     const routeRoot = parent.children[0] as InstanceType<typeof MockContainer>;
     const routeCurve = routeRoot.children[0] as InstanceType<typeof MockGraphics>;
     const midpoint = renderer.getContainerMap().get('loc-alpha-beta:none') as unknown as InstanceType<typeof MockContainer>;
-    const label = routeRoot.children[2] as InstanceType<typeof MockText>;
+    const labelCluster = midpoint.children[0] as InstanceType<typeof MockContainer>;
+    const label = labelCluster.children[0] as InstanceType<typeof MockText>;
     const junction = parent.children[1] as InstanceType<typeof MockGraphics>;
 
     expect(routeCurve.quadraticCurveToArgs).not.toBeNull();
@@ -265,9 +275,91 @@ describe('createConnectionRouteRenderer', () => {
     expect(routeCurve.strokeStyle).toEqual({ color: 0x8b7355, width: 8, alpha: 0.8 });
     expect(midpoint.position.x).toBeCloseTo(100);
     expect(midpoint.position.y).toBeCloseTo(15);
+    expect(labelCluster.rotation).toBe(0);
     expect(label.text).toBe('Alpha Beta');
     expect(routeRoot.hitArea).toBeInstanceOf(MockPolygon);
     expect(junction.circleArgs).toEqual([100, 20, 6]);
+  });
+
+  it('renders marker labels and badge visuals inside the midpoint label cluster and updates them in place', () => {
+    const parent = new MockContainer();
+    const renderer = createConnectionRouteRenderer(parent as unknown as Container, new VisualConfigProvider(null));
+
+    const routeWithMarkers = makeRoute({
+      zone: makeZone({
+        render: {
+          fillColor: '#4d5c6d',
+          stroke: { color: '#111827', width: 1, alpha: 0.7 },
+          hiddenStackCount: 0,
+          nameLabel: { text: 'Alpha Beta', x: 0, y: 0, visible: true },
+          markersLabel: { text: 'Sabotage', x: 0, y: 66, visible: true },
+          badge: { text: 'AO', color: '#dc2626', x: 18, y: -8, width: 30, height: 20 },
+        },
+      }),
+    });
+
+    renderer.update(
+      [routeWithMarkers],
+      [],
+      new Map([
+        ['alpha:none', { x: 0, y: 0 }],
+        ['beta:none', { x: 200, y: 0 }],
+      ]),
+    );
+
+    const midpoint = renderer.getContainerMap().get('loc-alpha-beta:none') as unknown as InstanceType<typeof MockContainer>;
+    const labelCluster = midpoint.children[0] as InstanceType<typeof MockContainer>;
+    const label = labelCluster.children[0] as InstanceType<typeof MockText>;
+    const markersLabel = labelCluster.children[1] as InstanceType<typeof MockText>;
+    const badgeGraphics = labelCluster.children[2] as InstanceType<typeof MockGraphics>;
+    const badgeLabel = labelCluster.children[3] as InstanceType<typeof MockText>;
+
+    expect(label.text).toBe('Alpha Beta');
+    expect(markersLabel.text).toBe('Sabotage');
+    expect(markersLabel.visible).toBe(true);
+    expect(markersLabel.position.x).toBe(0);
+    expect(markersLabel.position.y).toBe(18);
+    expect(badgeGraphics.visible).toBe(true);
+    expect(badgeGraphics.roundRectArgs).toEqual([18, -8, 30, 20, 4]);
+    expect(badgeGraphics.fillStyle).toEqual({ color: 0xdc2626 });
+    expect(badgeLabel.visible).toBe(true);
+    expect(badgeLabel.text).toBe('AO');
+    expect(badgeLabel.position.x).toBe(33);
+    expect(badgeLabel.position.y).toBe(2);
+
+    renderer.update(
+      [makeRoute({
+        zone: makeZone({
+          render: {
+            fillColor: '#4d5c6d',
+            stroke: { color: '#111827', width: 1, alpha: 0.7 },
+            hiddenStackCount: 0,
+            nameLabel: { text: 'Alpha Beta', x: 0, y: 0, visible: true },
+            markersLabel: { text: 'Control:COIN', x: 12, y: 84, visible: true },
+            badge: null,
+          },
+        }),
+      })],
+      [],
+      new Map([
+        ['alpha:none', { x: 0, y: 0 }],
+        ['beta:none', { x: 200, y: 0 }],
+      ]),
+    );
+
+    const updatedLabelCluster = midpoint.children[0] as InstanceType<typeof MockContainer>;
+    const updatedMarkersLabel = updatedLabelCluster.children[1] as InstanceType<typeof MockText>;
+    const updatedBadgeGraphics = updatedLabelCluster.children[2] as InstanceType<typeof MockGraphics>;
+    const updatedBadgeLabel = updatedLabelCluster.children[3] as InstanceType<typeof MockText>;
+
+    expect(updatedMarkersLabel.text).toBe('Control:COIN');
+    expect(updatedMarkersLabel.position.x).toBe(12);
+    expect(updatedMarkersLabel.position.y).toBe(18);
+    expect(updatedBadgeGraphics.visible).toBe(false);
+    expect(updatedBadgeLabel.visible).toBe(false);
+    expect(updatedLabelCluster.children[1]).toBe(markersLabel);
+    expect(updatedLabelCluster.children[2]).toBe(badgeGraphics);
+    expect(updatedLabelCluster.children[3]).toBe(badgeLabel);
   });
 
   it('binds selection to midpoint containers and cleans bindings on removal and destroy', () => {

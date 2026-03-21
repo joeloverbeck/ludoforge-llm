@@ -12,6 +12,7 @@ import {
   quadraticBezierPoint,
 } from '../geometry/bezier-utils.js';
 import {
+  LABEL_FONT_NAME,
   STROKE_LABEL_FONT_NAME,
 } from '../text/bitmap-font-registry.js';
 import { createManagedBitmapText, destroyManagedBitmapText } from '../text/bitmap-text-runtime.js';
@@ -37,7 +38,11 @@ interface RouteSlot {
   readonly root: Container;
   readonly curve: Graphics;
   readonly midpoint: Container;
+  readonly labelCluster: Container;
   readonly label: BitmapText;
+  readonly markersLabel: BitmapText;
+  readonly badgeGraphics: Graphics;
+  readonly badgeLabel: BitmapText;
 }
 
 const DEFAULT_JUNCTION_RADIUS = 6;
@@ -45,6 +50,8 @@ const DEFAULT_CURVATURE = 30;
 const DEFAULT_HIT_AREA_PADDING = 12;
 const DEFAULT_CURVE_SEGMENTS = 24;
 const DEFAULT_WAVY_SEGMENTS = 32;
+const ROUTE_NAME_LABEL_Y = 0;
+const ROUTE_MARKERS_LABEL_Y = 18;
 const UPSIDE_DOWN_MIN = Math.PI / 2;
 const UPSIDE_DOWN_MAX = (Math.PI * 3) / 2;
 const DEFAULT_ROUTE_STROKE = {
@@ -151,10 +158,16 @@ export function createConnectionRouteRenderer(
         slot.midpoint.position.set(midpoint.x, midpoint.y);
         slot.midpoint.visible = true;
         slot.midpoint.hitArea = translatePolygon(hitArea, -midpoint.x, -midpoint.y);
+        slot.labelCluster.rotation = labelRotation;
         slot.label.text = route.displayName;
-        slot.label.position.set(midpoint.x, midpoint.y);
-        slot.label.rotation = labelRotation;
         slot.label.visible = true;
+        slot.markersLabel.text = route.zone.render.markersLabel.text;
+        slot.markersLabel.position.set(
+          route.zone.render.markersLabel.x,
+          ROUTE_MARKERS_LABEL_Y,
+        );
+        slot.markersLabel.visible = route.zone.render.markersLabel.visible;
+        updateMarkerBadge(slot, route.zone.render.badge);
         selectableByRouteId.set(route.zoneId, route.zone.isSelectable);
       }
 
@@ -230,6 +243,9 @@ function getOrCreateRouteSlot(
   const midpoint = new Container();
   midpoint.eventMode = bindSelection === undefined ? 'none' : 'static';
   midpoint.interactiveChildren = false;
+  const labelCluster = new Container();
+  labelCluster.eventMode = 'none';
+  labelCluster.interactiveChildren = false;
   const label = createManagedBitmapText({
     text: '',
     style: {
@@ -239,13 +255,52 @@ function getOrCreateRouteSlot(
       stroke: { color: '#000000', width: 3 },
     },
     anchor: { x: 0.5, y: 0.5 },
+    position: { x: 0, y: ROUTE_NAME_LABEL_Y },
+    visible: false,
+  });
+  const markersLabel = createManagedBitmapText({
+    text: '',
+    style: {
+      fontName: STROKE_LABEL_FONT_NAME,
+      fill: '#f5f7fa',
+      fontSize: 11,
+      stroke: { color: '#000000', width: 2 },
+    },
+    anchor: { x: 0.5, y: 0 },
+    position: { x: 0, y: ROUTE_MARKERS_LABEL_Y },
+    visible: false,
+  });
+  const badgeGraphics = new Graphics();
+  badgeGraphics.eventMode = 'none';
+  badgeGraphics.interactiveChildren = false;
+  badgeGraphics.visible = false;
+  const badgeLabel = createManagedBitmapText({
+    text: '',
+    style: {
+      fontName: LABEL_FONT_NAME,
+      fill: '#ffffff',
+      fontSize: 10,
+      fontWeight: 'bold',
+    },
+    anchor: { x: 0.5, y: 0.5 },
     visible: false,
   });
 
-  root.addChild(curve, midpoint, label);
+  labelCluster.addChild(label, markersLabel, badgeGraphics, badgeLabel);
+  midpoint.addChild(labelCluster);
+  root.addChild(curve, midpoint);
   parentContainer.addChild(root);
 
-  const slot: RouteSlot = { root, curve, midpoint, label };
+  const slot: RouteSlot = {
+    root,
+    curve,
+    midpoint,
+    labelCluster,
+    label,
+    markersLabel,
+    badgeGraphics,
+    badgeLabel,
+  };
   routeSlots.set(routeId, slot);
   routeContainers.set(routeId, midpoint);
   if (bindSelection !== undefined) {
@@ -262,8 +317,35 @@ function getOrCreateRouteSlot(
 }
 
 function destroyRouteSlot(slot: RouteSlot): void {
+  destroyManagedBitmapText(slot.badgeLabel);
+  destroyManagedBitmapText(slot.markersLabel);
   destroyManagedBitmapText(slot.label);
   safeDestroyDisplayObject(slot.root, { children: true });
+}
+
+function hideBadge(slot: RouteSlot): void {
+  slot.badgeGraphics.visible = false;
+  slot.badgeLabel.visible = false;
+}
+
+function updateMarkerBadge(
+  slot: RouteSlot,
+  badge: ConnectionRouteNode['zone']['render']['badge'],
+): void {
+  if (badge === null) {
+    hideBadge(slot);
+    return;
+  }
+
+  const fillColor = parseHexColor(badge.color);
+  slot.badgeGraphics.clear();
+  slot.badgeGraphics.roundRect(badge.x, badge.y, badge.width, badge.height, 4);
+  slot.badgeGraphics.fill({ color: fillColor ?? 0x6b7280 });
+  slot.badgeGraphics.visible = true;
+
+  slot.badgeLabel.text = badge.text;
+  slot.badgeLabel.position.set(badge.x + (badge.width / 2), badge.y + (badge.height / 2));
+  slot.badgeLabel.visible = true;
 }
 
 interface ResolvedStroke {

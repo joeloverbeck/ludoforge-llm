@@ -14,6 +14,27 @@ import {
   parseVisualConfigStrict,
   validateVisualConfigRefs,
 } from '../../src/config/validate-visual-config-refs';
+import { resolveConnectionRoutes } from '../../src/presentation/connection-route-resolver';
+
+const EXPECTED_FITL_CONNECTION_ENDPOINTS = {
+  'loc-ban-me-thuot-da-lat:none': ['pleiku-darlac:none', 'quang-duc-long-khanh:none'],
+  'loc-cam-ranh-da-lat:none': ['cam-ranh:none', 'quang-duc-long-khanh:none'],
+  'loc-can-tho-bac-lieu:none': ['ba-xuyen:none', 'can-tho:none'],
+  'loc-can-tho-chau-doc:none': ['can-tho:none', 'the-parrots-beak:none'],
+  'loc-can-tho-long-phu:none': ['can-tho:none', 'kien-hoa-vinh-binh:none'],
+  'loc-da-nang-dak-to:none': ['da-nang:none', 'southern-laos:none'],
+  'loc-da-nang-qui-nhon:none': ['da-nang:none', 'qui-nhon:none'],
+  'loc-hue-da-nang:none': ['da-nang:none', 'hue:none'],
+  'loc-hue-khe-sanh:none': ['central-laos:none', 'hue:none'],
+  'loc-kontum-ban-me-thuot:none': ['kontum:none', 'pleiku-darlac:none'],
+  'loc-kontum-dak-to:none': ['kontum:none', 'southern-laos:none'],
+  'loc-kontum-qui-nhon:none': ['kontum:none', 'qui-nhon:none'],
+  'loc-qui-nhon-cam-ranh:none': ['cam-ranh:none', 'qui-nhon:none'],
+  'loc-saigon-an-loc-ban-me-thuot:none': ['an-loc:none', 'saigon:none'],
+  'loc-saigon-cam-ranh:none': ['cam-ranh:none', 'saigon:none'],
+  'loc-saigon-can-tho:none': ['can-tho:none', 'saigon:none'],
+  'loc-saigon-da-lat:none': ['quang-duc-long-khanh:none', 'saigon:none'],
+} as const;
 
 function repoRootPath(): string {
   const testDir = dirname(fileURLToPath(import.meta.url));
@@ -80,6 +101,7 @@ describe('visual-config.yaml files', () => {
     () => {
     const parsed = VisualConfigSchema.parse(readYaml('data/games/fire-in-the-lake/visual-config.yaml'));
     const fitlGameDef = compileProductionGameDef('data/games/fire-in-the-lake.game-spec.md');
+    const provider = new VisualConfigProvider(parsed);
     const internalScenarioDeckZones = fitlGameDef.zones.filter((zone) => zone.isInternal === true);
 
     const boardZoneIds = new Set(
@@ -177,13 +199,90 @@ describe('visual-config.yaml files', () => {
       },
       {
         match: { category: ['loc'], attributeContains: { terrainTags: 'highway' } },
-        style: { color: '#8b7355' },
+        style: { connectionStyleKey: 'highway' },
       },
       {
         match: { category: ['loc'], attributeContains: { terrainTags: 'mekong' } },
-        style: { color: '#4a7a8c' },
+        style: { connectionStyleKey: 'mekong' },
       },
     ]);
+    expect(parsed.zones?.categoryStyles?.loc).toEqual({
+      shape: 'connection',
+    });
+    expect(parsed.zones?.connectionStyles).toEqual({
+      highway: {
+        strokeWidth: 8,
+        strokeColor: '#8b7355',
+        strokeAlpha: 0.8,
+      },
+      mekong: {
+        strokeWidth: 12,
+        strokeColor: '#4a7a8c',
+        strokeAlpha: 0.9,
+        wavy: true,
+        waveAmplitude: 4,
+        waveFrequency: 0.08,
+      },
+    });
+    expect(parsed.zones?.connectionEndpoints).toEqual(EXPECTED_FITL_CONNECTION_ENDPOINTS);
+
+    const fitlBoardZones = fitlGameDef.zones.filter((zone) => zone.zoneKind === 'board' && zone.isInternal !== true);
+    const fitlLocZones = fitlBoardZones.filter((zone) => zone.category === 'loc');
+    expect(fitlLocZones).toHaveLength(17);
+    expect(provider.getConnectionEndpoints()).toEqual(
+      new Map(Object.entries(EXPECTED_FITL_CONNECTION_ENDPOINTS)),
+    );
+    for (const zone of fitlLocZones) {
+      const visual = provider.resolveZoneVisual(String(zone.id), zone.category ?? null, zone.attributes ?? {});
+      const terrainTags = Array.isArray(zone.attributes?.terrainTags)
+        ? zone.attributes.terrainTags.filter((tag): tag is string => typeof tag === 'string')
+        : [];
+      expect(visual.shape).toBe('connection');
+      if (terrainTags.includes('highway')) {
+        expect(visual.connectionStyleKey).toBe('highway');
+      }
+      if (terrainTags.includes('mekong')) {
+        expect(visual.connectionStyleKey).toBe('mekong');
+      }
+    }
+
+    const zones = fitlBoardZones.map((zone) => ({
+      id: String(zone.id),
+      displayName: String(zone.id),
+      ownerID: null,
+      isSelectable: false,
+      category: zone.category ?? null,
+      attributes: zone.attributes ?? {},
+      visual: provider.resolveZoneVisual(String(zone.id), zone.category ?? null, zone.attributes ?? {}),
+      render: {
+        fillColor: '#000000',
+        stroke: { color: '#111827', width: 1, alpha: 1 },
+        hiddenStackCount: 0,
+        nameLabel: { text: String(zone.id), x: 0, y: 0, visible: true },
+        markersLabel: { text: '', x: 0, y: 0, visible: false },
+        badge: null,
+      },
+    }));
+    const adjacencies = fitlBoardZones.flatMap((zone) =>
+      (zone.adjacentTo ?? []).map((adjacency) => ({
+        from: String(zone.id),
+        to: String(adjacency.to),
+        category: adjacency.category ?? null,
+        isHighlighted: false,
+      })));
+    const positions = new Map(
+      fitlBoardZones.map((zone, index) => [String(zone.id), { x: index * 10, y: index * 5 }]),
+    );
+    const resolution = resolveConnectionRoutes({
+      zones,
+      adjacencies,
+      positions,
+      endpointOverrides: provider.getConnectionEndpoints(),
+    });
+    expect(resolution.connectionRoutes).toHaveLength(17);
+    expect(Object.fromEntries(
+      resolution.connectionRoutes.map((route) => [route.zoneId, route.endpointZoneIds]),
+    )).toEqual(EXPECTED_FITL_CONNECTION_ENDPOINTS);
 
     expect(parsed.tokenTypes?.['us-irregulars']?.shape).toBe('beveled-cylinder');
     expect(parsed.tokenTypes?.['arvn-rangers']?.shape).toBe('beveled-cylinder');

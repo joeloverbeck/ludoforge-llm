@@ -361,7 +361,7 @@ describe('VisualConfigSchema', () => {
     expect(result.success).toBe(true);
   });
 
-  it('accepts connection as a valid zone shape and parses connection styles', () => {
+  it('accepts connection as a valid zone shape and parses connection styles/endpoints', () => {
     const result = VisualConfigSchema.safeParse({
       version: 1,
       zones: {
@@ -390,6 +390,9 @@ describe('VisualConfigSchema', () => {
             style: { connectionStyleKey: 'mekong' },
           },
         ],
+        connectionEndpoints: {
+          'loc-alpha-beta:none': ['alpha:none', 'beta:none'],
+        },
       },
     });
 

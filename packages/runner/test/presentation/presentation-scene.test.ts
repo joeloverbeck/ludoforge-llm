@@ -304,6 +304,64 @@ describe('buildPresentationScene', () => {
     ]);
   });
 
+  it('uses provider-owned connection endpoints for otherwise ambiguous connection routes', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      zones: {
+        categoryStyles: {
+          province: { shape: 'rectangle', width: 120, height: 90, color: '#2a6e3f' },
+          loc: { shape: 'connection', connectionStyleKey: 'mekong' },
+        },
+        connectionStyles: {
+          mekong: { strokeWidth: 12, strokeColor: '#4a7a8c', wavy: true, waveAmplitude: 4, waveFrequency: 0.08 },
+        },
+        connectionEndpoints: {
+          'loc-can-tho-long-phu:none': ['can-tho:none', 'kien-hoa-vinh-binh:none'],
+        },
+      },
+    });
+
+    const scene = buildPresentationScene({
+      runnerFrame: makeRunnerFrame({
+        zones: [
+          makeZone('can-tho:none', {}, { category: 'province' }),
+          makeZone('ba-xuyen:none', {}, { category: 'province' }),
+          makeZone('kien-hoa-vinh-binh:none', {}, { category: 'province' }),
+          makeZone('loc-can-tho-long-phu:none', { terrainTags: ['mekong'] }, { category: 'loc' }),
+        ],
+        adjacencies: [
+          { from: 'loc-can-tho-long-phu:none', to: 'can-tho:none', category: null, isHighlighted: false },
+          { from: 'loc-can-tho-long-phu:none', to: 'ba-xuyen:none', category: null, isHighlighted: false },
+          { from: 'loc-can-tho-long-phu:none', to: 'kien-hoa-vinh-binh:none', category: null, isHighlighted: false },
+        ],
+      }),
+      overlays: [],
+      positions: new Map([
+        ['can-tho:none', { x: 0, y: 0 }],
+        ['ba-xuyen:none', { x: 100, y: 40 }],
+        ['kien-hoa-vinh-binh:none', { x: 200, y: 0 }],
+        ['loc-can-tho-long-phu:none', { x: 100, y: 0 }],
+      ]),
+      visualConfigProvider: provider,
+      tokenRenderStyleProvider: new VisualConfigTokenRenderStyleProvider(provider),
+      interactionHighlights: { zoneIDs: [], tokenIDs: [] },
+    });
+
+    expect(scene.connectionRoutes).toEqual([
+      expect.objectContaining({
+        zoneId: 'loc-can-tho-long-phu:none',
+        endpointZoneIds: ['can-tho:none', 'kien-hoa-vinh-binh:none'],
+        touchingZoneIds: ['ba-xuyen:none'],
+        connectionStyleKey: 'mekong',
+      }),
+    ]);
+    expect(scene.zones.map((zone) => zone.id)).toEqual([
+      'can-tho:none',
+      'ba-xuyen:none',
+      'kien-hoa-vinh-binh:none',
+    ]);
+  });
+
   it('resolves token grouping and offsets before renderer mutation', () => {
     const provider = new VisualConfigProvider({
       version: 1,

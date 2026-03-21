@@ -15,6 +15,7 @@ describe('validate-visual-config-refs', () => {
       version: 1,
       zones: {
         overrides: { 'zone:a': { label: 'A' } },
+        connectionEndpoints: { 'zone:a': ['zone:a', 'zone:b'] },
         layoutRoles: { 'zone:b': 'hand' },
         tokenLayouts: {
           presets: {
@@ -109,6 +110,9 @@ describe('validate-visual-config-refs', () => {
         overrides: {
           'missing:zone': { label: 'oops' },
         },
+        connectionEndpoints: {
+          'zone:a': ['missing:endpoint', 'zone:b'],
+        },
         tokenLayouts: {
           assignments: {
             byCategory: {
@@ -132,6 +136,7 @@ describe('validate-visual-config-refs', () => {
 
     const errors = validateVisualConfigRefs(config, fixtureContext());
     expect(errors.map((error) => error.category)).toEqual([
+      'zone',
       'zone',
       'tokenType',
       'zoneCategory',
@@ -243,6 +248,32 @@ describe('validate-visual-config-refs', () => {
         category: 'zone',
         configPath: 'zones.hiddenZones[0]',
         referencedId: 'missing:zone',
+        message: 'Unknown zone id',
+      },
+    ]);
+  });
+
+  it('reports unknown connectionEndpoints keys and endpoint references', () => {
+    const config: VisualConfig = {
+      version: 1,
+      zones: {
+        connectionEndpoints: {
+          'missing:route': ['zone:a', 'missing:endpoint'],
+        },
+      },
+    };
+
+    expect(validateVisualConfigRefs(config, fixtureContext())).toEqual([
+      {
+        category: 'zone',
+        configPath: 'zones.connectionEndpoints.missing:route',
+        referencedId: 'missing:route',
+        message: 'Unknown zone id',
+      },
+      {
+        category: 'zone',
+        configPath: 'zones.connectionEndpoints.missing:route[1]',
+        referencedId: 'missing:endpoint',
         message: 'Unknown zone id',
       },
     ]);

@@ -325,6 +325,23 @@ describe('VisualConfigProvider', () => {
     expect(provider.resolveConnectionStyle('missing')).toBeNull();
   });
 
+  it('returns configured connection endpoint pairs as a deterministic map', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      zones: {
+        connectionEndpoints: {
+          'loc-alpha-beta:none': ['alpha:none', 'beta:none'],
+          'loc-beta-gamma:none': ['beta:none', 'gamma:none'],
+        },
+      },
+    });
+
+    expect(provider.getConnectionEndpoints()).toEqual(new Map([
+      ['loc-alpha-beta:none', ['alpha:none', 'beta:none']],
+      ['loc-beta-gamma:none', ['beta:none', 'gamma:none']],
+    ]));
+  });
+
   it('faction color uses config for known factions and default hash otherwise', () => {
     const provider = new VisualConfigProvider({
       version: 1,

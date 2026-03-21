@@ -1,6 +1,6 @@
 # Spec 71 — Connection-Route Zone Rendering
 
-## Status: DRAFT
+**Status**: COMPLETED
 
 ## Problem
 
@@ -505,3 +505,17 @@ This removes the previous ambiguity around touching-province lines. Once a route
 | `packages/runner/test/canvas/renderers/connection-route-renderer.test.ts` | **New** — renderer tests |
 | `packages/runner/test/presentation/presentation-scene.test.ts` | Modify — add connection route assertions |
 | `packages/runner/test/canvas/renderers/zone-renderer.test.ts` | Modify — verify connection zones excluded |
+
+## Outcome
+
+- Completion date: 2026-03-21
+- What actually changed:
+  - The generic connection-route architecture described here was implemented across the runner, including route resolution, renderer/runtime integration, interaction parity, marker presentation parity, and FITL migration.
+  - FITL now uses connection-route visuals with named `connectionStyles` and explicit visual-config-owned endpoint topology.
+- Deviations from original plan:
+  - Production FITL now configures explicit endpoint pairs for all 17 LoCs, not only a minimal ambiguous subset. That is cleaner than depending on runtime-id parsing as a production contract.
+  - Some FITL route names refer to towns that are not modeled as standalone board zones. Under the current generic route contract, those routes use explicit neighboring board-zone proxies as endpoints. A future ideal architecture could add non-zone route anchors for higher geometric fidelity if needed.
+- Verification results:
+  - `pnpm -F @ludoforge/runner test`
+  - `pnpm -F @ludoforge/runner typecheck`
+  - `pnpm -F @ludoforge/runner lint`

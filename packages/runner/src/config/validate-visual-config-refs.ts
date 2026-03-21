@@ -56,6 +56,14 @@ export function validateVisualConfigRefs(
   const errors: VisualConfigRefError[] = [];
 
   validateObjectKeys(config.zones?.overrides, context.zoneIds, 'zone', 'zones.overrides', errors);
+  validateObjectKeys(config.zones?.connectionEndpoints, context.zoneIds, 'zone', 'zones.connectionEndpoints', errors);
+  validateRecordTupleValues(
+    config.zones?.connectionEndpoints,
+    context.zoneIds,
+    'zone',
+    'zones.connectionEndpoints',
+    errors,
+  );
   validateObjectKeys(config.zones?.layoutRoles, context.zoneIds, 'zone', 'zones.layoutRoles', errors);
   validateStringList(config.zones?.hiddenZones, context.zoneIds, 'zone', 'zones.hiddenZones', errors);
   validateStringList(
@@ -219,6 +227,29 @@ function validateStringList(
       errors.push({
         category,
         configPath: `${path}[${index}]`,
+        referencedId: value,
+        message: `Unknown ${category} id`,
+      });
+    }
+  }
+}
+
+function validateRecordTupleValues(
+  record: Readonly<Record<string, readonly string[]>> | undefined,
+  knownIds: ReadonlySet<string>,
+  category: VisualConfigRefError['category'],
+  path: string,
+  errors: VisualConfigRefError[],
+): void {
+  for (const [key, values] of Object.entries(record ?? {})) {
+    for (let index = 0; index < values.length; index += 1) {
+      const value = values[index];
+      if (value === undefined || knownIds.has(value)) {
+        continue;
+      }
+      errors.push({
+        category,
+        configPath: `${path}.${key}[${index}]`,
         referencedId: value,
         message: `Unknown ${category} id`,
       });

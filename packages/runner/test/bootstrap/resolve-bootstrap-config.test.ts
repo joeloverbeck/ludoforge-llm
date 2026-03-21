@@ -75,7 +75,8 @@ describe('resolveBootstrapConfig', () => {
 
     expect(provider.resolveZoneVisual('sample:city', 'city', {})).toMatchObject({ shape: 'circle' });
     expect(provider.resolveZoneVisual('sample:province', 'province', {})).toMatchObject({ shape: 'rectangle' });
-    expect(provider.resolveZoneVisual('sample:loc', 'loc', {})).toMatchObject({ shape: 'line' });
+    expect(provider.resolveZoneVisual('sample:loc', 'loc', {})).toMatchObject({ shape: 'connection' });
+    expect(provider.getConnectionEndpoints().size).toBe(17);
 
     for (const zone of cityZones) {
       expect((zone.adjacentTo ?? []).length).toBeGreaterThan(0);

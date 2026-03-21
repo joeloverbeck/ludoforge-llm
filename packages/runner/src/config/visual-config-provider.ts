@@ -45,6 +45,7 @@ import type {
   RunnerChromeTopBarStatusAlignment,
   ZoneTokenLayout,
   ConnectionStyleConfig,
+  ConnectionEndpointPair,
 } from './visual-config-types.js';
 
 export interface ResolvedZoneVisual {
@@ -170,6 +171,16 @@ export class VisualConfigProvider {
 
   resolveConnectionStyle(styleKey: string): ConnectionStyleConfig | null {
     return this.config?.zones?.connectionStyles?.[styleKey] ?? null;
+  }
+
+  getConnectionEndpoints(): ReadonlyMap<string, ConnectionEndpointPair> {
+    const configured = this.config?.zones?.connectionEndpoints;
+    if (configured === undefined) {
+      return EMPTY_CONNECTION_ENDPOINTS;
+    }
+    return new Map(
+      Object.entries(configured).map(([zoneId, endpoints]) => [zoneId, [endpoints[0], endpoints[1]] as const]),
+    );
   }
 
   getZoneLabel(zoneId: string): string | null {
@@ -466,6 +477,7 @@ export class VisualConfigProvider {
 }
 
 const EMPTY_STRING_SET: ReadonlySet<string> = Object.freeze(new Set<string>());
+const EMPTY_CONNECTION_ENDPOINTS: ReadonlyMap<string, ConnectionEndpointPair> = Object.freeze(new Map());
 const DEFAULT_STACK_BADGE_STYLE: ResolvedStackBadgeStyle = Object.freeze({
   fontName: STROKE_LABEL_FONT_NAME,
   fontSize: 10,

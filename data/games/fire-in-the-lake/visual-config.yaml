@@ -73,9 +73,39 @@ zones:
       width: 360
       height: 220
     loc:
-      shape: line
-      width: 270
-      height: 50
+      shape: connection
+
+  connectionStyles:
+    highway:
+      strokeWidth: 8
+      strokeColor: "#8b7355"
+      strokeAlpha: 0.8
+    mekong:
+      strokeWidth: 12
+      strokeColor: "#4a7a8c"
+      strokeAlpha: 0.9
+      wavy: true
+      waveAmplitude: 4
+      waveFrequency: 0.08
+
+  connectionEndpoints:
+    "loc-ban-me-thuot-da-lat:none": ["pleiku-darlac:none", "quang-duc-long-khanh:none"]
+    "loc-cam-ranh-da-lat:none": ["cam-ranh:none", "quang-duc-long-khanh:none"]
+    "loc-can-tho-bac-lieu:none": ["ba-xuyen:none", "can-tho:none"]
+    "loc-can-tho-chau-doc:none": ["can-tho:none", "the-parrots-beak:none"]
+    "loc-can-tho-long-phu:none": ["can-tho:none", "kien-hoa-vinh-binh:none"]
+    "loc-da-nang-dak-to:none": ["da-nang:none", "southern-laos:none"]
+    "loc-da-nang-qui-nhon:none": ["da-nang:none", "qui-nhon:none"]
+    "loc-hue-da-nang:none": ["da-nang:none", "hue:none"]
+    "loc-hue-khe-sanh:none": ["central-laos:none", "hue:none"]
+    "loc-kontum-ban-me-thuot:none": ["kontum:none", "pleiku-darlac:none"]
+    "loc-kontum-dak-to:none": ["kontum:none", "southern-laos:none"]
+    "loc-kontum-qui-nhon:none": ["kontum:none", "qui-nhon:none"]
+    "loc-qui-nhon-cam-ranh:none": ["cam-ranh:none", "qui-nhon:none"]
+    "loc-saigon-an-loc-ban-me-thuot:none": ["an-loc:none", "saigon:none"]
+    "loc-saigon-cam-ranh:none": ["cam-ranh:none", "saigon:none"]
+    "loc-saigon-can-tho:none": ["can-tho:none", "saigon:none"]
+    "loc-saigon-da-lat:none": ["quang-duc-long-khanh:none", "saigon:none"]
 
   markerBadge:
     markerId: support
@@ -120,13 +150,13 @@ zones:
         attributeContains:
           terrainTags: highway
       style:
-        color: "#8b7355"
+        connectionStyleKey: highway
     - match:
         category: [loc]
         attributeContains:
           terrainTags: mekong
       style:
-        color: "#4a7a8c"
+        connectionStyleKey: mekong
 
   overrides:
     "an-loc:none":

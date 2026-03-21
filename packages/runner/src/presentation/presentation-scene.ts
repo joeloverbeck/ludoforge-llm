@@ -150,6 +150,7 @@ export function buildPresentationScene(options: BuildPresentationSceneOptions): 
     zones,
     adjacencies,
     positions: options.positions,
+    endpointOverrides: options.visualConfigProvider.getConnectionEndpoints(),
   });
   const visibleZoneIDs = new Set([
     ...connectionResolution.filteredZones.map((zone) => zone.id),

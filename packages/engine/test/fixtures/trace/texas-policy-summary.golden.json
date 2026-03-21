@@ -1,6 +1,6 @@
 {
   "move": {
-    "actionId": "call",
+    "actionId": "fold",
     "params": {}
   },
   "agentDecision": {
@@ -11,10 +11,10 @@
     "seatId": "neutral",
     "requestedProfileId": null,
     "resolvedProfileId": "baseline",
-    "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+    "profileFingerprint": "deab9b82706e28c26211bdd48c301951ab9487a410b364e445929042b415859f",
     "initialCandidateCount": 12,
-    "selectedStableMoveKey": "call|{}|false|unclassified",
-    "finalScore": 80,
+    "selectedStableMoveKey": "fold|{}|false|unclassified",
+    "finalScore": 70,
     "pruningSteps": [],
     "tieBreakChain": [],
     "previewUsage": {

@@ -5,6 +5,7 @@ import type {
   AgentPolicyLiteral,
   AgentPolicyOperator,
   AgentPolicyValueType,
+  AgentPolicyZoneTokenAggOp,
   CompiledAgentDependencyRefs,
   CompiledAgentPolicyRef,
   CompiledAgentParameterDef,
@@ -62,7 +63,8 @@ type KnownOperator =
   | 'or'
   | 'param'
   | 'ref'
-  | 'sub';
+  | 'sub'
+  | 'zoneTokenAgg';
 
 const KNOWN_OPERATORS = new Set<KnownOperator>([
   'abs',
@@ -90,6 +92,7 @@ const KNOWN_OPERATORS = new Set<KnownOperator>([
   'param',
   'ref',
   'sub',
+  'zoneTokenAgg',
 ]);
 
 export function analyzePolicyExpr(
@@ -199,6 +202,8 @@ export function analyzePolicyExpr(
       return analyzeClampOperator(value, context, diagnostics, path);
     case 'boolToNumber':
       return analyzeBoolToNumberOperator(value, context, diagnostics, path);
+    case 'zoneTokenAgg':
+      return analyzeZoneTokenAggOperator(value, diagnostics, path);
   }
 
   return null;
@@ -809,4 +814,81 @@ function unifyCoalescedType(
     return left;
   }
   return left === right ? left : null;
+}
+
+const ZONE_TOKEN_AGG_OPS = new Set<AgentPolicyZoneTokenAggOp>(['sum', 'count', 'min', 'max']);
+
+function analyzeZoneTokenAggOperator(
+  expr: GameSpecPolicyExpr,
+  diagnostics: Diagnostic[],
+  path: string,
+): PolicyExprAnalysis | null {
+  if (typeof expr !== 'object' || expr === null || Array.isArray(expr)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path,
+      severity: 'error',
+      message: 'zoneTokenAgg requires an object with zone, owner, prop, and op fields.',
+      suggestion: 'Use { zoneTokenAgg: { zone: "hand", owner: "self", prop: "rank", op: "sum" } }.',
+    });
+    return null;
+  }
+  const obj = expr as Readonly<Record<string, unknown>>;
+  const zone = obj['zone'];
+  const owner = obj['owner'];
+  const prop = obj['prop'];
+  const op = obj['op'];
+  if (typeof zone !== 'string' || zone.length === 0) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path: `${path}.zoneTokenAgg.zone`,
+      severity: 'error',
+      message: 'zoneTokenAgg.zone must be a non-empty string zone id.',
+      suggestion: 'Set zone to a declared zone id (e.g., "hand", "community").',
+    });
+    return null;
+  }
+  if (typeof owner !== 'string' || owner.length === 0) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path: `${path}.zoneTokenAgg.owner`,
+      severity: 'error',
+      message: 'zoneTokenAgg.owner must be "self", "active", "none", or a literal seat id.',
+      suggestion: 'Set owner to "self" for the acting player\'s zone.',
+    });
+    return null;
+  }
+  if (typeof prop !== 'string' || prop.length === 0) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path: `${path}.zoneTokenAgg.prop`,
+      severity: 'error',
+      message: 'zoneTokenAgg.prop must be a non-empty string token property name.',
+      suggestion: 'Set prop to a token property name (e.g., "rank").',
+    });
+    return null;
+  }
+  if (typeof op !== 'string' || !ZONE_TOKEN_AGG_OPS.has(op as AgentPolicyZoneTokenAggOp)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path: `${path}.zoneTokenAgg.op`,
+      severity: 'error',
+      message: `zoneTokenAgg.op must be one of: ${[...ZONE_TOKEN_AGG_OPS].join(', ')}.`,
+      suggestion: 'Use "sum", "count", "min", or "max".',
+    });
+    return null;
+  }
+  return {
+    expr: {
+      kind: 'zoneTokenAgg',
+      zone,
+      owner,
+      prop,
+      aggOp: op as AgentPolicyZoneTokenAggOp,
+    },
+    valueType: 'number',
+    costClass: 'state',
+    dependencies: emptyDependencies(),
+    isStaticallyZero: false,
+  };
 }

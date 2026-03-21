@@ -375,6 +375,7 @@ export type CompiledAgentPolicyRef =
       readonly kind: 'turnIntrinsic';
       readonly intrinsic: 'phaseId' | 'stepId' | 'round';
     };
+export type AgentPolicyZoneTokenAggOp = 'sum' | 'count' | 'min' | 'max';
 export type AgentPolicyExpr =
   | {
       readonly kind: 'literal';
@@ -392,6 +393,13 @@ export type AgentPolicyExpr =
       readonly kind: 'op';
       readonly op: AgentPolicyOperator;
       readonly args: readonly AgentPolicyExpr[];
+    }
+  | {
+      readonly kind: 'zoneTokenAgg';
+      readonly zone: string;
+      readonly owner: string;
+      readonly prop: string;
+      readonly aggOp: AgentPolicyZoneTokenAggOp;
     };
 
 export interface CompiledAgentPolicySurfacePreviewVisibility {

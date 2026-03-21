@@ -114,64 +114,113 @@ zones:
       x: 420
       y: 460
 
-  connectionEndpoints:
+  connectionRoutes:
     "loc-ban-me-thuot-da-lat:none":
-      - { kind: anchor, anchorId: "ban-me-thuot" }
-      - { kind: anchor, anchorId: "da-lat" }
+      points:
+        - { kind: anchor, anchorId: "ban-me-thuot" }
+        - { kind: anchor, anchorId: "da-lat" }
+      segments:
+        - { kind: straight }
     "loc-cam-ranh-da-lat:none":
-      - { kind: zone, zoneId: "cam-ranh:none" }
-      - { kind: anchor, anchorId: "da-lat" }
+      points:
+        - { kind: zone, zoneId: "cam-ranh:none" }
+        - { kind: anchor, anchorId: "da-lat" }
+      segments:
+        - { kind: straight }
     "loc-can-tho-bac-lieu:none":
-      - { kind: zone, zoneId: "can-tho:none" }
-      - { kind: anchor, anchorId: "bac-lieu" }
+      points:
+        - { kind: zone, zoneId: "can-tho:none" }
+        - { kind: anchor, anchorId: "bac-lieu" }
+      segments:
+        - { kind: straight }
     "loc-can-tho-chau-doc:none":
-      - { kind: zone, zoneId: "can-tho:none" }
-      - { kind: anchor, anchorId: "chau-doc" }
+      points:
+        - { kind: zone, zoneId: "can-tho:none" }
+        - { kind: anchor, anchorId: "chau-doc" }
+      segments:
+        - { kind: straight }
     "loc-can-tho-long-phu:none":
-      - { kind: zone, zoneId: "can-tho:none" }
-      - { kind: anchor, anchorId: "long-phu" }
+      points:
+        - { kind: zone, zoneId: "can-tho:none" }
+        - { kind: anchor, anchorId: "long-phu" }
+      segments:
+        - { kind: straight }
     "loc-da-nang-dak-to:none":
-      - { kind: zone, zoneId: "da-nang:none" }
-      - { kind: anchor, anchorId: "dak-to" }
+      points:
+        - { kind: zone, zoneId: "da-nang:none" }
+        - { kind: anchor, anchorId: "dak-to" }
+      segments:
+        - { kind: straight }
     "loc-da-nang-qui-nhon:none":
-      - { kind: zone, zoneId: "da-nang:none" }
-      - { kind: zone, zoneId: "qui-nhon:none" }
+      points:
+        - { kind: zone, zoneId: "da-nang:none" }
+        - { kind: zone, zoneId: "qui-nhon:none" }
+      segments:
+        - { kind: straight }
     "loc-hue-da-nang:none":
-      - { kind: zone, zoneId: "da-nang:none" }
-      - { kind: zone, zoneId: "hue:none" }
+      points:
+        - { kind: zone, zoneId: "da-nang:none" }
+        - { kind: zone, zoneId: "hue:none" }
+      segments:
+        - kind: quadratic
+          control: { kind: position, x: 480, y: 40 }
     "loc-hue-khe-sanh:none":
-      - { kind: zone, zoneId: "hue:none" }
-      - { kind: anchor, anchorId: "khe-sanh" }
+      points:
+        - { kind: zone, zoneId: "hue:none" }
+        - { kind: anchor, anchorId: "khe-sanh" }
+      segments:
+        - { kind: straight }
     "loc-kontum-ban-me-thuot:none":
-      - { kind: zone, zoneId: "kontum:none" }
-      - { kind: anchor, anchorId: "ban-me-thuot" }
+      points:
+        - { kind: zone, zoneId: "kontum:none" }
+        - { kind: anchor, anchorId: "ban-me-thuot" }
+      segments:
+        - { kind: straight }
     "loc-kontum-dak-to:none":
-      - { kind: zone, zoneId: "kontum:none" }
-      - { kind: anchor, anchorId: "dak-to" }
+      points:
+        - { kind: zone, zoneId: "kontum:none" }
+        - { kind: anchor, anchorId: "dak-to" }
+      segments:
+        - { kind: straight }
     "loc-kontum-qui-nhon:none":
-      - { kind: zone, zoneId: "kontum:none" }
-      - { kind: zone, zoneId: "qui-nhon:none" }
+      points:
+        - { kind: zone, zoneId: "kontum:none" }
+        - { kind: zone, zoneId: "qui-nhon:none" }
+      segments:
+        - { kind: straight }
     "loc-qui-nhon-cam-ranh:none":
-      - { kind: zone, zoneId: "cam-ranh:none" }
-      - { kind: zone, zoneId: "qui-nhon:none" }
+      points:
+        - { kind: zone, zoneId: "cam-ranh:none" }
+        - { kind: zone, zoneId: "qui-nhon:none" }
+      segments:
+        - { kind: straight }
     "loc-saigon-an-loc-ban-me-thuot:none":
-      - { kind: zone, zoneId: "saigon:none" }
-      - { kind: anchor, anchorId: "ban-me-thuot" }
+      points:
+        - { kind: zone, zoneId: "saigon:none" }
+        - { kind: anchor, anchorId: "an-loc" }
+        - { kind: anchor, anchorId: "ban-me-thuot" }
+      segments:
+        - { kind: straight }
+        - kind: quadratic
+          control: { kind: position, x: 500, y: 200 }
     "loc-saigon-cam-ranh:none":
-      - { kind: zone, zoneId: "cam-ranh:none" }
-      - { kind: zone, zoneId: "saigon:none" }
+      points:
+        - { kind: zone, zoneId: "cam-ranh:none" }
+        - { kind: zone, zoneId: "saigon:none" }
+      segments:
+        - { kind: straight }
     "loc-saigon-can-tho:none":
-      - { kind: zone, zoneId: "can-tho:none" }
-      - { kind: zone, zoneId: "saigon:none" }
+      points:
+        - { kind: zone, zoneId: "can-tho:none" }
+        - { kind: zone, zoneId: "saigon:none" }
+      segments:
+        - { kind: straight }
     "loc-saigon-da-lat:none":
-      - { kind: zone, zoneId: "saigon:none" }
-      - { kind: anchor, anchorId: "da-lat" }
-
-  connectionPaths:
-    "loc-saigon-an-loc-ban-me-thuot:none":
-      - { kind: zone, zoneId: "saigon:none" }
-      - { kind: anchor, anchorId: "an-loc" }
-      - { kind: anchor, anchorId: "ban-me-thuot" }
+      points:
+        - { kind: zone, zoneId: "saigon:none" }
+        - { kind: anchor, anchorId: "da-lat" }
+      segments:
+        - { kind: straight }
 
   markerBadge:
     markerId: support

@@ -3,12 +3,8 @@ import { Container, Graphics, Polygon, type BitmapText } from 'pixi.js';
 import type { VisualConfigProvider } from '../../config/visual-config-provider.js';
 import type { Position } from '../geometry.js';
 import {
-  approximateBezierHitPolygon,
-  computeControlPoint,
   normalize,
   perpendicular,
-  quadraticBezierMidpoint,
-  quadraticBezierMidpointTangent,
   quadraticBezierPoint,
 } from '../geometry/bezier-utils.js';
 import {
@@ -29,7 +25,6 @@ import type { ConnectionRouteNode, JunctionNode } from '../../presentation/conne
 
 interface ConnectionRouteRendererOptions {
   readonly junctionRadius?: number;
-  readonly defaultCurvature?: number;
   readonly hitAreaPadding?: number;
   readonly curveSegments?: number;
   readonly wavySegments?: number;
@@ -50,7 +45,6 @@ interface RouteSlot extends ZoneBadgeVisuals {
 }
 
 const DEFAULT_JUNCTION_RADIUS = 6;
-const DEFAULT_CURVATURE = 30;
 const DEFAULT_HIT_AREA_PADDING = 12;
 const DEFAULT_CURVE_SEGMENTS = 24;
 const DEFAULT_WAVY_SEGMENTS = 32;
@@ -81,7 +75,6 @@ export function createConnectionRouteRenderer(
   const selectionCleanupByRouteId = new Map<string, () => void>();
 
   const junctionRadius = options.junctionRadius ?? DEFAULT_JUNCTION_RADIUS;
-  const defaultCurvature = options.defaultCurvature ?? DEFAULT_CURVATURE;
   const hitAreaPadding = options.hitAreaPadding ?? DEFAULT_HIT_AREA_PADDING;
   const curveSegments = options.curveSegments ?? DEFAULT_CURVE_SEGMENTS;
   const wavySegments = options.wavySegments ?? DEFAULT_WAVY_SEGMENTS;
@@ -93,7 +86,6 @@ export function createConnectionRouteRenderer(
       _positions: ReadonlyMap<string, Position>,
     ): void {
       const routeById = new Map(routes.map((route) => [route.zoneId, route]));
-      const curvatureByRouteId = resolveCurvatureByRouteId(routes, defaultCurvature);
       const strokeByRouteId = new Map<string, ResolvedStroke>();
 
       for (const [routeId, slot] of routeSlots) {
@@ -121,7 +113,6 @@ export function createConnectionRouteRenderer(
         const resolvedStroke = resolveRouteStroke(route, visualConfigProvider);
         strokeByRouteId.set(route.zoneId, resolvedStroke);
         const routeGeometry = resolveRouteGeometry(route, {
-          curvature: curvatureByRouteId.get(route.zoneId) ?? defaultCurvature,
           hitAreaPadding,
           curveSegments,
           wavySegments,
@@ -290,10 +281,12 @@ interface ResolvedStroke {
 }
 
 interface RouteGeometry {
-  readonly drawMode: 'curve' | 'polyline';
-  readonly start: Position;
-  readonly controlPoint?: Position;
+  readonly drawMode: 'segments' | 'polyline';
   readonly points: readonly Position[];
+  readonly segments: readonly (
+    | { readonly kind: 'straight'; readonly end: Position }
+    | { readonly kind: 'quadratic'; readonly controlPoint: Position; readonly end: Position }
+  )[];
   readonly midpoint: Position;
   readonly tangent: Position;
   readonly hitArea: Polygon;
@@ -345,26 +338,33 @@ function drawRouteCurve(
   graphics: Graphics,
   geometry: RouteGeometry,
 ): void {
-  const { drawMode, start, controlPoint, points, stroke } = geometry;
+  const { drawMode, points, segments, stroke } = geometry;
   graphics.clear();
 
-  if (drawMode === 'curve' && controlPoint !== undefined) {
-    const end = points[1];
-    if (end === undefined) {
+  if (drawMode === 'segments') {
+    const start = points[0];
+    if (start === undefined) {
       return;
     }
-
-    if (!stroke.wavy) {
-      graphics
-        .moveTo(start.x, start.y)
-        .quadraticCurveTo(controlPoint.x, controlPoint.y, end.x, end.y)
-        .stroke({
-          color: stroke.color,
-          width: stroke.width,
-          alpha: stroke.alpha,
-        });
-      return;
+    graphics.moveTo(start.x, start.y);
+    for (const segment of segments) {
+      if (segment.kind === 'straight') {
+        graphics.lineTo(segment.end.x, segment.end.y);
+        continue;
+      }
+      graphics.quadraticCurveTo(
+        segment.controlPoint.x,
+        segment.controlPoint.y,
+        segment.end.x,
+        segment.end.y,
+      );
     }
+    graphics.stroke({
+      color: stroke.color,
+      width: stroke.width,
+      alpha: stroke.alpha,
+    });
+    return;
   }
 
   const firstPoint = points[0];
@@ -391,56 +391,25 @@ function drawRouteCurve(
 function resolveRouteGeometry(
   route: ConnectionRouteNode,
   options: {
-    readonly curvature: number;
     readonly hitAreaPadding: number;
     readonly curveSegments: number;
     readonly wavySegments: number;
     readonly stroke: ResolvedStroke;
   },
 ): RouteGeometry {
-  const { curvature, hitAreaPadding, curveSegments, wavySegments, stroke } = options;
+  const { hitAreaPadding, curveSegments, wavySegments, stroke } = options;
   const routePoints = route.path.map((point) => point.position);
-
-  if (routePoints.length === 2) {
-    const fromPosition = routePoints[0];
-    const toPosition = routePoints[1];
-    if (fromPosition !== undefined && toPosition !== undefined) {
-      const controlPoint = computeControlPoint(fromPosition, toPosition, curvature);
-      const renderedPoints = stroke.wavy
-        ? sampleBezierWavePoints(fromPosition, controlPoint, toPosition, stroke, wavySegments)
-        : [fromPosition, toPosition];
-      const hitAreaPoints = stroke.wavy
-        ? approximatePolylineHitPolygon(renderedPoints, stroke.width / 2 + hitAreaPadding)
-        : approximateBezierHitPolygon(
-            fromPosition,
-            controlPoint,
-            toPosition,
-            stroke.width / 2 + hitAreaPadding,
-            curveSegments,
-          );
-
-      return {
-        drawMode: 'curve',
-        start: fromPosition,
-        controlPoint,
-        points: renderedPoints,
-        midpoint: quadraticBezierMidpoint(fromPosition, controlPoint, toPosition),
-        tangent: quadraticBezierMidpointTangent(fromPosition, controlPoint, toPosition),
-        hitArea: new Polygon(flattenPoints(hitAreaPoints)),
-        stroke,
-      };
-    }
-  }
-
+  const segmentCommands = buildSegmentCommands(route);
+  const sampledPath = sampleRoutePath(routePoints, route.segments, curveSegments);
   const renderedPoints = stroke.wavy
-    ? samplePolylineWavePoints(routePoints, stroke, wavySegments)
-    : routePoints;
-  const midpointSample = resolvePolylinePointAtDistance(routePoints, getPolylineLength(routePoints) / 2);
+    ? samplePolylineWavePoints(sampledPath, stroke, wavySegments)
+    : sampledPath;
+  const midpointSample = resolvePolylinePointAtDistance(sampledPath, getPolylineLength(sampledPath) / 2);
 
   return {
-    drawMode: 'polyline',
-    start: renderedPoints[0] ?? { x: 0, y: 0 },
+    drawMode: stroke.wavy ? 'polyline' : 'segments',
     points: renderedPoints,
+    segments: segmentCommands,
     midpoint: midpointSample.position,
     tangent: midpointSample.tangent,
     hitArea: new Polygon(flattenPoints(approximatePolylineHitPolygon(
@@ -451,41 +420,72 @@ function resolveRouteGeometry(
   };
 }
 
-function sampleBezierWavePoints(
-  fromPosition: Position,
-  controlPoint: Position,
-  toPosition: Position,
-  stroke: ResolvedStroke,
-  wavySegments: number,
-): readonly Position[] {
-  const segmentCount = Math.max(2, Math.trunc(wavySegments));
-  const chordLength = Math.hypot(toPosition.x - fromPosition.x, toPosition.y - fromPosition.y);
-  const waveCycles = Math.max(1, chordLength * stroke.waveFrequency);
-  const displacedPoints: Position[] = [];
+function buildSegmentCommands(
+  route: ConnectionRouteNode,
+): readonly (
+  | { readonly kind: 'straight'; readonly end: Position }
+  | { readonly kind: 'quadratic'; readonly controlPoint: Position; readonly end: Position }
+)[] {
+  const commands: Array<
+    | { readonly kind: 'straight'; readonly end: Position }
+    | { readonly kind: 'quadratic'; readonly controlPoint: Position; readonly end: Position }
+  > = [];
 
-  for (let index = 0; index <= segmentCount; index += 1) {
-    const t = index / segmentCount;
-    const point = quadraticBezierPoint(t, fromPosition, controlPoint, toPosition);
-    const tangent = normalize(
-      index === segmentCount
-        ? {
-            x: toPosition.x - controlPoint.x,
-            y: toPosition.y - controlPoint.y,
-          }
-        : {
-            x: quadraticBezierPoint(Math.min(1, t + (1 / segmentCount)), fromPosition, controlPoint, toPosition).x - point.x,
-            y: quadraticBezierPoint(Math.min(1, t + (1 / segmentCount)), fromPosition, controlPoint, toPosition).y - point.y,
-          },
+  for (let index = 0; index < route.segments.length; index += 1) {
+    const segment = route.segments[index];
+    const end = route.path[index + 1]?.position;
+    if (segment === undefined || end === undefined) {
+      continue;
+    }
+
+    commands.push(
+      segment.kind === 'straight'
+        ? { kind: 'straight', end }
+        : { kind: 'quadratic', controlPoint: segment.controlPoint.position, end },
     );
-    const normal = perpendicular(tangent);
-    const offset = Math.sin(t * Math.PI * 2 * waveCycles) * stroke.waveAmplitude;
-    displacedPoints.push({
-      x: point.x + normal.x * offset,
-      y: point.y + normal.y * offset,
-    });
   }
 
-  return displacedPoints;
+  return commands;
+}
+
+function sampleRoutePath(
+  points: readonly Position[],
+  segments: ConnectionRouteNode['segments'],
+  curveSegments: number,
+): readonly Position[] {
+  if (points.length === 0) {
+    return [];
+  }
+
+  const sampled: Position[] = [points[0] ?? { x: 0, y: 0 }];
+  const segmentCount = Math.max(2, Math.trunc(curveSegments));
+
+  for (let index = 0; index < segments.length; index += 1) {
+    const segment = segments[index];
+    const start = points[index];
+    const end = points[index + 1];
+    if (segment === undefined || start === undefined || end === undefined) {
+      continue;
+    }
+
+    if (segment.kind === 'straight') {
+      sampled.push(end);
+      continue;
+    }
+
+    for (let sampleIndex = 1; sampleIndex <= segmentCount; sampleIndex += 1) {
+      sampled.push(
+        quadraticBezierPoint(
+          sampleIndex / segmentCount,
+          start,
+          segment.controlPoint.position,
+          end,
+        ),
+      );
+    }
+  }
+
+  return sampled;
 }
 
 function samplePolylineWavePoints(
@@ -652,47 +652,6 @@ function resolvePolylineNormal(points: readonly Position[], index: number): Posi
   }
 
   return nextNormal ?? previousNormal ?? { x: 0, y: 1 };
-}
-
-function resolveCurvatureByRouteId(
-  routes: readonly ConnectionRouteNode[],
-  defaultCurvature: number,
-): ReadonlyMap<string, number> {
-  const routeIdsByEndpointPair = new Map<string, string[]>();
-
-  for (const route of routes) {
-    if (route.path.length !== 2) {
-      continue;
-    }
-
-    const pairKey = route.path
-      .map((point) => `${point.kind}:${point.id}`)
-      .join('::');
-    const routeIds = routeIdsByEndpointPair.get(pairKey) ?? [];
-    routeIds.push(route.zoneId);
-    routeIdsByEndpointPair.set(pairKey, routeIds);
-  }
-
-  const curvatureByRouteId = new Map<string, number>();
-  for (const routeIds of routeIdsByEndpointPair.values()) {
-    routeIds.sort((left, right) => left.localeCompare(right));
-    if (routeIds.length === 1) {
-      const routeId = routeIds[0];
-      if (routeId !== undefined) {
-        curvatureByRouteId.set(routeId, defaultCurvature);
-      }
-      continue;
-    }
-
-    const midpoint = (routeIds.length - 1) / 2;
-    routeIds.forEach((routeId, index) => {
-      const offsetMultiplier = index - midpoint;
-      const magnitude = offsetMultiplier === 0 ? 0 : Math.abs(offsetMultiplier) + 0.5;
-      curvatureByRouteId.set(routeId, Math.sign(offsetMultiplier) * magnitude * defaultCurvature);
-    });
-  }
-
-  return curvatureByRouteId;
 }
 
 function resolveLabelRotation(angle: number): number {

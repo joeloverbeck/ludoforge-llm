@@ -307,7 +307,7 @@ describe('buildPresentationScene', () => {
     ]);
   });
 
-  it('uses provider-owned mixed zone/anchor endpoints for otherwise ambiguous connection routes', () => {
+  it('uses provider-owned unified route definitions for otherwise ambiguous connection routes', () => {
     const provider = new VisualConfigProvider({
       version: 1,
       zones: {
@@ -321,11 +321,16 @@ describe('buildPresentationScene', () => {
         connectionStyles: {
           mekong: { strokeWidth: 12, strokeColor: '#4a7a8c', wavy: true, waveAmplitude: 4, waveFrequency: 0.08 },
         },
-        connectionEndpoints: {
-          'loc-can-tho-long-phu:none': [
-            { kind: 'zone', zoneId: 'can-tho:none' },
-            { kind: 'anchor', anchorId: 'long-phu' },
-          ],
+        connectionRoutes: {
+          'loc-can-tho-long-phu:none': {
+            points: [
+              { kind: 'zone', zoneId: 'can-tho:none' },
+              { kind: 'anchor', anchorId: 'long-phu' },
+            ],
+            segments: [
+              { kind: 'quadratic', control: { kind: 'position', x: 120, y: -40 } },
+            ],
+          },
         },
       },
     });
@@ -363,6 +368,12 @@ describe('buildPresentationScene', () => {
           { kind: 'zone', id: 'can-tho:none', position: { x: 0, y: 0 } },
           { kind: 'anchor', id: 'long-phu', position: { x: 220, y: -20 } },
         ],
+        segments: [
+          {
+            kind: 'quadratic',
+            controlPoint: { kind: 'position', id: null, position: { x: 120, y: -40 } },
+          },
+        ],
         touchingZoneIds: ['ba-xuyen:none', 'kien-hoa-vinh-binh:none'],
         connectionStyleKey: 'mekong',
       }),
@@ -374,7 +385,7 @@ describe('buildPresentationScene', () => {
     ]);
   });
 
-  it('threads explicit multi-point connection paths through the scene pipeline', () => {
+  it('threads explicit multi-point connection routes through the scene pipeline', () => {
     const provider = new VisualConfigProvider({
       version: 1,
       zones: {
@@ -389,18 +400,18 @@ describe('buildPresentationScene', () => {
         connectionStyles: {
           highway: { strokeWidth: 8, strokeColor: '#8b7355' },
         },
-        connectionEndpoints: {
-          'loc-saigon-an-loc-ban-me-thuot:none': [
-            { kind: 'zone', zoneId: 'saigon:none' },
-            { kind: 'anchor', anchorId: 'ban-me-thuot' },
-          ],
-        },
-        connectionPaths: {
-          'loc-saigon-an-loc-ban-me-thuot:none': [
-            { kind: 'zone', zoneId: 'saigon:none' },
-            { kind: 'anchor', anchorId: 'an-loc' },
-            { kind: 'anchor', anchorId: 'ban-me-thuot' },
-          ],
+        connectionRoutes: {
+          'loc-saigon-an-loc-ban-me-thuot:none': {
+            points: [
+              { kind: 'zone', zoneId: 'saigon:none' },
+              { kind: 'anchor', anchorId: 'an-loc' },
+              { kind: 'anchor', anchorId: 'ban-me-thuot' },
+            ],
+            segments: [
+              { kind: 'straight' },
+              { kind: 'quadratic', control: { kind: 'position', x: 180, y: -40 } },
+            ],
+          },
         },
       },
     });
@@ -435,6 +446,13 @@ describe('buildPresentationScene', () => {
           { kind: 'zone', id: 'saigon:none', position: { x: 0, y: 0 } },
           { kind: 'anchor', id: 'an-loc', position: { x: 120, y: -20 } },
           { kind: 'anchor', id: 'ban-me-thuot', position: { x: 240, y: -10 } },
+        ],
+        segments: [
+          { kind: 'straight' },
+          {
+            kind: 'quadratic',
+            controlPoint: { kind: 'position', id: null, position: { x: 180, y: -40 } },
+          },
         ],
         touchingZoneIds: ['phu-bon:none'],
         connectionStyleKey: 'highway',

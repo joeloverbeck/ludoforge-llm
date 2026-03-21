@@ -88,6 +88,9 @@ describe('resolveConnectionRoutes', () => {
           { kind: 'zone', id: 'alpha:none', position: { x: 0, y: 0 } },
           { kind: 'zone', id: 'beta:none', position: { x: 200, y: 0 } },
         ],
+        segments: [
+          { kind: 'straight' },
+        ],
         touchingZoneIds: [],
         connectedConnectionIds: [],
         connectionStyleKey: 'highway',
@@ -97,7 +100,7 @@ describe('resolveConnectionRoutes', () => {
     expect(result.filteredAdjacencies).toEqual([makeAdjacency('alpha:none', 'gamma:none')]);
   });
 
-  it('uses explicit mixed zone/anchor endpoint definitions for multi-neighbor routes', () => {
+  it('uses explicit unified route definitions for multi-neighbor routes', () => {
     const zones = [
       makeZone('hue:none'),
       makeZone('quang-tri-thua-thien:none'),
@@ -121,11 +124,16 @@ describe('resolveConnectionRoutes', () => {
       anchorPositions: new Map([
         ['khe-sanh', { x: 160, y: -40 }],
       ]),
-      endpointDefinitions: new Map([
-        ['loc-hue-khe-sanh:none', [
-          { kind: 'zone', zoneId: 'hue:none' },
-          { kind: 'anchor', anchorId: 'khe-sanh' },
-        ]],
+      routeDefinitions: new Map([
+        ['loc-hue-khe-sanh:none', {
+          points: [
+            { kind: 'zone', zoneId: 'hue:none' },
+            { kind: 'anchor', anchorId: 'khe-sanh' },
+          ],
+          segments: [
+            { kind: 'quadratic', control: { kind: 'position', x: 80, y: -30 } },
+          ],
+        }],
       ]),
     }));
 
@@ -135,6 +143,12 @@ describe('resolveConnectionRoutes', () => {
         path: [
           { kind: 'zone', id: 'hue:none', position: { x: 0, y: 0 } },
           { kind: 'anchor', id: 'khe-sanh', position: { x: 160, y: -40 } },
+        ],
+        segments: [
+          {
+            kind: 'quadratic',
+            controlPoint: { kind: 'position', id: null, position: { x: 80, y: -30 } },
+          },
         ],
         touchingZoneIds: ['central-laos:none', 'quang-tri-thua-thien:none'],
         connectionStyleKey: 'highway',
@@ -160,11 +174,16 @@ describe('resolveConnectionRoutes', () => {
         ['hue:none', { x: 0, y: 0 }],
         ['central-laos:none', { x: 200, y: 0 }],
       ]),
-      endpointDefinitions: new Map([
-        ['loc-hue-khe-sanh:none', [
-          { kind: 'zone', zoneId: 'hue:none' },
-          { kind: 'anchor', anchorId: 'khe-sanh' },
-        ]],
+      routeDefinitions: new Map([
+        ['loc-hue-khe-sanh:none', {
+          points: [
+            { kind: 'zone', zoneId: 'hue:none' },
+            { kind: 'anchor', anchorId: 'khe-sanh' },
+          ],
+          segments: [
+            { kind: 'straight' },
+          ],
+        }],
       ]),
     }));
 
@@ -271,23 +290,43 @@ describe('resolveConnectionRoutes', () => {
         ['ban-me-thuot', { x: 160, y: 90 }],
         ['da-lat', { x: 320, y: 160 }],
       ]),
-      endpointDefinitions: new Map([
-        ['loc-saigon-ban-me-thuot:none', [
-          { kind: 'zone', zoneId: 'saigon:none' },
-          { kind: 'anchor', anchorId: 'ban-me-thuot' },
-        ]],
-        ['loc-kontum-ban-me-thuot:none', [
-          { kind: 'zone', zoneId: 'kontum:none' },
-          { kind: 'anchor', anchorId: 'ban-me-thuot' },
-        ]],
-        ['loc-cam-ranh-da-lat:none', [
-          { kind: 'zone', zoneId: 'cam-ranh:none' },
-          { kind: 'anchor', anchorId: 'da-lat' },
-        ]],
-        ['loc-ban-me-thuot-da-lat:none', [
-          { kind: 'anchor', anchorId: 'ban-me-thuot' },
-          { kind: 'anchor', anchorId: 'da-lat' },
-        ]],
+      routeDefinitions: new Map([
+        ['loc-saigon-ban-me-thuot:none', {
+          points: [
+            { kind: 'zone', zoneId: 'saigon:none' },
+            { kind: 'anchor', anchorId: 'ban-me-thuot' },
+          ],
+          segments: [
+            { kind: 'straight' },
+          ],
+        }],
+        ['loc-kontum-ban-me-thuot:none', {
+          points: [
+            { kind: 'zone', zoneId: 'kontum:none' },
+            { kind: 'anchor', anchorId: 'ban-me-thuot' },
+          ],
+          segments: [
+            { kind: 'straight' },
+          ],
+        }],
+        ['loc-cam-ranh-da-lat:none', {
+          points: [
+            { kind: 'zone', zoneId: 'cam-ranh:none' },
+            { kind: 'anchor', anchorId: 'da-lat' },
+          ],
+          segments: [
+            { kind: 'straight' },
+          ],
+        }],
+        ['loc-ban-me-thuot-da-lat:none', {
+          points: [
+            { kind: 'anchor', anchorId: 'ban-me-thuot' },
+            { kind: 'anchor', anchorId: 'da-lat' },
+          ],
+          segments: [
+            { kind: 'straight' },
+          ],
+        }],
       ]),
     }));
 
@@ -327,7 +366,7 @@ describe('resolveConnectionRoutes', () => {
     });
   });
 
-  it('prefers explicit path definitions over endpoint definitions and resolves multi-point geometry', () => {
+  it('resolves explicit multi-point geometry from unified route definitions', () => {
     const zones = [
       makeZone('saigon:none'),
       makeZone('phu-bon:none'),
@@ -349,18 +388,18 @@ describe('resolveConnectionRoutes', () => {
         ['an-loc', { x: 120, y: -20 }],
         ['ban-me-thuot', { x: 240, y: -10 }],
       ]),
-      endpointDefinitions: new Map([
-        ['loc-saigon-an-loc-ban-me-thuot:none', [
-          { kind: 'zone', zoneId: 'saigon:none' },
-          { kind: 'anchor', anchorId: 'ban-me-thuot' },
-        ]],
-      ]),
-      pathDefinitions: new Map([
-        ['loc-saigon-an-loc-ban-me-thuot:none', [
-          { kind: 'zone', zoneId: 'saigon:none' },
-          { kind: 'anchor', anchorId: 'an-loc' },
-          { kind: 'anchor', anchorId: 'ban-me-thuot' },
-        ]],
+      routeDefinitions: new Map([
+        ['loc-saigon-an-loc-ban-me-thuot:none', {
+          points: [
+            { kind: 'zone', zoneId: 'saigon:none' },
+            { kind: 'anchor', anchorId: 'an-loc' },
+            { kind: 'anchor', anchorId: 'ban-me-thuot' },
+          ],
+          segments: [
+            { kind: 'straight' },
+            { kind: 'quadratic', control: { kind: 'position', x: 180, y: -40 } },
+          ],
+        }],
       ]),
     }));
 
@@ -371,6 +410,13 @@ describe('resolveConnectionRoutes', () => {
           { kind: 'zone', id: 'saigon:none', position: { x: 0, y: 0 } },
           { kind: 'anchor', id: 'an-loc', position: { x: 120, y: -20 } },
           { kind: 'anchor', id: 'ban-me-thuot', position: { x: 240, y: -10 } },
+        ],
+        segments: [
+          { kind: 'straight' },
+          {
+            kind: 'quadratic',
+            controlPoint: { kind: 'position', id: null, position: { x: 180, y: -40 } },
+          },
         ],
         touchingZoneIds: ['phu-bon:none'],
       }),

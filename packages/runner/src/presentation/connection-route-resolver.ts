@@ -1,5 +1,10 @@
 import type { Position } from '../canvas/geometry.js';
-import type { ConnectionEndpointPair, ConnectionPath } from '../config/visual-config-types.js';
+import type {
+  ConnectionEndpoint,
+  ConnectionRouteControl,
+  ConnectionRouteDefinition,
+  ConnectionRouteSegment,
+} from '../config/visual-config-types.js';
 import type {
   PresentationAdjacencyNode,
   PresentationZoneNode,
@@ -11,10 +16,24 @@ export interface ResolvedConnectionPoint {
   readonly position: Position;
 }
 
+export interface ResolvedConnectionRouteControlPoint {
+  readonly kind: 'anchor' | 'position';
+  readonly id: string | null;
+  readonly position: Position;
+}
+
+export type ResolvedConnectionRouteSegment =
+  | { readonly kind: 'straight' }
+  | {
+      readonly kind: 'quadratic';
+      readonly controlPoint: ResolvedConnectionRouteControlPoint;
+    };
+
 export interface ConnectionRouteNode {
   readonly zoneId: string;
   readonly displayName: string;
   readonly path: readonly ResolvedConnectionPoint[];
+  readonly segments: readonly ResolvedConnectionRouteSegment[];
   readonly touchingZoneIds: readonly string[];
   readonly connectedConnectionIds: readonly string[];
   readonly connectionStyleKey: string | null;
@@ -38,15 +57,14 @@ export interface ResolveConnectionRoutesOptions {
   readonly zones: readonly PresentationZoneNode[];
   readonly adjacencies: readonly PresentationAdjacencyNode[];
   readonly positions: ReadonlyMap<string, Position>;
-  readonly endpointDefinitions?: ReadonlyMap<string, ConnectionEndpointPair>;
-  readonly pathDefinitions?: ReadonlyMap<string, ConnectionPath>;
+  readonly routeDefinitions?: ReadonlyMap<string, ConnectionRouteDefinition>;
   readonly anchorPositions?: ReadonlyMap<string, Position>;
 }
 
 export function resolveConnectionRoutes(
   options: ResolveConnectionRoutesOptions,
 ): ConnectionRouteResolution {
-  const { zones, adjacencies, positions, endpointDefinitions, pathDefinitions, anchorPositions } = options;
+  const { zones, adjacencies, positions, routeDefinitions, anchorPositions } = options;
   const zoneById = new Map(zones.map((zone) => [zone.id, zone]));
   const connectionZoneIds = new Set(
     zones
@@ -66,22 +84,21 @@ export function resolveConnectionRoutes(
     const connectedConnectionIds = neighbors
       .filter((neighborId) => connectionZoneIds.has(neighborId))
       .sort(compareStrings);
-    const path = resolveRoutePath(
+    const resolvedGeometry = resolveRouteGeometry(
       zone.id,
       nonConnectionNeighbors,
       connectionZoneIds,
-      endpointDefinitions,
-      pathDefinitions,
+      routeDefinitions,
       anchorPositions,
       positions,
       zoneById,
     );
 
-    if (path === null) {
+    if (resolvedGeometry === null) {
       continue;
     }
 
-    const pathZoneIds = path
+    const pathZoneIds = resolvedGeometry.path
       .filter((point): point is ResolvedConnectionPoint & { kind: 'zone' } => point.kind === 'zone')
       .map((point) => point.id);
     const pathZoneIdSet = new Set(pathZoneIds);
@@ -92,7 +109,8 @@ export function resolveConnectionRoutes(
     resolvedRoutes.push({
       zoneId: zone.id,
       displayName: zone.displayName,
-      path,
+      path: resolvedGeometry.path,
+      segments: resolvedGeometry.segments,
       touchingZoneIds,
       connectedConnectionIds,
       connectionStyleKey: zone.visual.connectionStyleKey,
@@ -133,24 +151,18 @@ function addNeighbor(index: Map<string, Set<string>>, from: string, to: string):
   neighbors.add(to);
 }
 
-function resolveRoutePath(
+function resolveRouteGeometry(
   zoneId: string,
   nonConnectionNeighbors: readonly string[],
   connectionZoneIds: ReadonlySet<string>,
-  endpointDefinitions: ReadonlyMap<string, ConnectionEndpointPair> | undefined,
-  pathDefinitions: ReadonlyMap<string, ConnectionPath> | undefined,
+  routeDefinitions: ReadonlyMap<string, ConnectionRouteDefinition> | undefined,
   anchorPositions: ReadonlyMap<string, Position> | undefined,
   positions: ReadonlyMap<string, Position>,
   zoneById: ReadonlyMap<string, PresentationZoneNode>,
-): readonly ResolvedConnectionPoint[] | null {
-  const explicitPath = pathDefinitions?.get(zoneId);
-  if (explicitPath !== undefined) {
-    return validateConnectionPath(explicitPath, zoneById, positions, anchorPositions);
-  }
-
-  const definition = endpointDefinitions?.get(zoneId);
+): { readonly path: readonly ResolvedConnectionPoint[]; readonly segments: readonly ResolvedConnectionRouteSegment[] } | null {
+  const definition = routeDefinitions?.get(zoneId);
   if (definition !== undefined) {
-    return validateEndpointDefinition(
+    return validateRouteDefinition(
       definition,
       nonConnectionNeighbors,
       connectionZoneIds,
@@ -170,55 +182,104 @@ function resolveRoutePath(
     return null;
   }
 
-  return resolveZoneEndpoints(sortPair(left, right), positions);
+  const path = resolveZoneEndpoints(sortPair(left, right), positions);
+  if (path === null) {
+    return null;
+  }
+
+  return {
+    path,
+    segments: [{ kind: 'straight' }],
+  };
 }
 
-function validateEndpointDefinition(
-  endpoints: ConnectionEndpointPair,
+function validateRouteDefinition(
+  definition: ConnectionRouteDefinition,
   nonConnectionNeighbors: readonly string[],
   connectionZoneIds: ReadonlySet<string>,
   zoneById: ReadonlyMap<string, PresentationZoneNode>,
   positions: ReadonlyMap<string, Position>,
   anchorPositions: ReadonlyMap<string, Position> | undefined,
-): readonly [ResolvedConnectionPoint, ResolvedConnectionPoint] | null {
-  const [left, right] = endpoints;
-  const leftResolved = resolveConfiguredEndpoint(
-    left,
+): { readonly path: readonly ResolvedConnectionPoint[]; readonly segments: readonly ResolvedConnectionRouteSegment[] } | null {
+  const path = validateRoutePoints(
+    definition.points,
     nonConnectionNeighbors,
     connectionZoneIds,
     zoneById,
     positions,
     anchorPositions,
   );
-  const rightResolved = resolveConfiguredEndpoint(
-    right,
-    nonConnectionNeighbors,
-    connectionZoneIds,
-    zoneById,
-    positions,
-    anchorPositions,
-  );
-
-  if (leftResolved === null || rightResolved === null) {
-    return null;
-  }
-  if (leftResolved.kind === rightResolved.kind && leftResolved.id === rightResolved.id) {
+  if (path === null || definition.segments.length !== path.length - 1) {
     return null;
   }
 
-  return [leftResolved, rightResolved];
+  const segments: ResolvedConnectionRouteSegment[] = [];
+  for (const segment of definition.segments) {
+    const resolvedSegment = resolveSegment(segment, anchorPositions);
+    if (resolvedSegment === null) {
+      return null;
+    }
+    segments.push(resolvedSegment);
+  }
+
+  return { path, segments };
+}
+
+function validateRoutePoints(
+  points: readonly ConnectionEndpoint[],
+  nonConnectionNeighbors: readonly string[],
+  connectionZoneIds: ReadonlySet<string>,
+  zoneById: ReadonlyMap<string, PresentationZoneNode>,
+  positions: ReadonlyMap<string, Position>,
+  anchorPositions: ReadonlyMap<string, Position> | undefined,
+): readonly ResolvedConnectionPoint[] | null {
+  const resolvedPath: ResolvedConnectionPoint[] = [];
+  const neighborSet = new Set(nonConnectionNeighbors);
+
+  for (const point of points) {
+    const resolvedPoint = resolveConfiguredEndpoint(
+      point,
+      neighborSet,
+      connectionZoneIds,
+      zoneById,
+      positions,
+      anchorPositions,
+    );
+    if (resolvedPoint === null) {
+      return null;
+    }
+    resolvedPath.push(resolvedPoint);
+  }
+
+  if (resolvedPath.length < 2) {
+    return null;
+  }
+
+  for (let index = 1; index < resolvedPath.length; index += 1) {
+    const previous = resolvedPath[index - 1];
+    const current = resolvedPath[index];
+    if (
+      previous !== undefined &&
+      current !== undefined &&
+      previous.kind === current.kind &&
+      previous.id === current.id
+    ) {
+      return null;
+    }
+  }
+
+  return resolvedPath;
 }
 
 function resolveConfiguredEndpoint(
-  endpoint: ConnectionEndpointPair[number],
-  nonConnectionNeighbors: readonly string[],
+  endpoint: ConnectionEndpoint,
+  neighborSet: ReadonlySet<string>,
   connectionZoneIds: ReadonlySet<string>,
   zoneById: ReadonlyMap<string, PresentationZoneNode>,
   positions: ReadonlyMap<string, Position>,
   anchorPositions: ReadonlyMap<string, Position> | undefined,
 ): ResolvedConnectionPoint | null {
   if (endpoint.kind === 'zone') {
-    const neighborSet = new Set(nonConnectionNeighbors);
     if (!neighborSet.has(endpoint.zoneId) || connectionZoneIds.has(endpoint.zoneId) || !zoneById.has(endpoint.zoneId)) {
       return null;
     }
@@ -246,6 +307,49 @@ function resolveConfiguredEndpoint(
   };
 }
 
+function resolveSegment(
+  segment: ConnectionRouteSegment,
+  anchorPositions: ReadonlyMap<string, Position> | undefined,
+): ResolvedConnectionRouteSegment | null {
+  if (segment.kind === 'straight') {
+    return { kind: 'straight' };
+  }
+
+  const controlPoint = resolveControlPoint(segment.control, anchorPositions);
+  if (controlPoint === null) {
+    return null;
+  }
+
+  return {
+    kind: 'quadratic',
+    controlPoint,
+  };
+}
+
+function resolveControlPoint(
+  control: ConnectionRouteControl,
+  anchorPositions: ReadonlyMap<string, Position> | undefined,
+): ResolvedConnectionRouteControlPoint | null {
+  if (control.kind === 'position') {
+    return {
+      kind: 'position',
+      id: null,
+      position: { x: control.x, y: control.y },
+    };
+  }
+
+  const position = anchorPositions?.get(control.anchorId);
+  if (position === undefined) {
+    return null;
+  }
+
+  return {
+    kind: 'anchor',
+    id: control.anchorId,
+    position,
+  };
+}
+
 function resolveZoneEndpoints(
   endpointZoneIds: readonly [string, string],
   positions: ReadonlyMap<string, Position>,
@@ -260,60 +364,6 @@ function resolveZoneEndpoints(
     { kind: 'zone', id: left, position: leftPosition },
     { kind: 'zone', id: right, position: rightPosition },
   ];
-}
-
-function validateConnectionPath(
-  path: ConnectionPath,
-  zoneById: ReadonlyMap<string, PresentationZoneNode>,
-  positions: ReadonlyMap<string, Position>,
-  anchorPositions: ReadonlyMap<string, Position> | undefined,
-): readonly ResolvedConnectionPoint[] | null {
-  const resolvedPath: ResolvedConnectionPoint[] = [];
-
-  for (const point of path) {
-    const resolvedPoint = resolvePathPoint(point, zoneById, positions, anchorPositions);
-    if (resolvedPoint === null) {
-      return null;
-    }
-    resolvedPath.push(resolvedPoint);
-  }
-
-  return resolvedPath.length >= 2 ? resolvedPath : null;
-}
-
-function resolvePathPoint(
-  point: ConnectionPath[number],
-  zoneById: ReadonlyMap<string, PresentationZoneNode>,
-  positions: ReadonlyMap<string, Position>,
-  anchorPositions: ReadonlyMap<string, Position> | undefined,
-): ResolvedConnectionPoint | null {
-  if (point.kind === 'zone') {
-    if (!zoneById.has(point.zoneId)) {
-      return null;
-    }
-
-    const position = positions.get(point.zoneId);
-    if (position === undefined) {
-      return null;
-    }
-
-    return {
-      kind: 'zone',
-      id: point.zoneId,
-      position,
-    };
-  }
-
-  const position = anchorPositions?.get(point.anchorId);
-  if (position === undefined) {
-    return null;
-  }
-
-  return {
-    kind: 'anchor',
-    id: point.anchorId,
-    position,
-  };
 }
 
 function resolveJunctions(

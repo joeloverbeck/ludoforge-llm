@@ -27,83 +27,132 @@ const EXPECTED_FITL_CONNECTION_ANCHORS = {
   'long-phu': { x: 420, y: 460 },
 } as const;
 
-const EXPECTED_FITL_CONNECTION_ENDPOINTS = {
-  'loc-ban-me-thuot-da-lat:none': [
-    { kind: 'anchor', anchorId: 'ban-me-thuot' },
-    { kind: 'anchor', anchorId: 'da-lat' },
-  ],
-  'loc-cam-ranh-da-lat:none': [
-    { kind: 'zone', zoneId: 'cam-ranh:none' },
-    { kind: 'anchor', anchorId: 'da-lat' },
-  ],
-  'loc-can-tho-bac-lieu:none': [
-    { kind: 'zone', zoneId: 'can-tho:none' },
-    { kind: 'anchor', anchorId: 'bac-lieu' },
-  ],
-  'loc-can-tho-chau-doc:none': [
-    { kind: 'zone', zoneId: 'can-tho:none' },
-    { kind: 'anchor', anchorId: 'chau-doc' },
-  ],
-  'loc-can-tho-long-phu:none': [
-    { kind: 'zone', zoneId: 'can-tho:none' },
-    { kind: 'anchor', anchorId: 'long-phu' },
-  ],
-  'loc-da-nang-dak-to:none': [
-    { kind: 'zone', zoneId: 'da-nang:none' },
-    { kind: 'anchor', anchorId: 'dak-to' },
-  ],
-  'loc-da-nang-qui-nhon:none': [
-    { kind: 'zone', zoneId: 'da-nang:none' },
-    { kind: 'zone', zoneId: 'qui-nhon:none' },
-  ],
-  'loc-hue-da-nang:none': [
-    { kind: 'zone', zoneId: 'da-nang:none' },
-    { kind: 'zone', zoneId: 'hue:none' },
-  ],
-  'loc-hue-khe-sanh:none': [
-    { kind: 'zone', zoneId: 'hue:none' },
-    { kind: 'anchor', anchorId: 'khe-sanh' },
-  ],
-  'loc-kontum-ban-me-thuot:none': [
-    { kind: 'zone', zoneId: 'kontum:none' },
-    { kind: 'anchor', anchorId: 'ban-me-thuot' },
-  ],
-  'loc-kontum-dak-to:none': [
-    { kind: 'zone', zoneId: 'kontum:none' },
-    { kind: 'anchor', anchorId: 'dak-to' },
-  ],
-  'loc-kontum-qui-nhon:none': [
-    { kind: 'zone', zoneId: 'kontum:none' },
-    { kind: 'zone', zoneId: 'qui-nhon:none' },
-  ],
-  'loc-qui-nhon-cam-ranh:none': [
-    { kind: 'zone', zoneId: 'cam-ranh:none' },
-    { kind: 'zone', zoneId: 'qui-nhon:none' },
-  ],
-  'loc-saigon-an-loc-ban-me-thuot:none': [
-    { kind: 'zone', zoneId: 'saigon:none' },
-    { kind: 'anchor', anchorId: 'ban-me-thuot' },
-  ],
-  'loc-saigon-cam-ranh:none': [
-    { kind: 'zone', zoneId: 'cam-ranh:none' },
-    { kind: 'zone', zoneId: 'saigon:none' },
-  ],
-  'loc-saigon-can-tho:none': [
-    { kind: 'zone', zoneId: 'can-tho:none' },
-    { kind: 'zone', zoneId: 'saigon:none' },
-  ],
-  'loc-saigon-da-lat:none': [
-    { kind: 'zone', zoneId: 'saigon:none' },
-    { kind: 'anchor', anchorId: 'da-lat' },
-  ],
-} as const;
-
-const EXPECTED_FITL_CONNECTION_PATHS = {
-  'loc-saigon-an-loc-ban-me-thuot:none': [
-    { kind: 'zone', zoneId: 'saigon:none' },
-    { kind: 'anchor', anchorId: 'an-loc' },
-    { kind: 'anchor', anchorId: 'ban-me-thuot' },
-  ],
+const EXPECTED_FITL_CONNECTION_ROUTES = {
+  'loc-ban-me-thuot-da-lat:none': {
+    points: [
+      { kind: 'anchor', anchorId: 'ban-me-thuot' },
+      { kind: 'anchor', anchorId: 'da-lat' },
+    ],
+    segments: [{ kind: 'straight' }],
+  },
+  'loc-cam-ranh-da-lat:none': {
+    points: [
+      { kind: 'zone', zoneId: 'cam-ranh:none' },
+      { kind: 'anchor', anchorId: 'da-lat' },
+    ],
+    segments: [{ kind: 'straight' }],
+  },
+  'loc-can-tho-bac-lieu:none': {
+    points: [
+      { kind: 'zone', zoneId: 'can-tho:none' },
+      { kind: 'anchor', anchorId: 'bac-lieu' },
+    ],
+    segments: [{ kind: 'straight' }],
+  },
+  'loc-can-tho-chau-doc:none': {
+    points: [
+      { kind: 'zone', zoneId: 'can-tho:none' },
+      { kind: 'anchor', anchorId: 'chau-doc' },
+    ],
+    segments: [{ kind: 'straight' }],
+  },
+  'loc-can-tho-long-phu:none': {
+    points: [
+      { kind: 'zone', zoneId: 'can-tho:none' },
+      { kind: 'anchor', anchorId: 'long-phu' },
+    ],
+    segments: [{ kind: 'straight' }],
+  },
+  'loc-da-nang-dak-to:none': {
+    points: [
+      { kind: 'zone', zoneId: 'da-nang:none' },
+      { kind: 'anchor', anchorId: 'dak-to' },
+    ],
+    segments: [{ kind: 'straight' }],
+  },
+  'loc-da-nang-qui-nhon:none': {
+    points: [
+      { kind: 'zone', zoneId: 'da-nang:none' },
+      { kind: 'zone', zoneId: 'qui-nhon:none' },
+    ],
+    segments: [{ kind: 'straight' }],
+  },
+  'loc-hue-da-nang:none': {
+    points: [
+      { kind: 'zone', zoneId: 'da-nang:none' },
+      { kind: 'zone', zoneId: 'hue:none' },
+    ],
+    segments: [
+      { kind: 'quadratic', control: { kind: 'position', x: 480, y: 40 } },
+    ],
+  },
+  'loc-hue-khe-sanh:none': {
+    points: [
+      { kind: 'zone', zoneId: 'hue:none' },
+      { kind: 'anchor', anchorId: 'khe-sanh' },
+    ],
+    segments: [{ kind: 'straight' }],
+  },
+  'loc-kontum-ban-me-thuot:none': {
+    points: [
+      { kind: 'zone', zoneId: 'kontum:none' },
+      { kind: 'anchor', anchorId: 'ban-me-thuot' },
+    ],
+    segments: [{ kind: 'straight' }],
+  },
+  'loc-kontum-dak-to:none': {
+    points: [
+      { kind: 'zone', zoneId: 'kontum:none' },
+      { kind: 'anchor', anchorId: 'dak-to' },
+    ],
+    segments: [{ kind: 'straight' }],
+  },
+  'loc-kontum-qui-nhon:none': {
+    points: [
+      { kind: 'zone', zoneId: 'kontum:none' },
+      { kind: 'zone', zoneId: 'qui-nhon:none' },
+    ],
+    segments: [{ kind: 'straight' }],
+  },
+  'loc-qui-nhon-cam-ranh:none': {
+    points: [
+      { kind: 'zone', zoneId: 'cam-ranh:none' },
+      { kind: 'zone', zoneId: 'qui-nhon:none' },
+    ],
+    segments: [{ kind: 'straight' }],
+  },
+  'loc-saigon-an-loc-ban-me-thuot:none': {
+    points: [
+      { kind: 'zone', zoneId: 'saigon:none' },
+      { kind: 'anchor', anchorId: 'an-loc' },
+      { kind: 'anchor', anchorId: 'ban-me-thuot' },
+    ],
+    segments: [
+      { kind: 'straight' },
+      { kind: 'quadratic', control: { kind: 'position', x: 500, y: 200 } },
+    ],
+  },
+  'loc-saigon-cam-ranh:none': {
+    points: [
+      { kind: 'zone', zoneId: 'cam-ranh:none' },
+      { kind: 'zone', zoneId: 'saigon:none' },
+    ],
+    segments: [{ kind: 'straight' }],
+  },
+  'loc-saigon-can-tho:none': {
+    points: [
+      { kind: 'zone', zoneId: 'can-tho:none' },
+      { kind: 'zone', zoneId: 'saigon:none' },
+    ],
+    segments: [{ kind: 'straight' }],
+  },
+  'loc-saigon-da-lat:none': {
+    points: [
+      { kind: 'zone', zoneId: 'saigon:none' },
+      { kind: 'anchor', anchorId: 'da-lat' },
+    ],
+    segments: [{ kind: 'straight' }],
+  },
 } as const;
 
 const EXPECTED_FITL_SHARED_JUNCTIONS = [
@@ -323,9 +372,8 @@ describe('visual-config.yaml files', () => {
         waveFrequency: 0.08,
       },
     });
-    expect(parsed.zones?.connectionEndpoints).toEqual(EXPECTED_FITL_CONNECTION_ENDPOINTS);
     expect(parsed.zones?.connectionAnchors).toEqual(EXPECTED_FITL_CONNECTION_ANCHORS);
-    expect(parsed.zones?.connectionPaths).toEqual(EXPECTED_FITL_CONNECTION_PATHS);
+    expect(parsed.zones?.connectionRoutes).toEqual(EXPECTED_FITL_CONNECTION_ROUTES);
 
     const fitlBoardZones = fitlGameDef.zones.filter((zone) => zone.zoneKind === 'board' && zone.isInternal !== true);
     const fitlLocZones = fitlBoardZones.filter((zone) => zone.category === 'loc');
@@ -333,11 +381,8 @@ describe('visual-config.yaml files', () => {
     expect(provider.getConnectionAnchors()).toEqual(
       new Map(Object.entries(EXPECTED_FITL_CONNECTION_ANCHORS)),
     );
-    expect(provider.getConnectionEndpoints()).toEqual(
-      new Map(Object.entries(EXPECTED_FITL_CONNECTION_ENDPOINTS)),
-    );
-    expect(provider.getConnectionPaths()).toEqual(
-      new Map(Object.entries(EXPECTED_FITL_CONNECTION_PATHS)),
+    expect(provider.getConnectionRoutes()).toEqual(
+      new Map(Object.entries(EXPECTED_FITL_CONNECTION_ROUTES)),
     );
     for (const zone of fitlLocZones) {
       const visual = provider.resolveZoneVisual(String(zone.id), zone.category ?? null, zone.attributes ?? {});
@@ -384,20 +429,34 @@ describe('visual-config.yaml files', () => {
       zones,
       adjacencies,
       positions,
-      endpointDefinitions: provider.getConnectionEndpoints(),
-      pathDefinitions: provider.getConnectionPaths(),
+      routeDefinitions: provider.getConnectionRoutes(),
       anchorPositions: provider.getConnectionAnchors(),
     });
     expect(resolution.connectionRoutes).toHaveLength(17);
     expect(Object.fromEntries(
-      resolution.connectionRoutes.map((route) => [route.zoneId, route.path.map((point) => (
-        point.kind === 'zone'
-          ? { kind: 'zone', zoneId: point.id }
-          : { kind: 'anchor', anchorId: point.id }
-      ))]),
+      resolution.connectionRoutes.map((route) => [route.zoneId, {
+        points: route.path.map((point) => (
+          point.kind === 'zone'
+            ? { kind: 'zone', zoneId: point.id }
+            : { kind: 'anchor', anchorId: point.id }
+        )),
+        segments: route.segments.map((segment) => (
+          segment.kind === 'straight'
+            ? { kind: 'straight' }
+            : segment.controlPoint.kind === 'anchor'
+              ? { kind: 'quadratic', control: { kind: 'anchor', anchorId: segment.controlPoint.id } }
+              : {
+                  kind: 'quadratic',
+                  control: {
+                    kind: 'position',
+                    x: segment.controlPoint.position.x,
+                    y: segment.controlPoint.position.y,
+                  },
+                }
+        )),
+      }]),
     )).toEqual({
-      ...EXPECTED_FITL_CONNECTION_ENDPOINTS,
-      ...EXPECTED_FITL_CONNECTION_PATHS,
+      ...EXPECTED_FITL_CONNECTION_ROUTES,
     });
     expect(resolution.junctions).toEqual(EXPECTED_FITL_SHARED_JUNCTIONS);
 

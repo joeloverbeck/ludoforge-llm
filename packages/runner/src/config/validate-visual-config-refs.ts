@@ -3,8 +3,7 @@ import type { GameDef } from '@ludoforge/engine/runtime';
 import { VisualConfigProvider } from './visual-config-provider.js';
 import {
   VisualConfigSchema,
-  type ConnectionEndpointPair,
-  type ConnectionPath,
+  type ConnectionRouteDefinition,
   type VisualConfig,
 } from './visual-config-types.js';
 
@@ -60,24 +59,15 @@ export function validateVisualConfigRefs(
 ): readonly VisualConfigRefError[] {
   const errors: VisualConfigRefError[] = [];
   const anchorIds = new Set(Object.keys(config.zones?.connectionAnchors ?? {}));
-  const connectionEndpoints = config.zones?.connectionEndpoints as Readonly<Record<string, ConnectionEndpointPair>> | undefined;
-  const connectionPaths = config.zones?.connectionPaths as Readonly<Record<string, ConnectionPath>> | undefined;
+  const connectionRoutes = config.zones?.connectionRoutes as Readonly<Record<string, ConnectionRouteDefinition>> | undefined;
 
   validateObjectKeys(config.zones?.overrides, context.zoneIds, 'zone', 'zones.overrides', errors);
-  validateObjectKeys(connectionEndpoints, context.zoneIds, 'zone', 'zones.connectionEndpoints', errors);
-  validateConnectionPoints(
-    connectionEndpoints,
+  validateObjectKeys(connectionRoutes, context.zoneIds, 'zone', 'zones.connectionRoutes', errors);
+  validateConnectionRoutes(
+    connectionRoutes,
     context.zoneIds,
     anchorIds,
-    'zones.connectionEndpoints',
-    errors,
-  );
-  validateObjectKeys(connectionPaths, context.zoneIds, 'zone', 'zones.connectionPaths', errors);
-  validateConnectionPoints(
-    connectionPaths,
-    context.zoneIds,
-    anchorIds,
-    'zones.connectionPaths',
+    'zones.connectionRoutes',
     errors,
   );
   validateObjectKeys(config.zones?.layoutRoles, context.zoneIds, 'zone', 'zones.layoutRoles', errors);
@@ -175,8 +165,8 @@ function validateShowdownSurface(
   );
 }
 
-function validateConnectionPoints(
-  values: Readonly<Record<string, readonly (ConnectionEndpointPair[number])[]>> | Readonly<Record<string, ConnectionPath>> | undefined,
+function validateConnectionRoutes(
+  values: Readonly<Record<string, ConnectionRouteDefinition>> | undefined,
   knownZoneIds: ReadonlySet<string>,
   knownAnchorIds: ReadonlySet<string>,
   path: string,
@@ -187,12 +177,12 @@ function validateConnectionPoints(
   }
 
   for (const key of Object.keys(values)) {
-    const endpoints = values[key];
-    if (endpoints === undefined) {
+    const route = values[key];
+    if (route === undefined) {
       continue;
     }
-    for (let index = 0; index < endpoints.length; index += 1) {
-      const endpoint = endpoints[index];
+    for (let index = 0; index < route.points.length; index += 1) {
+      const endpoint = route.points[index];
       if (endpoint === undefined) {
         continue;
       }
@@ -201,7 +191,7 @@ function validateConnectionPoints(
         if (!knownZoneIds.has(endpoint.zoneId)) {
           errors.push({
             category: 'zone',
-            configPath: `${path}.${key}[${index}].zoneId`,
+            configPath: `${path}.${key}.points[${index}].zoneId`,
             referencedId: endpoint.zoneId,
             message: 'Unknown zone id',
           });
@@ -212,8 +202,24 @@ function validateConnectionPoints(
       if (!knownAnchorIds.has(endpoint.anchorId)) {
         errors.push({
           category: 'anchor',
-          configPath: `${path}.${key}[${index}].anchorId`,
+          configPath: `${path}.${key}.points[${index}].anchorId`,
           referencedId: endpoint.anchorId,
+          message: 'Unknown anchor id',
+        });
+      }
+    }
+
+    for (let index = 0; index < route.segments.length; index += 1) {
+      const segment = route.segments[index];
+      if (segment === undefined || segment.kind !== 'quadratic' || segment.control.kind !== 'anchor') {
+        continue;
+      }
+
+      if (!knownAnchorIds.has(segment.control.anchorId)) {
+        errors.push({
+          category: 'anchor',
+          configPath: `${path}.${key}.segments[${index}].control.anchorId`,
+          referencedId: segment.control.anchorId,
           message: 'Unknown anchor id',
         });
       }

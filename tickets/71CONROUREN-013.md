@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — runner-only
-**Deps**: archive/specs/71-connection-route-rendering.md, archive/tickets/71CONROUREN/71CONROUREN-011.md, tickets/71CONROUREN-012.md
+**Deps**: archive/specs/71-connection-route-rendering.md, archive/tickets/71CONROUREN/71CONROUREN-011.md, archive/tickets/71CONROUREN/71CONROUREN-012.md
 
 ## Problem
 
@@ -20,7 +20,7 @@ The clean architecture is for resolved route nodes to expose only the data that 
 
 1. `packages/runner/src/presentation/connection-route-resolver.ts` still computes and stores `connectedConnectionIds` from adjacency between connection zones even after junction resolution moved to shared authored anchors.
 2. Current runner tests added in `71CONROUREN-011` prove junction rendering no longer depends on connection-to-connection adjacency midpoint heuristics, which means `connectedConnectionIds` is no longer required for the active route-junction pipeline.
-3. `71CONROUREN-012` is about explicit segment geometry and curvature ownership. Folding adjacency-metadata cleanup into that ticket would mix route-graph contract cleanup with segment-shape authoring, which is the wrong architectural seam.
+3. `71CONROUREN-012` is now completed and moved the runner onto a unified `zones.connectionRoutes` geometry contract. That change intentionally did not remove `connectedConnectionIds`, so this ticket remains the correct follow-up seam for deleting the last adjacency-derived route metadata.
 4. This cleanup is runner-only and aligns with `docs/FOUNDATIONS.md`:
    - F1 Engine Agnosticism
    - F3 Visual Separation
@@ -37,6 +37,7 @@ The clean architecture is for resolved route nodes to expose only the data that 
 
 ### 1. Remove stale route-graph fields from the resolved route contract
 
+- treat this as the post-`71CONROUREN-012` cleanup that finishes the route contract simplification
 - remove `connectedConnectionIds` from `ConnectionRouteNode`
 - stop collecting adjacency-derived connection-neighbor metadata during route resolution
 - update any downstream types or tests that still mention the removed field
@@ -60,7 +61,7 @@ The clean architecture is for resolved route nodes to expose only the data that 
 ## Out of Scope
 
 - Any engine/kernel/compiler changes
-- Explicit segment geometry and curvature ownership; that belongs to `71CONROUREN-012`
+- Route geometry ownership or unified route-definition schema work; that was completed in `archive/tickets/71CONROUREN/71CONROUREN-012.md`
 - New route topology config surfaces
 - Reintroducing any adjacency-based junction inference
 

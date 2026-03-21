@@ -112,20 +112,60 @@ const ConnectionAnchorConfigSchema = z.object({
 const ZoneConnectionEndpointSchema = z.object({
   kind: z.literal('zone'),
   zoneId: z.string(),
-});
+}).strict();
 
 const AnchorConnectionEndpointSchema = z.object({
   kind: z.literal('anchor'),
   anchorId: z.string(),
-});
+}).strict();
 
 const ConnectionEndpointSchema = z.discriminatedUnion('kind', [
   ZoneConnectionEndpointSchema,
   AnchorConnectionEndpointSchema,
 ]);
 
-const ConnectionEndpointPairSchema = z.tuple([ConnectionEndpointSchema, ConnectionEndpointSchema]);
-const ConnectionPathSchema = z.array(ConnectionEndpointSchema).min(2);
+const ConnectionRouteControlAnchorSchema = z.object({
+  kind: z.literal('anchor'),
+  anchorId: z.string(),
+}).strict();
+
+const ConnectionRouteControlPositionSchema = z.object({
+  kind: z.literal('position'),
+  x: z.number(),
+  y: z.number(),
+}).strict();
+
+const ConnectionRouteControlSchema = z.discriminatedUnion('kind', [
+  ConnectionRouteControlAnchorSchema,
+  ConnectionRouteControlPositionSchema,
+]);
+
+const StraightConnectionRouteSegmentSchema = z.object({
+  kind: z.literal('straight'),
+}).strict();
+
+const QuadraticConnectionRouteSegmentSchema = z.object({
+  kind: z.literal('quadratic'),
+  control: ConnectionRouteControlSchema,
+}).strict();
+
+const ConnectionRouteSegmentSchema = z.discriminatedUnion('kind', [
+  StraightConnectionRouteSegmentSchema,
+  QuadraticConnectionRouteSegmentSchema,
+]);
+
+const ConnectionRouteDefinitionSchema = z.object({
+  points: z.array(ConnectionEndpointSchema).min(2),
+  segments: z.array(ConnectionRouteSegmentSchema),
+}).strict().superRefine((value, context) => {
+  if (value.segments.length !== value.points.length - 1) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['segments'],
+      message: 'connection route segments must contain exactly one segment per consecutive point pair.',
+    });
+  }
+});
 
 const ZoneVisualOverrideSchema = ZoneVisualStyleSchema.extend({
   label: z.string().optional(),
@@ -269,8 +309,7 @@ const ZonesConfigSchema = z.object({
   categoryStyles: z.record(z.string(), ZoneVisualStyleSchema).optional(),
   connectionStyles: z.record(z.string(), ConnectionStyleConfigSchema).optional(),
   connectionAnchors: z.record(z.string(), ConnectionAnchorConfigSchema).optional(),
-  connectionEndpoints: z.record(z.string(), ConnectionEndpointPairSchema).optional(),
-  connectionPaths: z.record(z.string(), ConnectionPathSchema).optional(),
+  connectionRoutes: z.record(z.string(), ConnectionRouteDefinitionSchema).optional(),
   attributeRules: z.array(AttributeRuleSchema).optional(),
   overrides: z.record(z.string(), ZoneVisualOverrideSchema).optional(),
   layoutRoles: z.record(z.string(), LayoutRoleSchema).optional(),
@@ -567,8 +606,13 @@ export type ConnectionAnchorConfig = z.infer<typeof ConnectionAnchorConfigSchema
 export type ZoneConnectionEndpoint = z.infer<typeof ZoneConnectionEndpointSchema>;
 export type AnchorConnectionEndpoint = z.infer<typeof AnchorConnectionEndpointSchema>;
 export type ConnectionEndpoint = z.infer<typeof ConnectionEndpointSchema>;
-export type ConnectionEndpointPair = z.infer<typeof ConnectionEndpointPairSchema>;
-export type ConnectionPath = z.infer<typeof ConnectionPathSchema>;
+export type ConnectionRouteControlAnchor = z.infer<typeof ConnectionRouteControlAnchorSchema>;
+export type ConnectionRouteControlPosition = z.infer<typeof ConnectionRouteControlPositionSchema>;
+export type ConnectionRouteControl = z.infer<typeof ConnectionRouteControlSchema>;
+export type StraightConnectionRouteSegment = z.infer<typeof StraightConnectionRouteSegmentSchema>;
+export type QuadraticConnectionRouteSegment = z.infer<typeof QuadraticConnectionRouteSegmentSchema>;
+export type ConnectionRouteSegment = z.infer<typeof ConnectionRouteSegmentSchema>;
+export type ConnectionRouteDefinition = z.infer<typeof ConnectionRouteDefinitionSchema>;
 export type AttributeRuleMatch = z.infer<typeof AttributeRuleMatchSchema>;
 export type AttributeRule = z.infer<typeof AttributeRuleSchema>;
 export type MarkerBadgeColorEntry = z.infer<typeof MarkerBadgeColorEntrySchema>;

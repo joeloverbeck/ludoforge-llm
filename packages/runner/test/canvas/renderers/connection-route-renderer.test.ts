@@ -231,6 +231,12 @@ function makeRoute(overrides: Partial<ConnectionRouteNode> = {}): ConnectionRout
       { kind: 'zone', id: 'alpha:none', position: { x: 0, y: 0 } },
       { kind: 'anchor', id: 'beta-anchor', position: { x: 200, y: 0 } },
     ],
+    segments: [
+      {
+        kind: 'quadratic',
+        controlPoint: { kind: 'position', id: null, position: { x: 100, y: 30 } },
+      },
+    ],
     touchingZoneIds: [],
     connectedConnectionIds: [],
     connectionStyleKey: 'highway',
@@ -240,7 +246,7 @@ function makeRoute(overrides: Partial<ConnectionRouteNode> = {}): ConnectionRout
 }
 
 describe('createConnectionRouteRenderer', () => {
-  it('renders straight routes, midpoint containers, and shared-anchor junctions', () => {
+  it('renders explicit quadratic routes, midpoint containers, and shared-anchor junctions', () => {
     const parent = new MockContainer();
     const provider = new VisualConfigProvider({
       version: 1,
@@ -273,12 +279,12 @@ describe('createConnectionRouteRenderer', () => {
     const label = labelCluster.children[0] as InstanceType<typeof MockText>;
     const junction = parent.children[1] as InstanceType<typeof MockGraphics>;
 
-    expect(routeCurve.quadraticCurveToArgs).not.toBeNull();
+    expect(routeCurve.quadraticCurveToArgs).toEqual([100, 30, 200, 0]);
     expect(routeCurve.lineToArgs).toEqual([]);
     expect(routeCurve.strokeStyle).toEqual({ color: 0x8b7355, width: 8, alpha: 0.8 });
     expect(midpoint.position.x).toBeCloseTo(100);
     expect(midpoint.position.y).toBeCloseTo(15);
-    expect(labelCluster.rotation).toBe(0);
+    expect(labelCluster.rotation).toBeCloseTo(0, 1);
     expect(label.text).toBe('Alpha Beta');
     expect(routeRoot.hitArea).toBeInstanceOf(MockPolygon);
     expect(junction.circleArgs).toEqual([100, 20, 6]);
@@ -526,6 +532,10 @@ describe('createConnectionRouteRenderer', () => {
           { kind: 'zone', id: 'alpha:none', position: { x: 0, y: 0 } },
           { kind: 'anchor', id: 'an-loc', position: { x: 100, y: -20 } },
           { kind: 'anchor', id: 'ban-me-thuot', position: { x: 220, y: -10 } },
+        ],
+        segments: [
+          { kind: 'straight' },
+          { kind: 'straight' },
         ],
       })],
       [],

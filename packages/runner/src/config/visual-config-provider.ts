@@ -47,8 +47,7 @@ import type {
   ZoneTokenLayout,
   ConnectionAnchorConfig,
   ConnectionStyleConfig,
-  ConnectionEndpointPair,
-  ConnectionPath,
+  ConnectionRouteDefinition,
 } from './visual-config-types.js';
 
 export interface ResolvedZoneVisual {
@@ -176,23 +175,28 @@ export class VisualConfigProvider {
     return this.config?.zones?.connectionStyles?.[styleKey] ?? null;
   }
 
-  getConnectionEndpoints(): ReadonlyMap<string, ConnectionEndpointPair> {
-    const configured = this.config?.zones?.connectionEndpoints;
+  getConnectionRoutes(): ReadonlyMap<string, ConnectionRouteDefinition> {
+    const configured = this.config?.zones?.connectionRoutes;
     if (configured === undefined) {
-      return EMPTY_CONNECTION_ENDPOINTS;
+      return EMPTY_CONNECTION_ROUTES;
     }
     return new Map(
-      Object.entries(configured).map(([zoneId, endpoints]) => [zoneId, [endpoints[0], endpoints[1]] as const]),
-    );
-  }
-
-  getConnectionPaths(): ReadonlyMap<string, ConnectionPath> {
-    const configured = this.config?.zones?.connectionPaths;
-    if (configured === undefined) {
-      return EMPTY_CONNECTION_PATHS;
-    }
-    return new Map(
-      Object.entries(configured).map(([zoneId, points]) => [zoneId, [...points]]),
+      Object.entries(configured).map(([zoneId, route]) => [
+        zoneId,
+        {
+          points: [...route.points],
+          segments: route.segments.map((segment) => (
+            segment.kind === 'straight'
+              ? { kind: 'straight' }
+              : {
+                  kind: 'quadratic',
+                  control: segment.control.kind === 'anchor'
+                    ? { kind: 'anchor', anchorId: segment.control.anchorId }
+                    : { kind: 'position', x: segment.control.x, y: segment.control.y },
+                }
+          )),
+        },
+      ]),
     );
   }
 
@@ -500,8 +504,7 @@ export class VisualConfigProvider {
 }
 
 const EMPTY_STRING_SET: ReadonlySet<string> = Object.freeze(new Set<string>());
-const EMPTY_CONNECTION_ENDPOINTS: ReadonlyMap<string, ConnectionEndpointPair> = Object.freeze(new Map());
-const EMPTY_CONNECTION_PATHS: ReadonlyMap<string, ConnectionPath> = Object.freeze(new Map());
+const EMPTY_CONNECTION_ROUTES: ReadonlyMap<string, ConnectionRouteDefinition> = Object.freeze(new Map());
 const EMPTY_CONNECTION_ANCHORS: ReadonlyMap<string, Position> = Object.freeze(new Map());
 const DEFAULT_STACK_BADGE_STYLE: ResolvedStackBadgeStyle = Object.freeze({
   fontName: STROKE_LABEL_FONT_NAME,

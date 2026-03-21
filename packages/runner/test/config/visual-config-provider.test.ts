@@ -325,29 +325,34 @@ describe('VisualConfigProvider', () => {
     expect(provider.resolveConnectionStyle('missing')).toBeNull();
   });
 
-  it('returns configured connection anchors, endpoints, and paths as deterministic maps', () => {
+  it('returns configured connection anchors and unified routes as deterministic maps', () => {
     const provider = new VisualConfigProvider({
       version: 1,
       zones: {
         connectionAnchors: {
           'khe-sanh': { x: 120, y: 80 },
         },
-        connectionEndpoints: {
-          'loc-alpha-beta:none': [
-            { kind: 'zone', zoneId: 'alpha:none' },
-            { kind: 'anchor', anchorId: 'khe-sanh' },
-          ],
-          'loc-beta-gamma:none': [
-            { kind: 'zone', zoneId: 'beta:none' },
-            { kind: 'zone', zoneId: 'gamma:none' },
-          ],
-        },
-        connectionPaths: {
-          'loc-alpha-beta:none': [
-            { kind: 'zone', zoneId: 'alpha:none' },
-            { kind: 'anchor', anchorId: 'khe-sanh' },
-            { kind: 'zone', zoneId: 'beta:none' },
-          ],
+        connectionRoutes: {
+          'loc-alpha-beta:none': {
+            points: [
+              { kind: 'zone', zoneId: 'alpha:none' },
+              { kind: 'anchor', anchorId: 'khe-sanh' },
+              { kind: 'zone', zoneId: 'beta:none' },
+            ],
+            segments: [
+              { kind: 'straight' },
+              { kind: 'quadratic', control: { kind: 'position', x: 150, y: 90 } },
+            ],
+          },
+          'loc-beta-gamma:none': {
+            points: [
+              { kind: 'zone', zoneId: 'beta:none' },
+              { kind: 'zone', zoneId: 'gamma:none' },
+            ],
+            segments: [
+              { kind: 'straight' },
+            ],
+          },
         },
       },
     });
@@ -355,22 +360,27 @@ describe('VisualConfigProvider', () => {
     expect(provider.getConnectionAnchors()).toEqual(new Map([
       ['khe-sanh', { x: 120, y: 80 }],
     ]));
-    expect(provider.getConnectionEndpoints()).toEqual(new Map([
-      ['loc-alpha-beta:none', [
-        { kind: 'zone', zoneId: 'alpha:none' },
-        { kind: 'anchor', anchorId: 'khe-sanh' },
-      ]],
-      ['loc-beta-gamma:none', [
-        { kind: 'zone', zoneId: 'beta:none' },
-        { kind: 'zone', zoneId: 'gamma:none' },
-      ]],
-    ]));
-    expect(provider.getConnectionPaths()).toEqual(new Map([
-      ['loc-alpha-beta:none', [
-        { kind: 'zone', zoneId: 'alpha:none' },
-        { kind: 'anchor', anchorId: 'khe-sanh' },
-        { kind: 'zone', zoneId: 'beta:none' },
-      ]],
+    expect(provider.getConnectionRoutes()).toEqual(new Map([
+      ['loc-alpha-beta:none', {
+        points: [
+          { kind: 'zone', zoneId: 'alpha:none' },
+          { kind: 'anchor', anchorId: 'khe-sanh' },
+          { kind: 'zone', zoneId: 'beta:none' },
+        ],
+        segments: [
+          { kind: 'straight' },
+          { kind: 'quadratic', control: { kind: 'position', x: 150, y: 90 } },
+        ],
+      }],
+      ['loc-beta-gamma:none', {
+        points: [
+          { kind: 'zone', zoneId: 'beta:none' },
+          { kind: 'zone', zoneId: 'gamma:none' },
+        ],
+        segments: [
+          { kind: 'straight' },
+        ],
+      }],
     ]));
   });
 

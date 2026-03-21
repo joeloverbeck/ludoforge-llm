@@ -361,7 +361,7 @@ describe('VisualConfigSchema', () => {
     expect(result.success).toBe(true);
   });
 
-  it('accepts connection as a valid zone shape and parses connection anchors/styles/endpoints/paths', () => {
+  it('accepts connection as a valid zone shape and parses unified connection routes', () => {
     const result = VisualConfigSchema.safeParse({
       version: 1,
       zones: {
@@ -393,18 +393,27 @@ describe('VisualConfigSchema', () => {
             style: { connectionStyleKey: 'mekong' },
           },
         ],
-        connectionEndpoints: {
-          'loc-alpha-beta:none': [
-            { kind: 'zone', zoneId: 'alpha:none' },
-            { kind: 'anchor', anchorId: 'khe-sanh' },
-          ],
-        },
-        connectionPaths: {
-          'loc-saigon-an-loc-ban-me-thuot:none': [
-            { kind: 'zone', zoneId: 'saigon:none' },
-            { kind: 'anchor', anchorId: 'khe-sanh' },
-            { kind: 'zone', zoneId: 'ban-me-thuot:none' },
-          ],
+        connectionRoutes: {
+          'loc-alpha-beta:none': {
+            points: [
+              { kind: 'zone', zoneId: 'alpha:none' },
+              { kind: 'anchor', anchorId: 'khe-sanh' },
+            ],
+            segments: [
+              { kind: 'quadratic', control: { kind: 'position', x: 90, y: 40 } },
+            ],
+          },
+          'loc-saigon-an-loc-ban-me-thuot:none': {
+            points: [
+              { kind: 'zone', zoneId: 'saigon:none' },
+              { kind: 'anchor', anchorId: 'khe-sanh' },
+              { kind: 'zone', zoneId: 'ban-me-thuot:none' },
+            ],
+            segments: [
+              { kind: 'straight' },
+              { kind: 'quadratic', control: { kind: 'anchor', anchorId: 'khe-sanh' } },
+            ],
+          },
         },
       },
     });
@@ -412,14 +421,18 @@ describe('VisualConfigSchema', () => {
     expect(result.success).toBe(true);
   });
 
-  it('rejects connection paths shorter than two points', () => {
+  it('rejects connection routes with mismatched segment counts', () => {
     const result = VisualConfigSchema.safeParse({
       version: 1,
       zones: {
-        connectionPaths: {
-          'loc-short:none': [
-            { kind: 'zone', zoneId: 'alpha:none' },
-          ],
+        connectionRoutes: {
+          'loc-short:none': {
+            points: [
+              { kind: 'zone', zoneId: 'alpha:none' },
+              { kind: 'zone', zoneId: 'beta:none' },
+            ],
+            segments: [],
+          },
         },
       },
     });

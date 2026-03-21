@@ -16,18 +16,27 @@ describe('validate-visual-config-refs', () => {
       zones: {
         overrides: { 'zone:a': { label: 'A' } },
         connectionAnchors: { 'khe-sanh': { x: 120, y: 80 } },
-        connectionEndpoints: {
-          'zone:a': [
-            { kind: 'zone', zoneId: 'zone:a' },
-            { kind: 'anchor', anchorId: 'khe-sanh' },
-          ],
-        },
-        connectionPaths: {
-          'zone:b': [
-            { kind: 'zone', zoneId: 'zone:a' },
-            { kind: 'anchor', anchorId: 'khe-sanh' },
-            { kind: 'zone', zoneId: 'zone:b' },
-          ],
+        connectionRoutes: {
+          'zone:a': {
+            points: [
+              { kind: 'zone', zoneId: 'zone:a' },
+              { kind: 'anchor', anchorId: 'khe-sanh' },
+            ],
+            segments: [
+              { kind: 'quadratic', control: { kind: 'position', x: 20, y: 20 } },
+            ],
+          },
+          'zone:b': {
+            points: [
+              { kind: 'zone', zoneId: 'zone:a' },
+              { kind: 'anchor', anchorId: 'khe-sanh' },
+              { kind: 'zone', zoneId: 'zone:b' },
+            ],
+            segments: [
+              { kind: 'straight' },
+              { kind: 'quadratic', control: { kind: 'anchor', anchorId: 'khe-sanh' } },
+            ],
+          },
         },
         layoutRoles: { 'zone:b': 'hand' },
         tokenLayouts: {
@@ -123,11 +132,16 @@ describe('validate-visual-config-refs', () => {
         overrides: {
           'missing:zone': { label: 'oops' },
         },
-        connectionEndpoints: {
-          'zone:a': [
-            { kind: 'anchor', anchorId: 'missing-anchor' },
-            { kind: 'zone', zoneId: 'zone:b' },
-          ],
+        connectionRoutes: {
+          'zone:a': {
+            points: [
+              { kind: 'anchor', anchorId: 'missing-anchor' },
+              { kind: 'zone', zoneId: 'zone:b' },
+            ],
+            segments: [
+              { kind: 'straight' },
+            ],
+          },
         },
         tokenLayouts: {
           assignments: {
@@ -269,24 +283,32 @@ describe('validate-visual-config-refs', () => {
     ]);
   });
 
-  it('reports unknown connectionEndpoints and connectionPaths refs with precise paths', () => {
+  it('reports unknown connectionRoutes refs with precise paths', () => {
     const config: VisualConfig = {
       version: 1,
       zones: {
         connectionAnchors: {
           known: { x: 0, y: 0 },
         },
-        connectionEndpoints: {
-          'missing:route': [
-            { kind: 'zone', zoneId: 'zone:a' },
-            { kind: 'anchor', anchorId: 'missing:endpoint' },
-          ],
-        },
-        connectionPaths: {
-          'zone:b': [
-            { kind: 'zone', zoneId: 'missing:path-zone' },
-            { kind: 'anchor', anchorId: 'missing:path-anchor' },
-          ],
+        connectionRoutes: {
+          'missing:route': {
+            points: [
+              { kind: 'zone', zoneId: 'zone:a' },
+              { kind: 'anchor', anchorId: 'missing:endpoint' },
+            ],
+            segments: [
+              { kind: 'quadratic', control: { kind: 'anchor', anchorId: 'missing:control' } },
+            ],
+          },
+          'zone:b': {
+            points: [
+              { kind: 'zone', zoneId: 'missing:path-zone' },
+              { kind: 'anchor', anchorId: 'missing:path-anchor' },
+            ],
+            segments: [
+              { kind: 'straight' },
+            ],
+          },
         },
       },
     };
@@ -294,25 +316,31 @@ describe('validate-visual-config-refs', () => {
     expect(validateVisualConfigRefs(config, fixtureContext())).toEqual([
       {
         category: 'zone',
-        configPath: 'zones.connectionEndpoints.missing:route',
+        configPath: 'zones.connectionRoutes.missing:route',
         referencedId: 'missing:route',
         message: 'Unknown zone id',
       },
       {
         category: 'anchor',
-        configPath: 'zones.connectionEndpoints.missing:route[1].anchorId',
+        configPath: 'zones.connectionRoutes.missing:route.points[1].anchorId',
         referencedId: 'missing:endpoint',
         message: 'Unknown anchor id',
       },
       {
+        category: 'anchor',
+        configPath: 'zones.connectionRoutes.missing:route.segments[0].control.anchorId',
+        referencedId: 'missing:control',
+        message: 'Unknown anchor id',
+      },
+      {
         category: 'zone',
-        configPath: 'zones.connectionPaths.zone:b[0].zoneId',
+        configPath: 'zones.connectionRoutes.zone:b.points[0].zoneId',
         referencedId: 'missing:path-zone',
         message: 'Unknown zone id',
       },
       {
         category: 'anchor',
-        configPath: 'zones.connectionPaths.zone:b[1].anchorId',
+        configPath: 'zones.connectionRoutes.zone:b.points[1].anchorId',
         referencedId: 'missing:path-anchor',
         message: 'Unknown anchor id',
       },

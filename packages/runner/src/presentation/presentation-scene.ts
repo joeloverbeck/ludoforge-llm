@@ -150,8 +150,7 @@ export function buildPresentationScene(options: BuildPresentationSceneOptions): 
     zones,
     adjacencies,
     positions: options.positions,
-    endpointDefinitions: options.visualConfigProvider.getConnectionEndpoints(),
-    pathDefinitions: options.visualConfigProvider.getConnectionPaths(),
+    routeDefinitions: options.visualConfigProvider.getConnectionRoutes(),
     anchorPositions: options.visualConfigProvider.getConnectionAnchors(),
   });
   const visibleZoneIDs = new Set([

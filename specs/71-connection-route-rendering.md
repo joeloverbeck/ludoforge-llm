@@ -25,8 +25,8 @@ This spec introduces a generic **connection-route** zone visual mode where zones
 
 ### In Scope
 
-- New `'connection'` entry in the `ZoneShape` union
-- `ConnectionStyleConfig` schema and `connectionStyles` visual config section
+- Using the existing `'connection'` entry in the `ZoneShape` union
+- Using the existing `ConnectionStyleConfig` schema and `connectionStyles` visual config section
 - Connection-route resolver (topology: endpoints, junctions, adjacency filtering)
 - Bézier math utilities (quadratic curves, tangents, hit polygons)
 - Connection-route renderer (curves, labels, hit areas, junction dots)
@@ -44,7 +44,7 @@ This spec introduces a generic **connection-route** zone visual mode where zones
 
 ### ZoneShape Union
 
-In `packages/runner/src/config/visual-config-defaults.ts`, add `'connection'` to the `ZoneShape` type:
+Already implemented in `packages/runner/src/config/visual-config-defaults.ts`:
 
 ```typescript
 export type ZoneShape =
@@ -61,7 +61,7 @@ export type ZoneShape =
 
 ### ConnectionStyleConfig
 
-In `packages/runner/src/config/visual-config-types.ts`, add:
+Already implemented in `packages/runner/src/config/visual-config-types.ts`:
 
 ```typescript
 export interface ConnectionStyleConfig {
@@ -74,7 +74,7 @@ export interface ConnectionStyleConfig {
 }
 ```
 
-Extend `ZonesConfig` to include:
+The zones config already includes:
 
 ```typescript
 readonly connectionStyles?: Record<string, ConnectionStyleConfig>;
@@ -82,7 +82,7 @@ readonly connectionStyles?: Record<string, ConnectionStyleConfig>;
 
 ### VisualConfigProvider
 
-In `packages/runner/src/config/visual-config-provider.ts`, add:
+Already implemented in `packages/runner/src/config/visual-config-provider.ts`:
 
 ```typescript
 resolveConnectionStyle(styleKey: string): ConnectionStyleConfig | null;
@@ -148,7 +148,7 @@ export interface ConnectionRouteNode {
 
 export interface JunctionNode {
   readonly id: string;
-  readonly connectionIds: readonly string[];
+  readonly connectionIds: readonly [string, string];
   readonly position: Position; // computed as midpoint of meeting curves
 }
 
@@ -164,9 +164,12 @@ export interface ConnectionRouteResolution {
 
 ```typescript
 export function resolveConnectionRoutes(
-  zones: readonly PresentationZoneNode[],
-  adjacencies: readonly PresentationAdjacencyNode[],
-  positions: ReadonlyMap<string, Position>,
+  options: {
+    readonly zones: readonly PresentationZoneNode[];
+    readonly adjacencies: readonly PresentationAdjacencyNode[];
+    readonly positions: ReadonlyMap<string, Position>;
+    readonly endpointOverrides?: ReadonlyMap<string, readonly [string, string]>;
+  },
 ): ConnectionRouteResolution;
 ```
 
@@ -174,29 +177,36 @@ export function resolveConnectionRoutes(
 
 1. **Identify connection zones**: Filter zones where `visual.shape === 'connection'`.
 2. **Build adjacency index**: Map each zone ID to its set of adjacent zone IDs.
-3. **Resolve endpoints**: For each connection zone, partition its adjacencies into:
-   - **Primary endpoints** (2): The non-connection zones that the connection links. Heuristic: parse zone ID for embedded endpoint names (e.g., `loc-kontum-qui-nhon` → `kontum`, `qui-nhon`). Fallback: first two non-connection adjacencies.
-   - **Touching zones** (0+): Other non-connection adjacencies (provinces that border the LoC but aren't its endpoints).
-   - **Connected connections** (0+): Other connection zones that share an adjacency edge.
-4. **Detect junctions**: When two or more connection zones share an adjacency, create a `JunctionNode`. The junction position is computed as the geometric centroid of the shared adjacency endpoints' positions.
-5. **Filter outputs**:
-   - `filteredZones`: All zones minus connection zones.
-   - `filteredAdjacencies`: All adjacencies minus pairs where both ends include a connection zone and one of its primary endpoints. (Adjacencies between two non-connection zones are never removed.)
+3. **Partition neighbors**: For each connection zone, split its neighbors into non-connection adjacencies and connection adjacencies.
+4. **Resolve endpoints conservatively** with this precedence:
+   - explicit endpoint override supplied to the resolver
+   - exactly two non-connection neighbors
+   - unambiguous zone-ID parsing that matches exactly two known non-connection zone IDs
+   - otherwise unresolved
+5. **Build route nodes only for resolved zones**:
+   - **Primary endpoints** (2): exactly two non-connection zones
+   - **Touching zones** (0+): remaining non-connection neighbors
+   - **Connected connections** (0+): adjacent connection zones
+6. **Detect junctions** only from explicit connection-to-connection adjacency between resolved connection zones. The junction position is the midpoint between those connection zones' layout positions.
+7. **Filter outputs**:
+   - `filteredZones`: All zones minus resolved connection zones only.
+   - `filteredAdjacencies`: All adjacencies minus pairs where either end is a resolved connection zone.
+   - unresolved connection zones stay in the ordinary zone/adjacency lists.
 
 ### Endpoint Inference Details
 
 LoC zones are adjacent to more than 2 zones. For example, `loc-hue-da-nang` is adjacent to `hue:none`, `da-nang:none`, `quang-tri-thua-thien:none`, and `quang-nam:none`. The first two match the zone name and are the primary endpoints defining the curve. The other two are "touching" provinces — geographically adjacent but not the curve's terminators.
 
-The name-parsing heuristic handles all 17 FITL LoCs. For robustness, `visual-config.yaml` can declare explicit endpoint overrides per zone:
+The name-parsing heuristic is not sufficient for all FITL LoCs. Routes such as `loc-can-tho-long-phu:none` and `loc-kontum-ban-me-thuot:none` do not map cleanly to two endpoint zone IDs through naming alone, so endpoint resolution must support explicit overrides and must leave ambiguous routes unresolved rather than guessing.
+
+When later pipeline/config integration needs explicit endpoint overrides, it should pass them into the resolver as explicit input data:
 
 ```yaml
-zones:
-  zoneOverrides:
-    "loc-saigon-an-loc-ban-me-thuot:none":
-      connectionEndpoints: ["an-loc:none", "saigon:none"]
+connectionEndpoints:
+  "loc-saigon-an-loc-ban-me-thuot:none": ["an-loc:none", "saigon:none"]
 ```
 
-This is needed for zones like `loc-saigon-an-loc-ban-me-thuot` where the name contains 3 city references.
+The exact storage location for these overrides is an integration concern; the resolver itself should stay config-agnostic and consume explicit data only.
 
 ## Bézier Math Utilities
 
@@ -315,7 +325,12 @@ Remove all graphics, containers, labels, and junction dots from the parent conta
 In `buildPresentationScene()`, after filtering hidden zones and resolving zone nodes:
 
 ```typescript
-const connectionResolution = resolveConnectionRoutes(zones, adjacencies, options.positions);
+const connectionResolution = resolveConnectionRoutes({
+  zones,
+  adjacencies,
+  positions: options.positions,
+  endpointOverrides,
+});
 
 return {
   zones: connectionResolution.filteredZones,
@@ -369,13 +384,13 @@ Add a `'connection'` case to `drawZoneShape()` that is a no-op (returns without 
 
 ## Adjacency Filtering
 
-The connection-route resolver removes adjacency pairs where one end is a connection zone and the other is one of its primary endpoints. The curve *replaces* those lines.
+The connection-route resolver removes all adjacency pairs involving a resolved connection zone. The curve replaces those lines completely.
 
 **Preserved adjacencies**:
 - Between two non-connection zones (provinces, cities)
-- Between a connection zone and a "touching" province (these are standard adjacency lines from the touching province to the curve midpoint — or they can be suppressed entirely via visual config if they add clutter)
+- Any adjacency involving an unresolved connection zone, because unresolved routes must remain visible until explicit endpoint data is supplied
 
-**Open question**: Should adjacencies from touching provinces to connection zones be drawn? In the physical FITL map, these provinces border the road but aren't its endpoints. Drawing a line from a province to a curve midpoint may look odd. Recommendation: **suppress them by default** (the resolver removes all adjacencies involving a connection zone), with a visual config flag to re-enable if needed.
+This removes the previous ambiguity around touching-province lines. Once a route is resolved into a curve, all of its ordinary adjacency lines are suppressed.
 
 ## FITL LoC Inventory
 
@@ -414,9 +429,9 @@ The connection-route resolver removes adjacency pairs where one end is a connect
 - Testable with mock zone/adjacency data, no rendering needed
 
 ### Phase 3: Visual Config Schema Extension
-- Modify `packages/runner/src/config/visual-config-defaults.ts` — add `'connection'` to `ZoneShape`
-- Modify `packages/runner/src/config/visual-config-types.ts` — add `ConnectionStyleConfig`, extend `ZonesConfig`
-- Modify `packages/runner/src/config/visual-config-provider.ts` — add `resolveConnectionStyle()`
+- Already implemented: `ZoneShape` includes `'connection'`
+- Already implemented: `ConnectionStyleConfig` and `connectionStyles`
+- Already implemented: `VisualConfigProvider.resolveConnectionStyle()`
 - Modify `data/games/fire-in-the-lake/visual-config.yaml` — change LoC config
 - Modify `packages/runner/src/canvas/renderers/shape-utils.ts` — add no-op `'connection'` case
 
@@ -448,7 +463,7 @@ The connection-route resolver removes adjacency pairs where one end is a connect
 | Test File | Coverage |
 |-----------|----------|
 | `bezier-utils.test.ts` | Midpoint accuracy, tangent direction, hit polygon vertex count, perpendicular orthogonality, zero-curvature = straight line |
-| `connection-route-resolver.test.ts` | Endpoint resolution (2 of 4 adjacencies), junction detection (2 LoCs sharing edge), filtering correctness (connection zones removed, endpoint adjacencies removed, non-endpoint adjacencies preserved) |
+| `connection-route-resolver.test.ts` | Exact-two-neighbor resolution, explicit endpoint overrides, conservative unresolved pass-through, zone-ID parsing fallback, direct connection-junction detection, filtering correctness |
 | `connection-route-renderer.test.ts` | Container creation per route, midpoint positioning, getContainerMap() completeness, destroy cleanup |
 
 ### Integration Tests
@@ -473,9 +488,9 @@ The connection-route resolver removes adjacency pairs where one end is a connect
 
 | File | Action |
 |------|--------|
-| `packages/runner/src/config/visual-config-defaults.ts` | Modify — add `'connection'` to `ZoneShape` |
-| `packages/runner/src/config/visual-config-types.ts` | Modify — add `ConnectionStyleConfig`, extend `ZonesConfig` |
-| `packages/runner/src/config/visual-config-provider.ts` | Modify — add `resolveConnectionStyle()` |
+| `packages/runner/src/config/visual-config-defaults.ts` | Already implemented — `ZoneShape` includes `'connection'` |
+| `packages/runner/src/config/visual-config-types.ts` | Already implemented — `ConnectionStyleConfig`, `connectionStyles` |
+| `packages/runner/src/config/visual-config-provider.ts` | Already implemented — `resolveConnectionStyle()` |
 | `packages/runner/src/canvas/geometry/bezier-utils.ts` | **New** — Bézier math utilities |
 | `packages/runner/src/presentation/connection-route-resolver.ts` | **New** — topology resolution |
 | `packages/runner/src/canvas/renderers/connection-route-renderer.ts` | **New** — curve rendering |

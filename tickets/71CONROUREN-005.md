@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — runner-only
-**Deps**: tickets/71CONROUREN-003.md, tickets/71CONROUREN-004.md
+**Deps**: archive/tickets/71CONROUREN/71CONROUREN-003.md, tickets/71CONROUREN-004.md
 
 ## Problem
 

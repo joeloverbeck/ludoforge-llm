@@ -7275,6 +7275,15 @@
             "type": "string"
           }
         },
+        "actionSummaries": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
         "macros": {
           "type": "object",
           "propertyNames": {

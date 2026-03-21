@@ -48,8 +48,14 @@ const step = (messages: readonly TooltipMessage[], stepNumber = 1): ContentPlanS
   messages,
 });
 
-const plan = (messages: readonly TooltipMessage[], actionLabel = 'train', synopsisSource?: TooltipMessage): ContentPlan => ({
+const plan = (
+  messages: readonly TooltipMessage[],
+  actionLabel = 'train',
+  synopsisSource?: TooltipMessage,
+  authoredSynopsis?: string,
+): ContentPlan => ({
   actionLabel,
+  ...(authoredSynopsis !== undefined ? { authoredSynopsis } : {}),
   ...(synopsisSource !== undefined ? { synopsisSource } : {}),
   steps: [step(messages)],
   modifiers: [],
@@ -424,6 +430,15 @@ describe('realizeContentPlan', () => {
   // ---------------------------------------------------------------------------
 
   describe('synopsis generation', () => {
+    it('prefers authored synopsis over synopsisSource', () => {
+      const synSrc: TooltipMessage = { kind: 'select', astPath: 'r', target: 'spaces', bounds: { min: 1, max: 6 } };
+      const result = realizeContentPlan(
+        plan([], 'train', synSrc, 'Place forces and build support'),
+        undefined,
+      );
+      assert.equal(result.synopsis, 'Train — Place forces and build support');
+    });
+
     it('generates synopsis with synopsisSource', () => {
       const synSrc: TooltipMessage = { kind: 'select', astPath: 'r', target: 'spaces', bounds: { min: 1, max: 6 } };
       const result = realizeContentPlan(plan([], 'train', synSrc), undefined);

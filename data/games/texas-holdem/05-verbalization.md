@@ -50,6 +50,14 @@ verbalization:
     showdown: "Showdown"
     hand-cleanup: "Hand cleanup"
 
+  # ── Action-level tooltip synopses ───────────────────────────────────
+  actionSummaries:
+    fold: "Surrender hand and forfeit current bets"
+    check: "Pass without adding chips to the pot"
+    call: "Match the current bet to stay in the hand"
+    raise: "Increase the current bet"
+    allIn: "Bet all remaining chips"
+
   # ── Macros ───────────────────────────────────────────────────────────
   macros:
     deal-community:

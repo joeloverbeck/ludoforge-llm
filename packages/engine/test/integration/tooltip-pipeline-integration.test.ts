@@ -133,7 +133,7 @@ describe('tooltip pipeline integration', () => {
     assert.ok(result.tooltipPayload !== undefined);
 
     const { synopsis } = result.tooltipPayload.ruleCard;
-    assert.ok(synopsis.includes('Train'), `Train synopsis "${synopsis}" must include "Train"`);
+    assert.equal(synopsis, 'Train — Place forces and build support');
     assert.ok(result.tooltipPayload.ruleCard.steps.length > 0, 'Train must have steps');
   });
 
@@ -154,7 +154,7 @@ describe('tooltip pipeline integration', () => {
     assert.ok(result.tooltipPayload !== undefined);
 
     const { synopsis } = result.tooltipPayload.ruleCard;
-    assert.ok(synopsis.includes('Sweep'), `Sweep synopsis "${synopsis}" must include "Sweep"`);
+    assert.equal(synopsis, 'Sweep — Move forces and activate guerrillas');
     assert.ok(result.tooltipPayload.ruleCard.steps.length > 0, 'Sweep must have steps');
   });
 
@@ -175,7 +175,7 @@ describe('tooltip pipeline integration', () => {
     assert.ok(result.tooltipPayload !== undefined);
 
     const { synopsis } = result.tooltipPayload.ruleCard;
-    assert.ok(synopsis.includes('Rally'), `Rally synopsis "${synopsis}" must include "Rally"`);
+    assert.equal(synopsis, 'Rally — Place forces and build bases');
     assert.ok(result.tooltipPayload.ruleCard.steps.length > 0, 'Rally must have steps');
   });
 
@@ -305,7 +305,7 @@ describe('tooltip pipeline integration', () => {
     assert.ok(result.tooltipPayload !== undefined);
 
     const { synopsis } = result.tooltipPayload.ruleCard;
-    assert.ok(synopsis.includes('Fold'), `Fold synopsis "${synopsis}" must include "Fold"`);
+    assert.equal(synopsis, 'Fold — Surrender hand and forfeit current bets');
   });
 
   it('Texas Hold\'em Check synopsis uses verbalized action label', () => {
@@ -325,7 +325,7 @@ describe('tooltip pipeline integration', () => {
     assert.ok(result.tooltipPayload !== undefined);
 
     const { synopsis } = result.tooltipPayload.ruleCard;
-    assert.ok(synopsis.includes('Check'), `Check synopsis "${synopsis}" must include "Check"`);
+    assert.equal(synopsis, 'Check — Pass without adding chips to the pot');
   });
 
   it('Texas Hold\'em Call synopsis uses verbalized action label', () => {
@@ -345,7 +345,7 @@ describe('tooltip pipeline integration', () => {
     assert.ok(result.tooltipPayload !== undefined);
 
     const { synopsis } = result.tooltipPayload.ruleCard;
-    assert.ok(synopsis.includes('Call'), `Call synopsis "${synopsis}" must include "Call"`);
+    assert.equal(synopsis, 'Call — Match the current bet to stay in the hand');
   });
 
   it('Texas Hold\'em Raise synopsis uses verbalized action label', () => {
@@ -365,7 +365,7 @@ describe('tooltip pipeline integration', () => {
     assert.ok(result.tooltipPayload !== undefined);
 
     const { synopsis } = result.tooltipPayload.ruleCard;
-    assert.ok(synopsis.includes('Raise'), `Raise synopsis "${synopsis}" must include "Raise"`);
+    assert.equal(synopsis, 'Raise — Increase the current bet');
   });
 
   it('Texas Hold\'em verbalization labels cover all action IDs', () => {

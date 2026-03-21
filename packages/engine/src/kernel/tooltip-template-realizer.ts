@@ -360,6 +360,9 @@ const realizeSynopsis = (
   ctx: LabelContext,
 ): string => {
   const label = resolveLabel(plan.actionLabel, ctx);
+  if (plan.authoredSynopsis !== undefined) {
+    return `${label} — ${plan.authoredSynopsis}`;
+  }
   if (plan.synopsisSource !== undefined) {
     const detail = realizeMessage(plan.synopsisSource, ctx);
     return `${label} — ${detail}`;

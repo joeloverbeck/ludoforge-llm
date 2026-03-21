@@ -14,6 +14,7 @@ export function compileVerbalization(raw: GameSpecVerbalization): VerbalizationD
   return {
     labels: raw.labels ?? EMPTY_RECORD,
     stages: raw.stages ?? EMPTY_RECORD,
+    ...(raw.actionSummaries != null ? { actionSummaries: raw.actionSummaries } : {}),
     macros: raw.macros ?? EMPTY_RECORD,
     sentencePlans: raw.sentencePlans ?? EMPTY_RECORD,
     suppressPatterns: raw.suppressPatterns ?? EMPTY_ARRAY,

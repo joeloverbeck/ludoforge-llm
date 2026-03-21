@@ -419,7 +419,12 @@ const buildRuleCard = (
 
   const normalizedEffects = collectRuleCardEffects(action, def);
   const messages = normalizedEffects.flatMap((e, i) => normalizeEffect(e, normCtx, `root[${i}]`));
-  const plan = planContent(messages, String(action.id));
+  const authoredSynopsis = def.verbalization?.actionSummaries?.[String(action.id)];
+  const plan = planContent(
+    messages,
+    String(action.id),
+    authoredSynopsis !== undefined ? { authoredSynopsis } : {},
+  );
   const ruleCard = realizeContentPlan(plan, def.verbalization);
 
   runtime.ruleCardCache.set(cacheKey, ruleCard);

@@ -321,7 +321,7 @@ function isVictoryStandingsShape(value: Record<string, unknown>): boolean {
   );
 }
 
-const VERBALIZATION_FINGERPRINT_KEYS = new Set(['labels', 'stages', 'macros', 'sentencePlans', 'suppressPatterns']);
+const VERBALIZATION_FINGERPRINT_KEYS = new Set(['labels', 'stages', 'actionSummaries', 'macros', 'sentencePlans', 'suppressPatterns']);
 
 function isVerbalizationShape(value: Record<string, unknown>): boolean {
   const keys = Object.keys(value);

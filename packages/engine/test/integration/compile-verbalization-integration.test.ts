@@ -17,6 +17,11 @@ describe('verbalization compilation integration', () => {
       compiled.gameDef.verbalization.suppressPatterns.length > 0,
       'FITL verbalization must have at least one suppress pattern',
     );
+    assert.equal(
+      compiled.gameDef.verbalization.actionSummaries?.train,
+      'Place forces and build support',
+      'FITL verbalization must compile action summaries',
+    );
   });
 
   it('Texas Hold\'em production spec compiles with verbalization defined', () => {
@@ -26,6 +31,11 @@ describe('verbalization compilation integration', () => {
     assert.ok(
       Object.keys(compiled.gameDef.verbalization.labels).length > 0,
       'Texas verbalization must have at least one label',
+    );
+    assert.equal(
+      compiled.gameDef.verbalization.actionSummaries?.fold,
+      'Surrender hand and forfeit current bets',
+      'Texas verbalization must compile action summaries',
     );
   });
 

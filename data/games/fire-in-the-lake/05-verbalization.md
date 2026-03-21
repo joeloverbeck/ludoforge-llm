@@ -297,6 +297,30 @@ verbalization:
     resolveCommitment: "Resolve commitment"
     resetPhase: "Reset phase"
 
+  # ── Action-level tooltip synopses ─────────────────────────────────────
+  actionSummaries:
+    pass: "Take no action"
+    train: "Place forces and build support"
+    patrol: "Move forces along lines of communication and activate guerrillas"
+    sweep: "Move forces and activate guerrillas"
+    assault: "Remove enemy pieces from selected spaces"
+    rally: "Place forces and build bases"
+    march: "Move forces into adjacent spaces"
+    attack: "Attack enemy forces in selected spaces"
+    terror: "Place terror and degrade support"
+    advise: "Support ARVN operations"
+    airLift: "Transport forces by air"
+    airStrike: "Conduct air strikes against enemy forces"
+    govern: "Shift support and collect resources"
+    transport: "Move ARVN forces and flip Rangers underground"
+    raid: "Remove enemy pieces and steal resources"
+    infiltrate: "Place NVA forces and improve the trail"
+    bombard: "Remove enemy pieces via bombardment"
+    ambushNva: "Ambush COIN forces with NVA guerrillas"
+    tax: "Collect resources from population"
+    subvert: "Remove ARVN pieces and replace them with VC"
+    ambushVc: "Ambush COIN forces with VC guerrillas"
+
   # ── Macros ────────────────────────────────────────────────────────────
   macros:
     train-us-profile:

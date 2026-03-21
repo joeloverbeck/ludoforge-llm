@@ -640,6 +640,7 @@ export interface GameSpecDoc {
 export interface GameSpecVerbalization {
   readonly labels?: Readonly<Record<string, string | VerbalizationLabelEntry>> | null;
   readonly stages?: Readonly<Record<string, string>> | null;
+  readonly actionSummaries?: Readonly<Record<string, string>> | null;
   readonly macros?: Readonly<Record<string, VerbalizationMacroEntry>> | null;
   readonly sentencePlans?: Readonly<Record<string, Readonly<Record<string, Readonly<Record<string, string>>>>>> | null;
   readonly suppressPatterns?: readonly string[] | null;

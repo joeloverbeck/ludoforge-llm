@@ -19,8 +19,8 @@ interface DestroyableDisplayObject {
 
 /**
  * Neutralizes a PixiJS display object without calling destroy().
- * Removes from parent, hides, disables interaction, and nulls internal
- * texture references so PixiJS's render loop cannot access dangling state.
+ * Removes from parent, hides, and disables interaction while leaving
+ * PixiJS-owned internals intact for deferred destroy paths.
  * Children remain attached for deferred destroy paths.
  */
 export function neutralizeDisplayObject(displayObject: Container): void {
@@ -32,9 +32,6 @@ export function neutralizeDisplayObject(displayObject: Container): void {
   }
   if ('interactiveChildren' in displayObject) {
     (displayObject as { interactiveChildren: boolean }).interactiveChildren = false;
-  }
-  if ('_texture' in displayObject) {
-    (displayObject as { _texture: unknown })._texture = null;
   }
 }
 
@@ -51,6 +48,13 @@ export function safeDestroyDisplayObject(
   displayObject: DestroyableDisplayObject,
   options?: unknown,
 ): void {
+  if ('renderable' in displayObject) {
+    displayObject.renderable = false;
+  }
+  if ('visible' in displayObject) {
+    displayObject.visible = false;
+  }
+
   try {
     displayObject.destroy(options);
   } catch (error) {
@@ -69,9 +73,6 @@ export function safeDestroyDisplayObject(
     }
     if ('interactiveChildren' in displayObject) {
       (displayObject as { interactiveChildren: boolean }).interactiveChildren = false;
-    }
-    if ('_texture' in displayObject) {
-      (displayObject as { _texture: unknown })._texture = null;
     }
   }
 }

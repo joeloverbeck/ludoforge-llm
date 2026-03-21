@@ -326,6 +326,38 @@ describe('GameContainer', () => {
     expect(html).not.toContain('data-testid="ui-overlay"');
   });
 
+  it('keeps GameCanvas mounted when lifecycle is canvasCrashed', () => {
+    const html = renderToStaticMarkup(
+      createElement(GameContainer, {
+        bridge: TEST_BRIDGE,
+        store: createContainerStore({
+          gameLifecycle: 'canvasCrashed',
+          error: null,
+        }),
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+      }),
+    );
+
+    expect(html).toContain('data-testid="game-canvas"');
+    expect(html).toContain('data-testid="ui-overlay"');
+  });
+
+  it('keeps GameCanvas mounted when lifecycle is reinitializing', () => {
+    const html = renderToStaticMarkup(
+      createElement(GameContainer, {
+        bridge: TEST_BRIDGE,
+        store: createContainerStore({
+          gameLifecycle: 'reinitializing',
+          error: null,
+        }),
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+      }),
+    );
+
+    expect(html).toContain('data-testid="game-canvas"');
+    expect(html).toContain('data-testid="ui-overlay"');
+  });
+
   it('renders ErrorState when error is non-null', () => {
     const html = renderToStaticMarkup(
       createElement(GameContainer, {

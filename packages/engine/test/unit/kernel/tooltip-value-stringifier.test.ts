@@ -248,6 +248,29 @@ describe('tooltip-value-stringifier', () => {
     });
   });
 
+  describe('stringifyValueExpr — scalarArray expressions', () => {
+    it('joins string arrays with "or"', () => {
+      assert.equal(
+        stringifyValueExpr({ scalarArray: ['city', 'province'] }),
+        'city or province',
+      );
+    });
+
+    it('joins numeric arrays with "or"', () => {
+      assert.equal(
+        stringifyValueExpr({ scalarArray: [1, 2, 3] }),
+        '1 or 2 or 3',
+      );
+    });
+
+    it('returns a single item unchanged when only one exists', () => {
+      assert.equal(
+        stringifyValueExpr({ scalarArray: ['single'] }),
+        'single',
+      );
+    });
+  });
+
   // ---------------------------------------------------------------------------
   // humanizeValueExpr — label-aware humanization
   // ---------------------------------------------------------------------------
@@ -629,6 +652,29 @@ describe('tooltip-value-stringifier', () => {
       });
     });
 
+    describe('scalarArray', () => {
+      it('resolves labels for string arrays and joins with "or"', () => {
+        assert.equal(
+          humanizeValueExpr({ scalarArray: ['aid', 'resources'] }, withLabels),
+          'Aid or Resources',
+        );
+      });
+
+      it('humanizes numeric arrays without label lookup changes', () => {
+        assert.equal(
+          humanizeValueExpr({ scalarArray: [1, 2, 3] }, withLabels),
+          '1 or 2 or 3',
+        );
+      });
+
+      it('returns a single resolved item without trailing separator', () => {
+        assert.equal(
+          humanizeValueExpr({ scalarArray: ['aid'] }, withLabels),
+          'Aid',
+        );
+      });
+    });
+
     describe('no <value> placeholder', () => {
       it('never produces <value> for any supported shape', () => {
         const shapes: readonly unknown[] = [
@@ -659,6 +705,7 @@ describe('tooltip-value-stringifier', () => {
           },
           { concat: ['a', 'b'] },
           { if: { when: true, then: 1, else: 0 } },
+          { scalarArray: ['aid', 'resources'] },
         ];
         for (const expr of shapes) {
           const result = humanizeValueExpr(expr as never, noLabels);

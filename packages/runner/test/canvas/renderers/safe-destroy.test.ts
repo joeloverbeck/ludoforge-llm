@@ -140,6 +140,41 @@ describe('safeDestroyContainer', () => {
   });
 });
 
+describe('neutralizeDisplayObject invariants', () => {
+  it('detaches the root without calling destroy()', () => {
+    const parent = new MockContainer();
+    const container = new MockContainer();
+    parent.addChild(container);
+    const destroySpy = vi.spyOn(container, 'destroy');
+
+    neutralizeDisplayObject(container as unknown as Container);
+
+    expect(parent.children).not.toContain(container);
+    expect(container.parent).toBeNull();
+    expect(container.visible).toBe(false);
+    expect(container.renderable).toBe(false);
+    expect(destroySpy).not.toHaveBeenCalled();
+  });
+
+  it('keeps descendants attached to the detached subtree', () => {
+    const parent = new MockContainer();
+    const container = new MockContainer();
+    const child = new MockContainer();
+    const grandchild = new MockContainer();
+    child.addChild(grandchild);
+    container.addChild(child);
+    parent.addChild(container);
+
+    neutralizeDisplayObject(container as unknown as Container);
+
+    expect(parent.children).not.toContain(container);
+    expect(container.children).toEqual([child]);
+    expect(child.parent).toBe(container);
+    expect(child.children).toEqual([grandchild]);
+    expect(grandchild.parent).toBe(child);
+  });
+});
+
 describe('safeDestroyDisplayObject', () => {
   it('passes destroy options through to destroy()', () => {
     const container = new MockContainer();
@@ -166,13 +201,29 @@ describe('safeDestroyDisplayObject', () => {
     expect((container as unknown as { visible: boolean }).visible).toBe(false);
   });
 
-  it('does not set renderable/visible when destroy() succeeds', () => {
+  it('sets renderable and visible to false before destroy() is invoked', () => {
+    const container = new MockContainer() as unknown as Container;
+    const statesSeenByDestroy: Array<{ renderable: boolean; visible: boolean }> = [];
+
+    vi.spyOn(container, 'destroy').mockImplementation(() => {
+      statesSeenByDestroy.push({
+        renderable: (container as unknown as { renderable: boolean }).renderable,
+        visible: (container as unknown as { visible: boolean }).visible,
+      });
+    });
+
+    safeDestroyDisplayObject(container);
+
+    expect(statesSeenByDestroy).toEqual([{ renderable: false, visible: false }]);
+  });
+
+  it('keeps renderable/visible false when destroy() succeeds', () => {
     const container = new MockContainer() as unknown as Container;
 
     safeDestroyDisplayObject(container);
 
-    expect((container as unknown as { renderable: boolean }).renderable).toBe(true);
-    expect((container as unknown as { visible: boolean }).visible).toBe(true);
+    expect((container as unknown as { renderable: boolean }).renderable).toBe(false);
+    expect((container as unknown as { visible: boolean }).visible).toBe(false);
   });
 });
 
@@ -248,9 +299,10 @@ describe('safeDestroyDisplayObject fallback hardening', () => {
     expect(container.children).toHaveLength(0);
   });
 
-  it('nulls out _texture when destroy() throws and _texture exists', () => {
+  it('preserves _texture when destroy() throws and _texture exists', () => {
     const container = new MockContainer() as unknown as Container & { _texture?: unknown };
-    container._texture = { uid: 42 };
+    const texture = { uid: 42 };
+    container._texture = texture;
 
     vi.spyOn(container, 'destroy').mockImplementation(() => {
       throw new TypeError('TexturePoolClass.returnTexture failed');
@@ -259,7 +311,7 @@ describe('safeDestroyDisplayObject fallback hardening', () => {
 
     safeDestroyDisplayObject(container);
 
-    expect(container._texture).toBeNull();
+    expect(container._texture).toBe(texture);
   });
 
   it('sets eventMode to none and interactiveChildren to false when destroy() throws', () => {
@@ -316,12 +368,13 @@ describe('neutralizeDisplayObject', () => {
     expect(container.children[0]).toBe(child);
   });
 
-  it('nulls out _texture if present', () => {
+  it('preserves _texture if present', () => {
     const container = new MockContainer() as unknown as Container & { _texture?: unknown };
-    container._texture = { uid: 99 };
+    const texture = { uid: 99 };
+    container._texture = texture;
 
     neutralizeDisplayObject(container as unknown as Container);
 
-    expect(container._texture).toBeNull();
+    expect(container._texture).toBe(texture);
   });
 });

@@ -192,6 +192,9 @@ function createContainerStore(overrides: Partial<GameStore> = {}): StoreApi<Game
     setAiPlaybackDetailLevel: vi.fn(),
     setAiPlaybackAutoSkip: vi.fn(),
     clearError: vi.fn(),
+    reportCanvasCrash: vi.fn(),
+    beginCanvasRecovery: vi.fn(),
+    canvasRecovered: vi.fn(),
     ...overrides,
   } as unknown as GameStore));
 }

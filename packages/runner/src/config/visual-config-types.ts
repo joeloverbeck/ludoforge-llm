@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { ANIMATION_PRESET_OVERRIDE_KEYS } from '../animation/animation-types.js';
 
+export const BitmapFontRoleSchema = z.enum(['label', 'labelStroke']);
 export const LayoutModeSchema = z.enum(['graph', 'table', 'track', 'grid']);
 export const ZoneShapeSchema = z.enum([
   'rectangle',
@@ -127,7 +128,7 @@ const TokenPresentationSchema = z.object({
 });
 
 const StackBadgeStyleSchema = z.object({
-  fontFamily: z.string().optional(),
+  fontName: BitmapFontRoleSchema.optional(),
   fontSize: PositiveNumberSchema,
   fill: z.string(),
   stroke: z.string(),
@@ -136,7 +137,7 @@ const StackBadgeStyleSchema = z.object({
   anchorY: z.number(),
   offsetX: z.number(),
   offsetY: z.number(),
-});
+}).strict();
 
 const TokenGridLayoutSchema = z.object({
   mode: z.literal('grid'),

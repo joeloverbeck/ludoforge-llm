@@ -1,0 +1,1321 @@
+{
+  "seed": 1000,
+  "stopReason": "terminal",
+  "turnsCount": 64,
+  "totalMoves": 213,
+  "result": {
+    "type": "score",
+    "ranking": [
+      {
+        "player": 2,
+        "score": 4000
+      },
+      {
+        "player": 0,
+        "score": 0
+      },
+      {
+        "player": 1,
+        "score": 0
+      },
+      {
+        "player": 3,
+        "score": 0
+      }
+    ]
+  },
+  "evolvedSeat": 0,
+  "evolvedMoveCount": 43,
+  "evolvedMoves": [
+    {
+      "move": {
+        "actionId": "call",
+        "params": {}
+      },
+      "legalMoveCount": 12,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 12,
+        "selectedStableMoveKey": "call|{}|false|unclassified",
+        "finalScore": 80,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    },
+    {
+      "move": {
+        "actionId": "call",
+        "params": {}
+      },
+      "legalMoveCount": 12,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 12,
+        "selectedStableMoveKey": "call|{}|false|unclassified",
+        "finalScore": 80,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    },
+    {
+      "move": {
+        "actionId": "check",
+        "params": {}
+      },
+      "legalMoveCount": 12,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 12,
+        "selectedStableMoveKey": "check|{}|false|unclassified",
+        "finalScore": 100,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    },
+    {
+      "move": {
+        "actionId": "call",
+        "params": {}
+      },
+      "legalMoveCount": 12,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 12,
+        "selectedStableMoveKey": "call|{}|false|unclassified",
+        "finalScore": 80,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    },
+    {
+      "move": {
+        "actionId": "call",
+        "params": {}
+      },
+      "legalMoveCount": 12,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 12,
+        "selectedStableMoveKey": "call|{}|false|unclassified",
+        "finalScore": 80,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    },
+    {
+      "move": {
+        "actionId": "call",
+        "params": {}
+      },
+      "legalMoveCount": 12,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 12,
+        "selectedStableMoveKey": "call|{}|false|unclassified",
+        "finalScore": 80,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    },
+    {
+      "move": {
+        "actionId": "check",
+        "params": {}
+      },
+      "legalMoveCount": 12,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 12,
+        "selectedStableMoveKey": "check|{}|false|unclassified",
+        "finalScore": 100,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    },
+    {
+      "move": {
+        "actionId": "call",
+        "params": {}
+      },
+      "legalMoveCount": 12,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 12,
+        "selectedStableMoveKey": "call|{}|false|unclassified",
+        "finalScore": 80,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    },
+    {
+      "move": {
+        "actionId": "call",
+        "params": {}
+      },
+      "legalMoveCount": 12,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 12,
+        "selectedStableMoveKey": "call|{}|false|unclassified",
+        "finalScore": 80,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    },
+    {
+      "move": {
+        "actionId": "call",
+        "params": {}
+      },
+      "legalMoveCount": 12,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 12,
+        "selectedStableMoveKey": "call|{}|false|unclassified",
+        "finalScore": 80,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    },
+    {
+      "move": {
+        "actionId": "check",
+        "params": {}
+      },
+      "legalMoveCount": 12,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 12,
+        "selectedStableMoveKey": "check|{}|false|unclassified",
+        "finalScore": 100,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    },
+    {
+      "move": {
+        "actionId": "call",
+        "params": {}
+      },
+      "legalMoveCount": 12,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 12,
+        "selectedStableMoveKey": "call|{}|false|unclassified",
+        "finalScore": 80,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    },
+    {
+      "move": {
+        "actionId": "call",
+        "params": {}
+      },
+      "legalMoveCount": 12,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 12,
+        "selectedStableMoveKey": "call|{}|false|unclassified",
+        "finalScore": 80,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    },
+    {
+      "move": {
+        "actionId": "call",
+        "params": {}
+      },
+      "legalMoveCount": 12,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 12,
+        "selectedStableMoveKey": "call|{}|false|unclassified",
+        "finalScore": 80,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    },
+    {
+      "move": {
+        "actionId": "check",
+        "params": {}
+      },
+      "legalMoveCount": 12,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 12,
+        "selectedStableMoveKey": "check|{}|false|unclassified",
+        "finalScore": 100,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    },
+    {
+      "move": {
+        "actionId": "call",
+        "params": {}
+      },
+      "legalMoveCount": 12,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 12,
+        "selectedStableMoveKey": "call|{}|false|unclassified",
+        "finalScore": 80,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    },
+    {
+      "move": {
+        "actionId": "call",
+        "params": {}
+      },
+      "legalMoveCount": 12,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 12,
+        "selectedStableMoveKey": "call|{}|false|unclassified",
+        "finalScore": 80,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    },
+    {
+      "move": {
+        "actionId": "call",
+        "params": {}
+      },
+      "legalMoveCount": 12,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 12,
+        "selectedStableMoveKey": "call|{}|false|unclassified",
+        "finalScore": 80,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    },
+    {
+      "move": {
+        "actionId": "check",
+        "params": {}
+      },
+      "legalMoveCount": 12,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 12,
+        "selectedStableMoveKey": "check|{}|false|unclassified",
+        "finalScore": 100,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    },
+    {
+      "move": {
+        "actionId": "call",
+        "params": {}
+      },
+      "legalMoveCount": 12,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 12,
+        "selectedStableMoveKey": "call|{}|false|unclassified",
+        "finalScore": 80,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    },
+    {
+      "move": {
+        "actionId": "call",
+        "params": {}
+      },
+      "legalMoveCount": 12,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 12,
+        "selectedStableMoveKey": "call|{}|false|unclassified",
+        "finalScore": 80,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    },
+    {
+      "move": {
+        "actionId": "call",
+        "params": {}
+      },
+      "legalMoveCount": 12,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 12,
+        "selectedStableMoveKey": "call|{}|false|unclassified",
+        "finalScore": 80,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    },
+    {
+      "move": {
+        "actionId": "check",
+        "params": {}
+      },
+      "legalMoveCount": 12,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 12,
+        "selectedStableMoveKey": "check|{}|false|unclassified",
+        "finalScore": 100,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    },
+    {
+      "move": {
+        "actionId": "call",
+        "params": {}
+      },
+      "legalMoveCount": 12,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 12,
+        "selectedStableMoveKey": "call|{}|false|unclassified",
+        "finalScore": 80,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    },
+    {
+      "move": {
+        "actionId": "call",
+        "params": {}
+      },
+      "legalMoveCount": 12,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 12,
+        "selectedStableMoveKey": "call|{}|false|unclassified",
+        "finalScore": 80,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    },
+    {
+      "move": {
+        "actionId": "call",
+        "params": {}
+      },
+      "legalMoveCount": 12,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 12,
+        "selectedStableMoveKey": "call|{}|false|unclassified",
+        "finalScore": 80,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    },
+    {
+      "move": {
+        "actionId": "check",
+        "params": {}
+      },
+      "legalMoveCount": 12,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 12,
+        "selectedStableMoveKey": "check|{}|false|unclassified",
+        "finalScore": 100,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    },
+    {
+      "move": {
+        "actionId": "call",
+        "params": {}
+      },
+      "legalMoveCount": 12,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 12,
+        "selectedStableMoveKey": "call|{}|false|unclassified",
+        "finalScore": 80,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    },
+    {
+      "move": {
+        "actionId": "call",
+        "params": {}
+      },
+      "legalMoveCount": 12,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 12,
+        "selectedStableMoveKey": "call|{}|false|unclassified",
+        "finalScore": 80,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    },
+    {
+      "move": {
+        "actionId": "call",
+        "params": {}
+      },
+      "legalMoveCount": 12,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 12,
+        "selectedStableMoveKey": "call|{}|false|unclassified",
+        "finalScore": 80,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    },
+    {
+      "move": {
+        "actionId": "check",
+        "params": {}
+      },
+      "legalMoveCount": 12,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 12,
+        "selectedStableMoveKey": "check|{}|false|unclassified",
+        "finalScore": 100,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    },
+    {
+      "move": {
+        "actionId": "call",
+        "params": {}
+      },
+      "legalMoveCount": 12,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 12,
+        "selectedStableMoveKey": "call|{}|false|unclassified",
+        "finalScore": 80,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    },
+    {
+      "move": {
+        "actionId": "call",
+        "params": {}
+      },
+      "legalMoveCount": 12,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 12,
+        "selectedStableMoveKey": "call|{}|false|unclassified",
+        "finalScore": 80,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    },
+    {
+      "move": {
+        "actionId": "call",
+        "params": {}
+      },
+      "legalMoveCount": 12,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 12,
+        "selectedStableMoveKey": "call|{}|false|unclassified",
+        "finalScore": 80,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    },
+    {
+      "move": {
+        "actionId": "check",
+        "params": {}
+      },
+      "legalMoveCount": 12,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 12,
+        "selectedStableMoveKey": "check|{}|false|unclassified",
+        "finalScore": 100,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    },
+    {
+      "move": {
+        "actionId": "call",
+        "params": {}
+      },
+      "legalMoveCount": 12,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 12,
+        "selectedStableMoveKey": "call|{}|false|unclassified",
+        "finalScore": 80,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    },
+    {
+      "move": {
+        "actionId": "call",
+        "params": {}
+      },
+      "legalMoveCount": 12,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 12,
+        "selectedStableMoveKey": "call|{}|false|unclassified",
+        "finalScore": 80,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    },
+    {
+      "move": {
+        "actionId": "call",
+        "params": {}
+      },
+      "legalMoveCount": 12,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 12,
+        "selectedStableMoveKey": "call|{}|false|unclassified",
+        "finalScore": 80,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    },
+    {
+      "move": {
+        "actionId": "check",
+        "params": {}
+      },
+      "legalMoveCount": 12,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 12,
+        "selectedStableMoveKey": "check|{}|false|unclassified",
+        "finalScore": 100,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    },
+    {
+      "move": {
+        "actionId": "call",
+        "params": {}
+      },
+      "legalMoveCount": 12,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 12,
+        "selectedStableMoveKey": "call|{}|false|unclassified",
+        "finalScore": 80,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    },
+    {
+      "move": {
+        "actionId": "call",
+        "params": {}
+      },
+      "legalMoveCount": 12,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 12,
+        "selectedStableMoveKey": "call|{}|false|unclassified",
+        "finalScore": 80,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    },
+    {
+      "move": {
+        "actionId": "call",
+        "params": {}
+      },
+      "legalMoveCount": 3,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 3,
+        "selectedStableMoveKey": "call|{}|false|unclassified",
+        "finalScore": 80,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    },
+    {
+      "move": {
+        "actionId": "call",
+        "params": {}
+      },
+      "legalMoveCount": 3,
+      "agentDecision": {
+        "kind": "policy",
+        "agent": {
+          "kind": "policy",
+          "profileId": "evolved"
+        },
+        "seatId": "neutral",
+        "requestedProfileId": "evolved",
+        "resolvedProfileId": "evolved",
+        "profileFingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f",
+        "initialCandidateCount": 3,
+        "selectedStableMoveKey": "call|{}|false|unclassified",
+        "finalScore": 80,
+        "pruningSteps": [],
+        "tieBreakChain": [],
+        "previewUsage": {
+          "evaluatedCandidateCount": 0,
+          "refIds": [],
+          "unknownRefIds": []
+        },
+        "emergencyFallback": false,
+        "failure": null
+      }
+    }
+  ]
+}

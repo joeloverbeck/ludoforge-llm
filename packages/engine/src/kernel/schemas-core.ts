@@ -514,6 +514,7 @@ const VerbalizationDefSchema = z
   .object({
     labels: z.record(StringSchema, z.union([StringSchema, VerbalizationLabelEntrySchema])),
     stages: z.record(StringSchema, StringSchema),
+    actionSummaries: z.record(StringSchema, StringSchema).optional(),
     macros: z.record(StringSchema, VerbalizationMacroEntrySchema),
     sentencePlans: z.record(StringSchema, z.record(StringSchema, z.record(StringSchema, StringSchema))),
     suppressPatterns: z.array(StringSchema),

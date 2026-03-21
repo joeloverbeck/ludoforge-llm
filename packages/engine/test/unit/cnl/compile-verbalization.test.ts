@@ -12,6 +12,9 @@ describe('compileVerbalization', () => {
         saigon: 'Saigon',
       },
       stages: { selectSpaces: 'Select target spaces' },
+      actionSummaries: {
+        train: 'Place forces and build support',
+      },
       macros: {
         trainUs: { class: 'operation', summary: 'Place US forces and build support' },
       },
@@ -27,6 +30,9 @@ describe('compileVerbalization', () => {
 
     assert.deepStrictEqual(result.labels, raw.labels);
     assert.deepStrictEqual(result.stages, { selectSpaces: 'Select target spaces' });
+    assert.deepStrictEqual(result.actionSummaries, {
+      train: 'Place forces and build support',
+    });
     assert.deepStrictEqual(result.macros, {
       trainUs: { class: 'operation', summary: 'Place US forces and build support' },
     });
@@ -64,6 +70,7 @@ describe('compileVerbalization', () => {
     const raw: GameSpecVerbalization = {
       labels: null,
       stages: null,
+      actionSummaries: null,
       macros: null,
       sentencePlans: null,
       suppressPatterns: null,
@@ -75,6 +82,7 @@ describe('compileVerbalization', () => {
 
     assert.deepStrictEqual(result.labels, {});
     assert.deepStrictEqual(result.stages, {});
+    assert.equal(result.actionSummaries, undefined);
     assert.deepStrictEqual(result.macros, {});
     assert.deepStrictEqual(result.sentencePlans, {});
     assert.deepStrictEqual(result.suppressPatterns, []);
@@ -89,6 +97,7 @@ describe('compileVerbalization', () => {
 
     assert.deepStrictEqual(result.labels, {});
     assert.deepStrictEqual(result.stages, {});
+    assert.equal(result.actionSummaries, undefined);
     assert.deepStrictEqual(result.macros, {});
     assert.deepStrictEqual(result.sentencePlans, {});
     assert.deepStrictEqual(result.suppressPatterns, []);
@@ -184,8 +193,23 @@ describe('compileVerbalization', () => {
 
     assert.deepStrictEqual(result.labels, { pot: 'Pot' });
     assert.deepStrictEqual(result.stages, {});
+    assert.equal(result.actionSummaries, undefined);
     assert.deepStrictEqual(result.macros, {});
     assert.deepStrictEqual(result.sentencePlans, {});
     assert.deepStrictEqual(result.suppressPatterns, []);
+  });
+
+  it('preserves actionSummaries when present', () => {
+    const raw: GameSpecVerbalization = {
+      actionSummaries: {
+        fold: 'Surrender hand and forfeit current bets',
+      },
+    };
+
+    const result = compileVerbalization(raw);
+
+    assert.deepStrictEqual(result.actionSummaries, {
+      fold: 'Surrender hand and forfeit current bets',
+    });
   });
 });

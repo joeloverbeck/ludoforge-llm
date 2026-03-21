@@ -29,6 +29,12 @@ const { MockContainer, MockText } = vi.hoisted(() => {
 
     style: Record<string, unknown>;
 
+    alpha = 1;
+
+    rotation = 0;
+
+    scale = new MockPoint();
+
     position = new MockPoint();
 
     anchor = new MockAnchor();

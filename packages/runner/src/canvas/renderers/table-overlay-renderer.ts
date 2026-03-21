@@ -1,24 +1,32 @@
-import { Container, Graphics, Text } from 'pixi.js';
+import { BitmapText, Container, Graphics } from 'pixi.js';
 
 import type { TableOverlayRenderer } from './renderer-types.js';
-import type { TableOverlayMarkerNode, TableOverlayTextNode } from '../../presentation/project-table-overlay-surface.js';
+import type {
+  TableOverlayMarkerNode,
+  TableOverlayTextNode,
+} from '../../presentation/project-table-overlay-surface.js';
 import { safeDestroyDisplayObject } from './safe-destroy.js';
 import { parseHexColor } from './shape-utils.js';
-import { createKeyedTextReconciler, createManagedText } from '../text/text-runtime.js';
+import {
+  createKeyedBitmapTextReconciler,
+  createManagedBitmapText,
+  toPixiBitmapTextStyle,
+} from '../text/bitmap-text-runtime.js';
+import { LABEL_FONT_NAME } from '../text/bitmap-font-registry.js';
 
 const DEFAULT_MARKER_LABEL = '*';
 
 interface MarkerSlot {
   readonly container: Container;
   readonly badge: Graphics;
-  readonly label: Text;
+  readonly label: BitmapText;
 }
 
 export function createTableOverlayRenderer(
   parentContainer: Container,
   _unusedLegacyProvider?: unknown,
 ): TableOverlayRenderer {
-  const textRuntime = createKeyedTextReconciler({ parentContainer });
+  const textRuntime = createKeyedBitmapTextReconciler({ parentContainer });
   const markersByKey = new Map<string, MarkerSlot>();
 
   function getOrCreateMarkerSlot(key: string): MarkerSlot {
@@ -35,12 +43,12 @@ export function createTableOverlayRenderer(
     container.interactiveChildren = false;
 
     const badge = new Graphics();
-    const label = createManagedText({
+    const label = createManagedBitmapText({
       text: DEFAULT_MARKER_LABEL,
       style: {
         fill: '#111827',
         fontSize: 11,
-        fontFamily: 'monospace',
+        fontName: LABEL_FONT_NAME,
       },
       anchor: { x: 0.5, y: 0.5 },
     });
@@ -53,12 +61,17 @@ export function createTableOverlayRenderer(
     return slot;
   }
 
-  function updateMarkerSlot(slot: MarkerSlot, resolved: TableOverlayMarkerNode): void {
+  function updateMarkerSlot(
+    slot: MarkerSlot,
+    resolved: TableOverlayMarkerNode,
+  ): void {
     slot.container.visible = true;
     slot.container.renderable = true;
     slot.container.position.set(resolved.point.x, resolved.point.y);
 
-    const markerColor = parseHexColor(resolved.style.color, { allowNamedColors: true }) ?? 0xfbbf24;
+    const markerColor =
+      parseHexColor(resolved.style.color, { allowNamedColors: true }) ??
+      0xfbbf24;
     const markerShape = resolved.style.shape;
 
     slot.badge.clear();
@@ -70,11 +83,26 @@ export function createTableOverlayRenderer(
     slot.badge.fill(markerColor);
 
     slot.label.text = resolved.style.label;
-    slot.label.style = {
-      fill: resolved.style.textColor,
-      fontSize: resolved.style.fontSize,
-      fontFamily: resolved.style.fontFamily,
-    };
+    const currentStyle = slot.label.style as Partial<{
+      fill: string;
+      fontSize: number;
+      fontFamily: string;
+    }>;
+    const nextFill = resolved.style.textColor;
+    const nextFontSize = resolved.style.fontSize;
+    const nextFontName = resolved.style.fontName;
+
+    if (
+      currentStyle.fill !== nextFill ||
+      currentStyle.fontSize !== nextFontSize ||
+      currentStyle.fontFamily !== nextFontName
+    ) {
+      slot.label.style = toPixiBitmapTextStyle({
+        fill: nextFill,
+        fontSize: nextFontSize,
+        fontName: nextFontName,
+      });
+    }
   }
 
   function removeStaleMarkers(activeKeys: ReadonlySet<string>): void {
@@ -90,14 +118,16 @@ export function createTableOverlayRenderer(
   return {
     update(resolvedItems): void {
       const textSpecs = resolvedItems
-        .filter((item): item is TableOverlayTextNode => item.type === 'text')
+        .filter(
+          (item): item is TableOverlayTextNode => item.type === 'text',
+        )
         .map((item) => ({
           key: item.key,
           text: item.text,
           style: {
             fill: item.style.color,
             fontSize: item.style.fontSize,
-            fontFamily: item.style.fontFamily,
+            fontName: item.style.fontName,
           },
           position: { x: item.point.x, y: item.point.y },
         }));

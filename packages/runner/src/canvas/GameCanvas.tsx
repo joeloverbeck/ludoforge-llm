@@ -1,148 +1,22 @@
-import { useEffect, useRef, type ReactElement } from 'react';
+import { useEffect, useRef, useState, type ReactElement } from 'react';
 import type { StoreApi } from 'zustand';
 
 import type { KeyboardCoordinator } from '../input/keyboard-coordinator.js';
-import type { AnimationPlaybackSpeed } from '../animation/animation-types.js';
 import type { DiagnosticBuffer } from '../animation/diagnostic-buffer.js';
 import type { GameStore } from '../store/game-store';
-import { createAnimationController, type AnimationController } from '../animation/animation-controller.js';
-import { createAiPlaybackController, type AiPlaybackController } from '../animation/ai-playback.js';
-import { createReducedMotionObserver, type ReducedMotionObserver } from '../animation/reduced-motion.js';
-import type { CoordinateBridge } from './coordinate-bridge';
-import { createCoordinateBridge } from './coordinate-bridge';
-import type { CanvasWorldBounds, HoverAnchor, HoveredCanvasTarget } from './hover-anchor-contract';
-import { createGameCanvas, type GameCanvas as PixiGameCanvas } from './create-app';
-import { attachTokenSelectHandlers } from './interactions/token-select';
-import { attachZoneSelectHandlers } from './interactions/zone-select';
-import { createAriaAnnouncer } from './interactions/aria-announcer';
-import { attachKeyboardSelect, handleKeyboardSelectKeyDown } from './interactions/keyboard-select';
-import { createCanvasInteractionController } from './interactions/canvas-interaction-controller';
-import { createHoverTargetController } from './interactions/hover-target-controller';
-import { createRuntimeLayoutStore, type RuntimeLayoutStore } from './runtime-layout-store';
-import { createAdjacencyRenderer } from './renderers/adjacency-renderer';
-import { ContainerPool } from './renderers/container-pool';
-import { createDisposalQueue, type DisposalQueue } from './renderers/disposal-queue';
-import { VisualConfigTokenRenderStyleProvider } from './renderers/token-render-style-provider';
-import type { AdjacencyRenderer, TableOverlayRenderer, TokenRenderer, ZoneRenderer } from './renderers/renderer-types';
-import { createRegionBoundaryRenderer } from './renderers/region-boundary-renderer.js';
-import { createTableOverlayRenderer } from './renderers/table-overlay-renderer.js';
-import { createTokenRenderer } from './renderers/token-renderer';
-import { drawTableBackground } from './renderers/table-background-renderer.js';
-import { createZoneRenderer } from './renderers/zone-renderer';
-import {
-  createActionAnnouncementRenderer,
-  type ActionAnnouncementRenderer,
-} from './renderers/action-announcement-renderer.js';
-import { createCanvasUpdater, type CanvasUpdater } from './canvas-updater';
-import { setupViewport, type ViewportResult } from './viewport-setup';
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
+import type { HoverAnchor } from './hover-anchor-contract';
 import { EMPTY_INTERACTION_HIGHLIGHTS, type InteractionHighlights } from './interaction-highlights.js';
+import { createCanvasCrashRecovery } from './canvas-crash-recovery.js';
 import {
-  createActionAnnouncementPresenter,
-  type ActionAnnouncementPresenter,
-} from '../presentation/action-announcement-presentation.js';
-import type { WorldLayoutModel } from '../layout/world-layout-model.js';
+  createGameCanvasRuntime,
+  createScopedLifecycleCallback,
+  type GameCanvasRuntime,
+  type GameCanvasRuntimeOptions,
+  type ViewportSnapshot,
+} from './game-canvas-runtime.js';
 
 const DEFAULT_BACKGROUND_COLOR = 0x0b1020;
-const DEFAULT_WORLD_SIZE = 1;
-const EMPTY_TABLE_BOUNDS = { minX: 0, minY: 0, maxX: 0, maxY: 0 } as const;
-
-const ANIMATION_PLAYBACK_SPEED_MULTIPLIERS: Readonly<Record<AnimationPlaybackSpeed, number>> = {
-  '1x': 1,
-  '2x': 2,
-  '4x': 4,
-};
-
-interface SelectorSubscribeStore<TState> extends StoreApi<TState> {
-  subscribe: {
-    (listener: (state: TState, previousState: TState) => void): () => void;
-    <TSelected>(
-      selector: (state: TState) => TSelected,
-      listener: (selectedState: TSelected, previousSelectedState: TSelected) => void,
-      options?: {
-        readonly equalityFn?: (a: TSelected, b: TSelected) => boolean;
-        readonly fireImmediately?: boolean;
-      },
-    ): () => void;
-  };
-}
-
-export interface GameCanvasProps {
-  readonly store: StoreApi<GameStore>;
-  readonly visualConfigProvider: VisualConfigProvider;
-  readonly backgroundColor?: number;
-  readonly keyboardCoordinator?: KeyboardCoordinator;
-  readonly interactionHighlights?: InteractionHighlights;
-  readonly onHoverAnchorChange?: (anchor: HoverAnchor | null) => void;
-  readonly onAnimationDiagnosticBufferChange?: (buffer: DiagnosticBuffer | null) => void;
-  readonly onError?: (error: unknown) => void;
-}
-
-export interface GameCanvasRuntime {
-  readonly coordinateBridge: CoordinateBridge;
-  setInteractionHighlights(highlights: InteractionHighlights): void;
-  destroy(): void;
-}
-
-interface ScopedLifecycleCallback<T> {
-  invoke(value: T): void;
-  deactivate(): void;
-}
-
-interface GameCanvasRuntimeOptions {
-  readonly container: HTMLElement;
-  readonly store: StoreApi<GameStore>;
-  readonly visualConfigProvider: VisualConfigProvider;
-  readonly backgroundColor: number;
-  readonly keyboardCoordinator?: KeyboardCoordinator;
-  readonly interactionHighlights?: InteractionHighlights;
-  readonly onHoverAnchorChange?: (anchor: HoverAnchor | null) => void;
-  readonly onAnimationDiagnosticBufferChange?: (buffer: DiagnosticBuffer | null) => void;
-}
-
-interface GameCanvasRuntimeDeps {
-  readonly createGameCanvas: typeof createGameCanvas;
-  readonly setupViewport: typeof setupViewport;
-  readonly createRuntimeLayoutStore: typeof createRuntimeLayoutStore;
-  readonly createZoneRenderer: typeof createZoneRenderer;
-  readonly createAdjacencyRenderer: typeof createAdjacencyRenderer;
-  readonly createTokenRenderer: typeof createTokenRenderer;
-  readonly createTableOverlayRenderer: typeof createTableOverlayRenderer;
-  readonly createActionAnnouncementRenderer: typeof createActionAnnouncementRenderer;
-  readonly createActionAnnouncementPresenter: typeof createActionAnnouncementPresenter;
-  readonly createCanvasUpdater: typeof createCanvasUpdater;
-  readonly createCoordinateBridge: typeof createCoordinateBridge;
-  readonly createAnimationController: typeof createAnimationController;
-  readonly createAiPlaybackController: typeof createAiPlaybackController;
-  readonly createReducedMotionObserver: typeof createReducedMotionObserver;
-  readonly createAriaAnnouncer: typeof createAriaAnnouncer;
-  readonly attachZoneSelectHandlers: typeof attachZoneSelectHandlers;
-  readonly attachTokenSelectHandlers: typeof attachTokenSelectHandlers;
-  readonly attachKeyboardSelect: typeof attachKeyboardSelect;
-}
-
-const DEFAULT_RUNTIME_DEPS: GameCanvasRuntimeDeps = {
-  createGameCanvas,
-  setupViewport,
-  createRuntimeLayoutStore,
-  createZoneRenderer,
-  createAdjacencyRenderer,
-  createTokenRenderer,
-  createTableOverlayRenderer,
-  createActionAnnouncementRenderer,
-  createActionAnnouncementPresenter,
-  createCanvasUpdater,
-  createCoordinateBridge,
-  createAnimationController,
-  createAiPlaybackController,
-  createReducedMotionObserver,
-  createAriaAnnouncer,
-  attachZoneSelectHandlers,
-  attachTokenSelectHandlers,
-  attachKeyboardSelect,
-};
-
-type HoverBoundsResolver = (target: HoveredCanvasTarget) => CanvasWorldBounds | null;
 
 const LIVE_REGION_STYLE = {
   position: 'absolute',
@@ -157,400 +31,15 @@ const LIVE_REGION_STYLE = {
   whiteSpace: 'nowrap',
 } as const;
 
-export function createScopedLifecycleCallback<T>(callback?: (value: T) => void): ScopedLifecycleCallback<T> {
-  let active = true;
-
-  return {
-    invoke(value: T): void {
-      if (!active || callback === undefined) {
-        return;
-      }
-      callback(value);
-    },
-    deactivate(): void {
-      active = false;
-    },
-  };
-}
-
-export async function createGameCanvasRuntime(
-  options: GameCanvasRuntimeOptions,
-  deps: GameCanvasRuntimeDeps = DEFAULT_RUNTIME_DEPS,
-): Promise<GameCanvasRuntime> {
-  let layersForBackground: PixiGameCanvas['layers'] | null = null;
-  const selectorStore = options.store as SelectorSubscribeStore<GameStore>;
-  const initialState = selectorStore.getState();
-  const initialZoneIDs = selectZoneIDs(initialState);
-  const initialWorldLayout = initialState.worldLayout;
-  const runtimeLayoutStore = deps.createRuntimeLayoutStore(initialWorldLayout === null ? initialZoneIDs : []);
-
-  const applyWorldLayout = (
-    worldLayout: WorldLayoutModel | null,
-    gameDef: GameStore['gameDef'],
-  ): WorldLayoutModel | null => {
-    if (worldLayout === null || !Array.isArray(gameDef?.zones)) {
-      runtimeLayoutStore.setFallbackZoneIDs(selectZoneIDs(selectorStore.getState()));
-      if (layersForBackground !== null) {
-        drawTableBackground(layersForBackground.backgroundLayer, null, EMPTY_TABLE_BOUNDS);
-      }
-      return null;
-    }
-
-    const gameDefZoneIDs = gameDef.zones.map((zone) => zone.id);
-    runtimeLayoutStore.setActiveLayout(worldLayout, gameDefZoneIDs);
-    if (layersForBackground !== null) {
-      drawTableBackground(
-        layersForBackground.backgroundLayer,
-        options.visualConfigProvider.getTableBackground(),
-        worldLayout.boardBounds,
-      );
-    }
-    return worldLayout;
-  };
-
-  let initialLayoutResult: WorldLayoutModel | null = null;
-  if (initialWorldLayout !== null) {
-    initialLayoutResult = applyWorldLayout(initialWorldLayout, initialState.gameDef);
-  }
-
-  const gameCanvas = await deps.createGameCanvas(options.container, {
-    backgroundColor: options.backgroundColor,
-  });
-  layersForBackground = gameCanvas.layers;
-  const currentState = selectorStore.getState();
-  const currentGameDef = currentState.gameDef;
-  const currentWorldLayout = currentState.worldLayout;
-  if (currentWorldLayout === null || currentGameDef === null || !Array.isArray(currentGameDef.zones)) {
-    drawTableBackground(gameCanvas.layers.backgroundLayer, null, EMPTY_TABLE_BOUNDS);
-  } else {
-    const layoutResult = initialLayoutResult !== null && currentWorldLayout === initialWorldLayout
-      ? initialLayoutResult
-      : currentWorldLayout;
-    drawTableBackground(
-      gameCanvas.layers.backgroundLayer,
-      options.visualConfigProvider.getTableBackground(),
-      layoutResult.boardBounds,
-    );
-  }
-  const accessibilityContainer = options.container.parentElement ?? options.container;
-  const ariaAnnouncer = deps.createAriaAnnouncer(accessibilityContainer);
-  const interactionController = createCanvasInteractionController(() => selectorStore.getState(), ariaAnnouncer);
-  const hoverTargetController = createHoverTargetController({
-    onTargetChange: () => {
-      publishHoverAnchor();
-    },
-  });
-
-  const disposalQueue = createDisposalQueue();
-  const viewportResult = createViewportResult(deps, gameCanvas, runtimeLayoutStore);
-  const zonePool = new ContainerPool();
-  let publishHoverAnchor: () => void = () => {};
-
-  const zoneRenderer = deps.createZoneRenderer(gameCanvas.layers.zoneLayer, zonePool, {
-    bindSelection: (zoneContainer, zoneId, isSelectable) =>
-      deps.attachZoneSelectHandlers(
-        zoneContainer,
-        zoneId,
-        isSelectable,
-        (target) => {
-          interactionController.onSelectTarget(target);
-        },
-        {
-          onHoverEnter: (target) => {
-            hoverTargetController.onHoverEnter(target);
-          },
-          onHoverLeave: (target) => {
-            hoverTargetController.onHoverLeave(target);
-          },
-        },
-      ),
-  });
-
-  const adjacencyRenderer = deps.createAdjacencyRenderer(gameCanvas.layers.adjacencyLayer, options.visualConfigProvider, {
-    disposalQueue,
-  });
-
-  const regionBoundaryRenderer = createRegionBoundaryRenderer(gameCanvas.layers.regionLayer);
-
-  const tokenRenderStyleProvider = new VisualConfigTokenRenderStyleProvider(options.visualConfigProvider);
-  const tokenRenderer = deps.createTokenRenderer(gameCanvas.layers.tokenGroup, {
-    bindSelection: (tokenContainer, tokenId, isSelectable) =>
-      deps.attachTokenSelectHandlers(
-        tokenContainer,
-        tokenId,
-        isSelectable,
-        (target) => {
-          interactionController.onSelectTarget(target);
-        },
-        {
-          onHoverEnter: (target) => {
-            hoverTargetController.onHoverEnter(target);
-          },
-          onHoverLeave: (target) => {
-            hoverTargetController.onHoverLeave(target);
-          },
-        },
-      ),
-    disposalQueue,
-  });
-  const tableOverlayRenderer = deps.createTableOverlayRenderer(
-    gameCanvas.layers.tableOverlayLayer,
-    options.visualConfigProvider,
-  );
-  const actionAnnouncementRenderer = deps.createActionAnnouncementRenderer({
-    parentContainer: gameCanvas.layers.effectsGroup,
-  });
-  const actionAnnouncementPresenter = deps.createActionAnnouncementPresenter({
-    store: options.store,
-    onAnnouncement: (spec) => {
-      actionAnnouncementRenderer.enqueue(spec);
-    },
-  });
-
-  const canvasUpdater = deps.createCanvasUpdater({
-    store: options.store,
-    runtimeLayoutStore,
-    visualConfigProvider: options.visualConfigProvider,
-    tokenRenderStyleProvider,
-    zoneRenderer,
-    adjacencyRenderer,
-    tokenRenderer,
-    tableOverlayRenderer,
-    regionBoundaryRenderer,
-    viewport: viewportResult,
-    getInteractionHighlights: () => options.interactionHighlights ?? EMPTY_INTERACTION_HIGHLIGHTS,
-  });
-  canvasUpdater.start();
-
-  let animationController: AnimationController | null = null;
-  let aiPlaybackController: AiPlaybackController | null = null;
-  let actionAnnouncementDisplay: ActionAnnouncementRenderer | null = null;
-  let actionAnnouncementSource: ActionAnnouncementPresenter | null = null;
-  let reducedMotionObserver: ReducedMotionObserver | null = null;
-  try {
-    animationController = deps.createAnimationController({
-      store: options.store,
-      visualConfigProvider: options.visualConfigProvider,
-      tokenContainers: () => tokenRenderer.getContainerMap(),
-      tokenFaceControllers: () => tokenRenderer.getFaceControllerMap?.() ?? new Map(),
-      zoneContainers: () => zoneRenderer.getContainerMap(),
-      zonePositions: () => runtimeLayoutStore.getSnapshot(),
-      ephemeralParent: () => gameCanvas.layers.effectsGroup,
-      disposalQueue,
-    });
-    animationController.start();
-
-    reducedMotionObserver = deps.createReducedMotionObserver(options.container.ownerDocument?.defaultView ?? undefined);
-    animationController.setReducedMotion(reducedMotionObserver.reduced);
-  } catch (error) {
-    selectorStore.getState().setAnimationPlaying(false);
-    console.warn('Animation controller initialization failed. Continuing without animations.', error);
-  }
-
-  const applyAnimationSpeed = (speed: AnimationPlaybackSpeed): void => {
-    animationController?.setSpeed(ANIMATION_PLAYBACK_SPEED_MULTIPLIERS[speed]);
-  };
-  const applyAnimationPaused = (paused: boolean): void => {
-    if (paused) {
-      animationController?.pause();
-      return;
-    }
-    animationController?.resume();
-  };
-  applyAnimationSpeed(selectorStore.getState().animationPlaybackSpeed);
-  applyAnimationPaused(selectorStore.getState().animationPaused);
-  options.onAnimationDiagnosticBufferChange?.(animationController?.getDiagnosticBuffer() ?? null);
-
-  try {
-    actionAnnouncementDisplay = actionAnnouncementRenderer;
-    actionAnnouncementSource = actionAnnouncementPresenter;
-    actionAnnouncementPresenter.start();
-  } catch (error) {
-    console.warn('Action announcement presentation initialization failed. Continuing without AI action announcements.', error);
-  }
-
-  try {
-    aiPlaybackController = deps.createAiPlaybackController({
-      store: options.store,
-      animation: {
-        setDetailLevel: (level) => {
-          animationController?.setDetailLevel(level);
-        },
-        skipAll: () => {
-          animationController?.skipAll();
-        },
-      },
-      onError: (message) => {
-        selectorStore.getState().reportPlaybackDiagnostic(message);
-      },
-    });
-    aiPlaybackController.start();
-  } catch (error) {
-    console.warn('AI playback controller initialization failed. Continuing without AI playback orchestration.', error);
-  }
-
-  const unsubscribeZoneIDs = selectorStore.subscribe(selectZoneIDs, (zoneIDs) => {
-    if (selectorStore.getState().worldLayout !== null) {
-      return;
-    }
-    runtimeLayoutStore.setFallbackZoneIDs(zoneIDs);
-  }, { equalityFn: stringArraysEqual });
-  const unsubscribeWorldLayout = selectorStore.subscribe(
-    (state) => state.worldLayout,
-    (worldLayout, previousWorldLayout) => {
-      if (worldLayout === previousWorldLayout) {
-        return;
-      }
-      applyWorldLayout(worldLayout, selectorStore.getState().gameDef);
-    },
-  );
-  const unsubscribeAnimationPlaybackSpeed = selectorStore.subscribe(
-    (state) => state.animationPlaybackSpeed,
-    (speed, previousSpeed) => {
-      if (speed === previousSpeed) {
-        return;
-      }
-      applyAnimationSpeed(speed);
-    },
-  );
-  const unsubscribeAnimationPaused = selectorStore.subscribe(
-    (state) => state.animationPaused,
-    (paused, previousPaused) => {
-      if (paused === previousPaused) {
-        return;
-      }
-      applyAnimationPaused(paused);
-    },
-  );
-  const unsubscribeAnimationSkipRequestToken = selectorStore.subscribe(
-    (state) => state.animationSkipRequestToken,
-    (token, previousToken) => {
-      if (token === previousToken) {
-        return;
-      }
-      animationController?.skipCurrent();
-    },
-  );
-  const unsubscribeReducedMotion = reducedMotionObserver?.subscribe((reduced) => {
-    animationController?.setReducedMotion(reduced);
-  }) ?? (() => {
-    // No-op when reduced-motion observer is unavailable.
-  });
-  const unsubscribePhaseAnnouncement = selectorStore.subscribe(
-    selectPhaseAnnouncementLabel,
-    (phaseLabel, previousPhaseLabel) => {
-      if (phaseLabel === null || phaseLabel === previousPhaseLabel) {
-        return;
-      }
-      ariaAnnouncer.announce(`Phase: ${phaseLabel}`);
-    },
-  );
-  const keyboardSelectConfig = {
-    getSelectableZoneIDs: () => interactionController.getSelectableZoneIDs(),
-    getCurrentFocusedZoneID: () => interactionController.getFocusedZoneID(),
-    onSelect: (zoneId: string) => {
-      interactionController.onSelectTarget({ type: 'zone', id: zoneId });
-    },
-    onFocusChange: (zoneId: string | null) => {
-      interactionController.onFocusChange(zoneId);
-    },
-    onFocusAnnounce: (zoneId: string) => {
-      interactionController.onFocusAnnounce(zoneId);
-    },
-  };
-  const cleanupKeyboardSelect = options.keyboardCoordinator === undefined
-    ? deps.attachKeyboardSelect(keyboardSelectConfig)
-    : options.keyboardCoordinator.register(
-      (event) => handleKeyboardSelectKeyDown(event, keyboardSelectConfig),
-      { priority: 10 },
-    );
-
-  const coordinateBridge = deps.createCoordinateBridge(viewportResult.viewport, gameCanvas.app.canvas);
-  const hoverBoundsResolver: HoverBoundsResolver = (target) => {
-    const containers = target.kind === 'zone' ? zoneRenderer.getContainerMap() : tokenRenderer.getContainerMap();
-    const container = containers.get(target.id);
-    if (container === undefined) {
-      return null;
-    }
-    const bounds = container.getBounds();
-    return {
-      x: bounds.x,
-      y: bounds.y,
-      width: bounds.width,
-      height: bounds.height,
-    };
-  };
-  let hoverAnchorVersion = 0;
-
-  publishHoverAnchor = (): void => {
-    const hoveredTarget = hoverTargetController.getCurrentTarget();
-    if (hoveredTarget === null) {
-      options.onHoverAnchorChange?.(null);
-      return;
-    }
-    const worldBounds = hoverBoundsResolver(hoveredTarget);
-    if (worldBounds === null) {
-      options.onHoverAnchorChange?.(null);
-      return;
-    }
-    hoverAnchorVersion += 1;
-    options.onHoverAnchorChange?.({
-      target: hoveredTarget,
-      rect: coordinateBridge.canvasBoundsToScreenRect(worldBounds),
-      space: 'screen',
-      version: hoverAnchorVersion,
-    });
-  };
-  const viewport = viewportResult.viewport as unknown as {
-    on(event: 'moved', listener: () => void): void;
-    off(event: 'moved', listener: () => void): void;
-  };
-  viewport.on('moved', publishHoverAnchor);
-
-  let destroyed = false;
-
-  return {
-    coordinateBridge,
-    setInteractionHighlights(highlights): void {
-      canvasUpdater.setInteractionHighlights(highlights);
-    },
-    destroy(): void {
-      if (destroyed) {
-        return;
-      }
-      destroyed = true;
-
-      viewport.off('moved', publishHoverAnchor);
-      hoverTargetController.destroy();
-      options.onHoverAnchorChange?.(null);
-      unsubscribeZoneIDs();
-      unsubscribeWorldLayout();
-      unsubscribeAnimationPlaybackSpeed();
-      unsubscribeAnimationPaused();
-      unsubscribeAnimationSkipRequestToken();
-      unsubscribeReducedMotion();
-      reducedMotionObserver?.destroy();
-      unsubscribePhaseAnnouncement();
-      cleanupKeyboardSelect();
-      actionAnnouncementSource?.destroy();
-      actionAnnouncementDisplay?.destroy();
-      aiPlaybackController?.destroy();
-      animationController?.destroy();
-      ariaAnnouncer.destroy();
-      regionBoundaryRenderer.destroy();
-      destroyCanvasPipeline(
-        canvasUpdater,
-        zoneRenderer,
-        adjacencyRenderer,
-        tokenRenderer,
-        tableOverlayRenderer,
-        zonePool,
-        viewportResult,
-        gameCanvas,
-        disposalQueue,
-      );
-    },
-  };
+export interface GameCanvasProps {
+  readonly store: StoreApi<GameStore>;
+  readonly visualConfigProvider: VisualConfigProvider;
+  readonly backgroundColor?: number;
+  readonly keyboardCoordinator?: KeyboardCoordinator;
+  readonly interactionHighlights?: InteractionHighlights;
+  readonly onHoverAnchorChange?: (anchor: HoverAnchor | null) => void;
+  readonly onAnimationDiagnosticBufferChange?: (buffer: DiagnosticBuffer | null) => void;
+  readonly onError?: (error: unknown) => void;
 }
 
 export function GameCanvas({
@@ -566,6 +55,9 @@ export function GameCanvas({
   const rootRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const runtimeRef = useRef<GameCanvasRuntime | null>(null);
+  const recoveryPendingRef = useRef(false);
+  const viewportSnapshotRef = useRef<ViewportSnapshot | null>(null);
+  const [recoveryRevision, setRecoveryRevision] = useState(0);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -577,12 +69,22 @@ export function GameCanvas({
     let runtime: GameCanvasRuntime | null = null;
     const hoverAnchorCallback = createScopedLifecycleCallback(onHoverAnchorChange);
     const diagnosticBufferCallback = createScopedLifecycleCallback(onAnimationDiagnosticBufferChange);
+    const crashRecovery = createCanvasCrashRecovery({
+      store,
+      getHealthStatus: () => runtimeRef.current?.getHealthStatus() ?? null,
+      onRecoveryNeeded: () => {
+        viewportSnapshotRef.current = runtimeRef.current?.getViewportSnapshot() ?? null;
+        recoveryPendingRef.current = true;
+        setRecoveryRevision((revision) => revision + 1);
+      },
+    });
 
     const runtimeOptions: GameCanvasRuntimeOptions = {
       container,
       store,
       visualConfigProvider,
       backgroundColor,
+      ...(viewportSnapshotRef.current === null ? {} : { initialViewport: viewportSnapshotRef.current }),
       ...(keyboardCoordinator === undefined ? {} : { keyboardCoordinator }),
       interactionHighlights: interactionHighlights ?? EMPTY_INTERACTION_HIGHLIGHTS,
       ...(onHoverAnchorChange === undefined
@@ -599,6 +101,10 @@ export function GameCanvas({
               diagnosticBufferCallback.invoke(buffer);
             },
           }),
+      onError: (error) => {
+        crashRecovery.handleCrash(error);
+        onError?.(error);
+      },
     };
 
     void createGameCanvasRuntime(runtimeOptions).then((createdRuntime) => {
@@ -608,6 +114,11 @@ export function GameCanvas({
       }
       runtime = createdRuntime;
       runtimeRef.current = createdRuntime;
+      if (recoveryPendingRef.current) {
+        recoveryPendingRef.current = false;
+        viewportSnapshotRef.current = null;
+        store.getState().canvasRecovered();
+      }
     }).catch((error: unknown) => {
       if (!cancelled) {
         hoverAnchorCallback.invoke(null);
@@ -618,6 +129,7 @@ export function GameCanvas({
 
     return () => {
       cancelled = true;
+      crashRecovery.destroy();
       hoverAnchorCallback.deactivate();
       diagnosticBufferCallback.deactivate();
       onHoverAnchorChange?.(null);
@@ -633,6 +145,7 @@ export function GameCanvas({
     onHoverAnchorChange,
     onAnimationDiagnosticBufferChange,
     onError,
+    recoveryRevision,
   ]);
 
   useEffect(() => {
@@ -651,86 +164,4 @@ export function GameCanvas({
       />
     </div>
   );
-}
-
-function destroyCanvasPipeline(
-  canvasUpdater: CanvasUpdater,
-  zoneRenderer: ZoneRenderer,
-  adjacencyRenderer: AdjacencyRenderer,
-  tokenRenderer: TokenRenderer,
-  tableOverlayRenderer: TableOverlayRenderer,
-  zonePool: ContainerPool,
-  viewportResult: ViewportResult,
-  gameCanvas: PixiGameCanvas,
-  disposalQueue: DisposalQueue,
-): void {
-  canvasUpdater.destroy();
-  zoneRenderer.destroy();
-  adjacencyRenderer.destroy();
-  tokenRenderer.destroy();
-  tableOverlayRenderer.destroy();
-  zonePool.destroyAll();
-  disposalQueue.destroy();
-  viewportResult.destroy();
-  gameCanvas.destroy();
-}
-
-function createViewportResult(
-  deps: GameCanvasRuntimeDeps,
-  gameCanvas: PixiGameCanvas,
-  runtimeLayoutStore: RuntimeLayoutStore,
-): ViewportResult {
-  const snapshot = runtimeLayoutStore.getSnapshot();
-  const worldWidth = Math.max(DEFAULT_WORLD_SIZE, snapshot.bounds.maxX - snapshot.bounds.minX);
-  const worldHeight = Math.max(DEFAULT_WORLD_SIZE, snapshot.bounds.maxY - snapshot.bounds.minY);
-
-  return deps.setupViewport({
-    stage: gameCanvas.app.stage,
-    layers: gameCanvas.layers,
-    screenWidth: gameCanvas.app.renderer.screen.width,
-    screenHeight: gameCanvas.app.renderer.screen.height,
-    worldWidth,
-    worldHeight,
-    events: gameCanvas.app.renderer.events,
-    minScale: 0.2,
-    maxScale: 4,
-  });
-}
-
-function selectZoneIDs(state: GameStore): readonly string[] {
-  const gameDefZones = state.gameDef?.zones;
-  if (Array.isArray(gameDefZones) && gameDefZones.length > 0) {
-    return gameDefZones.map((zone) => zone.id);
-  }
-
-  const renderZones = state.renderModel?.zones;
-  if (renderZones === undefined || renderZones.length === 0) {
-    return [];
-  }
-
-  return renderZones.map((zone) => zone.id);
-}
-
-function selectPhaseAnnouncementLabel(state: GameStore): string | null {
-  const phaseName = state.renderModel?.phaseName?.trim();
-  if (phaseName === undefined || phaseName.length === 0) {
-    return null;
-  }
-
-  const displayName = state.renderModel?.phaseDisplayName?.trim();
-  return displayName !== undefined && displayName.length > 0 ? displayName : phaseName;
-}
-
-function stringArraysEqual(prev: readonly string[], next: readonly string[]): boolean {
-  if (prev.length !== next.length) {
-    return false;
-  }
-
-  for (let index = 0; index < prev.length; index += 1) {
-    if (prev[index] !== next[index]) {
-      return false;
-    }
-  }
-
-  return true;
 }

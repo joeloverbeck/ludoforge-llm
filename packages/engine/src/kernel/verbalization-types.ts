@@ -32,6 +32,7 @@ export interface VerbalizationModifierClassification {
 export interface VerbalizationDef {
   readonly labels: Readonly<Record<string, string | VerbalizationLabelEntry>>;
   readonly stages: Readonly<Record<string, string>>;
+  readonly actionSummaries?: Readonly<Record<string, string>>;
   readonly macros: Readonly<Record<string, VerbalizationMacroEntry>>;
   readonly sentencePlans: Readonly<Record<string, Readonly<Record<string, Readonly<Record<string, string>>>>>>;
   readonly suppressPatterns: readonly string[];

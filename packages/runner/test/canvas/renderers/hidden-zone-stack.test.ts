@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { LABEL_FONT_NAME } from '../../../src/canvas/text/bitmap-font-registry.js';
 
 const { MockContainer, MockGraphics, MockText } = vi.hoisted(() => {
   class MockPoint {
@@ -90,6 +91,7 @@ const { MockContainer, MockGraphics, MockText } = vi.hoisted(() => {
 });
 
 vi.mock('pixi.js', () => ({
+  BitmapText: MockText,
   Container: MockContainer,
   Graphics: MockGraphics,
   Text: MockText,
@@ -101,6 +103,19 @@ import {
 } from '../../../src/canvas/renderers/hidden-zone-stack';
 
 describe('hidden-zone-stack memoization', () => {
+  it('creates the count label with the typed bitmap font contract', () => {
+    const visual = createHiddenZoneStackVisual();
+    const countLabel = (visual as unknown as { countLabel: InstanceType<typeof MockText> }).countLabel;
+
+    expect(countLabel.style).toEqual({
+      fontFamily: LABEL_FONT_NAME,
+      fontSize: 11,
+      fill: '#0f172a',
+      fontWeight: undefined,
+      stroke: undefined,
+    });
+  });
+
   it('does not rebuild card children when called twice with identical inputs', () => {
     const visual = createHiddenZoneStackVisual();
 

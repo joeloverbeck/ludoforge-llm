@@ -2,6 +2,7 @@ import { asPlayerId } from '@ludoforge/engine/runtime';
 
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import type { TableOverlayItemConfig } from '../config/visual-config-types.js';
+import { LABEL_FONT_NAME, type BitmapFontName } from '../canvas/text/bitmap-font-registry.js';
 import type { WorldLayoutModel } from '../layout/world-layout-model.js';
 import type { RunnerProjectionBundle, RunnerVariable, RunnerZone } from '../model/runner-frame.js';
 
@@ -13,7 +14,7 @@ export interface TableOverlaySurfacePoint {
 export interface TableOverlayTextStyle {
   readonly color: string;
   readonly fontSize: number;
-  readonly fontFamily: string;
+  readonly fontName: BitmapFontName;
 }
 
 export interface TableOverlayMarkerStyle {
@@ -21,7 +22,7 @@ export interface TableOverlayMarkerStyle {
   readonly shape: 'circle' | 'badge';
   readonly label: string;
   readonly fontSize: number;
-  readonly fontFamily: string;
+  readonly fontName: BitmapFontName;
   readonly textColor: string;
 }
 
@@ -53,7 +54,7 @@ interface ProjectTableOverlaySurfaceOptions {
 const EMPTY_OVERLAY_SURFACE: readonly TableOverlaySurfaceNode[] = [];
 const DEFAULT_TEXT_COLOR = '#f8fafc';
 const DEFAULT_TEXT_FONT_SIZE = 12;
-const DEFAULT_FONT_FAMILY = 'monospace';
+const DEFAULT_FONT_FAMILY = LABEL_FONT_NAME;
 const DEFAULT_MARKER_COLOR = '#fbbf24';
 const DEFAULT_MARKER_LABEL = '*';
 const DEFAULT_MARKER_SHAPE: TableOverlayMarkerStyle['shape'] = 'circle';
@@ -100,7 +101,7 @@ export function projectTableOverlaySurface(
           text,
           point,
           style,
-          signature: `t|${text}|${point.x}|${point.y}|${style.color}|${style.fontSize}|${style.fontFamily}`,
+          signature: `t|${text}|${point.x}|${point.y}|${style.color}|${style.fontSize}|${style.fontName}`,
         });
         break;
       }
@@ -126,7 +127,7 @@ export function projectTableOverlaySurface(
             text,
             point,
             style,
-            signature: `t|${text}|${point.x}|${point.y}|${style.color}|${style.fontSize}|${style.fontFamily}`,
+            signature: `t|${text}|${point.x}|${point.y}|${style.color}|${style.fontSize}|${style.fontName}`,
           });
         }
         break;
@@ -146,7 +147,7 @@ export function projectTableOverlaySurface(
           type: 'marker',
           point,
           style,
-          signature: `m|${style.label}|${style.shape}|${point.x}|${point.y}|${style.color}|${style.fontSize}|${style.fontFamily}`,
+          signature: `m|${style.label}|${style.shape}|${point.x}|${point.y}|${style.color}|${style.fontSize}|${style.fontName}`,
         });
         break;
       }
@@ -180,7 +181,7 @@ function resolveTextStyle(item: TableOverlayItemConfig): TableOverlayTextStyle {
   return {
     color: item.color ?? DEFAULT_TEXT_COLOR,
     fontSize: item.fontSize ?? DEFAULT_TEXT_FONT_SIZE,
-    fontFamily: DEFAULT_FONT_FAMILY,
+    fontName: DEFAULT_FONT_FAMILY,
   };
 }
 
@@ -190,7 +191,7 @@ function resolveMarkerStyle(item: TableOverlayItemConfig): TableOverlayMarkerSty
     shape: item.markerShape ?? DEFAULT_MARKER_SHAPE,
     label: item.label ?? DEFAULT_MARKER_LABEL,
     fontSize: item.fontSize ?? 11,
-    fontFamily: DEFAULT_FONT_FAMILY,
+    fontName: DEFAULT_FONT_FAMILY,
     textColor: DEFAULT_MARKER_TEXT_COLOR,
   };
 }

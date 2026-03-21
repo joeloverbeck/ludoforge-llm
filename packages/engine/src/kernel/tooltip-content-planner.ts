@@ -23,9 +23,14 @@ export interface ContentPlanStep {
 
 export interface ContentPlan {
   readonly actionLabel: string;
+  readonly authoredSynopsis?: string;
   readonly synopsisSource?: TooltipMessage;
   readonly steps: readonly ContentPlanStep[];
   readonly modifiers: readonly ModifierMessage[];
+}
+
+export interface ContentPlanOptions {
+  readonly authoredSynopsis?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -139,6 +144,8 @@ function extractModifiers(
 function findSynopsisSource(
   messages: readonly TooltipMessage[],
 ): TooltipMessage | undefined {
+  const summary = messages.find((m) => m.kind === 'summary');
+  if (summary !== undefined) return summary;
   return messages.find((m) => m.kind === 'select' || m.kind === 'choose');
 }
 
@@ -285,6 +292,7 @@ function buildSteps(
 export function planContent(
   messages: readonly TooltipMessage[],
   actionLabel: string,
+  options: ContentPlanOptions = {},
 ): ContentPlan {
   const filtered = filterSuppressed(messages);
   const deduplicated = deduplicateMessages(filtered);
@@ -295,6 +303,7 @@ export function planContent(
 
   return {
     actionLabel,
+    ...(options.authoredSynopsis !== undefined ? { authoredSynopsis: options.authoredSynopsis } : {}),
     ...(synopsisSource !== undefined ? { synopsisSource } : {}),
     steps,
     modifiers,

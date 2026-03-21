@@ -7,7 +7,7 @@
  * to eliminate duplication and provide complete ref-type coverage.
  */
 
-import type { NumericValueExpr, OptionsQuery, ScopedVarNameExpr, TokenFilterExpr, ValueExpr, ZoneRef } from './types-ast.js';
+import type { NumericValueExpr, OptionsQuery, ScalarValue, ScopedVarNameExpr, TokenFilterExpr, ValueExpr, ZoneRef } from './types-ast.js';
 import type { LabelContext } from './tooltip-label-resolver.js';
 import { isTokenFilterPredicateExpr } from './token-filter-expr-utils.js';
 import { resolveLabel } from './tooltip-label-resolver.js';
@@ -299,6 +299,10 @@ export const stringifyValueExpr = (expr: ValueExpr): string => {
     return `${stringifyValueExpr(expr.if.then)} or ${stringifyValueExpr(expr.if.else)}`;
   }
 
+  if ('scalarArray' in expr) {
+    return (expr.scalarArray as readonly ScalarValue[]).map(String).join(' or ');
+  }
+
   // Best-effort: describe by keys for debugging
   const keys = Object.keys(expr as Record<string, unknown>);
   return keys.length > 0 ? `expr(${keys.join(', ')})` : 'expression';
@@ -411,6 +415,12 @@ export const humanizeValueExpr = (
     const thenText = humanizeValueExpr(expr.if.then, ctx, count);
     const elseText = humanizeValueExpr(expr.if.else, ctx, count);
     return `${thenText} if condition met, otherwise ${elseText}`;
+  }
+
+  if ('scalarArray' in expr) {
+    return (expr.scalarArray as readonly ScalarValue[])
+      .map((item) => resolveLabel(String(item), ctx, count))
+      .join(' or ');
   }
 
   // Best-effort: describe by keys for debugging instead of opaque 'value'

@@ -2,11 +2,16 @@ import { asPlayerId, type PlayerId } from '@ludoforge/engine/runtime';
 import { describe, expect, it, vi } from 'vitest';
 import type { Container } from 'pixi.js';
 
+import {
+  LABEL_FONT_NAME,
+  STROKE_LABEL_FONT_NAME,
+} from '../../../src/canvas/text/bitmap-font-registry.js';
 import { VisualConfigProvider } from '../../../src/config/visual-config-provider';
 import { createTableOverlayRenderer } from '../../../src/canvas/renderers/table-overlay-renderer';
 import type { WorldLayoutModel } from '../../../src/layout/world-layout-model.js';
 import type { RenderModel, RenderZone } from '../../../src/model/render-model';
 import type { RunnerFrame, RunnerProjectionSource } from '../../../src/model/runner-frame.js';
+import type { TableOverlayMarkerNode } from '../../../src/presentation/project-table-overlay-surface.js';
 import { projectTableOverlaySurface } from '../../../src/presentation/project-table-overlay-surface.js';
 
 interface ProjectionSourceFixture {
@@ -113,6 +118,8 @@ const {
 
     anchor = new MockPoint();
 
+    scale = new MockPoint();
+
     constructor(options: { text: string; style?: unknown }) {
       super();
       this.text = options.text;
@@ -131,6 +138,7 @@ vi.mock('pixi.js', () => ({
   Container: MockContainer,
   Graphics: MockGraphics,
   Text: MockText,
+  BitmapText: MockText,
 }));
 
 function makeRenderModel(overrides: Partial<RenderModel> = {}): RenderModel {
@@ -338,6 +346,32 @@ function toRunnerProjectionSource(projectionSource: ProjectionSourceFixture): Ru
   };
 }
 
+function makeMarkerNode(
+  overrides: Partial<TableOverlayMarkerNode> = {},
+): TableOverlayMarkerNode {
+  const baseStyle = {
+    color: '#fbbf24',
+    shape: 'circle',
+    label: 'D',
+    fontSize: 11,
+    fontName: LABEL_FONT_NAME,
+    textColor: '#111827',
+  } as const;
+  const style = {
+    ...baseStyle,
+    ...(overrides.style ?? {}),
+  };
+
+  return {
+    key: overrides.key ?? 'overlay:marker',
+    type: 'marker',
+    point: overrides.point ?? { x: 12, y: 34 },
+    signature: 'marker-signature',
+    ...(overrides.signature !== undefined ? { signature: overrides.signature } : {}),
+    style,
+  };
+}
+
 describe('createTableOverlayRenderer', () => {
   const positions = new Map([
     ['shared:center', { x: 0, y: 0 }],
@@ -494,6 +528,7 @@ describe('createTableOverlayRenderer', () => {
     expect(marker.position.y).toBe(80);
     expect(markerBadge.shape?.kind).toBe('circle');
     expect(markerLabel.text).toBe('D');
+    expect((markerLabel.style as { fontFamily?: string }).fontFamily).toBe(LABEL_FONT_NAME);
   });
 
   it('moves marker when marker variable changes and reuses same Container', () => {
@@ -551,6 +586,85 @@ describe('createTableOverlayRenderer', () => {
     );
 
     expect(parent.children).toHaveLength(0);
+  });
+
+  describe('marker style caching', () => {
+    it('keeps the same marker label style object when style inputs are unchanged', () => {
+      const parent = new MockContainer();
+      const renderer = createTableOverlayRenderer(parent as unknown as Container);
+
+      renderer.update([makeMarkerNode()]);
+      const marker = parent.children[0] as InstanceType<typeof MockContainer>;
+      const label = marker.children[1] as InstanceType<typeof MockText>;
+      const firstStyle = label.style;
+
+      renderer.update([makeMarkerNode({ point: { x: 50, y: 75 }, signature: 'marker-signature-2' })]);
+
+      expect(parent.children).toHaveLength(1);
+      expect(marker.position.x).toBe(50);
+      expect(marker.position.y).toBe(75);
+      expect(label.style).toBe(firstStyle);
+    });
+
+    it('reassigns marker label style when text color changes', () => {
+      const parent = new MockContainer();
+      const renderer = createTableOverlayRenderer(parent as unknown as Container);
+
+      renderer.update([makeMarkerNode()]);
+      const marker = parent.children[0] as InstanceType<typeof MockContainer>;
+      const label = marker.children[1] as InstanceType<typeof MockText>;
+      const firstStyle = label.style;
+
+      renderer.update([
+        makeMarkerNode({
+          style: { ...makeMarkerNode().style, textColor: '#ffffff' },
+          signature: 'marker-signature-color',
+        }),
+      ]);
+
+      expect(label.style).not.toBe(firstStyle);
+      expect((label.style as { fill?: string }).fill).toBe('#ffffff');
+    });
+
+    it('reassigns marker label style when font size changes', () => {
+      const parent = new MockContainer();
+      const renderer = createTableOverlayRenderer(parent as unknown as Container);
+
+      renderer.update([makeMarkerNode()]);
+      const marker = parent.children[0] as InstanceType<typeof MockContainer>;
+      const label = marker.children[1] as InstanceType<typeof MockText>;
+      const firstStyle = label.style;
+
+      renderer.update([
+        makeMarkerNode({
+          style: { ...makeMarkerNode().style, fontSize: 13 },
+          signature: 'marker-signature-font-size',
+        }),
+      ]);
+
+      expect(label.style).not.toBe(firstStyle);
+      expect((label.style as { fontSize?: number }).fontSize).toBe(13);
+    });
+
+    it('reassigns marker label style when font name changes', () => {
+      const parent = new MockContainer();
+      const renderer = createTableOverlayRenderer(parent as unknown as Container);
+
+      renderer.update([makeMarkerNode()]);
+      const marker = parent.children[0] as InstanceType<typeof MockContainer>;
+      const label = marker.children[1] as InstanceType<typeof MockText>;
+      const firstStyle = label.style;
+
+      renderer.update([
+        makeMarkerNode({
+          style: { ...makeMarkerNode().style, fontName: STROKE_LABEL_FONT_NAME },
+          signature: 'marker-signature-font-name',
+        }),
+      ]);
+
+      expect(label.style).not.toBe(firstStyle);
+      expect((label.style as { fontFamily?: string }).fontFamily).toBe(STROKE_LABEL_FONT_NAME);
+    });
   });
 
   describe('keyed reconciliation', () => {

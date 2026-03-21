@@ -4,6 +4,29 @@ import { describe, it } from 'node:test';
 import { compileProductionSpec, compileTexasProductionSpec } from '../helpers/production-spec-helpers.js';
 import { compileGameSpecToGameDef, parseGameSpec } from '../../src/cnl/index.js';
 
+const assertActionSummaryCoverage = (
+  actionIds: readonly string[],
+  summaries: Readonly<Record<string, string>> | undefined,
+  gameName: string,
+): void => {
+  assert.ok(summaries !== undefined, `${gameName} verbalization must define actionSummaries`);
+
+  const summaryKeys = Object.keys(summaries);
+  const missing = actionIds.filter((id) => summaries[id] === undefined);
+  const orphaned = summaryKeys.filter((id) => !actionIds.includes(id));
+
+  assert.deepEqual(
+    missing,
+    [],
+    `${gameName} actionSummaries must cover every compiled action id; missing: ${missing.join(', ')}`,
+  );
+  assert.deepEqual(
+    orphaned,
+    [],
+    `${gameName} actionSummaries must not contain orphaned keys; orphaned: ${orphaned.join(', ')}`,
+  );
+};
+
 describe('verbalization compilation integration', () => {
   it('FITL production spec compiles with verbalization defined', () => {
     const { compiled } = compileProductionSpec();
@@ -17,6 +40,16 @@ describe('verbalization compilation integration', () => {
       compiled.gameDef.verbalization.suppressPatterns.length > 0,
       'FITL verbalization must have at least one suppress pattern',
     );
+    assert.equal(
+      compiled.gameDef.verbalization.actionSummaries?.train,
+      'Place forces and build support',
+      'FITL verbalization must compile action summaries',
+    );
+    assertActionSummaryCoverage(
+      compiled.gameDef.actions.map((action) => String(action.id)),
+      compiled.gameDef.verbalization.actionSummaries,
+      'FITL',
+    );
   });
 
   it('Texas Hold\'em production spec compiles with verbalization defined', () => {
@@ -26,6 +59,16 @@ describe('verbalization compilation integration', () => {
     assert.ok(
       Object.keys(compiled.gameDef.verbalization.labels).length > 0,
       'Texas verbalization must have at least one label',
+    );
+    assert.equal(
+      compiled.gameDef.verbalization.actionSummaries?.fold,
+      'Surrender hand and forfeit current bets',
+      'Texas verbalization must compile action summaries',
+    );
+    assertActionSummaryCoverage(
+      compiled.gameDef.actions.map((action) => String(action.id)),
+      compiled.gameDef.verbalization.actionSummaries,
+      'Texas Hold\'em',
     );
   });
 

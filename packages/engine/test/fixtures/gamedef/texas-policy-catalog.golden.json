@@ -585,10 +585,40 @@
         "candidateAggregates": []
       },
       "fingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f"
+    },
+    "evolved": {
+      "params": {},
+      "use": {
+        "pruningRules": [],
+        "scoreTerms": [
+          "preferCheck",
+          "preferCall",
+          "preferRaise",
+          "preferSmallerRaise",
+          "preferAllIn",
+          "avoidFold"
+        ],
+        "tieBreakers": [
+          "stableMoveKey"
+        ]
+      },
+      "plan": {
+        "stateFeatures": [],
+        "candidateFeatures": [
+          "isCheck",
+          "isCall",
+          "isRaise",
+          "raiseAmount",
+          "isAllIn",
+          "isFold"
+        ],
+        "candidateAggregates": []
+      },
+      "fingerprint": "7db19f3da5cda90b1920bb9052dec931899e3e21b6f5079ba10bbabcacf3d52f"
     }
   },
   "bindingsBySeat": {
     "neutral": "baseline"
   },
-  "catalogFingerprint": "9be81cb43ac9b5ae87e18f62d60e94d73359fd5d3b704b3d9574504677b27b33"
+  "catalogFingerprint": "51c08ed3a560d5b22cbc68c229bf55c6d510384785771d7de1b068e9ea855d05"
 }

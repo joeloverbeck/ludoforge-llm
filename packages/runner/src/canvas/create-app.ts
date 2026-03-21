@@ -1,6 +1,11 @@
-import { Application } from 'pixi.js';
+// Side-effect import: must be first to patch TexturePool before any Application construction.
+// See pixi-patches.ts for upstream bug details (PixiJS #11735).
+import './pixi-patches.js';
+
+import { Application, TexturePool } from 'pixi.js';
 
 import { createLayerHierarchy, type LayerHierarchy } from './layers';
+import { installLabelBitmapFonts } from './text/bitmap-font-registry.js';
 
 function getResolution(): number {
   if (typeof window === 'undefined') {
@@ -35,6 +40,7 @@ export async function createGameCanvas(
     resizeTo: container,
   });
 
+  installLabelBitmapFonts(getResolution());
   container.appendChild(app.canvas);
   const layers = createLayerHierarchy();
 
@@ -42,6 +48,9 @@ export async function createGameCanvas(
     app,
     layers,
     destroy(): void {
+      // Clear the pool first: empties _texturePool so any returnTexture calls
+      // during app.destroy() find no buckets (the patch silently skips them).
+      TexturePool.clear();
       app.destroy(true, { children: true, texture: true });
     },
   };

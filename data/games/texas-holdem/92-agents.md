@@ -95,6 +95,20 @@ agents:
         tieBreakers:
           - stableMoveKey
 
+    evolved:
+      params: {}
+      use:
+        pruningRules: []
+        scoreTerms:
+          - preferCheck
+          - preferCall
+          - preferRaise
+          - preferSmallerRaise
+          - preferAllIn
+          - avoidFold
+        tieBreakers:
+          - stableMoveKey
+
   bindings:
     neutral: baseline
 ```

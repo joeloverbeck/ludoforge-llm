@@ -1165,6 +1165,75 @@ describe('describeAction (condition annotator)', () => {
     assert.ok(allText.includes('Gold Coins'), `Expected "Gold Coins" in RuleCard text, got: ${allText}`);
   });
 
+  it('uses actionSummaries as the RuleCard synopsis for matching action ids', () => {
+    const verbalization: VerbalizationDef = {
+      labels: { testAction: 'Test Action' },
+      stages: {},
+      macros: {},
+      sentencePlans: {},
+      suppressPatterns: [],
+      stageDescriptions: {},
+      modifierEffects: {},
+      actionSummaries: {
+        testAction: 'Authored summary',
+      },
+    };
+    const action = minimalActionDef({
+      id: 'testAction' as ActionDef['id'],
+      effects: [{
+        chooseOne: {
+          internalDecisionId: 'decision:testAction:choice',
+          bind: '$choice',
+          options: { query: 'enums', values: ['alpha', 'beta'] },
+        },
+      }],
+    });
+    const def = makeDef({ verbalization });
+    const ctx = makeContext({ def });
+
+    const result = describeAction(action, ctx);
+
+    assert.ok(result.tooltipPayload !== undefined);
+    assert.equal(result.tooltipPayload.ruleCard.synopsis, 'Test Action — Authored summary');
+  });
+
+  it('prefers actionSummaries over generated choose/select synopsis text', () => {
+    const verbalization: VerbalizationDef = {
+      labels: {
+        testAction: 'Test Action',
+        alpha: 'Alpha',
+        beta: 'Beta',
+      },
+      stages: {},
+      macros: {},
+      sentencePlans: {},
+      suppressPatterns: [],
+      stageDescriptions: {},
+      modifierEffects: {},
+      actionSummaries: {
+        testAction: 'Authored summary',
+      },
+    };
+    const action = minimalActionDef({
+      id: 'testAction' as ActionDef['id'],
+      effects: [{
+        chooseOne: {
+          internalDecisionId: 'decision:testAction:choice',
+          bind: '$choice',
+          options: { query: 'enums', values: ['alpha', 'beta'] },
+        },
+      }],
+    });
+    const def = makeDef({ verbalization });
+    const ctx = makeContext({ def });
+
+    const result = describeAction(action, ctx);
+
+    assert.ok(result.tooltipPayload !== undefined);
+    assert.equal(result.tooltipPayload.ruleCard.synopsis, 'Test Action — Authored summary');
+    assert.notEqual(result.tooltipPayload.ruleCard.synopsis, 'Test Action — Choose: Alpha, Beta');
+  });
+
   // -----------------------------------------------------------------------
   // 25. structuredClone-safe with tooltipPayload
   // -----------------------------------------------------------------------

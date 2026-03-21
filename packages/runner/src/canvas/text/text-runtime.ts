@@ -37,6 +37,8 @@ interface CreateKeyedTextReconcilerOptions {
   readonly parentContainer: Container;
 }
 
+const DEFAULT_KEYED_TEXT_STYLE: TextStyleOptions = {};
+
 export function createManagedText(options: ManagedTextOptions = {}): Text {
   const text = options.style === undefined
     ? new Text({ text: options.text ?? '' })
@@ -64,6 +66,8 @@ export function createManagedText(options: ManagedTextOptions = {}): Text {
 }
 
 export function destroyManagedText(text: Text): void {
+  text.renderable = false;
+  text.visible = false;
   text.removeFromParent();
   safeDestroyDisplayObject(text);
 }
@@ -73,26 +77,14 @@ export function createKeyedTextReconciler(options: CreateKeyedTextReconcilerOpti
 
   function applySpec(text: Text, spec: KeyedTextSpec): void {
     text.text = spec.text;
-    if (spec.style !== undefined) {
-      text.style = spec.style;
-    }
-    if (spec.anchor !== undefined) {
-      text.anchor.set(spec.anchor.x, spec.anchor.y);
-    }
-    if (spec.position !== undefined) {
-      text.position.set(spec.position.x, spec.position.y);
-    }
+    text.style = spec.style ?? DEFAULT_KEYED_TEXT_STYLE;
+    text.anchor.set(spec.anchor?.x ?? 0, spec.anchor?.y ?? 0);
+    text.position.set(spec.position?.x ?? 0, spec.position?.y ?? 0);
     text.visible = spec.visible ?? true;
     text.renderable = spec.renderable ?? true;
-    if (spec.alpha !== undefined) {
-      text.alpha = spec.alpha;
-    }
-    if (spec.rotation !== undefined) {
-      text.rotation = spec.rotation;
-    }
-    if (spec.scale !== undefined) {
-      text.scale.set(spec.scale.x, spec.scale.y);
-    }
+    text.alpha = spec.alpha ?? 1;
+    text.rotation = spec.rotation ?? 0;
+    text.scale.set(spec.scale?.x ?? 1, spec.scale?.y ?? 1);
     spec.apply?.(text);
   }
 
@@ -100,11 +92,6 @@ export function createKeyedTextReconciler(options: CreateKeyedTextReconcilerOpti
     const text = createManagedText({
       parent: options.parentContainer,
       text: spec.text,
-      ...(spec.style !== undefined ? { style: spec.style } : {}),
-      ...(spec.anchor !== undefined ? { anchor: spec.anchor } : {}),
-      ...(spec.position !== undefined ? { position: spec.position } : {}),
-      ...(spec.visible !== undefined ? { visible: spec.visible } : {}),
-      ...(spec.renderable !== undefined ? { renderable: spec.renderable } : {}),
     });
     applySpec(text, spec);
     return text;

@@ -1,0 +1,685 @@
+import type { StoreApi } from 'zustand';
+
+import type { KeyboardCoordinator } from '../input/keyboard-coordinator.js';
+import type { AnimationPlaybackSpeed } from '../animation/animation-types.js';
+import type { DiagnosticBuffer } from '../animation/diagnostic-buffer.js';
+import type { GameStore } from '../store/game-store';
+import { createAnimationController, type AnimationController } from '../animation/animation-controller.js';
+import { createAiPlaybackController, type AiPlaybackController } from '../animation/ai-playback.js';
+import { createReducedMotionObserver, type ReducedMotionObserver } from '../animation/reduced-motion.js';
+import type { CoordinateBridge } from './coordinate-bridge';
+import { createCoordinateBridge } from './coordinate-bridge';
+import type { CanvasWorldBounds, HoverAnchor, HoveredCanvasTarget } from './hover-anchor-contract';
+import { createGameCanvas, type GameCanvas as PixiGameCanvas } from './create-app';
+import { attachTokenSelectHandlers } from './interactions/token-select';
+import { attachZoneSelectHandlers } from './interactions/zone-select';
+import { createAriaAnnouncer } from './interactions/aria-announcer';
+import { attachKeyboardSelect, handleKeyboardSelectKeyDown } from './interactions/keyboard-select';
+import { createCanvasInteractionController } from './interactions/canvas-interaction-controller';
+import { createHoverTargetController } from './interactions/hover-target-controller';
+import { createRuntimeLayoutStore, type RuntimeLayoutStore } from './runtime-layout-store';
+import { installTickerErrorFence, type TickerErrorFence } from './ticker-error-fence.js';
+import { createRenderHealthProbe, type RenderHealthProbe } from './render-health-probe.js';
+import { createAdjacencyRenderer } from './renderers/adjacency-renderer';
+import { ContainerPool } from './renderers/container-pool';
+import { createDisposalQueue, type DisposalQueue } from './renderers/disposal-queue';
+import { VisualConfigTokenRenderStyleProvider } from './renderers/token-render-style-provider';
+import type { AdjacencyRenderer, TableOverlayRenderer, TokenRenderer, ZoneRenderer } from './renderers/renderer-types';
+import { createRegionBoundaryRenderer } from './renderers/region-boundary-renderer.js';
+import { createTableOverlayRenderer } from './renderers/table-overlay-renderer.js';
+import { createTokenRenderer } from './renderers/token-renderer';
+import { drawTableBackground } from './renderers/table-background-renderer.js';
+import { createZoneRenderer } from './renderers/zone-renderer';
+import {
+  createActionAnnouncementRenderer,
+  type ActionAnnouncementRenderer,
+} from './renderers/action-announcement-renderer.js';
+import { createCanvasUpdater, type CanvasUpdater } from './canvas-updater';
+import { setupViewport, type ViewportResult } from './viewport-setup';
+import type { VisualConfigProvider } from '../config/visual-config-provider.js';
+import { EMPTY_INTERACTION_HIGHLIGHTS, type InteractionHighlights } from './interaction-highlights.js';
+import type { CanvasRuntimeHealthStatus } from './canvas-runtime-health.js';
+import {
+  createActionAnnouncementPresenter,
+  type ActionAnnouncementPresenter,
+} from '../presentation/action-announcement-presentation.js';
+import type { WorldLayoutModel } from '../layout/world-layout-model.js';
+
+const DEFAULT_WORLD_SIZE = 1;
+const EMPTY_TABLE_BOUNDS = { minX: 0, minY: 0, maxX: 0, maxY: 0 } as const;
+
+const ANIMATION_PLAYBACK_SPEED_MULTIPLIERS: Readonly<Record<AnimationPlaybackSpeed, number>> = {
+  '1x': 1,
+  '2x': 2,
+  '4x': 4,
+};
+
+interface SelectorSubscribeStore<TState> extends StoreApi<TState> {
+  subscribe: {
+    (listener: (state: TState, previousState: TState) => void): () => void;
+    <TSelected>(
+      selector: (state: TState) => TSelected,
+      listener: (selectedState: TSelected, previousSelectedState: TSelected) => void,
+      options?: {
+        readonly equalityFn?: (a: TSelected, b: TSelected) => boolean;
+        readonly fireImmediately?: boolean;
+      },
+    ): () => void;
+  };
+}
+
+export interface GameCanvasRuntime {
+  readonly coordinateBridge: CoordinateBridge;
+  getHealthStatus(): CanvasRuntimeHealthStatus | null;
+  getViewportSnapshot(): ViewportSnapshot | null;
+  setInteractionHighlights(highlights: InteractionHighlights): void;
+  destroy(): void;
+}
+
+export interface ViewportSnapshot {
+  readonly x: number;
+  readonly y: number;
+  readonly scaleX: number;
+  readonly scaleY: number;
+}
+
+export interface ScopedLifecycleCallback<T> {
+  invoke(value: T): void;
+  deactivate(): void;
+}
+
+export interface GameCanvasRuntimeOptions {
+  readonly container: HTMLElement;
+  readonly store: StoreApi<GameStore>;
+  readonly visualConfigProvider: VisualConfigProvider;
+  readonly backgroundColor: number;
+  readonly initialViewport?: ViewportSnapshot | null;
+  readonly keyboardCoordinator?: KeyboardCoordinator;
+  readonly interactionHighlights?: InteractionHighlights;
+  readonly onHoverAnchorChange?: (anchor: HoverAnchor | null) => void;
+  readonly onAnimationDiagnosticBufferChange?: (buffer: DiagnosticBuffer | null) => void;
+  readonly onError?: (error: unknown) => void;
+}
+
+interface GameCanvasRuntimeDeps {
+  readonly createGameCanvas: typeof createGameCanvas;
+  readonly setupViewport: typeof setupViewport;
+  readonly createRuntimeLayoutStore: typeof createRuntimeLayoutStore;
+  readonly createZoneRenderer: typeof createZoneRenderer;
+  readonly createAdjacencyRenderer: typeof createAdjacencyRenderer;
+  readonly createTokenRenderer: typeof createTokenRenderer;
+  readonly createTableOverlayRenderer: typeof createTableOverlayRenderer;
+  readonly createActionAnnouncementRenderer: typeof createActionAnnouncementRenderer;
+  readonly createActionAnnouncementPresenter: typeof createActionAnnouncementPresenter;
+  readonly createCanvasUpdater: typeof createCanvasUpdater;
+  readonly createCoordinateBridge: typeof createCoordinateBridge;
+  readonly createAnimationController: typeof createAnimationController;
+  readonly createAiPlaybackController: typeof createAiPlaybackController;
+  readonly createReducedMotionObserver: typeof createReducedMotionObserver;
+  readonly createAriaAnnouncer: typeof createAriaAnnouncer;
+  readonly attachZoneSelectHandlers: typeof attachZoneSelectHandlers;
+  readonly attachTokenSelectHandlers: typeof attachTokenSelectHandlers;
+  readonly attachKeyboardSelect: typeof attachKeyboardSelect;
+  readonly createRenderHealthProbe: typeof createRenderHealthProbe;
+}
+
+const DEFAULT_RUNTIME_DEPS: GameCanvasRuntimeDeps = {
+  createGameCanvas,
+  setupViewport,
+  createRuntimeLayoutStore,
+  createZoneRenderer,
+  createAdjacencyRenderer,
+  createTokenRenderer,
+  createTableOverlayRenderer,
+  createActionAnnouncementRenderer,
+  createActionAnnouncementPresenter,
+  createCanvasUpdater,
+  createCoordinateBridge,
+  createAnimationController,
+  createAiPlaybackController,
+  createReducedMotionObserver,
+  createAriaAnnouncer,
+  attachZoneSelectHandlers,
+  attachTokenSelectHandlers,
+  attachKeyboardSelect,
+  createRenderHealthProbe,
+};
+
+type HoverBoundsResolver = (target: HoveredCanvasTarget) => CanvasWorldBounds | null;
+
+export function createScopedLifecycleCallback<T>(callback?: (value: T) => void): ScopedLifecycleCallback<T> {
+  let active = true;
+
+  return {
+    invoke(value: T): void {
+      if (!active || callback === undefined) {
+        return;
+      }
+      callback(value);
+    },
+    deactivate(): void {
+      active = false;
+    },
+  };
+}
+
+export async function createGameCanvasRuntime(
+  options: GameCanvasRuntimeOptions,
+  deps: GameCanvasRuntimeDeps = DEFAULT_RUNTIME_DEPS,
+): Promise<GameCanvasRuntime> {
+  let layersForBackground: PixiGameCanvas['layers'] | null = null;
+  const selectorStore = options.store as SelectorSubscribeStore<GameStore>;
+  const initialState = selectorStore.getState();
+  const initialZoneIDs = selectZoneIDs(initialState);
+  const initialWorldLayout = initialState.worldLayout;
+  const runtimeLayoutStore = deps.createRuntimeLayoutStore(initialWorldLayout === null ? initialZoneIDs : []);
+
+  const applyWorldLayout = (
+    worldLayout: WorldLayoutModel | null,
+    gameDef: GameStore['gameDef'],
+  ): WorldLayoutModel | null => {
+    if (worldLayout === null || !Array.isArray(gameDef?.zones)) {
+      runtimeLayoutStore.setFallbackZoneIDs(selectZoneIDs(selectorStore.getState()));
+      if (layersForBackground !== null) {
+        drawTableBackground(layersForBackground.backgroundLayer, null, EMPTY_TABLE_BOUNDS);
+      }
+      return null;
+    }
+
+    const gameDefZoneIDs = gameDef.zones.map((zone) => zone.id);
+    runtimeLayoutStore.setActiveLayout(worldLayout, gameDefZoneIDs);
+    if (layersForBackground !== null) {
+      drawTableBackground(
+        layersForBackground.backgroundLayer,
+        options.visualConfigProvider.getTableBackground(),
+        worldLayout.boardBounds,
+      );
+    }
+    return worldLayout;
+  };
+
+  let initialLayoutResult: WorldLayoutModel | null = null;
+  if (initialWorldLayout !== null) {
+    initialLayoutResult = applyWorldLayout(initialWorldLayout, initialState.gameDef);
+  }
+
+  const gameCanvas = await deps.createGameCanvas(options.container, {
+    backgroundColor: options.backgroundColor,
+  });
+  const reportRenderHealthCorruption = (): void => {
+    options.onError?.(new Error('Render health probe detected non-functional rendering after a contained ticker error.'));
+  };
+  const renderHealthProbe = deps.createRenderHealthProbe({
+    stage: gameCanvas.app.stage,
+    ticker: gameCanvas.app.ticker,
+    onCorruption: reportRenderHealthCorruption,
+  });
+  const tickerErrorFence = installTickerErrorFence(gameCanvas.app, {
+    onContainedError: () => {
+      renderHealthProbe.scheduleVerification();
+    },
+    onCrash: (error) => {
+      options.onError?.(error);
+    },
+  });
+  layersForBackground = gameCanvas.layers;
+  const currentState = selectorStore.getState();
+  const currentGameDef = currentState.gameDef;
+  const currentWorldLayout = currentState.worldLayout;
+  if (currentWorldLayout === null || currentGameDef === null || !Array.isArray(currentGameDef.zones)) {
+    drawTableBackground(gameCanvas.layers.backgroundLayer, null, EMPTY_TABLE_BOUNDS);
+  } else {
+    const layoutResult = initialLayoutResult !== null && currentWorldLayout === initialWorldLayout
+      ? initialLayoutResult
+      : currentWorldLayout;
+    drawTableBackground(
+      gameCanvas.layers.backgroundLayer,
+      options.visualConfigProvider.getTableBackground(),
+      layoutResult.boardBounds,
+    );
+  }
+  const accessibilityContainer = options.container.parentElement ?? options.container;
+  const ariaAnnouncer = deps.createAriaAnnouncer(accessibilityContainer);
+  const interactionController = createCanvasInteractionController(() => selectorStore.getState(), ariaAnnouncer);
+  const hoverTargetController = createHoverTargetController({
+    onTargetChange: () => {
+      publishHoverAnchor();
+    },
+  });
+
+  const disposalQueue = createDisposalQueue();
+  const viewportResult = createViewportResult(deps, gameCanvas, runtimeLayoutStore);
+  applyViewportSnapshot(viewportResult.viewport, options.initialViewport ?? null);
+  const zonePool = new ContainerPool();
+  let publishHoverAnchor: () => void = () => {};
+
+  const zoneRenderer = deps.createZoneRenderer(gameCanvas.layers.zoneLayer, zonePool, {
+    bindSelection: (zoneContainer, zoneId, isSelectable) =>
+      deps.attachZoneSelectHandlers(
+        zoneContainer,
+        zoneId,
+        isSelectable,
+        (target) => {
+          interactionController.onSelectTarget(target);
+        },
+        {
+          onHoverEnter: (target) => {
+            hoverTargetController.onHoverEnter(target);
+          },
+          onHoverLeave: (target) => {
+            hoverTargetController.onHoverLeave(target);
+          },
+        },
+      ),
+  });
+
+  const adjacencyRenderer = deps.createAdjacencyRenderer(gameCanvas.layers.adjacencyLayer, options.visualConfigProvider, {
+    disposalQueue,
+  });
+
+  const regionBoundaryRenderer = createRegionBoundaryRenderer(gameCanvas.layers.regionLayer);
+
+  const tokenRenderStyleProvider = new VisualConfigTokenRenderStyleProvider(options.visualConfigProvider);
+  const tokenRenderer = deps.createTokenRenderer(gameCanvas.layers.tokenGroup, {
+    bindSelection: (tokenContainer, tokenId, isSelectable) =>
+      deps.attachTokenSelectHandlers(
+        tokenContainer,
+        tokenId,
+        isSelectable,
+        (target) => {
+          interactionController.onSelectTarget(target);
+        },
+        {
+          onHoverEnter: (target) => {
+            hoverTargetController.onHoverEnter(target);
+          },
+          onHoverLeave: (target) => {
+            hoverTargetController.onHoverLeave(target);
+          },
+        },
+      ),
+    disposalQueue,
+  });
+  const tableOverlayRenderer = deps.createTableOverlayRenderer(
+    gameCanvas.layers.tableOverlayLayer,
+    options.visualConfigProvider,
+  );
+  const actionAnnouncementRenderer = deps.createActionAnnouncementRenderer({
+    parentContainer: gameCanvas.layers.effectsGroup,
+  });
+  const actionAnnouncementPresenter = deps.createActionAnnouncementPresenter({
+    store: options.store,
+    onAnnouncement: (spec) => {
+      actionAnnouncementRenderer.enqueue(spec);
+    },
+  });
+
+  const canvasUpdater = deps.createCanvasUpdater({
+    store: options.store,
+    runtimeLayoutStore,
+    visualConfigProvider: options.visualConfigProvider,
+    tokenRenderStyleProvider,
+    zoneRenderer,
+    adjacencyRenderer,
+    tokenRenderer,
+    tableOverlayRenderer,
+    regionBoundaryRenderer,
+    viewport: viewportResult,
+    getInteractionHighlights: () => options.interactionHighlights ?? EMPTY_INTERACTION_HIGHLIGHTS,
+  });
+  canvasUpdater.start();
+
+  let animationController: AnimationController | null = null;
+  let aiPlaybackController: AiPlaybackController | null = null;
+  let actionAnnouncementDisplay: ActionAnnouncementRenderer | null = null;
+  let actionAnnouncementSource: ActionAnnouncementPresenter | null = null;
+  let reducedMotionObserver: ReducedMotionObserver | null = null;
+  try {
+    animationController = deps.createAnimationController({
+      store: options.store,
+      visualConfigProvider: options.visualConfigProvider,
+      tokenContainers: () => tokenRenderer.getContainerMap(),
+      tokenFaceControllers: () => tokenRenderer.getFaceControllerMap?.() ?? new Map(),
+      zoneContainers: () => zoneRenderer.getContainerMap(),
+      zonePositions: () => runtimeLayoutStore.getSnapshot(),
+      ephemeralParent: () => gameCanvas.layers.effectsGroup,
+      disposalQueue,
+    });
+    animationController.start();
+
+    reducedMotionObserver = deps.createReducedMotionObserver(options.container.ownerDocument?.defaultView ?? undefined);
+    animationController.setReducedMotion(reducedMotionObserver.reduced);
+  } catch (error) {
+    selectorStore.getState().setAnimationPlaying(false);
+    console.warn('Animation controller initialization failed. Continuing without animations.', error);
+  }
+
+  const applyAnimationSpeed = (speed: AnimationPlaybackSpeed): void => {
+    animationController?.setSpeed(ANIMATION_PLAYBACK_SPEED_MULTIPLIERS[speed]);
+  };
+  const applyAnimationPaused = (paused: boolean): void => {
+    if (paused) {
+      animationController?.pause();
+      return;
+    }
+    animationController?.resume();
+  };
+  applyAnimationSpeed(selectorStore.getState().animationPlaybackSpeed);
+  applyAnimationPaused(selectorStore.getState().animationPaused);
+  options.onAnimationDiagnosticBufferChange?.(animationController?.getDiagnosticBuffer() ?? null);
+
+  try {
+    actionAnnouncementDisplay = actionAnnouncementRenderer;
+    actionAnnouncementSource = actionAnnouncementPresenter;
+    actionAnnouncementPresenter.start();
+  } catch (error) {
+    console.warn('Action announcement presentation initialization failed. Continuing without AI action announcements.', error);
+  }
+
+  try {
+    aiPlaybackController = deps.createAiPlaybackController({
+      store: options.store,
+      animation: {
+        setDetailLevel: (level) => {
+          animationController?.setDetailLevel(level);
+        },
+        skipAll: () => {
+          animationController?.skipAll();
+        },
+      },
+      onError: (message) => {
+        selectorStore.getState().reportPlaybackDiagnostic(message);
+      },
+    });
+    aiPlaybackController.start();
+  } catch (error) {
+    console.warn('AI playback controller initialization failed. Continuing without AI playback orchestration.', error);
+  }
+
+  const unsubscribeZoneIDs = selectorStore.subscribe(selectZoneIDs, (zoneIDs) => {
+    if (selectorStore.getState().worldLayout !== null) {
+      return;
+    }
+    runtimeLayoutStore.setFallbackZoneIDs(zoneIDs);
+  }, { equalityFn: stringArraysEqual });
+  const unsubscribeWorldLayout = selectorStore.subscribe(
+    (state) => state.worldLayout,
+    (worldLayout, previousWorldLayout) => {
+      if (worldLayout === previousWorldLayout) {
+        return;
+      }
+      applyWorldLayout(worldLayout, selectorStore.getState().gameDef);
+    },
+  );
+  const unsubscribeAnimationPlaybackSpeed = selectorStore.subscribe(
+    (state) => state.animationPlaybackSpeed,
+    (speed, previousSpeed) => {
+      if (speed === previousSpeed) {
+        return;
+      }
+      applyAnimationSpeed(speed);
+    },
+  );
+  const unsubscribeAnimationPaused = selectorStore.subscribe(
+    (state) => state.animationPaused,
+    (paused, previousPaused) => {
+      if (paused === previousPaused) {
+        return;
+      }
+      applyAnimationPaused(paused);
+    },
+  );
+  const unsubscribeAnimationSkipRequestToken = selectorStore.subscribe(
+    (state) => state.animationSkipRequestToken,
+    (token, previousToken) => {
+      if (token === previousToken) {
+        return;
+      }
+      animationController?.skipCurrent();
+    },
+  );
+  const unsubscribeReducedMotion = reducedMotionObserver?.subscribe((reduced) => {
+    animationController?.setReducedMotion(reduced);
+  }) ?? (() => {
+    // No-op when reduced-motion observer is unavailable.
+  });
+  const unsubscribePhaseAnnouncement = selectorStore.subscribe(
+    selectPhaseAnnouncementLabel,
+    (phaseLabel, previousPhaseLabel) => {
+      if (phaseLabel === null || phaseLabel === previousPhaseLabel) {
+        return;
+      }
+      ariaAnnouncer.announce(`Phase: ${phaseLabel}`);
+    },
+  );
+  const keyboardSelectConfig = {
+    getSelectableZoneIDs: () => interactionController.getSelectableZoneIDs(),
+    getCurrentFocusedZoneID: () => interactionController.getFocusedZoneID(),
+    onSelect: (zoneId: string) => {
+      interactionController.onSelectTarget({ type: 'zone', id: zoneId });
+    },
+    onFocusChange: (zoneId: string | null) => {
+      interactionController.onFocusChange(zoneId);
+    },
+    onFocusAnnounce: (zoneId: string) => {
+      interactionController.onFocusAnnounce(zoneId);
+    },
+  };
+  const cleanupKeyboardSelect = options.keyboardCoordinator === undefined
+    ? deps.attachKeyboardSelect(keyboardSelectConfig)
+    : options.keyboardCoordinator.register(
+      (event) => handleKeyboardSelectKeyDown(event, keyboardSelectConfig),
+      { priority: 10 },
+    );
+
+  const coordinateBridge = deps.createCoordinateBridge(viewportResult.viewport, gameCanvas.app.canvas);
+  const hoverBoundsResolver: HoverBoundsResolver = (target) => {
+    const containers = target.kind === 'zone' ? zoneRenderer.getContainerMap() : tokenRenderer.getContainerMap();
+    const container = containers.get(target.id);
+    if (container === undefined) {
+      return null;
+    }
+    const bounds = container.getBounds();
+    return {
+      x: bounds.x,
+      y: bounds.y,
+      width: bounds.width,
+      height: bounds.height,
+    };
+  };
+  let hoverAnchorVersion = 0;
+
+  publishHoverAnchor = (): void => {
+    const hoveredTarget = hoverTargetController.getCurrentTarget();
+    if (hoveredTarget === null) {
+      options.onHoverAnchorChange?.(null);
+      return;
+    }
+    const worldBounds = hoverBoundsResolver(hoveredTarget);
+    if (worldBounds === null) {
+      options.onHoverAnchorChange?.(null);
+      return;
+    }
+    hoverAnchorVersion += 1;
+    options.onHoverAnchorChange?.({
+      target: hoveredTarget,
+      rect: coordinateBridge.canvasBoundsToScreenRect(worldBounds),
+      space: 'screen',
+      version: hoverAnchorVersion,
+    });
+  };
+  const viewport = viewportResult.viewport as unknown as {
+    on(event: 'moved', listener: () => void): void;
+    off(event: 'moved', listener: () => void): void;
+  };
+  viewport.on('moved', publishHoverAnchor);
+
+  let destroyed = false;
+
+  return {
+    coordinateBridge,
+    getHealthStatus(): CanvasRuntimeHealthStatus | null {
+      if (destroyed) {
+        return null;
+      }
+      const tickerState = gameCanvas.app.ticker as { readonly started?: boolean };
+      const canvasElement = gameCanvas.app.canvas as HTMLCanvasElement & { readonly isConnected?: boolean };
+      return {
+        tickerStarted: tickerState.started !== false,
+        canvasConnected: canvasElement.isConnected !== false,
+        renderCorruptionSuspected: tickerErrorFence.isRenderCorruptionSuspected(),
+      };
+    },
+    getViewportSnapshot(): ViewportSnapshot | null {
+      if (destroyed) {
+        return null;
+      }
+      return {
+        x: viewportResult.viewport.x,
+        y: viewportResult.viewport.y,
+        scaleX: viewportResult.viewport.scale.x,
+        scaleY: viewportResult.viewport.scale.y,
+      };
+    },
+    setInteractionHighlights(highlights): void {
+      canvasUpdater.setInteractionHighlights(highlights);
+    },
+    destroy(): void {
+      if (destroyed) {
+        return;
+      }
+      destroyed = true;
+
+      viewport.off('moved', publishHoverAnchor);
+      hoverTargetController.destroy();
+      options.onHoverAnchorChange?.(null);
+      unsubscribeZoneIDs();
+      unsubscribeWorldLayout();
+      unsubscribeAnimationPlaybackSpeed();
+      unsubscribeAnimationPaused();
+      unsubscribeAnimationSkipRequestToken();
+      unsubscribeReducedMotion();
+      reducedMotionObserver?.destroy();
+      unsubscribePhaseAnnouncement();
+      cleanupKeyboardSelect();
+      actionAnnouncementSource?.destroy();
+      actionAnnouncementDisplay?.destroy();
+      aiPlaybackController?.destroy();
+      animationController?.destroy();
+      ariaAnnouncer.destroy();
+      regionBoundaryRenderer.destroy();
+      destroyCanvasPipeline(
+        canvasUpdater,
+        zoneRenderer,
+        adjacencyRenderer,
+        tokenRenderer,
+        tableOverlayRenderer,
+        zonePool,
+        viewportResult,
+        gameCanvas,
+        disposalQueue,
+        renderHealthProbe,
+        tickerErrorFence,
+      );
+    },
+  };
+}
+
+function applyViewportSnapshot(
+  viewport: ViewportResult['viewport'],
+  snapshot: ViewportSnapshot | null,
+): void {
+  if (snapshot === null) {
+    return;
+  }
+  viewport.x = snapshot.x;
+  viewport.y = snapshot.y;
+  viewport.scale.x = snapshot.scaleX;
+  viewport.scale.y = snapshot.scaleY;
+}
+
+function destroyCanvasPipeline(
+  canvasUpdater: CanvasUpdater,
+  zoneRenderer: ZoneRenderer,
+  adjacencyRenderer: AdjacencyRenderer,
+  tokenRenderer: TokenRenderer,
+  tableOverlayRenderer: TableOverlayRenderer,
+  zonePool: ContainerPool,
+  viewportResult: ViewportResult,
+  gameCanvas: PixiGameCanvas,
+  disposalQueue: DisposalQueue,
+  renderHealthProbe: RenderHealthProbe,
+  tickerErrorFence: TickerErrorFence,
+): void {
+  canvasUpdater.destroy();
+  zoneRenderer.destroy();
+  adjacencyRenderer.destroy();
+  tokenRenderer.destroy();
+  tableOverlayRenderer.destroy();
+  zonePool.destroyAll();
+  disposalQueue.destroy();
+  viewportResult.destroy();
+  renderHealthProbe.destroy();
+  tickerErrorFence.destroy();
+  gameCanvas.destroy();
+}
+
+function createViewportResult(
+  deps: GameCanvasRuntimeDeps,
+  gameCanvas: PixiGameCanvas,
+  runtimeLayoutStore: RuntimeLayoutStore,
+): ViewportResult {
+  const snapshot = runtimeLayoutStore.getSnapshot();
+  const worldWidth = Math.max(DEFAULT_WORLD_SIZE, snapshot.bounds.maxX - snapshot.bounds.minX);
+  const worldHeight = Math.max(DEFAULT_WORLD_SIZE, snapshot.bounds.maxY - snapshot.bounds.minY);
+
+  return deps.setupViewport({
+    stage: gameCanvas.app.stage,
+    layers: gameCanvas.layers,
+    screenWidth: gameCanvas.app.renderer.screen.width,
+    screenHeight: gameCanvas.app.renderer.screen.height,
+    worldWidth,
+    worldHeight,
+    events: gameCanvas.app.renderer.events,
+    minScale: 0.2,
+    maxScale: 4,
+  });
+}
+
+function selectZoneIDs(state: GameStore): readonly string[] {
+  const gameDefZones = state.gameDef?.zones;
+  if (Array.isArray(gameDefZones) && gameDefZones.length > 0) {
+    return gameDefZones.map((zone) => zone.id);
+  }
+
+  const renderZones = state.renderModel?.zones;
+  if (renderZones === undefined || renderZones.length === 0) {
+    return [];
+  }
+
+  return renderZones.map((zone) => zone.id);
+}
+
+function selectPhaseAnnouncementLabel(state: GameStore): string | null {
+  const phaseName = state.renderModel?.phaseName?.trim();
+  if (phaseName === undefined || phaseName.length === 0) {
+    return null;
+  }
+
+  const displayName = state.renderModel?.phaseDisplayName?.trim();
+  return displayName !== undefined && displayName.length > 0 ? displayName : phaseName;
+}
+
+function stringArraysEqual(prev: readonly string[], next: readonly string[]): boolean {
+  if (prev.length !== next.length) {
+    return false;
+  }
+
+  for (let index = 0; index < prev.length; index += 1) {
+    if (prev[index] !== next[index]) {
+      return false;
+    }
+  }
+
+  return true;
+}

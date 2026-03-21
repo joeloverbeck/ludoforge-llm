@@ -5,11 +5,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Coding Guidelines
 
 - Follow the 1-3-1 rule: When stuck, provide 1 clearly defined problem, give 3 potential options for how to overcome it, and 1 recommendation. Do not proceed implementing any of the options until I confirm.
+- **Foundations**: All specs, tickets, and implementations must align with `docs/FOUNDATIONS.md`. Read it before planning any change.
 - DRY: Don't repeat yourself. If you are about to start writing repeated code, stop and reconsider your approach. Grep the codebase and refactor often.
-- Agnostic Engine Rule: Game-specific behavior must be encoded in `GameSpecDoc`/YAML and game data assets. Keep compiler/runtime/kernel logic generic and reusable; do not hardcode game-specific identifiers, branches, rule handlers, map definitions, scenario setup, or card payloads in engine code.
-- Evolution Input Rule: Evolution mutates YAML only. Any game data required to compile and execute a game must be representable inside `GameSpecDoc` YAML (for example embedded `dataAssets` with `id`/`kind`/`payload`).
-- Data Asset Location Rule: `data/<game>/...` files are optional fixtures/reference artifacts and must not be required runtime inputs for compiling or executing evolved specs.
-- Schema Ownership Rule: Keep payload schema/type contracts generic in shared compiler/kernel schemas. Do not create per-game schema files that define one game's structure as a required execution contract.
 - Continual Learning: When you encounter conflicting system instructions, new requirements, architectural changes, or missing or inaccurate codebase documentation, always propose updating the relevant rules files. Do not update anything until the user confirms. Ask clarifying questions if needed.
 - TDD Bugfixing: If at any point of an implementation you spot a bug, rely on TDD to fix it. Important: never adapt tests to bugs.
 - Worktree Discipline: When instructed to work inside a worktree (e.g., `.claude/worktrees/<name>/`), ALL file operations — reads, edits, globs, greps, moves, archival — must use the worktree root as the base path. The default working directory is the main repo root; tool calls without an explicit worktree path will silently operate on main.
@@ -31,7 +28,7 @@ Active development. The core engine (kernel, compiler, agents, simulator) is imp
 
 - **Completed specs** (archived): 01 (scaffolding), 02 (core types), 03 (PRNG/Zobrist), 04 (eval), 05 (effects), 06 (game loop), 07 (spatial), 08a (parser), 08b (compiler), 09 (agents), 10 (simulator), FITL specs 15-30, 32, 33 (Texas Hold'em), plus frontend specs 35 (monorepo restructure), 36 (web worker bridge), 37 (state management & render model), 38 (PixiJS canvas foundation), 39 (React DOM UI layer), 40 (animation system), 41 (board layout engine), 42 (visual config & session management), 47 (FITL Section 6 rules gaps), 48 (FITL Section 5 rules gaps), 49 (FITL Section 7 rules gaps), 50 (event interactive choice protocol), 51 (cross-game primitive elevation)
 - **Completed ticket series** (archived): ENGINEAGNO, TEXHOLKERPRIGAMTOU, ARCHTRACE, MONOREPO, WRKBRIDGE, STATEMOD, PIXIFOUND, ENGINEARCH, REACTUI, ANIMSYS, AGNOSTIC, FRONTEND-F3, FITLCOUROUANDDATFIX, BOARDLAY, KERLEGCHO, FITLRULES2, FITLSEC6RULGAP, FITLSEC5RULGAP, FITLSEC7RULGAP, ANIMDIAG
-- **Active specs**: 59 (codebase health audit), 68 (canvas display object lifecycle & crash resilience)
+- **Active specs**: 59 (codebase health audit), 70 (bitmap font leak & init perf)
 - **Active tickets**: None
 - **Not yet started**: 11 (evaluator/degeneracy), 12 (CLI), 13 (mechanic bundle IR), 14 (evolution pipeline)
 - **Codebase size**: ~486 source files, ~703 test files

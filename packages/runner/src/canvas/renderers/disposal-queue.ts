@@ -1,6 +1,10 @@
 import type { Container } from 'pixi.js';
 
-import { neutralizeDisplayObject, safeDestroyDisplayObject } from './safe-destroy.js';
+import {
+  getDestroyFallbackCount,
+  neutralizeDisplayObject,
+  safeDestroyDisplayObject,
+} from './safe-destroy.js';
 
 export interface DisposalQueue {
   enqueue(container: Container): void;
@@ -8,20 +12,39 @@ export interface DisposalQueue {
   destroy(): void;
 }
 
+const DEFAULT_MAX_FLUSH_ERRORS = 5;
+
 export interface DisposalQueueOptions {
   readonly scheduleFlush?: (callback: () => void) => void;
+  /** After this many destroy failures in a single flush, remaining items are
+   *  neutralized instead of destroyed. Prevents 40+ warning cascades. */
+  readonly maxFlushErrors?: number;
+}
+
+function scheduleAfterTwoAnimationFrames(callback: () => void): void {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(callback);
+  });
 }
 
 export function createDisposalQueue(options?: DisposalQueueOptions): DisposalQueue {
   const pending = new Set<Container>();
-  const schedule = options?.scheduleFlush ?? ((fn: () => void) => requestAnimationFrame(fn));
+  const schedule = options?.scheduleFlush ?? scheduleAfterTwoAnimationFrames;
   let flushScheduled = false;
   let destroyed = false;
 
+  const maxFlushErrors = options?.maxFlushErrors ?? DEFAULT_MAX_FLUSH_ERRORS;
+
   const flush = (): void => {
     flushScheduled = false;
+    const baselineErrors = getDestroyFallbackCount();
     for (const container of pending) {
-      safeDestroyDisplayObject(container, { children: true });
+      const errorsSoFar = getDestroyFallbackCount() - baselineErrors;
+      if (errorsSoFar >= maxFlushErrors) {
+        neutralizeDisplayObject(container);
+      } else {
+        safeDestroyDisplayObject(container, { children: true });
+      }
     }
     pending.clear();
   };

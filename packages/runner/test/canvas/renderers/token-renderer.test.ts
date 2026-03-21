@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { asPlayerId } from '@ludoforge/engine/runtime';
 import type { Container } from 'pixi.js';
+import { STROKE_LABEL_FONT_NAME, type BitmapFontName } from '../../../src/canvas/text/bitmap-font-registry.js';
 
 const {
   MockContainer,
@@ -206,6 +207,7 @@ const {
 });
 
 vi.mock('pixi.js', () => ({
+  BitmapText: MockText,
   Circle: MockCircle,
   Container: MockContainer,
   Graphics: MockGraphics,
@@ -309,7 +311,7 @@ function createColorProvider(overrides: {
     }>>;
   };
   readonly stackBadgeStyle?: {
-    readonly fontFamily?: string;
+    readonly fontName?: BitmapFontName;
     readonly fontSize: number;
     readonly fill: string;
     readonly stroke: string;
@@ -369,7 +371,7 @@ function createColorProvider(overrides: {
           }
     )),
     getStackBadgeStyle: vi.fn(() => ({
-      fontFamily: overrides.stackBadgeStyle?.fontFamily ?? 'monospace',
+      fontName: overrides.stackBadgeStyle?.fontName ?? STROKE_LABEL_FONT_NAME,
       fontSize: overrides.stackBadgeStyle?.fontSize ?? 10,
       fill: overrides.stackBadgeStyle?.fill ?? '#f8fafc',
       stroke: overrides.stackBadgeStyle?.stroke ?? '#000000',
@@ -1546,7 +1548,7 @@ describe('createTokenRenderer', () => {
     expect(badge.text).toBe('2');
     expect(badge.style).toEqual({
       fill: '#f8fafc',
-      fontFamily: 'monospace',
+      fontFamily: STROKE_LABEL_FONT_NAME,
       fontSize: 13,
       stroke: {
         color: '#000000',

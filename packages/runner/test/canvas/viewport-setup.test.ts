@@ -11,6 +11,7 @@ vi.mock('pixi-viewport', () => ({
 import { setupViewport, type ViewportConfig } from '../../src/canvas/viewport-setup';
 
 interface MockViewport extends Container {
+  moving?: boolean;
   plugins: {
     removeAll: ReturnType<typeof vi.fn>;
   };
@@ -89,6 +90,7 @@ describe('setupViewport', () => {
 
   it('creates a viewport with explicit events and enables pan/zoom plugins', () => {
     const viewport = createMockViewport();
+    viewport.moving = true;
     viewportCtorMock.mockImplementation(function () { return viewport; } as never);
 
     const config = createConfig();
@@ -113,6 +115,7 @@ describe('setupViewport', () => {
     });
 
     expect(result.viewport).toBe(viewport);
+    expect(result.viewport.moving).toBe(true);
     expect(result.updateWorldBounds).toEqual(expect.any(Function));
     expect(result.destroy).toEqual(expect.any(Function));
   });

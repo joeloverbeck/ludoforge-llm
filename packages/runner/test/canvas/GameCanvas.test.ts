@@ -9,6 +9,7 @@ import { GameCanvas } from '../../src/canvas/GameCanvas';
 import { createGameCanvasRuntime, createScopedLifecycleCallback } from '../../src/canvas/game-canvas-runtime.js';
 import type { CoordinateBridge } from '../../src/canvas/coordinate-bridge';
 import type { RenderHealthProbeOptions } from '../../src/canvas/render-health-probe.js';
+import type { ViewportResult } from '../../src/canvas/viewport-setup';
 import type { GameStore } from '../../src/store/game-store';
 import type { DiagnosticBuffer } from '../../src/animation/diagnostic-buffer.js';
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
@@ -175,32 +176,32 @@ function createRuntimeFixture() {
     }),
   };
 
-  const viewportEvents: {
-    x: number;
-    y: number;
-    scale: { x: number; y: number };
-    moving?: boolean;
-    on(event: string, listener: () => void): void;
-    off(event: string, listener: () => void): void;
-  } = {
+  type RuntimeViewportFixture = Pick<ViewportResult['viewport'], 'x' | 'y' | 'scale' | 'moving'> & {
+    on(event: 'moved', listener: () => void): ViewportResult['viewport'];
+    off(event: 'moved', listener: () => void): ViewportResult['viewport'];
+  };
+
+  const viewportEvents: RuntimeViewportFixture = {
     x: 0,
     y: 0,
-    scale: { x: 1, y: 1 },
+    scale: { x: 1, y: 1 } as ViewportResult['viewport']['scale'],
     moving: false,
-    on: vi.fn((event: string, listener: () => void) => {
+    on: vi.fn((event: 'moved', listener: () => void) => {
       if (event === 'moved') {
         movedListener = listener;
       }
+      return viewportEvents as ViewportResult['viewport'];
     }),
-    off: vi.fn((event: string, listener: () => void) => {
+    off: vi.fn((event: 'moved', listener: () => void) => {
       if (event === 'moved' && movedListener === listener) {
         movedListener = null;
       }
+      return viewportEvents as ViewportResult['viewport'];
     }),
   };
 
   const viewportResult = {
-    viewport: viewportEvents,
+    viewport: viewportEvents as ViewportResult['viewport'],
     worldLayers: [],
     updateWorldBounds: vi.fn(),
     destroy: vi.fn(() => {

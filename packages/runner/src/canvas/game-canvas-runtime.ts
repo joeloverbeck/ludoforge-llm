@@ -540,11 +540,7 @@ export async function createGameCanvasRuntime(
       version: hoverAnchorVersion,
     });
   };
-  const viewport = viewportResult.viewport as unknown as {
-    readonly moving?: boolean;
-    on(event: 'moved', listener: () => void): void;
-    off(event: 'moved', listener: () => void): void;
-  };
+  const viewport = viewportResult.viewport;
   const onViewportMoved = (): void => {
     publishHoverAnchor();
     if (viewport.moving === true) {

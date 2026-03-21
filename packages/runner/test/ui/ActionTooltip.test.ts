@@ -138,6 +138,17 @@ const COMPANION_GROUPS = [
   },
 ] as const;
 
+const MULTI_COMPANION_GROUPS = [
+  ...COMPANION_GROUPS,
+  {
+    actionClass: 'bonusAction',
+    groupName: 'Bonus Action',
+    actions: [
+      { actionId: 'rally', displayName: 'Rally', isAvailable: true, actionClass: 'bonusAction' },
+    ],
+  },
+] as const;
+
 /* ------------------------------------------------------------------ */
 /* Tests                                                              */
 /* ------------------------------------------------------------------ */
@@ -540,6 +551,22 @@ describe('ActionTooltip', () => {
       expect(companionSection.textContent).toContain('Raid');
       const unavailableItem = Array.from(companionSection.querySelectorAll('li')).find((item) => item.textContent === 'Raid');
       expect(unavailableItem?.className).toContain('companionUnavailable');
+    });
+
+    it('renders multiple companion groups in declaration order', () => {
+      const desc = makeDescription({
+        tooltipPayload: makePayload(),
+      });
+
+      render(createElement(ActionTooltip, {
+        description: desc,
+        anchorElement: makeAnchor(),
+        companionGroups: MULTI_COMPANION_GROUPS,
+      }));
+
+      const headers = Array.from(screen.getByTestId('tooltip-companion-actions').querySelectorAll('p'));
+      expect(headers.map((header) => header.textContent)).toEqual(['Special Activity', 'Bonus Action']);
+      expect(screen.getByText('Rally')).toBeTruthy();
     });
 
     it('does not render companion actions when no companion groups are provided', () => {

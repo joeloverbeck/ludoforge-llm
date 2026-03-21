@@ -1,5 +1,7 @@
 # Spec 71 — Op+SA Tooltip Companion Actions
 
+**Status**: ✅ COMPLETED
+
 ## Problem
 
 When hovering over an operation (e.g., Train) in the "Operation + Special Activity" toolbar group, the tooltip shows only the operation steps — identical to the "Operation" group tooltip. Players choosing the Op+SA path should see what special activities are available alongside the operation to make an informed decision.
@@ -181,3 +183,21 @@ Add styles for `companionSection`, `companionHeader`, `companionList`, `companio
 - Per-special-activity tooltip descriptions within the companion section (future enhancement)
 - Interactive selection of special activities from within the tooltip
 - Any changes to GameSpecDoc or the kernel
+
+## Outcome
+
+- Completion date: 2026-03-21
+- What actually changed:
+  - `appendTooltipFrom` support was added to visual config and used by FITL's Op+SA synthesis rule.
+  - Hidden actions are preserved in `renderModel.hiddenActionsByClass` rather than being dropped during projection.
+  - `GameContainer` resolves tooltip companion data and passes grouped companion content into `ActionTooltip`.
+  - `ActionTooltip` renders grouped companion sections for hidden actions associated with the visible synthesized group.
+- Deviations from original plan:
+  - The final runner API generalized from a flat `companionActions` list to grouped `companionGroups`.
+  - The resolver shipped as `resolveTooltipCompanionGroups`, which is more extensible because it supports multiple appended hidden-action classes cleanly.
+  - The final verification work also included reassessing and correcting the stale ticket assumptions before archival.
+- Verification results:
+  - `pnpm -F @ludoforge/runner test -- --runInBand` ✅
+  - `pnpm turbo build` ✅
+  - `pnpm turbo typecheck` ✅
+  - `pnpm turbo lint` ✅

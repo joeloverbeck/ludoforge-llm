@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import type { Point } from '../../../src/canvas/geometry/convex-hull.js';
 import { padHull, roundHullCorners } from '../../../src/canvas/geometry/hull-padding.js';
+import type { Point2D } from '../../../src/canvas/geometry/point2d.js';
 
 describe('padHull', () => {
   it('returns empty for empty input', () => {
@@ -29,7 +29,7 @@ describe('padHull', () => {
   });
 
   it('pads a triangle outward', () => {
-    const triangle: Point[] = [
+    const triangle: Point2D[] = [
       { x: 0, y: 0 },
       { x: 100, y: 0 },
       { x: 50, y: 80 },
@@ -48,7 +48,7 @@ describe('padHull', () => {
 
   it('pads a square uniformly', () => {
     // Use CCW-ordered square (as convexHull would produce)
-    const square: Point[] = [
+    const square: Point2D[] = [
       { x: 0, y: 0 },
       { x: 100, y: 0 },
       { x: 100, y: 100 },
@@ -70,12 +70,12 @@ describe('padHull', () => {
 
 describe('roundHullCorners', () => {
   it('returns hull unchanged for less than 3 points', () => {
-    const twoPoints: Point[] = [{ x: 0, y: 0 }, { x: 1, y: 1 }];
+    const twoPoints: Point2D[] = [{ x: 0, y: 0 }, { x: 1, y: 1 }];
     expect(roundHullCorners(twoPoints, 10)).toEqual(twoPoints);
   });
 
   it('produces more points than original hull', () => {
-    const square: Point[] = [
+    const square: Point2D[] = [
       { x: 0, y: 0 },
       { x: 100, y: 0 },
       { x: 100, y: 100 },
@@ -88,7 +88,7 @@ describe('roundHullCorners', () => {
   });
 
   it('all rounded points lie within padded bounds', () => {
-    const square: Point[] = [
+    const square: Point2D[] = [
       { x: 0, y: 0 },
       { x: 100, y: 0 },
       { x: 100, y: 100 },
@@ -101,5 +101,25 @@ describe('roundHullCorners', () => {
       expect(p.y).toBeGreaterThanOrEqual(-1);
       expect(p.y).toBeLessThanOrEqual(101);
     }
+  });
+
+  it('preserves corner endpoints for each sampled quadratic arc after extraction', () => {
+    const square: Point2D[] = [
+      { x: 0, y: 0 },
+      { x: 100, y: 0 },
+      { x: 100, y: 100 },
+      { x: 0, y: 100 },
+    ];
+
+    const rounded = roundHullCorners(square, 20);
+
+    expect(rounded[0]).toEqual({ x: 0, y: 20 });
+    expect(rounded[8]).toEqual({ x: 20, y: 0 });
+    expect(rounded[9]).toEqual({ x: 80, y: 0 });
+    expect(rounded[17]).toEqual({ x: 100, y: 20 });
+    expect(rounded[18]).toEqual({ x: 100, y: 80 });
+    expect(rounded[26]).toEqual({ x: 80, y: 100 });
+    expect(rounded[27]).toEqual({ x: 20, y: 100 });
+    expect(rounded[35]).toEqual({ x: 0, y: 80 });
   });
 });

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { convexHull, type Point } from '../../../src/canvas/geometry/convex-hull.js';
+import { convexHull } from '../../../src/canvas/geometry/convex-hull.js';
+import type { Point2D } from '../../../src/canvas/geometry/point2d.js';
 
 describe('convexHull', () => {
   it('returns empty for empty input', () => {
@@ -7,24 +8,24 @@ describe('convexHull', () => {
   });
 
   it('returns single point for single input', () => {
-    const points: Point[] = [{ x: 5, y: 3 }];
+    const points: Point2D[] = [{ x: 5, y: 3 }];
     expect(convexHull(points)).toEqual([{ x: 5, y: 3 }]);
   });
 
   it('returns both points for two distinct points', () => {
-    const points: Point[] = [{ x: 0, y: 0 }, { x: 1, y: 1 }];
+    const points: Point2D[] = [{ x: 0, y: 0 }, { x: 1, y: 1 }];
     const hull = convexHull(points);
     expect(hull).toHaveLength(2);
   });
 
   it('returns single point for two identical points', () => {
-    const points: Point[] = [{ x: 3, y: 3 }, { x: 3, y: 3 }];
+    const points: Point2D[] = [{ x: 3, y: 3 }, { x: 3, y: 3 }];
     const hull = convexHull(points);
     expect(hull).toHaveLength(1);
   });
 
   it('handles collinear points', () => {
-    const points: Point[] = [
+    const points: Point2D[] = [
       { x: 0, y: 0 },
       { x: 1, y: 0 },
       { x: 2, y: 0 },
@@ -37,7 +38,7 @@ describe('convexHull', () => {
   });
 
   it('computes hull for a triangle', () => {
-    const points: Point[] = [
+    const points: Point2D[] = [
       { x: 0, y: 0 },
       { x: 4, y: 0 },
       { x: 2, y: 3 },
@@ -47,7 +48,7 @@ describe('convexHull', () => {
   });
 
   it('computes hull for a square with interior point', () => {
-    const points: Point[] = [
+    const points: Point2D[] = [
       { x: 0, y: 0 },
       { x: 4, y: 0 },
       { x: 4, y: 4 },
@@ -61,7 +62,7 @@ describe('convexHull', () => {
   });
 
   it('returns CCW-ordered vertices', () => {
-    const points: Point[] = [
+    const points: Point2D[] = [
       { x: 0, y: 0 },
       { x: 4, y: 0 },
       { x: 4, y: 4 },
@@ -79,7 +80,7 @@ describe('convexHull', () => {
   });
 
   it('handles many random points', () => {
-    const points: Point[] = [];
+    const points: Point2D[] = [];
     for (let i = 0; i < 100; i += 1) {
       points.push({ x: Math.cos(i * 0.1) * 50 + Math.random(), y: Math.sin(i * 0.1) * 50 + Math.random() });
     }
@@ -90,7 +91,7 @@ describe('convexHull', () => {
   });
 
   it('handles rectangle corner points (single-zone scenario)', () => {
-    const points: Point[] = [
+    const points: Point2D[] = [
       { x: 100, y: 100 },
       { x: 200, y: 100 },
       { x: 200, y: 200 },

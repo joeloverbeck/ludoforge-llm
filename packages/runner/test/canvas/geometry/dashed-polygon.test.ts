@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import type { Point } from '../../../src/canvas/geometry/convex-hull.js';
 import { drawDashedPolygon } from '../../../src/canvas/geometry/dashed-polygon.js';
+import type { Point2D } from '../../../src/canvas/geometry/point2d.js';
 
 function createMockGraphics(): { moveTo: ReturnType<typeof vi.fn>; lineTo: ReturnType<typeof vi.fn> } {
   return {
@@ -26,7 +26,7 @@ describe('drawDashedPolygon', () => {
 
   it('draws dashes along a square', () => {
     const g = createMockGraphics();
-    const square: Point[] = [
+    const square: Point2D[] = [
       { x: 0, y: 0 },
       { x: 100, y: 0 },
       { x: 100, y: 100 },
@@ -42,7 +42,7 @@ describe('drawDashedPolygon', () => {
 
   it('handles very small polygons without crashing', () => {
     const g = createMockGraphics();
-    const tiny: Point[] = [
+    const tiny: Point2D[] = [
       { x: 0, y: 0 },
       { x: 1, y: 0 },
       { x: 0.5, y: 1 },

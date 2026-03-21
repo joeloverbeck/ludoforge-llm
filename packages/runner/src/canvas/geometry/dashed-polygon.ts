@@ -1,12 +1,12 @@
 import type { Graphics } from 'pixi.js';
-import type { Point } from './convex-hull.js';
+import type { Point2D } from './point2d.js';
 
 /**
  * Draw dashed line segments along a closed polygon path.
  */
 export function drawDashedPolygon(
   graphics: Graphics,
-  points: readonly Point[],
+  points: readonly Point2D[],
   dashLength: number,
   gapLength: number,
 ): void {

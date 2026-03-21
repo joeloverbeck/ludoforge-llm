@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — runner-only
-**Deps**: None (can be done in parallel with 71CONROUREN-001)
+**Deps**: None
 
 ## Problem
 

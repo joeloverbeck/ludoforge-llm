@@ -1,10 +1,11 @@
-import type { Point } from './convex-hull.js';
+import type { Point2D } from './point2d.js';
+import { quadraticBezierPoint } from './bezier-utils.js';
 
 /**
  * Move each edge of a convex hull outward by `padding` along its normal,
  * then compute new vertex positions at edge intersections.
  */
-export function padHull(hull: readonly Point[], padding: number): readonly Point[] {
+export function padHull(hull: readonly Point2D[], padding: number): readonly Point2D[] {
   const n = hull.length;
   if (n === 0) {
     return [];
@@ -22,7 +23,7 @@ export function padHull(hull: readonly Point[], padding: number): readonly Point
     return padLineSegment(hull[0]!, hull[1]!, padding);
   }
 
-  const result: Point[] = [];
+  const result: Point2D[] = [];
 
   for (let i = 0; i < n; i += 1) {
     const prev = hull[(i - 1 + n) % n]!;
@@ -56,7 +57,7 @@ export function padHull(hull: readonly Point[], padding: number): readonly Point
   return result;
 }
 
-function padLineSegment(a: Point, b: Point, padding: number): readonly Point[] {
+function padLineSegment(a: Point2D, b: Point2D, padding: number): readonly Point2D[] {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const len = Math.sqrt(dx * dx + dy * dy);
@@ -76,7 +77,7 @@ function padLineSegment(a: Point, b: Point, padding: number): readonly Point[] {
   ];
 }
 
-function edgeOutwardNormal(from: Point, to: Point): { readonly x: number; readonly y: number } {
+function edgeOutwardNormal(from: Point2D, to: Point2D): Point2D {
   const dx = to.x - from.x;
   const dy = to.y - from.y;
   const len = Math.sqrt(dx * dx + dy * dy);
@@ -93,13 +94,13 @@ const SAMPLES_PER_CORNER = 8;
  * Replace each sharp vertex of the hull with a quadratic bezier arc.
  * `cornerRadius` controls how far the control points are from the vertex.
  */
-export function roundHullCorners(hull: readonly Point[], cornerRadius: number): readonly Point[] {
+export function roundHullCorners(hull: readonly Point2D[], cornerRadius: number): readonly Point2D[] {
   const n = hull.length;
   if (n < 3) {
     return hull;
   }
 
-  const result: Point[] = [];
+  const result: Point2D[] = [];
 
   for (let i = 0; i < n; i += 1) {
     const prev = hull[(i - 1 + n) % n]!;
@@ -116,23 +117,17 @@ export function roundHullCorners(hull: readonly Point[], cornerRadius: number): 
 
     const radius = Math.min(cornerRadius, toPrevLen * 0.4, toNextLen * 0.4);
 
-    const p0: Point = {
+    const p0: Point2D = {
       x: curr.x + (toPrevX / toPrevLen) * radius,
       y: curr.y + (toPrevY / toPrevLen) * radius,
     };
-    const p2: Point = {
+    const p2: Point2D = {
       x: curr.x + (toNextX / toNextLen) * radius,
       y: curr.y + (toNextY / toNextLen) * radius,
     };
 
-    // Quadratic bezier: P(t) = (1-t)^2 * p0 + 2(1-t)t * curr + t^2 * p2
     for (let s = 0; s <= SAMPLES_PER_CORNER; s += 1) {
-      const t = s / SAMPLES_PER_CORNER;
-      const mt = 1 - t;
-      result.push({
-        x: mt * mt * p0.x + 2 * mt * t * curr.x + t * t * p2.x,
-        y: mt * mt * p0.y + 2 * mt * t * curr.y + t * t * p2.y,
-      });
+      result.push(quadraticBezierPoint(s / SAMPLES_PER_CORNER, p0, curr, p2));
     }
   }
 

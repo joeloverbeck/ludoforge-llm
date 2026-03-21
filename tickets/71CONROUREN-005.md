@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — runner-only
-**Deps**: 71CONROUREN-003 (resolver), 71CONROUREN-004 (renderer)
+**Deps**: tickets/71CONROUREN-003.md, tickets/71CONROUREN-004.md
 
 ## Problem
 

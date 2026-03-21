@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — runner-only
-**Deps**: 71CONROUREN-002 (needs `'connection'` in `ZoneShape` and `connectionStyleKey` in resolved visuals)
+**Deps**: tickets/71CONROUREN-002.md
 
 ## Problem
 

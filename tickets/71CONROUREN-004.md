@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — runner-only
-**Deps**: 71CONROUREN-001 (Bézier math), 71CONROUREN-002 (visual config schema), 71CONROUREN-003 (resolver interfaces)
+**Deps**: archive/tickets/71CONROUREN/71CONROUREN-001.md, tickets/71CONROUREN-002.md, tickets/71CONROUREN-003.md
 
 ## Problem
 

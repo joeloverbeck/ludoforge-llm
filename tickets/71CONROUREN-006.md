@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — runner-only
-**Deps**: 71CONROUREN-002 (schema), 71CONROUREN-005 (pipeline wired)
+**Deps**: tickets/71CONROUREN-002.md, tickets/71CONROUREN-005.md
 
 ## Problem
 

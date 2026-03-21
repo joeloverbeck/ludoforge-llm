@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — runner-only
-**Deps**: None (independent of 71CANCRASH-001)
+**Deps**: None
 
 ## Problem
 

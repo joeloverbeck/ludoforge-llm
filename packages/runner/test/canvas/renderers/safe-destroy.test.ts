@@ -201,13 +201,29 @@ describe('safeDestroyDisplayObject', () => {
     expect((container as unknown as { visible: boolean }).visible).toBe(false);
   });
 
-  it('does not set renderable/visible when destroy() succeeds', () => {
+  it('sets renderable and visible to false before destroy() is invoked', () => {
+    const container = new MockContainer() as unknown as Container;
+    const statesSeenByDestroy: Array<{ renderable: boolean; visible: boolean }> = [];
+
+    vi.spyOn(container, 'destroy').mockImplementation(() => {
+      statesSeenByDestroy.push({
+        renderable: (container as unknown as { renderable: boolean }).renderable,
+        visible: (container as unknown as { visible: boolean }).visible,
+      });
+    });
+
+    safeDestroyDisplayObject(container);
+
+    expect(statesSeenByDestroy).toEqual([{ renderable: false, visible: false }]);
+  });
+
+  it('keeps renderable/visible false when destroy() succeeds', () => {
     const container = new MockContainer() as unknown as Container;
 
     safeDestroyDisplayObject(container);
 
-    expect((container as unknown as { renderable: boolean }).renderable).toBe(true);
-    expect((container as unknown as { visible: boolean }).visible).toBe(true);
+    expect((container as unknown as { renderable: boolean }).renderable).toBe(false);
+    expect((container as unknown as { visible: boolean }).visible).toBe(false);
   });
 });
 

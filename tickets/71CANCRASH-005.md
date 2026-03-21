@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — runner-only
-**Deps**: 71CANCRASH-003 (uses `isRenderCorruptionSuspected()` from the ticker error fence to schedule probes)
+**Deps**: 71CANCRASH-003
 
 ## Problem
 
@@ -16,12 +16,14 @@ The heartbeat checks structural health (ticker running, canvas connected) but ca
 2. PixiJS `Container` has `children`, `renderable`, and `visible` properties — standard PixiJS v8 API.
 3. After 71CANCRASH-003, the ticker error fence exposes `isRenderCorruptionSuspected()` — this ticket depends on that being available.
 4. The `GameCanvasRuntime.destroy()` method already tears down all subsystems in sequence (lines 536-572) — the probe must be destroyed in this sequence too.
+5. After 71CANCRASH-003, `CanvasRuntimeHealthStatus` should already be consolidated to a single source of truth. This ticket must use that shared type surface and must not re-declare it while wiring the probe into `game-canvas-runtime.ts`.
 
 ## Architecture Check
 
 1. The probe is lightweight: it runs only after contained errors (not every tick), checking that the stage has renderable children. This is O(N) over direct children of the stage, which is a small fixed set (layer containers).
 2. This is purely runner canvas concern — no engine or game-spec changes.
 3. The probe is a new module with a clean interface; no backwards-compatibility concerns.
+4. This ticket extends runtime wiring only; it must preserve the health-status consolidation introduced by 71CANCRASH-003 and avoid reintroducing duplicate type declarations.
 
 ## What to Change
 
@@ -55,6 +57,7 @@ Create `packages/runner/src/canvas/render-health-probe.ts`:
 - In the ticker error fence's `wrappedTick` catch path (or via a new `onContainedError` callback on the fence), call `probe.scheduleVerification()`.
 - The probe's `onCorruption` callback should trigger the existing crash recovery path (e.g., `options.onError?.(error)` or directly call `requestRecovery` via the crash recovery handle).
 - Add `probe.destroy()` to the `destroyCanvasPipeline` sequence.
+- While touching runtime health wiring, keep `CanvasRuntimeHealthStatus` imported from the single canonical module established by 71CANCRASH-003; do not re-declare it locally.
 
 ### 3. Extend `TickerErrorFenceOptions` with `onContainedError` callback (if not already addressed by 71CANCRASH-003)
 

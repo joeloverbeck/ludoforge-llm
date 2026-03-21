@@ -48,6 +48,13 @@ export function safeDestroyDisplayObject(
   displayObject: DestroyableDisplayObject,
   options?: unknown,
 ): void {
+  if ('renderable' in displayObject) {
+    displayObject.renderable = false;
+  }
+  if ('visible' in displayObject) {
+    displayObject.visible = false;
+  }
+
   try {
     displayObject.destroy(options);
   } catch (error) {

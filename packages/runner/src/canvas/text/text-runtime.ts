@@ -64,6 +64,8 @@ export function createManagedText(options: ManagedTextOptions = {}): Text {
 }
 
 export function destroyManagedText(text: Text): void {
+  text.renderable = false;
+  text.visible = false;
   text.removeFromParent();
   safeDestroyDisplayObject(text);
 }

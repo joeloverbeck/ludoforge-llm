@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — runner-only
-**Deps**: None (independent; builds on existing ticker-error-fence and canvas-crash-recovery infrastructure)
+**Deps**: None
 
 ## Problem
 

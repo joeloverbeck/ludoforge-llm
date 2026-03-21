@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — runner-only
-**Deps**: None (independent)
+**Deps**: None
 
 ## Problem
 

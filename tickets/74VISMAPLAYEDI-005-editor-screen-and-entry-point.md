@@ -24,6 +24,7 @@ Users need a way to enter the map editor from the game selection screen and see 
 1. `MapEditorScreen` follows the pattern of other screen components — receives `gameId` and callbacks as props, manages its own lifecycle.
 2. "Edit Map" button is conditional on `layout.mode === 'graph'` (map games only) — game-agnostic condition (Foundation 1).
 3. No backwards-compatibility shims — new button and screen, no fallback (Foundation 9).
+4. Session navigation must stay inside the existing discriminated-union session store added by `74VISMAPLAYEDI-001`. Do not introduce React Router, URL-state routing, or alternate navigation aliases for editor entry/exit; `openMapEditor(gameId)` and `returnToMenu()` remain the canonical transitions.
 
 ## What to Change
 
@@ -65,6 +66,7 @@ Replace the placeholder `<div>` in the `'mapEditor'` case with `<MapEditorScreen
 ### 5. Connect in `App.tsx`
 
 Pass `onEditMap` prop from `App.tsx` that calls `sessionStore.openMapEditor(gameId)`.
+Do not route editor entry through `selectGame()` or any pre-game screen transition. Editing a map is a distinct session intent and must remain explicit in the session API.
 
 ## Files to Touch
 
@@ -99,6 +101,7 @@ Pass `onEditMap` prop from `App.tsx` that calls `sessionStore.openMapEditor(game
 2. No modifications to bootstrap loaders, visual config parser, or layout computation modules.
 3. Canvas is properly destroyed on unmount (no memory leaks).
 4. Existing game selection and play flow is unchanged.
+5. Editor navigation continues to use the session store's explicit screen union rather than an additional routing layer.
 
 ## Test Plan
 

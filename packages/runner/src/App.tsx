@@ -186,6 +186,22 @@ export function App(): ReactElement {
             }}
           />
         );
+      case 'mapEditor':
+        return (
+          <main data-testid="map-editor-placeholder-screen">
+            <h1>Map Editor</h1>
+            <p data-testid="map-editor-game-id">{sessionState.gameId}</p>
+            <button
+              type="button"
+              data-testid="map-editor-back-to-menu"
+              onClick={() => {
+                sessionStore.getState().returnToMenu();
+              }}
+            >
+              Back to Menu
+            </button>
+          </main>
+        );
       default:
         return null;
     }

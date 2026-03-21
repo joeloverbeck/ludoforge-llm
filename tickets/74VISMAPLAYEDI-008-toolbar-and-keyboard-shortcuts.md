@@ -22,6 +22,7 @@ The map editor needs a toolbar with undo/redo buttons, grid toggle, snap toggle,
 1. Toolbar is a standard React component reading from the editor Zustand store — same pattern as game UI panels.
 2. Keyboard shortcuts are registered on mount, removed on unmount — no global state pollution.
 3. No engine changes (Foundation 1 preserved).
+4. Back navigation remains callback-driven from `MapEditorScreen` into the session store. Do not add a second navigation mechanism in the toolbar (router calls, location changes, or bespoke close-editor aliases).
 
 ## What to Change
 
@@ -30,7 +31,7 @@ The map editor needs a toolbar with undo/redo buttons, grid toggle, snap toggle,
 New file `packages/runner/src/map-editor/map-editor-toolbar.tsx`:
 
 **Buttons**:
-- **Back** (← arrow): Calls `onBack` prop (navigates to game selection). Shows confirmation dialog if `dirty === true`.
+- **Back** (← arrow): Calls the existing `onBack` prop from `MapEditorScreen` (which remains wired to session-store navigation). Shows confirmation dialog if `dirty === true`.
 - **Undo** (Ctrl+Z icon): Calls `store.undo()`. Disabled when `undoStack` is empty.
 - **Redo** (Ctrl+Shift+Z icon): Calls `store.redo()`. Disabled when `redoStack` is empty.
 - **Grid** (toggle): Calls `store.toggleGrid()`. Visual indicator when active.
@@ -95,6 +96,7 @@ Modify `packages/runner/src/map-editor/MapEditorScreen.tsx`:
 1. Keyboard shortcuts are cleaned up on unmount (no memory leaks).
 2. No modification to the existing keyboard coordinator or input modules.
 3. Toolbar is purely presentational + store interaction — no canvas logic.
+4. Back navigation stays delegated to the existing `onBack` callback; toolbar work must not introduce a parallel navigation path.
 
 ## Test Plan
 

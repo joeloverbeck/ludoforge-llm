@@ -20,10 +20,12 @@ interface SessionStoreState {
       readonly playerConfig: TestPlayerConfig;
       readonly initialMoveHistory: readonly unknown[];
     }
-    | { readonly screen: 'replay'; readonly gameId: string; readonly seed: number; readonly moveHistory: readonly unknown[]; readonly playerConfig: TestPlayerConfig };
+    | { readonly screen: 'replay'; readonly gameId: string; readonly seed: number; readonly moveHistory: readonly unknown[]; readonly playerConfig: TestPlayerConfig }
+    | { readonly screen: 'mapEditor'; readonly gameId: string };
   readonly unsavedChanges: boolean;
   readonly moveAccumulator: readonly unknown[];
   selectGame(gameId: string): void;
+  openMapEditor(gameId: string): void;
   startGame(seed: number, playerConfig: TestPlayerConfig): void;
   resumeGame(gameId: string, seed: number, playerConfig: TestPlayerConfig, moveHistory: readonly unknown[]): void;
   returnToMenu(): void;
@@ -79,6 +81,9 @@ function createMockSessionStore(initialState?: Partial<Pick<SessionStoreState, '
     moveAccumulator: [],
     selectGame(gameId) {
       store.setState({ sessionState: { screen: 'preGameConfig', gameId } });
+    },
+    openMapEditor(gameId) {
+      store.setState({ sessionState: { screen: 'mapEditor', gameId } });
     },
     startGame(seed, playerConfig) {
       const current = store.getState().sessionState;
@@ -547,6 +552,29 @@ describe('App', () => {
       expect(screen.getByTestId('replay-screen')).toBeTruthy();
     });
     fireEvent.click(screen.getByTestId('replay-back-to-menu'));
+    await waitFor(() => {
+      expect(screen.getByTestId('game-selection-screen')).toBeTruthy();
+    });
+  });
+
+  it('renders map editor placeholder branch and routes back to menu', async () => {
+    testDoubles.sessionStore = createMockSessionStore({
+      sessionState: {
+        screen: 'mapEditor',
+        gameId: 'fitl',
+      },
+    });
+    testDoubles.createSessionStore.mockImplementation(() => testDoubles.sessionStore);
+
+    const { App } = await import('../../src/App.js');
+
+    render(createElement(App));
+
+    expect(screen.getByTestId('map-editor-placeholder-screen')).toBeTruthy();
+    expect(screen.getByTestId('map-editor-game-id').textContent).toBe('fitl');
+
+    fireEvent.click(screen.getByTestId('map-editor-back-to-menu'));
+
     await waitFor(() => {
       expect(screen.getByTestId('game-selection-screen')).toBeTruthy();
     });

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — runner-only
-**Deps**: None (can be implemented independently)
+**Deps**: None
 
 ## Problem
 

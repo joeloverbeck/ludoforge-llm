@@ -22,6 +22,7 @@ The editor needs visual polish: a grid overlay for alignment reference, visual h
 1. Grid overlay is a pure rendering concern — draws lines on the background layer based on `gridSize`.
 2. Selection highlighting modifies zone/route visual state (glow, outline thickness) — no store changes needed beyond existing `selectedZoneId`/`selectedRouteId`.
 3. All visual polish is game-agnostic (Foundation 1).
+4. Dirty-state navigation warning must layer on top of the existing session-navigation callback flow from `74VISMAPLAYEDI-005` and `74VISMAPLAYEDI-008`, not replace it with router- or URL-driven behavior.
 
 ## What to Change
 

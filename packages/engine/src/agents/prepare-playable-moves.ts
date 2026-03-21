@@ -1,4 +1,3 @@
-import { legalChoicesEvaluate } from '../kernel/legal-choices.js';
 import { perfStart, perfDynEnd, type PerfProfiler } from '../kernel/perf-profiler.js';
 import { evaluatePlayableMoveCandidate } from '../kernel/playable-candidate.js';
 import { probeMoveViability } from '../kernel/apply-move.js';

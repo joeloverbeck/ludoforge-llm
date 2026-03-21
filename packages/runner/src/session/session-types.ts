@@ -2,7 +2,7 @@ import type { Move } from '@ludoforge/engine/runtime';
 import type { PlayerSeatConfig } from '../seat/seat-controller.js';
 export type { PlayerSeatConfig } from '../seat/seat-controller.js';
 
-export type AppScreen = 'gameSelection' | 'preGameConfig' | 'activeGame' | 'replay';
+export type AppScreen = 'gameSelection' | 'preGameConfig' | 'activeGame' | 'replay' | 'mapEditor';
 
 export interface GameSelectionState {
   readonly screen: 'gameSelection';
@@ -29,8 +29,14 @@ export interface ReplayState {
   readonly playerConfig: readonly PlayerSeatConfig[];
 }
 
+export interface MapEditorState {
+  readonly screen: 'mapEditor';
+  readonly gameId: string;
+}
+
 export type SessionState =
   | GameSelectionState
   | PreGameConfigState
   | ActiveGameState
-  | ReplayState;
+  | ReplayState
+  | MapEditorState;

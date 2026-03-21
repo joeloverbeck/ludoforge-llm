@@ -35,6 +35,7 @@ function createSessionStoreFixture(moveAccumulator: readonly Move[]): StoreApi<S
     unsavedChanges: true,
     moveAccumulator,
     selectGame: vi.fn(),
+    openMapEditor: vi.fn(),
     startGame: vi.fn(),
     resumeGame: vi.fn(),
     returnToMenu: vi.fn(),

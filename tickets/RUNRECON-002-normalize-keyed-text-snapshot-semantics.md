@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — runner-only
-**Deps**: docs/FOUNDATIONS.md, tickets/README.md, tickets/RUNRECON-001-normalize-keyed-bitmaptext-snapshot-semantics.md
+**Deps**: docs/FOUNDATIONS.md, tickets/README.md, archive/tickets/RUNRECON/RUNRECON-001-normalize-keyed-bitmaptext-snapshot-semantics.md
 
 ## Problem
 
@@ -23,6 +23,7 @@ That makes reused keyed `Text` nodes stateful in ways the spec does not express.
 3. Current keyed `Text` callers are `card-template-renderer.ts` and `region-boundary-renderer.ts`; both currently provide the fields they rely on, so no known live bug is exposed today — **confirmed**.
 4. Existing `text-runtime` tests verify creation, updates, replacement, teardown, and advanced-property application, but they do **not** assert reset-to-default behavior for omitted transform/style fields on reused entries — **confirmed** in `packages/runner/test/canvas/text/text-runtime.test.ts`.
 5. The cleanest default for omitted `style` is to align reused keyed entries with the same unstyled/base behavior that a fresh `createManagedText({ text })` entry receives, not to preserve old style objects invisibly — **inferred from current runtime design and needs explicit implementation/tests**.
+6. `anchor` and `position` are also still patch-style optional fields in `text-runtime.ts`, but this ticket intentionally does **not** widen them to reset-to-default semantics because geometry snapshotting is a separate contract change that should stay isolated from the transform/style work here.
 
 ## Architecture Check
 
@@ -72,6 +73,7 @@ Add tests that prove:
 ## Out of Scope
 
 - BitmapText runtime semantics in `packages/runner/src/canvas/text/bitmap-text-runtime.ts`
+- Keyed geometry omission semantics for `anchor` and `position` in either text runtime
 - Renderer-specific typography or layout decisions
 - New style abstractions beyond what the shared keyed runtime needs
 - Any engine (`packages/engine/`) or GameSpecDoc/GameDef changes

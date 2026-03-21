@@ -149,15 +149,9 @@ export function createKeyedBitmapTextReconciler(
     }
     text.visible = spec.visible ?? true;
     text.renderable = spec.renderable ?? true;
-    if (spec.alpha !== undefined) {
-      text.alpha = spec.alpha;
-    }
-    if (spec.rotation !== undefined) {
-      text.rotation = spec.rotation;
-    }
-    if (spec.scale !== undefined) {
-      text.scale.set(spec.scale.x, spec.scale.y);
-    }
+    text.alpha = spec.alpha ?? 1;
+    text.rotation = spec.rotation ?? 0;
+    text.scale.set(spec.scale?.x ?? 1, spec.scale?.y ?? 1);
     spec.apply?.(text);
   }
 

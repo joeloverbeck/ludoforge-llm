@@ -118,6 +118,8 @@ const {
 
     anchor = new MockPoint();
 
+    scale = new MockPoint();
+
     constructor(options: { text: string; style?: unknown }) {
       super();
       this.text = options.text;

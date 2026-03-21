@@ -231,6 +231,41 @@ describe('createKeyedBitmapTextReconciler', () => {
     });
   });
 
+  it('resets alpha, rotation, and scale to canonical defaults when omitted on reuse', () => {
+    const parent = new MockContainer() as unknown as Container;
+    const reconciler = createKeyedBitmapTextReconciler({ parentContainer: parent });
+
+    reconciler.reconcile([
+      {
+        key: 'resettable',
+        text: 'first',
+        style: { fontName: LABEL_FONT_NAME },
+        alpha: 0.25,
+        rotation: 0.75,
+        scale: { x: 2, y: 3 },
+      },
+    ]);
+
+    const resettable = reconciler.get('resettable') as unknown as InstanceType<typeof MockBitmapText>;
+    expect(resettable.alpha).toBe(0.25);
+    expect(resettable.rotation).toBe(0.75);
+    expect(resettable.scale.x).toBe(2);
+    expect(resettable.scale.y).toBe(3);
+
+    reconciler.reconcile([
+      {
+        key: 'resettable',
+        text: 'second',
+        style: { fontName: LABEL_FONT_NAME },
+      },
+    ]);
+
+    expect(resettable.alpha).toBe(1);
+    expect(resettable.rotation).toBe(0);
+    expect(resettable.scale.x).toBe(1);
+    expect(resettable.scale.y).toBe(1);
+  });
+
   it('creates keyed text with a single style assignment and preserves style identity for equivalent updates', () => {
     const parent = new MockContainer() as unknown as Container;
     const reconciler = createKeyedBitmapTextReconciler({ parentContainer: parent });
@@ -403,5 +438,45 @@ describe('createKeyedBitmapTextReconciler', () => {
     reconciler.reconcile([{ key: 'c', text: 'custom', style: { fontName: LABEL_FONT_NAME }, apply: applySpy }]);
     expect(applySpy).toHaveBeenCalledOnce();
     expect(applySpy).toHaveBeenCalledWith(reconciler.get('c'));
+  });
+
+  it('lets apply override canonical transform defaults after reconciliation', () => {
+    const parent = new MockContainer() as unknown as Container;
+    const reconciler = createKeyedBitmapTextReconciler({ parentContainer: parent });
+
+    reconciler.reconcile([
+      {
+        key: 'custom-transform',
+        text: 'first',
+        style: { fontName: LABEL_FONT_NAME },
+        alpha: 0.3,
+        rotation: 0.5,
+        scale: { x: 4, y: 5 },
+      },
+    ]);
+
+    const customTransform = reconciler.get('custom-transform') as unknown as InstanceType<typeof MockBitmapText>;
+    expect(customTransform.alpha).toBe(0.3);
+    expect(customTransform.rotation).toBe(0.5);
+    expect(customTransform.scale.x).toBe(4);
+    expect(customTransform.scale.y).toBe(5);
+
+    reconciler.reconcile([
+      {
+        key: 'custom-transform',
+        text: 'second',
+        style: { fontName: LABEL_FONT_NAME },
+        apply: (text) => {
+          text.alpha = 0.6;
+          text.rotation = 1.25;
+          text.scale.set(1.5, 1.75);
+        },
+      },
+    ]);
+
+    expect(customTransform.alpha).toBe(0.6);
+    expect(customTransform.rotation).toBe(1.25);
+    expect(customTransform.scale.x).toBe(1.5);
+    expect(customTransform.scale.y).toBe(1.75);
   });
 });

@@ -657,6 +657,59 @@ describe('createZoneRenderer', () => {
     expect(badgeLabel.visible).toBe(false);
   });
 
+  it('updates marker labels and badge visuals in place without stale badge leakage', () => {
+    const renderer = createZoneRenderer(new MockContainer() as unknown as Container, new ContainerPool());
+    const baseZone = makePresentationZoneNode();
+
+    renderer.update([{
+      ...baseZone,
+      render: {
+        ...baseZone.render,
+        markersLabel: { text: 'Sabotage', x: 0, y: 66, visible: true },
+        badge: { text: 'AO', color: '#dc2626', x: 18, y: -8, width: 30, height: 20 },
+      },
+    }], new Map());
+
+    const zoneContainer = renderer.getContainerMap().get('zone:a') as InstanceType<typeof MockContainer>;
+    const markersLabel = zoneContainer.children[3] as InstanceType<typeof MockText>;
+    const badgeGraphics = zoneContainer.children[4] as InstanceType<typeof MockGraphics>;
+    const badgeLabel = zoneContainer.children[5] as InstanceType<typeof MockText>;
+
+    expect(markersLabel.text).toBe('Sabotage');
+    expect(markersLabel.visible).toBe(true);
+    expect(markersLabel.position.x).toBe(0);
+    expect(markersLabel.position.y).toBe(66);
+    expect(badgeGraphics.visible).toBe(true);
+    expect(badgeGraphics.roundRectArgs).toEqual([18, -8, 30, 20, 4]);
+    expect(badgeGraphics.fillStyle).toEqual({ color: 0xdc2626 });
+    expect(badgeLabel.visible).toBe(true);
+    expect(badgeLabel.text).toBe('AO');
+    expect(badgeLabel.position.x).toBe(33);
+    expect(badgeLabel.position.y).toBe(2);
+
+    renderer.update([{
+      ...baseZone,
+      render: {
+        ...baseZone.render,
+        markersLabel: { text: 'Control:COIN', x: 12, y: 84, visible: true },
+        badge: null,
+      },
+    }], new Map());
+
+    const updatedMarkersLabel = zoneContainer.children[3] as InstanceType<typeof MockText>;
+    const updatedBadgeGraphics = zoneContainer.children[4] as InstanceType<typeof MockGraphics>;
+    const updatedBadgeLabel = zoneContainer.children[5] as InstanceType<typeof MockText>;
+
+    expect(updatedMarkersLabel.text).toBe('Control:COIN');
+    expect(updatedMarkersLabel.position.x).toBe(12);
+    expect(updatedMarkersLabel.position.y).toBe(84);
+    expect(updatedBadgeGraphics.visible).toBe(false);
+    expect(updatedBadgeLabel.visible).toBe(false);
+    expect(zoneContainer.children[3]).toBe(markersLabel);
+    expect(zoneContainer.children[4]).toBe(badgeGraphics);
+    expect(zoneContainer.children[5]).toBe(badgeLabel);
+  });
+
   it('filters badge marker from markers text', () => {
     const provider = new VisualConfigProvider({
       version: 1,

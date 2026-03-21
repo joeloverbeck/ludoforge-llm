@@ -12,12 +12,18 @@ import {
   quadraticBezierPoint,
 } from '../geometry/bezier-utils.js';
 import {
-  LABEL_FONT_NAME,
   STROKE_LABEL_FONT_NAME,
 } from '../text/bitmap-font-registry.js';
 import { createManagedBitmapText, destroyManagedBitmapText } from '../text/bitmap-text-runtime.js';
 import { parseHexColor } from './shape-utils.js';
 import { safeDestroyDisplayObject } from './safe-destroy.js';
+import {
+  createZoneBadgeVisuals,
+  createZoneMarkersLabel,
+  updateZoneBadgeVisuals,
+  updateZoneMarkersLabel,
+  type ZoneBadgeVisuals,
+} from './zone-presentation-visuals.js';
 import type { ConnectionRouteRenderer } from './renderer-types.js';
 import type { ConnectionRouteNode, JunctionNode } from '../../presentation/connection-route-resolver.js';
 
@@ -34,15 +40,13 @@ interface ConnectionRouteRendererOptions {
   ) => () => void;
 }
 
-interface RouteSlot {
+interface RouteSlot extends ZoneBadgeVisuals {
   readonly root: Container;
   readonly curve: Graphics;
   readonly midpoint: Container;
   readonly labelCluster: Container;
   readonly label: BitmapText;
   readonly markersLabel: BitmapText;
-  readonly badgeGraphics: Graphics;
-  readonly badgeLabel: BitmapText;
 }
 
 const DEFAULT_JUNCTION_RADIUS = 6;
@@ -161,13 +165,10 @@ export function createConnectionRouteRenderer(
         slot.labelCluster.rotation = labelRotation;
         slot.label.text = route.displayName;
         slot.label.visible = true;
-        slot.markersLabel.text = route.zone.render.markersLabel.text;
-        slot.markersLabel.position.set(
-          route.zone.render.markersLabel.x,
-          ROUTE_MARKERS_LABEL_Y,
-        );
-        slot.markersLabel.visible = route.zone.render.markersLabel.visible;
-        updateMarkerBadge(slot, route.zone.render.badge);
+        updateZoneMarkersLabel(slot.markersLabel, route.zone.render.markersLabel, {
+          y: ROUTE_MARKERS_LABEL_Y,
+        });
+        updateZoneBadgeVisuals(slot, route.zone.render.badge);
         selectableByRouteId.set(route.zoneId, route.zone.isSelectable);
       }
 
@@ -258,33 +259,8 @@ function getOrCreateRouteSlot(
     position: { x: 0, y: ROUTE_NAME_LABEL_Y },
     visible: false,
   });
-  const markersLabel = createManagedBitmapText({
-    text: '',
-    style: {
-      fontName: STROKE_LABEL_FONT_NAME,
-      fill: '#f5f7fa',
-      fontSize: 11,
-      stroke: { color: '#000000', width: 2 },
-    },
-    anchor: { x: 0.5, y: 0 },
-    position: { x: 0, y: ROUTE_MARKERS_LABEL_Y },
-    visible: false,
-  });
-  const badgeGraphics = new Graphics();
-  badgeGraphics.eventMode = 'none';
-  badgeGraphics.interactiveChildren = false;
-  badgeGraphics.visible = false;
-  const badgeLabel = createManagedBitmapText({
-    text: '',
-    style: {
-      fontName: LABEL_FONT_NAME,
-      fill: '#ffffff',
-      fontSize: 10,
-      fontWeight: 'bold',
-    },
-    anchor: { x: 0.5, y: 0.5 },
-    visible: false,
-  });
+  const markersLabel = createZoneMarkersLabel({ x: 0, y: ROUTE_MARKERS_LABEL_Y });
+  const { badgeGraphics, badgeLabel } = createZoneBadgeVisuals();
 
   labelCluster.addChild(label, markersLabel, badgeGraphics, badgeLabel);
   midpoint.addChild(labelCluster);
@@ -321,31 +297,6 @@ function destroyRouteSlot(slot: RouteSlot): void {
   destroyManagedBitmapText(slot.markersLabel);
   destroyManagedBitmapText(slot.label);
   safeDestroyDisplayObject(slot.root, { children: true });
-}
-
-function hideBadge(slot: RouteSlot): void {
-  slot.badgeGraphics.visible = false;
-  slot.badgeLabel.visible = false;
-}
-
-function updateMarkerBadge(
-  slot: RouteSlot,
-  badge: ConnectionRouteNode['zone']['render']['badge'],
-): void {
-  if (badge === null) {
-    hideBadge(slot);
-    return;
-  }
-
-  const fillColor = parseHexColor(badge.color);
-  slot.badgeGraphics.clear();
-  slot.badgeGraphics.roundRect(badge.x, badge.y, badge.width, badge.height, 4);
-  slot.badgeGraphics.fill({ color: fillColor ?? 0x6b7280 });
-  slot.badgeGraphics.visible = true;
-
-  slot.badgeLabel.text = badge.text;
-  slot.badgeLabel.position.set(badge.x + (badge.width / 2), badge.y + (badge.height / 2));
-  slot.badgeLabel.visible = true;
 }
 
 interface ResolvedStroke {

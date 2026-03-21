@@ -145,6 +145,25 @@ describe('destroyManagedText', () => {
     expect(statesSeenByRemove[0]).toEqual({ renderable: false, visible: false });
     expect(statesSeenByRemove).not.toHaveLength(0);
   });
+
+  it('reaches destroy() with renderable and visible already false', () => {
+    const parent = new MockContainer() as unknown as Container;
+    const text = createManagedText({ parent, text: 'Hello' }) as unknown as InstanceType<typeof MockText>;
+    const statesSeenByDestroy: Array<{ renderable: boolean; visible: boolean }> = [];
+    const originalDestroy = text.destroy;
+
+    text.destroy = vi.fn(() => {
+      statesSeenByDestroy.push({
+        renderable: text.renderable,
+        visible: text.visible,
+      });
+      originalDestroy();
+    });
+
+    destroyManagedText(text as unknown as Text);
+
+    expect(statesSeenByDestroy).toEqual([{ renderable: false, visible: false }]);
+  });
 });
 
 describe('createKeyedTextReconciler', () => {

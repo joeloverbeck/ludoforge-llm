@@ -55,6 +55,8 @@ interface EffectContextBase extends WriteContext {
   readonly freeOperationProbeScope?: FreeOperationProbeScope;
   /** Callback invoked during discovery when a chooseN pending choice is created, delivering the full-fidelity template. */
   readonly chooseNTemplateCallback?: (template: ChooseNTemplate) => void;
+  /** Opt-in profiler for per-effect-type timing. Measurement side-channel only. */
+  readonly profiler?: import('./perf-profiler.js').PerfProfiler;
 }
 
 export interface ExecutionEffectContext extends EffectContextBase {

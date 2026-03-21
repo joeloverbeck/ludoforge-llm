@@ -1,6 +1,7 @@
 import { applyEffects } from './effects.js';
 import { createExecutionEffectContext } from './effect-context.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
+import { perfStart, perfDynEnd, type PerfProfiler } from './perf-profiler.js';
 import { findPhaseDef } from './phase-lookup.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { buildAdjacencyGraph } from './spatial.js';
@@ -22,6 +23,7 @@ export const dispatchLifecycleEvent = (
   evalRuntimeResources?: EvalRuntimeResources,
   effectPathRoot = 'lifecycle',
   cachedRuntime?: GameDefRuntime,
+  profiler?: PerfProfiler,
 ): GameState => {
   if (evalRuntimeResources !== undefined) {
     assertEvalRuntimeResourcesContract(evalRuntimeResources, 'dispatchLifecycleEvent evalRuntimeResources');
@@ -44,8 +46,11 @@ export const dispatchLifecycleEvent = (
   }
   let currentState = state;
   let currentRng = { state: state.rng };
+  const t0_resolve = perfStart(profiler);
   const lifecycleEffects = resolveLifecycleEffects(def, event);
+  perfDynEnd(profiler, 'lifecycle:resolveEffects', t0_resolve);
   if (lifecycleEffects.length > 0) {
+    const t0_apply = perfStart(profiler);
     const effectResult = applyEffects(lifecycleEffects, createExecutionEffectContext({
       def,
       adjacencyGraph,
@@ -61,6 +66,7 @@ export const dispatchLifecycleEvent = (
       effectPath: '',
       ...(policy?.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: policy.phaseTransitionBudget }),
     }));
+    perfDynEnd(profiler, 'lifecycle:applyEffects', t0_apply);
     currentState = effectResult.state;
     currentRng = effectResult.rng;
     for (const emittedEvent of effectResult.emittedEvents ?? []) {
@@ -86,6 +92,7 @@ export const dispatchLifecycleEvent = (
     }
   }
 
+  const t0_triggerDispatch = perfStart(profiler);
   const result = dispatchTriggers({
     def,
     state: currentState,
@@ -100,6 +107,7 @@ export const dispatchLifecycleEvent = (
     evalRuntimeResources: runtimeResources,
     ...(policy === undefined ? {} : { policy }),
   });
+  perfDynEnd(profiler, 'lifecycle:dispatchTriggers', t0_triggerDispatch);
 
   if (triggerLogCollector !== undefined) {
     triggerLogCollector.push(...result.triggerLog);

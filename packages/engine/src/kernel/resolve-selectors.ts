@@ -105,21 +105,9 @@ function resolveBoundZoneBinding(zoneBinding: ZoneSel, ctx: Pick<ReadContext, 'b
 }
 
 export function resolvePlayerSel(sel: PlayerSel, ctx: ReadContext): readonly PlayerId[] {
-  const players = listPlayers(ctx);
-  let resolved: readonly PlayerId[];
-
-  if (sel === 'actor') {
-    resolved = sortAndDedupePlayers([ctx.actorPlayer]);
-  } else if (sel === 'active') {
-    resolved = sortAndDedupePlayers([ctx.activePlayer]);
-  } else if (sel === 'all') {
-    resolved = players;
-  } else if (sel === 'allOther') {
-    resolved = players.filter((playerId) => playerId !== ctx.actorPlayer);
-  } else if (typeof sel === 'object' && sel !== null && 'id' in sel) {
-    assertKnownPlayer(sel.id, ctx, sel);
-    resolved = [sel.id];
-  } else if (typeof sel === 'object' && sel !== null && 'chosen' in sel) {
+  // Fast path: 'chosen' selector (most common in forEach pvar access).
+  // Skip listPlayers array allocation and trace object construction.
+  if (typeof sel === 'object' && sel !== null && 'chosen' in sel) {
     const boundValue = ctx.bindings[sel.chosen];
     if (boundValue === undefined) {
       throw missingBindingError(`Chosen player binding not found: ${sel.chosen}`, {
@@ -137,8 +125,38 @@ export function resolvePlayerSel(sel: PlayerSel, ctx: ReadContext): readonly Pla
       });
     }
 
-    assertKnownPlayer(boundValue, ctx, sel);
-    resolved = [boundValue];
+    // Bounds check instead of assertKnownPlayer (which allocates a listPlayers array)
+    if (boundValue < 0 || boundValue >= ctx.state.playerCount) {
+      assertKnownPlayer(boundValue, ctx, sel); // falls through to throw
+    }
+    const resolved: readonly PlayerId[] = [boundValue];
+    if (ctx.collector.selectorTrace !== null) {
+      emitSelectorTrace(ctx.collector, {
+        kind: 'selectorResolution',
+        selectorType: 'player',
+        selectorExpr: sel,
+        candidateCount: ctx.state.playerCount,
+        resolvedIds: resolved.map(String),
+        provenance: { phase: String(ctx.state.currentPhase), eventContext: 'actionEffect', effectPath: 'selectorResolution' },
+      });
+    }
+    return resolved;
+  }
+
+  const players = listPlayers(ctx);
+  let resolved: readonly PlayerId[];
+
+  if (sel === 'actor') {
+    resolved = sortAndDedupePlayers([ctx.actorPlayer]);
+  } else if (sel === 'active') {
+    resolved = sortAndDedupePlayers([ctx.activePlayer]);
+  } else if (sel === 'all') {
+    resolved = players;
+  } else if (sel === 'allOther') {
+    resolved = players.filter((playerId) => playerId !== ctx.actorPlayer);
+  } else if (typeof sel === 'object' && sel !== null && 'id' in sel) {
+    assertKnownPlayer(sel.id, ctx, sel);
+    resolved = [sel.id];
   } else if (typeof sel !== 'object' || sel === null || !('relative' in sel)) {
     throw typeMismatchError('Invalid player selector value', {
       selector: sel,
@@ -158,18 +176,16 @@ export function resolvePlayerSel(sel: PlayerSel, ctx: ReadContext): readonly Pla
     resolved = [asPlayerId(wrappedIndex)];
   }
 
-  emitSelectorTrace(ctx.collector, {
-    kind: 'selectorResolution',
-    selectorType: 'player',
-    selectorExpr: sel,
-    candidateCount: players.length,
-    resolvedIds: resolved.map(String),
-    provenance: {
-      phase: String(ctx.state.currentPhase),
-      eventContext: 'actionEffect',
-      effectPath: 'selectorResolution',
-    },
-  });
+  if (ctx.collector.selectorTrace !== null) {
+    emitSelectorTrace(ctx.collector, {
+      kind: 'selectorResolution',
+      selectorType: 'player',
+      selectorExpr: sel,
+      candidateCount: players.length,
+      resolvedIds: resolved.map(String),
+      provenance: { phase: String(ctx.state.currentPhase), eventContext: 'actionEffect', effectPath: 'selectorResolution' },
+    });
+  }
 
   return resolved;
 }

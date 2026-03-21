@@ -69,10 +69,30 @@ optimization changes function signatures, data structures, or internal APIs,
 the corresponding tests MUST be updated to match — but the harness still
 requires all tests to pass before accepting.
 
+### Profiling Instrumentation Policy (IMPORTANT)
+
+**Opt-in profiling instrumentation may be added to ANY depth of the codebase.**
+This is not limited to the harness or benchmark scripts — profiling hooks may
+be added to kernel internals, effect handlers, condition evaluators, selector
+resolvers, agent evaluation, or any other hot path. The only requirements are:
+
+1. **Opt-in**: zero overhead when the profiler is not provided. A single
+   `profiler !== undefined` guard per instrumentation point is acceptable.
+2. **Alignment with `docs/FOUNDATIONS.md`**: profiling is a measurement
+   side-channel — it must NOT affect determinism, game state, or move
+   enumeration.
+3. **Permanent**: profiling instrumentation is valuable infrastructure that
+   persists across experiments. Commit it separately from optimization
+   experiments so it survives reverts.
+
+**Never guess bottlenecks. Always profile first.** The campaign's biggest wins
+(exp-021: -19.6%, exp-031: -3.6%) were discovered by profiling, not by
+theorizing about what "should" be slow. If an optimization hypothesis is not
+backed by profiling data identifying the specific hot path, add profiling
+instrumentation before implementing the optimization.
+
 ## Immutable System
 
-- `campaigns/texas-perf-optimization/harness.sh`
-- `campaigns/texas-perf-optimization/run-benchmark.mjs`
 - All GameSpecDoc data (`data/games/*`) — the game rules are fixed
 - `docs/FOUNDATIONS.md` — architectural commandments (read for guidance,
   never modify)

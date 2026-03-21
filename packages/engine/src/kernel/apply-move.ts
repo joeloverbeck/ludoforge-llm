@@ -1,4 +1,5 @@
 import { incrementActionUsage } from './action-usage.js';
+import { perfStart, perfEnd, type PerfProfiler } from './perf-profiler.js';
 import { deepEqual } from './deep-equal.js';
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
 import { applyBoundaryExpiry } from './boundary-expiry.js';
@@ -829,9 +830,15 @@ const executeMoveAction = (
   shared: SharedMoveExecutionContext,
   cachedRuntime?: GameDefRuntime,
 ): MoveActionExecutionResult => {
+  const profiler: PerfProfiler | undefined = options?.profiler;
+
+  const t0_val = perfStart(profiler);
   const validated = coreOptions?.skipValidation === true
     ? null
     : validateMove(def, state, move, seatResolution, shared.evalRuntimeResources, cachedRuntime);
+  perfEnd(profiler, 'validateMove', t0_val);
+
+  const t0_pre = perfStart(profiler);
   const freeOperationAnalysis = validated === null
     ? resolveMoveFreeOperationAnalysis(def, state, move, seatResolution)
     : null;
@@ -847,6 +854,7 @@ const executeMoveAction = (
     cachedRuntime,
     freeOperationAnalysis,
   );
+  perfEnd(profiler, 'resolvePreflight', t0_pre);
   const {
     action,
     executionPlayer,
@@ -868,6 +876,7 @@ const executeMoveAction = (
     moveParams: move.params,
     resources: shared.evalRuntimeResources,
     ...(shared.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: shared.phaseTransitionBudget }),
+    ...(profiler === undefined ? {} : { profiler }),
   } as const;
   const resolvedDecisionBindings = decisionBindingsForMove(actionPipeline, move.params);
   const runtimeMoveParams = {
@@ -954,6 +963,7 @@ const executeMoveAction = (
     applyCompoundSA();
   }
 
+  const t0_actionEffects = perfStart(profiler);
   if (executionProfile === undefined) {
     const effectResult = applyEffects(action.effects, createExecutionEffectContext({
       ...effectCtx,
@@ -1079,12 +1089,15 @@ const executeMoveAction = (
     }
   }
 
+  perfEnd(profiler, 'actionEffects', t0_actionEffects);
+
   const stateWithUsage = incrementActionUsage(effectState, action.id);
   const maxDepth = def.metadata.maxTriggerDepth ?? DEFAULT_MAX_TRIGGER_DEPTH;
   let triggerState = stateWithUsage;
   let triggerRng = effectRng;
   let triggerLog = [] as ApplyMoveResult['triggerFirings'];
 
+  const t0_triggers = perfStart(profiler);
   for (const emittedEvent of emittedEvents) {
     const emittedEventResult = dispatchTriggers({
       def,
@@ -1119,6 +1132,7 @@ const executeMoveAction = (
     evalRuntimeResources: shared.evalRuntimeResources,
     ...(shared.executionPolicy === undefined ? {} : { policy: shared.executionPolicy }),
   });
+  perfEnd(profiler, 'dispatchTriggers', t0_triggers);
 
   return {
     stateWithRng: {
@@ -1216,6 +1230,7 @@ const applyMoveCore = (
   coreOptions?: ApplyMoveCoreOptions,
   cachedRuntime?: GameDefRuntime,
 ): ApplyMoveResult => {
+  const profiler: PerfProfiler | undefined = options?.profiler;
   validateTurnFlowRuntimeStateInvariants(state);
   const adjacencyGraph = cachedRuntime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones);
   const runtimeTableIndex = cachedRuntime?.runtimeTableIndex ?? buildRuntimeTableIndex(def);
@@ -1235,8 +1250,15 @@ const applyMoveCore = (
   };
   const seatResolution = createSeatResolutionContext(def, state.playerCount);
 
+  const t0_exec = perfStart(profiler);
   const executed = executeMoveAction(def, state, move, seatResolution, options, coreOptions, shared, cachedRuntime);
+  perfEnd(profiler, 'executeMoveAction', t0_exec);
+
+  const t0_freeOp = perfStart(profiler);
   validateFreeOperationOutcomePolicy(def, state, executed.stateWithRng, move, seatResolution);
+  perfEnd(profiler, 'validateFreeOperationOutcomePolicy', t0_freeOp);
+
+  const t0_turnFlow = perfStart(profiler);
   const turnFlowResult = move.freeOperation === true
     ? (() => {
       const consumed = consumeTurnFlowFreeOperationGrant(def, state, executed.stateWithRng, move, seatResolution);
@@ -1264,12 +1286,18 @@ const applyMoveCore = (
     : applyTurnFlowEligibilityAfterMove(def, executed.stateWithRng, move, executed.deferredEventEffect, {
       originatingPhase: state.currentPhase,
     });
+  perfEnd(profiler, 'applyTurnFlowEligibility', t0_turnFlow);
+
+  const t0_deferred = perfStart(profiler);
   const deferredExecution = applyReleasedDeferredEventEffects(
     def,
     turnFlowResult.state,
     turnFlowResult.releasedDeferredEventEffects ?? [],
     shared,
   );
+  perfEnd(profiler, 'applyDeferredEventEffects', t0_deferred);
+
+  const t0_boundary = perfStart(profiler);
   const boundaryExpiryResult = applyBoundaryExpiry(
     def,
     deferredExecution.stateWithRng,
@@ -1278,10 +1306,14 @@ const applyMoveCore = (
     shared.executionPolicy,
     shared.evalRuntimeResources,
   );
+  perfEnd(profiler, 'applyBoundaryExpiry', t0_boundary);
+
   const lifecycleAndAdvanceLog: TriggerLogEntry[] = [];
   const shouldAdvanceToDecisionPoint =
     coreOptions?.skipAdvanceToDecisionPoint !== true
     && options?.advanceToDecisionPoint !== false;
+
+  const t0_advance = perfStart(profiler);
   const progressedState = shouldAdvanceToDecisionPoint
     ? advanceToDecisionPoint(
       def,
@@ -1290,13 +1322,17 @@ const applyMoveCore = (
       runtime.executionPolicy,
       shared.evalRuntimeResources,
       cachedRuntime,
+      profiler,
     )
     : boundaryExpiryResult.state;
+  perfEnd(profiler, 'advanceToDecisionPoint', t0_advance);
 
+  const t0_hash = perfStart(profiler);
   const stateWithHash = {
     ...progressedState,
     stateHash: computeFullHash(cachedRuntime?.zobristTable ?? createZobristTable(def), progressedState),
   };
+  perfEnd(profiler, 'computeFullHash', t0_hash);
 
   return {
     state: stateWithHash,

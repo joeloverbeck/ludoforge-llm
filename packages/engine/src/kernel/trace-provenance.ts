@@ -19,7 +19,14 @@ export const resolveTraceProvenance = (
 export const withTracePath = (
   ctx: EffectContext,
   suffix: string,
-): EffectContext => ({
-  ...ctx,
-  effectPath: `${ctx.effectPath ?? ''}${suffix}`,
-});
+): EffectContext => {
+  // Fast path: skip the costly full-context spread when tracing is disabled.
+  // The effectPath field is only consumed by trace emission and resolveTraceProvenance.
+  if (ctx.collector.trace === null && ctx.collector.conditionTrace === null) {
+    return ctx;
+  }
+  return {
+    ...ctx,
+    effectPath: `${ctx.effectPath ?? ''}${suffix}`,
+  };
+};

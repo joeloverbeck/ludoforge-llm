@@ -94,6 +94,7 @@ export const registry: EffectRegistry = {
 };
 
 export function effectKindOf(effect: EffectAST): EffectKind {
-  const keys = Object.keys(effect);
-  return keys[0] as EffectKind;
+  // Avoid Object.keys() array allocation (~300K calls). for-in returns the first own key.
+  for (const key in effect) return key as EffectKind;
+  return Object.keys(effect)[0] as EffectKind;
 }

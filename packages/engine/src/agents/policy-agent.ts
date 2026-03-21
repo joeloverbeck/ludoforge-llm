@@ -1,4 +1,5 @@
 import type { Agent } from '../kernel/types.js';
+import { perfStart, perfDynEnd } from '../kernel/perf-profiler.js';
 import { evaluatePolicyMove } from './policy-eval.js';
 import { buildPolicyAgentDecisionTrace, type PolicyDecisionTraceLevel } from './policy-diagnostics.js';
 import { preparePlayableMoves } from './prepare-playable-moves.js';
@@ -33,10 +34,17 @@ export class PolicyAgent implements Agent {
   }
 
   chooseMove(input: Parameters<Agent['chooseMove']>[0]): ReturnType<Agent['chooseMove']> {
+    const profiler = input.profiler;
+
+    const t0_prepare = perfStart(profiler);
     const prepared = preparePlayableMoves(input, {
       pendingTemplateCompletions: this.completionsPerTemplate,
     });
+    perfDynEnd(profiler, 'agent:preparePlayableMoves', t0_prepare);
+
     const playableMoves = prepared.completedMoves.length > 0 ? prepared.completedMoves : prepared.stochasticMoves;
+
+    const t0_eval = perfStart(profiler);
     const result = evaluatePolicyMove({
       ...input,
       legalMoves: playableMoves,
@@ -44,6 +52,7 @@ export class PolicyAgent implements Agent {
       ...(this.profileId === undefined ? {} : { profileIdOverride: this.profileId }),
       ...(this.fallbackOnError === undefined ? {} : { fallbackOnError: this.fallbackOnError }),
     });
+    perfDynEnd(profiler, 'agent:evaluatePolicyMove', t0_eval);
 
     return {
       move: result.move,

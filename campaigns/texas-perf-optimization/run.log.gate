@@ -1,8 +1,8 @@
 • turbo 2.8.17
 • Packages in scope: @ludoforge/engine, @ludoforge/runner
 • Running test in 2 packages
-• Remote caching disabled
-@ludoforge/engine:build: cache miss, executing ee409f042eea2a39
+• Remote caching disabled, using shared worktree cache
+@ludoforge/engine:build: cache hit, replaying logs ee409f042eea2a39
 @ludoforge/engine:build: 
 @ludoforge/engine:build: > @ludoforge/engine@0.0.0 build /home/joeloverbeck/projects/ludoforge-llm/packages/engine
 @ludoforge/engine:build: > node scripts/run-with-dist-lock.mjs "pnpm run clean && tsc"
@@ -11,18 +11,11 @@
 @ludoforge/engine:build: > @ludoforge/engine@0.0.0 clean /home/joeloverbeck/projects/ludoforge-llm/packages/engine
 @ludoforge/engine:build: > rm -rf dist
 @ludoforge/engine:build: 
-@ludoforge/runner:build: cache miss, executing 9786ee90d995bc27
-@ludoforge/engine:test: cache miss, executing a856c543d23e0a6e
+@ludoforge/engine:test: cache hit, replaying logs a856c543d23e0a6e
 @ludoforge/engine:test: 
 @ludoforge/engine:test: > @ludoforge/engine@0.0.0 test /home/joeloverbeck/projects/ludoforge-llm/packages/engine
 @ludoforge/engine:test: > pnpm run schema:artifacts:check && node scripts/run-tests.mjs --lane default
 @ludoforge/engine:test: 
-@ludoforge/runner:build: 
-@ludoforge/runner:build: > @ludoforge/runner@0.0.0 build /home/joeloverbeck/projects/ludoforge-llm/packages/runner
-@ludoforge/runner:build: > vite build
-@ludoforge/runner:build: 
-@ludoforge/runner:build: vite v7.3.1 building client environment for production...
-@ludoforge/runner:build: transforming...
 @ludoforge/engine:test: 
 @ludoforge/engine:test: > @ludoforge/engine@0.0.0 schema:artifacts:check /home/joeloverbeck/projects/ludoforge-llm/packages/engine
 @ludoforge/engine:test: > node scripts/schema-artifacts.mjs --check
@@ -954,37 +947,6 @@
 @ludoforge/engine:test:   duration_ms: 182.145334
 @ludoforge/engine:test:   type: 'suite'
 @ludoforge/engine:test:   ...
-@ludoforge/runner:build: ✓ 1298 modules transformed.
-@ludoforge/runner:build: rendering chunks...
-@ludoforge/runner:build: computing gzip size...
-@ludoforge/runner:build: dist/index.html                             0.80 kB │ gzip:   0.38 kB
-@ludoforge/runner:build: dist/assets/game-worker-BCMYjjB2.js       600.34 kB
-@ludoforge/runner:build: dist/assets/index-CBrXrwAH.css             45.33 kB │ gzip:   8.46 kB
-@ludoforge/runner:build: dist/assets/webworkerAll-Rf22SZJm.js        0.11 kB │ gzip:   0.11 kB │ map:     0.58 kB
-@ludoforge/runner:build: dist/assets/browserAll-aVSeqwNR.js          0.21 kB │ gzip:   0.17 kB │ map:     1.76 kB
-@ludoforge/runner:build: 
-@ludoforge/runner:build: dist/assets/vendor-react-DS5UYnvf.js       11.21 kB │ gzip:   4.03 kB │ map:    42.42 kB
-@ludoforge/runner:build: dist/assets/vendor-gsap-DDlvirwQ.js        69.89 kB │ gzip:  27.48 kB │ map:   374.35 kB
-@ludoforge/runner:build: dist/assets/vendor-graph-CiuxCRlE.js       78.31 kB │ gzip:  16.70 kB │ map:   344.45 kB
-@ludoforge/runner:build: (!) Some chunks are larger than 500 kB after minification. Consider:
-@ludoforge/runner:build: dist/assets/texas-game-def-N7Qux95C.js    170.33 kB │ gzip:  11.74 kB │ map:     0.11 kB
-@ludoforge/runner:build: - Using dynamic import() to code-split the application
-@ludoforge/runner:build: dist/assets/vendor-pixi-DNLO54VG.js       575.98 kB │ gzip: 162.31 kB │ map: 2,484.51 kB
-@ludoforge/runner:build: - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
-@ludoforge/runner:build: dist/assets/index-CTKCC36v.js           1,186.52 kB │ gzip: 342.02 kB │ map: 4,993.57 kB
-@ludoforge/runner:build: dist/assets/fitl-game-def-vb_Q8muV.js   1,266.80 kB │ gzip:  95.84 kB │ map:     0.11 kB
-@ludoforge/runner:build: ✓ built in 13.73s
-@ludoforge/runner:build: - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
-@ludoforge/runner:test: cache miss, executing cd677c204942f5fd
-@ludoforge/runner:test: 
-@ludoforge/runner:test: > @ludoforge/runner@0.0.0 test /home/joeloverbeck/projects/ludoforge-llm/packages/runner
-@ludoforge/runner:test: > vitest run
-@ludoforge/runner:test: 
-@ludoforge/runner:test: 
-@ludoforge/runner:test: [1m[46m RUN [49m[22m [36mv4.1.0 [39m[90m/home/joeloverbeck/projects/ludoforge-llm/packages/runner[39m
-@ludoforge/runner:test: 
-@ludoforge/runner:test:  [32m✓[39m test/ui/LoadGameDialog.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 721[2mms[22m[39m
-@ludoforge/runner:test:      [33m[2m✓[22m[39m lists saves and disables resume for terminal records [33m 419[2mms[22m[39m
 @ludoforge/engine:test: # Subtest: parse + validate full-spec integration
 @ludoforge/engine:test:     # Subtest: accepts a realistic valid full markdown spec end-to-end
 @ludoforge/engine:test:     ok 1 - accepts a realistic valid full markdown spec end-to-end
@@ -1040,7 +1002,6 @@
 @ludoforge/engine:test:   duration_ms: 15714.034857
 @ludoforge/engine:test:   type: 'suite'
 @ludoforge/engine:test:   ...
-@ludoforge/runner:test: Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
 @ludoforge/engine:test: # Subtest: prioritized chooseN integration
 @ludoforge/engine:test:     # Subtest: recomputes qualifier-aware legality through add, remove, and confirm in a synthetic non-FITL spec
 @ludoforge/engine:test:     ok 1 - recomputes qualifier-aware legality through add, remove, and confirm in a synthetic non-FITL spec
@@ -5358,7 +5319,6 @@
 @ludoforge/engine:test:   ...
 @ludoforge/engine:test: # Subtest: normalizeZoneOwnerQualifier
 @ludoforge/engine:test:     # Subtest: normalizes none/all and canonical player qualifiers
-@ludoforge/runner:test:  [32m✓[39m test/ui/SettingsMenu.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[33m 437[2mms[22m[39m
 @ludoforge/engine:test:     ok 1 - normalizes none/all and canonical player qualifiers
 @ludoforge/engine:test:       ---
 @ludoforge/engine:test:       duration_ms: 0.1831
@@ -7167,7 +7127,6 @@
 @ludoforge/engine:test:       ...
 @ludoforge/engine:test:     # Subtest: eventDecks discardZone referencing nonexistent zone emits CNL_XREF_EVENT_DECK_ZONE_MISSING
 @ludoforge/engine:test:     ok 26 - eventDecks discardZone referencing nonexistent zone emits CNL_XREF_EVENT_DECK_ZONE_MISSING
-@ludoforge/runner:test: Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
 @ludoforge/engine:test:       ---
 @ludoforge/engine:test:       duration_ms: 0.6936
 @ludoforge/engine:test:       type: 'test'
@@ -13054,9 +13013,6 @@
 @ludoforge/engine:test:       duration_ms: 60.966105
 @ludoforge/engine:test:       type: 'test'
 @ludoforge/engine:test:       ...
-@ludoforge/runner:test:  [32m✓[39m test/ui/GameSelectionScreen.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[33m 1089[2mms[22m[39m
-@ludoforge/runner:test:      [33m[2m✓[22m[39m renders game cards for non-default descriptors with metadata [33m 480[2mms[22m[39m
-@ludoforge/runner:test:      [33m[2m✓[22m[39m renders saved game rows when save manager returns entries [33m 467[2mms[22m[39m
 @ludoforge/engine:test:     # Subtest: reveals played and lookahead slots from the inferred draw pile when turnFlow lifecycle is declared
 @ludoforge/engine:test:     ok 17 - reveals played and lookahead slots from the inferred draw pile when turnFlow lifecycle is declared
 @ludoforge/engine:test:       ---
@@ -13113,74 +13069,6 @@
 @ludoforge/engine:test:   duration_ms: 10.881
 @ludoforge/engine:test:   type: 'suite'
 @ludoforge/engine:test:   ...
-@ludoforge/runner:test:  [32m✓[39m test/ui/ActionTooltip.test.ts [2m([22m[2m32 tests[22m[2m)[22m[33m 377[2mms[22m[39m
-@ludoforge/runner:test: [90mstderr[2m | test/canvas/GameCanvas.recovery.test.tsx[2m > [22m[2mGameCanvas recovery[2m > [22m[2mforwards fatal runtime errors into crash recovery
-@ludoforge/runner:test: [22m[39mCanvas runtime crash detected. Starting recovery. Error: ticker exploded
-@ludoforge/runner:test:     at [90m/home/joeloverbeck/projects/ludoforge-llm/packages/runner/[39mtest/canvas/GameCanvas.recovery.test.tsx:158:21
-@ludoforge/runner:test:     at file:///home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.0/node_modules/[4m@vitest[24m/runner/dist/index.js:1258:20
-@ludoforge/runner:test: 
-@ludoforge/runner:test: [90mstderr[2m | test/canvas/GameCanvas.recovery.test.tsx[2m > [22m[2mGameCanvas recovery[2m > [22m[2mre-mounts the runtime after crash recovery and preserves store session state
-@ludoforge/runner:test: [22m[39mCanvas runtime crash detected. Starting recovery. Error: boom
-@ludoforge/runner:test:     at [90m/home/joeloverbeck/projects/ludoforge-llm/packages/runner/[39mtest/canvas/GameCanvas.recovery.test.tsx:196:27
-@ludoforge/runner:test:     at /home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/@testing-library+react@16.3.2_@testing-library+dom@10.4.1_@types+react-dom@19.2.3_@type_893f466751a7d66081fd06e9edb9241a/node_modules/[4m@testing-library[24m/react/dist/act-compat.js:47:24
-@ludoforge/runner:test:     at process.env.NODE_ENV.exports.act (/home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/react@19.2.4/node_modules/[4mreact[24m/cjs/react.development.js:814:22)
-@ludoforge/runner:test:     at Proxy.<anonymous> (/home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/@testing-library+react@16.3.2_@testing-library+dom@10.4.1_@types+react-dom@19.2.3_@type_893f466751a7d66081fd06e9edb9241a/node_modules/[4m@testing-library[24m/react/dist/act-compat.js:46:25)
-@ludoforge/runner:test:     at [90m/home/joeloverbeck/projects/ludoforge-llm/packages/runner/[39mtest/canvas/GameCanvas.recovery.test.tsx:195:5
-@ludoforge/runner:test:     at file:///home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.0/node_modules/[4m@vitest[24m/runner/dist/index.js:1258:20
-@ludoforge/runner:test: 
-@ludoforge/runner:test: [90mstderr[2m | test/canvas/GameCanvas.recovery.test.tsx[2m > [22m[2mGameCanvas recovery[2m > [22m[2mcalls canvasRecovered after successful recovery mount
-@ludoforge/runner:test: [22m[39mCanvas runtime crash detected. Starting recovery. Error: boom
-@ludoforge/runner:test:     at [90m/home/joeloverbeck/projects/ludoforge-llm/packages/runner/[39mtest/canvas/GameCanvas.recovery.test.tsx:239:27
-@ludoforge/runner:test:     at /home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/@testing-library+react@16.3.2_@testing-library+dom@10.4.1_@types+react-dom@19.2.3_@type_893f466751a7d66081fd06e9edb9241a/node_modules/[4m@testing-library[24m/react/dist/act-compat.js:47:24
-@ludoforge/runner:test:     at process.env.NODE_ENV.exports.act (/home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/react@19.2.4/node_modules/[4mreact[24m/cjs/react.development.js:814:22)
-@ludoforge/runner:test:     at Proxy.<anonymous> (/home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/@testing-library+react@16.3.2_@testing-library+dom@10.4.1_@types+react-dom@19.2.3_@type_893f466751a7d66081fd06e9edb9241a/node_modules/[4m@testing-library[24m/react/dist/act-compat.js:46:25)
-@ludoforge/runner:test:     at [90m/home/joeloverbeck/projects/ludoforge-llm/packages/runner/[39mtest/canvas/GameCanvas.recovery.test.tsx:238:5
-@ludoforge/runner:test:     at file:///home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.0/node_modules/[4m@vitest[24m/runner/dist/index.js:1258:20
-@ludoforge/runner:test: 
-@ludoforge/runner:test: [90mstderr[2m | test/canvas/GameCanvas.recovery.test.tsx[2m > [22m[2mGameCanvas recovery[2m > [22m[2msupports repeated crash recovery cycles without mutating preserved store session state
-@ludoforge/runner:test: [22m[39mCanvas runtime crash detected. Starting recovery. Error: first crash
-@ludoforge/runner:test:     at [90m/home/joeloverbeck/projects/ludoforge-llm/packages/runner/[39mtest/canvas/GameCanvas.recovery.test.tsx:279:27
-@ludoforge/runner:test:     at /home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/@testing-library+react@16.3.2_@testing-library+dom@10.4.1_@types+react-dom@19.2.3_@type_893f466751a7d66081fd06e9edb9241a/node_modules/[4m@testing-library[24m/react/dist/act-compat.js:47:24
-@ludoforge/runner:test:     at process.env.NODE_ENV.exports.act (/home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/react@19.2.4/node_modules/[4mreact[24m/cjs/react.development.js:814:22)
-@ludoforge/runner:test:     at Proxy.<anonymous> (/home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/@testing-library+react@16.3.2_@testing-library+dom@10.4.1_@types+react-dom@19.2.3_@type_893f466751a7d66081fd06e9edb9241a/node_modules/[4m@testing-library[24m/react/dist/act-compat.js:46:25)
-@ludoforge/runner:test:     at [90m/home/joeloverbeck/projects/ludoforge-llm/packages/runner/[39mtest/canvas/GameCanvas.recovery.test.tsx:278:5
-@ludoforge/runner:test:     at file:///home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.0/node_modules/[4m@vitest[24m/runner/dist/index.js:1258:20
-@ludoforge/runner:test: 
-@ludoforge/runner:test: [90mstderr[2m | test/canvas/GameCanvas.recovery.test.tsx[2m > [22m[2mGameCanvas recovery[2m > [22m[2msupports repeated crash recovery cycles without mutating preserved store session state
-@ludoforge/runner:test: [22m[39mCanvas runtime crash detected. Starting recovery. Error: second crash
-@ludoforge/runner:test:     at [90m/home/joeloverbeck/projects/ludoforge-llm/packages/runner/[39mtest/canvas/GameCanvas.recovery.test.tsx:292:28
-@ludoforge/runner:test:     at /home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/@testing-library+react@16.3.2_@testing-library+dom@10.4.1_@types+react-dom@19.2.3_@type_893f466751a7d66081fd06e9edb9241a/node_modules/[4m@testing-library[24m/react/dist/act-compat.js:47:24
-@ludoforge/runner:test:     at process.env.NODE_ENV.exports.act (/home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/react@19.2.4/node_modules/[4mreact[24m/cjs/react.development.js:814:22)
-@ludoforge/runner:test:     at Proxy.<anonymous> (/home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/@testing-library+react@16.3.2_@testing-library+dom@10.4.1_@types+react-dom@19.2.3_@type_893f466751a7d66081fd06e9edb9241a/node_modules/[4m@testing-library[24m/react/dist/act-compat.js:46:25)
-@ludoforge/runner:test:     at [90m/home/joeloverbeck/projects/ludoforge-llm/packages/runner/[39mtest/canvas/GameCanvas.recovery.test.tsx:291:5
-@ludoforge/runner:test:     at file:///home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.0/node_modules/[4m@vitest[24m/runner/dist/index.js:1258:20
-@ludoforge/runner:test: 
-@ludoforge/runner:test: [90mstderr[2m | test/canvas/GameCanvas.recovery.test.tsx[2m > [22m[2mGameCanvas recovery[2m > [22m[2mcaptures the viewport snapshot before recovery and passes it into the recreated runtime
-@ludoforge/runner:test: [22m[39mCanvas runtime crash detected. Starting recovery. Error: boom
-@ludoforge/runner:test:     at [90m/home/joeloverbeck/projects/ludoforge-llm/packages/runner/[39mtest/canvas/GameCanvas.recovery.test.tsx:347:27
-@ludoforge/runner:test:     at /home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/@testing-library+react@16.3.2_@testing-library+dom@10.4.1_@types+react-dom@19.2.3_@type_893f466751a7d66081fd06e9edb9241a/node_modules/[4m@testing-library[24m/react/dist/act-compat.js:47:24
-@ludoforge/runner:test:     at process.env.NODE_ENV.exports.act (/home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/react@19.2.4/node_modules/[4mreact[24m/cjs/react.development.js:814:22)
-@ludoforge/runner:test:     at Proxy.<anonymous> (/home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/@testing-library+react@16.3.2_@testing-library+dom@10.4.1_@types+react-dom@19.2.3_@type_893f466751a7d66081fd06e9edb9241a/node_modules/[4m@testing-library[24m/react/dist/act-compat.js:46:25)
-@ludoforge/runner:test:     at [90m/home/joeloverbeck/projects/ludoforge-llm/packages/runner/[39mtest/canvas/GameCanvas.recovery.test.tsx:346:5
-@ludoforge/runner:test:     at file:///home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.0/node_modules/[4m@vitest[24m/runner/dist/index.js:1258:20
-@ludoforge/runner:test: 
-@ludoforge/runner:test: [90mstderr[2m | test/canvas/GameCanvas.recovery.test.tsx[2m > [22m[2mGameCanvas recovery[2m > [22m[2muses the runtime health getter to trigger heartbeat recovery
-@ludoforge/runner:test: [22m[39mCanvas runtime heartbeat detected unhealthy runtime. Starting recovery. {
-@ludoforge/runner:test:   tickerStarted: [33mfalse[39m,
-@ludoforge/runner:test:   canvasConnected: [33mtrue[39m,
-@ludoforge/runner:test:   renderCorruptionSuspected: [33mfalse[39m
-@ludoforge/runner:test: }
-@ludoforge/runner:test: 
-@ludoforge/runner:test:  [32m✓[39m test/canvas/GameCanvas.recovery.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[32m 289[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/ui/App.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 1681[2mms[22m[39m
-@ludoforge/runner:test:      [33m[2m✓[22m[39m renders game selection screen by default [33m 1401[2mms[22m[39m
-@ludoforge/runner:test: Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
-@ludoforge/runner:test:  [32m✓[39m test/ui/PreGameConfigScreen.test.tsx [2m([22m[2m12 tests[22m[2m)[22m[32m 208[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/animation/ai-playback.test.ts [2m([22m[2m9 tests[22m[2m)[22m[33m 647[2mms[22m[39m
-@ludoforge/runner:test:      [33m[2m✓[22m[39m retries on no-op then calls onError after max retries exhausted [33m 501[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/bootstrap/resolve-bootstrap-config.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 951[2mms[22m[39m
-@ludoforge/runner:test:      [33m[2m✓[22m[39m returns FITL bootstrap config when game=fitl and applies params [33m 303[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/store/game-store.test.ts [2m([22m[2m57 tests[22m[2m)[22m[32m 205[2mms[22m[39m
 @ludoforge/engine:test: # Subtest: json schema artifacts
 @ludoforge/engine:test:     # Subtest: each schema file is valid JSON and declares a draft version
 @ludoforge/engine:test:     ok 1 - each schema file is valid JSON and declares a draft version
@@ -13380,7 +13268,6 @@
 @ludoforge/engine:test:   duration_ms: 12271.379179
 @ludoforge/engine:test:   type: 'suite'
 @ludoforge/engine:test:   ...
-@ludoforge/runner:test:  [32m✓[39m test/model/project-render-model-zones.test.ts [2m([22m[2m25 tests[22m[2m)[22m[32m 94[2mms[22m[39m
 @ludoforge/engine:test: # Subtest: kernel source ast guard helpers
 @ludoforge/engine:test:     # Subtest: resolves object literal contexts from direct literals and identifier references
 @ludoforge/engine:test:     ok 1 - resolves object literal contexts from direct literals and identifier references
@@ -25768,124 +25655,6 @@
 @ludoforge/engine:test:   duration_ms: 5.603797
 @ludoforge/engine:test:   type: 'suite'
 @ludoforge/engine:test:   ...
-@ludoforge/runner:test:  [32m✓[39m test/ui/EventLogPanel.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 103[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/model/project-render-model-state.test.ts [2m([22m[2m54 tests[22m[2m)[22m[32m 130[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/session/replay-runtime.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[32m 123[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/ui/SaveGameDialog.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 162[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/ui/WarningsToast.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 201[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/worker/game-worker.test.ts [2m([22m[2m35 tests[22m[2m)[22m[32m 74[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/session/active-game-runtime.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[32m 165[2mms[22m[39m
-@ludoforge/runner:test: Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
-@ludoforge/runner:test:  [32m✓[39m test/ui/ChoicePanel.test.ts [2m([22m[2m36 tests[22m[2m)[22m[32m 152[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/ui/GameContainer.chrome.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[32m 275[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/config/visual-config-provider.test.ts [2m([22m[2m66 tests[22m[2m)[22m[32m 50[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/ui/useEventLogEntries.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 68[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/ui/EventCardTooltip.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 47[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/ui/RawAstToggle.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 40[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/ui/ModifiersSection.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 72[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/ui/TooltipLayer.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 64[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/ui/GameContainer.test.ts [2m([22m[2m26 tests[22m[2m)[22m[32m 72[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/store/game-store-async-serialization.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 90[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/persistence/save-manager.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 33[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/ui/AvailabilitySection.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 48[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/ui/ReplayScreen.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 37[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/animation/animation-controller.test.ts [2m([22m[2m33 tests[22m[2m)[22m[32m 47[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/ui/choose-n-resolution-display.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 56[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/store/ai-move-policy.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 46[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/store/agent-turn-orchestrator.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 52[2mms[22m[39m
-@ludoforge/runner:test: Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
-@ludoforge/runner:test:  [32m✓[39m test/ui/useActionTooltip.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 58[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/ui/ShowdownOverlay.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 58[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/ui/PlayerHandPanel.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 53[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/ui/ReplayControls.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 40[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/config/visual-config-schema.test.ts [2m([22m[2m54 tests[22m[2m)[22m[32m 43[2mms[22m[39m
-@ludoforge/runner:test: [90mstderr[2m | test/canvas/GameCanvas.test.ts[2m > [22m[2mcreateGameCanvasRuntime[2m > [22m[2mschedules render-health verification after contained ticker errors and reports confirmed corruption through onError
-@ludoforge/runner:test: [22m[39mTicker error fence contained ticker error 1/3. Error: contained
-@ludoforge/runner:test:     at Object.<anonymous> [90m(/home/joeloverbeck/projects/ludoforge-llm/packages/runner/[39mtest/canvas/GameCanvas.test.ts:594:13[90m)[39m
-@ludoforge/runner:test:     at Object.Mock (file:///home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/@vitest+spy@4.1.0/node_modules/[4m@vitest[24m/spy/dist/index.js:332:34)
-@ludoforge/runner:test:     at Object.wrappedTick [as _tick] [90m(/home/joeloverbeck/projects/ludoforge-llm/packages/runner/[39msrc/canvas/ticker-error-fence.ts:81:35[90m)[39m
-@ludoforge/runner:test:     at [90m/home/joeloverbeck/projects/ludoforge-llm/packages/runner/[39mtest/canvas/GameCanvas.test.ts:613:35
-@ludoforge/runner:test: [90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
-@ludoforge/runner:test:     at file:///home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.0/node_modules/[4m@vitest[24m/runner/dist/index.js:1258:20
-@ludoforge/runner:test: 
-@ludoforge/runner:test:  [32m✓[39m test/canvas/GameCanvas.test.ts [2m([22m[2m30 tests[22m[2m)[22m[32m 86[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/animation/timeline-builder.test.ts [2m([22m[2m41 tests[22m[2m)[22m[32m 43[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/ui/CollapsiblePanel.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 31[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/ui/MiniCard.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 31[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/layout/compute-layout.test.ts [2m([22m[2m40 tests[22m[2m)[22m[32m 28[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/ui/UIOverlay.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 13[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/ui/useHoverPopoverSession.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 25[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/ui/useCardTooltip.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 26[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/ui/UnsavedChangesDialog.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 28[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/store/game-store-crash-lifecycle.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 34[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/animation/animation-queue.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 10[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/ui/TerminalOverlay.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 31[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/animation/preset-registry.test.ts [2m([22m[2m27 tests[22m[2m)[22m[32m 14[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/canvas/renderers/token-renderer.test.ts [2m([22m[2m36 tests[22m[2m)[22m[32m 30[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/worker/clone-compat.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 26[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/ui/AITurnOverlay.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 44[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/canvas/renderers/zone-renderer.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 23[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/model/runner-frame-structural-sharing.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 19[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/canvas/canvas-updater.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 17[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/canvas/canvas-equality.test.ts [2m([22m[2m37 tests[22m[2m)[22m[32m 6[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/model/translate-effect-trace.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 15[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/replay/replay-controller.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 32[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/ui/ActionToolbar.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 19[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/canvas/renderers/table-overlay-renderer.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 17[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/model/runner-frame-projection-boundary.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 18[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/canvas/runtime-layout-store.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 10[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/worker/choose-n-session-integration.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 20[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/canvas/ticker-error-fence.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 8[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/canvas/renderers/card-template-renderer.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 10[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/bootstrap/bootstrap-registry.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 23[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/canvas/interactions/hover-staleness-guard.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 11[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/ui/ErrorState.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 7[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/model/project-render-model-structural-sharing.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 27[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/canvas/geometry/hull-padding.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 8[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/ui/EventDeckPanel.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 15[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/animation/animation-pipeline-integration.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 9[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/canvas/renderers/adjacency-renderer.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 17[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/animation/diagnostic-buffer.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 12[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/ui/LoadingState.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 7[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/canvas/renderers/safe-destroy.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 19[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/animation/trace-to-descriptors.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 8[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/animation/ephemeral-container-factory.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 32[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/canvas/renderers/region-boundary-renderer.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 16[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/config/validate-visual-config-refs.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 9[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/canvas/renderers/token-symbol-drawer.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 4[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/ui/InterruptBanner.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 9[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/canvas/renderers/disposal-queue.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 14[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/ui/EligiblePanel.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 13[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/canvas/viewport-setup.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 18[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/layout/layout-cache.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 19[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/canvas/text/bitmap-text-runtime.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 13[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/animation/animation-logger.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 16[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/ui/TurnOrderDisplay.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 17[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/session/session-store.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 6[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/canvas/text/text-runtime.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 15[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/ui/ActiveEffectsPanel.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 13[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/worker/game-bridge.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 15[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/model/tooltip-payload.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 10[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/canvas/canvas-crash-recovery.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 11[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/layout/build-layout-graph.test.ts [2m([22m[2m22 tests[22m[2m)[22m[32m 8[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/ui/PhaseIndicator.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 14[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/canvas/interactions/aria-announcer.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 6[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/ui/IllegalityFeedback.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 13[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/ui/ErrorBoundary.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 9[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/canvas/geometry/convex-hull.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 6[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/canvas/interactions/zone-select.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 10[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/model/iteration-context.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 5[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/config/visual-config-files.test.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 9283[2mms[22m[39m
-@ludoforge/runner:test:      [33m[2m✓[22m[39m production visual config for 'fitl' passes strict schema + reference validation against its compiled GameDef [33m 3637[2mms[22m[39m
-@ludoforge/runner:test:      [33m[2m✓[22m[39m production visual config for 'texas' passes strict schema + reference validation against its compiled GameDef [33m 377[2mms[22m[39m
-@ludoforge/runner:test:      [33m[2m✓[22m[39m FITL visual-config uses canonical runtime ids and expected visual rule chain [33m 2684[2mms[22m[39m
-@ludoforge/runner:test:      [33m[2m✓[22m[39m FITL actions section contains correct display names and choice prompts for all configured actions [33m 2296[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/ui/PhaseBannerOverlay.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 10[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/presentation/action-announcement-presentation.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 5[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/canvas/crash-elimination-integration.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 6[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/canvas/interactions/hover-target-controller.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 6[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/replay/replay-store.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 10[2mms[22m[39m
-@ludoforge/runner:test:  [32m✓[39m test/canvas/renderers/container-pool.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 7[2mms[22m[39m
 @ludoforge/engine:test: # Subtest: policy production golden fixtures
 @ludoforge/engine:test:     # Subtest: matches the compiled FITL policy catalog golden
 @ludoforge/engine:test:     ok 1 - matches the compiled FITL policy catalog golden
@@ -25918,7 +25687,6 @@
 @ludoforge/engine:test:   type: 'suite'
 @ludoforge/engine:test:   ...
 @ludoforge/engine:test: # Subtest: prng core
-@ludoforge/runner:test:  [32m✓[39m test/config/visual-config-loader.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 10[2mms[22m[39m
 @ludoforge/engine:test:     # Subtest: seed 42n produces the expected first 10 raw outputs (golden vector)
 @ludoforge/engine:test:     ok 1 - seed 42n produces the expected first 10 raw outputs (golden vector)
 @ludoforge/engine:test:       ---
@@ -31354,7 +31122,6 @@
 @ludoforge/engine:test:     # Subtest: rejects invalid moveZoneProbeBindings on event freeOperationGrants
 @ludoforge/engine:test:     ok 15 - rejects invalid moveZoneProbeBindings on event freeOperationGrants
 @ludoforge/engine:test:       ---
-@ludoforge/runner:test:  [32m✓[39m test/canvas/create-app.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 12[2mms[22m[39m
 @ludoforge/engine:test:       duration_ms: 0.1711
 @ludoforge/engine:test:       type: 'test'
 @ludoforge/engine:test:       ...
@@ -32388,6 +32155,239 @@
 @ludoforge/engine:test: # skipped 0
 @ludoforge/engine:test: # todo 0
 @ludoforge/engine:test: # duration_ms 29998.843313
+@ludoforge/runner:build: cache hit, replaying logs 9786ee90d995bc27
+@ludoforge/runner:build: 
+@ludoforge/runner:build: > @ludoforge/runner@0.0.0 build /home/joeloverbeck/projects/ludoforge-llm/packages/runner
+@ludoforge/runner:build: > vite build
+@ludoforge/runner:build: 
+@ludoforge/runner:build: vite v7.3.1 building client environment for production...
+@ludoforge/runner:build: transforming...
+@ludoforge/runner:build: ✓ 1298 modules transformed.
+@ludoforge/runner:build: rendering chunks...
+@ludoforge/runner:build: computing gzip size...
+@ludoforge/runner:build: dist/index.html                             0.80 kB │ gzip:   0.38 kB
+@ludoforge/runner:build: dist/assets/game-worker-BCMYjjB2.js       600.34 kB
+@ludoforge/runner:build: dist/assets/index-CBrXrwAH.css             45.33 kB │ gzip:   8.46 kB
+@ludoforge/runner:build: dist/assets/webworkerAll-Rf22SZJm.js        0.11 kB │ gzip:   0.11 kB │ map:     0.58 kB
+@ludoforge/runner:build: dist/assets/browserAll-aVSeqwNR.js          0.21 kB │ gzip:   0.17 kB │ map:     1.76 kB
+@ludoforge/runner:build: 
+@ludoforge/runner:build: dist/assets/vendor-react-DS5UYnvf.js       11.21 kB │ gzip:   4.03 kB │ map:    42.42 kB
+@ludoforge/runner:build: dist/assets/vendor-gsap-DDlvirwQ.js        69.89 kB │ gzip:  27.48 kB │ map:   374.35 kB
+@ludoforge/runner:build: dist/assets/vendor-graph-CiuxCRlE.js       78.31 kB │ gzip:  16.70 kB │ map:   344.45 kB
+@ludoforge/runner:build: (!) Some chunks are larger than 500 kB after minification. Consider:
+@ludoforge/runner:build: dist/assets/texas-game-def-N7Qux95C.js    170.33 kB │ gzip:  11.74 kB │ map:     0.11 kB
+@ludoforge/runner:build: - Using dynamic import() to code-split the application
+@ludoforge/runner:build: dist/assets/vendor-pixi-DNLO54VG.js       575.98 kB │ gzip: 162.31 kB │ map: 2,484.51 kB
+@ludoforge/runner:build: - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+@ludoforge/runner:build: dist/assets/index-CTKCC36v.js           1,186.52 kB │ gzip: 342.02 kB │ map: 4,993.57 kB
+@ludoforge/runner:build: dist/assets/fitl-game-def-vb_Q8muV.js   1,266.80 kB │ gzip:  95.84 kB │ map:     0.11 kB
+@ludoforge/runner:build: ✓ built in 13.73s
+@ludoforge/runner:build: - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+@ludoforge/runner:test: cache hit, replaying logs cd677c204942f5fd
+@ludoforge/runner:test: 
+@ludoforge/runner:test: > @ludoforge/runner@0.0.0 test /home/joeloverbeck/projects/ludoforge-llm/packages/runner
+@ludoforge/runner:test: > vitest run
+@ludoforge/runner:test: 
+@ludoforge/runner:test: 
+@ludoforge/runner:test: [1m[46m RUN [49m[22m [36mv4.1.0 [39m[90m/home/joeloverbeck/projects/ludoforge-llm/packages/runner[39m
+@ludoforge/runner:test: 
+@ludoforge/runner:test:  [32m✓[39m test/ui/LoadGameDialog.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 721[2mms[22m[39m
+@ludoforge/runner:test:      [33m[2m✓[22m[39m lists saves and disables resume for terminal records [33m 419[2mms[22m[39m
+@ludoforge/runner:test: Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+@ludoforge/runner:test:  [32m✓[39m test/ui/SettingsMenu.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[33m 437[2mms[22m[39m
+@ludoforge/runner:test: Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+@ludoforge/runner:test:  [32m✓[39m test/ui/GameSelectionScreen.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[33m 1089[2mms[22m[39m
+@ludoforge/runner:test:      [33m[2m✓[22m[39m renders game cards for non-default descriptors with metadata [33m 480[2mms[22m[39m
+@ludoforge/runner:test:      [33m[2m✓[22m[39m renders saved game rows when save manager returns entries [33m 467[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/ui/ActionTooltip.test.ts [2m([22m[2m32 tests[22m[2m)[22m[33m 377[2mms[22m[39m
+@ludoforge/runner:test: [90mstderr[2m | test/canvas/GameCanvas.recovery.test.tsx[2m > [22m[2mGameCanvas recovery[2m > [22m[2mforwards fatal runtime errors into crash recovery
+@ludoforge/runner:test: [22m[39mCanvas runtime crash detected. Starting recovery. Error: ticker exploded
+@ludoforge/runner:test:     at [90m/home/joeloverbeck/projects/ludoforge-llm/packages/runner/[39mtest/canvas/GameCanvas.recovery.test.tsx:158:21
+@ludoforge/runner:test:     at file:///home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.0/node_modules/[4m@vitest[24m/runner/dist/index.js:1258:20
+@ludoforge/runner:test: 
+@ludoforge/runner:test: [90mstderr[2m | test/canvas/GameCanvas.recovery.test.tsx[2m > [22m[2mGameCanvas recovery[2m > [22m[2mre-mounts the runtime after crash recovery and preserves store session state
+@ludoforge/runner:test: [22m[39mCanvas runtime crash detected. Starting recovery. Error: boom
+@ludoforge/runner:test:     at [90m/home/joeloverbeck/projects/ludoforge-llm/packages/runner/[39mtest/canvas/GameCanvas.recovery.test.tsx:196:27
+@ludoforge/runner:test:     at /home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/@testing-library+react@16.3.2_@testing-library+dom@10.4.1_@types+react-dom@19.2.3_@type_893f466751a7d66081fd06e9edb9241a/node_modules/[4m@testing-library[24m/react/dist/act-compat.js:47:24
+@ludoforge/runner:test:     at process.env.NODE_ENV.exports.act (/home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/react@19.2.4/node_modules/[4mreact[24m/cjs/react.development.js:814:22)
+@ludoforge/runner:test:     at Proxy.<anonymous> (/home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/@testing-library+react@16.3.2_@testing-library+dom@10.4.1_@types+react-dom@19.2.3_@type_893f466751a7d66081fd06e9edb9241a/node_modules/[4m@testing-library[24m/react/dist/act-compat.js:46:25)
+@ludoforge/runner:test:     at [90m/home/joeloverbeck/projects/ludoforge-llm/packages/runner/[39mtest/canvas/GameCanvas.recovery.test.tsx:195:5
+@ludoforge/runner:test:     at file:///home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.0/node_modules/[4m@vitest[24m/runner/dist/index.js:1258:20
+@ludoforge/runner:test: 
+@ludoforge/runner:test: [90mstderr[2m | test/canvas/GameCanvas.recovery.test.tsx[2m > [22m[2mGameCanvas recovery[2m > [22m[2mcalls canvasRecovered after successful recovery mount
+@ludoforge/runner:test: [22m[39mCanvas runtime crash detected. Starting recovery. Error: boom
+@ludoforge/runner:test:     at [90m/home/joeloverbeck/projects/ludoforge-llm/packages/runner/[39mtest/canvas/GameCanvas.recovery.test.tsx:239:27
+@ludoforge/runner:test:     at /home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/@testing-library+react@16.3.2_@testing-library+dom@10.4.1_@types+react-dom@19.2.3_@type_893f466751a7d66081fd06e9edb9241a/node_modules/[4m@testing-library[24m/react/dist/act-compat.js:47:24
+@ludoforge/runner:test:     at process.env.NODE_ENV.exports.act (/home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/react@19.2.4/node_modules/[4mreact[24m/cjs/react.development.js:814:22)
+@ludoforge/runner:test:     at Proxy.<anonymous> (/home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/@testing-library+react@16.3.2_@testing-library+dom@10.4.1_@types+react-dom@19.2.3_@type_893f466751a7d66081fd06e9edb9241a/node_modules/[4m@testing-library[24m/react/dist/act-compat.js:46:25)
+@ludoforge/runner:test:     at [90m/home/joeloverbeck/projects/ludoforge-llm/packages/runner/[39mtest/canvas/GameCanvas.recovery.test.tsx:238:5
+@ludoforge/runner:test:     at file:///home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.0/node_modules/[4m@vitest[24m/runner/dist/index.js:1258:20
+@ludoforge/runner:test: 
+@ludoforge/runner:test: [90mstderr[2m | test/canvas/GameCanvas.recovery.test.tsx[2m > [22m[2mGameCanvas recovery[2m > [22m[2msupports repeated crash recovery cycles without mutating preserved store session state
+@ludoforge/runner:test: [22m[39mCanvas runtime crash detected. Starting recovery. Error: first crash
+@ludoforge/runner:test:     at [90m/home/joeloverbeck/projects/ludoforge-llm/packages/runner/[39mtest/canvas/GameCanvas.recovery.test.tsx:279:27
+@ludoforge/runner:test:     at /home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/@testing-library+react@16.3.2_@testing-library+dom@10.4.1_@types+react-dom@19.2.3_@type_893f466751a7d66081fd06e9edb9241a/node_modules/[4m@testing-library[24m/react/dist/act-compat.js:47:24
+@ludoforge/runner:test:     at process.env.NODE_ENV.exports.act (/home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/react@19.2.4/node_modules/[4mreact[24m/cjs/react.development.js:814:22)
+@ludoforge/runner:test:     at Proxy.<anonymous> (/home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/@testing-library+react@16.3.2_@testing-library+dom@10.4.1_@types+react-dom@19.2.3_@type_893f466751a7d66081fd06e9edb9241a/node_modules/[4m@testing-library[24m/react/dist/act-compat.js:46:25)
+@ludoforge/runner:test:     at [90m/home/joeloverbeck/projects/ludoforge-llm/packages/runner/[39mtest/canvas/GameCanvas.recovery.test.tsx:278:5
+@ludoforge/runner:test:     at file:///home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.0/node_modules/[4m@vitest[24m/runner/dist/index.js:1258:20
+@ludoforge/runner:test: 
+@ludoforge/runner:test: [90mstderr[2m | test/canvas/GameCanvas.recovery.test.tsx[2m > [22m[2mGameCanvas recovery[2m > [22m[2msupports repeated crash recovery cycles without mutating preserved store session state
+@ludoforge/runner:test: [22m[39mCanvas runtime crash detected. Starting recovery. Error: second crash
+@ludoforge/runner:test:     at [90m/home/joeloverbeck/projects/ludoforge-llm/packages/runner/[39mtest/canvas/GameCanvas.recovery.test.tsx:292:28
+@ludoforge/runner:test:     at /home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/@testing-library+react@16.3.2_@testing-library+dom@10.4.1_@types+react-dom@19.2.3_@type_893f466751a7d66081fd06e9edb9241a/node_modules/[4m@testing-library[24m/react/dist/act-compat.js:47:24
+@ludoforge/runner:test:     at process.env.NODE_ENV.exports.act (/home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/react@19.2.4/node_modules/[4mreact[24m/cjs/react.development.js:814:22)
+@ludoforge/runner:test:     at Proxy.<anonymous> (/home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/@testing-library+react@16.3.2_@testing-library+dom@10.4.1_@types+react-dom@19.2.3_@type_893f466751a7d66081fd06e9edb9241a/node_modules/[4m@testing-library[24m/react/dist/act-compat.js:46:25)
+@ludoforge/runner:test:     at [90m/home/joeloverbeck/projects/ludoforge-llm/packages/runner/[39mtest/canvas/GameCanvas.recovery.test.tsx:291:5
+@ludoforge/runner:test:     at file:///home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.0/node_modules/[4m@vitest[24m/runner/dist/index.js:1258:20
+@ludoforge/runner:test: 
+@ludoforge/runner:test: [90mstderr[2m | test/canvas/GameCanvas.recovery.test.tsx[2m > [22m[2mGameCanvas recovery[2m > [22m[2mcaptures the viewport snapshot before recovery and passes it into the recreated runtime
+@ludoforge/runner:test: [22m[39mCanvas runtime crash detected. Starting recovery. Error: boom
+@ludoforge/runner:test:     at [90m/home/joeloverbeck/projects/ludoforge-llm/packages/runner/[39mtest/canvas/GameCanvas.recovery.test.tsx:347:27
+@ludoforge/runner:test:     at /home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/@testing-library+react@16.3.2_@testing-library+dom@10.4.1_@types+react-dom@19.2.3_@type_893f466751a7d66081fd06e9edb9241a/node_modules/[4m@testing-library[24m/react/dist/act-compat.js:47:24
+@ludoforge/runner:test:     at process.env.NODE_ENV.exports.act (/home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/react@19.2.4/node_modules/[4mreact[24m/cjs/react.development.js:814:22)
+@ludoforge/runner:test:     at Proxy.<anonymous> (/home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/@testing-library+react@16.3.2_@testing-library+dom@10.4.1_@types+react-dom@19.2.3_@type_893f466751a7d66081fd06e9edb9241a/node_modules/[4m@testing-library[24m/react/dist/act-compat.js:46:25)
+@ludoforge/runner:test:     at [90m/home/joeloverbeck/projects/ludoforge-llm/packages/runner/[39mtest/canvas/GameCanvas.recovery.test.tsx:346:5
+@ludoforge/runner:test:     at file:///home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.0/node_modules/[4m@vitest[24m/runner/dist/index.js:1258:20
+@ludoforge/runner:test: 
+@ludoforge/runner:test: [90mstderr[2m | test/canvas/GameCanvas.recovery.test.tsx[2m > [22m[2mGameCanvas recovery[2m > [22m[2muses the runtime health getter to trigger heartbeat recovery
+@ludoforge/runner:test: [22m[39mCanvas runtime heartbeat detected unhealthy runtime. Starting recovery. {
+@ludoforge/runner:test:   tickerStarted: [33mfalse[39m,
+@ludoforge/runner:test:   canvasConnected: [33mtrue[39m,
+@ludoforge/runner:test:   renderCorruptionSuspected: [33mfalse[39m
+@ludoforge/runner:test: }
+@ludoforge/runner:test: 
+@ludoforge/runner:test:  [32m✓[39m test/canvas/GameCanvas.recovery.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[32m 289[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/ui/App.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 1681[2mms[22m[39m
+@ludoforge/runner:test:      [33m[2m✓[22m[39m renders game selection screen by default [33m 1401[2mms[22m[39m
+@ludoforge/runner:test: Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+@ludoforge/runner:test:  [32m✓[39m test/ui/PreGameConfigScreen.test.tsx [2m([22m[2m12 tests[22m[2m)[22m[32m 208[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/animation/ai-playback.test.ts [2m([22m[2m9 tests[22m[2m)[22m[33m 647[2mms[22m[39m
+@ludoforge/runner:test:      [33m[2m✓[22m[39m retries on no-op then calls onError after max retries exhausted [33m 501[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/bootstrap/resolve-bootstrap-config.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 951[2mms[22m[39m
+@ludoforge/runner:test:      [33m[2m✓[22m[39m returns FITL bootstrap config when game=fitl and applies params [33m 303[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/store/game-store.test.ts [2m([22m[2m57 tests[22m[2m)[22m[32m 205[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/model/project-render-model-zones.test.ts [2m([22m[2m25 tests[22m[2m)[22m[32m 94[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/ui/EventLogPanel.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 103[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/model/project-render-model-state.test.ts [2m([22m[2m54 tests[22m[2m)[22m[32m 130[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/session/replay-runtime.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[32m 123[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/ui/SaveGameDialog.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 162[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/ui/WarningsToast.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 201[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/worker/game-worker.test.ts [2m([22m[2m35 tests[22m[2m)[22m[32m 74[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/session/active-game-runtime.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[32m 165[2mms[22m[39m
+@ludoforge/runner:test: Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+@ludoforge/runner:test:  [32m✓[39m test/ui/ChoicePanel.test.ts [2m([22m[2m36 tests[22m[2m)[22m[32m 152[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/ui/GameContainer.chrome.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[32m 275[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/config/visual-config-provider.test.ts [2m([22m[2m66 tests[22m[2m)[22m[32m 50[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/ui/useEventLogEntries.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 68[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/ui/EventCardTooltip.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 47[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/ui/RawAstToggle.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 40[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/ui/ModifiersSection.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 72[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/ui/TooltipLayer.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 64[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/ui/GameContainer.test.ts [2m([22m[2m26 tests[22m[2m)[22m[32m 72[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/store/game-store-async-serialization.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 90[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/persistence/save-manager.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 33[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/ui/AvailabilitySection.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 48[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/ui/ReplayScreen.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 37[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/animation/animation-controller.test.ts [2m([22m[2m33 tests[22m[2m)[22m[32m 47[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/ui/choose-n-resolution-display.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 56[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/store/ai-move-policy.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 46[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/store/agent-turn-orchestrator.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 52[2mms[22m[39m
+@ludoforge/runner:test: Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+@ludoforge/runner:test:  [32m✓[39m test/ui/useActionTooltip.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 58[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/ui/ShowdownOverlay.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 58[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/ui/PlayerHandPanel.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 53[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/ui/ReplayControls.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 40[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/config/visual-config-schema.test.ts [2m([22m[2m54 tests[22m[2m)[22m[32m 43[2mms[22m[39m
+@ludoforge/runner:test: [90mstderr[2m | test/canvas/GameCanvas.test.ts[2m > [22m[2mcreateGameCanvasRuntime[2m > [22m[2mschedules render-health verification after contained ticker errors and reports confirmed corruption through onError
+@ludoforge/runner:test: [22m[39mTicker error fence contained ticker error 1/3. Error: contained
+@ludoforge/runner:test:     at Object.<anonymous> [90m(/home/joeloverbeck/projects/ludoforge-llm/packages/runner/[39mtest/canvas/GameCanvas.test.ts:594:13[90m)[39m
+@ludoforge/runner:test:     at Object.Mock (file:///home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/@vitest+spy@4.1.0/node_modules/[4m@vitest[24m/spy/dist/index.js:332:34)
+@ludoforge/runner:test:     at Object.wrappedTick [as _tick] [90m(/home/joeloverbeck/projects/ludoforge-llm/packages/runner/[39msrc/canvas/ticker-error-fence.ts:81:35[90m)[39m
+@ludoforge/runner:test:     at [90m/home/joeloverbeck/projects/ludoforge-llm/packages/runner/[39mtest/canvas/GameCanvas.test.ts:613:35
+@ludoforge/runner:test: [90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+@ludoforge/runner:test:     at file:///home/joeloverbeck/projects/ludoforge-llm/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.0/node_modules/[4m@vitest[24m/runner/dist/index.js:1258:20
+@ludoforge/runner:test: 
+@ludoforge/runner:test:  [32m✓[39m test/canvas/GameCanvas.test.ts [2m([22m[2m30 tests[22m[2m)[22m[32m 86[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/animation/timeline-builder.test.ts [2m([22m[2m41 tests[22m[2m)[22m[32m 43[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/ui/CollapsiblePanel.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 31[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/ui/MiniCard.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 31[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/layout/compute-layout.test.ts [2m([22m[2m40 tests[22m[2m)[22m[32m 28[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/ui/UIOverlay.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/ui/useHoverPopoverSession.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/ui/useCardTooltip.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/ui/UnsavedChangesDialog.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 28[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/store/game-store-crash-lifecycle.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 34[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/animation/animation-queue.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/ui/TerminalOverlay.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 31[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/animation/preset-registry.test.ts [2m([22m[2m27 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/canvas/renderers/token-renderer.test.ts [2m([22m[2m36 tests[22m[2m)[22m[32m 30[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/worker/clone-compat.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/ui/AITurnOverlay.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 44[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/canvas/renderers/zone-renderer.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/model/runner-frame-structural-sharing.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/canvas/canvas-updater.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/canvas/canvas-equality.test.ts [2m([22m[2m37 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/model/translate-effect-trace.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/replay/replay-controller.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 32[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/ui/ActionToolbar.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/canvas/renderers/table-overlay-renderer.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/model/runner-frame-projection-boundary.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/canvas/runtime-layout-store.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/worker/choose-n-session-integration.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/canvas/ticker-error-fence.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/canvas/renderers/card-template-renderer.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/bootstrap/bootstrap-registry.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/canvas/interactions/hover-staleness-guard.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/ui/ErrorState.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/model/project-render-model-structural-sharing.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 27[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/canvas/geometry/hull-padding.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/ui/EventDeckPanel.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/animation/animation-pipeline-integration.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/canvas/renderers/adjacency-renderer.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/animation/diagnostic-buffer.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/ui/LoadingState.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/canvas/renderers/safe-destroy.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/animation/trace-to-descriptors.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/animation/ephemeral-container-factory.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 32[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/canvas/renderers/region-boundary-renderer.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/config/validate-visual-config-refs.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/canvas/renderers/token-symbol-drawer.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/ui/InterruptBanner.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/canvas/renderers/disposal-queue.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/ui/EligiblePanel.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/canvas/viewport-setup.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/layout/layout-cache.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/canvas/text/bitmap-text-runtime.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/animation/animation-logger.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/ui/TurnOrderDisplay.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/session/session-store.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/canvas/text/text-runtime.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/ui/ActiveEffectsPanel.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/worker/game-bridge.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/model/tooltip-payload.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/canvas/canvas-crash-recovery.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/layout/build-layout-graph.test.ts [2m([22m[2m22 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/ui/PhaseIndicator.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/canvas/interactions/aria-announcer.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/ui/IllegalityFeedback.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/ui/ErrorBoundary.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/canvas/geometry/convex-hull.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/canvas/interactions/zone-select.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/model/iteration-context.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/config/visual-config-files.test.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 9283[2mms[22m[39m
+@ludoforge/runner:test:      [33m[2m✓[22m[39m production visual config for 'fitl' passes strict schema + reference validation against its compiled GameDef [33m 3637[2mms[22m[39m
+@ludoforge/runner:test:      [33m[2m✓[22m[39m production visual config for 'texas' passes strict schema + reference validation against its compiled GameDef [33m 377[2mms[22m[39m
+@ludoforge/runner:test:      [33m[2m✓[22m[39m FITL visual-config uses canonical runtime ids and expected visual rule chain [33m 2684[2mms[22m[39m
+@ludoforge/runner:test:      [33m[2m✓[22m[39m FITL actions section contains correct display names and choice prompts for all configured actions [33m 2296[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/ui/PhaseBannerOverlay.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/presentation/action-announcement-presentation.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/canvas/crash-elimination-integration.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/canvas/interactions/hover-target-controller.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/replay/replay-store.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/canvas/renderers/container-pool.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/config/visual-config-loader.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+@ludoforge/runner:test:  [32m✓[39m test/canvas/create-app.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 12[2mms[22m[39m
 @ludoforge/runner:test:  [32m✓[39m test/bootstrap/bootstrap-fixtures-script.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 9[2mms[22m[39m
 @ludoforge/runner:test:  [32m✓[39m test/ui/UndoControl.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 8[2mms[22m[39m
 @ludoforge/runner:test:  [32m✓[39m test/canvas/interactions/token-select.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 5[2mms[22m[39m
@@ -32455,6 +32455,6 @@
 @ludoforge/runner:test: 
 
  Tasks:    4 successful, 4 total
-Cached:    0 cached, 4 total
-  Time:    44.074s 
+Cached:    4 cached, 4 total
+  Time:    200ms >>> FULL TURBO
 

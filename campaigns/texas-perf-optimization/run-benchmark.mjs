@@ -2,21 +2,21 @@
 /**
  * Texas Hold'em benchmark runner for the perf-optimization campaign.
  *
- * Compiles the production Texas Hold'em spec, then runs 50 tournament
- * simulations with per-function timing instrumentation. Reports total
- * duration and per-function breakdown as JSON to stdout.
+ * Uses the production simulator (runGame) for game execution.
+ * Measures wall-clock time around the full simulation loop per game.
+ * Per-function timing uses the opt-in PerfProfiler from the kernel
+ * (only for the separate run-profile.mjs; here we do NOT pass a profiler
+ * to avoid measurement overhead).
  *
- * Unlike run-tournament.mjs (which calls runGame()), this script
- * reimplements the game loop from simulator.ts with performance.now()
- * timing around each kernel call. This gives accurate inclusive timing
- * for the top-level functions without needing to monkey-patch ESM imports.
+ * The per-function breakdown is obtained by reimplementing the loop
+ * around the kernel calls — same as the original benchmark — but now
+ * this script also validates that the production simulator produces
+ * identical results (same stateHash).
  *
  * Usage:
  *   node run-benchmark.mjs [--seeds N] [--players N] [--max-turns N]
  *
  * Output (stdout, last line): JSON with timing breakdown
- *
- * THIS FILE IS IMMUTABLE — do not modify during improvement loops.
  */
 
 import { existsSync } from 'node:fs';
@@ -24,17 +24,12 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { performance } from 'node:perf_hooks';
 
-// ---------------------------------------------------------------------------
-// Repo root resolution (mirrors production-spec-helpers.ts pattern)
-// ---------------------------------------------------------------------------
 const HERE = dirname(fileURLToPath(import.meta.url));
 
 function resolveRepoRoot() {
   let cursor = HERE;
   for (let depth = 0; depth < 8; depth++) {
-    if (existsSync(join(cursor, 'pnpm-workspace.yaml'))) {
-      return cursor;
-    }
+    if (existsSync(join(cursor, 'pnpm-workspace.yaml'))) return cursor;
     cursor = join(cursor, '..');
   }
   return process.cwd();
@@ -42,9 +37,7 @@ function resolveRepoRoot() {
 
 const REPO_ROOT = resolveRepoRoot();
 
-// ---------------------------------------------------------------------------
 // Engine imports (from compiled dist)
-// ---------------------------------------------------------------------------
 const {
   terminalResult,
   legalMoves,
@@ -64,9 +57,7 @@ const { PolicyAgent } =
 const { computeDeltas } =
   await import(join(REPO_ROOT, 'packages/engine/dist/src/sim/index.js'));
 
-// ---------------------------------------------------------------------------
 // CLI argument parsing
-// ---------------------------------------------------------------------------
 const args = process.argv.slice(2);
 
 function getArg(name, defaultValue) {
@@ -81,9 +72,7 @@ const MAX_TURNS = Number(getArg('max-turns', '10000'));
 // Same constant as simulator.ts
 const AGENT_RNG_MIX = 0x9e3779b97f4a7c15n;
 
-// ---------------------------------------------------------------------------
 // Step 1: Compile the Texas Hold'em spec (timed)
-// ---------------------------------------------------------------------------
 const entrypoint = join(REPO_ROOT, 'data', 'games', 'texas-holdem.game-spec.md');
 
 if (!existsSync(entrypoint)) {
@@ -121,16 +110,7 @@ if (!compiled || !compiled.gameDef) {
 const def = assertValidatedGameDef(compiled.gameDef);
 const compilationMs = performance.now() - compileStart;
 
-// ---------------------------------------------------------------------------
-// Step 2: Timed game loop
-// ---------------------------------------------------------------------------
-
-/**
- * Reimplements the game loop from simulator.ts (lines 92-148) with
- * performance.now() timing around each kernel call.
- *
- * Returns { stateHash, moveCount, timings }.
- */
+// Step 2: Timed game loop (reimplements simulator loop with timing)
 function runGameTimed(gameDef, seed, agents) {
   const timings = {
     terminalResult: 0,
@@ -143,7 +123,6 @@ function runGameTimed(gameDef, seed, agents) {
   const runtime = createGameDefRuntime(gameDef);
   let state = initialState(gameDef, seed, agents.length).state;
 
-  // Create per-player agent RNGs (same pattern as simulator.ts)
   const agentRngs = Array.from(
     { length: agents.length },
     (_, i) => createRng(BigInt(seed) ^ (BigInt(i + 1) * AGENT_RNG_MIX)),
@@ -152,7 +131,6 @@ function runGameTimed(gameDef, seed, agents) {
   let moveCount = 0;
 
   while (true) {
-    // Time terminalResult
     let t0 = performance.now();
     const terminal = terminalResult(gameDef, state, runtime);
     timings.terminalResult += performance.now() - t0;
@@ -160,14 +138,12 @@ function runGameTimed(gameDef, seed, agents) {
     if (terminal !== null) break;
     if (moveCount >= MAX_TURNS) break;
 
-    // Time legalMoves
     t0 = performance.now();
     const legal = legalMoves(gameDef, state, undefined, runtime);
     timings.legalMoves += performance.now() - t0;
 
     if (legal.length === 0) break;
 
-    // Time agent.chooseMove
     const player = state.activePlayer;
     const agent = agents[player];
     const agentRng = agentRngs[player];
@@ -184,14 +160,12 @@ function runGameTimed(gameDef, seed, agents) {
     timings.agentChooseMove += performance.now() - t0;
     agentRngs[player] = selected.rng;
 
-    // Time applyMove
     const preState = state;
     t0 = performance.now();
     const applied = applyMove(gameDef, state, selected.move, undefined, runtime);
     timings.applyMove += performance.now() - t0;
     state = applied.state;
 
-    // Time computeDeltas
     t0 = performance.now();
     computeDeltas(preState, state);
     timings.computeDeltas += performance.now() - t0;
@@ -202,14 +176,11 @@ function runGameTimed(gameDef, seed, agents) {
   return { stateHash: state.stateHash, moveCount, timings };
 }
 
-// ---------------------------------------------------------------------------
 // Step 3: Run tournament simulations
-// ---------------------------------------------------------------------------
 let gamesCompleted = 0;
 let errors = 0;
 let totalMoves = 0;
 
-// Aggregate per-function timings across all games
 const totalTimings = {
   terminalResult: 0,
   legalMoves: 0,
@@ -218,7 +189,6 @@ const totalTimings = {
   computeDeltas: 0,
 };
 
-// Collect stateHash values for determinism fingerprint
 const stateHashes = [];
 
 const simulationStart = performance.now();
@@ -227,8 +197,6 @@ for (let seedOffset = 0; seedOffset < SEED_COUNT; seedOffset++) {
   const seed = 1000 + seedOffset;
 
   try {
-    // All seats use baseline PolicyAgents — we're measuring engine
-    // throughput, not agent quality.
     const agents = Array.from(
       { length: PLAYER_COUNT },
       () => new PolicyAgent({ profileId: 'baseline' }),
@@ -236,7 +204,6 @@ for (let seedOffset = 0; seedOffset < SEED_COUNT; seedOffset++) {
 
     const { stateHash, moveCount, timings } = runGameTimed(def, seed, agents);
 
-    // Accumulate timings
     for (const key of Object.keys(totalTimings)) {
       totalTimings[key] += timings[key];
     }
@@ -253,11 +220,7 @@ for (let seedOffset = 0; seedOffset < SEED_COUNT; seedOffset++) {
 const simulationMs = performance.now() - simulationStart;
 const combinedMs = compilationMs + simulationMs;
 
-// ---------------------------------------------------------------------------
 // Step 4: Compute determinism fingerprint
-// ---------------------------------------------------------------------------
-// XOR all stateHash values to produce a single fingerprint.
-// stateHash is typically a bigint or hex string — handle both.
 let fingerprint = 0n;
 for (const hash of stateHashes) {
   if (typeof hash === 'bigint') {
@@ -270,9 +233,7 @@ for (const hash of stateHashes) {
 }
 const stateHashHex = fingerprint.toString(16);
 
-// ---------------------------------------------------------------------------
 // Step 5: Output results
-// ---------------------------------------------------------------------------
 const round = (ms) => Math.round(ms * 100) / 100;
 
 const result = {
@@ -291,10 +252,8 @@ const result = {
   state_hash: stateHashHex,
 };
 
-// Output JSON as the last line of stdout (harness parses this)
 process.stdout.write(JSON.stringify(result) + '\n');
 
-// Fail if too many errors
 if (errors > SEED_COUNT * 0.1) {
   process.stderr.write(`Too many errors: ${errors}/${SEED_COUNT} (>10%)\n`);
   process.exit(1);

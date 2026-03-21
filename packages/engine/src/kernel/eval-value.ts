@@ -128,6 +128,20 @@ export function evalValue(expr: ValueExpr, ctx: ReadContext): ScalarValue | Scal
   if (typeof expr === 'number' || typeof expr === 'boolean' || typeof expr === 'string') {
     return expr;
   }
+  // Profiling: count by expression type
+  const profiler = (ctx as { readonly profiler?: import('./perf-profiler.js').PerfProfiler }).profiler;
+  if (profiler !== undefined) {
+    const exprType = 'ref' in expr ? `val:ref:${'ref' in expr ? (expr as { ref: unknown }).ref : '?'}`
+      : 'aggregate' in expr ? 'val:aggregate'
+      : 'if' in expr ? 'val:if'
+      : 'concat' in expr ? 'val:concat'
+      : 'op' in expr ? `val:op:${(expr as { op: string }).op}`
+      : 'scalarArray' in expr ? 'val:scalarArray'
+      : 'val:other';
+    const bucket = profiler.dynamic.get(exprType);
+    if (bucket !== undefined) { bucket.count += 1; }
+    else { profiler.dynamic.set(exprType, { count: 1, totalMs: 0 }); }
+  }
   if ('scalarArray' in expr) {
     return expr.scalarArray;
   }

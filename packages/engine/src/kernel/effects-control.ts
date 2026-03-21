@@ -1,4 +1,4 @@
-import { evalConditionTraced } from './eval-condition.js';
+import { evalCondition, evalConditionTraced } from './eval-condition.js';
 import { evalQuery } from './eval-query.js';
 import { evalValue } from './eval-value.js';
 import { rebaseIterationPath, withIterationSegment } from './decision-scope.js';
@@ -19,10 +19,14 @@ export interface EffectBudgetState {
 
 type ApplyEffectsWithBudget = (effects: readonly EffectAST[], ctx: EffectContext, budget: EffectBudgetState) => EffectResult;
 
-const resolveEffectBindings = (ctx: EffectContext): Readonly<Record<string, unknown>> => ({
-  ...ctx.moveParams,
-  ...ctx.bindings,
-});
+/** Merge moveParams into bindings. Fast path: return bindings directly when moveParams is empty. */
+const resolveEffectBindings = (ctx: EffectContext): Readonly<Record<string, unknown>> => {
+  const mp = ctx.moveParams;
+  // Fast path: skip merge when moveParams has no keys (common in lifecycle effects).
+  // Uses for-in to check emptiness without Object.keys() allocation.
+  for (const _ in mp) { return { ...mp, ...ctx.bindings }; } // eslint-disable-line @typescript-eslint/no-unused-vars, no-unreachable-loop
+  return ctx.bindings;
+};
 
 export const applyIf = (
   effect: Extract<EffectAST, { readonly if: unknown }>,
@@ -30,13 +34,13 @@ export const applyIf = (
   budget: EffectBudgetState,
   applyEffectsWithBudget: ApplyEffectsWithBudget,
 ): EffectResult => {
-  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
-  const predicate = evalConditionTraced(
-    effect.if.when,
-    evalCtx,
-    'ifBranch',
-    resolveTraceProvenance(ctx),
-  );
+  const resolvedBindings = resolveEffectBindings(ctx);
+  // Skip context spread when bindings identity unchanged (common in lifecycle effects with empty moveParams)
+  const evalCtx = resolvedBindings === ctx.bindings ? ctx : { ...ctx, bindings: resolvedBindings };
+  // Skip trace provenance construction when condition tracing is disabled (saves ~131K object allocations)
+  const predicate = ctx.collector.conditionTrace !== null
+    ? evalConditionTraced(effect.if.when, evalCtx, 'ifBranch', resolveTraceProvenance(ctx))
+    : evalCondition(effect.if.when, evalCtx);
 
   if (predicate) {
     const thenResult = applyEffectsWithBudget(effect.if.then, withTracePath(ctx, '.if.then'), budget);
@@ -181,15 +185,17 @@ export const applyForEach = (
     }
   }
 
-  emitTrace(ctx.collector, buildForEachTraceEntry({
-    bind: effect.forEach.bind,
-    ...(effect.forEach.macroOrigin === undefined ? {} : { macroOrigin: effect.forEach.macroOrigin }),
-    matchCount: queryResult.length,
-    iteratedCount: boundedItems.length,
-    explicitLimit: effect.forEach.limit !== undefined,
-    resolvedLimit: limit,
-    provenance: resolveTraceProvenance(ctx),
-  }));
+  if (ctx.collector.trace !== null) {
+    emitTrace(ctx.collector, buildForEachTraceEntry({
+      bind: effect.forEach.bind,
+      ...(effect.forEach.macroOrigin === undefined ? {} : { macroOrigin: effect.forEach.macroOrigin }),
+      matchCount: queryResult.length,
+      iteratedCount: boundedItems.length,
+      explicitLimit: effect.forEach.limit !== undefined,
+      resolvedLimit: limit,
+      provenance: resolveTraceProvenance(ctx),
+    }));
+  }
 
   if (effect.forEach.countBind !== undefined && effect.forEach.in !== undefined) {
     const countCtx: EffectContext = {
@@ -256,19 +262,21 @@ export const applyReduce = (
     });
   }
 
-  emitTrace(ctx.collector, buildReduceTraceEntry({
-    itemBind: effect.reduce.itemBind,
-    accBind: effect.reduce.accBind,
-    resultBind: effect.reduce.resultBind,
-    ...(effect.reduce.itemMacroOrigin === undefined ? {} : { itemMacroOrigin: effect.reduce.itemMacroOrigin }),
-    ...(effect.reduce.accMacroOrigin === undefined ? {} : { accMacroOrigin: effect.reduce.accMacroOrigin }),
-    ...(effect.reduce.resultMacroOrigin === undefined ? {} : { resultMacroOrigin: effect.reduce.resultMacroOrigin }),
-    matchCount: queryResult.length,
-    iteratedCount: boundedItems.length,
-    explicitLimit: effect.reduce.limit !== undefined,
-    resolvedLimit: limit,
-    provenance: resolveTraceProvenance(ctx),
-  }));
+  if (ctx.collector.trace !== null) {
+    emitTrace(ctx.collector, buildReduceTraceEntry({
+      itemBind: effect.reduce.itemBind,
+      accBind: effect.reduce.accBind,
+      resultBind: effect.reduce.resultBind,
+      ...(effect.reduce.itemMacroOrigin === undefined ? {} : { itemMacroOrigin: effect.reduce.itemMacroOrigin }),
+      ...(effect.reduce.accMacroOrigin === undefined ? {} : { accMacroOrigin: effect.reduce.accMacroOrigin }),
+      ...(effect.reduce.resultMacroOrigin === undefined ? {} : { resultMacroOrigin: effect.reduce.resultMacroOrigin }),
+      matchCount: queryResult.length,
+      iteratedCount: boundedItems.length,
+      explicitLimit: effect.reduce.limit !== undefined,
+      resolvedLimit: limit,
+      provenance: resolveTraceProvenance(ctx),
+    }));
+  }
 
   const continuationCtx: EffectContext = {
     ...ctx,

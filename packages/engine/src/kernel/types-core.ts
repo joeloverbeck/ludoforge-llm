@@ -748,9 +748,33 @@ export interface DataAssetRef {
   readonly kind: KnownDataAssetKind;
 }
 
+/** Pre-sorted key arrays derived from GameDef for computeFullHash. */
+export interface ZobristSortedKeys {
+  readonly zoneIds: readonly string[];
+  readonly globalVarNames: readonly string[];
+  readonly perPlayerIds: readonly number[];
+  readonly perPlayerVarNames: ReadonlyMap<number, readonly string[]>;
+  readonly zoneVarZoneIds: readonly string[];
+  readonly zoneVarNames: ReadonlyMap<string, readonly string[]>;
+  readonly actionIds: readonly string[];
+  readonly markerSpaceIds: readonly string[];
+  readonly markerIds: ReadonlyMap<string, readonly string[]>;
+  readonly globalMarkerIds: readonly string[];
+  readonly revealZoneIds: readonly string[];
+}
+
 export interface ZobristTable {
   readonly seed: bigint;
   readonly fingerprint: string;
+  /** Pre-cached hex string of seed — avoids repeated BigInt→string conversion. */
+  readonly seedHex: string;
+  /**
+   * Lazily-populated cache of zobrist keys keyed by encoded feature string.
+   * Mutable for lazy population only — externally pure.
+   */
+  readonly keyCache: Map<string, bigint>;
+  /** Pre-sorted key arrays for computeFullHash — avoids repeated sorting. */
+  readonly sortedKeys: ZobristSortedKeys | null;
 }
 
 export type ZobristFeature =
@@ -1325,6 +1349,8 @@ export interface ExecutionOptions {
   readonly selectorTrace?: boolean;
   readonly advanceToDecisionPoint?: boolean;
   readonly maxPhaseTransitionsPerMove?: number;
+  /** Opt-in performance profiler. Accumulates sub-function timing when provided. */
+  readonly profiler?: import('./perf-profiler.js').PerfProfiler;
 }
 
 export interface ExecutionCollector {
@@ -1465,5 +1491,7 @@ export interface Agent {
     readonly legalMoves: readonly Move[];
     readonly rng: Rng;
     readonly runtime?: import('./gamedef-runtime.js').GameDefRuntime;
+    /** Opt-in profiler for agent sub-function timing. */
+    readonly profiler?: import('./perf-profiler.js').PerfProfiler;
   }): { readonly move: Move; readonly rng: Rng; readonly agentDecision?: AgentDecisionTrace };
 }

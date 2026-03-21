@@ -58,6 +58,7 @@ Status values: `ACCEPT`, `REJECT`, `NEAR_MISS`, `EARLY_ABORT`, `CRASH`, `SUSPICI
 | `meta_improvement` | false | Enable self-improving program.md meta-loop |
 | `META_REVIEW_INTERVAL` | 20 | Experiments between meta-reviews |
 | `META_TRIAL_WINDOW` | 10 | Trial period for meta-changes |
+| `NOISE_TOLERANCE` | 0.01 | Assumed noise floor for single-run campaigns (1% as decimal) |
 | `PIVOT_CHECK_INTERVAL` | 10 | Experiments between PROCEED/REFINE/PIVOT checks |
 
 ## Worktree Requirement (NON-NEGOTIABLE)
@@ -155,7 +156,7 @@ Run this loop INDEFINITELY. Never stop. Never ask permission. Never pause at "na
 
 - Every `PIVOT_CHECK_INTERVAL` experiments, evaluate the campaign's trajectory:
   - **PROCEED** (accept rate in last N > 20%): Current approach is productive. Continue normally.
-  - **REFINE** (accept rate 10-20%): Approach has potential but is underperforming. Adjust parameters — tighten/loosen thresholds, shift category priorities, re-read mutable files for missed angles.
+  - **REFINE** (accept rate >= 10% and <= 20%): Approach has potential but is underperforming. Adjust parameters — tighten/loosen thresholds, shift category priorities, re-read mutable files for missed angles.
   - **PIVOT** (accept rate < 10%): Approach is exhausted. Consult lessons (local and global) for alternative strategies. If lessons suggest a pattern, adopt it. If no relevant lessons, trigger `radical` strategy regardless of consecutive reject count.
 
 ### Step 1f: META-REVIEW (Self-Improving program.md)

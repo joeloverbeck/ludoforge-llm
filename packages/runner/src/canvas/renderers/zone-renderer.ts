@@ -21,6 +21,7 @@ import { createManagedBitmapText } from '../text/bitmap-text-runtime.js';
 import {
   LABEL_FONT_NAME,
   STROKE_LABEL_FONT_NAME,
+  type BitmapFontName,
 } from '../text/bitmap-font-registry.js';
 import type { PresentationZoneNode } from '../../presentation/presentation-scene.js';
 
@@ -202,7 +203,7 @@ function createZoneVisualElements(): ZoneVisualElements {
 }
 
 interface BitmapLabelOptions {
-  readonly fontName: string;
+  readonly fontName: BitmapFontName;
   readonly fill?: string;
   readonly stroke?: { readonly color: string; readonly width: number };
   readonly anchor?: { readonly x: number; readonly y: number };
@@ -221,7 +222,7 @@ function createBitmapLabel(
     style: {
       fill: opts.fill ?? '#f5f7fa',
       fontSize,
-      fontFamily: opts.fontName,
+      fontName: opts.fontName,
       ...(opts.fontWeight !== undefined ? { fontWeight: opts.fontWeight as 'bold' | 'normal' } : {}),
       ...(opts.stroke !== undefined ? { stroke: opts.stroke } : {}),
     },

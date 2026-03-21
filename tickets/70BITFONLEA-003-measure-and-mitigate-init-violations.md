@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small–Medium
 **Engine Changes**: None — runner-only
-**Deps**: 70BITFONLEA-001, 70BITFONLEA-002
+**Deps**: 70BITFONLEA-001, 70BITFONLEA-002, 70BITFONLEA-004
 
 ## Problem
 
@@ -16,7 +16,7 @@ During game initialization, Chrome emits `'message' handler took 150ms` and `'re
 
 This creates a 3–4 frame stall for FITL (10+ zones, 20–50 tokens, 117 event cards).
 
-**This ticket is measurement-gated**: the font leak fix in tickets 001 + 002 may itself reduce handler times below the violation threshold, since dynamic font generation is expensive per-tick work. Implementation of the deferral only proceeds if violations persist.
+**This ticket is measurement-gated**: the font leak fix across tickets 001 + 002 + 004 may itself reduce handler times below the violation threshold, since dynamic font generation and repeated BitmapText style churn were part of the work happening during initialization. Implementation of the deferral only proceeds if violations persist.
 
 ## Assumption Reassessment (2026-03-21)
 
@@ -35,7 +35,7 @@ This creates a 3–4 frame stall for FITL (10+ zones, 20–50 tokens, 117 event 
 
 ### 1. Measurement Protocol (mandatory before any code changes)
 
-After 70BITFONLEA-001 and 70BITFONLEA-002 are merged:
+After 70BITFONLEA-001, 70BITFONLEA-002, and 70BITFONLEA-004 are merged:
 
 1. Run `pnpm -F @ludoforge/runner dev`
 2. Open Chrome DevTools console
@@ -81,8 +81,8 @@ _(To be filled after 70BITFONLEA-001 and 70BITFONLEA-002 are complete)_
 ## Out of Scope
 
 - Font name changes — completed in 70BITFONLEA-001.
-- Style caching — completed in 70BITFONLEA-002.
-- Typed BitmapText font-contract cleanup — handled separately in `70BITFONLEA-004`.
+- Style caching — handled in 70BITFONLEA-002.
+- Typed BitmapText font-contract cleanup — completed in `70BITFONLEA-004`.
 - Refactoring `deriveStoreRunnerProjection()` or `deriveStoreWorldLayout()` internals.
 - Any changes to canvas updater subscription logic.
 - Adding `performance.mark()` / `performance.measure()` instrumentation (nice-to-have but not in scope).

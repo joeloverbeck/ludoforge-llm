@@ -1,11 +1,23 @@
 import { BitmapText, type Container, type TextStyleOptions } from 'pixi.js';
 
 import { safeDestroyDisplayObject } from '../renderers/safe-destroy.js';
+import type { BitmapFontName } from './bitmap-font-registry.js';
+
+export interface BitmapTextStyle {
+  readonly fontName: BitmapFontName;
+  readonly fill?: string;
+  readonly fontSize?: number;
+  readonly stroke?: {
+    readonly color: string;
+    readonly width: number;
+  };
+  readonly fontWeight?: TextStyleOptions['fontWeight'];
+}
 
 export interface ManagedBitmapTextOptions {
   readonly parent?: Container;
   readonly text?: string;
-  readonly style?: TextStyleOptions;
+  readonly style: BitmapTextStyle;
   readonly anchor?: { readonly x: number; readonly y: number };
   readonly position?: { readonly x: number; readonly y: number };
   readonly visible?: boolean;
@@ -15,7 +27,7 @@ export interface ManagedBitmapTextOptions {
 export interface KeyedBitmapTextSpec {
   readonly key: string;
   readonly text: string;
-  readonly style?: TextStyleOptions;
+  readonly style: BitmapTextStyle;
   readonly anchor?: { readonly x: number; readonly y: number };
   readonly position?: { readonly x: number; readonly y: number };
   readonly visible?: boolean;
@@ -37,10 +49,28 @@ interface CreateKeyedBitmapTextReconcilerOptions {
   readonly parentContainer: Container;
 }
 
-export function createManagedBitmapText(options: ManagedBitmapTextOptions = {}): BitmapText {
-  const text = options.style === undefined
-    ? new BitmapText({ text: options.text ?? '' })
-    : new BitmapText({ text: options.text ?? '', style: options.style });
+export function toPixiBitmapTextStyle(style: BitmapTextStyle): TextStyleOptions {
+  return {
+    ...(style.fill !== undefined ? { fill: style.fill } : {}),
+    fontFamily: style.fontName,
+    ...(style.fontSize !== undefined ? { fontSize: style.fontSize } : {}),
+    ...(style.fontWeight !== undefined ? { fontWeight: style.fontWeight } : {}),
+    ...(style.stroke === undefined
+      ? {}
+      : {
+          stroke: {
+            color: style.stroke.color,
+            width: style.stroke.width,
+          },
+        }),
+  };
+}
+
+export function createManagedBitmapText(options: ManagedBitmapTextOptions): BitmapText {
+  const text = new BitmapText({
+    text: options.text ?? '',
+    style: toPixiBitmapTextStyle(options.style),
+  });
   text.eventMode = 'none';
   text.interactiveChildren = false;
 
@@ -77,9 +107,7 @@ export function createKeyedBitmapTextReconciler(
 
   function applySpec(text: BitmapText, spec: KeyedBitmapTextSpec): void {
     text.text = spec.text;
-    if (spec.style !== undefined) {
-      text.style = spec.style;
-    }
+    text.style = toPixiBitmapTextStyle(spec.style);
     if (spec.anchor !== undefined) {
       text.anchor.set(spec.anchor.x, spec.anchor.y);
     }
@@ -104,7 +132,7 @@ export function createKeyedBitmapTextReconciler(
     const text = createManagedBitmapText({
       parent: options.parentContainer,
       text: spec.text,
-      ...(spec.style !== undefined ? { style: spec.style } : {}),
+      style: spec.style,
       ...(spec.anchor !== undefined ? { anchor: spec.anchor } : {}),
       ...(spec.position !== undefined ? { position: spec.position } : {}),
       ...(spec.visible !== undefined ? { visible: spec.visible } : {}),

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — runner-only
-**Deps**: 70BITFONLEA-001
+**Deps**: 70BITFONLEA-001, 70BITFONLEA-004
 
 ## Problem
 
@@ -12,16 +12,16 @@ In `table-overlay-renderer.ts`, `updateMarkerSlot()` (lines 83–88) reassigns `
 
 ## Assumption Reassessment (2026-03-21)
 
-1. `updateMarkerSlot()` at lines 83–88 creates `slot.label.style = { fill, fontSize, fontFamily }` unconditionally — **confirmed**.
+1. `updateMarkerSlot()` still reassigns `slot.label.style` unconditionally on every update cycle — **confirmed**.
 2. PixiJS BitmapText re-evaluates font lookup when `style` is reassigned (even with identical values) — **confirmed** by the growing "dynamically created N bitmap fonts" count.
-3. The three style properties involved are `fill` (string), `fontSize` (number), `fontFamily` (string) — all cheaply comparable with `===`.
+3. After `70BITFONLEA-004`, the three style properties involved are `fill` (string), `fontSize` (number), and the resolved bitmap font name carried through the typed BitmapText contract — all cheaply comparable with `===`.
 
 ## Architecture Check
 
 1. Comparing three primitive values before reassigning is cheaper than creating a new object + triggering PixiJS font lookup every tick.
 2. No GameSpecDoc or GameDef boundaries are affected — this is internal renderer optimization.
 3. No backwards-compatibility shims — the behavior is identical when properties do change.
-4. This ticket does **not** own the broader font-contract cleanup. If `70BITFONLEA-004` lands first, the style guard should compare the typed bitmap font identifier field it introduces instead of perpetuating raw `fontFamily: string` assumptions.
+4. `70BITFONLEA-004` is now the source of truth for the BitmapText contract. This ticket should guard the already-typed path, not reintroduce local `fontFamily: string` assumptions or alternative style-mapping logic.
 
 ## What to Change
 
@@ -29,25 +29,25 @@ In `table-overlay-renderer.ts`, `updateMarkerSlot()` (lines 83–88) reassigns `
 
 **File**: `packages/runner/src/canvas/renderers/table-overlay-renderer.ts`
 
-In `updateMarkerSlot()`, before the `slot.label.style = { ... }` assignment (lines 83–88), compare the incoming `fill`, `fontSize`, and `fontFamily` against the current `slot.label.style` properties. Only reassign if at least one property differs.
+In `updateMarkerSlot()`, before the `slot.label.style = ...` assignment, compare the incoming `fill`, `fontSize`, and bitmap font name against the current `slot.label.style` properties. Only reassign if at least one property differs.
 
 Pseudocode:
 ```typescript
 const currentStyle = slot.label.style;
 const nextFill = resolved.style.textColor;
 const nextFontSize = resolved.style.fontSize;
-const nextFontFamily = resolved.style.fontFamily;
+const nextFontName = resolved.style.fontName;
 
 if (
   currentStyle.fill !== nextFill ||
   currentStyle.fontSize !== nextFontSize ||
-  currentStyle.fontFamily !== nextFontFamily
+  currentStyle.fontFamily !== nextFontName
 ) {
-  slot.label.style = {
+  slot.label.style = toPixiBitmapTextStyle({
     fill: nextFill,
     fontSize: nextFontSize,
-    fontFamily: nextFontFamily,
-  };
+    fontName: nextFontName,
+  });
 }
 ```
 
@@ -83,7 +83,7 @@ After canvas initialization with a game state, verify that `BitmapFontManager.in
 
 ### Invariants
 
-1. `slot.label.style` is only reassigned when at least one of `fill`, `fontSize`, or `fontFamily` has changed.
+1. `slot.label.style` is only reassigned when at least one of `fill`, `fontSize`, or bitmap font name has changed.
 2. Marker label text (`slot.label.text`) is still updated unconditionally — only style assignment is guarded.
 3. Badge shape and color updates remain unconditional (they use `Graphics.clear()` + redraw, which is correct).
 4. `pnpm turbo typecheck` and `pnpm turbo lint` pass with zero errors.
@@ -96,7 +96,7 @@ After canvas initialization with a game state, verify that `BitmapFontManager.in
    - "does not reassign style when properties are unchanged"
    - "reassigns style when fill changes"
    - "reassigns style when fontSize changes"
-   - "reassigns style when fontFamily changes"
+   - "reassigns style when fontName changes"
 2. `packages/runner/test/canvas/renderers/table-overlay-renderer.test.ts` — add "font leak regression" test:
    - "no dynamic font creation after overlay render cycle"
 

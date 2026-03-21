@@ -81,7 +81,7 @@ describe('buildPresentationScene', () => {
         type: 'text',
         text: 'Pot: 42',
         point: { x: 0, y: 40 },
-        style: { color: '#f8fafc', fontSize: 12, fontFamily: LABEL_FONT_NAME },
+        style: { color: '#f8fafc', fontSize: 12, fontName: LABEL_FONT_NAME },
         signature: 'text:pot',
       },
       {
@@ -89,7 +89,7 @@ describe('buildPresentationScene', () => {
         type: 'text',
         text: 'Bet: 5',
         point: { x: -100, y: 80 },
-        style: { color: '#f8fafc', fontSize: 12, fontFamily: LABEL_FONT_NAME },
+        style: { color: '#f8fafc', fontSize: 12, fontName: LABEL_FONT_NAME },
         signature: 'text:bet:0',
       },
       {
@@ -101,7 +101,7 @@ describe('buildPresentationScene', () => {
           shape: 'circle',
           label: 'D',
           fontSize: 11,
-          fontFamily: LABEL_FONT_NAME,
+          fontName: LABEL_FONT_NAME,
           textColor: '#111827',
         },
         signature: 'marker:dealer',

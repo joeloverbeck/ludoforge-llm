@@ -83,7 +83,7 @@ describe('renderer-types', () => {
         spacingY: 36,
       }),
       getStackBadgeStyle: () => ({
-        fontFamily: 'monospace',
+        fontName: 'ludoforge-label-stroke',
         fontSize: 10,
         fill: '#f8fafc',
         stroke: '#000000',

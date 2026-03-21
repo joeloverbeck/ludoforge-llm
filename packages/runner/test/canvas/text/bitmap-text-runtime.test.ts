@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Container } from 'pixi.js';
+import { LABEL_FONT_NAME, STROKE_LABEL_FONT_NAME } from '../../../src/canvas/text/bitmap-font-registry.js';
 
 const { MockContainer, MockBitmapText } = vi.hoisted(() => {
   class MockPoint {
@@ -101,7 +102,7 @@ describe('createManagedBitmapText', () => {
     const text = createManagedBitmapText({
       parent,
       text: 'Hello',
-      style: { fill: '#fff', fontSize: 12 },
+      style: { fill: '#fff', fontSize: 12, fontName: LABEL_FONT_NAME },
       anchor: { x: 0.5, y: 1 },
       position: { x: 10, y: 20 },
     }) as unknown as InstanceType<typeof MockBitmapText>;
@@ -114,16 +115,18 @@ describe('createManagedBitmapText', () => {
     expect(text.position.y).toBe(20);
     expect(text.eventMode).toBe('none');
     expect(text.interactiveChildren).toBe(false);
-  });
-
-  it('creates text with defaults when no options are provided', () => {
-    const text = createManagedBitmapText() as unknown as InstanceType<typeof MockBitmapText>;
-    expect(text.text).toBe('');
-    expect(text.parent).toBeNull();
+    expect(text.style).toEqual({
+      fill: '#fff',
+      fontFamily: LABEL_FONT_NAME,
+      fontSize: 12,
+      fontWeight: undefined,
+      stroke: undefined,
+    });
   });
 
   it('sets visible and renderable when provided', () => {
     const text = createManagedBitmapText({
+      style: { fontName: LABEL_FONT_NAME },
       visible: false,
       renderable: false,
     }) as unknown as InstanceType<typeof MockBitmapText>;
@@ -135,7 +138,7 @@ describe('createManagedBitmapText', () => {
 describe('destroyManagedBitmapText', () => {
   it('removes text from parent before destroying', () => {
     const parent = new MockContainer() as unknown as Container;
-    const text = createManagedBitmapText({ parent, text: '42' });
+    const text = createManagedBitmapText({ parent, text: '42', style: { fontName: LABEL_FONT_NAME } });
     const mock = text as unknown as InstanceType<typeof MockBitmapText>;
 
     expect(mock.parent).toBe(parent);
@@ -153,8 +156,8 @@ describe('createKeyedBitmapTextReconciler', () => {
     const reconciler = createKeyedBitmapTextReconciler({ parentContainer: parent });
 
     reconciler.reconcile([
-      { key: 'a', text: 'Alpha' },
-      { key: 'b', text: 'Beta' },
+      { key: 'a', text: 'Alpha', style: { fontName: LABEL_FONT_NAME } },
+      { key: 'b', text: 'Beta', style: { fontName: STROKE_LABEL_FONT_NAME } },
     ]);
 
     const a = reconciler.get('a') as unknown as InstanceType<typeof MockBitmapText>;
@@ -164,7 +167,7 @@ describe('createKeyedBitmapTextReconciler', () => {
     expect((parent as unknown as InstanceType<typeof MockContainer>).children).toHaveLength(2);
 
     // Remove 'b'
-    reconciler.reconcile([{ key: 'a', text: 'Alpha Updated' }]);
+    reconciler.reconcile([{ key: 'a', text: 'Alpha Updated', style: { fontName: LABEL_FONT_NAME } }]);
     expect(reconciler.get('b')).toBeUndefined();
     expect((parent as unknown as InstanceType<typeof MockContainer>).children).toHaveLength(1);
     expect(
@@ -176,11 +179,11 @@ describe('createKeyedBitmapTextReconciler', () => {
     const parent = new MockContainer() as unknown as Container;
     const reconciler = createKeyedBitmapTextReconciler({ parentContainer: parent });
 
-    reconciler.reconcile([{ key: 'x', text: 'v1', instanceKey: 'k1' }]);
+    reconciler.reconcile([{ key: 'x', text: 'v1', style: { fontName: LABEL_FONT_NAME }, instanceKey: 'k1' }]);
     const first = reconciler.get('x') as unknown as InstanceType<typeof MockBitmapText>;
     expect(first.text).toBe('v1');
 
-    reconciler.reconcile([{ key: 'x', text: 'v2', instanceKey: 'k2' }]);
+    reconciler.reconcile([{ key: 'x', text: 'v2', style: { fontName: LABEL_FONT_NAME }, instanceKey: 'k2' }]);
     const second = reconciler.get('x') as unknown as InstanceType<typeof MockBitmapText>;
     expect(second).not.toBe(first);
     expect(second.text).toBe('v2');
@@ -191,7 +194,14 @@ describe('createKeyedBitmapTextReconciler', () => {
     const reconciler = createKeyedBitmapTextReconciler({ parentContainer: parent });
 
     reconciler.reconcile([
-      { key: 'z', text: 'styled', alpha: 0.5, rotation: 1.2, scale: { x: 2, y: 3 } },
+      {
+        key: 'z',
+        text: 'styled',
+        style: { fontName: STROKE_LABEL_FONT_NAME, fill: '#fff', stroke: { color: '#000', width: 2 } },
+        alpha: 0.5,
+        rotation: 1.2,
+        scale: { x: 2, y: 3 },
+      },
     ]);
 
     const z = reconciler.get('z') as unknown as InstanceType<typeof MockBitmapText>;
@@ -199,6 +209,16 @@ describe('createKeyedBitmapTextReconciler', () => {
     expect(z.rotation).toBe(1.2);
     expect(z.scale.x).toBe(2);
     expect(z.scale.y).toBe(3);
+    expect(z.style).toEqual({
+      fill: '#fff',
+      fontFamily: STROKE_LABEL_FONT_NAME,
+      fontSize: undefined,
+      fontWeight: undefined,
+      stroke: {
+        color: '#000',
+        width: 2,
+      },
+    });
   });
 
   it('destroy cleans up all entries', () => {
@@ -206,8 +226,8 @@ describe('createKeyedBitmapTextReconciler', () => {
     const reconciler = createKeyedBitmapTextReconciler({ parentContainer: parent });
 
     reconciler.reconcile([
-      { key: 'a', text: 'one' },
-      { key: 'b', text: 'two' },
+      { key: 'a', text: 'one', style: { fontName: LABEL_FONT_NAME } },
+      { key: 'b', text: 'two', style: { fontName: LABEL_FONT_NAME } },
     ]);
     expect((parent as unknown as InstanceType<typeof MockContainer>).children).toHaveLength(2);
 
@@ -221,7 +241,7 @@ describe('createKeyedBitmapTextReconciler', () => {
     const reconciler = createKeyedBitmapTextReconciler({ parentContainer: parent });
     const applySpy = vi.fn();
 
-    reconciler.reconcile([{ key: 'c', text: 'custom', apply: applySpy }]);
+    reconciler.reconcile([{ key: 'c', text: 'custom', style: { fontName: LABEL_FONT_NAME }, apply: applySpy }]);
     expect(applySpy).toHaveBeenCalledOnce();
     expect(applySpy).toHaveBeenCalledWith(reconciler.get('c'));
   });

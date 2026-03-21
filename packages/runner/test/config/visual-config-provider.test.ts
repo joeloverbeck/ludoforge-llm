@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 
+import { STROKE_LABEL_FONT_NAME } from '../../src/canvas/text/bitmap-font-registry.js';
 import { DEFAULT_FACTION_PALETTE } from '../../src/config/visual-config-defaults';
 import { VisualConfigProvider } from '../../src/config/visual-config-provider';
 import type { VisualConfig } from '../../src/config/visual-config-types';
@@ -424,6 +425,7 @@ describe('VisualConfigProvider', () => {
       version: 1,
       tokens: {
         stackBadge: {
+          fontName: 'labelStroke',
           fontSize: 13,
           fill: '#f8fafc',
           stroke: '#000000',
@@ -438,7 +440,7 @@ describe('VisualConfigProvider', () => {
     const defaults = new VisualConfigProvider({ version: 1 });
 
     expect(configured.getStackBadgeStyle()).toEqual({
-      fontFamily: 'monospace',
+      fontName: STROKE_LABEL_FONT_NAME,
       fontSize: 13,
       fill: '#f8fafc',
       stroke: '#000000',
@@ -449,7 +451,7 @@ describe('VisualConfigProvider', () => {
       offsetY: -4,
     });
     expect(defaults.getStackBadgeStyle()).toEqual({
-      fontFamily: 'monospace',
+      fontName: STROKE_LABEL_FONT_NAME,
       fontSize: 10,
       fill: '#f8fafc',
       stroke: '#000000',
@@ -527,7 +529,7 @@ describe('VisualConfigProvider', () => {
     });
 
     expect(provider.getStackBadgeStyle()).toEqual({
-      fontFamily: 'monospace',
+      fontName: STROKE_LABEL_FONT_NAME,
       fontSize: 13,
       fill: '#f8fafc',
       stroke: '#000000',

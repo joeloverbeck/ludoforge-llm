@@ -10,6 +10,7 @@ import { parseHexColor } from './shape-utils.js';
 import {
   createKeyedBitmapTextReconciler,
   createManagedBitmapText,
+  toPixiBitmapTextStyle,
 } from '../text/bitmap-text-runtime.js';
 import { LABEL_FONT_NAME } from '../text/bitmap-font-registry.js';
 
@@ -47,7 +48,7 @@ export function createTableOverlayRenderer(
       style: {
         fill: '#111827',
         fontSize: 11,
-        fontFamily: LABEL_FONT_NAME,
+        fontName: LABEL_FONT_NAME,
       },
       anchor: { x: 0.5, y: 0.5 },
     });
@@ -82,11 +83,11 @@ export function createTableOverlayRenderer(
     slot.badge.fill(markerColor);
 
     slot.label.text = resolved.style.label;
-    slot.label.style = {
+    slot.label.style = toPixiBitmapTextStyle({
       fill: resolved.style.textColor,
       fontSize: resolved.style.fontSize,
-      fontFamily: resolved.style.fontFamily,
-    };
+      fontName: resolved.style.fontName,
+    });
   }
 
   function removeStaleMarkers(activeKeys: ReadonlySet<string>): void {
@@ -111,7 +112,7 @@ export function createTableOverlayRenderer(
           style: {
             fill: item.style.color,
             fontSize: item.style.fontSize,
-            fontFamily: item.style.fontFamily,
+            fontName: item.style.fontName,
           },
           position: { x: item.point.x, y: item.point.y },
         }));

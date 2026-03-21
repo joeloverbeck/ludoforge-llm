@@ -8,7 +8,7 @@ import { buildRegularPolygonPoints, parseHexColor } from './shape-utils';
 import { drawTokenShape } from './token-shape-drawer.js';
 import { drawTokenSymbol } from './token-symbol-drawer.js';
 import { destroyCardContentPool, drawResolvedCardContent } from './card-template-renderer.js';
-import { createManagedBitmapText } from '../text/bitmap-text-runtime.js';
+import { createManagedBitmapText, toPixiBitmapTextStyle } from '../text/bitmap-text-runtime.js';
 import { STROKE_LABEL_FONT_NAME } from '../text/bitmap-font-registry.js';
 import type { PresentationTokenNode } from '../../presentation/token-presentation.js';
 
@@ -198,7 +198,7 @@ function createTokenVisualElements(): TokenVisualElements {
     style: {
       fill: '#f8fafc',
       fontSize: 10,
-      fontFamily: STROKE_LABEL_FONT_NAME,
+      fontName: STROKE_LABEL_FONT_NAME,
     },
     anchor: { x: 1, y: 0 },
     visible: false,
@@ -249,15 +249,15 @@ function updateTokenVisuals(
   setTokenFaceVisibility(visuals, isFaceUp);
   visuals.countBadge.text = render.stackBadge.text;
   visuals.countBadge.visible = render.stackBadge.visible;
-  visuals.countBadge.style = {
+  visuals.countBadge.style = toPixiBitmapTextStyle({
     fill: render.stackBadge.style.fill,
-    fontFamily: render.stackBadge.style.fontFamily,
+    fontName: render.stackBadge.style.fontName,
     fontSize: render.stackBadge.style.fontSize,
     stroke: {
       color: render.stackBadge.style.stroke,
       width: render.stackBadge.style.strokeWidth,
     },
-  };
+  });
   visuals.countBadge.anchor.set(render.stackBadge.style.anchorX, render.stackBadge.style.anchorY);
   visuals.countBadge.position.set(
     render.stackBadge.position.x,

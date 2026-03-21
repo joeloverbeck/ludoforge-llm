@@ -89,7 +89,7 @@ describe('VisualConfigSchema', () => {
       },
       tokens: {
         stackBadge: {
-          fontFamily: 'monospace',
+          fontName: 'labelStroke',
           fontSize: 13,
           fill: '#f8fafc',
           stroke: '#000000',
@@ -203,6 +203,27 @@ describe('VisualConfigSchema', () => {
       version: 1,
       variables: {
         prominent: ['resources-us'],
+      },
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects legacy stackBadge fontFamily for BitmapText-backed config', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      tokens: {
+        stackBadge: {
+          fontFamily: 'monospace',
+          fontSize: 13,
+          fill: '#f8fafc',
+          stroke: '#000000',
+          strokeWidth: 3,
+          anchorX: 1,
+          anchorY: 0,
+          offsetX: 4,
+          offsetY: -4,
+        },
       },
     });
 

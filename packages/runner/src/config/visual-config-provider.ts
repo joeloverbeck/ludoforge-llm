@@ -1,4 +1,9 @@
 import {
+  LABEL_FONT_NAME,
+  STROKE_LABEL_FONT_NAME,
+  type BitmapFontName,
+} from '../canvas/text/bitmap-font-registry.js';
+import {
   computeDefaultFactionColor,
   DEFAULT_TOKEN_SHAPE,
   DEFAULT_TOKEN_SIZE,
@@ -67,7 +72,7 @@ export interface ResolvedTokenPresentation {
 }
 
 export interface ResolvedStackBadgeStyle {
-  readonly fontFamily: string;
+  readonly fontName: BitmapFontName;
   readonly fontSize: number;
   readonly fill: string;
   readonly stroke: string;
@@ -455,7 +460,7 @@ export class VisualConfigProvider {
 
 const EMPTY_STRING_SET: ReadonlySet<string> = Object.freeze(new Set<string>());
 const DEFAULT_STACK_BADGE_STYLE: ResolvedStackBadgeStyle = Object.freeze({
-  fontFamily: 'monospace',
+  fontName: STROKE_LABEL_FONT_NAME,
   fontSize: 10,
   fill: '#f8fafc',
   stroke: '#000000',
@@ -593,7 +598,7 @@ function normalizeStackBadgeStyle(style: StackBadgeStyle | undefined): ResolvedS
   }
 
   return {
-    fontFamily: style.fontFamily ?? DEFAULT_STACK_BADGE_STYLE.fontFamily,
+    fontName: resolveBitmapFontName(style.fontName) ?? DEFAULT_STACK_BADGE_STYLE.fontName,
     fontSize: style.fontSize,
     fill: style.fill,
     stroke: style.stroke,
@@ -603,6 +608,15 @@ function normalizeStackBadgeStyle(style: StackBadgeStyle | undefined): ResolvedS
     offsetX: style.offsetX,
     offsetY: style.offsetY,
   };
+}
+
+function resolveBitmapFontName(
+  fontName: 'label' | 'labelStroke' | undefined,
+): BitmapFontName | null {
+  if (fontName === undefined) {
+    return null;
+  }
+  return fontName === 'label' ? LABEL_FONT_NAME : STROKE_LABEL_FONT_NAME;
 }
 
 function normalizeZoneTokenLayout(layout: ZoneTokenLayout | undefined): ResolvedZoneTokenLayout {

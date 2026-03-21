@@ -53,7 +53,7 @@ export function createHiddenZoneStackVisual(): HiddenZoneStackVisual {
   const countLabel = createManagedBitmapText({
     text: '',
     style: {
-      fontFamily: LABEL_FONT_NAME,
+      fontName: LABEL_FONT_NAME,
       fontSize: 11,
       fill: CARD_BACK_PALETTE.badgeTextColor,
     },

@@ -157,7 +157,7 @@ describe('projectTableOverlaySurface', () => {
       type: 'text',
       text: 'Pot: 42',
       point: { x: 0, y: 40 },
-      style: { color: '#f8fafc', fontSize: 12, fontFamily: LABEL_FONT_NAME },
+      style: { color: '#f8fafc', fontSize: 12, fontName: LABEL_FONT_NAME },
     });
     expect(overlays[1]).toMatchObject({
       type: 'text',
@@ -172,7 +172,7 @@ describe('projectTableOverlaySurface', () => {
     expect(overlays[3]).toMatchObject({
       type: 'marker',
       point: { x: 70, y: 100 },
-      style: { label: 'D', shape: 'circle', fontFamily: LABEL_FONT_NAME },
+      style: { label: 'D', shape: 'circle', fontName: LABEL_FONT_NAME },
     });
   });
 

@@ -13,6 +13,8 @@
  */
 import { BitmapFontManager } from 'pixi.js';
 
+export const BITMAP_FONT_NAMES = ['ludoforge-label', 'ludoforge-label-stroke'] as const;
+export type BitmapFontName = (typeof BITMAP_FONT_NAMES)[number];
 export const LABEL_FONT_NAME = 'ludoforge-label';
 export const STROKE_LABEL_FONT_NAME = 'ludoforge-label-stroke';
 

@@ -23,7 +23,7 @@ export interface ConnectionRouteNode {
 
 export interface JunctionNode {
   readonly id: string;
-  readonly connectionIds: readonly [string, string];
+  readonly connectionIds: readonly string[];
   readonly position: Position;
 }
 
@@ -101,7 +101,7 @@ export function resolveConnectionRoutes(
   }
 
   const resolvedRouteIds = new Set(resolvedRoutes.map((route) => route.zoneId));
-  const junctions = resolveJunctions(resolvedRoutes, positions, resolvedRouteIds);
+  const junctions = resolveJunctions(resolvedRoutes);
 
   return {
     connectionRoutes: resolvedRoutes,
@@ -318,44 +318,44 @@ function resolvePathPoint(
 
 function resolveJunctions(
   routes: readonly ConnectionRouteNode[],
-  positions: ReadonlyMap<string, Position>,
-  resolvedRouteIds: ReadonlySet<string>,
 ): readonly JunctionNode[] {
-  const routeById = new Map(routes.map((route) => [route.zoneId, route]));
-  const junctions: JunctionNode[] = [];
-  const seenPairs = new Set<string>();
+  const routeIdsByAnchorId = new Map<string, Set<string>>();
+  const anchorPositionById = new Map<string, Position>();
 
   for (const route of routes) {
-    for (const connectedRouteId of route.connectedConnectionIds) {
-      if (!resolvedRouteIds.has(connectedRouteId)) {
+    const seenAnchorIds = new Set<string>();
+    for (const point of route.path) {
+      if (point.kind !== 'anchor' || seenAnchorIds.has(point.id)) {
         continue;
       }
 
-      const pair = sortPair(route.zoneId, connectedRouteId);
-      const pairKey = `${pair[0]}::${pair[1]}`;
-      if (seenPairs.has(pairKey)) {
-        continue;
+      seenAnchorIds.add(point.id);
+      anchorPositionById.set(point.id, point.position);
+      let routeIds = routeIdsByAnchorId.get(point.id);
+      if (routeIds === undefined) {
+        routeIds = new Set<string>();
+        routeIdsByAnchorId.set(point.id, routeIds);
       }
-
-      const leftPosition = positions.get(pair[0]);
-      const rightPosition = positions.get(pair[1]);
-      if (leftPosition === undefined || rightPosition === undefined) {
-        continue;
-      }
-      if (!routeById.has(pair[0]) || !routeById.has(pair[1])) {
-        continue;
-      }
-
-      seenPairs.add(pairKey);
-      junctions.push({
-        id: `junction:${pairKey}`,
-        connectionIds: pair,
-        position: {
-          x: (leftPosition.x + rightPosition.x) / 2,
-          y: (leftPosition.y + rightPosition.y) / 2,
-        },
-      });
+      routeIds.add(route.zoneId);
     }
+  }
+
+  const junctions: JunctionNode[] = [];
+  for (const [anchorId, routeIds] of routeIdsByAnchorId) {
+    if (routeIds.size < 2) {
+      continue;
+    }
+
+    const position = anchorPositionById.get(anchorId);
+    if (position === undefined) {
+      continue;
+    }
+
+    junctions.push({
+      id: `junction:anchor:${anchorId}`,
+      connectionIds: [...routeIds].sort(compareStrings),
+      position,
+    });
   }
 
   return junctions.sort((left, right) => left.id.localeCompare(right.id));

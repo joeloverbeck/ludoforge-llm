@@ -106,6 +106,35 @@ const EXPECTED_FITL_CONNECTION_PATHS = {
   ],
 } as const;
 
+const EXPECTED_FITL_SHARED_JUNCTIONS = [
+  {
+    id: 'junction:anchor:ban-me-thuot',
+    connectionIds: [
+      'loc-ban-me-thuot-da-lat:none',
+      'loc-kontum-ban-me-thuot:none',
+      'loc-saigon-an-loc-ban-me-thuot:none',
+    ],
+    position: { x: 560, y: 220 },
+  },
+  {
+    id: 'junction:anchor:da-lat',
+    connectionIds: [
+      'loc-ban-me-thuot-da-lat:none',
+      'loc-cam-ranh-da-lat:none',
+      'loc-saigon-da-lat:none',
+    ],
+    position: { x: 640, y: 360 },
+  },
+  {
+    id: 'junction:anchor:dak-to',
+    connectionIds: [
+      'loc-da-nang-dak-to:none',
+      'loc-kontum-dak-to:none',
+    ],
+    position: { x: 520, y: 60 },
+  },
+] as const;
+
 function repoRootPath(): string {
   const testDir = dirname(fileURLToPath(import.meta.url));
   return resolve(testDir, '../../../..');
@@ -370,6 +399,7 @@ describe('visual-config.yaml files', () => {
       ...EXPECTED_FITL_CONNECTION_ENDPOINTS,
       ...EXPECTED_FITL_CONNECTION_PATHS,
     });
+    expect(resolution.junctions).toEqual(EXPECTED_FITL_SHARED_JUNCTIONS);
 
     expect(parsed.tokenTypes?.['us-irregulars']?.shape).toBe('beveled-cylinder');
     expect(parsed.tokenTypes?.['arvn-rangers']?.shape).toBe('beveled-cylinder');

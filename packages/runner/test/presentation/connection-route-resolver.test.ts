@@ -202,7 +202,7 @@ describe('resolveConnectionRoutes', () => {
     expect(result.filteredAdjacencies).toEqual(adjacencies);
   });
 
-  it('creates junctions for directly adjacent resolved connection routes', () => {
+  it('does not create midpoint junctions from direct connection-to-connection adjacency alone', () => {
     const zones = [
       makeZone('alpha:none'),
       makeZone('beta:none'),
@@ -236,14 +236,86 @@ describe('resolveConnectionRoutes', () => {
       'loc-alpha-beta:none',
       'loc-beta-gamma:none',
     ]);
+    expect(result.junctions).toEqual([]);
+    expect(result.filteredAdjacencies).toEqual([makeAdjacency('alpha:none', 'gamma:none')]);
+  });
+
+  it('creates one shared-anchor junction for every authored anchor referenced by multiple routes', () => {
+    const zones = [
+      makeZone('saigon:none'),
+      makeZone('kontum:none'),
+      makeZone('cam-ranh:none'),
+      makeZone('loc-saigon-ban-me-thuot:none', 'connection', 'highway'),
+      makeZone('loc-kontum-ban-me-thuot:none', 'connection', 'highway'),
+      makeZone('loc-cam-ranh-da-lat:none', 'connection', 'highway'),
+      makeZone('loc-ban-me-thuot-da-lat:none', 'connection', 'highway'),
+    ];
+    const adjacencies = [
+      makeAdjacency('loc-saigon-ban-me-thuot:none', 'saigon:none'),
+      makeAdjacency('loc-kontum-ban-me-thuot:none', 'kontum:none'),
+      makeAdjacency('loc-cam-ranh-da-lat:none', 'cam-ranh:none'),
+      makeAdjacency('loc-saigon-ban-me-thuot:none', 'loc-kontum-ban-me-thuot:none'),
+      makeAdjacency('loc-kontum-ban-me-thuot:none', 'loc-ban-me-thuot-da-lat:none'),
+      makeAdjacency('loc-cam-ranh-da-lat:none', 'loc-ban-me-thuot-da-lat:none'),
+    ];
+
+    const result = resolveConnectionRoutes(makeOptions({
+      zones,
+      adjacencies,
+      positions: new Map([
+        ['saigon:none', { x: 0, y: 0 }],
+        ['kontum:none', { x: 220, y: 0 }],
+        ['cam-ranh:none', { x: 440, y: 0 }],
+      ]),
+      anchorPositions: new Map([
+        ['ban-me-thuot', { x: 160, y: 90 }],
+        ['da-lat', { x: 320, y: 160 }],
+      ]),
+      endpointDefinitions: new Map([
+        ['loc-saigon-ban-me-thuot:none', [
+          { kind: 'zone', zoneId: 'saigon:none' },
+          { kind: 'anchor', anchorId: 'ban-me-thuot' },
+        ]],
+        ['loc-kontum-ban-me-thuot:none', [
+          { kind: 'zone', zoneId: 'kontum:none' },
+          { kind: 'anchor', anchorId: 'ban-me-thuot' },
+        ]],
+        ['loc-cam-ranh-da-lat:none', [
+          { kind: 'zone', zoneId: 'cam-ranh:none' },
+          { kind: 'anchor', anchorId: 'da-lat' },
+        ]],
+        ['loc-ban-me-thuot-da-lat:none', [
+          { kind: 'anchor', anchorId: 'ban-me-thuot' },
+          { kind: 'anchor', anchorId: 'da-lat' },
+        ]],
+      ]),
+    }));
+
+    expect(result.connectionRoutes.map((route) => route.zoneId)).toEqual([
+      'loc-saigon-ban-me-thuot:none',
+      'loc-kontum-ban-me-thuot:none',
+      'loc-cam-ranh-da-lat:none',
+      'loc-ban-me-thuot-da-lat:none',
+    ]);
     expect(result.junctions).toEqual([
       {
-        id: 'junction:loc-alpha-beta:none::loc-beta-gamma:none',
-        connectionIds: ['loc-alpha-beta:none', 'loc-beta-gamma:none'],
-        position: { x: 20, y: 40 },
+        id: 'junction:anchor:ban-me-thuot',
+        connectionIds: [
+          'loc-ban-me-thuot-da-lat:none',
+          'loc-kontum-ban-me-thuot:none',
+          'loc-saigon-ban-me-thuot:none',
+        ],
+        position: { x: 160, y: 90 },
+      },
+      {
+        id: 'junction:anchor:da-lat',
+        connectionIds: [
+          'loc-ban-me-thuot-da-lat:none',
+          'loc-cam-ranh-da-lat:none',
+        ],
+        position: { x: 320, y: 160 },
       },
     ]);
-    expect(result.filteredAdjacencies).toEqual([makeAdjacency('alpha:none', 'gamma:none')]);
   });
 
   it('returns empty outputs for empty input', () => {

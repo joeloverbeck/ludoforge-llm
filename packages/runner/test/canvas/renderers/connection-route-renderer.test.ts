@@ -240,7 +240,7 @@ function makeRoute(overrides: Partial<ConnectionRouteNode> = {}): ConnectionRout
 }
 
 describe('createConnectionRouteRenderer', () => {
-  it('renders straight routes, midpoint containers, and junctions', () => {
+  it('renders straight routes, midpoint containers, and shared-anchor junctions', () => {
     const parent = new MockContainer();
     const provider = new VisualConfigProvider({
       version: 1,
@@ -255,7 +255,7 @@ describe('createConnectionRouteRenderer', () => {
     renderer.update(
       [makeRoute()],
       [{
-        id: 'junction:alpha-beta',
+        id: 'junction:anchor:beta-anchor',
         connectionIds: ['loc-alpha-beta:none', 'loc-alpha-beta:none'],
         position: { x: 100, y: 20 },
       }],
@@ -282,6 +282,68 @@ describe('createConnectionRouteRenderer', () => {
     expect(label.text).toBe('Alpha Beta');
     expect(routeRoot.hitArea).toBeInstanceOf(MockPolygon);
     expect(junction.circleArgs).toEqual([100, 20, 6]);
+  });
+
+  it('averages route colors for shared-anchor junctions referenced by multiple routes', () => {
+    const parent = new MockContainer();
+    const provider = new VisualConfigProvider({
+      version: 1,
+      zones: {
+        connectionStyles: {
+          highway: { strokeWidth: 8, strokeColor: '#ff0000', strokeAlpha: 0.8 },
+          river: { strokeWidth: 8, strokeColor: '#0000ff', strokeAlpha: 0.8 },
+          trail: { strokeWidth: 8, strokeColor: '#00ff00', strokeAlpha: 0.8 },
+        },
+      },
+    });
+    const renderer = createConnectionRouteRenderer(parent as unknown as Container, provider);
+
+    renderer.update(
+      [
+        makeRoute(),
+        makeRoute({
+          zoneId: 'loc-beta-gamma:none',
+          displayName: 'Beta Gamma',
+          connectionStyleKey: 'river',
+          zone: makeZone({
+            id: 'loc-beta-gamma:none',
+            displayName: 'Beta Gamma',
+            visual: {
+              shape: 'connection',
+              width: 160,
+              height: 100,
+              color: null,
+              connectionStyleKey: 'river',
+            },
+          }),
+        }),
+        makeRoute({
+          zoneId: 'loc-gamma-delta:none',
+          displayName: 'Gamma Delta',
+          connectionStyleKey: 'trail',
+          zone: makeZone({
+            id: 'loc-gamma-delta:none',
+            displayName: 'Gamma Delta',
+            visual: {
+              shape: 'connection',
+              width: 160,
+              height: 100,
+              color: null,
+              connectionStyleKey: 'trail',
+            },
+          }),
+        }),
+      ],
+      [{
+        id: 'junction:anchor:shared-node',
+        connectionIds: ['loc-alpha-beta:none', 'loc-beta-gamma:none', 'loc-gamma-delta:none'],
+        position: { x: 100, y: 20 },
+      }],
+      new Map(),
+    );
+
+    const junction = parent.children[3] as InstanceType<typeof MockGraphics>;
+    expect(junction.fillStyle).toEqual({ color: 0x555555, alpha: 0.95 });
   });
 
   it('renders marker labels and badge visuals inside the midpoint label cluster and updates them in place', () => {

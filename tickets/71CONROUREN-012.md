@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — runner-only
-**Deps**: archive/specs/71-connection-route-rendering.md, archive/tickets/71CONROUREN/71CONROUREN-010.md, tickets/71CONROUREN-011.md
+**Deps**: archive/specs/71-connection-route-rendering.md, archive/tickets/71CONROUREN/71CONROUREN-010.md, archive/tickets/71CONROUREN/71CONROUREN-011.md
 
 ## Problem
 
@@ -20,7 +20,8 @@ That is still not the ideal long-term architecture. The visual shape of a route 
 1. `71CONROUREN-010` already established ordered `connectionPaths` and normalized route rendering onto resolved path geometry. The old assumption that path topology is still missing is false.
 2. The current renderer still derives 2-point curvature from `computeControlPoint()` and treats multi-point paths as straight segment chains. Confirmed in `packages/runner/src/canvas/renderers/connection-route-renderer.ts`.
 3. `71CONROUREN-011` is about shared visual nodes/junction topology, not segment-shape ownership. It will not, by itself, make route curvature or bend style explicit data.
-4. The remaining gap is runner-only presentation geometry and remains aligned with `docs/FOUNDATIONS.md`:
+4. The remaining `connectedConnectionIds` adjacency metadata in `packages/runner/src/presentation/connection-route-resolver.ts` is a separate architectural cleanup concern and should not be folded into this geometry ticket. It is tracked separately to keep route-shape ownership distinct from route-graph contract cleanup.
+5. The remaining gap is runner-only presentation geometry and remains aligned with `docs/FOUNDATIONS.md`:
    - F1 Engine Agnosticism
    - F3 Visual Separation
    - F9 No Backwards Compatibility
@@ -95,6 +96,7 @@ This migration must remain data-owned and generic. No FITL-only rendering branch
 - Route-editing tooling
 - Automatic curvature inference from labels or natural language
 - Shared-node/junction-topology ownership beyond what `71CONROUREN-011` covers
+- Removing leftover adjacency-derived route-graph metadata such as `connectedConnectionIds`; that belongs in a separate cleanup ticket
 
 ## Acceptance Criteria
 

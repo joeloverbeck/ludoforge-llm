@@ -127,6 +127,17 @@ afterEach(() => {
   floatingMocks.useFloatingOptions = null;
 });
 
+const COMPANION_GROUPS = [
+  {
+    actionClass: 'specialActivity',
+    groupName: 'Special Activity',
+    actions: [
+      { actionId: 'ambush', displayName: 'Ambush', isAvailable: true, actionClass: 'specialActivity' },
+      { actionId: 'raid', displayName: 'Raid', isAvailable: false, actionClass: 'specialActivity' },
+    ],
+  },
+] as const;
+
 /* ------------------------------------------------------------------ */
 /* Tests                                                              */
 /* ------------------------------------------------------------------ */
@@ -463,6 +474,38 @@ describe('ActionTooltip', () => {
 
       expect(screen.getByTestId('availability-section')).toBeTruthy();
       expect(screen.getByTestId('availability-section').textContent).toContain('Available');
+    });
+
+    it('renders companion actions when companion groups are provided', () => {
+      const desc = makeDescription({
+        tooltipPayload: makePayload(),
+      });
+
+      render(createElement(ActionTooltip, {
+        description: desc,
+        anchorElement: makeAnchor(),
+        companionGroups: COMPANION_GROUPS,
+      }));
+
+      const companionSection = screen.getByTestId('tooltip-companion-actions');
+      expect(companionSection.textContent).toContain('Special Activity');
+      expect(companionSection.textContent).toContain('Ambush');
+      expect(companionSection.textContent).toContain('Raid');
+      const unavailableItem = Array.from(companionSection.querySelectorAll('li')).find((item) => item.textContent === 'Raid');
+      expect(unavailableItem?.className).toContain('companionUnavailable');
+    });
+
+    it('does not render companion actions when no companion groups are provided', () => {
+      const desc = makeDescription({
+        tooltipPayload: makePayload(),
+      });
+
+      render(createElement(ActionTooltip, {
+        description: desc,
+        anchorElement: makeAnchor(),
+      }));
+
+      expect(screen.queryByTestId('tooltip-companion-actions')).toBeNull();
     });
 
     it('renders raw AST toggle when sections are present alongside payload', () => {

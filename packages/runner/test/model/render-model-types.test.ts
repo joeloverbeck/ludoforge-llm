@@ -108,6 +108,7 @@ describe('render-model types', () => {
           actions: [{ actionId: 'pass', displayName: 'Pass', isAvailable: true }],
         },
       ],
+      hiddenActionsByClass: new Map(),
       choiceBreadcrumb: [
         {
           decisionKey: asDecisionKey('pick-zone'),

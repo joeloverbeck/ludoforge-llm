@@ -88,6 +88,7 @@ function makeRenderModel(overrides: Partial<RenderModel> = {}): RenderModel {
     phaseDisplayName: 'Main',
     eventDecks: [],
     actionGroups: [],
+    hiddenActionsByClass: new Map(),
     choiceBreadcrumb: [],
     choiceContext: null,
     choiceUi: { kind: 'none' },

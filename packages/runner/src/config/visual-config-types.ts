@@ -472,6 +472,7 @@ const ActionVisualSchema = z.object({
 const ActionGroupSynthesizeEntrySchema = z.object({
   fromClass: z.string(),
   intoGroup: z.string(),
+  appendTooltipFrom: z.array(z.string()).optional(),
 });
 
 const ActionGroupPolicySchema = z.object({

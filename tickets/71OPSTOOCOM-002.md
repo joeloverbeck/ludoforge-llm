@@ -4,7 +4,9 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — runner-only
-**Deps**: 71OPSTOOCOM-001 (needs `appendTooltipFrom` field on synthesize entry type, though this ticket's logic doesn't read it yet)
+**Deps**: `archive/tickets/71OPSTOOCOM-001.md`
+
+Dependency note: needs `appendTooltipFrom` on the synthesize entry type, though this ticket's logic does not read it directly.
 
 ## Problem
 

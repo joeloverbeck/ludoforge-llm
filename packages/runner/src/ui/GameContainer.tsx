@@ -33,6 +33,7 @@ import { useActionTooltip } from './useActionTooltip.js';
 import { useCardTooltip } from './useCardTooltip.js';
 import { ActionTooltip } from './ActionTooltip.js';
 import { EventCardTooltip } from './EventCardTooltip.js';
+import { resolveTooltipCompanionGroups } from './tooltip-companion-actions.js';
 import { PhaseBannerOverlay } from './PhaseBannerOverlay.js';
 import { ShowdownOverlay } from './ShowdownOverlay.js';
 import { TerminalOverlay } from './TerminalOverlay.js';
@@ -257,6 +258,13 @@ export function GameContainer({
     (factionId) => visualConfigProvider.getFactionColor(factionId),
   );
   const tooltipAnchorState = resolveTooltipAnchorState(hoverAnchor);
+  const tooltipCompanionGroups = renderModel === null || actionTooltipState.sourceKey === null
+    ? []
+    : resolveTooltipCompanionGroups(
+      actionTooltipState.sourceKey.groupKey,
+      visualConfigProvider.getActionGroupPolicy(),
+      renderModel.hiddenActionsByClass,
+    );
   const overlayDiagnostics: OverlayPanelDiagnostics | undefined = animationDiagnosticBuffer === undefined
     ? undefined
     : { animationDiagnosticBuffer };
@@ -447,6 +455,7 @@ export function GameContainer({
                 <ActionTooltip
                   description={actionTooltipState.description}
                   anchorElement={actionTooltipState.anchorElement}
+                  companionGroups={tooltipCompanionGroups}
                   onPointerEnter={onTooltipPointerEnter}
                   onPointerLeave={onTooltipPointerLeave}
                 />

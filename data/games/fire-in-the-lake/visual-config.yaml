@@ -477,6 +477,8 @@ actionGroupPolicy:
   synthesize:
     - fromClass: operation
       intoGroup: operationPlusSpecialActivity
+      appendTooltipFrom:
+        - specialActivity
   hide:
     - specialActivity
 

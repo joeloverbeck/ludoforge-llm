@@ -4,7 +4,9 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — runner-only
-**Deps**: 71OPSTOOCOM-001 (needs `appendTooltipFrom` on `ActionGroupSynthesizeEntry`), 71OPSTOOCOM-002 (needs `hiddenActionsByClass` on `RenderModel` / `RenderAction` type)
+**Deps**: `archive/tickets/71OPSTOOCOM-001.md`, `tickets/71OPSTOOCOM-002.md`
+
+Dependency notes: needs `appendTooltipFrom` on `ActionGroupSynthesizeEntry` and `hiddenActionsByClass` on `RenderModel`.
 
 ## Problem
 

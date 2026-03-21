@@ -4,7 +4,9 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — runner-only
-**Deps**: 71OPSTOOCOM-002 (needs `RenderAction` type for the prop)
+**Deps**: `tickets/71OPSTOOCOM-002.md`
+
+Dependency note: needs `RenderAction` available for the tooltip companion prop shape.
 
 ## Problem
 

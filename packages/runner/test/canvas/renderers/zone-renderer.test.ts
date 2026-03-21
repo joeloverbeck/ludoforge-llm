@@ -189,6 +189,12 @@ vi.mock('pixi.js', () => ({
   Graphics: MockGraphics,
   Rectangle: MockRectangle,
   Text: MockText,
+  BitmapText: MockText,
+}));
+
+vi.mock('../../../src/canvas/text/bitmap-font-registry', () => ({
+  LABEL_FONT_NAME: 'ludoforge-label',
+  STROKE_LABEL_FONT_NAME: 'ludoforge-label-stroke',
 }));
 
 import { createZoneRenderer } from '../../../src/canvas/renderers/zone-renderer';

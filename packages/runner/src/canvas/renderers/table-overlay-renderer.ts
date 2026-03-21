@@ -1,24 +1,30 @@
-import { Container, Graphics, Text } from 'pixi.js';
+import { BitmapText, Container, Graphics } from 'pixi.js';
 
 import type { TableOverlayRenderer } from './renderer-types.js';
-import type { TableOverlayMarkerNode, TableOverlayTextNode } from '../../presentation/project-table-overlay-surface.js';
+import type {
+  TableOverlayMarkerNode,
+  TableOverlayTextNode,
+} from '../../presentation/project-table-overlay-surface.js';
 import { safeDestroyDisplayObject } from './safe-destroy.js';
 import { parseHexColor } from './shape-utils.js';
-import { createKeyedTextReconciler, createManagedText } from '../text/text-runtime.js';
+import {
+  createKeyedBitmapTextReconciler,
+  createManagedBitmapText,
+} from '../text/bitmap-text-runtime.js';
 
 const DEFAULT_MARKER_LABEL = '*';
 
 interface MarkerSlot {
   readonly container: Container;
   readonly badge: Graphics;
-  readonly label: Text;
+  readonly label: BitmapText;
 }
 
 export function createTableOverlayRenderer(
   parentContainer: Container,
   _unusedLegacyProvider?: unknown,
 ): TableOverlayRenderer {
-  const textRuntime = createKeyedTextReconciler({ parentContainer });
+  const textRuntime = createKeyedBitmapTextReconciler({ parentContainer });
   const markersByKey = new Map<string, MarkerSlot>();
 
   function getOrCreateMarkerSlot(key: string): MarkerSlot {
@@ -35,7 +41,7 @@ export function createTableOverlayRenderer(
     container.interactiveChildren = false;
 
     const badge = new Graphics();
-    const label = createManagedText({
+    const label = createManagedBitmapText({
       text: DEFAULT_MARKER_LABEL,
       style: {
         fill: '#111827',
@@ -53,12 +59,17 @@ export function createTableOverlayRenderer(
     return slot;
   }
 
-  function updateMarkerSlot(slot: MarkerSlot, resolved: TableOverlayMarkerNode): void {
+  function updateMarkerSlot(
+    slot: MarkerSlot,
+    resolved: TableOverlayMarkerNode,
+  ): void {
     slot.container.visible = true;
     slot.container.renderable = true;
     slot.container.position.set(resolved.point.x, resolved.point.y);
 
-    const markerColor = parseHexColor(resolved.style.color, { allowNamedColors: true }) ?? 0xfbbf24;
+    const markerColor =
+      parseHexColor(resolved.style.color, { allowNamedColors: true }) ??
+      0xfbbf24;
     const markerShape = resolved.style.shape;
 
     slot.badge.clear();
@@ -90,7 +101,9 @@ export function createTableOverlayRenderer(
   return {
     update(resolvedItems): void {
       const textSpecs = resolvedItems
-        .filter((item): item is TableOverlayTextNode => item.type === 'text')
+        .filter(
+          (item): item is TableOverlayTextNode => item.type === 'text',
+        )
         .map((item) => ({
           key: item.key,
           text: item.text,

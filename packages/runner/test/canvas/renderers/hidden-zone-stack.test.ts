@@ -90,6 +90,7 @@ const { MockContainer, MockGraphics, MockText } = vi.hoisted(() => {
 });
 
 vi.mock('pixi.js', () => ({
+  BitmapText: MockText,
   Container: MockContainer,
   Graphics: MockGraphics,
   Text: MockText,

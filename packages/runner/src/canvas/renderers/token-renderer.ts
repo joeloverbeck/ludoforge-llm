@@ -1,4 +1,4 @@
-import { Circle, Container, Graphics, Polygon, Rectangle, Text } from 'pixi.js';
+import { BitmapText, Circle, Container, Graphics, Polygon, Rectangle } from 'pixi.js';
 
 import type { RenderToken } from '../../model/render-model';
 import type { TokenShape } from '../../config/visual-config-defaults.js';
@@ -8,7 +8,8 @@ import { buildRegularPolygonPoints, parseHexColor } from './shape-utils';
 import { drawTokenShape } from './token-shape-drawer.js';
 import { drawTokenSymbol } from './token-symbol-drawer.js';
 import { destroyCardContentPool, drawResolvedCardContent } from './card-template-renderer.js';
-import { createManagedText } from '../text/text-runtime.js';
+import { createManagedBitmapText } from '../text/bitmap-text-runtime.js';
+import { STROKE_LABEL_FONT_NAME } from '../text/bitmap-font-registry.js';
 import type { PresentationTokenNode } from '../../presentation/token-presentation.js';
 
 interface TokenVisualElements {
@@ -16,7 +17,7 @@ interface TokenVisualElements {
   readonly frontSymbol: Graphics;
   readonly backBase: Graphics;
   readonly backSymbol: Graphics;
-  readonly countBadge: Text;
+  readonly countBadge: BitmapText;
   frontContent: Container | null;
 }
 
@@ -192,12 +193,12 @@ function createTokenVisualElements(): TokenVisualElements {
   const frontSymbol = new Graphics();
   const backSymbol = new Graphics();
 
-  const countBadge = createManagedText({
+  const countBadge = createManagedBitmapText({
     text: '',
     style: {
       fill: '#f8fafc',
       fontSize: 10,
-      fontFamily: 'monospace',
+      fontFamily: STROKE_LABEL_FONT_NAME,
     },
     anchor: { x: 1, y: 0 },
     visible: false,

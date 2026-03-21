@@ -1,4 +1,4 @@
-import { Container, Graphics, Rectangle, Text } from 'pixi.js';
+import { BitmapText, Container, Graphics, Rectangle } from 'pixi.js';
 
 import type { Position } from '../geometry';
 import type { ZoneRenderer } from './renderer-types';
@@ -17,7 +17,11 @@ import {
   ZONE_RENDER_WIDTH as ZONE_WIDTH,
   ZONE_RENDER_HEIGHT as ZONE_HEIGHT,
 } from '../../layout/layout-constants.js';
-import { createManagedText } from '../text/text-runtime.js';
+import { createManagedBitmapText } from '../text/bitmap-text-runtime.js';
+import {
+  LABEL_FONT_NAME,
+  STROKE_LABEL_FONT_NAME,
+} from '../text/bitmap-font-registry.js';
 import type { PresentationZoneNode } from '../../presentation/presentation-scene.js';
 
 const ZONE_CORNER_RADIUS = 12;
@@ -27,10 +31,10 @@ const LABEL_AREA_HEIGHT = 40;
 interface ZoneVisualElements {
   readonly base: Graphics;
   readonly hiddenStack: HiddenZoneStackVisual;
-  readonly nameLabel: Text;
-  readonly markersLabel: Text;
+  readonly nameLabel: BitmapText;
+  readonly markersLabel: BitmapText;
   readonly badgeGraphics: Graphics;
-  readonly badgeLabel: Text;
+  readonly badgeLabel: BitmapText;
 }
 
 interface ZoneRendererOptions {
@@ -159,12 +163,14 @@ function createZoneVisualElements(): ZoneVisualElements {
   const base = new Graphics();
   const hiddenStack = createHiddenZoneStackVisual();
 
-  const nameLabel = createText('', 0, 0, 14, {
+  const nameLabel = createBitmapLabel('', 0, 0, 14, {
+    fontName: STROKE_LABEL_FONT_NAME,
     fill: '#ffffff',
     stroke: { color: '#000000', width: 3 },
     anchor: { x: 0.5, y: 0 },
   });
-  const markersLabel = createText('', 0, 0, 11, {
+  const markersLabel = createBitmapLabel('', 0, 0, 11, {
+    fontName: STROKE_LABEL_FONT_NAME,
     fill: '#f5f7fa',
     stroke: { color: '#000000', width: 2 },
     anchor: { x: 0.5, y: 0 },
@@ -177,7 +183,8 @@ function createZoneVisualElements(): ZoneVisualElements {
   badgeGraphics.interactiveChildren = false;
   badgeGraphics.visible = false;
 
-  const badgeLabel = createText('', 0, 0, 10, {
+  const badgeLabel = createBitmapLabel('', 0, 0, 10, {
+    fontName: LABEL_FONT_NAME,
     fill: '#ffffff',
     anchor: { x: 0.5, y: 0.5 },
     fontWeight: 'bold',
@@ -194,28 +201,35 @@ function createZoneVisualElements(): ZoneVisualElements {
   };
 }
 
-interface TextOptions {
+interface BitmapLabelOptions {
+  readonly fontName: string;
   readonly fill?: string;
   readonly stroke?: { readonly color: string; readonly width: number };
   readonly anchor?: { readonly x: number; readonly y: number };
   readonly fontWeight?: string;
 }
 
-function createText(text: string, x: number, y: number, fontSize: number, opts: TextOptions = {}): Text {
+function createBitmapLabel(
+  text: string,
+  x: number,
+  y: number,
+  fontSize: number,
+  opts: BitmapLabelOptions,
+): BitmapText {
   const labelOptions = {
     text,
     style: {
       fill: opts.fill ?? '#f5f7fa',
       fontSize,
-      fontFamily: 'monospace',
+      fontFamily: opts.fontName,
       ...(opts.fontWeight !== undefined ? { fontWeight: opts.fontWeight as 'bold' | 'normal' } : {}),
       ...(opts.stroke !== undefined ? { stroke: opts.stroke } : {}),
     },
     position: { x, y },
   };
   return opts.anchor === undefined
-    ? createManagedText(labelOptions)
-    : createManagedText({ ...labelOptions, anchor: opts.anchor });
+    ? createManagedBitmapText(labelOptions)
+    : createManagedBitmapText({ ...labelOptions, anchor: opts.anchor });
 }
 
 function updateZoneVisuals(

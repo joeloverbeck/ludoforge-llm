@@ -206,6 +206,7 @@ const {
 });
 
 vi.mock('pixi.js', () => ({
+  BitmapText: MockText,
   Circle: MockCircle,
   Container: MockContainer,
   Graphics: MockGraphics,

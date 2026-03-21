@@ -1,5 +1,6 @@
-import { Container, Graphics, Text } from 'pixi.js';
-import { createManagedText } from '../text/text-runtime.js';
+import { BitmapText, Container, Graphics } from 'pixi.js';
+import { LABEL_FONT_NAME } from '../text/bitmap-font-registry.js';
+import { createManagedBitmapText } from '../text/bitmap-text-runtime.js';
 import { safeDestroyChildren } from './safe-destroy.js';
 
 interface HiddenStackMetrics {
@@ -23,7 +24,7 @@ export interface HiddenZoneStackVisual {
   readonly root: Container;
   readonly cards: Container;
   readonly badge: Graphics;
-  readonly countLabel: Text;
+  readonly countLabel: BitmapText;
   /** @internal Tracks (layerCount, cardWidth, cardHeight) to skip redundant rebuildCards(). */
   lastCardSignature: string | null;
 }
@@ -49,13 +50,12 @@ export function createHiddenZoneStackVisual(): HiddenZoneStackVisual {
   cards.interactiveChildren = false;
 
   const badge = new Graphics();
-  const countLabel = createManagedText({
+  const countLabel = createManagedBitmapText({
     text: '',
     style: {
-      fill: CARD_BACK_PALETTE.badgeTextColor,
+      fontFamily: LABEL_FONT_NAME,
       fontSize: 11,
-      fontFamily: 'monospace',
-      fontWeight: '700',
+      fill: CARD_BACK_PALETTE.badgeTextColor,
     },
   });
 

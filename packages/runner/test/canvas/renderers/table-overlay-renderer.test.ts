@@ -131,6 +131,7 @@ vi.mock('pixi.js', () => ({
   Container: MockContainer,
   Graphics: MockGraphics,
   Text: MockText,
+  BitmapText: MockText,
 }));
 
 function makeRenderModel(overrides: Partial<RenderModel> = {}): RenderModel {

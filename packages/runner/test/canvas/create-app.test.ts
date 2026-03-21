@@ -38,6 +38,23 @@ vi.mock('pixi.js', () => ({
   TexturePool: {
     clear: texturePoolClearMock,
   },
+  TexturePoolClass: class MockTexturePoolClass {
+    _poolKeyHash = {};
+    _texturePool = {};
+    textureStyle = {};
+    returnTexture() {
+      /* noop */
+    }
+  },
+  BitmapFontManager: {
+    install: vi.fn(),
+    uninstall: vi.fn(),
+    ASCII: [[' ', '~']],
+  },
+}));
+
+vi.mock('../../src/canvas/text/bitmap-font-registry', () => ({
+  installLabelBitmapFonts: vi.fn(),
 }));
 
 vi.mock('../../src/canvas/layers', () => ({
@@ -69,7 +86,9 @@ describe('createGameCanvas', () => {
 
   it('creates an app with webgl configuration and returns app/layers', async () => {
     const app = createMockApplication();
-    applicationCtorMock.mockImplementation(function () { return app; } as never);
+    applicationCtorMock.mockImplementation(function () {
+      return app;
+    } as never);
 
     const appendChild = vi.fn();
     const container = { appendChild } as unknown as HTMLElement;
@@ -106,7 +125,9 @@ describe('createGameCanvas', () => {
 
     const app = createMockApplication();
     app.init = vi.fn(() => initPromise);
-    applicationCtorMock.mockImplementation(function () { return app; } as never);
+    applicationCtorMock.mockImplementation(function () {
+      return app;
+    } as never);
 
     const appendChild = vi.fn();
     const container = { appendChild } as unknown as HTMLElement;
@@ -125,7 +146,9 @@ describe('createGameCanvas', () => {
 
   it('destroys the app with deep cleanup flags', async () => {
     const app = createMockApplication();
-    applicationCtorMock.mockImplementation(function () { return app; } as never);
+    applicationCtorMock.mockImplementation(function () {
+      return app;
+    } as never);
 
     const container = { appendChild: vi.fn() } as unknown as HTMLElement;
 
@@ -138,9 +161,11 @@ describe('createGameCanvas', () => {
     });
   });
 
-  it('clears TexturePool after destroying the app', async () => {
+  it('clears TexturePool before destroying the app', async () => {
     const app = createMockApplication();
-    applicationCtorMock.mockImplementation(function () { return app; } as never);
+    applicationCtorMock.mockImplementation(function () {
+      return app;
+    } as never);
 
     const container = { appendChild: vi.fn() } as unknown as HTMLElement;
 
@@ -149,8 +174,8 @@ describe('createGameCanvas', () => {
 
     expect(texturePoolClearMock).toHaveBeenCalledTimes(1);
     expect(app.destroy).toHaveBeenCalledTimes(1);
-    expect(app.destroy.mock.invocationCallOrder[0]).toBeLessThan(
-      texturePoolClearMock.mock.invocationCallOrder[0]!,
+    expect(texturePoolClearMock.mock.invocationCallOrder[0]).toBeLessThan(
+      app.destroy.mock.invocationCallOrder[0]!,
     );
   });
 });

@@ -5,6 +5,10 @@ import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import type { ZobristTable, GameDef } from './types.js';
 import { createZobristTable } from './zobrist.js';
 import type { RuleCard } from './tooltip-rule-card.js';
+import type {
+  CompiledEffectSequence,
+  CompiledLifecycleEffectKey,
+} from './effect-compiler-types.js';
 
 /**
  * Pre-computed, immutable runtime structures derived from a GameDef.
@@ -22,6 +26,7 @@ export interface GameDefRuntime {
   readonly runtimeTableIndex: RuntimeTableIndex;
   readonly zobristTable: ZobristTable;
   readonly ruleCardCache: Map<string, RuleCard>;
+  readonly compiledLifecycleEffects: ReadonlyMap<CompiledLifecycleEffectKey, CompiledEffectSequence>;
 }
 
 export function createGameDefRuntime(def: GameDef): GameDefRuntime {
@@ -30,5 +35,6 @@ export function createGameDefRuntime(def: GameDef): GameDefRuntime {
     runtimeTableIndex: buildRuntimeTableIndex(def),
     zobristTable: createZobristTable(def),
     ruleCardCache: new Map(),
+    compiledLifecycleEffects: new Map<CompiledLifecycleEffectKey, CompiledEffectSequence>(),
   };
 }

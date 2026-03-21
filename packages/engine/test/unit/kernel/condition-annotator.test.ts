@@ -100,6 +100,7 @@ const makeRuntime = (def: GameDef): GameDefRuntime => ({
   runtimeTableIndex: buildRuntimeTableIndex(def),
   zobristTable: createZobristTable(def),
   ruleCardCache: new Map(),
+  compiledLifecycleEffects: new Map(),
 });
 
 const makeContext = (overrides: Partial<AnnotationContext> = {}): AnnotationContext => {

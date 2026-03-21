@@ -21,7 +21,10 @@ const clamp = (value: number, min: number, max: number): number => Math.max(min,
 /** Merge moveParams into bindings. Fast path: return bindings directly when moveParams is empty. */
 const resolveEffectBindings = (ctx: EffectContext): Readonly<Record<string, unknown>> => {
   const mp = ctx.moveParams;
-  for (const _ in mp) { return { ...mp, ...ctx.bindings }; }
+  for (const key in mp) {
+    void key;
+    return { ...mp, ...ctx.bindings };
+  }
   return ctx.bindings;
 };
 

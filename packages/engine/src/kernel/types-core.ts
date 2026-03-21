@@ -1348,6 +1348,7 @@ export interface ExecutionOptions {
   readonly decisionTrace?: boolean;
   readonly selectorTrace?: boolean;
   readonly advanceToDecisionPoint?: boolean;
+  readonly verifyCompiledEffects?: boolean;
   readonly maxPhaseTransitionsPerMove?: number;
   /** Opt-in performance profiler. Accumulates sub-function timing when provided. */
   readonly profiler?: import('./perf-profiler.js').PerfProfiler;

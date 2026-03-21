@@ -78,12 +78,8 @@ export function createKeyedTextReconciler(options: CreateKeyedTextReconcilerOpti
   function applySpec(text: Text, spec: KeyedTextSpec): void {
     text.text = spec.text;
     text.style = spec.style ?? DEFAULT_KEYED_TEXT_STYLE;
-    if (spec.anchor !== undefined) {
-      text.anchor.set(spec.anchor.x, spec.anchor.y);
-    }
-    if (spec.position !== undefined) {
-      text.position.set(spec.position.x, spec.position.y);
-    }
+    text.anchor.set(spec.anchor?.x ?? 0, spec.anchor?.y ?? 0);
+    text.position.set(spec.position?.x ?? 0, spec.position?.y ?? 0);
     text.visible = spec.visible ?? true;
     text.renderable = spec.renderable ?? true;
     text.alpha = spec.alpha ?? 1;

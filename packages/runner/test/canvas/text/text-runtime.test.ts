@@ -295,6 +295,34 @@ describe('createKeyedTextReconciler', () => {
     expect(label.scale.y).toBe(1);
   });
 
+  it('resets omitted anchor and position to canonical defaults on reuse', () => {
+    const parent = new MockContainer() as unknown as Container;
+    const runtime = createKeyedTextReconciler({ parentContainer: parent });
+
+    runtime.reconcile([{
+      key: 'label',
+      text: 'Styled',
+      anchor: { x: 0.5, y: 1 },
+      position: { x: 10, y: 20 },
+    }]);
+
+    const label = (parent as unknown as InstanceType<typeof MockContainer>).children[0]!;
+    expect(label.anchor.x).toBe(0.5);
+    expect(label.anchor.y).toBe(1);
+    expect(label.position.x).toBe(10);
+    expect(label.position.y).toBe(20);
+
+    runtime.reconcile([{
+      key: 'label',
+      text: 'Plain',
+    }]);
+
+    expect(label.anchor.x).toBe(0);
+    expect(label.anchor.y).toBe(0);
+    expect(label.position.x).toBe(0);
+    expect(label.position.y).toBe(0);
+  });
+
   it('creates keyed text with a single semantic style assignment', () => {
     const parent = new MockContainer() as unknown as Container;
     const runtime = createKeyedTextReconciler({ parentContainer: parent });
@@ -340,6 +368,34 @@ describe('createKeyedTextReconciler', () => {
     expect(label.rotation).toBe(1.25);
     expect(label.scale.x).toBe(4);
     expect(label.scale.y).toBe(5);
+  });
+
+  it('lets apply override canonical geometry defaults after reconciliation', () => {
+    const parent = new MockContainer() as unknown as Container;
+    const runtime = createKeyedTextReconciler({ parentContainer: parent });
+
+    runtime.reconcile([{
+      key: 'label',
+      text: 'Styled',
+      anchor: { x: 0.25, y: 0.75 },
+      position: { x: 10, y: 20 },
+    }]);
+
+    const label = (parent as unknown as InstanceType<typeof MockContainer>).children[0]!;
+
+    runtime.reconcile([{
+      key: 'label',
+      text: 'Plain',
+      apply: (text) => {
+        text.anchor.set(1, 0.5);
+        text.position.set(30, 40);
+      },
+    }]);
+
+    expect(label.anchor.x).toBe(1);
+    expect(label.anchor.y).toBe(0.5);
+    expect(label.position.x).toBe(30);
+    expect(label.position.y).toBe(40);
   });
 
   it('destroy tears down every retained text node', () => {

@@ -415,6 +415,40 @@ describe('createKeyedBitmapTextReconciler', () => {
     expect(mutable.position.y).toBe(20);
   });
 
+  it('resets omitted anchor and position to canonical defaults on reuse', () => {
+    const parent = new MockContainer() as unknown as Container;
+    const reconciler = createKeyedBitmapTextReconciler({ parentContainer: parent });
+
+    reconciler.reconcile([
+      {
+        key: 'geometry',
+        text: 'Alpha',
+        style: { fontName: LABEL_FONT_NAME },
+        anchor: { x: 0.5, y: 1 },
+        position: { x: 10, y: 20 },
+      },
+    ]);
+
+    const geometry = reconciler.get('geometry') as unknown as InstanceType<typeof MockBitmapText>;
+    expect(geometry.anchor.x).toBe(0.5);
+    expect(geometry.anchor.y).toBe(1);
+    expect(geometry.position.x).toBe(10);
+    expect(geometry.position.y).toBe(20);
+
+    reconciler.reconcile([
+      {
+        key: 'geometry',
+        text: 'Beta',
+        style: { fontName: LABEL_FONT_NAME },
+      },
+    ]);
+
+    expect(geometry.anchor.x).toBe(0);
+    expect(geometry.anchor.y).toBe(0);
+    expect(geometry.position.x).toBe(0);
+    expect(geometry.position.y).toBe(0);
+  });
+
   it('destroy cleans up all entries', () => {
     const parent = new MockContainer() as unknown as Container;
     const reconciler = createKeyedBitmapTextReconciler({ parentContainer: parent });
@@ -478,5 +512,43 @@ describe('createKeyedBitmapTextReconciler', () => {
     expect(customTransform.rotation).toBe(1.25);
     expect(customTransform.scale.x).toBe(1.5);
     expect(customTransform.scale.y).toBe(1.75);
+  });
+
+  it('lets apply override canonical geometry defaults after reconciliation', () => {
+    const parent = new MockContainer() as unknown as Container;
+    const reconciler = createKeyedBitmapTextReconciler({ parentContainer: parent });
+
+    reconciler.reconcile([
+      {
+        key: 'custom-geometry',
+        text: 'first',
+        style: { fontName: LABEL_FONT_NAME },
+        anchor: { x: 0.25, y: 0.75 },
+        position: { x: 10, y: 20 },
+      },
+    ]);
+
+    const customGeometry = reconciler.get('custom-geometry') as unknown as InstanceType<typeof MockBitmapText>;
+    expect(customGeometry.anchor.x).toBe(0.25);
+    expect(customGeometry.anchor.y).toBe(0.75);
+    expect(customGeometry.position.x).toBe(10);
+    expect(customGeometry.position.y).toBe(20);
+
+    reconciler.reconcile([
+      {
+        key: 'custom-geometry',
+        text: 'second',
+        style: { fontName: LABEL_FONT_NAME },
+        apply: (text) => {
+          text.anchor.set(1, 0.5);
+          text.position.set(30, 40);
+        },
+      },
+    ]);
+
+    expect(customGeometry.anchor.x).toBe(1);
+    expect(customGeometry.anchor.y).toBe(0.5);
+    expect(customGeometry.position.x).toBe(30);
+    expect(customGeometry.position.y).toBe(40);
   });
 });

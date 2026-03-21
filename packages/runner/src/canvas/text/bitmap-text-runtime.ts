@@ -141,12 +141,8 @@ export function createKeyedBitmapTextReconciler(
 
   function applySpec(text: BitmapText, spec: KeyedBitmapTextSpec): void {
     text.text = spec.text;
-    if (spec.anchor !== undefined) {
-      text.anchor.set(spec.anchor.x, spec.anchor.y);
-    }
-    if (spec.position !== undefined) {
-      text.position.set(spec.position.x, spec.position.y);
-    }
+    text.anchor.set(spec.anchor?.x ?? 0, spec.anchor?.y ?? 0);
+    text.position.set(spec.position?.x ?? 0, spec.position?.y ?? 0);
     text.visible = spec.visible ?? true;
     text.renderable = spec.renderable ?? true;
     text.alpha = spec.alpha ?? 1;

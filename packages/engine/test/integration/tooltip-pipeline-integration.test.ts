@@ -137,6 +137,36 @@ describe('tooltip pipeline integration', () => {
     assert.ok(result.tooltipPayload.ruleCard.steps.length > 0, 'Train must have steps');
   });
 
+  it('FITL Train humanizes scalarArray selectors in step text', () => {
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
+    const def = compiled.gameDef!;
+    const runtime = createGameDefRuntime(def);
+    const { state } = initialState(def, 42);
+    const train = def.actions.find((a) => a.id === 'train');
+    assert.ok(train !== undefined, 'train action must exist');
+
+    const context: AnnotationContext = {
+      def, runtime, state,
+      activePlayer: asPlayerId(0),
+      actorPlayer: asPlayerId(0),
+    };
+    const result = describeAction(train, context);
+    assert.ok(result.tooltipPayload !== undefined);
+
+    const allText = result.tooltipPayload.ruleCard.steps
+      .flatMap((step) => step.lines.map((line) => line.text))
+      .join(' ');
+
+    assert.ok(
+      allText.includes('City or Province'),
+      `Train step text must humanize scalarArray selectors, got: "${allText}"`,
+    );
+    assert.ok(
+      !allText.includes('expr(scalarArray)'),
+      `Train step text must not expose scalarArray debug output, got: "${allText}"`,
+    );
+  });
+
   it('FITL Sweep synopsis uses verbalized action label', () => {
     const { compiled } = FITL_PRODUCTION_FIXTURE;
     const def = compiled.gameDef!;

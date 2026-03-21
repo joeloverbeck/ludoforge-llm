@@ -1,5 +1,7 @@
 # Spec 70 — Action Tooltip Synopsis & Humanization Fixes
 
+**Status**: ✅ COMPLETED
+
 ## Problem
 
 The action tooltip system has two visible defects in the runner UI:
@@ -245,3 +247,19 @@ actionSummaries:
 - Refactoring the tooltip pipeline architecture
 - Adding summaries to event cards or triggers
 - Visual styling changes to the tooltip
+
+## Outcome
+
+- Completion date: 2026-03-21
+- What actually changed:
+  - `actionSummaries` compilation support, FITL/Texas authored summaries, synopsis priority, and `scalarArray` humanization are all present in the shipped codebase.
+  - End-to-end tooltip coverage now explicitly proves a FITL real action renders `City or Province` instead of `expr(scalarArray)`.
+- Deviations from original plan:
+  - The final architecture did not inject action-level summaries into the normalizer as synthetic `SummaryMessage` records.
+  - Instead, authored action synopsis is carried as explicit `ContentPlan.authoredSynopsis` metadata from `condition-annotator`, while macro summaries remain normalized messages. This is the cleaner long-term design and should remain the source of truth.
+  - No additional golden updates were required after reassessment.
+- Verification results:
+  - `pnpm -F @ludoforge/engine test -- --test-name-pattern "tooltip pipeline integration|verbalization compilation integration|tooltip cross-game property tests|tooltip-value-stringifier|tooltip-template-realizer|tooltip-content-planner"` ✅
+  - `pnpm turbo test` ✅
+  - `pnpm turbo typecheck` ✅
+  - `pnpm turbo lint` ✅

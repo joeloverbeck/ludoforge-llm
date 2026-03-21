@@ -16,6 +16,7 @@ import { attachZoneSelectHandlers } from './interactions/zone-select';
 import { createAriaAnnouncer } from './interactions/aria-announcer';
 import { attachKeyboardSelect, handleKeyboardSelectKeyDown } from './interactions/keyboard-select';
 import { createCanvasInteractionController } from './interactions/canvas-interaction-controller';
+import { createHoverStalenessGuard } from './interactions/hover-staleness-guard.js';
 import { createHoverTargetController } from './interactions/hover-target-controller';
 import { createRuntimeLayoutStore, type RuntimeLayoutStore } from './runtime-layout-store';
 import { installTickerErrorFence, type TickerErrorFence } from './ticker-error-fence.js';
@@ -241,17 +242,30 @@ export async function createGameCanvasRuntime(
   const accessibilityContainer = options.container.parentElement ?? options.container;
   const ariaAnnouncer = deps.createAriaAnnouncer(accessibilityContainer);
   const interactionController = createCanvasInteractionController(() => selectorStore.getState(), ariaAnnouncer);
+  const canvasElement = gameCanvas.app.canvas as HTMLCanvasElement;
+  let lastPointerScreenPosition: { x: number; y: number } | null = null;
+  let publishHoverAnchor: () => void = () => {};
+  let stalenessGuard: ReturnType<typeof createHoverStalenessGuard> | null = null;
   const hoverTargetController = createHoverTargetController({
     onTargetChange: () => {
       publishHoverAnchor();
+      stalenessGuard?.onHoverStateChanged();
     },
   });
+  const onCanvasPointerMove = (event: PointerEvent): void => {
+    lastPointerScreenPosition = { x: event.clientX, y: event.clientY };
+  };
+  const onCanvasPointerLeave = (): void => {
+    lastPointerScreenPosition = null;
+    stalenessGuard?.onCanvasPointerLeave();
+  };
+  canvasElement.addEventListener('pointermove', onCanvasPointerMove);
+  canvasElement.addEventListener('pointerleave', onCanvasPointerLeave);
 
   const disposalQueue = createDisposalQueue();
   const viewportResult = createViewportResult(deps, gameCanvas, runtimeLayoutStore);
   applyViewportSnapshot(viewportResult.viewport, options.initialViewport ?? null);
   const zonePool = new ContainerPool();
-  let publishHoverAnchor: () => void = () => {};
 
   const zoneRenderer = deps.createZoneRenderer(gameCanvas.layers.zoneLayer, zonePool, {
     bindSelection: (zoneContainer, zoneId, isSelectable) =>
@@ -488,6 +502,24 @@ export async function createGameCanvasRuntime(
     };
   };
   let hoverAnchorVersion = 0;
+  stalenessGuard = createHoverStalenessGuard({
+    getActiveTargets: () => hoverTargetController.getActiveTargets(),
+    removeTarget: (target) => {
+      hoverTargetController.removeTarget(target);
+    },
+    clearAll: () => {
+      hoverTargetController.clearAll();
+    },
+    getPointerScreenPosition: () => lastPointerScreenPosition,
+    getCanvasBounds: () => canvasElement.getBoundingClientRect(),
+    resolveTargetScreenBounds: (target) => {
+      const worldBounds = hoverBoundsResolver(target);
+      if (worldBounds === null) {
+        return null;
+      }
+      return coordinateBridge.canvasBoundsToScreenRect(worldBounds);
+    },
+  });
 
   publishHoverAnchor = (): void => {
     const hoveredTarget = hoverTargetController.getCurrentTarget();
@@ -509,10 +541,17 @@ export async function createGameCanvasRuntime(
     });
   };
   const viewport = viewportResult.viewport as unknown as {
+    readonly moving?: boolean;
     on(event: 'moved', listener: () => void): void;
     off(event: 'moved', listener: () => void): void;
   };
-  viewport.on('moved', publishHoverAnchor);
+  const onViewportMoved = (): void => {
+    publishHoverAnchor();
+    if (viewport.moving === true) {
+      stalenessGuard?.onViewportMoving();
+    }
+  };
+  viewport.on('moved', onViewportMoved);
 
   let destroyed = false;
 
@@ -550,7 +589,10 @@ export async function createGameCanvasRuntime(
       }
       destroyed = true;
 
-      viewport.off('moved', publishHoverAnchor);
+      viewport.off('moved', onViewportMoved);
+      canvasElement.removeEventListener('pointermove', onCanvasPointerMove);
+      canvasElement.removeEventListener('pointerleave', onCanvasPointerLeave);
+      stalenessGuard?.destroy();
       hoverTargetController.destroy();
       options.onHoverAnchorChange?.(null);
       unsubscribeZoneIDs();

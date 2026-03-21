@@ -98,6 +98,17 @@ function makeWorldLayout(zoneIds: readonly string[]): WorldLayoutModel {
 function createRuntimeFixture() {
   const lifecycle: string[] = [];
   let movedListener: (() => void) | null = null;
+  const canvasListeners = new Map<string, Set<EventListener>>();
+  let canvasBounds = {
+    left: 0,
+    top: 0,
+    right: 400,
+    bottom: 300,
+    x: 0,
+    y: 0,
+    width: 400,
+    height: 300,
+  };
 
   const runtimeLayoutStore = {
     getSnapshot: vi.fn(() => ({
@@ -168,12 +179,14 @@ function createRuntimeFixture() {
     x: number;
     y: number;
     scale: { x: number; y: number };
+    moving?: boolean;
     on(event: string, listener: () => void): void;
     off(event: string, listener: () => void): void;
   } = {
     x: 0,
     y: 0,
     scale: { x: 1, y: 1 },
+    moving: false,
     on: vi.fn((event: string, listener: () => void) => {
       if (event === 'moved') {
         movedListener = listener;
@@ -209,7 +222,18 @@ function createRuntimeFixture() {
         screen: { width: 1024, height: 768 },
         events: {} as never,
       },
-      canvas: { isConnected: true } as HTMLCanvasElement,
+      canvas: {
+        isConnected: true,
+        addEventListener: vi.fn((type: string, listener: EventListener) => {
+          const listeners = canvasListeners.get(type) ?? new Set<EventListener>();
+          listeners.add(listener);
+          canvasListeners.set(type, listeners);
+        }),
+        removeEventListener: vi.fn((type: string, listener: EventListener) => {
+          canvasListeners.get(type)?.delete(listener);
+        }),
+        getBoundingClientRect: vi.fn(() => canvasBounds),
+      } as unknown as HTMLCanvasElement,
     },
     layers: {
       boardGroup: {} as never,
@@ -394,9 +418,33 @@ function createRuntimeFixture() {
     emitViewportMoved: () => {
       movedListener?.();
     },
+    emitCanvasPointerMove: (clientX: number, clientY: number) => {
+      const event = { clientX, clientY } as PointerEvent;
+      for (const listener of canvasListeners.get('pointermove') ?? []) {
+        listener(event);
+      }
+    },
+    emitCanvasPointerLeave: () => {
+      const event = {} as PointerEvent;
+      for (const listener of canvasListeners.get('pointerleave') ?? []) {
+        listener(event);
+      }
+    },
     emitReducedMotionChange: (next: boolean) => {
       reducedMotion = next;
       reducedMotionListener?.(next);
+    },
+    setCanvasBounds: (nextBounds: {
+      left: number;
+      top: number;
+      right: number;
+      bottom: number;
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    }) => {
+      canvasBounds = nextBounds;
     },
     setNextScreenRect: (rect: { x: number; y: number; width: number; height: number }) => {
       nextRect = rect;
@@ -899,6 +947,10 @@ describe('createGameCanvasRuntime', () => {
     expect(fixture.keyboardCleanup).toHaveBeenCalledTimes(1);
     expect(fixture.ariaAnnouncer.destroy).toHaveBeenCalledTimes(1);
     expect(fixture.viewportEvents.off).toHaveBeenCalledWith('moved', expect.any(Function));
+    expect(fixture.gameCanvas.app.canvas.addEventListener).toHaveBeenCalledWith('pointermove', expect.any(Function));
+    expect(fixture.gameCanvas.app.canvas.addEventListener).toHaveBeenCalledWith('pointerleave', expect.any(Function));
+    expect(fixture.gameCanvas.app.canvas.removeEventListener).toHaveBeenCalledWith('pointermove', expect.any(Function));
+    expect(fixture.gameCanvas.app.canvas.removeEventListener).toHaveBeenCalledWith('pointerleave', expect.any(Function));
     expect(onHoverAnchorChange).toHaveBeenLastCalledWith(null);
   });
 
@@ -1044,6 +1096,79 @@ describe('createGameCanvasRuntime', () => {
       space: 'screen',
       version: 2,
     }));
+
+    runtime.destroy();
+  });
+
+  it('clears hover anchor when the pointer leaves the canvas element', async () => {
+    const fixture = createRuntimeFixture();
+    const onHoverAnchorChange = vi.fn();
+
+    const runtime = await createGameCanvasRuntime(
+      {
+        container: {} as HTMLElement,
+        store: createRuntimeStore(makeRenderModel(['zone:a'])) as unknown as StoreApi<GameStore>,
+        backgroundColor: 0x1,
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+        onHoverAnchorChange,
+      },
+      fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
+    );
+
+    const zoneHandlerCall = fixture.attachZoneSelectHandlers.mock.calls[0] as unknown[] | undefined;
+    const zoneHoverOptions = zoneHandlerCall?.[4] as {
+      onHoverEnter?: (target: { kind: 'zone'; id: string }) => void;
+    } | undefined;
+
+    zoneHoverOptions?.onHoverEnter?.({ kind: 'zone', id: 'zone:a' });
+    await flushMicrotasks();
+    fixture.emitCanvasPointerLeave();
+    await flushMicrotasks();
+
+    expect(onHoverAnchorChange).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      target: { kind: 'zone', id: 'zone:a' },
+      version: 1,
+    }));
+    expect(onHoverAnchorChange).toHaveBeenLastCalledWith(null);
+
+    runtime.destroy();
+  });
+
+  it('clears hover state when the viewport moves while dragging', async () => {
+    const fixture = createRuntimeFixture();
+    const onHoverAnchorChange = vi.fn();
+
+    const runtime = await createGameCanvasRuntime(
+      {
+        container: {} as HTMLElement,
+        store: createRuntimeStore(makeRenderModel(['zone:a'])) as unknown as StoreApi<GameStore>,
+        backgroundColor: 0x2,
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+        onHoverAnchorChange,
+      },
+      fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
+    );
+
+    const zoneHandlerCall = fixture.attachZoneSelectHandlers.mock.calls[0] as unknown[] | undefined;
+    const zoneHoverOptions = zoneHandlerCall?.[4] as {
+      onHoverEnter?: (target: { kind: 'zone'; id: string }) => void;
+    } | undefined;
+
+    zoneHoverOptions?.onHoverEnter?.({ kind: 'zone', id: 'zone:a' });
+    await flushMicrotasks();
+    fixture.viewportEvents.moving = true;
+    fixture.emitViewportMoved();
+    await flushMicrotasks();
+
+    expect(onHoverAnchorChange).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      target: { kind: 'zone', id: 'zone:a' },
+      version: 1,
+    }));
+    expect(onHoverAnchorChange).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      target: { kind: 'zone', id: 'zone:a' },
+      version: 2,
+    }));
+    expect(onHoverAnchorChange).toHaveBeenLastCalledWith(null);
 
     runtime.destroy();
   });

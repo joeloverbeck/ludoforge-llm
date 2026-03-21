@@ -1,6 +1,6 @@
 # 73TOOSTAGUA-003: Wire staleness guard into game-canvas-runtime
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — runner-only
@@ -24,6 +24,8 @@ The `HoverStalenessGuard` module (73TOOSTAGUA-002) and the extended `HoverTarget
 6. The canvas element is accessible as `gameCanvas.app.canvas as HTMLCanvasElement` — confirmed (used in `createCoordinateBridge` at line ~475).
 7. The viewport is cast to a typed interface at line ~511 for `on`/`off`; the `moving` property needs a separate type assertion.
 8. Ticket `73TOOSTAGUA-001` completed with `clearAll()`, `getActiveTargets(): readonly HoveredCanvasTarget[]`, and `removeTarget(target: HoveredCanvasTarget)`; runtime wiring should use that domain-level API, not internal keys or maps.
+9. The proposed runtime wiring is not currently covered by dedicated runtime tests. Existing unit suites cover the controller and guard in isolation, but `packages/runner/test/canvas/GameCanvas.test.ts` is the correct place to prove the runtime-level integration.
+10. The current runtime test fixture does not yet model DOM canvas listener APIs (`addEventListener`, `removeEventListener`, `getBoundingClientRect`). The ticket must include extending that fixture, otherwise the runtime change cannot be exercised or verified at the level this repo expects.
 
 ## Architecture Check
 
@@ -32,6 +34,7 @@ The `HoverStalenessGuard` module (73TOOSTAGUA-002) and the extended `HoverTarget
 3. The `onTargetChange` callback already calls `publishHoverAnchor`; adding `stalenessGuard.onHoverStateChanged()` to the same callback is the natural integration point.
 4. No engine/GameDef/GameSpecDoc boundaries affected — purely runner canvas interaction.
 5. No backwards-compatibility shims.
+6. The guard should remain a private runtime implementation detail. Injecting it into `GameCanvasRuntimeDeps` would widen the public test seam without improving production architecture; runtime tests can validate behavior through existing hover and viewport seams.
 
 ## What to Change
 
@@ -64,9 +67,18 @@ In the existing `viewport.on('moved', ...)` callback:
 - Call `stalenessGuard.destroy()`.
 - Remove the two DOM event listeners (`pointermove`, `pointerleave`) from the canvas element.
 
+### 5. Add runtime integration coverage
+
+- Extend the `GameCanvas.test.ts` runtime fixture so the mocked canvas exposes `addEventListener`, `removeEventListener`, and `getBoundingClientRect`.
+- Add runtime tests that prove:
+  - canvas `pointerleave` clears the active hover anchor,
+  - viewport `'moved'` clears hover state when `moving === true`,
+  - runtime destroy removes DOM listeners in addition to the existing viewport listener teardown.
+
 ## Files to Touch
 
 - `packages/runner/src/canvas/game-canvas-runtime.ts` (modify)
+- `packages/runner/test/canvas/GameCanvas.test.ts` (modify)
 
 ## Out of Scope
 
@@ -101,10 +113,29 @@ In the existing `viewport.on('moved', ...)` callback:
 
 ### New/Modified Tests
 
-1. No new test files for this ticket — the runtime wiring is verified by typecheck + lint + the existing unit test suites from 73TOOSTAGUA-001 and 73TOOSTAGUA-002. Integration behavior is verified via manual testing (see spec's manual verification checklist).
+1. Modify `packages/runner/test/canvas/GameCanvas.test.ts` to add runtime integration coverage for the new wiring and extend the fixture with DOM-canvas listener behavior.
+2. Existing `packages/runner/test/canvas/interactions/hover-target-controller.test.ts` remains the proof for controller semantics.
+3. Existing `packages/runner/test/canvas/interactions/hover-staleness-guard.test.ts` remains the proof for guard semantics.
 
 ### Commands
 
 1. `pnpm -F @ludoforge/runner typecheck`
 2. `pnpm -F @ludoforge/runner lint`
 3. `pnpm -F @ludoforge/runner test`
+
+## Outcome
+
+- Completion date: 2026-03-21
+- Actual change:
+  - wired `HoverStalenessGuard` into `game-canvas-runtime.ts`
+  - added canvas-level `pointermove` and `pointerleave` listeners
+  - cleared hover state on viewport `'moved'` events while `viewport.moving === true`
+  - destroyed the guard and removed DOM listeners during runtime teardown
+  - extended `GameCanvas.test.ts` fixture to model DOM canvas listeners and added runtime integration coverage for pointer-leave, viewport-moving, and teardown listener cleanup
+- Deviations from original plan:
+  - the original ticket claimed no new tests were needed; this was corrected before implementation
+  - no new public runtime deps were introduced; the guard remained a private runtime detail
+- Verification results:
+  - `pnpm -F @ludoforge/runner typecheck` passed
+  - `pnpm -F @ludoforge/runner lint` passed
+  - `pnpm -F @ludoforge/runner test` passed

@@ -1,6 +1,6 @@
 # Spec 73 — Tooltip Staleness Guard
 
-## Status: Draft
+## Status: COMPLETED
 
 ## Problem
 
@@ -245,3 +245,19 @@ All tests are pure unit tests with injected dependencies — no PixiJS, no DOM, 
 | Viewport `moving` check may be too aggressive (clears during deceleration) | Acceptable — tooltips during deceleration are not useful; pointer is stationary and a new `pointerenter` will re-trigger the tooltip once movement stops |
 | `resolveTargetScreenBounds` may return stale bounds during animation | 500ms sweep interval means bounds are re-resolved each tick; animation frames update positions continuously |
 | pixi-viewport API (`moving` property) may change | Accessed via type assertion; easily adjusted if API changes |
+
+## Outcome
+
+- Completion date: 2026-03-21
+- What actually changed:
+  - the planned controller and guard abstractions were wired into `game-canvas-runtime.ts`
+  - the runtime now tracks pointer screen position from canvas DOM events, clears hover state on canvas `pointerleave`, and clears hover state when the viewport reports movement during drag/deceleration
+  - runtime teardown now removes the added DOM listeners and destroys the staleness guard interval
+  - runtime integration coverage was added in `packages/runner/test/canvas/GameCanvas.test.ts` alongside the existing controller and guard unit suites
+- Deviations from original plan:
+  - the architecture stayed private to the runtime; no new public dependency injection seam was added for the staleness guard
+  - the spec's planned controller/guard work had already landed before this final wiring step, so the shipped work focused on runtime integration and proof
+- Verification results:
+  - `pnpm -F @ludoforge/runner typecheck` passed
+  - `pnpm -F @ludoforge/runner lint` passed
+  - `pnpm -F @ludoforge/runner test` passed

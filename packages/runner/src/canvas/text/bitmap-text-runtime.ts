@@ -49,6 +49,12 @@ interface CreateKeyedBitmapTextReconcilerOptions {
   readonly parentContainer: Container;
 }
 
+interface KeyedBitmapTextEntry {
+  instanceKey: string | null;
+  style: BitmapTextStyle;
+  text: BitmapText;
+}
+
 export function toPixiBitmapTextStyle(style: BitmapTextStyle): TextStyleOptions {
   return {
     ...(style.fill !== undefined ? { fill: style.fill } : {}),
@@ -93,6 +99,34 @@ export function createManagedBitmapText(options: ManagedBitmapTextOptions): Bitm
   return text;
 }
 
+function cloneBitmapTextStyle(style: BitmapTextStyle): BitmapTextStyle {
+  return {
+    fontName: style.fontName,
+    ...(style.fill !== undefined ? { fill: style.fill } : {}),
+    ...(style.fontSize !== undefined ? { fontSize: style.fontSize } : {}),
+    ...(style.fontWeight !== undefined ? { fontWeight: style.fontWeight } : {}),
+    ...(style.stroke === undefined
+      ? {}
+      : {
+          stroke: {
+            color: style.stroke.color,
+            width: style.stroke.width,
+          },
+        }),
+  };
+}
+
+function bitmapTextStylesEqual(a: BitmapTextStyle, b: BitmapTextStyle): boolean {
+  return (
+    a.fontName === b.fontName &&
+    a.fill === b.fill &&
+    a.fontSize === b.fontSize &&
+    a.fontWeight === b.fontWeight &&
+    a.stroke?.color === b.stroke?.color &&
+    a.stroke?.width === b.stroke?.width
+  );
+}
+
 export function destroyManagedBitmapText(text: BitmapText): void {
   text.renderable = false;
   text.visible = false;
@@ -103,11 +137,10 @@ export function destroyManagedBitmapText(text: BitmapText): void {
 export function createKeyedBitmapTextReconciler(
   options: CreateKeyedBitmapTextReconcilerOptions,
 ): KeyedBitmapTextReconciler {
-  const entries = new Map<string, { instanceKey: string | null; text: BitmapText }>();
+  const entries = new Map<string, KeyedBitmapTextEntry>();
 
   function applySpec(text: BitmapText, spec: KeyedBitmapTextSpec): void {
     text.text = spec.text;
-    text.style = toPixiBitmapTextStyle(spec.style);
     if (spec.anchor !== undefined) {
       text.anchor.set(spec.anchor.x, spec.anchor.y);
     }
@@ -155,12 +188,20 @@ export function createKeyedBitmapTextReconciler(
             destroyManagedBitmapText(entry.text);
           }
           const text = createFromSpec(spec);
-          entries.set(spec.key, { instanceKey, text });
+          entries.set(spec.key, {
+            instanceKey,
+            style: cloneBitmapTextStyle(spec.style),
+            text,
+          });
           continue;
         }
 
         if (entry.text.parent !== options.parentContainer) {
           options.parentContainer.addChild(entry.text);
+        }
+        if (!bitmapTextStylesEqual(entry.style, spec.style)) {
+          entry.text.style = toPixiBitmapTextStyle(spec.style);
+          entry.style = cloneBitmapTextStyle(spec.style);
         }
         applySpec(entry.text, spec);
       }

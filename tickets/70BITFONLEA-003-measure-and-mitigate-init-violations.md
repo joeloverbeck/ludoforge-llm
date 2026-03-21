@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small–Medium
 **Engine Changes**: None — runner-only
-**Deps**: archive/tickets/70BITFONLEA/70BITFONLEA-001-use-preinstalled-font-names-in-table-overlay.md, archive/tickets/70BITFONLEA/70BITFONLEA-002-guard-table-overlay-marker-style-reassignment.md, archive/tickets/70BITFONLEA/70BITFONLEA-004-replace-bitmaptext-fontfamily-strings-with-typed-font-contract.md, tickets/70BITFONLEA-005-guard-keyed-bitmaptext-style-reassignment.md
+**Deps**: archive/tickets/70BITFONLEA/70BITFONLEA-001-use-preinstalled-font-names-in-table-overlay.md, archive/tickets/70BITFONLEA/70BITFONLEA-002-guard-table-overlay-marker-style-reassignment.md, archive/tickets/70BITFONLEA/70BITFONLEA-004-replace-bitmaptext-fontfamily-strings-with-typed-font-contract.md, archive/tickets/70BITFONLEA/70BITFONLEA-005-guard-keyed-bitmaptext-style-reassignment.md
 
 ## Problem
 

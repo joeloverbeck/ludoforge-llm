@@ -64,7 +64,8 @@ const { MockContainer, MockBitmapText } = vi.hoisted(() => {
 
   class HoistedMockBitmapText extends HoistedMockContainer {
     text: string;
-    style: Record<string, unknown> | undefined;
+    private _style: Record<string, unknown> | undefined;
+    styleAssignments = 0;
     position = new MockPoint();
     anchor = new MockAnchor();
     destroy = vi.fn(() => {
@@ -75,6 +76,15 @@ const { MockContainer, MockBitmapText } = vi.hoisted(() => {
       super();
       this.text = options.text;
       this.style = options.style;
+    }
+
+    get style(): Record<string, unknown> | undefined {
+      return this._style;
+    }
+
+    set style(value: Record<string, unknown> | undefined) {
+      this._style = value;
+      this.styleAssignments += 1;
     }
   }
 
@@ -219,6 +229,155 @@ describe('createKeyedBitmapTextReconciler', () => {
         width: 2,
       },
     });
+  });
+
+  it('creates keyed text with a single style assignment and preserves style identity for equivalent updates', () => {
+    const parent = new MockContainer() as unknown as Container;
+    const reconciler = createKeyedBitmapTextReconciler({ parentContainer: parent });
+
+    reconciler.reconcile([
+      {
+        key: 'stable',
+        text: 'Alpha',
+        style: {
+          fontName: LABEL_FONT_NAME,
+          fill: '#fff',
+          fontSize: 12,
+          fontWeight: '700',
+          stroke: { color: '#000', width: 1 },
+        },
+      },
+    ]);
+
+    const stable = reconciler.get('stable') as unknown as InstanceType<typeof MockBitmapText>;
+    const initialStyle = stable.style;
+    expect(stable.styleAssignments).toBe(1);
+
+    reconciler.reconcile([
+      {
+        key: 'stable',
+        text: 'Alpha',
+        style: {
+          fontName: LABEL_FONT_NAME,
+          fill: '#fff',
+          fontSize: 12,
+          fontWeight: '700',
+          stroke: { color: '#000', width: 1 },
+        },
+      },
+    ]);
+
+    expect(stable.styleAssignments).toBe(1);
+    expect(stable.style).toBe(initialStyle);
+  });
+
+  it('reassigns style when a primitive semantic style field changes', () => {
+    const parent = new MockContainer() as unknown as Container;
+    const reconciler = createKeyedBitmapTextReconciler({ parentContainer: parent });
+
+    reconciler.reconcile([
+      {
+        key: 'primitive',
+        text: 'Alpha',
+        style: { fontName: LABEL_FONT_NAME, fill: '#fff', fontSize: 12 },
+      },
+    ]);
+
+    const primitive = reconciler.get('primitive') as unknown as InstanceType<typeof MockBitmapText>;
+    const initialStyle = primitive.style;
+
+    reconciler.reconcile([
+      {
+        key: 'primitive',
+        text: 'Alpha',
+        style: { fontName: LABEL_FONT_NAME, fill: '#f97316', fontSize: 12 },
+      },
+    ]);
+
+    expect(primitive.styleAssignments).toBe(2);
+    expect(primitive.style).not.toBe(initialStyle);
+    expect(primitive.style).toEqual({
+      fill: '#f97316',
+      fontFamily: LABEL_FONT_NAME,
+      fontSize: 12,
+      fontWeight: undefined,
+      stroke: undefined,
+    });
+  });
+
+  it('reassigns style when nested stroke values change', () => {
+    const parent = new MockContainer() as unknown as Container;
+    const reconciler = createKeyedBitmapTextReconciler({ parentContainer: parent });
+
+    reconciler.reconcile([
+      {
+        key: 'stroke',
+        text: 'Alpha',
+        style: {
+          fontName: STROKE_LABEL_FONT_NAME,
+          stroke: { color: '#000', width: 1 },
+        },
+      },
+    ]);
+
+    const stroke = reconciler.get('stroke') as unknown as InstanceType<typeof MockBitmapText>;
+    const initialStyle = stroke.style;
+
+    reconciler.reconcile([
+      {
+        key: 'stroke',
+        text: 'Alpha',
+        style: {
+          fontName: STROKE_LABEL_FONT_NAME,
+          stroke: { color: '#111', width: 2 },
+        },
+      },
+    ]);
+
+    expect(stroke.styleAssignments).toBe(2);
+    expect(stroke.style).not.toBe(initialStyle);
+    expect(stroke.style).toEqual({
+      fontFamily: STROKE_LABEL_FONT_NAME,
+      fontSize: undefined,
+      fontWeight: undefined,
+      fill: undefined,
+      stroke: {
+        color: '#111',
+        width: 2,
+      },
+    });
+  });
+
+  it('updates non-style fields when style reassignment is skipped', () => {
+    const parent = new MockContainer() as unknown as Container;
+    const reconciler = createKeyedBitmapTextReconciler({ parentContainer: parent });
+
+    reconciler.reconcile([
+      {
+        key: 'mutable',
+        text: 'Alpha',
+        style: { fontName: LABEL_FONT_NAME, fill: '#fff' },
+        position: { x: 1, y: 2 },
+      },
+    ]);
+
+    const mutable = reconciler.get('mutable') as unknown as InstanceType<typeof MockBitmapText>;
+    const initialStyle = mutable.style;
+
+    reconciler.reconcile([
+      {
+        key: 'mutable',
+        text: 'Beta',
+        style: { fontName: LABEL_FONT_NAME, fill: '#fff' },
+        position: { x: 10, y: 20 },
+      },
+    ]);
+
+    expect(mutable.styleAssignments).toBe(1);
+    expect(mutable.style).toBe(initialStyle);
+    expect(mutable.text).toBe('Beta');
+    expect(mutable.position.x).toBe(10);
+    expect(mutable.position.y).toBe(20);
   });
 
   it('destroy cleans up all entries', () => {

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel tooltip-normalizer
-**Deps**: 70ACTTOOSYN-002 (actionSummaries must exist on VerbalizationDef)
+**Deps**: tickets/70ACTTOOSYN-002.md
 
 ## Problem
 

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — test files only
-**Deps**: 70ACTTOOSYN-001 through 70ACTTOOSYN-006 (all pipeline pieces must be in place)
+**Deps**: archive/tickets/70ACTTOOSYN-001.md, tickets/70ACTTOOSYN-002.md, tickets/70ACTTOOSYN-003.md, tickets/70ACTTOOSYN-004.md, tickets/70ACTTOOSYN-005.md, tickets/70ACTTOOSYN-006.md
 
 ## Problem
 

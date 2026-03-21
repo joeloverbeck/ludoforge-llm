@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — data file only
-**Deps**: 70ACTTOOSYN-002 (actionSummaries field must exist on VerbalizationDef for compilation to succeed)
+**Deps**: tickets/70ACTTOOSYN-002.md
 
 ## Problem
 

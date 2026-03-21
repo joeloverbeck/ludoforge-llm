@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel types + cnl compiler
-**Deps**: None (independent of 70ACTTOOSYN-001)
+**Deps**: None
 
 ## Problem
 

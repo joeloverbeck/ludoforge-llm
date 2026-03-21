@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel tooltip-content-planner + tooltip-template-realizer
-**Deps**: 70ACTTOOSYN-003 (SummaryMessage must be emitted before it can be found)
+**Deps**: tickets/70ACTTOOSYN-003.md
 
 ## Problem
 

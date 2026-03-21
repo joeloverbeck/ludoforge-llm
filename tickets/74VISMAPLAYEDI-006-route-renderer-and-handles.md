@@ -24,6 +24,7 @@ Connection routes (roads, rivers) must render on the editor canvas as Bézier cu
 1. Editor route renderer is lightweight — reads from editor store's `connectionRoutes` and resolves endpoint positions from `zonePositions`/`connectionAnchors`.
 2. Handle renderer draws on the topmost layer for interaction priority — separate from route curves.
 3. Both renderers are game-agnostic (Foundation 1). No modification to existing renderers.
+4. This ticket stays below the screen composition layer. `MapEditorScreen` from `74VISMAPLAYEDI-005` remains responsible for assembling/destroying renderers rather than pushing orchestration into route or handle modules.
 
 ## What to Change
 
@@ -97,6 +98,7 @@ New file `packages/runner/src/map-editor/map-editor-handle-renderer.ts`:
 1. No modification to `bezier-utils.ts`, `connection-route-renderer.ts`, or any existing canvas module.
 2. Handle layer is always above zone layer (z-order maintained by canvas skeleton).
 3. Route renderer is game-agnostic (Foundation 1).
+4. Route/handle modules remain renderer-local: no game loading, no store creation, no keyboard/session/export ownership, and no editor-wide lifecycle orchestration.
 
 ## Test Plan
 

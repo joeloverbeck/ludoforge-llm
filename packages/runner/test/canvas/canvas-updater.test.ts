@@ -322,6 +322,7 @@ function createViewportMock(): ViewportResult {
     viewport: {} as ViewportResult['viewport'],
     worldLayers: [],
     updateWorldBounds: vi.fn(),
+    resize: vi.fn(),
     centerOnBounds: vi.fn(),
     destroy: vi.fn(),
   };

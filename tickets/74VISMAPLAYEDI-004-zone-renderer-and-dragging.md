@@ -23,6 +23,7 @@ Zones must render on the editor canvas at their initial ForceAtlas2 positions (o
 1. Editor zone renderer is lightweight — uses `drawZoneShape` utilities but has simpler inputs than game zone renderer (no `PresentationZoneNode`, no animation state).
 2. Drag commits to editor store on `pointerup`, triggering store-subscribed re-renders (immutable update, Foundation 7).
 3. Game-agnostic — renders any game's zones (Foundation 1).
+4. This ticket implements a renderer/interaction module only. Screen-level composition, bootstrap, and teardown remain owned by `74VISMAPLAYEDI-005`'s `MapEditorScreen`.
 
 ## What to Change
 
@@ -89,6 +90,7 @@ New file `packages/runner/src/map-editor/map-editor-drag.ts`:
 1. No modification to `shape-utils.ts`, `zone-renderer.ts`, or any existing renderer module.
 2. Drag commits produce immutable state updates (Foundation 7).
 3. Zone renderer is game-agnostic — no game-specific rendering logic (Foundation 1).
+4. The zone renderer stays lifecycle-local: no game loading, no store creation, no session navigation, and no editor-wide orchestration logic.
 
 ## Test Plan
 

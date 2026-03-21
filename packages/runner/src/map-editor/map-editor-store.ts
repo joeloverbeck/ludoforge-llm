@@ -52,12 +52,13 @@ interface MapEditorStoreActions {
 }
 
 export type MapEditorStore = MapEditorStoreState & MapEditorStoreActions;
+export type MapEditorStoreApi = UseBoundStore<StoreApi<MapEditorStore>>;
 
 export function createMapEditorStore(
   gameDef: GameDef,
   visualConfig: VisualConfig,
   initialPositions: ReadonlyMap<string, Position>,
-): UseBoundStore<StoreApi<MapEditorStore>> {
+): MapEditorStoreApi {
   return create<MapEditorStore>()((set, get) => {
     let interactionSnapshot: EditorSnapshot | null = null;
     let interactionChanged = false;

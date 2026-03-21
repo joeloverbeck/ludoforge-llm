@@ -25,6 +25,7 @@ Users need a way to enter the map editor from the game selection screen and see 
 2. "Edit Map" button is conditional on `layout.mode === 'graph'` (map games only) — game-agnostic condition (Foundation 1).
 3. No backwards-compatibility shims — new button and screen, no fallback (Foundation 9).
 4. Session navigation must stay inside the existing discriminated-union session store added by `74VISMAPLAYEDI-001`. Do not introduce React Router, URL-state routing, or alternate navigation aliases for editor entry/exit; `openMapEditor(gameId)` and `returnToMenu()` remain the canonical transitions.
+5. `MapEditorScreen` is the editor composition root. It owns bootstrap/loading, store creation, renderer assembly, canvas lifecycle, toolbar wiring, and teardown. Renderer/canvas modules stay narrow and must not absorb screen-level orchestration, session navigation, keyboard registration, or export flow ownership.
 
 ## What to Change
 
@@ -40,9 +41,10 @@ New file `packages/runner/src/map-editor/MapEditorScreen.tsx`:
 3. Create `VisualConfigProvider` from parsed config
 4. Compute initial layout via `getOrComputeLayout(def, visualConfigProvider)`
 5. Create editor store via `createMapEditorStore(def, visualConfig, worldLayout.positions)`
-6. Mount editor canvas into a `<div ref>` container
-7. Render toolbar component (placeholder — wired in 74VISMAPLAYEDI-008)
-8. On unmount: destroy canvas and store
+6. Assemble editor runtime services at the screen layer: create editor canvas, then attach zone/route/handle/grid renderers and any keyboard/export hooks owned by later tickets
+7. Mount editor canvas into a `<div ref>` container
+8. Render toolbar component (placeholder — wired in 74VISMAPLAYEDI-008)
+9. On unmount: destroy canvas/renderers/subscriptions owned by the screen composition root
 
 **Layout**: Full-screen canvas with toolbar overlaid at top (CSS module).
 
@@ -102,6 +104,7 @@ Do not route editor entry through `selectGame()` or any pre-game screen transiti
 3. Canvas is properly destroyed on unmount (no memory leaks).
 4. Existing game selection and play flow is unchanged.
 5. Editor navigation continues to use the session store's explicit screen union rather than an additional routing layer.
+6. `MapEditorScreen` remains the single composition root for the editor. Later tickets must plug renderers/tools into the screen rather than moving orchestration into `map-editor-canvas.ts` or individual renderer modules.
 
 ## Test Plan
 

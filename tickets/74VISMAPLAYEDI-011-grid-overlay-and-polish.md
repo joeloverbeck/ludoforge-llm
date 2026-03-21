@@ -23,6 +23,7 @@ The editor needs visual polish: a grid overlay for alignment reference, visual h
 2. Selection highlighting modifies zone/route visual state (glow, outline thickness) — no store changes needed beyond existing `selectedZoneId`/`selectedRouteId`.
 3. All visual polish is game-agnostic (Foundation 1).
 4. Dirty-state navigation warning must layer on top of the existing session-navigation callback flow from `74VISMAPLAYEDI-005` and `74VISMAPLAYEDI-008`, not replace it with router- or URL-driven behavior.
+5. This ticket extends already-composed editor runtime pieces. It must not collapse ownership back into `map-editor-canvas.ts`; `MapEditorScreen` remains the composition root and renderers remain narrowly scoped.
 
 ## What to Change
 
@@ -94,6 +95,7 @@ In `MapEditorScreen.tsx`:
 1. Grid overlay does not affect zone/route positions or store state — purely visual.
 2. Selection highlighting does not modify store state — reads `selectedZoneId`/`selectedRouteId` only.
 3. `beforeunload` handler is always cleaned up on unmount (no memory leaks).
+4. Polish work does not move bootstrap, store creation, or editor-wide assembly out of `MapEditorScreen`.
 
 ## Test Plan
 

@@ -23,6 +23,7 @@ The map editor needs a toolbar with undo/redo buttons, grid toggle, snap toggle,
 2. Keyboard shortcuts are registered on mount, removed on unmount — no global state pollution.
 3. No engine changes (Foundation 1 preserved).
 4. Back navigation remains callback-driven from `MapEditorScreen` into the session store. Do not add a second navigation mechanism in the toolbar (router calls, location changes, or bespoke close-editor aliases).
+5. Toolbar/shortcut wiring plugs into `MapEditorScreen`, which remains the editor composition root from `74VISMAPLAYEDI-005`. Do not move canvas/bootstrap/renderer orchestration into the toolbar or shortcut layer.
 
 ## What to Change
 
@@ -97,6 +98,7 @@ Modify `packages/runner/src/map-editor/MapEditorScreen.tsx`:
 2. No modification to the existing keyboard coordinator or input modules.
 3. Toolbar is purely presentational + store interaction — no canvas logic.
 4. Back navigation stays delegated to the existing `onBack` callback; toolbar work must not introduce a parallel navigation path.
+5. Editor-wide assembly remains in `MapEditorScreen`; toolbar code must not become the owner of editor runtime construction/destruction.
 
 ## Test Plan
 

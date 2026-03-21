@@ -23,6 +23,7 @@ The map editor's purpose is to produce an updated `visual-config.yaml` file. Use
 1. Export module is a pure function: takes editor state + original visual config → produces YAML string. Highly testable (Foundation 11).
 2. Validates output against `VisualConfigSchema` before download — ensures the exported file is always valid (Foundation 8).
 3. Visual data stays in `visual-config.yaml` — no GameSpecDoc changes (Foundation 3).
+4. Export remains a service used by `MapEditorScreen`/toolbar wiring. It must not become a second editor composition root or take ownership of canvas/store/session lifecycle.
 
 ## What to Change
 
@@ -104,6 +105,7 @@ Check `packages/runner/package.json` — if `yaml` is not listed, add it as a de
 2. No modification to `visual-config-types.ts` or `visual-config-loader.ts`.
 3. Export is a pure function of editor state — no side effects except the final download trigger (Foundation 7).
 4. Unedited config sections are byte-identical in the output (no reordering, no value changes).
+5. Export wiring remains downstream of `MapEditorScreen` composition; no bootstrap/session/canvas responsibilities move into export code.
 
 ## Test Plan
 

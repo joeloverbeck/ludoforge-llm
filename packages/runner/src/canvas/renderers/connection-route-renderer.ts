@@ -90,7 +90,7 @@ export function createConnectionRouteRenderer(
     update(
       routes: readonly ConnectionRouteNode[],
       junctions: readonly JunctionNode[],
-      positions: ReadonlyMap<string, Position>,
+      _positions: ReadonlyMap<string, Position>,
     ): void {
       const routeById = new Map(routes.map((route) => [route.zoneId, route]));
       const curvatureByRouteId = resolveCurvatureByRouteId(routes, defaultCurvature);
@@ -118,51 +118,32 @@ export function createConnectionRouteRenderer(
           selectableByRouteId,
           selectionCleanupByRouteId,
         );
-        const fromPosition = positions.get(route.endpointZoneIds[0]);
-        const toPosition = positions.get(route.endpointZoneIds[1]);
-
-        if (fromPosition === undefined || toPosition === undefined) {
-          slot.root.visible = false;
-          slot.root.renderable = false;
-          slot.midpoint.visible = false;
-          continue;
-        }
-
         const resolvedStroke = resolveRouteStroke(route, visualConfigProvider);
         strokeByRouteId.set(route.zoneId, resolvedStroke);
-        const controlPoint = computeControlPoint(
-          fromPosition,
-          toPosition,
-          curvatureByRouteId.get(route.zoneId) ?? defaultCurvature,
-        );
-
-        drawRouteCurve(slot.curve, {
-          route,
-          fromPosition,
-          toPosition,
-          controlPoint,
-          stroke: resolvedStroke,
+        const routeGeometry = resolveRouteGeometry(route, {
+          curvature: curvatureByRouteId.get(route.zoneId) ?? defaultCurvature,
+          hitAreaPadding,
+          curveSegments,
           wavySegments,
+          stroke: resolvedStroke,
         });
 
-        const midpoint = quadraticBezierMidpoint(fromPosition, controlPoint, toPosition);
-        const tangent = quadraticBezierMidpointTangent(fromPosition, controlPoint, toPosition);
-        const labelRotation = resolveLabelRotation(Math.atan2(tangent.y, tangent.x));
-        const hitArea = new Polygon(flattenPoints(approximateBezierHitPolygon(
-          fromPosition,
-          controlPoint,
-          toPosition,
-          resolvedStroke.width / 2 + hitAreaPadding,
-          curveSegments,
-        )));
+        drawRouteCurve(slot.curve, routeGeometry);
 
         slot.root.visible = true;
         slot.root.renderable = true;
-        slot.root.hitArea = hitArea;
-        slot.midpoint.position.set(midpoint.x, midpoint.y);
+        slot.root.hitArea = routeGeometry.hitArea;
+        slot.midpoint.position.set(routeGeometry.midpoint.x, routeGeometry.midpoint.y);
         slot.midpoint.visible = true;
-        slot.midpoint.hitArea = translatePolygon(hitArea, -midpoint.x, -midpoint.y);
-        slot.labelCluster.rotation = labelRotation;
+        slot.midpoint.hitArea = translatePolygon(
+          routeGeometry.hitArea,
+          -routeGeometry.midpoint.x,
+          -routeGeometry.midpoint.y,
+        );
+        slot.labelCluster.rotation = resolveLabelRotation(Math.atan2(
+          routeGeometry.tangent.y,
+          routeGeometry.tangent.x,
+        ));
         slot.label.text = route.displayName;
         slot.label.visible = true;
         updateZoneMarkersLabel(slot.markersLabel, route.zone.render.markersLabel, {
@@ -308,6 +289,17 @@ interface ResolvedStroke {
   readonly waveFrequency: number;
 }
 
+interface RouteGeometry {
+  readonly drawMode: 'curve' | 'polyline';
+  readonly start: Position;
+  readonly controlPoint?: Position;
+  readonly points: readonly Position[];
+  readonly midpoint: Position;
+  readonly tangent: Position;
+  readonly hitArea: Polygon;
+  readonly stroke: ResolvedStroke;
+}
+
 function resolveRouteStroke(
   route: ConnectionRouteNode,
   visualConfigProvider: VisualConfigProvider,
@@ -351,64 +343,42 @@ function isDefaultZoneStroke(stroke: {
 
 function drawRouteCurve(
   graphics: Graphics,
-  options: {
-    readonly route: ConnectionRouteNode;
-    readonly fromPosition: Position;
-    readonly toPosition: Position;
-    readonly controlPoint: Position;
-    readonly stroke: ResolvedStroke;
-    readonly wavySegments: number;
-  },
+  geometry: RouteGeometry,
 ): void {
-  const { fromPosition, toPosition, controlPoint, stroke, wavySegments } = options;
+  const { drawMode, start, controlPoint, points, stroke } = geometry;
   graphics.clear();
 
-  if (!stroke.wavy) {
-    graphics
-      .moveTo(fromPosition.x, fromPosition.y)
-      .quadraticCurveTo(controlPoint.x, controlPoint.y, toPosition.x, toPosition.y)
-      .stroke({
-        color: stroke.color,
-        width: stroke.width,
-        alpha: stroke.alpha,
-      });
+  if (drawMode === 'curve' && controlPoint !== undefined) {
+    const end = points[1];
+    if (end === undefined) {
+      return;
+    }
+
+    if (!stroke.wavy) {
+      graphics
+        .moveTo(start.x, start.y)
+        .quadraticCurveTo(controlPoint.x, controlPoint.y, end.x, end.y)
+        .stroke({
+          color: stroke.color,
+          width: stroke.width,
+          alpha: stroke.alpha,
+        });
+      return;
+    }
+  }
+
+  const firstPoint = points[0];
+  if (firstPoint === undefined) {
     return;
   }
 
-  const segmentCount = Math.max(2, Math.trunc(wavySegments));
-  const chordLength = Math.hypot(toPosition.x - fromPosition.x, toPosition.y - fromPosition.y);
-  const waveCycles = Math.max(1, chordLength * stroke.waveFrequency);
-
-  for (let index = 0; index <= segmentCount; index += 1) {
-    const t = index / segmentCount;
-    const point = quadraticBezierPoint(t, fromPosition, controlPoint, toPosition);
-    const tangent = normalize({
-      x: toPosition.x - fromPosition.x,
-      y: toPosition.y - fromPosition.y,
-    });
-    const curveNormal = perpendicular(normalize(
-      index === segmentCount
-        ? {
-            x: toPosition.x - controlPoint.x,
-            y: toPosition.y - controlPoint.y,
-          }
-        : {
-            x: quadraticBezierPoint(Math.min(1, t + (1 / segmentCount)), fromPosition, controlPoint, toPosition).x - point.x,
-            y: quadraticBezierPoint(Math.min(1, t + (1 / segmentCount)), fromPosition, controlPoint, toPosition).y - point.y,
-          },
-    ));
-    const normal = curveNormal.x === 0 && curveNormal.y === 0 ? perpendicular(tangent) : curveNormal;
-    const offset = Math.sin(t * Math.PI * 2 * waveCycles) * stroke.waveAmplitude;
-    const displacedPoint = {
-      x: point.x + normal.x * offset,
-      y: point.y + normal.y * offset,
-    };
-
-    if (index === 0) {
-      graphics.moveTo(displacedPoint.x, displacedPoint.y);
+  graphics.moveTo(firstPoint.x, firstPoint.y);
+  for (let index = 1; index < points.length; index += 1) {
+    const point = points[index];
+    if (point === undefined) {
       continue;
     }
-    graphics.lineTo(displacedPoint.x, displacedPoint.y);
+    graphics.lineTo(point.x, point.y);
   }
 
   graphics.stroke({
@@ -418,6 +388,272 @@ function drawRouteCurve(
   });
 }
 
+function resolveRouteGeometry(
+  route: ConnectionRouteNode,
+  options: {
+    readonly curvature: number;
+    readonly hitAreaPadding: number;
+    readonly curveSegments: number;
+    readonly wavySegments: number;
+    readonly stroke: ResolvedStroke;
+  },
+): RouteGeometry {
+  const { curvature, hitAreaPadding, curveSegments, wavySegments, stroke } = options;
+  const routePoints = route.path.map((point) => point.position);
+
+  if (routePoints.length === 2) {
+    const fromPosition = routePoints[0];
+    const toPosition = routePoints[1];
+    if (fromPosition !== undefined && toPosition !== undefined) {
+      const controlPoint = computeControlPoint(fromPosition, toPosition, curvature);
+      const renderedPoints = stroke.wavy
+        ? sampleBezierWavePoints(fromPosition, controlPoint, toPosition, stroke, wavySegments)
+        : [fromPosition, toPosition];
+      const hitAreaPoints = stroke.wavy
+        ? approximatePolylineHitPolygon(renderedPoints, stroke.width / 2 + hitAreaPadding)
+        : approximateBezierHitPolygon(
+            fromPosition,
+            controlPoint,
+            toPosition,
+            stroke.width / 2 + hitAreaPadding,
+            curveSegments,
+          );
+
+      return {
+        drawMode: 'curve',
+        start: fromPosition,
+        controlPoint,
+        points: renderedPoints,
+        midpoint: quadraticBezierMidpoint(fromPosition, controlPoint, toPosition),
+        tangent: quadraticBezierMidpointTangent(fromPosition, controlPoint, toPosition),
+        hitArea: new Polygon(flattenPoints(hitAreaPoints)),
+        stroke,
+      };
+    }
+  }
+
+  const renderedPoints = stroke.wavy
+    ? samplePolylineWavePoints(routePoints, stroke, wavySegments)
+    : routePoints;
+  const midpointSample = resolvePolylinePointAtDistance(routePoints, getPolylineLength(routePoints) / 2);
+
+  return {
+    drawMode: 'polyline',
+    start: renderedPoints[0] ?? { x: 0, y: 0 },
+    points: renderedPoints,
+    midpoint: midpointSample.position,
+    tangent: midpointSample.tangent,
+    hitArea: new Polygon(flattenPoints(approximatePolylineHitPolygon(
+      renderedPoints,
+      stroke.width / 2 + hitAreaPadding,
+    ))),
+    stroke,
+  };
+}
+
+function sampleBezierWavePoints(
+  fromPosition: Position,
+  controlPoint: Position,
+  toPosition: Position,
+  stroke: ResolvedStroke,
+  wavySegments: number,
+): readonly Position[] {
+  const segmentCount = Math.max(2, Math.trunc(wavySegments));
+  const chordLength = Math.hypot(toPosition.x - fromPosition.x, toPosition.y - fromPosition.y);
+  const waveCycles = Math.max(1, chordLength * stroke.waveFrequency);
+  const displacedPoints: Position[] = [];
+
+  for (let index = 0; index <= segmentCount; index += 1) {
+    const t = index / segmentCount;
+    const point = quadraticBezierPoint(t, fromPosition, controlPoint, toPosition);
+    const tangent = normalize(
+      index === segmentCount
+        ? {
+            x: toPosition.x - controlPoint.x,
+            y: toPosition.y - controlPoint.y,
+          }
+        : {
+            x: quadraticBezierPoint(Math.min(1, t + (1 / segmentCount)), fromPosition, controlPoint, toPosition).x - point.x,
+            y: quadraticBezierPoint(Math.min(1, t + (1 / segmentCount)), fromPosition, controlPoint, toPosition).y - point.y,
+          },
+    );
+    const normal = perpendicular(tangent);
+    const offset = Math.sin(t * Math.PI * 2 * waveCycles) * stroke.waveAmplitude;
+    displacedPoints.push({
+      x: point.x + normal.x * offset,
+      y: point.y + normal.y * offset,
+    });
+  }
+
+  return displacedPoints;
+}
+
+function samplePolylineWavePoints(
+  points: readonly Position[],
+  stroke: ResolvedStroke,
+  wavySegments: number,
+): readonly Position[] {
+  const totalLength = getPolylineLength(points);
+  if (totalLength === 0) {
+    return [...points];
+  }
+
+  const segmentCount = Math.max(2, Math.trunc(wavySegments));
+  const waveCycles = Math.max(1, totalLength * stroke.waveFrequency);
+  const displacedPoints: Position[] = [];
+
+  for (let index = 0; index <= segmentCount; index += 1) {
+    const distance = totalLength * (index / segmentCount);
+    const sample = resolvePolylinePointAtDistance(points, distance);
+    const normal = perpendicular(normalize(sample.tangent));
+    const offset = Math.sin((distance / totalLength) * Math.PI * 2 * waveCycles) * stroke.waveAmplitude;
+    displacedPoints.push({
+      x: sample.position.x + normal.x * offset,
+      y: sample.position.y + normal.y * offset,
+    });
+  }
+
+  return displacedPoints;
+}
+
+function getPolylineLength(points: readonly Position[]): number {
+  let totalLength = 0;
+  for (let index = 1; index < points.length; index += 1) {
+    const previous = points[index - 1];
+    const current = points[index];
+    if (previous === undefined || current === undefined) {
+      continue;
+    }
+    totalLength += Math.hypot(current.x - previous.x, current.y - previous.y);
+  }
+  return totalLength;
+}
+
+function resolvePolylinePointAtDistance(
+  points: readonly Position[],
+  distance: number,
+): { position: Position; tangent: Position } {
+  if (points.length === 0) {
+    return {
+      position: { x: 0, y: 0 },
+      tangent: { x: 1, y: 0 },
+    };
+  }
+
+  if (points.length === 1) {
+    return {
+      position: points[0] ?? { x: 0, y: 0 },
+      tangent: { x: 1, y: 0 },
+    };
+  }
+
+  let traversed = 0;
+  for (let index = 1; index < points.length; index += 1) {
+    const start = points[index - 1];
+    const end = points[index];
+    if (start === undefined || end === undefined) {
+      continue;
+    }
+
+    const segmentLength = Math.hypot(end.x - start.x, end.y - start.y);
+    if (segmentLength === 0) {
+      continue;
+    }
+
+    if (distance <= traversed + segmentLength || index === points.length - 1) {
+      const clampedDistance = Math.min(Math.max(distance - traversed, 0), segmentLength);
+      const t = clampedDistance / segmentLength;
+      return {
+        position: {
+          x: start.x + ((end.x - start.x) * t),
+          y: start.y + ((end.y - start.y) * t),
+        },
+        tangent: {
+          x: end.x - start.x,
+          y: end.y - start.y,
+        },
+      };
+    }
+
+    traversed += segmentLength;
+  }
+
+  const fallbackStart = points[points.length - 2] ?? points[0] ?? { x: 0, y: 0 };
+  const fallbackEnd = points[points.length - 1] ?? fallbackStart;
+  return {
+    position: fallbackEnd,
+    tangent: {
+      x: fallbackEnd.x - fallbackStart.x,
+      y: fallbackEnd.y - fallbackStart.y,
+    },
+  };
+}
+
+function approximatePolylineHitPolygon(
+  points: readonly Position[],
+  halfWidth: number,
+): readonly Position[] {
+  if (points.length === 0) {
+    return [];
+  }
+
+  const leftSide: Position[] = [];
+  const rightSide: Position[] = [];
+
+  for (let index = 0; index < points.length; index += 1) {
+    const point = points[index];
+    if (point === undefined) {
+      continue;
+    }
+    const normal = resolvePolylineNormal(points, index);
+    leftSide.push({
+      x: point.x + normal.x * halfWidth,
+      y: point.y + normal.y * halfWidth,
+    });
+    rightSide.push({
+      x: point.x - normal.x * halfWidth,
+      y: point.y - normal.y * halfWidth,
+    });
+  }
+
+  rightSide.reverse();
+  return [...leftSide, ...rightSide];
+}
+
+function resolvePolylineNormal(points: readonly Position[], index: number): Position {
+  const current = points[index];
+  if (current === undefined) {
+    return { x: 0, y: 1 };
+  }
+
+  const previous = index > 0 ? points[index - 1] : undefined;
+  const next = index < points.length - 1 ? points[index + 1] : undefined;
+  const previousNormal = previous === undefined
+    ? null
+    : perpendicular(normalize({
+        x: current.x - previous.x,
+        y: current.y - previous.y,
+      }));
+  const nextNormal = next === undefined
+    ? null
+    : perpendicular(normalize({
+        x: next.x - current.x,
+        y: next.y - current.y,
+      }));
+
+  if (previousNormal !== null && nextNormal !== null) {
+    const averaged = normalize({
+      x: previousNormal.x + nextNormal.x,
+      y: previousNormal.y + nextNormal.y,
+    });
+    if (averaged.x !== 0 || averaged.y !== 0) {
+      return averaged;
+    }
+  }
+
+  return nextNormal ?? previousNormal ?? { x: 0, y: 1 };
+}
+
 function resolveCurvatureByRouteId(
   routes: readonly ConnectionRouteNode[],
   defaultCurvature: number,
@@ -425,7 +661,13 @@ function resolveCurvatureByRouteId(
   const routeIdsByEndpointPair = new Map<string, string[]>();
 
   for (const route of routes) {
-    const pairKey = route.endpointZoneIds.join('::');
+    if (route.path.length !== 2) {
+      continue;
+    }
+
+    const pairKey = route.path
+      .map((point) => `${point.kind}:${point.id}`)
+      .join('::');
     const routeIds = routeIdsByEndpointPair.get(pairKey) ?? [];
     routeIds.push(route.zoneId);
     routeIdsByEndpointPair.set(pairKey, routeIds);

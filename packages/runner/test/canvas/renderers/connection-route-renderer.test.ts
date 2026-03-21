@@ -227,7 +227,10 @@ function makeRoute(overrides: Partial<ConnectionRouteNode> = {}): ConnectionRout
   return {
     zoneId: zone.id,
     displayName: zone.displayName,
-    endpointZoneIds: ['alpha:none', 'beta:none'],
+    path: [
+      { kind: 'zone', id: 'alpha:none', position: { x: 0, y: 0 } },
+      { kind: 'anchor', id: 'beta-anchor', position: { x: 200, y: 0 } },
+    ],
     touchingZoneIds: [],
     connectedConnectionIds: [],
     connectionStyleKey: 'highway',
@@ -451,18 +454,48 @@ describe('createConnectionRouteRenderer', () => {
     expect(routeCurve.strokeStyle).toEqual({ color: 0x60a5fa, width: 3, alpha: 1 });
   });
 
-  it('hides routes with missing endpoint positions and destroys all children on destroy', () => {
+  it('renders explicit multi-point routes as deterministic polylines', () => {
+    const parent = new MockContainer();
+    const renderer = createConnectionRouteRenderer(parent as unknown as Container, new VisualConfigProvider(null));
+
+    renderer.update(
+      [makeRoute({
+        path: [
+          { kind: 'zone', id: 'alpha:none', position: { x: 0, y: 0 } },
+          { kind: 'anchor', id: 'an-loc', position: { x: 100, y: -20 } },
+          { kind: 'anchor', id: 'ban-me-thuot', position: { x: 220, y: -10 } },
+        ],
+      })],
+      [],
+      new Map(),
+    );
+
+    const routeRoot = parent.children[0] as InstanceType<typeof MockContainer>;
+    const routeCurve = routeRoot.children[0] as InstanceType<typeof MockGraphics>;
+    const midpoint = renderer.getContainerMap().get('loc-alpha-beta:none') as unknown as InstanceType<typeof MockContainer>;
+
+    expect(routeCurve.quadraticCurveToArgs).toBeNull();
+    expect(routeCurve.lineToArgs).toEqual([
+      [100, -20],
+      [220, -10],
+    ]);
+    expect(routeRoot.hitArea).toBeInstanceOf(MockPolygon);
+    expect(midpoint.position.x).toBeGreaterThan(100);
+    expect(midpoint.position.x).toBeLessThan(220);
+  });
+
+  it('renders from embedded route geometry without consulting the positions map and destroys all children on destroy', () => {
     const parent = new MockContainer();
     const renderer = createConnectionRouteRenderer(parent as unknown as Container, new VisualConfigProvider(null));
 
     renderer.update(
       [makeRoute({ connectionStyleKey: null })],
       [] satisfies readonly JunctionNode[],
-      new Map([['alpha:none', { x: 0, y: 0 }]]),
+      new Map(),
     );
 
     const routeRoot = parent.children[0] as InstanceType<typeof MockContainer>;
-    expect(routeRoot.visible).toBe(false);
+    expect(routeRoot.visible).toBe(true);
     expect(renderer.getContainerMap().has('loc-alpha-beta:none')).toBe(true);
 
     renderer.destroy();

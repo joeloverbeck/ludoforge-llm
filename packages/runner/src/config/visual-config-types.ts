@@ -104,7 +104,28 @@ const ConnectionStyleConfigSchema = z.object({
   waveFrequency: z.number().optional(),
 });
 
-const ConnectionEndpointPairSchema = z.tuple([z.string(), z.string()]);
+const ConnectionAnchorConfigSchema = z.object({
+  x: z.number(),
+  y: z.number(),
+});
+
+const ZoneConnectionEndpointSchema = z.object({
+  kind: z.literal('zone'),
+  zoneId: z.string(),
+});
+
+const AnchorConnectionEndpointSchema = z.object({
+  kind: z.literal('anchor'),
+  anchorId: z.string(),
+});
+
+const ConnectionEndpointSchema = z.discriminatedUnion('kind', [
+  ZoneConnectionEndpointSchema,
+  AnchorConnectionEndpointSchema,
+]);
+
+const ConnectionEndpointPairSchema = z.tuple([ConnectionEndpointSchema, ConnectionEndpointSchema]);
+const ConnectionPathSchema = z.array(ConnectionEndpointSchema).min(2);
 
 const ZoneVisualOverrideSchema = ZoneVisualStyleSchema.extend({
   label: z.string().optional(),
@@ -247,7 +268,9 @@ const ZoneTokenLayoutsSchema = z.object({
 const ZonesConfigSchema = z.object({
   categoryStyles: z.record(z.string(), ZoneVisualStyleSchema).optional(),
   connectionStyles: z.record(z.string(), ConnectionStyleConfigSchema).optional(),
+  connectionAnchors: z.record(z.string(), ConnectionAnchorConfigSchema).optional(),
   connectionEndpoints: z.record(z.string(), ConnectionEndpointPairSchema).optional(),
+  connectionPaths: z.record(z.string(), ConnectionPathSchema).optional(),
   attributeRules: z.array(AttributeRuleSchema).optional(),
   overrides: z.record(z.string(), ZoneVisualOverrideSchema).optional(),
   layoutRoles: z.record(z.string(), LayoutRoleSchema).optional(),
@@ -540,7 +563,12 @@ export type FactionVisualConfig = z.infer<typeof FactionVisualConfigSchema>;
 export type ZoneVisualStyle = z.infer<typeof ZoneVisualStyleSchema>;
 export type ZoneVisualOverride = z.infer<typeof ZoneVisualOverrideSchema>;
 export type ConnectionStyleConfig = z.infer<typeof ConnectionStyleConfigSchema>;
+export type ConnectionAnchorConfig = z.infer<typeof ConnectionAnchorConfigSchema>;
+export type ZoneConnectionEndpoint = z.infer<typeof ZoneConnectionEndpointSchema>;
+export type AnchorConnectionEndpoint = z.infer<typeof AnchorConnectionEndpointSchema>;
+export type ConnectionEndpoint = z.infer<typeof ConnectionEndpointSchema>;
 export type ConnectionEndpointPair = z.infer<typeof ConnectionEndpointPairSchema>;
+export type ConnectionPath = z.infer<typeof ConnectionPathSchema>;
 export type AttributeRuleMatch = z.infer<typeof AttributeRuleMatchSchema>;
 export type AttributeRule = z.infer<typeof AttributeRuleSchema>;
 export type MarkerBadgeColorEntry = z.infer<typeof MarkerBadgeColorEntrySchema>;

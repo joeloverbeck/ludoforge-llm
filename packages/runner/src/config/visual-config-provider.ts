@@ -3,6 +3,7 @@ import {
   STROKE_LABEL_FONT_NAME,
   type BitmapFontName,
 } from '../canvas/text/bitmap-font-registry.js';
+import type { Position } from '../spatial/position-types.js';
 import {
   computeDefaultFactionColor,
   DEFAULT_TOKEN_SHAPE,
@@ -44,8 +45,10 @@ import type {
   VisualConfig,
   RunnerChromeTopBarStatusAlignment,
   ZoneTokenLayout,
+  ConnectionAnchorConfig,
   ConnectionStyleConfig,
   ConnectionEndpointPair,
+  ConnectionPath,
 } from './visual-config-types.js';
 
 export interface ResolvedZoneVisual {
@@ -180,6 +183,26 @@ export class VisualConfigProvider {
     }
     return new Map(
       Object.entries(configured).map(([zoneId, endpoints]) => [zoneId, [endpoints[0], endpoints[1]] as const]),
+    );
+  }
+
+  getConnectionPaths(): ReadonlyMap<string, ConnectionPath> {
+    const configured = this.config?.zones?.connectionPaths;
+    if (configured === undefined) {
+      return EMPTY_CONNECTION_PATHS;
+    }
+    return new Map(
+      Object.entries(configured).map(([zoneId, points]) => [zoneId, [...points]]),
+    );
+  }
+
+  getConnectionAnchors(): ReadonlyMap<string, Position> {
+    const configured = this.config?.zones?.connectionAnchors;
+    if (configured === undefined) {
+      return EMPTY_CONNECTION_ANCHORS;
+    }
+    return new Map(
+      Object.entries(configured).map(([anchorId, anchor]) => [anchorId, normalizeConnectionAnchor(anchor)]),
     );
   }
 
@@ -478,6 +501,8 @@ export class VisualConfigProvider {
 
 const EMPTY_STRING_SET: ReadonlySet<string> = Object.freeze(new Set<string>());
 const EMPTY_CONNECTION_ENDPOINTS: ReadonlyMap<string, ConnectionEndpointPair> = Object.freeze(new Map());
+const EMPTY_CONNECTION_PATHS: ReadonlyMap<string, ConnectionPath> = Object.freeze(new Map());
+const EMPTY_CONNECTION_ANCHORS: ReadonlyMap<string, Position> = Object.freeze(new Map());
 const DEFAULT_STACK_BADGE_STYLE: ResolvedStackBadgeStyle = Object.freeze({
   fontName: STROKE_LABEL_FONT_NAME,
   fontSize: 10,
@@ -636,6 +661,13 @@ function normalizeStackBadgeStyle(style: StackBadgeStyle | undefined): ResolvedS
     anchorY: style.anchorY,
     offsetX: style.offsetX,
     offsetY: style.offsetY,
+  };
+}
+
+function normalizeConnectionAnchor(anchor: ConnectionAnchorConfig): Position {
+  return {
+    x: anchor.x,
+    y: anchor.y,
   };
 }
 

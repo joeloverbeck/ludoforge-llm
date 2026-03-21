@@ -16,24 +16,94 @@ import {
 } from '../../src/config/validate-visual-config-refs';
 import { resolveConnectionRoutes } from '../../src/presentation/connection-route-resolver';
 
+const EXPECTED_FITL_CONNECTION_ANCHORS = {
+  'an-loc': { x: 420, y: 250 },
+  'ban-me-thuot': { x: 560, y: 220 },
+  'bac-lieu': { x: 360, y: 520 },
+  'chau-doc': { x: 200, y: 420 },
+  'da-lat': { x: 640, y: 360 },
+  'dak-to': { x: 520, y: 60 },
+  'khe-sanh': { x: 360, y: 20 },
+  'long-phu': { x: 420, y: 460 },
+} as const;
+
 const EXPECTED_FITL_CONNECTION_ENDPOINTS = {
-  'loc-ban-me-thuot-da-lat:none': ['pleiku-darlac:none', 'quang-duc-long-khanh:none'],
-  'loc-cam-ranh-da-lat:none': ['cam-ranh:none', 'quang-duc-long-khanh:none'],
-  'loc-can-tho-bac-lieu:none': ['ba-xuyen:none', 'can-tho:none'],
-  'loc-can-tho-chau-doc:none': ['can-tho:none', 'the-parrots-beak:none'],
-  'loc-can-tho-long-phu:none': ['can-tho:none', 'kien-hoa-vinh-binh:none'],
-  'loc-da-nang-dak-to:none': ['da-nang:none', 'southern-laos:none'],
-  'loc-da-nang-qui-nhon:none': ['da-nang:none', 'qui-nhon:none'],
-  'loc-hue-da-nang:none': ['da-nang:none', 'hue:none'],
-  'loc-hue-khe-sanh:none': ['central-laos:none', 'hue:none'],
-  'loc-kontum-ban-me-thuot:none': ['kontum:none', 'pleiku-darlac:none'],
-  'loc-kontum-dak-to:none': ['kontum:none', 'southern-laos:none'],
-  'loc-kontum-qui-nhon:none': ['kontum:none', 'qui-nhon:none'],
-  'loc-qui-nhon-cam-ranh:none': ['cam-ranh:none', 'qui-nhon:none'],
-  'loc-saigon-an-loc-ban-me-thuot:none': ['an-loc:none', 'saigon:none'],
-  'loc-saigon-cam-ranh:none': ['cam-ranh:none', 'saigon:none'],
-  'loc-saigon-can-tho:none': ['can-tho:none', 'saigon:none'],
-  'loc-saigon-da-lat:none': ['quang-duc-long-khanh:none', 'saigon:none'],
+  'loc-ban-me-thuot-da-lat:none': [
+    { kind: 'anchor', anchorId: 'ban-me-thuot' },
+    { kind: 'anchor', anchorId: 'da-lat' },
+  ],
+  'loc-cam-ranh-da-lat:none': [
+    { kind: 'zone', zoneId: 'cam-ranh:none' },
+    { kind: 'anchor', anchorId: 'da-lat' },
+  ],
+  'loc-can-tho-bac-lieu:none': [
+    { kind: 'zone', zoneId: 'can-tho:none' },
+    { kind: 'anchor', anchorId: 'bac-lieu' },
+  ],
+  'loc-can-tho-chau-doc:none': [
+    { kind: 'zone', zoneId: 'can-tho:none' },
+    { kind: 'anchor', anchorId: 'chau-doc' },
+  ],
+  'loc-can-tho-long-phu:none': [
+    { kind: 'zone', zoneId: 'can-tho:none' },
+    { kind: 'anchor', anchorId: 'long-phu' },
+  ],
+  'loc-da-nang-dak-to:none': [
+    { kind: 'zone', zoneId: 'da-nang:none' },
+    { kind: 'anchor', anchorId: 'dak-to' },
+  ],
+  'loc-da-nang-qui-nhon:none': [
+    { kind: 'zone', zoneId: 'da-nang:none' },
+    { kind: 'zone', zoneId: 'qui-nhon:none' },
+  ],
+  'loc-hue-da-nang:none': [
+    { kind: 'zone', zoneId: 'da-nang:none' },
+    { kind: 'zone', zoneId: 'hue:none' },
+  ],
+  'loc-hue-khe-sanh:none': [
+    { kind: 'zone', zoneId: 'hue:none' },
+    { kind: 'anchor', anchorId: 'khe-sanh' },
+  ],
+  'loc-kontum-ban-me-thuot:none': [
+    { kind: 'zone', zoneId: 'kontum:none' },
+    { kind: 'anchor', anchorId: 'ban-me-thuot' },
+  ],
+  'loc-kontum-dak-to:none': [
+    { kind: 'zone', zoneId: 'kontum:none' },
+    { kind: 'anchor', anchorId: 'dak-to' },
+  ],
+  'loc-kontum-qui-nhon:none': [
+    { kind: 'zone', zoneId: 'kontum:none' },
+    { kind: 'zone', zoneId: 'qui-nhon:none' },
+  ],
+  'loc-qui-nhon-cam-ranh:none': [
+    { kind: 'zone', zoneId: 'cam-ranh:none' },
+    { kind: 'zone', zoneId: 'qui-nhon:none' },
+  ],
+  'loc-saigon-an-loc-ban-me-thuot:none': [
+    { kind: 'zone', zoneId: 'saigon:none' },
+    { kind: 'anchor', anchorId: 'ban-me-thuot' },
+  ],
+  'loc-saigon-cam-ranh:none': [
+    { kind: 'zone', zoneId: 'cam-ranh:none' },
+    { kind: 'zone', zoneId: 'saigon:none' },
+  ],
+  'loc-saigon-can-tho:none': [
+    { kind: 'zone', zoneId: 'can-tho:none' },
+    { kind: 'zone', zoneId: 'saigon:none' },
+  ],
+  'loc-saigon-da-lat:none': [
+    { kind: 'zone', zoneId: 'saigon:none' },
+    { kind: 'anchor', anchorId: 'da-lat' },
+  ],
+} as const;
+
+const EXPECTED_FITL_CONNECTION_PATHS = {
+  'loc-saigon-an-loc-ban-me-thuot:none': [
+    { kind: 'zone', zoneId: 'saigon:none' },
+    { kind: 'anchor', anchorId: 'an-loc' },
+    { kind: 'anchor', anchorId: 'ban-me-thuot' },
+  ],
 } as const;
 
 function repoRootPath(): string {
@@ -225,12 +295,20 @@ describe('visual-config.yaml files', () => {
       },
     });
     expect(parsed.zones?.connectionEndpoints).toEqual(EXPECTED_FITL_CONNECTION_ENDPOINTS);
+    expect(parsed.zones?.connectionAnchors).toEqual(EXPECTED_FITL_CONNECTION_ANCHORS);
+    expect(parsed.zones?.connectionPaths).toEqual(EXPECTED_FITL_CONNECTION_PATHS);
 
     const fitlBoardZones = fitlGameDef.zones.filter((zone) => zone.zoneKind === 'board' && zone.isInternal !== true);
     const fitlLocZones = fitlBoardZones.filter((zone) => zone.category === 'loc');
     expect(fitlLocZones).toHaveLength(17);
+    expect(provider.getConnectionAnchors()).toEqual(
+      new Map(Object.entries(EXPECTED_FITL_CONNECTION_ANCHORS)),
+    );
     expect(provider.getConnectionEndpoints()).toEqual(
       new Map(Object.entries(EXPECTED_FITL_CONNECTION_ENDPOINTS)),
+    );
+    expect(provider.getConnectionPaths()).toEqual(
+      new Map(Object.entries(EXPECTED_FITL_CONNECTION_PATHS)),
     );
     for (const zone of fitlLocZones) {
       const visual = provider.resolveZoneVisual(String(zone.id), zone.category ?? null, zone.attributes ?? {});
@@ -277,12 +355,21 @@ describe('visual-config.yaml files', () => {
       zones,
       adjacencies,
       positions,
-      endpointOverrides: provider.getConnectionEndpoints(),
+      endpointDefinitions: provider.getConnectionEndpoints(),
+      pathDefinitions: provider.getConnectionPaths(),
+      anchorPositions: provider.getConnectionAnchors(),
     });
     expect(resolution.connectionRoutes).toHaveLength(17);
     expect(Object.fromEntries(
-      resolution.connectionRoutes.map((route) => [route.zoneId, route.endpointZoneIds]),
-    )).toEqual(EXPECTED_FITL_CONNECTION_ENDPOINTS);
+      resolution.connectionRoutes.map((route) => [route.zoneId, route.path.map((point) => (
+        point.kind === 'zone'
+          ? { kind: 'zone', zoneId: point.id }
+          : { kind: 'anchor', anchorId: point.id }
+      ))]),
+    )).toEqual({
+      ...EXPECTED_FITL_CONNECTION_ENDPOINTS,
+      ...EXPECTED_FITL_CONNECTION_PATHS,
+    });
 
     expect(parsed.tokenTypes?.['us-irregulars']?.shape).toBe('beveled-cylinder');
     expect(parsed.tokenTypes?.['arvn-rangers']?.shape).toBe('beveled-cylinder');

@@ -1,13 +1,20 @@
 import type { Position } from '../canvas/geometry.js';
+import type { ConnectionEndpointPair, ConnectionPath } from '../config/visual-config-types.js';
 import type {
   PresentationAdjacencyNode,
   PresentationZoneNode,
 } from './presentation-scene.js';
 
+export interface ResolvedConnectionPoint {
+  readonly kind: 'zone' | 'anchor';
+  readonly id: string;
+  readonly position: Position;
+}
+
 export interface ConnectionRouteNode {
   readonly zoneId: string;
   readonly displayName: string;
-  readonly endpointZoneIds: readonly [string, string];
+  readonly path: readonly ResolvedConnectionPoint[];
   readonly touchingZoneIds: readonly string[];
   readonly connectedConnectionIds: readonly string[];
   readonly connectionStyleKey: string | null;
@@ -31,13 +38,15 @@ export interface ResolveConnectionRoutesOptions {
   readonly zones: readonly PresentationZoneNode[];
   readonly adjacencies: readonly PresentationAdjacencyNode[];
   readonly positions: ReadonlyMap<string, Position>;
-  readonly endpointOverrides?: ReadonlyMap<string, readonly [string, string]>;
+  readonly endpointDefinitions?: ReadonlyMap<string, ConnectionEndpointPair>;
+  readonly pathDefinitions?: ReadonlyMap<string, ConnectionPath>;
+  readonly anchorPositions?: ReadonlyMap<string, Position>;
 }
 
 export function resolveConnectionRoutes(
   options: ResolveConnectionRoutesOptions,
 ): ConnectionRouteResolution {
-  const { zones, adjacencies, positions, endpointOverrides } = options;
+  const { zones, adjacencies, positions, endpointDefinitions, pathDefinitions, anchorPositions } = options;
   const zoneById = new Map(zones.map((zone) => [zone.id, zone]));
   const connectionZoneIds = new Set(
     zones
@@ -57,27 +66,33 @@ export function resolveConnectionRoutes(
     const connectedConnectionIds = neighbors
       .filter((neighborId) => connectionZoneIds.has(neighborId))
       .sort(compareStrings);
-    const endpointZoneIds = resolveEndpointZoneIds(
+    const path = resolveRoutePath(
       zone.id,
       nonConnectionNeighbors,
       connectionZoneIds,
-      endpointOverrides,
+      endpointDefinitions,
+      pathDefinitions,
+      anchorPositions,
+      positions,
       zoneById,
     );
 
-    if (endpointZoneIds === null) {
+    if (path === null) {
       continue;
     }
 
-    const endpointSet = new Set(endpointZoneIds);
+    const pathZoneIds = path
+      .filter((point): point is ResolvedConnectionPoint & { kind: 'zone' } => point.kind === 'zone')
+      .map((point) => point.id);
+    const pathZoneIdSet = new Set(pathZoneIds);
     const touchingZoneIds = nonConnectionNeighbors
-      .filter((neighborId) => !endpointSet.has(neighborId))
+      .filter((neighborId) => !pathZoneIdSet.has(neighborId))
       .sort(compareStrings);
 
     resolvedRoutes.push({
       zoneId: zone.id,
       displayName: zone.displayName,
-      endpointZoneIds,
+      path,
       touchingZoneIds,
       connectedConnectionIds,
       connectionStyleKey: zone.visual.connectionStyleKey,
@@ -118,88 +133,187 @@ function addNeighbor(index: Map<string, Set<string>>, from: string, to: string):
   neighbors.add(to);
 }
 
-function resolveEndpointZoneIds(
+function resolveRoutePath(
   zoneId: string,
   nonConnectionNeighbors: readonly string[],
   connectionZoneIds: ReadonlySet<string>,
-  endpointOverrides: ReadonlyMap<string, readonly [string, string]> | undefined,
+  endpointDefinitions: ReadonlyMap<string, ConnectionEndpointPair> | undefined,
+  pathDefinitions: ReadonlyMap<string, ConnectionPath> | undefined,
+  anchorPositions: ReadonlyMap<string, Position> | undefined,
+  positions: ReadonlyMap<string, Position>,
   zoneById: ReadonlyMap<string, PresentationZoneNode>,
-): readonly [string, string] | null {
-  const override = endpointOverrides?.get(zoneId);
-  if (override !== undefined) {
-    return validateEndpointPair(override, nonConnectionNeighbors, connectionZoneIds, zoneById);
+): readonly ResolvedConnectionPoint[] | null {
+  const explicitPath = pathDefinitions?.get(zoneId);
+  if (explicitPath !== undefined) {
+    return validateConnectionPath(explicitPath, zoneById, positions, anchorPositions);
   }
 
-  if (nonConnectionNeighbors.length === 2) {
-    const left = nonConnectionNeighbors[0];
-    const right = nonConnectionNeighbors[1];
-    if (left === undefined || right === undefined) {
-      return null;
-    }
-    return sortPair(left, right);
+  const definition = endpointDefinitions?.get(zoneId);
+  if (definition !== undefined) {
+    return validateEndpointDefinition(
+      definition,
+      nonConnectionNeighbors,
+      connectionZoneIds,
+      zoneById,
+      positions,
+      anchorPositions,
+    );
   }
 
-  const parsedMatch = resolveEndpointsByZoneIdParsing(zoneId, nonConnectionNeighbors);
-  if (parsedMatch !== null) {
-    return parsedMatch;
-  }
-
-  return null;
-}
-
-function validateEndpointPair(
-  endpoints: readonly [string, string],
-  nonConnectionNeighbors: readonly string[],
-  connectionZoneIds: ReadonlySet<string>,
-  zoneById: ReadonlyMap<string, PresentationZoneNode>,
-): readonly [string, string] | null {
-  const [left, right] = endpoints;
-  if (left === right) {
-    return null;
-  }
-  const neighborSet = new Set(nonConnectionNeighbors);
-  if (!neighborSet.has(left) || !neighborSet.has(right)) {
-    return null;
-  }
-  if (connectionZoneIds.has(left) || connectionZoneIds.has(right)) {
-    return null;
-  }
-  if (!zoneById.has(left) || !zoneById.has(right)) {
-    return null;
-  }
-  return [left, right];
-}
-
-function resolveEndpointsByZoneIdParsing(
-  zoneId: string,
-  nonConnectionNeighbors: readonly string[],
-): readonly [string, string] | null {
-  const normalizedZoneId = normalizeZoneId(zoneId);
-  const matches = nonConnectionNeighbors.filter((neighborId) => {
-    const normalizedNeighborId = normalizeZoneId(neighborId);
-    return new RegExp(`(^|-)${escapeRegExp(normalizedNeighborId)}(-|$)`).test(normalizedZoneId);
-  });
-
-  if (matches.length !== 2) {
+  if (nonConnectionNeighbors.length !== 2) {
     return null;
   }
 
-  const left = matches[0];
-  const right = matches[1];
+  const left = nonConnectionNeighbors[0];
+  const right = nonConnectionNeighbors[1];
   if (left === undefined || right === undefined) {
     return null;
   }
-  return sortPair(left, right);
+
+  return resolveZoneEndpoints(sortPair(left, right), positions);
 }
 
-function normalizeZoneId(zoneId: string): string {
-  return zoneId
-    .replace(/:[^:]+$/, '')
-    .toLowerCase();
+function validateEndpointDefinition(
+  endpoints: ConnectionEndpointPair,
+  nonConnectionNeighbors: readonly string[],
+  connectionZoneIds: ReadonlySet<string>,
+  zoneById: ReadonlyMap<string, PresentationZoneNode>,
+  positions: ReadonlyMap<string, Position>,
+  anchorPositions: ReadonlyMap<string, Position> | undefined,
+): readonly [ResolvedConnectionPoint, ResolvedConnectionPoint] | null {
+  const [left, right] = endpoints;
+  const leftResolved = resolveConfiguredEndpoint(
+    left,
+    nonConnectionNeighbors,
+    connectionZoneIds,
+    zoneById,
+    positions,
+    anchorPositions,
+  );
+  const rightResolved = resolveConfiguredEndpoint(
+    right,
+    nonConnectionNeighbors,
+    connectionZoneIds,
+    zoneById,
+    positions,
+    anchorPositions,
+  );
+
+  if (leftResolved === null || rightResolved === null) {
+    return null;
+  }
+  if (leftResolved.kind === rightResolved.kind && leftResolved.id === rightResolved.id) {
+    return null;
+  }
+
+  return [leftResolved, rightResolved];
 }
 
-function escapeRegExp(input: string): string {
-  return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+function resolveConfiguredEndpoint(
+  endpoint: ConnectionEndpointPair[number],
+  nonConnectionNeighbors: readonly string[],
+  connectionZoneIds: ReadonlySet<string>,
+  zoneById: ReadonlyMap<string, PresentationZoneNode>,
+  positions: ReadonlyMap<string, Position>,
+  anchorPositions: ReadonlyMap<string, Position> | undefined,
+): ResolvedConnectionPoint | null {
+  if (endpoint.kind === 'zone') {
+    const neighborSet = new Set(nonConnectionNeighbors);
+    if (!neighborSet.has(endpoint.zoneId) || connectionZoneIds.has(endpoint.zoneId) || !zoneById.has(endpoint.zoneId)) {
+      return null;
+    }
+
+    const position = positions.get(endpoint.zoneId);
+    if (position === undefined) {
+      return null;
+    }
+
+    return {
+      kind: 'zone',
+      id: endpoint.zoneId,
+      position,
+    };
+  }
+
+  const position = anchorPositions?.get(endpoint.anchorId);
+  if (position === undefined) {
+    return null;
+  }
+  return {
+    kind: 'anchor',
+    id: endpoint.anchorId,
+    position,
+  };
+}
+
+function resolveZoneEndpoints(
+  endpointZoneIds: readonly [string, string],
+  positions: ReadonlyMap<string, Position>,
+): readonly [ResolvedConnectionPoint, ResolvedConnectionPoint] | null {
+  const [left, right] = endpointZoneIds;
+  const leftPosition = positions.get(left);
+  const rightPosition = positions.get(right);
+  if (leftPosition === undefined || rightPosition === undefined) {
+    return null;
+  }
+  return [
+    { kind: 'zone', id: left, position: leftPosition },
+    { kind: 'zone', id: right, position: rightPosition },
+  ];
+}
+
+function validateConnectionPath(
+  path: ConnectionPath,
+  zoneById: ReadonlyMap<string, PresentationZoneNode>,
+  positions: ReadonlyMap<string, Position>,
+  anchorPositions: ReadonlyMap<string, Position> | undefined,
+): readonly ResolvedConnectionPoint[] | null {
+  const resolvedPath: ResolvedConnectionPoint[] = [];
+
+  for (const point of path) {
+    const resolvedPoint = resolvePathPoint(point, zoneById, positions, anchorPositions);
+    if (resolvedPoint === null) {
+      return null;
+    }
+    resolvedPath.push(resolvedPoint);
+  }
+
+  return resolvedPath.length >= 2 ? resolvedPath : null;
+}
+
+function resolvePathPoint(
+  point: ConnectionPath[number],
+  zoneById: ReadonlyMap<string, PresentationZoneNode>,
+  positions: ReadonlyMap<string, Position>,
+  anchorPositions: ReadonlyMap<string, Position> | undefined,
+): ResolvedConnectionPoint | null {
+  if (point.kind === 'zone') {
+    if (!zoneById.has(point.zoneId)) {
+      return null;
+    }
+
+    const position = positions.get(point.zoneId);
+    if (position === undefined) {
+      return null;
+    }
+
+    return {
+      kind: 'zone',
+      id: point.zoneId,
+      position,
+    };
+  }
+
+  const position = anchorPositions?.get(point.anchorId);
+  if (position === undefined) {
+    return null;
+  }
+
+  return {
+    kind: 'anchor',
+    id: point.anchorId,
+    position,
+  };
 }
 
 function resolveJunctions(
@@ -228,7 +342,6 @@ function resolveJunctions(
       if (leftPosition === undefined || rightPosition === undefined) {
         continue;
       }
-
       if (!routeById.has(pair[0]) || !routeById.has(pair[1])) {
         continue;
       }

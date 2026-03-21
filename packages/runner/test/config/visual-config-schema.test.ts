@@ -361,12 +361,15 @@ describe('VisualConfigSchema', () => {
     expect(result.success).toBe(true);
   });
 
-  it('accepts connection as a valid zone shape and parses connection styles/endpoints', () => {
+  it('accepts connection as a valid zone shape and parses connection anchors/styles/endpoints/paths', () => {
     const result = VisualConfigSchema.safeParse({
       version: 1,
       zones: {
         categoryStyles: {
           loc: { shape: 'connection', connectionStyleKey: 'highway' },
+        },
+        connectionAnchors: {
+          'khe-sanh': { x: 120, y: 80 },
         },
         connectionStyles: {
           highway: {
@@ -391,12 +394,37 @@ describe('VisualConfigSchema', () => {
           },
         ],
         connectionEndpoints: {
-          'loc-alpha-beta:none': ['alpha:none', 'beta:none'],
+          'loc-alpha-beta:none': [
+            { kind: 'zone', zoneId: 'alpha:none' },
+            { kind: 'anchor', anchorId: 'khe-sanh' },
+          ],
+        },
+        connectionPaths: {
+          'loc-saigon-an-loc-ban-me-thuot:none': [
+            { kind: 'zone', zoneId: 'saigon:none' },
+            { kind: 'anchor', anchorId: 'khe-sanh' },
+            { kind: 'zone', zoneId: 'ban-me-thuot:none' },
+          ],
         },
       },
     });
 
     expect(result.success).toBe(true);
+  });
+
+  it('rejects connection paths shorter than two points', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      zones: {
+        connectionPaths: {
+          'loc-short:none': [
+            { kind: 'zone', zoneId: 'alpha:none' },
+          ],
+        },
+      },
+    });
+
+    expect(result.success).toBe(false);
   });
 
   it('accepts token backSymbol in token type visual style', () => {

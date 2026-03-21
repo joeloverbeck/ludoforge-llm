@@ -70,16 +70,24 @@ describe('resolveConnectionRoutes', () => {
       makeAdjacency('loc-alpha-beta:none', 'beta:none'),
       makeAdjacency('alpha:none', 'gamma:none'),
     ];
+    const positions = new Map([
+      ['alpha:none', { x: 0, y: 0 }],
+      ['beta:none', { x: 200, y: 0 }],
+    ]);
 
     const result = resolveConnectionRoutes(makeOptions({
       zones,
       adjacencies,
+      positions,
     }));
 
     expect(result.connectionRoutes).toEqual([
       expect.objectContaining({
         zoneId: 'loc-alpha-beta:none',
-        endpointZoneIds: ['alpha:none', 'beta:none'],
+        path: [
+          { kind: 'zone', id: 'alpha:none', position: { x: 0, y: 0 } },
+          { kind: 'zone', id: 'beta:none', position: { x: 200, y: 0 } },
+        ],
         touchingZoneIds: [],
         connectedConnectionIds: [],
         connectionStyleKey: 'highway',
@@ -89,44 +97,84 @@ describe('resolveConnectionRoutes', () => {
     expect(result.filteredAdjacencies).toEqual([makeAdjacency('alpha:none', 'gamma:none')]);
   });
 
-  it('uses explicit endpoint overrides for multi-neighbor routes and preserves touching zones', () => {
+  it('uses explicit mixed zone/anchor endpoint definitions for multi-neighbor routes', () => {
     const zones = [
-      makeZone('can-tho:none'),
-      makeZone('ba-xuyen:none'),
-      makeZone('kien-hoa-vinh-binh:none'),
-      makeZone('loc-can-tho-long-phu:none', 'connection', 'mekong'),
+      makeZone('hue:none'),
+      makeZone('quang-tri-thua-thien:none'),
+      makeZone('central-laos:none'),
+      makeZone('loc-hue-khe-sanh:none', 'connection', 'highway'),
     ];
     const adjacencies = [
-      makeAdjacency('loc-can-tho-long-phu:none', 'can-tho:none'),
-      makeAdjacency('loc-can-tho-long-phu:none', 'ba-xuyen:none'),
-      makeAdjacency('loc-can-tho-long-phu:none', 'kien-hoa-vinh-binh:none'),
+      makeAdjacency('loc-hue-khe-sanh:none', 'hue:none'),
+      makeAdjacency('loc-hue-khe-sanh:none', 'quang-tri-thua-thien:none'),
+      makeAdjacency('loc-hue-khe-sanh:none', 'central-laos:none'),
     ];
 
     const result = resolveConnectionRoutes(makeOptions({
       zones,
       adjacencies,
-      endpointOverrides: new Map([
-        ['loc-can-tho-long-phu:none', ['can-tho:none', 'ba-xuyen:none'] as const],
+      positions: new Map([
+        ['hue:none', { x: 0, y: 0 }],
+        ['quang-tri-thua-thien:none', { x: 100, y: 40 }],
+        ['central-laos:none', { x: 220, y: -20 }],
+      ]),
+      anchorPositions: new Map([
+        ['khe-sanh', { x: 160, y: -40 }],
+      ]),
+      endpointDefinitions: new Map([
+        ['loc-hue-khe-sanh:none', [
+          { kind: 'zone', zoneId: 'hue:none' },
+          { kind: 'anchor', anchorId: 'khe-sanh' },
+        ]],
       ]),
     }));
 
     expect(result.connectionRoutes).toEqual([
       expect.objectContaining({
-        zoneId: 'loc-can-tho-long-phu:none',
-        endpointZoneIds: ['can-tho:none', 'ba-xuyen:none'],
-        touchingZoneIds: ['kien-hoa-vinh-binh:none'],
-        connectionStyleKey: 'mekong',
+        zoneId: 'loc-hue-khe-sanh:none',
+        path: [
+          { kind: 'zone', id: 'hue:none', position: { x: 0, y: 0 } },
+          { kind: 'anchor', id: 'khe-sanh', position: { x: 160, y: -40 } },
+        ],
+        touchingZoneIds: ['central-laos:none', 'quang-tri-thua-thien:none'],
+        connectionStyleKey: 'highway',
       }),
     ]);
-    expect(result.filteredZones.map((zone) => zone.id)).toEqual([
-      'can-tho:none',
-      'ba-xuyen:none',
-      'kien-hoa-vinh-binh:none',
-    ]);
-    expect(result.filteredAdjacencies).toEqual([]);
   });
 
-  it('falls back to zone-id parsing only when that yields exactly two known endpoints', () => {
+  it('fails closed when configured anchor geometry is missing', () => {
+    const zones = [
+      makeZone('hue:none'),
+      makeZone('central-laos:none'),
+      makeZone('loc-hue-khe-sanh:none', 'connection'),
+    ];
+    const adjacencies = [
+      makeAdjacency('loc-hue-khe-sanh:none', 'hue:none'),
+      makeAdjacency('loc-hue-khe-sanh:none', 'central-laos:none'),
+    ];
+
+    const result = resolveConnectionRoutes(makeOptions({
+      zones,
+      adjacencies,
+      positions: new Map([
+        ['hue:none', { x: 0, y: 0 }],
+        ['central-laos:none', { x: 200, y: 0 }],
+      ]),
+      endpointDefinitions: new Map([
+        ['loc-hue-khe-sanh:none', [
+          { kind: 'zone', zoneId: 'hue:none' },
+          { kind: 'anchor', anchorId: 'khe-sanh' },
+        ]],
+      ]),
+    }));
+
+    expect(result.connectionRoutes).toEqual([]);
+    expect(result.junctions).toEqual([]);
+    expect(result.filteredZones).toEqual(zones);
+    expect(result.filteredAdjacencies).toEqual(adjacencies);
+  });
+
+  it('does not fall back to zone-id parsing for ambiguous routes', () => {
     const zones = [
       makeZone('da-nang:none'),
       makeZone('hue:none'),
@@ -142,42 +190,14 @@ describe('resolveConnectionRoutes', () => {
     const result = resolveConnectionRoutes(makeOptions({
       zones,
       adjacencies,
-    }));
-
-    expect(result.connectionRoutes).toEqual([
-      expect.objectContaining({
-        zoneId: 'loc-hue-da-nang:none',
-        endpointZoneIds: ['da-nang:none', 'hue:none'],
-        touchingZoneIds: ['quang-nam:none'],
-      }),
-    ]);
-    expect(result.filteredZones.map((zone) => zone.id)).toEqual([
-      'da-nang:none',
-      'hue:none',
-      'quang-nam:none',
-    ]);
-  });
-
-  it('leaves ambiguous connection zones untouched when endpoints cannot be resolved', () => {
-    const zones = [
-      makeZone('can-tho:none'),
-      makeZone('ba-xuyen:none'),
-      makeZone('kien-hoa-vinh-binh:none'),
-      makeZone('loc-can-tho-long-phu:none', 'connection'),
-    ];
-    const adjacencies = [
-      makeAdjacency('loc-can-tho-long-phu:none', 'can-tho:none'),
-      makeAdjacency('loc-can-tho-long-phu:none', 'ba-xuyen:none'),
-      makeAdjacency('loc-can-tho-long-phu:none', 'kien-hoa-vinh-binh:none'),
-    ];
-
-    const result = resolveConnectionRoutes(makeOptions({
-      zones,
-      adjacencies,
+      positions: new Map([
+        ['da-nang:none', { x: 0, y: 0 }],
+        ['hue:none', { x: 200, y: 0 }],
+        ['quang-nam:none', { x: 100, y: 80 }],
+      ]),
     }));
 
     expect(result.connectionRoutes).toEqual([]);
-    expect(result.junctions).toEqual([]);
     expect(result.filteredZones).toEqual(zones);
     expect(result.filteredAdjacencies).toEqual(adjacencies);
   });
@@ -199,6 +219,9 @@ describe('resolveConnectionRoutes', () => {
       makeAdjacency('alpha:none', 'gamma:none'),
     ];
     const positions = new Map([
+      ['alpha:none', { x: 0, y: 0 }],
+      ['beta:none', { x: 100, y: 0 }],
+      ['gamma:none', { x: 200, y: 0 }],
       ['loc-alpha-beta:none', { x: 10, y: 20 }],
       ['loc-beta-gamma:none', { x: 30, y: 60 }],
     ]);
@@ -230,5 +253,55 @@ describe('resolveConnectionRoutes', () => {
       filteredZones: [],
       filteredAdjacencies: [],
     });
+  });
+
+  it('prefers explicit path definitions over endpoint definitions and resolves multi-point geometry', () => {
+    const zones = [
+      makeZone('saigon:none'),
+      makeZone('phu-bon:none'),
+      makeZone('loc-saigon-an-loc-ban-me-thuot:none', 'connection', 'highway'),
+    ];
+    const adjacencies = [
+      makeAdjacency('loc-saigon-an-loc-ban-me-thuot:none', 'saigon:none'),
+      makeAdjacency('loc-saigon-an-loc-ban-me-thuot:none', 'phu-bon:none'),
+    ];
+
+    const result = resolveConnectionRoutes(makeOptions({
+      zones,
+      adjacencies,
+      positions: new Map([
+        ['saigon:none', { x: 0, y: 0 }],
+        ['phu-bon:none', { x: 260, y: 0 }],
+      ]),
+      anchorPositions: new Map([
+        ['an-loc', { x: 120, y: -20 }],
+        ['ban-me-thuot', { x: 240, y: -10 }],
+      ]),
+      endpointDefinitions: new Map([
+        ['loc-saigon-an-loc-ban-me-thuot:none', [
+          { kind: 'zone', zoneId: 'saigon:none' },
+          { kind: 'anchor', anchorId: 'ban-me-thuot' },
+        ]],
+      ]),
+      pathDefinitions: new Map([
+        ['loc-saigon-an-loc-ban-me-thuot:none', [
+          { kind: 'zone', zoneId: 'saigon:none' },
+          { kind: 'anchor', anchorId: 'an-loc' },
+          { kind: 'anchor', anchorId: 'ban-me-thuot' },
+        ]],
+      ]),
+    }));
+
+    expect(result.connectionRoutes).toEqual([
+      expect.objectContaining({
+        zoneId: 'loc-saigon-an-loc-ban-me-thuot:none',
+        path: [
+          { kind: 'zone', id: 'saigon:none', position: { x: 0, y: 0 } },
+          { kind: 'anchor', id: 'an-loc', position: { x: 120, y: -20 } },
+          { kind: 'anchor', id: 'ban-me-thuot', position: { x: 240, y: -10 } },
+        ],
+        touchingZoneIds: ['phu-bon:none'],
+      }),
+    ]);
   });
 });

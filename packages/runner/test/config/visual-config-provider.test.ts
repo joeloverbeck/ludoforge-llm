@@ -325,20 +325,52 @@ describe('VisualConfigProvider', () => {
     expect(provider.resolveConnectionStyle('missing')).toBeNull();
   });
 
-  it('returns configured connection endpoint pairs as a deterministic map', () => {
+  it('returns configured connection anchors, endpoints, and paths as deterministic maps', () => {
     const provider = new VisualConfigProvider({
       version: 1,
       zones: {
+        connectionAnchors: {
+          'khe-sanh': { x: 120, y: 80 },
+        },
         connectionEndpoints: {
-          'loc-alpha-beta:none': ['alpha:none', 'beta:none'],
-          'loc-beta-gamma:none': ['beta:none', 'gamma:none'],
+          'loc-alpha-beta:none': [
+            { kind: 'zone', zoneId: 'alpha:none' },
+            { kind: 'anchor', anchorId: 'khe-sanh' },
+          ],
+          'loc-beta-gamma:none': [
+            { kind: 'zone', zoneId: 'beta:none' },
+            { kind: 'zone', zoneId: 'gamma:none' },
+          ],
+        },
+        connectionPaths: {
+          'loc-alpha-beta:none': [
+            { kind: 'zone', zoneId: 'alpha:none' },
+            { kind: 'anchor', anchorId: 'khe-sanh' },
+            { kind: 'zone', zoneId: 'beta:none' },
+          ],
         },
       },
     });
 
+    expect(provider.getConnectionAnchors()).toEqual(new Map([
+      ['khe-sanh', { x: 120, y: 80 }],
+    ]));
     expect(provider.getConnectionEndpoints()).toEqual(new Map([
-      ['loc-alpha-beta:none', ['alpha:none', 'beta:none']],
-      ['loc-beta-gamma:none', ['beta:none', 'gamma:none']],
+      ['loc-alpha-beta:none', [
+        { kind: 'zone', zoneId: 'alpha:none' },
+        { kind: 'anchor', anchorId: 'khe-sanh' },
+      ]],
+      ['loc-beta-gamma:none', [
+        { kind: 'zone', zoneId: 'beta:none' },
+        { kind: 'zone', zoneId: 'gamma:none' },
+      ]],
+    ]));
+    expect(provider.getConnectionPaths()).toEqual(new Map([
+      ['loc-alpha-beta:none', [
+        { kind: 'zone', zoneId: 'alpha:none' },
+        { kind: 'anchor', anchorId: 'khe-sanh' },
+        { kind: 'zone', zoneId: 'beta:none' },
+      ]],
     ]));
   });
 

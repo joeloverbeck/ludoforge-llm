@@ -1,7 +1,12 @@
 import type { GameDef } from '@ludoforge/engine/runtime';
 
 import { VisualConfigProvider } from './visual-config-provider.js';
-import { VisualConfigSchema, type VisualConfig } from './visual-config-types.js';
+import {
+  VisualConfigSchema,
+  type ConnectionEndpointPair,
+  type ConnectionPath,
+  type VisualConfig,
+} from './visual-config-types.js';
 
 export interface VisualConfigRefValidationContext {
   readonly zoneIds: ReadonlySet<string>;
@@ -15,7 +20,7 @@ export interface VisualConfigRefValidationContext {
 }
 
 export interface VisualConfigRefError {
-  readonly category: 'zone' | 'zoneCategory' | 'tokenType' | 'faction' | 'edge' | 'phase' | 'globalVar' | 'perPlayerVar';
+  readonly category: 'zone' | 'anchor' | 'zoneCategory' | 'tokenType' | 'faction' | 'edge' | 'phase' | 'globalVar' | 'perPlayerVar';
   readonly configPath: string;
   readonly referencedId: string;
   readonly message: string;
@@ -54,14 +59,25 @@ export function validateVisualConfigRefs(
   context: VisualConfigRefValidationContext,
 ): readonly VisualConfigRefError[] {
   const errors: VisualConfigRefError[] = [];
+  const anchorIds = new Set(Object.keys(config.zones?.connectionAnchors ?? {}));
+  const connectionEndpoints = config.zones?.connectionEndpoints as Readonly<Record<string, ConnectionEndpointPair>> | undefined;
+  const connectionPaths = config.zones?.connectionPaths as Readonly<Record<string, ConnectionPath>> | undefined;
 
   validateObjectKeys(config.zones?.overrides, context.zoneIds, 'zone', 'zones.overrides', errors);
-  validateObjectKeys(config.zones?.connectionEndpoints, context.zoneIds, 'zone', 'zones.connectionEndpoints', errors);
-  validateRecordTupleValues(
-    config.zones?.connectionEndpoints,
+  validateObjectKeys(connectionEndpoints, context.zoneIds, 'zone', 'zones.connectionEndpoints', errors);
+  validateConnectionPoints(
+    connectionEndpoints,
     context.zoneIds,
-    'zone',
+    anchorIds,
     'zones.connectionEndpoints',
+    errors,
+  );
+  validateObjectKeys(connectionPaths, context.zoneIds, 'zone', 'zones.connectionPaths', errors);
+  validateConnectionPoints(
+    connectionPaths,
+    context.zoneIds,
+    anchorIds,
+    'zones.connectionPaths',
     errors,
   );
   validateObjectKeys(config.zones?.layoutRoles, context.zoneIds, 'zone', 'zones.layoutRoles', errors);
@@ -159,6 +175,52 @@ function validateShowdownSurface(
   );
 }
 
+function validateConnectionPoints(
+  values: Readonly<Record<string, readonly (ConnectionEndpointPair[number])[]>> | Readonly<Record<string, ConnectionPath>> | undefined,
+  knownZoneIds: ReadonlySet<string>,
+  knownAnchorIds: ReadonlySet<string>,
+  path: string,
+  errors: VisualConfigRefError[],
+): void {
+  if (values === undefined) {
+    return;
+  }
+
+  for (const key of Object.keys(values)) {
+    const endpoints = values[key];
+    if (endpoints === undefined) {
+      continue;
+    }
+    for (let index = 0; index < endpoints.length; index += 1) {
+      const endpoint = endpoints[index];
+      if (endpoint === undefined) {
+        continue;
+      }
+
+      if (endpoint.kind === 'zone') {
+        if (!knownZoneIds.has(endpoint.zoneId)) {
+          errors.push({
+            category: 'zone',
+            configPath: `${path}.${key}[${index}].zoneId`,
+            referencedId: endpoint.zoneId,
+            message: 'Unknown zone id',
+          });
+        }
+        continue;
+      }
+
+      if (!knownAnchorIds.has(endpoint.anchorId)) {
+        errors.push({
+          category: 'anchor',
+          configPath: `${path}.${key}[${index}].anchorId`,
+          referencedId: endpoint.anchorId,
+          message: 'Unknown anchor id',
+        });
+      }
+    }
+  }
+}
+
 export function validateAndCreateProvider(
   rawYaml: unknown,
   context: VisualConfigRefValidationContext,
@@ -227,29 +289,6 @@ function validateStringList(
       errors.push({
         category,
         configPath: `${path}[${index}]`,
-        referencedId: value,
-        message: `Unknown ${category} id`,
-      });
-    }
-  }
-}
-
-function validateRecordTupleValues(
-  record: Readonly<Record<string, readonly string[]>> | undefined,
-  knownIds: ReadonlySet<string>,
-  category: VisualConfigRefError['category'],
-  path: string,
-  errors: VisualConfigRefError[],
-): void {
-  for (const [key, values] of Object.entries(record ?? {})) {
-    for (let index = 0; index < values.length; index += 1) {
-      const value = values[index];
-      if (value === undefined || knownIds.has(value)) {
-        continue;
-      }
-      errors.push({
-        category,
-        configPath: `${path}.${key}[${index}]`,
         referencedId: value,
         message: `Unknown ${category} id`,
       });

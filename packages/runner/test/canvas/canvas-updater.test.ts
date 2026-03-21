@@ -786,7 +786,10 @@ describe('createCanvasUpdater', () => {
       expect.arrayContaining([
         expect.objectContaining({
           zoneId: 'loc-alpha-beta:none',
-          endpointZoneIds: ['alpha:none', 'beta:none'],
+          path: [
+            { kind: 'zone', id: 'alpha:none', position: { x: 0, y: 0 } },
+            { kind: 'zone', id: 'beta:none', position: { x: 200, y: 0 } },
+          ],
         }),
       ]),
       [],

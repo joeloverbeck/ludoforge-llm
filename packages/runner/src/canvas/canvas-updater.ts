@@ -1,4 +1,5 @@
 import type { StoreApi } from 'zustand';
+import type { Container } from 'pixi.js';
 
 import type {
   RunnerAdjacency,
@@ -14,6 +15,7 @@ import { EMPTY_INTERACTION_HIGHLIGHTS, type InteractionHighlights } from './inte
 import type { RuntimeLayoutStore } from './runtime-layout-store';
 import type {
   AdjacencyRenderer,
+  ConnectionRouteRenderer,
   RegionBoundaryRenderer,
   TableOverlayRenderer,
   TokenRenderer,
@@ -54,6 +56,7 @@ export interface CanvasUpdaterDeps {
   readonly tokenRenderStyleProvider: TokenRenderStyleProvider;
   readonly zoneRenderer: ZoneRenderer;
   readonly adjacencyRenderer: AdjacencyRenderer;
+  readonly connectionRouteRenderer: ConnectionRouteRenderer;
   readonly tokenRenderer: TokenRenderer;
   readonly tableOverlayRenderer?: TableOverlayRenderer;
   readonly regionBoundaryRenderer?: RegionBoundaryRenderer;
@@ -106,7 +109,18 @@ export function createCanvasUpdater(deps: CanvasUpdaterDeps): CanvasUpdater {
     deps.regionBoundaryRenderer?.update(scene.regions);
     deps.zoneRenderer.update(scene.zones, latestRuntimeLayoutSnapshot.positions);
     deps.adjacencyRenderer.update(scene.adjacencies, latestRuntimeLayoutSnapshot.positions);
-    deps.tokenRenderer.update(scene.tokens, deps.zoneRenderer.getContainerMap());
+    deps.connectionRouteRenderer.update(
+      scene.connectionRoutes,
+      scene.junctions,
+      latestRuntimeLayoutSnapshot.positions,
+    );
+    deps.tokenRenderer.update(
+      scene.tokens,
+      mergeContainerMaps(
+        deps.zoneRenderer.getContainerMap(),
+        deps.connectionRouteRenderer.getContainerMap(),
+      ),
+    );
     deps.tableOverlayRenderer?.update(scene.overlays);
   };
 
@@ -226,6 +240,16 @@ export function createCanvasUpdater(deps: CanvasUpdaterDeps): CanvasUpdater {
       }
     },
   };
+}
+
+function mergeContainerMaps(
+  zoneContainers: ReadonlyMap<string, Container>,
+  connectionRouteContainers: ReadonlyMap<string, Container>,
+): ReadonlyMap<string, Container> {
+  return new Map<string, Container>([
+    ...zoneContainers,
+    ...connectionRouteContainers,
+  ]);
 }
 
 function selectCanvasSnapshot(state: GameStore): CanvasSnapshotSelectorResult {

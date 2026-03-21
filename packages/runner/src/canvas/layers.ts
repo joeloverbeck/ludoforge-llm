@@ -5,6 +5,7 @@ export interface LayerHierarchy {
   readonly backgroundLayer: Container;
   readonly regionLayer: Container;
   readonly adjacencyLayer: Container;
+  readonly connectionRouteLayer: Container;
   readonly zoneLayer: Container;
   readonly tableOverlayLayer: Container;
   readonly tokenGroup: Container;
@@ -28,6 +29,7 @@ export function createLayerHierarchy(): LayerHierarchy {
   const backgroundLayer = new Container();
   const regionLayer = new Container();
   const adjacencyLayer = new Container();
+  const connectionRouteLayer = new Container();
   const zoneLayer = new Container();
   const tableOverlayLayer = new Container();
   const tokenGroup = new Container();
@@ -45,6 +47,10 @@ export function createLayerHierarchy(): LayerHierarchy {
   adjacencyLayer.interactiveChildren = false;
   adjacencyLayer.sortableChildren = true;
 
+  connectionRouteLayer.eventMode = 'none';
+  connectionRouteLayer.interactiveChildren = false;
+  connectionRouteLayer.sortableChildren = true;
+
   backgroundLayer.eventMode = 'none';
   backgroundLayer.interactiveChildren = false;
   backgroundLayer.sortableChildren = false;
@@ -61,13 +67,21 @@ export function createLayerHierarchy(): LayerHierarchy {
   tableOverlayLayer.interactiveChildren = false;
   tableOverlayLayer.sortableChildren = true;
 
-  boardGroup.addChild(backgroundLayer, regionLayer, adjacencyLayer, zoneLayer, tableOverlayLayer);
+  boardGroup.addChild(
+    backgroundLayer,
+    regionLayer,
+    adjacencyLayer,
+    connectionRouteLayer,
+    zoneLayer,
+    tableOverlayLayer,
+  );
 
   return {
     boardGroup,
     backgroundLayer,
     regionLayer,
     adjacencyLayer,
+    connectionRouteLayer,
     zoneLayer,
     tableOverlayLayer,
     tokenGroup,

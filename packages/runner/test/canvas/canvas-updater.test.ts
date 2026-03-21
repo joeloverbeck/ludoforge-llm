@@ -1,4 +1,5 @@
 import { asPlayerId, type PlayerId } from '@ludoforge/engine/runtime';
+import type { Container } from 'pixi.js';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import { describe, expect, it, vi } from 'vitest';
@@ -6,7 +7,13 @@ import { describe, expect, it, vi } from 'vitest';
 import { createCanvasUpdater } from '../../src/canvas/canvas-updater';
 import { createRuntimeLayoutStore } from '../../src/canvas/runtime-layout-store';
 import { VisualConfigTokenRenderStyleProvider } from '../../src/canvas/renderers/token-render-style-provider';
-import type { AdjacencyRenderer, TableOverlayRenderer, TokenRenderer, ZoneRenderer } from '../../src/canvas/renderers/renderer-types';
+import type {
+  AdjacencyRenderer,
+  ConnectionRouteRenderer,
+  TableOverlayRenderer,
+  TokenRenderer,
+  ZoneRenderer,
+} from '../../src/canvas/renderers/renderer-types';
 import type { ViewportResult } from '../../src/canvas/viewport-setup';
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 import type { WorldLayoutModel } from '../../src/layout/world-layout-model.js';
@@ -284,6 +291,12 @@ function createRendererMocks() {
     destroy: vi.fn(),
   };
 
+  const connectionRouteRenderer: ConnectionRouteRenderer = {
+    update: vi.fn(),
+    getContainerMap: vi.fn(() => new Map()),
+    destroy: vi.fn(),
+  };
+
   const tokenRenderer: TokenRenderer = {
     update: vi.fn(),
     getContainerMap: vi.fn(() => new Map()),
@@ -298,6 +311,7 @@ function createRendererMocks() {
   return {
     zoneRenderer,
     adjacencyRenderer,
+    connectionRouteRenderer,
     tokenRenderer,
     tableOverlayRenderer,
   };
@@ -342,6 +356,7 @@ describe('createCanvasUpdater', () => {
       tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
+      connectionRouteRenderer: renderers.connectionRouteRenderer,
       tokenRenderer: renderers.tokenRenderer,
       viewport,
     });
@@ -368,6 +383,7 @@ describe('createCanvasUpdater', () => {
       tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
+      connectionRouteRenderer: renderers.connectionRouteRenderer,
       tokenRenderer: renderers.tokenRenderer,
       viewport,
     });
@@ -404,7 +420,7 @@ describe('createCanvasUpdater', () => {
         }),
       },
     ]);
-    expect(tokenCall?.[1]).toBe(renderers.zoneRenderer.getContainerMap());
+    expect(tokenCall?.[1]).toEqual(new Map(renderers.zoneRenderer.getContainerMap()));
   });
 
   it('builds scene-owned zone nodes from the visual config before calling renderers', () => {
@@ -442,6 +458,7 @@ describe('createCanvasUpdater', () => {
       tokenRenderStyleProvider: tokenStyleProvider,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
+      connectionRouteRenderer: renderers.connectionRouteRenderer,
       tokenRenderer: renderers.tokenRenderer,
       viewport,
     });
@@ -479,6 +496,7 @@ describe('createCanvasUpdater', () => {
       tokenRenderStyleProvider: new VisualConfigTokenRenderStyleProvider(TEST_TABLE_OVERLAY_PROVIDER),
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
+      connectionRouteRenderer: renderers.connectionRouteRenderer,
       tokenRenderer: renderers.tokenRenderer,
       tableOverlayRenderer: renderers.tableOverlayRenderer,
       viewport,
@@ -522,6 +540,7 @@ describe('createCanvasUpdater', () => {
       tokenRenderStyleProvider: new VisualConfigTokenRenderStyleProvider(TEST_TABLE_OVERLAY_PROVIDER),
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
+      connectionRouteRenderer: renderers.connectionRouteRenderer,
       tokenRenderer: renderers.tokenRenderer,
       tableOverlayRenderer: renderers.tableOverlayRenderer,
       viewport,
@@ -566,6 +585,7 @@ describe('createCanvasUpdater', () => {
       tokenRenderStyleProvider: new VisualConfigTokenRenderStyleProvider(TEST_TABLE_OVERLAY_PROVIDER),
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
+      connectionRouteRenderer: renderers.connectionRouteRenderer,
       tokenRenderer: renderers.tokenRenderer,
       tableOverlayRenderer: renderers.tableOverlayRenderer,
       viewport,
@@ -611,6 +631,7 @@ describe('createCanvasUpdater', () => {
       tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
+      connectionRouteRenderer: renderers.connectionRouteRenderer,
       tokenRenderer: renderers.tokenRenderer,
       viewport,
     });
@@ -652,6 +673,7 @@ describe('createCanvasUpdater', () => {
       tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
+      connectionRouteRenderer: renderers.connectionRouteRenderer,
       tokenRenderer: renderers.tokenRenderer,
       viewport,
     });
@@ -678,6 +700,113 @@ describe('createCanvasUpdater', () => {
     expect(renderers.adjacencyRenderer.update).toHaveBeenCalledTimes(1);
   });
 
+  it('routes connection zones through the connection-route renderer and merges their token containers', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      zones: {
+        categoryStyles: {
+          province: { shape: 'rectangle', width: 120, height: 90, color: '#2a6e3f' },
+          loc: { shape: 'connection', connectionStyleKey: 'highway' },
+        },
+        connectionStyles: {
+          highway: { strokeWidth: 8, strokeColor: '#8b7355', strokeAlpha: 0.8 },
+        },
+      },
+    });
+    const tokenStyleProvider = new VisualConfigTokenRenderStyleProvider(provider);
+    const model = makeRenderModel({
+      zones: [
+        makeZone({ id: 'alpha:none', category: 'province', tokenIDs: [] }),
+        makeZone({ id: 'beta:none', category: 'province', tokenIDs: [] }),
+        makeZone({ id: 'loc-alpha-beta:none', category: 'loc', tokenIDs: ['token:route'] }),
+      ],
+      adjacencies: [
+        { from: 'loc-alpha-beta:none', to: 'alpha:none', category: null, isHighlighted: false },
+        { from: 'loc-alpha-beta:none', to: 'beta:none', category: null, isHighlighted: false },
+      ],
+      tokens: [makeToken({ id: 'token:route', zoneID: 'loc-alpha-beta:none' })],
+    });
+    const store = createCanvasTestStore({
+      renderModel: model,
+      animationPlaying: false,
+      worldLayout: {
+        positions: new Map([
+          ['alpha:none', { x: 0, y: 0 }],
+          ['beta:none', { x: 200, y: 0 }],
+          ['loc-alpha-beta:none', { x: 100, y: 0 }],
+        ]),
+        bounds: { minX: -80, minY: -80, maxX: 320, maxY: 220 },
+        boardBounds: { minX: -40, minY: -20, maxX: 240, maxY: 140 },
+      },
+    });
+    const runtimeLayoutStore = createRuntimeLayoutStore(['alpha:none', 'beta:none', 'loc-alpha-beta:none']);
+    runtimeLayoutStore.setActiveLayout({
+      positions: new Map([
+        ['alpha:none', { x: 0, y: 0 }],
+        ['beta:none', { x: 200, y: 0 }],
+        ['loc-alpha-beta:none', { x: 100, y: 0 }],
+      ]),
+      bounds: { minX: -80, minY: -80, maxX: 320, maxY: 220 },
+    }, ['alpha:none', 'beta:none', 'loc-alpha-beta:none']);
+
+    const renderers = createRendererMocks();
+    const zoneContainer = { id: 'zone-container' } as unknown as Container;
+    const routeContainer = { id: 'route-container' } as unknown as Container;
+    vi.mocked(renderers.zoneRenderer.getContainerMap).mockReturnValue(new Map([
+      ['alpha:none', zoneContainer],
+      ['beta:none', zoneContainer],
+    ]));
+    vi.mocked(renderers.connectionRouteRenderer.getContainerMap).mockReturnValue(new Map([
+      ['loc-alpha-beta:none', routeContainer],
+    ]));
+    const viewport = createViewportMock();
+
+    const updater = createCanvasUpdater({
+      store: store as unknown as StoreApi<GameStore>,
+      runtimeLayoutStore,
+      visualConfigProvider: provider,
+      tokenRenderStyleProvider: tokenStyleProvider,
+      zoneRenderer: renderers.zoneRenderer,
+      adjacencyRenderer: renderers.adjacencyRenderer,
+      connectionRouteRenderer: renderers.connectionRouteRenderer,
+      tokenRenderer: renderers.tokenRenderer,
+      viewport,
+    });
+
+    updater.start();
+
+    expect(renderers.zoneRenderer.update).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'alpha:none' }),
+        expect.objectContaining({ id: 'beta:none' }),
+      ]),
+      runtimeLayoutStore.getSnapshot().positions,
+    );
+    expect(renderers.connectionRouteRenderer.update).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          zoneId: 'loc-alpha-beta:none',
+          endpointZoneIds: ['alpha:none', 'beta:none'],
+        }),
+      ]),
+      [],
+      runtimeLayoutStore.getSnapshot().positions,
+    );
+    expect(renderers.adjacencyRenderer.update).toHaveBeenCalledWith([], runtimeLayoutStore.getSnapshot().positions);
+    expect(renderers.tokenRenderer.update).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          zoneId: 'loc-alpha-beta:none',
+        }),
+      ]),
+      new Map([
+        ['alpha:none', zoneContainer],
+        ['beta:none', zoneContainer],
+        ['loc-alpha-beta:none', routeContainer],
+      ]),
+    );
+  });
+
   it('start centers the viewport on the initial runtime layout bounds', () => {
     const model = makeRenderModel();
     const store = createCanvasTestStore({ renderModel: model, animationPlaying: false });
@@ -694,6 +823,7 @@ describe('createCanvasUpdater', () => {
       tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
+      connectionRouteRenderer: renderers.connectionRouteRenderer,
       tokenRenderer: renderers.tokenRenderer,
       viewport,
     });
@@ -718,6 +848,7 @@ describe('createCanvasUpdater', () => {
       tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
+      connectionRouteRenderer: renderers.connectionRouteRenderer,
       tokenRenderer: renderers.tokenRenderer,
       viewport,
     });
@@ -768,6 +899,7 @@ describe('createCanvasUpdater', () => {
       tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
+      connectionRouteRenderer: renderers.connectionRouteRenderer,
       tokenRenderer: renderers.tokenRenderer,
       viewport,
     });
@@ -802,6 +934,7 @@ describe('createCanvasUpdater', () => {
       tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
+      connectionRouteRenderer: renderers.connectionRouteRenderer,
       tokenRenderer: renderers.tokenRenderer,
       viewport,
     });
@@ -847,6 +980,7 @@ describe('createCanvasUpdater', () => {
       tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
+      connectionRouteRenderer: renderers.connectionRouteRenderer,
       tokenRenderer: renderers.tokenRenderer,
       viewport,
     });
@@ -884,6 +1018,7 @@ describe('createCanvasUpdater', () => {
       tokenRenderStyleProvider: TEST_TOKEN_RENDER_STYLE_PROVIDER,
       zoneRenderer: renderers.zoneRenderer,
       adjacencyRenderer: renderers.adjacencyRenderer,
+      connectionRouteRenderer: renderers.connectionRouteRenderer,
       tokenRenderer: renderers.tokenRenderer,
       viewport,
     });
@@ -923,7 +1058,7 @@ describe('createCanvasUpdater', () => {
           }),
         }),
       ]),
-      renderers.zoneRenderer.getContainerMap(),
+      new Map(renderers.zoneRenderer.getContainerMap()),
     );
   });
 });

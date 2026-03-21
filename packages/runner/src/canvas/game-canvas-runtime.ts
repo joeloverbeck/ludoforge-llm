@@ -22,10 +22,17 @@ import { createRuntimeLayoutStore, type RuntimeLayoutStore } from './runtime-lay
 import { installTickerErrorFence, type TickerErrorFence } from './ticker-error-fence.js';
 import { createRenderHealthProbe, type RenderHealthProbe } from './render-health-probe.js';
 import { createAdjacencyRenderer } from './renderers/adjacency-renderer';
+import { createConnectionRouteRenderer } from './renderers/connection-route-renderer.js';
 import { ContainerPool } from './renderers/container-pool';
 import { createDisposalQueue, type DisposalQueue } from './renderers/disposal-queue';
 import { VisualConfigTokenRenderStyleProvider } from './renderers/token-render-style-provider';
-import type { AdjacencyRenderer, TableOverlayRenderer, TokenRenderer, ZoneRenderer } from './renderers/renderer-types';
+import type {
+  AdjacencyRenderer,
+  ConnectionRouteRenderer,
+  TableOverlayRenderer,
+  TokenRenderer,
+  ZoneRenderer,
+} from './renderers/renderer-types';
 import { createRegionBoundaryRenderer } from './renderers/region-boundary-renderer.js';
 import { createTableOverlayRenderer } from './renderers/table-overlay-renderer.js';
 import { createTokenRenderer } from './renderers/token-renderer';
@@ -108,6 +115,7 @@ interface GameCanvasRuntimeDeps {
   readonly createRuntimeLayoutStore: typeof createRuntimeLayoutStore;
   readonly createZoneRenderer: typeof createZoneRenderer;
   readonly createAdjacencyRenderer: typeof createAdjacencyRenderer;
+  readonly createConnectionRouteRenderer: typeof createConnectionRouteRenderer;
   readonly createTokenRenderer: typeof createTokenRenderer;
   readonly createTableOverlayRenderer: typeof createTableOverlayRenderer;
   readonly createActionAnnouncementRenderer: typeof createActionAnnouncementRenderer;
@@ -130,6 +138,7 @@ const DEFAULT_RUNTIME_DEPS: GameCanvasRuntimeDeps = {
   createRuntimeLayoutStore,
   createZoneRenderer,
   createAdjacencyRenderer,
+  createConnectionRouteRenderer,
   createTokenRenderer,
   createTableOverlayRenderer,
   createActionAnnouncementRenderer,
@@ -290,6 +299,10 @@ export async function createGameCanvasRuntime(
   const adjacencyRenderer = deps.createAdjacencyRenderer(gameCanvas.layers.adjacencyLayer, options.visualConfigProvider, {
     disposalQueue,
   });
+  const connectionRouteRenderer = deps.createConnectionRouteRenderer(
+    gameCanvas.layers.connectionRouteLayer,
+    options.visualConfigProvider,
+  );
 
   const regionBoundaryRenderer = createRegionBoundaryRenderer(gameCanvas.layers.regionLayer);
 
@@ -335,6 +348,7 @@ export async function createGameCanvasRuntime(
     tokenRenderStyleProvider,
     zoneRenderer,
     adjacencyRenderer,
+    connectionRouteRenderer,
     tokenRenderer,
     tableOverlayRenderer,
     regionBoundaryRenderer,
@@ -610,6 +624,7 @@ export async function createGameCanvasRuntime(
         canvasUpdater,
         zoneRenderer,
         adjacencyRenderer,
+        connectionRouteRenderer,
         tokenRenderer,
         tableOverlayRenderer,
         zonePool,
@@ -640,6 +655,7 @@ function destroyCanvasPipeline(
   canvasUpdater: CanvasUpdater,
   zoneRenderer: ZoneRenderer,
   adjacencyRenderer: AdjacencyRenderer,
+  connectionRouteRenderer: ConnectionRouteRenderer,
   tokenRenderer: TokenRenderer,
   tableOverlayRenderer: TableOverlayRenderer,
   zonePool: ContainerPool,
@@ -652,6 +668,7 @@ function destroyCanvasPipeline(
   canvasUpdater.destroy();
   zoneRenderer.destroy();
   adjacencyRenderer.destroy();
+  connectionRouteRenderer.destroy();
   tokenRenderer.destroy();
   tableOverlayRenderer.destroy();
   zonePool.destroyAll();

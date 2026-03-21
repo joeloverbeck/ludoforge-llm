@@ -220,6 +220,62 @@ describe('buildPresentationScene', () => {
     expect(scene.tokens[0]?.render.stroke).toEqual({ color: '#60a5fa', width: 3, alpha: 1 });
   });
 
+  it('projects connection-shaped zones into connection routes while keeping route tokens visible', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      zones: {
+        categoryStyles: {
+          province: { shape: 'rectangle', width: 120, height: 90, color: '#2a6e3f' },
+          loc: { shape: 'connection', connectionStyleKey: 'highway' },
+        },
+        connectionStyles: {
+          highway: { strokeWidth: 8, strokeColor: '#8b7355', strokeAlpha: 0.8 },
+        },
+      },
+    });
+
+    const scene = buildPresentationScene({
+      runnerFrame: makeRunnerFrame({
+        zones: [
+          makeZone('alpha:none', {}, { category: 'province' }),
+          makeZone('beta:none', {}, { category: 'province' }),
+          makeZone('loc-alpha-beta:none', {}, { category: 'loc' }),
+        ],
+        adjacencies: [
+          { from: 'loc-alpha-beta:none', to: 'alpha:none', category: null, isHighlighted: false },
+          { from: 'loc-alpha-beta:none', to: 'beta:none', category: null, isHighlighted: false },
+        ],
+        tokens: [
+          { id: 'token:route', type: 'troop', zoneID: 'loc-alpha-beta:none', ownerID: asPlayerId(0), factionId: null, faceUp: true, properties: {}, isSelectable: false, isSelected: false },
+        ],
+      }),
+      overlays: [],
+      positions: new Map([
+        ['alpha:none', { x: 0, y: 0 }],
+        ['beta:none', { x: 200, y: 0 }],
+        ['loc-alpha-beta:none', { x: 100, y: 0 }],
+      ]),
+      visualConfigProvider: provider,
+      tokenRenderStyleProvider: new VisualConfigTokenRenderStyleProvider(provider),
+      interactionHighlights: { zoneIDs: [], tokenIDs: [] },
+    });
+
+    expect(scene.zones.map((zone) => zone.id)).toEqual(['alpha:none', 'beta:none']);
+    expect(scene.connectionRoutes).toEqual([
+      expect.objectContaining({
+        zoneId: 'loc-alpha-beta:none',
+        endpointZoneIds: ['alpha:none', 'beta:none'],
+        connectionStyleKey: 'highway',
+      }),
+    ]);
+    expect(scene.adjacencies).toEqual([]);
+    expect(scene.tokens).toEqual([
+      expect.objectContaining({
+        zoneId: 'loc-alpha-beta:none',
+      }),
+    ]);
+  });
+
   it('resolves token grouping and offsets before renderer mutation', () => {
     const provider = new VisualConfigProvider({
       version: 1,

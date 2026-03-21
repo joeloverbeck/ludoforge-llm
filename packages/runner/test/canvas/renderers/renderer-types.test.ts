@@ -5,6 +5,7 @@ import type { Container } from 'pixi.js';
 
 import type {
   AdjacencyRenderer,
+  ConnectionRouteRenderer,
   TokenRenderer,
   TokenRenderStyleProvider,
   ZoneRenderer,
@@ -13,6 +14,10 @@ import type { Position } from '../../../src/canvas/geometry';
 import type {
   RenderAdjacency,
 } from '../../../src/model/render-model';
+import type {
+  ConnectionRouteNode,
+  JunctionNode,
+} from '../../../src/presentation/connection-route-resolver';
 import type { PresentationZoneNode } from '../../../src/presentation/presentation-scene';
 import type { PresentationTokenNode } from '../../../src/presentation/token-presentation';
 
@@ -61,6 +66,22 @@ describe('renderer-types', () => {
     };
 
     expect(renderer.destroy).toBeTypeOf('function');
+  });
+
+  it('accepts a mock ConnectionRouteRenderer contract', () => {
+    const containerMap = new Map<string, Container>();
+
+    const renderer: ConnectionRouteRenderer = {
+      update: (
+        _routes: readonly ConnectionRouteNode[],
+        _junctions: readonly JunctionNode[],
+        _positions: ReadonlyMap<string, Position>,
+      ) => {},
+      getContainerMap: () => containerMap,
+      destroy: () => {},
+    };
+
+    expect(renderer.getContainerMap()).toBe(containerMap);
   });
 
   it('accepts a mock TokenRenderStyleProvider contract', () => {

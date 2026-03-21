@@ -161,6 +161,14 @@ function createRuntimeFixture() {
     }),
   };
 
+  const connectionRouteRenderer = {
+    update: vi.fn(),
+    getContainerMap: vi.fn(() => new Map()),
+    destroy: vi.fn(() => {
+      lifecycle.push('connection-route-renderer-destroy');
+    }),
+  };
+
   const tokenRenderer = {
     update: vi.fn(),
     getContainerMap: vi.fn(() => tokenContainerMap),
@@ -240,6 +248,7 @@ function createRuntimeFixture() {
       boardGroup: {} as never,
       backgroundLayer: {} as never,
       adjacencyLayer: {} as never,
+      connectionRouteLayer: {} as never,
       zoneLayer: {} as never,
       tableOverlayLayer: {} as never,
       tokenGroup: {} as never,
@@ -365,6 +374,7 @@ function createRuntimeFixture() {
       return zoneRenderer;
     }),
     createAdjacencyRenderer: vi.fn(() => adjacencyRenderer),
+    createConnectionRouteRenderer: vi.fn(() => connectionRouteRenderer),
     createTokenRenderer: vi.fn((_parent, options: {
       bindSelection?: (tokenContainer: unknown, tokenId: string, isSelectable: () => boolean) => () => void;
       disposalQueue: unknown;
@@ -394,6 +404,7 @@ function createRuntimeFixture() {
     canvasUpdater,
     zoneRenderer,
     adjacencyRenderer,
+    connectionRouteRenderer,
     tokenRenderer,
     tableOverlayRenderer,
     viewportResult,
@@ -536,6 +547,7 @@ describe('createGameCanvasRuntime', () => {
     expect(fixture.deps.setupViewport).toHaveBeenCalledTimes(1);
     expect(fixture.deps.createZoneRenderer).toHaveBeenCalledTimes(1);
     expect(fixture.deps.createAdjacencyRenderer).toHaveBeenCalledTimes(1);
+    expect(fixture.deps.createConnectionRouteRenderer).toHaveBeenCalledTimes(1);
     expect(fixture.deps.createTokenRenderer).toHaveBeenCalledTimes(1);
     expect(fixture.deps.createTableOverlayRenderer).toHaveBeenCalledTimes(1);
     expect(fixture.deps.createActionAnnouncementRenderer).toHaveBeenCalledTimes(1);
@@ -939,6 +951,7 @@ describe('createGameCanvasRuntime', () => {
       'updater-destroy',
       'zone-renderer-destroy',
       'adjacency-renderer-destroy',
+      'connection-route-renderer-destroy',
       'token-renderer-destroy',
       'table-overlay-renderer-destroy',
       'viewport-destroy',

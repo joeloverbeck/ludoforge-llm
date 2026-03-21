@@ -212,6 +212,30 @@ describe('installTickerErrorFence', () => {
     fence.destroy();
   });
 
+  it('calls onContainedError for contained errors before the crash threshold is reached', () => {
+    const { app, ticker, tickMock } = createMockApp();
+    const failure = new Error('boom');
+    tickMock.mockImplementation(() => {
+      throw failure;
+    });
+    const onContainedError = vi.fn();
+
+    const fence = installTickerErrorFence(app, {
+      maxConsecutiveErrors: 3,
+      onContainedError,
+      logger: { warn: vi.fn() },
+    });
+
+    ticker._tick();
+    ticker._tick();
+
+    expect(onContainedError).toHaveBeenCalledTimes(2);
+    expect(onContainedError).toHaveBeenNthCalledWith(1, failure);
+    expect(onContainedError).toHaveBeenNthCalledWith(2, failure);
+
+    fence.destroy();
+  });
+
   it('destroy restores the original _tick callback', () => {
     const { app, ticker, tickMock } = createMockApp();
     const originalTick = ticker._tick;

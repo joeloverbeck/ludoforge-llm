@@ -32,6 +32,7 @@ export interface TickerErrorFenceOptions {
   readonly windowErrors?: number;
   readonly windowMs?: number;
   readonly corruptionClearThreshold?: number;
+  readonly onContainedError?: (error: unknown) => void;
   readonly onCrash?: (error: unknown) => void;
   readonly logger?: Pick<Console, 'warn'>;
   readonly now?: () => number;
@@ -91,6 +92,7 @@ export function installTickerErrorFence(
       consecutiveErrors += 1;
       renderCorruptionSuspected = true;
       successfulTicksSinceError = 0;
+      options?.onContainedError?.(error);
       errorTimestamps[nextTimestampIndex] = now();
       nextTimestampIndex = (nextTimestampIndex + 1) % windowErrors;
       if (recordedErrors < windowErrors) {

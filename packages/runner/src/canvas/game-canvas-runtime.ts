@@ -19,6 +19,7 @@ import { createCanvasInteractionController } from './interactions/canvas-interac
 import { createHoverTargetController } from './interactions/hover-target-controller';
 import { createRuntimeLayoutStore, type RuntimeLayoutStore } from './runtime-layout-store';
 import { installTickerErrorFence, type TickerErrorFence } from './ticker-error-fence.js';
+import { createRenderHealthProbe, type RenderHealthProbe } from './render-health-probe.js';
 import { createAdjacencyRenderer } from './renderers/adjacency-renderer';
 import { ContainerPool } from './renderers/container-pool';
 import { createDisposalQueue, type DisposalQueue } from './renderers/disposal-queue';
@@ -119,6 +120,7 @@ interface GameCanvasRuntimeDeps {
   readonly attachZoneSelectHandlers: typeof attachZoneSelectHandlers;
   readonly attachTokenSelectHandlers: typeof attachTokenSelectHandlers;
   readonly attachKeyboardSelect: typeof attachKeyboardSelect;
+  readonly createRenderHealthProbe: typeof createRenderHealthProbe;
 }
 
 const DEFAULT_RUNTIME_DEPS: GameCanvasRuntimeDeps = {
@@ -140,6 +142,7 @@ const DEFAULT_RUNTIME_DEPS: GameCanvasRuntimeDeps = {
   attachZoneSelectHandlers,
   attachTokenSelectHandlers,
   attachKeyboardSelect,
+  createRenderHealthProbe,
 };
 
 type HoverBoundsResolver = (target: HoveredCanvasTarget) => CanvasWorldBounds | null;
@@ -203,7 +206,18 @@ export async function createGameCanvasRuntime(
   const gameCanvas = await deps.createGameCanvas(options.container, {
     backgroundColor: options.backgroundColor,
   });
+  const reportRenderHealthCorruption = (): void => {
+    options.onError?.(new Error('Render health probe detected non-functional rendering after a contained ticker error.'));
+  };
+  const renderHealthProbe = deps.createRenderHealthProbe({
+    stage: gameCanvas.app.stage,
+    ticker: gameCanvas.app.ticker,
+    onCorruption: reportRenderHealthCorruption,
+  });
   const tickerErrorFence = installTickerErrorFence(gameCanvas.app, {
+    onContainedError: () => {
+      renderHealthProbe.scheduleVerification();
+    },
     onCrash: (error) => {
       options.onError?.(error);
     },
@@ -564,6 +578,7 @@ export async function createGameCanvasRuntime(
         viewportResult,
         gameCanvas,
         disposalQueue,
+        renderHealthProbe,
         tickerErrorFence,
       );
     },
@@ -593,6 +608,7 @@ function destroyCanvasPipeline(
   viewportResult: ViewportResult,
   gameCanvas: PixiGameCanvas,
   disposalQueue: DisposalQueue,
+  renderHealthProbe: RenderHealthProbe,
   tickerErrorFence: TickerErrorFence,
 ): void {
   canvasUpdater.destroy();
@@ -603,6 +619,7 @@ function destroyCanvasPipeline(
   zonePool.destroyAll();
   disposalQueue.destroy();
   viewportResult.destroy();
+  renderHealthProbe.destroy();
   tickerErrorFence.destroy();
   gameCanvas.destroy();
 }

@@ -8,6 +8,7 @@ import type { GameDef } from '@ludoforge/engine/runtime';
 import { GameCanvas } from '../../src/canvas/GameCanvas';
 import { createGameCanvasRuntime, createScopedLifecycleCallback } from '../../src/canvas/game-canvas-runtime.js';
 import type { CoordinateBridge } from '../../src/canvas/coordinate-bridge';
+import type { RenderHealthProbeOptions } from '../../src/canvas/render-health-probe.js';
 import type { GameStore } from '../../src/store/game-store';
 import type { DiagnosticBuffer } from '../../src/animation/diagnostic-buffer.js';
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
@@ -196,11 +197,13 @@ function createRuntimeFixture() {
 
   const gameCanvas = {
     app: {
-      stage: {} as never,
+      stage: { children: [] } as never,
       ticker: {
         _tick: vi.fn(),
         stop: vi.fn(),
         started: true,
+        addOnce: vi.fn(),
+        remove: vi.fn(),
       },
       renderer: {
         screen: { width: 1024, height: 768 },
@@ -320,6 +323,13 @@ function createRuntimeFixture() {
   const createAnimationController = vi.fn(() => animationController);
   const createAiPlaybackController = vi.fn(() => aiPlaybackController);
   const createReducedMotionObserver = vi.fn(() => reducedMotionObserver);
+  const renderHealthProbe = {
+    scheduleVerification: vi.fn(),
+    destroy: vi.fn(() => {
+      lifecycle.push('render-health-probe-destroy');
+    }),
+  };
+  const createRenderHealthProbe = vi.fn((_: RenderHealthProbeOptions) => renderHealthProbe);
 
   const deps = {
     createGameCanvas: vi.fn(async () => gameCanvas),
@@ -349,6 +359,7 @@ function createRuntimeFixture() {
     attachZoneSelectHandlers,
     attachTokenSelectHandlers,
     attachKeyboardSelect,
+    createRenderHealthProbe,
   };
 
   return {
@@ -374,6 +385,8 @@ function createRuntimeFixture() {
     attachZoneSelectHandlers,
     attachTokenSelectHandlers,
     attachKeyboardSelect,
+    renderHealthProbe,
+    createRenderHealthProbe,
     keyboardCleanup,
     zoneContainerMap,
     tokenContainerMap,
@@ -570,6 +583,47 @@ describe('createGameCanvasRuntime', () => {
 
     expect(runtime.getViewportSnapshot()).toBeNull();
     expect(runtime.getHealthStatus()).toBeNull();
+  });
+
+  it('schedules render-health verification after contained ticker errors and reports confirmed corruption through onError', async () => {
+    const fixture = createRuntimeFixture();
+    const store = createRuntimeStore(makeRenderModel(['zone:a']));
+    const onError = vi.fn();
+    const originalTick = fixture.gameCanvas.app.ticker._tick as ReturnType<typeof vi.fn>;
+    originalTick.mockImplementation(() => {
+      throw new Error('contained');
+    });
+
+    const runtime = await createGameCanvasRuntime(
+      {
+        container: {} as HTMLElement,
+        store: store as unknown as StoreApi<GameStore>,
+        backgroundColor: 0x0,
+        visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
+        onError,
+      },
+      fixture.deps as unknown as Parameters<typeof createGameCanvasRuntime>[1],
+    );
+
+    expect(fixture.createRenderHealthProbe).toHaveBeenCalledTimes(1);
+    const probeOptions = fixture.createRenderHealthProbe.mock.calls[0]![0];
+    expect(probeOptions.stage).toBe(fixture.gameCanvas.app.stage);
+    expect(probeOptions.ticker).toBe(fixture.gameCanvas.app.ticker);
+
+    fixture.gameCanvas.app.ticker._tick();
+
+    expect(fixture.renderHealthProbe.scheduleVerification).toHaveBeenCalledTimes(1);
+
+    probeOptions.onCorruption();
+
+    expect(onError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Render health probe detected non-functional rendering after a contained ticker error.',
+      }),
+    );
+
+    runtime.destroy();
+    expect(fixture.renderHealthProbe.destroy).toHaveBeenCalled();
   });
 
   it('restores an initial viewport snapshot when provided', async () => {
@@ -839,6 +893,7 @@ describe('createGameCanvasRuntime', () => {
       'token-renderer-destroy',
       'table-overlay-renderer-destroy',
       'viewport-destroy',
+      'render-health-probe-destroy',
       'game-canvas-destroy',
     ]);
     expect(fixture.keyboardCleanup).toHaveBeenCalledTimes(1);

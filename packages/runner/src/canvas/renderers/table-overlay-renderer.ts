@@ -83,11 +83,26 @@ export function createTableOverlayRenderer(
     slot.badge.fill(markerColor);
 
     slot.label.text = resolved.style.label;
-    slot.label.style = toPixiBitmapTextStyle({
-      fill: resolved.style.textColor,
-      fontSize: resolved.style.fontSize,
-      fontName: resolved.style.fontName,
-    });
+    const currentStyle = slot.label.style as Partial<{
+      fill: string;
+      fontSize: number;
+      fontFamily: string;
+    }>;
+    const nextFill = resolved.style.textColor;
+    const nextFontSize = resolved.style.fontSize;
+    const nextFontName = resolved.style.fontName;
+
+    if (
+      currentStyle.fill !== nextFill ||
+      currentStyle.fontSize !== nextFontSize ||
+      currentStyle.fontFamily !== nextFontName
+    ) {
+      slot.label.style = toPixiBitmapTextStyle({
+        fill: nextFill,
+        fontSize: nextFontSize,
+        fontName: nextFontName,
+      });
+    }
   }
 
   function removeStaleMarkers(activeKeys: ReadonlySet<string>): void {

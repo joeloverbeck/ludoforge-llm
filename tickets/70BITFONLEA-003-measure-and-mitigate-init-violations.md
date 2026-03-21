@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small–Medium
 **Engine Changes**: None — runner-only
-**Deps**: 70BITFONLEA-001, 70BITFONLEA-002, 70BITFONLEA-004
+**Deps**: archive/tickets/70BITFONLEA/70BITFONLEA-001-use-preinstalled-font-names-in-table-overlay.md, archive/tickets/70BITFONLEA/70BITFONLEA-002-guard-table-overlay-marker-style-reassignment.md, archive/tickets/70BITFONLEA/70BITFONLEA-004-replace-bitmaptext-fontfamily-strings-with-typed-font-contract.md, tickets/70BITFONLEA-005-guard-keyed-bitmaptext-style-reassignment.md
 
 ## Problem
 
@@ -16,7 +16,7 @@ During game initialization, Chrome emits `'message' handler took 150ms` and `'re
 
 This creates a 3–4 frame stall for FITL (10+ zones, 20–50 tokens, 117 event cards).
 
-**This ticket is measurement-gated**: the font leak fix across tickets 001 + 002 + 004 may itself reduce handler times below the violation threshold, since dynamic font generation and repeated BitmapText style churn were part of the work happening during initialization. Implementation of the deferral only proceeds if violations persist.
+**This ticket is measurement-gated**: the font leak and BitmapText style-churn fixes across tickets 001 + 002 + 004 + 005 may themselves reduce handler times below the violation threshold, since dynamic font generation and repeated BitmapText style reassignment were part of the work happening during initialization. Implementation of the deferral only proceeds if violations persist.
 
 ## Assumption Reassessment (2026-03-21)
 
@@ -35,7 +35,7 @@ This creates a 3–4 frame stall for FITL (10+ zones, 20–50 tokens, 117 event 
 
 ### 1. Measurement Protocol (mandatory before any code changes)
 
-After 70BITFONLEA-001, 70BITFONLEA-002, and 70BITFONLEA-004 are merged:
+After `70BITFONLEA-001`, `70BITFONLEA-002`, `70BITFONLEA-004`, and `70BITFONLEA-005` are merged:
 
 1. Run `pnpm -F @ludoforge/runner dev`
 2. Open Chrome DevTools console
@@ -81,7 +81,8 @@ _(To be filled after 70BITFONLEA-001 and 70BITFONLEA-002 are complete)_
 ## Out of Scope
 
 - Font name changes — completed in 70BITFONLEA-001.
-- Style caching — handled in 70BITFONLEA-002.
+- Table-overlay marker style caching — handled in `70BITFONLEA-002`.
+- Shared keyed BitmapText style-guard work — handled in `70BITFONLEA-005`.
 - Typed BitmapText font-contract cleanup — completed in `70BITFONLEA-004`.
 - Refactoring `deriveStoreRunnerProjection()` or `deriveStoreWorldLayout()` internals.
 - Any changes to canvas updater subscription logic.

@@ -2,6 +2,7 @@ import { asPlayerId } from '@ludoforge/engine/runtime';
 
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import type { TableOverlayItemConfig } from '../config/visual-config-types.js';
+import { LABEL_FONT_NAME } from '../canvas/text/bitmap-font-registry.js';
 import type { WorldLayoutModel } from '../layout/world-layout-model.js';
 import type { RunnerProjectionBundle, RunnerVariable, RunnerZone } from '../model/runner-frame.js';
 
@@ -53,7 +54,7 @@ interface ProjectTableOverlaySurfaceOptions {
 const EMPTY_OVERLAY_SURFACE: readonly TableOverlaySurfaceNode[] = [];
 const DEFAULT_TEXT_COLOR = '#f8fafc';
 const DEFAULT_TEXT_FONT_SIZE = 12;
-const DEFAULT_FONT_FAMILY = 'monospace';
+const DEFAULT_FONT_FAMILY = LABEL_FONT_NAME;
 const DEFAULT_MARKER_COLOR = '#fbbf24';
 const DEFAULT_MARKER_LABEL = '*';
 const DEFAULT_MARKER_SHAPE: TableOverlayMarkerStyle['shape'] = 'circle';

@@ -82,6 +82,7 @@ _(To be filled after 70BITFONLEA-001 and 70BITFONLEA-002 are complete)_
 
 - Font name changes — completed in 70BITFONLEA-001.
 - Style caching — completed in 70BITFONLEA-002.
+- Typed BitmapText font-contract cleanup — handled separately in `70BITFONLEA-004`.
 - Refactoring `deriveStoreRunnerProjection()` or `deriveStoreWorldLayout()` internals.
 - Any changes to canvas updater subscription logic.
 - Adding `performance.mark()` / `performance.measure()` instrumentation (nice-to-have but not in scope).

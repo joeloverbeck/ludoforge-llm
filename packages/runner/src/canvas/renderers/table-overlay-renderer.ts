@@ -11,6 +11,7 @@ import {
   createKeyedBitmapTextReconciler,
   createManagedBitmapText,
 } from '../text/bitmap-text-runtime.js';
+import { LABEL_FONT_NAME } from '../text/bitmap-font-registry.js';
 
 const DEFAULT_MARKER_LABEL = '*';
 
@@ -46,7 +47,7 @@ export function createTableOverlayRenderer(
       style: {
         fill: '#111827',
         fontSize: 11,
-        fontFamily: 'monospace',
+        fontFamily: LABEL_FONT_NAME,
       },
       anchor: { x: 0.5, y: 0.5 },
     });

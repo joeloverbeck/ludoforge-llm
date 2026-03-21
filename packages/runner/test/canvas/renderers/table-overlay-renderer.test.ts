@@ -2,6 +2,7 @@ import { asPlayerId, type PlayerId } from '@ludoforge/engine/runtime';
 import { describe, expect, it, vi } from 'vitest';
 import type { Container } from 'pixi.js';
 
+import { LABEL_FONT_NAME } from '../../../src/canvas/text/bitmap-font-registry.js';
 import { VisualConfigProvider } from '../../../src/config/visual-config-provider';
 import { createTableOverlayRenderer } from '../../../src/canvas/renderers/table-overlay-renderer';
 import type { WorldLayoutModel } from '../../../src/layout/world-layout-model.js';
@@ -495,6 +496,7 @@ describe('createTableOverlayRenderer', () => {
     expect(marker.position.y).toBe(80);
     expect(markerBadge.shape?.kind).toBe('circle');
     expect(markerLabel.text).toBe('D');
+    expect((markerLabel.style as { fontFamily?: string }).fontFamily).toBe(LABEL_FONT_NAME);
   });
 
   it('moves marker when marker variable changes and reuses same Container', () => {

@@ -1,6 +1,7 @@
 import { asPlayerId, type AttributeValue } from '@ludoforge/engine/runtime';
 import { describe, expect, it } from 'vitest';
 
+import { LABEL_FONT_NAME } from '../../src/canvas/text/bitmap-font-registry.js';
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 import type { WorldLayoutModel } from '../../src/layout/world-layout-model.js';
 import type {
@@ -156,7 +157,7 @@ describe('projectTableOverlaySurface', () => {
       type: 'text',
       text: 'Pot: 42',
       point: { x: 0, y: 40 },
-      style: { color: '#f8fafc', fontSize: 12, fontFamily: 'monospace' },
+      style: { color: '#f8fafc', fontSize: 12, fontFamily: LABEL_FONT_NAME },
     });
     expect(overlays[1]).toMatchObject({
       type: 'text',
@@ -171,7 +172,7 @@ describe('projectTableOverlaySurface', () => {
     expect(overlays[3]).toMatchObject({
       type: 'marker',
       point: { x: 70, y: 100 },
-      style: { label: 'D', shape: 'circle' },
+      style: { label: 'D', shape: 'circle', fontFamily: LABEL_FONT_NAME },
     });
   });
 

@@ -21,6 +21,7 @@ In `table-overlay-renderer.ts`, `updateMarkerSlot()` (lines 83–88) reassigns `
 1. Comparing three primitive values before reassigning is cheaper than creating a new object + triggering PixiJS font lookup every tick.
 2. No GameSpecDoc or GameDef boundaries are affected — this is internal renderer optimization.
 3. No backwards-compatibility shims — the behavior is identical when properties do change.
+4. This ticket does **not** own the broader font-contract cleanup. If `70BITFONLEA-004` lands first, the style guard should compare the typed bitmap font identifier field it introduces instead of perpetuating raw `fontFamily: string` assumptions.
 
 ## What to Change
 

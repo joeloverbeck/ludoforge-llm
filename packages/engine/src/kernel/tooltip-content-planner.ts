@@ -144,6 +144,8 @@ function extractModifiers(
 function findSynopsisSource(
   messages: readonly TooltipMessage[],
 ): TooltipMessage | undefined {
+  const summary = messages.find((m) => m.kind === 'summary');
+  if (summary !== undefined) return summary;
   return messages.find((m) => m.kind === 'select' || m.kind === 'choose');
 }
 

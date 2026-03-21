@@ -116,6 +116,57 @@ describe('tooltip-content-planner', () => {
       assert.equal(plan.synopsisSource, undefined);
     });
 
+    // --- Synopsis source selection ---
+
+    it('prefers SummaryMessage over select for synopsisSource', () => {
+      const summary: TooltipMessage = {
+        kind: 'summary',
+        text: 'Place forces and build bases',
+        astPath: 'effects[0]',
+      };
+      const messages: readonly TooltipMessage[] = [
+        summary,
+        makeSelect({ astPath: 'effects[1]' }),
+      ];
+
+      const plan = planContent(messages, 'Rally');
+
+      assert.equal(plan.synopsisSource, summary);
+    });
+
+    it('falls back to select when no SummaryMessage exists', () => {
+      const select = makeSelect({ astPath: 'effects[0]' });
+      const choose = makeChoose({ astPath: 'effects[1]' });
+      const messages: readonly TooltipMessage[] = [select, choose];
+
+      const plan = planContent(messages, 'Train');
+
+      assert.equal(plan.synopsisSource, select);
+    });
+
+    it('uses SummaryMessage as synopsisSource when it is the only candidate', () => {
+      const summary: TooltipMessage = {
+        kind: 'summary',
+        text: 'Move forces and activate guerrillas',
+        astPath: 'effects[0]',
+      };
+
+      const plan = planContent([summary], 'Sweep');
+
+      assert.equal(plan.synopsisSource, summary);
+    });
+
+    it('leaves synopsisSource undefined when no summary, select, or choose exists', () => {
+      const messages: readonly TooltipMessage[] = [
+        makePlace({ astPath: 'effects[0]' }),
+        makeGain({ astPath: 'effects[1]' }),
+      ];
+
+      const plan = planContent(messages, 'Gain');
+
+      assert.equal(plan.synopsisSource, undefined);
+    });
+
     // --- Modifier extraction ---
 
     it('extracts modifiers into separate array', () => {

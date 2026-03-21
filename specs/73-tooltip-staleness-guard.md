@@ -70,16 +70,16 @@ export interface HoverTargetController {
   destroy(): void;
   // new
   clearAll(): void;
-  getActiveTargetCount(): number;
-  getActiveTargets(): ReadonlyMap<string, HoveredCanvasTarget>;
-  removeTarget(key: string): void;
+  getActiveTargets(): readonly HoveredCanvasTarget[];
+  removeTarget(target: HoveredCanvasTarget): void;
 }
 ```
 
 - `clearAll()`: Empties `activeTargets` and schedules a publish (which will publish `null` since no targets remain).
-- `getActiveTargetCount()`: Returns `activeTargets.size`.
-- `getActiveTargets()`: Returns the `activeTargets` map as `ReadonlyMap`.
-- `removeTarget(key)`: Deletes a single entry by key and schedules a publish. The key format is `${kind}:${id}` (matching `toTargetKey()`).
+- `getActiveTargets()`: Returns a detached snapshot of active hovered targets as domain values.
+- `removeTarget(target)`: Deletes a single entry by target identity and schedules a publish.
+
+The controller remains responsible for its internal keying and priority rules. Callers should not know about or depend on controller key formats.
 
 ### 2. New Module: `HoverStalenessGuard`
 
@@ -88,17 +88,9 @@ export interface HoverTargetController {
 A pure logic module with injected dependencies — no PixiJS or DOM imports.
 
 ```typescript
-export interface ScreenRect {
-  readonly x: number;
-  readonly y: number;
-  readonly width: number;
-  readonly height: number;
-}
-
 export interface HoverStalenessGuardDeps {
-  readonly getActiveTargetCount: () => number;
-  readonly getActiveTargets: () => ReadonlyMap<string, HoveredCanvasTarget>;
-  readonly removeTarget: (key: string) => void;
+  readonly getActiveTargets: () => readonly HoveredCanvasTarget[];
+  readonly removeTarget: (target: HoveredCanvasTarget) => void;
   readonly clearAll: () => void;
   readonly getPointerScreenPosition: () => { readonly x: number; readonly y: number } | null;
   readonly getCanvasBounds: () => { readonly left: number; readonly top: number; readonly right: number; readonly bottom: number } | null;
@@ -114,12 +106,15 @@ export interface HoverStalenessGuard {
 }
 ```
 
+`ScreenRect` should be imported from `packages/runner/src/canvas/coordinate-bridge.ts`, not redefined in this module.
+
 **Behavior**:
 
 - `onViewportMoving()`: Calls `clearAll()` immediately.
 - `onCanvasPointerLeave()`: Calls `clearAll()` immediately.
-- `onHoverStateChanged()`: Called whenever `activeTargets` changes. If `getActiveTargetCount() > 0` and no sweep interval is running, starts the periodic sweep. If `getActiveTargetCount() === 0` and a sweep is running, clears it.
+- `onHoverStateChanged()`: Called whenever hover state changes. If `getActiveTargets().length > 0` and no sweep interval is running, starts the periodic sweep. If the snapshot is empty and a sweep is running, clears it.
 - **Sweep tick**: Gets the pointer's screen position. If `null` (pointer left window) or outside canvas bounds, calls `clearAll()`. Otherwise, iterates `getActiveTargets()`, resolves each target's screen bounds, and removes any target whose bounds do not contain the pointer position.
+- If `resolveTargetScreenBounds(target)` returns `null`, treat that target as stale and remove it.
 - `destroy()`: Clears any running interval.
 
 ### 3. Pointer Position Tracking
@@ -177,9 +172,8 @@ const hoverTargetController = createHoverTargetController({
 });
 
 const stalenessGuard = createHoverStalenessGuard({
-  getActiveTargetCount: () => hoverTargetController.getActiveTargetCount(),
   getActiveTargets: () => hoverTargetController.getActiveTargets(),
-  removeTarget: (key) => hoverTargetController.removeTarget(key),
+  removeTarget: (target) => hoverTargetController.removeTarget(target),
   clearAll: () => hoverTargetController.clearAll(),
   getPointerScreenPosition: () => lastPointerScreenPosition,
   getCanvasBounds: () => canvasElement.getBoundingClientRect(),
@@ -203,7 +197,7 @@ canvasElement.removeEventListener('pointerleave', onCanvasPointerLeave);
 
 | File | Change |
 |------|--------|
-| `packages/runner/src/canvas/interactions/hover-target-controller.ts` | Add `clearAll()`, `getActiveTargetCount()`, `getActiveTargets()`, `removeTarget()` |
+| `packages/runner/src/canvas/interactions/hover-target-controller.ts` | Add `clearAll()`, `getActiveTargets()`, `removeTarget()` |
 | `packages/runner/src/canvas/interactions/hover-staleness-guard.ts` | **New file** — staleness guard module |
 | `packages/runner/src/canvas/game-canvas-runtime.ts` | Wire staleness guard, DOM pointer listeners, viewport drag check |
 
@@ -213,23 +207,24 @@ canvasElement.removeEventListener('pointerleave', onCanvasPointerLeave);
 
 - `clearAll()` empties all targets and publishes `null`
 - `clearAll()` when already empty is a no-op (no publish)
-- `getActiveTargetCount()` returns correct count after enter/leave sequences
 - `getActiveTargets()` returns readable snapshot of current entries
-- `removeTarget(key)` removes a specific entry and republishes highest-priority
-- `removeTarget(key)` with nonexistent key is a no-op
+- `removeTarget(target)` removes a specific entry and republishes highest-priority
+- `removeTarget(target)` with nonexistent target is a no-op
 
 ### `hover-staleness-guard.test.ts` (new file)
 
 - `onViewportMoving()` calls `clearAll()` immediately
 - `onCanvasPointerLeave()` calls `clearAll()` immediately
-- `onHoverStateChanged()` starts sweep interval when `getActiveTargetCount() > 0`
-- `onHoverStateChanged()` stops sweep interval when `getActiveTargetCount()` returns 0
+- `onHoverStateChanged()` starts sweep interval when `getActiveTargets().length > 0`
+- `onHoverStateChanged()` stops sweep interval when the active-target snapshot becomes empty
 - Sweep removes targets whose screen bounds do not contain the pointer
 - Sweep removes all targets when pointer position is `null` (left window)
 - Sweep removes all targets when pointer is outside canvas bounds
 - Sweep keeps targets whose bounds still contain the pointer
+- Sweep removes targets whose bounds cannot be resolved
+- Repeated `onHoverStateChanged()` calls while active do not create duplicate intervals
 - `destroy()` clears any running interval
-- No sweep runs when `getActiveTargetCount()` is 0 (no unnecessary timers)
+- No sweep runs when `getActiveTargets()` is empty (no unnecessary timers)
 - Multiple rapid `onViewportMoving()` calls are safe (idempotent)
 
 All tests are pure unit tests with injected dependencies — no PixiJS, no DOM, no browser required.

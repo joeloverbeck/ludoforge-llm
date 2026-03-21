@@ -1,6 +1,6 @@
 # Spec 71 — Canvas TexturePool Crash Elimination
 
-**Status**: ACTIVE
+**Status**: ✅ COMPLETED
 **Priority**: Critical (crash blocks gameplay, survived two previous fix attempts)
 **Depends on**: None (standalone fix; builds on Specs 68 + 69 infrastructure)
 
@@ -258,6 +258,22 @@ The probe is lightweight (runs only after errors, not every tick) and does not i
 - [ ] All existing runner tests continue to pass.
 - [ ] New tests cover: monkey-patch behavior, corruption detection, heartbeat-triggered recovery, pre-destroy guards, render health probe.
 - [ ] Each defensive layer is proven independently sufficient by its own test suite.
+
+## Outcome
+
+- Completion date: 2026-03-21
+- What actually changed:
+  - The recovery architecture landed in runner-owned layers: pre-destroy render guards, corruption-suspicion heartbeat integration, `TexturePool.clear()` on canvas teardown, and an active render-health probe.
+  - Integration coverage was added for the composed recovery pipeline in `packages/runner/test/canvas/crash-elimination-integration.test.ts`.
+  - Existing focused tests cover destroy hardening, fence corruption signaling, heartbeat recovery, render-health probing, runtime wiring, and React recovery/remount behavior.
+- Deviations from original plan:
+  - The spec's original Layer 1 plan proposed a PixiJS-global `TexturePool` monkey-patch in `texture-pool-patch.ts`. That was not the architecture implemented. Reassessment in 71CANCRASH-001 replaced that approach with cleaner runner-owned destroy-path hardening in `safe-destroy.ts` and `text-runtime.ts`.
+  - As a result, the final proof strategy is a mix of focused ownership-boundary tests plus one composed integration test, rather than one giant test file reasserting every local invariant.
+- Verification results:
+  - `pnpm -F @ludoforge/runner test -- crash-elimination-integration`
+  - `pnpm -F @ludoforge/runner typecheck`
+  - `pnpm -F @ludoforge/runner lint`
+  - `pnpm -F @ludoforge/runner test`
 
 ---
 

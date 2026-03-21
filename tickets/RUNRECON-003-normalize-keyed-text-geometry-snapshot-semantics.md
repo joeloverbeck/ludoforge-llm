@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — runner-only
-**Deps**: docs/FOUNDATIONS.md, tickets/README.md, archive/tickets/RUNRECON/RUNRECON-001-normalize-keyed-bitmaptext-snapshot-semantics.md, tickets/RUNRECON-002-normalize-keyed-text-snapshot-semantics.md
+**Deps**: docs/FOUNDATIONS.md, tickets/README.md, archive/tickets/RUNRECON/RUNRECON-001-normalize-keyed-bitmaptext-snapshot-semantics.md, archive/tickets/RUNRECON/RUNRECON-002-normalize-keyed-text-snapshot-semantics.md
 
 ## Problem
 
@@ -84,7 +84,7 @@ Add tests that prove:
 ## Out of Scope
 
 - BitmapText transform semantics already handled in `archive/tickets/RUNRECON/RUNRECON-001-normalize-keyed-bitmaptext-snapshot-semantics.md`
-- Plain `Text` transform/style semantics handled in `tickets/RUNRECON-002-normalize-keyed-text-snapshot-semantics.md`
+- Plain `Text` transform/style semantics handled in `archive/tickets/RUNRECON/RUNRECON-002-normalize-keyed-text-snapshot-semantics.md`
 - Renderer-specific layout policy or typography choices
 - Any engine (`packages/engine/`) or GameSpecDoc/GameDef changes
 

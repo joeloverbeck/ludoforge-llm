@@ -61,7 +61,8 @@ const { MockContainer, MockText } = vi.hoisted(() => {
 
   class HoistedMockText extends HoistedMockContainer {
     text: string;
-    style: Record<string, unknown> | undefined;
+    private _style: Record<string, unknown> | undefined;
+    styleAssignments = 0;
     position = new MockPoint();
     anchor = new MockAnchor();
     destroy = vi.fn(() => {
@@ -71,7 +72,18 @@ const { MockContainer, MockText } = vi.hoisted(() => {
     constructor(options: { text: string; style?: Record<string, unknown> }) {
       super();
       this.text = options.text;
-      this.style = options.style;
+      if (options.style !== undefined) {
+        this.style = options.style;
+      }
+    }
+
+    get style(): Record<string, unknown> | undefined {
+      return this._style;
+    }
+
+    set style(value: Record<string, unknown> | undefined) {
+      this._style = value;
+      this.styleAssignments += 1;
     }
   }
 
@@ -249,6 +261,85 @@ describe('createKeyedTextReconciler', () => {
     expect(label.scale.y).toBe(3);
     expect(label.position.x).toBe(5);
     expect(label.position.y).toBe(6);
+  });
+
+  it('resets omitted transform fields and style to canonical defaults on reuse', () => {
+    const parent = new MockContainer() as unknown as Container;
+    const runtime = createKeyedTextReconciler({ parentContainer: parent });
+
+    runtime.reconcile([{
+      key: 'label',
+      text: 'Styled',
+      style: { fill: '#fff', fontSize: 16 },
+      alpha: 0.25,
+      rotation: Math.PI / 3,
+      scale: { x: 2, y: 3 },
+    }]);
+
+    const label = (parent as unknown as InstanceType<typeof MockContainer>).children[0]!;
+    expect(label.style).toEqual({ fill: '#fff', fontSize: 16 });
+    expect(label.alpha).toBe(0.25);
+    expect(label.rotation).toBe(Math.PI / 3);
+    expect(label.scale.x).toBe(2);
+    expect(label.scale.y).toBe(3);
+
+    runtime.reconcile([{
+      key: 'label',
+      text: 'Plain',
+    }]);
+
+    expect(label.style).toEqual({});
+    expect(label.alpha).toBe(1);
+    expect(label.rotation).toBe(0);
+    expect(label.scale.x).toBe(1);
+    expect(label.scale.y).toBe(1);
+  });
+
+  it('creates keyed text with a single semantic style assignment', () => {
+    const parent = new MockContainer() as unknown as Container;
+    const runtime = createKeyedTextReconciler({ parentContainer: parent });
+
+    runtime.reconcile([{
+      key: 'title',
+      text: 'Hello',
+      style: { fill: '#fff', fontSize: 12 },
+    }]);
+
+    const title = (parent as unknown as InstanceType<typeof MockContainer>).children[0]!;
+    expect(title.styleAssignments).toBe(1);
+    expect(title.style).toEqual({ fill: '#fff', fontSize: 12 });
+  });
+
+  it('lets apply override canonical defaults after reconciliation', () => {
+    const parent = new MockContainer() as unknown as Container;
+    const runtime = createKeyedTextReconciler({ parentContainer: parent });
+
+    runtime.reconcile([{
+      key: 'label',
+      text: 'Styled',
+      style: { fill: '#fff', fontSize: 16 },
+      alpha: 0.25,
+      rotation: 0.5,
+      scale: { x: 2, y: 3 },
+    }]);
+
+    const label = (parent as unknown as InstanceType<typeof MockContainer>).children[0]!;
+
+    runtime.reconcile([{
+      key: 'label',
+      text: 'Plain',
+      apply: (text) => {
+        text.alpha = 0.75;
+        text.rotation = 1.25;
+        text.scale.set(4, 5);
+      },
+    }]);
+
+    expect(label.style).toEqual({});
+    expect(label.alpha).toBe(0.75);
+    expect(label.rotation).toBe(1.25);
+    expect(label.scale.x).toBe(4);
+    expect(label.scale.y).toBe(5);
   });
 
   it('destroy tears down every retained text node', () => {

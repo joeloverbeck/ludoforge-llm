@@ -1,4 +1,4 @@
-import { Application } from 'pixi.js';
+import { Application, TexturePool } from 'pixi.js';
 
 import { createLayerHierarchy, type LayerHierarchy } from './layers';
 
@@ -43,6 +43,7 @@ export async function createGameCanvas(
     layers,
     destroy(): void {
       app.destroy(true, { children: true, texture: true });
+      TexturePool.clear();
     },
   };
 }

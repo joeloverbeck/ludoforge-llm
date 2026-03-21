@@ -12,6 +12,7 @@ const {
   applicationCtorMock,
   createLayerHierarchyMock,
   layersMock,
+  texturePoolClearMock,
 } = vi.hoisted(() => {
   const layers = {
     boardGroup: { id: 'board' },
@@ -28,11 +29,15 @@ const {
     applicationCtorMock: vi.fn(),
     createLayerHierarchyMock: vi.fn(() => layers),
     layersMock: layers,
+    texturePoolClearMock: vi.fn(),
   };
 });
 
 vi.mock('pixi.js', () => ({
   Application: applicationCtorMock,
+  TexturePool: {
+    clear: texturePoolClearMock,
+  },
 }));
 
 vi.mock('../../src/canvas/layers', () => ({
@@ -59,6 +64,7 @@ describe('createGameCanvas', () => {
   beforeEach(() => {
     applicationCtorMock.mockReset();
     createLayerHierarchyMock.mockClear();
+    texturePoolClearMock.mockReset();
   });
 
   it('creates an app with webgl configuration and returns app/layers', async () => {
@@ -130,5 +136,21 @@ describe('createGameCanvas', () => {
       children: true,
       texture: true,
     });
+  });
+
+  it('clears TexturePool after destroying the app', async () => {
+    const app = createMockApplication();
+    applicationCtorMock.mockImplementation(function () { return app; } as never);
+
+    const container = { appendChild: vi.fn() } as unknown as HTMLElement;
+
+    const gameCanvas = await createGameCanvas(container, GAME_CANVAS_CONFIG);
+    gameCanvas.destroy();
+
+    expect(texturePoolClearMock).toHaveBeenCalledTimes(1);
+    expect(app.destroy).toHaveBeenCalledTimes(1);
+    expect(app.destroy.mock.invocationCallOrder[0]).toBeLessThan(
+      texturePoolClearMock.mock.invocationCallOrder[0]!,
+    );
   });
 });

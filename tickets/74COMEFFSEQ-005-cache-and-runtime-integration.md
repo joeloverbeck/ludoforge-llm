@@ -24,6 +24,7 @@ The compiled effect sequences must be stored on `GameDefRuntime` (computed once 
 2. `dispatchLifecycleEvent` is the single entry point for lifecycle effect execution. Intercepting here guarantees full coverage.
 3. The compiled path reuses the same `EffectResult` contract — downstream trigger dispatch, trace emission, and state threading are unchanged.
 4. No backwards-compatibility shims: if `compiledLifecycleEffects` is undefined (e.g., compilation disabled), the existing interpreter path runs unchanged.
+5. Architectural follow-up from 74COMEFFSEQ-003: `phase-lifecycle.ts` must not open-code yet another partial execution-context shape for the compiled path. Reuse the shared compiled-to-execution context adapter established by the compiler work so `CompiledEffectContext` stays aligned with `EffectContext` semantics instead of drifting further.
 
 ## What to Change
 
@@ -79,6 +80,8 @@ if (compiledSeq !== undefined) {
   // Existing interpreter path (unchanged)
 }
 ```
+
+Note: if 74COMEFFSEQ-004 introduces a helper for building compiled execution context, use it here rather than duplicating this object shape inline.
 
 ### 3. Add compiled path profiler bucket
 

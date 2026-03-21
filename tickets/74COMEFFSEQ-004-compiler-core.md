@@ -24,6 +24,7 @@ The compiler core orchestrates the full compilation pipeline: it takes a sequenc
 2. Fallback strategy ensures 100% correctness — any unrecognized AST node delegates to the interpreter, so the compiler is strictly an optimization (Foundation 10).
 3. The compiler processes effects at `createGameDefRuntime` time (once per game load), not per-move. This amortizes compilation cost.
 4. Game-agnostic: compiles based on AST node types, not game-specific identifiers (Foundation 1).
+5. Architectural follow-up from 74COMEFFSEQ-003: do not let `CompiledEffectContext` drift into a second ad hoc execution-context model. If orchestration needs more runtime surface, centralize compiled-to-execution context adaptation in one shared helper and prefer convergence with `EffectContext` semantics over adding ticket-local one-off fields.
 
 ## What to Change
 
@@ -66,6 +67,7 @@ function createFallbackFragment(
 ```
 - Wraps the interpreter call in a `CompiledEffectFragment` interface.
 - Passes through the full `EffectContext` constructed from `CompiledEffectContext`.
+- Use a shared adapter/helper for this construction. Do not duplicate hand-built context assembly across fragments, compiler composition, and runtime integration.
 
 **Bulk compilation:**
 ```typescript

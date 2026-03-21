@@ -5,6 +5,7 @@ import type {
   EffectTraceContext,
   PhaseTransitionBudget,
 } from './effect-context.js';
+import type { DecisionScope } from './decision-scope.js';
 import type { EvalRuntimeResources } from './eval-context.js';
 import type { AdjacencyGraph } from './spatial.js';
 import type { RuntimeTableIndex } from './runtime-table-index.js';
@@ -38,6 +39,8 @@ export interface CompiledEffectContext {
   readonly moveParams: Readonly<Record<string, MoveParamValue>>;
   readonly fallbackApplyEffects: (effects: readonly EffectAST[], ctx: EffectContext) => EffectResult;
   readonly traceContext?: EffectTraceContext;
+  readonly decisionScope?: DecisionScope;
+  readonly effectPath?: string;
   readonly phaseTransitionBudget?: PhaseTransitionBudget;
 }
 

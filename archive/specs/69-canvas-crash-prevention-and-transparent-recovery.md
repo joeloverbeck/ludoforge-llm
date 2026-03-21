@@ -1,6 +1,6 @@
 # Spec 69 — Canvas Crash Prevention & Transparent Recovery
 
-## Status: COMPLETED
+**Status**: COMPLETED
 
 ## Problem
 
@@ -192,3 +192,10 @@ Implemented by extending the existing `GameCanvas.recovery.test.tsx` integration
 1. The underlying PixiJS `TexturePoolClass.returnTexture` bug may still exist upstream. Spec 69 hardens containment and recovery around it rather than claiming to eliminate every root cause inside Pixi.
 2. Heartbeat recovery is intentionally conservative, but any future runtime pause semantics should still be reviewed against the health criteria.
 3. If future evidence proves a remaining disposal-path bug, that should be addressed in a new spec with a reproducible failing test first.
+
+## Outcome
+
+- Completion date: 2026-03-20
+- What actually changed: Implemented the runner-side crash-hardening work described in this spec, including sliding-window ticker error detection, heartbeat-based recovery using a sanitized runtime health surface, viewport snapshot/restore across remount, and stronger disposal invariant coverage in tests.
+- Deviations from original plan: Ticket 001 was deliberately re-scoped away from speculative recursive descendant neutralization, and Ticket 005 was delivered by extending the existing recovery integration suite instead of creating a separate standalone test file.
+- Verification results: Verified with targeted Vitest canvas coverage, full runner test suite, runner typecheck, and runner lint as listed in the Verification section above.

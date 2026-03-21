@@ -300,6 +300,22 @@ verbalization:
   # ── Action-level tooltip synopses ─────────────────────────────────────
   actionSummaries:
     pass: "Take no action"
+    event: "Execute the current event card"
+    coupVictoryCheck: "Check faction victory conditions"
+    coupResourcesResolve: "Resolve coup resources and aid"
+    coupPacifyPass: "Pass on US pacification"
+    coupAgitatePass: "Pass on VC agitation"
+    coupPacifyUS: "US pacifies selected spaces"
+    coupPacifyARVN: "ARVN pacifies selected spaces"
+    coupAgitateVC: "VC agitates selected spaces"
+    coupArvnRedeployMandatory: "Redeploy required ARVN troops"
+    coupArvnRedeployOptionalTroops: "Optionally redeploy ARVN troops"
+    coupArvnRedeployPolice: "Redeploy ARVN police"
+    coupNvaRedeployTroops: "Redeploy NVA troops"
+    coupRedeployPass: "Pass on redeployment"
+    coupCommitmentPass: "Pass on commitment change"
+    coupCommitmentResolve: "Resolve coup commitment changes"
+    pivotalEvent: "Execute a pivotal event card"
     train: "Place forces and build support"
     patrol: "Move forces along lines of communication and activate guerrillas"
     sweep: "Move forces and activate guerrillas"
@@ -320,6 +336,14 @@ verbalization:
     tax: "Collect resources from population"
     subvert: "Remove ARVN pieces and replace them with VC"
     ambushVc: "Ambush COIN forces with VC guerrillas"
+    nvaTransferResources: "Transfer NVA resources to VC"
+    vcTransferResources: "Transfer VC resources to NVA"
+    resolveCommitment: "Resolve commitment adjustments"
+    resolveHonoluluPacify: "End Honolulu pacification"
+    apcPacifyUS: "US pacifies spaces during APC"
+    apcPacifyARVN: "ARVN pacifies spaces during APC"
+    apcPacifyPass: "Pass on APC pacification"
+    resolveApcPacify: "End APC pacification"
 
   # ── Macros ────────────────────────────────────────────────────────────
   macros:

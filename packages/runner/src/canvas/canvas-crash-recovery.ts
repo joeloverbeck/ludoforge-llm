@@ -1,17 +1,13 @@
 import type { StoreApi } from 'zustand';
 
 import type { GameStore } from '../store/game-store.js';
+import type { CanvasRuntimeHealthStatus } from './canvas-runtime-health.js';
 
 const DEFAULT_HEARTBEAT_INTERVAL_MS = 5000;
 
 export interface CanvasCrashRecovery {
   handleCrash(error: unknown): void;
   destroy(): void;
-}
-
-export interface CanvasRuntimeHealthStatus {
-  readonly tickerStarted: boolean;
-  readonly canvasConnected: boolean;
 }
 
 export interface CanvasCrashRecoveryOptions {
@@ -45,6 +41,10 @@ export function createCanvasCrashRecovery(options: CanvasCrashRecoveryOptions): 
     heartbeatId = setInterval(() => {
       const healthStatus = options.getHealthStatus?.();
       if (healthStatus === null || healthStatus === undefined) {
+        return;
+      }
+      if (healthStatus.renderCorruptionSuspected) {
+        requestRecovery('Canvas runtime heartbeat detected render corruption. Starting recovery.', healthStatus);
         return;
       }
       if (healthStatus.tickerStarted && healthStatus.canvasConnected) {

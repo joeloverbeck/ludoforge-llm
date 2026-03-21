@@ -3,6 +3,7 @@ import type { Application } from 'pixi.js';
 const DEFAULT_MAX_CONSECUTIVE_ERRORS = 3;
 const DEFAULT_WINDOW_ERRORS = 5;
 const DEFAULT_WINDOW_MS = 2000;
+const DEFAULT_CORRUPTION_CLEAR_THRESHOLD = 10;
 
 type TickerTick = (...args: unknown[]) => unknown;
 
@@ -22,6 +23,7 @@ interface FenceState {
 const installedFences = new WeakMap<TickerLike, FenceState>();
 
 export interface TickerErrorFence {
+  isRenderCorruptionSuspected(): boolean;
   destroy(): void;
 }
 
@@ -29,6 +31,7 @@ export interface TickerErrorFenceOptions {
   readonly maxConsecutiveErrors?: number;
   readonly windowErrors?: number;
   readonly windowMs?: number;
+  readonly corruptionClearThreshold?: number;
   readonly onCrash?: (error: unknown) => void;
   readonly logger?: Pick<Console, 'warn'>;
   readonly now?: () => number;
@@ -55,11 +58,17 @@ export function installTickerErrorFence(
   if (!Number.isFinite(windowMs) || windowMs <= 0) {
     throw new Error('Ticker error fence windowMs must be a positive number.');
   }
+  const corruptionClearThreshold = options?.corruptionClearThreshold ?? DEFAULT_CORRUPTION_CLEAR_THRESHOLD;
+  if (!Number.isInteger(corruptionClearThreshold) || corruptionClearThreshold < 1) {
+    throw new Error('Ticker error fence corruptionClearThreshold must be an integer >= 1.');
+  }
 
   const logger = options?.logger ?? console;
   const now = options?.now ?? Date.now;
   const originalTick = ticker._tick;
   let consecutiveErrors = 0;
+  let renderCorruptionSuspected = false;
+  let successfulTicksSinceError = 0;
   let destroyed = false;
   let crashReported = false;
   const errorTimestamps = new Array<number>(windowErrors);
@@ -70,9 +79,18 @@ export function installTickerErrorFence(
     try {
       const result = originalTick.apply(ticker, args);
       consecutiveErrors = 0;
+      if (renderCorruptionSuspected) {
+        successfulTicksSinceError += 1;
+        if (successfulTicksSinceError >= corruptionClearThreshold) {
+          renderCorruptionSuspected = false;
+          successfulTicksSinceError = 0;
+        }
+      }
       return result;
     } catch (error) {
       consecutiveErrors += 1;
+      renderCorruptionSuspected = true;
+      successfulTicksSinceError = 0;
       errorTimestamps[nextTimestampIndex] = now();
       nextTimestampIndex = (nextTimestampIndex + 1) % windowErrors;
       if (recordedErrors < windowErrors) {
@@ -105,6 +123,9 @@ export function installTickerErrorFence(
   installedFences.set(ticker, { originalTick });
 
   return {
+    isRenderCorruptionSuspected(): boolean {
+      return renderCorruptionSuspected;
+    },
     destroy(): void {
       if (destroyed) {
         return;

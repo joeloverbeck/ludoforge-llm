@@ -16,12 +16,14 @@ Each defensive layer (001-005) has its own unit tests, but there is no integrati
 2. The runner test infrastructure uses Vitest — confirmed (runner uses Vitest, not node --test).
 3. PixiJS mocking in the runner test suite: needs investigation at implementation time. The integration test may need to mock PixiJS internals to simulate TexturePool corruption without a real GPU context.
 4. The crash recovery flow is: `reportCanvasCrash()` → `beginCanvasRecovery()` → `onRecoveryNeeded()` callback — confirmed from `canvas-crash-recovery.ts` lines 39-41.
+5. This ticket is test-only. If 71CANCRASH-005 refines the shared runtime-health contract, this ticket must follow that canonical shape and must not preserve stale boolean-only assumptions in fixtures or mocks.
 
 ## Architecture Check
 
 1. This is a test-only ticket — no production code changes.
 2. The integration test validates the architectural claim that each layer is independently sufficient.
 3. No backwards-compatibility concerns; this is purely additive test coverage.
+4. This ticket is not the place to invent a new runtime-health model. It should validate the production contract delivered by 71CANCRASH-003 and, if needed, refined by 71CANCRASH-005.
 
 ## What to Change
 
@@ -38,6 +40,7 @@ Create `packages/runner/test/canvas/crash-elimination-integration.test.ts`:
 - Simulate a contained ticker error (by throwing inside the original tick).
 - Assert: `isRenderCorruptionSuspected()` returns `true` after the error.
 - Assert: heartbeat interval (fast-forwarded via fake timers) triggers recovery callback.
+- If 71CANCRASH-005 evolves the shared runtime-health contract beyond the current boolean form, assert against that canonical contract instead of preserving this exact boolean assertion.
 
 **Test group 3: Layer 3 independence (Clean Recovery)**
 - Simulate canvas teardown via `GameCanvas.destroy()`.
@@ -89,6 +92,7 @@ Create `packages/runner/test/canvas/crash-elimination-integration.test.ts`:
 2. The integration test does not modify production code.
 3. The integration test uses Vitest mocking/faking for PixiJS internals — no real GPU context required.
 4. All existing runner tests continue to pass unmodified.
+5. Runtime-health fixtures in this test must match the single canonical contract in production code at implementation time.
 
 ## Test Plan
 

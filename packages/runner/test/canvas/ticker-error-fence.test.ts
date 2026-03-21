@@ -48,6 +48,71 @@ describe('installTickerErrorFence', () => {
     }).not.toThrow();
     expect(stopMock).not.toHaveBeenCalled();
     expect(onCrash).not.toHaveBeenCalled();
+    expect(fence.isRenderCorruptionSuspected()).toBe(true);
+
+    fence.destroy();
+  });
+
+  it('clears render corruption suspicion after enough successful ticks', () => {
+    const { app, ticker, tickMock } = createMockApp();
+    const failure = new Error('boom');
+    tickMock
+      .mockImplementationOnce(() => {
+        throw failure;
+      })
+      .mockImplementation(() => undefined);
+
+    const fence = installTickerErrorFence(app, {
+      corruptionClearThreshold: 3,
+      logger: { warn: vi.fn() },
+    });
+
+    ticker._tick();
+    expect(fence.isRenderCorruptionSuspected()).toBe(true);
+
+    ticker._tick();
+    ticker._tick();
+    expect(fence.isRenderCorruptionSuspected()).toBe(true);
+
+    ticker._tick();
+    expect(fence.isRenderCorruptionSuspected()).toBe(false);
+
+    fence.destroy();
+  });
+
+  it('resets the corruption clear countdown after a new contained error', () => {
+    const { app, ticker, tickMock } = createMockApp();
+    const failure = new Error('boom');
+    tickMock
+      .mockImplementationOnce(() => {
+        throw failure;
+      })
+      .mockImplementationOnce(() => undefined)
+      .mockImplementationOnce(() => undefined)
+      .mockImplementationOnce(() => {
+        throw failure;
+      })
+      .mockImplementation(() => undefined);
+
+    const fence = installTickerErrorFence(app, {
+      corruptionClearThreshold: 3,
+      logger: { warn: vi.fn() },
+    });
+
+    ticker._tick();
+    ticker._tick();
+    ticker._tick();
+    expect(fence.isRenderCorruptionSuspected()).toBe(true);
+
+    ticker._tick();
+    expect(fence.isRenderCorruptionSuspected()).toBe(true);
+
+    ticker._tick();
+    ticker._tick();
+    expect(fence.isRenderCorruptionSuspected()).toBe(true);
+
+    ticker._tick();
+    expect(fence.isRenderCorruptionSuspected()).toBe(false);
 
     fence.destroy();
   });
@@ -339,6 +404,13 @@ describe('installTickerErrorFence', () => {
           logger: { warn: vi.fn() },
         });
       }).toThrow(/windowMs/i);
+
+      expect(() => {
+        installTickerErrorFence(app, {
+          corruptionClearThreshold: 0,
+          logger: { warn: vi.fn() },
+        });
+      }).toThrow(/corruptionClearThreshold/i);
     });
   });
 });

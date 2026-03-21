@@ -3,8 +3,8 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import {
   createCanvasCrashRecovery,
-  type CanvasRuntimeHealthStatus,
 } from '../../src/canvas/canvas-crash-recovery.js';
+import type { CanvasRuntimeHealthStatus } from '../../src/canvas/canvas-runtime-health.js';
 import type { GameStore } from '../../src/store/game-store.js';
 
 interface RecoveryStoreState {
@@ -92,6 +92,7 @@ describe('canvas crash recovery', () => {
       let healthStatus: CanvasRuntimeHealthStatus | null = {
         tickerStarted: true,
         canvasConnected: true,
+        renderCorruptionSuspected: false,
       };
       const recovery = createCanvasCrashRecovery({
         store: createRecoveryStore(calls) as unknown as StoreApi<GameStore>,
@@ -106,6 +107,7 @@ describe('canvas crash recovery', () => {
       healthStatus = {
         tickerStarted: false,
         canvasConnected: true,
+        renderCorruptionSuspected: false,
       };
       vi.advanceTimersByTime(100);
 
@@ -129,6 +131,7 @@ describe('canvas crash recovery', () => {
         getHealthStatus: () => ({
           tickerStarted: true,
           canvasConnected: false,
+          renderCorruptionSuspected: false,
         }),
         heartbeatIntervalMs: 100,
         logger: { warn: vi.fn() },
@@ -156,6 +159,7 @@ describe('canvas crash recovery', () => {
         getHealthStatus: () => ({
           tickerStarted: false,
           canvasConnected: true,
+          renderCorruptionSuspected: false,
         }),
         heartbeatIntervalMs: 100,
         logger: { warn: vi.fn() },
@@ -183,6 +187,7 @@ describe('canvas crash recovery', () => {
         getHealthStatus: () => ({
           tickerStarted: false,
           canvasConnected: true,
+          renderCorruptionSuspected: false,
         }),
         heartbeatIntervalMs: 100,
         logger: { warn: vi.fn() },
@@ -205,6 +210,7 @@ describe('canvas crash recovery', () => {
         getHealthStatus: () => ({
           tickerStarted: false,
           canvasConnected: true,
+          renderCorruptionSuspected: false,
         }),
         heartbeatIntervalMs: 0,
         logger: { warn: vi.fn() },
@@ -224,6 +230,34 @@ describe('canvas crash recovery', () => {
 
       disabled.destroy();
       noGetter.destroy();
+    });
+
+    it('triggers recovery when render corruption is suspected despite structural health remaining true', () => {
+      vi.useFakeTimers();
+      const calls: string[] = [];
+      const recovery = createCanvasCrashRecovery({
+        store: createRecoveryStore(calls) as unknown as StoreApi<GameStore>,
+        onRecoveryNeeded: vi.fn(() => {
+          calls.push('onRecoveryNeeded');
+        }),
+        getHealthStatus: () => ({
+          tickerStarted: true,
+          canvasConnected: true,
+          renderCorruptionSuspected: true,
+        }),
+        heartbeatIntervalMs: 100,
+        logger: { warn: vi.fn() },
+      });
+
+      vi.advanceTimersByTime(100);
+
+      expect(calls).toEqual([
+        'reportCanvasCrash',
+        'beginCanvasRecovery',
+        'onRecoveryNeeded',
+      ]);
+
+      recovery.destroy();
     });
   });
 });

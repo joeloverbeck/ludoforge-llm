@@ -37,6 +37,7 @@ import { createCanvasUpdater, type CanvasUpdater } from './canvas-updater';
 import { setupViewport, type ViewportResult } from './viewport-setup';
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import { EMPTY_INTERACTION_HIGHLIGHTS, type InteractionHighlights } from './interaction-highlights.js';
+import type { CanvasRuntimeHealthStatus } from './canvas-runtime-health.js';
 import {
   createActionAnnouncementPresenter,
   type ActionAnnouncementPresenter,
@@ -72,11 +73,6 @@ export interface GameCanvasRuntime {
   getViewportSnapshot(): ViewportSnapshot | null;
   setInteractionHighlights(highlights: InteractionHighlights): void;
   destroy(): void;
-}
-
-export interface CanvasRuntimeHealthStatus {
-  readonly tickerStarted: boolean;
-  readonly canvasConnected: boolean;
 }
 
 export interface ViewportSnapshot {
@@ -517,6 +513,7 @@ export async function createGameCanvasRuntime(
       return {
         tickerStarted: tickerState.started !== false,
         canvasConnected: canvasElement.isConnected !== false,
+        renderCorruptionSuspected: tickerErrorFence.isRenderCorruptionSuspected(),
       };
     },
     getViewportSnapshot(): ViewportSnapshot | null {

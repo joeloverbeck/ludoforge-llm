@@ -563,6 +563,7 @@ describe('createGameCanvasRuntime', () => {
     expect(runtime.getHealthStatus()).toEqual({
       tickerStarted: true,
       canvasConnected: true,
+      renderCorruptionSuspected: false,
     });
 
     runtime.destroy();

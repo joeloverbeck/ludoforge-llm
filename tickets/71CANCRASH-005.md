@@ -17,6 +17,7 @@ The heartbeat checks structural health (ticker running, canvas connected) but ca
 3. After 71CANCRASH-003, the ticker error fence exposes `isRenderCorruptionSuspected()` — this ticket depends on that being available.
 4. The `GameCanvasRuntime.destroy()` method already tears down all subsystems in sequence (lines 536-572) — the probe must be destroyed in this sequence too.
 5. After 71CANCRASH-003, `CanvasRuntimeHealthStatus` should already be consolidated to a single source of truth. This ticket must use that shared type surface and must not re-declare it while wiring the probe into `game-canvas-runtime.ts`.
+6. A richer runtime-health model is only justified if this ticket introduces another persisted runtime health signal or failure reason. If the probe only performs one-shot verification and immediately routes confirmed corruption into the existing recovery path, a new discriminated health-state abstraction would be speculative and should not be added.
 
 ## Architecture Check
 
@@ -24,6 +25,9 @@ The heartbeat checks structural health (ticker running, canvas connected) but ca
 2. This is purely runner canvas concern — no engine or game-spec changes.
 3. The probe is a new module with a clean interface; no backwards-compatibility concerns.
 4. This ticket extends runtime wiring only; it must preserve the health-status consolidation introduced by 71CANCRASH-003 and avoid reintroducing duplicate type declarations.
+5. This ticket is the correct place to decide whether the runtime health contract should stay as the current boolean surface or graduate to a discriminated health-state object. Rule:
+   - If the probe only triggers immediate recovery through `onCorruption`, keep the current shared health contract and avoid adding more structure.
+   - If the probe needs to persist additional fault modes or expose recovery reasons beyond `renderCorruptionSuspected`, refactor `canvas-runtime-health.ts` into a single discriminated runtime-health model here instead of adding more top-level booleans.
 
 ## What to Change
 
@@ -58,6 +62,9 @@ Create `packages/runner/src/canvas/render-health-probe.ts`:
 - The probe's `onCorruption` callback should trigger the existing crash recovery path (e.g., `options.onError?.(error)` or directly call `requestRecovery` via the crash recovery handle).
 - Add `probe.destroy()` to the `destroyCanvasPipeline` sequence.
 - While touching runtime health wiring, keep `CanvasRuntimeHealthStatus` imported from the single canonical module established by 71CANCRASH-003; do not re-declare it locally.
+- Before adding any new field to `CanvasRuntimeHealthStatus`, decide whether the probe truly needs persisted runtime-health state:
+  - If no, keep the probe callback-based and leave the health contract unchanged.
+  - If yes, perform the health-contract refactor in this ticket rather than layering another boolean onto the current shape.
 
 ### 3. Extend `TickerErrorFenceOptions` with `onContainedError` callback (if not already addressed by 71CANCRASH-003)
 
@@ -94,6 +101,7 @@ If 71CANCRASH-003 does not add an `onContainedError` callback to the fence optio
 6. **onContainedError wiring**: A contained ticker error triggers `scheduleVerification()` on the probe.
 7. Existing suite: `pnpm -F @ludoforge/runner test` passes.
 8. Typecheck: `pnpm -F @ludoforge/runner typecheck` passes.
+9. If this ticket adds another persisted runtime health signal, `canvas-runtime-health.ts` is refactored once into the new canonical shape here, and no additional duplicate or parallel health contracts are introduced.
 
 ### Invariants
 
@@ -101,6 +109,7 @@ If 71CANCRASH-003 does not add an `onContainedError` callback to the fence optio
 2. The probe does not interfere with normal rendering — it only inspects, never modifies.
 3. The probe is destroyed during the canvas teardown sequence.
 4. The probe's `onCorruption` callback feeds into the existing crash recovery path.
+5. This ticket must not grow the shared health contract by boolean accumulation unless that is still the minimal correct architecture after implementation-time reassessment.
 
 ## Test Plan
 

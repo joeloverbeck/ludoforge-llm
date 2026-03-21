@@ -7,9 +7,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { GameCanvas } from '../../src/canvas/GameCanvas.js';
 import type {
-  CanvasRuntimeHealthStatus,
   ViewportSnapshot,
 } from '../../src/canvas/game-canvas-runtime.js';
+import type { CanvasRuntimeHealthStatus } from '../../src/canvas/canvas-runtime-health.js';
 import type { GameStore } from '../../src/store/game-store.js';
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 
@@ -62,6 +62,7 @@ function createRuntime(): MockRuntime {
     getHealthStatus: vi.fn(() => ({
       tickerStarted: true,
       canvasConnected: true,
+      renderCorruptionSuspected: false,
     })),
     getViewportSnapshot: vi.fn(() => null),
     setInteractionHighlights: vi.fn(),
@@ -388,6 +389,7 @@ describe('GameCanvas recovery', () => {
     firstRuntime.getHealthStatus.mockReturnValue({
       tickerStarted: false,
       canvasConnected: true,
+      renderCorruptionSuspected: false,
     });
 
     await act(async () => {

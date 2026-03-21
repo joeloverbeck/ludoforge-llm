@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — runner-only
-**Deps**: `archive/tickets/71OPSTOOCOM-001.md`, `tickets/71OPSTOOCOM-002.md`
+**Deps**: `archive/tickets/71OPSTOOCOM-001.md`, `archive/tickets/71OPSTOOCOM/71OPSTOOCOM-002.md`
 
 Dependency notes: needs `appendTooltipFrom` on `ActionGroupSynthesizeEntry` and `hiddenActionsByClass` on `RenderModel`.
 

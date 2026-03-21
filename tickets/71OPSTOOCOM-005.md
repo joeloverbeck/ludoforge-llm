@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — runner-only
-**Deps**: `archive/tickets/71OPSTOOCOM/71OPSTOOCOM-002.md`, `archive/tickets/71OPSTOOCOM/71OPSTOOCOM-003.md`, `tickets/71OPSTOOCOM-004.md`
+**Deps**: `archive/tickets/71OPSTOOCOM/71OPSTOOCOM-002.md`, `archive/tickets/71OPSTOOCOM/71OPSTOOCOM-003.md`, `archive/tickets/71OPSTOOCOM/71OPSTOOCOM-004.md`
 
 Dependency notes: needs hidden-action projection metadata, tooltip companion resolution, and tooltip companion rendering support.
 

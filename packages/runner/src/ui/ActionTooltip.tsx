@@ -45,6 +45,25 @@ export function ActionTooltip({
   }
 
   const { tooltipPayload } = description;
+  const companionSection = companionGroups !== undefined && companionGroups.length > 0 ? (
+    <div className={styles.companionSection} data-testid="tooltip-companion-actions">
+      {companionGroups.map((group) => (
+        <div key={group.actionClass} className={styles.companionGroup}>
+          <p className={styles.companionHeader}>{group.groupName}</p>
+          <ul className={styles.companionList}>
+            {group.actions.map((action) => (
+              <li
+                key={action.actionId}
+                className={action.isAvailable ? styles.companionAvailable : styles.companionUnavailable}
+              >
+                {action.displayName}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  ) : null;
 
   return (
     <div
@@ -106,25 +125,7 @@ export function ActionTooltip({
             />
           )}
           <AvailabilitySection ruleState={tooltipPayload.ruleState} />
-          {companionGroups !== undefined && companionGroups.length > 0 && (
-            <div className={styles.companionSection} data-testid="tooltip-companion-actions">
-              {companionGroups.map((group) => (
-                <div key={group.actionClass} className={styles.companionGroup}>
-                  <p className={styles.companionHeader}>{group.groupName}</p>
-                  <ul className={styles.companionList}>
-                    {group.actions.map((action) => (
-                      <li
-                        key={action.actionId}
-                        className={action.isAvailable ? styles.companionAvailable : styles.companionUnavailable}
-                      >
-                        {action.displayName}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          )}
+          {companionSection}
           {description.sections.length > 0 && (
             <RawAstToggle sections={description.sections} />
           )}
@@ -143,6 +144,7 @@ export function ActionTooltip({
               ))}
             </div>
           )}
+          {companionSection}
         </>
       )}
     </div>

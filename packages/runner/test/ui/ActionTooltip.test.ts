@@ -393,6 +393,53 @@ describe('ActionTooltip', () => {
     expect(onPointerLeave).toHaveBeenCalledTimes(1);
   });
 
+  it('renders companion actions when legacy tooltip content is shown', () => {
+    const desc = makeDescription({
+      sections: [makeEffectsGroup()],
+    });
+
+    render(createElement(ActionTooltip, {
+      description: desc,
+      anchorElement: makeAnchor(),
+      companionGroups: COMPANION_GROUPS,
+    }));
+
+    const tooltip = screen.getByTestId('action-tooltip');
+    expect(tooltip.textContent).toContain('Effects');
+
+    const companionSection = screen.getByTestId('tooltip-companion-actions');
+    expect(companionSection.textContent).toContain('Special Activity');
+    expect(companionSection.textContent).toContain('Ambush');
+    expect(companionSection.textContent).toContain('Raid');
+  });
+
+  it('does not render companion actions for legacy tooltip content when companion groups are undefined', () => {
+    const desc = makeDescription({
+      sections: [makeEffectsGroup()],
+    });
+
+    render(createElement(ActionTooltip, {
+      description: desc,
+      anchorElement: makeAnchor(),
+    }));
+
+    expect(screen.queryByTestId('tooltip-companion-actions')).toBeNull();
+  });
+
+  it('does not render companion actions for legacy tooltip content when companion groups are empty', () => {
+    const desc = makeDescription({
+      sections: [makeEffectsGroup()],
+    });
+
+    render(createElement(ActionTooltip, {
+      description: desc,
+      anchorElement: makeAnchor(),
+      companionGroups: [],
+    }));
+
+    expect(screen.queryByTestId('tooltip-companion-actions')).toBeNull();
+  });
+
   /* -------------------------------------------------------------- */
   /* Progressive Disclosure (tooltipPayload present)                 */
   /* -------------------------------------------------------------- */

@@ -2,6 +2,7 @@ import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import type { RuntimeTableIndex } from './runtime-table-index.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
+import type { ActionId } from './branded.js';
 import type { ZobristTable, GameDef } from './types.js';
 import { createZobristTable } from './zobrist.js';
 import type { RuleCard } from './tooltip-rule-card.js';
@@ -10,6 +11,7 @@ import type {
   CompiledLifecycleEffectKey,
 } from './effect-compiler-types.js';
 import { compileAllLifecycleEffects } from './effect-compiler.js';
+import { computeAlwaysCompleteActionIds } from './always-complete-actions.js';
 
 /**
  * Pre-computed, immutable runtime structures derived from a GameDef.
@@ -26,16 +28,19 @@ export interface GameDefRuntime {
   readonly adjacencyGraph: AdjacencyGraph;
   readonly runtimeTableIndex: RuntimeTableIndex;
   readonly zobristTable: ZobristTable;
+  readonly alwaysCompleteActionIds: ReadonlySet<ActionId>;
   readonly ruleCardCache: Map<string, RuleCard>;
   readonly compiledLifecycleEffects: ReadonlyMap<CompiledLifecycleEffectKey, CompiledEffectSequence>;
 }
 
 export function createGameDefRuntime(def: GameDef): GameDefRuntime {
   const compiledLifecycleEffects = compileAllLifecycleEffects(def);
+  const alwaysCompleteActionIds = computeAlwaysCompleteActionIds(def);
   return {
     adjacencyGraph: buildAdjacencyGraph(def.zones),
     runtimeTableIndex: buildRuntimeTableIndex(def),
     zobristTable: createZobristTable(def),
+    alwaysCompleteActionIds,
     ruleCardCache: new Map(),
     compiledLifecycleEffects,
   };

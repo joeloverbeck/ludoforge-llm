@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — agent interface, all agent implementations, preparePlayableMoves
-**Deps**: 75ENRLEGMOVENU-001 (ClassifiedMove type), 75ENRLEGMOVENU-002 (legalMoves returns ClassifiedMove[])
+**Deps**: archive/tickets/75ENRLEGMOVENU/75ENRLEGMOVENU-001-classifiedmove-type-and-always-complete-actions.md, tickets/75ENRLEGMOVENU-002-enumeratelegal-moves-classification.md
 
 ## Problem
 

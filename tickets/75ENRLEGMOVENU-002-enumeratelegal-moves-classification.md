@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — legal-moves.ts return types and classification logic
-**Deps**: 75ENRLEGMOVENU-001 (ClassifiedMove type, alwaysCompleteActionIds)
+**Deps**: archive/tickets/75ENRLEGMOVENU/75ENRLEGMOVENU-001-classifiedmove-type-and-always-complete-actions.md
 
 ## Problem
 

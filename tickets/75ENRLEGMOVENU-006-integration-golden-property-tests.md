@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — test files only, no production code
-**Deps**: 75ENRLEGMOVENU-001 through 005 (all production changes complete)
+**Deps**: archive/tickets/75ENRLEGMOVENU/75ENRLEGMOVENU-001-classifiedmove-type-and-always-complete-actions.md, tickets/75ENRLEGMOVENU-002-enumeratelegal-moves-classification.md, tickets/75ENRLEGMOVENU-003-skip-move-validation-threading.md, tickets/75ENRLEGMOVENU-004-agent-and-prepare-playable-moves-update.md, tickets/75ENRLEGMOVENU-005-simulator-and-runner-type-threading.md
 
 ## Problem
 

@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — simulator.ts; Runner changes are type-only
-**Deps**: 75ENRLEGMOVENU-002 (legalMoves returns ClassifiedMove[]), 75ENRLEGMOVENU-003 (skipMoveValidation), 75ENRLEGMOVENU-004 (agents accept ClassifiedMove[])
+**Deps**: tickets/75ENRLEGMOVENU-002-enumeratelegal-moves-classification.md, tickets/75ENRLEGMOVENU-003-skip-move-validation-threading.md, tickets/75ENRLEGMOVENU-004-agent-and-prepare-playable-moves-update.md
 
 ## Problem
 

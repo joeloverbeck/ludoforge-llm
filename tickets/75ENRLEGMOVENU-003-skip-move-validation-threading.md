@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — types-core.ts, apply-move.ts
-**Deps**: None (independent of 001/002, but used by 005)
+**Deps**: None
 
 ## Problem
 

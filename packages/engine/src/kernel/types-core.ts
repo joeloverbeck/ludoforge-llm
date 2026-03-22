@@ -890,6 +890,12 @@ export interface Move {
   readonly compound?: CompoundMovePayload;
 }
 
+/** A legal move with its viability pre-computed during enumeration. */
+export interface ClassifiedMove {
+  readonly move: Move;
+  readonly viability: import('./apply-move.js').MoveViabilityProbeResult;
+}
+
 export interface DecisionAuthorityBaseContext {
   readonly source: 'engineRuntime';
   readonly player: PlayerId;

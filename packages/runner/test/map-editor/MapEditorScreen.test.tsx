@@ -67,7 +67,7 @@ describe('MapEditorScreen', () => {
   });
 
   it('loads editor bootstrap, mounts canvas runtime, and cleans up on unmount', async () => {
-    const store = { getState: vi.fn(() => ({})) };
+    const store = createMockEditorStore();
     const zoneRenderer = { destroy: vi.fn() };
     const routeRenderer = { destroy: vi.fn() };
     const handleRenderer = { destroy: vi.fn() };
@@ -101,6 +101,8 @@ describe('MapEditorScreen', () => {
     await waitFor(() => {
       expect(screen.getByTestId('map-editor-canvas-container')).toBeTruthy();
     });
+    expect((screen.getByTestId('map-editor-undo-button') as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByTestId('map-editor-export-button') as HTMLButtonElement).disabled).toBe(true);
 
     expect(testDoubles.createMapEditorStore).toHaveBeenCalledWith(
       expect.anything(),
@@ -171,3 +173,29 @@ describe('MapEditorScreen', () => {
     expect(testDoubles.createEditorCanvas).not.toHaveBeenCalled();
   });
 });
+
+function createMockEditorStore() {
+  const state = {
+    showGrid: false,
+    snapToGrid: false,
+    gridSize: 20,
+    dirty: false,
+    undoStack: [],
+    redoStack: [],
+    undo: vi.fn(),
+    redo: vi.fn(),
+    toggleGrid: vi.fn(),
+    setGridSize: vi.fn(),
+    setSnapToGrid: vi.fn(),
+    selectZone: vi.fn(),
+    selectRoute: vi.fn(),
+    gameDef: undefined,
+  };
+
+  const store = ((selector: (value: typeof state) => unknown) => selector(state)) as {
+    (selector: (value: typeof state) => unknown): unknown;
+    getState: () => typeof state;
+  };
+  store.getState = () => state;
+  return store;
+}

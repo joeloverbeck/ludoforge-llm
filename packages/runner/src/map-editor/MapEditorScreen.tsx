@@ -6,8 +6,10 @@ import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import { createEditorCanvas } from './map-editor-canvas.js';
 import { createEditorHandleRenderer } from './map-editor-handle-renderer.js';
 import { createEditorRouteRenderer } from './map-editor-route-renderer.js';
+import { MapEditorToolbar } from './map-editor-toolbar.js';
 import { createMapEditorStore, type MapEditorStoreApi } from './map-editor-store.js';
 import { createEditorZoneRenderer } from './map-editor-zone-renderer.js';
+import { useMapEditorKeyboardShortcuts } from './use-map-editor-keyboard-shortcuts.js';
 import styles from './MapEditorScreen.module.css';
 
 interface MapEditorScreenProps {
@@ -29,6 +31,9 @@ type ScreenState =
 export function MapEditorScreen({ gameId, onBack }: MapEditorScreenProps): ReactElement {
   const canvasContainerRef = useRef<HTMLDivElement | null>(null);
   const [screenState, setScreenState] = useState<ScreenState>({ status: 'loading' });
+  const readyStore = screenState.status === 'ready' ? screenState.editor.store : null;
+
+  useMapEditorKeyboardShortcuts(readyStore);
 
   useEffect(() => {
     let cancelled = false;
@@ -163,19 +168,12 @@ export function MapEditorScreen({ gameId, onBack }: MapEditorScreenProps): React
 
   return (
     <main className={styles.container} data-testid="map-editor-screen">
-      <div className={styles.toolbar}>
-        <button
-          type="button"
-          className={styles.toolbarButton}
-          data-testid="map-editor-back-button"
-          onClick={onBack}
-        >
-          Back to Menu
-        </button>
-        <span className={styles.toolbarTitle}>{title}</span>
-        <span className={styles.toolbarSpacer} />
-        <span className={styles.toolbarHint}>Toolbar controls land in later tickets.</span>
-      </div>
+      <MapEditorToolbar
+        title={title}
+        store={readyStore}
+        onBack={onBack}
+        onExport={() => {}}
+      />
 
       {screenState.status === 'loading'
         ? (

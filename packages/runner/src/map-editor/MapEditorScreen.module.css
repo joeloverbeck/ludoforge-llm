@@ -27,16 +27,12 @@
   background: rgba(255, 249, 239, 0.92);
   box-shadow: 0 14px 28px rgba(63, 45, 16, 0.12);
   backdrop-filter: blur(10px);
+  flex-wrap: wrap;
 }
 
 .toolbarTitle {
   font-weight: 700;
   color: #332716;
-}
-
-.toolbarHint {
-  color: #665540;
-  font-size: 0.92rem;
 }
 
 .toolbarSpacer {
@@ -50,6 +46,54 @@
   color: #2b2215;
   padding: 0.45rem 0.8rem;
   cursor: pointer;
+}
+
+.toolbarButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.toolbarToggleActive {
+  border: 1px solid #4f6d3a;
+  border-radius: 0.6rem;
+  background: #4f6d3a;
+  color: #fff9ef;
+  cursor: pointer;
+  padding: 0.45rem 0.8rem;
+}
+
+.dirtyIndicator {
+  border-radius: 999px;
+  background: rgba(137, 51, 32, 0.12);
+  color: #7a2c18;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+}
+
+.gridSizeControl {
+  align-items: center;
+  color: #4a3a27;
+  display: inline-flex;
+  gap: 0.45rem;
+}
+
+.gridSizeLabel {
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.gridSizeInput {
+  width: 4.25rem;
+  border: 1px solid #8f7751;
+  border-radius: 0.55rem;
+  background: #fffdf7;
+  color: #2b2215;
+  padding: 0.35rem 0.5rem;
+}
+
+.gridSizeInput:disabled {
+  opacity: 0.55;
 }
 
 .statusPanel {

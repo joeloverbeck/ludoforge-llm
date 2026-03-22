@@ -6,6 +6,10 @@ interface MockKeyboardEvent {
   readonly key: string;
   readonly defaultPrevented: boolean;
   readonly target: EventTarget | null;
+  readonly ctrlKey: boolean;
+  readonly metaKey: boolean;
+  readonly shiftKey: boolean;
+  readonly altKey: boolean;
   preventDefault(): void;
 }
 
@@ -26,11 +30,19 @@ class MockKeydownTarget {
     this.listeners.delete(listener);
   }
 
-  emit(key: string, defaultPrevented = false): MockKeyboardEvent {
+  emit(
+    key: string,
+    defaultPrevented = false,
+    modifiers: Partial<Pick<MockKeyboardEvent, 'ctrlKey' | 'metaKey' | 'shiftKey' | 'altKey'>> = {},
+  ): MockKeyboardEvent {
     let prevented = defaultPrevented;
     const event: MockKeyboardEvent = {
       key,
       target: null,
+      ctrlKey: modifiers.ctrlKey ?? false,
+      metaKey: modifiers.metaKey ?? false,
+      shiftKey: modifiers.shiftKey ?? false,
+      altKey: modifiers.altKey ?? false,
       get defaultPrevented() {
         return prevented;
       },
@@ -91,5 +103,22 @@ describe('createKeyboardCoordinator', () => {
 
     coordinator.destroy();
     expect(target.listenerCount()).toBe(0);
+  });
+
+  it('passes modifier-key state through to handlers', () => {
+    const target = new MockKeydownTarget();
+    const coordinator = createKeyboardCoordinator(target);
+    const handler = vi.fn(() => false);
+    coordinator.register(handler);
+
+    target.emit('z', false, { ctrlKey: true, shiftKey: true });
+
+    expect(handler).toHaveBeenCalledWith(expect.objectContaining({
+      key: 'z',
+      ctrlKey: true,
+      shiftKey: true,
+      metaKey: false,
+      altKey: false,
+    }));
   });
 });

@@ -17,6 +17,7 @@ interface SessionStoreState {
 
 interface SessionStoreActions {
   selectGame(gameId: string): void;
+  openMapEditor(gameId: string): void;
   startGame(seed: number, playerConfig: readonly PlayerSeatConfig[]): void;
   resumeGame(gameId: string, seed: number, playerConfig: readonly PlayerSeatConfig[], moveHistory: readonly Move[]): void;
   returnToMenu(): void;
@@ -77,6 +78,17 @@ export function createSessionStore(): UseBoundStore<StoreApi<SessionStore>> {
       set({
         sessionState: {
           screen: 'preGameConfig',
+          gameId,
+        },
+      });
+    },
+
+    openMapEditor(gameId) {
+      const current = get().sessionState;
+      assertTransitionAllowed('openMapEditor', current.screen, ['gameSelection']);
+      set({
+        sessionState: {
+          screen: 'mapEditor',
           gameId,
         },
       });

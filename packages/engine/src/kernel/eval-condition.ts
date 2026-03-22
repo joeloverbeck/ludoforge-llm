@@ -30,6 +30,14 @@ function expectOrderingNumber(
 
 export function evalCondition(cond: ConditionAST, ctx: ReadContext): boolean {
   if (typeof cond === 'boolean') return cond;
+  // Profiling: count calls by operator type (no timing — too frequent for performance.now())
+  const profiler = (ctx as { readonly profiler?: import('./perf-profiler.js').PerfProfiler }).profiler;
+  if (profiler !== undefined) {
+    const opKey = `cond:${cond.op}`;
+    const opBucket = profiler.dynamic.get(opKey);
+    if (opBucket !== undefined) { opBucket.count += 1; }
+    else { profiler.dynamic.set(opKey, { count: 1, totalMs: 0 }); }
+  }
   switch (cond.op) {
     case 'and':
       if (!isNonEmptyArray(cond.args)) {

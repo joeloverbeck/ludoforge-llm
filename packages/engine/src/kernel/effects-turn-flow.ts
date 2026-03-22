@@ -415,7 +415,7 @@ export const applyGotoPhaseExact = (
   const exitedState = dispatchLifecycleEvent(ctx.def, ctx.state, {
     type: 'phaseExit',
     phase: ctx.state.currentPhase,
-  }, undefined, lifecycleBudgetOptions(ctx), lifecycleResources);
+  }, undefined, lifecycleBudgetOptions(ctx), lifecycleResources, 'lifecycle', undefined, ctx.profiler);
   const enteredState = resetPhaseUsage({
     ...exitedState,
     currentPhase: targetPhaseId,
@@ -423,7 +423,7 @@ export const applyGotoPhaseExact = (
   const finalState = dispatchLifecycleEvent(ctx.def, enteredState, {
     type: 'phaseEnter',
     phase: targetPhaseId,
-  }, undefined, lifecycleBudgetOptions(ctx), lifecycleResources);
+  }, undefined, lifecycleBudgetOptions(ctx), lifecycleResources, 'lifecycle', undefined, ctx.profiler);
   return {
     state: finalState,
     rng: { state: finalState.rng },

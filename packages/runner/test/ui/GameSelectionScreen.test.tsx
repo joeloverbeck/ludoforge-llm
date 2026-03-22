@@ -6,11 +6,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const testDoubles = vi.hoisted(() => ({
   listBootstrapDescriptors: vi.fn(),
+  resolveMapEditorCapabilities: vi.fn(),
   listSavedGames: vi.fn(),
 }));
 
 vi.mock('../../src/bootstrap/bootstrap-registry.js', () => ({
   listBootstrapDescriptors: testDoubles.listBootstrapDescriptors,
+}));
+
+vi.mock('../../src/bootstrap/map-editor-bootstrap.js', () => ({
+  resolveMapEditorCapabilities: testDoubles.resolveMapEditorCapabilities,
 }));
 
 vi.mock('../../src/persistence/save-manager.js', () => ({
@@ -26,6 +31,7 @@ describe('GameSelectionScreen', () => {
   beforeEach(() => {
     vi.resetModules();
     testDoubles.listBootstrapDescriptors.mockReset();
+    testDoubles.resolveMapEditorCapabilities.mockReset();
     testDoubles.listSavedGames.mockReset();
 
     testDoubles.listBootstrapDescriptors.mockReturnValue([
@@ -78,6 +84,9 @@ describe('GameSelectionScreen', () => {
         resolveVisualConfigYaml: () => null,
       },
     ]);
+    testDoubles.resolveMapEditorCapabilities.mockImplementation(async (descriptor: { id: string }) => ({
+      supportsMapEditor: descriptor.id === 'fitl',
+    }));
     testDoubles.listSavedGames.mockResolvedValue([]);
   });
 
@@ -105,6 +114,21 @@ describe('GameSelectionScreen', () => {
 
     fireEvent.click(screen.getByTestId('select-game-fitl'));
     expect(onSelectGame).toHaveBeenCalledWith('fitl');
+  });
+
+  it('renders Edit Map only for games that support the editor and emits the correct id', async () => {
+    const onEditMap = vi.fn();
+    const { GameSelectionScreen } = await import('../../src/ui/GameSelectionScreen.js');
+
+    render(createElement(GameSelectionScreen, { onSelectGame: vi.fn(), onEditMap }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('edit-map-fitl')).toBeTruthy();
+    });
+    expect(screen.queryByTestId('edit-map-texas')).toBeNull();
+
+    fireEvent.click(screen.getByTestId('edit-map-fitl'));
+    expect(onEditMap).toHaveBeenCalledWith('fitl');
   });
 
   it('renders saved game rows when save manager returns entries', async () => {

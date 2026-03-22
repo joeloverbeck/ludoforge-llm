@@ -19,6 +19,10 @@ export const emitVarChangeTraceIfChanged = (
     return false;
   }
 
+  // Skip provenance construction when tracing is disabled (saves ~84K object allocations)
+  if (ctx.collector.trace === null) {
+    return true;
+  }
   const provenance = entry.provenance ?? resolveTraceProvenance(ctx);
   if (entry.scope === 'global') {
     emitTrace(ctx.collector, {

@@ -3,7 +3,7 @@ import type { Container, EventSystem } from 'pixi.js';
 
 import type { LayerHierarchy } from './layers';
 
-interface WorldBounds {
+export interface WorldBounds {
   readonly minX: number;
   readonly minY: number;
   readonly maxX: number;
@@ -34,6 +34,7 @@ export interface ViewportResult {
   readonly viewport: Viewport;
   readonly worldLayers: readonly Container[];
   updateWorldBounds(bounds: WorldBounds): void;
+  resize(screenWidth: number, screenHeight: number, bounds: WorldBounds): void;
   centerOnBounds(bounds: WorldBounds): void;
   destroy(): void;
 }
@@ -57,6 +58,9 @@ export function setupViewport(config: ViewportConfig): ViewportResult {
     .wheel()
     .clampZoom({ minScale: config.minScale, maxScale: config.maxScale });
 
+  let currentScreenWidth = config.screenWidth;
+  let currentScreenHeight = config.screenHeight;
+
   const worldLayers: readonly Container[] = [
     config.layers.boardGroup,
     config.layers.tokenGroup,
@@ -73,14 +77,13 @@ export function setupViewport(config: ViewportConfig): ViewportResult {
     config.stage.addChild(config.layers.hudGroup);
   }
 
-  const overscrollPadX = config.screenWidth / config.minScale / 2;
-  const overscrollPadY = config.screenHeight / config.minScale / 2;
-
-  const updateWorldBounds = (bounds: WorldBounds): void => {
+  const applyViewportBounds = (bounds: WorldBounds): void => {
     assertBounds(bounds);
+    const overscrollPadX = currentScreenWidth / config.minScale / 2;
+    const overscrollPadY = currentScreenHeight / config.minScale / 2;
     const paddedWidth = (bounds.maxX + overscrollPadX) - (bounds.minX - overscrollPadX);
     const paddedHeight = (bounds.maxY + overscrollPadY) - (bounds.minY - overscrollPadY);
-    viewport.resize(config.screenWidth, config.screenHeight, paddedWidth, paddedHeight);
+    viewport.resize(currentScreenWidth, currentScreenHeight, paddedWidth, paddedHeight);
     viewport.clamp({
       left: bounds.minX - overscrollPadX,
       top: bounds.minY - overscrollPadY,
@@ -88,6 +91,10 @@ export function setupViewport(config: ViewportConfig): ViewportResult {
       bottom: bounds.maxY + overscrollPadY,
       underflow: 'none',
     });
+  };
+
+  const updateWorldBounds = (bounds: WorldBounds): void => {
+    applyViewportBounds(bounds);
   };
 
   const centerOnBounds = (bounds: WorldBounds): void => {
@@ -98,12 +105,19 @@ export function setupViewport(config: ViewportConfig): ViewportResult {
     );
   };
 
+  const resize = (screenWidth: number, screenHeight: number, bounds: WorldBounds): void => {
+    currentScreenWidth = screenWidth;
+    currentScreenHeight = screenHeight;
+    applyViewportBounds(bounds);
+  };
+
   updateWorldBounds({ minX: 0, minY: 0, maxX: config.worldWidth, maxY: config.worldHeight });
 
   return {
     viewport,
     worldLayers,
     updateWorldBounds,
+    resize,
     centerOnBounds,
     destroy(): void {
       viewport.plugins.removeAll();

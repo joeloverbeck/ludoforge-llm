@@ -218,6 +218,54 @@ describe('setupViewport', () => {
     expect(viewport.moveCenter).toHaveBeenCalledWith(300, 400);
   });
 
+  it('resize updates viewport screen size and recomputes overscroll padding', () => {
+    const viewport = createMockViewport();
+    viewportCtorMock.mockImplementation(function () { return viewport; } as never);
+
+    const config = createConfig();
+    const result = setupViewport(config);
+
+    viewport.resize.mockClear();
+    viewport.clamp.mockClear();
+
+    result.resize(640, 360, { minX: 10, minY: 20, maxX: 300, maxY: 500 });
+
+    expect(viewport.resize).toHaveBeenCalledWith(
+      640,
+      360,
+      (300 + 1280) - (10 - 1280),
+      (500 + 720) - (20 - 720),
+    );
+    expect(viewport.clamp).toHaveBeenCalledWith({
+      left: 10 - 1280,
+      top: 20 - 720,
+      right: 300 + 1280,
+      bottom: 500 + 720,
+      underflow: 'none',
+    });
+  });
+
+  it('uses the latest resized screen dimensions for subsequent world-bound updates', () => {
+    const viewport = createMockViewport();
+    viewportCtorMock.mockImplementation(function () { return viewport; } as never);
+
+    const config = createConfig();
+    const result = setupViewport(config);
+
+    result.resize(640, 360, { minX: 0, minY: 0, maxX: 100, maxY: 100 });
+    viewport.clamp.mockClear();
+
+    result.updateWorldBounds({ minX: 10, minY: 20, maxX: 300, maxY: 500 });
+
+    expect(viewport.clamp).toHaveBeenCalledWith({
+      left: 10 - 1280,
+      top: 20 - 720,
+      right: 300 + 1280,
+      bottom: 500 + 720,
+      underflow: 'none',
+    });
+  });
+
   it('overscroll padding works with zero-size bounds', () => {
     const viewport = createMockViewport();
     viewportCtorMock.mockImplementation(function () { return viewport; } as never);

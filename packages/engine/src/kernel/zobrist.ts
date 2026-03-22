@@ -1,4 +1,4 @@
-import type { GameDef, GameState, ZobristFeature, ZobristTable } from './types.js';
+import type { GameDef, GameState, ZobristFeature, ZobristSortedKeys, ZobristTable } from './types.js';
 import { canonicalTokenFilterKey } from './hidden-info-grants.js';
 
 const MASK_64 = (1n << 64n) - 1n;
@@ -135,14 +135,57 @@ const encodeFeature = (feature: ZobristFeature): string => {
   }
 };
 
+const buildSortedKeys = (def: GameDef): ZobristSortedKeys => {
+  const cmp = (a: string, b: string): number => a.localeCompare(b);
+  const zoneIds = def.zones.map((z) => String(z.id)).sort(cmp);
+  const globalVarNames = def.globalVars.map((v) => v.name).sort(cmp);
+  const perPlayerIds = Array.from({ length: def.metadata.players.max }, (_, i) => i).sort((a, b) => a - b);
+  const perPlayerVarNames = new Map<number, readonly string[]>();
+  const ppNames = def.perPlayerVars.map((v) => v.name).sort(cmp);
+  for (const pid of perPlayerIds) {
+    perPlayerVarNames.set(pid, ppNames);
+  }
+  const zoneVarDefs = def.zoneVars ?? [];
+  const zvNames = zoneVarDefs.map((v) => v.name).sort(cmp);
+  const zoneVarZoneIds = [...zoneIds]; // zones with zoneVars — in practice all zones can have zone vars
+  const zoneVarNames = new Map<string, readonly string[]>();
+  for (const zid of zoneVarZoneIds) {
+    zoneVarNames.set(zid, zvNames);
+  }
+  const actionIds = def.actions.map((a) => String(a.id)).sort(cmp);
+  // Markers and reveals depend on runtime state and can't be pre-sorted from def alone.
+  // We use empty arrays as defaults — computeFullHash falls back to Object.keys().sort() for these.
+  return {
+    zoneIds,
+    globalVarNames,
+    perPlayerIds,
+    perPlayerVarNames,
+    zoneVarZoneIds,
+    zoneVarNames,
+    actionIds,
+    markerSpaceIds: [],
+    markerIds: new Map(),
+    globalMarkerIds: [],
+    revealZoneIds: [],
+  };
+};
+
 export const createZobristTable = (def: GameDef): ZobristTable => {
   const fingerprint = canonicalizeGameDefFingerprint(def);
   const seed = fnv1a64(`table-seed|fingerprint=${fingerprint}`);
-  return { seed, fingerprint };
+  return { seed, fingerprint, seedHex: seed.toString(16), keyCache: new Map(), sortedKeys: buildSortedKeys(def) };
 };
 
-export const zobristKey = (table: ZobristTable, feature: ZobristFeature): bigint =>
-  fnv1a64(`zobrist-key-v1|seed=${table.seed.toString(16)}|${encodeFeature(feature)}`);
+export const zobristKey = (table: ZobristTable, feature: ZobristFeature): bigint => {
+  const encoded = encodeFeature(feature);
+  const cached = table.keyCache.get(encoded);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const key = fnv1a64(`zobrist-key-v1|seed=${table.seedHex}|${encoded}`);
+  table.keyCache.set(encoded, key);
+  return key;
+};
 
 export const updateHashFeatureChange = (
   hash: bigint,
@@ -172,49 +215,60 @@ const compareNumbers = (left: number, right: number): number => left - right;
 
 export const computeFullHash = (table: ZobristTable, state: GameState): bigint => {
   let hash = 0n;
+  const sk = table.sortedKeys;
 
-  const sortedZoneIds = Object.keys(state.zones).sort(compareStrings);
+  const sortedZoneIds = sk !== null ? sk.zoneIds : Object.keys(state.zones).sort(compareStrings);
   for (const zoneId of sortedZoneIds) {
     const zoneTokens = state.zones[zoneId] ?? [];
-    zoneTokens.forEach((token, slot) => {
+    for (let slot = 0; slot < zoneTokens.length; slot++) {
       hash ^= zobristKey(table, {
         kind: 'tokenPlacement',
-        tokenId: token.id,
+        tokenId: zoneTokens[slot]!.id,
         zoneId: zoneId as TokenPlacementFeature['zoneId'],
         slot,
-      });
-    });
-  }
-
-  const sortedGlobalVarNames = Object.keys(state.globalVars).sort(compareStrings);
-  for (const varName of sortedGlobalVarNames) {
-    hash ^= zobristKey(table, {
-      kind: 'globalVar',
-      varName,
-      value: state.globalVars[varName] ?? 0,
-    });
-  }
-
-  const sortedPerPlayerIds = Object.keys(state.perPlayerVars)
-    .map((value) => Number(value))
-    .sort(compareNumbers);
-  for (const playerId of sortedPerPlayerIds) {
-    const playerVars = state.perPlayerVars[playerId] ?? {};
-    const sortedPerPlayerVarNames = Object.keys(playerVars).sort(compareStrings);
-    for (const varName of sortedPerPlayerVarNames) {
-      hash ^= zobristKey(table, {
-        kind: 'perPlayerVar',
-        playerId: playerId as PerPlayerVarFeature['playerId'],
-        varName,
-        value: playerVars[varName] ?? 0,
       });
     }
   }
 
-  const sortedZoneVarZoneIds = Object.keys(state.zoneVars).sort(compareStrings);
+  const sortedGlobalVarNames = sk !== null ? sk.globalVarNames : Object.keys(state.globalVars).sort(compareStrings);
+  for (const varName of sortedGlobalVarNames) {
+    const val = state.globalVars[varName];
+    if (val !== undefined) {
+      hash ^= zobristKey(table, {
+        kind: 'globalVar',
+        varName,
+        value: val,
+      });
+    }
+  }
+
+  const sortedPerPlayerIds = sk !== null
+    ? sk.perPlayerIds
+    : Object.keys(state.perPlayerVars).map((value) => Number(value)).sort(compareNumbers);
+  for (const playerId of sortedPerPlayerIds) {
+    const playerVars = state.perPlayerVars[playerId] ?? {};
+    const sortedPerPlayerVarNames = sk !== null
+      ? (sk.perPlayerVarNames.get(playerId) ?? Object.keys(playerVars).sort(compareStrings))
+      : Object.keys(playerVars).sort(compareStrings);
+    for (const varName of sortedPerPlayerVarNames) {
+      const val = playerVars[varName];
+      if (val !== undefined) {
+        hash ^= zobristKey(table, {
+          kind: 'perPlayerVar',
+          playerId: playerId as PerPlayerVarFeature['playerId'],
+          varName,
+          value: val,
+        });
+      }
+    }
+  }
+
+  const sortedZoneVarZoneIds = sk !== null ? sk.zoneVarZoneIds : Object.keys(state.zoneVars).sort(compareStrings);
   for (const zoneId of sortedZoneVarZoneIds) {
     const zoneVarMap = state.zoneVars[zoneId] ?? {};
-    const sortedZoneVarNames = Object.keys(zoneVarMap).sort(compareStrings);
+    const sortedZoneVarNames = sk !== null
+      ? (sk.zoneVarNames.get(zoneId) ?? Object.keys(zoneVarMap).sort(compareStrings))
+      : Object.keys(zoneVarMap).sort(compareStrings);
     for (const varName of sortedZoneVarNames) {
       const value = zoneVarMap[varName];
       if (value !== undefined) {
@@ -232,7 +286,7 @@ export const computeFullHash = (table: ZobristTable, state: GameState): bigint =
   hash ^= zobristKey(table, { kind: 'currentPhase', phaseId: state.currentPhase });
   hash ^= zobristKey(table, { kind: 'turnCount', value: state.turnCount });
 
-  const sortedActionIds = Object.keys(state.actionUsage).sort(compareStrings);
+  const sortedActionIds = sk !== null ? sk.actionIds : Object.keys(state.actionUsage).sort(compareStrings);
   for (const actionId of sortedActionIds) {
     const usage = state.actionUsage[actionId];
     if (!usage) {

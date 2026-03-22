@@ -18,10 +18,12 @@ import type { TriggerEvent } from './types.js';
 
 const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(max, value));
 
-const resolveEffectBindings = (ctx: EffectContext): Readonly<Record<string, unknown>> => ({
-  ...ctx.moveParams,
-  ...ctx.bindings,
-});
+/** Merge moveParams into bindings. Fast path: return bindings directly when moveParams is empty. */
+const resolveEffectBindings = (ctx: EffectContext): Readonly<Record<string, unknown>> => {
+  const mp = ctx.moveParams;
+  for (const _ in mp) { return { ...mp, ...ctx.bindings }; }
+  return ctx.bindings;
+};
 
 const expectInteger = (value: unknown, effectType: 'setVar' | 'addVar', field: 'value' | 'delta'): number => {
   if (typeof value !== 'number' || !Number.isFinite(value) || !Number.isSafeInteger(value)) {
@@ -64,9 +66,20 @@ const emitVarChangeArtifacts = (
 };
 
 export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknown }>, ctx: EffectContext): EffectResult => {
+  const profiler = ctx.profiler;
   const { value } = effect.setVar;
-  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const t0_bindings = profiler !== undefined ? performance.now() : 0;
+  const resolvedBindings = resolveEffectBindings(ctx);
+  const evalCtx = resolvedBindings === ctx.bindings ? ctx : { ...ctx, bindings: resolvedBindings };
+  if (profiler !== undefined) {
+    const k = 'setVar:bindings'; const b = profiler.dynamic.get(k); if (b) b.totalMs += performance.now() - t0_bindings; else profiler.dynamic.set(k, { count: 0, totalMs: performance.now() - t0_bindings });
+  }
+  const t0_eval = profiler !== undefined ? performance.now() : 0;
   const evaluatedValue = evalValue(value, evalCtx);
+  if (profiler !== undefined) {
+    const k = 'setVar:evalValue'; const b = profiler.dynamic.get(k); if (b) { b.totalMs += performance.now() - t0_eval; b.count += 1; } else profiler.dynamic.set(k, { count: 1, totalMs: performance.now() - t0_eval });
+  }
+  const t0_endpoint = profiler !== undefined ? performance.now() : 0;
   const endpoint = resolveRuntimeScopedEndpoint(effect.setVar, evalCtx, {
     code: EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED,
     effectType: 'setVar',
@@ -75,6 +88,9 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
     zoneResolutionFailureMessage: 'setVar zoneVar selector resolution failed',
     context: { endpoint: effect.setVar },
   });
+  if (profiler !== undefined) {
+    const k = 'setVar:resolveEndpoint'; const b = profiler.dynamic.get(k); if (b) { b.totalMs += performance.now() - t0_endpoint; b.count += 1; } else profiler.dynamic.set(k, { count: 1, totalMs: performance.now() - t0_endpoint });
+  }
   const variableDef = resolveScopedVarDef(
     ctx,
     { scope: effect.setVar.scope, var: endpoint.var },
@@ -108,8 +124,13 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
       ? toScopedVarWrite(endpoint, expectInteger(nextValue, 'setVar', 'value'))
       : toScopedVarWrite(endpoint, nextValue);
 
+  const t0_write = profiler !== undefined ? performance.now() : 0;
+  const newState = writeScopedVarsToState(ctx.state, [scopedWrite]);
+  if (profiler !== undefined) {
+    const k = 'setVar:writeState'; const b = profiler.dynamic.get(k); if (b) { b.totalMs += performance.now() - t0_write; b.count += 1; } else profiler.dynamic.set(k, { count: 1, totalMs: performance.now() - t0_write });
+  }
   return {
-    state: writeScopedVarsToState(ctx.state, [scopedWrite]),
+    state: newState,
     rng: ctx.rng,
     emittedEvents: [emittedEvent],
   };
@@ -117,7 +138,8 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
 
 export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknown }>, ctx: EffectContext): EffectResult => {
   const { delta } = effect.addVar;
-  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const resolvedBindingsAdd = resolveEffectBindings(ctx);
+  const evalCtx = resolvedBindingsAdd === ctx.bindings ? ctx : { ...ctx, bindings: resolvedBindingsAdd };
   const evaluatedDelta = expectInteger(evalValue(delta, evalCtx), 'addVar', 'delta');
   const endpoint = resolveRuntimeScopedEndpoint(effect.addVar, evalCtx, {
     code: EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED,

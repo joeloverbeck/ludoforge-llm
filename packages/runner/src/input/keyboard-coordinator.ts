@@ -11,6 +11,10 @@ export interface KeyboardEventLike {
   readonly key: string;
   readonly defaultPrevented: boolean;
   readonly target: EventTarget | null;
+  readonly ctrlKey: boolean;
+  readonly metaKey: boolean;
+  readonly shiftKey: boolean;
+  readonly altKey: boolean;
   preventDefault(): void;
 }
 

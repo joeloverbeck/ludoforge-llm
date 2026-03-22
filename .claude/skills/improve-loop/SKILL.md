@@ -41,7 +41,17 @@ Status values: `ACCEPT`, `REJECT`, `NEAR_MISS`, `EARLY_ABORT`, `CRASH`, `SUSPICI
 | `lessons.jsonl` | Per-campaign extracted lessons |
 | `intermediates.jsonl` | Per-experiment intermediate metric breakdowns |
 | `program.md.backup` | Meta-loop rollback snapshot |
-| `campaigns/lessons-global.jsonl` | Cross-campaign promoted lessons (at repo root) |
+
+### Persistent Cross-Campaign Files (MUST be committed)
+
+| File | Purpose |
+|------|---------|
+| `campaigns/lessons-global.jsonl` | Cross-campaign promoted lessons — persists across campaigns and worktrees |
+
+**IMPORTANT**: `campaigns/lessons-global.jsonl` is NOT a per-campaign runtime file.
+It accumulates lessons across ALL campaigns and MUST be committed to the repo
+(not gitignored) so it survives worktree removal and squash-merges. The "After
+Campaign Completes" step explicitly commits this file.
 
 ### Configuration Keys (read from program.md, all have defaults)
 
@@ -404,13 +414,16 @@ Go back to Step 1. Do NOT stop.
 
 `results.tsv`, `musings.md`, `checkpoints.jsonl`, `lessons.jsonl`, `intermediates.jsonl`, and `run.log` are untracked (gitignored) — they persist across accepts and rejects but are not committed.
 
+**Exception**: `campaigns/lessons-global.jsonl` is NOT gitignored — it MUST be committed during campaign completion (see below).
+
 ## After Campaign Completes
 
 When the human decides to stop the loop:
 1. Review the worktree branch: `git log --oneline` shows all accepted improvements.
 2. Promote high-confidence lessons to global store (if not already done by Step 7.6).
-3. Squash-merge into main: `git merge --squash improve/<campaign>`
-4. Remove the worktree: `git worktree remove .claude/worktrees/improve-<campaign>`
+3. **Commit `campaigns/lessons-global.jsonl`** with `git add -f campaigns/lessons-global.jsonl && git commit -m "chore: promote global lessons from <campaign>"`. This file persists across campaigns — without this commit, lessons are lost when the worktree is removed.
+4. Squash-merge into main: `git merge --squash improve/<campaign>`
+5. Remove the worktree: `git worktree remove .claude/worktrees/improve-<campaign>`
 
 ## Important Rules
 

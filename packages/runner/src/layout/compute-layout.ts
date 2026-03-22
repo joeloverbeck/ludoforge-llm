@@ -1,7 +1,8 @@
 import forceAtlas2 from 'graphology-layout-forceatlas2';
 import type { GameDef, ZoneDef } from '@ludoforge/engine/runtime';
+import type Graph from 'graphology';
 
-import type { CardAnimationZoneRoles, CompassPosition, RegionHint } from '../config/visual-config-types.js';
+import type { CardAnimationZoneRoles, CompassPosition, LayoutHints, RegionHint } from '../config/visual-config-types.js';
 import { buildLayoutGraph, partitionZones } from './build-layout-graph.js';
 import { computeGridLayout } from './grid-layout.js';
 import { ZONE_RENDER_HEIGHT, ZONE_RENDER_WIDTH } from './layout-constants.js';
@@ -41,9 +42,14 @@ const COMPASS_ANGLES: Readonly<Record<CompassPosition, number>> = {
 const CENTER_RADIUS_FRACTION = 0.15;
 
 interface ComputeLayoutOptions {
-  readonly regionHints?: readonly RegionHint[] | null;
+  readonly layoutHints?: LayoutHints | null;
   readonly boardZones?: readonly ZoneDef[];
   readonly tableZoneRoles?: CardAnimationZoneRoles | null;
+}
+
+interface GraphNodeAttributes {
+  readonly x?: unknown;
+  readonly y?: unknown;
 }
 
 function computeGraphExtent(nodeCount: number): number {
@@ -63,7 +69,7 @@ export function computeLayout(
 ): LayoutResult {
   switch (mode) {
     case 'graph':
-      return computeGraphLayout(def, options?.regionHints ?? null);
+      return computeGraphLayout(def, options?.layoutHints ?? null);
     case 'table':
       return computeTableLayout(
         options?.boardZones ?? selectPrimaryLayoutZones(def),
@@ -115,7 +121,7 @@ function computeTableLayout(
 
 function computeGraphLayout(
   def: GameDef,
-  regionHints: readonly RegionHint[] | null,
+  layoutHints: LayoutHints | null,
 ): LayoutResult {
   const { board } = partitionZones(def);
   const graph = buildLayoutGraph(board);
@@ -129,31 +135,83 @@ function computeGraphLayout(
     };
   }
 
-  seedInitialPositions(graph, nodeIDs, regionHints);
-  forceAtlas2.assign(graph, {
-    iterations: GRAPH_ITERATIONS,
-    settings: {
-      barnesHutOptimize: nodeIDs.length >= 50,
-    },
-  });
+  seedInitialPositions(graph, nodeIDs, layoutHints?.regions ?? null);
+  const fixedPositions = collectFixedPositions(nodeIDs, layoutHints?.fixed);
+  applyFixedNodeAttributes(graph, fixedPositions);
 
-  const positions = new Map<string, MutablePosition>();
-  for (const nodeID of nodeIDs) {
-    const attributes = graph.getNodeAttributes(nodeID) as { x?: unknown; y?: unknown };
-    const x = typeof attributes.x === 'number' && Number.isFinite(attributes.x) ? attributes.x : 0;
-    const y = typeof attributes.y === 'number' && Number.isFinite(attributes.y) ? attributes.y : 0;
-    positions.set(nodeID, { x, y });
+  if (fixedPositions.size !== nodeIDs.length) {
+    forceAtlas2.assign(graph, {
+      iterations: GRAPH_ITERATIONS,
+      settings: {
+        barnesHutOptimize: nodeIDs.length >= 50,
+      },
+    });
   }
 
-  normalizeToExtent(positions, computeGraphExtent(nodeIDs.length));
-  enforceMinimumSpacing(positions, computeGraphMinSpacing(), GRAPH_SPACING_RELAXATION_PASSES);
-  centerOnOrigin(positions);
+  const positions = extractGraphPositions(graph, nodeIDs, fixedPositions);
+
+  if (fixedPositions.size === 0) {
+    normalizeToExtent(positions, computeGraphExtent(nodeIDs.length));
+    enforceMinimumSpacing(positions, computeGraphMinSpacing(), GRAPH_SPACING_RELAXATION_PASSES);
+    centerOnOrigin(positions);
+  }
 
   return {
     positions,
     mode: 'graph',
     boardBounds: computeBounds(positions),
   };
+}
+
+function collectFixedPositions(
+  sortedNodeIDs: readonly string[],
+  fixedHints: LayoutHints['fixed'] | undefined,
+): Map<string, MutablePosition> {
+  const graphNodeIDs = new Set(sortedNodeIDs);
+  const fixedPositions = new Map<string, MutablePosition>();
+
+  for (const hint of fixedHints ?? []) {
+    if (!graphNodeIDs.has(hint.zone)) {
+      continue;
+    }
+    fixedPositions.set(hint.zone, { x: hint.x, y: hint.y });
+  }
+
+  return fixedPositions;
+}
+
+function applyFixedNodeAttributes(
+  graph: Graph,
+  fixedPositions: ReadonlyMap<string, MutablePosition>,
+): void {
+  for (const [nodeID, position] of fixedPositions) {
+    graph.setNodeAttribute(nodeID, 'x', position.x);
+    graph.setNodeAttribute(nodeID, 'y', position.y);
+    graph.setNodeAttribute(nodeID, 'fixed', true);
+  }
+}
+
+function extractGraphPositions(
+  graph: Graph,
+  sortedNodeIDs: readonly string[],
+  fixedPositions: ReadonlyMap<string, MutablePosition>,
+): Map<string, MutablePosition> {
+  const positions = new Map<string, MutablePosition>();
+
+  for (const nodeID of sortedNodeIDs) {
+    const fixedPosition = fixedPositions.get(nodeID);
+    if (fixedPosition !== undefined) {
+      positions.set(nodeID, { x: fixedPosition.x, y: fixedPosition.y });
+      continue;
+    }
+
+    const attributes = graph.getNodeAttributes(nodeID) as GraphNodeAttributes;
+    const x = typeof attributes.x === 'number' && Number.isFinite(attributes.x) ? attributes.x : 0;
+    const y = typeof attributes.y === 'number' && Number.isFinite(attributes.y) ? attributes.y : 0;
+    positions.set(nodeID, { x, y });
+  }
+
+  return positions;
 }
 
 

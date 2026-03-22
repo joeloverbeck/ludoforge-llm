@@ -11,6 +11,7 @@ import { ErrorBoundary } from './ui/ErrorBoundary.js';
 import { GameContainer } from './ui/GameContainer.js';
 import { GameSelectionScreen } from './ui/GameSelectionScreen.js';
 import { LoadGameDialog } from './ui/LoadGameDialog.js';
+import { MapEditorScreen } from './map-editor/MapEditorScreen.js';
 import { PreGameConfigScreen } from './ui/PreGameConfigScreen.js';
 import { ReplayScreen } from './ui/ReplayScreen.js';
 import { SaveGameDialog } from './ui/SaveGameDialog.js';
@@ -82,6 +83,9 @@ export function App(): ReactElement {
           <GameSelectionScreen
             onSelectGame={(gameId) => {
               sessionStore.getState().selectGame(gameId);
+            }}
+            onEditMap={(gameId) => {
+              sessionStore.getState().openMapEditor(gameId);
             }}
             onResumeSavedGame={handleResumeSavedGame}
             onReplaySavedGame={handleReplaySavedGame}
@@ -182,6 +186,15 @@ export function App(): ReactElement {
           <ReplayScreen
             runtime={replayRuntime}
             onBackToMenu={() => {
+              sessionStore.getState().returnToMenu();
+            }}
+          />
+        );
+      case 'mapEditor':
+        return (
+          <MapEditorScreen
+            gameId={sessionState.gameId}
+            onBack={() => {
               sessionStore.getState().returnToMenu();
             }}
           />

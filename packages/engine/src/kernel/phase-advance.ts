@@ -4,6 +4,7 @@ import { resetPhaseUsage, resetTurnUsage } from './action-usage.js';
 import { resolveBoundaryDurationsAtTurnEnd } from './event-execution.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
 import { legalMoves } from './legal-moves.js';
+import { perfStart, perfDynEnd } from './perf-profiler.js';
 import { dispatchLifecycleEvent } from './phase-lifecycle.js';
 import { applyTurnFlowCardBoundary } from './turn-flow-lifecycle.js';
 import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
@@ -437,6 +438,7 @@ export const advanceToDecisionPoint = (
   policy?: MoveExecutionPolicy,
   evalRuntimeResources?: EvalRuntimeResources,
   cachedRuntime?: GameDefRuntime,
+  profiler?: import('./perf-profiler.js').PerfProfiler,
 ): GameState => {
   if (evalRuntimeResources !== undefined) {
     assertEvalRuntimeResourcesContract(evalRuntimeResources, 'advanceToDecisionPoint evalRuntimeResources');
@@ -454,11 +456,13 @@ export const advanceToDecisionPoint = (
   const seatResolution = createSeatResolutionContext(def, state.playerCount);
   let nextState = state;
   let advances = 0;
-
   while (terminalResult(def, nextState, cachedRuntime) === null) {
     const isInterruptPhase = (def.turnStructure.interrupts ?? []).some((phase) => phase.id === nextState.currentPhase);
     const phaseValid = isInterruptPhase || effectiveTurnPhases(def, nextState).some((phase) => phase.id === nextState.currentPhase);
-    if (phaseValid && legalMoves(def, nextState, undefined, cachedRuntime).length > 0) {
+    const t0_lm = perfStart(profiler);
+    const hasLegal = phaseValid && legalMoves(def, nextState, undefined, cachedRuntime).length > 0;
+    perfDynEnd(profiler, 'adp:legalMoves', t0_lm);
+    if (hasLegal) {
       break;
     }
 
@@ -479,11 +483,14 @@ export const advanceToDecisionPoint = (
       }
     }
 
+    const t0_adv = perfStart(profiler);
     nextState = advancePhase(buildAdvancePhaseRequest(def, nextState, operationResources, {
       triggerLogCollector,
       policy,
       cachedRuntime,
     }));
+    perfDynEnd(profiler, 'adp:advancePhase', t0_adv);
+    perfDynEnd(profiler, 'adp:iterations', 0); // count-only
     advances += 1;
   }
 

@@ -1,5 +1,6 @@
 import { applyMove, createGameDefRuntime, createRng, initialState, legalMoves, terminalResult } from '../kernel/index.js';
 import { assertValidatedGameDef } from '../kernel/index.js';
+import { perfStart, perfEnd } from '../kernel/perf-profiler.js';
 import type {
   Agent,
   ExecutionOptions,
@@ -84,13 +85,16 @@ export const runGame = (
     );
   }
 
+  const profiler = options?.profiler;
   const moveLogs: MoveLog[] = [];
   const agentRngByPlayer = [...createAgentRngByPlayer(seed, state.playerCount)];
   let result: TerminalResult | null = null;
   let stopReason: SimulationStopReason;
 
   while (true) {
+    const t0_term = perfStart(profiler);
     const terminal = terminalResult(validatedDef, state, runtime);
+    perfEnd(profiler, 'simTerminalResult', t0_term);
     if (terminal !== null) {
       result = terminal;
       stopReason = 'terminal';
@@ -102,7 +106,9 @@ export const runGame = (
       break;
     }
 
+    const t0_legal = perfStart(profiler);
     const legal = legalMoves(validatedDef, state, undefined, runtime);
+    perfEnd(profiler, 'simLegalMoves', t0_legal);
     if (legal.length === 0) {
       stopReason = 'noLegalMoves';
       break;
@@ -115,6 +121,7 @@ export const runGame = (
       throw new Error(`missing agent or agent RNG for player ${String(player)}`);
     }
 
+    const t0_agent = perfStart(profiler);
     const selected = agent.chooseMove({
       def: validatedDef,
       state,
@@ -122,20 +129,28 @@ export const runGame = (
       legalMoves: legal,
       rng: agentRng,
       runtime,
+      ...(profiler === undefined ? {} : { profiler }),
     });
+    perfEnd(profiler, 'simAgentChooseMove', t0_agent);
     agentRngByPlayer[player] = selected.rng;
 
     const preState = state;
     const moveContext = captureMoveContext(selected.move);
+    const t0_apply = perfStart(profiler);
     const applied = applyMove(validatedDef, state, selected.move, options, runtime);
+    perfEnd(profiler, 'simApplyMove', t0_apply);
     state = applied.state;
+
+    const t0_delta = perfStart(profiler);
+    const deltas = computeDeltas(preState, state);
+    perfEnd(profiler, 'simComputeDeltas', t0_delta);
 
     moveLogs.push({
       stateHash: state.stateHash,
       player,
       move: selected.move,
       legalMoveCount: legal.length,
-      deltas: computeDeltas(preState, state),
+      deltas,
       triggerFirings: applied.triggerFirings,
       warnings: applied.warnings,
       ...(applied.effectTrace !== undefined ? { effectTrace: applied.effectTrace } : {}),

@@ -208,6 +208,26 @@ describe('layout-cache', () => {
 
     expect(result.worldLayout.boardBounds.maxX).toBeLessThan(result.worldLayout.bounds.maxX);
   });
+
+  it('forwards fixed layout hints from the visual config provider into graph layout', () => {
+    const def = makeDef('fixed-graph', [
+      zone('a', { zoneKind: 'board', adjacentTo: [{ to: 'b' }] }),
+      zone('b', { zoneKind: 'board', adjacentTo: [{ to: 'a' }] }),
+    ], 'graph');
+
+    const result = getOrComputeLayout(def, new VisualConfigProvider({
+      version: 1,
+      layout: {
+        mode: 'graph',
+        hints: {
+          fixed: [{ zone: 'a', x: 100, y: 200 }],
+        },
+      },
+    }));
+
+    expect(result.worldLayout.positions.get('a')).toEqual({ x: 100, y: 200 });
+    expect(result.worldLayout.positions.get('b')).toBeDefined();
+  });
 });
 
 function makeDef(

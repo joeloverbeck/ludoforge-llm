@@ -45,6 +45,17 @@ describe('createSessionStore', () => {
     });
   });
 
+  it('transitions from game selection to map editor via openMapEditor', () => {
+    const store = createSessionStore();
+
+    store.getState().openMapEditor('fire-in-the-lake');
+
+    expect(store.getState().sessionState).toEqual({
+      screen: 'mapEditor',
+      gameId: 'fire-in-the-lake',
+    });
+  });
+
   it('transitions from pre-game config to active game via startGame', () => {
     const store = createSessionStore();
     toPreGame(store, 'fitl');
@@ -108,6 +119,14 @@ describe('createSessionStore', () => {
     expect(replayStore.getState().sessionState).toEqual({ screen: 'gameSelection' });
     expect(replayStore.getState().unsavedChanges).toBe(false);
     expect(replayStore.getState().moveAccumulator).toEqual([]);
+
+    const mapEditorStore = createSessionStore();
+    mapEditorStore.getState().openMapEditor('fitl');
+    mapEditorStore.getState().recordMove(MOVE_A);
+    mapEditorStore.getState().returnToMenu();
+    expect(mapEditorStore.getState().sessionState).toEqual({ screen: 'gameSelection' });
+    expect(mapEditorStore.getState().unsavedChanges).toBe(false);
+    expect(mapEditorStore.getState().moveAccumulator).toEqual([]);
   });
 
   it('transitions to replay from game selection via startReplay', () => {
@@ -185,6 +204,14 @@ describe('createSessionStore', () => {
     const store = createSessionStore();
 
     expect(() => store.getState().startGame(42, PLAYER_CONFIG)).toThrow(/Invalid session transition for startGame/u);
+  });
+
+  it('throws for openMapEditor from activeGame', () => {
+    const store = createSessionStore();
+    toPreGame(store, 'fitl');
+    store.getState().startGame(42, PLAYER_CONFIG);
+
+    expect(() => store.getState().openMapEditor('fire-in-the-lake')).toThrow(/Invalid session transition for openMapEditor/u);
   });
 
   it('throws for newGame from replay', () => {

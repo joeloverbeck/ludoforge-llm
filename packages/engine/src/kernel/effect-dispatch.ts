@@ -6,6 +6,7 @@ import {
   effectNotImplementedError,
 } from './effect-error.js';
 import { assertEffectContextEntryInvariant } from './effect-context-invariants.js';
+import { perfStart, perfDynEnd } from './perf-profiler.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import type { EffectBudgetState } from './effects-control.js';
 import type { EffectAST, TriggerEvent } from './types.js';
@@ -31,21 +32,18 @@ const consumeBudget = (budget: EffectBudgetState, effectType: string): void => {
   budget.remaining -= 1;
 };
 
-const dispatchEffect = (effect: EffectAST, ctx: EffectContext, budget: EffectBudgetState): EffectResult => {
+const applyEffectWithBudget = (effect: EffectAST, ctx: EffectContext, budget: EffectBudgetState): EffectResult => {
   const kind = effectKindOf(effect);
+  consumeBudget(budget, kind);
   const handler = registry[kind];
   if (!handler) {
     throw effectNotImplementedError(kind, { effect });
   }
-  // Safe cast: registry construction guarantees type-correct handlers
+  const profiler = ctx.profiler;
+  const t0 = perfStart(profiler);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (handler as any)(effect, ctx, budget, applyEffectsWithBudget);
-};
-
-const applyEffectWithBudget = (effect: EffectAST, ctx: EffectContext, budget: EffectBudgetState): EffectResult => {
-  const effectType = effectKindOf(effect);
-  consumeBudget(budget, effectType);
-  const result = dispatchEffect(effect, ctx, budget);
+  const result = (handler as any)(effect, ctx, budget, applyEffectsWithBudget) as EffectResult;
+  perfDynEnd(profiler, `effect:${kind}`, t0);
   return {
     state: result.state,
     rng: result.rng,
@@ -62,17 +60,19 @@ const applyEffectsWithBudget = (effects: readonly EffectAST[], ctx: EffectContex
   let currentBindings = ctx.bindings;
   let currentDecisionScope = ctx.decisionScope;
   const emittedEvents: TriggerEvent[] = [];
+  // Skip effectPath string construction when tracing is disabled
+  const tracingEnabled = ctx.collector.trace !== null || ctx.collector.conditionTrace !== null;
 
-  for (const [effectIndex, effect] of effects.entries()) {
+  for (let effectIndex = 0; effectIndex < effects.length; effectIndex++) {
     const result = applyEffectWithBudget(
-      effect,
+      effects[effectIndex]!,
       {
         ...ctx,
         state: currentState,
         rng: currentRng,
         bindings: currentBindings,
         decisionScope: currentDecisionScope,
-        effectPath: `${ctx.effectPath ?? ''}[${effectIndex}]`,
+        ...(tracingEnabled ? { effectPath: `${ctx.effectPath ?? ''}[${effectIndex}]` } : {}),
       },
       budget,
     );
@@ -80,7 +80,9 @@ const applyEffectsWithBudget = (effects: readonly EffectAST[], ctx: EffectContex
     currentRng = result.rng;
     currentBindings = result.bindings ?? currentBindings;
     currentDecisionScope = result.decisionScope ?? currentDecisionScope;
-    emittedEvents.push(...(result.emittedEvents ?? []));
+    if (result.emittedEvents !== undefined && result.emittedEvents.length > 0) {
+      for (let i = 0; i < result.emittedEvents.length; i++) emittedEvents.push(result.emittedEvents[i]!);
+    }
     if (result.pendingChoice !== undefined) {
       return {
         state: currentState,

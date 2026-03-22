@@ -38,7 +38,7 @@ export function getOrComputeLayout(def: GameDef, visualConfigProvider: VisualCon
   const promoted = promoteCardRoleZones(partitioned, roleZoneIds);
   const hints = visualConfigProvider.getLayoutHints();
   const boardLayout = computeLayout(def, mode, {
-    regionHints: hints?.regions ?? null,
+    layoutHints: hints,
     boardZones: promoted.board,
     tableZoneRoles: cardAnimation?.zoneRoles ?? null,
   });

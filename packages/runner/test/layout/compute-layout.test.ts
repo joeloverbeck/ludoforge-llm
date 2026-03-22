@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { asZoneId, type GameDef, type ZoneDef } from '@ludoforge/engine/runtime';
-import type { CardAnimationZoneRoles, RegionHint } from '../../src/config/visual-config-types';
+import type { CardAnimationZoneRoles, LayoutHints, RegionHint } from '../../src/config/visual-config-types';
 import {
   ZONE_RENDER_WIDTH,
   ZONE_RENDER_HEIGHT,
@@ -220,6 +220,90 @@ describe('computeLayout graph mode', () => {
       expect(Number.isFinite(position.y)).toBe(true);
     }
   });
+
+  it('keeps fixed zones at their authored coordinates', () => {
+    const layout = computeLayout(makeDef([
+      zone('fixed', { zoneKind: 'board', adjacentTo: [{ to: 'free' }] }),
+      zone('free', { zoneKind: 'board', adjacentTo: [{ to: 'fixed' }] }),
+    ]), 'graph', {
+      layoutHints: {
+        fixed: [{ zone: 'fixed', x: 100, y: 200 }],
+      },
+    });
+
+    expect(layout.positions.get('fixed')).toEqual({ x: 100, y: 200 });
+    expect(layout.positions.get('free')).toBeDefined();
+  });
+
+  it('keeps multiple fixed zones at their authored coordinates', () => {
+    const layout = computeLayout(makeDef([
+      zone('a', { zoneKind: 'board', adjacentTo: [{ to: 'b' }] }),
+      zone('b', { zoneKind: 'board', adjacentTo: [{ to: 'a' }, { to: 'c' }] }),
+      zone('c', { zoneKind: 'board', adjacentTo: [{ to: 'b' }] }),
+    ]), 'graph', {
+      layoutHints: {
+        fixed: [
+          { zone: 'a', x: 100, y: 200 },
+          { zone: 'c', x: 300, y: 400 },
+        ],
+      },
+    });
+
+    expect(layout.positions.get('a')).toEqual({ x: 100, y: 200 });
+    expect(layout.positions.get('c')).toEqual({ x: 300, y: 400 });
+  });
+
+  it('skips ForceAtlas2 when all graph zones are fixed', () => {
+    forceAtlas2State.assign.mockClear();
+
+    const layout = computeLayout(makeDef([
+      zone('a', { zoneKind: 'board', adjacentTo: [{ to: 'b' }] }),
+      zone('b', { zoneKind: 'board', adjacentTo: [{ to: 'a' }] }),
+    ]), 'graph', {
+      layoutHints: {
+        fixed: [
+          { zone: 'a', x: 10, y: 20 },
+          { zone: 'b', x: 30, y: 40 },
+        ],
+      },
+    });
+
+    expect(forceAtlas2State.assign).not.toHaveBeenCalled();
+    expect(layout.positions.get('a')).toEqual({ x: 10, y: 20 });
+    expect(layout.positions.get('b')).toEqual({ x: 30, y: 40 });
+  });
+
+  it('ignores fixed hints for zones not present in the graph', () => {
+    const layout = computeLayout(makeDef([
+      zone('a', { zoneKind: 'board', adjacentTo: [{ to: 'b' }] }),
+      zone('b', { zoneKind: 'board', adjacentTo: [{ to: 'a' }] }),
+    ]), 'graph', {
+      layoutHints: {
+        fixed: [{ zone: 'missing', x: 100, y: 200 }],
+      },
+    });
+
+    expect(layout.positions.has('missing')).toBe(false);
+    expect(layout.positions.size).toBe(2);
+  });
+
+  it('treats empty fixed hints like no fixed hints', () => {
+    const hints: LayoutHints = {
+      fixed: [],
+    };
+    const withoutFixed = computeLayout(makeDef([
+      zone('a', { zoneKind: 'board', adjacentTo: [{ to: 'b' }] }),
+      zone('b', { zoneKind: 'board', adjacentTo: [{ to: 'a' }] }),
+    ]), 'graph');
+    const withEmptyFixed = computeLayout(makeDef([
+      zone('a', { zoneKind: 'board', adjacentTo: [{ to: 'b' }] }),
+      zone('b', { zoneKind: 'board', adjacentTo: [{ to: 'a' }] }),
+    ]), 'graph', {
+      layoutHints: hints,
+    });
+
+    expect(withEmptyFixed).toEqual(withoutFixed);
+  });
 });
 
 describe('computeLayout graph mode with region hints', () => {
@@ -235,7 +319,7 @@ describe('computeLayout graph mode with region hints', () => {
       { name: 'Southeast', zones: ['se1', 'se2'], position: 'se' },
     ];
 
-    const layout = computeLayout(makeDef(zones), 'graph', { regionHints: hints });
+    const layout = computeLayout(makeDef(zones), 'graph', { layoutHints: { regions: hints } });
 
     const nwCentroid = centroid([layout.positions.get('nw1')!, layout.positions.get('nw2')!]);
     const seCentroid = centroid([layout.positions.get('se1')!, layout.positions.get('se2')!]);
@@ -259,7 +343,7 @@ describe('computeLayout graph mode with region hints', () => {
       { name: 'South', zones: ['s1', 's2'], position: 's' },
     ];
 
-    const layout = computeLayout(makeDef(zones), 'graph', { regionHints: hints });
+    const layout = computeLayout(makeDef(zones), 'graph', { layoutHints: { regions: hints } });
 
     const centerCentroid = centroid([layout.positions.get('c1')!, layout.positions.get('c2')!]);
     const northCentroid = centroid([layout.positions.get('n1')!, layout.positions.get('n2')!]);
@@ -279,7 +363,7 @@ describe('computeLayout graph mode with region hints', () => {
       { name: 'North', zones: ['hinted'], position: 'n' },
     ];
 
-    const layout = computeLayout(makeDef(zones), 'graph', { regionHints: hints });
+    const layout = computeLayout(makeDef(zones), 'graph', { layoutHints: { regions: hints } });
 
     for (const position of layout.positions.values()) {
       expect(Number.isFinite(position.x)).toBe(true);
@@ -294,13 +378,33 @@ describe('computeLayout graph mode with region hints', () => {
       zone('b', { zoneKind: 'board', adjacentTo: [{ to: 'a' }] }),
     ];
 
-    const withNull = computeLayout(makeDef(zones), 'graph', { regionHints: null });
+    const withNull = computeLayout(makeDef(zones), 'graph', { layoutHints: null });
     const withUndefined = computeLayout(makeDef(zones), 'graph');
-    const withEmpty = computeLayout(makeDef(zones), 'graph', { regionHints: [] });
+    const withEmpty = computeLayout(makeDef(zones), 'graph', { layoutHints: { regions: [] } });
 
     expect(withNull.positions.size).toBe(2);
     expect(withUndefined.positions.size).toBe(2);
     expect(withEmpty.positions.size).toBe(2);
+  });
+
+  it('supports region hints and fixed hints together', () => {
+    const layout = computeLayout(makeDef([
+      zone('north-fixed', { zoneKind: 'board', adjacentTo: [{ to: 'north-free' }], category: 'city' }),
+      zone('north-free', { zoneKind: 'board', adjacentTo: [{ to: 'north-fixed' }, { to: 'south' }], category: 'city' }),
+      zone('south', { zoneKind: 'board', adjacentTo: [{ to: 'north-free' }], category: 'province' }),
+    ]), 'graph', {
+      layoutHints: {
+        regions: [
+          { name: 'North', zones: ['north-fixed', 'north-free'], position: 'n' },
+          { name: 'South', zones: ['south'], position: 's' },
+        ],
+        fixed: [{ zone: 'north-fixed', x: 50, y: -75 }],
+      },
+    });
+
+    expect(layout.positions.get('north-fixed')).toEqual({ x: 50, y: -75 });
+    expect(layout.positions.get('north-free')).toBeDefined();
+    expect(layout.positions.get('south')).toBeDefined();
   });
 });
 

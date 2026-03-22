@@ -65,6 +65,10 @@ fraction of evalValue's 35.7% is dispatch overhead vs. actual computation).
   Clean separation.
 - **Foundation 9 (No Backwards Compatibility)**: All consumers updated in the
   same change. No fallback dispatch path needed.
+- **Foundation 10 (Architectural Completeness)**: Exhaustive switch with throw
+  on unknown tags — no silent fallback that could mask compiler bugs.
+- **Foundation 12 (Branded Types)**: `VALUE_EXPR_TAG` constants and
+  `ValueExprTag` type provide compile-time safety for tag values.
 
 ## Design
 
@@ -109,16 +113,17 @@ by `typeof` and never reach the `switch`. They do NOT get tags.
 
 ### Compiler changes
 
-In the CNL compiler output pipeline (after `compileGameSpecToGameDef`), a
-tree-walking pass adds `_t` to all ValueExpr nodes in:
-- Action effects and cost expressions
-- Phase lifecycle effects (onEnter, onExit)
-- Trigger effects
-- Terminal conditions
-- Action preconditions
-- Parameter domain expressions
+The `lowerValueNode()` function in `compile-conditions-values.ts` is the
+primary ValueExpr factory. Each variant receives its `_t` tag inline at
+construction time — no separate tree-walking pass needed.
 
-This pass runs ONCE during compilation — zero runtime cost.
+Injection points:
+- `lowerValueNode()` — assigns `_t` for scalarArray, op, concat, if variants
+- `lowerReference()` — assigns `_t: VALUE_EXPR_TAG.REF` on all Reference objects
+- `lowerAggregate()` — assigns `_t: VALUE_EXPR_TAG.AGGREGATE` on aggregate objects
+
+This approach is simpler than a post-compilation pass: impossible to miss a
+node, no second AST traversal, zero runtime cost.
 
 ### evalValue changes
 
@@ -127,14 +132,17 @@ export function evalValue(expr: ValueExpr, ctx: ReadContext): ScalarValue | Scal
   if (typeof expr === 'number' || typeof expr === 'boolean' || typeof expr === 'string') {
     return expr;
   }
-  switch ((expr as { readonly _t: number })._t) {
-    case 1: return (expr as { readonly scalarArray: ScalarArrayValue }).scalarArray;
-    case 2: return resolveRef(expr as Reference, ctx);
-    case 3: return evalConcat(expr, ctx);
-    case 4: { const ifExpr = (expr as any).if; return evalCondition(ifExpr.when, ctx) ? evalValue(ifExpr.then, ctx) : evalValue(ifExpr.else, ctx); }
-    case 5: return evalAggregate(expr, ctx);
-    case 6: return evalArithmetic(expr, ctx);
-    default: return expr;
+  switch ((expr as { readonly _t: ValueExprTag })._t) {
+    case VALUE_EXPR_TAG.SCALAR_ARRAY: return (expr as { readonly scalarArray: ScalarArrayValue }).scalarArray;
+    case VALUE_EXPR_TAG.REF: return resolveRef(expr as Reference, ctx);
+    case VALUE_EXPR_TAG.CONCAT: return evalConcat(expr, ctx);
+    case VALUE_EXPR_TAG.IF: { const ifExpr = (expr as any).if; return evalCondition(ifExpr.when, ctx) ? evalValue(ifExpr.then, ctx) : evalValue(ifExpr.else, ctx); }
+    case VALUE_EXPR_TAG.AGGREGATE: return evalAggregate(expr, ctx);
+    case VALUE_EXPR_TAG.OP: return evalArithmetic(expr, ctx);
+    default: {
+      const _exhaustive: never = (expr as { readonly _t: ValueExprTag })._t as never;
+      throw new Error(`Unknown ValueExpr tag: ${(expr as any)._t}`);
+    }
   }
 }
 ```
@@ -143,30 +151,58 @@ The handler bodies (`evalConcat`, `evalAggregate`, `evalArithmetic`) are
 extracted into separate functions to keep `evalValue` small (critical for
 V8 inlining — lesson from exp-014).
 
+The `default` case uses an exhaustive check that throws on unknown tags.
+If `_t` is missing or invalid, it's a compiler bug that should fail loudly
+(Foundation 8: the compiler guarantees structure).
+
 ### JSON Schema changes
 
 The GameDef JSON schema adds `_t` as a required integer field on all
 non-primitive ValueExpr variants. This is a schema-breaking change — old
 GameDef JSON files must be re-compiled.
 
-### EffectAST tags (optional extension)
+### isNumericValueExpr update
 
-EffectAST already uses `effectKindOf` with `for-in` first-key extraction,
-which is reasonably fast. Adding `_t` to EffectAST nodes is an optional
-extension that would make `effectKindOf` a direct property access instead
-of `for-in` iteration. This can be deferred or included based on profiling.
+`isNumericValueExpr()` in `numeric-value-expr.ts` uses the same
+property-discrimination chain (`'scalarArray' in expr`, `'ref' in expr`,
+etc.). Update it to dispatch on `_t` instead:
+
+```typescript
+export function isNumericValueExpr(expr: ValueExpr): expr is NumericValueExpr {
+  if (typeof expr === 'number') return true;
+  if (typeof expr === 'boolean' || typeof expr === 'string') return false;
+  switch ((expr as { readonly _t: ValueExprTag })._t) {
+    case VALUE_EXPR_TAG.SCALAR_ARRAY: return false;
+    case VALUE_EXPR_TAG.CONCAT: return false;
+    case VALUE_EXPR_TAG.REF: return true;
+    case VALUE_EXPR_TAG.AGGREGATE: return true;
+    case VALUE_EXPR_TAG.IF:
+      return isNumericValueExpr((expr as any).if.then) && isNumericValueExpr((expr as any).if.else);
+    case VALUE_EXPR_TAG.OP:
+      return isNumericValueExpr((expr as any).left) && isNumericValueExpr((expr as any).right);
+    default: {
+      const _exhaustive: never = (expr as { readonly _t: ValueExprTag })._t as never;
+      throw new Error(`Unknown ValueExpr tag: ${(expr as any)._t}`);
+    }
+  }
+}
+```
+
+Consistency benefit: all ValueExpr dispatch paths use the same `_t`
+mechanism. Minor speedup for compile-time calls.
 
 ## Scope
 
 ### Files affected
 
-- `packages/engine/src/kernel/types-ast.ts` — ValueExpr type + tag constants
-- `packages/engine/src/kernel/eval-value.ts` — switch dispatch + extract handlers
+- `packages/engine/src/kernel/types-ast.ts` — ValueExpr type union + `VALUE_EXPR_TAG` constants
+- `packages/engine/src/kernel/eval-value.ts` — switch dispatch + extract handler functions
+- `packages/engine/src/kernel/numeric-value-expr.ts` — `isNumericValueExpr()` switch on `_t`
 - `packages/engine/src/kernel/eval-condition.ts` — remove dead profiler code (opportunistic)
-- `packages/engine/src/cnl/compiler.ts` (or post-compilation pass) — tag assignment
-- `packages/engine/schemas/gamedef.schema.json` — add `_t` field
+- `packages/engine/src/cnl/compile-conditions-values.ts` — inline `_t` assignment in `lowerValueNode()`, `lowerReference()`, `lowerAggregate()`
+- `packages/engine/schemas/gamedef.schema.json` — add `_t` field to non-primitive ValueExpr variants
 - `packages/engine/test/` — update test fixtures that create ValueExpr objects
-- `packages/engine/src/kernel/effect-compiler-codegen.ts` — compiled effects that create ValueExpr
+- `packages/engine/src/kernel/effect-compiler-codegen.ts` — add `_t: VALUE_EXPR_TAG.REF` to Reference objects created by `compileValueAccessor()`
 
 ### Files NOT affected
 
@@ -185,3 +221,10 @@ of `for-in` iteration. This can be deferred or included based on profiling.
 
 - **V8 switch optimization**: V8 should compile `switch` on small integers to a jump table, but this depends on V8's heuristics. If V8 falls back to if-else chain internally, the gain would be smaller.
 - **Schema migration**: All cached/serialized GameDef JSON becomes invalid. This is acceptable per Foundation 9 (no backwards compatibility).
+
+## Future Work
+
+These are separate concerns that may deserve their own specs if post-implementation profiling shows bottlenecks:
+
+- **Reference sub-tags**: Reference has 15 string-keyed sub-variants (`ref: 'gvar' | 'pvar' | ...`). Adding numeric sub-tags could speed up `resolveRef()` dispatch. Profile after `_t` implementation to determine if this is worthwhile.
+- **EffectAST tags**: EffectAST uses `effectKindOf` with `for-in` first-key extraction, which is reasonably fast. Adding `_t` to EffectAST's 20+ variants would make `effectKindOf` a direct property access. Profile separately to justify the scope.

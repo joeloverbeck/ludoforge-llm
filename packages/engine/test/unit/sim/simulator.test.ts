@@ -8,9 +8,12 @@ import {
   asPhaseId,
   asZoneId,
   computeFullHash,
+  enumerateLegalMoves,
   createZobristTable,
   initialState,
+  terminalResult,
   type Agent,
+  type ClassifiedMove,
   type GameDef,
   type Move,
   type ValidatedGameDef,
@@ -194,6 +197,53 @@ describe('runGame', () => {
 
     const def = createDef();
     assert.throws(() => runGame(def, 9, [illegalMoveAgent, illegalMoveAgent], 1), /Illegal move/);
+  });
+
+  it('passes classified enumerated moves into the agent boundary', () => {
+    const def = createDef();
+    let observedLegalMoves: readonly ClassifiedMove[] | null = null;
+
+    const inspectingAgent: Agent = {
+      chooseMove(input) {
+        observedLegalMoves = input.legalMoves;
+        assert.ok(input.legalMoves.length > 0);
+        assert.ok('move' in input.legalMoves[0]!);
+        assert.ok('viability' in input.legalMoves[0]!);
+        assert.deepEqual(input.legalMoves, enumerateLegalMoves(input.def, input.state, undefined, input.runtime).moves);
+        return { move: input.legalMoves[0]!.move, rng: input.rng };
+      },
+    };
+
+    const trace = runGame(def, 13, [inspectingAgent, inspectingAgent], 1);
+
+    let classifiedMoves: readonly ClassifiedMove[];
+    if (observedLegalMoves === null) {
+      throw new Error('expected simulator to provide classified legal moves to agent');
+    }
+    classifiedMoves = observedLegalMoves;
+    assert.equal(trace.moves[0]?.legalMoveCount, classifiedMoves.length);
+  });
+
+  it('matches a validated replay when simulator uses skipMoveValidation optimization', () => {
+    const def = createDef({ terminalAtScore: 3 });
+    const seed = 29;
+    const trace = runGame(def, seed, [firstLegalAgent, firstLegalAgent], 10);
+
+    let replayState = initialState(def, seed, 2).state;
+    for (const moveLog of trace.moves) {
+      const enumerated = enumerateLegalMoves(def, replayState);
+      assert.equal(moveLog.legalMoveCount, enumerated.moves.length);
+
+      const applied = applyMove(def, replayState, moveLog.move);
+      assert.deepEqual(applied.triggerFirings, moveLog.triggerFirings);
+      assert.deepEqual(applied.warnings, moveLog.warnings);
+      replayState = applied.state;
+
+      assert.equal(moveLog.stateHash, replayState.stateHash);
+    }
+
+    assert.deepEqual(trace.finalState, replayState);
+    assert.deepEqual(trace.result, terminalResult(def, replayState));
   });
 
   it('keeps selected event side/branch params in move logs for trace visibility', () => {

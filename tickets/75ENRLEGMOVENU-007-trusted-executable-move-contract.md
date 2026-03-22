@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — kernel move types, agent return contract, simulator, runner worker/store threading
-**Deps**: tickets/75ENRLEGMOVENU-004-agent-and-prepare-playable-moves-update.md, tickets/75ENRLEGMOVENU-005-simulator-and-runner-type-threading.md
+**Deps**: archive/tickets/75ENRLEGMOVENU/75ENRLEGMOVENU-004-agent-and-prepare-playable-moves-update.md, archive/tickets/75ENRLEGMOVENU/75ENRLEGMOVENU-005-simulator-and-runner-type-threading.md
 
 ## Problem
 
@@ -33,10 +33,14 @@ The long-term architecture should carry trust as a typed value, not as a boolean
 ## Architecture Check
 
 1. The cleaner design is a dedicated `TrustedExecutableMove` value object that carries both the executable `Move` and the state identity it was validated against. Raw moves stay raw; trusted executable moves become a distinct contract.
-2. `applyMove()` should remain the validating entry point for raw/untrusted `Move` values. A separate `applyTrustedMove()` should accept `TrustedExecutableMove` and perform only cheap trust checks before skipping full validation. This keeps the trust boundary explicit and readable.
-3. The boolean option should be removed from the public API entirely. No deprecation shim, no alias path, no "legacy support" branch.
-4. This remains game-agnostic. Trust metadata is generic kernel provenance (`sourceStateHash`, provenance kind), not game-specific logic.
-5. The trust contract must be carried across both simulator and runner AI pipelines. Otherwise one path stays convention-based and the architecture remains split-brain.
+2. The split boundary introduced by Spec 75 should remain intact:
+   - `legalMoves()` continues to serve raw `Move[]` for general kernel/UI callers
+   - `enumerateLegalMoves()` continues to serve classified agent-facing data
+   This ticket should not collapse those APIs together while introducing trusted execution.
+3. `applyMove()` should remain the validating entry point for raw/untrusted `Move` values. A separate `applyTrustedMove()` should accept `TrustedExecutableMove` and perform only cheap trust checks before skipping full validation. This keeps the trust boundary explicit and readable.
+4. The boolean option should be removed from the public API entirely. No deprecation shim, no alias path, no "legacy support" branch.
+5. This remains game-agnostic. Trust metadata is generic kernel provenance (`sourceStateHash`, provenance kind), not game-specific logic.
+6. The trust contract must be carried across both simulator and runner AI pipelines. Otherwise one path stays convention-based and the architecture remains split-brain.
 
 ## What to Change
 

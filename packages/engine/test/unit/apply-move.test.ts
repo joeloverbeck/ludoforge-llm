@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  applyTrustedMove,
   applyMove,
   asActionId,
   asPhaseId,
@@ -13,6 +14,7 @@ import {
   asTriggerId,
   asZoneId,
   computeFullHash,
+  createTrustedExecutableMove,
   createZobristTable,
   legalChoicesDiscover,
   type GameDef,
@@ -400,6 +402,74 @@ describe('applyMove', () => {
     const table = createZobristTable(def);
     assert.notEqual(result.state.stateHash, state.stateHash);
     assert.equal(result.state.stateHash, computeFullHash(table, result.state));
+  });
+
+  it('produces the same result for a legal move when applyTrustedMove is used for the same state', () => {
+    const def = createDef();
+    const state = createState();
+
+    const baseline = applyMove(def, state, playMove(2));
+    const trusted = applyTrustedMove(
+      def,
+      state,
+      createTrustedExecutableMove(playMove(2), state.stateHash, 'enumerateLegalMoves'),
+    );
+
+    assert.deepEqual(trusted, baseline);
+  });
+
+  it('rejects trusted moves whose sourceStateHash does not match the current state', () => {
+    const def: GameDef = {
+      metadata: { id: 'trusted-move-state-mismatch', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+      seats: [{ id: '0' }, { id: '1' }],
+      constants: {},
+      globalVars: [
+        { name: 'energy', type: 'int', init: 0, min: 0, max: 20 },
+        { name: 'score', type: 'int', init: 0, min: 0, max: 20 },
+      ],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      actions: [
+        {
+          id: asActionId('gated'),
+          actor: 'active',
+          executor: 'actor',
+          phase: [asPhaseId('main')],
+          params: [],
+          pre: { op: '>=', left: { ref: 'gvar', var: 'energy' }, right: 2 },
+          cost: [],
+          effects: [{ addVar: { scope: 'global', var: 'score', delta: 1 } }],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      terminal: { conditions: [] },
+    } as unknown as GameDef;
+    const state: GameState = {
+      globalVars: { energy: 0, score: 0 },
+      perPlayerVars: {},
+      zoneVars: {},
+      playerCount: 2,
+      zones: {},
+      nextTokenOrdinal: 0,
+      currentPhase: asPhaseId('main'),
+      activePlayer: asPlayerId(0),
+      turnCount: 0,
+      rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [7n, 11n] },
+      stateHash: 0n,
+      actionUsage: {},
+      turnOrderState: { type: 'roundRobin' },
+      markers: {},
+    };
+    const gatedMove: Move = { actionId: asActionId('gated'), params: {} };
+
+    assert.throws(
+      () => applyTrustedMove(def, state, createTrustedExecutableMove(gatedMove, state.stateHash + 1n, 'enumerateLegalMoves')),
+      /sourceStateHash does not match the current state/,
+    );
   });
 
   it('throws descriptive illegal-move error with actionId, params, and reason', () => {

@@ -8,6 +8,7 @@ import {
   classifyPlayableMoveCandidate,
   createRng,
   createGameDefRuntime,
+  enumerateLegalMoves,
   evaluatePlayableMoveCandidate,
   initialState,
   legalMoves,
@@ -61,7 +62,7 @@ describe('FITL policy agent integration', () => {
       def,
       state,
       playerId: state.activePlayer,
-      legalMoves: rawLegalMoves,
+      legalMoves: enumerateLegalMoves(def, state, undefined, runtime).moves,
       rng: createRng(7n),
       runtime,
     });

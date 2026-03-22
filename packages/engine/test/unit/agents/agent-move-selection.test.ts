@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import { pickRandom, selectStochasticFallback } from '../../../src/agents/agent-move-selection.js';
 import { asActionId, createRng, type Move } from '../../../src/kernel/index.js';
+import { trustedMove } from '../../helpers/classified-move-fixtures.js';
 
 const createMoves = (count: number): readonly Move[] =>
   Array.from({ length: count }, (_unused, index) => ({
@@ -51,7 +52,7 @@ describe('agent-move-selection helpers', () => {
   });
 
   it('selectStochasticFallback returns deterministic move + rng for identical seed', () => {
-    const stochasticMoves = createMoves(3);
+    const stochasticMoves = createMoves(3).map((move) => trustedMove(move));
     const first = selectStochasticFallback(stochasticMoves, createRng(222n));
     const second = selectStochasticFallback(stochasticMoves, createRng(222n));
 
@@ -59,7 +60,7 @@ describe('agent-move-selection helpers', () => {
   });
 
   it('selectStochasticFallback preserves rng when exactly one move exists', () => {
-    const stochasticMoves = createMoves(1);
+    const stochasticMoves = createMoves(1).map((move) => trustedMove(move));
     const rng = createRng(500n);
 
     const result = selectStochasticFallback(stochasticMoves, rng);

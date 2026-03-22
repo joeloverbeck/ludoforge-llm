@@ -152,6 +152,39 @@ const makeEventLegalMovesFixture = (card: EventCardDef): { def: GameDef; state: 
 };
 
 describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
+  it('enumerateLegalMoves returns classified complete moves for simple parameterless actions', () => {
+    const action: ActionDef = {
+      id: asActionId('simple'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const state = makeBaseState();
+    const result = enumerateLegalMoves(makeBaseDef({ actions: [action] }), state);
+
+    assert.equal(result.moves.length, 1);
+    assert.deepEqual(result.moves[0]?.move, { actionId: asActionId('simple'), params: {} });
+    assert.deepEqual(result.moves[0]?.viability, {
+      viable: true,
+      complete: true,
+      move: { actionId: asActionId('simple'), params: {} },
+      warnings: [],
+    });
+    assert.deepEqual(result.moves[0]?.trustedMove, {
+      actionId: asActionId('simple'),
+      params: {},
+      move: { actionId: asActionId('simple'), params: {} },
+      provenance: 'enumerateLegalMoves',
+      sourceStateHash: state.stateHash,
+    });
+  });
+
   it('supports actions declared across multiple phases', () => {
     const action: ActionDef = {
       id: asActionId('multiPhaseAction'),
@@ -1984,7 +2017,7 @@ phase: [asPhaseId('main')],
       budgets: { maxTemplates: 1 },
     });
 
-    assert.deepEqual(result.moves.map((move) => move.actionId), [asActionId('first')]);
+    assert.deepEqual(result.moves.map(({ move }) => move.actionId), [asActionId('first')]);
     assert.equal(result.warnings.some((warning) => warning.code === 'MOVE_ENUM_TEMPLATE_BUDGET_EXCEEDED'), true);
   });
 
@@ -2008,7 +2041,7 @@ phase: [asPhaseId('main')],
       budgets: { maxParamExpansions: 2 },
     });
 
-    assert.deepEqual(result.moves, [{ actionId: asActionId('expand'), params: { a: 'x', b: '1' } }]);
+    assert.deepEqual(result.moves.map(({ move }) => move), [{ actionId: asActionId('expand'), params: { a: 'x', b: '1' } }]);
     assert.equal(result.warnings.some((warning) => warning.code === 'MOVE_ENUM_PARAM_EXPANSION_BUDGET_EXCEEDED'), true);
   });
 
@@ -2051,7 +2084,7 @@ phase: [asPhaseId('main')],
       budgets: { maxDecisionProbeSteps: 0 },
     });
 
-    assert.deepEqual(result.moves, [{ actionId: asActionId('needsDecision'), params: {} }]);
+    assert.deepEqual(result.moves.map(({ move }) => move), [{ actionId: asActionId('needsDecision'), params: {} }]);
     assert.equal(result.warnings.some((warning) => warning.code === 'MOVE_ENUM_DECISION_PROBE_STEP_BUDGET_EXCEEDED'), true);
   });
 
@@ -2125,7 +2158,7 @@ phase: [asPhaseId('main')],
     const result = enumerateLegalMoves(def, state, { budgets: { maxDecisionProbeSteps: 0 } });
     assert.equal(
       result.moves.some(
-        (move) => String(move.actionId) === 'operation' && move.freeOperation === true,
+        ({ move }) => String(move.actionId) === 'operation' && move.freeOperation === true,
       ),
       true,
     );
@@ -3369,7 +3402,7 @@ phase: [asPhaseId('main')],
     });
 
     const result = enumerateLegalMoves(def, state, { budgets: { maxDecisionProbeSteps: 0 } });
-    assert.deepEqual(result.moves, [
+    assert.deepEqual(result.moves.map(({ move }) => move), [
       {
         actionId,
         params: {
@@ -3663,7 +3696,7 @@ describe('legalMoves plain-action feasibility probe', () => {
 
     const result = enumerateLegalMoves(def, state, { probePlainActionFeasibility: true, budgets: { maxDecisionProbeSteps: 0 } });
     assert.equal(result.moves.length, 1, 'when probe budget is zero, move should be kept (conservative)');
-    assert.equal(result.moves[0]?.actionId, asActionId('patrol'));
+    assert.equal(result.moves[0]?.move.actionId, asActionId('patrol'));
   });
 
   it('35. pipeline actions are not double-probed', () => {

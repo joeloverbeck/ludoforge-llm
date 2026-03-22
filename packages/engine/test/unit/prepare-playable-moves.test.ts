@@ -5,17 +5,81 @@ import { preparePlayableMoves } from '../../src/agents/prepare-playable-moves.js
 import { PolicyAgent } from '../../src/agents/policy-agent.js';
 import {
   applyMove,
+  asActionId,
+  asPhaseId,
   assertValidatedGameDef,
+  createTrustedExecutableMove,
   createRng,
   createGameDefRuntime,
+  enumerateLegalMoves,
   initialState,
-  legalMoves,
   probeMoveViability,
+  type ClassifiedMove,
+  type Move,
 } from '../../src/kernel/index.js';
 import { runGame } from '../../src/sim/simulator.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 describe('preparePlayableMoves', () => {
+  it('routes complete and stochastic ClassifiedMove inputs without reclassification', () => {
+    const def = assertValidatedGameDef({
+      metadata: { id: 'prepare-playable-routing', players: { min: 2, max: 2 } },
+      constants: {},
+      globalVars: [],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      actions: [],
+      triggers: [],
+      terminal: { conditions: [] },
+    });
+    const state = initialState(def, 1, 2).state;
+    const completeMove: Move = { actionId: asActionId('complete'), params: {} };
+    const stochasticMove: Move = { actionId: asActionId('stochastic'), params: {} };
+    const legalMoves: readonly ClassifiedMove[] = [
+      {
+        move: completeMove,
+        viability: { viable: true, complete: true, move: completeMove, warnings: [] },
+        trustedMove: createTrustedExecutableMove(completeMove, state.stateHash, 'enumerateLegalMoves'),
+      },
+      {
+        move: stochasticMove,
+        viability: {
+          viable: true,
+          complete: false,
+          stochasticDecision: {
+            kind: 'pendingStochastic',
+            complete: false,
+            source: 'rollRandom',
+            alternatives: [],
+            outcomes: [],
+          },
+          move: stochasticMove,
+          warnings: [],
+        },
+        trustedMove: createTrustedExecutableMove(stochasticMove, state.stateHash, 'enumerateLegalMoves'),
+      },
+    ];
+
+    const prepared = preparePlayableMoves({
+      def,
+      state,
+      legalMoves,
+      rng: createRng(1n),
+    });
+
+    assert.deepEqual(
+      prepared.completedMoves.map((move) => move.move),
+      [completeMove],
+    );
+    assert.deepEqual(
+      prepared.stochasticMoves.map((move) => move.move),
+      [stochasticMove],
+    );
+  });
+
   describe('zone-filtered free-operation templates', () => {
     /**
      * Regression test for a scenario where a free-operation template move
@@ -44,7 +108,7 @@ describe('preparePlayableMoves', () => {
       );
 
       // Execute turn 0 (ARVN plays event).
-      const legal0 = legalMoves(def, state, undefined, runtime);
+      const legal0 = enumerateLegalMoves(def, state, undefined, runtime).moves;
       const player0 = state.activePlayer;
       const selected0 = agent.chooseMove({
         def, state, playerId: player0,
@@ -53,10 +117,16 @@ describe('preparePlayableMoves', () => {
       state = applyMove(def, state, selected0.move, undefined, runtime).state;
 
       // Turn 1: VC should have a free-operation rally template.
-      const legal1 = legalMoves(def, state, undefined, runtime);
+      const enumerated1 = enumerateLegalMoves(def, state, undefined, runtime);
+      const classifiedFreeOpMove = enumerated1.moves.find(({ move }) => move.freeOperation === true);
+      assert.ok(classifiedFreeOpMove, 'expected a classified free-operation move in enumerated legal moves');
+      assert.equal(classifiedFreeOpMove.viability.viable, true, 'deferred free-operation template should remain classified as viable');
+      assert.equal(classifiedFreeOpMove.viability.complete, false, 'deferred free-operation template should remain incomplete until completion');
+
+      const legal1 = enumerateLegalMoves(def, state, undefined, runtime).moves;
       assert.ok(legal1.length > 0, 'expected at least one legal move at turn 1');
 
-      const freeOpMove = legal1.find((m) => m.freeOperation === true);
+      const freeOpMove = legal1.find(({ move }) => move.freeOperation === true)?.move;
       assert.ok(freeOpMove, 'expected a free-operation move in legal moves');
 
       // Verify that probeMoveViability rejects the template (this is the
@@ -86,7 +156,7 @@ describe('preparePlayableMoves', () => {
 
       // Use initial state where no free operation grants exist.
       const state = initialState(def, 1, 4, undefined, runtime).state;
-      const legal = legalMoves(def, state, undefined, runtime);
+      const legal = enumerateLegalMoves(def, state, undefined, runtime).moves;
 
       // Verify non-free-operation moves are handled normally.
       const rng = createRng(1n);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { compileGameSpecToGameDef, createEmptyGameSpecDoc } from '@ludoforge/engine/cnl';
-import { asActionId, createGameDefRuntime, createRng, initialState, type GameDef, type Move } from '@ludoforge/engine/runtime';
+import { asActionId, createGameDefRuntime, createRng, createTrustedExecutableMove, initialState, type ClassifiedMove, type GameDef, type Move } from '@ludoforge/engine/runtime';
 
 import { createAgentSeatController, createHumanSeatController } from '../../src/seat/seat-controller.js';
 import {
@@ -13,6 +13,19 @@ import {
 const MOVE_A: Move = { actionId: asActionId('a'), params: {} };
 const MOVE_B: Move = { actionId: asActionId('b'), params: {} };
 const MOVE_C: Move = { actionId: asActionId('c'), params: {} };
+
+function toClassifiedMove(move: Move, sourceStateHash = 0n): ClassifiedMove {
+  return {
+    move,
+    viability: {
+      viable: true,
+      complete: true,
+      move,
+      warnings: [],
+    },
+    trustedMove: createTrustedExecutableMove(move, sourceStateHash, 'enumerateLegalMoves'),
+  };
+}
 
 function compileFixture(): GameDef {
   const compiled = compileGameSpecToGameDef({
@@ -72,13 +85,13 @@ describe('ai-move-policy', () => {
       def,
       state,
       playerId: state.activePlayer,
-      legalMoves: [MOVE_A, MOVE_B, MOVE_C],
+      legalMoves: [MOVE_A, MOVE_B, MOVE_C].map((move) => toClassifiedMove(move, state.stateHash)),
       rng: createRng(7n),
       runtime: createGameDefRuntime(def),
     });
 
     expect(result).not.toBeNull();
-    expect([MOVE_A, MOVE_B, MOVE_C]).toContainEqual(result?.move);
+    expect([MOVE_A, MOVE_B, MOVE_C]).toContainEqual(result?.move.move);
     expect(result?.agentDecision).toMatchObject({
       kind: 'builtin',
       agent: { kind: 'builtin', builtinId: 'greedy' },

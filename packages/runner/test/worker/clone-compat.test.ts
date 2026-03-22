@@ -6,6 +6,7 @@ import * as runtime from '@ludoforge/engine/runtime';
 import {
   asActionId,
   asPlayerId,
+  type ClassifiedMove,
   type AdvanceChooseNResult,
   type ChoiceRequest,
   type ChooseNCommand,
@@ -32,6 +33,16 @@ const createStampFactory = (): (() => OperationStamp) => {
   let token = 0;
   return () => ({ epoch: 0, token: ++token });
 };
+
+const toClassifiedMove = (move: typeof LEGAL_TICK_MOVE): ClassifiedMove => ({
+  move,
+  viability: {
+    viable: true,
+    complete: true,
+    move,
+    warnings: [],
+  },
+});
 
 const EFFECT_PROVENANCE = {
   phase: 'main',
@@ -129,7 +140,7 @@ describe('worker boundary structured clone compatibility', () => {
     const nextStamp = createStampFactory();
     const initResult = await worker.init(TEST_DEF, 31, undefined, nextStamp());
     const legalMoveEnumeration = await worker.enumerateLegalMoves();
-    const move = legalMoveEnumeration.moves[0] ?? LEGAL_TICK_MOVE;
+    const move = legalMoveEnumeration.moves[0]?.move ?? LEGAL_TICK_MOVE;
     const applyMoveResult = await worker.applyMove(move, undefined, nextStamp());
     const applyTemplateMoveResult = await worker.applyTemplateMove(move, undefined, nextStamp());
     const choiceRequest = await worker.legalChoices(move);
@@ -247,7 +258,7 @@ describe('worker boundary structured clone compatibility', () => {
 
   it('round-trips LegalMoveEnumerationResult with warnings explicitly', () => {
     const sample: LegalMoveEnumerationResult = {
-      moves: [LEGAL_TICK_MOVE],
+      moves: [toClassifiedMove(LEGAL_TICK_MOVE)],
       warnings: RUNTIME_WARNINGS,
     };
 

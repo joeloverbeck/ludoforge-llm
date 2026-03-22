@@ -2,6 +2,7 @@ import {
   advanceChooseN,
   advanceChooseNWithSession,
   applyMove,
+  applyTrustedMove,
   assertValidatedGameDefInput,
   completeTemplateMove,
   createChooseNSession,
@@ -38,6 +39,7 @@ import type {
   MoveParamScalar,
   PlayerId,
   TerminalResult,
+  TrustedExecutableMove,
 } from '@ludoforge/engine/runtime';
 
 export interface WorkerError {
@@ -102,6 +104,11 @@ export interface GameWorkerAPI {
   ): Promise<AdvanceChooseNResult>;
   applyMove(
     move: Move,
+    options: { readonly trace?: boolean } | undefined,
+    stamp: OperationStamp,
+  ): Promise<ApplyMoveResult>;
+  applyTrustedMove(
+    move: TrustedExecutableMove,
     options: { readonly trace?: boolean } | undefined,
     stamp: OperationStamp,
   ): Promise<ApplyMoveResult>;
@@ -292,6 +299,27 @@ export function createGameWorker(): GameWorkerAPI {
     }
   };
 
+  const executeTrustedAppliedMove = (
+    currentDef: GameDef,
+    currentState: GameState,
+    move: TrustedExecutableMove,
+    options: { readonly trace?: boolean } | undefined,
+  ): ApplyMoveResult => {
+    history.push(currentState);
+    try {
+      const executionOptions: ExecutionOptions = {
+        trace: options?.trace ?? enableTrace,
+      };
+      const result = applyTrustedMove(currentDef, currentState, move, executionOptions, runtime ?? undefined);
+      state = result.state;
+      invalidateSession();
+      return result;
+    } catch (error) {
+      history.pop();
+      throw error;
+    }
+  };
+
   const api: GameWorkerAPI = {
     async init(nextDef: GameDef, seed: number, options: BridgeInitOptions | undefined, stamp: OperationStamp): Promise<InitResult> {
       return withInternalErrorMapping(() => {
@@ -395,6 +423,16 @@ export function createGameWorker(): GameWorkerAPI {
       const current = assertInitialized(def, state);
       ensureFreshMutation(stamp);
       return withIllegalMoveMapping(() => executeAppliedMove(current.def, current.state, move, options));
+    },
+
+    async applyTrustedMove(
+      move: TrustedExecutableMove,
+      options: { readonly trace?: boolean } | undefined,
+      stamp: OperationStamp,
+    ): Promise<ApplyMoveResult> {
+      const current = assertInitialized(def, state);
+      ensureFreshMutation(stamp);
+      return withIllegalMoveMapping(() => executeTrustedAppliedMove(current.def, current.state, move, options));
     },
 
     async applyTemplateMove(

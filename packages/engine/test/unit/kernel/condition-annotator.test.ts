@@ -99,6 +99,7 @@ const makeRuntime = (def: GameDef): GameDefRuntime => ({
   adjacencyGraph: buildAdjacencyGraph(def.zones),
   runtimeTableIndex: buildRuntimeTableIndex(def),
   zobristTable: createZobristTable(def),
+  alwaysCompleteActionIds: new Set(),
   ruleCardCache: new Map(),
   compiledLifecycleEffects: new Map(),
 });

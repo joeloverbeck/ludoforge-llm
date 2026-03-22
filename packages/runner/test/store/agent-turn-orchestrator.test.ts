@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { compileGameSpecToGameDef, createEmptyGameSpecDoc } from '@ludoforge/engine/cnl';
-import { asActionId, asPlayerId, initialState, type GameDef, type Move } from '@ludoforge/engine/runtime';
+import { asActionId, asPlayerId, createTrustedExecutableMove, initialState, type ClassifiedMove, type GameDef, type Move } from '@ludoforge/engine/runtime';
 
 import { createAgentSeatController, createHumanSeatController } from '../../src/seat/seat-controller.js';
 import { createAgentTurnOrchestrator } from '../../src/store/agent-turn-orchestrator.js';
@@ -8,7 +8,19 @@ import { createAgentTurnOrchestrator } from '../../src/store/agent-turn-orchestr
 const MOVE_A: Move = { actionId: asActionId('a'), params: {} };
 const MOVE_B: Move = { actionId: asActionId('b'), params: {} };
 const MOVE_C: Move = { actionId: asActionId('c'), params: {} };
-const RANDOM_MOVES = [MOVE_A, MOVE_B, MOVE_C] as const;
+
+function toClassifiedMove(move: Move, sourceStateHash = 0n): ClassifiedMove {
+  return {
+    move,
+    viability: {
+      viable: true,
+      complete: true,
+      move,
+      warnings: [],
+    },
+    trustedMove: createTrustedExecutableMove(move, sourceStateHash, 'enumerateLegalMoves'),
+  };
+}
 
 function compileFixture(): GameDef {
   const compiled = compileGameSpecToGameDef({
@@ -44,7 +56,7 @@ describe('agent-turn-orchestrator', () => {
     expect(orchestrator.resolveStep({
       controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }),
       def,
-      legalMoves: RANDOM_MOVES,
+      legalMoves: [MOVE_A, MOVE_B, MOVE_C].map((move) => toClassifiedMove(move, state.stateHash)),
       playerId: state.activePlayer,
       state,
     })).toEqual({ kind: 'no-session' });
@@ -61,21 +73,21 @@ describe('agent-turn-orchestrator', () => {
     const p0First = interleaved.resolveStep({
       controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }),
       def,
-      legalMoves: RANDOM_MOVES,
+      legalMoves: [MOVE_A, MOVE_B, MOVE_C].map((move) => toClassifiedMove(move, state.stateHash)),
       playerId: player0,
       state: { ...state, activePlayer: player0 },
     });
     const p1First = interleaved.resolveStep({
       controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }),
       def,
-      legalMoves: RANDOM_MOVES,
+      legalMoves: [MOVE_A, MOVE_B, MOVE_C].map((move) => toClassifiedMove(move, state.stateHash)),
       playerId: player1,
       state: { ...state, activePlayer: player1 },
     });
     const p0Second = interleaved.resolveStep({
       controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }),
       def,
-      legalMoves: RANDOM_MOVES,
+      legalMoves: [MOVE_A, MOVE_B, MOVE_C].map((move) => toClassifiedMove(move, state.stateHash)),
       playerId: player0,
       state: { ...state, activePlayer: player0 },
     });
@@ -85,14 +97,14 @@ describe('agent-turn-orchestrator', () => {
     const isolatedP0First = isolated.resolveStep({
       controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }),
       def,
-      legalMoves: RANDOM_MOVES,
+      legalMoves: [MOVE_A, MOVE_B, MOVE_C].map((move) => toClassifiedMove(move, state.stateHash)),
       playerId: player0,
       state: { ...state, activePlayer: player0 },
     });
     const isolatedP0Second = isolated.resolveStep({
       controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }),
       def,
-      legalMoves: RANDOM_MOVES,
+      legalMoves: [MOVE_A, MOVE_B, MOVE_C].map((move) => toClassifiedMove(move, state.stateHash)),
       playerId: player0,
       state: { ...state, activePlayer: player0 },
     });
@@ -119,7 +131,7 @@ describe('agent-turn-orchestrator', () => {
     const resetP0First = interleaved.resolveStep({
       controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }),
       def,
-      legalMoves: RANDOM_MOVES,
+      legalMoves: [MOVE_A, MOVE_B, MOVE_C].map((move) => toClassifiedMove(move, state.stateHash)),
       playerId: player0,
       state: { ...state, activePlayer: player0 },
     });
@@ -140,7 +152,7 @@ describe('agent-turn-orchestrator', () => {
     expect(orchestrator.resolveStep({
       controller: createHumanSeatController(),
       def,
-      legalMoves: RANDOM_MOVES,
+      legalMoves: [MOVE_A, MOVE_B, MOVE_C].map((move) => toClassifiedMove(move, state.stateHash)),
       playerId: state.activePlayer,
       state,
     })).toEqual({ kind: 'human-turn' });
@@ -155,7 +167,7 @@ describe('agent-turn-orchestrator', () => {
     const result = orchestrator.resolveStep({
       controller: createAgentSeatController({ kind: 'builtin', builtinId: 'greedy' }),
       def,
-      legalMoves: RANDOM_MOVES,
+      legalMoves: [MOVE_A, MOVE_B, MOVE_C].map((move) => toClassifiedMove(move, state.stateHash)),
       playerId: state.activePlayer,
       state,
     });

@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { PolicyAgent } from '../../../src/agents/policy-agent.js';
+import { completeClassifiedMoves } from '../../helpers/classified-move-fixtures.js';
 import { evaluatePolicyMove } from '../../../src/agents/policy-eval.js';
 import {
   asActionId,
@@ -210,7 +211,7 @@ describe('policy determinism', () => {
       def,
       state,
       playerId: asPlayerId(0),
-      legalMoves,
+      legalMoves: completeClassifiedMoves(legalMoves),
       rng: createRng(42n),
     });
 

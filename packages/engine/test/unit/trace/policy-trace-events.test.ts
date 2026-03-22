@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import { buildPolicyDiagnosticsSnapshot } from '../../../src/agents/policy-diagnostics.js';
 import { PolicyAgent } from '../../../src/agents/policy-agent.js';
 import { evaluatePolicyMove } from '../../../src/agents/policy-eval.js';
+import { completeClassifiedMoves } from '../../helpers/classified-move-fixtures.js';
 import { runGame } from '../../../src/sim/simulator.js';
 import {
   asActionId,
@@ -146,7 +147,7 @@ function createInput(def: GameDef): Parameters<PolicyAgent['chooseMove']>[0] {
     def,
     state,
     playerId: state.activePlayer,
-    legalMoves,
+    legalMoves: completeClassifiedMoves(legalMoves),
     rng: createRng(5n),
   };
 }
@@ -194,7 +195,8 @@ describe('policy trace events', () => {
 
   it('formats a diagnostics snapshot from compiled policy data plus evaluator metadata', () => {
     const def = createDef();
-    const evaluation = evaluatePolicyMove(createInput(def));
+    const input = createInput(def);
+    const evaluation = evaluatePolicyMove({ ...input, legalMoves: input.legalMoves.map(({ move }) => move) });
     const snapshot = buildPolicyDiagnosticsSnapshot(def, evaluation.metadata, 'verbose');
 
     assert.deepEqual(snapshot.resolvedPlan.scoreTerms, ['preferEvent']);

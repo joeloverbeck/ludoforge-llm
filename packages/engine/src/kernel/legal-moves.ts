@@ -55,14 +55,18 @@ import { isCardEventAction } from './action-capabilities.js';
 import { buildRuntimeTableIndex, type RuntimeTableIndex } from './runtime-table-index.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
 import type { FreeOperationExecutionOverlay } from './free-operation-overlay.js';
+import { computeAlwaysCompleteActionIds } from './always-complete-actions.js';
+import { probeMoveViability } from './apply-move.js';
 import { kernelRuntimeError } from './runtime-error.js';
 import { createSeatResolutionContext } from './identity.js';
+import { createTrustedExecutableMove } from './trusted-move.js';
 import { requireCardDrivenActiveSeat, validateTurnFlowRuntimeStateInvariants } from './turn-flow-runtime-invariants.js';
 import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
 import { findPhaseDef } from './phase-lookup.js';
 import type {
   ActionDef,
   ActionPipelineDef,
+  ClassifiedMove,
   GameDef,
   GameState,
   Move,
@@ -83,6 +87,11 @@ export interface LegalMoveEnumerationOptions {
 }
 
 export interface LegalMoveEnumerationResult {
+  readonly moves: readonly ClassifiedMove[];
+  readonly warnings: readonly RuntimeWarning[];
+}
+
+interface RawLegalMoveEnumerationResult {
   readonly moves: readonly Move[];
   readonly warnings: readonly RuntimeWarning[];
 }
@@ -216,6 +225,90 @@ const consumeParamExpansionBudget = (state: MoveEnumerationState, actionId: Acti
     });
   }
   return false;
+};
+
+const isDeferredFreeOperationTemplateProbeFailure = (
+  move: Move,
+  viability: ReturnType<typeof probeMoveViability>,
+): boolean => {
+  if (move.freeOperation !== true || viability.viable || viability.code !== 'ILLEGAL_MOVE') {
+    return false;
+  }
+  const ctx = viability.context;
+  return (
+    ctx.reason === 'freeOperationNotGranted'
+    && 'freeOperationDenial' in ctx
+    && (ctx as { readonly freeOperationDenial: { readonly cause: string } }).freeOperationDenial.cause === 'zoneFilterMismatch'
+  );
+};
+
+const classifyEnumeratedMoves = (
+  def: GameDef,
+  state: GameState,
+  moves: readonly Move[],
+  warnings: RuntimeWarning[],
+  runtime?: GameDefRuntime,
+): readonly ClassifiedMove[] => {
+  const alwaysCompleteActionIds = runtime?.alwaysCompleteActionIds ?? computeAlwaysCompleteActionIds(def);
+  const classified: ClassifiedMove[] = [];
+
+  for (const move of moves) {
+    if (alwaysCompleteActionIds.has(move.actionId)) {
+      classified.push({
+        move,
+        viability: {
+          viable: true,
+          complete: true,
+          move,
+          warnings: [],
+        },
+        trustedMove: createTrustedExecutableMove(move, state.stateHash, 'enumerateLegalMoves'),
+      });
+      continue;
+    }
+
+    const viability = probeMoveViability(def, state, move, runtime);
+    if (viability.viable) {
+      classified.push({
+        move,
+        viability,
+        ...(viability.complete || viability.stochasticDecision !== undefined
+          ? {
+            trustedMove: createTrustedExecutableMove(
+              viability.move,
+              state.stateHash,
+              'enumerateLegalMoves',
+            ),
+          }
+          : {}),
+      });
+      continue;
+    }
+
+    if (isDeferredFreeOperationTemplateProbeFailure(move, viability)) {
+      classified.push({
+        move,
+        viability: {
+          viable: true,
+          complete: false,
+          move,
+          warnings: [],
+        },
+      });
+      continue;
+    }
+
+    warnings.push({
+      code: 'MOVE_ENUM_PROBE_REJECTED',
+      message: 'Enumerated legal move was rejected by move viability probing and removed.',
+      context: {
+        actionId: String(move.actionId),
+        reason: viability.code,
+      },
+    });
+  }
+
+  return classified;
 };
 
 function makeEvalContext(
@@ -967,12 +1060,12 @@ function enumerateCurrentEventMoves(
   }
 }
 
-export const enumerateLegalMoves = (
+const enumerateRawLegalMoves = (
   def: GameDef,
   state: GameState,
   options?: LegalMoveEnumerationOptions,
   runtime?: GameDefRuntime,
-): LegalMoveEnumerationResult => {
+): RawLegalMoveEnumerationResult => {
   validateTurnFlowRuntimeStateInvariants(state);
   const budgets = resolveMoveEnumerationBudgets(options?.budgets);
   const warnings: RuntimeWarning[] = [];
@@ -1109,9 +1202,23 @@ export const enumerateLegalMoves = (
   return { moves: finalMoves, warnings };
 };
 
+export const enumerateLegalMoves = (
+  def: GameDef,
+  state: GameState,
+  options?: LegalMoveEnumerationOptions,
+  runtime?: GameDefRuntime,
+): LegalMoveEnumerationResult => {
+  const { moves, warnings: rawWarnings } = enumerateRawLegalMoves(def, state, options, runtime);
+  const warnings = [...rawWarnings];
+  return {
+    moves: classifyEnumeratedMoves(def, state, moves, warnings, runtime),
+    warnings,
+  };
+};
+
 export const legalMoves = (
   def: GameDef,
   state: GameState,
   options?: LegalMoveEnumerationOptions,
   runtime?: GameDefRuntime,
-): readonly Move[] => enumerateLegalMoves(def, state, options, runtime).moves;
+): readonly Move[] => enumerateRawLegalMoves(def, state, options, runtime).moves;

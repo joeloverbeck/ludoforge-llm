@@ -1,17 +1,17 @@
 import { nextInt } from '../kernel/prng.js';
-import type { Move, Rng } from '../kernel/types.js';
+import type { Rng } from '../kernel/types.js';
 
-export const selectCandidatesDeterministically = (
-  legalMoves: readonly Move[],
+export const selectCandidatesDeterministically = <T>(
+  legalMoves: readonly T[],
   rng: Rng,
   maxMovesToEvaluate: number | undefined,
-): { readonly moves: readonly Move[]; readonly rng: Rng } => {
+): { readonly moves: readonly T[]; readonly rng: Rng } => {
   if (maxMovesToEvaluate === undefined || maxMovesToEvaluate >= legalMoves.length) {
     return { moves: legalMoves, rng };
   }
 
   const remainingIndices = legalMoves.map((_, index) => index);
-  const selectedMoves: Move[] = [];
+  const selectedMoves: T[] = [];
   let cursor = rng;
 
   for (let pick = 0; pick < maxMovesToEvaluate; pick += 1) {
@@ -32,4 +32,3 @@ export const selectCandidatesDeterministically = (
 
   return { moves: selectedMoves, rng: cursor };
 };
-

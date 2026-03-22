@@ -1,7 +1,6 @@
 import { perfStart, perfDynEnd, type PerfProfiler } from '../kernel/perf-profiler.js';
 import { evaluatePlayableMoveCandidate } from '../kernel/playable-candidate.js';
-import { probeMoveViability, type MoveViabilityProbeResult } from '../kernel/apply-move.js';
-import type { Agent, Move, Rng } from '../kernel/types.js';
+import type { Agent, ClassifiedMove, Move, Rng, TrustedExecutableMove } from '../kernel/types.js';
 
 /**
  * Detect non-viable results that stem from premature zone-filter evaluation on
@@ -14,9 +13,9 @@ import type { Agent, Move, Rng } from '../kernel/types.js';
  * being discarded.
  */
 const isZoneFilterMismatchOnFreeOpTemplate = (
-  move: Move,
-  viability: MoveViabilityProbeResult,
+  classified: ClassifiedMove,
 ): boolean => {
+  const { move, viability } = classified;
   if (viability.viable || move.freeOperation !== true) {
     return false;
   }
@@ -37,8 +36,8 @@ export interface PreparePlayableMovesOptions {
 }
 
 export interface PreparedPlayableMoves {
-  readonly completedMoves: readonly Move[];
-  readonly stochasticMoves: readonly Move[];
+  readonly completedMoves: readonly TrustedExecutableMove[];
+  readonly stochasticMoves: readonly TrustedExecutableMove[];
   readonly rng: Rng;
 }
 
@@ -47,35 +46,35 @@ export function preparePlayableMoves(
   options: PreparePlayableMovesOptions = {},
 ): PreparedPlayableMoves {
   const profiler: PerfProfiler | undefined = (input as { profiler?: PerfProfiler }).profiler;
-  const completedMoves: Move[] = [];
-  const stochasticMoves: Move[] = [];
+  const completedMoves: TrustedExecutableMove[] = [];
+  const stochasticMoves: TrustedExecutableMove[] = [];
   let rng = input.rng;
   const pendingTemplateCompletions = options.pendingTemplateCompletions ?? 1;
 
-  for (const move of input.legalMoves) {
-    // Fast path: probe viability directly. For complete moves (common case),
-    // this avoids the redundant legalChoicesEvaluate → evaluatePlayableMoveCandidate
-    // double-validation that costs ~10s across 120K calls.
-    const t0_probe = perfStart(profiler);
-    const viability = probeMoveViability(input.def, input.state, move, input.runtime);
-    perfDynEnd(profiler, 'agent:probeMoveViability', t0_probe);
-
+  for (const classified of input.legalMoves) {
+    const { move, viability } = classified;
     if (!viability.viable) {
       // Zone-filter mismatches on free-operation templates are not definitive
       // rejections — the zone filter cannot be evaluated until target zones are
       // selected during template completion.  Fall through to the completion
       // path so evaluatePlayableMoveCandidate can resolve zones and re-check.
-      if (isZoneFilterMismatchOnFreeOpTemplate(move, viability)) {
+      if (isZoneFilterMismatchOnFreeOpTemplate(classified)) {
         rng = attemptTemplateCompletion(input, move, rng, pendingTemplateCompletions, completedMoves, stochasticMoves, profiler);
       }
       continue;
     }
     if (viability.complete) {
-      completedMoves.push(viability.move);
+      if (classified.trustedMove === undefined) {
+        throw new Error(`complete classified move ${String(move.actionId)} is missing trusted execution metadata`);
+      }
+      completedMoves.push(classified.trustedMove);
       continue;
     }
     if (viability.stochasticDecision !== undefined) {
-      stochasticMoves.push(viability.move);
+      if (classified.trustedMove === undefined) {
+        throw new Error(`stochastic classified move ${String(move.actionId)} is missing trusted execution metadata`);
+      }
+      stochasticMoves.push(classified.trustedMove);
       continue;
     }
 
@@ -100,8 +99,8 @@ function attemptTemplateCompletion(
   move: Move,
   initialRng: Rng,
   pendingTemplateCompletions: number,
-  completedMoves: Move[],
-  stochasticMoves: Move[],
+  completedMoves: TrustedExecutableMove[],
+  stochasticMoves: TrustedExecutableMove[],
   profiler: PerfProfiler | undefined,
 ): Rng {
   let currentRng = initialRng;

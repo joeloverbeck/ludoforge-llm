@@ -44,6 +44,8 @@ export * from './map-model.js';
 export * from './piece-catalog.js';
 export * from './seat-catalog.js';
 export * from './effect-context.js';
+export * from './effect-compiler-runtime.js';
+export * from './effect-compiler.js';
 export * from './effect-compiler-codegen.js';
 export * from './effect-compiler-types.js';
 export * from './effect-context-invariants.js';

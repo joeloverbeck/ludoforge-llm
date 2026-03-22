@@ -26,6 +26,7 @@ The compiled effect sequences need comprehensive end-to-end testing across both 
 3. Golden tests compare compiled-path outcomes against known-good interpreter results for specific seeds.
 4. Both games must be tested to prove engine-agnosticism (Foundation 1).
 5. This ticket assumes a stable sequential engine test harness. Any future build/test concurrency hardening should stay separate from compiled-effects benchmark/tests scope so ownership remains clear.
+6. Runtime integration in `74COMEFFSEQ-005` now explicitly owns effect-budget parity. This ticket should verify that contract at the regression level, not redefine it.
 
 ## What to Change
 
@@ -62,6 +63,7 @@ This is a developer tool, not a CI-gated test — it runs manually to measure pe
 A lightweight test that runs a short simulation (10 hands) with compiled effects and asserts:
 - No verification errors (with `verifyCompiledEffects: true`).
 - Final state hash matches a golden value for the fixed seed.
+- A low-budget lifecycle execution scenario behaves identically between compiled and interpreter paths, so the compiled runtime path cannot silently bypass `maxEffectOps`.
 - This runs in CI and catches compiler regressions.
 
 ## Files to Touch
@@ -90,10 +92,11 @@ A lightweight test that runs a short simulation (10 hands) with compiled effects
 3. Coverage: Texas Hold'em lifecycle effects have a compiled coverage ratio ≥ 0.8.
 4. Coverage: every game's `compiledLifecycleEffects` map has at least one entry per phase with onEnter/onExit effects.
 5. Regression guard: 10-hand Texas Hold'em simulation with `verifyCompiledEffects: true` passes without verification errors.
-6. Regression guard: final state hash for seed 42 matches the golden value.
-7. Benchmark script runs without errors and produces a readable timing comparison.
-8. Existing suite: `pnpm -F @ludoforge/engine test`
-9. Existing e2e suite: `pnpm -F @ludoforge/engine test:e2e`
+6. Regression guard: compiled and interpreted lifecycle execution match under a constrained effect budget.
+7. Regression guard: final state hash for seed 42 matches the golden value.
+8. Benchmark script runs without errors and produces a readable timing comparison.
+9. Existing suite: `pnpm -F @ludoforge/engine test`
+10. Existing e2e suite: `pnpm -F @ludoforge/engine test:e2e`
 
 ### Invariants
 
@@ -109,7 +112,7 @@ A lightweight test that runs a short simulation (10 hands) with compiled effects
 1. `packages/engine/test/e2e/compiled-effects-texas-holdem.test.ts` — full simulation comparison
 2. `packages/engine/test/e2e/compiled-effects-fitl.test.ts` — full simulation comparison
 3. `packages/engine/test/integration/compiled-effects-coverage.test.ts` — coverage ratio assertions
-4. `packages/engine/test/unit/kernel/compiled-effects-regression.test.ts` — golden hash regression guard
+4. `packages/engine/test/unit/kernel/compiled-effects-regression.test.ts` — golden hash regression guard plus a focused budget-parity assertion for compiled lifecycle execution
 
 ### Commands
 

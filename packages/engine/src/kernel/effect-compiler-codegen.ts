@@ -1,9 +1,10 @@
 import { rebaseIterationPath, withIterationSegment, emptyScope } from './decision-scope.js';
-import { createExecutionEffectContext, type EffectResult } from './effect-context.js';
+import type { EffectResult } from './effect-context.js';
 import { createEvalContext } from './eval-context.js';
 import { evalQuery } from './eval-query.js';
 import { typeMismatchError } from './eval-error.js';
 import { emitWarning } from './execution-collector.js';
+import { createCompiledExecutionContext } from './effect-compiler-runtime.js';
 import {
   type AddVarPattern,
   type CompilableConditionPattern,
@@ -120,29 +121,6 @@ const createCompiledEvalContext = (
   resources: ctx.resources,
 });
 
-const createCompiledExecutionContext = (
-  state: GameState,
-  rng: Rng,
-  bindings: Readonly<Record<string, unknown>>,
-  ctx: CompiledEffectContext,
-  decisionScope = ctx.decisionScope ?? emptyScope(),
-): ReturnType<typeof createExecutionEffectContext> => createExecutionEffectContext({
-  def: ctx.def,
-  adjacencyGraph: ctx.adjacencyGraph,
-  runtimeTableIndex: ctx.runtimeTableIndex,
-  resources: ctx.resources,
-  state,
-  rng,
-  activePlayer: ctx.activePlayer,
-  actorPlayer: ctx.actorPlayer,
-  bindings,
-  moveParams: ctx.moveParams,
-  decisionScope,
-  ...(ctx.traceContext === undefined ? {} : { traceContext: ctx.traceContext }),
-  ...(ctx.effectPath === undefined ? {} : { effectPath: ctx.effectPath }),
-  ...(ctx.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: ctx.phaseTransitionBudget }),
-});
-
 const toReference = (
   pattern: Exclude<SimpleValuePattern | SimpleNumericValuePattern, { readonly kind: 'literal' | 'binding' }>,
 ): Reference => {
@@ -207,7 +185,7 @@ const executeEffectList = (
 
   return ctx.fallbackApplyEffects(
     effects,
-    createCompiledExecutionContext(state, rng, bindings, ctx, ctx.decisionScope ?? emptyScope()),
+    createCompiledExecutionContext(state, rng, bindings, { ...ctx, decisionScope: ctx.decisionScope ?? emptyScope() }),
   );
 };
 

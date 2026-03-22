@@ -29,6 +29,8 @@ export * from './derived-values.js';
 export * from './map-model.js';
 export * from './piece-catalog.js';
 export * from './effect-context.js';
+export * from './effect-compiler-runtime.js';
+export * from './effect-compiler.js';
 export * from './effect-error.js';
 export * from './runtime-error.js';
 export * from './runtime-reasons.js';

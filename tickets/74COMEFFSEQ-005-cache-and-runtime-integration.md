@@ -17,6 +17,7 @@ The compiled effect sequences must be stored on `GameDefRuntime` (computed once 
 3. `dispatchLifecycleEvent` receives `cachedRuntime?: GameDefRuntime` — the compiled map will be available through this parameter. Confirmed.
 4. `EffectResult` is the return type from both `applyEffects` and the compiled path. Confirmed.
 5. The profiler already instruments `lifecycle:applyEffects` (line 69). The compiled path should use a distinct profiler key.
+6. Follow-up from completed `74COMEFFSEQ-004`: the current orchestrator preserves interpreter fallback semantics, but full effect-operation budget parity is still unresolved because `CompiledEffectContext` does not carry the interpreter's `maxEffectOps` budget state. This ticket owns that gap, since budget parity only matters once compiled sequences are wired into the live lifecycle path.
 
 ## Architecture Check
 
@@ -25,6 +26,7 @@ The compiled effect sequences must be stored on `GameDefRuntime` (computed once 
 3. The compiled path reuses the same `EffectResult` contract — downstream trigger dispatch, trace emission, and state threading are unchanged.
 4. No backwards-compatibility shims: if `compiledLifecycleEffects` is undefined (e.g., compilation disabled), the existing interpreter path runs unchanged.
 5. Architectural follow-up from 74COMEFFSEQ-003: `phase-lifecycle.ts` must not open-code yet another partial execution-context shape for the compiled path. Reuse the shared compiled-to-execution context adapter established by the compiler work so `CompiledEffectContext` stays aligned with `EffectContext` semantics instead of drifting further.
+6. Budget enforcement must remain a single runtime contract. The compiled path must not bypass `maxEffectOps` or implement a second incompatible budget model. If the current compiled contract is insufficient, extend it cleanly here and update all compiled execution sites in the same change.
 
 ## What to Change
 
@@ -83,7 +85,16 @@ if (compiledSeq !== undefined) {
 
 Note: if 74COMEFFSEQ-004 introduces a helper for building compiled execution context, use it here rather than duplicating this object shape inline.
 
-### 3. Add compiled path profiler bucket
+### 3. Preserve effect-operation budget semantics
+
+Before enabling the compiled branch in production runtime:
+
+- Reassess how `applyEffects` enforces `maxEffectOps` through the interpreter budget state.
+- Extend the compiled execution contract as needed so lifecycle execution with compiled effects cannot exceed the same operation budget that the interpreter would enforce.
+- Keep this as one architectural contract, not dual accounting. Either compiled sequencing consumes the same shared budget state, or compiled lifecycle dispatch must be wrapped so the budget boundary is still enforced with equivalent semantics.
+- Add targeted tests that force lifecycle execution near the budget limit and prove that compiled and interpreted paths fail or succeed identically.
+
+### 4. Add compiled path profiler bucket
 
 The compiled path uses `'lifecycle:applyEffects:compiled'` as its profiler key so performance can be compared to the interpreter key `'lifecycle:applyEffects'`.
 
@@ -110,24 +121,26 @@ The compiled path uses `'lifecycle:applyEffects:compiled'` as its profiler key s
 3. `createGameDefRuntime` for a GameDef with no lifecycle effects produces an empty map.
 4. `dispatchLifecycleEvent` with a cached runtime containing compiled effects uses the compiled path (verified via profiler bucket `lifecycle:applyEffects:compiled` having non-zero count).
 5. `dispatchLifecycleEvent` without a cached runtime falls back to the interpreter path (existing behavior unchanged).
-6. Full Texas Hold'em simulation with compiled effects produces identical final state hash to simulation without compiled effects.
-7. Full FITL simulation (if lifecycle effects exist) produces identical final state hash.
-8. Existing suite: `pnpm -F @ludoforge/engine test`
-9. Existing e2e suite: `pnpm -F @ludoforge/engine test:e2e`
+6. Compiled lifecycle execution respects the same `maxEffectOps` boundary as interpreted lifecycle execution for both success and failure cases.
+7. Full Texas Hold'em simulation with compiled effects produces identical final state hash to simulation without compiled effects.
+8. Full FITL simulation (if lifecycle effects exist) produces identical final state hash.
+9. Existing suite: `pnpm -F @ludoforge/engine test`
+10. Existing e2e suite: `pnpm -F @ludoforge/engine test:e2e`
 
 ### Invariants
 
 1. **Determinism**: Compiled path produces bit-identical state to interpreter path for all games (Foundation 5).
 2. **Backwards compatibility**: If `compiledLifecycleEffects` is undefined, behavior is identical to pre-change.
 3. **Trigger dispatch unchanged**: Emitted events from the compiled path are dispatched identically to the interpreter path.
-4. **No performance regression in compilation**: `createGameDefRuntime` should not add more than 50ms to startup time.
+4. **Budget parity**: Compiled lifecycle execution cannot bypass, weaken, or double-count the interpreter's effect-operation budget contract.
+5. **No performance regression in compilation**: `createGameDefRuntime` should not add more than 50ms to startup time.
 
 ## Test Plan
 
 ### New/Modified Tests
 
 1. `packages/engine/test/unit/kernel/effect-compiled-cache.test.ts` — tests that `createGameDefRuntime` populates the compiled map correctly.
-2. `packages/engine/test/integration/compiled-lifecycle-dispatch.test.ts` — tests that `dispatchLifecycleEvent` uses the compiled path and produces correct results.
+2. `packages/engine/test/integration/compiled-lifecycle-dispatch.test.ts` — tests that `dispatchLifecycleEvent` uses the compiled path, preserves lifecycle semantics, and enforces the same effect budget limits as the interpreter.
 
 ### Commands
 

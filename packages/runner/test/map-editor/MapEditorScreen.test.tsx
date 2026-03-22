@@ -8,6 +8,8 @@ const testDoubles = vi.hoisted(() => ({
   resolveMapEditorBootstrapByGameId: vi.fn(),
   getOrComputeLayout: vi.fn(),
   createMapEditorStore: vi.fn(),
+  exportVisualConfig: vi.fn(),
+  triggerDownload: vi.fn(),
   createEditorCanvas: vi.fn(),
   createEditorZoneRenderer: vi.fn(),
   createEditorRouteRenderer: vi.fn(),
@@ -24,6 +26,11 @@ vi.mock('../../src/layout/layout-cache.js', () => ({
 
 vi.mock('../../src/map-editor/map-editor-store.js', () => ({
   createMapEditorStore: testDoubles.createMapEditorStore,
+}));
+
+vi.mock('../../src/map-editor/map-editor-export.js', () => ({
+  exportVisualConfig: testDoubles.exportVisualConfig,
+  triggerDownload: testDoubles.triggerDownload,
 }));
 
 vi.mock('../../src/map-editor/map-editor-canvas.js', () => ({
@@ -53,6 +60,8 @@ describe('MapEditorScreen', () => {
     testDoubles.resolveMapEditorBootstrapByGameId.mockReset();
     testDoubles.getOrComputeLayout.mockReset();
     testDoubles.createMapEditorStore.mockReset();
+    testDoubles.exportVisualConfig.mockReset();
+    testDoubles.triggerDownload.mockReset();
     testDoubles.createEditorCanvas.mockReset();
     testDoubles.createEditorZoneRenderer.mockReset();
     testDoubles.createEditorRouteRenderer.mockReset();
@@ -99,10 +108,10 @@ describe('MapEditorScreen', () => {
     expect(screen.getByTestId('map-editor-loading')).toBeTruthy();
 
     await waitFor(() => {
-      expect(screen.getByTestId('map-editor-canvas-container')).toBeTruthy();
+    expect(screen.getByTestId('map-editor-canvas-container')).toBeTruthy();
     });
     expect((screen.getByTestId('map-editor-undo-button') as HTMLButtonElement).disabled).toBe(true);
-    expect((screen.getByTestId('map-editor-export-button') as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByTestId('map-editor-export-button') as HTMLButtonElement).disabled).toBe(false);
 
     expect(testDoubles.createMapEditorStore).toHaveBeenCalledWith(
       expect.anything(),
@@ -172,6 +181,86 @@ describe('MapEditorScreen', () => {
     expect(screen.getByText("Texas Hold'em does not support the map editor.")).toBeTruthy();
     expect(testDoubles.createEditorCanvas).not.toHaveBeenCalled();
   });
+
+  it('exports the current editor document and marks the store saved', async () => {
+    const store = createMockEditorStore();
+    testDoubles.resolveMapEditorBootstrapByGameId.mockResolvedValue({
+      descriptor: { gameMetadata: { name: 'Fire in the Lake' } },
+      gameDef: { metadata: { id: 'fitl' } },
+      visualConfig: { layout: {}, zones: {} },
+      visualConfigProvider: { tag: 'provider' },
+      capabilities: { supportsMapEditor: true },
+    });
+    testDoubles.createMapEditorStore.mockReturnValue(store);
+    testDoubles.createEditorCanvas.mockResolvedValue({
+      layers: { zone: {}, route: {}, handle: {} },
+      viewport: {},
+      resize: vi.fn(),
+      centerOnContent: vi.fn(),
+      destroy: vi.fn(),
+    });
+    testDoubles.createEditorZoneRenderer.mockReturnValue({ destroy: vi.fn() });
+    testDoubles.createEditorRouteRenderer.mockReturnValue({ destroy: vi.fn() });
+    testDoubles.createEditorHandleRenderer.mockReturnValue({ destroy: vi.fn() });
+    testDoubles.exportVisualConfig.mockReturnValue('version: 1\n');
+
+    const { MapEditorScreen } = await import('../../src/map-editor/MapEditorScreen.js');
+    render(createElement(MapEditorScreen, { gameId: 'fitl', onBack: vi.fn() }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('map-editor-canvas-container')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByTestId('map-editor-export-button'));
+
+    expect(testDoubles.exportVisualConfig).toHaveBeenCalledWith({
+      originalVisualConfig: store.getState().originalVisualConfig,
+      zonePositions: store.getState().zonePositions,
+      connectionAnchors: store.getState().connectionAnchors,
+      connectionRoutes: store.getState().connectionRoutes,
+    });
+    expect(testDoubles.triggerDownload).toHaveBeenCalledWith('version: 1\n', 'visual-config.yaml');
+    expect(store.getState().markSaved).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows an inline export error when export fails', async () => {
+    const store = createMockEditorStore();
+    testDoubles.resolveMapEditorBootstrapByGameId.mockResolvedValue({
+      descriptor: { gameMetadata: { name: 'Fire in the Lake' } },
+      gameDef: { metadata: { id: 'fitl' } },
+      visualConfig: { layout: {}, zones: {} },
+      visualConfigProvider: { tag: 'provider' },
+      capabilities: { supportsMapEditor: true },
+    });
+    testDoubles.createMapEditorStore.mockReturnValue(store);
+    testDoubles.createEditorCanvas.mockResolvedValue({
+      layers: { zone: {}, route: {}, handle: {} },
+      viewport: {},
+      resize: vi.fn(),
+      centerOnContent: vi.fn(),
+      destroy: vi.fn(),
+    });
+    testDoubles.createEditorZoneRenderer.mockReturnValue({ destroy: vi.fn() });
+    testDoubles.createEditorRouteRenderer.mockReturnValue({ destroy: vi.fn() });
+    testDoubles.createEditorHandleRenderer.mockReturnValue({ destroy: vi.fn() });
+    testDoubles.exportVisualConfig.mockImplementation(() => {
+      throw new Error('schema mismatch');
+    });
+
+    const { MapEditorScreen } = await import('../../src/map-editor/MapEditorScreen.js');
+    render(createElement(MapEditorScreen, { gameId: 'fitl', onBack: vi.fn() }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('map-editor-canvas-container')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByTestId('map-editor-export-button'));
+
+    expect(await screen.findByTestId('map-editor-export-error')).toBeTruthy();
+    expect(screen.getByText('schema mismatch')).toBeTruthy();
+    expect(testDoubles.triggerDownload).not.toHaveBeenCalled();
+    expect(store.getState().markSaved).not.toHaveBeenCalled();
+  });
 });
 
 function createMockEditorStore() {
@@ -182,11 +271,21 @@ function createMockEditorStore() {
     dirty: false,
     undoStack: [],
     redoStack: [],
+    originalVisualConfig: { version: 1 },
+    zonePositions: new Map([['zone:a', { x: 10, y: 20 }]]),
+    connectionAnchors: new Map([['bend', { x: 30, y: 40 }]]),
+    connectionRoutes: new Map([
+      ['route:none', {
+        points: [{ kind: 'zone', zoneId: 'zone:a' }, { kind: 'anchor', anchorId: 'bend' }],
+        segments: [{ kind: 'straight' }],
+      }],
+    ]),
     undo: vi.fn(),
     redo: vi.fn(),
     toggleGrid: vi.fn(),
     setGridSize: vi.fn(),
     setSnapToGrid: vi.fn(),
+    markSaved: vi.fn(),
     selectZone: vi.fn(),
     selectRoute: vi.fn(),
     gameDef: undefined,

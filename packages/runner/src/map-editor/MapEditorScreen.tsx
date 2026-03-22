@@ -4,6 +4,7 @@ import { getOrComputeLayout } from '../layout/layout-cache.js';
 import { resolveMapEditorBootstrapByGameId } from '../bootstrap/map-editor-bootstrap.js';
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import { createEditorCanvas } from './map-editor-canvas.js';
+import { exportVisualConfig, triggerDownload } from './map-editor-export.js';
 import { createEditorHandleRenderer } from './map-editor-handle-renderer.js';
 import { createEditorRouteRenderer } from './map-editor-route-renderer.js';
 import { MapEditorToolbar } from './map-editor-toolbar.js';
@@ -31,6 +32,7 @@ type ScreenState =
 export function MapEditorScreen({ gameId, onBack }: MapEditorScreenProps): ReactElement {
   const canvasContainerRef = useRef<HTMLDivElement | null>(null);
   const [screenState, setScreenState] = useState<ScreenState>({ status: 'loading' });
+  const [exportError, setExportError] = useState<string | null>(null);
   const readyStore = screenState.status === 'ready' ? screenState.editor.store : null;
 
   useMapEditorKeyboardShortcuts(readyStore);
@@ -38,6 +40,7 @@ export function MapEditorScreen({ gameId, onBack }: MapEditorScreenProps): React
   useEffect(() => {
     let cancelled = false;
     setScreenState({ status: 'loading' });
+    setExportError(null);
 
     void resolveMapEditorBootstrapByGameId(gameId)
       .then((resolved) => {
@@ -165,6 +168,27 @@ export function MapEditorScreen({ gameId, onBack }: MapEditorScreenProps): React
   }, [screenState]);
 
   const title = screenState.status === 'ready' ? screenState.editor.gameName : gameId;
+  const handleExport = (): void => {
+    if (screenState.status !== 'ready') {
+      return;
+    }
+
+    try {
+      const { originalVisualConfig, zonePositions, connectionAnchors, connectionRoutes, markSaved } =
+        screenState.editor.store.getState();
+      const yaml = exportVisualConfig({
+        originalVisualConfig,
+        zonePositions,
+        connectionAnchors,
+        connectionRoutes,
+      });
+      triggerDownload(yaml, 'visual-config.yaml');
+      markSaved();
+      setExportError(null);
+    } catch (error: unknown) {
+      setExportError(error instanceof Error ? error.message : 'Failed to export visual config.');
+    }
+  };
 
   return (
     <main className={styles.container} data-testid="map-editor-screen">
@@ -172,7 +196,8 @@ export function MapEditorScreen({ gameId, onBack }: MapEditorScreenProps): React
         title={title}
         store={readyStore}
         onBack={onBack}
-        onExport={() => {}}
+        onExport={handleExport}
+        exportEnabled={screenState.status === 'ready'}
       />
 
       {screenState.status === 'loading'
@@ -199,11 +224,23 @@ export function MapEditorScreen({ gameId, onBack }: MapEditorScreenProps): React
 
       {screenState.status === 'ready'
         ? (
-          <div
-            ref={canvasContainerRef}
-            className={styles.canvasContainer}
-            data-testid="map-editor-canvas-container"
-          />
+          <>
+            {exportError === null
+              ? null
+              : (
+                <div className={styles.statusPanel} data-testid="map-editor-export-error">
+                  <section className={styles.statusCard}>
+                    <h2>Export failed</h2>
+                    <p>{exportError}</p>
+                  </section>
+                </div>
+              )}
+            <div
+              ref={canvasContainerRef}
+              className={styles.canvasContainer}
+              data-testid="map-editor-canvas-container"
+            />
+          </>
         )
         : null}
     </main>

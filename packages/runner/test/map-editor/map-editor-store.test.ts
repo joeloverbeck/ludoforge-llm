@@ -113,6 +113,34 @@ describe('createMapEditorStore', () => {
     expect(store.getState().dirty).toBe(false);
   });
 
+  it('markSaved clears dirty state and establishes a new saved baseline', () => {
+    const store = makeStore();
+
+    store.getState().moveZone('zone:a', { x: 100, y: 200 });
+    expect(store.getState().dirty).toBe(true);
+
+    store.getState().markSaved();
+    expect(store.getState().dirty).toBe(false);
+
+    store.getState().undo();
+    expect(store.getState().zonePositions.get('zone:a')).toEqual({ x: 0, y: 0 });
+    expect(store.getState().dirty).toBe(true);
+
+    store.getState().redo();
+    expect(store.getState().zonePositions.get('zone:a')).toEqual({ x: 100, y: 200 });
+    expect(store.getState().dirty).toBe(false);
+  });
+
+  it('undoing back to the original saved snapshot clears dirty state', () => {
+    const store = makeStore();
+
+    store.getState().moveZone('zone:a', { x: 100, y: 200 });
+    expect(store.getState().dirty).toBe(true);
+
+    store.getState().undo();
+    expect(store.getState().dirty).toBe(false);
+  });
+
   it('insertWaypoint adds a generated anchor and splits the segment', () => {
     const store = makeStore({
       routes: new Map<string, ConnectionRouteDefinition>([

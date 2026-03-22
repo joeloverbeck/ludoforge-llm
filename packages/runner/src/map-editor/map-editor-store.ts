@@ -17,6 +17,7 @@ const UNDO_STACK_LIMIT = 50;
 interface MapEditorStoreState extends MapEditorDocumentState {
   readonly gameDef: GameDef;
   readonly originalVisualConfig: VisualConfig;
+  readonly savedSnapshot: EditorSnapshot;
   readonly selectedZoneId: string | null;
   readonly selectedRouteId: string | null;
   readonly isDragging: boolean;
@@ -47,6 +48,7 @@ interface MapEditorStoreActions {
   previewControlPointMove(routeId: string, segmentIndex: number, position: Position): void;
   commitInteraction(): void;
   cancelInteraction(): void;
+  markSaved(): void;
   undo(): void;
   redo(): void;
 }
@@ -62,6 +64,11 @@ export function createMapEditorStore(
   return create<MapEditorStore>()((set, get) => {
     let interactionSnapshot: EditorSnapshot | null = null;
     let interactionChanged = false;
+    const initialDocumentState: EditorSnapshot = {
+      zonePositions: clonePositionMap(initialPositions),
+      connectionAnchors: cloneAnchorMap(visualConfig),
+      connectionRoutes: cloneRouteMap(visualConfig),
+    };
 
     const ensureInteraction = (): void => {
       if (interactionSnapshot !== null) {
@@ -88,9 +95,9 @@ export function createMapEditorStore(
 
         return {
           ...nextDocument,
+          dirty: !documentMatchesSnapshot(nextDocument, state.savedSnapshot),
           undoStack: pushUndoSnapshot(state.undoStack, snapshotFromState(state)),
           redoStack: [],
-          dirty: true,
         };
       });
     };
@@ -105,16 +112,18 @@ export function createMapEditorStore(
           return {};
         }
         interactionChanged = true;
-        return nextDocument;
+        return {
+          ...nextDocument,
+          dirty: !documentMatchesSnapshot(nextDocument, state.savedSnapshot),
+        };
       });
     };
 
     return {
       gameDef,
       originalVisualConfig: cloneVisualConfig(visualConfig),
-      zonePositions: clonePositionMap(initialPositions),
-      connectionAnchors: cloneAnchorMap(visualConfig),
-      connectionRoutes: cloneRouteMap(visualConfig),
+      savedSnapshot: cloneSnapshot(initialDocumentState),
+      ...cloneSnapshot(initialDocumentState),
       selectedZoneId: null,
       selectedRouteId: null,
       isDragging: false,
@@ -217,7 +226,21 @@ export function createMapEditorStore(
 
         const snapshot = cloneSnapshot(interactionSnapshot);
         clearInteraction();
-        set(snapshot);
+        set((state) => ({
+          ...snapshot,
+          dirty: !snapshotsEqual(snapshot, state.savedSnapshot),
+        }));
+      },
+
+      markSaved() {
+        clearInteraction();
+        set((state) => {
+          const savedSnapshot = snapshotFromState(state);
+          return {
+            savedSnapshot,
+            dirty: false,
+          };
+        });
       },
 
       undo() {
@@ -230,6 +253,7 @@ export function createMapEditorStore(
 
           return {
             ...cloneSnapshot(previous),
+            dirty: !snapshotsEqual(previous, state.savedSnapshot),
             undoStack: state.undoStack.slice(0, -1),
             redoStack: [...state.redoStack, snapshotFromState(state)],
           };
@@ -246,6 +270,7 @@ export function createMapEditorStore(
 
           return {
             ...cloneSnapshot(next),
+            dirty: !snapshotsEqual(next, state.savedSnapshot),
             undoStack: pushUndoSnapshot(state.undoStack, snapshotFromState(state)),
             redoStack: state.redoStack.slice(0, -1),
           };
@@ -269,6 +294,19 @@ function cloneSnapshot(snapshot: EditorSnapshot): EditorSnapshot {
     connectionAnchors: clonePositionMap(snapshot.connectionAnchors),
     connectionRoutes: cloneRouteDefinitions(snapshot.connectionRoutes),
   };
+}
+
+function documentMatchesSnapshot(
+  documentState: MapEditorDocumentState,
+  savedSnapshot: EditorSnapshot,
+): boolean {
+  return snapshotsEqual(snapshotFromState(documentState), savedSnapshot);
+}
+
+function snapshotsEqual(left: EditorSnapshot, right: EditorSnapshot): boolean {
+  return positionMapsEqual(left.zonePositions, right.zonePositions)
+    && positionMapsEqual(left.connectionAnchors, right.connectionAnchors)
+    && routeMapsEqual(left.connectionRoutes, right.connectionRoutes);
 }
 
 function cloneVisualConfig(visualConfig: VisualConfig): VisualConfig {
@@ -370,6 +408,110 @@ function pushUndoSnapshot(
   snapshot: EditorSnapshot,
 ): readonly EditorSnapshot[] {
   return [...undoStack, cloneSnapshot(snapshot)].slice(-UNDO_STACK_LIMIT);
+}
+
+function positionMapsEqual(
+  left: ReadonlyMap<string, Position>,
+  right: ReadonlyMap<string, Position>,
+): boolean {
+  if (left.size !== right.size) {
+    return false;
+  }
+
+  for (const [id, position] of left.entries()) {
+    const other = right.get(id);
+    if (other === undefined || !positionsEqual(position, other)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function routeMapsEqual(
+  left: ReadonlyMap<string, ConnectionRouteDefinition>,
+  right: ReadonlyMap<string, ConnectionRouteDefinition>,
+): boolean {
+  if (left.size !== right.size) {
+    return false;
+  }
+
+  for (const [routeId, route] of left.entries()) {
+    const other = right.get(routeId);
+    if (other === undefined || !routeDefinitionsEqual(route, other)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function routeDefinitionsEqual(left: ConnectionRouteDefinition, right: ConnectionRouteDefinition): boolean {
+  if (left.points.length !== right.points.length || left.segments.length !== right.segments.length) {
+    return false;
+  }
+
+  for (let index = 0; index < left.points.length; index += 1) {
+    const leftPoint = left.points[index];
+    const rightPoint = right.points[index];
+    if (leftPoint === undefined || rightPoint === undefined || !endpointsEqual(leftPoint, rightPoint)) {
+      return false;
+    }
+  }
+
+  for (let index = 0; index < left.segments.length; index += 1) {
+    const leftSegment = left.segments[index];
+    const rightSegment = right.segments[index];
+    if (leftSegment === undefined || rightSegment === undefined || !segmentsEqual(leftSegment, rightSegment)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function endpointsEqual(left: ConnectionEndpoint, right: ConnectionEndpoint): boolean {
+  if (left.kind !== right.kind) {
+    return false;
+  }
+
+  if (left.kind === 'zone' && right.kind === 'zone') {
+    return left.zoneId === right.zoneId;
+  }
+
+  if (left.kind === 'anchor' && right.kind === 'anchor') {
+    return left.anchorId === right.anchorId;
+  }
+
+  return false;
+}
+
+function segmentsEqual(left: ConnectionRouteSegment, right: ConnectionRouteSegment): boolean {
+  if (left.kind !== right.kind) {
+    return false;
+  }
+
+  if (left.kind === 'straight' && right.kind === 'straight') {
+    return true;
+  }
+
+  if (left.kind !== 'quadratic' || right.kind !== 'quadratic') {
+    return false;
+  }
+
+  if (left.control.kind !== right.control.kind) {
+    return false;
+  }
+
+  if (left.control.kind === 'anchor' && right.control.kind === 'anchor') {
+    return left.control.anchorId === right.control.anchorId;
+  }
+
+  if (left.control.kind === 'position' && right.control.kind === 'position') {
+    return left.control.x === right.control.x && left.control.y === right.control.y;
+  }
+
+  return false;
 }
 
 function moveZoneInDocument(

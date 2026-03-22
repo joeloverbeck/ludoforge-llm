@@ -4,6 +4,7 @@ import { getOrComputeLayout } from '../layout/layout-cache.js';
 import { resolveRunnerBootstrapByGameId } from '../bootstrap/runner-bootstrap.js';
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import { createEditorCanvas } from './map-editor-canvas.js';
+import { createEditorAdjacencyRenderer } from './map-editor-adjacency-renderer.js';
 import { exportVisualConfig, triggerDownload } from './map-editor-export.js';
 import { createEditorHandleRenderer } from './map-editor-handle-renderer.js';
 import { createEditorRouteRenderer } from './map-editor-route-renderer.js';
@@ -120,6 +121,10 @@ export function MapEditorScreen({ gameId, onBack }: MapEditorScreenProps): React
           return;
         }
 
+        const adjacencyRenderer = createEditorAdjacencyRenderer(
+          canvas.layers.adjacency,
+          screenState.editor.store,
+        );
         const zoneRenderer = createEditorZoneRenderer(
           canvas.layers.zone,
           screenState.editor.store,
@@ -153,6 +158,7 @@ export function MapEditorScreen({ gameId, onBack }: MapEditorScreenProps): React
 
         destroyRuntime = () => {
           removeWindowListeners();
+          adjacencyRenderer.destroy();
           handleRenderer.destroy();
           routeRenderer.destroy();
           zoneRenderer.destroy();

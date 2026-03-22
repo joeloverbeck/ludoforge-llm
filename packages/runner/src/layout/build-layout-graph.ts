@@ -9,6 +9,11 @@ interface PartitionedZones {
   readonly aux: readonly ZoneDef[];
 }
 
+export interface LayoutAdjacencyPair {
+  readonly from: string;
+  readonly to: string;
+}
+
 export function resolveLayoutMode(def: GameDef, provider: VisualConfigProvider): LayoutMode {
   const hasAnyAdjacency = def.zones.some((zone) => zone.isInternal !== true && hasAdjacency(zone));
   return provider.getLayoutMode(hasAnyAdjacency);
@@ -61,7 +66,19 @@ export function buildLayoutGraph(boardZones: readonly ZoneDef[]): Graph {
     }
   }
 
+  for (const { from, to } of collectLayoutAdjacencyPairs(boardZones)) {
+    if (boardZoneIDs.has(from) && boardZoneIDs.has(to)) {
+      graph.addUndirectedEdge(from, to);
+    }
+  }
+
+  return graph;
+}
+
+export function collectLayoutAdjacencyPairs(boardZones: readonly ZoneDef[]): readonly LayoutAdjacencyPair[] {
+  const boardZoneIDs = new Set<string>(boardZones.map((zone) => zone.id));
   const emittedPairs = new Set<string>();
+  const pairs: LayoutAdjacencyPair[] = [];
 
   for (const zone of boardZones) {
     const sourceID = zone.id;
@@ -80,11 +97,15 @@ export function buildLayoutGraph(boardZones: readonly ZoneDef[]): Graph {
       }
 
       emittedPairs.add(pairKey);
-      graph.addUndirectedEdge(sourceID, targetID);
+      pairs.push(
+        sourceID < targetID
+          ? { from: sourceID, to: targetID }
+          : { from: targetID, to: sourceID },
+      );
     }
   }
 
-  return graph;
+  return pairs;
 }
 
 function hasAdjacency(zone: ZoneDef): boolean {

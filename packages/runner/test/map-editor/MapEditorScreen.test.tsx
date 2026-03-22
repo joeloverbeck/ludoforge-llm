@@ -11,6 +11,7 @@ const testDoubles = vi.hoisted(() => ({
   exportVisualConfig: vi.fn(),
   triggerDownload: vi.fn(),
   createEditorCanvas: vi.fn(),
+  createEditorAdjacencyRenderer: vi.fn(),
   createEditorZoneRenderer: vi.fn(),
   createEditorRouteRenderer: vi.fn(),
   createEditorHandleRenderer: vi.fn(),
@@ -35,6 +36,10 @@ vi.mock('../../src/map-editor/map-editor-export.js', () => ({
 
 vi.mock('../../src/map-editor/map-editor-canvas.js', () => ({
   createEditorCanvas: testDoubles.createEditorCanvas,
+}));
+
+vi.mock('../../src/map-editor/map-editor-adjacency-renderer.js', () => ({
+  createEditorAdjacencyRenderer: testDoubles.createEditorAdjacencyRenderer,
 }));
 
 vi.mock('../../src/map-editor/map-editor-zone-renderer.js', () => ({
@@ -63,6 +68,7 @@ describe('MapEditorScreen', () => {
     testDoubles.exportVisualConfig.mockReset();
     testDoubles.triggerDownload.mockReset();
     testDoubles.createEditorCanvas.mockReset();
+    testDoubles.createEditorAdjacencyRenderer.mockReset();
     testDoubles.createEditorZoneRenderer.mockReset();
     testDoubles.createEditorRouteRenderer.mockReset();
     testDoubles.createEditorHandleRenderer.mockReset();
@@ -77,11 +83,17 @@ describe('MapEditorScreen', () => {
 
   it('loads editor bootstrap, mounts canvas runtime, and cleans up on unmount', async () => {
     const store = createMockEditorStore();
+    const adjacencyRenderer = { destroy: vi.fn() };
     const zoneRenderer = { destroy: vi.fn() };
     const routeRenderer = { destroy: vi.fn() };
     const handleRenderer = { destroy: vi.fn() };
     const editorCanvas = {
-      layers: { zone: { tag: 'zone-layer' }, route: { tag: 'route-layer' }, handle: { tag: 'handle-layer' } },
+      layers: {
+        adjacency: { tag: 'adjacency-layer' },
+        zone: { tag: 'zone-layer' },
+        route: { tag: 'route-layer' },
+        handle: { tag: 'handle-layer' },
+      },
       viewport: { tag: 'viewport' },
       resize: vi.fn(),
       centerOnContent: vi.fn(),
@@ -97,6 +109,7 @@ describe('MapEditorScreen', () => {
     });
     testDoubles.createMapEditorStore.mockReturnValue(store);
     testDoubles.createEditorCanvas.mockResolvedValue(editorCanvas);
+    testDoubles.createEditorAdjacencyRenderer.mockReturnValue(adjacencyRenderer);
     testDoubles.createEditorZoneRenderer.mockReturnValue(zoneRenderer);
     testDoubles.createEditorRouteRenderer.mockReturnValue(routeRenderer);
     testDoubles.createEditorHandleRenderer.mockReturnValue(handleRenderer);
@@ -125,6 +138,10 @@ describe('MapEditorScreen', () => {
         onPointerWorldPositionChange: expect.any(Function),
       }),
     );
+    expect(testDoubles.createEditorAdjacencyRenderer).toHaveBeenCalledWith(
+      editorCanvas.layers.adjacency,
+      store,
+    );
     expect(testDoubles.createEditorZoneRenderer).toHaveBeenCalledWith(
       editorCanvas.layers.zone,
       store,
@@ -149,6 +166,7 @@ describe('MapEditorScreen', () => {
 
     rendered.unmount();
 
+    expect(adjacencyRenderer.destroy).toHaveBeenCalledTimes(1);
     expect(zoneRenderer.destroy).toHaveBeenCalledTimes(1);
     expect(routeRenderer.destroy).toHaveBeenCalledTimes(1);
     expect(handleRenderer.destroy).toHaveBeenCalledTimes(1);
@@ -197,12 +215,13 @@ describe('MapEditorScreen', () => {
     });
     testDoubles.createMapEditorStore.mockReturnValue(store);
     testDoubles.createEditorCanvas.mockResolvedValue({
-      layers: { zone: {}, route: {}, handle: {} },
+      layers: { adjacency: {}, zone: {}, route: {}, handle: {} },
       viewport: {},
       resize: vi.fn(),
       centerOnContent: vi.fn(),
       destroy: vi.fn(),
     });
+    testDoubles.createEditorAdjacencyRenderer.mockReturnValue({ destroy: vi.fn() });
     testDoubles.createEditorZoneRenderer.mockReturnValue({ destroy: vi.fn() });
     testDoubles.createEditorRouteRenderer.mockReturnValue({ destroy: vi.fn() });
     testDoubles.createEditorHandleRenderer.mockReturnValue({ destroy: vi.fn() });
@@ -238,12 +257,13 @@ describe('MapEditorScreen', () => {
     });
     testDoubles.createMapEditorStore.mockReturnValue(store);
     testDoubles.createEditorCanvas.mockResolvedValue({
-      layers: { zone: {}, route: {}, handle: {} },
+      layers: { adjacency: {}, zone: {}, route: {}, handle: {} },
       viewport: {},
       resize: vi.fn(),
       centerOnContent: vi.fn(),
       destroy: vi.fn(),
     });
+    testDoubles.createEditorAdjacencyRenderer.mockReturnValue({ destroy: vi.fn() });
     testDoubles.createEditorZoneRenderer.mockReturnValue({ destroy: vi.fn() });
     testDoubles.createEditorRouteRenderer.mockReturnValue({ destroy: vi.fn() });
     testDoubles.createEditorHandleRenderer.mockReturnValue({ destroy: vi.fn() });
@@ -277,12 +297,13 @@ describe('MapEditorScreen', () => {
     });
     testDoubles.createMapEditorStore.mockReturnValue(store);
     testDoubles.createEditorCanvas.mockResolvedValue({
-      layers: { zone: {}, route: {}, handle: {} },
+      layers: { adjacency: {}, zone: {}, route: {}, handle: {} },
       viewport: {},
       resize: vi.fn(),
       centerOnContent: vi.fn(),
       destroy: vi.fn(),
     });
+    testDoubles.createEditorAdjacencyRenderer.mockReturnValue({ destroy: vi.fn() });
     testDoubles.createEditorZoneRenderer.mockReturnValue({ destroy: vi.fn() });
     testDoubles.createEditorRouteRenderer.mockReturnValue({ destroy: vi.fn() });
     testDoubles.createEditorHandleRenderer.mockReturnValue({ destroy: vi.fn() });
@@ -325,12 +346,13 @@ describe('MapEditorScreen', () => {
     });
     testDoubles.createMapEditorStore.mockReturnValue(store);
     testDoubles.createEditorCanvas.mockResolvedValue({
-      layers: { zone: {}, route: {}, handle: {} },
+      layers: { adjacency: {}, zone: {}, route: {}, handle: {} },
       viewport: {},
       resize: vi.fn(),
       centerOnContent: vi.fn(),
       destroy: vi.fn(),
     });
+    testDoubles.createEditorAdjacencyRenderer.mockReturnValue({ destroy: vi.fn() });
     testDoubles.createEditorZoneRenderer.mockReturnValue({ destroy: vi.fn() });
     testDoubles.createEditorRouteRenderer.mockReturnValue({ destroy: vi.fn() });
     testDoubles.createEditorHandleRenderer.mockReturnValue({ destroy: vi.fn() });

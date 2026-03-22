@@ -56,14 +56,18 @@ describe('createEditorCanvas', () => {
     );
 
     expect(editorCanvas.layers.background.parent).toBe(fixture.sharedLayers.backgroundLayer);
+    expect(editorCanvas.layers.adjacency.parent).toBe(fixture.sharedLayers.adjacencyLayer);
     expect(editorCanvas.layers.route.parent).toBe(fixture.sharedLayers.connectionRouteLayer);
     expect(editorCanvas.layers.zone.parent).toBe(fixture.sharedLayers.zoneLayer);
     expect(editorCanvas.layers.handle.parent).toBe(fixture.sharedLayers.interfaceGroup);
 
     expect(fixture.sharedLayers.backgroundLayer.children.at(-1)).toBe(editorCanvas.layers.background);
+    expect(fixture.sharedLayers.adjacencyLayer.children.at(-1)).toBe(editorCanvas.layers.adjacency);
     expect(fixture.sharedLayers.connectionRouteLayer.children.at(-1)).toBe(editorCanvas.layers.route);
     expect(fixture.sharedLayers.zoneLayer.children.at(-1)).toBe(editorCanvas.layers.zone);
     expect(fixture.sharedLayers.interfaceGroup.children.at(-1)).toBe(editorCanvas.layers.handle);
+    expect(editorCanvas.layers.adjacency.eventMode).toBe('none');
+    expect(editorCanvas.layers.adjacency.interactiveChildren).toBe(false);
   });
 
   it('recomputes viewport bounds when zone positions change and ignores non-zone entries', async () => {
@@ -118,6 +122,7 @@ describe('createEditorCanvas', () => {
 
     expect(fixture.container.contains(fixture.canvas)).toBe(false);
     expect(editorCanvas.layers.background.parent).toBeNull();
+    expect(editorCanvas.layers.adjacency.parent).toBeNull();
     expect(editorCanvas.layers.route.parent).toBeNull();
     expect(editorCanvas.layers.zone.parent).toBeNull();
     expect(editorCanvas.layers.handle.parent).toBeNull();

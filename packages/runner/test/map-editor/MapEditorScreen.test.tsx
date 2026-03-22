@@ -5,7 +5,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const testDoubles = vi.hoisted(() => ({
-  resolveMapEditorBootstrapByGameId: vi.fn(),
+  resolveRunnerBootstrapByGameId: vi.fn(),
   getOrComputeLayout: vi.fn(),
   createMapEditorStore: vi.fn(),
   exportVisualConfig: vi.fn(),
@@ -16,8 +16,8 @@ const testDoubles = vi.hoisted(() => ({
   createEditorHandleRenderer: vi.fn(),
 }));
 
-vi.mock('../../src/bootstrap/map-editor-bootstrap.js', () => ({
-  resolveMapEditorBootstrapByGameId: testDoubles.resolveMapEditorBootstrapByGameId,
+vi.mock('../../src/bootstrap/runner-bootstrap.js', () => ({
+  resolveRunnerBootstrapByGameId: testDoubles.resolveRunnerBootstrapByGameId,
 }));
 
 vi.mock('../../src/layout/layout-cache.js', () => ({
@@ -57,7 +57,7 @@ afterEach(() => {
 describe('MapEditorScreen', () => {
   beforeEach(() => {
     vi.resetModules();
-    testDoubles.resolveMapEditorBootstrapByGameId.mockReset();
+    testDoubles.resolveRunnerBootstrapByGameId.mockReset();
     testDoubles.getOrComputeLayout.mockReset();
     testDoubles.createMapEditorStore.mockReset();
     testDoubles.exportVisualConfig.mockReset();
@@ -88,7 +88,7 @@ describe('MapEditorScreen', () => {
       destroy: vi.fn(),
     };
 
-    testDoubles.resolveMapEditorBootstrapByGameId.mockResolvedValue({
+    testDoubles.resolveRunnerBootstrapByGameId.mockResolvedValue({
       descriptor: { gameMetadata: { name: 'Fire in the Lake' } },
       gameDef: { metadata: { id: 'fitl' } },
       visualConfig: { layout: {}, zones: {} },
@@ -155,7 +155,7 @@ describe('MapEditorScreen', () => {
   });
 
   it('shows an error state for unknown games', async () => {
-    testDoubles.resolveMapEditorBootstrapByGameId.mockResolvedValue(null);
+    testDoubles.resolveRunnerBootstrapByGameId.mockResolvedValue(null);
 
     const { MapEditorScreen } = await import('../../src/map-editor/MapEditorScreen.js');
     render(createElement(MapEditorScreen, { gameId: 'missing-game', onBack: vi.fn() }));
@@ -167,7 +167,7 @@ describe('MapEditorScreen', () => {
   });
 
   it('shows an error state for unsupported games', async () => {
-    testDoubles.resolveMapEditorBootstrapByGameId.mockResolvedValue({
+    testDoubles.resolveRunnerBootstrapByGameId.mockResolvedValue({
       descriptor: { gameMetadata: { name: "Texas Hold'em" } },
       gameDef: { metadata: { id: 'texas' } },
       visualConfig: { layout: {}, zones: {} },
@@ -187,7 +187,7 @@ describe('MapEditorScreen', () => {
 
   it('exports the current editor document and marks the store saved', async () => {
     const store = createMockEditorStore();
-    testDoubles.resolveMapEditorBootstrapByGameId.mockResolvedValue({
+    testDoubles.resolveRunnerBootstrapByGameId.mockResolvedValue({
       descriptor: { gameMetadata: { name: 'Fire in the Lake' } },
       gameDef: { metadata: { id: 'fitl' } },
       visualConfig: { layout: {}, zones: {} },
@@ -228,7 +228,7 @@ describe('MapEditorScreen', () => {
 
   it('shows an inline export error when export fails', async () => {
     const store = createMockEditorStore();
-    testDoubles.resolveMapEditorBootstrapByGameId.mockResolvedValue({
+    testDoubles.resolveRunnerBootstrapByGameId.mockResolvedValue({
       descriptor: { gameMetadata: { name: 'Fire in the Lake' } },
       gameDef: { metadata: { id: 'fitl' } },
       visualConfig: { layout: {}, zones: {} },
@@ -267,7 +267,7 @@ describe('MapEditorScreen', () => {
 
   it('shows pointer coordinates and falls back to the selected zone position', async () => {
     const store = createMockEditorStore();
-    testDoubles.resolveMapEditorBootstrapByGameId.mockResolvedValue({
+    testDoubles.resolveRunnerBootstrapByGameId.mockResolvedValue({
       descriptor: { gameMetadata: { name: 'Fire in the Lake' } },
       gameDef: { metadata: { id: 'fitl' } },
       visualConfig: { layout: {}, zones: {} },
@@ -315,7 +315,7 @@ describe('MapEditorScreen', () => {
     const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
     const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener');
     const store = createMockEditorStore();
-    testDoubles.resolveMapEditorBootstrapByGameId.mockResolvedValue({
+    testDoubles.resolveRunnerBootstrapByGameId.mockResolvedValue({
       descriptor: { gameMetadata: { name: 'Fire in the Lake' } },
       gameDef: { metadata: { id: 'fitl' } },
       visualConfig: { layout: {}, zones: {} },

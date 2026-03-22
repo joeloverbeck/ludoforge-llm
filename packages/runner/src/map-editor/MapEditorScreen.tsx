@@ -1,7 +1,7 @@
 import { type ReactElement, useEffect, useRef, useState } from 'react';
 
 import { getOrComputeLayout } from '../layout/layout-cache.js';
-import { resolveMapEditorBootstrapByGameId } from '../bootstrap/map-editor-bootstrap.js';
+import { resolveRunnerBootstrapByGameId } from '../bootstrap/runner-bootstrap.js';
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import { createEditorCanvas } from './map-editor-canvas.js';
 import { exportVisualConfig, triggerDownload } from './map-editor-export.js';
@@ -48,7 +48,7 @@ export function MapEditorScreen({ gameId, onBack }: MapEditorScreenProps): React
     setPointerWorldPosition(null);
     setSelectedZonePosition(null);
 
-    void resolveMapEditorBootstrapByGameId(gameId)
+    void resolveRunnerBootstrapByGameId(gameId)
       .then((resolved) => {
         if (cancelled) {
           return;

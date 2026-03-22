@@ -1,4 +1,4 @@
-import { Container, Graphics } from 'pixi.js';
+import { Circle, Container, Graphics, Polygon } from 'pixi.js';
 
 import { safeDestroyChildren, safeDestroyDisplayObject } from '../canvas/renderers/safe-destroy.js';
 import type { MapEditorStoreApi } from './map-editor-store.js';
@@ -20,7 +20,11 @@ export interface EditorHandleRenderer {
 export function createEditorHandleRenderer(
   handleLayer: Container,
   store: MapEditorStoreApi,
+  options: {
+    readonly dragSurface?: Container;
+  } = {},
 ): EditorHandleRenderer {
+  const dragSurface = options.dragSurface ?? handleLayer;
   const root = new Container();
   root.eventMode = 'none';
   root.interactiveChildren = true;
@@ -76,6 +80,7 @@ export function createEditorHandleRenderer(
       if (point.endpoint.kind === 'zone') {
         handle.eventMode = 'none';
         handle.cursor = 'default';
+        handle.hitArea = new Circle(0, 0, HANDLE_RADIUS);
         handle
           .circle(0, 0, HANDLE_RADIUS)
           .stroke({
@@ -86,13 +91,14 @@ export function createEditorHandleRenderer(
       } else {
         handle.eventMode = 'static';
         handle.cursor = 'grab';
+        handle.hitArea = new Circle(0, 0, HANDLE_RADIUS);
         handle
           .circle(0, 0, HANDLE_RADIUS)
           .fill({
             color: HANDLE_STROKE_COLOR,
             alpha: 1,
           });
-        attachAnchorDragHandlers(handle, routeId, point.endpoint.anchorId, handleLayer, store);
+        attachAnchorDragHandlers(handle, routeId, point.endpoint.anchorId, dragSurface, store);
         handle.on('pointerdown', (event) => {
           if (event.button !== 2) {
             return;
@@ -125,6 +131,16 @@ export function createEditorHandleRenderer(
       control.eventMode = 'static';
       control.cursor = 'grab';
       control.interactiveChildren = false;
+      control.hitArea = new Polygon([
+        0,
+        -CONTROL_HANDLE_SIZE,
+        CONTROL_HANDLE_SIZE,
+        0,
+        0,
+        CONTROL_HANDLE_SIZE,
+        -CONTROL_HANDLE_SIZE,
+        0,
+      ]);
       control
         .poly([
           0,
@@ -140,7 +156,7 @@ export function createEditorHandleRenderer(
           color: HANDLE_STROKE_COLOR,
           alpha: 1,
         });
-      attachControlPointDragHandlers(control, routeId, segmentIndex, handleLayer, store);
+      attachControlPointDragHandlers(control, routeId, segmentIndex, dragSurface, store);
       root.addChild(control);
     }
   };

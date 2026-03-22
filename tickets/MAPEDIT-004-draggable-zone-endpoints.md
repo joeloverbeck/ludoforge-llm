@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — runner-only
-**Deps**: `tickets/MAPEDIT-001-fix-handle-drag.md` (shares `map-editor-handle-renderer.ts`; depends on drag surface fix)
+**Deps**: `archive/tickets/MAPEDIT-001-fix-handle-drag.md`
 
 ## Problem
 
@@ -19,12 +19,15 @@ Example: the Hue-Da Nang road connector uses a quadratic curve with a poorly pla
 3. `resolveEndpointPosition()` in `map-editor-store.ts` line 739-740: zone endpoints resolve to `zonePositions.get(endpoint.zoneId)` — always zone center.
 4. Anchor endpoints already draggable: `eventMode: 'static'`, filled circle, `attachAnchorDragHandlers()` attached — confirmed working (after MAPEDIT-001 fix).
 5. User approved the "convert to anchor" approach over "zone-relative offset" — simpler, no schema changes needed.
+6. This ticket depends on MAPEDIT-001 because both changes touch `map-editor-handle-renderer.ts` and zone-endpoint dragging assumes the handle drag-surface fix is already in place.
+7. Follow-up hardening opportunity identified after MAPEDIT-001: `map-editor-handle-renderer.ts` attaches drag handlers without retaining per-handle cleanup disposers. Because this ticket adds another drag path in the same renderer, it is the right place to make handle cleanup ownership explicit if the implementation still relies only on display-object teardown.
 
 ## Architecture Check
 
 1. Converting a zone endpoint to an anchor on first drag avoids schema changes to `ConnectionEndpoint` and keeps both the editor and play-mode route resolvers unchanged. The anchor is a standard `AnchorConnectionEndpoint` — all existing anchor handling works.
 2. All changes are runner-only. No engine, GameSpecDoc, or GameDef type changes. The conversion is a visual-config editing operation, not a runtime behavior change.
 3. No backwards-compatibility shims. The zone endpoint is cleanly replaced with an anchor endpoint in the route definition. The exported `visual-config.yaml` will contain the anchor instead of the zone endpoint.
+4. If `map-editor-handle-renderer.ts` still creates drag handlers without storing their returned cleanup functions, this ticket should fold that lifecycle hardening in while touching the same renderer. The ideal architecture is for the renderer to own and release all interaction disposers explicitly, not implicitly via object destruction.
 
 ## What to Change
 
@@ -54,6 +57,7 @@ In `map-editor-handle-renderer.ts`:
 - Add `hitArea = new Circle(0, 0, HANDLE_RADIUS)`
 - Fill the circle (matching anchor endpoint style) to indicate interactivity
 - Attach `attachZoneEndpointConvertDragHandlers()` instead of no handler
+- While editing this renderer, reassess whether anchor/control/zone-endpoint drag handlers should register explicit cleanup disposers owned by the renderer rather than relying only on display-object teardown
 
 ## Files to Touch
 
@@ -76,7 +80,8 @@ In `map-editor-handle-renderer.ts`:
 3. `convertEndpointToAnchor` returns null for non-zone endpoints
 4. Generated anchor IDs are unique (no collision with existing anchors)
 5. Zone endpoint handles have `eventMode: 'static'` and non-null `hitArea`
-6. Existing suite: `pnpm -F @ludoforge/runner test`
+6. If explicit drag-handler disposers are added in the renderer, destroying the renderer releases them cleanly without leaving drag-surface listeners behind
+7. Existing suite: `pnpm -F @ludoforge/runner test`
 
 ### Invariants
 
@@ -90,6 +95,7 @@ In `map-editor-handle-renderer.ts`:
 
 1. `packages/runner/test/map-editor/map-editor-store.test.ts` — test `convertEndpointToAnchor` for zone endpoint conversion, null return for non-zone, anchor uniqueness
 2. `packages/runner/test/map-editor/map-editor-handle-renderer.test.ts` — verify zone endpoint handles are interactive with hitArea
+3. If renderer-owned cleanup is added, extend `packages/runner/test/map-editor/map-editor-handle-renderer.test.ts` or `packages/runner/test/map-editor/map-editor-drag.test.ts` to verify renderer destroy/cleanup detaches drag-surface listeners for all handle drag modes
 
 ### Commands
 

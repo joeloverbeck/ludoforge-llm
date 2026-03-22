@@ -140,6 +140,7 @@ describe('MapEditorScreen', () => {
     expect(testDoubles.createEditorHandleRenderer).toHaveBeenCalledWith(
       editorCanvas.layers.handle,
       store,
+      { dragSurface: editorCanvas.viewport },
     );
     expect(editorCanvas.centerOnContent).toHaveBeenCalledTimes(1);
 

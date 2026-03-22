@@ -135,6 +135,7 @@ export function MapEditorScreen({ gameId, onBack }: MapEditorScreenProps): React
         const handleRenderer = createEditorHandleRenderer(
           canvas.layers.handle,
           screenState.editor.store,
+          { dragSurface: canvas.viewport },
         );
 
         const syncCanvasSize = (): void => {

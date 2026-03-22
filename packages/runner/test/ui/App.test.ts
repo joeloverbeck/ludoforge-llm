@@ -236,6 +236,7 @@ vi.mock('../../src/ui/ReplayScreen.js', () => ({
 vi.mock('../../src/ui/GameSelectionScreen.js', () => ({
   GameSelectionScreen: (props: {
     readonly onSelectGame: (gameId: string) => void;
+    readonly onEditMap?: (gameId: string) => void;
     readonly onResumeSavedGame?: (saveId: string) => void;
     readonly onReplaySavedGame?: (saveId: string) => void;
     readonly onDeleteSavedGame?: (saveId: string) => void;
@@ -248,6 +249,13 @@ vi.mock('../../src/ui/GameSelectionScreen.js', () => ({
           props.onSelectGame('fitl');
         },
       }, 'select-fitl'),
+      createElement('button', {
+        type: 'button',
+        'data-testid': 'edit-map-fitl',
+        onClick: () => {
+          props.onEditMap?.('fitl');
+        },
+      }, 'edit-fitl'),
       createElement('button', {
         type: 'button',
         'data-testid': 'resume-saved',
@@ -263,6 +271,19 @@ vi.mock('../../src/ui/GameSelectionScreen.js', () => ({
         'data-testid': 'delete-saved',
         onClick: () => props.onDeleteSavedGame?.('save-1'),
       }, 'delete'),
+    )
+  ),
+}));
+
+vi.mock('../../src/map-editor/MapEditorScreen.js', () => ({
+  MapEditorScreen: (props: { readonly gameId: string; readonly onBack: () => void }) => (
+    createElement('main', { 'data-testid': 'map-editor-screen' },
+      createElement('p', { 'data-testid': 'map-editor-game-id' }, props.gameId),
+      createElement('button', {
+        type: 'button',
+        'data-testid': 'map-editor-back-button',
+        onClick: props.onBack,
+      }, 'back'),
     )
   ),
 }));
@@ -434,6 +455,22 @@ describe('App', () => {
     expect(screen.getByTestId('select-game-fitl')).toBeTruthy();
   });
 
+  it('opens the map editor from game selection through the session store', async () => {
+    const { App } = await import('../../src/App.js');
+
+    render(createElement(App));
+
+    fireEvent.click(screen.getByTestId('edit-map-fitl'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('map-editor-screen')).toBeTruthy();
+    });
+    expect(testDoubles.sessionStore?.getState().sessionState).toEqual({
+      screen: 'mapEditor',
+      gameId: 'fitl',
+    });
+  });
+
   it('routes to active game on start', async () => {
     const { App } = await import('../../src/App.js');
 
@@ -557,7 +594,7 @@ describe('App', () => {
     });
   });
 
-  it('renders map editor placeholder branch and routes back to menu', async () => {
+  it('routes to the map editor screen and supports back-to-menu', async () => {
     testDoubles.sessionStore = createMockSessionStore({
       sessionState: {
         screen: 'mapEditor',
@@ -570,10 +607,10 @@ describe('App', () => {
 
     render(createElement(App));
 
-    expect(screen.getByTestId('map-editor-placeholder-screen')).toBeTruthy();
+    expect(screen.getByTestId('map-editor-screen')).toBeTruthy();
     expect(screen.getByTestId('map-editor-game-id').textContent).toBe('fitl');
 
-    fireEvent.click(screen.getByTestId('map-editor-back-to-menu'));
+    fireEvent.click(screen.getByTestId('map-editor-back-button'));
 
     await waitFor(() => {
       expect(screen.getByTestId('game-selection-screen')).toBeTruthy();

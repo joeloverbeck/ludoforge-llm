@@ -27,6 +27,10 @@ const TOP_LEVEL_SCREEN_LAYOUT_CONTRACTS: readonly ScreenLayoutContract[] = [
     cssPath: 'src/ui/PreGameConfigScreen.module.css',
     requiredTokens: ['min-height: 100%;'],
   },
+  {
+    cssPath: 'src/map-editor/MapEditorScreen.module.css',
+    requiredTokens: ['min-height: 100%;'],
+  },
 ];
 
 describe('tokens.css', () => {

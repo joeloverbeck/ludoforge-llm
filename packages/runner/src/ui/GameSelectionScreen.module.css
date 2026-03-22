@@ -19,6 +19,11 @@
 }
 
 .gameCard {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.gameCardButton {
   width: 100%;
   text-align: left;
   display: grid;
@@ -30,9 +35,28 @@
   cursor: pointer;
 }
 
-.gameCard:hover {
+.gameCardButton:hover {
   border-color: #7d8da8;
   background: #eef2f8;
+}
+
+.gameActions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.gameActions button {
+  border: 1px solid #9aa9c1;
+  border-radius: 0.45rem;
+  background: #f5f8fc;
+  color: #22324a;
+  padding: 0.4rem 0.65rem;
+  cursor: pointer;
+}
+
+.gameActions button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .gameName {

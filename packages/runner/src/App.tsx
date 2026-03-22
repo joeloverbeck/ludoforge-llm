@@ -11,6 +11,7 @@ import { ErrorBoundary } from './ui/ErrorBoundary.js';
 import { GameContainer } from './ui/GameContainer.js';
 import { GameSelectionScreen } from './ui/GameSelectionScreen.js';
 import { LoadGameDialog } from './ui/LoadGameDialog.js';
+import { MapEditorScreen } from './map-editor/MapEditorScreen.js';
 import { PreGameConfigScreen } from './ui/PreGameConfigScreen.js';
 import { ReplayScreen } from './ui/ReplayScreen.js';
 import { SaveGameDialog } from './ui/SaveGameDialog.js';
@@ -82,6 +83,9 @@ export function App(): ReactElement {
           <GameSelectionScreen
             onSelectGame={(gameId) => {
               sessionStore.getState().selectGame(gameId);
+            }}
+            onEditMap={(gameId) => {
+              sessionStore.getState().openMapEditor(gameId);
             }}
             onResumeSavedGame={handleResumeSavedGame}
             onReplaySavedGame={handleReplaySavedGame}
@@ -188,19 +192,12 @@ export function App(): ReactElement {
         );
       case 'mapEditor':
         return (
-          <main data-testid="map-editor-placeholder-screen">
-            <h1>Map Editor</h1>
-            <p data-testid="map-editor-game-id">{sessionState.gameId}</p>
-            <button
-              type="button"
-              data-testid="map-editor-back-to-menu"
-              onClick={() => {
-                sessionStore.getState().returnToMenu();
-              }}
-            >
-              Back to Menu
-            </button>
-          </main>
+          <MapEditorScreen
+            gameId={sessionState.gameId}
+            onBack={() => {
+              sessionStore.getState().returnToMenu();
+            }}
+          />
         );
       default:
         return null;

@@ -1,11 +1,13 @@
 import { type ReactElement, useEffect, useState } from 'react';
 
 import { listBootstrapDescriptors } from '../bootstrap/bootstrap-registry.js';
+import { resolveMapEditorCapabilities } from '../bootstrap/map-editor-bootstrap.js';
 import { listSavedGames, type SavedGameListItem } from '../persistence/save-manager.js';
 import styles from './GameSelectionScreen.module.css';
 
 interface GameSelectionScreenProps {
   readonly onSelectGame: (gameId: string) => void;
+  readonly onEditMap?: (gameId: string) => void;
   readonly onResumeSavedGame?: (saveId: string) => void | Promise<void>;
   readonly onReplaySavedGame?: (saveId: string) => void | Promise<void>;
   readonly onDeleteSavedGame?: (saveId: string) => void | Promise<void>;
@@ -13,6 +15,7 @@ interface GameSelectionScreenProps {
 
 export function GameSelectionScreen({
   onSelectGame,
+  onEditMap,
   onResumeSavedGame,
   onReplaySavedGame,
   onDeleteSavedGame,
@@ -20,6 +23,7 @@ export function GameSelectionScreen({
   const [savedGames, setSavedGames] = useState<readonly SavedGameListItem[]>([]);
   const [savedGamesStatus, setSavedGamesStatus] = useState<'loading' | 'ready'>('loading');
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [mapEditorSupport, setMapEditorSupport] = useState<ReadonlyMap<string, boolean>>(new Map());
   const gameDescriptors = listBootstrapDescriptors().filter((descriptor) => descriptor.id !== 'default');
 
   useEffect(() => {
@@ -44,6 +48,28 @@ export function GameSelectionScreen({
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    void Promise.all(gameDescriptors.map(async (descriptor) => {
+      try {
+        const capabilities = await resolveMapEditorCapabilities(descriptor);
+        return [descriptor.id, capabilities.supportsMapEditor] as const;
+      } catch {
+        return [descriptor.id, false] as const;
+      }
+    })).then((entries) => {
+      if (cancelled) {
+        return;
+      }
+      setMapEditorSupport(new Map(entries));
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <main className={styles.screen} data-testid="game-selection-screen">
       <section className={styles.gamesSection} aria-labelledby="available-games-heading">
@@ -51,11 +77,12 @@ export function GameSelectionScreen({
         <ul className={styles.gameList}>
           {gameDescriptors.map((descriptor) => {
             const metadata = descriptor.gameMetadata;
+            const supportsMapEditor = mapEditorSupport.get(descriptor.id) === true;
             return (
-              <li key={descriptor.id}>
+              <li key={descriptor.id} className={styles.gameCard}>
                 <button
                   type="button"
-                  className={styles.gameCard}
+                  className={styles.gameCardButton}
                   data-testid={`select-game-${descriptor.id}`}
                   onClick={() => {
                     onSelectGame(descriptor.id);
@@ -67,6 +94,22 @@ export function GameSelectionScreen({
                     Players: {metadata.playerMin}-{metadata.playerMax}
                   </span>
                 </button>
+                {supportsMapEditor
+                  ? (
+                    <div className={styles.gameActions}>
+                      <button
+                        type="button"
+                        data-testid={`edit-map-${descriptor.id}`}
+                        onClick={() => {
+                          onEditMap?.(descriptor.id);
+                        }}
+                        disabled={onEditMap === undefined}
+                      >
+                        Edit Map
+                      </button>
+                    </div>
+                  )
+                  : null}
               </li>
             );
           })}

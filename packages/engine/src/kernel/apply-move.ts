@@ -812,7 +812,7 @@ const createMoveExecutionRuntime = (
   existingBudget?: PhaseTransitionBudget,
 ): MoveExecutionRuntime => {
   const phaseTransitionBudget = resolvePhaseTransitionBudget(options, existingBudget);
-  const executionPolicy = toMoveExecutionPolicy(phaseTransitionBudget);
+  const executionPolicy = toMoveExecutionPolicy(options, phaseTransitionBudget);
   return {
     collector: createCollector(options),
     ...(phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget }),
@@ -875,6 +875,7 @@ const executeMoveAction = (
     bindings: baseBindings,
     moveParams: move.params,
     resources: shared.evalRuntimeResources,
+    ...(options?.verifyCompiledEffects === undefined ? {} : { verifyCompiledEffects: options.verifyCompiledEffects }),
     ...(shared.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: shared.phaseTransitionBudget }),
     ...(profiler === undefined ? {} : { profiler }),
   } as const;
@@ -1185,6 +1186,9 @@ const applyReleasedDeferredEventEffects = (
         effectPathRoot: `action:${deferredEventEffect.actionId}.deferredEventEffects`,
       },
       effectPath: '',
+      ...(shared.executionPolicy?.verifyCompiledEffects === undefined
+        ? {}
+        : { verifyCompiledEffects: shared.executionPolicy.verifyCompiledEffects }),
       ...(shared.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: shared.phaseTransitionBudget }),
     }));
     nextState = effectResult.state;

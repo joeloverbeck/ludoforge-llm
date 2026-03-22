@@ -23,6 +23,7 @@ export const createCompiledExecutionContext = (
   ...(ctx.traceContext === undefined ? {} : { traceContext: ctx.traceContext }),
   ...(ctx.effectPath === undefined ? {} : { effectPath: ctx.effectPath }),
   ...(ctx.maxEffectOps === undefined ? {} : { maxEffectOps: ctx.maxEffectOps }),
+  ...(ctx.verifyCompiledEffects === undefined ? {} : { verifyCompiledEffects: ctx.verifyCompiledEffects }),
   ...(ctx.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: ctx.phaseTransitionBudget }),
   ...(ctx.profiler === undefined ? {} : { profiler: ctx.profiler }),
 });

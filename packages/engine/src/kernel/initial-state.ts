@@ -8,6 +8,7 @@ import { applyTurnFlowInitialReveal } from './turn-flow-lifecycle.js';
 import { kernelRuntimeError } from './runtime-error.js';
 import { dispatchLifecycleEvent } from './phase-lifecycle.js';
 import { createCollector } from './execution-collector.js';
+import { toMoveExecutionPolicy } from './execution-policy.js';
 import { createEvalRuntimeResources } from './eval-context.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { assertValidatedGameDef } from './validate-gamedef.js';
@@ -41,6 +42,7 @@ export const initialState = (def: GameDef, seed: number, playerCount?: number, o
   const runtimeResources = createEvalRuntimeResources({
     collector,
   });
+  const executionPolicy = toMoveExecutionPolicy(options, undefined);
 
   const baseState: GameState = {
     globalVars: Object.fromEntries(validatedDef.globalVars.map((variable) => [variable.name, variable.init])),
@@ -79,13 +81,14 @@ export const initialState = (def: GameDef, seed: number, playerCount?: number, o
     resources: runtimeResources,
     traceContext: { eventContext: 'lifecycleEffect', effectPathRoot: 'initialState.setup' },
     effectPath: '',
+    ...(options?.verifyCompiledEffects === undefined ? {} : { verifyCompiledEffects: options.verifyCompiledEffects }),
   }));
   const lifecycleResult = applyTurnFlowInitialReveal(validatedDef, setupResult.state);
   const afterTurnStart = dispatchLifecycleEvent(validatedDef, {
     ...lifecycleResult.state,
     rng: setupResult.rng.state,
-  }, { type: 'turnStart' }, undefined, undefined, runtimeResources);
-  const stateWithRng = dispatchLifecycleEvent(validatedDef, afterTurnStart, { type: 'phaseEnter', phase: initialPhase }, undefined, undefined, runtimeResources);
+  }, { type: 'turnStart' }, undefined, executionPolicy, runtimeResources);
+  const stateWithRng = dispatchLifecycleEvent(validatedDef, afterTurnStart, { type: 'phaseEnter', phase: initialPhase }, undefined, executionPolicy, runtimeResources);
   const withTurnFlow = initializeTurnFlowEligibilityState(validatedDef, stateWithRng);
   const table = createZobristTable(validatedDef);
 

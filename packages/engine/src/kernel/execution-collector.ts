@@ -19,6 +19,17 @@ export function createCollector(options?: ExecutionOptions): ExecutionCollector 
   };
 }
 
+export function createCollectorLike(collector: ExecutionCollector): ExecutionCollector {
+  return {
+    warnings: [],
+    trace: collector.trace === null ? null : [],
+    conditionTrace: collector.conditionTrace === null ? null : [],
+    decisionTrace: collector.decisionTrace === null ? null : [],
+    selectorTrace: collector.selectorTrace === null ? null : [],
+    nextSeq: collector.nextSeq,
+  };
+}
+
 export function emitWarning(collector: ExecutionCollector | undefined, warning: RuntimeWarning): void {
   if (collector === undefined) return;
   collector.warnings.push(warning);

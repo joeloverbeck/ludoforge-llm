@@ -78,7 +78,7 @@ export const runGame = (
   const validatedDef = assertValidatedGameDef(def);
   const runtime = createGameDefRuntime(validatedDef);
 
-  let state = initialState(validatedDef, seed, playerCount).state;
+  let state = initialState(validatedDef, seed, playerCount, options).state;
   if (agents.length !== state.playerCount) {
     throw new RangeError(
       `agents length must equal resolved player count ${state.playerCount}, received ${agents.length}`,

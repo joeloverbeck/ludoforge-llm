@@ -524,6 +524,7 @@ const applyEffectList = (
       effectPathRoot,
     },
     effectPath: '',
+    ...(policy?.verifyCompiledEffects === undefined ? {} : { verifyCompiledEffects: policy.verifyCompiledEffects }),
     ...(policy?.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: policy.phaseTransitionBudget }),
   }));
   return {

@@ -25,7 +25,7 @@ import {
 } from './free-operation-sequence-progression.js';
 import { resolveFreeOperationGrantSeatToken } from './free-operation-seat-resolution.js';
 import { resolveFreeOperationExecutionContext } from './free-operation-execution-context.js';
-import type { MoveExecutionPolicy } from './execution-policy.js';
+import { toMoveExecutionPolicy, type MoveExecutionPolicy } from './execution-policy.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
 import type {
   EffectAST,
@@ -92,7 +92,10 @@ const consumePhaseTransitionBudget = (ctx: EffectContext, effectType: string): b
 };
 
 const lifecycleBudgetOptions = (ctx: EffectContext): MoveExecutionPolicy | undefined =>
-  ctx.phaseTransitionBudget === undefined ? undefined : { phaseTransitionBudget: ctx.phaseTransitionBudget };
+  toMoveExecutionPolicy(
+    ctx.verifyCompiledEffects === undefined ? undefined : { verifyCompiledEffects: ctx.verifyCompiledEffects },
+    ctx.phaseTransitionBudget,
+  );
 
 const resolveTemplateTree = <T>(value: T, bindings: Readonly<Record<string, unknown>>): T => {
   if (typeof value === 'string') {

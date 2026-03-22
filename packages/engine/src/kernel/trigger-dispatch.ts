@@ -101,6 +101,7 @@ export const dispatchTriggers = (request: DispatchTriggersRequest): DispatchTrig
         ...(event.type === 'actionResolved' ? { actionId: String(event.action) } : {}),
       },
       effectPath: '',
+      ...(policy?.verifyCompiledEffects === undefined ? {} : { verifyCompiledEffects: policy.verifyCompiledEffects }),
       ...(policy?.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: policy.phaseTransitionBudget }),
     }));
     nextState = effectResult.state;

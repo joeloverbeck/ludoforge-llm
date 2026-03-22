@@ -13,8 +13,11 @@ const toKeyPart = (value: unknown): string | null => {
   return null;
 };
 
-export const resolveBindingTemplate = (template: string, bindings: BindingMap): string =>
-  template.replace(/\{([^{}]+)\}/g, (match, rawName: string) => {
+export const resolveBindingTemplate = (template: string, bindings: BindingMap): string => {
+  // Fast path: skip regex when template has no binding placeholders.
+  // In Texas Hold'em, 100% of templates are plain strings.
+  if (template.indexOf('{') === -1) return template;
+  return template.replace(/\{([^{}]+)\}/g, (match, rawName: string) => {
     const name = rawName.trim();
     const value = bindings[name];
     if (value === undefined) {
@@ -23,4 +26,5 @@ export const resolveBindingTemplate = (template: string, bindings: BindingMap): 
     const keyPart = toKeyPart(value);
     return keyPart ?? match;
   });
+};
 

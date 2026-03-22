@@ -88,6 +88,13 @@ export const runGame = (
   }
 
   const profiler = options?.profiler;
+  // Kernel options strip the profiler to avoid 30%+ overhead from deep instrumentation.
+  // The sim-level timing (simApplyMove, simLegalMoves, etc.) is handled externally here.
+  const kernelOptions: ExecutionOptions | undefined = (() => {
+    if (options === undefined || profiler === undefined) return options;
+    const { profiler: _stripped, ...rest } = options;
+    return rest;
+  })();
   const moveLogs: MoveLog[] = [];
   const agentRngByPlayer = [...createAgentRngByPlayer(seed, state.playerCount)];
   let result: TerminalResult | null = null;
@@ -131,7 +138,6 @@ export const runGame = (
       legalMoves: legalMoveResult.moves,
       rng: agentRng,
       runtime: resolvedRuntime,
-      ...(profiler === undefined ? {} : { profiler }),
     });
     perfEnd(profiler, 'simAgentChooseMove', t0_agent);
     agentRngByPlayer[player] = selected.rng;
@@ -139,12 +145,12 @@ export const runGame = (
     const preState = state;
     const moveContext = captureMoveContext(selected.move.move);
     const t0_apply = perfStart(profiler);
-    const applied = applyTrustedMove(validatedDef, state, selected.move, options, resolvedRuntime);
+    const applied = applyTrustedMove(validatedDef, state, selected.move, kernelOptions, resolvedRuntime);
     perfEnd(profiler, 'simApplyMove', t0_apply);
     state = applied.state;
 
     const t0_delta = perfStart(profiler);
-    const deltas = computeDeltas(preState, state);
+    const deltas = options?.skipDeltas === true ? [] : computeDeltas(preState, state);
     perfEnd(profiler, 'simComputeDeltas', t0_delta);
 
     moveLogs.push({

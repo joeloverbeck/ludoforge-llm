@@ -85,6 +85,12 @@ export interface LegalMoveEnumerationOptions {
    * internal callers like phase-advance that rely on template presence.
    */
   readonly probePlainActionFeasibility?: boolean;
+  /**
+   * When true, enumeration stops after finding the first legal move.
+   * Used by advanceToDecisionPoint which only needs to know whether
+   * any legal move exists, not what they all are.
+   */
+  readonly earlyExitAfterFirst?: boolean;
 }
 
 export interface LegalMoveEnumerationResult {
@@ -1097,8 +1103,12 @@ const enumerateRawLegalMoves = (
   const evalRuntimeResources = createEvalRuntimeResources();
   const currentPhaseDef = findPhaseDef(def, state.currentPhase);
 
+  const earlyExitAfterFirst = options?.earlyExitAfterFirst === true;
   for (const action of def.actions) {
     if (enumeration.templateBudgetExceeded) {
+      break;
+    }
+    if (earlyExitAfterFirst && enumeration.moves.length > 0) {
       break;
     }
     const hasActionPipeline = (def.actionPipelines ?? []).some((pipeline) => pipeline.actionId === action.id);

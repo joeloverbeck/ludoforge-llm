@@ -1366,6 +1366,8 @@ export interface ExecutionOptions {
   readonly maxPhaseTransitionsPerMove?: number;
   /** Opt-in performance profiler. Accumulates sub-function timing when provided. */
   readonly profiler?: import('./perf-profiler.js').PerfProfiler;
+  /** When true, the simulator skips delta computation between moves (trace-only data). */
+  readonly skipDeltas?: boolean;
 }
 
 export interface ExecutionCollector {

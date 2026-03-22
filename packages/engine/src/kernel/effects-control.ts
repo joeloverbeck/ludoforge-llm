@@ -78,7 +78,9 @@ export const applyLet = (
   budget: EffectBudgetState,
   applyEffectsWithBudget: ApplyEffectsWithBudget,
 ): EffectResult => {
-  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const resolvedBindings = resolveEffectBindings(ctx);
+  // Skip context spread when bindings identity unchanged (common in lifecycle effects with empty moveParams)
+  const evalCtx = resolvedBindings === ctx.bindings ? ctx : { ...ctx, bindings: resolvedBindings };
   const evaluatedValue = evalValue(effect.let.value, evalCtx);
   const nestedCtx: EffectContext = {
     ...ctx,
@@ -125,7 +127,8 @@ export const applyForEach = (
   budget: EffectBudgetState,
   applyEffectsWithBudget: ApplyEffectsWithBudget,
 ): EffectResult => {
-  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const resolvedBindingsForEach = resolveEffectBindings(ctx);
+  const evalCtx = resolvedBindingsForEach === ctx.bindings ? ctx : { ...ctx, bindings: resolvedBindingsForEach };
   const limit = resolveControlFlowIterationLimit('forEach', effect.forEach.limit, evalCtx, (evaluatedLimit) => {
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CONTROL_FLOW_RUNTIME_VALIDATION_FAILED, 'forEach.limit must evaluate to a non-negative integer', {
       effectType: 'forEach',
@@ -226,7 +229,8 @@ export const applyReduce = (
   budget: EffectBudgetState,
   applyEffectsWithBudget: ApplyEffectsWithBudget,
 ): EffectResult => {
-  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const resolvedBindingsReduce = resolveEffectBindings(ctx);
+  const evalCtx = resolvedBindingsReduce === ctx.bindings ? ctx : { ...ctx, bindings: resolvedBindingsReduce };
   const limit = resolveControlFlowIterationLimit('reduce', effect.reduce.limit, evalCtx, (evaluatedLimit) => {
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CONTROL_FLOW_RUNTIME_VALIDATION_FAILED, 'reduce.limit must evaluate to a non-negative integer', {
       effectType: 'reduce',

@@ -3,8 +3,12 @@ import { kernelRuntimeError } from './runtime-error.js';
 
 const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
-const EVAL_RUNTIME_RESOURCE_KEYS = ['collector'] as const;
-const EVAL_RUNTIME_COLLECTOR_KEYS = ['warnings', 'trace', 'conditionTrace', 'decisionTrace', 'selectorTrace', 'nextSeq'] as const;
+
+// Use Sets for O(1) key validation without array allocation.
+const EVAL_RUNTIME_RESOURCE_KEYS_SET: ReadonlySet<string> = new Set(['collector']);
+const EVAL_RUNTIME_COLLECTOR_KEYS_SET: ReadonlySet<string> = new Set([
+  'warnings', 'trace', 'conditionTrace', 'decisionTrace', 'selectorTrace', 'nextSeq',
+]);
 
 const describeType = (value: unknown): string => {
   if (value === null) {
@@ -26,14 +30,14 @@ export const assertEvalRuntimeResourcesContract: (
       `${resourcePath} must be an object; received ${describeType(value)}`,
     );
   }
-  const unknownTopLevelKeys = Object.keys(value).filter(
-    (key) => !EVAL_RUNTIME_RESOURCE_KEYS.includes(key as (typeof EVAL_RUNTIME_RESOURCE_KEYS)[number]),
-  );
-  if (unknownTopLevelKeys.length > 0) {
-    throw kernelRuntimeError(
-      'RUNTIME_CONTRACT_INVALID',
-      `${resourcePath} contains unknown resource key(s): ${unknownTopLevelKeys.sort().join(', ')}`,
-    );
+  // Use for-in instead of Object.keys().filter() to avoid array allocations.
+  for (const key in value) {
+    if (!EVAL_RUNTIME_RESOURCE_KEYS_SET.has(key)) {
+      throw kernelRuntimeError(
+        'RUNTIME_CONTRACT_INVALID',
+        `${resourcePath} contains unknown resource key(s): ${key}`,
+      );
+    }
   }
   const candidate = value as { collector?: unknown };
   if (!isObjectRecord(candidate.collector)) {
@@ -42,14 +46,13 @@ export const assertEvalRuntimeResourcesContract: (
       `${resourcePath}.collector must be an object; received ${describeType(candidate.collector)}`,
     );
   }
-  const unknownCollectorKeys = Object.keys(candidate.collector).filter(
-    (key) => !EVAL_RUNTIME_COLLECTOR_KEYS.includes(key as (typeof EVAL_RUNTIME_COLLECTOR_KEYS)[number]),
-  );
-  if (unknownCollectorKeys.length > 0) {
-    throw kernelRuntimeError(
-      'RUNTIME_CONTRACT_INVALID',
-      `${resourcePath}.collector contains unknown key(s): ${unknownCollectorKeys.sort().join(', ')}`,
-    );
+  for (const key in candidate.collector) {
+    if (!EVAL_RUNTIME_COLLECTOR_KEYS_SET.has(key)) {
+      throw kernelRuntimeError(
+        'RUNTIME_CONTRACT_INVALID',
+        `${resourcePath}.collector contains unknown key(s): ${key}`,
+      );
+    }
   }
   if (!Array.isArray(candidate.collector.warnings)) {
     throw kernelRuntimeError(

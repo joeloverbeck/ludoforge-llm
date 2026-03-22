@@ -56,9 +56,6 @@ export function computeAlwaysCompleteActionIds(def: GameDef): ReadonlySet<Action
   const alwaysCompleteActionIds = new Set<ActionId>();
 
   for (const action of def.actions) {
-    if (action.params.length > 0) {
-      continue;
-    }
     if (isCardEventAction(action)) {
       continue;
     }
@@ -68,6 +65,9 @@ export function computeAlwaysCompleteActionIds(def: GameDef): ReadonlySet<Action
     if (effectTreeMayYieldIncompleteMove(action.cost) || effectTreeMayYieldIncompleteMove(action.effects)) {
       continue;
     }
+    // Actions with params are always-complete when all params are provided in
+    // the move (which they are after parameter expansion) AND the effect tree
+    // has no decision effects (chooseOne/chooseN/rollRandom).
     alwaysCompleteActionIds.add(action.id);
   }
 

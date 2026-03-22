@@ -161,6 +161,54 @@ function deterministicDownsample(
   return [...requiredValues, ...selected].sort((left, right) => left - right);
 }
 
+/**
+ * Fast path for step=1 with maxResults << range size.
+ * Computes the downsampled result directly in O(maxResults * required.length)
+ * instead of O(range) by mapping optional indices to values mathematically.
+ */
+function directIntRangeDownsample(
+  min: number,
+  max: number,
+  requiredSet: ReadonlySet<number>,
+  maxResults: number,
+): readonly number[] {
+  const sortedRequired: number[] = [];
+  for (const v of requiredSet) {
+    if (v >= min && v <= max) sortedRequired.push(v);
+  }
+  sortedRequired.sort((a, b) => a - b);
+
+  if (sortedRequired.length >= maxResults) {
+    return sortedRequired.slice(0, maxResults);
+  }
+
+  const optionalSlots = maxResults - sortedRequired.length;
+  const totalOptional = (max - min + 1) - sortedRequired.length;
+
+  if (totalOptional <= optionalSlots) {
+    // All values fit — build full range
+    const result: number[] = [];
+    for (let v = min; v <= max; v++) result.push(v);
+    return result;
+  }
+
+  // Pick evenly-spaced optional values by index, adjusting for required gaps.
+  const stride = totalOptional / optionalSlots;
+  const resultSet = new Set(sortedRequired);
+  for (let slot = 0; slot < optionalSlots; slot++) {
+    const targetIdx = Math.floor(slot * stride);
+    let candidate = min + targetIdx;
+    for (const req of sortedRequired) {
+      if (req <= candidate) candidate++;
+      else break;
+    }
+    if (candidate >= min && candidate <= max) {
+      resultSet.add(candidate);
+    }
+  }
+  return [...resultSet].sort((a, b) => a - b);
+}
+
 function evaluateIntRangeDomain(
   min: number,
   max: number,
@@ -186,6 +234,12 @@ function evaluateIntRangeDomain(
       return [];
     }
     maxResults = resolvedMaxResults;
+  }
+
+  // Fast path: step=1 with maxResults — skip building the full range array.
+  if (maxResults !== undefined && contract.step === 1) {
+    const required = new Set([contract.min, contract.max, ...contract.alwaysInclude]);
+    return directIntRangeDownsample(contract.min, contract.max, required, maxResults);
   }
 
   const alwaysInclude = [...contract.alwaysInclude];

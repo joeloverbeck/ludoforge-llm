@@ -137,7 +137,7 @@ const collectModeSummary = (modeName, runtime) => {
         { length: PLAYER_COUNT },
         () => new PolicyAgent({ profileId: 'baseline' }),
       );
-      const trace = runGame(def, seed, agents, MAX_TURNS, PLAYER_COUNT, { profiler }, runtime);
+      const trace = runGame(def, seed, agents, MAX_TURNS, PLAYER_COUNT, { profiler, skipDeltas: true }, runtime);
       totalMoves += trace.moves.length;
       stateHashes.push(trace.finalState.stateHash);
       gamesCompleted++;

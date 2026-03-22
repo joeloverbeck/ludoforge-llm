@@ -190,7 +190,7 @@ describe('createEditorRouteRenderer', () => {
     );
 
     const graphics = renderer.getContainerMap().get('route:road') as unknown as InstanceType<typeof MockGraphics>;
-    graphics.emit('pointertap');
+    graphics.emit('pointertap', pointer(20, 10));
 
     expect(fixture.store.getState().selectedRouteId).toBe('route:road');
     expect(fixture.store.getState().selectedZoneId).toBeNull();
@@ -214,9 +214,59 @@ describe('createEditorRouteRenderer', () => {
     expect(graphics.quadraticCurveToArgs[0]).toEqual([40, 30, 80, 0]);
     expect(graphics.hitArea).toBeInstanceOf(MockPolygon);
   });
+
+  it('inserts a waypoint on double-click at the nearest point on the targeted segment', () => {
+    const fixture = createFixture();
+    const renderer = createEditorRouteRenderer(
+      fixture.routeLayer as unknown as Container,
+      fixture.store,
+      fixture.gameDef,
+      fixture.provider,
+    );
+
+    const graphics = renderer.getContainerMap().get('route:road') as unknown as InstanceType<typeof MockGraphics>;
+    graphics.emit('pointertap', pointer(18, 12));
+    graphics.emit('pointertap', pointer(18, 12, { detail: 2 }));
+
+    const route = fixture.store.getState().connectionRoutes.get('route:road');
+    expect(route?.points).toHaveLength(3);
+    expect(route?.points[1]).toEqual({ kind: 'anchor', anchorId: 'route:road:waypoint:1' });
+    expect(route?.segments).toHaveLength(2);
+    expect(fixture.store.getState().connectionAnchors.get('route:road:waypoint:1')).toEqual(
+      expect.objectContaining({ x: expect.any(Number), y: expect.any(Number) }),
+    );
+  });
+
+  it('toggles the clicked segment between straight and quadratic on right-click', () => {
+    const fixture = createFixture({
+      connectionRoutes: {
+        'route:road': {
+          points: [
+            { kind: 'zone', zoneId: 'zone:a' },
+            { kind: 'zone', zoneId: 'zone:b' },
+          ],
+          segments: [{ kind: 'straight' }],
+        },
+      },
+    });
+    const renderer = createEditorRouteRenderer(
+      fixture.routeLayer as unknown as Container,
+      fixture.store,
+      fixture.gameDef,
+      fixture.provider,
+    );
+
+    const graphics = renderer.getContainerMap().get('route:road') as unknown as InstanceType<typeof MockGraphics>;
+    graphics.emit('pointerdown', pointer(40, 2, { button: 2 }));
+
+    expect(fixture.store.getState().connectionRoutes.get('route:road')?.segments[0]).toEqual({
+      kind: 'quadratic',
+      control: { kind: 'position', x: 40, y: 0 },
+    });
+  });
 });
 
-function createFixture() {
+function createFixture(overrides?: Partial<NonNullable<VisualConfig['zones']>>) {
   const gameDef = {
     metadata: {
       id: 'editor-test',
@@ -231,6 +281,7 @@ function createFixture() {
   const visualConfig = {
     version: 1,
     zones: {
+      ...overrides,
       categoryStyles: {
         road: { shape: 'connection', connectionStyleKey: 'highway' },
       },
@@ -240,6 +291,7 @@ function createFixture() {
       connectionRoutes: {
         'route:road': makeRouteDefinition(),
         'not-a-connection': makeRouteDefinition(),
+        ...overrides?.connectionRoutes,
       },
     },
   } as VisualConfig;
@@ -260,6 +312,24 @@ function createFixture() {
     provider: new VisualConfigProvider(store.getState().originalVisualConfig),
     routeLayer,
     store,
+  };
+}
+
+function pointer(
+  x: number,
+  y: number,
+  options?: {
+    readonly button?: number;
+    readonly detail?: number;
+  },
+) {
+  return {
+    button: options?.button ?? 0,
+    detail: options?.detail ?? 1,
+    getLocalPosition() {
+      return { x, y };
+    },
+    stopPropagation() {},
   };
 }
 

@@ -38,6 +38,15 @@ const {
 
     parent: HoistedMockContainer | null = null;
 
+    position = {
+      x: 0,
+      y: 0,
+      set: (x: number, y: number) => {
+        this.position.x = x;
+        this.position.y = y;
+      },
+    };
+
     visible = true;
 
     renderable = true;
@@ -45,6 +54,8 @@ const {
     eventMode: 'none' | 'static' | 'passive' = 'none';
 
     interactiveChildren = true;
+
+    cursor = 'default';
 
     addChild(...children: HoistedMockContainer[]): void {
       for (const child of children) {
@@ -173,18 +184,94 @@ describe('createEditorHandleRenderer', () => {
     expect(zoneHandle.strokeStyle).toEqual({ color: 0xffffff, width: 2, alpha: 1 });
     expect(anchorHandle.fillStyle).toEqual({ color: 0xffffff, alpha: 1 });
     expect(zoneHandleB.strokeStyle).toEqual({ color: 0xffffff, width: 2, alpha: 1 });
-    expect(controlHandle.polyArgs).toEqual([20, -10, 30, 0, 20, 10, 10, 0]);
+    expect(anchorHandle.eventMode).toBe('static');
+    expect(anchorHandle.cursor).toBe('grab');
+    expect(anchorHandle.circleArgs).toEqual([0, 0, 8]);
+    expect(anchorHandle.position).toEqual(expect.objectContaining({ x: 40, y: 20 }));
+    expect(controlHandle.polyArgs).toEqual([0, -10, 10, 0, 0, 10, -10, 0]);
+    expect(controlHandle.position).toEqual(expect.objectContaining({ x: 20, y: 0 }));
 
     fixture.store.getState().moveAnchor('anchor:mid', { x: 45, y: 25 });
     const updatedRoot = fixture.handleLayer.children[0] as InstanceType<typeof MockContainer>;
     const updatedAnchorHandle = updatedRoot.children[2] as InstanceType<typeof MockGraphics>;
-    expect(updatedAnchorHandle.circleArgs).toEqual([45, 25, 8]);
+    expect(updatedAnchorHandle.position).toEqual(expect.objectContaining({ x: 45, y: 25 }));
 
     renderer.destroy();
   });
+
+  it('routes anchor drag interactions through the editor store', () => {
+    const fixture = createFixture();
+    createEditorHandleRenderer(
+      fixture.handleLayer as unknown as Container,
+      fixture.store,
+    );
+
+    fixture.store.getState().selectRoute('route:road');
+
+    const root = fixture.handleLayer.children[0] as InstanceType<typeof MockContainer>;
+    const anchorHandle = root.children[2] as InstanceType<typeof MockGraphics>;
+    anchorHandle.emit('pointerdown', pointer(41, 21));
+    fixture.handleLayer.emit('globalpointermove', pointer(51, 31));
+    fixture.handleLayer.emit('pointerup');
+
+    expect(fixture.store.getState().connectionAnchors.get('anchor:mid')).toEqual({ x: 50, y: 30 });
+    expect(fixture.store.getState().undoStack).toHaveLength(1);
+  });
+
+  it('removes only non-endpoint anchor waypoints on right-click', () => {
+    const fixture = createFixture();
+    createEditorHandleRenderer(
+      fixture.handleLayer as unknown as Container,
+      fixture.store,
+    );
+
+    fixture.store.getState().selectRoute('route:road');
+    const root = fixture.handleLayer.children[0] as InstanceType<typeof MockContainer>;
+    const anchorHandle = root.children[2] as InstanceType<typeof MockGraphics>;
+    anchorHandle.emit('pointerdown', { button: 2, stopPropagation() {} });
+
+    expect(fixture.store.getState().connectionRoutes.get('route:road')).toEqual({
+      points: [
+        { kind: 'zone', zoneId: 'zone:a' },
+        { kind: 'zone', zoneId: 'zone:b' },
+      ],
+      segments: [{ kind: 'straight' }],
+    });
+    expect(fixture.store.getState().connectionAnchors.has('anchor:mid')).toBe(false);
+  });
+
+  it('does not remove endpoint handles on right-click', () => {
+    const fixture = createFixture({
+      connectionRoutes: {
+        'route:road': {
+          points: [
+            { kind: 'anchor', anchorId: 'anchor:start' },
+            { kind: 'zone', zoneId: 'zone:b' },
+          ],
+          segments: [{ kind: 'straight' }],
+        },
+      },
+      connectionAnchors: {
+        'anchor:start': { x: 0, y: 0 },
+      },
+    });
+    createEditorHandleRenderer(
+      fixture.handleLayer as unknown as Container,
+      fixture.store,
+    );
+
+    fixture.store.getState().selectRoute('route:road');
+    const root = fixture.handleLayer.children[0] as InstanceType<typeof MockContainer>;
+    const endpointHandle = root.children[0] as InstanceType<typeof MockGraphics>;
+    endpointHandle.emit('pointerdown', { button: 2, stopPropagation() {} });
+
+    expect(fixture.store.getState().connectionRoutes.get('route:road')?.points).toHaveLength(2);
+    expect(fixture.store.getState().connectionAnchors.has('anchor:start')).toBe(true);
+
+  });
 });
 
-function createFixture() {
+function createFixture(overrides?: Partial<NonNullable<VisualConfig['zones']>>) {
   const handleLayer = new MockContainer();
   const store = createMapEditorStore(
     {
@@ -199,6 +286,7 @@ function createFixture() {
       zones: {
         connectionAnchors: {
           'anchor:mid': { x: 40, y: 20 },
+          ...overrides?.connectionAnchors,
         },
         connectionRoutes: {
           'route:road': {
@@ -212,6 +300,7 @@ function createFixture() {
               { kind: 'straight' },
             ],
           },
+          ...overrides?.connectionRoutes,
         },
       },
     } as VisualConfig,
@@ -225,5 +314,15 @@ function createFixture() {
   return {
     handleLayer,
     store,
+  };
+}
+
+function pointer(x: number, y: number) {
+  return {
+    button: 0,
+    getLocalPosition() {
+      return { x, y };
+    },
+    stopPropagation() {},
   };
 }

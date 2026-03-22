@@ -44,6 +44,13 @@ export interface EditorRouteGeometry {
   readonly hitAreaPoints: readonly Position[];
 }
 
+export interface RouteSegmentMatch {
+  readonly segmentIndex: number;
+  readonly position: Position;
+  readonly t: number;
+  readonly distance: number;
+}
+
 export function resolveEndpointPosition(
   endpoint: ConnectionEndpoint,
   zonePositions: ReadonlyMap<string, Position>,
@@ -115,6 +122,95 @@ export function resolveRouteGeometry(
     sampledPath,
     hitAreaPoints,
   };
+}
+
+export function nearestPointOnStraight(
+  p0: Position,
+  p1: Position,
+  target: Position,
+): { position: Position; t: number } {
+  const dx = p1.x - p0.x;
+  const dy = p1.y - p0.y;
+  const lengthSquared = dx * dx + dy * dy;
+  if (lengthSquared === 0) {
+    return {
+      position: { x: p0.x, y: p0.y },
+      t: 0,
+    };
+  }
+
+  const projected = ((target.x - p0.x) * dx + (target.y - p0.y) * dy) / lengthSquared;
+  const t = clampUnitInterval(projected);
+  return {
+    position: {
+      x: p0.x + dx * t,
+      y: p0.y + dy * t,
+    },
+    t,
+  };
+}
+
+export function nearestPointOnQuadratic(
+  p0: Position,
+  cp: Position,
+  p2: Position,
+  target: Position,
+  samples = 50,
+): { position: Position; t: number } {
+  const sampleCount = Math.max(1, Math.trunc(samples));
+  let bestT = 0;
+  let bestPoint = quadraticBezierPoint(0, p0, cp, p2);
+  let bestDistanceSquared = distanceSquared(bestPoint, target);
+
+  for (let index = 1; index <= sampleCount; index += 1) {
+    const t = index / sampleCount;
+    const point = quadraticBezierPoint(t, p0, cp, p2);
+    const candidateDistanceSquared = distanceSquared(point, target);
+    if (candidateDistanceSquared < bestDistanceSquared) {
+      bestDistanceSquared = candidateDistanceSquared;
+      bestPoint = point;
+      bestT = t;
+    }
+  }
+
+  return {
+    position: bestPoint,
+    t: bestT,
+  };
+}
+
+export function findNearestRouteSegment(
+  geometry: EditorRouteGeometry,
+  target: Position,
+): RouteSegmentMatch | null {
+  let bestMatch: RouteSegmentMatch | null = null;
+
+  for (let segmentIndex = 0; segmentIndex < geometry.segments.length; segmentIndex += 1) {
+    const segment = geometry.segments[segmentIndex];
+    if (segment === undefined) {
+      continue;
+    }
+
+    const nearest = segment.kind === 'straight'
+      ? nearestPointOnStraight(segment.start, segment.end, target)
+      : nearestPointOnQuadratic(
+          segment.start,
+          segment.controlPoint.position,
+          segment.end,
+          target,
+        );
+    const distance = Math.sqrt(distanceSquared(nearest.position, target));
+    if (bestMatch === null || distance < bestMatch.distance) {
+      bestMatch = {
+        segmentIndex,
+        position: nearest.position,
+        t: nearest.t,
+        distance,
+      };
+    }
+  }
+
+  return bestMatch;
 }
 
 function resolveSegment(
@@ -275,4 +371,14 @@ function clonePosition(position: Position | undefined): Position | null {
     x: position.x,
     y: position.y,
   };
+}
+
+function clampUnitInterval(value: number): number {
+  return Math.min(1, Math.max(0, value));
+}
+
+function distanceSquared(a: Position, b: Position): number {
+  const dx = a.x - b.x;
+  const dy = a.y - b.y;
+  return dx * dx + dy * dy;
 }

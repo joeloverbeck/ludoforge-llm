@@ -3,7 +3,12 @@ import { EventEmitter } from 'node:events';
 import { describe, expect, it } from 'vitest';
 import type { GameDef } from '@ludoforge/engine/runtime';
 
-import { attachZoneDragHandlers, snapToGrid } from '../../src/map-editor/map-editor-drag.js';
+import {
+  attachAnchorDragHandlers,
+  attachControlPointDragHandlers,
+  attachZoneDragHandlers,
+  snapToGrid,
+} from '../../src/map-editor/map-editor-drag.js';
 import { createMapEditorStore } from '../../src/map-editor/map-editor-store.js';
 import type { VisualConfig } from '../../src/map-editor/map-editor-types.js';
 
@@ -120,6 +125,65 @@ describe('map-editor-drag', () => {
     expect(store.getState().isDragging).toBe(false);
     expect(zoneContainer.cursor).toBe('default');
   });
+
+  it('previews anchor drag movement and commits a single undo entry on release', () => {
+    const { dragSurface, store } = createFixture();
+    const anchorHandle = new MockContainer();
+    anchorHandle.parent = dragSurface;
+    anchorHandle.position.set(20, 30);
+    const cleanup = attachAnchorDragHandlers(
+      anchorHandle as never,
+      'road:none',
+      'bend-1',
+      dragSurface as never,
+      store,
+    );
+
+    anchorHandle.emit('pointerdown', pointer(22, 33));
+    dragSurface.emit('globalpointermove', pointer(42, 63));
+
+    expect(store.getState().selectedRouteId).toBe('road:none');
+    expect(store.getState().selectedZoneId).toBeNull();
+    expect(store.getState().connectionAnchors.get('bend-1')).toEqual({ x: 40, y: 60 });
+    expect(store.getState().undoStack).toHaveLength(0);
+
+    dragSurface.emit('pointerup');
+
+    expect(store.getState().connectionAnchors.get('bend-1')).toEqual({ x: 40, y: 60 });
+    expect(store.getState().undoStack).toHaveLength(1);
+    expect(store.getState().undoStack[0]?.connectionAnchors.get('bend-1')).toEqual({ x: 20, y: 30 });
+
+    cleanup();
+  });
+
+  it('previews control point drag movement and commits a single undo entry on release', () => {
+    const { dragSurface, store } = createFixture();
+    const controlHandle = new MockContainer();
+    controlHandle.parent = dragSurface;
+    controlHandle.position.set(45, 55);
+    const cleanup = attachControlPointDragHandlers(
+      controlHandle as never,
+      'river:none',
+      0,
+      dragSurface as never,
+      store,
+    );
+
+    controlHandle.emit('pointerdown', pointer(46, 57));
+    dragSurface.emit('globalpointermove', pointer(78, 92));
+
+    expect(store.getState().selectedRouteId).toBe('river:none');
+    expect(store.getState().connectionAnchors.get('curve-ctrl')).toEqual({ x: 77, y: 90 });
+    expect(store.getState().undoStack).toHaveLength(0);
+
+    dragSurface.emit('pointerup');
+
+    expect(store.getState().connectionAnchors.get('curve-ctrl')).toEqual({ x: 77, y: 90 });
+    expect(store.getState().undoStack).toHaveLength(1);
+    expect(store.getState().undoStack[0]?.connectionAnchors.get('curve-ctrl')).toEqual({ x: 45, y: 55 });
+
+    cleanup();
+  });
 });
 
 function createFixture() {
@@ -140,10 +204,38 @@ function createFixture() {
     } as unknown as GameDef,
     {
       version: 1,
-      zones: {},
+      zones: {
+        connectionAnchors: {
+          'bend-1': { x: 20, y: 30 },
+          'curve-ctrl': { x: 45, y: 55 },
+        },
+        connectionRoutes: {
+          'road:none': {
+            points: [
+              { kind: 'zone', zoneId: 'zone:a' },
+              { kind: 'anchor', anchorId: 'bend-1' },
+              { kind: 'zone', zoneId: 'zone:b' },
+            ],
+            segments: [
+              { kind: 'straight' },
+              { kind: 'straight' },
+            ],
+          },
+          'river:none': {
+            points: [
+              { kind: 'zone', zoneId: 'zone:a' },
+              { kind: 'zone', zoneId: 'zone:b' },
+            ],
+            segments: [
+              { kind: 'quadratic', control: { kind: 'anchor', anchorId: 'curve-ctrl' } },
+            ],
+          },
+        },
+      },
     } as VisualConfig,
     new Map([
       ['zone:a', { x: 10, y: 20 }],
+      ['zone:b', { x: 80, y: 20 }],
     ]),
   );
 

@@ -1,5 +1,5 @@
 import type { GameDef, ZoneDef } from '@ludoforge/engine/runtime';
-import { Container, Graphics, Polygon } from 'pixi.js';
+import { Container, Graphics, Polygon, type FederatedPointerEvent } from 'pixi.js';
 
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import { normalize, perpendicular } from '../canvas/geometry/bezier-utils.js';
@@ -7,6 +7,7 @@ import { parseHexColor } from '../canvas/renderers/shape-utils.js';
 import { safeDestroyDisplayObject } from '../canvas/renderers/safe-destroy.js';
 import type { MapEditorStoreApi } from './map-editor-store.js';
 import {
+  findNearestRouteSegment,
   resolveRouteGeometry,
   type EditorRouteGeometry,
 } from './map-editor-route-geometry.js';
@@ -139,13 +140,84 @@ function getOrCreateRouteSlot(
   curve.eventMode = 'static';
   curve.cursor = 'pointer';
 
-  const onPointerTap = (): void => {
+  const onPointerTap = (event: FederatedPointerEvent): void => {
     const state = store.getState();
     state.selectZone(null);
     state.selectRoute(routeId);
+
+    if (event.detail < 2) {
+      return;
+    }
+
+    const route = state.connectionRoutes.get(routeId);
+    if (route === undefined) {
+      return;
+    }
+
+    const geometry = resolveRouteGeometry(route, state.zonePositions, state.connectionAnchors, {
+      curveSegments: DEFAULT_CURVE_SEGMENTS,
+      hitAreaPadding: DEFAULT_HIT_AREA_PADDING,
+    });
+    if (geometry === null) {
+      return;
+    }
+
+    const match = findNearestRouteSegment(
+      geometry,
+      getPointerPosition(event, curve.parent ?? routeLayer),
+    );
+    if (match === null) {
+      return;
+    }
+
+    state.insertWaypoint(routeId, match.segmentIndex, match.position);
+  };
+
+  const onPointerDown = (event: FederatedPointerEvent): void => {
+    if (event.button !== 2) {
+      return;
+    }
+
+    event.stopPropagation();
+    const state = store.getState();
+    state.selectZone(null);
+    state.selectRoute(routeId);
+
+    const route = state.connectionRoutes.get(routeId);
+    if (route === undefined) {
+      return;
+    }
+
+    const geometry = resolveRouteGeometry(route, state.zonePositions, state.connectionAnchors, {
+      curveSegments: DEFAULT_CURVE_SEGMENTS,
+      hitAreaPadding: DEFAULT_HIT_AREA_PADDING,
+    });
+    if (geometry === null) {
+      return;
+    }
+
+    const match = findNearestRouteSegment(
+      geometry,
+      getPointerPosition(event, curve.parent ?? routeLayer),
+    );
+    if (match === null) {
+      return;
+    }
+
+    const segment = route.segments[match.segmentIndex];
+    if (segment === undefined) {
+      return;
+    }
+
+    state.convertSegment(
+      routeId,
+      match.segmentIndex,
+      segment.kind === 'straight' ? 'quadratic' : 'straight',
+    );
   };
 
   curve.on('pointertap', onPointerTap);
+  curve.on('pointerdown', onPointerDown);
   root.addChild(curve);
   routeLayer.addChild(root);
 
@@ -154,6 +226,7 @@ function getOrCreateRouteSlot(
     curve,
     cleanupSelection: () => {
       curve.off('pointertap', onPointerTap);
+      curve.off('pointerdown', onPointerDown);
     },
   };
   routeSlots.set(routeId, slot);
@@ -462,4 +535,15 @@ function sanitizePositiveNumber(value: number | undefined, fallback: number): nu
 
 function sanitizeUnitInterval(value: number | undefined, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1 ? value : fallback;
+}
+
+function getPointerPosition(
+  event: Pick<FederatedPointerEvent, 'getLocalPosition'>,
+  referenceContainer: Container,
+): Position {
+  const localPosition = event.getLocalPosition(referenceContainer);
+  return {
+    x: localPosition.x,
+    y: localPosition.y,
+  };
 }

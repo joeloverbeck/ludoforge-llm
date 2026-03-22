@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  findNearestRouteSegment,
+  nearestPointOnQuadratic,
+  nearestPointOnStraight,
   resolveEndpointPosition,
   resolveRouteGeometry,
 } from '../../src/map-editor/map-editor-route-geometry.js';
@@ -82,6 +85,63 @@ describe('map-editor-route-geometry', () => {
     expect(geometry?.sampledPath[0]).toEqual({ x: 0, y: 0 });
     expect(geometry?.sampledPath.at(-1)).toEqual({ x: 80, y: 0 });
     expect(geometry?.hitAreaPoints.length).toBeGreaterThan(geometry?.sampledPath.length ?? 0);
+  });
+
+  it('projects nearest points onto straight segments and clamps to endpoints', () => {
+    expect(
+      nearestPointOnStraight({ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 5, y: 3 }),
+    ).toEqual({
+      position: { x: 5, y: 0 },
+      t: 0.5,
+    });
+
+    expect(
+      nearestPointOnStraight({ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 20, y: 4 }),
+    ).toEqual({
+      position: { x: 10, y: 0 },
+      t: 1,
+    });
+  });
+
+  it('finds a stable nearest point on quadratic curves', () => {
+    const result = nearestPointOnQuadratic(
+      { x: 0, y: 0 },
+      { x: 20, y: 20 },
+      { x: 40, y: 0 },
+      { x: 20, y: 8 },
+      80,
+    );
+
+    expect(result.t).toBeGreaterThan(0.2);
+    expect(result.t).toBeLessThan(0.8);
+    expect(result.position.y).toBeGreaterThan(8);
+  });
+
+  it('finds the nearest segment on multi-segment routes', () => {
+    const geometry = resolveRouteGeometry(
+      {
+        points: [
+          { kind: 'zone', zoneId: 'zone:a' },
+          { kind: 'anchor', anchorId: 'anchor:mid' },
+          { kind: 'zone', zoneId: 'zone:b' },
+        ],
+        segments: [
+          { kind: 'straight' },
+          { kind: 'quadratic', control: { kind: 'position', x: 60, y: 30 } },
+        ],
+      },
+      new Map([
+        ['zone:a', { x: 0, y: 0 }],
+        ['zone:b', { x: 80, y: 0 }],
+      ]),
+      new Map([
+        ['anchor:mid', { x: 40, y: 0 }],
+      ]),
+    );
+
+    expect(geometry).not.toBeNull();
+    expect(findNearestRouteSegment(geometry!, { x: 15, y: 4 })?.segmentIndex).toBe(0);
+    expect(findNearestRouteSegment(geometry!, { x: 62, y: 14 })?.segmentIndex).toBe(1);
   });
 });
 

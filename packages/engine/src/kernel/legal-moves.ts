@@ -73,6 +73,7 @@ import type {
   MoveParamValue,
   PhaseDef,
   RuntimeWarning,
+  TurnFlowPendingFreeOperationGrant,
 } from './types.js';
 
 export interface LegalMoveEnumerationOptions {
@@ -588,8 +589,10 @@ function enumeratePendingFreeOperationMoves(
     ) {
       return true;
     }
+    let strongestOutcomeGrant: TurnFlowPendingFreeOperationGrant | null;
     try {
-      if (resolveStrongestRequiredFreeOperationOutcomeGrant(def, candidateState, candidateMove, seatResolution) === null) {
+      strongestOutcomeGrant = resolveStrongestRequiredFreeOperationOutcomeGrant(def, candidateState, candidateMove, seatResolution);
+      if (strongestOutcomeGrant === null) {
         return true;
       }
     } catch (error) {
@@ -597,6 +600,11 @@ function enumeratePendingFreeOperationMoves(
         return true;
       }
       throw error;
+    }
+    // Required grants must always be surfaced so the obligation is visible;
+    // apply-move.ts `validateFreeOperationOutcomePolicy` enforces outcome policy.
+    if (strongestOutcomeGrant.completionPolicy === 'required') {
+      return true;
     }
     return hasLegalCompletedFreeOperationMoveInCurrentState(
       def,

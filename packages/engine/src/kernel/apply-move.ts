@@ -120,6 +120,14 @@ const canonicalTurnFlowMove = (
   },
 });
 
+/**
+ * Enforcement half of the free-operation outcome-policy contract.
+ *
+ * `legal-moves.ts` surfaces required grants even when `mustChangeGameplayState`
+ * cannot yet be proven, so the obligation stays visible during enumeration.
+ * This apply-time check is the authoritative gate that rejects completed
+ * free operations which still fail to materially change gameplay state.
+ */
 const validateFreeOperationOutcomePolicy = (
   def: GameDef,
   beforeState: GameState,
@@ -1252,6 +1260,8 @@ const applyMoveCore = (
   perfEnd(profiler, 'executeMoveAction', t0_exec);
 
   const t0_freeOp = perfStart(profiler);
+  // CONTRACT: Pair with legal-moves.ts `isFreeOperationCandidateAdmitted`.
+  // Required grants stay visible during enumeration; outcome policy is enforced here.
   validateFreeOperationOutcomePolicy(def, state, executed.stateWithRng, move, seatResolution);
   perfEnd(profiler, 'validateFreeOperationOutcomePolicy', t0_freeOp);
 

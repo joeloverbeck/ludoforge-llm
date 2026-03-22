@@ -42,6 +42,7 @@ const createDef = (): GameDef =>
             seats: ['US', 'ARVN', 'NVA', 'VC'],
           },
           windows: [],
+          actionClassByActionId: { event: 'event', operation: 'operation' },
           optionMatrix: [{ first: 'event', second: ['operation'] }],
           passRewards: [],
           freeOperationActionIds: ['operation'],
@@ -276,7 +277,7 @@ const createClassAwareDedupDef = (): GameDef => {
 
   def.metadata.id = 'event-free-op-class-aware-dedup-int';
   def.turnOrder.config.turnFlow.optionMatrix = [{ first: 'operation', second: ['operation', 'limitedOperation'] }];
-  def.turnOrder.config.turnFlow.actionClassByActionId = {};
+  def.turnOrder.config.turnFlow.actionClassByActionId = { event: 'event', operation: 'operation' };
 
   const eventAction = def.actions.find((action) => String(action.id) === 'event');
   const eventCardParam = eventAction?.params.find((param) => param.name === 'eventCardId');
@@ -746,6 +747,7 @@ const createZoneFilteredDef = (): GameDef =>
           },
           windows: [],
           optionMatrix: [{ first: 'event', second: ['operation'] }],
+          actionClassByActionId: { event: 'event', operation: 'operation' },
           passRewards: [],
           freeOperationActionIds: ['operation'],
           durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -877,6 +879,7 @@ const createSequenceContextDef = (): GameDef =>
           },
           windows: [],
           optionMatrix: [{ first: 'event', second: ['operation'] }],
+          actionClassByActionId: { event: 'event', operation: 'operation' },
           passRewards: [],
           freeOperationActionIds: ['operation', 'operationCapturedQuery'],
           durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -1172,6 +1175,7 @@ const createExecuteAsSeatDef = (): GameDef =>
           },
           windows: [],
           optionMatrix: [{ first: 'event', second: ['operation'] }],
+          actionClassByActionId: { operation: 'operation' },
           passRewards: [],
           freeOperationActionIds: ['operation'],
           durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -1297,6 +1301,7 @@ const createExecuteAsSeatZoneBindingDef = (): GameDef =>
           eligibility: { seats: ['US', 'ARVN'] },
           windows: [],
           optionMatrix: [{ first: 'event', second: ['operation'] }],
+          actionClassByActionId: { operation: 'operation' },
           passRewards: [],
           freeOperationActionIds: ['operation'],
           durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -1433,6 +1438,7 @@ const createGrantViabilityPolicyDef = (): GameDef =>
           },
           windows: [],
           optionMatrix: [{ first: 'event', second: ['operation'] }],
+          actionClassByActionId: { event: 'event', operation: 'operation' },
           passRewards: [],
           freeOperationActionIds: ['operation'],
           durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],

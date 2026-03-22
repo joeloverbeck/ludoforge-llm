@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { compileGameSpecToGameDef, createEmptyGameSpecDoc } from '@ludoforge/engine/cnl';
 import {
   asActionId,
+  type ClassifiedMove,
   asPlayerId,
   asTriggerId,
   initialState,
@@ -44,6 +45,25 @@ function asChoiceScalar(value: Move['params'][string], label: string): ChoiceSca
     throw new Error(`Expected scalar ${label} choice value.`);
   }
   return value;
+}
+
+function toClassifiedMove(move: Move): ClassifiedMove {
+  return {
+    move,
+    viability: {
+      viable: true,
+      complete: true,
+      move,
+      warnings: [],
+    },
+  };
+}
+
+function toLegalMoveResult(...moves: readonly Move[]) {
+  return {
+    moves: moves.map(toClassifiedMove),
+    warnings: [],
+  };
 }
 
 function compileStoreFixture(terminalThreshold: number): GameDef {
@@ -347,10 +367,7 @@ describe('createGameStore', () => {
     const def = compileStoreFixture(5);
     const bridge = createBridgeStub({
       init: () => initialState(def, 15, 2),
-      enumerateLegalMoves: () => ({
-        moves: [{ actionId: asActionId('pick-two'), params: {} }],
-        warnings: [],
-      }),
+      enumerateLegalMoves: () => toLegalMoveResult({ actionId: asActionId('pick-two'), params: {} }),
       terminalResult: () => null,
       legalChoices: (partialMove) => {
         if (partialMove.params['decision:first'] === undefined) {
@@ -604,7 +621,7 @@ describe('createGameStore', () => {
     ];
     const bridge = createBridgeStub({
       init: () => ({ state: baseState, setupTrace: [] }),
-      enumerateLegalMoves: () => ({ moves: [move], warnings: [] }),
+      enumerateLegalMoves: () => toLegalMoveResult(move),
       legalChoices: () => ({ kind: 'complete', complete: true }),
       applyMove: () => ({
         state: {
@@ -659,8 +676,8 @@ describe('createGameStore', () => {
     };
     const enumerateLegalMoves = vi
       .fn<GameWorkerAPI['enumerateLegalMoves']>()
-      .mockResolvedValueOnce({ moves: [aiMove], warnings: [] })
-      .mockResolvedValue({ moves: [aiMove], warnings: [] });
+      .mockResolvedValueOnce(toLegalMoveResult(aiMove))
+      .mockResolvedValue(toLegalMoveResult(aiMove));
     const applyMove = vi.fn<GameWorkerAPI['applyMove']>(async () => ({
       state: humanState,
       effectTrace: [],
@@ -736,7 +753,7 @@ describe('createGameStore', () => {
     }));
     const bridge = createBridgeStub({
       init: () => ({ state: aiState, setupTrace: [] }),
-      enumerateLegalMoves: () => ({ moves: [moveA, moveB], warnings: [] }),
+      enumerateLegalMoves: () => toLegalMoveResult(moveA, moveB),
       terminalResult: () => null,
       applyMove,
     });
@@ -760,7 +777,7 @@ describe('createGameStore', () => {
     });
     const bridge = createBridgeStub({
       init: () => ({ state: aiState, setupTrace: [] }),
-      enumerateLegalMoves: () => ({ moves: [], warnings: [] }),
+      enumerateLegalMoves: () => toLegalMoveResult(),
       terminalResult: () => null,
       applyMove,
     });
@@ -783,7 +800,7 @@ describe('createGameStore', () => {
     };
     const bridge = createBridgeStub({
       init: () => ({ state: aiState, setupTrace: [] }),
-      enumerateLegalMoves: () => ({ moves: [{ actionId: asActionId('tick'), params: {} }], warnings: [] }),
+      enumerateLegalMoves: () => toLegalMoveResult({ actionId: asActionId('tick'), params: {} }),
       terminalResult: () => null,
     });
     const store = createStoreWithDefaultVisuals(bridge);
@@ -821,7 +838,7 @@ describe('createGameStore', () => {
     }));
     const bridge = createBridgeStub({
       init: () => ({ state: aiState, setupTrace: [] }),
-      enumerateLegalMoves: () => ({ moves: [aiMove], warnings: [] }),
+      enumerateLegalMoves: () => toLegalMoveResult(aiMove),
       terminalResult: () => null,
       applyMove,
     });
@@ -858,7 +875,7 @@ describe('createGameStore', () => {
     }));
     const bridge = createBridgeStub({
       init: () => ({ state: aiState, setupTrace: [] }),
-      enumerateLegalMoves: () => ({ moves: [aiMove], warnings: [] }),
+      enumerateLegalMoves: () => toLegalMoveResult(aiMove),
       terminalResult: () => null,
       applyMove,
     });
@@ -908,9 +925,9 @@ describe('createGameStore', () => {
       },
       enumerateLegalMoves: () => {
         if (currentState.activePlayer === asPlayerId(1)) {
-          return { moves: [aiMove], warnings: [] };
+          return toLegalMoveResult(aiMove);
         }
-        return { moves: [humanMove], warnings: [] };
+        return toLegalMoveResult(humanMove);
       },
       terminalResult: () => null,
       legalChoices: () => ({ kind: 'complete', complete: true }),
@@ -991,7 +1008,7 @@ describe('createGameStore', () => {
     }));
     const bridge = createBridgeStub({
       init: () => ({ state: aiState, setupTrace: [] }),
-      enumerateLegalMoves: () => ({ moves: [{ actionId: asActionId('tick'), params: {} }], warnings: [] }),
+      enumerateLegalMoves: () => toLegalMoveResult({ actionId: asActionId('tick'), params: {} }),
       terminalResult: () => null,
       applyMove,
     });
@@ -1032,7 +1049,7 @@ describe('createGameStore', () => {
     }));
     const bridge = createBridgeStub({
       init: () => ({ state: aiState, setupTrace: [] }),
-      enumerateLegalMoves: () => ({ moves: [completedMove], warnings: [] }),
+      enumerateLegalMoves: () => toLegalMoveResult(completedMove),
       terminalResult: () => null,
       applyMove,
     });
@@ -1057,7 +1074,7 @@ describe('createGameStore', () => {
     });
     const bridge = createBridgeStub({
       init: () => ({ state: aiState, setupTrace: [] }),
-      enumerateLegalMoves: () => ({ moves: [{ actionId: asActionId('unknown-action'), params: {} }], warnings: [] }),
+      enumerateLegalMoves: () => toLegalMoveResult({ actionId: asActionId('unknown-action'), params: {} }),
       terminalResult: () => null,
       applyMove,
     });
@@ -1088,7 +1105,7 @@ describe('createGameStore', () => {
     });
     const bridge = createBridgeStub({
       init: () => ({ state: aiState, setupTrace: [] }),
-      enumerateLegalMoves: () => ({ moves: [aiMove], warnings: [] }),
+      enumerateLegalMoves: () => toLegalMoveResult(aiMove),
       terminalResult: () => null,
       applyMove,
     });
@@ -1270,7 +1287,7 @@ describe('createGameStore', () => {
         sawInitializing = store.getState().gameLifecycle === 'initializing';
         return baseState;
       },
-      enumerateLegalMoves: () => ({ moves: [], warnings: [] }),
+      enumerateLegalMoves: () => toLegalMoveResult(),
       terminalResult: () => ({ type: 'draw' }),
     });
 
@@ -1297,7 +1314,7 @@ describe('createGameStore', () => {
       });
     const bridge = createBridgeStub({
       init: initMock,
-      enumerateLegalMoves: () => ({ moves: [{ actionId: asActionId('tick'), params: {} }], warnings: [] }),
+      enumerateLegalMoves: () => toLegalMoveResult({ actionId: asActionId('tick'), params: {} }),
       terminalResult: () => null,
       legalChoices: () => ({ kind: 'complete', complete: true }),
     });
@@ -1344,7 +1361,7 @@ describe('createGameStore', () => {
       });
     const bridge = createBridgeStub({
       init: initMock,
-      enumerateLegalMoves: () => ({ moves: [{ actionId: asActionId('tick'), params: {} }], warnings: [] }),
+      enumerateLegalMoves: () => toLegalMoveResult({ actionId: asActionId('tick'), params: {} }),
       terminalResult: () => null,
     });
     const store = createStoreWithDefaultVisuals(bridge);
@@ -1376,7 +1393,7 @@ describe('createGameStore', () => {
       .mockResolvedValueOnce(gameState);
     const bridge = createBridgeStub({
       init: initMock,
-      enumerateLegalMoves: () => ({ moves: [{ actionId: asActionId('tick'), params: {} }], warnings: [] }),
+      enumerateLegalMoves: () => toLegalMoveResult({ actionId: asActionId('tick'), params: {} }),
       terminalResult: () => null,
     });
     const store = createStoreWithDefaultVisuals(bridge);
@@ -1409,7 +1426,7 @@ describe('createGameStore', () => {
       init: () => {
         throw workerError;
       },
-      enumerateLegalMoves: () => ({ moves: [], warnings: [] }),
+      enumerateLegalMoves: () => toLegalMoveResult(),
       terminalResult: () => null,
     });
 
@@ -1441,7 +1458,7 @@ describe('createGameStore', () => {
     const def = compileStoreFixture(5);
     const bridge = createBridgeStub({
       init: () => initialState(def, 30, 2),
-      enumerateLegalMoves: () => ({ moves: [{ actionId: asActionId('tick'), params: {} }], warnings: [] }),
+      enumerateLegalMoves: () => toLegalMoveResult({ actionId: asActionId('tick'), params: {} }),
       terminalResult: () => null,
     });
     const store = createStoreWithDefaultVisuals(bridge);
@@ -1476,7 +1493,7 @@ describe('createGameStore', () => {
     };
     const bridge = createBridgeStub({
       init: () => initialState(def, 23, 2),
-      enumerateLegalMoves: () => ({ moves: [{ actionId: asActionId('tick'), params: {} }], warnings: [] }),
+      enumerateLegalMoves: () => toLegalMoveResult({ actionId: asActionId('tick'), params: {} }),
       terminalResult: () => null,
       legalChoices: () => {
         throw workerError;
@@ -1561,7 +1578,7 @@ describe('createGameStore', () => {
     });
     const bridge = createBridgeStub({
       init: initSpy,
-      enumerateLegalMoves: () => ({ moves: [{ actionId: asActionId('tick'), params: {} }], warnings: [] }),
+      enumerateLegalMoves: () => toLegalMoveResult({ actionId: asActionId('tick'), params: {} }),
       terminalResult: () => null,
     });
     const store = createStoreWithDefaultVisuals(bridge);
@@ -1582,7 +1599,7 @@ describe('createGameStore', () => {
     const def = compileStoreFixture(5);
     const bridge = createBridgeStub({
       init: (_d, _s, options) => initialState(def, 41, options?.playerCount),
-      enumerateLegalMoves: () => ({ moves: [{ actionId: asActionId('tick'), params: {} }], warnings: [] }),
+      enumerateLegalMoves: () => toLegalMoveResult({ actionId: asActionId('tick'), params: {} }),
       terminalResult: () => null,
     });
     const store = createStoreWithDefaultVisuals(bridge);

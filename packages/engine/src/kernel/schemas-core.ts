@@ -953,6 +953,7 @@ export const RuntimeWarningCodeSchema = z.union([
   z.literal('MOVE_ENUM_PARAM_EXPANSION_BUDGET_EXCEEDED'),
   z.literal('MOVE_ENUM_DECISION_PROBE_STEP_BUDGET_EXCEEDED'),
   z.literal('MOVE_ENUM_DEFERRED_PREDICATE_BUDGET_EXCEEDED'),
+  z.literal('MOVE_ENUM_PROBE_REJECTED'),
 ]);
 
 export const RuntimeWarningSchema = z

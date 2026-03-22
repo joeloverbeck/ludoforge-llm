@@ -4,27 +4,29 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — agent interface, all agent implementations, preparePlayableMoves
-**Deps**: archive/tickets/75ENRLEGMOVENU/75ENRLEGMOVENU-001-classifiedmove-type-and-always-complete-actions.md, tickets/75ENRLEGMOVENU-002-enumeratelegal-moves-classification.md
+**Deps**: archive/tickets/75ENRLEGMOVENU/75ENRLEGMOVENU-001-classifiedmove-type-and-always-complete-actions.md, archive/tickets/75ENRLEGMOVENU/75ENRLEGMOVENU-002-enumeratelegal-moves-classification.md
 
 ## Problem
 
 The `Agent.chooseMove` interface receives `legalMoves: readonly Move[]`. With Spec 75, this becomes `readonly ClassifiedMove[]`. All agent implementations and `preparePlayableMoves` must consume the pre-computed viability instead of calling `probeMoveViability` redundantly.
 
+This is the ticket that owns the remaining architectural step identified after ticket `002`: `preparePlayableMoves` should stop re-deriving move viability and instead consume the classified enumeration result directly.
+
 ## Assumption Reassessment (2026-03-22)
 
-1. `Agent.chooseMove` input at `types-core.ts:1486-1494` has `legalMoves: readonly Move[]` — changes to `readonly ClassifiedMove[]`.
-2. `preparePlayableMoves` at `prepare-playable-moves.ts:45-48` uses `Pick<..., 'legalMoves' | ...>` — type flows from Agent interface.
-3. `preparePlayableMoves` calls `probeMoveViability` at line 60 for each move — this is the 120526-call hotspot to eliminate.
-4. `RandomAgent.chooseMove` at `random-agent.ts` calls `preparePlayableMoves(input)` — type flows naturally.
-5. `GreedyAgent.chooseMove` at `greedy-agent.ts` calls `preparePlayableMoves(input)` — type flows naturally.
-6. `PolicyAgent` exists at `policy-agent.ts` — also needs the type update.
-7. `PreparedPlayableMoves.completedMoves` and `.stochasticMoves` are `readonly Move[]` — these stay as `Move[]` (unwrapped from `ClassifiedMove`).
+1. `Agent.chooseMove` input at `types-core.ts:1493-1501` still has `legalMoves: readonly Move[]` — this ticket changes it to `readonly ClassifiedMove[]`.
+2. Ticket `002` changed `enumerateLegalMoves()` and `LegalMoveEnumerationResult.moves` to return `ClassifiedMove[]`, but intentionally left `legalMoves()` raw. Agent inputs must therefore be sourced from classified enumeration, not from the raw `legalMoves()` facade.
+3. `preparePlayableMoves` at `prepare-playable-moves.ts` currently uses `Pick<..., 'legalMoves' | ...>` — the type will flow from the `Agent` interface once that interface changes.
+4. `preparePlayableMoves` still calls `probeMoveViability` for each move — this is the hotspot this ticket is meant to eliminate.
+5. `RandomAgent.chooseMove`, `GreedyAgent.chooseMove`, and `PolicyAgent.chooseMove` all route through `preparePlayableMoves`, so the type/behavior change should stay centralized there.
+6. `PreparedPlayableMoves.completedMoves` and `.stochasticMoves` should remain `readonly Move[]` — agents consume classified input but still act on raw selected moves.
 
 ## Architecture Check
 
 1. The Agent interface change is a breaking change — Foundation 9 requires all consumers updated in the same change. This ticket handles all agent-side consumers.
 2. `preparePlayableMoves` becomes a pure classifier reader — no `probeMoveViability` import needed. Simpler, faster, less coupling.
 3. Agents that need the raw `Move` extract it via `.move` — the `ClassifiedMove` wrapper is transparent.
+4. The clean boundary is: raw callers keep using `legalMoves()`, while the agent pipeline consumes `enumerateLegalMoves()` output. This ticket should not try to collapse those two APIs back together.
 
 ## What to Change
 
@@ -80,7 +82,7 @@ Import `ClassifiedMove` (or use the inline `import()` pattern already used for o
 
 - Changing `enumerateLegalMoves` or `legalMoves` (ticket 002)
 - Adding `skipMoveValidation` (ticket 003)
-- Changing simulator or runner (ticket 005)
+- Changing simulator or runner sourcing/threading of classified moves (ticket 005)
 - Modifying `probeMoveViability` function itself — it stays exported for direct callers
 - Changing `PreparedPlayableMoves` return type — stays `readonly Move[]`
 

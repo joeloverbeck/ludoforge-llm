@@ -1146,6 +1146,10 @@
                     {
                       "type": "string",
                       "const": "MOVE_ENUM_DEFERRED_PREDICATE_BUDGET_EXCEEDED"
+                    },
+                    {
+                      "type": "string",
+                      "const": "MOVE_ENUM_PROBE_REJECTED"
                     }
                   ]
                 },

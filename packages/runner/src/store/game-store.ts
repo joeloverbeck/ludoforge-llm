@@ -857,7 +857,7 @@ export function createGameStore(
         const aiStep = agentTurnOrchestrator.resolveStep({
           controller: activeController,
           def: state.gameDef,
-          legalMoves: legalMoveResult.moves,
+          legalMoves: legalMoveResult.moves.map(({ move }) => move),
           playerId: activePlayerId,
           state: state.gameState,
         });

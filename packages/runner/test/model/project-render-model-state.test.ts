@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { compileGameSpecToGameDef, createEmptyGameSpecDoc } from '@ludoforge/engine/cnl';
 import {
   asActionId,
+  type ClassifiedMove,
   asPhaseId,
   asPlayerId,
   asTokenId,
@@ -25,6 +26,18 @@ import type { RenderContext } from '../../src/store/store-types.js';
 import { deriveProjectedRenderModel, type DerivedProjection } from './helpers/derive-projected-render-model.js';
 
 const asDecisionKey = (value: string): DecisionKey => value as DecisionKey;
+
+function toClassifiedMoves(moves: readonly Move[]): readonly ClassifiedMove[] {
+  return moves.map((move) => ({
+    move,
+    viability: {
+      viable: true,
+      complete: true,
+      move,
+      warnings: [],
+    },
+  }));
+}
 
 function compileFixture(): GameDef {
   const compiled = compileGameSpecToGameDef({
@@ -798,11 +811,11 @@ describe('projectRenderModel state metadata', () => {
     const state = initialState(def, 23, 2).state;
 
     const legalMoveResult: LegalMoveEnumerationResult = {
-      moves: [
+      moves: toClassifiedMoves([
         { actionId: asActionId('train-us'), params: {}, actionClass: 'ops' },
         { actionId: asActionId('train-us'), params: { amount: 1 }, actionClass: 'ops' },
         { actionId: asActionId('pass'), params: {} },
-      ] satisfies readonly Move[],
+      ] satisfies readonly Move[]),
       warnings: [
         { code: 'MOVE_ENUM_TEMPLATE_BUDGET_EXCEEDED', message: 'query produced no rows', context: { query: 'q1' } },
       ],
@@ -1454,7 +1467,7 @@ describe('projectRenderModel state metadata', () => {
       { actionId: asActionId('pass'), params: {} },
     ];
 
-    const legalMoveResult: LegalMoveEnumerationResult = { moves, warnings: [] };
+    const legalMoveResult: LegalMoveEnumerationResult = { moves: toClassifiedMoves(moves), warnings: [] };
     const model = deriveModel(
       state,
       def,
@@ -1492,7 +1505,7 @@ describe('projectRenderModel state metadata', () => {
       },
     });
 
-    const legalMoveResult: LegalMoveEnumerationResult = { moves, warnings: [] };
+    const legalMoveResult: LegalMoveEnumerationResult = { moves: toClassifiedMoves(moves), warnings: [] };
     const model = deriveModel(
       state,
       def,
@@ -1545,7 +1558,7 @@ describe('projectRenderModel state metadata', () => {
       },
     });
 
-    const legalMoveResult: LegalMoveEnumerationResult = { moves, warnings: [] };
+    const legalMoveResult: LegalMoveEnumerationResult = { moves: toClassifiedMoves(moves), warnings: [] };
     const model = deriveModel(
       state,
       def,
@@ -1572,7 +1585,7 @@ describe('projectRenderModel state metadata', () => {
       { actionId: asActionId('pass'), params: {} },
     ];
 
-    const legalMoveResult: LegalMoveEnumerationResult = { moves, warnings: [] };
+    const legalMoveResult: LegalMoveEnumerationResult = { moves: toClassifiedMoves(moves), warnings: [] };
     const model = deriveModel(
       state,
       def,
@@ -1609,7 +1622,7 @@ describe('projectRenderModel state metadata', () => {
       },
     });
 
-    const legalMoveResult: LegalMoveEnumerationResult = { moves, warnings: [] };
+    const legalMoveResult: LegalMoveEnumerationResult = { moves: toClassifiedMoves(moves), warnings: [] };
     const model = deriveModel(
       state,
       def,

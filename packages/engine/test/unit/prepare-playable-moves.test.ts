@@ -8,6 +8,7 @@ import {
   assertValidatedGameDef,
   createRng,
   createGameDefRuntime,
+  enumerateLegalMoves,
   initialState,
   legalMoves,
   probeMoveViability,
@@ -53,6 +54,12 @@ describe('preparePlayableMoves', () => {
       state = applyMove(def, state, selected0.move, undefined, runtime).state;
 
       // Turn 1: VC should have a free-operation rally template.
+      const enumerated1 = enumerateLegalMoves(def, state, undefined, runtime);
+      const classifiedFreeOpMove = enumerated1.moves.find(({ move }) => move.freeOperation === true);
+      assert.ok(classifiedFreeOpMove, 'expected a classified free-operation move in enumerated legal moves');
+      assert.equal(classifiedFreeOpMove.viability.viable, true, 'deferred free-operation template should remain classified as viable');
+      assert.equal(classifiedFreeOpMove.viability.complete, false, 'deferred free-operation template should remain incomplete until completion');
+
       const legal1 = legalMoves(def, state, undefined, runtime);
       assert.ok(legal1.length > 0, 'expected at least one legal move at turn 1');
 

@@ -8,7 +8,9 @@ import { applyTurnFlowInitialReveal } from './turn-flow-lifecycle.js';
 import { kernelRuntimeError } from './runtime-error.js';
 import { dispatchLifecycleEvent } from './phase-lifecycle.js';
 import { createCollector } from './execution-collector.js';
+import { toMoveExecutionPolicy } from './execution-policy.js';
 import { createEvalRuntimeResources } from './eval-context.js';
+import type { GameDefRuntime } from './gamedef-runtime.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { assertValidatedGameDef } from './validate-gamedef.js';
 import type { EffectTraceEntry, ExecutionOptions, GameDef, GameState } from './types.js';
@@ -27,7 +29,13 @@ const parseFixedOrderPlayer = (playerId: string, playerCount: number): number | 
   return numeric;
 };
 
-export const initialState = (def: GameDef, seed: number, playerCount?: number, options?: ExecutionOptions): InitialStateResult => {
+export const initialState = (
+  def: GameDef,
+  seed: number,
+  playerCount?: number,
+  options?: ExecutionOptions,
+  cachedRuntime?: GameDefRuntime,
+): InitialStateResult => {
   const validatedDef = assertValidatedGameDef(def);
   const resolvedPlayerCount = resolvePlayerCount(validatedDef, playerCount);
   const initialPhase = resolveInitialPhase(validatedDef);
@@ -41,6 +49,7 @@ export const initialState = (def: GameDef, seed: number, playerCount?: number, o
   const runtimeResources = createEvalRuntimeResources({
     collector,
   });
+  const executionPolicy = toMoveExecutionPolicy(options, undefined);
 
   const baseState: GameState = {
     globalVars: Object.fromEntries(validatedDef.globalVars.map((variable) => [variable.name, variable.init])),
@@ -77,15 +86,27 @@ export const initialState = (def: GameDef, seed: number, playerCount?: number, o
     runtimeTableIndex,
     moveParams: {},
     resources: runtimeResources,
+    ...(cachedRuntime === undefined ? {} : { cachedRuntime }),
     traceContext: { eventContext: 'lifecycleEffect', effectPathRoot: 'initialState.setup' },
     effectPath: '',
+    ...(options?.verifyCompiledEffects === undefined ? {} : { verifyCompiledEffects: options.verifyCompiledEffects }),
   }));
   const lifecycleResult = applyTurnFlowInitialReveal(validatedDef, setupResult.state);
   const afterTurnStart = dispatchLifecycleEvent(validatedDef, {
     ...lifecycleResult.state,
     rng: setupResult.rng.state,
-  }, { type: 'turnStart' }, undefined, undefined, runtimeResources);
-  const stateWithRng = dispatchLifecycleEvent(validatedDef, afterTurnStart, { type: 'phaseEnter', phase: initialPhase }, undefined, undefined, runtimeResources);
+  }, { type: 'turnStart' }, undefined, executionPolicy, runtimeResources, 'lifecycle', cachedRuntime, options?.profiler);
+  const stateWithRng = dispatchLifecycleEvent(
+    validatedDef,
+    afterTurnStart,
+    { type: 'phaseEnter', phase: initialPhase },
+    undefined,
+    executionPolicy,
+    runtimeResources,
+    'lifecycle',
+    cachedRuntime,
+    options?.profiler,
+  );
   const withTurnFlow = initializeTurnFlowEligibilityState(validatedDef, stateWithRng);
   const table = createZobristTable(validatedDef);
 

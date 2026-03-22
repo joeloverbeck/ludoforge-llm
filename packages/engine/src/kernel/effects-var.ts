@@ -12,16 +12,18 @@ import {
 } from './scoped-var-runtime-access.js';
 import { toTraceVarChangePayload, toVarChangedEvent, type RuntimeScopedVarEndpoint } from './scoped-var-runtime-mapping.js';
 import { emitVarChangeTraceIfChanged } from './var-change-trace.js';
+import { clampIntVarValue } from './var-runtime-utils.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
 import type { EffectAST } from './types.js';
 import type { TriggerEvent } from './types.js';
 
-const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(max, value));
-
 /** Merge moveParams into bindings. Fast path: return bindings directly when moveParams is empty. */
 const resolveEffectBindings = (ctx: EffectContext): Readonly<Record<string, unknown>> => {
   const mp = ctx.moveParams;
-  for (const _ in mp) { return { ...mp, ...ctx.bindings }; }
+  for (const key in mp) {
+    void key;
+    return { ...mp, ...ctx.bindings };
+  }
   return ctx.bindings;
 };
 
@@ -112,7 +114,7 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
       : readScopedVarValue(ctx, endpoint, 'setVar', EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED);
   const nextValue =
     variableDef.type === 'int'
-      ? clamp(expectInteger(evaluatedValue, 'setVar', 'value'), variableDef.min, variableDef.max)
+      ? clampIntVarValue(expectInteger(evaluatedValue, 'setVar', 'value'), variableDef)
       : expectBoolean(evaluatedValue, 'setVar', 'value');
   const emittedEvent = emitVarChangeArtifacts(ctx, endpoint, currentValue, nextValue);
   if (emittedEvent === undefined) {
@@ -169,7 +171,7 @@ export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknow
   }
 
   const currentValue = readScopedIntVarValue(ctx, endpoint, 'addVar', EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED);
-  const nextValue = clamp(currentValue + evaluatedDelta, variableDef.min, variableDef.max);
+  const nextValue = clampIntVarValue(currentValue + evaluatedDelta, variableDef);
   const emittedEvent = emitVarChangeArtifacts(ctx, endpoint, currentValue, nextValue);
   if (emittedEvent === undefined) {
     return { state: ctx.state, rng: ctx.rng };

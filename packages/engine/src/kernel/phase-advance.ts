@@ -354,6 +354,8 @@ export const advancePhase = (request: AdvancePhaseRequest): GameState => {
     triggerLogCollector,
     policy,
     lifecycleResources,
+    'boundaryExpiry',
+    cachedRuntime,
   );
   nextState = expiry.state;
   if (triggerLogCollector !== undefined) {

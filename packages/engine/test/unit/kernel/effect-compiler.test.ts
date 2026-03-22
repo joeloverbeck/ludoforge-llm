@@ -1,0 +1,323 @@
+import * as assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
+
+import {
+  applyEffects,
+  asPhaseId,
+  asPlayerId,
+  buildAdjacencyGraph,
+  buildRuntimeTableIndex,
+  compileAllLifecycleEffects,
+  compileEffectSequence,
+  composeFragments,
+  computeFullHash,
+  createEvalRuntimeResources,
+  createExecutionEffectContext,
+  createRng,
+  createZobristTable,
+  emptyScope,
+  makeCompiledLifecycleEffectKey,
+  type CompiledEffectContext,
+  type CompiledEffectFragment,
+  type EffectAST,
+  type EffectResult,
+  type GameDef,
+  type GameState,
+  type TriggerEvent,
+} from '../../../src/kernel/index.js';
+
+const makeDef = (): GameDef => ({
+  metadata: { id: 'effect-compiler-orchestrator-test', players: { min: 2, max: 3 } },
+  constants: {},
+  globalVars: [
+    { name: 'score', type: 'int', init: 0, min: 0, max: 20 },
+    { name: 'count', type: 'int', init: 0, min: 0, max: 20 },
+    { name: 'flag', type: 'boolean', init: false },
+  ],
+  perPlayerVars: [
+    { name: 'hp', type: 'int', init: 0, min: 0, max: 20 },
+  ],
+  zoneVars: [],
+  zones: [],
+  tokenTypes: [],
+  setup: [],
+  turnStructure: {
+    phases: [
+      {
+        id: asPhaseId('main'),
+        onEnter: [
+          { setVar: { scope: 'global', var: 'score', value: 1 } },
+          { addVar: { scope: 'global', var: 'score', delta: 2 } },
+        ],
+        onExit: [],
+      },
+      {
+        id: asPhaseId('cleanup'),
+        onExit: [
+          {
+            rollRandom: {
+              bind: '$roll',
+              min: 1,
+              max: 6,
+              in: [{ setVar: { scope: 'global', var: 'count', value: { ref: 'binding', name: '$roll' } } }],
+            },
+          },
+        ],
+      },
+      {
+        id: asPhaseId('idle'),
+      },
+    ],
+  },
+  actions: [],
+  triggers: [],
+  terminal: { conditions: [] },
+});
+
+const makeState = (): GameState => ({
+  globalVars: { score: 3, count: 0, flag: false },
+  perPlayerVars: {
+    '0': { hp: 5 },
+    '1': { hp: 7 },
+    '2': { hp: 9 },
+  },
+  zoneVars: {},
+  playerCount: 3,
+  zones: {},
+  nextTokenOrdinal: 0,
+  currentPhase: asPhaseId('main'),
+  activePlayer: asPlayerId(1),
+  turnCount: 1,
+  rng: createRng(17n).state,
+  stateHash: 0n,
+  actionUsage: {},
+  turnOrderState: { type: 'roundRobin' },
+  markers: {},
+});
+
+const makeCompiledContext = (def: GameDef): CompiledEffectContext => ({
+  def,
+  adjacencyGraph: buildAdjacencyGraph(def.zones),
+  runtimeTableIndex: buildRuntimeTableIndex(def),
+  resources: createEvalRuntimeResources(),
+  activePlayer: asPlayerId(1),
+  actorPlayer: asPlayerId(0),
+  moveParams: {},
+  fallbackApplyEffects: applyEffects,
+  decisionScope: emptyScope(),
+});
+
+const compareResults = (
+  def: GameDef,
+  compiled: EffectResult,
+  interpreted: EffectResult,
+): void => {
+  const zobrist = createZobristTable(def);
+  assert.deepEqual(compiled.state, interpreted.state);
+  assert.deepEqual(compiled.rng, interpreted.rng);
+  assert.deepEqual(compiled.emittedEvents ?? [], interpreted.emittedEvents ?? []);
+  assert.deepEqual(compiled.bindings ?? {}, interpreted.bindings ?? {});
+  assert.deepEqual(compiled.decisionScope ?? emptyScope(), interpreted.decisionScope ?? emptyScope());
+  assert.equal(
+    computeFullHash(zobrist, compiled.state),
+    computeFullHash(zobrist, interpreted.state),
+  );
+};
+
+describe('effect-compiler orchestrator', () => {
+  it('compiles a fully compilable sequence with full coverage and interpreter parity', () => {
+    const def = makeDef();
+    const effects: readonly EffectAST[] = [
+      { setVar: { scope: 'global', var: 'score', value: 1 } },
+      { addVar: { scope: 'global', var: 'score', delta: 2 } },
+      {
+        if: {
+          when: { op: '==', left: { ref: 'gvar', var: 'score' }, right: 3 },
+          then: [{ setVar: { scope: 'global', var: 'flag', value: true } }],
+          else: [{ setVar: { scope: 'global', var: 'flag', value: false } }],
+        },
+      },
+    ];
+    const state = makeState();
+    const rng = createRng(23n);
+    const compiled = compileEffectSequence(asPhaseId('main'), 'onEnter', effects);
+
+    assert.equal(compiled.coverageRatio, 1);
+    compareResults(
+      def,
+      compiled.execute(state, rng, {}, makeCompiledContext(def)),
+      applyEffects(
+        effects,
+        createExecutionEffectContext({
+          def,
+          adjacencyGraph: buildAdjacencyGraph(def.zones),
+          runtimeTableIndex: buildRuntimeTableIndex(def),
+          state,
+          rng,
+          activePlayer: asPlayerId(1),
+          actorPlayer: asPlayerId(0),
+          bindings: {},
+          moveParams: {},
+          resources: createEvalRuntimeResources(),
+        }),
+      ),
+    );
+  });
+
+  it('mixes compiled fragments with fallback fragments without changing behavior', () => {
+    const def = makeDef();
+    const effects: readonly EffectAST[] = [
+      { setVar: { scope: 'global', var: 'score', value: 1 } },
+      {
+        rollRandom: {
+          bind: '$roll',
+          min: 1,
+          max: 6,
+          in: [{ setVar: { scope: 'global', var: 'count', value: { ref: 'binding', name: '$roll' } } }],
+        },
+      },
+      { addVar: { scope: 'global', var: 'score', delta: 2 } },
+    ];
+    const state = makeState();
+    const rng = createRng(29n);
+    const compiled = compileEffectSequence(asPhaseId('main'), 'onEnter', effects);
+
+    assert.ok(compiled.coverageRatio > 0 && compiled.coverageRatio < 1);
+    compareResults(
+      def,
+      compiled.execute(state, rng, {}, makeCompiledContext(def)),
+      applyEffects(
+        effects,
+        createExecutionEffectContext({
+          def,
+          adjacencyGraph: buildAdjacencyGraph(def.zones),
+          runtimeTableIndex: buildRuntimeTableIndex(def),
+          state,
+          rng,
+          activePlayer: asPlayerId(1),
+          actorPlayer: asPlayerId(0),
+          bindings: {},
+          moveParams: {},
+          resources: createEvalRuntimeResources(),
+        }),
+      ),
+    );
+  });
+
+  it('falls back for fully unsupported sequences while preserving coverage accounting', () => {
+    const def = makeDef();
+    const effects: readonly EffectAST[] = [
+      {
+        rollRandom: {
+          bind: '$roll',
+          min: 1,
+          max: 6,
+          in: [{ setVar: { scope: 'global', var: 'count', value: { ref: 'binding', name: '$roll' } } }],
+        },
+      },
+    ];
+    const state = makeState();
+    const rng = createRng(31n);
+    const compiled = compileEffectSequence(asPhaseId('cleanup'), 'onExit', effects);
+
+    assert.equal(compiled.coverageRatio, 0);
+    compareResults(
+      def,
+      compiled.execute(state, rng, {}, makeCompiledContext(def)),
+      applyEffects(
+        effects,
+        createExecutionEffectContext({
+          def,
+          adjacencyGraph: buildAdjacencyGraph(def.zones),
+          runtimeTableIndex: buildRuntimeTableIndex(def),
+          state,
+          rng,
+          activePlayer: asPlayerId(1),
+          actorPlayer: asPlayerId(0),
+          bindings: {},
+          moveParams: {},
+          resources: createEvalRuntimeResources(),
+        }),
+      ),
+    );
+  });
+
+  it('composeFragments threads bindings, decision scope, and emitted events in order', () => {
+    const markerEvent = { type: 'varChanged', scope: 'global', var: 'score', oldValue: 3, newValue: 4 } as TriggerEvent;
+    const composed = composeFragments([
+      {
+        nodeCount: 1,
+        execute: (state, rng, bindings) => ({
+          state: { ...state, globalVars: { ...state.globalVars, score: Number(state.globalVars.score) + 1 } },
+          rng,
+          emittedEvents: [markerEvent],
+          bindings: { ...bindings, $a: 'alpha' },
+        }),
+      },
+      {
+        nodeCount: 1,
+        execute: (state, rng, bindings, ctx) => ({
+          state: { ...state, globalVars: { ...state.globalVars, count: state.globalVars.score } },
+          rng,
+          emittedEvents: [{ ...markerEvent, newValue: state.globalVars.score } as TriggerEvent],
+          bindings: { ...bindings, $b: 'beta' },
+          decisionScope: ctx.decisionScope,
+        }),
+      },
+    ] as readonly CompiledEffectFragment[]);
+
+    const def = makeDef();
+    const state = makeState();
+    const result = composed(state, createRng(37n), {}, makeCompiledContext(def));
+
+    assert.equal(result.state.globalVars.score, 4);
+    assert.equal(result.state.globalVars.count, 4);
+    assert.deepEqual(result.bindings, { $a: 'alpha', $b: 'beta' });
+    assert.equal(result.emittedEvents?.length, 2);
+    assert.deepEqual(result.decisionScope, emptyScope());
+  });
+
+  it('composeFragments short-circuits on pendingChoice and skips later fragments', () => {
+    let executedTail = false;
+    const composed = composeFragments([
+      {
+        nodeCount: 1,
+        execute: (state, rng, bindings) => ({
+          state,
+          rng,
+          bindings: { ...bindings, $first: true },
+          pendingChoice: {
+            kind: 'pending',
+            type: 'chooseOne',
+            decisionKey: '$choice',
+            options: [{ value: 'a', legality: 'unknown', illegalReason: null }],
+          },
+        }),
+      },
+      {
+        nodeCount: 1,
+        execute: (state, rng, bindings) => {
+          executedTail = true;
+          return { state, rng, bindings };
+        },
+      },
+    ] as readonly CompiledEffectFragment[]);
+
+    const result = composed(makeState(), createRng(41n), {}, makeCompiledContext(makeDef()));
+
+    assert.equal(executedTail, false);
+    assert.equal(result.pendingChoice?.kind, 'pending');
+    assert.deepEqual(result.bindings, { $first: true });
+  });
+
+  it('compileAllLifecycleEffects compiles non-empty lifecycle entries and skips empty ones', () => {
+    const def = makeDef();
+    const compiled = compileAllLifecycleEffects(def);
+
+    assert.equal(compiled.size, 2);
+    assert.ok(compiled.has(makeCompiledLifecycleEffectKey(asPhaseId('main'), 'onEnter')));
+    assert.ok(compiled.has(makeCompiledLifecycleEffectKey(asPhaseId('cleanup'), 'onExit')));
+    assert.equal(compiled.has(makeCompiledLifecycleEffectKey(asPhaseId('main'), 'onExit')), false);
+    assert.equal(compiled.has(makeCompiledLifecycleEffectKey(asPhaseId('idle'), 'onEnter')), false);
+  });
+});

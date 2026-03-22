@@ -768,6 +768,7 @@ interface SharedMoveExecutionContext {
   readonly evalRuntimeResources: EvalRuntimeResources;
   readonly phaseTransitionBudget?: PhaseTransitionBudget;
   readonly executionPolicy?: ReturnType<typeof toMoveExecutionPolicy>;
+  readonly cachedRuntime?: GameDefRuntime;
 }
 
 interface MoveActionExecutionResult {
@@ -812,7 +813,7 @@ const createMoveExecutionRuntime = (
   existingBudget?: PhaseTransitionBudget,
 ): MoveExecutionRuntime => {
   const phaseTransitionBudget = resolvePhaseTransitionBudget(options, existingBudget);
-  const executionPolicy = toMoveExecutionPolicy(phaseTransitionBudget);
+  const executionPolicy = toMoveExecutionPolicy(options, phaseTransitionBudget);
   return {
     collector: createCollector(options),
     ...(phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget }),
@@ -875,6 +876,8 @@ const executeMoveAction = (
     bindings: baseBindings,
     moveParams: move.params,
     resources: shared.evalRuntimeResources,
+    ...(cachedRuntime === undefined ? {} : { cachedRuntime }),
+    ...(options?.verifyCompiledEffects === undefined ? {} : { verifyCompiledEffects: options.verifyCompiledEffects }),
     ...(shared.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: shared.phaseTransitionBudget }),
     ...(profiler === undefined ? {} : { profiler }),
   } as const;
@@ -1109,6 +1112,7 @@ const executeMoveAction = (
       triggerLog,
       adjacencyGraph: shared.adjacencyGraph,
       runtimeTableIndex: shared.runtimeTableIndex,
+      ...(cachedRuntime === undefined ? {} : { cachedRuntime }),
       effectPathRoot: `action:${String(action.id)}.emittedEvent(${emittedEvent.type})`,
       evalRuntimeResources: shared.evalRuntimeResources,
       ...(shared.executionPolicy === undefined ? {} : { policy: shared.executionPolicy }),
@@ -1128,6 +1132,7 @@ const executeMoveAction = (
     triggerLog,
     adjacencyGraph: shared.adjacencyGraph,
     runtimeTableIndex: shared.runtimeTableIndex,
+    ...(cachedRuntime === undefined ? {} : { cachedRuntime }),
     effectPathRoot: `action:${String(action.id)}.actionResolved`,
     evalRuntimeResources: shared.evalRuntimeResources,
     ...(shared.executionPolicy === undefined ? {} : { policy: shared.executionPolicy }),
@@ -1179,12 +1184,16 @@ const applyReleasedDeferredEventEffects = (
       bindings: { ...deferredEventEffect.moveParams },
       moveParams: deferredEventEffect.moveParams,
       resources: shared.evalRuntimeResources,
+      ...(shared.cachedRuntime === undefined ? {} : { cachedRuntime: shared.cachedRuntime }),
       traceContext: {
         eventContext: 'actionEffect',
         actionId: deferredEventEffect.actionId,
         effectPathRoot: `action:${deferredEventEffect.actionId}.deferredEventEffects`,
       },
       effectPath: '',
+      ...(shared.executionPolicy?.verifyCompiledEffects === undefined
+        ? {}
+        : { verifyCompiledEffects: shared.executionPolicy.verifyCompiledEffects }),
       ...(shared.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: shared.phaseTransitionBudget }),
     }));
     nextState = effectResult.state;
@@ -1200,6 +1209,7 @@ const applyReleasedDeferredEventEffects = (
         triggerLog,
         adjacencyGraph: shared.adjacencyGraph,
         runtimeTableIndex: shared.runtimeTableIndex,
+        ...(shared.cachedRuntime === undefined ? {} : { cachedRuntime: shared.cachedRuntime }),
         effectPathRoot: `action:${deferredEventEffect.actionId}.deferredEvent(${emittedEvent.type})`,
         evalRuntimeResources: shared.evalRuntimeResources,
         ...(shared.executionPolicy === undefined ? {} : { policy: shared.executionPolicy }),
@@ -1245,6 +1255,7 @@ const applyMoveCore = (
     adjacencyGraph,
     runtimeTableIndex,
     evalRuntimeResources,
+    ...(cachedRuntime === undefined ? {} : { cachedRuntime }),
     ...(runtime.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: runtime.phaseTransitionBudget }),
     ...(runtime.executionPolicy === undefined ? {} : { executionPolicy: runtime.executionPolicy }),
   };
@@ -1305,6 +1316,8 @@ const applyMoveCore = (
     undefined,
     shared.executionPolicy,
     shared.evalRuntimeResources,
+    'boundaryExpiry',
+    shared.cachedRuntime,
   );
   perfEnd(profiler, 'applyBoundaryExpiry', t0_boundary);
 

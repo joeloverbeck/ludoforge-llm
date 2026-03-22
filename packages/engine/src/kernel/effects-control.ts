@@ -24,7 +24,10 @@ const resolveEffectBindings = (ctx: EffectContext): Readonly<Record<string, unkn
   const mp = ctx.moveParams;
   // Fast path: skip merge when moveParams has no keys (common in lifecycle effects).
   // Uses for-in to check emptiness without Object.keys() allocation.
-  for (const _ in mp) { return { ...mp, ...ctx.bindings }; }
+  for (const key in mp) {
+    void key;
+    return { ...mp, ...ctx.bindings };
+  }
   return ctx.bindings;
 };
 

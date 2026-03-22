@@ -47,8 +47,10 @@ interface EffectContextBase extends WriteContext {
   readonly traceContext?: EffectTraceContext;
   readonly effectPath?: string;
   readonly maxEffectOps?: number;
+  readonly verifyCompiledEffects?: boolean;
   readonly freeOperation?: boolean;
   readonly phaseTransitionBudget?: PhaseTransitionBudget;
+  readonly cachedRuntime?: import('./gamedef-runtime.js').GameDefRuntime;
   readonly transientDecisionSelections?: Readonly<Record<string, readonly MoveParamScalar[]>>;
   readonly decisionScope: DecisionScope;
   /** Runtime scope carrying previously executed grant definitions for sequence viability probes. */

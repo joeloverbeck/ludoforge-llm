@@ -12,7 +12,7 @@ import type { EffectBudgetState } from './effects-control.js';
 import type { EffectAST, TriggerEvent } from './types.js';
 import { registry, effectKindOf } from './effect-registry.js';
 
-const createBudgetState = (ctx: Pick<EffectContext, 'maxEffectOps'>): EffectBudgetState => {
+export const createEffectBudgetState = (ctx: Pick<EffectContext, 'maxEffectOps'>): EffectBudgetState => {
   const maxEffectOps = getMaxEffectOps(ctx);
   if (!Number.isInteger(maxEffectOps) || maxEffectOps < 0) {
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.EFFECT_BUDGET_CONFIG_INVALID, 'maxEffectOps must be a non-negative integer', { maxEffectOps });
@@ -21,7 +21,7 @@ const createBudgetState = (ctx: Pick<EffectContext, 'maxEffectOps'>): EffectBudg
   return { remaining: maxEffectOps, max: maxEffectOps };
 };
 
-const consumeBudget = (budget: EffectBudgetState, effectType: string): void => {
+export const consumeEffectBudget = (budget: EffectBudgetState, effectType: string): void => {
   if (budget.remaining <= 0) {
     throw new EffectBudgetExceededError('Effect operation budget exceeded', {
       effectType,
@@ -34,7 +34,7 @@ const consumeBudget = (budget: EffectBudgetState, effectType: string): void => {
 
 const applyEffectWithBudget = (effect: EffectAST, ctx: EffectContext, budget: EffectBudgetState): EffectResult => {
   const kind = effectKindOf(effect);
-  consumeBudget(budget, kind);
+  consumeEffectBudget(budget, kind);
   const handler = registry[kind];
   if (!handler) {
     throw effectNotImplementedError(kind, { effect });
@@ -42,7 +42,7 @@ const applyEffectWithBudget = (effect: EffectAST, ctx: EffectContext, budget: Ef
   const profiler = ctx.profiler;
   const t0 = perfStart(profiler);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const result = (handler as any)(effect, ctx, budget, applyEffectsWithBudget) as EffectResult;
+  const result = (handler as any)(effect, ctx, budget, applyEffectsWithBudgetState) as EffectResult;
   perfDynEnd(profiler, `effect:${kind}`, t0);
   return {
     state: result.state,
@@ -54,7 +54,11 @@ const applyEffectWithBudget = (effect: EffectAST, ctx: EffectContext, budget: Ef
   };
 };
 
-const applyEffectsWithBudget = (effects: readonly EffectAST[], ctx: EffectContext, budget: EffectBudgetState): EffectResult => {
+export const applyEffectsWithBudgetState = (
+  effects: readonly EffectAST[],
+  ctx: EffectContext,
+  budget: EffectBudgetState,
+): EffectResult => {
   let currentState = ctx.state;
   let currentRng = ctx.rng;
   let currentBindings = ctx.bindings;
@@ -106,7 +110,7 @@ const applyEffectsWithBudget = (effects: readonly EffectAST[], ctx: EffectContex
 
 export function applyEffect(effect: EffectAST, ctx: EffectContext): EffectResult {
   assertEffectContextEntryInvariant(ctx);
-  const budget = createBudgetState(ctx);
+  const budget = createEffectBudgetState(ctx);
   const freeOperationProbeScope: FreeOperationProbeScope = ctx.freeOperationProbeScope ?? {
     priorGrantDefinitions: [],
     blockedStrictSequenceBatchIds: [],
@@ -127,12 +131,12 @@ export function applyEffect(effect: EffectAST, ctx: EffectContext): EffectResult
 
 export function applyEffects(effects: readonly EffectAST[], ctx: EffectContext): EffectResult {
   assertEffectContextEntryInvariant(ctx);
-  const budget = createBudgetState(ctx);
+  const budget = createEffectBudgetState(ctx);
   const freeOperationProbeScope: FreeOperationProbeScope = ctx.freeOperationProbeScope ?? {
     priorGrantDefinitions: [],
     blockedStrictSequenceBatchIds: [],
   };
-  const result = applyEffectsWithBudget(
+  const result = applyEffectsWithBudgetState(
     effects,
     { ...ctx, freeOperationProbeScope, decisionScope: ctx.decisionScope ?? emptyScope() },
     budget,

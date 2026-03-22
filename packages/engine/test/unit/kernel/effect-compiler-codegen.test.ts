@@ -1,0 +1,306 @@
+import * as assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
+
+import {
+  applyEffect,
+  applyEffects,
+  asPhaseId,
+  asPlayerId,
+  buildAdjacencyGraph,
+  buildRuntimeTableIndex,
+  compilePatternDescriptor,
+  computeFullHash,
+  createExecutionEffectContext,
+  createEvalRuntimeResources,
+  createRng,
+  createZobristTable,
+  emptyScope,
+  type CompiledEffectContext,
+  type CompiledEffectFragment,
+  type EffectAST,
+  type EffectResult,
+  type GameDef,
+  type GameState,
+  type Rng,
+  type TriggerEvent,
+} from '../../../src/kernel/index.js';
+import { classifyEffect } from '../../../src/kernel/effect-compiler-patterns.js';
+
+const makeDef = (): GameDef => ({
+  metadata: { id: 'effect-compiler-codegen-test', players: { min: 2, max: 3 } },
+  constants: {},
+  globalVars: [
+    { name: 'score', type: 'int', init: 0, min: 0, max: 10 },
+    { name: 'round', type: 'int', init: 0, min: 0, max: 10 },
+    { name: 'flag', type: 'boolean', init: false },
+    { name: 'count', type: 'int', init: 0, min: 0, max: 10 },
+  ],
+  perPlayerVars: [
+    { name: 'hp', type: 'int', init: 0, min: 0, max: 20 },
+    { name: 'ready', type: 'boolean', init: false },
+  ],
+  zoneVars: [],
+  zones: [],
+  tokenTypes: [],
+  setup: [],
+  turnStructure: {
+    phases: [
+      {
+        id: asPhaseId('main'),
+        onExit: [{ addVar: { scope: 'global', var: 'round', delta: 1 } }],
+      },
+      {
+        id: asPhaseId('cleanup'),
+        onEnter: [{ setVar: { scope: 'global', var: 'flag', value: true } }],
+      },
+    ],
+  },
+  actions: [],
+  triggers: [],
+  terminal: { conditions: [] },
+});
+
+const makeState = (): GameState => ({
+  globalVars: { score: 3, round: 0, flag: false, count: 0 },
+  perPlayerVars: {
+    '0': { hp: 5, ready: false },
+    '1': { hp: 7, ready: false },
+    '2': { hp: 9, ready: true },
+  },
+  zoneVars: {},
+  playerCount: 3,
+  zones: {},
+  nextTokenOrdinal: 0,
+  currentPhase: asPhaseId('main'),
+  activePlayer: asPlayerId(1),
+  turnCount: 1,
+  rng: createRng(17n).state,
+  stateHash: 0n,
+  actionUsage: {},
+  turnOrderState: { type: 'roundRobin' },
+  markers: {},
+});
+
+const compileEffects = (effects: readonly EffectAST[]): CompiledEffectFragment | null => {
+  const fragments = effects.map((effect) => {
+    const descriptor = classifyEffect(effect);
+    return descriptor === null ? null : compilePatternDescriptor(descriptor, compileEffects);
+  });
+
+  if (fragments.some((entry) => entry === null)) {
+    return null;
+  }
+
+  const compiledFragments = fragments as readonly CompiledEffectFragment[];
+  return {
+    nodeCount: compiledFragments.reduce((sum, fragment) => sum + fragment.nodeCount, 0),
+    execute: (state, rng, bindings, ctx) => {
+      let currentState = state;
+      let currentRng = rng;
+      let currentBindings = bindings;
+      let currentDecisionScope = ctx.decisionScope ?? emptyScope();
+      const emittedEvents: TriggerEvent[] = [];
+
+      for (const fragment of compiledFragments) {
+        const result = fragment.execute(currentState, currentRng, currentBindings, {
+          ...ctx,
+          decisionScope: currentDecisionScope,
+        });
+        currentState = result.state;
+        currentRng = result.rng;
+        currentBindings = result.bindings ?? currentBindings;
+        currentDecisionScope = result.decisionScope ?? currentDecisionScope;
+        for (const event of result.emittedEvents ?? []) {
+          emittedEvents.push(event);
+        }
+        if (result.pendingChoice !== undefined) {
+          return {
+            state: currentState,
+            rng: currentRng,
+            emittedEvents,
+            bindings: currentBindings,
+            decisionScope: currentDecisionScope,
+            pendingChoice: result.pendingChoice,
+          };
+        }
+      }
+
+      return {
+        state: currentState,
+        rng: currentRng,
+        emittedEvents,
+        bindings: currentBindings,
+        decisionScope: currentDecisionScope,
+      };
+    },
+  };
+};
+
+const makeCompiledContext = (def: GameDef): CompiledEffectContext => ({
+  def,
+  adjacencyGraph: buildAdjacencyGraph(def.zones),
+  runtimeTableIndex: buildRuntimeTableIndex(def),
+  resources: createEvalRuntimeResources(),
+  activePlayer: asPlayerId(1),
+  actorPlayer: asPlayerId(0),
+  moveParams: {},
+  fallbackApplyEffects: applyEffects,
+  decisionScope: emptyScope(),
+});
+
+const compareResults = (
+  def: GameDef,
+  compiled: EffectResult,
+  interpreted: EffectResult,
+) => {
+  const table = createZobristTable(def);
+
+  assert.deepEqual(compiled.state, interpreted.state);
+  assert.deepEqual(compiled.rng, interpreted.rng);
+  assert.deepEqual(compiled.emittedEvents ?? [], interpreted.emittedEvents ?? []);
+  if (compiled.bindings !== undefined || interpreted.bindings !== undefined) {
+    assert.deepEqual(compiled.bindings ?? {}, interpreted.bindings ?? {});
+  }
+  if (compiled.decisionScope !== undefined && interpreted.decisionScope !== undefined) {
+    assert.deepEqual(compiled.decisionScope, interpreted.decisionScope);
+  }
+  assert.equal(computeFullHash(table, compiled.state), computeFullHash(table, interpreted.state));
+};
+
+const runCompiled = (
+  def: GameDef,
+  state: GameState,
+  effect: EffectAST,
+  bindings: Readonly<Record<string, unknown>> = {},
+  rng: Rng = createRng(17n),
+): EffectResult => {
+  const descriptor = classifyEffect(effect);
+  assert.ok(descriptor !== null);
+
+  const fragment = compilePatternDescriptor(descriptor, compileEffects);
+  assert.ok(fragment !== null);
+
+  return fragment.execute(state, rng, bindings, makeCompiledContext(def));
+};
+
+const runInterpreted = (
+  def: GameDef,
+  state: GameState,
+  effect: EffectAST,
+  bindings: Readonly<Record<string, unknown>> = {},
+  rng: Rng = createRng(17n),
+): EffectResult => applyEffect(effect, createExecutionEffectContext({
+  def,
+  adjacencyGraph: buildAdjacencyGraph(def.zones),
+  runtimeTableIndex: buildRuntimeTableIndex(def),
+  state,
+  rng,
+  activePlayer: asPlayerId(1),
+  actorPlayer: asPlayerId(0),
+  bindings,
+  moveParams: {},
+  resources: createEvalRuntimeResources(),
+}));
+
+describe('effect-compiler-codegen', () => {
+  it('compileSetVar matches interpreter for global ref writes and emitted events', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = { setVar: { scope: 'global', var: 'score', value: { ref: 'gvar', var: 'round' } } };
+
+    compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
+  });
+
+  it('compileSetVar matches interpreter for pvar boolean writes from bindings', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = { setVar: { scope: 'pvar', player: 'actor', var: 'ready', value: { ref: 'binding', name: '$ready' } } };
+
+    compareResults(def, runCompiled(def, state, effect, { $ready: true }), runInterpreted(def, state, effect, { $ready: true }));
+  });
+
+  it('compileAddVar matches interpreter for clamp boundaries', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = { addVar: { scope: 'pvar', player: 'active', var: 'hp', delta: { ref: 'binding', name: '$delta' } } };
+
+    compareResults(def, runCompiled(def, state, effect, { $delta: 50 }), runInterpreted(def, state, effect, { $delta: 50 }));
+  });
+
+  it('compileIf matches interpreter for logical conditions and branch execution', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = {
+      if: {
+        when: {
+          op: 'and',
+          args: [
+            { op: '==', left: { ref: 'gvar', var: 'flag' }, right: false },
+            { op: '>=', left: { ref: 'pvar', player: 'active', var: 'hp' }, right: 7 },
+          ],
+        },
+        then: [{ addVar: { scope: 'global', var: 'score', delta: 2 } }],
+        else: [{ setVar: { scope: 'global', var: 'score', value: 0 } }],
+      },
+    };
+
+    compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
+  });
+
+  it('compileForEachPlayers matches interpreter for player iteration, limit, and countBind', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = {
+      forEach: {
+        bind: '$seat',
+        over: { query: 'players' },
+        limit: 2,
+        effects: [{ addVar: { scope: 'pvar', player: { chosen: '$seat' }, var: 'hp', delta: 1 } }],
+        countBind: '$counted',
+        in: [{ setVar: { scope: 'global', var: 'count', value: { ref: 'binding', name: '$counted' } } }],
+      },
+    };
+
+    compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
+  });
+
+  it('compileForEachPlayers matches interpreter when player query is empty', () => {
+    const def = makeDef();
+    const state = { ...makeState(), playerCount: 0, perPlayerVars: {} };
+    const effect: EffectAST = {
+      forEach: {
+        bind: '$seat',
+        over: { query: 'players' },
+        effects: [{ addVar: { scope: 'global', var: 'score', delta: 1 } }],
+        countBind: '$counted',
+        in: [{ setVar: { scope: 'global', var: 'count', value: { ref: 'binding', name: '$counted' } } }],
+      },
+    };
+
+    compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
+  });
+
+  it('compileGotoPhaseExact matches interpreter lifecycle semantics', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = { gotoPhaseExact: { phase: 'cleanup' } };
+
+    compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
+  });
+
+  it('compilePatternDescriptor dispatches all supported Phase 1 descriptors', () => {
+    const effects: readonly EffectAST[] = [
+      { setVar: { scope: 'global', var: 'score', value: 1 } },
+      { addVar: { scope: 'global', var: 'score', delta: 1 } },
+      { if: { when: { op: '==', left: 1, right: 1 }, then: [] } },
+      { forEach: { bind: '$seat', over: { query: 'players' }, effects: [] } },
+      { gotoPhaseExact: { phase: 'cleanup' } },
+    ];
+
+    for (const effect of effects) {
+      const descriptor = classifyEffect(effect);
+      assert.ok(descriptor !== null);
+      assert.ok(compilePatternDescriptor(descriptor, compileEffects) !== null);
+    }
+  });
+});

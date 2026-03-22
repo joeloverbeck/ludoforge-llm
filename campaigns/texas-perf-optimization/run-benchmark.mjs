@@ -2,21 +2,16 @@
 /**
  * Texas Hold'em benchmark runner for the perf-optimization campaign.
  *
- * Uses the production simulator (runGame) for game execution.
- * Measures wall-clock time around the full simulation loop per game.
- * Per-function timing uses the opt-in PerfProfiler from the kernel
- * (only for the separate run-profile.mjs; here we do NOT pass a profiler
- * to avoid measurement overhead).
+ * Compares two modes over the same corpus:
+ * - compiled lifecycle runtime (current architecture)
+ * - interpreter-only lifecycle runtime (compiled cache removed)
  *
- * The per-function breakdown is obtained by reimplementing the loop
- * around the kernel calls — same as the original benchmark — but now
- * this script also validates that the production simulator produces
- * identical results (same stateHash).
+ * The final stdout line remains JSON so the existing campaign harness can
+ * continue parsing the primary metric from the compiled mode. Human-readable
+ * comparison output is printed before that final line.
  *
  * Usage:
  *   node run-benchmark.mjs [--seeds N] [--players N] [--max-turns N]
- *
- * Output (stdout, last line): JSON with timing breakdown
  */
 
 import { existsSync } from 'node:fs';
@@ -37,14 +32,9 @@ function resolveRepoRoot() {
 
 const REPO_ROOT = resolveRepoRoot();
 
-// Engine imports (from compiled dist)
 const {
-  terminalResult,
-  legalMoves,
-  applyMove,
-  initialState,
   createGameDefRuntime,
-  createRng,
+  createPerfProfiler,
   assertValidatedGameDef,
 } = await import(join(REPO_ROOT, 'packages/engine/dist/src/kernel/index.js'));
 
@@ -54,7 +44,7 @@ const { loadGameSpecBundleFromEntrypoint, runGameSpecStagesFromBundle } =
 const { PolicyAgent } =
   await import(join(REPO_ROOT, 'packages/engine/dist/src/agents/index.js'));
 
-const { computeDeltas } =
+const { runGame } =
   await import(join(REPO_ROOT, 'packages/engine/dist/src/sim/index.js'));
 
 // CLI argument parsing
@@ -68,9 +58,6 @@ function getArg(name, defaultValue) {
 const SEED_COUNT = Number(getArg('seeds', '50'));
 const PLAYER_COUNT = Number(getArg('players', '4'));
 const MAX_TURNS = Number(getArg('max-turns', '10000'));
-
-// Same constant as simulator.ts
-const AGENT_RNG_MIX = 0x9e3779b97f4a7c15n;
 
 // Step 1: Compile the Texas Hold'em spec (timed)
 const entrypoint = join(REPO_ROOT, 'data', 'games', 'texas-holdem.game-spec.md');
@@ -110,153 +97,157 @@ if (!compiled || !compiled.gameDef) {
 const def = assertValidatedGameDef(compiled.gameDef);
 const compilationMs = performance.now() - compileStart;
 
-// Step 2: Timed game loop (reimplements simulator loop with timing)
-function runGameTimed(gameDef, seed, agents) {
-  const timings = {
-    terminalResult: 0,
-    legalMoves: 0,
-    applyMove: 0,
-    agentChooseMove: 0,
-    computeDeltas: 0,
-  };
-
-  const runtime = createGameDefRuntime(gameDef);
-  let state = initialState(gameDef, seed, agents.length).state;
-
-  const agentRngs = Array.from(
-    { length: agents.length },
-    (_, i) => createRng(BigInt(seed) ^ (BigInt(i + 1) * AGENT_RNG_MIX)),
-  );
-
-  let moveCount = 0;
-
-  while (true) {
-    let t0 = performance.now();
-    const terminal = terminalResult(gameDef, state, runtime);
-    timings.terminalResult += performance.now() - t0;
-
-    if (terminal !== null) break;
-    if (moveCount >= MAX_TURNS) break;
-
-    t0 = performance.now();
-    const legal = legalMoves(gameDef, state, undefined, runtime);
-    timings.legalMoves += performance.now() - t0;
-
-    if (legal.length === 0) break;
-
-    const player = state.activePlayer;
-    const agent = agents[player];
-    const agentRng = agentRngs[player];
-
-    t0 = performance.now();
-    const selected = agent.chooseMove({
-      def: gameDef,
-      state,
-      playerId: player,
-      legalMoves: legal,
-      rng: agentRng,
-      runtime,
-    });
-    timings.agentChooseMove += performance.now() - t0;
-    agentRngs[player] = selected.rng;
-
-    const preState = state;
-    t0 = performance.now();
-    const applied = applyMove(gameDef, state, selected.move, undefined, runtime);
-    timings.applyMove += performance.now() - t0;
-    state = applied.state;
-
-    t0 = performance.now();
-    computeDeltas(preState, state);
-    timings.computeDeltas += performance.now() - t0;
-
-    moveCount++;
-  }
-
-  return { stateHash: state.stateHash, moveCount, timings };
-}
-
-// Step 3: Run tournament simulations
-let gamesCompleted = 0;
-let errors = 0;
-let totalMoves = 0;
-
-const totalTimings = {
-  terminalResult: 0,
-  legalMoves: 0,
-  applyMove: 0,
-  agentChooseMove: 0,
-  computeDeltas: 0,
-};
-
-const stateHashes = [];
-
-const simulationStart = performance.now();
-
-for (let seedOffset = 0; seedOffset < SEED_COUNT; seedOffset++) {
-  const seed = 1000 + seedOffset;
-
-  try {
-    const agents = Array.from(
-      { length: PLAYER_COUNT },
-      () => new PolicyAgent({ profileId: 'baseline' }),
-    );
-
-    const { stateHash, moveCount, timings } = runGameTimed(def, seed, agents);
-
-    for (const key of Object.keys(totalTimings)) {
-      totalTimings[key] += timings[key];
-    }
-
-    totalMoves += moveCount;
-    stateHashes.push(stateHash);
-    gamesCompleted++;
-  } catch (err) {
-    process.stderr.write(`Seed ${seed} error: ${err.message}\n`);
-    errors++;
-  }
-}
-
-const simulationMs = performance.now() - simulationStart;
-const combinedMs = compilationMs + simulationMs;
-
-// Step 4: Compute determinism fingerprint
-let fingerprint = 0n;
-for (const hash of stateHashes) {
-  if (typeof hash === 'bigint') {
-    fingerprint ^= hash;
-  } else if (typeof hash === 'string') {
-    fingerprint ^= BigInt(`0x${hash.replace(/^0x/i, '')}`);
-  } else if (typeof hash === 'number') {
-    fingerprint ^= BigInt(hash);
-  }
-}
-const stateHashHex = fingerprint.toString(16);
-
-// Step 5: Output results
 const round = (ms) => Math.round(ms * 100) / 100;
 
-const result = {
-  combined_duration_ms: round(combinedMs),
-  compilation_ms: round(compilationMs),
-  per_function: {
-    terminalResult_ms: round(totalTimings.terminalResult),
-    legalMoves_ms: round(totalTimings.legalMoves),
-    applyMove_ms: round(totalTimings.applyMove),
-    agentChooseMove_ms: round(totalTimings.agentChooseMove),
-    computeDeltas_ms: round(totalTimings.computeDeltas),
-  },
-  games_completed: gamesCompleted,
-  errors,
-  total_moves: totalMoves,
-  state_hash: stateHashHex,
+const toInterpreterOnlyRuntime = (runtime) => ({
+  ...runtime,
+  compiledLifecycleEffects: new Map(),
+});
+
+const fingerprintStateHashes = (stateHashes) => {
+  let fingerprint = 0n;
+  for (const hash of stateHashes) {
+    if (typeof hash === 'bigint') {
+      fingerprint ^= hash;
+      continue;
+    }
+    if (typeof hash === 'string') {
+      fingerprint ^= BigInt(`0x${hash.replace(/^0x/i, '')}`);
+      continue;
+    }
+    if (typeof hash === 'number') {
+      fingerprint ^= BigInt(hash);
+    }
+  }
+  return fingerprint.toString(16);
 };
 
-process.stdout.write(JSON.stringify(result) + '\n');
+const collectModeSummary = (modeName, runtime) => {
+  const profiler = createPerfProfiler();
+  const stateHashes = [];
+  let gamesCompleted = 0;
+  let errors = 0;
+  let totalMoves = 0;
 
-if (errors > SEED_COUNT * 0.1) {
-  process.stderr.write(`Too many errors: ${errors}/${SEED_COUNT} (>10%)\n`);
+  const simulationStart = performance.now();
+  for (let seedOffset = 0; seedOffset < SEED_COUNT; seedOffset++) {
+    const seed = 1000 + seedOffset;
+    try {
+      const agents = Array.from(
+        { length: PLAYER_COUNT },
+        () => new PolicyAgent({ profileId: 'baseline' }),
+      );
+      const trace = runGame(def, seed, agents, MAX_TURNS, PLAYER_COUNT, { profiler }, runtime);
+      totalMoves += trace.moves.length;
+      stateHashes.push(trace.finalState.stateHash);
+      gamesCompleted++;
+    } catch (err) {
+      process.stderr.write(`[${modeName}] seed ${seed} error: ${err.message}\n`);
+      errors++;
+    }
+  }
+  const simulationMs = performance.now() - simulationStart;
+
+  return {
+    simulationMs,
+    gamesCompleted,
+    errors,
+    totalMoves,
+    stateHash: fingerprintStateHashes(stateHashes),
+    profiler,
+  };
+};
+
+const compiledRuntime = createGameDefRuntime(def);
+const compiledMode = collectModeSummary('compiled', compiledRuntime);
+const interpretedMode = collectModeSummary('interpreted', toInterpreterOnlyRuntime(compiledRuntime));
+
+if (compiledMode.errors > SEED_COUNT * 0.1) {
+  process.stderr.write(`Too many compiled-mode errors: ${compiledMode.errors}/${SEED_COUNT} (>10%)\n`);
   process.exit(1);
 }
 
-process.exit(0);
+if (interpretedMode.errors > SEED_COUNT * 0.1) {
+  process.stderr.write(`Too many interpreter-mode errors: ${interpretedMode.errors}/${SEED_COUNT} (>10%)\n`);
+  process.exit(1);
+}
+
+if (compiledMode.stateHash !== interpretedMode.stateHash) {
+  process.stderr.write(
+    `Compiled/interpreter determinism mismatch: compiled=${compiledMode.stateHash} interpreted=${interpretedMode.stateHash}\n`,
+  );
+  process.exit(1);
+}
+
+const compiledCombinedMs = compilationMs + compiledMode.simulationMs;
+const improvementPct = interpretedMode.simulationMs === 0
+  ? 0
+  : ((interpretedMode.simulationMs - compiledMode.simulationMs) / interpretedMode.simulationMs) * 100;
+
+process.stdout.write('\n=== TEXAS COMPILED LIFECYCLE BENCHMARK ===\n');
+process.stdout.write(`Compilation: ${round(compilationMs)}ms\n`);
+process.stdout.write(`Compiled simulation: ${round(compiledMode.simulationMs)}ms\n`);
+process.stdout.write(`Interpreter simulation: ${round(interpretedMode.simulationMs)}ms\n`);
+process.stdout.write(`Delta vs interpreter: ${improvementPct >= 0 ? '-' : '+'}${round(Math.abs(improvementPct))}%\n`);
+process.stdout.write(`Deterministic fingerprint: ${compiledMode.stateHash}\n`);
+process.stdout.write('\n=== LIFECYCLE BUCKETS ===\n');
+process.stdout.write(
+  `Compiled lifecycle bucket: ${round(compiledMode.profiler.dynamic.get('lifecycle:applyEffects:compiled')?.totalMs ?? 0)}ms `
+    + `(${compiledMode.profiler.dynamic.get('lifecycle:applyEffects:compiled')?.count ?? 0} calls)\n`,
+);
+process.stdout.write(
+  `Compiled interpreter bucket: ${round(compiledMode.profiler.dynamic.get('lifecycle:applyEffects')?.totalMs ?? 0)}ms `
+    + `(${compiledMode.profiler.dynamic.get('lifecycle:applyEffects')?.count ?? 0} calls)\n`,
+);
+process.stdout.write(
+  `Interpreter lifecycle bucket: ${round(interpretedMode.profiler.dynamic.get('lifecycle:applyEffects')?.totalMs ?? 0)}ms `
+    + `(${interpretedMode.profiler.dynamic.get('lifecycle:applyEffects')?.count ?? 0} calls)\n`,
+);
+process.stdout.write(
+  `Interpreter compiled bucket: ${round(interpretedMode.profiler.dynamic.get('lifecycle:applyEffects:compiled')?.totalMs ?? 0)}ms `
+    + `(${interpretedMode.profiler.dynamic.get('lifecycle:applyEffects:compiled')?.count ?? 0} calls)\n`,
+);
+
+const result = {
+  combined_duration_ms: round(compiledCombinedMs),
+  compilation_ms: round(compilationMs),
+  per_function: {
+    terminalResult_ms: round(compiledMode.profiler.data.simTerminalResult.totalMs),
+    legalMoves_ms: round(compiledMode.profiler.data.simLegalMoves.totalMs),
+    applyMove_ms: round(compiledMode.profiler.data.simApplyMove.totalMs),
+    agentChooseMove_ms: round(compiledMode.profiler.data.simAgentChooseMove.totalMs),
+    computeDeltas_ms: round(compiledMode.profiler.data.simComputeDeltas.totalMs),
+  },
+  games_completed: compiledMode.gamesCompleted,
+  errors: compiledMode.errors,
+  total_moves: compiledMode.totalMoves,
+  state_hash: compiledMode.stateHash,
+  comparison: {
+    compiled: {
+      simulation_ms: round(compiledMode.simulationMs),
+      lifecycle_apply_effects_compiled_ms: round(
+        compiledMode.profiler.dynamic.get('lifecycle:applyEffects:compiled')?.totalMs ?? 0,
+      ),
+      lifecycle_apply_effects_compiled_count: compiledMode.profiler.dynamic.get('lifecycle:applyEffects:compiled')?.count ?? 0,
+      lifecycle_apply_effects_interpreter_ms: round(
+        compiledMode.profiler.dynamic.get('lifecycle:applyEffects')?.totalMs ?? 0,
+      ),
+      lifecycle_apply_effects_interpreter_count: compiledMode.profiler.dynamic.get('lifecycle:applyEffects')?.count ?? 0,
+    },
+    interpreted: {
+      simulation_ms: round(interpretedMode.simulationMs),
+      lifecycle_apply_effects_ms: round(
+        interpretedMode.profiler.dynamic.get('lifecycle:applyEffects')?.totalMs ?? 0,
+      ),
+      lifecycle_apply_effects_count: interpretedMode.profiler.dynamic.get('lifecycle:applyEffects')?.count ?? 0,
+      lifecycle_apply_effects_compiled_ms: round(
+        interpretedMode.profiler.dynamic.get('lifecycle:applyEffects:compiled')?.totalMs ?? 0,
+      ),
+      lifecycle_apply_effects_compiled_count: interpretedMode.profiler.dynamic.get('lifecycle:applyEffects:compiled')?.count ?? 0,
+    },
+    improvement_pct_vs_interpreter: round(improvementPct),
+    deterministic_parity: compiledMode.stateHash === interpretedMode.stateHash,
+  },
+};
+
+process.stdout.write(`${JSON.stringify(result)}\n`);

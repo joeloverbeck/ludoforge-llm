@@ -10,6 +10,8 @@ const testDoubles = vi.hoisted(() => ({
   createMapEditorStore: vi.fn(),
   createEditorCanvas: vi.fn(),
   createEditorZoneRenderer: vi.fn(),
+  createEditorRouteRenderer: vi.fn(),
+  createEditorHandleRenderer: vi.fn(),
 }));
 
 vi.mock('../../src/bootstrap/map-editor-bootstrap.js', () => ({
@@ -32,6 +34,14 @@ vi.mock('../../src/map-editor/map-editor-zone-renderer.js', () => ({
   createEditorZoneRenderer: testDoubles.createEditorZoneRenderer,
 }));
 
+vi.mock('../../src/map-editor/map-editor-route-renderer.js', () => ({
+  createEditorRouteRenderer: testDoubles.createEditorRouteRenderer,
+}));
+
+vi.mock('../../src/map-editor/map-editor-handle-renderer.js', () => ({
+  createEditorHandleRenderer: testDoubles.createEditorHandleRenderer,
+}));
+
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
@@ -45,6 +55,8 @@ describe('MapEditorScreen', () => {
     testDoubles.createMapEditorStore.mockReset();
     testDoubles.createEditorCanvas.mockReset();
     testDoubles.createEditorZoneRenderer.mockReset();
+    testDoubles.createEditorRouteRenderer.mockReset();
+    testDoubles.createEditorHandleRenderer.mockReset();
 
     testDoubles.getOrComputeLayout.mockReturnValue({
       worldLayout: {
@@ -57,8 +69,10 @@ describe('MapEditorScreen', () => {
   it('loads editor bootstrap, mounts canvas runtime, and cleans up on unmount', async () => {
     const store = { getState: vi.fn(() => ({})) };
     const zoneRenderer = { destroy: vi.fn() };
+    const routeRenderer = { destroy: vi.fn() };
+    const handleRenderer = { destroy: vi.fn() };
     const editorCanvas = {
-      layers: { zone: { tag: 'zone-layer' } },
+      layers: { zone: { tag: 'zone-layer' }, route: { tag: 'route-layer' }, handle: { tag: 'handle-layer' } },
       viewport: { tag: 'viewport' },
       resize: vi.fn(),
       centerOnContent: vi.fn(),
@@ -75,6 +89,8 @@ describe('MapEditorScreen', () => {
     testDoubles.createMapEditorStore.mockReturnValue(store);
     testDoubles.createEditorCanvas.mockResolvedValue(editorCanvas);
     testDoubles.createEditorZoneRenderer.mockReturnValue(zoneRenderer);
+    testDoubles.createEditorRouteRenderer.mockReturnValue(routeRenderer);
+    testDoubles.createEditorHandleRenderer.mockReturnValue(handleRenderer);
 
     const { MapEditorScreen } = await import('../../src/map-editor/MapEditorScreen.js');
     const onBack = vi.fn();
@@ -101,6 +117,16 @@ describe('MapEditorScreen', () => {
       { tag: 'provider' },
       { dragSurface: editorCanvas.viewport },
     );
+    expect(testDoubles.createEditorRouteRenderer).toHaveBeenCalledWith(
+      editorCanvas.layers.route,
+      store,
+      undefined,
+      { tag: 'provider' },
+    );
+    expect(testDoubles.createEditorHandleRenderer).toHaveBeenCalledWith(
+      editorCanvas.layers.handle,
+      store,
+    );
     expect(editorCanvas.centerOnContent).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByTestId('map-editor-back-button'));
@@ -109,6 +135,8 @@ describe('MapEditorScreen', () => {
     rendered.unmount();
 
     expect(zoneRenderer.destroy).toHaveBeenCalledTimes(1);
+    expect(routeRenderer.destroy).toHaveBeenCalledTimes(1);
+    expect(handleRenderer.destroy).toHaveBeenCalledTimes(1);
     expect(editorCanvas.destroy).toHaveBeenCalledTimes(1);
   });
 

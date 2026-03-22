@@ -4,6 +4,8 @@ import { getOrComputeLayout } from '../layout/layout-cache.js';
 import { resolveMapEditorBootstrapByGameId } from '../bootstrap/map-editor-bootstrap.js';
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import { createEditorCanvas } from './map-editor-canvas.js';
+import { createEditorHandleRenderer } from './map-editor-handle-renderer.js';
+import { createEditorRouteRenderer } from './map-editor-route-renderer.js';
 import { createMapEditorStore, type MapEditorStoreApi } from './map-editor-store.js';
 import { createEditorZoneRenderer } from './map-editor-zone-renderer.js';
 import styles from './MapEditorScreen.module.css';
@@ -108,6 +110,16 @@ export function MapEditorScreen({ gameId, onBack }: MapEditorScreenProps): React
           screenState.editor.visualConfigProvider,
           { dragSurface: canvas.viewport },
         );
+        const routeRenderer = createEditorRouteRenderer(
+          canvas.layers.route,
+          screenState.editor.store,
+          screenState.editor.store.getState().gameDef,
+          screenState.editor.visualConfigProvider,
+        );
+        const handleRenderer = createEditorHandleRenderer(
+          canvas.layers.handle,
+          screenState.editor.store,
+        );
 
         const syncCanvasSize = (): void => {
           const nextWidth = Math.max(container.clientWidth, 1);
@@ -124,6 +136,8 @@ export function MapEditorScreen({ gameId, onBack }: MapEditorScreenProps): React
 
         destroyRuntime = () => {
           removeWindowListeners();
+          handleRenderer.destroy();
+          routeRenderer.destroy();
           zoneRenderer.destroy();
           canvas.destroy();
         };

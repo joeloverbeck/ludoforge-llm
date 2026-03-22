@@ -17,6 +17,7 @@ import {
   asTriggerId,
   asZoneId,
   legalMoves,
+  probeMoveViability,
   type ActionDef,
   type EffectAST,
   type GameDef,
@@ -1204,6 +1205,81 @@ describe('applyMove() required free-operation grant enforcement', () => {
     );
     assert.equal(state.turnOrderState.type, 'cardDriven');
     assert.equal(state.turnOrderState.runtime.pendingFreeOperationGrants?.length, 1);
+  });
+
+  it('marks completed free operations that fail mustChangeGameplayState as non-viable during probing', () => {
+    const action: ActionDef = {
+      id: asActionId('operation'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const def = {
+      ...makeBaseDef({ actions: [action], globalVars: [] }),
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'] },
+            windows: [],
+            optionMatrix: [],
+            passRewards: [],
+            freeOperationActionIds: ['operation'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+            actionClassByActionId: { operation: 'operation' },
+          },
+        },
+      },
+    } as unknown as GameDef;
+
+    const state = makeBaseState({
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          seatOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: '1',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
+          pendingFreeOperationGrants: [
+            {
+              grantId: 'grant-required-outcome',
+              seat: '0',
+              operationClass: 'operation',
+              actionIds: ['operation'],
+              completionPolicy: 'required',
+              outcomePolicy: 'mustChangeGameplayState',
+              postResolutionTurnFlow: 'resumeCardFlow',
+              remainingUses: 1,
+            },
+          ],
+        },
+      },
+      globalVars: {},
+    });
+
+    const viability = probeMoveViability(def, state, { actionId: asActionId('operation'), params: {}, freeOperation: true });
+    assert.equal(viability.viable, false);
+    if (viability.viable) {
+      assert.fail('expected completed no-op free operation to be non-viable');
+    }
+    assert.equal(viability.code, 'ILLEGAL_MOVE');
+    assert.equal(viability.context.reason, ILLEGAL_MOVE_REASONS.FREE_OPERATION_OUTCOME_POLICY_FAILED);
+    assert.equal(viability.context.grantId, 'grant-required-outcome');
+    assert.equal(viability.context.outcomePolicy, 'mustChangeGameplayState');
   });
 
   it('ignores non-material variable changes when enforcing mustChangeGameplayState outcome policy', () => {

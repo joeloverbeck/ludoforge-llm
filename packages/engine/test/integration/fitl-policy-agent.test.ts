@@ -105,4 +105,22 @@ describe('FITL policy agent integration', () => {
       );
     }
   });
+
+  it('handles seed 17 free-operation outcome-policy dead-end without runtime failure or fallback', () => {
+    const { compiled } = compileProductionSpec();
+    const def = assertValidatedGameDef(compiled.gameDef);
+    const agents = [new PolicyAgent(), new PolicyAgent(), new PolicyAgent(), new PolicyAgent()];
+
+    const trace = runGame(def, 17, agents, 5, 4);
+
+    assert.equal(trace.moves.length > 0, true);
+    assert.equal(trace.stopReason === 'noLegalMoves' || trace.stopReason === 'maxTurns' || trace.stopReason === 'terminal', true);
+    for (const move of trace.moves) {
+      assert.equal(move.agentDecision?.kind, 'policy');
+      if (move.agentDecision?.kind !== 'policy') {
+        assert.fail('expected policy trace metadata');
+      }
+      assert.equal(move.agentDecision.emergencyFallback, false);
+    }
+  });
 });

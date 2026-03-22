@@ -1058,6 +1058,56 @@ phase: [asPhaseId('main')],
     assert.deepStrictEqual(moves[0]?.params, {});
   });
 
+  it('does not enumerate required free-operation templates that have no outcome-policy-satisfying completion', () => {
+    const action: ActionDef = {
+      id: asActionId('freeOp'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const def = {
+      ...makeBaseDef({ actions: [action], globalVars: [] }),
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'] },
+            windows: [],
+            optionMatrix: [],
+            passRewards: [],
+            freeOperationActionIds: ['freeOp'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+            actionClassByActionId: { freeOp: 'operation' },
+          },
+        },
+      },
+    } as unknown as GameDef;
+
+    const state = makeCardDrivenState({
+      pendingFreeOperationGrants: [
+        {
+          grantId: 'grant-required-outcome',
+          seat: '0',
+          operationClass: 'operation',
+          actionIds: ['freeOp'],
+          completionPolicy: 'required',
+          outcomePolicy: 'mustChangeGameplayState',
+          postResolutionTurnFlow: 'resumeCardFlow',
+          remainingUses: 1,
+        },
+      ],
+    });
+
+    assert.deepStrictEqual(legalMoves(def, state), []);
+  });
+
   it('6. limited operations produce template moves when within limits', () => {
     const action: ActionDef = {
       id: asActionId('limitedOp'),

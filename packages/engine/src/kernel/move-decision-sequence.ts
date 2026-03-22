@@ -147,6 +147,24 @@ export const isMoveDecisionSequenceSatisfiable = (
   return classifyMoveDecisionSequenceSatisfiability(def, state, baseMove, options, runtime).classification === 'satisfiable';
 };
 
+export const classifyMoveDecisionSequenceAdmissionForLegalMove = (
+  def: GameDef,
+  state: GameState,
+  baseMove: Move,
+  context: MissingBindingPolicyContext,
+  options?: Omit<ResolveMoveDecisionSequenceOptions, 'choose'>,
+  runtime?: GameDefRuntime,
+): MoveDecisionSequenceSatisfiabilityResult['classification'] => {
+  try {
+    return classifyMoveDecisionSequenceSatisfiability(def, state, baseMove, options, runtime).classification;
+  } catch (error) {
+    if (shouldDeferMissingBinding(error, context)) {
+      return 'unknown';
+    }
+    throw error;
+  }
+};
+
 export const isMoveDecisionSequenceAdmittedForLegalMove = (
   def: GameDef,
   state: GameState,
@@ -154,16 +172,14 @@ export const isMoveDecisionSequenceAdmittedForLegalMove = (
   context: MissingBindingPolicyContext,
   options?: Omit<ResolveMoveDecisionSequenceOptions, 'choose'>,
   runtime?: GameDefRuntime,
-): boolean => {
-  try {
-    return classifyMoveDecisionSequenceSatisfiability(def, state, baseMove, options, runtime).classification !== 'unsatisfiable';
-  } catch (error) {
-    if (shouldDeferMissingBinding(error, context)) {
-      return true;
-    }
-    throw error;
-  }
-};
+): boolean => classifyMoveDecisionSequenceAdmissionForLegalMove(
+  def,
+  state,
+  baseMove,
+  context,
+  options,
+  runtime,
+) !== 'unsatisfiable';
 
 export const classifyMoveDecisionSequenceSatisfiability = (
   def: GameDef,

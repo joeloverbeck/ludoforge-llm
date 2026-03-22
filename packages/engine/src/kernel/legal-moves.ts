@@ -6,7 +6,10 @@ import type { ReadContext, EvalRuntimeResources } from './eval-context.js';
 import { createEvalContext, createEvalRuntimeResources } from './eval-context.js';
 import { resolveCapturedSequenceZonesByKey } from './free-operation-captured-sequence-zones.js';
 import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-overlay.js';
-import { isMoveDecisionSequenceAdmittedForLegalMove } from './move-decision-sequence.js';
+import {
+  classifyMoveDecisionSequenceAdmissionForLegalMove,
+  isMoveDecisionSequenceAdmittedForLegalMove,
+} from './move-decision-sequence.js';
 import {
   applyTurnFlowWindowFilters,
   isMoveAllowedByTurnFlowOptionMatrix,
@@ -25,8 +28,13 @@ import {
   isFreeOperationApplicableForMove,
   isFreeOperationGrantedForMove,
 } from './free-operation-discovery-analysis.js';
-import { canResolveAmbiguousFreeOperationOverlapInCurrentState } from './free-operation-viability.js';
+import {
+  canResolveAmbiguousFreeOperationOverlapInCurrentState,
+  hasLegalCompletedFreeOperationMoveInCurrentState,
+} from './free-operation-viability.js';
+import { resolveStrongestRequiredFreeOperationOutcomeGrant } from './free-operation-outcome-policy.js';
 import { resolveTurnFlowActionClass } from './turn-flow-action-class.js';
+import { isTurnFlowErrorCode } from './turn-flow-error.js';
 import type { TurnFlowActionClass } from './types-turn-flow.js';
 import { shouldEnumerateLegalMoveForOutcome } from './legality-outcome.js';
 import { resolveMoveEnumerationBudgets, type MoveEnumerationBudgets } from './move-enumeration-budgets.js';
@@ -465,11 +473,43 @@ function enumeratePendingFreeOperationMoves(
         return false;
       }
     }
-    return isMoveDecisionSequenceAdmittedForLegalMove(
+    const decisionSequenceClassification = classifyMoveDecisionSequenceAdmissionForLegalMove(
       def,
       candidateState,
       candidateMove,
       MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_FREE_OPERATION_DECISION_SEQUENCE,
+      {
+        budgets: enumeration.budgets,
+        onWarning: (warning) => emitEnumerationWarning(enumeration, warning),
+      },
+    );
+    if (decisionSequenceClassification === 'unsatisfiable') {
+      return false;
+    }
+    if (decisionSequenceClassification !== 'satisfiable') {
+      return true;
+    }
+    if (
+      candidateState.turnOrderState.type !== 'cardDriven'
+      || !(candidateState.turnOrderState.runtime.pendingFreeOperationGrants ?? []).some((grant) => grant.outcomePolicy === 'mustChangeGameplayState')
+    ) {
+      return true;
+    }
+    try {
+      if (resolveStrongestRequiredFreeOperationOutcomeGrant(def, candidateState, candidateMove, seatResolution) === null) {
+        return true;
+      }
+    } catch (error) {
+      if (isTurnFlowErrorCode(error, 'FREE_OPERATION_ZONE_FILTER_EVALUATION_FAILED')) {
+        return true;
+      }
+      throw error;
+    }
+    return hasLegalCompletedFreeOperationMoveInCurrentState(
+      def,
+      candidateState,
+      candidateMove,
+      seatResolution,
       {
         budgets: enumeration.budgets,
         onWarning: (warning) => emitEnumerationWarning(enumeration, warning),

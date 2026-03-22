@@ -9,8 +9,8 @@ import {
   assertValidatedGameDef,
   createGameDefRuntime,
   createRng,
+  enumerateLegalMoves,
   initialState,
-  legalMoves,
   type GameDefRuntime,
   type GameState,
   type ValidatedGameDef,
@@ -33,7 +33,7 @@ describe('policy agent performance regression', () => {
     const corpus = createPerfCorpus();
     const agent = new PolicyAgent({ traceLevel: 'summary' });
     const samples = corpus.map((entry) => {
-      const candidateMoves = legalMoves(entry.def, entry.state, undefined, entry.runtime);
+      const candidateMoves = enumerateLegalMoves(entry.def, entry.state, undefined, entry.runtime).moves;
       const start = performance.now();
       const result = agent.chooseMove({
         def: entry.def,

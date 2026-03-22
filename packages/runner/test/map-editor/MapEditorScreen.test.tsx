@@ -126,18 +126,20 @@ describe('MapEditorScreen', () => {
     expect((screen.getByTestId('map-editor-undo-button') as HTMLButtonElement).disabled).toBe(true);
     expect((screen.getByTestId('map-editor-export-button') as HTMLButtonElement).disabled).toBe(false);
 
-    expect(testDoubles.createMapEditorStore).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.anything(),
-      expect.any(Map),
-    );
-    expect(testDoubles.createEditorCanvas).toHaveBeenCalledWith(
-      expect.any(HTMLDivElement),
-      store,
-      expect.objectContaining({
-        onPointerWorldPositionChange: expect.any(Function),
-      }),
-    );
+    await waitFor(() => {
+      expect(testDoubles.createMapEditorStore).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.anything(),
+        expect.any(Map),
+      );
+      expect(testDoubles.createEditorCanvas).toHaveBeenCalledWith(
+        expect.any(HTMLDivElement),
+        store,
+        expect.objectContaining({
+          onPointerWorldPositionChange: expect.any(Function),
+        }),
+      );
+    });
     expect(testDoubles.createEditorAdjacencyRenderer).toHaveBeenCalledWith(
       editorCanvas.layers.adjacency,
       store,

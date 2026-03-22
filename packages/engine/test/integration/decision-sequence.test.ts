@@ -7,6 +7,7 @@ import {
   asPhaseId,
   asZoneId,
   createRng,
+  enumerateLegalMoves,
   initialState,
   legalChoicesDiscover,
   legalChoicesEvaluate,
@@ -159,7 +160,7 @@ const runRandomAgentTurn = (
   seed: number,
 ): { readonly state: GameState; readonly move: Move } => {
   const agent = new RandomAgent();
-  const moves = legalMoves(def, state);
+  const moves = enumerateLegalMoves(def, state).moves;
   const rng = createRng(BigInt(seed));
   const { move } = agent.chooseMove({ def, state, playerId: state.activePlayer, legalMoves: moves, rng });
   const result = applyMove(def, state, move);
@@ -172,7 +173,7 @@ const runGreedyAgentTurn = (
   seed: number,
 ): { readonly state: GameState; readonly move: Move } => {
   const agent = new GreedyAgent({ completionsPerTemplate: 3 });
-  const moves = legalMoves(def, state);
+  const moves = enumerateLegalMoves(def, state).moves;
   const rng = createRng(BigInt(seed));
   const { move } = agent.chooseMove({ def, state, playerId: state.activePlayer, legalMoves: moves, rng });
   const result = applyMove(def, state, move);

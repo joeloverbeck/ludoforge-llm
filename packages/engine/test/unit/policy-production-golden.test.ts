@@ -7,8 +7,8 @@ import {
   assertValidatedGameDef,
   createGameDefRuntime,
   createRng,
+  enumerateLegalMoves,
   initialState,
-  legalMoves,
   type AgentDecisionTrace,
   type GameDef,
   type Move,
@@ -57,7 +57,7 @@ function chooseFitlSummaryDecision(): PolicyDecisionGolden {
   const def = assertValidatedGameDef(compileProductionSpec().compiled.gameDef);
   const runtime = createGameDefRuntime(def);
   const state = initialState(def, 7, 4).state;
-  const moves = legalMoves(def, state, undefined, runtime);
+  const moves = enumerateLegalMoves(def, state, undefined, runtime).moves;
   const result = new PolicyAgent({ traceLevel: 'summary' }).chooseMove({
     def,
     state,
@@ -82,7 +82,7 @@ function chooseTexasSummaryDecision(): PolicyDecisionGolden {
   const runtime = createGameDefRuntime(def);
   const seeded = initialState(def, 23, 4).state;
   const state = advanceToDecisionPoint(def, seeded);
-  const moves = legalMoves(def, state, undefined, runtime);
+  const moves = enumerateLegalMoves(def, state, undefined, runtime).moves;
   const result = new PolicyAgent({ traceLevel: 'summary' }).chooseMove({
     def,
     state,

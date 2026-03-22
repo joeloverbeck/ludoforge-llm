@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { compileGameSpecToGameDef, createEmptyGameSpecDoc } from '@ludoforge/engine/cnl';
-import { asActionId, asPlayerId, initialState, type GameDef, type Move } from '@ludoforge/engine/runtime';
+import { asActionId, asPlayerId, initialState, type ClassifiedMove, type GameDef, type Move } from '@ludoforge/engine/runtime';
 
 import { createAgentSeatController, createHumanSeatController } from '../../src/seat/seat-controller.js';
 import { createAgentTurnOrchestrator } from '../../src/store/agent-turn-orchestrator.js';
@@ -8,7 +8,20 @@ import { createAgentTurnOrchestrator } from '../../src/store/agent-turn-orchestr
 const MOVE_A: Move = { actionId: asActionId('a'), params: {} };
 const MOVE_B: Move = { actionId: asActionId('b'), params: {} };
 const MOVE_C: Move = { actionId: asActionId('c'), params: {} };
-const RANDOM_MOVES = [MOVE_A, MOVE_B, MOVE_C] as const;
+
+function toClassifiedMove(move: Move): ClassifiedMove {
+  return {
+    move,
+    viability: {
+      viable: true,
+      complete: true,
+      move,
+      warnings: [],
+    },
+  };
+}
+
+const RANDOM_MOVES = [MOVE_A, MOVE_B, MOVE_C].map(toClassifiedMove) as readonly ClassifiedMove[];
 
 function compileFixture(): GameDef {
   const compiled = compileGameSpecToGameDef({

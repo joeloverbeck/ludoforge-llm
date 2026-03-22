@@ -1,4 +1,4 @@
-import { applyMove, createGameDefRuntime, createRng, initialState, legalMoves, terminalResult } from '../kernel/index.js';
+import { applyMove, createGameDefRuntime, createRng, enumerateLegalMoves, initialState, terminalResult } from '../kernel/index.js';
 import { assertValidatedGameDef } from '../kernel/index.js';
 import { perfStart, perfEnd } from '../kernel/perf-profiler.js';
 import type {
@@ -109,9 +109,9 @@ export const runGame = (
     }
 
     const t0_legal = perfStart(profiler);
-    const legal = legalMoves(validatedDef, state, undefined, resolvedRuntime);
+    const legalMoveResult = enumerateLegalMoves(validatedDef, state, undefined, resolvedRuntime);
     perfEnd(profiler, 'simLegalMoves', t0_legal);
-    if (legal.length === 0) {
+    if (legalMoveResult.moves.length === 0) {
       stopReason = 'noLegalMoves';
       break;
     }
@@ -128,7 +128,7 @@ export const runGame = (
       def: validatedDef,
       state,
       playerId: player,
-      legalMoves: legal,
+      legalMoves: legalMoveResult.moves,
       rng: agentRng,
       runtime: resolvedRuntime,
       ...(profiler === undefined ? {} : { profiler }),
@@ -139,7 +139,7 @@ export const runGame = (
     const preState = state;
     const moveContext = captureMoveContext(selected.move);
     const t0_apply = perfStart(profiler);
-    const applied = applyMove(validatedDef, state, selected.move, options, resolvedRuntime);
+    const applied = applyMove(validatedDef, state, selected.move, { ...options, skipMoveValidation: true }, resolvedRuntime);
     perfEnd(profiler, 'simApplyMove', t0_apply);
     state = applied.state;
 
@@ -151,7 +151,7 @@ export const runGame = (
       stateHash: state.stateHash,
       player,
       move: selected.move,
-      legalMoveCount: legal.length,
+      legalMoveCount: legalMoveResult.moves.length,
       deltas,
       triggerFirings: applied.triggerFirings,
       warnings: applied.warnings,

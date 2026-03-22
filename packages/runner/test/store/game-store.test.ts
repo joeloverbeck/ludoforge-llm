@@ -1022,7 +1022,7 @@ describe('createGameStore', () => {
     expect(orchestrator.resolveStep).toHaveBeenCalledWith({
       controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }),
       def,
-      legalMoves: [{ actionId: asActionId('tick'), params: {} }],
+      legalMoves: toLegalMoveResult({ actionId: asActionId('tick'), params: {} }).moves,
       playerId: asPlayerId(1),
       state: aiState,
     });
@@ -1069,6 +1069,14 @@ describe('createGameStore', () => {
       ...initialState(def, 61, 2).state,
       activePlayer: asPlayerId(1),
     };
+    const orchestrator: AgentTurnOrchestrator = {
+      resetSession: vi.fn(),
+      initializeSession: vi.fn(),
+      resolveStep: vi.fn<AgentTurnOrchestrator['resolveStep']>(() => ({
+        kind: 'illegal-template',
+        error: new Error('selection failed'),
+      })),
+    };
     const applyMove = vi.fn<GameWorkerAPI['applyMove']>(async () => {
       throw new Error('applyMove should not be called when agent selection fails');
     });
@@ -1078,7 +1086,7 @@ describe('createGameStore', () => {
       terminalResult: () => null,
       applyMove,
     });
-    const store = createStoreWithDefaultVisuals(bridge);
+    const store = createStoreWithDefaultVisuals(bridge, { agentTurnOrchestrator: orchestrator });
 
     await store.getState().initGame(def, 61, GREEDY_TWO_PLAYER_CONFIG);
     const outcome = await store.getState().resolveAiStep();

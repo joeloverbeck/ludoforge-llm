@@ -1496,7 +1496,7 @@ export interface Agent {
     readonly def: GameDef;
     readonly state: GameState;
     readonly playerId: PlayerId;
-    readonly legalMoves: readonly Move[];
+    readonly legalMoves: readonly ClassifiedMove[];
     readonly rng: Rng;
     readonly runtime?: import('./gamedef-runtime.js').GameDefRuntime;
     /** Opt-in profiler for agent sub-function timing. */

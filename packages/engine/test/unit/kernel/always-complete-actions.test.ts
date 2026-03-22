@@ -113,6 +113,9 @@ describe('always-complete-actions', () => {
       const withParams = makeAction('withParams', {
         params: [{ name: 'amount', domain: { query: 'intsInRange', min: 1, max: 2 } }],
       });
+      const cardEvent = makeAction('cardEvent', {
+        capabilities: ['cardEvent'],
+      });
       const withDecision = makeAction('withDecision', {
         effects: [{
           chooseOne: {
@@ -134,7 +137,7 @@ describe('always-complete-actions', () => {
       });
       const pipelined = makeAction('pipelined');
       const def = makeDef({
-        actions: [complete, withParams, withDecision, withRandomCost, pipelined],
+        actions: [complete, withParams, cardEvent, withDecision, withRandomCost, pipelined],
         actionPipelines: [{
           id: 'pipeline-pass',
           actionId: pipelined.id,
@@ -153,6 +156,7 @@ describe('always-complete-actions', () => {
 
       assert.equal(ids.has(complete.id), true);
       assert.equal(ids.has(withParams.id), false);
+      assert.equal(ids.has(cardEvent.id), false);
       assert.equal(ids.has(withDecision.id), false);
       assert.equal(ids.has(withRandomCost.id), false);
       assert.equal(ids.has(pipelined.id), false);

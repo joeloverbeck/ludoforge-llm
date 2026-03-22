@@ -1,4 +1,5 @@
 import type { ActionId } from './branded.js';
+import { isCardEventAction } from './action-capabilities.js';
 import type { EffectAST, GameDef } from './types.js';
 
 export function effectTreeMayYieldIncompleteMove(effects: readonly EffectAST[]): boolean {
@@ -56,6 +57,9 @@ export function computeAlwaysCompleteActionIds(def: GameDef): ReadonlySet<Action
 
   for (const action of def.actions) {
     if (action.params.length > 0) {
+      continue;
+    }
+    if (isCardEventAction(action)) {
       continue;
     }
     if (pipelineActionIds.has(action.id)) {

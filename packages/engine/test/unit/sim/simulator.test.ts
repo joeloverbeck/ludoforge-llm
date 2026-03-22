@@ -19,7 +19,7 @@ import { runGame } from '../../../src/sim/index.js';
 
 const firstLegalAgent: Agent = {
   chooseMove(input) {
-    const move = input.legalMoves[0];
+    const move = input.legalMoves[0]?.move;
     if (move === undefined) {
       throw new Error('firstLegalAgent requires at least one legal move');
     }
@@ -254,12 +254,12 @@ phase: [asPhaseId('main')],
     const sideBranchAgent: Agent = {
       chooseMove(input) {
         const selected = input.legalMoves.find(
-          (move) => move.params.side === 'shaded' && move.params.branch === 'b',
+          ({ move }) => move.params.side === 'shaded' && move.params.branch === 'b',
         );
         if (selected === undefined) {
           throw new Error('expected shaded/b event move to be legal');
         }
-        return { move: selected, rng: input.rng };
+        return { move: selected.move, rng: input.rng };
       },
     };
 

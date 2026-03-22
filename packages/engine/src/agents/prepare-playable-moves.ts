@@ -1,7 +1,6 @@
 import { perfStart, perfDynEnd, type PerfProfiler } from '../kernel/perf-profiler.js';
 import { evaluatePlayableMoveCandidate } from '../kernel/playable-candidate.js';
-import { probeMoveViability, type MoveViabilityProbeResult } from '../kernel/apply-move.js';
-import type { Agent, Move, Rng } from '../kernel/types.js';
+import type { Agent, ClassifiedMove, Move, Rng } from '../kernel/types.js';
 
 /**
  * Detect non-viable results that stem from premature zone-filter evaluation on
@@ -14,9 +13,9 @@ import type { Agent, Move, Rng } from '../kernel/types.js';
  * being discarded.
  */
 const isZoneFilterMismatchOnFreeOpTemplate = (
-  move: Move,
-  viability: MoveViabilityProbeResult,
+  classified: ClassifiedMove,
 ): boolean => {
+  const { move, viability } = classified;
   if (viability.viable || move.freeOperation !== true) {
     return false;
   }
@@ -52,20 +51,14 @@ export function preparePlayableMoves(
   let rng = input.rng;
   const pendingTemplateCompletions = options.pendingTemplateCompletions ?? 1;
 
-  for (const move of input.legalMoves) {
-    // Fast path: probe viability directly. For complete moves (common case),
-    // this avoids the redundant legalChoicesEvaluate → evaluatePlayableMoveCandidate
-    // double-validation that costs ~10s across 120K calls.
-    const t0_probe = perfStart(profiler);
-    const viability = probeMoveViability(input.def, input.state, move, input.runtime);
-    perfDynEnd(profiler, 'agent:probeMoveViability', t0_probe);
-
+  for (const classified of input.legalMoves) {
+    const { move, viability } = classified;
     if (!viability.viable) {
       // Zone-filter mismatches on free-operation templates are not definitive
       // rejections — the zone filter cannot be evaluated until target zones are
       // selected during template completion.  Fall through to the completion
       // path so evaluatePlayableMoveCandidate can resolve zones and re-check.
-      if (isZoneFilterMismatchOnFreeOpTemplate(move, viability)) {
+      if (isZoneFilterMismatchOnFreeOpTemplate(classified)) {
         rng = attemptTemplateCompletion(input, move, rng, pendingTemplateCompletions, completedMoves, stochasticMoves, profiler);
       }
       continue;

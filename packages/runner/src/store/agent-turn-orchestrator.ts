@@ -1,5 +1,6 @@
 import type {
   AgentDecisionTrace,
+  ClassifiedMove,
   GameDef,
   GameDefRuntime,
   GameState,
@@ -23,7 +24,7 @@ export interface InitializeAgentTurnSessionInput {
 export interface ResolveAgentTurnStepInput {
   readonly controller: SeatController | undefined;
   readonly def: GameDef;
-  readonly legalMoves: readonly Move[];
+  readonly legalMoves: readonly ClassifiedMove[];
   readonly playerId: PlayerId;
   readonly state: GameState;
 }

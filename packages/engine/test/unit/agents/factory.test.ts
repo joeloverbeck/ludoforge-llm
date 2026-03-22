@@ -5,6 +5,7 @@ import { createAgent, normalizeAgentDescriptor, parseAgentDescriptor, parseAgent
 import { GreedyAgent } from '../../../src/agents/greedy-agent.js';
 import { PolicyAgent } from '../../../src/agents/policy-agent.js';
 import { RandomAgent } from '../../../src/agents/random-agent.js';
+import { completeClassifiedMoves } from '../../helpers/classified-move-fixtures.js';
 import {
   asActionId,
   asPhaseId,
@@ -165,7 +166,7 @@ function createInput(def: GameDef): Parameters<PolicyAgent['chooseMove']>[0] {
     def,
     state,
     playerId: asPlayerId(0),
-    legalMoves,
+    legalMoves: completeClassifiedMoves(legalMoves),
     rng: createRng(7n),
   };
 }

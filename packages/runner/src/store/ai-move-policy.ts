@@ -2,6 +2,7 @@ import { createAgent, normalizeAgentDescriptor } from '@ludoforge/engine/agents'
 import type {
   AgentDecisionTrace,
   AgentDescriptor,
+  ClassifiedMove,
   GameDef,
   GameDefRuntime,
   GameState,
@@ -29,7 +30,7 @@ export interface SelectAgentMoveInput {
   readonly def: GameDef;
   readonly state: GameState;
   readonly playerId: PlayerId;
-  readonly legalMoves: readonly Move[];
+  readonly legalMoves: readonly ClassifiedMove[];
   readonly rng: Rng;
   readonly runtime: GameDefRuntime;
 }

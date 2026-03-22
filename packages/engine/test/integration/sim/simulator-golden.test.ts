@@ -15,7 +15,7 @@ import { readFixtureJson } from '../../helpers/fixture-reader.js';
 
 const firstLegalAgent: Agent = {
   chooseMove(input) {
-    const move = input.legalMoves[0];
+    const move = input.legalMoves[0]?.move;
     if (move === undefined) {
       throw new Error('firstLegalAgent requires at least one legal move');
     }

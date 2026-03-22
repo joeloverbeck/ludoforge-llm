@@ -7,8 +7,8 @@ import {
   assertValidatedGameDef,
   createGameDefRuntime,
   createRng,
+  enumerateLegalMoves,
   initialState,
-  legalMoves,
   probeMoveViability,
 } from '../../src/kernel/index.js';
 import { advanceToDecisionPoint } from '../../src/kernel/phase-advance.js';
@@ -32,7 +32,7 @@ describe('Texas Hold\'em policy agent integration', () => {
     const runtime = createGameDefRuntime(def);
     const seeded = initialState(def, 23, 4).state;
     const state = advanceToDecisionPoint(def, seeded);
-    const moves = legalMoves(def, state, undefined, runtime);
+    const moves = enumerateLegalMoves(def, state, undefined, runtime).moves;
     const agent = new PolicyAgent();
 
     const selected = agent.chooseMove({
@@ -80,8 +80,8 @@ describe('Texas Hold\'em policy agent integration', () => {
         [opponentZoneId]: [...opponentCards].reverse(),
       },
     };
-    const baseMoves = legalMoves(def, state, undefined, runtime);
-    const swappedMoves = legalMoves(def, swappedState, undefined, runtime);
+    const baseMoves = enumerateLegalMoves(def, state, undefined, runtime).moves;
+    const swappedMoves = enumerateLegalMoves(def, swappedState, undefined, runtime).moves;
 
     const left = agent.chooseMove({
       def,

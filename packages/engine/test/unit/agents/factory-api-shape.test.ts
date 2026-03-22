@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { createAgent, GreedyAgent, parseAgentDescriptor, parseAgentSpec, PolicyAgent, RandomAgent } from '../../../src/agents/index.js';
+import { completeClassifiedMoves } from '../../helpers/classified-move-fixtures.js';
 import {
   asActionId,
   asPhaseId,
@@ -71,7 +72,7 @@ describe('agents factory API shape', () => {
       def: defStub,
       state: stateStub,
       playerId: asPlayerId(0),
-      legalMoves: [moveStub],
+      legalMoves: completeClassifiedMoves([moveStub]),
       rng: createRng(1n),
     });
     assert.deepEqual(result.move, moveStub);
@@ -112,7 +113,7 @@ phase: [asPhaseId('main')],
       def,
       state,
       playerId: asPlayerId(0),
-      legalMoves: moves,
+      legalMoves: completeClassifiedMoves(moves),
       rng: createRng(1n),
     });
     assert.deepEqual(result.move, moves[0]);

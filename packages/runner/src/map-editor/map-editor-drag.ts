@@ -54,6 +54,105 @@ export function attachAnchorDragHandlers(
   });
 }
 
+export function attachZoneEndpointConvertDragHandlers(
+  handle: Container,
+  routeId: string,
+  pointIndex: number,
+  dragSurface: Container,
+  store: MapEditorStoreApi,
+): () => void {
+  let activeDrag: ActiveDrag | null = null;
+  let anchorId: string | null = null;
+
+  const onPointerDown = (event: PointerEventLike): void => {
+    if (event.button !== undefined && event.button !== 0) {
+      return;
+    }
+
+    event.stopPropagation?.();
+
+    const pointerPosition = getPointerPosition(event, handle.parent ?? dragSurface);
+    activeDrag = {
+      offset: {
+        x: pointerPosition.x - handle.position.x,
+        y: pointerPosition.y - handle.position.y,
+      },
+    };
+
+    handle.cursor = 'grabbing';
+    const state = store.getState();
+    state.selectZone(null);
+    state.selectRoute(routeId);
+    state.beginInteraction();
+    state.setDragging(true);
+
+    dragSurface.on('globalpointermove', onPointerMove);
+    dragSurface.on('pointerup', finishDrag);
+    dragSurface.on('pointerupoutside', finishDrag);
+  };
+
+  const onPointerMove = (event: PointerEventLike): void => {
+    if (activeDrag === null) {
+      return;
+    }
+
+    const pointerPosition = getPointerPosition(event, handle.parent ?? dragSurface);
+    const unsnappedPosition = {
+      x: pointerPosition.x - activeDrag.offset.x,
+      y: pointerPosition.y - activeDrag.offset.y,
+    };
+    const state = store.getState();
+    const nextPosition = state.snapToGrid
+      ? snapToGrid(unsnappedPosition, state.gridSize)
+      : unsnappedPosition;
+    handle.position.set(nextPosition.x, nextPosition.y);
+
+    if (anchorId === null) {
+      anchorId = state.convertEndpointToAnchor(routeId, pointIndex);
+      if (anchorId === null) {
+        return;
+      }
+    }
+
+    state.previewAnchorMove(anchorId, nextPosition);
+  };
+
+  const finishDrag = (): void => {
+    if (activeDrag === null) {
+      return;
+    }
+
+    activeDrag = null;
+    anchorId = null;
+    handle.cursor = 'grab';
+    dragSurface.off('globalpointermove', onPointerMove);
+    dragSurface.off('pointerup', finishDrag);
+    dragSurface.off('pointerupoutside', finishDrag);
+    const state = store.getState();
+    state.commitInteraction();
+    state.setDragging(false);
+  };
+
+  handle.on('pointerdown', onPointerDown);
+
+  return (): void => {
+    handle.off('pointerdown', onPointerDown);
+    dragSurface.off('globalpointermove', onPointerMove);
+    dragSurface.off('pointerup', finishDrag);
+    dragSurface.off('pointerupoutside', finishDrag);
+
+    if (activeDrag !== null) {
+      activeDrag = null;
+      anchorId = null;
+      const state = store.getState();
+      state.cancelInteraction();
+      state.setDragging(false);
+    }
+
+    handle.cursor = 'default';
+  };
+}
+
 export function attachControlPointDragHandlers(
   handle: Container,
   routeId: string,
@@ -128,6 +227,7 @@ function attachPositionDragHandlers(
     const nextPosition = state.snapToGrid
       ? snapToGrid(unsnappedPosition, state.gridSize)
       : unsnappedPosition;
+    target.position.set(nextPosition.x, nextPosition.y);
     callbacks.previewMove(state, nextPosition);
   };
 

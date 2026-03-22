@@ -72,7 +72,7 @@ function chooseFitlSummaryDecision(): PolicyDecisionGolden {
     assert.fail('expected policy trace metadata');
   }
   return {
-    move: result.move,
+    move: result.move.move,
     agentDecision: result.agentDecision,
   };
 }
@@ -97,7 +97,7 @@ function chooseTexasSummaryDecision(): PolicyDecisionGolden {
     assert.fail('expected policy trace metadata');
   }
   return {
-    move: result.move,
+    move: result.move.move,
     agentDecision: result.agentDecision,
   };
 }

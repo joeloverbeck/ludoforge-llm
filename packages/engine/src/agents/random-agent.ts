@@ -20,7 +20,7 @@ export class RandomAgent implements Agent {
           agent: { kind: 'builtin', builtinId: 'random' },
           candidateCount: stochasticMoves.length,
           selectedIndex: stochasticMoves.findIndex((move) => move === fallback.move),
-          selectedStableMoveKey: toMoveIdentityKey(input.def, fallback.move),
+          selectedStableMoveKey: toMoveIdentityKey(input.def, fallback.move.move),
         },
       };
     }
@@ -38,7 +38,7 @@ export class RandomAgent implements Agent {
         agent: { kind: 'builtin', builtinId: 'random' },
         candidateCount: completedMoves.length,
         selectedIndex: completedMoves.findIndex((move) => move === selected),
-        selectedStableMoveKey: toMoveIdentityKey(input.def, selected),
+        selectedStableMoveKey: toMoveIdentityKey(input.def, selected.move),
       },
     };
   }

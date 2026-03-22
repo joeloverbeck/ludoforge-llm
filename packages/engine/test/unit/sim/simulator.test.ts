@@ -19,6 +19,7 @@ import {
   type ValidatedGameDef,
 } from '../../../src/kernel/index.js';
 import { runGame } from '../../../src/sim/index.js';
+import { trustedMove } from '../../helpers/classified-move-fixtures.js';
 
 const firstLegalAgent: Agent = {
   chooseMove(input) {
@@ -26,7 +27,7 @@ const firstLegalAgent: Agent = {
     if (move === undefined) {
       throw new Error('firstLegalAgent requires at least one legal move');
     }
-    return { move, rng: input.rng };
+    return { move: trustedMove(move, input.state.stateHash), rng: input.rng };
   },
 };
 
@@ -191,7 +192,7 @@ describe('runGame', () => {
     const illegalMoveAgent: Agent = {
       chooseMove(input) {
         const move: Move = { actionId: asActionId('unknown-action'), params: {} };
-        return { move, rng: input.rng };
+        return { move: trustedMove(move, input.state.stateHash), rng: input.rng };
       },
     };
 
@@ -210,7 +211,7 @@ describe('runGame', () => {
         assert.ok('move' in input.legalMoves[0]!);
         assert.ok('viability' in input.legalMoves[0]!);
         assert.deepEqual(input.legalMoves, enumerateLegalMoves(input.def, input.state, undefined, input.runtime).moves);
-        return { move: input.legalMoves[0]!.move, rng: input.rng };
+        return { move: input.legalMoves[0]!.trustedMove ?? trustedMove(input.legalMoves[0]!.move, input.state.stateHash), rng: input.rng };
       },
     };
 
@@ -224,7 +225,7 @@ describe('runGame', () => {
     assert.equal(trace.moves[0]?.legalMoveCount, classifiedMoves.length);
   });
 
-  it('matches a validated replay when simulator uses skipMoveValidation optimization', () => {
+  it('matches a validated replay when simulator uses trusted execution', () => {
     const def = createDef({ terminalAtScore: 3 });
     const seed = 29;
     const trace = runGame(def, seed, [firstLegalAgent, firstLegalAgent], 10);
@@ -309,7 +310,7 @@ phase: [asPhaseId('main')],
         if (selected === undefined) {
           throw new Error('expected shaded/b event move to be legal');
         }
-        return { move: selected.move, rng: input.rng };
+        return { move: selected.trustedMove ?? trustedMove(selected.move, input.state.stateHash), rng: input.rng };
       },
     };
 

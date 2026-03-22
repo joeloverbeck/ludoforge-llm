@@ -77,6 +77,7 @@ import type {
   MoveParamValue,
   Rng,
   RuntimeWarning,
+  TrustedExecutableMove,
   TurnFlowDeferredEventEffectPayload,
   TurnFlowReleasedDeferredEventEffect,
   TriggerLogEntry,
@@ -1538,10 +1539,43 @@ export const applyMove = (def: GameDef, state: GameState, move: Move, options?: 
   if (def.turnOrder?.type === 'simultaneous') {
     return applySimultaneousSubmission(def, state, move, options, runtime);
   }
-  const coreOptions = options?.skipMoveValidation === true
-    ? { skipValidation: true }
-    : undefined;
-  return applyMoveCore(def, state, move, options, coreOptions, runtime);
+  return applyMoveCore(def, state, move, options, undefined, runtime);
+};
+
+const assertTrustedExecutableMove = (
+  trustedMove: TrustedExecutableMove,
+  state: GameState,
+): void => {
+  if (typeof trustedMove.sourceStateHash !== 'bigint') {
+    throw new Error('Trusted move is missing a bigint sourceStateHash.');
+  }
+  if (trustedMove.sourceStateHash !== state.stateHash) {
+    throw new Error('Trusted move sourceStateHash does not match the current state.');
+  }
+  if (trustedMove.move === undefined || typeof trustedMove.move !== 'object' || trustedMove.move === null) {
+    throw new Error('Trusted move is missing its executable move payload.');
+  }
+};
+
+export const applyTrustedMove = (
+  def: GameDef,
+  state: GameState,
+  trustedMove: TrustedExecutableMove,
+  options?: ExecutionOptions,
+  runtime?: GameDefRuntime,
+): ApplyMoveResult => {
+  assertTrustedExecutableMove(trustedMove, state);
+  if (def.turnOrder?.type === 'simultaneous') {
+    return applySimultaneousSubmission(def, state, trustedMove.move, options, runtime);
+  }
+  return applyMoveCore(
+    def,
+    state,
+    trustedMove.move,
+    options,
+    { skipValidation: true },
+    runtime,
+  );
 };
 
 export const probeMoveLegality = (

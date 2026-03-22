@@ -1,4 +1,4 @@
-import { applyMove, createGameDefRuntime, createRng, enumerateLegalMoves, initialState, terminalResult } from '../kernel/index.js';
+import { applyTrustedMove, createGameDefRuntime, createRng, enumerateLegalMoves, initialState, terminalResult } from '../kernel/index.js';
 import { assertValidatedGameDef } from '../kernel/index.js';
 import { perfStart, perfEnd } from '../kernel/perf-profiler.js';
 import type {
@@ -137,9 +137,9 @@ export const runGame = (
     agentRngByPlayer[player] = selected.rng;
 
     const preState = state;
-    const moveContext = captureMoveContext(selected.move);
+    const moveContext = captureMoveContext(selected.move.move);
     const t0_apply = perfStart(profiler);
-    const applied = applyMove(validatedDef, state, selected.move, { ...options, skipMoveValidation: true }, resolvedRuntime);
+    const applied = applyTrustedMove(validatedDef, state, selected.move, options, resolvedRuntime);
     perfEnd(profiler, 'simApplyMove', t0_apply);
     state = applied.state;
 
@@ -150,7 +150,7 @@ export const runGame = (
     moveLogs.push({
       stateHash: state.stateHash,
       player,
-      move: selected.move,
+      move: selected.move.move,
       legalMoveCount: legalMoveResult.moves.length,
       deltas,
       triggerFirings: applied.triggerFirings,

@@ -1,6 +1,6 @@
 # 75ENRLEGMOVENU-007: Replace `skipMoveValidation` with Trusted Executable Moves
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — kernel move types, agent return contract, simulator, runner worker/store threading
@@ -24,11 +24,16 @@ The long-term architecture should carry trust as a typed value, not as a boolean
 
 1. `ExecutionOptions` in `packages/engine/src/kernel/types-core.ts` currently includes public `skipMoveValidation?: boolean`.
 2. `applyMove()` in `packages/engine/src/kernel/apply-move.ts` now threads that option to the internal `skipValidation` mechanism, so the public boolean exists and is active.
-3. `ClassifiedMove` currently contains `{ move, viability }` only. It does not carry execution provenance such as the state hash it was derived from.
-4. `Agent.chooseMove` still returns a raw `Move`, so even after ticket `004` changes its input to `ClassifiedMove[]`, the trusted provenance is still discarded at the selection boundary.
-5. `evaluatePlayableMoveCandidate()` in `packages/engine/src/kernel/playable-candidate.ts` currently returns raw executable `Move` values for `playableComplete` and `playableStochastic`. This is the other place where trusted provenance must be minted and preserved.
-6. Runner AI uses the same pattern as simulator: classified enumeration on one side, raw `Move` execution on the other via `bridge.applyMove(...)`.
-7. None of the remaining active tickets (`004`, `005`, `006`) currently owns replacing the public boolean with a typed trusted-move contract. This ticket is required to close that architectural gap.
+3. Spec 75's classified-enumeration split has already landed:
+   - `enumerateLegalMoves()` returns `ClassifiedMove[]`
+   - `legalMoves()` intentionally remains the raw `Move[]` facade for UI/general callers
+   This ticket must preserve that split rather than re-open it.
+4. `ClassifiedMove` currently contains `{ move, viability }` only. It does not carry execution provenance such as the state hash it was derived from.
+5. `Agent.chooseMove` already accepts `ClassifiedMove[]`, but it still returns a raw `Move`, so trusted provenance is discarded at the selection boundary.
+6. `evaluatePlayableMoveCandidate()` and `preparePlayableMoves()` currently surface executable raw `Move` values for completed/stochastic candidates. This is the other provenance-loss point.
+7. Runner AI uses the same pattern as simulator: classified enumeration on one side, raw `Move` execution on the other via `bridge.applyMove(...)`.
+8. Existing tests already prove the current boolean optimization works for parity. This ticket should replace that coverage with typed trusted-move coverage rather than duplicate it.
+9. None of the remaining active tickets currently owns replacing the public boolean with a typed trusted-move contract. This ticket is still required to close that architectural gap.
 
 ## Architecture Check
 
@@ -41,6 +46,7 @@ The long-term architecture should carry trust as a typed value, not as a boolean
 4. The boolean option should be removed from the public API entirely. No deprecation shim, no alias path, no "legacy support" branch.
 5. This remains game-agnostic. Trust metadata is generic kernel provenance (`sourceStateHash`, provenance kind), not game-specific logic.
 6. The trust contract must be carried across both simulator and runner AI pipelines. Otherwise one path stays convention-based and the architecture remains split-brain.
+7. The current architecture is already better than the original Spec 75 draft in one key respect: `legalMoves()` stayed raw while agent-facing enrichment moved to `enumerateLegalMoves()`. This ticket should build on that separation, not undo it.
 
 ## What to Change
 
@@ -74,7 +80,7 @@ Update trusted-move producers so executable moves are emitted as `TrustedExecuta
 - `preparePlayableMoves()`:
   - `completedMoves` and `stochasticMoves` become `readonly TrustedExecutableMove[]`
 
-This ticket should choose a single consistent representation and apply it everywhere instead of mixing raw/trusted move arrays.
+This ticket should choose a single consistent representation for executable AI candidates and apply it everywhere instead of mixing raw/trusted executable arrays.
 
 ### 3. Change the agent selection boundary
 
@@ -125,7 +131,7 @@ Human/UI-selected moves should continue using the validating raw `applyMove` pat
 ## Files to Touch
 
 - `packages/engine/src/kernel/types-core.ts` (modify — add trusted move type, remove public boolean)
-- `packages/engine/src/kernel/legal-moves.ts` (modify — mint trusted executable moves for executable classified results)
+- `packages/engine/src/kernel/legal-moves.ts` (modify — mint trusted executable moves for executable classified results while preserving raw `legalMoves()`)
 - `packages/engine/src/kernel/playable-candidate.ts` (modify — return trusted executable moves for completed/stochastic candidates)
 - `packages/engine/src/agents/prepare-playable-moves.ts` (modify — carry trusted executable moves)
 - `packages/engine/src/agents/random-agent.ts` (modify)
@@ -171,14 +177,13 @@ Human/UI-selected moves should continue using the validating raw `applyMove` pat
 
 ### New/Modified Tests
 
-1. `packages/engine/test/unit/apply-move.test.ts` — verify `applyTrustedMove` parity for same-state trusted moves and rejection for mismatched-state trusted moves.
+1. `packages/engine/test/unit/apply-move.test.ts` — replace public-boolean assertions with `applyTrustedMove` parity for same-state trusted moves and rejection for mismatched-state trusted moves.
 2. `packages/engine/test/unit/agents/random-agent.test.ts` — verify trusted move return type and selection behavior.
-3. `packages/engine/test/unit/agents/greedy-agent.test.ts` — verify trusted move return type and selection behavior.
-4. `packages/engine/test/unit/agents/policy-agent.test.ts` — verify trusted move return type and selection behavior.
-5. `packages/engine/test/unit/prepare-playable-moves.test.ts` — verify executable candidate preparation returns trusted executable moves.
-6. `packages/engine/test/unit/sim/simulator.test.ts` — verify simulator uses trusted execution, not the removed public boolean.
-7. `packages/runner/test/store/ai-move-policy.test.ts` — verify runner AI selection carries trusted executable moves.
-8. `packages/runner/test/store/agent-turn-orchestrator.test.ts` — verify runner AI orchestration carries and applies trusted executable moves.
+3. `packages/engine/test/unit/agents/greedy-agent-core.test.ts` and/or `packages/engine/test/unit/agents/policy-agent.test.ts` — verify agents preserve trusted executable moves through selection.
+4. `packages/engine/test/unit/prepare-playable-moves.test.ts` — verify executable candidate preparation returns trusted executable moves.
+5. `packages/engine/test/unit/sim/simulator.test.ts` and `packages/engine/test/integration/classified-move-parity.test.ts` — replace `skipMoveValidation` parity with trusted-apply parity.
+6. `packages/runner/test/store/ai-move-policy.test.ts` — verify runner AI selection carries trusted executable moves.
+7. `packages/runner/test/store/agent-turn-orchestrator.test.ts` — verify runner AI orchestration carries trusted executable moves.
 
 ### Commands
 
@@ -186,3 +191,22 @@ Human/UI-selected moves should continue using the validating raw `applyMove` pat
 2. `pnpm turbo typecheck`
 3. `pnpm turbo lint`
 4. `pnpm run check:ticket-deps`
+
+## Outcome
+
+- Completed: 2026-03-22
+- What changed:
+  - Added a first-class `TrustedExecutableMove` contract with `sourceStateHash` and provenance.
+  - Removed public `ExecutionOptions.skipMoveValidation` and introduced `applyTrustedMove()` as the explicit trusted execution boundary.
+  - Threaded trusted executable moves through classified enumeration, template completion, agent selection, simulator execution, and runner AI execution.
+  - Kept `legalMoves()` as the raw `Move[]` facade and preserved classified enrichment on the `enumerateLegalMoves()` / agent-facing path.
+  - Updated engine and runner tests to assert the trusted contract instead of the old boolean bypass.
+- Deviations from original plan:
+  - `ClassifiedMove` now carries optional `trustedMove` metadata for executable classified results rather than replacing `move` outright.
+  - Policy evaluation and preview internals intentionally still reason over raw `Move` values and reattach the selected trusted candidate at the boundary, which keeps policy logic decoupled from execution provenance.
+  - This ticket also corrected stale assumptions left behind by the earlier Spec 75 split, because classified enumeration had already landed before this work started.
+- Verification:
+  - `pnpm turbo test`
+  - `pnpm turbo typecheck`
+  - `pnpm turbo lint`
+  - `pnpm run check:ticket-deps`

@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import { PolicyAgent } from '../../src/agents/policy-agent.js';
 import {
+  applyTrustedMove,
   applyMove,
   areMovesEquivalent,
   assertValidatedGameDef,
@@ -49,7 +50,7 @@ const TEXAS_CASE: ProductionParityCase = {
   maxTurns: 8,
 };
 
-const assertCompleteMoveSkipValidationParity = (
+const assertCompleteMoveTrustedParity = (
   label: string,
   def: ValidatedGameDef,
   state: ReturnType<typeof initialState>['state'],
@@ -62,14 +63,17 @@ const assertCompleteMoveSkipValidationParity = (
     if (!entry.viability.viable || !entry.viability.complete) {
       continue;
     }
+    if (entry.trustedMove === undefined) {
+      throw new Error(`expected trusted move metadata for ${String(entry.move.actionId)}`);
+    }
 
     const baseline = applyMove(def, state, entry.move, undefined, runtime);
-    const skipped = applyMove(def, state, entry.move, { skipMoveValidation: true }, runtime);
+    const trusted = applyTrustedMove(def, state, entry.trustedMove, undefined, runtime);
 
     assert.deepEqual(
-      skipped,
+      trusted,
       baseline,
-      `${label} step=${stepIndex} complete move ${String(entry.move.actionId)} diverged under skipMoveValidation`,
+      `${label} step=${stepIndex} complete move ${String(entry.move.actionId)} diverged under trusted execution`,
     );
   }
 };
@@ -127,15 +131,26 @@ const assertProductionParity = (testCase: ProductionParityCase): void => {
       `${label} step=${stepIndex} trace legalMoveCount should match classified enumeration`,
     );
 
-    assertCompleteMoveSkipValidationParity(label, def, replayState, stepIndex, runtime);
+    assertCompleteMoveTrustedParity(label, def, replayState, stepIndex, runtime);
 
     const baseline = applyMove(def, replayState, moveLog.move, undefined, runtime);
-    const skipped = applyMove(def, replayState, moveLog.move, { skipMoveValidation: true }, runtime);
+    const trusted = applyTrustedMove(
+      def,
+      replayState,
+      {
+        ...moveLog.move,
+        move: moveLog.move,
+        sourceStateHash: replayState.stateHash,
+        provenance: 'enumerateLegalMoves',
+      },
+      undefined,
+      runtime,
+    );
 
     assert.deepEqual(
-      skipped,
+      trusted,
       baseline,
-      `${label} step=${stepIndex} selected move diverged under skipMoveValidation`,
+      `${label} step=${stepIndex} selected move diverged under trusted execution`,
     );
     assert.deepEqual(
       baseline.triggerFirings,
@@ -160,7 +175,7 @@ const assertProductionParity = (testCase: ProductionParityCase): void => {
 };
 
 describe('classified move production parity', () => {
-  it('preserves legality-surface and skip-validation parity for FITL and Texas production traces', () => {
+  it('preserves legality-surface and trusted-execution parity for FITL and Texas production traces', () => {
     assertProductionParity(FITL_CASE);
     assertProductionParity(TEXAS_CASE);
   });

@@ -6,9 +6,9 @@ import type {
   GameDef,
   GameDefRuntime,
   GameState,
-  Move,
   PlayerId,
   Rng,
+  TrustedExecutableMove,
 } from '@ludoforge/engine/runtime';
 
 import {
@@ -20,7 +20,7 @@ import {
 export type AiPlaybackSpeed = '1x' | '2x' | '4x';
 
 export interface AgentMoveSelectionResult {
-  readonly move: Move;
+  readonly move: TrustedExecutableMove;
   readonly rng: Rng;
   readonly agentDecision?: AgentDecisionTrace;
 }

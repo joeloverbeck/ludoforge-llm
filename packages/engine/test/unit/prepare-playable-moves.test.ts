@@ -8,6 +8,7 @@ import {
   asActionId,
   asPhaseId,
   assertValidatedGameDef,
+  createTrustedExecutableMove,
   createRng,
   createGameDefRuntime,
   enumerateLegalMoves,
@@ -41,6 +42,7 @@ describe('preparePlayableMoves', () => {
       {
         move: completeMove,
         viability: { viable: true, complete: true, move: completeMove, warnings: [] },
+        trustedMove: createTrustedExecutableMove(completeMove, state.stateHash, 'enumerateLegalMoves'),
       },
       {
         move: stochasticMove,
@@ -57,6 +59,7 @@ describe('preparePlayableMoves', () => {
           move: stochasticMove,
           warnings: [],
         },
+        trustedMove: createTrustedExecutableMove(stochasticMove, state.stateHash, 'enumerateLegalMoves'),
       },
     ];
 
@@ -67,8 +70,14 @@ describe('preparePlayableMoves', () => {
       rng: createRng(1n),
     });
 
-    assert.deepEqual(prepared.completedMoves, [completeMove]);
-    assert.deepEqual(prepared.stochasticMoves, [stochasticMove]);
+    assert.deepEqual(
+      prepared.completedMoves.map((move) => move.move),
+      [completeMove],
+    );
+    assert.deepEqual(
+      prepared.stochasticMoves.map((move) => move.move),
+      [stochasticMove],
+    );
   });
 
   describe('zone-filtered free-operation templates', () => {

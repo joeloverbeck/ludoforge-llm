@@ -1,5 +1,5 @@
 import { nextInt } from '../kernel/prng.js';
-import type { Move, Rng } from '../kernel/types.js';
+import type { Rng, TrustedExecutableMove } from '../kernel/types.js';
 
 export const pickRandom = <T>(
   items: readonly T[],
@@ -21,10 +21,9 @@ export const pickRandom = <T>(
 };
 
 export const selectStochasticFallback = (
-  stochasticMoves: readonly Move[],
+  stochasticMoves: readonly TrustedExecutableMove[],
   rng: Rng,
-): { readonly move: Move; readonly rng: Rng } => {
+): { readonly move: TrustedExecutableMove; readonly rng: Rng } => {
   const { item: move, rng: nextRng } = pickRandom(stochasticMoves, rng);
   return { move, rng: nextRng };
 };
-

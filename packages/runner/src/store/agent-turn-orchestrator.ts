@@ -4,9 +4,9 @@ import type {
   GameDef,
   GameDefRuntime,
   GameState,
-  Move,
   PlayerId,
   Rng,
+  TrustedExecutableMove,
 } from '@ludoforge/engine/runtime';
 import { createGameDefRuntime, createRng } from '@ludoforge/engine/runtime';
 
@@ -34,7 +34,7 @@ export type AgentTurnStepResult =
   | { readonly kind: 'illegal-template'; readonly error: unknown }
   | { readonly kind: 'no-legal-moves' }
   | { readonly kind: 'no-session' }
-  | { readonly kind: 'selected-move'; readonly move: Move; readonly agentDecision?: AgentDecisionTrace };
+  | { readonly kind: 'selected-move'; readonly move: TrustedExecutableMove; readonly agentDecision?: AgentDecisionTrace };
 
 export interface AgentTurnOrchestrator {
   resetSession(): void;

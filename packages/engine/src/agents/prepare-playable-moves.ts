@@ -1,6 +1,6 @@
 import { perfStart, perfDynEnd, type PerfProfiler } from '../kernel/perf-profiler.js';
 import { evaluatePlayableMoveCandidate } from '../kernel/playable-candidate.js';
-import type { Agent, ClassifiedMove, Move, Rng } from '../kernel/types.js';
+import type { Agent, ClassifiedMove, Move, Rng, TrustedExecutableMove } from '../kernel/types.js';
 
 /**
  * Detect non-viable results that stem from premature zone-filter evaluation on
@@ -36,8 +36,8 @@ export interface PreparePlayableMovesOptions {
 }
 
 export interface PreparedPlayableMoves {
-  readonly completedMoves: readonly Move[];
-  readonly stochasticMoves: readonly Move[];
+  readonly completedMoves: readonly TrustedExecutableMove[];
+  readonly stochasticMoves: readonly TrustedExecutableMove[];
   readonly rng: Rng;
 }
 
@@ -46,8 +46,8 @@ export function preparePlayableMoves(
   options: PreparePlayableMovesOptions = {},
 ): PreparedPlayableMoves {
   const profiler: PerfProfiler | undefined = (input as { profiler?: PerfProfiler }).profiler;
-  const completedMoves: Move[] = [];
-  const stochasticMoves: Move[] = [];
+  const completedMoves: TrustedExecutableMove[] = [];
+  const stochasticMoves: TrustedExecutableMove[] = [];
   let rng = input.rng;
   const pendingTemplateCompletions = options.pendingTemplateCompletions ?? 1;
 
@@ -64,11 +64,17 @@ export function preparePlayableMoves(
       continue;
     }
     if (viability.complete) {
-      completedMoves.push(viability.move);
+      if (classified.trustedMove === undefined) {
+        throw new Error(`complete classified move ${String(move.actionId)} is missing trusted execution metadata`);
+      }
+      completedMoves.push(classified.trustedMove);
       continue;
     }
     if (viability.stochasticDecision !== undefined) {
-      stochasticMoves.push(viability.move);
+      if (classified.trustedMove === undefined) {
+        throw new Error(`stochastic classified move ${String(move.actionId)} is missing trusted execution metadata`);
+      }
+      stochasticMoves.push(classified.trustedMove);
       continue;
     }
 
@@ -93,8 +99,8 @@ function attemptTemplateCompletion(
   move: Move,
   initialRng: Rng,
   pendingTemplateCompletions: number,
-  completedMoves: Move[],
-  stochasticMoves: Move[],
+  completedMoves: TrustedExecutableMove[],
+  stochasticMoves: TrustedExecutableMove[],
   profiler: PerfProfiler | undefined,
 ): Rng {
   let currentRng = initialRng;

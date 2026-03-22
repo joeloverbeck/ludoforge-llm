@@ -1,6 +1,14 @@
-import type { ClassifiedMove, Move } from '../../src/kernel/index.js';
+import { createTrustedExecutableMove, type ClassifiedMove, type Move, type TrustedExecutableMove } from '../../src/kernel/index.js';
 
-export function completeClassifiedMove(move: Move): ClassifiedMove {
+export function trustedMove(
+  move: Move,
+  sourceStateHash = 0n,
+  provenance: TrustedExecutableMove['provenance'] = 'enumerateLegalMoves',
+): TrustedExecutableMove {
+  return createTrustedExecutableMove(move, sourceStateHash, provenance);
+}
+
+export function completeClassifiedMove(move: Move, sourceStateHash = 0n): ClassifiedMove {
   return {
     move,
     viability: {
@@ -9,6 +17,7 @@ export function completeClassifiedMove(move: Move): ClassifiedMove {
       move,
       warnings: [],
     },
+    trustedMove: trustedMove(move, sourceStateHash),
   };
 }
 
@@ -33,7 +42,7 @@ export function pendingClassifiedMove(move: Move, decisionId = 'decision:$pendin
   };
 }
 
-export function stochasticClassifiedMove(move: Move): ClassifiedMove {
+export function stochasticClassifiedMove(move: Move, sourceStateHash = 0n): ClassifiedMove {
   return {
     move,
     viability: {
@@ -49,9 +58,10 @@ export function stochasticClassifiedMove(move: Move): ClassifiedMove {
         outcomes: [],
       },
     },
+    trustedMove: trustedMove(move, sourceStateHash),
   };
 }
 
-export function completeClassifiedMoves(moves: readonly Move[]): readonly ClassifiedMove[] {
-  return moves.map(completeClassifiedMove);
+export function completeClassifiedMoves(moves: readonly Move[], sourceStateHash = 0n): readonly ClassifiedMove[] {
+  return moves.map((move) => completeClassifiedMove(move, sourceStateHash));
 }

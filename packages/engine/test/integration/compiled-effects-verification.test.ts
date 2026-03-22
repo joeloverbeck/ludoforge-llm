@@ -10,6 +10,7 @@ import {
   type ValidatedGameDef,
 } from '../../src/kernel/index.js';
 import { runGame } from '../../src/sim/index.js';
+import { trustedMove } from '../helpers/classified-move-fixtures.js';
 import { compileTexasProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const firstLegalAgent: Agent = {
@@ -18,7 +19,7 @@ const firstLegalAgent: Agent = {
     if (move === undefined) {
       throw new Error('firstLegalAgent requires at least one legal move');
     }
-    return { move, rng: input.rng };
+    return { move: trustedMove(move, input.state.stateHash), rng: input.rng };
   },
 };
 

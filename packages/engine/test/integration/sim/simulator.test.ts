@@ -14,6 +14,7 @@ import {
   type ValidatedGameDef,
 } from '../../../src/kernel/index.js';
 import { runGames } from '../../../src/sim/index.js';
+import { trustedMove } from '../../helpers/classified-move-fixtures.js';
 
 const rngDrivenAgent: Agent = {
   chooseMove(input) {
@@ -22,7 +23,7 @@ const rngDrivenAgent: Agent = {
     if (move === undefined) {
       throw new Error('rngDrivenAgent requires at least one legal move');
     }
-    return { move, rng: nextRng };
+    return { move: trustedMove(move, input.state.stateHash), rng: nextRng };
   },
 };
 

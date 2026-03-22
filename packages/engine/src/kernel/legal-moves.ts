@@ -59,6 +59,7 @@ import { computeAlwaysCompleteActionIds } from './always-complete-actions.js';
 import { probeMoveViability } from './apply-move.js';
 import { kernelRuntimeError } from './runtime-error.js';
 import { createSeatResolutionContext } from './identity.js';
+import { createTrustedExecutableMove } from './trusted-move.js';
 import { requireCardDrivenActiveSeat, validateTurnFlowRuntimeStateInvariants } from './turn-flow-runtime-invariants.js';
 import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
 import { findPhaseDef } from './phase-lookup.js';
@@ -261,6 +262,7 @@ const classifyEnumeratedMoves = (
           move,
           warnings: [],
         },
+        trustedMove: createTrustedExecutableMove(move, state.stateHash, 'enumerateLegalMoves'),
       });
       continue;
     }
@@ -270,6 +272,15 @@ const classifyEnumeratedMoves = (
       classified.push({
         move,
         viability,
+        ...(viability.complete || viability.stochasticDecision !== undefined
+          ? {
+            trustedMove: createTrustedExecutableMove(
+              viability.move,
+              state.stateHash,
+              'enumerateLegalMoves',
+            ),
+          }
+          : {}),
       });
       continue;
     }

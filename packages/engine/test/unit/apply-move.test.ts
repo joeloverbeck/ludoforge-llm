@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  applyTrustedMove,
   applyMove,
   asActionId,
   asPhaseId,
@@ -13,6 +14,7 @@ import {
   asTriggerId,
   asZoneId,
   computeFullHash,
+  createTrustedExecutableMove,
   createZobristTable,
   legalChoicesDiscover,
   type GameDef,
@@ -402,19 +404,23 @@ describe('applyMove', () => {
     assert.equal(result.state.stateHash, computeFullHash(table, result.state));
   });
 
-  it('produces the same result for a legal move when skipMoveValidation is enabled', () => {
+  it('produces the same result for a legal move when applyTrustedMove is used for the same state', () => {
     const def = createDef();
     const state = createState();
 
     const baseline = applyMove(def, state, playMove(2));
-    const skipped = applyMove(def, state, playMove(2), { skipMoveValidation: true });
+    const trusted = applyTrustedMove(
+      def,
+      state,
+      createTrustedExecutableMove(playMove(2), state.stateHash, 'enumerateLegalMoves'),
+    );
 
-    assert.deepEqual(skipped, baseline);
+    assert.deepEqual(trusted, baseline);
   });
 
-  it('bypasses the legality gate for controlled validation-only illegal moves when skipMoveValidation is enabled', () => {
+  it('rejects trusted moves whose sourceStateHash does not match the current state', () => {
     const def: GameDef = {
-      metadata: { id: 'skip-validation-precondition-gate', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+      metadata: { id: 'trusted-move-state-mismatch', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
       seats: [{ id: '0' }, { id: '1' }],
       constants: {},
       globalVars: [
@@ -458,24 +464,12 @@ describe('applyMove', () => {
       turnOrderState: { type: 'roundRobin' },
       markers: {},
     };
-    const gatedMove: Move = {
-      actionId: asActionId('gated'),
-      params: {},
-    };
+    const gatedMove: Move = { actionId: asActionId('gated'), params: {} };
 
-    assert.throws(() => applyMove(def, state, gatedMove, { advanceToDecisionPoint: false }), (error: unknown) => {
-      const details = error as Error & { code?: unknown };
-      assert.equal(details.code, 'ILLEGAL_MOVE');
-      return true;
-    });
-
-    const skipped = applyMove(def, state, gatedMove, {
-      advanceToDecisionPoint: false,
-      skipMoveValidation: true,
-    });
-    assert.equal(skipped.state.globalVars.energy, 0);
-    assert.equal(skipped.state.globalVars.score, 1);
-    assert.deepEqual(skipped.state.actionUsage.gated, { turnCount: 1, phaseCount: 1, gameCount: 1 });
+    assert.throws(
+      () => applyTrustedMove(def, state, createTrustedExecutableMove(gatedMove, state.stateHash + 1n, 'enumerateLegalMoves')),
+      /sourceStateHash does not match the current state/,
+    );
   });
 
   it('throws descriptive illegal-move error with actionId, params, and reason', () => {

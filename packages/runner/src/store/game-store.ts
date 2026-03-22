@@ -882,7 +882,7 @@ export function createGameStore(
 
         let result;
         try {
-          result = await bridge.applyMove(aiStep.move, undefined, toOperationStamp(ctx));
+          result = await bridge.applyTrustedMove(aiStep.move, undefined, toOperationStamp(ctx));
         } catch (error) {
           guardSetAndDerive(ctx, {
             legalMoveResult,
@@ -891,7 +891,7 @@ export function createGameStore(
           return 'illegal-template';
         }
 
-        const completedMove = aiStep.move;
+        const completedMove = aiStep.move.move;
         const mutationInputs = await deriveMutationInputs(result.state);
         const appliedMovePatch = buildAppliedMoveEventPatch(state, completedMove);
         const lifecycle = assertLifecycleTransition(

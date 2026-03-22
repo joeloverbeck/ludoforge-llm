@@ -890,10 +890,19 @@ export interface Move {
   readonly compound?: CompoundMovePayload;
 }
 
+export type TrustedMoveProvenance = 'enumerateLegalMoves' | 'templateCompletion';
+
+export interface TrustedExecutableMove extends Move {
+  readonly move: Move;
+  readonly sourceStateHash: bigint;
+  readonly provenance: TrustedMoveProvenance;
+}
+
 /** A legal move with its viability pre-computed during enumeration. */
 export interface ClassifiedMove {
   readonly move: Move;
   readonly viability: import('./apply-move.js').MoveViabilityProbeResult;
+  readonly trustedMove?: TrustedExecutableMove;
 }
 
 export interface DecisionAuthorityBaseContext {
@@ -1353,8 +1362,6 @@ export interface ExecutionOptions {
   readonly decisionTrace?: boolean;
   readonly selectorTrace?: boolean;
   readonly advanceToDecisionPoint?: boolean;
-  /** Skip move legality validation in applyMove. Only safe for trusted legalMoves -> applyMove pipelines on the same state. */
-  readonly skipMoveValidation?: boolean;
   readonly verifyCompiledEffects?: boolean;
   readonly maxPhaseTransitionsPerMove?: number;
   /** Opt-in performance profiler. Accumulates sub-function timing when provided. */
@@ -1501,5 +1508,5 @@ export interface Agent {
     readonly runtime?: import('./gamedef-runtime.js').GameDefRuntime;
     /** Opt-in profiler for agent sub-function timing. */
     readonly profiler?: import('./perf-profiler.js').PerfProfiler;
-  }): { readonly move: Move; readonly rng: Rng; readonly agentDecision?: AgentDecisionTrace };
+  }): { readonly move: TrustedExecutableMove; readonly rng: Rng; readonly agentDecision?: AgentDecisionTrace };
 }

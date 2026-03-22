@@ -140,7 +140,7 @@ describe('RandomAgent', () => {
     const input = createInput([move], 19n);
     const result = agent.chooseMove(input);
 
-    assert.deepEqual(result.move, move);
+    assert.deepEqual(result.move.move, move);
     assert.equal(result.rng, input.rng);
   });
 
@@ -151,7 +151,7 @@ describe('RandomAgent', () => {
     const [expectedIndex, expectedRng] = nextInt(input.rng, 0, legalMoves.length - 1);
     const result = agent.chooseMove(input);
 
-    assert.deepEqual(result.move, legalMoves[expectedIndex]);
+    assert.deepEqual(result.move.move, legalMoves[expectedIndex]);
     assert.deepEqual(result.rng, expectedRng);
   });
 
@@ -226,7 +226,7 @@ describe('RandomAgent', () => {
     const first = agent.chooseMove(createInput(legalMoves, 42n));
     const [expectedIndex] = nextInt(createRng(42n), 0, legalMoves.length - 1);
 
-    assert.deepEqual(first.move, legalMoves[expectedIndex]);
+    assert.deepEqual(first.move.move, legalMoves[expectedIndex]);
   });
 
   it('produces deterministic results with same seed for template moves', () => {
@@ -515,7 +515,7 @@ describe('RandomAgent', () => {
       def,
       state: stateStub,
       playerId: asPlayerId(0),
-      legalMoves: moves.map(stochasticClassifiedMove),
+      legalMoves: moves.map((move) => stochasticClassifiedMove(move)),
       rng: createRng(77n),
     });
 

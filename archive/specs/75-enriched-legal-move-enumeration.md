@@ -1,5 +1,7 @@
 # Spec 75 — Enriched Legal Move Enumeration
 
+**Status**: ✅ COMPLETED
+
 ## Problem
 
 The simulator → agent → kernel boundary performs redundant move validation.
@@ -258,6 +260,22 @@ work is:
 
 ### Property Tests
 - Every `ClassifiedMove` from `enumerateLegalMoves` has `viability.viable === true`
+
+## Outcome
+
+- Completed: 2026-03-22
+- What changed:
+  - The classified-enumeration split described here landed, but the final architecture preserved `legalMoves()` as the raw `Move[]` facade while `enumerateLegalMoves()` carries `ClassifiedMove[]`.
+  - Executable classified results now also mint `TrustedExecutableMove` metadata, and trusted execution is handled through `applyTrustedMove()` instead of a public skip-validation boolean.
+  - Agents, simulator, and runner AI now preserve trusted execution provenance end-to-end.
+- Deviations from original plan:
+  - The spec originally proposed changing `legalMoves()` itself to return classified moves and adding a public `skipMoveValidation` option. The codebase ended in a cleaner split: raw `legalMoves()`, classified `enumerateLegalMoves()`, and a dedicated trusted-execution API with no boolean alias path.
+  - The optimization did not stop at enriched enumeration; it also replaced the weaker trust-side-channel with a typed trusted move contract.
+- Verification:
+  - `pnpm turbo test`
+  - `pnpm turbo typecheck`
+  - `pnpm turbo lint`
+  - `pnpm run check:ticket-deps`
 - For every complete `ClassifiedMove`, `applyMove` succeeds
 - `skipMoveValidation` produces same `ApplyMoveResult` as full validation
 

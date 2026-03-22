@@ -1,5 +1,6 @@
 import type { Agent } from '../kernel/types.js';
 import { perfStart, perfDynEnd } from '../kernel/perf-profiler.js';
+import { toMoveIdentityKey } from '../kernel/move-identity.js';
 import { evaluatePolicyMove } from './policy-eval.js';
 import { buildPolicyAgentDecisionTrace, type PolicyDecisionTraceLevel } from './policy-diagnostics.js';
 import { preparePlayableMoves } from './prepare-playable-moves.js';
@@ -47,15 +48,22 @@ export class PolicyAgent implements Agent {
     const t0_eval = perfStart(profiler);
     const result = evaluatePolicyMove({
       ...input,
-      legalMoves: playableMoves,
+      legalMoves: playableMoves.map((move) => move.move),
       rng: prepared.rng,
       ...(this.profileId === undefined ? {} : { profileIdOverride: this.profileId }),
       ...(this.fallbackOnError === undefined ? {} : { fallbackOnError: this.fallbackOnError }),
     });
     perfDynEnd(profiler, 'agent:evaluatePolicyMove', t0_eval);
 
+    const trustedMove = playableMoves.find(
+      (candidate) => toMoveIdentityKey(input.def, candidate.move) === toMoveIdentityKey(input.def, result.move),
+    );
+    if (trustedMove === undefined) {
+      throw new Error('PolicyAgent selected a move that was not present in the trusted candidate set.');
+    }
+
     return {
-      move: result.move,
+      move: trustedMove,
       rng: result.rng,
       agentDecision: buildPolicyAgentDecisionTrace(result.metadata, this.traceLevel),
     };

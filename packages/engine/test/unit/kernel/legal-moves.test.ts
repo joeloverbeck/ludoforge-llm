@@ -165,19 +165,24 @@ describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
       limits: [],
     };
 
-    const result = enumerateLegalMoves(makeBaseDef({ actions: [action] }), makeBaseState());
+    const state = makeBaseState();
+    const result = enumerateLegalMoves(makeBaseDef({ actions: [action] }), state);
 
-    assert.deepEqual(result.moves, [
-      {
-        move: { actionId: asActionId('simple'), params: {} },
-        viability: {
-          viable: true,
-          complete: true,
-          move: { actionId: asActionId('simple'), params: {} },
-          warnings: [],
-        },
-      },
-    ]);
+    assert.equal(result.moves.length, 1);
+    assert.deepEqual(result.moves[0]?.move, { actionId: asActionId('simple'), params: {} });
+    assert.deepEqual(result.moves[0]?.viability, {
+      viable: true,
+      complete: true,
+      move: { actionId: asActionId('simple'), params: {} },
+      warnings: [],
+    });
+    assert.deepEqual(result.moves[0]?.trustedMove, {
+      actionId: asActionId('simple'),
+      params: {},
+      move: { actionId: asActionId('simple'), params: {} },
+      provenance: 'enumerateLegalMoves',
+      sourceStateHash: state.stateHash,
+    });
   });
 
   it('supports actions declared across multiple phases', () => {

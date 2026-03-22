@@ -75,7 +75,7 @@ describe('agents factory API shape', () => {
       legalMoves: completeClassifiedMoves([moveStub]),
       rng: createRng(1n),
     });
-    assert.deepEqual(result.move, moveStub);
+    assert.deepEqual(result.move.move, moveStub);
   });
 
   it("createAgent({ kind: 'builtin', builtinId: 'greedy' }) returns an object with chooseMove", () => {
@@ -113,10 +113,10 @@ phase: [asPhaseId('main')],
       def,
       state,
       playerId: asPlayerId(0),
-      legalMoves: completeClassifiedMoves(moves),
+      legalMoves: completeClassifiedMoves(moves, state.stateHash),
       rng: createRng(1n),
     });
-    assert.deepEqual(result.move, moves[0]);
+    assert.deepEqual(result.move.move, moves[0]);
   });
 
   it("createAgent rejects unknown builtin ids", () => {

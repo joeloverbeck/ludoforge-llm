@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import { createPolicyPreviewRuntime } from '../../../src/agents/policy-preview.js';
 import {
   asActionId,
+  createTrustedExecutableMove,
   asPhaseId,
   asPlayerId,
   initialState,
@@ -130,7 +131,7 @@ describe('policy-preview', () => {
       dependencies: {
         classifyPlayableMoveCandidate: () => {
           probeCalls += 1;
-          return { kind: 'playableComplete', move: candidate.move, warnings: [] };
+          return { kind: 'playableComplete', move: createTrustedExecutableMove(candidate.move, state.stateHash, 'templateCompletion'), warnings: [] };
         },
         applyMove: () => {
           applyCalls += 1;
@@ -192,7 +193,11 @@ describe('policy-preview', () => {
       playerId: asPlayerId(0),
       seatId: 'us',
       dependencies: {
-        classifyPlayableMoveCandidate: () => ({ kind: 'playableComplete', move: candidate.move, warnings: [] }),
+        classifyPlayableMoveCandidate: () => ({
+          kind: 'playableComplete',
+          move: createTrustedExecutableMove(candidate.move, state.stateHash, 'templateCompletion'),
+          warnings: [],
+        }),
         applyMove: () => ({
           state: {
             ...state,
@@ -219,7 +224,11 @@ describe('policy-preview', () => {
       playerId: asPlayerId(0),
       seatId: 'us',
       dependencies: {
-        classifyPlayableMoveCandidate: () => ({ kind: 'playableComplete', move: candidate.move, warnings: [] }),
+        classifyPlayableMoveCandidate: () => ({
+          kind: 'playableComplete',
+          move: createTrustedExecutableMove(candidate.move, state.stateHash, 'templateCompletion'),
+          warnings: [],
+        }),
         applyMove: () => ({
           state: {
             ...state,
@@ -258,7 +267,11 @@ describe('policy-preview', () => {
       playerId: asPlayerId(1),
       seatId: 'neutral',
       dependencies: {
-        classifyPlayableMoveCandidate: () => ({ kind: 'playableComplete', move: candidate.move, warnings: [] }),
+        classifyPlayableMoveCandidate: () => ({
+          kind: 'playableComplete',
+          move: createTrustedExecutableMove(candidate.move, state.stateHash, 'templateCompletion'),
+          warnings: [],
+        }),
         applyMove: () => ({ state }),
         derivePlayerObservation: () => createObservation(false),
       },

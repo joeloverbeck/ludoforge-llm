@@ -238,7 +238,7 @@ describe('PolicyAgent', () => {
 
     const result = agent.chooseMove(createInput(def));
 
-    assert.deepEqual(result.move, { actionId: asActionId('pass'), params: {} });
+    assert.deepEqual(result.move.move, { actionId: asActionId('pass'), params: {} });
     assert.equal(result.agentDecision?.kind, 'policy');
     if (result.agentDecision?.kind !== 'policy') {
       assert.fail('expected policy agent decision');
@@ -255,7 +255,7 @@ describe('PolicyAgent', () => {
 
     const result = agent.chooseMove(createInput(def));
 
-    assert.deepEqual(result.move, { actionId: asActionId('event'), params: {} });
+    assert.deepEqual(result.move.move, { actionId: asActionId('event'), params: {} });
     assert.equal(result.agentDecision?.kind, 'policy');
     if (result.agentDecision?.kind !== 'policy') {
       assert.fail('expected policy agent decision');
@@ -289,7 +289,7 @@ describe('PolicyAgent', () => {
       rng: createRng(7n),
     });
 
-    assert.deepEqual(result.move, { actionId: asActionId('pass'), params: {} });
+    assert.deepEqual(result.move.move, { actionId: asActionId('pass'), params: {} });
     assert.equal(result.agentDecision?.kind, 'policy');
     if (result.agentDecision?.kind !== 'policy') {
       assert.fail('expected policy agent decision');

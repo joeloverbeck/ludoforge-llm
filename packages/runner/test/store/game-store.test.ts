@@ -5,6 +5,7 @@ import {
   type ClassifiedMove,
   asPlayerId,
   asTriggerId,
+  createTrustedExecutableMove,
   initialState,
   type DecisionKey,
   type EffectTraceEntry,
@@ -47,7 +48,7 @@ function asChoiceScalar(value: Move['params'][string], label: string): ChoiceSca
   return value;
 }
 
-function toClassifiedMove(move: Move): ClassifiedMove {
+function toClassifiedMove(move: Move, sourceStateHash = 0n): ClassifiedMove {
   return {
     move,
     viability: {
@@ -56,12 +57,13 @@ function toClassifiedMove(move: Move): ClassifiedMove {
       move,
       warnings: [],
     },
+    trustedMove: createTrustedExecutableMove(move, sourceStateHash, 'enumerateLegalMoves'),
   };
 }
 
-function toLegalMoveResult(...moves: readonly Move[]) {
+function toLegalMoveResult(moves: readonly Move[], sourceStateHash = 0n) {
   return {
-    moves: moves.map(toClassifiedMove),
+    moves: moves.map((move) => toClassifiedMove(move, sourceStateHash)),
     warnings: [],
   };
 }
@@ -205,6 +207,7 @@ function createBridgeStub(overrides: BridgeOverrides): GameWorkerAPI {
     legalChoices: resolveOverride('legalChoices'),
     advanceChooseN: resolveOverride('advanceChooseN'),
     applyMove: resolveOverride('applyMove'),
+    applyTrustedMove: resolveOverride('applyTrustedMove'),
     applyTemplateMove: resolveOverride('applyTemplateMove'),
     playSequence: resolveOverride('playSequence'),
     describeAction: resolveOverride('describeAction'),
@@ -367,7 +370,7 @@ describe('createGameStore', () => {
     const def = compileStoreFixture(5);
     const bridge = createBridgeStub({
       init: () => initialState(def, 15, 2),
-      enumerateLegalMoves: () => toLegalMoveResult({ actionId: asActionId('pick-two'), params: {} }),
+      enumerateLegalMoves: () => toLegalMoveResult([{ actionId: asActionId('pick-two'), params: {} }]),
       terminalResult: () => null,
       legalChoices: (partialMove) => {
         if (partialMove.params['decision:first'] === undefined) {
@@ -621,7 +624,7 @@ describe('createGameStore', () => {
     ];
     const bridge = createBridgeStub({
       init: () => ({ state: baseState, setupTrace: [] }),
-      enumerateLegalMoves: () => toLegalMoveResult(move),
+      enumerateLegalMoves: () => toLegalMoveResult([move]),
       legalChoices: () => ({ kind: 'complete', complete: true }),
       applyMove: () => ({
         state: {
@@ -676,9 +679,9 @@ describe('createGameStore', () => {
     };
     const enumerateLegalMoves = vi
       .fn<GameWorkerAPI['enumerateLegalMoves']>()
-      .mockResolvedValueOnce(toLegalMoveResult(aiMove))
-      .mockResolvedValue(toLegalMoveResult(aiMove));
-    const applyMove = vi.fn<GameWorkerAPI['applyMove']>(async () => ({
+      .mockResolvedValueOnce(toLegalMoveResult([aiMove], aiState.stateHash))
+      .mockResolvedValue(toLegalMoveResult([aiMove], aiState.stateHash));
+    const applyTrustedMove = vi.fn<GameWorkerAPI['applyTrustedMove']>(async () => ({
       state: humanState,
       effectTrace: [],
       triggerFirings: [],
@@ -688,7 +691,7 @@ describe('createGameStore', () => {
       init: () => ({ state: aiState, setupTrace: [] }),
       enumerateLegalMoves,
       terminalResult: () => null,
-      applyMove,
+      applyTrustedMove,
     });
     const store = createStoreWithDefaultVisuals(bridge);
 
@@ -701,7 +704,7 @@ describe('createGameStore', () => {
     await store.getState().resolveAiTurn();
 
     const afterResolve = store.getState();
-    expect(applyMove).toHaveBeenCalledTimes(1);
+    expect(applyTrustedMove).toHaveBeenCalledTimes(1);
     expect(afterResolve.gameState?.globalVars.round).toBe(1);
     expect(afterResolve.renderModel?.activePlayerID).toEqual(asPlayerId(0));
     expect(afterResolve.renderModel?.players.find((player) => player.id === asPlayerId(0))?.isHuman).toBe(true);
@@ -742,7 +745,7 @@ describe('createGameStore', () => {
     };
     const moveA: Move = { actionId: asActionId('tick'), params: { pick: 'a' } };
     const moveB: Move = { actionId: asActionId('tick'), params: { pick: 'b' } };
-    const applyMove = vi.fn<GameWorkerAPI['applyMove']>(async () => ({
+    const applyTrustedMove = vi.fn<GameWorkerAPI['applyTrustedMove']>(async () => ({
       state: {
         ...aiState,
         activePlayer: asPlayerId(0),
@@ -753,17 +756,17 @@ describe('createGameStore', () => {
     }));
     const bridge = createBridgeStub({
       init: () => ({ state: aiState, setupTrace: [] }),
-      enumerateLegalMoves: () => toLegalMoveResult(moveA, moveB),
+      enumerateLegalMoves: () => toLegalMoveResult([moveA, moveB], aiState.stateHash),
       terminalResult: () => null,
-      applyMove,
+      applyTrustedMove,
     });
     const store = createStoreWithDefaultVisuals(bridge);
 
     await store.getState().initGame(def, 31, GREEDY_TWO_PLAYER_CONFIG);
     await store.getState().resolveAiTurn();
 
-    expect(applyMove).toHaveBeenCalledTimes(1);
-    expect(applyMove.mock.calls[0]?.[0]).toEqual(moveA);
+    expect(applyTrustedMove).toHaveBeenCalledTimes(1);
+    expect(applyTrustedMove.mock.calls[0]?.[0]).toMatchObject({ move: moveA });
   });
 
   it('resolveAiTurn preserves state when AI turn has no legal moves', async () => {
@@ -772,21 +775,21 @@ describe('createGameStore', () => {
       ...initialState(def, 29, 2).state,
       activePlayer: asPlayerId(1),
     };
-    const applyMove = vi.fn<GameWorkerAPI['applyMove']>(async () => {
-      throw new Error('applyMove should not be called when there are no legal moves');
+    const applyTrustedMove = vi.fn<GameWorkerAPI['applyTrustedMove']>(async () => {
+      throw new Error('applyTrustedMove should not be called when there are no legal moves');
     });
     const bridge = createBridgeStub({
       init: () => ({ state: aiState, setupTrace: [] }),
-      enumerateLegalMoves: () => toLegalMoveResult(),
+      enumerateLegalMoves: () => toLegalMoveResult([]),
       terminalResult: () => null,
-      applyMove,
+      applyTrustedMove,
     });
     const store = createStoreWithDefaultVisuals(bridge);
 
     await store.getState().initGame(def, 29, TWO_PLAYER_CONFIG);
     await store.getState().resolveAiTurn();
 
-    expect(applyMove).not.toHaveBeenCalled();
+    expect(applyTrustedMove).not.toHaveBeenCalled();
     expect(store.getState().gameState).toEqual(aiState);
     expect(store.getState().renderModel?.activePlayerID).toEqual(asPlayerId(1));
     expect(store.getState().error).toBeNull();
@@ -800,7 +803,7 @@ describe('createGameStore', () => {
     };
     const bridge = createBridgeStub({
       init: () => ({ state: aiState, setupTrace: [] }),
-      enumerateLegalMoves: () => toLegalMoveResult({ actionId: asActionId('tick'), params: {} }),
+      enumerateLegalMoves: () => toLegalMoveResult([{ actionId: asActionId('tick'), params: {} }], aiState.stateHash),
       terminalResult: () => null,
     });
     const store = createStoreWithDefaultVisuals(bridge);
@@ -830,7 +833,7 @@ describe('createGameStore', () => {
       activePlayer: asPlayerId(1),
     };
     const aiMove: Move = { actionId: asActionId('tick'), params: {} };
-    const applyMove = vi.fn<GameWorkerAPI['applyMove']>(async () => ({
+    const applyTrustedMove = vi.fn<GameWorkerAPI['applyTrustedMove']>(async () => ({
       state: stillAiState,
       effectTrace: [],
       triggerFirings: [],
@@ -838,9 +841,9 @@ describe('createGameStore', () => {
     }));
     const bridge = createBridgeStub({
       init: () => ({ state: aiState, setupTrace: [] }),
-      enumerateLegalMoves: () => toLegalMoveResult(aiMove),
+      enumerateLegalMoves: () => toLegalMoveResult([aiMove], aiState.stateHash),
       terminalResult: () => null,
-      applyMove,
+      applyTrustedMove,
     });
     const store = createStoreWithDefaultVisuals(bridge);
 
@@ -848,7 +851,7 @@ describe('createGameStore', () => {
     const outcome = await store.getState().resolveAiStep();
 
     expect(outcome).toBe('advanced');
-    expect(applyMove).toHaveBeenCalledTimes(1);
+    expect(applyTrustedMove).toHaveBeenCalledTimes(1);
     expect(store.getState().renderModel?.activePlayerID).toEqual(asPlayerId(1));
   });
 
@@ -867,7 +870,7 @@ describe('createGameStore', () => {
       activePlayer: asPlayerId(1),
     };
     const aiMove: Move = { actionId: asActionId('tick'), params: {} };
-    const applyMove = vi.fn<GameWorkerAPI['applyMove']>(async () => ({
+    const applyTrustedMove = vi.fn<GameWorkerAPI['applyTrustedMove']>(async () => ({
       state: stillAiState,
       effectTrace: [],
       triggerFirings: [],
@@ -875,9 +878,9 @@ describe('createGameStore', () => {
     }));
     const bridge = createBridgeStub({
       init: () => ({ state: aiState, setupTrace: [] }),
-      enumerateLegalMoves: () => toLegalMoveResult(aiMove),
+      enumerateLegalMoves: () => toLegalMoveResult([aiMove], aiState.stateHash),
       terminalResult: () => null,
-      applyMove,
+      applyTrustedMove,
     });
     const onMoveApplied = vi.fn<(move: Move) => void>();
     const store = createStoreWithDefaultVisuals(bridge, { onMoveApplied });
@@ -925,19 +928,28 @@ describe('createGameStore', () => {
       },
       enumerateLegalMoves: () => {
         if (currentState.activePlayer === asPlayerId(1)) {
-          return toLegalMoveResult(aiMove);
+          return toLegalMoveResult([aiMove], currentState.stateHash);
         }
-        return toLegalMoveResult(humanMove);
+        return toLegalMoveResult([humanMove], currentState.stateHash);
       },
       terminalResult: () => null,
       legalChoices: () => ({ kind: 'complete', complete: true }),
-      applyMove: (move) => {
-        if ('ai' in move.params) {
-          currentState = afterAi;
-        } else if (currentState.globalVars.round === 0) {
+      applyMove: (_move) => {
+        if (currentState.globalVars.round === 0) {
           currentState = afterHumanOne;
         } else {
           currentState = afterHumanTwo;
+        }
+        return {
+          state: currentState,
+          effectTrace: [],
+          triggerFirings: [],
+          warnings: [],
+        };
+      },
+      applyTrustedMove: (move) => {
+        if ('ai' in move.params) {
+          currentState = afterAi;
         }
         return {
           state: currentState,
@@ -993,10 +1005,10 @@ describe('createGameStore', () => {
       initializeSession: vi.fn(),
       resolveStep: vi.fn<AgentTurnOrchestrator['resolveStep']>(() => ({
         kind: 'selected-move',
-        move: completedMove,
+        move: createTrustedExecutableMove(completedMove, aiState.stateHash, 'enumerateLegalMoves'),
       })),
     };
-    const applyMove = vi.fn<GameWorkerAPI['applyMove']>(async (_move) => ({
+    const applyTrustedMove = vi.fn<GameWorkerAPI['applyTrustedMove']>(async (_move) => ({
       state: {
         ...aiState,
         activePlayer: asPlayerId(0),
@@ -1008,9 +1020,9 @@ describe('createGameStore', () => {
     }));
     const bridge = createBridgeStub({
       init: () => ({ state: aiState, setupTrace: [] }),
-      enumerateLegalMoves: () => toLegalMoveResult({ actionId: asActionId('tick'), params: {} }),
+      enumerateLegalMoves: () => toLegalMoveResult([{ actionId: asActionId('tick'), params: {} }], aiState.stateHash),
       terminalResult: () => null,
-      applyMove,
+      applyTrustedMove,
     });
     const store = createStoreWithDefaultVisuals(bridge, { agentTurnOrchestrator: orchestrator });
 
@@ -1022,14 +1034,18 @@ describe('createGameStore', () => {
     expect(orchestrator.resolveStep).toHaveBeenCalledWith({
       controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }),
       def,
-      legalMoves: toLegalMoveResult({ actionId: asActionId('tick'), params: {} }).moves,
+      legalMoves: toLegalMoveResult([{ actionId: asActionId('tick'), params: {} }], aiState.stateHash).moves,
       playerId: asPlayerId(1),
       state: aiState,
     });
-    expect(applyMove).toHaveBeenCalledWith(completedMove, undefined, expect.any(Object));
+    expect(applyTrustedMove).toHaveBeenCalledWith(
+      createTrustedExecutableMove(completedMove, aiState.stateHash, 'enumerateLegalMoves'),
+      undefined,
+      expect.any(Object),
+    );
   });
 
-  it('resolveAiStep executes completed AI moves through applyMove', async () => {
+  it('resolveAiStep executes completed AI moves through applyTrustedMove', async () => {
     const def = compileStoreFixture(8);
     const aiState: GameState = {
       ...initialState(def, 60, 2).state,
@@ -1041,7 +1057,7 @@ describe('createGameStore', () => {
       activePlayer: asPlayerId(0),
     };
     const completedMove: Move = { actionId: asActionId('tick'), params: {} };
-    const applyMove = vi.fn<GameWorkerAPI['applyMove']>(async () => ({
+    const applyTrustedMove = vi.fn<GameWorkerAPI['applyTrustedMove']>(async () => ({
       state: completedState,
       effectTrace: [],
       triggerFirings: [],
@@ -1049,9 +1065,9 @@ describe('createGameStore', () => {
     }));
     const bridge = createBridgeStub({
       init: () => ({ state: aiState, setupTrace: [] }),
-      enumerateLegalMoves: () => toLegalMoveResult(completedMove),
+      enumerateLegalMoves: () => toLegalMoveResult([completedMove], aiState.stateHash),
       terminalResult: () => null,
-      applyMove,
+      applyTrustedMove,
     });
     const store = createStoreWithDefaultVisuals(bridge);
 
@@ -1059,8 +1075,12 @@ describe('createGameStore', () => {
     const outcome = await store.getState().resolveAiStep();
 
     expect(outcome).toBe('advanced');
-    expect(applyMove).toHaveBeenCalledTimes(1);
-    expect(applyMove).toHaveBeenCalledWith(completedMove, undefined, expect.any(Object));
+    expect(applyTrustedMove).toHaveBeenCalledTimes(1);
+    expect(applyTrustedMove).toHaveBeenCalledWith(
+      createTrustedExecutableMove(completedMove, aiState.stateHash, 'enumerateLegalMoves'),
+      undefined,
+      expect.any(Object),
+    );
   });
 
   it('resolveAiStep returns illegal-template when agent selection fails', async () => {
@@ -1077,14 +1097,14 @@ describe('createGameStore', () => {
         error: new Error('selection failed'),
       })),
     };
-    const applyMove = vi.fn<GameWorkerAPI['applyMove']>(async () => {
-      throw new Error('applyMove should not be called when agent selection fails');
+    const applyTrustedMove = vi.fn<GameWorkerAPI['applyTrustedMove']>(async () => {
+      throw new Error('applyTrustedMove should not be called when agent selection fails');
     });
     const bridge = createBridgeStub({
       init: () => ({ state: aiState, setupTrace: [] }),
-      enumerateLegalMoves: () => toLegalMoveResult({ actionId: asActionId('unknown-action'), params: {} }),
+      enumerateLegalMoves: () => toLegalMoveResult([{ actionId: asActionId('unknown-action'), params: {} }], aiState.stateHash),
       terminalResult: () => null,
-      applyMove,
+      applyTrustedMove,
     });
     const store = createStoreWithDefaultVisuals(bridge, { agentTurnOrchestrator: orchestrator });
 
@@ -1092,20 +1112,20 @@ describe('createGameStore', () => {
     const outcome = await store.getState().resolveAiStep();
 
     expect(outcome).toBe('illegal-template');
-    expect(applyMove).not.toHaveBeenCalled();
+    expect(applyTrustedMove).not.toHaveBeenCalled();
     expect(store.getState().error).toMatchObject({
       code: 'INTERNAL_ERROR',
     });
   });
 
-  it('resolveAiStep returns illegal-template and stores worker error when applyMove fails', async () => {
+  it('resolveAiStep returns illegal-template and stores worker error when applyTrustedMove fails', async () => {
     const def = compileStoreFixture(8);
     const aiState: GameState = {
       ...initialState(def, 62, 2).state,
       activePlayer: asPlayerId(1),
     };
     const aiMove: Move = { actionId: asActionId('tick'), params: {} };
-    const applyMove = vi.fn<GameWorkerAPI['applyMove']>(async () => {
+    const applyTrustedMove = vi.fn<GameWorkerAPI['applyTrustedMove']>(async () => {
       throw {
         code: 'ILLEGAL_MOVE',
         message: 'forced illegal move',
@@ -1113,9 +1133,9 @@ describe('createGameStore', () => {
     });
     const bridge = createBridgeStub({
       init: () => ({ state: aiState, setupTrace: [] }),
-      enumerateLegalMoves: () => toLegalMoveResult(aiMove),
+      enumerateLegalMoves: () => toLegalMoveResult([aiMove], aiState.stateHash),
       terminalResult: () => null,
-      applyMove,
+      applyTrustedMove,
     });
     const store = createStoreWithDefaultVisuals(bridge);
 
@@ -1123,7 +1143,7 @@ describe('createGameStore', () => {
     const outcome = await store.getState().resolveAiStep();
 
     expect(outcome).toBe('illegal-template');
-    expect(applyMove).toHaveBeenCalledTimes(1);
+    expect(applyTrustedMove).toHaveBeenCalledTimes(1);
     expect(store.getState().gameState).toEqual(aiState);
     expect(store.getState().error).toMatchObject({
       code: 'ILLEGAL_MOVE',
@@ -1295,7 +1315,7 @@ describe('createGameStore', () => {
         sawInitializing = store.getState().gameLifecycle === 'initializing';
         return baseState;
       },
-      enumerateLegalMoves: () => toLegalMoveResult(),
+      enumerateLegalMoves: () => toLegalMoveResult([]),
       terminalResult: () => ({ type: 'draw' }),
     });
 
@@ -1322,7 +1342,7 @@ describe('createGameStore', () => {
       });
     const bridge = createBridgeStub({
       init: initMock,
-      enumerateLegalMoves: () => toLegalMoveResult({ actionId: asActionId('tick'), params: {} }),
+      enumerateLegalMoves: () => toLegalMoveResult([{ actionId: asActionId('tick'), params: {} }]),
       terminalResult: () => null,
       legalChoices: () => ({ kind: 'complete', complete: true }),
     });
@@ -1369,7 +1389,7 @@ describe('createGameStore', () => {
       });
     const bridge = createBridgeStub({
       init: initMock,
-      enumerateLegalMoves: () => toLegalMoveResult({ actionId: asActionId('tick'), params: {} }),
+      enumerateLegalMoves: () => toLegalMoveResult([{ actionId: asActionId('tick'), params: {} }]),
       terminalResult: () => null,
     });
     const store = createStoreWithDefaultVisuals(bridge);
@@ -1401,7 +1421,7 @@ describe('createGameStore', () => {
       .mockResolvedValueOnce(gameState);
     const bridge = createBridgeStub({
       init: initMock,
-      enumerateLegalMoves: () => toLegalMoveResult({ actionId: asActionId('tick'), params: {} }),
+      enumerateLegalMoves: () => toLegalMoveResult([{ actionId: asActionId('tick'), params: {} }]),
       terminalResult: () => null,
     });
     const store = createStoreWithDefaultVisuals(bridge);
@@ -1434,7 +1454,7 @@ describe('createGameStore', () => {
       init: () => {
         throw workerError;
       },
-      enumerateLegalMoves: () => toLegalMoveResult(),
+      enumerateLegalMoves: () => toLegalMoveResult([]),
       terminalResult: () => null,
     });
 
@@ -1466,7 +1486,7 @@ describe('createGameStore', () => {
     const def = compileStoreFixture(5);
     const bridge = createBridgeStub({
       init: () => initialState(def, 30, 2),
-      enumerateLegalMoves: () => toLegalMoveResult({ actionId: asActionId('tick'), params: {} }),
+      enumerateLegalMoves: () => toLegalMoveResult([{ actionId: asActionId('tick'), params: {} }]),
       terminalResult: () => null,
     });
     const store = createStoreWithDefaultVisuals(bridge);
@@ -1501,7 +1521,7 @@ describe('createGameStore', () => {
     };
     const bridge = createBridgeStub({
       init: () => initialState(def, 23, 2),
-      enumerateLegalMoves: () => toLegalMoveResult({ actionId: asActionId('tick'), params: {} }),
+      enumerateLegalMoves: () => toLegalMoveResult([{ actionId: asActionId('tick'), params: {} }]),
       terminalResult: () => null,
       legalChoices: () => {
         throw workerError;
@@ -1586,7 +1606,7 @@ describe('createGameStore', () => {
     });
     const bridge = createBridgeStub({
       init: initSpy,
-      enumerateLegalMoves: () => toLegalMoveResult({ actionId: asActionId('tick'), params: {} }),
+      enumerateLegalMoves: () => toLegalMoveResult([{ actionId: asActionId('tick'), params: {} }]),
       terminalResult: () => null,
     });
     const store = createStoreWithDefaultVisuals(bridge);
@@ -1607,7 +1627,7 @@ describe('createGameStore', () => {
     const def = compileStoreFixture(5);
     const bridge = createBridgeStub({
       init: (_d, _s, options) => initialState(def, 41, options?.playerCount),
-      enumerateLegalMoves: () => toLegalMoveResult({ actionId: asActionId('tick'), params: {} }),
+      enumerateLegalMoves: () => toLegalMoveResult([{ actionId: asActionId('tick'), params: {} }]),
       terminalResult: () => null,
     });
     const store = createStoreWithDefaultVisuals(bridge);

@@ -8,6 +8,7 @@ import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { buildRuntimeTableIndex, type RuntimeTableIndex } from './runtime-table-index.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';
+import type { GameDefRuntime } from './gamedef-runtime.js';
 import type { GameDef, GameState, Rng, TriggerDef, TriggerEvent, TriggerLogEntry } from './types.js';
 
 export interface DispatchTriggersResult {
@@ -26,6 +27,7 @@ export interface DispatchTriggersRequest {
   readonly triggerLog: readonly TriggerLogEntry[];
   readonly adjacencyGraph?: AdjacencyGraph;
   readonly runtimeTableIndex?: RuntimeTableIndex;
+  readonly cachedRuntime?: GameDefRuntime;
   readonly policy?: MoveExecutionPolicy;
   readonly effectPathRoot?: string;
   readonly evalRuntimeResources?: EvalRuntimeResources;
@@ -95,6 +97,7 @@ export const dispatchTriggers = (request: DispatchTriggersRequest): DispatchTrig
       resources: runtimeResources,
       rng: nextRng,
       moveParams: {},
+      ...(request.cachedRuntime === undefined ? {} : { cachedRuntime: request.cachedRuntime }),
       traceContext: {
         eventContext: 'triggerEffect',
         effectPathRoot: `${effectPathRoot}.trigger:${trigger.id}.effects`,
@@ -124,6 +127,7 @@ export const dispatchTriggers = (request: DispatchTriggersRequest): DispatchTrig
         triggerLog: nextTriggerLog,
         adjacencyGraph,
         runtimeTableIndex,
+        ...(request.cachedRuntime === undefined ? {} : { cachedRuntime: request.cachedRuntime }),
         effectPathRoot: `${effectPathRoot}.cascade(${emittedEvent.type})`,
         evalRuntimeResources: runtimeResources,
         ...(policy === undefined ? {} : { policy }),

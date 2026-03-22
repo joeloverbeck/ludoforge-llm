@@ -418,7 +418,7 @@ export const applyGotoPhaseExact = (
   const exitedState = dispatchLifecycleEvent(ctx.def, ctx.state, {
     type: 'phaseExit',
     phase: ctx.state.currentPhase,
-  }, undefined, lifecycleBudgetOptions(ctx), lifecycleResources, 'lifecycle', undefined, ctx.profiler);
+  }, undefined, lifecycleBudgetOptions(ctx), lifecycleResources, 'lifecycle', ctx.cachedRuntime, ctx.profiler);
   const enteredState = resetPhaseUsage({
     ...exitedState,
     currentPhase: targetPhaseId,
@@ -426,7 +426,7 @@ export const applyGotoPhaseExact = (
   const finalState = dispatchLifecycleEvent(ctx.def, enteredState, {
     type: 'phaseEnter',
     phase: targetPhaseId,
-  }, undefined, lifecycleBudgetOptions(ctx), lifecycleResources, 'lifecycle', undefined, ctx.profiler);
+  }, undefined, lifecycleBudgetOptions(ctx), lifecycleResources, 'lifecycle', ctx.cachedRuntime, ctx.profiler);
   return {
     state: finalState,
     rng: { state: finalState.rng },
@@ -447,7 +447,10 @@ export const applyAdvancePhase = (
     createEvalRuntimeResources({
       collector: ctx.collector,
     }),
-    { policy },
+    {
+      policy,
+      ...(ctx.cachedRuntime === undefined ? {} : { cachedRuntime: ctx.cachedRuntime }),
+    },
   ));
   return {
     state: nextState,
@@ -492,7 +495,7 @@ export const applyPushInterruptPhase = (
   const exitedState = dispatchLifecycleEvent(ctx.def, ctx.state, {
     type: 'phaseExit',
     phase: ctx.state.currentPhase,
-  }, undefined, lifecycleBudgetOptions(ctx), lifecycleResources);
+  }, undefined, lifecycleBudgetOptions(ctx), lifecycleResources, 'lifecycle', ctx.cachedRuntime);
   const nextStack = [
     ...(exitedState.interruptPhaseStack ?? []),
     { phase: targetPhase, resumePhase },
@@ -505,7 +508,7 @@ export const applyPushInterruptPhase = (
   const finalState = dispatchLifecycleEvent(ctx.def, enteredState, {
     type: 'phaseEnter',
     phase: targetPhase,
-  }, undefined, lifecycleBudgetOptions(ctx), lifecycleResources);
+  }, undefined, lifecycleBudgetOptions(ctx), lifecycleResources, 'lifecycle', ctx.cachedRuntime);
   return {
     state: finalState,
     rng: { state: finalState.rng },
@@ -532,7 +535,7 @@ export const applyPopInterruptPhase = (
   const exitedState = dispatchLifecycleEvent(ctx.def, ctx.state, {
     type: 'phaseExit',
     phase: ctx.state.currentPhase,
-  }, undefined, lifecycleBudgetOptions(ctx), lifecycleResources);
+  }, undefined, lifecycleBudgetOptions(ctx), lifecycleResources, 'lifecycle', ctx.cachedRuntime);
   const stackAfterExit = exitedState.interruptPhaseStack ?? [];
   const resumeFrame = stackAfterExit.at(-1);
   if (resumeFrame === undefined) {
@@ -559,7 +562,7 @@ export const applyPopInterruptPhase = (
   const finalState = dispatchLifecycleEvent(ctx.def, resumedState, {
     type: 'phaseEnter',
     phase: resumeFrame.resumePhase,
-  }, undefined, lifecycleBudgetOptions(ctx), lifecycleResources);
+  }, undefined, lifecycleBudgetOptions(ctx), lifecycleResources, 'lifecycle', ctx.cachedRuntime);
   return {
     state: finalState,
     rng: { state: finalState.rng },

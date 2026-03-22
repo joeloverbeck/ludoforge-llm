@@ -26,4 +26,5 @@ export const createCompiledExecutionContext = (
   ...(ctx.verifyCompiledEffects === undefined ? {} : { verifyCompiledEffects: ctx.verifyCompiledEffects }),
   ...(ctx.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: ctx.phaseTransitionBudget }),
   ...(ctx.profiler === undefined ? {} : { profiler: ctx.profiler }),
+  ...(ctx.cachedRuntime === undefined ? {} : { cachedRuntime: ctx.cachedRuntime }),
 });

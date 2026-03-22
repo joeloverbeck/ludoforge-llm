@@ -4,6 +4,7 @@ import { perfStart, perfEnd } from '../kernel/perf-profiler.js';
 import type {
   Agent,
   ExecutionOptions,
+  GameDefRuntime,
   GameTrace,
   Move,
   MoveContext,
@@ -72,13 +73,14 @@ export const runGame = (
   maxTurns: number,
   playerCount?: number,
   options?: ExecutionOptions,
+  runtime?: GameDefRuntime,
 ): GameTrace => {
   validateSeed(seed);
   validateMaxTurns(maxTurns);
   const validatedDef = assertValidatedGameDef(def);
-  const runtime = createGameDefRuntime(validatedDef);
+  const resolvedRuntime = runtime ?? createGameDefRuntime(validatedDef);
 
-  let state = initialState(validatedDef, seed, playerCount, options).state;
+  let state = initialState(validatedDef, seed, playerCount, options, resolvedRuntime).state;
   if (agents.length !== state.playerCount) {
     throw new RangeError(
       `agents length must equal resolved player count ${state.playerCount}, received ${agents.length}`,
@@ -93,7 +95,7 @@ export const runGame = (
 
   while (true) {
     const t0_term = perfStart(profiler);
-    const terminal = terminalResult(validatedDef, state, runtime);
+    const terminal = terminalResult(validatedDef, state, resolvedRuntime);
     perfEnd(profiler, 'simTerminalResult', t0_term);
     if (terminal !== null) {
       result = terminal;
@@ -107,7 +109,7 @@ export const runGame = (
     }
 
     const t0_legal = perfStart(profiler);
-    const legal = legalMoves(validatedDef, state, undefined, runtime);
+    const legal = legalMoves(validatedDef, state, undefined, resolvedRuntime);
     perfEnd(profiler, 'simLegalMoves', t0_legal);
     if (legal.length === 0) {
       stopReason = 'noLegalMoves';
@@ -128,7 +130,7 @@ export const runGame = (
       playerId: player,
       legalMoves: legal,
       rng: agentRng,
-      runtime,
+      runtime: resolvedRuntime,
       ...(profiler === undefined ? {} : { profiler }),
     });
     perfEnd(profiler, 'simAgentChooseMove', t0_agent);
@@ -137,7 +139,7 @@ export const runGame = (
     const preState = state;
     const moveContext = captureMoveContext(selected.move);
     const t0_apply = perfStart(profiler);
-    const applied = applyMove(validatedDef, state, selected.move, options, runtime);
+    const applied = applyMove(validatedDef, state, selected.move, options, resolvedRuntime);
     perfEnd(profiler, 'simApplyMove', t0_apply);
     state = applied.state;
 
@@ -180,4 +182,5 @@ export const runGames = (
   maxTurns: number,
   playerCount?: number,
   options?: ExecutionOptions,
-): readonly GameTrace[] => seeds.map((seed) => runGame(def, seed, agents, maxTurns, playerCount, options));
+  runtime?: GameDefRuntime,
+): readonly GameTrace[] => seeds.map((seed) => runGame(def, seed, agents, maxTurns, playerCount, options, runtime));

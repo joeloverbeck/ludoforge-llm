@@ -1,5 +1,7 @@
 # Spec 74 — Compiled Effect Sequences
 
+**Status**: ✅ COMPLETED
+
 ## Problem
 
 The kernel's effect AST interpreter is the dominant performance bottleneck.
@@ -167,3 +169,21 @@ comparison for multiple game specs.
   correctly even without a compiler pattern — they just don't get the speedup.
 - **V8 JIT interaction:** The generated functions must have consistent shapes
   to avoid hidden class deoptimization (lesson from exp-026/027).
+
+## Outcome
+
+- Completion date: 2026-03-22
+- What actually changed:
+  - the compiled lifecycle architecture described here was implemented across the kernel, including runtime compilation, verification, profiler bucketing, and lifecycle dispatch integration;
+  - this ticket cycle tightened the production architecture by preserving the cached runtime through initialization, phase transitions, trigger dispatch, boundary expiry, and phase advance so compiled lifecycle handlers remain active in real Texas simulations;
+  - Texas production regression coverage and benchmark comparison tooling now exercise compiled-versus-interpreted lifecycle execution directly.
+- Deviations from original plan:
+  - the current codebase uses the existing kernel module layout rather than the early module split proposed in this spec;
+  - FITL still has no compiled lifecycle entries in production, so compiled coverage remains focused on Texas rather than forcing speculative cross-game parity tests;
+  - the benchmark work extended the existing Texas performance campaign instead of introducing a separate profiling framework.
+- Verification results:
+  - `pnpm -F @ludoforge/engine test`
+  - `pnpm -F @ludoforge/engine test:e2e`
+  - `pnpm -F @ludoforge/engine lint`
+  - `pnpm turbo typecheck`
+  - `node campaigns/texas-perf-optimization/run-benchmark.mjs --seeds 5 --players 2 --max-turns 50`

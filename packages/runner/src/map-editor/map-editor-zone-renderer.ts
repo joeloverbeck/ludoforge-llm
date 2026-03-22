@@ -195,9 +195,13 @@ function indexZonesById(
   gameDef: GameDef,
   visualConfigProvider: VisualConfigProvider,
 ): ReadonlyMap<string, ZoneDef> {
+  const hiddenZones = visualConfigProvider.getHiddenZones();
   return new Map(
     (gameDef.zones ?? [])
-      .filter((zone) => !isConnectionZone(zone, visualConfigProvider))
+      .filter((zone) =>
+        !isConnectionZone(zone, visualConfigProvider)
+        && !hiddenZones.has(zone.id as string),
+      )
       .map((zone) => [zone.id as string, zone]),
   );
 }

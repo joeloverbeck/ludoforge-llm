@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — test files only, no production code
-**Deps**: archive/tickets/75ENRLEGMOVENU/75ENRLEGMOVENU-001-classifiedmove-type-and-always-complete-actions.md, archive/tickets/75ENRLEGMOVENU/75ENRLEGMOVENU-002-enumeratelegal-moves-classification.md, tickets/75ENRLEGMOVENU-003-skip-move-validation-threading.md, tickets/75ENRLEGMOVENU-004-agent-and-prepare-playable-moves-update.md, tickets/75ENRLEGMOVENU-005-simulator-and-runner-type-threading.md
+**Deps**: archive/tickets/75ENRLEGMOVENU/75ENRLEGMOVENU-001-classifiedmove-type-and-always-complete-actions.md, archive/tickets/75ENRLEGMOVENU/75ENRLEGMOVENU-002-enumeratelegal-moves-classification.md, archive/tickets/75ENRLEGMOVENU-003-skip-move-validation-threading.md, tickets/75ENRLEGMOVENU-004-agent-and-prepare-playable-moves-update.md, tickets/75ENRLEGMOVENU-005-simulator-and-runner-type-threading.md
 
 ## Problem
 
@@ -17,6 +17,7 @@ Spec 75 changes the core `legalMoves` → agent → `applyMove` pipeline. While 
 3. Determinism tests exist — they verify same seed + same actions = identical state hash.
 4. Property tests may exist for random play stability — verify no crashes for N turns.
 5. `compileProductionSpec()` from `test/helpers/production-spec-helpers.ts` is used for FITL compilation in tests.
+6. Follow-up ticket `75ENRLEGMOVENU-007` may replace the public `skipMoveValidation` flag with a trusted execution contract. If that lands first, this ticket's parity assertions should target the trusted execution API instead of preserving boolean-flag-specific tests.
 
 ## Architecture Check
 

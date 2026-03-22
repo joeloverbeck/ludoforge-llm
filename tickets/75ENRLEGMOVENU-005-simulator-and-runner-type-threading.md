@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — simulator.ts; Runner changes are type-only
-**Deps**: archive/tickets/75ENRLEGMOVENU/75ENRLEGMOVENU-002-enumeratelegal-moves-classification.md, tickets/75ENRLEGMOVENU-003-skip-move-validation-threading.md, tickets/75ENRLEGMOVENU-004-agent-and-prepare-playable-moves-update.md
+**Deps**: archive/tickets/75ENRLEGMOVENU/75ENRLEGMOVENU-002-enumeratelegal-moves-classification.md, archive/tickets/75ENRLEGMOVENU-003-skip-move-validation-threading.md, tickets/75ENRLEGMOVENU-004-agent-and-prepare-playable-moves-update.md
 
 ## Problem
 
@@ -24,6 +24,7 @@ The simulator and runner both participate in the agent-move pipeline. After tick
 1. Simulator change is not a passive type-flow update anymore. It must switch from the raw `legalMoves()` facade to `enumerateLegalMoves()` at the agent boundary, while preserving raw move usage elsewhere.
 2. Runner changes should stay focused on agent-facing/store-facing types. UI layers should continue receiving unwrapped `Move` objects where that is the established boundary.
 3. `ClassifiedMove` crosses the Comlink worker boundary via structured clone — it's a plain object with no functions or class instances. Ticket `002` already guarantees only viable classified results cross this boundary.
+4. This ticket is intentionally limited to the current Spec 75 shape, where the optimized execution handoff is still expressed via `skipMoveValidation`. Follow-up ticket `75ENRLEGMOVENU-007` owns replacing that public boolean with a dedicated trusted execution contract.
 
 ## What to Change
 

@@ -402,6 +402,82 @@ describe('applyMove', () => {
     assert.equal(result.state.stateHash, computeFullHash(table, result.state));
   });
 
+  it('produces the same result for a legal move when skipMoveValidation is enabled', () => {
+    const def = createDef();
+    const state = createState();
+
+    const baseline = applyMove(def, state, playMove(2));
+    const skipped = applyMove(def, state, playMove(2), { skipMoveValidation: true });
+
+    assert.deepEqual(skipped, baseline);
+  });
+
+  it('bypasses the legality gate for controlled validation-only illegal moves when skipMoveValidation is enabled', () => {
+    const def: GameDef = {
+      metadata: { id: 'skip-validation-precondition-gate', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+      seats: [{ id: '0' }, { id: '1' }],
+      constants: {},
+      globalVars: [
+        { name: 'energy', type: 'int', init: 0, min: 0, max: 20 },
+        { name: 'score', type: 'int', init: 0, min: 0, max: 20 },
+      ],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      actions: [
+        {
+          id: asActionId('gated'),
+          actor: 'active',
+          executor: 'actor',
+          phase: [asPhaseId('main')],
+          params: [],
+          pre: { op: '>=', left: { ref: 'gvar', var: 'energy' }, right: 2 },
+          cost: [],
+          effects: [{ addVar: { scope: 'global', var: 'score', delta: 1 } }],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      terminal: { conditions: [] },
+    } as unknown as GameDef;
+    const state: GameState = {
+      globalVars: { energy: 0, score: 0 },
+      perPlayerVars: {},
+      zoneVars: {},
+      playerCount: 2,
+      zones: {},
+      nextTokenOrdinal: 0,
+      currentPhase: asPhaseId('main'),
+      activePlayer: asPlayerId(0),
+      turnCount: 0,
+      rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [7n, 11n] },
+      stateHash: 0n,
+      actionUsage: {},
+      turnOrderState: { type: 'roundRobin' },
+      markers: {},
+    };
+    const gatedMove: Move = {
+      actionId: asActionId('gated'),
+      params: {},
+    };
+
+    assert.throws(() => applyMove(def, state, gatedMove, { advanceToDecisionPoint: false }), (error: unknown) => {
+      const details = error as Error & { code?: unknown };
+      assert.equal(details.code, 'ILLEGAL_MOVE');
+      return true;
+    });
+
+    const skipped = applyMove(def, state, gatedMove, {
+      advanceToDecisionPoint: false,
+      skipMoveValidation: true,
+    });
+    assert.equal(skipped.state.globalVars.energy, 0);
+    assert.equal(skipped.state.globalVars.score, 1);
+    assert.deepEqual(skipped.state.actionUsage.gated, { turnCount: 1, phaseCount: 1, gameCount: 1 });
+  });
+
   it('throws descriptive illegal-move error with actionId, params, and reason', () => {
     const def = createDef();
     const state: GameState = { ...createState(), globalVars: { ...createState().globalVars, v: 0 } };

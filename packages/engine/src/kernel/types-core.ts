@@ -1353,6 +1353,8 @@ export interface ExecutionOptions {
   readonly decisionTrace?: boolean;
   readonly selectorTrace?: boolean;
   readonly advanceToDecisionPoint?: boolean;
+  /** Skip move legality validation in applyMove. Only safe for trusted legalMoves -> applyMove pipelines on the same state. */
+  readonly skipMoveValidation?: boolean;
   readonly verifyCompiledEffects?: boolean;
   readonly maxPhaseTransitionsPerMove?: number;
   /** Opt-in performance profiler. Accumulates sub-function timing when provided. */

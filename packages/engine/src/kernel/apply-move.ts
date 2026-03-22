@@ -1538,7 +1538,10 @@ export const applyMove = (def: GameDef, state: GameState, move: Move, options?: 
   if (def.turnOrder?.type === 'simultaneous') {
     return applySimultaneousSubmission(def, state, move, options, runtime);
   }
-  return applyMoveCore(def, state, move, options, undefined, runtime);
+  const coreOptions = options?.skipMoveValidation === true
+    ? { skipValidation: true }
+    : undefined;
+  return applyMoveCore(def, state, move, options, coreOptions, runtime);
 };
 
 export const probeMoveLegality = (

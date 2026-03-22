@@ -7,6 +7,8 @@ import type {
 } from './effect-context.js';
 import type { DecisionScope } from './decision-scope.js';
 import type { EvalRuntimeResources } from './eval-context.js';
+import type { EffectBudgetState } from './effects-control.js';
+import type { PerfProfiler } from './perf-profiler.js';
 import type { AdjacencyGraph } from './spatial.js';
 import type { RuntimeTableIndex } from './runtime-table-index.js';
 import type { EffectAST, GameDef, GameState, MoveParamValue, Rng } from './types.js';
@@ -41,7 +43,10 @@ export interface CompiledEffectContext {
   readonly traceContext?: EffectTraceContext;
   readonly decisionScope?: DecisionScope;
   readonly effectPath?: string;
+  readonly maxEffectOps?: number;
   readonly phaseTransitionBudget?: PhaseTransitionBudget;
+  readonly profiler?: PerfProfiler;
+  readonly effectBudget?: EffectBudgetState;
 }
 
 export const makeCompiledLifecycleEffectKey = (

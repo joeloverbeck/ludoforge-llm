@@ -9,6 +9,7 @@ import type {
   CompiledEffectSequence,
   CompiledLifecycleEffectKey,
 } from './effect-compiler-types.js';
+import { compileAllLifecycleEffects } from './effect-compiler.js';
 
 /**
  * Pre-computed, immutable runtime structures derived from a GameDef.
@@ -30,11 +31,12 @@ export interface GameDefRuntime {
 }
 
 export function createGameDefRuntime(def: GameDef): GameDefRuntime {
+  const compiledLifecycleEffects = compileAllLifecycleEffects(def);
   return {
     adjacencyGraph: buildAdjacencyGraph(def.zones),
     runtimeTableIndex: buildRuntimeTableIndex(def),
     zobristTable: createZobristTable(def),
     ruleCardCache: new Map(),
-    compiledLifecycleEffects: new Map<CompiledLifecycleEffectKey, CompiledEffectSequence>(),
+    compiledLifecycleEffects,
   };
 }

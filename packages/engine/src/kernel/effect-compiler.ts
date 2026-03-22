@@ -3,6 +3,7 @@ import type { EffectResult } from './effect-context.js';
 import { compilePatternDescriptor, type BodyCompiler, type CompiledEffectFragment } from './effect-compiler-codegen.js';
 import { classifyEffect, computeCoverageRatio } from './effect-compiler-patterns.js';
 import { createCompiledExecutionContext } from './effect-compiler-runtime.js';
+import { applyEffectsWithBudgetState, createEffectBudgetState } from './effect-dispatch.js';
 import {
   makeCompiledLifecycleEffectKey,
   type CompiledEffectFn,
@@ -49,16 +50,19 @@ const normalizeFragmentResult = (
 export const composeFragments = (
   fragments: readonly CompiledEffectFragment[],
 ): CompiledEffectFn => (state, rng, bindings, ctx) => {
+  const compiledCtx = ctx.effectBudget === undefined
+    ? { ...ctx, effectBudget: createEffectBudgetState(ctx) }
+    : ctx;
   let currentState = state;
   let currentRng = rng;
   let currentBindings = bindings;
-  let currentDecisionScope = ctx.decisionScope ?? emptyScope();
+  let currentDecisionScope = compiledCtx.decisionScope ?? emptyScope();
   const emittedEvents: TriggerEvent[] = [];
 
   for (const fragment of fragments) {
     const result = normalizeFragmentResult(
       fragment.execute(currentState, currentRng, currentBindings, {
-        ...ctx,
+        ...compiledCtx,
         decisionScope: currentDecisionScope,
       }),
       currentBindings,
@@ -96,19 +100,20 @@ export const createFallbackFragment = (
   effects: readonly EffectAST[],
 ): CompiledEffectFragment => ({
   nodeCount: countEffectNodes(effects),
-  execute: (state, rng, bindings, ctx) => normalizeFragmentResult(
-    ctx.fallbackApplyEffects(
-      effects,
-      createCompiledExecutionContext(
-        state,
-        rng,
-        bindings,
-        { ...ctx, decisionScope: ctx.decisionScope ?? emptyScope() },
-      ),
-    ),
-    bindings,
-    ctx.decisionScope ?? emptyScope(),
-  ),
+  execute: (state, rng, bindings, ctx) => {
+    const effectCtx = createCompiledExecutionContext(state, rng, bindings, {
+      ...ctx,
+      decisionScope: ctx.decisionScope ?? emptyScope(),
+    });
+    const result = ctx.effectBudget === undefined
+      ? ctx.fallbackApplyEffects(effects, effectCtx)
+      : applyEffectsWithBudgetState(effects, effectCtx, ctx.effectBudget);
+    return normalizeFragmentResult(
+      result,
+      bindings,
+      ctx.decisionScope ?? emptyScope(),
+    );
+  },
 });
 
 const compileFragmentList = (

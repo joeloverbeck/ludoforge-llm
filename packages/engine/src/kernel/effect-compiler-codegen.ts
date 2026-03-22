@@ -5,6 +5,7 @@ import { evalQuery } from './eval-query.js';
 import { typeMismatchError } from './eval-error.js';
 import { emitWarning } from './execution-collector.js';
 import { createCompiledExecutionContext } from './effect-compiler-runtime.js';
+import { consumeEffectBudget } from './effect-dispatch.js';
 import {
   type AddVarPattern,
   type CompilableConditionPattern,
@@ -267,6 +268,9 @@ export const compileSetVar = (desc: SetVarPattern): CompiledEffectFragment => {
   return {
     nodeCount: 1,
     execute: (state, rng, bindings, ctx) => {
+      if (ctx.effectBudget !== undefined) {
+        consumeEffectBudget(ctx.effectBudget, 'setVar');
+      }
       const resolvedBindings = resolveCompiledBindings(bindings, ctx);
       const execCtx = createCompiledExecutionContext(state, rng, bindings, ctx);
       const evalCtx = resolvedBindings === bindings ? execCtx : { ...execCtx, bindings: resolvedBindings };
@@ -324,6 +328,9 @@ export const compileAddVar = (desc: AddVarPattern): CompiledEffectFragment => {
   return {
     nodeCount: 1,
     execute: (state, rng, bindings, ctx) => {
+      if (ctx.effectBudget !== undefined) {
+        consumeEffectBudget(ctx.effectBudget, 'addVar');
+      }
       const resolvedBindings = resolveCompiledBindings(bindings, ctx);
       const execCtx = createCompiledExecutionContext(state, rng, bindings, ctx);
       const evalCtx = resolvedBindings === bindings ? execCtx : { ...execCtx, bindings: resolvedBindings };
@@ -384,6 +391,9 @@ export const compileIf = (
   return {
     nodeCount: 1 + countEffectNodes(desc.thenEffects) + countEffectNodes(desc.elseEffects),
     execute: (state, rng, bindings, ctx) => {
+      if (ctx.effectBudget !== undefined) {
+        consumeEffectBudget(ctx.effectBudget, 'if');
+      }
       const decisionScope = ctx.decisionScope ?? emptyScope();
       if (conditionEvaluator(state, bindings, ctx)) {
         return normalizeBranchResult(
@@ -416,6 +426,9 @@ export const compileForEachPlayers = (
   return {
     nodeCount: 1 + countEffectNodes(desc.effects) + countEffectNodes(desc.inEffects ?? []),
     execute: (state, rng, bindings, ctx) => {
+      if (ctx.effectBudget !== undefined) {
+        consumeEffectBudget(ctx.effectBudget, 'forEach');
+      }
       const evalCtx = createCompiledEvalContext(state, bindings, ctx);
       const limit = resolveControlFlowIterationLimit('forEach', desc.limit, evalCtx, (evaluatedLimit) => {
         throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CONTROL_FLOW_RUNTIME_VALIDATION_FAILED, 'forEach.limit must evaluate to a non-negative integer', {
@@ -520,6 +533,9 @@ export const compileForEachPlayers = (
 export const compileGotoPhaseExact = (desc: GotoPhaseExactPattern): CompiledEffectFragment => ({
   nodeCount: 1,
   execute: (state, rng, bindings, ctx) => {
+    if (ctx.effectBudget !== undefined) {
+      consumeEffectBudget(ctx.effectBudget, 'gotoPhaseExact');
+    }
     const result = applyGotoPhaseExact(
       { gotoPhaseExact: { phase: desc.phase } },
       createCompiledExecutionContext(state, rng, bindings, ctx),

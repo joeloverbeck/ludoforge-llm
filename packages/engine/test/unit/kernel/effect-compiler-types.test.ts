@@ -11,7 +11,7 @@ import {
   type GameDef,
 } from '../../../src/kernel/index.js';
 
-const createDef = (): GameDef => ({
+const createEmptyDef = (): GameDef => ({
   metadata: { id: 'compiled-effect-types-test', players: { min: 2, max: 2 } },
   constants: {},
   globalVars: [],
@@ -23,6 +23,19 @@ const createDef = (): GameDef => ({
   actions: [],
   triggers: [],
   terminal: { conditions: [] },
+});
+
+const createLifecycleDef = (): GameDef => ({
+  ...createEmptyDef(),
+  turnStructure: {
+    phases: [
+      {
+        id: asPhaseId('main'),
+        onEnter: [{ setVar: { scope: 'global', var: 'ready', value: true } }],
+      },
+    ],
+  },
+  globalVars: [{ name: 'ready', type: 'boolean', init: false }],
 });
 
 describe('effect-compiler-types', () => {
@@ -37,11 +50,19 @@ describe('effect-compiler-types', () => {
     );
   });
 
-  it('initializes createGameDefRuntime with an empty compiled lifecycle map', () => {
-    const runtime = createGameDefRuntime(createDef());
+  it('initializes createGameDefRuntime with an empty compiled lifecycle map when no lifecycle effects exist', () => {
+    const runtime = createGameDefRuntime(createEmptyDef());
 
     assert.ok(runtime.compiledLifecycleEffects instanceof Map);
     assert.equal(runtime.compiledLifecycleEffects.size, 0);
+  });
+
+  it('eagerly populates createGameDefRuntime with compiled lifecycle effects when phases define them', () => {
+    const runtime = createGameDefRuntime(createLifecycleDef());
+
+    assert.ok(runtime.compiledLifecycleEffects instanceof Map);
+    assert.equal(runtime.compiledLifecycleEffects.size, 1);
+    assert.ok(runtime.compiledLifecycleEffects.has(makeCompiledLifecycleEffectKey(asPhaseId('main'), 'onEnter')));
   });
 
   it('re-exports the compiled effect contract through the kernel barrel', () => {

@@ -1,5 +1,6 @@
 import { applyEffects } from './effects.js';
 import { createExecutionEffectContext } from './effect-context.js';
+import { makeCompiledLifecycleEffectKey, type CompiledEffectSequence } from './effect-compiler-types.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
 import { perfStart, perfDynEnd, type PerfProfiler } from './perf-profiler.js';
 import { findPhaseDef } from './phase-lookup.js';
@@ -51,22 +52,44 @@ export const dispatchLifecycleEvent = (
   perfDynEnd(profiler, 'lifecycle:resolveEffects', t0_resolve);
   if (lifecycleEffects.length > 0) {
     const t0_apply = perfStart(profiler);
-    const effectResult = applyEffects(lifecycleEffects, createExecutionEffectContext({
-      def,
-      adjacencyGraph,
-      runtimeTableIndex,
-      state: currentState,
-      rng: currentRng,
-      activePlayer: currentState.activePlayer,
-      actorPlayer: currentState.activePlayer,
-      bindings: {},
-      moveParams: {},
-      resources: runtimeResources,
-      traceContext: { eventContext: 'lifecycleEffect', effectPathRoot: `${effectPathRoot}.effects` },
-      effectPath: '',
-      ...(policy?.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: policy.phaseTransitionBudget }),
-    }));
-    perfDynEnd(profiler, 'lifecycle:applyEffects', t0_apply);
+    const traceContext = { eventContext: 'lifecycleEffect', effectPathRoot: `${effectPathRoot}.effects` } as const;
+    const compiledEffect = resolveCompiledLifecycleEffect(cachedRuntime, event);
+    const effectResult = compiledEffect === undefined
+      ? applyEffects(lifecycleEffects, createExecutionEffectContext({
+        def,
+        adjacencyGraph,
+        runtimeTableIndex,
+        state: currentState,
+        rng: currentRng,
+        activePlayer: currentState.activePlayer,
+        actorPlayer: currentState.activePlayer,
+        bindings: {},
+        moveParams: {},
+        resources: runtimeResources,
+        traceContext,
+        effectPath: '',
+        ...(policy?.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: policy.phaseTransitionBudget }),
+        ...(profiler === undefined ? {} : { profiler }),
+      }))
+      : compiledEffect.execute(currentState, currentRng, {}, {
+        def,
+        adjacencyGraph,
+        runtimeTableIndex,
+        resources: runtimeResources,
+        activePlayer: currentState.activePlayer,
+        actorPlayer: currentState.activePlayer,
+        moveParams: {},
+        fallbackApplyEffects: applyEffects,
+        traceContext,
+        effectPath: '',
+        ...(policy?.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: policy.phaseTransitionBudget }),
+        ...(profiler === undefined ? {} : { profiler }),
+      });
+    perfDynEnd(
+      profiler,
+      compiledEffect === undefined ? 'lifecycle:applyEffects' : 'lifecycle:applyEffects:compiled',
+      t0_apply,
+    );
     currentState = effectResult.state;
     currentRng = effectResult.rng;
     for (const emittedEvent of effectResult.emittedEvents ?? []) {
@@ -121,6 +144,21 @@ export const dispatchLifecycleEvent = (
     ...result.state,
     rng: result.rng.state,
   };
+};
+
+const resolveCompiledLifecycleEffect = (
+  cachedRuntime: GameDefRuntime | undefined,
+  event: TriggerEvent,
+): CompiledEffectSequence | undefined => {
+  if (cachedRuntime === undefined) {
+    return undefined;
+  }
+  if (event.type !== 'phaseEnter' && event.type !== 'phaseExit') {
+    return undefined;
+  }
+  return cachedRuntime.compiledLifecycleEffects.get(
+    makeCompiledLifecycleEffectKey(event.phase, event.type === 'phaseEnter' ? 'onEnter' : 'onExit'),
+  );
 };
 
 const resolveLifecycleEffects = (

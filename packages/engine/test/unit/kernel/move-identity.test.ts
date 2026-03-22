@@ -47,22 +47,22 @@ phase: [asPhaseId('main')],
   }) as unknown as GameDef;
 
 describe('toMoveIdentityKey', () => {
-  it('uses effective mapped action class instead of submitted conflicting class', () => {
+  it('uses effective mapped action class instead of submitted incompatible class', () => {
     const def = makeDef();
     const withMappedClass: Move = {
       actionId: asActionId('operation'),
       params: {},
       actionClass: 'operation',
     };
-    const withConflictingClass: Move = {
+    const withIncompatibleClass: Move = {
       actionId: asActionId('operation'),
       params: {},
-      actionClass: 'limitedOperation',
+      actionClass: 'event',
     };
 
     assert.equal(
       toMoveIdentityKey(def, withMappedClass),
-      toMoveIdentityKey(def, withConflictingClass),
+      toMoveIdentityKey(def, withIncompatibleClass),
     );
   });
 
@@ -93,6 +93,10 @@ describe('toMoveIdentityKey', () => {
     assert.notEqual(
       toMoveIdentityKey(noMapDef, freeOperation),
       toMoveIdentityKey(noMapDef, freeLimited),
+    );
+    assert.notEqual(
+      toMoveIdentityKey(def, freeOperation),
+      toMoveIdentityKey(def, freeLimited),
     );
   });
 });

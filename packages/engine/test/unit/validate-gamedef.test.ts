@@ -7064,6 +7064,38 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
 });
 
 describe('validated GameDef boundary', () => {
+  it('rejects card-driven turnFlow definitions missing actionClassByActionId', () => {
+    const valid = withCardDrivenTurnFlow(createValidGameDef(), { US: 'US', ARVN: 'ARVN' }, ['US', 'ARVN']);
+    const turnOrder = valid.turnOrder;
+    if (turnOrder === undefined || turnOrder.type !== 'cardDriven') {
+      throw new Error('Expected cardDriven turn order in validation fixture.');
+    }
+
+    const turnFlowWithoutActionClassMap = Object.fromEntries(
+      Object.entries(turnOrder.config.turnFlow).filter(([key]) => key !== 'actionClassByActionId'),
+    ) as typeof turnOrder.config.turnFlow;
+    const invalid: GameDef = {
+      ...valid,
+      turnOrder: {
+        ...turnOrder,
+        config: {
+          ...turnOrder.config,
+          turnFlow: turnFlowWithoutActionClassMap as typeof turnOrder.config.turnFlow,
+        },
+      },
+    };
+
+    const result = validateGameDefBoundary(invalid);
+    assert.equal(result.gameDef, null);
+    assert.ok(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'TURN_FLOW_REQUIRED_KEY_MISSING'
+          && diagnostic.path === 'turnOrder.config.turnFlow.actionClassByActionId',
+      ),
+    );
+  });
+
   it('brands only when validation has no errors and caches the branded identity', () => {
     const valid = createValidGameDef();
 

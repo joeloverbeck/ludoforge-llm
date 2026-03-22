@@ -37,6 +37,7 @@ const createCardDrivenDef = (): GameDef =>
           eligibility: { seats: ['0', '1'] },
 
           windows: [],
+          actionClassByActionId: { pass: 'pass' },
           optionMatrix: [],
           passRewards: [],
           durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],

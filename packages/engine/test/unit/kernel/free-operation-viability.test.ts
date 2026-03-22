@@ -36,6 +36,7 @@ const makeBaseDef = (overrides: {
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
           eligibility: { seats: ['0', '1'] },
           windows: [],
+          actionClassByActionId: { operation: 'operation' },
           optionMatrix: [],
           passRewards: [],
           freeOperationActionIds: ['operation'],

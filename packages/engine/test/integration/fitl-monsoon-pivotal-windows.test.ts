@@ -39,6 +39,7 @@ const createDef = (): GameDef =>
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
           eligibility: { seats: ['US', 'ARVN'] },
           windows: [],
+          actionClassByActionId: { pass: 'pass', operate: 'operation', sweep: 'operation', airLift: 'operation', pivotalEvent: 'event' },
           optionMatrix: [],
           passRewards: [],
           durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -125,11 +126,11 @@ describe('FITL monsoon/pivotal windows integration', () => {
 
     assert.equal(start.zones['lookahead:none']?.[0]?.props.isCoup, true);
     assert.deepEqual(legalMoves(def, start), [
-      { actionId: asActionId('pass'), params: {} },
-      { actionId: asActionId('operate'), params: {} },
-      { actionId: asActionId('airLift'), params: { spaces: 1 } },
-      { actionId: asActionId('airLift'), params: { spaces: 2 } },
-      { actionId: asActionId('pivotalEvent'), params: { override: 'monsoonPivotalAllowed' } },
+      { actionId: asActionId('pass'), params: {}, actionClass: 'pass' },
+      { actionId: asActionId('operate'), params: {}, actionClass: 'operation' },
+      { actionId: asActionId('airLift'), params: { spaces: 1 }, actionClass: 'operation' },
+      { actionId: asActionId('airLift'), params: { spaces: 2 }, actionClass: 'operation' },
+      { actionId: asActionId('pivotalEvent'), params: { override: 'monsoonPivotalAllowed' }, actionClass: 'event' },
     ]);
   });
 

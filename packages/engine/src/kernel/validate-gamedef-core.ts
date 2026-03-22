@@ -17,12 +17,48 @@ import {
   validateSpaceMarkerLattices,
   validateStructureSections,
 } from './validate-gamedef-structure.js';
-import { conditionSurfacePathForActionPre } from '../contracts/index.js';
+import { conditionSurfacePathForActionPre, TURN_FLOW_REQUIRED_KEYS } from '../contracts/index.js';
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const validateCardDrivenTurnFlowRequiredKeys = (diagnostics: Diagnostic[], def: GameDef): void => {
+  if (def.turnOrder?.type !== 'cardDriven') {
+    return;
+  }
+
+  const turnFlow = def.turnOrder.config.turnFlow as unknown as Record<string, unknown>;
+
+  for (const requiredKey of TURN_FLOW_REQUIRED_KEYS) {
+    const value = turnFlow[requiredKey];
+    if (value !== undefined) {
+      continue;
+    }
+    diagnostics.push({
+      code: 'TURN_FLOW_REQUIRED_KEY_MISSING',
+      path: `turnOrder.config.turnFlow.${requiredKey}`,
+      severity: 'error',
+      message: `turnFlow.${requiredKey} is required for card-driven turn orders.`,
+      suggestion: `Define turnFlow.${requiredKey} on the card-driven turnFlow config.`,
+    });
+  }
+
+  if (turnFlow.actionClassByActionId !== undefined && !isRecord(turnFlow.actionClassByActionId)) {
+    diagnostics.push({
+      code: 'TURN_FLOW_ACTION_CLASS_MAP_INVALID',
+      path: 'turnOrder.config.turnFlow.actionClassByActionId',
+      severity: 'error',
+      message: 'turnFlow.actionClassByActionId must be an object mapping action ids to action classes.',
+      suggestion: 'Define turnFlow.actionClassByActionId as an object whose keys are action ids.',
+    });
+  }
+};
 
 export const validateGameDef = (def: GameDef): Diagnostic[] => {
   const diagnostics: Diagnostic[] = [];
 
   validateStructureSections(diagnostics, def);
+  validateCardDrivenTurnFlowRequiredKeys(diagnostics, def);
 
   const { context, phaseCandidates, actionCandidates } = buildValidationContext(def);
   validateSpaceMarkerLattices(diagnostics, def, context);

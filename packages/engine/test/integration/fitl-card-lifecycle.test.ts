@@ -31,6 +31,7 @@ const createLifecycleDef = (): GameDef =>
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
           eligibility: { seats: ['0', '1'] },
           windows: [],
+          actionClassByActionId: { pass: 'pass' },
           optionMatrix: [],
           passRewards: [],
           durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],

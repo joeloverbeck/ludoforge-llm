@@ -13,7 +13,7 @@ const resolveMappedTurnFlowActionClass = (
   move: Move,
 ): ResolvedTurnFlowActionClass | null => {
   const actionId = String(move.actionId);
-  const mapped = cardDrivenConfig(def)?.turnFlow.actionClassByActionId?.[actionId];
+  const mapped = cardDrivenConfig(def)?.turnFlow.actionClassByActionId[actionId];
   return typeof mapped === 'string' && isTurnFlowActionClass(mapped) ? mapped : null;
 };
 

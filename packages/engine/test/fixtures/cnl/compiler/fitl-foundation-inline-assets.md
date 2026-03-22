@@ -85,6 +85,12 @@ turnFlow:
     - id: force-ineligible
       duration: nextTurn
       usages: [eligibilityOverride]
+  actionClassByActionId:
+    pass: pass
+    event: event
+    operation: operation
+    operationPlusSpecialActivity: operationPlusSpecialActivity
+    limitedOperation: limitedOperation
   optionMatrix:
     - first: event
       second: [operation, operationPlusSpecialActivity]

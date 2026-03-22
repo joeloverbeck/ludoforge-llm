@@ -653,6 +653,7 @@ phase: [asPhaseId('main')],
             eligibility: { seats: ['0', '1'] },
 
             windows: [],
+            actionClassByActionId: { pass: 'pass', sweep: 'operation', airLift: 'operation', pivotalEvent: 'event' },
             optionMatrix: [],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -751,10 +752,10 @@ phase: [asPhaseId('main')],
     };
 
     assert.deepEqual(legalMoves(def, state), [
-      { actionId: asActionId('pass'), params: {} },
-      { actionId: asActionId('airLift'), params: { spaces: 1 } },
-      { actionId: asActionId('airLift'), params: { spaces: 2 } },
-      { actionId: asActionId('pivotalEvent'), params: { override: 'monsoonPivotalAllowed' } },
+      { actionId: asActionId('pass'), params: {}, actionClass: 'pass' },
+      { actionId: asActionId('airLift'), params: { spaces: 1 }, actionClass: 'operation' },
+      { actionId: asActionId('airLift'), params: { spaces: 2 }, actionClass: 'operation' },
+      { actionId: asActionId('pivotalEvent'), params: { override: 'monsoonPivotalAllowed' }, actionClass: 'event' },
     ]);
   });
 
@@ -775,6 +776,7 @@ phase: [asPhaseId('main')],
             eligibility: { seats: ['0', '1'] },
 
             windows: [],
+            actionClassByActionId: { pass: 'pass', airStrike: 'operation' },
             optionMatrix: [],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -848,10 +850,10 @@ phase: [asPhaseId('main')],
     };
 
     assert.deepEqual(legalMoves(def, state), [
-      { actionId: asActionId('pass'), params: {} },
-      { actionId: asActionId('airStrike'), params: { spaces: 1, $bonusSpaces: 0 } },
-      { actionId: asActionId('airStrike'), params: { spaces: 1, $bonusSpaces: 1 } },
-      { actionId: asActionId('airStrike'), params: { spaces: 2, $bonusSpaces: 0 } },
+      { actionId: asActionId('pass'), params: {}, actionClass: 'pass' },
+      { actionId: asActionId('airStrike'), params: { spaces: 1, $bonusSpaces: 0 }, actionClass: 'operation' },
+      { actionId: asActionId('airStrike'), params: { spaces: 1, $bonusSpaces: 1 }, actionClass: 'operation' },
+      { actionId: asActionId('airStrike'), params: { spaces: 2, $bonusSpaces: 0 }, actionClass: 'operation' },
     ]);
   });
 
@@ -872,6 +874,7 @@ phase: [asPhaseId('main')],
             eligibility: { seats: ['0', '1'] },
 
             windows: [],
+            actionClassByActionId: { pass: 'pass', airStrike: 'operation' },
             optionMatrix: [],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -941,16 +944,16 @@ phase: [asPhaseId('main')],
     };
 
     const filtered = applyTurnFlowWindowFilters(def, state, [
-      { actionId: asActionId('pass'), params: {} },
-      { actionId: asActionId('airStrike'), params: { spaces: ['a'], $bonusSpaces: ['b'] } },
-      { actionId: asActionId('airStrike'), params: { spaces: ['a', 'b'], $bonusSpaces: [] } },
-      { actionId: asActionId('airStrike'), params: { spaces: ['a', 'b'], $bonusSpaces: ['c'] } },
+      { actionId: asActionId('pass'), params: {}, actionClass: 'pass' },
+      { actionId: asActionId('airStrike'), params: { spaces: ['a'], $bonusSpaces: ['b'] }, actionClass: 'operation' },
+      { actionId: asActionId('airStrike'), params: { spaces: ['a', 'b'], $bonusSpaces: [] }, actionClass: 'operation' },
+      { actionId: asActionId('airStrike'), params: { spaces: ['a', 'b'], $bonusSpaces: ['c'] }, actionClass: 'operation' },
     ], createSeatResolutionContext(def, state.playerCount));
 
     assert.deepEqual(filtered, [
-      { actionId: asActionId('pass'), params: {} },
-      { actionId: asActionId('airStrike'), params: { spaces: ['a'], $bonusSpaces: ['b'] } },
-      { actionId: asActionId('airStrike'), params: { spaces: ['a', 'b'], $bonusSpaces: [] } },
+      { actionId: asActionId('pass'), params: {}, actionClass: 'pass' },
+      { actionId: asActionId('airStrike'), params: { spaces: ['a'], $bonusSpaces: ['b'] }, actionClass: 'operation' },
+      { actionId: asActionId('airStrike'), params: { spaces: ['a', 'b'], $bonusSpaces: [] }, actionClass: 'operation' },
     ]);
   });
 
@@ -966,6 +969,7 @@ phase: [asPhaseId('main')],
             eligibility: { seats: ['0', '1'] },
 
             windows: [],
+            actionClassByActionId: { pass: 'pass', pivotalA: 'event', pivotalB: 'event', operate: 'operation' },
             optionMatrix: [],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -1037,8 +1041,8 @@ phase: [asPhaseId('main')],
     };
 
     assert.deepEqual(legalMoves(def, state), [
-      { actionId: asActionId('pass'), params: {} },
-      { actionId: asActionId('operate'), params: {} },
+      { actionId: asActionId('pass'), params: {}, actionClass: 'pass' },
+      { actionId: asActionId('operate'), params: {}, actionClass: 'operation' },
     ]);
   });
 
@@ -1054,6 +1058,7 @@ phase: [asPhaseId('main')],
             eligibility: { seats: ['0', '1'] },
 
             windows: [],
+            actionClassByActionId: { pass: 'pass', pivotalA: 'event', pivotalB: 'event' },
             optionMatrix: [],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -1132,8 +1137,8 @@ phase: [asPhaseId('main')],
     };
 
     assert.deepEqual(legalMoves(def, state), [
-      { actionId: asActionId('pass'), params: {} },
-      { actionId: asActionId('pivotalA'), params: {} },
+      { actionId: asActionId('pass'), params: {}, actionClass: 'pass' },
+      { actionId: asActionId('pivotalA'), params: {}, actionClass: 'event' },
     ]);
   });
 
@@ -1149,6 +1154,7 @@ phase: [asPhaseId('main')],
             eligibility: { seats: ['0', '1'] },
 
             windows: [],
+            actionClassByActionId: { pass: 'pass', pivotalEvent: 'event' },
             optionMatrix: [],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -1236,8 +1242,8 @@ phase: [asPhaseId('main')],
     };
 
     assert.deepEqual(legalMoves(def, state), [
-      { actionId: asActionId('pass'), params: {} },
-      { actionId: asActionId('pivotalEvent'), params: { eventCardId: 'piv-vc' } },
+      { actionId: asActionId('pass'), params: {}, actionClass: 'pass' },
+      { actionId: asActionId('pivotalEvent'), params: { eventCardId: 'piv-vc' }, actionClass: 'event' },
     ]);
   });
 
@@ -1257,6 +1263,7 @@ phase: [asPhaseId('main')],
             eligibility: { seats: ['0', '1'] },
 
             windows: [],
+            actionClassByActionId: { operation: 'operation' },
             optionMatrix: [],
             passRewards: [],
             freeOperationActionIds: ['operation'],
@@ -1370,6 +1377,7 @@ phase: [asPhaseId('main')],
             eligibility: { seats: ['0', '1'] },
 
             windows: [],
+            actionClassByActionId: { operation: 'operation' },
             optionMatrix: [],
             passRewards: [],
             freeOperationActionIds: ['operation'],

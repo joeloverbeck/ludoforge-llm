@@ -36,6 +36,7 @@ const createDef = (): GameDef =>
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
           eligibility: { seats: ['US', 'ARVN', 'NVA', 'VC'] },
           windows: [],
+          actionClassByActionId: { pass: 'pass', operate: 'operation' },
           optionMatrix: [],
           passRewards: [
             { seat: 'US', resource: 'res0', amount: 1 },
@@ -105,6 +106,7 @@ const createCardLifecycleDef = (): GameDef =>
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
           eligibility: { seats: ['US', 'ARVN', 'NVA', 'VC'] },
           windows: [],
+          actionClassByActionId: { pass: 'pass' },
           optionMatrix: [],
           passRewards: [],
           durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],

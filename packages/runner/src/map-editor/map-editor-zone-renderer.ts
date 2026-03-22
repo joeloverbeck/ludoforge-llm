@@ -15,6 +15,7 @@ import {
 } from '../layout/layout-constants.js';
 import { formatIdAsDisplayName } from '../utils/format-display-name.js';
 import type { MapEditorStoreApi } from './map-editor-store.js';
+import { isConnectionZone } from './map-editor-connection-zones.js';
 import { attachZoneDragHandlers } from './map-editor-drag.js';
 
 const ZONE_CORNER_RADIUS = 12;
@@ -47,7 +48,7 @@ export function createEditorZoneRenderer(
 ): EditorZoneRenderer {
   const dragSurface = options.dragSurface ?? zoneLayer;
   const state = store.getState();
-  const zoneDefinitions = indexZonesById(state.gameDef);
+  const zoneDefinitions = indexZonesById(state.gameDef, visualConfigProvider);
   const containerByZoneId = new Map<string, Container>();
   const visualsByZoneId = new Map<string, EditorZoneVisuals>();
   const cleanupByZoneId = new Map<string, () => void>();
@@ -190,6 +191,13 @@ function resolveZoneLabel(
   return visualConfigProvider.getZoneLabel(zoneId) ?? formatIdAsDisplayName(zoneId);
 }
 
-function indexZonesById(gameDef: GameDef): ReadonlyMap<string, ZoneDef> {
-  return new Map((gameDef.zones ?? []).map((zone) => [zone.id as string, zone]));
+function indexZonesById(
+  gameDef: GameDef,
+  visualConfigProvider: VisualConfigProvider,
+): ReadonlyMap<string, ZoneDef> {
+  return new Map(
+    (gameDef.zones ?? [])
+      .filter((zone) => !isConnectionZone(zone, visualConfigProvider))
+      .map((zone) => [zone.id as string, zone]),
+  );
 }

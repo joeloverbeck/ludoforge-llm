@@ -187,6 +187,40 @@ describe('createEditorZoneRenderer', () => {
     expect(attachZoneDragHandlers).toHaveBeenCalledTimes(2);
   });
 
+  it('excludes connection-shaped zones from zone containers and drag bindings', () => {
+    const fixture = createFixture({
+      zones: {
+        categoryStyles: {
+          city: { shape: 'circle', color: '#336699', width: 120, height: 80 },
+          road: { shape: 'connection' },
+        },
+      },
+      gameDef: {
+        zones: [
+          { id: 'zone:a', owner: 'none', visibility: 'public', ordering: 'stack' },
+          { id: 'zone:b', owner: 'none', visibility: 'public', ordering: 'stack', category: 'city' },
+          { id: 'route:road', owner: 'none', visibility: 'public', ordering: 'stack', category: 'road' },
+        ],
+      } as unknown as GameDef,
+      zonePositions: new Map([
+        ['zone:a', { x: 10, y: 20 }],
+        ['zone:b', { x: 60, y: 70 }],
+        ['route:road', { x: 40, y: 50 }],
+      ]),
+    });
+
+    const renderer = createEditorZoneRenderer(
+      fixture.zoneLayer as unknown as Container,
+      fixture.store,
+      fixture.provider,
+    );
+
+    expect(renderer.getContainerMap().size).toBe(2);
+    expect(renderer.getContainerMap().has('route:road')).toBe(false);
+    expect(fixture.zoneLayer.children).toHaveLength(2);
+    expect(attachZoneDragHandlers).toHaveBeenCalledTimes(2);
+  });
+
   it('resolves labels from visual config overrides and formatted IDs', () => {
     const fixture = createFixture();
     const renderer = createEditorZoneRenderer(
@@ -248,33 +282,41 @@ describe('createEditorZoneRenderer', () => {
   });
 });
 
-function createFixture() {
+function createFixture(overrides?: {
+  readonly gameDef?: GameDef;
+  readonly zones?: VisualConfig['zones'];
+  readonly zonePositions?: Map<string, { x: number; y: number }>;
+}) {
   attachZoneDragHandlers.mockClear();
 
   const zoneLayer = new MockContainer();
+  const defaultGameDef = {
+    metadata: {
+      id: 'editor-test',
+      players: { min: 1, max: 4 },
+    },
+    zones: [
+      { id: 'zone:a', owner: 'none', visibility: 'public', ordering: 'stack' },
+      { id: 'zone:b', owner: 'none', visibility: 'public', ordering: 'stack', category: 'city' },
+    ],
+  } as unknown as GameDef;
+  const gameDef = overrides?.gameDef ?? defaultGameDef;
+  const visualConfig = {
+    version: 1,
+    zones: {
+      categoryStyles: {
+        city: { shape: 'circle', color: '#336699', width: 120, height: 80 },
+      },
+      overrides: {
+        'zone:a': { label: 'Alpha Override', color: '#112233' },
+      },
+      ...overrides?.zones,
+    },
+  } as VisualConfig;
   const store = createMapEditorStore(
-    {
-      metadata: {
-        id: 'editor-test',
-        players: { min: 1, max: 4 },
-      },
-      zones: [
-        { id: 'zone:a', owner: 'none', visibility: 'public', ordering: 'stack' },
-        { id: 'zone:b', owner: 'none', visibility: 'public', ordering: 'stack', category: 'city' },
-      ],
-    } as unknown as GameDef,
-    {
-      version: 1,
-      zones: {
-        categoryStyles: {
-          city: { shape: 'circle', color: '#336699', width: 120, height: 80 },
-        },
-        overrides: {
-          'zone:a': { label: 'Alpha Override', color: '#112233' },
-        },
-      },
-    } as VisualConfig,
-    new Map([
+    gameDef,
+    visualConfig,
+    overrides?.zonePositions ?? new Map([
       ['zone:a', { x: 10, y: 20 }],
       ['zone:b', { x: 60, y: 70 }],
       ['route:extra', { x: 999, y: 999 }],

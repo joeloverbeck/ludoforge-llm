@@ -36,7 +36,7 @@ describe('ExecutionCollector', () => {
     it('pushes warning to collector', () => {
       const c = createCollector();
       const w: RuntimeWarning = {
-        code: 'ZERO_EFFECT_ITERATIONS',
+        code: 'MOVE_ENUM_TEMPLATE_BUDGET_EXCEEDED',
         message: 'test',
         context: {},
       };
@@ -47,7 +47,7 @@ describe('ExecutionCollector', () => {
 
     it('is a no-op when collector is undefined', () => {
       emitWarning(undefined, {
-        code: 'ZERO_EFFECT_ITERATIONS',
+        code: 'MOVE_ENUM_TEMPLATE_BUDGET_EXCEEDED',
         message: 'test',
         context: {},
       });

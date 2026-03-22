@@ -804,7 +804,7 @@ describe('projectRenderModel state metadata', () => {
         { actionId: asActionId('pass'), params: {} },
       ] satisfies readonly Move[],
       warnings: [
-        { code: 'EMPTY_QUERY_RESULT', message: 'query produced no rows', context: { query: 'q1' } },
+        { code: 'MOVE_ENUM_TEMPLATE_BUDGET_EXCEEDED', message: 'query produced no rows', context: { query: 'q1' } },
       ],
     };
     const choicePending: ChoicePendingRequest = {
@@ -864,7 +864,7 @@ describe('projectRenderModel state metadata', () => {
       expectedRenderChoiceStep('pick-action', 'pickAction', 'Pick Action', 'train-us', 'Train Us'),
     ]);
     expect(model.moveEnumerationWarnings).toEqual([
-      { code: 'EMPTY_QUERY_RESULT', message: 'query produced no rows' },
+      { code: 'MOVE_ENUM_TEMPLATE_BUDGET_EXCEEDED', message: 'query produced no rows' },
     ]);
   });
 

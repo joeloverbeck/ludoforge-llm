@@ -946,11 +946,9 @@ export const StateDeltaSchema = z
   .strict();
 
 export const RuntimeWarningCodeSchema = z.union([
-  z.literal('EMPTY_QUERY_RESULT'),
   z.literal('TOKEN_NOT_IN_ZONE'),
   z.literal('BINDING_UNDEFINED'),
   z.literal('EMPTY_ZONE_OPERATION'),
-  z.literal('ZERO_EFFECT_ITERATIONS'),
   z.literal('MOVE_ENUM_TEMPLATE_BUDGET_EXCEEDED'),
   z.literal('MOVE_ENUM_PARAM_EXPANSION_BUDGET_EXCEEDED'),
   z.literal('MOVE_ENUM_DECISION_PROBE_STEP_BUDGET_EXCEEDED'),

@@ -225,6 +225,7 @@ export async function runFitlPolicySeedScan(config, dependencies = {}) {
   let passedSeedCount = 0;
   let totalWarnings = 0;
   let seedsWithWarnings = 0;
+  const warningCodeCounts = new Map();
 
   for (const seed of config.seeds) {
     const seedStartedAt = now();
@@ -243,6 +244,11 @@ export async function runFitlPolicySeedScan(config, dependencies = {}) {
       totalWarnings += warningCount;
       if (warningCount > 0) {
         seedsWithWarnings += 1;
+      }
+      for (const move of trace.moves) {
+        for (const warning of move.warnings) {
+          warningCodeCounts.set(warning.code, (warningCodeCounts.get(warning.code) ?? 0) + 1);
+        }
       }
 
       const failure = classifyTraceFailure(seed, trace);
@@ -284,6 +290,7 @@ export async function runFitlPolicySeedScan(config, dependencies = {}) {
       warnings: {
         totalWarnings,
         seedsWithWarnings,
+        countsByCode: Object.fromEntries([...warningCodeCounts.entries()].sort(([left], [right]) => left.localeCompare(right))),
       },
       timing: {
         durationMs: now() - scanStartedAt,

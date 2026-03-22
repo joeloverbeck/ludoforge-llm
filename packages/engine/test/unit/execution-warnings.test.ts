@@ -63,7 +63,7 @@ function makeCtx(zones: Record<string, Token[]>, bindings?: Record<string, unkno
 }
 
 describe('Runtime warnings', () => {
-  it('emits ZERO_EFFECT_ITERATIONS when forEach matches 0 tokens', () => {
+  it('does not emit runtime warnings when forEach matches 0 tokens', () => {
     const ctx = makeCtx({ [z1]: [], [z2]: [] });
     const effects: readonly EffectAST[] = [{
       forEach: {
@@ -73,11 +73,10 @@ describe('Runtime warnings', () => {
       },
     }];
     applyEffects(effects, ctx);
-    assert.ok(ctx.collector!.warnings.length > 0);
-    assert.equal(ctx.collector!.warnings[0]!.code, 'ZERO_EFFECT_ITERATIONS');
+    assert.deepEqual(ctx.collector!.warnings, []);
   });
 
-  it('emits EMPTY_QUERY_RESULT when filter reduces all tokens to 0', () => {
+  it('does not emit runtime warnings when a token filter reduces matches to 0', () => {
     const token: Token = { id: asTokenId('t1'), type: 'piece', props: { faction: 'US' } };
     const ctx = makeCtx({ [z1]: [token], [z2]: [] });
     const effects: readonly EffectAST[] = [{
@@ -92,8 +91,7 @@ describe('Runtime warnings', () => {
       },
     }];
     applyEffects(effects, ctx);
-    const warnings = ctx.collector!.warnings;
-    assert.ok(warnings.some((w) => w.code === 'EMPTY_QUERY_RESULT'));
+    assert.deepEqual(ctx.collector!.warnings, []);
   });
 
   it('emits no warnings when forEach matches tokens normally', () => {

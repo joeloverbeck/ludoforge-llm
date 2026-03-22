@@ -92,7 +92,10 @@ test('runFitlPolicySeedScan aggregates pass, fallback, and exception results', a
       {
         stopReason: 'terminal',
         turnsCount: 2,
-        moves: [{ warnings: [], agentDecision: { kind: 'policy', emergencyFallback: false } }],
+        moves: [{
+          warnings: [{ code: 'MOVE_ENUM_TEMPLATE_BUDGET_EXCEEDED', message: 'noop', context: {} }],
+          agentDecision: { kind: 'policy', emergencyFallback: false },
+        }],
       },
     ],
     [
@@ -141,6 +144,13 @@ test('runFitlPolicySeedScan aggregates pass, fallback, and exception results', a
     maxTurns: 0,
     noLegalMoves: 1,
   });
+  assert.deepEqual(report.summary.warnings, {
+    totalWarnings: 1,
+    seedsWithWarnings: 1,
+    countsByCode: {
+      MOVE_ENUM_TEMPLATE_BUDGET_EXCEEDED: 1,
+    },
+  });
   assert.equal(report.failures[0].kind, 'emergencyFallback');
   assert.equal(report.failures[1].kind, 'exception');
 });
@@ -156,7 +166,7 @@ test('writeArtifacts persists deterministic JSON and NDJSON outputs', () => {
         failedSeedCount: 1,
         countsByFailureKind: { exception: 1, emergencyFallback: 0 },
         stopReasons: { terminal: 0, maxTurns: 0, noLegalMoves: 0 },
-        warnings: { totalWarnings: 0, seedsWithWarnings: 0 },
+        warnings: { totalWarnings: 0, seedsWithWarnings: 0, countsByCode: {} },
         timing: { durationMs: 5 },
       },
       failures: [

@@ -53,13 +53,13 @@ describe('diagnostic-helpers', () => {
 
     it('fails with formatted message when warnings exist', () => {
       const warnings: RuntimeWarning[] = [
-        { code: 'ZERO_EFFECT_ITERATIONS', message: 'forEach matched 0', context: { bind: '$x' } },
+        { code: 'MOVE_ENUM_TEMPLATE_BUDGET_EXCEEDED', message: 'template budget exceeded', context: { actionId: 'attack' } },
       ];
       assert.throws(
         () => assertNoWarnings({ warnings }),
         (err: Error) =>
           err.message.includes('Expected 0 runtime warnings, got 1') &&
-          err.message.includes('ZERO_EFFECT_ITERATIONS'),
+          err.message.includes('MOVE_ENUM_TEMPLATE_BUDGET_EXCEEDED'),
       );
     });
   });

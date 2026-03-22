@@ -3,7 +3,6 @@ import { isRecoverableEvalResolutionError } from './eval-error-classification.js
 import { missingVarError, queryBoundsExceededError, typeMismatchError } from './eval-error.js';
 import { evalCondition } from './eval-condition.js';
 import { evalValue } from './eval-value.js';
-import { emitWarning } from './execution-collector.js';
 import { shouldDeferFreeOperationZoneFilterFailure } from './missing-binding-policy.js';
 import {
   collectFreeOperationZoneFilterProbeRebindableAliases,
@@ -29,7 +28,6 @@ import { resolvePredicateValue } from './predicate-value-resolution.js';
 import { resolveFreeOperationSequenceKey } from './free-operation-sequence-key.js';
 import { isDynamicScopedVarNameExpr, resolveScopedVarNameExprValue } from './scoped-var-name-resolution.js';
 import { filterTokensByExpr } from './token-filter.js';
-import { foldTokenFilterExpr } from './token-filter-expr-utils.js';
 import { planAssetRowsLookup } from './runtime-table-lookup-plan.js';
 import { hasTokenRuntimeShapeKeys } from './token-shape.js';
 import { getTokenStateIndex } from './token-state-index.js';
@@ -337,15 +335,6 @@ function applyTokenFilter(tokens: readonly Token[], filter: TokenFilterExpr, ctx
       return undefined;
     },
   );
-}
-
-function tokenFilterPredicateCount(filter: TokenFilterExpr): number {
-  return foldTokenFilterExpr(filter, {
-    predicate: () => 1,
-    not: (_entry, arg) => arg,
-    and: (_entry, args) => args.reduce((total, count) => total + count, 0),
-    or: (_entry, args) => args.reduce((total, count) => total + count, 0),
-  });
 }
 
 function resolveAssetRowPredicates(where: readonly AssetRowPredicate[], ctx: ReadContext): readonly ResolvedRowPredicate[] {
@@ -793,15 +782,6 @@ export function evalQuery(query: OptionsQuery, ctx: ReadContext): readonly Query
       }
 
       const filtered = query.filter !== undefined ? applyTokenFilter(zoneTokens, query.filter, ctx) : [...zoneTokens];
-      if (filtered.length === 0 && zoneTokens.length > 0 && query.filter !== undefined) {
-        const filterCount = tokenFilterPredicateCount(query.filter);
-        emitWarning(ctx.collector, {
-          code: 'EMPTY_QUERY_RESULT',
-          message: `tokensInZone in ${zoneId} matched 0 of ${zoneTokens.length} tokens after filtering`,
-          context: { zone: zoneId, totalTokens: zoneTokens.length, filterCount },
-          hint: 'enable trace:true to see filter predicates vs token props',
-        });
-      }
       assertWithinBounds(filtered.length, query, maxQueryResults);
       return filtered;
     }

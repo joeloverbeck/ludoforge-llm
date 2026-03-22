@@ -1,0 +1,49 @@
+{
+  "gameDefId": "fire-in-the-lake",
+  "config": {
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20
+    ],
+    "maxTurns": 5,
+    "traceLevel": "summary"
+  },
+  "scannedSeedCount": 20,
+  "passedSeedCount": 20,
+  "failedSeedCount": 0,
+  "countsByFailureKind": {
+    "exception": 0,
+    "emergencyFallback": 0
+  },
+  "stopReasons": {
+    "terminal": 0,
+    "maxTurns": 20,
+    "noLegalMoves": 0
+  },
+  "warnings": {
+    "totalWarnings": 0,
+    "seedsWithWarnings": 0,
+    "countsByCode": {}
+  },
+  "timing": {
+    "durationMs": 208191
+  }
+}

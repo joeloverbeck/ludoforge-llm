@@ -2307,7 +2307,7 @@ describe('evalQuery', () => {
     assert.deepEqual(result, []);
   });
 
-  it('records nested token-filter predicate count in EMPTY_QUERY_RESULT warning context', () => {
+  it('does not emit runtime warnings when tokensInZone filter yields no matches', () => {
     const collector = createCollector();
     const ctx = makeCtx({ collector });
 
@@ -2333,9 +2333,7 @@ describe('evalQuery', () => {
     );
 
     assert.deepEqual(result, []);
-    const warning = collector.warnings.find((entry) => entry.code === 'EMPTY_QUERY_RESULT');
-    assert.ok(warning);
-    assert.equal((warning.context as { filterCount?: number }).filterCount, 3);
+    assert.deepEqual(collector.warnings, []);
   });
 
   it('tokensInZone with compound filter (AND) returns only tokens matching all predicates', () => {

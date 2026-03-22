@@ -121,7 +121,7 @@ describe('deriveRunnerFrame structural sharing', () => {
       makeContext({
         legalMoveResult: {
           moves: [],
-          warnings: [{ code: 'EMPTY_QUERY_RESULT', message: 'unrelated change', context: {} }],
+          warnings: [{ code: 'MOVE_ENUM_TEMPLATE_BUDGET_EXCEEDED', message: 'unrelated change', context: {} }],
         },
       }),
       first,

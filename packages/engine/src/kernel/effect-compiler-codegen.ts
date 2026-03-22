@@ -3,7 +3,6 @@ import type { EffectResult } from './effect-context.js';
 import { createEvalContext } from './eval-context.js';
 import { evalQuery } from './eval-query.js';
 import { typeMismatchError } from './eval-error.js';
-import { emitWarning } from './execution-collector.js';
 import { createCompiledExecutionContext } from './effect-compiler-runtime.js';
 import { consumeEffectBudget } from './effect-dispatch.js';
 import {
@@ -437,23 +436,7 @@ export const compileForEachPlayers = (
         });
       });
       const queryResult = evalQuery({ query: 'players' }, evalCtx);
-      if (queryResult.length === 0) {
-        emitWarning(ctx.resources.collector, {
-          code: 'ZERO_EFFECT_ITERATIONS',
-          message: `forEach bind=${desc.bind} matched 0 items in query`,
-          context: { bind: desc.bind },
-          hint: 'enable trace:true for effect execution details',
-        });
-      }
-
       const boundedItems = queryResult.slice(0, limit);
-      if (boundedItems.length === 0 && queryResult.length > 0) {
-        emitWarning(ctx.resources.collector, {
-          code: 'ZERO_EFFECT_ITERATIONS',
-          message: `forEach bind=${desc.bind} limit=${limit} truncated ${queryResult.length} matches to 0`,
-          context: { bind: desc.bind, limit, matchCount: queryResult.length },
-        });
-      }
 
       let currentState = state;
       let currentRng = rng;

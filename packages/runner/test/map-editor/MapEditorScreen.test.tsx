@@ -121,6 +121,9 @@ describe('MapEditorScreen', () => {
     expect(testDoubles.createEditorCanvas).toHaveBeenCalledWith(
       expect.any(HTMLDivElement),
       store,
+      expect.objectContaining({
+        onPointerWorldPositionChange: expect.any(Function),
+      }),
     );
     expect(testDoubles.createEditorZoneRenderer).toHaveBeenCalledWith(
       editorCanvas.layers.zone,
@@ -261,10 +264,146 @@ describe('MapEditorScreen', () => {
     expect(testDoubles.triggerDownload).not.toHaveBeenCalled();
     expect(store.getState().markSaved).not.toHaveBeenCalled();
   });
+
+  it('shows pointer coordinates and falls back to the selected zone position', async () => {
+    const store = createMockEditorStore();
+    testDoubles.resolveMapEditorBootstrapByGameId.mockResolvedValue({
+      descriptor: { gameMetadata: { name: 'Fire in the Lake' } },
+      gameDef: { metadata: { id: 'fitl' } },
+      visualConfig: { layout: {}, zones: {} },
+      visualConfigProvider: { tag: 'provider' },
+      capabilities: { supportsMapEditor: true },
+    });
+    testDoubles.createMapEditorStore.mockReturnValue(store);
+    testDoubles.createEditorCanvas.mockResolvedValue({
+      layers: { zone: {}, route: {}, handle: {} },
+      viewport: {},
+      resize: vi.fn(),
+      centerOnContent: vi.fn(),
+      destroy: vi.fn(),
+    });
+    testDoubles.createEditorZoneRenderer.mockReturnValue({ destroy: vi.fn() });
+    testDoubles.createEditorRouteRenderer.mockReturnValue({ destroy: vi.fn() });
+    testDoubles.createEditorHandleRenderer.mockReturnValue({ destroy: vi.fn() });
+
+    const { MapEditorScreen } = await import('../../src/map-editor/MapEditorScreen.js');
+    render(createElement(MapEditorScreen, { gameId: 'fitl', onBack: vi.fn() }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('map-editor-canvas-container')).toBeTruthy();
+    });
+
+    const canvasOptions = testDoubles.createEditorCanvas.mock.calls[0]?.[2] as {
+      onPointerWorldPositionChange?: (position: { x: number; y: number } | null) => void;
+    };
+
+    canvasOptions.onPointerWorldPositionChange?.({ x: 12.4, y: 27.6 });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('map-editor-coordinate-readout').textContent).toBe('Cursor (12, 28)');
+    });
+
+    canvasOptions.onPointerWorldPositionChange?.(null);
+    store.setState({ selectedZoneId: 'zone:a' });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('map-editor-coordinate-readout').textContent).toBe('Selected (10, 20)');
+    });
+  });
+
+  it('registers beforeunload only while the editor is dirty and cleans it up on unmount', async () => {
+    const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
+    const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener');
+    const store = createMockEditorStore();
+    testDoubles.resolveMapEditorBootstrapByGameId.mockResolvedValue({
+      descriptor: { gameMetadata: { name: 'Fire in the Lake' } },
+      gameDef: { metadata: { id: 'fitl' } },
+      visualConfig: { layout: {}, zones: {} },
+      visualConfigProvider: { tag: 'provider' },
+      capabilities: { supportsMapEditor: true },
+    });
+    testDoubles.createMapEditorStore.mockReturnValue(store);
+    testDoubles.createEditorCanvas.mockResolvedValue({
+      layers: { zone: {}, route: {}, handle: {} },
+      viewport: {},
+      resize: vi.fn(),
+      centerOnContent: vi.fn(),
+      destroy: vi.fn(),
+    });
+    testDoubles.createEditorZoneRenderer.mockReturnValue({ destroy: vi.fn() });
+    testDoubles.createEditorRouteRenderer.mockReturnValue({ destroy: vi.fn() });
+    testDoubles.createEditorHandleRenderer.mockReturnValue({ destroy: vi.fn() });
+
+    const { MapEditorScreen } = await import('../../src/map-editor/MapEditorScreen.js');
+    const rendered = render(createElement(MapEditorScreen, { gameId: 'fitl', onBack: vi.fn() }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('map-editor-canvas-container')).toBeTruthy();
+    });
+
+    expect(addEventListenerSpy).not.toHaveBeenCalledWith('beforeunload', expect.any(Function));
+
+    store.setState({ dirty: true });
+
+    await waitFor(() => {
+      expect(
+        addEventListenerSpy.mock.calls.filter(([eventName]) => eventName === 'beforeunload'),
+      ).toHaveLength(1);
+    });
+
+    store.setState({ dirty: false });
+
+    await waitFor(() => {
+      expect(
+        removeEventListenerSpy.mock.calls.filter(([eventName]) => eventName === 'beforeunload'),
+      ).toHaveLength(1);
+    });
+
+    store.setState({ dirty: true });
+
+    await waitFor(() => {
+      expect(
+        addEventListenerSpy.mock.calls.filter(([eventName]) => eventName === 'beforeunload'),
+      ).toHaveLength(2);
+    });
+
+    rendered.unmount();
+
+    expect(
+      removeEventListenerSpy.mock.calls.filter(([eventName]) => eventName === 'beforeunload'),
+    ).toHaveLength(2);
+  });
 });
 
 function createMockEditorStore() {
-  const state = {
+  type MockEditorState = {
+    showGrid: boolean;
+    snapToGrid: boolean;
+    gridSize: number;
+    dirty: boolean;
+    undoStack: unknown[];
+    redoStack: unknown[];
+    originalVisualConfig: { version: number };
+    zonePositions: Map<string, { x: number; y: number }>;
+    connectionAnchors: Map<string, { x: number; y: number }>;
+    connectionRoutes: Map<string, {
+      points: Array<{ kind: string; zoneId?: string; anchorId?: string }>;
+      segments: Array<{ kind: string }>;
+    }>;
+    undo: ReturnType<typeof vi.fn>;
+    redo: ReturnType<typeof vi.fn>;
+    toggleGrid: ReturnType<typeof vi.fn>;
+    setGridSize: ReturnType<typeof vi.fn>;
+    setSnapToGrid: ReturnType<typeof vi.fn>;
+    markSaved: ReturnType<typeof vi.fn>;
+    selectZone: ReturnType<typeof vi.fn>;
+    selectRoute: ReturnType<typeof vi.fn>;
+    selectedZoneId: string | null;
+    selectedRouteId: string | null;
+    gameDef: undefined;
+  };
+
+  const state: MockEditorState = {
     showGrid: false,
     snapToGrid: false,
     gridSize: 20,
@@ -288,13 +427,31 @@ function createMockEditorStore() {
     markSaved: vi.fn(),
     selectZone: vi.fn(),
     selectRoute: vi.fn(),
+    selectedZoneId: null,
+    selectedRouteId: null,
     gameDef: undefined,
   };
+  const listeners = new Set<(state: MockEditorState, previousState: MockEditorState) => void>();
 
-  const store = ((selector: (value: typeof state) => unknown) => selector(state)) as {
-    (selector: (value: typeof state) => unknown): unknown;
-    getState: () => typeof state;
+  const store = ((selector: (value: MockEditorState) => unknown) => selector(state)) as {
+    (selector: (value: MockEditorState) => unknown): unknown;
+    getState: () => MockEditorState;
+    subscribe: (listener: (value: MockEditorState, previousValue: MockEditorState) => void) => () => void;
+    setState: (patch: Partial<MockEditorState>) => void;
   };
   store.getState = () => state;
+  store.subscribe = (listener) => {
+    listeners.add(listener);
+    return () => {
+      listeners.delete(listener);
+    };
+  };
+  store.setState = (patch) => {
+    const previousState = { ...state };
+    Object.assign(state, patch);
+    for (const listener of listeners) {
+      listener(state, previousState);
+    }
+  };
   return store;
 }

@@ -215,6 +215,39 @@ describe('createEditorRouteRenderer', () => {
     expect(graphics.hitArea).toBeInstanceOf(MockPolygon);
   });
 
+  it('re-renders selected routes with explicit highlight styling and removes it on deselect', () => {
+    const fixture = createFixture();
+    const renderer = createEditorRouteRenderer(
+      fixture.routeLayer as unknown as Container,
+      fixture.store,
+      fixture.gameDef,
+      fixture.provider,
+    );
+
+    const graphics = renderer.getContainerMap().get('route:road') as unknown as InstanceType<typeof MockGraphics>;
+    expect(graphics.strokeStyle).toEqual({
+      color: 0x8b7355,
+      width: 6,
+      alpha: 0.75,
+    });
+
+    fixture.store.getState().selectRoute('route:road');
+
+    expect(graphics.strokeStyle).toEqual({
+      color: 0xf59e0b,
+      width: 8,
+      alpha: 1,
+    });
+
+    fixture.store.getState().selectRoute(null);
+
+    expect(graphics.strokeStyle).toEqual({
+      color: 0x8b7355,
+      width: 6,
+      alpha: 0.75,
+    });
+  });
+
   it('inserts a waypoint on double-click at the nearest point on the targeted segment', () => {
     const fixture = createFixture();
     const renderer = createEditorRouteRenderer(

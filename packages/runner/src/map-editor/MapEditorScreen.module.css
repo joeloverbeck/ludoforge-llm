@@ -71,6 +71,12 @@
   padding: 0.2rem 0.55rem;
 }
 
+.coordinateReadout {
+  color: #5f4c36;
+  font-size: 0.88rem;
+  font-variant-numeric: tabular-nums;
+}
+
 .gridSizeControl {
   align-items: center;
   color: #4a3a27;

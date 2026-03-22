@@ -79,6 +79,12 @@ describe('MapEditorToolbar', () => {
 
     expect(onBack).toHaveBeenCalledTimes(1);
   });
+
+  it('renders the coordinate readout when provided', () => {
+    renderToolbar(createStore(), { coordinateReadout: 'Cursor (12, 28)' });
+
+    expect(screen.getByTestId('map-editor-coordinate-readout').textContent).toBe('Cursor (12, 28)');
+  });
 });
 
 function renderToolbar(
@@ -87,6 +93,7 @@ function renderToolbar(
     onBack: () => void;
     onExport: () => void;
     confirmDiscard: (message: string) => boolean;
+    coordinateReadout: string | null;
   }> = {},
 ) {
   const props = {
@@ -94,6 +101,7 @@ function renderToolbar(
     store,
     onBack: overrides.onBack ?? vi.fn(),
     onExport: overrides.onExport ?? vi.fn(),
+    coordinateReadout: overrides.coordinateReadout ?? null,
   };
 
   return render(createElement(MapEditorToolbar, {

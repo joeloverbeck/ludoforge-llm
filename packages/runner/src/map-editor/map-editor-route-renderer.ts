@@ -18,6 +18,8 @@ const DEFAULT_ROUTE_STROKE = {
   width: 4,
   alpha: 0.85,
 } as const;
+const SELECTED_ROUTE_COLOR = 0xf59e0b;
+const SELECTED_ROUTE_WIDTH_BONUS = 2;
 const DEFAULT_WAVE_AMPLITUDE = 4;
 const DEFAULT_WAVE_FREQUENCY = 0.08;
 const DEFAULT_HIT_AREA_PADDING = 12;
@@ -77,7 +79,11 @@ export function createEditorRouteRenderer(
       }
 
       const slot = getOrCreateRouteSlot(routeId, routeSlots, routeContainers, routeLayer, store);
-      const stroke = resolveRouteStroke(zone, visualConfigProvider);
+      const stroke = resolveRouteStroke(
+        zone,
+        visualConfigProvider,
+        state.selectedRouteId === routeId,
+      );
       const geometry = resolveRouteGeometry(route, state.zonePositions, state.connectionAnchors, {
         curveSegments: DEFAULT_CURVE_SEGMENTS,
         hitAreaPadding: DEFAULT_HIT_AREA_PADDING,
@@ -94,7 +100,8 @@ export function createEditorRouteRenderer(
     if (
       state.zonePositions === previousState.zonePositions &&
       state.connectionAnchors === previousState.connectionAnchors &&
-      state.connectionRoutes === previousState.connectionRoutes
+      state.connectionRoutes === previousState.connectionRoutes &&
+      state.selectedRouteId === previousState.selectedRouteId
     ) {
       return;
     }
@@ -324,6 +331,7 @@ function drawPolyline(
 function resolveRouteStroke(
   zone: ZoneDef,
   visualConfigProvider: VisualConfigProvider,
+  isSelected: boolean,
 ): ResolvedStroke {
   const visual = visualConfigProvider.resolveZoneVisual(
     zone.id as string,
@@ -334,13 +342,24 @@ function resolveRouteStroke(
     ? null
     : visualConfigProvider.resolveConnectionStyle(visual.connectionStyleKey);
 
-  return {
+  const baseStroke = {
     color: parseHexColor(routeStyle?.strokeColor, { allowNamedColors: true }) ?? DEFAULT_ROUTE_STROKE.color,
     width: sanitizePositiveNumber(routeStyle?.strokeWidth, DEFAULT_ROUTE_STROKE.width),
     alpha: sanitizeUnitInterval(routeStyle?.strokeAlpha, DEFAULT_ROUTE_STROKE.alpha),
     wavy: routeStyle?.wavy === true,
     waveAmplitude: sanitizePositiveNumber(routeStyle?.waveAmplitude, DEFAULT_WAVE_AMPLITUDE),
     waveFrequency: sanitizePositiveNumber(routeStyle?.waveFrequency, DEFAULT_WAVE_FREQUENCY),
+  };
+
+  if (!isSelected) {
+    return baseStroke;
+  }
+
+  return {
+    ...baseStroke,
+    color: SELECTED_ROUTE_COLOR,
+    width: baseStroke.width + SELECTED_ROUTE_WIDTH_BONUS,
+    alpha: 1,
   };
 }
 

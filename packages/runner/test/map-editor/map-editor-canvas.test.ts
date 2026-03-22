@@ -12,6 +12,7 @@ import type { VisualConfig } from '../../src/map-editor/map-editor-types.js';
 const testDoubles = vi.hoisted(() => ({
   createGameCanvas: vi.fn(),
   setupViewport: vi.fn(),
+  createEditorGridRenderer: vi.fn(),
 }));
 
 vi.mock('../../src/canvas/create-app.js', () => ({
@@ -22,12 +23,17 @@ vi.mock('../../src/canvas/viewport-setup.js', () => ({
   setupViewport: testDoubles.setupViewport,
 }));
 
+vi.mock('../../src/map-editor/map-editor-grid-renderer.js', () => ({
+  createEditorGridRenderer: testDoubles.createEditorGridRenderer,
+}));
+
 import { createEditorCanvas } from '../../src/map-editor/map-editor-canvas.js';
 
 describe('createEditorCanvas', () => {
   beforeEach(() => {
     testDoubles.createGameCanvas.mockReset();
     testDoubles.setupViewport.mockReset();
+    testDoubles.createEditorGridRenderer.mockReset();
   });
 
   it('reuses shared canvas bootstrap and mounts editor layers into shared hierarchy', async () => {
@@ -43,6 +49,11 @@ describe('createEditorCanvas', () => {
       stage: fixture.app.stage,
       layers: fixture.sharedLayers,
     }));
+    expect(testDoubles.createEditorGridRenderer).toHaveBeenCalledWith(
+      editorCanvas.layers.background,
+      fixture.viewportResult.viewport,
+      fixture.store,
+    );
 
     expect(editorCanvas.layers.background.parent).toBe(fixture.sharedLayers.backgroundLayer);
     expect(editorCanvas.layers.route.parent).toBe(fixture.sharedLayers.connectionRouteLayer);
@@ -146,12 +157,16 @@ function createFixture() {
     centerOnBounds: vi.fn(),
     destroy: vi.fn(),
   };
+  const gridRenderer = {
+    destroy: vi.fn(),
+  };
 
   testDoubles.createGameCanvas.mockImplementation(async (targetContainer: HTMLElement) => {
     targetContainer.appendChild(canvas);
     return gameCanvas;
   });
   testDoubles.setupViewport.mockReturnValue(viewportResult);
+  testDoubles.createEditorGridRenderer.mockReturnValue(gridRenderer);
 
   const store = createMapEditorStore(
     {
@@ -183,6 +198,7 @@ function createFixture() {
     renderer,
     sharedLayers,
     store,
+    gridRenderer,
     viewportResult,
   };
 }

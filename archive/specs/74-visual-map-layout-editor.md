@@ -1,5 +1,7 @@
 # Spec 74 — Visual Map Layout Editor
 
+**Status**: COMPLETED
+
 ## Problem
 
 The runner renders board game maps using ForceAtlas2 force-directed layout based on zone adjacency. While topologically correct, this produces geographically unrealistic maps:
@@ -387,3 +389,19 @@ packages/runner/src/map-editor/
 - **No visual regression testing** — manual verification via dev server for MVP
 - **No background image support** — no map underlay/overlay for geographic reference (future enhancement)
 - **No multi-user editing** — single-user, local workflow
+
+## Outcome
+
+- Completion date: 2026-03-22
+- What actually changed:
+  - The map editor shipped as a dedicated runner screen with its own store, canvas, route/zone/handle renderers, keyboard shortcuts, and YAML export flow
+  - `compute-layout.ts` honors authored fixed positions and the editor can export `layout.hints.fixed`, anchor positions, and connection routes back into `visual-config.yaml`
+  - The final polish pass added a dedicated grid renderer, route highlight repainting, coordinate readout, and browser-level dirty-state warning handling
+- Deviations from original plan:
+  - The final coordinate readout uses pointer world coordinates with selected-zone fallback rather than introducing separate anchor/control-point selection state
+  - Zone selection highlighting was already present before the final polish ticket and therefore did not require new architectural work in the closing pass
+  - Grid rendering landed as its own renderer module, which preserved narrower ownership than adding more responsibilities to `map-editor-canvas.ts`
+- Verification results:
+  - `pnpm -F @ludoforge/runner test` passed
+  - `pnpm -F @ludoforge/runner typecheck` passed
+  - `pnpm turbo lint` passed

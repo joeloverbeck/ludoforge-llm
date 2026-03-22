@@ -1,19 +1,25 @@
-import { Container } from 'pixi.js';
+import { Container, type FederatedPointerEvent } from 'pixi.js';
 
 import { createGameCanvas } from '../canvas/create-app.js';
 import { setupViewport, type WorldBounds } from '../canvas/viewport-setup.js';
 import { ZONE_RENDER_HEIGHT, ZONE_RENDER_WIDTH } from '../layout/layout-constants.js';
 import type { MapEditorStoreApi } from './map-editor-store.js';
-import type { EditorCanvas, EditorLayerSet } from './map-editor-types.js';
+import { createEditorGridRenderer } from './map-editor-grid-renderer.js';
+import type { EditorCanvas, EditorLayerSet, Position } from './map-editor-types.js';
 
 const EDITOR_BACKGROUND_COLOR = 0xf3efe4;
 const DEFAULT_WORLD_SPAN = 1000;
 const CONTENT_PADDING_X = Math.ceil(ZONE_RENDER_WIDTH / 2) + 80;
 const CONTENT_PADDING_Y = Math.ceil(ZONE_RENDER_HEIGHT / 2) + 80;
 
+interface CreateEditorCanvasOptions {
+  readonly onPointerWorldPositionChange?: (position: Position | null) => void;
+}
+
 export async function createEditorCanvas(
   container: HTMLElement,
   store: MapEditorStoreApi,
+  options: CreateEditorCanvasOptions = {},
 ): Promise<EditorCanvas> {
   const gameCanvas = await createGameCanvas(container, {
     backgroundColor: EDITOR_BACKGROUND_COLOR,
@@ -37,6 +43,8 @@ export async function createEditorCanvas(
   viewportResult.updateWorldBounds(contentBounds);
   viewportResult.centerOnBounds(contentBounds);
 
+  const gridRenderer = createEditorGridRenderer(layers.background, viewportResult.viewport, store);
+
   const unsubscribe = store.subscribe((state, previousState) => {
     if (state.zonePositions === previousState.zonePositions) {
       return;
@@ -45,6 +53,16 @@ export async function createEditorCanvas(
     contentBounds = computeEditorWorldBounds(state);
     viewportResult.updateWorldBounds(contentBounds);
   });
+
+  const onPointerMove = (event: FederatedPointerEvent): void => {
+    options.onPointerWorldPositionChange?.(resolvePointerWorldPosition(event, viewportResult.viewport));
+  };
+  const onPointerLeave = (): void => {
+    options.onPointerWorldPositionChange?.(null);
+  };
+
+  viewportResult.viewport.on('globalpointermove', onPointerMove);
+  gameCanvas.app.canvas.addEventListener('pointerleave', onPointerLeave);
 
   return {
     app: gameCanvas.app,
@@ -59,6 +77,10 @@ export async function createEditorCanvas(
     },
     destroy() {
       unsubscribe();
+      gridRenderer.destroy();
+      viewportResult.viewport.off('globalpointermove', onPointerMove);
+      gameCanvas.app.canvas.removeEventListener('pointerleave', onPointerLeave);
+      options.onPointerWorldPositionChange?.(null);
       detachEditorLayers(layers);
       removeCanvasFromDom(gameCanvas.app.canvas);
       viewportResult.destroy();
@@ -119,6 +141,17 @@ function detachEditorLayers(layers: EditorLayerSet): void {
 
 function removeCanvasFromDom(canvas: HTMLCanvasElement): void {
   canvas.parentElement?.removeChild(canvas);
+}
+
+function resolvePointerWorldPosition(
+  event: Pick<FederatedPointerEvent, 'getLocalPosition'>,
+  viewport: Container,
+): Position {
+  const localPosition = event.getLocalPosition(viewport);
+  return {
+    x: localPosition.x,
+    y: localPosition.y,
+  };
 }
 
 function computeEditorWorldBounds(

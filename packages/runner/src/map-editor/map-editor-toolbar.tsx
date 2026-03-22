@@ -9,6 +9,7 @@ interface MapEditorToolbarProps {
   readonly onBack: () => void;
   readonly onExport: () => void;
   readonly exportEnabled?: boolean;
+  readonly coordinateReadout?: string | null;
   readonly confirmDiscard?: (message: string) => boolean;
 }
 
@@ -22,6 +23,7 @@ interface MapEditorToolbarViewProps {
   readonly dirty: boolean;
   readonly controlsDisabled: boolean;
   readonly exportEnabled: boolean;
+  readonly coordinateReadout: string | null;
   readonly onBack: () => void;
   readonly onUndo: () => void;
   readonly onRedo: () => void;
@@ -39,6 +41,7 @@ export function MapEditorToolbar({
   onBack,
   onExport,
   exportEnabled = false,
+  coordinateReadout = null,
   confirmDiscard = (message) => window.confirm(message),
 }: MapEditorToolbarProps): ReactElement {
   if (store === null) {
@@ -53,6 +56,7 @@ export function MapEditorToolbar({
         dirty={false}
         controlsDisabled
         exportEnabled={false}
+        coordinateReadout={coordinateReadout}
         onBack={onBack}
         onUndo={() => {}}
         onRedo={() => {}}
@@ -71,6 +75,7 @@ export function MapEditorToolbar({
       onBack={onBack}
       onExport={onExport}
       exportEnabled={exportEnabled}
+      coordinateReadout={coordinateReadout}
       confirmDiscard={confirmDiscard}
     />
   );
@@ -82,6 +87,7 @@ function ConnectedMapEditorToolbar({
   onBack,
   onExport,
   exportEnabled,
+  coordinateReadout,
   confirmDiscard,
 }: Required<Omit<MapEditorToolbarProps, 'store'>> & { readonly store: MapEditorStoreApi }): ReactElement {
   const showGrid = store((state) => state.showGrid);
@@ -114,6 +120,7 @@ function ConnectedMapEditorToolbar({
       dirty={dirty}
       controlsDisabled={false}
       exportEnabled={exportEnabled}
+      coordinateReadout={coordinateReadout}
       onBack={handleBack}
       onUndo={() => store.getState().undo()}
       onRedo={() => store.getState().redo()}
@@ -135,6 +142,7 @@ function MapEditorToolbarView({
   dirty,
   controlsDisabled,
   exportEnabled,
+  coordinateReadout,
   onBack,
   onUndo,
   onRedo,
@@ -166,6 +174,16 @@ function MapEditorToolbarView({
           </span>
         )
         : null}
+      {coordinateReadout === null
+        ? null
+        : (
+          <span
+            className={styles.coordinateReadout}
+            data-testid="map-editor-coordinate-readout"
+          >
+            {coordinateReadout}
+          </span>
+        )}
       <span className={styles.toolbarSpacer} />
       <button
         type="button"

@@ -33,6 +33,7 @@ describe('map-editor-types', () => {
   it('defines the logical editor layer set as pixi containers', () => {
     expectTypeOf<EditorLayerSet>().toEqualTypeOf<{
       readonly background: Container;
+      readonly adjacency: Container;
       readonly route: Container;
       readonly zone: Container;
       readonly handle: Container;

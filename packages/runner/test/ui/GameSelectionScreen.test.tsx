@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const testDoubles = vi.hoisted(() => ({
   listBootstrapDescriptors: vi.fn(),
-  resolveMapEditorCapabilities: vi.fn(),
+  resolveRunnerBootstrapHandle: vi.fn(),
   listSavedGames: vi.fn(),
 }));
 
@@ -14,8 +14,8 @@ vi.mock('../../src/bootstrap/bootstrap-registry.js', () => ({
   listBootstrapDescriptors: testDoubles.listBootstrapDescriptors,
 }));
 
-vi.mock('../../src/bootstrap/map-editor-bootstrap.js', () => ({
-  resolveMapEditorCapabilities: testDoubles.resolveMapEditorCapabilities,
+vi.mock('../../src/bootstrap/runner-bootstrap.js', () => ({
+  resolveRunnerBootstrapHandle: testDoubles.resolveRunnerBootstrapHandle,
 }));
 
 vi.mock('../../src/persistence/save-manager.js', () => ({
@@ -31,7 +31,7 @@ describe('GameSelectionScreen', () => {
   beforeEach(() => {
     vi.resetModules();
     testDoubles.listBootstrapDescriptors.mockReset();
-    testDoubles.resolveMapEditorCapabilities.mockReset();
+    testDoubles.resolveRunnerBootstrapHandle.mockReset();
     testDoubles.listSavedGames.mockReset();
 
     testDoubles.listBootstrapDescriptors.mockReturnValue([
@@ -84,8 +84,10 @@ describe('GameSelectionScreen', () => {
         resolveVisualConfigYaml: () => null,
       },
     ]);
-    testDoubles.resolveMapEditorCapabilities.mockImplementation(async (descriptor: { id: string }) => ({
-      supportsMapEditor: descriptor.id === 'fitl',
+    testDoubles.resolveRunnerBootstrapHandle.mockImplementation((descriptor: { id: string }) => ({
+      resolveCapabilities: async () => ({
+        supportsMapEditor: descriptor.id === 'fitl',
+      }),
     }));
     testDoubles.listSavedGames.mockResolvedValue([]);
   });
@@ -129,6 +131,22 @@ describe('GameSelectionScreen', () => {
 
     fireEvent.click(screen.getByTestId('edit-map-fitl'));
     expect(onEditMap).toHaveBeenCalledWith('fitl');
+  });
+
+  it('hides Edit Map when shared bootstrap capability resolution fails', async () => {
+    testDoubles.resolveRunnerBootstrapHandle.mockImplementation(() => ({
+      resolveCapabilities: async () => {
+        throw new Error('broken bootstrap');
+      },
+    }));
+
+    const { GameSelectionScreen } = await import('../../src/ui/GameSelectionScreen.js');
+    render(createElement(GameSelectionScreen, { onSelectGame: vi.fn(), onEditMap: vi.fn() }));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-map-fitl')).toBeNull();
+      expect(screen.queryByTestId('edit-map-texas')).toBeNull();
+    });
   });
 
   it('renders saved game rows when save manager returns entries', async () => {

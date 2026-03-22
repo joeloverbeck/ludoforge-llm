@@ -2,10 +2,12 @@ import { type ReactElement, useCallback, useEffect, useRef, useState } from 'rea
 import { useStore } from 'zustand';
 import type { Move } from '@ludoforge/engine/runtime';
 
+import type { BrowserBootstrapEntryRequest } from './bootstrap/browser-entry.js';
+import { findBootstrapDescriptorById } from './bootstrap/bootstrap-registry.js';
 import { deleteSavedGame, loadGame } from './persistence/save-manager.js';
 import type { SavedGameRecord } from './persistence/game-db.js';
 import { createSessionStore } from './session/session-store.js';
-import { findBootstrapDescriptorById, useActiveGameRuntime } from './session/active-game-runtime.js';
+import { useActiveGameRuntime } from './session/active-game-runtime.js';
 import { useReplayRuntime } from './session/replay-runtime.js';
 import { ErrorBoundary } from './ui/ErrorBoundary.js';
 import { GameContainer } from './ui/GameContainer.js';
@@ -17,8 +19,21 @@ import { ReplayScreen } from './ui/ReplayScreen.js';
 import { SaveGameDialog } from './ui/SaveGameDialog.js';
 import { UnsavedChangesDialog } from './ui/UnsavedChangesDialog.js';
 
-export function App(): ReactElement {
-  const sessionStoreRef = useRef(createSessionStore());
+interface AppProps {
+  readonly browserBootstrapEntry?: BrowserBootstrapEntryRequest | null;
+}
+
+export function App({ browserBootstrapEntry = null }: AppProps = {}): ReactElement {
+  const sessionStoreRef = useRef(
+    createSessionStore(
+      browserBootstrapEntry === null
+        ? undefined
+        : {
+          screen: 'preGameConfig',
+          gameId: browserBootstrapEntry.gameId,
+        },
+    ),
+  );
   const [quitDialogOpen, setQuitDialogOpen] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [loadDialogOpen, setLoadDialogOpen] = useState(false);

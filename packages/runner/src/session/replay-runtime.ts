@@ -2,30 +2,17 @@ import { useEffect, useRef, useState } from 'react';
 import type { StoreApi } from 'zustand';
 
 import { createGameBridge, type GameBridgeHandle } from '../bridge/game-bridge.js';
-import { resolveBootstrapConfig } from '../bootstrap/resolve-bootstrap-config.js';
+import { resolveRuntimeBootstrap, type RuntimeBootstrapConfig } from '../bootstrap/runner-bootstrap.js';
 import { createReplayController, type ReplayController } from '../replay/replay-controller.js';
 import { createReplayStore, type ReplayStore } from '../replay/replay-store.js';
-import { isHumanSeatController } from '../seat/seat-controller.js';
 import { createGameStore, type GameStore } from '../store/game-store.js';
-import { findBootstrapDescriptorById } from './active-game-runtime.js';
-import type { ReplayState, SessionState } from './session-types.js';
+import type { SessionState } from './session-types.js';
 
 export interface ReplayRuntime {
   readonly bridgeHandle: GameBridgeHandle;
   readonly store: StoreApi<GameStore>;
   readonly replayStore: StoreApi<ReplayStore>;
-  readonly visualConfigProvider: ReturnType<typeof resolveBootstrapConfig>['visualConfigProvider'];
-}
-
-function buildReplayBootstrapSearch(state: ReplayState): string {
-  const descriptor = findBootstrapDescriptorById(state.gameId);
-  if (descriptor === null) {
-    throw new Error(`Unknown replay descriptor id: ${state.gameId}`);
-  }
-
-  const humanSeat = state.playerConfig.find((seat) => isHumanSeatController(seat.controller));
-  const humanPlayerId = humanSeat?.playerId ?? descriptor.defaultPlayerId;
-  return `?game=${encodeURIComponent(descriptor.queryValue)}&seed=${String(state.seed)}&player=${String(humanPlayerId)}`;
+  readonly visualConfigProvider: RuntimeBootstrapConfig['visualConfigProvider'];
 }
 
 async function syncReplayProjection(runtime: ReplayRuntime, controller: ReplayController): Promise<void> {
@@ -54,10 +41,12 @@ export function useReplayRuntime(sessionState: SessionState): ReplayRuntime | nu
     }
 
     const replayState = sessionState;
-    const search = buildReplayBootstrapSearch(replayState);
-    const bootstrapConfig = resolveBootstrapConfig(search);
-    const descriptor = findBootstrapDescriptorById(replayState.gameId);
-    if (descriptor === null) {
+    const bootstrapConfig = resolveRuntimeBootstrap(
+      replayState.gameId,
+      replayState.seed,
+      replayState.playerConfig,
+    );
+    if (bootstrapConfig === null) {
       throw new Error(`Unknown replay descriptor id: ${replayState.gameId}`);
     }
 

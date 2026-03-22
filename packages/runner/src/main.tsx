@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { initializeAnimationRuntime } from './animation/bootstrap-runtime.js';
+import { resolveBrowserBootstrapEntryRequest } from './bootstrap/browser-entry.js';
 import { App } from './App.js';
 import './ui/tokens.css';
 
@@ -14,6 +15,6 @@ initializeAnimationRuntime();
 
 createRoot(container).render(
   <StrictMode>
-    <App />
+    <App browserBootstrapEntry={resolveBrowserBootstrapEntryRequest()} />
   </StrictMode>,
 );

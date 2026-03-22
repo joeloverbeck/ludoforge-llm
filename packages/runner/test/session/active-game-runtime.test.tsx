@@ -16,8 +16,7 @@ const testDoubles = vi.hoisted(() => ({
   terminate: vi.fn(),
   createGameBridge: vi.fn(),
   createGameStore: vi.fn(),
-  listBootstrapDescriptors: vi.fn(),
-  resolveBootstrapConfig: vi.fn(),
+  resolveRuntimeBootstrap: vi.fn(),
   detachFatalError: vi.fn(),
   bridge: {} as unknown,
   visualConfigProvider: {} as unknown,
@@ -31,12 +30,8 @@ vi.mock('../../src/store/game-store.js', () => ({
   createGameStore: testDoubles.createGameStore,
 }));
 
-vi.mock('../../src/bootstrap/bootstrap-registry.js', () => ({
-  listBootstrapDescriptors: testDoubles.listBootstrapDescriptors,
-}));
-
-vi.mock('../../src/bootstrap/resolve-bootstrap-config.js', () => ({
-  resolveBootstrapConfig: testDoubles.resolveBootstrapConfig,
+vi.mock('../../src/bootstrap/runner-bootstrap.js', () => ({
+  resolveRuntimeBootstrap: testDoubles.resolveRuntimeBootstrap,
 }));
 
 function HookHarness(
@@ -60,24 +55,8 @@ describe('useActiveGameRuntime', () => {
     testDoubles.terminate.mockReset();
     testDoubles.createGameBridge.mockReset();
     testDoubles.createGameStore.mockReset();
-    testDoubles.listBootstrapDescriptors.mockReset();
-    testDoubles.resolveBootstrapConfig.mockReset();
+    testDoubles.resolveRuntimeBootstrap.mockReset();
     testDoubles.detachFatalError.mockReset();
-
-    testDoubles.listBootstrapDescriptors.mockReturnValue([
-      {
-        id: 'default',
-        queryValue: 'default',
-        defaultSeed: 42,
-        defaultPlayerId: 0,
-      },
-      {
-        id: 'fitl',
-        queryValue: 'fitl',
-        defaultSeed: 17,
-        defaultPlayerId: 1,
-      },
-    ]);
 
     testDoubles.createGameBridge.mockReturnValue({
       bridge: testDoubles.bridge,
@@ -94,7 +73,10 @@ describe('useActiveGameRuntime', () => {
     };
     testDoubles.createGameStore.mockReturnValue(gameStore);
 
-    testDoubles.resolveBootstrapConfig.mockReturnValue({
+    testDoubles.resolveRuntimeBootstrap.mockReturnValue({
+      descriptor: { id: 'fitl' },
+      seed: 17,
+      playerId: 1,
       visualConfigProvider: testDoubles.visualConfigProvider,
       resolveGameDef: async () => ({ metadata: { id: 'fitl' } }),
     });
@@ -123,6 +105,11 @@ describe('useActiveGameRuntime', () => {
     expect(screen.getByTestId('runtime-ready')).toBeTruthy();
     expect(testDoubles.createGameBridge).toHaveBeenCalledTimes(1);
     expect(testDoubles.createGameStore).toHaveBeenCalledTimes(1);
+    expect(testDoubles.resolveRuntimeBootstrap).toHaveBeenCalledWith(
+      'fitl',
+      17,
+      [{ playerId: 1, controller: createHumanSeatController() }],
+    );
 
     await waitFor(() => {
       expect(testDoubles.initGame).toHaveBeenCalledTimes(1);
@@ -205,5 +192,19 @@ describe('useActiveGameRuntime', () => {
     await waitFor(() => {
       expect(testDoubles.reportBootstrapFailure).toHaveBeenCalledWith({ message: 'Worker startup failed.' });
     });
+  });
+
+  it('throws for unknown active-game descriptor ids through the typed bootstrap seam', () => {
+    testDoubles.resolveRuntimeBootstrap.mockReturnValue(null);
+
+    expect(() => render(createElement(HookHarness, {
+      sessionState: {
+        screen: 'activeGame',
+        gameId: 'missing',
+        seed: 17,
+        playerConfig: [{ playerId: 1, controller: createHumanSeatController() }],
+        initialMoveHistory: [],
+      },
+    }))).toThrowError(/Unknown activeGame descriptor id: missing/u);
   });
 });

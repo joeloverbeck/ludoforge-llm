@@ -20,6 +20,7 @@
     "test:engine:game-packages": "pnpm -F @ludoforge/engine test:integration:game-packages",
     "test:engine:performance": "pnpm -F @ludoforge/engine test:performance",
     "test:engine:memory": "pnpm -F @ludoforge/engine test:memory",
+    "scan:fitl:policy": "node scripts/fitl-policy-seed-scan.mjs",
     "dev": "turbo dev",
     "schema:artifacts": "turbo schema:artifacts"
   },

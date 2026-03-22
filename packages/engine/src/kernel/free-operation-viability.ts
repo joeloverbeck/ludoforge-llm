@@ -4,7 +4,6 @@ import { toExecutionPipeline } from './apply-move-pipeline.js';
 import { asActionId, asPlayerId } from './branded.js';
 import { selectChoiceOptionValuesByLegalityPrecedence, selectUniqueChoiceOptionValuesByLegalityPrecedence } from './choice-option-policy.js';
 import { isDeclaredActionParamValueInDomain } from './declared-action-param-domain.js';
-import { deepEqual } from './deep-equal.js';
 import { evalCondition } from './eval-condition.js';
 import { createEvalRuntimeResources, type ReadContext } from './eval-context.js';
 import { createExecutionEffectContext } from './effect-context.js';
@@ -34,6 +33,7 @@ import {
 } from './free-operation-discovery-analysis.js';
 import { resolveGrantFreeOperationActionDomain } from './free-operation-action-domain.js';
 import { resolveFreeOperationExecutionContext } from './free-operation-execution-context.js';
+import { doesMaterialGameplayStateChange, resolveStrongestRequiredFreeOperationOutcomeGrant } from './free-operation-outcome-policy.js';
 import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-overlay.js';
 import { resolveSequenceProgressionPolicy } from './free-operation-sequence-progression.js';
 import {
@@ -43,7 +43,6 @@ import {
 } from './move-runtime-bindings.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { buildAdjacencyGraph } from './spatial.js';
-import { materialGameplayStateProjection } from './material-gameplay-state.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import type {
   ActionPipelineDef,
@@ -447,7 +446,7 @@ const isCompletedProbeMoveCurrentlyLegal = (
   return true;
 };
 
-const doesCompletedProbeMoveChangeGameplayState = (
+export const doesCompletedProbeMoveChangeGameplayState = (
   def: GameDef,
   state: GameState,
   move: Move,
@@ -571,10 +570,7 @@ const doesCompletedProbeMoveChangeGameplayState = (
     throw error;
   }
 
-  return !deepEqual(
-    materialGameplayStateProjection(def, state),
-    materialGameplayStateProjection(def, afterActionState),
-  );
+  return doesMaterialGameplayStateChange(def, state, afterActionState);
 };
 
 const hasLegalCompletedProbeMove = (
@@ -632,20 +628,7 @@ const hasLegalCompletedProbeMove = (
       ) {
         return false;
       }
-      const freeOperationAnalysis = resolveFreeOperationDiscoveryAnalysis(
-        def,
-        authorizationState,
-        request.move,
-        seatResolution,
-        { zoneFilterErrorSurface: 'turnFlowEligibility' },
-      );
-      const matchingGrantIds = freeOperationAnalysis.denial.cause === 'granted'
-        ? new Set(freeOperationAnalysis.denial.matchingGrantIds ?? [])
-        : new Set<string>();
-      const matchingOutcomeGrantRequiresStateChange = authorizationState.turnOrderState.type === 'cardDriven'
-        && (authorizationState.turnOrderState.runtime.pendingFreeOperationGrants ?? []).some((grant) =>
-          matchingGrantIds.has(grant.grantId) && grant.outcomePolicy === 'mustChangeGameplayState');
-      if (matchingOutcomeGrantRequiresStateChange) {
+      if (resolveStrongestRequiredFreeOperationOutcomeGrant(def, authorizationState, request.move, seatResolution) !== null) {
         return doesCompletedProbeMoveChangeGameplayState(def, authorizationState, request.move, seatResolution);
       }
       return true;
@@ -731,6 +714,25 @@ export const canResolveAmbiguousFreeOperationOverlapInCurrentState = (
     },
   );
 };
+
+export const hasLegalCompletedFreeOperationMoveInCurrentState = (
+  def: GameDef,
+  state: GameState,
+  baseMove: Move,
+  seatResolution: SeatResolutionContext,
+  options?: {
+    readonly budgets?: Partial<ReturnType<typeof resolveMoveEnumerationBudgets>>;
+    readonly onWarning?: (warning: RuntimeWarning) => void;
+    readonly resolveDecisionSequence?: FreeOperationDecisionSequenceResolver;
+  },
+): boolean => hasLegalCompletedProbeMove(
+  def,
+  state,
+  state,
+  baseMove,
+  seatResolution,
+  options,
+);
 
 export const isFreeOperationGrantUsableInCurrentState = (
   def: GameDef,

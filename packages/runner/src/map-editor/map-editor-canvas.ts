@@ -95,6 +95,11 @@ function createEditorLayers(interfaceGroup: Container): EditorLayerSet {
   background.interactiveChildren = false;
   background.sortableChildren = false;
 
+  const adjacency = new Container();
+  adjacency.eventMode = 'none';
+  adjacency.interactiveChildren = false;
+  adjacency.sortableChildren = true;
+
   const route = new Container();
   route.eventMode = 'passive';
   route.interactiveChildren = true;
@@ -116,6 +121,7 @@ function createEditorLayers(interfaceGroup: Container): EditorLayerSet {
 
   return {
     background,
+    adjacency,
     route,
     zone,
     handle,
@@ -127,6 +133,7 @@ function mountEditorLayers(
   editorLayers: EditorLayerSet,
 ): void {
   sharedLayers.backgroundLayer.addChild(editorLayers.background);
+  sharedLayers.adjacencyLayer.addChild(editorLayers.adjacency);
   sharedLayers.connectionRouteLayer.addChild(editorLayers.route);
   sharedLayers.zoneLayer.addChild(editorLayers.zone);
   sharedLayers.interfaceGroup.addChild(editorLayers.handle);
@@ -134,6 +141,7 @@ function mountEditorLayers(
 
 function detachEditorLayers(layers: EditorLayerSet): void {
   layers.background.removeFromParent();
+  layers.adjacency.removeFromParent();
   layers.route.removeFromParent();
   layers.zone.removeFromParent();
   layers.handle.removeFromParent();

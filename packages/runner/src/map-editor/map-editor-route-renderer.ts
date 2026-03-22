@@ -1,10 +1,14 @@
 import type { GameDef, ZoneDef } from '@ludoforge/engine/runtime';
-import { Container, Graphics, Polygon, type FederatedPointerEvent } from 'pixi.js';
+import { Container, Graphics, Polygon, type BitmapText, type FederatedPointerEvent } from 'pixi.js';
 
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import { normalize, perpendicular } from '../canvas/geometry/bezier-utils.js';
 import { parseHexColor } from '../canvas/renderers/shape-utils.js';
 import { safeDestroyDisplayObject } from '../canvas/renderers/safe-destroy.js';
+import { STROKE_LABEL_FONT_NAME } from '../canvas/text/bitmap-font-registry.js';
+import { createManagedBitmapText, destroyManagedBitmapText } from '../canvas/text/bitmap-text-runtime.js';
+import { formatIdAsDisplayName } from '../utils/format-display-name.js';
+import { isConnectionZone } from './map-editor-connection-zones.js';
 import type { MapEditorStoreApi } from './map-editor-store.js';
 import {
   findNearestRouteSegment,
@@ -25,6 +29,8 @@ const DEFAULT_WAVE_FREQUENCY = 0.08;
 const DEFAULT_HIT_AREA_PADDING = 12;
 const DEFAULT_CURVE_SEGMENTS = 24;
 const DEFAULT_WAVY_SEGMENTS = 32;
+const UPSIDE_DOWN_MIN = Math.PI / 2;
+const UPSIDE_DOWN_MAX = (Math.PI * 3) / 2;
 
 interface ResolvedStroke {
   readonly color: number;
@@ -38,6 +44,8 @@ interface ResolvedStroke {
 interface RouteSlot {
   readonly root: Container;
   readonly curve: Graphics;
+  readonly midpoint: Container;
+  readonly label: BitmapText;
   readonly cleanupSelection: () => void;
 }
 
@@ -65,8 +73,7 @@ export function createEditorRouteRenderer(
       if (nextRouteIds.has(routeId)) {
         continue;
       }
-      slot.cleanupSelection();
-      safeDestroyDisplayObject(slot.root, { children: true });
+      destroyRouteSlot(slot);
       routeSlots.delete(routeId);
       routeContainers.delete(routeId);
     }
@@ -90,7 +97,7 @@ export function createEditorRouteRenderer(
         strokeWidth: stroke.width,
       });
 
-      syncRouteSlot(slot, geometry, stroke);
+      syncRouteSlot(routeId, slot, geometry, stroke, visualConfigProvider);
     }
   };
 
@@ -118,8 +125,7 @@ export function createEditorRouteRenderer(
       unsubscribe();
 
       for (const slot of routeSlots.values()) {
-        slot.cleanupSelection();
-        safeDestroyDisplayObject(slot.root, { children: true });
+        destroyRouteSlot(slot);
       }
       routeSlots.clear();
       routeContainers.clear();
@@ -146,6 +152,22 @@ function getOrCreateRouteSlot(
   const curve = new Graphics();
   curve.eventMode = 'static';
   curve.cursor = 'pointer';
+
+  const midpoint = new Container();
+  midpoint.eventMode = 'none';
+  midpoint.interactiveChildren = false;
+  const label = createManagedBitmapText({
+    text: '',
+    style: {
+      fontName: STROKE_LABEL_FONT_NAME,
+      fontSize: 12,
+      fill: '#f8fafc',
+      stroke: { color: '#000000', width: 3 },
+    },
+    anchor: { x: 0.5, y: 0.5 },
+    visible: false,
+  });
+  midpoint.addChild(label);
 
   const onPointerTap = (event: FederatedPointerEvent): void => {
     const state = store.getState();
@@ -225,38 +247,57 @@ function getOrCreateRouteSlot(
 
   curve.on('pointertap', onPointerTap);
   curve.on('pointerdown', onPointerDown);
-  root.addChild(curve);
+  root.addChild(curve, midpoint);
   routeLayer.addChild(root);
 
   const slot: RouteSlot = {
     root,
     curve,
+    midpoint,
+    label,
     cleanupSelection: () => {
       curve.off('pointertap', onPointerTap);
       curve.off('pointerdown', onPointerDown);
     },
   };
   routeSlots.set(routeId, slot);
-  routeContainers.set(routeId, curve);
+  routeContainers.set(routeId, midpoint);
   return slot;
 }
 
 function syncRouteSlot(
+  routeId: string,
   slot: RouteSlot,
   geometry: EditorRouteGeometry | null,
   stroke: ResolvedStroke,
+  visualConfigProvider: VisualConfigProvider,
 ): void {
   slot.curve.clear();
 
   if (geometry === null) {
     slot.root.visible = false;
     slot.root.renderable = false;
+    slot.midpoint.visible = false;
+    slot.midpoint.renderable = false;
+    slot.label.visible = false;
+    slot.label.renderable = false;
     slot.curve.hitArea = null;
     return;
   }
 
   slot.root.visible = true;
   slot.root.renderable = true;
+  const midpointSample = resolvePolylinePointAtDistance(
+    geometry.sampledPath,
+    getPolylineLength(geometry.sampledPath) / 2,
+  );
+  slot.midpoint.visible = true;
+  slot.midpoint.renderable = true;
+  slot.midpoint.position.set(midpointSample.position.x, midpointSample.position.y);
+  slot.label.text = resolveRouteLabel(routeId, visualConfigProvider);
+  slot.label.rotation = resolveLabelRotation(midpointSample.tangent);
+  slot.label.visible = true;
+  slot.label.renderable = true;
 
   if (stroke.wavy) {
     const renderedPoints = samplePolylineWavePoints(geometry.sampledPath, stroke, DEFAULT_WAVY_SEGMENTS);
@@ -369,13 +410,15 @@ function indexConnectionZones(
 ): ReadonlyMap<string, ZoneDef> {
   return new Map(
     (gameDef.zones ?? [])
-      .filter((zone) => visualConfigProvider.resolveZoneVisual(
-        zone.id as string,
-        zone.category ?? null,
-        zone.attributes ?? null,
-      ).shape === 'connection')
+      .filter((zone) => isConnectionZone(zone, visualConfigProvider))
       .map((zone) => [zone.id as string, zone]),
   );
+}
+
+function destroyRouteSlot(slot: RouteSlot): void {
+  slot.cleanupSelection();
+  destroyManagedBitmapText(slot.label);
+  safeDestroyDisplayObject(slot.root, { children: true });
 }
 
 function samplePolylineWavePoints(
@@ -479,6 +522,13 @@ function resolvePolylinePointAtDistance(
   };
 }
 
+function resolveRouteLabel(
+  routeId: string,
+  visualConfigProvider: VisualConfigProvider,
+): string {
+  return visualConfigProvider.getZoneLabel(routeId) ?? formatIdAsDisplayName(routeId);
+}
+
 function approximatePolylineHitPolygon(
   points: readonly Position[],
   halfWidth: number,
@@ -546,6 +596,25 @@ function resolvePolylineNormal(points: readonly Position[], index: number): Posi
 
 function flattenPoints(points: readonly Position[]): number[] {
   return points.flatMap((point) => [point.x, point.y]);
+}
+
+function resolveLabelRotation(tangent: Position): number {
+  const angle = normalizeAngle(Math.atan2(tangent.y, tangent.x));
+  if (angle > UPSIDE_DOWN_MIN && angle < UPSIDE_DOWN_MAX) {
+    return normalizeAngle(angle + Math.PI);
+  }
+  return angle;
+}
+
+function normalizeAngle(angle: number): number {
+  let normalized = angle;
+  while (normalized < 0) {
+    normalized += Math.PI * 2;
+  }
+  while (normalized >= Math.PI * 2) {
+    normalized -= Math.PI * 2;
+  }
+  return normalized;
 }
 
 function sanitizePositiveNumber(value: number | undefined, fallback: number): number {

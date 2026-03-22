@@ -5,33 +5,20 @@ import type { StoreApi } from 'zustand';
 
 import type { GameBridgeHandle } from '../bridge/game-bridge.js';
 import { createGameBridge } from '../bridge/game-bridge.js';
-import type { BootstrapDescriptor } from '../bootstrap/bootstrap-registry.js';
-import { listBootstrapDescriptors } from '../bootstrap/bootstrap-registry.js';
-import { resolveBootstrapConfig } from '../bootstrap/resolve-bootstrap-config.js';
+import { resolveRuntimeBootstrap, type RuntimeBootstrapConfig } from '../bootstrap/runner-bootstrap.js';
 import { createGameStore, type GameStore } from '../store/game-store.js';
 import { createConsoleTraceSubscriber } from '../trace/console-trace-subscriber.js';
-import { isHumanSeatController } from '../seat/seat-controller.js';
-import type { ActiveGameState, SessionState } from './session-types.js';
+import type { SessionState } from './session-types.js';
 
 export interface ActiveGameRuntime {
   readonly bridgeHandle: GameBridgeHandle;
   readonly store: StoreApi<GameStore>;
-  readonly visualConfigProvider: ReturnType<typeof resolveBootstrapConfig>['visualConfigProvider'];
+  readonly visualConfigProvider: RuntimeBootstrapConfig['visualConfigProvider'];
   readonly traceBus: TraceBus;
 }
 
 interface ActiveGameRuntimeOptions {
   readonly onMoveApplied?: (move: Move) => void;
-}
-
-export function findBootstrapDescriptorById(gameId: string): BootstrapDescriptor | null {
-  return listBootstrapDescriptors().find((descriptor) => descriptor.id === gameId) ?? null;
-}
-
-function buildActiveGameBootstrapSearch(state: ActiveGameState, descriptor: BootstrapDescriptor): string {
-  const humanSeat = state.playerConfig.find((seat) => isHumanSeatController(seat.controller));
-  const humanPlayerId = humanSeat?.playerId ?? descriptor.defaultPlayerId;
-  return `?game=${encodeURIComponent(descriptor.queryValue)}&seed=${String(state.seed)}&player=${String(humanPlayerId)}`;
 }
 
 export function useActiveGameRuntime(
@@ -52,13 +39,15 @@ export function useActiveGameRuntime(
       return;
     }
 
-    const descriptor = findBootstrapDescriptorById(sessionState.gameId);
-    if (descriptor === null) {
+    const bootstrapConfig = resolveRuntimeBootstrap(
+      sessionState.gameId,
+      sessionState.seed,
+      sessionState.playerConfig,
+    );
+    if (bootstrapConfig === null) {
       throw new Error(`Unknown activeGame descriptor id: ${sessionState.gameId}`);
     }
 
-    const search = buildActiveGameBootstrapSearch(sessionState, descriptor);
-    const bootstrapConfig = resolveBootstrapConfig(search);
     const bridgeHandle = createGameBridge();
     const traceBus = createTraceBus();
 

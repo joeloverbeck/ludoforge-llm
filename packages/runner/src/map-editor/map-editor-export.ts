@@ -19,15 +19,18 @@ export function buildExportConfig({
 }: EditorExportInput): VisualConfig {
   const config = cloneSerializable(originalVisualConfig);
 
+  const hiddenZoneSet = new Set(originalVisualConfig.zones?.hiddenZones ?? []);
   config.layout = {
     ...config.layout,
     hints: {
       ...config.layout?.hints,
-      fixed: [...zonePositions.entries()].map(([zone, position]) => ({
-        zone,
-        x: position.x,
-        y: position.y,
-      })),
+      fixed: [...zonePositions.entries()]
+        .filter(([zone]) => !hiddenZoneSet.has(zone))
+        .map(([zone, position]) => ({
+          zone,
+          x: position.x,
+          y: position.y,
+        })),
     },
   };
 

@@ -1,12 +1,8 @@
-import { assertValidatedGameDefInput, asPlayerId, type GameDef, type PlayerId } from '@ludoforge/engine/runtime';
-import {
-  buildRefValidationContext,
-  parseVisualConfigStrict,
-  validateVisualConfigRefs,
-  VisualConfigProvider,
-} from '../config/index.js';
+import { asPlayerId, type GameDef, type PlayerId } from '@ludoforge/engine/runtime';
+import { VisualConfigProvider } from '../config/index.js';
 
 import { resolveBootstrapDescriptor } from './bootstrap-registry';
+import { resolveRunnerBootstrapHandle } from './runner-bootstrap.js';
 
 export interface BootstrapConfig {
   readonly seed: number;
@@ -18,29 +14,15 @@ export interface BootstrapConfig {
 export function resolveBootstrapConfig(search = resolveWindowSearch()): BootstrapConfig {
   const params = new URLSearchParams(search);
   const descriptor = resolveBootstrapDescriptor(params.get('game'));
+  const bootstrapHandle = resolveRunnerBootstrapHandle(descriptor);
   const seed = parseNonNegativeInteger(params.get('seed'), descriptor.defaultSeed);
   const playerId = asPlayerId(parseNonNegativeInteger(params.get('player'), descriptor.defaultPlayerId));
-  const rawVisualConfig = descriptor.resolveVisualConfigYaml();
-  const parsedVisualConfig = parseVisualConfigStrict(rawVisualConfig);
-  const visualConfigProvider = new VisualConfigProvider(parsedVisualConfig);
 
   return {
     seed,
     playerId,
-    visualConfigProvider,
-    resolveGameDef: async () => {
-      const gameDefInput = await descriptor.resolveGameDefInput();
-      const gameDef = assertValidatedGameDefInput(gameDefInput, descriptor.sourceLabel);
-      const context = buildRefValidationContext(gameDef);
-      const errors = parsedVisualConfig === null ? [] : validateVisualConfigRefs(parsedVisualConfig, context);
-      if (errors.length > 0) {
-        const message = errors
-          .map((error) => `${error.configPath} -> "${error.referencedId}" (${error.message})`)
-          .join('\n');
-        throw new Error(`Invalid visual config references:\n${message}`);
-      }
-      return gameDef;
-    },
+    visualConfigProvider: bootstrapHandle.visualConfigProvider,
+    resolveGameDef: bootstrapHandle.resolveGameDef,
   };
 }
 

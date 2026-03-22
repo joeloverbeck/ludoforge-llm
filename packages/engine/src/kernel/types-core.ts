@@ -1034,11 +1034,9 @@ export type TriggerLogEntry =
 // ── Runtime Warnings ──────────────────────────────────────
 
 export type RuntimeWarningCode =
-  | 'EMPTY_QUERY_RESULT'
   | 'TOKEN_NOT_IN_ZONE'
   | 'BINDING_UNDEFINED'
   | 'EMPTY_ZONE_OPERATION'
-  | 'ZERO_EFFECT_ITERATIONS'
   | 'MOVE_ENUM_TEMPLATE_BUDGET_EXCEEDED'
   | 'MOVE_ENUM_PARAM_EXPANSION_BUDGET_EXCEEDED'
   | 'MOVE_ENUM_DECISION_PROBE_STEP_BUDGET_EXCEEDED'

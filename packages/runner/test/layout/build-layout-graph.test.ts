@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { asZoneId, type GameDef, type ZoneDef } from '@ludoforge/engine/runtime';
 
 import { VisualConfigProvider } from '../../src/config/visual-config-provider';
-import { buildLayoutGraph, partitionZones, resolveLayoutMode } from '../../src/layout/build-layout-graph';
+import {
+  buildLayoutGraph,
+  collectLayoutAdjacencyPairs,
+  partitionZones,
+  resolveLayoutMode,
+} from '../../src/layout/build-layout-graph';
 
 describe('resolveLayoutMode', () => {
   it('uses provider-configured grid mode', () => {
@@ -205,6 +210,26 @@ describe('buildLayoutGraph', () => {
     buildLayoutGraph(boardZones);
 
     expect(adjacentTo).toEqual(['b', 'b']);
+  });
+});
+
+describe('collectLayoutAdjacencyPairs', () => {
+  it('returns one undirected pair per board adjacency edge', () => {
+    expect(collectLayoutAdjacencyPairs([
+      zone('a', { adjacentTo: [{ to: 'b' }, { to: 'b' }, { to: 'c' }] }),
+      zone('b', { adjacentTo: [{ to: 'a' }] }),
+      zone('c', { adjacentTo: [{ to: 'a' }] }),
+    ])).toEqual([
+      { from: 'a', to: 'b' },
+      { from: 'a', to: 'c' },
+    ]);
+  });
+
+  it('skips self and non-board targets', () => {
+    expect(collectLayoutAdjacencyPairs([
+      zone('a', { adjacentTo: [{ to: 'a' }, { to: 'aux-x' }] }),
+      zone('b'),
+    ])).toEqual([]);
   });
 });
 

@@ -107,7 +107,7 @@ const TRACE_ENTRIES: readonly EffectTraceEntry[] = [
 
 const RUNTIME_WARNINGS: readonly RuntimeWarning[] = [
   {
-    code: 'EMPTY_QUERY_RESULT',
+    code: 'MOVE_ENUM_TEMPLATE_BUDGET_EXCEEDED',
     message: 'No rows matched selector',
     context: { selector: 'players' },
   },

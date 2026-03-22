@@ -161,8 +161,11 @@ function createMockSessionStore(initialState?: Partial<Pick<SessionStoreState, '
   return store;
 }
 
-vi.mock('../../src/session/active-game-runtime.js', () => ({
+vi.mock('../../src/bootstrap/bootstrap-registry.js', () => ({
   findBootstrapDescriptorById: testDoubles.findBootstrapDescriptorById,
+}));
+
+vi.mock('../../src/session/active-game-runtime.js', () => ({
   useActiveGameRuntime: testDoubles.useActiveGameRuntime,
 }));
 
@@ -432,8 +435,17 @@ describe('App', () => {
       };
     });
 
-    testDoubles.sessionStore = createMockSessionStore();
-    testDoubles.createSessionStore.mockImplementation(() => testDoubles.sessionStore);
+    testDoubles.sessionStore = null;
+    testDoubles.createSessionStore.mockImplementation((initialSessionState?: SessionStoreState['sessionState']) => {
+      if (testDoubles.sessionStore === null) {
+        testDoubles.sessionStore = createMockSessionStore(
+          initialSessionState === undefined
+            ? undefined
+            : { sessionState: initialSessionState },
+        );
+      }
+      return testDoubles.sessionStore;
+    });
     testDoubles.loadGame.mockResolvedValue({
       gameId: 'fitl',
       seed: 17,
@@ -453,6 +465,25 @@ describe('App', () => {
     expect(screen.getByTestId('error-boundary')).toBeTruthy();
     expect(screen.getByTestId('game-selection-screen')).toBeTruthy();
     expect(screen.getByTestId('select-game-fitl')).toBeTruthy();
+  });
+
+  it('opens pre-game config directly when bootstrapped from a browser entry request', async () => {
+    const { App } = await import('../../src/App.js');
+
+    render(createElement(
+      App as unknown as ((props: unknown) => ReactNode),
+      {
+        browserBootstrapEntry: {
+          gameId: 'fitl',
+          seed: 17,
+          playerId: 1,
+        },
+      } as never,
+    ));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('pre-game-config-screen')).toBeTruthy();
+    });
   });
 
   it('opens the map editor from game selection through the session store', async () => {

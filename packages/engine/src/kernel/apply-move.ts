@@ -1,6 +1,5 @@
 import { incrementActionUsage } from './action-usage.js';
 import { perfStart, perfEnd, type PerfProfiler } from './perf-profiler.js';
-import { deepEqual } from './deep-equal.js';
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
 import { applyBoundaryExpiry } from './boundary-expiry.js';
 import { isEffectRuntimeReason } from './effect-error.js';
@@ -45,7 +44,6 @@ import {
   hasActiveSeatRequiredPendingFreeOperationGrant,
   isMoveAllowedByRequiredPendingFreeOperationGrant,
 } from './turn-flow-eligibility.js';
-import { resolveAuthorizedPendingFreeOperationGrants } from './free-operation-grant-authorization.js';
 import { resolveFreeOperationDiscoveryAnalysis } from './free-operation-discovery-analysis.js';
 import { resolveTurnFlowActionClassMismatch } from './turn-flow-action-class.js';
 import { toFreeOperationDeniedCauseForLegality } from './free-operation-legality-policy.js';
@@ -58,12 +56,12 @@ import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { toMoveExecutionPolicy } from './execution-policy.js';
 import { createSeatResolutionContext } from './identity.js';
 import { validateTurnFlowRuntimeStateInvariants } from './turn-flow-runtime-invariants.js';
-import { requireCardDrivenActiveSeat } from './turn-flow-runtime-invariants.js';
 import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
 import { createDeferredLifecycleTraceEntry } from './turn-flow-deferred-lifecycle-trace.js';
 import { createExecutionEffectContext, type PhaseTransitionBudget } from './effect-context.js';
 import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-overlay.js';
-import { materialGameplayStateProjection } from './material-gameplay-state.js';
+import { doesCompletedProbeMoveChangeGameplayState } from './free-operation-viability.js';
+import { doesMaterialGameplayStateChange, resolveStrongestRequiredFreeOperationOutcomeGrant } from './free-operation-outcome-policy.js';
 import type { SimultaneousMoveSubmission } from './types-turn-flow.js';
 import type {
   ActionDef,
@@ -128,26 +126,13 @@ const validateFreeOperationOutcomePolicy = (
   move: Move,
   seatResolution: ReturnType<typeof createSeatResolutionContext>,
 ): void => {
-  if (move.freeOperation !== true || beforeState.turnOrderState.type !== 'cardDriven') {
+  const strongestOutcomeGrant = resolveStrongestRequiredFreeOperationOutcomeGrant(def, beforeState, move, seatResolution);
+  if (strongestOutcomeGrant === null) {
     return;
   }
-  const activeSeat = requireCardDrivenActiveSeat(
-    def,
-    beforeState,
-    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.FREE_OPERATION_GRANT_CONSUMPTION,
-    seatResolution,
-  );
-  const pending = beforeState.turnOrderState.runtime.pendingFreeOperationGrants ?? [];
-  const authorized = resolveAuthorizedPendingFreeOperationGrants(def, beforeState, pending, activeSeat, move);
-  if (authorized.strongestOutcomeGrant === null) {
-    return;
-  }
-  if (deepEqual(
-    materialGameplayStateProjection(def, beforeState),
-    materialGameplayStateProjection(def, afterActionState),
-  )) {
+  if (!doesMaterialGameplayStateChange(def, beforeState, afterActionState)) {
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.FREE_OPERATION_OUTCOME_POLICY_FAILED, {
-      grantId: authorized.strongestOutcomeGrant.grantId,
+      grantId: strongestOutcomeGrant.grantId,
       outcomePolicy: 'mustChangeGameplayState',
     });
   }
@@ -1680,6 +1665,22 @@ export const probeMoveViability = (
       });
     }
     if (sequence.complete) {
+      const strongestOutcomeGrant = resolveStrongestRequiredFreeOperationOutcomeGrant(
+        def,
+        state,
+        sequence.move,
+        seatResolution,
+        TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.FREE_OPERATION_GRANT_MATCH_EVALUATION,
+      );
+      if (
+        strongestOutcomeGrant !== null
+        && !doesCompletedProbeMoveChangeGameplayState(def, state, sequence.move, seatResolution)
+      ) {
+        throw illegalMoveError(sequence.move, ILLEGAL_MOVE_REASONS.FREE_OPERATION_OUTCOME_POLICY_FAILED, {
+          grantId: strongestOutcomeGrant.grantId,
+          outcomePolicy: 'mustChangeGameplayState',
+        });
+      }
       return {
         viable: true,
         complete: true,

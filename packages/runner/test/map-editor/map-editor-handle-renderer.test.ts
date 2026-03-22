@@ -4,7 +4,9 @@ import type { Container } from 'pixi.js';
 
 const {
   MockContainer,
+  MockCircle,
   MockGraphics,
+  MockPolygon,
 } = vi.hoisted(() => {
   class MockEmitter {
     private readonly listeners = new Map<string, Set<(...args: unknown[]) => void>>();
@@ -31,6 +33,10 @@ const {
       }
       return listeners.size > 0;
     }
+
+    listenerCount(event: string): number {
+      return this.listeners.get(event)?.size ?? 0;
+    }
   }
 
   class HoistedMockContainer extends MockEmitter {
@@ -56,6 +62,8 @@ const {
     interactiveChildren = true;
 
     cursor = 'default';
+
+    hitArea: unknown = null;
 
     addChild(...children: HoistedMockContainer[]): void {
       for (const child of children) {
@@ -133,15 +141,31 @@ const {
     }
   }
 
+  class HoistedMockCircle {
+    constructor(
+      public readonly x: number,
+      public readonly y: number,
+      public readonly radius: number,
+    ) {}
+  }
+
+  class HoistedMockPolygon {
+    constructor(public readonly points: number[]) {}
+  }
+
   return {
     MockContainer: HoistedMockContainer,
+    MockCircle: HoistedMockCircle,
     MockGraphics: HoistedMockGraphics,
+    MockPolygon: HoistedMockPolygon,
   };
 });
 
 vi.mock('pixi.js', () => ({
+  Circle: MockCircle,
   Container: MockContainer,
   Graphics: MockGraphics,
+  Polygon: MockPolygon,
 }));
 
 import { createMapEditorStore } from '../../src/map-editor/map-editor-store.js';
@@ -181,13 +205,21 @@ describe('createEditorHandleRenderer', () => {
     const controlHandle = root.children[4] as InstanceType<typeof MockGraphics>;
 
     expect(tangent.strokeStyle).toEqual({ color: 0xffffff, width: 1, alpha: 0.5 });
-    expect(zoneHandle.strokeStyle).toEqual({ color: 0xffffff, width: 2, alpha: 1 });
+    expect(zoneHandle.fillStyle).toEqual({ color: 0xffffff, alpha: 1 });
     expect(anchorHandle.fillStyle).toEqual({ color: 0xffffff, alpha: 1 });
-    expect(zoneHandleB.strokeStyle).toEqual({ color: 0xffffff, width: 2, alpha: 1 });
+    expect(zoneHandleB.fillStyle).toEqual({ color: 0xffffff, alpha: 1 });
+    expect(zoneHandle.eventMode).toBe('static');
+    expect(zoneHandle.hitArea).toBeInstanceOf(MockCircle);
+    expect(anchorHandle.hitArea).toBeInstanceOf(MockCircle);
     expect(anchorHandle.eventMode).toBe('static');
     expect(anchorHandle.cursor).toBe('grab');
     expect(anchorHandle.circleArgs).toEqual([0, 0, 8]);
     expect(anchorHandle.position).toEqual(expect.objectContaining({ x: 40, y: 20 }));
+    expect(zoneHandle.cursor).toBe('grab');
+    expect(zoneHandleB.eventMode).toBe('static');
+    expect(zoneHandleB.hitArea).toBeInstanceOf(MockCircle);
+    expect(controlHandle.eventMode).toBe('static');
+    expect(controlHandle.hitArea).toBeInstanceOf(MockPolygon);
     expect(controlHandle.polyArgs).toEqual([0, -10, 10, 0, 0, 10, -10, 0]);
     expect(controlHandle.position).toEqual(expect.objectContaining({ x: 20, y: 0 }));
 
@@ -201,9 +233,11 @@ describe('createEditorHandleRenderer', () => {
 
   it('routes anchor drag interactions through the editor store', () => {
     const fixture = createFixture();
+    const dragSurface = new MockContainer();
     createEditorHandleRenderer(
       fixture.handleLayer as unknown as Container,
       fixture.store,
+      { dragSurface: dragSurface as unknown as Container },
     );
 
     fixture.store.getState().selectRoute('route:road');
@@ -211,10 +245,45 @@ describe('createEditorHandleRenderer', () => {
     const root = fixture.handleLayer.children[0] as InstanceType<typeof MockContainer>;
     const anchorHandle = root.children[2] as InstanceType<typeof MockGraphics>;
     anchorHandle.emit('pointerdown', pointer(41, 21));
-    fixture.handleLayer.emit('globalpointermove', pointer(51, 31));
-    fixture.handleLayer.emit('pointerup');
+    dragSurface.emit('globalpointermove', pointer(51, 31));
+    dragSurface.emit('pointerup');
 
     expect(fixture.store.getState().connectionAnchors.get('anchor:mid')).toEqual({ x: 50, y: 30 });
+    expect(fixture.store.getState().undoStack).toHaveLength(1);
+  });
+
+  it('routes zone endpoint drag promotion through the editor store', () => {
+    const fixture = createFixture({
+      connectionRoutes: {
+        'route:road': {
+          points: [
+            { kind: 'zone', zoneId: 'zone:a' },
+            { kind: 'zone', zoneId: 'zone:b' },
+          ],
+          segments: [{ kind: 'straight' }],
+        },
+      },
+    });
+    const dragSurface = new MockContainer();
+    createEditorHandleRenderer(
+      fixture.handleLayer as unknown as Container,
+      fixture.store,
+      { dragSurface: dragSurface as unknown as Container },
+    );
+
+    fixture.store.getState().selectRoute('route:road');
+
+    const root = fixture.handleLayer.children[0] as InstanceType<typeof MockContainer>;
+    const zoneHandle = root.children[0] as InstanceType<typeof MockGraphics>;
+    zoneHandle.emit('pointerdown', pointer(1, 1));
+    dragSurface.emit('globalpointermove', pointer(16, 11));
+    dragSurface.emit('pointerup');
+
+    expect(fixture.store.getState().connectionRoutes.get('route:road')?.points[0]).toEqual({
+      kind: 'anchor',
+      anchorId: 'route:road:endpoint:zone:a:0',
+    });
+    expect(fixture.store.getState().connectionAnchors.get('route:road:endpoint:zone:a:0')).toEqual({ x: 15, y: 10 });
     expect(fixture.store.getState().undoStack).toHaveLength(1);
   });
 
@@ -223,6 +292,7 @@ describe('createEditorHandleRenderer', () => {
     createEditorHandleRenderer(
       fixture.handleLayer as unknown as Container,
       fixture.store,
+      { dragSurface: fixture.handleLayer as unknown as Container },
     );
 
     fixture.store.getState().selectRoute('route:road');
@@ -258,6 +328,7 @@ describe('createEditorHandleRenderer', () => {
     createEditorHandleRenderer(
       fixture.handleLayer as unknown as Container,
       fixture.store,
+      { dragSurface: fixture.handleLayer as unknown as Container },
     );
 
     fixture.store.getState().selectRoute('route:road');
@@ -268,6 +339,43 @@ describe('createEditorHandleRenderer', () => {
     expect(fixture.store.getState().connectionRoutes.get('route:road')?.points).toHaveLength(2);
     expect(fixture.store.getState().connectionAnchors.has('anchor:start')).toBe(true);
 
+  });
+
+  it('releases active drag listeners when rerender tears down handle interactions', () => {
+    const fixture = createFixture({
+      connectionRoutes: {
+        'route:road': {
+          points: [
+            { kind: 'zone', zoneId: 'zone:a' },
+            { kind: 'zone', zoneId: 'zone:b' },
+          ],
+          segments: [{ kind: 'straight' }],
+        },
+      },
+    });
+    const dragSurface = new MockContainer();
+    createEditorHandleRenderer(
+      fixture.handleLayer as unknown as Container,
+      fixture.store,
+      { dragSurface: dragSurface as unknown as Container },
+    );
+
+    fixture.store.getState().selectRoute('route:road');
+    const root = fixture.handleLayer.children[0] as InstanceType<typeof MockContainer>;
+    const zoneHandle = root.children[0] as InstanceType<typeof MockGraphics>;
+
+    zoneHandle.emit('pointerdown', pointer(1, 1));
+
+    expect(dragSurface.listenerCount('globalpointermove')).toBe(1);
+    expect(dragSurface.listenerCount('pointerup')).toBe(1);
+    expect(fixture.store.getState().isDragging).toBe(true);
+
+    fixture.store.getState().selectRoute(null);
+
+    expect(dragSurface.listenerCount('globalpointermove')).toBe(0);
+    expect(dragSurface.listenerCount('pointerup')).toBe(0);
+    expect(dragSurface.listenerCount('pointerupoutside')).toBe(0);
+    expect(fixture.store.getState().isDragging).toBe(false);
   });
 });
 

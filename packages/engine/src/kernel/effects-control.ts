@@ -5,7 +5,7 @@ import { rebaseIterationPath, withIterationSegment } from './decision-scope.js';
 import { resolveControlFlowIterationLimit } from './control-flow-limit.js';
 import { buildForEachTraceEntry, buildReduceTraceEntry } from './control-flow-trace.js';
 import { effectRuntimeError } from './effect-error.js';
-import { emitTrace, emitWarning } from './execution-collector.js';
+import { emitTrace } from './execution-collector.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import { resolveRuntimeTokenBindingValue } from './token-binding.js';
 import { resolveTraceProvenance, withTracePath } from './trace-provenance.js';
@@ -135,24 +135,7 @@ export const applyForEach = (
 
   const queryResult = evalQuery(effect.forEach.over, evalCtx);
 
-  if (queryResult.length === 0) {
-    emitWarning(ctx.collector, {
-      code: 'ZERO_EFFECT_ITERATIONS',
-      message: `forEach bind=${effect.forEach.bind} matched 0 items in query`,
-      context: { bind: effect.forEach.bind },
-      hint: 'enable trace:true for effect execution details',
-    });
-  }
-
   const boundedItems = queryResult.slice(0, limit);
-
-  if (boundedItems.length === 0 && queryResult.length > 0) {
-    emitWarning(ctx.collector, {
-      code: 'ZERO_EFFECT_ITERATIONS',
-      message: `forEach bind=${effect.forEach.bind} limit=${limit} truncated ${queryResult.length} matches to 0`,
-      context: { bind: effect.forEach.bind, limit, matchCount: queryResult.length },
-    });
-  }
 
   let currentState = ctx.state;
   let currentRng = ctx.rng;

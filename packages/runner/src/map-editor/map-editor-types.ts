@@ -25,6 +25,7 @@ export interface MapEditorDocumentState {
 
 export interface EditorLayerSet {
   readonly background: Container;
+  readonly adjacency: Container;
   readonly route: Container;
   readonly zone: Container;
   readonly handle: Container;

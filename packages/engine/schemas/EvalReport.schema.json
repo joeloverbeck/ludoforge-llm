@@ -1182,10 +1182,6 @@
                         "anyOf": [
                           {
                             "type": "string",
-                            "const": "EMPTY_QUERY_RESULT"
-                          },
-                          {
-                            "type": "string",
                             "const": "TOKEN_NOT_IN_ZONE"
                           },
                           {
@@ -1195,10 +1191,6 @@
                           {
                             "type": "string",
                             "const": "EMPTY_ZONE_OPERATION"
-                          },
-                          {
-                            "type": "string",
-                            "const": "ZERO_EFFECT_ITERATIONS"
                           },
                           {
                             "type": "string",

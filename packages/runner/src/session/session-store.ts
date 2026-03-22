@@ -4,7 +4,10 @@ import { create, type StoreApi, type UseBoundStore } from 'zustand';
 import type {
   ActiveGameState,
   AppScreen,
+  GameSelectionState,
+  MapEditorState,
   PreGameConfigState,
+  ReplayState,
   SessionState,
 } from './session-types.js';
 import type { PlayerSeatConfig } from '../seat/seat-controller.js';
@@ -30,6 +33,12 @@ interface SessionStoreActions {
 export type SessionStore = SessionStoreState & SessionStoreActions;
 
 const SESSION_MENU_STATE: SessionState = { screen: 'gameSelection' };
+type InitialSessionState =
+  | GameSelectionState
+  | PreGameConfigState
+  | ActiveGameState
+  | ReplayState
+  | MapEditorState;
 
 function buildTransitionError(
   action: string,
@@ -66,9 +75,9 @@ function expectActiveGameState(state: SessionState, action: string): ActiveGameS
   return state;
 }
 
-export function createSessionStore(): UseBoundStore<StoreApi<SessionStore>> {
+export function createSessionStore(initialSessionState: InitialSessionState = SESSION_MENU_STATE): UseBoundStore<StoreApi<SessionStore>> {
   return create<SessionStore>()((set, get) => ({
-    sessionState: SESSION_MENU_STATE,
+    sessionState: initialSessionState,
     unsavedChanges: false,
     moveAccumulator: [],
 

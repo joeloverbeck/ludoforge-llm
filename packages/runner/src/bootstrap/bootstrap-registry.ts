@@ -70,12 +70,20 @@ export function listBootstrapDescriptors(): readonly BootstrapDescriptor[] {
   return BOOTSTRAP_REGISTRY;
 }
 
+export function findBootstrapDescriptorById(gameId: string): BootstrapDescriptor | null {
+  return BOOTSTRAP_REGISTRY.find((descriptor) => descriptor.id === gameId) ?? null;
+}
+
+export function findBootstrapDescriptorByQueryValue(game: string): BootstrapDescriptor | null {
+  return BOOTSTRAP_REGISTRY.find((descriptor) => descriptor.queryValue === game) ?? null;
+}
+
 export function resolveBootstrapDescriptor(game: string | null): BootstrapDescriptor {
   if (game === null) {
     return DEFAULT_BOOTSTRAP_DESCRIPTOR;
   }
 
-  return BOOTSTRAP_REGISTRY.find((descriptor) => descriptor.queryValue === game) ?? DEFAULT_BOOTSTRAP_DESCRIPTOR;
+  return findBootstrapDescriptorByQueryValue(game) ?? DEFAULT_BOOTSTRAP_DESCRIPTOR;
 }
 
 export function assertBootstrapRegistry(descriptors: readonly BootstrapDescriptor[]): void {

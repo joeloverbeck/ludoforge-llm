@@ -5,19 +5,20 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const testDoubles = vi.hoisted(() => ({
-  resolveMapEditorBootstrapByGameId: vi.fn(),
+  resolveRunnerBootstrapByGameId: vi.fn(),
   getOrComputeLayout: vi.fn(),
   createMapEditorStore: vi.fn(),
   exportVisualConfig: vi.fn(),
   triggerDownload: vi.fn(),
   createEditorCanvas: vi.fn(),
+  createEditorAdjacencyRenderer: vi.fn(),
   createEditorZoneRenderer: vi.fn(),
   createEditorRouteRenderer: vi.fn(),
   createEditorHandleRenderer: vi.fn(),
 }));
 
-vi.mock('../../src/bootstrap/map-editor-bootstrap.js', () => ({
-  resolveMapEditorBootstrapByGameId: testDoubles.resolveMapEditorBootstrapByGameId,
+vi.mock('../../src/bootstrap/runner-bootstrap.js', () => ({
+  resolveRunnerBootstrapByGameId: testDoubles.resolveRunnerBootstrapByGameId,
 }));
 
 vi.mock('../../src/layout/layout-cache.js', () => ({
@@ -35,6 +36,10 @@ vi.mock('../../src/map-editor/map-editor-export.js', () => ({
 
 vi.mock('../../src/map-editor/map-editor-canvas.js', () => ({
   createEditorCanvas: testDoubles.createEditorCanvas,
+}));
+
+vi.mock('../../src/map-editor/map-editor-adjacency-renderer.js', () => ({
+  createEditorAdjacencyRenderer: testDoubles.createEditorAdjacencyRenderer,
 }));
 
 vi.mock('../../src/map-editor/map-editor-zone-renderer.js', () => ({
@@ -57,12 +62,13 @@ afterEach(() => {
 describe('MapEditorScreen', () => {
   beforeEach(() => {
     vi.resetModules();
-    testDoubles.resolveMapEditorBootstrapByGameId.mockReset();
+    testDoubles.resolveRunnerBootstrapByGameId.mockReset();
     testDoubles.getOrComputeLayout.mockReset();
     testDoubles.createMapEditorStore.mockReset();
     testDoubles.exportVisualConfig.mockReset();
     testDoubles.triggerDownload.mockReset();
     testDoubles.createEditorCanvas.mockReset();
+    testDoubles.createEditorAdjacencyRenderer.mockReset();
     testDoubles.createEditorZoneRenderer.mockReset();
     testDoubles.createEditorRouteRenderer.mockReset();
     testDoubles.createEditorHandleRenderer.mockReset();
@@ -77,18 +83,24 @@ describe('MapEditorScreen', () => {
 
   it('loads editor bootstrap, mounts canvas runtime, and cleans up on unmount', async () => {
     const store = createMockEditorStore();
+    const adjacencyRenderer = { destroy: vi.fn() };
     const zoneRenderer = { destroy: vi.fn() };
     const routeRenderer = { destroy: vi.fn() };
     const handleRenderer = { destroy: vi.fn() };
     const editorCanvas = {
-      layers: { zone: { tag: 'zone-layer' }, route: { tag: 'route-layer' }, handle: { tag: 'handle-layer' } },
+      layers: {
+        adjacency: { tag: 'adjacency-layer' },
+        zone: { tag: 'zone-layer' },
+        route: { tag: 'route-layer' },
+        handle: { tag: 'handle-layer' },
+      },
       viewport: { tag: 'viewport' },
       resize: vi.fn(),
       centerOnContent: vi.fn(),
       destroy: vi.fn(),
     };
 
-    testDoubles.resolveMapEditorBootstrapByGameId.mockResolvedValue({
+    testDoubles.resolveRunnerBootstrapByGameId.mockResolvedValue({
       descriptor: { gameMetadata: { name: 'Fire in the Lake' } },
       gameDef: { metadata: { id: 'fitl' } },
       visualConfig: { layout: {}, zones: {} },
@@ -97,6 +109,7 @@ describe('MapEditorScreen', () => {
     });
     testDoubles.createMapEditorStore.mockReturnValue(store);
     testDoubles.createEditorCanvas.mockResolvedValue(editorCanvas);
+    testDoubles.createEditorAdjacencyRenderer.mockReturnValue(adjacencyRenderer);
     testDoubles.createEditorZoneRenderer.mockReturnValue(zoneRenderer);
     testDoubles.createEditorRouteRenderer.mockReturnValue(routeRenderer);
     testDoubles.createEditorHandleRenderer.mockReturnValue(handleRenderer);
@@ -125,6 +138,10 @@ describe('MapEditorScreen', () => {
         onPointerWorldPositionChange: expect.any(Function),
       }),
     );
+    expect(testDoubles.createEditorAdjacencyRenderer).toHaveBeenCalledWith(
+      editorCanvas.layers.adjacency,
+      store,
+    );
     expect(testDoubles.createEditorZoneRenderer).toHaveBeenCalledWith(
       editorCanvas.layers.zone,
       store,
@@ -140,6 +157,7 @@ describe('MapEditorScreen', () => {
     expect(testDoubles.createEditorHandleRenderer).toHaveBeenCalledWith(
       editorCanvas.layers.handle,
       store,
+      { dragSurface: editorCanvas.viewport },
     );
     expect(editorCanvas.centerOnContent).toHaveBeenCalledTimes(1);
 
@@ -148,6 +166,7 @@ describe('MapEditorScreen', () => {
 
     rendered.unmount();
 
+    expect(adjacencyRenderer.destroy).toHaveBeenCalledTimes(1);
     expect(zoneRenderer.destroy).toHaveBeenCalledTimes(1);
     expect(routeRenderer.destroy).toHaveBeenCalledTimes(1);
     expect(handleRenderer.destroy).toHaveBeenCalledTimes(1);
@@ -155,7 +174,7 @@ describe('MapEditorScreen', () => {
   });
 
   it('shows an error state for unknown games', async () => {
-    testDoubles.resolveMapEditorBootstrapByGameId.mockResolvedValue(null);
+    testDoubles.resolveRunnerBootstrapByGameId.mockResolvedValue(null);
 
     const { MapEditorScreen } = await import('../../src/map-editor/MapEditorScreen.js');
     render(createElement(MapEditorScreen, { gameId: 'missing-game', onBack: vi.fn() }));
@@ -167,7 +186,7 @@ describe('MapEditorScreen', () => {
   });
 
   it('shows an error state for unsupported games', async () => {
-    testDoubles.resolveMapEditorBootstrapByGameId.mockResolvedValue({
+    testDoubles.resolveRunnerBootstrapByGameId.mockResolvedValue({
       descriptor: { gameMetadata: { name: "Texas Hold'em" } },
       gameDef: { metadata: { id: 'texas' } },
       visualConfig: { layout: {}, zones: {} },
@@ -187,7 +206,7 @@ describe('MapEditorScreen', () => {
 
   it('exports the current editor document and marks the store saved', async () => {
     const store = createMockEditorStore();
-    testDoubles.resolveMapEditorBootstrapByGameId.mockResolvedValue({
+    testDoubles.resolveRunnerBootstrapByGameId.mockResolvedValue({
       descriptor: { gameMetadata: { name: 'Fire in the Lake' } },
       gameDef: { metadata: { id: 'fitl' } },
       visualConfig: { layout: {}, zones: {} },
@@ -196,12 +215,13 @@ describe('MapEditorScreen', () => {
     });
     testDoubles.createMapEditorStore.mockReturnValue(store);
     testDoubles.createEditorCanvas.mockResolvedValue({
-      layers: { zone: {}, route: {}, handle: {} },
+      layers: { adjacency: {}, zone: {}, route: {}, handle: {} },
       viewport: {},
       resize: vi.fn(),
       centerOnContent: vi.fn(),
       destroy: vi.fn(),
     });
+    testDoubles.createEditorAdjacencyRenderer.mockReturnValue({ destroy: vi.fn() });
     testDoubles.createEditorZoneRenderer.mockReturnValue({ destroy: vi.fn() });
     testDoubles.createEditorRouteRenderer.mockReturnValue({ destroy: vi.fn() });
     testDoubles.createEditorHandleRenderer.mockReturnValue({ destroy: vi.fn() });
@@ -228,7 +248,7 @@ describe('MapEditorScreen', () => {
 
   it('shows an inline export error when export fails', async () => {
     const store = createMockEditorStore();
-    testDoubles.resolveMapEditorBootstrapByGameId.mockResolvedValue({
+    testDoubles.resolveRunnerBootstrapByGameId.mockResolvedValue({
       descriptor: { gameMetadata: { name: 'Fire in the Lake' } },
       gameDef: { metadata: { id: 'fitl' } },
       visualConfig: { layout: {}, zones: {} },
@@ -237,12 +257,13 @@ describe('MapEditorScreen', () => {
     });
     testDoubles.createMapEditorStore.mockReturnValue(store);
     testDoubles.createEditorCanvas.mockResolvedValue({
-      layers: { zone: {}, route: {}, handle: {} },
+      layers: { adjacency: {}, zone: {}, route: {}, handle: {} },
       viewport: {},
       resize: vi.fn(),
       centerOnContent: vi.fn(),
       destroy: vi.fn(),
     });
+    testDoubles.createEditorAdjacencyRenderer.mockReturnValue({ destroy: vi.fn() });
     testDoubles.createEditorZoneRenderer.mockReturnValue({ destroy: vi.fn() });
     testDoubles.createEditorRouteRenderer.mockReturnValue({ destroy: vi.fn() });
     testDoubles.createEditorHandleRenderer.mockReturnValue({ destroy: vi.fn() });
@@ -267,7 +288,7 @@ describe('MapEditorScreen', () => {
 
   it('shows pointer coordinates and falls back to the selected zone position', async () => {
     const store = createMockEditorStore();
-    testDoubles.resolveMapEditorBootstrapByGameId.mockResolvedValue({
+    testDoubles.resolveRunnerBootstrapByGameId.mockResolvedValue({
       descriptor: { gameMetadata: { name: 'Fire in the Lake' } },
       gameDef: { metadata: { id: 'fitl' } },
       visualConfig: { layout: {}, zones: {} },
@@ -276,12 +297,13 @@ describe('MapEditorScreen', () => {
     });
     testDoubles.createMapEditorStore.mockReturnValue(store);
     testDoubles.createEditorCanvas.mockResolvedValue({
-      layers: { zone: {}, route: {}, handle: {} },
+      layers: { adjacency: {}, zone: {}, route: {}, handle: {} },
       viewport: {},
       resize: vi.fn(),
       centerOnContent: vi.fn(),
       destroy: vi.fn(),
     });
+    testDoubles.createEditorAdjacencyRenderer.mockReturnValue({ destroy: vi.fn() });
     testDoubles.createEditorZoneRenderer.mockReturnValue({ destroy: vi.fn() });
     testDoubles.createEditorRouteRenderer.mockReturnValue({ destroy: vi.fn() });
     testDoubles.createEditorHandleRenderer.mockReturnValue({ destroy: vi.fn() });
@@ -315,7 +337,7 @@ describe('MapEditorScreen', () => {
     const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
     const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener');
     const store = createMockEditorStore();
-    testDoubles.resolveMapEditorBootstrapByGameId.mockResolvedValue({
+    testDoubles.resolveRunnerBootstrapByGameId.mockResolvedValue({
       descriptor: { gameMetadata: { name: 'Fire in the Lake' } },
       gameDef: { metadata: { id: 'fitl' } },
       visualConfig: { layout: {}, zones: {} },
@@ -324,12 +346,13 @@ describe('MapEditorScreen', () => {
     });
     testDoubles.createMapEditorStore.mockReturnValue(store);
     testDoubles.createEditorCanvas.mockResolvedValue({
-      layers: { zone: {}, route: {}, handle: {} },
+      layers: { adjacency: {}, zone: {}, route: {}, handle: {} },
       viewport: {},
       resize: vi.fn(),
       centerOnContent: vi.fn(),
       destroy: vi.fn(),
     });
+    testDoubles.createEditorAdjacencyRenderer.mockReturnValue({ destroy: vi.fn() });
     testDoubles.createEditorZoneRenderer.mockReturnValue({ destroy: vi.fn() });
     testDoubles.createEditorRouteRenderer.mockReturnValue({ destroy: vi.fn() });
     testDoubles.createEditorHandleRenderer.mockReturnValue({ destroy: vi.fn() });

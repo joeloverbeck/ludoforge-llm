@@ -11,8 +11,7 @@ import { useReplayRuntime } from '../../src/session/replay-runtime.js';
 
 const testDoubles = vi.hoisted(() => ({
   createGameBridge: vi.fn(),
-  resolveBootstrapConfig: vi.fn(),
-  findBootstrapDescriptorById: vi.fn(),
+  resolveRuntimeBootstrap: vi.fn(),
   createGameStore: vi.fn(),
   createReplayController: vi.fn(),
   createReplayStore: vi.fn(),
@@ -33,12 +32,8 @@ vi.mock('../../src/bridge/game-bridge.js', () => ({
   createGameBridge: testDoubles.createGameBridge,
 }));
 
-vi.mock('../../src/bootstrap/resolve-bootstrap-config.js', () => ({
-  resolveBootstrapConfig: testDoubles.resolveBootstrapConfig,
-}));
-
-vi.mock('../../src/session/active-game-runtime.js', () => ({
-  findBootstrapDescriptorById: testDoubles.findBootstrapDescriptorById,
+vi.mock('../../src/bootstrap/runner-bootstrap.js', () => ({
+  resolveRuntimeBootstrap: testDoubles.resolveRuntimeBootstrap,
 }));
 
 vi.mock('../../src/store/game-store.js', () => ({
@@ -69,8 +64,7 @@ describe('useReplayRuntime', () => {
   beforeEach(() => {
     vi.resetModules();
     testDoubles.createGameBridge.mockReset();
-    testDoubles.resolveBootstrapConfig.mockReset();
-    testDoubles.findBootstrapDescriptorById.mockReset();
+    testDoubles.resolveRuntimeBootstrap.mockReset();
     testDoubles.createGameStore.mockReset();
     testDoubles.createReplayController.mockReset();
     testDoubles.createReplayStore.mockReset();
@@ -86,18 +80,10 @@ describe('useReplayRuntime', () => {
     testDoubles.bridgeTerminalResult.mockReset();
     testDoubles.onReplayStateChange = null;
 
-    testDoubles.findBootstrapDescriptorById.mockImplementation((gameId: string) => {
-      if (gameId !== 'fitl') {
-        return null;
-      }
-      return {
-        id: 'fitl',
-        queryValue: 'fitl',
-        defaultPlayerId: 1,
-      };
-    });
-
-    testDoubles.resolveBootstrapConfig.mockReturnValue({
+    testDoubles.resolveRuntimeBootstrap.mockReturnValue({
+      descriptor: { id: 'fitl' },
+      seed: 17,
+      playerId: 1,
       visualConfigProvider: {},
       resolveGameDef: async () => ({ metadata: { id: 'fitl' } }),
     });
@@ -191,6 +177,11 @@ describe('useReplayRuntime', () => {
     expect(testDoubles.createGameBridge).toHaveBeenCalledTimes(1);
     expect(testDoubles.createGameStore).toHaveBeenCalledTimes(1);
     expect(testDoubles.initGame).toHaveBeenCalledTimes(1);
+    expect(testDoubles.resolveRuntimeBootstrap).toHaveBeenCalledWith(
+      'fitl',
+      17,
+      [{ playerId: 1, controller: createHumanSeatController() }],
+    );
   });
 
   it('hydrates game-store replay projection on replay controller state changes', async () => {
@@ -285,5 +276,19 @@ describe('useReplayRuntime', () => {
       expect(testDoubles.destroyReplayStore).toHaveBeenCalledTimes(1);
       expect(testDoubles.terminate).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it('throws for unknown replay descriptor ids through the typed bootstrap seam', () => {
+    testDoubles.resolveRuntimeBootstrap.mockReturnValue(null);
+
+    expect(() => render(createElement(HookHarness, {
+      sessionState: {
+        screen: 'replay',
+        gameId: 'missing',
+        seed: 17,
+        moveHistory: [],
+        playerConfig: [{ playerId: 1, controller: createHumanSeatController() }],
+      },
+    }))).toThrowError(/Unknown replay descriptor id: missing/u);
   });
 });

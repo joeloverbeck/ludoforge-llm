@@ -6,6 +6,7 @@ import type { GameDef } from '@ludoforge/engine/runtime';
 import {
   attachAnchorDragHandlers,
   attachControlPointDragHandlers,
+  attachZoneEndpointConvertDragHandlers,
   attachZoneDragHandlers,
   snapToGrid,
 } from '../../src/map-editor/map-editor-drag.js';
@@ -181,6 +182,45 @@ describe('map-editor-drag', () => {
     expect(store.getState().connectionAnchors.get('curve-ctrl')).toEqual({ x: 77, y: 90 });
     expect(store.getState().undoStack).toHaveLength(1);
     expect(store.getState().undoStack[0]?.connectionAnchors.get('curve-ctrl')).toEqual({ x: 45, y: 55 });
+
+    cleanup();
+  });
+
+  it('promotes a zone endpoint on first movement and commits convert plus drag as one undo entry', () => {
+    const { dragSurface, store } = createFixture();
+    const zoneEndpointHandle = new MockContainer();
+    zoneEndpointHandle.parent = dragSurface;
+    zoneEndpointHandle.position.set(10, 20);
+    const cleanup = attachZoneEndpointConvertDragHandlers(
+      zoneEndpointHandle as never,
+      'road:none',
+      0,
+      dragSurface as never,
+      store,
+    );
+
+    zoneEndpointHandle.emit('pointerdown', pointer(12, 23));
+    expect(store.getState().selectedRouteId).toBe('road:none');
+    expect(store.getState().isDragging).toBe(true);
+
+    dragSurface.emit('globalpointermove', pointer(32, 43));
+
+    expect(store.getState().connectionRoutes.get('road:none')?.points[0]).toEqual({
+      kind: 'anchor',
+      anchorId: 'road:none:endpoint:zone:a:0',
+    });
+    expect(store.getState().connectionAnchors.get('road:none:endpoint:zone:a:0')).toEqual({ x: 30, y: 40 });
+    expect(store.getState().undoStack).toHaveLength(0);
+
+    dragSurface.emit('pointerup');
+
+    expect(store.getState().undoStack).toHaveLength(1);
+    expect(store.getState().undoStack[0]?.connectionRoutes.get('road:none')?.points[0]).toEqual({
+      kind: 'zone',
+      zoneId: 'zone:a',
+    });
+    expect(store.getState().isDragging).toBe(false);
+    expect(zoneEndpointHandle.cursor).toBe('grab');
 
     cleanup();
   });

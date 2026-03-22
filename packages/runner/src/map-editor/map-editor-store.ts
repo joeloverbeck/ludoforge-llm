@@ -33,6 +33,7 @@ interface MapEditorStoreActions {
   moveZone(zoneId: string, position: Position): void;
   moveAnchor(anchorId: string, position: Position): void;
   moveControlPoint(routeId: string, segmentIndex: number, position: Position): void;
+  convertEndpointToAnchor(routeId: string, pointIndex: number): string | null;
   insertWaypoint(routeId: string, segmentIndex: number, position: Position): void;
   removeWaypoint(routeId: string, pointIndex: number): void;
   convertSegment(routeId: string, segmentIndex: number, kind: 'straight' | 'quadratic'): void;
@@ -144,6 +145,20 @@ export function createMapEditorStore(
 
       moveControlPoint(routeId, segmentIndex, position) {
         applyCommittedEdit((state) => moveControlPointInDocument(state, routeId, segmentIndex, position));
+      },
+
+      convertEndpointToAnchor(routeId, pointIndex) {
+        let anchorId: string | null = null;
+        applyPreviewEdit((state) => {
+          const converted = convertEndpointToAnchorInDocument(state, routeId, pointIndex);
+          if (converted === null) {
+            return null;
+          }
+
+          anchorId = converted.anchorId;
+          return converted.document;
+        });
+        return anchorId;
       },
 
       insertWaypoint(routeId, segmentIndex, position) {
@@ -630,6 +645,48 @@ function insertWaypointInDocument(
   };
 }
 
+function convertEndpointToAnchorInDocument(
+  state: MapEditorDocumentState,
+  routeId: string,
+  pointIndex: number,
+): { readonly anchorId: string; readonly document: MapEditorDocumentState } | null {
+  const route = state.connectionRoutes.get(routeId);
+  const point = route?.points[pointIndex];
+  if (route === undefined || point === undefined || point.kind !== 'zone') {
+    return null;
+  }
+
+  const position = state.zonePositions.get(point.zoneId);
+  if (position === undefined) {
+    return null;
+  }
+
+  const anchorId = createEndpointAnchorId(routeId, point.zoneId, pointIndex, state.connectionAnchors);
+  const connectionAnchors = new Map(state.connectionAnchors);
+  connectionAnchors.set(anchorId, { x: position.x, y: position.y });
+
+  const points = route.points.map((entry, index) => (
+    index === pointIndex
+      ? { kind: 'anchor' as const, anchorId }
+      : cloneEndpoint(entry)
+  ));
+
+  const connectionRoutes = new Map(state.connectionRoutes);
+  connectionRoutes.set(routeId, {
+    points,
+    segments: route.segments.map(cloneSegment),
+  });
+
+  return {
+    anchorId,
+    document: {
+      zonePositions: state.zonePositions,
+      connectionAnchors,
+      connectionRoutes,
+    },
+  };
+}
+
 function removeWaypointInDocument(
   state: MapEditorDocumentState,
   routeId: string,
@@ -754,6 +811,23 @@ function createWaypointAnchorId(
       return candidate;
     }
     index += 1;
+  }
+}
+
+function createEndpointAnchorId(
+  routeId: string,
+  zoneId: string,
+  pointIndex: number,
+  anchors: ReadonlyMap<string, Position>,
+): string {
+  const baseId = `${routeId}:endpoint:${zoneId}:${pointIndex}`;
+  let suffix = 0;
+  while (true) {
+    const candidate = suffix === 0 ? baseId : `${baseId}:${suffix + 1}`;
+    if (!anchors.has(candidate)) {
+      return candidate;
+    }
+    suffix += 1;
   }
 }
 

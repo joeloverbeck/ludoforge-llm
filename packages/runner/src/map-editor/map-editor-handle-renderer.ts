@@ -1,10 +1,11 @@
-import { Container, Graphics } from 'pixi.js';
+import { Circle, Container, Graphics, Polygon } from 'pixi.js';
 
 import { safeDestroyChildren, safeDestroyDisplayObject } from '../canvas/renderers/safe-destroy.js';
 import type { MapEditorStoreApi } from './map-editor-store.js';
 import {
   attachAnchorDragHandlers,
   attachControlPointDragHandlers,
+  attachZoneEndpointConvertDragHandlers,
 } from './map-editor-drag.js';
 import { resolveRouteGeometry } from './map-editor-route-geometry.js';
 
@@ -20,13 +21,26 @@ export interface EditorHandleRenderer {
 export function createEditorHandleRenderer(
   handleLayer: Container,
   store: MapEditorStoreApi,
+  options: {
+    readonly dragSurface?: Container;
+  } = {},
 ): EditorHandleRenderer {
+  const dragSurface = options.dragSurface ?? handleLayer;
   const root = new Container();
   root.eventMode = 'none';
   root.interactiveChildren = true;
   handleLayer.addChild(root);
+  let cleanupDisposers: Array<() => void> = [];
+
+  const releaseInteractionDisposers = (): void => {
+    for (const dispose of cleanupDisposers) {
+      dispose();
+    }
+    cleanupDisposers = [];
+  };
 
   const render = (state: ReturnType<MapEditorStoreApi['getState']>): void => {
+    releaseInteractionDisposers();
     safeDestroyChildren(root, { children: true });
 
     const routeId = state.selectedRouteId;
@@ -74,26 +88,32 @@ export function createEditorHandleRenderer(
       handle.interactiveChildren = false;
 
       if (point.endpoint.kind === 'zone') {
-        handle.eventMode = 'none';
-        handle.cursor = 'default';
-        handle
-          .circle(0, 0, HANDLE_RADIUS)
-          .stroke({
-            color: HANDLE_STROKE_COLOR,
-            width: 2,
-            alpha: 1,
-          });
-      } else {
         handle.eventMode = 'static';
         handle.cursor = 'grab';
+        handle.hitArea = new Circle(0, 0, HANDLE_RADIUS);
         handle
           .circle(0, 0, HANDLE_RADIUS)
           .fill({
             color: HANDLE_STROKE_COLOR,
             alpha: 1,
           });
-        attachAnchorDragHandlers(handle, routeId, point.endpoint.anchorId, handleLayer, store);
-        handle.on('pointerdown', (event) => {
+        cleanupDisposers.push(
+          attachZoneEndpointConvertDragHandlers(handle, routeId, pointIndex, dragSurface, store),
+        );
+      } else {
+        handle.eventMode = 'static';
+        handle.cursor = 'grab';
+        handle.hitArea = new Circle(0, 0, HANDLE_RADIUS);
+        handle
+          .circle(0, 0, HANDLE_RADIUS)
+          .fill({
+            color: HANDLE_STROKE_COLOR,
+            alpha: 1,
+          });
+        cleanupDisposers.push(
+          attachAnchorDragHandlers(handle, routeId, point.endpoint.anchorId, dragSurface, store),
+        );
+        const removeWaypointOnRightClick = (event: { button?: number; stopPropagation(): void }): void => {
           if (event.button !== 2) {
             return;
           }
@@ -107,6 +127,10 @@ export function createEditorHandleRenderer(
           state.selectZone(null);
           state.selectRoute(routeId);
           state.removeWaypoint(routeId, pointIndex);
+        };
+        handle.on('pointerdown', removeWaypointOnRightClick);
+        cleanupDisposers.push(() => {
+          handle.off('pointerdown', removeWaypointOnRightClick);
         });
       }
 
@@ -125,6 +149,16 @@ export function createEditorHandleRenderer(
       control.eventMode = 'static';
       control.cursor = 'grab';
       control.interactiveChildren = false;
+      control.hitArea = new Polygon([
+        0,
+        -CONTROL_HANDLE_SIZE,
+        CONTROL_HANDLE_SIZE,
+        0,
+        0,
+        CONTROL_HANDLE_SIZE,
+        -CONTROL_HANDLE_SIZE,
+        0,
+      ]);
       control
         .poly([
           0,
@@ -140,7 +174,9 @@ export function createEditorHandleRenderer(
           color: HANDLE_STROKE_COLOR,
           alpha: 1,
         });
-      attachControlPointDragHandlers(control, routeId, segmentIndex, handleLayer, store);
+      cleanupDisposers.push(
+        attachControlPointDragHandlers(control, routeId, segmentIndex, dragSurface, store),
+      );
       root.addChild(control);
     }
   };
@@ -148,12 +184,21 @@ export function createEditorHandleRenderer(
   render(store.getState());
 
   const unsubscribe = store.subscribe((state, previousState) => {
+    const routeSelectionChanged = state.selectedRouteId !== previousState.selectedRouteId;
+    const documentChanged = state.zonePositions !== previousState.zonePositions
+      || state.connectionAnchors !== previousState.connectionAnchors
+      || state.connectionRoutes !== previousState.connectionRoutes;
+    const dragEnded = previousState.isDragging && !state.isDragging;
+
     if (
-      state.selectedRouteId === previousState.selectedRouteId &&
-      state.zonePositions === previousState.zonePositions &&
-      state.connectionAnchors === previousState.connectionAnchors &&
-      state.connectionRoutes === previousState.connectionRoutes
+      !routeSelectionChanged
+      && !documentChanged
+      && !dragEnded
     ) {
+      return;
+    }
+
+    if (!routeSelectionChanged && state.isDragging) {
       return;
     }
 
@@ -163,6 +208,7 @@ export function createEditorHandleRenderer(
   return {
     destroy(): void {
       unsubscribe();
+      releaseInteractionDisposers();
       safeDestroyDisplayObject(root, { children: true });
     },
   };

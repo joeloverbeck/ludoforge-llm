@@ -70,6 +70,39 @@ describe('map-editor-export', () => {
     });
   });
 
+  it('buildExportConfig preserves promoted endpoint anchors in route points', () => {
+    const input = makeExportInput();
+    input.connectionAnchors = new Map([
+      ['route:none:endpoint:zone:a:0', { x: 10, y: 20 }],
+      ['ctrl', { x: 44, y: 55 }],
+    ]);
+    input.connectionRoutes = new Map<string, ConnectionRouteDefinition>([
+      ['route:none', {
+        points: [
+          { kind: 'anchor', anchorId: 'route:none:endpoint:zone:a:0' },
+          { kind: 'zone', zoneId: 'zone:b' },
+        ],
+        segments: [
+          { kind: 'straight' },
+        ],
+      }],
+    ]);
+
+    const exported = buildExportConfig(input);
+
+    expect(exported.zones?.connectionAnchors).toEqual({
+      'route:none:endpoint:zone:a:0': { x: 10, y: 20 },
+      ctrl: { x: 44, y: 55 },
+    });
+    expect(exported.zones?.connectionRoutes?.['route:none']).toEqual({
+      points: [
+        { kind: 'anchor', anchorId: 'route:none:endpoint:zone:a:0' },
+        { kind: 'zone', zoneId: 'zone:b' },
+      ],
+      segments: [{ kind: 'straight' }],
+    });
+  });
+
   it('serializeVisualConfig emits yaml text', () => {
     const yaml = serializeVisualConfig(buildExportConfig(makeExportInput()));
 

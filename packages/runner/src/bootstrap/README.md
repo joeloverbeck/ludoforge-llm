@@ -1,6 +1,6 @@
 # Runner Bootstrap Registry
 
-`resolveBootstrapConfig` is registry-driven. Do not add game-specific branches in the resolver.
+`runner-bootstrap.ts` is the canonical typed bootstrap service for runner consumers. Browser search params are parsed once at app startup into a typed request by `browser-entry.ts`; `resolve-bootstrap-config.ts` remains only as a compatibility helper for search-param based bootstrap tests and true URL-entry adapters.
 Bootstrap targets are defined once in `bootstrap-targets.json` and consumed by both runtime registry and fixture tooling.
 
 ## Adding a New Bootstrap Target
@@ -21,6 +21,7 @@ Bootstrap targets are defined once in `bootstrap-targets.json` and consumed by b
 4. Add/update tests in:
    - `packages/runner/test/bootstrap/bootstrap-registry.test.ts`
    - `packages/runner/test/bootstrap/resolve-bootstrap-config.test.ts`
+   - `packages/runner/test/bootstrap/runner-bootstrap.test.ts` (if the typed service changes)
 5. Run:
    - `pnpm -F @ludoforge/runner test`
    - `pnpm -F @ludoforge/runner typecheck`

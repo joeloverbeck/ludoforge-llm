@@ -3,6 +3,7 @@ import type { GameDef } from '@ludoforge/engine/runtime';
 import type { Container } from 'pixi.js';
 
 const {
+  MockBitmapText,
   MockContainer,
   MockGraphics,
   MockPolygon,
@@ -55,6 +56,8 @@ const {
     visible = true;
 
     renderable = true;
+
+    rotation = 0;
 
     eventMode: 'none' | 'static' | 'passive' = 'none';
 
@@ -143,7 +146,22 @@ const {
     }
   }
 
+  class HoistedMockBitmapText extends HoistedMockContainer {
+    text: string;
+
+    style: unknown;
+
+    anchor = new MockPoint();
+
+    constructor(options: { text: string; style?: unknown }) {
+      super();
+      this.text = options.text;
+      this.style = options.style;
+    }
+  }
+
   return {
+    MockBitmapText: HoistedMockBitmapText,
     MockContainer: HoistedMockContainer,
     MockGraphics: HoistedMockGraphics,
     MockPolygon: HoistedMockPolygon,
@@ -151,10 +169,40 @@ const {
 });
 
 vi.mock('pixi.js', () => ({
+  BitmapText: MockBitmapText,
   BitmapFontManager: { install: vi.fn(), uninstall: vi.fn() },
   Container: MockContainer,
   Graphics: MockGraphics,
   Polygon: MockPolygon,
+}));
+
+vi.mock('../../src/canvas/text/bitmap-font-registry.js', () => ({
+  STROKE_LABEL_FONT_NAME: 'ludoforge-label-stroke',
+}));
+
+vi.mock('../../src/canvas/text/bitmap-text-runtime.js', () => ({
+  createManagedBitmapText: (options: {
+    text?: string;
+    style: unknown;
+    anchor?: { x: number; y: number };
+    position?: { x: number; y: number };
+    visible?: boolean;
+  }) => {
+    const text = new MockBitmapText({ text: options.text ?? '', style: options.style });
+    if (options.anchor !== undefined) {
+      text.anchor.set(options.anchor.x, options.anchor.y);
+    }
+    if (options.position !== undefined) {
+      text.position.set(options.position.x, options.position.y);
+    }
+    if (options.visible !== undefined) {
+      text.visible = options.visible;
+    }
+    text.eventMode = 'none';
+    text.interactiveChildren = false;
+    return text;
+  },
+  destroyManagedBitmapText: vi.fn(),
 }));
 
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
@@ -176,20 +224,23 @@ describe('createEditorRouteRenderer', () => {
     expect(renderer.getContainerMap().size).toBe(1);
     expect([...renderer.getContainerMap().keys()]).toEqual(['route:road']);
     expect(fixture.routeLayer.children).toHaveLength(1);
+    const midpoint = renderer.getContainerMap().get('route:road') as unknown as InstanceType<typeof MockContainer>;
+    expect(midpoint.children[0]).toBeInstanceOf(MockBitmapText);
   });
 
   it('selects a route and clears any zone selection when clicked', () => {
     const fixture = createFixture();
     fixture.store.getState().selectZone('zone:a');
 
-    const renderer = createEditorRouteRenderer(
+    createEditorRouteRenderer(
       fixture.routeLayer as unknown as Container,
       fixture.store,
       fixture.gameDef,
       fixture.provider,
     );
 
-    const graphics = renderer.getContainerMap().get('route:road') as unknown as InstanceType<typeof MockGraphics>;
+    const root = fixture.routeLayer.children[0] as InstanceType<typeof MockContainer>;
+    const graphics = root.children[0] as InstanceType<typeof MockGraphics>;
     graphics.emit('pointertap', pointer(20, 10));
 
     expect(fixture.store.getState().selectedRouteId).toBe('route:road');
@@ -198,14 +249,15 @@ describe('createEditorRouteRenderer', () => {
 
   it('re-renders route geometry when positions change', () => {
     const fixture = createFixture();
-    const renderer = createEditorRouteRenderer(
+    createEditorRouteRenderer(
       fixture.routeLayer as unknown as Container,
       fixture.store,
       fixture.gameDef,
       fixture.provider,
     );
 
-    const graphics = renderer.getContainerMap().get('route:road') as unknown as InstanceType<typeof MockGraphics>;
+    const root = fixture.routeLayer.children[0] as InstanceType<typeof MockContainer>;
+    const graphics = root.children[0] as InstanceType<typeof MockGraphics>;
     expect(graphics.moveToArgs).toEqual([0, 0]);
 
     fixture.store.getState().moveZone('zone:a', { x: 15, y: 25 });
@@ -217,14 +269,15 @@ describe('createEditorRouteRenderer', () => {
 
   it('re-renders selected routes with explicit highlight styling and removes it on deselect', () => {
     const fixture = createFixture();
-    const renderer = createEditorRouteRenderer(
+    createEditorRouteRenderer(
       fixture.routeLayer as unknown as Container,
       fixture.store,
       fixture.gameDef,
       fixture.provider,
     );
 
-    const graphics = renderer.getContainerMap().get('route:road') as unknown as InstanceType<typeof MockGraphics>;
+    const root = fixture.routeLayer.children[0] as InstanceType<typeof MockContainer>;
+    const graphics = root.children[0] as InstanceType<typeof MockGraphics>;
     expect(graphics.strokeStyle).toEqual({
       color: 0x8b7355,
       width: 6,
@@ -250,14 +303,15 @@ describe('createEditorRouteRenderer', () => {
 
   it('inserts a waypoint on double-click at the nearest point on the targeted segment', () => {
     const fixture = createFixture();
-    const renderer = createEditorRouteRenderer(
+    createEditorRouteRenderer(
       fixture.routeLayer as unknown as Container,
       fixture.store,
       fixture.gameDef,
       fixture.provider,
     );
 
-    const graphics = renderer.getContainerMap().get('route:road') as unknown as InstanceType<typeof MockGraphics>;
+    const root = fixture.routeLayer.children[0] as InstanceType<typeof MockContainer>;
+    const graphics = root.children[0] as InstanceType<typeof MockGraphics>;
     graphics.emit('pointertap', pointer(18, 12));
     graphics.emit('pointertap', pointer(18, 12, { detail: 2 }));
 
@@ -272,24 +326,27 @@ describe('createEditorRouteRenderer', () => {
 
   it('toggles the clicked segment between straight and quadratic on right-click', () => {
     const fixture = createFixture({
-      connectionRoutes: {
-        'route:road': {
-          points: [
-            { kind: 'zone', zoneId: 'zone:a' },
-            { kind: 'zone', zoneId: 'zone:b' },
-          ],
-          segments: [{ kind: 'straight' }],
+      overrides: {
+        connectionRoutes: {
+          'route:road': {
+            points: [
+              { kind: 'zone', zoneId: 'zone:a' },
+              { kind: 'zone', zoneId: 'zone:b' },
+            ],
+            segments: [{ kind: 'straight' }],
+          },
         },
       },
     });
-    const renderer = createEditorRouteRenderer(
+    createEditorRouteRenderer(
       fixture.routeLayer as unknown as Container,
       fixture.store,
       fixture.gameDef,
       fixture.provider,
     );
 
-    const graphics = renderer.getContainerMap().get('route:road') as unknown as InstanceType<typeof MockGraphics>;
+    const root = fixture.routeLayer.children[0] as InstanceType<typeof MockContainer>;
+    const graphics = root.children[0] as InstanceType<typeof MockGraphics>;
     graphics.emit('pointerdown', pointer(40, 2, { button: 2 }));
 
     expect(fixture.store.getState().connectionRoutes.get('route:road')?.segments[0]).toEqual({
@@ -297,9 +354,62 @@ describe('createEditorRouteRenderer', () => {
       control: { kind: 'position', x: 40, y: 0 },
     });
   });
+
+  it('renders a non-interactive midpoint label using visual-config label or formatted route id', () => {
+    const fixture = createFixture({
+      overrides: {
+        overrides: {
+          'route:road': { label: 'Highway 1' },
+        },
+      },
+    });
+
+    const renderer = createEditorRouteRenderer(
+      fixture.routeLayer as unknown as Container,
+      fixture.store,
+      fixture.gameDef,
+      fixture.provider,
+    );
+
+    const midpoint = renderer.getContainerMap().get('route:road') as unknown as InstanceType<typeof MockContainer>;
+    const label = midpoint.children[0] as InstanceType<typeof MockBitmapText>;
+
+    expect(midpoint.position.x).toBeCloseTo(40, 6);
+    expect(midpoint.position.y).toBeCloseTo(15, 6);
+    expect(label.text).toBe('Highway 1');
+    expect(label.eventMode).toBe('none');
+    expect(label.interactiveChildren).toBe(false);
+    expect(Math.min(label.rotation, Math.abs((Math.PI * 2) - label.rotation))).toBeLessThan(0.05);
+  });
+
+  it('falls back to the formatted route id and flips label rotation for reversed routes', () => {
+    const fixture = createFixture({
+      zonePositions: new Map([
+        ['zone:a', { x: 80, y: 0 }],
+        ['zone:b', { x: 0, y: 0 }],
+        ['route:road', { x: 40, y: 0 }],
+      ]),
+    });
+
+    const renderer = createEditorRouteRenderer(
+      fixture.routeLayer as unknown as Container,
+      fixture.store,
+      fixture.gameDef,
+      fixture.provider,
+    );
+
+    const midpoint = renderer.getContainerMap().get('route:road') as unknown as InstanceType<typeof MockContainer>;
+    const label = midpoint.children[0] as InstanceType<typeof MockBitmapText>;
+
+    expect(label.text).toBe('Route Road');
+    expect(Math.min(label.rotation, Math.abs((Math.PI * 2) - label.rotation))).toBeLessThan(0.05);
+  });
 });
 
-function createFixture(overrides?: Partial<NonNullable<VisualConfig['zones']>>) {
+function createFixture(options?: {
+  readonly overrides?: Partial<NonNullable<VisualConfig['zones']>>;
+  readonly zonePositions?: Map<string, { x: number; y: number }>;
+}) {
   const gameDef = {
     metadata: {
       id: 'editor-test',
@@ -314,7 +424,6 @@ function createFixture(overrides?: Partial<NonNullable<VisualConfig['zones']>>) 
   const visualConfig = {
     version: 1,
     zones: {
-      ...overrides,
       categoryStyles: {
         road: { shape: 'connection', connectionStyleKey: 'highway' },
       },
@@ -324,15 +433,16 @@ function createFixture(overrides?: Partial<NonNullable<VisualConfig['zones']>>) 
       connectionRoutes: {
         'route:road': makeRouteDefinition(),
         'not-a-connection': makeRouteDefinition(),
-        ...overrides?.connectionRoutes,
+        ...options?.overrides?.connectionRoutes,
       },
+      ...options?.overrides,
     },
   } as VisualConfig;
 
   const store = createMapEditorStore(
     gameDef,
     visualConfig,
-    new Map([
+    options?.zonePositions ?? new Map([
       ['zone:a', { x: 0, y: 0 }],
       ['zone:b', { x: 80, y: 0 }],
       ['route:road', { x: 40, y: 0 }],

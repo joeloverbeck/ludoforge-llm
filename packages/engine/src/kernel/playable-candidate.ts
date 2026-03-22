@@ -5,17 +5,18 @@ import {
 } from './move-completion.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
 import type { MoveEnumerationBudgets } from './move-enumeration-budgets.js';
-import type { GameDef, GameState, Move, Rng, RuntimeWarning } from './types.js';
+import { createTrustedExecutableMove } from './trusted-move.js';
+import type { GameDef, GameState, Move, Rng, RuntimeWarning, TrustedExecutableMove } from './types.js';
 
 export type PlayableCandidateClassification =
   | Readonly<{
       readonly kind: 'playableComplete';
-      readonly move: Move;
+      readonly move: TrustedExecutableMove;
       readonly warnings: readonly RuntimeWarning[];
     }>
   | Readonly<{
       readonly kind: 'playableStochastic';
-      readonly move: Move;
+      readonly move: TrustedExecutableMove;
       readonly warnings: readonly RuntimeWarning[];
       readonly viability: Extract<MoveViabilityProbeResult, { readonly viable: true; readonly complete: false }>;
     }>
@@ -31,6 +32,7 @@ export type PlayableCandidateEvaluation =
 
 const classifyPlayableCandidateViability = (
   move: Move,
+  state: GameState,
   viability: MoveViabilityProbeResult,
 ): PlayableCandidateClassification => {
   if (!viability.viable) {
@@ -44,14 +46,14 @@ const classifyPlayableCandidateViability = (
   if (viability.complete) {
     return {
       kind: 'playableComplete',
-      move: viability.move,
+      move: createTrustedExecutableMove(viability.move, state.stateHash, 'templateCompletion'),
       warnings: viability.warnings,
     };
   }
   if (viability.stochasticDecision !== undefined) {
     return {
       kind: 'playableStochastic',
-      move: viability.move,
+      move: createTrustedExecutableMove(viability.move, state.stateHash, 'templateCompletion'),
       warnings: viability.warnings,
       viability,
     };
@@ -79,6 +81,7 @@ const classifyCompletedTemplateMove = (
   }
   return classifyPlayableCandidateViability(
     completed.move,
+    state,
     probeMoveViability(def, state, completed.move, runtime),
   );
 };
@@ -90,6 +93,7 @@ export const classifyPlayableMoveCandidate = (
   runtime?: GameDefRuntime,
 ): PlayableCandidateClassification => classifyPlayableCandidateViability(
   move,
+  state,
   probeMoveViability(def, state, move, runtime),
 );
 

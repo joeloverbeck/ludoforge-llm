@@ -1,5 +1,6 @@
 export * from './branded.js';
 export * from './gamedef-runtime.js';
+export * from './always-complete-actions.js';
 export * from './choice-option-policy.js';
 export * from './decision-scope.js';
 export * from './choose-n-cardinality.js';
@@ -21,6 +22,7 @@ export * from './move-completion.js';
 export * from './playable-candidate.js';
 export * from './move-equivalence.js';
 export * from './move-runtime-bindings.js';
+export * from './trusted-move.js';
 export * from './apply-move.js';
 export * from './trigger-dispatch.js';
 export * from './phase-advance.js';

@@ -1,4 +1,5 @@
-import { resolveTurnFlowActionClass } from './turn-flow-action-class.js';
+import { resolveTurnFlowActionClass, resolveTurnFlowActionClassMismatch } from './turn-flow-action-class.js';
+import { isTurnFlowActionClass } from '../contracts/index.js';
 import type { GameDef, Move } from './types.js';
 
 export interface MoveIdentityKeyOptions {
@@ -21,7 +22,16 @@ export const toMoveIdentityKey = (
     parts.push(String(move.freeOperation === true));
   }
   if (includeEffectiveActionClass) {
-    parts.push(resolveTurnFlowActionClass(def, move) ?? unresolvedActionClassSentinel);
+    const resolvedActionClass = resolveTurnFlowActionClass(def, move);
+    const identityActionClass =
+      resolvedActionClass !== null
+      && typeof move.actionClass === 'string'
+      && isTurnFlowActionClass(move.actionClass)
+      && move.actionClass !== resolvedActionClass
+      && resolveTurnFlowActionClassMismatch(def, move) === null
+        ? move.actionClass
+        : resolvedActionClass;
+    parts.push(identityActionClass ?? unresolvedActionClassSentinel);
   }
   return parts.join('|');
 };

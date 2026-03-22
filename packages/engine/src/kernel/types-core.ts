@@ -890,6 +890,21 @@ export interface Move {
   readonly compound?: CompoundMovePayload;
 }
 
+export type TrustedMoveProvenance = 'enumerateLegalMoves' | 'templateCompletion';
+
+export interface TrustedExecutableMove extends Move {
+  readonly move: Move;
+  readonly sourceStateHash: bigint;
+  readonly provenance: TrustedMoveProvenance;
+}
+
+/** A legal move with its viability pre-computed during enumeration. */
+export interface ClassifiedMove {
+  readonly move: Move;
+  readonly viability: import('./apply-move.js').MoveViabilityProbeResult;
+  readonly trustedMove?: TrustedExecutableMove;
+}
+
 export interface DecisionAuthorityBaseContext {
   readonly source: 'engineRuntime';
   readonly player: PlayerId;
@@ -1040,7 +1055,8 @@ export type RuntimeWarningCode =
   | 'MOVE_ENUM_TEMPLATE_BUDGET_EXCEEDED'
   | 'MOVE_ENUM_PARAM_EXPANSION_BUDGET_EXCEEDED'
   | 'MOVE_ENUM_DECISION_PROBE_STEP_BUDGET_EXCEEDED'
-  | 'MOVE_ENUM_DEFERRED_PREDICATE_BUDGET_EXCEEDED';
+  | 'MOVE_ENUM_DEFERRED_PREDICATE_BUDGET_EXCEEDED'
+  | 'MOVE_ENUM_PROBE_REJECTED';
 
 export interface RuntimeWarning {
   readonly code: RuntimeWarningCode;
@@ -1487,10 +1503,10 @@ export interface Agent {
     readonly def: GameDef;
     readonly state: GameState;
     readonly playerId: PlayerId;
-    readonly legalMoves: readonly Move[];
+    readonly legalMoves: readonly ClassifiedMove[];
     readonly rng: Rng;
     readonly runtime?: import('./gamedef-runtime.js').GameDefRuntime;
     /** Opt-in profiler for agent sub-function timing. */
     readonly profiler?: import('./perf-profiler.js').PerfProfiler;
-  }): { readonly move: Move; readonly rng: Rng; readonly agentDecision?: AgentDecisionTrace };
+  }): { readonly move: TrustedExecutableMove; readonly rng: Rng; readonly agentDecision?: AgentDecisionTrace };
 }

@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import * as kernel from '../../../src/kernel/index.js';
 import {
   asPhaseId,
+  asActionId,
   createGameDefRuntime,
   makeCompiledLifecycleEffectKey,
   type CompiledEffectContext,
@@ -53,6 +54,8 @@ describe('effect-compiler-types', () => {
   it('initializes createGameDefRuntime with an empty compiled lifecycle map when no lifecycle effects exist', () => {
     const runtime = createGameDefRuntime(createEmptyDef());
 
+    assert.ok(runtime.alwaysCompleteActionIds instanceof Set);
+    assert.equal(runtime.alwaysCompleteActionIds.size, 0);
     assert.ok(runtime.compiledLifecycleEffects instanceof Map);
     assert.equal(runtime.compiledLifecycleEffects.size, 0);
   });
@@ -63,6 +66,28 @@ describe('effect-compiler-types', () => {
     assert.ok(runtime.compiledLifecycleEffects instanceof Map);
     assert.equal(runtime.compiledLifecycleEffects.size, 1);
     assert.ok(runtime.compiledLifecycleEffects.has(makeCompiledLifecycleEffectKey(asPhaseId('main'), 'onEnter')));
+  });
+
+  it('precomputes always-complete action ids in createGameDefRuntime', () => {
+    const actionId = asActionId('pass');
+    const runtime = createGameDefRuntime({
+      ...createEmptyDef(),
+      actions: [{
+        id: actionId,
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+        capabilities: [],
+      }],
+    });
+
+    assert.ok(runtime.alwaysCompleteActionIds instanceof Set);
+    assert.equal(runtime.alwaysCompleteActionIds.has(actionId), true);
   });
 
   it('re-exports the compiled effect contract through the kernel barrel', () => {

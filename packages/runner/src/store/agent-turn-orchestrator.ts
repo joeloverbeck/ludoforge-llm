@@ -1,11 +1,12 @@
 import type {
   AgentDecisionTrace,
+  ClassifiedMove,
   GameDef,
   GameDefRuntime,
   GameState,
-  Move,
   PlayerId,
   Rng,
+  TrustedExecutableMove,
 } from '@ludoforge/engine/runtime';
 import { createGameDefRuntime, createRng } from '@ludoforge/engine/runtime';
 
@@ -23,7 +24,7 @@ export interface InitializeAgentTurnSessionInput {
 export interface ResolveAgentTurnStepInput {
   readonly controller: SeatController | undefined;
   readonly def: GameDef;
-  readonly legalMoves: readonly Move[];
+  readonly legalMoves: readonly ClassifiedMove[];
   readonly playerId: PlayerId;
   readonly state: GameState;
 }
@@ -33,7 +34,7 @@ export type AgentTurnStepResult =
   | { readonly kind: 'illegal-template'; readonly error: unknown }
   | { readonly kind: 'no-legal-moves' }
   | { readonly kind: 'no-session' }
-  | { readonly kind: 'selected-move'; readonly move: Move; readonly agentDecision?: AgentDecisionTrace };
+  | { readonly kind: 'selected-move'; readonly move: TrustedExecutableMove; readonly agentDecision?: AgentDecisionTrace };
 
 export interface AgentTurnOrchestrator {
   resetSession(): void;

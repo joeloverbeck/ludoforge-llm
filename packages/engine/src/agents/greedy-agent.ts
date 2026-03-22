@@ -1,6 +1,6 @@
-import { applyMove } from '../kernel/apply-move.js';
+import { applyTrustedMove } from '../kernel/apply-move.js';
 import { toMoveIdentityKey } from '../kernel/move-identity.js';
-import type { Agent, Move } from '../kernel/types.js';
+import type { Agent, TrustedExecutableMove } from '../kernel/types.js';
 import { evaluateState } from './evaluate-state.js';
 import { pickRandom, selectStochasticFallback } from './agent-move-selection.js';
 import { preparePlayableMoves } from './prepare-playable-moves.js';
@@ -53,7 +53,7 @@ export class GreedyAgent implements Agent {
           agent: { kind: 'builtin', builtinId: 'greedy' },
           candidateCount: stochasticMoves.length,
           selectedIndex: stochasticMoves.findIndex((move) => move === fallback.move),
-          selectedStableMoveKey: toMoveIdentityKey(input.def, fallback.move),
+          selectedStableMoveKey: toMoveIdentityKey(input.def, fallback.move.move),
         },
       };
     }
@@ -71,10 +71,10 @@ export class GreedyAgent implements Agent {
 
     let bestMove = candidates.moves[0];
     let bestScore = Number.NEGATIVE_INFINITY;
-    const tiedBestMoves: Move[] = [];
+    const tiedBestMoves: TrustedExecutableMove[] = [];
 
     for (const move of candidates.moves) {
-      const nextState = applyMove(input.def, input.state, move, undefined, input.runtime).state;
+      const nextState = applyTrustedMove(input.def, input.state, move, undefined, input.runtime).state;
       const score = evaluateState(input.def, nextState, input.playerId, input.runtime);
       if (score > bestScore) {
         bestScore = score;
@@ -99,7 +99,7 @@ export class GreedyAgent implements Agent {
           agent: { kind: 'builtin', builtinId: 'greedy' },
           candidateCount: candidates.moves.length,
           selectedIndex: candidates.moves.findIndex((move) => move === bestMove),
-          selectedStableMoveKey: toMoveIdentityKey(input.def, bestMove),
+          selectedStableMoveKey: toMoveIdentityKey(input.def, bestMove.move),
         },
       };
     }
@@ -113,7 +113,7 @@ export class GreedyAgent implements Agent {
         agent: { kind: 'builtin', builtinId: 'greedy' },
         candidateCount: candidates.moves.length,
         selectedIndex: candidates.moves.findIndex((move) => move === selectedMove),
-        selectedStableMoveKey: toMoveIdentityKey(input.def, selectedMove),
+        selectedStableMoveKey: toMoveIdentityKey(input.def, selectedMove.move),
       },
     };
   }

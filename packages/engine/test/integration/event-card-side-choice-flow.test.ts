@@ -159,9 +159,9 @@ describe('event card side choice flow (integration)', () => {
     const def = makeDef(dualUseCard);
     const state = makeState('card-dual');
     const result = enumerateLegalMoves(def, state);
-    const eventMoves = result.moves.filter((m) => m.actionId === asActionId('event'));
+    const eventMoves = result.moves.filter(({ move }) => move.actionId === asActionId('event'));
     assert.equal(eventMoves.length, 2, 'should enumerate both sides as separate moves');
-    const sides = eventMoves.map((m) => m.params.side);
+    const sides = eventMoves.map(({ move }) => move.params.side);
     assert.ok(sides.includes('unshaded'), 'should include unshaded');
     assert.ok(sides.includes('shaded'), 'should include shaded');
   });

@@ -5,6 +5,7 @@ import { createAgent, normalizeAgentDescriptor, parseAgentDescriptor, parseAgent
 import { GreedyAgent } from '../../../src/agents/greedy-agent.js';
 import { PolicyAgent } from '../../../src/agents/policy-agent.js';
 import { RandomAgent } from '../../../src/agents/random-agent.js';
+import { completeClassifiedMoves } from '../../helpers/classified-move-fixtures.js';
 import {
   asActionId,
   asPhaseId,
@@ -165,7 +166,7 @@ function createInput(def: GameDef): Parameters<PolicyAgent['chooseMove']>[0] {
     def,
     state,
     playerId: asPlayerId(0),
-    legalMoves,
+    legalMoves: completeClassifiedMoves(legalMoves),
     rng: createRng(7n),
   };
 }
@@ -232,7 +233,7 @@ describe('createAgent', () => {
     const agent = createAgent({ kind: 'policy' });
     const result = agent.chooseMove(createInput(def));
 
-    assert.deepEqual(result.move, { actionId: asActionId('pass'), params: {} });
+    assert.deepEqual(result.move.move, { actionId: asActionId('pass'), params: {} });
     assert.equal(result.agentDecision?.kind, 'policy');
     if (result.agentDecision?.kind !== 'policy') {
       assert.fail('expected policy agent decision');
@@ -246,7 +247,7 @@ describe('createAgent', () => {
     const agent = createAgent({ kind: 'policy', profileId: 'aggressive' });
     const result = agent.chooseMove(createInput(def));
 
-    assert.deepEqual(result.move, { actionId: asActionId('event'), params: {} });
+    assert.deepEqual(result.move.move, { actionId: asActionId('event'), params: {} });
     assert.equal(result.agentDecision?.kind, 'policy');
     if (result.agentDecision?.kind !== 'policy') {
       assert.fail('expected policy agent decision');

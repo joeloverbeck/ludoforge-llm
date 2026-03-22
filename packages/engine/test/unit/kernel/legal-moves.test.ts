@@ -152,6 +152,39 @@ const makeEventLegalMovesFixture = (card: EventCardDef): { def: GameDef; state: 
 };
 
 describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
+  it('enumerateLegalMoves returns classified complete moves for simple parameterless actions', () => {
+    const action: ActionDef = {
+      id: asActionId('simple'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const state = makeBaseState();
+    const result = enumerateLegalMoves(makeBaseDef({ actions: [action] }), state);
+
+    assert.equal(result.moves.length, 1);
+    assert.deepEqual(result.moves[0]?.move, { actionId: asActionId('simple'), params: {} });
+    assert.deepEqual(result.moves[0]?.viability, {
+      viable: true,
+      complete: true,
+      move: { actionId: asActionId('simple'), params: {} },
+      warnings: [],
+    });
+    assert.deepEqual(result.moves[0]?.trustedMove, {
+      actionId: asActionId('simple'),
+      params: {},
+      move: { actionId: asActionId('simple'), params: {} },
+      provenance: 'enumerateLegalMoves',
+      sourceStateHash: state.stateHash,
+    });
+  });
+
   it('supports actions declared across multiple phases', () => {
     const action: ActionDef = {
       id: asActionId('multiPhaseAction'),
@@ -349,6 +382,7 @@ phase: [asPhaseId('main')],
             eligibility: { seats: ['0', '1'] },
 
             windows: [],
+            actionClassByActionId: { noop: 'noop' },
             optionMatrix: [],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -404,6 +438,7 @@ phase: [asPhaseId('main')],
             eligibility: { seats: ['bogus-seat', 'us'] },
 
             windows: [],
+            actionClassByActionId: {},
             optionMatrix: [],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -1058,7 +1093,7 @@ phase: [asPhaseId('main')],
     assert.deepStrictEqual(moves[0]?.params, {});
   });
 
-  it('does not enumerate required free-operation templates that have no outcome-policy-satisfying completion', () => {
+  it('enumerates required free-operation templates even when outcome policy cannot be satisfied so the obligation remains visible', () => {
     const action: ActionDef = {
       id: asActionId('freeOp'),
       actor: 'active',
@@ -1105,7 +1140,9 @@ phase: [asPhaseId('main')],
       ],
     });
 
-    assert.deepStrictEqual(legalMoves(def, state), []);
+    const moves = legalMoves(def, state);
+    assert.equal(moves.length > 0, true, 'required grants must surface their moves so the obligation is visible');
+    assert.equal(moves.every((m) => m.freeOperation === true), true, 'all surfaced moves should be free operations');
   });
 
   it('6. limited operations produce template moves when within limits', () => {
@@ -1575,6 +1612,7 @@ phase: [asPhaseId('main')],
             eligibility: { seats: ['0', '1'] },
 
             windows: [],
+            actionClassByActionId: { operation: 'operation' },
             optionMatrix: [],
             passRewards: [],
             freeOperationActionIds: ['operation'],
@@ -1683,6 +1721,7 @@ phase: [asPhaseId('main')],
             eligibility: { seats: ['0', '1'] },
 
             windows: [],
+            actionClassByActionId: { operation: 'operation' },
             optionMatrix: [],
             passRewards: [],
             freeOperationActionIds: ['operation'],
@@ -1786,6 +1825,7 @@ phase: [asPhaseId('main')],
             eligibility: { seats: ['0', '1'] },
 
             windows: [],
+            actionClassByActionId: { operation: 'operation' },
             optionMatrix: [],
             passRewards: [],
             freeOperationActionIds: ['operation'],
@@ -1984,7 +2024,7 @@ phase: [asPhaseId('main')],
       budgets: { maxTemplates: 1 },
     });
 
-    assert.deepEqual(result.moves.map((move) => move.actionId), [asActionId('first')]);
+    assert.deepEqual(result.moves.map(({ move }) => move.actionId), [asActionId('first')]);
     assert.equal(result.warnings.some((warning) => warning.code === 'MOVE_ENUM_TEMPLATE_BUDGET_EXCEEDED'), true);
   });
 
@@ -2008,7 +2048,7 @@ phase: [asPhaseId('main')],
       budgets: { maxParamExpansions: 2 },
     });
 
-    assert.deepEqual(result.moves, [{ actionId: asActionId('expand'), params: { a: 'x', b: '1' } }]);
+    assert.deepEqual(result.moves.map(({ move }) => move), [{ actionId: asActionId('expand'), params: { a: 'x', b: '1' } }]);
     assert.equal(result.warnings.some((warning) => warning.code === 'MOVE_ENUM_PARAM_EXPANSION_BUDGET_EXCEEDED'), true);
   });
 
@@ -2051,7 +2091,7 @@ phase: [asPhaseId('main')],
       budgets: { maxDecisionProbeSteps: 0 },
     });
 
-    assert.deepEqual(result.moves, [{ actionId: asActionId('needsDecision'), params: {} }]);
+    assert.deepEqual(result.moves.map(({ move }) => move), [{ actionId: asActionId('needsDecision'), params: {} }]);
     assert.equal(result.warnings.some((warning) => warning.code === 'MOVE_ENUM_DECISION_PROBE_STEP_BUDGET_EXCEEDED'), true);
   });
 
@@ -2101,6 +2141,7 @@ phase: [asPhaseId('main')],
             eligibility: { seats: ['0', '1'] },
 
             windows: [],
+            actionClassByActionId: { operation: 'operation' },
             optionMatrix: [],
             passRewards: [],
             freeOperationActionIds: ['operation'],
@@ -2125,7 +2166,7 @@ phase: [asPhaseId('main')],
     const result = enumerateLegalMoves(def, state, { budgets: { maxDecisionProbeSteps: 0 } });
     assert.equal(
       result.moves.some(
-        (move) => String(move.actionId) === 'operation' && move.freeOperation === true,
+        ({ move }) => String(move.actionId) === 'operation' && move.freeOperation === true,
       ),
       true,
     );
@@ -2178,6 +2219,7 @@ phase: [asPhaseId('main')],
             eligibility: { seats: ['0', '1'] },
 
             windows: [],
+            actionClassByActionId: { operation: 'operation' },
             optionMatrix: [],
             passRewards: [],
             freeOperationActionIds: ['operation'],
@@ -2333,6 +2375,7 @@ phase: [asPhaseId('main')],
             eligibility: { seats: ['0', '1'] },
 
             windows: [],
+            actionClassByActionId: { freeOpDeferrableMissingBinding: 'operation' },
             optionMatrix: [],
             passRewards: [],
             freeOperationActionIds: ['freeOpDeferrableMissingBinding'],
@@ -2398,6 +2441,7 @@ phase: [asPhaseId('main')],
             eligibility: { seats: ['0', '1'] },
 
             windows: [],
+            actionClassByActionId: { freeOpNonDeferrableError: 'operation' },
             optionMatrix: [],
             passRewards: [],
             freeOperationActionIds: ['freeOpNonDeferrableError'],
@@ -2445,6 +2489,7 @@ phase: [asPhaseId('main')],
             eligibility: { seats: ['0', '1'] },
 
             windows: [],
+            actionClassByActionId: { operation: 'operation' },
             optionMatrix: [{ first: 'operation', second: ['operation', 'limitedOperation'] }],
             passRewards: [],
             freeOperationActionIds: ['operation'],
@@ -2531,6 +2576,7 @@ phase: [asPhaseId('main')],
             cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
             eligibility: { seats: ['0', '1'] },
             windows: [],
+            actionClassByActionId: { operation: 'operation' },
             optionMatrix: [],
             passRewards: [],
             freeOperationActionIds: ['operation'],
@@ -2591,6 +2637,7 @@ phase: [asPhaseId('main')],
             eligibility: { seats: ['0', '1'] },
 
             windows: [],
+            actionClassByActionId: { operation: 'operation' },
             optionMatrix: [{ first: 'operation', second: ['operation', 'limitedOperation'] }],
             passRewards: [],
             durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
@@ -2653,6 +2700,7 @@ phase: [asPhaseId('main')],
             eligibility: { seats: ['0', '1'] },
 
             windows: [],
+            actionClassByActionId: { operation: 'operation' },
             optionMatrix: [{ first: 'operation', second: ['operation', 'limitedOperation'] }],
             passRewards: [],
             freeOperationActionIds: ['operation'],
@@ -3369,7 +3417,7 @@ phase: [asPhaseId('main')],
     });
 
     const result = enumerateLegalMoves(def, state, { budgets: { maxDecisionProbeSteps: 0 } });
-    assert.deepEqual(result.moves, [
+    assert.deepEqual(result.moves.map(({ move }) => move), [
       {
         actionId,
         params: {
@@ -3663,7 +3711,7 @@ describe('legalMoves plain-action feasibility probe', () => {
 
     const result = enumerateLegalMoves(def, state, { probePlainActionFeasibility: true, budgets: { maxDecisionProbeSteps: 0 } });
     assert.equal(result.moves.length, 1, 'when probe budget is zero, move should be kept (conservative)');
-    assert.equal(result.moves[0]?.actionId, asActionId('patrol'));
+    assert.equal(result.moves[0]?.move.actionId, asActionId('patrol'));
   });
 
   it('35. pipeline actions are not double-probed', () => {
@@ -3814,6 +3862,7 @@ describe('legalMoves seat-resolution lifecycle architecture guard', () => {
             eligibility: { seats: ['0', '1'] },
 
             windows: [],
+            actionClassByActionId: { operation: 'operation' },
             optionMatrix: [{ first: 'operation', second: ['operation'] }],
             passRewards: [],
             freeOperationActionIds: ['operation'],

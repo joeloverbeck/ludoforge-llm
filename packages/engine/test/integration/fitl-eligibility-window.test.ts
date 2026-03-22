@@ -41,6 +41,7 @@ const createDef = (): GameDef =>
             { id: 'remain-eligible', duration: 'nextTurn', usages: ['eligibilityOverride'] },
             { id: 'force-ineligible', duration: 'nextTurn', usages: ['eligibilityOverride'] },
           ],
+          actionClassByActionId: { event: 'event', operation: 'operation' },
           optionMatrix: [{ first: 'event', second: ['operation'] }],
           passRewards: [],
           freeOperationActionIds: ['operation'],

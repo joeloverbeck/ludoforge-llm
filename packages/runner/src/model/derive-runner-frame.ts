@@ -130,7 +130,7 @@ export function deriveRunnerFrame(
     isInInterrupt: interruptStack.length > 0,
     phaseName: String(state.currentPhase),
     eventDecks,
-    actionGroups: deriveActionGroups(context.legalMoveResult?.moves ?? []),
+    actionGroups: deriveActionGroups((context.legalMoveResult?.moves ?? []).map(({ move }) => move)),
     choiceBreadcrumb: deriveChoiceBreadcrumb(context, zonesById),
     choiceContext,
     choiceUi,

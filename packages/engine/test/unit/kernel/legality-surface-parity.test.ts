@@ -97,6 +97,7 @@ const makeCardDrivenFreeOpDef = (operationActionId: ReturnType<typeof asActionId
           eligibility: { seats: ['0', '1'] },
 
           windows: [],
+          actionClassByActionId: { [String(operationActionId)]: 'operation', 'operation-alt': 'operation' },
           optionMatrix: [],
           passRewards: [],
           freeOperationActionIds: [String(operationActionId)],
@@ -958,6 +959,7 @@ describe('legality surface parity', () => {
             eligibility: { seats: ['0', '1'] },
 
             windows: [],
+            actionClassByActionId: { [String(operationActionId)]: 'operation' },
             optionMatrix: [],
             passRewards: [],
             freeOperationActionIds: [String(operationActionId)],

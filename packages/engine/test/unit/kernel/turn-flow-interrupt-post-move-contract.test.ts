@@ -39,6 +39,7 @@ const createDef = (): GameDef =>
             seats: ['0', '1', '2', '3'],
           },
           windows: [{ id: 'remain-eligible', duration: 'nextTurn', usages: ['eligibilityOverride'] }],
+          actionClassByActionId: { event: 'event', operation: 'operation' },
           optionMatrix: [{ first: 'event', second: ['operation'] }],
           passRewards: [],
           freeOperationActionIds: ['operation'],

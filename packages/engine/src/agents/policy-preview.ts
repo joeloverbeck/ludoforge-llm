@@ -1,6 +1,6 @@
 import { computeDerivedMetricValue } from '../kernel/derived-values.js';
 import { derivePlayerObservation } from '../kernel/observation.js';
-import { applyMove } from '../kernel/apply-move.js';
+import { applyTrustedMove } from '../kernel/apply-move.js';
 import { buildSeatResolutionIndex, resolvePlayerIndexForSeatValue, type SeatResolutionIndex } from '../kernel/identity.js';
 import { classifyPlayableMoveCandidate, type PlayableCandidateClassification } from '../kernel/playable-candidate.js';
 import type { PlayerId } from '../kernel/branded.js';
@@ -35,7 +35,7 @@ export interface PolicyPreviewDependencies {
   readonly applyMove?: (
     def: GameDef,
     state: GameState,
-    move: Move,
+    move: import('../kernel/types.js').TrustedExecutableMove,
     options?: undefined,
     runtime?: GameDefRuntime,
   ) => { readonly state: GameState };
@@ -74,7 +74,7 @@ type PreviewOutcome =
 
 const defaultDependencies = {
   classifyPlayableMoveCandidate,
-  applyMove,
+  applyMove: applyTrustedMove,
   derivePlayerObservation,
   computeDerivedMetricValue,
 } satisfies Required<PolicyPreviewDependencies>;

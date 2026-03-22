@@ -154,6 +154,7 @@ const createRedeployCommitResetDef = (options: CoupFixtureOptions): GameDef => {
           cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
           eligibility: { seats: ['US', 'ARVN'] },
           windows: [],
+          actionClassByActionId: { pass: 'pass' },
           optionMatrix: [],
           passRewards: [],
           durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],

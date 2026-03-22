@@ -4,6 +4,12 @@ import { describe, it } from 'node:test';
 import { pickRandom } from '../../../src/agents/agent-move-selection.js';
 import { GreedyAgent } from '../../../src/agents/greedy-agent.js';
 import {
+  completeClassifiedMove,
+  completeClassifiedMoves,
+  pendingClassifiedMove,
+  stochasticClassifiedMove,
+} from '../../helpers/classified-move-fixtures.js';
+import {
   createTemplateChooseNDuplicatesAction,
   createTemplateChooseNDuplicatesProfile,
   createTemplateChooseOneAction,
@@ -66,7 +72,7 @@ const choose = (def: GameDef, seed = 5n) => {
     def,
     state,
     playerId: asPlayerId(0),
-    legalMoves: moves,
+    legalMoves: completeClassifiedMoves(moves, state.stateHash),
     rng: createRng(seed),
   });
 };
@@ -199,14 +205,14 @@ describe('GreedyAgent core', () => {
       def,
       state,
       playerId: asPlayerId(0),
-      legalMoves: moves,
+      legalMoves: completeClassifiedMoves(moves, state.stateHash),
       rng: createRng(99n),
     });
     const second = agent.chooseMove({
       def,
       state,
       playerId: asPlayerId(0),
-      legalMoves: moves,
+      legalMoves: completeClassifiedMoves(moves, state.stateHash),
       rng: createRng(99n),
     });
 
@@ -227,7 +233,7 @@ describe('GreedyAgent core', () => {
       def,
       state,
       playerId: asPlayerId(0),
-      legalMoves: moves,
+      legalMoves: completeClassifiedMoves(moves, state.stateHash),
       rng,
     });
 
@@ -248,7 +254,7 @@ describe('GreedyAgent core', () => {
       def,
       state,
       playerId: asPlayerId(0),
-      legalMoves: moves,
+      legalMoves: completeClassifiedMoves(moves, state.stateHash),
       rng,
     });
 
@@ -269,7 +275,7 @@ describe('GreedyAgent core', () => {
       def,
       state: stateStub,
       playerId: asPlayerId(0),
-      legalMoves: [templateMove],
+      legalMoves: [pendingClassifiedMove(templateMove)],
       rng: createRng(42n),
     });
 
@@ -304,7 +310,7 @@ describe('GreedyAgent core', () => {
       def,
       state: stateStub,
       playerId: asPlayerId(0),
-      legalMoves: [templateMove],
+      legalMoves: [pendingClassifiedMove(templateMove)],
       rng: createRng(77n),
     });
 
@@ -326,7 +332,7 @@ describe('GreedyAgent core', () => {
       def,
       state: stateStub,
       playerId: asPlayerId(0),
-      legalMoves: [templateMove],
+      legalMoves: [pendingClassifiedMove(templateMove)],
       rng: createRng(42n),
     });
 
@@ -346,7 +352,7 @@ describe('GreedyAgent core', () => {
       def,
       state: stateStub,
       playerId: asPlayerId(0),
-      legalMoves: [templateMove],
+      legalMoves: [pendingClassifiedMove(templateMove)],
       rng: createRng(42n),
     });
 
@@ -413,7 +419,7 @@ describe('GreedyAgent core', () => {
       def,
       state: stateStub,
       playerId: asPlayerId(0),
-      legalMoves: [templateMove],
+      legalMoves: [stochasticClassifiedMove(templateMove)],
       rng: createRng(42n),
     });
 
@@ -489,7 +495,7 @@ describe('GreedyAgent core', () => {
       def,
       state: stateStub,
       playerId: asPlayerId(0),
-      legalMoves: moves,
+      legalMoves: moves.map((move) => stochasticClassifiedMove(move)),
       rng: createRng(77n),
     });
 
@@ -557,7 +563,7 @@ describe('GreedyAgent core', () => {
       def,
       state: stateStub,
       playerId: asPlayerId(0),
-      legalMoves: [stochasticMove, simpleMove],
+      legalMoves: [stochasticClassifiedMove(stochasticMove), completeClassifiedMove(simpleMove)],
       rng: createRng(42n),
     });
 

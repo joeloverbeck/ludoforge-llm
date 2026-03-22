@@ -3,14 +3,15 @@ import { describe, it } from 'node:test';
 
 import { assertValidatedGameDef, asActionId, asPhaseId, type Agent, type ValidatedGameDef } from '../../../src/kernel/index.js';
 import { runGame } from '../../../src/sim/index.js';
+import { trustedMove } from '../../helpers/classified-move-fixtures.js';
 
 const firstLegalAgent: Agent = {
   chooseMove(input) {
-    const move = input.legalMoves[0];
+    const move = input.legalMoves[0]?.move;
     if (move === undefined) {
       throw new Error('firstLegalAgent requires at least one legal move');
     }
-    return { move, rng: input.rng };
+    return { move: trustedMove(move, input.state.stateHash), rng: input.rng };
   },
 };
 

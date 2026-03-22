@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { PolicyAgent } from '../../../src/agents/policy-agent.js';
+import { completeClassifiedMoves, pendingClassifiedMove } from '../../helpers/classified-move-fixtures.js';
 import { createTemplateChooseOneAction, createTemplateChooseOneProfile } from '../../helpers/agent-template-fixtures.js';
 import {
   type ActionPipelineDef,
@@ -218,7 +219,7 @@ function createInput(def: GameDef): Parameters<PolicyAgent['chooseMove']>[0] {
     def,
     state,
     playerId: asPlayerId(0),
-    legalMoves,
+    legalMoves: completeClassifiedMoves(legalMoves),
     rng: createRng(7n),
   };
 }
@@ -237,7 +238,7 @@ describe('PolicyAgent', () => {
 
     const result = agent.chooseMove(createInput(def));
 
-    assert.deepEqual(result.move, { actionId: asActionId('pass'), params: {} });
+    assert.deepEqual(result.move.move, { actionId: asActionId('pass'), params: {} });
     assert.equal(result.agentDecision?.kind, 'policy');
     if (result.agentDecision?.kind !== 'policy') {
       assert.fail('expected policy agent decision');
@@ -254,7 +255,7 @@ describe('PolicyAgent', () => {
 
     const result = agent.chooseMove(createInput(def));
 
-    assert.deepEqual(result.move, { actionId: asActionId('event'), params: {} });
+    assert.deepEqual(result.move.move, { actionId: asActionId('event'), params: {} });
     assert.equal(result.agentDecision?.kind, 'policy');
     if (result.agentDecision?.kind !== 'policy') {
       assert.fail('expected policy agent decision');
@@ -281,14 +282,14 @@ describe('PolicyAgent', () => {
       def,
       state,
       playerId: asPlayerId(1),
-      legalMoves: [
+      legalMoves: completeClassifiedMoves([
         { actionId: asActionId('pass'), params: {} },
         { actionId: asActionId('event'), params: {} },
-      ],
+      ]),
       rng: createRng(7n),
     });
 
-    assert.deepEqual(result.move, { actionId: asActionId('pass'), params: {} });
+    assert.deepEqual(result.move.move, { actionId: asActionId('pass'), params: {} });
     assert.equal(result.agentDecision?.kind, 'policy');
     if (result.agentDecision?.kind !== 'policy') {
       assert.fail('expected policy agent decision');
@@ -326,7 +327,7 @@ describe('PolicyAgent', () => {
       def,
       state,
       playerId: asPlayerId(0),
-      legalMoves: [{ actionId: asActionId('op1'), params: {} }],
+      legalMoves: [pendingClassifiedMove({ actionId: asActionId('op1'), params: {} })],
       rng: createRng(42n),
     });
 

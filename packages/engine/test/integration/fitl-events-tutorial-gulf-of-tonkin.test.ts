@@ -7,6 +7,7 @@ import {
   asPlayerId,
   asTokenId,
   createRng,
+  enumerateLegalMoves,
   ILLEGAL_MOVE_REASONS,
   initialState,
   legalChoicesEvaluate,
@@ -803,13 +804,17 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
       false,
       'Expected legalMoves to emit base event params only',
     );
+    const classifiedTemplate = enumerateLegalMoves(def, setup).moves.find(
+      ({ move }) => String(move.actionId) === 'event' && move.params.side === 'unshaded',
+    );
+    assert.notEqual(classifiedTemplate, undefined, 'Expected classified unshaded event template move');
 
     const agent = new RandomAgent();
     const selected = agent.chooseMove({
       def,
       state: setup,
       playerId: setup.activePlayer,
-      legalMoves: [template!],
+      legalMoves: [classifiedTemplate!],
       rng: createRng(1302n),
     }).move;
 
@@ -856,13 +861,17 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
       false,
       'Expected legalMoves to emit base event params only',
     );
+    const classifiedTemplate = enumerateLegalMoves(def, setup).moves.find(
+      ({ move }) => String(move.actionId) === 'event' && move.params.side === 'unshaded',
+    );
+    assert.notEqual(classifiedTemplate, undefined, 'Expected classified unshaded event template move');
 
     const agent = new GreedyAgent({ completionsPerTemplate: 2 });
     const selected = agent.chooseMove({
       def,
       state: setup,
       playerId: setup.activePlayer,
-      legalMoves: [template!],
+      legalMoves: [classifiedTemplate!],
       rng: createRng(1303n),
     }).move;
 

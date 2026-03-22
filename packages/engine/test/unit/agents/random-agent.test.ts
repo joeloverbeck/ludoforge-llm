@@ -3,6 +3,12 @@ import { describe, it } from 'node:test';
 
 import { RandomAgent } from '../../../src/agents/random-agent.js';
 import {
+  completeClassifiedMove,
+  completeClassifiedMoves,
+  pendingClassifiedMove,
+  stochasticClassifiedMove,
+} from '../../helpers/classified-move-fixtures.js';
+import {
   createTemplateChooseNDuplicatesAction,
   createTemplateChooseNDuplicatesProfile,
   createTemplateChooseOneAction,
@@ -81,7 +87,7 @@ const createInput = (legalMoves: readonly Move[], rngSeed = 42n) => ({
   def: createDefForMoves(legalMoves),
   state: stateStub,
   playerId: asPlayerId(0),
-  legalMoves,
+  legalMoves: completeClassifiedMoves(legalMoves),
   rng: createRng(rngSeed),
 });
 
@@ -134,7 +140,7 @@ describe('RandomAgent', () => {
     const input = createInput([move], 19n);
     const result = agent.chooseMove(input);
 
-    assert.deepEqual(result.move, move);
+    assert.deepEqual(result.move.move, move);
     assert.equal(result.rng, input.rng);
   });
 
@@ -145,7 +151,7 @@ describe('RandomAgent', () => {
     const [expectedIndex, expectedRng] = nextInt(input.rng, 0, legalMoves.length - 1);
     const result = agent.chooseMove(input);
 
-    assert.deepEqual(result.move, legalMoves[expectedIndex]);
+    assert.deepEqual(result.move.move, legalMoves[expectedIndex]);
     assert.deepEqual(result.rng, expectedRng);
   });
 
@@ -178,7 +184,7 @@ describe('RandomAgent', () => {
         def: createDefForMoves(legalMoves),
         state: stateStub,
         playerId: asPlayerId(0),
-        legalMoves,
+        legalMoves: completeClassifiedMoves(legalMoves),
         rng,
       });
       seen.add(result.move.actionId);
@@ -201,7 +207,7 @@ describe('RandomAgent', () => {
       def,
       state: stateStub,
       playerId: asPlayerId(0),
-      legalMoves: [templateMove],
+      legalMoves: [pendingClassifiedMove(templateMove)],
       rng: createRng(42n),
     });
 
@@ -220,7 +226,7 @@ describe('RandomAgent', () => {
     const first = agent.chooseMove(createInput(legalMoves, 42n));
     const [expectedIndex] = nextInt(createRng(42n), 0, legalMoves.length - 1);
 
-    assert.deepEqual(first.move, legalMoves[expectedIndex]);
+    assert.deepEqual(first.move.move, legalMoves[expectedIndex]);
   });
 
   it('produces deterministic results with same seed for template moves', () => {
@@ -235,7 +241,7 @@ describe('RandomAgent', () => {
       def,
       state: stateStub,
       playerId: asPlayerId(0),
-      legalMoves: [templateMove],
+      legalMoves: [pendingClassifiedMove(templateMove)],
       rng: createRng(77n),
     });
 
@@ -256,7 +262,7 @@ describe('RandomAgent', () => {
       def,
       state: stateStub,
       playerId: asPlayerId(0),
-      legalMoves: [templateMove],
+      legalMoves: [pendingClassifiedMove(templateMove)],
       rng: createRng(42n),
     });
 
@@ -295,7 +301,7 @@ describe('RandomAgent', () => {
       def,
       state: stateStub,
       playerId: asPlayerId(0),
-      legalMoves: [templateMove, simpleMove],
+      legalMoves: [pendingClassifiedMove(templateMove), completeClassifiedMove(simpleMove)],
       rng: createRng(42n),
     });
 
@@ -360,7 +366,7 @@ describe('RandomAgent', () => {
       def,
       state: stateStub,
       playerId: asPlayerId(0),
-      legalMoves: [templateMove],
+      legalMoves: [stochasticClassifiedMove(templateMove)],
       rng: createRng(42n),
     });
 
@@ -432,7 +438,7 @@ describe('RandomAgent', () => {
       def,
       state: stateStub,
       playerId: asPlayerId(0),
-      legalMoves: [stochasticMove, simpleMove],
+      legalMoves: [stochasticClassifiedMove(stochasticMove), completeClassifiedMove(simpleMove)],
       rng: createRng(42n),
     });
 
@@ -509,7 +515,7 @@ describe('RandomAgent', () => {
       def,
       state: stateStub,
       playerId: asPlayerId(0),
-      legalMoves: moves,
+      legalMoves: moves.map((move) => stochasticClassifiedMove(move)),
       rng: createRng(77n),
     });
 

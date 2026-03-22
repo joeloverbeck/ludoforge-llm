@@ -77,6 +77,7 @@ import type {
   MoveParamValue,
   Rng,
   RuntimeWarning,
+  TrustedExecutableMove,
   TurnFlowDeferredEventEffectPayload,
   TurnFlowReleasedDeferredEventEffect,
   TriggerLogEntry,
@@ -119,6 +120,14 @@ const canonicalTurnFlowMove = (
   },
 });
 
+/**
+ * Enforcement half of the free-operation outcome-policy contract.
+ *
+ * `legal-moves.ts` surfaces required grants even when `mustChangeGameplayState`
+ * cannot yet be proven, so the obligation stays visible during enumeration.
+ * This apply-time check is the authoritative gate that rejects completed
+ * free operations which still fail to materially change gameplay state.
+ */
 const validateFreeOperationOutcomePolicy = (
   def: GameDef,
   beforeState: GameState,
@@ -1251,6 +1260,8 @@ const applyMoveCore = (
   perfEnd(profiler, 'executeMoveAction', t0_exec);
 
   const t0_freeOp = perfStart(profiler);
+  // CONTRACT: Pair with legal-moves.ts `isFreeOperationCandidateAdmitted`.
+  // Required grants stay visible during enumeration; outcome policy is enforced here.
   validateFreeOperationOutcomePolicy(def, state, executed.stateWithRng, move, seatResolution);
   perfEnd(profiler, 'validateFreeOperationOutcomePolicy', t0_freeOp);
 
@@ -1539,6 +1550,42 @@ export const applyMove = (def: GameDef, state: GameState, move: Move, options?: 
     return applySimultaneousSubmission(def, state, move, options, runtime);
   }
   return applyMoveCore(def, state, move, options, undefined, runtime);
+};
+
+const assertTrustedExecutableMove = (
+  trustedMove: TrustedExecutableMove,
+  state: GameState,
+): void => {
+  if (typeof trustedMove.sourceStateHash !== 'bigint') {
+    throw new Error('Trusted move is missing a bigint sourceStateHash.');
+  }
+  if (trustedMove.sourceStateHash !== state.stateHash) {
+    throw new Error('Trusted move sourceStateHash does not match the current state.');
+  }
+  if (trustedMove.move === undefined || typeof trustedMove.move !== 'object' || trustedMove.move === null) {
+    throw new Error('Trusted move is missing its executable move payload.');
+  }
+};
+
+export const applyTrustedMove = (
+  def: GameDef,
+  state: GameState,
+  trustedMove: TrustedExecutableMove,
+  options?: ExecutionOptions,
+  runtime?: GameDefRuntime,
+): ApplyMoveResult => {
+  assertTrustedExecutableMove(trustedMove, state);
+  if (def.turnOrder?.type === 'simultaneous') {
+    return applySimultaneousSubmission(def, state, trustedMove.move, options, runtime);
+  }
+  return applyMoveCore(
+    def,
+    state,
+    trustedMove.move,
+    options,
+    { skipValidation: true },
+    runtime,
+  );
 };
 
 export const probeMoveLegality = (

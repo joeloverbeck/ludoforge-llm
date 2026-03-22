@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Large
 **Engine Changes**: Yes — kernel validation and turn-flow-action-class.ts
-**Deps**: EXEASEATPIP-001 (the 3 executeAsSeat defs need the pipeline fix before they can have proper `actionClassByActionId` with `event: 'event'`)
+**Deps**: None
 
 ## Problem
 
@@ -24,7 +24,7 @@ Approximately 20 test files define card-driven `turnFlow` objects without `actio
 2. `turn-flow-action-class.ts:16` uses `?.` on `actionClassByActionId`, making it effectively optional at runtime. Confirmed.
 3. `validate-gamedef-core.ts` has zero validation of `actionClassByActionId` or `turnFlow` — no kernel-side validation exists. Confirmed.
 4. ~20 test files reference `turnFlow:` without `actionClassByActionId`. Confirmed by grep.
-5. EXEASEATPIP-001 must land first — the 3 `executeAsSeat` test defs need the pipeline fix before they can safely receive `event: 'event'` in their `actionClassByActionId`.
+5. The prior `EXEASEATPIP-001` dependency is no longer valid. Those 3 `executeAsSeat` test defs have already been corrected to include `event: 'event'`, so this ticket can proceed independently.
 
 ## Architecture Check
 

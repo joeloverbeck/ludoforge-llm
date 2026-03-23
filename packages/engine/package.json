@@ -52,7 +52,7 @@
     "test:all": "node scripts/run-tests.mjs \"dist/test/unit/**/*.test.js\" \"dist/test/integration/**/*.test.js\" \"dist/test/performance/**/*.test.js\" \"dist/test/memory/**/*.test.js\" \"dist/test/e2e/**/*.test.js\""
   },
   "dependencies": {
-    "yaml": "^2.8.0",
+    "yaml": "^2.8.3",
     "zod": "^4.1.5"
   },
   "devDependencies": {

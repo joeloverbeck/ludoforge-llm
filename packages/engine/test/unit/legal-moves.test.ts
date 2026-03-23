@@ -21,9 +21,10 @@ import {
 import { compileGameSpecToGameDef, createEmptyGameSpecDoc } from '../../src/cnl/index.js';
 import { applyTurnFlowWindowFilters } from '../../src/kernel/legal-moves-turn-order.js';
 import { resolveTurnFlowActionClass } from '../../src/kernel/turn-flow-action-class.js';
+import { asTaggedGameDef } from '../helpers/gamedef-fixtures.js';
 
 const createDef = (): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'legal-moves-test', players: { min: 2, max: 2 } },
     seats: [{ id: '0' }, { id: '1' }, { id: '2' }, { id: '3' }],
     constants: {},
@@ -40,9 +41,9 @@ const createDef = (): GameDef =>
     actions: [
       {
         id: asActionId('wrongPhase'),
-actor: 'active',
-executor: 'actor',
-phase: [asPhaseId('other')],
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('other')],
         params: [],
         pre: null,
         cost: [],
@@ -51,9 +52,9 @@ phase: [asPhaseId('other')],
       },
       {
         id: asActionId('wrongActor'),
-actor: { id: asPlayerId(1) },
-executor: 'actor',
-phase: [asPhaseId('main')],
+        actor: { id: asPlayerId(1) },
+        executor: 'actor',
+        phase: [asPhaseId('main')],
         params: [],
         pre: null,
         cost: [],
@@ -62,9 +63,9 @@ phase: [asPhaseId('main')],
       },
       {
         id: asActionId('limitedTurn'),
-actor: 'active',
-executor: 'actor',
-phase: [asPhaseId('main')],
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
         params: [],
         pre: null,
         cost: [],
@@ -73,9 +74,9 @@ phase: [asPhaseId('main')],
       },
       {
         id: asActionId('comboPre'),
-actor: 'active',
-executor: 'actor',
-phase: [asPhaseId('main')],
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
         params: [
           { name: 'n', domain: { query: 'intsInRange', min: 1, max: 2 } },
           { name: 'c', domain: { query: 'enums', values: ['x', 'y'] } },
@@ -87,9 +88,9 @@ phase: [asPhaseId('main')],
       },
       {
         id: asActionId('invalidExecutorForPlayerCount'),
-actor: 'active',
-executor: { id: asPlayerId(2) },
-phase: [asPhaseId('main')],
+        actor: 'active',
+        executor: { id: asPlayerId(2) },
+        phase: [asPhaseId('main')],
         params: [],
         pre: null,
         cost: [],
@@ -98,9 +99,9 @@ phase: [asPhaseId('main')],
       },
       {
         id: asActionId('invalidActorForPlayerCount'),
-actor: { id: asPlayerId(2) },
-executor: 'actor',
-phase: [asPhaseId('main')],
+        actor: { id: asPlayerId(2) },
+        executor: 'actor',
+        phase: [asPhaseId('main')],
         params: [],
         pre: null,
         cost: [],
@@ -109,9 +110,9 @@ phase: [asPhaseId('main')],
       },
       {
         id: asActionId('dependentDomain'),
-actor: 'active',
-executor: 'actor',
-phase: [asPhaseId('main')],
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
         params: [
           { name: '$owner', domain: { query: 'players' } },
           { name: 'zone', domain: { query: 'zones', filter: { owner: { chosen: '$owner' } } } },
@@ -124,7 +125,7 @@ phase: [asPhaseId('main')],
     ],
     triggers: [],
     terminal: { conditions: [] },
-  }) as unknown as GameDef;
+  });
 
 const createState = (): GameState => ({
   globalVars: {},
@@ -234,8 +235,8 @@ describe('legalMoves', () => {
               name: 'amount',
               domain: {
                 query: 'intsInRange',
-                min: { ref: 'binding', name: 'base' },
-                max: { op: '+', left: { ref: 'binding', name: 'base' }, right: 1 },
+                min: { _t: 2, ref: 'binding', name: 'base' },
+                max: { _t: 6, op: '+', left: { _t: 2, ref: 'binding', name: 'base' }, right: 1 },
               },
             },
           ],
@@ -388,7 +389,7 @@ describe('legalMoves', () => {
   });
 
   it('applies option matrix gating to the second eligible faction after a first event action', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       ...createDef(),
       metadata: { id: 'turnflow-matrix-event', players: { min: 3, max: 3 } },
       turnOrder: {
@@ -415,9 +416,9 @@ describe('legalMoves', () => {
       actions: [
         {
           id: asActionId('pass'),
-actor: 'active',
-executor: 'actor',
-phase: [asPhaseId('main')],
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
           params: [],
           pre: null,
           cost: [],
@@ -427,9 +428,9 @@ phase: [asPhaseId('main')],
         {
           id: asActionId('event'),
 capabilities: ['cardEvent'],
-actor: 'active',
-executor: 'actor',
-phase: [asPhaseId('main')],
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
           params: [],
           pre: null,
           cost: [],
@@ -438,9 +439,9 @@ phase: [asPhaseId('main')],
         },
         {
           id: asActionId('operation'),
-actor: 'active',
-executor: 'actor',
-phase: [asPhaseId('main')],
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
           params: [],
           pre: null,
           cost: [],
@@ -449,9 +450,9 @@ phase: [asPhaseId('main')],
         },
         {
           id: asActionId('limitedOperation'),
-actor: 'active',
-executor: 'actor',
-phase: [asPhaseId('main')],
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
           params: [],
           pre: null,
           cost: [],
@@ -460,9 +461,9 @@ phase: [asPhaseId('main')],
         },
         {
           id: asActionId('operationPlusSpecialActivity'),
-actor: 'active',
-executor: 'actor',
-phase: [asPhaseId('main')],
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
           params: [],
           pre: null,
           cost: [],
@@ -470,7 +471,7 @@ phase: [asPhaseId('main')],
           limits: [],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const state: GameState = {
       ...createState(),
@@ -503,7 +504,7 @@ phase: [asPhaseId('main')],
   });
 
   it('allows only limited operations as second action when first-action class is operation', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       ...createDef(),
       metadata: { id: 'turnflow-matrix-operation', players: { min: 3, max: 3 } },
       turnOrder: {
@@ -529,9 +530,9 @@ phase: [asPhaseId('main')],
       actions: [
         {
           id: asActionId('pass'),
-actor: 'active',
-executor: 'actor',
-phase: [asPhaseId('main')],
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
           params: [],
           pre: null,
           cost: [],
@@ -541,9 +542,9 @@ phase: [asPhaseId('main')],
         {
           id: asActionId('event'),
 capabilities: ['cardEvent'],
-actor: 'active',
-executor: 'actor',
-phase: [asPhaseId('main')],
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
           params: [],
           pre: null,
           cost: [],
@@ -552,9 +553,9 @@ phase: [asPhaseId('main')],
         },
         {
           id: asActionId('operation'),
-actor: 'active',
-executor: 'actor',
-phase: [asPhaseId('main')],
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
           params: [],
           pre: null,
           cost: [],
@@ -563,9 +564,9 @@ phase: [asPhaseId('main')],
         },
         {
           id: asActionId('limitedOperation'),
-actor: 'active',
-executor: 'actor',
-phase: [asPhaseId('main')],
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
           params: [],
           pre: null,
           cost: [],
@@ -573,7 +574,7 @@ phase: [asPhaseId('main')],
           limits: [],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const state: GameState = {
       ...createState(),
@@ -603,7 +604,7 @@ phase: [asPhaseId('main')],
   });
 
   it('resolves card-driven action class from turnFlow.actionClassByActionId even when move.actionClass conflicts', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       ...createDef(),
       metadata: { id: 'turnflow-class-authority', players: { min: 3, max: 3 } },
       turnOrder: {
@@ -625,7 +626,7 @@ phase: [asPhaseId('main')],
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const resolved = resolveTurnFlowActionClass(def, {
       actionId: asActionId('operation'),
@@ -637,7 +638,7 @@ phase: [asPhaseId('main')],
   });
 
   it('applies monsoon action restrictions and pivotal override metadata when lookahead is coup', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       ...createDef(),
       metadata: { id: 'turnflow-monsoon-windows', players: { min: 2, max: 2 } },
       zones: [
@@ -675,9 +676,9 @@ phase: [asPhaseId('main')],
       actions: [
         {
           id: asActionId('pass'),
-actor: 'active',
-executor: 'actor',
-phase: [asPhaseId('main')],
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
           params: [],
           pre: null,
           cost: [],
@@ -686,9 +687,9 @@ phase: [asPhaseId('main')],
         },
         {
           id: asActionId('sweep'),
-actor: 'active',
-executor: 'actor',
-phase: [asPhaseId('main')],
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
           params: [],
           pre: null,
           cost: [],
@@ -697,9 +698,9 @@ phase: [asPhaseId('main')],
         },
         {
           id: asActionId('airLift'),
-actor: 'active',
-executor: 'actor',
-phase: [asPhaseId('main')],
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
           params: [{ name: 'spaces', domain: { query: 'intsInRange', min: 1, max: 3 } }],
           pre: null,
           cost: [],
@@ -708,9 +709,9 @@ phase: [asPhaseId('main')],
         },
         {
           id: asActionId('pivotalEvent'),
-actor: 'active',
-executor: 'actor',
-phase: [asPhaseId('main')],
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
           params: [
             {
               name: 'override',
@@ -723,7 +724,7 @@ phase: [asPhaseId('main')],
           limits: [],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const state: GameState = {
       ...createState(),
@@ -760,7 +761,7 @@ phase: [asPhaseId('main')],
   });
 
   it('supports monsoon maxParamsTotal restrictions across multiple move params', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       ...createDef(),
       metadata: { id: 'turnflow-monsoon-multi-param-cap', players: { min: 2, max: 2 } },
       zones: [
@@ -797,9 +798,9 @@ phase: [asPhaseId('main')],
       actions: [
         {
           id: asActionId('pass'),
-actor: 'active',
-executor: 'actor',
-phase: [asPhaseId('main')],
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
           params: [],
           pre: null,
           cost: [],
@@ -808,9 +809,9 @@ phase: [asPhaseId('main')],
         },
         {
           id: asActionId('airStrike'),
-actor: 'active',
-executor: 'actor',
-phase: [asPhaseId('main')],
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
           params: [
             { name: 'spaces', domain: { query: 'intsInRange', min: 1, max: 2 } },
             { name: '$bonusSpaces', domain: { query: 'intsInRange', min: 0, max: 1 } },
@@ -821,7 +822,7 @@ phase: [asPhaseId('main')],
           limits: [],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const state: GameState = {
       ...createState(),
@@ -858,7 +859,7 @@ phase: [asPhaseId('main')],
   });
 
   it('counts array-valued params in monsoon maxParamsTotal restrictions', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       ...createDef(),
       metadata: { id: 'turnflow-monsoon-array-param-cap', players: { min: 2, max: 2 } },
       zones: [
@@ -894,9 +895,9 @@ phase: [asPhaseId('main')],
       actions: [
         {
           id: asActionId('pass'),
-actor: 'active',
-executor: 'actor',
-phase: [asPhaseId('main')],
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
           params: [],
           pre: null,
           cost: [],
@@ -905,9 +906,9 @@ phase: [asPhaseId('main')],
         },
         {
           id: asActionId('airStrike'),
-actor: 'active',
-executor: 'actor',
-phase: [asPhaseId('main')],
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
           params: [],
           pre: null,
           cost: [],
@@ -915,7 +916,7 @@ phase: [asPhaseId('main')],
           limits: [],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const state: GameState = {
       ...createState(),
@@ -958,7 +959,7 @@ phase: [asPhaseId('main')],
   });
 
   it('enforces pivotal interrupt precedence against current first/second candidates', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       ...createDef(),
       metadata: { id: 'turnflow-pivotal-precedence', players: { min: 2, max: 2 } },
       turnOrder: {
@@ -985,9 +986,9 @@ phase: [asPhaseId('main')],
       actions: [
         {
           id: asActionId('pass'),
-actor: 'active',
-executor: 'actor',
-phase: [asPhaseId('main')],
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
           params: [],
           pre: null,
           cost: [],
@@ -996,9 +997,9 @@ phase: [asPhaseId('main')],
         },
         {
           id: asActionId('pivotalA'),
-actor: 'active',
-executor: 'actor',
-phase: [asPhaseId('main')],
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
           params: [],
           pre: null,
           cost: [],
@@ -1007,9 +1008,9 @@ phase: [asPhaseId('main')],
         },
         {
           id: asActionId('operate'),
-actor: 'active',
-executor: 'actor',
-phase: [asPhaseId('main')],
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
           params: [],
           pre: null,
           cost: [],
@@ -1017,7 +1018,7 @@ phase: [asPhaseId('main')],
           limits: [],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const state: GameState = {
       ...createState(),
@@ -1047,7 +1048,7 @@ phase: [asPhaseId('main')],
   });
 
   it('applies deterministic pivotal cancellation after restriction filtering', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       ...createDef(),
       metadata: { id: 'turnflow-pivotal-cancellation', players: { min: 2, max: 2 } },
       turnOrder: {
@@ -1080,9 +1081,9 @@ phase: [asPhaseId('main')],
       actions: [
         {
           id: asActionId('pass'),
-actor: 'active',
-executor: 'actor',
-phase: [asPhaseId('main')],
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
           params: [],
           pre: null,
           cost: [],
@@ -1091,9 +1092,9 @@ phase: [asPhaseId('main')],
         },
         {
           id: asActionId('pivotalA'),
-actor: 'active',
-executor: 'actor',
-phase: [asPhaseId('main')],
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
           params: [],
           pre: null,
           cost: [],
@@ -1102,9 +1103,9 @@ phase: [asPhaseId('main')],
         },
         {
           id: asActionId('pivotalB'),
-actor: 'active',
-executor: 'actor',
-phase: [asPhaseId('main')],
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
           params: [],
           pre: null,
           cost: [],
@@ -1112,7 +1113,7 @@ phase: [asPhaseId('main')],
           limits: [],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const state: GameState = {
       ...createState(),
@@ -1143,7 +1144,7 @@ phase: [asPhaseId('main')],
   });
 
   it('supports event-card-tag cancellation selectors for interrupt windows', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       ...createDef(),
       metadata: { id: 'turnflow-pivotal-card-tag-cancellation', players: { min: 2, max: 2 } },
       turnOrder: {
@@ -1194,9 +1195,9 @@ phase: [asPhaseId('main')],
       actions: [
         {
           id: asActionId('pass'),
-actor: 'active',
-executor: 'actor',
-phase: [asPhaseId('main')],
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
           params: [],
           pre: null,
           cost: [],
@@ -1205,9 +1206,9 @@ phase: [asPhaseId('main')],
         },
         {
           id: asActionId('pivotalEvent'),
-actor: 'active',
-executor: 'actor',
-phase: [asPhaseId('main')],
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
           params: [
             { name: 'eventCardId', domain: { query: 'enums', values: ['piv-us', 'piv-vc'] } },
           ],
@@ -1217,7 +1218,7 @@ phase: [asPhaseId('main')],
           limits: [],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const state: GameState = {
       ...createState(),
@@ -1248,7 +1249,7 @@ phase: [asPhaseId('main')],
   });
 
   it('emits free-operation template variants before zone decisions are bound when grant action/faction matches', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       ...createDef(),
       metadata: { id: 'free-op-template-zone-filter-discovery', players: { min: 2, max: 2 } },
       zones: [
@@ -1285,9 +1286,9 @@ phase: [asPhaseId('main')],
         },
         {
           id: asActionId('operation'),
-actor: 'active',
-executor: 'actor',
-phase: [asPhaseId('main')],
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
           params: [],
           pre: null,
           cost: [],
@@ -1319,7 +1320,7 @@ phase: [asPhaseId('main')],
           atomicity: 'partial',
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const state: GameState = {
       ...createState(),
@@ -1350,7 +1351,7 @@ phase: [asPhaseId('main')],
               actionIds: ['operation'],
               zoneFilter: {
                 op: '==',
-                left: { ref: 'zoneProp', zone: '$zone', prop: 'country' },
+                left: { _t: 2, ref: 'zoneProp', zone: '$zone', prop: 'country' },
                 right: 'cambodia',
               },
               remainingUses: 1,
@@ -1366,7 +1367,7 @@ phase: [asPhaseId('main')],
   });
 
   it('does not emit free-operation variants when a matching grant is sequence-locked behind an inapplicable earlier step', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       ...createDef(),
       metadata: { id: 'free-op-template-sequence-lock', players: { min: 2, max: 2 } },
       turnOrder: {
@@ -1399,9 +1400,9 @@ phase: [asPhaseId('main')],
         },
         {
           id: asActionId('operation'),
-actor: 'active',
-executor: 'actor',
-phase: [asPhaseId('main')],
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
           params: [],
           pre: null,
           cost: [],
@@ -1409,7 +1410,7 @@ phase: [asPhaseId('main')],
           limits: [],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const state: GameState = {
       ...createState(),
@@ -1458,7 +1459,7 @@ phase: [asPhaseId('main')],
   });
 
   it('enumerates dual-use event side/branch selections deterministically for any active faction', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       ...createDef(),
       metadata: { id: 'dual-use-event-selection-order', players: { min: 2, max: 2 } },
       zones: [
@@ -1469,9 +1470,9 @@ phase: [asPhaseId('main')],
         {
           id: asActionId('event'),
 capabilities: ['cardEvent'],
-actor: 'active',
-executor: 'actor',
-phase: [asPhaseId('main')],
+        actor: 'active',
+        executor: 'actor',
+        phase: [asPhaseId('main')],
           params: [],
           pre: null,
           cost: [],
@@ -1495,7 +1496,7 @@ phase: [asPhaseId('main')],
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const expected: readonly Move[] = [
       {
@@ -1540,7 +1541,7 @@ phase: [asPhaseId('main')],
   });
 
   it('does not route event-card side/branch discovery by misleading action id without cardEvent capability', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       ...createDef(),
       metadata: { id: 'misleading-event-id-without-capability', players: { min: 2, max: 2 } },
       zones: [
@@ -1588,7 +1589,7 @@ phase: [asPhaseId('main')],
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const moves = legalMoves(def, {
       ...createState(),

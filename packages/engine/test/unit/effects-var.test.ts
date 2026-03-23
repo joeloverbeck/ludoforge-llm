@@ -328,7 +328,7 @@ describe('effects var handlers', () => {
           {
             setVar: {
               scope: 'zoneVar',
-              zone: { zoneExpr: { ref: 'binding', name: '$missingZone' } },
+              zone: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$missingZone' } },
               var: 'threat',
               value: 1,
             },
@@ -358,7 +358,7 @@ describe('effects var handlers', () => {
           {
             addVar: {
               scope: 'zoneVar',
-              zone: { zoneExpr: { ref: 'binding', name: '$missingZone' } },
+              zone: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$missingZone' } },
               var: 'threat',
               delta: 1,
             },
@@ -406,7 +406,7 @@ describe('effects var handlers', () => {
         scope: 'pvar',
         player: { chosen: '$target' },
         var: 'mana',
-        delta: { ref: 'binding', name: 'value' },
+        delta: { _t: 2 as const, ref: 'binding', name: 'value' },
       },
     };
 

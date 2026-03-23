@@ -111,8 +111,8 @@ describe('effects token lifecycle', () => {
           type: 'card',
           zone: 'deck:none',
           props: {
-            cost: { op: '+', left: { ref: 'binding', name: '$baseCost' }, right: 1 },
-            label: { ref: 'binding', name: '$label' },
+            cost: { _t: 6 as const, op: '+' as const, left: { _t: 2 as const, ref: 'binding', name: '$baseCost' }, right: 1 },
+            label: { _t: 2 as const, ref: 'binding', name: '$label' },
             frozen: true,
           },
         },
@@ -146,7 +146,7 @@ describe('effects token lifecycle', () => {
           createToken: {
             type: 'card',
             zone: 'deck:none',
-            props: { cost: { op: '+', left: 1, right: 'bad' } },
+            props: { cost: { _t: 6 as const, op: '+' as const, left: 1, right: 'bad' } },
           },
         },
         ctx,
@@ -163,7 +163,7 @@ describe('effects token lifecycle', () => {
     assert.throws(
       () =>
         applyEffect(
-          { createToken: { type: 'card', zone: { zoneExpr: { ref: 'binding', name: '$missingZone' } } } },
+          { createToken: { type: 'card', zone: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$missingZone' } } } },
           ctx,
         ),
       (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'createToken.zone resolution failed'),
@@ -514,7 +514,7 @@ describe('effects setTokenProp', () => {
     });
 
     const result = applyEffect(
-      { setTokenProp: { token: '$unit', prop: 'faction', value: { ref: 'binding', name: '$newFaction' } } },
+      { setTokenProp: { token: '$unit', prop: 'faction', value: { _t: 2 as const, ref: 'binding', name: '$newFaction' } } },
       ctx,
     );
 
@@ -768,7 +768,7 @@ describe('effects global marker lifecycle', () => {
     });
     const effect: EffectAST = {
       flipGlobalMarker: {
-        marker: { ref: 'binding', name: '$marker' },
+        marker: { _t: 2 as const, ref: 'binding', name: '$marker' },
         stateA: 'unshaded',
         stateB: 'shaded',
       },
@@ -792,7 +792,7 @@ describe('effects global marker lifecycle', () => {
     });
     const effect: EffectAST = {
       flipGlobalMarker: {
-        marker: { ref: 'binding', name: '$marker' },
+        marker: { _t: 2 as const, ref: 'binding', name: '$marker' },
         stateA: 'unshaded',
         stateB: 'shaded',
       },

@@ -39,7 +39,7 @@ const makeDef = (): GameDef => ({
       defaultState: 'neutral',
       constraints: [
         {
-          when: { op: '==', left: { ref: 'zoneProp', zone: '$space', prop: 'population' }, right: 0 },
+          when: { op: '==', left: { _t: 2 as const, ref: 'zoneProp', zone: '$space', prop: 'population' }, right: 0 },
           allowedStates: ['neutral'],
         },
       ],
@@ -106,7 +106,7 @@ describe('spatial condition runtime', () => {
       op: 'connected',
       from: 'a:none',
       to: 'd:none',
-      via: { op: 'in', item: { ref: 'binding', name: '$zone' }, set: { ref: 'binding', name: '$allowed' } },
+      via: { op: 'in', item: { _t: 2 as const, ref: 'binding', name: '$zone' }, set: { _t: 2 as const, ref: 'binding', name: '$allowed' } },
     } as const;
 
     assert.equal(evalCondition(condition, passCtx), true);

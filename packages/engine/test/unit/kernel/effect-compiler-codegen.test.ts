@@ -206,7 +206,7 @@ describe('effect-compiler-codegen', () => {
   it('compileSetVar matches interpreter for global ref writes and emitted events', () => {
     const def = makeDef();
     const state = makeState();
-    const effect: EffectAST = { setVar: { scope: 'global', var: 'score', value: { ref: 'gvar', var: 'round' } } };
+    const effect: EffectAST = { setVar: { scope: 'global', var: 'score', value: { _t: 2, ref: 'gvar', var: 'round' } } };
 
     compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
   });
@@ -214,7 +214,7 @@ describe('effect-compiler-codegen', () => {
   it('compileSetVar matches interpreter for pvar boolean writes from bindings', () => {
     const def = makeDef();
     const state = makeState();
-    const effect: EffectAST = { setVar: { scope: 'pvar', player: 'actor', var: 'ready', value: { ref: 'binding', name: '$ready' } } };
+    const effect: EffectAST = { setVar: { scope: 'pvar', player: 'actor', var: 'ready', value: { _t: 2, ref: 'binding', name: '$ready' } } };
 
     compareResults(def, runCompiled(def, state, effect, { $ready: true }), runInterpreted(def, state, effect, { $ready: true }));
   });
@@ -222,7 +222,7 @@ describe('effect-compiler-codegen', () => {
   it('compileAddVar matches interpreter for clamp boundaries', () => {
     const def = makeDef();
     const state = makeState();
-    const effect: EffectAST = { addVar: { scope: 'pvar', player: 'active', var: 'hp', delta: { ref: 'binding', name: '$delta' } } };
+    const effect: EffectAST = { addVar: { scope: 'pvar', player: 'active', var: 'hp', delta: { _t: 2, ref: 'binding', name: '$delta' } } };
 
     compareResults(def, runCompiled(def, state, effect, { $delta: 50 }), runInterpreted(def, state, effect, { $delta: 50 }));
   });
@@ -235,8 +235,8 @@ describe('effect-compiler-codegen', () => {
         when: {
           op: 'and',
           args: [
-            { op: '==', left: { ref: 'gvar', var: 'flag' }, right: false },
-            { op: '>=', left: { ref: 'pvar', player: 'active', var: 'hp' }, right: 7 },
+            { op: '==', left: { _t: 2, ref: 'gvar', var: 'flag' }, right: false },
+            { op: '>=', left: { _t: 2, ref: 'pvar', player: 'active', var: 'hp' }, right: 7 },
           ],
         },
         then: [{ addVar: { scope: 'global', var: 'score', delta: 2 } }],
@@ -257,7 +257,7 @@ describe('effect-compiler-codegen', () => {
         limit: 2,
         effects: [{ addVar: { scope: 'pvar', player: { chosen: '$seat' }, var: 'hp', delta: 1 } }],
         countBind: '$counted',
-        in: [{ setVar: { scope: 'global', var: 'count', value: { ref: 'binding', name: '$counted' } } }],
+        in: [{ setVar: { scope: 'global', var: 'count', value: { _t: 2, ref: 'binding', name: '$counted' } } }],
       },
     };
 
@@ -273,7 +273,7 @@ describe('effect-compiler-codegen', () => {
         over: { query: 'players' },
         effects: [{ addVar: { scope: 'global', var: 'score', delta: 1 } }],
         countBind: '$counted',
-        in: [{ setVar: { scope: 'global', var: 'count', value: { ref: 'binding', name: '$counted' } } }],
+        in: [{ setVar: { scope: 'global', var: 'count', value: { _t: 2, ref: 'binding', name: '$counted' } } }],
       },
     };
 

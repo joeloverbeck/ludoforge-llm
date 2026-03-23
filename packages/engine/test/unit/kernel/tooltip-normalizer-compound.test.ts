@@ -462,7 +462,7 @@ describe('extractBranchLabel guarding', () => {
 
     const ifEffect: IfEffectAST = {
       if: {
-        when: { op: '==', left: { ref: 'gvar', var: 'cap_cords' }, right: 'unshaded' },
+        when: { op: '==', left: { _t: 2, ref: 'gvar', var: 'cap_cords' }, right: 'unshaded' },
         then: [{ addVar: { scope: 'global', var: 'gold', delta: 1 } }],
       },
     };
@@ -500,7 +500,7 @@ describe('extractBranchLabel guarding', () => {
 
     const ifEffect: IfEffectAST = {
       if: {
-        when: { op: '==', left: { ref: 'gvar', var: 'Train Choice' }, right: 'Place Irregulars' },
+        when: { op: '==', left: { _t: 2, ref: 'gvar', var: 'Train Choice' }, right: 'Place Irregulars' },
         then: [{
           chooseN: {
             internalDecisionId: 'd1',

@@ -54,7 +54,7 @@ describe('TooltipIR types', () => {
       target: 'spaces',
       bounds: { min: 1, max: 3 },
       filter: 'aid ≥ 3',
-      conditionAST: { op: '>=', left: { ref: 'gvar', var: 'aid' }, right: 3 },
+      conditionAST: { op: '>=', left: { _t: 2, ref: 'gvar', var: 'aid' }, right: 3 },
     };
     assert.equal(msg.kind, 'select');
     assert.ok(msg.conditionAST !== undefined);

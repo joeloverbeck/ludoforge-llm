@@ -33,11 +33,11 @@ describe('evaluation integration - complex scenario', () => {
     const condition: ConditionAST = {
       op: 'and',
       args: [
-        { op: '>=', left: { ref: 'pvar', player: 'actor', var: 'money' }, right: 3 },
-        { op: '<', left: { ref: 'gvar', var: 'threat' }, right: 10 },
+        { op: '>=', left: { _t: 2 as const, ref: 'pvar', player: 'actor', var: 'money' }, right: 3 },
+        { op: '<', left: { _t: 2 as const, ref: 'gvar', var: 'threat' }, right: 10 },
         {
           op: '>',
-          left: { aggregate: { op: 'count', query: { query: 'tokensInZone', zone: 'hand:actor' } } },
+          left: { _t: 5 as const, aggregate: { op: 'count', query: { query: 'tokensInZone', zone: 'hand:actor' } } },
           right: 0,
         },
       ],

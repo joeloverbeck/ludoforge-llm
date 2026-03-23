@@ -28,7 +28,7 @@ import {
 } from '../../src/contracts/index.js';
 import { booleanArityMessage } from '../../src/kernel/boolean-arity-policy.js';
 import { collectEffectDeclaredBinderPolicyPatternsForTest } from '../../src/kernel/validate-gamedef-behavior.js';
-import { createValidGameDef, readGameDefFixture } from '../helpers/gamedef-fixtures.js';
+import { asTaggedGameDef, createValidGameDef, readGameDefFixture } from '../helpers/gamedef-fixtures.js';
 
 const withCardDrivenTurnFlow = (
   base: GameDef,
@@ -36,7 +36,7 @@ const withCardDrivenTurnFlow = (
   seatOrder: readonly string[],
   eligibilitySeats: readonly string[] = ['0', '1'],
 ): GameDef =>
-  ({
+  asTaggedGameDef({
     ...base,
     turnOrder: {
       type: 'cardDriven',
@@ -70,7 +70,7 @@ const withCardDrivenTurnFlow = (
         cards: [{ id: 'card-1', metadata: { seatOrder } }],
       },
     ],
-  }) as unknown as GameDef;
+  });
 
 const withPipelineZonePropCondition = (
   prop: string,
@@ -79,7 +79,7 @@ const withPipelineZonePropCondition = (
 ): GameDef => {
   const base = createValidGameDef();
   const when = { op: '==', left: { ref: 'zoneProp', zone: 'market:none', prop }, right };
-  return {
+  return asTaggedGameDef({
     ...base,
     zones: [
       {
@@ -106,7 +106,7 @@ const withPipelineZonePropCondition = (
         atomicity: 'atomic',
       },
     ],
-  } as unknown as GameDef;
+  });
 };
 
 const withPipelineLinkedWindows = (
@@ -121,7 +121,7 @@ const withPipelineLinkedWindows = (
   const turnOrderType = options?.turnOrderType ?? 'cardDriven';
   const overrideWindowIds = options?.overrideWindowIds ?? ['special-window'];
   const overrideWindowUsages = options?.overrideWindowUsages ?? ['actionPipeline'];
-  return {
+  return asTaggedGameDef({
     ...base,
     turnOrder: turnOrderType === 'cardDriven'
       ? {
@@ -154,7 +154,7 @@ const withPipelineLinkedWindows = (
         ...(linkedWindows === undefined ? {} : { linkedWindows }),
       },
     ],
-  } as unknown as GameDef;
+  });
 };
 
 const withMalformedPipelineOmissions = (
@@ -174,10 +174,10 @@ const withMalformedPipelineOmissions = (
   for (const field of omittedFields) {
     delete pipeline[field];
   }
-  return {
+  return asTaggedGameDef({
     ...base,
     actionPipelines: [pipeline],
-  } as unknown as GameDef;
+  });
 };
 
 const collectDeclaredEffectBinderPatternsFromContract = (): readonly string[] => {
@@ -194,10 +194,10 @@ describe('validateGameDef reference checks', () => {
   it('validates eligibility seats against canonical declared seats', () => {
     const base = createValidGameDef();
     const def = withCardDrivenTurnFlow(
-      {
+      asTaggedGameDef({
         ...base,
         seats: [{ id: 'US' }, { id: 'ARVN' }],
-      } as unknown as GameDef,
+      }),
       { US: 'US', ARVN: 'ARVN' },
       ['US', 'ARVN'],
       ['US', 'NVA'],
@@ -216,10 +216,10 @@ describe('validateGameDef reference checks', () => {
   it('requires unique canonical seats across resolved eligibility seats', () => {
     const base = createValidGameDef();
     const def = withCardDrivenTurnFlow(
-      {
+      asTaggedGameDef({
         ...base,
         seats: [{ id: 'NVA' }, { id: 'US' }],
-      } as unknown as GameDef,
+      }),
       { north_vietnam: 'NVA', US: 'US' },
       ['north_vietnam', 'US'],
       ['NVA', 'north_vietnam'],
@@ -347,10 +347,10 @@ describe('validateGameDef reference checks', () => {
 
   it('emits deterministic duplicate action diagnostics', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [...base.actions, { ...base.actions[0], limits: [] }],
-    } as unknown as GameDef;
+    });
 
     const first = validateGameDef(def);
     const second = validateGameDef(def);
@@ -364,7 +364,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports missing zone references with alternatives', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -372,7 +372,7 @@ describe('validateGameDef reference checks', () => {
           effects: [{ draw: { from: 'deck:none', to: 'markte:none', count: 1 } }],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     const missingZone = diagnostics.find((diag) => diag.code === 'REF_ZONE_MISSING');
@@ -385,7 +385,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports out-of-bounds player selectors for conceal.from', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -393,7 +393,7 @@ describe('validateGameDef reference checks', () => {
           effects: [{ conceal: { zone: 'market:none', from: { id: 99 } } }],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -405,7 +405,7 @@ describe('validateGameDef reference checks', () => {
 
   it('validates conceal.filter value expressions', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -420,7 +420,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -432,7 +432,7 @@ describe('validateGameDef reference checks', () => {
 
   it('rejects unknown token-filter props in tokensInZone domains', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       tokenTypes: [{ id: 'card', props: { faction: 'string' } }],
       actions: [
@@ -450,7 +450,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     const diagnostic = diagnostics.find(
@@ -471,7 +471,7 @@ describe('validateGameDef reference checks', () => {
       {
         name: 'tokensInZone domain filter',
         expectedPath: 'actions[0].params[0].domain.filter.args',
-        buildDef: (base) => ({
+        buildDef: (base) => asTaggedGameDef({
           ...base,
           actions: [
             {
@@ -488,12 +488,12 @@ describe('validateGameDef reference checks', () => {
               ],
             },
           ],
-        }) as unknown as GameDef,
+        }),
       },
       {
         name: 'tokensInMapSpaces domain filter',
         expectedPath: 'actions[0].params[0].domain.filter.args',
-        buildDef: (base) => ({
+        buildDef: (base) => asTaggedGameDef({
           ...base,
           actions: [
             {
@@ -509,12 +509,12 @@ describe('validateGameDef reference checks', () => {
               ],
             },
           ],
-        }) as unknown as GameDef,
+        }),
       },
       {
         name: 'tokensInAdjacentZones domain filter',
         expectedPath: 'actions[0].params[0].domain.filter.args',
-        buildDef: (base) => ({
+        buildDef: (base) => asTaggedGameDef({
           ...base,
           actions: [
             {
@@ -531,12 +531,12 @@ describe('validateGameDef reference checks', () => {
               ],
             },
           ],
-        }) as unknown as GameDef,
+        }),
       },
       {
         name: 'reveal.filter effect',
         expectedPath: 'actions[0].effects[0].reveal.filter.args',
-        buildDef: (base) => ({
+        buildDef: (base) => asTaggedGameDef({
           ...base,
           actions: [
             {
@@ -552,12 +552,12 @@ describe('validateGameDef reference checks', () => {
               ],
             },
           ],
-        }) as unknown as GameDef,
+        }),
       },
       {
         name: 'conceal.filter effect',
         expectedPath: 'actions[0].effects[0].conceal.filter.args',
-        buildDef: (base) => ({
+        buildDef: (base) => asTaggedGameDef({
           ...base,
           actions: [
             {
@@ -572,7 +572,7 @@ describe('validateGameDef reference checks', () => {
               ],
             },
           ],
-        }) as unknown as GameDef,
+        }),
       },
     ];
 
@@ -589,7 +589,7 @@ describe('validateGameDef reference checks', () => {
 
   it('rejects nested empty boolean token-filter args with full nested path', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -614,7 +614,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -628,7 +628,7 @@ describe('validateGameDef reference checks', () => {
 
   it('co-reports empty-args and unknown-prop diagnostics for sibling token-filter branches', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       tokenTypes: [{ id: 'card', props: { faction: 'string' } }],
       actions: [
@@ -652,7 +652,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -673,7 +673,7 @@ describe('validateGameDef reference checks', () => {
 
   it('preserves nested deterministic paths when mixed token-filter traversal and prop diagnostics coexist', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       tokenTypes: [{ id: 'card', props: { faction: 'string' } }],
       actions: [
@@ -705,7 +705,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -726,7 +726,7 @@ describe('validateGameDef reference checks', () => {
 
   it('maps token-filter traversal reasons to deterministic validator boundary messages/suggestions', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -750,7 +750,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     const emptyArgsDiagnostic = diagnostics.find(
@@ -811,42 +811,42 @@ describe('validateGameDef reference checks', () => {
       {
         name: 'actions.pre',
         expectedPath: `${conditionSurfacePathForActionPre(0)}.args`,
-        buildDef: (seed) => ({
+        buildDef: (seed) => asTaggedGameDef({
           ...seed,
           actions: [{ ...seed.actions[0], pre: { op: 'and', args: [] } }],
-        }) as unknown as GameDef,
+        }),
       },
       {
         name: 'triggers.match',
         expectedPath: `${conditionSurfacePathForTriggerMatch(0)}.args`,
-        buildDef: (seed) => ({
+        buildDef: (seed) => asTaggedGameDef({
           ...seed,
           triggers: [{ ...seed.triggers[0], match: { op: 'and', args: [] } }],
-        }) as unknown as GameDef,
+        }),
       },
       {
         name: 'triggers.when',
         expectedPath: `${conditionSurfacePathForTriggerWhen(0)}.args`,
-        buildDef: (seed) => ({
+        buildDef: (seed) => asTaggedGameDef({
           ...seed,
           triggers: [{ ...seed.triggers[0], when: { op: 'or', args: [] } }],
-        }) as unknown as GameDef,
+        }),
       },
       {
         name: 'terminal.conditions.when',
         expectedPath: `${conditionSurfacePathForTerminalConditionWhen(0)}.args`,
-        buildDef: (seed) => ({
+        buildDef: (seed) => asTaggedGameDef({
           ...seed,
           terminal: {
             ...seed.terminal,
             conditions: [{ ...seed.terminal.conditions[0], when: { op: 'and', args: [] } }],
           },
-        }) as unknown as GameDef,
+        }),
       },
       {
         name: 'actions.params.domain.zones.filter.condition',
         expectedPath: `${appendQueryConditionSurfacePath('actions[0].params[0].domain', CONDITION_SURFACE_SUFFIX.query.filterCondition)}.args`,
-        buildDef: (seed) => ({
+        buildDef: (seed) => asTaggedGameDef({
           ...seed,
           actions: [
             {
@@ -859,12 +859,12 @@ describe('validateGameDef reference checks', () => {
               ],
             },
           ],
-        }) as unknown as GameDef,
+        }),
       },
       {
         name: 'actions.params.domain.connectedZones.via',
         expectedPath: `${appendQueryConditionSurfacePath('actions[0].params[0].domain', CONDITION_SURFACE_SUFFIX.query.via)}.args`,
-        buildDef: (seed) => ({
+        buildDef: (seed) => asTaggedGameDef({
           ...seed,
           actions: [
             {
@@ -877,12 +877,12 @@ describe('validateGameDef reference checks', () => {
               ],
             },
           ],
-        }) as unknown as GameDef,
+        }),
       },
       {
         name: 'actions.params.domain.nextInOrderByCondition.where',
         expectedPath: `${appendQueryConditionSurfacePath('actions[0].params[0].domain', CONDITION_SURFACE_SUFFIX.query.where)}.args`,
-        buildDef: (seed) => ({
+        buildDef: (seed) => asTaggedGameDef({
           ...seed,
           actions: [
             {
@@ -901,12 +901,12 @@ describe('validateGameDef reference checks', () => {
               ],
             },
           ],
-        }) as unknown as GameDef,
+        }),
       },
       {
         name: 'actions.effects.moveAll.filter',
         expectedPath: `${appendEffectConditionSurfacePath('actions[0].effects[0]', CONDITION_SURFACE_SUFFIX.effect.moveAllFilter)}.args`,
-        buildDef: (seed) => ({
+        buildDef: (seed) => asTaggedGameDef({
           ...seed,
           actions: [
             {
@@ -914,12 +914,12 @@ describe('validateGameDef reference checks', () => {
               effects: [{ moveAll: { from: 'deck:none', to: 'market:none', filter: { op: 'or', args: [] } } }],
             },
           ],
-        }) as unknown as GameDef,
+        }),
       },
       {
         name: 'actionPipelines.applicability',
         expectedPath: `${appendActionPipelineConditionSurfacePath('actionPipelines[0]', CONDITION_SURFACE_SUFFIX.actionPipeline.applicability)}.args`,
-        buildDef: (seed) => ({
+        buildDef: (seed) => asTaggedGameDef({
           ...seed,
           actionPipelines: [
             {
@@ -934,12 +934,12 @@ describe('validateGameDef reference checks', () => {
               atomicity: 'atomic',
             },
           ],
-        }) as unknown as GameDef,
+        }),
       },
       {
         name: 'actionPipelines.legality',
         expectedPath: `${appendActionPipelineConditionSurfacePath('actionPipelines[0]', CONDITION_SURFACE_SUFFIX.actionPipeline.legality)}.args`,
-        buildDef: (seed) => ({
+        buildDef: (seed) => asTaggedGameDef({
           ...seed,
           actionPipelines: [
             {
@@ -953,12 +953,12 @@ describe('validateGameDef reference checks', () => {
               atomicity: 'atomic',
             },
           ],
-        }) as unknown as GameDef,
+        }),
       },
       {
         name: 'actionPipelines.costValidation',
         expectedPath: `${appendActionPipelineConditionSurfacePath('actionPipelines[0]', CONDITION_SURFACE_SUFFIX.actionPipeline.costValidation)}.args`,
-        buildDef: (seed) => ({
+        buildDef: (seed) => asTaggedGameDef({
           ...seed,
           actionPipelines: [
             {
@@ -972,12 +972,12 @@ describe('validateGameDef reference checks', () => {
               atomicity: 'atomic',
             },
           ],
-        }) as unknown as GameDef,
+        }),
       },
       {
         name: 'actionPipelines.targeting.filter',
         expectedPath: `${appendActionPipelineConditionSurfacePath('actionPipelines[0]', CONDITION_SURFACE_SUFFIX.actionPipeline.targetingFilter)}.args`,
-        buildDef: (seed) => ({
+        buildDef: (seed) => asTaggedGameDef({
           ...seed,
           actionPipelines: [
             {
@@ -991,12 +991,12 @@ describe('validateGameDef reference checks', () => {
               atomicity: 'atomic',
             },
           ],
-        }) as unknown as GameDef,
+        }),
       },
       {
         name: 'actionPipelines.stages.legality',
         expectedPath: `${appendActionPipelineConditionSurfacePath('actionPipelines[0].stages[0]', CONDITION_SURFACE_SUFFIX.actionPipeline.legality)}.args`,
-        buildDef: (seed) => ({
+        buildDef: (seed) => asTaggedGameDef({
           ...seed,
           actionPipelines: [
             {
@@ -1010,12 +1010,12 @@ describe('validateGameDef reference checks', () => {
               atomicity: 'atomic',
             },
           ],
-        }) as unknown as GameDef,
+        }),
       },
       {
         name: 'actionPipelines.stages.costValidation',
         expectedPath: `${appendActionPipelineConditionSurfacePath('actionPipelines[0].stages[0]', CONDITION_SURFACE_SUFFIX.actionPipeline.costValidation)}.args`,
-        buildDef: (seed) => ({
+        buildDef: (seed) => asTaggedGameDef({
           ...seed,
           actionPipelines: [
             {
@@ -1029,12 +1029,12 @@ describe('validateGameDef reference checks', () => {
               atomicity: 'atomic',
             },
           ],
-        }) as unknown as GameDef,
+        }),
       },
       {
         name: 'terminal.checkpoints.when',
         expectedPath: `${conditionSurfacePathForTerminalCheckpointWhen(0)}.args`,
-        buildDef: (seed) => ({
+        buildDef: (seed) => asTaggedGameDef({
           ...seed,
           terminal: {
             ...seed.terminal,
@@ -1042,7 +1042,7 @@ describe('validateGameDef reference checks', () => {
               { id: 'cp-1', seat: '0', timing: 'duringCoup', when: { op: 'and', args: [] } },
             ],
           },
-        }) as unknown as GameDef,
+        }),
       },
     ];
 
@@ -1059,7 +1059,7 @@ describe('validateGameDef reference checks', () => {
 
   it('rejects nested empty boolean ConditionAST args with full nested path', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -1085,7 +1085,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -1099,7 +1099,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports malformed boolean ConditionAST nodes without throwing', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -1116,7 +1116,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     assert.doesNotThrow(() => {
       const diagnostics = validateGameDef(def);
@@ -1132,13 +1132,13 @@ describe('validateGameDef reference checks', () => {
 
   it('uses shared condition boolean-arity message for empty or args', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       terminal: {
         ...base.terminal,
         conditions: [{ when: { op: 'or', args: [] }, result: { type: 'draw' } }],
       },
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     const diagnostic = diagnostics.find(
@@ -1153,7 +1153,7 @@ describe('validateGameDef reference checks', () => {
 
   it('rejects unsupported token-filter operators when malformed objects bypass typing', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -1172,7 +1172,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -1186,7 +1186,7 @@ describe('validateGameDef reference checks', () => {
 
   it('rejects unsupported token-filter operators in query filter surfaces', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -1206,7 +1206,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -1220,7 +1220,7 @@ describe('validateGameDef reference checks', () => {
 
   it('rejects unsupported nested token-filter operators with full nested path', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -1249,7 +1249,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -1263,7 +1263,7 @@ describe('validateGameDef reference checks', () => {
 
   it('rejects unsupported token-filter predicate operators on effect surfaces', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -1279,7 +1279,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -1293,7 +1293,7 @@ describe('validateGameDef reference checks', () => {
 
   it('rejects unsupported token-filter predicate operators on query surfaces', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -1310,7 +1310,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -1324,7 +1324,7 @@ describe('validateGameDef reference checks', () => {
 
   it('rejects unsupported nested token-filter predicate operators with full nested path', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -1347,7 +1347,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -1361,7 +1361,7 @@ describe('validateGameDef reference checks', () => {
 
   it('rejects non-conforming boolean token-filter nodes when malformed objects bypass typing', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -1380,7 +1380,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -1395,7 +1395,7 @@ describe('validateGameDef reference checks', () => {
 
   it('accepts intrinsic token-filter prop id in query and effect surfaces', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -1421,7 +1421,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.equal(diagnostics.some((diag) => diag.code === 'REF_TOKEN_FILTER_PROP_MISSING'), false);
@@ -1429,7 +1429,7 @@ describe('validateGameDef reference checks', () => {
 
   it('accepts declared token-filter props across mixed token-type schemas', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       tokenTypes: [
         { id: 'card', props: { faction: 'string' } },
@@ -1450,7 +1450,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.equal(diagnostics.some((diag) => diag.code === 'REF_TOKEN_FILTER_PROP_MISSING'), false);
@@ -1458,7 +1458,7 @@ describe('validateGameDef reference checks', () => {
 
   it('rejects unknown token-filter props in tokensInMapSpaces domains', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -1474,7 +1474,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -1488,7 +1488,7 @@ describe('validateGameDef reference checks', () => {
 
   it('rejects unknown token-filter props in tokensInAdjacentZones domains', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -1505,7 +1505,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -1519,7 +1519,7 @@ describe('validateGameDef reference checks', () => {
 
   it('accepts intrinsic token-filter prop id in tokensInAdjacentZones domains', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -1536,7 +1536,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.equal(diagnostics.some((diag) => diag.code === 'REF_TOKEN_FILTER_PROP_MISSING'), false);
@@ -1544,7 +1544,7 @@ describe('validateGameDef reference checks', () => {
 
   it('rejects unknown token-filter props in reveal.filter effects', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -1560,7 +1560,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -1574,7 +1574,7 @@ describe('validateGameDef reference checks', () => {
 
   it('accepts declared token-filter props in reveal.filter effects', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       tokenTypes: [{ id: 'card', props: { faction: 'string' } }],
       actions: [
@@ -1591,7 +1591,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.equal(diagnostics.some((diag) => diag.code === 'REF_TOKEN_FILTER_PROP_MISSING'), false);
@@ -1599,7 +1599,7 @@ describe('validateGameDef reference checks', () => {
 
   it('rejects unknown token-filter props in conceal.filter effects', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -1614,7 +1614,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -1628,7 +1628,7 @@ describe('validateGameDef reference checks', () => {
 
   it('accepts intrinsic token-filter prop id in conceal.filter effects', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -1643,7 +1643,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.equal(diagnostics.some((diag) => diag.code === 'REF_TOKEN_FILTER_PROP_MISSING'), false);
@@ -1651,7 +1651,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports unknown map-space properties used by zoneProp references', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       zones: [
         {
@@ -1672,7 +1672,7 @@ describe('validateGameDef reference checks', () => {
           pre: { op: '==', left: { ref: 'zoneProp', zone: 'market:none', prop: 'controlClass' }, right: 'coin' },
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -1684,7 +1684,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports map-space property kind mismatches for zoneProp', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       zones: [
         {
@@ -1705,7 +1705,7 @@ describe('validateGameDef reference checks', () => {
           pre: { op: '==', left: { ref: 'zoneProp', zone: 'market:none', prop: 'terrainTags' }, right: 'urban' },
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -1717,7 +1717,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports map-space property kind mismatches for zonePropIncludes', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       zones: [
         {
@@ -1738,7 +1738,7 @@ describe('validateGameDef reference checks', () => {
           pre: { op: 'zonePropIncludes', zone: 'market:none', prop: 'category', value: 'city' },
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -1748,7 +1748,7 @@ describe('validateGameDef reference checks', () => {
 
   it('validates metadata-declared condition fields across zone, value, numeric, and nested traversal', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       zones: [
         {
@@ -1792,7 +1792,7 @@ describe('validateGameDef reference checks', () => {
           },
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     const expected = [
@@ -1812,7 +1812,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports missing zone references in derived metric filters', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       derivedMetrics: [
         {
@@ -1830,7 +1830,7 @@ describe('validateGameDef reference checks', () => {
           },
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -1842,7 +1842,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports non-numeric zone attributes required by derived metrics', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       zones: [
         {
@@ -1873,7 +1873,7 @@ describe('validateGameDef reference checks', () => {
           },
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -1885,7 +1885,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports explicit zoneProp selectors that are not declared map spaces', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       zones: [
         {
@@ -1906,7 +1906,7 @@ describe('validateGameDef reference checks', () => {
           pre: { op: '==', left: { ref: 'zoneProp', zone: 'deck:none', prop: 'category' }, right: 'city' },
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -1918,7 +1918,7 @@ describe('validateGameDef reference checks', () => {
 
   it('does not treat category on aux zones as map-space identity', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       zones: [
         {
@@ -1948,7 +1948,7 @@ describe('validateGameDef reference checks', () => {
           pre: { op: '==', left: { ref: 'zoneProp', zone: 'market:none', prop: 'category' }, right: 'city' },
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(diagnostics.some((diag) => diag.code === 'REF_MAP_SPACE_MISSING' && diag.path === 'actions[0].pre.left.zone'));
@@ -1956,7 +1956,7 @@ describe('validateGameDef reference checks', () => {
 
   it('accepts binding-qualified zone selectors for player-owned zone bases', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       zones: [
         ...base.zones,
@@ -1977,7 +1977,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.equal(
@@ -1988,7 +1988,7 @@ describe('validateGameDef reference checks', () => {
 
   it('accepts dynamic bound zone selectors in query filters', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       zones: [
         {
@@ -2033,7 +2033,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.equal(
@@ -2044,7 +2044,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports undefined gvar references', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -2052,7 +2052,7 @@ describe('validateGameDef reference checks', () => {
           pre: { op: '==', left: { ref: 'gvar', var: 'gold' }, right: 1 },
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(diagnostics.some((diag) => diag.code === 'REF_GVAR_MISSING' && diag.path === 'actions[0].pre.left.var'));
@@ -2060,7 +2060,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports undefined pvar references', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -2068,7 +2068,7 @@ describe('validateGameDef reference checks', () => {
           effects: [{ setVar: { scope: 'pvar', player: 'active', var: 'health', value: 1 } }],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -2078,7 +2078,7 @@ describe('validateGameDef reference checks', () => {
 
   it('rejects addVar targeting boolean global vars', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       globalVars: [...base.globalVars, { name: 'flag', type: 'boolean', init: false }],
       actions: [
@@ -2087,7 +2087,7 @@ describe('validateGameDef reference checks', () => {
           effects: [{ addVar: { scope: 'global', var: 'flag', delta: 1 } }],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -2102,7 +2102,7 @@ describe('validateGameDef reference checks', () => {
 
   it('rejects addVar targeting boolean per-player vars', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       perPlayerVars: [...base.perPlayerVars, { name: 'ready', type: 'boolean', init: false }],
       actions: [
@@ -2111,7 +2111,7 @@ describe('validateGameDef reference checks', () => {
           effects: [{ addVar: { scope: 'pvar', player: 'active', var: 'ready', delta: 1 } }],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -2126,7 +2126,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports undefined zoneVar references for setVar and addVar', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -2137,7 +2137,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -2150,10 +2150,10 @@ describe('validateGameDef reference checks', () => {
 
   it('rejects boolean zoneVars at structural validation time', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       zoneVars: [{ name: 'locked', type: 'boolean', init: false }],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -2163,7 +2163,7 @@ describe('validateGameDef reference checks', () => {
 
   it('keeps boolean zoneVar diagnostics at structure layer for addVar', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       zoneVars: [{ name: 'locked', type: 'boolean', init: false }],
       actions: [
@@ -2172,7 +2172,7 @@ describe('validateGameDef reference checks', () => {
           effects: [{ addVar: { scope: 'zoneVar', zone: 'deck:none', var: 'locked', delta: 1 } }],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -2188,7 +2188,7 @@ describe('validateGameDef reference checks', () => {
 
   it('accepts valid zoneVar setVar and addVar targets', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       zoneVars: [{ name: 'supply', type: 'int', init: 0, min: 0, max: 10 }],
       actions: [
@@ -2200,7 +2200,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.equal(diagnostics.some((diag) => diag.code === 'REF_ZONEVAR_MISSING'), false);
@@ -2209,7 +2209,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports missing runtime data assets for assetRows domains', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -2225,7 +2225,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -2237,7 +2237,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports invalid runtime table field references in assetRows where predicates', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       tableContracts: [
         {
@@ -2262,7 +2262,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -2276,7 +2276,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports invalid runtime table field references in assetField refs', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       tableContracts: [
         {
@@ -2305,7 +2305,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -2317,7 +2317,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports malformed runtime table uniqueBy declarations', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       runtimeDataAssets: [{ id: 'tournament-standard', kind: 'scenario', payload: { blindSchedule: { levels: [] } } }],
       tableContracts: [
@@ -2332,7 +2332,7 @@ describe('validateGameDef reference checks', () => {
           uniqueBy: [[], ['missing'], ['level', 'level'], ['level'], ['level']],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(diagnostics.some((diag) => diag.code === 'RUNTIME_TABLE_UNIQUE_KEY_EMPTY' && diag.path === 'tableContracts[0].uniqueBy[0]'));
@@ -2353,7 +2353,7 @@ describe('validateGameDef reference checks', () => {
 
   it('enforces uniqueBy tuples against runtime table rows', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       runtimeDataAssets: [
         {
@@ -2381,7 +2381,7 @@ describe('validateGameDef reference checks', () => {
           uniqueBy: [['level']],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(diagnostics.some((diag) => diag.code === 'RUNTIME_TABLE_UNIQUE_KEY_VIOLATION' && diag.path === 'tableContracts[0].uniqueBy[0]'));
@@ -2389,7 +2389,7 @@ describe('validateGameDef reference checks', () => {
 
   it('enforces monotonic/contiguous/numericRange runtime table constraints', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       runtimeDataAssets: [
         {
@@ -2422,7 +2422,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(diagnostics.some((diag) => diag.code === 'RUNTIME_TABLE_CONSTRAINT_MONOTONIC_VIOLATION'));
@@ -2432,7 +2432,7 @@ describe('validateGameDef reference checks', () => {
 
   it('accepts valid runtime table constraints', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       runtimeDataAssets: [
         {
@@ -2466,7 +2466,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.equal(
@@ -2483,7 +2483,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports exactlyOne assetRows queries without key-constraining where predicates', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       runtimeDataAssets: [{ id: 'tournament-standard', kind: 'scenario', payload: { blindSchedule: { levels: [] } } }],
       tableContracts: [
@@ -2513,7 +2513,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -2525,7 +2525,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports exactlyOne assetRows queries when table contracts lack uniqueBy', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       runtimeDataAssets: [{ id: 'tournament-standard', kind: 'scenario', payload: { blindSchedule: { levels: [] } } }],
       tableContracts: [
@@ -2552,7 +2552,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -2566,7 +2566,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports exactlyOne assetRows queries when predicates do not constrain a unique key', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       runtimeDataAssets: [{ id: 'tournament-standard', kind: 'scenario', payload: { blindSchedule: { levels: [] } } }],
       tableContracts: [
@@ -2597,7 +2597,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -2611,7 +2611,7 @@ describe('validateGameDef reference checks', () => {
 
   it('accepts exactlyOne assetRows queries when predicates constrain a declared unique key', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       runtimeDataAssets: [{ id: 'tournament-standard', kind: 'scenario', payload: { blindSchedule: { levels: [] } } }],
       tableContracts: [
@@ -2642,7 +2642,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.equal(
@@ -2658,7 +2658,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports concat queries with empty sources', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -2674,7 +2674,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -2686,7 +2686,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports concat queries with mixed runtime item shapes', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -2705,7 +2705,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -2717,7 +2717,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports prioritized queries with empty tiers', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -2733,7 +2733,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -2745,7 +2745,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports prioritized queries with mixed runtime item shapes', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -2764,7 +2764,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -2776,7 +2776,7 @@ describe('validateGameDef reference checks', () => {
 
   it('warns when prioritized qualifierKey is not declared on any token type', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       tokenTypes: [{ id: 'troops', props: { faction: 'string' } }],
       actions: [
@@ -2796,7 +2796,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -2811,7 +2811,7 @@ describe('validateGameDef reference checks', () => {
 
   it('accepts prioritized qualifierKey when declared on a token type', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       tokenTypes: [
         { id: 'troops', props: { faction: 'string' } },
@@ -2834,7 +2834,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.equal(
@@ -2849,7 +2849,7 @@ describe('validateGameDef reference checks', () => {
 
   it('accepts tokensInZone domains with dynamic zoneExpr selectors', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -2865,7 +2865,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.equal(
@@ -2876,7 +2876,7 @@ describe('validateGameDef reference checks', () => {
 
   it('validates nested zoneExpr ValueExpr in dynamic tokensInZone domains', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -2892,7 +2892,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -2904,7 +2904,7 @@ describe('validateGameDef reference checks', () => {
 
   it('accepts adjacent/connected zone queries with dynamic zoneExpr selectors', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -2927,7 +2927,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.equal(
@@ -2942,7 +2942,7 @@ describe('validateGameDef reference checks', () => {
 
   it('accepts aggregate valueExpr over non-numeric query items', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       mapSpaces: [
         {
@@ -2973,7 +2973,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.equal(
@@ -2984,7 +2984,7 @@ describe('validateGameDef reference checks', () => {
 
   it('validates transferVar variable references by scope', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -3000,7 +3000,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -3013,7 +3013,7 @@ describe('validateGameDef reference checks', () => {
 
   it('skips static missing-var diagnostics for dynamic scoped variable names while still validating structure', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -3031,7 +3031,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.equal(diagnostics.some((diag) => diag.code === 'REF_GVAR_MISSING' || diag.code === 'REF_PVAR_MISSING'), false);
@@ -3039,7 +3039,7 @@ describe('validateGameDef reference checks', () => {
 
   it('still validates canonical binding names inside dynamic scoped variable expressions', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -3047,7 +3047,7 @@ describe('validateGameDef reference checks', () => {
           effects: [{ setVar: { scope: 'global', var: { ref: 'binding', name: 'notCanonical' }, value: 1 } }],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -3059,7 +3059,7 @@ describe('validateGameDef reference checks', () => {
 
   it('does not duplicate structural transferVar endpoint diagnostics handled by schema contracts', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       zoneVars: [{ name: 'supply', type: 'int', init: 0, min: 0, max: 10 }],
       actions: [
@@ -3076,7 +3076,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.equal(
@@ -3096,7 +3096,7 @@ describe('validateGameDef reference checks', () => {
 
   it('rejects transferVar boolean variable targets', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       perPlayerVars: [...base.perPlayerVars, { name: 'ready', type: 'boolean', init: false }],
       actions: [
@@ -3113,7 +3113,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -3126,7 +3126,7 @@ describe('validateGameDef reference checks', () => {
 
   it('keeps boolean zoneVar diagnostics at structure layer for transferVar', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       zoneVars: [{ name: 'locked', type: 'boolean', init: false }],
       actions: [
@@ -3143,7 +3143,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -3160,7 +3160,7 @@ describe('validateGameDef reference checks', () => {
 
   it('keeps boolean zoneVar diagnostics at structure layer for transferVar destination', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       zoneVars: [{ name: 'locked', type: 'boolean', init: false }],
       actions: [
@@ -3177,7 +3177,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -3194,10 +3194,10 @@ describe('validateGameDef reference checks', () => {
 
   it('reports invalid phase references with alternatives', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [{ ...base.actions[0], phase: ['mian'] }],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     const missingPhase = diagnostics.find((diag) => diag.code === 'REF_PHASE_MISSING');
@@ -3209,7 +3209,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports invalid gotoPhaseExact target references with alternatives', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -3217,7 +3217,7 @@ describe('validateGameDef reference checks', () => {
           effects: [{ gotoPhaseExact: { phase: 'mian' } }],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     const missingPhase = diagnostics.find((diag) => diag.code === 'REF_PHASE_MISSING');
@@ -3229,7 +3229,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports invalid action references in actionResolved triggers', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       triggers: [
         {
@@ -3237,7 +3237,7 @@ describe('validateGameDef reference checks', () => {
           event: { type: 'actionResolved', action: 'playCrad' },
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -3249,7 +3249,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports invalid createToken type references', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -3257,7 +3257,7 @@ describe('validateGameDef reference checks', () => {
           effects: [{ createToken: { type: 'crad', zone: 'market:none' } }],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -3269,7 +3269,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports invalid var references in varChanged triggers', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       triggers: [
         {
@@ -3278,7 +3278,7 @@ describe('validateGameDef reference checks', () => {
           effects: [],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -3290,7 +3290,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports malformed intsInRange param domains', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -3298,7 +3298,7 @@ describe('validateGameDef reference checks', () => {
           params: [{ name: '$n', domain: { query: 'intsInRange', min: 5, max: 1 } }],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -3313,7 +3313,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports duplicate action param names', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -3324,7 +3324,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -3339,7 +3339,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports reserved runtime binding names used as action param names', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -3347,7 +3347,7 @@ describe('validateGameDef reference checks', () => {
           params: [{ name: '__freeOperation', domain: { query: 'intsInRange', min: 0, max: 3 } }],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -3362,7 +3362,7 @@ describe('validateGameDef reference checks', () => {
 
   it('accepts intsInRange dynamic bounds as ValueExpr', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -3379,7 +3379,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.equal(
@@ -3390,7 +3390,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports non-integer literal intsInRange bounds', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -3398,7 +3398,7 @@ describe('validateGameDef reference checks', () => {
           params: [{ name: '$n', domain: { query: 'intsInRange', min: 0.5, max: 3 } }],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -3413,7 +3413,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports malformed intsInRange cardinality controls', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -3433,7 +3433,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -3464,7 +3464,7 @@ describe('validateGameDef reference checks', () => {
 
   it('accepts nextInOrderByCondition domain with numeric from and condition predicate', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -3483,7 +3483,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.equal(
@@ -3499,7 +3499,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports shape-mismatched nextInOrderByCondition.source domains', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -3521,7 +3521,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -3536,7 +3536,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports tokenZones source shape mismatches for incompatible known source shapes', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -3552,7 +3552,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -3567,7 +3567,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports tokenZones dedupe when payload is not boolean', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -3584,7 +3584,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -3599,7 +3599,7 @@ describe('validateGameDef reference checks', () => {
 
   it('accepts tokenZones source shapes that are token, string, or unknown', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -3622,7 +3622,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.equal(
@@ -3633,7 +3633,7 @@ describe('validateGameDef reference checks', () => {
 
   it('ignores unknown source shape but still reports incompatible known tokenZones source shapes', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -3655,7 +3655,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -3670,7 +3670,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports nextInOrderByCondition source/anchor mismatch for string source and numeric anchor', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -3689,7 +3689,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -3704,7 +3704,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports nextInOrderByCondition source/anchor mismatch for numeric source and string anchor', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -3723,7 +3723,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -3738,7 +3738,7 @@ describe('validateGameDef reference checks', () => {
 
   it('accepts shape-compatible nextInOrderByCondition source/anchor pairs', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -3757,7 +3757,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.equal(
@@ -3768,7 +3768,7 @@ describe('validateGameDef reference checks', () => {
 
   it('does not report source/anchor mismatch when nextInOrderByCondition source shape is unknown', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -3787,7 +3787,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.equal(
@@ -3798,7 +3798,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports non-canonical nextInOrderByCondition.bind', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -3817,7 +3817,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -3832,7 +3832,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports non-canonical removeByPriority bind fields', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -3855,7 +3855,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -3886,7 +3886,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports non-canonical binder declarations across behavior surfaces', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -3953,7 +3953,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     const expected = [
@@ -3992,7 +3992,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports missing intsInVarRange source variable', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -4000,7 +4000,7 @@ describe('validateGameDef reference checks', () => {
           params: [{ name: '$n', domain: { query: 'intsInVarRange', var: 'monye' } }],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -4015,7 +4015,7 @@ describe('validateGameDef reference checks', () => {
 
   it('does not report static intsInVarRange source-missing diagnostics for dynamic variable-name expressions', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -4023,7 +4023,7 @@ describe('validateGameDef reference checks', () => {
           params: [{ name: '$n', domain: { query: 'intsInVarRange', var: { ref: 'grantContext', key: 'resourceVar' } } }],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.equal(
@@ -4034,7 +4034,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports non-int intsInVarRange source variable', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       globalVars: [...base.globalVars, { name: 'flag', type: 'boolean', init: false }],
       actions: [
@@ -4043,7 +4043,7 @@ describe('validateGameDef reference checks', () => {
           params: [{ name: '$n', domain: { query: 'intsInVarRange', var: 'flag' } }],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -4058,7 +4058,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports malformed intsInVarRange cardinality controls', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -4079,7 +4079,7 @@ describe('validateGameDef reference checks', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -4110,7 +4110,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports unknown marker lattice references in setMarker effects', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -4118,7 +4118,7 @@ describe('validateGameDef reference checks', () => {
           effects: [{ setMarker: { space: 'market:none', marker: 'unknownMarker', state: 'neutral' } }],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -4130,7 +4130,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports unknown marker lattice references in shiftMarker effects', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -4138,7 +4138,7 @@ describe('validateGameDef reference checks', () => {
           effects: [{ shiftMarker: { space: 'market:none', marker: 'unknownMarker', delta: 1 } }],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -4151,7 +4151,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports invalid static marker state literals in setMarker effects', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -4159,7 +4159,7 @@ describe('validateGameDef reference checks', () => {
           effects: [{ setMarker: { space: 'market:none', marker: 'supportOpposition', state: 'notAState' } }],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -4171,7 +4171,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports unknown marker lattice references in markerState refs', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -4183,7 +4183,7 @@ describe('validateGameDef reference checks', () => {
           },
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(diagnostics.some((diag) => diag.code === 'REF_MARKER_LATTICE_MISSING' && diag.path === 'actions[0].pre.left.marker'));
@@ -4191,7 +4191,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports invalid static marker-state comparisons against marker lattices', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -4203,7 +4203,7 @@ describe('validateGameDef reference checks', () => {
           },
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(diagnostics.some((diag) => diag.code === 'REF_MARKER_STATE_MISSING' && diag.path === 'actions[0].pre.right'));
@@ -4211,7 +4211,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports unknown global marker lattice references in globalMarkerState refs', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -4223,7 +4223,7 @@ describe('validateGameDef reference checks', () => {
           },
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -4235,7 +4235,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports unknown global marker lattice references in setGlobalMarker effects', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -4243,7 +4243,7 @@ describe('validateGameDef reference checks', () => {
           effects: [{ setGlobalMarker: { marker: 'unknownGlobalMarker', state: 'inactive' } }],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -4256,7 +4256,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports operation profile action references missing from actions', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actionPipelines: [
         {
@@ -4269,7 +4269,7 @@ describe('validateGameDef reference checks', () => {
           atomicity: 'atomic',
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -4279,7 +4279,7 @@ describe('validateGameDef reference checks', () => {
 
   it('accepts accompanyingOps set to any', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actionPipelines: [
         {
@@ -4293,7 +4293,7 @@ describe('validateGameDef reference checks', () => {
           atomicity: 'atomic',
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(!diagnostics.some((diag) => diag.code === 'REF_ACTION_MISSING' && diag.path.includes('.accompanyingOps[')));
@@ -4301,7 +4301,7 @@ describe('validateGameDef reference checks', () => {
 
   it('accepts accompanyingOps entries that reference declared actions', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actionPipelines: [
         {
@@ -4315,7 +4315,7 @@ describe('validateGameDef reference checks', () => {
           atomicity: 'atomic',
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(!diagnostics.some((diag) => diag.code === 'REF_ACTION_MISSING' && diag.path.includes('.accompanyingOps[')));
@@ -4323,7 +4323,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports accompanyingOps entries that reference unknown actions', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actionPipelines: [
         {
@@ -4337,7 +4337,7 @@ describe('validateGameDef reference checks', () => {
           atomicity: 'atomic',
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -4349,7 +4349,7 @@ describe('validateGameDef reference checks', () => {
 
   it('accepts operation profiles with accompanyingOps omitted', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actionPipelines: [
         {
@@ -4362,7 +4362,7 @@ describe('validateGameDef reference checks', () => {
           atomicity: 'atomic',
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(!diagnostics.some((diag) => diag.code === 'REF_ACTION_MISSING' && diag.path.includes('.accompanyingOps[')));
@@ -4370,7 +4370,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports ambiguous operation profile action mappings', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actionPipelines: [
         {
@@ -4392,7 +4392,7 @@ describe('validateGameDef reference checks', () => {
           atomicity: 'partial',
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -4575,7 +4575,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports explicit diagnostics when pipeline stages/targeting have invalid runtime shapes', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actionPipelines: [
         {
@@ -4589,7 +4589,7 @@ describe('validateGameDef reference checks', () => {
           atomicity: 'atomic',
         },
       ],
-    } as unknown as GameDef;
+    });
 
     let diagnostics: ReturnType<typeof validateGameDef> = [];
     assert.doesNotThrow(() => {
@@ -4611,7 +4611,7 @@ describe('validateGameDef reference checks', () => {
 
   it('does not throw when a pipeline stage entry has an invalid runtime shape', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actionPipelines: [
         {
@@ -4625,7 +4625,7 @@ describe('validateGameDef reference checks', () => {
           atomicity: 'atomic',
         },
       ],
-    } as unknown as GameDef;
+    });
 
     let diagnostics: ReturnType<typeof validateGameDef> = [];
     assert.doesNotThrow(() => {
@@ -4641,7 +4641,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports unknown coupPlan final-round omitted phases', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       turnOrder: {
         type: 'cardDriven',
@@ -4663,7 +4663,7 @@ describe('validateGameDef reference checks', () => {
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -4677,7 +4677,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports empty coupPlan phases when coupPlan is declared', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       turnOrder: {
         type: 'cardDriven',
@@ -4697,7 +4697,7 @@ describe('validateGameDef reference checks', () => {
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -4707,7 +4707,7 @@ describe('validateGameDef reference checks', () => {
 
   it('requires coupPlan phase ids to match turnStructure phase ids', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       turnStructure: {
         phases: [{ id: 'operations' }],
@@ -4733,7 +4733,7 @@ describe('validateGameDef reference checks', () => {
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.equal(
@@ -4748,7 +4748,7 @@ describe('validateGameDef reference checks', () => {
 
   it('reports missing references inside victory expressions', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       terminal: {
         ...base.terminal,
@@ -4763,7 +4763,7 @@ describe('validateGameDef reference checks', () => {
         margins: [{ seat: 'us', value: { ref: 'pvar', player: 'active', var: 'missingPvar' } }],
         ranking: { order: 'desc' },
       },
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -4778,10 +4778,10 @@ describe('validateGameDef reference checks', () => {
 describe('validateGameDef constraints and warnings', () => {
   it('reports PlayerSel.id outside configured bounds', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [{ ...base.actions[0], actor: { id: 4 } }],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -4793,10 +4793,10 @@ describe('validateGameDef constraints and warnings', () => {
 
   it('reports action executor id outside configured bounds', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [{ ...base.actions[0], executor: { id: 4 } }],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -4808,10 +4808,10 @@ describe('validateGameDef constraints and warnings', () => {
 
   it('reports invalid players metadata', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       metadata: { ...base.metadata, players: { min: 0, max: 0 } },
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -4821,10 +4821,10 @@ describe('validateGameDef constraints and warnings', () => {
 
   it('reports invalid maxTriggerDepth metadata', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       metadata: { ...base.metadata, maxTriggerDepth: 1.5 },
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -4836,10 +4836,10 @@ describe('validateGameDef constraints and warnings', () => {
 
   it('reports variable bounds inconsistency', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       globalVars: [{ name: 'money', type: 'int', min: 2, init: 1, max: 99 }],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(diagnostics.some((diag) => diag.code === 'VAR_BOUNDS_INVALID' && diag.path === 'globalVars[0]'));
@@ -4847,13 +4847,13 @@ describe('validateGameDef constraints and warnings', () => {
 
   it('reports duplicate marker lattice ids on direct GameDef input', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       markerLattices: [
         ...(base.markerLattices ?? []),
         { ...(base.markerLattices ?? [])[0]! },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -4863,7 +4863,7 @@ describe('validateGameDef constraints and warnings', () => {
 
   it('reports direct GameDef marker constraint violations from initial marker states', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       zones: [
         {
@@ -4892,7 +4892,7 @@ describe('validateGameDef constraints and warnings', () => {
         },
       ],
       spaceMarkers: [{ spaceId: 'province:none', markerId: 'supportOpposition', state: 'activeSupport' }],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -4902,7 +4902,7 @@ describe('validateGameDef constraints and warnings', () => {
 
   it('reports direct GameDef marker constraints that cannot be evaluated', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       zones: [
         {
@@ -4929,7 +4929,7 @@ describe('validateGameDef constraints and warnings', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -4939,10 +4939,10 @@ describe('validateGameDef constraints and warnings', () => {
 
   it('reports score end-condition without scoring definition', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       terminal: { conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'score' } }] },
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -4954,13 +4954,13 @@ describe('validateGameDef constraints and warnings', () => {
 
   it('warns when scoring is configured but never used by end-conditions', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       terminal: {
         ...base.terminal,
         scoring: { method: 'highest', value: 1 },
       },
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -4970,13 +4970,13 @@ describe('validateGameDef constraints and warnings', () => {
 
   it('warns on asymmetric adjacency declarations with spatial diagnostics', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       zones: [
         { ...base.zones[0], adjacentTo: [{ to: 'deck:none', direction: 'bidirectional' }] },
         { ...base.zones[1], adjacentTo: [] },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     const diagnostic = diagnostics.find((diag) => diag.code === 'SPATIAL_ASYMMETRIC_EDGE_NORMALIZED');
@@ -4989,10 +4989,10 @@ describe('validateGameDef constraints and warnings', () => {
 
   it('reports dangling adjacency references with spatial diagnostics', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       zones: [{ ...base.zones[0], adjacentTo: [{ to: 'missing:none', direction: 'bidirectional' }] }, base.zones[1]],
-    } as unknown as GameDef;
+    });
 
     const diagnostic = validateGameDef(def).find((diag) => diag.code === 'SPATIAL_DANGLING_ZONE_REF');
     assert.ok(diagnostic);
@@ -5004,7 +5004,7 @@ describe('validateGameDef constraints and warnings', () => {
 
   it('reports unsorted adjacency declarations with spatial diagnostics', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       zones: [
         {
@@ -5016,7 +5016,7 @@ describe('validateGameDef constraints and warnings', () => {
         },
         base.zones[1],
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostic = validateGameDef(def).find((diag) => diag.code === 'SPATIAL_NEIGHBORS_UNSORTED');
     assert.ok(diagnostic);
@@ -5028,10 +5028,10 @@ describe('validateGameDef constraints and warnings', () => {
 
   it('reports missing adjacency direction as an error', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       zones: [{ ...base.zones[0], adjacentTo: [{ to: 'deck:none' }] }, base.zones[1]],
-    } as unknown as GameDef;
+    });
 
     const diagnostic = validateGameDef(def).find((diag) => diag.code === 'SPATIAL_ADJACENCY_DIRECTION_REQUIRED');
     assert.ok(diagnostic);
@@ -5041,7 +5041,7 @@ describe('validateGameDef constraints and warnings', () => {
 
   it('reports conflicting directions for duplicate adjacency target as an error', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       zones: [
         {
@@ -5053,7 +5053,7 @@ describe('validateGameDef constraints and warnings', () => {
         },
         base.zones[1],
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostic = validateGameDef(def).find((diag) => diag.code === 'SPATIAL_CONFLICTING_NEIGHBOR_DIRECTION');
     assert.ok(diagnostic);
@@ -5063,10 +5063,10 @@ describe('validateGameDef constraints and warnings', () => {
 
   it('reports ownership mismatch for :none selector targeting player-owned zone', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       zones: [{ ...base.zones[0], owner: 'player' }, base.zones[1]],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -5081,10 +5081,10 @@ describe('validateGameDef constraints and warnings', () => {
 
   it('reports unowned zone ids that do not use :none qualifier', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       zones: [{ ...base.zones[0], id: 'market:0', owner: 'none' }, base.zones[1]],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -5096,10 +5096,10 @@ describe('validateGameDef constraints and warnings', () => {
 
   it('reports player-owned zone ids without numeric qualifiers', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       zones: [{ ...base.zones[0], id: 'hand:actor', owner: 'player' }, base.zones[1]],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -5112,10 +5112,10 @@ describe('validateGameDef constraints and warnings', () => {
 
   it('reports player-owned zone ids that exceed metadata.players.max bounds', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       zones: [{ ...base.zones[0], id: 'hand:4', owner: 'player' }, base.zones[1]],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -5130,7 +5130,7 @@ describe('validateGameDef constraints and warnings', () => {
 
   it('reports invalid chooseN range cardinality declarations', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -5147,7 +5147,7 @@ describe('validateGameDef constraints and warnings', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -5162,7 +5162,7 @@ describe('validateGameDef constraints and warnings', () => {
 
   it('rejects chooseOne/chooseN options queries with non-encodable runtime shapes', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       runtimeDataAssets: [{ id: 'tournament-standard', kind: 'scenario', payload: { blindSchedule: { levels: [] } } }],
       tableContracts: [
@@ -5193,7 +5193,7 @@ describe('validateGameDef constraints and warnings', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     const chooseOneDiagnostic = diagnostics.find(
@@ -5216,7 +5216,7 @@ describe('validateGameDef constraints and warnings', () => {
 
   it('suppresses secondary choose options shape diagnostics when options queries already fail validation', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -5238,7 +5238,7 @@ describe('validateGameDef constraints and warnings', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.equal(
@@ -5279,7 +5279,7 @@ describe('validateGameDef constraints and warnings', () => {
 
   it('accepts chooseOne/chooseN options queries with move-param-encodable runtime shapes', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -5290,7 +5290,7 @@ describe('validateGameDef constraints and warnings', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.equal(
@@ -5301,7 +5301,7 @@ describe('validateGameDef constraints and warnings', () => {
 
   it('accepts chooseN expression-valued range bounds in behavior validation', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       globalVars: [...base.globalVars, { name: 'dynamicMax', type: 'int', init: 2, min: 0, max: 6 }],
       actions: [
@@ -5319,7 +5319,7 @@ describe('validateGameDef constraints and warnings', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.equal(
@@ -5340,7 +5340,7 @@ describe('validateGameDef constraints and warnings', () => {
 
   it('reports error when stacking faction filters lack canonical tokenType faction metadata', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       tokenTypes: [{ id: 'troops', props: { faction: 'string' } }],
       stackingConstraints: [
@@ -5352,7 +5352,7 @@ describe('validateGameDef constraints and warnings', () => {
           rule: 'prohibit' as const,
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(diagnostics.some((diag) => diag.code === 'STACKING_CONSTRAINT_TOKEN_TYPE_SEAT_MISSING'));
@@ -5360,11 +5360,11 @@ describe('validateGameDef constraints and warnings', () => {
 
   it('reports error when token type faction references undeclared faction id', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       seats: [{ id: 'us' }],
       tokenTypes: [{ id: 'troops', seat: 'arvn', props: { faction: 'string' } }],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.ok(
@@ -5646,7 +5646,7 @@ describe('validateInitialPlacementsAgainstStackingConstraints', () => {
 describe('validateGameDef arithmetic diagnostics', () => {
   it('reports static divide-by-zero diagnostics for integer division operators', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -5658,7 +5658,7 @@ describe('validateGameDef arithmetic diagnostics', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     const staticDivideByZeroDiagnostics = diagnostics.filter((diag) => diag.code === 'VALUE_EXPR_DIVISION_BY_ZERO_STATIC');
@@ -5682,7 +5682,7 @@ describe('validateGameDef arithmetic diagnostics', () => {
 describe('validateGameDef free-operation sequence-context linkage diagnostics', () => {
   const withEventFreeOperationGrants = (freeOperationGrants: readonly unknown[]): GameDef => {
     const base = createValidGameDef();
-    return {
+    return asTaggedGameDef({
       ...base,
       eventDecks: [
         {
@@ -5702,12 +5702,12 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
   };
 
   const withEventCardSideConfig = (unshaded: Record<string, unknown>): GameDef => {
     const base = createValidGameDef();
-    return {
+    return asTaggedGameDef({
       ...base,
       eventDecks: [
         {
@@ -5727,7 +5727,7 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
   };
 
   const withEventTargetSelector = (
@@ -5748,10 +5748,10 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
         },
       ],
     });
-    return {
+    return asTaggedGameDef({
       ...base,
       ...(options?.baseOverrides ?? {}),
-    } as unknown as GameDef;
+    });
   };
 
   it('validates event side effects through the generic effect validator', () => {
@@ -5775,7 +5775,7 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
   });
 
   it('validates event card playCondition through the generic condition validator', () => {
-    const def = {
+    const def = asTaggedGameDef({
       ...withEventCardSideConfig({}),
       eventDecks: [
         {
@@ -5797,7 +5797,7 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.equal(
@@ -6309,7 +6309,7 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
         },
       },
     ] as const;
-    const def = {
+    const def = asTaggedGameDef({
       ...createValidGameDef(),
       actions: [
         {
@@ -6317,7 +6317,7 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
           effects,
         },
       ],
-    };
+    });
 
     const diagnostics = validateGameDef(def);
     assert.equal(
@@ -7111,7 +7111,7 @@ describe('validated GameDef boundary', () => {
   });
 
   it('does not brand invalid definitions', () => {
-    const invalid = {
+    const invalid = asTaggedGameDef({
       ...createValidGameDef(),
       actions: [
         {
@@ -7119,7 +7119,7 @@ describe('validated GameDef boundary', () => {
           phase: ['missing-phase'],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const result = validateGameDefBoundary(invalid);
     assert.equal(result.gameDef, null);
@@ -7129,7 +7129,7 @@ describe('validated GameDef boundary', () => {
 
   it('rejects duplicate limit IDs within an action', () => {
     const base = createValidGameDef();
-    const invalid = {
+    const invalid = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -7140,7 +7140,7 @@ describe('validated GameDef boundary', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(invalid);
     const duplicateDiag = diagnostics.find((d) => d.code === 'DUPLICATE_LIMIT_ID');
@@ -7151,7 +7151,7 @@ describe('validated GameDef boundary', () => {
 
   it('rejects non-canonical limit IDs', () => {
     const base = createValidGameDef();
-    const invalid = {
+    const invalid = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -7161,7 +7161,7 @@ describe('validated GameDef boundary', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(invalid);
     const nonCanonicalDiag = diagnostics.find((d) => d.code === 'NON_CANONICAL_LIMIT_ID');
@@ -7173,7 +7173,7 @@ describe('validated GameDef boundary', () => {
 
   it('accepts valid canonical limit IDs', () => {
     const base = createValidGameDef();
-    const valid = {
+    const valid = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -7184,7 +7184,7 @@ describe('validated GameDef boundary', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(valid);
     const limitDiags = diagnostics.filter(

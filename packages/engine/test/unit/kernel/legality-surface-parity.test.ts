@@ -26,6 +26,7 @@ import {
   createSequenceContextMismatchZones,
 } from '../../helpers/free-operation-sequence-context-fixtures.js';
 import { assertLegalitySurfaceParityForMove } from '../../helpers/legality-surface-parity-helpers.js';
+import { asTaggedGameDef } from '../../helpers/gamedef-fixtures.js';
 
 const makeState = (overrides?: Partial<GameState>): GameState => ({
   globalVars: { resources: 0 },
@@ -62,7 +63,7 @@ const makeDef = (overrides?: {
   readonly action?: ActionDef;
   readonly actionPipelines?: readonly ActionPipelineDef[];
 }): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'legality-surface-parity', players: { min: 2, max: 2 } },
     seats: [{ id: '0' }, { id: '1' }, { id: '2' }, { id: '3' }],
     constants: {},
@@ -76,10 +77,10 @@ const makeDef = (overrides?: {
     ...(overrides?.actionPipelines === undefined ? {} : { actionPipelines: overrides.actionPipelines }),
     triggers: [],
     terminal: { conditions: [] },
-  }) as unknown as GameDef;
+  });
 
 const makeCardDrivenFreeOpDef = (operationActionId: ReturnType<typeof asActionId>): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'free-op-legality-surface-parity', players: { min: 2, max: 2 } },
     seats: [{ id: '0' }, { id: '1' }],
     constants: {},
@@ -131,7 +132,7 @@ const makeCardDrivenFreeOpDef = (operationActionId: ReturnType<typeof asActionId
     ],
     triggers: [],
     terminal: { conditions: [] },
-  }) as unknown as GameDef;
+  });
 
 const hasExactLegalMove = (def: GameDef, state: GameState, move: Move): boolean =>
   legalMoves(def, state).some(
@@ -211,7 +212,7 @@ describe('legality surface parity', () => {
               {
                 id: 'op-profile',
                 actionId: action.id,
-                applicability: { op: '==', left: { ref: 'activePlayer' }, right: 1 },
+                applicability: { op: '==', left: { _t: 2, ref: 'activePlayer' }, right: 1 },
                 legality: null,
                 costValidation: null,
                 costEffects: [],
@@ -239,7 +240,7 @@ describe('legality surface parity', () => {
               {
                 id: 'op-profile',
                 actionId: action.id,
-                legality: { op: '>=', left: { ref: 'gvar', var: 'resources' }, right: 5 },
+                legality: { op: '>=', left: { _t: 2, ref: 'gvar', var: 'resources' }, right: 5 },
                 costValidation: null,
                 costEffects: [],
                 targeting: {},
@@ -267,7 +268,7 @@ describe('legality surface parity', () => {
                 id: 'op-profile',
                 actionId: action.id,
                 legality: null,
-                costValidation: { op: '>=', left: { ref: 'gvar', var: 'resources' }, right: 5 },
+                costValidation: { op: '>=', left: { _t: 2, ref: 'gvar', var: 'resources' }, right: 5 },
                 costEffects: [],
                 targeting: {},
                 stages: [],
@@ -484,7 +485,7 @@ describe('legality surface parity', () => {
                   actionIds: ['operation'],
                   zoneFilter: {
                     op: '==',
-                    left: { ref: 'gvar', var: 'resources' },
+                    left: { _t: 2, ref: 'gvar', var: 'resources' },
                     right: 1,
                   },
                   remainingUses: 1,
@@ -566,10 +567,10 @@ describe('legality surface parity', () => {
 
   it('projects sequenceContextMismatch parity for denied free-operation probes', () => {
     const operationActionId = asActionId('operation');
-    const def = {
+    const def = asTaggedGameDef({
       ...makeCardDrivenFreeOpDef(operationActionId),
       zones: createSequenceContextMismatchZones(),
-    } as unknown as GameDef;
+    });
     const state = makeState({
       zones: createSequenceContextMismatchZoneState(),
       turnOrderState: createSequenceContextMismatchTurnOrderState(),
@@ -611,7 +612,7 @@ describe('legality surface parity', () => {
 
   it('defers provisional exact-zone free-operation overlap during discovery until move zones are chosen', () => {
     const operationActionId = asActionId('operation');
-    const def = {
+    const def = asTaggedGameDef({
       ...makeCardDrivenFreeOpDef(operationActionId),
       zones: [
         { id: asZoneId('board:none'), owner: 'none', visibility: 'public', ordering: 'set' },
@@ -643,7 +644,7 @@ describe('legality surface parity', () => {
           atomicity: 'partial',
         },
       ],
-    } as unknown as GameDef;
+    });
     const state = makeState({
       zones: { 'board:none': [], 'city:none': [] },
       turnOrderState: {
@@ -666,7 +667,7 @@ describe('legality surface parity', () => {
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
-              zoneFilter: { op: '==', left: { ref: 'binding', name: '$zone' }, right: 'board:none' },
+              zoneFilter: { op: '==', left: { _t: 2, ref: 'binding', name: '$zone' }, right: 'board:none' },
               remainingUses: 1,
             },
             {
@@ -674,7 +675,7 @@ describe('legality surface parity', () => {
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
-              zoneFilter: { op: '==', left: { ref: 'binding', name: '$zone' }, right: 'city:none' },
+              zoneFilter: { op: '==', left: { _t: 2, ref: 'binding', name: '$zone' }, right: 'city:none' },
               remainingUses: 1,
             },
           ],
@@ -693,13 +694,13 @@ describe('legality surface parity', () => {
 
   it('rejects exact-zone free-operation overlap when no future zone binding can resolve it', () => {
     const operationActionId = asActionId('operation');
-    const def = {
+    const def = asTaggedGameDef({
       ...makeCardDrivenFreeOpDef(operationActionId),
       zones: [
         { id: asZoneId('board:none'), owner: 'none', visibility: 'public', ordering: 'set' },
         { id: asZoneId('city:none'), owner: 'none', visibility: 'public', ordering: 'set' },
       ],
-    } as unknown as GameDef;
+    });
     const state = makeState({
       zones: { 'board:none': [], 'city:none': [] },
       turnOrderState: {
@@ -722,7 +723,7 @@ describe('legality surface parity', () => {
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
-              zoneFilter: { op: '==', left: { ref: 'binding', name: '$zone' }, right: 'board:none' },
+              zoneFilter: { op: '==', left: { _t: 2, ref: 'binding', name: '$zone' }, right: 'board:none' },
               remainingUses: 1,
             },
             {
@@ -730,7 +731,7 @@ describe('legality surface parity', () => {
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
-              zoneFilter: { op: '==', left: { ref: 'binding', name: '$zone' }, right: 'city:none' },
+              zoneFilter: { op: '==', left: { _t: 2, ref: 'binding', name: '$zone' }, right: 'city:none' },
               remainingUses: 1,
             },
           ],
@@ -772,7 +773,7 @@ describe('legality surface parity', () => {
 
   it('rejects exact-zone free-operation overlap when remaining decisions are non-zone choices only', () => {
     const operationActionId = asActionId('operation');
-    const def = {
+    const def = asTaggedGameDef({
       ...makeCardDrivenFreeOpDef(operationActionId),
       zones: [
         { id: asZoneId('board:none'), owner: 'none', visibility: 'public', ordering: 'set' },
@@ -802,7 +803,7 @@ describe('legality surface parity', () => {
           atomicity: 'partial',
         },
       ],
-    } as unknown as GameDef;
+    });
     const state = makeState({
       zones: { 'board:none': [], 'city:none': [] },
       turnOrderState: {
@@ -825,7 +826,7 @@ describe('legality surface parity', () => {
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
-              zoneFilter: { op: '==', left: { ref: 'binding', name: '$zone' }, right: 'board:none' },
+              zoneFilter: { op: '==', left: { _t: 2, ref: 'binding', name: '$zone' }, right: 'board:none' },
               remainingUses: 1,
             },
             {
@@ -833,7 +834,7 @@ describe('legality surface parity', () => {
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
-              zoneFilter: { op: '==', left: { ref: 'binding', name: '$zone' }, right: 'city:none' },
+              zoneFilter: { op: '==', left: { _t: 2, ref: 'binding', name: '$zone' }, right: 'city:none' },
               remainingUses: 1,
             },
           ],
@@ -874,7 +875,7 @@ describe('legality surface parity', () => {
         {
           id: 'operation-profile',
           actionId: operationActionId,
-          applicability: { op: '==', left: { ref: 'activePlayer' }, right: 1 },
+          applicability: { op: '==', left: { _t: 2, ref: 'activePlayer' }, right: 1 },
           legality: null,
           costValidation: null,
           costEffects: [],
@@ -938,7 +939,7 @@ describe('legality surface parity', () => {
 
   it('keeps free-operation pipeline applicability parity when grants provide zone filters', () => {
     const operationActionId = asActionId('operation');
-    const def = {
+    const def = asTaggedGameDef({
       metadata: { id: 'free-op-zone-filter-pipeline-parity', players: { min: 2, max: 2 } },
       seats: [{ id: '0' }, { id: '1' }],
       constants: {},
@@ -999,7 +1000,7 @@ describe('legality surface parity', () => {
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
     const state = makeState({
       zones: { 'board:none': [], 'city:none': [] },
       turnOrderState: {
@@ -1024,7 +1025,7 @@ describe('legality surface parity', () => {
               actionIds: ['operation'],
               zoneFilter: {
                 op: '==',
-                left: { ref: 'zoneProp', zone: '$zone', prop: 'category' },
+                left: { _t: 2, ref: 'zoneProp', zone: '$zone', prop: 'category' },
                 right: 'board',
               },
               remainingUses: 1,
@@ -1214,7 +1215,7 @@ describe('legality surface parity', () => {
         {
           id: 'broken-legality',
           actionId: action.id,
-          legality: { op: '>=', left: { ref: 'gvar', var: 'missingVar' }, right: 0 },
+          legality: { op: '>=', left: { _t: 2, ref: 'gvar', var: 'missingVar' }, right: 0 },
           costValidation: null,
           costEffects: [],
           targeting: {},
@@ -1258,11 +1259,11 @@ describe('legality surface parity', () => {
           {
             let: {
               bind: '$modeCopy',
-              value: { ref: 'binding', name: '$mode' },
+              value: { _t: 2, ref: 'binding', name: '$mode' },
               in: [
                 {
                   if: {
-                    when: { op: '==', left: { ref: 'binding', name: '$modeCopy' }, right: 'tokens' },
+                    when: { op: '==', left: { _t: 2, ref: 'binding', name: '$modeCopy' }, right: 'tokens' },
                     then: [
                       {
                         chooseOne: {
@@ -1311,7 +1312,7 @@ describe('legality surface parity', () => {
           },
           {
             if: {
-              when: { op: '==', left: { ref: 'binding', name: '$branch' }, right: 'then' },
+              when: { op: '==', left: { _t: 2, ref: 'binding', name: '$branch' }, right: 'then' },
               then: [
                 {
                   if: {

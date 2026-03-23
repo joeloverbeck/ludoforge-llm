@@ -3542,7 +3542,7 @@
                 "minLength": 1
               },
               "value": {
-                "$ref": "#/definitions/anon_a21ede90"
+                "$ref": "#/definitions/anon_c93f434a"
               }
             },
             "required": [
@@ -3596,7 +3596,7 @@
               ]
             },
             "value": {
-              "$ref": "#/definitions/anon_79ebe76a"
+              "$ref": "#/definitions/anon_9ad05e0e"
             }
           },
           "required": [
@@ -3873,7 +3873,7 @@
                                   "type": "string"
                                 },
                                 "additionalProperties": {
-                                  "$ref": "#/definitions/anon_a21ede90"
+                                  "$ref": "#/definitions/anon_c93f434a"
                                 }
                               },
                               "viabilityPolicy": {
@@ -4048,7 +4048,7 @@
                                   "type": "string"
                                 },
                                 "additionalProperties": {
-                                  "$ref": "#/definitions/anon_a21ede90"
+                                  "$ref": "#/definitions/anon_c93f434a"
                                 }
                               },
                               "viabilityPolicy": {
@@ -4339,7 +4339,7 @@
                                         "type": "string"
                                       },
                                       "additionalProperties": {
-                                        "$ref": "#/definitions/anon_a21ede90"
+                                        "$ref": "#/definitions/anon_c93f434a"
                                       }
                                     },
                                     "viabilityPolicy": {
@@ -4514,7 +4514,7 @@
                                         "type": "string"
                                       },
                                       "additionalProperties": {
-                                        "$ref": "#/definitions/anon_a21ede90"
+                                        "$ref": "#/definitions/anon_c93f434a"
                                       }
                                     },
                                     "viabilityPolicy": {
@@ -5306,7 +5306,7 @@
                                   "type": "string"
                                 },
                                 "additionalProperties": {
-                                  "$ref": "#/definitions/anon_a21ede90"
+                                  "$ref": "#/definitions/anon_c93f434a"
                                 }
                               },
                               "viabilityPolicy": {
@@ -5481,7 +5481,7 @@
                                   "type": "string"
                                 },
                                 "additionalProperties": {
-                                  "$ref": "#/definitions/anon_a21ede90"
+                                  "$ref": "#/definitions/anon_c93f434a"
                                 }
                               },
                               "viabilityPolicy": {
@@ -5772,7 +5772,7 @@
                                         "type": "string"
                                       },
                                       "additionalProperties": {
-                                        "$ref": "#/definitions/anon_a21ede90"
+                                        "$ref": "#/definitions/anon_c93f434a"
                                       }
                                     },
                                     "viabilityPolicy": {
@@ -5947,7 +5947,7 @@
                                         "type": "string"
                                       },
                                       "additionalProperties": {
-                                        "$ref": "#/definitions/anon_a21ede90"
+                                        "$ref": "#/definitions/anon_c93f434a"
                                       }
                                     },
                                     "viabilityPolicy": {
@@ -7518,10 +7518,10 @@
               ]
             },
             "left": {
-              "$ref": "#/definitions/anon_a21ede90"
+              "$ref": "#/definitions/anon_c93f434a"
             },
             "right": {
-              "$ref": "#/definitions/anon_a21ede90"
+              "$ref": "#/definitions/anon_c93f434a"
             }
           },
           "required": [
@@ -7539,10 +7539,10 @@
               "const": "in"
             },
             "item": {
-              "$ref": "#/definitions/anon_a21ede90"
+              "$ref": "#/definitions/anon_c93f434a"
             },
             "set": {
-              "$ref": "#/definitions/anon_a21ede90"
+              "$ref": "#/definitions/anon_c93f434a"
             }
           },
           "required": [
@@ -7621,7 +7621,7 @@
               "type": "string"
             },
             "value": {
-              "$ref": "#/definitions/anon_a21ede90"
+              "$ref": "#/definitions/anon_c93f434a"
             }
           },
           "required": [
@@ -7646,7 +7646,7 @@
               "type": "string"
             },
             "state": {
-              "$ref": "#/definitions/anon_a21ede90"
+              "$ref": "#/definitions/anon_c93f434a"
             }
           },
           "required": [
@@ -7671,7 +7671,7 @@
               "type": "string"
             },
             "delta": {
-              "$ref": "#/definitions/anon_79ebe76a"
+              "$ref": "#/definitions/anon_9ad05e0e"
             }
           },
           "required": [
@@ -7767,7 +7767,7 @@
                   "type": "object",
                   "properties": {
                     "zoneExpr": {
-                      "$ref": "#/definitions/anon_a21ede90"
+                      "$ref": "#/definitions/anon_c93f434a"
                     }
                   },
                   "required": [
@@ -7821,7 +7821,7 @@
                   "value": {
                     "anyOf": [
                       {
-                        "$ref": "#/definitions/anon_a21ede90"
+                        "$ref": "#/definitions/anon_c93f434a"
                       },
                       {
                         "type": "array",
@@ -7984,7 +7984,7 @@
               "$ref": "#/definitions/anon_33b83f56"
             },
             "from": {
-              "$ref": "#/definitions/anon_a21ede90"
+              "$ref": "#/definitions/anon_c93f434a"
             },
             "bind": {
               "type": "string",
@@ -8021,7 +8021,7 @@
                   "maximum": 9007199254740991
                 },
                 {
-                  "$ref": "#/definitions/anon_79ebe76a"
+                  "$ref": "#/definitions/anon_9ad05e0e"
                 }
               ]
             },
@@ -8033,7 +8033,7 @@
                   "maximum": 9007199254740991
                 },
                 {
-                  "$ref": "#/definitions/anon_79ebe76a"
+                  "$ref": "#/definitions/anon_9ad05e0e"
                 }
               ]
             },
@@ -8045,7 +8045,7 @@
                   "maximum": 9007199254740991
                 },
                 {
-                  "$ref": "#/definitions/anon_79ebe76a"
+                  "$ref": "#/definitions/anon_9ad05e0e"
                 }
               ]
             },
@@ -8059,7 +8059,7 @@
                     "maximum": 9007199254740991
                   },
                   {
-                    "$ref": "#/definitions/anon_79ebe76a"
+                    "$ref": "#/definitions/anon_9ad05e0e"
                   }
                 ]
               }
@@ -8072,7 +8072,7 @@
                   "maximum": 9007199254740991
                 },
                 {
-                  "$ref": "#/definitions/anon_79ebe76a"
+                  "$ref": "#/definitions/anon_9ad05e0e"
                 }
               ]
             }
@@ -8155,7 +8155,7 @@
                   "maximum": 9007199254740991
                 },
                 {
-                  "$ref": "#/definitions/anon_79ebe76a"
+                  "$ref": "#/definitions/anon_9ad05e0e"
                 }
               ]
             },
@@ -8167,7 +8167,7 @@
                   "maximum": 9007199254740991
                 },
                 {
-                  "$ref": "#/definitions/anon_79ebe76a"
+                  "$ref": "#/definitions/anon_9ad05e0e"
                 }
               ]
             },
@@ -8179,7 +8179,7 @@
                   "maximum": 9007199254740991
                 },
                 {
-                  "$ref": "#/definitions/anon_79ebe76a"
+                  "$ref": "#/definitions/anon_9ad05e0e"
                 }
               ]
             },
@@ -8193,7 +8193,7 @@
                     "maximum": 9007199254740991
                   },
                   {
-                    "$ref": "#/definitions/anon_79ebe76a"
+                    "$ref": "#/definitions/anon_9ad05e0e"
                   }
                 ]
               }
@@ -8206,7 +8206,7 @@
                   "maximum": 9007199254740991
                 },
                 {
-                  "$ref": "#/definitions/anon_79ebe76a"
+                  "$ref": "#/definitions/anon_9ad05e0e"
                 }
               ]
             }
@@ -8477,7 +8477,7 @@
                   "type": "object",
                   "properties": {
                     "zoneExpr": {
-                      "$ref": "#/definitions/anon_a21ede90"
+                      "$ref": "#/definitions/anon_c93f434a"
                     }
                   },
                   "required": [
@@ -8510,7 +8510,7 @@
                   "type": "object",
                   "properties": {
                     "zoneExpr": {
-                      "$ref": "#/definitions/anon_a21ede90"
+                      "$ref": "#/definitions/anon_c93f434a"
                     }
                   },
                   "required": [
@@ -8550,7 +8550,7 @@
                   "type": "object",
                   "properties": {
                     "zoneExpr": {
-                      "$ref": "#/definitions/anon_a21ede90"
+                      "$ref": "#/definitions/anon_c93f434a"
                     }
                   },
                   "required": [
@@ -8740,7 +8740,7 @@
                       ]
                     },
                     "value": {
-                      "$ref": "#/definitions/anon_a21ede90"
+                      "$ref": "#/definitions/anon_c93f434a"
                     }
                   },
                   "required": [
@@ -8869,7 +8869,7 @@
                       ]
                     },
                     "value": {
-                      "$ref": "#/definitions/anon_a21ede90"
+                      "$ref": "#/definitions/anon_c93f434a"
                     }
                   },
                   "required": [
@@ -8940,7 +8940,7 @@
                           "type": "object",
                           "properties": {
                             "zoneExpr": {
-                              "$ref": "#/definitions/anon_a21ede90"
+                              "$ref": "#/definitions/anon_c93f434a"
                             }
                           },
                           "required": [
@@ -8951,7 +8951,7 @@
                       ]
                     },
                     "value": {
-                      "$ref": "#/definitions/anon_a21ede90"
+                      "$ref": "#/definitions/anon_c93f434a"
                     }
                   },
                   "required": [
@@ -9071,7 +9071,7 @@
                       "type": "string"
                     },
                     "delta": {
-                      "$ref": "#/definitions/anon_79ebe76a"
+                      "$ref": "#/definitions/anon_9ad05e0e"
                     }
                   },
                   "required": [
@@ -9159,7 +9159,7 @@
                       ]
                     },
                     "delta": {
-                      "$ref": "#/definitions/anon_79ebe76a"
+                      "$ref": "#/definitions/anon_9ad05e0e"
                     }
                   },
                   "required": [
@@ -9189,7 +9189,7 @@
                           "type": "object",
                           "properties": {
                             "zoneExpr": {
-                              "$ref": "#/definitions/anon_a21ede90"
+                              "$ref": "#/definitions/anon_c93f434a"
                             }
                           },
                           "required": [
@@ -9200,7 +9200,7 @@
                       ]
                     },
                     "delta": {
-                      "$ref": "#/definitions/anon_79ebe76a"
+                      "$ref": "#/definitions/anon_9ad05e0e"
                     }
                   },
                   "required": [
@@ -9471,7 +9471,7 @@
                               "type": "object",
                               "properties": {
                                 "zoneExpr": {
-                                  "$ref": "#/definitions/anon_a21ede90"
+                                  "$ref": "#/definitions/anon_c93f434a"
                                 }
                               },
                               "required": [
@@ -9737,7 +9737,7 @@
                               "type": "object",
                               "properties": {
                                 "zoneExpr": {
-                                  "$ref": "#/definitions/anon_a21ede90"
+                                  "$ref": "#/definitions/anon_c93f434a"
                                 }
                               },
                               "required": [
@@ -9758,19 +9758,19 @@
                   ]
                 },
                 "amount": {
-                  "$ref": "#/definitions/anon_79ebe76a"
+                  "$ref": "#/definitions/anon_9ad05e0e"
                 },
                 "min": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/anon_79ebe76a"
+                      "$ref": "#/definitions/anon_9ad05e0e"
                     }
                   ]
                 },
                 "max": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/anon_79ebe76a"
+                      "$ref": "#/definitions/anon_9ad05e0e"
                     }
                   ]
                 },
@@ -9826,7 +9826,7 @@
                       "type": "object",
                       "properties": {
                         "zoneExpr": {
-                          "$ref": "#/definitions/anon_a21ede90"
+                          "$ref": "#/definitions/anon_c93f434a"
                         }
                       },
                       "required": [
@@ -9845,7 +9845,7 @@
                       "type": "object",
                       "properties": {
                         "zoneExpr": {
-                          "$ref": "#/definitions/anon_a21ede90"
+                          "$ref": "#/definitions/anon_c93f434a"
                         }
                       },
                       "required": [
@@ -9900,7 +9900,7 @@
                       "type": "object",
                       "properties": {
                         "zoneExpr": {
-                          "$ref": "#/definitions/anon_a21ede90"
+                          "$ref": "#/definitions/anon_c93f434a"
                         }
                       },
                       "required": [
@@ -9919,7 +9919,7 @@
                       "type": "object",
                       "properties": {
                         "zoneExpr": {
-                          "$ref": "#/definitions/anon_a21ede90"
+                          "$ref": "#/definitions/anon_c93f434a"
                         }
                       },
                       "required": [
@@ -9967,7 +9967,7 @@
                       "type": "object",
                       "properties": {
                         "zoneExpr": {
-                          "$ref": "#/definitions/anon_a21ede90"
+                          "$ref": "#/definitions/anon_c93f434a"
                         }
                       },
                       "required": [
@@ -10008,7 +10008,7 @@
                       "type": "object",
                       "properties": {
                         "zoneExpr": {
-                          "$ref": "#/definitions/anon_a21ede90"
+                          "$ref": "#/definitions/anon_c93f434a"
                         }
                       },
                       "required": [
@@ -10027,7 +10027,7 @@
                       "type": "object",
                       "properties": {
                         "zoneExpr": {
-                          "$ref": "#/definitions/anon_a21ede90"
+                          "$ref": "#/definitions/anon_c93f434a"
                         }
                       },
                       "required": [
@@ -10069,7 +10069,7 @@
                       "type": "object",
                       "properties": {
                         "zoneExpr": {
-                          "$ref": "#/definitions/anon_a21ede90"
+                          "$ref": "#/definitions/anon_c93f434a"
                         }
                       },
                       "required": [
@@ -10189,7 +10189,7 @@
                       "type": "object",
                       "properties": {
                         "zoneExpr": {
-                          "$ref": "#/definitions/anon_a21ede90"
+                          "$ref": "#/definitions/anon_c93f434a"
                         }
                       },
                       "required": [
@@ -10308,7 +10308,7 @@
                       "type": "object",
                       "properties": {
                         "zoneExpr": {
-                          "$ref": "#/definitions/anon_a21ede90"
+                          "$ref": "#/definitions/anon_c93f434a"
                         }
                       },
                       "required": [
@@ -10348,7 +10348,7 @@
                       "type": "object",
                       "properties": {
                         "zoneExpr": {
-                          "$ref": "#/definitions/anon_a21ede90"
+                          "$ref": "#/definitions/anon_c93f434a"
                         }
                       },
                       "required": [
@@ -10364,7 +10364,7 @@
                     "type": "string"
                   },
                   "additionalProperties": {
-                    "$ref": "#/definitions/anon_a21ede90"
+                    "$ref": "#/definitions/anon_c93f434a"
                   }
                 }
               },
@@ -10414,7 +10414,7 @@
                   "type": "string"
                 },
                 "value": {
-                  "$ref": "#/definitions/anon_a21ede90"
+                  "$ref": "#/definitions/anon_c93f434a"
                 }
               },
               "required": [
@@ -10502,7 +10502,7 @@
                 "limit": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/anon_79ebe76a"
+                      "$ref": "#/definitions/anon_9ad05e0e"
                     }
                   ]
                 },
@@ -10580,15 +10580,15 @@
                   "$ref": "#/definitions/anon_33b83f56"
                 },
                 "initial": {
-                  "$ref": "#/definitions/anon_a21ede90"
+                  "$ref": "#/definitions/anon_c93f434a"
                 },
                 "next": {
-                  "$ref": "#/definitions/anon_a21ede90"
+                  "$ref": "#/definitions/anon_c93f434a"
                 },
                 "limit": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/anon_79ebe76a"
+                      "$ref": "#/definitions/anon_9ad05e0e"
                     }
                   ]
                 },
@@ -10643,7 +10643,7 @@
               "type": "object",
               "properties": {
                 "budget": {
-                  "$ref": "#/definitions/anon_79ebe76a"
+                  "$ref": "#/definitions/anon_9ad05e0e"
                 },
                 "groups": {
                   "type": "array",
@@ -10666,7 +10666,7 @@
                             "type": "object",
                             "properties": {
                               "zoneExpr": {
-                                "$ref": "#/definitions/anon_a21ede90"
+                                "$ref": "#/definitions/anon_c93f434a"
                               }
                             },
                             "required": [
@@ -10685,7 +10685,7 @@
                             "type": "object",
                             "properties": {
                               "zoneExpr": {
-                                "$ref": "#/definitions/anon_a21ede90"
+                                "$ref": "#/definitions/anon_c93f434a"
                               }
                             },
                             "required": [
@@ -10774,7 +10774,7 @@
                   "pattern": "^\\$.+"
                 },
                 "value": {
-                  "$ref": "#/definitions/anon_a21ede90"
+                  "$ref": "#/definitions/anon_c93f434a"
                 },
                 "in": {
                   "type": "array",
@@ -10823,7 +10823,7 @@
                   "pattern": "^\\$.+"
                 },
                 "value": {
-                  "$ref": "#/definitions/anon_a21ede90"
+                  "$ref": "#/definitions/anon_c93f434a"
                 },
                 "macroOrigin": {
                   "type": "object",
@@ -10864,7 +10864,7 @@
                   "$ref": "#/definitions/anon_33b83f56"
                 },
                 "subsetSize": {
-                  "$ref": "#/definitions/anon_79ebe76a"
+                  "$ref": "#/definitions/anon_9ad05e0e"
                 },
                 "subsetBind": {
                   "type": "string",
@@ -10877,7 +10877,7 @@
                   }
                 },
                 "scoreExpr": {
-                  "$ref": "#/definitions/anon_79ebe76a"
+                  "$ref": "#/definitions/anon_9ad05e0e"
                 },
                 "resultBind": {
                   "type": "string",
@@ -11245,12 +11245,12 @@
                     "min": {
                       "allOf": [
                         {
-                          "$ref": "#/definitions/anon_79ebe76a"
+                          "$ref": "#/definitions/anon_9ad05e0e"
                         }
                       ]
                     },
                     "max": {
-                      "$ref": "#/definitions/anon_79ebe76a"
+                      "$ref": "#/definitions/anon_9ad05e0e"
                     },
                     "macroOrigin": {
                       "type": "object",
@@ -11296,10 +11296,10 @@
                   "pattern": "^\\$.+"
                 },
                 "min": {
-                  "$ref": "#/definitions/anon_79ebe76a"
+                  "$ref": "#/definitions/anon_9ad05e0e"
                 },
                 "max": {
-                  "$ref": "#/definitions/anon_79ebe76a"
+                  "$ref": "#/definitions/anon_9ad05e0e"
                 },
                 "in": {
                   "type": "array",
@@ -11353,7 +11353,7 @@
                       "type": "object",
                       "properties": {
                         "zoneExpr": {
-                          "$ref": "#/definitions/anon_a21ede90"
+                          "$ref": "#/definitions/anon_c93f434a"
                         }
                       },
                       "required": [
@@ -11367,7 +11367,7 @@
                   "type": "string"
                 },
                 "state": {
-                  "$ref": "#/definitions/anon_a21ede90"
+                  "$ref": "#/definitions/anon_c93f434a"
                 }
               },
               "required": [
@@ -11398,7 +11398,7 @@
                       "type": "object",
                       "properties": {
                         "zoneExpr": {
-                          "$ref": "#/definitions/anon_a21ede90"
+                          "$ref": "#/definitions/anon_c93f434a"
                         }
                       },
                       "required": [
@@ -11412,7 +11412,7 @@
                   "type": "string"
                 },
                 "delta": {
-                  "$ref": "#/definitions/anon_79ebe76a"
+                  "$ref": "#/definitions/anon_9ad05e0e"
                 }
               },
               "required": [
@@ -11438,7 +11438,7 @@
                   "type": "string"
                 },
                 "state": {
-                  "$ref": "#/definitions/anon_a21ede90"
+                  "$ref": "#/definitions/anon_c93f434a"
                 }
               },
               "required": [
@@ -11460,13 +11460,13 @@
               "type": "object",
               "properties": {
                 "marker": {
-                  "$ref": "#/definitions/anon_a21ede90"
+                  "$ref": "#/definitions/anon_c93f434a"
                 },
                 "stateA": {
-                  "$ref": "#/definitions/anon_a21ede90"
+                  "$ref": "#/definitions/anon_c93f434a"
                 },
                 "stateB": {
-                  "$ref": "#/definitions/anon_a21ede90"
+                  "$ref": "#/definitions/anon_c93f434a"
                 }
               },
               "required": [
@@ -11492,7 +11492,7 @@
                   "type": "string"
                 },
                 "delta": {
-                  "$ref": "#/definitions/anon_79ebe76a"
+                  "$ref": "#/definitions/anon_9ad05e0e"
                 }
               },
               "required": [
@@ -11661,7 +11661,7 @@
                         "type": "string"
                       },
                       "additionalProperties": {
-                        "$ref": "#/definitions/anon_a21ede90"
+                        "$ref": "#/definitions/anon_c93f434a"
                       }
                     }
                   },
@@ -11820,7 +11820,7 @@
                         "type": "string"
                       },
                       "additionalProperties": {
-                        "$ref": "#/definitions/anon_a21ede90"
+                        "$ref": "#/definitions/anon_c93f434a"
                       }
                     },
                     "completionPolicy": {
@@ -12473,7 +12473,7 @@
         }
       ]
     },
-    "anon_79ebe76a": {
+    "anon_9ad05e0e": {
       "anyOf": [
         {
           "type": "number"
@@ -12483,6 +12483,11 @@
             {
               "type": "object",
               "properties": {
+                "_t": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
                 "ref": {
                   "type": "string",
                   "const": "gvar"
@@ -12541,6 +12546,11 @@
             {
               "type": "object",
               "properties": {
+                "_t": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
                 "ref": {
                   "type": "string",
                   "const": "pvar"
@@ -12667,6 +12677,11 @@
             {
               "type": "object",
               "properties": {
+                "_t": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
                 "ref": {
                   "type": "string",
                   "const": "zoneVar"
@@ -12729,6 +12744,11 @@
             {
               "type": "object",
               "properties": {
+                "_t": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
                 "ref": {
                   "type": "string",
                   "const": "zoneCount"
@@ -12746,6 +12766,11 @@
             {
               "type": "object",
               "properties": {
+                "_t": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
                 "ref": {
                   "type": "string",
                   "const": "tokenProp"
@@ -12767,6 +12792,11 @@
             {
               "type": "object",
               "properties": {
+                "_t": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
                 "ref": {
                   "type": "string",
                   "const": "assetField"
@@ -12792,6 +12822,11 @@
             {
               "type": "object",
               "properties": {
+                "_t": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
                 "ref": {
                   "type": "string",
                   "const": "binding"
@@ -12812,6 +12847,11 @@
             {
               "type": "object",
               "properties": {
+                "_t": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
                 "ref": {
                   "type": "string",
                   "const": "markerState"
@@ -12833,6 +12873,11 @@
             {
               "type": "object",
               "properties": {
+                "_t": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
                 "ref": {
                   "type": "string",
                   "const": "globalMarkerState"
@@ -12850,6 +12895,11 @@
             {
               "type": "object",
               "properties": {
+                "_t": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
                 "ref": {
                   "type": "string",
                   "const": "tokenZone"
@@ -12867,6 +12917,11 @@
             {
               "type": "object",
               "properties": {
+                "_t": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
                 "ref": {
                   "type": "string",
                   "const": "zoneProp"
@@ -12888,6 +12943,11 @@
             {
               "type": "object",
               "properties": {
+                "_t": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
                 "ref": {
                   "type": "string",
                   "const": "activePlayer"
@@ -12901,6 +12961,11 @@
             {
               "type": "object",
               "properties": {
+                "_t": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
                 "ref": {
                   "type": "string",
                   "const": "activeSeat"
@@ -12914,6 +12979,11 @@
             {
               "type": "object",
               "properties": {
+                "_t": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
                 "ref": {
                   "type": "string",
                   "const": "grantContext"
@@ -12931,6 +13001,11 @@
             {
               "type": "object",
               "properties": {
+                "_t": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
                 "ref": {
                   "type": "string",
                   "const": "capturedSequenceZones"
@@ -12992,6 +13067,11 @@
         {
           "type": "object",
           "properties": {
+            "_t": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
             "op": {
               "anyOf": [
                 {
@@ -13029,10 +13109,10 @@
               ]
             },
             "left": {
-              "$ref": "#/definitions/anon_79ebe76a"
+              "$ref": "#/definitions/anon_9ad05e0e"
             },
             "right": {
-              "$ref": "#/definitions/anon_79ebe76a"
+              "$ref": "#/definitions/anon_9ad05e0e"
             }
           },
           "required": [
@@ -13045,6 +13125,11 @@
         {
           "type": "object",
           "properties": {
+            "_t": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
             "aggregate": {
               "anyOf": [
                 {
@@ -13091,7 +13176,7 @@
                       "pattern": "^\\$.+"
                     },
                     "valueExpr": {
-                      "$ref": "#/definitions/anon_79ebe76a"
+                      "$ref": "#/definitions/anon_9ad05e0e"
                     }
                   },
                   "required": [
@@ -13113,6 +13198,11 @@
         {
           "type": "object",
           "properties": {
+            "_t": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
             "if": {
               "type": "object",
               "properties": {
@@ -13120,10 +13210,10 @@
                   "$ref": "#/definitions/anon_15cb1372"
                 },
                 "then": {
-                  "$ref": "#/definitions/anon_79ebe76a"
+                  "$ref": "#/definitions/anon_9ad05e0e"
                 },
                 "else": {
-                  "$ref": "#/definitions/anon_79ebe76a"
+                  "$ref": "#/definitions/anon_9ad05e0e"
                 }
               },
               "required": [
@@ -13141,7 +13231,7 @@
         }
       ]
     },
-    "anon_a21ede90": {
+    "anon_c93f434a": {
       "anyOf": [
         {
           "type": "number"
@@ -13155,6 +13245,11 @@
         {
           "type": "object",
           "properties": {
+            "_t": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
             "scalarArray": {
               "type": "array",
               "items": {
@@ -13182,6 +13277,11 @@
             {
               "type": "object",
               "properties": {
+                "_t": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
                 "ref": {
                   "type": "string",
                   "const": "gvar"
@@ -13240,6 +13340,11 @@
             {
               "type": "object",
               "properties": {
+                "_t": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
                 "ref": {
                   "type": "string",
                   "const": "pvar"
@@ -13366,6 +13471,11 @@
             {
               "type": "object",
               "properties": {
+                "_t": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
                 "ref": {
                   "type": "string",
                   "const": "zoneVar"
@@ -13428,6 +13538,11 @@
             {
               "type": "object",
               "properties": {
+                "_t": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
                 "ref": {
                   "type": "string",
                   "const": "zoneCount"
@@ -13445,6 +13560,11 @@
             {
               "type": "object",
               "properties": {
+                "_t": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
                 "ref": {
                   "type": "string",
                   "const": "tokenProp"
@@ -13466,6 +13586,11 @@
             {
               "type": "object",
               "properties": {
+                "_t": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
                 "ref": {
                   "type": "string",
                   "const": "assetField"
@@ -13491,6 +13616,11 @@
             {
               "type": "object",
               "properties": {
+                "_t": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
                 "ref": {
                   "type": "string",
                   "const": "binding"
@@ -13511,6 +13641,11 @@
             {
               "type": "object",
               "properties": {
+                "_t": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
                 "ref": {
                   "type": "string",
                   "const": "markerState"
@@ -13532,6 +13667,11 @@
             {
               "type": "object",
               "properties": {
+                "_t": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
                 "ref": {
                   "type": "string",
                   "const": "globalMarkerState"
@@ -13549,6 +13689,11 @@
             {
               "type": "object",
               "properties": {
+                "_t": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
                 "ref": {
                   "type": "string",
                   "const": "tokenZone"
@@ -13566,6 +13711,11 @@
             {
               "type": "object",
               "properties": {
+                "_t": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
                 "ref": {
                   "type": "string",
                   "const": "zoneProp"
@@ -13587,6 +13737,11 @@
             {
               "type": "object",
               "properties": {
+                "_t": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
                 "ref": {
                   "type": "string",
                   "const": "activePlayer"
@@ -13600,6 +13755,11 @@
             {
               "type": "object",
               "properties": {
+                "_t": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
                 "ref": {
                   "type": "string",
                   "const": "activeSeat"
@@ -13613,6 +13773,11 @@
             {
               "type": "object",
               "properties": {
+                "_t": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
                 "ref": {
                   "type": "string",
                   "const": "grantContext"
@@ -13630,6 +13795,11 @@
             {
               "type": "object",
               "properties": {
+                "_t": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
                 "ref": {
                   "type": "string",
                   "const": "capturedSequenceZones"
@@ -13691,6 +13861,11 @@
         {
           "type": "object",
           "properties": {
+            "_t": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
             "op": {
               "anyOf": [
                 {
@@ -13728,10 +13903,10 @@
               ]
             },
             "left": {
-              "$ref": "#/definitions/anon_a21ede90"
+              "$ref": "#/definitions/anon_c93f434a"
             },
             "right": {
-              "$ref": "#/definitions/anon_a21ede90"
+              "$ref": "#/definitions/anon_c93f434a"
             }
           },
           "required": [
@@ -13744,6 +13919,11 @@
         {
           "type": "object",
           "properties": {
+            "_t": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
             "aggregate": {
               "anyOf": [
                 {
@@ -13790,7 +13970,7 @@
                       "pattern": "^\\$.+"
                     },
                     "valueExpr": {
-                      "$ref": "#/definitions/anon_79ebe76a"
+                      "$ref": "#/definitions/anon_9ad05e0e"
                     }
                   },
                   "required": [
@@ -13812,10 +13992,15 @@
         {
           "type": "object",
           "properties": {
+            "_t": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
             "concat": {
               "type": "array",
               "items": {
-                "$ref": "#/definitions/anon_a21ede90"
+                "$ref": "#/definitions/anon_c93f434a"
               }
             }
           },
@@ -13827,6 +14012,11 @@
         {
           "type": "object",
           "properties": {
+            "_t": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
             "if": {
               "type": "object",
               "properties": {
@@ -13834,10 +14024,10 @@
                   "$ref": "#/definitions/anon_15cb1372"
                 },
                 "then": {
-                  "$ref": "#/definitions/anon_a21ede90"
+                  "$ref": "#/definitions/anon_c93f434a"
                 },
                 "else": {
-                  "$ref": "#/definitions/anon_a21ede90"
+                  "$ref": "#/definitions/anon_c93f434a"
                 }
               },
               "required": [
@@ -13939,7 +14129,7 @@
             "value": {
               "anyOf": [
                 {
-                  "$ref": "#/definitions/anon_a21ede90"
+                  "$ref": "#/definitions/anon_c93f434a"
                 },
                 {
                   "type": "array",

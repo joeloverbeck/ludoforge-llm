@@ -62,8 +62,8 @@ describe('resolveChooseNCardinality', () => {
       internalDecisionId: 'decision:$picks',
       bind: '$picks',
       options: { query: 'players' as const },
-      min: { if: { when: true, then: 1, else: 0 } },
-      max: { ref: 'gvar' as const, var: 'cap' },
+      min: { _t: 4 as const, if: { when: true, then: 1, else: 0 } },
+      max: { _t: 2 as const, ref: 'gvar' as const, var: 'cap' },
     };
 
     const result = resolveChooseNCardinality(chooseN, makeChooseNContext({ cap: 3 }), (issue) => {

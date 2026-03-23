@@ -139,7 +139,7 @@ describe('selector-resolution-normalization', () => {
 
     assert.throws(
       () =>
-        resolveZoneWithNormalization({ zoneExpr: { ref: 'binding', name: '$missingZone' } }, evalCtx, {
+        resolveZoneWithNormalization({ zoneExpr: { _t: 2 as const, ref: 'binding', name: '$missingZone' } }, evalCtx, {
           code: 'resourceRuntimeValidationFailed',
           effectType: 'transferVar',
           scope: 'zoneVar',
@@ -151,7 +151,7 @@ describe('selector-resolution-normalization', () => {
 
     assert.throws(
       () =>
-        resolveZoneWithNormalization({ zoneExpr: { ref: 'binding', name: '$missingZone' } }, evalCtx, {
+        resolveZoneWithNormalization({ zoneExpr: { _t: 2 as const, ref: 'binding', name: '$missingZone' } }, evalCtx, {
           code: 'resourceRuntimeValidationFailed',
           effectType: 'transferVar',
           scope: 'zoneVar',

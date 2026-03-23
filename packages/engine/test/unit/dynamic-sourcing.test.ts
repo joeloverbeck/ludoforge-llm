@@ -112,7 +112,7 @@ const buildSourcePieceEffect = (
       if: {
         when: {
           op: '>',
-          left: { aggregate: { op: 'count', query: { query: 'tokensInZone', zone: availableZone } } },
+          left: { _t: 5 as const, aggregate: { op: 'count' as const, query: { query: 'tokensInZone' as const, zone: availableZone } } },
           right: 0,
         },
         then: thenBranch,
@@ -124,7 +124,7 @@ const buildSourcePieceEffect = (
     if: {
       when: {
         op: '>',
-        left: { aggregate: { op: 'count', query: { query: 'tokensInZone', zone: availableZone } } },
+        left: { _t: 5 as const, aggregate: { op: 'count' as const, query: { query: 'tokensInZone' as const, zone: availableZone } } },
         right: 0,
       },
       then: thenBranch,
@@ -156,7 +156,7 @@ const buildNestedSourcePieceEffect = (
   if: {
     when: {
       op: '>',
-      left: { aggregate: { op: 'count', query: { query: 'tokensInZone', zone: availableZone } } },
+      left: { _t: 5 as const, aggregate: { op: 'count' as const, query: { query: 'tokensInZone' as const, zone: availableZone } } },
       right: 0,
     },
     then: [

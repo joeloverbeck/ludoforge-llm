@@ -32,7 +32,7 @@ describe('free-operation preflight overlay builder', () => {
   it('threads zone-filter diagnostics with provided surface and move payload for both surfaces', () => {
     const zoneFilter = {
       op: '==',
-      left: { ref: 'zoneProp', zone: '$zone', prop: 'category' },
+      left: { _t: 2 as const, ref: 'zoneProp', zone: '$zone', prop: 'category' },
       right: 'board',
     } as const;
     const moveParams = { zone: 'board:none', count: 2 };

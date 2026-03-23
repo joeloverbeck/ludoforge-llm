@@ -13,6 +13,7 @@ import {
   type GameDef,
   type GameState,
 } from '../../src/kernel/index.js';
+import { asTaggedGameDef } from '../helpers/gamedef-fixtures.js';
 
 /**
  * Shared helpers for multi-pipeline dispatch tests.
@@ -23,7 +24,7 @@ import {
  */
 
 const createMultiProfileDef = (): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'applicability-dispatch', players: { min: 2, max: 2 } },
     constants: {},
     globalVars: [
@@ -73,7 +74,7 @@ phase: [asPhaseId('main')],
     ],
     triggers: [],
     terminal: { conditions: [] },
-  }) as unknown as GameDef;
+  });
 
 const createState = (activePlayer: number): GameState => {
   const def = createMultiProfileDef();
@@ -128,7 +129,7 @@ describe('applicability-based action pipeline dispatch', () => {
   });
 
   it('single pipeline without applicability still works', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       ...createMultiProfileDef(),
       actionPipelines: [
         {
@@ -141,14 +142,14 @@ describe('applicability-based action pipeline dispatch', () => {
           atomicity: 'atomic',
         },
       ],
-    } as unknown as GameDef;
+    });
     const state = createState(0);
     const result = applyMove(def, state, { actionId: asActionId('operate'), params: {} });
     assert.equal(result.state.globalVars.score, 5);
   });
 
   it('treats action as illegal when no candidate applicability matches', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       ...createMultiProfileDef(),
       actionPipelines: [
         {
@@ -172,7 +173,7 @@ describe('applicability-based action pipeline dispatch', () => {
           atomicity: 'atomic',
         },
       ],
-    } as unknown as GameDef;
+    });
     // Player 999 matches no applicability.
     const state: GameState = { ...createState(0), activePlayer: asPlayerId(999) };
     const legal = legalMoves(def, state);
@@ -185,7 +186,7 @@ describe('applicability-based action pipeline dispatch', () => {
   });
 
   it('treats action as illegal when single candidate applicability is false', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       ...createMultiProfileDef(),
       actionPipelines: [
         {
@@ -199,7 +200,7 @@ describe('applicability-based action pipeline dispatch', () => {
           atomicity: 'atomic',
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const state = createState(0);
     const legal = legalMoves(def, state);
@@ -208,7 +209,7 @@ describe('applicability-based action pipeline dispatch', () => {
   });
 
   it('surfaces malformed applicability errors in legalMoves, legalChoicesDiscover, and applyMove', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       ...createMultiProfileDef(),
       actionPipelines: [
         {
@@ -222,7 +223,7 @@ describe('applicability-based action pipeline dispatch', () => {
           atomicity: 'atomic',
         },
       ],
-    } as unknown as GameDef;
+    });
     const state = createState(0);
 
     for (const run of [
@@ -244,7 +245,7 @@ describe('applicability-based action pipeline dispatch', () => {
   });
 
   it('profile with legality condition blocks move for the matching applicability player', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       ...createMultiProfileDef(),
       actionPipelines: [
         {
@@ -268,7 +269,7 @@ describe('applicability-based action pipeline dispatch', () => {
           atomicity: 'atomic',
         },
       ],
-    } as unknown as GameDef;
+    });
 
     // Player 0: score is 0, legality requires >= 50 — move is NOT legal
     const stateP0 = createState(0);

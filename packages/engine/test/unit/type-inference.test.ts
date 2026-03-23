@@ -56,98 +56,98 @@ describe('inferValueExprType', () => {
   describe('reference types', () => {
     it('infers number for gvar of int type', () => {
       assert.equal(
-        inferValueExprType({ ref: 'gvar', var: 'score' }, richCtx),
+        inferValueExprType({ _t: 2, ref: 'gvar', var: 'score' }, richCtx),
         'number',
       );
     });
 
     it('infers boolean for gvar of boolean type', () => {
       assert.equal(
-        inferValueExprType({ ref: 'gvar', var: 'gameOver' }, richCtx),
+        inferValueExprType({ _t: 2, ref: 'gvar', var: 'gameOver' }, richCtx),
         'boolean',
       );
     });
 
     it('returns unknown for unknown gvar', () => {
       assert.equal(
-        inferValueExprType({ ref: 'gvar', var: 'nonexistent' }, richCtx),
+        inferValueExprType({ _t: 2, ref: 'gvar', var: 'nonexistent' }, richCtx),
         'unknown',
       );
     });
 
     it('infers number for pvar of int type', () => {
       assert.equal(
-        inferValueExprType({ ref: 'pvar', var: 'chips', player: 'active' }, richCtx),
+        inferValueExprType({ _t: 2, ref: 'pvar', var: 'chips', player: 'active' }, richCtx),
         'number',
       );
     });
 
     it('infers boolean for pvar of boolean type', () => {
       assert.equal(
-        inferValueExprType({ ref: 'pvar', var: 'hasFolded', player: 'active' }, richCtx),
+        inferValueExprType({ _t: 2, ref: 'pvar', var: 'hasFolded', player: 'active' }, richCtx),
         'boolean',
       );
     });
 
     it('returns unknown for unknown pvar', () => {
       assert.equal(
-        inferValueExprType({ ref: 'pvar', var: 'nonexistent', player: 'active' }, richCtx),
+        inferValueExprType({ _t: 2, ref: 'pvar', var: 'nonexistent', player: 'active' }, richCtx),
         'unknown',
       );
     });
 
     it('infers number for zoneCount', () => {
       assert.equal(
-        inferValueExprType({ ref: 'zoneCount', zone: 'hand:0' }, emptyCtx),
+        inferValueExprType({ _t: 2, ref: 'zoneCount', zone: 'hand:0' }, emptyCtx),
         'number',
       );
     });
 
     it('infers number for activePlayer', () => {
       assert.equal(
-        inferValueExprType({ ref: 'activePlayer' }, emptyCtx),
+        inferValueExprType({ _t: 2, ref: 'activePlayer' }, emptyCtx),
         'number',
       );
     });
 
     it('infers string for markerState', () => {
       assert.equal(
-        inferValueExprType({ ref: 'markerState', space: 'board', marker: 'control' }, emptyCtx),
+        inferValueExprType({ _t: 2, ref: 'markerState', space: 'board', marker: 'control' }, emptyCtx),
         'string',
       );
     });
 
     it('infers string for globalMarkerState', () => {
       assert.equal(
-        inferValueExprType({ ref: 'globalMarkerState', marker: 'phase' }, emptyCtx),
+        inferValueExprType({ _t: 2, ref: 'globalMarkerState', marker: 'phase' }, emptyCtx),
         'string',
       );
     });
 
     it('infers string for tokenZone', () => {
       assert.equal(
-        inferValueExprType({ ref: 'tokenZone', token: '$t' }, emptyCtx),
+        inferValueExprType({ _t: 2, ref: 'tokenZone', token: '$t' }, emptyCtx),
         'string',
       );
     });
 
     it('infers string for tokenProp with consistent string type', () => {
       assert.equal(
-        inferValueExprType({ ref: 'tokenProp', token: '$t', prop: 'suit' }, richCtx),
+        inferValueExprType({ _t: 2, ref: 'tokenProp', token: '$t', prop: 'suit' }, richCtx),
         'string',
       );
     });
 
     it('infers number for tokenProp with consistent int type', () => {
       assert.equal(
-        inferValueExprType({ ref: 'tokenProp', token: '$t', prop: 'strength' }, richCtx),
+        inferValueExprType({ _t: 2, ref: 'tokenProp', token: '$t', prop: 'strength' }, richCtx),
         'number',
       );
     });
 
     it('infers boolean for tokenProp with consistent boolean type', () => {
       assert.equal(
-        inferValueExprType({ ref: 'tokenProp', token: '$t', prop: 'faceUp' }, richCtx),
+        inferValueExprType({ _t: 2, ref: 'tokenProp', token: '$t', prop: 'faceUp' }, richCtx),
         'boolean',
       );
     });
@@ -161,63 +161,63 @@ describe('inferValueExprType', () => {
         },
       };
       assert.equal(
-        inferValueExprType({ ref: 'tokenProp', token: '$t', prop: 'value' }, ctx),
+        inferValueExprType({ _t: 2, ref: 'tokenProp', token: '$t', prop: 'value' }, ctx),
         'unknown',
       );
     });
 
     it('returns unknown for tokenProp with unknown prop name', () => {
       assert.equal(
-        inferValueExprType({ ref: 'tokenProp', token: '$t', prop: 'nonexistent' }, richCtx),
+        inferValueExprType({ _t: 2, ref: 'tokenProp', token: '$t', prop: 'nonexistent' }, richCtx),
         'unknown',
       );
     });
 
     it('infers string for assetField with string type', () => {
       assert.equal(
-        inferValueExprType({ ref: 'assetField', row: '$r', tableId: 'cardData', field: 'name' }, richCtx),
+        inferValueExprType({ _t: 2, ref: 'assetField', row: '$r', tableId: 'cardData', field: 'name' }, richCtx),
         'string',
       );
     });
 
     it('infers number for assetField with int type', () => {
       assert.equal(
-        inferValueExprType({ ref: 'assetField', row: '$r', tableId: 'cardData', field: 'value' }, richCtx),
+        inferValueExprType({ _t: 2, ref: 'assetField', row: '$r', tableId: 'cardData', field: 'value' }, richCtx),
         'number',
       );
     });
 
     it('infers boolean for assetField with boolean type', () => {
       assert.equal(
-        inferValueExprType({ ref: 'assetField', row: '$r', tableId: 'cardData', field: 'active' }, richCtx),
+        inferValueExprType({ _t: 2, ref: 'assetField', row: '$r', tableId: 'cardData', field: 'active' }, richCtx),
         'boolean',
       );
     });
 
     it('returns unknown for assetField with unknown table', () => {
       assert.equal(
-        inferValueExprType({ ref: 'assetField', row: '$r', tableId: 'unknown', field: 'name' }, richCtx),
+        inferValueExprType({ _t: 2, ref: 'assetField', row: '$r', tableId: 'unknown', field: 'name' }, richCtx),
         'unknown',
       );
     });
 
     it('returns unknown for assetField with unknown field', () => {
       assert.equal(
-        inferValueExprType({ ref: 'assetField', row: '$r', tableId: 'cardData', field: 'unknown' }, richCtx),
+        inferValueExprType({ _t: 2, ref: 'assetField', row: '$r', tableId: 'cardData', field: 'unknown' }, richCtx),
         'unknown',
       );
     });
 
     it('returns unknown for zoneProp', () => {
       assert.equal(
-        inferValueExprType({ ref: 'zoneProp', zone: 'board', prop: 'terrain' }, emptyCtx),
+        inferValueExprType({ _t: 2, ref: 'zoneProp', zone: 'board', prop: 'terrain' }, emptyCtx),
         'unknown',
       );
     });
 
     it('returns unknown for binding', () => {
       assert.equal(
-        inferValueExprType({ ref: 'binding', name: '$x' }, emptyCtx),
+        inferValueExprType({ _t: 2, ref: 'binding', name: '$x' }, emptyCtx),
         'unknown',
       );
     });
@@ -226,18 +226,18 @@ describe('inferValueExprType', () => {
   describe('composite expressions', () => {
     it('infers number for arithmetic op', () => {
       assert.equal(
-        inferValueExprType({ op: '+', left: 1, right: 2 }, emptyCtx),
+        inferValueExprType({ _t: 6, op: '+', left: 1, right: 2 }, emptyCtx),
         'number',
       );
     });
 
     it('infers number for min/max ops', () => {
       assert.equal(
-        inferValueExprType({ op: 'min', left: 1, right: 2 }, emptyCtx),
+        inferValueExprType({ _t: 6, op: 'min', left: 1, right: 2 }, emptyCtx),
         'number',
       );
       assert.equal(
-        inferValueExprType({ op: 'max', left: 1, right: 2 }, emptyCtx),
+        inferValueExprType({ _t: 6, op: 'max', left: 1, right: 2 }, emptyCtx),
         'number',
       );
     });
@@ -245,7 +245,7 @@ describe('inferValueExprType', () => {
     it('infers number for count aggregate', () => {
       assert.equal(
         inferValueExprType(
-          { aggregate: { op: 'count', query: { query: 'tokensInZone', zone: 'deck:none' } } },
+          { _t: 5, aggregate: { op: 'count', query: { query: 'tokensInZone', zone: 'deck:none' } } },
           emptyCtx,
         ),
         'number',
@@ -256,11 +256,12 @@ describe('inferValueExprType', () => {
       assert.equal(
         inferValueExprType(
           {
+            _t: 5,
             aggregate: {
               op: 'sum',
               query: { query: 'intsInRange', min: 1, max: 5 },
               bind: '$n',
-              valueExpr: { ref: 'binding', name: '$n' },
+              valueExpr: { _t: 2, ref: 'binding', name: '$n' },
             },
           },
           emptyCtx,
@@ -271,14 +272,14 @@ describe('inferValueExprType', () => {
 
     it('infers string for concat', () => {
       assert.equal(
-        inferValueExprType({ concat: ['a', 'b'] }, emptyCtx),
+        inferValueExprType({ _t: 3, concat: ['a', 'b'] }, emptyCtx),
         'string',
       );
     });
 
     it('falls back to unknown for concat expressions containing scalar arrays', () => {
       assert.equal(
-        inferValueExprType({ concat: [{ scalarArray: ['US'] }, { scalarArray: ['ARVN'] }] }, emptyCtx),
+        inferValueExprType({ _t: 3, concat: [{ _t: 1, scalarArray: ['US'] }, { _t: 1, scalarArray: ['ARVN'] }] }, emptyCtx),
         'unknown',
       );
     });
@@ -286,7 +287,7 @@ describe('inferValueExprType', () => {
     it('infers matching type for if with same then/else types', () => {
       assert.equal(
         inferValueExprType(
-          { if: { when: { op: '==', left: 1, right: 1 }, then: 42, else: 99 } },
+          { _t: 4, if: { when: { op: '==', left: 1, right: 1 }, then: 42, else: 99 } },
           emptyCtx,
         ),
         'number',
@@ -297,9 +298,10 @@ describe('inferValueExprType', () => {
       assert.equal(
         inferValueExprType(
           {
+            _t: 4,
             if: {
               when: { op: '==', left: 1, right: 1 },
-              then: { ref: 'binding', name: '$x' },
+              then: { _t: 2, ref: 'binding', name: '$x' },
               else: 42,
             },
           },
@@ -313,10 +315,11 @@ describe('inferValueExprType', () => {
       assert.equal(
         inferValueExprType(
           {
+            _t: 4,
             if: {
               when: { op: '==', left: 1, right: 1 },
               then: 'hello',
-              else: { ref: 'binding', name: '$x' },
+              else: { _t: 2, ref: 'binding', name: '$x' },
             },
           },
           emptyCtx,
@@ -328,7 +331,7 @@ describe('inferValueExprType', () => {
     it('returns unknown for if with mismatched branch types', () => {
       assert.equal(
         inferValueExprType(
-          { if: { when: { op: '==', left: 1, right: 1 }, then: 42, else: 'hello' } },
+          { _t: 4, if: { when: { op: '==', left: 1, right: 1 }, then: 42, else: 'hello' } },
           emptyCtx,
         ),
         'unknown',

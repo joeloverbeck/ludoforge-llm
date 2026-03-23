@@ -98,7 +98,7 @@ phase: [asPhaseId('main')],
       conditions:
         terminalAtScore === undefined
           ? []
-          : [{ when: { op: '>=', left: { ref: 'gvar', var: 'score' }, right: terminalAtScore }, result: { type: 'draw' } }],
+          : [{ when: { op: '>=', left: { _t: 2 as const, ref: 'gvar', var: 'score' }, right: terminalAtScore }, result: { type: 'draw' } }],
     },
   } as const);
 };

@@ -22,16 +22,16 @@ describe('effect-compiler-patterns', () => {
       assert.deepEqual(matchSimpleValue(7), { kind: 'literal', value: 7 });
       assert.deepEqual(matchSimpleValue(true), { kind: 'literal', value: true });
       assert.deepEqual(matchSimpleValue('river'), { kind: 'literal', value: 'river' });
-      assert.deepEqual(matchSimpleValue({ ref: 'gvar', var: 'pot' }), {
+      assert.deepEqual(matchSimpleValue({ _t: 2, ref: 'gvar', var: 'pot' }), {
         kind: 'gvar',
         varName: 'pot',
       });
-      assert.deepEqual(matchSimpleValue({ ref: 'pvar', player: 'active', var: 'chips' }), {
+      assert.deepEqual(matchSimpleValue({ _t: 2, ref: 'pvar', player: 'active', var: 'chips' }), {
         kind: 'pvar',
         player: 'active',
         varName: 'chips',
       });
-      assert.deepEqual(matchSimpleValue({ ref: 'binding', name: 'seat', displayName: 'Seat' }), {
+      assert.deepEqual(matchSimpleValue({ _t: 2, ref: 'binding', name: 'seat', displayName: 'Seat' }), {
         kind: 'binding',
         name: 'seat',
         displayName: 'Seat',
@@ -39,22 +39,22 @@ describe('effect-compiler-patterns', () => {
     });
 
     it('rejects complex expressions and unsupported ref families', () => {
-      const aggregateExpr: ValueExpr = { aggregate: { op: 'count', query: { query: 'players' } } };
-      assert.equal(matchSimpleValue({ op: '+', left: 1, right: 2 }), null);
+      const aggregateExpr: ValueExpr = { _t: 5, aggregate: { op: 'count', query: { query: 'players' } } };
+      assert.equal(matchSimpleValue({ _t: 6, op: '+', left: 1, right: 2 }), null);
       assert.equal(matchSimpleValue(aggregateExpr), null);
-      assert.equal(matchSimpleValue({ ref: 'zoneVar', zone: 'board', var: 'threat' }), null);
-      assert.equal(matchSimpleValue({ ref: 'tokenProp', token: 't1', prop: 'face' }), null);
+      assert.equal(matchSimpleValue({ _t: 2, ref: 'zoneVar', zone: 'board', var: 'threat' }), null);
+      assert.equal(matchSimpleValue({ _t: 2, ref: 'tokenProp', token: 't1', prop: 'face' }), null);
     });
   });
 
   describe('matchSimpleNumericValue', () => {
     it('accepts numeric literals and numeric-compatible refs only', () => {
       assert.deepEqual(matchSimpleNumericValue(3), { kind: 'literal', value: 3 });
-      assert.deepEqual(matchSimpleNumericValue({ ref: 'binding', name: 'delta' }), {
+      assert.deepEqual(matchSimpleNumericValue({ _t: 2, ref: 'binding', name: 'delta' }), {
         kind: 'binding',
         name: 'delta',
       });
-      assert.equal(matchSimpleNumericValue({ op: '+', left: 1, right: 2 }), null);
+      assert.equal(matchSimpleNumericValue({ _t: 6, op: '+', left: 1, right: 2 }), null);
     });
   });
 
@@ -63,12 +63,12 @@ describe('effect-compiler-patterns', () => {
       const condition: ConditionAST = {
         op: 'and',
         args: [
-          { op: '==', left: { ref: 'gvar', var: 'phase' }, right: 'deal' },
+          { op: '==', left: { _t: 2, ref: 'gvar', var: 'phase' }, right: 'deal' },
           {
             op: 'or',
             args: [
-              { op: '>=', left: { ref: 'binding', name: 'count' }, right: 2 },
-              { op: '<', left: { ref: 'pvar', player: 'active', var: 'chips' }, right: 5 },
+              { op: '>=', left: { _t: 2, ref: 'binding', name: 'count' }, right: 2 },
+              { op: '<', left: { _t: 2, ref: 'pvar', player: 'active', var: 'chips' }, right: 5 },
             ],
           },
         ],
@@ -126,7 +126,7 @@ describe('effect-compiler-patterns', () => {
       );
 
       assert.deepEqual(
-        matchSetVar({ setVar: { scope: 'pvar', player: 'active', var: 'chips', value: { ref: 'binding', name: 'seat' } } }),
+        matchSetVar({ setVar: { scope: 'pvar', player: 'active', var: 'chips', value: { _t: 2, ref: 'binding', name: 'seat' } } }),
         {
           kind: 'setVar',
           target: { scope: 'pvar', player: 'active', varName: 'chips' },
@@ -141,14 +141,14 @@ describe('effect-compiler-patterns', () => {
         null,
       );
       assert.equal(
-        matchSetVar({ setVar: { scope: 'global', var: 'pot', value: { op: '+', left: 1, right: 2 } } }),
+        matchSetVar({ setVar: { scope: 'global', var: 'pot', value: { _t: 6, op: '+', left: 1, right: 2 } } }),
         null,
       );
     });
 
     it('matches numeric addVar and rejects non-compilable deltas', () => {
       assert.deepEqual(
-        matchAddVar({ addVar: { scope: 'global', var: 'pot', delta: { ref: 'gvar', var: 'ante' } } }),
+        matchAddVar({ addVar: { scope: 'global', var: 'pot', delta: { _t: 2, ref: 'gvar', var: 'ante' } } }),
         {
           kind: 'addVar',
           target: { scope: 'global', varName: 'pot' },
@@ -157,11 +157,11 @@ describe('effect-compiler-patterns', () => {
       );
 
       assert.equal(
-        matchAddVar({ addVar: { scope: 'global', var: 'pot', delta: { ref: 'zoneVar', zone: 'board', var: 'threat' } } }),
+        matchAddVar({ addVar: { scope: 'global', var: 'pot', delta: { _t: 2, ref: 'zoneVar', zone: 'board', var: 'threat' } } }),
         null,
       );
       assert.equal(
-        matchAddVar({ addVar: { scope: 'pvar', player: 'active', var: 'chips', delta: { op: '+', left: 1, right: 2 } } }),
+        matchAddVar({ addVar: { scope: 'pvar', player: 'active', var: 'chips', delta: { _t: 6, op: '+', left: 1, right: 2 } } }),
         null,
       );
     });
@@ -173,7 +173,7 @@ describe('effect-compiler-patterns', () => {
       assert.deepEqual(
         matchIf({
           if: {
-            when: { op: '==', left: { ref: 'gvar', var: 'phase' }, right: 'deal' },
+            when: { op: '==', left: { _t: 2, ref: 'gvar', var: 'phase' }, right: 'deal' },
             then: thenEffects,
             else: elseEffects,
           },
@@ -268,7 +268,7 @@ describe('effect-compiler-patterns', () => {
         { setVar: { scope: 'global', var: 'pot', value: 0 } },
         {
           if: {
-            when: { op: '==', left: { ref: 'gvar', var: 'phase' }, right: 'deal' },
+            when: { op: '==', left: { _t: 2, ref: 'gvar', var: 'phase' }, right: 'deal' },
             then: [
               { addVar: { scope: 'global', var: 'pot', delta: 1 } },
               { moveToken: { token: 't1', from: 'deck', to: 'board' } },
@@ -299,7 +299,7 @@ describe('effect-compiler-patterns', () => {
             bind: 'player',
             over: { query: 'players' },
             effects: [
-              { setVar: { scope: 'pvar', player: 'active', var: 'chips', value: { ref: 'binding', name: 'seat' } } },
+              { setVar: { scope: 'pvar', player: 'active', var: 'chips', value: { _t: 2, ref: 'binding', name: 'seat' } } },
               { addVar: { scope: 'global', var: 'pot', delta: 1 } },
             ],
             in: [

@@ -14,6 +14,7 @@ import {
   type GameState,
 } from '../../src/kernel/index.js';
 import { dispatchLifecycleEvent } from '../../src/kernel/phase-lifecycle.js';
+import { asTaggedGameDef } from '../helpers/gamedef-fixtures.js';
 
 const makeState = (): GameState => ({
   globalVars: {},
@@ -35,7 +36,7 @@ const makeState = (): GameState => ({
 });
 
 const makeDef = (): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'phase-lifecycle-resources', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
     seats: [{ id: '0' }, { id: '1' }],
     constants: {},
@@ -85,7 +86,7 @@ const makeDef = (): GameDef =>
       },
     ],
     terminal: { conditions: [] },
-  }) as unknown as GameDef;
+  });
 
 describe('dispatchLifecycleEvent runtime resources', () => {
   it('preserves state identity when lifecycle dispatch produces no state/rng changes', () => {

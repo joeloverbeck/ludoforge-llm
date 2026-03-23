@@ -407,7 +407,7 @@ describe('FITL removal ordering macros', () => {
       const effects: readonly EffectAST[] = [
         { let: {
           bind: '$usPiecesBefore',
-          value: { aggregate: { op: 'count', query: { query: 'tokensInZone', zone: 'quangTri:none', filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US' }] } } } },
+          value: { _t: 5 as const, aggregate: { op: 'count', query: { query: 'tokensInZone', zone: 'quangTri:none', filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US' }] } } } },
           in: [
             {
               removeByPriority: {
@@ -433,16 +433,16 @@ describe('FITL removal ordering macros', () => {
             },
             { let: {
               bind: '$usPiecesAfter',
-              value: { aggregate: { op: 'count', query: { query: 'tokensInZone', zone: 'quangTri:none', filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US' }] } } } },
+              value: { _t: 5 as const, aggregate: { op: 'count', query: { query: 'tokensInZone', zone: 'quangTri:none', filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US' }] } } } },
               in: [{
                 let: {
                   bind: '$usRemoved',
-                  value: { op: '-', left: { ref: 'binding', name: '$usPiecesBefore' }, right: { ref: 'binding', name: '$usPiecesAfter' } },
+                  value: { _t: 6 as const, op: '-', left: { _t: 2 as const, ref: 'binding', name: '$usPiecesBefore' }, right: { _t: 2 as const, ref: 'binding', name: '$usPiecesAfter' } },
                   in: [{
                     forEach: {
                       bind: '$attritionPiece',
                       over: { query: 'tokensInZone', zone: 'quangTri:none', filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'NVA' }] } },
-                      limit: { ref: 'binding', name: '$usRemoved' },
+                      limit: { _t: 2 as const, ref: 'binding', name: '$usRemoved' },
                       effects: [{ moveToken: { token: '$attritionPiece', from: 'quangTri:none', to: 'available-NVA:none' } }],
                     },
                   }],

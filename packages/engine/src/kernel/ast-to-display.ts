@@ -182,7 +182,7 @@ const sequenceKeyExprToInlineNodes = (key: string | { readonly ref: 'binding'; r
   return [kw('grantCtx'), LPAREN, ref(key.key, 'binding'), RPAREN];
 };
 
-const isReference = (expr: ValueExpr): expr is Reference =>
+const isReference = (expr: ValueExpr): expr is Reference & { readonly _t: 2 } =>
   typeof expr === 'object' && expr !== null && 'ref' in expr;
 
 export const valueExprToInlineNodes = (expr: ValueExpr): DisplayInlineNode[] => {

@@ -102,7 +102,7 @@ describe('effects moveAll and shuffle', () => {
           to: 'discard:none',
           filter: {
             op: '>=',
-            left: { ref: 'tokenProp', token: '$token', prop: 'rank' },
+            left: { _t: 2 as const, ref: 'tokenProp', token: '$token', prop: 'rank' },
             right: 2,
           },
         },
@@ -241,7 +241,7 @@ describe('effects moveAll and shuffle', () => {
           to: 'discard:none',
           filter: {
             op: '>=',
-            left: { ref: 'tokenProp', token: '$token', prop: 'rank' },
+            left: { _t: 2 as const, ref: 'tokenProp', token: '$token', prop: 'rank' },
             right: 2,
           },
         },
@@ -300,7 +300,7 @@ describe('effects moveAll and shuffle', () => {
         applyEffect(
           {
             moveAll: {
-              from: { zoneExpr: { ref: 'binding', name: '$missingFromZone' } },
+              from: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$missingFromZone' } },
               to: 'discard:none',
             },
           },
@@ -319,7 +319,7 @@ describe('effects moveAll and shuffle', () => {
           {
             moveAll: {
               from: 'deck:none',
-              to: { zoneExpr: { ref: 'binding', name: '$missingToZone' } },
+              to: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$missingToZone' } },
             },
           },
           ctx,
@@ -332,7 +332,7 @@ describe('effects moveAll and shuffle', () => {
     const ctx = makeCtx();
 
     assert.throws(
-      () => applyEffect({ shuffle: { zone: { zoneExpr: { ref: 'binding', name: '$missingZone' } } } }, ctx),
+      () => applyEffect({ shuffle: { zone: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$missingZone' } } } }, ctx),
       (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'shuffle.zone resolution failed'),
     );
   });
@@ -346,7 +346,7 @@ describe('effects moveAll and shuffle', () => {
           {
             moveTokenAdjacent: {
               token: '$token',
-              from: { zoneExpr: { ref: 'binding', name: '$missingFromZone' } },
+              from: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$missingFromZone' } },
               direction: 'discard:none',
             },
           },

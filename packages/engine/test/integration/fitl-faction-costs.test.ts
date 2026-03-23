@@ -81,8 +81,8 @@ describe('FITL per-province-city-cost macro', () => {
           when: {
             op: 'and',
             args: [
-              { op: '!=', left: { ref: 'binding', name: '__freeOperation' }, right: true },
-              { op: '!=', left: { ref: 'zoneProp', zone: 'quangTri:none', prop: 'category' }, right: 'loc' },
+              { op: '!=', left: { _t: 2 as const, ref: 'binding', name: '__freeOperation' }, right: true },
+              { op: '!=', left: { _t: 2 as const, ref: 'zoneProp', zone: 'quangTri:none', prop: 'category' }, right: 'loc' },
             ],
           },
           then: [{ addVar: { scope: 'global', var: 'resources', delta: -3 } }],
@@ -100,8 +100,8 @@ describe('FITL per-province-city-cost macro', () => {
           when: {
             op: 'and',
             args: [
-              { op: '!=', left: { ref: 'binding', name: '__freeOperation' }, right: true },
-              { op: '!=', left: { ref: 'zoneProp', zone: 'saigon:none', prop: 'category' }, right: 'loc' },
+              { op: '!=', left: { _t: 2 as const, ref: 'binding', name: '__freeOperation' }, right: true },
+              { op: '!=', left: { _t: 2 as const, ref: 'zoneProp', zone: 'saigon:none', prop: 'category' }, right: 'loc' },
             ],
           },
           then: [{ addVar: { scope: 'global', var: 'resources', delta: -3 } }],
@@ -119,8 +119,8 @@ describe('FITL per-province-city-cost macro', () => {
           when: {
             op: 'and',
             args: [
-              { op: '!=', left: { ref: 'binding', name: '__freeOperation' }, right: true },
-              { op: '!=', left: { ref: 'zoneProp', zone: 'route1:none', prop: 'category' }, right: 'loc' },
+              { op: '!=', left: { _t: 2 as const, ref: 'binding', name: '__freeOperation' }, right: true },
+              { op: '!=', left: { _t: 2 as const, ref: 'zoneProp', zone: 'route1:none', prop: 'category' }, right: 'loc' },
             ],
           },
           then: [{ addVar: { scope: 'global', var: 'resources', delta: -3 } }],
@@ -138,8 +138,8 @@ describe('FITL per-province-city-cost macro', () => {
           when: {
             op: 'and',
             args: [
-              { op: '!=', left: { ref: 'binding', name: '__freeOperation' }, right: true },
-              { op: '!=', left: { ref: 'zoneProp', zone: 'quangTri:none', prop: 'category' }, right: 'loc' },
+              { op: '!=', left: { _t: 2 as const, ref: 'binding', name: '__freeOperation' }, right: true },
+              { op: '!=', left: { _t: 2 as const, ref: 'zoneProp', zone: 'quangTri:none', prop: 'category' }, right: 'loc' },
             ],
           },
           then: [{ addVar: { scope: 'global', var: 'resources', delta: -3 } }],

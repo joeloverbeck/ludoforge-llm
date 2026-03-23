@@ -37,11 +37,11 @@ describe('evaluation golden outputs', () => {
     const condition: ConditionAST = {
       op: 'and',
       args: [
-        { op: '>=', left: { ref: 'pvar', player: 'actor', var: 'money' }, right: 3 },
-        { op: '<', left: { ref: 'gvar', var: 'threat' }, right: 10 },
+        { op: '>=', left: { _t: 2 as const, ref: 'pvar', player: 'actor', var: 'money' }, right: 3 },
+        { op: '<', left: { _t: 2 as const, ref: 'gvar', var: 'threat' }, right: 10 },
         {
           op: '>',
-          left: { aggregate: { op: 'count', query: { query: 'tokensInZone', zone: 'hand:actor' } } },
+          left: { _t: 5, aggregate: { op: 'count', query: { query: 'tokensInZone', zone: 'hand:actor' } } },
           right: 0,
         },
       ],
@@ -54,11 +54,11 @@ describe('evaluation golden outputs', () => {
     const ctx = makeCtx();
 
     const aggregateExpr: ValueExpr = {
-      aggregate: {
+      _t: 5, aggregate: {
         op: 'sum',
         query: { query: 'tokensInZone', zone: 'deck:none' },
         bind: '$token',
-        valueExpr: { ref: 'tokenProp', token: '$token', prop: 'cost' },
+        valueExpr: { _t: 2 as const, ref: 'tokenProp', token: '$token', prop: 'cost' },
       },
     };
 

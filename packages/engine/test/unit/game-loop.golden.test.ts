@@ -10,9 +10,10 @@ import {
   type GameDef,
   type Move,
 } from '../../src/kernel/index.js';
+import { asTaggedGameDef } from '../helpers/gamedef-fixtures.js';
 
 const createGoldenDef = (): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'game-loop-golden', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
     constants: {},
     globalVars: [{ name: 'score', type: 'int', init: 0, min: 0, max: 100 }],
@@ -47,7 +48,7 @@ phase: [asPhaseId('main')],
     ],
     triggers: [],
     terminal: { conditions: [] },
-  }) as unknown as GameDef;
+  });
 
 const fixedScript: readonly Move[] = [
   { actionId: asActionId('boost'), params: { amount: 2 } },

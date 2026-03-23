@@ -343,7 +343,7 @@ describe('RandomAgent', () => {
                 in: [
                   {
                     if: {
-                      when: { op: '==' as const, left: { ref: 'binding' as const, name: '$roll' }, right: 1 },
+                      when: { op: '==' as const, left: { _t: 2 as const, ref: 'binding' as const, name: '$roll' }, right: 1 },
                       then: [{ chooseOne: { internalDecisionId: 'decision:$targetA', bind: '$targetA', options: { query: 'enums' as const, values: ['alpha'] } } }],
                       else: [{ chooseOne: { internalDecisionId: 'decision:$targetB', bind: '$targetB', options: { query: 'enums' as const, values: ['beta'] } } }],
                     },
@@ -403,7 +403,7 @@ describe('RandomAgent', () => {
                 in: [
                   {
                     if: {
-                      when: { op: '==' as const, left: { ref: 'binding' as const, name: '$roll' }, right: 1 },
+                      when: { op: '==' as const, left: { _t: 2 as const, ref: 'binding' as const, name: '$roll' }, right: 1 },
                       then: [{ chooseOne: { internalDecisionId: 'decision:$targetA', bind: '$targetA', options: { query: 'enums' as const, values: ['alpha'] } } }],
                       else: [{ chooseOne: { internalDecisionId: 'decision:$targetB', bind: '$targetB', options: { query: 'enums' as const, values: ['beta'] } } }],
                     },
@@ -487,7 +487,7 @@ describe('RandomAgent', () => {
                 in: [
                   {
                     if: {
-                      when: { op: '==' as const, left: { ref: 'binding' as const, name: '$roll' }, right: 1 },
+                      when: { op: '==' as const, left: { _t: 2 as const, ref: 'binding' as const, name: '$roll' }, right: 1 },
                       then: [{ chooseOne: { internalDecisionId: 'decision:$targetA', bind: '$targetA', options: { query: 'enums' as const, values: ['alpha'] } } }],
                       else: [{ chooseOne: { internalDecisionId: 'decision:$targetB', bind: '$targetB', options: { query: 'enums' as const, values: ['alpha'] } } }],
                     },

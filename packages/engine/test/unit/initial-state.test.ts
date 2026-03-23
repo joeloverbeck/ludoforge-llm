@@ -18,9 +18,10 @@ import {
   type SerializedGameState,
 } from '../../src/kernel/index.js';
 import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
+import { asTaggedGameDef } from '../helpers/gamedef-fixtures.js';
 
 const createDef = (): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'initial-state-test', players: { min: 2, max: 4 }, maxTriggerDepth: 8 },
     seats: [{ id: '0' }, { id: '1' }, { id: '2' }, { id: '3' }],
     constants: {},
@@ -50,7 +51,7 @@ const createDef = (): GameDef =>
       },
     ],
     terminal: { conditions: [] },
-  }) as unknown as GameDef;
+  });
 
 describe('initialState', () => {
   it('initializes vars, zones, and player metadata', () => {
@@ -270,7 +271,7 @@ describe('initialState', () => {
   });
 
   it('reveals played and lookahead slots from the inferred draw pile when turnFlow lifecycle is declared', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'lifecycle-start', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
       seats: [{ id: '0' }, { id: '1' }],
       constants: {},
@@ -306,9 +307,9 @@ describe('initialState', () => {
       actions: [
         {
           id: asActionId('pass'),
-actor: 'active',
-executor: 'actor',
-phase: [asPhaseId('main')],
+          actor: 'active',
+          executor: 'actor',
+          phase: [asPhaseId('main')],
           params: [],
           pre: null,
           cost: [],
@@ -318,7 +319,7 @@ phase: [asPhaseId('main')],
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
 
     const state = initialState(def, 1, 2).state;
     assert.equal(state.zones['played:none']?.length, 1);
@@ -329,7 +330,7 @@ phase: [asPhaseId('main')],
   });
 
   it('initializes turnFlow eligibility runtime state from declared faction order', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'turn-flow-eligibility-start', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
       seats: [{ id: '0' }, { id: '1' }],
       constants: {},
@@ -356,7 +357,7 @@ phase: [asPhaseId('main')],
       actions: [],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
 
     const state = initialState(def, 1, 2).state;
     assert.equal(state.activePlayer, asPlayerId(1));

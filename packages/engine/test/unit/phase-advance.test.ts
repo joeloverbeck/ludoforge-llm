@@ -103,6 +103,7 @@ describe('phase advancement', () => {
         when: {
           op: '>=',
           left: {
+            _t: 5,
             aggregate: {
               op: 'count',
               query: {
@@ -316,7 +317,7 @@ describe('phase advancement', () => {
           event: { type: 'phaseExit', phase: asPhaseId('p1') },
           effects: [
             { addVar: { scope: 'global', var: 'step', delta: 1 } },
-            { addVar: { scope: 'global', var: 'order', delta: { op: '*', left: { ref: 'gvar', var: 'step' }, right: 100 } } },
+            { addVar: { scope: 'global', var: 'order', delta: { _t: 6, op: '*', left: { _t: 2, ref: 'gvar', var: 'step' }, right: 100 } } },
           ],
         },
         {
@@ -324,7 +325,7 @@ describe('phase advancement', () => {
           event: { type: 'phaseEnter', phase: asPhaseId('p2') },
           effects: [
             { addVar: { scope: 'global', var: 'step', delta: 1 } },
-            { addVar: { scope: 'global', var: 'order', delta: { op: '*', left: { ref: 'gvar', var: 'step' }, right: 10 } } },
+            { addVar: { scope: 'global', var: 'order', delta: { _t: 6, op: '*', left: { _t: 2, ref: 'gvar', var: 'step' }, right: 10 } } },
           ],
         },
       ],
@@ -350,7 +351,7 @@ describe('phase advancement', () => {
           event: { type: 'phaseExit', phase: asPhaseId('p2') },
           effects: [
             { addVar: { scope: 'global', var: 'step', delta: 1 } },
-            { addVar: { scope: 'global', var: 'order', delta: { op: '*', left: { ref: 'gvar', var: 'step' }, right: 1000 } } },
+            { addVar: { scope: 'global', var: 'order', delta: { _t: 6, op: '*', left: { _t: 2, ref: 'gvar', var: 'step' }, right: 1000 } } },
           ],
         },
         {
@@ -358,7 +359,7 @@ describe('phase advancement', () => {
           event: { type: 'turnEnd' },
           effects: [
             { addVar: { scope: 'global', var: 'step', delta: 1 } },
-            { addVar: { scope: 'global', var: 'order', delta: { op: '*', left: { ref: 'gvar', var: 'step' }, right: 100 } } },
+            { addVar: { scope: 'global', var: 'order', delta: { _t: 6, op: '*', left: { _t: 2, ref: 'gvar', var: 'step' }, right: 100 } } },
           ],
         },
         {
@@ -366,7 +367,7 @@ describe('phase advancement', () => {
           event: { type: 'turnStart' },
           effects: [
             { addVar: { scope: 'global', var: 'step', delta: 1 } },
-            { addVar: { scope: 'global', var: 'order', delta: { op: '*', left: { ref: 'gvar', var: 'step' }, right: 10 } } },
+            { addVar: { scope: 'global', var: 'order', delta: { _t: 6, op: '*', left: { _t: 2, ref: 'gvar', var: 'step' }, right: 10 } } },
           ],
         },
         {
@@ -374,7 +375,7 @@ describe('phase advancement', () => {
           event: { type: 'phaseEnter', phase: asPhaseId('p1') },
           effects: [
             { addVar: { scope: 'global', var: 'step', delta: 1 } },
-            { addVar: { scope: 'global', var: 'order', delta: { ref: 'gvar', var: 'step' } } },
+            { addVar: { scope: 'global', var: 'order', delta: { _t: 2, ref: 'gvar', var: 'step' } } },
           ],
         },
       ],

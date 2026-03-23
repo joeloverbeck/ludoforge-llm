@@ -12,6 +12,7 @@ import type {
   SpaceMarkerLatticeDef,
 } from './types.js';
 import { asZoneId } from './branded.js';
+import { tagMarkerLatticeConstraints } from './tag-value-exprs.js';
 import { buildValidationContext } from './validate-gamedef-structure.js';
 import { validateConditionAst } from './validate-conditions.js';
 
@@ -41,7 +42,9 @@ export function validateMapPayload(
   const diagnostics: Diagnostic[] = [];
   const spaces = mapPayload.spaces;
   const tracks = mapPayload.tracks ?? [];
-  const markerLattices = mapPayload.markerLattices ?? [];
+  const markerLattices = mapPayload.markerLattices !== undefined
+    ? tagMarkerLatticeConstraints(mapPayload.markerLattices)
+    : [];
   const spaceMarkers = mapPayload.spaceMarkers ?? [];
   const validationDef = buildMarkerConstraintValidationDef(spaces, markerLattices);
   const validationContext = buildValidationContext(validationDef).context;

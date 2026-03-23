@@ -1,6 +1,6 @@
 # Spec 76 — ValueExpr Type-Tag Discriminants
 
-**Status**: PROPOSED
+**Status**: ✅ COMPLETED
 **Dependencies**: None
 **Blocked by**: None
 **Enables**: Spec 79 (Compiled Effect Path Redesign) benefits from faster value evaluation
@@ -228,3 +228,29 @@ These are separate concerns that may deserve their own specs if post-implementat
 
 - **Reference sub-tags**: Reference has 15 string-keyed sub-variants (`ref: 'gvar' | 'pvar' | ...`). Adding numeric sub-tags could speed up `resolveRef()` dispatch. Profile after `_t` implementation to determine if this is worthwhile.
 - **EffectAST tags**: EffectAST uses `effectKindOf` with `for-in` first-key extraction, which is reasonably fast. Adding `_t` to EffectAST's 20+ variants would make `effectKindOf` a direct property access. Profile separately to justify the scope.
+
+## Outcome
+
+**Completion date**: 2026-03-23
+
+**What changed**:
+- `types-ast.ts`: Added `VALUE_EXPR_TAG` constants (1–6), `ValueExprTag` type, `_t` discriminant on all non-primitive `ValueExpr` and `NumericValueExpr` variants.
+- `eval-value.ts`: Replaced if-in dispatch chain with `switch(expr._t)`. Extracted `evalConcat`, `evalAggregate`, `evalArithmetic` helper functions to keep `evalValue` small for V8 inlining.
+- `numeric-value-expr.ts`: `isNumericValueExpr` now dispatches on `_t`.
+- `compile-conditions-values.ts`: `lowerValueNode`, `lowerAggregate` assign `_t` inline at construction. Reference objects tagged at the `lowerValueNode` callsite via spread.
+- `effect-compiler-codegen.ts`: `compileValueAccessor` and `toReference` add `_t: VALUE_EXPR_TAG.REF` to Reference objects.
+- `compile-effects-choice.ts`, `compile-effects-core.ts`, `effects-control.ts`: Inline ValueExpr/Reference constructions updated with `_t`.
+- `schemas-ast.ts`: Zod schema updated with `_t: IntegerSchema.optional()` on all non-primitive ValueExpr variants (optional to support both raw YAML validation and compiled JSON).
+- Schema artifacts (`GameDef.schema.json`, `Trace.schema.json`, `EvalReport.schema.json`) regenerated.
+- `tag-value-exprs.ts` (kernel): Utility for tagging ValueExpr objects in marker lattice constraints from data assets, which bypass the compiler lowering pipeline.
+- `map-model.ts`, `compile-data-assets.ts`: Marker lattice constraint ValueExprs tagged at compile time.
+- `ast-to-display.ts`: `isReference` type guard updated for `Reference & { readonly _t: 2 }`.
+
+**Deviations from original plan**:
+- `_t` is optional in the Zod schema (not required) because the same schema validates both raw GameSpecDoc YAML (no `_t`) and compiled GameDef JSON (has `_t`). The TypeScript type requires `_t`; the schema is permissive.
+- Marker lattice constraints from data assets bypass the compiler's `lowerValueNode` pipeline. A `tagValueExprs` utility in `src/kernel/` tags these at compile time in `compile-data-assets.ts` and `map-model.ts`.
+- A test-only `tagValueExprs` utility (`test/helpers/tag-value-exprs.ts`) and `asTaggedGameDef` helper were created to handle ~95 test files that construct GameDef objects via `as unknown as GameDef`, bypassing TypeScript type checking.
+- The spec's exhaustive `default` case uses a direct `throw` instead of an `_exhaustive: never` variable, to satisfy the project's ESLint `no-unused-vars` rule.
+- The spec mentioned removing dead profiler code from `eval-condition.ts` as opportunistic cleanup — this was not done (out of scope).
+
+**Verification**: 4650 engine tests pass, 0 failures. Build clean. Lint clean. Schema artifacts in sync.

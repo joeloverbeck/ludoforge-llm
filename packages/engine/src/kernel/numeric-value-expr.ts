@@ -1,4 +1,5 @@
-import type { NumericValueExpr, ValueExpr } from './types.js';
+import { VALUE_EXPR_TAG } from './types.js';
+import type { NumericValueExpr, ValueExpr, ValueExprTag } from './types.js';
 
 export function isNumericValueExpr(expr: ValueExpr): expr is NumericValueExpr {
   if (typeof expr === 'number') {
@@ -7,20 +8,18 @@ export function isNumericValueExpr(expr: ValueExpr): expr is NumericValueExpr {
   if (typeof expr === 'boolean' || typeof expr === 'string') {
     return false;
   }
-  if ('scalarArray' in expr) {
-    return false;
+  switch ((expr as { readonly _t: ValueExprTag })._t) {
+    case VALUE_EXPR_TAG.SCALAR_ARRAY: return false;
+    case VALUE_EXPR_TAG.CONCAT: return false;
+    case VALUE_EXPR_TAG.REF: return true;
+    case VALUE_EXPR_TAG.AGGREGATE: return true;
+    case VALUE_EXPR_TAG.IF:
+      return isNumericValueExpr((expr as Extract<ValueExpr, { readonly _t: 4 }>).if.then)
+        && isNumericValueExpr((expr as Extract<ValueExpr, { readonly _t: 4 }>).if.else);
+    case VALUE_EXPR_TAG.OP:
+      return isNumericValueExpr((expr as Extract<ValueExpr, { readonly _t: 6 }>).left)
+        && isNumericValueExpr((expr as Extract<ValueExpr, { readonly _t: 6 }>).right);
+    default:
+      throw new Error(`Unknown ValueExpr tag: ${(expr as { readonly _t: number })._t}`);
   }
-  if ('ref' in expr) {
-    return true;
-  }
-  if ('concat' in expr) {
-    return false;
-  }
-  if ('aggregate' in expr) {
-    return true;
-  }
-  if ('if' in expr) {
-    return isNumericValueExpr(expr.if.then) && isNumericValueExpr(expr.if.else);
-  }
-  return isNumericValueExpr(expr.left) && isNumericValueExpr(expr.right);
 }

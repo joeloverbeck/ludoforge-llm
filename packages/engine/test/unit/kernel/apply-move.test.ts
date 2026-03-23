@@ -96,7 +96,7 @@ const makeBaseState = (overrides?: Partial<GameState>): GameState => ({
  */
 const conditionalCostEffect: EffectAST = {
   if: {
-    when: { op: '!=', left: { ref: 'binding', name: '__freeOperation' }, right: true },
+    when: { op: '!=', left: { _t: 2 as const, ref: 'binding', name: '__freeOperation' }, right: true },
     then: [{ addVar: { scope: 'global', var: 'resources', delta: -3 } }],
   },
 };
@@ -178,7 +178,7 @@ describe('applyMove() __freeOperation binding (KERDECSEQMOD-004)', () => {
     const flagVar: VariableDef = { name: 'wasFree', type: 'int', init: 0, min: 0, max: 1 };
     const setFlagEffect: EffectAST = {
       if: {
-        when: { op: '==', left: { ref: 'binding', name: '__freeOperation' }, right: true },
+        when: { op: '==', left: { _t: 2 as const, ref: 'binding', name: '__freeOperation' }, right: true },
         then: [{ setVar: { scope: 'global', var: 'wasFree', value: 1 } }],
       },
     };
@@ -247,7 +247,7 @@ describe('applyMove() declared int-range params respect full domain membership',
       ],
       pre: null,
       cost: [],
-      effects: [{ setVar: { scope: 'global', var: 'resources', value: { ref: 'binding', name: 'amount' } } }],
+      effects: [{ setVar: { scope: 'global', var: 'resources', value: { _t: 2 as const, ref: 'binding', name: 'amount' } } }],
       limits: [],
     };
     const def = makeBaseDef({ actions: [action] });
@@ -300,7 +300,7 @@ describe('applyMove() declared int-range params respect full domain membership',
       ],
       pre: null,
       cost: [],
-      effects: [{ setVar: { scope: 'global', var: 'resources', value: { ref: 'binding', name: 'amount' } } }],
+      effects: [{ setVar: { scope: 'global', var: 'resources', value: { _t: 2 as const, ref: 'binding', name: 'amount' } } }],
       limits: [],
     };
     const def = makeBaseDef({ actions: [action] });
@@ -344,7 +344,7 @@ describe('applyMove() declared int-range params respect full domain membership',
       ],
       pre: null,
       cost: [],
-      effects: [{ setVar: { scope: 'global', var: 'resources', value: { ref: 'binding', name: 'amount' } } }],
+      effects: [{ setVar: { scope: 'global', var: 'resources', value: { _t: 2 as const, ref: 'binding', name: 'amount' } } }],
       limits: [],
     };
     const def = makeBaseDef({ actions: [action] });
@@ -737,7 +737,7 @@ describe('applyMove() maxPhaseTransitionsPerMove replay boundary', () => {
  */
 const actionClassCheckEffect: EffectAST = {
   if: {
-    when: { op: '==', left: { ref: 'binding', name: '__actionClass' }, right: 'limitedOperation' },
+    when: { op: '==', left: { _t: 2 as const, ref: 'binding', name: '__actionClass' }, right: 'limitedOperation' },
     then: [{ setVar: { scope: 'global', var: 'isLimited', value: 1 } }],
   },
 };
@@ -788,7 +788,7 @@ describe('applyMove() __actionClass binding (FITLOPEFULEFF-001)', () => {
   it('3. move.actionClass = "operationPlusSpecialActivity" → bindings contain correct value', () => {
     const opSACheckEffect: EffectAST = {
       if: {
-        when: { op: '==', left: { ref: 'binding', name: '__actionClass' }, right: 'operationPlusSpecialActivity' },
+        when: { op: '==', left: { _t: 2 as const, ref: 'binding', name: '__actionClass' }, right: 'operationPlusSpecialActivity' },
         then: [{ setVar: { scope: 'global', var: 'isLimited', value: 1 } }],
       },
     };
@@ -860,7 +860,7 @@ phase: [asPhaseId('main')],
       actionId: asActionId('mapAwareOp'),
       legality: {
         op: '==',
-        left: { ref: 'zoneProp', zone: 'city:none', prop: 'category' },
+        left: { _t: 2 as const, ref: 'zoneProp', zone: 'city:none', prop: 'category' },
         right: 'city',
       },
       costValidation: null,
@@ -960,7 +960,7 @@ phase: [asPhaseId('main')],
               actionIds: ['operation'],
               zoneFilter: {
                 op: '==',
-                left: { ref: 'gvar', var: 'missingVar' },
+                left: { _t: 2 as const, ref: 'gvar', var: 'missingVar' },
                 right: 1,
               },
               remainingUses: 1,
@@ -1052,7 +1052,7 @@ phase: [asPhaseId('main')],
               actionIds: ['operation'],
               zoneFilter: {
                 op: '==',
-                left: { ref: 'gvar', var: 'missingVar' },
+                left: { _t: 2 as const, ref: 'gvar', var: 'missingVar' },
                 right: 1,
               },
               remainingUses: 1,
@@ -1659,7 +1659,7 @@ describe('applyMove() required free-operation grant enforcement', () => {
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
-              zoneFilter: { op: '==', left: { ref: 'binding', name: '$zone' }, right: 'board:none' },
+              zoneFilter: { op: '==', left: { _t: 2 as const, ref: 'binding', name: '$zone' }, right: 'board:none' },
               remainingUses: 1,
             },
             {
@@ -1667,7 +1667,7 @@ describe('applyMove() required free-operation grant enforcement', () => {
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
-              zoneFilter: { op: '==', left: { ref: 'binding', name: '$zone' }, right: 'city:none' },
+              zoneFilter: { op: '==', left: { _t: 2 as const, ref: 'binding', name: '$zone' }, right: 'city:none' },
               remainingUses: 1,
             },
           ],
@@ -2044,7 +2044,7 @@ phase: [asPhaseId('main')],
     const profile: ActionPipelineDef = {
       id: 'operation-profile',
       actionId: asActionId('operation'),
-      applicability: { op: '==', left: { ref: 'activePlayer' }, right: 1 },
+      applicability: { op: '==', left: { _t: 2 as const, ref: 'activePlayer' }, right: 1 },
       legality: null,
       costValidation: null,
       costEffects: [],
@@ -2130,7 +2130,7 @@ phase: [asPhaseId('main')],
     const profile: ActionPipelineDef = {
       id: 'operation-profile',
       actionId: action.id,
-      applicability: { op: '==', left: { ref: 'activePlayer' }, right: 1 },
+      applicability: { op: '==', left: { _t: 2 as const, ref: 'activePlayer' }, right: 1 },
       legality: null,
       costValidation: null,
       costEffects: [],
@@ -2220,7 +2220,7 @@ phase: [asPhaseId('main')],
       actionId: action.id,
       applicability: {
         op: '==',
-        left: { aggregate: { op: 'count', query: { query: 'zones' } } },
+        left: { _t: 5, aggregate: { op: 'count', query: { query: 'zones' } } },
         right: 2,
       },
       legality: null,
@@ -2279,7 +2279,7 @@ phase: [asPhaseId('main')],
               actionIds: ['operation'],
               zoneFilter: {
                 op: '==',
-                left: { ref: 'zoneProp', zone: '$zone', prop: 'category' },
+                left: { _t: 2 as const, ref: 'zoneProp', zone: '$zone', prop: 'category' },
                 right: 'board',
               },
               remainingUses: 1,
@@ -2360,7 +2360,7 @@ describe('applyMove() compound special-activity free-operation pipeline overlay 
               actionIds: ['special'],
               zoneFilter: {
                 op: '==',
-                left: { ref: 'zoneProp', zone: '$zone', prop: 'category' },
+                left: { _t: 2 as const, ref: 'zoneProp', zone: '$zone', prop: 'category' },
                 right: 'board',
               },
               remainingUses: 1,
@@ -2398,7 +2398,7 @@ describe('applyMove() compound special-activity free-operation pipeline overlay 
       actionId: special.id,
       applicability: {
         op: '==',
-        left: { aggregate: { op: 'count', query: { query: 'zones' } } },
+        left: { _t: 5, aggregate: { op: 'count', query: { query: 'zones' } } },
         right: 2,
       },
       legality: null,
@@ -2467,7 +2467,7 @@ describe('applyMove() compound special-activity free-operation pipeline overlay 
       actionId: special.id,
       applicability: {
         op: '==',
-        left: { aggregate: { op: 'count', query: { query: 'zones' } } },
+        left: { _t: 5, aggregate: { op: 'count', query: { query: 'zones' } } },
         right: 2,
       },
       legality: null,
@@ -2652,7 +2652,7 @@ describe('applyMove() executor applicability contract', () => {
       id: 'costlyProfile',
       actionId: action.id,
       legality: null,
-      costValidation: { op: '>=', left: { ref: 'gvar', var: 'resources' }, right: 20 },
+      costValidation: { op: '>=', left: { _t: 2 as const, ref: 'gvar', var: 'resources' }, right: 20 },
       costEffects: [],
       targeting: {},
       stages: [],
@@ -2705,7 +2705,7 @@ describe('applyMove() simultaneous commit preflight parity', () => {
       id: 'costlyProfile',
       actionId: costlyAction.id,
       legality: null,
-      costValidation: { op: '>=', left: { ref: 'gvar', var: 'resources' }, right: 20 },
+      costValidation: { op: '>=', left: { _t: 2 as const, ref: 'gvar', var: 'resources' }, right: 20 },
       costEffects: [],
       targeting: {},
       stages: [],

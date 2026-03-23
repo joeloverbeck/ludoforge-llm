@@ -743,7 +743,7 @@ describe('realizeContentPlan', () => {
         target: 'spaces',
         bounds: { min: 1, max: 3 },
         filter: 'aid >= 3',
-        conditionAST: { op: '>=', left: { ref: 'gvar', var: 'aid' }, right: 3 },
+        conditionAST: { op: '>=', left: { _t: 2, ref: 'gvar', var: 'aid' }, right: 3 },
       };
       const result = realizeContentPlan(plan([msg]), MOCK_VERB);
       // With conditionAST + verbalization, should re-render using label "Aid" not raw "aid >= 3"
@@ -780,7 +780,7 @@ describe('realizeContentPlan', () => {
         target: 'spaces',
         bounds: { min: 1, max: 1 },
         filter: 'aid >= 3',
-        conditionAST: { op: '>=', left: { ref: 'gvar', var: 'aid' }, right: 3 },
+        conditionAST: { op: '>=', left: { _t: 2, ref: 'gvar', var: 'aid' }, right: 3 },
       };
       const result = realizeContentPlan(plan([msg]), MOCK_VERB);
       assert.equal(result.steps[0]!.lines[0]!.text, 'Select 1 Aid ≥ 3');
@@ -793,7 +793,7 @@ describe('realizeContentPlan', () => {
         target: 'spaces',
         bounds: { min: 0, max: 3 },
         filter: 'aid >= 3',
-        conditionAST: { op: '>=', left: { ref: 'gvar', var: 'aid' }, right: 3 },
+        conditionAST: { op: '>=', left: { _t: 2, ref: 'gvar', var: 'aid' }, right: 3 },
       };
       const result = realizeContentPlan(plan([msg]), MOCK_VERB);
       assert.equal(result.steps[0]!.lines[0]!.text, 'Select up to 3 Aid ≥ 3');
@@ -806,7 +806,7 @@ describe('realizeContentPlan', () => {
         target: 'spaces',
         bounds: { min: 1, max: 3 },
         filter: 'old filter',
-        conditionAST: { op: '>=', left: { ref: 'gvar', var: 'playerGold' }, right: 5 },
+        conditionAST: { op: '>=', left: { _t: 2, ref: 'gvar', var: 'playerGold' }, right: 5 },
       };
       const result = realizeContentPlan(plan([msg]), undefined);
       // Without verbalization, humanizeConditionWithLabels still produces a string

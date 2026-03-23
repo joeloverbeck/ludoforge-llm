@@ -117,7 +117,7 @@ describe('move decision helpers', () => {
             in: [
               {
                 if: {
-                  when: { op: '==', left: { ref: 'binding', name: '$roll' }, right: 1 },
+                  when: { op: '==', left: { _t: 2, ref: 'binding', name: '$roll' }, right: 1 },
                   then: [
                     {
                       chooseOne: {

@@ -44,14 +44,14 @@ describe('evaluation property-style checks', () => {
         arg: {
           op: 'in',
           item: 4,
-          set: { ref: 'binding', name: '$set' },
+          set: { _t: 2, ref: 'binding', name: '$set' },
         },
       },
       {
         op: 'and',
         args: [
-          { op: '<', left: { ref: 'gvar', var: 'threat' }, right: 20 },
-          { op: '>', left: { ref: 'pvar', player: 'actor', var: 'money' }, right: 0 },
+          { op: '<', left: { _t: 2, ref: 'gvar', var: 'threat' }, right: 20 },
+          { op: '>', left: { _t: 2, ref: 'pvar', player: 'actor', var: 'money' }, right: 0 },
         ],
       },
     ];
@@ -68,13 +68,13 @@ describe('evaluation property-style checks', () => {
     const ctx = makeCtx();
 
     const expressions: ValueExpr[] = [
-      { op: '+', left: 3, right: 4 },
-      { op: '-', left: 10, right: 7 },
-      { op: '*', left: 6, right: 5 },
-      { aggregate: { op: 'sum', query: { query: 'intsInRange', min: 1, max: 4 }, bind: '$n', valueExpr: { ref: 'binding', name: '$n' } } },
-      { aggregate: { op: 'count', query: { query: 'tokensInZone', zone: 'deck:none' } } },
-      { aggregate: { op: 'min', query: { query: 'intsInRange', min: 2, max: 5 }, bind: '$n', valueExpr: { ref: 'binding', name: '$n' } } },
-      { aggregate: { op: 'max', query: { query: 'intsInRange', min: 2, max: 5 }, bind: '$n', valueExpr: { ref: 'binding', name: '$n' } } },
+      { _t: 6, op: '+', left: 3, right: 4 },
+      { _t: 6, op: '-', left: 10, right: 7 },
+      { _t: 6, op: '*', left: 6, right: 5 },
+      { _t: 5, aggregate: { op: 'sum', query: { query: 'intsInRange', min: 1, max: 4 }, bind: '$n', valueExpr: { _t: 2, ref: 'binding', name: '$n' } } },
+      { _t: 5, aggregate: { op: 'count', query: { query: 'tokensInZone', zone: 'deck:none' } } },
+      { _t: 5, aggregate: { op: 'min', query: { query: 'intsInRange', min: 2, max: 5 }, bind: '$n', valueExpr: { _t: 2, ref: 'binding', name: '$n' } } },
+      { _t: 5, aggregate: { op: 'max', query: { query: 'intsInRange', min: 2, max: 5 }, bind: '$n', valueExpr: { _t: 2, ref: 'binding', name: '$n' } } },
     ];
 
     expressions.forEach((expr) => {

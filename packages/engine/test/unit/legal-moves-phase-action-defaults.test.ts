@@ -63,13 +63,13 @@ const makeBaseState = (overrides?: Partial<GameState>): GameState => ({
 
 const gatePassCondition: ConditionAST = {
   op: '==',
-  left: { ref: 'gvar', var: 'gate' },
+  left: { _t: 2, ref: 'gvar', var: 'gate' },
   right: 1,
 };
 
 const gateFailCondition: ConditionAST = {
   op: '==',
-  left: { ref: 'gvar', var: 'gate' },
+  left: { _t: 2, ref: 'gvar', var: 'gate' },
   right: 0,
 };
 

@@ -1,8 +1,10 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
+import { VALUE_EXPR_TAG } from '../kernel/types.js';
 import type {
   EffectAST,
   FreeOperationExecutionContext,
   FreeOperationTokenInterpretationRule,
+  ValueExpr,
 } from '../kernel/types.js';
 import { lowerTokenFilterExpr, lowerValueNode, type ConditionLoweringContext } from './compile-conditions.js';
 import { SUPPORTED_EFFECT_KINDS } from './effect-kind-registry.js';
@@ -84,7 +86,7 @@ export function lowerFreeOperationExecutionContextNode(
         ]).diagnostics);
         continue;
       }
-      loweredEntries.push([key, { scalarArray: [...value] }]);
+      loweredEntries.push([key, { _t: VALUE_EXPR_TAG.SCALAR_ARRAY, scalarArray: [...value] } as ValueExpr]);
       continue;
     }
 

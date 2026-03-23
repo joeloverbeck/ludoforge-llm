@@ -103,7 +103,7 @@ function buildMoveCubeEffects(cubeIds: readonly string[], targetZone: string): r
   return cubeIds.map((cubeId) => ({
     moveToken: {
       token: cubeId,
-      from: { zoneExpr: { ref: 'tokenZone' as const, token: cubeId } },
+      from: { zoneExpr: { _t: 2 as const, ref: 'tokenZone' as const, token: cubeId } },
       to: targetZone,
     },
   }));
@@ -174,7 +174,7 @@ function buildSweepHopMoveEffects(
     {
       moveToken: {
         token: sourceTroopBinding,
-        from: { zoneExpr: { ref: 'tokenZone', token: sourceTroopBinding } },
+        from: { zoneExpr: { _t: 2 as const, ref: 'tokenZone', token: sourceTroopBinding } },
         to: targetZone,
       },
     },

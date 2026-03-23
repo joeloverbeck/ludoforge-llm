@@ -516,7 +516,7 @@ describe('effects choice assertions', () => {
         bind: '$pick',
         over: { query: 'binding', name: '$picks' },
         effects: [
-          { setVar: { scope: 'global', var: 'score', value: { ref: 'tokenProp', token: '$pick', prop: 'value' } } },
+          { setVar: { scope: 'global', var: 'score', value: { _t: 2 as const, ref: 'tokenProp', token: '$pick', prop: 'value' } } },
         ],
       },
     };
@@ -849,7 +849,7 @@ describe('effects choice assertions', () => {
               bind: '$inside',
               options: { query: 'enums', values: ['a', 'b', 'c'] },
               min: 1,
-              max: { ref: 'binding', name: '$die' },
+              max: { _t: 2 as const, ref: 'binding' as const, name: '$die' },
             },
           },
         ],
@@ -887,7 +887,7 @@ describe('effects choice assertions', () => {
         in: [
           {
             if: {
-              when: { op: '==', left: { ref: 'binding', name: '$die' }, right: 1 },
+              when: { op: '==', left: { _t: 2 as const, ref: 'binding' as const, name: '$die' }, right: 1 },
               then: [
                 {
                   chooseOne: {
@@ -964,8 +964,8 @@ describe('effects choice assertions', () => {
         internalDecisionId: 'decision:$picks',
         bind: '$picks',
         options: { query: 'enums', values: ['alpha', 'beta', 'gamma'] },
-        min: { if: { when: { op: '>', left: { ref: 'gvar', var: 'score' }, right: 0 }, then: 1, else: 0 } },
-        max: { ref: 'gvar', var: 'score' },
+        min: { _t: 4 as const, if: { when: { op: '>', left: { _t: 2 as const, ref: 'gvar' as const, var: 'score' }, right: 0 }, then: 1, else: 0 } },
+        max: { _t: 2 as const, ref: 'gvar' as const, var: 'score' },
       },
     };
 
@@ -986,8 +986,8 @@ describe('effects choice assertions', () => {
               internalDecisionId: 'decision:$picks',
               bind: '$picks',
               options: { query: 'enums', values: ['alpha', 'beta', 'gamma'] },
-              min: { ref: 'binding', name: '$pickCount' },
-              max: { ref: 'binding', name: '$pickCount' },
+              min: { _t: 2 as const, ref: 'binding' as const, name: '$pickCount' },
+              max: { _t: 2 as const, ref: 'binding' as const, name: '$pickCount' },
             },
           },
         ],
@@ -1142,7 +1142,7 @@ describe('effects choice assertions', () => {
     const ctx = makeCtx();
     const effect: EffectAST = {
       setMarker: {
-        space: { zoneExpr: { ref: 'binding', name: '$missingSpace' } },
+        space: { zoneExpr: { _t: 2 as const, ref: 'binding' as const, name: '$missingSpace' } },
         marker: 'unknownMarker',
         state: 'neutral',
       },
@@ -1161,7 +1161,7 @@ describe('effects choice assertions', () => {
     const ctx = makeCtx();
     const effect: EffectAST = {
       shiftMarker: {
-        space: { zoneExpr: { ref: 'binding', name: '$missingSpace' } },
+        space: { zoneExpr: { _t: 2 as const, ref: 'binding' as const, name: '$missingSpace' } },
         marker: 'unknownMarker',
         delta: 1,
       },
@@ -1180,7 +1180,7 @@ describe('effects choice assertions', () => {
     const ctx = makeDiscoveryCtx();
     const effect: EffectAST = {
       setMarker: {
-        space: { zoneExpr: { ref: 'binding', name: '$missingSpace' } },
+        space: { zoneExpr: { _t: 2 as const, ref: 'binding' as const, name: '$missingSpace' } },
         marker: 'unknownMarker',
         state: 'neutral',
       },
@@ -1193,7 +1193,7 @@ describe('effects choice assertions', () => {
     const ctx = makeDiscoveryCtx();
     const effect: EffectAST = {
       shiftMarker: {
-        space: { zoneExpr: { ref: 'binding', name: '$missingSpace' } },
+        space: { zoneExpr: { _t: 2 as const, ref: 'binding' as const, name: '$missingSpace' } },
         marker: 'unknownMarker',
         delta: 1,
       },

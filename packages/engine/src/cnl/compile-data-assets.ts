@@ -19,6 +19,7 @@ import type {
 } from '../kernel/types.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 import { isRecord } from './compile-lowering.js';
+import { tagMarkerLatticeConstraints } from '../kernel/tag-value-exprs.js';
 import { collectInvalidSeatReferences } from './seat-reference-validation.js';
 import { SEAT_REFERENCE_SELECTED_CATALOG_FALLBACK_SUGGESTION } from './seat-reference-diagnostic-suggestion-policy.js';
 import {
@@ -472,7 +473,9 @@ export function deriveSectionsFromDataAssets(
     seats: selectedSeatCatalog?.payload.seats ?? null,
     tracks: selectedMap?.payload.tracks ?? null,
     scenarioInitialTrackValues: selectedScenario?.initialTrackValues ?? null,
-    markerLattices: selectedMap?.payload.markerLattices ?? null,
+    markerLattices: selectedMap?.payload.markerLattices !== undefined
+      ? tagMarkerLatticeConstraints(selectedMap.payload.markerLattices)
+      : null,
     spaceMarkers: selectedMap?.payload.spaceMarkers ?? null,
     stackingConstraints: selectedMap?.payload.stackingConstraints ?? null,
     scenarioSetupEffects,

@@ -373,13 +373,13 @@ describe('dispatchTriggers', () => {
         {
           id: asTriggerId('byMatch'),
           event: { type: 'actionResolved' },
-          match: { op: '==', left: { ref: 'binding', name: '$action' }, right: asActionId('play') },
+          match: { op: '==', left: { _t: 2 as const, ref: 'binding', name: '$action' }, right: asActionId('play') },
           effects: [{ addVar: { scope: 'global', var: 'score', delta: 1 } }],
         },
         {
           id: asTriggerId('byWhen'),
           event: { type: 'actionResolved', action: asActionId('play') },
-          when: { op: '==', left: { ref: 'gvar', var: 'enabled' }, right: 1 },
+          when: { op: '==', left: { _t: 2 as const, ref: 'gvar', var: 'enabled' }, right: 1 },
           effects: [{ addVar: { scope: 'global', var: 'score', delta: 2 } }],
         },
         {
@@ -427,10 +427,10 @@ describe('dispatchTriggers', () => {
         {
           id: asTriggerId('onTrailChanged'),
           event: { type: 'varChanged', scope: 'global', var: 'trail' },
-          when: { op: '>', left: { ref: 'binding', name: '$newValue' }, right: { ref: 'binding', name: '$oldValue' } },
+          when: { op: '>', left: { _t: 2 as const, ref: 'binding', name: '$newValue' }, right: { _t: 2 as const, ref: 'binding', name: '$oldValue' } },
           effects: [
-            { setVar: { scope: 'global', var: 'capturedOld', value: { ref: 'binding', name: '$oldValue' } } },
-            { setVar: { scope: 'global', var: 'capturedNew', value: { ref: 'binding', name: '$newValue' } } },
+            { setVar: { scope: 'global', var: 'capturedOld', value: { _t: 2 as const, ref: 'binding', name: '$oldValue' } } },
+            { setVar: { scope: 'global', var: 'capturedNew', value: { _t: 2 as const, ref: 'binding', name: '$newValue' } } },
             { addVar: { scope: 'global', var: 'score', delta: 1 } },
           ],
         },

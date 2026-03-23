@@ -91,7 +91,7 @@ function createDef(): GameDef {
     terminal: {
       conditions: [],
       margins: [
-        { seat: 'us', value: { ref: 'gvar', var: 'score' } },
+        { seat: 'us', value: { _t: 2 as const, ref: 'gvar', var: 'score' } },
         { seat: 'arvn', value: 0 },
       ],
     },

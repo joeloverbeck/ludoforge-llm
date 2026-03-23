@@ -113,11 +113,11 @@ describe('evalCondition', () => {
         {
           op: 'or',
           args: [
-            { op: '==', left: { ref: 'gvar', var: 'a' }, right: 9 },
-            { op: '==', left: { ref: 'gvar', var: 'a' }, right: 3 },
+            { op: '==', left: { _t: 2 as const, ref: 'gvar', var: 'a' }, right: 9 },
+            { op: '==', left: { _t: 2 as const, ref: 'gvar', var: 'a' }, right: 3 },
           ],
         },
-        { op: 'not', arg: { op: '==', left: { ref: 'gvar', var: 'b' }, right: 9 } },
+        { op: 'not', arg: { op: '==', left: { _t: 2 as const, ref: 'gvar', var: 'b' }, right: 9 } },
       ],
     } as const;
 
@@ -133,7 +133,7 @@ describe('evalCondition', () => {
           op: 'and',
           args: [
             { op: '==', left: 1, right: 2 },
-            { op: '==', left: { ref: 'binding', name: '$missing' }, right: 1 },
+            { op: '==', left: { _t: 2 as const, ref: 'binding', name: '$missing' }, right: 1 },
           ],
         },
         ctx,
@@ -147,7 +147,7 @@ describe('evalCondition', () => {
           op: 'or',
           args: [
             { op: '==', left: 2, right: 2 },
-            { op: '==', left: { ref: 'binding', name: '$missing' }, right: 1 },
+            { op: '==', left: { _t: 2 as const, ref: 'binding', name: '$missing' }, right: 1 },
           ],
         },
         ctx,
@@ -167,14 +167,14 @@ describe('evalCondition', () => {
   it('supports in membership against bound collections', () => {
     const ctx = makeCtx({ bindings: { '$set': [1, 3, 5] } });
 
-    assert.equal(evalCondition({ op: 'in', item: 3, set: { ref: 'binding', name: '$set' } }, ctx), true);
-    assert.equal(evalCondition({ op: 'in', item: 2, set: { ref: 'binding', name: '$set' } }, ctx), false);
+    assert.equal(evalCondition({ op: 'in', item: 3, set: { _t: 2 as const, ref: 'binding', name: '$set' } }, ctx), true);
+    assert.equal(evalCondition({ op: 'in', item: 2, set: { _t: 2 as const, ref: 'binding', name: '$set' } }, ctx), false);
   });
 
   it('throws TYPE_MISMATCH when in set is not a collection', () => {
     const ctx = makeCtx({ bindings: { '$set': 3 } });
     assert.throws(
-      () => evalCondition({ op: 'in', item: 3, set: { ref: 'binding', name: '$set' } }, ctx),
+      () => evalCondition({ op: 'in', item: 3, set: { _t: 2 as const, ref: 'binding', name: '$set' } }, ctx),
       (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
     );
   });
@@ -182,7 +182,7 @@ describe('evalCondition', () => {
   it('throws TYPE_MISMATCH when in set mixes scalar types', () => {
     const ctx = makeCtx({ bindings: { '$set': [1, '2', 3] } });
     assert.throws(
-      () => evalCondition({ op: 'in', item: 3, set: { ref: 'binding', name: '$set' } }, ctx),
+      () => evalCondition({ op: 'in', item: 3, set: { _t: 2 as const, ref: 'binding', name: '$set' } }, ctx),
       (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
     );
   });
@@ -190,7 +190,7 @@ describe('evalCondition', () => {
   it('throws TYPE_MISMATCH when in item and set scalar types do not match', () => {
     const ctx = makeCtx({ bindings: { '$set': [1, 2, 3] } });
     assert.throws(
-      () => evalCondition({ op: 'in', item: '3', set: { ref: 'binding', name: '$set' } }, ctx),
+      () => evalCondition({ op: 'in', item: '3', set: { _t: 2 as const, ref: 'binding', name: '$set' } }, ctx),
       (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
     );
   });
@@ -199,7 +199,7 @@ describe('evalCondition', () => {
     const ctx = makeCtx();
 
     assert.throws(
-      () => evalCondition({ op: 'in', item: 3, set: { ref: 'binding', name: '$missingSet' } }, ctx),
+      () => evalCondition({ op: 'in', item: 3, set: { _t: 2 as const, ref: 'binding', name: '$missingSet' } }, ctx),
       (error: unknown) => isEvalErrorCode(error, 'MISSING_BINDING'),
     );
   });
@@ -207,7 +207,7 @@ describe('evalCondition', () => {
   it('treats missing grantContext membership refs as an empty set', () => {
     const ctx = makeCtx();
 
-    assert.equal(evalCondition({ op: 'in', item: 3, set: { ref: 'grantContext', key: 'allowedTargets' } }, ctx), false);
+    assert.equal(evalCondition({ op: 'in', item: 3, set: { _t: 2 as const, ref: 'grantContext', key: 'allowedTargets' } }, ctx), false);
   });
 
   it('throws TYPE_MISMATCH when in grantContext set resolves to a scalar', () => {
@@ -220,7 +220,7 @@ describe('evalCondition', () => {
     });
 
     assert.throws(
-      () => evalCondition({ op: 'in', item: 3, set: { ref: 'grantContext', key: 'allowedTargets' } }, ctx),
+      () => evalCondition({ op: 'in', item: 3, set: { _t: 2 as const, ref: 'grantContext', key: 'allowedTargets' } }, ctx),
       (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
     );
   });
@@ -235,7 +235,7 @@ describe('evalCondition', () => {
     });
 
     assert.throws(
-      () => evalCondition({ op: 'in', item: 3, set: { ref: 'grantContext', key: 'allowedTargets' } }, ctx),
+      () => evalCondition({ op: 'in', item: 3, set: { _t: 2 as const, ref: 'grantContext', key: 'allowedTargets' } }, ctx),
       (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
     );
   });

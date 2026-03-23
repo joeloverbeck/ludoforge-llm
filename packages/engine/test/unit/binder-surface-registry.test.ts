@@ -667,7 +667,7 @@ describe('binder-surface-registry', () => {
           initial: 0,
           next: 0,
           resultBind: 'result',
-          in: [{ bindValue: { bind: 'exported', value: { ref: 'binding', name: 'result' } } }],
+          in: [{ bindValue: { bind: 'exported', value: { _t: 2 as const, ref: 'binding', name: 'result' } } }],
         },
       }),
       ['exported'],

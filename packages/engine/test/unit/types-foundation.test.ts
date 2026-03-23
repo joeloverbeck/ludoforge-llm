@@ -276,7 +276,7 @@ describe('kernel type foundations', () => {
     });
 
     divisionByZeroError('division by zero', {
-      expr: { op: '/', left: 1, right: 0 },
+      expr: { _t: 6 as const, op: '/', left: 1, right: 0 },
       left: 1,
       right: 0,
     });
@@ -316,12 +316,12 @@ describe('kernel type foundations', () => {
     queryBoundsExceededError('too many widened', widenedQueryWithUndeclaredKey);
 
     const widenedDivisionWithUndeclaredKey: {
-      expr: { op: '/'; left: 1; right: 0 };
+      expr: { _t: 6; op: '/'; left: 1; right: 0 };
       left: number;
       right: number;
       extraInfo: string;
     } = {
-      expr: { op: '/', left: 1, right: 0 },
+      expr: { _t: 6 as const, op: '/', left: 1, right: 0 },
       left: 1,
       right: 0,
       extraInfo: 'debug',

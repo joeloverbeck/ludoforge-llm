@@ -66,7 +66,7 @@ phase: [asPhaseId('main')],
       effects: [{ addVar: { scope: 'global', var: 'entered', delta: 1 } }],
     },
   ],
-  terminal: { conditions: [{ when: { op: '>=', left: { ref: 'gvar', var: 'entered' }, right: 1 }, result: { type: 'draw' } }] },
+  terminal: { conditions: [{ when: { op: '>=', left: { _t: 2 as const, ref: 'gvar', var: 'entered' }, right: 1 }, result: { type: 'draw' } }] },
 });
 
 const makeRuntimeState = (): GameState => ({
@@ -124,7 +124,7 @@ describe('spatial kernel integration', () => {
       {
         query: 'connectedZones',
         zone: 'a:none',
-        via: { op: 'in', item: { ref: 'binding', name: '$zone' }, set: { ref: 'binding', name: '$reachable' } },
+        via: { op: 'in', item: { _t: 2 as const, ref: 'binding', name: '$zone' }, set: { _t: 2 as const, ref: 'binding', name: '$reachable' } },
       },
       ctx,
     );

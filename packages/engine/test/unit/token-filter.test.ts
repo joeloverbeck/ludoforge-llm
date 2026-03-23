@@ -36,7 +36,7 @@ describe('token-filter', () => {
     const predicate: TokenFilterPredicate = {
       prop: 'rank',
       op: 'eq',
-      value: { ref: 'gvar', var: 'tick' },
+      value: { _t: 2 as const, ref: 'gvar', var: 'tick' },
     };
 
     assert.equal(resolveLiteralTokenFilterValue(predicate.value), null);
@@ -49,7 +49,7 @@ describe('token-filter', () => {
     const predicate: TokenFilterPredicate = {
       prop: 'rank',
       op: 'eq',
-      value: { ref: 'gvar', var: 'tick' },
+      value: { _t: 2 as const, ref: 'gvar', var: 'tick' },
     };
 
     const resolved = matchesTokenFilterPredicate(token, predicate, (value) =>
@@ -63,7 +63,7 @@ describe('token-filter', () => {
     const predicate: TokenFilterPredicate = {
       prop: 'faction',
       op: 'in',
-      value: { ref: 'binding', name: '$targetFactions' },
+      value: { _t: 2 as const, ref: 'binding', name: '$targetFactions' },
     };
 
     const resolved = matchesTokenFilterPredicate(token, predicate, (value) =>
@@ -77,7 +77,7 @@ describe('token-filter', () => {
     const predicate: TokenFilterPredicate = {
       prop: 'faction',
       op: 'in',
-      value: { ref: 'binding', name: '$targetFactions' },
+      value: { _t: 2 as const, ref: 'binding', name: '$targetFactions' },
     };
 
     assert.throws(
@@ -94,7 +94,7 @@ describe('token-filter', () => {
     const predicate: TokenFilterPredicate = {
       prop: 'faction',
       op: 'in',
-      value: { ref: 'binding', name: '$targetFactions' },
+      value: { _t: 2 as const, ref: 'binding', name: '$targetFactions' },
     };
 
     assert.throws(

@@ -46,7 +46,7 @@ describe('tooltip-modifier-humanizer', () => {
     it('suppresses conditions referencing double-underscore vars', () => {
       const cond: ConditionAST = {
         op: '==',
-        left: { ref: 'gvar', var: '__actionClass' },
+        left: { _t: 2, ref: 'gvar', var: '__actionClass' },
         right: 'limitedOperation',
       };
       const result = humanizeCondition(cond, EMPTY_CTX);
@@ -56,7 +56,7 @@ describe('tooltip-modifier-humanizer', () => {
     it('suppresses conditions referencing $__macro_ prefixed vars', () => {
       const cond: ConditionAST = {
         op: '==',
-        left: { ref: 'gvar', var: '$__macro_cap_sweep_booby_traps_shaded_cost' },
+        left: { _t: 2, ref: 'gvar', var: '$__macro_cap_sweep_booby_traps_shaded_cost' },
         right: 1,
       };
       const result = humanizeCondition(cond, EMPTY_CTX);
@@ -66,7 +66,7 @@ describe('tooltip-modifier-humanizer', () => {
     it('suppresses conditions matching suppress patterns', () => {
       const cond: ConditionAST = {
         op: '>=',
-        left: { ref: 'gvar', var: 'fitl_monsoon_active' },
+        left: { _t: 2, ref: 'gvar', var: 'fitl_monsoon_active' },
         right: 1,
       };
       const ctx = ctxWithPatterns(['fitl_*']);
@@ -77,7 +77,7 @@ describe('tooltip-modifier-humanizer', () => {
     it('humanizes a simple comparison with label resolution', () => {
       const cond: ConditionAST = {
         op: '==',
-        left: { ref: 'gvar', var: 'aid' },
+        left: { _t: 2, ref: 'gvar', var: 'aid' },
         right: 0,
       };
       const ctx = ctxWithVerbalization(baseVerb);
@@ -89,8 +89,8 @@ describe('tooltip-modifier-humanizer', () => {
       const cond: ConditionAST = {
         op: 'and',
         args: [
-          { op: '>=', left: { ref: 'gvar', var: 'aid' }, right: 3 },
-          { op: '==', left: { ref: 'gvar', var: 'resources' }, right: 0 },
+          { op: '>=', left: { _t: 2, ref: 'gvar', var: 'aid' }, right: 3 },
+          { op: '==', left: { _t: 2, ref: 'gvar', var: 'resources' }, right: 0 },
         ],
       };
       const ctx = ctxWithVerbalization(baseVerb);
@@ -101,7 +101,7 @@ describe('tooltip-modifier-humanizer', () => {
     it('humanizes NOT conditions', () => {
       const cond: ConditionAST = {
         op: 'not',
-        arg: { op: '==', left: { ref: 'gvar', var: 'aid' }, right: 0 },
+        arg: { op: '==', left: { _t: 2, ref: 'gvar', var: 'aid' }, right: 0 },
       };
       const ctx = ctxWithVerbalization(baseVerb);
       const result = humanizeCondition(cond, ctx);
@@ -124,8 +124,8 @@ describe('tooltip-modifier-humanizer', () => {
       const cond: ConditionAST = {
         op: 'and',
         args: [
-          { op: '>=', left: { ref: 'gvar', var: 'aid' }, right: 3 },
-          { op: '==', left: { ref: 'gvar', var: '__actionClass' }, right: 'limitedOperation' },
+          { op: '>=', left: { _t: 2, ref: 'gvar', var: 'aid' }, right: 3 },
+          { op: '==', left: { _t: 2, ref: 'gvar', var: '__actionClass' }, right: 'limitedOperation' },
         ],
       };
       const result = humanizeCondition(cond, EMPTY_CTX);
@@ -135,7 +135,7 @@ describe('tooltip-modifier-humanizer', () => {
     it('falls back to auto-humanize without verbalization', () => {
       const cond: ConditionAST = {
         op: '>=',
-        left: { ref: 'gvar', var: 'playerGold' },
+        left: { _t: 2, ref: 'gvar', var: 'playerGold' },
         right: 5,
       };
       const result = humanizeCondition(cond, EMPTY_CTX);
@@ -148,7 +148,7 @@ describe('tooltip-modifier-humanizer', () => {
     it('humanizes markerState ref as "marker of space"', () => {
       const cond: ConditionAST = {
         op: '==',
-        left: { ref: 'markerState', marker: 'population', space: 'saigon' },
+        left: { _t: 2, ref: 'markerState', marker: 'population', space: 'saigon' },
         right: 2,
       };
       const ctx = ctxWithVerbalization({
@@ -162,7 +162,7 @@ describe('tooltip-modifier-humanizer', () => {
     it('humanizes zoneCount ref as "pieces in zone"', () => {
       const cond: ConditionAST = {
         op: '>=',
-        left: { ref: 'zoneCount', zone: 'hanoi' },
+        left: { _t: 2, ref: 'zoneCount', zone: 'hanoi' },
         right: 3,
       };
       const ctx = ctxWithVerbalization({
@@ -176,7 +176,7 @@ describe('tooltip-modifier-humanizer', () => {
     it('humanizes tokenProp ref as "token.prop"', () => {
       const cond: ConditionAST = {
         op: '==',
-        left: { ref: 'tokenProp', token: 'usBase', prop: 'strength' },
+        left: { _t: 2, ref: 'tokenProp', token: 'usBase', prop: 'strength' },
         right: 1,
       };
       const ctx = ctxWithVerbalization({
@@ -190,7 +190,7 @@ describe('tooltip-modifier-humanizer', () => {
     it('humanizes assetField ref as "field"', () => {
       const cond: ConditionAST = {
         op: '==',
-        left: { ref: 'assetField', row: 'row1', tableId: 'costs', field: 'moveCost' },
+        left: { _t: 2, ref: 'assetField', row: 'row1', tableId: 'costs', field: 'moveCost' },
         right: 3,
       };
       const ctx = ctxWithVerbalization({
@@ -204,7 +204,7 @@ describe('tooltip-modifier-humanizer', () => {
     it('humanizes zoneProp ref as "zone.prop"', () => {
       const cond: ConditionAST = {
         op: '==',
-        left: { ref: 'zoneProp', zone: 'saigon', prop: 'terrain' },
+        left: { _t: 2, ref: 'zoneProp', zone: 'saigon', prop: 'terrain' },
         right: 'city',
       };
       const ctx = ctxWithVerbalization({
@@ -218,7 +218,7 @@ describe('tooltip-modifier-humanizer', () => {
     it('humanizes activePlayer ref as "active player"', () => {
       const cond: ConditionAST = {
         op: '==',
-        left: { ref: 'activePlayer' },
+        left: { _t: 2, ref: 'activePlayer' },
         right: 'us',
       };
       const ctx = ctxWithVerbalization({
@@ -232,7 +232,7 @@ describe('tooltip-modifier-humanizer', () => {
     it('humanizes tokenZone ref as "zone of token"', () => {
       const cond: ConditionAST = {
         op: '==',
-        left: { ref: 'tokenZone', token: 'usBase' },
+        left: { _t: 2, ref: 'tokenZone', token: 'usBase' },
         right: 'saigon',
       };
       const ctx = ctxWithVerbalization({
@@ -246,7 +246,7 @@ describe('tooltip-modifier-humanizer', () => {
     it('humanizes zoneVar ref as "var of zone"', () => {
       const cond: ConditionAST = {
         op: '>=',
-        left: { ref: 'zoneVar', zone: 'saigon', var: 'control' },
+        left: { _t: 2, ref: 'zoneVar', zone: 'saigon', var: 'control' },
         right: 1,
       };
       const ctx = ctxWithVerbalization({
@@ -262,7 +262,7 @@ describe('tooltip-modifier-humanizer', () => {
     it('suppresses markerState when marker matches suppress pattern', () => {
       const cond: ConditionAST = {
         op: '==',
-        left: { ref: 'markerState', marker: 'fitl_control', space: 'saigon' },
+        left: { _t: 2, ref: 'markerState', marker: 'fitl_control', space: 'saigon' },
         right: 1,
       };
       const ctx = ctxWithPatterns(['fitl_*']);
@@ -272,7 +272,7 @@ describe('tooltip-modifier-humanizer', () => {
     it('suppresses zoneVar when var matches suppress pattern', () => {
       const cond: ConditionAST = {
         op: '>=',
-        left: { ref: 'zoneVar', zone: 'saigon', var: '__internalTracker' },
+        left: { _t: 2, ref: 'zoneVar', zone: 'saigon', var: '__internalTracker' },
         right: 1,
       };
       assert.equal(humanizeCondition(cond, EMPTY_CTX), null);
@@ -281,7 +281,7 @@ describe('tooltip-modifier-humanizer', () => {
     it('suppresses tokenProp when token matches suppress pattern', () => {
       const cond: ConditionAST = {
         op: '==',
-        left: { ref: 'tokenProp', token: '__hiddenToken', prop: 'strength' },
+        left: { _t: 2, ref: 'tokenProp', token: '__hiddenToken', prop: 'strength' },
         right: 1,
       };
       assert.equal(humanizeCondition(cond, EMPTY_CTX), null);
@@ -290,7 +290,7 @@ describe('tooltip-modifier-humanizer', () => {
     it('suppresses zoneProp when zone matches suppress pattern', () => {
       const cond: ConditionAST = {
         op: '==',
-        left: { ref: 'zoneProp', zone: 'fitl_hue', prop: 'terrain' },
+        left: { _t: 2, ref: 'zoneProp', zone: 'fitl_hue', prop: 'terrain' },
         right: 'city',
       };
       const ctx = ctxWithPatterns(['fitl_*']);
@@ -303,7 +303,7 @@ describe('tooltip-modifier-humanizer', () => {
     it('returns null for suppressed conditions', () => {
       const cond: ConditionAST = {
         op: '==',
-        left: { ref: 'gvar', var: '__actionClass' },
+        left: { _t: 2, ref: 'gvar', var: '__actionClass' },
         right: 'limitedOperation',
       };
       const result = resolveModifierEffect(cond, EMPTY_CTX);
@@ -313,7 +313,7 @@ describe('tooltip-modifier-humanizer', () => {
     it('returns pre-authored effect when condition matches', () => {
       const cond: ConditionAST = {
         op: '==',
-        left: { ref: 'gvar', var: 'cap_m48Patton' },
+        left: { _t: 2, ref: 'gvar', var: 'cap_m48Patton' },
         right: 'shaded',
       };
       // The humanized condition would be "M48 Patton is Shaded"
@@ -334,7 +334,7 @@ describe('tooltip-modifier-humanizer', () => {
     it('returns humanized condition with empty effect as fallback', () => {
       const cond: ConditionAST = {
         op: '>=',
-        left: { ref: 'gvar', var: 'aid' },
+        left: { _t: 2, ref: 'gvar', var: 'aid' },
         right: 10,
       };
       const ctx = ctxWithVerbalization(baseVerb);
@@ -352,7 +352,7 @@ describe('tooltip-modifier-humanizer', () => {
     it('resolves zone IDs to display names via LabelContext', () => {
       const cond: ConditionAST = {
         op: '>=',
-        left: { ref: 'zoneCount', zone: 'hanoi' },
+        left: { _t: 2, ref: 'zoneCount', zone: 'hanoi' },
         right: 3,
       };
       const ctx = buildLabelContext({
@@ -366,7 +366,7 @@ describe('tooltip-modifier-humanizer', () => {
     it('resolves player references to display names via LabelContext', () => {
       const cond: ConditionAST = {
         op: '==',
-        left: { ref: 'activePlayer' },
+        left: { _t: 2, ref: 'activePlayer' },
         right: 'us',
       };
       const ctx = buildLabelContext({
@@ -380,7 +380,7 @@ describe('tooltip-modifier-humanizer', () => {
     it('delegates embedded ValueExpr nodes to humanizeValueExpr', () => {
       const cond: ConditionAST = {
         op: '>=',
-        left: { ref: 'gvar', var: 'aid' },
+        left: { _t: 2, ref: 'gvar', var: 'aid' },
         right: 5,
       };
       const ctx = buildLabelContext(baseVerb);
@@ -392,8 +392,8 @@ describe('tooltip-modifier-humanizer', () => {
       const cond: ConditionAST = {
         op: 'and',
         args: [
-          { op: '>=', left: { ref: 'gvar', var: 'aid' }, right: 3 },
-          { op: '==', left: { ref: 'gvar', var: 'resources' }, right: 0 },
+          { op: '>=', left: { _t: 2, ref: 'gvar', var: 'aid' }, right: 3 },
+          { op: '==', left: { _t: 2, ref: 'gvar', var: 'resources' }, right: 0 },
         ],
       };
       const ctx = buildLabelContext(baseVerb);
@@ -405,7 +405,7 @@ describe('tooltip-modifier-humanizer', () => {
       // __actionClass would be suppressed by humanizeCondition, but not by humanizeConditionWithLabels
       const cond: ConditionAST = {
         op: '==',
-        left: { ref: 'gvar', var: '__actionClass' },
+        left: { _t: 2, ref: 'gvar', var: '__actionClass' },
         right: 'limitedOperation',
       };
       const ctx = buildLabelContext(undefined);

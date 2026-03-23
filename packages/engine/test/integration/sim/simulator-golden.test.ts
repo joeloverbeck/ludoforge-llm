@@ -59,7 +59,7 @@ phase: [asPhaseId('p2')],
       },
     ],
     triggers: [],
-    terminal: { conditions: [{ when: { op: '>=', left: { ref: 'gvar', var: 'score' }, right: 3 }, result: { type: 'draw' } }] },
+    terminal: { conditions: [{ when: { op: '>=', left: { _t: 2 as const, ref: 'gvar', var: 'score' }, right: 3 }, result: { type: 'draw' } }] },
   } as const);
 
 describe('simulator golden trace stability', () => {

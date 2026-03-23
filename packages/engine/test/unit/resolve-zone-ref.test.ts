@@ -87,7 +87,7 @@ describe('resolveZoneRef', () => {
     const ctx = makeCtx({
       bindings: { '$cube': cube1 },
     });
-    const ref: ZoneRef = { zoneExpr: { ref: 'tokenZone', token: '$cube' } };
+    const ref: ZoneRef = { zoneExpr: { _t: 2 as const, ref: 'tokenZone', token: '$cube' } };
     assert.equal(resolveZoneRef(ref, ctx), 'hand:0');
   });
 
@@ -96,7 +96,7 @@ describe('resolveZoneRef', () => {
       bindings: { '$owner': '0' },
     });
     const ref: ZoneRef = {
-      zoneExpr: { concat: ['hand:', { ref: 'binding', name: '$owner' }] },
+      zoneExpr: { _t: 3 as const, concat: ['hand:', { _t: 2 as const, ref: 'binding', name: '$owner' }] },
     };
     assert.equal(resolveZoneRef(ref, ctx), 'hand:0');
   });
@@ -107,8 +107,9 @@ describe('resolveZoneRef', () => {
     });
     const ref: ZoneRef = {
       zoneExpr: {
+        _t: 4 as const,
         if: {
-          when: { op: '==', left: { ref: 'binding', name: '$useHand' }, right: 1 },
+          when: { op: '==', left: { _t: 2 as const, ref: 'binding', name: '$useHand' }, right: 1 },
           then: 'hand:0',
           else: 'board:none',
         },
@@ -123,8 +124,9 @@ describe('resolveZoneRef', () => {
     });
     const ref: ZoneRef = {
       zoneExpr: {
+        _t: 4 as const,
         if: {
-          when: { op: '==', left: { ref: 'binding', name: '$useHand' }, right: 1 },
+          when: { op: '==', left: { _t: 2 as const, ref: 'binding', name: '$useHand' }, right: 1 },
           then: 'hand:0',
           else: 'board:none',
         },

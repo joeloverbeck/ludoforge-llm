@@ -98,7 +98,7 @@ describe('apply-move phase actionDefaults.afterEffects', () => {
   it('afterEffects see state changes from action effects', () => {
     const condAfterEffect: EffectAST = {
       if: {
-        when: { op: '>=', left: { ref: 'gvar', var: 'counter' }, right: 1 },
+        when: { op: '>=', left: { _t: 2 as const, ref: 'gvar', var: 'counter' }, right: 1 },
         then: [incrementAfterCounter],
       },
     };
@@ -128,7 +128,7 @@ describe('apply-move phase actionDefaults.afterEffects', () => {
         event: { type: 'actionResolved', action: asActionId('doThing') },
         effects: [{
           if: {
-            when: { op: '>=', left: { ref: 'gvar', var: 'afterCounter' }, right: 1 },
+            when: { op: '>=', left: { _t: 2 as const, ref: 'gvar', var: 'afterCounter' }, right: 1 },
             then: [{ addVar: { scope: 'global', var: 'triggerFired', delta: 1 } }],
           },
         }],

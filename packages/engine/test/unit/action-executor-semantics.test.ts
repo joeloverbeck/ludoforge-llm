@@ -10,9 +10,10 @@ import {
   legalMoves,
   type GameDef,
 } from '../../src/kernel/index.js';
+import { asTaggedGameDef } from '../helpers/gamedef-fixtures.js';
 
 const buildDef = (): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'action-executor-semantics', players: { min: 2, max: 2 } },
     constants: {},
     globalVars: [],
@@ -36,7 +37,7 @@ const buildDef = (): GameDef =>
     ],
     triggers: [],
     terminal: { conditions: [] },
-  }) as unknown as GameDef;
+  });
 
 describe('action executor semantics', () => {
   it('legalMoves evaluates action preconditions under executor context', () => {

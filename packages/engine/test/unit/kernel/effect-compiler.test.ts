@@ -59,7 +59,7 @@ const makeDef = (): GameDef => ({
               bind: '$roll',
               min: 1,
               max: 6,
-              in: [{ setVar: { scope: 'global', var: 'count', value: { ref: 'binding', name: '$roll' } } }],
+              in: [{ setVar: { scope: 'global', var: 'count', value: { _t: 2, ref: 'binding', name: '$roll' } } }],
             },
           },
         ],
@@ -132,7 +132,7 @@ describe('effect-compiler orchestrator', () => {
       { addVar: { scope: 'global', var: 'score', delta: 2 } },
       {
         if: {
-          when: { op: '==', left: { ref: 'gvar', var: 'score' }, right: 3 },
+          when: { op: '==', left: { _t: 2, ref: 'gvar', var: 'score' }, right: 3 },
           then: [{ setVar: { scope: 'global', var: 'flag', value: true } }],
           else: [{ setVar: { scope: 'global', var: 'flag', value: false } }],
         },
@@ -173,7 +173,7 @@ describe('effect-compiler orchestrator', () => {
           bind: '$roll',
           min: 1,
           max: 6,
-          in: [{ setVar: { scope: 'global', var: 'count', value: { ref: 'binding', name: '$roll' } } }],
+          in: [{ setVar: { scope: 'global', var: 'count', value: { _t: 2, ref: 'binding', name: '$roll' } } }],
         },
       },
       { addVar: { scope: 'global', var: 'score', delta: 2 } },
@@ -212,7 +212,7 @@ describe('effect-compiler orchestrator', () => {
           bind: '$roll',
           min: 1,
           max: 6,
-          in: [{ setVar: { scope: 'global', var: 'count', value: { ref: 'binding', name: '$roll' } } }],
+          in: [{ setVar: { scope: 'global', var: 'count', value: { _t: 2, ref: 'binding', name: '$roll' } } }],
         },
       },
     ];

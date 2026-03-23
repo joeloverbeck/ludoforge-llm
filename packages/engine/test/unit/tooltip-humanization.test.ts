@@ -212,7 +212,7 @@ describe('normalizeIf __actionClass branch selection', () => {
     if: {
       when: {
         op: '==' as const,
-        left: { ref: 'binding' as const, name: '__actionClass' },
+        left: { _t: 2 as const, ref: 'binding' as const, name: '__actionClass' },
         right: 'limitedOperation',
       },
       then: thenEffects,

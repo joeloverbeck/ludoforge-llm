@@ -68,7 +68,7 @@ describe('tooltip-normalizer', () => {
         transferVar: {
           from: { scope: 'global', var: 'aid' },
           to: { scope: 'global', var: 'patronage' },
-          amount: { ref: 'binding', name: 'x' },
+          amount: { _t: 2, ref: 'binding', name: 'x' },
         },
       };
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'effects[2b]'));
@@ -119,7 +119,7 @@ describe('tooltip-normalizer', () => {
         addVar: {
           scope: 'global',
           var: 'aid',
-          delta: { ref: 'binding', name: 'amount' },
+          delta: { _t: 2, ref: 'binding', name: 'amount' },
         },
       };
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'e[5]'));
@@ -256,7 +256,7 @@ describe('tooltip-normalizer', () => {
         addVar: {
           scope: 'zoneVar',
           var: 'econ',
-          zone: { zoneExpr: { ref: 'binding', name: 'targetZone' } },
+          zone: { zoneExpr: { _t: 2, ref: 'binding', name: 'targetZone' } },
           delta: 1,
         },
       };
@@ -450,7 +450,7 @@ describe('tooltip-normalizer', () => {
 
     it('moveAll with filter → output message includes filter string', () => {
       const effect: EffectAST = {
-        moveAll: { from: 'saigon', to: 'hue', filter: { op: '>', left: { ref: 'gvar', var: 'count' }, right: 0 } },
+        moveAll: { from: 'saigon', to: 'hue', filter: { op: '>', left: { _t: 2, ref: 'gvar', var: 'count' }, right: 0 } },
       };
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 't[16b]'));
       assert.equal(msg.kind, 'move');
@@ -461,7 +461,7 @@ describe('tooltip-normalizer', () => {
 
     it('moveAll from supply with filter → PlaceMessage with filter', () => {
       const effect: EffectAST = {
-        moveAll: { from: 'available-us', to: 'saigon', filter: { op: '==', left: { ref: 'gvar', var: 'type' }, right: 'troop' } },
+        moveAll: { from: 'available-us', to: 'saigon', filter: { op: '==', left: { _t: 2, ref: 'gvar', var: 'type' }, right: 'troop' } },
       };
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 't[16c]'));
       assert.equal(msg.kind, 'place');
@@ -472,7 +472,7 @@ describe('tooltip-normalizer', () => {
 
     it('moveAll to removal zone with filter → RemoveMessage with filter', () => {
       const effect: EffectAST = {
-        moveAll: { from: 'saigon', to: 'casualties-nva', filter: { op: '==', left: { ref: 'gvar', var: 'type' }, right: 'guerrilla' } },
+        moveAll: { from: 'saigon', to: 'casualties-nva', filter: { op: '==', left: { _t: 2, ref: 'gvar', var: 'type' }, right: 'guerrilla' } },
       };
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 't[16d]'));
       assert.equal(msg.kind, 'remove');
@@ -495,7 +495,7 @@ describe('tooltip-normalizer', () => {
       const effect: EffectAST = {
         moveToken: {
           token: 'troop',
-          from: { zoneExpr: { ref: 'binding', name: 'sourceZone' } },
+          from: { zoneExpr: { _t: 2, ref: 'binding', name: 'sourceZone' } },
           to: 'target',
         },
       };
@@ -526,7 +526,7 @@ describe('tooltip-normalizer', () => {
 
     it('rule 24: shiftMarker with binding expression → ShiftMessage with deltaExpr', () => {
       const effect: EffectAST = {
-        shiftMarker: { space: 'saigon', marker: 'support', delta: { ref: 'binding', name: 'shiftAmount' } },
+        shiftMarker: { space: 'saigon', marker: 'support', delta: { _t: 2, ref: 'binding', name: 'shiftAmount' } },
       };
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'm[0b]'));
       assert.equal(msg.kind, 'shift');
@@ -602,7 +602,7 @@ describe('tooltip-normalizer', () => {
 
     it('rule 28: shiftGlobalMarker with binding expression → ShiftMessage with deltaExpr', () => {
       const effect: EffectAST = {
-        shiftGlobalMarker: { marker: 'trail', delta: { ref: 'binding', name: 'trailDelta' } },
+        shiftGlobalMarker: { marker: 'trail', delta: { _t: 2, ref: 'binding', name: 'trailDelta' } },
       };
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'm[5b]'));
       assert.equal(msg.kind, 'shift');
@@ -839,7 +839,7 @@ describe('tooltip-normalizer', () => {
         if: {
           when: {
             op: '==',
-            left: { ref: 'globalMarkerState', marker: 'monsoon' },
+            left: { _t: 2, ref: 'globalMarkerState', marker: 'monsoon' },
             right: 'active',
           },
           then: [
@@ -859,7 +859,7 @@ describe('tooltip-normalizer', () => {
     it('rule 33: if generic → ModifierMessage + then children', () => {
       const effect: EffectAST = {
         if: {
-          when: { op: '>', left: { ref: 'gvar', var: 'aid' }, right: 0 },
+          when: { op: '>', left: { _t: 2, ref: 'gvar', var: 'aid' }, right: 0 },
           then: [
             { addVar: { scope: 'global', var: 'aid', delta: -1 } },
           ],
@@ -1186,7 +1186,7 @@ describe('tooltip-normalizer', () => {
         if: {
           when: {
             op: '==',
-            left: { ref: 'gvar', var: '__actionClass' },
+            left: { _t: 2, ref: 'gvar', var: '__actionClass' },
             right: 'limitedOperation',
           },
           then: [{ addVar: { scope: 'global', var: 'aid', delta: 1 } }],
@@ -1204,7 +1204,7 @@ describe('tooltip-normalizer', () => {
         if: {
           when: {
             op: '==',
-            left: { ref: 'gvar', var: '$__macro_trainActive' },
+            left: { _t: 2, ref: 'gvar', var: '$__macro_trainActive' },
             right: 1,
           },
           then: [{ addVar: { scope: 'global', var: 'aid', delta: 1 } }],
@@ -1219,7 +1219,7 @@ describe('tooltip-normalizer', () => {
         if: {
           when: {
             op: '>=',
-            left: { ref: 'gvar', var: 'aid' },
+            left: { _t: 2, ref: 'gvar', var: 'aid' },
             right: 3,
           },
           then: [{ addVar: { scope: 'global', var: 'aid', delta: -1 } }],
@@ -1240,7 +1240,7 @@ describe('tooltip-normalizer', () => {
         if: {
           when: {
             op: '==',
-            left: { ref: 'gvar', var: '__actionClass' },
+            left: { _t: 2, ref: 'gvar', var: '__actionClass' },
             right: 'limitedOperation',
           },
           then: [{ addVar: { scope: 'global', var: 'aid', delta: 1 } }],
@@ -1263,7 +1263,7 @@ describe('tooltip-normalizer', () => {
           bind: 'spaces',
           options: {
             query: 'mapSpaces',
-            filter: { condition: { op: '==', left: { ref: 'gvar', var: 'control' }, right: 'coin' } },
+            filter: { condition: { op: '==', left: { _t: 2, ref: 'gvar', var: 'control' }, right: 'coin' } },
           },
           min: 1,
           max: 3,

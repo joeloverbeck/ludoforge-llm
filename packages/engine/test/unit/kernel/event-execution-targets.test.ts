@@ -321,7 +321,7 @@ describe('event playability context parity', () => {
     sideMode: 'single',
     playCondition: {
       op: '>=',
-      left: { ref: 'gvar', var: 'canPlay' },
+      left: { _t: 2, ref: 'gvar', var: 'canPlay' },
       right: 1,
     },
     unshaded: {
@@ -430,13 +430,13 @@ describe('event playability context parity', () => {
         eligibilityOverrides: [
           {
             target: { kind: 'active' },
-            when: { op: '==', left: { ref: 'activeSeat' }, right: '0' },
+            when: { op: '==', left: { _t: 2, ref: 'activeSeat' }, right: '0' },
             eligible: true,
             windowId: 'window-a',
           },
           {
             target: { kind: 'seat', seat: '1' },
-            when: { op: '==', left: { ref: 'activeSeat' }, right: '1' },
+            when: { op: '==', left: { _t: 2, ref: 'activeSeat' }, right: '1' },
             eligible: false,
             windowId: 'window-a',
           },
@@ -459,7 +459,7 @@ describe('event playability context parity', () => {
     assert.deepEqual(resolveEventEligibilityOverrides(def, state, move), [
       {
         target: { kind: 'active' },
-        when: { op: '==', left: { ref: 'activeSeat' }, right: '0' },
+        when: { op: '==', left: { _t: 2, ref: 'activeSeat' }, right: '0' },
         eligible: true,
         windowId: 'window-a',
       },

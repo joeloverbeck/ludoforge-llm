@@ -173,7 +173,7 @@ describe('GreedyAgent core', () => {
         createAction('resource', [{ addVar: { scope: 'pvar', player: 'actor', var: 'coins', delta: 10 } }]),
         createAction('win', [{ setVar: { scope: 'global', var: 'winNow', value: 1 } }]),
       ],
-      [{ when: { op: '==', left: { ref: 'gvar', var: 'winNow' }, right: 1 }, result: { type: 'win', player: { id: asPlayerId(0) } } }],
+      [{ when: { op: '==', left: { _t: 2 as const, ref: 'gvar', var: 'winNow' }, right: 1 }, result: { type: 'win', player: { id: asPlayerId(0) } } }],
     );
 
     const result = choose(def, 11n);
@@ -186,7 +186,7 @@ describe('GreedyAgent core', () => {
         createAction('lose', [{ setVar: { scope: 'global', var: 'loseNow', value: 1 } }]),
         createAction('safe', [{ addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 1 } }]),
       ],
-      [{ when: { op: '==', left: { ref: 'gvar', var: 'loseNow' }, right: 1 }, result: { type: 'win', player: { id: asPlayerId(1) } } }],
+      [{ when: { op: '==', left: { _t: 2 as const, ref: 'gvar', var: 'loseNow' }, right: 1 }, result: { type: 'win', player: { id: asPlayerId(1) } } }],
     );
 
     const result = choose(def, 12n);
@@ -396,7 +396,7 @@ describe('GreedyAgent core', () => {
                 in: [
                   {
                     if: {
-                      when: { op: '==' as const, left: { ref: 'binding' as const, name: '$roll' }, right: 1 },
+                      when: { op: '==' as const, left: { _t: 2 as const, ref: 'binding' as const, name: '$roll' }, right: 1 },
                       then: [{ chooseOne: { internalDecisionId: 'decision:$targetA', bind: '$targetA', options: { query: 'enums' as const, values: ['alpha'] } } }],
                       else: [{ chooseOne: { internalDecisionId: 'decision:$targetB', bind: '$targetB', options: { query: 'enums' as const, values: ['beta'] } } }],
                     },
@@ -467,7 +467,7 @@ describe('GreedyAgent core', () => {
                 in: [
                   {
                     if: {
-                      when: { op: '==' as const, left: { ref: 'binding' as const, name: '$roll' }, right: 1 },
+                      when: { op: '==' as const, left: { _t: 2 as const, ref: 'binding' as const, name: '$roll' }, right: 1 },
                       then: [{ chooseOne: { internalDecisionId: 'decision:$targetA', bind: '$targetA', options: { query: 'enums' as const, values: ['alpha'] } } }],
                       else: [{ chooseOne: { internalDecisionId: 'decision:$targetB', bind: '$targetB', options: { query: 'enums' as const, values: ['beta'] } } }],
                     },
@@ -535,7 +535,7 @@ describe('GreedyAgent core', () => {
                 in: [
                   {
                     if: {
-                      when: { op: '==' as const, left: { ref: 'binding' as const, name: '$roll' }, right: 1 },
+                      when: { op: '==' as const, left: { _t: 2 as const, ref: 'binding' as const, name: '$roll' }, right: 1 },
                       then: [{ chooseOne: { internalDecisionId: 'decision:$targetA', bind: '$targetA', options: { query: 'enums' as const, values: ['alpha'] } } }],
                       else: [{ chooseOne: { internalDecisionId: 'decision:$targetB', bind: '$targetB', options: { query: 'enums' as const, values: ['beta'] } } }],
                     },

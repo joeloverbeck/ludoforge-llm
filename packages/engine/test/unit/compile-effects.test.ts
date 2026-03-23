@@ -118,7 +118,7 @@ describe('compile-effects lowering', () => {
       { reveal: { zone: 'hand:$actor', to: { chosen: '$actor' }, filter: { prop: 'faction', op: 'eq', value: 'US' } } },
       {
         if: {
-          when: { op: '>', left: { ref: 'zoneCount', zone: 'deck:none' }, right: 0 },
+          when: { op: '>', left: { _t: 2, ref: 'zoneCount', zone: 'deck:none' }, right: 0 },
           then: [{ shuffle: { zone: 'deck:none' } }],
           else: [{ moveAll: { from: 'deck:none', to: 'discard:none' } }],
         },
@@ -136,15 +136,15 @@ describe('compile-effects lowering', () => {
           accBind: '$acc',
           over: { query: 'intsInRange', min: 1, max: 3 },
           initial: 0,
-          next: { op: '+', left: { ref: 'binding', name: '$acc' }, right: { ref: 'binding', name: '$n' } },
+          next: { _t: 6, op: '+', left: { _t: 2, ref: 'binding', name: '$acc' }, right: { _t: 2, ref: 'binding', name: '$n' } },
           resultBind: '$sum',
-          in: [{ setVar: { scope: 'global', var: 'total', value: { ref: 'binding', name: '$sum' } } }],
+          in: [{ setVar: { scope: 'global', var: 'total', value: { _t: 2, ref: 'binding', name: '$sum' } } }],
         },
       },
       {
         bindValue: {
           bind: '$computed',
-          value: { op: '+', left: 1, right: 2 },
+          value: { _t: 6, op: '+', left: 1, right: 2 },
         },
       },
     ]);
@@ -927,7 +927,7 @@ describe('compile-effects lowering', () => {
         transferVar: {
           from: { scope: 'pvar', player: { chosen: '$actor' }, var: 'coins' },
           to: { scope: 'pvar', player: 'active', var: 'committed' },
-          amount: { ref: 'gvar', var: 'stake' },
+          amount: { _t: 2, ref: 'gvar', var: 'stake' },
           min: 1,
           max: 4,
           actualBind: '$actual',
@@ -1106,8 +1106,8 @@ describe('compile-effects lowering', () => {
           internalDecisionId: 'decision:doc.actions.0.effects.2.chooseN',
           bind: '$dynamicRange',
           options: { query: 'players' },
-          min: { if: { when: true, then: 0, else: 1 } },
-          max: { ref: 'gvar', var: 'maxTargets' },
+          min: { _t: 4, if: { when: true, then: 0, else: 1 } },
+          max: { _t: 2, ref: 'gvar', var: 'maxTargets' },
         },
       },
     ]);
@@ -1315,12 +1315,14 @@ describe('compile-effects lowering', () => {
                 token: '$__token_doc_actions_0_effects_0_distributeTokens',
                 from: {
                   zoneExpr: {
+                    _t: 2,
                     ref: 'tokenZone',
                     token: '$__token_doc_actions_0_effects_0_distributeTokens',
                   },
                 },
                 to: {
                   zoneExpr: {
+                    _t: 2,
                     ref: 'binding',
                     name: '$__destination_doc_actions_0_effects_0_distributeTokens',
                   },
@@ -1550,7 +1552,7 @@ describe('compile-effects lowering', () => {
       },
       {
         flipGlobalMarker: {
-          marker: { ref: 'binding', name: '$marker' },
+          marker: { _t: 2, ref: 'binding', name: '$marker' },
           stateA: 'unshaded',
           stateB: 'shaded',
         },
@@ -1593,7 +1595,7 @@ describe('compile-effects lowering', () => {
           moveZoneBindings: ['$destination'],
           moveZoneProbeBindings: ['$spaces'],
           sequence: { batch: 'apc-uprising', step: 0 },
-          zoneFilter: { op: '==', left: { ref: 'zoneProp', zone: 'saigon:none', prop: 'country' }, right: 'southVietnam' },
+          zoneFilter: { op: '==', left: { _t: 2, ref: 'zoneProp', zone: 'saigon:none', prop: 'country' }, right: 'southVietnam' },
         },
       },
     ]);
@@ -2067,7 +2069,7 @@ describe('compile-effects lowering', () => {
     assert.ok(result.value !== null && result.value.length === 1);
     const effect = result.value[0]!;
     assert.ok('moveToken' in effect);
-    assert.deepEqual(effect.moveToken.from, { zoneExpr: { ref: 'tokenZone', token: '$cube' } });
+    assert.deepEqual(effect.moveToken.from, { zoneExpr: { _t: 2, ref: 'tokenZone', token: '$cube' } });
     assert.equal(effect.moveToken.to, 'discard:none');
   });
 
@@ -2092,7 +2094,7 @@ describe('compile-effects lowering', () => {
     assert.ok('moveToken' in effect);
     assert.equal(effect.moveToken.from, 'deck:none');
     assert.deepEqual(effect.moveToken.to, {
-      zoneExpr: { concat: ['available:', { ref: 'binding', name: '$faction' }] },
+      zoneExpr: { _t: 3, concat: ['available:', { _t: 2, ref: 'binding', name: '$faction' }] },
     });
   });
 
@@ -2107,7 +2109,7 @@ describe('compile-effects lowering', () => {
     assert.ok(result.value !== null && result.value.length === 1);
     const effect = result.value[0]!;
     assert.ok('shuffle' in effect);
-    assert.deepEqual(effect.shuffle.zone, { zoneExpr: { concat: ['deck:', 'none'] } });
+    assert.deepEqual(effect.shuffle.zone, { zoneExpr: { _t: 3, concat: ['deck:', 'none'] } });
   });
 
   it('rejects implicit object-based dynamic zone selectors', () => {

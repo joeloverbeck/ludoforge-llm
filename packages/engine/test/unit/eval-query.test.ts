@@ -156,7 +156,7 @@ describe('evalQuery', () => {
     });
 
     const result = evalQuery(
-      { query: 'tokensInZone', zone: { zoneExpr: { ref: 'binding', name: '$targetZone' } } },
+      { query: 'tokensInZone', zone: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$targetZone' } } },
       ctx,
     );
 
@@ -183,8 +183,8 @@ describe('evalQuery', () => {
       evalQuery(
         {
           query: 'intsInRange',
-          min: { ref: 'binding', name: '$min' },
-          max: { op: '+', left: { ref: 'binding', name: '$min' }, right: 2 },
+          min: { _t: 2 as const, ref: 'binding', name: '$min' },
+          max: { _t: 6 as const, op: '+', left: { _t: 2 as const, ref: 'binding', name: '$min' }, right: 2 },
         },
         ctx,
       ),
@@ -198,8 +198,8 @@ describe('evalQuery', () => {
       evalQuery(
         {
           query: 'intsInRange',
-          min: { ref: 'binding', name: '$min' },
-          max: { ref: 'binding', name: '$max' },
+          min: { _t: 2 as const, ref: 'binding', name: '$min' },
+          max: { _t: 2 as const, ref: 'binding', name: '$max' },
         },
         nonInteger,
       ),
@@ -211,8 +211,8 @@ describe('evalQuery', () => {
       evalQuery(
         {
           query: 'intsInRange',
-          min: { ref: 'binding', name: '$min' },
-          max: { ref: 'binding', name: '$max' },
+          min: { _t: 2 as const, ref: 'binding', name: '$min' },
+          max: { _t: 2 as const, ref: 'binding', name: '$max' },
         },
         nonNumeric,
       ),
@@ -224,8 +224,8 @@ describe('evalQuery', () => {
       evalQuery(
         {
           query: 'intsInRange',
-          min: { ref: 'binding', name: '$min' },
-          max: { op: '/', left: 1, right: 0 },
+          min: { _t: 2 as const, ref: 'binding', name: '$min' },
+          max: { _t: 6 as const, op: '/', left: 1, right: 0 },
         },
         nonFinite,
       ),
@@ -309,7 +309,7 @@ describe('evalQuery', () => {
           query: 'intsInRange',
           min: 1,
           max: 5,
-          step: { ref: 'binding', name: '$badStep' },
+          step: { _t: 2 as const, ref: 'binding', name: '$badStep' },
         },
         ctx,
       ),
@@ -322,7 +322,7 @@ describe('evalQuery', () => {
           query: 'intsInRange',
           min: 1,
           max: 5,
-          maxResults: { ref: 'binding', name: '$badMaxResults' },
+          maxResults: { _t: 2 as const, ref: 'binding', name: '$badMaxResults' },
         },
         ctx,
       ),
@@ -335,7 +335,7 @@ describe('evalQuery', () => {
           query: 'intsInRange',
           min: 1,
           max: 5,
-          alwaysInclude: [{ ref: 'binding', name: '$nonInt' }],
+          alwaysInclude: [{ _t: 2 as const, ref: 'binding', name: '$nonInt' }],
         },
         ctx,
       ),
@@ -408,7 +408,7 @@ describe('evalQuery', () => {
 
     assert.deepEqual(evalQuery({ query: 'intsInVarRange', var: 'missing' }, ctx), []);
     assert.deepEqual(evalQuery({ query: 'intsInVarRange', var: 'flag' }, ctx), []);
-    assert.deepEqual(evalQuery({ query: 'intsInVarRange', var: 'missing', min: 1, max: { ref: 'binding', name: '$badMax' } }, ctx), []);
+    assert.deepEqual(evalQuery({ query: 'intsInVarRange', var: 'missing', min: 1, max: { _t: 2 as const, ref: 'binding', name: '$badMax' } }, ctx), []);
     assert.deepEqual(evalQuery({ query: 'intsInVarRange', var: 'missing', step: 0 }, ctx), []);
   });
 
@@ -475,9 +475,9 @@ describe('evalQuery', () => {
         where: {
           op: 'and',
           args: [
-            { op: '==', left: { ref: 'pvar', player: { chosen: '$seatCandidate' }, var: 'eliminated' }, right: false },
-            { op: '==', left: { ref: 'pvar', player: { chosen: '$seatCandidate' }, var: 'handActive' }, right: true },
-            { op: '==', left: { ref: 'pvar', player: { chosen: '$seatCandidate' }, var: 'allIn' }, right: false },
+            { op: '==', left: { _t: 2 as const, ref: 'pvar', player: { chosen: '$seatCandidate' }, var: 'eliminated' }, right: false },
+            { op: '==', left: { _t: 2 as const, ref: 'pvar', player: { chosen: '$seatCandidate' }, var: 'handActive' }, right: true },
+            { op: '==', left: { _t: 2 as const, ref: 'pvar', player: { chosen: '$seatCandidate' }, var: 'allIn' }, right: false },
           ],
         },
       },
@@ -495,7 +495,7 @@ describe('evalQuery', () => {
                 source: { query: 'players' },
                 from: 0,
         bind: '$seatCandidate',
-        where: { op: '==', left: { ref: 'binding', name: '$seatCandidate' }, right: 99 },
+        where: { op: '==', left: { _t: 2 as const, ref: 'binding', name: '$seatCandidate' }, right: 99 },
       },
       ctx,
     );
@@ -515,8 +515,8 @@ describe('evalQuery', () => {
         where: {
           op: 'or',
           args: [
-            { op: '==', left: { ref: 'binding', name: '$seatCandidate' }, right: 1 },
-            { op: '==', left: { ref: 'binding', name: '$seatCandidate' }, right: 2 },
+            { op: '==', left: { _t: 2 as const, ref: 'binding', name: '$seatCandidate' }, right: 1 },
+            { op: '==', left: { _t: 2 as const, ref: 'binding', name: '$seatCandidate' }, right: 2 },
           ],
         },
       },
@@ -532,8 +532,8 @@ describe('evalQuery', () => {
         where: {
           op: 'or',
           args: [
-            { op: '==', left: { ref: 'binding', name: '$seatCandidate' }, right: 1 },
-            { op: '==', left: { ref: 'binding', name: '$seatCandidate' }, right: 2 },
+            { op: '==', left: { _t: 2 as const, ref: 'binding', name: '$seatCandidate' }, right: 1 },
+            { op: '==', left: { _t: 2 as const, ref: 'binding', name: '$seatCandidate' }, right: 2 },
           ],
         },
       },
@@ -556,8 +556,8 @@ describe('evalQuery', () => {
         where: {
           op: 'or',
           args: [
-            { op: '==', left: { ref: 'binding', name: '$candidate' }, right: 'x' },
-            { op: '==', left: { ref: 'binding', name: '$candidate' }, right: 'y' },
+            { op: '==', left: { _t: 2 as const, ref: 'binding', name: '$candidate' }, right: 'x' },
+            { op: '==', left: { _t: 2 as const, ref: 'binding', name: '$candidate' }, right: 'y' },
           ],
         },
       },
@@ -579,8 +579,8 @@ describe('evalQuery', () => {
         where: {
           op: 'or',
           args: [
-            { op: '==', left: { ref: 'binding', name: '$candidate' }, right: 'x' },
-            { op: '==', left: { ref: 'binding', name: '$candidate' }, right: 'y' },
+            { op: '==', left: { _t: 2 as const, ref: 'binding', name: '$candidate' }, right: 'x' },
+            { op: '==', left: { _t: 2 as const, ref: 'binding', name: '$candidate' }, right: 'y' },
           ],
         },
       },
@@ -600,7 +600,7 @@ describe('evalQuery', () => {
         bind: '$street',
         where: {
           op: '==',
-          left: { ref: 'binding', name: '$street' },
+          left: { _t: 2 as const, ref: 'binding', name: '$street' },
           right: 'river',
         },
       },
@@ -618,7 +618,7 @@ describe('evalQuery', () => {
                 source: { query: 'players' },
                 from: 99,
         bind: '$seatCandidate',
-        where: { op: '==', left: { ref: 'binding', name: '$seatCandidate' }, right: 0 },
+        where: { op: '==', left: { _t: 2 as const, ref: 'binding', name: '$seatCandidate' }, right: 0 },
       },
       ctx,
     );
@@ -631,9 +631,9 @@ describe('evalQuery', () => {
       {
         query: 'nextInOrderByCondition',
         source: { query: 'players' },
-        from: { ref: 'binding', name: '$missingAnchor' },
+        from: { _t: 2 as const, ref: 'binding', name: '$missingAnchor' },
         bind: '$seatCandidate',
-        where: { op: '==', left: { ref: 'binding', name: '$seatCandidate' }, right: 0 },
+        where: { op: '==', left: { _t: 2 as const, ref: 'binding', name: '$seatCandidate' }, right: 0 },
       },
       ctx,
     );
@@ -646,9 +646,9 @@ describe('evalQuery', () => {
       {
         query: 'nextInOrderByCondition',
         source: { query: 'players' },
-        from: { ref: 'gvar', var: 'missingDealerButton' },
+        from: { _t: 2 as const, ref: 'gvar', var: 'missingDealerButton' },
         bind: '$seatCandidate',
-        where: { op: '==', left: { ref: 'binding', name: '$seatCandidate' }, right: 0 },
+        where: { op: '==', left: { _t: 2 as const, ref: 'binding', name: '$seatCandidate' }, right: 0 },
       },
       ctx,
     );
@@ -661,9 +661,9 @@ describe('evalQuery', () => {
       {
         query: 'nextInOrderByCondition',
         source: { query: 'players' },
-        from: { op: '/', left: 1, right: 0 },
+        from: { _t: 6 as const, op: '/', left: 1, right: 0 },
         bind: '$seatCandidate',
-        where: { op: '==', left: { ref: 'binding', name: '$seatCandidate' }, right: 0 },
+        where: { op: '==', left: { _t: 2 as const, ref: 'binding', name: '$seatCandidate' }, right: 0 },
       },
       ctx,
     );
@@ -678,9 +678,9 @@ describe('evalQuery', () => {
           {
             query: 'nextInOrderByCondition',
             source: { query: 'players' },
-            from: { op: '+', left: 'invalid-anchor-type', right: 1 },
+            from: { _t: 6 as const, op: '+', left: 'invalid-anchor-type', right: 1 },
             bind: '$seatCandidate',
-            where: { op: '==', left: { ref: 'binding', name: '$seatCandidate' }, right: 0 },
+            where: { op: '==', left: { _t: 2 as const, ref: 'binding', name: '$seatCandidate' }, right: 0 },
           },
           ctx,
         ),
@@ -792,7 +792,7 @@ describe('evalQuery', () => {
       {
         query: 'assetRows',
         tableId: 'tournament-standard::blindSchedule.levels',
-        where: [{ field: 'phase', op: 'in', value: { ref: 'grantContext', key: 'allowedPhases' } }],
+        where: [{ field: 'phase', op: 'in', value: { _t: 2 as const, ref: 'grantContext', key: 'allowedPhases' } }],
       },
       ctx,
     );
@@ -1352,8 +1352,8 @@ describe('evalQuery', () => {
           filter: {
             condition: {
               op: 'in',
-              item: { ref: 'binding', name: '$zone' },
-              set: { ref: 'binding', name: '$allowedZones' },
+              item: { _t: 2 as const, ref: 'binding', name: '$zone' },
+              set: { _t: 2 as const, ref: 'binding', name: '$allowedZones' },
             },
           },
         },
@@ -1370,8 +1370,8 @@ describe('evalQuery', () => {
             owner: 'actor',
             condition: {
               op: 'in',
-              item: { ref: 'binding', name: '$zone' },
-              set: { ref: 'binding', name: '$allowedZones' },
+              item: { _t: 2 as const, ref: 'binding', name: '$zone' },
+              set: { _t: 2 as const, ref: 'binding', name: '$allowedZones' },
             },
           },
         },
@@ -1846,7 +1846,7 @@ describe('evalQuery', () => {
           filter: {
             condition: {
               op: '==',
-              left: { ref: 'zoneProp', zone: '$zone', prop: 'category' },
+              left: { _t: 2 as const, ref: 'zoneProp', zone: '$zone', prop: 'category' },
               right: 'city',
             },
           },
@@ -1892,7 +1892,7 @@ describe('evalQuery', () => {
           spaceFilter: {
             condition: {
               op: '==',
-              left: { ref: 'zoneProp', zone: '$zone', prop: 'country' },
+              left: { _t: 2 as const, ref: 'zoneProp', zone: '$zone', prop: 'country' },
               right: 'southVietnam',
             },
           },
@@ -1917,7 +1917,7 @@ describe('evalQuery', () => {
         zone: 'battlefield:none',
         filter: {
           op: 'and',
-          args: [{ prop: 'faction', op: 'in', value: { ref: 'binding', name: '$targetFactions' } }],
+          args: [{ prop: 'faction', op: 'in', value: { _t: 2 as const, ref: 'binding', name: '$targetFactions' } }],
         },
       },
       ctx,
@@ -2071,7 +2071,7 @@ describe('evalQuery', () => {
             filter: {
               condition: {
                 op: '==',
-                left: { ref: 'zoneProp', zone: '$zone', prop: 'category' },
+                left: { _t: 2 as const, ref: 'zoneProp', zone: '$zone', prop: 'category' },
                 right: 'city',
               },
             },
@@ -2138,8 +2138,8 @@ describe('evalQuery', () => {
           zone: 'deck:none',
           via: {
             op: 'in',
-            item: { ref: 'binding', name: '$zone' },
-            set: { ref: 'binding', name: '$allowed' },
+            item: { _t: 2 as const, ref: 'binding', name: '$zone' },
+            set: { _t: 2 as const, ref: 'binding', name: '$allowed' },
           },
         },
         {
@@ -2163,22 +2163,22 @@ describe('evalQuery', () => {
     });
 
     assert.deepEqual(
-      evalQuery({ query: 'adjacentZones', zone: { zoneExpr: { ref: 'binding', name: '$origin' } } }, ctx),
+      evalQuery({ query: 'adjacentZones', zone: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$origin' } } }, ctx),
       [asZoneId('hand:0'), asZoneId('hand:1')],
     );
     assert.deepEqual(
-      evalQuery({ query: 'tokensInAdjacentZones', zone: { zoneExpr: { ref: 'binding', name: '$origin' } } }, ctx).map((token) => (token as Token).id),
+      evalQuery({ query: 'tokensInAdjacentZones', zone: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$origin' } } }, ctx).map((token) => (token as Token).id),
       [asTokenId('hand-0'), asTokenId('hand-0b'), asTokenId('hand-1')],
     );
     assert.deepEqual(
       evalQuery(
         {
           query: 'connectedZones',
-          zone: { zoneExpr: { ref: 'binding', name: '$origin' } },
+          zone: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$origin' } },
           via: {
             op: 'in',
-            item: { ref: 'binding', name: '$zone' },
-            set: { ref: 'binding', name: '$allowed' },
+            item: { _t: 2 as const, ref: 'binding', name: '$zone' },
+            set: { _t: 2 as const, ref: 'binding', name: '$allowed' },
           },
         },
         ctx,
@@ -2199,11 +2199,11 @@ describe('evalQuery', () => {
       evalQuery(
         {
           query: 'connectedZones',
-          zone: { zoneExpr: { ref: 'binding', name: '$origin' } },
+          zone: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$origin' } },
           via: {
             op: 'in',
-            item: { ref: 'binding', name: '$zone' },
-            set: { ref: 'binding', name: '$allowed' },
+            item: { _t: 2 as const, ref: 'binding', name: '$zone' },
+            set: { _t: 2 as const, ref: 'binding', name: '$allowed' },
           },
           allowTargetOutsideVia: true,
         },
@@ -2535,7 +2535,7 @@ describe('evalQuery', () => {
           {
             query: 'tokensInZone',
             zone: 'battlefield:none',
-            filter: { op: 'and', args: [{ prop: 'faction', op: 'in', value: { ref: 'binding', name: '$targetFactions' } }] },
+            filter: { op: 'and', args: [{ prop: 'faction', op: 'in', value: { _t: 2 as const, ref: 'binding', name: '$targetFactions' } }] },
           },
           ctx,
         ),
@@ -2651,7 +2651,7 @@ describe('evalQuery', () => {
           {
             query: 'assetRows',
             tableId: 'tournament-standard::blindSchedule.levels',
-            where: [{ field: 'phase', op: 'in', value: { ref: 'grantContext', key: 'allowedPhases' } }],
+            where: [{ field: 'phase', op: 'in', value: { _t: 2 as const, ref: 'grantContext', key: 'allowedPhases' } }],
           },
           ctx,
         ),
@@ -2699,7 +2699,7 @@ describe('evalQuery', () => {
           {
             query: 'assetRows',
             tableId: 'tournament-standard::blindSchedule.levels',
-            where: [{ field: 'phase', op: 'in', value: { ref: 'grantContext', key: 'allowedPhases' } }],
+            where: [{ field: 'phase', op: 'in', value: { _t: 2 as const, ref: 'grantContext', key: 'allowedPhases' } }],
           },
           ctx,
         ),
@@ -2720,7 +2720,7 @@ describe('evalQuery', () => {
           {
             query: 'tokensInZone',
             zone: 'battlefield:none',
-            filter: { op: 'and', args: [{ prop: 'faction', op: 'in', value: { ref: 'binding', name: '$targetFactions' } }] },
+            filter: { op: 'and', args: [{ prop: 'faction', op: 'in', value: { _t: 2 as const, ref: 'binding', name: '$targetFactions' } }] },
           },
           ctx,
         ),

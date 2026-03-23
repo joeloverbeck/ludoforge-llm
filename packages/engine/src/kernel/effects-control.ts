@@ -10,7 +10,8 @@ import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import { resolveRuntimeTokenBindingValue } from './token-binding.js';
 import { resolveTraceProvenance, withTracePath } from './trace-provenance.js';
 import type { EffectContext, EffectResult } from './effect-context.js';
-import type { EffectAST, TriggerEvent } from './types.js';
+import { VALUE_EXPR_TAG } from './types.js';
+import type { EffectAST, TriggerEvent, ValueExpr } from './types.js';
 
 export interface EffectBudgetState {
   remaining: number;
@@ -369,7 +370,7 @@ export const applyRemoveByPriority = (
             {
               moveToken: {
                 token: group.bind,
-                from: group.from ?? { zoneExpr: { ref: 'tokenZone', token: group.bind } },
+                from: group.from ?? { zoneExpr: { _t: VALUE_EXPR_TAG.REF, ref: 'tokenZone', token: group.bind } as ValueExpr },
                 to: group.to,
               },
             },

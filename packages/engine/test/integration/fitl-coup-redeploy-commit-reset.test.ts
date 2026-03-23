@@ -19,9 +19,10 @@ interface CoupFixtureOptions {
 
 const createRedeployCommitResetDef = (options: CoupFixtureOptions): GameDef => {
   const recomputeControlValue = {
+    _t: 6 as const,
     op: '+',
-    left: { ref: 'zoneCount', zone: 'arvn_redeploy:none' },
-    right: { ref: 'zoneCount', zone: 'nva_base:none' },
+    left: { _t: 2 as const, ref: 'zoneCount', zone: 'arvn_redeploy:none' },
+    right: { _t: 2 as const, ref: 'zoneCount', zone: 'nva_base:none' },
   } as const;
 
   const redeployEffects: EffectAST[] = [
@@ -36,7 +37,7 @@ const createRedeployCommitResetDef = (options: CoupFixtureOptions): GameDef => {
   const commitmentEffects: EffectAST[] = [
     {
       if: {
-        when: { op: '==', left: { ref: 'gvar', var: 'isFinalCoup' }, right: 0 },
+        when: { op: '==', left: { _t: 2 as const, ref: 'gvar', var: 'isFinalCoup' }, right: 0 },
         then: [
           { moveAll: { from: 'us_out_of_play:none', to: 'us_available:none' } },
           { setVar: { scope: 'global', var: 'commitmentControlCheckpoint', value: recomputeControlValue } },
@@ -49,16 +50,16 @@ const createRedeployCommitResetDef = (options: CoupFixtureOptions): GameDef => {
   const resetEffects: EffectAST[] = [
     {
       if: {
-        when: { op: '==', left: { ref: 'gvar', var: 'isFinalCoup' }, right: 0 },
+        when: { op: '==', left: { _t: 2 as const, ref: 'gvar', var: 'isFinalCoup' }, right: 0 },
         then: [
           {
             if: {
-              when: { op: '==', left: { ref: 'gvar', var: 'trail' }, right: 0 },
+              when: { op: '==', left: { _t: 2 as const, ref: 'gvar', var: 'trail' }, right: 0 },
               then: [{ addVar: { scope: 'global', var: 'trail', delta: 1 } }],
               else: [
                 {
                   if: {
-                    when: { op: '==', left: { ref: 'gvar', var: 'trail' }, right: 4 },
+                    when: { op: '==', left: { _t: 2 as const, ref: 'gvar', var: 'trail' }, right: 4 },
                     then: [{ addVar: { scope: 'global', var: 'trail', delta: -1 } }],
                   },
                 },

@@ -92,8 +92,7 @@ export const runGame = (
   // The sim-level timing (simApplyMove, simLegalMoves, etc.) is handled externally here.
   const kernelOptions: ExecutionOptions | undefined = (() => {
     if (options === undefined || profiler === undefined) return options;
-    const { profiler: _stripped, ...rest } = options;
-    return rest;
+    return Object.fromEntries(Object.entries(options).filter(([key]) => key !== 'profiler')) as typeof options;
   })();
   const moveLogs: MoveLog[] = [];
   const agentRngByPlayer = [...createAgentRngByPlayer(seed, state.playerCount)];

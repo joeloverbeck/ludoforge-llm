@@ -54,7 +54,7 @@ describe('eval error surface', () => {
       resultLength: 11,
     });
     const divisionError = divisionByZeroError('division by zero', {
-      expr: { op: '/', left: 1, right: 0 },
+      expr: { _t: 6 as const, op: '/', left: 1, right: 0 },
       left: 1,
       right: 0,
     });
@@ -71,7 +71,7 @@ describe('eval error surface', () => {
       resultLength: 11,
     });
     assert.deepEqual(divisionError.context, {
-      expr: { op: '/', left: 1, right: 0 },
+      expr: { _t: 6 as const, op: '/', left: 1, right: 0 },
       left: 1,
       right: 0,
     });

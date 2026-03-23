@@ -71,8 +71,8 @@ describe('FITL 1968 ARVN-first event-card production spec', () => {
       'Cut NVA and VC Resources each to half their total (round down). 5 Available NVA Troops out of play.',
     );
     assert.deepEqual(card?.unshaded?.effects, [
-      { setVar: { scope: 'global', var: 'nvaResources', value: { op: 'floorDiv', left: { ref: 'gvar', var: 'nvaResources' }, right: 2 } } },
-      { setVar: { scope: 'global', var: 'vcResources', value: { op: 'floorDiv', left: { ref: 'gvar', var: 'vcResources' }, right: 2 } } },
+      { setVar: { scope: 'global', var: 'nvaResources', value: { _t: 6, op: 'floorDiv', left: { _t: 2, ref: 'gvar', var: 'nvaResources' }, right: 2 } } },
+      { setVar: { scope: 'global', var: 'vcResources', value: { _t: 6, op: 'floorDiv', left: { _t: 2, ref: 'gvar', var: 'vcResources' }, right: 2 } } },
       {
         forEach: {
           bind: '$nvaTroopOutOfPlay',

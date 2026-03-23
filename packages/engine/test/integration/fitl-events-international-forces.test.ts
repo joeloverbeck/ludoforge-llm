@@ -121,8 +121,8 @@ describe('FITL card-65 International Forces', () => {
     assert.match(shadedText, /"bind":"\$internationalForcesUsMapPieces"/);
     assert.match(shadedText, /"chooser":\{"id":0\}/);
     assert.match(shadedText, /"query":"tokensInMapSpaces"/);
-    assert.match(shadedText, /"min":\{"ref":"binding","name":"\$internationalForcesPiecesToRemove"\}/);
-    assert.match(shadedText, /"max":\{"ref":"binding","name":"\$internationalForcesPiecesToRemove"\}/);
+    assert.match(shadedText, /"min":\{"ref":"binding","name":"\$internationalForcesPiecesToRemove","_t":2\}/);
+    assert.match(shadedText, /"max":\{"ref":"binding","name":"\$internationalForcesPiecesToRemove","_t":2\}/);
     assert.match(shadedText, /"zoneExpr":"out-of-play-US:none"/);
     assert.equal(
       countPattern(shadedText, /"bind":"\$internationalForcesUsMapPieces"/g),

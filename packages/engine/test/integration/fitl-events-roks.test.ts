@@ -38,8 +38,8 @@ const ROKS_TOKEN_INTERPRETATIONS = [
 ] as const;
 const ROKS_SWEEP_ZONE_FILTER = {
   op: 'in',
-  item: { ref: 'zoneProp', zone: '$zone', prop: 'id' },
-  set: { scalarArray: [QUI_NHON, 'binh-dinh:none', 'kontum:none', 'pleiku-darlac:none', PHU_BON, KHANH_HOA, 'cam-ranh:none'] },
+  item: { _t: 2, ref: 'zoneProp', zone: '$zone', prop: 'id' },
+  set: { _t: 1, scalarArray: [QUI_NHON, 'binh-dinh:none', 'kontum:none', 'pleiku-darlac:none', PHU_BON, KHANH_HOA, 'cam-ranh:none'] },
 } as const;
 
 const makeToken = (

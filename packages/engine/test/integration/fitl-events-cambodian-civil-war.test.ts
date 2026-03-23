@@ -159,7 +159,7 @@ describe('FITL card-62 Cambodian Civil War', () => {
     assert.equal(usBranchGrants.length, 2);
     assert.equal(usBranchGrants[0]?.seat, 'us');
     assert.deepEqual(usBranchGrants[0]?.actionIds, ['airLift']);
-    assert.deepEqual(usBranchGrants[0]?.executionContext?.airLiftDestinationProfile, { scalarArray: ['cambodia-only'] });
+    assert.deepEqual(usBranchGrants[0]?.executionContext?.airLiftDestinationProfile, { _t: 1, scalarArray: ['cambodia-only'] });
     assert.equal(usBranchGrants[1]?.seat, 'us');
     assert.deepEqual(usBranchGrants[1]?.actionIds, ['sweep']);
     assert.equal(usBranchGrants[1]?.allowDuringMonsoon, true);
@@ -168,7 +168,7 @@ describe('FITL card-62 Cambodian Civil War', () => {
     assert.equal(arvnBranchGrants.length, 2);
     assert.equal(arvnBranchGrants[0]?.seat, 'us');
     assert.deepEqual(arvnBranchGrants[0]?.actionIds, ['airLift']);
-    assert.deepEqual(arvnBranchGrants[0]?.executionContext?.airLiftDestinationProfile, { scalarArray: ['cambodia-only'] });
+    assert.deepEqual(arvnBranchGrants[0]?.executionContext?.airLiftDestinationProfile, { _t: 1, scalarArray: ['cambodia-only'] });
     assert.equal(arvnBranchGrants[1]?.seat, 'arvn');
     assert.deepEqual(arvnBranchGrants[1]?.actionIds, ['sweep']);
     assert.equal(arvnBranchGrants[1]?.allowDuringMonsoon, true);

@@ -116,8 +116,8 @@ describe('FITL text-only card behavior backfill', () => {
         when: {
           op: 'or',
           args: [
-            { op: '==', left: { ref: 'activeSeat' }, right: 'nva' },
-            { op: '==', left: { ref: 'activeSeat' }, right: 'vc' },
+            { op: '==', left: { _t: 2, ref: 'activeSeat' }, right: 'nva' },
+            { op: '==', left: { _t: 2, ref: 'activeSeat' }, right: 'vc' },
           ],
         },
       },

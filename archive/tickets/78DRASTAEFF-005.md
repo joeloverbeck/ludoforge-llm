@@ -1,6 +1,6 @@
 # 78DRASTAEFF-005: Migrate effects-token handlers to native (env, cursor) signature
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — effects-token.ts, effect-registry.ts
@@ -102,3 +102,25 @@ Unwrap all 8 `simple()` calls for token handlers.
 1. `pnpm -F @ludoforge/engine test -- --test-name-pattern "moveToken|moveAll|draw|shuffle|createToken|destroyToken|setTokenProp"`
 2. `pnpm turbo typecheck`
 3. `pnpm turbo test --force`
+
+## Outcome
+
+**Completed**: 2026-03-23
+
+### What changed
+
+- **`token-state-index.ts`**: Added `invalidateTokenStateIndex()` export — clears the WeakMap cache after mutable zone mutations to prevent stale token lookups across sequential handler calls within a single mutable scope.
+- **`effects-token.ts`**: Migrated all 8 handlers to native `(effect, env, cursor, budget, applyBatch)` signature. Added `writeZoneMutations()` file-local helper for dual-path (mutable via `ensureZoneCloned` / immutable spread fallback) zone writes. Removed file-local `resolveEffectBindings`; imported from `effect-context.ts`. Refactored `resolveBoundTokenId` and `resolveMoveTokenAdjacentDestination` to accept pre-resolved bindings instead of `EffectContext`.
+- **`effect-registry.ts`**: Unwrapped all 8 `simple()` calls for token handlers.
+- **`effect-resolver-normalization-guard.test.ts`**: Updated architecture guard to accept both `evalCtx.mode` (legacy) and `env.mode` (native EffectEnv) as canonical policy derivation sources.
+
+### Deviations from plan
+
+- **Token state index invalidation**: The ticket did not explicitly call for `invalidateTokenStateIndex`, but mutable zone mutations within a draft scope caused the WeakMap-backed token state index to return stale data for subsequent handler calls on the same `MutableGameState` object. This was a correctness requirement discovered during implementation.
+- **`token-state-index.ts` added to files touched**: Not listed in the original "Files to Touch" but necessary for the invalidation function. The ticket's out-of-scope note ("Token state index mutations — if tokenStateIndex needs mutable update, that's scoped to this ticket") anticipated this.
+- **Architecture guard test update**: Required because migrated handlers use `env.mode` instead of `evalCtx.mode`.
+
+### Verification
+
+- `pnpm turbo typecheck` — passes (all packages)
+- `pnpm turbo test --force` — 4670 tests, 0 failures

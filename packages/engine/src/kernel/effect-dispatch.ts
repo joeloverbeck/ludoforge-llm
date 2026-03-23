@@ -1,4 +1,13 @@
-import { getMaxEffectOps, type EffectContext, type EffectResult, type FreeOperationProbeScope } from './effect-context.js';
+import {
+  getMaxEffectOps,
+  toEffectEnv,
+  toEffectCursor,
+  type EffectContext,
+  type EffectCursor,
+  type EffectEnv,
+  type EffectResult,
+  type FreeOperationProbeScope,
+} from './effect-context.js';
 import { emptyScope } from './decision-scope.js';
 import {
   EffectBudgetExceededError,
@@ -34,23 +43,28 @@ export const consumeEffectBudget = (budget: EffectBudgetState, effectType: strin
 
 const EMPTY_EVENTS: readonly TriggerEvent[] = [];
 
-const applyEffectWithBudget = (effect: EffectAST, ctx: EffectContext, budget: EffectBudgetState): EffectResult => {
+const applyEffectWithBudget = (
+  effect: EffectAST,
+  env: EffectEnv,
+  cursor: EffectCursor,
+  budget: EffectBudgetState,
+): EffectResult => {
   const kind = effectKindOf(effect);
   consumeEffectBudget(budget, kind);
   const handler = registry[kind];
   if (!handler) {
     throw effectNotImplementedError(kind, { effect });
   }
-  const profiler = ctx.profiler;
+  const profiler = env.profiler;
   const t0 = perfStart(profiler);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const result = (handler as any)(effect, ctx, budget, applyEffectsWithBudgetState) as EffectResult;
+  const result = (handler as any)(effect, env, cursor, budget, applyEffectsWithBudgetState) as EffectResult;
   perfDynEnd(profiler, `effect:${kind}`, t0);
   // Normalize result: use shared empty array to avoid per-call allocation,
   // apply defaults for bindings/decisionScope only when handler omitted them.
   const emitted = result.emittedEvents ?? EMPTY_EVENTS;
-  const bindings = result.bindings ?? ctx.bindings;
-  const scope = result.decisionScope ?? ctx.decisionScope;
+  const bindings = result.bindings ?? cursor.bindings;
+  const scope = result.decisionScope ?? cursor.decisionScope;
   if (result.pendingChoice !== undefined) {
     return { state: result.state, rng: result.rng, emittedEvents: emitted, bindings, decisionScope: scope, pendingChoice: result.pendingChoice };
   }
@@ -59,35 +73,35 @@ const applyEffectWithBudget = (effect: EffectAST, ctx: EffectContext, budget: Ef
 
 export const applyEffectsWithBudgetState = (
   effects: readonly EffectAST[],
-  ctx: EffectContext,
+  env: EffectEnv,
+  cursor: EffectCursor,
   budget: EffectBudgetState,
 ): EffectResult => {
-  let currentState = ctx.state;
-  let currentRng = ctx.rng;
-  let currentBindings = ctx.bindings;
-  let currentDecisionScope = ctx.decisionScope;
+  let currentState = cursor.state;
+  let currentRng = cursor.rng;
+  let currentBindings = cursor.bindings;
+  let currentDecisionScope = cursor.decisionScope;
   const emittedEvents: TriggerEvent[] = [];
   // Skip effectPath string construction when tracing is disabled
-  const tracingEnabled = ctx.collector.trace !== null || ctx.collector.conditionTrace !== null;
+  const tracingEnabled = env.collector.trace !== null || env.collector.conditionTrace !== null;
 
-  // Clone ctx once into a mutable working context. Property assignments below
-  // mutate this single object instead of spreading ~25 fields per iteration.
-  // V8 hidden-class safe: same shape as the original spread, same property order.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const workCtx: any = { ...ctx };
+  // Reusable mutable cursor — mutated in place between iterations.
+  // Only 5 fields instead of the previous ~25-field workCtx spread.
+  const workCursor: EffectCursor = { ...cursor };
 
   for (let effectIndex = 0; effectIndex < effects.length; effectIndex++) {
     // Update only the fields that change between iterations
-    workCtx.state = currentState;
-    workCtx.rng = currentRng;
-    workCtx.bindings = currentBindings;
-    workCtx.decisionScope = currentDecisionScope;
+    workCursor.state = currentState;
+    workCursor.rng = currentRng;
+    workCursor.bindings = currentBindings;
+    workCursor.decisionScope = currentDecisionScope;
     if (tracingEnabled) {
-      workCtx.effectPath = `${ctx.effectPath ?? ''}[${effectIndex}]`;
+      workCursor.effectPath = `${cursor.effectPath ?? ''}[${effectIndex}]`;
     }
     const result = applyEffectWithBudget(
       effects[effectIndex]!,
-      workCtx as EffectContext,
+      env,
+      workCursor,
       budget,
     );
     currentState = result.state;
@@ -125,11 +139,10 @@ export function applyEffect(effect: EffectAST, ctx: EffectContext): EffectResult
     priorGrantDefinitions: [],
     blockedStrictSequenceBatchIds: [],
   };
-  const result = applyEffectWithBudget(
-    effect,
-    { ...ctx, freeOperationProbeScope, decisionScope: ctx.decisionScope ?? emptyScope() },
-    budget,
-  );
+  const fullCtx = { ...ctx, freeOperationProbeScope, decisionScope: ctx.decisionScope ?? emptyScope() };
+  const env = toEffectEnv(fullCtx);
+  const cursor = toEffectCursor(fullCtx);
+  const result = applyEffectWithBudget(effect, env, cursor, budget);
   return {
     state: result.state,
     rng: result.rng,
@@ -146,11 +159,10 @@ export function applyEffects(effects: readonly EffectAST[], ctx: EffectContext):
     priorGrantDefinitions: [],
     blockedStrictSequenceBatchIds: [],
   };
-  const result = applyEffectsWithBudgetState(
-    effects,
-    { ...ctx, freeOperationProbeScope, decisionScope: ctx.decisionScope ?? emptyScope() },
-    budget,
-  );
+  const fullCtx = { ...ctx, freeOperationProbeScope, decisionScope: ctx.decisionScope ?? emptyScope() };
+  const env = toEffectEnv(fullCtx);
+  const cursor = toEffectCursor(fullCtx);
+  const result = applyEffectsWithBudgetState(effects, env, cursor, budget);
   return {
     state: result.state,
     rng: result.rng,

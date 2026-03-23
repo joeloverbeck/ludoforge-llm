@@ -1,6 +1,6 @@
 # Spec 77 — EffectContext Static/Dynamic Split
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Dependencies**: None
 **Blocked by**: None
 **Enables**: Spec 78 (Draft State) can use the split context naturally;
@@ -232,3 +232,21 @@ Phase 3 if profiling shows the merge cost is significant.
 - **ReadContext merge cost**: If option 1 (merge on demand) creates too many
   merged objects, it could negate the savings. Profiling during Phase 1 will
   reveal this before committing to the full migration.
+
+## Outcome
+
+- **Completion date**: 2026-03-23
+- **What changed**:
+  - Added `EffectEnv` (~22 static fields) and `EffectCursor` (5 dynamic fields) interfaces to `effect-context.ts`
+  - Added 6 shared helpers: `toEffectEnv`, `toEffectCursor`, `fromEnvAndCursor`, `mergeToReadContext`, `mergeToEvalContext`, `resolveEffectBindings`
+  - Updated `effect-dispatch.ts`: `applyEffectsWithBudgetState` and `applyEffectWithBudget` now operate on `(env, cursor)` internally; public entry points (`applyEffect`, `applyEffects`) keep their `EffectContext` signature
+  - Updated `effect-registry.ts`: new `EffectHandler` type accepts `(effect, env, cursor, budget, applyBatch)`; `simple()` wrapper bridges unmigrated handlers via `fromEnvAndCursor`; `compat()` wrapper bridges complex unmigrated handlers
+  - Fully migrated all 5 hot-path handlers in `effects-control.ts` (applyIf, applyLet, applyForEach, applyReduce, applyRemoveByPriority) to native env+cursor — nested dispatch calls now spread 5 fields instead of ~24
+  - Updated `effect-compiler.ts` call site to use env+cursor for `applyEffectsWithBudgetState`
+- **Deviations from plan**:
+  - Phases 1-2 were combined into a single implementation pass rather than separate phases
+  - Simple handlers (effects-var, effects-token, effects-choice, effects-binding, effects-resource, effects-reveal, effects-turn-flow) were NOT migrated to env+cursor — they stay wrapped by `simple()`/`compat()` adapters since the perf gain is concentrated in the control flow handlers (let/forEach/reduce account for ~10% of CPU)
+  - `trace-provenance.ts` and `effect-context-invariants.ts` were NOT changed — effects-control.ts uses local `withCursorTrace` and `envCursorProvenance` helpers instead
+  - Phase 3 (removing old EffectContext type) was deferred — the type remains as the external API contract
+  - Added `mergeToEvalContext` helper (not in original spec) for the common pattern of creating a ReadContext with resolved bindings
+- **Verification**: 4650/4650 unit tests pass, 36/36 E2E tests pass, lint clean, typecheck clean

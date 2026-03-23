@@ -1,5 +1,5 @@
 import { emptyScope } from './decision-scope.js';
-import type { EffectResult } from './effect-context.js';
+import { toEffectEnv, toEffectCursor, type EffectResult } from './effect-context.js';
 import { compilePatternDescriptor, type BodyCompiler, type CompiledEffectFragment } from './effect-compiler-codegen.js';
 import { classifyEffect, computeCoverageRatio } from './effect-compiler-patterns.js';
 import { createCompiledExecutionContext } from './effect-compiler-runtime.js';
@@ -107,7 +107,7 @@ export const createFallbackFragment = (
     });
     const result = ctx.effectBudget === undefined
       ? ctx.fallbackApplyEffects(effects, effectCtx)
-      : applyEffectsWithBudgetState(effects, effectCtx, ctx.effectBudget);
+      : applyEffectsWithBudgetState(effects, toEffectEnv(effectCtx), toEffectCursor(effectCtx), ctx.effectBudget);
     return normalizeFragmentResult(
       result,
       bindings,

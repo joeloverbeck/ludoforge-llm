@@ -46,6 +46,8 @@ The kernel is a pure, deterministic state machine. PRNG state lives in GameState
 
 Kernel effect handlers receive state and return new state. Use spread operators and immutable update patterns. The previous state is never modified — this enables determinism verification, undo/replay, and safe parallel reasoning about state.
 
+**Exception — Scoped internal mutation**: Within a single synchronous effect-execution scope (e.g., `applyEffectsWithBudgetState`), effect handlers MAY mutate a working copy of the state for performance. The working copy is created at scope entry (shallow clone) and is not observable by external code. The external contract is preserved: `applyMove(state) → newState` where the input `state` is never modified.
+
 ## 8. Compiler-Kernel Validation Boundary
 
 **The compiler validates structure and references. The kernel validates behavior and semantics.**

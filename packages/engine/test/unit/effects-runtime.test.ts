@@ -130,7 +130,9 @@ describe('effects runtime foundation', () => {
     const ctx = makeCtx();
     const result = applyEffects([], ctx);
 
-    assert.equal(result.state, ctx.state);
+    // Spec 78: createMutableState always shallow-clones, so reference identity
+    // is no longer guaranteed for no-op effect lists. Structural equality suffices.
+    assert.deepStrictEqual(result.state, ctx.state);
     assert.equal(result.rng, ctx.rng);
   });
 

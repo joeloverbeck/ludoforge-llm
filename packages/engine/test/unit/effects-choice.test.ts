@@ -995,7 +995,9 @@ describe('effects choice assertions', () => {
     };
 
     const result = applyEffect(effect, ctx);
-    assert.equal(result.state, ctx.state);
+    // Spec 78: createMutableState always shallow-clones, so reference identity
+    // is no longer guaranteed. Structural equality suffices.
+    assert.deepStrictEqual(result.state, ctx.state);
     assert.equal(result.rng, ctx.rng);
   });
 

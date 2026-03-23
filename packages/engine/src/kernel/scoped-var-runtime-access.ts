@@ -8,6 +8,8 @@ import {
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import type { EffectContext } from './effect-context.js';
 import type { RuntimeScopedVarEndpoint } from './scoped-var-runtime-mapping.js';
+import type { DraftTracker, MutableGameState } from './state-draft.js';
+import { ensurePlayerVarCloned, ensureZoneVarCloned } from './state-draft.js';
 import type { GameState, IntVariableDef, PlayerSel, ScopedVarNameExpr, VariableDef, VariableValue, ZoneRef } from './types.js';
 
 type ScopedVarDefinitionScope = 'global' | 'pvar' | 'zoneVar';
@@ -580,4 +582,37 @@ export const writeScopedVarsToState = (state: GameState, writes: readonly Scoped
 
   const branches = writeScopedVarsToBranches(scopedVarStateBranchesFromState(state), writes);
   return writeScopedVarBranchesToState(state, branches);
+};
+
+/**
+ * Mutable counterpart of {@link writeScopedVarsToState}.
+ *
+ * Applies scoped variable writes directly to a {@link MutableGameState},
+ * using the {@link DraftTracker} for copy-on-write of inner maps.
+ * Top-level maps (`globalVars`, `perPlayerVars`, `zoneVars`) are already
+ * shallow-cloned by `createMutableState`; this function only clones inner
+ * per-player / per-zone maps on first write via the tracker.
+ */
+export const writeScopedVarsMutable = (
+  state: MutableGameState,
+  writes: readonly ScopedVarWrite[],
+  tracker: DraftTracker,
+): void => {
+  for (const write of writes) {
+    if (isZoneScopedWrite(write)) {
+      const zoneKey = String(write.endpoint.zone);
+      ensureZoneVarCloned(state, tracker, zoneKey);
+      (state.zoneVars as Record<string, Record<string, number>>)[zoneKey]![write.endpoint.var] = write.value;
+      continue;
+    }
+
+    if (write.endpoint.scope === 'global') {
+      (state.globalVars as Record<string, VariableValue>)[write.endpoint.var] = write.value;
+      continue;
+    }
+
+    const playerKey = resolvePvarScopedWritePlayerKey(write);
+    ensurePlayerVarCloned(state, tracker, playerKey);
+    (state.perPlayerVars as Record<number, Record<string, VariableValue>>)[playerKey]![write.endpoint.var] = write.value;
+  }
 };

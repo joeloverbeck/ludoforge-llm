@@ -85,27 +85,28 @@ export const MacroOriginSchema = z
   .strict();
 
 export const ReferenceSchema = z.union([
-  z.object({ ref: z.literal('gvar'), var: ScopedVarNameExprSchema }).strict(),
+  z.object({ _t: IntegerSchema.optional(), ref: z.literal('gvar'), var: ScopedVarNameExprSchema }).strict(),
   z
     .object({
+      _t: IntegerSchema.optional(),
       ref: z.literal('pvar'),
       player: PlayerSelSchema,
       var: ScopedVarNameExprSchema,
     })
     .strict(),
-  z.object({ ref: z.literal('zoneVar'), zone: ZoneSelSchema, var: ScopedVarNameExprSchema }).strict(),
-  z.object({ ref: z.literal('zoneCount'), zone: ZoneSelSchema }).strict(),
-  z.object({ ref: z.literal('tokenProp'), token: TokenSelSchema, prop: StringSchema }).strict(),
-  z.object({ ref: z.literal('assetField'), row: StringSchema, tableId: StringSchema, field: StringSchema }).strict(),
-  z.object({ ref: z.literal('binding'), name: StringSchema, displayName: StringSchema.optional() }).strict(),
-  z.object({ ref: z.literal('markerState'), space: ZoneSelSchema, marker: StringSchema }).strict(),
-  z.object({ ref: z.literal('globalMarkerState'), marker: StringSchema }).strict(),
-  z.object({ ref: z.literal('tokenZone'), token: TokenSelSchema }).strict(),
-  z.object({ ref: z.literal('zoneProp'), zone: ZoneSelSchema, prop: StringSchema }).strict(),
-  z.object({ ref: z.literal('activePlayer') }).strict(),
-  z.object({ ref: z.literal('activeSeat') }).strict(),
-  z.object({ ref: z.literal('grantContext'), key: StringSchema }).strict(),
-  z.object({ ref: z.literal('capturedSequenceZones'), key: FreeOperationSequenceKeyExprSchema }).strict(),
+  z.object({ _t: IntegerSchema.optional(), ref: z.literal('zoneVar'), zone: ZoneSelSchema, var: ScopedVarNameExprSchema }).strict(),
+  z.object({ _t: IntegerSchema.optional(), ref: z.literal('zoneCount'), zone: ZoneSelSchema }).strict(),
+  z.object({ _t: IntegerSchema.optional(), ref: z.literal('tokenProp'), token: TokenSelSchema, prop: StringSchema }).strict(),
+  z.object({ _t: IntegerSchema.optional(), ref: z.literal('assetField'), row: StringSchema, tableId: StringSchema, field: StringSchema }).strict(),
+  z.object({ _t: IntegerSchema.optional(), ref: z.literal('binding'), name: StringSchema, displayName: StringSchema.optional() }).strict(),
+  z.object({ _t: IntegerSchema.optional(), ref: z.literal('markerState'), space: ZoneSelSchema, marker: StringSchema }).strict(),
+  z.object({ _t: IntegerSchema.optional(), ref: z.literal('globalMarkerState'), marker: StringSchema }).strict(),
+  z.object({ _t: IntegerSchema.optional(), ref: z.literal('tokenZone'), token: TokenSelSchema }).strict(),
+  z.object({ _t: IntegerSchema.optional(), ref: z.literal('zoneProp'), zone: ZoneSelSchema, prop: StringSchema }).strict(),
+  z.object({ _t: IntegerSchema.optional(), ref: z.literal('activePlayer') }).strict(),
+  z.object({ _t: IntegerSchema.optional(), ref: z.literal('activeSeat') }).strict(),
+  z.object({ _t: IntegerSchema.optional(), ref: z.literal('grantContext'), key: StringSchema }).strict(),
+  z.object({ _t: IntegerSchema.optional(), ref: z.literal('capturedSequenceZones'), key: FreeOperationSequenceKeyExprSchema }).strict(),
 ]);
 
 let conditionAstSchemaInternal: z.ZodTypeAny;
@@ -359,10 +360,11 @@ valueExprSchemaInternal = z.union([
   NumberSchema,
   BooleanSchema,
   StringSchema,
-  z.object({ scalarArray: ScalarValueArraySchema }).strict(),
+  z.object({ _t: IntegerSchema.optional(), scalarArray: ScalarValueArraySchema }).strict(),
   ReferenceSchema,
   z
     .object({
+      _t: IntegerSchema.optional(),
       op: z.union([
         z.literal('+'),
         z.literal('-'),
@@ -379,6 +381,7 @@ valueExprSchemaInternal = z.union([
     .strict(),
   z
     .object({
+      _t: IntegerSchema.optional(),
       aggregate: z
         .union([
           z
@@ -398,9 +401,10 @@ valueExprSchemaInternal = z.union([
         ]),
     })
     .strict(),
-  z.object({ concat: z.array(ValueExprSchema) }).strict(),
+  z.object({ _t: IntegerSchema.optional(), concat: z.array(ValueExprSchema) }).strict(),
   z
     .object({
+      _t: IntegerSchema.optional(),
       if: z
         .object({
           when: ConditionASTSchema,
@@ -417,6 +421,7 @@ numericValueExprSchemaInternal = z.union([
   ReferenceSchema,
   z
     .object({
+      _t: IntegerSchema.optional(),
       op: z.union([
         z.literal('+'),
         z.literal('-'),
@@ -433,6 +438,7 @@ numericValueExprSchemaInternal = z.union([
     .strict(),
   z
     .object({
+      _t: IntegerSchema.optional(),
       aggregate: z
         .union([
           z
@@ -454,6 +460,7 @@ numericValueExprSchemaInternal = z.union([
     .strict(),
   z
     .object({
+      _t: IntegerSchema.optional(),
       if: z
         .object({
           when: ConditionASTSchema,

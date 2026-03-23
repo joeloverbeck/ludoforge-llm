@@ -615,7 +615,7 @@ describe('scoped-var-runtime-access', () => {
 
     assert.throws(
       () =>
-        resolveZoneWithNormalization({ zoneExpr: { ref: 'binding', name: '$missingZone' } }, ctx, {
+        resolveZoneWithNormalization({ zoneExpr: { _t: 2 as const, ref: 'binding', name: '$missingZone' } }, ctx, {
           code: 'resourceRuntimeValidationFailed',
           effectType: 'transferVar',
           scope: 'zoneVar',
@@ -634,7 +634,7 @@ describe('scoped-var-runtime-access', () => {
 
     assert.throws(
       () =>
-        resolveZoneWithNormalization({ zoneExpr: { ref: 'binding', name: '$missingZone' } }, ctx, {
+        resolveZoneWithNormalization({ zoneExpr: { _t: 2 as const, ref: 'binding', name: '$missingZone' } }, ctx, {
           code: 'resourceRuntimeValidationFailed',
           effectType: 'transferVar',
           scope: 'zoneVar',
@@ -650,7 +650,7 @@ describe('scoped-var-runtime-access', () => {
 
     assert.throws(
       () =>
-        resolveZoneWithNormalization({ zoneExpr: { ref: 'binding', name: '$missingZone' } }, ctx, {
+        resolveZoneWithNormalization({ zoneExpr: { _t: 2 as const, ref: 'binding', name: '$missingZone' } }, ctx, {
           code: 'resourceRuntimeValidationFailed',
           effectType: 'transferVar',
           scope: 'zoneVar',

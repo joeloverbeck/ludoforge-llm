@@ -39,7 +39,7 @@ describe('compile-lowering actionDefaults', () => {
     assert.ok(phase.actionDefaults.pre !== undefined, 'pre should be present');
     assert.deepEqual(phase.actionDefaults.pre, {
       op: '==',
-      left: { ref: 'gvar', var: 'gate' },
+      left: { _t: 2, ref: 'gvar', var: 'gate' },
       right: 1,
     });
   });

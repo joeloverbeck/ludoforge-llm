@@ -319,12 +319,12 @@ describe('effects moveToken and draw', () => {
     assertSelectorResolutionPolicyBoundary({
       executionRun: () =>
         applyEffect(
-          { draw: { from: { zoneExpr: { ref: 'binding', name: '$missingFromZone' } }, to: 'discard:none', count: 1 } },
+          { draw: { from: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$missingFromZone' } }, to: 'discard:none', count: 1 } },
           makeCtx(),
         ),
       discoveryRun: () =>
         applyEffect(
-          { draw: { from: { zoneExpr: { ref: 'binding', name: '$missingFromZone' } }, to: 'discard:none', count: 1 } },
+          { draw: { from: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$missingFromZone' } }, to: 'discard:none', count: 1 } },
           makeDiscoveryCtx(),
         ),
       normalizedMessage: 'draw.from zone resolution failed',
@@ -338,7 +338,7 @@ describe('effects moveToken and draw', () => {
           {
             moveToken: {
               token: '$token',
-              from: { zoneExpr: { ref: 'binding', name: '$missingFromZone' } },
+              from: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$missingFromZone' } },
               to: 'discard:none',
             },
           },
@@ -349,7 +349,7 @@ describe('effects moveToken and draw', () => {
           {
             moveToken: {
               token: '$token',
-              from: { zoneExpr: { ref: 'binding', name: '$missingFromZone' } },
+              from: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$missingFromZone' } },
               to: 'discard:none',
             },
           },
@@ -367,7 +367,7 @@ describe('effects moveToken and draw', () => {
             moveToken: {
               token: '$token',
               from: 'deck:none',
-              to: { zoneExpr: { ref: 'binding', name: '$missingToZone' } },
+              to: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$missingToZone' } },
             },
           },
           makeCtx(),
@@ -378,7 +378,7 @@ describe('effects moveToken and draw', () => {
             moveToken: {
               token: '$token',
               from: 'deck:none',
-              to: { zoneExpr: { ref: 'binding', name: '$missingToZone' } },
+              to: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$missingToZone' } },
             },
           },
           makeDiscoveryCtx(),

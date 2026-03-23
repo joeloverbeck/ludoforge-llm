@@ -106,16 +106,17 @@ describe('evaluateSubset effect', () => {
         subsetBind: '$subset',
         compute: [],
         scoreExpr: {
+          _t: 5,
           aggregate: {
             op: 'sum',
             query: { query: 'binding', name: '$subset' },
             bind: '$token',
-            valueExpr: { ref: 'tokenProp', token: '$token', prop: 'value' },
+            valueExpr: { _t: 2, ref: 'tokenProp', token: '$token', prop: 'value' },
           },
         },
         resultBind: '$bestScore',
         in: [
-          { setVar: { scope: 'global', var: 'winner', value: { ref: 'binding', name: '$bestScore' } } },
+          { setVar: { scope: 'global', var: 'winner', value: { _t: 2, ref: 'binding', name: '$bestScore' } } },
         ],
       },
     };
@@ -147,15 +148,16 @@ describe('evaluateSubset effect', () => {
         subsetBind: '$subset',
         compute: [],
         scoreExpr: {
+          _t: 5,
           aggregate: {
             op: 'sum',
             query: { query: 'binding', name: '$subset' },
             bind: '$token',
-            valueExpr: { ref: 'tokenProp', token: '$token', prop: 'value' },
+            valueExpr: { _t: 2, ref: 'tokenProp', token: '$token', prop: 'value' },
           },
         },
         resultBind: '$bestScore',
-        in: [{ setVar: { scope: 'global', var: 'winner', value: { ref: 'binding', name: '$bestScore' } } }],
+        in: [{ setVar: { scope: 'global', var: 'winner', value: { _t: 2, ref: 'binding', name: '$bestScore' } } }],
       },
     };
 
@@ -177,11 +179,12 @@ describe('evaluateSubset effect', () => {
         subsetBind: '$subset',
         compute: [],
         scoreExpr: {
+          _t: 5,
           aggregate: {
             op: 'sum',
             query: { query: 'binding', name: '$subset' },
             bind: '$token',
-            valueExpr: { ref: 'tokenProp', token: '$token', prop: 'value' },
+            valueExpr: { _t: 2, ref: 'tokenProp', token: '$token', prop: 'value' },
           },
         },
         resultBind: '$bestScore',
@@ -237,10 +240,10 @@ describe('evaluateSubset effect', () => {
             },
           },
         ],
-        scoreExpr: { ref: 'binding', name: '$removed' },
+        scoreExpr: { _t: 2, ref: 'binding', name: '$removed' },
         resultBind: '$bestScore',
         in: [
-          { setVar: { scope: 'global', var: 'winner', value: { ref: 'binding', name: '$bestScore' } } },
+          { setVar: { scope: 'global', var: 'winner', value: { _t: 2, ref: 'binding', name: '$bestScore' } } },
         ],
       },
     };
@@ -264,11 +267,12 @@ describe('evaluateSubset effect', () => {
         subsetBind: '$subset',
         compute: [],
         scoreExpr: {
+          _t: 5,
           aggregate: {
             op: 'sum',
             query: { query: 'binding', name: '$subset' },
             bind: '$token',
-            valueExpr: { ref: 'tokenProp', token: '$token', prop: 'value' },
+            valueExpr: { _t: 2, ref: 'tokenProp', token: '$token', prop: 'value' },
           },
         },
         resultBind: '$bestScore',
@@ -306,15 +310,16 @@ describe('evaluateSubset effect', () => {
         subsetBind: '$subset',
         compute: [],
         scoreExpr: {
+          _t: 5,
           aggregate: {
             op: 'sum',
             query: { query: 'binding', name: '$subset' },
             bind: '$token',
-            valueExpr: { ref: 'tokenProp', token: '$token', prop: 'value' },
+            valueExpr: { _t: 2, ref: 'tokenProp', token: '$token', prop: 'value' },
           },
         },
         resultBind: '$bestScore',
-        in: [{ setVar: { scope: 'global', var: 'winner', value: { ref: 'binding', name: '$bestScore' } } }],
+        in: [{ setVar: { scope: 'global', var: 'winner', value: { _t: 2, ref: 'binding', name: '$bestScore' } } }],
       },
     };
     const fullSetResult = applyEffect(fullSetEffect, kEqualsN);
@@ -327,9 +332,9 @@ describe('evaluateSubset effect', () => {
         subsetSize: 0,
         subsetBind: '$subset',
         compute: [],
-        scoreExpr: { aggregate: { op: 'count', query: { query: 'binding', name: '$subset' } } },
+        scoreExpr: { _t: 5, aggregate: { op: 'count', query: { query: 'binding', name: '$subset' } } },
         resultBind: '$bestScore',
-        in: [{ setVar: { scope: 'global', var: 'winner', value: { ref: 'binding', name: '$bestScore' } } }],
+        in: [{ setVar: { scope: 'global', var: 'winner', value: { _t: 2, ref: 'binding', name: '$bestScore' } } }],
       },
     };
     const emptySubsetResult = applyEffect(emptySubsetEffect, kZero);
@@ -378,9 +383,9 @@ describe('evaluateSubset effect', () => {
         subsetSize: 1,
         subsetBind: '$subset',
         compute: [{ addVar: { scope: 'global', var: 'scratch', delta: 1 } }],
-        scoreExpr: { ref: 'gvar', var: 'scratch' },
+        scoreExpr: { _t: 2, ref: 'gvar', var: 'scratch' },
         resultBind: '$bestScore',
-        in: [{ setVar: { scope: 'global', var: 'winner', value: { ref: 'binding', name: '$bestScore' } } }],
+        in: [{ setVar: { scope: 'global', var: 'winner', value: { _t: 2, ref: 'binding', name: '$bestScore' } } }],
       },
     };
 

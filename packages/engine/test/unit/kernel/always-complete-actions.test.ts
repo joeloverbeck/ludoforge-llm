@@ -108,7 +108,7 @@ describe('always-complete-actions', () => {
   });
 
   describe('computeAlwaysCompleteActionIds', () => {
-    it('includes only parameterless non-pipeline actions without incomplete cost/effect nodes', () => {
+    it('includes non-pipeline actions without incomplete cost/effect nodes regardless of params', () => {
       const complete = makeAction('complete');
       const withParams = makeAction('withParams', {
         params: [{ name: 'amount', domain: { query: 'intsInRange', min: 1, max: 2 } }],
@@ -155,7 +155,7 @@ describe('always-complete-actions', () => {
       const ids = computeAlwaysCompleteActionIds(def);
 
       assert.equal(ids.has(complete.id), true);
-      assert.equal(ids.has(withParams.id), false);
+      assert.equal(ids.has(withParams.id), true);
       assert.equal(ids.has(cardEvent.id), false);
       assert.equal(ids.has(withDecision.id), false);
       assert.equal(ids.has(withRandomCost.id), false);

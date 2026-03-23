@@ -94,8 +94,8 @@ describe('pipeline viability policy', () => {
     const pipeline: ActionPipelineDef = {
       id: 'profile',
       actionId: action.id,
-      legality: { op: '>=', left: { ref: 'gvar', var: 'resources' }, right: 5 },
-      costValidation: { op: '>=', left: { ref: 'gvar', var: 'resources' }, right: 1 },
+      legality: { op: '>=', left: { _t: 2, ref: 'gvar', var: 'resources' }, right: 5 },
+      costValidation: { op: '>=', left: { _t: 2, ref: 'gvar', var: 'resources' }, right: 1 },
       costEffects: [],
       targeting: {},
       stages: [],
@@ -127,7 +127,7 @@ describe('pipeline viability policy', () => {
       id: 'profile',
       actionId: action.id,
       legality: null,
-      costValidation: { op: '>=', left: { ref: 'gvar', var: 'resources' }, right: 5 },
+      costValidation: { op: '>=', left: { _t: 2, ref: 'gvar', var: 'resources' }, right: 5 },
       costEffects: [],
       targeting: {},
       stages: [],
@@ -160,7 +160,7 @@ describe('pipeline viability policy', () => {
       id: 'profile',
       actionId: action.id,
       legality: null,
-      costValidation: { op: '>=', left: { ref: 'gvar', var: 'resources' }, right: 5 },
+      costValidation: { op: '>=', left: { _t: 2, ref: 'gvar', var: 'resources' }, right: 5 },
       costEffects: [],
       targeting: {},
       stages: [],
@@ -184,8 +184,8 @@ describe('evaluateDiscoveryPipelinePredicateStatus()', () => {
     const profile: ActionPipelineDef = {
       id: 'profile',
       actionId: action.id,
-      legality: { op: '>=', left: { ref: 'gvar', var: 'resources' }, right: 1 },
-      costValidation: { op: '>=', left: { ref: 'binding', name: '$cost' }, right: 2 },
+      legality: { op: '>=', left: { _t: 2, ref: 'gvar', var: 'resources' }, right: 1 },
+      costValidation: { op: '>=', left: { _t: 2, ref: 'binding', name: '$cost' }, right: 2 },
       costEffects: [],
       targeting: {},
       stages: [],
@@ -212,8 +212,8 @@ describe('evaluateDiscoveryPipelinePredicateStatus()', () => {
     const profile: ActionPipelineDef = {
       id: 'profile',
       actionId: action.id,
-      legality: { op: '>=', left: { ref: 'gvar', var: 'resources' }, right: 1 },
-      costValidation: { op: '>=', left: { ref: 'binding', name: '$cost' }, right: 2 },
+      legality: { op: '>=', left: { _t: 2, ref: 'gvar', var: 'resources' }, right: 1 },
+      costValidation: { op: '>=', left: { _t: 2, ref: 'binding', name: '$cost' }, right: 2 },
       costEffects: [],
       targeting: {},
       stages: [],
@@ -232,8 +232,8 @@ describe('evaluateDiscoveryPipelinePredicateStatus()', () => {
     const profile: ActionPipelineDef = {
       id: 'profile',
       actionId: action.id,
-      legality: { op: '>=', left: { ref: 'gvar', var: 'resources' }, right: 1 },
-      costValidation: { op: '==', left: { ref: 'gvar', var: 'missingVar' }, right: 1 },
+      legality: { op: '>=', left: { _t: 2, ref: 'gvar', var: 'resources' }, right: 1 },
+      costValidation: { op: '==', left: { _t: 2, ref: 'gvar', var: 'missingVar' }, right: 1 },
       costEffects: [],
       targeting: {},
       stages: [],
@@ -260,7 +260,7 @@ describe('stage checkpoint predicate evaluation', () => {
   it('reuses pipeline viability outcomes for atomic stage cost validation', () => {
     const action = makeAction();
     const stage: ActionResolutionStageDef = {
-      costValidation: { op: '>=', left: { ref: 'binding', name: '$cost' }, right: 2 },
+      costValidation: { op: '>=', left: { _t: 2, ref: 'binding', name: '$cost' }, right: 2 },
       effects: [],
     };
     const def = makeDef(action, {
@@ -287,7 +287,7 @@ describe('stage checkpoint predicate evaluation', () => {
   it('defers recoverable missing bindings for stage discovery checkpoints', () => {
     const action = makeAction();
     const stage: ActionResolutionStageDef = {
-      legality: { op: '==', left: { ref: 'binding', name: '$choice' }, right: 'a' },
+      legality: { op: '==', left: { _t: 2, ref: 'binding', name: '$choice' }, right: 'a' },
       effects: [],
     };
     const def = makeDef(action, {

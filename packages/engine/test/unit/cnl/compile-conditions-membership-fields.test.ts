@@ -60,7 +60,7 @@ describe('condition operator field-name mismatch diagnostics', () => {
       );
 
       assertNoDiagnostics(result);
-      assert.deepEqual(result.value, { op: 'in', item: 1, set: { scalarArray: [1, 2, 3] } });
+      assert.deepEqual(result.value, { op: 'in', item: 1, set: { _t: 1, scalarArray: [1, 2, 3] } });
     });
   });
 

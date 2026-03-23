@@ -19,8 +19,17 @@ const OWNER_SPEC_SEPARATOR = ':';
 
 const zoneIdListCache = new WeakMap<readonly ZoneDef[], readonly ZoneId[]>();
 
+// Cache player list per playerCount — pure function of a small integer, safe to share.
+const playerListByCount = new Map<number, readonly PlayerId[]>();
+
 function listPlayers(ctx: Pick<ReadContext, 'state'>): readonly PlayerId[] {
-  return Array.from({ length: ctx.state.playerCount }, (_, index) => asPlayerId(index));
+  const pc = ctx.state.playerCount;
+  let cached = playerListByCount.get(pc);
+  if (cached === undefined) {
+    cached = Array.from({ length: pc }, (_, index) => asPlayerId(index));
+    playerListByCount.set(pc, cached);
+  }
+  return cached;
 }
 
 function sortAndDedupePlayers(players: readonly PlayerId[]): readonly PlayerId[] {

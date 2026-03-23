@@ -171,7 +171,7 @@ describe('effect-context construction contract', () => {
       freeOperationOverlay: {
         zoneFilter: {
           op: '==',
-          left: { ref: 'zoneProp', zone: '$zone', prop: 'category' },
+          left: { _t: 2, ref: 'zoneProp', zone: '$zone', prop: 'category' },
           right: 'board',
         },
         zoneFilterDiagnostics: {

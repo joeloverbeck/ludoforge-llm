@@ -1,4 +1,5 @@
-import type { EffectAST, NumericValueExpr } from '../kernel/types.js';
+import { VALUE_EXPR_TAG } from '../kernel/types.js';
+import type { EffectAST, NumericValueExpr, ValueExpr } from '../kernel/types.js';
 import { chooseOne as chooseOneBuilder, chooseN as chooseNBuilder, forEach as forEachBuilder, moveToken as moveTokenBuilder } from '../kernel/ast-builders.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 import {
@@ -327,8 +328,8 @@ export function lowerDistributeTokensEffects(
           }),
           moveTokenBuilder({
             token: tokenBind,
-            from: { zoneExpr: { ref: 'tokenZone', token: tokenBind } },
-            to: { zoneExpr: { ref: 'binding', name: destinationBind } },
+            from: { zoneExpr: { _t: VALUE_EXPR_TAG.REF, ref: 'tokenZone', token: tokenBind } as ValueExpr },
+            to: { zoneExpr: { _t: VALUE_EXPR_TAG.REF, ref: 'binding', name: destinationBind } as ValueExpr },
           }),
         ],
       }),

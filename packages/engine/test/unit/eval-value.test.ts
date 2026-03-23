@@ -86,17 +86,17 @@ describe('evalValue', () => {
 
   it('passes through homogeneous scalar-array values', () => {
     const ctx = makeCtx();
-    assert.deepEqual(evalValue({ scalarArray: ['NVA', 'VC'] }, ctx), ['NVA', 'VC']);
+    assert.deepEqual(evalValue({ _t: 1, scalarArray: ['NVA', 'VC'] } as const, ctx), ['NVA', 'VC']);
   });
 
   it('delegates reference evaluation to resolveRef', () => {
     const ctx = makeCtx();
-    assert.equal(evalValue({ ref: 'gvar', var: 'a' }, ctx), 3);
+    assert.equal(evalValue({ _t: 2, ref: 'gvar', var: 'a' } as const, ctx), 3);
   });
 
   it('resolves binding and grantContext refs that carry scalar arrays', () => {
     const bindingCtx = makeCtx({ bindings: { '$targetFactions': ['NVA', 'VC'] } });
-    assert.deepEqual(evalValue({ ref: 'binding', name: '$targetFactions' }, bindingCtx), ['NVA', 'VC']);
+    assert.deepEqual(evalValue({ _t: 2, ref: 'binding', name: '$targetFactions' } as const, bindingCtx), ['NVA', 'VC']);
 
     const grantCtx = makeCtx({
       freeOperationOverlay: {
@@ -105,39 +105,39 @@ describe('evalValue', () => {
         },
       },
     });
-    assert.deepEqual(evalValue({ ref: 'grantContext', key: 'allowedTargets' }, grantCtx), ['NVA', 'VC']);
+    assert.deepEqual(evalValue({ _t: 2, ref: 'grantContext', key: 'allowedTargets' } as const, grantCtx), ['NVA', 'VC']);
   });
 
   it('evaluates integer arithmetic (+, -, *, /, floorDiv, ceilDiv, min, max)', () => {
     const ctx = makeCtx();
 
-    assert.equal(evalValue({ op: '+', left: 3, right: 4 }, ctx), 7);
-    assert.equal(evalValue({ op: '-', left: 10, right: 3 }, ctx), 7);
-    assert.equal(evalValue({ op: '*', left: 5, right: 2 }, ctx), 10);
-    assert.equal(evalValue({ op: '/', left: 7, right: 2 }, ctx), 3);
-    assert.equal(evalValue({ op: '/', left: -7, right: 2 }, ctx), -3);
-    assert.equal(evalValue({ op: '/', left: 0, right: 5 }, ctx), 0);
-    assert.equal(evalValue({ op: '/', left: 6, right: 3 }, ctx), 2);
-    assert.equal(evalValue({ op: 'floorDiv', left: 7, right: 2 }, ctx), 3);
-    assert.equal(evalValue({ op: 'floorDiv', left: -7, right: 2 }, ctx), -4);
-    assert.equal(evalValue({ op: 'ceilDiv', left: 7, right: 2 }, ctx), 4);
-    assert.equal(evalValue({ op: 'ceilDiv', left: -7, right: 2 }, ctx), -3);
-    assert.equal(evalValue({ op: 'min', left: 7, right: 2 }, ctx), 2);
-    assert.equal(evalValue({ op: 'max', left: -7, right: 2 }, ctx), 2);
+    assert.equal(evalValue({ _t: 6, op: '+', left: 3, right: 4 }, ctx), 7);
+    assert.equal(evalValue({ _t: 6, op: '-', left: 10, right: 3 }, ctx), 7);
+    assert.equal(evalValue({ _t: 6, op: '*', left: 5, right: 2 }, ctx), 10);
+    assert.equal(evalValue({ _t: 6, op: '/', left: 7, right: 2 }, ctx), 3);
+    assert.equal(evalValue({ _t: 6, op: '/', left: -7, right: 2 }, ctx), -3);
+    assert.equal(evalValue({ _t: 6, op: '/', left: 0, right: 5 }, ctx), 0);
+    assert.equal(evalValue({ _t: 6, op: '/', left: 6, right: 3 }, ctx), 2);
+    assert.equal(evalValue({ _t: 6, op: 'floorDiv', left: 7, right: 2 }, ctx), 3);
+    assert.equal(evalValue({ _t: 6, op: 'floorDiv', left: -7, right: 2 }, ctx), -4);
+    assert.equal(evalValue({ _t: 6, op: 'ceilDiv', left: 7, right: 2 }, ctx), 4);
+    assert.equal(evalValue({ _t: 6, op: 'ceilDiv', left: -7, right: 2 }, ctx), -3);
+    assert.equal(evalValue({ _t: 6, op: 'min', left: 7, right: 2 }, ctx), 2);
+    assert.equal(evalValue({ _t: 6, op: 'max', left: -7, right: 2 }, ctx), 2);
   });
 
   it('throws DIVISION_BY_ZERO for division by zero', () => {
     const ctx = makeCtx();
     assert.throws(
-      () => evalValue({ op: '/', left: 10, right: 0 }, ctx),
+      () => evalValue({ _t: 6, op: '/', left: 10, right: 0 }, ctx),
       (error: unknown) => isEvalErrorCode(error, 'DIVISION_BY_ZERO'),
     );
     assert.throws(
-      () => evalValue({ op: 'floorDiv', left: 10, right: 0 }, ctx),
+      () => evalValue({ _t: 6, op: 'floorDiv', left: 10, right: 0 }, ctx),
       (error: unknown) => isEvalErrorCode(error, 'DIVISION_BY_ZERO'),
     );
     assert.throws(
-      () => evalValue({ op: 'ceilDiv', left: 10, right: 0 }, ctx),
+      () => evalValue({ _t: 6, op: 'ceilDiv', left: 10, right: 0 }, ctx),
       (error: unknown) => isEvalErrorCode(error, 'DIVISION_BY_ZERO'),
     );
   });
@@ -145,16 +145,18 @@ describe('evalValue', () => {
   it('evaluates division with aggregate sub-expressions', () => {
     const ctx = makeCtx();
     const expr: ValueExpr = {
+      _t: 6,
       op: '/',
       left: {
+        _t: 5,
         aggregate: {
           op: 'sum',
           query: { query: 'tokensInZone', zone: 'tableau:0' },
           bind: '$token',
-          valueExpr: { ref: 'tokenProp', token: '$token', prop: 'vp' },
+          valueExpr: { _t: 2, ref: 'tokenProp', token: '$token', prop: 'vp' } as const,
         },
       },
-      right: { aggregate: { op: 'count', query: { query: 'tokensInZone', zone: 'tableau:0' } } },
+      right: { _t: 5, aggregate: { op: 'count', query: { query: 'tokensInZone', zone: 'tableau:0' } } },
     };
     assert.equal(evalValue(expr, ctx), 3);
   });
@@ -162,7 +164,7 @@ describe('evalValue', () => {
   it('throws TYPE_MISMATCH for non-numeric arithmetic operands', () => {
     const ctx = makeCtx();
     assert.throws(
-      () => evalValue({ op: '+', left: 1, right: 'bad' }, ctx),
+      () => evalValue({ _t: 6, op: '+', left: 1, right: 'bad' }, ctx),
       (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
     );
   });
@@ -170,22 +172,22 @@ describe('evalValue', () => {
   it('evaluates count/sum/min/max aggregates with expected empty defaults', () => {
     const ctx = makeCtx();
 
-    const countExpr: ValueExpr = { aggregate: { op: 'count', query: { query: 'tokensInZone', zone: 'deck:none' } } };
+    const countExpr: ValueExpr = { _t: 5, aggregate: { op: 'count', query: { query: 'tokensInZone', zone: 'deck:none' } } };
     assert.equal(evalValue(countExpr, ctx), 2);
 
     const emptyCountExpr: ValueExpr = {
-      aggregate: { op: 'count', query: { query: 'tokensInZone', zone: 'hand:0' } },
+      _t: 5, aggregate: { op: 'count', query: { query: 'tokensInZone', zone: 'hand:0' } },
     };
     assert.equal(evalValue(emptyCountExpr, ctx), 0);
 
     assert.equal(
       evalValue(
         {
-          aggregate: {
+          _t: 5, aggregate: {
             op: 'sum',
             query: { query: 'tokensInZone', zone: 'tableau:0' },
             bind: '$token',
-            valueExpr: { ref: 'tokenProp', token: '$token', prop: 'vp' },
+            valueExpr: { _t: 2 as const, ref: 'tokenProp', token: '$token', prop: 'vp' },
           },
         },
         ctx,
@@ -195,11 +197,11 @@ describe('evalValue', () => {
     assert.equal(
       evalValue(
         {
-          aggregate: {
+          _t: 5, aggregate: {
             op: 'min',
             query: { query: 'tokensInZone', zone: 'tableau:0' },
             bind: '$token',
-            valueExpr: { ref: 'tokenProp', token: '$token', prop: 'cost' },
+            valueExpr: { _t: 2 as const, ref: 'tokenProp', token: '$token', prop: 'cost' },
           },
         },
         ctx,
@@ -209,11 +211,11 @@ describe('evalValue', () => {
     assert.equal(
       evalValue(
         {
-          aggregate: {
+          _t: 5, aggregate: {
             op: 'max',
             query: { query: 'tokensInZone', zone: 'tableau:0' },
             bind: '$token',
-            valueExpr: { ref: 'tokenProp', token: '$token', prop: 'cost' },
+            valueExpr: { _t: 2 as const, ref: 'tokenProp', token: '$token', prop: 'cost' },
           },
         },
         ctx,
@@ -224,11 +226,11 @@ describe('evalValue', () => {
     assert.equal(
       evalValue(
         {
-          aggregate: {
+          _t: 5, aggregate: {
             op: 'sum',
             query: { query: 'tokensInZone', zone: 'hand:0' },
             bind: '$token',
-            valueExpr: { ref: 'tokenProp', token: '$token', prop: 'vp' },
+            valueExpr: { _t: 2 as const, ref: 'tokenProp', token: '$token', prop: 'vp' },
           },
         },
         ctx,
@@ -238,11 +240,11 @@ describe('evalValue', () => {
     assert.equal(
       evalValue(
         {
-          aggregate: {
+          _t: 5, aggregate: {
             op: 'min',
             query: { query: 'tokensInZone', zone: 'hand:0' },
             bind: '$token',
-            valueExpr: { ref: 'tokenProp', token: '$token', prop: 'vp' },
+            valueExpr: { _t: 2 as const, ref: 'tokenProp', token: '$token', prop: 'vp' },
           },
         },
         ctx,
@@ -252,11 +254,11 @@ describe('evalValue', () => {
     assert.equal(
       evalValue(
         {
-          aggregate: {
+          _t: 5, aggregate: {
             op: 'max',
             query: { query: 'tokensInZone', zone: 'hand:0' },
             bind: '$token',
-            valueExpr: { ref: 'tokenProp', token: '$token', prop: 'vp' },
+            valueExpr: { _t: 2 as const, ref: 'tokenProp', token: '$token', prop: 'vp' },
           },
         },
         ctx,
@@ -318,7 +320,7 @@ describe('evalValue', () => {
     assert.equal(
       evalValue(
         {
-          aggregate: {
+          _t: 5, aggregate: {
             op: 'count',
             query: {
               query: 'prioritized',
@@ -343,11 +345,11 @@ describe('evalValue', () => {
       () =>
         evalValue(
           {
-            aggregate: {
+            _t: 5, aggregate: {
               op: 'sum',
               query: { query: 'tokensInZone', zone: 'deck:none' },
               bind: '$token',
-              valueExpr: { ref: 'tokenProp', token: '$token', prop: 'missing' },
+              valueExpr: { _t: 2 as const, ref: 'tokenProp', token: '$token', prop: 'missing' },
             },
           },
           ctx,
@@ -359,11 +361,11 @@ describe('evalValue', () => {
       () =>
         evalValue(
           {
-            aggregate: {
+            _t: 5, aggregate: {
               op: 'sum',
               query: { query: 'tokensInZone', zone: 'hand:1' },
               bind: '$token',
-              valueExpr: { ref: 'tokenProp', token: '$token', prop: 'label' },
+              valueExpr: { _t: 2 as const, ref: 'tokenProp', token: '$token', prop: 'label' },
             },
           },
           ctx,
@@ -378,11 +380,11 @@ describe('evalValue', () => {
     assert.equal(
       evalValue(
         {
-          aggregate: {
+          _t: 5, aggregate: {
             op: 'sum',
             query: { query: 'intsInRange', min: 1, max: 3 },
             bind: '$n',
-            valueExpr: { ref: 'binding', name: '$n' },
+            valueExpr: { _t: 2 as const, ref: 'binding', name: '$n' },
           },
         },
         ctx,
@@ -391,7 +393,7 @@ describe('evalValue', () => {
     );
 
     assert.throws(
-      () => evalValue({ op: '+', left: Number.MAX_SAFE_INTEGER, right: 1 }, ctx),
+      () => evalValue({ _t: 6, op: '+', left: Number.MAX_SAFE_INTEGER, right: 1 }, ctx),
       (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
     );
   });
@@ -399,11 +401,11 @@ describe('evalValue', () => {
   it('supports aggregate valueExpr evaluation over players', () => {
     const ctx = makeCtx();
     const expr: ValueExpr = {
-      aggregate: {
+      _t: 5, aggregate: {
         op: 'sum',
         query: { query: 'players' },
         bind: '$player',
-        valueExpr: { ref: 'binding', name: '$player' },
+        valueExpr: { _t: 2 as const, ref: 'binding', name: '$player' },
       },
     };
 
@@ -413,7 +415,7 @@ describe('evalValue', () => {
   it('supports aggregate valueExpr evaluation over composed numeric queries', () => {
     const ctx = makeCtx();
     const expr: ValueExpr = {
-      aggregate: {
+      _t: 5, aggregate: {
         op: 'sum',
         query: {
           query: 'concat',
@@ -423,7 +425,7 @@ describe('evalValue', () => {
           ],
         },
         bind: '$n',
-        valueExpr: { ref: 'binding', name: '$n' },
+        valueExpr: { _t: 2 as const, ref: 'binding', name: '$n' },
       },
     };
 
@@ -471,20 +473,20 @@ describe('evalValue', () => {
     };
     const ctx = makeCtx({ def, state, adjacencyGraph: buildAdjacencyGraph(def.zones) });
     const expr: ValueExpr = {
-      aggregate: {
+      _t: 5, aggregate: {
         op: 'sum',
         query: {
           query: 'mapSpaces',
           filter: {
             condition: {
               op: '==',
-              left: { ref: 'markerState', space: '$zone', marker: 'supportOpposition' },
+              left: { _t: 2 as const, ref: 'markerState', space: '$zone', marker: 'supportOpposition' },
               right: 'activeSupport',
             },
           },
         },
         bind: '$zone',
-        valueExpr: { ref: 'zoneProp', zone: '$zone', prop: 'population' },
+        valueExpr: { _t: 2 as const, ref: 'zoneProp', zone: '$zone', prop: 'population' },
       },
     };
 
@@ -523,12 +525,12 @@ describe('evalValue', () => {
     };
     const ctx = makeCtx({ def });
     const expr: ValueExpr = {
-      aggregate: {
+      _t: 5, aggregate: {
         op: 'sum',
         query: { query: 'assetRows', tableId: 'tournament-standard::blindSchedule.levels' },
         bind: '$row',
         valueExpr: {
-          ref: 'assetField',
+          _t: 2 as const, ref: 'assetField',
           row: '$row',
           tableId: 'tournament-standard::blindSchedule.levels',
           field: 'smallBlind',
@@ -542,43 +544,43 @@ describe('evalValue', () => {
     const ctx = makeCtx();
 
     assert.throws(
-      () => evalValue({ op: '+', left: Number.MAX_SAFE_INTEGER + 1, right: 0 }, ctx),
+      () => evalValue({ _t: 6, op: '+', left: Number.MAX_SAFE_INTEGER + 1, right: 0 }, ctx),
       (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
     );
 
     assert.throws(
-      () => evalValue({ op: '+', left: Number.POSITIVE_INFINITY, right: 1 }, ctx),
+      () => evalValue({ _t: 6, op: '+', left: Number.POSITIVE_INFINITY, right: 1 }, ctx),
       (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
     );
   });
 
   it('evaluates concat with string literals', () => {
     const ctx = makeCtx();
-    assert.equal(evalValue({ concat: ['hello', ' ', 'world'] }, ctx), 'hello world');
+    assert.equal(evalValue({ _t: 3, concat: ['hello', ' ', 'world'] }, ctx), 'hello world');
   });
 
   it('evaluates concat with mixed types (coerced to string)', () => {
     const ctx = makeCtx();
-    assert.equal(evalValue({ concat: ['count:', 42] }, ctx), 'count:42');
-    assert.equal(evalValue({ concat: ['flag:', true] }, ctx), 'flag:true');
+    assert.equal(evalValue({ _t: 3, concat: ['count:', 42] }, ctx), 'count:42');
+    assert.equal(evalValue({ _t: 3, concat: ['flag:', true] }, ctx), 'flag:true');
   });
 
   it('evaluates concat with refs', () => {
     const ctx = makeCtx();
-    assert.equal(evalValue({ concat: ['var_a=', { ref: 'gvar', var: 'a' }] }, ctx), 'var_a=3');
+    assert.equal(evalValue({ _t: 3, concat: ['var_a=', { _t: 2 as const, ref: 'gvar', var: 'a' }] }, ctx), 'var_a=3');
   });
 
   it('evaluates concat with nested expressions', () => {
     const ctx = makeCtx();
     assert.equal(
-      evalValue({ concat: ['result:', { op: '+', left: 1, right: 2 }] }, ctx),
+      evalValue({ _t: 3, concat: ['result:', { _t: 6 as const, op: '+', left: 1, right: 2 }] }, ctx),
       'result:3',
     );
   });
 
   it('evaluates empty concat as empty string', () => {
     const ctx = makeCtx();
-    assert.equal(evalValue({ concat: [] }, ctx), '');
+    assert.equal(evalValue({ _t: 3, concat: [] }, ctx), '');
   });
 
   it('evaluates concat with scalar-array parts by flattening them left-to-right', () => {
@@ -591,10 +593,10 @@ describe('evalValue', () => {
     assert.deepEqual(
       evalValue(
         {
-          concat: [
-            { scalarArray: ['US'] },
-            { ref: 'binding', name: '$enemySeats' },
-            { scalarArray: ['ARVN'] },
+          _t: 3, concat: [
+            { _t: 1, scalarArray: ['US'] },
+            { _t: 2 as const, ref: 'binding', name: '$enemySeats' },
+            { _t: 1, scalarArray: ['ARVN'] },
           ],
         },
         ctx,
@@ -606,7 +608,7 @@ describe('evalValue', () => {
   it('rejects concat expressions that mix scalar and scalar-array parts', () => {
     const ctx = makeCtx();
     assert.throws(
-      () => evalValue({ concat: [{ scalarArray: ['US'] }, 'VC'] }, ctx),
+      () => evalValue({ _t: 3, concat: [{ _t: 1, scalarArray: ['US'] }, 'VC'] }, ctx),
       (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
     );
   });
@@ -614,8 +616,8 @@ describe('evalValue', () => {
   it('evaluates conditional if/then/else — true branch', () => {
     const ctx = makeCtx();
     const expr: ValueExpr = {
-      if: {
-        when: { op: '>', left: { ref: 'gvar', var: 'a' }, right: 0 },
+      _t: 4, if: {
+        when: { op: '>', left: { _t: 2 as const, ref: 'gvar', var: 'a' }, right: 0 },
         then: 100,
         else: 0,
       },
@@ -626,8 +628,8 @@ describe('evalValue', () => {
   it('evaluates conditional if/then/else — false branch', () => {
     const ctx = makeCtx();
     const expr: ValueExpr = {
-      if: {
-        when: { op: '<', left: { ref: 'gvar', var: 'a' }, right: 0 },
+      _t: 4, if: {
+        when: { op: '<', left: { _t: 2 as const, ref: 'gvar', var: 'a' }, right: 0 },
         then: 100,
         else: 0,
       },
@@ -638,11 +640,11 @@ describe('evalValue', () => {
   it('evaluates nested conditional', () => {
     const ctx = makeCtx();
     const expr: ValueExpr = {
-      if: {
-        when: { op: '==', left: { ref: 'gvar', var: 'a' }, right: 3 },
+      _t: 4, if: {
+        when: { op: '==', left: { _t: 2 as const, ref: 'gvar', var: 'a' }, right: 3 },
         then: {
-          if: {
-            when: { op: '==', left: { ref: 'gvar', var: 'b' }, right: 4 },
+          _t: 4, if: {
+            when: { op: '==', left: { _t: 2 as const, ref: 'gvar', var: 'b' }, right: 4 },
             then: 'both-match',
             else: 'only-a',
           },
@@ -656,11 +658,11 @@ describe('evalValue', () => {
   it('evaluates conditional in arithmetic expression', () => {
     const ctx = makeCtx();
     const expr: ValueExpr = {
-      op: '+',
+      _t: 6, op: '+',
       left: 10,
       right: {
-        if: {
-          when: { op: '>', left: { ref: 'gvar', var: 'a' }, right: 2 },
+        _t: 4, if: {
+          when: { op: '>', left: { _t: 2 as const, ref: 'gvar', var: 'a' }, right: 2 },
           then: 5,
           else: 0,
         },

@@ -257,7 +257,7 @@ const makeDefWithStochasticChoice = (): GameDef => {
               in: [
                 {
                   if: {
-                    when: { op: '==', left: { ref: 'binding', name: '$roll' }, right: 1 },
+                    when: { op: '==', left: { _t: 2 as const, ref: 'binding' as const, name: '$roll' }, right: 1 },
                     then: [
                       {
                         chooseOne: {

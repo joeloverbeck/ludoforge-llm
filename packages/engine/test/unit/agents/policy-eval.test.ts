@@ -86,7 +86,7 @@ function createBaseDef(agents: AgentPolicyCatalog): GameDef {
     terminal: {
       conditions: [],
       margins: [
-        { seat: 'us', value: { ref: 'gvar', var: 'usMargin' } },
+        { seat: 'us', value: { _t: 2 as const, ref: 'gvar', var: 'usMargin' } },
         { seat: 'arvn', value: 0 },
       ],
       ranking: {

@@ -59,7 +59,7 @@ const makeDef = (): GameDef => ({
         {
           when: {
             op: '==',
-            left: { ref: 'zoneProp', zone: '$space', prop: 'population' },
+            left: { _t: 2 as const, ref: 'zoneProp', zone: '$space', prop: 'population' },
             right: 0,
           },
           allowedStates: ['neutral'],
@@ -234,7 +234,7 @@ describe('space marker lattice rules', () => {
             {
               when: {
                 op: '==',
-                left: { ref: 'zoneProp', zone: '$space', prop: 'population' },
+                left: { _t: 2 as const, ref: 'zoneProp', zone: '$space', prop: 'population' },
                 right: 0,
               },
               allowedStates: ['neutral'],

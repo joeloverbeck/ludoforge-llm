@@ -14,10 +14,11 @@ import {
   type Move,
   type Token,
 } from '../../src/kernel/index.js';
+import { asTaggedGameDef } from '../helpers/gamedef-fixtures.js';
 import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
 
 const createDef = (): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'fitl-eligibility-window-int', players: { min: 4, max: 4 }, maxTriggerDepth: 8 },
     seats: [{ id: 'US' }, { id: 'ARVN' }, { id: 'NVA' }, { id: 'VC' }],
     constants: {},
@@ -172,7 +173,7 @@ phase: [asPhaseId('main')],
         ],
       },
     ],
-  }) as unknown as GameDef;
+  });
 
 describe('FITL eligibility window integration', () => {
   it('applies declared nextTurn overrides at card end', () => {

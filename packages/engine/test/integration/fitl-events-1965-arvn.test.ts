@@ -7,8 +7,8 @@ import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js'
 const FITL_PRODUCTION_FIXTURE = getFitlProductionFixture();
 const ROKS_SWEEP_ZONE_FILTER = {
   op: 'in',
-  item: { ref: 'zoneProp', zone: '$zone', prop: 'id' },
-  set: { scalarArray: [
+  item: { _t: 2, ref: 'zoneProp', zone: '$zone', prop: 'id' },
+  set: { _t: 1, scalarArray: [
     'qui-nhon:none',
     'binh-dinh:none',
     'kontum:none',
@@ -20,8 +20,8 @@ const ROKS_SWEEP_ZONE_FILTER = {
 } as const;
 const ROKS_ASSAULT_ZONE_FILTER = {
   op: 'in',
-  item: { ref: 'zoneProp', zone: '$zone', prop: 'id' },
-  set: { scalarArray: [
+  item: { _t: 2, ref: 'zoneProp', zone: '$zone', prop: 'id' },
+  set: { _t: 1, scalarArray: [
     'qui-nhon:none',
     'binh-dinh:none',
     'kontum:none',
@@ -346,6 +346,7 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
       moveZoneBindings: ['$targetSpaces'],
       executionContext: {
         selectedSpace: {
+          _t: 2,
           ref: 'binding',
           name: '$amphibLandingOperationSpace',
         },
@@ -353,11 +354,13 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
       zoneFilter: {
         op: '==',
         left: {
+          _t: 2,
           ref: 'zoneProp',
           zone: '$zone',
           prop: 'id',
         },
         right: {
+          _t: 2,
           ref: 'grantContext',
           key: 'selectedSpace',
         },
@@ -373,6 +376,7 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
       moveZoneBindings: ['$targetSpaces'],
       executionContext: {
         selectedSpace: {
+          _t: 2,
           ref: 'binding',
           name: '$amphibLandingOperationSpace',
         },
@@ -380,11 +384,13 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
       zoneFilter: {
         op: '==',
         left: {
+          _t: 2,
           ref: 'zoneProp',
           zone: '$zone',
           prop: 'id',
         },
         right: {
+          _t: 2,
           ref: 'grantContext',
           key: 'selectedSpace',
         },
@@ -464,9 +470,11 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
       filter: { prop: 'faction', op: 'eq', value: 'US' },
     });
     assert.deepEqual(choosePieces?.min, {
+      _t: 6,
       op: 'min',
       left: 3,
       right: {
+        _t: 5,
         aggregate: {
           op: 'count',
           query: {
@@ -478,9 +486,11 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
       },
     });
     assert.deepEqual(choosePieces?.max, {
+      _t: 6,
       op: 'min',
       left: 3,
       right: {
+        _t: 5,
         aggregate: {
           op: 'count',
           query: {
@@ -504,6 +514,7 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
               token: '$greatSocietyUsPiece',
               from: {
                 zoneExpr: {
+                  _t: 2,
                   ref: 'tokenZone',
                   token: '$greatSocietyUsPiece',
                 },

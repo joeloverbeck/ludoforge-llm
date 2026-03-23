@@ -15,7 +15,7 @@ describe('zone selector alias collection', () => {
       args: [
         {
           op: '==',
-          left: { ref: 'zoneProp', zone: '$targetProvince', prop: 'country' },
+          left: { _t: 2, ref: 'zoneProp', zone: '$targetProvince', prop: 'country' },
           right: 'cambodia',
         },
         {
@@ -50,6 +50,7 @@ describe('zone selector alias collection', () => {
           space: '$candidateSpace',
           marker: 'supportOpposition',
           delta: {
+            _t: 4,
             if: {
               when: { op: 'adjacent', left: '$adjacentFrom', right: '$adjacentTo' },
               then: 1,
@@ -66,8 +67,9 @@ describe('zone selector alias collection', () => {
             space: '$viaSpace',
             marker: 'supportOpposition',
             state: {
+              _t: 4,
               if: {
-                when: { op: '==', left: { ref: 'zoneProp', zone: '$stateProbe', prop: 'country' }, right: 'southVietnam' },
+                when: { op: '==', left: { _t: 2, ref: 'zoneProp', zone: '$stateProbe', prop: 'country' }, right: 'southVietnam' },
                 then: 'activeSupport',
                 else: 'neutral',
               },
@@ -110,8 +112,8 @@ describe('zone selector alias collection', () => {
         label: '==',
         condition: {
           op: '==',
-          left: { ref: 'zoneProp', zone: '$eqLeft', prop: 'country' },
-          right: { ref: 'zoneCount', zone: '$eqRight' },
+          left: { _t: 2, ref: 'zoneProp', zone: '$eqLeft', prop: 'country' },
+          right: { _t: 2, ref: 'zoneCount', zone: '$eqRight' },
         },
         expected: ['$eqLeft', '$eqRight'],
       },
@@ -119,8 +121,8 @@ describe('zone selector alias collection', () => {
         label: '!=',
         condition: {
           op: '!=',
-          left: { ref: 'zoneProp', zone: '$neqLeft', prop: 'country' },
-          right: { ref: 'zoneCount', zone: '$neqRight' },
+          left: { _t: 2, ref: 'zoneProp', zone: '$neqLeft', prop: 'country' },
+          right: { _t: 2, ref: 'zoneCount', zone: '$neqRight' },
         },
         expected: ['$neqLeft', '$neqRight'],
       },
@@ -128,8 +130,8 @@ describe('zone selector alias collection', () => {
         label: '<',
         condition: {
           op: '<',
-          left: { ref: 'zoneProp', zone: '$ltLeft', prop: 'population' },
-          right: { ref: 'zoneCount', zone: '$ltRight' },
+          left: { _t: 2, ref: 'zoneProp', zone: '$ltLeft', prop: 'population' },
+          right: { _t: 2, ref: 'zoneCount', zone: '$ltRight' },
         },
         expected: ['$ltLeft', '$ltRight'],
       },
@@ -137,8 +139,8 @@ describe('zone selector alias collection', () => {
         label: '<=',
         condition: {
           op: '<=',
-          left: { ref: 'zoneProp', zone: '$lteLeft', prop: 'population' },
-          right: { ref: 'zoneCount', zone: '$lteRight' },
+          left: { _t: 2, ref: 'zoneProp', zone: '$lteLeft', prop: 'population' },
+          right: { _t: 2, ref: 'zoneCount', zone: '$lteRight' },
         },
         expected: ['$lteLeft', '$lteRight'],
       },
@@ -146,8 +148,8 @@ describe('zone selector alias collection', () => {
         label: '>',
         condition: {
           op: '>',
-          left: { ref: 'zoneProp', zone: '$gtLeft', prop: 'population' },
-          right: { ref: 'zoneCount', zone: '$gtRight' },
+          left: { _t: 2, ref: 'zoneProp', zone: '$gtLeft', prop: 'population' },
+          right: { _t: 2, ref: 'zoneCount', zone: '$gtRight' },
         },
         expected: ['$gtLeft', '$gtRight'],
       },
@@ -155,8 +157,8 @@ describe('zone selector alias collection', () => {
         label: '>=',
         condition: {
           op: '>=',
-          left: { ref: 'zoneProp', zone: '$gteLeft', prop: 'population' },
-          right: { ref: 'zoneCount', zone: '$gteRight' },
+          left: { _t: 2, ref: 'zoneProp', zone: '$gteLeft', prop: 'population' },
+          right: { _t: 2, ref: 'zoneCount', zone: '$gteRight' },
         },
         expected: ['$gteLeft', '$gteRight'],
       },
@@ -164,8 +166,8 @@ describe('zone selector alias collection', () => {
         label: 'in',
         condition: {
           op: 'in',
-          item: { ref: 'zoneProp', zone: '$inItem', prop: 'country' },
-          set: { concat: [{ ref: 'zoneProp', zone: '$inSet', prop: 'country' }, 'fallback'] },
+          item: { _t: 2, ref: 'zoneProp', zone: '$inItem', prop: 'country' },
+          set: { _t: 3, concat: [{ _t: 2, ref: 'zoneProp', zone: '$inSet', prop: 'country' }, 'fallback'] },
         },
         expected: ['$inItem', '$inSet'],
       },
@@ -190,7 +192,7 @@ describe('zone selector alias collection', () => {
           op: 'zonePropIncludes',
           zone: '$zonePropZone',
           prop: 'terrainTags',
-          value: { ref: 'zoneProp', zone: '$zonePropValue', prop: 'country' },
+          value: { _t: 2, ref: 'zoneProp', zone: '$zonePropValue', prop: 'country' },
         },
         expected: ['$zonePropValue', '$zonePropZone'],
       },
@@ -201,6 +203,7 @@ describe('zone selector alias collection', () => {
           space: '$markerStateSpace',
           marker: 'supportOpposition',
           state: {
+            _t: 4,
             if: {
               when: { op: 'adjacent', left: '$markerStateWhenLeft', right: '$markerStateWhenRight' },
               then: 'activeSupport',
@@ -217,6 +220,7 @@ describe('zone selector alias collection', () => {
           space: '$markerShiftSpace',
           marker: 'supportOpposition',
           delta: {
+            _t: 4,
             if: {
               when: { op: 'adjacent', left: '$markerShiftWhenLeft', right: '$markerShiftWhenRight' },
               then: 1,
@@ -237,7 +241,7 @@ describe('zone selector alias collection', () => {
   it('excludes non-zone binding refs even when they are unresolved bindings', () => {
     const condition: ConditionAST = {
       op: '==',
-      left: { ref: 'binding', name: '$targetCountry' },
+      left: { _t: 2, ref: 'binding', name: '$targetCountry' },
       right: 'cambodia',
     };
 
@@ -247,6 +251,7 @@ describe('zone selector alias collection', () => {
 
   it('collects zone aliases reachable through aggregate query/value recursion', () => {
     const valueExpr: ValueExpr = {
+      _t: 5,
       aggregate: {
         op: 'count',
         query: {
@@ -257,6 +262,7 @@ describe('zone selector alias collection', () => {
               prop: 'label',
               op: 'eq',
               value: {
+                _t: 5,
                 aggregate: {
                   op: 'count',
                   query: {
@@ -283,6 +289,7 @@ describe('zone selector alias collection', () => {
 
   it('collects zone aliases from token-filter value expressions nested under not/or', () => {
     const valueExpr: ValueExpr = {
+      _t: 5,
       aggregate: {
         op: 'count',
         query: {
@@ -296,7 +303,7 @@ describe('zone selector alias collection', () => {
                 {
                   prop: 'label',
                   op: 'eq',
-                  value: { ref: 'zoneProp', zone: '$candidate', prop: 'country' },
+                  value: { _t: 2, ref: 'zoneProp', zone: '$candidate', prop: 'country' },
                 },
                 { prop: 'faction', op: 'eq', value: 'US' },
               ],
@@ -312,6 +319,7 @@ describe('zone selector alias collection', () => {
 
   it('collects zone aliases reachable through prioritized tiers', () => {
     const valueExpr: ValueExpr = {
+      _t: 5,
       aggregate: {
         op: 'count',
         query: {
@@ -321,14 +329,14 @@ describe('zone selector alias collection', () => {
             { query: 'tokensInZone', zone: '$availableSource' },
             {
               query: 'tokensInAdjacentZones',
-              zone: { zoneExpr: { ref: 'zoneProp', zone: '$fallbackAlias', prop: 'linkedZone' } },
+              zone: { zoneExpr: { _t: 2, ref: 'zoneProp', zone: '$fallbackAlias', prop: 'linkedZone' } },
               filter: {
                 op: 'and',
                 args: [
                   {
                     prop: 'label',
                     op: 'eq',
-                    value: { ref: 'zoneProp', zone: '$fallbackOrigin', prop: 'country' },
+                    value: { _t: 2, ref: 'zoneProp', zone: '$fallbackOrigin', prop: 'country' },
                   },
                 ],
               },
@@ -348,17 +356,17 @@ describe('zone selector alias collection', () => {
       args: [
         {
           op: '==',
-          left: { ref: 'zoneProp', zone: '$zone', prop: 'country' },
+          left: { _t: 2, ref: 'zoneProp', zone: '$zone', prop: 'country' },
           right: 'cambodia',
         },
         {
           op: '==',
-          left: { ref: 'zoneProp', zone: '$targetProvince', prop: 'country' },
+          left: { _t: 2, ref: 'zoneProp', zone: '$targetProvince', prop: 'country' },
           right: 'cambodia',
         },
         {
           op: '==',
-          left: { ref: 'zoneProp', zone: '$targetProvince', prop: 'population' },
+          left: { _t: 2, ref: 'zoneProp', zone: '$targetProvince', prop: 'population' },
           right: 1,
         },
       ],

@@ -15,9 +15,10 @@ import {
   type GameState,
   type TriggerLogEntry,
 } from '../../src/kernel/index.js';
+import { asTaggedGameDef } from '../helpers/gamedef-fixtures.js';
 
 const createProgressionDef = (): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'game-loop-progression-int', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
     constants: {},
     globalVars: [
@@ -50,10 +51,10 @@ phase: [asPhaseId('main')],
       },
     ],
     terminal: { conditions: [{ when: { op: '>=', left: { ref: 'gvar', var: 'score' }, right: 3 }, result: { type: 'draw' } }] },
-  }) as unknown as GameDef;
+  });
 
 const createDeterminismDef = (): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'game-loop-determinism-int', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
     constants: {},
     globalVars: [{ name: 'score', type: 'int', init: 0, min: 0, max: 50 }],
@@ -94,7 +95,7 @@ phase: [asPhaseId('main')],
       },
     ],
     terminal: { conditions: [] },
-  }) as unknown as GameDef;
+  });
 
 const serializeLogs = (entries: readonly TriggerLogEntry[]): readonly string[] =>
   entries.map((entry) => JSON.stringify(entry));

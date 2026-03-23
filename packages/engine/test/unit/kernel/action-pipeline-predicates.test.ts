@@ -84,7 +84,7 @@ describe('evalActionPipelinePredicate()', () => {
         action,
         'strict-profile',
         'legality',
-        { op: '==', left: { ref: 'binding', name: '$missing' }, right: 1 },
+        { op: '==', left: { _t: 2 as const, ref: 'binding', name: '$missing' }, right: 1 },
         ctx,
       ),
       (error: unknown) => {
@@ -113,7 +113,7 @@ describe('evalActionPipelinePredicate()', () => {
         action,
         'broken-profile',
         'legality',
-        { op: '==', left: { ref: 'gvar', var: 'missingVar' }, right: 1 },
+        { op: '==', left: { _t: 2 as const, ref: 'gvar', var: 'missingVar' }, right: 1 },
         ctx,
       ),
       (error: unknown) => {
@@ -140,7 +140,7 @@ describe('evalActionPipelinePredicateForDiscovery()', () => {
       action,
       'discovery-profile',
       'costValidation',
-      { op: '==', left: { ref: 'binding', name: '$missing' }, right: 1 },
+      { op: '==', left: { _t: 2 as const, ref: 'binding', name: '$missing' }, right: 1 },
       ctx,
     );
     assert.equal(result, 'deferred');
@@ -173,7 +173,7 @@ describe('evalActionPipelinePredicateForDiscovery()', () => {
         action,
         'discovery-profile',
         'costValidation',
-        { op: '==', left: { ref: 'gvar', var: 'missingVar' }, right: 1 },
+        { op: '==', left: { _t: 2 as const, ref: 'gvar', var: 'missingVar' }, right: 1 },
         ctx,
       ),
       (error: unknown) => {

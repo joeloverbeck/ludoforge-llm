@@ -103,20 +103,20 @@ describe('FITL card-46 559th Transport Grp', () => {
       {
         let: {
           bind: '$trailValue',
-          value: { ref: 'gvar', var: 'trail' },
+          value: { _t: 2, ref: 'gvar', var: 'trail' },
           in: [
             {
               addVar: {
                 scope: 'global',
                 var: 'nvaResources',
-                delta: { op: '*', left: 3, right: { ref: 'binding', name: '$trailValue' } },
+                delta: { _t: 6, op: '*', left: 3, right: { _t: 2, ref: 'binding', name: '$trailValue' } },
               },
             },
             {
               addVar: {
                 scope: 'global',
                 var: 'vcResources',
-                delta: { op: '*', left: 2, right: { ref: 'binding', name: '$trailValue' } },
+                delta: { _t: 6, op: '*', left: 2, right: { _t: 2, ref: 'binding', name: '$trailValue' } },
               },
             },
           ],

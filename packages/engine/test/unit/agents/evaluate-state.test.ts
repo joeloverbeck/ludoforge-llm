@@ -27,7 +27,7 @@ const createBaseDef = (): GameDef => ({
   triggers: [],
   terminal: {
     conditions: [],
-    scoring: { method: 'highest', value: { ref: 'pvar', player: 'actor', var: 'vp' } },
+    scoring: { method: 'highest', value: { _t: 2 as const, ref: 'pvar', player: 'actor', var: 'vp' } },
   },
 });
 
@@ -55,7 +55,7 @@ describe('evaluateState', () => {
         ...createBaseDef().terminal,
         conditions: [
           {
-            when: { op: '==', left: { ref: 'gvar', var: 'ended' }, right: 1 },
+            when: { op: '==', left: { _t: 2 as const, ref: 'gvar', var: 'ended' }, right: 1 },
             result: { type: 'win', player: { id: asPlayerId(0) } },
           },
         ],

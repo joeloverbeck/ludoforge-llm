@@ -2135,7 +2135,7 @@ describe('compile top-level actions/triggers/end conditions', () => {
             when: { op: '>' as const, left: 51, right: 50 },
           },
         ],
-        margins: [{ seat: 'us', value: { op: '-' as const, left: 55, right: 50 } }],
+        margins: [{ seat: 'us', value: { _t: 6 as const, op: '-' as const, left: 55, right: 50 } }],
         ranking: { order: 'desc' as const },
       },
     };

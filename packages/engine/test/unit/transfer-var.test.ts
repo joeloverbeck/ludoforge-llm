@@ -17,8 +17,9 @@ import {
   type GameState,
 } from '../../src/kernel/index.js';
 import { isNormalizedEffectRuntimeFailure } from '../helpers/effect-error-assertions.js';
+import { asTaggedGameDef } from '../helpers/gamedef-fixtures.js';
 
-const makeDef = (): GameDef => ({
+const makeDef = (): GameDef => asTaggedGameDef({
   metadata: { id: 'transfer-var-test', players: { min: 2, max: 2 } },
   constants: {},
   globalVars: [
@@ -176,7 +177,7 @@ describe('transferVar effect', () => {
             actualBind: '$actual',
           },
         },
-        { addVar: { scope: 'global', var: 'pot', delta: { ref: 'binding', name: '$actual' } } },
+        { addVar: { scope: 'global', var: 'pot', delta: { _t: 2 as const, ref: 'binding', name: '$actual' } } },
       ],
       ctx,
     );
@@ -196,7 +197,7 @@ describe('transferVar effect', () => {
             actualBind: '$actual',
           },
         },
-        { addVar: { scope: 'global', var: 'pot', delta: { ref: 'binding', name: '$actual' } } },
+        { addVar: { scope: 'global', var: 'pot', delta: { _t: 2 as const, ref: 'binding', name: '$actual' } } },
       ],
       ctx,
     );
@@ -496,7 +497,7 @@ describe('transferVar effect', () => {
     const ctx = makeCtx();
     const unresolvedSourceZone = {
       transferVar: {
-        from: { scope: 'zoneVar', zone: { zoneExpr: { ref: 'binding', name: '$missingSourceZone' } }, var: 'supply' },
+        from: { scope: 'zoneVar', zone: { zoneExpr: { _t: 2, ref: 'binding', name: '$missingSourceZone' } }, var: 'supply' },
         to: { scope: 'global', var: 'pot' },
         amount: 1,
       },
@@ -513,7 +514,7 @@ describe('transferVar effect', () => {
     const unresolvedDestinationZone = {
       transferVar: {
         from: { scope: 'global', var: 'pot' },
-        to: { scope: 'zoneVar', zone: { zoneExpr: { ref: 'binding', name: '$missingDestinationZone' } }, var: 'supply' },
+        to: { scope: 'zoneVar', zone: { zoneExpr: { _t: 2, ref: 'binding', name: '$missingDestinationZone' } }, var: 'supply' },
         amount: 1,
       },
     } as unknown as EffectAST;

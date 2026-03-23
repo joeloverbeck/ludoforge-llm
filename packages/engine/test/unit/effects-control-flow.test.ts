@@ -127,7 +127,7 @@ describe('effects control-flow handlers', () => {
       let: {
         bind: '$value',
         value: 7,
-        in: [{ addVar: { scope: 'global', var: 'sum', delta: { ref: 'binding', name: '$value' } } }],
+        in: [{ addVar: { scope: 'global', var: 'sum', delta: { _t: 2 as const, ref: 'binding', name: '$value' } } }],
       },
     };
 
@@ -142,10 +142,10 @@ describe('effects control-flow handlers', () => {
         let: {
           bind: '$value',
           value: 4,
-          in: [{ addVar: { scope: 'global', var: 'sum', delta: { ref: 'binding', name: '$value' } } }],
+          in: [{ addVar: { scope: 'global', var: 'sum', delta: { _t: 2 as const, ref: 'binding', name: '$value' } } }],
         },
       },
-      { addVar: { scope: 'global', var: 'sum', delta: { ref: 'binding', name: '$value' } } },
+      { addVar: { scope: 'global', var: 'sum', delta: { _t: 2 as const, ref: 'binding', name: '$value' } } },
     ];
 
     assert.throws(() => applyEffects(effects, ctx), (error: unknown) => {
@@ -159,7 +159,7 @@ describe('effects control-flow handlers', () => {
       forEach: {
         bind: '$n',
         over: { query: 'intsInRange', min: 1, max: 3 },
-        effects: [{ addVar: { scope: 'global', var: 'sum', delta: { ref: 'binding', name: '$n' } } }],
+        effects: [{ addVar: { scope: 'global', var: 'sum', delta: { _t: 2 as const, ref: 'binding', name: '$n' } } }],
         limit: 3,
       },
     };
@@ -203,7 +203,7 @@ describe('effects control-flow handlers', () => {
       forEach: {
         bind: '$n',
         over: { query: 'intsInRange', min: 1, max: 5 },
-        effects: [{ addVar: { scope: 'global', var: 'sum', delta: { ref: 'binding', name: '$n' } } }],
+        effects: [{ addVar: { scope: 'global', var: 'sum', delta: { _t: 2 as const, ref: 'binding', name: '$n' } } }],
         limit: 2,
       },
     };
@@ -218,7 +218,7 @@ describe('effects control-flow handlers', () => {
       forEach: {
         bind: '$n',
         over: { query: 'intsInRange', min: 1, max: 2 },
-        effects: [{ addVar: { scope: 'global', var: 'sum', delta: { ref: 'binding', name: '$n' } } }],
+        effects: [{ addVar: { scope: 'global', var: 'sum', delta: { _t: 2 as const, ref: 'binding', name: '$n' } } }],
       },
     };
 
@@ -250,7 +250,7 @@ describe('effects control-flow handlers', () => {
           },
           {
             if: {
-              when: { op: '==', left: { ref: 'binding', name: '$pick' }, right: 'alpha' },
+              when: { op: '==', left: { _t: 2 as const, ref: 'binding', name: '$pick' }, right: 'alpha' },
               then: [{ addVar: { scope: 'global', var: 'sum', delta: 1 } }],
               else: [{ addVar: { scope: 'global', var: 'sum', delta: 10 } }],
             },
@@ -291,7 +291,7 @@ describe('effects control-flow handlers', () => {
                 },
                 {
                   if: {
-                    when: { op: '==', left: { ref: 'binding', name: '$pick' }, right: 'alpha' },
+                    when: { op: '==', left: { _t: 2 as const, ref: 'binding', name: '$pick' }, right: 'alpha' },
                     then: [{ addVar: { scope: 'global', var: 'sum', delta: 1 } }],
                     else: [{ addVar: { scope: 'global', var: 'sum', delta: 10 } }],
                   },
@@ -359,13 +359,13 @@ describe('effects control-flow handlers', () => {
           {
             let: {
               bind: '$delta',
-              value: { op: '*', left: { ref: 'binding', name: '$n' }, right: 2 },
+              value: { _t: 6 as const, op: '*' as const, left: { _t: 2 as const, ref: 'binding', name: '$n' }, right: 2 },
               in: [
                 {
                   if: {
-                    when: { op: '>', left: { ref: 'binding', name: '$delta' }, right: 4 },
+                    when: { op: '>', left: { _t: 2 as const, ref: 'binding', name: '$delta' }, right: 4 },
                     then: [{ addVar: { scope: 'global', var: 'bonus', delta: 1 } }],
-                    else: [{ addVar: { scope: 'global', var: 'sum', delta: { ref: 'binding', name: '$delta' } } }],
+                    else: [{ addVar: { scope: 'global', var: 'sum', delta: { _t: 2 as const, ref: 'binding', name: '$delta' } } }],
                   },
                 },
               ],
@@ -386,8 +386,8 @@ describe('effects control-flow handlers', () => {
       forEach: {
         bind: '$n',
         over: { query: 'intsInRange', min: 1, max: 5 },
-        effects: [{ addVar: { scope: 'global', var: 'sum', delta: { ref: 'binding', name: '$n' } } }],
-        limit: { ref: 'binding', name: '$maxItems' },
+        effects: [{ addVar: { scope: 'global', var: 'sum', delta: { _t: 2 as const, ref: 'binding', name: '$n' } } }],
+        limit: { _t: 2 as const, ref: 'binding', name: '$maxItems' },
       },
     };
 
@@ -406,8 +406,8 @@ describe('effects control-flow handlers', () => {
             forEach: {
               bind: '$n',
               over: { query: 'intsInRange', min: 1, max: 5 },
-              limit: { ref: 'binding', name: '$loopLimit' },
-              effects: [{ addVar: { scope: 'global', var: 'sum', delta: { ref: 'binding', name: '$n' } } }],
+              limit: { _t: 2 as const, ref: 'binding', name: '$loopLimit' },
+              effects: [{ addVar: { scope: 'global', var: 'sum', delta: { _t: 2 as const, ref: 'binding', name: '$n' } } }],
             },
           },
         ],
@@ -424,9 +424,9 @@ describe('effects control-flow handlers', () => {
       forEach: {
         bind: '$n',
         over: { query: 'intsInRange', min: 1, max: 3 },
-        effects: [{ addVar: { scope: 'global', var: 'sum', delta: { ref: 'binding', name: '$n' } } }],
+        effects: [{ addVar: { scope: 'global', var: 'sum', delta: { _t: 2 as const, ref: 'binding', name: '$n' } } }],
         countBind: '$total',
-        in: [{ setVar: { scope: 'global', var: 'count', value: { ref: 'binding', name: '$total' } } }],
+        in: [{ setVar: { scope: 'global', var: 'count', value: { _t: 2 as const, ref: 'binding', name: '$total' } } }],
       },
     };
 
@@ -444,7 +444,7 @@ describe('effects control-flow handlers', () => {
         effects: [{ addVar: { scope: 'global', var: 'count', delta: 1 } }],
         limit: 4,
         countBind: '$actual',
-        in: [{ setVar: { scope: 'global', var: 'bonus', value: { ref: 'binding', name: '$actual' } } }],
+        in: [{ setVar: { scope: 'global', var: 'bonus', value: { _t: 2 as const, ref: 'binding', name: '$actual' } } }],
       },
     };
 
@@ -461,7 +461,7 @@ describe('effects control-flow handlers', () => {
         over: { query: 'intsInRange', min: 5, max: 4 },
         effects: [{ addVar: { scope: 'global', var: 'count', delta: 1 } }],
         countBind: '$total',
-        in: [{ setVar: { scope: 'global', var: 'x', value: { ref: 'binding', name: '$total' } } }],
+        in: [{ setVar: { scope: 'global', var: 'x', value: { _t: 2 as const, ref: 'binding', name: '$total' } } }],
       },
     };
 
@@ -477,9 +477,9 @@ describe('effects control-flow handlers', () => {
         accBind: '$acc',
         over: { query: 'intsInRange', min: 1, max: 4 },
         initial: 0,
-        next: { op: '+', left: { ref: 'binding', name: '$acc' }, right: { ref: 'binding', name: '$n' } },
+        next: { _t: 6 as const, op: '+' as const, left: { _t: 2 as const, ref: 'binding', name: '$acc' }, right: { _t: 2 as const, ref: 'binding', name: '$n' } },
         resultBind: '$sum',
-        in: [{ setVar: { scope: 'global', var: 'sum', value: { ref: 'binding', name: '$sum' } } }],
+        in: [{ setVar: { scope: 'global', var: 'sum', value: { _t: 2 as const, ref: 'binding', name: '$sum' } } }],
       },
     };
 
@@ -495,12 +495,12 @@ describe('effects control-flow handlers', () => {
         accBind: '$acc',
         over: { query: 'intsInRange', min: 1, max: 3 },
         initial: '',
-        next: { concat: [{ ref: 'binding', name: '$acc' }, { ref: 'binding', name: '$n' }] },
+        next: { _t: 3 as const, concat: [{ _t: 2 as const, ref: 'binding' as const, name: '$acc' }, { _t: 2 as const, ref: 'binding' as const, name: '$n' }] },
         resultBind: '$joined',
         in: [
           {
             if: {
-              when: { op: '==', left: { ref: 'binding', name: '$joined' }, right: '123' },
+              when: { op: '==', left: { _t: 2 as const, ref: 'binding', name: '$joined' }, right: '123' },
               then: [{ setVar: { scope: 'global', var: 'bonus', value: 1 } }],
             },
           },
@@ -522,19 +522,19 @@ describe('effects control-flow handlers', () => {
             accBind: '$acc',
             over: { query: 'intsInRange', min: 1, max: 3 },
             initial: 0,
-            next: { op: '+', left: { ref: 'binding', name: '$acc' }, right: { ref: 'binding', name: '$n' } },
+            next: { _t: 6 as const, op: '+' as const, left: { _t: 2 as const, ref: 'binding', name: '$acc' }, right: { _t: 2 as const, ref: 'binding', name: '$n' } },
             resultBind: '$sum',
             in: [
               {
                 bindValue: {
                   bind: '$exported',
-                  value: { op: '*', left: { ref: 'binding', name: '$sum' }, right: 2 },
+                  value: { _t: 6 as const, op: '*' as const, left: { _t: 2 as const, ref: 'binding', name: '$sum' }, right: 2 },
                 },
               },
             ],
           },
         },
-        { setVar: { scope: 'global', var: 'sum', value: { ref: 'binding', name: '$exported' } } },
+        { setVar: { scope: 'global', var: 'sum', value: { _t: 2 as const, ref: 'binding', name: '$exported' } } },
       ],
       ctx,
     );
@@ -550,9 +550,9 @@ describe('effects control-flow handlers', () => {
         accBind: '$acc',
         over: { query: 'intsInRange', min: 1, max: 120 },
         initial: 0,
-        next: { op: '+', left: { ref: 'binding', name: '$acc' }, right: 1 },
+        next: { _t: 6 as const, op: '+' as const, left: { _t: 2 as const, ref: 'binding', name: '$acc' }, right: 1 },
         resultBind: '$count',
-        in: [{ setVar: { scope: 'global', var: 'count', value: { ref: 'binding', name: '$count' } } }],
+        in: [{ setVar: { scope: 'global', var: 'count', value: { _t: 2 as const, ref: 'binding', name: '$count' } } }],
       },
     };
     const defaultResult = applyEffect(defaultEffect, defaultCtx);
@@ -565,10 +565,10 @@ describe('effects control-flow handlers', () => {
         accBind: '$acc',
         over: { query: 'intsInRange', min: 1, max: 10 },
         initial: 0,
-        next: { op: '+', left: { ref: 'binding', name: '$acc' }, right: 1 },
-        limit: { ref: 'binding', name: '$max' },
+        next: { _t: 6 as const, op: '+' as const, left: { _t: 2 as const, ref: 'binding', name: '$acc' }, right: 1 },
+        limit: { _t: 2 as const, ref: 'binding', name: '$max' },
         resultBind: '$count',
-        in: [{ setVar: { scope: 'global', var: 'count', value: { ref: 'binding', name: '$count' } } }],
+        in: [{ setVar: { scope: 'global', var: 'count', value: { _t: 2 as const, ref: 'binding', name: '$count' } } }],
       },
     };
     const dynamicResult = applyEffect(dynamicEffect, dynamicCtx);
@@ -654,20 +654,20 @@ describe('effects control-flow handlers', () => {
           {
             bind: '$tok',
             over: { query: 'tokensInZone', zone: 'space:none', filter: { op: 'and', args: [{ prop: 'type', op: 'eq', value: 'troops' }] } },
-            to: { zoneExpr: { concat: ['available-', { ref: 'tokenProp', token: '$tok', prop: 'faction' }, ':none'] } },
+            to: { zoneExpr: { _t: 3 as const, concat: ['available-', { _t: 2 as const, ref: 'tokenProp', token: '$tok', prop: 'faction' }, ':none'] } },
             countBind: '$troopsRemoved',
           },
           {
             bind: '$tok',
             over: { query: 'tokensInZone', zone: 'space:none', filter: { op: 'and', args: [{ prop: 'type', op: 'eq', value: 'guerrilla' }] } },
-            to: { zoneExpr: { concat: ['available-', { ref: 'tokenProp', token: '$tok', prop: 'faction' }, ':none'] } },
+            to: { zoneExpr: { _t: 3 as const, concat: ['available-', { _t: 2 as const, ref: 'tokenProp', token: '$tok', prop: 'faction' }, ':none'] } },
             countBind: '$guerrillasRemoved',
           },
         ],
         remainingBind: '$remaining',
         in: [
-          { setVar: { scope: 'global', var: 'count', value: { ref: 'binding', name: '$troopsRemoved' } } },
-          { setVar: { scope: 'global', var: 'bonus', value: { ref: 'binding', name: '$remaining' } } },
+          { setVar: { scope: 'global', var: 'count', value: { _t: 2 as const, ref: 'binding', name: '$troopsRemoved' } } },
+          { setVar: { scope: 'global', var: 'bonus', value: { _t: 2 as const, ref: 'binding', name: '$remaining' } } },
         ],
       },
     };
@@ -724,11 +724,11 @@ describe('effects control-flow handlers', () => {
           {
             bind: '$tok',
             over: { query: 'tokensInZone', zone: 'space:none' },
-            to: { zoneExpr: { concat: ['available-', { ref: 'tokenProp', token: '$tok', prop: 'faction' }, ':none'] } },
+            to: { zoneExpr: { _t: 3 as const, concat: ['available-', { _t: 2 as const, ref: 'tokenProp', token: '$tok', prop: 'faction' }, ':none'] } },
             countBind: '$removed',
           },
         ],
-        in: [{ setVar: { scope: 'global', var: 'count', value: { ref: 'binding', name: '$removed' } } }],
+        in: [{ setVar: { scope: 'global', var: 'count', value: { _t: 2 as const, ref: 'binding', name: '$removed' } } }],
       },
     };
 
@@ -791,8 +791,8 @@ describe('effects control-flow handlers', () => {
           remainingBind: '$remaining',
         },
       },
-      { setVar: { scope: 'global', var: 'count', value: { ref: 'binding', name: '$removed' } } },
-      { setVar: { scope: 'global', var: 'bonus', value: { ref: 'binding', name: '$remaining' } } },
+      { setVar: { scope: 'global', var: 'count', value: { _t: 2 as const, ref: 'binding', name: '$removed' } } },
+      { setVar: { scope: 'global', var: 'bonus', value: { _t: 2 as const, ref: 'binding', name: '$remaining' } } },
     ];
 
     const result = applyEffects(effects, ctx);
@@ -872,7 +872,7 @@ describe('effects control-flow handlers', () => {
         bind: '$die',
         min: 1,
         max: 6,
-        in: [{ setVar: { scope: 'global', var: 'x', value: { ref: 'binding', name: '$die' } } }],
+        in: [{ setVar: { scope: 'global', var: 'x', value: { _t: 2 as const, ref: 'binding', name: '$die' } } }],
       },
     };
 
@@ -888,7 +888,7 @@ describe('effects control-flow handlers', () => {
         bind: '$die',
         min: 1,
         max: 6,
-        in: [{ setVar: { scope: 'global', var: 'x', value: { ref: 'binding', name: '$die' } } }],
+        in: [{ setVar: { scope: 'global', var: 'x', value: { _t: 2 as const, ref: 'binding', name: '$die' } } }],
       },
     };
 
@@ -937,11 +937,11 @@ describe('effects control-flow handlers', () => {
           bind: '$die',
           min: 1,
           max: 6,
-          in: [{ setVar: { scope: 'global', var: 'x', value: { ref: 'binding', name: '$die' } } }],
+          in: [{ setVar: { scope: 'global', var: 'x', value: { _t: 2 as const, ref: 'binding', name: '$die' } } }],
         },
       },
       // $die should not be available here
-      { setVar: { scope: 'global', var: 'count', value: { ref: 'binding', name: '$die' } } },
+      { setVar: { scope: 'global', var: 'count', value: { _t: 2 as const, ref: 'binding', name: '$die' } } },
     ];
 
     assert.throws(

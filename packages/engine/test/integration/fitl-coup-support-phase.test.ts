@@ -7,21 +7,21 @@ const pacifyCondition = (spaceVar: string, trackerVar: string, actor: 'us' | 'ar
   const spendConstraints: readonly ConditionAST[] =
     actor === 'us'
       ? [
-          { op: '>', left: { ref: 'gvar', var: 'arvnResources' }, right: { ref: 'gvar', var: 'totalEcon' } },
-          { op: '>', left: { ref: 'gvar', var: 'arvnResources' }, right: 0 },
+          { op: '>', left: { _t: 2 as const, ref: 'gvar', var: 'arvnResources' }, right: { _t: 2 as const, ref: 'gvar', var: 'totalEcon' } },
+          { op: '>', left: { _t: 2 as const, ref: 'gvar', var: 'arvnResources' }, right: 0 },
         ]
-      : [{ op: '>', left: { ref: 'gvar', var: 'arvnResources' }, right: 0 }];
+      : [{ op: '>', left: { _t: 2 as const, ref: 'gvar', var: 'arvnResources' }, right: 0 }];
 
   return {
     op: 'and',
     args: [
-      { op: '<', left: { ref: 'gvar', var: spaceVar }, right: 2 },
-      { op: '<', left: { ref: 'gvar', var: trackerVar }, right: 2 },
+      { op: '<', left: { _t: 2 as const, ref: 'gvar', var: spaceVar }, right: 2 },
+      { op: '<', left: { _t: 2 as const, ref: 'gvar', var: trackerVar }, right: 2 },
       {
         op: 'or',
         args: [
-          { op: '<', left: { ref: 'gvar', var: 'pacSpacesUsed' }, right: 4 },
-          { op: '>', left: { ref: 'gvar', var: trackerVar }, right: 0 },
+          { op: '<', left: { _t: 2 as const, ref: 'gvar', var: 'pacSpacesUsed' }, right: 4 },
+          { op: '>', left: { _t: 2 as const, ref: 'gvar', var: trackerVar }, right: 0 },
         ],
       },
       ...spendConstraints,
@@ -32,16 +32,16 @@ const pacifyCondition = (spaceVar: string, trackerVar: string, actor: 'us' | 'ar
 const agitationCondition = (spaceVar: string, trackerVar: string): ConditionAST => ({
   op: 'and',
   args: [
-    { op: '>', left: { ref: 'gvar', var: spaceVar }, right: -2 },
-    { op: '<', left: { ref: 'gvar', var: trackerVar }, right: 2 },
+    { op: '>', left: { _t: 2 as const, ref: 'gvar', var: spaceVar }, right: -2 },
+    { op: '<', left: { _t: 2 as const, ref: 'gvar', var: trackerVar }, right: 2 },
     {
       op: 'or',
       args: [
-        { op: '<', left: { ref: 'gvar', var: 'agSpacesUsed' }, right: 4 },
-        { op: '>', left: { ref: 'gvar', var: trackerVar }, right: 0 },
+        { op: '<', left: { _t: 2 as const, ref: 'gvar', var: 'agSpacesUsed' }, right: 4 },
+        { op: '>', left: { _t: 2 as const, ref: 'gvar', var: trackerVar }, right: 0 },
       ],
     },
-    { op: '>', left: { ref: 'gvar', var: 'vcResources' }, right: 0 },
+    { op: '>', left: { _t: 2 as const, ref: 'gvar', var: 'vcResources' }, right: 0 },
   ],
 });
 
@@ -51,7 +51,7 @@ const attemptPacifyShift = (spaceVar: string, trackerVar: string, actor: 'us' | 
     then: [
       {
         if: {
-          when: { op: '==', left: { ref: 'gvar', var: trackerVar }, right: 0 },
+          when: { op: '==', left: { _t: 2 as const, ref: 'gvar', var: trackerVar }, right: 0 },
           then: [{ addVar: { scope: 'global', var: 'pacSpacesUsed', delta: 1 } }],
         },
       },
@@ -69,7 +69,7 @@ const attemptAgitationShift = (spaceVar: string, trackerVar: string): EffectAST 
     then: [
       {
         if: {
-          when: { op: '==', left: { ref: 'gvar', var: trackerVar }, right: 0 },
+          when: { op: '==', left: { _t: 2 as const, ref: 'gvar', var: trackerVar }, right: 0 },
           then: [{ addVar: { scope: 'global', var: 'agSpacesUsed', delta: 1 } }],
         },
       },
@@ -123,7 +123,7 @@ const createSupportFixtureDef = (): GameDef => {
 
   const supportEffects: EffectAST[] = [
     ...usPlan.map(([spaceVar, trackerVar]) => attemptPacifyShift(spaceVar, trackerVar, 'us')),
-    { setVar: { scope: 'global', var: 'arvnAfterUs', value: { ref: 'gvar', var: 'arvnResources' } } },
+    { setVar: { scope: 'global', var: 'arvnAfterUs', value: { _t: 2 as const, ref: 'gvar', var: 'arvnResources' } } },
     ...arvnPlan.map(([spaceVar, trackerVar]) => attemptPacifyShift(spaceVar, trackerVar, 'arvn')),
     ...vcPlan.map(([spaceVar, trackerVar]) => attemptAgitationShift(spaceVar, trackerVar)),
   ];

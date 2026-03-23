@@ -68,24 +68,38 @@ export type FreeOperationSequenceKeyExpr =
   | { readonly ref: 'binding'; readonly name: string; readonly displayName?: string }
   | { readonly ref: 'grantContext'; readonly key: string };
 
+export const VALUE_EXPR_TAG = {
+  SCALAR_ARRAY: 1,
+  REF: 2,
+  CONCAT: 3,
+  IF: 4,
+  AGGREGATE: 5,
+  OP: 6,
+} as const;
+
+export type ValueExprTag = typeof VALUE_EXPR_TAG[keyof typeof VALUE_EXPR_TAG];
+
 export type ValueExpr =
   | number
   | boolean
   | string
-  | { readonly scalarArray: ScalarArrayValue }
-  | Reference
+  | { readonly _t: 1; readonly scalarArray: ScalarArrayValue }
+  | (Reference & { readonly _t: 2 })
   | {
+      readonly _t: 6;
       readonly op: '+' | '-' | '*' | '/' | 'floorDiv' | 'ceilDiv' | 'min' | 'max';
       readonly left: ValueExpr;
       readonly right: ValueExpr;
     }
   | {
+      readonly _t: 5;
       readonly aggregate: {
         readonly op: 'count';
         readonly query: OptionsQuery;
       };
     }
   | {
+      readonly _t: 5;
       readonly aggregate: {
         readonly op: 'sum' | 'min' | 'max';
         readonly query: OptionsQuery;
@@ -93,8 +107,9 @@ export type ValueExpr =
         readonly valueExpr: NumericValueExpr;
       };
     }
-  | { readonly concat: readonly ValueExpr[] }
+  | { readonly _t: 3; readonly concat: readonly ValueExpr[] }
   | {
+      readonly _t: 4;
       readonly if: {
         readonly when: ConditionAST;
         readonly then: ValueExpr;
@@ -107,19 +122,22 @@ export type FreeOperationExecutionContext = Readonly<Record<string, FreeOperatio
 
 export type NumericValueExpr =
   | number
-  | Reference
+  | (Reference & { readonly _t: 2 })
   | {
+      readonly _t: 6;
       readonly op: '+' | '-' | '*' | '/' | 'floorDiv' | 'ceilDiv' | 'min' | 'max';
       readonly left: NumericValueExpr;
       readonly right: NumericValueExpr;
     }
   | {
+      readonly _t: 5;
       readonly aggregate: {
         readonly op: 'count';
         readonly query: OptionsQuery;
       };
     }
   | {
+      readonly _t: 5;
       readonly aggregate: {
         readonly op: 'sum' | 'min' | 'max';
         readonly query: OptionsQuery;
@@ -128,6 +146,7 @@ export type NumericValueExpr =
       };
     }
   | {
+      readonly _t: 4;
       readonly if: {
         readonly when: ConditionAST;
         readonly then: NumericValueExpr;

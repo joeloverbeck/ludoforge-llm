@@ -45,6 +45,14 @@ export const dispatchTriggers = (request: DispatchTriggersRequest): DispatchTrig
     triggerLog,
     policy,
   } = request;
+
+  // Fast path: when the game has no triggers, skip array copying, resource creation,
+  // and graph construction. Callers only read the result (never mutate triggerLog),
+  // so returning the original array reference is safe.
+  if (def.triggers.length === 0) {
+    return { state, rng, triggerLog };
+  }
+
   const adjacencyGraph = request.adjacencyGraph ?? buildAdjacencyGraph(def.zones);
   const runtimeTableIndex = request.runtimeTableIndex ?? buildRuntimeTableIndex(def);
   const effectPathRoot = request.effectPathRoot ?? `triggerEvent(${event.type})`;

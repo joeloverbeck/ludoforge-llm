@@ -457,12 +457,14 @@ export const advanceToDecisionPoint = (
   const maxAutoAdvancesPerMove = 2 * state.playerCount * phaseCount + 1;
   const seatResolution = createSeatResolutionContext(def, state.playerCount);
   let nextState = state;
+  const interrupts = def.turnStructure.interrupts;
+  const hasInterrupts = interrupts !== undefined && interrupts.length > 0;
   let advances = 0;
   while (terminalResult(def, nextState, cachedRuntime) === null) {
-    const isInterruptPhase = (def.turnStructure.interrupts ?? []).some((phase) => phase.id === nextState.currentPhase);
+    const isInterruptPhase = hasInterrupts && interrupts!.some((phase) => phase.id === nextState.currentPhase);
     const phaseValid = isInterruptPhase || effectiveTurnPhases(def, nextState).some((phase) => phase.id === nextState.currentPhase);
     const t0_lm = perfStart(profiler);
-    const hasLegal = phaseValid && legalMoves(def, nextState, undefined, cachedRuntime).length > 0;
+    const hasLegal = phaseValid && legalMoves(def, nextState, { earlyExitAfterFirst: true }, cachedRuntime).length > 0;
     perfDynEnd(profiler, 'adp:legalMoves', t0_lm);
     if (hasLegal) {
       break;

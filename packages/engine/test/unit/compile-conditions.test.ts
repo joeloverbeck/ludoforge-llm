@@ -56,6 +56,7 @@ describe('compile-conditions lowering', () => {
     assert.deepEqual(result.value, {
       op: '>=',
       left: {
+        _t: 5,
         aggregate: {
           op: 'count',
           query: { query: 'tokensInZone', zone: 'deck:none' },
@@ -81,11 +82,12 @@ describe('compile-conditions lowering', () => {
 
     assertNoDiagnostics(result);
     assert.deepEqual(result.value, {
+      _t: 5,
       aggregate: {
         op: 'sum',
         query: { query: 'intsInRange', min: 1, max: 3 },
         bind: '$n',
-        valueExpr: { ref: 'binding', name: '$n' },
+        valueExpr: { _t: 2, ref: 'binding', name: '$n' },
       },
     });
   });
@@ -223,10 +225,12 @@ describe('compile-conditions lowering', () => {
 
     assertNoDiagnostics(result);
     assert.deepEqual(result.value, {
+      _t: 4,
       if: {
         when: {
           op: '>',
           left: {
+            _t: 5,
             aggregate: {
               op: 'count',
               query: {
@@ -235,7 +239,7 @@ describe('compile-conditions lowering', () => {
                   owner: { id: 0 },
                   condition: {
                     op: '==',
-                    left: { ref: 'zoneProp', zone: 'board:none', prop: 'region' },
+                    left: { _t: 2, ref: 'zoneProp', zone: 'board:none', prop: 'region' },
                     right: 'highlands',
                   },
                 },
@@ -246,11 +250,12 @@ describe('compile-conditions lowering', () => {
           right: 0,
         },
         then: {
+          _t: 5,
           aggregate: {
             op: 'sum',
             query: { query: 'intsInRange', min: 1, max: 2 },
             bind: '$n',
-            valueExpr: { ref: 'binding', name: '$n' },
+            valueExpr: { _t: 2, ref: 'binding', name: '$n' },
           },
         },
         else: 0,
@@ -348,8 +353,8 @@ describe('compile-conditions lowering', () => {
     assertNoDiagnostics(result);
     assert.deepEqual(result.value, {
       query: 'intsInRange',
-      min: { ref: 'binding', name: '$min' },
-      max: { op: '+', left: { ref: 'binding', name: '$min' }, right: 2 },
+      min: { _t: 2, ref: 'binding', name: '$min' },
+      max: { _t: 6, op: '+', left: { _t: 2, ref: 'binding', name: '$min' }, right: 2 },
     });
   });
 
@@ -373,7 +378,7 @@ describe('compile-conditions lowering', () => {
       min: 10,
       max: 100,
       step: 10,
-      alwaysInclude: [15, { ref: 'binding', name: '$anchor' }],
+      alwaysInclude: [15, { _t: 2, ref: 'binding', name: '$anchor' }],
       maxResults: 8,
     });
   });
@@ -400,9 +405,9 @@ describe('compile-conditions lowering', () => {
       var: 'nvaResources',
       scope: 'global',
       min: 1,
-      max: { op: '+', left: { ref: 'binding', name: '$cap' }, right: 0 },
+      max: { _t: 6, op: '+', left: { _t: 2, ref: 'binding', name: '$cap' }, right: 0 },
       step: 2,
-      alwaysInclude: [5, { ref: 'binding', name: '$anchor' }],
+      alwaysInclude: [5, { _t: 2, ref: 'binding', name: '$anchor' }],
       maxResults: 6,
     });
   });
@@ -414,7 +419,7 @@ describe('compile-conditions lowering', () => {
       'doc.actions.0.effects.0.setVar.value',
     );
     assertNoDiagnostics(refResult);
-    assert.deepEqual(refResult.value, { ref: 'gvar', var: { ref: 'binding', name: '$track' } });
+    assert.deepEqual(refResult.value, { _t: 2, ref: 'gvar', var: { ref: 'binding', name: '$track' } });
 
     const queryResult = lowerQueryNode(
       {
@@ -457,13 +462,13 @@ describe('compile-conditions lowering', () => {
     assert.deepEqual(result.value, {
       query: 'nextInOrderByCondition',
                 source: { query: 'players' },
-                from: { ref: 'gvar', var: 'dealerSeat' },
+                from: { _t: 2, ref: 'gvar', var: 'dealerSeat' },
       bind: '$seatCandidate',
       where: {
         op: 'and',
         args: [
-          { op: '==', left: { ref: 'pvar', player: { chosen: '$seatCandidate' }, var: 'eliminated' }, right: false },
-          { op: '==', left: { ref: 'pvar', player: { chosen: '$seatCandidate' }, var: 'handActive' }, right: true },
+          { op: '==', left: { _t: 2, ref: 'pvar', player: { chosen: '$seatCandidate' }, var: 'eliminated' }, right: false },
+          { op: '==', left: { _t: 2, ref: 'pvar', player: { chosen: '$seatCandidate' }, var: 'handActive' }, right: true },
         ],
       },
       includeFrom: false,
@@ -495,7 +500,7 @@ describe('compile-conditions lowering', () => {
       'doc.actions.0.pre.left',
     );
     assertNoDiagnostics(result);
-    assert.deepEqual(result.value, { ref: 'pvar', player: { id: 2 }, var: 'resources' });
+    assert.deepEqual(result.value, { _t: 2, ref: 'pvar', player: { id: 2 }, var: 'resources' });
   });
 
   it('rejects seat-name pvar reference selectors when seatIds are unavailable', () => {
@@ -583,6 +588,7 @@ describe('compile-conditions lowering', () => {
 
     assertNoDiagnostics(result);
     assert.deepEqual(result.value, {
+      _t: 2,
       ref: 'zoneCount',
       zone: 'deck:none',
     });
@@ -612,7 +618,7 @@ describe('compile-conditions lowering', () => {
     );
 
     assertNoDiagnostics(result);
-    assert.deepEqual(result.value, { op: '/', left: 10, right: 3 });
+    assert.deepEqual(result.value, { _t: 6, op: '/', left: 10, right: 3 });
   });
 
   it('lowers floorDiv/ceilDiv/min/max operators in value node', () => {
@@ -641,10 +647,10 @@ describe('compile-conditions lowering', () => {
     assertNoDiagnostics(ceilResult);
     assertNoDiagnostics(minResult);
     assertNoDiagnostics(maxResult);
-    assert.deepEqual(floorResult.value, { op: 'floorDiv', left: 10, right: 3 });
-    assert.deepEqual(ceilResult.value, { op: 'ceilDiv', left: 10, right: 3 });
-    assert.deepEqual(minResult.value, { op: 'min', left: 10, right: 3 });
-    assert.deepEqual(maxResult.value, { op: 'max', left: 10, right: 3 });
+    assert.deepEqual(floorResult.value, { _t: 6, op: 'floorDiv', left: 10, right: 3 });
+    assert.deepEqual(ceilResult.value, { _t: 6, op: 'ceilDiv', left: 10, right: 3 });
+    assert.deepEqual(minResult.value, { _t: 6, op: 'min', left: 10, right: 3 });
+    assert.deepEqual(maxResult.value, { _t: 6, op: 'max', left: 10, right: 3 });
   });
 
   it('lowers markerState reference with zone canonicalization', () => {
@@ -655,7 +661,7 @@ describe('compile-conditions lowering', () => {
     );
 
     assertNoDiagnostics(result);
-    assert.deepEqual(result.value, { ref: 'markerState', space: 'board:none', marker: 'support' });
+    assert.deepEqual(result.value, { _t: 2, ref: 'markerState', space: 'board:none', marker: 'support' });
   });
 
   it('emits diagnostic for markerState with missing marker', () => {
@@ -678,7 +684,7 @@ describe('compile-conditions lowering', () => {
     );
 
     assertNoDiagnostics(result);
-    assert.deepEqual(result.value, { ref: 'globalMarkerState', marker: 'cap_topGun' });
+    assert.deepEqual(result.value, { _t: 2, ref: 'globalMarkerState', marker: 'cap_topGun' });
   });
 
   it('lowers tokenZone reference', () => {
@@ -689,7 +695,7 @@ describe('compile-conditions lowering', () => {
     );
 
     assertNoDiagnostics(result);
-    assert.deepEqual(result.value, { ref: 'tokenZone', token: '$piece' });
+    assert.deepEqual(result.value, { _t: 2, ref: 'tokenZone', token: '$piece' });
   });
 
   it('lowers assetField reference and validates binding scope', () => {
@@ -705,6 +711,7 @@ describe('compile-conditions lowering', () => {
 
     assertNoDiagnostics(result);
     assert.deepEqual(result.value, {
+      _t: 2,
       ref: 'assetField',
       row: '$row',
       tableId: 'tournament-standard::blindSchedule.levels',
@@ -736,7 +743,7 @@ describe('compile-conditions lowering', () => {
     );
 
     assertNoDiagnostics(result);
-    assert.deepEqual(result.value, { ref: 'zoneProp', zone: 'board:none', prop: 'population' });
+    assert.deepEqual(result.value, { _t: 2, ref: 'zoneProp', zone: 'board:none', prop: 'population' });
   });
 
   it('lowers zonePropIncludes condition with zone canonicalization', () => {
@@ -980,8 +987,8 @@ describe('compile-conditions lowering', () => {
         condition: {
           op: 'and',
           args: [
-            { op: '==', left: { ref: 'zoneProp', zone: 'board:none', prop: 'category' }, right: 'province' },
-            { op: 'not', arg: { op: '==', left: { ref: 'zoneProp', zone: 'board:none', prop: 'control' }, right: 'NVA' } },
+            { op: '==', left: { _t: 2, ref: 'zoneProp', zone: 'board:none', prop: 'category' }, right: 'province' },
+            { op: 'not', arg: { op: '==', left: { _t: 2, ref: 'zoneProp', zone: 'board:none', prop: 'control' }, right: 'NVA' } },
           ],
         },
       },
@@ -1008,7 +1015,7 @@ describe('compile-conditions lowering', () => {
       filter: {
         condition: {
           op: '==',
-          left: { ref: 'zoneProp', zone: 'board:none', prop: 'category' },
+          left: { _t: 2, ref: 'zoneProp', zone: 'board:none', prop: 'category' },
           right: 'province',
         },
       },
@@ -1037,7 +1044,7 @@ describe('compile-conditions lowering', () => {
       filter: {
         condition: {
           op: '==',
-          left: { ref: 'zoneProp', zone: 'board:none', prop: 'category' },
+          left: { _t: 2, ref: 'zoneProp', zone: 'board:none', prop: 'category' },
           right: 'province',
         },
       },
@@ -1065,7 +1072,7 @@ describe('compile-conditions lowering', () => {
       spaceFilter: {
         condition: {
           op: '==',
-          left: { ref: 'zoneProp', zone: 'board:none', prop: 'country' },
+          left: { _t: 2, ref: 'zoneProp', zone: 'board:none', prop: 'country' },
           right: 'southVietnam',
         },
       },
@@ -1157,7 +1164,7 @@ describe('compile-conditions lowering', () => {
     assert.deepEqual(result.value, {
       query: 'assetRows',
       tableId: 'tournament-standard::blindSchedule.levels',
-      where: [{ field: 'phase', op: 'in', value: { ref: 'grantContext', key: 'allowedPhases' } }],
+      where: [{ field: 'phase', op: 'in', value: { _t: 2, ref: 'grantContext', key: 'allowedPhases' } }],
     });
   });
 
@@ -1300,7 +1307,7 @@ describe('compile-conditions lowering', () => {
     assert.deepEqual(result.value, {
       query: 'tokensInZone',
       zone: 'board:none',
-      filter: { prop: 'faction', op: 'in', value: { ref: 'binding', name: '$targetFactions' } },
+      filter: { prop: 'faction', op: 'in', value: { _t: 2, ref: 'binding', name: '$targetFactions' } },
     });
   });
 
@@ -1712,7 +1719,7 @@ describe('compile-conditions lowering', () => {
     assertNoDiagnostics(result);
     assert.deepEqual(result.value, {
       query: 'tokensInZone',
-      zone: { zoneExpr: { ref: 'binding', name: '$zone' } },
+      zone: { zoneExpr: { _t: 2, ref: 'binding', name: '$zone' } },
     });
   });
 
@@ -1731,7 +1738,7 @@ describe('compile-conditions lowering', () => {
     assert.deepEqual(result.value, {
       query: 'tokensInZone',
       zone: 'board:none',
-      filter: { prop: 'faction', op: 'neq', value: { ref: 'activePlayer' } },
+      filter: { prop: 'faction', op: 'neq', value: { _t: 2, ref: 'activePlayer' } },
     });
   });
 
@@ -1909,15 +1916,15 @@ describe('compile-conditions lowering', () => {
     assertNoDiagnostics(connected);
     assert.deepEqual(adjacent.value, {
       query: 'adjacentZones',
-      zone: { zoneExpr: { ref: 'binding', name: '$zone' } },
+      zone: { zoneExpr: { _t: 2, ref: 'binding', name: '$zone' } },
     });
     assert.deepEqual(nearbyTokens.value, {
       query: 'tokensInAdjacentZones',
-      zone: { zoneExpr: { ref: 'binding', name: '$zone' } },
+      zone: { zoneExpr: { _t: 2, ref: 'binding', name: '$zone' } },
     });
     assert.deepEqual(connected.value, {
       query: 'connectedZones',
-      zone: { zoneExpr: { ref: 'binding', name: '$zone' } },
+      zone: { zoneExpr: { _t: 2, ref: 'binding', name: '$zone' } },
       includeStart: true,
       allowTargetOutsideVia: true,
     });
@@ -1993,8 +2000,9 @@ describe('compile-conditions lowering', () => {
 
     assertNoDiagnostics(result);
     assert.deepEqual(result.value, {
+      _t: 4,
       if: {
-        when: { op: '>', left: { ref: 'gvar', var: 'score' }, right: 10 },
+        when: { op: '>', left: { _t: 2, ref: 'gvar', var: 'score' }, right: 10 },
         then: 1,
         else: 0,
       },

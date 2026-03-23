@@ -373,17 +373,17 @@ export const applyGotoPhaseExact = (
   ctx: EffectContext,
 ): EffectResult => {
   const targetPhase = effect.gotoPhaseExact.phase;
-  const phaseIds = ctx.def.turnStructure.phases.map((phase) => phase.id);
-  if (!phaseIds.some((phaseId) => phaseId === targetPhase)) {
+  const phases = ctx.def.turnStructure.phases;
+  if (!phases.some((phase) => phase.id === targetPhase)) {
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED, `gotoPhaseExact.phase is unknown: ${targetPhase}`, {
       effectType: 'gotoPhaseExact',
       phase: targetPhase,
-      phaseCandidates: phaseIds,
+      phaseCandidates: phases.map((phase) => phase.id),
     });
   }
 
-  const currentPhaseIndex = phaseIds.findIndex((phaseId) => phaseId === ctx.state.currentPhase);
-  const targetPhaseIndex = phaseIds.findIndex((phaseId) => phaseId === targetPhase);
+  const currentPhaseIndex = phases.findIndex((phase) => phase.id === ctx.state.currentPhase);
+  const targetPhaseIndex = phases.findIndex((phase) => phase.id === targetPhase);
   if (currentPhaseIndex < 0 || targetPhaseIndex < 0) {
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED, `gotoPhaseExact could not resolve current/target phase indices`, {
       effectType: 'gotoPhaseExact',
@@ -413,7 +413,7 @@ export const applyGotoPhaseExact = (
   const lifecycleResources = createEvalRuntimeResources({
     collector: ctx.collector,
   });
-  const targetPhaseId = phaseIds[targetPhaseIndex]!;
+  const targetPhaseId = phases[targetPhaseIndex]!.id;
 
   const exitedState = dispatchLifecycleEvent(ctx.def, ctx.state, {
     type: 'phaseExit',

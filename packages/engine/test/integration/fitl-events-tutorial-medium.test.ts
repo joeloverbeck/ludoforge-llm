@@ -191,7 +191,7 @@ describe('FITL tutorial medium event-card production spec', () => {
           addVar: {
             scope: 'global',
             var: 'nvaResources',
-            delta: { ref: 'binding', name: '$dieRoll' },
+            delta: { _t: 2, ref: 'binding', name: '$dieRoll' },
           },
         },
       ]);

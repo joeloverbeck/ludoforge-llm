@@ -1,5 +1,6 @@
 import { hasBindingIdentifier, isCanonicalBindingIdentifier, rankBindingIdentifierAlternatives } from '../contracts/index.js';
 import { isNumericValueExpr } from '../kernel/numeric-value-expr.js';
+import { VALUE_EXPR_TAG } from '../kernel/types.js';
 import type { FreeOperationSequenceKeyExpr, NumericValueExpr, PlayerSel, Reference, ScopedVarNameExpr, ValueExpr, ZoneRef } from '../kernel/types.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 import {
@@ -107,7 +108,7 @@ export function createValueLowerers(
         return { value: null, diagnostics: loweredArray.diagnostics };
       }
       return {
-        value: { scalarArray: loweredArray.value },
+        value: { _t: VALUE_EXPR_TAG.SCALAR_ARRAY, scalarArray: loweredArray.value } as ValueExpr,
         diagnostics: loweredArray.diagnostics,
       };
     }
@@ -122,13 +123,15 @@ export function createValueLowerers(
         return { value: null, diagnostics: zone.diagnostics };
       }
       return {
-        value: { ref: 'zoneCount', zone: zone.value },
+        value: { _t: VALUE_EXPR_TAG.REF, ref: 'zoneCount', zone: zone.value } as ValueExpr,
         diagnostics: zone.diagnostics,
       };
     }
 
     if ('ref' in source && typeof source.ref === 'string') {
-      return lowerReference(source, context, path);
+      const refResult = lowerReference(source, context, path);
+      if (refResult.value === null) return { value: null, diagnostics: refResult.diagnostics };
+      return { value: { ...refResult.value, _t: VALUE_EXPR_TAG.REF } as ValueExpr, diagnostics: refResult.diagnostics };
     }
 
     if (
@@ -150,7 +153,7 @@ export function createValueLowerers(
         return { value: null, diagnostics };
       }
       return {
-        value: { op: source.op, left: left.value, right: right.value },
+        value: { _t: VALUE_EXPR_TAG.OP, op: source.op, left: left.value, right: right.value } as ValueExpr,
         diagnostics,
       };
     }
@@ -170,7 +173,7 @@ export function createValueLowerers(
         }
         children.push(child.value);
       }
-      return { value: { concat: children }, diagnostics };
+      return { value: { _t: VALUE_EXPR_TAG.CONCAT, concat: children } as ValueExpr, diagnostics };
     }
 
     if ('if' in source && isRecord(source.if)) {
@@ -183,7 +186,7 @@ export function createValueLowerers(
         return { value: null, diagnostics };
       }
       return {
-        value: { if: { when: when.value, then: then.value, else: elseVal.value } },
+        value: { _t: VALUE_EXPR_TAG.IF, if: { when: when.value, then: then.value, else: elseVal.value } } as ValueExpr,
         diagnostics,
       };
     }
@@ -288,11 +291,12 @@ export function createValueLowerers(
       }
       return {
         value: {
+          _t: VALUE_EXPR_TAG.AGGREGATE,
           aggregate: {
             op,
             query: query.value,
           },
-        },
+        } as ValueExpr,
         diagnostics: query.diagnostics,
       };
     }
@@ -331,13 +335,14 @@ export function createValueLowerers(
 
     return {
       value: {
+        _t: VALUE_EXPR_TAG.AGGREGATE,
         aggregate: {
           op,
           query: query.value,
           bind: source.bind,
           valueExpr: valueExpr.value,
         },
-      },
+      } as ValueExpr,
       diagnostics,
     };
   }

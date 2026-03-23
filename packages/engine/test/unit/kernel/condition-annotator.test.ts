@@ -134,7 +134,7 @@ describe('describeAction (condition annotator)', () => {
   it('annotates passing precondition with pass marker', () => {
     const pre: ConditionAST = {
       op: '>=',
-      left: { ref: 'gvar', var: 'gold' },
+      left: { _t: 2 as const, ref: 'gvar', var: 'gold' },
       right: 5,
     };
     const action = minimalActionDef({ pre });
@@ -155,7 +155,7 @@ describe('describeAction (condition annotator)', () => {
   it('annotates failing precondition with fail marker', () => {
     const pre: ConditionAST = {
       op: '>=',
-      left: { ref: 'gvar', var: 'gold' },
+      left: { _t: 2 as const, ref: 'gvar', var: 'gold' },
       right: 5,
     };
     const action = minimalActionDef({ pre });
@@ -176,7 +176,7 @@ describe('describeAction (condition annotator)', () => {
   it('includes value annotation with current value for comparisons', () => {
     const pre: ConditionAST = {
       op: '>=',
-      left: { ref: 'gvar', var: 'gold' },
+      left: { _t: 2 as const, ref: 'gvar', var: 'gold' },
       right: 5,
     };
     const action = minimalActionDef({ pre });
@@ -197,7 +197,7 @@ describe('describeAction (condition annotator)', () => {
   it('produces fail annotation with depends-on-choice text for unbound bindings', () => {
     const pre: ConditionAST = {
       op: '>=',
-      left: { ref: 'binding', name: 'unboundVar' },
+      left: { _t: 2 as const, ref: 'binding', name: 'unboundVar' },
       right: 5,
     };
     const action = minimalActionDef({ pre });
@@ -468,7 +468,7 @@ describe('describeAction (condition annotator)', () => {
   // -----------------------------------------------------------------------
   it('does not add annotations to Costs or Effects groups', () => {
     const action = minimalActionDef({
-      pre: { op: '>=', left: { ref: 'gvar', var: 'gold' }, right: 1 },
+      pre: { op: '>=', left: { _t: 2 as const, ref: 'gvar', var: 'gold' }, right: 1 },
       cost: [{ addVar: { scope: 'global', var: 'gold', delta: -1 } }],
       effects: [{ setVar: { scope: 'global', var: 'gold', value: 0 } }],
     });
@@ -514,8 +514,8 @@ describe('describeAction (condition annotator)', () => {
     const pre: ConditionAST = {
       op: 'and',
       args: [
-        { op: '>=', left: { ref: 'gvar', var: 'gold' }, right: 5 },
-        { op: '==', left: { ref: 'gvar', var: 'gold' }, right: 10 },
+        { op: '>=', left: { _t: 2 as const, ref: 'gvar', var: 'gold' }, right: 5 },
+        { op: '==', left: { _t: 2 as const, ref: 'gvar', var: 'gold' }, right: 10 },
       ],
     };
     const action = minimalActionDef({ pre });
@@ -551,7 +551,7 @@ describe('describeAction (condition annotator)', () => {
   it('produces structuredClone-safe output', () => {
     const pre: ConditionAST = {
       op: '>=',
-      left: { ref: 'gvar', var: 'gold' },
+      left: { _t: 2 as const, ref: 'gvar', var: 'gold' },
       right: 5,
     };
     const action = minimalActionDef({ pre, limits: [{ id: 'test::turn::0', scope: 'turn', max: 3 }] });
@@ -571,7 +571,7 @@ describe('describeAction (condition annotator)', () => {
       pre: {
         op: 'and',
         args: [
-          { op: '>=', left: { ref: 'gvar', var: 'nonexistent' }, right: 99 },
+          { op: '>=', left: { _t: 2 as const, ref: 'gvar', var: 'nonexistent' }, right: 99 },
           { op: 'not', arg: true },
         ],
       },
@@ -593,7 +593,7 @@ describe('describeAction (condition annotator)', () => {
     const pipeline: ActionPipelineDef = {
       id: 'train-us',
       actionId: action.id,
-      legality: { op: '>=', left: { ref: 'gvar', var: 'gold' }, right: 1 },
+      legality: { op: '>=', left: { _t: 2 as const, ref: 'gvar', var: 'gold' }, right: 1 },
       costValidation: null,
       costEffects: [{ addVar: { scope: 'global', var: 'gold', delta: -3 } }],
       targeting: {},
@@ -625,7 +625,7 @@ describe('describeAction (condition annotator)', () => {
     const pipeline: ActionPipelineDef = {
       id: 'pipeline-annotated',
       actionId: action.id,
-      legality: { op: '>=', left: { ref: 'gvar', var: 'gold' }, right: 5 },
+      legality: { op: '>=', left: { _t: 2 as const, ref: 'gvar', var: 'gold' }, right: 5 },
       costValidation: null,
       costEffects: [],
       targeting: {},
@@ -658,8 +658,8 @@ describe('describeAction (condition annotator)', () => {
       stages: [
         {
           stage: 'resolution',
-          legality: { op: '>=', left: { ref: 'gvar', var: 'gold' }, right: 5 },
-          costValidation: { op: '>=', left: { ref: 'gvar', var: 'gold' }, right: 2 },
+          legality: { op: '>=', left: { _t: 2 as const, ref: 'gvar', var: 'gold' }, right: 5 },
+          costValidation: { op: '>=', left: { _t: 2 as const, ref: 'gvar', var: 'gold' }, right: 2 },
           effects: [{ advancePhase: {} }],
         },
       ],
@@ -687,7 +687,7 @@ describe('describeAction (condition annotator)', () => {
     const passingPipeline: ActionPipelineDef = {
       id: 'train-us',
       actionId: action.id,
-      applicability: { op: '==', left: { ref: 'gvar', var: 'gold' }, right: 10 },
+      applicability: { op: '==', left: { _t: 2 as const, ref: 'gvar', var: 'gold' }, right: 10 },
       legality: null,
       costValidation: null,
       costEffects: [],
@@ -698,7 +698,7 @@ describe('describeAction (condition annotator)', () => {
     const failingPipeline: ActionPipelineDef = {
       id: 'train-arvn',
       actionId: action.id,
-      applicability: { op: '==', left: { ref: 'gvar', var: 'gold' }, right: 999 },
+      applicability: { op: '==', left: { _t: 2 as const, ref: 'gvar', var: 'gold' }, right: 999 },
       legality: null,
       costValidation: null,
       costEffects: [],
@@ -756,7 +756,7 @@ describe('describeAction (condition annotator)', () => {
   // 15. No matching pipelines — same result as before (no regression)
   // -----------------------------------------------------------------------
   it('produces unchanged result when no pipelines match', () => {
-    const pre: ConditionAST = { op: '>=', left: { ref: 'gvar', var: 'gold' }, right: 5 };
+    const pre: ConditionAST = { op: '>=', left: { _t: 2 as const, ref: 'gvar', var: 'gold' }, right: 5 };
     const action = minimalActionDef({ pre });
     const otherPipeline: ActionPipelineDef = {
       id: 'unrelated',
@@ -784,12 +784,12 @@ describe('describeAction (condition annotator)', () => {
   it('includes unannotated pipeline sections on error fallback', () => {
     const action = minimalActionDef({
       // Force an eval error by using a nonexistent binding in pre
-      pre: { op: '>=', left: { ref: 'binding', name: 'crash' }, right: 5 },
+      pre: { op: '>=', left: { _t: 2 as const, ref: 'binding', name: 'crash' }, right: 5 },
     });
     const pipeline: ActionPipelineDef = {
       id: 'fallback-pipeline',
       actionId: action.id,
-      legality: { op: '>=', left: { ref: 'gvar', var: 'gold' }, right: 1 },
+      legality: { op: '>=', left: { _t: 2 as const, ref: 'gvar', var: 'gold' }, right: 1 },
       costValidation: null,
       costEffects: [],
       targeting: {},
@@ -815,7 +815,7 @@ describe('describeAction (condition annotator)', () => {
   // -----------------------------------------------------------------------
   it('returns tooltipPayload with ruleCard and ruleState when action has effects', () => {
     const action = minimalActionDef({
-      pre: { op: '>=', left: { ref: 'gvar', var: 'gold' }, right: 5 },
+      pre: { op: '>=', left: { _t: 2 as const, ref: 'gvar', var: 'gold' }, right: 5 },
       effects: [{ addVar: { scope: 'global', var: 'gold', delta: 3 } }],
     });
     const ctx = makeContext({ state: makeState({ globalVars: { gold: 10 } }) });
@@ -930,7 +930,7 @@ describe('describeAction (condition annotator)', () => {
   it('represents pipeline applicability as RuleCard modifier conditions', () => {
     const applicability: ConditionAST = {
       op: '>=',
-      left: { ref: 'gvar', var: 'gold' },
+      left: { _t: 2 as const, ref: 'gvar', var: 'gold' },
       right: 5,
     };
     const action = minimalActionDef();
@@ -987,7 +987,7 @@ describe('describeAction (condition annotator)', () => {
   it('produces different ruleState.available when precondition passes vs fails', () => {
     const pre: ConditionAST = {
       op: '>=',
-      left: { ref: 'gvar', var: 'gold' },
+      left: { _t: 2 as const, ref: 'gvar', var: 'gold' },
       right: 5,
     };
     const action = minimalActionDef({ pre, effects: [{ addVar: { scope: 'global', var: 'gold', delta: 1 } }] });
@@ -1025,7 +1025,7 @@ describe('describeAction (condition annotator)', () => {
   it('does not alter sections or limitUsage when tooltipPayload is present', () => {
     const pre: ConditionAST = {
       op: '>=',
-      left: { ref: 'gvar', var: 'gold' },
+      left: { _t: 2 as const, ref: 'gvar', var: 'gold' },
       right: 5,
     };
     const action = minimalActionDef({
@@ -1101,7 +1101,7 @@ describe('describeAction (condition annotator)', () => {
     const action = minimalActionDef({
       effects: [{
         if: {
-          when: { op: '>=', left: { ref: 'gvar', var: 'gold' }, right: 5 },
+          when: { op: '>=', left: { _t: 2 as const, ref: 'gvar', var: 'gold' }, right: 5 },
           then: [{ addVar: { scope: 'global', var: 'gold', delta: 1 } }],
         },
       }],
@@ -1241,7 +1241,7 @@ describe('describeAction (condition annotator)', () => {
   // -----------------------------------------------------------------------
   it('produces structuredClone-safe output including tooltipPayload', () => {
     const action = minimalActionDef({
-      pre: { op: '>=', left: { ref: 'gvar', var: 'gold' }, right: 5 },
+      pre: { op: '>=', left: { _t: 2 as const, ref: 'gvar', var: 'gold' }, right: 5 },
       effects: [{ addVar: { scope: 'global', var: 'gold', delta: 1 } }],
     });
     const ctx = makeContext();

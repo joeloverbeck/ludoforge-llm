@@ -251,7 +251,7 @@ phase: [asPhaseId('main')],
             in: [
               {
                 if: {
-                  when: { op: '==', left: { ref: 'binding', name: '$roll' }, right: 1 },
+                  when: { op: '==', left: { _t: 2, ref: 'binding', name: '$roll' }, right: 1 },
                   then: [
                     {
                       chooseOne: {
@@ -311,8 +311,8 @@ phase: [asPhaseId('main')],
                   internalDecisionId: 'decision:$targets',
                   bind: '$targets',
                   options: { query: 'enums', values: ['a', 'b', 'c'] },
-                  min: { ref: 'binding', name: '$roll' },
-                  max: { ref: 'binding', name: '$roll' },
+                  min: { _t: 2, ref: 'binding', name: '$roll' },
+                  max: { _t: 2, ref: 'binding', name: '$roll' },
                 },
               } as GameDef['actions'][number]['effects'][number],
             ],
@@ -421,7 +421,7 @@ phase: [asPhaseId('main')],
             } as GameDef['actions'][number]['effects'][number],
             {
               if: {
-                when: { op: '==', left: { ref: 'binding', name: '$mode' }, right: 'trap' },
+                when: { op: '==', left: { _t: 2, ref: 'binding', name: '$mode' }, right: 'trap' },
                 then: [
                   {
                     chooseOne: {
@@ -630,7 +630,7 @@ phase: [asPhaseId('main')],
           effects: [
             {
               if: {
-                when: { op: '==', left: { ref: 'binding', name: '$missing' }, right: 1 },
+                when: { op: '==', left: { _t: 2, ref: 'binding', name: '$missing' }, right: 1 },
                 then: [],
               },
             } as GameDef['actions'][number]['effects'][number],
@@ -684,7 +684,7 @@ phase: [asPhaseId('main')],
           effects: [
             {
               if: {
-                when: { op: '==', left: { ref: 'gvar', var: 'missingVar' }, right: 1 },
+                when: { op: '==', left: { _t: 2, ref: 'gvar', var: 'missingVar' }, right: 1 },
                 then: [],
               },
             } as GameDef['actions'][number]['effects'][number],
@@ -728,7 +728,7 @@ phase: [asPhaseId('main')],
     const profile: ActionPipelineDef = {
       id: 'deferred-profile',
       actionId: asActionId('deferred-op'),
-      legality: { op: '==', left: { ref: 'binding', name: '$missing' }, right: 1 },
+      legality: { op: '==', left: { _t: 2, ref: 'binding', name: '$missing' }, right: 1 },
       costValidation: null,
       costEffects: [],
       targeting: {},
@@ -836,7 +836,7 @@ phase: [asPhaseId('main')],
           effects: [
             {
               if: {
-                when: { op: '==', left: { ref: 'gvar', var: 'missingVar' }, right: 1 },
+                when: { op: '==', left: { _t: 2, ref: 'gvar', var: 'missingVar' }, right: 1 },
                 then: [],
               },
             } as GameDef['actions'][number]['effects'][number],
@@ -934,7 +934,7 @@ phase: [asPhaseId('main')],
               actionIds: ['operation'],
               zoneFilter: {
                 op: '==',
-                left: { ref: 'zoneProp', zone: '$zone', prop: 'country' },
+                left: { _t: 2, ref: 'zoneProp', zone: '$zone', prop: 'country' },
                 right: 'cambodia',
               },
               remainingUses: 1,
@@ -1040,7 +1040,7 @@ phase: [asPhaseId('main')],
               actionIds: ['operation'],
               zoneFilter: {
                 op: '==',
-                left: { ref: 'zoneProp', zone: '$targetProvince', prop: 'country' },
+                left: { _t: 2, ref: 'zoneProp', zone: '$targetProvince', prop: 'country' },
                 right: 'cambodia',
               },
               remainingUses: 1,
@@ -1146,8 +1146,8 @@ phase: [asPhaseId('main')],
               actionIds: ['operation'],
               zoneFilter: {
                 op: '==',
-                left: { ref: 'zoneProp', zone: '$targetProvince', prop: 'country' },
-                right: { ref: 'binding', name: '$targetCountry' },
+                left: { _t: 2, ref: 'zoneProp', zone: '$targetProvince', prop: 'country' },
+                right: { _t: 2, ref: 'binding', name: '$targetCountry' },
               },
               remainingUses: 1,
             },
@@ -1255,12 +1255,12 @@ phase: [asPhaseId('main')],
                 args: [
                   {
                     op: '==',
-                    left: { ref: 'zoneProp', zone: '$targetProvince', prop: 'country' },
+                    left: { _t: 2, ref: 'zoneProp', zone: '$targetProvince', prop: 'country' },
                     right: 'cambodia',
                   },
                   {
                     op: '==',
-                    left: { ref: 'zoneProp', zone: '$supportProvince', prop: 'country' },
+                    left: { _t: 2, ref: 'zoneProp', zone: '$supportProvince', prop: 'country' },
                     right: 'cambodia',
                   },
                 ],
@@ -1368,7 +1368,7 @@ phase: [asPhaseId('main')],
               actionIds: ['operation'],
               zoneFilter: {
                 op: '==',
-                left: { ref: 'zoneProp', zone: '$zone', prop: 'country' },
+                left: { _t: 2, ref: 'zoneProp', zone: '$zone', prop: 'country' },
                 right: 'cambodia',
               },
               remainingUses: 1,

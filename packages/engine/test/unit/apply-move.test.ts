@@ -31,9 +31,10 @@ import {
   type ChoiceOwnershipPrimitive,
 } from '../helpers/choice-ownership-parity-helpers.js';
 import { requireCardDrivenRuntime, withPendingFreeOperationGrant } from '../helpers/turn-order-helpers.js';
+import { asTaggedGameDef } from '../helpers/gamedef-fixtures.js';
 
 const createDef = (): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'apply-move-test', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
     seats: [{ id: '0' }, { id: '1' }, { id: '2' }, { id: '3' }],
     constants: {},
@@ -79,7 +80,7 @@ phase: [asPhaseId('main')],
       },
     ],
     terminal: { conditions: [] },
-  }) as unknown as GameDef;
+  });
 
 const createState = (): GameState => ({
   globalVars: { energy: 5, score: 0, triggered: 0 },
@@ -113,7 +114,7 @@ const lifecycleTraceCategories = (
   ));
 
 const createEventDynamicDecisionDef = (withDeclaredParam = false): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: withDeclaredParam ? 'event-dynamic-decision-with-declared' : 'event-dynamic-decision', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
     seats: [{ id: '0' }, { id: '1' }],
     constants: {},
@@ -168,10 +169,10 @@ phase: [asPhaseId('main')],
         ],
       },
     ],
-  }) as unknown as GameDef;
+  });
 
 const createEventDynamicChooseNDecisionDef = (): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'event-dynamic-choose-n-decision', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
     seats: [{ id: '0' }, { id: '1' }],
     constants: {},
@@ -227,7 +228,7 @@ const createEventDynamicChooseNDecisionDef = (): GameDef =>
         ],
       },
     ],
-  }) as unknown as GameDef;
+  });
 
 const createEventDynamicDecisionState = (): GameState => ({
   ...createState(),
@@ -246,7 +247,7 @@ const createDeferredDecisionEventDef = (
     readonly includePlayCondition?: boolean;
   },
 ): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: withFreeGrant ? 'deferred-decision-with-grant' : 'deferred-decision-no-grant', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
     seats: [{ id: '0' }, { id: '1' }],
     constants: {},
@@ -364,7 +365,7 @@ const createDeferredDecisionEventDef = (
         ],
       },
     ],
-  }) as unknown as GameDef;
+  });
 
 const createDeferredDecisionEventState = (def: GameDef): GameState => {
   const base = initialState(def, 17, 2).state;
@@ -420,7 +421,7 @@ describe('applyMove', () => {
   });
 
   it('rejects trusted moves whose sourceStateHash does not match the current state', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'trusted-move-state-mismatch', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
       seats: [{ id: '0' }, { id: '1' }],
       constants: {},
@@ -448,7 +449,7 @@ describe('applyMove', () => {
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
     const state: GameState = {
       globalVars: { energy: 0, score: 0 },
       perPlayerVars: {},
@@ -504,7 +505,7 @@ describe('applyMove', () => {
   });
 
   it('applies non-pipeline effect decisions when provided via emitted decision ids', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'non-pipeline-decision-validation', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
       constants: {},
       globalVars: [{ name: 'score', type: 'int', init: 0, min: 0, max: 10 }],
@@ -537,7 +538,7 @@ phase: [asPhaseId('main')],
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
     const state: GameState = {
       ...createState(),
       globalVars: { score: 0 },
@@ -561,7 +562,7 @@ phase: [asPhaseId('main')],
     for (const primitive of ownershipPrimitives) {
       const actionId = `decide-${primitive}`;
       const decisionKey = '$pick';
-      const def: GameDef = {
+      const def: GameDef = asTaggedGameDef({
         metadata: { id: `non-pipeline-choice-owner-${primitive}`, players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
         constants: {},
         globalVars: [{ name: 'score', type: 'int', init: 0, min: 0, max: 10 }],
@@ -588,7 +589,7 @@ phase: [asPhaseId('main')],
         ],
         triggers: [],
         terminal: { conditions: [] },
-      } as unknown as GameDef;
+      });
       const state: GameState = {
         ...createState(),
         globalVars: { score: 0 },
@@ -621,7 +622,7 @@ phase: [asPhaseId('main')],
     for (const primitive of ownershipPrimitives) {
       const actionId = `pipeline-decide-${primitive}`;
       const decisionKey = '$pick';
-      const def: GameDef = {
+      const def: GameDef = asTaggedGameDef({
         metadata: { id: `pipeline-choice-owner-${primitive}`, players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
         constants: {},
         globalVars: [{ name: 'score', type: 'int', init: 0, min: 0, max: 10 }],
@@ -664,7 +665,7 @@ phase: [asPhaseId('main')],
         ],
         triggers: [],
         terminal: { conditions: [] },
-      } as unknown as GameDef;
+      });
 
       const state: GameState = {
         ...createState(),
@@ -694,7 +695,7 @@ phase: [asPhaseId('main')],
   });
 
   it('rejects stale replayed decision params when current pending decision identity changes', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'non-pipeline-stale-decision-replay', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
       constants: {},
       globalVars: [{ name: 'score', type: 'int', init: 0, min: 0, max: 10 }],
@@ -727,7 +728,7 @@ phase: [asPhaseId('main')],
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
     const state: GameState = {
       ...createState(),
       globalVars: { score: 0 },
@@ -780,7 +781,7 @@ phase: [asPhaseId('main')],
   });
 
   it('advances to the next decision point after actionResolved processing', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       ...createDef(),
       globalVars: [],
       turnStructure: {
@@ -812,7 +813,7 @@ phase: [asPhaseId('p2')],
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
     const state: GameState = {
       ...createState(),
       globalVars: {},
@@ -831,7 +832,7 @@ phase: [asPhaseId('p2')],
   });
 
   it('queues simultaneous submissions and rotates to next unsubmitted player before commit', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'simultaneous-submit', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
       constants: {},
       globalVars: [{ name: 'score', type: 'int', init: 0, min: 0, max: 20 }],
@@ -856,7 +857,7 @@ phase: [asPhaseId('main')],
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
     const state: GameState = {
       ...createState(),
       globalVars: { score: 0 },
@@ -891,7 +892,7 @@ phase: [asPhaseId('main')],
   });
 
   it('rejects invalid maxPhaseTransitionsPerMove in simultaneous mode before commit', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'simultaneous-invalid-transition-budget', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
       constants: {},
       globalVars: [],
@@ -916,7 +917,7 @@ phase: [asPhaseId('main')],
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
     const state: GameState = {
       ...createState(),
       globalVars: {},
@@ -935,7 +936,7 @@ phase: [asPhaseId('main')],
   });
 
   it('shares maxPhaseTransitionsPerMove budget across simultaneous commit fan-in', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'simultaneous-shared-transition-budget', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
       constants: {},
       globalVars: [],
@@ -971,7 +972,7 @@ phase: [asPhaseId('main')],
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
     const state: GameState = {
       ...createState(),
       globalVars: {},
@@ -997,7 +998,7 @@ phase: [asPhaseId('main')],
   });
 
   it('commits simultaneous submissions in deterministic player order once all players submit', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'simultaneous-commit', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
       constants: {},
       globalVars: [{ name: 'score', type: 'int', init: 0, min: 0, max: 20 }],
@@ -1022,7 +1023,7 @@ phase: [asPhaseId('main')],
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
     const state: GameState = {
       ...createState(),
       globalVars: { score: 0 },
@@ -1054,7 +1055,7 @@ phase: [asPhaseId('main')],
   });
 
   it('includes lifecycle entries in effectTrace after simultaneous commit auto-advance', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'simultaneous-trace-auto-advance', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
       constants: {},
       globalVars: [],
@@ -1090,7 +1091,7 @@ phase: [asPhaseId('main')],
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
     const state: GameState = {
       ...createState(),
       globalVars: {},
@@ -1150,7 +1151,7 @@ phase: [asPhaseId('main')],
       terminal: { conditions: [] },
     } as const;
 
-    const roundRobinDef = { ...baseDef, turnOrder: undefined } as unknown as GameDef;
+    const roundRobinDef = asTaggedGameDef({ ...baseDef, turnOrder: undefined });
     const roundRobinState: GameState = {
       ...createState(),
       globalVars: {},
@@ -1160,7 +1161,7 @@ phase: [asPhaseId('main')],
     };
     const roundRobin = applyMove(roundRobinDef, roundRobinState, { actionId: asActionId('play'), params: {} }, { trace: true });
 
-    const simultaneousDef = { ...baseDef, turnOrder: { type: 'simultaneous' as const } } as unknown as GameDef;
+    const simultaneousDef = asTaggedGameDef({ ...baseDef, turnOrder: { type: 'simultaneous' as const } });
     const simultaneousStart: GameState = {
       ...createState(),
       globalVars: {},
@@ -1206,7 +1207,7 @@ phase: [asPhaseId('main')],
   });
 
   it('annotates lifecycle trace entries with lifecycle event provenance', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'lifecycle-provenance', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
       constants: {},
       globalVars: [],
@@ -1241,7 +1242,7 @@ phase: [asPhaseId('main')],
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
     const state: GameState = {
       ...createState(),
       globalVars: {},
@@ -1267,7 +1268,7 @@ phase: [asPhaseId('main')],
   });
 
   it('applies pass rewards and resets candidates when rightmost eligible faction passes', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'turn-flow-pass-chain', players: { min: 4, max: 4 }, maxTriggerDepth: 8 },
       seats: [{ id: '0' }, { id: '1' }, { id: '2' }, { id: '3' }],
       constants: {},
@@ -1313,7 +1314,7 @@ phase: [asPhaseId('main')],
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
 
     const passMove: Move = { actionId: asActionId('pass'), params: {} };
     const start = initialState(def, 5, 4).state;
@@ -1340,7 +1341,7 @@ phase: [asPhaseId('main')],
   });
 
   it('marks non-pass executors ineligible for the next card at card end', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'turn-flow-default-eligibility', players: { min: 4, max: 4 }, maxTriggerDepth: 8 },
       seats: [{ id: '0' }, { id: '1' }, { id: '2' }, { id: '3' }],
       constants: {},
@@ -1391,7 +1392,7 @@ phase: [asPhaseId('main')],
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
 
     const start = initialState(def, 13, 4).state;
     const first = applyMove(def, start, { actionId: asActionId('operation'), params: {} }).state;
@@ -1412,7 +1413,7 @@ phase: [asPhaseId('main')],
   });
 
   it('applies typed nextTurn eligibility overrides and traces override creation', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'turn-flow-override-typed', players: { min: 4, max: 4 }, maxTriggerDepth: 8 },
       seats: [{ id: '0' }, { id: '1' }, { id: '2' }, { id: '3' }],
       constants: {},
@@ -1492,7 +1493,7 @@ phase: [asPhaseId('main')],
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
 
     const start = initialState(def, 17, 4).state;
     const first = applyMove(def, start, {
@@ -1522,7 +1523,7 @@ phase: [asPhaseId('main')],
   });
 
   it('enforces operation-profile legality predicates before side effects', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'operation-profile-legality', players: { min: 2, max: 2 } },
       constants: {},
       globalVars: [
@@ -1560,7 +1561,7 @@ phase: [asPhaseId('main')],
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
     const state: GameState = {
       ...createState(),
       globalVars: { energy: 1, score: 0, triggered: 0 },
@@ -1577,7 +1578,7 @@ phase: [asPhaseId('main')],
   });
 
   it('blocks operation execution when partial mode is forbid and cost validation fails', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'operation-profile-cost-forbid', players: { min: 2, max: 2 } },
       constants: {},
       globalVars: [
@@ -1616,7 +1617,7 @@ phase: [asPhaseId('main')],
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
     const state: GameState = {
       ...createState(),
       globalVars: { energy: 1, score: 0, triggered: 0 },
@@ -1633,7 +1634,7 @@ phase: [asPhaseId('main')],
   });
 
   it('allows partial operation execution when cost validation fails in allow mode', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'operation-profile-cost-allow', players: { min: 2, max: 2 } },
       constants: {},
       globalVars: [
@@ -1672,7 +1673,7 @@ phase: [asPhaseId('main')],
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
     const state: GameState = {
       ...createState(),
       globalVars: { energy: 1, score: 0, triggered: 0 },
@@ -1693,7 +1694,7 @@ phase: [asPhaseId('main')],
   });
 
   it('rejects execution when a downstream stage cost validation checkpoint fails in atomic mode', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'operation-stage-cost-atomic', players: { min: 2, max: 2 } },
       constants: {},
       globalVars: [
@@ -1748,7 +1749,7 @@ phase: [asPhaseId('main')],
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
     const state: GameState = {
       ...createState(),
       globalVars: { energy: 1, score: 0, triggered: 0 },
@@ -1772,7 +1773,7 @@ phase: [asPhaseId('main')],
   });
 
   it('skips a stage when its cost validation checkpoint fails in partial mode', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'operation-stage-cost-partial', players: { min: 2, max: 2 } },
       constants: {},
       globalVars: [{ name: 'score', type: 'int', init: 0, min: 0, max: 20 }],
@@ -1829,7 +1830,7 @@ phase: [asPhaseId('main')],
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
     const state: GameState = {
       ...createState(),
       globalVars: { score: 0, triggered: 0 },
@@ -1844,7 +1845,7 @@ phase: [asPhaseId('main')],
   });
 
   it('makes transient bindings from one stage available to later stage effects', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'operation-stage-transient-binding', players: { min: 2, max: 2 } },
       constants: {},
       globalVars: [{ name: 'score', type: 'int', init: 0, min: 0, max: 20 }],
@@ -1904,7 +1905,7 @@ phase: [asPhaseId('main')],
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
     const state: GameState = {
       ...createState(),
       globalVars: { score: 0, triggered: 0 },
@@ -1916,7 +1917,7 @@ phase: [asPhaseId('main')],
   });
 
   it('skips RNG-consuming cost spend in allow mode when cost validation fails', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'operation-profile-cost-allow-rng-skip', players: { min: 2, max: 2 } },
       constants: {},
       globalVars: [
@@ -1955,7 +1956,7 @@ phase: [asPhaseId('main')],
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
     const state: GameState = {
       ...createState(),
       globalVars: { energy: 1, score: 0, triggered: 0 },
@@ -1989,7 +1990,7 @@ phase: [asPhaseId('main')],
   });
 
   it('executes operation-profile stages stages in declared order', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'operation-profile-stage-order', players: { min: 2, max: 2 } },
       constants: {},
       globalVars: [{ name: 'orderValue', type: 'int', init: 0, min: 0, max: 99 }],
@@ -2027,7 +2028,7 @@ phase: [asPhaseId('main')],
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
     const state: GameState = {
       ...createState(),
       globalVars: { orderValue: 0 },
@@ -2039,7 +2040,7 @@ phase: [asPhaseId('main')],
   });
 
   it('skips costSpend effects and preserves resources when freeOperation is true with operation profile', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'free-op-cost-skip', players: { min: 2, max: 2 } },
       constants: {},
       globalVars: [
@@ -2078,7 +2079,7 @@ phase: [asPhaseId('main')],
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
     const state: GameState = {
       ...createState(),
       globalVars: { energy: 10, score: 0 },
@@ -2091,7 +2092,7 @@ phase: [asPhaseId('main')],
   });
 
   it('preserves eligibility state when freeOperation is true with operation profile', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'free-op-eligibility', players: { min: 4, max: 4 } },
       seats: [{ id: '0' }, { id: '1' }, { id: '2' }, { id: '3' }],
       constants: {},
@@ -2142,7 +2143,7 @@ phase: [asPhaseId('main')],
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
 
     const start = initialState(def, 7, 4).state;
     const beforeEligibility = requireCardDrivenRuntime(start).eligibility;
@@ -2162,7 +2163,7 @@ phase: [asPhaseId('main')],
   });
 
   it('consumes exactly one matching grant instance per free operation use', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'free-op-consume-single-grant', players: { min: 4, max: 4 } },
       seats: [{ id: '0' }, { id: '1' }, { id: '2' }, { id: '3' }],
       constants: {},
@@ -2214,7 +2215,7 @@ phase: [asPhaseId('main')],
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
 
     const start = initialState(def, 71, 4).state;
     const withOneGrant = withPendingFreeOperationGrant(start, { actionIds: ['operate'] });
@@ -2242,7 +2243,7 @@ phase: [asPhaseId('main')],
   });
 
   it('throws runtime contract error when released deferred actorPlayer is out of range', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'deferred-actor-player-range', players: { min: 4, max: 4 } },
       seats: [{ id: '0' }, { id: '1' }, { id: '2' }, { id: '3' }],
       constants: {},
@@ -2294,7 +2295,7 @@ phase: [asPhaseId('main')],
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
 
     const start = initialState(def, 77, 4).state;
     const withGrant = withPendingFreeOperationGrant(start, {
@@ -2342,7 +2343,7 @@ phase: [asPhaseId('main')],
   });
 
   it('executes stages stage effects normally for free operations', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'free-op-stages', players: { min: 2, max: 2 } },
       constants: {},
       globalVars: [
@@ -2384,7 +2385,7 @@ phase: [asPhaseId('main')],
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
     const state: GameState = {
       ...createState(),
       globalVars: { stageA: 0, stageB: 0 },
@@ -2397,7 +2398,7 @@ phase: [asPhaseId('main')],
   });
 
   it('includes operationFree trace entry for free operations with operation profile', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'free-op-trace', players: { min: 2, max: 2 } },
       constants: {},
       globalVars: [],
@@ -2432,7 +2433,7 @@ phase: [asPhaseId('main')],
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
     const state: GameState = {
       ...createState(),
       globalVars: {},
@@ -2449,7 +2450,7 @@ phase: [asPhaseId('main')],
   });
 
   it('applies costSpend and eligibility normally when freeOperation is not set (default)', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'non-free-op-default', players: { min: 2, max: 2 } },
       constants: {},
       globalVars: [
@@ -2488,7 +2489,7 @@ phase: [asPhaseId('main')],
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
     const state: GameState = {
       ...createState(),
       globalVars: { energy: 10, score: 0 },
@@ -2514,7 +2515,7 @@ phase: [asPhaseId('main')],
   });
 
   it('bypasses cost validation for free operations even when cost validation would fail', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'free-op-bypass-cost-validation', players: { min: 2, max: 2 } },
       constants: {},
       globalVars: [
@@ -2564,7 +2565,7 @@ phase: [asPhaseId('main')],
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
     const state: GameState = {
       ...createState(),
       globalVars: { energy: 1, score: 0 },
@@ -2578,7 +2579,7 @@ phase: [asPhaseId('main')],
   });
 
   it('resolves event side and branch effects from selected move params', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'event-side-branch-stages', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
       constants: {},
       globalVars: [{ name: 'resolved', type: 'int', init: 0, min: 0, max: 99 }],
@@ -2641,7 +2642,7 @@ phase: [asPhaseId('main')],
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const state: GameState = {
       ...createState(),
@@ -2677,7 +2678,7 @@ phase: [asPhaseId('main')],
   });
 
   it('applies event deck side and branch effects for event actions', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'event-deck-side-branch-effects', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
       constants: {},
       globalVars: [{ name: 'resolved', type: 'int', init: 0, min: 0, max: 99 }],
@@ -2729,7 +2730,7 @@ phase: [asPhaseId('main')],
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const state: GameState = {
       ...createState(),
@@ -2758,7 +2759,7 @@ phase: [asPhaseId('main')],
   });
 
   it('does not execute event-card effects for misleading action id without cardEvent capability', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'event-capability-required-for-event-effects', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
       constants: {},
       globalVars: [{ name: 'resolved', type: 'int', init: 0, min: 0, max: 99 }],
@@ -2802,7 +2803,7 @@ phase: [asPhaseId('main')],
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const state: GameState = {
       ...createState(),
@@ -2963,7 +2964,7 @@ phase: [asPhaseId('main')],
   });
 
   it('activates selected lasting effects and applies setup effects for event moves', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'event-lasting-effect-activation', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
       seats: [{ id: '0' }, { id: '1' }],
       constants: {},
@@ -3033,7 +3034,7 @@ phase: [asPhaseId('main')],
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
 
     const state: GameState = {
       ...createState(),
@@ -3074,7 +3075,7 @@ phase: [asPhaseId('main')],
   });
 
   it('activates lasting effects for event moves without cardDriven turnOrder by resolving from deck discard zones', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'event-lasting-non-card-driven', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
       constants: {},
       globalVars: [{ name: 'aid', type: 'int', init: 0, min: -99, max: 99 }],
@@ -3126,7 +3127,7 @@ phase: [asPhaseId('main')],
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
 
     const state: GameState = {
       ...createState(),
@@ -3149,7 +3150,7 @@ phase: [asPhaseId('main')],
   });
 
   it('executes compound SA before operation stages when timing is "before"', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'compound-before', players: { min: 2, max: 2 } },
       constants: {},
       globalVars: [{ name: 'order', type: 'int', init: 0, min: 0, max: 99 }],
@@ -3175,7 +3176,7 @@ phase: [asPhaseId('main')],
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
 
     const state: GameState = { ...createState(), globalVars: { ...createState().globalVars, order: 0 } };
     const result = applyMove(def, state, {
@@ -3192,7 +3193,7 @@ phase: [asPhaseId('main')],
   });
 
   it('executes compound SA after operation stages when timing is "after"', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'compound-after', players: { min: 2, max: 2 } },
       constants: {},
       globalVars: [{ name: 'order', type: 'int', init: 0, min: 0, max: 99 }],
@@ -3218,7 +3219,7 @@ phase: [asPhaseId('main')],
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
 
     const state: GameState = { ...createState(), globalVars: { ...createState().globalVars, order: 0 } };
     const result = applyMove(def, state, {
@@ -3235,7 +3236,7 @@ phase: [asPhaseId('main')],
   });
 
   it('executes compound SA during operation stages after specified stage index', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'compound-during', players: { min: 2, max: 2 } },
       constants: {},
       globalVars: [{ name: 'order', type: 'int', init: 0, min: 0, max: 99 }],
@@ -3264,7 +3265,7 @@ phase: [asPhaseId('main')],
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
 
     const state: GameState = { ...createState(), globalVars: { ...createState().globalVars, order: 0 } };
     const result = applyMove(def, state, {
@@ -3282,7 +3283,7 @@ phase: [asPhaseId('main')],
   });
 
   it('executes non-compound moves identically to before (no compound field)', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'no-compound', players: { min: 2, max: 2 } },
       constants: {},
       globalVars: [{ name: 'v', type: 'int', init: 0, min: 0, max: 99 }],
@@ -3307,7 +3308,7 @@ phase: [asPhaseId('main')],
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
 
     const state: GameState = { ...createState(), globalVars: { ...createState().globalVars, v: 0 } };
     const result = applyMove(def, state, { actionId: asActionId('operate'), params: {} });
@@ -3315,7 +3316,7 @@ phase: [asPhaseId('main')],
   });
 
   it('rejects compound SA when accompanyingOps excludes the operation action id', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'compound-accompanying-op-reject', players: { min: 2, max: 2 } },
       constants: {},
       globalVars: [{ name: 'v', type: 'int', init: 0, min: 0, max: 99 }],
@@ -3352,7 +3353,7 @@ phase: [asPhaseId('main')],
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
 
     const state = createState();
     assert.throws(
@@ -3370,7 +3371,7 @@ phase: [asPhaseId('main')],
   });
 
   it('allows compound SA when accompanyingOps includes the operation action id', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'compound-accompanying-op-allow', players: { min: 2, max: 2 } },
       constants: {},
       globalVars: [{ name: 'v', type: 'int', init: 0, min: 0, max: 99 }],
@@ -3406,7 +3407,7 @@ phase: [asPhaseId('main')],
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
 
     const state: GameState = { ...createState(), globalVars: { ...createState().globalVars, v: 0 } };
     const result = applyMove(def, state, {
@@ -3418,7 +3419,7 @@ phase: [asPhaseId('main')],
   });
 
   it('rejects compound SA when compoundParamConstraints disallow overlapping operation/SA params', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'compound-param-constraint-reject', players: { min: 2, max: 2 } },
       constants: {},
       globalVars: [{ name: 'v', type: 'int', init: 0, min: 0, max: 99 }],
@@ -3475,7 +3476,7 @@ phase: [asPhaseId('main')],
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
 
     const state = createState();
     assert.throws(
@@ -3493,7 +3494,7 @@ phase: [asPhaseId('main')],
   });
 
   it('rejects compound SA when subset constraint is violated', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'compound-param-subset-reject', players: { min: 2, max: 2 } },
       constants: {},
       globalVars: [{ name: 'v', type: 'int', init: 0, min: 0, max: 99 }],
@@ -3550,7 +3551,7 @@ phase: [asPhaseId('main')],
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
 
     const state = createState();
     assert.throws(
@@ -3569,7 +3570,7 @@ phase: [asPhaseId('main')],
   });
 
   it('allows compound SA when subset constraint is satisfied', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'compound-param-subset-allow', players: { min: 2, max: 2 } },
       constants: {},
       globalVars: [{ name: 'v', type: 'int', init: 0, min: 0, max: 99 }],
@@ -3626,7 +3627,7 @@ phase: [asPhaseId('main')],
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
 
     const state: GameState = { ...createState(), globalVars: { ...createState().globalVars, v: 0 } };
     const result = applyMove(def, state, {
@@ -3638,7 +3639,7 @@ phase: [asPhaseId('main')],
   });
 
   it('allows compound SA when subset constraint is satisfied for array-valued params', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       metadata: { id: 'compound-param-subset-allow-arrays', players: { min: 2, max: 2 } },
       constants: {},
       globalVars: [{ name: 'v', type: 'int', init: 0, min: 0, max: 99 }],
@@ -3675,7 +3676,7 @@ phase: [asPhaseId('main')],
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
 
     const state: GameState = { ...createState(), globalVars: { ...createState().globalVars, v: 0 } };
     const result = applyMove(def, state, {

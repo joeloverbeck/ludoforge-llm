@@ -143,11 +143,11 @@ describe('AST and selector schemas', () => {
           {
             moveToken: {
               token: '$card',
-              from: { zoneExpr: { ref: 'tokenZone', token: '$card' } },
-              to: { zoneExpr: { concat: ['discard:', { ref: 'activePlayer' }] } },
+              from: { zoneExpr: { _t: 2 as const, ref: 'tokenZone', token: '$card' } },
+              to: { zoneExpr: { _t: 3 as const, concat: ['discard:', { _t: 2 as const, ref: 'activePlayer' }] } },
             },
           },
-          { setVar: { scope: 'global', var: 'activeSeatLabel', value: { ref: 'activeSeat' } } },
+          { setVar: { scope: 'global', var: 'activeSeatLabel', value: { _t: 2 as const, ref: 'activeSeat' } } },
           { moveAll: { from: 'discard:none', to: 'deck:none', filter: { op: 'not', arg: { op: '==', left: 1, right: 2 } } } },
           { moveAll: { from: { zoneExpr: 'discard:none' }, to: { zoneExpr: 'deck:none' } } },
           { moveTokenAdjacent: { token: '$unit', from: 'board:active', direction: 'north' } },
@@ -193,7 +193,7 @@ describe('AST and selector schemas', () => {
               bind: '$die',
               min: 1,
               max: 6,
-              in: [{ setVar: { scope: 'global', var: 'roll', value: { ref: 'binding', name: '$die' } } }],
+              in: [{ setVar: { scope: 'global', var: 'roll', value: { _t: 2 as const, ref: 'binding', name: '$die' } } }],
             },
           },
           {
@@ -207,7 +207,7 @@ describe('AST and selector schemas', () => {
             forEach: {
               bind: '$p',
               over: { query: 'players' },
-              effects: [{ setVar: { scope: 'global', var: 'seen', value: { ref: 'binding', name: '$p' } } }],
+              effects: [{ setVar: { scope: 'global', var: 'seen', value: { _t: 2 as const, ref: 'binding', name: '$p' } } }],
               limit: 10,
             },
           },
@@ -217,22 +217,22 @@ describe('AST and selector schemas', () => {
               accBind: '$acc',
               over: { query: 'intsInRange', min: 1, max: 3 },
               initial: 0,
-              next: { op: '+', left: { ref: 'binding', name: '$acc' }, right: { ref: 'binding', name: '$n' } },
+              next: { _t: 6 as const, op: '+', left: { _t: 2 as const, ref: 'binding', name: '$acc' }, right: { _t: 2 as const, ref: 'binding', name: '$n' } },
               resultBind: '$sum',
-              in: [{ setVar: { scope: 'global', var: 'seen', value: { ref: 'binding', name: '$sum' } } }],
+              in: [{ setVar: { scope: 'global', var: 'seen', value: { _t: 2 as const, ref: 'binding', name: '$sum' } } }],
             },
           },
           {
             let: {
               bind: '$n',
-              value: { aggregate: { op: 'count', query: { query: 'tokensInZone', zone: 'deck:none' } } },
+              value: { _t: 5 as const, aggregate: { op: 'count', query: { query: 'tokensInZone', zone: 'deck:none' } } },
               in: [{ chooseN: { internalDecisionId: 'decision:$pick', bind: '$pick', options: { query: 'players' }, n: 1 } }],
             },
           },
           {
             bindValue: {
               bind: '$score',
-              value: { op: '+', left: 1, right: 2 },
+              value: { _t: 6 as const, op: '+', left: 1, right: 2 },
             },
           },
         ],
@@ -247,16 +247,17 @@ describe('AST and selector schemas', () => {
               subsetBind: '$subset',
               compute: [],
               scoreExpr: {
+                _t: 5 as const,
                 aggregate: {
                   op: 'sum',
                   query: { query: 'binding', name: '$subset' },
                   bind: '$token',
-                  valueExpr: { ref: 'tokenProp', token: '$token', prop: 'cost' },
+                  valueExpr: { _t: 2 as const, ref: 'tokenProp', token: '$token', prop: 'cost' },
                 },
               },
               resultBind: '$score',
               bestSubsetBind: '$best',
-              in: [{ setVar: { scope: 'global', var: 'bestScore', value: { ref: 'binding', name: '$score' } } }],
+              in: [{ setVar: { scope: 'global', var: 'bestScore', value: { _t: 2 as const, ref: 'binding', name: '$score' } } }],
             },
           },
           {
@@ -289,8 +290,8 @@ describe('AST and selector schemas', () => {
               internalDecisionId: 'decision:$dynamicRange',
               bind: '$dynamicRange',
               options: { query: 'players' },
-              min: { if: { when: true, then: 0, else: 1 } },
-              max: { ref: 'gvar', var: 'maxTargets' },
+              min: { _t: 4 as const, if: { when: true, then: 0, else: 1 } },
+              max: { _t: 2 as const, ref: 'gvar', var: 'maxTargets' },
             },
           },
         ],
@@ -305,12 +306,12 @@ describe('AST and selector schemas', () => {
                 {
                   bind: '$tok',
                   over: { query: 'tokensInZone', zone: 'board:none' },
-                  to: { zoneExpr: { concat: ['available-', { ref: 'tokenProp', token: '$tok', prop: 'faction' }, ':none'] } },
+                  to: { zoneExpr: { _t: 3 as const, concat: ['available-', { _t: 2 as const, ref: 'tokenProp', token: '$tok', prop: 'faction' }, ':none'] } },
                   countBind: '$removed',
                 },
               ],
               remainingBind: '$remaining',
-              in: [{ setVar: { scope: 'global', var: 'seen', value: { ref: 'binding', name: '$removed' } } }],
+              in: [{ setVar: { scope: 'global', var: 'seen', value: { _t: 2 as const, ref: 'binding', name: '$removed' } } }],
             },
           },
           {
@@ -320,7 +321,7 @@ describe('AST and selector schemas', () => {
               executeAsSeat: 'self',
               operationClass: 'limitedOperation',
               actionIds: ['operation'],
-              zoneFilter: { op: '==', left: { ref: 'zoneProp', zone: '$zone', prop: 'country' }, right: 'southVietnam' },
+              zoneFilter: { op: '==', left: { _t: 2 as const, ref: 'zoneProp', zone: '$zone', prop: 'country' }, right: 'southVietnam' },
               uses: 2,
               sequence: { batch: 'vc-ops', step: 1 },
             },
@@ -352,7 +353,7 @@ describe('AST and selector schemas', () => {
           { shiftMarker: { space: 'saigon:none', marker: 'support', delta: 1 } },
           { shiftMarker: { space: { zoneExpr: 'saigon:none' }, marker: 'support', delta: 1 } },
           { setGlobalMarker: { marker: 'cap_topGun', state: 'unshaded' } },
-          { flipGlobalMarker: { marker: { ref: 'binding', name: '$marker' }, stateA: 'unshaded', stateB: 'shaded' } },
+          { flipGlobalMarker: { marker: { _t: 2 as const, ref: 'binding', name: '$marker' }, stateA: 'unshaded', stateB: 'shaded' } },
           { shiftGlobalMarker: { marker: 'cap_topGun', delta: 1 } },
         ],
       },
@@ -429,8 +430,8 @@ describe('AST and selector schemas', () => {
           operationClass: 'operation',
           executionContext: {
             effectCode: 7,
-            allowedTargets: { scalarArray: [1, 2] },
-            computed: { op: '+', left: 4, right: 5 },
+            allowedTargets: { _t: 1, scalarArray: [1, 2] },
+            computed: { _t: 6, op: '+', left: 4, right: 5 },
           },
         },
       } as const;
@@ -662,7 +663,7 @@ describe('AST and selector schemas', () => {
   it('parses connectedZones query with traversal options', () => {
     const queries: OptionsQuery[] = [
       { query: 'connectedZones', zone: 'board:a' },
-      { query: 'connectedZones', zone: { zoneExpr: { ref: 'binding', name: '$zone' } } },
+      { query: 'connectedZones', zone: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$zone' } } },
       { query: 'connectedZones', zone: 'board:a', includeStart: true },
       { query: 'connectedZones', zone: 'board:a', allowTargetOutsideVia: true },
       { query: 'connectedZones', zone: 'board:a', maxDepth: 2 },
@@ -684,11 +685,11 @@ describe('AST and selector schemas', () => {
   it('parses adjacent spatial queries with ZoneRef selectors', () => {
     const adjacent: OptionsQuery = {
       query: 'adjacentZones',
-      zone: { zoneExpr: { ref: 'binding', name: '$zone' } },
+      zone: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$zone' } },
     };
     const tokensInAdjacent: OptionsQuery = {
       query: 'tokensInAdjacentZones',
-      zone: { zoneExpr: { ref: 'binding', name: '$zone' } },
+      zone: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$zone' } },
       filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'NVA' }] },
     };
 
@@ -699,7 +700,7 @@ describe('AST and selector schemas', () => {
   it('parses tokensInZone query with and without filter', () => {
     const queries: OptionsQuery[] = [
       { query: 'tokensInZone', zone: 'board:a' },
-      { query: 'tokensInZone', zone: { zoneExpr: { ref: 'binding', name: '$zone' } } },
+      { query: 'tokensInZone', zone: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$zone' } } },
       { query: 'tokensInZone', zone: 'board:a', filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US' }] } },
       { query: 'tokensInZone', zone: 'board:a', filter: { op: 'and', args: [{ prop: 'faction', op: 'neq', value: 'NVA' }] } },
       { query: 'tokensInZone', zone: 'board:a', filter: { op: 'and', args: [{ prop: 'faction', op: 'in', value: ['US', 'ARVN'] }] } },
@@ -780,7 +781,7 @@ describe('AST and selector schemas', () => {
         spaceFilter: {
           condition: {
             op: '==',
-            left: { ref: 'zoneProp', zone: '$zone', prop: 'country' },
+            left: { _t: 2 as const, ref: 'zoneProp', zone: '$zone', prop: 'country' },
             right: 'southVietnam',
           },
         },
@@ -803,7 +804,7 @@ describe('AST and selector schemas', () => {
                 source: { query: 'players' },
                 from: 1,
       bind: '$seatCandidate',
-      where: { op: '==', left: { ref: 'binding', name: '$seatCandidate' }, right: 1 },
+      where: { op: '==', left: { _t: 2 as const, ref: 'binding', name: '$seatCandidate' }, right: 1 },
     };
     assert.deepEqual(OptionsQuerySchema.parse(valid), valid);
 
@@ -812,7 +813,7 @@ describe('AST and selector schemas', () => {
                 source: { query: 'players' },
                 from: 1,
       bind: 'seatCandidate',
-      where: { op: '==', left: { ref: 'binding', name: '$seatCandidate' }, right: 1 },
+      where: { op: '==', left: { _t: 2 as const, ref: 'binding', name: '$seatCandidate' }, right: 1 },
     });
     assert.equal(nonCanonical.success, false);
 
@@ -821,7 +822,7 @@ describe('AST and selector schemas', () => {
                 source: { query: 'players' },
                 from: 1,
       bind: '   ',
-      where: { op: '==', left: { ref: 'binding', name: '$seatCandidate' }, right: 1 },
+      where: { op: '==', left: { _t: 2 as const, ref: 'binding', name: '$seatCandidate' }, right: 1 },
     });
     assert.equal(whitespaceOnly.success, false);
 
@@ -829,7 +830,7 @@ describe('AST and selector schemas', () => {
       query: 'nextInOrderByCondition',
                 from: 1,
       bind: '$seatCandidate',
-      where: { op: '==', left: { ref: 'binding', name: '$seatCandidate' }, right: 1 },
+      where: { op: '==', left: { _t: 2 as const, ref: 'binding', name: '$seatCandidate' }, right: 1 },
     });
     assert.equal(missingSource.success, false);
   });
@@ -1001,8 +1002,8 @@ describe('AST and selector schemas', () => {
   it('parses intsInRange query with dynamic ValueExpr bounds', () => {
     const query: OptionsQuery = {
       query: 'intsInRange',
-      min: { ref: 'binding', name: '$min' },
-      max: { op: '+', left: { ref: 'binding', name: '$min' }, right: 2 },
+      min: { _t: 2 as const, ref: 'binding', name: '$min' },
+      max: { _t: 6 as const, op: '+', left: { _t: 2 as const, ref: 'binding', name: '$min' }, right: 2 },
     };
     assert.deepEqual(OptionsQuerySchema.parse(query), query);
   });

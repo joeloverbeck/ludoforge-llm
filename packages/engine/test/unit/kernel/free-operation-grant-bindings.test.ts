@@ -9,9 +9,10 @@ import { asActionId, asPhaseId, asPlayerId } from '../../../src/kernel/branded.j
 import { formatDecisionKey } from '../../../src/kernel/decision-scope.js';
 import type { GameDef, GameState, Move, TurnFlowPendingFreeOperationGrant } from '../../../src/kernel/types.js';
 import { requireCardDrivenRuntime, withIsolatedFreeOperationGrant, withPendingFreeOperationGrant } from '../../helpers/turn-order-helpers.js';
+import { asTaggedGameDef } from '../../helpers/gamedef-fixtures.js';
 
 const createExecutionContextBindingDef = (): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'free-op-grant-bindings-unit', players: { min: 2, max: 2 }, maxTriggerDepth: 4 },
     seats: [{ id: 'US' }, { id: 'NVA' }],
     constants: {},
@@ -98,7 +99,7 @@ const createExecutionContextBindingDef = (): GameDef =>
     ],
     triggers: [],
     terminal: { conditions: [] },
-  }) as unknown as GameDef;
+  });
 
 const createExecutionContextBindingState = (): GameState =>
   ({
@@ -182,7 +183,7 @@ describe('free-operation grant test helpers', () => {
       seat: 'NVA',
       operationClass: 'limitedOperation',
       actionIds: ['operation'],
-      zoneFilter: { op: '==', left: { ref: 'zoneProp', zone: '$zone', prop: 'id' }, right: 'boardCambodia:none' },
+      zoneFilter: { op: '==', left: { _t: 2, ref: 'zoneProp', zone: '$zone', prop: 'id' }, right: 'boardCambodia:none' },
       moveZoneBindings: ['$targetSpaces'],
       allowDuringMonsoon: true,
       executionContext: { zoneProfile: 'cambodia-only' },

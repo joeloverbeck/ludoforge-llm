@@ -296,8 +296,8 @@ describe('effects runtime foundation', () => {
             {
               moveToken: {
                 token: '$__token_doc_actions_0_effects_0_distributeTokens',
-                from: { zoneExpr: { ref: 'tokenZone', token: '$__token_doc_actions_0_effects_0_distributeTokens' } },
-                to: { zoneExpr: { ref: 'binding', name: '$__destination_doc_actions_0_effects_0_distributeTokens' } },
+                from: { zoneExpr: { _t: 2 as const, ref: 'tokenZone', token: '$__token_doc_actions_0_effects_0_distributeTokens' } },
+                to: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$__destination_doc_actions_0_effects_0_distributeTokens' } },
               },
             },
           ],

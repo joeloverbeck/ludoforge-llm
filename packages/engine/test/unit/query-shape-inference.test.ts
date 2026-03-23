@@ -113,10 +113,11 @@ describe('query shape inference', () => {
   it('infers value runtime shapes for refs and conditional expressions', () => {
     const shapes = inferValueRuntimeShapes(
       {
+        _t: 4 as const,
         if: {
           when: true,
-          then: { ref: 'gvar', var: 'money' },
-          else: { ref: 'assetField', row: '$row', tableId: 't1', field: 'enabled' },
+          then: { _t: 2 as const, ref: 'gvar', var: 'money' },
+          else: { _t: 2 as const, ref: 'assetField', row: '$row', tableId: 't1', field: 'enabled' },
         },
       },
       {

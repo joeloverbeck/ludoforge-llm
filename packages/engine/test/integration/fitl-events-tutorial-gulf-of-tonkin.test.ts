@@ -123,8 +123,10 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
         scope: 'global',
         var: 'aid',
         delta: {
+          _t: 6,
           op: '*',
           left: {
+              _t: 5,
               aggregate: {
                 op: 'count',
                 query: {

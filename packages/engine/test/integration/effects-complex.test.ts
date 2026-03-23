@@ -125,7 +125,7 @@ describe('effects complex integration chains', () => {
         let: {
           bind: '$base',
           value: 2,
-          in: [{ addVar: { scope: 'global', var: 'score', delta: { ref: 'binding', name: '$base' } } }],
+          in: [{ addVar: { scope: 'global', var: 'score', delta: { _t: 2 as const, ref: 'binding', name: '$base' } } }],
         },
       },
       {
@@ -136,8 +136,8 @@ describe('effects complex integration chains', () => {
           effects: [
             {
               if: {
-                when: { op: '>', left: { ref: 'binding', name: '$n' }, right: 1 },
-                then: [{ addVar: { scope: 'global', var: 'score', delta: { ref: 'binding', name: '$n' } } }],
+                when: { op: '>', left: { _t: 2 as const, ref: 'binding', name: '$n' }, right: 1 },
+                then: [{ addVar: { scope: 'global', var: 'score', delta: { _t: 2 as const, ref: 'binding', name: '$n' } } }],
                 else: [{ addVar: { scope: 'global', var: 'score', delta: 5 } }],
               },
             },
@@ -146,7 +146,7 @@ describe('effects complex integration chains', () => {
       },
       { moveToken: { token: '$move', from: 'deck:none', to: 'discard:none', position: 'bottom' } },
       { shuffle: { zone: 'discard:none' } },
-      { createToken: { type: 'card', zone: 'hand:0', props: { rank: 9, label: { ref: 'binding', name: '$label' } } } },
+      { createToken: { type: 'card', zone: 'hand:0', props: { rank: 9, label: { _t: 2 as const, ref: 'binding', name: '$label' } } } },
       { destroyToken: { token: '$destroy' } },
     ];
 
@@ -183,13 +183,13 @@ describe('effects complex integration chains', () => {
                 effects: [
                   {
                     if: {
-                      when: { op: '>', left: { ref: 'binding', name: '$n' }, right: 2 },
+                      when: { op: '>', left: { _t: 2 as const, ref: 'binding', name: '$n' }, right: 2 },
                       then: [
                         {
                           addVar: {
                             scope: 'global',
                             var: 'count',
-                            delta: { op: '+', left: { ref: 'binding', name: '$n' }, right: { ref: 'binding', name: '$bonus' } },
+                            delta: { _t: 6 as const, op: '+', left: { _t: 2 as const, ref: 'binding', name: '$n' }, right: { _t: 2 as const, ref: 'binding', name: '$bonus' } },
                           },
                         },
                       ],

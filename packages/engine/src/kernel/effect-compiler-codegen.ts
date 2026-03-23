@@ -35,6 +35,7 @@ import { toTraceVarChangePayload, toVarChangedEvent } from './scoped-var-runtime
 import { emitVarChangeTraceIfChanged } from './var-change-trace.js';
 import { clampIntVarValue } from './var-runtime-utils.js';
 import { resolveControlFlowIterationLimit } from './control-flow-limit.js';
+import { VALUE_EXPR_TAG } from './types.js';
 import type { EffectAST, GameState, IntVariableDef, Reference, Rng, TriggerEvent } from './types.js';
 
 export interface CompiledEffectFragment {
@@ -125,14 +126,15 @@ const toReference = (
   pattern: Exclude<SimpleValuePattern | SimpleNumericValuePattern, { readonly kind: 'literal' | 'binding' }>,
 ): Reference => {
   if (pattern.kind === 'gvar') {
-    return { ref: 'gvar', var: pattern.varName };
+    return { _t: VALUE_EXPR_TAG.REF, ref: 'gvar', var: pattern.varName } as Reference;
   }
 
   return {
+    _t: VALUE_EXPR_TAG.REF,
     ref: 'pvar',
     player: pattern.player,
     var: pattern.varName,
-  };
+  } as Reference;
 };
 
 const emitVarChangeArtifacts = (
@@ -210,7 +212,7 @@ export const compileValueAccessor = (
   }
 
   if (pattern.kind === 'binding') {
-    const reference: Reference = { ref: 'binding', name: pattern.name, ...(pattern.displayName === undefined ? {} : { displayName: pattern.displayName }) };
+    const reference: Reference = { _t: VALUE_EXPR_TAG.REF, ref: 'binding', name: pattern.name, ...(pattern.displayName === undefined ? {} : { displayName: pattern.displayName }) } as Reference;
     return (state, bindings, ctx) => resolveRef(reference, createCompiledEvalContext(state, bindings, ctx));
   }
 

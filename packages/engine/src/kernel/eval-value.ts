@@ -4,7 +4,8 @@ import { divisionByZeroError, typeMismatchError } from './eval-error.js';
 import { evalQuery } from './eval-query.js';
 import { computeTierAdmissibility } from './prioritized-tier-legality.js';
 import { resolveRef } from './resolve-ref.js';
-import type { ScalarArrayValue, ScalarValue, Token, ValueExpr } from './types.js';
+import { VALUE_EXPR_TAG } from './types.js';
+import type { ScalarArrayValue, ScalarValue, Token, ValueExpr, ValueExprTag } from './types.js';
 
 function isSafeIntegerNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && Number.isSafeInteger(value);
@@ -124,100 +125,75 @@ export function evalIntegerValue(expr: ValueExpr, ctx: ReadContext, label?: stri
   return result;
 }
 
-export function evalValue(expr: ValueExpr, ctx: ReadContext): ScalarValue | ScalarArrayValue {
-  if (typeof expr === 'number' || typeof expr === 'boolean' || typeof expr === 'string') {
-    return expr;
+function evalConcat(expr: Extract<ValueExpr, { readonly _t: 3 }>, ctx: ReadContext): ScalarValue | ScalarArrayValue {
+  const children = expr.concat;
+  const len = children.length;
+  let allScalar = true;
+  let allArray = true;
+  const parts: (ScalarValue | ScalarArrayValue)[] = new Array(len);
+  for (let i = 0; i < len; i++) {
+    const val = evalValue(children[i]!, ctx);
+    parts[i] = val;
+    if (Array.isArray(val)) allScalar = false;
+    else allArray = false;
   }
-  // Profiling: count by expression type
-  const profiler = (ctx as { readonly profiler?: import('./perf-profiler.js').PerfProfiler }).profiler;
-  if (profiler !== undefined) {
-    const exprType = 'ref' in expr ? `val:ref:${'ref' in expr ? (expr as { ref: unknown }).ref : '?'}`
-      : 'aggregate' in expr ? 'val:aggregate'
-      : 'if' in expr ? 'val:if'
-      : 'concat' in expr ? 'val:concat'
-      : 'op' in expr ? `val:op:${(expr as { op: string }).op}`
-      : 'scalarArray' in expr ? 'val:scalarArray'
-      : 'val:other';
-    const bucket = profiler.dynamic.get(exprType);
-    if (bucket !== undefined) { bucket.count += 1; }
-    else { profiler.dynamic.set(exprType, { count: 1, totalMs: 0 }); }
+  if (allScalar) {
+    let result = '';
+    for (let i = 0; i < len; i++) result += String(parts[i]);
+    return result;
   }
-  if ('scalarArray' in expr) {
-    return expr.scalarArray;
+  if (allArray) {
+    return (parts as ScalarArrayValue[]).flatMap((part) => part);
   }
+  throw typeMismatchError('concat expressions must not mix scalar and scalar-array parts', {
+    expr,
+    parts,
+  });
+}
 
-  if ('ref' in expr) {
-    return resolveRef(expr, ctx);
-  }
+function evalAggregate(expr: Extract<ValueExpr, { readonly _t: 5 }>, ctx: ReadContext): number {
+  const { aggregate } = expr;
 
-  if (!Array.isArray(expr) && 'concat' in expr) {
-    const parts = expr.concat.map((child) => evalValue(child, ctx));
-    const arrayParts = parts.filter(Array.isArray);
-    if (arrayParts.length === 0) {
-      return parts.map((part) => String(part)).join('');
-    }
-    if (arrayParts.length !== parts.length) {
-      throw typeMismatchError('concat expressions must not mix scalar and scalar-array parts', {
-        expr,
-        parts,
-      });
-    }
-    return parts.flatMap((part) => part);
+  if (aggregate.op === 'count') {
+    return countAggregateItems(aggregate, ctx);
   }
 
-  if ('if' in expr) {
-    const condResult = evalCondition(expr.if.when, ctx);
-    return condResult ? evalValue(expr.if.then, ctx) : evalValue(expr.if.else, ctx);
+  const items = evalQuery(aggregate.query, ctx);
+
+  if (items.length === 0) {
+    return 0;
   }
 
-  if ('aggregate' in expr) {
-    const { aggregate } = expr;
+  // Inline aggregation to avoid intermediate values array + per-item context spreads.
+  // Uses a single mutable bindings object updated per item (safe: evalValue is synchronous).
+  const itemBindings = { ...ctx.bindings };
+  const itemCtx = { ...ctx, bindings: itemBindings };
+  const op = aggregate.op;
+  let accumulator = op === 'min' ? Number.MAX_SAFE_INTEGER : op === 'max' ? Number.MIN_SAFE_INTEGER : 0;
 
-    if (aggregate.op === 'count') {
-      return countAggregateItems(aggregate, ctx);
-    }
-
-    const items = evalQuery(aggregate.query, ctx);
-
-    if (items.length === 0) {
-      return 0;
-    }
-
-    const values = items.map((item, index) => {
-      const value = evalValue(aggregate.valueExpr, {
-        ...ctx,
-        bindings: {
-          ...ctx.bindings,
-          [aggregate.bind]: item,
-        },
-      });
-      return expectSafeInteger(value, 'Aggregate valueExpr must evaluate to a finite safe integer', {
-        expr,
-        index,
-        bind: aggregate.bind,
-        value,
-      });
+  for (let index = 0; index < items.length; index++) {
+    itemBindings[aggregate.bind] = items[index]!;
+    const value = evalValue(aggregate.valueExpr, itemCtx);
+    const intValue = expectSafeInteger(value, 'Aggregate valueExpr must evaluate to a finite safe integer', {
+      expr,
+      index,
+      bind: aggregate.bind,
+      value,
     });
-
-    if (aggregate.op === 'sum') {
-      const total = values.reduce((acc, value) => acc + value, 0);
-      return expectSafeInteger(total, 'Aggregate sum result must be a finite safe integer', {
-        expr,
-        values,
-      });
-    }
-
-    if (aggregate.op === 'min') {
-      return Math.min(...values);
-    }
-
-    return Math.max(...values);
+    if (op === 'sum') accumulator += intValue;
+    else if (op === 'min') { if (intValue < accumulator) accumulator = intValue; }
+    else { if (intValue > accumulator) accumulator = intValue; }
   }
 
-  if (!('op' in expr)) {
-    return expr;
+  if (op === 'sum') {
+    return expectSafeInteger(accumulator, 'Aggregate sum result must be a finite safe integer', {
+      expr,
+    });
   }
+  return accumulator;
+}
 
+function evalArithmetic(expr: Extract<ValueExpr, { readonly _t: 6 }>, ctx: ReadContext): number {
   const left = expectSafeInteger(evalValue(expr.left, ctx), 'Arithmetic operands must be finite safe integers', {
     expr,
     side: 'left',
@@ -263,4 +239,23 @@ export function evalValue(expr: ValueExpr, ctx: ReadContext): ScalarValue | Scal
 
   const result = expr.op === '+' ? left + right : expr.op === '-' ? left - right : left * right;
   return expectSafeInteger(result, 'Arithmetic result must be a finite safe integer', { expr, left, right, result });
+}
+
+export function evalValue(expr: ValueExpr, ctx: ReadContext): ScalarValue | ScalarArrayValue {
+  if (typeof expr === 'number' || typeof expr === 'boolean' || typeof expr === 'string') {
+    return expr;
+  }
+  switch ((expr as { readonly _t: ValueExprTag })._t) {
+    case VALUE_EXPR_TAG.SCALAR_ARRAY: return (expr as Extract<ValueExpr, { readonly _t: 1 }>).scalarArray;
+    case VALUE_EXPR_TAG.REF: return resolveRef(expr as Extract<ValueExpr, { readonly _t: 2 }>, ctx);
+    case VALUE_EXPR_TAG.CONCAT: return evalConcat(expr as Extract<ValueExpr, { readonly _t: 3 }>, ctx);
+    case VALUE_EXPR_TAG.IF: {
+      const ifExpr = (expr as Extract<ValueExpr, { readonly _t: 4 }>).if;
+      return evalCondition(ifExpr.when, ctx) ? evalValue(ifExpr.then, ctx) : evalValue(ifExpr.else, ctx);
+    }
+    case VALUE_EXPR_TAG.AGGREGATE: return evalAggregate(expr as Extract<ValueExpr, { readonly _t: 5 }>, ctx);
+    case VALUE_EXPR_TAG.OP: return evalArithmetic(expr as Extract<ValueExpr, { readonly _t: 6 }>, ctx);
+    default:
+      throw new Error(`Unknown ValueExpr tag: ${(expr as { readonly _t: number })._t}`);
+  }
 }

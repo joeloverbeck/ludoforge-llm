@@ -144,6 +144,7 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
         zoneFilter: {
           op: '>',
               left: {
+                _t: 5,
                 aggregate: {
                   op: 'count',
                       query: { query: 'tokensInZone', zone: '$zone', filter: { prop: 'faction', op: 'eq', value: 'NVA' } },
@@ -243,6 +244,7 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
       zoneFilter: {
         op: '==',
         left: {
+          _t: 2,
           ref: 'binding',
           name: '$zone',
         },
@@ -264,6 +266,7 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
       },
       executionContext: {
         selectedSpaces: {
+          _t: 2,
           ref: 'binding',
           name: '$voNguyenGiapShadedSpace',
         },
@@ -271,10 +274,12 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
       zoneFilter: {
         op: 'in',
         item: {
+          _t: 2,
           ref: 'binding',
           name: '$zone',
         },
         set: {
+          _t: 2,
           ref: 'grantContext',
           key: 'selectedSpaces',
         },
@@ -318,6 +323,7 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
     assert.deepEqual(grants[1]?.zoneFilter, {
       op: '==',
       left: {
+        _t: 5,
         aggregate: {
           op: 'count',
           query: {

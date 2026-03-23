@@ -256,6 +256,7 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
     assert.deepEqual((card?.shaded?.effects?.[1] as { let?: unknown })?.let, {
       bind: '$trailValue',
       value: {
+        _t: 2,
         ref: 'gvar',
         var: 'trail',
       },
@@ -265,9 +266,11 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
             scope: 'global',
             var: 'nvaResources',
             delta: {
+              _t: 6,
               op: '*',
               left: 3,
               right: {
+                _t: 2,
                 ref: 'binding',
                 name: '$trailValue',
               },
@@ -386,11 +389,11 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
       shadedEffects[1] as { let?: { bind?: string; value?: unknown; in?: Array<{ addVar?: unknown }> } }
     )?.let;
     assert.equal(shadedTrailLet?.bind, '$trailValue');
-    assert.deepEqual(shadedTrailLet?.value, { ref: 'gvar', var: 'trail' });
+    assert.deepEqual(shadedTrailLet?.value, { _t: 2, ref: 'gvar', var: 'trail' });
     assert.deepEqual(shadedTrailLet?.in?.[0]?.addVar, {
       scope: 'global',
       var: 'vcResources',
-      delta: { ref: 'binding', name: '$trailValue' },
+      delta: { _t: 2, ref: 'binding', name: '$trailValue' },
     });
   });
 
@@ -425,7 +428,7 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
     assert.deepEqual(unshadedChoose?.options?.markers, [...RAND_US_CAPABILITY_MARKERS]);
     assert.deepEqual(unshadedChoose?.options?.states, ['shaded']);
     assert.deepEqual((card?.unshaded?.effects?.[1] as { flipGlobalMarker?: unknown })?.flipGlobalMarker, {
-      marker: { ref: 'binding', name: '$randCapabilityMarker' },
+      marker: { _t: 2, ref: 'binding', name: '$randCapabilityMarker' },
       stateA: 'unshaded',
       stateB: 'shaded',
     });
@@ -445,7 +448,7 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
     assert.deepEqual(shadedChoose?.options?.markers, [...RAND_US_CAPABILITY_MARKERS]);
     assert.deepEqual(shadedChoose?.options?.states, ['unshaded']);
     assert.deepEqual((card?.shaded?.effects?.[1] as { flipGlobalMarker?: unknown })?.flipGlobalMarker, {
-      marker: { ref: 'binding', name: '$randCapabilityMarker' },
+      marker: { _t: 2, ref: 'binding', name: '$randCapabilityMarker' },
       stateA: 'unshaded',
       stateB: 'shaded',
     });
@@ -629,7 +632,7 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
     assert.deepEqual(card?.shaded?.eligibilityOverrides, [
       {
         target: { kind: 'active' },
-        when: { op: '==', left: { ref: 'activeSeat' }, right: 'NVA' },
+        when: { op: '==', left: { _t: 2, ref: 'activeSeat' }, right: 'NVA' },
         eligible: true,
         windowId: 'remain-eligible',
       },
@@ -759,7 +762,7 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
     assert.deepEqual(resolveEventEligibilityOverrides(def, nvaSetup, nvaMove), [
       {
         target: { kind: 'active' },
-        when: { op: '==', left: { ref: 'activeSeat' }, right: 'NVA' },
+        when: { op: '==', left: { _t: 2, ref: 'activeSeat' }, right: 'NVA' },
         eligible: true,
         windowId: 'remain-eligible',
       },

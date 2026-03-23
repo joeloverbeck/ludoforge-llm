@@ -150,6 +150,7 @@ describe('FITL card-74 Lam Son 719', () => {
       when: {
         op: '>',
         left: {
+          _t: 5,
           aggregate: {
             op: 'count',
             query: {
@@ -179,12 +180,12 @@ describe('FITL card-74 Lam Son 719', () => {
             operationClass: 'limitedOperation',
             moveZoneBindings: ['$targetSpaces', '$targetLoCs'],
             executionContext: {
-              selectedSpace: { ref: 'binding', name: '$lamSon719LaosSpace' },
+              selectedSpace: { _t: 2, ref: 'binding', name: '$lamSon719LaosSpace' },
             },
             zoneFilter: {
               op: '==',
-              left: { ref: 'zoneProp', zone: '$zone', prop: 'id' },
-              right: { ref: 'grantContext', key: 'selectedSpace' },
+              left: { _t: 2, ref: 'zoneProp', zone: '$zone', prop: 'id' },
+              right: { _t: 2, ref: 'grantContext', key: 'selectedSpace' },
             },
           },
         },
@@ -197,9 +198,11 @@ describe('FITL card-74 Lam Son 719', () => {
           scope: 'global',
           var: 'nvaResources',
           delta: {
+            _t: 6,
             op: '+',
             left: 6,
             right: {
+              _t: 5,
               aggregate: {
                 op: 'count',
                 query: {
@@ -207,7 +210,7 @@ describe('FITL card-74 Lam Son 719', () => {
                   spaceFilter: {
                     condition: {
                       op: '==',
-                      left: { ref: 'zoneProp', zone: '$zone', prop: 'country' },
+                      left: { _t: 2, ref: 'zoneProp', zone: '$zone', prop: 'country' },
                       right: 'laos',
                     },
                   },

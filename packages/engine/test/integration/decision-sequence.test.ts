@@ -20,6 +20,8 @@ import {
 import { RandomAgent } from '../../src/agents/random-agent.js';
 import { GreedyAgent } from '../../src/agents/greedy-agent.js';
 import { completeTemplateMove } from '../../src/kernel/move-completion.js';
+import { asTaggedGameDef } from '../helpers/gamedef-fixtures.js';
+import { tagValueExprs } from '../helpers/tag-value-exprs.js';
 
 // ---------------------------------------------------------------------------
 // Synthetic fixture: 2 players, reserve with 3 tokens, deploy operation + simple action
@@ -96,7 +98,7 @@ const DEPLOY_PROFILE: ActionPipelineDef = {
 } as unknown as ActionPipelineDef;
 
 const createDecisionSequenceDef = (): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'decision-sequence-int', players: { min: 2, max: 2 } },
     constants: {},
     globalVars: [
@@ -142,7 +144,7 @@ phase: [PHASE_MAIN],
     ],
     triggers: [],
     terminal: { conditions: [] },
-  }) as unknown as GameDef;
+  });
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -187,7 +189,7 @@ const runGreedyAgentTurn = (
 describe('decision sequence integration', () => {
   it('keeps satisfiable templates while evaluated legality marks unsatisfiable first-branch options illegal', () => {
     const actionId = asActionId('branchingDeploy');
-    const def = {
+    const def = asTaggedGameDef({
       metadata: { id: 'decision-sequence-branching-int', players: { min: 2, max: 2 } },
       constants: {},
       globalVars: [],
@@ -258,7 +260,7 @@ describe('decision sequence integration', () => {
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
 
     const state = initialState(def, 123, 2).state;
     const template = findTemplateMove(legalMoves(def, state), actionId);
@@ -277,7 +279,7 @@ describe('decision sequence integration', () => {
 
   it('keeps stage-bound cost validation aligned between evaluated choices and execution', () => {
     const actionId = asActionId('stageGatedDeploy');
-    const def = {
+    const def = asTaggedGameDef({
       metadata: { id: 'decision-sequence-stage-gated-int', players: { min: 2, max: 2 } },
       constants: {},
       globalVars: [{ name: 'score', type: 'int', init: 0, min: 0, max: 100 }],
@@ -338,7 +340,7 @@ describe('decision sequence integration', () => {
       ],
       triggers: [],
       terminal: { conditions: [] },
-    } as unknown as GameDef;
+    });
 
     const state = initialState(def, 123, 2).state;
     const evaluated = legalChoicesEvaluate(def, state, { actionId, params: {} });
@@ -458,7 +460,7 @@ describe('decision sequence integration', () => {
   it('completeTemplateMove persists a sampled stochastic binding before branch-local completion', () => {
     const stochasticActionId = asActionId('stochasticDeploy');
     const baseDef = createDecisionSequenceDef();
-    const def: GameDef = {
+    const def: GameDef = tagValueExprs({
       ...baseDef,
       actions: [
         ...baseDef.actions.filter((action) => action.id !== stochasticActionId),
@@ -511,7 +513,7 @@ describe('decision sequence integration', () => {
           atomicity: 'atomic',
         },
       ],
-    };
+    }) as GameDef;
 
     const state = initialState(def, 42, 2).state;
     const template: Move = { actionId: stochasticActionId, params: {} };

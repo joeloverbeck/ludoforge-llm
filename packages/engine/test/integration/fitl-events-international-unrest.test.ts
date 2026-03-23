@@ -128,6 +128,7 @@ describe('FITL card-57 International Unrest', () => {
             scope: 'global',
             var: 'nvaResources',
             delta: {
+              _t: 2,
               ref: 'binding',
               name: '$dieRoll',
             },

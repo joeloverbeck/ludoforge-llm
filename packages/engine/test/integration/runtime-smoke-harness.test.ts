@@ -9,9 +9,10 @@ import {
   selectorPolicy,
   type RuntimeSmokeInvariant,
 } from '../helpers/runtime-smoke-harness.js';
+import { asTaggedGameDef } from '../helpers/gamedef-fixtures.js';
 
 const createHarnessFixtureDef = (): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'runtime-smoke-harness-fixture', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
     constants: {},
     globalVars: [{ name: 'score', type: 'int', init: 0, min: 0, max: 100 }],
@@ -48,10 +49,10 @@ const createHarnessFixtureDef = (): GameDef =>
     terminal: {
       conditions: [{ when: { op: '>=', left: { ref: 'gvar', var: 'score' }, right: 12 }, result: { type: 'draw' } }],
     },
-  }) as unknown as GameDef;
+  });
 
 const createUnresolvableDecisionFixtureDef = (): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'runtime-smoke-harness-unresolved-fixture', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
     constants: {},
     globalVars: [{ name: 'score', type: 'int', init: 0, min: 0, max: 100 }],
@@ -83,7 +84,7 @@ const createUnresolvableDecisionFixtureDef = (): GameDef =>
     ],
     triggers: [],
     terminal: { conditions: [] },
-  }) as unknown as GameDef;
+  });
 
 describe('runtime smoke harness integration', () => {
   it('proves policy determinism and invariant plug-in wiring across policy types', () => {

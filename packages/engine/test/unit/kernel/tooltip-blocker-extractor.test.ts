@@ -38,7 +38,7 @@ const mockEvaluator = (results: Map<ConditionAST, boolean>) =>
 describe('extractBlockers', () => {
   describe('satisfied condition', () => {
     it('returns satisfied with no blockers when condition passes', () => {
-      const cond: ConditionAST = { op: '>=', left: { ref: 'gvar', var: 'aid' }, right: 3 };
+      const cond: ConditionAST = { op: '>=', left: { _t: 2, ref: 'gvar', var: 'aid' }, right: 3 };
       const result = extractBlockers(cond, () => true, undefined);
       assert.equal(result.satisfied, true);
       assert.equal(result.blockers.length, 0);
@@ -70,7 +70,7 @@ describe('extractBlockers', () => {
 
   describe('leaf comparisons', () => {
     it('formats >= comparison with verbalization labels', () => {
-      const cond: ConditionAST = { op: '>=', left: { ref: 'gvar', var: 'aid' }, right: 3 };
+      const cond: ConditionAST = { op: '>=', left: { _t: 2, ref: 'gvar', var: 'aid' }, right: 3 };
       const result = extractBlockers(cond, () => false, MOCK_VERB);
       assert.equal(result.satisfied, false);
       assert.equal(result.blockers.length, 1);
@@ -79,19 +79,19 @@ describe('extractBlockers', () => {
     });
 
     it('formats == comparison', () => {
-      const cond: ConditionAST = { op: '==', left: { ref: 'gvar', var: 'aid' }, right: 0 };
+      const cond: ConditionAST = { op: '==', left: { _t: 2, ref: 'gvar', var: 'aid' }, right: 0 };
       const result = extractBlockers(cond, () => false, MOCK_VERB);
       assert.equal(result.blockers[0]!.description, 'Need Aid = 0');
     });
 
     it('formats != comparison', () => {
-      const cond: ConditionAST = { op: '!=', left: { ref: 'gvar', var: 'aid' }, right: 0 };
+      const cond: ConditionAST = { op: '!=', left: { _t: 2, ref: 'gvar', var: 'aid' }, right: 0 };
       const result = extractBlockers(cond, () => false, MOCK_VERB);
       assert.ok(result.blockers[0]!.description.includes('\u2260'));
     });
 
     it('formats < comparison', () => {
-      const cond: ConditionAST = { op: '<', left: { ref: 'gvar', var: 'aid' }, right: 5 };
+      const cond: ConditionAST = { op: '<', left: { _t: 2, ref: 'gvar', var: 'aid' }, right: 5 };
       const result = extractBlockers(cond, () => false, undefined);
       assert.equal(result.blockers[0]!.description, 'Need Aid < 5');
     });
@@ -133,9 +133,9 @@ describe('extractBlockers', () => {
 
   describe('and walk rule', () => {
     it('collects only failing children from and', () => {
-      const child1: ConditionAST = { op: '>=', left: { ref: 'gvar', var: 'aid' }, right: 3 };
-      const child2: ConditionAST = { op: '>=', left: { ref: 'gvar', var: 'aid' }, right: 5 };
-      const child3: ConditionAST = { op: '>=', left: { ref: 'gvar', var: 'aid' }, right: 10 };
+      const child1: ConditionAST = { op: '>=', left: { _t: 2, ref: 'gvar', var: 'aid' }, right: 3 };
+      const child2: ConditionAST = { op: '>=', left: { _t: 2, ref: 'gvar', var: 'aid' }, right: 5 };
+      const child3: ConditionAST = { op: '>=', left: { _t: 2, ref: 'gvar', var: 'aid' }, right: 10 };
       const cond: ConditionAST = { op: 'and', args: [child1, child2, child3] };
 
       const results = new Map<ConditionAST, boolean>();
@@ -152,7 +152,7 @@ describe('extractBlockers', () => {
     });
 
     it('returns no blockers when and is satisfied', () => {
-      const child1: ConditionAST = { op: '>=', left: { ref: 'gvar', var: 'aid' }, right: 3 };
+      const child1: ConditionAST = { op: '>=', left: { _t: 2, ref: 'gvar', var: 'aid' }, right: 3 };
       const cond: ConditionAST = { op: 'and', args: [child1] };
       const result = extractBlockers(cond, () => true, MOCK_VERB);
       assert.equal(result.satisfied, true);
@@ -167,7 +167,7 @@ describe('extractBlockers', () => {
   describe('or walk rule', () => {
     it('shows smallest failing alternative', () => {
       // Alternative 1: single leaf (size 1)
-      const alt1: ConditionAST = { op: '>=', left: { ref: 'gvar', var: 'aid' }, right: 3 };
+      const alt1: ConditionAST = { op: '>=', left: { _t: 2, ref: 'gvar', var: 'aid' }, right: 3 };
       // Alternative 2: and with 3 children (size 3)
       const alt2Child1: ConditionAST = { op: '>=', left: 1, right: 2 };
       const alt2Child2: ConditionAST = { op: '>=', left: 3, right: 4 };
@@ -191,8 +191,8 @@ describe('extractBlockers', () => {
     });
 
     it('returns no blockers when one alternative passes', () => {
-      const alt1: ConditionAST = { op: '>=', left: { ref: 'gvar', var: 'aid' }, right: 3 };
-      const alt2: ConditionAST = { op: '>=', left: { ref: 'gvar', var: 'aid' }, right: 5 };
+      const alt1: ConditionAST = { op: '>=', left: { _t: 2, ref: 'gvar', var: 'aid' }, right: 3 };
+      const alt2: ConditionAST = { op: '>=', left: { _t: 2, ref: 'gvar', var: 'aid' }, right: 5 };
       const cond: ConditionAST = { op: 'or', args: [alt1, alt2] };
 
       const results = new Map<ConditionAST, boolean>();
@@ -211,7 +211,7 @@ describe('extractBlockers', () => {
 
   describe('not walk rule', () => {
     it('describes positive condition violated by not', () => {
-      const inner: ConditionAST = { op: '==', left: { ref: 'gvar', var: 'aid' }, right: 0 };
+      const inner: ConditionAST = { op: '==', left: { _t: 2, ref: 'gvar', var: 'aid' }, right: 0 };
       const cond: ConditionAST = { op: 'not', arg: inner };
 
       const results = new Map<ConditionAST, boolean>();
@@ -233,7 +233,7 @@ describe('extractBlockers', () => {
     });
 
     it('describes not(!=) as equality', () => {
-      const inner: ConditionAST = { op: '!=', left: { ref: 'gvar', var: 'aid' }, right: 0 };
+      const inner: ConditionAST = { op: '!=', left: { _t: 2, ref: 'gvar', var: 'aid' }, right: 0 };
       const cond: ConditionAST = { op: 'not', arg: inner };
 
       const result = extractBlockers(cond, () => false, MOCK_VERB);
@@ -241,7 +241,7 @@ describe('extractBlockers', () => {
     });
 
     it('describes not(>=) as less-than', () => {
-      const inner: ConditionAST = { op: '>=', left: { ref: 'gvar', var: 'aid' }, right: 3 };
+      const inner: ConditionAST = { op: '>=', left: { _t: 2, ref: 'gvar', var: 'aid' }, right: 3 };
       const cond: ConditionAST = { op: 'not', arg: inner };
 
       const result = extractBlockers(cond, () => false, MOCK_VERB);
@@ -249,7 +249,7 @@ describe('extractBlockers', () => {
     });
 
     it('describes not(<) as greater-or-equal', () => {
-      const inner: ConditionAST = { op: '<', left: { ref: 'gvar', var: 'aid' }, right: 5 };
+      const inner: ConditionAST = { op: '<', left: { _t: 2, ref: 'gvar', var: 'aid' }, right: 5 };
       const cond: ConditionAST = { op: 'not', arg: inner };
 
       const result = extractBlockers(cond, () => false, MOCK_VERB);
@@ -257,7 +257,7 @@ describe('extractBlockers', () => {
     });
 
     it('describes not(<=) as greater-than', () => {
-      const inner: ConditionAST = { op: '<=', left: { ref: 'gvar', var: 'aid' }, right: 5 };
+      const inner: ConditionAST = { op: '<=', left: { _t: 2, ref: 'gvar', var: 'aid' }, right: 5 };
       const cond: ConditionAST = { op: 'not', arg: inner };
 
       const result = extractBlockers(cond, () => false, MOCK_VERB);
@@ -265,7 +265,7 @@ describe('extractBlockers', () => {
     });
 
     it('describes not(>) as less-or-equal', () => {
-      const inner: ConditionAST = { op: '>', left: { ref: 'gvar', var: 'aid' }, right: 5 };
+      const inner: ConditionAST = { op: '>', left: { _t: 2, ref: 'gvar', var: 'aid' }, right: 5 };
       const cond: ConditionAST = { op: 'not', arg: inner };
 
       const result = extractBlockers(cond, () => false, MOCK_VERB);
@@ -312,7 +312,7 @@ describe('extractBlockers', () => {
 
   describe('safe evaluation', () => {
     it('treats evaluator exceptions as false', () => {
-      const cond: ConditionAST = { op: '>=', left: { ref: 'gvar', var: 'aid' }, right: 3 };
+      const cond: ConditionAST = { op: '>=', left: { _t: 2, ref: 'gvar', var: 'aid' }, right: 3 };
       const result = extractBlockers(cond, () => { throw new Error('boom'); }, MOCK_VERB);
       assert.equal(result.satisfied, false);
       assert.equal(result.blockers.length, 1);
@@ -375,31 +375,31 @@ describe('extractBlockers', () => {
 
   describe('value expression stringification', () => {
     it('resolves gvar reference through verbalization', () => {
-      const cond: ConditionAST = { op: '>=', left: { ref: 'gvar', var: 'aid' }, right: 3 };
+      const cond: ConditionAST = { op: '>=', left: { _t: 2, ref: 'gvar', var: 'aid' }, right: 3 };
       const result = extractBlockers(cond, () => false, MOCK_VERB);
       assert.equal(result.blockers[0]!.description, 'Need Aid \u2265 3');
     });
 
     it('resolves pvar reference', () => {
-      const cond: ConditionAST = { op: '>=', left: { ref: 'pvar', player: 'active', var: 'aid' }, right: 3 };
+      const cond: ConditionAST = { op: '>=', left: { _t: 2, ref: 'pvar', player: 'active', var: 'aid' }, right: 3 };
       const result = extractBlockers(cond, () => false, MOCK_VERB);
       assert.ok(result.blockers[0]!.description.includes('Aid'));
     });
 
     it('resolves zoneCount reference', () => {
-      const cond: ConditionAST = { op: '>=', left: { ref: 'zoneCount', zone: 'saigon' }, right: 1 };
+      const cond: ConditionAST = { op: '>=', left: { _t: 2, ref: 'zoneCount', zone: 'saigon' }, right: 1 };
       const result = extractBlockers(cond, () => false, MOCK_VERB);
       assert.ok(result.blockers[0]!.description.includes('pieces in Saigon'));
     });
 
     it('resolves binding reference', () => {
-      const cond: ConditionAST = { op: '>=', left: { ref: 'binding', name: 'selectedCount' }, right: 1 };
+      const cond: ConditionAST = { op: '>=', left: { _t: 2, ref: 'binding', name: 'selectedCount' }, right: 1 };
       const result = extractBlockers(cond, () => false, undefined);
       assert.ok(result.blockers[0]!.description.includes('Selected Count'));
     });
 
     it('uses humanize fallback without verbalization', () => {
-      const cond: ConditionAST = { op: '>=', left: { ref: 'gvar', var: 'totalEcon' }, right: 5 };
+      const cond: ConditionAST = { op: '>=', left: { _t: 2, ref: 'gvar', var: 'totalEcon' }, right: 5 };
       const result = extractBlockers(cond, () => false, undefined);
       assert.ok(result.blockers[0]!.description.includes('Total Econ'));
     });

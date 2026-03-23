@@ -68,12 +68,12 @@ describe('evalNumericValue', () => {
 
   it('returns number for numeric expression', () => {
     const ctx = makeCtx();
-    assert.equal(evalNumericValue({ op: '+', left: 3, right: 4 }, ctx), 7);
+    assert.equal(evalNumericValue({ _t: 6, op: '+', left: 3, right: 4 } as const, ctx), 7);
   });
 
   it('returns number for numeric ref', () => {
     const ctx = makeCtx();
-    assert.equal(evalNumericValue({ ref: 'gvar', var: 'score' }, ctx), 42);
+    assert.equal(evalNumericValue({ _t: 2, ref: 'gvar', var: 'score' } as const, ctx), 42);
   });
 
   it('throws TYPE_MISMATCH for string value', () => {
@@ -95,7 +95,7 @@ describe('evalNumericValue', () => {
   it('throws TYPE_MISMATCH for array value', () => {
     const ctx = makeCtx();
     assert.throws(
-      () => evalNumericValue({ scalarArray: ['a', 'b'] }, ctx),
+      () => evalNumericValue({ _t: 1, scalarArray: ['a', 'b'] } as const, ctx),
       (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
     );
   });
@@ -120,7 +120,7 @@ describe('evalStringValue', () => {
 
   it('returns string for concat expression', () => {
     const ctx = makeCtx();
-    assert.equal(evalStringValue({ concat: ['a', 'b'] }, ctx), 'ab');
+    assert.equal(evalStringValue({ _t: 3, concat: ['a', 'b'] } as const, ctx), 'ab');
   });
 
   it('throws TYPE_MISMATCH for number value', () => {
@@ -142,7 +142,7 @@ describe('evalStringValue', () => {
   it('throws TYPE_MISMATCH for array value', () => {
     const ctx = makeCtx();
     assert.throws(
-      () => evalStringValue({ scalarArray: ['a', 'b'] }, ctx),
+      () => evalStringValue({ _t: 1, scalarArray: ['a', 'b'] } as const, ctx),
       (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
     );
   });
@@ -167,7 +167,7 @@ describe('evalIntegerValue', () => {
 
   it('returns integer for integer expression', () => {
     const ctx = makeCtx();
-    assert.equal(evalIntegerValue({ op: '+', left: 2, right: 3 }, ctx), 5);
+    assert.equal(evalIntegerValue({ _t: 6, op: '+', left: 2, right: 3 } as const, ctx), 5);
   });
 
   it('throws TYPE_MISMATCH for string value', () => {

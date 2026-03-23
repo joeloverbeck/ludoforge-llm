@@ -255,7 +255,7 @@ describe('legalChoicesDiscover() — action.pre precondition enforcement', () =>
   // Action with two params and a precondition that checks param2 != 'blocked'
   const preCond: ConditionAST = {
     op: '!=',
-    left: { ref: 'binding', name: 'mode' },
+    left: { _t: 2, ref: 'binding', name: 'mode' },
     right: 'blocked',
   };
 

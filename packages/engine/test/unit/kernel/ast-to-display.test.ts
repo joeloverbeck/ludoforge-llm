@@ -154,7 +154,7 @@ describe('conditionToDisplayNodes', () => {
       op: 'connected',
       from: 'A',
       to: 'B',
-      via: { op: '==', left: { ref: 'zoneProp', zone: 'A', prop: 'terrain' }, right: '"jungle"' },
+      via: { op: '==', left: { _t: 2 as const, ref: 'zoneProp', zone: 'A', prop: 'terrain' }, right: '"jungle"' },
     };
     const nodes = conditionToDisplayNodes(cond, 0);
     const ln = asLine(nodes[0]!);
@@ -200,48 +200,48 @@ describe('valueExprToInlineNodes', () => {
   });
 
   it('renders gvar reference', () => {
-    const expr: ValueExpr = { ref: 'gvar', var: 'score' };
+    const expr: ValueExpr = { _t: 2, ref: 'gvar', var: 'score' };
     const nodes = valueExprToInlineNodes(expr);
     assert.equal(nodes[0]!.kind, 'reference');
     assert.equal(nodes[0]!.text, 'score');
   });
 
   it('renders pvar reference', () => {
-    const expr: ValueExpr = { ref: 'pvar', player: 'actor', var: 'resources' };
+    const expr: ValueExpr = { _t: 2, ref: 'pvar', player: 'actor', var: 'resources' };
     const nodes = valueExprToInlineNodes(expr);
     const refs = findByKind(nodes, 'reference');
     assert.ok(refs.some((n) => n.text === 'resources'));
   });
 
   it('renders binding reference', () => {
-    const expr: ValueExpr = { ref: 'binding', name: 'x' };
+    const expr: ValueExpr = { _t: 2, ref: 'binding', name: 'x' };
     const nodes = valueExprToInlineNodes(expr);
     assert.equal(nodes[0]!.kind, 'reference');
     assert.equal(nodes[0]!.text, 'x');
   });
 
   it('renders binding reference with displayName', () => {
-    const expr: ValueExpr = { ref: 'binding', name: '$__macro_foo_0_player', displayName: 'player' };
+    const expr: ValueExpr = { _t: 2, ref: 'binding', name: '$__macro_foo_0_player', displayName: 'player' };
     const nodes = valueExprToInlineNodes(expr);
     assert.equal(nodes[0]!.kind, 'reference');
     assert.equal(nodes[0]!.text, 'player');
   });
 
   it('renders binary op', () => {
-    const expr: ValueExpr = { op: '+', left: 1, right: 2 };
+    const expr: ValueExpr = { _t: 6, op: '+', left: 1, right: 2 };
     const nodes = valueExprToInlineNodes(expr);
     const ops = findByKind(nodes, 'operator');
     assert.ok(ops.some((n) => n.text === '+'));
   });
 
   it('renders count aggregate', () => {
-    const expr: ValueExpr = { aggregate: { op: 'count', query: { query: 'players' } } };
+    const expr: ValueExpr = { _t: 5, aggregate: { op: 'count', query: { query: 'players' } } };
     const nodes = valueExprToInlineNodes(expr);
     assert.ok(texts(nodes).includes('count'));
   });
 
   it('renders conditional if', () => {
-    const expr: ValueExpr = { if: { when: true, then: 1, else: 0 } };
+    const expr: ValueExpr = { _t: 4, if: { when: true, then: 1, else: 0 } };
     const nodes = valueExprToInlineNodes(expr);
     assert.ok(texts(nodes).includes('if'));
   });
@@ -342,7 +342,7 @@ describe('zoneRefToInlineNodes', () => {
   });
 
   it('renders zoneExpr zone ref', () => {
-    const nodes = zoneRefToInlineNodes({ zoneExpr: { ref: 'binding', name: 'z' } });
+    const nodes = zoneRefToInlineNodes({ zoneExpr: { _t: 2 as const, ref: 'binding', name: 'z' } });
     assert.equal(nodes[0]!.kind, 'reference');
     assert.equal(nodes[0]!.text, 'z');
   });
@@ -486,7 +486,7 @@ describe('effectToDisplayNodes', () => {
       let: {
         bind: 'x',
         value: 42,
-        in: [{ setVar: { scope: 'global', var: 'y', value: { ref: 'binding', name: 'x' } } }],
+        in: [{ setVar: { scope: 'global', var: 'y', value: { _t: 2 as const, ref: 'binding', name: 'x' } } }],
       },
     };
     const nodes = effectToDisplayNodes(effect, 0);
@@ -502,7 +502,7 @@ describe('effectToDisplayNodes', () => {
         accBind: 'acc',
         over: { query: 'players' },
         initial: 0,
-        next: { op: '+', left: { ref: 'binding', name: 'acc' }, right: 1 },
+        next: { _t: 6 as const, op: '+', left: { _t: 2 as const, ref: 'binding', name: 'acc' }, right: 1 },
         resultBind: 'total',
         in: [],
       },
@@ -520,7 +520,7 @@ describe('effectToDisplayNodes', () => {
         itemMacroOrigin: { macroId: 'sum', stem: 'item' },
         over: { query: 'players' },
         initial: 0,
-        next: { op: '+', left: { ref: 'binding', name: 'acc' }, right: 1 },
+        next: { _t: 6 as const, op: '+', left: { _t: 2 as const, ref: 'binding', name: 'acc' }, right: 1 },
         resultBind: '$__macro_reduce_0_total',
         in: [],
       },
@@ -714,7 +714,7 @@ describe('actionDefToDisplayTree', () => {
   it('produces correct sections for full action', () => {
     const action = minimalActionDef({
       params: [{ name: 'target', domain: { query: 'zones' } }],
-      pre: { op: '>', left: { ref: 'gvar', var: 'score' }, right: 0 },
+      pre: { op: '>', left: { _t: 2 as const, ref: 'gvar', var: 'score' }, right: 0 },
       cost: [{ addVar: { scope: 'global', var: 'gold', delta: -1 } }],
       effects: [{ setVar: { scope: 'global', var: 'done', value: true } }],
       limits: [{ id: 'test::turn::0', scope: 'turn', max: 1 }],
@@ -820,9 +820,9 @@ describe('actionPipelineDefToDisplayTree', () => {
 
   it('includes all sections when pipeline is fully populated', () => {
     const pipeline = minimalPipeline({
-      applicability: { op: '==', left: { ref: 'activePlayer' }, right: 'US' },
-      legality: { op: '>=', left: { ref: 'gvar', var: 'gold' }, right: 1 },
-      costValidation: { op: '>=', left: { ref: 'gvar', var: 'gold' }, right: 3 },
+      applicability: { op: '==', left: { _t: 2 as const, ref: 'activePlayer' }, right: 'US' },
+      legality: { op: '>=', left: { _t: 2 as const, ref: 'gvar', var: 'gold' }, right: 1 },
+      costValidation: { op: '>=', left: { _t: 2 as const, ref: 'gvar', var: 'gold' }, right: 3 },
       costEffects: [{ addVar: { scope: 'global', var: 'gold', delta: -3 } }],
       stages: [
         { stage: 'placement', effects: [{ setVar: { scope: 'global', var: 'gold', value: 0 } }] },
@@ -835,7 +835,7 @@ describe('actionPipelineDefToDisplayTree', () => {
 
   it('produces group with only legality when only legality is set', () => {
     const pipeline = minimalPipeline({
-      legality: { op: '>=', left: { ref: 'gvar', var: 'gold' }, right: 1 },
+      legality: { op: '>=', left: { _t: 2 as const, ref: 'gvar', var: 'gold' }, right: 1 },
     });
     const result = actionPipelineDefToDisplayTree(pipeline);
     assert.equal(result.children.length, 1);
@@ -847,8 +847,8 @@ describe('actionPipelineDefToDisplayTree', () => {
       stages: [
         {
           stage: 'resolution',
-          legality: { op: '>=', left: { ref: 'gvar', var: 'gold' }, right: 1 },
-          costValidation: { op: '>=', left: { ref: 'gvar', var: 'gold' }, right: 2 },
+          legality: { op: '>=', left: { _t: 2 as const, ref: 'gvar', var: 'gold' }, right: 1 },
+          costValidation: { op: '>=', left: { _t: 2 as const, ref: 'gvar', var: 'gold' }, right: 2 },
           effects: [{ advancePhase: {} }],
         },
       ],

@@ -223,11 +223,11 @@ describe('compile-effects binding scope validation', () => {
       {
         let: {
           bind: '$targetFactions',
-          value: { scalarArray: ['NVA', 'VC'] },
+          value: { _t: 1, scalarArray: ['NVA', 'VC'] },
           in: [
             {
               if: {
-                when: { op: 'in', item: 'NVA', set: { ref: 'binding', name: '$targetFactions' } },
+                when: { op: 'in', item: 'NVA', set: { _t: 2, ref: 'binding', name: '$targetFactions' } },
                 then: [],
               },
             },

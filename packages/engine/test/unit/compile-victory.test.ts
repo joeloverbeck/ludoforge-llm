@@ -84,6 +84,7 @@ describe('compile victory lowering', () => {
           when: {
             op: '>',
             left: {
+              _t: 5,
               aggregate: {
                 op: 'count',
                 query: {
@@ -92,7 +93,7 @@ describe('compile victory lowering', () => {
                     owner: { id: 0 },
                     condition: {
                       op: '==',
-                      left: { ref: 'zoneProp', zone: 'board:none', prop: 'category' },
+                      left: { _t: 2, ref: 'zoneProp', zone: 'board:none', prop: 'category' },
                       right: 'province',
                     },
                   },
@@ -108,8 +109,10 @@ describe('compile victory lowering', () => {
         {
           seat: 'us',
           value: {
+            _t: 6,
             op: '-',
             left: {
+              _t: 5,
               aggregate: {
                 op: 'count',
                 query: {

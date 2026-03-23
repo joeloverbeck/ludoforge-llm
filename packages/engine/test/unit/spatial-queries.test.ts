@@ -141,8 +141,8 @@ describe('spatial query helpers', () => {
       ctx,
       {
         op: 'in',
-        item: { ref: 'binding', name: '$zone' },
-        set: { ref: 'binding', name: '$allowed' },
+        item: { _t: 2 as const, ref: 'binding', name: '$zone' },
+        set: { _t: 2 as const, ref: 'binding', name: '$allowed' },
       },
     );
 
@@ -163,8 +163,8 @@ describe('spatial query helpers', () => {
       ctx,
       {
         op: '!=',
-        left: { ref: 'binding', name: '$zone' },
-        right: { ref: 'binding', name: '$blocked' },
+        left: { _t: 2 as const, ref: 'binding', name: '$zone' },
+        right: { _t: 2 as const, ref: 'binding', name: '$blocked' },
       },
       { allowTargetOutsideVia: true },
     );

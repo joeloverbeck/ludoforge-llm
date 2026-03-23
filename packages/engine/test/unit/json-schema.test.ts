@@ -80,16 +80,16 @@ phase: [asPhaseId('main')],
       pre: { op: 'zonePropIncludes', zone: 'discard:none', prop: 'terrainTags', value: 'urban' },
       cost: [],
       effects: [
-        { draw: { from: { zoneExpr: 'deck:none' }, to: { zoneExpr: { ref: 'tokenZone', token: '$card' } }, count: 1 } },
+        { draw: { from: { zoneExpr: 'deck:none' }, to: { zoneExpr: { _t: 2 as const, ref: 'tokenZone', token: '$card' } }, count: 1 } },
         {
           setVar: {
             scope: 'global',
             var: 'round',
             value: {
-              if: {
-                when: { op: '==', left: { ref: 'zoneProp', zone: 'discard:none', prop: 'category' }, right: 'city' },
-                then: { op: 'floorDiv', left: 5, right: 2 },
-                else: { op: 'ceilDiv', left: 5, right: 2 },
+              _t: 4, if: {
+                when: { op: '==', left: { _t: 2 as const, ref: 'zoneProp', zone: 'discard:none', prop: 'category' }, right: 'city' },
+                then: { _t: 6 as const, op: 'floorDiv', left: 5, right: 2 },
+                else: { _t: 6 as const, op: 'ceilDiv', left: 5, right: 2 },
               },
             },
           },
@@ -98,7 +98,7 @@ phase: [asPhaseId('main')],
           setTokenProp: {
             token: '$card',
             prop: 'name',
-            value: { concat: ['zone=', { ref: 'tokenZone', token: '$card' }] },
+            value: { _t: 3, concat: ['zone=', { _t: 2 as const, ref: 'tokenZone', token: '$card' }] },
           },
         },
         { setMarker: { space: { zoneExpr: 'discard:none' }, marker: 'support', state: 'neutral' } },
@@ -905,8 +905,8 @@ describe('json schema artifacts', () => {
                 seat: '0',
                 operationClass: 'operation',
                 executionContext: {
-                  allowedTargets: { scalarArray: [1, 2] },
-                  effectCode: { op: '+', left: 3, right: 4 },
+                  allowedTargets: { _t: 1, scalarArray: [1, 2] },
+                  effectCode: { _t: 6 as const, op: '+', left: 3, right: 4 },
                 },
               },
             },

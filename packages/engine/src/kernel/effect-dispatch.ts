@@ -32,6 +32,8 @@ export const consumeEffectBudget = (budget: EffectBudgetState, effectType: strin
   budget.remaining -= 1;
 };
 
+const EMPTY_EVENTS: readonly TriggerEvent[] = [];
+
 const applyEffectWithBudget = (effect: EffectAST, ctx: EffectContext, budget: EffectBudgetState): EffectResult => {
   const kind = effectKindOf(effect);
   consumeEffectBudget(budget, kind);
@@ -44,14 +46,15 @@ const applyEffectWithBudget = (effect: EffectAST, ctx: EffectContext, budget: Ef
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const result = (handler as any)(effect, ctx, budget, applyEffectsWithBudgetState) as EffectResult;
   perfDynEnd(profiler, `effect:${kind}`, t0);
-  return {
-    state: result.state,
-    rng: result.rng,
-    emittedEvents: result.emittedEvents ?? [],
-    bindings: result.bindings ?? ctx.bindings,
-    decisionScope: result.decisionScope ?? ctx.decisionScope,
-    ...(result.pendingChoice === undefined ? {} : { pendingChoice: result.pendingChoice }),
-  };
+  // Normalize result: use shared empty array to avoid per-call allocation,
+  // apply defaults for bindings/decisionScope only when handler omitted them.
+  const emitted = result.emittedEvents ?? EMPTY_EVENTS;
+  const bindings = result.bindings ?? ctx.bindings;
+  const scope = result.decisionScope ?? ctx.decisionScope;
+  if (result.pendingChoice !== undefined) {
+    return { state: result.state, rng: result.rng, emittedEvents: emitted, bindings, decisionScope: scope, pendingChoice: result.pendingChoice };
+  }
+  return { state: result.state, rng: result.rng, emittedEvents: emitted, bindings, decisionScope: scope };
 };
 
 export const applyEffectsWithBudgetState = (
@@ -67,17 +70,24 @@ export const applyEffectsWithBudgetState = (
   // Skip effectPath string construction when tracing is disabled
   const tracingEnabled = ctx.collector.trace !== null || ctx.collector.conditionTrace !== null;
 
+  // Clone ctx once into a mutable working context. Property assignments below
+  // mutate this single object instead of spreading ~25 fields per iteration.
+  // V8 hidden-class safe: same shape as the original spread, same property order.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const workCtx: any = { ...ctx };
+
   for (let effectIndex = 0; effectIndex < effects.length; effectIndex++) {
+    // Update only the fields that change between iterations
+    workCtx.state = currentState;
+    workCtx.rng = currentRng;
+    workCtx.bindings = currentBindings;
+    workCtx.decisionScope = currentDecisionScope;
+    if (tracingEnabled) {
+      workCtx.effectPath = `${ctx.effectPath ?? ''}[${effectIndex}]`;
+    }
     const result = applyEffectWithBudget(
       effects[effectIndex]!,
-      {
-        ...ctx,
-        state: currentState,
-        rng: currentRng,
-        bindings: currentBindings,
-        decisionScope: currentDecisionScope,
-        ...(tracingEnabled ? { effectPath: `${ctx.effectPath ?? ''}[${effectIndex}]` } : {}),
-      },
+      workCtx as EffectContext,
       budget,
     );
     currentState = result.state;

@@ -62,7 +62,7 @@ phase: [asPhaseId('main')],
       },
     ],
     triggers: [],
-    terminal: { conditions: [{ when: { op: '>=', left: { ref: 'gvar', var: 'score' }, right: 6 }, result: { type: 'draw' } }] },
+    terminal: { conditions: [{ when: { op: '>=', left: { _t: 2 as const, ref: 'gvar', var: 'score' }, right: 6 }, result: { type: 'draw' } }] },
   } as const);
 
 describe('runGames integration', () => {

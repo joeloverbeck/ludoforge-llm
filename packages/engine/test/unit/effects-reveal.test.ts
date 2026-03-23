@@ -286,7 +286,7 @@ describe('effects reveal', () => {
     assert.throws(
       () =>
         applyEffect(
-          { reveal: { zone: { zoneExpr: { ref: 'binding', name: '$missingZone' } }, to: { id: asPlayerId(1) } } },
+          { reveal: { zone: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$missingZone' } }, to: { id: asPlayerId(1) } } },
           ctx,
         ),
       (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'reveal.zone resolution failed'),
@@ -708,7 +708,7 @@ describe('effects conceal', () => {
     assert.throws(
       () =>
         applyEffect(
-          { conceal: { zone: { zoneExpr: { ref: 'binding', name: '$missingZone' } } } },
+          { conceal: { zone: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$missingZone' } } } },
           ctx,
         ),
       (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'conceal.zone resolution failed'),

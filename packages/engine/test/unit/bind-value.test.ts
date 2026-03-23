@@ -66,7 +66,7 @@ describe('bindValue effect', () => {
     const effect: EffectAST = {
       bindValue: {
         bind: '$computed',
-        value: { op: '+', left: 4, right: 5 },
+        value: { _t: 6 as const, op: '+' as const, left: 4, right: 5 },
       },
     };
 
@@ -82,10 +82,10 @@ describe('bindValue effect', () => {
         {
           bindValue: {
             bind: '$computed',
-            value: { op: '+', left: 4, right: 5 },
+            value: { _t: 6 as const, op: '+' as const, left: 4, right: 5 },
           },
         },
-        { setVar: { scope: 'global', var: 'score', value: { ref: 'binding', name: '$computed' } } },
+        { setVar: { scope: 'global', var: 'score', value: { _t: 2 as const, ref: 'binding', name: '$computed' } } },
       ],
       ctx,
     );
@@ -105,13 +105,13 @@ describe('bindValue effect', () => {
               {
                 bindValue: {
                   bind: '$computed',
-                  value: { op: '+', left: { ref: 'binding', name: '$local' }, right: 5 },
+                  value: { _t: 6 as const, op: '+' as const, left: { _t: 2 as const, ref: 'binding', name: '$local' }, right: 5 },
                 },
               },
             ],
           },
         },
-        { setVar: { scope: 'global', var: 'score', value: { ref: 'binding', name: '$computed' } } },
+        { setVar: { scope: 'global', var: 'score', value: { _t: 2 as const, ref: 'binding', name: '$computed' } } },
       ],
       ctx,
     );

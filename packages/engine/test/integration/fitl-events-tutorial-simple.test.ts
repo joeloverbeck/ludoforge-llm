@@ -24,7 +24,7 @@ describe('FITL tutorial simple event-card production spec', () => {
       if: {
         when: {
           op: '==',
-          left: { ref: 'markerState', space: 'saigon:none', marker: 'supportOpposition' },
+          left: { _t: 2, ref: 'markerState', space: 'saigon:none', marker: 'supportOpposition' },
           right: 'activeSupport',
         },
         then: [{ addVar: { scope: 'global', var: 'patronage', delta: 6 } }],
@@ -135,7 +135,7 @@ describe('FITL tutorial simple event-card production spec', () => {
       addVar: {
         scope: 'global',
         var: 'patronage',
-        delta: { op: '*', left: 2, right: { ref: 'binding', name: '$removedCount' } },
+        delta: { _t: 6, op: '*', left: 2, right: { _t: 2, ref: 'binding', name: '$removedCount' } },
       },
     });
   });

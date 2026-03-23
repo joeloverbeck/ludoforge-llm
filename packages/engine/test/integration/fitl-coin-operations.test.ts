@@ -366,8 +366,8 @@ describe('FITL COIN operations integration', () => {
       const expected = {
         op: 'or',
         args: [
-          { op: '==', left: { ref: 'binding', name: '__freeOperation' }, right: true },
-          { op: '>=', left: { ref: 'gvar', var: 'arvnResources' }, right: 3 },
+          { op: '==', left: { _t: 2, ref: 'binding', name: '__freeOperation' }, right: true },
+          { op: '>=', left: { _t: 2, ref: 'gvar', var: 'arvnResources' }, right: 3 },
         ],
       };
       assert.deepEqual(profile.legality, expected);
@@ -1272,9 +1272,9 @@ describe('FITL COIN operations integration', () => {
       const expected = {
         op: 'or',
         args: [
-          { op: '==', left: { ref: 'gvar', var: 'mom_bodyCount' }, right: true },
-          { op: '==', left: { ref: 'binding', name: '__freeOperation' }, right: true },
-          { op: '>=', left: { ref: 'gvar', var: 'arvnResources' }, right: 3 },
+          { op: '==', left: { _t: 2, ref: 'gvar', var: 'mom_bodyCount' }, right: true },
+          { op: '==', left: { _t: 2, ref: 'binding', name: '__freeOperation' }, right: true },
+          { op: '>=', left: { _t: 2, ref: 'gvar', var: 'arvnResources' }, right: 3 },
         ],
       };
       assert.deepEqual(profile.legality, expected);
@@ -1582,8 +1582,8 @@ describe('FITL COIN operations integration', () => {
       assert.ok(usProfile, 'train-us-profile must exist');
       assert.ok(arvnProfile, 'train-arvn-profile must exist');
 
-      assert.deepEqual(usProfile.applicability, { op: '==', left: { ref: 'activePlayer' }, right: 0 });
-      assert.deepEqual(arvnProfile.applicability, { op: '==', left: { ref: 'activePlayer' }, right: 1 });
+      assert.deepEqual(usProfile.applicability, { op: '==', left: { _t: 2, ref: 'activePlayer' }, right: 0 });
+      assert.deepEqual(arvnProfile.applicability, { op: '==', left: { _t: 2, ref: 'activePlayer' }, right: 1 });
     });
 
     it('patrol-us-profile has applicability for player 0 (US)', () => {
@@ -1592,7 +1592,7 @@ describe('FITL COIN operations integration', () => {
 
       const patrolProfile = compiled.gameDef!.actionPipelines!.find((p) => p.id === 'patrol-us-profile');
       assert.ok(patrolProfile, 'patrol-us-profile must exist');
-      assert.deepEqual(patrolProfile.applicability, { op: '==', left: { ref: 'activePlayer' }, right: 0 });
+      assert.deepEqual(patrolProfile.applicability, { op: '==', left: { _t: 2, ref: 'activePlayer' }, right: 0 });
     });
 
     it('patrol-arvn-profile has applicability for player 1 (ARVN)', () => {
@@ -1601,7 +1601,7 @@ describe('FITL COIN operations integration', () => {
 
       const patrolProfile = compiled.gameDef!.actionPipelines!.find((p) => p.id === 'patrol-arvn-profile');
       assert.ok(patrolProfile, 'patrol-arvn-profile must exist');
-      assert.deepEqual(patrolProfile.applicability, { op: '==', left: { ref: 'activePlayer' }, right: 1 });
+      assert.deepEqual(patrolProfile.applicability, { op: '==', left: { _t: 2, ref: 'activePlayer' }, right: 1 });
     });
 
     it('sweep/assault profiles have explicit US/ARVN applicability', () => {
@@ -1617,7 +1617,7 @@ describe('FITL COIN operations integration', () => {
       for (const entry of expected) {
         const profile = compiled.gameDef!.actionPipelines!.find((p) => p.id === entry.id);
         assert.ok(profile, `${entry.id} must exist`);
-        assert.deepEqual(profile.applicability, { op: '==', left: { ref: 'activePlayer' }, right: entry.right });
+        assert.deepEqual(profile.applicability, { op: '==', left: { _t: 2, ref: 'activePlayer' }, right: entry.right });
       }
     });
   });
@@ -1808,7 +1808,7 @@ describe('FITL COIN operations integration', () => {
       assert.deepEqual(profile.costEffects, [
         {
           if: {
-            when: { op: '!=', left: { ref: 'gvar', var: 'mom_bodyCount' }, right: true },
+            when: { op: '!=', left: { _t: 2, ref: 'gvar', var: 'mom_bodyCount' }, right: true },
             then: [{ addVar: { scope: 'global', var: 'arvnResources', delta: -3 } }],
           },
         },
@@ -1820,8 +1820,8 @@ describe('FITL COIN operations integration', () => {
       const expected = {
         op: 'or',
         args: [
-          { op: '==', left: { ref: 'gvar', var: 'mom_bodyCount' }, right: true },
-          { op: '>=', left: { ref: 'gvar', var: 'arvnResources' }, right: 3 },
+          { op: '==', left: { _t: 2, ref: 'gvar', var: 'mom_bodyCount' }, right: true },
+          { op: '>=', left: { _t: 2, ref: 'gvar', var: 'arvnResources' }, right: 3 },
         ],
       };
       assert.deepEqual(profile.legality, expected);

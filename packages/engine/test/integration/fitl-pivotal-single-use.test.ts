@@ -104,11 +104,12 @@ describe('FITL pivotal single-use integration', () => {
         {
           op: 'and',
           args: [
-            { op: '==', left: { ref: 'activePlayer' }, right: 0 },
-            { op: '==', left: { ref: 'binding', name: 'eventCardId' }, right: 'card-121' },
+            { op: '==', left: { _t: 2, ref: 'activePlayer' }, right: 0 },
+            { op: '==', left: { _t: 2, ref: 'binding', name: 'eventCardId' }, right: 'card-121' },
             {
               op: '>',
               left: {
+                _t: 5,
                 aggregate: {
                   op: 'count',
                   query: {
@@ -125,11 +126,12 @@ describe('FITL pivotal single-use integration', () => {
         {
           op: 'and',
           args: [
-            { op: '==', left: { ref: 'activePlayer' }, right: 2 },
-            { op: '==', left: { ref: 'binding', name: 'eventCardId' }, right: 'card-122' },
+            { op: '==', left: { _t: 2, ref: 'activePlayer' }, right: 2 },
+            { op: '==', left: { _t: 2, ref: 'binding', name: 'eventCardId' }, right: 'card-122' },
             {
               op: '>',
               left: {
+                _t: 5,
                 aggregate: {
                   op: 'count',
                   query: {
@@ -146,11 +148,12 @@ describe('FITL pivotal single-use integration', () => {
         {
           op: 'and',
           args: [
-            { op: '==', left: { ref: 'activePlayer' }, right: 1 },
-            { op: '==', left: { ref: 'binding', name: 'eventCardId' }, right: 'card-123' },
+            { op: '==', left: { _t: 2, ref: 'activePlayer' }, right: 1 },
+            { op: '==', left: { _t: 2, ref: 'binding', name: 'eventCardId' }, right: 'card-123' },
             {
               op: '>',
               left: {
+                _t: 5,
                 aggregate: {
                   op: 'count',
                   query: {
@@ -167,11 +170,12 @@ describe('FITL pivotal single-use integration', () => {
         {
           op: 'and',
           args: [
-            { op: '==', left: { ref: 'activePlayer' }, right: 3 },
-            { op: '==', left: { ref: 'binding', name: 'eventCardId' }, right: 'card-124' },
+            { op: '==', left: { _t: 2, ref: 'activePlayer' }, right: 3 },
+            { op: '==', left: { _t: 2, ref: 'binding', name: 'eventCardId' }, right: 'card-124' },
             {
               op: '>',
               left: {
+                _t: 5,
                 aggregate: {
                   op: 'count',
                   query: {
@@ -190,7 +194,7 @@ describe('FITL pivotal single-use integration', () => {
     assert.deepEqual(pivotalAction?.effects, [
       {
         if: {
-          when: { op: '==', left: { ref: 'binding', name: 'eventCardId' }, right: 'card-121' },
+          when: { op: '==', left: { _t: 2, ref: 'binding', name: 'eventCardId' }, right: 'card-121' },
           then: [
             {
               forEach: {
@@ -209,7 +213,7 @@ describe('FITL pivotal single-use integration', () => {
       },
       {
         if: {
-          when: { op: '==', left: { ref: 'binding', name: 'eventCardId' }, right: 'card-122' },
+          when: { op: '==', left: { _t: 2, ref: 'binding', name: 'eventCardId' }, right: 'card-122' },
           then: [
             {
               forEach: {
@@ -228,7 +232,7 @@ describe('FITL pivotal single-use integration', () => {
       },
       {
         if: {
-          when: { op: '==', left: { ref: 'binding', name: 'eventCardId' }, right: 'card-123' },
+          when: { op: '==', left: { _t: 2, ref: 'binding', name: 'eventCardId' }, right: 'card-123' },
           then: [
             {
               forEach: {
@@ -247,7 +251,7 @@ describe('FITL pivotal single-use integration', () => {
       },
       {
         if: {
-          when: { op: '==', left: { ref: 'binding', name: 'eventCardId' }, right: 'card-124' },
+          when: { op: '==', left: { _t: 2, ref: 'binding', name: 'eventCardId' }, right: 'card-124' },
           then: [
             {
               forEach: {

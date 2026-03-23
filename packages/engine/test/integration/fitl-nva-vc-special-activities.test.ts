@@ -466,8 +466,8 @@ describe('FITL NVA/VC special activities integration', () => {
       {
         op: 'and',
         args: [
-          { op: '>', left: { ref: 'zoneProp', zone: '$space', prop: 'population' }, right: 0 },
-          { op: '!=', left: { ref: 'markerState', space: '$space', marker: 'supportOpposition' }, right: 'activeSupport' },
+          { op: '>', left: { _t: 2, ref: 'zoneProp', zone: '$space', prop: 'population' }, right: 0 },
+          { op: '!=', left: { _t: 2, ref: 'markerState', space: '$space', marker: 'supportOpposition' }, right: 'activeSupport' },
         ],
       },
       'Tax support shift should require population > 0 and skip activeSupport spaces',

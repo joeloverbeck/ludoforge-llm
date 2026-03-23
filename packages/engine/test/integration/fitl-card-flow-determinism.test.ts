@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { readFixtureJson } from '../helpers/fixture-reader.js';
+import { asTaggedGameDef } from '../helpers/gamedef-fixtures.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 import {
   applyMove,
@@ -217,7 +218,7 @@ interface FitlEventInitialPackGolden {
 }
 
 const createEventTraceDef = (): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'fitl-events-initial-pack-golden-int', players: { min: 4, max: 4 }, maxTriggerDepth: 8 },
     seats: [{ id: 'US' }, { id: 'ARVN' }, { id: 'NVA' }, { id: 'VC' }],
     constants: {},
@@ -340,7 +341,7 @@ phase: [asPhaseId('main')],
     ],
     triggers: [],
     terminal: { conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }] },
-  }) as unknown as GameDef;
+  });
 
 describe('FITL card-flow determinism integration', () => {
   it('keeps deterministic initialization when card metadata seat order is valid and mapped', () => {

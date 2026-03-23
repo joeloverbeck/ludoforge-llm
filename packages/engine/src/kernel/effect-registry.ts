@@ -1,5 +1,6 @@
 import type { EffectKind, EffectKindMap, EffectAST } from './types.js';
-import type { EffectContext, EffectResult } from './effect-context.js';
+import type { EffectContext, EffectCursor, EffectEnv, EffectResult } from './effect-context.js';
+import { fromEnvAndCursor, toEffectEnv, toEffectCursor } from './effect-context.js';
 import type { EffectBudgetState } from './effects-control.js';
 
 import { applySetVar, applyAddVar, applySetActivePlayer } from './effects-var.js';
@@ -36,25 +37,54 @@ import {
 import { applyIf, applyForEach, applyReduce, applyRemoveByPriority, applyLet } from './effects-control.js';
 import { applyEvaluateSubset } from './effects-subset.js';
 
-type ApplyEffectsWithBudget = (
+export type ApplyEffectsWithBudget = (
   effects: readonly EffectAST[],
-  ctx: EffectContext,
+  env: EffectEnv,
+  cursor: EffectCursor,
   budget: EffectBudgetState,
 ) => EffectResult;
 
-type EffectHandler<K extends EffectKind> = (
+export type EffectHandler<K extends EffectKind> = (
   effect: EffectKindMap[K],
-  ctx: EffectContext,
+  env: EffectEnv,
+  cursor: EffectCursor,
   budget: EffectBudgetState,
-  applyEffects: ApplyEffectsWithBudget,
+  applyBatch: ApplyEffectsWithBudget,
 ) => EffectResult;
 
 type EffectRegistry = { readonly [K in EffectKind]: EffectHandler<K> };
 
+/**
+ * Wrap a simple handler `(effect, ctx) => result` into the env+cursor handler signature.
+ * Reconstructs EffectContext from env+cursor for compatibility with handlers that
+ * haven't been migrated yet to the split signature.
+ */
 const simple = <K extends EffectKind>(
   fn: (effect: EffectKindMap[K], ctx: EffectContext) => EffectResult,
 ): EffectHandler<K> =>
-  (effect, ctx, _budget, _apply) => fn(effect, ctx);
+  (effect, env, cursor, _budget, _apply) => fn(effect, fromEnvAndCursor(env, cursor));
+
+/**
+ * Wrap a complex handler `(effect, ctx, budget, applyEffects)` into env+cursor signature.
+ * Temporary compatibility bridge until complex handlers are migrated to native env+cursor.
+ */
+type OldApplyEffectsWithBudget = (
+  effects: readonly EffectAST[],
+  ctx: EffectContext,
+  budget: EffectBudgetState,
+) => EffectResult;
+const compat = <K extends EffectKind>(
+  fn: (effect: EffectKindMap[K], ctx: EffectContext, budget: EffectBudgetState, applyBatch: OldApplyEffectsWithBudget) => EffectResult,
+): EffectHandler<K> =>
+  (effect, env, cursor, budget, applyBatch) => {
+    const ctx = fromEnvAndCursor(env, cursor);
+    const oldApply: OldApplyEffectsWithBudget = (effects, innerCtx, b) => {
+      const innerEnv = toEffectEnv(innerCtx);
+      const innerCursor = toEffectCursor(innerCtx);
+      return applyBatch(effects, innerEnv, innerCursor, b);
+    };
+    return fn(effect, ctx, budget, oldApply);
+  };
 
 export const registry: EffectRegistry = {
   setVar: simple(applySetVar),
@@ -84,13 +114,13 @@ export const registry: EffectRegistry = {
   advancePhase: simple(applyAdvancePhase),
   pushInterruptPhase: simple(applyPushInterruptPhase),
   popInterruptPhase: simple(applyPopInterruptPhase),
-  rollRandom: applyRollRandom,
+  rollRandom: compat(applyRollRandom),
   if: applyIf,
   forEach: applyForEach,
   reduce: applyReduce,
   removeByPriority: applyRemoveByPriority,
   let: applyLet,
-  evaluateSubset: applyEvaluateSubset,
+  evaluateSubset: compat(applyEvaluateSubset),
 };
 
 export function effectKindOf(effect: EffectAST): EffectKind {

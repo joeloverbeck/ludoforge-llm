@@ -8,101 +8,116 @@ import { effectRuntimeError } from './effect-error.js';
 import { emitTrace } from './execution-collector.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import { resolveRuntimeTokenBindingValue } from './token-binding.js';
-import { resolveTraceProvenance, withTracePath } from './trace-provenance.js';
-import type { EffectContext, EffectResult } from './effect-context.js';
+import { resolveTraceProvenance } from './trace-provenance.js';
+import {
+  mergeToEvalContext,
+  resolveEffectBindings,
+  type EffectCursor,
+  type EffectEnv,
+  type EffectResult,
+} from './effect-context.js';
 import { VALUE_EXPR_TAG } from './types.js';
-import type { EffectAST, TriggerEvent, ValueExpr } from './types.js';
+import type { EffectAST, EffectTraceProvenance, TriggerEvent, ValueExpr } from './types.js';
 
 export interface EffectBudgetState {
   remaining: number;
   readonly max: number;
 }
 
-type ApplyEffectsWithBudget = (effects: readonly EffectAST[], ctx: EffectContext, budget: EffectBudgetState) => EffectResult;
+type ApplyEffectsWithBudget = (
+  effects: readonly EffectAST[],
+  env: EffectEnv,
+  cursor: EffectCursor,
+  budget: EffectBudgetState,
+) => EffectResult;
 
-/** Merge moveParams into bindings. Fast path: return bindings directly when moveParams is empty. */
-const resolveEffectBindings = (ctx: EffectContext): Readonly<Record<string, unknown>> => {
-  const mp = ctx.moveParams;
-  // Fast path: skip merge when moveParams has no keys (common in lifecycle effects).
-  // Uses for-in to check emptiness without Object.keys() allocation.
-  for (const key in mp) {
-    void key;
-    return { ...mp, ...ctx.bindings };
-  }
-  return ctx.bindings;
+/**
+ * Append a trace path suffix to a cursor. Only 5-field spread (vs ~24 previously).
+ * Fast path: returns cursor unchanged when tracing is disabled.
+ */
+const withCursorTrace = (env: EffectEnv, cursor: EffectCursor, suffix: string): EffectCursor => {
+  if (env.collector.trace === null && env.collector.conditionTrace === null) return cursor;
+  return { ...cursor, effectPath: `${cursor.effectPath ?? ''}${suffix}` };
 };
+
+/** Build trace provenance from env + cursor (avoids full EffectContext reconstruction). */
+const envCursorProvenance = (env: EffectEnv, cursor: EffectCursor): EffectTraceProvenance =>
+  resolveTraceProvenance({
+    state: cursor.state,
+    ...(env.traceContext === undefined ? {} : { traceContext: env.traceContext }),
+    ...(cursor.effectPath === undefined ? {} : { effectPath: cursor.effectPath }),
+  });
 
 export const applyIf = (
   effect: Extract<EffectAST, { readonly if: unknown }>,
-  ctx: EffectContext,
+  env: EffectEnv,
+  cursor: EffectCursor,
   budget: EffectBudgetState,
   applyEffectsWithBudget: ApplyEffectsWithBudget,
 ): EffectResult => {
-  const resolvedBindings = resolveEffectBindings(ctx);
-  // Skip context spread when bindings identity unchanged (common in lifecycle effects with empty moveParams)
-  const evalCtx = resolvedBindings === ctx.bindings ? ctx : { ...ctx, bindings: resolvedBindings };
+  const evalCtx = mergeToEvalContext(env, cursor);
   // Skip trace provenance construction when condition tracing is disabled (saves ~131K object allocations)
-  const predicate = ctx.collector.conditionTrace !== null
-    ? evalConditionTraced(effect.if.when, evalCtx, 'ifBranch', resolveTraceProvenance(ctx))
+  const predicate = env.collector.conditionTrace !== null
+    ? evalConditionTraced(effect.if.when, evalCtx, 'ifBranch', envCursorProvenance(env, cursor))
     : evalCondition(effect.if.when, evalCtx);
 
   if (predicate) {
-    const thenResult = applyEffectsWithBudget(effect.if.then, withTracePath(ctx, '.if.then'), budget);
+    const thenResult = applyEffectsWithBudget(effect.if.then, env, withCursorTrace(env, cursor, '.if.then'), budget);
     return {
       state: thenResult.state,
       rng: thenResult.rng,
       ...(thenResult.emittedEvents === undefined ? {} : { emittedEvents: thenResult.emittedEvents }),
-      bindings: thenResult.bindings ?? ctx.bindings,
+      bindings: thenResult.bindings ?? cursor.bindings,
       ...(thenResult.decisionScope === undefined ? {} : { decisionScope: thenResult.decisionScope }),
       ...(thenResult.pendingChoice === undefined ? {} : { pendingChoice: thenResult.pendingChoice }),
     };
   }
 
   if (effect.if.else !== undefined) {
-    const elseResult = applyEffectsWithBudget(effect.if.else, withTracePath(ctx, '.if.else'), budget);
+    const elseResult = applyEffectsWithBudget(effect.if.else, env, withCursorTrace(env, cursor, '.if.else'), budget);
     return {
       state: elseResult.state,
       rng: elseResult.rng,
       ...(elseResult.emittedEvents === undefined ? {} : { emittedEvents: elseResult.emittedEvents }),
-      bindings: elseResult.bindings ?? ctx.bindings,
+      bindings: elseResult.bindings ?? cursor.bindings,
       ...(elseResult.decisionScope === undefined ? {} : { decisionScope: elseResult.decisionScope }),
       ...(elseResult.pendingChoice === undefined ? {} : { pendingChoice: elseResult.pendingChoice }),
     };
   }
 
-  return { state: ctx.state, rng: ctx.rng, bindings: ctx.bindings, decisionScope: ctx.decisionScope };
+  return { state: cursor.state, rng: cursor.rng, bindings: cursor.bindings, decisionScope: cursor.decisionScope };
 };
 
 export const applyLet = (
   effect: Extract<EffectAST, { readonly let: unknown }>,
-  ctx: EffectContext,
+  env: EffectEnv,
+  cursor: EffectCursor,
   budget: EffectBudgetState,
   applyEffectsWithBudget: ApplyEffectsWithBudget,
 ): EffectResult => {
-  const resolvedBindings = resolveEffectBindings(ctx);
-  // Skip context spread when bindings identity unchanged (common in lifecycle effects with empty moveParams)
-  const evalCtx = resolvedBindings === ctx.bindings ? ctx : { ...ctx, bindings: resolvedBindings };
+  const evalCtx = mergeToEvalContext(env, cursor);
   const evaluatedValue = evalValue(effect.let.value, evalCtx);
-  const nestedCtx: EffectContext = {
-    ...ctx,
+  // KEY OPTIMIZATION: only 5 fields spread instead of ~24
+  const nestedCursor: EffectCursor = {
+    ...cursor,
     bindings: {
-      ...ctx.bindings,
+      ...cursor.bindings,
       [effect.let.bind]: evaluatedValue,
     },
   };
 
-  const nestedResult = applyEffectsWithBudget(effect.let.in, withTracePath(nestedCtx, '.let.in'), budget);
+  const nestedResult = applyEffectsWithBudget(effect.let.in, env, withCursorTrace(env, nestedCursor, '.let.in'), budget);
   if (nestedResult.pendingChoice !== undefined) {
     return {
       state: nestedResult.state,
       rng: nestedResult.rng,
       ...(nestedResult.emittedEvents === undefined ? {} : { emittedEvents: nestedResult.emittedEvents }),
-      bindings: ctx.bindings,
+      bindings: cursor.bindings,
       ...(nestedResult.decisionScope === undefined ? {} : { decisionScope: nestedResult.decisionScope }),
       pendingChoice: nestedResult.pendingChoice,
     };
   }
-  const nestedBindings = nestedResult.bindings ?? nestedCtx.bindings;
+  const nestedBindings = nestedResult.bindings ?? nestedCursor.bindings;
   const exportedBindings: Record<string, unknown> = {};
   for (const [name, value] of Object.entries(nestedBindings)) {
     if (name === effect.let.bind || !name.startsWith('$')) {
@@ -116,7 +131,7 @@ export const applyLet = (
     ...(nestedResult.emittedEvents === undefined ? {} : { emittedEvents: nestedResult.emittedEvents }),
     ...(nestedResult.decisionScope === undefined ? {} : { decisionScope: nestedResult.decisionScope }),
     bindings: {
-      ...ctx.bindings,
+      ...cursor.bindings,
       ...exportedBindings,
     },
   };
@@ -124,12 +139,12 @@ export const applyLet = (
 
 export const applyForEach = (
   effect: Extract<EffectAST, { readonly forEach: unknown }>,
-  ctx: EffectContext,
+  env: EffectEnv,
+  cursor: EffectCursor,
   budget: EffectBudgetState,
   applyEffectsWithBudget: ApplyEffectsWithBudget,
 ): EffectResult => {
-  const resolvedBindingsForEach = resolveEffectBindings(ctx);
-  const evalCtx = resolvedBindingsForEach === ctx.bindings ? ctx : { ...ctx, bindings: resolvedBindingsForEach };
+  const evalCtx = mergeToEvalContext(env, cursor);
   const limit = resolveControlFlowIterationLimit('forEach', effect.forEach.limit, evalCtx, (evaluatedLimit) => {
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CONTROL_FLOW_RUNTIME_VALIDATION_FAILED, 'forEach.limit must evaluate to a non-negative integer', {
       effectType: 'forEach',
@@ -141,24 +156,30 @@ export const applyForEach = (
 
   const boundedItems = queryResult.slice(0, limit);
 
-  let currentState = ctx.state;
-  let currentRng = ctx.rng;
-  let currentDecisionScope = ctx.decisionScope;
-  const parentIterationPath = ctx.decisionScope.iterationPath;
+  let currentState = cursor.state;
+  let currentRng = cursor.rng;
+  let currentDecisionScope = cursor.decisionScope;
+  const parentIterationPath = cursor.decisionScope.iterationPath;
   const emittedEvents: TriggerEvent[] = [];
   for (let iterIdx = 0; iterIdx < boundedItems.length; iterIdx += 1) {
     const item = boundedItems[iterIdx]!;
-    const iterationCtx: EffectContext = {
-      ...ctx,
+    // KEY OPTIMIZATION: only 5 fields spread instead of ~24
+    const iterationCursor: EffectCursor = {
+      ...cursor,
       state: currentState,
       rng: currentRng,
       decisionScope: withIterationSegment(rebaseIterationPath(currentDecisionScope, parentIterationPath), iterIdx),
       bindings: {
-        ...ctx.bindings,
+        ...cursor.bindings,
         [effect.forEach.bind]: item,
       },
     };
-    const iterationResult = applyEffectsWithBudget(effect.forEach.effects, withTracePath(iterationCtx, '.forEach.effects'), budget);
+    const iterationResult = applyEffectsWithBudget(
+      effect.forEach.effects,
+      env,
+      withCursorTrace(env, iterationCursor, '.forEach.effects'),
+      budget,
+    );
     currentState = iterationResult.state;
     currentRng = iterationResult.rng;
     currentDecisionScope = iterationResult.decisionScope ?? currentDecisionScope;
@@ -168,37 +189,43 @@ export const applyForEach = (
         state: currentState,
         rng: currentRng,
         emittedEvents,
-        bindings: ctx.bindings,
+        bindings: cursor.bindings,
         decisionScope: currentDecisionScope,
         pendingChoice: iterationResult.pendingChoice,
       };
     }
   }
 
-  if (ctx.collector.trace !== null) {
-    emitTrace(ctx.collector, buildForEachTraceEntry({
+  if (env.collector.trace !== null) {
+    emitTrace(env.collector, buildForEachTraceEntry({
       bind: effect.forEach.bind,
       ...(effect.forEach.macroOrigin === undefined ? {} : { macroOrigin: effect.forEach.macroOrigin }),
       matchCount: queryResult.length,
       iteratedCount: boundedItems.length,
       explicitLimit: effect.forEach.limit !== undefined,
       resolvedLimit: limit,
-      provenance: resolveTraceProvenance(ctx),
+      provenance: envCursorProvenance(env, cursor),
     }));
   }
 
   if (effect.forEach.countBind !== undefined && effect.forEach.in !== undefined) {
-    const countCtx: EffectContext = {
-      ...ctx,
+    // Only 5 fields spread
+    const countCursor: EffectCursor = {
+      ...cursor,
       state: currentState,
       rng: currentRng,
       decisionScope: currentDecisionScope,
       bindings: {
-        ...ctx.bindings,
+        ...cursor.bindings,
         [effect.forEach.countBind]: boundedItems.length,
       },
     };
-    const countResult = applyEffectsWithBudget(effect.forEach.in, withTracePath(countCtx, '.forEach.in'), budget);
+    const countResult = applyEffectsWithBudget(
+      effect.forEach.in,
+      env,
+      withCursorTrace(env, countCursor, '.forEach.in'),
+      budget,
+    );
     currentState = countResult.state;
     currentRng = countResult.rng;
     currentDecisionScope = countResult.decisionScope ?? currentDecisionScope;
@@ -208,7 +235,7 @@ export const applyForEach = (
         state: currentState,
         rng: currentRng,
         emittedEvents,
-        bindings: ctx.bindings,
+        bindings: cursor.bindings,
         decisionScope: currentDecisionScope,
         pendingChoice: countResult.pendingChoice,
       };
@@ -219,19 +246,19 @@ export const applyForEach = (
     state: currentState,
     rng: currentRng,
     emittedEvents,
-    bindings: ctx.bindings,
+    bindings: cursor.bindings,
     decisionScope: currentDecisionScope,
   };
 };
 
 export const applyReduce = (
   effect: Extract<EffectAST, { readonly reduce: unknown }>,
-  ctx: EffectContext,
+  env: EffectEnv,
+  cursor: EffectCursor,
   budget: EffectBudgetState,
   applyEffectsWithBudget: ApplyEffectsWithBudget,
 ): EffectResult => {
-  const resolvedBindingsReduce = resolveEffectBindings(ctx);
-  const evalCtx = resolvedBindingsReduce === ctx.bindings ? ctx : { ...ctx, bindings: resolvedBindingsReduce };
+  const evalCtx = mergeToEvalContext(env, cursor);
   const limit = resolveControlFlowIterationLimit('reduce', effect.reduce.limit, evalCtx, (evaluatedLimit) => {
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CONTROL_FLOW_RUNTIME_VALIDATION_FAILED, 'reduce.limit must evaluate to a non-negative integer', {
       effectType: 'reduce',
@@ -253,8 +280,8 @@ export const applyReduce = (
     });
   }
 
-  if (ctx.collector.trace !== null) {
-    emitTrace(ctx.collector, buildReduceTraceEntry({
+  if (env.collector.trace !== null) {
+    emitTrace(env.collector, buildReduceTraceEntry({
       itemBind: effect.reduce.itemBind,
       accBind: effect.reduce.accBind,
       resultBind: effect.reduce.resultBind,
@@ -265,29 +292,35 @@ export const applyReduce = (
       iteratedCount: boundedItems.length,
       explicitLimit: effect.reduce.limit !== undefined,
       resolvedLimit: limit,
-      provenance: resolveTraceProvenance(ctx),
+      provenance: envCursorProvenance(env, cursor),
     }));
   }
 
-  const continuationCtx: EffectContext = {
-    ...ctx,
+  // Only 5 fields spread
+  const continuationCursor: EffectCursor = {
+    ...cursor,
     bindings: {
-      ...ctx.bindings,
+      ...cursor.bindings,
       [effect.reduce.resultBind]: accumulator,
     },
   };
-  const continuationResult = applyEffectsWithBudget(effect.reduce.in, withTracePath(continuationCtx, '.reduce.in'), budget);
+  const continuationResult = applyEffectsWithBudget(
+    effect.reduce.in,
+    env,
+    withCursorTrace(env, continuationCursor, '.reduce.in'),
+    budget,
+  );
   if (continuationResult.pendingChoice !== undefined) {
     return {
       state: continuationResult.state,
       rng: continuationResult.rng,
       ...(continuationResult.emittedEvents === undefined ? {} : { emittedEvents: continuationResult.emittedEvents }),
-      bindings: ctx.bindings,
+      bindings: cursor.bindings,
       ...(continuationResult.decisionScope === undefined ? {} : { decisionScope: continuationResult.decisionScope }),
       pendingChoice: continuationResult.pendingChoice,
     };
   }
-  const continuationBindings = continuationResult.bindings ?? continuationCtx.bindings;
+  const continuationBindings = continuationResult.bindings ?? continuationCursor.bindings;
   const exportedBindings: Record<string, unknown> = {};
   for (const [name, value] of Object.entries(continuationBindings)) {
     if (name === effect.reduce.resultBind || !name.startsWith('$')) {
@@ -301,7 +334,7 @@ export const applyReduce = (
     ...(continuationResult.emittedEvents === undefined ? {} : { emittedEvents: continuationResult.emittedEvents }),
     ...(continuationResult.decisionScope === undefined ? {} : { decisionScope: continuationResult.decisionScope }),
     bindings: {
-      ...ctx.bindings,
+      ...cursor.bindings,
       ...exportedBindings,
     },
   };
@@ -319,15 +352,16 @@ const resolveRemovalBudget = (budgetExpr: unknown, effectType: string): number =
 
 export const applyRemoveByPriority = (
   effect: Extract<EffectAST, { readonly removeByPriority: unknown }>,
-  ctx: EffectContext,
+  env: EffectEnv,
+  cursor: EffectCursor,
   budget: EffectBudgetState,
   applyEffectsWithBudget: ApplyEffectsWithBudget,
 ): EffectResult => {
-  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const evalCtx = mergeToEvalContext(env, cursor);
   let remainingBudget = resolveRemovalBudget(evalValue(effect.removeByPriority.budget, evalCtx), 'removeByPriority');
-  let currentState = ctx.state;
-  let currentRng = ctx.rng;
-  let currentDecisionScope = ctx.decisionScope;
+  let currentState = cursor.state;
+  let currentRng = cursor.rng;
+  let currentDecisionScope = cursor.decisionScope;
   const emittedEvents: TriggerEvent[] = [];
   const countBindings: Record<string, number> = {};
 
@@ -335,11 +369,15 @@ export const applyRemoveByPriority = (
     let removedInGroup = 0;
 
     if (remainingBudget > 0) {
-      const groupEvalCtx = {
-        ...ctx,
+      const resolvedGroupBindings = resolveEffectBindings(env, {
+        ...cursor,
         state: currentState,
         rng: currentRng,
-        bindings: resolveEffectBindings({ ...ctx, state: currentState, rng: currentRng }),
+      });
+      const groupEvalCtx = {
+        ...evalCtx,
+        state: currentState,
+        bindings: resolvedGroupBindings,
       };
       const queried = evalQuery(group.over, groupEvalCtx);
       const bounded = queried.slice(0, remainingBudget);
@@ -354,13 +392,14 @@ export const applyRemoveByPriority = (
           });
         }
 
-        const iterationCtx: EffectContext = {
-          ...ctx,
+        // Only 5 fields spread
+        const iterationCursor: EffectCursor = {
+          ...cursor,
           state: currentState,
           rng: currentRng,
           decisionScope: currentDecisionScope,
           bindings: {
-            ...ctx.bindings,
+            ...cursor.bindings,
             [group.bind]: item,
           },
         };
@@ -375,7 +414,8 @@ export const applyRemoveByPriority = (
               },
             },
           ],
-          withTracePath(iterationCtx, `.removeByPriority.groups[${groupIndex}].effects`),
+          env,
+          withCursorTrace(env, iterationCursor, `.removeByPriority.groups[${groupIndex}].effects`),
           budget,
         );
 
@@ -401,36 +441,42 @@ export const applyRemoveByPriority = (
   }
 
   const exportedBindings: Record<string, unknown> = {
-    ...ctx.bindings,
+    ...cursor.bindings,
     ...countBindings,
     ...(effect.removeByPriority.remainingBind === undefined ? {} : { [effect.removeByPriority.remainingBind]: remainingBudget }),
   };
 
   if (effect.removeByPriority.in !== undefined) {
-      const inCtx: EffectContext = {
-        ...ctx,
+    // Only 5 fields spread
+    const inCursor: EffectCursor = {
+      ...cursor,
+      state: currentState,
+      rng: currentRng,
+      decisionScope: currentDecisionScope,
+      bindings: exportedBindings,
+    };
+
+    const inResult = applyEffectsWithBudget(
+      effect.removeByPriority.in,
+      env,
+      withCursorTrace(env, inCursor, '.removeByPriority.in'),
+      budget,
+    );
+    currentState = inResult.state;
+    currentRng = inResult.rng;
+    currentDecisionScope = inResult.decisionScope ?? currentDecisionScope;
+    emittedEvents.push(...(inResult.emittedEvents ?? []));
+    if (inResult.pendingChoice !== undefined) {
+      return {
         state: currentState,
         rng: currentRng,
-        decisionScope: currentDecisionScope,
+        emittedEvents,
         bindings: exportedBindings,
+        decisionScope: currentDecisionScope,
+        pendingChoice: inResult.pendingChoice,
       };
-
-      const inResult = applyEffectsWithBudget(effect.removeByPriority.in, withTracePath(inCtx, '.removeByPriority.in'), budget);
-      currentState = inResult.state;
-      currentRng = inResult.rng;
-      currentDecisionScope = inResult.decisionScope ?? currentDecisionScope;
-      emittedEvents.push(...(inResult.emittedEvents ?? []));
-      if (inResult.pendingChoice !== undefined) {
-        return {
-          state: currentState,
-          rng: currentRng,
-          emittedEvents,
-          bindings: exportedBindings,
-          decisionScope: currentDecisionScope,
-          pendingChoice: inResult.pendingChoice,
-        };
-      }
     }
+  }
 
   return {
     state: currentState,

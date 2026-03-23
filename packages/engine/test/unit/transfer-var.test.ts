@@ -202,7 +202,9 @@ describe('transferVar effect', () => {
       ctx,
     );
 
-    assert.equal(result.state, ctx.state);
+    // Spec 78: createMutableState always shallow-clones, so reference identity
+    // is no longer guaranteed for no-op effect lists.
+    assert.deepStrictEqual(result.state, ctx.state);
     assert.deepEqual(result.emittedEvents, []);
   });
 

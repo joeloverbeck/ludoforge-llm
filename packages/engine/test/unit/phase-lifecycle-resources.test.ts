@@ -95,10 +95,12 @@ describe('dispatchLifecycleEvent runtime resources', () => {
     const resources = createEvalRuntimeResources({ collector: createCollector({ trace: true }) });
 
     const afterTurnStart = dispatchLifecycleEvent(def, state, { type: 'turnStart' }, undefined, undefined, resources);
-    assert.equal(afterTurnStart, state);
+    // Spec 78: createMutableState always shallow-clones, so reference identity
+    // is no longer guaranteed for no-op lifecycle dispatches.
+    assert.deepStrictEqual(afterTurnStart, state);
 
     const afterPhaseEnter = dispatchLifecycleEvent(def, afterTurnStart, { type: 'phaseEnter', phase: asPhaseId('main') }, undefined, undefined, resources);
-    assert.equal(afterPhaseEnter, state);
+    assert.deepStrictEqual(afterPhaseEnter, state);
   });
 
   it('reuses provided runtime resources across successive lifecycle calls in one operation', () => {
@@ -111,7 +113,7 @@ describe('dispatchLifecycleEvent runtime resources', () => {
     const afterTurnStart = dispatchLifecycleEvent(def, state, { type: 'turnStart' }, undefined, undefined, resources);
     const afterPhaseEnter = dispatchLifecycleEvent(def, afterTurnStart, { type: 'phaseEnter', phase: asPhaseId('main') }, undefined, undefined, resources);
 
-    assert.equal(afterPhaseEnter, state);
+    assert.deepStrictEqual(afterPhaseEnter, state);
   });
 
   it('fails fast with RUNTIME_CONTRACT_INVALID when evalRuntimeResources is malformed', () => {

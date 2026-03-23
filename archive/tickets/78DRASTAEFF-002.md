@@ -1,6 +1,6 @@
 # 78DRASTAEFF-002: Wire mutable state and DraftTracker into the dispatch loop
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — effect-dispatch.ts
@@ -36,6 +36,7 @@ No changes to `applyEffectWithBudget`, `applyEffect`, or `applyEffects` — the 
 
 ## Files to Touch
 
+- `packages/engine/src/kernel/effect-context.ts` (modify — add `tracker?: DraftTracker` to `EffectCursor`)
 - `packages/engine/src/kernel/effect-dispatch.ts` (modify)
 
 ## Out of Scope
@@ -73,3 +74,14 @@ No changes to `applyEffectWithBudget`, `applyEffect`, or `applyEffects` — the 
 1. `pnpm turbo test --force`
 2. `pnpm turbo typecheck`
 3. `pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-23
+- **What changed**:
+  - `packages/engine/src/kernel/effect-dispatch.ts`: imported `createMutableState`/`createDraftTracker` from `state-draft.ts`, wired them at scope entry in `applyEffectsWithBudgetState`, threaded `tracker` into `workCursor`.
+  - `tickets/78DRASTAEFF-002.md`: added `effect-context.ts` to Files to Touch (the `tracker` field on `EffectCursor` was already added by ticket 001).
+- **Deviations from original plan**:
+  - The ticket listed only `effect-dispatch.ts` in Files to Touch, but `effect-context.ts` already had `tracker?: DraftTracker` on `EffectCursor` from ticket 001 — no additional change needed there.
+  - 5 test assertions across 4 files changed from `assert.equal` (reference identity) to `assert.deepStrictEqual` (structural equality) because `createMutableState` always shallow-clones. Affected: `effects-runtime.test.ts`, `effects-choice.test.ts`, `phase-lifecycle-resources.test.ts`, `transfer-var.test.ts`.
+- **Verification**: typecheck pass, lint pass, 4665/4665 tests pass (`pnpm turbo test --force`).

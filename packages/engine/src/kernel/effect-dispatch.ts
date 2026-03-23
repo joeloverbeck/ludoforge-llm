@@ -18,8 +18,9 @@ import { assertEffectContextEntryInvariant } from './effect-context-invariants.j
 import { perfStart, perfDynEnd } from './perf-profiler.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import type { EffectBudgetState } from './effects-control.js';
-import type { EffectAST, TriggerEvent } from './types.js';
+import type { EffectAST, GameState, TriggerEvent } from './types.js';
 import { registry, effectKindOf } from './effect-registry.js';
+import { createMutableState, createDraftTracker } from './state-draft.js';
 
 export const createEffectBudgetState = (ctx: Pick<EffectContext, 'maxEffectOps'>): EffectBudgetState => {
   const maxEffectOps = getMaxEffectOps(ctx);
@@ -77,7 +78,10 @@ export const applyEffectsWithBudgetState = (
   cursor: EffectCursor,
   budget: EffectBudgetState,
 ): EffectResult => {
-  let currentState = cursor.state;
+  // Create a mutable state clone ONCE for this scope (Spec 78).
+  const mutableState = createMutableState(cursor.state);
+  const tracker = createDraftTracker();
+  let currentState: GameState = mutableState as GameState;
   let currentRng = cursor.rng;
   let currentBindings = cursor.bindings;
   let currentDecisionScope = cursor.decisionScope;
@@ -87,7 +91,8 @@ export const applyEffectsWithBudgetState = (
 
   // Reusable mutable cursor — mutated in place between iterations.
   // Only 5 fields instead of the previous ~25-field workCtx spread.
-  const workCursor: EffectCursor = { ...cursor };
+  // Tracker is set once (stable for the scope) so handlers can access it.
+  const workCursor: EffectCursor = { ...cursor, tracker };
 
   for (let effectIndex = 0; effectIndex < effects.length; effectIndex++) {
     // Update only the fields that change between iterations

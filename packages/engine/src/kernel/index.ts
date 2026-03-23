@@ -110,3 +110,4 @@ export * from './tooltip-blocker-extractor.js';
 export * from './decision-scope.js';
 export * from './perf-profiler.js';
 export * from './var-runtime-utils.js';
+export * from './state-draft.js';

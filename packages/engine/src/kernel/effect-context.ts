@@ -1,6 +1,7 @@
 import type { PlayerId } from './branded.js';
 import type { ChooseNTemplate } from './choose-n-session.js';
 import { emptyScope, type DecisionScope } from './decision-scope.js';
+import type { DraftTracker } from './state-draft.js';
 import type {
   DecisionAuthorityProbeContext,
   DecisionAuthorityStrictContext,
@@ -214,6 +215,8 @@ export interface EffectCursor {
   bindings: Readonly<Record<string, unknown>>;
   decisionScope: DecisionScope;
   effectPath?: string;
+  /** Present when inside a mutable-state scope (Spec 78 draft execution). */
+  tracker?: DraftTracker;
 }
 
 /** Extract the static environment from a full EffectContext. */

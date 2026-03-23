@@ -1,6 +1,6 @@
 # 78DRASTAEFF-003: Add writeScopedVarsMutable helper to scoped-var-runtime-access
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — scoped-var-runtime-access.ts
@@ -82,3 +82,13 @@ Import `MutableGameState`, `DraftTracker`, `ensurePlayerVarCloned`, `ensureZoneV
 1. `pnpm -F @ludoforge/engine test -- --test-name-pattern "scoped-var-mutable"`
 2. `pnpm turbo typecheck`
 3. `pnpm turbo test --force`
+
+## Outcome
+
+- **Completion date**: 2026-03-23
+- **What changed**:
+  - `packages/engine/src/kernel/scoped-var-runtime-access.ts` — added `writeScopedVarsMutable` export (~25 lines) with imports from `state-draft.ts` (`DraftTracker`, `MutableGameState`, `ensurePlayerVarCloned`, `ensureZoneVarCloned`)
+  - `packages/engine/test/unit/kernel/scoped-var-mutable-write.test.ts` — new test file with 5 unit tests (global write, per-player write with clone check, zone write with clone check, tracker idempotency, parity with `writeScopedVarsToState`)
+  - `packages/engine/test/unit/kernel/scoped-var-write-surface-guard.test.ts` — added `writeScopedVarsMutable` to the expected exports list
+- **Deviations**: none
+- **Verification**: `pnpm turbo typecheck` clean, `pnpm turbo lint` clean, `pnpm turbo test --force` — 4670 pass / 0 fail

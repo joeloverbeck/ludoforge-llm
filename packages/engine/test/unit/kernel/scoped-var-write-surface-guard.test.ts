@@ -24,6 +24,7 @@ const expectedScopedVarRuntimeAccessExports = [
   'readScopedVarValue',
   'readScopedIntVarValue',
   'writeScopedVarsToState',
+  'writeScopedVarsMutable',
 ] as const;
 
 describe('scoped-var write surface architecture guard', () => {

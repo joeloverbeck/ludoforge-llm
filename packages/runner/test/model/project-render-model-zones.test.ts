@@ -882,7 +882,7 @@ describe('projectRenderModel zones/tokens/adjacencies', () => {
         'deck:none': [
           {
             observers: 'all',
-            filter: { prop: 'rank', op: 'eq', value: { ref: 'gvar', var: 'tick' } },
+            filter: { prop: 'rank', op: 'eq', value: { _t: 2, ref: 'gvar', var: 'tick' } },
           },
         ],
       },

@@ -87,9 +87,9 @@ const compat = <K extends EffectKind>(
   };
 
 export const registry: EffectRegistry = {
-  setVar: simple(applySetVar),
-  addVar: simple(applyAddVar),
-  setActivePlayer: simple(applySetActivePlayer),
+  setVar: applySetVar,
+  addVar: applyAddVar,
+  setActivePlayer: applySetActivePlayer,
   transferVar: simple(applyTransferVar),
   moveToken: simple(applyMoveToken),
   moveAll: simple(applyMoveAll),

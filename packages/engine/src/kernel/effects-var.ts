@@ -8,24 +8,19 @@ import {
   resolveRuntimeScopedEndpoint,
   resolveScopedVarDef,
   toScopedVarWrite,
+  writeScopedVarsMutable,
   writeScopedVarsToState,
 } from './scoped-var-runtime-access.js';
 import { toTraceVarChangePayload, toVarChangedEvent, type RuntimeScopedVarEndpoint } from './scoped-var-runtime-mapping.js';
 import { emitVarChangeTraceIfChanged } from './var-change-trace.js';
 import { clampIntVarValue } from './var-runtime-utils.js';
-import type { EffectContext, EffectResult } from './effect-context.js';
+import { fromEnvAndCursor, resolveEffectBindings } from './effect-context.js';
+import type { EffectCursor, EffectEnv, EffectResult } from './effect-context.js';
+import type { EffectBudgetState } from './effects-control.js';
+import type { ApplyEffectsWithBudget } from './effect-registry.js';
+import type { MutableGameState } from './state-draft.js';
 import type { EffectAST } from './types.js';
 import type { TriggerEvent } from './types.js';
-
-/** Merge moveParams into bindings. Fast path: return bindings directly when moveParams is empty. */
-const resolveEffectBindings = (ctx: EffectContext): Readonly<Record<string, unknown>> => {
-  const mp = ctx.moveParams;
-  for (const key in mp) {
-    void key;
-    return { ...mp, ...ctx.bindings };
-  }
-  return ctx.bindings;
-};
 
 const expectInteger = (value: unknown, effectType: 'setVar' | 'addVar', field: 'value' | 'delta'): number => {
   if (typeof value !== 'number' || !Number.isFinite(value) || !Number.isSafeInteger(value)) {
@@ -54,25 +49,32 @@ const expectBoolean = (value: unknown, effectType: 'setVar', field: 'value'): bo
 };
 
 const emitVarChangeArtifacts = (
-  ctx: EffectContext,
+  traceCtx: Pick<import('./effect-context.js').EffectContext, 'collector' | 'state' | 'traceContext' | 'effectPath'>,
   endpoint: RuntimeScopedVarEndpoint,
   oldValue: number | boolean,
   newValue: number | boolean,
 ): TriggerEvent | undefined => {
   const tracePayload = toTraceVarChangePayload(endpoint, oldValue, newValue);
-  if (!emitVarChangeTraceIfChanged(ctx, tracePayload)) {
+  if (!emitVarChangeTraceIfChanged(traceCtx, tracePayload)) {
     return undefined;
   }
 
   return toVarChangedEvent(endpoint, oldValue, newValue);
 };
 
-export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknown }>, ctx: EffectContext): EffectResult => {
-  const profiler = ctx.profiler;
+export const applySetVar = (
+  effect: Extract<EffectAST, { readonly setVar: unknown }>,
+  env: EffectEnv,
+  cursor: EffectCursor,
+  _budget: EffectBudgetState,
+  _applyBatch: ApplyEffectsWithBudget,
+): EffectResult => {
+  const profiler = env.profiler;
   const { value } = effect.setVar;
   const t0_bindings = profiler !== undefined ? performance.now() : 0;
-  const resolvedBindings = resolveEffectBindings(ctx);
-  const evalCtx = resolvedBindings === ctx.bindings ? ctx : { ...ctx, bindings: resolvedBindings };
+  const resolvedBindings = resolveEffectBindings(env, cursor);
+  const evalCursor = resolvedBindings === cursor.bindings ? cursor : { ...cursor, bindings: resolvedBindings };
+  const evalCtx = fromEnvAndCursor(env, evalCursor);
   if (profiler !== undefined) {
     const k = 'setVar:bindings'; const b = profiler.dynamic.get(k); if (b) b.totalMs += performance.now() - t0_bindings; else profiler.dynamic.set(k, { count: 0, totalMs: performance.now() - t0_bindings });
   }
@@ -94,7 +96,7 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
     const k = 'setVar:resolveEndpoint'; const b = profiler.dynamic.get(k); if (b) { b.totalMs += performance.now() - t0_endpoint; b.count += 1; } else profiler.dynamic.set(k, { count: 1, totalMs: performance.now() - t0_endpoint });
   }
   const variableDef = resolveScopedVarDef(
-    ctx,
+    evalCtx,
     { scope: effect.setVar.scope, var: endpoint.var },
     'setVar',
     EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED,
@@ -110,15 +112,15 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
 
   const currentValue =
     variableDef.type === 'int'
-      ? readScopedIntVarValue(ctx, endpoint, 'setVar', EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED)
-      : readScopedVarValue(ctx, endpoint, 'setVar', EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED);
+      ? readScopedIntVarValue(evalCtx, endpoint, 'setVar', EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED)
+      : readScopedVarValue(evalCtx, endpoint, 'setVar', EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED);
   const nextValue =
     variableDef.type === 'int'
       ? clampIntVarValue(expectInteger(evaluatedValue, 'setVar', 'value'), variableDef)
       : expectBoolean(evaluatedValue, 'setVar', 'value');
-  const emittedEvent = emitVarChangeArtifacts(ctx, endpoint, currentValue, nextValue);
+  const emittedEvent = emitVarChangeArtifacts(evalCtx, endpoint, currentValue, nextValue);
   if (emittedEvent === undefined) {
-    return { state: ctx.state, rng: ctx.rng };
+    return { state: cursor.state, rng: cursor.rng };
   }
 
   const scopedWrite =
@@ -127,21 +129,34 @@ export const applySetVar = (effect: Extract<EffectAST, { readonly setVar: unknow
       : toScopedVarWrite(endpoint, nextValue);
 
   const t0_write = profiler !== undefined ? performance.now() : 0;
-  const newState = writeScopedVarsToState(ctx.state, [scopedWrite]);
+  let newState: import('./types.js').GameState;
+  if (cursor.tracker) {
+    writeScopedVarsMutable(cursor.state as MutableGameState, [scopedWrite], cursor.tracker);
+    newState = cursor.state;
+  } else {
+    newState = writeScopedVarsToState(cursor.state, [scopedWrite]);
+  }
   if (profiler !== undefined) {
     const k = 'setVar:writeState'; const b = profiler.dynamic.get(k); if (b) { b.totalMs += performance.now() - t0_write; b.count += 1; } else profiler.dynamic.set(k, { count: 1, totalMs: performance.now() - t0_write });
   }
   return {
     state: newState,
-    rng: ctx.rng,
+    rng: cursor.rng,
     emittedEvents: [emittedEvent],
   };
 };
 
-export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknown }>, ctx: EffectContext): EffectResult => {
+export const applyAddVar = (
+  effect: Extract<EffectAST, { readonly addVar: unknown }>,
+  env: EffectEnv,
+  cursor: EffectCursor,
+  _budget: EffectBudgetState,
+  _applyBatch: ApplyEffectsWithBudget,
+): EffectResult => {
   const { delta } = effect.addVar;
-  const resolvedBindingsAdd = resolveEffectBindings(ctx);
-  const evalCtx = resolvedBindingsAdd === ctx.bindings ? ctx : { ...ctx, bindings: resolvedBindingsAdd };
+  const resolvedBindings = resolveEffectBindings(env, cursor);
+  const evalCursor = resolvedBindings === cursor.bindings ? cursor : { ...cursor, bindings: resolvedBindings };
+  const evalCtx = fromEnvAndCursor(env, evalCursor);
   const evaluatedDelta = expectInteger(evalValue(delta, evalCtx), 'addVar', 'delta');
   const endpoint = resolveRuntimeScopedEndpoint(effect.addVar, evalCtx, {
     code: EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED,
@@ -152,7 +167,7 @@ export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknow
     context: { endpoint: effect.addVar },
   });
   const variableDef = resolveScopedVarDef(
-    ctx,
+    evalCtx,
     { scope: effect.addVar.scope, var: endpoint.var },
     'addVar',
     EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED,
@@ -170,25 +185,38 @@ export const applyAddVar = (effect: Extract<EffectAST, { readonly addVar: unknow
     });
   }
 
-  const currentValue = readScopedIntVarValue(ctx, endpoint, 'addVar', EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED);
+  const currentValue = readScopedIntVarValue(evalCtx, endpoint, 'addVar', EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED);
   const nextValue = clampIntVarValue(currentValue + evaluatedDelta, variableDef);
-  const emittedEvent = emitVarChangeArtifacts(ctx, endpoint, currentValue, nextValue);
+  const emittedEvent = emitVarChangeArtifacts(evalCtx, endpoint, currentValue, nextValue);
   if (emittedEvent === undefined) {
-    return { state: ctx.state, rng: ctx.rng };
+    return { state: cursor.state, rng: cursor.rng };
   }
 
+  const write = toScopedVarWrite(endpoint, nextValue);
+  let newState: import('./types.js').GameState;
+  if (cursor.tracker) {
+    writeScopedVarsMutable(cursor.state as MutableGameState, [write], cursor.tracker);
+    newState = cursor.state;
+  } else {
+    newState = writeScopedVarsToState(cursor.state, [write]);
+  }
   return {
-    state: writeScopedVarsToState(ctx.state, [toScopedVarWrite(endpoint, nextValue)]),
-    rng: ctx.rng,
+    state: newState,
+    rng: cursor.rng,
     emittedEvents: [emittedEvent],
   };
 };
 
 export const applySetActivePlayer = (
   effect: Extract<EffectAST, { readonly setActivePlayer: unknown }>,
-  ctx: EffectContext,
+  env: EffectEnv,
+  cursor: EffectCursor,
+  _budget: EffectBudgetState,
+  _applyBatch: ApplyEffectsWithBudget,
 ): EffectResult => {
-  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const resolvedBindings = resolveEffectBindings(env, cursor);
+  const evalCursor = resolvedBindings === cursor.bindings ? cursor : { ...cursor, bindings: resolvedBindings };
+  const evalCtx = fromEnvAndCursor(env, evalCursor);
   const onResolutionFailure = selectorResolutionFailurePolicyForMode(evalCtx.mode);
   const nextActive = resolveSinglePlayerWithNormalization(effect.setActivePlayer.player, evalCtx, {
     code: EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED,
@@ -199,15 +227,16 @@ export const applySetActivePlayer = (
     onResolutionFailure,
     context: { endpoint: effect.setActivePlayer },
   });
-  if (nextActive === ctx.state.activePlayer) {
-    return { state: ctx.state, rng: ctx.rng };
+  if (nextActive === cursor.state.activePlayer) {
+    return { state: cursor.state, rng: cursor.rng };
   }
 
+  if (cursor.tracker) {
+    (cursor.state as MutableGameState).activePlayer = nextActive;
+    return { state: cursor.state, rng: cursor.rng };
+  }
   return {
-    state: {
-      ...ctx.state,
-      activePlayer: nextActive,
-    },
-    rng: ctx.rng,
+    state: { ...cursor.state, activePlayer: nextActive },
+    rng: cursor.rng,
   };
 };

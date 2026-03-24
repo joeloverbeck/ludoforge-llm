@@ -6,6 +6,7 @@ const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const ENGINE_ROOT = resolve(SCRIPT_DIR, '..');
 const INTEGRATION_TEST_ROOT = resolve(ENGINE_ROOT, 'test', 'integration');
 const E2E_TEST_ROOT = resolve(ENGINE_ROOT, 'test', 'e2e');
+const DETERMINISM_TEST_ROOT = resolve(ENGINE_ROOT, 'test', 'determinism');
 
 export const GAME_PACKAGE_TEST_PREFIXES = ['fitl-', 'texas-'];
 
@@ -49,6 +50,7 @@ function collectTestFiles(dir) {
 
 export const ALL_INTEGRATION_TESTS = collectTestFiles(INTEGRATION_TEST_ROOT);
 export const ALL_E2E_TESTS = collectTestFiles(E2E_TEST_ROOT);
+export const ALL_DETERMINISM_TESTS = collectTestFiles(DETERMINISM_TEST_ROOT);
 
 const gamePackageSmokeTests = new Set(GAME_PACKAGE_SMOKE_TESTS.map((testPath) => `test/integration/${testPath}`));
 

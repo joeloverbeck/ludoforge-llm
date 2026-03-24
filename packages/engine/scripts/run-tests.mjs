@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { basename } from 'node:path';
-import { listE2eTestsForLane, listIntegrationTestsForLane, toDistTestPath } from './test-lane-manifest.mjs';
+import { ALL_DETERMINISM_TESTS, listE2eTestsForLane, listIntegrationTestsForLane, toDistTestPath } from './test-lane-manifest.mjs';
 
 const lanePatterns = {
   default: ['dist/test/unit/**/*.test.js', ...listIntegrationTestsForLane('integration:core').map(toDistTestPath)],
@@ -13,6 +13,7 @@ const lanePatterns = {
   'integration:fitl-events': listIntegrationTestsForLane('integration:fitl-events').map(toDistTestPath),
   'integration:fitl-rules': listIntegrationTestsForLane('integration:fitl-rules').map(toDistTestPath),
   'integration:texas-cross-game': listIntegrationTestsForLane('integration:texas-cross-game').map(toDistTestPath),
+  determinism: ALL_DETERMINISM_TESTS.map(toDistTestPath),
 };
 
 const normalizeRequestedPattern = (pattern) => {

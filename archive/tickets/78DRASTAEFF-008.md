@@ -1,6 +1,6 @@
 # 78DRASTAEFF-008: Remove simple()/compat() wrappers, clean up registry, add determinism parity tests
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — effect-registry.ts, effect-context.ts, new test file
@@ -25,19 +25,13 @@ After all 29 handlers are migrated to native `(env, cursor)` signatures (tickets
 
 ## What to Change
 
-### 1. Remove `simple()` and `compat()` from `effect-registry.ts`
+### 1. ~~Remove `simple()` and `compat()` from `effect-registry.ts`~~ — ALREADY DONE
 
-- Delete the `simple` function (lines ~62–65)
-- Delete the `OldApplyEffectsWithBudget` type (lines ~71–75)
-- Delete the `compat` function (lines ~76–87)
-- Remove imports of `fromEnvAndCursor`, `toEffectEnv`, `toEffectCursor` from `effect-context.ts` IF no longer needed in this file
-- Verify the registry object contains ONLY direct handler references
+> Verified 2026-03-24: `simple()`, `compat()`, and `OldApplyEffectsWithBudget` were already removed during tickets 004–007. The registry contains only direct handler references (34 entries). No code changes needed.
 
-### 2. Audit and potentially remove `fromEnvAndCursor` from `effect-context.ts`
+### 2. ~~Audit and potentially remove `fromEnvAndCursor` from `effect-context.ts`~~ — KEEP, NO ACTION
 
-- Grep for all usages of `fromEnvAndCursor` across the codebase
-- If only used in `effect-registry.ts` (now removed), delete the function
-- If used in test helpers, either keep it or migrate the test helpers. Document the decision.
+> Verified 2026-03-24: `fromEnvAndCursor` is used ~30 times across 7 production handler files (effects-token, effects-var, effects-choice, effects-binding, effects-reveal, effects-resource, effects-subset). Zero test-only usage. It is a live production function and cannot be removed.
 
 ### 3. Add determinism parity tests
 
@@ -55,9 +49,9 @@ Create a new test file that:
 
 ## Files to Touch
 
-- `packages/engine/src/kernel/effect-registry.ts` (modify — delete simple/compat/OldApplyEffectsWithBudget)
-- `packages/engine/src/kernel/effect-context.ts` (modify — potentially remove fromEnvAndCursor)
-- `packages/engine/test/unit/kernel/draft-state-determinism-parity.test.ts` (new — determinism parity tests)
+- `packages/engine/src/kernel/effect-registry.ts` — NO CHANGES NEEDED (already clean)
+- `packages/engine/src/kernel/effect-context.ts` — NO CHANGES NEEDED (fromEnvAndCursor is live production code)
+- `packages/engine/test/determinism/draft-state-determinism-parity.test.ts` (new — determinism parity tests, CI-only lane)
 - `packages/engine/test/performance/draft-state-gc-measurement.test.ts` (new — optional GC benchmark)
 
 ## Out of Scope
@@ -90,12 +84,38 @@ Create a new test file that:
 
 ### New/Modified Tests
 
-1. `packages/engine/test/unit/kernel/draft-state-determinism-parity.test.ts` — multi-game determinism verification
+1. `packages/engine/test/determinism/draft-state-determinism-parity.test.ts` — multi-game determinism verification (CI-only lane)
 2. `packages/engine/test/performance/draft-state-gc-measurement.test.ts` — GC pressure measurement (advisory)
 
 ### Commands
 
-1. `pnpm -F @ludoforge/engine test -- --test-name-pattern "determinism-parity"`
+1. `pnpm -F @ludoforge/engine test:determinism`
 2. `pnpm turbo typecheck`
 3. `pnpm turbo lint`
 4. `pnpm turbo test --force`
+
+## Outcome
+
+**Completion date**: 2026-03-24
+
+**What changed**:
+- `simple()`, `compat()`, `OldApplyEffectsWithBudget` were already removed during tickets 004–007. Verified clean.
+- `fromEnvAndCursor` kept — used ~30 times across 7 production handler files. Not dead code.
+- New determinism parity test: `packages/engine/test/determinism/draft-state-determinism-parity.test.ts` — runs 10 seeds (100 via RUN_SLOW_E2E=1) for FITL and Texas Hold'em, verifying same seed → same final state hash (or same error).
+- New GC measurement test: `packages/engine/test/performance/draft-state-gc-measurement.test.ts` — advisory, requires `--expose-gc`.
+- New `determinism` test lane added to `scripts/test-lane-manifest.mjs` and `scripts/run-tests.mjs`.
+- New npm script: `test:determinism` in `packages/engine/package.json`.
+- New CI workflow: `.github/workflows/engine-determinism.yml`.
+
+**Deviations from original plan**:
+- Sections 1–2 (remove wrappers, audit fromEnvAndCursor) required no code changes — already done in prior tickets.
+- Determinism test moved from `test/unit/kernel/` to `test/determinism/` (CI-only lane) to avoid ~10 min slowdown in the default test suite.
+- Seed count reduced to 10 (default) / 100 (RUN_SLOW_E2E=1) for practical test runtime.
+- Test handles FITL runtime errors (known rules gaps) gracefully — asserts same seed produces same error, proving determinism even on failure paths.
+
+**Verification**:
+- `pnpm turbo build`: pass
+- `pnpm turbo typecheck`: pass
+- `pnpm turbo lint`: pass
+- `pnpm turbo test --force`: 4670 pass, 0 fail (35s, determinism test excluded)
+- `pnpm -F @ludoforge/engine test:determinism`: 20 pass, 0 fail (~10 min)

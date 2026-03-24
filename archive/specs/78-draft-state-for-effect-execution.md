@@ -1,6 +1,6 @@
 # Spec 78 — Draft State for Effect Execution
 
-**Status**: PROPOSED (revised 2026-03-23)
+**Status**: ✅ COMPLETED (2026-03-24)
 **Dependencies**: Spec 77 (EffectContext Split) — COMPLETED. The draft integrates
 directly with the EffectEnv/EffectCursor split.
 **Blocked by**: None
@@ -402,3 +402,22 @@ setup (e.g., `{ ...exitedState, currentPhase: targetPhaseId }`).
 | Large handler migration surface (29 handlers) | MEDIUM | Each handler is independent; migrate and test in batches across tickets |
 | EffectCursor.tracker threading through control-flow handlers | LOW | Control-flow handlers (if, forEach, reduce, removeByPriority, let) already pass cursor through; tracker field is automatically threaded |
 | `as any` casts for nested mutation | LOW | Required because TypeScript readonly types cannot be locally narrowed. Confined to draft write helpers (state-draft.ts, scoped-var-runtime-access.ts) — not scattered across handlers |
+
+## Outcome
+
+**Completion date**: 2026-03-24
+
+**What was delivered** (across tickets 78DRASTAEFF-001 through 008):
+- `state-draft.ts`: DraftTracker with mutable-state scope for effect execution
+- `toEffectEnv` / `toEffectCursor` split (Spec 77 prerequisite) integrated
+- `applyEffects` / `applyEffect` dispatch path updated to create mutable scope and thread tracker through cursor
+- All 29 effect handlers migrated to native `(env, cursor)` signatures with direct mutation via tracker
+- 5 control-flow handlers (if, forEach, reduce, removeByPriority, let) thread tracker automatically
+- `simple()` / `compat()` wrappers removed (dead code after migration)
+- `fromEnvAndCursor` kept — actively used by handler eval bridges (~30 call sites)
+- Determinism parity tests (CI-only lane): 10 FITL + 10 Texas Hold'em seeds prove identical Zobrist hashes on replay
+- GC measurement test (advisory): benchmarks GC pressure under `--expose-gc`
+
+**Deviations from spec**:
+- `fromEnvAndCursor` was not removed — still essential for constructing EffectContext for eval functions inside handlers
+- Determinism parity tests run in dedicated `test/determinism/` lane (not unit tests) due to ~10 min runtime

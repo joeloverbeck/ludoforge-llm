@@ -1,10 +1,11 @@
 import { rebaseIterationPath, withIterationSegment, emptyScope } from './decision-scope.js';
-import type { EffectResult } from './effect-context.js';
+import type { EffectCursor, EffectResult } from './effect-context.js';
 import { createEvalContext } from './eval-context.js';
 import { evalQuery } from './eval-query.js';
 import { typeMismatchError } from './eval-error.js';
-import { createCompiledExecutionContext } from './effect-compiler-runtime.js';
-import { consumeEffectBudget } from './effect-dispatch.js';
+import { buildEffectEnvFromCompiledCtx, createCompiledExecutionContext } from './effect-compiler-runtime.js';
+import { applyEffectsWithBudgetState, consumeEffectBudget, createEffectBudgetState } from './effect-dispatch.js';
+import type { MutableGameState } from './state-draft.js';
 import {
   type AddVarPattern,
   type CompilableConditionPattern,
@@ -30,6 +31,7 @@ import {
   resolveRuntimeScopedEndpoint,
   resolveScopedVarDef,
   toScopedVarWrite,
+  writeScopedVarsMutable,
   writeScopedVarsToState,
 } from './scoped-var-runtime-access.js';
 import { toTraceVarChangePayload, toVarChangedEvent } from './scoped-var-runtime-mapping.js';
@@ -186,10 +188,22 @@ const executeEffectList = (
     return fragment.execute(state, rng, bindings, ctx);
   }
 
-  return ctx.fallbackApplyEffects(
-    effects,
-    createCompiledExecutionContext(state, rng, bindings, { ...ctx, decisionScope: ctx.decisionScope ?? emptyScope() }),
+  const env = buildEffectEnvFromCompiledCtx(
+    ctx,
+    ctx.resources.collector,
+    { source: 'engineRuntime' as const, player: ctx.activePlayer, ownershipEnforcement: 'strict' as const },
+    'execution',
   );
+  const cursor: EffectCursor = {
+    state,
+    rng,
+    bindings,
+    decisionScope: ctx.decisionScope ?? emptyScope(),
+    ...(ctx.effectPath === undefined ? {} : { effectPath: ctx.effectPath }),
+    ...(ctx.tracker === undefined ? {} : { tracker: ctx.tracker }),
+  };
+  const budget = createEffectBudgetState(env);
+  return applyEffectsWithBudgetState(effects, env, cursor, budget);
 };
 
 const normalizeBranchResult = (
@@ -310,12 +324,19 @@ export const compileSetVar = (desc: SetVarPattern): CompiledEffectFragment => {
         return { state, rng, bindings };
       }
 
+      const writes = [
+        endpoint.scope === 'zone'
+          ? toScopedVarWrite(endpoint, expectInteger(nextValue, 'setVar', 'value'))
+          : toScopedVarWrite(endpoint, nextValue),
+      ];
+      const tracker = ctx.tracker;
+      if (tracker) {
+        writeScopedVarsMutable(state as MutableGameState, writes, tracker);
+        return { state, rng, emittedEvents: [emittedEvent], bindings };
+      }
+
       return {
-        state: writeScopedVarsToState(state, [
-          endpoint.scope === 'zone'
-            ? toScopedVarWrite(endpoint, expectInteger(nextValue, 'setVar', 'value'))
-            : toScopedVarWrite(endpoint, nextValue),
-        ]),
+        state: writeScopedVarsToState(state, writes),
         rng,
         emittedEvents: [emittedEvent],
         bindings,
@@ -372,8 +393,15 @@ export const compileAddVar = (desc: AddVarPattern): CompiledEffectFragment => {
         return { state, rng, bindings };
       }
 
+      const writes = [toScopedVarWrite(endpoint, nextValue)];
+      const tracker = ctx.tracker;
+      if (tracker) {
+        writeScopedVarsMutable(state as MutableGameState, writes, tracker);
+        return { state, rng, emittedEvents: [emittedEvent], bindings };
+      }
+
       return {
-        state: writeScopedVarsToState(state, [toScopedVarWrite(endpoint, nextValue)]),
+        state: writeScopedVarsToState(state, writes),
         rng,
         emittedEvents: [emittedEvent],
         bindings,

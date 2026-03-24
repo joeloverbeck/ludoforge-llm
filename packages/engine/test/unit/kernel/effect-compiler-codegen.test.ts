@@ -10,17 +10,22 @@ import {
   buildRuntimeTableIndex,
   compilePatternDescriptor,
   computeFullHash,
+  createDraftTracker,
   createExecutionEffectContext,
   createEvalRuntimeResources,
+  createMutableState,
   createRng,
   createZobristTable,
   emptyScope,
+  freezeState,
   type CompiledEffectContext,
   type CompiledEffectFragment,
+  type DraftTracker,
   type EffectAST,
   type EffectResult,
   type GameDef,
   type GameState,
+  type MutableGameState,
   type Rng,
   type TriggerEvent,
 } from '../../../src/kernel/index.js';
@@ -302,5 +307,133 @@ describe('effect-compiler-codegen', () => {
       assert.ok(descriptor !== null);
       assert.ok(compilePatternDescriptor(descriptor, compileEffects) !== null);
     }
+  });
+
+  // --- Draft-aware codegen tests (79COMEFFPATRED-005) ---
+
+  const makeDraftCompiledContext = (
+    def: GameDef,
+    tracker: DraftTracker,
+  ): CompiledEffectContext => ({
+    ...makeCompiledContext(def),
+    tracker,
+  });
+
+  const runCompiledWithTracker = (
+    def: GameDef,
+    mutableState: MutableGameState,
+    effect: EffectAST,
+    tracker: DraftTracker,
+    bindings: Readonly<Record<string, unknown>> = {},
+    rng: Rng = createRng(17n),
+  ): EffectResult => {
+    const descriptor = classifyEffect(effect);
+    assert.ok(descriptor !== null);
+    const fragment = compilePatternDescriptor(descriptor, compileEffects);
+    assert.ok(fragment !== null);
+    return fragment.execute(mutableState as GameState, rng, bindings, makeDraftCompiledContext(def, tracker));
+  };
+
+  it('compileSetVar with ctx.tracker returns same state reference (mutable path)', () => {
+    const def = makeDef();
+    const mutableState = createMutableState(makeState());
+    const tracker = createDraftTracker();
+    const effect: EffectAST = { setVar: { scope: 'global', var: 'score', value: 7 } };
+
+    const result = runCompiledWithTracker(def, mutableState, effect, tracker);
+
+    // Mutable path: state reference is the same object (mutated in-place)
+    assert.equal(result.state, mutableState as unknown as GameState);
+    // Value was actually written
+    assert.equal((result.state as GameState).globalVars.score, 7);
+  });
+
+  it('compileSetVar without ctx.tracker returns new state reference (immutable path)', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = { setVar: { scope: 'global', var: 'score', value: 7 } };
+
+    const result = runCompiled(def, state, effect);
+
+    // Immutable path: state reference is a different object
+    assert.notEqual(result.state, state);
+    assert.equal(result.state.globalVars.score, 7);
+    // Original state unchanged
+    assert.equal(state.globalVars.score, 3);
+  });
+
+  it('compileAddVar with ctx.tracker returns same state reference (mutable path)', () => {
+    const def = makeDef();
+    const mutableState = createMutableState(makeState());
+    const tracker = createDraftTracker();
+    const effect: EffectAST = { addVar: { scope: 'global', var: 'score', delta: 2 } };
+
+    const result = runCompiledWithTracker(def, mutableState, effect, tracker);
+
+    assert.equal(result.state, mutableState as unknown as GameState);
+    assert.equal((result.state as GameState).globalVars.score, 5); // 3 + 2
+  });
+
+  it('compileAddVar without ctx.tracker returns new state reference (immutable path)', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = { addVar: { scope: 'global', var: 'score', delta: 2 } };
+
+    const result = runCompiled(def, state, effect);
+
+    assert.notEqual(result.state, state);
+    assert.equal(result.state.globalVars.score, 5);
+    assert.equal(state.globalVars.score, 3);
+  });
+
+  it('compileSetVar with tracker produces bit-identical result to interpreter', () => {
+    const def = makeDef();
+    const effect: EffectAST = { setVar: { scope: 'global', var: 'score', value: 7 } };
+
+    // Run with tracker, freeze, and compare to interpreter
+    const mutableState = createMutableState(makeState());
+    const tracker = createDraftTracker();
+    const compiledResult = runCompiledWithTracker(def, mutableState, effect, tracker);
+    const frozenResult: EffectResult = { ...compiledResult, state: freezeState(mutableState) };
+
+    const interpretedResult = runInterpreted(def, makeState(), effect);
+    compareResults(def, frozenResult, interpretedResult);
+  });
+
+  it('compileAddVar with tracker produces bit-identical result to interpreter', () => {
+    const def = makeDef();
+    const effect: EffectAST = { addVar: { scope: 'global', var: 'score', delta: 2 } };
+
+    const mutableState = createMutableState(makeState());
+    const tracker = createDraftTracker();
+    const compiledResult = runCompiledWithTracker(def, mutableState, effect, tracker);
+    const frozenResult: EffectResult = { ...compiledResult, state: freezeState(mutableState) };
+
+    const interpretedResult = runInterpreted(def, makeState(), effect);
+    compareResults(def, frozenResult, interpretedResult);
+  });
+
+  it('executeEffectList fallback produces correct EffectResult via applyEffectsWithBudgetState', () => {
+    // Force the fallback path by wrapping a non-compilable effect inside an if.
+    // The if is compilable, but its then-branch body compiler returns null when
+    // it encounters the non-compilable effect, so executeEffectList falls through
+    // to the new buildEffectEnvFromCompiledCtx + applyEffectsWithBudgetState path.
+    const def = makeDef();
+    const state = makeState();
+
+    // Use an if whose then-branch contains an effect that classifyEffect returns
+    // null for — this makes compileBody return null for the then fragment,
+    // triggering the fallback in executeEffectList.
+    // setActivePlayer is a valid EffectAST but not compilable by the pattern compiler.
+    const effect: EffectAST = {
+      if: {
+        when: { op: '==', left: 1, right: 1 },
+        then: [{ setActivePlayer: { player: 'active' } }],
+      },
+    };
+
+    const compiledResult = runCompiled(def, state, effect);
+    const interpretedResult = runInterpreted(def, state, effect);
+    compareResults(def, compiledResult, interpretedResult);
   });
 });

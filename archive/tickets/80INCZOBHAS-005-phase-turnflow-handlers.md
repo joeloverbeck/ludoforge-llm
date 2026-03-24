@@ -1,6 +1,6 @@
 # 80INCZOBHAS-005: Instrument Phase and Turn-Flow Handlers with Incremental Hash Updates
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — effects-turn-flow.ts, phase-advance.ts, phase-lifecycle.ts, apply-move.ts (phase transition paths)
@@ -120,3 +120,19 @@ The `computeFullHash` calls in `phase-lifecycle.ts` (~line 254–255) are for ve
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`
 3. `pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-24
+- **What changed**:
+  - Created `packages/engine/src/kernel/zobrist-phase-hash.ts` — pure hash update helpers for currentPhase, turnCount, activePlayer, and actionUsage features, plus `patchPhaseTransitionHash` for batch immutable state transitions.
+  - Instrumented `applyGotoPhaseExact`, `applyPushInterruptPhase`, `applyPopInterruptPhase` in `effects-turn-flow.ts` with incremental hash updates for currentPhase changes and actionUsage resets.
+  - Instrumented all 3 code paths in `advancePhase` (redirect, normal advance, turn-wrap) and `coupPhaseImplicitPass` in `phase-advance.ts`.
+  - Instrumented `incrementActionUsage` and `applyTurnFlowEligibilityAfterMove` result in `apply-move.ts` to maintain hash parity through the full move pipeline.
+  - Created `packages/engine/test/unit/kernel/zobrist-incremental-phase.test.ts` (7 tests).
+  - Created `packages/engine/test/integration/zobrist-phase-transitions.test.ts` (2 tests).
+- **Deviations from original plan**:
+  - Effect handlers operate in immutable mode (not mutable-state scope), requiring pure hash update functions (`updateHashFeatureChange`-style) rather than the mutable `updateRunningHash`. Created `patchPhaseTransitionHash` as a general-purpose "compare before/after and patch hash" helper.
+  - `apply-move.ts` required more instrumentation than anticipated: `incrementActionUsage` and `applyTurnFlowEligibilityAfterMove` both change hashed features outside effect handlers.
+  - `pushInterruptPhase` and `popInterruptPhase` were not explicitly listed in the ticket but follow the same pattern as `gotoPhaseExact` and were instrumented.
+- **Verification**: 4729 tests pass, typecheck clean, lint clean.

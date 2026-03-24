@@ -86,6 +86,7 @@ import type {
 import { asPlayerId } from './branded.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
 import { computeFullHash, createZobristTable } from './zobrist.js';
+import { patchPhaseTransitionHash } from './zobrist-phase-hash.js';
 import { resolveMoveDecisionSequence } from './move-decision-sequence.js';
 
 const DEFAULT_MAX_TRIGGER_DEPTH = 8;
@@ -1088,7 +1089,12 @@ const executeMoveAction = (
 
   perfEnd(profiler, 'actionEffects', t0_actionEffects);
 
-  const stateWithUsage = incrementActionUsage(effectState, action.id);
+  const stateBeforeUsage = effectState;
+  let stateWithUsage = incrementActionUsage(effectState, action.id);
+  const usageTable = cachedRuntime?.zobristTable;
+  if (usageTable) {
+    stateWithUsage = patchPhaseTransitionHash(usageTable, stateBeforeUsage, stateWithUsage);
+  }
   const maxDepth = def.metadata.maxTriggerDepth ?? DEFAULT_MAX_TRIGGER_DEPTH;
   let triggerState = stateWithUsage;
   let triggerRng = effectRng;
@@ -1295,10 +1301,16 @@ const applyMoveCore = (
     });
   perfEnd(profiler, 'applyTurnFlowEligibility', t0_turnFlow);
 
+  // Patch _runningHash for any activePlayer change introduced by turn-flow eligibility.
+  const turnFlowTable = cachedRuntime?.zobristTable;
+  const turnFlowPatchedState = turnFlowTable
+    ? patchPhaseTransitionHash(turnFlowTable, executed.stateWithRng, turnFlowResult.state)
+    : turnFlowResult.state;
+
   const t0_deferred = perfStart(profiler);
   const deferredExecution = applyReleasedDeferredEventEffects(
     def,
-    turnFlowResult.state,
+    turnFlowPatchedState,
     turnFlowResult.releasedDeferredEventEffects ?? [],
     shared,
   );

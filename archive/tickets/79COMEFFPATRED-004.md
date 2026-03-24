@@ -1,6 +1,6 @@
 # 79COMEFFPATRED-004: Rebuild `createFallbackFragment` with lightweight bridging
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel compiled effect fallback path
@@ -24,7 +24,7 @@ intermediate objects.
 2. It currently calls `createCompiledExecutionContext` from `effect-compiler-runtime.ts` — **confirmed**.
 3. `applyEffectsWithBudgetState` is exported from `effect-dispatch.ts` — **confirmed**.
 4. `EffectCursor` has fields: `state`, `rng`, `bindings`, `decisionScope`, `effectPath`, and `tracker` — **must verify** exact shape at implementation time.
-5. `normalizeFragmentResult` is still present after 79COMEFFPATRED-003 (003 removed its use from `composeFragments` but retained it for `createFallbackFragment`). **This ticket must delete it** after inlining the fallback logic.
+5. `normalizeFragmentResult` is still present in `effect-compiler.ts` (lines 38-49), used only by `createFallbackFragment`. **This ticket must delete the function definition** after rewriting the fallback — no other callers exist.
 6. `applyEffectsWithBudgetState` creates its own `MutableGameState` + `DraftTracker` at entry — nested mutable scope is safe (per spec design note).
 
 ## Architecture Check
@@ -40,23 +40,23 @@ intermediate objects.
 
 ### 1. Rewrite `createFallbackFragment` execute function
 
-Replace:
-```typescript
-// OLD
-const execCtx = createCompiledExecutionContext(state, rng, bindings, ctx);
-const result = ctx.fallbackApplyEffects(effects, execCtx);
-return normalizeFragmentResult(result, bindings, ctx.decisionScope);
-```
+Replace the entire execute body (which has a dual-path: `fallbackApplyEffects` when no
+budget, `applyEffectsWithBudgetState` when budget exists, both going through
+`createCompiledExecutionContext` + `normalizeFragmentResult`) with:
 
-With:
 ```typescript
 // NEW
-const env = buildEffectEnvFromCompiledCtx(ctx);
+const env = buildEffectEnvFromCompiledCtx(
+  ctx,
+  ctx.resources.collector,
+  { source: 'engineRuntime', player: ctx.activePlayer, ownershipEnforcement: 'strict' as const },
+  'execution',
+);
 const cursor: EffectCursor = {
   state,
   rng,
   bindings,
-  decisionScope: ctx.decisionScope,
+  decisionScope: ctx.decisionScope ?? emptyScope(),
   effectPath: ctx.effectPath,
   tracker: ctx.tracker,
 };
@@ -64,13 +64,16 @@ const budget = createEffectBudgetState(env);
 return applyEffectsWithBudgetState(effects, env, cursor, budget);
 ```
 
+Note: `buildEffectEnvFromCompiledCtx` takes 4 arguments (ctx, collector,
+decisionAuthority, mode), not 1.
+
 ### 2. Update imports
 
 - Add: `buildEffectEnvFromCompiledCtx` from `./effect-compiler-runtime.js`
-- Add: `applyEffectsWithBudgetState`, `createEffectBudgetState` from `./effect-dispatch.js`
-- Add: `EffectCursor` type from `./effect-context.js`
-- Remove: `createCompiledExecutionContext` import (if no longer used in this file)
-- Remove: `normalizeFragmentResult` reference (already deleted in 003)
+- Add: `type EffectCursor` to existing `./effect-context.js` import
+- Remove: `toEffectEnv`, `toEffectCursor` from `./effect-context.js` import (no longer used in this file)
+- Remove: `createCompiledExecutionContext` import (no longer used in this file)
+- Keep: `applyEffectsWithBudgetState`, `createEffectBudgetState` imports (already present)
 
 ### 3. Remove `fallbackApplyEffects` usage
 
@@ -133,3 +136,17 @@ with compiled fragments (integration within `composeFragments`).
 2. `pnpm -F @ludoforge/engine test:e2e`
 3. `pnpm turbo typecheck`
 4. `pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-24
+- **What changed**:
+  - `effect-compiler.ts`: Rewrote `createFallbackFragment` to use `buildEffectEnvFromCompiledCtx` + direct `EffectCursor` construction + `applyEffectsWithBudgetState`, eliminating the intermediate `ExecutionEffectContext` object.
+  - `effect-compiler.ts`: Deleted `normalizeFragmentResult` (no remaining callers).
+  - `effect-compiler.ts`: Updated imports — removed `createCompiledExecutionContext`, `toEffectEnv`, `toEffectCursor`; added `buildEffectEnvFromCompiledCtx`, `EffectCursor`.
+  - `effect-compiler.test.ts`: Added test verifying `createFallbackFragment` produces interpreter-parity results via the new lightweight bridging path.
+- **Deviations from original plan**:
+  - `buildEffectEnvFromCompiledCtx` requires 4 arguments (ctx, collector, decisionAuthority, mode), not 1 as the ticket originally showed. Ticket was corrected before implementation.
+  - `EffectCursor` optional fields (`effectPath`, `tracker`) required conditional spreading due to `exactOptionalPropertyTypes`.
+  - `normalizeFragmentResult` was not "already deleted in 003" as originally stated — it was still present and was deleted in this ticket.
+- **Verification**: Unit tests 4676/4676 pass, E2E 36/36 pass, typecheck clean, lint clean.

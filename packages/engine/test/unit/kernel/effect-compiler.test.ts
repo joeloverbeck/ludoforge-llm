@@ -13,6 +13,7 @@ import {
   computeFullHash,
   createEvalRuntimeResources,
   createExecutionEffectContext,
+  createFallbackFragment,
   createRng,
   createZobristTable,
   emptyScope,
@@ -342,6 +343,45 @@ describe('effect-compiler orchestrator', () => {
     assert.equal(executedTail, false);
     assert.equal(result.pendingChoice?.kind, 'pending');
     assert.deepEqual(result.bindings, { $first: true });
+  });
+
+  it('createFallbackFragment uses lightweight env+cursor bridging with interpreter parity', () => {
+    const def = makeDef();
+    const effects: readonly EffectAST[] = [
+      {
+        rollRandom: {
+          bind: '$roll',
+          min: 1,
+          max: 6,
+          in: [{ setVar: { scope: 'global', var: 'count', value: { _t: 2, ref: 'binding', name: '$roll' } } }],
+        },
+      },
+    ];
+    const state = makeState();
+    const rng = createRng(53n);
+    const ctx = makeCompiledContext(def);
+    const fragment = createFallbackFragment(effects);
+    const result = fragment.execute(state, rng, {}, ctx);
+
+    compareResults(
+      def,
+      result,
+      applyEffects(
+        effects,
+        createExecutionEffectContext({
+          def,
+          adjacencyGraph: buildAdjacencyGraph(def.zones),
+          runtimeTableIndex: buildRuntimeTableIndex(def),
+          state,
+          rng,
+          activePlayer: asPlayerId(1),
+          actorPlayer: asPlayerId(0),
+          bindings: {},
+          moveParams: {},
+          resources: createEvalRuntimeResources(),
+        }),
+      ),
+    );
   });
 
   it('compileAllLifecycleEffects compiles non-empty lifecycle entries and skips empty ones', () => {

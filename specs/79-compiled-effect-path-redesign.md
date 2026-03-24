@@ -1,267 +1,242 @@
-# Spec 79 — Compiled Effect Path Redesign
+# Spec 79 — Compiled Effect Path: DraftTracker Integration
 
 **Status**: PROPOSED
-**Dependencies**: Spec 77 (EffectContext Split) — the compiled path must use
-the same context structure as the interpreter for parity verification.
-Spec 76 (Type Tags) — if implemented, compiled code can use tag-based
-dispatch for fallback values.
-**Blocked by**: Spec 77 (should be implemented first so the compiled path
-builds on the final context structure)
-**Enables**: Compilation of action effects (not just lifecycle), which is
-critical for FITL performance
+**Dependencies**: Spec 76 (Type Tags, completed), Spec 77 (EffectContext Split,
+completed), Spec 78 (Draft State, completed)
+**Enables**: Performance parity between compiled and interpreted effect paths.
+Whole-sequence compilation (future spec) becomes viable once the compiled path
+is at parity.
 
 ## Problem
 
-The compiled lifecycle effect system (Spec 74, completed) was designed before
-the interpreter was optimized. After the `texas-perf-optimization` campaign
-(exp-008 through exp-013), the interpreter became **12-16% FASTER** than the
-compiled path for Texas Hold'em:
+The compiled lifecycle effect system (Spec 74) was designed before the
+interpreter was optimized. Specs 77 and 78 optimized the interpreter path:
 
-```
-Compiled lifecycle:  231ms/game
-Interpreter only:    199ms/game
-Compiled overhead:   +16.2%
-```
+- **Spec 77** split the 24-field `EffectContext` into `EffectEnv` (~22 static
+  fields) + `EffectCursor` (5-6 dynamic fields), reducing per-effect context
+  reconstruction cost.
+- **Spec 78** introduced `DraftTracker` with copy-on-write mutable state inside
+  `applyEffectsWithBudgetState`, eliminating ~25K intermediate `GameState`
+  allocations per 10 games and reducing GC from 3.6% to <2%.
 
-### Root causes
+The compiled path was **not updated** for either optimization. It still uses:
 
-1. **Per-fragment overhead in `composeFragments`**: Each fragment call does
-   `{ ...compiledCtx, decisionScope }` (spread ~15 fields) plus
-   `normalizeFragmentResult` (creates another object). The interpreter's
-   mutable `workCtx` (exp-008) avoids both.
+1. **Fragment-based composition** (`composeFragments`): iterates a
+   `CompiledEffectFragment[]` array, calling each fragment with a per-fragment
+   context spread (`{ ...compiledCtx, decisionScope }`) plus
+   `normalizeFragmentResult` (creates another object). The interpreter's mutable
+   `workCursor` avoids both.
 
-2. **Fallback fragment wrapper cost**: `createFallbackFragment` wraps the
-   interpreter in an extra function call + `createCompiledExecutionContext`
-   (another object creation) + `normalizeFragmentResult`. For 26-42% of
-   effects that fall through to the interpreter, this ADDS overhead compared
-   to running the interpreter directly.
+2. **Heavyweight fallback bridging** (`createFallbackFragment`): wraps
+   non-compilable effects via `createCompiledExecutionContext` (reconstructs a
+   full `ExecutionEffectContext` from `CompiledEffectContext` fields) plus
+   `normalizeFragmentResult`. For 26-42% of effects that fall through, this
+   **adds** overhead vs. running the interpreter directly.
 
-3. **Two dispatch systems**: The compiled path iterates FRAGMENTS (compiled +
-   fallback), while the interpreter iterates EFFECTS. The fragment abstraction
-   adds a layer of indirection that the interpreter doesn't have.
+3. **No mutable state**: Each fragment returns immutable state. The interpreter
+   creates a `MutableGameState` + `DraftTracker` once at scope entry and
+   mutates in-place via copy-on-write.
 
-4. **Coverage ceiling**: The pattern-based compiler only recognizes ~6 effect
-   patterns (setVar, addVar, if, forEach-players, gotoPhaseExact). Complex
-   effects (evaluateSubset, reduce, let with nested scopes) always fall
-   through. This limits the compilation benefit.
+Pre-Spec-78 benchmarks showed the compiled path was +16% slower than the
+interpreter for Texas Hold'em. The gap may have widened further since Spec 78
+only optimized the interpreter side. Re-baselining is part of this spec's
+deliverables.
 
 ### Impact on FITL
 
-FITL has MORE lifecycle effects per phase (up to 50+ in coup/support
-resolution phases) and more complex patterns (forEach over zones,
-multi-level if-else trees, trigger effects). The compiled path is even MORE
-likely to be slower for FITL due to higher fallback rates.
+FITL has more lifecycle effects per phase (up to 50+ in coup/support resolution
+phases) and higher fallback rates (complex forEach-over-zones, multi-level
+if-else trees, trigger effects). The compiled path overhead is amplified for
+FITL.
 
 ## Objective
 
-Redesign the compiled effect execution path to be **at least as fast as** the
-interpreter for all games, and **significantly faster** for games with
-compilable effect patterns.
+Achieve **performance parity** between the compiled and interpreted effect paths
+by integrating Spec 78's `DraftTracker` into the compiled path and eliminating
+per-fragment overhead.
 
-Two options are presented. The spec recommends Option B.
+**Non-goal**: Whole-sequence compilation (the original Spec 79 "Option B") is
+deferred to a future spec. The fragment-based architecture is preserved but
+optimized.
 
 ## Foundations Alignment
 
-- **Foundation 1 (Engine Agnosticism)**: Compilation is based on AST node
-  types, not game-specific knowledge. Any game benefits.
+- **Foundation 1 (Engine Agnosticism)**: DraftTracker integration is AST-based,
+  not game-specific. Any game benefits.
 - **Foundation 5 (Determinism)**: Compiled functions produce bit-identical
-  results. The existing verification mode (run both paths, compare results)
-  is preserved and enhanced.
-- **Foundation 6 (Bounded Computation)**: Compiled loops preserve iteration
-  bounds. forEach compiles to counted loops bounded by query result length.
-- **Foundation 7 (Immutability)**: Compiled functions return new state objects
-  (or mutate drafts if Spec 78 is implemented). External contract preserved.
-- **Foundation 11 (Testing)**: Parity between compiled and interpreted paths
-  is proven by automated verification tests.
+  results to the interpreter. The existing verification mode (dual execution +
+  Zobrist hash comparison) is preserved unchanged.
+- **Foundation 6 (Bounded Computation)**: No change to iteration bounds.
+  Compiled loops remain bounded by query result length.
+- **Foundation 7 (Immutability)**: Scoped internal mutation applies (Foundation
+  7 explicitly allows mutable working copies within a synchronous scope).
+  External contract `applyMove(state) → newState` is preserved — the input
+  state is never modified.
+- **Foundation 9 (No Backwards Compat)**: `normalizeFragmentResult` and
+  `createCompiledExecutionContext` are deleted, not deprecated.
+- **Foundation 11 (Testing)**: Parity between compiled and interpreted paths is
+  proven by existing automated verification tests.
 
-## Option A: Fix Compiled Path Overhead (LOW EFFORT)
+## Design
 
-Apply the same optimizations from the interpreter to the compiled path:
+### Key decision: where does the mutable scope live?
 
-1. **Mutable working context in `composeFragments`**: Replace per-fragment
-   `{ ...compiledCtx, decisionScope }` with a mutable working context
-   (same pattern as `applyEffectsWithBudgetState`).
+`composeFragments` creates its own mutable state scope (matching the
+interpreter's `applyEffectsWithBudgetState`). Rationale:
 
-2. **Eliminate `normalizeFragmentResult`**: Return handler results directly
-   and normalize in the loop (same pattern as `applyEffectWithBudget`
-   post exp-008).
+- The caller (`phase-lifecycle.ts`) passes immutable `GameState`. Creating
+  mutable state is an internal optimization, not a lifecycle concern.
+- Verification mode runs both paths independently. Each path manages its own
+  mutable scope — no interaction.
+- The `CompiledEffectFn` signature stays unchanged: `(state, rng, bindings,
+  ctx) → EffectResult`.
 
-3. **Eliminate `createCompiledExecutionContext` for fallback fragments**:
-   Pass the compiled context directly to the interpreter instead of creating
-   a separate execution context.
+### Change 1: Add `tracker` to `CompiledEffectContext`
 
-**Estimated impact**: Bring compiled path to parity with interpreter (0%
-overhead instead of +16%). Does NOT make compilation faster than the
-interpreter — it just removes the compilation tax.
+**File**: `effect-compiler-types.ts`
 
-**Effort**: 1-2 days. Changes to `effect-compiler.ts` only.
+Add an optional `tracker?: DraftTracker` field to `CompiledEffectContext`. This
+is additive — no consumers break.
 
-## Option B: Whole-Sequence Compilation (HIGH EFFORT, RECOMMENDED)
+### Change 2: Add `buildEffectEnvFromCompiledCtx` helper
 
-Instead of composing individual fragments, compile ENTIRE effect sequences
-into single JavaScript functions.
+**File**: `effect-compiler-runtime.ts`
 
-### Current architecture (fragment-based)
+A lightweight helper that builds an `EffectEnv` directly from
+`CompiledEffectContext` fields. This replaces the heavyweight
+`createCompiledExecutionContext` → `createExecutionEffectContext` path for
+fallback fragments. Maps the ~12 static fields (`def`, `adjacencyGraph`,
+`resources`, `activePlayer`, `actorPlayer`, `moveParams`, `runtimeTableIndex`,
+`traceContext`, `maxEffectOps`, `verifyCompiledEffects`,
+`phaseTransitionBudget`, `profiler`, `cachedRuntime`, `collector`,
+`decisionAuthority`, `mode`).
 
+### Change 3: Integrate DraftTracker into `composeFragments`
+
+**File**: `effect-compiler.ts`
+
+At scope entry:
 ```
-Lifecycle onEnter effects: [setVar, setVar, if, forEach, setVar, let, gotoPhase]
-                                    ↓ compile
-Fragments: [compiled(setVar,setVar), fallback(if), compiled(forEach), fallback(setVar,let), compiled(gotoPhase)]
-                                    ↓ compose
-composeFragments loop: iterate fragments[], call each, normalize result, update state
-```
-
-### Proposed architecture (whole-sequence)
-
-```
-Lifecycle onEnter effects: [setVar, setVar, if, forEach, setVar, let, gotoPhase]
-                                    ↓ compile
-Single function: function onEnter_handSetup(state, rng, bindings, env) {
-  // Inline compiled code for setVar, setVar
-  state = { ...state, globalVars: { ...state.globalVars, x: 1, y: 2 } };
-  // Inline interpreter call for 'if' (not compilable)
-  const ifResult = applyIf(ifAst, env, { state, rng, bindings, decisionScope });
-  state = ifResult.state; rng = ifResult.rng;
-  // Inline compiled code for forEach
-  for (const player of listPlayers(state)) { ... }
-  // Inline interpreter call for 'let' (not compilable)
-  const letResult = applyLet(letAst, env, { state, rng, bindings, decisionScope });
-  state = letResult.state; rng = letResult.rng;
-  // Inline compiled code for gotoPhaseExact
-  state = dispatchLifecycleEvent(def, state, { type: 'phaseExit', ... }, ...);
-  return { state, rng, emittedEvents, bindings, decisionScope };
-}
+const mutableState = createMutableState(state);
+const tracker = createDraftTracker();
+let currentState = mutableState as GameState;
 ```
 
-The key difference: **no fragment array, no composition loop, no per-fragment
-context creation**. Compiled effects are inlined directly. Non-compilable
-effects call the interpreter handler directly with the current state.
-
-### Code generation
-
-The compiler generates a JavaScript function body as a string and uses
-`new Function(...)` to create the compiled function:
-
-```typescript
-function compileEffectSequence(effects: EffectAST[], env: CompilationEnv): CompiledEffectFn {
-  const lines: string[] = [];
-  lines.push('let currentState = state;');
-  lines.push('let currentRng = rng;');
-  lines.push('let currentBindings = bindings;');
-  lines.push('const emittedEvents = [];');
-
-  for (let i = 0; i < effects.length; i++) {
-    const pattern = classifyEffect(effects[i]);
-    if (pattern !== null) {
-      // Emit inline compiled code
-      lines.push(emitCompiledEffect(pattern, i));
-    } else {
-      // Emit interpreter call for this specific effect
-      lines.push(`const r${i} = handlers[${i}](effects[${i}], env, { state: currentState, rng: currentRng, bindings: currentBindings, decisionScope: currentScope });`);
-      lines.push(`currentState = r${i}.state; currentRng = r${i}.rng;`);
-      lines.push(`if (r${i}.bindings) currentBindings = r${i}.bindings;`);
-    }
-  }
-
-  lines.push('return { state: currentState, rng: currentRng, emittedEvents, bindings: currentBindings, decisionScope: currentScope };');
-
-  // Create function with closed-over handler references
-  return new Function('state', 'rng', 'bindings', 'env', 'effects', 'handlers',
-    lines.join('\n')
-  ).bind(null) as CompiledEffectFn;
-}
+Thread `tracker` through fragment calls via `ctx`:
+```
+fragment.execute(currentState, currentRng, currentBindings, {
+  ...compiledCtx,
+  decisionScope: currentDecisionScope,
+  tracker,
+})
 ```
 
-### Extending to action effects
+Inline normalization — replace `normalizeFragmentResult` with direct field reads
+(same pattern as `applyEffectsWithBudgetState` loop body). Null-coalesce
+`bindings`, `decisionScope`, guard `emittedEvents` and `pendingChoice`.
 
-The whole-sequence compilation approach naturally extends to action effects:
+Delete `normalizeFragmentResult`.
 
-```typescript
-function createGameDefRuntime(def: GameDef): GameDefRuntime {
-  return {
-    // ... existing fields
-    compiledLifecycleEffects: compileAllLifecycleEffects(def),
-    compiledActionEffects: compileAllActionEffects(def),  // NEW
-  };
-}
-```
+### Change 4: Rebuild `createFallbackFragment`
 
-Action effects are compiled per-action (fold, check, call, raise, allIn for
-Texas Hold'em). Each action's effect tree becomes a single compiled function.
+**File**: `effect-compiler.ts`
 
-**Impact for FITL**: FITL has 20+ actions with complex effect trees (some
-with 50+ effect nodes, nested forEach over zones, evaluateSubset for hand
-evaluation). Compiling these would eliminate the interpreter dispatch
-overhead for the most frequently executed action effects.
+Replace the fallback fragment's execute function:
 
-### Determinism verification
+- Use `buildEffectEnvFromCompiledCtx(ctx)` instead of
+  `createCompiledExecutionContext`.
+- Build an `EffectCursor` directly: `{ state, rng, bindings, decisionScope,
+  effectPath }`.
+- Always call `applyEffectsWithBudgetState(effects, env, cursor, budget)` —
+  remove the two-path branching.
+- Remove `normalizeFragmentResult` wrapper — `applyEffectsWithBudgetState`
+  already returns a well-formed `EffectResult`.
 
-The existing verification system (run both compiled and interpreted, compare
-results) is preserved. The `verifyCompiledEffects` flag triggers dual
-execution and comparison.
+**Note on nested scopes**: The fallback's `applyEffectsWithBudgetState` call
+creates its own mutable state + tracker (it unconditionally creates them at
+entry). This means fallback fragments get a nested mutable scope rather than
+sharing the parent's tracker. This is correct (nested copy-on-write is safe)
+but suboptimal. Sharing trackers across scopes is a follow-up optimization if
+profiling shows it matters.
 
-**Estimated impact**: 10-25% total improvement for games with complex effect
-trees (eliminates interpreter dispatch for compiled portions). For Texas
-Hold'em: ~10%. For FITL: potentially 15-25% (more effects per move).
+### Change 5: Make codegen fragments draft-aware
 
-**Effort**: 5-7 days. New code generation system, integration with
-`dispatchLifecycleEvent` and `executeMoveAction`, comprehensive parity
-testing.
+**File**: `effect-compiler-codegen.ts`
 
-## Recommended Approach
+For `compileSetVar` and `compileAddVar`: when `ctx.tracker` is present, use
+`writeScopedVarsMutable(state, writes, ctx.tracker)` instead of
+`writeScopedVarsToState(state, writes)`. Return the same `state` reference
+(mutated in-place) rather than a new state object.
 
-**Option B** is recommended because:
-1. Option A only achieves parity — it doesn't make compilation worthwhile
-2. Option B enables action effect compilation — the key unlock for FITL
-3. Option B's code generation is simpler than fragment composition (no
-   `composeFragments`, no `normalizeFragmentResult`, no fragment array)
-4. The `new Function` approach is a standard JavaScript optimization
-   technique used by template engines, ORMs, and serializers
+For `executeEffectList` fallback path: replace `createCompiledExecutionContext` +
+`ctx.fallbackApplyEffects` with `buildEffectEnvFromCompiledCtx` +
+`applyEffectsWithBudgetState`. Thread `tracker` from ctx into the cursor.
+
+### Change 6: Dead code removal
+
+- Delete `normalizeFragmentResult` from `effect-compiler.ts`.
+- Delete `createCompiledExecutionContext` from `effect-compiler-runtime.ts` if
+  no longer referenced.
+- Evaluate whether `fallbackApplyEffects` on `CompiledEffectContext` is still
+  needed. If all fallback paths now use `applyEffectsWithBudgetState` directly,
+  remove it.
+- Update imports.
 
 ## Scope
 
 ### Files affected
 
-- `packages/engine/src/kernel/effect-compiler.ts` — rewrite compilation pipeline
-- `packages/engine/src/kernel/effect-compiler-codegen.ts` — rewrite code generation
-- `packages/engine/src/kernel/effect-compiler-types.ts` — simplify types
-- `packages/engine/src/kernel/effect-compiler-patterns.ts` — extend pattern matching
-- `packages/engine/src/kernel/gamedef-runtime.ts` — add compiledActionEffects
-- `packages/engine/src/kernel/phase-lifecycle.ts` — use new compiled functions
-- `packages/engine/src/kernel/apply-move.ts` — use compiled action effects
-- `packages/engine/test/unit/kernel/effect-compiler*.ts` — comprehensive tests
-- `packages/engine/test/integration/compiled-effects*.ts` — parity tests
+- `packages/engine/src/kernel/effect-compiler-types.ts` — add `tracker` field
+- `packages/engine/src/kernel/effect-compiler-runtime.ts` — add
+  `buildEffectEnvFromCompiledCtx`, remove `createCompiledExecutionContext`
+- `packages/engine/src/kernel/effect-compiler.ts` — rewrite `composeFragments`,
+  rebuild `createFallbackFragment`, delete `normalizeFragmentResult`
+- `packages/engine/src/kernel/effect-compiler-codegen.ts` — draft-aware
+  `compileSetVar`/`compileAddVar`, replace `executeEffectList` fallback
+- `packages/engine/test/unit/kernel/effect-compiler*.ts` — unit tests
+- `specs/79-compiled-effect-path-redesign.md` — this file
 
 ### Files NOT affected
 
-- GameDef schema (compilation is a runtime optimization, not a data change)
-- GameSpecDoc YAML
-- Effect handler implementations (they're called from compiled code)
+- `phase-lifecycle.ts` — no changes (compiled fn signature unchanged)
+- `gamedef-runtime.ts` — no changes
+- `effect-dispatch.ts` — read only (reuse `applyEffectsWithBudgetState`)
+- `state-draft.ts` — read only (reuse `createMutableState`, `createDraftTracker`)
+- GameDef schema, GameSpecDoc YAML
+- Effect handler implementations
 - Simulator, runner, agents
 
 ## Testing
 
-- **Parity verification**: Run 100 games per game spec (Texas Hold'em, FITL)
-  with both compiled and interpreted paths, compare all state hashes
-- **Coverage measurement**: Log which effects are compiled vs. fallback for
-  each game, target >80% coverage
-- **Performance regression test**: Compiled path must be >= interpreter speed
-  (never slower)
-- **Determinism**: Same seed + same actions = identical final state hash across
-  compiled and interpreted modes
+- **Parity verification**: Existing `verifyCompiledEffects: true` in
+  `phase-lifecycle.ts` runs both compiled and interpreted paths, compares
+  Zobrist hashes, rng, emittedEvents, bindings, decisionScope, pendingChoice,
+  and warnings. No changes needed to verification logic.
+- **Unit tests**: Test that `composeFragments` creates a mutable scope (output
+  state !== input state identity). Test draft-aware codegen (`compileSetVar`,
+  `compileAddVar` use `writeScopedVarsMutable` when tracker present).
+- **E2E**: Full game parity via `pnpm -F @ludoforge/engine test:e2e`.
+- **Performance re-baseline**: Run Texas Hold'em benchmark (10 games, multiple
+  seeds) with compiled path before and after. Target: 0% overhead (parity with
+  interpreter), ideally slight improvement from draft-aware codegen.
 
 ## Risks
 
-- **`new Function` security**: `new Function` is similar to `eval` and may be
-  blocked in certain environments (CSP headers, sandboxed contexts). This
-  only affects the runner (browser) — the engine runs in Node.js where
-  `new Function` is unrestricted. For the runner, the compiled functions
-  are generated at game-load time from trusted GameDef data, not from user
-  input.
-- **Debugging compiled code**: Generated functions are harder to debug than
-  handwritten code. Mitigated by the verification mode that runs both paths
-  and reports mismatches.
-- **Pattern coverage**: If pattern matching is incomplete, fallback-heavy
-  sequences may not see improvement. The whole-sequence approach ensures
-  that even mixed sequences (compiled + fallback) have less overhead than
-  the current fragment composition.
+| Risk | Mitigation |
+|------|-----------|
+| Mutable state leak across fragment boundary | `composeFragments` creates mutable state at entry (same as interpreter). Each fragment mutates the same working copy. External contract preserved. |
+| Verification mode divergence | Verification runs compiled and interpreted paths independently. Each creates its own mutable scope. No interaction. |
+| Nested mutable scopes in fallback fragments | Safe (nested copy-on-write) but suboptimal. Acceptable for parity — optimize as follow-up if profiling warrants. |
+| `emitVarChangeArtifacts` in codegen still uses `createCompiledExecutionContext` | Per-effect cost (~1 object), same order as interpreter. Follow-up optimization. |
+
+## Future Work
+
+- **Whole-sequence compilation**: Compile entire effect sequences into single
+  functions via `new Function(...)`, eliminating the fragment array and
+  composition loop entirely. Deferred to a separate spec contingent on
+  post-parity profiling results.
+- **Action effect compilation**: Extend compilation to action effects (not just
+  lifecycle). Depends on whole-sequence compilation for meaningful benefit.
+- **Shared tracker across scopes**: Allow `applyEffectsWithBudgetState` to
+  accept an existing tracker, eliminating nested mutable scope creation in
+  fallback fragments.

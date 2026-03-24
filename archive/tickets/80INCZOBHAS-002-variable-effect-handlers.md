@@ -1,6 +1,6 @@
 # 80INCZOBHAS-002: Instrument Variable Effect Handlers with Incremental Hash Updates
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — effects-var.ts, effects-resource.ts
@@ -102,3 +102,17 @@ Capture old `state.activePlayer`, then after setting the new value, call `update
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`
 3. `pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-24
+- **What changed**:
+  - Created `packages/engine/src/kernel/zobrist-var-hash.ts` — `updateVarRunningHash()` helper mapping `RuntimeScopedVarEndpoint` (global/pvar/zone) to `ZobristFeature` and calling `updateRunningHash`.
+  - Instrumented `applySetVar`, `applyAddVar` in `effects-var.ts` with hash updates after mutable writes.
+  - Instrumented `applySetActivePlayer` in `effects-var.ts` with `activePlayer` feature hash updates.
+  - Instrumented `applyTransferVar` in `effects-resource.ts` with two hash updates (source + destination endpoints).
+  - Added 8 unit tests in `packages/engine/test/unit/kernel/zobrist-incremental-vars.test.ts`.
+  - Fixed 2 existing tests (`compiled-lifecycle-runtime.test.ts`, `simulator.test.ts`) that needed `cachedRuntime` parity between compared code paths.
+- **Deviations from original plan**:
+  - Also covered `zoneVar` scope (ticket only mentioned `globalVar` and `perPlayerVar`, but `applySetVar`, `applyAddVar`, and `applyTransferVar` all handle zone-scoped variables too, and `ZobristFeature` has a `zoneVar` kind).
+- **Verification results**: 4699/4699 engine tests pass, typecheck clean, lint clean.

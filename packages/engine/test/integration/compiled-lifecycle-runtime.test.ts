@@ -130,6 +130,7 @@ describe('compiled lifecycle runtime integration', () => {
   it('preserves lifecycle dispatch results between compiled and interpreted execution', () => {
     const def = createLifecycleDef();
     const state = createState();
+    const runtime = createGameDefRuntime(def);
     const compiled = dispatchLifecycleEvent(
       def,
       state,
@@ -138,7 +139,7 @@ describe('compiled lifecycle runtime integration', () => {
       undefined,
       createEvalRuntimeResources(),
       'lifecycle',
-      createGameDefRuntime(def),
+      runtime,
     );
     const interpreted = dispatchLifecycleEvent(
       def,
@@ -148,6 +149,7 @@ describe('compiled lifecycle runtime integration', () => {
       undefined,
       createEvalRuntimeResources(),
       'lifecycle',
+      runtime,
     );
 
     assert.deepEqual(compiled, interpreted);

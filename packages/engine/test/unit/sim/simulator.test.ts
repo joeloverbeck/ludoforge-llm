@@ -8,6 +8,7 @@ import {
   asPhaseId,
   asZoneId,
   computeFullHash,
+  createGameDefRuntime,
   enumerateLegalMoves,
   createZobristTable,
   initialState,
@@ -228,6 +229,7 @@ describe('runGame', () => {
   it('matches a validated replay when simulator uses trusted execution', () => {
     const def = createDef({ terminalAtScore: 3 });
     const seed = 29;
+    const runtime = createGameDefRuntime(def);
     const trace = runGame(def, seed, [firstLegalAgent, firstLegalAgent], 10);
 
     let replayState = initialState(def, seed, 2).state;
@@ -235,7 +237,7 @@ describe('runGame', () => {
       const enumerated = enumerateLegalMoves(def, replayState);
       assert.equal(moveLog.legalMoveCount, enumerated.moves.length);
 
-      const applied = applyMove(def, replayState, moveLog.move);
+      const applied = applyMove(def, replayState, moveLog.move, undefined, runtime);
       assert.deepEqual(applied.triggerFirings, moveLog.triggerFirings);
       assert.deepEqual(applied.warnings, moveLog.warnings);
       replayState = applied.state;

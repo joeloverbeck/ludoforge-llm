@@ -14,6 +14,8 @@ import {
 import { toTraceVarChangePayload, toVarChangedEvent, type RuntimeScopedVarEndpoint } from './scoped-var-runtime-mapping.js';
 import { emitVarChangeTraceIfChanged } from './var-change-trace.js';
 import { clampIntVarValue } from './var-runtime-utils.js';
+import { updateRunningHash } from './zobrist.js';
+import { updateVarRunningHash } from './zobrist-var-hash.js';
 import { fromEnvAndCursor, resolveEffectBindings } from './effect-context.js';
 import type { EffectCursor, EffectEnv, EffectResult } from './effect-context.js';
 import type { EffectBudgetState } from './effects-control.js';
@@ -132,6 +134,7 @@ export const applySetVar = (
   let newState: import('./types.js').GameState;
   if (cursor.tracker) {
     writeScopedVarsMutable(cursor.state as MutableGameState, [scopedWrite], cursor.tracker);
+    updateVarRunningHash(cursor.state as MutableGameState, env.cachedRuntime?.zobristTable, endpoint, currentValue, nextValue);
     newState = cursor.state;
   } else {
     newState = writeScopedVarsToState(cursor.state, [scopedWrite]);
@@ -196,6 +199,7 @@ export const applyAddVar = (
   let newState: import('./types.js').GameState;
   if (cursor.tracker) {
     writeScopedVarsMutable(cursor.state as MutableGameState, [write], cursor.tracker);
+    updateVarRunningHash(cursor.state as MutableGameState, env.cachedRuntime?.zobristTable, endpoint, currentValue, nextValue);
     newState = cursor.state;
   } else {
     newState = writeScopedVarsToState(cursor.state, [write]);
@@ -232,7 +236,17 @@ export const applySetActivePlayer = (
   }
 
   if (cursor.tracker) {
+    const oldActive = cursor.state.activePlayer;
     (cursor.state as MutableGameState).activePlayer = nextActive;
+    const table = env.cachedRuntime?.zobristTable;
+    if (table) {
+      updateRunningHash(
+        cursor.state as MutableGameState,
+        table,
+        { kind: 'activePlayer', playerId: oldActive },
+        { kind: 'activePlayer', playerId: nextActive },
+      );
+    }
     return { state: cursor.state, rng: cursor.rng };
   }
   return {

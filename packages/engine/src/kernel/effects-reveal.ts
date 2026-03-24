@@ -16,13 +16,11 @@ import { emitTrace } from './execution-collector.js';
 import { resolveTraceProvenance } from './trace-provenance.js';
 import { omitOptionalStateKey } from './state-shape.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
-import type { EffectContext, EffectResult } from './effect-context.js';
+import { fromEnvAndCursor, resolveEffectBindings } from './effect-context.js';
+import type { EffectCursor, EffectEnv, EffectResult } from './effect-context.js';
+import type { EffectBudgetState } from './effects-control.js';
+import type { ApplyEffectsWithBudget } from './effect-registry.js';
 import type { EffectAST, RevealGrant, TokenFilterExpr } from './types.js';
-
-const resolveEffectBindings = (ctx: EffectContext): Readonly<Record<string, unknown>> => ({
-  ...ctx.moveParams,
-  ...ctx.bindings,
-});
 
 const canonicalTokenFilterKeyForRuntime = (filter: TokenFilterExpr): string => {
   try {
@@ -34,10 +32,14 @@ const canonicalTokenFilterKeyForRuntime = (filter: TokenFilterExpr): string => {
 
 export const applyConceal = (
   effect: Extract<EffectAST, { readonly conceal: unknown }>,
-  ctx: EffectContext,
+  env: EffectEnv,
+  cursor: EffectCursor,
+  _budget: EffectBudgetState,
+  _applyBatch: ApplyEffectsWithBudget,
 ): EffectResult => {
-  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
-  const onResolutionFailure = selectorResolutionFailurePolicyForMode(evalCtx.mode);
+  const resolvedBindings = resolveEffectBindings(env, cursor);
+  const evalCtx = fromEnvAndCursor(env, resolvedBindings === cursor.bindings ? cursor : { ...cursor, bindings: resolvedBindings });
+  const onResolutionFailure = selectorResolutionFailurePolicyForMode(env.mode);
   const zoneId = String(
     resolveZoneWithNormalization(effect.conceal.zone, evalCtx, {
       code: EFFECT_RUNTIME_REASONS.CONCEAL_RUNTIME_VALIDATION_FAILED,
@@ -48,19 +50,19 @@ export const applyConceal = (
     }),
   );
 
-  if (ctx.state.zones[zoneId] === undefined) {
+  if (cursor.state.zones[zoneId] === undefined) {
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CONCEAL_RUNTIME_VALIDATION_FAILED, `Zone state not found for selector result: ${zoneId}`, {
       effectType: 'conceal',
       field: 'zone',
       zoneId,
-      availableZoneIds: Object.keys(ctx.state.zones).sort(),
+      availableZoneIds: Object.keys(cursor.state.zones).sort(),
     });
   }
 
   const expectedFilterKey = effect.conceal.filter === undefined ? null : canonicalTokenFilterKeyForRuntime(effect.conceal.filter);
-  const existingReveals = ctx.state.reveals ?? {};
+  const existingReveals = cursor.state.reveals ?? {};
   if (existingReveals[zoneId] === undefined || existingReveals[zoneId].length === 0) {
-    return { state: ctx.state, rng: ctx.rng, emittedEvents: [] };
+    return { state: cursor.state, rng: cursor.rng, emittedEvents: [] };
   }
 
   let from: 'all' | readonly PlayerId[] | undefined;
@@ -76,7 +78,7 @@ export const applyConceal = (
           resolutionFailureMessage: 'conceal.from selector resolution failed',
           onResolutionFailure,
         }),
-        ctx.state.playerCount,
+        cursor.state.playerCount,
       );
     }
   }
@@ -88,17 +90,30 @@ export const applyConceal = (
   const remainingZoneGrants = removal.remaining;
 
   if (removal.removedCount === 0) {
-    return { state: ctx.state, rng: ctx.rng, emittedEvents: [] };
+    return { state: cursor.state, rng: cursor.rng, emittedEvents: [] };
   }
 
-  emitTrace(ctx.collector, {
+  emitTrace(env.collector, {
     kind: 'conceal',
     zone: zoneId,
     ...(from === undefined ? {} : { from }),
     ...(effect.conceal.filter === undefined ? {} : { filter: effect.conceal.filter }),
     grantsRemoved: removal.removedCount,
-    provenance: resolveTraceProvenance(ctx),
+    provenance: resolveTraceProvenance(evalCtx),
   });
+
+  if (cursor.tracker) {
+    const mutableReveals = cursor.state.reveals as Record<string, unknown>;
+    if (remainingZoneGrants.length === 0) {
+      delete mutableReveals[zoneId];
+    } else {
+      mutableReveals[zoneId] = remainingZoneGrants;
+    }
+    if (Object.keys(mutableReveals).length === 0) {
+      return { state: omitOptionalStateKey(cursor.state, 'reveals'), rng: cursor.rng, emittedEvents: [] };
+    }
+    return { state: cursor.state, rng: cursor.rng, emittedEvents: [] };
+  }
 
   const nextReveals = { ...existingReveals };
   if (remainingZoneGrants.length === 0) {
@@ -108,15 +123,22 @@ export const applyConceal = (
   }
 
   if (Object.keys(nextReveals).length === 0) {
-    return { state: omitOptionalStateKey(ctx.state, 'reveals'), rng: ctx.rng, emittedEvents: [] };
+    return { state: omitOptionalStateKey(cursor.state, 'reveals'), rng: cursor.rng, emittedEvents: [] };
   }
 
-  return { state: { ...ctx.state, reveals: nextReveals }, rng: ctx.rng, emittedEvents: [] };
+  return { state: { ...cursor.state, reveals: nextReveals }, rng: cursor.rng, emittedEvents: [] };
 };
 
-export const applyReveal = (effect: Extract<EffectAST, { readonly reveal: unknown }>, ctx: EffectContext): EffectResult => {
-  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
-  const onResolutionFailure = selectorResolutionFailurePolicyForMode(evalCtx.mode);
+export const applyReveal = (
+  effect: Extract<EffectAST, { readonly reveal: unknown }>,
+  env: EffectEnv,
+  cursor: EffectCursor,
+  _budget: EffectBudgetState,
+  _applyBatch: ApplyEffectsWithBudget,
+): EffectResult => {
+  const resolvedBindings = resolveEffectBindings(env, cursor);
+  const evalCtx = fromEnvAndCursor(env, resolvedBindings === cursor.bindings ? cursor : { ...cursor, bindings: resolvedBindings });
+  const onResolutionFailure = selectorResolutionFailurePolicyForMode(env.mode);
   const zoneId = String(
     resolveZoneWithNormalization(effect.reveal.zone, evalCtx, {
       code: EFFECT_RUNTIME_REASONS.REVEAL_RUNTIME_VALIDATION_FAILED,
@@ -127,12 +149,12 @@ export const applyReveal = (effect: Extract<EffectAST, { readonly reveal: unknow
     }),
   );
 
-  if (ctx.state.zones[zoneId] === undefined) {
+  if (cursor.state.zones[zoneId] === undefined) {
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.REVEAL_RUNTIME_VALIDATION_FAILED, `Zone state not found for selector result: ${zoneId}`, {
       effectType: 'reveal',
       field: 'zone',
       zoneId,
-      availableZoneIds: Object.keys(ctx.state.zones).sort(),
+      availableZoneIds: Object.keys(cursor.state.zones).sort(),
     });
   }
 
@@ -148,7 +170,7 @@ export const applyReveal = (effect: Extract<EffectAST, { readonly reveal: unknow
         resolutionFailureMessage: 'reveal.to selector resolution failed',
         onResolutionFailure,
       }),
-      ctx.state.playerCount,
+      cursor.state.playerCount,
     );
   }
 
@@ -162,27 +184,37 @@ export const applyReveal = (effect: Extract<EffectAST, { readonly reveal: unknow
     ...(effect.reveal.filter === undefined ? {} : { filter: effect.reveal.filter }),
   };
 
-  const existingReveals = ctx.state.reveals ?? {};
+  const existingReveals = cursor.state.reveals ?? {};
   const existingZoneGrants = existingReveals[zoneId] ?? [];
   if (existingZoneGrants.some((existing) => revealGrantEquals(existing, grant))) {
-    return { state: ctx.state, rng: ctx.rng, emittedEvents: [] };
+    return { state: cursor.state, rng: cursor.rng, emittedEvents: [] };
+  }
+
+  emitTrace(env.collector, {
+    kind: 'reveal',
+    zone: zoneId,
+    observers,
+    ...(effect.reveal.filter === undefined ? {} : { filter: effect.reveal.filter }),
+    provenance: resolveTraceProvenance(evalCtx),
+  });
+
+  if (cursor.tracker) {
+    const mutableReveals = cursor.state.reveals as Record<string, unknown> | undefined;
+    if (mutableReveals !== undefined) {
+      (mutableReveals as Record<string, readonly RevealGrant[]>)[zoneId] = [...existingZoneGrants, grant];
+    } else {
+      (cursor.state as { reveals: Record<string, readonly RevealGrant[]> }).reveals = { [zoneId]: [grant] };
+    }
+    return { state: cursor.state, rng: cursor.rng, emittedEvents: [] };
   }
 
   const nextState = {
-    ...ctx.state,
+    ...cursor.state,
     reveals: {
       ...existingReveals,
       [zoneId]: [...existingZoneGrants, grant],
     },
   };
 
-  emitTrace(ctx.collector, {
-    kind: 'reveal',
-    zone: zoneId,
-    observers,
-    ...(effect.reveal.filter === undefined ? {} : { filter: effect.reveal.filter }),
-    provenance: resolveTraceProvenance(ctx),
-  });
-
-  return { state: nextState, rng: ctx.rng, emittedEvents: [] };
+  return { state: nextState, rng: cursor.rng, emittedEvents: [] };
 };

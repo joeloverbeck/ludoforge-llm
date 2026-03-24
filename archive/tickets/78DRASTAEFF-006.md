@@ -1,6 +1,6 @@
 # 78DRASTAEFF-006: Migrate choice, reveal, binding, and resource handlers to native (env, cursor) signature
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — effects-choice.ts, effects-reveal.ts, effects-binding.ts, effects-resource.ts, effect-registry.ts
@@ -107,3 +107,17 @@ Unwrap `simple()` for all 12 handlers.
 1. `pnpm -F @ludoforge/engine test -- --test-name-pattern "choice|reveal|conceal|bindValue|transferVar|marker"`
 2. `pnpm turbo typecheck`
 3. `pnpm turbo test --force`
+
+## Outcome
+
+- **Completion date**: 2026-03-24
+- **What changed**:
+  - `effects-binding.ts`: migrated `applyBindValue` to native `(env, cursor)` signature; removed local `resolveEffectBindings`
+  - `effects-reveal.ts`: migrated `applyReveal` and `applyConceal` to native signature; removed local `resolveEffectBindings`; added mutable-path for `state.reveals` when `cursor.tracker` present
+  - `effects-resource.ts`: migrated `applyTransferVar` to native signature; removed local `resolveEffectBindings`; added `writeScopedVarsMutable` path when `cursor.tracker` present
+  - `effects-choice.ts`: migrated 7 handlers (`applyChooseOne`, `applyChooseN`, `applySetMarker`, `applyShiftMarker`, `applySetGlobalMarker`, `applyFlipGlobalMarker`, `applyShiftGlobalMarker`) to native signature; converted local `resolveEffectBindings` to `resolveChoiceBindings(env, cursor)` (keeps binding template key resolution); added `resolveChoiceBindingsCompat` for `applyRollRandom` (stays on `compat()`); refactored `resolveMarkerLattice`/`resolveGlobalMarkerLattice` to accept `def` directly; added `ensureMarkerCloned` for marker mutations and direct writes for globalMarkers when tracker present
+  - `effect-registry.ts`: unwrapped `simple()` for all 12 migrated handlers
+- **Deviations from plan**:
+  - Ticket step 5 said to remove all local `resolveEffectBindings` and import from `effect-context.ts`. The `effects-choice.ts` version does extra binding template key resolution, so it was kept as `resolveChoiceBindings(env, cursor)` plus a compat wrapper for `applyRollRandom`.
+  - Added `OldApplyEffectsWithBudget` type alias in `effects-choice.ts` to keep `applyRollRandom`'s 3-arg batch apply signature compiling (it still uses `compat()`, ticket 007).
+- **Verification**: typecheck clean, 4670 tests pass / 0 fail

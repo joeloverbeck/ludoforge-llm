@@ -1,6 +1,6 @@
 # 79COMEFFPATRED-005: Make codegen fragments draft-aware
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel compiled effect codegen
@@ -71,13 +71,18 @@ return ctx.fallbackApplyEffects(effects, execCtx);
 
 With:
 ```typescript
-// NEW
-const env = buildEffectEnvFromCompiledCtx(ctx);
+// NEW (mirrors createFallbackFragment in effect-compiler.ts)
+const env = buildEffectEnvFromCompiledCtx(
+  ctx,
+  ctx.resources.collector,
+  { source: 'engineRuntime' as const, player: ctx.activePlayer, ownershipEnforcement: 'strict' as const },
+  'execution',
+);
 const cursor: EffectCursor = {
   state, rng, bindings,
-  decisionScope: ctx.decisionScope,
-  effectPath: ctx.effectPath,
-  tracker: ctx.tracker,
+  decisionScope: ctx.decisionScope ?? emptyScope(),
+  ...(ctx.effectPath === undefined ? {} : { effectPath: ctx.effectPath }),
+  ...(ctx.tracker === undefined ? {} : { tracker: ctx.tracker }),
 };
 const budget = createEffectBudgetState(env);
 return applyEffectsWithBudgetState(effects, env, cursor, budget);
@@ -88,7 +93,7 @@ return applyEffectsWithBudgetState(effects, env, cursor, budget);
 - Add: `buildEffectEnvFromCompiledCtx` from `./effect-compiler-runtime.js`
 - Add: `applyEffectsWithBudgetState`, `createEffectBudgetState` from `./effect-dispatch.js` (if not already imported)
 - Add: `EffectCursor` type from `./effect-context.js` (if not already imported)
-- Remove: `createCompiledExecutionContext` import (if no longer used in this file)
+- Keep: `createCompiledExecutionContext` import — still used by `emitVarChangeArtifacts` (removal deferred to 006)
 
 ### 4. Update codegen tests
 
@@ -146,3 +151,14 @@ Test that `compileSetVar` and `compileAddVar` use `writeScopedVarsMutable` when
 2. `pnpm -F @ludoforge/engine test:e2e`
 3. `pnpm turbo typecheck`
 4. `pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-24
+- **What changed**:
+  - `effect-compiler-codegen.ts`: `compileSetVar` and `compileAddVar` now prefer `ctx.tracker` for in-place mutation via `writeScopedVarsMutable`; fall back to immutable `writeScopedVarsToState` when tracker absent. `executeEffectList` fallback replaced `ctx.fallbackApplyEffects` + `createCompiledExecutionContext` with `buildEffectEnvFromCompiledCtx` + `EffectCursor` + `createEffectBudgetState` + `applyEffectsWithBudgetState`.
+  - `effect-compiler-codegen.test.ts`: 7 new tests covering mutable/immutable paths for setVar and addVar, bit-identical parity with interpreter, and executeEffectList fallback correctness.
+- **Deviations from original plan**:
+  - Ticket pseudocode for `buildEffectEnvFromCompiledCtx` showed 1-arg call; corrected to 4-arg call matching `createFallbackFragment` pattern in `effect-compiler.ts`.
+  - `createCompiledExecutionContext` import retained (still used by `emitVarChangeArtifacts`); removal deferred to 006.
+- **Verification**: engine tests 658/658, E2E 36/36, typecheck clean, lint clean.

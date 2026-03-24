@@ -13,12 +13,14 @@ import {
   computeFullHash,
   createEvalRuntimeResources,
   createExecutionEffectContext,
+  createFallbackFragment,
   createRng,
   createZobristTable,
   emptyScope,
   makeCompiledLifecycleEffectKey,
   type CompiledEffectContext,
   type CompiledEffectFragment,
+  type DraftTracker,
   type EffectAST,
   type EffectResult,
   type GameDef,
@@ -103,7 +105,6 @@ const makeCompiledContext = (def: GameDef): CompiledEffectContext => ({
   activePlayer: asPlayerId(1),
   actorPlayer: asPlayerId(0),
   moveParams: {},
-  fallbackApplyEffects: applyEffects,
   decisionScope: emptyScope(),
 });
 
@@ -242,6 +243,39 @@ describe('effect-compiler orchestrator', () => {
     );
   });
 
+  it('composeFragments creates a mutable scope — output state is not identity-equal to input', () => {
+    const noopFragment: CompiledEffectFragment = {
+      nodeCount: 1,
+      execute: (state, rng, bindings) => ({ state, rng, bindings }),
+    };
+    const composed = composeFragments([noopFragment]);
+    const inputState = makeState();
+    const result = composed(inputState, createRng(43n), {}, makeCompiledContext(makeDef()));
+
+    // Output must be structurally equal but NOT the same object reference
+    assert.deepEqual(result.state, inputState);
+    assert.notEqual(result.state, inputState);
+  });
+
+  it('composeFragments threads tracker through fragment calls as a DraftTracker', () => {
+    let capturedTracker: DraftTracker | undefined;
+    const spyFragment: CompiledEffectFragment = {
+      nodeCount: 1,
+      execute: (state, rng, bindings, ctx) => {
+        capturedTracker = ctx.tracker;
+        return { state, rng, bindings };
+      },
+    };
+    const composed = composeFragments([spyFragment]);
+    composed(makeState(), createRng(47n), {}, makeCompiledContext(makeDef()));
+
+    assert.ok(capturedTracker !== undefined, 'tracker must be provided to fragments');
+    assert.ok(capturedTracker!.playerVars instanceof Set, 'tracker.playerVars must be a Set');
+    assert.ok(capturedTracker!.zoneVars instanceof Set, 'tracker.zoneVars must be a Set');
+    assert.ok(capturedTracker!.zones instanceof Set, 'tracker.zones must be a Set');
+    assert.ok(capturedTracker!.markers instanceof Set, 'tracker.markers must be a Set');
+  });
+
   it('composeFragments threads bindings, decision scope, and emitted events in order', () => {
     const markerEvent = { type: 'varChanged', scope: 'global', var: 'score', oldValue: 3, newValue: 4 } as TriggerEvent;
     const composed = composeFragments([
@@ -308,6 +342,45 @@ describe('effect-compiler orchestrator', () => {
     assert.equal(executedTail, false);
     assert.equal(result.pendingChoice?.kind, 'pending');
     assert.deepEqual(result.bindings, { $first: true });
+  });
+
+  it('createFallbackFragment uses lightweight env+cursor bridging with interpreter parity', () => {
+    const def = makeDef();
+    const effects: readonly EffectAST[] = [
+      {
+        rollRandom: {
+          bind: '$roll',
+          min: 1,
+          max: 6,
+          in: [{ setVar: { scope: 'global', var: 'count', value: { _t: 2, ref: 'binding', name: '$roll' } } }],
+        },
+      },
+    ];
+    const state = makeState();
+    const rng = createRng(53n);
+    const ctx = makeCompiledContext(def);
+    const fragment = createFallbackFragment(effects);
+    const result = fragment.execute(state, rng, {}, ctx);
+
+    compareResults(
+      def,
+      result,
+      applyEffects(
+        effects,
+        createExecutionEffectContext({
+          def,
+          adjacencyGraph: buildAdjacencyGraph(def.zones),
+          runtimeTableIndex: buildRuntimeTableIndex(def),
+          state,
+          rng,
+          activePlayer: asPlayerId(1),
+          actorPlayer: asPlayerId(0),
+          bindings: {},
+          moveParams: {},
+          resources: createEvalRuntimeResources(),
+        }),
+      ),
+    );
   });
 
   it('compileAllLifecycleEffects compiles non-empty lifecycle entries and skips empty ones', () => {

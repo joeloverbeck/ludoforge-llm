@@ -198,7 +198,6 @@ const executeLifecycleEffect = ({
     activePlayer: state.activePlayer,
     actorPlayer: state.activePlayer,
     moveParams: {},
-    fallbackApplyEffects: applyEffects,
     traceContext,
     effectPath: '',
     ...(cachedRuntime === undefined ? {} : { cachedRuntime }),

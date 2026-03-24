@@ -1,6 +1,6 @@
 # 79COMEFFPATRED-003: Integrate DraftTracker into `composeFragments`
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel compiled effect orchestration
@@ -136,3 +136,14 @@ contract) must remain identical.
 2. `pnpm -F @ludoforge/engine test:e2e`
 3. `pnpm turbo typecheck`
 4. `pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-24
+- **What changed**:
+  - `packages/engine/src/kernel/effect-compiler.ts`: Rewrote `composeFragments` to create `MutableGameState` + `DraftTracker` at scope entry, thread `tracker` through fragment ctx, inline normalization logic (removed `normalizeFragmentResult` call), and `freezeState()` at both normal and early-return exits. Added imports for `createMutableState`, `createDraftTracker`, `freezeState`, `MutableGameState`, `GameState`.
+  - `packages/engine/test/unit/kernel/effect-compiler.test.ts`: Added 2 new tests — mutable scope identity check and tracker threading verification. Imported `DraftTracker` type.
+- **Deviations from original plan**:
+  - `normalizeFragmentResult` was NOT deleted — it is still called by `createFallbackFragment` (out of scope, deferred to 79COMEFFPATRED-004). Ticket section 2 was corrected pre-implementation to reflect this. 79COMEFFPATRED-004 assumption 5 was also corrected to note it inherits the deletion responsibility.
+  - Acceptance criterion 6 was softened from "no longer exported or callable" to "no longer called from `composeFragments`".
+- **Verification**: 4676 unit tests pass, 36 E2E tests pass, typecheck clean, lint clean.

@@ -1,8 +1,8 @@
 import { emptyScope } from './decision-scope.js';
-import { toEffectEnv, toEffectCursor, type EffectResult } from './effect-context.js';
+import { type EffectCursor } from './effect-context.js';
 import { compilePatternDescriptor, type BodyCompiler, type CompiledEffectFragment } from './effect-compiler-codegen.js';
 import { classifyEffect, computeCoverageRatio } from './effect-compiler-patterns.js';
-import { createCompiledExecutionContext } from './effect-compiler-runtime.js';
+import { buildEffectEnvFromCompiledCtx } from './effect-compiler-runtime.js';
 import { applyEffectsWithBudgetState, createEffectBudgetState } from './effect-dispatch.js';
 import {
   makeCompiledLifecycleEffectKey,
@@ -11,8 +11,9 @@ import {
   type CompiledLifecycle,
   type CompiledLifecycleEffectKey,
 } from './effect-compiler-types.js';
+import { createDraftTracker, createMutableState, freezeState, type MutableGameState } from './state-draft.js';
 import type { PhaseId } from './branded.js';
-import type { EffectAST, GameDef, TriggerEvent } from './types.js';
+import type { EffectAST, GameDef, GameState, TriggerEvent } from './types.js';
 
 const countEffectNodes = (effects: readonly EffectAST[]): number => {
   let total = 0;
@@ -34,40 +35,26 @@ const countEffectNodes = (effects: readonly EffectAST[]): number => {
   return total;
 };
 
-const normalizeFragmentResult = (
-  result: EffectResult,
-  bindings: Readonly<Record<string, unknown>>,
-  decisionScope = emptyScope(),
-): EffectResult => ({
-  state: result.state,
-  rng: result.rng,
-  ...(result.emittedEvents === undefined ? {} : { emittedEvents: result.emittedEvents }),
-  bindings: result.bindings ?? bindings,
-  decisionScope: result.decisionScope ?? decisionScope,
-  ...(result.pendingChoice === undefined ? {} : { pendingChoice: result.pendingChoice }),
-});
-
 export const composeFragments = (
   fragments: readonly CompiledEffectFragment[],
 ): CompiledEffectFn => (state, rng, bindings, ctx) => {
   const compiledCtx = ctx.effectBudget === undefined
     ? { ...ctx, effectBudget: createEffectBudgetState(ctx) }
     : ctx;
-  let currentState = state;
+  const mutableState = createMutableState(state);
+  const tracker = createDraftTracker();
+  let currentState: GameState = mutableState as GameState;
   let currentRng = rng;
   let currentBindings = bindings;
   let currentDecisionScope = compiledCtx.decisionScope ?? emptyScope();
   const emittedEvents: TriggerEvent[] = [];
 
   for (const fragment of fragments) {
-    const result = normalizeFragmentResult(
-      fragment.execute(currentState, currentRng, currentBindings, {
-        ...compiledCtx,
-        decisionScope: currentDecisionScope,
-      }),
-      currentBindings,
-      currentDecisionScope,
-    );
+    const result = fragment.execute(currentState, currentRng, currentBindings, {
+      ...compiledCtx,
+      decisionScope: currentDecisionScope,
+      tracker,
+    });
     currentState = result.state;
     currentRng = result.rng;
     currentBindings = result.bindings ?? currentBindings;
@@ -77,7 +64,7 @@ export const composeFragments = (
     }
     if (result.pendingChoice !== undefined) {
       return {
-        state: currentState,
+        state: freezeState(currentState as MutableGameState),
         rng: currentRng,
         emittedEvents,
         bindings: currentBindings,
@@ -88,7 +75,7 @@ export const composeFragments = (
   }
 
   return {
-    state: currentState,
+    state: freezeState(currentState as MutableGameState),
     rng: currentRng,
     emittedEvents,
     bindings: currentBindings,
@@ -101,18 +88,22 @@ export const createFallbackFragment = (
 ): CompiledEffectFragment => ({
   nodeCount: countEffectNodes(effects),
   execute: (state, rng, bindings, ctx) => {
-    const effectCtx = createCompiledExecutionContext(state, rng, bindings, {
-      ...ctx,
-      decisionScope: ctx.decisionScope ?? emptyScope(),
-    });
-    const result = ctx.effectBudget === undefined
-      ? ctx.fallbackApplyEffects(effects, effectCtx)
-      : applyEffectsWithBudgetState(effects, toEffectEnv(effectCtx), toEffectCursor(effectCtx), ctx.effectBudget);
-    return normalizeFragmentResult(
-      result,
-      bindings,
-      ctx.decisionScope ?? emptyScope(),
+    const env = buildEffectEnvFromCompiledCtx(
+      ctx,
+      ctx.resources.collector,
+      { source: 'engineRuntime' as const, player: ctx.activePlayer, ownershipEnforcement: 'strict' as const },
+      'execution',
     );
+    const cursor: EffectCursor = {
+      state,
+      rng,
+      bindings,
+      decisionScope: ctx.decisionScope ?? emptyScope(),
+      ...(ctx.effectPath === undefined ? {} : { effectPath: ctx.effectPath }),
+      ...(ctx.tracker === undefined ? {} : { tracker: ctx.tracker }),
+    };
+    const budget = createEffectBudgetState(env);
+    return applyEffectsWithBudgetState(effects, env, cursor, budget);
   },
 });
 

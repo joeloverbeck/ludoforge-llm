@@ -1,6 +1,6 @@
 # 79COMEFFPATRED-006: Dead code removal and import cleanup
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — kernel dead code removal
@@ -121,3 +121,23 @@ test fixtures.
 2. `pnpm -F @ludoforge/engine test:e2e`
 3. `pnpm turbo typecheck`
 4. `pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-24
+- **What changed**:
+  - Removed `fallbackApplyEffects` field from `CompiledEffectContext` interface (`effect-compiler-types.ts`)
+  - Removed `fallbackApplyEffects` assignment from compiled context construction (`phase-lifecycle.ts`)
+  - Cleaned up unused imports (`EffectContext`, `EffectAST`) from `effect-compiler-types.ts`
+  - Removed `fallbackApplyEffects` from test fixtures in 4 test files; cleaned up unused `applyEffects` imports in 2 test files
+- **Deviations from plan**:
+  - `createCompiledExecutionContext` deletion was skipped — it is still actively called at 4 sites in `effect-compiler-codegen.ts` and is not dead code. Tickets 003-005 did not migrate these consumers.
+  - Import cleanup in `effect-compiler.ts` and `effect-compiler-codegen.ts` source files was not needed (no unused imports after skipping the `createCompiledExecutionContext` deletion).
+- **Verification**:
+  - `fallbackApplyEffects`: 0 references in `packages/engine/src/`
+  - `normalizeFragmentResult`: 0 references in `packages/engine/src/`
+  - `pnpm turbo build`: pass
+  - `pnpm turbo typecheck`: pass
+  - `pnpm turbo lint`: pass (0 warnings)
+  - `pnpm -F @ludoforge/engine test`: 4684 tests pass, 0 failures
+  - `pnpm -F @ludoforge/engine test:e2e`: 36 tests pass, 0 failures

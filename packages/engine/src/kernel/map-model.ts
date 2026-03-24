@@ -359,6 +359,7 @@ function buildMarkerConstraintValidationState(
       state: [0n, 0n],
     },
     stateHash: 0n,
+    _runningHash: 0n,
     actionUsage: {},
     turnOrderState: { type: 'roundRobin' },
     markers,

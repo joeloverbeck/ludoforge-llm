@@ -866,6 +866,7 @@ export interface GameState {
   readonly turnCount: number;
   readonly rng: RngState;
   readonly stateHash: bigint;
+  readonly _runningHash: bigint;
   readonly actionUsage: Readonly<Record<string, ActionUsageRecord>>;
   readonly turnOrderState: TurnOrderRuntimeState;
   readonly markers: Readonly<Record<string, Readonly<Record<string, string>>>>;
@@ -1458,7 +1459,7 @@ export interface SerializedMoveLog extends Omit<MoveLog, 'stateHash'> {
   readonly stateHash: HexBigInt;
 }
 
-export interface SerializedGameState extends Omit<GameState, 'rng' | 'stateHash'> {
+export interface SerializedGameState extends Omit<GameState, 'rng' | 'stateHash' | '_runningHash'> {
   readonly rng: SerializedRngState;
   readonly stateHash: HexBigInt;
 }

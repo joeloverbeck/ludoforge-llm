@@ -80,6 +80,7 @@ const makeState = (): GameState => ({
   turnCount: 1,
   rng: createRng(17n).state,
   stateHash: 0n,
+  _runningHash: 0n,
   actionUsage: {},
   turnOrderState: { type: 'roundRobin' },
   markers: {},

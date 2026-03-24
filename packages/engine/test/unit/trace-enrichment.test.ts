@@ -24,6 +24,7 @@ const makeMockTrace = (playerIndices: readonly number[]): GameTrace => ({
   seed: 42,
   moves: playerIndices.map((player) => ({
     stateHash: 0n,
+    _runningHash: 0n,
     player: asPlayerId(player),
     move: { actionId: 'pass' as unknown as GameTrace['moves'][0]['move']['actionId'], params: {} },
     legalMoveCount: 1,

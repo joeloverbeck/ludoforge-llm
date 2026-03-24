@@ -67,6 +67,7 @@ const createState = (): GameState => ({
   turnCount: 0,
   rng: createRng(17n).state,
   stateHash: 0n,
+  _runningHash: 0n,
   actionUsage: {},
   turnOrderState: { type: 'roundRobin' },
   markers: {},
@@ -129,6 +130,7 @@ describe('compiled lifecycle runtime integration', () => {
   it('preserves lifecycle dispatch results between compiled and interpreted execution', () => {
     const def = createLifecycleDef();
     const state = createState();
+    const runtime = createGameDefRuntime(def);
     const compiled = dispatchLifecycleEvent(
       def,
       state,
@@ -137,7 +139,7 @@ describe('compiled lifecycle runtime integration', () => {
       undefined,
       createEvalRuntimeResources(),
       'lifecycle',
-      createGameDefRuntime(def),
+      runtime,
     );
     const interpreted = dispatchLifecycleEvent(
       def,
@@ -147,6 +149,7 @@ describe('compiled lifecycle runtime integration', () => {
       undefined,
       createEvalRuntimeResources(),
       'lifecycle',
+      runtime,
     );
 
     assert.deepEqual(compiled, interpreted);

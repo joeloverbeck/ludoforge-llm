@@ -13,6 +13,7 @@ import {
 import { emitVarChangeTraceIfChanged } from './var-change-trace.js';
 import { toTraceResourceEndpoint, toTraceVarChangePayload, toVarChangedEvent } from './scoped-var-runtime-mapping.js';
 import { resolveTraceProvenance } from './trace-provenance.js';
+import { updateVarRunningHash } from './zobrist-var-hash.js';
 import { fromEnvAndCursor, resolveEffectBindings } from './effect-context.js';
 import type { RuntimeScopedVarEndpoint } from './scoped-var-runtime-mapping.js';
 import type { PlayerId, ZoneId } from './branded.js';
@@ -246,6 +247,9 @@ export const applyTransferVar = (
   let nextState: import('./types.js').GameState;
   if (cursor.tracker) {
     writeScopedVarsMutable(cursor.state as MutableGameState, writes, cursor.tracker);
+    const table = env.cachedRuntime?.zobristTable;
+    updateVarRunningHash(cursor.state as MutableGameState, table, source, source.before, sourceAfter);
+    updateVarRunningHash(cursor.state as MutableGameState, table, destination, destination.before, destinationAfter);
     nextState = cursor.state;
   } else {
     nextState = writeScopedVarsToState(cursor.state, writes);

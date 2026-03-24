@@ -72,6 +72,7 @@ describe('effect error context contracts', () => {
     turnCount: 1,
     rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [0n, 1n] },
     stateHash: 0n,
+    _runningHash: 0n,
     actionUsage: {},
     turnOrderState: { type: 'roundRobin' },
     markers: {},

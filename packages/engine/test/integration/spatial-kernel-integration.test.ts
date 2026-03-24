@@ -85,6 +85,7 @@ const makeRuntimeState = (): GameState => ({
   turnCount: 0,
   rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [3n, 7n] },
   stateHash: 0n,
+  _runningHash: 0n,
   actionUsage: {},
   turnOrderState: { type: 'roundRobin' },
   markers: {},

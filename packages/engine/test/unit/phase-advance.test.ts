@@ -56,6 +56,7 @@ const createState = (overrides: Partial<GameState> = {}): GameState => ({
   turnCount: 0,
   rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [1n, 2n] },
   stateHash: 0n,
+  _runningHash: 0n,
   actionUsage: {
     pass: { turnCount: 3, phaseCount: 2, gameCount: 9 },
   },

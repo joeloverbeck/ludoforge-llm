@@ -22,6 +22,7 @@ const fixtureState: GameState = {
   turnCount: 5,
   rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [0x10n, 0x21n] },
   stateHash: 0xabcdefn,
+  _runningHash: 0xabcdefn,
   actionUsage: {
     pass: { turnCount: 1, phaseCount: 1, gameCount: 3 },
   },

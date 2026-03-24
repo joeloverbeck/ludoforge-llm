@@ -93,6 +93,7 @@ export * from './limit-identity.js';
 export * from './validate-gamedef.js';
 export * from './zobrist.js';
 export * from './zobrist-var-hash.js';
+export * from './zobrist-token-hash.js';
 export * from './display-node.js';
 export * from './ast-to-display.js';
 export * from './condition-annotator.js';

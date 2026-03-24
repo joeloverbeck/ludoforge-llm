@@ -51,12 +51,11 @@ const isCanonicalPolicyDerivationCall = (expression: ts.Expression): boolean => 
   if (arg === undefined) {
     return false;
   }
-  return (
-    ts.isPropertyAccessExpression(arg) &&
-    ts.isIdentifier(arg.expression) &&
-    arg.expression.text === 'evalCtx' &&
-    arg.name.text === 'mode'
-  );
+  if (!ts.isPropertyAccessExpression(arg) || !ts.isIdentifier(arg.expression) || arg.name.text !== 'mode') {
+    return false;
+  }
+  // Accept both evalCtx.mode (legacy EffectContext pattern) and env.mode (native EffectEnv pattern)
+  return arg.expression.text === 'evalCtx' || arg.expression.text === 'env';
 };
 
 describe('effect resolver normalization architecture guard', () => {

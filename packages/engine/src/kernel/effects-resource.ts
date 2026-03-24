@@ -7,20 +7,20 @@ import {
   resolveRuntimeScopedEndpointWithMalformedSupport,
   resolveScopedIntVarDef,
   toScopedVarWrite,
+  writeScopedVarsMutable,
   writeScopedVarsToState,
 } from './scoped-var-runtime-access.js';
 import { emitVarChangeTraceIfChanged } from './var-change-trace.js';
 import { toTraceResourceEndpoint, toTraceVarChangePayload, toVarChangedEvent } from './scoped-var-runtime-mapping.js';
 import { resolveTraceProvenance } from './trace-provenance.js';
+import { fromEnvAndCursor, resolveEffectBindings } from './effect-context.js';
 import type { RuntimeScopedVarEndpoint } from './scoped-var-runtime-mapping.js';
 import type { PlayerId, ZoneId } from './branded.js';
-import type { EffectContext, EffectResult } from './effect-context.js';
+import type { EffectContext, EffectCursor, EffectEnv, EffectResult } from './effect-context.js';
+import type { EffectBudgetState } from './effects-control.js';
+import type { ApplyEffectsWithBudget } from './effect-registry.js';
+import type { MutableGameState } from './state-draft.js';
 import type { EffectAST } from './types.js';
-
-const resolveEffectBindings = (ctx: EffectContext): Readonly<Record<string, unknown>> => ({
-  ...ctx.moveParams,
-  ...ctx.bindings,
-});
 
 const expectInteger = (
   value: unknown,
@@ -40,7 +40,7 @@ const expectInteger = (
 };
 
 const withActualBind = (
-  ctx: EffectContext,
+  bindings: Readonly<Record<string, unknown>>,
   actualBind: string | undefined,
   actual: number,
 ): Readonly<Record<string, unknown>> | undefined => {
@@ -49,7 +49,7 @@ const withActualBind = (
   }
 
   return {
-    ...ctx.bindings,
+    ...bindings,
     [actualBind]: actual,
   };
 };
@@ -173,9 +173,15 @@ const isSameCell = (from: ResolvedEndpoint, to: ResolvedEndpoint): boolean => {
 
 export const applyTransferVar = (
   effect: Extract<EffectAST, { readonly transferVar: unknown }>,
-  ctx: EffectContext,
+  env: EffectEnv,
+  cursor: EffectCursor,
+  _budget: EffectBudgetState,
+  _applyBatch: ApplyEffectsWithBudget,
 ): EffectResult => {
-  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const resolvedBindings = resolveEffectBindings(env, cursor);
+  const evalCursor = resolvedBindings === cursor.bindings ? cursor : { ...cursor, bindings: resolvedBindings };
+  const evalCtx = fromEnvAndCursor(env, evalCursor);
+  const ctx = fromEnvAndCursor(env, cursor);
   const source = resolveEndpoint(effect.transferVar.from, evalCtx, ctx);
   const destination = resolveEndpoint(effect.transferVar.to, evalCtx, ctx);
 
@@ -200,14 +206,14 @@ export const applyTransferVar = (
     actual = Math.min(actual, maxAmount);
   }
 
-  const resolvedBindings = withActualBind(ctx, effect.transferVar.actualBind, actual);
+  const actualBindBindings = withActualBind(cursor.bindings, effect.transferVar.actualBind, actual);
 
   if (actual === 0 || isSameCell(source, destination)) {
     return {
-      state: ctx.state,
-      rng: ctx.rng,
+      state: cursor.state,
+      rng: cursor.rng,
       emittedEvents: [],
-      ...(resolvedBindings === undefined ? {} : { bindings: resolvedBindings }),
+      ...(actualBindBindings === undefined ? {} : { bindings: actualBindBindings }),
     };
   }
 
@@ -217,7 +223,7 @@ export const applyTransferVar = (
   const sourceVarChange = toTraceVarChangePayload(source, source.before, sourceAfter);
   const destinationVarChange = toTraceVarChangePayload(destination, destination.before, destinationAfter);
 
-  emitTrace(ctx.collector, {
+  emitTrace(env.collector, {
     kind: 'resourceTransfer',
     from: toTraceResourceEndpoint(source),
     to: toTraceResourceEndpoint(destination),
@@ -232,18 +238,26 @@ export const applyTransferVar = (
   emitVarChangeTraceIfChanged(ctx, { ...sourceVarChange, provenance });
   emitVarChangeTraceIfChanged(ctx, { ...destinationVarChange, provenance });
 
-  const nextState = writeScopedVarsToState(ctx.state, [
+  const writes = [
     toScopedVarWrite(source, sourceAfter),
     toScopedVarWrite(destination, destinationAfter),
-  ]);
+  ];
+
+  let nextState: import('./types.js').GameState;
+  if (cursor.tracker) {
+    writeScopedVarsMutable(cursor.state as MutableGameState, writes, cursor.tracker);
+    nextState = cursor.state;
+  } else {
+    nextState = writeScopedVarsToState(cursor.state, writes);
+  }
 
   return {
     state: nextState,
-    rng: ctx.rng,
+    rng: cursor.rng,
     emittedEvents: [
       toVarChangedEvent(source, source.before, sourceAfter),
       toVarChangedEvent(destination, destination.before, destinationAfter),
     ],
-    ...(resolvedBindings === undefined ? {} : { bindings: resolvedBindings }),
+    ...(actualBindBindings === undefined ? {} : { bindings: actualBindBindings }),
   };
 };

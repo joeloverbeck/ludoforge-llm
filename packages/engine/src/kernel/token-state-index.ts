@@ -53,3 +53,12 @@ export function getTokenStateIndex(state: GameState): ReadonlyMap<string, TokenS
 export function getTokenStateIndexEntry(state: GameState, tokenId: string): TokenStateIndexEntry | undefined {
   return getTokenStateIndex(state).get(tokenId);
 }
+
+/**
+ * Invalidate the cached token-state index for a GameState.
+ * Must be called after mutable zone mutations so that subsequent
+ * lookups rebuild the index from the (now-mutated) zone arrays.
+ */
+export function invalidateTokenStateIndex(state: GameState): void {
+  tokenStateIndexByState.delete(state);
+}

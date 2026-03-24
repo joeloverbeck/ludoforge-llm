@@ -1,24 +1,27 @@
 import { evalValue } from './eval-value.js';
-import type { EffectContext, EffectResult } from './effect-context.js';
+import { fromEnvAndCursor, resolveEffectBindings } from './effect-context.js';
+import type { EffectCursor, EffectEnv, EffectResult } from './effect-context.js';
+import type { EffectBudgetState } from './effects-control.js';
+import type { ApplyEffectsWithBudget } from './effect-registry.js';
 import type { EffectAST } from './types.js';
-
-const resolveEffectBindings = (ctx: EffectContext): Readonly<Record<string, unknown>> => ({
-  ...ctx.moveParams,
-  ...ctx.bindings,
-});
 
 export const applyBindValue = (
   effect: Extract<EffectAST, { readonly bindValue: unknown }>,
-  ctx: EffectContext,
+  env: EffectEnv,
+  cursor: EffectCursor,
+  _budget: EffectBudgetState,
+  _applyBatch: ApplyEffectsWithBudget,
 ): EffectResult => {
-  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const resolvedBindings = resolveEffectBindings(env, cursor);
+  const evalCursor = resolvedBindings === cursor.bindings ? cursor : { ...cursor, bindings: resolvedBindings };
+  const evalCtx = fromEnvAndCursor(env, evalCursor);
   const value = evalValue(effect.bindValue.value, evalCtx);
   return {
-    state: ctx.state,
-    rng: ctx.rng,
+    state: cursor.state,
+    rng: cursor.rng,
     emittedEvents: [],
     bindings: {
-      ...ctx.bindings,
+      ...cursor.bindings,
       [effect.bindValue.bind]: value,
     },
   };

@@ -20,7 +20,9 @@ import { validateChooseNSelectedSequence } from './choose-n-selected-validation.
 import { normalizeChoiceDomain, toChoiceComparableValue, type MembershipScalar } from './value-membership.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
-import type { EffectContext, EffectResult } from './effect-context.js';
+import { fromEnvAndCursor } from './effect-context.js';
+import { ensureMarkerCloned, type MutableGameState } from './state-draft.js';
+import type { EffectContext, EffectCursor, EffectEnv, EffectResult } from './effect-context.js';
 import type {
   ChoicePendingRequest,
   ChoiceStochasticOutcome,
@@ -33,8 +35,10 @@ import type {
 } from './types.js';
 import type { PlayerId } from './branded.js';
 import type { EffectBudgetState } from './effects-control.js';
+import type { ApplyEffectsWithBudget } from './effect-registry.js';
 
-type ApplyEffectsWithBudget = (effects: readonly EffectAST[], ctx: EffectContext, budget: EffectBudgetState) => EffectResult;
+/** Old-style batch apply signature used by compat()-wrapped applyRollRandom (ticket 007). */
+type OldApplyEffectsWithBudget = (effects: readonly EffectAST[], ctx: EffectContext, budget: EffectBudgetState) => EffectResult;
 
 const choiceOptionKey = (value: unknown): string => JSON.stringify([typeof value, value]);
 
@@ -475,14 +479,29 @@ const collectNestedOutcomes = (
   }];
 };
 
-const resolveEffectBindings = (ctx: EffectContext): Readonly<Record<string, unknown>> => {
+/** Compat wrapper for handlers still on EffectContext (applyRollRandom). */
+const resolveChoiceBindingsCompat = (ctx: EffectContext): Readonly<Record<string, unknown>> => {
   const merged: Record<string, unknown> = {
     ...ctx.moveParams,
     ...ctx.bindings,
   };
-
   for (const [bindingKey, value] of Object.entries(merged)) {
     const resolvedKey = resolveBindingTemplate(bindingKey, ctx.bindings);
+    if (resolvedKey !== bindingKey && !Object.prototype.hasOwnProperty.call(merged, resolvedKey)) {
+      merged[resolvedKey] = value;
+    }
+  }
+  return merged;
+};
+
+const resolveChoiceBindings = (env: EffectEnv, cursor: EffectCursor): Readonly<Record<string, unknown>> => {
+  const merged: Record<string, unknown> = {
+    ...env.moveParams,
+    ...cursor.bindings,
+  };
+
+  for (const [bindingKey, value] of Object.entries(merged)) {
+    const resolvedKey = resolveBindingTemplate(bindingKey, cursor.bindings);
     if (resolvedKey !== bindingKey && !Object.prototype.hasOwnProperty.call(merged, resolvedKey)) {
       merged[resolvedKey] = value;
     }
@@ -491,26 +510,26 @@ const resolveEffectBindings = (ctx: EffectContext): Readonly<Record<string, unkn
   return merged;
 };
 
-const resolveMarkerLattice = (ctx: EffectContext, markerId: string, effectType: string): NonNullable<EffectContext['def']['markerLattices']>[number] => {
-  const lattice = getLatticeMap(ctx.def)?.get(markerId);
+const resolveMarkerLattice = (def: EffectContext['def'], markerId: string, effectType: string): NonNullable<EffectContext['def']['markerLattices']>[number] => {
+  const lattice = getLatticeMap(def)?.get(markerId);
   if (lattice === undefined) {
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `Unknown marker lattice: ${markerId}`, {
       effectType,
       markerId,
-      availableLattices: (ctx.def.markerLattices ?? []).map((l) => l.id).sort(),
+      availableLattices: (def.markerLattices ?? []).map((l) => l.id).sort(),
     });
   }
 
   return lattice;
 };
 
-const resolveGlobalMarkerLattice = (ctx: EffectContext, markerId: string, effectType: string): NonNullable<EffectContext['def']['globalMarkerLattices']>[number] => {
-  const lattice = ctx.def.globalMarkerLattices?.find((l) => l.id === markerId);
+const resolveGlobalMarkerLattice = (def: EffectContext['def'], markerId: string, effectType: string): NonNullable<EffectContext['def']['globalMarkerLattices']>[number] => {
+  const lattice = def.globalMarkerLattices?.find((l) => l.id === markerId);
   if (lattice === undefined) {
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `Unknown global marker lattice: ${markerId}`, {
       effectType,
       markerId,
-      availableLattices: (ctx.def.globalMarkerLattices ?? []).map((l) => l.id).sort(),
+      availableLattices: (def.globalMarkerLattices ?? []).map((l) => l.id).sort(),
     });
   }
 
@@ -581,18 +600,25 @@ const buildComparableDomainBindingMap = (
   return bindingMap;
 };
 
-export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: unknown }>, ctx: EffectContext): EffectResult => {
-  const resolvedBind = resolveBindingTemplate(effect.chooseOne.bind, ctx.bindings);
+export const applyChooseOne = (
+  effect: Extract<EffectAST, { readonly chooseOne: unknown }>,
+  env: EffectEnv,
+  cursor: EffectCursor,
+  _budget: EffectBudgetState,
+  _applyBatch: ApplyEffectsWithBudget,
+): EffectResult => {
+  const resolvedBind = resolveBindingTemplate(effect.chooseOne.bind, cursor.bindings);
   const resolvedDecisionIdentity = resolveBindingTemplate(
     effect.chooseOne.decisionIdentity ?? effect.chooseOne.bind,
-    ctx.bindings,
+    cursor.bindings,
   );
-  const scopeAdvance = advanceScope(ctx.decisionScope, effect.chooseOne.internalDecisionId, resolvedDecisionIdentity);
+  const scopeAdvance = advanceScope(cursor.decisionScope, effect.chooseOne.internalDecisionId, resolvedDecisionIdentity);
   const decisionKey = scopeAdvance.key;
-  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const resolvedBindings = resolveChoiceBindings(env, cursor);
+  const evalCtx = fromEnvAndCursor(env, { ...cursor, bindings: resolvedBindings });
   const chooser = effect.chooseOne.chooser ?? 'active';
   const choiceDecisionPlayer = resolveChoiceDecisionPlayer('chooseOne', chooser, evalCtx, resolvedBind, decisionKey);
-  const providedDecisionPlayer = ctx.decisionAuthority.player;
+  const providedDecisionPlayer = env.decisionAuthority.player;
   const options = evalQuery(effect.chooseOne.options, evalCtx);
   const normalizedOptions = normalizeChoiceDomain(options, (issue) => {
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `chooseOne options domain item is not move-param encodable: ${resolvedBind}`, {
@@ -606,14 +632,14 @@ export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: 
     });
   });
   const comparableBindingMap = buildComparableDomainBindingMap('chooseOne', resolvedBind, decisionKey, options, normalizedOptions);
-  const selected = ctx.moveParams[decisionKey];
+  const selected = env.moveParams[decisionKey];
   if (selected === undefined) {
-    if (ctx.mode === 'discovery') {
+    if (env.mode === 'discovery') {
       const targetKinds = deriveChoiceTargetKinds(effect.chooseOne.options);
       return {
-        state: ctx.state,
-        rng: ctx.rng,
-        bindings: ctx.bindings,
+        state: cursor.state,
+        rng: cursor.rng,
+        bindings: cursor.bindings,
         decisionScope: scopeAdvance.scope,
         pendingChoice: {
           kind: 'pending',
@@ -636,11 +662,11 @@ export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: 
       bind: resolvedBind,
       decisionKey,
       bindTemplate: effect.chooseOne.bind,
-      availableMoveParams: Object.keys(ctx.moveParams).sort(),
+      availableMoveParams: Object.keys(env.moveParams).sort(),
     });
   }
   if (effect.chooseOne.chooser === undefined && providedDecisionPlayer !== choiceDecisionPlayer) {
-    const runtimeReason = ctx.decisionAuthority.ownershipEnforcement === 'probe'
+    const runtimeReason = env.decisionAuthority.ownershipEnforcement === 'probe'
       ? EFFECT_RUNTIME_REASONS.CHOICE_PROBE_AUTHORITY_MISMATCH
       : EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED;
     throw effectRuntimeError(
@@ -673,38 +699,45 @@ export const applyChooseOne = (effect: Extract<EffectAST, { readonly chooseOne: 
   }
   const selectedBinding = comparableBindingMap.get(selectedComparable);
 
-  emitDecisionTrace(ctx.collector, {
+  emitDecisionTrace(env.collector, {
     kind: 'decision',
     decisionKey,
     type: 'chooseOne',
     player: choiceDecisionPlayer,
     options: normalizedOptions,
     selected: [selected as MoveParamScalar],
-    provenance: resolveTraceProvenance(ctx),
+    provenance: resolveTraceProvenance(evalCtx),
   });
 
   return {
-    state: ctx.state,
-    rng: ctx.rng,
+    state: cursor.state,
+    rng: cursor.rng,
     decisionScope: scopeAdvance.scope,
     bindings: {
-      ...ctx.bindings,
+      ...cursor.bindings,
       [resolvedBind]: selectedBinding,
     },
   };
 };
 
-export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unknown }>, ctx: EffectContext): EffectResult => {
+export const applyChooseN = (
+  effect: Extract<EffectAST, { readonly chooseN: unknown }>,
+  env: EffectEnv,
+  cursor: EffectCursor,
+  _budget: EffectBudgetState,
+  _applyBatch: ApplyEffectsWithBudget,
+): EffectResult => {
   const chooseN = effect.chooseN;
   const bindTemplate = chooseN.bind;
-  const bind = resolveBindingTemplate(bindTemplate, ctx.bindings);
-  const resolvedDecisionIdentity = resolveBindingTemplate(chooseN.decisionIdentity ?? chooseN.bind, ctx.bindings);
-  const scopeAdvance = advanceScope(ctx.decisionScope, chooseN.internalDecisionId, resolvedDecisionIdentity);
+  const bind = resolveBindingTemplate(bindTemplate, cursor.bindings);
+  const resolvedDecisionIdentity = resolveBindingTemplate(chooseN.decisionIdentity ?? chooseN.bind, cursor.bindings);
+  const scopeAdvance = advanceScope(cursor.decisionScope, chooseN.internalDecisionId, resolvedDecisionIdentity);
   const decisionKey = scopeAdvance.key;
-  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const resolvedBindings = resolveChoiceBindings(env, cursor);
+  const evalCtx = fromEnvAndCursor(env, { ...cursor, bindings: resolvedBindings });
   const chooser = chooseN.chooser ?? 'active';
   const choiceDecisionPlayer = resolveChoiceDecisionPlayer('chooseN', chooser, evalCtx, bind, decisionKey);
-  const providedDecisionPlayer = ctx.decisionAuthority.player;
+  const providedDecisionPlayer = env.decisionAuthority.player;
   const { minCardinality, maxCardinality } = resolveChooseNCardinality(chooseN, evalCtx, (issue) => {
     if (issue.code === 'CHOOSE_N_MODE_INVALID') {
       throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, 'chooseN must use either exact n or range max/min cardinality', {
@@ -774,10 +807,10 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
   const prioritizedQualifierMode = chooseN.options.query === 'prioritized' && chooseN.options.qualifierKey !== undefined
     ? 'byQualifier'
     : 'none';
-  const selectedValue = ctx.moveParams[decisionKey];
+  const selectedValue = env.moveParams[decisionKey];
   if (selectedValue === undefined) {
-    if (ctx.mode === 'discovery') {
-      const transientSelected = ctx.transientDecisionSelections?.[decisionKey] ?? [];
+    if (env.mode === 'discovery') {
+      const transientSelected = env.transientDecisionSelections?.[decisionKey] ?? [];
       if (transientSelected.length > clampedMax) {
         throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `chooseN selection cardinality mismatch for: ${bind}`, {
           effectType: 'chooseN',
@@ -813,8 +846,8 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
         prioritizedQualifierMode,
       });
 
-      if (ctx.chooseNTemplateCallback !== undefined) {
-        const action = ctx.def.actions.find((a) => String(a.id) === ctx.traceContext?.actionId);
+      if (env.chooseNTemplateCallback !== undefined) {
+        const action = env.def.actions.find((a: { readonly id: unknown }) => String(a.id) === env.traceContext?.actionId);
         const template = createChooseNTemplate({
           decisionKey,
           name: bind,
@@ -825,27 +858,27 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
           prioritizedTierEntries,
           qualifierMode: prioritizedQualifierMode,
           preparedContext: {
-            def: ctx.def,
-            state: ctx.state,
+            def: env.def,
+            state: cursor.state,
             action: action!,
-            adjacencyGraph: ctx.adjacencyGraph,
-            runtimeTableIndex: ctx.runtimeTableIndex ?? buildRuntimeTableIndex(ctx.def),
-            seatResolution: createSeatResolutionContext(ctx.def, ctx.state.playerCount),
+            adjacencyGraph: env.adjacencyGraph,
+            runtimeTableIndex: env.runtimeTableIndex ?? buildRuntimeTableIndex(env.def),
+            seatResolution: createSeatResolutionContext(env.def, cursor.state.playerCount),
           },
           partialMoveIdentity: {
-            actionId: ctx.traceContext?.actionId ?? '',
-            params: ctx.moveParams as Readonly<Record<string, unknown>>,
+            actionId: env.traceContext?.actionId ?? '',
+            params: env.moveParams as Readonly<Record<string, unknown>>,
           },
           choiceDecisionPlayer,
           chooser: chooseN.chooser,
         });
-        ctx.chooseNTemplateCallback(template);
+        env.chooseNTemplateCallback(template);
       }
 
       return {
-        state: ctx.state,
-        rng: ctx.rng,
-        bindings: ctx.bindings,
+        state: cursor.state,
+        rng: cursor.rng,
+        bindings: cursor.bindings,
         decisionScope: scopeAdvance.scope,
         pendingChoice,
       };
@@ -854,11 +887,11 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
       effectType: 'chooseN',
       bind,
       decisionKey,
-      availableMoveParams: Object.keys(ctx.moveParams).sort(),
+      availableMoveParams: Object.keys(env.moveParams).sort(),
     });
   }
   if (chooseN.chooser === undefined && providedDecisionPlayer !== choiceDecisionPlayer) {
-    const runtimeReason = ctx.decisionAuthority.ownershipEnforcement === 'probe'
+    const runtimeReason = env.decisionAuthority.ownershipEnforcement === 'probe'
       ? EFFECT_RUNTIME_REASONS.CHOICE_PROBE_AUTHORITY_MISMATCH
       : EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED;
     throw effectRuntimeError(
@@ -908,7 +941,7 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
     selectedBindings.push(comparableBindingMap.get(selected));
   }
 
-  emitDecisionTrace(ctx.collector, {
+  emitDecisionTrace(env.collector, {
     kind: 'decision',
     decisionKey,
     type: 'chooseN',
@@ -917,15 +950,15 @@ export const applyChooseN = (effect: Extract<EffectAST, { readonly chooseN: unkn
     selected: selectedSequence,
     min: minCardinality,
     max: clampedMax,
-    provenance: resolveTraceProvenance(ctx),
+    provenance: resolveTraceProvenance(evalCtx),
   });
 
   return {
-    state: ctx.state,
-    rng: ctx.rng,
+    state: cursor.state,
+    rng: cursor.rng,
     decisionScope: scopeAdvance.scope,
     bindings: {
-      ...ctx.bindings,
+      ...cursor.bindings,
       [bind]: selectedBindings,
     },
   };
@@ -935,9 +968,9 @@ export const applyRollRandom = (
   effect: Extract<EffectAST, { readonly rollRandom: unknown }>,
   ctx: EffectContext,
   budget: EffectBudgetState,
-  applyEffectsWithBudget: ApplyEffectsWithBudget,
+  applyEffectsWithBudget: OldApplyEffectsWithBudget,
 ): EffectResult => {
-  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const evalCtx = { ...ctx, bindings: resolveChoiceBindingsCompat(ctx) };
   const minValue = evalValue(effect.rollRandom.min, evalCtx);
   const maxValue = evalValue(effect.rollRandom.max, evalCtx);
 
@@ -1068,10 +1101,17 @@ export const applyRollRandom = (
   };
 };
 
-export const applySetMarker = (effect: Extract<EffectAST, { readonly setMarker: unknown }>, ctx: EffectContext): EffectResult => {
+export const applySetMarker = (
+  effect: Extract<EffectAST, { readonly setMarker: unknown }>,
+  env: EffectEnv,
+  cursor: EffectCursor,
+  _budget: EffectBudgetState,
+  _applyBatch: ApplyEffectsWithBudget,
+): EffectResult => {
   const { space, marker, state: stateExpr } = effect.setMarker;
-  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
-  const onResolutionFailure = selectorResolutionFailurePolicyForMode(evalCtx.mode);
+  const resolvedBindings = resolveChoiceBindings(env, cursor);
+  const evalCtx = fromEnvAndCursor(env, { ...cursor, bindings: resolvedBindings });
+  const onResolutionFailure = selectorResolutionFailurePolicyForMode(env.mode);
   const spaceId = resolveZoneWithNormalization(space, evalCtx, {
     code: EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
     effectType: 'setMarker',
@@ -1089,7 +1129,7 @@ export const applySetMarker = (effect: Extract<EffectAST, { readonly setMarker: 
     });
   }
 
-  const lattice = resolveMarkerLattice(ctx, marker, 'setMarker');
+  const lattice = resolveMarkerLattice(env.def, marker, 'setMarker');
   if (!lattice.states.includes(evaluatedState)) {
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `Invalid marker state "${evaluatedState}" for lattice "${marker}"`, {
       effectType: 'setMarker',
@@ -1115,26 +1155,39 @@ export const applySetMarker = (effect: Extract<EffectAST, { readonly setMarker: 
     );
   }
 
-  const spaceMarkers = ctx.state.markers[String(spaceId)] ?? {};
+  if (cursor.tracker) {
+    ensureMarkerCloned(cursor.state as MutableGameState, cursor.tracker, String(spaceId));
+    (cursor.state.markers[String(spaceId)] as Record<string, string>)[marker] = evaluatedState;
+    return { state: cursor.state, rng: cursor.rng };
+  }
+
+  const spaceMarkers = cursor.state.markers[String(spaceId)] ?? {};
   return {
     state: {
-      ...ctx.state,
+      ...cursor.state,
       markers: {
-        ...ctx.state.markers,
+        ...cursor.state.markers,
         [String(spaceId)]: {
           ...spaceMarkers,
           [marker]: evaluatedState,
         },
       },
     },
-    rng: ctx.rng,
+    rng: cursor.rng,
   };
 };
 
-export const applyShiftMarker = (effect: Extract<EffectAST, { readonly shiftMarker: unknown }>, ctx: EffectContext): EffectResult => {
+export const applyShiftMarker = (
+  effect: Extract<EffectAST, { readonly shiftMarker: unknown }>,
+  env: EffectEnv,
+  cursor: EffectCursor,
+  _budget: EffectBudgetState,
+  _applyBatch: ApplyEffectsWithBudget,
+): EffectResult => {
   const { space, marker, delta: deltaExpr } = effect.shiftMarker;
-  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
-  const onResolutionFailure = selectorResolutionFailurePolicyForMode(evalCtx.mode);
+  const resolvedBindings = resolveChoiceBindings(env, cursor);
+  const evalCtx = fromEnvAndCursor(env, { ...cursor, bindings: resolvedBindings });
+  const onResolutionFailure = selectorResolutionFailurePolicyForMode(env.mode);
   const spaceId = resolveZoneWithNormalization(space, evalCtx, {
     code: EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
     effectType: 'shiftMarker',
@@ -1152,8 +1205,8 @@ export const applyShiftMarker = (effect: Extract<EffectAST, { readonly shiftMark
     });
   }
 
-  const lattice = resolveMarkerLattice(ctx, marker, 'shiftMarker');
-  const spaceMarkers = ctx.state.markers[String(spaceId)] ?? {};
+  const lattice = resolveMarkerLattice(env.def, marker, 'shiftMarker');
+  const spaceMarkers = cursor.state.markers[String(spaceId)] ?? {};
   let resolution;
   try {
     resolution = resolveSpaceMarkerShift(lattice, String(spaceId), evaluatedDelta, evalCtx, evalCondition);
@@ -1172,7 +1225,7 @@ export const applyShiftMarker = (effect: Extract<EffectAST, { readonly shiftMark
   const newState = resolution.destinationState;
 
   if (!resolution.changed) {
-    return { state: ctx.state, rng: ctx.rng };
+    return { state: cursor.state, rng: cursor.rng };
   }
 
   const shiftViolation = resolution.violation;
@@ -1191,27 +1244,37 @@ export const applyShiftMarker = (effect: Extract<EffectAST, { readonly shiftMark
     );
   }
 
+  if (cursor.tracker) {
+    ensureMarkerCloned(cursor.state as MutableGameState, cursor.tracker, String(spaceId));
+    (cursor.state.markers[String(spaceId)] as Record<string, string>)[marker] = newState;
+    return { state: cursor.state, rng: cursor.rng };
+  }
+
   return {
     state: {
-      ...ctx.state,
+      ...cursor.state,
       markers: {
-        ...ctx.state.markers,
+        ...cursor.state.markers,
         [String(spaceId)]: {
           ...spaceMarkers,
           [marker]: newState,
         },
       },
     },
-    rng: ctx.rng,
+    rng: cursor.rng,
   };
 };
 
 export const applySetGlobalMarker = (
   effect: Extract<EffectAST, { readonly setGlobalMarker: unknown }>,
-  ctx: EffectContext,
+  env: EffectEnv,
+  cursor: EffectCursor,
+  _budget: EffectBudgetState,
+  _applyBatch: ApplyEffectsWithBudget,
 ): EffectResult => {
   const { marker, state: stateExpr } = effect.setGlobalMarker;
-  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const resolvedBindings = resolveChoiceBindings(env, cursor);
+  const evalCtx = fromEnvAndCursor(env, { ...cursor, bindings: resolvedBindings });
   const evaluatedState = evalValue(stateExpr, evalCtx);
 
   if (typeof evaluatedState !== 'string') {
@@ -1222,7 +1285,7 @@ export const applySetGlobalMarker = (
     });
   }
 
-  const lattice = resolveGlobalMarkerLattice(ctx, marker, 'setGlobalMarker');
+  const lattice = resolveGlobalMarkerLattice(env.def, marker, 'setGlobalMarker');
   if (!lattice.states.includes(evaluatedState)) {
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `Invalid marker state "${evaluatedState}" for lattice "${marker}"`, {
       effectType: 'setGlobalMarker',
@@ -1232,24 +1295,33 @@ export const applySetGlobalMarker = (
     });
   }
 
+  if (cursor.tracker) {
+    ((cursor.state as { globalMarkers: Record<string, string> }).globalMarkers ??= {})[marker] = evaluatedState;
+    return { state: cursor.state, rng: cursor.rng };
+  }
+
   return {
     state: {
-      ...ctx.state,
+      ...cursor.state,
       globalMarkers: {
-        ...(ctx.state.globalMarkers ?? {}),
+        ...(cursor.state.globalMarkers ?? {}),
         [marker]: evaluatedState,
       },
     },
-    rng: ctx.rng,
+    rng: cursor.rng,
   };
 };
 
 export const applyShiftGlobalMarker = (
   effect: Extract<EffectAST, { readonly shiftGlobalMarker: unknown }>,
-  ctx: EffectContext,
+  env: EffectEnv,
+  cursor: EffectCursor,
+  _budget: EffectBudgetState,
+  _applyBatch: ApplyEffectsWithBudget,
 ): EffectResult => {
   const { marker, delta: deltaExpr } = effect.shiftGlobalMarker;
-  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const resolvedBindings = resolveChoiceBindings(env, cursor);
+  const evalCtx = fromEnvAndCursor(env, { ...cursor, bindings: resolvedBindings });
   const evaluatedDelta = evalValue(deltaExpr, evalCtx);
 
   if (typeof evaluatedDelta !== 'number' || !Number.isSafeInteger(evaluatedDelta)) {
@@ -1260,8 +1332,8 @@ export const applyShiftGlobalMarker = (
     });
   }
 
-  const lattice = resolveGlobalMarkerLattice(ctx, marker, 'shiftGlobalMarker');
-  const currentState = ctx.state.globalMarkers?.[marker] ?? lattice.defaultState;
+  const lattice = resolveGlobalMarkerLattice(env.def, marker, 'shiftGlobalMarker');
+  const currentState = cursor.state.globalMarkers?.[marker] ?? lattice.defaultState;
   const currentIndex = lattice.states.indexOf(currentState);
 
   if (currentIndex < 0) {
@@ -1277,27 +1349,36 @@ export const applyShiftGlobalMarker = (
   const newState = lattice.states[newIndex]!;
 
   if (newState === currentState) {
-    return { state: ctx.state, rng: ctx.rng };
+    return { state: cursor.state, rng: cursor.rng };
+  }
+
+  if (cursor.tracker) {
+    ((cursor.state as { globalMarkers: Record<string, string> }).globalMarkers ??= {})[marker] = newState;
+    return { state: cursor.state, rng: cursor.rng };
   }
 
   return {
     state: {
-      ...ctx.state,
+      ...cursor.state,
       globalMarkers: {
-        ...(ctx.state.globalMarkers ?? {}),
+        ...(cursor.state.globalMarkers ?? {}),
         [marker]: newState,
       },
     },
-    rng: ctx.rng,
+    rng: cursor.rng,
   };
 };
 
 export const applyFlipGlobalMarker = (
   effect: Extract<EffectAST, { readonly flipGlobalMarker: unknown }>,
-  ctx: EffectContext,
+  env: EffectEnv,
+  cursor: EffectCursor,
+  _budget: EffectBudgetState,
+  _applyBatch: ApplyEffectsWithBudget,
 ): EffectResult => {
   const { marker: markerExpr, stateA: stateAExpr, stateB: stateBExpr } = effect.flipGlobalMarker;
-  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const resolvedBindings = resolveChoiceBindings(env, cursor);
+  const evalCtx = fromEnvAndCursor(env, { ...cursor, bindings: resolvedBindings });
   const evaluatedMarker = evalValue(markerExpr, evalCtx);
   const evaluatedStateA = evalValue(stateAExpr, evalCtx);
   const evaluatedStateB = evalValue(stateBExpr, evalCtx);
@@ -1332,7 +1413,7 @@ export const applyFlipGlobalMarker = (
     });
   }
 
-  const lattice = resolveGlobalMarkerLattice(ctx, evaluatedMarker, 'flipGlobalMarker');
+  const lattice = resolveGlobalMarkerLattice(env.def, evaluatedMarker, 'flipGlobalMarker');
   if (!lattice.states.includes(evaluatedStateA)) {
     throw effectRuntimeError(
       EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
@@ -1358,7 +1439,7 @@ export const applyFlipGlobalMarker = (
     );
   }
 
-  const currentState = ctx.state.globalMarkers?.[evaluatedMarker] ?? lattice.defaultState;
+  const currentState = cursor.state.globalMarkers?.[evaluatedMarker] ?? lattice.defaultState;
   let nextState: string | null;
   if (currentState === evaluatedStateA) {
     nextState = evaluatedStateB;
@@ -1378,14 +1459,19 @@ export const applyFlipGlobalMarker = (
     );
   }
 
+  if (cursor.tracker) {
+    ((cursor.state as { globalMarkers: Record<string, string> }).globalMarkers ??= {})[evaluatedMarker] = nextState;
+    return { state: cursor.state, rng: cursor.rng };
+  }
+
   return {
     state: {
-      ...ctx.state,
+      ...cursor.state,
       globalMarkers: {
-        ...(ctx.state.globalMarkers ?? {}),
+        ...(cursor.state.globalMarkers ?? {}),
         [evaluatedMarker]: nextState,
       },
     },
-    rng: ctx.rng,
+    rng: cursor.rng,
   };
 };

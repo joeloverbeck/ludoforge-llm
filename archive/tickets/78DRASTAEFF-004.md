@@ -1,6 +1,6 @@
 # 78DRASTAEFF-004: Migrate effects-var handlers to native (env, cursor) signature
 
-**Status**: PENDING
+**Status**: DONE
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — effects-var.ts, effect-registry.ts

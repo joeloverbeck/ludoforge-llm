@@ -1,6 +1,6 @@
 # 79COMEFFPATRED-002: Add `buildEffectEnvFromCompiledCtx` helper
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel runtime helper
@@ -19,8 +19,8 @@ not deleted yet (that happens in 79COMEFFPATRED-006 after all consumers migrate)
 
 ## Assumption Reassessment (2026-03-24)
 
-1. `EffectEnv` is defined in `effect-context.ts` — **must verify** exact field list.
-2. `CompiledEffectContext` already carries all fields needed for `EffectEnv` — **confirmed** from spec analysis: `def`, `adjacencyGraph`, `resources`, `activePlayer`, `actorPlayer`, `moveParams`, `runtimeTableIndex`, `traceContext`, `maxEffectOps`, `verifyCompiledEffects`, `phaseTransitionBudget`, `profiler`, `cachedRuntime`, `collector`, `decisionAuthority`, `mode`.
+1. `EffectEnv` is defined in `effect-context.ts` — **verified**. 21 fields total (12 required, 9 optional).
+2. `CompiledEffectContext` does NOT carry all fields needed for `EffectEnv`. Three required `EffectEnv` fields are absent from `CompiledEffectContext`: `collector`, `decisionAuthority`, `mode`. Six optional fields are also absent: `freeOperationOverlay`, `maxQueryResults`, `freeOperation`, `transientDecisionSelections`, `freeOperationProbeScope`, `chooseNTemplateCallback`. The function must accept extra parameters for the three missing required fields.
 3. `createCompiledExecutionContext` lives in `effect-compiler-runtime.ts` — **confirmed** (30-line file).
 4. The new helper is a pure function with no side effects — safe to add.
 
@@ -37,7 +37,10 @@ not deleted yet (that happens in 79COMEFFPATRED-006 after all consumers migrate)
 
 ```typescript
 export function buildEffectEnvFromCompiledCtx(
-  ctx: CompiledEffectContext
+  ctx: CompiledEffectContext,
+  collector: ExecutionCollector,
+  decisionAuthority: DecisionAuthorityStrictContext | DecisionAuthorityProbeContext,
+  mode: 'execution' | 'discovery',
 ): EffectEnv {
   return {
     def: ctx.def,
@@ -53,16 +56,20 @@ export function buildEffectEnvFromCompiledCtx(
     phaseTransitionBudget: ctx.phaseTransitionBudget,
     profiler: ctx.profiler,
     cachedRuntime: ctx.cachedRuntime,
-    collector: ctx.collector,
-    decisionAuthority: ctx.decisionAuthority,
-    mode: ctx.mode,
+    collector,
+    decisionAuthority,
+    mode,
   };
 }
 ```
 
-**Important**: The exact field list must be verified against the current
-`EffectEnv` type definition at implementation time. Do not guess — read
-`effect-context.ts` and map every required field.
+**Note**: `CompiledEffectContext` is missing three required `EffectEnv` fields
+(`collector`, `decisionAuthority`, `mode`) and six optional fields
+(`freeOperationOverlay`, `maxQueryResults`, `freeOperation`,
+`transientDecisionSelections`, `freeOperationProbeScope`,
+`chooseNTemplateCallback`). The three required fields are passed as explicit
+parameters. The six optional fields default to `undefined` (omitted from the
+object literal).
 
 ### 2. Add unit test for the new helper
 
@@ -110,3 +117,12 @@ Verify that given a `CompiledEffectContext` with known values, the returned
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`
 3. `pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-24
+- **What changed**:
+  - Added `buildEffectEnvFromCompiledCtx` to `packages/engine/src/kernel/effect-compiler-runtime.ts`
+  - Created `packages/engine/test/unit/kernel/effect-compiler-runtime.test.ts` (4 test cases)
+- **Deviations from original plan**: The ticket assumed `CompiledEffectContext` carried `collector`, `decisionAuthority`, and `mode` — it does not. The function signature was corrected to accept these three as explicit parameters. Optional fields use conditional spreads to satisfy `exactOptionalPropertyTypes`.
+- **Verification**: 4674 engine tests pass, typecheck clean, lint clean.

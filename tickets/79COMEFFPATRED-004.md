@@ -24,7 +24,7 @@ intermediate objects.
 2. It currently calls `createCompiledExecutionContext` from `effect-compiler-runtime.ts` — **confirmed**.
 3. `applyEffectsWithBudgetState` is exported from `effect-dispatch.ts` — **confirmed**.
 4. `EffectCursor` has fields: `state`, `rng`, `bindings`, `decisionScope`, `effectPath`, and `tracker` — **must verify** exact shape at implementation time.
-5. `normalizeFragmentResult` is already deleted in 79COMEFFPATRED-003 — **confirmed by dependency**.
+5. `normalizeFragmentResult` is still present after 79COMEFFPATRED-003 (003 removed its use from `composeFragments` but retained it for `createFallbackFragment`). **This ticket must delete it** after inlining the fallback logic.
 6. `applyEffectsWithBudgetState` creates its own `MutableGameState` + `DraftTracker` at entry — nested mutable scope is safe (per spec design note).
 
 ## Architecture Check

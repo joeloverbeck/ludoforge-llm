@@ -11,8 +11,9 @@ import {
   type CompiledLifecycle,
   type CompiledLifecycleEffectKey,
 } from './effect-compiler-types.js';
+import { createDraftTracker, createMutableState, freezeState, type MutableGameState } from './state-draft.js';
 import type { PhaseId } from './branded.js';
-import type { EffectAST, GameDef, TriggerEvent } from './types.js';
+import type { EffectAST, GameDef, GameState, TriggerEvent } from './types.js';
 
 const countEffectNodes = (effects: readonly EffectAST[]): number => {
   let total = 0;
@@ -53,21 +54,20 @@ export const composeFragments = (
   const compiledCtx = ctx.effectBudget === undefined
     ? { ...ctx, effectBudget: createEffectBudgetState(ctx) }
     : ctx;
-  let currentState = state;
+  const mutableState = createMutableState(state);
+  const tracker = createDraftTracker();
+  let currentState: GameState = mutableState as GameState;
   let currentRng = rng;
   let currentBindings = bindings;
   let currentDecisionScope = compiledCtx.decisionScope ?? emptyScope();
   const emittedEvents: TriggerEvent[] = [];
 
   for (const fragment of fragments) {
-    const result = normalizeFragmentResult(
-      fragment.execute(currentState, currentRng, currentBindings, {
-        ...compiledCtx,
-        decisionScope: currentDecisionScope,
-      }),
-      currentBindings,
-      currentDecisionScope,
-    );
+    const result = fragment.execute(currentState, currentRng, currentBindings, {
+      ...compiledCtx,
+      decisionScope: currentDecisionScope,
+      tracker,
+    });
     currentState = result.state;
     currentRng = result.rng;
     currentBindings = result.bindings ?? currentBindings;
@@ -77,7 +77,7 @@ export const composeFragments = (
     }
     if (result.pendingChoice !== undefined) {
       return {
-        state: currentState,
+        state: freezeState(currentState as MutableGameState),
         rng: currentRng,
         emittedEvents,
         bindings: currentBindings,
@@ -88,7 +88,7 @@ export const composeFragments = (
   }
 
   return {
-    state: currentState,
+    state: freezeState(currentState as MutableGameState),
     rng: currentRng,
     emittedEvents,
     bindings: currentBindings,

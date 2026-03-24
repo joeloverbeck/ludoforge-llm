@@ -19,6 +19,7 @@ import {
   makeCompiledLifecycleEffectKey,
   type CompiledEffectContext,
   type CompiledEffectFragment,
+  type DraftTracker,
   type EffectAST,
   type EffectResult,
   type GameDef,
@@ -240,6 +241,39 @@ describe('effect-compiler orchestrator', () => {
         }),
       ),
     );
+  });
+
+  it('composeFragments creates a mutable scope — output state is not identity-equal to input', () => {
+    const noopFragment: CompiledEffectFragment = {
+      nodeCount: 1,
+      execute: (state, rng, bindings) => ({ state, rng, bindings }),
+    };
+    const composed = composeFragments([noopFragment]);
+    const inputState = makeState();
+    const result = composed(inputState, createRng(43n), {}, makeCompiledContext(makeDef()));
+
+    // Output must be structurally equal but NOT the same object reference
+    assert.deepEqual(result.state, inputState);
+    assert.notEqual(result.state, inputState);
+  });
+
+  it('composeFragments threads tracker through fragment calls as a DraftTracker', () => {
+    let capturedTracker: DraftTracker | undefined;
+    const spyFragment: CompiledEffectFragment = {
+      nodeCount: 1,
+      execute: (state, rng, bindings, ctx) => {
+        capturedTracker = ctx.tracker;
+        return { state, rng, bindings };
+      },
+    };
+    const composed = composeFragments([spyFragment]);
+    composed(makeState(), createRng(47n), {}, makeCompiledContext(makeDef()));
+
+    assert.ok(capturedTracker !== undefined, 'tracker must be provided to fragments');
+    assert.ok(capturedTracker!.playerVars instanceof Set, 'tracker.playerVars must be a Set');
+    assert.ok(capturedTracker!.zoneVars instanceof Set, 'tracker.zoneVars must be a Set');
+    assert.ok(capturedTracker!.zones instanceof Set, 'tracker.zones must be a Set');
+    assert.ok(capturedTracker!.markers instanceof Set, 'tracker.markers must be a Set');
   });
 
   it('composeFragments threads bindings, decision scope, and emitted events in order', () => {

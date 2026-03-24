@@ -108,6 +108,32 @@ function resolveScopedVarNameForReference(ref: Extract<Reference, { ref: 'gvar' 
 }
 
 export function resolveRef(ref: Reference, ctx: ReadContext): number | boolean | string | ScalarArrayValue {
+  // Fast path: 'binding' refs are the most common type in effect chains
+  // (let-bound values). Check first to avoid falling through 14 if-else checks.
+  if (ref.ref === 'binding') {
+    const resolvedName = resolveBindingTemplate(ref.name, ctx.bindings);
+    const value = ctx.bindings[resolvedName];
+    if (value === undefined) {
+      throw missingBindingError(`Binding not found: ${resolvedName}`, {
+        reference: ref,
+        binding: resolvedName,
+        bindingTemplate: ref.name,
+        availableBindings: Object.keys(ctx.bindings).sort(),
+      });
+    }
+
+    if (!isScalarValue(value) && !isScalarArrayValue(value)) {
+      throw typeMismatchError(`Binding ${resolvedName} must resolve to number | boolean | string | scalar-array`, {
+        reference: ref,
+        binding: resolvedName,
+        actualType: typeof value,
+        value,
+      });
+    }
+
+    return value;
+  }
+
   if (ref.ref === 'gvar') {
     const variableName = resolveScopedVarNameForReference(ref, ctx);
     const value = ctx.state.globalVars[variableName];
@@ -484,26 +510,6 @@ export function resolveRef(ref: Reference, ctx: ReadContext): number | boolean |
     return propValue;
   }
 
-  const resolvedName = resolveBindingTemplate(ref.name, ctx.bindings);
-  const value = ctx.bindings[resolvedName];
-  if (value === undefined) {
-    throw missingBindingError(`Binding not found: ${resolvedName}`, {
-      reference: ref,
-      binding: resolvedName,
-      bindingTemplate: ref.name,
-      availableBindings: Object.keys(ctx.bindings).sort(),
-    });
-  }
-
-  if (!isScalarValue(value) && !isScalarArrayValue(value)) {
-    throw typeMismatchError(`Binding ${resolvedName} must resolve to number | boolean | string | scalar-array`, {
-      reference: ref,
-      binding: resolvedName,
-      bindingTemplate: ref.name,
-      actualType: Array.isArray(value) ? 'array' : typeof value,
-      value,
-    });
-  }
-
-  return value;
+  // Exhaustive — 'binding' is handled at the top of the function.
+  throw new Error(`Unknown Reference type: ${(ref as { ref: string }).ref}`);
 }

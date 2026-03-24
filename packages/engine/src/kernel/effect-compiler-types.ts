@@ -12,6 +12,7 @@ import type { PerfProfiler } from './perf-profiler.js';
 import type { AdjacencyGraph } from './spatial.js';
 import type { RuntimeTableIndex } from './runtime-table-index.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
+import type { DraftTracker } from './state-draft.js';
 import type { EffectAST, GameDef, GameState, MoveParamValue, Rng } from './types.js';
 
 export type CompiledLifecycle = 'onEnter' | 'onExit';
@@ -50,6 +51,7 @@ export interface CompiledEffectContext {
   readonly profiler?: PerfProfiler;
   readonly effectBudget?: EffectBudgetState;
   readonly cachedRuntime?: GameDefRuntime;
+  readonly tracker?: DraftTracker;
 }
 
 export type CompiledEffectVerificationMismatchKind =

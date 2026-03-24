@@ -1,6 +1,6 @@
 # 79COMEFFPATRED-001: Add `tracker` field to `CompiledEffectContext`
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel type definition
@@ -83,3 +83,10 @@ If `effect-compiler-types.test.ts` has snapshot or structural assertions on
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`
 3. `pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-24
+- **What changed**: Added `import type { DraftTracker } from './state-draft.js'` and `readonly tracker?: DraftTracker` to `CompiledEffectContext` in `packages/engine/src/kernel/effect-compiler-types.ts`.
+- **Deviations**: None. No test file updates were needed — existing assertions are type-level null checks unaffected by the new optional field.
+- **Verification**: 4670/4670 engine tests pass, typecheck clean (3/3), lint clean (2/2).

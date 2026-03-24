@@ -3,7 +3,6 @@ import { describe, it } from 'node:test';
 
 import {
   applyEffect,
-  applyEffects,
   asPhaseId,
   asPlayerId,
   buildAdjacencyGraph,
@@ -149,7 +148,6 @@ const makeCompiledContext = (def: GameDef): CompiledEffectContext => ({
   activePlayer: asPlayerId(1),
   actorPlayer: asPlayerId(0),
   moveParams: {},
-  fallbackApplyEffects: applyEffects,
   decisionScope: emptyScope(),
 });
 

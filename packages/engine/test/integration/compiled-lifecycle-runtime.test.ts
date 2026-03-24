@@ -171,7 +171,6 @@ describe('compiled lifecycle runtime integration', () => {
       activePlayer: state.activePlayer,
       actorPlayer: state.activePlayer,
       moveParams: {},
-      fallbackApplyEffects: applyEffects,
       maxEffectOps: 3,
     } as const;
 

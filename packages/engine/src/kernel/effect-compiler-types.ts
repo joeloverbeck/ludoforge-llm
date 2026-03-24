@@ -1,6 +1,5 @@
 import type { PhaseId, PlayerId } from './branded.js';
 import type {
-  EffectContext,
   EffectResult,
   EffectTraceContext,
   PhaseTransitionBudget,
@@ -13,7 +12,7 @@ import type { AdjacencyGraph } from './spatial.js';
 import type { RuntimeTableIndex } from './runtime-table-index.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
 import type { DraftTracker } from './state-draft.js';
-import type { EffectAST, GameDef, GameState, MoveParamValue, Rng } from './types.js';
+import type { GameDef, GameState, MoveParamValue, Rng } from './types.js';
 
 export type CompiledLifecycle = 'onEnter' | 'onExit';
 
@@ -41,7 +40,6 @@ export interface CompiledEffectContext {
   readonly activePlayer: PlayerId;
   readonly actorPlayer: PlayerId;
   readonly moveParams: Readonly<Record<string, MoveParamValue>>;
-  readonly fallbackApplyEffects: (effects: readonly EffectAST[], ctx: EffectContext) => EffectResult;
   readonly traceContext?: EffectTraceContext;
   readonly decisionScope?: DecisionScope;
   readonly effectPath?: string;

@@ -14,7 +14,7 @@ import {
   type EffectEnv,
   type GameDef,
 } from '../../../src/kernel/index.js';
-import { applyEffects } from '../../../src/kernel/effects.js';
+
 
 const minimalDef: GameDef = {
   metadata: { id: 'env-test', players: { min: 2, max: 2 }, maxTriggerDepth: 5 },
@@ -39,7 +39,6 @@ const makeCompiledCtx = (): CompiledEffectContext => ({
   activePlayer: asPlayerId(0),
   actorPlayer: asPlayerId(1),
   moveParams: { foo: 'bar' },
-  fallbackApplyEffects: applyEffects,
   decisionScope: emptyScope(),
 });
 

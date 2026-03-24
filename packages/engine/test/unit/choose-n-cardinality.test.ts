@@ -32,6 +32,7 @@ const makeChooseNContext = (globalVars: Record<string, number | boolean> = {}): 
     turnCount: 1,
     rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [1n, 2n] },
     stateHash: 0n,
+    _runningHash: 0n,
     actionUsage: {},
     turnOrderState: { type: 'roundRobin' },
     markers: {},

@@ -43,6 +43,7 @@ function makeMinimalState(): GameState {
     turnCount: 0,
     rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [1n, 2n] },
     stateHash: 0n,
+    _runningHash: 0n,
     actionUsage: { attack: { count: 1, lastTurn: 0 } },
     turnOrderState: { type: 'roundRobin' },
     markers: {

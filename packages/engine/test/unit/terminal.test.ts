@@ -34,6 +34,7 @@ const createBaseState = (overrides: Partial<GameState> = {}): GameState => ({
   turnCount: 4,
   rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [11n, 22n] },
   stateHash: 0n,
+  _runningHash: 0n,
   actionUsage: {},
   turnOrderState: { type: 'roundRobin' },
   markers: {},

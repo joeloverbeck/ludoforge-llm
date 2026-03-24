@@ -68,6 +68,7 @@ export const initialState = (
     turnCount: 0,
     rng: rng.state,
     stateHash: 0n,
+    _runningHash: 0n,
     actionUsage: {},
     markers: initialMarkers,
     globalMarkers: initialGlobalMarkers,
@@ -110,10 +111,12 @@ export const initialState = (
   const withTurnFlow = initializeTurnFlowEligibilityState(validatedDef, stateWithRng);
   const table = createZobristTable(validatedDef);
 
+  const fullHash = computeFullHash(table, withTurnFlow);
   return {
     state: {
       ...withTurnFlow,
-      stateHash: computeFullHash(table, withTurnFlow),
+      stateHash: fullHash,
+      _runningHash: fullHash,
     },
     setupTrace: collector.trace ?? [],
   };

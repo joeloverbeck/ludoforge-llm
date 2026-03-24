@@ -1,4 +1,5 @@
 import type { GameDef, GameState, ZobristFeature, ZobristSortedKeys, ZobristTable } from './types.js';
+import type { MutableGameState } from './state-draft.js';
 import { canonicalTokenFilterKey } from './hidden-info-grants.js';
 
 const MASK_64 = (1n << 64n) - 1n;
@@ -209,6 +210,35 @@ export const updateHashTokenPlacement = (
     { kind: 'tokenPlacement', tokenId, zoneId: fromZone, slot: fromSlot },
     { kind: 'tokenPlacement', tokenId, zoneId: toZone, slot: toSlot },
   );
+
+/** XOR out the old feature and XOR in the new one on the mutable state's running hash. */
+export const updateRunningHash = (
+  state: MutableGameState,
+  table: ZobristTable,
+  oldFeature: ZobristFeature,
+  newFeature: ZobristFeature,
+): void => {
+  state._runningHash ^= zobristKey(table, oldFeature);
+  state._runningHash ^= zobristKey(table, newFeature);
+};
+
+/** XOR in a new feature (e.g., token created) on the mutable state's running hash. */
+export const addToRunningHash = (
+  state: MutableGameState,
+  table: ZobristTable,
+  feature: ZobristFeature,
+): void => {
+  state._runningHash ^= zobristKey(table, feature);
+};
+
+/** XOR out a removed feature (e.g., token destroyed) on the mutable state's running hash. */
+export const removeFromRunningHash = (
+  state: MutableGameState,
+  table: ZobristTable,
+  feature: ZobristFeature,
+): void => {
+  state._runningHash ^= zobristKey(table, feature);
+};
 
 const compareStrings = (left: string, right: string): number => left.localeCompare(right);
 const compareNumbers = (left: number, right: number): number => left - right;

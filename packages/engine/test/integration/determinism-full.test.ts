@@ -79,6 +79,7 @@ const createInitialState = (seed: bigint): GameState => {
     turnCount: 0,
     rng: serialize(createRng(seed)),
     stateHash: 0n,
+    _runningHash: 0n,
     actionUsage: {},
     turnOrderState: { type: 'roundRobin' },
     markers: {},

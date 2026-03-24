@@ -1,6 +1,6 @@
 # 80INCZOBHAS-001: Running Hash Foundation — GameState Field, Helpers, and EffectEnv Threading
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel types, zobrist helpers, effect context, initial state, state-draft
@@ -55,9 +55,17 @@ In `initial-state.ts`, after calling `computeFullHash`, set both `stateHash` and
 
 In `state-draft.ts`, ensure `createMutableState` copies `_runningHash` (it will, since it's a shallow clone of GameState, but verify). In `freezeState`, no change needed (type-cast only).
 
-### 5. Update Schema Artifacts (if applicable)
+### 5. Handle Serialization (`serde.ts`)
 
-Check if `GameState` is reflected in any JSON Schema under `packages/engine/schemas/`. If `_runningHash` should be excluded from serialized state (it's internal), add an exclusion note.
+`_runningHash` is a kernel-internal optimization field — it must NOT appear in serialized state. In `serializeGameState`, destructure to exclude `_runningHash` from the spread. In `deserializeGameState`, set `_runningHash` from `stateHash` (the serialized hash is the correct starting value for the running hash on deserialization).
+
+### 6. Fix Validation Stub GameState Literals
+
+Add `_runningHash: 0n` to the GameState objects constructed in `map-model.ts` and `validate-gamedef-structure.ts`.
+
+### 7. Fix All Test GameState Literals (Foundation 9 — No Shims)
+
+Per Foundation 9, the `_runningHash` field is required on `GameState`. All ~107 test files that construct `GameState` literals with `stateHash: 0n` must add `_runningHash: 0n` alongside. This is a mechanical bulk replacement.
 
 ## Files to Touch
 
@@ -66,6 +74,10 @@ Check if `GameState` is reflected in any JSON Schema under `packages/engine/sche
 - `packages/engine/src/kernel/initial-state.ts` (modify — seed `_runningHash`)
 - `packages/engine/src/kernel/state-draft.ts` (verify — may need no change if shallow clone covers it)
 - `packages/engine/src/kernel/apply-move.ts` (modify — pass `_runningHash: 0n` in any intermediate state construction that creates a fresh GameState, e.g. for `advanceToDecisionPoint` scratch states)
+- `packages/engine/src/kernel/serde.ts` (modify — strip `_runningHash` on serialize, restore from `stateHash` on deserialize)
+- `packages/engine/src/kernel/map-model.ts` (modify — add `_runningHash: 0n` to validation stub GameState)
+- `packages/engine/src/kernel/validate-gamedef-structure.ts` (modify — add `_runningHash: 0n` to validation stub GameState)
+- ~107 test files under `packages/engine/test/` (modify — add `_runningHash: 0n` alongside `stateHash: 0n` in all GameState literals; mechanical bulk change per Foundation 9)
 
 ## Out of Scope
 
@@ -74,7 +86,7 @@ Check if `GameState` is reflected in any JSON Schema under `packages/engine/sche
 - Adding verification mode or new tests beyond unit tests for the helpers (ticket 007).
 - Changing `EffectEnv` interface (using Option B via `cachedRuntime`).
 - Runner package changes.
-- JSON Schema artifact changes (if `_runningHash` is not serialized).
+- JSON Schema artifact changes (`_runningHash` is stripped from serialized state by `serde.ts`, so the Zod schema and JSON Schema artifacts do not include it).
 
 ## Acceptance Criteria
 
@@ -106,3 +118,23 @@ Check if `GameState` is reflected in any JSON Schema under `packages/engine/sche
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`
 3. `pnpm turbo lint`
+
+## Outcome
+
+**Completion date**: 2026-03-24
+
+**What changed**:
+- `types-core.ts`: Added `readonly _runningHash: bigint` to `GameState`. Added `'_runningHash'` to `SerializedGameState`'s `Omit` list.
+- `zobrist.ts`: Added `updateRunningHash`, `addToRunningHash`, `removeFromRunningHash` — mutable-state helpers wrapping `zobristKey`.
+- `initial-state.ts`: Seeded `_runningHash` alongside `stateHash` from a single `computeFullHash` call.
+- `serde.ts`: Strips `_runningHash` on serialize (destructure + eslint-disable), restores from `stateHash` on deserialize.
+- `map-model.ts`, `validate-gamedef-structure.ts`: Added `_runningHash: 0n` to validation stub states.
+- 107+ test files: Bulk-added `_runningHash: 0n` alongside `stateHash: 0n` with matching indentation. Manual fixes for non-zero hash fixtures (`serde.test.ts`, `determinism-state-roundtrip.test.ts`, `sim/delta.test.ts`, `json-schema.test.ts`). Removed `_runningHash` from `schemas-top-level.test.ts` `validGameState` (schema validation fixture — strict Zod schema rejects unknown fields).
+- New tests: `zobrist-incremental-helpers.test.ts` (4 tests), `initial-state-running-hash.test.ts` (2 tests).
+
+**Deviations from original ticket**:
+- Ticket originally listed 5 files to touch. Reassessment added `serde.ts`, `map-model.ts`, `validate-gamedef-structure.ts`, and ~107 test files (per Foundation 9 — no shims).
+- `SerializedGameState` type needed `_runningHash` added to its `Omit` list (not anticipated in original ticket).
+- Schema validation test fixtures needed `_runningHash` removed (strict Zod schema rejects unknown fields).
+
+**Verification**: `pnpm turbo build` passes, `pnpm turbo typecheck` passes, `pnpm turbo lint` passes, `pnpm -F @ludoforge/engine test` — 4691 tests, 0 failures.

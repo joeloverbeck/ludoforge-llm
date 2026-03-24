@@ -255,6 +255,7 @@ const validRuntimeTrace: GameTrace = {
     turnCount: 1,
     rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [1n, 3n] },
     stateHash: 42n,
+    _runningHash: 42n,
     actionUsage: {},
     turnOrderState: {
       type: 'cardDriven',

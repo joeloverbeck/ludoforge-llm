@@ -21,6 +21,7 @@ import {
 import type { CompiledEffectContext, CompiledEffectFn } from './effect-compiler-types.js';
 import { effectRuntimeError } from './effect-error.js';
 import { applyGotoPhaseExact } from './effects-turn-flow.js';
+import { toEffectEnv, toEffectCursor } from './effect-context.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import { resolveRef } from './resolve-ref.js';
 import {
@@ -521,9 +522,13 @@ export const compileGotoPhaseExact = (desc: GotoPhaseExactPattern): CompiledEffe
     if (ctx.effectBudget !== undefined) {
       consumeEffectBudget(ctx.effectBudget, 'gotoPhaseExact');
     }
+    const effectCtx = createCompiledExecutionContext(state, rng, bindings, ctx);
     const result = applyGotoPhaseExact(
       { gotoPhaseExact: { phase: desc.phase } },
-      createCompiledExecutionContext(state, rng, bindings, ctx),
+      toEffectEnv(effectCtx),
+      toEffectCursor(effectCtx),
+      { remaining: 10_000, max: 10_000 },
+      () => { throw new Error('applyBatch not available in compiled gotoPhaseExact'); },
     );
     return {
       ...result,

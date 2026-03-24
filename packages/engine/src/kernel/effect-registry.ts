@@ -1,6 +1,5 @@
 import type { EffectKind, EffectKindMap, EffectAST } from './types.js';
-import type { EffectContext, EffectCursor, EffectEnv, EffectResult } from './effect-context.js';
-import { fromEnvAndCursor, toEffectEnv, toEffectCursor } from './effect-context.js';
+import type { EffectCursor, EffectEnv, EffectResult } from './effect-context.js';
 import type { EffectBudgetState } from './effects-control.js';
 
 import { applySetVar, applyAddVar, applySetActivePlayer } from './effects-var.js';
@@ -54,38 +53,6 @@ export type EffectHandler<K extends EffectKind> = (
 
 type EffectRegistry = { readonly [K in EffectKind]: EffectHandler<K> };
 
-/**
- * Wrap a simple handler `(effect, ctx) => result` into the env+cursor handler signature.
- * Reconstructs EffectContext from env+cursor for compatibility with handlers that
- * haven't been migrated yet to the split signature.
- */
-const simple = <K extends EffectKind>(
-  fn: (effect: EffectKindMap[K], ctx: EffectContext) => EffectResult,
-): EffectHandler<K> =>
-  (effect, env, cursor, _budget, _apply) => fn(effect, fromEnvAndCursor(env, cursor));
-
-/**
- * Wrap a complex handler `(effect, ctx, budget, applyEffects)` into env+cursor signature.
- * Temporary compatibility bridge until complex handlers are migrated to native env+cursor.
- */
-type OldApplyEffectsWithBudget = (
-  effects: readonly EffectAST[],
-  ctx: EffectContext,
-  budget: EffectBudgetState,
-) => EffectResult;
-const compat = <K extends EffectKind>(
-  fn: (effect: EffectKindMap[K], ctx: EffectContext, budget: EffectBudgetState, applyBatch: OldApplyEffectsWithBudget) => EffectResult,
-): EffectHandler<K> =>
-  (effect, env, cursor, budget, applyBatch) => {
-    const ctx = fromEnvAndCursor(env, cursor);
-    const oldApply: OldApplyEffectsWithBudget = (effects, innerCtx, b) => {
-      const innerEnv = toEffectEnv(innerCtx);
-      const innerCursor = toEffectCursor(innerCtx);
-      return applyBatch(effects, innerEnv, innerCursor, b);
-    };
-    return fn(effect, ctx, budget, oldApply);
-  };
-
 export const registry: EffectRegistry = {
   setVar: applySetVar,
   addVar: applyAddVar,
@@ -109,18 +76,18 @@ export const registry: EffectRegistry = {
   setGlobalMarker: applySetGlobalMarker,
   flipGlobalMarker: applyFlipGlobalMarker,
   shiftGlobalMarker: applyShiftGlobalMarker,
-  grantFreeOperation: simple(applyGrantFreeOperation),
-  gotoPhaseExact: simple(applyGotoPhaseExact),
-  advancePhase: simple(applyAdvancePhase),
-  pushInterruptPhase: simple(applyPushInterruptPhase),
-  popInterruptPhase: simple(applyPopInterruptPhase),
-  rollRandom: compat(applyRollRandom),
+  grantFreeOperation: applyGrantFreeOperation,
+  gotoPhaseExact: applyGotoPhaseExact,
+  advancePhase: applyAdvancePhase,
+  pushInterruptPhase: applyPushInterruptPhase,
+  popInterruptPhase: applyPopInterruptPhase,
+  rollRandom: applyRollRandom,
   if: applyIf,
   forEach: applyForEach,
   reduce: applyReduce,
   removeByPriority: applyRemoveByPriority,
   let: applyLet,
-  evaluateSubset: compat(applyEvaluateSubset),
+  evaluateSubset: applyEvaluateSubset,
 };
 
 export function effectKindOf(effect: EffectAST): EffectKind {

@@ -3,19 +3,13 @@ import { evalQuery } from './eval-query.js';
 import { evalValue } from './eval-value.js';
 import { effectRuntimeError } from './effect-error.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
-import { withTracePath } from './trace-provenance.js';
-import type { EffectContext, EffectResult } from './effect-context.js';
+import type { EffectCursor, EffectEnv, EffectResult } from './effect-context.js';
+import { fromEnvAndCursor, resolveEffectBindings } from './effect-context.js';
 import type { EffectAST, TriggerEvent } from './types.js';
 import type { EffectBudgetState } from './effects-control.js';
-
-type ApplyEffectsWithBudget = (effects: readonly EffectAST[], ctx: EffectContext, budget: EffectBudgetState) => EffectResult;
+import type { ApplyEffectsWithBudget } from './effect-registry.js';
 
 const MAX_SUBSET_COMBINATIONS = 10_000;
-
-const resolveEffectBindings = (ctx: EffectContext): Readonly<Record<string, unknown>> => ({
-  ...ctx.moveParams,
-  ...ctx.bindings,
-});
 
 const resolveSubsetSize = (value: unknown): number => {
   if (typeof value !== 'number' || !Number.isSafeInteger(value)) {
@@ -39,12 +33,14 @@ const resolveScore = (value: unknown): number => {
 
 export const applyEvaluateSubset = (
   effect: Extract<EffectAST, { readonly evaluateSubset: unknown }>,
-  ctx: EffectContext,
+  env: EffectEnv,
+  cursor: EffectCursor,
   budget: EffectBudgetState,
-  applyEffectsWithBudget: ApplyEffectsWithBudget,
+  applyBatch: ApplyEffectsWithBudget,
 ): EffectResult => {
   const evaluateSubset = effect.evaluateSubset;
-  const evalCtx = { ...ctx, bindings: resolveEffectBindings(ctx) };
+  const resolvedBindings = resolveEffectBindings(env, cursor);
+  const evalCtx = fromEnvAndCursor(env, { ...cursor, bindings: resolvedBindings });
   const items = evalQuery(evaluateSubset.source, evalCtx);
   const subsetSize = resolveSubsetSize(evalValue(evaluateSubset.subsetSize, evalCtx));
 
@@ -67,39 +63,43 @@ export const applyEvaluateSubset = (
     });
   }
 
+  const traceSuffix = (env.collector.trace !== null || env.collector.conditionTrace !== null);
+
   let bestScore = Number.NEGATIVE_INFINITY;
   let bestSubset: readonly unknown[] | null = null;
 
   for (const subset of combinations(items, subsetSize)) {
-    const computeCtx: EffectContext = {
-      ...ctx,
+    const computeCursor: EffectCursor = {
+      ...cursor,
       bindings: {
-        ...ctx.bindings,
+        ...cursor.bindings,
         [evaluateSubset.subsetBind]: subset,
       },
+      ...(traceSuffix ? { effectPath: `${cursor.effectPath ?? ''}.evaluateSubset.compute` } : {}),
     };
 
-    const computeResult = applyEffectsWithBudget(evaluateSubset.compute, withTracePath(computeCtx, '.evaluateSubset.compute'), budget);
+    const computeResult = applyBatch(evaluateSubset.compute, env, computeCursor, budget);
     if (computeResult.pendingChoice !== undefined) {
       return {
         state: computeResult.state,
         rng: computeResult.rng,
         ...(computeResult.emittedEvents === undefined ? {} : { emittedEvents: computeResult.emittedEvents }),
-        bindings: ctx.bindings,
+        bindings: cursor.bindings,
         pendingChoice: computeResult.pendingChoice,
       };
     }
-    const scoreCtx = {
-      ...ctx,
+    const scoreResolvedBindings = resolveEffectBindings(env, {
+      ...cursor,
       state: computeResult.state,
       rng: computeResult.rng,
-      bindings: resolveEffectBindings({
-        ...ctx,
-        state: computeResult.state,
-        rng: computeResult.rng,
-        bindings: computeResult.bindings ?? computeCtx.bindings,
-      }),
-    };
+      bindings: computeResult.bindings ?? computeCursor.bindings,
+    });
+    const scoreCtx = fromEnvAndCursor(env, {
+      ...cursor,
+      state: computeResult.state,
+      rng: computeResult.rng,
+      bindings: scoreResolvedBindings,
+    });
     const score = resolveScore(evalValue(evaluateSubset.scoreExpr, scoreCtx));
 
     if (score > bestScore) {
@@ -117,16 +117,17 @@ export const applyEvaluateSubset = (
   }
 
   const exportedBindings: Record<string, unknown> = {
-    ...ctx.bindings,
+    ...cursor.bindings,
     [evaluateSubset.resultBind]: bestScore,
     ...(evaluateSubset.bestSubsetBind === undefined ? {} : { [evaluateSubset.bestSubsetBind]: bestSubset }),
   };
 
-  const inCtx: EffectContext = {
-    ...ctx,
+  const inCursor: EffectCursor = {
+    ...cursor,
     bindings: exportedBindings,
+    ...(traceSuffix ? { effectPath: `${cursor.effectPath ?? ''}.evaluateSubset.in` } : {}),
   };
-  const inResult = applyEffectsWithBudget(evaluateSubset.in, withTracePath(inCtx, '.evaluateSubset.in'), budget);
+  const inResult = applyBatch(evaluateSubset.in, env, inCursor, budget);
   if (inResult.pendingChoice !== undefined) {
     return {
       state: inResult.state,

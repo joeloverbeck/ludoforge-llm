@@ -13,7 +13,7 @@ import { nextInt } from './prng.js';
 import { resolveSinglePlayerSel } from './resolve-selectors.js';
 import { resolveZoneWithNormalization, selectorResolutionFailurePolicyForMode } from './selector-resolution-normalization.js';
 import { findSpaceMarkerConstraintViolation, resolveSpaceMarkerShift } from './space-marker-rules.js';
-import { resolveTraceProvenance, withTracePath } from './trace-provenance.js';
+import { resolveTraceProvenance } from './trace-provenance.js';
 import { emitDecisionTrace } from './execution-collector.js';
 import { computeTierAdmissibility, type PrioritizedTierEntry } from './prioritized-tier-legality.js';
 import { validateChooseNSelectedSequence } from './choose-n-selected-validation.js';
@@ -37,8 +37,6 @@ import type { PlayerId } from './branded.js';
 import type { EffectBudgetState } from './effects-control.js';
 import type { ApplyEffectsWithBudget } from './effect-registry.js';
 
-/** Old-style batch apply signature used by compat()-wrapped applyRollRandom (ticket 007). */
-type OldApplyEffectsWithBudget = (effects: readonly EffectAST[], ctx: EffectContext, budget: EffectBudgetState) => EffectResult;
 
 const choiceOptionKey = (value: unknown): string => JSON.stringify([typeof value, value]);
 
@@ -479,20 +477,6 @@ const collectNestedOutcomes = (
   }];
 };
 
-/** Compat wrapper for handlers still on EffectContext (applyRollRandom). */
-const resolveChoiceBindingsCompat = (ctx: EffectContext): Readonly<Record<string, unknown>> => {
-  const merged: Record<string, unknown> = {
-    ...ctx.moveParams,
-    ...ctx.bindings,
-  };
-  for (const [bindingKey, value] of Object.entries(merged)) {
-    const resolvedKey = resolveBindingTemplate(bindingKey, ctx.bindings);
-    if (resolvedKey !== bindingKey && !Object.prototype.hasOwnProperty.call(merged, resolvedKey)) {
-      merged[resolvedKey] = value;
-    }
-  }
-  return merged;
-};
 
 const resolveChoiceBindings = (env: EffectEnv, cursor: EffectCursor): Readonly<Record<string, unknown>> => {
   const merged: Record<string, unknown> = {
@@ -966,11 +950,13 @@ export const applyChooseN = (
 
 export const applyRollRandom = (
   effect: Extract<EffectAST, { readonly rollRandom: unknown }>,
-  ctx: EffectContext,
+  env: EffectEnv,
+  cursor: EffectCursor,
   budget: EffectBudgetState,
-  applyEffectsWithBudget: OldApplyEffectsWithBudget,
+  applyBatch: ApplyEffectsWithBudget,
 ): EffectResult => {
-  const evalCtx = { ...ctx, bindings: resolveChoiceBindingsCompat(ctx) };
+  const resolvedBindings = resolveChoiceBindings(env, cursor);
+  const evalCtx = fromEnvAndCursor(env, { ...cursor, bindings: resolvedBindings });
   const minValue = evalValue(effect.rollRandom.min, evalCtx);
   const maxValue = evalValue(effect.rollRandom.max, evalCtx);
 
@@ -998,48 +984,55 @@ export const applyRollRandom = (
     });
   }
 
-  const fixedBinding = evalCtx.bindings[effect.rollRandom.bind];
+  const traceSuffix = '.rollRandom.in';
+  const tracedEffectPath = (env.collector.trace !== null || env.collector.conditionTrace !== null)
+    ? `${cursor.effectPath ?? ''}${traceSuffix}`
+    : cursor.effectPath;
+
+  const fixedBinding = resolvedBindings[effect.rollRandom.bind];
   if (fixedBinding !== undefined) {
     const rolledValue = resolveFixedRandomBinding(effect.rollRandom.bind, fixedBinding, minValue, maxValue);
-    const nestedCtx: EffectContext = {
-      ...ctx,
+    const nestedCursor: EffectCursor = {
+      ...cursor,
       bindings: {
-        ...ctx.bindings,
+        ...cursor.bindings,
         [effect.rollRandom.bind]: rolledValue,
       },
+      ...(tracedEffectPath === cursor.effectPath ? {} : { effectPath: tracedEffectPath }),
     };
-    const nestedResult = applyEffectsWithBudget(effect.rollRandom.in, withTracePath(nestedCtx, '.rollRandom.in'), budget);
+    const nestedResult = applyBatch(effect.rollRandom.in, env, nestedCursor, budget);
     return {
       state: nestedResult.state,
       rng: nestedResult.rng,
       ...(nestedResult.emittedEvents === undefined ? {} : { emittedEvents: nestedResult.emittedEvents }),
       ...(nestedResult.pendingChoice === undefined ? {} : { pendingChoice: nestedResult.pendingChoice }),
-      bindings: ctx.bindings,
+      bindings: cursor.bindings,
     };
   }
 
-  if (ctx.mode === 'discovery') {
+  if (env.mode === 'discovery') {
     const outcomes: ChoiceStochasticOutcome[] = [];
     for (let rolledValue = minValue; rolledValue <= maxValue; rolledValue += 1) {
-      const nestedCtx: EffectContext = {
-        ...ctx,
+      const nestedCursor: EffectCursor = {
+        ...cursor,
         bindings: {
-          ...ctx.bindings,
+          ...cursor.bindings,
           [effect.rollRandom.bind]: rolledValue,
         },
+        ...(tracedEffectPath === cursor.effectPath ? {} : { effectPath: tracedEffectPath }),
       };
-      const nestedResult = applyEffectsWithBudget(effect.rollRandom.in, withTracePath(nestedCtx, '.rollRandom.in'), budget);
+      const nestedResult = applyBatch(effect.rollRandom.in, env, nestedCursor, budget);
       outcomes.push(...collectNestedOutcomes(effect.rollRandom.bind, rolledValue, nestedResult.pendingChoice));
     }
 
     if (outcomes.length === 0) {
-      return { state: ctx.state, rng: ctx.rng, bindings: ctx.bindings };
+      return { state: cursor.state, rng: cursor.rng, bindings: cursor.bindings };
     }
     if (outcomes.every((outcome) => outcome.nextDecision === undefined)) {
       return {
-        state: ctx.state,
-        rng: ctx.rng,
-        bindings: ctx.bindings,
+        state: cursor.state,
+        rng: cursor.rng,
+        bindings: cursor.bindings,
         pendingChoice: toStochasticPendingChoice(outcomes),
       };
     }
@@ -1075,29 +1068,30 @@ export const applyRollRandom = (
         })()
         : toStochasticPendingChoice(outcomes);
     return {
-      state: ctx.state,
-      rng: ctx.rng,
-      bindings: ctx.bindings,
+      state: cursor.state,
+      rng: cursor.rng,
+      bindings: cursor.bindings,
       pendingChoice,
     };
   }
 
-  const [rolledValue, nextRng] = nextInt(ctx.rng, minValue, maxValue);
-  const nestedCtx: EffectContext = {
-    ...ctx,
+  const [rolledValue, nextRng] = nextInt(cursor.rng, minValue, maxValue);
+  const nestedCursor: EffectCursor = {
+    ...cursor,
     rng: nextRng,
     bindings: {
-      ...ctx.bindings,
+      ...cursor.bindings,
       [effect.rollRandom.bind]: rolledValue,
     },
+    ...(tracedEffectPath === cursor.effectPath ? {} : { effectPath: tracedEffectPath }),
   };
 
-  const nestedResult = applyEffectsWithBudget(effect.rollRandom.in, withTracePath(nestedCtx, '.rollRandom.in'), budget);
+  const nestedResult = applyBatch(effect.rollRandom.in, env, nestedCursor, budget);
   return {
     state: nestedResult.state,
     rng: nestedResult.rng,
     ...(nestedResult.emittedEvents === undefined ? {} : { emittedEvents: nestedResult.emittedEvents }),
-    bindings: ctx.bindings,
+    bindings: cursor.bindings,
   };
 };
 

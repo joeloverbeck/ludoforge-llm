@@ -1,6 +1,6 @@
 # 78DRASTAEFF-007: Migrate turn-flow handlers and compat()-wrapped handlers to native (env, cursor) signature
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — effects-turn-flow.ts, effects-subset.ts, effects-choice.ts (rollRandom only), effect-registry.ts
@@ -119,3 +119,16 @@ To direct references (no wrappers).
 1. `pnpm -F @ludoforge/engine test -- --test-name-pattern "turnFlow|gotoPhase|advancePhase|rollRandom|evaluateSubset|grantFreeOperation|interruptPhase"`
 2. `pnpm turbo typecheck`
 3. `pnpm turbo test --force`
+
+## Outcome
+
+- **Completion date**: 2026-03-24
+- **What changed**:
+  - `effects-turn-flow.ts`: All 5 handlers (`applyGrantFreeOperation`, `applyGotoPhaseExact`, `applyAdvancePhase`, `applyPushInterruptPhase`, `applyPopInterruptPhase`) migrated from `(effect, ctx: EffectContext)` to native `(effect, env, cursor, budget, applyBatch)`. Internal helpers (`buildSequenceProbeCandidates`, `consumePhaseTransitionBudget`, `lifecycleBudgetOptions`, `resolvePhaseId`) updated to accept `env`/`cursor`.
+  - `effects-choice.ts`: `applyRollRandom` migrated to native signature. Removed `OldApplyEffectsWithBudget` type alias and `resolveChoiceBindingsCompat` compat helper. Trace path logic inlined (removed `withTracePath` import).
+  - `effects-subset.ts`: `applyEvaluateSubset` migrated to native signature. Removed file-local `ApplyEffectsWithBudget` type alias and `resolveEffectBindings` helper; now imports `resolveEffectBindings` from `effect-context.ts`.
+  - `effect-registry.ts`: Removed `simple()`, `compat()`, and `OldApplyEffectsWithBudget`. All 7 entries are now direct handler references. Removed unused imports.
+  - `effect-compiler-codegen.ts`: Updated `compileGotoPhaseExact` to split context via `toEffectEnv`/`toEffectCursor` for the native call.
+  - `test/unit/effects-turn-flow.test.ts`: Added `adaptHandler` bridge so existing `(effect, ctx)` test calls work with the new 5-arg signature.
+- **Deviations from plan**: `effect-compiler-codegen.ts` was an additional caller not listed in the ticket's "Files to Touch". Test file also required an adapter pattern.
+- **Verification**: Build pass, typecheck pass, lint pass (0 warnings), full suite 4670 tests pass / 0 failures.

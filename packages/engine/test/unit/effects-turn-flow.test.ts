@@ -19,12 +19,28 @@ import {
 } from '../../src/kernel/index.js';
 
 import {
-  applyGrantFreeOperation,
-  applyGotoPhaseExact,
-  applyAdvancePhase,
-  applyPushInterruptPhase,
-  applyPopInterruptPhase,
+  applyGrantFreeOperation as applyGrantFreeOperationNative,
+  applyGotoPhaseExact as applyGotoPhaseExactNative,
+  applyAdvancePhase as applyAdvancePhaseNative,
+  applyPushInterruptPhase as applyPushInterruptPhaseNative,
+  applyPopInterruptPhase as applyPopInterruptPhaseNative,
 } from '../../src/kernel/effects-turn-flow.js';
+import { toEffectEnv, toEffectCursor } from '../../src/kernel/effect-context.js';
+import type { EffectBudgetState } from '../../src/kernel/effects-control.js';
+import type { ApplyEffectsWithBudget } from '../../src/kernel/effect-registry.js';
+
+const dummyBudget: EffectBudgetState = { remaining: 10_000, max: 10_000 };
+const dummyApplyBatch: ApplyEffectsWithBudget = () => { throw new Error('unexpected applyBatch call'); };
+
+type SimpleHandler<E> = (effect: E, ctx: EffectContext) => import('../../src/kernel/effect-context.js').EffectResult;
+const adaptHandler = <E>(native: (effect: E, env: import('../../src/kernel/effect-context.js').EffectEnv, cursor: import('../../src/kernel/effect-context.js').EffectCursor, budget: EffectBudgetState, applyBatch: ApplyEffectsWithBudget) => import('../../src/kernel/effect-context.js').EffectResult): SimpleHandler<E> =>
+  (effect, ctx) => native(effect, toEffectEnv(ctx), toEffectCursor(ctx), dummyBudget, dummyApplyBatch);
+
+const applyGrantFreeOperation = adaptHandler(applyGrantFreeOperationNative);
+const applyGotoPhaseExact = adaptHandler(applyGotoPhaseExactNative);
+const applyAdvancePhase = adaptHandler(applyAdvancePhaseNative);
+const applyPushInterruptPhase = adaptHandler(applyPushInterruptPhaseNative);
+const applyPopInterruptPhase = adaptHandler(applyPopInterruptPhaseNative);
 
 const makeDef = (overrides?: Partial<GameDef>): GameDef =>
   ({

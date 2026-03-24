@@ -26,7 +26,7 @@ import {
 import { resolveFreeOperationGrantSeatToken } from './free-operation-seat-resolution.js';
 import { resolveFreeOperationExecutionContext } from './free-operation-execution-context.js';
 import { toMoveExecutionPolicy, type MoveExecutionPolicy } from './execution-policy.js';
-import type { EffectContext, EffectResult } from './effect-context.js';
+import type { EffectCursor, EffectEnv, EffectResult } from './effect-context.js';
 import type {
   EffectAST,
   GameState,
@@ -39,6 +39,8 @@ import {
   makeActiveSeatUnresolvableInvariantContext,
 } from './turn-flow-invariant-contracts.js';
 import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
+import type { EffectBudgetState } from './effects-control.js';
+import type { ApplyEffectsWithBudget } from './effect-registry.js';
 
 const makeUniqueGrantId = (
   grants: readonly TurnFlowPendingFreeOperationGrant[],
@@ -58,14 +60,14 @@ const makeUniqueGrantId = (
 };
 
 const buildSequenceProbeCandidates = (
-  ctx: EffectContext,
+  env: EffectEnv,
   grant: Extract<EffectAST, { readonly grantFreeOperation: unknown }>['grantFreeOperation'],
 ): readonly TurnFlowFreeOperationGrantContract[] => {
   const step = grant.sequence?.step;
   if (step === undefined || step <= 0) {
     return [];
   }
-  return (ctx.freeOperationProbeScope?.priorGrantDefinitions ?? []).filter(
+  return (env.freeOperationProbeScope?.priorGrantDefinitions ?? []).filter(
     (candidate) =>
       candidate.sequence !== undefined
       && candidate.sequence.batch === grant.sequence!.batch
@@ -73,8 +75,8 @@ const buildSequenceProbeCandidates = (
   );
 };
 
-const consumePhaseTransitionBudget = (ctx: EffectContext, effectType: string): boolean => {
-  const budget = ctx.phaseTransitionBudget;
+const consumePhaseTransitionBudget = (env: EffectEnv, effectType: string): boolean => {
+  const budget = env.phaseTransitionBudget;
   if (budget === undefined) {
     return true;
   }
@@ -91,10 +93,10 @@ const consumePhaseTransitionBudget = (ctx: EffectContext, effectType: string): b
   return true;
 };
 
-const lifecycleBudgetOptions = (ctx: EffectContext): MoveExecutionPolicy | undefined =>
+const lifecycleBudgetOptions = (env: EffectEnv): MoveExecutionPolicy | undefined =>
   toMoveExecutionPolicy(
-    ctx.verifyCompiledEffects === undefined ? undefined : { verifyCompiledEffects: ctx.verifyCompiledEffects },
-    ctx.phaseTransitionBudget,
+    env.verifyCompiledEffects === undefined ? undefined : { verifyCompiledEffects: env.verifyCompiledEffects },
+    env.phaseTransitionBudget,
   );
 
 const resolveTemplateTree = <T>(value: T, bindings: Readonly<Record<string, unknown>>): T => {
@@ -113,12 +115,15 @@ const resolveTemplateTree = <T>(value: T, bindings: Readonly<Record<string, unkn
 
 export const applyGrantFreeOperation = (
   effect: Extract<EffectAST, { readonly grantFreeOperation: unknown }>,
-  ctx: EffectContext,
+  env: EffectEnv,
+  cursor: EffectCursor,
+  _budget: EffectBudgetState,
+  _applyBatch: ApplyEffectsWithBudget,
 ): EffectResult => {
-  if (ctx.state.turnOrderState.type !== 'cardDriven') {
+  if (cursor.state.turnOrderState.type !== 'cardDriven') {
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED, 'grantFreeOperation requires cardDriven turn order state', {
       effectType: 'grantFreeOperation',
-      turnOrderType: ctx.state.turnOrderState.type,
+      turnOrderType: cursor.state.turnOrderState.type,
     });
   }
 
@@ -130,17 +135,17 @@ export const applyGrantFreeOperation = (
     });
   }
 
-  const runtime = ctx.state.turnOrderState.runtime;
-  const seatResolution = createSeatResolutionContext(ctx.def, ctx.state.playerCount);
+  const runtime = cursor.state.turnOrderState.runtime;
+  const seatResolution = createSeatResolutionContext(env.def, cursor.state.playerCount);
   const activeSeat = resolveTurnFlowSeatForPlayerIndex(
     runtime.seatOrder,
-    Number(ctx.activePlayer),
+    Number(env.activePlayer),
     seatResolution.index,
   );
   if (activeSeat === null) {
     const activeSeatInvariant = makeActiveSeatUnresolvableInvariantContext(
       TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.FREE_OPERATION_GRANT_APPLICATION,
-      Number(ctx.activePlayer),
+      Number(env.activePlayer),
       runtime.seatOrder,
     );
     throw effectRuntimeError(
@@ -225,28 +230,28 @@ export const applyGrantFreeOperation = (
   }
 
   const existing = runtime.pendingFreeOperationGrants ?? [];
-  const fallbackBaseId = `freeOpEffect:${ctx.state.turnCount}:${activeSeat}:${existing.length}`;
+  const fallbackBaseId = `freeOpEffect:${cursor.state.turnCount}:${activeSeat}:${existing.length}`;
   const grantId = makeUniqueGrantId(existing, grant.id ?? fallbackBaseId);
   const sequenceBatchBaseId = grant.sequence === undefined
     ? undefined
-    : grant.id ?? `${ctx.traceContext?.effectPathRoot ?? 'freeOpEffect'}:${activeSeat}`;
+    : grant.id ?? `${env.traceContext?.effectPathRoot ?? 'freeOpEffect'}:${activeSeat}`;
   const sequenceBatchId = grant.sequence === undefined ? undefined : `${sequenceBatchBaseId}:${grant.sequence.batch}`;
   const sequenceIndex = grant.sequence?.step;
   const sequenceProgressionPolicy = resolveSequenceProgressionPolicy(grant);
   if (
     sequenceBatchId !== undefined
     && sequenceProgressionPolicy === 'strictInOrder'
-    && ctx.freeOperationProbeScope?.blockedStrictSequenceBatchIds.includes(sequenceBatchId)
+    && env.freeOperationProbeScope?.blockedStrictSequenceBatchIds.includes(sequenceBatchId)
   ) {
     return {
-      state: ctx.state,
-      rng: ctx.rng,
+      state: cursor.state,
+      rng: cursor.rng,
     };
   }
 
   const resolvedZoneFilter = grant.zoneFilter === undefined
     ? undefined
-    : resolveTemplateTree(grant.zoneFilter, ctx.bindings);
+    : resolveTemplateTree(grant.zoneFilter, cursor.bindings);
   const resolvedGrant = resolvedZoneFilter === undefined
     ? grant
     : {
@@ -254,34 +259,34 @@ export const applyGrantFreeOperation = (
         zoneFilter: resolvedZoneFilter,
       };
   const grantEvalContext = createEvalContext({
-    def: ctx.def,
-    adjacencyGraph: ctx.adjacencyGraph,
-    state: ctx.state,
-    activePlayer: ctx.activePlayer,
-    actorPlayer: ctx.actorPlayer,
-    bindings: ctx.bindings,
-    resources: ctx.resources,
-    ...(ctx.runtimeTableIndex === undefined ? {} : { runtimeTableIndex: ctx.runtimeTableIndex }),
-    ...(ctx.freeOperationOverlay === undefined ? {} : { freeOperationOverlay: ctx.freeOperationOverlay }),
-    ...(ctx.maxQueryResults === undefined ? {} : { maxQueryResults: ctx.maxQueryResults }),
+    def: env.def,
+    adjacencyGraph: env.adjacencyGraph,
+    state: cursor.state,
+    activePlayer: env.activePlayer,
+    actorPlayer: env.actorPlayer,
+    bindings: cursor.bindings,
+    resources: env.resources,
+    ...(env.runtimeTableIndex === undefined ? {} : { runtimeTableIndex: env.runtimeTableIndex }),
+    ...(env.freeOperationOverlay === undefined ? {} : { freeOperationOverlay: env.freeOperationOverlay }),
+    ...(env.maxQueryResults === undefined ? {} : { maxQueryResults: env.maxQueryResults }),
   });
   const resolvedExecutionContext = resolveFreeOperationExecutionContext(
     grant.executionContext,
     grantEvalContext,
   );
-  ctx.freeOperationProbeScope?.priorGrantDefinitions.push(resolvedGrant);
+  env.freeOperationProbeScope?.priorGrantDefinitions.push(resolvedGrant);
 
   if (
     grantRequiresUsableProbe(resolvedGrant)
     && !isFreeOperationGrantUsableInCurrentState(
-      ctx.def,
-      ctx.state,
+      env.def,
+      cursor.state,
       resolvedGrant,
       activeSeat,
       runtime.seatOrder,
       seatResolution,
       {
-        sequenceProbeCandidates: buildSequenceProbeCandidates(ctx, resolvedGrant),
+        sequenceProbeCandidates: buildSequenceProbeCandidates(env, resolvedGrant),
         evalContext: grantEvalContext,
       },
     )
@@ -290,9 +295,9 @@ export const applyGrantFreeOperation = (
       sequenceBatchId !== undefined
       && sequenceIndex !== undefined
       && sequenceProgressionPolicy === 'strictInOrder'
-      && !ctx.freeOperationProbeScope?.blockedStrictSequenceBatchIds.includes(sequenceBatchId)
+      && !env.freeOperationProbeScope?.blockedStrictSequenceBatchIds.includes(sequenceBatchId)
     ) {
-      ctx.freeOperationProbeScope?.blockedStrictSequenceBatchIds.push(sequenceBatchId);
+      env.freeOperationProbeScope?.blockedStrictSequenceBatchIds.push(sequenceBatchId);
     }
     const nextSequenceContexts =
       sequenceBatchId !== undefined
@@ -307,9 +312,9 @@ export const applyGrantFreeOperation = (
         : runtime.freeOperationSequenceContexts;
     return {
       state: nextSequenceContexts === runtime.freeOperationSequenceContexts
-        ? ctx.state
+        ? cursor.state
         : {
-          ...ctx.state,
+          ...cursor.state,
           turnOrderState: {
             type: 'cardDriven',
             runtime: {
@@ -318,7 +323,7 @@ export const applyGrantFreeOperation = (
             },
           },
         },
-      rng: ctx.rng,
+      rng: cursor.rng,
     };
   }
 
@@ -354,7 +359,7 @@ export const applyGrantFreeOperation = (
     );
   return {
     state: {
-      ...ctx.state,
+      ...cursor.state,
       turnOrderState: {
         type: 'cardDriven',
         runtime: {
@@ -364,16 +369,19 @@ export const applyGrantFreeOperation = (
         },
       },
     },
-    rng: ctx.rng,
+    rng: cursor.rng,
   };
 };
 
 export const applyGotoPhaseExact = (
   effect: Extract<EffectAST, { readonly gotoPhaseExact: unknown }>,
-  ctx: EffectContext,
+  env: EffectEnv,
+  cursor: EffectCursor,
+  _budget: EffectBudgetState,
+  _applyBatch: ApplyEffectsWithBudget,
 ): EffectResult => {
   const targetPhase = effect.gotoPhaseExact.phase;
-  const phases = ctx.def.turnStructure.phases;
+  const phases = env.def.turnStructure.phases;
   if (!phases.some((phase) => phase.id === targetPhase)) {
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED, `gotoPhaseExact.phase is unknown: ${targetPhase}`, {
       effectType: 'gotoPhaseExact',
@@ -382,12 +390,12 @@ export const applyGotoPhaseExact = (
     });
   }
 
-  const currentPhaseIndex = phases.findIndex((phase) => phase.id === ctx.state.currentPhase);
+  const currentPhaseIndex = phases.findIndex((phase) => phase.id === cursor.state.currentPhase);
   const targetPhaseIndex = phases.findIndex((phase) => phase.id === targetPhase);
   if (currentPhaseIndex < 0 || targetPhaseIndex < 0) {
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED, `gotoPhaseExact could not resolve current/target phase indices`, {
       effectType: 'gotoPhaseExact',
-      currentPhase: ctx.state.currentPhase,
+      currentPhase: cursor.state.currentPhase,
       targetPhase,
     });
   }
@@ -395,38 +403,38 @@ export const applyGotoPhaseExact = (
   if (targetPhaseIndex < currentPhaseIndex) {
     throw effectRuntimeError(
       EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED,
-      `gotoPhaseExact cannot cross a turn boundary (current=${String(ctx.state.currentPhase)}, target=${targetPhase})`,
+      `gotoPhaseExact cannot cross a turn boundary (current=${String(cursor.state.currentPhase)}, target=${targetPhase})`,
       {
         effectType: 'gotoPhaseExact',
-        currentPhase: ctx.state.currentPhase,
+        currentPhase: cursor.state.currentPhase,
         targetPhase,
       },
     );
   }
 
-  if (ctx.state.currentPhase === targetPhase) {
-    return { state: ctx.state, rng: ctx.rng };
+  if (cursor.state.currentPhase === targetPhase) {
+    return { state: cursor.state, rng: cursor.rng };
   }
-  if (!consumePhaseTransitionBudget(ctx, 'gotoPhaseExact')) {
-    return { state: ctx.state, rng: ctx.rng };
+  if (!consumePhaseTransitionBudget(env, 'gotoPhaseExact')) {
+    return { state: cursor.state, rng: cursor.rng };
   }
   const lifecycleResources = createEvalRuntimeResources({
-    collector: ctx.collector,
+    collector: env.collector,
   });
   const targetPhaseId = phases[targetPhaseIndex]!.id;
 
-  const exitedState = dispatchLifecycleEvent(ctx.def, ctx.state, {
+  const exitedState = dispatchLifecycleEvent(env.def, cursor.state, {
     type: 'phaseExit',
-    phase: ctx.state.currentPhase,
-  }, undefined, lifecycleBudgetOptions(ctx), lifecycleResources, 'lifecycle', ctx.cachedRuntime, ctx.profiler);
+    phase: cursor.state.currentPhase,
+  }, undefined, lifecycleBudgetOptions(env), lifecycleResources, 'lifecycle', env.cachedRuntime, env.profiler);
   const enteredState = resetPhaseUsage({
     ...exitedState,
     currentPhase: targetPhaseId,
   });
-  const finalState = dispatchLifecycleEvent(ctx.def, enteredState, {
+  const finalState = dispatchLifecycleEvent(env.def, enteredState, {
     type: 'phaseEnter',
     phase: targetPhaseId,
-  }, undefined, lifecycleBudgetOptions(ctx), lifecycleResources, 'lifecycle', ctx.cachedRuntime, ctx.profiler);
+  }, undefined, lifecycleBudgetOptions(env), lifecycleResources, 'lifecycle', env.cachedRuntime, env.profiler);
   return {
     state: finalState,
     rng: { state: finalState.rng },
@@ -435,21 +443,24 @@ export const applyGotoPhaseExact = (
 
 export const applyAdvancePhase = (
   _effect: Extract<EffectAST, { readonly advancePhase: unknown }>,
-  ctx: EffectContext,
+  env: EffectEnv,
+  cursor: EffectCursor,
+  _budget: EffectBudgetState,
+  _applyBatch: ApplyEffectsWithBudget,
 ): EffectResult => {
-  if (!consumePhaseTransitionBudget(ctx, 'advancePhase')) {
-    return { state: ctx.state, rng: ctx.rng };
+  if (!consumePhaseTransitionBudget(env, 'advancePhase')) {
+    return { state: cursor.state, rng: cursor.rng };
   }
-  const policy = lifecycleBudgetOptions(ctx);
+  const policy = lifecycleBudgetOptions(env);
   const nextState = advancePhase(buildAdvancePhaseRequest(
-    ctx.def,
-    ctx.state,
+    env.def,
+    cursor.state,
     createEvalRuntimeResources({
-      collector: ctx.collector,
+      collector: env.collector,
     }),
     {
       policy,
-      ...(ctx.cachedRuntime === undefined ? {} : { cachedRuntime: ctx.cachedRuntime }),
+      ...(env.cachedRuntime === undefined ? {} : { cachedRuntime: env.cachedRuntime }),
     },
   ));
   return {
@@ -459,16 +470,16 @@ export const applyAdvancePhase = (
 };
 
 const resolvePhaseId = (
-  ctx: EffectContext,
+  env: EffectEnv,
   phase: string,
   effectType: string,
   field: 'phase' | 'resumePhase',
 ): GameState['currentPhase'] => {
-  const candidate = findPhaseDef(ctx.def, phase)?.id;
+  const candidate = findPhaseDef(env.def, phase)?.id;
   if (candidate === undefined) {
     const phaseCandidates = [
-      ...ctx.def.turnStructure.phases.map((entry) => entry.id),
-      ...(ctx.def.turnStructure.interrupts ?? []).map((entry) => entry.id),
+      ...env.def.turnStructure.phases.map((entry) => entry.id),
+      ...(env.def.turnStructure.interrupts ?? []).map((entry) => entry.id),
     ];
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED, `${effectType}.${field} is unknown: ${phase}`, {
       effectType,
@@ -482,20 +493,23 @@ const resolvePhaseId = (
 
 export const applyPushInterruptPhase = (
   effect: Extract<EffectAST, { readonly pushInterruptPhase: unknown }>,
-  ctx: EffectContext,
+  env: EffectEnv,
+  cursor: EffectCursor,
+  _budget: EffectBudgetState,
+  _applyBatch: ApplyEffectsWithBudget,
 ): EffectResult => {
-  if (!consumePhaseTransitionBudget(ctx, 'pushInterruptPhase')) {
-    return { state: ctx.state, rng: ctx.rng };
+  if (!consumePhaseTransitionBudget(env, 'pushInterruptPhase')) {
+    return { state: cursor.state, rng: cursor.rng };
   }
   const lifecycleResources = createEvalRuntimeResources({
-    collector: ctx.collector,
+    collector: env.collector,
   });
-  const targetPhase = resolvePhaseId(ctx, effect.pushInterruptPhase.phase, 'pushInterruptPhase', 'phase');
-  const resumePhase = resolvePhaseId(ctx, effect.pushInterruptPhase.resumePhase, 'pushInterruptPhase', 'resumePhase');
-  const exitedState = dispatchLifecycleEvent(ctx.def, ctx.state, {
+  const targetPhase = resolvePhaseId(env, effect.pushInterruptPhase.phase, 'pushInterruptPhase', 'phase');
+  const resumePhase = resolvePhaseId(env, effect.pushInterruptPhase.resumePhase, 'pushInterruptPhase', 'resumePhase');
+  const exitedState = dispatchLifecycleEvent(env.def, cursor.state, {
     type: 'phaseExit',
-    phase: ctx.state.currentPhase,
-  }, undefined, lifecycleBudgetOptions(ctx), lifecycleResources, 'lifecycle', ctx.cachedRuntime);
+    phase: cursor.state.currentPhase,
+  }, undefined, lifecycleBudgetOptions(env), lifecycleResources, 'lifecycle', env.cachedRuntime);
   const nextStack = [
     ...(exitedState.interruptPhaseStack ?? []),
     { phase: targetPhase, resumePhase },
@@ -505,10 +519,10 @@ export const applyPushInterruptPhase = (
     currentPhase: targetPhase,
     interruptPhaseStack: nextStack,
   });
-  const finalState = dispatchLifecycleEvent(ctx.def, enteredState, {
+  const finalState = dispatchLifecycleEvent(env.def, enteredState, {
     type: 'phaseEnter',
     phase: targetPhase,
-  }, undefined, lifecycleBudgetOptions(ctx), lifecycleResources, 'lifecycle', ctx.cachedRuntime);
+  }, undefined, lifecycleBudgetOptions(env), lifecycleResources, 'lifecycle', env.cachedRuntime);
   return {
     state: finalState,
     rng: { state: finalState.rng },
@@ -517,25 +531,28 @@ export const applyPushInterruptPhase = (
 
 export const applyPopInterruptPhase = (
   _effect: Extract<EffectAST, { readonly popInterruptPhase: unknown }>,
-  ctx: EffectContext,
+  env: EffectEnv,
+  cursor: EffectCursor,
+  _budget: EffectBudgetState,
+  _applyBatch: ApplyEffectsWithBudget,
 ): EffectResult => {
-  if (!consumePhaseTransitionBudget(ctx, 'popInterruptPhase')) {
-    return { state: ctx.state, rng: ctx.rng };
+  if (!consumePhaseTransitionBudget(env, 'popInterruptPhase')) {
+    return { state: cursor.state, rng: cursor.rng };
   }
   const lifecycleResources = createEvalRuntimeResources({
-    collector: ctx.collector,
+    collector: env.collector,
   });
-  const activeStack = ctx.state.interruptPhaseStack ?? [];
+  const activeStack = cursor.state.interruptPhaseStack ?? [];
   if (activeStack.length === 0) {
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED, 'popInterruptPhase requires a non-empty interruptPhaseStack', {
       effectType: 'popInterruptPhase',
     });
   }
 
-  const exitedState = dispatchLifecycleEvent(ctx.def, ctx.state, {
+  const exitedState = dispatchLifecycleEvent(env.def, cursor.state, {
     type: 'phaseExit',
-    phase: ctx.state.currentPhase,
-  }, undefined, lifecycleBudgetOptions(ctx), lifecycleResources, 'lifecycle', ctx.cachedRuntime);
+    phase: cursor.state.currentPhase,
+  }, undefined, lifecycleBudgetOptions(env), lifecycleResources, 'lifecycle', env.cachedRuntime);
   const stackAfterExit = exitedState.interruptPhaseStack ?? [];
   const resumeFrame = stackAfterExit.at(-1);
   if (resumeFrame === undefined) {
@@ -559,10 +576,10 @@ export const applyPopInterruptPhase = (
           interruptPhaseStack: nextStack,
         },
   );
-  const finalState = dispatchLifecycleEvent(ctx.def, resumedState, {
+  const finalState = dispatchLifecycleEvent(env.def, resumedState, {
     type: 'phaseEnter',
     phase: resumeFrame.resumePhase,
-  }, undefined, lifecycleBudgetOptions(ctx), lifecycleResources, 'lifecycle', ctx.cachedRuntime);
+  }, undefined, lifecycleBudgetOptions(env), lifecycleResources, 'lifecycle', env.cachedRuntime);
   return {
     state: finalState,
     rng: { state: finalState.rng },

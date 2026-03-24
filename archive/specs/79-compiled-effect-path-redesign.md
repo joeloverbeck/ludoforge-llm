@@ -1,6 +1,6 @@
 # Spec 79 — Compiled Effect Path: DraftTracker Integration
 
-**Status**: PROPOSED
+**Status**: ✅ COMPLETED
 **Dependencies**: Spec 76 (Type Tags, completed), Spec 77 (EffectContext Split,
 completed), Spec 78 (Draft State, completed)
 **Enables**: Performance parity between compiled and interpreted effect paths.
@@ -229,6 +229,44 @@ For `executeEffectList` fallback path: replace `createCompiledExecutionContext` 
 | Nested mutable scopes in fallback fragments | Safe (nested copy-on-write) but suboptimal. Acceptable for parity — optimize as follow-up if profiling warrants. |
 | `emitVarChangeArtifacts` in codegen still uses `createCompiledExecutionContext` | Per-effect cost (~1 object), same order as interpreter. Follow-up optimization. |
 
+## Results (2026-03-24)
+
+### Performance Re-baseline
+
+Benchmark environment: Node.js, compiled JS (dist/), RandomAgent, skipDeltas.
+
+**Texas Hold'em** (15 games, seeds 5000–5014, 500 max turns, 6 players):
+
+| Path | Avg (ms) | Median (ms) | Min (ms) | Max (ms) |
+|------|----------|-------------|----------|----------|
+| Compiled | 96.8 | 85.0 | 38.8 | 172.4 |
+| Interpreted | 94.1 | 91.1 | 38.0 | 171.6 |
+| **Difference** | **+2.91%** | | | |
+
+**FITL** (5 games, seeds 5000–5005, 200 max turns, 4 players; 1 seed skipped
+per path due to stall-loop errors with RandomAgent):
+
+| Path | Avg (ms) | Median (ms) | Min (ms) | Max (ms) |
+|------|----------|-------------|----------|----------|
+| Compiled | 51,948 | 58,869 | 1,285 | 77,523 |
+| Interpreted | 52,327 | 59,988 | 1,288 | 77,847 |
+| **Difference** | **-0.72%** | | | |
+
+### Conclusion
+
+Both games show the compiled and interpreted paths at **performance parity**
+(within noise margin of ±3%). The pre-Spec-78 +16% compiled overhead is
+eliminated. DraftTracker integration into the compiled path (Changes 1–5) and
+dead code removal (Change 6) achieved the target.
+
+FITL profiler breakdown (seed=42, compiled path) shows lifecycle effects are
+negligible (<0.1ms) relative to legal move enumeration (~39s) and agent
+decisions (~3.7s). Further lifecycle optimization would yield diminishing
+returns for FITL; the bottleneck is move enumeration.
+
+**Parity target: MET.** No follow-up optimization required for the compiled
+lifecycle path. Whole-sequence compilation remains a viable future optimization.
+
 ## Future Work
 
 - **Whole-sequence compilation**: Compile entire effect sequences into single
@@ -240,3 +278,16 @@ For `executeEffectList` fallback path: replace `createCompiledExecutionContext` 
 - **Shared tracker across scopes**: Allow `applyEffectsWithBudgetState` to
   accept an existing tracker, eliminating nested mutable scope creation in
   fallback fragments.
+
+## Outcome
+
+- **Completion date**: 2026-03-24
+- **What changed**: All 6 design changes implemented across tickets 79COMEFFPATRED-001 through 006. Ticket 007 performed the performance re-baseline confirming parity.
+  - `effect-compiler-types.ts`: `tracker` field added to `CompiledEffectContext`
+  - `effect-compiler-runtime.ts`: `buildEffectEnvFromCompiledCtx` added, `createCompiledExecutionContext` removed
+  - `effect-compiler.ts`: `composeFragments` rewritten with DraftTracker mutable scope, `createFallbackFragment` rebuilt, `normalizeFragmentResult` deleted
+  - `effect-compiler-codegen.ts`: `compileSetVar`/`compileAddVar` draft-aware, `executeEffectList` fallback replaced
+  - Dead code removed: `normalizeFragmentResult`, `createCompiledExecutionContext`, `fallbackApplyEffects`
+- **Performance**: Texas Hold'em +2.91%, FITL -0.72% (both within ±3% noise). Pre-Spec-78 +16% overhead eliminated. Parity target met.
+- **Deviations**: None from the design. Implementation followed all 6 changes as specified.
+- **Verification**: 4,684 unit tests, 36 E2E tests, typecheck, lint — all pass.

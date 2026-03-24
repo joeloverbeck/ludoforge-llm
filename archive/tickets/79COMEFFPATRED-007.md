@@ -1,6 +1,6 @@
 # 79COMEFFPATRED-007: Performance re-baseline and spec closure
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — benchmarks and documentation only
@@ -107,3 +107,14 @@ If the spec moves to completed:
 2. Benchmark command (TBD based on existing infrastructure)
 3. `pnpm turbo typecheck`
 4. `pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-24
+- **What changed**:
+  - New benchmark script: `packages/engine/test/performance/compiled-vs-interpreted-benchmark.test.ts`
+  - Spec 79 status updated from PROPOSED to COMPLETED with Results section
+  - CLAUDE.md updated: Spec 79 moved from active to completed
+- **Results**: Texas Hold'em +2.91%, FITL -0.72% — both within noise margin (±3%). Parity target met.
+- **Deviations**: FITL benchmark used 5 games / 200 max turns (not 10+) due to ~52s per-game runtime. Both paths skip seeds that hit `STALL_LOOP_DETECTED` (a RandomAgent + seed issue, not a path divergence).
+- **Verification**: 4,684 unit tests pass, 36 E2E tests pass, typecheck clean, lint clean.

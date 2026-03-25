@@ -1,7 +1,7 @@
 import { asPlayerId } from './branded.js';
 import { applyBoundaryExpiry } from './boundary-expiry.js';
 import { resetPhaseUsage, resetTurnUsage } from './action-usage.js';
-import { patchPhaseTransitionHash } from './zobrist-phase-hash.js';
+import { reconcileRunningHash } from './zobrist-phase-hash.js';
 import { resolveBoundaryDurationsAtTurnEnd } from './event-execution.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
 import { legalMoves } from './legal-moves.js';
@@ -323,7 +323,7 @@ export const advancePhase = (request: AdvancePhaseRequest): GameState => {
     }), targetPhase.id, seatResolution);
     const table = cachedRuntime?.zobristTable;
     if (table) {
-      redirected = patchPhaseTransitionHash(table, beforeRedirect, redirected);
+      redirected = { ...redirected, _runningHash: reconcileRunningHash(table, beforeRedirect, redirected) };
     }
     return dispatchLifecycleEvent(def, redirected, { type: 'phaseEnter', phase: targetPhase.id }, triggerLogCollector, policy, lifecycleResources, 'lifecycle', cachedRuntime);
   }
@@ -348,7 +348,7 @@ export const advancePhase = (request: AdvancePhaseRequest): GameState => {
     }), nextPhase.id, seatResolution);
     const tableMid = cachedRuntime?.zobristTable;
     if (tableMid) {
-      nextState = patchPhaseTransitionHash(tableMid, beforeMidPhase, nextState);
+      nextState = { ...nextState, _runningHash: reconcileRunningHash(tableMid, beforeMidPhase, nextState) };
     }
 
     return dispatchLifecycleEvent(def, nextState, { type: 'phaseEnter', phase: nextPhase.id }, triggerLogCollector, policy, lifecycleResources, 'lifecycle', cachedRuntime);
@@ -390,7 +390,7 @@ export const advancePhase = (request: AdvancePhaseRequest): GameState => {
   ), initialPhase, seatResolution);
   const tableTurn = cachedRuntime?.zobristTable;
   if (tableTurn) {
-    rolledState = patchPhaseTransitionHash(tableTurn, beforeTurnRoll, rolledState);
+    rolledState = { ...rolledState, _runningHash: reconcileRunningHash(tableTurn, beforeTurnRoll, rolledState) };
   }
   const afterTurnStart = dispatchLifecycleEvent(def, rolledState, { type: 'turnStart' }, triggerLogCollector, policy, lifecycleResources, 'lifecycle', cachedRuntime);
   return dispatchLifecycleEvent(def, afterTurnStart, { type: 'phaseEnter', phase: initialPhase }, triggerLogCollector, policy, lifecycleResources, 'lifecycle', cachedRuntime);
@@ -498,7 +498,7 @@ export const advanceToDecisionPoint = (
       const coupCycled = coupPhaseImplicitPass(def, nextState, seatResolution);
       if (coupCycled !== null) {
         const tableAdp = cachedRuntime?.zobristTable;
-        nextState = tableAdp ? patchPhaseTransitionHash(tableAdp, nextState, coupCycled) : coupCycled;
+        nextState = tableAdp ? { ...coupCycled, _runningHash: reconcileRunningHash(tableAdp, nextState, coupCycled) } : coupCycled;
         advances += 1;
         continue;
       }

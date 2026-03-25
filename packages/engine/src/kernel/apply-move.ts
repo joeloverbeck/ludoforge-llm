@@ -86,7 +86,7 @@ import type {
 import { asPlayerId } from './branded.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
 import { computeFullHash, createZobristTable } from './zobrist.js';
-import { patchPhaseTransitionHash } from './zobrist-phase-hash.js';
+import { reconcileRunningHash } from './zobrist-phase-hash.js';
 import { resolveMoveDecisionSequence } from './move-decision-sequence.js';
 
 const DEFAULT_MAX_TRIGGER_DEPTH = 8;
@@ -1089,12 +1089,7 @@ const executeMoveAction = (
 
   perfEnd(profiler, 'actionEffects', t0_actionEffects);
 
-  const stateBeforeUsage = effectState;
-  let stateWithUsage = incrementActionUsage(effectState, action.id);
-  const usageTable = cachedRuntime?.zobristTable;
-  if (usageTable) {
-    stateWithUsage = patchPhaseTransitionHash(usageTable, stateBeforeUsage, stateWithUsage);
-  }
+  const stateWithUsage = incrementActionUsage(effectState, action.id);
   const maxDepth = def.metadata.maxTriggerDepth ?? DEFAULT_MAX_TRIGGER_DEPTH;
   let triggerState = stateWithUsage;
   let triggerRng = effectRng;
@@ -1301,16 +1296,10 @@ const applyMoveCore = (
     });
   perfEnd(profiler, 'applyTurnFlowEligibility', t0_turnFlow);
 
-  // Patch _runningHash for any activePlayer change introduced by turn-flow eligibility.
-  const turnFlowTable = cachedRuntime?.zobristTable;
-  const turnFlowPatchedState = turnFlowTable
-    ? patchPhaseTransitionHash(turnFlowTable, executed.stateWithRng, turnFlowResult.state)
-    : turnFlowResult.state;
-
   const t0_deferred = perfStart(profiler);
   const deferredExecution = applyReleasedDeferredEventEffects(
     def,
-    turnFlowPatchedState,
+    turnFlowResult.state,
     turnFlowResult.releasedDeferredEventEffects ?? [],
     shared,
   );
@@ -1348,10 +1337,18 @@ const applyMoveCore = (
     : boundaryExpiryResult.state;
   perfEnd(profiler, 'advanceToDecisionPoint', t0_advance);
 
+  // Reconcile _runningHash by diffing the original input state against the
+  // final progressed state. This single call replaces all intermediate hash
+  // patches and is correct by construction — it covers every hashed feature
+  // category. When no zobrist table is available, fall back to full recompute.
   const t0_hash = perfStart(profiler);
+  const reconciledHash = cachedRuntime?.zobristTable
+    ? reconcileRunningHash(cachedRuntime.zobristTable, state, progressedState)
+    : computeFullHash(createZobristTable(def), progressedState);
   const stateWithHash = {
     ...progressedState,
-    stateHash: computeFullHash(cachedRuntime?.zobristTable ?? createZobristTable(def), progressedState),
+    stateHash: reconciledHash,
+    _runningHash: reconciledHash,
   };
   perfEnd(profiler, 'computeFullHash', t0_hash);
 

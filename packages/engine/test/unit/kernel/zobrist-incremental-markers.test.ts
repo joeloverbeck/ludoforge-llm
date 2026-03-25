@@ -16,6 +16,7 @@ import {
   type GameState,
 } from '../../../src/kernel/index.js';
 import { makeExecutionEffectContext } from '../../helpers/effect-context-test-helpers.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
 
 // ---------------------------------------------------------------------------
 // Shared test fixtures
@@ -118,7 +119,7 @@ describe('zobrist incremental hash — marker effect handlers', () => {
       const state = makeState(def, table);
       const ctx = makeCtx(def, state);
 
-      const effect: EffectAST = { setMarker: { space: 'board:none', marker: 'support', state: 'active-support' } };
+      const effect: EffectAST = eff({ setMarker: { space: 'board:none', marker: 'support', state: 'active-support' } });
       const result = applyEffects([effect], ctx);
 
       const expected = computeFullHash(table, result.state);
@@ -129,12 +130,12 @@ describe('zobrist incremental hash — marker effect handlers', () => {
       // First set to a non-default state
       const state = makeState(def, table);
       const ctx1 = makeCtx(def, state);
-      const setup: EffectAST = { setMarker: { space: 'board:none', marker: 'support', state: 'passive-support' } };
+      const setup: EffectAST = eff({ setMarker: { space: 'board:none', marker: 'support', state: 'passive-support' } });
       const setupResult = applyEffects([setup], ctx1);
 
       // Now set to the same value again
       const ctx2 = makeCtx(def, setupResult.state);
-      const noop: EffectAST = { setMarker: { space: 'board:none', marker: 'support', state: 'passive-support' } };
+      const noop: EffectAST = eff({ setMarker: { space: 'board:none', marker: 'support', state: 'passive-support' } });
       const result = applyEffects([noop], ctx2);
 
       assert.equal(result.state._runningHash, setupResult.state._runningHash, 'hash must not change when setting same state');
@@ -147,7 +148,7 @@ describe('zobrist incremental hash — marker effect handlers', () => {
       const ctx = makeCtx(def, state);
 
       // neutral (index 2) + delta 1 = passive-support (index 3)
-      const effect: EffectAST = { shiftMarker: { space: 'board:none', marker: 'support', delta: 1 } };
+      const effect: EffectAST = eff({ shiftMarker: { space: 'board:none', marker: 'support', delta: 1 } });
       const result = applyEffects([effect], ctx);
 
       const expected = computeFullHash(table, result.state);
@@ -159,7 +160,7 @@ describe('zobrist incremental hash — marker effect handlers', () => {
       const ctx = makeCtx(def, state);
 
       // neutral (index 2) - 1 = active-opposition (index 1)
-      const effect: EffectAST = { shiftMarker: { space: 'board:none', marker: 'support', delta: -1 } };
+      const effect: EffectAST = eff({ shiftMarker: { space: 'board:none', marker: 'support', delta: -1 } });
       const result = applyEffects([effect], ctx);
 
       const expected = computeFullHash(table, result.state);
@@ -172,7 +173,7 @@ describe('zobrist incremental hash — marker effect handlers', () => {
       const state = makeState(def, table);
       const ctx = makeCtx(def, state);
 
-      const effect: EffectAST = { setGlobalMarker: { marker: 'capability', state: 'active' } };
+      const effect: EffectAST = eff({ setGlobalMarker: { marker: 'capability', state: 'active' } });
       const result = applyEffects([effect], ctx);
 
       const expected = computeFullHash(table, result.state);
@@ -186,7 +187,7 @@ describe('zobrist incremental hash — marker effect handlers', () => {
       const ctx = makeCtx(def, state);
 
       // Toggle starts at 'off'; flip to 'on'
-      const effect: EffectAST = { flipGlobalMarker: { marker: 'toggle', stateA: 'off', stateB: 'on' } };
+      const effect: EffectAST = eff({ flipGlobalMarker: { marker: 'toggle', stateA: 'off', stateB: 'on' } });
       const result = applyEffects([effect], ctx);
 
       const expected = computeFullHash(table, result.state);
@@ -198,12 +199,12 @@ describe('zobrist incremental hash — marker effect handlers', () => {
 
       // First flip: off → on
       const ctx1 = makeCtx(def, state);
-      const flip1: EffectAST = { flipGlobalMarker: { marker: 'toggle', stateA: 'off', stateB: 'on' } };
+      const flip1: EffectAST = eff({ flipGlobalMarker: { marker: 'toggle', stateA: 'off', stateB: 'on' } });
       const r1 = applyEffects([flip1], ctx1);
 
       // Second flip: on → off
       const ctx2 = makeCtx(def, r1.state);
-      const flip2: EffectAST = { flipGlobalMarker: { marker: 'toggle', stateA: 'off', stateB: 'on' } };
+      const flip2: EffectAST = eff({ flipGlobalMarker: { marker: 'toggle', stateA: 'off', stateB: 'on' } });
       const r2 = applyEffects([flip2], ctx2);
 
       const expected = computeFullHash(table, r2.state);
@@ -217,7 +218,7 @@ describe('zobrist incremental hash — marker effect handlers', () => {
       const ctx = makeCtx(def, state);
 
       // capability: inactive (index 0) + delta 2 = shaded (index 2)
-      const effect: EffectAST = { shiftGlobalMarker: { marker: 'capability', delta: 2 } };
+      const effect: EffectAST = eff({ shiftGlobalMarker: { marker: 'capability', delta: 2 } });
       const result = applyEffects([effect], ctx);
 
       const expected = computeFullHash(table, result.state);
@@ -230,7 +231,7 @@ describe('zobrist incremental hash — marker effect handlers', () => {
       const state = makeState(def, table);
       const ctx = makeCtx(def, state, { noCachedRuntime: true });
 
-      const effect: EffectAST = { setMarker: { space: 'board:none', marker: 'support', state: 'active-support' } };
+      const effect: EffectAST = eff({ setMarker: { space: 'board:none', marker: 'support', state: 'active-support' } });
       // Must not throw
       const result = applyEffects([effect], ctx);
 
@@ -246,9 +247,9 @@ describe('zobrist incremental hash — marker effect handlers', () => {
       const ctx = makeCtx(def, state);
 
       const effects: EffectAST[] = [
-        { setMarker: { space: 'board:none', marker: 'support', state: 'passive-opposition' } },
-        { setGlobalMarker: { marker: 'capability', state: 'shaded' } },
-        { flipGlobalMarker: { marker: 'toggle', stateA: 'off', stateB: 'on' } },
+        eff({ setMarker: { space: 'board:none', marker: 'support', state: 'passive-opposition' } }),
+        eff({ setGlobalMarker: { marker: 'capability', state: 'shaded' } }),
+        eff({ flipGlobalMarker: { marker: 'toggle', stateA: 'off', stateB: 'on' } }),
       ];
       const result = applyEffects(effects, ctx);
 

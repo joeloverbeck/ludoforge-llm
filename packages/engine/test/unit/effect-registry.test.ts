@@ -6,7 +6,7 @@ import {
   effectKindOf,
   makeEffect,
 } from '../../src/kernel/index.js';
-import type { EffectKind } from '../../src/kernel/index.js';
+import type { EffectAST, EffectKind } from '../../src/kernel/index.js';
 
 describe('TAG_TO_KIND', () => {
   it('has exactly as many entries as EFFECT_KIND_TAG', () => {
@@ -88,7 +88,7 @@ describe('effectKindOf (tag-based)', () => {
       evaluateSubset: { from: { query: 'zones' }, bind: 'b', filterCondition: true, effects: [] },
     };
     for (const kind of Object.keys(kindPayloads) as EffectKind[]) {
-      const effect = makeEffect(kind, kindPayloads[kind] as any);
+      const effect = makeEffect(kind, kindPayloads[kind] as never) as unknown as EffectAST;
       assert.equal(
         effectKindOf(effect),
         kind,

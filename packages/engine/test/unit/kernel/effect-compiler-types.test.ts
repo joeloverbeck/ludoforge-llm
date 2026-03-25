@@ -11,6 +11,7 @@ import {
   type CompiledEffectSequence,
   type GameDef,
 } from '../../../src/kernel/index.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
 
 const createEmptyDef = (): GameDef => ({
   metadata: { id: 'compiled-effect-types-test', players: { min: 2, max: 2 } },
@@ -32,7 +33,7 @@ const createLifecycleDef = (): GameDef => ({
     phases: [
       {
         id: asPhaseId('main'),
-        onEnter: [{ setVar: { scope: 'global', var: 'ready', value: true } }],
+        onEnter: [eff({ setVar: { scope: 'global', var: 'ready', value: true } })],
       },
     ],
   },

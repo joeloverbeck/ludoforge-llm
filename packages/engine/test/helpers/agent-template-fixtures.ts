@@ -1,4 +1,5 @@
 import type { ActionDef, ActionId, ActionPipelineDef, PhaseId } from '../../src/kernel/index.js';
+import { eff } from './effect-tag-helper.js';
 
 export const createTemplateChooseOneAction = (id: ActionId, phaseId: PhaseId): ActionDef => ({
   id,
@@ -9,13 +10,13 @@ export const createTemplateChooseOneAction = (id: ActionId, phaseId: PhaseId): A
   pre: null,
   cost: [],
   effects: [
-    {
+    eff({
       chooseOne: {
         internalDecisionId: 'decision:$target',
         bind: '$target',
         options: { query: 'enums', values: ['alpha', 'beta', 'gamma'] },
       },
-    },
+    }),
   ],
   limits: [],
 });
@@ -31,13 +32,13 @@ export const createTemplateChooseOneProfile = (actionId: ActionId): ActionPipeli
     {
       stage: 'resolve',
       effects: [
-        {
+        eff({
           chooseOne: {
             internalDecisionId: 'decision:$target',
             bind: '$target',
             options: { query: 'enums', values: ['alpha', 'beta', 'gamma'] },
           },
-        },
+        }),
       ],
     },
   ],
@@ -53,7 +54,7 @@ export const createTemplateChooseNDuplicatesAction = (id: ActionId, phaseId: Pha
   pre: null,
   cost: [],
   effects: [
-    {
+    eff({
       chooseN: {
         internalDecisionId: 'decision:$targets',
         bind: '$targets',
@@ -61,7 +62,7 @@ export const createTemplateChooseNDuplicatesAction = (id: ActionId, phaseId: Pha
         min: 2,
         max: 2,
       },
-    },
+    }),
   ],
   limits: [],
 });
@@ -77,7 +78,7 @@ export const createTemplateChooseNDuplicatesProfile = (actionId: ActionId): Acti
     {
       stage: 'resolve',
       effects: [
-        {
+        eff({
           chooseN: {
             internalDecisionId: 'decision:$targets',
             bind: '$targets',
@@ -85,7 +86,7 @@ export const createTemplateChooseNDuplicatesProfile = (actionId: ActionId): Acti
             min: 2,
             max: 2,
           },
-        },
+        }),
       ],
     },
   ],

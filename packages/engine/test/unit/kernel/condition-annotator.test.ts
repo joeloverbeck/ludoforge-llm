@@ -24,6 +24,7 @@ import {
   type GameState,
   type VerbalizationDef,
 } from '../../../src/kernel/index.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
 
 // ---------------------------------------------------------------------------
 // Test helpers
@@ -248,7 +249,7 @@ describe('describeAction (condition annotator)', () => {
   it('preserves canonical limit ids from ActionDef without re-deriving', () => {
     const action = minimalActionDef({
       limits: [{ id: 'canonical-limit-id', scope: 'turn', max: 2 }],
-      effects: [{ addVar: { scope: 'global', var: 'gold', delta: 1 } }],
+      effects: [eff({ addVar: { scope: 'global', var: 'gold', delta: 1 } })],
     });
     const ctx = makeContext({
       state: makeState({
@@ -270,7 +271,7 @@ describe('describeAction (condition annotator)', () => {
         { id: 'test::turn::0', scope: 'turn', max: 1 },
         { id: 'test::turn::1', scope: 'turn', max: 3 },
       ],
-      effects: [{ addVar: { scope: 'global', var: 'gold', delta: 1 } }],
+      effects: [eff({ addVar: { scope: 'global', var: 'gold', delta: 1 } })],
     });
     const ctx = makeContext({
       state: makeState({
@@ -439,7 +440,7 @@ describe('describeAction (condition annotator)', () => {
         { id: 'test::turn::0', scope: 'turn', max: 2 },
         { id: 'test::game::1', scope: 'game', max: 5 },
       ],
-      effects: [{ addVar: { scope: 'global', var: 'gold', delta: 1 } }],
+      effects: [eff({ addVar: { scope: 'global', var: 'gold', delta: 1 } })],
     });
     const ctx = makeContext({
       state: makeState({
@@ -470,8 +471,8 @@ describe('describeAction (condition annotator)', () => {
   it('does not add annotations to Costs or Effects groups', () => {
     const action = minimalActionDef({
       pre: { op: '>=', left: { _t: 2 as const, ref: 'gvar', var: 'gold' }, right: 1 },
-      cost: [{ addVar: { scope: 'global', var: 'gold', delta: -1 } }],
-      effects: [{ setVar: { scope: 'global', var: 'gold', value: 0 } }],
+      cost: [eff({ addVar: { scope: 'global', var: 'gold', delta: -1 } })],
+      effects: [eff({ setVar: { scope: 'global', var: 'gold', value: 0 } })],
     });
     const ctx = makeContext();
     const result = describeAction(action, ctx);
@@ -596,9 +597,9 @@ describe('describeAction (condition annotator)', () => {
       actionId: action.id,
       legality: { op: '>=', left: { _t: 2 as const, ref: 'gvar', var: 'gold' }, right: 1 },
       costValidation: null,
-      costEffects: [{ addVar: { scope: 'global', var: 'gold', delta: -3 } }],
+      costEffects: [eff({ addVar: { scope: 'global', var: 'gold', delta: -3 } })],
       targeting: {},
-      stages: [{ stage: 'placement', effects: [{ advancePhase: {} }] }],
+      stages: [{ stage: 'placement', effects: [eff({ advancePhase: {} })] }],
       atomicity: 'atomic',
     };
     const def = makeDef({ actionPipelines: [pipeline] });
@@ -661,7 +662,7 @@ describe('describeAction (condition annotator)', () => {
           stage: 'resolution',
           legality: { op: '>=', left: { _t: 2 as const, ref: 'gvar', var: 'gold' }, right: 5 },
           costValidation: { op: '>=', left: { _t: 2 as const, ref: 'gvar', var: 'gold' }, right: 2 },
-          effects: [{ advancePhase: {} }],
+          effects: [eff({ advancePhase: {} })],
         },
       ],
       atomicity: 'atomic',
@@ -693,7 +694,7 @@ describe('describeAction (condition annotator)', () => {
       costValidation: null,
       costEffects: [],
       targeting: {},
-      stages: [{ effects: [{ advancePhase: {} }] }],
+      stages: [{ effects: [eff({ advancePhase: {} })] }],
       atomicity: 'atomic',
     };
     const failingPipeline: ActionPipelineDef = {
@@ -704,7 +705,7 @@ describe('describeAction (condition annotator)', () => {
       costValidation: null,
       costEffects: [],
       targeting: {},
-      stages: [{ effects: [{ advancePhase: {} }] }],
+      stages: [{ effects: [eff({ advancePhase: {} })] }],
       atomicity: 'atomic',
     };
     const def = makeDef({ actionPipelines: [passingPipeline, failingPipeline] });
@@ -730,7 +731,7 @@ describe('describeAction (condition annotator)', () => {
       costValidation: null,
       costEffects: [],
       targeting: {},
-      stages: [{ effects: [{ advancePhase: {} }] }],
+      stages: [{ effects: [eff({ advancePhase: {} })] }],
       atomicity: 'atomic',
     };
     const p2: ActionPipelineDef = {
@@ -740,7 +741,7 @@ describe('describeAction (condition annotator)', () => {
       costValidation: null,
       costEffects: [],
       targeting: {},
-      stages: [{ effects: [{ advancePhase: {} }] }],
+      stages: [{ effects: [eff({ advancePhase: {} })] }],
       atomicity: 'atomic',
     };
     const def = makeDef({ actionPipelines: [p1, p2] });
@@ -817,7 +818,7 @@ describe('describeAction (condition annotator)', () => {
   it('returns tooltipPayload with ruleCard and ruleState when action has effects', () => {
     const action = minimalActionDef({
       pre: { op: '>=', left: { _t: 2 as const, ref: 'gvar', var: 'gold' }, right: 5 },
-      effects: [{ addVar: { scope: 'global', var: 'gold', delta: 3 } }],
+      effects: [eff({ addVar: { scope: 'global', var: 'gold', delta: 3 } })],
     });
     const ctx = makeContext({ state: makeState({ globalVars: { gold: 10 } }) });
     const result = describeAction(action, ctx);
@@ -833,7 +834,7 @@ describe('describeAction (condition annotator)', () => {
   // -----------------------------------------------------------------------
   it('returns tooltipPayload even without verbalization via auto-humanization', () => {
     const action = minimalActionDef({
-      effects: [{ addVar: { scope: 'global', var: 'gold', delta: -2 } }],
+      effects: [eff({ addVar: { scope: 'global', var: 'gold', delta: -2 } })],
     });
     const def = makeDef(); // no verbalization
     const ctx = makeContext({ def });
@@ -848,7 +849,7 @@ describe('describeAction (condition annotator)', () => {
   // -----------------------------------------------------------------------
   it('returns same RuleCard reference on repeated calls for same action', () => {
     const action = minimalActionDef({
-      effects: [{ addVar: { scope: 'global', var: 'gold', delta: 1 } }],
+      effects: [eff({ addVar: { scope: 'global', var: 'gold', delta: 1 } })],
     });
     const def = makeDef();
     const runtime = makeRuntime(def);
@@ -874,19 +875,19 @@ describe('describeAction (condition annotator)', () => {
 
   it('uses pipeline effects (not base action effects) in RuleCard when pipelines are configured', () => {
     const action = minimalActionDef({
-      effects: [{ addVar: { scope: 'global', var: 'baseResource', delta: 5 } }],
+      effects: [eff({ addVar: { scope: 'global', var: 'baseResource', delta: 5 } })],
     });
     const pipeline: ActionPipelineDef = {
       id: 'pipeline-only-effects',
       actionId: action.id,
       legality: null,
       costValidation: null,
-      costEffects: [{ addVar: { scope: 'global', var: 'pipeCostResource', delta: -1 } }],
+      costEffects: [eff({ addVar: { scope: 'global', var: 'pipeCostResource', delta: -1 } })],
       targeting: {},
       stages: [
         {
           stage: 'main',
-          effects: [{ addVar: { scope: 'global', var: 'pipeStageResource', delta: 2 } }],
+          effects: [eff({ addVar: { scope: 'global', var: 'pipeStageResource', delta: 2 } })],
         },
       ],
       atomicity: 'atomic',
@@ -941,12 +942,12 @@ describe('describeAction (condition annotator)', () => {
       applicability,
       legality: null,
       costValidation: null,
-      costEffects: [{ addVar: { scope: 'global', var: 'gold', delta: -1 } }],
+      costEffects: [eff({ addVar: { scope: 'global', var: 'gold', delta: -1 } })],
       targeting: {},
       stages: [
         {
           stage: 'main',
-          effects: [{ addVar: { scope: 'global', var: 'gold', delta: 1 } }],
+          effects: [eff({ addVar: { scope: 'global', var: 'gold', delta: 1 } })],
         },
       ],
       atomicity: 'atomic',
@@ -991,7 +992,7 @@ describe('describeAction (condition annotator)', () => {
       left: { _t: 2 as const, ref: 'gvar', var: 'gold' },
       right: 5,
     };
-    const action = minimalActionDef({ pre, effects: [{ addVar: { scope: 'global', var: 'gold', delta: 1 } }] });
+    const action = minimalActionDef({ pre, effects: [eff({ addVar: { scope: 'global', var: 'gold', delta: 1 } })] });
     const def = makeDef();
     const runtime = makeRuntime(def);
 
@@ -1031,7 +1032,7 @@ describe('describeAction (condition annotator)', () => {
     };
     const action = minimalActionDef({
       pre,
-      effects: [{ setVar: { scope: 'global', var: 'gold', value: 0 } }],
+      effects: [eff({ setVar: { scope: 'global', var: 'gold', value: 0 } })],
       limits: [{ id: 'test::turn::0', scope: 'turn', max: 3 }],
     });
     const def = makeDef();
@@ -1063,7 +1064,7 @@ describe('describeAction (condition annotator)', () => {
         { id: 'test::turn::0', scope: 'turn', max: 1 },
         { id: 'test::game::1', scope: 'game', max: 3 },
       ],
-      effects: [{ addVar: { scope: 'global', var: 'gold', delta: 1 } }],
+      effects: [eff({ addVar: { scope: 'global', var: 'gold', delta: 1 } })],
     });
     const ctx = makeContext({
       state: makeState({
@@ -1100,12 +1101,12 @@ describe('describeAction (condition annotator)', () => {
   // -----------------------------------------------------------------------
   it('populates activeModifierIndices when if-condition is satisfied', () => {
     const action = minimalActionDef({
-      effects: [{
+      effects: [eff({
         if: {
           when: { op: '>=', left: { _t: 2 as const, ref: 'gvar', var: 'gold' }, right: 5 },
-          then: [{ addVar: { scope: 'global', var: 'gold', delta: 1 } }],
+          then: [eff({ addVar: { scope: 'global', var: 'gold', delta: 1 } })],
         },
-      }],
+      })],
     });
     const def = makeDef();
     const runtime = makeRuntime(def);
@@ -1155,7 +1156,7 @@ describe('describeAction (condition annotator)', () => {
       modifierEffects: {},
     };
     const action = minimalActionDef({
-      effects: [{ addVar: { scope: 'global', var: 'gold', delta: 3 } }],
+      effects: [eff({ addVar: { scope: 'global', var: 'gold', delta: 3 } })],
     });
     const def = makeDef({ verbalization });
     const ctx = makeContext({ def });
@@ -1183,13 +1184,13 @@ describe('describeAction (condition annotator)', () => {
     };
     const action = minimalActionDef({
       id: 'testAction' as ActionDef['id'],
-      effects: [{
+      effects: [eff({
         chooseOne: {
           internalDecisionId: 'decision:testAction:choice',
           bind: '$choice',
           options: { query: 'enums', values: ['alpha', 'beta'] },
         },
-      }],
+      })],
     });
     const def = makeDef({ verbalization });
     const ctx = makeContext({ def });
@@ -1219,13 +1220,13 @@ describe('describeAction (condition annotator)', () => {
     };
     const action = minimalActionDef({
       id: 'testAction' as ActionDef['id'],
-      effects: [{
+      effects: [eff({
         chooseOne: {
           internalDecisionId: 'decision:testAction:choice',
           bind: '$choice',
           options: { query: 'enums', values: ['alpha', 'beta'] },
         },
-      }],
+      })],
     });
     const def = makeDef({ verbalization });
     const ctx = makeContext({ def });
@@ -1243,7 +1244,7 @@ describe('describeAction (condition annotator)', () => {
   it('produces structuredClone-safe output including tooltipPayload', () => {
     const action = minimalActionDef({
       pre: { op: '>=', left: { _t: 2 as const, ref: 'gvar', var: 'gold' }, right: 5 },
-      effects: [{ addVar: { scope: 'global', var: 'gold', delta: 1 } }],
+      effects: [eff({ addVar: { scope: 'global', var: 'gold', delta: 1 } })],
     });
     const ctx = makeContext();
     const result = describeAction(action, ctx);

@@ -16,6 +16,9 @@ import {
 import type { GameDef, GameTrace } from '../../src/kernel/index.js';
 import { AST_SCOPED_VAR_SCOPES, TRACE_SCOPED_VAR_SCOPES } from '../../src/kernel/scoped-var-contract.js';
 import { buildDiscriminatedEndpointMatrix } from '../helpers/transfer-endpoint-matrix.js';
+import { eff } from '../helpers/effect-tag-helper.js';
+import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
+import { EFFECT_KIND_TAG } from '../../src/kernel/types-ast.js';
 
 const readSchema = (filename: string): Record<string, unknown> => {
   const schemaPath = path.join(process.cwd(), 'schemas', filename);
@@ -49,9 +52,9 @@ const fullGameDef: GameDef = {
     { id: asZoneId('discard:none'), zoneKind: 'aux', owner: 'none', visibility: 'public', ordering: 'stack' },
   ],
   tokenTypes: [{ id: 'card', props: { cost: 'int', name: 'string', rare: 'boolean' } }],
-  setup: [{ shuffle: { zone: 'deck:none' } }],
+  setup: [eff({ shuffle: { zone: 'deck:none' } })],
   turnStructure: {
-    phases: [{ id: asPhaseId('main'), onEnter: [{ addVar: { scope: 'global', var: 'round', delta: 1 } }] }],
+    phases: [{ id: asPhaseId('main'), onEnter: [eff({ addVar: { scope: 'global', var: 'round', delta: 1 } })] }],
   },
   actionPipelines: [
     {
@@ -80,8 +83,8 @@ phase: [asPhaseId('main')],
       pre: { op: 'zonePropIncludes', zone: 'discard:none', prop: 'terrainTags', value: 'urban' },
       cost: [],
       effects: [
-        { draw: { from: { zoneExpr: 'deck:none' }, to: { zoneExpr: { _t: 2 as const, ref: 'tokenZone', token: '$card' } }, count: 1 } },
-        {
+        eff({ draw: { from: { zoneExpr: 'deck:none' }, to: { zoneExpr: { _t: 2 as const, ref: 'tokenZone', token: '$card' } }, count: 1 } }),
+        eff({
           setVar: {
             scope: 'global',
             var: 'round',
@@ -93,15 +96,15 @@ phase: [asPhaseId('main')],
               },
             },
           },
-        },
-        {
+        }),
+        eff({
           setTokenProp: {
             token: '$card',
             prop: 'name',
             value: { _t: 3, concat: ['zone=', { _t: 2 as const, ref: 'tokenZone', token: '$card' }] },
           },
-        },
-        { setMarker: { space: { zoneExpr: 'discard:none' }, marker: 'support', state: 'neutral' } },
+        }),
+        eff({ setMarker: { space: { zoneExpr: 'discard:none' }, marker: 'support', state: 'neutral' } }),
       ],
       limits: [{ id: 'playCard::turn::0', scope: 'turn', max: 1 }],
     },
@@ -110,7 +113,7 @@ phase: [asPhaseId('main')],
     {
       id: asTriggerId('onMainEnter'),
       event: { type: 'phaseEnter', phase: asPhaseId('main') },
-      effects: [{ shuffle: { zone: 'deck:none' } }],
+      effects: [eff({ shuffle: { zone: 'deck:none' } })],
     },
   ],
   terminal: {
@@ -148,8 +151,8 @@ const gameDefWithModernEventDeck: GameDef = {
               {
                 id: 'lasting-1',
                 duration: 'nextTurn',
-                setupEffects: [{ addVar: { scope: 'global', var: 'round', delta: 1 } }],
-                teardownEffects: [{ addVar: { scope: 'global', var: 'round', delta: -1 } }],
+                setupEffects: [eff({ addVar: { scope: 'global', var: 'round', delta: 1 } })],
+                teardownEffects: [eff({ addVar: { scope: 'global', var: 'round', delta: -1 } })],
               },
             ],
           },
@@ -717,7 +720,7 @@ describe('json schema artifacts', () => {
       actions: [
         {
           ...fullGameDef.actions[0],
-          effects: [{ transferVar: { from, to, amount: 1 } }],
+          effects: [{ _k: EFFECT_KIND_TAG.transferVar, transferVar: { from, to, amount: 1 } }],
         },
       ],
     });
@@ -853,6 +856,7 @@ describe('json schema artifacts', () => {
           ...fullGameDef.actions[0],
           effects: [
             {
+              _k: EFFECT_KIND_TAG.grantFreeOperation,
               grantFreeOperation: {
                 seat: '0',
                 operationClass: 'operation',
@@ -878,6 +882,7 @@ describe('json schema artifacts', () => {
           ...fullGameDef.actions[0],
           effects: [
             {
+              _k: EFFECT_KIND_TAG.grantFreeOperation,
               grantFreeOperation: {
                 seat: '0',
                 operationClass: 'operation',
@@ -902,6 +907,7 @@ describe('json schema artifacts', () => {
           ...fullGameDef.actions[0],
           effects: [
             {
+              _k: EFFECT_KIND_TAG.grantFreeOperation,
               grantFreeOperation: {
                 seat: '0',
                 operationClass: 'operation',

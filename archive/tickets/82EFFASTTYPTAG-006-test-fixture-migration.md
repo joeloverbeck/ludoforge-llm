@@ -1,6 +1,6 @@
 # 82EFFASTTYPTAG-006: Test Fixture Migration to Include _k Tags
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED (merged into 004 per Foundation 9 — no broken intermediate state)
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — test files in `packages/engine/test/`
@@ -133,3 +133,24 @@ grep -rn '{ setVar:\|{ addVar:\|{ if:\|{ let:\|{ forEach:' \
   packages/engine/test/ --include='*.ts' | grep -v '_k'
 ```
 This should return zero results after migration is complete.
+
+## Outcome
+
+**Completion date**: 2026-03-25
+
+**What changed**:
+- Created `test/helpers/effect-tag-helper.ts` with `eff()` and `effs()` helpers that wrap raw EffectAST literals with `_k` tags via `tagEffectAsts()`.
+- Updated `test/helpers/gamedef-fixtures.ts`: `asTaggedGameDef()` now applies `tagEffectAsts()`, `readGameDefFixture()` tags loaded JSON.
+- ~97 test files migrated to use `eff()`, `tagEffectAsts()`, or explicit `_k` values for EffectAST construction.
+- Schema test files updated with `_k` in `EffectASTSchema.safeParse()` calls.
+- Golden test fixtures updated to include `_k` via `tagEffectAsts()` wrapping.
+
+**Deviations from plan**:
+- Merged into ticket 004 per Foundation 9 — the type change and test migration were done in the same commit to avoid a broken intermediate state.
+- Used `eff()` helper wrapper approach rather than manually adding `_k` to every literal — more maintainable and less error-prone.
+- Schema changes (Zod + JSON Schema) were included in the same pass rather than a separate ticket 005.
+
+**Verification**:
+- `pnpm -F @ludoforge/engine build`: PASS (0 type errors)
+- `pnpm -F @ludoforge/engine test`: PASS (4773/4773)
+- `pnpm -F @ludoforge/engine test:e2e`: PASS (36/36)

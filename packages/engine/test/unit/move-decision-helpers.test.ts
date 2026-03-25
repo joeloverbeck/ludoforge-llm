@@ -14,6 +14,7 @@ import {
   type Move,
 } from '../../src/kernel/index.js';
 import { completeMoveDecisionSequenceOrThrow, pickDeterministicDecisionValue } from '../helpers/move-decision-helpers.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 const asDecisionKey = (value: string): DecisionKey => value as DecisionKey;
 
@@ -77,13 +78,13 @@ describe('move decision helpers', () => {
       pre: null,
       cost: [],
       effects: [
-        {
+        eff({
           chooseOne: {
             internalDecisionId: 'decision:$target',
             bind: '$target',
             options: { query: 'enums', values: [] },
           },
-        } as ActionDef['effects'][number],
+        }) as ActionDef['effects'][number],
       ],
       limits: [],
     });
@@ -110,38 +111,38 @@ describe('move decision helpers', () => {
       pre: null,
       cost: [],
       effects: [
-        {
+        eff({
           rollRandom: {
             bind: '$roll',
             min: 1,
             max: 2,
             in: [
-              {
+              eff({
                 if: {
                   when: { op: '==', left: { _t: 2, ref: 'binding', name: '$roll' }, right: 1 },
                   then: [
-                    {
+                    eff({
                       chooseOne: {
                         internalDecisionId: 'decision:$alpha',
                         bind: '$alpha',
                         options: { query: 'enums', values: ['alpha'] },
                       },
-                    } as ActionDef['effects'][number],
+                    }) as ActionDef['effects'][number],
                   ],
                   else: [
-                    {
+                    eff({
                       chooseOne: {
                         internalDecisionId: 'decision:$beta',
                         bind: '$beta',
                         options: { query: 'enums', values: ['beta'] },
                       },
-                    } as ActionDef['effects'][number],
+                    }) as ActionDef['effects'][number],
                   ],
                 },
-              } as ActionDef['effects'][number],
+              }) as ActionDef['effects'][number],
             ],
           },
-        } as ActionDef['effects'][number],
+        }) as ActionDef['effects'][number],
       ],
       limits: [],
     });

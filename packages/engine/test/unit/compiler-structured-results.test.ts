@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import type { CompileSectionResults } from '../../src/cnl/index.js';
 import { compileGameSpecToGameDef, createEmptyGameSpecDoc, parseGameSpec } from '../../src/cnl/index.js';
 import { assertDataAssetCascadeSuppression, assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 import { readCompilerFixture } from '../helpers/production-spec-helpers.js';
 
 describe('compiler structured section results', () => {
@@ -1485,7 +1486,7 @@ describe('compiler structured section results', () => {
               id: 'card-a',
               title: 'Card A',
               sideMode: 'single' as const,
-              unshaded: { effects: [{ shuffle: { zone: 'board:none' } }] },
+              unshaded: { effects: [eff({ shuffle: { zone: 'board:none' } })] },
             },
           ],
         },
@@ -1519,7 +1520,7 @@ describe('compiler structured section results', () => {
               id: 'card-a',
               title: 'Card A',
               sideMode: 'single' as const,
-              unshaded: { effects: [{ shuffle: { zone: 'board:none' } }] },
+              unshaded: { effects: [eff({ shuffle: { zone: 'board:none' } })] },
             },
           ],
         },
@@ -1571,7 +1572,7 @@ describe('compiler structured section results', () => {
               id: 'card-a',
               title: 'Card A',
               sideMode: 'single' as const,
-              unshaded: { effects: [{ shuffle: { zone: 'board:none' } }] },
+              unshaded: { effects: [eff({ shuffle: { zone: 'board:none' } })] },
             },
           ],
         },
@@ -1629,7 +1630,7 @@ describe('compiler structured section results', () => {
               id: 'card-a',
               title: 'Card A',
               sideMode: 'single' as const,
-              unshaded: { effects: [{ shuffle: { zone: 'board:none' } }] },
+              unshaded: { effects: [eff({ shuffle: { zone: 'board:none' } })] },
             },
           ],
         },

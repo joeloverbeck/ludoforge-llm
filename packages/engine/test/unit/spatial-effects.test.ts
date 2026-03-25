@@ -14,6 +14,7 @@ import {
   type Token,
 } from '../../src/kernel/index.js';
 import { makeExecutionEffectContext, type EffectContextTestOverrides } from '../helpers/effect-context-test-helpers.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 const makeDef = (): GameDef => ({
   metadata: { id: 'spatial-effects-test', players: { min: 1, max: 2 } },
@@ -71,7 +72,7 @@ describe('moveTokenAdjacent spatial runtime', () => {
 
     const totalBefore = Object.values(ctx.state.zones).reduce((sum, zoneTokens) => sum + zoneTokens.length, 0);
     const result = applyEffect(
-      { moveTokenAdjacent: { token: '$token', from: 'a:none', direction: 'b:none' } },
+      eff({ moveTokenAdjacent: { token: '$token', from: 'a:none', direction: 'b:none' } }),
       { ...ctx, bindings: { $token: movingToken } },
     );
     const totalAfter = Object.values(result.state.zones).reduce((sum, zoneTokens) => sum + zoneTokens.length, 0);
@@ -91,7 +92,7 @@ describe('moveTokenAdjacent spatial runtime', () => {
     assert.throws(
       () =>
         applyEffect(
-          { moveTokenAdjacent: { token: '$token', from: 'a:none', direction: 'c:none' } },
+          eff({ moveTokenAdjacent: { token: '$token', from: 'a:none', direction: 'c:none' } }),
           { ...ctx, bindings: { $token: movingToken } },
         ),
       (error: unknown) => isEffectErrorCode(error, 'SPATIAL_DESTINATION_NOT_ADJACENT'),
@@ -104,7 +105,7 @@ describe('moveTokenAdjacent spatial runtime', () => {
     assert.ok(movingToken !== undefined);
 
     assert.throws(
-      () => applyEffect({ moveTokenAdjacent: { token: '$token', from: 'a:none' } }, { ...ctx, bindings: { $token: movingToken } }),
+      () => applyEffect(eff({ moveTokenAdjacent: { token: '$token', from: 'a:none' } }), { ...ctx, bindings: { $token: movingToken } }),
       (error: unknown) => isEffectErrorCode(error, 'SPATIAL_DESTINATION_REQUIRED'),
     );
   });
@@ -115,7 +116,7 @@ describe('moveTokenAdjacent spatial runtime', () => {
     assert.ok(moveParamToken !== undefined);
 
     const moveParamResult = applyEffect(
-      { moveTokenAdjacent: { token: '$token', from: 'a:none', direction: '$to' } },
+      eff({ moveTokenAdjacent: { token: '$token', from: 'a:none', direction: '$to' } }),
       { ...moveParamCtx, bindings: { $token: moveParamToken } },
     );
     assert.equal(moveParamResult.state.zones['b:none']?.[0]?.id, moveParamToken.id);
@@ -125,7 +126,7 @@ describe('moveTokenAdjacent spatial runtime', () => {
     assert.ok(bindingToken !== undefined);
 
     const bindingResult = applyEffect(
-      { moveTokenAdjacent: { token: '$token', from: 'a:none', direction: '$to' } },
+      eff({ moveTokenAdjacent: { token: '$token', from: 'a:none', direction: '$to' } }),
       { ...bindingCtx, bindings: { ...bindingCtx.bindings, $token: bindingToken } },
     );
     assert.equal(bindingResult.state.zones['b:none']?.[0]?.id, bindingToken.id);

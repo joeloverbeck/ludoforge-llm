@@ -18,6 +18,7 @@ import {
   type Token,
 } from '../../../src/kernel/index.js';
 import { makeExecutionEffectContext } from '../../helpers/effect-context-test-helpers.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
 
 // ---------------------------------------------------------------------------
 // Shared test fixtures
@@ -121,9 +122,9 @@ describe('zobrist incremental hash — token effect handlers', () => {
       const state = makeState(def, table);
       const ctx = makeCtx(def, state, { bindings: { $tok: 'tok_card_1' } });
 
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         moveToken: { token: '$tok', from: 'hand:none', to: 'discard:none' },
-      };
+      });
       const result = applyEffects([effect], ctx);
 
       const expected = computeFullHash(table, result.state);
@@ -134,9 +135,9 @@ describe('zobrist incremental hash — token effect handlers', () => {
       const state = makeState(def, table);
       const ctx = makeCtx(def, state, { bindings: { $tok: 'tok_card_1' } });
 
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         moveToken: { token: '$tok', from: 'hand:none', to: 'hand:none', position: 'bottom' },
-      };
+      });
       const result = applyEffects([effect], ctx);
 
       const expected = computeFullHash(table, result.state);
@@ -162,9 +163,9 @@ describe('zobrist incremental hash — token effect handlers', () => {
         bindings: { $tok: 'tok_card_0', $destZone: 'zoneB:none' },
       });
 
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         moveTokenAdjacent: { token: '$tok', from: 'zoneA:none', direction: '$destZone' },
-      };
+      });
       const result = applyEffects([effect], adjCtx);
 
       const expected = computeFullHash(adjTable, result.state);
@@ -177,9 +178,9 @@ describe('zobrist incremental hash — token effect handlers', () => {
       const state = makeState(def, table);
       const ctx = makeCtx(def, state);
 
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         createToken: { type: 'card', zone: 'board:none', props: { suit: 'spades' } },
-      };
+      });
       const result = applyEffects([effect], ctx);
 
       const expected = computeFullHash(table, result.state);
@@ -192,9 +193,9 @@ describe('zobrist incremental hash — token effect handlers', () => {
       const state = makeState(def, table);
       const ctx = makeCtx(def, state, { bindings: { $tok: 'tok_card_3' } });
 
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         destroyToken: { token: '$tok' },
-      };
+      });
       const result = applyEffects([effect], ctx);
 
       const expected = computeFullHash(table, result.state);
@@ -207,9 +208,9 @@ describe('zobrist incremental hash — token effect handlers', () => {
       const state = makeState(def, table);
       const ctx = makeCtx(def, state);
 
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         draw: { from: 'hand:none', to: 'board:none', count: 1 },
-      };
+      });
       const result = applyEffects([effect], ctx);
 
       const expected = computeFullHash(table, result.state);
@@ -220,9 +221,9 @@ describe('zobrist incremental hash — token effect handlers', () => {
       const state = makeState(def, table);
       const ctx = makeCtx(def, state);
 
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         draw: { from: 'hand:none', to: 'board:none', count: 2 },
-      };
+      });
       const result = applyEffects([effect], ctx);
 
       const expected = computeFullHash(table, result.state);
@@ -235,9 +236,9 @@ describe('zobrist incremental hash — token effect handlers', () => {
       const state = makeState(def, table);
       const ctx = makeCtx(def, state);
 
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         moveAll: { from: 'hand:none', to: 'board:none' },
-      };
+      });
       const result = applyEffects([effect], ctx);
 
       const expected = computeFullHash(table, result.state);
@@ -250,9 +251,9 @@ describe('zobrist incremental hash — token effect handlers', () => {
       const state = makeState(def, table);
       const ctx = makeCtx(def, state);
 
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         shuffle: { zone: 'hand:none' },
-      };
+      });
       const result = applyEffects([effect], ctx);
 
       const expected = computeFullHash(table, result.state);
@@ -265,9 +266,9 @@ describe('zobrist incremental hash — token effect handlers', () => {
       const state = makeState(def, table);
       const ctx = makeCtx(def, state, { bindings: { $tok: 'tok_card_0' } });
 
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         setTokenProp: { token: '$tok', prop: 'suit', value: 'spades' },
-      };
+      });
       const result = applyEffects([effect], ctx);
 
       const expected = computeFullHash(table, result.state);
@@ -281,9 +282,9 @@ describe('zobrist incremental hash — token effect handlers', () => {
       const state = makeState(def, table);
       const ctx = makeCtx(def, state, { noCachedRuntime: true, bindings: { $tok: 'tok_card_1' } });
 
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         moveToken: { token: '$tok', from: 'hand:none', to: 'discard:none' },
-      };
+      });
       // Should not throw — hash update is skipped gracefully
       const result = applyEffects([effect], ctx);
       assert.ok(result.state, 'moveToken completes without cachedRuntime');

@@ -16,11 +16,12 @@ import {
   type Move,
   type MoveParamScalar,
 } from '../../../src/kernel/index.js';
+import { asTaggedGameDef } from '../../helpers/gamedef-fixtures.js';
 
 const makeBaseDef = (overrides?: {
   actions?: readonly ActionDef[];
 }): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'strategy-dispatch-test', players: { min: 2, max: 2 } },
     seats: [{ id: '0' }, { id: '1' }, { id: '2' }, { id: '3' }],
     constants: {},
@@ -37,7 +38,7 @@ const makeBaseDef = (overrides?: {
     actions: overrides?.actions ?? [],
     triggers: [],
     terminal: { conditions: [] },
-  }) as unknown as GameDef;
+  });
 
 const makeBaseState = (): GameState => ({
   globalVars: {},

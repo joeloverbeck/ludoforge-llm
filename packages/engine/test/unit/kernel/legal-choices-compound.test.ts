@@ -15,6 +15,7 @@ import {
   type Move,
   type ChoicePendingRequest,
 } from '../../../src/kernel/index.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -63,13 +64,13 @@ const makeBaseState = (overrides?: Partial<GameState>): GameState => ({
 });
 
 /** A chooseOne effect that asks for one of the given enum values. */
-const chooseOneEffect = (bind: string, values: readonly string[]): EffectAST => ({
+const chooseOneEffect = (bind: string, values: readonly string[]): EffectAST => (eff({
   chooseOne: {
     internalDecisionId: `decision:${bind}`,
     bind,
     options: { query: 'enums', values: [...values] },
   },
-});
+}));
 
 /** Build a minimal action def with the given effects. */
 const makeAction = (id: string, effects: readonly EffectAST[], params: ActionDef['params'] = []): ActionDef => ({

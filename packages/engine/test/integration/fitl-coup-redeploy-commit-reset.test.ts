@@ -11,6 +11,7 @@ import {
   type TriggerLogEntry,
 } from '../../src/kernel/index.js';
 import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 interface CoupFixtureOptions {
   readonly isFinalCoup: boolean;
@@ -26,56 +27,56 @@ const createRedeployCommitResetDef = (options: CoupFixtureOptions): GameDef => {
   } as const;
 
   const redeployEffects: EffectAST[] = [
-    { moveAll: { from: 'laos_coin:none', to: 'coin_available:none' } },
-    { moveAll: { from: 'cambodia_coin:none', to: 'coin_available:none' } },
-    { moveAll: { from: 'arvn_force_pool:none', to: 'arvn_redeploy:none' } },
-    { moveAll: { from: 'nva_force_pool:none', to: 'nva_base:none' } },
-    { setVar: { scope: 'global', var: 'redeployControlCheckpoint', value: recomputeControlValue } },
-    { setVar: { scope: 'global', var: 'redeployExecuted', value: 1 } },
+    eff({ moveAll: { from: 'laos_coin:none', to: 'coin_available:none' } }),
+    eff({ moveAll: { from: 'cambodia_coin:none', to: 'coin_available:none' } }),
+    eff({ moveAll: { from: 'arvn_force_pool:none', to: 'arvn_redeploy:none' } }),
+    eff({ moveAll: { from: 'nva_force_pool:none', to: 'nva_base:none' } }),
+    eff({ setVar: { scope: 'global', var: 'redeployControlCheckpoint', value: recomputeControlValue } }),
+    eff({ setVar: { scope: 'global', var: 'redeployExecuted', value: 1 } }),
   ];
 
   const commitmentEffects: EffectAST[] = [
-    {
+    eff({
       if: {
         when: { op: '==', left: { _t: 2 as const, ref: 'gvar', var: 'isFinalCoup' }, right: 0 },
         then: [
-          { moveAll: { from: 'us_out_of_play:none', to: 'us_available:none' } },
-          { setVar: { scope: 'global', var: 'commitmentControlCheckpoint', value: recomputeControlValue } },
-          { setVar: { scope: 'global', var: 'commitmentExecuted', value: 1 } },
+          eff({ moveAll: { from: 'us_out_of_play:none', to: 'us_available:none' } }),
+          eff({ setVar: { scope: 'global', var: 'commitmentControlCheckpoint', value: recomputeControlValue } }),
+          eff({ setVar: { scope: 'global', var: 'commitmentExecuted', value: 1 } }),
         ],
       },
-    },
+    }),
   ];
 
   const resetEffects: EffectAST[] = [
-    {
+    eff({
       if: {
         when: { op: '==', left: { _t: 2 as const, ref: 'gvar', var: 'isFinalCoup' }, right: 0 },
         then: [
-          {
+          eff({
             if: {
               when: { op: '==', left: { _t: 2 as const, ref: 'gvar', var: 'trail' }, right: 0 },
-              then: [{ addVar: { scope: 'global', var: 'trail', delta: 1 } }],
+              then: [eff({ addVar: { scope: 'global', var: 'trail', delta: 1 } })],
               else: [
-                {
+                eff({
                   if: {
                     when: { op: '==', left: { _t: 2 as const, ref: 'gvar', var: 'trail' }, right: 4 },
-                    then: [{ addVar: { scope: 'global', var: 'trail', delta: -1 } }],
+                    then: [eff({ addVar: { scope: 'global', var: 'trail', delta: -1 } })],
                   },
-                },
+                }),
               ],
             },
-          },
-          { moveAll: { from: 'terror_map:none', to: 'terror_available:none' } },
-          { moveAll: { from: 'sabotage_map:none', to: 'sabotage_available:none' } },
-          { moveAll: { from: 'guerrilla_active:none', to: 'guerrilla_underground:none' } },
-          { moveAll: { from: 'sf_active:none', to: 'sf_underground:none' } },
-          { moveAll: { from: 'momentum_in_play:none', to: 'momentum_discard:none' } },
-          { setVar: { scope: 'global', var: 'eligibilityBaselineAudit', value: 1 } },
-          { setVar: { scope: 'global', var: 'resetExecuted', value: 1 } },
+          }),
+          eff({ moveAll: { from: 'terror_map:none', to: 'terror_available:none' } }),
+          eff({ moveAll: { from: 'sabotage_map:none', to: 'sabotage_available:none' } }),
+          eff({ moveAll: { from: 'guerrilla_active:none', to: 'guerrilla_underground:none' } }),
+          eff({ moveAll: { from: 'sf_active:none', to: 'sf_underground:none' } }),
+          eff({ moveAll: { from: 'momentum_in_play:none', to: 'momentum_discard:none' } }),
+          eff({ setVar: { scope: 'global', var: 'eligibilityBaselineAudit', value: 1 } }),
+          eff({ setVar: { scope: 'global', var: 'resetExecuted', value: 1 } }),
         ],
       },
-    },
+    }),
   ];
 
   return {

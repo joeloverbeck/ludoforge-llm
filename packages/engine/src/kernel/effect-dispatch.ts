@@ -44,13 +44,19 @@ export const consumeEffectBudget = (budget: EffectBudgetState, effectType: strin
 
 const EMPTY_EVENTS: readonly TriggerEvent[] = [];
 
-// Build dispatch array from the typed registry (one-time at module load).
+// Build dispatch array lazily on first use to avoid circular-init issues.
 // TAG_TO_KIND maps each numeric tag to its EffectKind string; we use that
 // to pull the corresponding handler from the registry. The result is an
 // array where dispatchTable[tag] is the handler function for that tag.
+type DispatchFn = (effect: EffectAST, env: EffectEnv, cursor: EffectCursor, budget: EffectBudgetState, applyBatch: typeof applyEffectsWithBudgetState) => EffectResult;
+let _dispatchTable: readonly DispatchFn[] | null = null;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const dispatchTable: readonly ((effect: EffectAST, env: EffectEnv, cursor: EffectCursor, budget: EffectBudgetState, applyBatch: typeof applyEffectsWithBudgetState) => EffectResult)[] =
-  TAG_TO_KIND.map(kind => registry[kind] as any);
+const getDispatchTable = (): readonly DispatchFn[] => {
+  if (_dispatchTable === null) {
+    _dispatchTable = TAG_TO_KIND.map(kind => registry[kind] as any);
+  }
+  return _dispatchTable;
+};
 
 const applyEffectWithBudget = (
   effect: EffectAST,
@@ -61,7 +67,7 @@ const applyEffectWithBudget = (
   const tag = (effect as { readonly _k: EffectKindTag })._k;
   const kind = TAG_TO_KIND[tag]!;
   consumeEffectBudget(budget, kind);
-  const handler = dispatchTable[tag];
+  const handler = getDispatchTable()[tag];
   if (!handler) {
     throw effectNotImplementedError(kind, { effect });
   }

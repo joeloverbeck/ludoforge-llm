@@ -15,6 +15,7 @@ import {
 } from '../../../src/kernel/index.js';
 import { runGames } from '../../../src/sim/index.js';
 import { trustedMove } from '../../helpers/classified-move-fixtures.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
 
 const rngDrivenAgent: Agent = {
   chooseMove(input) {
@@ -46,7 +47,7 @@ phase: [asPhaseId('main')],
         params: [],
         pre: null,
         cost: [],
-        effects: [{ addVar: { scope: 'global', var: 'score', delta: 1 } }],
+        effects: [eff({ addVar: { scope: 'global', var: 'score', delta: 1 } })],
         limits: [],
       },
       {
@@ -57,7 +58,7 @@ phase: [asPhaseId('main')],
         params: [],
         pre: null,
         cost: [],
-        effects: [{ addVar: { scope: 'global', var: 'score', delta: 2 } }],
+        effects: [eff({ addVar: { scope: 'global', var: 'score', delta: 2 } })],
         limits: [],
       },
     ],

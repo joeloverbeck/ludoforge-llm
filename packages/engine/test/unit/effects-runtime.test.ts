@@ -22,6 +22,7 @@ import {
   type Token,
   createCollector,
 } from '../../src/kernel/index.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 const makeDef = (): GameDef => ({
   metadata: { id: 'effects-runtime-test', players: { min: 1, max: 2 } },
@@ -76,43 +77,43 @@ const makeCtx = (overrides?: EffectContextTestOverrides): EffectContext => makeE
   ...overrides,
 });
 
-const setVarEffect: EffectAST = {
+const setVarEffect: EffectAST = eff({
   setVar: {
     scope: 'global',
     var: 'x',
     value: 1,
   },
-};
+});
 
-const addVarEffect: EffectAST = {
+const addVarEffect: EffectAST = eff({
   addVar: {
     scope: 'global',
     var: 'x',
     delta: 1,
   },
-};
+});
 
-const ifEffect: EffectAST = {
+const ifEffect: EffectAST = eff({
   if: {
     when: { op: '==', left: 1, right: 1 },
     then: [],
   },
-};
+});
 
-const chooseOneEffect: EffectAST = {
+const chooseOneEffect: EffectAST = eff({
   chooseOne: {
     internalDecisionId: 'decision:$choice',
     bind: '$choice',
     options: { query: 'enums', values: ['a', 'b'] },
   },
-};
+});
 
-const moveTokenAdjacentEffect: EffectAST = {
+const moveTokenAdjacentEffect: EffectAST = eff({
   moveTokenAdjacent: {
     token: '$token',
     from: 'board:none',
   },
-};
+});
 
 const loweringContext: EffectLoweringContext = {
   ownershipByBase: {
@@ -156,12 +157,12 @@ describe('effects runtime foundation', () => {
 
   it('shares the same effect budget across nested control-flow execution', () => {
     const ctx = makeCtx({ maxEffectOps: 2 });
-    const nestedEffect: EffectAST = {
+    const nestedEffect: EffectAST = eff({
       if: {
         when: { op: '==', left: 1, right: 1 },
         then: [setVarEffect, addVarEffect],
       },
-    };
+    });
 
     assert.throws(() => applyEffects([nestedEffect], ctx), (error: unknown) => {
       assert.ok(error instanceof EffectBudgetExceededError);
@@ -192,7 +193,7 @@ describe('effects runtime foundation', () => {
       turnStructure: {
         phases: [
           { id: asPhaseId('operations') },
-          { id: asPhaseId('commitment'), onEnter: [{ addVar: { scope: 'global', var: 'x', delta: 5 } }] },
+          { id: asPhaseId('commitment'), onEnter: [eff({ addVar: { scope: 'global', var: 'x', delta: 5 } })] },
           { id: asPhaseId('reset') },
         ],
       },
@@ -201,7 +202,7 @@ describe('effects runtime foundation', () => {
       ...makeState(),
       currentPhase: asPhaseId('operations'),
     };
-    const effect: EffectAST = { gotoPhaseExact: { phase: 'reset' } };
+    const effect: EffectAST = eff({ gotoPhaseExact: { phase: 'reset' } });
     const result = applyEffect(effect, makeCtx({ def, state }));
 
     assert.equal(result.state.currentPhase, asPhaseId('reset'));
@@ -216,7 +217,7 @@ describe('effects runtime foundation', () => {
       turnStructure: {
         phases: [
           { id: asPhaseId('operations') },
-          { id: asPhaseId('commitment'), onEnter: [{ addVar: { scope: 'global', var: 'x', delta: 5 } }] },
+          { id: asPhaseId('commitment'), onEnter: [eff({ addVar: { scope: 'global', var: 'x', delta: 5 } })] },
           { id: asPhaseId('reset') },
         ],
       },
@@ -225,7 +226,7 @@ describe('effects runtime foundation', () => {
       ...makeState(),
       currentPhase: asPhaseId('operations'),
     };
-    const effect: EffectAST = { advancePhase: {} };
+    const effect: EffectAST = eff({ advancePhase: {} });
     const result = applyEffect(effect, makeCtx({ def, state }));
 
     assert.equal(result.state.currentPhase, asPhaseId('commitment'));
@@ -245,7 +246,7 @@ describe('effects runtime foundation', () => {
       currentPhase: asPhaseId('reset'),
       turnCount: 4,
     };
-    const effect: EffectAST = { gotoPhaseExact: { phase: 'commitment' } };
+    const effect: EffectAST = eff({ gotoPhaseExact: { phase: 'commitment' } });
     assert.throws(() => applyEffect(effect, makeCtx({ def, state })), (error: unknown) => {
       return isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('cannot cross a turn boundary');
     });
@@ -274,7 +275,7 @@ describe('effects runtime foundation', () => {
     const loweredEffects = lowered.value;
 
     const manual: EffectAST[] = [
-      {
+      eff({
         chooseN: {
           internalDecisionId: 'decision:doc.actions.0.effects.0.distributeTokens.selectTokens',
           bind: '$__selected_doc_actions_0_effects_0_distributeTokens',
@@ -282,30 +283,30 @@ describe('effects runtime foundation', () => {
           options: { query: 'tokensInZone', zone: 'board:none' },
           n: 1,
         },
-      },
-      {
+      }),
+      eff({
         forEach: {
           bind: '$__token_doc_actions_0_effects_0_distributeTokens',
           over: { query: 'binding', name: '$__selected_doc_actions_0_effects_0_distributeTokens' },
           effects: [
-            {
+            eff({
               chooseOne: {
                 internalDecisionId: 'decision:doc.actions.0.effects.0.distributeTokens.chooseDestination',
                 bind: '$__destination_doc_actions_0_effects_0_distributeTokens',
                 decisionIdentity: 'decision:doc.actions.0.effects.0.distributeTokens.chooseDestination',
                 options: { query: 'zones' },
               },
-            },
-            {
+            }),
+            eff({
               moveToken: {
                 token: '$__token_doc_actions_0_effects_0_distributeTokens',
                 from: { zoneExpr: { _t: 2 as const, ref: 'tokenZone', token: '$__token_doc_actions_0_effects_0_distributeTokens' } },
                 to: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$__destination_doc_actions_0_effects_0_distributeTokens' } },
               },
-            },
+            }),
           ],
         },
-      },
+      }),
     ];
 
     const token: Token = { id: asTokenId('t1'), type: 'piece', props: {} };

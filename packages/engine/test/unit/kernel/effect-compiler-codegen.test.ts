@@ -29,6 +29,7 @@ import {
   type TriggerEvent,
 } from '../../../src/kernel/index.js';
 import { classifyEffect } from '../../../src/kernel/effect-compiler-patterns.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
 
 const makeDef = (): GameDef => ({
   metadata: { id: 'effect-compiler-codegen-test', players: { min: 2, max: 3 } },
@@ -51,11 +52,11 @@ const makeDef = (): GameDef => ({
     phases: [
       {
         id: asPhaseId('main'),
-        onExit: [{ addVar: { scope: 'global', var: 'round', delta: 1 } }],
+        onExit: [eff({ addVar: { scope: 'global', var: 'round', delta: 1 } })],
       },
       {
         id: asPhaseId('cleanup'),
-        onEnter: [{ setVar: { scope: 'global', var: 'flag', value: true } }],
+        onEnter: [eff({ setVar: { scope: 'global', var: 'flag', value: true } })],
       },
     ],
   },
@@ -210,7 +211,7 @@ describe('effect-compiler-codegen', () => {
   it('compileSetVar matches interpreter for global ref writes and emitted events', () => {
     const def = makeDef();
     const state = makeState();
-    const effect: EffectAST = { setVar: { scope: 'global', var: 'score', value: { _t: 2, ref: 'gvar', var: 'round' } } };
+    const effect: EffectAST = eff({ setVar: { scope: 'global', var: 'score', value: { _t: 2, ref: 'gvar', var: 'round' } } });
 
     compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
   });
@@ -218,7 +219,7 @@ describe('effect-compiler-codegen', () => {
   it('compileSetVar matches interpreter for pvar boolean writes from bindings', () => {
     const def = makeDef();
     const state = makeState();
-    const effect: EffectAST = { setVar: { scope: 'pvar', player: 'actor', var: 'ready', value: { _t: 2, ref: 'binding', name: '$ready' } } };
+    const effect: EffectAST = eff({ setVar: { scope: 'pvar', player: 'actor', var: 'ready', value: { _t: 2, ref: 'binding', name: '$ready' } } });
 
     compareResults(def, runCompiled(def, state, effect, { $ready: true }), runInterpreted(def, state, effect, { $ready: true }));
   });
@@ -226,7 +227,7 @@ describe('effect-compiler-codegen', () => {
   it('compileAddVar matches interpreter for clamp boundaries', () => {
     const def = makeDef();
     const state = makeState();
-    const effect: EffectAST = { addVar: { scope: 'pvar', player: 'active', var: 'hp', delta: { _t: 2, ref: 'binding', name: '$delta' } } };
+    const effect: EffectAST = eff({ addVar: { scope: 'pvar', player: 'active', var: 'hp', delta: { _t: 2, ref: 'binding', name: '$delta' } } });
 
     compareResults(def, runCompiled(def, state, effect, { $delta: 50 }), runInterpreted(def, state, effect, { $delta: 50 }));
   });
@@ -234,7 +235,7 @@ describe('effect-compiler-codegen', () => {
   it('compileIf matches interpreter for logical conditions and branch execution', () => {
     const def = makeDef();
     const state = makeState();
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       if: {
         when: {
           op: 'and',
@@ -243,10 +244,10 @@ describe('effect-compiler-codegen', () => {
             { op: '>=', left: { _t: 2, ref: 'pvar', player: 'active', var: 'hp' }, right: 7 },
           ],
         },
-        then: [{ addVar: { scope: 'global', var: 'score', delta: 2 } }],
-        else: [{ setVar: { scope: 'global', var: 'score', value: 0 } }],
+        then: [eff({ addVar: { scope: 'global', var: 'score', delta: 2 } })],
+        else: [eff({ setVar: { scope: 'global', var: 'score', value: 0 } })],
       },
-    };
+    });
 
     compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
   });
@@ -254,16 +255,16 @@ describe('effect-compiler-codegen', () => {
   it('compileForEachPlayers matches interpreter for player iteration, limit, and countBind', () => {
     const def = makeDef();
     const state = makeState();
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       forEach: {
         bind: '$seat',
         over: { query: 'players' },
         limit: 2,
-        effects: [{ addVar: { scope: 'pvar', player: { chosen: '$seat' }, var: 'hp', delta: 1 } }],
+        effects: [eff({ addVar: { scope: 'pvar', player: { chosen: '$seat' }, var: 'hp', delta: 1 } })],
         countBind: '$counted',
-        in: [{ setVar: { scope: 'global', var: 'count', value: { _t: 2, ref: 'binding', name: '$counted' } } }],
+        in: [eff({ setVar: { scope: 'global', var: 'count', value: { _t: 2, ref: 'binding', name: '$counted' } } })],
       },
-    };
+    });
 
     compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
   });
@@ -271,15 +272,15 @@ describe('effect-compiler-codegen', () => {
   it('compileForEachPlayers matches interpreter when player query is empty', () => {
     const def = makeDef();
     const state = { ...makeState(), playerCount: 0, perPlayerVars: {} };
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       forEach: {
         bind: '$seat',
         over: { query: 'players' },
-        effects: [{ addVar: { scope: 'global', var: 'score', delta: 1 } }],
+        effects: [eff({ addVar: { scope: 'global', var: 'score', delta: 1 } })],
         countBind: '$counted',
-        in: [{ setVar: { scope: 'global', var: 'count', value: { _t: 2, ref: 'binding', name: '$counted' } } }],
+        in: [eff({ setVar: { scope: 'global', var: 'count', value: { _t: 2, ref: 'binding', name: '$counted' } } })],
       },
-    };
+    });
 
     compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
   });
@@ -287,18 +288,18 @@ describe('effect-compiler-codegen', () => {
   it('compileGotoPhaseExact matches interpreter lifecycle semantics', () => {
     const def = makeDef();
     const state = makeState();
-    const effect: EffectAST = { gotoPhaseExact: { phase: 'cleanup' } };
+    const effect: EffectAST = eff({ gotoPhaseExact: { phase: 'cleanup' } });
 
     compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
   });
 
   it('compilePatternDescriptor dispatches all supported Phase 1 descriptors', () => {
     const effects: readonly EffectAST[] = [
-      { setVar: { scope: 'global', var: 'score', value: 1 } },
-      { addVar: { scope: 'global', var: 'score', delta: 1 } },
-      { if: { when: { op: '==', left: 1, right: 1 }, then: [] } },
-      { forEach: { bind: '$seat', over: { query: 'players' }, effects: [] } },
-      { gotoPhaseExact: { phase: 'cleanup' } },
+      eff({ setVar: { scope: 'global', var: 'score', value: 1 } }),
+      eff({ addVar: { scope: 'global', var: 'score', delta: 1 } }),
+      eff({ if: { when: { op: '==', left: 1, right: 1 }, then: [] } }),
+      eff({ forEach: { bind: '$seat', over: { query: 'players' }, effects: [] } }),
+      eff({ gotoPhaseExact: { phase: 'cleanup' } }),
     ];
 
     for (const effect of effects) {
@@ -337,7 +338,7 @@ describe('effect-compiler-codegen', () => {
     const def = makeDef();
     const mutableState = createMutableState(makeState());
     const tracker = createDraftTracker();
-    const effect: EffectAST = { setVar: { scope: 'global', var: 'score', value: 7 } };
+    const effect: EffectAST = eff({ setVar: { scope: 'global', var: 'score', value: 7 } });
 
     const result = runCompiledWithTracker(def, mutableState, effect, tracker);
 
@@ -350,7 +351,7 @@ describe('effect-compiler-codegen', () => {
   it('compileSetVar without ctx.tracker returns new state reference (immutable path)', () => {
     const def = makeDef();
     const state = makeState();
-    const effect: EffectAST = { setVar: { scope: 'global', var: 'score', value: 7 } };
+    const effect: EffectAST = eff({ setVar: { scope: 'global', var: 'score', value: 7 } });
 
     const result = runCompiled(def, state, effect);
 
@@ -365,7 +366,7 @@ describe('effect-compiler-codegen', () => {
     const def = makeDef();
     const mutableState = createMutableState(makeState());
     const tracker = createDraftTracker();
-    const effect: EffectAST = { addVar: { scope: 'global', var: 'score', delta: 2 } };
+    const effect: EffectAST = eff({ addVar: { scope: 'global', var: 'score', delta: 2 } });
 
     const result = runCompiledWithTracker(def, mutableState, effect, tracker);
 
@@ -376,7 +377,7 @@ describe('effect-compiler-codegen', () => {
   it('compileAddVar without ctx.tracker returns new state reference (immutable path)', () => {
     const def = makeDef();
     const state = makeState();
-    const effect: EffectAST = { addVar: { scope: 'global', var: 'score', delta: 2 } };
+    const effect: EffectAST = eff({ addVar: { scope: 'global', var: 'score', delta: 2 } });
 
     const result = runCompiled(def, state, effect);
 
@@ -387,7 +388,7 @@ describe('effect-compiler-codegen', () => {
 
   it('compileSetVar with tracker produces bit-identical result to interpreter', () => {
     const def = makeDef();
-    const effect: EffectAST = { setVar: { scope: 'global', var: 'score', value: 7 } };
+    const effect: EffectAST = eff({ setVar: { scope: 'global', var: 'score', value: 7 } });
 
     // Run with tracker, freeze, and compare to interpreter
     const mutableState = createMutableState(makeState());
@@ -401,7 +402,7 @@ describe('effect-compiler-codegen', () => {
 
   it('compileAddVar with tracker produces bit-identical result to interpreter', () => {
     const def = makeDef();
-    const effect: EffectAST = { addVar: { scope: 'global', var: 'score', delta: 2 } };
+    const effect: EffectAST = eff({ addVar: { scope: 'global', var: 'score', delta: 2 } });
 
     const mutableState = createMutableState(makeState());
     const tracker = createDraftTracker();
@@ -424,12 +425,12 @@ describe('effect-compiler-codegen', () => {
     // null for — this makes compileBody return null for the then fragment,
     // triggering the fallback in executeEffectList.
     // setActivePlayer is a valid EffectAST but not compilable by the pattern compiler.
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       if: {
         when: { op: '==', left: 1, right: 1 },
-        then: [{ setActivePlayer: { player: 'active' } }],
+        then: [eff({ setActivePlayer: { player: 'active' } })],
       },
-    };
+    });
 
     const compiledResult = runCompiled(def, state, effect);
     const interpretedResult = runInterpreted(def, state, effect);

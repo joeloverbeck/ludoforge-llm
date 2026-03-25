@@ -17,6 +17,7 @@ import {
   type GameState,
   type Move,
 } from '../../../src/kernel/index.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
 
 const asDecisionKey = (value: string): DecisionKey => value as DecisionKey;
 
@@ -72,7 +73,7 @@ describe('advanceChooseN', () => {
       pre: null,
       cost: [],
       effects: [
-        {
+        eff({
           chooseN: {
             internalDecisionId: 'decision:$targets',
             bind: '$targets',
@@ -86,7 +87,7 @@ describe('advanceChooseN', () => {
             min: 1,
             max: 2,
           },
-        } as EffectAST,
+        }),
       ],
       limits: [],
     };
@@ -163,7 +164,7 @@ describe('advanceChooseN', () => {
       pre: null,
       cost: [],
       effects: [
-        {
+        eff({
           chooseN: {
             internalDecisionId: 'decision:$targets',
             bind: '$targets',
@@ -178,7 +179,7 @@ describe('advanceChooseN', () => {
             min: 1,
             max: 2,
           },
-        } as EffectAST,
+        }),
       ],
       limits: [],
     };
@@ -238,7 +239,7 @@ describe('advanceChooseN', () => {
       pre: null,
       cost: [],
       effects: [
-        {
+        eff({
           chooseN: {
             internalDecisionId: 'decision:$targets',
             bind: '$targets',
@@ -252,7 +253,7 @@ describe('advanceChooseN', () => {
             min: 1,
             max: 2,
           },
-        } as EffectAST,
+        }),
       ],
       limits: [],
     };
@@ -304,7 +305,7 @@ describe('advanceChooseN', () => {
       pre: null,
       cost: [],
       effects: [
-        {
+        eff({
           chooseN: {
             internalDecisionId: 'decision:$targets',
             bind: '$targets',
@@ -319,7 +320,7 @@ describe('advanceChooseN', () => {
             min: 1,
             max: 3,
           },
-        } as EffectAST,
+        }),
       ],
       limits: [],
     };
@@ -377,7 +378,7 @@ describe('advanceChooseN', () => {
       pre: null,
       cost: [],
       effects: [
-        {
+        eff({
           chooseN: {
             internalDecisionId: 'decision:$targets',
             bind: '$targets',
@@ -385,7 +386,7 @@ describe('advanceChooseN', () => {
             min: 1,
             max: 2,
           },
-        } as EffectAST,
+        }),
       ],
       limits: [],
     };
@@ -448,7 +449,7 @@ describe('advanceChooseN', () => {
       pre: null,
       cost: [],
       effects: [
-        {
+        eff({
           chooseN: {
             internalDecisionId: 'decision:$targets',
             bind: '$targets',
@@ -456,7 +457,7 @@ describe('advanceChooseN', () => {
             min: 1,
             max: 2,
           },
-        } as EffectAST,
+        }),
       ],
       limits: [],
     };
@@ -500,14 +501,14 @@ describe('advanceChooseN', () => {
       pre: null,
       cost: [],
       effects: [
-        {
+        eff({
           chooseN: {
             internalDecisionId: 'decision:$targets',
             bind: '$targets',
             options: { query: 'enums', values: ['a', 'b', 'c'] },
             n: 2,
           },
-        } as EffectAST,
+        }),
       ],
       limits: [],
     };

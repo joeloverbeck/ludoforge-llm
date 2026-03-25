@@ -14,6 +14,7 @@ import {
   type Token,
 } from '../../src/kernel/index.js';
 import { makeExecutionEffectContext } from '../helpers/effect-context-test-helpers.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 /**
  * Dynamic piece sourcing pattern (Rule 1.4.1):
@@ -98,18 +99,18 @@ const buildSourcePieceEffect = (
   isUSRestricted: boolean,
 ): EffectAST => {
   const thenBranch: readonly EffectAST[] = [
-    {
+    eff({
       forEach: {
         bind: '$tok',
         over: { query: 'tokensInZone', zone: availableZone },
-        effects: [{ moveToken: { token: '$tok', from: availableZone, to: targetZone, position: 'bottom' } }],
+        effects: [eff({ moveToken: { token: '$tok', from: availableZone, to: targetZone, position: 'bottom' } })],
         limit: 1,
       },
-    },
+    }),
   ];
 
   if (isUSRestricted) {
-    return {
+    return eff({
       if: {
         when: {
           op: '>',
@@ -118,10 +119,10 @@ const buildSourcePieceEffect = (
         },
         then: thenBranch,
       },
-    };
+    });
   }
 
-  return {
+  return eff({
     if: {
       when: {
         op: '>',
@@ -130,17 +131,17 @@ const buildSourcePieceEffect = (
       },
       then: thenBranch,
       else: [
-        {
+        eff({
           forEach: {
             bind: '$mapTok',
             over: { query: 'tokensInZone', zone: mapZone },
-            effects: [{ moveToken: { token: '$mapTok', from: mapZone, to: targetZone, position: 'bottom' } }],
+            effects: [eff({ moveToken: { token: '$mapTok', from: mapZone, to: targetZone, position: 'bottom' } })],
             limit: 1,
           },
-        },
+        }),
       ],
     },
-  };
+  });
 };
 
 /**
@@ -153,7 +154,7 @@ const buildNestedSourcePieceEffect = (
   mapZone: string,
   targetZone: string,
   isUSRestricted: boolean,
-): EffectAST => ({
+): EffectAST => eff({
   if: {
     when: {
       op: '>',
@@ -161,33 +162,33 @@ const buildNestedSourcePieceEffect = (
       right: 0,
     },
     then: [
-      {
+      eff({
         forEach: {
           bind: '$tok',
           over: { query: 'tokensInZone', zone: availableZone },
-          effects: [{ moveToken: { token: '$tok', from: availableZone, to: targetZone, position: 'bottom' } }],
+          effects: [eff({ moveToken: { token: '$tok', from: availableZone, to: targetZone, position: 'bottom' } })],
           limit: 1,
         },
-      },
+      }),
     ],
     else: [
-      {
+      eff({
         if: {
           when: isUSRestricted ? { op: '==', left: 1, right: 0 } : { op: '==', left: 1, right: 1 },
           then: [
-            {
+            eff({
               forEach: {
                 bind: '$mapTok',
                 over: { query: 'tokensInZone', zone: mapZone },
                 effects: [
-                  { moveToken: { token: '$mapTok', from: mapZone, to: targetZone, position: 'bottom' } },
+                  eff({ moveToken: { token: '$mapTok', from: mapZone, to: targetZone, position: 'bottom' } }),
                 ],
                 limit: 1,
               },
-            },
+            }),
           ],
         },
-      },
+      }),
     ],
   },
 });

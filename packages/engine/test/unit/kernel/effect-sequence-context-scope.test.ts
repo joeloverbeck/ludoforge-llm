@@ -9,8 +9,9 @@ import {
   collectEffectGrantSequenceContextExecutionPaths,
 } from '../../../src/kernel/effect-grant-execution-paths.js';
 import type { EffectAST } from '../../../src/kernel/types.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
 
-const captureGrant = (batch: string, step: number): EffectAST => ({
+const captureGrant = (batch: string, step: number): EffectAST => (eff({
   grantFreeOperation: {
     seat: '0',
     sequence: { batch, step },
@@ -18,9 +19,9 @@ const captureGrant = (batch: string, step: number): EffectAST => ({
     actionIds: ['playCard'],
     sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
   },
-});
+}));
 
-const requireGrant = (batch: string, step: number): EffectAST => ({
+const requireGrant = (batch: string, step: number): EffectAST => (eff({
   grantFreeOperation: {
     seat: '0',
     sequence: { batch, step },
@@ -28,7 +29,7 @@ const requireGrant = (batch: string, step: number): EffectAST => ({
     actionIds: ['playCard'],
     sequenceContext: { requireMoveZoneCandidatesFrom: 'selected-space' },
   },
-});
+}));
 
 const summarizeNestedScopes = (effect: EffectAST) =>
   getNestedEffectSequenceContextScopes(effect, ROOT_EFFECT_SEQUENCE_CONTEXT_SCOPE).map((nestedScope) => ({
@@ -70,13 +71,13 @@ describe('effect sequence-context scope policy', () => {
     }> = [
       {
         name: 'if',
-        effect: {
+        effect: eff({
           if: {
             when: { op: '==', left: 1, right: 1 },
             then: [captureGrant('if-chain', 0)],
             else: [requireGrant('if-chain', 1)],
           },
-        },
+        }),
         expected: [
           {
             pathSuffix: '.if.then',
@@ -92,13 +93,13 @@ describe('effect sequence-context scope policy', () => {
       },
       {
         name: 'let',
-        effect: {
+        effect: eff({
           let: {
             bind: '$value',
             value: 1,
             in: [captureGrant('let-chain', 0)],
           },
-        },
+        }),
         expected: [
           {
             pathSuffix: '.let.in',
@@ -109,7 +110,7 @@ describe('effect sequence-context scope policy', () => {
       },
       {
         name: 'forEach',
-        effect: {
+        effect: eff({
           forEach: {
             bind: '$item',
             countBind: '$count',
@@ -117,7 +118,7 @@ describe('effect sequence-context scope policy', () => {
             effects: [captureGrant('for-each-chain', 0)],
             in: [requireGrant('for-each-chain', 1)],
           },
-        },
+        }),
         expected: [
           {
             pathSuffix: '.forEach.effects',
@@ -133,7 +134,7 @@ describe('effect sequence-context scope policy', () => {
       },
       {
         name: 'reduce',
-        effect: {
+        effect: eff({
           reduce: {
             itemBind: '$item',
             accBind: '$acc',
@@ -143,7 +144,7 @@ describe('effect sequence-context scope policy', () => {
             resultBind: '$result',
             in: [captureGrant('reduce-chain', 0)],
           },
-        },
+        }),
         expected: [
           {
             pathSuffix: '.reduce.in',
@@ -154,7 +155,7 @@ describe('effect sequence-context scope policy', () => {
       },
       {
         name: 'removeByPriority',
-        effect: {
+        effect: eff({
           removeByPriority: {
             budget: 1,
             groups: [
@@ -166,7 +167,7 @@ describe('effect sequence-context scope policy', () => {
             ],
             in: [captureGrant('remove-chain', 0)],
           },
-        },
+        }),
         expected: [
           {
             pathSuffix: '.removeByPriority.in',
@@ -177,7 +178,7 @@ describe('effect sequence-context scope policy', () => {
       },
       {
         name: 'evaluateSubset',
-        effect: {
+        effect: eff({
           evaluateSubset: {
             source: { query: 'players' },
             subsetSize: 1,
@@ -187,7 +188,7 @@ describe('effect sequence-context scope policy', () => {
             resultBind: '$result',
             in: [requireGrant('in-chain', 1)],
           },
-        },
+        }),
         expected: [
           {
             pathSuffix: '.evaluateSubset.compute',
@@ -203,14 +204,14 @@ describe('effect sequence-context scope policy', () => {
       },
       {
         name: 'rollRandom',
-        effect: {
+        effect: eff({
           rollRandom: {
             bind: '$roll',
             min: 1,
             max: 6,
             in: [captureGrant('roll-chain', 0)],
           },
-        },
+        }),
         expected: [
           {
             pathSuffix: '.rollRandom.in',
@@ -228,7 +229,7 @@ describe('effect sequence-context scope policy', () => {
 
   it('omits optional nested descriptors when the effect form does not define them', () => {
     assert.deepEqual(
-      summarizeNestedScopes({
+      summarizeNestedScopes(eff({
         removeByPriority: {
           budget: 1,
           groups: [
@@ -239,17 +240,17 @@ describe('effect sequence-context scope policy', () => {
             },
           ],
         },
-      }),
+      })),
       [],
     );
     assert.deepEqual(
-      summarizeNestedScopes({
+      summarizeNestedScopes(eff({
         forEach: {
           bind: '$item',
           over: { query: 'players' },
           effects: [],
         },
-      }),
+      })),
       [
         {
           pathSuffix: '.forEach.effects',
@@ -269,13 +270,13 @@ describe('effect sequence-context scope policy', () => {
       {
         name: 'if',
         effects: [
-          {
+          eff({
             if: {
               when: { op: '==', left: 1, right: 1 },
               then: [captureGrant('if-chain', 0)],
               else: [requireGrant('if-chain', 1)],
             },
-          },
+          }),
         ],
         expected: [
           [captureReference('if-chain', 0, 'effects[0].if.then[0].grantFreeOperation')],
@@ -285,13 +286,13 @@ describe('effect sequence-context scope policy', () => {
       {
         name: 'let',
         effects: [
-          {
+          eff({
             let: {
               bind: '$value',
               value: 1,
               in: [captureGrant('let-chain', 0), requireGrant('let-chain', 1)],
             },
-          },
+          }),
         ],
         expected: [
           [
@@ -303,7 +304,7 @@ describe('effect sequence-context scope policy', () => {
       {
         name: 'forEach',
         effects: [
-          {
+          eff({
             forEach: {
               bind: '$item',
               countBind: '$count',
@@ -311,7 +312,7 @@ describe('effect sequence-context scope policy', () => {
               effects: [captureGrant('for-each-chain', 0)],
               in: [requireGrant('for-each-chain', 1)],
             },
-          },
+          }),
         ],
         expected: [
           [requireReference('for-each-chain', 1, 'effects[0].forEach.in[0].grantFreeOperation')],
@@ -324,7 +325,7 @@ describe('effect sequence-context scope policy', () => {
       {
         name: 'reduce',
         effects: [
-          {
+          eff({
             reduce: {
               itemBind: '$item',
               accBind: '$acc',
@@ -334,7 +335,7 @@ describe('effect sequence-context scope policy', () => {
               resultBind: '$result',
               in: [captureGrant('reduce-chain', 0), requireGrant('reduce-chain', 1)],
             },
-          },
+          }),
         ],
         expected: [
           [
@@ -346,7 +347,7 @@ describe('effect sequence-context scope policy', () => {
       {
         name: 'removeByPriority',
         effects: [
-          {
+          eff({
             removeByPriority: {
               budget: 1,
               groups: [
@@ -358,7 +359,7 @@ describe('effect sequence-context scope policy', () => {
               ],
               in: [captureGrant('remove-chain', 0), requireGrant('remove-chain', 1)],
             },
-          },
+          }),
         ],
         expected: [
           [
@@ -370,14 +371,14 @@ describe('effect sequence-context scope policy', () => {
       {
         name: 'rollRandom',
         effects: [
-          {
+          eff({
             rollRandom: {
               bind: '$roll',
               min: 1,
               max: 6,
               in: [captureGrant('roll-chain', 0), requireGrant('roll-chain', 1)],
             },
-          },
+          }),
         ],
         expected: [
           [
@@ -389,7 +390,7 @@ describe('effect sequence-context scope policy', () => {
       {
         name: 'evaluateSubset.in',
         effects: [
-          {
+          eff({
             evaluateSubset: {
               source: { query: 'players' },
               subsetSize: 1,
@@ -399,7 +400,7 @@ describe('effect sequence-context scope policy', () => {
               resultBind: '$result',
               in: [captureGrant('persistent-chain', 0), requireGrant('persistent-chain', 1)],
             },
-          },
+          }),
         ],
         expected: [
           [
@@ -417,24 +418,24 @@ describe('effect sequence-context scope policy', () => {
 
   it('excludes evaluateSubset.compute descendants from sequence-context linkage paths', () => {
     const effects: readonly EffectAST[] = [
-      {
+      eff({
         evaluateSubset: {
           source: { query: 'players' },
           subsetSize: 1,
           subsetBind: '$subset',
           compute: [
-            {
+            eff({
               if: {
                 when: { op: '==', left: 1, right: 1 },
                 then: [captureGrant('compute-only-chain', 0)],
               },
-            },
+            }),
           ],
           scoreExpr: 1,
           resultBind: '$result',
           in: [],
         },
-      },
+      }),
     ];
 
     const executionPaths = collectEffectGrantSequenceContextExecutionPaths(effects, 'effects');
@@ -444,13 +445,13 @@ describe('effect sequence-context scope policy', () => {
 
   it('exposes grant execution paths through the generic collector without rewalking control flow differently', () => {
     const effects: readonly EffectAST[] = [
-      {
+      eff({
         if: {
           when: { op: '==', left: 1, right: 1 },
           then: [captureGrant('generic-then-chain', 0)],
           else: [requireGrant('generic-else-chain', 1)],
         },
-      },
+      }),
     ];
 
     const executionPaths = collectGenericEffectGrantExecutionPaths(

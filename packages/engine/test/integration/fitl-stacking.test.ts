@@ -21,6 +21,7 @@ import {
   type ZoneDef,
   createCollector,
 } from '../../src/kernel/index.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 // ─── Shared FITL-style stacking constraints ──────────────────────────────────
 
@@ -203,7 +204,7 @@ describe('FITL stacking: compile-time and runtime enforcement', () => {
       assert.throws(
         () =>
           applyEffect(
-            { moveToken: { token: '$token', from: 'available:none', to: 'quangTri:none' } },
+            eff({ moveToken: { token: '$token', from: 'available:none', to: 'quangTri:none' } }),
             { ...ctx, bindings: { $token: 'b3' } },
           ),
         (error: unknown) => isEffectErrorCode(error, 'STACKING_VIOLATION'),
@@ -216,7 +217,7 @@ describe('FITL stacking: compile-time and runtime enforcement', () => {
       assert.throws(
         () =>
           applyEffect(
-            { createToken: { type: 'base', zone: 'route1:none', props: { faction: 'NVA' } } },
+            eff({ createToken: { type: 'base', zone: 'route1:none', props: { faction: 'NVA' } } }),
             ctx,
           ),
         (error: unknown) => isEffectErrorCode(error, 'STACKING_VIOLATION'),
@@ -229,7 +230,7 @@ describe('FITL stacking: compile-time and runtime enforcement', () => {
       assert.throws(
         () =>
           applyEffect(
-            { moveToken: { token: '$token', from: 'available:none', to: 'hanoi:none' } },
+            eff({ moveToken: { token: '$token', from: 'available:none', to: 'hanoi:none' } }),
             { ...ctx, bindings: { $token: 't1' } },
           ),
         (error: unknown) => isEffectErrorCode(error, 'STACKING_VIOLATION'),
@@ -254,7 +255,7 @@ describe('FITL stacking: compile-time and runtime enforcement', () => {
       const runtimeThrows = (() => {
         try {
           applyEffect(
-            { moveToken: { token: '$token', from: 'available:none', to: 'quangTri:none' } },
+            eff({ moveToken: { token: '$token', from: 'available:none', to: 'quangTri:none' } }),
             { ...ctx, bindings: { $token: 'b3' } },
           );
           return false;
@@ -269,7 +270,7 @@ describe('FITL stacking: compile-time and runtime enforcement', () => {
       // Moving troops (not base) to province is fine — only 2 bases, not 3
       const ctx = makeCtx();
       const result = applyEffect(
-        { moveToken: { token: '$token', from: 'available:none', to: 'quangTri:none' } },
+        eff({ moveToken: { token: '$token', from: 'available:none', to: 'quangTri:none' } }),
         { ...ctx, bindings: { $token: 't1' } },
       );
 

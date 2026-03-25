@@ -20,6 +20,7 @@ import {
   type MoveParamValue,
 } from '../../../src/kernel/index.js';
 import { makeExecutionEffectContext } from '../../helpers/effect-context-test-helpers.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
 
 const makeDef = (effects: readonly EffectAST[]): GameDef =>
   ({
@@ -72,13 +73,13 @@ const makeState = (): GameState => ({
   markers: {},
 });
 
-const chooseOneEffect: EffectAST = {
+const chooseOneEffect: EffectAST = eff({
   chooseOne: {
     internalDecisionId: 'decision:$token',
     bind: '$token',
     options: { query: 'tokensInZone', zone: 'hand:0' },
   },
-};
+});
 
 const makeMove = (params: Record<string, unknown>): Move => ({
   actionId: asActionId('decide'),

@@ -8,6 +8,7 @@ import {
   resolvePipelineDecisionBindingsForMove,
   type Move,
 } from '../../src/kernel/index.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 describe('move runtime bindings', () => {
   it('derives decision bindings from canonical decision keys', () => {
@@ -65,7 +66,7 @@ describe('move runtime bindings', () => {
         stages: [
           {
             effects: [
-              {
+              eff({
                 chooseN: {
                   internalDecisionId: 'decision:doc.actions.0.effects.0.distributeTokens.selectTokens',
                   bind: '$__selected_doc_actions_0_effects_0_distributeTokens',
@@ -73,23 +74,23 @@ describe('move runtime bindings', () => {
                   options: { query: 'tokensInZone', zone: 'board:none' },
                   n: 1,
                 },
-              },
-              {
+              }),
+              eff({
                 forEach: {
                   bind: '$__token_doc_actions_0_effects_0_distributeTokens',
                   over: { query: 'binding', name: '$__selected_doc_actions_0_effects_0_distributeTokens' },
                   effects: [
-                    {
+                    eff({
                       chooseOne: {
                         internalDecisionId: 'decision:doc.actions.0.effects.0.distributeTokens.chooseDestination',
                         bind: '$__destination_doc_actions_0_effects_0_distributeTokens',
                         decisionIdentity: 'decision:doc.actions.0.effects.0.distributeTokens.chooseDestination',
                         options: { query: 'zones' },
                       },
-                    },
+                    }),
                   ],
                 },
-              },
+              }),
             ],
           },
         ],
@@ -120,7 +121,7 @@ describe('move runtime bindings', () => {
         stages: [
           {
             effects: [
-              {
+              eff({
                 chooseN: {
                   internalDecisionId: 'decision:doc.pipeline.moveTroops',
                   bind: '$movingTroops@{$zone}',
@@ -128,7 +129,7 @@ describe('move runtime bindings', () => {
                   options: { query: 'tokensInZone', zone: 'hue:none' },
                   n: 1,
                 },
-              },
+              }),
             ],
           },
         ],

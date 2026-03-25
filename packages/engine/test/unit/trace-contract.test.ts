@@ -15,11 +15,13 @@ import {
   type GameState,
 } from '../../src/kernel/index.js';
 import { makeExecutionEffectContext } from '../helpers/effect-context-test-helpers.js';
+import { eff } from '../helpers/effect-tag-helper.js';
+import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
 
 const phaseId = asPhaseId('main');
 const actionId = asActionId('commit');
 
-const makeDef = (): GameDef => ({
+const makeDef = (): GameDef => tagEffectAsts({
   metadata: { id: 'trace-contract', players: { min: 2, max: 2 } },
   constants: {},
   globalVars: [
@@ -53,7 +55,7 @@ const makeDef = (): GameDef => ({
   }],
   triggers: [],
   terminal: { conditions: [] },
-} as unknown as GameDef);
+}) as unknown as GameDef;
 
 const makeState = (): GameState => ({
   globalVars: { score: 3, pool: 2 },
@@ -88,16 +90,16 @@ describe('trace semantics contract', () => {
   it('enforces no-op mutation trace parity across setVar, addVar, and transferVar', () => {
     const ctx = makeEffectCtx();
     const effects: readonly EffectAST[] = [
-      { setVar: { scope: 'global', var: 'score', value: 3 } },
-      { addVar: { scope: 'global', var: 'score', delta: 0 } },
-      { addVar: { scope: 'pvar', player: 'actor', var: 'coins', delta: 0 } },
-      {
+      eff({ setVar: { scope: 'global', var: 'score', value: 3 } }),
+      eff({ addVar: { scope: 'global', var: 'score', delta: 0 } }),
+      eff({ addVar: { scope: 'pvar', player: 'actor', var: 'coins', delta: 0 } }),
+      eff({
         transferVar: {
           from: { scope: 'pvar', player: 'actor', var: 'coins' },
           to: { scope: 'global', var: 'pool' },
           amount: 0,
         },
-      },
+      }),
     ];
 
     applyEffects(effects, ctx);
@@ -106,13 +108,13 @@ describe('trace semantics contract', () => {
 
   it('keeps resourceTransfer and varChange trace entries coherent with provenance', () => {
     const ctx = makeEffectCtx();
-    const effects: readonly EffectAST[] = [{
+    const effects: readonly EffectAST[] = [eff({
       transferVar: {
         from: { scope: 'pvar', player: 'actor', var: 'coins' },
         to: { scope: 'global', var: 'pool' },
         amount: 5,
       },
-    }];
+    })];
 
     applyEffects(effects, ctx);
     const trace = ctx.collector.trace ?? [];

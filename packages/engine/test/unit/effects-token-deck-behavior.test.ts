@@ -15,6 +15,7 @@ import {
   type ZoneDef,
   createCollector,
 } from '../../src/kernel/index.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 import { shuffleTokenArray } from '../../src/kernel/effects-token.js';
 import type { EffectTraceEntry } from '../../src/kernel/types-core.js';
 
@@ -114,7 +115,7 @@ describe('deck behavior — applyDraw drawFrom: top', () => {
     });
 
     const result = applyEffect(
-      { draw: { from: 'deck:none', to: 'hand:0', count: 2 } },
+      eff({ draw: { from: 'deck:none', to: 'hand:0', count: 2 } }),
       ctx,
     );
     assert.deepEqual(
@@ -151,7 +152,7 @@ describe('deck behavior — applyDraw drawFrom: bottom', () => {
     });
 
     const result = applyEffect(
-      { draw: { from: 'deck:none', to: 'hand:0', count: 2 } },
+      eff({ draw: { from: 'deck:none', to: 'hand:0', count: 2 } }),
       ctx,
     );
     assert.deepEqual(
@@ -189,8 +190,8 @@ describe('deck behavior — applyDraw drawFrom: random', () => {
       collector: createCollector(),
     });
 
-    const r1 = applyEffect({ draw: { from: 'deck:none', to: 'hand:0', count: 2 } }, makeCtx());
-    const r2 = applyEffect({ draw: { from: 'deck:none', to: 'hand:0', count: 2 } }, makeCtx());
+    const r1 = applyEffect(eff({ draw: { from: 'deck:none', to: 'hand:0', count: 2 } }), makeCtx());
+    const r2 = applyEffect(eff({ draw: { from: 'deck:none', to: 'hand:0', count: 2 } }), makeCtx());
 
     // Deterministic: same seed gives same draw
     assert.deepEqual(
@@ -235,7 +236,7 @@ describe('deck behavior — auto-reshuffle', () => {
     });
 
     const result = applyEffect(
-      { draw: { from: 'deck:none', to: 'hand:0', count: 3 } },
+      eff({ draw: { from: 'deck:none', to: 'hand:0', count: 3 } }),
       ctx,
     );
 
@@ -277,8 +278,8 @@ describe('deck behavior — auto-reshuffle', () => {
       collector: createCollector(),
     });
 
-    const r1 = applyEffect({ draw: { from: 'deck:none', to: 'hand:0', count: 2 } }, makeCtx());
-    const r2 = applyEffect({ draw: { from: 'deck:none', to: 'hand:0', count: 2 } }, makeCtx());
+    const r1 = applyEffect(eff({ draw: { from: 'deck:none', to: 'hand:0', count: 2 } }), makeCtx());
+    const r2 = applyEffect(eff({ draw: { from: 'deck:none', to: 'hand:0', count: 2 } }), makeCtx());
     assert.deepEqual(
       r1.state.zones['hand:0']?.map(t => t.id),
       r2.state.zones['hand:0']?.map(t => t.id),
@@ -307,7 +308,7 @@ describe('deck behavior — auto-reshuffle', () => {
     });
 
     const result = applyEffect(
-      { draw: { from: 'deck:none', to: 'hand:0', count: 3 } },
+      eff({ draw: { from: 'deck:none', to: 'hand:0', count: 3 } }),
       ctx,
     );
     assert.equal(result.state.zones['hand:0']?.length, 0);
@@ -337,7 +338,7 @@ describe('deck behavior — auto-reshuffle', () => {
     });
 
     const result = applyEffect(
-      { draw: { from: 'deck:none', to: 'hand:0', count: 3 } },
+      eff({ draw: { from: 'deck:none', to: 'hand:0', count: 3 } }),
       ctx,
     );
     assert.equal(result.state.zones['hand:0']?.length, 0);
@@ -365,7 +366,7 @@ describe('deck behavior — zone without behavior', () => {
     });
 
     const result = applyEffect(
-      { draw: { from: 'deck:none', to: 'hand:0', count: 2 } },
+      eff({ draw: { from: 'deck:none', to: 'hand:0', count: 2 } }),
       ctx,
     );
     assert.deepEqual(
@@ -405,7 +406,7 @@ describe('deck behavior — trace emission: auto-reshuffle', () => {
     });
 
     applyEffect(
-      { draw: { from: 'deck:none', to: 'hand:0', count: 3 } },
+      eff({ draw: { from: 'deck:none', to: 'hand:0', count: 3 } }),
       ctx,
     );
 
@@ -468,7 +469,7 @@ describe('deck behavior — trace emission: auto-reshuffle', () => {
     });
 
     applyEffect(
-      { draw: { from: 'deck:none', to: 'hand:0', count: 2 } },
+      eff({ draw: { from: 'deck:none', to: 'hand:0', count: 2 } }),
       ctx,
     );
 
@@ -508,7 +509,7 @@ describe('deck behavior — trace emission: applyShuffle', () => {
       collector,
     });
 
-    applyEffect({ shuffle: { zone: 'deck:none' } }, ctx);
+    applyEffect(eff({ shuffle: { zone: 'deck:none' } }), ctx);
 
     const trace = collector.trace!;
     assert.equal(trace.length, 1, 'should emit exactly 1 trace entry');
@@ -532,7 +533,7 @@ describe('deck behavior — trace emission: applyShuffle', () => {
       moveParams: {},
       collector: emptyCollector,
     });
-    applyEffect({ shuffle: { zone: 'deck:none' } }, emptyCtx);
+    applyEffect(eff({ shuffle: { zone: 'deck:none' } }), emptyCtx);
     assert.equal(emptyCollector.trace!.length, 0, 'no trace for 0 tokens');
 
     // 1 token
@@ -547,7 +548,7 @@ describe('deck behavior — trace emission: applyShuffle', () => {
       moveParams: {},
       collector: singleCollector,
     });
-    applyEffect({ shuffle: { zone: 'deck:none' } }, singleCtx);
+    applyEffect(eff({ shuffle: { zone: 'deck:none' } }), singleCtx);
     assert.equal(singleCollector.trace!.length, 0, 'no trace for 1 token');
   });
 });

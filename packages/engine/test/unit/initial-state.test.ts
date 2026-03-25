@@ -19,6 +19,7 @@ import {
 } from '../../src/kernel/index.js';
 import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
 import { asTaggedGameDef } from '../helpers/gamedef-fixtures.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 const createDef = (): GameDef =>
   asTaggedGameDef({
@@ -218,7 +219,7 @@ describe('initialState', () => {
         phases: [
           {
             id: asPhaseId('main'),
-            onEnter: [{ addVar: { scope: 'global', var: 'coins', delta: 3 } }],
+            onEnter: [eff({ addVar: { scope: 'global', var: 'coins', delta: 3 } })],
           },
         ],
       },

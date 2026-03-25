@@ -1,4 +1,5 @@
-import type { EffectKind, EffectKindMap } from './types-ast.js';
+import type { EffectKind, EffectKindMap, WithKindTag } from './types-ast.js';
+import { makeEffect } from './effect-builders.js';
 
 /**
  * Extract the payload type for a given effect kind.
@@ -6,12 +7,12 @@ import type { EffectKind, EffectKindMap } from './types-ast.js';
  */
 export type EffectPayload<K extends EffectKind> = K extends keyof EffectKindMap[K] ? EffectKindMap[K][K] : never;
 
-/** Generic typed effect builder — compile-time exhaustiveness via EffectKindMap. */
-export function buildEffect<K extends EffectKind>(kind: K, payload: EffectPayload<K>): EffectKindMap[K] {
-  return { [kind]: payload } as unknown as EffectKindMap[K];
+/** Generic typed effect builder — delegates to makeEffect for _k tagging. */
+export function buildEffect<K extends EffectKind>(kind: K, payload: EffectPayload<K>): WithKindTag<K> {
+  return makeEffect(kind, payload as never);
 }
 
-type EffectBuilder<K extends EffectKind> = (payload: EffectPayload<K>) => EffectKindMap[K];
+type EffectBuilder<K extends EffectKind> = (payload: EffectPayload<K>) => WithKindTag<K>;
 
 // Named convenience builders for all 34 effect kinds:
 

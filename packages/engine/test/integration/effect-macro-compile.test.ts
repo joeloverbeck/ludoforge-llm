@@ -7,6 +7,7 @@ import {
   parseGameSpec,
   type EffectMacroDef,
 } from '../../src/cnl/index.js';
+import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
 
 function makeMinimalDoc() {
   return {
@@ -58,9 +59,9 @@ actor: 'active',
     assert.deepEqual(errors, [], `Unexpected errors: ${JSON.stringify(errors, null, 2)}`);
     assert.ok(result.gameDef !== null, 'Expected valid GameDef');
 
-    assert.deepEqual(result.gameDef.setup, [
+    assert.deepEqual(result.gameDef.setup, tagEffectAsts([
       { setVar: { scope: 'global', var: 'score', value: 10 } },
-    ]);
+    ]));
   });
 
   it('macro in action effects expands and compiles', () => {
@@ -96,9 +97,9 @@ actor: 'active',
 
     const actionEffects = result.gameDef.actions[0]?.effects;
     assert.ok(actionEffects !== undefined);
-    assert.deepEqual(actionEffects, [
+    assert.deepEqual(actionEffects, tagEffectAsts([
       { addVar: { scope: 'global', var: 'score', delta: 5 } },
-    ]);
+    ]));
   });
 
   it('nested macro expansion compiles correctly', () => {
@@ -145,10 +146,10 @@ actor: 'active',
     assert.deepEqual(errors, [], `Unexpected errors: ${JSON.stringify(errors, null, 2)}`);
     assert.ok(result.gameDef !== null, 'Expected valid GameDef');
 
-    assert.deepEqual(result.gameDef.setup, [
+    assert.deepEqual(result.gameDef.setup, tagEffectAsts([
       { setVar: { scope: 'global', var: 'score', value: 0 } },
       { setVar: { scope: 'global', var: 'count', value: 0 } },
-    ]);
+    ]));
   });
 
   it('constrained macro params compile with valid enum/literal args', () => {

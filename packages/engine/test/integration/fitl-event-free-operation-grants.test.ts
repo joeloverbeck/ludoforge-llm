@@ -21,6 +21,7 @@ import {
 } from '../../src/kernel/index.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
 import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 const createDef = (): GameDef =>
   ({
@@ -555,8 +556,8 @@ const createExecutionContextGrantDef = (): GameDef => ({
       stages: [
         {
           effects: [
-            { setVar: { scope: 'global', var: 'effectCode', value: { _t: 2 as const, ref: 'grantContext', key: 'effectCode' } } },
-            { setVar: { scope: 'global', var: 'selectedTarget', value: { _t: 2 as const, ref: 'binding', name: 'target' } } },
+            eff({ setVar: { scope: 'global', var: 'effectCode', value: { _t: 2 as const, ref: 'grantContext', key: 'effectCode' } } }),
+            eff({ setVar: { scope: 'global', var: 'selectedTarget', value: { _t: 2 as const, ref: 'binding', name: 'target' } } }),
           ],
         },
       ],
@@ -600,7 +601,7 @@ const createExecutionContextGrantDef = (): GameDef => ({
           unshaded: {
             text: 'Grant US a context-scoped free operation from an effect.',
             effects: [
-              {
+              eff({
                 grantFreeOperation: {
                   seat: 'self',
                   operationClass: 'operation',
@@ -612,7 +613,7 @@ const createExecutionContextGrantDef = (): GameDef => ({
                     effectCode: { _t: 6 as const, op: '+', left: 4, right: 5 },
                   },
                 },
-              },
+              }),
             ],
           },
         },
@@ -623,7 +624,7 @@ const createExecutionContextGrantDef = (): GameDef => ({
           unshaded: {
             text: 'Grant NVA a required context-scoped free operation from an effect.',
             effects: [
-              {
+              eff({
                 grantFreeOperation: {
                   seat: 'NVA',
                   operationClass: 'operation',
@@ -635,7 +636,7 @@ const createExecutionContextGrantDef = (): GameDef => ({
                     effectCode: { _t: 6 as const, op: '+', left: 5, right: 7 },
                   },
                 },
-              },
+              }),
             ],
           },
         },
@@ -1845,7 +1846,7 @@ const createImplementWhatCanInOrderGrantDef = (): GameDef => {
           unshaded: {
             text: 'Effect-issued batches skip unusable earlier steps and still emit later usable steps.',
             effects: [
-              {
+              eff({
                 grantFreeOperation: {
                   seat: 'self',
                   operationClass: 'operation',
@@ -1854,8 +1855,8 @@ const createImplementWhatCanInOrderGrantDef = (): GameDef => {
                   viabilityPolicy: 'requireUsableAtIssue',
                   zoneFilter: { op: '==', left: 1, right: 2 },
                 },
-              },
-              {
+              }),
+              eff({
                 grantFreeOperation: {
                   seat: 'self',
                   operationClass: 'operation',
@@ -1863,7 +1864,7 @@ const createImplementWhatCanInOrderGrantDef = (): GameDef => {
                   sequence: { batch: 'effect-issue-implement-what-can', step: 1, progressionPolicy: 'implementWhatCanInOrder' },
                   viabilityPolicy: 'requireUsableAtIssue',
                 },
-              },
+              }),
             ],
           },
         } as EventCardDef,
@@ -1933,7 +1934,7 @@ const createStrictInOrderGrantDef = (): GameDef => {
           unshaded: {
             text: 'Effect-issued strict-in-order batches suppress later steps when the earlier step is unusable.',
             effects: [
-              {
+              eff({
                 grantFreeOperation: {
                   seat: 'self',
                   operationClass: 'operation',
@@ -1942,8 +1943,8 @@ const createStrictInOrderGrantDef = (): GameDef => {
                   viabilityPolicy: 'requireUsableAtIssue',
                   zoneFilter: { op: '==', left: 1, right: 2 },
                 },
-              },
-              {
+              }),
+              eff({
                 grantFreeOperation: {
                   seat: 'self',
                   operationClass: 'operation',
@@ -1951,7 +1952,7 @@ const createStrictInOrderGrantDef = (): GameDef => {
                   sequence: { batch: 'effect-issue-strict-in-order', step: 1 },
                   viabilityPolicy: 'requireUsableAtIssue',
                 },
-              },
+              }),
             ],
           },
         } as EventCardDef,

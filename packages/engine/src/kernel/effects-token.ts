@@ -1,4 +1,5 @@
 import { asTokenId } from './branded.js';
+import { moveToken as moveTokenBuilder } from './ast-builders.js';
 import { getZoneMap } from './def-lookup.js';
 import { evalCondition } from './eval-condition.js';
 import { evalValue } from './eval-value.js';
@@ -472,13 +473,11 @@ export const applyMoveTokenAdjacent = (
   }
 
   return applyMoveToken(
-    {
-      moveToken: {
-        token: effect.moveTokenAdjacent.token,
-        from: effect.moveTokenAdjacent.from,
-        to: toZoneId,
-      },
-    },
+    moveTokenBuilder({
+      token: effect.moveTokenAdjacent.token,
+      from: effect.moveTokenAdjacent.from,
+      to: toZoneId,
+    }),
     env,
     cursor,
     budget,

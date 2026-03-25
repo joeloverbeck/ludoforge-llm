@@ -11,6 +11,7 @@ import {
 import { assertDataAssetCascadeSuppression, assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { applyMove, asActionId, initialState, validateGameDef } from '../../src/kernel/index.js';
 import { readCompilerFixture } from '../helpers/production-spec-helpers.js';
+import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
 
 describe('compile pipeline integration', () => {
   it('passes metadata name and description through to GameDef only when provided', () => {
@@ -202,7 +203,7 @@ actor: 'active',
     });
 
     assertNoDiagnostics(compiled);
-    assert.deepEqual(compiled.gameDef?.actions[0]?.effects, [
+    assert.deepEqual(compiled.gameDef?.actions[0]?.effects, tagEffectAsts([
       {
         grantFreeOperation: {
           seat: '0',
@@ -211,7 +212,7 @@ actor: 'active',
           sequenceContext: { captureMoveZoneCandidatesAs: 'selected-space' },
         },
       },
-    ]);
+    ]));
   });
 
   it('preserves grantFreeOperation executionContext through the compile pipeline', () => {
@@ -249,7 +250,7 @@ actor: 'active',
     });
 
     assertNoDiagnostics(compiled);
-    assert.deepEqual(compiled.gameDef?.actions[0]?.effects, [
+    assert.deepEqual(compiled.gameDef?.actions[0]?.effects, tagEffectAsts([
       {
         grantFreeOperation: {
           seat: '0',
@@ -261,7 +262,7 @@ actor: 'active',
           },
         },
       },
-    ]);
+    ]));
   });
 
   it('runs parse/validate/expand/compile/validate end-to-end for compile-valid fixture', () => {

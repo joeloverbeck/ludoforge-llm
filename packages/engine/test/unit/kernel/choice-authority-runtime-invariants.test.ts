@@ -28,6 +28,7 @@ import {
   ownershipSelection,
   type ChoiceOwnershipPrimitive,
 } from '../../helpers/choice-ownership-parity-helpers.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
 
 const makeDef = (effects: readonly EffectAST[]): GameDef =>
   ({
@@ -95,22 +96,22 @@ const buildImplicitChooserEffect = (
   values: readonly string[],
 ): EffectAST => {
   if (primitive === 'chooseOne') {
-    return {
+    return eff({
       chooseOne: {
         internalDecisionId: decisionKey,
         bind,
         options: { query: 'enums', values },
       },
-    };
+    });
   }
-  return {
+  return eff({
     chooseN: {
       internalDecisionId: decisionKey,
       bind,
       options: { query: 'enums', values },
       n: 1,
     },
-  };
+  });
 };
 
 describe('choice authority runtime invariants', () => {

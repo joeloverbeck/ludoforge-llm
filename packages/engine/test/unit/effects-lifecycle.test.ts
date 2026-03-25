@@ -23,6 +23,7 @@ import {
   createCollector,
 } from '../../src/kernel/index.js';
 import { isNormalizedEffectRuntimeFailure } from '../helpers/effect-error-assertions.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 const makeDef = (): GameDef => ({
   metadata: { id: 'effects-lifecycle-test', players: { min: 1, max: 2 } },
@@ -89,7 +90,7 @@ describe('effects token lifecycle', () => {
     const totalBefore = Object.values(ctx.state.zones).reduce((sum, zone) => sum + zone.length, 0);
 
     const result = applyEffect(
-      { createToken: { type: 'card', zone: 'deck:none', props: { cost: 2, label: 'alpha', frozen: false } } },
+      eff({ createToken: { type: 'card', zone: 'deck:none', props: { cost: 2, label: 'alpha', frozen: false } } }),
       ctx,
     );
 
@@ -107,7 +108,7 @@ describe('effects token lifecycle', () => {
     const ctx = makeCtx({ bindings: { $baseCost: 4 } });
 
     const result = applyEffect(
-      {
+      eff({
         createToken: {
           type: 'card',
           zone: 'deck:none',
@@ -117,7 +118,7 @@ describe('effects token lifecycle', () => {
             frozen: true,
           },
         },
-      },
+      }),
       { ...ctx, moveParams: { $label: 'beta' } },
     );
 
@@ -127,8 +128,8 @@ describe('effects token lifecycle', () => {
   it('repeated createToken calls produce deterministic unique IDs', () => {
     const ctx = makeCtx();
     const effects: readonly EffectAST[] = [
-      { createToken: { type: 'card', zone: 'deck:none' } },
-      { createToken: { type: 'card', zone: 'deck:none' } },
+      eff({ createToken: { type: 'card', zone: 'deck:none' } }),
+      eff({ createToken: { type: 'card', zone: 'deck:none' } }),
     ];
 
     const result = applyEffects(effects, ctx);
@@ -143,13 +144,13 @@ describe('effects token lifecycle', () => {
 
     assert.throws(() =>
       applyEffect(
-        {
+        eff({
           createToken: {
             type: 'card',
             zone: 'deck:none',
             props: { cost: { _t: 6 as const, op: '+' as const, left: 1, right: 'bad' } },
           },
-        },
+        }),
         ctx,
       ),
     );
@@ -164,7 +165,7 @@ describe('effects token lifecycle', () => {
     assert.throws(
       () =>
         applyEffect(
-          { createToken: { type: 'card', zone: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$missingZone' } } } },
+          eff({ createToken: { type: 'card', zone: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$missingZone' } } } }),
           ctx,
         ),
       (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'createToken.zone resolution failed'),
@@ -177,7 +178,7 @@ describe('effects token lifecycle', () => {
     assert.ok(doomed !== undefined);
     const totalBefore = Object.values(ctx.state.zones).reduce((sum, zone) => sum + zone.length, 0);
 
-    const result = applyEffect({ destroyToken: { token: '$token' } }, { ...ctx, bindings: { $token: doomed } });
+    const result = applyEffect(eff({ destroyToken: { token: '$token' } }), { ...ctx, bindings: { $token: doomed } });
 
     const totalAfter = Object.values(result.state.zones).reduce((sum, zone) => sum + zone.length, 0);
     assert.deepEqual(
@@ -198,7 +199,7 @@ describe('effects token lifecycle', () => {
     const doomed = ctx.state.zones['deck:none']?.[1];
     assert.ok(doomed !== undefined);
 
-    applyEffect({ destroyToken: { token: '$token' } }, { ...ctx, bindings: { $token: doomed } });
+    applyEffect(eff({ destroyToken: { token: '$token' } }), { ...ctx, bindings: { $token: doomed } });
 
     const traceEntries = collector.trace ?? [];
     const destroyEntries = traceEntries.filter((entry) => entry.kind === 'destroyToken');
@@ -215,7 +216,7 @@ describe('effects token lifecycle', () => {
     const ctx = makeCtx({ bindings: { $token: asTokenId('missing') } });
 
     assert.throws(
-      () => applyEffect({ destroyToken: { token: '$token' } }, ctx),
+      () => applyEffect(eff({ destroyToken: { token: '$token' } }), ctx),
       (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('not found'),
     );
   });
@@ -226,7 +227,7 @@ describe('effects token lifecycle', () => {
     });
 
     assert.throws(
-      () => applyEffect({ destroyToken: { token: '$token' } }, ctx),
+      () => applyEffect(eff({ destroyToken: { token: '$token' } }), ctx),
       (error: unknown) =>
         isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('must resolve to Token or TokenId'),
     );
@@ -248,7 +249,7 @@ describe('effects token lifecycle', () => {
     });
 
     assert.throws(
-      () => applyEffect({ destroyToken: { token: '$token' } }, ctx),
+      () => applyEffect(eff({ destroyToken: { token: '$token' } }), ctx),
       (error: unknown) =>
         isEffectErrorCode(error, 'EFFECT_RUNTIME')
         && String(error).includes('Token appears in multiple zones: dup')
@@ -271,7 +272,7 @@ describe('effects token lifecycle', () => {
     });
 
     assert.throws(
-      () => applyEffect({ destroyToken: { token: '$token' } }, ctx),
+      () => applyEffect(eff({ destroyToken: { token: '$token' } }), ctx),
       (error: unknown) =>
         isEffectErrorCode(error, 'EFFECT_RUNTIME')
         && String(error).includes('Token appears multiple times in zone "deck:none": dup-same-zone')
@@ -308,7 +309,7 @@ describe('effects createToken stacking enforcement', () => {
     assert.throws(
       () =>
         applyEffect(
-          { createToken: { type: 'base', zone: 'deck:none', props: { faction: 'US' } } },
+          eff({ createToken: { type: 'base', zone: 'deck:none', props: { faction: 'US' } } }),
           ctx,
         ),
       (error: unknown) => isEffectErrorCode(error, 'STACKING_VIOLATION'),
@@ -325,7 +326,7 @@ describe('effects createToken stacking enforcement', () => {
     const ctx = makeCtx({ def });
 
     const result = applyEffect(
-      { createToken: { type: 'base', zone: 'discard:none', props: { faction: 'US' } } },
+      eff({ createToken: { type: 'base', zone: 'discard:none', props: { faction: 'US' } } }),
       ctx,
     );
 
@@ -368,7 +369,7 @@ describe('effects setTokenProp', () => {
     });
 
     const result = applyEffect(
-      { setTokenProp: { token: '$unit', prop: 'activity', value: 'active' } },
+      eff({ setTokenProp: { token: '$unit', prop: 'activity', value: 'active' } }),
       ctx,
     );
 
@@ -387,7 +388,7 @@ describe('effects setTokenProp', () => {
     });
 
     assert.throws(
-      () => applyEffect({ setTokenProp: { token: '$unit', prop: 'activity', value: 'active' } }, ctx),
+      () => applyEffect(eff({ setTokenProp: { token: '$unit', prop: 'activity', value: 'active' } }), ctx),
       (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('not found'),
     );
   });
@@ -399,7 +400,7 @@ describe('effects setTokenProp', () => {
     });
 
     assert.throws(
-      () => applyEffect({ setTokenProp: { token: '$unit', prop: 'activity', value: 'active' } }, ctx),
+      () => applyEffect(eff({ setTokenProp: { token: '$unit', prop: 'activity', value: 'active' } }), ctx),
       (error: unknown) =>
         isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('must resolve to Token or TokenId'),
     );
@@ -422,7 +423,7 @@ describe('effects setTokenProp', () => {
     });
 
     assert.throws(
-      () => applyEffect({ setTokenProp: { token: '$unit', prop: 'activity', value: 'active' } }, ctx),
+      () => applyEffect(eff({ setTokenProp: { token: '$unit', prop: 'activity', value: 'active' } }), ctx),
       (error: unknown) =>
         isEffectErrorCode(error, 'EFFECT_RUNTIME')
         && String(error).includes('Token appears in multiple zones: dup-prop')
@@ -446,7 +447,7 @@ describe('effects setTokenProp', () => {
     });
 
     assert.throws(
-      () => applyEffect({ setTokenProp: { token: '$unit', prop: 'activity', value: 'active' } }, ctx),
+      () => applyEffect(eff({ setTokenProp: { token: '$unit', prop: 'activity', value: 'active' } }), ctx),
       (error: unknown) =>
         isEffectErrorCode(error, 'EFFECT_RUNTIME')
         && String(error).includes('Token appears multiple times in zone "deck:none": dup-prop-same-zone')
@@ -464,7 +465,7 @@ describe('effects setTokenProp', () => {
     });
 
     assert.throws(
-      () => applyEffect({ setTokenProp: { token: '$unit', prop: 'nonexistent', value: 'x' } }, ctx),
+      () => applyEffect(eff({ setTokenProp: { token: '$unit', prop: 'nonexistent', value: 'x' } }), ctx),
       (error: unknown) =>
         isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('not defined on token type'),
     );
@@ -481,7 +482,7 @@ describe('effects setTokenProp', () => {
 
     // underground → destroyed is not a valid transition
     assert.throws(
-      () => applyEffect({ setTokenProp: { token: '$unit', prop: 'activity', value: 'destroyed' } }, ctx),
+      () => applyEffect(eff({ setTokenProp: { token: '$unit', prop: 'activity', value: 'destroyed' } }), ctx),
       (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('Invalid transition'),
     );
   });
@@ -497,7 +498,7 @@ describe('effects setTokenProp', () => {
 
     // 'faction' has no transitions defined, so any value is allowed
     const result = applyEffect(
-      { setTokenProp: { token: '$unit', prop: 'faction', value: 'ARVN' } },
+      eff({ setTokenProp: { token: '$unit', prop: 'faction', value: 'ARVN' } }),
       ctx,
     );
 
@@ -515,7 +516,7 @@ describe('effects setTokenProp', () => {
     });
 
     const result = applyEffect(
-      { setTokenProp: { token: '$unit', prop: 'faction', value: { _t: 2 as const, ref: 'binding', name: '$newFaction' } } },
+      eff({ setTokenProp: { token: '$unit', prop: 'faction', value: { _t: 2 as const, ref: 'binding', name: '$newFaction' } } }),
       ctx,
     );
 
@@ -532,7 +533,7 @@ describe('effects setTokenProp', () => {
     });
 
     applyEffect(
-      { setTokenProp: { token: '$unit', prop: 'activity', value: 'active' } },
+      eff({ setTokenProp: { token: '$unit', prop: 'activity', value: 'active' } }),
       ctx,
     );
 
@@ -567,9 +568,9 @@ const makeMarkerCtx = (overrides?: EffectContextTestOverrides): EffectContext =>
 describe('effects setMarker', () => {
   it('sets a marker state on a space', () => {
     const ctx = makeMarkerCtx();
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       setMarker: { space: 'deck:none', marker: 'support', state: 'activeSupport' },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state.markers['deck:none']?.['support'], 'activeSupport');
@@ -577,9 +578,9 @@ describe('effects setMarker', () => {
 
   it('throws for invalid marker state', () => {
     const ctx = makeMarkerCtx();
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       setMarker: { space: 'deck:none', marker: 'support', state: 'invalidState' },
-    };
+    });
 
     assert.throws(
       () => applyEffect(effect, ctx),
@@ -589,9 +590,9 @@ describe('effects setMarker', () => {
 
   it('throws for unknown marker lattice', () => {
     const ctx = makeMarkerCtx();
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       setMarker: { space: 'deck:none', marker: 'nonexistent', state: 'neutral' },
-    };
+    });
 
     assert.throws(
       () => applyEffect(effect, ctx),
@@ -605,9 +606,9 @@ describe('effects setMarker', () => {
       markers: { 'deck:none': { support: 'neutral' } },
     };
     const ctx = makeMarkerCtx({ state });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       setMarker: { space: 'deck:none', marker: 'support', state: 'activeOpposition' },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state.markers['deck:none']?.['support'], 'activeOpposition');
@@ -615,9 +616,9 @@ describe('effects setMarker', () => {
 
   it('does not mutate original state', () => {
     const ctx = makeMarkerCtx();
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       setMarker: { space: 'deck:none', marker: 'support', state: 'activeSupport' },
-    };
+    });
 
     applyEffect(effect, ctx);
     assert.deepEqual(ctx.state.markers, {});
@@ -631,9 +632,9 @@ describe('effects shiftMarker', () => {
       markers: { 'deck:none': { support: 'neutral' } },
     };
     const ctx = makeMarkerCtx({ state });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       shiftMarker: { space: 'deck:none', marker: 'support', delta: 1 },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state.markers['deck:none']?.['support'], 'passiveSupport');
@@ -645,9 +646,9 @@ describe('effects shiftMarker', () => {
       markers: { 'deck:none': { support: 'neutral' } },
     };
     const ctx = makeMarkerCtx({ state });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       shiftMarker: { space: 'deck:none', marker: 'support', delta: -1 },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state.markers['deck:none']?.['support'], 'passiveOpposition');
@@ -659,9 +660,9 @@ describe('effects shiftMarker', () => {
       markers: { 'deck:none': { support: 'activeSupport' } },
     };
     const ctx = makeMarkerCtx({ state });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       shiftMarker: { space: 'deck:none', marker: 'support', delta: 10 },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state.markers['deck:none']?.['support'], 'activeSupport');
@@ -669,9 +670,9 @@ describe('effects shiftMarker', () => {
 
   it('uses default state when space has no markers', () => {
     const ctx = makeMarkerCtx();
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       shiftMarker: { space: 'deck:none', marker: 'support', delta: 2 },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state.markers['deck:none']?.['support'], 'activeSupport');
@@ -683,9 +684,9 @@ describe('effects shiftMarker', () => {
       markers: { 'deck:none': { support: 'activeOpposition' } },
     };
     const ctx = makeMarkerCtx({ state });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       shiftMarker: { space: 'deck:none', marker: 'support', delta: -5 },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state, ctx.state);
@@ -698,9 +699,9 @@ describe('effects shiftMarker', () => {
       markers: { 'deck:none': { support: 'neutral' } },
     };
     const ctx = makeMarkerCtx({ state });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       shiftMarker: { space: 'deck:none', marker: 'support', delta: 0 },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state, ctx.state);
@@ -709,9 +710,9 @@ describe('effects shiftMarker', () => {
 
   it('throws for unknown marker lattice', () => {
     const ctx = makeMarkerCtx();
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       shiftMarker: { space: 'deck:none', marker: 'unknown', delta: 1 },
-    };
+    });
 
     assert.throws(
       () => applyEffect(effect, ctx),
@@ -728,9 +729,9 @@ describe('effects global marker lifecycle', () => {
         globalMarkerLattices: [{ id: 'cap_topGun', states: ['inactive', 'unshaded', 'shaded'], defaultState: 'inactive' }],
       },
     });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       setGlobalMarker: { marker: 'cap_topGun', state: 'unshaded' },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state.globalMarkers?.cap_topGun, 'unshaded');
@@ -747,9 +748,9 @@ describe('effects global marker lifecycle', () => {
         globalMarkers: { cap_topGun: 'inactive' },
       },
     });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       shiftGlobalMarker: { marker: 'cap_topGun', delta: 5 },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state.globalMarkers?.cap_topGun, 'shaded');
@@ -767,13 +768,13 @@ describe('effects global marker lifecycle', () => {
       },
       bindings: { $marker: 'cap_topGun' },
     });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       flipGlobalMarker: {
         marker: { _t: 2 as const, ref: 'binding', name: '$marker' },
         stateA: 'unshaded',
         stateB: 'shaded',
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state.globalMarkers?.cap_topGun, 'shaded');
@@ -791,13 +792,13 @@ describe('effects global marker lifecycle', () => {
       },
       bindings: { $marker: 'cap_topGun' },
     });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       flipGlobalMarker: {
         marker: { _t: 2 as const, ref: 'binding', name: '$marker' },
         stateA: 'unshaded',
         stateB: 'shaded',
       },
-    };
+    });
 
     assert.throws(
       () => applyEffect(effect, ctx),

@@ -10,9 +10,10 @@ import {
   legalMoves,
   type GameDef,
 } from '../../src/kernel/index.js';
+import { asTaggedGameDef } from '../helpers/gamedef-fixtures.js';
 
 const buildDef = (): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'action-executor-binding', players: { min: 2, max: 2 } },
     constants: {},
     globalVars: [],
@@ -36,10 +37,10 @@ const buildDef = (): GameDef =>
     ],
     triggers: [],
     terminal: { conditions: [] },
-  }) as unknown as GameDef;
+  });
 
 const buildInvalidBindingDef = (): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'action-executor-binding-invalid', players: { min: 2, max: 2 } },
     constants: {},
     globalVars: [],
@@ -63,7 +64,7 @@ const buildInvalidBindingDef = (): GameDef =>
     ],
     triggers: [],
     terminal: { conditions: [] },
-  }) as unknown as GameDef;
+  });
 
 describe('action executor binding', () => {
   it('resolves executor from declared action params in legalMoves and applyMove', () => {

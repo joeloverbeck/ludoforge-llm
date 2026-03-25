@@ -13,6 +13,7 @@ import {
   type GameState,
   type Move,
 } from '../../../src/kernel/index.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
 
 const phaseId = asPhaseId('main');
 
@@ -62,7 +63,7 @@ const createChooseNProfile = (
     {
       stage: 'resolve',
       effects: [
-        {
+        eff({
           chooseN: {
             internalDecisionId: 'decision:$targets',
             bind: '$targets',
@@ -70,7 +71,7 @@ const createChooseNProfile = (
             min,
             max,
           },
-        },
+        }),
       ],
     },
   ],
@@ -103,13 +104,13 @@ const createStochasticProfile = (actionId: string): ActionPipelineDef => ({
     {
       stage: 'resolve',
       effects: [
-        {
+        eff({
           rollRandom: {
             bind: '$roll',
             min: 1,
             max: 2,
             in: [
-              {
+              eff({
                 chooseN: {
                   internalDecisionId: 'decision:$targets',
                   bind: '$targets',
@@ -117,10 +118,10 @@ const createStochasticProfile = (actionId: string): ActionPipelineDef => ({
                   min: { _t: 2, ref: 'binding', name: '$roll' },
                   max: { _t: 2, ref: 'binding', name: '$roll' },
                 },
-              } as ActionDef['effects'][number],
+              }) as ActionDef['effects'][number],
             ],
           },
-        } as ActionDef['effects'][number],
+        }) as ActionDef['effects'][number],
       ],
     },
   ],

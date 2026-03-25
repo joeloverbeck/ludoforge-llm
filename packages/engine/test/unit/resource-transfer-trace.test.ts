@@ -12,6 +12,7 @@ import {
   type GameState,
 } from '../../src/kernel/index.js';
 import { makeExecutionEffectContext } from '../helpers/effect-context-test-helpers.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 const traceDef: GameDef = {
   metadata: { id: 'resource-transfer-trace-test', players: { min: 2, max: 2 } },
@@ -77,13 +78,13 @@ function makeCtx(args: {
 describe('resourceTransfer effect trace entries', () => {
   it('emits resourceTransfer with endpoints, amounts, provenance, and coherent varChange deltas', () => {
     const ctx = makeCtx({ player0Coins: 7, pool: 2 });
-    const effects: readonly EffectAST[] = [{
+    const effects: readonly EffectAST[] = [eff({
       transferVar: {
         from: { scope: 'pvar', player: 'actor', var: 'coins' },
         to: { scope: 'global', var: 'pool' },
         amount: 5,
       },
-    }];
+    })];
 
     applyEffects(effects, ctx);
     const trace = ctx.collector.trace ?? [];
@@ -115,7 +116,7 @@ describe('resourceTransfer effect trace entries', () => {
 
   it('records clamped transfer context fields', () => {
     const ctx = makeCtx({ player0Coins: 7, pool: 18 });
-    const effects: readonly EffectAST[] = [{
+    const effects: readonly EffectAST[] = [eff({
       transferVar: {
         from: { scope: 'pvar', player: 'actor', var: 'coins' },
         to: { scope: 'global', var: 'pool' },
@@ -123,7 +124,7 @@ describe('resourceTransfer effect trace entries', () => {
         min: 2,
         max: 4,
       },
-    }];
+    })];
 
     applyEffects(effects, ctx);
     const trace = ctx.collector.trace ?? [];
@@ -139,13 +140,13 @@ describe('resourceTransfer effect trace entries', () => {
 
   it('does not emit resourceTransfer for no-op transferVar', () => {
     const ctx = makeCtx({ player0Coins: 0, pool: 10 });
-    const effects: readonly EffectAST[] = [{
+    const effects: readonly EffectAST[] = [eff({
       transferVar: {
         from: { scope: 'pvar', player: 'actor', var: 'coins' },
         to: { scope: 'global', var: 'pool' },
         amount: 3,
       },
-    }];
+    })];
 
     applyEffects(effects, ctx);
     const trace = ctx.collector.trace ?? [];
@@ -155,13 +156,13 @@ describe('resourceTransfer effect trace entries', () => {
 
   it('emits per-player destination endpoint with player id', () => {
     const ctx = makeCtx({ player0Coins: 8, player1Committed: 3, pool: 0 });
-    const effects: readonly EffectAST[] = [{
+    const effects: readonly EffectAST[] = [eff({
       transferVar: {
         from: { scope: 'pvar', player: 'actor', var: 'coins' },
         to: { scope: 'pvar', player: 'active', var: 'committed' },
         amount: 4,
       },
-    }];
+    })];
 
     applyEffects(effects, ctx);
     const trace = ctx.collector.trace ?? [];
@@ -173,13 +174,13 @@ describe('resourceTransfer effect trace entries', () => {
 
   it('emits no transfer trace when source and destination resolve to the same cell', () => {
     const ctx = makeCtx({ player0Coins: 8, pool: 0 });
-    const effects: readonly EffectAST[] = [{
+    const effects: readonly EffectAST[] = [eff({
       transferVar: {
         from: { scope: 'pvar', player: 'actor', var: 'coins' },
         to: { scope: 'pvar', player: 'actor', var: 'coins' },
         amount: 4,
       },
-    }];
+    })];
 
     applyEffects(effects, ctx);
     const trace = ctx.collector.trace ?? [];
@@ -188,13 +189,13 @@ describe('resourceTransfer effect trace entries', () => {
 
   it('emits zone endpoints in resourceTransfer trace entries', () => {
     const ctx = makeCtx({ player0Coins: 0, pool: 0 });
-    const effects: readonly EffectAST[] = [{
+    const effects: readonly EffectAST[] = [eff({
       transferVar: {
         from: { scope: 'zoneVar', zone: 'zone-a:none', var: 'supply' },
         to: { scope: 'zoneVar', zone: 'zone-b:none', var: 'supply' },
         amount: 3,
       },
-    }];
+    })];
 
     applyEffects(effects, ctx);
     const trace = ctx.collector.trace ?? [];

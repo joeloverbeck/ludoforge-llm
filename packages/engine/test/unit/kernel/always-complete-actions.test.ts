@@ -11,6 +11,7 @@ import {
   type EffectAST,
   type GameDef,
 } from '../../../src/kernel/index.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
 
 const makeAction = (
   id: string,
@@ -51,13 +52,13 @@ describe('always-complete-actions', () => {
   describe('effectTreeMayYieldIncompleteMove', () => {
     it('returns false for empty effect arrays and non-decision control flow', () => {
       const effects: readonly EffectAST[] = [
-        {
+        eff({
           forEach: {
             bind: 'zone',
             over: { query: 'zones' },
-            effects: [{ setVar: { scope: 'global', var: 'ready', value: true } }],
+            effects: [eff({ setVar: { scope: 'global', var: 'ready', value: true } })],
           },
-        },
+        }),
       ];
 
       assert.equal(effectTreeMayYieldIncompleteMove([]), false);
@@ -66,42 +67,42 @@ describe('always-complete-actions', () => {
 
     it('detects nested chooseN and rollRandom nodes', () => {
       const chooseNEffects: readonly EffectAST[] = [
-        {
+        eff({
           forEach: {
             bind: 'zone',
             over: { query: 'zones' },
-            effects: [{
+            effects: [eff({
               chooseN: {
                 internalDecisionId: 'decide-zones',
                 bind: 'targets',
                 options: { query: 'zones' },
                 max: 2,
               },
-            }],
+            })],
           },
-        },
+        }),
       ];
       const rollRandomEffects: readonly EffectAST[] = [
-        {
+        eff({
           if: {
             when: true,
-            then: [{
+            then: [eff({
               rollRandom: {
                 bind: 'die',
                 min: 1,
                 max: 6,
                 in: [],
               },
-            }],
+            })],
           },
-        },
+        }),
       ];
 
-      assert.equal(effectTreeMayYieldIncompleteMove([{ chooseOne: {
+      assert.equal(effectTreeMayYieldIncompleteMove([eff({ chooseOne: {
         internalDecisionId: 'choose-top-level',
         bind: 'target',
         options: { query: 'zones' },
-      } }]), true);
+      } })]), true);
       assert.equal(effectTreeMayYieldIncompleteMove(chooseNEffects), true);
       assert.equal(effectTreeMayYieldIncompleteMove(rollRandomEffects), true);
     });
@@ -117,23 +118,23 @@ describe('always-complete-actions', () => {
         capabilities: ['cardEvent'],
       });
       const withDecision = makeAction('withDecision', {
-        effects: [{
+        effects: [eff({
           chooseOne: {
             internalDecisionId: 'pick-zone',
             bind: 'zone',
             options: { query: 'zones' },
           },
-        }],
+        })],
       });
       const withRandomCost = makeAction('withRandomCost', {
-        cost: [{
+        cost: [eff({
           rollRandom: {
             bind: 'die',
             min: 1,
             max: 6,
             in: [],
           },
-        }],
+        })],
       });
       const pipelined = makeAction('pipelined');
       const def = makeDef({

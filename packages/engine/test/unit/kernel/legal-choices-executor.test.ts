@@ -10,9 +10,10 @@ import {
   type GameDef,
   type GameState,
 } from '../../../src/kernel/index.js';
+import { asTaggedGameDef } from '../../helpers/gamedef-fixtures.js';
 
 const makeDef = (): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'legal-choices-executor', players: { min: 2, max: 2 } },
     constants: {},
     globalVars: [],
@@ -47,7 +48,7 @@ const makeDef = (): GameDef =>
     ],
     triggers: [],
     terminal: { conditions: [] },
-  }) as unknown as GameDef;
+  });
 
 const makeState = (): GameState => ({
   globalVars: {},
@@ -83,7 +84,7 @@ describe('legalChoices executor context', () => {
   });
 
   it('returns illegal when fixed executor is outside playerCount', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       ...makeDef(),
       actions: [
         {
@@ -106,7 +107,7 @@ describe('legalChoices executor context', () => {
           limits: [],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const request = legalChoicesDiscover(def, makeState(), {
       actionId: asActionId('pickExecutorHand'),
@@ -117,7 +118,7 @@ describe('legalChoices executor context', () => {
   });
 
   it('throws runtime contract error for invalid executor selectors', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       ...makeDef(),
       actions: [
         {
@@ -132,7 +133,7 @@ describe('legalChoices executor context', () => {
           limits: [],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     assert.throws(() => legalChoicesDiscover(def, makeState(), { actionId: asActionId('pickExecutorHand'), params: {} }), (error: unknown) => {
       assert.ok(error instanceof Error);
@@ -147,7 +148,7 @@ describe('legalChoices executor context', () => {
   });
 
   it('returns illegal when actor does not include active player', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       ...makeDef(),
       actions: [
         {
@@ -162,7 +163,7 @@ describe('legalChoices executor context', () => {
           limits: [],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const request = legalChoicesDiscover(def, makeState(), {
       actionId: asActionId('pickExecutorHand'),
@@ -173,7 +174,7 @@ describe('legalChoices executor context', () => {
   });
 
   it('throws runtime contract error for invalid actor selectors', () => {
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       ...makeDef(),
       actions: [
         {
@@ -188,7 +189,7 @@ describe('legalChoices executor context', () => {
           limits: [],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     assert.throws(() => legalChoicesDiscover(def, makeState(), { actionId: asActionId('pickExecutorHand'), params: {} }), (error: unknown) => {
       assert.ok(error instanceof Error);

@@ -15,6 +15,7 @@ import {
   type Token,
 } from '../../src/kernel/index.js';
 import { makeExecutionEffectContext } from '../helpers/effect-context-test-helpers.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 const minimalDef: GameDef = {
   metadata: { id: 'trace-test', players: { min: 2, max: 2 } },
@@ -68,13 +69,13 @@ describe('Effect execution trace', () => {
   it('traces forEach iteration count', () => {
     const token: Token = { id: asTokenId('t1'), type: 'piece', props: { faction: 'US' } };
     const ctx = makeCtx({ [z1]: [token], [z2]: [] }, {}, true);
-    const effects: readonly EffectAST[] = [{
+    const effects: readonly EffectAST[] = [eff({
       forEach: {
         bind: '$item',
         over: { query: 'tokensInZone' as const, zone: z1, filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US' }] } },
         effects: [],
       },
-    }];
+    })];
     applyEffects(effects, ctx);
     const trace = ctx.collector!.trace!;
     const forEachEntry = trace.find((e) => e.kind === 'forEach');
@@ -89,7 +90,7 @@ describe('Effect execution trace', () => {
 
   it('traces reduce iteration count and bind roles', () => {
     const ctx = makeCtx({ [z1]: [], [z2]: [] }, {}, true);
-    const effects: readonly EffectAST[] = [{
+    const effects: readonly EffectAST[] = [eff({
       reduce: {
         itemBind: '$n',
         accBind: '$acc',
@@ -99,7 +100,7 @@ describe('Effect execution trace', () => {
         resultBind: '$sum',
         in: [],
       },
-    }];
+    })];
     applyEffects(effects, ctx);
     const trace = ctx.collector!.trace!;
     const reduceEntry = trace.find((e) => e.kind === 'reduce');
@@ -118,14 +119,14 @@ describe('Effect execution trace', () => {
   it('traces forEach macroOrigin when annotated by compiler', () => {
     const token: Token = { id: asTokenId('t1'), type: 'piece', props: { faction: 'US' } };
     const ctx = makeCtx({ [z1]: [token], [z2]: [] }, {}, true);
-    const effects: readonly EffectAST[] = [{
+    const effects: readonly EffectAST[] = [eff({
       forEach: {
         bind: '$__macro_collect_forced_bets_turnStructure_phases_0__player',
         macroOrigin: { macroId: 'collect-forced-bets', stem: 'player' },
         over: { query: 'tokensInZone' as const, zone: z1, filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US' }] } },
         effects: [],
       },
-    }];
+    })];
     applyEffects(effects, ctx);
     const trace = ctx.collector!.trace!;
     const forEachEntry = trace.find((e) => e.kind === 'forEach');
@@ -135,7 +136,7 @@ describe('Effect execution trace', () => {
 
   it('traces reduce binder-specific macro origins when annotated by compiler', () => {
     const ctx = makeCtx({ [z1]: [], [z2]: [] }, {}, true);
-    const effects: readonly EffectAST[] = [{
+    const effects: readonly EffectAST[] = [eff({
       reduce: {
         itemBind: '$n',
         accBind: '$acc',
@@ -148,7 +149,7 @@ describe('Effect execution trace', () => {
         resultBind: '$__macro_hand_rank_score_turnStructure_phases_5__straightHigh',
         in: [],
       },
-    }];
+    })];
     applyEffects(effects, ctx);
     const trace = ctx.collector!.trace!;
     const reduceEntry = trace.find((e) => e.kind === 'reduce');
@@ -161,9 +162,9 @@ describe('Effect execution trace', () => {
   it('traces moveToken with from and to zones', () => {
     const token: Token = { id: asTokenId('t1'), type: 'piece', props: { faction: 'US' } };
     const ctx = makeCtx({ [z1]: [token], [z2]: [] }, { $tok: token }, true);
-    const effects: readonly EffectAST[] = [{
+    const effects: readonly EffectAST[] = [eff({
       moveToken: { token: '$tok', from: z1, to: z2 },
-    }];
+    })];
     applyEffects(effects, ctx);
     const trace = ctx.collector!.trace!;
     const moveEntry = trace.find((e) => e.kind === 'moveToken');
@@ -177,9 +178,9 @@ describe('Effect execution trace', () => {
   it('traces setTokenProp with old and new values', () => {
     const token: Token = { id: asTokenId('t1'), type: 'piece', props: { faction: 'US' } };
     const ctx = makeCtx({ [z1]: [token], [z2]: [] }, { $tok: token }, true);
-    const effects: readonly EffectAST[] = [{
+    const effects: readonly EffectAST[] = [eff({
       setTokenProp: { token: '$tok', prop: 'faction', value: 'NVA' },
-    }];
+    })];
     applyEffects(effects, ctx);
     const trace = ctx.collector!.trace!;
     const propEntry = trace.find((e) => e.kind === 'setTokenProp');
@@ -191,9 +192,9 @@ describe('Effect execution trace', () => {
 
   it('traces addVar with old and new values', () => {
     const ctx = makeCtx({ [z1]: [], [z2]: [] }, {}, true);
-    const effects: readonly EffectAST[] = [{
+    const effects: readonly EffectAST[] = [eff({
       addVar: { scope: 'global', var: 'score', delta: 5 },
-    }];
+    })];
     applyEffects(effects, ctx);
     const trace = ctx.collector!.trace!;
     const varEntry = trace.find((e) => e.kind === 'varChange');
@@ -207,9 +208,9 @@ describe('Effect execution trace', () => {
 
   it('traces createToken with provenance', () => {
     const ctx = makeCtx({ [z1]: [], [z2]: [] }, {}, true);
-    const effects: readonly EffectAST[] = [{
+    const effects: readonly EffectAST[] = [eff({
       createToken: { type: 'piece', zone: z1 },
-    }];
+    })];
     applyEffects(effects, ctx);
     const trace = ctx.collector!.trace!;
     const createEntry = trace.find((e) => e.kind === 'createToken');
@@ -222,9 +223,9 @@ describe('Effect execution trace', () => {
   it('produces no trace entries when trace is disabled', () => {
     const token: Token = { id: asTokenId('t1'), type: 'piece', props: { faction: 'US' } };
     const ctx = makeCtx({ [z1]: [token], [z2]: [] }, { $tok: token }, false);
-    const effects: readonly EffectAST[] = [{
+    const effects: readonly EffectAST[] = [eff({
       moveToken: { token: '$tok', from: z1, to: z2 },
-    }];
+    })];
     applyEffects(effects, ctx);
     assert.equal(ctx.collector!.trace, null);
   });

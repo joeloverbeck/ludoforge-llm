@@ -12,6 +12,7 @@ import {
 import { runGame } from '../../src/sim/index.js';
 import { trustedMove } from '../helpers/classified-move-fixtures.js';
 import { compileTexasProductionSpec } from '../helpers/production-spec-helpers.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 const firstLegalAgent: Agent = {
   chooseMove(input) {
@@ -36,7 +37,7 @@ const createLoopingLifecycleDef = (): ValidatedGameDef =>
       phases: [
         {
           id: asPhaseId('main'),
-          onEnter: [{ addVar: { scope: 'global', var: 'score', delta: 1 } }],
+          onEnter: [eff({ addVar: { scope: 'global', var: 'score', delta: 1 } })],
         },
       ],
     },
@@ -49,7 +50,7 @@ const createLoopingLifecycleDef = (): ValidatedGameDef =>
         params: [],
         pre: null,
         cost: [],
-        effects: [{ addVar: { scope: 'global', var: 'score', delta: 1 } }],
+        effects: [eff({ addVar: { scope: 'global', var: 'score', delta: 1 } })],
         limits: [],
       },
     ],

@@ -16,6 +16,7 @@ import {
   type GameState,
 } from '../../../src/kernel/index.js';
 import { makeExecutionEffectContext } from '../../helpers/effect-context-test-helpers.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
 
 // ---------------------------------------------------------------------------
 // Shared test fixtures
@@ -109,7 +110,7 @@ describe('zobrist incremental hash — phase and turn-flow effect handlers', () 
       const state = makeState(def, table);
       const ctx = makeCtx(def, state);
 
-      const effect: EffectAST = { gotoPhaseExact: { phase: 'main' } };
+      const effect: EffectAST = eff({ gotoPhaseExact: { phase: 'main' } });
       const result = applyEffects([effect], ctx);
 
       assert.equal(
@@ -129,7 +130,7 @@ describe('zobrist incremental hash — phase and turn-flow effect handlers', () 
       const state = makeState(def, table);
       const ctx = makeCtx(def, state);
 
-      const effect: EffectAST = { gotoPhaseExact: { phase: 'setup' } };
+      const effect: EffectAST = eff({ gotoPhaseExact: { phase: 'setup' } });
       const result = applyEffects([effect], ctx);
 
       assert.equal(result.state._runningHash, state._runningHash, 'hash must not change when phase is unchanged');
@@ -140,7 +141,7 @@ describe('zobrist incremental hash — phase and turn-flow effect handlers', () 
       assert.equal(state.actionUsage.act?.phaseCount, 1, 'precondition: phaseCount > 0');
 
       const ctx = makeCtx(def, state);
-      const effect: EffectAST = { gotoPhaseExact: { phase: 'main' } };
+      const effect: EffectAST = eff({ gotoPhaseExact: { phase: 'main' } });
       const result = applyEffects([effect], ctx);
 
       assert.equal(result.state.actionUsage.act?.phaseCount, 0, 'phaseCount should be reset');
@@ -158,7 +159,7 @@ describe('zobrist incremental hash — phase and turn-flow effect handlers', () 
       const state = makeState(def, table);
       const ctx = makeCtx(def, state);
 
-      const effect: EffectAST = { gotoPhaseExact: { phase: 'cleanup' } };
+      const effect: EffectAST = eff({ gotoPhaseExact: { phase: 'cleanup' } });
       const result = applyEffects([effect], ctx);
 
       assert.equal(String(result.state.currentPhase), 'cleanup');
@@ -176,7 +177,7 @@ describe('zobrist incremental hash — phase and turn-flow effect handlers', () 
       const state = makeState(def, table);
       const ctx = makeCtx(def, state);
 
-      const effect: EffectAST = { advancePhase: {} };
+      const effect: EffectAST = eff({ advancePhase: {} });
       const result = applyEffects([effect], ctx);
 
       // Should have advanced from 'setup' to 'main'
@@ -200,7 +201,7 @@ describe('zobrist incremental hash — phase and turn-flow effect handlers', () 
       const state = { ...atCleanup, stateHash: fullHash, _runningHash: fullHash };
 
       const ctx = makeCtx(def, state);
-      const effect: EffectAST = { advancePhase: {} };
+      const effect: EffectAST = eff({ advancePhase: {} });
       const result = applyEffects([effect], ctx);
 
       // Turn wrap: turnCount should have incremented
@@ -219,7 +220,7 @@ describe('zobrist incremental hash — phase and turn-flow effect handlers', () 
       const state = makeState(def, table);
       const ctx = makeCtx(def, state, { noCachedRuntime: true });
 
-      const effect: EffectAST = { gotoPhaseExact: { phase: 'main' } };
+      const effect: EffectAST = eff({ gotoPhaseExact: { phase: 'main' } });
       const result = applyEffects([effect], ctx);
 
       assert.equal(String(result.state.currentPhase), 'main', 'phase must still change');

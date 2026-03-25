@@ -15,6 +15,7 @@ import {
   matchSimpleNumericValue,
   matchSimpleValue,
 } from '../../../src/kernel/effect-compiler-patterns.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
 
 describe('effect-compiler-patterns', () => {
   describe('matchSimpleValue', () => {
@@ -117,7 +118,7 @@ describe('effect-compiler-patterns', () => {
   describe('effect matchers', () => {
     it('matches setVar for global and pvar targets with simple values', () => {
       assert.deepEqual(
-        matchSetVar({ setVar: { scope: 'global', var: 'pot', value: 0 } }),
+        matchSetVar(eff({ setVar: { scope: 'global', var: 'pot', value: 0 } })),
         {
           kind: 'setVar',
           target: { scope: 'global', varName: 'pot' },
@@ -126,7 +127,7 @@ describe('effect-compiler-patterns', () => {
       );
 
       assert.deepEqual(
-        matchSetVar({ setVar: { scope: 'pvar', player: 'active', var: 'chips', value: { _t: 2, ref: 'binding', name: 'seat' } } }),
+        matchSetVar(eff({ setVar: { scope: 'pvar', player: 'active', var: 'chips', value: { _t: 2, ref: 'binding', name: 'seat' } } })),
         {
           kind: 'setVar',
           target: { scope: 'pvar', player: 'active', varName: 'chips' },
@@ -137,18 +138,18 @@ describe('effect-compiler-patterns', () => {
 
     it('rejects zoneVar and complex setVar payloads', () => {
       assert.equal(
-        matchSetVar({ setVar: { scope: 'zoneVar', zone: 'board', var: 'threat', value: 1 } }),
+        matchSetVar(eff({ setVar: { scope: 'zoneVar', zone: 'board', var: 'threat', value: 1 } })),
         null,
       );
       assert.equal(
-        matchSetVar({ setVar: { scope: 'global', var: 'pot', value: { _t: 6, op: '+', left: 1, right: 2 } } }),
+        matchSetVar(eff({ setVar: { scope: 'global', var: 'pot', value: { _t: 6, op: '+', left: 1, right: 2 } } })),
         null,
       );
     });
 
     it('matches numeric addVar and rejects non-compilable deltas', () => {
       assert.deepEqual(
-        matchAddVar({ addVar: { scope: 'global', var: 'pot', delta: { _t: 2, ref: 'gvar', var: 'ante' } } }),
+        matchAddVar(eff({ addVar: { scope: 'global', var: 'pot', delta: { _t: 2, ref: 'gvar', var: 'ante' } } })),
         {
           kind: 'addVar',
           target: { scope: 'global', varName: 'pot' },
@@ -157,27 +158,27 @@ describe('effect-compiler-patterns', () => {
       );
 
       assert.equal(
-        matchAddVar({ addVar: { scope: 'global', var: 'pot', delta: { _t: 2, ref: 'zoneVar', zone: 'board', var: 'threat' } } }),
+        matchAddVar(eff({ addVar: { scope: 'global', var: 'pot', delta: { _t: 2, ref: 'zoneVar', zone: 'board', var: 'threat' } } })),
         null,
       );
       assert.equal(
-        matchAddVar({ addVar: { scope: 'pvar', player: 'active', var: 'chips', delta: { _t: 6, op: '+', left: 1, right: 2 } } }),
+        matchAddVar(eff({ addVar: { scope: 'pvar', player: 'active', var: 'chips', delta: { _t: 6, op: '+', left: 1, right: 2 } } })),
         null,
       );
     });
 
     it('matches if, forEach players, and gotoPhaseExact', () => {
-      const thenEffects: readonly EffectAST[] = [{ setVar: { scope: 'global', var: 'pot', value: 1 } }];
-      const elseEffects: readonly EffectAST[] = [{ addVar: { scope: 'global', var: 'pot', delta: 2 } }];
+      const thenEffects: readonly EffectAST[] = [eff({ setVar: { scope: 'global', var: 'pot', value: 1 } })];
+      const elseEffects: readonly EffectAST[] = [eff({ addVar: { scope: 'global', var: 'pot', delta: 2 } })];
 
       assert.deepEqual(
-        matchIf({
+        matchIf(eff({
           if: {
             when: { op: '==', left: { _t: 2, ref: 'gvar', var: 'phase' }, right: 'deal' },
             then: thenEffects,
             else: elseEffects,
           },
-        }),
+        })),
         {
           kind: 'if',
           condition: {
@@ -192,17 +193,17 @@ describe('effect-compiler-patterns', () => {
       );
 
       assert.equal(
-        matchIf({
+        matchIf(eff({
           if: {
             when: { op: 'not', arg: { op: '==', left: 1, right: 1 } },
             then: thenEffects,
           },
-        }),
+        })),
         null,
       );
 
       assert.deepEqual(
-        matchForEachPlayers({
+        matchForEachPlayers(eff({
           forEach: {
             bind: 'player',
             over: { query: 'players' },
@@ -210,7 +211,7 @@ describe('effect-compiler-patterns', () => {
             countBind: 'count',
             in: elseEffects,
           },
-        }),
+        })),
         {
           kind: 'forEachPlayers',
           bind: 'player',
@@ -221,17 +222,17 @@ describe('effect-compiler-patterns', () => {
       );
 
       assert.equal(
-        matchForEachPlayers({
+        matchForEachPlayers(eff({
           forEach: {
             bind: 'zone',
             over: { query: 'zones' },
             effects: thenEffects,
           },
-        }),
+        })),
         null,
       );
 
-      assert.deepEqual(matchGotoPhaseExact({ gotoPhaseExact: { phase: 'cleanup' } }), {
+      assert.deepEqual(matchGotoPhaseExact(eff({ gotoPhaseExact: { phase: 'cleanup' } })), {
         kind: 'gotoPhaseExact',
         phase: 'cleanup',
       });
@@ -240,21 +241,21 @@ describe('effect-compiler-patterns', () => {
 
   describe('classifyEffect', () => {
     it('classifies supported Phase 1 families and rejects unsupported effects', () => {
-      assert.equal(classifyEffect({ setVar: { scope: 'global', var: 'pot', value: 0 } })?.kind, 'setVar');
-      assert.equal(classifyEffect({ addVar: { scope: 'global', var: 'pot', delta: 1 } })?.kind, 'addVar');
+      assert.equal(classifyEffect(eff({ setVar: { scope: 'global', var: 'pot', value: 0 } }))?.kind, 'setVar');
+      assert.equal(classifyEffect(eff({ addVar: { scope: 'global', var: 'pot', delta: 1 } }))?.kind, 'addVar');
       assert.equal(
-        classifyEffect({ if: { when: { op: '==', left: 1, right: 1 }, then: [] } })?.kind,
+        classifyEffect(eff({ if: { when: { op: '==', left: 1, right: 1 }, then: [] } }))?.kind,
         'if',
       );
       assert.equal(
-        classifyEffect({ forEach: { bind: 'player', over: { query: 'players' }, effects: [] } })?.kind,
+        classifyEffect(eff({ forEach: { bind: 'player', over: { query: 'players' }, effects: [] } }))?.kind,
         'forEachPlayers',
       );
-      assert.equal(classifyEffect({ gotoPhaseExact: { phase: 'main' } })?.kind, 'gotoPhaseExact');
+      assert.equal(classifyEffect(eff({ gotoPhaseExact: { phase: 'main' } }))?.kind, 'gotoPhaseExact');
 
-      assert.equal(classifyEffect({ chooseOne: { internalDecisionId: 'd1', bind: 'choice', options: { query: 'players' } } }), null);
-      assert.equal(classifyEffect({ moveToken: { token: 't1', from: 'deck', to: 'discard' } }), null);
-      assert.equal(classifyEffect({ rollRandom: { bind: 'roll', min: 1, max: 6, in: [] } }), null);
+      assert.equal(classifyEffect(eff({ chooseOne: { internalDecisionId: 'd1', bind: 'choice', options: { query: 'players' } } })), null);
+      assert.equal(classifyEffect(eff({ moveToken: { token: 't1', from: 'deck', to: 'discard' } })), null);
+      assert.equal(classifyEffect(eff({ rollRandom: { bind: 'roll', min: 1, max: 6, in: [] } })), null);
     });
   });
 
@@ -265,28 +266,28 @@ describe('effect-compiler-patterns', () => {
 
     it('counts nested compilable and non-compilable nodes recursively', () => {
       const effects: readonly EffectAST[] = [
-        { setVar: { scope: 'global', var: 'pot', value: 0 } },
-        {
+        eff({ setVar: { scope: 'global', var: 'pot', value: 0 } }),
+        eff({
           if: {
             when: { op: '==', left: { _t: 2, ref: 'gvar', var: 'phase' }, right: 'deal' },
             then: [
-              { addVar: { scope: 'global', var: 'pot', delta: 1 } },
-              { moveToken: { token: 't1', from: 'deck', to: 'board' } },
+              eff({ addVar: { scope: 'global', var: 'pot', delta: 1 } }),
+              eff({ moveToken: { token: 't1', from: 'deck', to: 'board' } }),
             ],
             else: [
-              {
+              eff({
                 forEach: {
                   bind: 'player',
                   over: { query: 'players' },
                   effects: [
-                    { gotoPhaseExact: { phase: 'cleanup' } },
-                    { chooseOne: { internalDecisionId: 'd1', bind: 'choice', options: { query: 'players' } } },
+                    eff({ gotoPhaseExact: { phase: 'cleanup' } }),
+                    eff({ chooseOne: { internalDecisionId: 'd1', bind: 'choice', options: { query: 'players' } } }),
                   ],
                 },
-              },
+              }),
             ],
           },
-        },
+        }),
       ];
 
       assert.equal(computeCoverageRatio(effects), 5 / 7);
@@ -294,19 +295,19 @@ describe('effect-compiler-patterns', () => {
 
     it('returns 1 for a fully compilable tree', () => {
       const effects: readonly EffectAST[] = [
-        {
+        eff({
           forEach: {
             bind: 'player',
             over: { query: 'players' },
             effects: [
-              { setVar: { scope: 'pvar', player: 'active', var: 'chips', value: { _t: 2, ref: 'binding', name: 'seat' } } },
-              { addVar: { scope: 'global', var: 'pot', delta: 1 } },
+              eff({ setVar: { scope: 'pvar', player: 'active', var: 'chips', value: { _t: 2, ref: 'binding', name: 'seat' } } }),
+              eff({ addVar: { scope: 'global', var: 'pot', delta: 1 } }),
             ],
             in: [
-              { gotoPhaseExact: { phase: 'cleanup' } },
+              eff({ gotoPhaseExact: { phase: 'cleanup' } }),
             ],
           },
-        },
+        }),
       ];
 
       assert.equal(computeCoverageRatio(effects), 1);

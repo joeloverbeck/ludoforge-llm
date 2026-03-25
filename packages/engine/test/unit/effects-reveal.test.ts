@@ -20,8 +20,10 @@ import { tokenFilterPathSuffix } from '../../src/kernel/token-filter-expr-utils.
 import type { TokenFilterExpr } from '../../src/kernel/types.js';
 import { isNormalizedEffectRuntimeFailure } from '../helpers/effect-error-assertions.js';
 import { makeDiscoveryEffectContext, makeExecutionEffectContext, type EffectContextTestOverrides } from '../helpers/effect-context-test-helpers.js';
+import { eff } from '../helpers/effect-tag-helper.js';
+import { asTaggedGameDef } from '../helpers/gamedef-fixtures.js';
 
-const makeDef = (): GameDef => ({
+const makeDef = (): GameDef => asTaggedGameDef({
   metadata: { id: 'effects-reveal-test', players: { min: 2, max: 2 } },
   constants: {},
   globalVars: [],
@@ -37,7 +39,7 @@ const makeDef = (): GameDef => ({
   actions: [],
   triggers: [],
   terminal: { conditions: [] },
-}) as unknown as GameDef;
+});
 
 const makeState = (): GameState => ({
   globalVars: {},
@@ -75,7 +77,7 @@ const makeDiscoveryCtx = (overrides?: EffectContextTestOverrides): EffectContext
 
 describe('effects reveal', () => {
   it('appends a zone grant for a specific player selector', () => {
-    const effect: EffectAST = { reveal: { zone: 'hand:0', to: { id: asPlayerId(1) } } };
+    const effect: EffectAST = eff({ reveal: { zone: 'hand:0', to: { id: asPlayerId(1) } } });
     const result = applyEffect(effect, makeCtx());
 
     assert.deepEqual(result.state.reveals, {
@@ -84,7 +86,7 @@ describe('effects reveal', () => {
   });
 
   it('stores public grant when to is all', () => {
-    const effect: EffectAST = { reveal: { zone: 'hand:0', to: 'all' } };
+    const effect: EffectAST = eff({ reveal: { zone: 'hand:0', to: 'all' } });
     const result = applyEffect(effect, makeCtx());
 
     assert.deepEqual(result.state.reveals, {
@@ -94,8 +96,8 @@ describe('effects reveal', () => {
 
   it('accumulates multiple reveal grants for the same zone', () => {
     const effects: readonly EffectAST[] = [
-      { reveal: { zone: 'hand:0', to: { id: asPlayerId(0) } } },
-      { reveal: { zone: 'hand:0', to: { id: asPlayerId(1) } } },
+      eff({ reveal: { zone: 'hand:0', to: { id: asPlayerId(0) } } }),
+      eff({ reveal: { zone: 'hand:0', to: { id: asPlayerId(1) } } }),
     ];
 
     const result = applyEffects(effects, makeCtx());
@@ -109,13 +111,13 @@ describe('effects reveal', () => {
   });
 
   it('preserves filter metadata in reveal grants', () => {
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       reveal: {
         zone: 'hand:0',
         to: { id: asPlayerId(1) },
         filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US' }] },
       },
-    };
+    });
 
     const result = applyEffect(effect, makeCtx());
     assert.deepEqual(result.state.reveals, {
@@ -127,7 +129,7 @@ describe('effects reveal', () => {
 
   it('deduplicates semantically equivalent reveal filters regardless of predicate order', () => {
     const effects: readonly EffectAST[] = [
-      {
+      eff({
         reveal: {
           zone: 'hand:0',
           to: { id: asPlayerId(1) },
@@ -136,8 +138,8 @@ describe('effects reveal', () => {
             { prop: 'rank', op: 'eq', value: 1 },
           ] },
         },
-      },
-      {
+      }),
+      eff({
         reveal: {
           zone: 'hand:0',
           to: { id: asPlayerId(1) },
@@ -146,7 +148,7 @@ describe('effects reveal', () => {
             { prop: 'faction', op: 'eq', value: 'US' },
           ] },
         },
-      },
+      }),
     ];
 
     const result = applyEffects(effects, makeCtx());
@@ -166,13 +168,13 @@ describe('effects reveal', () => {
 
   it('emits reveal trace entry on successful grant addition', () => {
     const ctx = makeCtx({ collector: createCollector({ trace: true }) });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       reveal: {
         zone: 'hand:0',
         to: { id: asPlayerId(1) },
         filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US' }] },
       },
-    };
+    });
 
     applyEffect(effect, ctx);
 
@@ -203,7 +205,7 @@ describe('effects reveal', () => {
       },
     });
 
-    applyEffect({ reveal: { zone: 'hand:0', to: { id: asPlayerId(1) } } }, ctx);
+    applyEffect(eff({ reveal: { zone: 'hand:0', to: { id: asPlayerId(1) } } }), ctx);
 
     assert.deepEqual(ctx.collector.trace, []);
   });
@@ -221,7 +223,7 @@ describe('effects reveal', () => {
     assert.throws(
       () =>
         applyEffect(
-          { reveal: { zone: 'hand:0', to: 'all', filter: malformedFilter } } as unknown as EffectAST,
+          eff({ reveal: { zone: 'hand:0', to: 'all', filter: malformedFilter } } as never),
           ctx,
         ),
       (error: unknown) => {
@@ -249,7 +251,7 @@ describe('effects reveal', () => {
     assert.throws(
       () =>
         applyEffect(
-          { reveal: { zone: 'hand:0', to: 'all', filter: unsupportedOperatorFilter } } as unknown as EffectAST,
+          eff({ reveal: { zone: 'hand:0', to: 'all', filter: unsupportedOperatorFilter } } as never),
           ctx,
         ),
       (error: unknown) => {
@@ -276,7 +278,7 @@ describe('effects reveal', () => {
     });
 
     assert.throws(
-      () => applyEffect({ reveal: { zone: 'hand:0', to: 'all' } }, ctx),
+      () => applyEffect(eff({ reveal: { zone: 'hand:0', to: 'all' } }), ctx),
       (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('Zone state not found'),
     );
   });
@@ -287,7 +289,7 @@ describe('effects reveal', () => {
     assert.throws(
       () =>
         applyEffect(
-          { reveal: { zone: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$missingZone' } }, to: { id: asPlayerId(1) } } },
+          eff({ reveal: { zone: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$missingZone' } }, to: { id: asPlayerId(1) } } }),
           ctx,
         ),
       (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'reveal.zone resolution failed'),
@@ -298,7 +300,7 @@ describe('effects reveal', () => {
     const ctx = makeCtx();
 
     assert.throws(
-      () => applyEffect({ reveal: { zone: 'hand:0', to: { chosen: '$missingPlayer' } } }, ctx),
+      () => applyEffect(eff({ reveal: { zone: 'hand:0', to: { chosen: '$missingPlayer' } } }), ctx),
       (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'reveal.to selector resolution failed'),
     );
   });
@@ -307,7 +309,7 @@ describe('effects reveal', () => {
     const ctx = makeDiscoveryCtx();
 
     assert.throws(
-      () => applyEffect({ reveal: { zone: 'hand:0', to: { chosen: '$missingPlayer' } } }, ctx),
+      () => applyEffect(eff({ reveal: { zone: 'hand:0', to: { chosen: '$missingPlayer' } } }), ctx),
       (error: unknown) => isEvalErrorCode(error, 'MISSING_BINDING'),
     );
   });
@@ -324,7 +326,7 @@ describe('effects conceal', () => {
       },
     });
 
-    const effect: EffectAST = { conceal: { zone: 'hand:0' } };
+    const effect: EffectAST = eff({ conceal: { zone: 'hand:0' } });
     const result = applyEffect(effect, ctx);
 
     assert.equal(result.state.reveals, undefined);
@@ -339,7 +341,7 @@ describe('effects conceal', () => {
     };
     const ctx = makeCtx({ state });
 
-    const effect: EffectAST = { conceal: { zone: 'hand:0' } };
+    const effect: EffectAST = eff({ conceal: { zone: 'hand:0' } });
     const result = applyEffect(effect, ctx);
 
     assert.notEqual(result.state, state);
@@ -351,7 +353,7 @@ describe('effects conceal', () => {
 
   it('is a no-op when zone has no existing grants', () => {
     const ctx = makeCtx();
-    const effect: EffectAST = { conceal: { zone: 'hand:0' } };
+    const effect: EffectAST = eff({ conceal: { zone: 'hand:0' } });
     const result = applyEffect(effect, ctx);
 
     assert.equal(result.state, ctx.state);
@@ -369,7 +371,7 @@ describe('effects conceal', () => {
       },
     });
 
-    const effect: EffectAST = { conceal: { zone: 'hand:0' } };
+    const effect: EffectAST = eff({ conceal: { zone: 'hand:0' } });
     const result = applyEffect(effect, ctx);
 
     assert.deepEqual(result.state.reveals, {
@@ -391,7 +393,7 @@ describe('effects conceal', () => {
       },
     });
 
-    const effect: EffectAST = { conceal: { zone: 'hand:0', from: { id: asPlayerId(1) } } };
+    const effect: EffectAST = eff({ conceal: { zone: 'hand:0', from: { id: asPlayerId(1) } } });
     const result = applyEffect(effect, ctx);
 
     assert.deepEqual(result.state.reveals, {
@@ -416,12 +418,12 @@ describe('effects conceal', () => {
       },
     });
 
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       conceal: {
         zone: 'hand:0',
         filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US' }] },
       },
-    };
+    });
     const result = applyEffect(effect, ctx);
 
     assert.deepEqual(result.state.reveals, {
@@ -446,13 +448,13 @@ describe('effects conceal', () => {
       },
     });
 
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       conceal: {
         zone: 'hand:0',
         from: { id: asPlayerId(1) },
         filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US' }] },
       },
-    };
+    });
     const result = applyEffect(effect, ctx);
 
     assert.deepEqual(result.state.reveals, {
@@ -477,7 +479,7 @@ describe('effects conceal', () => {
       },
     });
 
-    const effect: EffectAST = { conceal: { zone: 'hand:0', from: 'all' } };
+    const effect: EffectAST = eff({ conceal: { zone: 'hand:0', from: 'all' } });
     const result = applyEffect(effect, ctx);
 
     assert.deepEqual(result.state.reveals, {
@@ -496,7 +498,7 @@ describe('effects conceal', () => {
       },
     };
     const ctx = makeCtx({ state });
-    const effect: EffectAST = { conceal: { zone: 'hand:0', from: { id: asPlayerId(1) } } };
+    const effect: EffectAST = eff({ conceal: { zone: 'hand:0', from: { id: asPlayerId(1) } } });
     const result = applyEffect(effect, ctx);
 
     assert.equal(result.state, state);
@@ -522,7 +524,7 @@ describe('effects conceal', () => {
     assert.throws(
       () =>
         applyEffect(
-          { conceal: { zone: 'hand:0', filter: malformedFilter } } as unknown as EffectAST,
+          eff({ conceal: { zone: 'hand:0', filter: malformedFilter } } as never),
           ctx,
         ),
       (error: unknown) => {
@@ -557,7 +559,7 @@ describe('effects conceal', () => {
     assert.throws(
       () =>
         applyEffect(
-          { conceal: { zone: 'hand:0', filter: unsupportedOperatorFilter } } as unknown as EffectAST,
+          eff({ conceal: { zone: 'hand:0', filter: unsupportedOperatorFilter } } as never),
           ctx,
         ),
       (error: unknown) => {
@@ -588,13 +590,13 @@ describe('effects conceal', () => {
     });
 
     applyEffect(
-      {
+      eff({
         conceal: {
           zone: 'hand:0',
           from: { id: asPlayerId(1) },
           filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US' }] },
         },
-      },
+      }),
       ctx,
     );
 
@@ -626,7 +628,7 @@ describe('effects conceal', () => {
       },
     });
 
-    applyEffect({ conceal: { zone: 'hand:0', from: { id: asPlayerId(1) } } }, ctx);
+    applyEffect(eff({ conceal: { zone: 'hand:0', from: { id: asPlayerId(1) } } }), ctx);
 
     assert.deepEqual(ctx.collector.trace, []);
   });
@@ -649,7 +651,7 @@ describe('effects conceal', () => {
       },
     });
 
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       conceal: {
         zone: 'hand:0',
         filter: { op: 'and', args: [
@@ -657,7 +659,7 @@ describe('effects conceal', () => {
           { prop: 'faction', op: 'eq', value: 'US' },
         ] },
       },
-    };
+    });
     const result = applyEffect(effect, ctx);
 
     assert.equal(result.state.reveals, undefined);
@@ -674,8 +676,8 @@ describe('effects conceal', () => {
     });
 
     const effects: readonly EffectAST[] = [
-      { conceal: { zone: 'hand:0' } },
-      { conceal: { zone: 'hand:0' } },
+      eff({ conceal: { zone: 'hand:0' } }),
+      eff({ conceal: { zone: 'hand:0' } }),
     ];
     const result = applyEffects(effects, ctx);
 
@@ -694,7 +696,7 @@ describe('effects conceal', () => {
     });
 
     assert.throws(
-      () => applyEffect({ conceal: { zone: 'hand:0' } }, ctx),
+      () => applyEffect(eff({ conceal: { zone: 'hand:0' } }), ctx),
       (error: unknown) => {
         assert.ok(isEffectErrorCode(error, 'EFFECT_RUNTIME'));
         assert.equal(error.context?.reason, EFFECT_RUNTIME_REASONS.CONCEAL_RUNTIME_VALIDATION_FAILED);
@@ -709,7 +711,7 @@ describe('effects conceal', () => {
     assert.throws(
       () =>
         applyEffect(
-          { conceal: { zone: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$missingZone' } } } },
+          eff({ conceal: { zone: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$missingZone' } } } }),
           ctx,
         ),
       (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'conceal.zone resolution failed'),
@@ -727,7 +729,7 @@ describe('effects conceal', () => {
     });
 
     assert.throws(
-      () => applyEffect({ conceal: { zone: 'hand:0', from: { chosen: '$missingPlayer' } } }, ctx),
+      () => applyEffect(eff({ conceal: { zone: 'hand:0', from: { chosen: '$missingPlayer' } } }), ctx),
       (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'conceal.from selector resolution failed'),
     );
   });
@@ -743,15 +745,15 @@ describe('effects conceal', () => {
     });
 
     assert.throws(
-      () => applyEffect({ conceal: { zone: 'hand:0', from: { chosen: '$missingPlayer' } } }, ctx),
+      () => applyEffect(eff({ conceal: { zone: 'hand:0', from: { chosen: '$missingPlayer' } } }), ctx),
       (error: unknown) => isEvalErrorCode(error, 'MISSING_BINDING'),
     );
   });
 
   it('works in sequence with reveal', () => {
     const effects: readonly EffectAST[] = [
-      { reveal: { zone: 'hand:0', to: 'all' } },
-      { conceal: { zone: 'hand:0' } },
+      eff({ reveal: { zone: 'hand:0', to: 'all' } }),
+      eff({ conceal: { zone: 'hand:0' } }),
     ];
 
     const result = applyEffects(effects, makeCtx());

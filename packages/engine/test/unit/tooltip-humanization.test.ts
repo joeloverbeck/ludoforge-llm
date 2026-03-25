@@ -5,6 +5,7 @@ import { humanizeMacroId } from '../../src/kernel/tooltip-value-stringifier.js';
 import { normalizeEffect, type NormalizerContext } from '../../src/kernel/tooltip-normalizer.js';
 import type { EffectAST } from '../../src/kernel/types-ast.js';
 import type { VerbalizationDef } from '../../src/kernel/verbalization-types.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 // ---------------------------------------------------------------------------
 // Fix 3: humanizeMacroId
@@ -69,14 +70,14 @@ describe('macro override fallback', () => {
   };
 
   it('tryMacroOverride generates humanized summary when no verbalization exists', () => {
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       forEach: {
         bind: '$space',
         over: { query: 'mapSpaces' },
         effects: [],
         macroOrigin: { macroId: 'place_from_available_or_map_action', stem: '$space' },
       },
-    };
+    });
     const messages = normalizeEffect(effect, baseCtx, 'root[0]');
     const summaries = messages.filter((m) => m.kind === 'summary');
     assert.ok(summaries.length > 0, 'expected at least one summary message');
@@ -110,14 +111,14 @@ describe('macro override fallback', () => {
       verbalization,
       suppressPatterns: [],
     };
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       forEach: {
         bind: '$space',
         over: { query: 'mapSpaces' },
         effects: [],
         macroOrigin: { macroId: 'place_from_available_or_map_action', stem: '$space' },
       },
-    };
+    });
     const messages = normalizeEffect(effect, ctx, 'root[0]');
     const summaries = messages.filter((m) => m.kind === 'summary');
     assert.ok(summaries.length > 0);
@@ -127,13 +128,13 @@ describe('macro override fallback', () => {
   });
 
   it('tryLeafMacroOverride generates humanized summary for leaf effects', () => {
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       moveToken: {
         token: '__macro_nva_march_attack Pipelines_0__stages_1__effects_0__piece',
         from: 'available-nva',
         to: 'saigon',
       },
-    };
+    });
     const messages = normalizeEffect(effect, baseCtx, 'root[0]');
     const summaries = messages.filter((m) => m.kind === 'summary');
     assert.ok(summaries.length > 0, 'expected summary from leaf macro override');
@@ -154,7 +155,7 @@ describe('normalizeChooseN context derivation', () => {
   };
 
   it('derives choiceBranchLabel from binding query', () => {
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       chooseN: {
         internalDecisionId: 'test-decision-1',
         bind: '$target',
@@ -162,7 +163,7 @@ describe('normalizeChooseN context derivation', () => {
         min: 0,
         max: 2,
       },
-    };
+    });
     const messages = normalizeEffect(effect, baseCtx, 'root[0]');
     const selects = messages.filter((m) => m.kind === 'select');
     assert.ok(selects.length > 0);
@@ -177,7 +178,7 @@ describe('normalizeChooseN context derivation', () => {
       ...baseCtx,
       choiceBranchLabel: 'Place Irregulars',
     };
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       chooseN: {
         internalDecisionId: 'test-decision-2',
         bind: '$target',
@@ -185,7 +186,7 @@ describe('normalizeChooseN context derivation', () => {
         min: 0,
         max: 2,
       },
-    };
+    });
     const messages = normalizeEffect(effect, ctx, 'root[0]');
     const selects = messages.filter((m) => m.kind === 'select');
     assert.ok(selects.length > 0);
@@ -208,7 +209,7 @@ describe('normalizeIf __actionClass branch selection', () => {
   const makeActionClassIfEffect = (
     thenEffects: readonly EffectAST[],
     elseEffects: readonly EffectAST[],
-  ): EffectAST => ({
+  ): EffectAST => (eff({
     if: {
       when: {
         op: '==' as const,
@@ -218,7 +219,7 @@ describe('normalizeIf __actionClass branch selection', () => {
       then: thenEffects,
       else: elseEffects,
     },
-  });
+  }));
 
   it('emits only then branch when actionClassBinding matches', () => {
     const ctx: NormalizerContext = {
@@ -226,8 +227,8 @@ describe('normalizeIf __actionClass branch selection', () => {
       actionClassBinding: 'limitedOperation',
     };
     const effect = makeActionClassIfEffect(
-      [{ addVar: { var: 'resources', delta: -1, scope: 'global' } }],
-      [{ addVar: { var: 'resources', delta: -3, scope: 'global' } }],
+      [eff({ addVar: { var: 'resources', delta: -1, scope: 'global' } })],
+      [eff({ addVar: { var: 'resources', delta: -3, scope: 'global' } })],
     );
     const messages = normalizeEffect(effect, ctx, 'root[0]');
     const nonSuppressed = messages.filter((m) => m.kind !== 'suppressed');
@@ -244,8 +245,8 @@ describe('normalizeIf __actionClass branch selection', () => {
       actionClassBinding: 'fullOperation',
     };
     const effect = makeActionClassIfEffect(
-      [{ addVar: { var: 'resources', delta: -1, scope: 'global' } }],
-      [{ addVar: { var: 'resources', delta: -3, scope: 'global' } }],
+      [eff({ addVar: { var: 'resources', delta: -1, scope: 'global' } })],
+      [eff({ addVar: { var: 'resources', delta: -3, scope: 'global' } })],
     );
     const messages = normalizeEffect(effect, ctx, 'root[0]');
     const nonSuppressed = messages.filter((m) => m.kind !== 'suppressed');
@@ -258,8 +259,8 @@ describe('normalizeIf __actionClass branch selection', () => {
 
   it('falls through to existing behavior when actionClassBinding is undefined', () => {
     const effect = makeActionClassIfEffect(
-      [{ addVar: { var: 'resources', delta: -1, scope: 'global' } }],
-      [{ addVar: { var: 'resources', delta: -3, scope: 'global' } }],
+      [eff({ addVar: { var: 'resources', delta: -1, scope: 'global' } })],
+      [eff({ addVar: { var: 'resources', delta: -3, scope: 'global' } })],
     );
     const messages = normalizeEffect(effect, baseCtx, 'root[0]');
     // Without actionClassBinding, both branches are shown (existing behavior)

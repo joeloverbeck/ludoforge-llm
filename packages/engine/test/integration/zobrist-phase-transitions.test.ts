@@ -13,13 +13,14 @@ import {
   type Move,
 } from '../../src/kernel/index.js';
 import { applyMove } from '../../src/kernel/apply-move.js';
+import { asTaggedGameDef } from '../helpers/gamedef-fixtures.js';
 
 // ---------------------------------------------------------------------------
 // Multi-phase game definition: 3 phases, round-robin, one action per phase
 // ---------------------------------------------------------------------------
 
 const makeDef = (): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'zobrist-phase-transitions', players: { min: 2, max: 2 } },
     constants: {},
     globalVars: [
@@ -54,7 +55,7 @@ const makeDef = (): GameDef =>
     triggers: [],
     setup: [],
     terminal: { conditions: [] },
-  }) as unknown as GameDef;
+  });
 
 const makeState = (def: GameDef, table: ReturnType<typeof createZobristTable>): GameState => {
   const base: GameState = {
@@ -123,7 +124,7 @@ describe('zobrist incremental hash — multi-phase transitions integration', () 
   });
 
   it('_runningHash matches after gotoPhaseExact effect via action', () => {
-    const gotoDef = {
+    const gotoDef = asTaggedGameDef({
       ...def,
       metadata: { ...def.metadata, id: 'zobrist-goto-integration' },
       actions: [
@@ -140,7 +141,7 @@ describe('zobrist incremental hash — multi-phase transitions integration', () 
           limits: [{ id: 'skip::phase::0', scope: 'phase', max: 1 }],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const gotoTable = createZobristTable(gotoDef);
     const gotoRuntime = createGameDefRuntime(gotoDef);

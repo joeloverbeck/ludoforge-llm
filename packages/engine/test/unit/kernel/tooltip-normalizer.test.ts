@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { normalizeEffect, type NormalizerContext } from '../../../src/kernel/tooltip-normalizer.js';
 import type { EffectAST } from '../../../src/kernel/types-ast.js';
 import type { TooltipMessage } from '../../../src/kernel/tooltip-ir.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
 
 const EMPTY_CTX: NormalizerContext = {
   verbalization: undefined,
@@ -25,7 +26,7 @@ describe('tooltip-normalizer', () => {
 
   describe('variable effects', () => {
     it('rule 1: addVar with negative literal → PayMessage', () => {
-      const effect: EffectAST = { addVar: { scope: 'global', var: 'aid', delta: -3 } };
+      const effect: EffectAST = eff({ addVar: { scope: 'global', var: 'aid', delta: -3 } });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'effects[0]'));
       assert.equal(msg.kind, 'pay');
       assert.equal(msg.astPath, 'effects[0]');
@@ -36,7 +37,7 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 2: addVar with positive literal → GainMessage', () => {
-      const effect: EffectAST = { addVar: { scope: 'global', var: 'resources', delta: 5 } };
+      const effect: EffectAST = eff({ addVar: { scope: 'global', var: 'resources', delta: 5 } });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'effects[1]'));
       assert.equal(msg.kind, 'gain');
       if (msg.kind === 'gain') {
@@ -46,13 +47,13 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 3: transferVar with literal amount → TransferMessage without amountExpr', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         transferVar: {
           from: { scope: 'global', var: 'aid' },
           to: { scope: 'global', var: 'patronage' },
           amount: 2,
         },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'effects[2]'));
       assert.equal(msg.kind, 'transfer');
       if (msg.kind === 'transfer') {
@@ -64,13 +65,13 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 3: transferVar with binding expression → TransferMessage with amountExpr', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         transferVar: {
           from: { scope: 'global', var: 'aid' },
           to: { scope: 'global', var: 'patronage' },
           amount: { _t: 2, ref: 'binding', name: 'x' },
         },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'effects[2b]'));
       assert.equal(msg.kind, 'transfer');
       if (msg.kind === 'transfer') {
@@ -80,32 +81,32 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 4: setVar with suppressed name (suffix Count) → SuppressedMessage', () => {
-      const effect: EffectAST = { setVar: { scope: 'global', var: 'sweepCount', value: 0 } };
+      const effect: EffectAST = eff({ setVar: { scope: 'global', var: 'sweepCount', value: 0 } });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'e[0]'));
       assert.equal(msg.kind, 'suppressed');
     });
 
     it('rule 5: setVar with __prefix → SuppressedMessage', () => {
-      const effect: EffectAST = { setVar: { scope: 'global', var: '__temp', value: 0 } };
+      const effect: EffectAST = eff({ setVar: { scope: 'global', var: '__temp', value: 0 } });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'e[1]'));
       assert.equal(msg.kind, 'suppressed');
     });
 
     it('rule 6: setVar with suppressed name (suffix Tracker) → SuppressedMessage', () => {
-      const effect: EffectAST = { setVar: { scope: 'global', var: 'rallyTracker', value: 0 } };
+      const effect: EffectAST = eff({ setVar: { scope: 'global', var: 'rallyTracker', value: 0 } });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'e[2]'));
       assert.equal(msg.kind, 'suppressed');
     });
 
     it('rule 4 with explicit suppress pattern → SuppressedMessage', () => {
-      const effect: EffectAST = { setVar: { scope: 'global', var: 'tempSetup', value: 0 } };
+      const effect: EffectAST = eff({ setVar: { scope: 'global', var: 'tempSetup', value: 0 } });
       const ctx = ctxWithPatterns(['temp*']);
       const msg = single(normalizeEffect(effect, ctx, 'e[3]'));
       assert.equal(msg.kind, 'suppressed');
     });
 
     it('rule 7: setVar generic → SetMessage', () => {
-      const effect: EffectAST = { setVar: { scope: 'global', var: 'patronage', value: 3 } };
+      const effect: EffectAST = eff({ setVar: { scope: 'global', var: 'patronage', value: 3 } });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'e[4]'));
       assert.equal(msg.kind, 'set');
       if (msg.kind === 'set') {
@@ -115,13 +116,13 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 8: addVar with non-literal expr → SetMessage', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         addVar: {
           scope: 'global',
           var: 'aid',
           delta: { _t: 2, ref: 'binding', name: 'amount' },
         },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'e[5]'));
       assert.equal(msg.kind, 'set');
       if (msg.kind === 'set') {
@@ -131,21 +132,21 @@ describe('tooltip-normalizer', () => {
     });
 
     it('addVar with zero literal → SetMessage (not pay or gain)', () => {
-      const effect: EffectAST = { addVar: { scope: 'global', var: 'aid', delta: 0 } };
+      const effect: EffectAST = eff({ addVar: { scope: 'global', var: 'aid', delta: 0 } });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'e[6]'));
       assert.equal(msg.kind, 'set');
     });
 
     it('addVar on suppressed var → SuppressedMessage', () => {
-      const effect: EffectAST = { addVar: { scope: 'global', var: '__internal', delta: 5 } };
+      const effect: EffectAST = eff({ addVar: { scope: 'global', var: '__internal', delta: 5 } });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'e[7]'));
       assert.equal(msg.kind, 'suppressed');
     });
 
     it('setVar with pvar scope → SetMessage with correct var name', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         setVar: { scope: 'pvar', var: 'influence', player: 'actor', value: 10 },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'e[8]'));
       assert.equal(msg.kind, 'set');
       if (msg.kind === 'set') {
@@ -156,7 +157,7 @@ describe('tooltip-normalizer', () => {
     // --- Scope context preservation tests (LEGACTTOO-013) ---
 
     it('addVar global scope → PayMessage with no scope/scopeOwner', () => {
-      const effect: EffectAST = { addVar: { scope: 'global', var: 'aid', delta: -3 } };
+      const effect: EffectAST = eff({ addVar: { scope: 'global', var: 'aid', delta: -3 } });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'sc[0]'));
       assert.equal(msg.kind, 'pay');
       if (msg.kind === 'pay') {
@@ -166,9 +167,9 @@ describe('tooltip-normalizer', () => {
     });
 
     it('addVar pvar scope → GainMessage with scope: player, scopeOwner', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         addVar: { scope: 'pvar', var: 'resources', player: 'actor', delta: 3 },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'sc[1]'));
       assert.equal(msg.kind, 'gain');
       if (msg.kind === 'gain') {
@@ -180,9 +181,9 @@ describe('tooltip-normalizer', () => {
     });
 
     it('addVar zoneVar scope → GainMessage with scope: zone, scopeOwner', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         addVar: { scope: 'zoneVar', var: 'econ', zone: 'saigon', delta: 2 },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'sc[2]'));
       assert.equal(msg.kind, 'gain');
       if (msg.kind === 'gain') {
@@ -192,9 +193,9 @@ describe('tooltip-normalizer', () => {
     });
 
     it('setVar pvar scope → SetMessage with scope: player', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         setVar: { scope: 'pvar', var: 'patronage', player: 'active', value: 5 },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'sc[3]'));
       assert.equal(msg.kind, 'set');
       if (msg.kind === 'set') {
@@ -204,13 +205,13 @@ describe('tooltip-normalizer', () => {
     });
 
     it('transferVar with pvar endpoints → TransferMessage with per-endpoint scope', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         transferVar: {
           from: { scope: 'pvar', var: 'resources', player: 'actor' },
           to: { scope: 'pvar', var: 'resources', player: 'active' },
           amount: 3,
         },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'sc[4]'));
       assert.equal(msg.kind, 'transfer');
       if (msg.kind === 'transfer') {
@@ -222,13 +223,13 @@ describe('tooltip-normalizer', () => {
     });
 
     it('transferVar with global endpoints → TransferMessage with no scope fields', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         transferVar: {
           from: { scope: 'global', var: 'aid' },
           to: { scope: 'global', var: 'patronage' },
           amount: 2,
         },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'sc[5]'));
       assert.equal(msg.kind, 'transfer');
       if (msg.kind === 'transfer') {
@@ -240,9 +241,9 @@ describe('tooltip-normalizer', () => {
     });
 
     it('addVar pvar with PlayerId object → scopeOwner stringified', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         addVar: { scope: 'pvar', var: 'resources', player: { id: 2 as never }, delta: 1 },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'sc[6]'));
       assert.equal(msg.kind, 'gain');
       if (msg.kind === 'gain') {
@@ -252,14 +253,14 @@ describe('tooltip-normalizer', () => {
     });
 
     it('addVar zoneVar with ZoneRef expression → scopeOwner is humanized binding name', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         addVar: {
           scope: 'zoneVar',
           var: 'econ',
           zone: { zoneExpr: { _t: 2, ref: 'binding', name: 'targetZone' } },
           delta: 1,
         },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'sc[7]'));
       assert.equal(msg.kind, 'gain');
       if (msg.kind === 'gain') {
@@ -273,9 +274,9 @@ describe('tooltip-normalizer', () => {
 
   describe('token effects', () => {
     it('rule 9: moveToken from available-* → PlaceMessage', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         moveToken: { token: 'usTroop', from: 'available-us', to: 'saigon' },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 't[0]'));
       assert.equal(msg.kind, 'place');
       if (msg.kind === 'place') {
@@ -285,9 +286,9 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 10: moveToken to casualties-* → RemoveMessage', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         moveToken: { token: 'nvaGuerrilla', from: 'hanoi', to: 'casualties-nva' },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 't[1]'));
       assert.equal(msg.kind, 'remove');
       if (msg.kind === 'remove') {
@@ -298,17 +299,17 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 10: moveToken to available-* → RemoveMessage', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         moveToken: { token: 'usTroop', from: 'saigon', to: 'available-us' },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 't[2]'));
       assert.equal(msg.kind, 'remove');
     });
 
     it('rule 11: moveTokenAdjacent → MoveMessage(variant: adjacent)', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         moveTokenAdjacent: { token: 'usTroop', from: 'saigon' },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 't[3]'));
       assert.equal(msg.kind, 'move');
       if (msg.kind === 'move') {
@@ -319,9 +320,9 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 12: moveToken generic → MoveMessage', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         moveToken: { token: 'usTroop', from: 'saigon', to: 'hue' },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 't[4]'));
       assert.equal(msg.kind, 'move');
       if (msg.kind === 'move') {
@@ -332,9 +333,9 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 13: setTokenProp activity=underground → ActivateMessage', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         setTokenProp: { token: 'vcGuerrilla', prop: 'activity', value: 'underground' },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 't[5]'));
       assert.equal(msg.kind, 'activate');
       if (msg.kind === 'activate') {
@@ -343,17 +344,17 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 13: setTokenProp activity=active → ActivateMessage', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         setTokenProp: { token: 'vcGuerrilla', prop: 'activity', value: 'active' },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 't[6]'));
       assert.equal(msg.kind, 'activate');
     });
 
     it('rule 14: setTokenProp activity=inactive → DeactivateMessage', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         setTokenProp: { token: 'arvnPolice', prop: 'activity', value: 'inactive' },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 't[7]'));
       assert.equal(msg.kind, 'deactivate');
       if (msg.kind === 'deactivate') {
@@ -362,9 +363,9 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 15: setTokenProp generic → SetMessage', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         setTokenProp: { token: 'card', prop: 'facing', value: 'up' },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 't[8]'));
       assert.equal(msg.kind, 'set');
       if (msg.kind === 'set') {
@@ -374,9 +375,9 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 16: createToken → CreateMessage', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         createToken: { type: 'guerrilla', zone: 'saigon' },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 't[9]'));
       assert.equal(msg.kind, 'create');
       if (msg.kind === 'create') {
@@ -386,7 +387,7 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 17: destroyToken → DestroyMessage', () => {
-      const effect: EffectAST = { destroyToken: { token: 'base' } };
+      const effect: EffectAST = eff({ destroyToken: { token: 'base' } });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 't[10]'));
       assert.equal(msg.kind, 'destroy');
       if (msg.kind === 'destroy') {
@@ -395,7 +396,7 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 18: draw → DrawMessage', () => {
-      const effect: EffectAST = { draw: { from: 'eventDeck', to: 'hand', count: 2 } };
+      const effect: EffectAST = eff({ draw: { from: 'eventDeck', to: 'hand', count: 2 } });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 't[11]'));
       assert.equal(msg.kind, 'draw');
       if (msg.kind === 'draw') {
@@ -405,7 +406,7 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 19: reveal → RevealMessage', () => {
-      const effect: EffectAST = { reveal: { zone: 'hand', to: 'all' } };
+      const effect: EffectAST = eff({ reveal: { zone: 'hand', to: 'all' } });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 't[12]'));
       assert.equal(msg.kind, 'reveal');
       if (msg.kind === 'reveal') {
@@ -414,7 +415,7 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 20: shuffle → ShuffleMessage', () => {
-      const effect: EffectAST = { shuffle: { zone: 'eventDeck' } };
+      const effect: EffectAST = eff({ shuffle: { zone: 'eventDeck' } });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 't[13]'));
       assert.equal(msg.kind, 'shuffle');
       if (msg.kind === 'shuffle') {
@@ -423,7 +424,7 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 21: moveAll from available-* → PlaceMessage', () => {
-      const effect: EffectAST = { moveAll: { from: 'available-nva', to: 'hanoi' } };
+      const effect: EffectAST = eff({ moveAll: { from: 'available-nva', to: 'hanoi' } });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 't[14]'));
       assert.equal(msg.kind, 'place');
       if (msg.kind === 'place') {
@@ -433,13 +434,13 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 22: moveAll to casualties-* → RemoveMessage', () => {
-      const effect: EffectAST = { moveAll: { from: 'saigon', to: 'casualties-arvn' } };
+      const effect: EffectAST = eff({ moveAll: { from: 'saigon', to: 'casualties-arvn' } });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 't[15]'));
       assert.equal(msg.kind, 'remove');
     });
 
     it('rule 23: moveAll generic → MoveMessage', () => {
-      const effect: EffectAST = { moveAll: { from: 'saigon', to: 'hue' } };
+      const effect: EffectAST = eff({ moveAll: { from: 'saigon', to: 'hue' } });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 't[16]'));
       assert.equal(msg.kind, 'move');
       if (msg.kind === 'move') {
@@ -449,9 +450,9 @@ describe('tooltip-normalizer', () => {
     });
 
     it('moveAll with filter → output message includes filter string', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         moveAll: { from: 'saigon', to: 'hue', filter: { op: '>', left: { _t: 2, ref: 'gvar', var: 'count' }, right: 0 } },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 't[16b]'));
       assert.equal(msg.kind, 'move');
       if (msg.kind === 'move') {
@@ -460,9 +461,9 @@ describe('tooltip-normalizer', () => {
     });
 
     it('moveAll from supply with filter → PlaceMessage with filter', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         moveAll: { from: 'available-us', to: 'saigon', filter: { op: '==', left: { _t: 2, ref: 'gvar', var: 'type' }, right: 'troop' } },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 't[16c]'));
       assert.equal(msg.kind, 'place');
       if (msg.kind === 'place') {
@@ -471,9 +472,9 @@ describe('tooltip-normalizer', () => {
     });
 
     it('moveAll to removal zone with filter → RemoveMessage with filter', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         moveAll: { from: 'saigon', to: 'casualties-nva', filter: { op: '==', left: { _t: 2, ref: 'gvar', var: 'type' }, right: 'guerrilla' } },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 't[16d]'));
       assert.equal(msg.kind, 'remove');
       if (msg.kind === 'remove') {
@@ -483,7 +484,7 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 23b: conceal → ConcealMessage', () => {
-      const effect: EffectAST = { conceal: { zone: 'hand' } };
+      const effect: EffectAST = eff({ conceal: { zone: 'hand' } });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 't[17]'));
       assert.equal(msg.kind, 'conceal');
       if (msg.kind === 'conceal') {
@@ -492,13 +493,13 @@ describe('tooltip-normalizer', () => {
     });
 
     it('moveToken with ZoneRef expression → uses humanized binding name', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         moveToken: {
           token: 'troop',
           from: { zoneExpr: { _t: 2, ref: 'binding', name: 'sourceZone' } },
           to: 'target',
         },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 't[18]'));
       assert.equal(msg.kind, 'move');
       if (msg.kind === 'move') {
@@ -511,9 +512,9 @@ describe('tooltip-normalizer', () => {
 
   describe('marker effects', () => {
     it('rule 24: shiftMarker → ShiftMessage', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         shiftMarker: { space: 'saigon', marker: 'support', delta: 1 },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'm[0]'));
       assert.equal(msg.kind, 'shift');
       if (msg.kind === 'shift') {
@@ -525,9 +526,9 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 24: shiftMarker with binding expression → ShiftMessage with deltaExpr', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         shiftMarker: { space: 'saigon', marker: 'support', delta: { _t: 2, ref: 'binding', name: 'shiftAmount' } },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'm[0b]'));
       assert.equal(msg.kind, 'shift');
       if (msg.kind === 'shift') {
@@ -538,9 +539,9 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 24: shiftMarker negative → ShiftMessage with minus direction', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         shiftMarker: { space: 'saigon', marker: 'support', delta: -2 },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'm[1]'));
       assert.equal(msg.kind, 'shift');
       if (msg.kind === 'shift') {
@@ -550,9 +551,9 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 25: setMarker → SetMessage', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         setMarker: { space: 'saigon', marker: 'control', state: 'coin' },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'm[2]'));
       assert.equal(msg.kind, 'set');
       if (msg.kind === 'set') {
@@ -562,9 +563,9 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 26: setGlobalMarker → SetMessage', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         setGlobalMarker: { marker: 'monsoon', state: 'active' },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'm[3]'));
       assert.equal(msg.kind, 'set');
       if (msg.kind === 'set') {
@@ -574,9 +575,9 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 27: flipGlobalMarker → SetMessage with toggle', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         flipGlobalMarker: { marker: 'monsoon', stateA: 'active', stateB: 'inactive' },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'm[4]'));
       assert.equal(msg.kind, 'set');
       if (msg.kind === 'set') {
@@ -587,9 +588,9 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 28: shiftGlobalMarker → ShiftMessage', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         shiftGlobalMarker: { marker: 'trail', delta: 2 },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'm[5]'));
       assert.equal(msg.kind, 'shift');
       if (msg.kind === 'shift') {
@@ -601,9 +602,9 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 28: shiftGlobalMarker with binding expression → ShiftMessage with deltaExpr', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         shiftGlobalMarker: { marker: 'trail', delta: { _t: 2, ref: 'binding', name: 'trailDelta' } },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'm[5b]'));
       assert.equal(msg.kind, 'shift');
       if (msg.kind === 'shift') {
@@ -618,9 +619,9 @@ describe('tooltip-normalizer', () => {
 
   describe('scaffolding and unhandled effects', () => {
     it('let effect → SuppressedMessage (scaffolding)', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         let: { bind: 'x', value: 'zone1', in: [] },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 's[0]'));
       assert.equal(msg.kind, 'suppressed');
       if (msg.kind === 'suppressed') {
@@ -629,25 +630,25 @@ describe('tooltip-normalizer', () => {
     });
 
     it('bindValue effect → SuppressedMessage (scaffolding)', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         bindValue: { bind: 'temp', value: 42 },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 's[1]'));
       assert.equal(msg.kind, 'suppressed');
     });
 
     it('setActivePlayer effect → SuppressedMessage (scaffolding)', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         setActivePlayer: { player: { id: 'us' as never } },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 's[2]'));
       assert.equal(msg.kind, 'suppressed');
     });
 
     it('forEach with empty effects → SuppressedMessage (empty forEach)', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         forEach: { bind: 'x', over: { query: 'enums', values: ['a'] }, effects: [] },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'u[0]'));
       assert.equal(msg.kind, 'suppressed');
       if (msg.kind === 'suppressed') {
@@ -656,9 +657,9 @@ describe('tooltip-normalizer', () => {
     });
 
     it('if effect with empty then → ModifierMessage only', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         if: { when: true, then: [] },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'u[1]'));
       assert.equal(msg.kind, 'modifier');
     });
@@ -668,7 +669,7 @@ describe('tooltip-normalizer', () => {
 
   describe('compound effects', () => {
     it('rule 28: chooseN over mapSpaces → SelectMessage(spaces) with bounds', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         chooseN: {
           internalDecisionId: 'd1',
           bind: 'spaces',
@@ -676,7 +677,7 @@ describe('tooltip-normalizer', () => {
           min: 1,
           max: 6,
         },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'c[0]'));
       assert.equal(msg.kind, 'select');
       if (msg.kind === 'select') {
@@ -686,14 +687,14 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 28: chooseN with exact n → bounds min===max', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         chooseN: {
           internalDecisionId: 'd2',
           bind: 'spaces',
           options: { query: 'mapSpaces' },
           n: 3,
         },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'c[0b]'));
       if (msg.kind === 'select') {
         assert.deepStrictEqual(msg.bounds, { min: 3, max: 3 });
@@ -701,7 +702,7 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 29: chooseN over tokensInZone → SelectMessage(zones)', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         chooseN: {
           internalDecisionId: 'd3',
           bind: 'tokens',
@@ -709,7 +710,7 @@ describe('tooltip-normalizer', () => {
           min: 1,
           max: 4,
         },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'c[1]'));
       assert.equal(msg.kind, 'select');
       if (msg.kind === 'select') {
@@ -718,7 +719,7 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 29b: chooseN over enums → SelectMessage(options)', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         chooseN: {
           internalDecisionId: 'd4',
           bind: 'items',
@@ -726,7 +727,7 @@ describe('tooltip-normalizer', () => {
           min: 1,
           max: 2,
         },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'c[1b]'));
       assert.equal(msg.kind, 'select');
       if (msg.kind === 'select') {
@@ -736,7 +737,7 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 29b: chooseN over intsInRange → SelectMessage(values)', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         chooseN: {
           internalDecisionId: 'd4b',
           bind: 'amounts',
@@ -744,7 +745,7 @@ describe('tooltip-normalizer', () => {
           min: 1,
           max: 3,
         },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'c[1c]'));
       assert.equal(msg.kind, 'select');
       if (msg.kind === 'select') {
@@ -753,13 +754,13 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 30: chooseOne over enums → ChooseMessage with options', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         chooseOne: {
           internalDecisionId: 'd5',
           bind: 'action',
           options: { query: 'enums', values: ['attack', 'defend'] },
         },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'c[2]'));
       assert.equal(msg.kind, 'choose');
       if (msg.kind === 'choose') {
@@ -769,13 +770,13 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 30b: chooseOne generic → ChooseMessage with empty options', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         chooseOne: {
           internalDecisionId: 'd6',
           bind: 'target',
           options: { query: 'mapSpaces' },
         },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'c[2b]'));
       assert.equal(msg.kind, 'choose');
       if (msg.kind === 'choose') {
@@ -785,16 +786,16 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 31: forEach → recursively normalizes children', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         forEach: {
           bind: 'space',
           over: { query: 'mapSpaces' },
           effects: [
-            { addVar: { scope: 'global', var: 'aid', delta: 1 } },
-            { setVar: { scope: 'global', var: 'patronage', value: 5 } },
+            eff({ addVar: { scope: 'global', var: 'aid', delta: 1 } }),
+            eff({ setVar: { scope: 'global', var: 'patronage', value: 5 } }),
           ],
         },
-      };
+      });
       const messages = normalizeEffect(effect, EMPTY_CTX, 'c[3]');
       assert.equal(messages.length, 2);
       assert.equal(messages[0]!.kind, 'gain');
@@ -803,30 +804,30 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 31: forEach with empty effects → single suppressed message', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         forEach: {
           bind: 'x',
           over: { query: 'enums', values: ['a'] },
           effects: [],
         },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'c[3b]'));
       assert.equal(msg.kind, 'suppressed');
     });
 
     it('rule 31: forEach with in-block → normalizes both effects and in', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         forEach: {
           bind: 'space',
           over: { query: 'mapSpaces' },
           effects: [
-            { addVar: { scope: 'global', var: 'aid', delta: 1 } },
+            eff({ addVar: { scope: 'global', var: 'aid', delta: 1 } }),
           ],
           in: [
-            { setVar: { scope: 'global', var: 'result', value: 10 } },
+            eff({ setVar: { scope: 'global', var: 'result', value: 10 } }),
           ],
         },
-      };
+      });
       const messages = normalizeEffect(effect, EMPTY_CTX, 'c[3c]');
       assert.equal(messages.length, 2);
       assert.equal(messages[0]!.kind, 'gain');
@@ -835,7 +836,7 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 32: if with globalMarkerState → ModifierMessage', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         if: {
           when: {
             op: '==',
@@ -843,10 +844,10 @@ describe('tooltip-normalizer', () => {
             right: 'active',
           },
           then: [
-            { addVar: { scope: 'global', var: 'aid', delta: -1 } },
+            eff({ addVar: { scope: 'global', var: 'aid', delta: -1 } }),
           ],
         },
-      };
+      });
       const messages = normalizeEffect(effect, EMPTY_CTX, 'c[4]');
       assert.ok(messages.length >= 2, 'Should produce modifier + child messages');
       assert.equal(messages[0]!.kind, 'modifier');
@@ -857,14 +858,14 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 33: if generic → ModifierMessage + then children', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         if: {
           when: { op: '>', left: { _t: 2, ref: 'gvar', var: 'aid' }, right: 0 },
           then: [
-            { addVar: { scope: 'global', var: 'aid', delta: -1 } },
+            eff({ addVar: { scope: 'global', var: 'aid', delta: -1 } }),
           ],
         },
-      };
+      });
       const messages = normalizeEffect(effect, EMPTY_CTX, 'c[5]');
       assert.ok(messages.length >= 2);
       assert.equal(messages[0]!.kind, 'modifier');
@@ -872,13 +873,13 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 33: if with else → includes both then and else children', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         if: {
           when: true,
-          then: [{ addVar: { scope: 'global', var: 'a', delta: 1 } }],
-          else: [{ addVar: { scope: 'global', var: 'b', delta: 2 } }],
+          then: [eff({ addVar: { scope: 'global', var: 'a', delta: 1 } })],
+          else: [eff({ addVar: { scope: 'global', var: 'b', delta: 2 } })],
         },
-      };
+      });
       const messages = normalizeEffect(effect, EMPTY_CTX, 'c[5b]');
       assert.equal(messages.length, 3); // modifier + then + else
       assert.equal(messages[0]!.kind, 'modifier');
@@ -887,16 +888,16 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 34: rollRandom → RollMessage + children', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         rollRandom: {
           bind: 'dieRoll',
           min: 1,
           max: 6,
           in: [
-            { addVar: { scope: 'global', var: 'aid', delta: 1 } },
+            eff({ addVar: { scope: 'global', var: 'aid', delta: 1 } }),
           ],
         },
-      };
+      });
       const messages = normalizeEffect(effect, EMPTY_CTX, 'c[6]');
       assert.ok(messages.length >= 2);
       assert.equal(messages[0]!.kind, 'roll');
@@ -908,7 +909,7 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 35: removeByPriority single group → RemoveMessage with budget metadata', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         removeByPriority: {
           budget: 3,
           groups: [{
@@ -917,7 +918,7 @@ describe('tooltip-normalizer', () => {
             to: 'casualties-nva',
           }],
         },
-      };
+      });
       const messages = normalizeEffect(effect, EMPTY_CTX, 'c[7]');
       assert.equal(messages.length, 1, 'Should emit 1 remove (budget folded in)');
       assert.equal(messages[0]!.kind, 'remove');
@@ -930,7 +931,7 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 35: removeByPriority with multiple groups → per-group RemoveMessages with budget, preserving priority order', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         removeByPriority: {
           budget: 4,
           groups: [
@@ -946,7 +947,7 @@ describe('tooltip-normalizer', () => {
             },
           ],
         },
-      };
+      });
       const messages = normalizeEffect(effect, EMPTY_CTX, 'c[7b]');
       assert.equal(messages.length, 2, 'Should emit 2 removes (budget folded in)');
       // Priority 0: guerrillas to casualties
@@ -968,7 +969,7 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 35: removeByPriority with from zone → RemoveMessage includes fromZone and budget', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         removeByPriority: {
           budget: 2,
           groups: [{
@@ -978,7 +979,7 @@ describe('tooltip-normalizer', () => {
             to: 'available-us',
           }],
         },
-      };
+      });
       const messages = normalizeEffect(effect, EMPTY_CTX, 'c[7c]');
       const removeMsg = messages.find(m => m.kind === 'remove');
       assert.ok(removeMsg !== undefined);
@@ -990,7 +991,7 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 35: removeByPriority never emits SetMessage with target "budget"', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         removeByPriority: {
           budget: 5,
           groups: [{
@@ -999,7 +1000,7 @@ describe('tooltip-normalizer', () => {
             to: 'casualties-nva',
           }],
         },
-      };
+      });
       const messages = normalizeEffect(effect, EMPTY_CTX, 'c[neg]');
       const budgetSet = messages.find(
         m => m.kind === 'set' && (m as { target: string }).target === 'budget'
@@ -1008,12 +1009,12 @@ describe('tooltip-normalizer', () => {
     });
 
     it('rule 41: grantFreeOperation → GrantMessage', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         grantFreeOperation: {
           seat: 'arvn',
           operationClass: 'operation',
         },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'c[8]'));
       assert.equal(msg.kind, 'grant');
       if (msg.kind === 'grant') {
@@ -1023,7 +1024,7 @@ describe('tooltip-normalizer', () => {
     });
 
     it('reduce → SuppressedMessage (internal computation)', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         reduce: {
           itemBind: 'item',
           accBind: 'acc',
@@ -1033,7 +1034,7 @@ describe('tooltip-normalizer', () => {
           resultBind: 'result',
           in: [],
         },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'c[9]'));
       assert.equal(msg.kind, 'suppressed');
       if (msg.kind === 'suppressed') {
@@ -1058,17 +1059,17 @@ describe('tooltip-normalizer', () => {
         },
         suppressPatterns: [],
       };
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         forEach: {
           bind: 'space',
           over: { query: 'mapSpaces' },
           macroOrigin: { macroId: 'trainUs', stem: 'train' },
           effects: [
-            { addVar: { scope: 'global', var: 'aid', delta: 1 } },
-            { addVar: { scope: 'global', var: 'aid', delta: 2 } },
+            eff({ addVar: { scope: 'global', var: 'aid', delta: 1 } }),
+            eff({ addVar: { scope: 'global', var: 'aid', delta: 2 } }),
           ],
         },
-      };
+      });
       const messages = normalizeEffect(effect, ctx, 'macro[0]');
       assert.equal(messages.length, 1, 'Macro override should produce exactly 1 message');
       assert.equal(messages[0]!.kind, 'summary');
@@ -1080,16 +1081,16 @@ describe('tooltip-normalizer', () => {
     });
 
     it('effect with macroOrigin but no verbalization → normal processing', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         forEach: {
           bind: 'space',
           over: { query: 'mapSpaces' },
           macroOrigin: { macroId: 'trainUs', stem: 'train' },
           effects: [
-            { addVar: { scope: 'global', var: 'aid', delta: 1 } },
+            eff({ addVar: { scope: 'global', var: 'aid', delta: 1 } }),
           ],
         },
-      };
+      });
       const messages = normalizeEffect(effect, EMPTY_CTX, 'macro[1]');
       assert.ok(messages.length >= 1);
       assert.equal(messages[0]!.kind, 'gain');
@@ -1108,16 +1109,16 @@ describe('tooltip-normalizer', () => {
         },
         suppressPatterns: [],
       };
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         forEach: {
           bind: 'space',
           over: { query: 'mapSpaces' },
           macroOrigin: { macroId: 'trainUs', stem: 'train' },
           effects: [
-            { addVar: { scope: 'global', var: 'aid', delta: 1 } },
+            eff({ addVar: { scope: 'global', var: 'aid', delta: 1 } }),
           ],
         },
-      };
+      });
       const messages = normalizeEffect(effect, ctx, 'macro[2]');
       assert.equal(messages.length, 1, 'Fallback should produce exactly 1 summary');
       assert.equal(messages[0]!.kind, 'summary');
@@ -1132,13 +1133,13 @@ describe('tooltip-normalizer', () => {
 
   describe('LEGTOOLT-003: optional choose detection', () => {
     it('chooseOne with "None" option → optional: true, "None" filtered', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         chooseOne: {
           internalDecisionId: 'opt1',
           bind: 'action',
           options: { query: 'enums', values: ['attack', 'None', 'defend'] },
         },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'opt[0]'));
       assert.equal(msg.kind, 'choose');
       if (msg.kind === 'choose') {
@@ -1148,13 +1149,13 @@ describe('tooltip-normalizer', () => {
     });
 
     it('chooseOne with "none" (lowercase) → optional: true', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         chooseOne: {
           internalDecisionId: 'opt2',
           bind: 'action',
           options: { query: 'enums', values: ['attack', 'none'] },
         },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'opt[1]'));
       assert.equal(msg.kind, 'choose');
       if (msg.kind === 'choose') {
@@ -1164,13 +1165,13 @@ describe('tooltip-normalizer', () => {
     });
 
     it('chooseOne without "None" → optional is undefined', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         chooseOne: {
           internalDecisionId: 'opt3',
           bind: 'action',
           options: { query: 'enums', values: ['attack', 'defend'] },
         },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'opt[2]'));
       assert.equal(msg.kind, 'choose');
       if (msg.kind === 'choose') {
@@ -1182,16 +1183,16 @@ describe('tooltip-normalizer', () => {
 
   describe('LEGTOOLT-003: suppressed modifier conditions', () => {
     it('if with __actionClass condition → SuppressedMessage', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         if: {
           when: {
             op: '==',
             left: { _t: 2, ref: 'gvar', var: '__actionClass' },
             right: 'limitedOperation',
           },
-          then: [{ addVar: { scope: 'global', var: 'aid', delta: 1 } }],
+          then: [eff({ addVar: { scope: 'global', var: 'aid', delta: 1 } })],
         },
-      };
+      });
       const messages = normalizeEffect(effect, EMPTY_CTX, 'sup[0]');
       assert.equal(messages[0]!.kind, 'suppressed');
       if (messages[0]!.kind === 'suppressed') {
@@ -1200,31 +1201,31 @@ describe('tooltip-normalizer', () => {
     });
 
     it('if with $__macro_* condition → SuppressedMessage', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         if: {
           when: {
             op: '==',
             left: { _t: 2, ref: 'gvar', var: '$__macro_trainActive' },
             right: 1,
           },
-          then: [{ addVar: { scope: 'global', var: 'aid', delta: 1 } }],
+          then: [eff({ addVar: { scope: 'global', var: 'aid', delta: 1 } })],
         },
-      };
+      });
       const messages = normalizeEffect(effect, EMPTY_CTX, 'sup[1]');
       assert.equal(messages[0]!.kind, 'suppressed');
     });
 
     it('if with normal condition → ModifierMessage with humanized string', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         if: {
           when: {
             op: '>=',
             left: { _t: 2, ref: 'gvar', var: 'aid' },
             right: 3,
           },
-          then: [{ addVar: { scope: 'global', var: 'aid', delta: -1 } }],
+          then: [eff({ addVar: { scope: 'global', var: 'aid', delta: -1 } })],
         },
-      };
+      });
       const messages = normalizeEffect(effect, EMPTY_CTX, 'sup[2]');
       assert.equal(messages[0]!.kind, 'modifier');
       if (messages[0]!.kind === 'modifier') {
@@ -1236,17 +1237,17 @@ describe('tooltip-normalizer', () => {
     });
 
     it('if with suppressed condition still recurses into then/else', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         if: {
           when: {
             op: '==',
             left: { _t: 2, ref: 'gvar', var: '__actionClass' },
             right: 'limitedOperation',
           },
-          then: [{ addVar: { scope: 'global', var: 'aid', delta: 1 } }],
-          else: [{ addVar: { scope: 'global', var: 'aid', delta: -1 } }],
+          then: [eff({ addVar: { scope: 'global', var: 'aid', delta: 1 } })],
+          else: [eff({ addVar: { scope: 'global', var: 'aid', delta: -1 } })],
         },
-      };
+      });
       const messages = normalizeEffect(effect, EMPTY_CTX, 'sup[3]');
       assert.equal(messages.length, 3); // suppressed + then child + else child
       assert.equal(messages[0]!.kind, 'suppressed');
@@ -1257,7 +1258,7 @@ describe('tooltip-normalizer', () => {
 
   describe('LEGTOOLT-003: filter population on select messages', () => {
     it('chooseN with mapSpaces filter → SelectMessage with filter', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         chooseN: {
           internalDecisionId: 'f1',
           bind: 'spaces',
@@ -1268,7 +1269,7 @@ describe('tooltip-normalizer', () => {
           min: 1,
           max: 3,
         },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'flt[0]'));
       assert.equal(msg.kind, 'select');
       if (msg.kind === 'select') {
@@ -1279,7 +1280,7 @@ describe('tooltip-normalizer', () => {
     });
 
     it('chooseN with tokensInZone filter → SelectMessage with filter', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         chooseN: {
           internalDecisionId: 'f2',
           bind: 'tokens',
@@ -1291,7 +1292,7 @@ describe('tooltip-normalizer', () => {
           min: 1,
           max: 4,
         },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'flt[1]'));
       assert.equal(msg.kind, 'select');
       if (msg.kind === 'select') {
@@ -1302,7 +1303,7 @@ describe('tooltip-normalizer', () => {
     });
 
     it('chooseN without filter → SelectMessage with no filter', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         chooseN: {
           internalDecisionId: 'f3',
           bind: 'spaces',
@@ -1310,7 +1311,7 @@ describe('tooltip-normalizer', () => {
           min: 1,
           max: 6,
         },
-      };
+      });
       const msg = single(normalizeEffect(effect, EMPTY_CTX, 'flt[2]'));
       assert.equal(msg.kind, 'select');
       if (msg.kind === 'select') {
@@ -1323,9 +1324,9 @@ describe('tooltip-normalizer', () => {
 
   describe('ACTTOOHUMGAP-003: no __macro_ leaks in normalizer output', () => {
     it('moveToken with __macro_ zone refs → sanitized output', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         moveToken: { token: 'guerrilla', from: '__macro_sweep__sourceZone', to: '__macro_sweep__destZone' },
-      };
+      });
       const messages = normalizeEffect(effect, EMPTY_CTX, 'mac[0]');
       assert.ok(messages.length >= 1);
       for (const msg of messages) {
@@ -1335,9 +1336,9 @@ describe('tooltip-normalizer', () => {
     });
 
     it('moveAll with __macro_ zone refs → sanitized output', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         moveAll: { from: '__macro_rally__fromZone', to: '__macro_rally__toZone' },
-      };
+      });
       const messages = normalizeEffect(effect, EMPTY_CTX, 'mac[1]');
       for (const msg of messages) {
         const json = JSON.stringify(msg);
@@ -1346,9 +1347,9 @@ describe('tooltip-normalizer', () => {
     });
 
     it('createToken with __macro_ zone ref → sanitized output', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         createToken: { type: 'guerrilla', zone: '__macro_place__targetZone' },
-      };
+      });
       const messages = normalizeEffect(effect, EMPTY_CTX, 'mac[2]');
       for (const msg of messages) {
         const json = JSON.stringify(msg);
@@ -1357,9 +1358,9 @@ describe('tooltip-normalizer', () => {
     });
 
     it('draw with __macro_ zone ref → sanitized output', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         draw: { from: '__macro_deal__deckZone', to: 'hand', count: 2 },
-      };
+      });
       const messages = normalizeEffect(effect, EMPTY_CTX, 'mac[3]');
       for (const msg of messages) {
         const json = JSON.stringify(msg);
@@ -1369,9 +1370,9 @@ describe('tooltip-normalizer', () => {
 
     it('reveal/conceal/shuffle with __macro_ zone ref → sanitized output', () => {
       const effects: EffectAST[] = [
-        { reveal: { zone: '__macro_intel__revealZone', to: 'all' as const } },
-        { conceal: { zone: '__macro_intel__concealZone' } },
-        { shuffle: { zone: '__macro_deal__deckZone' } },
+        eff({ reveal: { zone: '__macro_intel__revealZone', to: 'all' as const } }),
+        eff({ conceal: { zone: '__macro_intel__concealZone' } }),
+        eff({ shuffle: { zone: '__macro_deal__deckZone' } }),
       ];
       for (const [i, effect] of effects.entries()) {
         const messages = normalizeEffect(effect, EMPTY_CTX, `mac[4.${i}]`);
@@ -1383,9 +1384,9 @@ describe('tooltip-normalizer', () => {
     });
 
     it('setVar with zoneVar scope and __macro_ zone → sanitized output', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         setVar: { scope: 'zoneVar', var: 'support', zone: '__macro_pacify__targetZone', value: 2 },
-      };
+      });
       const messages = normalizeEffect(effect, EMPTY_CTX, 'mac[5]');
       for (const msg of messages) {
         const json = JSON.stringify(msg);
@@ -1394,13 +1395,13 @@ describe('tooltip-normalizer', () => {
     });
 
     it('moveToken with __macro_ token and __macro_ zones → all sanitized', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         moveToken: {
           token: '__macro_sweep__guerrilla',
           from: '__macro_sweep__source',
           to: '__macro_sweep__dest',
         },
-      };
+      });
       const messages = normalizeEffect(effect, EMPTY_CTX, 'mac[6]');
       for (const msg of messages) {
         const json = JSON.stringify(msg);
@@ -1430,13 +1431,13 @@ describe('tooltip-normalizer', () => {
         },
         suppressPatterns: [],
       };
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         moveToken: {
           token: '__macro_place_from_available_or_map_action Pipelines_0__piece',
           from: 'available-alpha',
           to: 'saigon',
         },
-      };
+      });
       const messages = normalizeEffect(effect, ctx, 'leaf[0]');
       assert.equal(messages.length, 1);
       assert.equal(messages[0]!.kind, 'summary');
@@ -1460,13 +1461,13 @@ describe('tooltip-normalizer', () => {
         },
         suppressPatterns: [],
       };
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         moveToken: {
           token: '__macro_place_from_available_or_map_action Pipelines_0__piece',
           from: 'available-alpha',
           to: 'saigon',
         },
-      };
+      });
       const messages = normalizeEffect(effect, ctx, 'leaf[1]');
       assert.equal(messages.length, 1);
       assert.equal(messages[0]!.kind, 'summary');
@@ -1477,13 +1478,13 @@ describe('tooltip-normalizer', () => {
     });
 
     it('moveToken with __macro_ token but no verbalization at all → falls through', () => {
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         moveToken: {
           token: '__macro_place_from_available_or_map_action Pipelines_0__piece',
           from: 'available-alpha',
           to: 'saigon',
         },
-      };
+      });
       const messages = normalizeEffect(effect, EMPTY_CTX, 'leaf[2]');
       assert.equal(messages.length, 1);
       assert.equal(messages[0]!.kind, 'place');
@@ -1495,11 +1496,11 @@ describe('tooltip-normalizer', () => {
   describe('invariants', () => {
     it('every message has a non-empty astPath', () => {
       const effects: EffectAST[] = [
-        { addVar: { scope: 'global', var: 'aid', delta: -1 } },
-        { setVar: { scope: 'global', var: 'x', value: 0 } },
-        { moveToken: { token: 't', from: 'a', to: 'b' } },
-        { shiftMarker: { space: 's', marker: 'm', delta: 1 } },
-        { shuffle: { zone: 'deck' } },
+        eff({ addVar: { scope: 'global', var: 'aid', delta: -1 } }),
+        eff({ setVar: { scope: 'global', var: 'x', value: 0 } }),
+        eff({ moveToken: { token: 't', from: 'a', to: 'b' } }),
+        eff({ shiftMarker: { space: 's', marker: 'm', delta: 1 } }),
+        eff({ shuffle: { zone: 'deck' } }),
       ];
 
       for (const [i, effect] of effects.entries()) {
@@ -1512,7 +1513,7 @@ describe('tooltip-normalizer', () => {
     });
 
     it('normalizeEffect is pure — same input produces same output', () => {
-      const effect: EffectAST = { addVar: { scope: 'global', var: 'aid', delta: -3 } };
+      const effect: EffectAST = eff({ addVar: { scope: 'global', var: 'aid', delta: -3 } });
       const result1 = normalizeEffect(effect, EMPTY_CTX, 'p[0]');
       const result2 = normalizeEffect(effect, EMPTY_CTX, 'p[0]');
       assert.deepStrictEqual(result1, result2);

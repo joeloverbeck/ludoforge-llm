@@ -26,6 +26,7 @@ import {
 } from '../../../src/kernel/index.js';
 
 import type { ActionPipelineDef } from '../../../src/kernel/index.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
 
 // ---------------------------------------------------------------------------
 // Test helpers
@@ -354,7 +355,7 @@ describe('zoneRefToInlineNodes', () => {
 
 describe('effectToDisplayNodes', () => {
   it('renders setVar (global)', () => {
-    const effect: EffectAST = { setVar: { scope: 'global', var: 'score', value: 10 } };
+    const effect: EffectAST = eff({ setVar: { scope: 'global', var: 'score', value: 10 } });
     const nodes = effectToDisplayNodes(effect, 0);
     assert.equal(nodes.length, 1);
     const ln = asLine(nodes[0]!);
@@ -363,34 +364,34 @@ describe('effectToDisplayNodes', () => {
   });
 
   it('renders setVar (pvar)', () => {
-    const effect: EffectAST = { setVar: { scope: 'pvar', player: 'actor', var: 'gold', value: 5 } };
+    const effect: EffectAST = eff({ setVar: { scope: 'pvar', player: 'actor', var: 'gold', value: 5 } });
     const nodes = effectToDisplayNodes(effect, 0);
     const ln = asLine(nodes[0]!);
     assert.ok(texts(ln.children).includes('gold'));
   });
 
   it('renders addVar', () => {
-    const effect: EffectAST = { addVar: { scope: 'global', var: 'turn', delta: 1 } };
+    const effect: EffectAST = eff({ addVar: { scope: 'global', var: 'turn', delta: 1 } });
     const nodes = effectToDisplayNodes(effect, 0);
     const ln = asLine(nodes[0]!);
     assert.ok(texts(ln.children).includes('add'));
   });
 
   it('renders moveToken', () => {
-    const effect: EffectAST = { moveToken: { token: '$t', from: 'hand', to: 'board' } };
+    const effect: EffectAST = eff({ moveToken: { token: '$t', from: 'hand', to: 'board' } });
     const nodes = effectToDisplayNodes(effect, 0);
     const ln = asLine(nodes[0]!);
     assert.ok(texts(ln.children).includes('move'));
   });
 
   it('renders if with then and else', () => {
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       if: {
         when: true,
-        then: [{ setVar: { scope: 'global', var: 'a', value: 1 } }],
-        else: [{ setVar: { scope: 'global', var: 'b', value: 2 } }],
+        then: [eff({ setVar: { scope: 'global', var: 'a', value: 1 } })],
+        else: [eff({ setVar: { scope: 'global', var: 'b', value: 2 } })],
       },
-    };
+    });
     const nodes = effectToDisplayNodes(effect, 0);
     // Should have: if-header, then-body, else-header, else-body
     assert.ok(nodes.length >= 4);
@@ -404,13 +405,13 @@ describe('effectToDisplayNodes', () => {
   });
 
   it('renders forEach with nested effects', () => {
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       forEach: {
         bind: 'token',
         over: { query: 'tokensInZone', zone: 'hand' },
-        effects: [{ setVar: { scope: 'global', var: 'x', value: 1 } }],
+        effects: [eff({ setVar: { scope: 'global', var: 'x', value: 1 } })],
       },
-    };
+    });
     const nodes = effectToDisplayNodes(effect, 0);
     assert.ok(nodes.length >= 2);
     const header = asLine(nodes[0]!);
@@ -421,14 +422,14 @@ describe('effectToDisplayNodes', () => {
   });
 
   it('renders forEach with macroOrigin.stem instead of hygienic bind', () => {
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       forEach: {
         bind: '$__macro_deal_0_card',
         macroOrigin: { macroId: 'deal', stem: 'card' },
         over: { query: 'tokensInZone', zone: 'deck' },
         effects: [],
       },
-    };
+    });
     const nodes = effectToDisplayNodes(effect, 0);
     const header = asLine(nodes[0]!);
     const refs = findByKind(header.children, 'reference');
@@ -437,14 +438,14 @@ describe('effectToDisplayNodes', () => {
   });
 
   it('renders chooseOne with macroOrigin.stem', () => {
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       chooseOne: {
         internalDecisionId: 'd1',
         bind: '$__macro_pick_0_choice',
         macroOrigin: { macroId: 'pick', stem: 'choice' },
         options: { query: 'players' },
       },
-    };
+    });
     const nodes = effectToDisplayNodes(effect, 0);
     const ln = asLine(nodes[0]!);
     const refs = findByKind(ln.children, 'reference');
@@ -452,14 +453,14 @@ describe('effectToDisplayNodes', () => {
   });
 
   it('renders let with macroOrigin.stem', () => {
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       let: {
         bind: '$__macro_calc_0_val',
         macroOrigin: { macroId: 'calc', stem: 'val' },
         value: 42,
         in: [],
       },
-    };
+    });
     const nodes = effectToDisplayNodes(effect, 0);
     const header = asLine(nodes[0]!);
     const refs = findByKind(header.children, 'reference');
@@ -467,13 +468,13 @@ describe('effectToDisplayNodes', () => {
   });
 
   it('renders bindValue with macroOrigin.stem', () => {
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       bindValue: {
         bind: '$__macro_calc_0_value',
         macroOrigin: { macroId: 'calc', stem: 'value' },
         value: 7,
       },
-    };
+    });
     const nodes = effectToDisplayNodes(effect, 0);
     const header = asLine(nodes[0]!);
     const refs = findByKind(header.children, 'reference');
@@ -482,13 +483,13 @@ describe('effectToDisplayNodes', () => {
   });
 
   it('renders let with body', () => {
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       let: {
         bind: 'x',
         value: 42,
-        in: [{ setVar: { scope: 'global', var: 'y', value: { _t: 2 as const, ref: 'binding', name: 'x' } } }],
+        in: [eff({ setVar: { scope: 'global', var: 'y', value: { _t: 2 as const, ref: 'binding', name: 'x' } } })],
       },
-    };
+    });
     const nodes = effectToDisplayNodes(effect, 0);
     const header = asLine(nodes[0]!);
     assert.ok(texts(header.children).includes('let'));
@@ -496,7 +497,7 @@ describe('effectToDisplayNodes', () => {
   });
 
   it('renders reduce', () => {
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       reduce: {
         itemBind: 'item',
         accBind: 'acc',
@@ -506,14 +507,14 @@ describe('effectToDisplayNodes', () => {
         resultBind: 'total',
         in: [],
       },
-    };
+    });
     const nodes = effectToDisplayNodes(effect, 0);
     const header = asLine(nodes[0]!);
     assert.ok(texts(header.children).includes('reduce'));
   });
 
   it('renders reduce with itemMacroOrigin.stem for item bind', () => {
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       reduce: {
         itemBind: '$__macro_reduce_0_item',
         accBind: 'acc',
@@ -524,7 +525,7 @@ describe('effectToDisplayNodes', () => {
         resultBind: '$__macro_reduce_0_total',
         in: [],
       },
-    };
+    });
     const nodes = effectToDisplayNodes(effect, 0);
     const header = asLine(nodes[0]!);
     const refs = findByKind(header.children, 'reference');
@@ -533,7 +534,7 @@ describe('effectToDisplayNodes', () => {
   });
 
   it('renders removeByPriority group bind with macroOrigin.stem', () => {
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       removeByPriority: {
         budget: 1,
         macroOrigin: { macroId: 'cleanup', stem: 'target' },
@@ -545,7 +546,7 @@ describe('effectToDisplayNodes', () => {
           },
         ],
       },
-    };
+    });
     const nodes = effectToDisplayNodes(effect, 0);
     const groupLine = asLine(nodes[1]!);
     const refs = findByKind(groupLine.children, 'reference');
@@ -554,7 +555,7 @@ describe('effectToDisplayNodes', () => {
   });
 
   it('renders removeByPriority group macroOrigin.stem over parent macroOrigin.stem', () => {
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       removeByPriority: {
         budget: 1,
         macroOrigin: { macroId: 'cleanup', stem: 'fallback' },
@@ -567,7 +568,7 @@ describe('effectToDisplayNodes', () => {
           },
         ],
       },
-    };
+    });
     const nodes = effectToDisplayNodes(effect, 0);
     const groupLine = asLine(nodes[1]!);
     const refs = findByKind(groupLine.children, 'reference');
@@ -576,7 +577,7 @@ describe('effectToDisplayNodes', () => {
   });
 
   it('renders removeByPriority group bind raw when macroOrigin is absent', () => {
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       removeByPriority: {
         budget: 1,
         groups: [
@@ -587,7 +588,7 @@ describe('effectToDisplayNodes', () => {
           },
         ],
       },
-    };
+    });
     const nodes = effectToDisplayNodes(effect, 0);
     const groupLine = asLine(nodes[1]!);
     const refs = findByKind(groupLine.children, 'reference');
@@ -595,7 +596,7 @@ describe('effectToDisplayNodes', () => {
   });
 
   it('renders removeByPriority mixed groups with per-group origin and raw fallback', () => {
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       removeByPriority: {
         budget: 1,
         groups: [
@@ -612,7 +613,7 @@ describe('effectToDisplayNodes', () => {
           },
         ],
       },
-    };
+    });
     const nodes = effectToDisplayNodes(effect, 0);
     const firstGroupLine = asLine(nodes[1]!);
     const secondGroupLine = asLine(nodes[2]!);
@@ -623,16 +624,16 @@ describe('effectToDisplayNodes', () => {
   });
 
   it('renders chooseOne', () => {
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       chooseOne: { internalDecisionId: 'd1', bind: 'choice', options: { query: 'players' } },
-    };
+    });
     const nodes = effectToDisplayNodes(effect, 0);
     const ln = asLine(nodes[0]!);
     assert.ok(texts(ln.children).includes('choose'));
   });
 
   it('renders chooseN with macroOrigin.stem', () => {
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       chooseN: {
         internalDecisionId: 'd2',
         bind: '$__macro_pick_0_group',
@@ -640,7 +641,7 @@ describe('effectToDisplayNodes', () => {
         options: { query: 'players' },
         n: 1,
       },
-    };
+    });
     const nodes = effectToDisplayNodes(effect, 0);
     const ln = asLine(nodes[0]!);
     const refs = findByKind(ln.children, 'reference');
@@ -649,7 +650,7 @@ describe('effectToDisplayNodes', () => {
   });
 
   it('renders rollRandom with macroOrigin.stem', () => {
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       rollRandom: {
         bind: '$__macro_roll_0_die',
         macroOrigin: { macroId: 'roll', stem: 'die' },
@@ -657,7 +658,7 @@ describe('effectToDisplayNodes', () => {
         max: 6,
         in: [],
       },
-    };
+    });
     const nodes = effectToDisplayNodes(effect, 0);
     const ln = asLine(nodes[0]!);
     const refs = findByKind(ln.children, 'reference');
@@ -666,14 +667,14 @@ describe('effectToDisplayNodes', () => {
   });
 
   it('renders setMarker', () => {
-    const effect: EffectAST = { setMarker: { space: 'Saigon', marker: 'control', state: '"NVA"' } };
+    const effect: EffectAST = eff({ setMarker: { space: 'Saigon', marker: 'control', state: '"NVA"' } });
     const nodes = effectToDisplayNodes(effect, 0);
     const ln = asLine(nodes[0]!);
     assert.ok(texts(ln.children).includes('setMarker'));
   });
 
   it('renders flipGlobalMarker with stateA and stateB', () => {
-    const effect: EffectAST = { flipGlobalMarker: { marker: '"monsoon"', stateA: '"dry"', stateB: '"wet"' } };
+    const effect: EffectAST = eff({ flipGlobalMarker: { marker: '"monsoon"', stateA: '"dry"', stateB: '"wet"' } });
     const nodes = effectToDisplayNodes(effect, 0);
     const ln = asLine(nodes[0]!);
     assert.ok(texts(ln.children).includes('flipGlobalMarker'));
@@ -684,7 +685,7 @@ describe('effectToDisplayNodes', () => {
   });
 
   it('renders gotoPhaseExact', () => {
-    const effect: EffectAST = { gotoPhaseExact: { phase: 'combat' } };
+    const effect: EffectAST = eff({ gotoPhaseExact: { phase: 'combat' } });
     const nodes = effectToDisplayNodes(effect, 0);
     const ln = asLine(nodes[0]!);
     assert.ok(texts(ln.children).includes('goto'));
@@ -692,14 +693,14 @@ describe('effectToDisplayNodes', () => {
   });
 
   it('renders advancePhase', () => {
-    const effect: EffectAST = { advancePhase: {} };
+    const effect: EffectAST = eff({ advancePhase: {} });
     const nodes = effectToDisplayNodes(effect, 0);
     const ln = asLine(nodes[0]!);
     assert.ok(texts(ln.children).includes('advancePhase'));
   });
 
   it('respects indent parameter', () => {
-    const effect: EffectAST = { advancePhase: {} };
+    const effect: EffectAST = eff({ advancePhase: {} });
     const nodes = effectToDisplayNodes(effect, 5);
     const ln = asLine(nodes[0]!);
     assert.equal(ln.indent, 5);
@@ -715,8 +716,8 @@ describe('actionDefToDisplayTree', () => {
     const action = minimalActionDef({
       params: [{ name: 'target', domain: { query: 'zones' } }],
       pre: { op: '>', left: { _t: 2 as const, ref: 'gvar', var: 'score' }, right: 0 },
-      cost: [{ addVar: { scope: 'global', var: 'gold', delta: -1 } }],
-      effects: [{ setVar: { scope: 'global', var: 'done', value: true } }],
+      cost: [eff({ addVar: { scope: 'global', var: 'gold', delta: -1 } })],
+      effects: [eff({ setVar: { scope: 'global', var: 'done', value: true } })],
       limits: [{ id: 'test::turn::0', scope: 'turn', max: 1 }],
     });
 
@@ -729,7 +730,7 @@ describe('actionDefToDisplayTree', () => {
 
   it('omits empty sections', () => {
     const action = minimalActionDef({
-      effects: [{ advancePhase: {} }],
+      effects: [eff({ advancePhase: {} })],
     });
 
     const sections = actionDefToDisplayTree(action);
@@ -759,7 +760,7 @@ describe('actionDefToDisplayTree', () => {
   it('Limits section shows max and scope', () => {
     const action = minimalActionDef({
       limits: [{ id: 'test::turn::0', scope: 'turn', max: 1 }, { id: 'test::game::1', scope: 'game', max: 3 }],
-      effects: [{ advancePhase: {} }],
+      effects: [eff({ advancePhase: {} })],
     });
     const sections = actionDefToDisplayTree(action);
     const limitSection = sections.find((s) => s.label === 'Limits');
@@ -785,7 +786,7 @@ describe('actionDefToDisplayTree', () => {
     const action = minimalActionDef({
       pre: { op: 'and', args: [true, { op: '==', left: 1, right: 1 }] },
       effects: [
-        { forEach: { bind: 'x', over: { query: 'players' }, effects: [{ advancePhase: {} }] } },
+        eff({ forEach: { bind: 'x', over: { query: 'players' }, effects: [eff({ advancePhase: {} })] } }),
       ],
     });
     const sections = actionDefToDisplayTree(action);
@@ -823,9 +824,9 @@ describe('actionPipelineDefToDisplayTree', () => {
       applicability: { op: '==', left: { _t: 2 as const, ref: 'activePlayer' }, right: 'US' },
       legality: { op: '>=', left: { _t: 2 as const, ref: 'gvar', var: 'gold' }, right: 1 },
       costValidation: { op: '>=', left: { _t: 2 as const, ref: 'gvar', var: 'gold' }, right: 3 },
-      costEffects: [{ addVar: { scope: 'global', var: 'gold', delta: -3 } }],
+      costEffects: [eff({ addVar: { scope: 'global', var: 'gold', delta: -3 } })],
       stages: [
-        { stage: 'placement', effects: [{ setVar: { scope: 'global', var: 'gold', value: 0 } }] },
+        { stage: 'placement', effects: [eff({ setVar: { scope: 'global', var: 'gold', value: 0 } })] },
       ],
     });
     const result = actionPipelineDefToDisplayTree(pipeline);
@@ -849,7 +850,7 @@ describe('actionPipelineDefToDisplayTree', () => {
           stage: 'resolution',
           legality: { op: '>=', left: { _t: 2 as const, ref: 'gvar', var: 'gold' }, right: 1 },
           costValidation: { op: '>=', left: { _t: 2 as const, ref: 'gvar', var: 'gold' }, right: 2 },
-          effects: [{ advancePhase: {} }],
+          effects: [eff({ advancePhase: {} })],
         },
       ],
     });
@@ -866,8 +867,8 @@ describe('actionPipelineDefToDisplayTree', () => {
   it('produces multiple stage sub-groups', () => {
     const pipeline = minimalPipeline({
       stages: [
-        { stage: 'targeting', effects: [{ advancePhase: {} }] },
-        { stage: 'resolution', effects: [{ advancePhase: {} }] },
+        { stage: 'targeting', effects: [eff({ advancePhase: {} })] },
+        { stage: 'resolution', effects: [eff({ advancePhase: {} })] },
       ],
     });
     const result = actionPipelineDefToDisplayTree(pipeline);
@@ -877,7 +878,7 @@ describe('actionPipelineDefToDisplayTree', () => {
 
   it('uses Effects label for unnamed stages', () => {
     const pipeline = minimalPipeline({
-      stages: [{ effects: [{ advancePhase: {} }] }],
+      stages: [{ effects: [eff({ advancePhase: {} })] }],
     });
     const result = actionPipelineDefToDisplayTree(pipeline);
     assert.equal((result.children[0] as DisplayGroupNode).label, 'Effects');

@@ -22,6 +22,7 @@ import {
   createCollector,
 } from '../../src/kernel/index.js';
 import { compileGameSpecToGameDef, createEmptyGameSpecDoc } from '../../src/cnl/index.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 const token = (id: string, rank: number): Token => ({
   id: asTokenId(id),
@@ -107,48 +108,48 @@ describe('effects complex integration chains', () => {
     });
 
     const effects: readonly EffectAST[] = [
-      {
+      eff({
         chooseOne: {
           internalDecisionId: 'decision:$zoneChoice',
           bind: '$zoneChoice',
           options: { query: 'enums', values: ['deck:none', 'discard:none'] },
         },
-      },
-      {
+      }),
+      eff({
         chooseN: {
           internalDecisionId: 'decision:$tags',
           bind: '$tags',
           options: { query: 'enums', values: ['alpha', 'beta', 'gamma'] },
           n: 2,
         },
-      },
-      {
+      }),
+      eff({
         let: {
           bind: '$base',
           value: 2,
-          in: [{ addVar: { scope: 'global', var: 'score', delta: { _t: 2 as const, ref: 'binding', name: '$base' } } }],
+          in: [eff({ addVar: { scope: 'global', var: 'score', delta: { _t: 2 as const, ref: 'binding', name: '$base' } } })],
         },
-      },
-      {
+      }),
+      eff({
         forEach: {
           bind: '$n',
           over: { query: 'intsInRange', min: 1, max: 3 },
           limit: 2,
           effects: [
-            {
+            eff({
               if: {
                 when: { op: '>', left: { _t: 2 as const, ref: 'binding', name: '$n' }, right: 1 },
-                then: [{ addVar: { scope: 'global', var: 'score', delta: { _t: 2 as const, ref: 'binding', name: '$n' } } }],
-                else: [{ addVar: { scope: 'global', var: 'score', delta: 5 } }],
+                then: [eff({ addVar: { scope: 'global', var: 'score', delta: { _t: 2 as const, ref: 'binding', name: '$n' } } })],
+                else: [eff({ addVar: { scope: 'global', var: 'score', delta: 5 } })],
               },
-            },
+            }),
           ],
         },
-      },
-      { moveToken: { token: '$move', from: 'deck:none', to: 'discard:none', position: 'bottom' } },
-      { shuffle: { zone: 'discard:none' } },
-      { createToken: { type: 'card', zone: 'hand:0', props: { rank: 9, label: { _t: 2 as const, ref: 'binding', name: '$label' } } } },
-      { destroyToken: { token: '$destroy' } },
+      }),
+      eff({ moveToken: { token: '$move', from: 'deck:none', to: 'discard:none', position: 'bottom' } }),
+      eff({ shuffle: { zone: 'discard:none' } }),
+      eff({ createToken: { type: 'card', zone: 'hand:0', props: { rank: 9, label: { _t: 2 as const, ref: 'binding', name: '$label' } } } }),
+      eff({ destroyToken: { token: '$destroy' } }),
     ];
 
     const result = applyEffects(effects, ctx);
@@ -172,37 +173,37 @@ describe('effects complex integration chains', () => {
   it('threads nested let + forEach + if deterministically and yields expected cumulative result', () => {
     const ctx = makeCtx();
     const effects: readonly EffectAST[] = [
-      {
+      eff({
         let: {
           bind: '$bonus',
           value: 3,
           in: [
-            {
+            eff({
               forEach: {
                 bind: '$n',
                 over: { query: 'intsInRange', min: 1, max: 4 },
                 effects: [
-                  {
+                  eff({
                     if: {
                       when: { op: '>', left: { _t: 2 as const, ref: 'binding', name: '$n' }, right: 2 },
                       then: [
-                        {
+                        eff({
                           addVar: {
                             scope: 'global',
                             var: 'count',
                             delta: { _t: 6 as const, op: '+', left: { _t: 2 as const, ref: 'binding', name: '$n' }, right: { _t: 2 as const, ref: 'binding', name: '$bonus' } },
                           },
-                        },
+                        }),
                       ],
-                      else: [{ addVar: { scope: 'global', var: 'count', delta: 1 } }],
+                      else: [eff({ addVar: { scope: 'global', var: 'count', delta: 1 } })],
                     },
-                  },
+                  }),
                 ],
               },
-            },
+            }),
           ],
         },
-      },
+      }),
     ];
 
     const result = applyEffects(effects, ctx);

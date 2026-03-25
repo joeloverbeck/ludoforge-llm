@@ -32,6 +32,7 @@ import {
 } from '../helpers/choice-ownership-parity-helpers.js';
 import { requireCardDrivenRuntime, withPendingFreeOperationGrant } from '../helpers/turn-order-helpers.js';
 import { asTaggedGameDef } from '../helpers/gamedef-fixtures.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 const createDef = (): GameDef =>
   asTaggedGameDef({
@@ -1719,13 +1720,13 @@ phase: [asPhaseId('main')],
           stages: [
             {
               effects: [
-                {
+                eff({
                   chooseOne: {
                     internalDecisionId: 'decision:probe::$target',
                     bind: '$target',
                     options: { query: 'enums', values: ['a', 'b'] },
                   },
-                } as EffectAST,
+                }) as EffectAST,
               ],
             },
             {
@@ -1795,13 +1796,13 @@ phase: [asPhaseId('main')],
           stages: [
             {
               effects: [
-                {
+                eff({
                   chooseOne: {
                     internalDecisionId: 'decision:probe::$target',
                     bind: '$target',
                     options: { query: 'enums', values: ['a', 'b'] },
                   },
-                } as EffectAST,
+                }) as EffectAST,
               ],
             },
             {
@@ -2315,7 +2316,7 @@ phase: [asPhaseId('main')],
             {
               deferredId: 'deferred-1',
               requiredGrantBatchIds: ['batch-1'],
-              effects: [{ addVar: { scope: 'global', var: 'resolved', delta: 1 } }],
+              effects: [eff({ addVar: { scope: 'global', var: 'resolved', delta: 1 } })],
               moveParams: {},
               actorPlayer: withGrant.playerCount,
               actionId: 'operate',

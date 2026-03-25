@@ -13,6 +13,7 @@ import {
   type Token,
 } from '../../src/kernel/index.js';
 import { makeExecutionEffectContext } from '../helpers/effect-context-test-helpers.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 describe('FITL tunnel zone-entry reset (integration)', () => {
   const compiled = compileProductionSpec();
@@ -71,7 +72,7 @@ describe('FITL tunnel zone-entry reset (integration)', () => {
     });
 
     const result = applyEffect(
-      { moveToken: { token: '$token', from: 'saigon:none', to: 'available-NVA:none' } },
+      eff({ moveToken: { token: '$token', from: 'saigon:none', to: 'available-NVA:none' } }),
       ctx,
     );
 
@@ -109,7 +110,7 @@ describe('FITL tunnel zone-entry reset (integration)', () => {
     });
 
     const result = applyEffect(
-      { moveToken: { token: '$token', from: 'tay-ninh:none', to: 'out-of-play-VC:none' } },
+      eff({ moveToken: { token: '$token', from: 'tay-ninh:none', to: 'out-of-play-VC:none' } }),
       ctx,
     );
 
@@ -146,7 +147,7 @@ describe('FITL tunnel zone-entry reset (integration)', () => {
     });
 
     const result = applyEffect(
-      { moveToken: { token: '$token', from: 'saigon:none', to: 'available-US:none' } },
+      eff({ moveToken: { token: '$token', from: 'saigon:none', to: 'available-US:none' } }),
       ctx,
     );
 

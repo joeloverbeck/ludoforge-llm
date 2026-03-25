@@ -17,6 +17,7 @@ import {
   type GameDef,
   type GameState,
 } from '../../src/kernel/index.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 const makeDef = (): GameDef => ({
   metadata: { id: 'interrupt-phase-stack-test', players: { min: 1, max: 2 } },
@@ -69,10 +70,10 @@ const makeCtx = (overrides?: EffectContextTestOverrides): EffectContext => makeE
 describe('interrupt phase stack transitions', () => {
   it('supports nested push/pop with deterministic resume order', () => {
     const effects: readonly EffectAST[] = [
-      { pushInterruptPhase: { phase: 'commitment', resumePhase: 'main' } },
-      { pushInterruptPhase: { phase: 'aftermath', resumePhase: 'commitment' } },
-      { popInterruptPhase: {} },
-      { popInterruptPhase: {} },
+      eff({ pushInterruptPhase: { phase: 'commitment', resumePhase: 'main' } }),
+      eff({ pushInterruptPhase: { phase: 'aftermath', resumePhase: 'commitment' } }),
+      eff({ popInterruptPhase: {} }),
+      eff({ popInterruptPhase: {} }),
     ];
 
     const result = applyEffects(effects, makeCtx());
@@ -83,7 +84,7 @@ describe('interrupt phase stack transitions', () => {
   });
 
   it('rejects popInterruptPhase when stack is empty', () => {
-    const effect: EffectAST = { popInterruptPhase: {} };
+    const effect: EffectAST = eff({ popInterruptPhase: {} });
     assert.throws(() => applyEffect(effect, makeCtx()), (error: unknown) => {
       return isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('non-empty interruptPhaseStack');
     });

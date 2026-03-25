@@ -22,6 +22,7 @@ import { GreedyAgent } from '../../src/agents/greedy-agent.js';
 import { completeTemplateMove } from '../../src/kernel/move-completion.js';
 import { asTaggedGameDef } from '../helpers/gamedef-fixtures.js';
 import { tagValueExprs } from '../helpers/tag-value-exprs.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 // ---------------------------------------------------------------------------
 // Synthetic fixture: 2 players, reserve with 3 tokens, deploy operation + simple action
@@ -489,7 +490,7 @@ describe('decision sequence integration', () => {
             {
               stage: 'resolve',
               effects: [
-                {
+                eff({
                   rollRandom: {
                     bind: '$roll',
                     min: 1,
@@ -506,7 +507,7 @@ describe('decision sequence integration', () => {
                       } as ActionPipelineDef['stages'][number]['effects'][number],
                     ],
                   },
-                } as ActionPipelineDef['stages'][number]['effects'][number],
+                }) as ActionPipelineDef['stages'][number]['effects'][number],
               ],
             },
           ],

@@ -27,6 +27,7 @@ import {
 } from '../../helpers/free-operation-sequence-context-fixtures.js';
 import { assertLegalitySurfaceParityForMove } from '../../helpers/legality-surface-parity-helpers.js';
 import { asTaggedGameDef } from '../../helpers/gamedef-fixtures.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
 
 const makeState = (overrides?: Partial<GameState>): GameState => ({
   globalVars: { resources: 0 },
@@ -1250,36 +1251,36 @@ describe('legality surface parity', () => {
     const def = makeDef({
       action: makeAction({
         effects: [
-          {
+          eff({
             chooseOne: {
               internalDecisionId: 'decision:$mode',
               bind: '$mode',
               options: { query: 'enums', values: ['tokens', 'noop'] },
             },
-          },
-          {
+          }),
+          eff({
             let: {
               bind: '$modeCopy',
               value: { _t: 2, ref: 'binding', name: '$mode' },
               in: [
-                {
+                eff({
                   if: {
                     when: { op: '==', left: { _t: 2, ref: 'binding', name: '$modeCopy' }, right: 'tokens' },
                     then: [
-                      {
+                      eff({
                         chooseOne: {
                           internalDecisionId: 'decision:$token',
                           bind: '$token',
                           options: { query: 'tokensInZone', zone: 'board:none' },
                         },
-                      },
+                      }),
                     ],
                     else: [],
                   },
-                },
+                }),
               ],
             },
-          },
+          }),
         ],
       }),
     });
@@ -1304,22 +1305,22 @@ describe('legality surface parity', () => {
     const def = makeDef({
       action: makeAction({
         effects: [
-          {
+          eff({
             chooseOne: {
               internalDecisionId: 'decision:$branch',
               bind: '$branch',
               options: { query: 'enums', values: ['then', 'else'] },
             },
-          },
-          {
+          }),
+          eff({
             if: {
               when: { op: '==', left: { _t: 2, ref: 'binding', name: '$branch' }, right: 'then' },
               then: [
-                {
+                eff({
                   if: {
                     when: true,
                     then: [
-                      {
+                      eff({
                         chooseN: {
                           internalDecisionId: 'decision:$targets',
                           bind: '$targets',
@@ -1327,23 +1328,23 @@ describe('legality surface parity', () => {
                           min: 1,
                           max: 1,
                         },
-                      },
+                      }),
                     ],
                     else: [],
                   },
-                },
+                }),
               ],
               else: [
-                {
+                eff({
                   chooseOne: {
                     internalDecisionId: 'decision:$fallback',
                     bind: '$fallback',
                     options: { query: 'enums', values: ['x'] },
                   },
-                },
+                }),
               ],
             },
-          },
+          }),
         ],
       }),
     });
@@ -1364,13 +1365,13 @@ describe('legality surface parity', () => {
     const def = makeDef({
       action: makeAction({
         effects: [
-          {
+          eff({
             chooseOne: {
               internalDecisionId: 'decision:$mode',
               bind: '$mode',
               options: { query: 'enums', values: ['x'] },
             },
-          },
+          }),
         ],
       }),
     });
@@ -1390,13 +1391,13 @@ describe('legality surface parity', () => {
     const def = makeDef({
       action: makeAction({
         effects: [
-          {
+          eff({
             chooseOne: {
               internalDecisionId: 'decision:$target',
               bind: '$target',
               options: { query: 'enums', values: [] },
             },
-          },
+          }),
         ],
       }),
     });

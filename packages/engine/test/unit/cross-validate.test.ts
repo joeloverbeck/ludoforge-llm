@@ -13,6 +13,7 @@ import {
 } from '../../src/cnl/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { readCompilerFixture } from '../helpers/production-spec-helpers.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 const RICH_SEAT_CATALOG_IDS = ['us', 'arvn'] as const;
 const PRIMARY_SEAT_ID = RICH_SEAT_CATALOG_IDS[0];
@@ -113,7 +114,7 @@ phase: ['main'],
             title: 'Card 1',
             sideMode: 'single',
             unshaded: {
-              effects: [{ shuffle: { zone: 'deck:none' } }],
+              effects: [eff({ shuffle: { zone: 'deck:none' } })],
             },
           },
         ],
@@ -424,7 +425,7 @@ describe('crossValidateSpec', () => {
     const sections = compileRichSections();
     const diagnostics = crossValidate({
       ...sections,
-      setup: [{ createToken: { type: 'cube', zone: 'discrad:none' } }],
+      setup: [eff({ createToken: { type: 'cube', zone: 'discrad:none' } })],
     });
 
     assert.equal(diagnostics.some((entry) => entry.code === 'CNL_XREF_SETUP_ZONE_MISSING'), true);
@@ -683,7 +684,7 @@ describe('crossValidateSpec', () => {
     const sections = compileRichSections();
     const diagnostics = crossValidate({
       ...sections,
-      setup: [{ createToken: { type: 'cubee', zone: 'discard:none' } }],
+      setup: [eff({ createToken: { type: 'cubee', zone: 'discard:none' } })],
     });
 
     const diagnostic = diagnostics.find((entry) => entry.code === 'CNL_XREF_SETUP_TOKEN_TYPE_MISSING');
@@ -742,7 +743,7 @@ describe('crossValidateSpec', () => {
             {
               ...card,
               unshaded: {
-                effects: [{ draw: { from: 'deck:none', to: 'discrad:none', count: 1 } }],
+                effects: [eff({ draw: { from: 'deck:none', to: 'discrad:none', count: 1 } })],
               },
             },
           ],

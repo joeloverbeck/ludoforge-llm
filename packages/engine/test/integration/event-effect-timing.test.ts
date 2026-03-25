@@ -12,9 +12,11 @@ import {
   type GameDef,
 } from '../../src/kernel/index.js';
 import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
+import { eff } from '../helpers/effect-tag-helper.js';
+import { asTaggedGameDef } from '../helpers/gamedef-fixtures.js';
 
 const createDef = (): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'event-effect-timing-int', players: { min: 4, max: 4 }, maxTriggerDepth: 8 },
     seats: [{ id: '0' }, { id: '1' }, { id: '2' }, { id: '3' }],
     constants: {},
@@ -148,7 +150,7 @@ const createDef = (): GameDef =>
                   actionIds: ['operation'],
                 },
               ],
-              effects: [{ addVar: { scope: 'global', var: 'afterCounter', delta: 1 } }],
+              effects: [eff({ addVar: { scope: 'global', var: 'afterCounter', delta: 1 } })],
             },
           },
           {
@@ -165,7 +167,7 @@ const createDef = (): GameDef =>
                   actionIds: ['operation'],
                 },
               ],
-              effects: [{ addVar: { scope: 'global', var: 'afterCounterTwo', delta: 1 } }],
+              effects: [eff({ addVar: { scope: 'global', var: 'afterCounterTwo', delta: 1 } })],
             },
           },
           {
@@ -182,7 +184,7 @@ const createDef = (): GameDef =>
                   actionIds: ['operation'],
                 },
               ],
-              effects: [{ addVar: { scope: 'global', var: 'beforeCounter', delta: 1 } }],
+              effects: [eff({ addVar: { scope: 'global', var: 'beforeCounter', delta: 1 } })],
             },
           },
           {
@@ -191,7 +193,7 @@ const createDef = (): GameDef =>
             sideMode: 'single',
             unshaded: {
               effectTiming: 'afterGrants',
-              effects: [{ addVar: { scope: 'global', var: 'afterNoGrantCounter', delta: 1 } }],
+              effects: [eff({ addVar: { scope: 'global', var: 'afterNoGrantCounter', delta: 1 } })],
             },
           },
           {
@@ -207,7 +209,7 @@ const createDef = (): GameDef =>
                   actionIds: ['operation'],
                 },
               ],
-              effects: [{ addVar: { scope: 'global', var: 'defaultCounter', delta: 1 } }],
+              effects: [eff({ addVar: { scope: 'global', var: 'defaultCounter', delta: 1 } })],
             },
           },
           {
@@ -230,7 +232,7 @@ const createDef = (): GameDef =>
                   actionIds: ['operation'],
                 },
               ],
-              effects: [{ addVar: { scope: 'global', var: 'batchCounter', delta: 1 } }],
+              effects: [eff({ addVar: { scope: 'global', var: 'batchCounter', delta: 1 } })],
             },
           },
           {
@@ -239,7 +241,7 @@ const createDef = (): GameDef =>
             sideMode: 'single',
             unshaded: {
               effectTiming: 'beforeGrants',
-              effects: [{ addVar: { scope: 'global', var: 'branchSideCounter', delta: 1 } }],
+              effects: [eff({ addVar: { scope: 'global', var: 'branchSideCounter', delta: 1 } })],
               branches: [
                 {
                   id: 'branch-after',
@@ -252,7 +254,7 @@ const createDef = (): GameDef =>
                       actionIds: ['operation'],
                     },
                   ],
-                  effects: [{ addVar: { scope: 'global', var: 'branchCounter', delta: 1 } }],
+                  effects: [eff({ addVar: { scope: 'global', var: 'branchCounter', delta: 1 } })],
                 },
               ],
             },
@@ -263,12 +265,12 @@ const createDef = (): GameDef =>
             sideMode: 'single',
             unshaded: {
               effectTiming: 'beforeGrants',
-              effects: [{ addVar: { scope: 'global', var: 'branchSideNoGrantCounter', delta: 1 } }],
+              effects: [eff({ addVar: { scope: 'global', var: 'branchSideNoGrantCounter', delta: 1 } })],
               branches: [
                 {
                   id: 'branch-after-no-grant',
                   effectTiming: 'afterGrants',
-                  effects: [{ addVar: { scope: 'global', var: 'branchNoGrantCounter', delta: 1 } }],
+                  effects: [eff({ addVar: { scope: 'global', var: 'branchNoGrantCounter', delta: 1 } })],
                 },
               ],
             },
@@ -287,7 +289,7 @@ const createDef = (): GameDef =>
                   actionIds: ['operation'],
                 },
               ],
-              effects: [{ addVar: { scope: 'global', var: 'selfGrantCounter', delta: 1 } }],
+              effects: [eff({ addVar: { scope: 'global', var: 'selfGrantCounter', delta: 1 } })],
             },
           },
           {
@@ -311,13 +313,13 @@ const createDef = (): GameDef =>
                   actionIds: ['operation'],
                 },
               ],
-              effects: [{ addVar: { scope: 'global', var: 'interruptCounter', delta: 1 } }],
+              effects: [eff({ addVar: { scope: 'global', var: 'interruptCounter', delta: 1 } })],
             },
           },
         ],
       } as EventDeckDef,
     ],
-  }) as unknown as GameDef;
+  });
 
 const advanceToSeat = (def: GameDef, state: ReturnType<typeof initialState>['state'], targetSeat: number) => {
   let next = state;

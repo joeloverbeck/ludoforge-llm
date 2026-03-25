@@ -32,6 +32,8 @@ import {
   createSequenceContextMismatchZones,
 } from '../../helpers/free-operation-sequence-context-fixtures.js';
 import { readKernelSource } from '../../helpers/kernel-source-guard.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
+import { asTaggedGameDef } from '../../helpers/gamedef-fixtures.js';
 
 const makeBaseDef = (overrides?: {
   actions?: readonly ActionDef[];
@@ -41,7 +43,7 @@ const makeBaseDef = (overrides?: {
   tokenTypes?: GameDef['tokenTypes'];
   zones?: GameDef['zones'];
 }): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'legal-choices-test', players: { min: 2, max: 2 } },
     seats: [{ id: '0' }, { id: '1' }, { id: '2' }, { id: '3' }],
     constants: {},
@@ -60,7 +62,7 @@ const makeBaseDef = (overrides?: {
     actionPipelines: overrides?.actionPipelines,
     triggers: [],
     terminal: { conditions: [] },
-  }) as unknown as GameDef;
+  });
 
 const makeBaseState = (overrides?: Partial<GameState>): GameState => ({
   globalVars: {},
@@ -120,13 +122,13 @@ describe('legalChoicesDiscover()', () => {
       pre: null,
       cost: [],
       effects: [
-        {
+        eff({
           chooseOne: {
             internalDecisionId: 'decision:$target',
             bind: '$target',
             options: { query: 'enums', values: ['a', 'b'] },
           },
-        },
+        }),
       ],
       limits: [],
     };
@@ -181,7 +183,7 @@ phase: [asPhaseId('main')],
       pre: null,
       cost: [],
       effects: [
-        { setVar: { scope: 'global', var: 'score', value: 5 } },
+        eff({ setVar: { scope: 'global', var: 'score', value: 5 } }),
       ],
       limits: [],
     };
@@ -212,7 +214,7 @@ phase: [asPhaseId('main')],
       pre: null,
       cost: [],
       effects: [
-        { addVar: { scope: 'global', var: 'score', delta: { _t: 2, ref: 'binding', name: 'amount' } } },
+        eff({ addVar: { scope: 'global', var: 'score', delta: { _t: 2, ref: 'binding', name: 'amount' } } }),
       ],
       limits: [],
     };
@@ -244,13 +246,13 @@ phase: [asPhaseId('main')],
       pre: null,
       cost: [],
       effects: [
-        {
+        eff({
           chooseOne: {
             internalDecisionId: 'decision:$pick@{mode}',
             bind: '$pick@{mode}',
             options: { query: 'intsInRange', min: 1, max: 2 },
           },
-        },
+        }),
       ],
       limits: [],
     };
@@ -468,13 +470,13 @@ phase: [asPhaseId('main')],
       pre: null,
       cost: [],
       effects: [
-        {
+        eff({
           chooseOne: {
             internalDecisionId: 'decision:$color',
             bind: '$color',
             options: { query: 'enums', values: ['red', 'blue', 'green'] },
           },
-        },
+        }),
       ],
       limits: [],
     };
@@ -507,7 +509,7 @@ phase: [asPhaseId('main')],
       pre: null,
       cost: [],
       effects: [
-        {
+        eff({
           chooseN: {
             internalDecisionId: 'decision:$targets',
             bind: '$targets',
@@ -515,7 +517,7 @@ phase: [asPhaseId('main')],
             min: 1,
             max: 10,
           },
-        } as EffectAST,
+        }),
       ],
       limits: [],
     };
@@ -544,13 +546,13 @@ phase: [asPhaseId('main')],
       pre: null,
       cost: [],
       effects: [
-        {
+        eff({
           chooseOne: {
             internalDecisionId: 'decision:$zone',
             bind: '$zone',
             options: { query: 'zones' },
           },
-        },
+        }),
       ],
       limits: [],
     };
@@ -571,7 +573,7 @@ phase: [asPhaseId('main')],
       pre: null,
       cost: [],
       effects: [
-        {
+        eff({
           chooseN: {
             internalDecisionId: 'decision:$tokens',
             bind: '$tokens',
@@ -579,7 +581,7 @@ phase: [asPhaseId('main')],
             min: 1,
             max: 2,
           },
-        } as EffectAST,
+        }),
       ],
       limits: [],
     };
@@ -606,13 +608,13 @@ phase: [asPhaseId('main')],
       pre: null,
       cost: [],
       effects: [
-        {
+        eff({
           chooseOne: {
             internalDecisionId: 'decision:$zone',
             bind: '$zone',
             options: { query: 'zones' },
           },
-        },
+        }),
       ],
       limits: [],
     };
@@ -625,13 +627,13 @@ phase: [asPhaseId('main')],
       pre: null,
       cost: [],
       effects: [
-        {
+        eff({
           chooseOne: {
             internalDecisionId: 'decision:internal-zone',
             bind: '$zone',
             options: { query: 'zones' },
           },
-        },
+        }),
       ],
       limits: [],
     };
@@ -657,7 +659,7 @@ phase: [asPhaseId('main')],
       pre: null,
       cost: [],
       effects: [
-        {
+        eff({
           chooseN: {
             internalDecisionId: 'decision:$targets',
             bind: '$targets',
@@ -665,7 +667,7 @@ phase: [asPhaseId('main')],
             min: { _t: 4, if: { when: { op: '>', left: { _t: 2, ref: 'gvar', var: 'dynamicMin' }, right: 0 }, then: 1, else: 0 } },
             max: { _t: 2, ref: 'gvar', var: 'dynamicMax' },
           },
-        } as EffectAST,
+        }),
       ],
       limits: [],
     };
@@ -702,14 +704,14 @@ phase: [asPhaseId('main')],
       pre: null,
       cost: [],
       effects: [
-        {
+        eff({
           chooseN: {
             internalDecisionId: 'decision:$targets',
             bind: '$targets',
             options: { query: 'enums', values: ['a', 'b', 'c'] },
             max: true as unknown as number,
           },
-        } as EffectAST,
+        }),
       ],
       limits: [],
     };
@@ -733,20 +735,20 @@ phase: [asPhaseId('main')],
       pre: null,
       cost: [],
       effects: [
-        {
+        eff({
           chooseOne: {
             internalDecisionId: 'decision:$first',
             bind: '$first',
             options: { query: 'enums', values: ['x', 'y'] },
           },
-        },
-        {
+        }),
+        eff({
           chooseOne: {
             internalDecisionId: 'decision:$second',
             bind: '$second',
             options: { query: 'enums', values: ['a', 'b', 'c'] },
           },
-        },
+        }),
       ],
       limits: [],
     };
@@ -787,13 +789,13 @@ phase: [asPhaseId('main')],
       pre: null,
       cost: [],
       effects: [
-        {
+        eff({
           chooseOne: {
             internalDecisionId: 'decision:$color',
             bind: '$color',
             options: { query: 'enums', values: ['red', 'blue'] },
           },
-        },
+        }),
       ],
       limits: [],
     };
@@ -821,13 +823,13 @@ phase: [asPhaseId('main')],
       pre: null,
       cost: [],
       effects: [
-        {
+        eff({
           chooseOne: {
             internalDecisionId: 'decision:$row',
             bind: '$row',
             options: { query: 'assetRows', tableId: 'tournament-standard::blindSchedule.levels' },
           },
-        },
+        }),
       ],
       limits: [],
     };
@@ -872,7 +874,7 @@ phase: [asPhaseId('main')],
       pre: null,
       cost: [],
       effects: [
-        {
+        eff({
           if: {
             when: {
               op: '>=',
@@ -880,16 +882,16 @@ phase: [asPhaseId('main')],
               right: 5,
             },
             then: [
-              {
+              eff({
                 chooseOne: {
                   internalDecisionId: 'decision:$bonus',
                   bind: '$bonus',
                   options: { query: 'enums', values: ['gold', 'silver'] },
                 },
-              },
+              }),
             ],
           },
-        },
+        }),
       ],
       limits: [],
     };
@@ -956,12 +958,12 @@ phase: [asPhaseId('main')],
       pre: null,
       cost: [],
       effects: [
-        {
+        eff({
           let: {
             bind: '$threshold',
             value: 3,
             in: [
-              {
+              eff({
                 chooseOne: {
                   internalDecisionId: 'decision:$pick',
                   bind: '$pick',
@@ -971,10 +973,10 @@ phase: [asPhaseId('main')],
                     max: 3,
                   },
                 },
-              },
+              }),
             ],
           },
-        },
+        }),
       ],
       limits: [],
     };
@@ -1003,25 +1005,25 @@ phase: [asPhaseId('main')],
       pre: null,
       cost: [],
       effects: [
-        {
+        eff({
           let: {
             bind: '$inner',
             value: 1,
             in: [
-              {
+              eff({
                 transferVar: {
                   from: { scope: 'pvar', player: 'actor', var: 'chips' },
                   to: { scope: 'global', var: 'pot' },
                   amount: 3,
                   actualBind: '$paid',
                 },
-              },
-              {
+              }),
+              eff({
                 addVar: { scope: 'global', var: 'tracked', delta: { _t: 2, ref: 'binding', name: '$paid' } },
-              },
+              }),
             ],
           },
-        },
+        }),
       ],
       limits: [],
     };
@@ -1050,22 +1052,22 @@ phase: [asPhaseId('main')],
       pre: null,
       cost: [],
       effects: [
-        {
+        eff({
           rollRandom: {
             bind: '$roll',
             min: 1,
             max: 6,
             in: [
-              {
+              eff({
                 chooseOne: {
                   internalDecisionId: 'decision:$innerChoice',
                   bind: '$innerChoice',
                   options: { query: 'enums', values: ['a', 'b'] },
                 },
-              },
+              }),
             ],
           },
-        },
+        }),
       ],
       limits: [],
     };
@@ -1093,14 +1095,14 @@ phase: [asPhaseId('main')],
       pre: null,
       cost: [],
       effects: [
-        {
+        eff({
           chooseN: {
             internalDecisionId: 'decision:$exactTargets',
             bind: '$exactTargets',
             options: { query: 'enums', values: ['alpha', 'beta', 'gamma', 'delta'] },
             n: 2,
           },
-        } as EffectAST,
+        }),
       ],
       limits: [],
     };
@@ -1149,7 +1151,7 @@ phase: [asPhaseId('main')],
           {
             stage: 'selectSpaces',
             effects: [
-              {
+              eff({
                 chooseN: {
                   internalDecisionId: 'decision:$spaces',
                   bind: '$spaces',
@@ -1157,7 +1159,7 @@ phase: [asPhaseId('main')],
                   min: 1,
                   max: 10,
                 },
-              } as EffectAST,
+              }),
             ],
           },
         ],
@@ -1206,13 +1208,13 @@ phase: [asPhaseId('main')],
         stages: [
           {
             effects: [
-              {
+              eff({
                 chooseOne: {
                   internalDecisionId: 'decision:$target',
                   bind: '$target',
                   options: { query: 'enums', values: ['a', 'b'] },
                 },
-              },
+              }),
             ],
           },
         ],
@@ -1294,13 +1296,13 @@ phase: [asPhaseId('main')],
         stages: [
           {
             effects: [
-              {
+              eff({
                 chooseOne: {
                   internalDecisionId: 'decision:probe::$target',
                   bind: '$target',
                   options: { query: 'enums', values: ['a', 'b'] },
                 },
-              } as EffectAST,
+              }),
             ],
           },
         ],
@@ -1361,7 +1363,7 @@ phase: [asPhaseId('main')],
         stages: [
           {
             effects: [
-              {
+              eff({
                 chooseN: {
                   internalDecisionId: 'decision:probe::$targets',
                   bind: '$targets',
@@ -1369,7 +1371,7 @@ phase: [asPhaseId('main')],
                   min: 1,
                   max: 2,
                 },
-              } as EffectAST,
+              }),
             ],
           },
         ],
@@ -1405,7 +1407,7 @@ phase: [asPhaseId('main')],
         pre: null,
         cost: [],
         effects: [
-          {
+          eff({
             chooseN: {
               internalDecisionId: 'decision:$selected',
               bind: '$selected',
@@ -1413,13 +1415,13 @@ phase: [asPhaseId('main')],
               min: 2,
               max: 2,
             },
-          },
-          {
+          }),
+          eff({
             forEach: {
               bind: '$piece',
               over: { query: 'binding', name: '$selected' },
               effects: [
-                {
+                eff({
                   if: {
                     when: {
                       op: '==',
@@ -1463,10 +1465,10 @@ phase: [asPhaseId('main')],
                       } as EffectAST,
                     ],
                   },
-                } as EffectAST,
+                }),
               ],
             },
-          },
+          }),
         ],
         limits: [],
       };
@@ -1544,7 +1546,7 @@ phase: [asPhaseId('main')],
         stages: [
           {
             effects: [
-              {
+              eff({
                 chooseN: {
                   internalDecisionId: 'decision:probe::$targets',
                   bind: '$targets',
@@ -1552,7 +1554,7 @@ phase: [asPhaseId('main')],
                   min: 1,
                   max: 2,
                 },
-              } as EffectAST,
+              }),
             ],
           },
           {
@@ -1595,7 +1597,7 @@ phase: [asPhaseId('main')],
         pre: null,
         cost: [],
         effects: [
-          {
+          eff({
             chooseN: {
               internalDecisionId: 'decision:$targets',
               bind: '$targets',
@@ -1608,7 +1610,7 @@ phase: [asPhaseId('main')],
               },
               n: 1,
             },
-          } as EffectAST,
+          }),
         ],
         limits: [],
       };
@@ -1637,7 +1639,7 @@ phase: [asPhaseId('main')],
         pre: null,
         cost: [],
         effects: [
-          {
+          eff({
             chooseN: {
               internalDecisionId: 'decision:$targets',
               bind: '$targets',
@@ -1652,7 +1654,7 @@ phase: [asPhaseId('main')],
               min: 1,
               max: 2,
             },
-          } as EffectAST,
+          }),
         ],
         limits: [],
       };
@@ -1758,36 +1760,36 @@ phase: [asPhaseId('main')],
         stages: [
           {
             effects: [
-              {
+              eff({
                 chooseOne: {
                   internalDecisionId: 'decision:$mode',
                   bind: '$mode',
                   options: { query: 'enums', values: ['trap', 'safe'] },
                 },
-              } as EffectAST,
-              {
+              }),
+              eff({
                 if: {
                   when: { op: '==', left: { _t: 2, ref: 'binding', name: '$mode' }, right: 'trap' },
                   then: [
-                    {
+                    eff({
                       chooseOne: {
                         internalDecisionId: 'decision:$trapChoice',
                         bind: '$trapChoice',
                         options: { query: 'enums', values: [] },
                       },
-                    } as EffectAST,
+                    }),
                   ],
                   else: [
-                    {
+                    eff({
                       chooseOne: {
                         internalDecisionId: 'decision:$safeChoice',
                         bind: '$safeChoice',
                         options: { query: 'enums', values: ['ok'] },
                       },
-                    } as EffectAST,
+                    }),
                   ],
                 },
-              } as EffectAST,
+              }),
             ],
           },
         ],
@@ -1815,37 +1817,37 @@ phase: [asPhaseId('main')],
         pre: null,
         cost: [],
         effects: [
-          {
+          eff({
             chooseOne: {
               internalDecisionId: 'decision:$mode',
               bind: '$mode',
               options: { query: 'enums', values: ['stochastic', 'safe'] },
             },
-          } as EffectAST,
-          {
+          }),
+          eff({
             if: {
               when: { op: '==', left: { _t: 2, ref: 'binding', name: '$mode' }, right: 'stochastic' },
               then: [
-                {
+                eff({
                   rollRandom: {
                     bind: '$roll',
                     min: 1,
                     max: 2,
                     in: [
-                      {
+                      eff({
                         chooseOne: {
                           internalDecisionId: 'decision:$stochasticPick@{$roll}',
                           bind: '$stochasticPick@{$roll}',
                           options: { query: 'enums', values: ['x', 'y'] },
                         },
-                      } as EffectAST,
+                      }),
                     ],
                   },
-                } as EffectAST,
+                }),
               ],
               else: [],
             },
-          } as EffectAST,
+          }),
         ],
         limits: [],
       };
@@ -1875,7 +1877,7 @@ phase: [asPhaseId('main')],
         pre: null,
         cost: [],
         effects: [
-          {
+          eff({
             chooseN: {
               internalDecisionId: 'decision:$targets',
               bind: '$targets',
@@ -1883,8 +1885,8 @@ phase: [asPhaseId('main')],
               min: 1,
               max: 1,
             },
-          } as EffectAST,
-          {
+          }),
+          eff({
             if: {
               when: {
                 op: 'in',
@@ -1892,26 +1894,26 @@ phase: [asPhaseId('main')],
                 set: { _t: 2, ref: 'binding', name: '$targets' },
               },
               then: [
-                {
+                eff({
                   rollRandom: {
                     bind: '$roll',
                     min: 1,
                     max: 2,
                     in: [
-                      {
+                      eff({
                         chooseOne: {
                           internalDecisionId: 'decision:$stochasticPick@{$roll}',
                           bind: '$stochasticPick@{$roll}',
                           options: { query: 'enums', values: ['x', 'y'] },
                         },
-                      } as EffectAST,
+                      }),
                     ],
                   },
-                } as EffectAST,
+                }),
               ],
               else: [],
             },
-          } as EffectAST,
+          }),
         ],
         limits: [],
       };
@@ -1942,7 +1944,7 @@ phase: [asPhaseId('main')],
         pre: null,
         cost: [],
         effects: [
-          {
+          eff({
             chooseN: {
               internalDecisionId: 'decision:reuse::$targets',
               bind: '$targets',
@@ -1950,7 +1952,7 @@ phase: [asPhaseId('main')],
               min: 1,
               max: 2,
             },
-          } as EffectAST,
+          }),
         ],
         limits: [],
       };
@@ -1989,7 +1991,7 @@ phase: [asPhaseId('main')],
         pre: null,
         cost: [],
         effects: [
-          {
+          eff({
             chooseN: {
               internalDecisionId: 'decision:overflow::$targets',
               bind: '$targets',
@@ -1999,7 +2001,7 @@ phase: [asPhaseId('main')],
               },
               n: 5,
             },
-          } as EffectAST,
+          }),
         ],
         limits: [],
       };
@@ -2070,13 +2072,13 @@ phase: [asPhaseId('main')],
         pre: null,
         cost: [],
         effects: [
-          {
+          eff({
             chooseOne: {
               internalDecisionId: 'decision:$fallbackChoice',
               bind: '$fallbackChoice',
               options: { query: 'enums', values: ['fallback'] },
             },
-          } as EffectAST,
+          }),
         ],
         limits: [],
       };
@@ -2092,13 +2094,13 @@ phase: [asPhaseId('main')],
         stages: [
           {
             effects: [
-              {
+              eff({
                 chooseOne: {
                   internalDecisionId: 'decision:$profileChoice',
                   bind: '$profileChoice',
                   options: { query: 'enums', values: ['profile'] },
                 },
-              } as EffectAST,
+              }),
             ],
           },
         ],
@@ -2218,20 +2220,20 @@ phase: [asPhaseId('main')],
         stages: [
           {
             effects: [
-              {
+              eff({
                 chooseN: {
                   internalDecisionId: 'decision:targetSpaces',
                   bind: 'targetSpaces',
                   options: { query: 'enums', values: ['b:none', 'c:none'] },
                   n: 2,
                 },
-              } as EffectAST,
-              {
+              }),
+              eff({
                 forEach: {
                   bind: '$dest',
                   over: { query: 'binding', name: 'targetSpaces' },
                   effects: [
-                    {
+                    eff({
                       chooseN: {
                         internalDecisionId: 'decision:$moving',
                         bind: '$moving',
@@ -2243,32 +2245,32 @@ phase: [asPhaseId('main')],
                         min: 0,
                         max: 99,
                       },
-                    } as EffectAST,
-                    {
+                    }),
+                    eff({
                       forEach: {
                         bind: '$piece',
                         over: { query: 'binding', name: '$moving' },
                         effects: [
-                          {
+                          eff({
                             moveToken: {
                               token: '$piece',
                               from: { zoneExpr: { _t: 2, ref: 'tokenZone', token: '$piece' } },
                               to: '$dest',
                             },
-                          },
+                          }),
                         ],
                       },
-                    } as EffectAST,
+                    }),
                   ],
                 },
-              } as EffectAST,
+              }),
             ],
           },
         ],
         atomicity: 'partial',
       };
 
-      const def = {
+      const def = asTaggedGameDef({
         ...makeBaseDef({ actions: [action], actionPipelines: [profile] }),
         zones: [
           { id: asZoneId('a:none'), owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [{ to: asZoneId('b:none') }] },
@@ -2276,7 +2278,7 @@ phase: [asPhaseId('main')],
           { id: asZoneId('c:none'), owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [{ to: asZoneId('b:none') }] },
           { id: asZoneId('hand:0'), owner: 'player', visibility: 'owner', ordering: 'stack' },
         ],
-      } as GameDef;
+      });
 
       const state = makeBaseState({
         zones: {
@@ -2327,7 +2329,7 @@ phase: [asPhaseId('main')],
         stages: [
           {
             effects: [
-              {
+              eff({
                 forEach: {
                   bind: '$zone',
                   over: {
@@ -2339,7 +2341,7 @@ phase: [asPhaseId('main')],
                   },
                   effects: [],
                 },
-              } as EffectAST,
+              }),
             ],
           },
         ],
@@ -2374,7 +2376,7 @@ phase: [asPhaseId('main')],
         stages: [
           {
             effects: [
-              {
+              eff({
                 reduce: {
                   itemBind: '$n',
                   accBind: '$acc',
@@ -2383,17 +2385,17 @@ phase: [asPhaseId('main')],
                   next: { _t: 6, op: '+', left: { _t: 2, ref: 'binding', name: '$acc' }, right: { _t: 2, ref: 'binding', name: '$n' } },
                   resultBind: '$total',
                   in: [
-                    {
+                    eff({
                       chooseN: {
                         internalDecisionId: 'decision:$picked',
                         bind: '$picked',
                         options: { query: 'intsInRange', min: 1, max: { _t: 2, ref: 'binding', name: '$total' } },
                         n: 1,
                       },
-                    },
+                    }),
                   ],
                 },
-              } as EffectAST,
+              }),
             ],
           },
         ],
@@ -2434,14 +2436,14 @@ phase: [asPhaseId('main')],
         costEffects: [],
         targeting: {},
         stages: [{
-          effects: [{
+          effects: [eff({
             forEach: {
               bind: '$n',
               over: { query: 'intsInRange', min: 1, max: 2 },
               effects: [],
               limit: -1,
             },
-          } as EffectAST],
+          })],
         }],
         atomicity: 'partial',
       };
@@ -2472,7 +2474,7 @@ phase: [asPhaseId('main')],
         costEffects: [],
         targeting: {},
         stages: [{
-          effects: [{
+          effects: [eff({
             reduce: {
               itemBind: '$n',
               accBind: '$acc',
@@ -2483,7 +2485,7 @@ phase: [asPhaseId('main')],
               resultBind: '$out',
               in: [],
             },
-          } as EffectAST],
+          })],
         }],
         atomicity: 'partial',
       };
@@ -2504,7 +2506,7 @@ phase: [asPhaseId('main')],
         pre: null,
         cost: [],
         effects: [
-          {
+          eff({
             removeByPriority: {
               budget: 1,
               groups: [
@@ -2516,16 +2518,16 @@ phase: [asPhaseId('main')],
                 },
               ],
               in: [
-                {
+                eff({
                   chooseOne: {
                     internalDecisionId: 'decision:$picked',
                     bind: '$picked',
                     options: { query: 'tokensInZone', zone: 'hand:0' },
                   },
-                },
+                }),
               ],
             },
-          },
+          }),
         ],
         limits: [],
       };
@@ -2579,7 +2581,7 @@ phase: [asPhaseId('main')],
         atomicity: 'partial',
       };
 
-      const def: GameDef = {
+      const def: GameDef = asTaggedGameDef({
         ...makeBaseDef({ actions: [action], actionPipelines: [profile] }),
         zones: [
           { id: asZoneId('board:cambodia'), owner: 'none', visibility: 'public', ordering: 'set', category: 'province', attributes: { population: 1, econ: 0, terrainTags: [], country: 'cambodia', coastal: false }, adjacentTo: [] },
@@ -2601,7 +2603,7 @@ phase: [asPhaseId('main')],
             },
           },
         },
-      } as unknown as GameDef;
+      });
 
       const state = makeBaseState({
         zones: { 'board:cambodia': [], 'board:vietnam': [] },
@@ -2657,7 +2659,7 @@ phase: [asPhaseId('main')],
         limits: [],
       };
 
-      const def: GameDef = {
+      const def: GameDef = asTaggedGameDef({
         ...makeBaseDef({ actions: [action] }),
         turnOrder: {
           type: 'cardDriven',
@@ -2675,7 +2677,7 @@ phase: [asPhaseId('main')],
             },
           },
         },
-      } as unknown as GameDef;
+      });
 
       const state = makeBaseState({
         turnOrderState: {
@@ -2727,7 +2729,7 @@ phase: [asPhaseId('main')],
         limits: [],
       };
 
-      const def: GameDef = {
+      const def: GameDef = asTaggedGameDef({
         ...makeBaseDef({
           actions: [action],
           zones: [
@@ -2763,7 +2765,7 @@ phase: [asPhaseId('main')],
             },
           },
         },
-      } as unknown as GameDef;
+      });
 
       const state = makeBaseState({
         zones: { 'board:cambodia': [] },
@@ -2843,7 +2845,7 @@ phase: [asPhaseId('main')],
         atomicity: 'partial',
       };
 
-      const def: GameDef = {
+      const def: GameDef = asTaggedGameDef({
         ...makeBaseDef({ actions: [action], actionPipelines: [profile] }),
         zones: [
           { id: asZoneId('board:cambodia'), owner: 'none', visibility: 'public', ordering: 'set', category: 'province', attributes: { population: 1, econ: 0, terrainTags: [], country: 'cambodia', coastal: false }, adjacentTo: [] },
@@ -2865,7 +2867,7 @@ phase: [asPhaseId('main')],
             },
           },
         },
-      } as unknown as GameDef;
+      });
 
       const state = makeBaseState({
         zones: { 'board:cambodia': [], 'board:vietnam': [] },
@@ -2943,7 +2945,7 @@ phase: [asPhaseId('main')],
         atomicity: 'partial',
       };
 
-      const def: GameDef = {
+      const def: GameDef = asTaggedGameDef({
         ...makeBaseDef({ actions: [action], actionPipelines: [profile] }),
         turnOrder: {
           type: 'cardDriven',
@@ -2961,7 +2963,7 @@ phase: [asPhaseId('main')],
             },
           },
         },
-      } as unknown as GameDef;
+      });
 
       const state = makeBaseState({
         activePlayer: asPlayerId(0),
@@ -3033,7 +3035,7 @@ phase: [asPhaseId('main')],
         atomicity: 'partial',
       };
 
-      const def: GameDef = {
+      const def: GameDef = asTaggedGameDef({
         ...makeBaseDef({ actions: [action], actionPipelines: [profile] }),
         turnOrder: {
           type: 'cardDriven',
@@ -3051,7 +3053,7 @@ phase: [asPhaseId('main')],
             },
           },
         },
-      } as unknown as GameDef;
+      });
 
       const state = makeBaseState({
         turnOrderState: {
@@ -3112,7 +3114,7 @@ phase: [asPhaseId('main')],
         limits: [],
       };
 
-      const def: GameDef = {
+      const def: GameDef = asTaggedGameDef({
         ...makeBaseDef({ actions: [action] }),
         turnOrder: {
           type: 'cardDriven',
@@ -3130,7 +3132,7 @@ phase: [asPhaseId('main')],
             },
           },
         },
-      } as unknown as GameDef;
+      });
 
       const state = makeBaseState({
         turnOrderState: {
@@ -3179,7 +3181,7 @@ phase: [asPhaseId('main')],
         limits: [],
       };
 
-      const def: GameDef = {
+      const def: GameDef = asTaggedGameDef({
         ...makeBaseDef({
           actions: [action],
           globalVars: [{ name: 'resources', type: 'int', init: 0, min: 0, max: 100 }],
@@ -3200,7 +3202,7 @@ phase: [asPhaseId('main')],
             },
           },
         },
-      } as unknown as GameDef;
+      });
 
       const state = makeBaseState({
         globalVars: { resources: 0 },
@@ -3255,7 +3257,7 @@ phase: [asPhaseId('main')],
         limits: [],
       };
 
-      const def: GameDef = {
+      const def: GameDef = asTaggedGameDef({
         ...makeBaseDef({
           actions: [action],
           zones: createSequenceContextMismatchZones(),
@@ -3276,7 +3278,7 @@ phase: [asPhaseId('main')],
             },
           },
         },
-      } as unknown as GameDef;
+      });
 
       const state = makeBaseState({
         zones: createSequenceContextMismatchZoneState(),
@@ -3306,7 +3308,7 @@ phase: [asPhaseId('main')],
         limits: [],
       };
 
-      const def: GameDef = {
+      const def: GameDef = asTaggedGameDef({
         ...makeBaseDef({ actions: [action] }),
         turnOrder: {
           type: 'cardDriven',
@@ -3324,7 +3326,7 @@ phase: [asPhaseId('main')],
             },
           },
         },
-      } as unknown as GameDef;
+      });
 
       const state = makeBaseState({
         turnOrderState: {
@@ -3373,7 +3375,7 @@ phase: [asPhaseId('main')],
         limits: [],
       };
 
-      const def: GameDef = {
+      const def: GameDef = asTaggedGameDef({
         ...makeBaseDef({ actions: [action] }),
         turnOrder: {
           type: 'cardDriven',
@@ -3391,7 +3393,7 @@ phase: [asPhaseId('main')],
             },
           },
         },
-      } as unknown as GameDef;
+      });
 
       const state = makeBaseState({
         turnOrderState: {
@@ -3451,7 +3453,7 @@ phase: [asPhaseId('main')],
         limits: [],
       };
 
-      const def: GameDef = {
+      const def: GameDef = asTaggedGameDef({
         ...makeBaseDef({ actions: [action] }),
         turnOrder: {
           type: 'cardDriven',
@@ -3469,7 +3471,7 @@ phase: [asPhaseId('main')],
             },
           },
         },
-      } as unknown as GameDef;
+      });
 
       const state = makeBaseState({
         turnOrderState: {
@@ -3651,13 +3653,13 @@ phase: [asPhaseId('main')],
         pre: null,
         cost: [],
         effects: [
-          {
+          eff({
             chooseOne: {
               internalDecisionId: 'decision:$choice',
               bind: '$choice',
               options: { query: 'enums', values: ['a', 'b'] },
             },
-          },
+          }),
         ],
         limits: [],
       };

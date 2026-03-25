@@ -19,6 +19,7 @@ import {
   type Move,
   type ActionDef,
 } from '../../../src/kernel/index.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
 
 const phaseId = asPhaseId('main');
 const literal = (value: AgentPolicyLiteral): AgentPolicyExpr => ({
@@ -43,7 +44,7 @@ function createAction(id: string, params: ActionDef['params'] = []): ActionDef {
     pre: null,
     cost: [],
     effects: id === 'advance'
-      ? [{ addVar: { scope: 'global', var: 'usMargin', delta: 3 } }]
+      ? [eff({ addVar: { scope: 'global', var: 'usMargin', delta: 3 } })]
       : [],
     limits: [],
   };

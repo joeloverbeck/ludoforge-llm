@@ -13,6 +13,7 @@ import { describe, it } from 'node:test';
 import type { GameSpecDoc } from '../../src/cnl/game-spec-doc.js';
 import { createEmptyGameSpecDoc } from '../../src/cnl/game-spec-doc.js';
 import { compileGameSpecToGameDef } from '../../src/cnl/compiler.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 /**
  * Creates a minimal doc with card-driven turn order that references an `event`
@@ -129,7 +130,7 @@ describe('compiler diagnostic visibility', () => {
               id: 'card-a',
               title: 'Card A',
               sideMode: 'single' as const,
-              unshaded: { effects: [{ shuffle: { zone: 'board:none' } }] },
+              unshaded: { effects: [eff({ shuffle: { zone: 'board:none' } })] },
             },
           ],
         },

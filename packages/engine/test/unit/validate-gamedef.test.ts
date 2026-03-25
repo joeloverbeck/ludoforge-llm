@@ -29,6 +29,7 @@ import {
 import { booleanArityMessage } from '../../src/kernel/boolean-arity-policy.js';
 import { collectEffectDeclaredBinderPolicyPatternsForTest } from '../../src/kernel/validate-gamedef-behavior.js';
 import { asTaggedGameDef, createValidGameDef, readGameDefFixture } from '../helpers/gamedef-fixtures.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 const withCardDrivenTurnFlow = (
   base: GameDef,
@@ -6294,20 +6295,20 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
 
   it('rejects mixed progressionPolicy values within one effect-issued free-operation batch', () => {
     const effects: readonly EffectAST[] = [
-      {
+      eff({
         grantFreeOperation: {
           seat: '0',
           operationClass: 'operation',
           sequence: { batch: 'effect-chain', step: 0, progressionPolicy: 'strictInOrder' },
         },
-      },
-      {
+      }),
+      eff({
         grantFreeOperation: {
           seat: '0',
           operationClass: 'operation',
           sequence: { batch: 'effect-chain', step: 1, progressionPolicy: 'implementWhatCanInOrder' },
         },
-      },
+      }),
     ] as const;
     const def = asTaggedGameDef({
       ...createValidGameDef(),

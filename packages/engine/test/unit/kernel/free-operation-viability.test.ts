@@ -12,6 +12,7 @@ import {
   type GameDef,
   type GameState,
 } from '../../../src/kernel/index.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
 
 const makeBaseDef = (overrides: {
   readonly actions: readonly ActionDef[];
@@ -108,7 +109,7 @@ describe('free-operation viability runtime', () => {
       stages: [
         {
           effects: [
-            {
+            eff({
               chooseN: {
                 internalDecisionId: 'decision:$targets',
                 bind: '$targets',
@@ -119,14 +120,14 @@ describe('free-operation viability runtime', () => {
                 min: 8,
                 max: 8,
               },
-            } as ActionPipelineDef['stages'][number]['effects'][number],
-            {
+            }) as ActionPipelineDef['stages'][number]['effects'][number],
+            eff({
               chooseOne: {
                 internalDecisionId: 'decision:$unreachable',
                 bind: '$unreachable',
                 options: { query: 'enums', values: [] },
               },
-            } as ActionPipelineDef['stages'][number]['effects'][number],
+            }) as ActionPipelineDef['stages'][number]['effects'][number],
           ],
         },
       ],

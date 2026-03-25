@@ -6,6 +6,7 @@ import { canonicalizeNamedSets } from '../../src/cnl/named-set-utils.js';
 import type { Diagnostic } from '../../src/kernel/diagnostics.js';
 import type { PhaseDef } from '../../src/kernel/types-core.js';
 import { asPhaseId } from '../../src/kernel/branded.js';
+import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
 
 const makeContext = (): EffectLoweringSharedContext => ({
   ownershipByBase: { board: 'none' },
@@ -67,9 +68,9 @@ describe('compile-lowering actionDefaults', () => {
     assert.ok(phase.actionDefaults !== undefined, 'actionDefaults should be present');
     assert.ok(phase.actionDefaults.afterEffects !== undefined, 'afterEffects should be present');
     assert.equal(phase.actionDefaults.afterEffects.length, 1);
-    assert.deepEqual(phase.actionDefaults.afterEffects[0], {
+    assert.deepEqual(phase.actionDefaults.afterEffects[0], tagEffectAsts({
       addVar: { scope: 'global', var: 'counter', delta: 1 },
-    });
+    }));
   });
 
   it('phase without actionDefaults lowers as before (no field in output)', () => {

@@ -17,6 +17,7 @@ import {
   type Token,
   createCollector,
 } from '../../src/kernel/index.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 const token = (id: string, rank: number): Token => ({
   id: asTokenId(id),
@@ -79,10 +80,10 @@ describe('effects golden outputs', () => {
   it('known seed + fixed effect list yields expected final state snapshot', () => {
     const ctx = makeCtx({ bindings: { $move: asTokenId('d2') } });
     const effects: readonly EffectAST[] = [
-      { addVar: { scope: 'global', var: 'score', delta: 4 } },
-      { moveToken: { token: '$move', from: 'deck:none', to: 'discard:none', position: 'top' } },
-      { draw: { from: 'deck:none', to: 'discard:none', count: 1 } },
-      { createToken: { type: 'card', zone: 'deck:none', props: { rank: 7 } } },
+      eff({ addVar: { scope: 'global', var: 'score', delta: 4 } }),
+      eff({ moveToken: { token: '$move', from: 'deck:none', to: 'discard:none', position: 'top' } }),
+      eff({ draw: { from: 'deck:none', to: 'discard:none', count: 1 } }),
+      eff({ createToken: { type: 'card', zone: 'deck:none', props: { rank: 7 } } }),
     ];
 
     const result = applyEffects(effects, ctx);

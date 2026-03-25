@@ -15,6 +15,9 @@ import { EventCardFreeOperationGrantSchema } from '../../src/kernel/schemas-exte
 import { PREDICATE_OPERATORS } from '../../src/contracts/index.js';
 import { AST_SCOPED_VAR_SCOPES } from '../../src/kernel/scoped-var-contract.js';
 import { buildDiscriminatedEndpointMatrix } from '../helpers/transfer-endpoint-matrix.js';
+import { eff } from '../helpers/effect-tag-helper.js';
+import { EFFECT_KIND_TAG } from '../../src/kernel/types-ast.js';
+import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
 
 const collectIssuePaths = (issue: unknown): string[] => {
   if (!issue || typeof issue !== 'object') {
@@ -114,10 +117,10 @@ describe('AST and selector schemas', () => {
       {
         name: 'variable and player state operations',
         effects: [
-          { setVar: { scope: 'global', var: 'gold', value: 1 } },
-          { setActivePlayer: { player: { chosen: '$targetPlayer' } } },
-          { addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 2 } },
-          {
+          eff({ setVar: { scope: 'global', var: 'gold', value: 1 } }),
+          eff({ setActivePlayer: { player: { chosen: '$targetPlayer' } } }),
+          eff({ addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 2 } }),
+          eff({
             transferVar: {
               from: { scope: 'pvar', player: 'actor', var: 'coins' },
               to: { scope: 'global', var: 'pot' },
@@ -126,92 +129,92 @@ describe('AST and selector schemas', () => {
               max: 10,
               actualBind: '$actual',
             },
-          },
-          {
+          }),
+          eff({
             transferVar: {
               from: { scope: 'zoneVar', zone: 'board:none', var: 'supply' },
               to: { scope: 'zoneVar', zone: 'hand:actor', var: 'supply' },
               amount: 2,
             },
-          },
+          }),
         ],
       },
       {
         name: 'token and zone movement operations',
         effects: [
-          { moveToken: { token: '$card', from: 'deck:none', to: 'hand:actor', position: 'top' } },
-          {
+          eff({ moveToken: { token: '$card', from: 'deck:none', to: 'hand:actor', position: 'top' } }),
+          eff({
             moveToken: {
               token: '$card',
               from: { zoneExpr: { _t: 2 as const, ref: 'tokenZone', token: '$card' } },
               to: { zoneExpr: { _t: 3 as const, concat: ['discard:', { _t: 2 as const, ref: 'activePlayer' }] } },
             },
-          },
-          { setVar: { scope: 'global', var: 'activeSeatLabel', value: { _t: 2 as const, ref: 'activeSeat' } } },
-          { moveAll: { from: 'discard:none', to: 'deck:none', filter: { op: 'not', arg: { op: '==', left: 1, right: 2 } } } },
-          { moveAll: { from: { zoneExpr: 'discard:none' }, to: { zoneExpr: 'deck:none' } } },
-          { moveTokenAdjacent: { token: '$unit', from: 'board:active', direction: 'north' } },
-          { moveTokenAdjacent: { token: '$unit', from: { zoneExpr: 'board:active' }, direction: 'north' } },
-          { draw: { from: 'deck:none', to: 'hand:actor', count: 1 } },
-          { draw: { from: { zoneExpr: 'deck:none' }, to: { zoneExpr: 'hand:actor' }, count: 1 } },
-          { shuffle: { zone: 'deck:none' } },
-          { shuffle: { zone: { zoneExpr: 'deck:none' } } },
+          }),
+          eff({ setVar: { scope: 'global', var: 'activeSeatLabel', value: { _t: 2 as const, ref: 'activeSeat' } } }),
+          eff({ moveAll: { from: 'discard:none', to: 'deck:none', filter: { op: 'not', arg: { op: '==', left: 1, right: 2 } } } }),
+          eff({ moveAll: { from: { zoneExpr: 'discard:none' }, to: { zoneExpr: 'deck:none' } } }),
+          eff({ moveTokenAdjacent: { token: '$unit', from: 'board:active', direction: 'north' } }),
+          eff({ moveTokenAdjacent: { token: '$unit', from: { zoneExpr: 'board:active' }, direction: 'north' } }),
+          eff({ draw: { from: 'deck:none', to: 'hand:actor', count: 1 } }),
+          eff({ draw: { from: { zoneExpr: 'deck:none' }, to: { zoneExpr: 'hand:actor' }, count: 1 } }),
+          eff({ shuffle: { zone: 'deck:none' } }),
+          eff({ shuffle: { zone: { zoneExpr: 'deck:none' } } }),
         ],
       },
       {
         name: 'hidden-information visibility operations',
         effects: [
-          { reveal: { zone: 'hand:actor', to: 'all' } },
-          {
+          eff({ reveal: { zone: 'hand:actor', to: 'all' } }),
+          eff({
             reveal: {
               zone: { zoneExpr: 'hand:actor' },
               to: { chosen: '$targetPlayer' },
               filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US' }] },
             },
-          },
-          { conceal: { zone: 'hand:actor' } },
-          { conceal: { zone: 'hand:actor', from: 'all' } },
-          { conceal: { zone: 'hand:actor', from: { id: asPlayerId(2) } } },
-          { conceal: { zone: 'hand:actor', from: { chosen: '$targetPlayer' } } },
-          { conceal: { zone: 'hand:actor', filter: { op: 'and', args: [{ prop: 'faction', op: 'neq', value: 'US' }] } } },
+          }),
+          eff({ conceal: { zone: 'hand:actor' } }),
+          eff({ conceal: { zone: 'hand:actor', from: 'all' } }),
+          eff({ conceal: { zone: 'hand:actor', from: { id: asPlayerId(2) } } }),
+          eff({ conceal: { zone: 'hand:actor', from: { chosen: '$targetPlayer' } } }),
+          eff({ conceal: { zone: 'hand:actor', filter: { op: 'and', args: [{ prop: 'faction', op: 'neq', value: 'US' }] } } }),
         ],
       },
       {
         name: 'token lifecycle and property operations',
         effects: [
-          { createToken: { type: 'card', zone: 'deck:none', props: { cost: 3, rare: false } } },
-          { createToken: { type: 'card', zone: { zoneExpr: 'deck:none' }, props: { cost: 3, rare: false } } },
-          { destroyToken: { token: '$dead' } },
-          { setTokenProp: { token: '$unit', prop: 'activity', value: 'active' } },
+          eff({ createToken: { type: 'card', zone: 'deck:none', props: { cost: 3, rare: false } } }),
+          eff({ createToken: { type: 'card', zone: { zoneExpr: 'deck:none' }, props: { cost: 3, rare: false } } }),
+          eff({ destroyToken: { token: '$dead' } }),
+          eff({ setTokenProp: { token: '$unit', prop: 'activity', value: 'active' } }),
         ],
       },
       {
         name: 'control flow and binding operations',
         effects: [
-          {
+          eff({
             rollRandom: {
               bind: '$die',
               min: 1,
               max: 6,
-              in: [{ setVar: { scope: 'global', var: 'roll', value: { _t: 2 as const, ref: 'binding', name: '$die' } } }],
+              in: [eff({ setVar: { scope: 'global', var: 'roll', value: { _t: 2 as const, ref: 'binding', name: '$die' } } })],
             },
-          },
-          {
+          }),
+          eff({
             if: {
               when: { op: 'and', args: [{ op: '==', left: 1, right: 1 }] },
-              then: [{ addVar: { scope: 'global', var: 'turn', delta: 1 } }],
-              else: [{ shuffle: { zone: 'deck:none' } }],
+              then: [eff({ addVar: { scope: 'global', var: 'turn', delta: 1 } })],
+              else: [eff({ shuffle: { zone: 'deck:none' } })],
             },
-          },
-          {
+          }),
+          eff({
             forEach: {
               bind: '$p',
               over: { query: 'players' },
-              effects: [{ setVar: { scope: 'global', var: 'seen', value: { _t: 2 as const, ref: 'binding', name: '$p' } } }],
+              effects: [eff({ setVar: { scope: 'global', var: 'seen', value: { _t: 2 as const, ref: 'binding', name: '$p' } } })],
               limit: 10,
             },
-          },
-          {
+          }),
+          eff({
             reduce: {
               itemBind: '$n',
               accBind: '$acc',
@@ -219,28 +222,28 @@ describe('AST and selector schemas', () => {
               initial: 0,
               next: { _t: 6 as const, op: '+', left: { _t: 2 as const, ref: 'binding', name: '$acc' }, right: { _t: 2 as const, ref: 'binding', name: '$n' } },
               resultBind: '$sum',
-              in: [{ setVar: { scope: 'global', var: 'seen', value: { _t: 2 as const, ref: 'binding', name: '$sum' } } }],
+              in: [eff({ setVar: { scope: 'global', var: 'seen', value: { _t: 2 as const, ref: 'binding', name: '$sum' } } })],
             },
-          },
-          {
+          }),
+          eff({
             let: {
               bind: '$n',
               value: { _t: 5 as const, aggregate: { op: 'count', query: { query: 'tokensInZone', zone: 'deck:none' } } },
-              in: [{ chooseN: { internalDecisionId: 'decision:$pick', bind: '$pick', options: { query: 'players' }, n: 1 } }],
+              in: [eff({ chooseN: { internalDecisionId: 'decision:$pick', bind: '$pick', options: { query: 'players' }, n: 1 } })],
             },
-          },
-          {
+          }),
+          eff({
             bindValue: {
               bind: '$score',
               value: { _t: 6 as const, op: '+', left: 1, right: 2 },
             },
-          },
+          }),
         ],
       },
       {
         name: 'choice and search operations',
         effects: [
-          {
+          eff({
             evaluateSubset: {
               source: { query: 'tokensInZone', zone: 'deck:none' },
               subsetSize: 2,
@@ -257,26 +260,26 @@ describe('AST and selector schemas', () => {
               },
               resultBind: '$score',
               bestSubsetBind: '$best',
-              in: [{ setVar: { scope: 'global', var: 'bestScore', value: { _t: 2 as const, ref: 'binding', name: '$score' } } }],
+              in: [eff({ setVar: { scope: 'global', var: 'bestScore', value: { _t: 2 as const, ref: 'binding', name: '$score' } } })],
             },
-          },
-          {
+          }),
+          eff({
             chooseOne: {
               internalDecisionId: 'decision:$zone',
               bind: '$zone',
               options: { query: 'zones', filter: { owner: 'active' } },
             },
-          },
-          {
+          }),
+          eff({
             chooseN: {
               internalDecisionId: 'decision:$token',
               bind: '$token',
               options: { query: 'tokensInAdjacentZones', zone: 'board:actor' },
               n: 2,
             },
-          },
-          { chooseN: { internalDecisionId: 'decision:$opt', bind: '$opt', options: { query: 'players' }, max: 2 } },
-          {
+          }),
+          eff({ chooseN: { internalDecisionId: 'decision:$opt', bind: '$opt', options: { query: 'players' }, max: 2 } }),
+          eff({
             chooseN: {
               internalDecisionId: 'decision:$range',
               bind: '$range',
@@ -284,8 +287,8 @@ describe('AST and selector schemas', () => {
               min: 1,
               max: 3,
             },
-          },
-          {
+          }),
+          eff({
             chooseN: {
               internalDecisionId: 'decision:$dynamicRange',
               bind: '$dynamicRange',
@@ -293,13 +296,13 @@ describe('AST and selector schemas', () => {
               min: { _t: 4 as const, if: { when: true, then: 0, else: 1 } },
               max: { _t: 2 as const, ref: 'gvar', var: 'maxTargets' },
             },
-          },
+          }),
         ],
       },
       {
         name: 'priority removal and phase operations',
         effects: [
-          {
+          eff({
             removeByPriority: {
               budget: 3,
               groups: [
@@ -311,10 +314,10 @@ describe('AST and selector schemas', () => {
                 },
               ],
               remainingBind: '$remaining',
-              in: [{ setVar: { scope: 'global', var: 'seen', value: { _t: 2 as const, ref: 'binding', name: '$removed' } } }],
+              in: [eff({ setVar: { scope: 'global', var: 'seen', value: { _t: 2 as const, ref: 'binding', name: '$removed' } } })],
             },
-          },
-          {
+          }),
+          eff({
             grantFreeOperation: {
               id: 'grant-vc-op',
               seat: '3',
@@ -325,36 +328,36 @@ describe('AST and selector schemas', () => {
               uses: 2,
               sequence: { batch: 'vc-ops', step: 1 },
             },
-          },
-          {
+          }),
+          eff({
             gotoPhaseExact: {
               phase: 'commitment',
             },
-          },
-          {
+          }),
+          eff({
             advancePhase: {},
-          },
-          {
+          }),
+          eff({
             pushInterruptPhase: {
               phase: 'commitment',
               resumePhase: 'main',
             },
-          },
-          {
+          }),
+          eff({
             popInterruptPhase: {},
-          },
+          }),
         ],
       },
       {
         name: 'spatial marker operations',
         effects: [
-          { setMarker: { space: 'saigon:none', marker: 'support', state: 'activeSupport' } },
-          { setMarker: { space: { zoneExpr: 'saigon:none' }, marker: 'support', state: 'activeSupport' } },
-          { shiftMarker: { space: 'saigon:none', marker: 'support', delta: 1 } },
-          { shiftMarker: { space: { zoneExpr: 'saigon:none' }, marker: 'support', delta: 1 } },
-          { setGlobalMarker: { marker: 'cap_topGun', state: 'unshaded' } },
-          { flipGlobalMarker: { marker: { _t: 2 as const, ref: 'binding', name: '$marker' }, stateA: 'unshaded', stateB: 'shaded' } },
-          { shiftGlobalMarker: { marker: 'cap_topGun', delta: 1 } },
+          eff({ setMarker: { space: 'saigon:none', marker: 'support', state: 'activeSupport' } }),
+          eff({ setMarker: { space: { zoneExpr: 'saigon:none' }, marker: 'support', state: 'activeSupport' } }),
+          eff({ shiftMarker: { space: 'saigon:none', marker: 'support', delta: 1 } }),
+          eff({ shiftMarker: { space: { zoneExpr: 'saigon:none' }, marker: 'support', delta: 1 } }),
+          eff({ setGlobalMarker: { marker: 'cap_topGun', state: 'unshaded' } }),
+          eff({ flipGlobalMarker: { marker: { _t: 2 as const, ref: 'binding', name: '$marker' }, stateA: 'unshaded', stateB: 'shaded' } }),
+          eff({ shiftGlobalMarker: { marker: 'cap_topGun', delta: 1 } }),
         ],
       },
     ];
@@ -369,6 +372,7 @@ describe('AST and selector schemas', () => {
 
     it('parses grantFreeOperation sequenceContext when at least one canonical key is present', () => {
       const effect = {
+        _k: EFFECT_KIND_TAG.grantFreeOperation,
         grantFreeOperation: {
           seat: '3',
           operationClass: 'operation',
@@ -382,6 +386,7 @@ describe('AST and selector schemas', () => {
 
     it('rejects grantFreeOperation sequenceContext when both canonical keys are absent', () => {
       const result = EffectASTSchema.safeParse({
+        _k: EFFECT_KIND_TAG.grantFreeOperation,
         grantFreeOperation: {
           seat: '3',
           operationClass: 'operation',
@@ -399,6 +404,7 @@ describe('AST and selector schemas', () => {
 
     it('parses grantFreeOperation moveZoneBindings when bound zone names are provided', () => {
       const effect = {
+        _k: EFFECT_KIND_TAG.grantFreeOperation,
         grantFreeOperation: {
           seat: '3',
           operationClass: 'operation',
@@ -412,6 +418,7 @@ describe('AST and selector schemas', () => {
 
     it('rejects grantFreeOperation moveZoneBindings when empty or non-string values are provided', () => {
       const result = EffectASTSchema.safeParse({
+        _k: EFFECT_KIND_TAG.grantFreeOperation,
         grantFreeOperation: {
           seat: '3',
           operationClass: 'operation',
@@ -425,6 +432,7 @@ describe('AST and selector schemas', () => {
 
     it('parses grantFreeOperation executionContext with scalar, array, and ValueExpr entries', () => {
       const effect = {
+        _k: EFFECT_KIND_TAG.grantFreeOperation,
         grantFreeOperation: {
           seat: '3',
           operationClass: 'operation',
@@ -441,6 +449,7 @@ describe('AST and selector schemas', () => {
 
     it('rejects grantFreeOperation executionContext arrays with non-scalar entries', () => {
       const result = EffectASTSchema.safeParse({
+        _k: EFFECT_KIND_TAG.grantFreeOperation,
         grantFreeOperation: {
           seat: '3',
           operationClass: 'operation',
@@ -455,6 +464,7 @@ describe('AST and selector schemas', () => {
 
     it('rejects grantFreeOperation required completion without postResolutionTurnFlow', () => {
       const result = EffectASTSchema.safeParse({
+        _k: EFFECT_KIND_TAG.grantFreeOperation,
         grantFreeOperation: {
           seat: '3',
           operationClass: 'operation',
@@ -467,6 +477,7 @@ describe('AST and selector schemas', () => {
 
     it('rejects grantFreeOperation postResolutionTurnFlow without required completionPolicy', () => {
       const result = EffectASTSchema.safeParse({
+        _k: EFFECT_KIND_TAG.grantFreeOperation,
         grantFreeOperation: {
           seat: '3',
           operationClass: 'operation',
@@ -479,6 +490,7 @@ describe('AST and selector schemas', () => {
 
     it('reports grantFreeOperation invalid completionPolicy on the field path instead of a top-level union error', () => {
       const result = EffectASTSchema.safeParse({
+        _k: EFFECT_KIND_TAG.grantFreeOperation,
         grantFreeOperation: {
           seat: '3',
           operationClass: 'operation',
@@ -507,6 +519,7 @@ describe('AST and selector schemas', () => {
 
       for (const progressionPolicy of policies) {
         const effect = {
+          _k: EFFECT_KIND_TAG.grantFreeOperation,
           grantFreeOperation: {
             seat: '3',
             operationClass: 'operation',
@@ -526,6 +539,7 @@ describe('AST and selector schemas', () => {
 
     it('rejects invalid progressionPolicy on event-card and effect-issued free-operation sequences', () => {
       const effectResult = EffectASTSchema.safeParse({
+        _k: EFFECT_KIND_TAG.grantFreeOperation,
         grantFreeOperation: {
           seat: '3',
           operationClass: 'operation',
@@ -598,42 +612,41 @@ describe('AST and selector schemas', () => {
   });
 
   it('enforces canonical bind fields for removeByPriority', () => {
-    const valid: EffectAST = {
-      removeByPriority: {
-        budget: 2,
-        groups: [
-          {
-            bind: '$candidate',
-            over: { query: 'tokensInZone', zone: 'deck:none' },
-            to: 'market:none',
-            countBind: '$removed',
-          },
-        ],
-        remainingBind: '$remaining',
-      },
-    };
+    const rbpPayload = {
+      budget: 2,
+      groups: [
+        {
+          bind: '$candidate',
+          over: { query: 'tokensInZone', zone: 'deck:none' },
+          to: 'market:none',
+          countBind: '$removed',
+        },
+      ],
+      remainingBind: '$remaining',
+    } as const;
+    const valid: EffectAST = eff({ removeByPriority: rbpPayload });
 
     assert.deepEqual(EffectASTSchema.parse(valid), valid);
 
     const nonCanonicalGroupBind = EffectASTSchema.safeParse({
       removeByPriority: {
-        ...valid.removeByPriority,
-        groups: [{ ...valid.removeByPriority.groups[0], bind: 'candidate' }],
+        ...rbpPayload,
+        groups: [{ ...rbpPayload.groups[0], bind: 'candidate' }],
       },
     });
     assert.equal(nonCanonicalGroupBind.success, false);
 
     const nonCanonicalCountBind = EffectASTSchema.safeParse({
       removeByPriority: {
-        ...valid.removeByPriority,
-        groups: [{ ...valid.removeByPriority.groups[0], countBind: 'removed' }],
+        ...rbpPayload,
+        groups: [{ ...rbpPayload.groups[0], countBind: 'removed' }],
       },
     });
     assert.equal(nonCanonicalCountBind.success, false);
 
     const nonCanonicalRemainingBind = EffectASTSchema.safeParse({
       removeByPriority: {
-        ...valid.removeByPriority,
+        ...rbpPayload,
         remainingBind: 'remaining',
       },
     });
@@ -927,6 +940,7 @@ describe('AST and selector schemas', () => {
       value: { ref: 'capturedSequenceZones', key: { ref: 'grantContext', key: 'originRestrictionKey' } },
     } as const;
     const parsed = EffectASTSchema.parse({
+      _k: EFFECT_KIND_TAG.chooseOne,
       chooseOne: {
         internalDecisionId: 'token-zone-filter-test',
         bind: '$piece',
@@ -947,6 +961,7 @@ describe('AST and selector schemas', () => {
       value: 'province',
     } as const;
     const parsed = EffectASTSchema.parse({
+      _k: EFFECT_KIND_TAG.chooseN,
       chooseN: {
         internalDecisionId: 'token-zone-prop-filter-test',
         bind: '$piece',
@@ -1332,6 +1347,7 @@ describe('AST and selector schemas', () => {
 
     for (const testCase of cases) {
       const result = EffectASTSchema.safeParse({
+        _k: EFFECT_KIND_TAG.transferVar,
         transferVar: {
           from: testCase.from,
           to: testCase.to,
@@ -1374,7 +1390,7 @@ describe('AST and selector schemas', () => {
 
   it('accepts setVar valid scoped payloads for global, pvar, and zoneVar', () => {
     for (const { name, endpoint } of validScopedVarEndpoints) {
-      const result = EffectASTSchema.safeParse({ setVar: { ...endpoint, value: 1 } });
+      const result = EffectASTSchema.safeParse({ _k: EFFECT_KIND_TAG.setVar, setVar: { ...endpoint, value: 1 } });
       assert.equal(result.success, true, name);
     }
   });
@@ -1401,14 +1417,14 @@ describe('AST and selector schemas', () => {
 
     for (const testCase of cases) {
       const endpoint = testCase.violation?.endpoint === 'to' ? testCase.to : testCase.from;
-      const result = EffectASTSchema.safeParse({ setVar: { ...endpoint, value: 1 } });
+      const result = EffectASTSchema.safeParse({ _k: EFFECT_KIND_TAG.setVar, setVar: { ...endpoint, value: 1 } });
       assert.equal(result.success, testCase.violation === undefined, testCase.name);
     }
   });
 
   it('accepts addVar valid scoped payloads for global, pvar, and zoneVar', () => {
     for (const { name, endpoint } of validScopedVarEndpoints) {
-      const result = EffectASTSchema.safeParse({ addVar: { ...endpoint, delta: 1 } });
+      const result = EffectASTSchema.safeParse({ _k: EFFECT_KIND_TAG.addVar, addVar: { ...endpoint, delta: 1 } });
       assert.equal(result.success, true, name);
     }
   });
@@ -1435,7 +1451,7 @@ describe('AST and selector schemas', () => {
 
     for (const testCase of cases) {
       const endpoint = testCase.violation?.endpoint === 'to' ? testCase.to : testCase.from;
-      const result = EffectASTSchema.safeParse({ addVar: { ...endpoint, delta: 1 } });
+      const result = EffectASTSchema.safeParse({ _k: EFFECT_KIND_TAG.addVar, addVar: { ...endpoint, delta: 1 } });
       assert.equal(result.success, testCase.violation === undefined, testCase.name);
     }
   });

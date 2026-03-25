@@ -9,10 +9,12 @@ import {
   validateGameDef,
 } from '../../src/kernel/index.js';
 import { withSingleActionEffect } from '../helpers/gamedef-fixtures.js';
+import { EFFECT_KIND_TAG } from '../../src/kernel/types-ast.js';
 
 describe('reveal/conceal parity guardrails', () => {
   it('accepts equivalent AST schema shapes for zone + selector + filter', () => {
     const reveal = EffectASTSchema.safeParse({
+      _k: EFFECT_KIND_TAG.reveal,
       reveal: {
         zone: { zoneExpr: 'market:none' },
         to: { chosen: '$targetPlayer' },
@@ -20,6 +22,7 @@ describe('reveal/conceal parity guardrails', () => {
       },
     });
     const conceal = EffectASTSchema.safeParse({
+      _k: EFFECT_KIND_TAG.conceal,
       conceal: {
         zone: { zoneExpr: 'market:none' },
         from: { chosen: '$targetPlayer' },

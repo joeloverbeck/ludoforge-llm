@@ -25,14 +25,14 @@ const EMPTY_CTX: NormalizerContext = {
   suppressPatterns: [],
 };
 
-const chooseNPayload = (options: OptionsQuery, n = 1): Extract<EffectAST, { chooseN: unknown }> => ({
+const chooseNPayload = (options: OptionsQuery, n = 1): Extract<EffectAST, { chooseN: unknown }> => eff({
   chooseN: {
     internalDecisionId: 'test-decision',
     options,
     bind: 'sel',
     n,
   },
-});
+}) as Extract<EffectAST, { chooseN: unknown }>;
 
 // ---------------------------------------------------------------------------
 // Query type classification helpers
@@ -326,14 +326,14 @@ describe('tryMacroOverride', () => {
     modifierEffects: {},
   });
 
-  const forEachWithMacro = (macroId: string): EffectAST => ({
+  const forEachWithMacro = (macroId: string): EffectAST => (eff({
     forEach: {
       over: { query: 'mapSpaces' },
       bind: 'sp',
       effects: [],
       macroOrigin: { macroId, stem: macroId },
     },
-  });
+  }));
 
   it('returns undefined when no verbalization context', () => {
     const result = tryMacroOverride(forEachWithMacro('trainUs'), EMPTY_CTX, 'r');
@@ -435,6 +435,7 @@ describe('extractMacroIdFromBinding', () => {
 
 import { normalizeIf } from '../../../src/kernel/tooltip-normalizer-compound.js';
 import type { EffectAST as IfEffectAST } from '../../../src/kernel/types-ast.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
 
 describe('extractBranchLabel guarding', () => {
   const noopRecurse = (effects: readonly IfEffectAST[], _ctx: NormalizerContext, basePath: string) =>
@@ -460,12 +461,12 @@ describe('extractBranchLabel guarding', () => {
       suppressPatterns: [],
     };
 
-    const ifEffect: IfEffectAST = {
+    const ifEffect: IfEffectAST = eff({
       if: {
         when: { op: '==', left: { _t: 2, ref: 'gvar', var: 'cap_cords' }, right: 'unshaded' },
-        then: [{ addVar: { scope: 'global', var: 'gold', delta: 1 } }],
+        then: [eff({ addVar: { scope: 'global', var: 'gold', delta: 1 } })],
       },
-    };
+    });
 
     const result = normalizeIf(
       ifEffect as Extract<IfEffectAST, { if: unknown }>,
@@ -498,19 +499,19 @@ describe('extractBranchLabel guarding', () => {
       suppressPatterns: [],
     };
 
-    const ifEffect: IfEffectAST = {
+    const ifEffect: IfEffectAST = eff({
       if: {
         when: { op: '==', left: { _t: 2, ref: 'gvar', var: 'Train Choice' }, right: 'Place Irregulars' },
-        then: [{
+        then: [eff({
           chooseN: {
             internalDecisionId: 'd1',
             options: { query: 'binding', name: 'items' } as OptionsQuery,
             bind: 'sel',
             n: 2,
           },
-        }],
+        })],
       },
-    };
+    });
 
     const innerRecurse = (effects: readonly IfEffectAST[], innerCtx: NormalizerContext, basePath: string) => {
       return effects.flatMap((e, i) => {

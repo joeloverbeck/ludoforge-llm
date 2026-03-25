@@ -18,8 +18,9 @@ import {
   type GameState,
 } from '../../../src/kernel/index.js';
 import { dispatchLifecycleEvent } from '../../../src/kernel/phase-lifecycle.js';
+import { asTaggedGameDef } from '../../helpers/gamedef-fixtures.js';
 
-const createLifecycleDef = (): GameDef => ({
+const createLifecycleDef = (): GameDef => asTaggedGameDef({
   metadata: { id: 'effect-compiler-verification', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
   constants: {},
   globalVars: [
@@ -52,7 +53,7 @@ const createLifecycleDef = (): GameDef => ({
     },
   ],
   terminal: { conditions: [] },
-}) as unknown as GameDef;
+});
 
 const createState = (): GameState => ({
   globalVars: { score: 0, count: 0 },

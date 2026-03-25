@@ -16,13 +16,14 @@ import {
   type PhaseDef,
   type VariableDef,
 } from '../../src/kernel/index.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 const counterVar: VariableDef = { name: 'counter', type: 'int', init: 0, min: 0, max: 100 };
 const afterVar: VariableDef = { name: 'afterCounter', type: 'int', init: 0, min: 0, max: 100 };
 const triggerVar: VariableDef = { name: 'triggerFired', type: 'int', init: 0, min: 0, max: 100 };
 
-const incrementCounter: EffectAST = { addVar: { scope: 'global', var: 'counter', delta: 1 } };
-const incrementAfterCounter: EffectAST = { addVar: { scope: 'global', var: 'afterCounter', delta: 1 } };
+const incrementCounter: EffectAST = eff({ addVar: { scope: 'global', var: 'counter', delta: 1 } });
+const incrementAfterCounter: EffectAST = eff({ addVar: { scope: 'global', var: 'afterCounter', delta: 1 } });
 
 const makeBaseDef = (overrides?: {
   actions?: readonly ActionDef[];
@@ -97,12 +98,12 @@ describe('apply-move phase actionDefaults.afterEffects', () => {
   });
 
   it('afterEffects see state changes from action effects', () => {
-    const condAfterEffect: EffectAST = {
+    const condAfterEffect: EffectAST = eff({
       if: {
         when: { op: '>=', left: { _t: 2 as const, ref: 'gvar', var: 'counter' }, right: 1 },
         then: [incrementAfterCounter],
       },
-    };
+    });
     const def = makeBaseDef({
       actions: [simpleAction],
       phases: [{
@@ -127,12 +128,12 @@ describe('apply-move phase actionDefaults.afterEffects', () => {
       triggers: [{
         id: asTriggerId('checkAfterState'),
         event: { type: 'actionResolved', action: asActionId('doThing') },
-        effects: [{
+        effects: [eff({
           if: {
             when: { op: '>=', left: { _t: 2 as const, ref: 'gvar', var: 'afterCounter' }, right: 1 },
-            then: [{ addVar: { scope: 'global', var: 'triggerFired', delta: 1 } }],
+            then: [eff({ addVar: { scope: 'global', var: 'triggerFired', delta: 1 } })],
           },
-        }],
+        })],
       }],
     });
     const state = makeBaseState();
@@ -154,7 +155,7 @@ describe('apply-move phase actionDefaults.afterEffects', () => {
       cost: [],
       effects: [
         incrementCounter,
-        { gotoPhaseExact: { phase: asPhaseId('other') } },
+        eff({ gotoPhaseExact: { phase: asPhaseId('other') } }),
       ],
       limits: [],
     };

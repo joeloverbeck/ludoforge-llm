@@ -16,6 +16,7 @@ import {
   type MapPayload,
 } from '../../src/kernel/index.js';
 import { makeEvalContext } from '../helpers/eval-context-test-helpers.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 const makeDef = (): GameDef => ({
   metadata: { id: 'space-marker-rules', players: { min: 1, max: 1 } },
@@ -145,13 +146,13 @@ describe('space marker lattice rules', () => {
       resources: evalCtx.resources,
     });
 
-    const result = applyEffects([{
+    const result = applyEffects([eff({
       shiftMarker: {
         space: 'saigon:none',
         marker: 'supportOpposition',
         delta: -1,
       },
-    }], shiftCtx);
+    })], shiftCtx);
     assert.equal(result.state.markers['saigon:none']?.supportOpposition, 'passiveSupport');
   });
 
@@ -180,13 +181,13 @@ describe('space marker lattice rules', () => {
     });
 
     assert.throws(
-      () => applyEffects([{
+      () => applyEffects([eff({
         setMarker: {
           space: 'central-laos:none',
           marker: 'supportOpposition',
           state: 'activeSupport',
         },
-      }], setCtx),
+      })], setCtx),
       /illegal for lattice "supportOpposition"/,
     );
 
@@ -204,13 +205,13 @@ describe('space marker lattice rules', () => {
     });
 
     assert.throws(
-      () => applyEffects([{
+      () => applyEffects([eff({
         shiftMarker: {
           space: 'central-laos:none',
           marker: 'supportOpposition',
           delta: 1,
         },
-      }], shiftCtx),
+      })], shiftCtx),
       /illegal for lattice "supportOpposition"/,
     );
   });

@@ -16,6 +16,7 @@ import {
   type GameState,
 } from '../../../src/kernel/index.js';
 import { makeExecutionEffectContext } from '../../helpers/effect-context-test-helpers.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
 
 // ---------------------------------------------------------------------------
 // Shared test fixtures
@@ -113,7 +114,7 @@ describe('zobrist incremental hash — variable effect handlers', () => {
       const state = makeState(def, table);
       const ctx = makeCtx(def, state);
 
-      const effect: EffectAST = { setVar: { scope: 'global', var: 'score', value: 42 } };
+      const effect: EffectAST = eff({ setVar: { scope: 'global', var: 'score', value: 42 } });
       const result = applyEffects([effect], ctx);
 
       const expected = computeFullHash(table, result.state);
@@ -126,7 +127,7 @@ describe('zobrist incremental hash — variable effect handlers', () => {
       const state = makeState(def, table);
       const ctx = makeCtx(def, state);
 
-      const effect: EffectAST = { setVar: { scope: 'pvar', player: 'actor', var: 'hp', value: 3 } };
+      const effect: EffectAST = eff({ setVar: { scope: 'pvar', player: 'actor', var: 'hp', value: 3 } });
       const result = applyEffects([effect], ctx);
 
       const expected = computeFullHash(table, result.state);
@@ -140,7 +141,7 @@ describe('zobrist incremental hash — variable effect handlers', () => {
       const ctx = makeCtx(def, state);
 
       // Set score to its current value (5)
-      const effect: EffectAST = { setVar: { scope: 'global', var: 'score', value: 5 } };
+      const effect: EffectAST = eff({ setVar: { scope: 'global', var: 'score', value: 5 } });
       const result = applyEffects([effect], ctx);
 
       assert.equal(result.state._runningHash, state._runningHash, 'hash must not change when value is unchanged');
@@ -152,7 +153,7 @@ describe('zobrist incremental hash — variable effect handlers', () => {
       const state = makeState(def, table);
       const ctx = makeCtx(def, state);
 
-      const effect: EffectAST = { addVar: { scope: 'global', var: 'score', delta: 10 } };
+      const effect: EffectAST = eff({ addVar: { scope: 'global', var: 'score', delta: 10 } });
       const result = applyEffects([effect], ctx);
 
       const expected = computeFullHash(table, result.state);
@@ -165,13 +166,13 @@ describe('zobrist incremental hash — variable effect handlers', () => {
       const state = makeState(def, table);
       const ctx = makeCtx(def, state);
 
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         transferVar: {
           from: { scope: 'pvar', var: 'gold', player: 'active' },
           to: { scope: 'pvar', var: 'gold', player: { id: asPlayerId(1) } },
           amount: 5,
         },
-      };
+      });
       const result = applyEffects([effect], ctx);
 
       const expected = computeFullHash(table, result.state);
@@ -184,7 +185,7 @@ describe('zobrist incremental hash — variable effect handlers', () => {
       const state = makeState(def, table);
       const ctx = makeCtx(def, state);
 
-      const effect: EffectAST = { setActivePlayer: { player: { id: asPlayerId(1) } } };
+      const effect: EffectAST = eff({ setActivePlayer: { player: { id: asPlayerId(1) } } });
       const result = applyEffects([effect], ctx);
 
       const expected = computeFullHash(table, result.state);
@@ -197,7 +198,7 @@ describe('zobrist incremental hash — variable effect handlers', () => {
       const state = makeState(def, table);
       const ctx = makeCtx(def, state, { noCachedRuntime: true });
 
-      const effect: EffectAST = { setVar: { scope: 'global', var: 'score', value: 99 } };
+      const effect: EffectAST = eff({ setVar: { scope: 'global', var: 'score', value: 99 } });
       // Must not throw
       const result = applyEffects([effect], ctx);
 
@@ -214,9 +215,9 @@ describe('zobrist incremental hash — variable effect handlers', () => {
       const ctx = makeCtx(def, state);
 
       const effects: EffectAST[] = [
-        { setVar: { scope: 'global', var: 'score', value: 42 } },
-        { addVar: { scope: 'pvar', player: 'active', var: 'hp', delta: -3 } },
-        { setActivePlayer: { player: { id: asPlayerId(1) } } },
+        eff({ setVar: { scope: 'global', var: 'score', value: 42 } }),
+        eff({ addVar: { scope: 'pvar', player: 'active', var: 'hp', delta: -3 } }),
+        eff({ setActivePlayer: { player: { id: asPlayerId(1) } } }),
       ];
       const result = applyEffects(effects, ctx);
 

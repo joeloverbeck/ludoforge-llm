@@ -16,6 +16,7 @@ import {
   type Token,
 } from '../../src/kernel/index.js';
 import { makeExecutionEffectContext } from '../helpers/effect-context-test-helpers.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 const minimalDef: GameDef = {
   metadata: { id: 'warn-test', players: { min: 2, max: 2 } },
@@ -66,13 +67,13 @@ function makeCtx(zones: Record<string, Token[]>, bindings?: Record<string, unkno
 describe('Runtime warnings', () => {
   it('does not emit runtime warnings when forEach matches 0 tokens', () => {
     const ctx = makeCtx({ [z1]: [], [z2]: [] });
-    const effects: readonly EffectAST[] = [{
+    const effects: readonly EffectAST[] = [eff({
       forEach: {
         bind: '$item',
         over: { query: 'tokensInZone' as const, zone: z1, filter: { op: 'and', args: [] } } as unknown as OptionsQuery,
         effects: [],
       },
-    }];
+    })];
     applyEffects(effects, ctx);
     assert.deepEqual(ctx.collector!.warnings, []);
   });
@@ -80,7 +81,7 @@ describe('Runtime warnings', () => {
   it('does not emit runtime warnings when a token filter reduces matches to 0', () => {
     const token: Token = { id: asTokenId('t1'), type: 'piece', props: { faction: 'US' } };
     const ctx = makeCtx({ [z1]: [token], [z2]: [] });
-    const effects: readonly EffectAST[] = [{
+    const effects: readonly EffectAST[] = [eff({
       forEach: {
         bind: '$item',
         over: {
@@ -90,7 +91,7 @@ describe('Runtime warnings', () => {
         },
         effects: [],
       },
-    }];
+    })];
     applyEffects(effects, ctx);
     assert.deepEqual(ctx.collector!.warnings, []);
   });
@@ -98,7 +99,7 @@ describe('Runtime warnings', () => {
   it('emits no warnings when forEach matches tokens normally', () => {
     const token: Token = { id: asTokenId('t1'), type: 'piece', props: { faction: 'US' } };
     const ctx = makeCtx({ [z1]: [token], [z2]: [] });
-    const effects: readonly EffectAST[] = [{
+    const effects: readonly EffectAST[] = [eff({
       forEach: {
         bind: '$item',
         over: {
@@ -108,7 +109,7 @@ describe('Runtime warnings', () => {
         },
         effects: [],
       },
-    }];
+    })];
     applyEffects(effects, ctx);
     assert.equal(ctx.collector!.warnings.length, 0);
   });

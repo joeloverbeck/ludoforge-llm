@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { advancePhase, asPhaseId, createEvalRuntimeResources, initialState, type ConditionAST, type EffectAST, type GameDef, type TriggerLogEntry } from '../../src/kernel/index.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 const pacifyCondition = (spaceVar: string, trackerVar: string, actor: 'us' | 'arvn'): ConditionAST => {
   const spendConstraints: readonly ConditionAST[] =
@@ -45,41 +46,41 @@ const agitationCondition = (spaceVar: string, trackerVar: string): ConditionAST 
   ],
 });
 
-const attemptPacifyShift = (spaceVar: string, trackerVar: string, actor: 'us' | 'arvn'): EffectAST => ({
+const attemptPacifyShift = (spaceVar: string, trackerVar: string, actor: 'us' | 'arvn'): EffectAST => (eff({
   if: {
     when: pacifyCondition(spaceVar, trackerVar, actor),
     then: [
-      {
+      eff({
         if: {
           when: { op: '==', left: { _t: 2 as const, ref: 'gvar', var: trackerVar }, right: 0 },
-          then: [{ addVar: { scope: 'global', var: 'pacSpacesUsed', delta: 1 } }],
+          then: [eff({ addVar: { scope: 'global', var: 'pacSpacesUsed', delta: 1 } })],
         },
-      },
-      { addVar: { scope: 'global', var: spaceVar, delta: 1 } },
-      { addVar: { scope: 'global', var: trackerVar, delta: 1 } },
-      { addVar: { scope: 'global', var: actor === 'us' ? 'usShifts' : 'arvnShifts', delta: 1 } },
-      { addVar: { scope: 'global', var: 'arvnResources', delta: -1 } },
+      }),
+      eff({ addVar: { scope: 'global', var: spaceVar, delta: 1 } }),
+      eff({ addVar: { scope: 'global', var: trackerVar, delta: 1 } }),
+      eff({ addVar: { scope: 'global', var: actor === 'us' ? 'usShifts' : 'arvnShifts', delta: 1 } }),
+      eff({ addVar: { scope: 'global', var: 'arvnResources', delta: -1 } }),
     ],
   },
-});
+}));
 
-const attemptAgitationShift = (spaceVar: string, trackerVar: string): EffectAST => ({
+const attemptAgitationShift = (spaceVar: string, trackerVar: string): EffectAST => (eff({
   if: {
     when: agitationCondition(spaceVar, trackerVar),
     then: [
-      {
+      eff({
         if: {
           when: { op: '==', left: { _t: 2 as const, ref: 'gvar', var: trackerVar }, right: 0 },
-          then: [{ addVar: { scope: 'global', var: 'agSpacesUsed', delta: 1 } }],
+          then: [eff({ addVar: { scope: 'global', var: 'agSpacesUsed', delta: 1 } })],
         },
-      },
-      { addVar: { scope: 'global', var: spaceVar, delta: -1 } },
-      { addVar: { scope: 'global', var: trackerVar, delta: 1 } },
-      { addVar: { scope: 'global', var: 'vcShifts', delta: 1 } },
-      { addVar: { scope: 'global', var: 'vcResources', delta: -1 } },
+      }),
+      eff({ addVar: { scope: 'global', var: spaceVar, delta: -1 } }),
+      eff({ addVar: { scope: 'global', var: trackerVar, delta: 1 } }),
+      eff({ addVar: { scope: 'global', var: 'vcShifts', delta: 1 } }),
+      eff({ addVar: { scope: 'global', var: 'vcResources', delta: -1 } }),
     ],
   },
-});
+}));
 
 const createSupportFixtureDef = (): GameDef => {
   const usPlan = [
@@ -123,7 +124,7 @@ const createSupportFixtureDef = (): GameDef => {
 
   const supportEffects: EffectAST[] = [
     ...usPlan.map(([spaceVar, trackerVar]) => attemptPacifyShift(spaceVar, trackerVar, 'us')),
-    { setVar: { scope: 'global', var: 'arvnAfterUs', value: { _t: 2 as const, ref: 'gvar', var: 'arvnResources' } } },
+    eff({ setVar: { scope: 'global', var: 'arvnAfterUs', value: { _t: 2 as const, ref: 'gvar', var: 'arvnResources' } } }),
     ...arvnPlan.map(([spaceVar, trackerVar]) => attemptPacifyShift(spaceVar, trackerVar, 'arvn')),
     ...vcPlan.map(([spaceVar, trackerVar]) => attemptAgitationShift(spaceVar, trackerVar)),
   ];

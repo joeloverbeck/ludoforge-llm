@@ -28,6 +28,7 @@ import {
 import { toEffectEnv, toEffectCursor } from '../../src/kernel/effect-context.js';
 import type { EffectBudgetState } from '../../src/kernel/effects-control.js';
 import type { ApplyEffectsWithBudget } from '../../src/kernel/effect-registry.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 const dummyBudget: EffectBudgetState = { remaining: 10_000, max: 10_000 };
 const dummyApplyBatch: ApplyEffectsWithBudget = () => { throw new Error('unexpected applyBatch call'); };
@@ -455,7 +456,7 @@ describe('applyGrantFreeOperation', () => {
     const ctx = makeCtx();
     const result = applyEffects(
       [
-        {
+        eff({
           grantFreeOperation: {
             seat: 'self',
             operationClass: 'operation',
@@ -463,8 +464,8 @@ describe('applyGrantFreeOperation', () => {
             viabilityPolicy: 'requireUsableAtIssue',
             sequence: { batch: 'usable-sequence', step: 0 },
           },
-        },
-        {
+        }),
+        eff({
           grantFreeOperation: {
             seat: 'self',
             operationClass: 'operation',
@@ -472,7 +473,7 @@ describe('applyGrantFreeOperation', () => {
             viabilityPolicy: 'requireUsableAtIssue',
             sequence: { batch: 'usable-sequence', step: 1 },
           },
-        },
+        }),
       ],
       ctx,
     );
@@ -487,7 +488,7 @@ describe('applyGrantFreeOperation', () => {
     const ctx = makeCtx();
     const result = applyEffects(
       [
-        {
+        eff({
           grantFreeOperation: {
             seat: 'self',
             operationClass: 'operation',
@@ -496,8 +497,8 @@ describe('applyGrantFreeOperation', () => {
             sequence: { batch: 'unusable-sequence', step: 0 },
             zoneFilter: { op: '==', left: 1, right: 2 },
           },
-        },
-        {
+        }),
+        eff({
           grantFreeOperation: {
             seat: 'self',
             operationClass: 'operation',
@@ -505,7 +506,7 @@ describe('applyGrantFreeOperation', () => {
             viabilityPolicy: 'requireUsableAtIssue',
             sequence: { batch: 'unusable-sequence', step: 1 },
           },
-        },
+        }),
       ],
       ctx,
     );
@@ -519,11 +520,11 @@ describe('applyGrantFreeOperation', () => {
     const ctx = makeCtx();
     const result = applyEffects(
       [
-        {
+        eff({
           if: {
             when: { op: '==', left: 1, right: 1 },
             then: [
-              {
+              eff({
                 grantFreeOperation: {
                   seat: 'self',
                   operationClass: 'operation',
@@ -531,8 +532,8 @@ describe('applyGrantFreeOperation', () => {
                   viabilityPolicy: 'requireUsableAtIssue',
                   sequence: { batch: 'nested-usable-sequence', step: 0 },
                 },
-              },
-              {
+              }),
+              eff({
                 grantFreeOperation: {
                   seat: 'self',
                   operationClass: 'operation',
@@ -540,10 +541,10 @@ describe('applyGrantFreeOperation', () => {
                   viabilityPolicy: 'requireUsableAtIssue',
                   sequence: { batch: 'nested-usable-sequence', step: 1 },
                 },
-              },
+              }),
             ],
           },
-        },
+        }),
       ],
       ctx,
     );
@@ -558,11 +559,11 @@ describe('applyGrantFreeOperation', () => {
     const ctx = makeCtx();
     const result = applyEffects(
       [
-        {
+        eff({
           if: {
             when: { op: '==', left: 1, right: 1 },
             then: [
-              {
+              eff({
                 grantFreeOperation: {
                   seat: 'self',
                   operationClass: 'operation',
@@ -571,8 +572,8 @@ describe('applyGrantFreeOperation', () => {
                   sequence: { batch: 'nested-unusable-sequence', step: 0 },
                   zoneFilter: { op: '==', left: 1, right: 2 },
                 },
-              },
-              {
+              }),
+              eff({
                 grantFreeOperation: {
                   seat: 'self',
                   operationClass: 'operation',
@@ -580,10 +581,10 @@ describe('applyGrantFreeOperation', () => {
                   viabilityPolicy: 'requireUsableAtIssue',
                   sequence: { batch: 'nested-unusable-sequence', step: 1 },
                 },
-              },
+              }),
             ],
           },
-        },
+        }),
       ],
       ctx,
     );
@@ -597,7 +598,7 @@ describe('applyGrantFreeOperation', () => {
     const ctx = makeCtx();
     const result = applyEffects(
       [
-        {
+        eff({
           grantFreeOperation: {
             seat: 'self',
             operationClass: 'operation',
@@ -606,8 +607,8 @@ describe('applyGrantFreeOperation', () => {
             sequence: { batch: 'implement-what-can', step: 0, progressionPolicy: 'implementWhatCanInOrder' },
             zoneFilter: { op: '==', left: 1, right: 2 },
           },
-        },
-        {
+        }),
+        eff({
           grantFreeOperation: {
             seat: 'self',
             operationClass: 'operation',
@@ -615,7 +616,7 @@ describe('applyGrantFreeOperation', () => {
             viabilityPolicy: 'requireUsableAtIssue',
             sequence: { batch: 'implement-what-can', step: 1, progressionPolicy: 'implementWhatCanInOrder' },
           },
-        },
+        }),
       ],
       ctx,
     );
@@ -637,7 +638,7 @@ describe('applyGrantFreeOperation', () => {
     const ctx = makeCtx();
     const result = applyEffects(
       [
-        {
+        eff({
           grantFreeOperation: {
             seat: 'self',
             operationClass: 'operation',
@@ -646,8 +647,8 @@ describe('applyGrantFreeOperation', () => {
             sequence: { batch: 'strict-sequence', step: 0, progressionPolicy: 'strictInOrder' },
             zoneFilter: { op: '==', left: 1, right: 2 },
           },
-        },
-        {
+        }),
+        eff({
           grantFreeOperation: {
             seat: 'self',
             operationClass: 'operation',
@@ -655,7 +656,7 @@ describe('applyGrantFreeOperation', () => {
             viabilityPolicy: 'requireUsableAtIssue',
             sequence: { batch: 'strict-sequence', step: 1, progressionPolicy: 'strictInOrder' },
           },
-        },
+        }),
       ],
       ctx,
     );
@@ -669,7 +670,7 @@ describe('applyGrantFreeOperation', () => {
     const ctx = makeCtx();
     const result = applyEffects(
       [
-        {
+        eff({
           grantFreeOperation: {
             seat: 'self',
             operationClass: 'operation',
@@ -678,15 +679,15 @@ describe('applyGrantFreeOperation', () => {
             sequence: { batch: 'strict-sequence-no-policy-later', step: 0, progressionPolicy: 'strictInOrder' },
             zoneFilter: { op: '==', left: 1, right: 2 },
           },
-        },
-        {
+        }),
+        eff({
           grantFreeOperation: {
             seat: 'self',
             operationClass: 'operation',
             actionIds: ['attack'],
             sequence: { batch: 'strict-sequence-no-policy-later', step: 1, progressionPolicy: 'strictInOrder' },
           },
-        },
+        }),
       ],
       ctx,
     );
@@ -700,7 +701,7 @@ describe('applyGrantFreeOperation', () => {
     const ctx = makeCtx();
     const result = applyEffects(
       [
-        {
+        eff({
           grantFreeOperation: {
             seat: 'self',
             operationClass: 'operation',
@@ -709,23 +710,23 @@ describe('applyGrantFreeOperation', () => {
             sequence: { batch: 'strict-sequence-batch-a', step: 0, progressionPolicy: 'strictInOrder' },
             zoneFilter: { op: '==', left: 1, right: 2 },
           },
-        },
-        {
+        }),
+        eff({
           grantFreeOperation: {
             seat: 'self',
             operationClass: 'operation',
             actionIds: ['attack'],
             sequence: { batch: 'strict-sequence-batch-a', step: 1, progressionPolicy: 'strictInOrder' },
           },
-        },
-        {
+        }),
+        eff({
           grantFreeOperation: {
             seat: 'self',
             operationClass: 'operation',
             actionIds: ['attack'],
             sequence: { batch: 'strict-sequence-batch-b', step: 0, progressionPolicy: 'strictInOrder' },
           },
-        },
+        }),
       ],
       ctx,
     );

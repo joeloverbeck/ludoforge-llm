@@ -14,13 +14,14 @@ import {
 } from '../../../src/kernel/index.js';
 import { createGameDefRuntime } from '../../../src/kernel/gamedef-runtime.js';
 import { legalMoves } from '../../../src/kernel/legal-moves.js';
+import { asTaggedGameDef } from '../../helpers/gamedef-fixtures.js';
 
 // ---------------------------------------------------------------------------
 // Fixtures
 // ---------------------------------------------------------------------------
 
 function createSimpleDef(): GameDef {
-  return {
+  return asTaggedGameDef({
     metadata: { id: 'lc-diag-test', players: { min: 2, max: 2 } },
     constants: {},
     globalVars: [{ name: 'ended', type: 'int', init: 0, min: 0, max: 1 }],
@@ -62,7 +63,7 @@ function createSimpleDef(): GameDef {
         },
       ],
     },
-  } as unknown as GameDef;
+  });
 }
 
 // ---------------------------------------------------------------------------

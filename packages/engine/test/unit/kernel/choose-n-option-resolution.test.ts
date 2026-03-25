@@ -24,6 +24,7 @@ import {
 } from '../../../src/kernel/choose-n-option-resolution.js';
 import type { ChoicePendingChooseNRequest, ChoiceRequest, MoveParamScalar } from '../../../src/kernel/types.js';
 import type { DecisionSequenceSatisfiability } from '../../../src/kernel/decision-sequence-satisfiability.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
 
 const asDecisionKey = (value: string): DecisionKey => value as DecisionKey;
 
@@ -84,7 +85,7 @@ describe('chooseN option resolution field', () => {
     pre: null,
     cost: [],
     effects: [
-      {
+      eff({
         chooseN: {
           internalDecisionId: 'decision:$items',
           bind: '$items',
@@ -92,7 +93,7 @@ describe('chooseN option resolution field', () => {
           min: 1,
           max: 2,
         },
-      } as EffectAST,
+      }),
     ],
     limits: [],
   };
@@ -168,7 +169,7 @@ describe('chooseN option resolution field', () => {
         pre: null,
         cost: [],
         effects: [
-          {
+          eff({
             chooseN: {
               internalDecisionId: 'decision:$large',
               bind: '$large',
@@ -176,7 +177,7 @@ describe('chooseN option resolution field', () => {
               min: 1,
               max: 10,
             },
-          } as EffectAST,
+          }),
         ],
         limits: [],
       };
@@ -209,7 +210,7 @@ describe('chooseN option resolution field', () => {
         pre: null,
         cost: [],
         effects: [
-          {
+          eff({
             chooseN: {
               internalDecisionId: 'decision:$highMin',
               bind: '$highMin',
@@ -217,7 +218,7 @@ describe('chooseN option resolution field', () => {
               min: 5,
               max: 10,
             },
-          } as EffectAST,
+          }),
         ],
         limits: [],
       };
@@ -251,7 +252,7 @@ describe('chooseN option resolution field', () => {
         pre: null,
         cost: [],
         effects: [
-          {
+          eff({
             chooseN: {
               internalDecisionId: 'decision:$probeCount',
               bind: '$probeCount',
@@ -259,7 +260,7 @@ describe('chooseN option resolution field', () => {
               min: 1,
               max: 10,
             },
-          } as EffectAST,
+          }),
         ],
         limits: [],
       };
@@ -292,7 +293,7 @@ describe('chooseN option resolution field', () => {
         pre: null,
         cost: [],
         effects: [
-          {
+          eff({
             chooseN: {
               internalDecisionId: 'decision:$oracle',
               bind: '$oracle',
@@ -300,7 +301,7 @@ describe('chooseN option resolution field', () => {
               min: 1,
               max: 3,
             },
-          } as EffectAST,
+          }),
         ],
         limits: [],
       };
@@ -332,7 +333,7 @@ describe('chooseN option resolution field', () => {
         pre: null,
         cost: [],
         effects: [
-          {
+          eff({
             chooseN: {
               internalDecisionId: 'decision:$confirm',
               bind: '$confirm',
@@ -340,7 +341,7 @@ describe('chooseN option resolution field', () => {
               min: 1,
               max: 5,
             },
-          } as EffectAST,
+          }),
         ],
         limits: [],
       };
@@ -371,13 +372,13 @@ describe('chooseN option resolution field', () => {
         pre: null,
         cost: [],
         effects: [
-          {
+          eff({
             chooseOne: {
               internalDecisionId: 'decision:$pick',
               bind: '$pick',
               options: { query: 'enums', values: ['alpha', 'beta'] },
             },
-          } as EffectAST,
+          }),
         ],
         limits: [],
       };

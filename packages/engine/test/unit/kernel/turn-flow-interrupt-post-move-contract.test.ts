@@ -12,6 +12,7 @@ import {
   type GameDef,
   type GameState,
 } from '../../../src/kernel/index.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
 import { requireCardDrivenRuntime } from '../../helpers/turn-order-helpers.js';
 
 const createDef = (): GameDef =>
@@ -83,7 +84,7 @@ const createDef = (): GameDef =>
         params: [],
         pre: null,
         cost: [],
-        effects: [{ popInterruptPhase: {} }],
+        effects: [eff({ popInterruptPhase: {} })],
         limits: [],
       },
     ],
@@ -117,7 +118,7 @@ const createDef = (): GameDef =>
                   actionIds: ['operation'],
                 },
               ],
-              effects: [{ addVar: { scope: 'global', var: 'interruptCounter', delta: 1 } }],
+              effects: [eff({ addVar: { scope: 'global', var: 'interruptCounter', delta: 1 } })],
             },
           },
         ],

@@ -15,6 +15,7 @@ import {
   type GameState,
   type Move,
 } from '../../../src/kernel/index.js';
+import { asTaggedGameDef } from '../../helpers/gamedef-fixtures.js';
 
 const makeBaseDef = (overrides?: {
   actions?: readonly ActionDef[];
@@ -22,7 +23,7 @@ const makeBaseDef = (overrides?: {
   tokenTypes?: GameDef['tokenTypes'];
   zones?: GameDef['zones'];
 }): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'illegal-path-test', players: { min: 2, max: 2 } },
     seats: [{ id: '0' }, { id: '1' }],
     constants: {},
@@ -41,7 +42,7 @@ const makeBaseDef = (overrides?: {
     actionPipelines: undefined,
     triggers: [],
     terminal: { conditions: [] },
-  }) as unknown as GameDef;
+  });
 
 const makeBaseState = (overrides?: Partial<GameState>): GameState => ({
   globalVars: {},

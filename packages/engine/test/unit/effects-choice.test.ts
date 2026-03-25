@@ -26,6 +26,7 @@ import {
   createCollector,
 } from '../../src/kernel/index.js';
 import { isEvalErrorCode } from '../../src/kernel/eval-error.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 const makeDef = (): GameDef => ({
   metadata: { id: 'effects-choice-test', players: { min: 1, max: 2 } },
@@ -111,13 +112,13 @@ const makeDiscoveryProbeCtx = (overrides?: EffectContextTestOverrides): EffectCo
 describe('effects choice assertions', () => {
   it('chooseOne succeeds when selected move param is in evaluated domain', () => {
     const ctx = makeCtx({ moveParams: { '$choice': 'beta' } });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       chooseOne: {
         internalDecisionId: 'decision:$choice',
         bind: '$choice',
         options: { query: 'enums', values: ['alpha', 'beta', 'gamma'] },
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state, ctx.state);
@@ -126,13 +127,13 @@ describe('effects choice assertions', () => {
 
   it('chooseOne throws when move param binding is missing', () => {
     const ctx = makeCtx();
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       chooseOne: {
         internalDecisionId: 'decision:$choice',
         bind: '$choice',
         options: { query: 'enums', values: ['alpha', 'beta'] },
       },
-    };
+    });
 
     assert.throws(() => applyEffect(effect, ctx), (error: unknown) => {
       return isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('missing move param binding');
@@ -141,13 +142,13 @@ describe('effects choice assertions', () => {
 
   it('chooseOne returns pending choice in discovery mode when move param binding is missing', () => {
     const ctx = makeDiscoveryCtx();
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       chooseOne: {
         internalDecisionId: 'decision:$choice',
         bind: '$choice',
         options: { query: 'enums', values: ['alpha', 'beta'] },
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.pendingChoice?.kind, 'pending');
@@ -164,14 +165,14 @@ describe('effects choice assertions', () => {
 
   it('chooseN returns initial engine-owned selection state in discovery mode when move param binding is missing', () => {
     const ctx = makeDiscoveryCtx();
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       chooseN: {
         internalDecisionId: 'decision:$choice',
         bind: '$choice',
         options: { query: 'enums', values: ['alpha', 'beta'] },
         max: 2,
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.pendingChoice?.kind, 'pending');
@@ -192,7 +193,7 @@ describe('effects choice assertions', () => {
     const ctx = makeDiscoveryCtx({
       transientDecisionSelections: { '$choice': ['alpha'] },
     });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       chooseN: {
         internalDecisionId: 'decision:$choice',
         bind: '$choice',
@@ -206,7 +207,7 @@ describe('effects choice assertions', () => {
         min: 1,
         max: 2,
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.pendingChoice?.kind, 'pending');
@@ -224,13 +225,13 @@ describe('effects choice assertions', () => {
 
   it('chooseOne appends iterationPath to static decision IDs in discovery mode', () => {
     const ctx = makeDiscoveryCtx({ iterationPath: '[2]' });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       chooseOne: {
         internalDecisionId: 'decision:$choice',
         bind: '$choice',
         options: { query: 'enums', values: ['alpha', 'beta'] },
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.pendingChoice?.kind, 'pending');
@@ -245,13 +246,13 @@ describe('effects choice assertions', () => {
       bindings: { $space: 'saigon:none' },
       iterationPath: '[2]',
     });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       chooseOne: {
         internalDecisionId: 'decision:$choice@{$space}',
         bind: '$choice@{$space}',
         options: { query: 'enums', values: ['alpha', 'beta'] },
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.pendingChoice?.kind, 'pending');
@@ -267,13 +268,13 @@ describe('effects choice assertions', () => {
       iterationPath: '[2]',
       moveParams: { 'decision:$choice@{$space}::$choice@saigon:none[2]': 'beta' },
     });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       chooseOne: {
         internalDecisionId: 'decision:$choice@{$space}',
         bind: '$choice@{$space}',
         options: { query: 'enums', values: ['alpha', 'beta'] },
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.ok(result.bindings !== undefined);
@@ -287,20 +288,20 @@ describe('effects choice assertions', () => {
       },
     });
     const effects: readonly EffectAST[] = [
-      {
+      eff({
         chooseOne: {
           internalDecisionId: 'decision:$choice',
           bind: '$choice',
           options: { query: 'enums', values: ['alpha', 'beta'] },
         },
-      },
-      {
+      }),
+      eff({
         chooseOne: {
           internalDecisionId: 'decision:$choice',
           bind: '$choice',
           options: { query: 'enums', values: ['alpha', 'beta'] },
         },
-      },
+      }),
     ];
 
     assert.throws(() => applyEffects(effects, ctx), (error: unknown) => {
@@ -311,13 +312,13 @@ describe('effects choice assertions', () => {
 
   it('chooseOne starts from a fresh scope on separate top-level calls', () => {
     const ctx = makeDiscoveryCtx();
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       chooseOne: {
         internalDecisionId: 'decision:$choice',
         bind: '$choice',
         options: { query: 'enums', values: ['alpha', 'beta'] },
       },
-    };
+    });
 
     const first = applyEffect(effect, ctx);
     const second = applyEffect(effect, ctx);
@@ -333,13 +334,13 @@ describe('effects choice assertions', () => {
 
   it('chooseOne throws when selected value is outside domain', () => {
     const ctx = makeCtx({ moveParams: { '$choice': 'delta' } });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       chooseOne: {
         internalDecisionId: 'decision:$choice',
         bind: '$choice',
         options: { query: 'enums', values: ['alpha', 'beta'] },
       },
-    };
+    });
 
     assert.throws(() => applyEffect(effect, ctx), (error: unknown) => {
       return isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('outside options domain');
@@ -351,13 +352,13 @@ describe('effects choice assertions', () => {
       decisionAuthorityPlayer: asPlayerId(1),
       moveParams: { '$choice': 'alpha' },
     });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       chooseOne: {
         internalDecisionId: 'decision:$choice',
         bind: '$choice',
         options: { query: 'enums', values: ['alpha', 'beta'] },
       },
-    };
+    });
 
     assert.throws(() => applyEffect(effect, ctx), (error: unknown) =>
       isEffectErrorCode(error, 'EFFECT_RUNTIME')
@@ -369,13 +370,13 @@ describe('effects choice assertions', () => {
       decisionAuthorityPlayer: asPlayerId(1),
       moveParams: { '$choice': 'alpha' },
     });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       chooseOne: {
         internalDecisionId: 'decision:$choice',
         bind: '$choice',
         options: { query: 'enums', values: ['alpha', 'beta'] },
       },
-    };
+    });
 
     assert.throws(() => applyEffect(effect, ctx), (error: unknown) =>
       isEffectErrorCode(error, 'EFFECT_RUNTIME')
@@ -387,13 +388,13 @@ describe('effects choice assertions', () => {
       bindings: { $space: 'quang-nam:none' },
       moveParams: { 'decision:$adviseMode@{$space}::$adviseMode@quang-nam:none': 'assault' },
     });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       chooseOne: {
         internalDecisionId: 'decision:$adviseMode@{$space}',
         bind: '$adviseMode@{$space}',
         options: { query: 'enums', values: ['sweep', 'assault', 'activate-remove'] },
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state, ctx.state);
@@ -415,13 +416,13 @@ describe('effects choice assertions', () => {
       },
       moveParams: { '$marker': 'cap_topGun' },
     });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       chooseOne: {
         internalDecisionId: 'decision:$marker',
         bind: '$marker',
         options: { query: 'globalMarkers', states: ['unshaded', 'shaded'] },
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state, ctx.state);
@@ -454,13 +455,13 @@ describe('effects choice assertions', () => {
       def,
       moveParams: { '$row': 'irrelevant' },
     });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       chooseOne: {
         internalDecisionId: 'decision:$row',
         bind: '$row',
         options: { query: 'assetRows', tableId: 'tournament-standard::blindSchedule.levels' },
       },
-    };
+    });
 
     assert.throws(() => applyEffect(effect, ctx), (error: unknown) => {
       return isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('not move-param encodable');
@@ -469,14 +470,14 @@ describe('effects choice assertions', () => {
 
   it('chooseN succeeds for exact-length unique in-domain array', () => {
     const ctx = makeCtx({ moveParams: { '$picks': ['alpha', 'gamma'] } });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       chooseN: {
         internalDecisionId: 'decision:$picks',
         bind: '$picks',
         options: { query: 'enums', values: ['alpha', 'beta', 'gamma'] },
         n: 2,
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state, ctx.state);
@@ -500,27 +501,27 @@ describe('effects choice assertions', () => {
       },
       moveParams: { '$picks': [asTokenId('tok-1')] },
     });
-    const chooseEffect: EffectAST = {
+    const chooseEffect: EffectAST = eff({
       chooseN: {
         internalDecisionId: 'decision:$picks',
         bind: '$picks',
         options: { query: 'tokensInZone', zone: 'hand:0' },
         n: 1,
       },
-    };
+    });
 
     const chooseResult = applyEffect(chooseEffect, ctx);
     assert.deepEqual(chooseResult.bindings?.$picks, [token]);
 
-    const followupEffect: EffectAST = {
+    const followupEffect: EffectAST = eff({
       forEach: {
         bind: '$pick',
         over: { query: 'binding', name: '$picks' },
         effects: [
-          { setVar: { scope: 'global', var: 'score', value: { _t: 2 as const, ref: 'tokenProp', token: '$pick', prop: 'value' } } },
+          eff({ setVar: { scope: 'global', var: 'score', value: { _t: 2 as const, ref: 'tokenProp', token: '$pick', prop: 'value' } } }),
         ],
       },
-    };
+    });
     const followupResult = applyEffect(followupEffect, {
       ...ctx,
       moveParams: {},
@@ -547,13 +548,13 @@ describe('effects choice assertions', () => {
       },
       moveParams: { '$pick': asTokenId('tok-1') },
     });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       chooseOne: {
         internalDecisionId: 'decision:$pick',
         bind: '$pick',
         options: { query: 'tokensInZone', zone: 'hand:0' },
       },
-    };
+    });
 
     assert.throws(
       () => applyEffect(effect, ctx),
@@ -579,14 +580,14 @@ describe('effects choice assertions', () => {
       },
       moveParams: { '$picks': [asTokenId('tok-1')] },
     });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       chooseN: {
         internalDecisionId: 'decision:$picks',
         bind: '$picks',
         n: 1,
         options: { query: 'tokensInZone', zone: 'hand:0' },
       },
-    };
+    });
 
     assert.throws(
       () => applyEffect(effect, ctx),
@@ -599,14 +600,14 @@ describe('effects choice assertions', () => {
       bindings: { $zone: 'saigon:none' },
       iterationPath: '[1]',
     });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       chooseN: {
         internalDecisionId: 'decision:$picks@{$zone}',
         bind: '$picks@{$zone}',
         options: { query: 'enums', values: ['alpha', 'beta', 'gamma'] },
         n: 1,
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.pendingChoice?.kind, 'pending');
@@ -618,14 +619,14 @@ describe('effects choice assertions', () => {
 
   it('chooseN appends iterationPath to static decision IDs in discovery mode', () => {
     const ctx = makeDiscoveryCtx({ iterationPath: '[1]' });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       chooseN: {
         internalDecisionId: 'decision:$picks',
         bind: '$picks',
         options: { query: 'enums', values: ['alpha', 'beta', 'gamma'] },
         n: 1,
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.pendingChoice?.kind, 'pending');
@@ -640,14 +641,14 @@ describe('effects choice assertions', () => {
       iterationPath: '[1]',
       moveParams: { '$picks[1]': ['alpha'] },
     });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       chooseN: {
         internalDecisionId: 'decision:$picks',
         bind: '$picks',
         options: { query: 'enums', values: ['alpha', 'beta', 'gamma'] },
         n: 1,
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.ok(result.bindings !== undefined);
@@ -656,14 +657,14 @@ describe('effects choice assertions', () => {
 
   it('chooseN throws on duplicate selections', () => {
     const ctx = makeCtx({ moveParams: { '$picks': ['alpha', 'alpha'] } });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       chooseN: {
         internalDecisionId: 'decision:$picks',
         bind: '$picks',
         options: { query: 'enums', values: ['alpha', 'beta'] },
         n: 2,
       },
-    };
+    });
 
     assert.throws(() => applyEffect(effect, ctx), (error: unknown) => {
       return isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('must be unique');
@@ -672,14 +673,14 @@ describe('effects choice assertions', () => {
 
   it('chooseN throws on wrong cardinality', () => {
     const ctx = makeCtx({ moveParams: { '$picks': ['alpha'] } });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       chooseN: {
         internalDecisionId: 'decision:$picks',
         bind: '$picks',
         options: { query: 'enums', values: ['alpha', 'beta'] },
         n: 2,
       },
-    };
+    });
 
     assert.throws(() => applyEffect(effect, ctx), (error: unknown) => {
       return isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('cardinality mismatch');
@@ -688,14 +689,14 @@ describe('effects choice assertions', () => {
 
   it('chooseN throws on out-of-domain selections', () => {
     const ctx = makeCtx({ moveParams: { '$picks': ['alpha', 'delta'] } });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       chooseN: {
         internalDecisionId: 'decision:$picks',
         bind: '$picks',
         options: { query: 'enums', values: ['alpha', 'beta', 'gamma'] },
         n: 2,
       },
-    };
+    });
 
     assert.throws(() => applyEffect(effect, ctx), (error: unknown) => {
       return isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('outside options domain');
@@ -704,7 +705,7 @@ describe('effects choice assertions', () => {
 
   it('chooseN rejects prioritized selections that skip an earlier tier', () => {
     const ctx = makeCtx({ moveParams: { '$picks': ['reserve-a'] } });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       chooseN: {
         internalDecisionId: 'decision:$picks',
         bind: '$picks',
@@ -717,7 +718,7 @@ describe('effects choice assertions', () => {
         },
         n: 1,
       },
-    };
+    });
 
     assert.throws(() => applyEffect(effect, ctx), (error: unknown) => {
       return isEffectErrorCode(error, 'EFFECT_RUNTIME')
@@ -727,7 +728,7 @@ describe('effects choice assertions', () => {
 
   it('chooseN accepts prioritized selections that exhaust earlier tiers first', () => {
     const ctx = makeCtx({ moveParams: { '$picks': ['available-a', 'reserve-a'] } });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       chooseN: {
         internalDecisionId: 'decision:$picks',
         bind: '$picks',
@@ -740,7 +741,7 @@ describe('effects choice assertions', () => {
         },
         n: 2,
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state, ctx.state);
@@ -771,7 +772,7 @@ describe('effects choice assertions', () => {
       },
       moveParams: { '$picks': [asTokenId('map-troop'), asTokenId('map-base')] },
     });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       chooseN: {
         internalDecisionId: 'decision:$picks',
         bind: '$picks',
@@ -785,7 +786,7 @@ describe('effects choice assertions', () => {
         },
         n: 2,
       },
-    };
+    });
 
     assert.throws(() => applyEffect(effect, ctx), (error: unknown) => {
       return isEffectErrorCode(error, 'EFFECT_RUNTIME')
@@ -795,14 +796,14 @@ describe('effects choice assertions', () => {
 
   it('chooseN leaves non-prioritized selections unchanged', () => {
     const ctx = makeCtx({ moveParams: { '$picks': ['reserve-a'] } });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       chooseN: {
         internalDecisionId: 'decision:$picks',
         bind: '$picks',
         options: { query: 'enums', values: ['available-a', 'reserve-a'] },
         n: 1,
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state, ctx.state);
@@ -811,22 +812,22 @@ describe('effects choice assertions', () => {
 
   it('rollRandom discovery surfaces pending nested choices', () => {
     const ctx = makeDiscoveryCtx();
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       rollRandom: {
         bind: '$die',
         min: 1,
         max: 6,
         in: [
-          {
+          eff({
             chooseOne: {
               internalDecisionId: 'decision:$inside',
               bind: '$inside',
               options: { query: 'enums', values: ['x'] },
             },
-          },
+          }),
         ],
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state, ctx.state);
@@ -838,13 +839,13 @@ describe('effects choice assertions', () => {
 
   it('rollRandom discovery preserves chooseN alternatives when exact cardinality differs across outcomes', () => {
     const ctx = makeDiscoveryCtx();
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       rollRandom: {
         bind: '$die',
         min: 1,
         max: 2,
         in: [
-          {
+          eff({
             chooseN: {
               internalDecisionId: 'decision:$inside',
               bind: '$inside',
@@ -852,10 +853,10 @@ describe('effects choice assertions', () => {
               min: 1,
               max: { _t: 2 as const, ref: 'binding' as const, name: '$die' },
             },
-          },
+          }),
         ],
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.pendingChoice?.kind, 'pendingStochastic');
@@ -880,38 +881,38 @@ describe('effects choice assertions', () => {
 
   it('rollRandom discovery returns stochastic pending alternatives when outcome branches require different decisions', () => {
     const ctx = makeDiscoveryCtx();
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       rollRandom: {
         bind: '$die',
         min: 1,
         max: 2,
         in: [
-          {
+          eff({
             if: {
               when: { op: '==', left: { _t: 2 as const, ref: 'binding' as const, name: '$die' }, right: 1 },
               then: [
-                {
+                eff({
                   chooseOne: {
                     internalDecisionId: 'decision:$alpha',
                     bind: '$alpha',
                     options: { query: 'enums', values: ['a1', 'a2'] },
                   },
-                },
+                }),
               ],
               else: [
-                {
+                eff({
                   chooseOne: {
                     internalDecisionId: 'decision:$beta',
                     bind: '$beta',
                     options: { query: 'enums', values: ['b1', 'b2'] },
                   },
-                },
+                }),
               ],
             },
-          },
+          }),
         ],
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.pendingChoice?.kind, 'pendingStochastic');
@@ -924,14 +925,14 @@ describe('effects choice assertions', () => {
 
   it('chooseN supports up-to cardinality with max only', () => {
     const ctx = makeCtx({ moveParams: { '$picks': ['alpha'] } });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       chooseN: {
         internalDecisionId: 'decision:$picks',
         bind: '$picks',
         options: { query: 'enums', values: ['alpha', 'beta', 'gamma'] },
         max: 2,
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state, ctx.state);
@@ -940,7 +941,7 @@ describe('effects choice assertions', () => {
 
   it('chooseN supports min..max cardinality ranges', () => {
     const ctx = makeCtx({ moveParams: { '$picks': ['alpha', 'beta'] } });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       chooseN: {
         internalDecisionId: 'decision:$picks',
         bind: '$picks',
@@ -948,7 +949,7 @@ describe('effects choice assertions', () => {
         min: 1,
         max: 2,
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state, ctx.state);
@@ -960,7 +961,7 @@ describe('effects choice assertions', () => {
       state: { ...makeState(), globalVars: { score: 2 } },
       moveParams: { '$picks': ['alpha', 'beta'] },
     });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       chooseN: {
         internalDecisionId: 'decision:$picks',
         bind: '$picks',
@@ -968,7 +969,7 @@ describe('effects choice assertions', () => {
         min: { _t: 4 as const, if: { when: { op: '>', left: { _t: 2 as const, ref: 'gvar' as const, var: 'score' }, right: 0 }, then: 1, else: 0 } },
         max: { _t: 2 as const, ref: 'gvar' as const, var: 'score' },
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state, ctx.state);
@@ -977,12 +978,12 @@ describe('effects choice assertions', () => {
 
   it('chooseN resolves min/max from a let binding in the same authored scope', () => {
     const ctx = makeCtx({ moveParams: { '$picks': ['alpha', 'beta'] } });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       let: {
         bind: '$pickCount',
         value: 2,
         in: [
-          {
+          eff({
             chooseN: {
               internalDecisionId: 'decision:$picks',
               bind: '$picks',
@@ -990,10 +991,10 @@ describe('effects choice assertions', () => {
               min: { _t: 2 as const, ref: 'binding' as const, name: '$pickCount' },
               max: { _t: 2 as const, ref: 'binding' as const, name: '$pickCount' },
             },
-          },
+          }),
         ],
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     // Spec 78: createMutableState always shallow-clones, so reference identity
@@ -1004,14 +1005,14 @@ describe('effects choice assertions', () => {
 
   it('chooseN throws when expression-valued bounds evaluate to non-integers', () => {
     const ctx = makeCtx({ moveParams: { '$picks': ['alpha'] } });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       chooseN: {
         internalDecisionId: 'decision:$picks',
         bind: '$picks',
         options: { query: 'enums', values: ['alpha', 'beta', 'gamma'] },
         max: true as unknown as number,
       },
-    };
+    });
 
     assert.throws(
       () => applyEffect(effect, ctx),
@@ -1021,7 +1022,7 @@ describe('effects choice assertions', () => {
 
   it('chooseN range throws when selected count is outside min..max', () => {
     const ctx = makeCtx({ moveParams: { '$picks': [] } });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       chooseN: {
         internalDecisionId: 'decision:$picks',
         bind: '$picks',
@@ -1029,7 +1030,7 @@ describe('effects choice assertions', () => {
         min: 1,
         max: 2,
       },
-    };
+    });
 
     assert.throws(() => applyEffect(effect, ctx), (error: unknown) => {
       return isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('cardinality mismatch');
@@ -1043,14 +1044,14 @@ describe('effects choice assertions', () => {
     assert.throws(
       () =>
         applyEffect(
-          {
+          eff({
             chooseN: {
               internalDecisionId: 'decision:$picks',
               bind: '$picks',
               options: { query: 'enums', values: ['alpha'] },
               n: -1,
             },
-          },
+          }),
           negativeCtx,
         ),
       (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('non-negative integer'),
@@ -1059,14 +1060,14 @@ describe('effects choice assertions', () => {
     assert.throws(
       () =>
         applyEffect(
-          {
+          eff({
             chooseN: {
               internalDecisionId: 'decision:$picks',
               bind: '$picks',
               options: { query: 'enums', values: ['alpha'] },
               n: 1.5,
             },
-          },
+          }),
           nonIntegerCtx,
         ),
       (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('non-negative integer'),
@@ -1075,7 +1076,7 @@ describe('effects choice assertions', () => {
 
   it('chooseN throws when cardinality declaration mixes n with max', () => {
     const ctx = makeCtx({ moveParams: { '$picks': ['alpha'] } });
-    const effect = {
+    const effect = eff({
       chooseN: {
         internalDecisionId: 'decision:$picks',
         bind: '$picks',
@@ -1083,7 +1084,7 @@ describe('effects choice assertions', () => {
         n: 1,
         max: 2,
       },
-    } as unknown as EffectAST;
+    } as never);
 
     assert.throws(
       () => applyEffect(effect, ctx),
@@ -1096,13 +1097,13 @@ describe('effects choice assertions', () => {
       moveParams: { $owner: asPlayerId(0), '$pickedZone': 'hand:1' },
       bindings: { $owner: asPlayerId(1) },
     });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       chooseOne: {
         internalDecisionId: 'decision:$pickedZone',
         bind: '$pickedZone',
         options: { query: 'zones', filter: { owner: { chosen: '$owner' } } },
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state, ctx.state);
@@ -1111,13 +1112,13 @@ describe('effects choice assertions', () => {
 
   it('setMarker throws when marker lattice is missing', () => {
     const ctx = makeCtx();
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       setMarker: {
         space: 'discard:none',
         marker: 'unknownMarker',
         state: 'neutral',
       },
-    };
+    });
 
     assert.throws(
       () => applyEffect(effect, ctx),
@@ -1127,13 +1128,13 @@ describe('effects choice assertions', () => {
 
   it('shiftMarker throws when marker lattice is missing', () => {
     const ctx = makeCtx();
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       shiftMarker: {
         space: 'discard:none',
         marker: 'unknownMarker',
         delta: 1,
       },
-    };
+    });
 
     assert.throws(
       () => applyEffect(effect, ctx),
@@ -1143,13 +1144,13 @@ describe('effects choice assertions', () => {
 
   it('setMarker normalizes unresolved space selector bindings to effect runtime errors', () => {
     const ctx = makeCtx();
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       setMarker: {
         space: { zoneExpr: { _t: 2 as const, ref: 'binding' as const, name: '$missingSpace' } },
         marker: 'unknownMarker',
         state: 'neutral',
       },
-    };
+    });
 
     assert.throws(
       () => applyEffect(effect, ctx),
@@ -1162,13 +1163,13 @@ describe('effects choice assertions', () => {
 
   it('shiftMarker normalizes unresolved space selector bindings to effect runtime errors', () => {
     const ctx = makeCtx();
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       shiftMarker: {
         space: { zoneExpr: { _t: 2 as const, ref: 'binding' as const, name: '$missingSpace' } },
         marker: 'unknownMarker',
         delta: 1,
       },
-    };
+    });
 
     assert.throws(
       () => applyEffect(effect, ctx),
@@ -1181,26 +1182,26 @@ describe('effects choice assertions', () => {
 
   it('setMarker passes through unresolved selector errors in discovery mode', () => {
     const ctx = makeDiscoveryCtx();
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       setMarker: {
         space: { zoneExpr: { _t: 2 as const, ref: 'binding' as const, name: '$missingSpace' } },
         marker: 'unknownMarker',
         state: 'neutral',
       },
-    };
+    });
 
     assert.throws(() => applyEffect(effect, ctx), (error: unknown) => isEvalErrorCode(error, 'MISSING_BINDING'));
   });
 
   it('shiftMarker passes through unresolved selector errors in discovery mode', () => {
     const ctx = makeDiscoveryCtx();
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       shiftMarker: {
         space: { zoneExpr: { _t: 2 as const, ref: 'binding' as const, name: '$missingSpace' } },
         marker: 'unknownMarker',
         delta: 1,
       },
-    };
+    });
 
     assert.throws(() => applyEffect(effect, ctx), (error: unknown) => isEvalErrorCode(error, 'MISSING_BINDING'));
   });

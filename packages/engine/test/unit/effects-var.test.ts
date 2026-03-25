@@ -15,6 +15,7 @@ import {
   type GameState,
   createCollector,
 } from '../../src/kernel/index.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 import { assertSelectorResolutionPolicyBoundary, isNormalizedEffectRuntimeFailure } from '../helpers/effect-error-assertions.js';
 
 const makeDef = (): GameDef => ({
@@ -91,7 +92,7 @@ const makeDiscoveryCtx = (overrides?: EffectContextTestOverrides): EffectContext
 describe('effects var handlers', () => {
   it('setVar updates a global variable and preserves unrelated state branches', () => {
     const ctx = makeCtx();
-    const effect: EffectAST = { setVar: { scope: 'global', var: 'score', value: 9 } };
+    const effect: EffectAST = eff({ setVar: { scope: 'global', var: 'score', value: 9 } });
 
     const result = applyEffect(effect, ctx);
 
@@ -105,7 +106,7 @@ describe('effects var handlers', () => {
 
   it('setVar updates only the selected per-player variable cell', () => {
     const ctx = makeCtx();
-    const effect: EffectAST = { setVar: { scope: 'pvar', player: 'actor', var: 'hp', value: 11 } };
+    const effect: EffectAST = eff({ setVar: { scope: 'pvar', player: 'actor', var: 'hp', value: 11 } });
 
     const result = applyEffect(effect, ctx);
 
@@ -128,7 +129,7 @@ describe('effects var handlers', () => {
       },
     });
 
-    const result = applyEffect({ setVar: { scope: 'zoneVar', zone: 'zone-a:none', var: 'threat', value: 8 } }, zoneCtx);
+    const result = applyEffect(eff({ setVar: { scope: 'zoneVar', zone: 'zone-a:none', var: 'threat', value: 8 } }), zoneCtx);
 
     assert.equal(result.state.zoneVars['zone-a:none']?.threat, 8);
     assert.notEqual(result.state.zoneVars, zoneCtx.state.zoneVars);
@@ -139,40 +140,40 @@ describe('effects var handlers', () => {
   it('setVar supports boolean variables for global and per-player scopes', () => {
     const ctx = makeCtx();
 
-    const globalResult = applyEffect({ setVar: { scope: 'global', var: 'flag', value: true } }, ctx);
+    const globalResult = applyEffect(eff({ setVar: { scope: 'global', var: 'flag', value: true } }), ctx);
     assert.equal(globalResult.state.globalVars.flag, true);
 
-    const pvarResult = applyEffect({ setVar: { scope: 'pvar', player: 'actor', var: 'ready', value: true } }, ctx);
+    const pvarResult = applyEffect(eff({ setVar: { scope: 'pvar', player: 'actor', var: 'ready', value: true } }), ctx);
     assert.equal(pvarResult.state.perPlayerVars['0']?.ready, true);
   });
 
   it('setVar clamps values to min/max bounds', () => {
     const ctx = makeCtx();
 
-    const clampedHigh = applyEffect({ setVar: { scope: 'global', var: 'score', value: 999 } }, ctx);
+    const clampedHigh = applyEffect(eff({ setVar: { scope: 'global', var: 'score', value: 999 } }), ctx);
     assert.equal(clampedHigh.state.globalVars.score, 10);
 
-    const clampedLow = applyEffect({ setVar: { scope: 'pvar', player: 'actor', var: 'hp', value: -4 } }, ctx);
+    const clampedLow = applyEffect(eff({ setVar: { scope: 'pvar', player: 'actor', var: 'hp', value: -4 } }), ctx);
     assert.equal(clampedLow.state.perPlayerVars['0']?.hp, 0);
   });
 
   it('addVar applies signed deltas for global and per-player vars', () => {
     const ctx = makeCtx();
 
-    const globalResult = applyEffect({ addVar: { scope: 'global', var: 'score', delta: -2 } }, ctx);
+    const globalResult = applyEffect(eff({ addVar: { scope: 'global', var: 'score', delta: -2 } }), ctx);
     assert.equal(globalResult.state.globalVars.score, 1);
 
-    const pvarResult = applyEffect({ addVar: { scope: 'pvar', player: 'active', var: 'hp', delta: 5 } }, ctx);
+    const pvarResult = applyEffect(eff({ addVar: { scope: 'pvar', player: 'active', var: 'hp', delta: 5 } }), ctx);
     assert.equal(pvarResult.state.perPlayerVars['1']?.hp, 13);
   });
 
   it('addVar clamps values to min/max bounds', () => {
     const ctx = makeCtx();
 
-    const clampedHigh = applyEffect({ addVar: { scope: 'global', var: 'score', delta: 30 } }, ctx);
+    const clampedHigh = applyEffect(eff({ addVar: { scope: 'global', var: 'score', delta: 30 } }), ctx);
     assert.equal(clampedHigh.state.globalVars.score, 10);
 
-    const clampedLow = applyEffect({ addVar: { scope: 'pvar', player: 'actor', var: 'hp', delta: -30 } }, ctx);
+    const clampedLow = applyEffect(eff({ addVar: { scope: 'pvar', player: 'actor', var: 'hp', delta: -30 } }), ctx);
     assert.equal(clampedLow.state.perPlayerVars['0']?.hp, 0);
   });
 
@@ -183,13 +184,13 @@ describe('effects var handlers', () => {
     });
 
     const setResult = applyEffect(
-      { setVar: { scope: 'global', var: { ref: 'binding', name: '$targetVar' }, value: 9 } },
+      eff({ setVar: { scope: 'global', var: { ref: 'binding', name: '$targetVar' }, value: 9 } }),
       ctx,
     );
     assert.equal(setResult.state.globalVars.score, 9);
 
     const addResult = applyEffect(
-      { addVar: { scope: 'pvar', player: 'actor', var: { ref: 'grantContext', key: 'playerVar' }, delta: 3 } },
+      eff({ addVar: { scope: 'pvar', player: 'actor', var: { ref: 'grantContext', key: 'playerVar' }, delta: 3 } }),
       ctx,
     );
     assert.equal(addResult.state.perPlayerVars['0']?.mana, 4);
@@ -198,7 +199,7 @@ describe('effects var handlers', () => {
   it('throws EFFECT_RUNTIME for unknown variable names', () => {
     const ctx = makeCtx();
 
-    assert.throws(() => applyEffect({ setVar: { scope: 'global', var: 'missing', value: 1 } }, ctx), (error: unknown) => {
+    assert.throws(() => applyEffect(eff({ setVar: { scope: 'global', var: 'missing', value: 1 } }), ctx), (error: unknown) => {
       return isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('Unknown global variable');
     });
   });
@@ -206,7 +207,7 @@ describe('effects var handlers', () => {
   it('throws EFFECT_RUNTIME when dynamic scoped variable names resolve to missing or non-string values', () => {
     const missingBindingCtx = makeCtx();
     assert.throws(
-      () => applyEffect({ setVar: { scope: 'global', var: { ref: 'binding', name: '$missingVar' }, value: 1 } }, missingBindingCtx),
+      () => applyEffect(eff({ setVar: { scope: 'global', var: { ref: 'binding', name: '$missingVar' }, value: 1 } }), missingBindingCtx),
       (error: unknown) =>
         isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
         String(error).includes('setVar variable name binding not found: $missingVar'),
@@ -216,7 +217,7 @@ describe('effects var handlers', () => {
       freeOperationOverlay: { grantContext: { targetVar: 7 } },
     });
     assert.throws(
-      () => applyEffect({ addVar: { scope: 'global', var: { ref: 'grantContext', key: 'targetVar' }, delta: 1 } }, badGrantContextCtx),
+      () => applyEffect(eff({ addVar: { scope: 'global', var: { ref: 'grantContext', key: 'targetVar' }, delta: 1 } }), badGrantContextCtx),
       (error: unknown) =>
         isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
         String(error).includes('addVar variable name grantContext value must resolve to string: targetVar'),
@@ -226,11 +227,11 @@ describe('effects var handlers', () => {
   it('throws EFFECT_RUNTIME when evaluated setVar/addVar numeric inputs are not integers', () => {
     const ctx = makeCtx();
 
-    assert.throws(() => applyEffect({ setVar: { scope: 'global', var: 'score', value: true } }, ctx), (error: unknown) => {
+    assert.throws(() => applyEffect(eff({ setVar: { scope: 'global', var: 'score', value: true } }), ctx), (error: unknown) => {
       return isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('setVar.value');
     });
 
-    assert.throws(() => applyEffect({ addVar: { scope: 'global', var: 'score', delta: 'x' as unknown as number } }, ctx), (error: unknown) => {
+    assert.throws(() => applyEffect(eff({ addVar: { scope: 'global', var: 'score', delta: 'x' as unknown as number } }), ctx), (error: unknown) => {
       return isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('addVar.delta');
     });
   });
@@ -238,11 +239,11 @@ describe('effects var handlers', () => {
   it('throws EFFECT_RUNTIME for invalid boolean setVar/addVar usage', () => {
     const ctx = makeCtx();
 
-    assert.throws(() => applyEffect({ setVar: { scope: 'global', var: 'flag', value: 1 } }, ctx), (error: unknown) => {
+    assert.throws(() => applyEffect(eff({ setVar: { scope: 'global', var: 'flag', value: 1 } }), ctx), (error: unknown) => {
       return isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('setVar.value');
     });
 
-    assert.throws(() => applyEffect({ addVar: { scope: 'global', var: 'flag', delta: 1 } }, ctx), (error: unknown) => {
+    assert.throws(() => applyEffect(eff({ addVar: { scope: 'global', var: 'flag', delta: 1 } }), ctx), (error: unknown) => {
       return isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('addVar cannot target non-int variable');
     });
   });
@@ -260,7 +261,7 @@ describe('effects var handlers', () => {
     });
 
     assert.throws(
-      () => applyEffect({ addVar: { scope: 'global', var: 'score', delta: 1 } }, ctx),
+      () => applyEffect(eff({ addVar: { scope: 'global', var: 'score', delta: 1 } }), ctx),
       (error: unknown) =>
         isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
         String(error).includes('Global variable state must be a finite safe integer: score'),
@@ -280,7 +281,7 @@ describe('effects var handlers', () => {
     });
 
     assert.throws(
-      () => applyEffect({ setVar: { scope: 'global', var: 'score', value: 4 } }, ctx),
+      () => applyEffect(eff({ setVar: { scope: 'global', var: 'score', value: 4 } }), ctx),
       (error: unknown) =>
         isEffectErrorCode(error, 'EFFECT_RUNTIME') &&
         String(error).includes('Global variable state must be a finite safe integer: score'),
@@ -290,7 +291,7 @@ describe('effects var handlers', () => {
   it('throws EFFECT_RUNTIME when per-player selector resolves to non-scalar cardinality', () => {
     const ctx = makeCtx();
 
-    assert.throws(() => applyEffect({ setVar: { scope: 'pvar', player: 'all', var: 'hp', value: 1 } }, ctx), (error: unknown) => {
+    assert.throws(() => applyEffect(eff({ setVar: { scope: 'pvar', player: 'all', var: 'hp', value: 1 } }), ctx), (error: unknown) => {
       return isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('exactly one resolved player');
     });
   });
@@ -301,9 +302,9 @@ describe('effects var handlers', () => {
     assert.throws(
       () =>
         applyEffect(
-          {
+          eff({
             setVar: { scope: 'pvar', player: { chosen: '$missingPlayer' }, var: 'hp', value: 1 },
-          },
+          }),
           ctx,
         ),
       (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'setVar pvar selector resolution failed'),
@@ -326,14 +327,14 @@ describe('effects var handlers', () => {
     assert.throws(
       () =>
         applyEffect(
-          {
+          eff({
             setVar: {
               scope: 'zoneVar',
               zone: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$missingZone' } },
               var: 'threat',
               value: 1,
             },
-          },
+          }),
           zoneCtx,
         ),
       (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'setVar zoneVar selector resolution failed'),
@@ -356,14 +357,14 @@ describe('effects var handlers', () => {
     assert.throws(
       () =>
         applyEffect(
-          {
+          eff({
             addVar: {
               scope: 'zoneVar',
               zone: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$missingZone' } },
               var: 'threat',
               delta: 1,
             },
-          },
+          }),
           zoneCtx,
         ),
       (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'addVar zoneVar selector resolution failed'),
@@ -375,7 +376,7 @@ describe('effects var handlers', () => {
       moveParams: { $target: asPlayerId(0) },
     });
 
-    const result = applyEffect({ setActivePlayer: { player: { chosen: '$target' } } }, ctx);
+    const result = applyEffect(eff({ setActivePlayer: { player: { chosen: '$target' } } }), ctx);
     assert.equal(result.state.activePlayer, asPlayerId(0));
     assert.equal(result.state.globalVars, ctx.state.globalVars);
   });
@@ -383,16 +384,16 @@ describe('effects var handlers', () => {
   it('setActivePlayer throws when selector does not resolve to exactly one player', () => {
     const ctx = makeCtx();
 
-    assert.throws(() => applyEffect({ setActivePlayer: { player: 'all' } }, ctx), (error: unknown) => {
+    assert.throws(() => applyEffect(eff({ setActivePlayer: { player: 'all' } }), ctx), (error: unknown) => {
       return isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('setActivePlayer requires exactly one resolved player');
     });
   });
 
   it('setActivePlayer unresolved selector follows execution/discovery policy boundary', () => {
     assertSelectorResolutionPolicyBoundary({
-      executionRun: () => applyEffect({ setActivePlayer: { player: { chosen: '$missingPlayer' } } }, makeCtx()),
+      executionRun: () => applyEffect(eff({ setActivePlayer: { player: { chosen: '$missingPlayer' } } }), makeCtx()),
       discoveryRun: () =>
-        applyEffect({ setActivePlayer: { player: { chosen: '$missingPlayer' } } }, makeDiscoveryCtx()),
+        applyEffect(eff({ setActivePlayer: { player: { chosen: '$missingPlayer' } } }), makeDiscoveryCtx()),
       normalizedMessage: 'setActivePlayer selector resolution failed',
     });
   });
@@ -402,14 +403,14 @@ describe('effects var handlers', () => {
       moveParams: { $target: asPlayerId(1), value: 3 },
       bindings: { value: 6 },
     });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       addVar: {
         scope: 'pvar',
         player: { chosen: '$target' },
         var: 'mana',
         delta: { _t: 2 as const, ref: 'binding', name: 'value' },
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state.perPlayerVars['1']?.mana, 9);
@@ -417,7 +418,7 @@ describe('effects var handlers', () => {
 
   it('returns original state reference when clamped/updated value is unchanged', () => {
     const ctx = makeCtx();
-    const effect: EffectAST = { setVar: { scope: 'global', var: 'score', value: 3 } };
+    const effect: EffectAST = eff({ setVar: { scope: 'global', var: 'score', value: 3 } });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state, ctx.state);
@@ -428,12 +429,12 @@ describe('effects var handlers', () => {
   it('emits varChanged event payload on global and per-player setVar changes', () => {
     const ctx = makeCtx();
 
-    const globalResult = applyEffect({ setVar: { scope: 'global', var: 'score', value: 9 } }, ctx);
+    const globalResult = applyEffect(eff({ setVar: { scope: 'global', var: 'score', value: 9 } }), ctx);
     assert.deepEqual(globalResult.emittedEvents, [
       { type: 'varChanged', scope: 'global', var: 'score', oldValue: 3, newValue: 9 },
     ]);
 
-    const playerResult = applyEffect({ setVar: { scope: 'pvar', player: 'actor', var: 'hp', value: 11 } }, ctx);
+    const playerResult = applyEffect(eff({ setVar: { scope: 'pvar', player: 'actor', var: 'hp', value: 11 } }), ctx);
     assert.deepEqual(playerResult.emittedEvents, [
       { type: 'varChanged', scope: 'perPlayer', player: asPlayerId(0), var: 'hp', oldValue: 6, newValue: 11 },
     ]);
@@ -441,12 +442,12 @@ describe('effects var handlers', () => {
 
   it('emits varChanged event payload on addVar changes and not on no-op clamp writes', () => {
     const ctx = makeCtx();
-    const changed = applyEffect({ addVar: { scope: 'global', var: 'score', delta: -2 } }, ctx);
+    const changed = applyEffect(eff({ addVar: { scope: 'global', var: 'score', delta: -2 } }), ctx);
     assert.deepEqual(changed.emittedEvents, [
       { type: 'varChanged', scope: 'global', var: 'score', oldValue: 3, newValue: 1 },
     ]);
 
-    const noOp = applyEffect({ addVar: { scope: 'global', var: 'score', delta: 0 } }, ctx);
+    const noOp = applyEffect(eff({ addVar: { scope: 'global', var: 'score', delta: 0 } }), ctx);
     assert.deepEqual(noOp.emittedEvents, []);
   });
 
@@ -470,12 +471,12 @@ describe('effects var handlers', () => {
     });
 
     const cases: readonly { readonly name: string; readonly ctx: EffectContext; readonly effect: EffectAST }[] = [
-      { name: 'setVar global', ctx: makeCtx(), effect: { setVar: { scope: 'global', var: 'score', value: 9 } } },
-      { name: 'setVar pvar', ctx: makeCtx(), effect: { setVar: { scope: 'pvar', player: 'actor', var: 'hp', value: 11 } } },
-      { name: 'setVar zoneVar', ctx: zoneCtx, effect: { setVar: { scope: 'zoneVar', zone: 'zone-a:none', var: 'threat', value: 7 } } },
-      { name: 'addVar global', ctx: makeCtx(), effect: { addVar: { scope: 'global', var: 'score', delta: 3 } } },
-      { name: 'addVar pvar', ctx: makeCtx(), effect: { addVar: { scope: 'pvar', player: 'actor', var: 'hp', delta: 2 } } },
-      { name: 'addVar zoneVar', ctx: zoneCtx, effect: { addVar: { scope: 'zoneVar', zone: 'zone-a:none', var: 'threat', delta: -2 } } },
+      { name: 'setVar global', ctx: makeCtx(), effect: eff({ setVar: { scope: 'global', var: 'score', value: 9 } }) },
+      { name: 'setVar pvar', ctx: makeCtx(), effect: eff({ setVar: { scope: 'pvar', player: 'actor', var: 'hp', value: 11 } }) },
+      { name: 'setVar zoneVar', ctx: zoneCtx, effect: eff({ setVar: { scope: 'zoneVar', zone: 'zone-a:none', var: 'threat', value: 7 } }) },
+      { name: 'addVar global', ctx: makeCtx(), effect: eff({ addVar: { scope: 'global', var: 'score', delta: 3 } }) },
+      { name: 'addVar pvar', ctx: makeCtx(), effect: eff({ addVar: { scope: 'pvar', player: 'actor', var: 'hp', delta: 2 } }) },
+      { name: 'addVar zoneVar', ctx: zoneCtx, effect: eff({ addVar: { scope: 'zoneVar', zone: 'zone-a:none', var: 'threat', delta: -2 } }) },
     ];
 
     for (const testCase of cases) {
@@ -568,7 +569,7 @@ describe('lattice marker shift via addVar', () => {
 
   it('shifts +1 from middle state (index 2 → 3)', () => {
     const ctx = makeLatticeCtx(2);
-    const effect: EffectAST = { addVar: { scope: 'global', var: 'marker', delta: 1 } };
+    const effect: EffectAST = eff({ addVar: { scope: 'global', var: 'marker', delta: 1 } });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state.globalVars.marker, 3);
@@ -576,7 +577,7 @@ describe('lattice marker shift via addVar', () => {
 
   it('clamps at max when shifting +1 from top state (index 4 → 4)', () => {
     const ctx = makeLatticeCtx(4);
-    const effect: EffectAST = { addVar: { scope: 'global', var: 'marker', delta: 1 } };
+    const effect: EffectAST = eff({ addVar: { scope: 'global', var: 'marker', delta: 1 } });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state.globalVars.marker, 4, 'clamped at max');
@@ -585,7 +586,7 @@ describe('lattice marker shift via addVar', () => {
 
   it('clamps at min when shifting -1 from bottom state (index 0 → 0)', () => {
     const ctx = makeLatticeCtx(0);
-    const effect: EffectAST = { addVar: { scope: 'global', var: 'marker', delta: -1 } };
+    const effect: EffectAST = eff({ addVar: { scope: 'global', var: 'marker', delta: -1 } });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state.globalVars.marker, 0, 'clamped at min');
@@ -594,7 +595,7 @@ describe('lattice marker shift via addVar', () => {
 
   it('shifts -1 from middle state (index 3 → 2)', () => {
     const ctx = makeLatticeCtx(3);
-    const effect: EffectAST = { addVar: { scope: 'global', var: 'marker', delta: -1 } };
+    const effect: EffectAST = eff({ addVar: { scope: 'global', var: 'marker', delta: -1 } });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state.globalVars.marker, 2);
@@ -602,7 +603,7 @@ describe('lattice marker shift via addVar', () => {
 
   it('clamps double shift +2 correctly (index 3 + 2 → clamped to 4)', () => {
     const ctx = makeLatticeCtx(3);
-    const effect: EffectAST = { addVar: { scope: 'global', var: 'marker', delta: 2 } };
+    const effect: EffectAST = eff({ addVar: { scope: 'global', var: 'marker', delta: 2 } });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state.globalVars.marker, 4, 'clamped to max on double shift');

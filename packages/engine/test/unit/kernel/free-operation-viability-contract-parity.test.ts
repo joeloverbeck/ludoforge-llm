@@ -10,7 +10,7 @@ import {
 import type { FreeOperationSequenceContextContract } from '../../../src/kernel/free-operation-sequence-context-contract.js';
 import { EffectASTSchema } from '../../../src/kernel/schemas-ast.js';
 import { EventCardFreeOperationGrantSchema } from '../../../src/kernel/schemas-extensions.js';
-import type { EffectAST } from '../../../src/kernel/types-ast.js';
+import { EFFECT_KIND_TAG, type EffectAST } from '../../../src/kernel/types-ast.js';
 import type { EventFreeOperationGrantDef } from '../../../src/kernel/types-events.js';
 import type {
   TurnFlowFreeOperationGrantContract,
@@ -118,6 +118,7 @@ describe('free-operation viability policy contract parity', () => {
       assert.equal(isTurnFlowFreeOperationGrantViabilityPolicy(policy), true, `runtime guard should accept ${policy}`);
 
       const astParsed = EffectASTSchema.safeParse({
+        _k: EFFECT_KIND_TAG.grantFreeOperation,
         grantFreeOperation: {
           seat: 'self',
           operationClass: 'operation',
@@ -149,6 +150,7 @@ describe('free-operation viability policy contract parity', () => {
       assert.equal(isTurnFlowFreeOperationGrantViabilityPolicy(value), false, `runtime guard should reject ${value}`);
 
       const astParsed = EffectASTSchema.safeParse({
+        _k: EFFECT_KIND_TAG.grantFreeOperation,
         grantFreeOperation: {
           seat: 'self',
           operationClass: 'operation',
@@ -181,6 +183,7 @@ describe('free-operation viability policy contract parity', () => {
 
   it('keeps AST and event schema completion-contract coupling aligned', () => {
     const validAst = EffectASTSchema.safeParse({
+      _k: EFFECT_KIND_TAG.grantFreeOperation,
       grantFreeOperation: {
         seat: 'self',
         operationClass: 'operation',
@@ -202,6 +205,7 @@ describe('free-operation viability policy contract parity', () => {
     const invalidCases = [
       {
         ast: {
+          _k: EFFECT_KIND_TAG.grantFreeOperation,
           grantFreeOperation: {
             seat: 'self',
             operationClass: 'operation',
@@ -217,6 +221,7 @@ describe('free-operation viability policy contract parity', () => {
       },
       {
         ast: {
+          _k: EFFECT_KIND_TAG.grantFreeOperation,
           grantFreeOperation: {
             seat: 'self',
             operationClass: 'operation',

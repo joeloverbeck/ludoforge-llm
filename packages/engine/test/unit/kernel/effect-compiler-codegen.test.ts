@@ -320,6 +320,54 @@ describe('effect-compiler-codegen', () => {
     compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
   });
 
+  it('compileSetActivePlayer matches interpreter for active player updates', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = eff({ setActivePlayer: { player: { id: asPlayerId(2) } } });
+
+    compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
+  });
+
+  it('compileAdvancePhase matches interpreter lifecycle semantics', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = eff({ advancePhase: {} });
+
+    compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
+  });
+
+  it('compilePopInterruptPhase matches interpreter resume semantics', () => {
+    const def = makeDef();
+    const state: GameState = {
+      ...makeState(),
+      currentPhase: asPhaseId('cleanup'),
+      interruptPhaseStack: [{ phase: asPhaseId('cleanup'), resumePhase: asPhaseId('main') }],
+    };
+    const effect: EffectAST = eff({ popInterruptPhase: {} });
+
+    compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
+  });
+
+  it('compilePopInterruptPhase throws the same runtime error as interpreter on an empty stack', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = eff({ popInterruptPhase: {} });
+
+    assert.throws(
+      () => runCompiled(def, state, effect),
+      (error: unknown) => {
+        assert.throws(() => runInterpreted(def, state, effect), (interpretedError: unknown) => {
+          assert.equal(
+            interpretedError instanceof Error ? interpretedError.name : undefined,
+            error instanceof Error ? error.name : undefined,
+          );
+          return true;
+        });
+        return true;
+      },
+    );
+  });
+
   it('compileBindValue matches interpreter for non-simple value expressions', () => {
     const def = makeDef();
     const state = makeState();
@@ -467,6 +515,9 @@ describe('effect-compiler-codegen', () => {
       eff({ if: { when: { op: '==', left: 1, right: 1 }, then: [] } }),
       eff({ forEach: { bind: '$seat', over: { query: 'players' }, effects: [] } }),
       eff({ gotoPhaseExact: { phase: 'cleanup' } }),
+      eff({ setActivePlayer: { player: 'active' } }),
+      eff({ advancePhase: {} }),
+      eff({ popInterruptPhase: {} }),
       eff({ bindValue: { bind: '$x', value: { _t: 6, op: '+', left: 1, right: 2 } } }),
       eff({ transferVar: { from: { scope: 'global', var: 'bank' }, to: { scope: 'global', var: 'count' }, amount: 1 } }),
       eff({ let: { bind: 'tmp', value: { _t: 6, op: '+', left: 1, right: 2 }, in: [] } }),

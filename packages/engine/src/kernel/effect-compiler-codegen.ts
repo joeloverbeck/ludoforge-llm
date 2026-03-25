@@ -9,6 +9,7 @@ import { applyEffectsWithBudgetState, consumeEffectBudget, createEffectBudgetSta
 import type { MutableGameState } from './state-draft.js';
 import {
   type AddVarPattern,
+  type AdvancePhasePattern,
   type BindValuePattern,
   type CompilableConditionPattern,
   type FlipGlobalMarkerPattern,
@@ -18,6 +19,8 @@ import {
   type LetPattern,
   type LogicalConditionPattern,
   type PatternDescriptor,
+  type PopInterruptPhasePattern,
+  type SetActivePlayerPattern,
   type SetGlobalMarkerPattern,
   type SetMarkerPattern,
   type SetVarPattern,
@@ -38,8 +41,14 @@ import {
   applyShiftMarker,
 } from './effects-choice.js';
 import { applyTransferVar } from './effects-resource.js';
-import { applyGotoPhaseExact } from './effects-turn-flow.js';
-import { gotoPhaseExact as gotoPhaseExactBuilder } from './ast-builders.js';
+import { applyAdvancePhase, applyGotoPhaseExact, applyPopInterruptPhase } from './effects-turn-flow.js';
+import { applySetActivePlayer } from './effects-var.js';
+import {
+  advancePhase as advancePhaseBuilder,
+  gotoPhaseExact as gotoPhaseExactBuilder,
+  popInterruptPhase as popInterruptPhaseBuilder,
+  setActivePlayer as setActivePlayerBuilder,
+} from './ast-builders.js';
 import { toEffectEnv, toEffectCursor } from './effect-context.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import { resolveRef } from './resolve-ref.js';
@@ -246,6 +255,41 @@ const normalizeBranchResult = (
   decisionScope: result.decisionScope ?? decisionScope,
   ...(result.pendingChoice === undefined ? {} : { pendingChoice: result.pendingChoice }),
 });
+
+const executeCompiledDelegate = (
+  effectType: string,
+  state: GameState,
+  rng: Rng,
+  bindings: Readonly<Record<string, unknown>>,
+  ctx: CompiledEffectContext,
+  handler: (
+    env: ReturnType<typeof toEffectEnv>,
+    cursor: ReturnType<typeof toEffectCursor>,
+  ) => EffectResult,
+): EffectResult => {
+  if (ctx.effectBudget !== undefined) {
+    consumeEffectBudget(ctx.effectBudget, effectType);
+  }
+
+  const effectCtx = createCompiledExecutionContext(state, rng, bindings, ctx);
+  const cursor: EffectCursor = {
+    state,
+    rng,
+    bindings,
+    decisionScope: ctx.decisionScope ?? emptyScope(),
+    ...(ctx.effectPath === undefined ? {} : { effectPath: ctx.effectPath }),
+    ...(ctx.tracker === undefined ? {} : { tracker: ctx.tracker }),
+  };
+  const result = handler(toEffectEnv(effectCtx), cursor);
+  return {
+    state: result.state,
+    rng: result.rng,
+    ...(result.emittedEvents === undefined ? {} : { emittedEvents: result.emittedEvents }),
+    bindings: result.bindings ?? cursor.bindings,
+    decisionScope: result.decisionScope ?? cursor.decisionScope,
+    ...(result.pendingChoice === undefined ? {} : { pendingChoice: result.pendingChoice }),
+  };
+};
 
 export const compileValueAccessor = (
   pattern: SimpleValuePattern | SimpleNumericValuePattern,
@@ -574,23 +618,74 @@ export const compileForEachPlayers = (
 
 export const compileGotoPhaseExact = (desc: GotoPhaseExactPattern): CompiledEffectFragment => ({
   nodeCount: 1,
-  execute: (state, rng, bindings, ctx) => {
-    if (ctx.effectBudget !== undefined) {
-      consumeEffectBudget(ctx.effectBudget, 'gotoPhaseExact');
-    }
-    const effectCtx = createCompiledExecutionContext(state, rng, bindings, ctx);
-    const result = applyGotoPhaseExact(
+  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+    'gotoPhaseExact',
+    state,
+    rng,
+    bindings,
+    ctx,
+    (env, cursor) => applyGotoPhaseExact(
       gotoPhaseExactBuilder({ phase: desc.phase }),
-      toEffectEnv(effectCtx),
-      toEffectCursor(effectCtx),
+      env,
+      cursor,
       { remaining: 10_000, max: 10_000 },
       () => { throw new Error('applyBatch not available in compiled gotoPhaseExact'); },
-    );
-    return {
-      ...result,
-      bindings,
-    };
-  },
+    ),
+  ),
+});
+
+export const compileSetActivePlayer = (desc: SetActivePlayerPattern): CompiledEffectFragment => ({
+  nodeCount: 1,
+  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+    'setActivePlayer',
+    state,
+    rng,
+    bindings,
+    ctx,
+    (env, cursor) => applySetActivePlayer(
+      setActivePlayerBuilder({ player: desc.player }),
+      env,
+      cursor,
+      { remaining: 10_000, max: 10_000 },
+      () => { throw new Error('applyBatch not available in compiled setActivePlayer'); },
+    ),
+  ),
+});
+
+export const compileAdvancePhase = (_desc: AdvancePhasePattern): CompiledEffectFragment => ({
+  nodeCount: 1,
+  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+    'advancePhase',
+    state,
+    rng,
+    bindings,
+    ctx,
+    (env, cursor) => applyAdvancePhase(
+      advancePhaseBuilder({}),
+      env,
+      cursor,
+      { remaining: 10_000, max: 10_000 },
+      () => { throw new Error('applyBatch not available in compiled advancePhase'); },
+    ),
+  ),
+});
+
+export const compilePopInterruptPhase = (_desc: PopInterruptPhasePattern): CompiledEffectFragment => ({
+  nodeCount: 1,
+  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+    'popInterruptPhase',
+    state,
+    rng,
+    bindings,
+    ctx,
+    (env, cursor) => applyPopInterruptPhase(
+      popInterruptPhaseBuilder({}),
+      env,
+      cursor,
+      { remaining: 10_000, max: 10_000 },
+      () => { throw new Error('applyBatch not available in compiled popInterruptPhase'); },
+    ),
+  ),
 });
 
 export const compileBindValue = (desc: BindValuePattern): CompiledEffectFragment => ({
@@ -614,151 +709,110 @@ export const compileBindValue = (desc: BindValuePattern): CompiledEffectFragment
 
 export const compileTransferVar = (desc: TransferVarPattern): CompiledEffectFragment => ({
   nodeCount: 1,
-  execute: (state, rng, bindings, ctx) => {
-    if (ctx.effectBudget !== undefined) {
-      consumeEffectBudget(ctx.effectBudget, 'transferVar');
-    }
-    const effectCtx = createCompiledExecutionContext(state, rng, bindings, ctx);
-    return applyTransferVar(
+  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+    'transferVar',
+    state,
+    rng,
+    bindings,
+    ctx,
+    (env, cursor) => applyTransferVar(
       { _k: EFFECT_KIND_TAG.transferVar, transferVar: desc.payload },
-      toEffectEnv(effectCtx),
-      {
-        state,
-        rng,
-        bindings,
-        decisionScope: ctx.decisionScope ?? emptyScope(),
-        ...(ctx.effectPath === undefined ? {} : { effectPath: ctx.effectPath }),
-        ...(ctx.tracker === undefined ? {} : { tracker: ctx.tracker }),
-      },
+      env,
+      cursor,
       { remaining: 10_000, max: 10_000 },
       () => { throw new Error('applyBatch not available in compiled transferVar'); },
-    );
-  },
+    ),
+  ),
 });
 
 export const compileSetMarker = (desc: SetMarkerPattern): CompiledEffectFragment => ({
   nodeCount: 1,
-  execute: (state, rng, bindings, ctx) => {
-    if (ctx.effectBudget !== undefined) {
-      consumeEffectBudget(ctx.effectBudget, 'setMarker');
-    }
-    const effectCtx = createCompiledExecutionContext(state, rng, bindings, ctx);
-    const result = applySetMarker(
+  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+    'setMarker',
+    state,
+    rng,
+    bindings,
+    ctx,
+    (env, cursor) => applySetMarker(
       { _k: EFFECT_KIND_TAG.setMarker, setMarker: desc.payload },
-      toEffectEnv(effectCtx),
-      {
-        state,
-        rng,
-        bindings,
-        decisionScope: ctx.decisionScope ?? emptyScope(),
-        ...(ctx.effectPath === undefined ? {} : { effectPath: ctx.effectPath }),
-        ...(ctx.tracker === undefined ? {} : { tracker: ctx.tracker }),
-      },
+      env,
+      cursor,
       { remaining: 10_000, max: 10_000 },
       () => { throw new Error('applyBatch not available in compiled setMarker'); },
-    );
-    return { ...result, bindings };
-  },
+    ),
+  ),
 });
 
 export const compileShiftMarker = (desc: ShiftMarkerPattern): CompiledEffectFragment => ({
   nodeCount: 1,
-  execute: (state, rng, bindings, ctx) => {
-    if (ctx.effectBudget !== undefined) {
-      consumeEffectBudget(ctx.effectBudget, 'shiftMarker');
-    }
-    const effectCtx = createCompiledExecutionContext(state, rng, bindings, ctx);
-    const result = applyShiftMarker(
+  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+    'shiftMarker',
+    state,
+    rng,
+    bindings,
+    ctx,
+    (env, cursor) => applyShiftMarker(
       { _k: EFFECT_KIND_TAG.shiftMarker, shiftMarker: desc.payload },
-      toEffectEnv(effectCtx),
-      {
-        state,
-        rng,
-        bindings,
-        decisionScope: ctx.decisionScope ?? emptyScope(),
-        ...(ctx.effectPath === undefined ? {} : { effectPath: ctx.effectPath }),
-        ...(ctx.tracker === undefined ? {} : { tracker: ctx.tracker }),
-      },
+      env,
+      cursor,
       { remaining: 10_000, max: 10_000 },
       () => { throw new Error('applyBatch not available in compiled shiftMarker'); },
-    );
-    return { ...result, bindings };
-  },
+    ),
+  ),
 });
 
 export const compileSetGlobalMarker = (desc: SetGlobalMarkerPattern): CompiledEffectFragment => ({
   nodeCount: 1,
-  execute: (state, rng, bindings, ctx) => {
-    if (ctx.effectBudget !== undefined) {
-      consumeEffectBudget(ctx.effectBudget, 'setGlobalMarker');
-    }
-    const effectCtx = createCompiledExecutionContext(state, rng, bindings, ctx);
-    const result = applySetGlobalMarker(
+  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+    'setGlobalMarker',
+    state,
+    rng,
+    bindings,
+    ctx,
+    (env, cursor) => applySetGlobalMarker(
       { _k: EFFECT_KIND_TAG.setGlobalMarker, setGlobalMarker: desc.payload },
-      toEffectEnv(effectCtx),
-      {
-        state,
-        rng,
-        bindings,
-        decisionScope: ctx.decisionScope ?? emptyScope(),
-        ...(ctx.effectPath === undefined ? {} : { effectPath: ctx.effectPath }),
-        ...(ctx.tracker === undefined ? {} : { tracker: ctx.tracker }),
-      },
+      env,
+      cursor,
       { remaining: 10_000, max: 10_000 },
       () => { throw new Error('applyBatch not available in compiled setGlobalMarker'); },
-    );
-    return { ...result, bindings };
-  },
+    ),
+  ),
 });
 
 export const compileFlipGlobalMarker = (desc: FlipGlobalMarkerPattern): CompiledEffectFragment => ({
   nodeCount: 1,
-  execute: (state, rng, bindings, ctx) => {
-    if (ctx.effectBudget !== undefined) {
-      consumeEffectBudget(ctx.effectBudget, 'flipGlobalMarker');
-    }
-    const effectCtx = createCompiledExecutionContext(state, rng, bindings, ctx);
-    const result = applyFlipGlobalMarker(
+  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+    'flipGlobalMarker',
+    state,
+    rng,
+    bindings,
+    ctx,
+    (env, cursor) => applyFlipGlobalMarker(
       { _k: EFFECT_KIND_TAG.flipGlobalMarker, flipGlobalMarker: desc.payload },
-      toEffectEnv(effectCtx),
-      {
-        state,
-        rng,
-        bindings,
-        decisionScope: ctx.decisionScope ?? emptyScope(),
-        ...(ctx.effectPath === undefined ? {} : { effectPath: ctx.effectPath }),
-        ...(ctx.tracker === undefined ? {} : { tracker: ctx.tracker }),
-      },
+      env,
+      cursor,
       { remaining: 10_000, max: 10_000 },
       () => { throw new Error('applyBatch not available in compiled flipGlobalMarker'); },
-    );
-    return { ...result, bindings };
-  },
+    ),
+  ),
 });
 
 export const compileShiftGlobalMarker = (desc: ShiftGlobalMarkerPattern): CompiledEffectFragment => ({
   nodeCount: 1,
-  execute: (state, rng, bindings, ctx) => {
-    if (ctx.effectBudget !== undefined) {
-      consumeEffectBudget(ctx.effectBudget, 'shiftGlobalMarker');
-    }
-    const effectCtx = createCompiledExecutionContext(state, rng, bindings, ctx);
-    const result = applyShiftGlobalMarker(
+  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+    'shiftGlobalMarker',
+    state,
+    rng,
+    bindings,
+    ctx,
+    (env, cursor) => applyShiftGlobalMarker(
       { _k: EFFECT_KIND_TAG.shiftGlobalMarker, shiftGlobalMarker: desc.payload },
-      toEffectEnv(effectCtx),
-      {
-        state,
-        rng,
-        bindings,
-        decisionScope: ctx.decisionScope ?? emptyScope(),
-        ...(ctx.effectPath === undefined ? {} : { effectPath: ctx.effectPath }),
-        ...(ctx.tracker === undefined ? {} : { tracker: ctx.tracker }),
-      },
+      env,
+      cursor,
       { remaining: 10_000, max: 10_000 },
       () => { throw new Error('applyBatch not available in compiled shiftGlobalMarker'); },
-    );
-    return { ...result, bindings };
-  },
+    ),
+  ),
 });
 
 export const compileLet = (
@@ -828,6 +882,12 @@ export const compilePatternDescriptor = (
       return compileForEachPlayers(desc, compileBody);
     case 'gotoPhaseExact':
       return compileGotoPhaseExact(desc);
+    case 'setActivePlayer':
+      return compileSetActivePlayer(desc);
+    case 'advancePhase':
+      return compileAdvancePhase(desc);
+    case 'popInterruptPhase':
+      return compilePopInterruptPhase(desc);
     case 'bindValue':
       return compileBindValue(desc);
     case 'transferVar':

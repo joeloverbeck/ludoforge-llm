@@ -14,6 +14,9 @@ import {
   matchGotoPhaseExact,
   matchIf,
   matchLet,
+  matchAdvancePhase,
+  matchPopInterruptPhase,
+  matchSetActivePlayer,
   matchSetGlobalMarker,
   matchSetMarker,
   matchSetVar,
@@ -175,7 +178,7 @@ describe('effect-compiler-patterns', () => {
       );
     });
 
-    it('matches if, forEach players, and gotoPhaseExact', () => {
+    it('matches if, forEach players, gotoPhaseExact, and turn-flow leaves', () => {
       const thenEffects: readonly EffectAST[] = [eff({ setVar: { scope: 'global', var: 'pot', value: 1 } })];
       const elseEffects: readonly EffectAST[] = [eff({ addVar: { scope: 'global', var: 'pot', delta: 2 } })];
 
@@ -243,6 +246,19 @@ describe('effect-compiler-patterns', () => {
       assert.deepEqual(matchGotoPhaseExact(eff({ gotoPhaseExact: { phase: 'cleanup' } })), {
         kind: 'gotoPhaseExact',
         phase: 'cleanup',
+      });
+
+      assert.deepEqual(matchSetActivePlayer(eff({ setActivePlayer: { player: 'active' } })), {
+        kind: 'setActivePlayer',
+        player: 'active',
+      });
+
+      assert.deepEqual(matchAdvancePhase(eff({ advancePhase: {} })), {
+        kind: 'advancePhase',
+      });
+
+      assert.deepEqual(matchPopInterruptPhase(eff({ popInterruptPhase: {} })), {
+        kind: 'popInterruptPhase',
       });
     });
 
@@ -356,6 +372,9 @@ describe('effect-compiler-patterns', () => {
         'forEachPlayers',
       );
       assert.equal(classifyEffect(eff({ gotoPhaseExact: { phase: 'main' } }))?.kind, 'gotoPhaseExact');
+      assert.equal(classifyEffect(eff({ setActivePlayer: { player: 'active' } }))?.kind, 'setActivePlayer');
+      assert.equal(classifyEffect(eff({ advancePhase: {} }))?.kind, 'advancePhase');
+      assert.equal(classifyEffect(eff({ popInterruptPhase: {} }))?.kind, 'popInterruptPhase');
       assert.equal(classifyEffect(eff({ bindValue: { bind: '$x', value: { _t: 6, op: '+', left: 1, right: 2 } } }))?.kind, 'bindValue');
       assert.equal(classifyEffect(eff({ transferVar: { from: { scope: 'global', var: 'a' }, to: { scope: 'global', var: 'b' }, amount: 1 } }))?.kind, 'transferVar');
       assert.equal(classifyEffect(eff({ let: { bind: 'x', value: { _t: 6, op: '+', left: 1, right: 2 }, in: [] } }))?.kind, 'let');
@@ -390,6 +409,15 @@ describe('effect-compiler-patterns', () => {
       const gotoDesc = classifyEffect(eff({ gotoPhaseExact: { phase: 'end' } }));
       assert.equal(gotoDesc?.kind, 'gotoPhaseExact');
 
+      const setActivePlayerDesc = classifyEffect(eff({ setActivePlayer: { player: 'active' } }));
+      assert.equal(setActivePlayerDesc?.kind, 'setActivePlayer');
+
+      const advancePhaseDesc = classifyEffect(eff({ advancePhase: {} }));
+      assert.equal(advancePhaseDesc?.kind, 'advancePhase');
+
+      const popInterruptPhaseDesc = classifyEffect(eff({ popInterruptPhase: {} }));
+      assert.equal(popInterruptPhaseDesc?.kind, 'popInterruptPhase');
+
       const bindValueDesc = classifyEffect(eff({ bindValue: { bind: '$x', value: { _t: 6, op: '+', left: 1, right: 2 } } }));
       assert.equal(bindValueDesc?.kind, 'bindValue');
 
@@ -417,7 +445,6 @@ describe('effect-compiler-patterns', () => {
 
     it('returns null for every not-yet-compiled _k tag', () => {
       const stubTags: Array<{ tag: string; node: EffectAST }> = [
-        { tag: 'setActivePlayer', node: eff({ setActivePlayer: { player: 'active' } }) },
         { tag: 'moveToken', node: eff({ moveToken: { token: 't1', from: 'z1', to: 'z2' } }) },
         { tag: 'moveAll', node: eff({ moveAll: { from: 'z1', to: 'z2' } }) },
         { tag: 'moveTokenAdjacent', node: eff({ moveTokenAdjacent: { token: 't1', from: 'z1' } }) },
@@ -432,11 +459,9 @@ describe('effect-compiler-patterns', () => {
         { tag: 'removeByPriority', node: eff({ removeByPriority: { budget: 1, groups: [] } }) },
         { tag: 'rollRandom', node: eff({ rollRandom: { bind: 'roll', min: 1, max: 6, in: [] } }) },
         { tag: 'pushInterruptPhase', node: eff({ pushInterruptPhase: { phase: 'int', resumePhase: 'main' } }) },
-        { tag: 'popInterruptPhase', node: eff({ popInterruptPhase: {} }) },
         { tag: 'evaluateSubset', node: eff({ evaluateSubset: { source: { query: 'players' }, subsetSize: 2, subsetBind: 's', compute: [], scoreExpr: 0, resultBind: 'r', in: [] } }) },
         { tag: 'chooseOne', node: eff({ chooseOne: { internalDecisionId: 'd1', bind: 'c', options: { query: 'players' } } }) },
         { tag: 'chooseN', node: eff({ chooseN: { internalDecisionId: 'd1', bind: 'c', options: { query: 'players' }, n: 2 } }) },
-        { tag: 'advancePhase', node: eff({ advancePhase: {} }) },
       ];
 
       for (const { tag, node } of stubTags) {
@@ -508,6 +533,17 @@ describe('effect-compiler-patterns', () => {
       ];
 
       assert.equal(computeCoverageRatio(effects), 1);
+    });
+
+    it('counts compiled turn-flow leaves in coverage ratios', () => {
+      const effects: readonly EffectAST[] = [
+        eff({ setActivePlayer: { player: 'active' } }),
+        eff({ advancePhase: {} }),
+        eff({ popInterruptPhase: {} }),
+        eff({ moveToken: { token: 't1', from: 'z1', to: 'z2' } }),
+      ];
+
+      assert.equal(computeCoverageRatio(effects), 3 / 4);
     });
 
     it('traverses let.in bodies via walkEffects', () => {

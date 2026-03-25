@@ -79,6 +79,19 @@ export type GotoPhaseExactPattern = {
   readonly phase: string;
 };
 
+export type SetActivePlayerPattern = {
+  readonly kind: 'setActivePlayer';
+  readonly player: PlayerSel;
+};
+
+export type AdvancePhasePattern = {
+  readonly kind: 'advancePhase';
+};
+
+export type PopInterruptPhasePattern = {
+  readonly kind: 'popInterruptPhase';
+};
+
 type BindValuePayload = Extract<EffectAST, { readonly bindValue: unknown }>['bindValue'];
 type TransferVarPayload = Extract<EffectAST, { readonly transferVar: unknown }>['transferVar'];
 type LetPayload = Extract<EffectAST, { readonly let: unknown }>['let'];
@@ -137,6 +150,9 @@ export type PatternDescriptor =
   | IfPattern
   | ForEachPlayersPattern
   | GotoPhaseExactPattern
+  | SetActivePlayerPattern
+  | AdvancePhasePattern
+  | PopInterruptPhasePattern
   | BindValuePattern
   | TransferVarPattern
   | LetPattern
@@ -331,6 +347,33 @@ export const matchGotoPhaseExact = (node: EffectAST): GotoPhaseExactPattern | nu
   };
 };
 
+export const matchSetActivePlayer = (node: EffectAST): SetActivePlayerPattern | null => {
+  if (!('setActivePlayer' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'setActivePlayer',
+    player: node.setActivePlayer.player,
+  };
+};
+
+export const matchAdvancePhase = (node: EffectAST): AdvancePhasePattern | null => {
+  if (!('advancePhase' in node)) {
+    return null;
+  }
+
+  return { kind: 'advancePhase' };
+};
+
+export const matchPopInterruptPhase = (node: EffectAST): PopInterruptPhasePattern | null => {
+  if (!('popInterruptPhase' in node)) {
+    return null;
+  }
+
+  return { kind: 'popInterruptPhase' };
+};
+
 export const matchBindValue = (node: EffectAST): BindValuePattern | null => {
   if (!('bindValue' in node)) {
     return null;
@@ -427,7 +470,7 @@ export const matchShiftGlobalMarker = (node: EffectAST): ShiftGlobalMarkerPatter
  *
  *  0  setVar              — compiled (Phase 0)
  *  1  addVar              — compiled (Phase 0)
- *  2  setActivePlayer     — stub (Phase 1)
+ *  2  setActivePlayer     — compiled (Phase 1)
  *  3  transferVar         — compiled (Phase 1)
  *  4  moveToken           — stub (Phase 2)
  *  5  moveAll             — stub (Phase 2)
@@ -449,9 +492,9 @@ export const matchShiftGlobalMarker = (node: EffectAST): ShiftGlobalMarkerPatter
  * 21  shiftGlobalMarker   — stub (Phase 1)
  * 22  grantFreeOperation  — deferred (action-context-heavy, future spec)
  * 23  gotoPhaseExact      — compiled (Phase 0)
- * 24  advancePhase        — stub (Phase 1)
+ * 24  advancePhase        — compiled (Phase 1)
  * 25  pushInterruptPhase  — stub (Phase 5)
- * 26  popInterruptPhase   — stub (Phase 1)
+ * 26  popInterruptPhase   — compiled (Phase 1)
  * 27  rollRandom          — stub (Phase 5)
  * 28  if                  — compiled (Phase 0)
  * 29  forEach             — compiled (Phase 0, players-only; general in Phase 3)
@@ -472,6 +515,12 @@ export const classifyEffect = (node: EffectAST): PatternDescriptor | null => {
       return matchForEachPlayers(node);
     case EFFECT_KIND_TAG.gotoPhaseExact:
       return matchGotoPhaseExact(node);
+    case EFFECT_KIND_TAG.setActivePlayer:
+      return matchSetActivePlayer(node);
+    case EFFECT_KIND_TAG.advancePhase:
+      return matchAdvancePhase(node);
+    case EFFECT_KIND_TAG.popInterruptPhase:
+      return matchPopInterruptPhase(node);
     case EFFECT_KIND_TAG.bindValue:
       return matchBindValue(node);
     case EFFECT_KIND_TAG.transferVar:
@@ -493,9 +542,6 @@ export const classifyEffect = (node: EffectAST): PatternDescriptor | null => {
     case EFFECT_KIND_TAG.grantFreeOperation:
       return null;
     // Not-yet-compiled lifecycle tags — stubs for future tickets (002-009)
-    case EFFECT_KIND_TAG.setActivePlayer:
-    case EFFECT_KIND_TAG.advancePhase:
-    case EFFECT_KIND_TAG.popInterruptPhase:
     case EFFECT_KIND_TAG.moveToken:
     case EFFECT_KIND_TAG.moveAll:
     case EFFECT_KIND_TAG.moveTokenAdjacent:

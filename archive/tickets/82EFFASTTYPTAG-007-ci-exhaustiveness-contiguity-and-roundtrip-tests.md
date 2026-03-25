@@ -1,6 +1,6 @@
 # 82EFFASTTYPTAG-007: CI Exhaustiveness, Contiguity, and Round-Trip Tests
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — new test file in `packages/engine/test/unit/`
@@ -127,3 +127,10 @@ fields are preserved with correct values.
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/test/unit/effect-kind-tag-invariants.test.ts`
 2. `pnpm -F @ludoforge/engine test`
 3. `pnpm turbo test`
+
+## Outcome
+
+- **Completion date**: 2026-03-25
+- **What changed**: Created `packages/engine/test/unit/effect-kind-tag-invariants.test.ts` with 7 CI-level invariant tests covering exhaustiveness, key parity, contiguity, TAG_TO_KIND consistency, tag consistency on both FITL and Texas Hold'em compiled GameDefs, and JSON round-trip preservation.
+- **Deviations**: The tag consistency tests (FITL/Texas Hold'em) use a custom recursive walker (`collectTagMismatches`) instead of the `tagEffectAsts`-based comparison suggested in the ticket. This is because `tagEffectAsts` over-tags `ValueExpr` objects that share the `if` property key with `EffectKind.if`, causing false positives on deep equality. The custom walker validates only objects that already carry a `_k` field.
+- **Verification**: All 7 new tests pass. Full engine suite passes (4782 tests, 0 failures).

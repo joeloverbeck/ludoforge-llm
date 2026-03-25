@@ -1,6 +1,6 @@
 # Spec 82 — Effect AST Type Tags
 
-**Status**: Draft
+**Status**: ✅ COMPLETED
 **Dependencies**: None (standalone)
 **Enables**: Spec 81 (Whole-Sequence Effect Compilation) — the compiler can use
 numeric tags for faster codegen dispatch. Also improves interpreter dispatch.
@@ -395,3 +395,10 @@ cleanup spec.
    fields are preserved.
 7. **makeEffect type safety test**: Verify that `makeEffect('setVar', { wrong: 'payload' })`
    produces a compile-time type error.
+
+## Outcome
+
+- **Completion date**: 2026-03-25
+- **What changed**: All 7 tickets (82EFFASTTYPTAG-001 through 007) implemented across the series. Added `EFFECT_KIND_TAG` constant and `EffectKindTag` type to `types-ast.ts`, `WithKindTag<K>` helper type, updated `EffectAST` union. Created `effect-builders.ts` with `makeEffect()` factory, `tag-effect-asts.ts` with structural tagger, updated `effect-registry.ts` with `TAG_TO_KIND` and tag-based `effectKindOf`. Updated `effect-dispatch.ts` with `dispatchTable` array for O(1) numeric dispatch. Migrated all compiler effect construction sites (8 `compile-effects-*.ts` files) and `ast-builders.ts` to `makeEffect()`. Added `_k` to JSON schemas. Updated all test fixtures. Created CI invariant tests.
+- **Deviations**: Tag consistency CI tests use a custom walker instead of `tagEffectAsts` comparison due to `ValueExpr`/`EffectAST` `if`-key collision in the tagger.
+- **Verification**: Full engine test suite passes (4782 tests). Full runner test suite passes. Typecheck and lint clean.

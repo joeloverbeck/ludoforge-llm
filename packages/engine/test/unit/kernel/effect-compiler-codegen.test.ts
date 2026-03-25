@@ -803,6 +803,95 @@ describe('effect-compiler-codegen', () => {
     compareResults(def, runCompiled(def, state, effect, bindings), runInterpreted(def, state, effect, bindings));
   });
 
+  it('compileReveal matches interpreter for filtered zone grants and trace emission', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = eff({
+      reveal: {
+        zone: 'hand:none',
+        to: { id: asPlayerId(2) },
+        filter: { op: 'and', args: [{ prop: 'rank', op: 'eq', value: 'J' }] },
+      },
+    });
+
+    compareResults(
+      def,
+      runCompiled(def, state, effect, {}, createRng(17n), { trace: true }),
+      runInterpreted(def, state, effect, {}, createRng(17n), { trace: true }),
+    );
+  });
+
+  it('compileReveal matches interpreter for duplicate-grant no-op behavior', () => {
+    const def = makeDef();
+    const state: GameState = {
+      ...makeState(),
+      reveals: {
+        'hand:none': [{ observers: [asPlayerId(2)] }],
+      },
+    };
+    const effect: EffectAST = eff({
+      reveal: {
+        zone: 'hand:none',
+        to: { id: asPlayerId(2) },
+      },
+    });
+
+    compareResults(
+      def,
+      runCompiled(def, state, effect, {}, createRng(17n), { trace: true }),
+      runInterpreted(def, state, effect, {}, createRng(17n), { trace: true }),
+    );
+  });
+
+  it('compileConceal matches interpreter for filter-key canonicalization and removal', () => {
+    const def = makeDef();
+    const state: GameState = {
+      ...makeState(),
+      reveals: {
+        'hand:none': [{
+          observers: [asPlayerId(1)],
+          filter: { op: 'and', args: [
+            { prop: 'faction', op: 'eq', value: 'US' },
+            { prop: 'rank', op: 'eq', value: 'A' },
+          ] },
+        }],
+      },
+    };
+    const effect: EffectAST = eff({
+      conceal: {
+        zone: 'hand:none',
+        from: { id: asPlayerId(1) },
+        filter: { op: 'and', args: [
+          { prop: 'rank', op: 'eq', value: 'A' },
+          { prop: 'faction', op: 'eq', value: 'US' },
+        ] },
+      },
+    });
+
+    compareResults(
+      def,
+      runCompiled(def, state, effect, {}, createRng(17n), { trace: true }),
+      runInterpreted(def, state, effect, {}, createRng(17n), { trace: true }),
+    );
+  });
+
+  it('compileConceal matches interpreter for no-op removals without trace emission', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = eff({
+      conceal: {
+        zone: 'hand:none',
+        from: 'all',
+      },
+    });
+
+    compareResults(
+      def,
+      runCompiled(def, state, effect, {}, createRng(17n), { trace: true }),
+      runInterpreted(def, state, effect, {}, createRng(17n), { trace: true }),
+    );
+  });
+
   it('compilePatternDescriptor dispatches all supported compiled descriptors', () => {
     const effects: readonly EffectAST[] = [
       eff({ setVar: { scope: 'global', var: 'score', value: 1 } }),
@@ -831,6 +920,8 @@ describe('effect-compiler-codegen', () => {
       eff({ createToken: { type: 'card', zone: 'hand:none' } }),
       eff({ destroyToken: { token: '$token' } }),
       eff({ setTokenProp: { token: '$token', prop: 'face', value: 'up' } }),
+      eff({ reveal: { zone: 'hand:none', to: 'all' } }),
+      eff({ conceal: { zone: 'hand:none' } }),
     ];
 
     for (const effect of effects) {

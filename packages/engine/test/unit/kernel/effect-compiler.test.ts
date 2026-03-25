@@ -353,6 +353,38 @@ describe('effect-compiler orchestrator', () => {
     );
   });
 
+  it('treats information-effect lifecycle sequences as fully compilable with interpreter parity', () => {
+    const def = makeTokenDef();
+    const effects: readonly EffectAST[] = [
+      eff({ reveal: { zone: 'hand:none', to: 'all' } }),
+      eff({ conceal: { zone: 'hand:none', from: 'all' } }),
+    ];
+    const state = makeTokenState();
+    const rng = createRng(41n);
+    const compiled = compileEffectSequence(asPhaseId('main'), 'onEnter', effects);
+
+    assert.equal(compiled.coverageRatio, 1);
+    compareResults(
+      def,
+      compiled.execute(state, rng, {}, makeCompiledContext(def)),
+      applyEffects(
+        effects,
+        createExecutionEffectContext({
+          def,
+          adjacencyGraph: buildAdjacencyGraph(def.zones),
+          runtimeTableIndex: buildRuntimeTableIndex(def),
+          state,
+          rng,
+          activePlayer: asPlayerId(1),
+          actorPlayer: asPlayerId(0),
+          bindings: {},
+          moveParams: {},
+          resources: createEvalRuntimeResources(),
+        }),
+      ),
+    );
+  });
+
   it('treats iteration/reduction lifecycle sequences as fully compilable with interpreter parity', () => {
     const def = makeTokenDef();
     const effects: readonly EffectAST[] = [

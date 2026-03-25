@@ -123,6 +123,8 @@ type ShufflePayload = Extract<EffectAST, { readonly shuffle: unknown }>['shuffle
 type CreateTokenPayload = Extract<EffectAST, { readonly createToken: unknown }>['createToken'];
 type DestroyTokenPayload = Extract<EffectAST, { readonly destroyToken: unknown }>['destroyToken'];
 type SetTokenPropPayload = Extract<EffectAST, { readonly setTokenProp: unknown }>['setTokenProp'];
+type RevealPayload = Extract<EffectAST, { readonly reveal: unknown }>['reveal'];
+type ConcealPayload = Extract<EffectAST, { readonly conceal: unknown }>['conceal'];
 
 export type BindValuePattern = {
   readonly kind: 'bindValue';
@@ -207,6 +209,16 @@ export type SetTokenPropPattern = {
   readonly payload: SetTokenPropPayload;
 };
 
+export type RevealPattern = {
+  readonly kind: 'reveal';
+  readonly payload: RevealPayload;
+};
+
+export type ConcealPattern = {
+  readonly kind: 'conceal';
+  readonly payload: ConcealPayload;
+};
+
 export type PatternDescriptor =
   | SetVarPattern
   | AddVarPattern
@@ -233,7 +245,9 @@ export type PatternDescriptor =
   | ShufflePattern
   | CreateTokenPattern
   | DestroyTokenPattern
-  | SetTokenPropPattern;
+  | SetTokenPropPattern
+  | RevealPattern
+  | ConcealPattern;
 
 const isScalarLiteral = (expr: ValueExpr): expr is ScalarLiteral =>
   typeof expr === 'number' || typeof expr === 'boolean' || typeof expr === 'string';
@@ -649,6 +663,28 @@ export const matchSetTokenProp = (node: EffectAST): SetTokenPropPattern | null =
   };
 };
 
+export const matchReveal = (node: EffectAST): RevealPattern | null => {
+  if (!('reveal' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'reveal',
+    payload: node.reveal,
+  };
+};
+
+export const matchConceal = (node: EffectAST): ConcealPattern | null => {
+  if (!('conceal' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'conceal',
+    payload: node.conceal,
+  };
+};
+
 /*
  * Effect compilation status by EFFECT_KIND_TAG (34 tags, 0-33):
  *
@@ -664,8 +700,8 @@ export const matchSetTokenProp = (node: EffectAST): SetTokenPropPattern | null =
  *  9  createToken         — compiled (Phase 2)
  * 10  destroyToken        — compiled (Phase 2)
  * 11  setTokenProp        — compiled (Phase 2)
- * 12  reveal              — stub (Phase 4)
- * 13  conceal             — stub (Phase 4)
+ * 12  reveal              — compiled (Phase 4)
+ * 13  conceal             — compiled (Phase 4)
  * 14  bindValue           — compiled (Phase 1)
  * 15  chooseOne           — stub (Phase 6)
  * 16  chooseN             — stub (Phase 6)
@@ -741,13 +777,15 @@ export const classifyEffect = (node: EffectAST): PatternDescriptor | null => {
       return matchDestroyToken(node);
     case EFFECT_KIND_TAG.setTokenProp:
       return matchSetTokenProp(node);
+    case EFFECT_KIND_TAG.reveal:
+      return matchReveal(node);
+    case EFFECT_KIND_TAG.conceal:
+      return matchConceal(node);
     // Deferred: action-context-heavy, depends on __freeOperation/__actionClass
     // bindings only available during the operation pipeline. See Spec 81.
     case EFFECT_KIND_TAG.grantFreeOperation:
       return null;
     // Not-yet-compiled lifecycle tags — stubs for future tickets (002-009)
-    case EFFECT_KIND_TAG.reveal:
-    case EFFECT_KIND_TAG.conceal:
     case EFFECT_KIND_TAG.rollRandom:
     case EFFECT_KIND_TAG.pushInterruptPhase:
     case EFFECT_KIND_TAG.evaluateSubset:

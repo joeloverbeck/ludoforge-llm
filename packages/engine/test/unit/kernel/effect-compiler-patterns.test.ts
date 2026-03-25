@@ -22,7 +22,9 @@ import {
   matchMoveToken,
   matchMoveTokenAdjacent,
   matchPopInterruptPhase,
+  matchConceal,
   matchReduce,
+  matchReveal,
   matchRemoveByPriority,
   matchSetActivePlayer,
   matchSetGlobalMarker,
@@ -620,12 +622,16 @@ describe('effect-compiler-patterns', () => {
 
       const setTokenPropDesc = classifyEffect(eff({ setTokenProp: { token: '$token', prop: 'face', value: 'up' } }));
       assert.equal(setTokenPropDesc?.kind, 'setTokenProp');
+
+      const revealDesc = classifyEffect(eff({ reveal: { zone: 'hand', to: 'all' } }));
+      assert.equal(revealDesc?.kind, 'reveal');
+
+      const concealDesc = classifyEffect(eff({ conceal: { zone: 'hand' } }));
+      assert.equal(concealDesc?.kind, 'conceal');
     });
 
     it('returns null for every remaining not-yet-compiled _k tag', () => {
       const stubTags: Array<{ tag: string; node: EffectAST }> = [
-        { tag: 'reveal', node: eff({ reveal: { zone: 'hand', to: 'all' } }) },
-        { tag: 'conceal', node: eff({ conceal: { zone: 'hand' } }) },
         { tag: 'rollRandom', node: eff({ rollRandom: { bind: 'roll', min: 1, max: 6, in: [] } }) },
         { tag: 'pushInterruptPhase', node: eff({ pushInterruptPhase: { phase: 'int', resumePhase: 'main' } }) },
         { tag: 'evaluateSubset', node: eff({ evaluateSubset: { source: { query: 'players' }, subsetSize: 2, subsetBind: 's', compute: [], scoreExpr: 0, resultBind: 'r', in: [] } }) },
@@ -805,6 +811,45 @@ describe('effect-compiler-patterns', () => {
       ];
       // 2 nodes: removeByPriority + gotoPhaseExact are both compiled.
       assert.equal(computeCoverageRatio(effects), 1);
+    });
+
+    it('counts reveal and conceal as compiled leaf effects', () => {
+      const effects: readonly EffectAST[] = [
+        eff({ reveal: { zone: 'hand', to: 'all' } }),
+        eff({ conceal: { zone: 'hand' } }),
+      ];
+
+      assert.equal(computeCoverageRatio(effects), 1);
+    });
+  });
+
+  describe('information-effect matchers', () => {
+    it('matches reveal and conceal payloads verbatim', () => {
+      const revealNode = eff({
+        reveal: {
+          zone: 'hand:none',
+          to: { chosen: '$seat' },
+          filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US' }] },
+        },
+      });
+      const concealNode = eff({
+        conceal: {
+          zone: 'hand:none',
+          from: 'all',
+          filter: { op: 'and', args: [{ prop: 'rank', op: 'eq', value: 'A' }] },
+        },
+      });
+
+      assert.ok('reveal' in revealNode);
+      assert.deepEqual(matchReveal(revealNode), {
+        kind: 'reveal',
+        payload: revealNode.reveal,
+      });
+      assert.ok('conceal' in concealNode);
+      assert.deepEqual(matchConceal(concealNode), {
+        kind: 'conceal',
+        payload: concealNode.conceal,
+      });
     });
   });
 });

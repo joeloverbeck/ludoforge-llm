@@ -27,6 +27,7 @@ Three complex control flow effects (tags 33, 27, 25) fall back to the interprete
 4. `pushInterruptPhase` pushes to the interrupt stack. Similar to `popInterruptPhase` (ticket 004) but in reverse.
 5. If `pushInterruptPhase` is implemented as a thin delegate to existing turn-flow handlers, it should reuse the shared compiled delegate helper established in earlier tickets instead of adding another one-off wrapper.
 6. This ticket is the right place to introduce a shared kernel-internal control-flow helper layer if needed. That helper should be game-agnostic and own common loop/continuation mechanics used by both interpreted and compiled paths: bounded iteration, decision-scope rebasing, continuation execution, binding export filtering, and trace emission. Doing that here aligns with Foundations 8, 9, and 10 better than letting duplication spread further and trying to clean it up in ticket 010.
+7. Delegate-backed leaf-wrapper consolidation is tracked separately in `tickets/81WHOSEQEFFCOM-011-delegate-leaf-wrapper-consolidation.md`. If this ticket adds new delegate-backed wrappers, they must be compatible with that shared helper direction rather than introducing another bespoke adapter shape.
 
 ## What to Change
 

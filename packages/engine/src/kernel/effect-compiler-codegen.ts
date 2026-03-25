@@ -12,6 +12,7 @@ import {
   type AddVarPattern,
   type AdvancePhasePattern,
   type BindValuePattern,
+  type ConcealPattern,
   type CompilableConditionPattern,
   type CreateTokenPattern,
   type DestroyTokenPattern,
@@ -28,6 +29,7 @@ import {
   type PatternDescriptor,
   type PopInterruptPhasePattern,
   type ReducePattern,
+  type RevealPattern,
   type RemoveByPriorityPattern,
   type SetActivePlayerPattern,
   type SetGlobalMarkerPattern,
@@ -51,6 +53,7 @@ import {
   applyShiftGlobalMarker,
   applyShiftMarker,
 } from './effects-choice.js';
+import { applyConceal, applyReveal } from './effects-reveal.js';
 import { applyTransferVar } from './effects-resource.js';
 import {
   applyCreateToken,
@@ -67,6 +70,7 @@ import { applySetActivePlayer } from './effects-var.js';
 import { emitTrace } from './execution-collector.js';
 import {
   advancePhase as advancePhaseBuilder,
+  conceal as concealBuilder,
   createToken as createTokenBuilder,
   destroyToken as destroyTokenBuilder,
   draw as drawBuilder,
@@ -75,6 +79,7 @@ import {
   moveToken as moveTokenBuilder,
   moveTokenAdjacent as moveTokenAdjacentBuilder,
   popInterruptPhase as popInterruptPhaseBuilder,
+  reveal as revealBuilder,
   setActivePlayer as setActivePlayerBuilder,
   setTokenProp as setTokenPropBuilder,
   shuffle as shuffleBuilder,
@@ -1295,6 +1300,42 @@ export const compileSetTokenProp = (desc: SetTokenPropPattern): CompiledEffectFr
   ),
 });
 
+export const compileReveal = (desc: RevealPattern): CompiledEffectFragment => ({
+  nodeCount: 1,
+  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+    'reveal',
+    state,
+    rng,
+    bindings,
+    ctx,
+    (env, cursor) => applyReveal(
+      revealBuilder(desc.payload),
+      env,
+      cursor,
+      { remaining: 10_000, max: 10_000 },
+      () => { throw new Error('applyBatch not available in compiled reveal'); },
+    ),
+  ),
+});
+
+export const compileConceal = (desc: ConcealPattern): CompiledEffectFragment => ({
+  nodeCount: 1,
+  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+    'conceal',
+    state,
+    rng,
+    bindings,
+    ctx,
+    (env, cursor) => applyConceal(
+      concealBuilder(desc.payload),
+      env,
+      cursor,
+      { remaining: 10_000, max: 10_000 },
+      () => { throw new Error('applyBatch not available in compiled conceal'); },
+    ),
+  ),
+});
+
 export const compilePatternDescriptor = (
   desc: PatternDescriptor,
   compileBody: BodyCompiler,
@@ -1352,6 +1393,10 @@ export const compilePatternDescriptor = (
       return compileDestroyToken(desc);
     case 'setTokenProp':
       return compileSetTokenProp(desc);
+    case 'reveal':
+      return compileReveal(desc);
+    case 'conceal':
+      return compileConceal(desc);
     default:
       return null;
   }

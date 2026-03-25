@@ -25,6 +25,7 @@ Two choice effects (tags 15, 16) fall back to the interpreter. In lifecycle effe
 3. The `pendingChoice` propagation contract: if the inner decision resolution returns a pending choice, the fragment must propagate it with current bindings and decision scope. This is already handled by the existing `composeFragments` infrastructure.
 4. Template effects within options: if option templates contain effects that need execution (e.g., to compute option viability), those effects should use the compiled path when available.
 5. Because this ticket is likely to delegate to existing choice handlers, it SHOULD reuse the shared compiled delegate helper for the outer adapter layer and keep any choice-specific logic focused on lifecycle/bot-resolution behavior rather than repeating bridge mechanics.
+6. The explicit ownership ticket for consolidating delegate-backed leaf wrappers is `tickets/81WHOSEQEFFCOM-011-delegate-leaf-wrapper-consolidation.md`. Any new delegate-backed choice wrapper introduced here should align with that planned abstraction rather than adding another one-off pattern.
 
 ## What to Change
 

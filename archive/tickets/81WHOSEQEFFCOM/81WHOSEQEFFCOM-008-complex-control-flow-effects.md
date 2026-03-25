@@ -29,7 +29,7 @@ Three complex control flow effects (tags 33, 27, 25) fall back to the interprete
    - In generic runtime usage, it also has discovery semantics. Because Spec 81 targets lifecycle compilation, this ticket should preserve runtime parity for execution/fixed-binding behavior and avoid broadening lifecycle compilation into a second choice-engine implementation.
 4. `pushInterruptPhase` is a turn-flow transition, not a performance hotspot. A thin compiled delegate to the canonical runtime handler is cleaner than duplicating phase-enter/exit, stack, and Zobrist-update logic in codegen.
 5. If a shared internal helper is introduced for `evaluateSubset` / `rollRandom`, it should be limited to mechanics actually shared by those compiled closures. Avoid a speculative "control-flow framework" in this ticket.
-6. Delegate-backed leaf-wrapper consolidation remains tracked separately in `tickets/81WHOSEQEFFCOM-011-delegate-leaf-wrapper-consolidation.md`. This ticket should reuse existing delegate infrastructure, not fork it.
+6. Delegate-backed leaf-wrapper consolidation remains tracked separately in `archive/tickets/81WHOSEQEFFCOM/81WHOSEQEFFCOM-011-delegate-leaf-wrapper-consolidation.md`. This ticket should reuse existing delegate infrastructure, not fork it.
 
 ## What to Change
 

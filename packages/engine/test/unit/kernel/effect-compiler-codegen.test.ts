@@ -312,12 +312,48 @@ describe('effect-compiler-codegen', () => {
     compareResults(def, runCompiled(def, state, effect, { $ready: true }), runInterpreted(def, state, effect, { $ready: true }));
   });
 
+  it('compileSetVar delegate mode matches interpreter for complex value expressions', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = eff({
+      setVar: {
+        scope: 'global',
+        var: 'score',
+        value: { _t: 6, op: '+', left: { _t: 2, ref: 'gvar', var: 'round' }, right: 2 },
+      },
+    });
+
+    const descriptor = classifyEffect(effect);
+    assert.ok(descriptor !== null);
+    assert.equal(descriptor.kind, 'setVar');
+    assert.equal(descriptor.mode, 'delegate');
+    compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
+  });
+
   it('compileAddVar matches interpreter for clamp boundaries', () => {
     const def = makeDef();
     const state = makeState();
     const effect: EffectAST = eff({ addVar: { scope: 'pvar', player: 'active', var: 'hp', delta: { _t: 2, ref: 'binding', name: '$delta' } } });
 
     compareResults(def, runCompiled(def, state, effect, { $delta: 50 }), runInterpreted(def, state, effect, { $delta: 50 }));
+  });
+
+  it('compileAddVar delegate mode matches interpreter for computed deltas', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = eff({
+      addVar: {
+        scope: 'global',
+        var: 'score',
+        delta: { _t: 6, op: '+', left: 1, right: { _t: 2, ref: 'gvar', var: 'round' } },
+      },
+    });
+
+    const descriptor = classifyEffect(effect);
+    assert.ok(descriptor !== null);
+    assert.equal(descriptor.kind, 'addVar');
+    assert.equal(descriptor.mode, 'delegate');
+    compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
   });
 
   it('compileIf matches interpreter for logical conditions and branch execution', () => {
@@ -998,24 +1034,16 @@ describe('effect-compiler-codegen', () => {
     );
   });
 
-  it('compilePatternDescriptor dispatches all supported compiled descriptors', () => {
+  it('compilePatternDescriptor dispatches all delegate-backed compiled descriptors', () => {
     const effects: readonly EffectAST[] = [
-      eff({ setVar: { scope: 'global', var: 'score', value: 1 } }),
-      eff({ addVar: { scope: 'global', var: 'score', delta: 1 } }),
-      eff({ if: { when: { op: '==', left: 1, right: 1 }, then: [] } }),
-      eff({ forEach: { bind: '$seat', over: { query: 'players' }, effects: [] } }),
-      eff({ reduce: { itemBind: '$seat', accBind: '$acc', over: { query: 'players' }, initial: 0, next: 0, resultBind: '$result', in: [] } }),
-      eff({ removeByPriority: { budget: 1, groups: [] } }),
+      eff({ setVar: { scope: 'global', var: 'score', value: { _t: 6, op: '+', left: 1, right: 2 } } }),
+      eff({ addVar: { scope: 'global', var: 'score', delta: { _t: 6, op: '+', left: 1, right: 2 } } }),
       eff({ gotoPhaseExact: { phase: 'cleanup' } }),
       eff({ setActivePlayer: { player: 'active' } }),
       eff({ advancePhase: {} }),
       eff({ pushInterruptPhase: { phase: 'cleanup', resumePhase: 'main' } }),
       eff({ popInterruptPhase: {} }),
-      eff({ rollRandom: { bind: '$roll', min: 1, max: 6, in: [] } }),
-      eff({ bindValue: { bind: '$x', value: { _t: 6, op: '+', left: 1, right: 2 } } }),
       eff({ transferVar: { from: { scope: 'global', var: 'bank' }, to: { scope: 'global', var: 'count' }, amount: 1 } }),
-      eff({ let: { bind: 'tmp', value: { _t: 6, op: '+', left: 1, right: 2 }, in: [] } }),
-      eff({ evaluateSubset: { source: { query: 'players' }, subsetSize: 2, subsetBind: '$subset', compute: [], scoreExpr: 0, resultBind: '$score', in: [] } }),
       eff({ setMarker: { space: 'city:none', marker: 'supportOpposition', state: 'activeSupport' } }),
       eff({ shiftMarker: { space: 'city:none', marker: 'supportOpposition', delta: 1 } }),
       eff({ setGlobalMarker: { marker: 'leaderFlipped', state: 'yes' } }),
@@ -1031,11 +1059,45 @@ describe('effect-compiler-codegen', () => {
       eff({ setTokenProp: { token: '$token', prop: 'face', value: 'up' } }),
       eff({ reveal: { zone: 'hand:none', to: 'all' } }),
       eff({ conceal: { zone: 'hand:none' } }),
-    ];
+      eff({ chooseOne: { internalDecisionId: 'd1', bind: '$choice', options: { query: 'players' } } }),
+      eff({ chooseN: { internalDecisionId: 'decision:$choices', bind: '$choices', n: 1, options: { query: 'players' } } }),
+    ] as const;
+
+    const expectedKinds = new Set([
+      'setVar',
+      'addVar',
+      'gotoPhaseExact',
+      'setActivePlayer',
+      'advancePhase',
+      'pushInterruptPhase',
+      'popInterruptPhase',
+      'transferVar',
+      'setMarker',
+      'shiftMarker',
+      'setGlobalMarker',
+      'flipGlobalMarker',
+      'shiftGlobalMarker',
+      'moveToken',
+      'moveAll',
+      'moveTokenAdjacent',
+      'draw',
+      'shuffle',
+      'createToken',
+      'destroyToken',
+      'setTokenProp',
+      'reveal',
+      'conceal',
+      'chooseOne',
+      'chooseN',
+    ]);
 
     for (const effect of effects) {
       const descriptor = classifyEffect(effect);
       assert.ok(descriptor !== null);
+      assert.ok(expectedKinds.has(descriptor.kind));
+      if ('setVar' in effect || 'addVar' in effect) {
+        assert.equal('mode' in descriptor ? descriptor.mode : undefined, 'delegate');
+      }
       assert.ok(compilePatternDescriptor(descriptor, compileEffects));
     }
   });

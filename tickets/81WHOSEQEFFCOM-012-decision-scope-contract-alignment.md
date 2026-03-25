@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — effect-dispatch.ts, phase-lifecycle.ts, effect-compiler tests, runtime effect tests
-**Deps**: archive/tickets/81WHOSEQEFFCOM/81WHOSEQEFFCOM-009-lifecycle-choice-effects.md, archive/tickets/81WHOSEQEFFCOM/81WHOSEQEFFCOM-010-cleanup-delete-fallback-path.md, tickets/81WHOSEQEFFCOM-011-delegate-leaf-wrapper-consolidation.md
+**Deps**: archive/tickets/81WHOSEQEFFCOM/81WHOSEQEFFCOM-009-lifecycle-choice-effects.md, archive/tickets/81WHOSEQEFFCOM/81WHOSEQEFFCOM-010-cleanup-delete-fallback-path.md, archive/tickets/81WHOSEQEFFCOM/81WHOSEQEFFCOM-011-delegate-leaf-wrapper-consolidation.md
 
 ## Problem
 

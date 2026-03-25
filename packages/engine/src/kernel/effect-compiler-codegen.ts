@@ -7,9 +7,10 @@ import { evalQuery } from './eval-query.js';
 import { evalValue } from './eval-value.js';
 import { typeMismatchError } from './eval-error.js';
 import { buildEffectEnvFromCompiledCtx, createCompiledExecutionContext } from './effect-compiler-runtime.js';
-import { consumeEffectBudget } from './effect-dispatch.js';
+import { applyEffectsWithBudgetState, consumeEffectBudget } from './effect-dispatch.js';
 import type { MutableGameState } from './state-draft.js';
 import { buildForEachTraceEntry, buildReduceTraceEntry } from './control-flow-trace.js';
+import type { EffectBudgetState } from './effects-control.js';
 import {
   type AddVarPattern,
   type AdvancePhasePattern,
@@ -400,6 +401,46 @@ const executeCompiledDelegate = (
   };
 };
 
+const createCompiledDelegateBudget = (): EffectBudgetState => ({
+  remaining: 10_000,
+  max: 10_000,
+});
+
+const unavailableCompiledApplyBatch = (
+  effectType: string,
+): typeof applyEffectsWithBudgetState =>
+  () => { throw new Error(`applyBatch not available in compiled ${effectType}`); };
+
+type CompiledDelegateInvoker<TEffect extends EffectAST> = (
+  effect: TEffect,
+  env: ReturnType<typeof buildEffectEnvFromCompiledCtx>,
+  cursor: EffectCursor,
+  budget: ReturnType<typeof createCompiledDelegateBudget>,
+  applyBatch: typeof applyEffectsWithBudgetState,
+) => EffectResult;
+
+const createCompiledDelegateLeafFragment = <TEffect extends EffectAST>(
+  effectType: string,
+  effect: TEffect,
+  invoke: CompiledDelegateInvoker<TEffect>,
+): CompiledEffectFragment => ({
+  nodeCount: 1,
+  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+    effectType,
+    state,
+    rng,
+    bindings,
+    ctx,
+    (env, cursor) => invoke(
+      effect,
+      env,
+      cursor,
+      createCompiledDelegateBudget(),
+      unavailableCompiledApplyBatch(effectType),
+    ),
+  ),
+});
+
 export const compileValueAccessor = (
   pattern: SimpleValuePattern | SimpleNumericValuePattern,
 ): CompiledValueAccessor => {
@@ -466,23 +507,11 @@ export const compileConditionEvaluator = (
 
 export const compileSetVar = (desc: SetVarPattern): CompiledEffectFragment => {
   if (desc.mode === 'delegate') {
-    return {
-      nodeCount: 1,
-      execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
-        'setVar',
-        state,
-        rng,
-        bindings,
-        ctx,
-        (env, cursor) => applySetVar(
-          setVarBuilder(desc.payload),
-          env,
-          cursor,
-          { remaining: 10_000, max: 10_000 },
-          () => { throw new Error('applyBatch not available in compiled setVar'); },
-        ),
-      ),
-    };
+    return createCompiledDelegateLeafFragment(
+      'setVar',
+      setVarBuilder(desc.payload),
+      applySetVar,
+    );
   }
 
   const valueAccessor = compileValueAccessor(desc.value);
@@ -553,23 +582,11 @@ export const compileSetVar = (desc: SetVarPattern): CompiledEffectFragment => {
 
 export const compileAddVar = (desc: AddVarPattern): CompiledEffectFragment => {
   if (desc.mode === 'delegate') {
-    return {
-      nodeCount: 1,
-      execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
-        'addVar',
-        state,
-        rng,
-        bindings,
-        ctx,
-        (env, cursor) => applyAddVar(
-          addVarBuilder(desc.payload),
-          env,
-          cursor,
-          { remaining: 10_000, max: 10_000 },
-          () => { throw new Error('applyBatch not available in compiled addVar'); },
-        ),
-      ),
-    };
+    return createCompiledDelegateLeafFragment(
+      'addVar',
+      addVarBuilder(desc.payload),
+      applyAddVar,
+    );
   }
 
   const deltaAccessor = compileValueAccessor(desc.delta);
@@ -1002,77 +1019,33 @@ export const compileRemoveByPriority = (
   };
 };
 
-export const compileGotoPhaseExact = (desc: GotoPhaseExactPattern): CompiledEffectFragment => ({
-  nodeCount: 1,
-  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+export const compileGotoPhaseExact = (desc: GotoPhaseExactPattern): CompiledEffectFragment =>
+  createCompiledDelegateLeafFragment(
     'gotoPhaseExact',
-    state,
-    rng,
-    bindings,
-    ctx,
-    (env, cursor) => applyGotoPhaseExact(
-      gotoPhaseExactBuilder({ phase: desc.phase }),
-      env,
-      cursor,
-      { remaining: 10_000, max: 10_000 },
-      () => { throw new Error('applyBatch not available in compiled gotoPhaseExact'); },
-    ),
-  ),
-});
+    gotoPhaseExactBuilder({ phase: desc.phase }),
+    applyGotoPhaseExact,
+  );
 
-export const compileSetActivePlayer = (desc: SetActivePlayerPattern): CompiledEffectFragment => ({
-  nodeCount: 1,
-  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+export const compileSetActivePlayer = (desc: SetActivePlayerPattern): CompiledEffectFragment =>
+  createCompiledDelegateLeafFragment(
     'setActivePlayer',
-    state,
-    rng,
-    bindings,
-    ctx,
-    (env, cursor) => applySetActivePlayer(
-      setActivePlayerBuilder({ player: desc.player }),
-      env,
-      cursor,
-      { remaining: 10_000, max: 10_000 },
-      () => { throw new Error('applyBatch not available in compiled setActivePlayer'); },
-    ),
-  ),
-});
+    setActivePlayerBuilder({ player: desc.player }),
+    applySetActivePlayer,
+  );
 
-export const compileAdvancePhase = (_desc: AdvancePhasePattern): CompiledEffectFragment => ({
-  nodeCount: 1,
-  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+export const compileAdvancePhase = (_desc: AdvancePhasePattern): CompiledEffectFragment =>
+  createCompiledDelegateLeafFragment(
     'advancePhase',
-    state,
-    rng,
-    bindings,
-    ctx,
-    (env, cursor) => applyAdvancePhase(
-      advancePhaseBuilder({}),
-      env,
-      cursor,
-      { remaining: 10_000, max: 10_000 },
-      () => { throw new Error('applyBatch not available in compiled advancePhase'); },
-    ),
-  ),
-});
+    advancePhaseBuilder({}),
+    applyAdvancePhase,
+  );
 
-export const compilePopInterruptPhase = (_desc: PopInterruptPhasePattern): CompiledEffectFragment => ({
-  nodeCount: 1,
-  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+export const compilePopInterruptPhase = (_desc: PopInterruptPhasePattern): CompiledEffectFragment =>
+  createCompiledDelegateLeafFragment(
     'popInterruptPhase',
-    state,
-    rng,
-    bindings,
-    ctx,
-    (env, cursor) => applyPopInterruptPhase(
-      popInterruptPhaseBuilder({}),
-      env,
-      cursor,
-      { remaining: 10_000, max: 10_000 },
-      () => { throw new Error('applyBatch not available in compiled popInterruptPhase'); },
-    ),
-  ),
-});
+    popInterruptPhaseBuilder({}),
+    applyPopInterruptPhase,
+  );
 
 export const compileRollRandom = (
   desc: RollRandomPattern,
@@ -1144,23 +1117,12 @@ export const compileRollRandom = (
   };
 };
 
-export const compilePushInterruptPhase = (desc: PushInterruptPhasePattern): CompiledEffectFragment => ({
-  nodeCount: 1,
-  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+export const compilePushInterruptPhase = (desc: PushInterruptPhasePattern): CompiledEffectFragment =>
+  createCompiledDelegateLeafFragment(
     'pushInterruptPhase',
-    state,
-    rng,
-    bindings,
-    ctx,
-    (env, cursor) => applyPushInterruptPhase(
-      pushInterruptPhaseBuilder(desc.payload),
-      env,
-      cursor,
-      { remaining: 10_000, max: 10_000 },
-      () => { throw new Error('applyBatch not available in compiled pushInterruptPhase'); },
-    ),
-  ),
-});
+    pushInterruptPhaseBuilder(desc.payload),
+    applyPushInterruptPhase,
+  );
 
 export const compileBindValue = (desc: BindValuePattern): CompiledEffectFragment => ({
   nodeCount: 1,
@@ -1181,113 +1143,47 @@ export const compileBindValue = (desc: BindValuePattern): CompiledEffectFragment
   },
 });
 
-export const compileTransferVar = (desc: TransferVarPattern): CompiledEffectFragment => ({
-  nodeCount: 1,
-  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+export const compileTransferVar = (desc: TransferVarPattern): CompiledEffectFragment =>
+  createCompiledDelegateLeafFragment(
     'transferVar',
-    state,
-    rng,
-    bindings,
-    ctx,
-    (env, cursor) => applyTransferVar(
-      { _k: EFFECT_KIND_TAG.transferVar, transferVar: desc.payload },
-      env,
-      cursor,
-      { remaining: 10_000, max: 10_000 },
-      () => { throw new Error('applyBatch not available in compiled transferVar'); },
-    ),
-  ),
-});
+    { _k: EFFECT_KIND_TAG.transferVar, transferVar: desc.payload },
+    applyTransferVar,
+  );
 
-export const compileSetMarker = (desc: SetMarkerPattern): CompiledEffectFragment => ({
-  nodeCount: 1,
-  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+export const compileSetMarker = (desc: SetMarkerPattern): CompiledEffectFragment =>
+  createCompiledDelegateLeafFragment(
     'setMarker',
-    state,
-    rng,
-    bindings,
-    ctx,
-    (env, cursor) => applySetMarker(
-      { _k: EFFECT_KIND_TAG.setMarker, setMarker: desc.payload },
-      env,
-      cursor,
-      { remaining: 10_000, max: 10_000 },
-      () => { throw new Error('applyBatch not available in compiled setMarker'); },
-    ),
-  ),
-});
+    { _k: EFFECT_KIND_TAG.setMarker, setMarker: desc.payload },
+    applySetMarker,
+  );
 
-export const compileShiftMarker = (desc: ShiftMarkerPattern): CompiledEffectFragment => ({
-  nodeCount: 1,
-  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+export const compileShiftMarker = (desc: ShiftMarkerPattern): CompiledEffectFragment =>
+  createCompiledDelegateLeafFragment(
     'shiftMarker',
-    state,
-    rng,
-    bindings,
-    ctx,
-    (env, cursor) => applyShiftMarker(
-      { _k: EFFECT_KIND_TAG.shiftMarker, shiftMarker: desc.payload },
-      env,
-      cursor,
-      { remaining: 10_000, max: 10_000 },
-      () => { throw new Error('applyBatch not available in compiled shiftMarker'); },
-    ),
-  ),
-});
+    { _k: EFFECT_KIND_TAG.shiftMarker, shiftMarker: desc.payload },
+    applyShiftMarker,
+  );
 
-export const compileSetGlobalMarker = (desc: SetGlobalMarkerPattern): CompiledEffectFragment => ({
-  nodeCount: 1,
-  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+export const compileSetGlobalMarker = (desc: SetGlobalMarkerPattern): CompiledEffectFragment =>
+  createCompiledDelegateLeafFragment(
     'setGlobalMarker',
-    state,
-    rng,
-    bindings,
-    ctx,
-    (env, cursor) => applySetGlobalMarker(
-      { _k: EFFECT_KIND_TAG.setGlobalMarker, setGlobalMarker: desc.payload },
-      env,
-      cursor,
-      { remaining: 10_000, max: 10_000 },
-      () => { throw new Error('applyBatch not available in compiled setGlobalMarker'); },
-    ),
-  ),
-});
+    { _k: EFFECT_KIND_TAG.setGlobalMarker, setGlobalMarker: desc.payload },
+    applySetGlobalMarker,
+  );
 
-export const compileFlipGlobalMarker = (desc: FlipGlobalMarkerPattern): CompiledEffectFragment => ({
-  nodeCount: 1,
-  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+export const compileFlipGlobalMarker = (desc: FlipGlobalMarkerPattern): CompiledEffectFragment =>
+  createCompiledDelegateLeafFragment(
     'flipGlobalMarker',
-    state,
-    rng,
-    bindings,
-    ctx,
-    (env, cursor) => applyFlipGlobalMarker(
-      { _k: EFFECT_KIND_TAG.flipGlobalMarker, flipGlobalMarker: desc.payload },
-      env,
-      cursor,
-      { remaining: 10_000, max: 10_000 },
-      () => { throw new Error('applyBatch not available in compiled flipGlobalMarker'); },
-    ),
-  ),
-});
+    { _k: EFFECT_KIND_TAG.flipGlobalMarker, flipGlobalMarker: desc.payload },
+    applyFlipGlobalMarker,
+  );
 
-export const compileShiftGlobalMarker = (desc: ShiftGlobalMarkerPattern): CompiledEffectFragment => ({
-  nodeCount: 1,
-  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+export const compileShiftGlobalMarker = (desc: ShiftGlobalMarkerPattern): CompiledEffectFragment =>
+  createCompiledDelegateLeafFragment(
     'shiftGlobalMarker',
-    state,
-    rng,
-    bindings,
-    ctx,
-    (env, cursor) => applyShiftGlobalMarker(
-      { _k: EFFECT_KIND_TAG.shiftGlobalMarker, shiftGlobalMarker: desc.payload },
-      env,
-      cursor,
-      { remaining: 10_000, max: 10_000 },
-      () => { throw new Error('applyBatch not available in compiled shiftGlobalMarker'); },
-    ),
-  ),
-});
+    { _k: EFFECT_KIND_TAG.shiftGlobalMarker, shiftGlobalMarker: desc.payload },
+    applyShiftGlobalMarker,
+  );
 
 export const compileLet = (
   desc: LetPattern,
@@ -1469,221 +1365,89 @@ export const compileEvaluateSubset = (
   };
 };
 
-export const compileMoveToken = (desc: MoveTokenPattern): CompiledEffectFragment => ({
-  nodeCount: 1,
-  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+export const compileMoveToken = (desc: MoveTokenPattern): CompiledEffectFragment =>
+  createCompiledDelegateLeafFragment(
     'moveToken',
-    state,
-    rng,
-    bindings,
-    ctx,
-    (env, cursor) => applyMoveToken(
-      moveTokenBuilder(desc.payload),
-      env,
-      cursor,
-      { remaining: 10_000, max: 10_000 },
-      () => { throw new Error('applyBatch not available in compiled moveToken'); },
-    ),
-  ),
-});
+    moveTokenBuilder(desc.payload),
+    applyMoveToken,
+  );
 
-export const compileMoveAll = (desc: MoveAllPattern): CompiledEffectFragment => ({
-  nodeCount: 1,
-  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+export const compileMoveAll = (desc: MoveAllPattern): CompiledEffectFragment =>
+  createCompiledDelegateLeafFragment(
     'moveAll',
-    state,
-    rng,
-    bindings,
-    ctx,
-    (env, cursor) => applyMoveAll(
-      moveAllBuilder(desc.payload),
-      env,
-      cursor,
-      { remaining: 10_000, max: 10_000 },
-      () => { throw new Error('applyBatch not available in compiled moveAll'); },
-    ),
-  ),
-});
+    moveAllBuilder(desc.payload),
+    applyMoveAll,
+  );
 
-export const compileMoveTokenAdjacent = (desc: MoveTokenAdjacentPattern): CompiledEffectFragment => ({
-  nodeCount: 1,
-  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+export const compileMoveTokenAdjacent = (desc: MoveTokenAdjacentPattern): CompiledEffectFragment =>
+  createCompiledDelegateLeafFragment(
     'moveTokenAdjacent',
-    state,
-    rng,
-    bindings,
-    ctx,
-    (env, cursor) => applyMoveTokenAdjacent(
-      moveTokenAdjacentBuilder(desc.payload),
-      env,
-      cursor,
-      { remaining: 10_000, max: 10_000 },
-      () => { throw new Error('applyBatch not available in compiled moveTokenAdjacent'); },
-    ),
-  ),
-});
+    moveTokenAdjacentBuilder(desc.payload),
+    applyMoveTokenAdjacent,
+  );
 
-export const compileDraw = (desc: DrawPattern): CompiledEffectFragment => ({
-  nodeCount: 1,
-  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+export const compileDraw = (desc: DrawPattern): CompiledEffectFragment =>
+  createCompiledDelegateLeafFragment(
     'draw',
-    state,
-    rng,
-    bindings,
-    ctx,
-    (env, cursor) => applyDraw(
-      drawBuilder(desc.payload),
-      env,
-      cursor,
-      { remaining: 10_000, max: 10_000 },
-      () => { throw new Error('applyBatch not available in compiled draw'); },
-    ),
-  ),
-});
+    drawBuilder(desc.payload),
+    applyDraw,
+  );
 
-export const compileShuffle = (desc: ShufflePattern): CompiledEffectFragment => ({
-  nodeCount: 1,
-  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+export const compileShuffle = (desc: ShufflePattern): CompiledEffectFragment =>
+  createCompiledDelegateLeafFragment(
     'shuffle',
-    state,
-    rng,
-    bindings,
-    ctx,
-    (env, cursor) => applyShuffle(
-      shuffleBuilder(desc.payload),
-      env,
-      cursor,
-      { remaining: 10_000, max: 10_000 },
-      () => { throw new Error('applyBatch not available in compiled shuffle'); },
-    ),
-  ),
-});
+    shuffleBuilder(desc.payload),
+    applyShuffle,
+  );
 
-export const compileCreateToken = (desc: CreateTokenPattern): CompiledEffectFragment => ({
-  nodeCount: 1,
-  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+export const compileCreateToken = (desc: CreateTokenPattern): CompiledEffectFragment =>
+  createCompiledDelegateLeafFragment(
     'createToken',
-    state,
-    rng,
-    bindings,
-    ctx,
-    (env, cursor) => applyCreateToken(
-      createTokenBuilder(desc.payload),
-      env,
-      cursor,
-      { remaining: 10_000, max: 10_000 },
-      () => { throw new Error('applyBatch not available in compiled createToken'); },
-    ),
-  ),
-});
+    createTokenBuilder(desc.payload),
+    applyCreateToken,
+  );
 
-export const compileDestroyToken = (desc: DestroyTokenPattern): CompiledEffectFragment => ({
-  nodeCount: 1,
-  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+export const compileDestroyToken = (desc: DestroyTokenPattern): CompiledEffectFragment =>
+  createCompiledDelegateLeafFragment(
     'destroyToken',
-    state,
-    rng,
-    bindings,
-    ctx,
-    (env, cursor) => applyDestroyToken(
-      destroyTokenBuilder(desc.payload),
-      env,
-      cursor,
-      { remaining: 10_000, max: 10_000 },
-      () => { throw new Error('applyBatch not available in compiled destroyToken'); },
-    ),
-  ),
-});
+    destroyTokenBuilder(desc.payload),
+    applyDestroyToken,
+  );
 
-export const compileSetTokenProp = (desc: SetTokenPropPattern): CompiledEffectFragment => ({
-  nodeCount: 1,
-  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+export const compileSetTokenProp = (desc: SetTokenPropPattern): CompiledEffectFragment =>
+  createCompiledDelegateLeafFragment(
     'setTokenProp',
-    state,
-    rng,
-    bindings,
-    ctx,
-    (env, cursor) => applySetTokenProp(
-      setTokenPropBuilder(desc.payload),
-      env,
-      cursor,
-      { remaining: 10_000, max: 10_000 },
-      () => { throw new Error('applyBatch not available in compiled setTokenProp'); },
-    ),
-  ),
-});
+    setTokenPropBuilder(desc.payload),
+    applySetTokenProp,
+  );
 
-export const compileReveal = (desc: RevealPattern): CompiledEffectFragment => ({
-  nodeCount: 1,
-  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+export const compileReveal = (desc: RevealPattern): CompiledEffectFragment =>
+  createCompiledDelegateLeafFragment(
     'reveal',
-    state,
-    rng,
-    bindings,
-    ctx,
-    (env, cursor) => applyReveal(
-      revealBuilder(desc.payload),
-      env,
-      cursor,
-      { remaining: 10_000, max: 10_000 },
-      () => { throw new Error('applyBatch not available in compiled reveal'); },
-    ),
-  ),
-});
+    revealBuilder(desc.payload),
+    applyReveal,
+  );
 
-export const compileConceal = (desc: ConcealPattern): CompiledEffectFragment => ({
-  nodeCount: 1,
-  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+export const compileConceal = (desc: ConcealPattern): CompiledEffectFragment =>
+  createCompiledDelegateLeafFragment(
     'conceal',
-    state,
-    rng,
-    bindings,
-    ctx,
-    (env, cursor) => applyConceal(
-      concealBuilder(desc.payload),
-      env,
-      cursor,
-      { remaining: 10_000, max: 10_000 },
-      () => { throw new Error('applyBatch not available in compiled conceal'); },
-    ),
-  ),
-});
+    concealBuilder(desc.payload),
+    applyConceal,
+  );
 
-export const compileChooseOne = (desc: ChooseOnePattern): CompiledEffectFragment => ({
-  nodeCount: 1,
-  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+export const compileChooseOne = (desc: ChooseOnePattern): CompiledEffectFragment =>
+  createCompiledDelegateLeafFragment(
     'chooseOne',
-    state,
-    rng,
-    bindings,
-    ctx,
-    (env, cursor) => applyChooseOne(
-      chooseOneBuilder(desc.payload),
-      env,
-      cursor,
-      { remaining: 10_000, max: 10_000 },
-      () => { throw new Error('applyBatch not available in compiled chooseOne'); },
-    ),
-  ),
-});
+    chooseOneBuilder(desc.payload),
+    applyChooseOne,
+  );
 
-export const compileChooseN = (desc: ChooseNPattern): CompiledEffectFragment => ({
-  nodeCount: 1,
-  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+export const compileChooseN = (desc: ChooseNPattern): CompiledEffectFragment =>
+  createCompiledDelegateLeafFragment(
     'chooseN',
-    state,
-    rng,
-    bindings,
-    ctx,
-    (env, cursor) => applyChooseN(
-      chooseNBuilder(desc.payload),
-      env,
-      cursor,
-      { remaining: 10_000, max: 10_000 },
-      () => { throw new Error('applyBatch not available in compiled chooseN'); },
-    ),
-  ),
-});
+    chooseNBuilder(desc.payload),
+    applyChooseN,
+  );
 
 export const compilePatternDescriptor = (
   desc: PatternDescriptor,

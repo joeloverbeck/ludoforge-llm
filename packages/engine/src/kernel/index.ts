@@ -71,6 +71,8 @@ export * from './eval-query.js';
 export * from './query-domain-kinds.js';
 export * from './eval-value.js';
 export { buildEffect, type EffectPayload } from './ast-builders.js';
+export { makeEffect } from './effect-builders.js';
+export { tagEffectAsts } from './tag-effect-asts.js';
 export * from './interpreter-mode.js';
 export * from './value-membership.js';
 export * from './token-filter.js';

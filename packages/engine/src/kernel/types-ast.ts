@@ -645,7 +645,7 @@ export interface EffectKindMap {
 
 export type EffectKind = keyof EffectKindMap;
 
-type WithKindTag<K extends EffectKind> =
+export type WithKindTag<K extends EffectKind> =
   EffectKindMap[K] & { readonly _k: typeof EFFECT_KIND_TAG[K] };
 
 export type EffectOfKind<K extends EffectKind> = WithKindTag<K>;

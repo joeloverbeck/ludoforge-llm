@@ -1,6 +1,6 @@
 # 82EFFASTTYPTAG-002: makeEffect Builder Factory and tagEffectAsts Utility
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — two new files in `packages/engine/src/kernel/`
@@ -120,3 +120,19 @@ Export from `kernel/index.ts`.
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/test/unit/effect-builders.test.ts`
 2. `pnpm -F @ludoforge/engine build && node --test packages/engine/test/unit/tag-effect-asts.test.ts`
 3. `pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-25
+- **What changed**:
+  - Exported `WithKindTag` from `types-ast.ts` (was non-exported local alias)
+  - Created `packages/engine/src/kernel/effect-builders.ts` with `makeEffect<K>()` factory
+  - Created `packages/engine/src/kernel/tag-effect-asts.ts` with `tagEffectAsts()` structural tagger
+  - Added exports to `packages/engine/src/kernel/index.ts`
+  - Created `packages/engine/test/unit/effect-builders.test.ts` (8 tests)
+  - Created `packages/engine/test/unit/tag-effect-asts.test.ts` (20 tests)
+- **Deviations**:
+  - `makeEffect` uses `EffectPayloadOf<K>` helper type instead of `EffectKindMap[K][K]` for the payload parameter — TS cannot resolve the self-indexed generic access directly
+  - Cast through `unknown` in `makeEffect` return (`as unknown as WithKindTag<K>`) required for the same generic limitation
+  - Test `OptionsQuery` values use `{ query: 'zones' }` instead of the ticket's `{ domain: 'zone', zoneId: 'deck' }` which doesn't match the actual `OptionsQuery` type
+- **Verification**: 28/28 tests pass (8 makeEffect + 20 tagEffectAsts). New source files typecheck cleanly. Full build blocked by pre-existing type errors from ticket 001 (tickets 003-006 will resolve).

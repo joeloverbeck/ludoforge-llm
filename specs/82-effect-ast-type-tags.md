@@ -34,7 +34,7 @@ export const registry: EffectRegistry = {
   setVar: applySetVar,
   if: applyIf,
   let: applyLet,
-  // ... 27 more entries
+  // ... 31 more entries
 };
 ```
 
@@ -73,27 +73,34 @@ measurable. More importantly, aligning EffectAST with ValueExpr's pattern:
 
 Add a numeric `_k: EffectKindTag` field to every `EffectAST` node. Update
 the compiler to set the tag during effect construction. Update the kernel's
-effect dispatch to use numeric switch.
+effect dispatch to use numeric switch. Provide builder helpers that make
+manual `_k` assignment unnecessary at construction sites.
 
 ## Foundations Alignment
 
 - **Foundation 1 (Engine Agnosticism)**: Tags are added by the generic
   compiler. No game-specific logic.
-- **Foundation 4 (Schema Ownership)**: The `_k` field is an internal
-  optimization detail, not a public schema contract. It is not serialized
-  to GameDef JSON — it's computed at compilation time.
+- **Foundation 4 (Schema Ownership)**: The `_k` field is a generic
+  optimization — it applies uniformly to all effect kinds for all games.
+  No per-game schema files introduced.
+- **Foundation 5 (Determinism)**: `_k` is serialized in GameDef JSON,
+  ensuring round-trip integrity without recovery passes.
 - **Foundation 8 (Compiler-Kernel Boundary)**: The compiler adds tags
   (structural concern); the kernel uses them for dispatch (behavioral
   concern). Clean separation preserved.
 - **Foundation 9 (No Backwards Compat)**: The old `for-in` dispatch is
-  replaced, not wrapped. Test fixtures are updated to include `_k` fields.
+  replaced, not wrapped. `_k` is a required field — no optional/shim
+  path. Test fixtures are updated to include `_k` fields.
+- **Foundation 10 (Architectural Completeness)**: Builder helpers,
+  exhaustiveness assertions, and a tagging utility ensure comprehensive
+  coverage. No construction site is left untagged.
 
 ## Design
 
-### 1. Type Tag Enum
+### 1. Type Tag Constant
 
 ```typescript
-// In types.ts or a new effect-kind-tag.ts
+// In types-ast.ts alongside VALUE_EXPR_TAG
 export const EFFECT_KIND_TAG = {
   setVar: 0,
   addVar: 1,
@@ -134,23 +141,94 @@ export const EFFECT_KIND_TAG = {
 export type EffectKindTag = typeof EFFECT_KIND_TAG[keyof typeof EFFECT_KIND_TAG];
 ```
 
-### 2. EffectAST Type Modification
+**Naming convention**: Keys use camelCase matching `EffectKind` string
+values (e.g., `EFFECT_KIND_TAG.setVar`, not `EFFECT_KIND_TAG.SET_VAR`).
+This differs from `VALUE_EXPR_TAG` (which uses UPPER_CASE) because effect
+kind strings are the canonical identifiers throughout the codebase —
+matching them reduces cognitive overhead. Note: Spec 81 references must
+use this same convention (e.g., `EFFECT_KIND_TAG.let`, not
+`EFFECT_KIND_TAG.LET`).
 
-Each variant of the EffectAST union gains a `_k` field:
+### 2. Exhaustiveness Assertion
 
 ```typescript
-type EffectAST =
-  | { readonly _k: 0; readonly setVar: { ... } }
-  | { readonly _k: 1; readonly addVar: { ... } }
-  | { readonly _k: 28; readonly if: { ... } }
-  | { readonly _k: 32; readonly let: { ... } }
-  | ...;
+// Compile-time: tag keys must exactly match EffectKind keys
+const _exhaustiveCheck: Record<EffectKind, number> = EFFECT_KIND_TAG;
+
+// CI test: tag count matches EffectKind count
+assert.strictEqual(
+  Object.keys(EFFECT_KIND_TAG).length,
+  Object.keys(registry).length,
+  'EFFECT_KIND_TAG must cover all EffectKind variants',
+);
+
+// CI test: tag values are contiguous 0..N-1
+const tagValues = Object.values(EFFECT_KIND_TAG).sort((a, b) => a - b);
+assert.deepStrictEqual(
+  tagValues,
+  Array.from({ length: tagValues.length }, (_, i) => i),
+  'EFFECT_KIND_TAG values must be contiguous starting from 0',
+);
 ```
 
-The `_k` field is a compile-time constant per variant. It is NOT optional —
-every EffectAST node must have it.
+### 3. EffectKindMap Type Modification
 
-### 3. Updated effectKindOf
+The existing `EffectKindMap` interface uses a double-keyed pattern where
+each entry is `{ readonly [kindKey]: payload }`. Adding `_k` requires
+each entry to also carry its tag. A helper type makes this clean:
+
+```typescript
+// Helper: inject _k into an EffectKindMap entry
+type WithKindTag<K extends EffectKind> =
+  EffectKindMap[K] & { readonly _k: typeof EFFECT_KIND_TAG[K] };
+
+// Updated EffectAST union
+export type EffectAST = { [K in EffectKind]: WithKindTag<K> }[EffectKind];
+```
+
+This preserves the existing `EffectKindMap` interface unchanged — each
+entry still defines `{ readonly setVar: {...} }` etc. The `_k` field
+is injected at the union level via intersection. This minimizes diff
+churn on the 34-entry interface.
+
+The `EffectOfKind<K>` helper type is updated accordingly:
+
+```typescript
+export type EffectOfKind<K extends EffectKind> = WithKindTag<K>;
+```
+
+### 4. Effect Builder Factory
+
+A type-safe factory function eliminates manual `_k` assignment at every
+construction site:
+
+```typescript
+// In a new file: effect-builders.ts (or in types-ast.ts)
+export function makeEffect<K extends EffectKind>(
+  kind: K,
+  payload: EffectKindMap[K][K],
+): WithKindTag<K> {
+  return { _k: EFFECT_KIND_TAG[kind], [kind]: payload } as WithKindTag<K>;
+}
+
+// Usage in compiler:
+// Before:
+{ setVar: { var: varName, value: compiledValue } }
+
+// After:
+makeEffect('setVar', { var: varName, value: compiledValue })
+```
+
+The factory:
+- Derives `_k` from the `kind` string automatically — no manual tag
+- Provides full type safety — `payload` is narrowed to the correct variant
+- Is a zero-cost abstraction at runtime (V8 inlines small functions)
+
+All effect construction sites in `compile-effects-*.ts` (8 files) and
+`ast-builders.ts` should migrate to `makeEffect()`. Direct `{ _k: ...,
+kind: ... }` construction is permitted but discouraged.
+
+### 5. Updated effectKindOf
 
 ```typescript
 /** Reverse lookup: tag number → string kind name. */
@@ -159,69 +237,126 @@ const TAG_TO_KIND: readonly EffectKind[] = Object.entries(EFFECT_KIND_TAG)
   .map(([k]) => k as EffectKind);
 
 export function effectKindOf(effect: EffectAST): EffectKind {
-  return TAG_TO_KIND[effect._k]!;
+  return TAG_TO_KIND[(effect as { readonly _k: EffectKindTag })._k];
 }
 ```
 
-### 4. Updated Effect Dispatch
+### 6. Updated Effect Dispatch
+
+The existing typed registry is **preserved** for handler definitions (it
+provides per-variant type safety via the mapped type). A parallel dispatch
+array provides O(1) lookup by `_k`:
 
 ```typescript
 // In effect-dispatch.ts
-const handlers: readonly ((
+
+// Build dispatch array from the typed registry (one-time at module load)
+const dispatchTable: readonly ((
   effect: EffectAST, env: EffectEnv, cursor: EffectCursor,
   budget: EffectBudgetState, applyBatch: ApplyEffectsWithBudget,
-) => EffectResult)[] = [
-  applySetVar,     // 0
-  applyAddVar,     // 1
-  // ... indexed by EFFECT_KIND_TAG value
-];
+) => EffectResult)[] = TAG_TO_KIND.map(kind => registry[kind] as any);
 
 const applyEffectWithBudget = (effect, env, cursor, budget) => {
-  consumeEffectBudget(budget, effectKindOf(effect));
-  const handler = handlers[effect._k];
-  // ...
+  const tag = (effect as { readonly _k: EffectKindTag })._k;
+  consumeEffectBudget(budget, TAG_TO_KIND[tag]);
+  const handler = dispatchTable[tag];
+  if (!handler) {
+    throw effectNotImplementedError(TAG_TO_KIND[tag], { effect });
+  }
+  // ... profiler, invoke handler, normalize result (unchanged)
 };
 ```
 
-### 5. Compiler Changes
+This approach:
+- **Preserves type safety**: Registry definition still uses `EffectHandler<K>`
+- **Enables jump table**: V8 optimizes array-index dispatch
+- **Single source of truth**: Dispatch array is derived from registry + tags
+
+### 7. tagEffectAsts Recovery/Migration Helper
+
+A structural tagging helper for test fixtures and validation:
+
+```typescript
+// In a new file: tag-effect-asts.ts (mirrors tag-value-exprs.ts)
+
+/** Infer _k tag from the property key of an EffectAST-shaped object. */
+function classifyEffectTag(obj: Record<string, unknown>): EffectKindTag | null {
+  for (const key in obj) {
+    if (key === '_k') continue;
+    if (key in EFFECT_KIND_TAG) {
+      return EFFECT_KIND_TAG[key as EffectKind];
+    }
+  }
+  return null;
+}
+
+/** Recursively walk a structure and add _k tags to EffectAST-shaped objects. */
+export function tagEffectAsts<T>(obj: T): T { /* recursive walk */ }
+```
+
+**Use cases:**
+- **Test migration**: Existing test fixtures that construct EffectAST
+  literals by hand can use `tagEffectAsts(fixture)` to add `_k` fields.
+  This eases migration — tests don't all need to switch to `makeEffect()`
+  immediately.
+- **Validation**: A CI test can verify that `tagEffectAsts(compiledGameDef)`
+  produces the same `_k` values as the compiler assigned — catching any
+  tag/key mismatch.
+- **Not needed at runtime boundaries**: Since `_k` is serialized in GameDef
+  JSON (see Serialization section), no runtime recovery pass is needed.
+  This is strictly a development/test utility.
+
+### 8. Compiler Changes
 
 Every effect construction site in `packages/engine/src/cnl/compile-effects-*.ts`
-must add the `_k` field:
+migrates to `makeEffect()`:
 
 ```typescript
 // Before:
 { setVar: { var: varName, value: compiledValue } }
 
 // After:
-{ _k: EFFECT_KIND_TAG.setVar, setVar: { var: varName, value: compiledValue } }
+makeEffect('setVar', { var: varName, value: compiledValue })
 ```
 
 Similarly, `packages/engine/src/kernel/ast-builders.ts` (if it exists) or
 any kernel code that constructs EffectAST nodes for lifecycle effects,
-trigger effects, or test fixtures must include `_k`.
+trigger effects, or test fixtures must use `makeEffect()` or include `_k`.
 
-### 6. Schema / Serialization
+### 9. Schema / Serialization
 
-The `_k` field is **not serialized** to GameDef JSON. It is computed during
-compilation (`runGameSpecStagesFromBundle`) and is present only in the
-in-memory `GameDef` object. If GameDef is serialized and deserialized (e.g.,
-for worker transfer), a post-deserialization pass adds `_k` fields.
+The `_k` field **is serialized** in GameDef JSON as a required integer.
 
-Alternatively, `_k` can be included in the JSON schema as an optional integer
-field. The `assertValidatedGameDef` function ensures it is present.
+**Rationale** (per Foundations analysis):
+- **Foundation 5**: Round-trip integrity without recovery passes.
+- **Foundation 9**: No tagging shim needed at deserialization boundaries.
+- **Foundation 10**: Architecturally complete — the type says `_k` is
+  required, the serialized form includes it.
+
+The JSON schema in `schemas-ast.ts` adds `_k` as a required integer field
+on each effect object. `assertValidatedGameDef` validates its presence.
+
+Worker transfer via Comlink's `structuredClone` preserves `_k` automatically.
+
+**Note on `_t` divergence**: The `ValueExpr` `_t` tag currently uses a
+post-deserialization tagging pass (`tagValueExprs`). This is arguably
+technical debt (per Foundation 9). Aligning `_t` with this spec's
+serialize-always approach is out of scope but recommended for a future
+cleanup spec.
 
 ## Files Modified
 
 | File(s) | Change |
 |---------|--------|
-| `types-ast.ts` | Add `_k` field to EffectAST union |
-| `types.ts` | Export `EFFECT_KIND_TAG` constant |
-| `effect-registry.ts` | Replace string-keyed registry with array; update `effectKindOf` |
-| `effect-dispatch.ts` | Use `handlers[effect._k]` instead of `registry[kind]` |
-| `compile-effects-*.ts` (8 files) | Add `_k` during effect construction |
-| `ast-builders.ts` | Add `_k` to effect builder functions |
-| Test fixtures | Add `_k` to hand-crafted EffectAST literals |
-| `schemas-ast.ts` | Add optional `_k` integer field to JSON schema |
+| `types-ast.ts` | Add `EFFECT_KIND_TAG` constant, `EffectKindTag` type, `WithKindTag<K>` helper, update `EffectAST` and `EffectOfKind` |
+| `effect-builders.ts` (new) | `makeEffect<K>()` factory function |
+| `effect-registry.ts` | Replace `effectKindOf` with tag-based lookup; add `TAG_TO_KIND` array |
+| `effect-dispatch.ts` | Add `dispatchTable` array; use `effect._k` for dispatch |
+| `tag-effect-asts.ts` (new) | `tagEffectAsts()` structural tagging helper |
+| `compile-effects-*.ts` (8 files) | Migrate to `makeEffect()` |
+| `ast-builders.ts` | Migrate to `makeEffect()` |
+| `schemas-ast.ts` | Add required `_k` integer field to effect JSON schema |
+| Test fixtures | Add `_k` via `makeEffect()` or `tagEffectAsts()` |
 
 ## Estimated Impact
 
@@ -230,24 +365,33 @@ field. The `assertValidatedGameDef` function ensures it is present.
 - **Spec 81 compiler**: Faster codegen dispatch during compilation;
   simpler code generation using numeric tags
 - **Consistency**: Aligns with proven ValueExpr pattern
+- **Developer ergonomics**: `makeEffect()` is shorter and less error-prone
+  than manual `{ _k: EFFECT_KIND_TAG.setVar, setVar: {...} }` construction
 
 ## Risks
 
-1. **Wide file touch**: ~15 files modified. **Mitigation**: Mechanical
-   changes — each site adds one field. Low risk of logic errors.
+1. **Wide file touch**: ~15 files modified. **Mitigation**: `makeEffect()`
+   factory makes each migration site a simple function call change. Low
+   risk of logic errors.
 2. **Test fixture churn**: Many tests create EffectAST literals that need
-   `_k`. **Mitigation**: A helper function `withTag(effect)` can compute
-   `_k` from the existing property key, easing migration.
-3. **Serialization gap**: If GameDef JSON is loaded without `_k` fields
-   (e.g., from a pre-Spec-82 file), the kernel fails. **Mitigation**:
-   `assertValidatedGameDef` adds tags on-the-fly if missing.
+   `_k`. **Mitigation**: `tagEffectAsts(fixture)` can bulk-add tags to
+   existing test fixtures, allowing incremental migration to `makeEffect()`.
+3. **Exhaustiveness drift**: New effect kinds added without updating
+   `EFFECT_KIND_TAG`. **Mitigation**: Compile-time `satisfies` check +
+   CI test assert tag count == registry count.
 
 ## Testing Plan
 
 1. **All existing tests pass**: No behavioral change — only dispatch
    mechanism changes.
-2. **Tag consistency test**: For every EffectAST node in compiled GameDefs
-   (Texas Hold'em, FITL), assert `_k` matches the property key.
-3. **Performance benchmark**: Verify effect dispatch is equal or faster.
-4. **Round-trip test**: Serialize and deserialize a GameDef, verify `_k`
-   fields are correctly restored.
+2. **Exhaustiveness test**: Assert `EFFECT_KIND_TAG` keys === `EffectKind`
+   keys (via the `satisfies` check and runtime assertion).
+3. **Contiguity test**: Assert tag values are contiguous 0..N-1.
+4. **Tag consistency test**: For every EffectAST node in compiled GameDefs
+   (Texas Hold'em, FITL), assert `_k` matches the property key via
+   `tagEffectAsts` comparison.
+5. **Performance benchmark**: Verify effect dispatch is equal or faster.
+6. **Round-trip test**: Serialize and deserialize a GameDef, verify `_k`
+   fields are preserved.
+7. **makeEffect type safety test**: Verify that `makeEffect('setVar', { wrong: 'payload' })`
+   produces a compile-time type error.

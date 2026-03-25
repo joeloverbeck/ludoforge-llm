@@ -1,4 +1,5 @@
 import { rebaseIterationPath, withIterationSegment, emptyScope } from './decision-scope.js';
+import { combinations, countCombinations } from './combinatorics.js';
 import type { EffectCursor, EffectResult } from './effect-context.js';
 import { createEvalContext } from './eval-context.js';
 import { evalQuery } from './eval-query.js';
@@ -17,6 +18,7 @@ import {
   type CreateTokenPattern,
   type DestroyTokenPattern,
   type DrawPattern,
+  type EvaluateSubsetPattern,
   type FlipGlobalMarkerPattern,
   type ForEachPattern,
   type GotoPhaseExactPattern,
@@ -28,9 +30,11 @@ import {
   type MoveTokenPattern,
   type PatternDescriptor,
   type PopInterruptPhasePattern,
+  type PushInterruptPhasePattern,
   type ReducePattern,
   type RevealPattern,
   type RemoveByPriorityPattern,
+  type RollRandomPattern,
   type SetActivePlayerPattern,
   type SetGlobalMarkerPattern,
   type SetMarkerPattern,
@@ -65,7 +69,7 @@ import {
   applySetTokenProp,
   applyShuffle,
 } from './effects-token.js';
-import { applyAdvancePhase, applyGotoPhaseExact, applyPopInterruptPhase } from './effects-turn-flow.js';
+import { applyAdvancePhase, applyGotoPhaseExact, applyPopInterruptPhase, applyPushInterruptPhase } from './effects-turn-flow.js';
 import { applySetActivePlayer } from './effects-var.js';
 import { emitTrace } from './execution-collector.js';
 import {
@@ -78,6 +82,7 @@ import {
   moveAll as moveAllBuilder,
   moveToken as moveTokenBuilder,
   moveTokenAdjacent as moveTokenAdjacentBuilder,
+  pushInterruptPhase as pushInterruptPhaseBuilder,
   popInterruptPhase as popInterruptPhaseBuilder,
   reveal as revealBuilder,
   setActivePlayer as setActivePlayerBuilder,
@@ -89,6 +94,7 @@ import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import { resolveRef } from './resolve-ref.js';
 import { resolveRuntimeTokenBindingValue } from './token-binding.js';
 import { resolveTraceProvenance } from './trace-provenance.js';
+import { nextInt } from './prng.js';
 import {
   readScopedIntVarValue,
   readScopedVarValue,
@@ -104,6 +110,8 @@ import { clampIntVarValue } from './var-runtime-utils.js';
 import { resolveControlFlowIterationLimit } from './control-flow-limit.js';
 import { EFFECT_KIND_TAG, VALUE_EXPR_TAG } from './types.js';
 import type { EffectAST, EffectTraceProvenance, GameState, IntVariableDef, NumericValueExpr, Reference, Rng, TriggerEvent, ValueExpr } from './types.js';
+
+const MAX_SUBSET_COMBINATIONS = 10_000;
 
 export interface CompiledEffectFragment {
   readonly execute: CompiledEffectFn;
@@ -132,6 +140,25 @@ const expectInteger = (value: unknown, effectType: 'setVar' | 'addVar', field: '
       actualType: typeof value,
       value,
     });
+  }
+
+  return value;
+};
+
+const expectSafeInteger = (value: unknown, effectType: 'rollRandom' | 'evaluateSubset', field: 'min' | 'max' | 'subsetSize' | 'scoreExpr'): number => {
+  if (typeof value !== 'number' || !Number.isFinite(value) || !Number.isSafeInteger(value)) {
+    throw effectRuntimeError(
+      effectType === 'rollRandom'
+        ? EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED
+        : EFFECT_RUNTIME_REASONS.SUBSET_RUNTIME_VALIDATION_FAILED,
+      `${effectType}.${field} must evaluate to a safe integer`,
+      {
+        effectType,
+        field,
+        actualType: typeof value,
+        value,
+      },
+    );
   }
 
   return value;
@@ -249,6 +276,13 @@ const countEffectNodes = (effects: readonly EffectAST[]): number => {
     if ('reduce' in effect) {
       total += countEffectNodes(effect.reduce.in);
     }
+    if ('rollRandom' in effect) {
+      total += countEffectNodes(effect.rollRandom.in);
+    }
+    if ('evaluateSubset' in effect) {
+      total += countEffectNodes(effect.evaluateSubset.compute);
+      total += countEffectNodes(effect.evaluateSubset.in);
+    }
     if ('removeByPriority' in effect && effect.removeByPriority.in !== undefined) {
       total += countEffectNodes(effect.removeByPriority.in);
     }
@@ -307,6 +341,20 @@ const normalizeBranchResult = (
   decisionScope: result.decisionScope ?? decisionScope,
   ...(result.pendingChoice === undefined ? {} : { pendingChoice: result.pendingChoice }),
 });
+
+const exportDollarBindings = (
+  bindings: Readonly<Record<string, unknown>>,
+  excludedNames: readonly string[],
+): Record<string, unknown> => {
+  const exportedBindings: Record<string, unknown> = {};
+  for (const [name, value] of Object.entries(bindings)) {
+    if (excludedNames.includes(name) || !name.startsWith('$')) {
+      continue;
+    }
+    exportedBindings[name] = value;
+  }
+  return exportedBindings;
+};
 
 const executeCompiledDelegate = (
   effectType: string,
@@ -977,6 +1025,95 @@ export const compilePopInterruptPhase = (_desc: PopInterruptPhasePattern): Compi
   ),
 });
 
+export const compileRollRandom = (
+  desc: RollRandomPattern,
+  compileBody: BodyCompiler,
+): CompiledEffectFragment => {
+  const inFragment = compileBody(desc.payload.in);
+
+  return {
+    nodeCount: 1 + countEffectNodes(desc.payload.in),
+    execute: (state, rng, bindings, ctx) => {
+      if (ctx.effectBudget !== undefined) {
+        consumeEffectBudget(ctx.effectBudget, 'rollRandom');
+      }
+
+      const minValue = expectSafeInteger(evalCompiledValue(desc.payload.min, state, bindings, ctx), 'rollRandom', 'min');
+      const maxValue = expectSafeInteger(evalCompiledValue(desc.payload.max, state, bindings, ctx), 'rollRandom', 'max');
+      if (minValue > maxValue) {
+        throw effectRuntimeError(
+          EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+          `rollRandom requires min <= max, received min=${minValue}, max=${maxValue}`,
+          {
+            effectType: 'rollRandom',
+            min: minValue,
+            max: maxValue,
+          },
+        );
+      }
+
+      const fixedBinding = resolveCompiledBindings(bindings, ctx)[desc.payload.bind];
+      const [rolledValue, nextRng] = fixedBinding === undefined
+        ? nextInt(rng, minValue, maxValue)
+        : [expectSafeInteger(fixedBinding, 'rollRandom', 'min'), rng] as const;
+
+      if (rolledValue < minValue || rolledValue > maxValue) {
+        throw effectRuntimeError(
+          EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+          `rollRandom binding ${desc.payload.bind} must stay within [${minValue}, ${maxValue}]`,
+          {
+            effectType: 'rollRandom',
+            bind: desc.payload.bind,
+            min: minValue,
+            max: maxValue,
+            value: rolledValue,
+          },
+        );
+      }
+
+      const nestedResult = executeEffectList(
+        desc.payload.in,
+        inFragment,
+        state,
+        nextRng,
+        { ...bindings, [desc.payload.bind]: rolledValue },
+        {
+          ...ctx,
+          ...((ctx.resources.collector.trace !== null || ctx.resources.collector.conditionTrace !== null)
+            ? { effectPath: `${ctx.effectPath ?? ''}.rollRandom.in` }
+            : (ctx.effectPath === undefined ? {} : { effectPath: ctx.effectPath })),
+        },
+      );
+
+      return {
+        state: nestedResult.state,
+        rng: nestedResult.rng,
+        ...(nestedResult.emittedEvents === undefined ? {} : { emittedEvents: nestedResult.emittedEvents }),
+        ...(nestedResult.pendingChoice === undefined ? {} : { pendingChoice: nestedResult.pendingChoice }),
+        bindings,
+      };
+    },
+  };
+};
+
+export const compilePushInterruptPhase = (desc: PushInterruptPhasePattern): CompiledEffectFragment => ({
+  nodeCount: 1,
+  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+    'pushInterruptPhase',
+    state,
+    rng,
+    bindings,
+    ctx,
+    (env, cursor) => applyPushInterruptPhase(
+      pushInterruptPhaseBuilder(desc.payload),
+      env,
+      cursor,
+      { remaining: 10_000, max: 10_000 },
+      () => { throw new Error('applyBatch not available in compiled pushInterruptPhase'); },
+    ),
+  ),
+});
+
 export const compileBindValue = (desc: BindValuePattern): CompiledEffectFragment => ({
   nodeCount: 1,
   execute: (state, rng, bindings, ctx) => {
@@ -1134,13 +1271,7 @@ export const compileLet = (
       }
 
       const resolvedNestedBindings = nestedResult.bindings ?? nestedBindings;
-      const exportedBindings: Record<string, unknown> = {};
-      for (const [name, value] of Object.entries(resolvedNestedBindings)) {
-        if (name === desc.bind || !name.startsWith('$')) {
-          continue;
-        }
-        exportedBindings[name] = value;
-      }
+      const exportedBindings = exportDollarBindings(resolvedNestedBindings, [desc.bind]);
 
       return {
         state: nestedResult.state,
@@ -1151,6 +1282,142 @@ export const compileLet = (
           ...bindings,
           ...exportedBindings,
         },
+      };
+    },
+  };
+};
+
+export const compileEvaluateSubset = (
+  desc: EvaluateSubsetPattern,
+  compileBody: BodyCompiler,
+): CompiledEffectFragment => {
+  const computeFragment = compileBody(desc.payload.compute);
+  const inFragment = compileBody(desc.payload.in);
+
+  return {
+    nodeCount: 1 + countEffectNodes(desc.payload.compute) + countEffectNodes(desc.payload.in),
+    execute: (state, rng, bindings, ctx) => {
+      if (ctx.effectBudget !== undefined) {
+        consumeEffectBudget(ctx.effectBudget, 'evaluateSubset');
+      }
+
+      const items = evalQuery(desc.payload.source, createCompiledEvalContext(state, bindings, ctx));
+      const subsetSize = expectSafeInteger(evalCompiledValue(desc.payload.subsetSize, state, bindings, ctx), 'evaluateSubset', 'subsetSize');
+      if (subsetSize < 0 || subsetSize > items.length) {
+        throw effectRuntimeError(
+          EFFECT_RUNTIME_REASONS.SUBSET_RUNTIME_VALIDATION_FAILED,
+          'evaluateSubset requires 0 <= subsetSize <= source item count',
+          {
+            effectType: 'evaluateSubset',
+            subsetSize,
+            sourceCount: items.length,
+          },
+        );
+      }
+
+      const combinationCount = countCombinations(items.length, subsetSize);
+      if (combinationCount > MAX_SUBSET_COMBINATIONS) {
+        throw effectRuntimeError(
+          EFFECT_RUNTIME_REASONS.SUBSET_RUNTIME_VALIDATION_FAILED,
+          'evaluateSubset combination count exceeds safety cap',
+          {
+            effectType: 'evaluateSubset',
+            subsetSize,
+            sourceCount: items.length,
+            combinationCount,
+            maxCombinations: MAX_SUBSET_COMBINATIONS,
+          },
+        );
+      }
+
+      let bestScore = Number.NEGATIVE_INFINITY;
+      let bestSubset: readonly unknown[] | null = null;
+
+      for (const subset of combinations(items, subsetSize)) {
+        const computeBindings = {
+          ...bindings,
+          [desc.payload.subsetBind]: subset,
+        };
+        const computeResult = executeEffectList(
+          desc.payload.compute,
+          computeFragment,
+          state,
+          rng,
+          computeBindings,
+          {
+            ...ctx,
+            ...((ctx.resources.collector.trace !== null || ctx.resources.collector.conditionTrace !== null)
+              ? { effectPath: `${ctx.effectPath ?? ''}.evaluateSubset.compute` }
+              : (ctx.effectPath === undefined ? {} : { effectPath: ctx.effectPath })),
+          },
+        );
+        if (computeResult.pendingChoice !== undefined) {
+          return {
+            state: computeResult.state,
+            rng: computeResult.rng,
+            ...(computeResult.emittedEvents === undefined ? {} : { emittedEvents: computeResult.emittedEvents }),
+            bindings,
+            pendingChoice: computeResult.pendingChoice,
+          };
+        }
+
+        const scoreBindings = computeResult.bindings ?? computeBindings;
+        const score = expectSafeInteger(
+          evalCompiledValue(desc.payload.scoreExpr, computeResult.state, scoreBindings, ctx),
+          'evaluateSubset',
+          'scoreExpr',
+        );
+        if (score > bestScore) {
+          bestScore = score;
+          bestSubset = subset;
+        }
+      }
+
+      if (bestSubset === null) {
+        throw effectRuntimeError(
+          EFFECT_RUNTIME_REASONS.SUBSET_RUNTIME_VALIDATION_FAILED,
+          'evaluateSubset could not evaluate any subset',
+          {
+            effectType: 'evaluateSubset',
+            subsetSize,
+            sourceCount: items.length,
+          },
+        );
+      }
+
+      const inBindings = {
+        ...bindings,
+        [desc.payload.resultBind]: bestScore,
+        ...(desc.payload.bestSubsetBind === undefined ? {} : { [desc.payload.bestSubsetBind]: bestSubset }),
+      };
+      const inResult = executeEffectList(
+        desc.payload.in,
+        inFragment,
+        state,
+        rng,
+        inBindings,
+        {
+          ...ctx,
+          ...((ctx.resources.collector.trace !== null || ctx.resources.collector.conditionTrace !== null)
+            ? { effectPath: `${ctx.effectPath ?? ''}.evaluateSubset.in` }
+            : (ctx.effectPath === undefined ? {} : { effectPath: ctx.effectPath })),
+        },
+      );
+      if (inResult.pendingChoice !== undefined) {
+        return {
+          state: inResult.state,
+          rng: inResult.rng,
+          ...(inResult.emittedEvents === undefined ? {} : { emittedEvents: inResult.emittedEvents }),
+          bindings: inBindings,
+          pendingChoice: inResult.pendingChoice,
+        };
+      }
+
+      return {
+        state: inResult.state,
+        rng: inResult.rng,
+        ...(inResult.emittedEvents === undefined ? {} : { emittedEvents: inResult.emittedEvents }),
+        bindings: inBindings,
       };
     },
   };
@@ -1361,10 +1628,14 @@ export const compilePatternDescriptor = (
       return compileAdvancePhase(desc);
     case 'popInterruptPhase':
       return compilePopInterruptPhase(desc);
+    case 'rollRandom':
+      return compileRollRandom(desc, compileBody);
     case 'bindValue':
       return compileBindValue(desc);
     case 'transferVar':
       return compileTransferVar(desc);
+    case 'pushInterruptPhase':
+      return compilePushInterruptPhase(desc);
     case 'setMarker':
       return compileSetMarker(desc);
     case 'shiftMarker':
@@ -1377,6 +1648,8 @@ export const compilePatternDescriptor = (
       return compileShiftGlobalMarker(desc);
     case 'let':
       return compileLet(desc, compileBody);
+    case 'evaluateSubset':
+      return compileEvaluateSubset(desc, compileBody);
     case 'moveToken':
       return compileMoveToken(desc);
     case 'moveAll':

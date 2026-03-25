@@ -430,6 +430,74 @@ describe('effect-compiler-codegen', () => {
     );
   });
 
+  it('compilePushInterruptPhase matches interpreter for nested interrupt stacks', () => {
+    const def = makeDef();
+    const state: GameState = {
+      ...makeState(),
+      currentPhase: asPhaseId('cleanup'),
+      interruptPhaseStack: [{ phase: asPhaseId('cleanup'), resumePhase: asPhaseId('main') }],
+    };
+    const effect: EffectAST = eff({ pushInterruptPhase: { phase: 'main', resumePhase: 'cleanup' } });
+
+    compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
+  });
+
+  it('compileRollRandom matches interpreter for deterministic execution and fixed bindings', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = eff({
+      rollRandom: {
+        bind: '$die',
+        min: 1,
+        max: 6,
+        in: [
+          eff({ setVar: { scope: 'global', var: 'count', value: { _t: 2, ref: 'binding', name: '$die' } } }),
+        ],
+      },
+    });
+
+    compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
+    compareResults(def, runCompiled(def, state, effect, { $die: 4 }), runInterpreted(def, state, effect, { $die: 4 }));
+  });
+
+  it('compileEvaluateSubset matches interpreter for repeated subset scoring and best-subset export', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = eff({
+      evaluateSubset: {
+        source: { query: 'players' },
+        subsetSize: 2,
+        subsetBind: '$subset',
+        compute: [
+          eff({
+            bindValue: {
+              bind: '$bonus',
+              value: {
+                _t: 5,
+                aggregate: {
+                  op: 'sum',
+                  query: { query: 'binding', name: '$subset' },
+                  bind: '$seat',
+                  valueExpr: { _t: 2, ref: 'pvar', player: { chosen: '$seat' }, var: 'coins' },
+                },
+              },
+            },
+          }),
+        ],
+        scoreExpr: { _t: 2, ref: 'binding', name: '$bonus' },
+        resultBind: '$bestScore',
+        bestSubsetBind: '$bestSubset',
+        in: [
+          eff({ bindValue: { bind: '$winnerCount', value: { _t: 5, aggregate: { op: 'count', query: { query: 'binding', name: '$bestSubset' } } } } }),
+          eff({ setVar: { scope: 'global', var: 'bank', value: { _t: 2, ref: 'binding', name: '$bestScore' } } }),
+          eff({ setVar: { scope: 'global', var: 'count', value: { _t: 2, ref: 'binding', name: '$winnerCount' } } }),
+        ],
+      },
+    });
+
+    compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
+  });
+
   it('compileBindValue matches interpreter for non-simple value expressions', () => {
     const def = makeDef();
     const state = makeState();
@@ -903,10 +971,13 @@ describe('effect-compiler-codegen', () => {
       eff({ gotoPhaseExact: { phase: 'cleanup' } }),
       eff({ setActivePlayer: { player: 'active' } }),
       eff({ advancePhase: {} }),
+      eff({ pushInterruptPhase: { phase: 'cleanup', resumePhase: 'main' } }),
       eff({ popInterruptPhase: {} }),
+      eff({ rollRandom: { bind: '$roll', min: 1, max: 6, in: [] } }),
       eff({ bindValue: { bind: '$x', value: { _t: 6, op: '+', left: 1, right: 2 } } }),
       eff({ transferVar: { from: { scope: 'global', var: 'bank' }, to: { scope: 'global', var: 'count' }, amount: 1 } }),
       eff({ let: { bind: 'tmp', value: { _t: 6, op: '+', left: 1, right: 2 }, in: [] } }),
+      eff({ evaluateSubset: { source: { query: 'players' }, subsetSize: 2, subsetBind: '$subset', compute: [], scoreExpr: 0, resultBind: '$score', in: [] } }),
       eff({ setMarker: { space: 'city:none', marker: 'supportOpposition', state: 'activeSupport' } }),
       eff({ shiftMarker: { space: 'city:none', marker: 'supportOpposition', delta: 1 } }),
       eff({ setGlobalMarker: { marker: 'leaderFlipped', state: 'yes' } }),

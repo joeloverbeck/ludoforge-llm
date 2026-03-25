@@ -245,11 +245,10 @@ describe('effect-compiler orchestrator', () => {
     const effects: readonly EffectAST[] = [
       eff({ setVar: { scope: 'global', var: 'score', value: 1 } }),
       eff({
-        rollRandom: {
-          bind: '$roll',
-          min: 1,
-          max: 6,
-          in: [eff({ setVar: { scope: 'global', var: 'count', value: { _t: 2, ref: 'binding', name: '$roll' } } })],
+        chooseOne: {
+          internalDecisionId: 'd1',
+          bind: '$choice',
+          options: { query: 'players' },
         },
       }),
       eff({ addVar: { scope: 'global', var: 'score', delta: 2 } }),
@@ -284,11 +283,10 @@ describe('effect-compiler orchestrator', () => {
     const def = makeDef();
     const effects: readonly EffectAST[] = [
       eff({
-        rollRandom: {
-          bind: '$roll',
-          min: 1,
-          max: 6,
-          in: [eff({ setVar: { scope: 'global', var: 'count', value: { _t: 2, ref: 'binding', name: '$roll' } } })],
+        chooseOne: {
+          internalDecisionId: 'd1',
+          bind: '$choice',
+          options: { query: 'players' },
         },
       }),
     ];
@@ -296,9 +294,7 @@ describe('effect-compiler orchestrator', () => {
     const rng = createRng(31n);
     const compiled = compileEffectSequence(asPhaseId('cleanup'), 'onExit', effects);
 
-    // walkEffects now traverses rollRandom.in, finding the nested setVar (compiled).
-    // 2 nodes: rollRandom (not compiled) + setVar (compiled) = 1/2
-    assert.equal(compiled.coverageRatio, 0.5);
+    assert.equal(compiled.coverageRatio, 0);
     compareResults(
       def,
       compiled.execute(state, rng, {}, makeCompiledContext(def)),

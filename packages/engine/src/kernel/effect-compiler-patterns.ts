@@ -107,6 +107,10 @@ export type PopInterruptPhasePattern = {
   readonly kind: 'popInterruptPhase';
 };
 
+type RollRandomPayload = Extract<EffectAST, { readonly rollRandom: unknown }>['rollRandom'];
+type PushInterruptPhasePayload = Extract<EffectAST, { readonly pushInterruptPhase: unknown }>['pushInterruptPhase'];
+type EvaluateSubsetPayload = Extract<EffectAST, { readonly evaluateSubset: unknown }>['evaluateSubset'];
+
 type BindValuePayload = Extract<EffectAST, { readonly bindValue: unknown }>['bindValue'];
 type TransferVarPayload = Extract<EffectAST, { readonly transferVar: unknown }>['transferVar'];
 type LetPayload = Extract<EffectAST, { readonly let: unknown }>['let'];
@@ -130,6 +134,21 @@ export type BindValuePattern = {
   readonly kind: 'bindValue';
   readonly bind: BindValuePayload['bind'];
   readonly value: BindValuePayload['value'];
+};
+
+export type RollRandomPattern = {
+  readonly kind: 'rollRandom';
+  readonly payload: RollRandomPayload;
+};
+
+export type PushInterruptPhasePattern = {
+  readonly kind: 'pushInterruptPhase';
+  readonly payload: PushInterruptPhasePayload;
+};
+
+export type EvaluateSubsetPattern = {
+  readonly kind: 'evaluateSubset';
+  readonly payload: EvaluateSubsetPayload;
 };
 
 export type TransferVarPattern = {
@@ -230,9 +249,12 @@ export type PatternDescriptor =
   | SetActivePlayerPattern
   | AdvancePhasePattern
   | PopInterruptPhasePattern
+  | RollRandomPattern
+  | PushInterruptPhasePattern
   | BindValuePattern
   | TransferVarPattern
   | LetPattern
+  | EvaluateSubsetPattern
   | SetMarkerPattern
   | ShiftMarkerPattern
   | SetGlobalMarkerPattern
@@ -484,6 +506,28 @@ export const matchPopInterruptPhase = (node: EffectAST): PopInterruptPhasePatter
   return { kind: 'popInterruptPhase' };
 };
 
+export const matchRollRandom = (node: EffectAST): RollRandomPattern | null => {
+  if (!('rollRandom' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'rollRandom',
+    payload: node.rollRandom,
+  };
+};
+
+export const matchPushInterruptPhase = (node: EffectAST): PushInterruptPhasePattern | null => {
+  if (!('pushInterruptPhase' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'pushInterruptPhase',
+    payload: node.pushInterruptPhase,
+  };
+};
+
 export const matchBindValue = (node: EffectAST): BindValuePattern | null => {
   if (!('bindValue' in node)) {
     return null;
@@ -517,6 +561,17 @@ export const matchLet = (node: EffectAST): LetPattern | null => {
     bind: node.let.bind,
     value: node.let.value,
     inEffects: node.let.in,
+  };
+};
+
+export const matchEvaluateSubset = (node: EffectAST): EvaluateSubsetPattern | null => {
+  if (!('evaluateSubset' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'evaluateSubset',
+    payload: node.evaluateSubset,
   };
 };
 
@@ -713,15 +768,15 @@ export const matchConceal = (node: EffectAST): ConcealPattern | null => {
  * 22  grantFreeOperation  — deferred (action-context-heavy, future spec)
  * 23  gotoPhaseExact      — compiled (Phase 0)
  * 24  advancePhase        — compiled (Phase 1)
- * 25  pushInterruptPhase  — stub (Phase 5)
+ * 25  pushInterruptPhase  — compiled (Phase 5)
  * 26  popInterruptPhase   — compiled (Phase 1)
- * 27  rollRandom          — stub (Phase 5)
+ * 27  rollRandom          — compiled (Phase 5)
  * 28  if                  — compiled (Phase 0)
  * 29  forEach             — compiled (Phase 3, generic OptionsQuery support)
  * 30  reduce              — compiled (Phase 3)
  * 31  removeByPriority    — compiled (Phase 3)
  * 32  let                 — compiled (Phase 1)
- * 33  evaluateSubset      — stub (Phase 5)
+ * 33  evaluateSubset      — compiled (Phase 5)
  */
 export const classifyEffect = (node: EffectAST): PatternDescriptor | null => {
   switch (node._k) {
@@ -743,14 +798,20 @@ export const classifyEffect = (node: EffectAST): PatternDescriptor | null => {
       return matchSetActivePlayer(node);
     case EFFECT_KIND_TAG.advancePhase:
       return matchAdvancePhase(node);
+    case EFFECT_KIND_TAG.pushInterruptPhase:
+      return matchPushInterruptPhase(node);
     case EFFECT_KIND_TAG.popInterruptPhase:
       return matchPopInterruptPhase(node);
+    case EFFECT_KIND_TAG.rollRandom:
+      return matchRollRandom(node);
     case EFFECT_KIND_TAG.bindValue:
       return matchBindValue(node);
     case EFFECT_KIND_TAG.transferVar:
       return matchTransferVar(node);
     case EFFECT_KIND_TAG.let:
       return matchLet(node);
+    case EFFECT_KIND_TAG.evaluateSubset:
+      return matchEvaluateSubset(node);
     case EFFECT_KIND_TAG.setMarker:
       return matchSetMarker(node);
     case EFFECT_KIND_TAG.shiftMarker:
@@ -786,9 +847,6 @@ export const classifyEffect = (node: EffectAST): PatternDescriptor | null => {
     case EFFECT_KIND_TAG.grantFreeOperation:
       return null;
     // Not-yet-compiled lifecycle tags — stubs for future tickets (002-009)
-    case EFFECT_KIND_TAG.rollRandom:
-    case EFFECT_KIND_TAG.pushInterruptPhase:
-    case EFFECT_KIND_TAG.evaluateSubset:
     case EFFECT_KIND_TAG.chooseOne:
     case EFFECT_KIND_TAG.chooseN:
       return null;

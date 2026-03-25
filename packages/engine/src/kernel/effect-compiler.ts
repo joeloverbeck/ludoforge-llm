@@ -31,8 +31,15 @@ const countEffectNodes = (effects: readonly EffectAST[]): number => {
         total += countEffectNodes(effect.forEach.in);
       }
     }
+    if ('rollRandom' in effect) {
+      total += countEffectNodes(effect.rollRandom.in);
+    }
     if ('reduce' in effect) {
       total += countEffectNodes(effect.reduce.in);
+    }
+    if ('evaluateSubset' in effect) {
+      total += countEffectNodes(effect.evaluateSubset.compute);
+      total += countEffectNodes(effect.evaluateSubset.in);
     }
     if ('removeByPriority' in effect && effect.removeByPriority.in !== undefined) {
       total += countEffectNodes(effect.removeByPriority.in);

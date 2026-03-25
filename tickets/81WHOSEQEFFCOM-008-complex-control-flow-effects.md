@@ -24,6 +24,7 @@ Three complex control flow effects (tags 33, 27, 25) fall back to the interprete
 2. The compiled closure must: enumerate combinations, evaluate inner body per combination, track best score, rebase decision scope per combination, export `bestBind` and `bestScoreBind`.
 3. `rollRandom` is straightforward in lifecycle context — always deterministic (no player suspension). Consume RNG, bind result, execute optional inner effects.
 4. `pushInterruptPhase` pushes to the interrupt stack. Similar to `popInterruptPhase` (ticket 004) but in reverse.
+5. If `pushInterruptPhase` is implemented as a thin delegate to existing turn-flow handlers, it should reuse the shared compiled delegate helper established in earlier tickets instead of adding another one-off wrapper.
 
 ## What to Change
 
@@ -42,6 +43,7 @@ In `effect-compiler-codegen.ts`:
 - `compileEvaluateSubset(desc, bodyCompiler)` — enumerate C(n,k) combinations (capped), compile inner body, evaluate per combination, track best score (comparison), decision scope rebasing per combination, export `bestBind`/`bestScoreBind`
 - `compileRollRandom(desc, bodyCompiler)` — consume RNG for range [min, max], bind result, compile and execute optional inner body
 - `compilePushInterruptPhase(desc)` — push phase to interrupt stack, initialize state
+- If `compilePushInterruptPhase` delegates to an existing runtime handler, implement it via the shared codegen delegate helper
 - Wire into `compilePatternDescriptor` dispatcher
 
 ## Files to Touch

@@ -22,7 +22,7 @@ Two information effects (tags 12, 13) fall back to the interpreter. `reveal` and
 
 1. Both effects follow a similar pattern: resolve target (tokens/zones), resolve observer (player), update `state.reveals` map.
 2. `conceal` is the inverse of `reveal` — removes entries from the reveals map.
-3. Since `effects-reveal.ts` is only ~220 lines, the compiled closures can replicate the logic directly without excessive duplication.
+3. Since `effects-reveal.ts` is only ~220 lines, the compiled closures can replicate the logic directly without excessive duplication, but if they instead delegate to existing handlers they should use the shared delegate-wrapper helper rather than ad hoc bridge code.
 4. Trace emission must match the interpreter's trace entries exactly.
 
 ## What to Change
@@ -40,6 +40,7 @@ In `effect-compiler-patterns.ts`:
 In `effect-compiler-codegen.ts`:
 - `compileReveal(desc)` — resolve targets and observers, update `state.reveals`, trace emission
 - `compileConceal(desc)` — resolve targets and observers, remove from `state.reveals`, trace emission
+- If reveal/conceal are implemented as delegates to existing handlers, route them through the shared codegen delegate helper rather than adding another bespoke adapter
 - Wire into `compilePatternDescriptor` dispatcher
 
 ## Files to Touch

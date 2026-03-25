@@ -82,6 +82,11 @@ export type GotoPhaseExactPattern = {
 type BindValuePayload = Extract<EffectAST, { readonly bindValue: unknown }>['bindValue'];
 type TransferVarPayload = Extract<EffectAST, { readonly transferVar: unknown }>['transferVar'];
 type LetPayload = Extract<EffectAST, { readonly let: unknown }>['let'];
+type SetMarkerPayload = Extract<EffectAST, { readonly setMarker: unknown }>['setMarker'];
+type ShiftMarkerPayload = Extract<EffectAST, { readonly shiftMarker: unknown }>['shiftMarker'];
+type SetGlobalMarkerPayload = Extract<EffectAST, { readonly setGlobalMarker: unknown }>['setGlobalMarker'];
+type FlipGlobalMarkerPayload = Extract<EffectAST, { readonly flipGlobalMarker: unknown }>['flipGlobalMarker'];
+type ShiftGlobalMarkerPayload = Extract<EffectAST, { readonly shiftGlobalMarker: unknown }>['shiftGlobalMarker'];
 
 export type BindValuePattern = {
   readonly kind: 'bindValue';
@@ -101,6 +106,31 @@ export type LetPattern = {
   readonly inEffects: LetPayload['in'];
 };
 
+export type SetMarkerPattern = {
+  readonly kind: 'setMarker';
+  readonly payload: SetMarkerPayload;
+};
+
+export type ShiftMarkerPattern = {
+  readonly kind: 'shiftMarker';
+  readonly payload: ShiftMarkerPayload;
+};
+
+export type SetGlobalMarkerPattern = {
+  readonly kind: 'setGlobalMarker';
+  readonly payload: SetGlobalMarkerPayload;
+};
+
+export type FlipGlobalMarkerPattern = {
+  readonly kind: 'flipGlobalMarker';
+  readonly payload: FlipGlobalMarkerPayload;
+};
+
+export type ShiftGlobalMarkerPattern = {
+  readonly kind: 'shiftGlobalMarker';
+  readonly payload: ShiftGlobalMarkerPayload;
+};
+
 export type PatternDescriptor =
   | SetVarPattern
   | AddVarPattern
@@ -109,7 +139,12 @@ export type PatternDescriptor =
   | GotoPhaseExactPattern
   | BindValuePattern
   | TransferVarPattern
-  | LetPattern;
+  | LetPattern
+  | SetMarkerPattern
+  | ShiftMarkerPattern
+  | SetGlobalMarkerPattern
+  | FlipGlobalMarkerPattern
+  | ShiftGlobalMarkerPattern;
 
 const isScalarLiteral = (expr: ValueExpr): expr is ScalarLiteral =>
   typeof expr === 'number' || typeof expr === 'boolean' || typeof expr === 'string';
@@ -332,6 +367,61 @@ export const matchLet = (node: EffectAST): LetPattern | null => {
   };
 };
 
+export const matchSetMarker = (node: EffectAST): SetMarkerPattern | null => {
+  if (!('setMarker' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'setMarker',
+    payload: node.setMarker,
+  };
+};
+
+export const matchShiftMarker = (node: EffectAST): ShiftMarkerPattern | null => {
+  if (!('shiftMarker' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'shiftMarker',
+    payload: node.shiftMarker,
+  };
+};
+
+export const matchSetGlobalMarker = (node: EffectAST): SetGlobalMarkerPattern | null => {
+  if (!('setGlobalMarker' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'setGlobalMarker',
+    payload: node.setGlobalMarker,
+  };
+};
+
+export const matchFlipGlobalMarker = (node: EffectAST): FlipGlobalMarkerPattern | null => {
+  if (!('flipGlobalMarker' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'flipGlobalMarker',
+    payload: node.flipGlobalMarker,
+  };
+};
+
+export const matchShiftGlobalMarker = (node: EffectAST): ShiftGlobalMarkerPattern | null => {
+  if (!('shiftGlobalMarker' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'shiftGlobalMarker',
+    payload: node.shiftGlobalMarker,
+  };
+};
+
 /*
  * Effect compilation status by EFFECT_KIND_TAG (34 tags, 0-33):
  *
@@ -388,17 +478,22 @@ export const classifyEffect = (node: EffectAST): PatternDescriptor | null => {
       return matchTransferVar(node);
     case EFFECT_KIND_TAG.let:
       return matchLet(node);
+    case EFFECT_KIND_TAG.setMarker:
+      return matchSetMarker(node);
+    case EFFECT_KIND_TAG.shiftMarker:
+      return matchShiftMarker(node);
+    case EFFECT_KIND_TAG.setGlobalMarker:
+      return matchSetGlobalMarker(node);
+    case EFFECT_KIND_TAG.flipGlobalMarker:
+      return matchFlipGlobalMarker(node);
+    case EFFECT_KIND_TAG.shiftGlobalMarker:
+      return matchShiftGlobalMarker(node);
     // Deferred: action-context-heavy, depends on __freeOperation/__actionClass
     // bindings only available during the operation pipeline. See Spec 81.
     case EFFECT_KIND_TAG.grantFreeOperation:
       return null;
     // Not-yet-compiled lifecycle tags — stubs for future tickets (002-009)
     case EFFECT_KIND_TAG.setActivePlayer:
-    case EFFECT_KIND_TAG.setMarker:
-    case EFFECT_KIND_TAG.shiftMarker:
-    case EFFECT_KIND_TAG.setGlobalMarker:
-    case EFFECT_KIND_TAG.flipGlobalMarker:
-    case EFFECT_KIND_TAG.shiftGlobalMarker:
     case EFFECT_KIND_TAG.advancePhase:
     case EFFECT_KIND_TAG.popInterruptPhase:
     case EFFECT_KIND_TAG.moveToken:

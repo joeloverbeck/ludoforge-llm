@@ -24,6 +24,7 @@ Two choice effects (tags 15, 16) fall back to the interpreter. In lifecycle effe
 2. **Recommended approach**: Compile the outer structure (check if lifecycle context, invoke decision resolution, handle `pendingChoice` propagation) but delegate the complex option resolution and tier query logic to existing helpers. This eliminates the interpreter dispatch overhead while keeping the diff manageable.
 3. The `pendingChoice` propagation contract: if the inner decision resolution returns a pending choice, the fragment must propagate it with current bindings and decision scope. This is already handled by the existing `composeFragments` infrastructure.
 4. Template effects within options: if option templates contain effects that need execution (e.g., to compute option viability), those effects should use the compiled path when available.
+5. Because this ticket is likely to delegate to existing choice handlers, it SHOULD reuse the shared compiled delegate helper for the outer adapter layer and keep any choice-specific logic focused on lifecycle/bot-resolution behavior rather than repeating bridge mechanics.
 
 ## What to Change
 
@@ -40,6 +41,7 @@ In `effect-compiler-patterns.ts`:
 In `effect-compiler-codegen.ts`:
 - `compileChooseOne(desc, bodyCompiler)` — compile outer decision structure, delegate option resolution to existing helpers, handle `pendingChoice` propagation, compile option template effects where possible
 - `compileChooseN(desc, bodyCompiler)` — same pattern with multi-choice cardinality handling
+- Reuse the shared delegate-wrapper helper for the common bridge mechanics if the implementation delegates to existing handler functions
 - Wire into `compilePatternDescriptor` dispatcher
 
 ## Files to Touch

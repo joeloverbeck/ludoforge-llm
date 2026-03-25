@@ -24,6 +24,7 @@ Three turn flow effects (tags 2, 24, 26) fall back to the interpreter. `setActiv
 2. `advancePhase` wraps existing `applyAdvancePhase` logic. The compiled closure may delegate to the existing runtime helper if the logic is complex, or inline it if simple enough. The key is eliminating the interpreter dispatch overhead.
 3. `popInterruptPhase` has moderate complexity (stack manipulation, lifecycle dispatch, usage reset). The compiled closure should delegate to the existing `applyPopInterruptPhase` helper to avoid duplicating complex logic, wrapping it in the compiled fragment contract.
 4. For `advancePhase` and `popInterruptPhase`, if the interpreter helper already returns an `EffectResult`-compatible shape, the compiled closure can wrap it directly. If not, adapter logic is needed.
+5. If this ticket adds a second or third delegate-style compiled leaf wrapper after marker effects, extract a shared helper in `effect-compiler-codegen.ts` for "compiled leaf effect delegates to existing handler while preserving bindings / tracker / decision scope". Do not keep copy-pasting that adapter shape across tickets.
 
 ## What to Change
 
@@ -42,6 +43,7 @@ In `effect-compiler-codegen.ts`:
 - `compileSetActivePlayer(desc)` — resolve player, update `state.activePlayer`, Zobrist hash update
 - `compileAdvancePhase(desc)` — delegate to existing `applyAdvancePhase` logic wrapped in compiled fragment contract
 - `compilePopInterruptPhase(desc)` — delegate to existing `applyPopInterruptPhase` logic wrapped in compiled fragment contract
+- If delegate-style wrappers now repeat the marker-effect bridge structure, extract the common adapter helper as part of this ticket rather than adding another bespoke wrapper pattern
 - Wire into `compilePatternDescriptor` dispatcher
 
 ## Files to Touch

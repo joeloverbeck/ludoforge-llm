@@ -24,6 +24,7 @@ Three iteration/reduction effects (tags 29, 30, 31) fall back to the interpreter
 2. `reduce` follows a similar iteration pattern but accumulates a value across iterations via a `next` expression. Binding export rules mirror `let` (`$`-prefix only, exclude `resultBind`).
 3. `removeByPriority` is extremely complex — it has multi-group iteration with per-group budget tracking, query scope refresh, and synthesized moveToken effects. Consider delegating to the existing interpreter helper wrapped in compiled fragment contract to avoid duplicating the logic.
 4. The spec explicitly marks `removeByPriority` as "Very High" complexity. A pragmatic approach: compile the outer structure but delegate inner removal logic to existing helpers.
+5. If `removeByPriority` ends up using a delegate-style compiled leaf wrapper, it should reuse the shared codegen delegate helper established by earlier tickets rather than introducing another one-off adapter.
 
 ## What to Change
 

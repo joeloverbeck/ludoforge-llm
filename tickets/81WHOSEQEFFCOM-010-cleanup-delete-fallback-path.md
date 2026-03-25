@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — effect-compiler.ts, effect-compiler-codegen.ts, effect-compiler-patterns.ts
-**Deps**: archive/tickets/81WHOSEQEFFCOM-001-classifyEffect-switch-dispatch.md, archive/tickets/81WHOSEQEFFCOM-002-variable-binding-leaf-effects.md, tickets/81WHOSEQEFFCOM-003-marker-effects.md, tickets/81WHOSEQEFFCOM-004-turn-flow-effects.md, tickets/81WHOSEQEFFCOM-005-token-effects.md, tickets/81WHOSEQEFFCOM-006-iteration-reduction-effects.md, tickets/81WHOSEQEFFCOM-007-information-effects.md, tickets/81WHOSEQEFFCOM-008-complex-control-flow-effects.md, tickets/81WHOSEQEFFCOM-009-lifecycle-choice-effects.md
+**Deps**: archive/tickets/81WHOSEQEFFCOM-001-classifyEffect-switch-dispatch.md, archive/tickets/81WHOSEQEFFCOM-002-variable-binding-leaf-effects.md, archive/tickets/81WHOSEQEFFCOM-003-marker-effects.md, tickets/81WHOSEQEFFCOM-004-turn-flow-effects.md, tickets/81WHOSEQEFFCOM-005-token-effects.md, tickets/81WHOSEQEFFCOM-006-iteration-reduction-effects.md, tickets/81WHOSEQEFFCOM-007-information-effects.md, tickets/81WHOSEQEFFCOM-008-complex-control-flow-effects.md, tickets/81WHOSEQEFFCOM-009-lifecycle-choice-effects.md
 
 ## Problem
 
@@ -26,6 +26,7 @@ Once all 33 lifecycle effect types have compiled closures (tickets 001-009), the
 3. `composeFragments` simplifies: no fallback-related branching.
 4. A runtime assertion in `compileFragmentList` or `classifyEffect` ensures `grantFreeOperation` is never encountered in lifecycle effect sequences. If encountered, throw an error (this would indicate a bug in the phase/lifecycle classification).
 5. CI assertion: `coverageRatio === 1.0` for all compiled lifecycle sequences in both FITL and Texas Hold'em.
+6. Before this cleanup lands, the delegate-style compiled leaf wrappers introduced in earlier tickets should already be consolidated behind a shared helper. Ticket 010 is not the place to introduce that helper for the first time; at most it should remove any dead or superseded adapter code left after tickets 004-009.
 
 ## What to Change
 

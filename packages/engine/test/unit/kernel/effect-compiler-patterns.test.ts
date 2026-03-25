@@ -10,10 +10,15 @@ import {
   matchBindValue,
   matchCompilableCondition,
   matchForEachPlayers,
+  matchFlipGlobalMarker,
   matchGotoPhaseExact,
   matchIf,
   matchLet,
+  matchSetGlobalMarker,
+  matchSetMarker,
   matchSetVar,
+  matchShiftGlobalMarker,
+  matchShiftMarker,
   matchSimpleNumericValue,
   matchSimpleValue,
   matchTransferVar,
@@ -241,7 +246,7 @@ describe('effect-compiler-patterns', () => {
       });
     });
 
-    it('matches bindValue, transferVar, and let without narrowing away full payload support', () => {
+    it('matches bindValue, transferVar, let, and marker effects without narrowing away full payload support', () => {
       assert.deepEqual(
         matchBindValue(eff({ bindValue: { bind: '$sum', value: { _t: 6, op: '+', left: 1, right: 2 } } })),
         {
@@ -285,6 +290,56 @@ describe('effect-compiler-patterns', () => {
           inEffects,
         },
       );
+
+      assert.deepEqual(
+        matchSetMarker(eff({ setMarker: { space: 'city:none', marker: 'supportOpposition', state: 'activeSupport' } })),
+        {
+          kind: 'setMarker',
+          payload: { space: 'city:none', marker: 'supportOpposition', state: 'activeSupport' },
+        },
+      );
+
+      assert.deepEqual(
+        matchShiftMarker(eff({ shiftMarker: { space: 'city:none', marker: 'supportOpposition', delta: 1 } })),
+        {
+          kind: 'shiftMarker',
+          payload: { space: 'city:none', marker: 'supportOpposition', delta: 1 },
+        },
+      );
+
+      assert.deepEqual(
+        matchSetGlobalMarker(eff({ setGlobalMarker: { marker: 'leaderFlipped', state: 'yes' } })),
+        {
+          kind: 'setGlobalMarker',
+          payload: { marker: 'leaderFlipped', state: 'yes' },
+        },
+      );
+
+      assert.deepEqual(
+        matchFlipGlobalMarker(eff({
+          flipGlobalMarker: {
+            marker: { _t: 2, ref: 'binding', name: '$marker' },
+            stateA: { _t: 2, ref: 'binding', name: '$stateA' },
+            stateB: { _t: 2, ref: 'binding', name: '$stateB' },
+          },
+        })),
+        {
+          kind: 'flipGlobalMarker',
+          payload: {
+            marker: { _t: 2, ref: 'binding', name: '$marker' },
+            stateA: { _t: 2, ref: 'binding', name: '$stateA' },
+            stateB: { _t: 2, ref: 'binding', name: '$stateB' },
+          },
+        },
+      );
+
+      assert.deepEqual(
+        matchShiftGlobalMarker(eff({ shiftGlobalMarker: { marker: 'momentum', delta: -1 } })),
+        {
+          kind: 'shiftGlobalMarker',
+          payload: { marker: 'momentum', delta: -1 },
+        },
+      );
     });
   });
 
@@ -304,6 +359,11 @@ describe('effect-compiler-patterns', () => {
       assert.equal(classifyEffect(eff({ bindValue: { bind: '$x', value: { _t: 6, op: '+', left: 1, right: 2 } } }))?.kind, 'bindValue');
       assert.equal(classifyEffect(eff({ transferVar: { from: { scope: 'global', var: 'a' }, to: { scope: 'global', var: 'b' }, amount: 1 } }))?.kind, 'transferVar');
       assert.equal(classifyEffect(eff({ let: { bind: 'x', value: { _t: 6, op: '+', left: 1, right: 2 }, in: [] } }))?.kind, 'let');
+      assert.equal(classifyEffect(eff({ setMarker: { space: 'city:none', marker: 'supportOpposition', state: 'activeSupport' } }))?.kind, 'setMarker');
+      assert.equal(classifyEffect(eff({ shiftMarker: { space: 'city:none', marker: 'supportOpposition', delta: 1 } }))?.kind, 'shiftMarker');
+      assert.equal(classifyEffect(eff({ setGlobalMarker: { marker: 'leaderFlipped', state: 'yes' } }))?.kind, 'setGlobalMarker');
+      assert.equal(classifyEffect(eff({ flipGlobalMarker: { marker: 'leaderFlipped', stateA: 'no', stateB: 'yes' } }))?.kind, 'flipGlobalMarker');
+      assert.equal(classifyEffect(eff({ shiftGlobalMarker: { marker: 'momentum', delta: -1 } }))?.kind, 'shiftGlobalMarker');
 
       assert.equal(classifyEffect(eff({ chooseOne: { internalDecisionId: 'd1', bind: 'choice', options: { query: 'players' } } })), null);
       assert.equal(classifyEffect(eff({ moveToken: { token: 't1', from: 'deck', to: 'discard' } })), null);
@@ -338,16 +398,26 @@ describe('effect-compiler-patterns', () => {
 
       const letDesc = classifyEffect(eff({ let: { bind: 'x', value: { _t: 6, op: '+', left: 1, right: 2 }, in: [] } }));
       assert.equal(letDesc?.kind, 'let');
+
+      const setMarkerDesc = classifyEffect(eff({ setMarker: { space: 'city:none', marker: 'supportOpposition', state: 'activeSupport' } }));
+      assert.equal(setMarkerDesc?.kind, 'setMarker');
+
+      const shiftMarkerDesc = classifyEffect(eff({ shiftMarker: { space: 'city:none', marker: 'supportOpposition', delta: 1 } }));
+      assert.equal(shiftMarkerDesc?.kind, 'shiftMarker');
+
+      const setGlobalMarkerDesc = classifyEffect(eff({ setGlobalMarker: { marker: 'leaderFlipped', state: 'yes' } }));
+      assert.equal(setGlobalMarkerDesc?.kind, 'setGlobalMarker');
+
+      const flipGlobalMarkerDesc = classifyEffect(eff({ flipGlobalMarker: { marker: 'leaderFlipped', stateA: 'no', stateB: 'yes' } }));
+      assert.equal(flipGlobalMarkerDesc?.kind, 'flipGlobalMarker');
+
+      const shiftGlobalMarkerDesc = classifyEffect(eff({ shiftGlobalMarker: { marker: 'momentum', delta: -1 } }));
+      assert.equal(shiftGlobalMarkerDesc?.kind, 'shiftGlobalMarker');
     });
 
     it('returns null for every not-yet-compiled _k tag', () => {
       const stubTags: Array<{ tag: string; node: EffectAST }> = [
         { tag: 'setActivePlayer', node: eff({ setActivePlayer: { player: 'active' } }) },
-        { tag: 'setMarker', node: eff({ setMarker: { space: 'zone1', marker: 'm', state: 0 } }) },
-        { tag: 'shiftMarker', node: eff({ shiftMarker: { space: 'zone1', marker: 'm', delta: 1 } }) },
-        { tag: 'setGlobalMarker', node: eff({ setGlobalMarker: { marker: 'm', state: 0 } }) },
-        { tag: 'flipGlobalMarker', node: eff({ flipGlobalMarker: { marker: 'm', stateA: 0, stateB: 1 } }) },
-        { tag: 'shiftGlobalMarker', node: eff({ shiftGlobalMarker: { marker: 'm', delta: 1 } }) },
         { tag: 'moveToken', node: eff({ moveToken: { token: 't1', from: 'z1', to: 'z2' } }) },
         { tag: 'moveAll', node: eff({ moveAll: { from: 'z1', to: 'z2' } }) },
         { tag: 'moveTokenAdjacent', node: eff({ moveTokenAdjacent: { token: 't1', from: 'z1' } }) },

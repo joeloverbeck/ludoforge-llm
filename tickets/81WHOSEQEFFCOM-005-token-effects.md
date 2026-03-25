@@ -28,6 +28,7 @@ Eight token effects (tags 4-11) fall back to the interpreter. Token effects are 
 4. `draw` is a bounded loop: moves `count` tokens from source to target.
 5. `moveTokenAdjacent` needs the adjacency graph from `ctx.adjacencyGraph` for target zone resolution.
 6. Given the size of `effects-token.ts` (1098 lines), compiled closures should either (a) extract shared helpers that both interpreted and compiled paths use, or (b) delegate to the existing interpreter helpers wrapped in the compiled fragment contract — whichever keeps the diff smaller and more reviewable.
+7. If delegate-style wrappers are used for multiple token effects, this ticket SHOULD consolidate them behind a shared codegen helper instead of introducing eight near-identical bridge adapters. That keeps the compiler robust and aligns with Foundations 9 and 10.
 
 ## What to Change
 
@@ -55,6 +56,7 @@ In `effect-compiler-codegen.ts`:
 - `compileSetTokenProp(desc)` — resolve token, create modified copy with new prop, replace in zone, `invalidateTokenStateIndex`
 - `compileDraw(desc)` — bounded loop moving `count` tokens, `invalidateTokenStateIndex`
 - `compileShuffle(desc)` — randomize zone token order using RNG, `invalidateTokenStateIndex`
+- If two or more token effects delegate to existing runtime handlers instead of inlining their semantics, extract or reuse a shared delegate-wrapper helper rather than repeating binding/tracker/decision-scope adapter code per effect
 - Wire into `compilePatternDescriptor` dispatcher
 
 ## Files to Touch

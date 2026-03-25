@@ -11,13 +11,18 @@ import {
   type AddVarPattern,
   type BindValuePattern,
   type CompilableConditionPattern,
+  type FlipGlobalMarkerPattern,
   type ForEachPlayersPattern,
   type GotoPhaseExactPattern,
   type IfPattern,
   type LetPattern,
   type LogicalConditionPattern,
   type PatternDescriptor,
+  type SetGlobalMarkerPattern,
+  type SetMarkerPattern,
   type SetVarPattern,
+  type ShiftGlobalMarkerPattern,
+  type ShiftMarkerPattern,
   type SimpleComparisonPattern,
   type SimpleNumericValuePattern,
   type SimpleValuePattern,
@@ -25,6 +30,13 @@ import {
 } from './effect-compiler-patterns.js';
 import type { CompiledEffectContext, CompiledEffectFn } from './effect-compiler-types.js';
 import { effectRuntimeError } from './effect-error.js';
+import {
+  applyFlipGlobalMarker,
+  applySetGlobalMarker,
+  applySetMarker,
+  applyShiftGlobalMarker,
+  applyShiftMarker,
+} from './effects-choice.js';
 import { applyTransferVar } from './effects-resource.js';
 import { applyGotoPhaseExact } from './effects-turn-flow.js';
 import { gotoPhaseExact as gotoPhaseExactBuilder } from './ast-builders.js';
@@ -624,6 +636,131 @@ export const compileTransferVar = (desc: TransferVarPattern): CompiledEffectFrag
   },
 });
 
+export const compileSetMarker = (desc: SetMarkerPattern): CompiledEffectFragment => ({
+  nodeCount: 1,
+  execute: (state, rng, bindings, ctx) => {
+    if (ctx.effectBudget !== undefined) {
+      consumeEffectBudget(ctx.effectBudget, 'setMarker');
+    }
+    const effectCtx = createCompiledExecutionContext(state, rng, bindings, ctx);
+    const result = applySetMarker(
+      { _k: EFFECT_KIND_TAG.setMarker, setMarker: desc.payload },
+      toEffectEnv(effectCtx),
+      {
+        state,
+        rng,
+        bindings,
+        decisionScope: ctx.decisionScope ?? emptyScope(),
+        ...(ctx.effectPath === undefined ? {} : { effectPath: ctx.effectPath }),
+        ...(ctx.tracker === undefined ? {} : { tracker: ctx.tracker }),
+      },
+      { remaining: 10_000, max: 10_000 },
+      () => { throw new Error('applyBatch not available in compiled setMarker'); },
+    );
+    return { ...result, bindings };
+  },
+});
+
+export const compileShiftMarker = (desc: ShiftMarkerPattern): CompiledEffectFragment => ({
+  nodeCount: 1,
+  execute: (state, rng, bindings, ctx) => {
+    if (ctx.effectBudget !== undefined) {
+      consumeEffectBudget(ctx.effectBudget, 'shiftMarker');
+    }
+    const effectCtx = createCompiledExecutionContext(state, rng, bindings, ctx);
+    const result = applyShiftMarker(
+      { _k: EFFECT_KIND_TAG.shiftMarker, shiftMarker: desc.payload },
+      toEffectEnv(effectCtx),
+      {
+        state,
+        rng,
+        bindings,
+        decisionScope: ctx.decisionScope ?? emptyScope(),
+        ...(ctx.effectPath === undefined ? {} : { effectPath: ctx.effectPath }),
+        ...(ctx.tracker === undefined ? {} : { tracker: ctx.tracker }),
+      },
+      { remaining: 10_000, max: 10_000 },
+      () => { throw new Error('applyBatch not available in compiled shiftMarker'); },
+    );
+    return { ...result, bindings };
+  },
+});
+
+export const compileSetGlobalMarker = (desc: SetGlobalMarkerPattern): CompiledEffectFragment => ({
+  nodeCount: 1,
+  execute: (state, rng, bindings, ctx) => {
+    if (ctx.effectBudget !== undefined) {
+      consumeEffectBudget(ctx.effectBudget, 'setGlobalMarker');
+    }
+    const effectCtx = createCompiledExecutionContext(state, rng, bindings, ctx);
+    const result = applySetGlobalMarker(
+      { _k: EFFECT_KIND_TAG.setGlobalMarker, setGlobalMarker: desc.payload },
+      toEffectEnv(effectCtx),
+      {
+        state,
+        rng,
+        bindings,
+        decisionScope: ctx.decisionScope ?? emptyScope(),
+        ...(ctx.effectPath === undefined ? {} : { effectPath: ctx.effectPath }),
+        ...(ctx.tracker === undefined ? {} : { tracker: ctx.tracker }),
+      },
+      { remaining: 10_000, max: 10_000 },
+      () => { throw new Error('applyBatch not available in compiled setGlobalMarker'); },
+    );
+    return { ...result, bindings };
+  },
+});
+
+export const compileFlipGlobalMarker = (desc: FlipGlobalMarkerPattern): CompiledEffectFragment => ({
+  nodeCount: 1,
+  execute: (state, rng, bindings, ctx) => {
+    if (ctx.effectBudget !== undefined) {
+      consumeEffectBudget(ctx.effectBudget, 'flipGlobalMarker');
+    }
+    const effectCtx = createCompiledExecutionContext(state, rng, bindings, ctx);
+    const result = applyFlipGlobalMarker(
+      { _k: EFFECT_KIND_TAG.flipGlobalMarker, flipGlobalMarker: desc.payload },
+      toEffectEnv(effectCtx),
+      {
+        state,
+        rng,
+        bindings,
+        decisionScope: ctx.decisionScope ?? emptyScope(),
+        ...(ctx.effectPath === undefined ? {} : { effectPath: ctx.effectPath }),
+        ...(ctx.tracker === undefined ? {} : { tracker: ctx.tracker }),
+      },
+      { remaining: 10_000, max: 10_000 },
+      () => { throw new Error('applyBatch not available in compiled flipGlobalMarker'); },
+    );
+    return { ...result, bindings };
+  },
+});
+
+export const compileShiftGlobalMarker = (desc: ShiftGlobalMarkerPattern): CompiledEffectFragment => ({
+  nodeCount: 1,
+  execute: (state, rng, bindings, ctx) => {
+    if (ctx.effectBudget !== undefined) {
+      consumeEffectBudget(ctx.effectBudget, 'shiftGlobalMarker');
+    }
+    const effectCtx = createCompiledExecutionContext(state, rng, bindings, ctx);
+    const result = applyShiftGlobalMarker(
+      { _k: EFFECT_KIND_TAG.shiftGlobalMarker, shiftGlobalMarker: desc.payload },
+      toEffectEnv(effectCtx),
+      {
+        state,
+        rng,
+        bindings,
+        decisionScope: ctx.decisionScope ?? emptyScope(),
+        ...(ctx.effectPath === undefined ? {} : { effectPath: ctx.effectPath }),
+        ...(ctx.tracker === undefined ? {} : { tracker: ctx.tracker }),
+      },
+      { remaining: 10_000, max: 10_000 },
+      () => { throw new Error('applyBatch not available in compiled shiftGlobalMarker'); },
+    );
+    return { ...result, bindings };
+  },
+});
+
 export const compileLet = (
   desc: LetPattern,
   compileBody: BodyCompiler,
@@ -695,6 +832,16 @@ export const compilePatternDescriptor = (
       return compileBindValue(desc);
     case 'transferVar':
       return compileTransferVar(desc);
+    case 'setMarker':
+      return compileSetMarker(desc);
+    case 'shiftMarker':
+      return compileShiftMarker(desc);
+    case 'setGlobalMarker':
+      return compileSetGlobalMarker(desc);
+    case 'flipGlobalMarker':
+      return compileFlipGlobalMarker(desc);
+    case 'shiftGlobalMarker':
+      return compileShiftGlobalMarker(desc);
     case 'let':
       return compileLet(desc, compileBody);
     default:

@@ -5,6 +5,7 @@ import {
   applyEffect,
   asPhaseId,
   asPlayerId,
+  asZoneId,
   buildAdjacencyGraph,
   buildRuntimeTableIndex,
   compilePatternDescriptor,
@@ -47,8 +48,22 @@ const makeDef = (): GameDef => ({
     { name: 'ready', type: 'boolean', init: false },
   ],
   zoneVars: [],
-  zones: [],
+  zones: [
+    { id: asZoneId('city:none'), zoneKind: 'board', owner: 'none', visibility: 'public', ordering: 'set' },
+    { id: asZoneId('province:none'), zoneKind: 'board', owner: 'none', visibility: 'public', ordering: 'set' },
+  ],
   tokenTypes: [],
+  markerLattices: [
+    {
+      id: 'supportOpposition',
+      states: ['activeOpposition', 'passiveOpposition', 'neutral', 'passiveSupport', 'activeSupport'],
+      defaultState: 'neutral',
+    },
+  ],
+  globalMarkerLattices: [
+    { id: 'leaderFlipped', states: ['no', 'yes'], defaultState: 'no' },
+    { id: 'momentum', states: ['low', 'mid', 'high'], defaultState: 'mid' },
+  ],
   setup: [],
   turnStructure: {
     phases: [
@@ -76,7 +91,10 @@ const makeState = (): GameState => ({
   },
   zoneVars: {},
   playerCount: 3,
-  zones: {},
+  zones: {
+    'city:none': [],
+    'province:none': [],
+  },
   nextTokenOrdinal: 0,
   currentPhase: asPhaseId('main'),
   activePlayer: asPlayerId(1),
@@ -86,7 +104,14 @@ const makeState = (): GameState => ({
   _runningHash: 0n,
   actionUsage: {},
   turnOrderState: { type: 'roundRobin' },
-  markers: {},
+  markers: {
+    'city:none': { supportOpposition: 'neutral' },
+    'province:none': { supportOpposition: 'passiveOpposition' },
+  },
+  globalMarkers: {
+    leaderFlipped: 'no',
+    momentum: 'mid',
+  },
 });
 
 const compileEffects = (effects: readonly EffectAST[]): CompiledEffectFragment | null => {
@@ -366,6 +391,75 @@ describe('effect-compiler-codegen', () => {
     compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
   });
 
+  it('compileSetMarker matches interpreter for zone marker writes', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = eff({
+      setMarker: {
+        space: 'city:none',
+        marker: 'supportOpposition',
+        state: 'activeSupport',
+      },
+    });
+
+    compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
+  });
+
+  it('compileShiftMarker matches interpreter for lattice shifts', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = eff({
+      shiftMarker: {
+        space: 'province:none',
+        marker: 'supportOpposition',
+        delta: 2,
+      },
+    });
+
+    compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
+  });
+
+  it('compileSetGlobalMarker matches interpreter for global marker writes', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = eff({
+      setGlobalMarker: {
+        marker: 'leaderFlipped',
+        state: 'yes',
+      },
+    });
+
+    compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
+  });
+
+  it('compileFlipGlobalMarker matches interpreter for dynamic binding-driven marker flips', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = eff({
+      flipGlobalMarker: {
+        marker: { _t: 2, ref: 'binding', name: '$marker' },
+        stateA: { _t: 2, ref: 'binding', name: '$stateA' },
+        stateB: { _t: 2, ref: 'binding', name: '$stateB' },
+      },
+    });
+
+    const bindings = { $marker: 'leaderFlipped', $stateA: 'no', $stateB: 'yes' };
+    compareResults(def, runCompiled(def, state, effect, bindings), runInterpreted(def, state, effect, bindings));
+  });
+
+  it('compileShiftGlobalMarker matches interpreter for global lattice shifts', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = eff({
+      shiftGlobalMarker: {
+        marker: 'momentum',
+        delta: -1,
+      },
+    });
+
+    compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
+  });
+
   it('compilePatternDescriptor dispatches all supported compiled descriptors', () => {
     const effects: readonly EffectAST[] = [
       eff({ setVar: { scope: 'global', var: 'score', value: 1 } }),
@@ -376,6 +470,11 @@ describe('effect-compiler-codegen', () => {
       eff({ bindValue: { bind: '$x', value: { _t: 6, op: '+', left: 1, right: 2 } } }),
       eff({ transferVar: { from: { scope: 'global', var: 'bank' }, to: { scope: 'global', var: 'count' }, amount: 1 } }),
       eff({ let: { bind: 'tmp', value: { _t: 6, op: '+', left: 1, right: 2 }, in: [] } }),
+      eff({ setMarker: { space: 'city:none', marker: 'supportOpposition', state: 'activeSupport' } }),
+      eff({ shiftMarker: { space: 'city:none', marker: 'supportOpposition', delta: 1 } }),
+      eff({ setGlobalMarker: { marker: 'leaderFlipped', state: 'yes' } }),
+      eff({ flipGlobalMarker: { marker: 'leaderFlipped', stateA: 'no', stateB: 'yes' } }),
+      eff({ shiftGlobalMarker: { marker: 'momentum', delta: 1 } }),
     ];
 
     for (const effect of effects) {
@@ -497,6 +596,44 @@ describe('effect-compiler-codegen', () => {
         to: { scope: 'pvar', player: 'active', var: 'coins' },
         amount: 2,
         actualBind: '$actual',
+      },
+    });
+
+    const mutableState = createMutableState(makeState());
+    const tracker = createDraftTracker();
+    const compiledResult = runCompiledWithTracker(def, mutableState, effect, tracker);
+    const frozenResult: EffectResult = { ...compiledResult, state: freezeState(mutableState) };
+
+    const interpretedResult = runInterpreted(def, makeState(), effect);
+    compareResults(def, frozenResult, interpretedResult);
+  });
+
+  it('compileSetMarker with tracker produces bit-identical result to interpreter', () => {
+    const def = makeDef();
+    const effect: EffectAST = eff({
+      setMarker: {
+        space: 'city:none',
+        marker: 'supportOpposition',
+        state: 'activeSupport',
+      },
+    });
+
+    const mutableState = createMutableState(makeState());
+    const tracker = createDraftTracker();
+    const compiledResult = runCompiledWithTracker(def, mutableState, effect, tracker);
+    const frozenResult: EffectResult = { ...compiledResult, state: freezeState(mutableState) };
+
+    const interpretedResult = runInterpreted(def, makeState(), effect);
+    compareResults(def, frozenResult, interpretedResult);
+  });
+
+  it('compileShiftMarker with tracker produces bit-identical result to interpreter', () => {
+    const def = makeDef();
+    const effect: EffectAST = eff({
+      shiftMarker: {
+        space: 'province:none',
+        marker: 'supportOpposition',
+        delta: 2,
       },
     });
 

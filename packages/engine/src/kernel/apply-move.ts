@@ -91,6 +91,13 @@ import { resolveMoveDecisionSequence } from './move-decision-sequence.js';
 
 const DEFAULT_MAX_TRIGGER_DEPTH = 8;
 
+const shouldVerifyHash = (options: ExecutionOptions | undefined, turnCount: number): boolean => {
+  const flag = options?.verifyIncrementalHash;
+  if (flag === undefined || flag === false) return false;
+  if (flag === true) return true;
+  return flag.interval > 0 && turnCount % flag.interval === 0;
+};
+
 const findAction = (def: GameDef, actionId: Move['actionId']): ActionDef | undefined =>
   def.actions.find((action) => action.id === actionId);
 
@@ -1351,6 +1358,19 @@ const applyMoveCore = (
     _runningHash: reconciledHash,
   };
   perfEnd(profiler, 'computeFullHash', t0_hash);
+
+  if (shouldVerifyHash(options, stateWithHash.turnCount)) {
+    const verifyTable = cachedRuntime?.zobristTable ?? createZobristTable(def);
+    const fullHash = computeFullHash(verifyTable, stateWithHash);
+    if (fullHash !== stateWithHash.stateHash) {
+      throw kernelRuntimeError('HASH_DRIFT', 'Incremental Zobrist hash drift detected', {
+        expected: fullHash,
+        actual: stateWithHash.stateHash,
+        turnCount: stateWithHash.turnCount,
+        currentPhase: stateWithHash.currentPhase as string,
+      });
+    }
+  }
 
   return {
     state: stateWithHash,

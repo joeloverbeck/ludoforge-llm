@@ -5,6 +5,8 @@ import {
   applyEffects,
   asPhaseId,
   asPlayerId,
+  asTokenId,
+  asZoneId,
   buildAdjacencyGraph,
   buildRuntimeTableIndex,
   compileAllLifecycleEffects,
@@ -99,6 +101,27 @@ const makeState = (): GameState => ({
   actionUsage: {},
   turnOrderState: { type: 'roundRobin' },
   markers: {},
+});
+
+const makeTokenDef = (): GameDef => ({
+  ...makeDef(),
+  zones: [
+    { id: asZoneId('deck:none'), zoneKind: 'board', owner: 'none', visibility: 'public', ordering: 'stack' },
+    { id: asZoneId('hand:none'), zoneKind: 'board', owner: 'none', visibility: 'public', ordering: 'stack' },
+  ],
+  tokenTypes: [{ id: 'card', props: { face: 'string' } }],
+});
+
+const makeTokenState = (): GameState => ({
+  ...makeState(),
+  zones: {
+    'deck:none': [
+      { id: asTokenId('tok_card_0'), type: 'card', props: { face: 'down' } },
+      { id: asTokenId('tok_card_1'), type: 'card', props: { face: 'down' } },
+    ],
+    'hand:none': [],
+  },
+  nextTokenOrdinal: 2,
 });
 
 const makeCompiledContext = (def: GameDef): CompiledEffectContext => ({
@@ -276,6 +299,39 @@ describe('effect-compiler orchestrator', () => {
     // walkEffects now traverses rollRandom.in, finding the nested setVar (compiled).
     // 2 nodes: rollRandom (not compiled) + setVar (compiled) = 1/2
     assert.equal(compiled.coverageRatio, 0.5);
+    compareResults(
+      def,
+      compiled.execute(state, rng, {}, makeCompiledContext(def)),
+      applyEffects(
+        effects,
+        createExecutionEffectContext({
+          def,
+          adjacencyGraph: buildAdjacencyGraph(def.zones),
+          runtimeTableIndex: buildRuntimeTableIndex(def),
+          state,
+          rng,
+          activePlayer: asPlayerId(1),
+          actorPlayer: asPlayerId(0),
+          bindings: {},
+          moveParams: {},
+          resources: createEvalRuntimeResources(),
+        }),
+      ),
+    );
+  });
+
+  it('treats token-only lifecycle sequences as fully compilable with interpreter parity', () => {
+    const def = makeTokenDef();
+    const effects: readonly EffectAST[] = [
+      eff({ shuffle: { zone: 'deck:none' } }),
+      eff({ draw: { from: 'deck:none', to: 'hand:none', count: 1 } }),
+      eff({ createToken: { type: 'card', zone: 'hand:none', props: { face: 'up' } } }),
+    ];
+    const state = makeTokenState();
+    const rng = createRng(37n);
+    const compiled = compileEffectSequence(asPhaseId('main'), 'onEnter', effects);
+
+    assert.equal(compiled.coverageRatio, 1);
     compareResults(
       def,
       compiled.execute(state, rng, {}, makeCompiledContext(def)),

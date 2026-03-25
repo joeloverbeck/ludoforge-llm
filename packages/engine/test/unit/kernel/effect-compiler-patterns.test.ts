@@ -9,17 +9,25 @@ import {
   matchAddVar,
   matchBindValue,
   matchCompilableCondition,
+  matchCreateToken,
+  matchDestroyToken,
+  matchDraw,
   matchForEachPlayers,
   matchFlipGlobalMarker,
   matchGotoPhaseExact,
   matchIf,
   matchLet,
   matchAdvancePhase,
+  matchMoveAll,
+  matchMoveToken,
+  matchMoveTokenAdjacent,
   matchPopInterruptPhase,
   matchSetActivePlayer,
   matchSetGlobalMarker,
   matchSetMarker,
+  matchSetTokenProp,
   matchSetVar,
+  matchShuffle,
   matchShiftGlobalMarker,
   matchShiftMarker,
   matchSimpleNumericValue,
@@ -356,6 +364,67 @@ describe('effect-compiler-patterns', () => {
           payload: { marker: 'momentum', delta: -1 },
         },
       );
+
+      assert.deepEqual(
+        matchMoveToken(eff({ moveToken: { token: '$token', from: 'deck', to: 'hand', position: 'random' } })),
+        {
+          kind: 'moveToken',
+          payload: { token: '$token', from: 'deck', to: 'hand', position: 'random' },
+        },
+      );
+
+      assert.deepEqual(
+        matchMoveAll(eff({ moveAll: { from: 'deck', to: 'discard', filter: { op: '==', left: { _t: 2, ref: 'binding', name: '$token' }, right: { _t: 2, ref: 'binding', name: '$token' } } } })),
+        {
+          kind: 'moveAll',
+          payload: { from: 'deck', to: 'discard', filter: { op: '==', left: { _t: 2, ref: 'binding', name: '$token' }, right: { _t: 2, ref: 'binding', name: '$token' } } },
+        },
+      );
+
+      assert.deepEqual(
+        matchMoveTokenAdjacent(eff({ moveTokenAdjacent: { token: '$token', from: 'city:none', direction: '$to' } })),
+        {
+          kind: 'moveTokenAdjacent',
+          payload: { token: '$token', from: 'city:none', direction: '$to' },
+        },
+      );
+
+      assert.deepEqual(
+        matchDraw(eff({ draw: { from: 'deck', to: 'hand', count: 2 } })),
+        {
+          kind: 'draw',
+          payload: { from: 'deck', to: 'hand', count: 2 },
+        },
+      );
+
+      assert.deepEqual(matchShuffle(eff({ shuffle: { zone: 'deck' } })), {
+        kind: 'shuffle',
+        payload: { zone: 'deck' },
+      });
+
+      assert.deepEqual(
+        matchCreateToken(eff({ createToken: { type: 'card', zone: 'deck', props: { rank: 'A' } } })),
+        {
+          kind: 'createToken',
+          payload: { type: 'card', zone: 'deck', props: { rank: 'A' } },
+        },
+      );
+
+      assert.deepEqual(
+        matchDestroyToken(eff({ destroyToken: { token: '$token' } })),
+        {
+          kind: 'destroyToken',
+          payload: { token: '$token' },
+        },
+      );
+
+      assert.deepEqual(
+        matchSetTokenProp(eff({ setTokenProp: { token: '$token', prop: 'face', value: 'up' } })),
+        {
+          kind: 'setTokenProp',
+          payload: { token: '$token', prop: 'face', value: 'up' },
+        },
+      );
     });
   });
 
@@ -385,7 +454,7 @@ describe('effect-compiler-patterns', () => {
       assert.equal(classifyEffect(eff({ shiftGlobalMarker: { marker: 'momentum', delta: -1 } }))?.kind, 'shiftGlobalMarker');
 
       assert.equal(classifyEffect(eff({ chooseOne: { internalDecisionId: 'd1', bind: 'choice', options: { query: 'players' } } })), null);
-      assert.equal(classifyEffect(eff({ moveToken: { token: 't1', from: 'deck', to: 'discard' } })), null);
+      assert.equal(classifyEffect(eff({ moveToken: { token: '$token', from: 'deck', to: 'discard' } }))?.kind, 'moveToken');
       assert.equal(classifyEffect(eff({ rollRandom: { bind: 'roll', min: 1, max: 6, in: [] } })), null);
     });
 
@@ -441,18 +510,34 @@ describe('effect-compiler-patterns', () => {
 
       const shiftGlobalMarkerDesc = classifyEffect(eff({ shiftGlobalMarker: { marker: 'momentum', delta: -1 } }));
       assert.equal(shiftGlobalMarkerDesc?.kind, 'shiftGlobalMarker');
+
+      const moveTokenDesc = classifyEffect(eff({ moveToken: { token: '$token', from: 'deck', to: 'hand' } }));
+      assert.equal(moveTokenDesc?.kind, 'moveToken');
+
+      const moveAllDesc = classifyEffect(eff({ moveAll: { from: 'deck', to: 'discard' } }));
+      assert.equal(moveAllDesc?.kind, 'moveAll');
+
+      const moveTokenAdjacentDesc = classifyEffect(eff({ moveTokenAdjacent: { token: '$token', from: 'city:none', direction: '$to' } }));
+      assert.equal(moveTokenAdjacentDesc?.kind, 'moveTokenAdjacent');
+
+      const drawDesc = classifyEffect(eff({ draw: { from: 'deck', to: 'hand', count: 1 } }));
+      assert.equal(drawDesc?.kind, 'draw');
+
+      const shuffleDesc = classifyEffect(eff({ shuffle: { zone: 'deck' } }));
+      assert.equal(shuffleDesc?.kind, 'shuffle');
+
+      const createTokenDesc = classifyEffect(eff({ createToken: { type: 'card', zone: 'deck' } }));
+      assert.equal(createTokenDesc?.kind, 'createToken');
+
+      const destroyTokenDesc = classifyEffect(eff({ destroyToken: { token: '$token' } }));
+      assert.equal(destroyTokenDesc?.kind, 'destroyToken');
+
+      const setTokenPropDesc = classifyEffect(eff({ setTokenProp: { token: '$token', prop: 'face', value: 'up' } }));
+      assert.equal(setTokenPropDesc?.kind, 'setTokenProp');
     });
 
-    it('returns null for every not-yet-compiled _k tag', () => {
+    it('returns null for every remaining not-yet-compiled _k tag', () => {
       const stubTags: Array<{ tag: string; node: EffectAST }> = [
-        { tag: 'moveToken', node: eff({ moveToken: { token: 't1', from: 'z1', to: 'z2' } }) },
-        { tag: 'moveAll', node: eff({ moveAll: { from: 'z1', to: 'z2' } }) },
-        { tag: 'moveTokenAdjacent', node: eff({ moveTokenAdjacent: { token: 't1', from: 'z1' } }) },
-        { tag: 'draw', node: eff({ draw: { from: 'deck', to: 'hand', count: 2 } }) },
-        { tag: 'shuffle', node: eff({ shuffle: { zone: 'deck' } }) },
-        { tag: 'createToken', node: eff({ createToken: { type: 'card', zone: 'z1' } }) },
-        { tag: 'destroyToken', node: eff({ destroyToken: { token: 't1' } }) },
-        { tag: 'setTokenProp', node: eff({ setTokenProp: { token: 't1', prop: 'face', value: 'up' } }) },
         { tag: 'reveal', node: eff({ reveal: { zone: 'hand', to: 'all' } }) },
         { tag: 'conceal', node: eff({ conceal: { zone: 'hand' } }) },
         { tag: 'reduce', node: eff({ reduce: { itemBind: 'x', accBind: 'acc', over: { query: 'players' }, initial: 0, next: 0, resultBind: 'r', in: [] } }) },
@@ -494,7 +579,7 @@ describe('effect-compiler-patterns', () => {
             when: { op: '==', left: { _t: 2, ref: 'gvar', var: 'phase' }, right: 'deal' },
             then: [
               eff({ addVar: { scope: 'global', var: 'pot', delta: 1 } }),
-              eff({ moveToken: { token: 't1', from: 'deck', to: 'board' } }),
+              eff({ moveToken: { token: '$token', from: 'deck', to: 'board' } }),
             ],
             else: [
               eff({
@@ -512,7 +597,7 @@ describe('effect-compiler-patterns', () => {
         }),
       ];
 
-      assert.equal(computeCoverageRatio(effects), 5 / 7);
+      assert.equal(computeCoverageRatio(effects), 6 / 7);
     });
 
     it('returns 1 for a fully compilable tree', () => {
@@ -543,7 +628,7 @@ describe('effect-compiler-patterns', () => {
         eff({ moveToken: { token: 't1', from: 'z1', to: 'z2' } }),
       ];
 
-      assert.equal(computeCoverageRatio(effects), 3 / 4);
+      assert.equal(computeCoverageRatio(effects), 1);
     });
 
     it('traverses let.in bodies via walkEffects', () => {
@@ -559,8 +644,8 @@ describe('effect-compiler-patterns', () => {
           },
         }),
       ];
-      // 3 nodes: let (compiled) + setVar (compiled) + moveToken (not compiled) = 2/3
-      assert.equal(computeCoverageRatio(effects), 2 / 3);
+      // 3 nodes: let + setVar + moveToken are all compiled.
+      assert.equal(computeCoverageRatio(effects), 1);
     });
 
     it('traverses reduce.in bodies via walkEffects', () => {

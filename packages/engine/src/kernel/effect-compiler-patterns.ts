@@ -100,6 +100,14 @@ type ShiftMarkerPayload = Extract<EffectAST, { readonly shiftMarker: unknown }>[
 type SetGlobalMarkerPayload = Extract<EffectAST, { readonly setGlobalMarker: unknown }>['setGlobalMarker'];
 type FlipGlobalMarkerPayload = Extract<EffectAST, { readonly flipGlobalMarker: unknown }>['flipGlobalMarker'];
 type ShiftGlobalMarkerPayload = Extract<EffectAST, { readonly shiftGlobalMarker: unknown }>['shiftGlobalMarker'];
+type MoveTokenPayload = Extract<EffectAST, { readonly moveToken: unknown }>['moveToken'];
+type MoveAllPayload = Extract<EffectAST, { readonly moveAll: unknown }>['moveAll'];
+type MoveTokenAdjacentPayload = Extract<EffectAST, { readonly moveTokenAdjacent: unknown }>['moveTokenAdjacent'];
+type DrawPayload = Extract<EffectAST, { readonly draw: unknown }>['draw'];
+type ShufflePayload = Extract<EffectAST, { readonly shuffle: unknown }>['shuffle'];
+type CreateTokenPayload = Extract<EffectAST, { readonly createToken: unknown }>['createToken'];
+type DestroyTokenPayload = Extract<EffectAST, { readonly destroyToken: unknown }>['destroyToken'];
+type SetTokenPropPayload = Extract<EffectAST, { readonly setTokenProp: unknown }>['setTokenProp'];
 
 export type BindValuePattern = {
   readonly kind: 'bindValue';
@@ -144,6 +152,46 @@ export type ShiftGlobalMarkerPattern = {
   readonly payload: ShiftGlobalMarkerPayload;
 };
 
+export type MoveTokenPattern = {
+  readonly kind: 'moveToken';
+  readonly payload: MoveTokenPayload;
+};
+
+export type MoveAllPattern = {
+  readonly kind: 'moveAll';
+  readonly payload: MoveAllPayload;
+};
+
+export type MoveTokenAdjacentPattern = {
+  readonly kind: 'moveTokenAdjacent';
+  readonly payload: MoveTokenAdjacentPayload;
+};
+
+export type DrawPattern = {
+  readonly kind: 'draw';
+  readonly payload: DrawPayload;
+};
+
+export type ShufflePattern = {
+  readonly kind: 'shuffle';
+  readonly payload: ShufflePayload;
+};
+
+export type CreateTokenPattern = {
+  readonly kind: 'createToken';
+  readonly payload: CreateTokenPayload;
+};
+
+export type DestroyTokenPattern = {
+  readonly kind: 'destroyToken';
+  readonly payload: DestroyTokenPayload;
+};
+
+export type SetTokenPropPattern = {
+  readonly kind: 'setTokenProp';
+  readonly payload: SetTokenPropPayload;
+};
+
 export type PatternDescriptor =
   | SetVarPattern
   | AddVarPattern
@@ -160,7 +208,15 @@ export type PatternDescriptor =
   | ShiftMarkerPattern
   | SetGlobalMarkerPattern
   | FlipGlobalMarkerPattern
-  | ShiftGlobalMarkerPattern;
+  | ShiftGlobalMarkerPattern
+  | MoveTokenPattern
+  | MoveAllPattern
+  | MoveTokenAdjacentPattern
+  | DrawPattern
+  | ShufflePattern
+  | CreateTokenPattern
+  | DestroyTokenPattern
+  | SetTokenPropPattern;
 
 const isScalarLiteral = (expr: ValueExpr): expr is ScalarLiteral =>
   typeof expr === 'number' || typeof expr === 'boolean' || typeof expr === 'string';
@@ -465,6 +521,94 @@ export const matchShiftGlobalMarker = (node: EffectAST): ShiftGlobalMarkerPatter
   };
 };
 
+export const matchMoveToken = (node: EffectAST): MoveTokenPattern | null => {
+  if (!('moveToken' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'moveToken',
+    payload: node.moveToken,
+  };
+};
+
+export const matchMoveAll = (node: EffectAST): MoveAllPattern | null => {
+  if (!('moveAll' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'moveAll',
+    payload: node.moveAll,
+  };
+};
+
+export const matchMoveTokenAdjacent = (node: EffectAST): MoveTokenAdjacentPattern | null => {
+  if (!('moveTokenAdjacent' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'moveTokenAdjacent',
+    payload: node.moveTokenAdjacent,
+  };
+};
+
+export const matchDraw = (node: EffectAST): DrawPattern | null => {
+  if (!('draw' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'draw',
+    payload: node.draw,
+  };
+};
+
+export const matchShuffle = (node: EffectAST): ShufflePattern | null => {
+  if (!('shuffle' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'shuffle',
+    payload: node.shuffle,
+  };
+};
+
+export const matchCreateToken = (node: EffectAST): CreateTokenPattern | null => {
+  if (!('createToken' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'createToken',
+    payload: node.createToken,
+  };
+};
+
+export const matchDestroyToken = (node: EffectAST): DestroyTokenPattern | null => {
+  if (!('destroyToken' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'destroyToken',
+    payload: node.destroyToken,
+  };
+};
+
+export const matchSetTokenProp = (node: EffectAST): SetTokenPropPattern | null => {
+  if (!('setTokenProp' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'setTokenProp',
+    payload: node.setTokenProp,
+  };
+};
+
 /*
  * Effect compilation status by EFFECT_KIND_TAG (34 tags, 0-33):
  *
@@ -472,14 +616,14 @@ export const matchShiftGlobalMarker = (node: EffectAST): ShiftGlobalMarkerPatter
  *  1  addVar              — compiled (Phase 0)
  *  2  setActivePlayer     — compiled (Phase 1)
  *  3  transferVar         — compiled (Phase 1)
- *  4  moveToken           — stub (Phase 2)
- *  5  moveAll             — stub (Phase 2)
- *  6  moveTokenAdjacent   — stub (Phase 2)
- *  7  draw                — stub (Phase 2)
- *  8  shuffle             — stub (Phase 2)
- *  9  createToken         — stub (Phase 2)
- * 10  destroyToken        — stub (Phase 2)
- * 11  setTokenProp        — stub (Phase 2)
+ *  4  moveToken           — compiled (Phase 2)
+ *  5  moveAll             — compiled (Phase 2)
+ *  6  moveTokenAdjacent   — compiled (Phase 2)
+ *  7  draw                — compiled (Phase 2)
+ *  8  shuffle             — compiled (Phase 2)
+ *  9  createToken         — compiled (Phase 2)
+ * 10  destroyToken        — compiled (Phase 2)
+ * 11  setTokenProp        — compiled (Phase 2)
  * 12  reveal              — stub (Phase 4)
  * 13  conceal             — stub (Phase 4)
  * 14  bindValue           — compiled (Phase 1)
@@ -537,19 +681,27 @@ export const classifyEffect = (node: EffectAST): PatternDescriptor | null => {
       return matchFlipGlobalMarker(node);
     case EFFECT_KIND_TAG.shiftGlobalMarker:
       return matchShiftGlobalMarker(node);
+    case EFFECT_KIND_TAG.moveToken:
+      return matchMoveToken(node);
+    case EFFECT_KIND_TAG.moveAll:
+      return matchMoveAll(node);
+    case EFFECT_KIND_TAG.moveTokenAdjacent:
+      return matchMoveTokenAdjacent(node);
+    case EFFECT_KIND_TAG.draw:
+      return matchDraw(node);
+    case EFFECT_KIND_TAG.shuffle:
+      return matchShuffle(node);
+    case EFFECT_KIND_TAG.createToken:
+      return matchCreateToken(node);
+    case EFFECT_KIND_TAG.destroyToken:
+      return matchDestroyToken(node);
+    case EFFECT_KIND_TAG.setTokenProp:
+      return matchSetTokenProp(node);
     // Deferred: action-context-heavy, depends on __freeOperation/__actionClass
     // bindings only available during the operation pipeline. See Spec 81.
     case EFFECT_KIND_TAG.grantFreeOperation:
       return null;
     // Not-yet-compiled lifecycle tags — stubs for future tickets (002-009)
-    case EFFECT_KIND_TAG.moveToken:
-    case EFFECT_KIND_TAG.moveAll:
-    case EFFECT_KIND_TAG.moveTokenAdjacent:
-    case EFFECT_KIND_TAG.draw:
-    case EFFECT_KIND_TAG.shuffle:
-    case EFFECT_KIND_TAG.createToken:
-    case EFFECT_KIND_TAG.destroyToken:
-    case EFFECT_KIND_TAG.setTokenProp:
     case EFFECT_KIND_TAG.reveal:
     case EFFECT_KIND_TAG.conceal:
     case EFFECT_KIND_TAG.reduce:

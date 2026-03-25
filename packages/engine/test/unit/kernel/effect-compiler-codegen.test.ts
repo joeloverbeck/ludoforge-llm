@@ -5,6 +5,7 @@ import {
   applyEffect,
   asPhaseId,
   asPlayerId,
+  asTokenId,
   asZoneId,
   buildAdjacencyGraph,
   buildRuntimeTableIndex,
@@ -49,10 +50,16 @@ const makeDef = (): GameDef => ({
   ],
   zoneVars: [],
   zones: [
-    { id: asZoneId('city:none'), zoneKind: 'board', owner: 'none', visibility: 'public', ordering: 'set' },
-    { id: asZoneId('province:none'), zoneKind: 'board', owner: 'none', visibility: 'public', ordering: 'set' },
+    { id: asZoneId('city:none'), zoneKind: 'board', owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [{ to: asZoneId('province:none') }] },
+    { id: asZoneId('province:none'), zoneKind: 'board', owner: 'none', visibility: 'public', ordering: 'set', adjacentTo: [{ to: asZoneId('city:none') }] },
+    { id: asZoneId('deck:none'), zoneKind: 'board', owner: 'none', visibility: 'public', ordering: 'stack', behavior: { type: 'deck', drawFrom: 'top', reshuffleFrom: asZoneId('discard:none') } },
+    { id: asZoneId('hand:none'), zoneKind: 'board', owner: 'none', visibility: 'public', ordering: 'stack' },
+    { id: asZoneId('discard:none'), zoneKind: 'board', owner: 'none', visibility: 'public', ordering: 'stack' },
   ],
-  tokenTypes: [],
+  tokenTypes: [
+    { id: 'pawn', props: { face: 'string', faction: 'string' } },
+    { id: 'card', props: { face: 'string', rank: 'string' } },
+  ],
   markerLattices: [
     {
       id: 'supportOpposition',
@@ -92,10 +99,17 @@ const makeState = (): GameState => ({
   zoneVars: {},
   playerCount: 3,
   zones: {
-    'city:none': [],
-    'province:none': [],
+    'city:none': [{ id: asTokenId('tok_pawn_0'), type: 'pawn', props: { face: 'down', faction: 'blue' } }],
+    'province:none': [{ id: asTokenId('tok_pawn_1'), type: 'pawn', props: { face: 'down', faction: 'red' } }],
+    'deck:none': [
+      { id: asTokenId('tok_card_2'), type: 'card', props: { face: 'down', rank: 'A' } },
+      { id: asTokenId('tok_card_3'), type: 'card', props: { face: 'down', rank: 'K' } },
+      { id: asTokenId('tok_card_4'), type: 'card', props: { face: 'down', rank: 'Q' } },
+    ],
+    'hand:none': [],
+    'discard:none': [{ id: asTokenId('tok_card_5'), type: 'card', props: { face: 'down', rank: 'J' } }],
   },
-  nextTokenOrdinal: 0,
+  nextTokenOrdinal: 6,
   currentPhase: asPhaseId('main'),
   activePlayer: asPlayerId(1),
   turnCount: 1,
@@ -113,6 +127,9 @@ const makeState = (): GameState => ({
     momentum: 'mid',
   },
 });
+
+const tokenById = (state: GameState, tokenId: string) =>
+  Object.values(state.zones).flat().find((token) => String(token.id) === tokenId);
 
 const compileEffects = (effects: readonly EffectAST[]): CompiledEffectFragment | null => {
   const fragments = effects.map((effect) => {
@@ -508,6 +525,123 @@ describe('effect-compiler-codegen', () => {
     compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
   });
 
+  it('compileMoveToken matches interpreter for token relocation with random insertion', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = eff({
+      moveToken: {
+        token: '$token',
+        from: 'city:none',
+        to: 'province:none',
+        position: 'random',
+      },
+    });
+
+    const bindings = { $token: tokenById(state, 'tok_pawn_0') };
+    compareResults(def, runCompiled(def, state, effect, bindings), runInterpreted(def, state, effect, bindings));
+  });
+
+  it('compileMoveAll matches interpreter for filtered moves', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = eff({
+      moveAll: {
+        from: 'deck:none',
+        to: 'discard:none',
+        filter: {
+          op: '==',
+          left: { _t: 2, ref: 'tokenProp', token: '$token', prop: 'rank' },
+          right: 'A',
+        },
+      },
+    });
+
+    compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
+  });
+
+  it('compileMoveTokenAdjacent matches interpreter for adjacency-driven token moves', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = eff({
+      moveTokenAdjacent: {
+        token: '$token',
+        from: 'city:none',
+        direction: '$to',
+      },
+    });
+
+    const bindings = { $token: tokenById(state, 'tok_pawn_0'), $to: asZoneId('province:none') };
+    compareResults(def, runCompiled(def, state, effect, bindings), runInterpreted(def, state, effect, bindings));
+  });
+
+  it('compileDraw matches interpreter for deck draws with reshuffle support', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = eff({
+      draw: {
+        from: 'deck:none',
+        to: 'hand:none',
+        count: 4,
+      },
+    });
+
+    compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
+  });
+
+  it('compileShuffle matches interpreter for RNG-driven zone order changes', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = eff({
+      shuffle: {
+        zone: 'deck:none',
+      },
+    });
+
+    compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
+  });
+
+  it('compileCreateToken matches interpreter for token creation with props', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = eff({
+      createToken: {
+        type: 'card',
+        zone: 'hand:none',
+        props: { face: 'up', rank: '10' },
+      },
+    });
+
+    compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
+  });
+
+  it('compileDestroyToken matches interpreter for token removal', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = eff({
+      destroyToken: {
+        token: '$token',
+      },
+    });
+
+    const bindings = { $token: tokenById(state, 'tok_card_5') };
+    compareResults(def, runCompiled(def, state, effect, bindings), runInterpreted(def, state, effect, bindings));
+  });
+
+  it('compileSetTokenProp matches interpreter for scalar property updates', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = eff({
+      setTokenProp: {
+        token: '$token',
+        prop: 'face',
+        value: 'up',
+      },
+    });
+
+    const bindings = { $token: tokenById(state, 'tok_card_2') };
+    compareResults(def, runCompiled(def, state, effect, bindings), runInterpreted(def, state, effect, bindings));
+  });
+
   it('compilePatternDescriptor dispatches all supported compiled descriptors', () => {
     const effects: readonly EffectAST[] = [
       eff({ setVar: { scope: 'global', var: 'score', value: 1 } }),
@@ -526,6 +660,14 @@ describe('effect-compiler-codegen', () => {
       eff({ setGlobalMarker: { marker: 'leaderFlipped', state: 'yes' } }),
       eff({ flipGlobalMarker: { marker: 'leaderFlipped', stateA: 'no', stateB: 'yes' } }),
       eff({ shiftGlobalMarker: { marker: 'momentum', delta: 1 } }),
+      eff({ moveToken: { token: '$token', from: 'city:none', to: 'province:none' } }),
+      eff({ moveAll: { from: 'deck:none', to: 'discard:none' } }),
+      eff({ moveTokenAdjacent: { token: '$token', from: 'city:none', direction: 'province:none' } }),
+      eff({ draw: { from: 'deck:none', to: 'hand:none', count: 1 } }),
+      eff({ shuffle: { zone: 'deck:none' } }),
+      eff({ createToken: { type: 'card', zone: 'hand:none' } }),
+      eff({ destroyToken: { token: '$token' } }),
+      eff({ setTokenProp: { token: '$token', prop: 'face', value: 'up' } }),
     ];
 
     for (const effect of effects) {
@@ -647,6 +789,46 @@ describe('effect-compiler-codegen', () => {
         to: { scope: 'pvar', player: 'active', var: 'coins' },
         amount: 2,
         actualBind: '$actual',
+      },
+    });
+
+    const mutableState = createMutableState(makeState());
+    const tracker = createDraftTracker();
+    const compiledResult = runCompiledWithTracker(def, mutableState, effect, tracker);
+    const frozenResult: EffectResult = { ...compiledResult, state: freezeState(mutableState) };
+
+    const interpretedResult = runInterpreted(def, makeState(), effect);
+    compareResults(def, frozenResult, interpretedResult);
+  });
+
+  it('compileMoveToken with tracker produces bit-identical result to interpreter', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = eff({
+      moveToken: {
+        token: '$token',
+        from: 'city:none',
+        to: 'province:none',
+      },
+    });
+    const bindings = { $token: tokenById(state, 'tok_pawn_0') };
+
+    const mutableState = createMutableState(state);
+    const tracker = createDraftTracker();
+    const compiledResult = runCompiledWithTracker(def, mutableState, effect, tracker, bindings);
+    const frozenResult: EffectResult = { ...compiledResult, state: freezeState(mutableState) };
+
+    const interpretedResult = runInterpreted(def, makeState(), effect, bindings);
+    compareResults(def, frozenResult, interpretedResult);
+  });
+
+  it('compileCreateToken with tracker preserves mutable-state execution parity', () => {
+    const def = makeDef();
+    const effect: EffectAST = eff({
+      createToken: {
+        type: 'card',
+        zone: 'hand:none',
+        props: { face: 'up', rank: '9' },
       },
     });
 

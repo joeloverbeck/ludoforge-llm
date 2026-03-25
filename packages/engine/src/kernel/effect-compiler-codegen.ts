@@ -12,18 +12,26 @@ import {
   type AdvancePhasePattern,
   type BindValuePattern,
   type CompilableConditionPattern,
+  type CreateTokenPattern,
+  type DestroyTokenPattern,
+  type DrawPattern,
   type FlipGlobalMarkerPattern,
   type ForEachPlayersPattern,
   type GotoPhaseExactPattern,
   type IfPattern,
   type LetPattern,
   type LogicalConditionPattern,
+  type MoveAllPattern,
+  type MoveTokenAdjacentPattern,
+  type MoveTokenPattern,
   type PatternDescriptor,
   type PopInterruptPhasePattern,
   type SetActivePlayerPattern,
   type SetGlobalMarkerPattern,
   type SetMarkerPattern,
+  type SetTokenPropPattern,
   type SetVarPattern,
+  type ShufflePattern,
   type ShiftGlobalMarkerPattern,
   type ShiftMarkerPattern,
   type SimpleComparisonPattern,
@@ -41,13 +49,31 @@ import {
   applyShiftMarker,
 } from './effects-choice.js';
 import { applyTransferVar } from './effects-resource.js';
+import {
+  applyCreateToken,
+  applyDestroyToken,
+  applyDraw,
+  applyMoveAll,
+  applyMoveToken,
+  applyMoveTokenAdjacent,
+  applySetTokenProp,
+  applyShuffle,
+} from './effects-token.js';
 import { applyAdvancePhase, applyGotoPhaseExact, applyPopInterruptPhase } from './effects-turn-flow.js';
 import { applySetActivePlayer } from './effects-var.js';
 import {
   advancePhase as advancePhaseBuilder,
+  createToken as createTokenBuilder,
+  destroyToken as destroyTokenBuilder,
+  draw as drawBuilder,
   gotoPhaseExact as gotoPhaseExactBuilder,
+  moveAll as moveAllBuilder,
+  moveToken as moveTokenBuilder,
+  moveTokenAdjacent as moveTokenAdjacentBuilder,
   popInterruptPhase as popInterruptPhaseBuilder,
   setActivePlayer as setActivePlayerBuilder,
+  setTokenProp as setTokenPropBuilder,
+  shuffle as shuffleBuilder,
 } from './ast-builders.js';
 import { toEffectEnv, toEffectCursor } from './effect-context.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
@@ -867,6 +893,150 @@ export const compileLet = (
   };
 };
 
+export const compileMoveToken = (desc: MoveTokenPattern): CompiledEffectFragment => ({
+  nodeCount: 1,
+  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+    'moveToken',
+    state,
+    rng,
+    bindings,
+    ctx,
+    (env, cursor) => applyMoveToken(
+      moveTokenBuilder(desc.payload),
+      env,
+      cursor,
+      { remaining: 10_000, max: 10_000 },
+      () => { throw new Error('applyBatch not available in compiled moveToken'); },
+    ),
+  ),
+});
+
+export const compileMoveAll = (desc: MoveAllPattern): CompiledEffectFragment => ({
+  nodeCount: 1,
+  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+    'moveAll',
+    state,
+    rng,
+    bindings,
+    ctx,
+    (env, cursor) => applyMoveAll(
+      moveAllBuilder(desc.payload),
+      env,
+      cursor,
+      { remaining: 10_000, max: 10_000 },
+      () => { throw new Error('applyBatch not available in compiled moveAll'); },
+    ),
+  ),
+});
+
+export const compileMoveTokenAdjacent = (desc: MoveTokenAdjacentPattern): CompiledEffectFragment => ({
+  nodeCount: 1,
+  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+    'moveTokenAdjacent',
+    state,
+    rng,
+    bindings,
+    ctx,
+    (env, cursor) => applyMoveTokenAdjacent(
+      moveTokenAdjacentBuilder(desc.payload),
+      env,
+      cursor,
+      { remaining: 10_000, max: 10_000 },
+      () => { throw new Error('applyBatch not available in compiled moveTokenAdjacent'); },
+    ),
+  ),
+});
+
+export const compileDraw = (desc: DrawPattern): CompiledEffectFragment => ({
+  nodeCount: 1,
+  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+    'draw',
+    state,
+    rng,
+    bindings,
+    ctx,
+    (env, cursor) => applyDraw(
+      drawBuilder(desc.payload),
+      env,
+      cursor,
+      { remaining: 10_000, max: 10_000 },
+      () => { throw new Error('applyBatch not available in compiled draw'); },
+    ),
+  ),
+});
+
+export const compileShuffle = (desc: ShufflePattern): CompiledEffectFragment => ({
+  nodeCount: 1,
+  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+    'shuffle',
+    state,
+    rng,
+    bindings,
+    ctx,
+    (env, cursor) => applyShuffle(
+      shuffleBuilder(desc.payload),
+      env,
+      cursor,
+      { remaining: 10_000, max: 10_000 },
+      () => { throw new Error('applyBatch not available in compiled shuffle'); },
+    ),
+  ),
+});
+
+export const compileCreateToken = (desc: CreateTokenPattern): CompiledEffectFragment => ({
+  nodeCount: 1,
+  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+    'createToken',
+    state,
+    rng,
+    bindings,
+    ctx,
+    (env, cursor) => applyCreateToken(
+      createTokenBuilder(desc.payload),
+      env,
+      cursor,
+      { remaining: 10_000, max: 10_000 },
+      () => { throw new Error('applyBatch not available in compiled createToken'); },
+    ),
+  ),
+});
+
+export const compileDestroyToken = (desc: DestroyTokenPattern): CompiledEffectFragment => ({
+  nodeCount: 1,
+  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+    'destroyToken',
+    state,
+    rng,
+    bindings,
+    ctx,
+    (env, cursor) => applyDestroyToken(
+      destroyTokenBuilder(desc.payload),
+      env,
+      cursor,
+      { remaining: 10_000, max: 10_000 },
+      () => { throw new Error('applyBatch not available in compiled destroyToken'); },
+    ),
+  ),
+});
+
+export const compileSetTokenProp = (desc: SetTokenPropPattern): CompiledEffectFragment => ({
+  nodeCount: 1,
+  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+    'setTokenProp',
+    state,
+    rng,
+    bindings,
+    ctx,
+    (env, cursor) => applySetTokenProp(
+      setTokenPropBuilder(desc.payload),
+      env,
+      cursor,
+      { remaining: 10_000, max: 10_000 },
+      () => { throw new Error('applyBatch not available in compiled setTokenProp'); },
+    ),
+  ),
+});
+
 export const compilePatternDescriptor = (
   desc: PatternDescriptor,
   compileBody: BodyCompiler,
@@ -904,6 +1074,22 @@ export const compilePatternDescriptor = (
       return compileShiftGlobalMarker(desc);
     case 'let':
       return compileLet(desc, compileBody);
+    case 'moveToken':
+      return compileMoveToken(desc);
+    case 'moveAll':
+      return compileMoveAll(desc);
+    case 'moveTokenAdjacent':
+      return compileMoveTokenAdjacent(desc);
+    case 'draw':
+      return compileDraw(desc);
+    case 'shuffle':
+      return compileShuffle(desc);
+    case 'createToken':
+      return compileCreateToken(desc);
+    case 'destroyToken':
+      return compileDestroyToken(desc);
+    case 'setTokenProp':
+      return compileSetTokenProp(desc);
     default:
       return null;
   }

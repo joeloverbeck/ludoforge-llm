@@ -240,7 +240,7 @@ describe('effect-compiler orchestrator', () => {
     );
   });
 
-  it('mixes compiled fragments with fallback fragments without changing behavior', () => {
+  it('treats mixed sequences with chooseOne as fully compilable', () => {
     const def = makeDef();
     const effects: readonly EffectAST[] = [
       eff({ setVar: { scope: 'global', var: 'score', value: 1 } }),
@@ -256,30 +256,35 @@ describe('effect-compiler orchestrator', () => {
     const state = makeState();
     const rng = createRng(29n);
     const compiled = compileEffectSequence(asPhaseId('main'), 'onEnter', effects);
+    const moveParams = { 'd1::$choice': asPlayerId(2) } as const;
 
-    assert.ok(compiled.coverageRatio > 0 && compiled.coverageRatio < 1);
-    compareResults(
-      def,
-      compiled.execute(state, rng, {}, makeCompiledContext(def)),
-      applyEffects(
-        effects,
-        createExecutionEffectContext({
-          def,
-          adjacencyGraph: buildAdjacencyGraph(def.zones),
-          runtimeTableIndex: buildRuntimeTableIndex(def),
-          state,
-          rng,
-          activePlayer: asPlayerId(1),
-          actorPlayer: asPlayerId(0),
-          bindings: {},
-          moveParams: {},
-          resources: createEvalRuntimeResources(),
-        }),
-      ),
+    assert.equal(compiled.coverageRatio, 1);
+    const compiledResult = compiled.execute(state, rng, {}, { ...makeCompiledContext(def), moveParams });
+    const interpretedResult = applyEffects(
+      effects,
+      createExecutionEffectContext({
+        def,
+        adjacencyGraph: buildAdjacencyGraph(def.zones),
+        runtimeTableIndex: buildRuntimeTableIndex(def),
+        state,
+        rng,
+        activePlayer: asPlayerId(1),
+        actorPlayer: asPlayerId(0),
+        bindings: {},
+        moveParams,
+        resources: createEvalRuntimeResources(),
+      }),
     );
+    const zobrist = createZobristTable(def);
+
+    assert.deepEqual(compiledResult.state, interpretedResult.state);
+    assert.deepEqual(compiledResult.rng, interpretedResult.rng);
+    assert.deepEqual(compiledResult.emittedEvents ?? [], interpretedResult.emittedEvents ?? []);
+    assert.deepEqual(compiledResult.bindings ?? {}, interpretedResult.bindings ?? {});
+    assert.equal(computeFullHash(zobrist, compiledResult.state), computeFullHash(zobrist, interpretedResult.state));
   });
 
-  it('falls back for fully unsupported sequences while preserving coverage accounting', () => {
+  it('treats chooseOne-only lifecycle sequences as fully compilable', () => {
     const def = makeDef();
     const effects: readonly EffectAST[] = [
       eff({
@@ -293,27 +298,32 @@ describe('effect-compiler orchestrator', () => {
     const state = makeState();
     const rng = createRng(31n);
     const compiled = compileEffectSequence(asPhaseId('cleanup'), 'onExit', effects);
+    const moveParams = { 'd1::$choice': asPlayerId(0) } as const;
 
-    assert.equal(compiled.coverageRatio, 0);
-    compareResults(
-      def,
-      compiled.execute(state, rng, {}, makeCompiledContext(def)),
-      applyEffects(
-        effects,
-        createExecutionEffectContext({
-          def,
-          adjacencyGraph: buildAdjacencyGraph(def.zones),
-          runtimeTableIndex: buildRuntimeTableIndex(def),
-          state,
-          rng,
-          activePlayer: asPlayerId(1),
-          actorPlayer: asPlayerId(0),
-          bindings: {},
-          moveParams: {},
-          resources: createEvalRuntimeResources(),
-        }),
-      ),
+    assert.equal(compiled.coverageRatio, 1);
+    const compiledResult = compiled.execute(state, rng, {}, { ...makeCompiledContext(def), moveParams });
+    const interpretedResult = applyEffects(
+      effects,
+      createExecutionEffectContext({
+        def,
+        adjacencyGraph: buildAdjacencyGraph(def.zones),
+        runtimeTableIndex: buildRuntimeTableIndex(def),
+        state,
+        rng,
+        activePlayer: asPlayerId(1),
+        actorPlayer: asPlayerId(0),
+        bindings: {},
+        moveParams,
+        resources: createEvalRuntimeResources(),
+      }),
     );
+    const zobrist = createZobristTable(def);
+
+    assert.deepEqual(compiledResult.state, interpretedResult.state);
+    assert.deepEqual(compiledResult.rng, interpretedResult.rng);
+    assert.deepEqual(compiledResult.emittedEvents ?? [], interpretedResult.emittedEvents ?? []);
+    assert.deepEqual(compiledResult.bindings ?? {}, interpretedResult.bindings ?? {});
+    assert.equal(computeFullHash(zobrist, compiledResult.state), computeFullHash(zobrist, interpretedResult.state));
   });
 
   it('treats token-only lifecycle sequences as fully compilable with interpreter parity', () => {

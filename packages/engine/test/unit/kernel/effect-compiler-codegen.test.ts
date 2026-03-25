@@ -12,6 +12,7 @@ import {
   compilePatternDescriptor,
   computeFullHash,
   createCollector,
+  createDiscoveryStrictEffectContext,
   createDraftTracker,
   createExecutionEffectContext,
   createEvalRuntimeResources,
@@ -28,10 +29,13 @@ import {
   type GameDef,
   type GameState,
   type MutableGameState,
+  type MoveParamScalar,
+  type MoveParamValue,
   type Rng,
   type TriggerEvent,
 } from '../../../src/kernel/index.js';
 import { classifyEffect } from '../../../src/kernel/effect-compiler-patterns.js';
+import type { ChooseNTemplate } from '../../../src/kernel/choose-n-session.js';
 import { eff } from '../../helpers/effect-tag-helper.js';
 
 const makeDef = (): GameDef => ({
@@ -189,7 +193,13 @@ const compileEffects = (effects: readonly EffectAST[]): CompiledEffectFragment |
 
 const makeCompiledContext = (
   def: GameDef,
-  options?: { readonly trace?: boolean },
+  options?: {
+    readonly trace?: boolean;
+    readonly moveParams?: Readonly<Record<string, MoveParamValue>>;
+    readonly mode?: 'execution' | 'discovery';
+    readonly transientDecisionSelections?: Readonly<Record<string, readonly MoveParamScalar[]>>;
+    readonly chooseNTemplateCallback?: (template: ChooseNTemplate) => void;
+  },
 ): CompiledEffectContext => ({
   def,
   adjacencyGraph: buildAdjacencyGraph(def.zones),
@@ -197,8 +207,15 @@ const makeCompiledContext = (
   resources: createEvalRuntimeResources(options?.trace === true ? { collector: createCollector({ trace: true }) } : undefined),
   activePlayer: asPlayerId(1),
   actorPlayer: asPlayerId(0),
-  moveParams: {},
+  moveParams: options?.moveParams ?? {},
   decisionScope: emptyScope(),
+  ...(options?.mode === undefined ? {} : { mode: options.mode }),
+  ...(options?.transientDecisionSelections === undefined
+    ? {}
+    : { transientDecisionSelections: options.transientDecisionSelections }),
+  ...(options?.chooseNTemplateCallback === undefined
+    ? {}
+    : { chooseNTemplateCallback: options.chooseNTemplateCallback }),
 });
 
 const compareResults = (
@@ -226,7 +243,13 @@ const runCompiled = (
   effect: EffectAST,
   bindings: Readonly<Record<string, unknown>> = {},
   rng: Rng = createRng(17n),
-  options?: { readonly trace?: boolean },
+  options?: {
+    readonly trace?: boolean;
+    readonly moveParams?: Readonly<Record<string, MoveParamValue>>;
+    readonly mode?: 'execution' | 'discovery';
+    readonly transientDecisionSelections?: Readonly<Record<string, readonly MoveParamScalar[]>>;
+    readonly chooseNTemplateCallback?: (template: ChooseNTemplate) => void;
+  },
 ): EffectResult => {
   const descriptor = classifyEffect(effect);
   assert.ok(descriptor !== null);
@@ -243,19 +266,40 @@ const runInterpreted = (
   effect: EffectAST,
   bindings: Readonly<Record<string, unknown>> = {},
   rng: Rng = createRng(17n),
-  options?: { readonly trace?: boolean },
-): EffectResult => applyEffect(effect, createExecutionEffectContext({
-  def,
-  adjacencyGraph: buildAdjacencyGraph(def.zones),
-  runtimeTableIndex: buildRuntimeTableIndex(def),
-  state,
-  rng,
-  activePlayer: asPlayerId(1),
-  actorPlayer: asPlayerId(0),
-  bindings,
-  moveParams: {},
-  resources: createEvalRuntimeResources(options?.trace === true ? { collector: createCollector({ trace: true }) } : undefined),
-}));
+  options?: {
+    readonly trace?: boolean;
+    readonly moveParams?: Readonly<Record<string, MoveParamValue>>;
+    readonly mode?: 'execution' | 'discovery';
+    readonly transientDecisionSelections?: Readonly<Record<string, readonly MoveParamScalar[]>>;
+    readonly chooseNTemplateCallback?: (template: ChooseNTemplate) => void;
+  },
+): EffectResult => {
+  const shared = {
+    def,
+    adjacencyGraph: buildAdjacencyGraph(def.zones),
+    runtimeTableIndex: buildRuntimeTableIndex(def),
+    state,
+    rng,
+    activePlayer: asPlayerId(1),
+    actorPlayer: asPlayerId(0),
+    bindings,
+    moveParams: options?.moveParams ?? {},
+    resources: createEvalRuntimeResources(options?.trace === true ? { collector: createCollector({ trace: true }) } : undefined),
+    ...(options?.transientDecisionSelections === undefined
+      ? {}
+      : { transientDecisionSelections: options.transientDecisionSelections }),
+    ...(options?.chooseNTemplateCallback === undefined
+      ? {}
+      : { chooseNTemplateCallback: options.chooseNTemplateCallback }),
+  } as const;
+
+  return applyEffect(
+    effect,
+    options?.mode === 'discovery'
+      ? createDiscoveryStrictEffectContext(shared)
+      : createExecutionEffectContext(shared),
+  );
+};
 
 describe('effect-compiler-codegen', () => {
   it('compileSetVar matches interpreter for global ref writes and emitted events', () => {
@@ -1202,6 +1246,115 @@ describe('effect-compiler-codegen', () => {
 
     const interpretedResult = runInterpreted(def, makeState(), effect);
     compareResults(def, frozenResult, interpretedResult);
+  });
+
+  it('compileChooseOne matches interpreted execution semantics', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = eff({
+      chooseOne: {
+        internalDecisionId: 'decision:$choice',
+        bind: '$choice',
+        options: { query: 'players' },
+      },
+    });
+    const options = { moveParams: { '$choice': asPlayerId(2) } } as const;
+
+    const compiledResult = runCompiled(def, state, effect, {}, createRng(23n), options);
+    const interpretedResult = runInterpreted(def, state, effect, {}, createRng(23n), options);
+
+    compareResults(def, compiledResult, interpretedResult);
+    assert.deepEqual(compiledResult.bindings, interpretedResult.bindings);
+  });
+
+  it('compileChooseOne matches interpreted discovery pending-choice semantics', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = eff({
+      chooseOne: {
+        internalDecisionId: 'decision:$choice',
+        bind: '$choice',
+        options: { query: 'players' },
+      },
+    });
+    const options = { mode: 'discovery' as const };
+
+    const compiledResult = runCompiled(def, state, effect, {}, createRng(23n), options);
+    const interpretedResult = runInterpreted(def, state, effect, {}, createRng(23n), options);
+
+    assert.deepEqual(compiledResult.pendingChoice, interpretedResult.pendingChoice);
+    assert.deepEqual(compiledResult.bindings, interpretedResult.bindings);
+  });
+
+  it('compileChooseN matches interpreted execution semantics for prioritized tiers', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = eff({
+      chooseN: {
+        internalDecisionId: 'decision:$picks',
+        bind: '$picks',
+        options: {
+          query: 'prioritized',
+          qualifierKey: 'faction',
+          tiers: [
+            { query: 'tokensInZone', zone: 'city:none' },
+            { query: 'tokensInZone', zone: 'province:none' },
+          ],
+        },
+        n: 2,
+      },
+    });
+    const options = {
+      moveParams: { '$picks': [asTokenId('tok_pawn_0'), asTokenId('tok_pawn_1')] },
+    } as const;
+
+    const compiledResult = runCompiled(def, state, effect, {}, createRng(29n), options);
+    const interpretedResult = runInterpreted(def, state, effect, {}, createRng(29n), options);
+
+    compareResults(def, compiledResult, interpretedResult);
+    assert.deepEqual(compiledResult.bindings, interpretedResult.bindings);
+  });
+
+  it('compileChooseN matches interpreted discovery semantics and emits chooseN templates', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = eff({
+      chooseN: {
+        internalDecisionId: 'decision:$picks',
+        bind: '$picks',
+        options: {
+          query: 'prioritized',
+          qualifierKey: 'faction',
+          tiers: [
+            { query: 'tokensInZone', zone: 'city:none' },
+            { query: 'tokensInZone', zone: 'province:none' },
+          ],
+        },
+        min: 0,
+        max: 2,
+      },
+    });
+    const compiledTemplates: unknown[] = [];
+    const interpretedTemplates: unknown[] = [];
+    const options = {
+      mode: 'discovery' as const,
+      chooseNTemplateCallback: (template: unknown) => {
+        compiledTemplates.push(template);
+      },
+    };
+    const interpretedOptions = {
+      mode: 'discovery' as const,
+      chooseNTemplateCallback: (template: unknown) => {
+        interpretedTemplates.push(template);
+      },
+    };
+
+    const compiledResult = runCompiled(def, state, effect, {}, createRng(31n), options);
+    const interpretedResult = runInterpreted(def, state, effect, {}, createRng(31n), interpretedOptions);
+
+    assert.deepEqual(compiledResult.pendingChoice, interpretedResult.pendingChoice);
+    assert.deepEqual(compiledResult.bindings, interpretedResult.bindings);
+    assert.deepEqual(compiledTemplates, interpretedTemplates);
   });
 
   it('executeEffectList fallback produces correct EffectResult via applyEffectsWithBudgetState', () => {

@@ -61,4 +61,6 @@ export const buildEffectEnvFromCompiledCtx = (
   ...(ctx.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: ctx.phaseTransitionBudget }),
   ...(ctx.profiler === undefined ? {} : { profiler: ctx.profiler }),
   ...(ctx.cachedRuntime === undefined ? {} : { cachedRuntime: ctx.cachedRuntime }),
+  ...(ctx.transientDecisionSelections === undefined ? {} : { transientDecisionSelections: ctx.transientDecisionSelections }),
+  ...(ctx.chooseNTemplateCallback === undefined ? {} : { chooseNTemplateCallback: ctx.chooseNTemplateCallback }),
 });

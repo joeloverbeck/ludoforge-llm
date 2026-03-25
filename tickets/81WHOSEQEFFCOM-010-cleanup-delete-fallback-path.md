@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — effect-compiler.ts, effect-compiler-codegen.ts, effect-compiler-patterns.ts
-**Deps**: archive/tickets/81WHOSEQEFFCOM-001-classifyEffect-switch-dispatch.md, archive/tickets/81WHOSEQEFFCOM-002-variable-binding-leaf-effects.md, archive/tickets/81WHOSEQEFFCOM-003-marker-effects.md, archive/tickets/81WHOSEQEFFCOM/81WHOSEQEFFCOM-004-turn-flow-effects.md, archive/tickets/81WHOSEQEFFCOM/81WHOSEQEFFCOM-005-token-effects.md, archive/tickets/81WHOSEQEFFCOM/81WHOSEQEFFCOM-006-iteration-reduction-effects.md, archive/tickets/81WHOSEQEFFCOM/81WHOSEQEFFCOM-007-information-effects.md, archive/tickets/81WHOSEQEFFCOM/81WHOSEQEFFCOM-008-complex-control-flow-effects.md, tickets/81WHOSEQEFFCOM-009-lifecycle-choice-effects.md, tickets/81WHOSEQEFFCOM-011-delegate-leaf-wrapper-consolidation.md
+**Deps**: archive/tickets/81WHOSEQEFFCOM-001-classifyEffect-switch-dispatch.md, archive/tickets/81WHOSEQEFFCOM-002-variable-binding-leaf-effects.md, archive/tickets/81WHOSEQEFFCOM-003-marker-effects.md, archive/tickets/81WHOSEQEFFCOM/81WHOSEQEFFCOM-004-turn-flow-effects.md, archive/tickets/81WHOSEQEFFCOM/81WHOSEQEFFCOM-005-token-effects.md, archive/tickets/81WHOSEQEFFCOM/81WHOSEQEFFCOM-006-iteration-reduction-effects.md, archive/tickets/81WHOSEQEFFCOM/81WHOSEQEFFCOM-007-information-effects.md, archive/tickets/81WHOSEQEFFCOM/81WHOSEQEFFCOM-008-complex-control-flow-effects.md, archive/tickets/81WHOSEQEFFCOM/81WHOSEQEFFCOM-009-lifecycle-choice-effects.md, tickets/81WHOSEQEFFCOM-011-delegate-leaf-wrapper-consolidation.md
 
 ## Problem
 
@@ -29,6 +29,7 @@ Once all 33 lifecycle effect types have compiled closures (tickets 001-009), the
 5. CI assertion: `coverageRatio === 1.0` for all compiled lifecycle sequences in both FITL and Texas Hold'em.
 6. Before this cleanup lands, the delegate-style compiled leaf wrappers introduced in earlier tickets should already be consolidated behind a shared helper. That work is explicitly tracked in `tickets/81WHOSEQEFFCOM-011-delegate-leaf-wrapper-consolidation.md`. Ticket 010 is not the place to introduce that helper for the first time; at most it should remove any dead or superseded adapter code left after tickets 004-011.
 7. The same rule applies to shared control-flow helpers: if ticket 008 introduces them, ticket 010 should only consume that result by deleting dead fallback-era plumbing, not create the abstraction for the first time.
+8. The remaining public-contract asymmetry where `applyEffects` / `applyEffect` drop `decisionScope` on successful completion is a separate runtime contract issue. It is tracked in `tickets/81WHOSEQEFFCOM-012-decision-scope-contract-alignment.md` and must not be folded into this fallback-deletion cleanup.
 
 ## What to Change
 
@@ -70,6 +71,7 @@ If coverage ratio tracking is only useful during the transition, consider removi
 - Performance benchmarking (separate task)
 - Refactoring `composeFragments` beyond removing fallback branching
 - Modifying `phase-lifecycle.ts` verification mode
+- Normalizing the public `decisionScope` return contract across interpreted and compiled execution (ticket 012)
 
 ## Acceptance Criteria
 

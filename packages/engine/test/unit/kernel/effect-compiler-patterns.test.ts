@@ -8,6 +8,8 @@ import {
   isCompilableCondition,
   matchAddVar,
   matchBindValue,
+  matchChooseN,
+  matchChooseOne,
   matchCompilableCondition,
   matchCreateToken,
   matchDestroyToken,
@@ -496,6 +498,48 @@ describe('effect-compiler-patterns', () => {
         },
       );
     });
+
+    it('matches chooseOne and chooseN as payload-backed descriptors', () => {
+      assert.deepEqual(
+        matchChooseOne(eff({
+          chooseOne: {
+            internalDecisionId: 'decision:$choice',
+            bind: '$choice',
+            options: { query: 'players' },
+          },
+        })),
+        {
+          kind: 'chooseOne',
+          payload: {
+            internalDecisionId: 'decision:$choice',
+            bind: '$choice',
+            options: { query: 'players' },
+          },
+        },
+      );
+
+      assert.deepEqual(
+        matchChooseN(eff({
+          chooseN: {
+            internalDecisionId: 'decision:$picks',
+            bind: '$picks',
+            options: { query: 'players' },
+            min: 0,
+            max: 2,
+          },
+        })),
+        {
+          kind: 'chooseN',
+          payload: {
+            internalDecisionId: 'decision:$picks',
+            bind: '$picks',
+            options: { query: 'players' },
+            min: 0,
+            max: 2,
+          },
+        },
+      );
+    });
   });
 
   describe('classifyEffect', () => {
@@ -534,7 +578,8 @@ describe('effect-compiler-patterns', () => {
       assert.equal(classifyEffect(eff({ flipGlobalMarker: { marker: 'leaderFlipped', stateA: 'no', stateB: 'yes' } }))?.kind, 'flipGlobalMarker');
       assert.equal(classifyEffect(eff({ shiftGlobalMarker: { marker: 'momentum', delta: -1 } }))?.kind, 'shiftGlobalMarker');
 
-      assert.equal(classifyEffect(eff({ chooseOne: { internalDecisionId: 'd1', bind: 'choice', options: { query: 'players' } } })), null);
+      assert.equal(classifyEffect(eff({ chooseOne: { internalDecisionId: 'd1', bind: 'choice', options: { query: 'players' } } }))?.kind, 'chooseOne');
+      assert.equal(classifyEffect(eff({ chooseN: { internalDecisionId: 'd1', bind: 'choice', options: { query: 'players' }, n: 2 } }))?.kind, 'chooseN');
       assert.equal(classifyEffect(eff({ moveToken: { token: '$token', from: 'deck', to: 'discard' } }))?.kind, 'moveToken');
     });
 
@@ -582,6 +627,12 @@ describe('effect-compiler-patterns', () => {
 
       const rollRandomDesc = classifyEffect(eff({ rollRandom: { bind: 'roll', min: 1, max: 6, in: [] } }));
       assert.equal(rollRandomDesc?.kind, 'rollRandom');
+
+      const chooseOneDesc = classifyEffect(eff({ chooseOne: { internalDecisionId: 'd1', bind: 'c', options: { query: 'players' } } }));
+      assert.equal(chooseOneDesc?.kind, 'chooseOne');
+
+      const chooseNDesc = classifyEffect(eff({ chooseN: { internalDecisionId: 'd1', bind: 'c', options: { query: 'players' }, n: 2 } }));
+      assert.equal(chooseNDesc?.kind, 'chooseN');
 
       const bindValueDesc = classifyEffect(eff({ bindValue: { bind: '$x', value: { _t: 6, op: '+', left: 1, right: 2 } } }));
       assert.equal(bindValueDesc?.kind, 'bindValue');
@@ -641,17 +692,6 @@ describe('effect-compiler-patterns', () => {
       assert.equal(concealDesc?.kind, 'conceal');
     });
 
-    it('returns null for every remaining not-yet-compiled _k tag', () => {
-      const stubTags: Array<{ tag: string; node: EffectAST }> = [
-        { tag: 'chooseOne', node: eff({ chooseOne: { internalDecisionId: 'd1', bind: 'c', options: { query: 'players' } } }) },
-        { tag: 'chooseN', node: eff({ chooseN: { internalDecisionId: 'd1', bind: 'c', options: { query: 'players' }, n: 2 } }) },
-      ];
-
-      for (const { tag, node } of stubTags) {
-        assert.equal(classifyEffect(node), null, `expected null for not-yet-compiled tag: ${tag}`);
-      }
-    });
-
     it('returns null for grantFreeOperation (deferred)', () => {
       const node = eff({
         grantFreeOperation: {
@@ -695,7 +735,7 @@ describe('effect-compiler-patterns', () => {
         }),
       ];
 
-      assert.equal(computeCoverageRatio(effects), 6 / 7);
+      assert.equal(computeCoverageRatio(effects), 1);
     });
 
     it('returns 1 for a fully compilable tree', () => {

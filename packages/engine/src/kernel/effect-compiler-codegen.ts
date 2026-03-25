@@ -13,6 +13,8 @@ import {
   type AddVarPattern,
   type AdvancePhasePattern,
   type BindValuePattern,
+  type ChooseNPattern,
+  type ChooseOnePattern,
   type ConcealPattern,
   type CompilableConditionPattern,
   type CreateTokenPattern,
@@ -51,6 +53,8 @@ import {
 import type { CompiledEffectContext, CompiledEffectFn } from './effect-compiler-types.js';
 import { effectRuntimeError } from './effect-error.js';
 import {
+  applyChooseN,
+  applyChooseOne,
   applyFlipGlobalMarker,
   applySetGlobalMarker,
   applySetMarker,
@@ -74,6 +78,8 @@ import { applySetActivePlayer } from './effects-var.js';
 import { emitTrace } from './execution-collector.js';
 import {
   advancePhase as advancePhaseBuilder,
+  chooseN as chooseNBuilder,
+  chooseOne as chooseOneBuilder,
   conceal as concealBuilder,
   createToken as createTokenBuilder,
   destroyToken as destroyTokenBuilder,
@@ -89,7 +95,6 @@ import {
   setTokenProp as setTokenPropBuilder,
   shuffle as shuffleBuilder,
 } from './ast-builders.js';
-import { toEffectEnv, toEffectCursor } from './effect-context.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import { resolveRef } from './resolve-ref.js';
 import { resolveRuntimeTokenBindingValue } from './token-binding.js';
@@ -363,15 +368,25 @@ const executeCompiledDelegate = (
   bindings: Readonly<Record<string, unknown>>,
   ctx: CompiledEffectContext,
   handler: (
-    env: ReturnType<typeof toEffectEnv>,
-    cursor: ReturnType<typeof toEffectCursor>,
+    env: ReturnType<typeof buildEffectEnvFromCompiledCtx>,
+    cursor: EffectCursor,
   ) => EffectResult,
 ): EffectResult => {
   if (ctx.effectBudget !== undefined) {
     consumeEffectBudget(ctx.effectBudget, effectType);
   }
 
-  const effectCtx = createCompiledExecutionContext(state, rng, bindings, ctx);
+  const decisionAuthority = ctx.decisionAuthority ?? {
+    source: 'engineRuntime' as const,
+    player: ctx.activePlayer,
+    ownershipEnforcement: 'strict' as const,
+  };
+  const mode = ctx.mode === undefined ? 'execution' : ctx.mode;
+  const effectCtx = createCompiledExecutionContext(state, rng, bindings, {
+    ...ctx,
+    decisionAuthority,
+    mode,
+  });
   const cursor: EffectCursor = {
     state,
     rng,
@@ -380,13 +395,25 @@ const executeCompiledDelegate = (
     ...(ctx.effectPath === undefined ? {} : { effectPath: ctx.effectPath }),
     ...(ctx.tracker === undefined ? {} : { tracker: ctx.tracker }),
   };
-  const result = handler(toEffectEnv(effectCtx), cursor);
+  const result = handler(
+    buildEffectEnvFromCompiledCtx(
+      {
+        ...ctx,
+        decisionAuthority,
+        mode,
+      },
+      effectCtx.collector,
+      decisionAuthority,
+      mode,
+    ),
+    cursor,
+  );
   return {
     state: result.state,
     rng: result.rng,
     ...(result.emittedEvents === undefined ? {} : { emittedEvents: result.emittedEvents }),
     bindings: result.bindings ?? cursor.bindings,
-    decisionScope: result.decisionScope ?? cursor.decisionScope,
+    ...(result.decisionScope === undefined ? {} : { decisionScope: result.decisionScope }),
     ...(result.pendingChoice === undefined ? {} : { pendingChoice: result.pendingChoice }),
   };
 };
@@ -1603,6 +1630,42 @@ export const compileConceal = (desc: ConcealPattern): CompiledEffectFragment => 
   ),
 });
 
+export const compileChooseOne = (desc: ChooseOnePattern): CompiledEffectFragment => ({
+  nodeCount: 1,
+  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+    'chooseOne',
+    state,
+    rng,
+    bindings,
+    ctx,
+    (env, cursor) => applyChooseOne(
+      chooseOneBuilder(desc.payload),
+      env,
+      cursor,
+      { remaining: 10_000, max: 10_000 },
+      () => { throw new Error('applyBatch not available in compiled chooseOne'); },
+    ),
+  ),
+});
+
+export const compileChooseN = (desc: ChooseNPattern): CompiledEffectFragment => ({
+  nodeCount: 1,
+  execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+    'chooseN',
+    state,
+    rng,
+    bindings,
+    ctx,
+    (env, cursor) => applyChooseN(
+      chooseNBuilder(desc.payload),
+      env,
+      cursor,
+      { remaining: 10_000, max: 10_000 },
+      () => { throw new Error('applyBatch not available in compiled chooseN'); },
+    ),
+  ),
+});
+
 export const compilePatternDescriptor = (
   desc: PatternDescriptor,
   compileBody: BodyCompiler,
@@ -1630,6 +1693,10 @@ export const compilePatternDescriptor = (
       return compilePopInterruptPhase(desc);
     case 'rollRandom':
       return compileRollRandom(desc, compileBody);
+    case 'chooseOne':
+      return compileChooseOne(desc);
+    case 'chooseN':
+      return compileChooseN(desc);
     case 'bindValue':
       return compileBindValue(desc);
     case 'transferVar':

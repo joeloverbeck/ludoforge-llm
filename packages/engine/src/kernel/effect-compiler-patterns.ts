@@ -110,6 +110,8 @@ export type PopInterruptPhasePattern = {
 type RollRandomPayload = Extract<EffectAST, { readonly rollRandom: unknown }>['rollRandom'];
 type PushInterruptPhasePayload = Extract<EffectAST, { readonly pushInterruptPhase: unknown }>['pushInterruptPhase'];
 type EvaluateSubsetPayload = Extract<EffectAST, { readonly evaluateSubset: unknown }>['evaluateSubset'];
+type ChooseOnePayload = Extract<EffectAST, { readonly chooseOne: unknown }>['chooseOne'];
+type ChooseNPayload = Extract<EffectAST, { readonly chooseN: unknown }>['chooseN'];
 
 type BindValuePayload = Extract<EffectAST, { readonly bindValue: unknown }>['bindValue'];
 type TransferVarPayload = Extract<EffectAST, { readonly transferVar: unknown }>['transferVar'];
@@ -139,6 +141,16 @@ export type BindValuePattern = {
 export type RollRandomPattern = {
   readonly kind: 'rollRandom';
   readonly payload: RollRandomPayload;
+};
+
+export type ChooseOnePattern = {
+  readonly kind: 'chooseOne';
+  readonly payload: ChooseOnePayload;
+};
+
+export type ChooseNPattern = {
+  readonly kind: 'chooseN';
+  readonly payload: ChooseNPayload;
 };
 
 export type PushInterruptPhasePattern = {
@@ -250,6 +262,8 @@ export type PatternDescriptor =
   | AdvancePhasePattern
   | PopInterruptPhasePattern
   | RollRandomPattern
+  | ChooseOnePattern
+  | ChooseNPattern
   | PushInterruptPhasePattern
   | BindValuePattern
   | TransferVarPattern
@@ -517,6 +531,28 @@ export const matchRollRandom = (node: EffectAST): RollRandomPattern | null => {
   };
 };
 
+export const matchChooseOne = (node: EffectAST): ChooseOnePattern | null => {
+  if (!('chooseOne' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'chooseOne',
+    payload: node.chooseOne,
+  };
+};
+
+export const matchChooseN = (node: EffectAST): ChooseNPattern | null => {
+  if (!('chooseN' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'chooseN',
+    payload: node.chooseN,
+  };
+};
+
 export const matchPushInterruptPhase = (node: EffectAST): PushInterruptPhasePattern | null => {
   if (!('pushInterruptPhase' in node)) {
     return null;
@@ -758,13 +794,13 @@ export const matchConceal = (node: EffectAST): ConcealPattern | null => {
  * 12  reveal              — compiled (Phase 4)
  * 13  conceal             — compiled (Phase 4)
  * 14  bindValue           — compiled (Phase 1)
- * 15  chooseOne           — stub (Phase 6)
- * 16  chooseN             — stub (Phase 6)
- * 17  setMarker           — stub (Phase 1)
- * 18  shiftMarker         — stub (Phase 1)
- * 19  setGlobalMarker     — stub (Phase 1)
- * 20  flipGlobalMarker    — stub (Phase 1)
- * 21  shiftGlobalMarker   — stub (Phase 1)
+ * 15  chooseOne           — compiled (Phase 6)
+ * 16  chooseN             — compiled (Phase 6)
+ * 17  setMarker           — compiled (Phase 1)
+ * 18  shiftMarker         — compiled (Phase 1)
+ * 19  setGlobalMarker     — compiled (Phase 1)
+ * 20  flipGlobalMarker    — compiled (Phase 1)
+ * 21  shiftGlobalMarker   — compiled (Phase 1)
  * 22  grantFreeOperation  — deferred (action-context-heavy, future spec)
  * 23  gotoPhaseExact      — compiled (Phase 0)
  * 24  advancePhase        — compiled (Phase 1)
@@ -804,6 +840,10 @@ export const classifyEffect = (node: EffectAST): PatternDescriptor | null => {
       return matchPopInterruptPhase(node);
     case EFFECT_KIND_TAG.rollRandom:
       return matchRollRandom(node);
+    case EFFECT_KIND_TAG.chooseOne:
+      return matchChooseOne(node);
+    case EFFECT_KIND_TAG.chooseN:
+      return matchChooseN(node);
     case EFFECT_KIND_TAG.bindValue:
       return matchBindValue(node);
     case EFFECT_KIND_TAG.transferVar:
@@ -845,10 +885,6 @@ export const classifyEffect = (node: EffectAST): PatternDescriptor | null => {
     // Deferred: action-context-heavy, depends on __freeOperation/__actionClass
     // bindings only available during the operation pipeline. See Spec 81.
     case EFFECT_KIND_TAG.grantFreeOperation:
-      return null;
-    // Not-yet-compiled lifecycle tags — stubs for future tickets (002-009)
-    case EFFECT_KIND_TAG.chooseOne:
-    case EFFECT_KIND_TAG.chooseN:
       return null;
     default:
       return null;

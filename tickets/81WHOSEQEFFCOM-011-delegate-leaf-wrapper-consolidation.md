@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — effect-compiler-codegen.ts, new kernel-internal helper module, effect-compiler tests
-**Deps**: archive/tickets/81WHOSEQEFFCOM/81WHOSEQEFFCOM-004-turn-flow-effects.md, archive/tickets/81WHOSEQEFFCOM/81WHOSEQEFFCOM-005-token-effects.md, archive/tickets/81WHOSEQEFFCOM/81WHOSEQEFFCOM-007-information-effects.md, archive/tickets/81WHOSEQEFFCOM/81WHOSEQEFFCOM-008-complex-control-flow-effects.md, tickets/81WHOSEQEFFCOM-009-lifecycle-choice-effects.md
+**Deps**: archive/tickets/81WHOSEQEFFCOM/81WHOSEQEFFCOM-004-turn-flow-effects.md, archive/tickets/81WHOSEQEFFCOM/81WHOSEQEFFCOM-005-token-effects.md, archive/tickets/81WHOSEQEFFCOM/81WHOSEQEFFCOM-007-information-effects.md, archive/tickets/81WHOSEQEFFCOM/81WHOSEQEFFCOM-008-complex-control-flow-effects.md, archive/tickets/81WHOSEQEFFCOM/81WHOSEQEFFCOM-009-lifecycle-choice-effects.md
 
 ## Problem
 
@@ -20,6 +20,7 @@ If left as repeated bespoke wrappers, tickets 008 and 009 will add even more nea
 4. The remaining cleanup gap is not semantic; it is structural duplication inside compiler codegen ownership areas.
 5. No active ticket currently owns this consolidation as an explicit deliverable. Tickets 008, 009, and 010 only reference it as a recommendation or precondition.
 6. Sequencing clarification: the deps on tickets 008 and 009 are intentional. This ticket is the post-implementation consolidation pass that absorbs any additional delegate-backed wrappers introduced while compiling those effects.
+7. The public `decisionScope` contract asymmetry between interpreted and compiled execution is adjacent but distinct. It belongs to runtime contract normalization, not delegate-wrapper consolidation, and is tracked in `tickets/81WHOSEQEFFCOM-012-decision-scope-contract-alignment.md`.
 
 ## Architecture Check
 
@@ -79,6 +80,7 @@ Add or update tests so the abstraction is proven safe:
 - Removing the lifecycle fallback path (ticket 010)
 - Choice/action CPS model changes
 - Game-specific behavior changes
+- Normalizing the public `decisionScope` return contract across interpreted and compiled execution (ticket 012)
 
 ## Acceptance Criteria
 

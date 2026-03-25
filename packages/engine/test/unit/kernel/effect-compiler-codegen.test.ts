@@ -39,9 +39,11 @@ const makeDef = (): GameDef => ({
     { name: 'round', type: 'int', init: 0, min: 0, max: 10 },
     { name: 'flag', type: 'boolean', init: false },
     { name: 'count', type: 'int', init: 0, min: 0, max: 10 },
+    { name: 'bank', type: 'int', init: 0, min: 0, max: 20 },
   ],
   perPlayerVars: [
     { name: 'hp', type: 'int', init: 0, min: 0, max: 20 },
+    { name: 'coins', type: 'int', init: 0, min: 0, max: 20 },
     { name: 'ready', type: 'boolean', init: false },
   ],
   zoneVars: [],
@@ -66,11 +68,11 @@ const makeDef = (): GameDef => ({
 });
 
 const makeState = (): GameState => ({
-  globalVars: { score: 3, round: 0, flag: false, count: 0 },
+  globalVars: { score: 3, round: 0, flag: false, count: 0, bank: 10 },
   perPlayerVars: {
-    '0': { hp: 5, ready: false },
-    '1': { hp: 7, ready: false },
-    '2': { hp: 9, ready: true },
+    '0': { hp: 5, coins: 4, ready: false },
+    '1': { hp: 7, coins: 6, ready: false },
+    '2': { hp: 9, coins: 8, ready: true },
   },
   zoneVars: {},
   playerCount: 3,
@@ -293,13 +295,87 @@ describe('effect-compiler-codegen', () => {
     compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
   });
 
-  it('compilePatternDescriptor dispatches all supported Phase 1 descriptors', () => {
+  it('compileBindValue matches interpreter for non-simple value expressions', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = eff({
+      bindValue: {
+        bind: '$sum',
+        value: { _t: 6, op: '+', left: { _t: 2, ref: 'gvar', var: 'score' }, right: 2 },
+      },
+    });
+
+    compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
+  });
+
+  it('compileTransferVar matches interpreter for actualBind and min/max clamping', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = eff({
+      transferVar: {
+        from: { scope: 'global', var: 'bank' },
+        to: { scope: 'pvar', player: 'active', var: 'coins' },
+        amount: { _t: 6, op: '+', left: 1, right: 4 },
+        min: 2,
+        max: 3,
+        actualBind: '$actual',
+      },
+    });
+
+    compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
+  });
+
+  it('compileTransferVar matches interpreter for same-cell no-op behavior', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = eff({
+      transferVar: {
+        from: { scope: 'global', var: 'bank' },
+        to: { scope: 'global', var: 'bank' },
+        amount: 5,
+        actualBind: '$actual',
+      },
+    });
+
+    compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
+  });
+
+  it('compileLet matches interpreter for nested binding export semantics with complex values', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = eff({
+      let: {
+        bind: 'tmp',
+        value: { _t: 6, op: '+', left: { _t: 2, ref: 'gvar', var: 'score' }, right: 2 },
+        in: [
+          eff({ bindValue: { bind: '$visible', value: { _t: 2, ref: 'binding', name: 'tmp' } } }),
+          eff({ bindValue: { bind: 'hidden', value: 99 } }),
+          eff({
+            let: {
+              bind: '$shadow',
+              value: { _t: 6, op: '+', left: 1, right: 1 },
+              in: [
+                eff({ bindValue: { bind: '$nested', value: { _t: 2, ref: 'binding', name: '$shadow' } } }),
+              ],
+            },
+          }),
+        ],
+      },
+    });
+
+    compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
+  });
+
+  it('compilePatternDescriptor dispatches all supported compiled descriptors', () => {
     const effects: readonly EffectAST[] = [
       eff({ setVar: { scope: 'global', var: 'score', value: 1 } }),
       eff({ addVar: { scope: 'global', var: 'score', delta: 1 } }),
       eff({ if: { when: { op: '==', left: 1, right: 1 }, then: [] } }),
       eff({ forEach: { bind: '$seat', over: { query: 'players' }, effects: [] } }),
       eff({ gotoPhaseExact: { phase: 'cleanup' } }),
+      eff({ bindValue: { bind: '$x', value: { _t: 6, op: '+', left: 1, right: 2 } } }),
+      eff({ transferVar: { from: { scope: 'global', var: 'bank' }, to: { scope: 'global', var: 'count' }, amount: 1 } }),
+      eff({ let: { bind: 'tmp', value: { _t: 6, op: '+', left: 1, right: 2 }, in: [] } }),
     ];
 
     for (const effect of effects) {
@@ -403,6 +479,26 @@ describe('effect-compiler-codegen', () => {
   it('compileAddVar with tracker produces bit-identical result to interpreter', () => {
     const def = makeDef();
     const effect: EffectAST = eff({ addVar: { scope: 'global', var: 'score', delta: 2 } });
+
+    const mutableState = createMutableState(makeState());
+    const tracker = createDraftTracker();
+    const compiledResult = runCompiledWithTracker(def, mutableState, effect, tracker);
+    const frozenResult: EffectResult = { ...compiledResult, state: freezeState(mutableState) };
+
+    const interpretedResult = runInterpreted(def, makeState(), effect);
+    compareResults(def, frozenResult, interpretedResult);
+  });
+
+  it('compileTransferVar with tracker produces bit-identical result to interpreter', () => {
+    const def = makeDef();
+    const effect: EffectAST = eff({
+      transferVar: {
+        from: { scope: 'global', var: 'bank' },
+        to: { scope: 'pvar', player: 'active', var: 'coins' },
+        amount: 2,
+        actualBind: '$actual',
+      },
+    });
 
     const mutableState = createMutableState(makeState());
     const tracker = createDraftTracker();

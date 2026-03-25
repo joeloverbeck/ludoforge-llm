@@ -50,10 +50,9 @@ const EMPTY_EVENTS: readonly TriggerEvent[] = [];
 // array where dispatchTable[tag] is the handler function for that tag.
 type DispatchFn = (effect: EffectAST, env: EffectEnv, cursor: EffectCursor, budget: EffectBudgetState, applyBatch: typeof applyEffectsWithBudgetState) => EffectResult;
 let _dispatchTable: readonly DispatchFn[] | null = null;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const getDispatchTable = (): readonly DispatchFn[] => {
   if (_dispatchTable === null) {
-    _dispatchTable = TAG_TO_KIND.map(kind => registry[kind] as any);
+    _dispatchTable = TAG_TO_KIND.map((kind) => registry[kind] as DispatchFn);
   }
   return _dispatchTable;
 };

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — effect-compiler-patterns.ts, effect-compiler-codegen.ts
-**Deps**: 81WHOSEQEFFCOM-001 (switch dispatch), 81WHOSEQEFFCOM-002 (let — binding export for evaluateSubset), 81WHOSEQEFFCOM-005 (token effects — evaluateSubset body may contain token effects), 81WHOSEQEFFCOM-006 (iteration — evaluateSubset uses similar iteration patterns)
+**Deps**: archive/tickets/81WHOSEQEFFCOM-001-classifyEffect-switch-dispatch.md, archive/tickets/81WHOSEQEFFCOM-002-variable-binding-leaf-effects.md, tickets/81WHOSEQEFFCOM-005-token-effects.md, tickets/81WHOSEQEFFCOM-006-iteration-reduction-effects.md
 
 ## Problem
 

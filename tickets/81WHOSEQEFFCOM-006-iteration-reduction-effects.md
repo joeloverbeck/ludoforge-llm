@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — effect-compiler-patterns.ts, effect-compiler-codegen.ts
-**Deps**: 81WHOSEQEFFCOM-001 (switch dispatch), 81WHOSEQEFFCOM-002 (let — binding export pattern), 81WHOSEQEFFCOM-005 (token effects — forEach may iterate tokens, removeByPriority synthesizes moveToken)
+**Deps**: archive/tickets/81WHOSEQEFFCOM-001-classifyEffect-switch-dispatch.md, archive/tickets/81WHOSEQEFFCOM-002-variable-binding-leaf-effects.md, tickets/81WHOSEQEFFCOM-005-token-effects.md
 
 ## Problem
 

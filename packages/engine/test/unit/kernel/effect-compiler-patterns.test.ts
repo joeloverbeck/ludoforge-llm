@@ -7,13 +7,16 @@ import {
   computeCoverageRatio,
   isCompilableCondition,
   matchAddVar,
+  matchBindValue,
   matchCompilableCondition,
   matchForEachPlayers,
   matchGotoPhaseExact,
   matchIf,
+  matchLet,
   matchSetVar,
   matchSimpleNumericValue,
   matchSimpleValue,
+  matchTransferVar,
 } from '../../../src/kernel/effect-compiler-patterns.js';
 import { eff } from '../../helpers/effect-tag-helper.js';
 
@@ -237,10 +240,56 @@ describe('effect-compiler-patterns', () => {
         phase: 'cleanup',
       });
     });
+
+    it('matches bindValue, transferVar, and let without narrowing away full payload support', () => {
+      assert.deepEqual(
+        matchBindValue(eff({ bindValue: { bind: '$sum', value: { _t: 6, op: '+', left: 1, right: 2 } } })),
+        {
+          kind: 'bindValue',
+          bind: '$sum',
+          value: { _t: 6, op: '+', left: 1, right: 2 },
+        },
+      );
+
+      assert.deepEqual(
+        matchTransferVar(eff({
+          transferVar: {
+            from: { scope: 'global', var: 'bank' },
+            to: { scope: 'pvar', player: 'active', var: 'chips' },
+            amount: { _t: 6, op: '+', left: 1, right: 2 },
+            min: 1,
+            max: 2,
+            actualBind: '$actual',
+          },
+        })),
+        {
+          kind: 'transferVar',
+          payload: {
+            from: { scope: 'global', var: 'bank' },
+            to: { scope: 'pvar', player: 'active', var: 'chips' },
+            amount: { _t: 6, op: '+', left: 1, right: 2 },
+            min: 1,
+            max: 2,
+            actualBind: '$actual',
+          },
+        },
+      );
+
+      const inEffects: readonly EffectAST[] = [eff({ bindValue: { bind: '$visible', value: 1 } })];
+      assert.deepEqual(
+        matchLet(eff({ let: { bind: 'tmp', value: { _t: 6, op: '+', left: 1, right: 2 }, in: inEffects } })),
+        {
+          kind: 'let',
+          bind: 'tmp',
+          value: { _t: 6, op: '+', left: 1, right: 2 },
+          inEffects,
+        },
+      );
+    });
   });
 
   describe('classifyEffect', () => {
-    it('classifies supported Phase 0 families and rejects unsupported effects', () => {
+    it('classifies compiled families and rejects unsupported effects', () => {
       assert.equal(classifyEffect(eff({ setVar: { scope: 'global', var: 'pot', value: 0 } }))?.kind, 'setVar');
       assert.equal(classifyEffect(eff({ addVar: { scope: 'global', var: 'pot', delta: 1 } }))?.kind, 'addVar');
       assert.equal(
@@ -252,6 +301,9 @@ describe('effect-compiler-patterns', () => {
         'forEachPlayers',
       );
       assert.equal(classifyEffect(eff({ gotoPhaseExact: { phase: 'main' } }))?.kind, 'gotoPhaseExact');
+      assert.equal(classifyEffect(eff({ bindValue: { bind: '$x', value: { _t: 6, op: '+', left: 1, right: 2 } } }))?.kind, 'bindValue');
+      assert.equal(classifyEffect(eff({ transferVar: { from: { scope: 'global', var: 'a' }, to: { scope: 'global', var: 'b' }, amount: 1 } }))?.kind, 'transferVar');
+      assert.equal(classifyEffect(eff({ let: { bind: 'x', value: { _t: 6, op: '+', left: 1, right: 2 }, in: [] } }))?.kind, 'let');
 
       assert.equal(classifyEffect(eff({ chooseOne: { internalDecisionId: 'd1', bind: 'choice', options: { query: 'players' } } })), null);
       assert.equal(classifyEffect(eff({ moveToken: { token: 't1', from: 'deck', to: 'discard' } })), null);
@@ -277,14 +329,20 @@ describe('effect-compiler-patterns', () => {
 
       const gotoDesc = classifyEffect(eff({ gotoPhaseExact: { phase: 'end' } }));
       assert.equal(gotoDesc?.kind, 'gotoPhaseExact');
+
+      const bindValueDesc = classifyEffect(eff({ bindValue: { bind: '$x', value: { _t: 6, op: '+', left: 1, right: 2 } } }));
+      assert.equal(bindValueDesc?.kind, 'bindValue');
+
+      const transferVarDesc = classifyEffect(eff({ transferVar: { from: { scope: 'global', var: 'a' }, to: { scope: 'global', var: 'b' }, amount: 1 } }));
+      assert.equal(transferVarDesc?.kind, 'transferVar');
+
+      const letDesc = classifyEffect(eff({ let: { bind: 'x', value: { _t: 6, op: '+', left: 1, right: 2 }, in: [] } }));
+      assert.equal(letDesc?.kind, 'let');
     });
 
     it('returns null for every not-yet-compiled _k tag', () => {
       const stubTags: Array<{ tag: string; node: EffectAST }> = [
         { tag: 'setActivePlayer', node: eff({ setActivePlayer: { player: 'active' } }) },
-        { tag: 'transferVar', node: eff({ transferVar: { from: { scope: 'global', var: 'a' }, to: { scope: 'global', var: 'b' }, amount: 1 } }) },
-        { tag: 'bindValue', node: eff({ bindValue: { bind: 'x', value: 1 } }) },
-        { tag: 'let', node: eff({ let: { bind: 'x', value: 1, in: [] } }) },
         { tag: 'setMarker', node: eff({ setMarker: { space: 'zone1', marker: 'm', state: 0 } }) },
         { tag: 'shiftMarker', node: eff({ shiftMarker: { space: 'zone1', marker: 'm', delta: 1 } }) },
         { tag: 'setGlobalMarker', node: eff({ setGlobalMarker: { marker: 'm', state: 0 } }) },
@@ -395,8 +453,8 @@ describe('effect-compiler-patterns', () => {
           },
         }),
       ];
-      // 3 nodes: let (not compiled) + setVar (compiled) + moveToken (not compiled) = 1/3
-      assert.equal(computeCoverageRatio(effects), 1 / 3);
+      // 3 nodes: let (compiled) + setVar (compiled) + moveToken (not compiled) = 2/3
+      assert.equal(computeCoverageRatio(effects), 2 / 3);
     });
 
     it('traverses reduce.in bodies via walkEffects', () => {

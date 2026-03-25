@@ -2,25 +2,30 @@ import { rebaseIterationPath, withIterationSegment, emptyScope } from './decisio
 import type { EffectCursor, EffectResult } from './effect-context.js';
 import { createEvalContext } from './eval-context.js';
 import { evalQuery } from './eval-query.js';
+import { evalValue } from './eval-value.js';
 import { typeMismatchError } from './eval-error.js';
 import { buildEffectEnvFromCompiledCtx, createCompiledExecutionContext } from './effect-compiler-runtime.js';
 import { applyEffectsWithBudgetState, consumeEffectBudget, createEffectBudgetState } from './effect-dispatch.js';
 import type { MutableGameState } from './state-draft.js';
 import {
   type AddVarPattern,
+  type BindValuePattern,
   type CompilableConditionPattern,
   type ForEachPlayersPattern,
   type GotoPhaseExactPattern,
   type IfPattern,
+  type LetPattern,
   type LogicalConditionPattern,
   type PatternDescriptor,
   type SetVarPattern,
   type SimpleComparisonPattern,
   type SimpleNumericValuePattern,
   type SimpleValuePattern,
+  type TransferVarPattern,
 } from './effect-compiler-patterns.js';
 import type { CompiledEffectContext, CompiledEffectFn } from './effect-compiler-types.js';
 import { effectRuntimeError } from './effect-error.js';
+import { applyTransferVar } from './effects-resource.js';
 import { applyGotoPhaseExact } from './effects-turn-flow.js';
 import { gotoPhaseExact as gotoPhaseExactBuilder } from './ast-builders.js';
 import { toEffectEnv, toEffectCursor } from './effect-context.js';
@@ -39,8 +44,8 @@ import { toTraceVarChangePayload, toVarChangedEvent } from './scoped-var-runtime
 import { emitVarChangeTraceIfChanged } from './var-change-trace.js';
 import { clampIntVarValue } from './var-runtime-utils.js';
 import { resolveControlFlowIterationLimit } from './control-flow-limit.js';
-import { VALUE_EXPR_TAG } from './types.js';
-import type { EffectAST, GameState, IntVariableDef, Reference, Rng, TriggerEvent } from './types.js';
+import { EFFECT_KIND_TAG, VALUE_EXPR_TAG } from './types.js';
+import type { EffectAST, GameState, IntVariableDef, NumericValueExpr, Reference, Rng, TriggerEvent, ValueExpr } from './types.js';
 
 export interface CompiledEffectFragment {
   readonly execute: CompiledEffectFn;
@@ -126,6 +131,13 @@ const createCompiledEvalContext = (
   resources: ctx.resources,
 });
 
+const evalCompiledValue = (
+  expr: ValueExpr | NumericValueExpr,
+  state: GameState,
+  bindings: Readonly<Record<string, unknown>>,
+  ctx: CompiledEffectContext,
+): unknown => evalValue(expr, createCompiledEvalContext(state, bindings, ctx));
+
 const toReference = (
   pattern: Exclude<SimpleValuePattern | SimpleNumericValuePattern, { readonly kind: 'literal' | 'binding' }>,
 ): Reference => {
@@ -172,6 +184,9 @@ const countEffectNodes = (effects: readonly EffectAST[]): number => {
       if (effect.forEach.in !== undefined) {
         total += countEffectNodes(effect.forEach.in);
       }
+    }
+    if ('let' in effect) {
+      total += countEffectNodes(effect.let.in);
     }
   }
   return total;
@@ -566,6 +581,101 @@ export const compileGotoPhaseExact = (desc: GotoPhaseExactPattern): CompiledEffe
   },
 });
 
+export const compileBindValue = (desc: BindValuePattern): CompiledEffectFragment => ({
+  nodeCount: 1,
+  execute: (state, rng, bindings, ctx) => {
+    if (ctx.effectBudget !== undefined) {
+      consumeEffectBudget(ctx.effectBudget, 'bindValue');
+    }
+    const value = evalCompiledValue(desc.value, state, bindings, ctx);
+    return {
+      state,
+      rng,
+      emittedEvents: [],
+      bindings: {
+        ...bindings,
+        [desc.bind]: value,
+      },
+    };
+  },
+});
+
+export const compileTransferVar = (desc: TransferVarPattern): CompiledEffectFragment => ({
+  nodeCount: 1,
+  execute: (state, rng, bindings, ctx) => {
+    if (ctx.effectBudget !== undefined) {
+      consumeEffectBudget(ctx.effectBudget, 'transferVar');
+    }
+    const effectCtx = createCompiledExecutionContext(state, rng, bindings, ctx);
+    return applyTransferVar(
+      { _k: EFFECT_KIND_TAG.transferVar, transferVar: desc.payload },
+      toEffectEnv(effectCtx),
+      {
+        state,
+        rng,
+        bindings,
+        decisionScope: ctx.decisionScope ?? emptyScope(),
+        ...(ctx.effectPath === undefined ? {} : { effectPath: ctx.effectPath }),
+        ...(ctx.tracker === undefined ? {} : { tracker: ctx.tracker }),
+      },
+      { remaining: 10_000, max: 10_000 },
+      () => { throw new Error('applyBatch not available in compiled transferVar'); },
+    );
+  },
+});
+
+export const compileLet = (
+  desc: LetPattern,
+  compileBody: BodyCompiler,
+): CompiledEffectFragment => {
+  const bodyFragment = compileBody(desc.inEffects);
+
+  return {
+    nodeCount: 1 + countEffectNodes(desc.inEffects),
+    execute: (state, rng, bindings, ctx) => {
+      if (ctx.effectBudget !== undefined) {
+        consumeEffectBudget(ctx.effectBudget, 'let');
+      }
+      const evaluatedValue = evalCompiledValue(desc.value, state, bindings, ctx);
+      const nestedBindings = {
+        ...bindings,
+        [desc.bind]: evaluatedValue,
+      };
+      const nestedResult = executeEffectList(desc.inEffects, bodyFragment, state, rng, nestedBindings, ctx);
+      if (nestedResult.pendingChoice !== undefined) {
+        return {
+          state: nestedResult.state,
+          rng: nestedResult.rng,
+          ...(nestedResult.emittedEvents === undefined ? {} : { emittedEvents: nestedResult.emittedEvents }),
+          ...(nestedResult.decisionScope === undefined ? {} : { decisionScope: nestedResult.decisionScope }),
+          bindings,
+          pendingChoice: nestedResult.pendingChoice,
+        };
+      }
+
+      const resolvedNestedBindings = nestedResult.bindings ?? nestedBindings;
+      const exportedBindings: Record<string, unknown> = {};
+      for (const [name, value] of Object.entries(resolvedNestedBindings)) {
+        if (name === desc.bind || !name.startsWith('$')) {
+          continue;
+        }
+        exportedBindings[name] = value;
+      }
+
+      return {
+        state: nestedResult.state,
+        rng: nestedResult.rng,
+        ...(nestedResult.emittedEvents === undefined ? {} : { emittedEvents: nestedResult.emittedEvents }),
+        ...(nestedResult.decisionScope === undefined ? {} : { decisionScope: nestedResult.decisionScope }),
+        bindings: {
+          ...bindings,
+          ...exportedBindings,
+        },
+      };
+    },
+  };
+};
+
 export const compilePatternDescriptor = (
   desc: PatternDescriptor,
   compileBody: BodyCompiler,
@@ -581,6 +691,12 @@ export const compilePatternDescriptor = (
       return compileForEachPlayers(desc, compileBody);
     case 'gotoPhaseExact':
       return compileGotoPhaseExact(desc);
+    case 'bindValue':
+      return compileBindValue(desc);
+    case 'transferVar':
+      return compileTransferVar(desc);
+    case 'let':
+      return compileLet(desc, compileBody);
     default:
       return null;
   }

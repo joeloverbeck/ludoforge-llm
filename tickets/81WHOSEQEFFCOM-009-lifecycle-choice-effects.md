@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — effect-compiler-patterns.ts, effect-compiler-codegen.ts
-**Deps**: 81WHOSEQEFFCOM-001 (switch dispatch), 81WHOSEQEFFCOM-002 (let — binding patterns), 81WHOSEQEFFCOM-005 (token effects — choice bodies may contain token effects), 81WHOSEQEFFCOM-006 (iteration — choice option templates may use forEach)
+**Deps**: archive/tickets/81WHOSEQEFFCOM-001-classifyEffect-switch-dispatch.md, archive/tickets/81WHOSEQEFFCOM-002-variable-binding-leaf-effects.md, tickets/81WHOSEQEFFCOM-005-token-effects.md, tickets/81WHOSEQEFFCOM-006-iteration-reduction-effects.md
 
 ## Problem
 

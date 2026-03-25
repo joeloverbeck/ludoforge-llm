@@ -12,7 +12,6 @@ import {
   resolveMoveDecisionSequence,
   type ActionDef,
   type DecisionKey,
-  type EffectAST,
   type GameDef,
   type GameState,
   type Move,

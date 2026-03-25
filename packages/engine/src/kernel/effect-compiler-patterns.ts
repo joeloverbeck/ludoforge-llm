@@ -79,12 +79,37 @@ export type GotoPhaseExactPattern = {
   readonly phase: string;
 };
 
+type BindValuePayload = Extract<EffectAST, { readonly bindValue: unknown }>['bindValue'];
+type TransferVarPayload = Extract<EffectAST, { readonly transferVar: unknown }>['transferVar'];
+type LetPayload = Extract<EffectAST, { readonly let: unknown }>['let'];
+
+export type BindValuePattern = {
+  readonly kind: 'bindValue';
+  readonly bind: BindValuePayload['bind'];
+  readonly value: BindValuePayload['value'];
+};
+
+export type TransferVarPattern = {
+  readonly kind: 'transferVar';
+  readonly payload: TransferVarPayload;
+};
+
+export type LetPattern = {
+  readonly kind: 'let';
+  readonly bind: LetPayload['bind'];
+  readonly value: LetPayload['value'];
+  readonly inEffects: LetPayload['in'];
+};
+
 export type PatternDescriptor =
   | SetVarPattern
   | AddVarPattern
   | IfPattern
   | ForEachPlayersPattern
-  | GotoPhaseExactPattern;
+  | GotoPhaseExactPattern
+  | BindValuePattern
+  | TransferVarPattern
+  | LetPattern;
 
 const isScalarLiteral = (expr: ValueExpr): expr is ScalarLiteral =>
   typeof expr === 'number' || typeof expr === 'boolean' || typeof expr === 'string';
@@ -271,13 +296,49 @@ export const matchGotoPhaseExact = (node: EffectAST): GotoPhaseExactPattern | nu
   };
 };
 
+export const matchBindValue = (node: EffectAST): BindValuePattern | null => {
+  if (!('bindValue' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'bindValue',
+    bind: node.bindValue.bind,
+    value: node.bindValue.value,
+  };
+};
+
+export const matchTransferVar = (node: EffectAST): TransferVarPattern | null => {
+  if (!('transferVar' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'transferVar',
+    payload: node.transferVar,
+  };
+};
+
+export const matchLet = (node: EffectAST): LetPattern | null => {
+  if (!('let' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'let',
+    bind: node.let.bind,
+    value: node.let.value,
+    inEffects: node.let.in,
+  };
+};
+
 /*
  * Effect compilation status by EFFECT_KIND_TAG (34 tags, 0-33):
  *
  *  0  setVar              — compiled (Phase 0)
  *  1  addVar              — compiled (Phase 0)
  *  2  setActivePlayer     — stub (Phase 1)
- *  3  transferVar         — stub (Phase 1)
+ *  3  transferVar         — compiled (Phase 1)
  *  4  moveToken           — stub (Phase 2)
  *  5  moveAll             — stub (Phase 2)
  *  6  moveTokenAdjacent   — stub (Phase 2)
@@ -288,7 +349,7 @@ export const matchGotoPhaseExact = (node: EffectAST): GotoPhaseExactPattern | nu
  * 11  setTokenProp        — stub (Phase 2)
  * 12  reveal              — stub (Phase 4)
  * 13  conceal             — stub (Phase 4)
- * 14  bindValue           — stub (Phase 1)
+ * 14  bindValue           — compiled (Phase 1)
  * 15  chooseOne           — stub (Phase 6)
  * 16  chooseN             — stub (Phase 6)
  * 17  setMarker           — stub (Phase 1)
@@ -306,7 +367,7 @@ export const matchGotoPhaseExact = (node: EffectAST): GotoPhaseExactPattern | nu
  * 29  forEach             — compiled (Phase 0, players-only; general in Phase 3)
  * 30  reduce              — stub (Phase 3)
  * 31  removeByPriority    — stub (Phase 3)
- * 32  let                 — stub (Phase 1)
+ * 32  let                 — compiled (Phase 1)
  * 33  evaluateSubset      — stub (Phase 5)
  */
 export const classifyEffect = (node: EffectAST): PatternDescriptor | null => {
@@ -321,15 +382,18 @@ export const classifyEffect = (node: EffectAST): PatternDescriptor | null => {
       return matchForEachPlayers(node);
     case EFFECT_KIND_TAG.gotoPhaseExact:
       return matchGotoPhaseExact(node);
+    case EFFECT_KIND_TAG.bindValue:
+      return matchBindValue(node);
+    case EFFECT_KIND_TAG.transferVar:
+      return matchTransferVar(node);
+    case EFFECT_KIND_TAG.let:
+      return matchLet(node);
     // Deferred: action-context-heavy, depends on __freeOperation/__actionClass
     // bindings only available during the operation pipeline. See Spec 81.
     case EFFECT_KIND_TAG.grantFreeOperation:
       return null;
     // Not-yet-compiled lifecycle tags — stubs for future tickets (002-009)
     case EFFECT_KIND_TAG.setActivePlayer:
-    case EFFECT_KIND_TAG.transferVar:
-    case EFFECT_KIND_TAG.bindValue:
-    case EFFECT_KIND_TAG.let:
     case EFFECT_KIND_TAG.setMarker:
     case EFFECT_KIND_TAG.shiftMarker:
     case EFFECT_KIND_TAG.setGlobalMarker:

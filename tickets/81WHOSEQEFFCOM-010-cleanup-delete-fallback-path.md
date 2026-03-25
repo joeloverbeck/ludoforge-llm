@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — effect-compiler.ts, effect-compiler-codegen.ts, effect-compiler-patterns.ts
-**Deps**: 81WHOSEQEFFCOM-001 through 009 (all lifecycle types compilable)
+**Deps**: archive/tickets/81WHOSEQEFFCOM-001-classifyEffect-switch-dispatch.md, archive/tickets/81WHOSEQEFFCOM-002-variable-binding-leaf-effects.md, tickets/81WHOSEQEFFCOM-003-marker-effects.md, tickets/81WHOSEQEFFCOM-004-turn-flow-effects.md, tickets/81WHOSEQEFFCOM-005-token-effects.md, tickets/81WHOSEQEFFCOM-006-iteration-reduction-effects.md, tickets/81WHOSEQEFFCOM-007-information-effects.md, tickets/81WHOSEQEFFCOM-008-complex-control-flow-effects.md, tickets/81WHOSEQEFFCOM-009-lifecycle-choice-effects.md
 
 ## Problem
 

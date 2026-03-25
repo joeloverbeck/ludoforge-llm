@@ -36,9 +36,11 @@ const makeDef = (): GameDef => ({
     { name: 'score', type: 'int', init: 0, min: 0, max: 20 },
     { name: 'count', type: 'int', init: 0, min: 0, max: 20 },
     { name: 'flag', type: 'boolean', init: false },
+    { name: 'bank', type: 'int', init: 0, min: 0, max: 20 },
   ],
   perPlayerVars: [
     { name: 'hp', type: 'int', init: 0, min: 0, max: 20 },
+    { name: 'coins', type: 'int', init: 0, min: 0, max: 20 },
   ],
   zoneVars: [],
   zones: [],
@@ -78,11 +80,11 @@ const makeDef = (): GameDef => ({
 });
 
 const makeState = (): GameState => ({
-  globalVars: { score: 3, count: 0, flag: false },
+  globalVars: { score: 3, count: 0, flag: false, bank: 6 },
   perPlayerVars: {
-    '0': { hp: 5 },
-    '1': { hp: 7 },
-    '2': { hp: 9 },
+    '0': { hp: 5, coins: 4 },
+    '1': { hp: 7, coins: 6 },
+    '2': { hp: 9, coins: 8 },
   },
   zoneVars: {},
   playerCount: 3,
@@ -143,6 +145,54 @@ describe('effect-compiler orchestrator', () => {
     ];
     const state = makeState();
     const rng = createRng(23n);
+    const compiled = compileEffectSequence(asPhaseId('main'), 'onEnter', effects);
+
+    assert.equal(compiled.coverageRatio, 1);
+    compareResults(
+      def,
+      compiled.execute(state, rng, {}, makeCompiledContext(def)),
+      applyEffects(
+        effects,
+        createExecutionEffectContext({
+          def,
+          adjacencyGraph: buildAdjacencyGraph(def.zones),
+          runtimeTableIndex: buildRuntimeTableIndex(def),
+          state,
+          rng,
+          activePlayer: asPlayerId(1),
+          actorPlayer: asPlayerId(0),
+          bindings: {},
+          moveParams: {},
+          resources: createEvalRuntimeResources(),
+        }),
+      ),
+    );
+  });
+
+  it('treats bindValue, transferVar, and let sequences as fully compilable', () => {
+    const def = makeDef();
+    const effects: readonly EffectAST[] = [
+      eff({ bindValue: { bind: '$bonus', value: { _t: 6, op: '+', left: 1, right: 2 } } }),
+      eff({
+        let: {
+          bind: 'tmp',
+          value: { _t: 2, ref: 'binding', name: '$bonus' },
+          in: [
+            eff({ bindValue: { bind: '$visible', value: { _t: 2, ref: 'binding', name: 'tmp' } } }),
+          ],
+        },
+      }),
+      eff({
+        transferVar: {
+          from: { scope: 'global', var: 'bank' },
+          to: { scope: 'pvar', player: 'active', var: 'coins' },
+          amount: { _t: 2, ref: 'binding', name: '$visible' },
+          actualBind: '$actual',
+        },
+      }),
+    ];
+    const state = makeState();
+    const rng = createRng(31n);
     const compiled = compileEffectSequence(asPhaseId('main'), 'onEnter', effects);
 
     assert.equal(compiled.coverageRatio, 1);

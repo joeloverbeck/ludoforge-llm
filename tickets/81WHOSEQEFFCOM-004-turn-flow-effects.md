@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — effect-compiler-patterns.ts, effect-compiler-codegen.ts
-**Deps**: 81WHOSEQEFFCOM-001 (switch dispatch)
+**Deps**: archive/tickets/81WHOSEQEFFCOM-001-classifyEffect-switch-dispatch.md
 
 ## Problem
 

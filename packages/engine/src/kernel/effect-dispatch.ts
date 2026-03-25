@@ -167,6 +167,7 @@ export function applyEffect(effect: EffectAST, ctx: EffectContext): EffectResult
     rng: result.rng,
     ...(result.emittedEvents === undefined ? {} : { emittedEvents: result.emittedEvents }),
     ...(result.bindings === undefined ? {} : { bindings: result.bindings }),
+    decisionScope: result.decisionScope ?? fullCtx.decisionScope,
     ...(result.pendingChoice === undefined ? {} : { pendingChoice: result.pendingChoice }),
   };
 }
@@ -187,6 +188,7 @@ export function applyEffects(effects: readonly EffectAST[], ctx: EffectContext):
     rng: result.rng,
     ...(result.emittedEvents === undefined ? {} : { emittedEvents: result.emittedEvents }),
     ...(result.bindings === undefined ? {} : { bindings: result.bindings }),
+    decisionScope: result.decisionScope ?? fullCtx.decisionScope,
     ...(result.pendingChoice === undefined ? {} : { pendingChoice: result.pendingChoice }),
   };
 }

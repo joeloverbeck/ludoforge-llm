@@ -153,6 +153,10 @@ describe('effects runtime foundation', () => {
 
     assert.equal(result.state.globalVars.x, 2);
     assert.equal(result.rng, ctx.rng);
+    assert.deepEqual(result.decisionScope, {
+      iterationPath: '',
+      counters: { '$choice': 1 },
+    });
   });
 
   it('shares the same effect budget across nested control-flow execution', () => {
@@ -232,6 +236,23 @@ describe('effects runtime foundation', () => {
     assert.equal(result.state.currentPhase, asPhaseId('commitment'));
     assert.equal(result.state.globalVars.x, 5);
     assert.equal(result.state.turnCount, 1);
+  });
+
+  it('applyEffect returns advanced decisionScope after successful chooseOne completion', () => {
+    const effect: EffectAST = eff({
+      chooseOne: {
+        internalDecisionId: 'd1',
+        bind: '$choice',
+        options: { query: 'enums', values: ['a', 'b'] },
+      },
+    });
+
+    const result = applyEffect(effect, makeCtx({ moveParams: { 'd1::$choice': 'b' } }));
+
+    assert.deepEqual(result.decisionScope, {
+      iterationPath: '',
+      counters: { 'd1::$choice': 1 },
+    });
   });
 
   it('gotoPhaseExact rejects crossing a turn boundary to an earlier phase', () => {

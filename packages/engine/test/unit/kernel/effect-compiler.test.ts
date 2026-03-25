@@ -280,6 +280,7 @@ describe('effect-compiler orchestrator', () => {
     assert.deepEqual(compiledResult.rng, interpretedResult.rng);
     assert.deepEqual(compiledResult.emittedEvents ?? [], interpretedResult.emittedEvents ?? []);
     assert.deepEqual(compiledResult.bindings ?? {}, interpretedResult.bindings ?? {});
+    assert.deepEqual(compiledResult.decisionScope ?? emptyScope(), interpretedResult.decisionScope ?? emptyScope());
     assert.equal(computeFullHash(zobrist, compiledResult.state), computeFullHash(zobrist, interpretedResult.state));
   });
 
@@ -322,6 +323,7 @@ describe('effect-compiler orchestrator', () => {
     assert.deepEqual(compiledResult.rng, interpretedResult.rng);
     assert.deepEqual(compiledResult.emittedEvents ?? [], interpretedResult.emittedEvents ?? []);
     assert.deepEqual(compiledResult.bindings ?? {}, interpretedResult.bindings ?? {});
+    assert.deepEqual(compiledResult.decisionScope ?? emptyScope(), interpretedResult.decisionScope ?? emptyScope());
     assert.equal(computeFullHash(zobrist, compiledResult.state), computeFullHash(zobrist, interpretedResult.state));
   });
 

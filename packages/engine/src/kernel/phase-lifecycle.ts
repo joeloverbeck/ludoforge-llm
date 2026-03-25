@@ -294,6 +294,16 @@ const verifyLifecycleResultParity = (
       interpretedValue: interpretedResult.pendingChoice,
     });
   }
+  if (!deepEqual(compiledResult.decisionScope ?? emptyScope(), interpretedResult.decisionScope ?? emptyScope())) {
+    throw new CompiledEffectVerificationError({
+      phaseId: compiledEffect.phaseId,
+      lifecycle: compiledEffect.lifecycle,
+      coverageRatio: compiledEffect.coverageRatio,
+      mismatchKind: 'decisionScope',
+      compiledValue: compiledResult.decisionScope ?? emptyScope(),
+      interpretedValue: interpretedResult.decisionScope ?? emptyScope(),
+    });
+  }
   if (compiledResult.pendingChoice !== undefined || interpretedResult.pendingChoice !== undefined) {
     if (!deepEqual(compiledResult.bindings ?? {}, interpretedResult.bindings ?? {})) {
       throw new CompiledEffectVerificationError({
@@ -303,16 +313,6 @@ const verifyLifecycleResultParity = (
         mismatchKind: 'bindings',
         compiledValue: compiledResult.bindings ?? {},
         interpretedValue: interpretedResult.bindings ?? {},
-      });
-    }
-    if (!deepEqual(compiledResult.decisionScope ?? emptyScope(), interpretedResult.decisionScope ?? emptyScope())) {
-      throw new CompiledEffectVerificationError({
-        phaseId: compiledEffect.phaseId,
-        lifecycle: compiledEffect.lifecycle,
-        coverageRatio: compiledEffect.coverageRatio,
-        mismatchKind: 'decisionScope',
-        compiledValue: compiledResult.decisionScope ?? emptyScope(),
-        interpretedValue: interpretedResult.decisionScope ?? emptyScope(),
       });
     }
   }

@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — effect-context/result types, effect-dispatch normalization, compiled-effect typing, targeted runtime/compiler tests
-**Deps**: specs/81-whole-sequence-effect-compilation.md, archive/tickets/81WHOSEQEFFCOM/81WHOSEQEFFCOM-012-decision-scope-contract-alignment.md
+**Deps**: archive/specs/81-whole-sequence-effect-compilation.md, archive/tickets/81WHOSEQEFFCOM/81WHOSEQEFFCOM-012-decision-scope-contract-alignment.md
 
 ## Problem
 

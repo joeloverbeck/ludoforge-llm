@@ -21,7 +21,9 @@ import {
   createZobristTable,
   emptyScope,
   freezeState,
+  promoteCompiledEffectContext,
   type CompiledEffectContext,
+  type CompiledExecutionContext,
   type CompiledEffectFragment,
   type DraftTracker,
   type EffectAST,
@@ -150,7 +152,7 @@ const compileEffects = (effects: readonly EffectAST[]): CompiledEffectFragment =
       let currentState = state;
       let currentRng = rng;
       let currentBindings = bindings;
-      let currentDecisionScope = ctx.decisionScope ?? emptyScope();
+      let currentDecisionScope = ctx.decisionScope;
       const emittedEvents: TriggerEvent[] = [];
 
       for (const fragment of compiledFragments) {
@@ -205,8 +207,13 @@ const makeCompiledContext = (
   activePlayer: asPlayerId(1),
   actorPlayer: asPlayerId(0),
   moveParams: options?.moveParams ?? {},
+  mode: options?.mode ?? 'execution',
+  decisionAuthority: {
+    source: 'engineRuntime',
+    player: asPlayerId(1),
+    ownershipEnforcement: 'strict',
+  },
   decisionScope: emptyScope(),
-  ...(options?.mode === undefined ? {} : { mode: options.mode }),
   ...(options?.transientDecisionSelections === undefined
     ? {}
     : { transientDecisionSelections: options.transientDecisionSelections }),
@@ -252,7 +259,20 @@ const runCompiled = (
   assert.ok(descriptor !== null);
 
   const fragment = compilePatternDescriptor(descriptor, compileEffects);
-  return fragment.execute(state, rng, bindings, makeCompiledContext(def, options));
+  const mutableState = createMutableState(state);
+  const result = fragment.execute(
+    mutableState as GameState,
+    rng,
+    bindings,
+    promoteCompiledEffectContext(makeCompiledContext(def, options), createDraftTracker()),
+  );
+
+  return {
+    ...result,
+    state: result.state === (mutableState as unknown as GameState)
+      ? freezeState(mutableState)
+      : result.state,
+  };
 };
 
 const runInterpreted = (
@@ -1105,13 +1125,10 @@ describe('effect-compiler-codegen', () => {
 
   // --- Draft-aware codegen tests (79COMEFFPATRED-005) ---
 
-  const makeDraftCompiledContext = (
+const makeDraftCompiledContext = (
     def: GameDef,
     tracker: DraftTracker,
-): CompiledEffectContext => ({
-    ...makeCompiledContext(def),
-    tracker,
-  });
+): CompiledExecutionContext => promoteCompiledEffectContext(makeCompiledContext(def), tracker);
 
 const runCompiledWithTracker = (
     def: GameDef,

@@ -197,6 +197,12 @@ const executeLifecycleEffect = ({
     activePlayer: state.activePlayer,
     actorPlayer: state.activePlayer,
     moveParams: {},
+    mode: 'execution' as const,
+    decisionAuthority: {
+      source: 'engineRuntime' as const,
+      player: state.activePlayer,
+      ownershipEnforcement: 'strict' as const,
+    },
     traceContext,
     effectPath: '',
     ...(cachedRuntime === undefined ? {} : { cachedRuntime }),

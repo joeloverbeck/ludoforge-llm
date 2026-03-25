@@ -1,4 +1,4 @@
-import { rebaseIterationPath, withIterationSegment, emptyScope } from './decision-scope.js';
+import { rebaseIterationPath, withIterationSegment } from './decision-scope.js';
 import { combinations, countCombinations } from './combinatorics.js';
 import type { EffectCursor, NormalizedEffectResult, PartialEffectResult } from './effect-context.js';
 import { createEvalContext } from './eval-context.js';
@@ -6,7 +6,7 @@ import { evalCondition } from './eval-condition.js';
 import { evalQuery } from './eval-query.js';
 import { evalValue } from './eval-value.js';
 import { typeMismatchError } from './eval-error.js';
-import { buildEffectEnvFromCompiledCtx, createCompiledExecutionContext } from './effect-compiler-runtime.js';
+import { buildEffectEnvFromCompiledCtx, createExecutionContextFromCompiled } from './effect-compiler-runtime.js';
 import { applyEffectsWithBudgetState, consumeEffectBudget } from './effect-dispatch.js';
 import type { MutableGameState } from './state-draft.js';
 import { buildForEachTraceEntry, buildReduceTraceEntry } from './control-flow-trace.js';
@@ -53,7 +53,7 @@ import {
   type SimpleValuePattern,
   type TransferVarPattern,
 } from './effect-compiler-patterns.js';
-import type { CompiledEffectContext, CompiledEffectFragmentFn } from './effect-compiler-types.js';
+import type { CompiledExecutionContext, CompiledEffectFragmentFn } from './effect-compiler-types.js';
 import { effectRuntimeError } from './effect-error.js';
 import {
   applyChooseN,
@@ -112,7 +112,6 @@ import {
   resolveScopedVarDef,
   toScopedVarWrite,
   writeScopedVarsMutable,
-  writeScopedVarsToState,
 } from './scoped-var-runtime-access.js';
 import { toTraceVarChangePayload, toVarChangedEvent } from './scoped-var-runtime-mapping.js';
 import { emitVarChangeTraceIfChanged } from './var-change-trace.js';
@@ -131,13 +130,13 @@ export interface CompiledEffectFragment {
 export type CompiledValueAccessor = (
   state: GameState,
   bindings: Readonly<Record<string, unknown>>,
-  ctx: CompiledEffectContext,
+  ctx: CompiledExecutionContext,
 ) => unknown;
 
 export type CompiledConditionEvaluator = (
   state: GameState,
   bindings: Readonly<Record<string, unknown>>,
-  ctx: CompiledEffectContext,
+  ctx: CompiledExecutionContext,
 ) => boolean;
 
 export type BodyCompiler = (effects: readonly EffectAST[]) => CompiledEffectFragment;
@@ -201,7 +200,7 @@ const expectOrderingNumber = (value: unknown, side: 'left' | 'right', condition:
 
 const resolveCompiledBindings = (
   bindings: Readonly<Record<string, unknown>>,
-  ctx: Pick<CompiledEffectContext, 'moveParams'>,
+  ctx: Pick<CompiledExecutionContext, 'moveParams'>,
 ): Readonly<Record<string, unknown>> => {
   const moveParams = ctx.moveParams;
   for (const key in moveParams) {
@@ -214,7 +213,7 @@ const resolveCompiledBindings = (
 const createCompiledEvalContext = (
   state: GameState,
   bindings: Readonly<Record<string, unknown>>,
-  ctx: CompiledEffectContext,
+  ctx: CompiledExecutionContext,
 ): ReturnType<typeof createEvalContext> => createEvalContext({
   def: ctx.def,
   adjacencyGraph: ctx.adjacencyGraph,
@@ -230,7 +229,7 @@ const evalCompiledValue = (
   expr: ValueExpr | NumericValueExpr,
   state: GameState,
   bindings: Readonly<Record<string, unknown>>,
-  ctx: CompiledEffectContext,
+  ctx: CompiledExecutionContext,
 ): unknown => evalValue(expr, createCompiledEvalContext(state, bindings, ctx));
 
 const toReference = (
@@ -250,12 +249,12 @@ const toReference = (
 
 const emitVarChangeArtifacts = (
   state: GameState,
-  ctx: CompiledEffectContext,
+  ctx: CompiledExecutionContext,
   endpoint: Parameters<typeof toTraceVarChangePayload>[0],
   oldValue: number | boolean,
   newValue: number | boolean,
 ): ReturnType<typeof toVarChangedEvent> | undefined => {
-  const evalCtx = createCompiledExecutionContext(state, { state: state.rng }, {}, ctx);
+  const evalCtx = createExecutionContextFromCompiled(state, { state: state.rng }, {}, ctx);
   const tracePayload = toTraceVarChangePayload(endpoint, oldValue, newValue);
   if (!emitVarChangeTraceIfChanged(evalCtx, tracePayload)) {
     return undefined;
@@ -302,7 +301,7 @@ const countEffectNodes = (effects: readonly EffectAST[]): number => {
 
 const compiledTraceProvenance = (
   state: GameState,
-  ctx: CompiledEffectContext,
+  ctx: CompiledExecutionContext,
 ): EffectTraceProvenance => resolveTraceProvenance({
   state,
   ...(ctx.traceContext === undefined ? {} : { traceContext: ctx.traceContext }),
@@ -314,13 +313,13 @@ const executeCompiledFragment = (
   state: GameState,
   rng: Rng,
   bindings: Readonly<Record<string, unknown>>,
-  ctx: CompiledEffectContext,
+  ctx: CompiledExecutionContext,
 ): PartialEffectResult => fragment.execute(state, rng, bindings, ctx);
 
 const normalizeBranchResult = (
   result: PartialEffectResult,
   bindings: Readonly<Record<string, unknown>>,
-  decisionScope: NonNullable<CompiledEffectContext['decisionScope']>,
+  decisionScope: CompiledExecutionContext['decisionScope'],
 ): NormalizedEffectResult => ({
   state: result.state,
   rng: result.rng,
@@ -349,46 +348,24 @@ const executeCompiledDelegate = (
   state: GameState,
   rng: Rng,
   bindings: Readonly<Record<string, unknown>>,
-  ctx: CompiledEffectContext,
+  ctx: CompiledExecutionContext,
   handler: (
     env: ReturnType<typeof buildEffectEnvFromCompiledCtx>,
     cursor: EffectCursor,
   ) => PartialEffectResult,
 ): PartialEffectResult => {
-  if (ctx.effectBudget !== undefined) {
-    consumeEffectBudget(ctx.effectBudget, effectType);
-  }
-
-  const decisionAuthority = ctx.decisionAuthority ?? {
-    source: 'engineRuntime' as const,
-    player: ctx.activePlayer,
-    ownershipEnforcement: 'strict' as const,
-  };
-  const mode = ctx.mode === undefined ? 'execution' : ctx.mode;
-  const effectCtx = createCompiledExecutionContext(state, rng, bindings, {
-    ...ctx,
-    decisionAuthority,
-    mode,
-  });
+  consumeEffectBudget(ctx.effectBudget, effectType);
+  const effectCtx = createExecutionContextFromCompiled(state, rng, bindings, ctx);
   const cursor: EffectCursor = {
     state,
     rng,
     bindings,
-    decisionScope: ctx.decisionScope ?? emptyScope(),
+    decisionScope: ctx.decisionScope,
     ...(ctx.effectPath === undefined ? {} : { effectPath: ctx.effectPath }),
-    ...(ctx.tracker === undefined ? {} : { tracker: ctx.tracker }),
+    tracker: ctx.tracker,
   };
   const result = handler(
-    buildEffectEnvFromCompiledCtx(
-      {
-        ...ctx,
-        decisionAuthority,
-        mode,
-      },
-      effectCtx.collector,
-      decisionAuthority,
-      mode,
-    ),
+    buildEffectEnvFromCompiledCtx(ctx, effectCtx.collector),
     cursor,
   );
   return {
@@ -519,11 +496,9 @@ export const compileSetVar = (desc: SetVarPattern): CompiledEffectFragment => {
   return {
     nodeCount: 1,
     execute: (state, rng, bindings, ctx) => {
-      if (ctx.effectBudget !== undefined) {
-        consumeEffectBudget(ctx.effectBudget, 'setVar');
-      }
+      consumeEffectBudget(ctx.effectBudget, 'setVar');
       const resolvedBindings = resolveCompiledBindings(bindings, ctx);
-      const execCtx = createCompiledExecutionContext(state, rng, bindings, ctx);
+      const execCtx = createExecutionContextFromCompiled(state, rng, bindings, ctx);
       const evalCtx = resolvedBindings === bindings ? execCtx : { ...execCtx, bindings: resolvedBindings };
       const endpoint = resolveRuntimeScopedEndpoint(
         desc.target.scope === 'global'
@@ -564,18 +539,8 @@ export const compileSetVar = (desc: SetVarPattern): CompiledEffectFragment => {
           ? toScopedVarWrite(endpoint, expectInteger(nextValue, 'setVar', 'value'))
           : toScopedVarWrite(endpoint, nextValue),
       ];
-      const tracker = ctx.tracker;
-      if (tracker) {
-        writeScopedVarsMutable(state as MutableGameState, writes, tracker);
-        return { state, rng, emittedEvents: [emittedEvent], bindings };
-      }
-
-      return {
-        state: writeScopedVarsToState(state, writes),
-        rng,
-        emittedEvents: [emittedEvent],
-        bindings,
-      };
+      writeScopedVarsMutable(state as MutableGameState, writes, ctx.tracker);
+      return { state, rng, emittedEvents: [emittedEvent], bindings };
     },
   };
 };
@@ -594,11 +559,9 @@ export const compileAddVar = (desc: AddVarPattern): CompiledEffectFragment => {
   return {
     nodeCount: 1,
     execute: (state, rng, bindings, ctx) => {
-      if (ctx.effectBudget !== undefined) {
-        consumeEffectBudget(ctx.effectBudget, 'addVar');
-      }
+      consumeEffectBudget(ctx.effectBudget, 'addVar');
       const resolvedBindings = resolveCompiledBindings(bindings, ctx);
-      const execCtx = createCompiledExecutionContext(state, rng, bindings, ctx);
+      const execCtx = createExecutionContextFromCompiled(state, rng, bindings, ctx);
       const evalCtx = resolvedBindings === bindings ? execCtx : { ...execCtx, bindings: resolvedBindings };
       const endpoint = resolveRuntimeScopedEndpoint(
         desc.target.scope === 'global'
@@ -637,18 +600,8 @@ export const compileAddVar = (desc: AddVarPattern): CompiledEffectFragment => {
       }
 
       const writes = [toScopedVarWrite(endpoint, nextValue)];
-      const tracker = ctx.tracker;
-      if (tracker) {
-        writeScopedVarsMutable(state as MutableGameState, writes, tracker);
-        return { state, rng, emittedEvents: [emittedEvent], bindings };
-      }
-
-      return {
-        state: writeScopedVarsToState(state, writes),
-        rng,
-        emittedEvents: [emittedEvent],
-        bindings,
-      };
+      writeScopedVarsMutable(state as MutableGameState, writes, ctx.tracker);
+      return { state, rng, emittedEvents: [emittedEvent], bindings };
     },
   };
 };
@@ -664,10 +617,8 @@ export const compileIf = (
   return {
     nodeCount: 1 + countEffectNodes(desc.thenEffects) + countEffectNodes(desc.elseEffects),
     execute: (state, rng, bindings, ctx) => {
-      if (ctx.effectBudget !== undefined) {
-        consumeEffectBudget(ctx.effectBudget, 'if');
-      }
-      const decisionScope = ctx.decisionScope ?? emptyScope();
+      consumeEffectBudget(ctx.effectBudget, 'if');
+      const decisionScope = ctx.decisionScope;
       if (conditionEvaluator(state, bindings, ctx)) {
         return normalizeBranchResult(
           executeCompiledFragment(thenFragment, state, rng, bindings, ctx),
@@ -699,9 +650,7 @@ export const compileForEach = (
   return {
     nodeCount: 1 + countEffectNodes(desc.effects) + countEffectNodes(desc.inEffects ?? []),
     execute: (state, rng, bindings, ctx) => {
-      if (ctx.effectBudget !== undefined) {
-        consumeEffectBudget(ctx.effectBudget, 'forEach');
-      }
+      consumeEffectBudget(ctx.effectBudget, 'forEach');
       const evalCtx = createCompiledEvalContext(state, bindings, ctx);
       const limit = resolveControlFlowIterationLimit('forEach', desc.limit, evalCtx, (evaluatedLimit) => {
         throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CONTROL_FLOW_RUNTIME_VALIDATION_FAILED, 'forEach.limit must evaluate to a non-negative integer', {
@@ -714,7 +663,7 @@ export const compileForEach = (
 
       let currentState = state;
       let currentRng = rng;
-      let currentDecisionScope = ctx.decisionScope ?? emptyScope();
+      let currentDecisionScope = ctx.decisionScope;
       const parentIterationPath = currentDecisionScope.iterationPath;
       const emittedEvents: TriggerEvent[] = [];
 
@@ -805,9 +754,7 @@ export const compileReduce = (
   return {
     nodeCount: 1 + countEffectNodes(desc.payload.in),
     execute: (state, rng, bindings, ctx) => {
-      if (ctx.effectBudget !== undefined) {
-        consumeEffectBudget(ctx.effectBudget, 'reduce');
-      }
+      consumeEffectBudget(ctx.effectBudget, 'reduce');
       const evalCtx = createCompiledEvalContext(state, bindings, ctx);
       const limit = resolveControlFlowIterationLimit('reduce', desc.payload.limit, evalCtx, (evaluatedLimit) => {
         throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CONTROL_FLOW_RUNTIME_VALIDATION_FAILED, 'reduce.limit must evaluate to a non-negative integer', {
@@ -922,13 +869,11 @@ export const compileRemoveByPriority = (
   return {
     nodeCount: 1 + countEffectNodes(inEffects),
     execute: (state, rng, bindings, ctx) => {
-      if (ctx.effectBudget !== undefined) {
-        consumeEffectBudget(ctx.effectBudget, 'removeByPriority');
-      }
+      consumeEffectBudget(ctx.effectBudget, 'removeByPriority');
       let remainingBudget = resolveRemovalBudget(evalCompiledValue(desc.payload.budget, state, bindings, ctx));
       let currentState = state;
       let currentRng = rng;
-      let currentDecisionScope = ctx.decisionScope ?? emptyScope();
+      let currentDecisionScope = ctx.decisionScope;
       const emittedEvents: TriggerEvent[] = [];
       const countBindings: Record<string, number> = {};
 
@@ -1056,9 +1001,7 @@ export const compileRollRandom = (
   return {
     nodeCount: 1 + countEffectNodes(desc.payload.in),
     execute: (state, rng, bindings, ctx) => {
-      if (ctx.effectBudget !== undefined) {
-        consumeEffectBudget(ctx.effectBudget, 'rollRandom');
-      }
+      consumeEffectBudget(ctx.effectBudget, 'rollRandom');
 
       const minValue = expectSafeInteger(evalCompiledValue(desc.payload.min, state, bindings, ctx), 'rollRandom', 'min');
       const maxValue = expectSafeInteger(evalCompiledValue(desc.payload.max, state, bindings, ctx), 'rollRandom', 'max');
@@ -1127,9 +1070,7 @@ export const compilePushInterruptPhase = (desc: PushInterruptPhasePattern): Comp
 export const compileBindValue = (desc: BindValuePattern): CompiledEffectFragment => ({
   nodeCount: 1,
   execute: (state, rng, bindings, ctx) => {
-    if (ctx.effectBudget !== undefined) {
-      consumeEffectBudget(ctx.effectBudget, 'bindValue');
-    }
+    consumeEffectBudget(ctx.effectBudget, 'bindValue');
     const value = evalCompiledValue(desc.value, state, bindings, ctx);
     return {
       state,
@@ -1194,9 +1135,7 @@ export const compileLet = (
   return {
     nodeCount: 1 + countEffectNodes(desc.inEffects),
     execute: (state, rng, bindings, ctx) => {
-      if (ctx.effectBudget !== undefined) {
-        consumeEffectBudget(ctx.effectBudget, 'let');
-      }
+      consumeEffectBudget(ctx.effectBudget, 'let');
       const evaluatedValue = evalCompiledValue(desc.value, state, bindings, ctx);
       const nestedBindings = {
         ...bindings,
@@ -1241,9 +1180,7 @@ export const compileEvaluateSubset = (
   return {
     nodeCount: 1 + countEffectNodes(desc.payload.compute) + countEffectNodes(desc.payload.in),
     execute: (state, rng, bindings, ctx) => {
-      if (ctx.effectBudget !== undefined) {
-        consumeEffectBudget(ctx.effectBudget, 'evaluateSubset');
-      }
+      consumeEffectBudget(ctx.effectBudget, 'evaluateSubset');
 
       const items = evalQuery(desc.payload.source, createCompiledEvalContext(state, bindings, ctx));
       const subsetSize = expectSafeInteger(evalCompiledValue(desc.payload.subsetSize, state, bindings, ctx), 'evaluateSubset', 'subsetSize');

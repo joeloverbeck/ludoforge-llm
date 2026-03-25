@@ -21,6 +21,7 @@ import {
   makeCompiledLifecycleEffectKey,
   type CompiledEffectContext,
   type CompiledEffectFragment,
+  type CompiledExecutionContext,
   type DraftTracker,
   type EffectAST,
   type GameDef,
@@ -131,6 +132,12 @@ const makeCompiledContext = (def: GameDef): CompiledEffectContext => ({
   activePlayer: asPlayerId(1),
   actorPlayer: asPlayerId(0),
   moveParams: {},
+  mode: 'execution',
+  decisionAuthority: {
+    source: 'engineRuntime',
+    player: asPlayerId(1),
+    ownershipEnforcement: 'strict',
+  },
   decisionScope: emptyScope(),
 });
 
@@ -488,9 +495,11 @@ describe('effect-compiler orchestrator', () => {
 
   it('composeFragments threads tracker through fragment calls as a DraftTracker', () => {
     let capturedTracker: DraftTracker | undefined;
+    let capturedCtx: CompiledExecutionContext | undefined;
     const spyFragment: CompiledEffectFragment = {
       nodeCount: 1,
       execute: (state, rng, bindings, ctx) => {
+        capturedCtx = ctx;
         capturedTracker = ctx.tracker;
         return { state, rng, bindings };
       },
@@ -503,6 +512,9 @@ describe('effect-compiler orchestrator', () => {
     assert.ok(capturedTracker!.zoneVars instanceof Set, 'tracker.zoneVars must be a Set');
     assert.ok(capturedTracker!.zones instanceof Set, 'tracker.zones must be a Set');
     assert.ok(capturedTracker!.markers instanceof Set, 'tracker.markers must be a Set');
+    assert.equal(capturedCtx?.mode, 'execution');
+    assert.equal(capturedCtx?.decisionAuthority.player, asPlayerId(1));
+    assert.ok(capturedCtx !== undefined && capturedCtx.effectBudget.remaining > 0);
   });
 
   it('composeFragments threads bindings, decision scope, and emitted events in order', () => {

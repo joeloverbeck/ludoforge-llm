@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — CNL compiler refactor
-**Deps**: specs/59-codebase-health-audit.md
+**Deps**: archive/specs/59-codebase-health-audit.md
 
 ## Problem
 

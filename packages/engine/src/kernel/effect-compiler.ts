@@ -1,7 +1,6 @@
-import { emptyScope } from './decision-scope.js';
 import { compilePatternDescriptor, type BodyCompiler, type CompiledEffectFragment } from './effect-compiler-codegen.js';
 import { classifyLifecycleEffect, computeCoverageRatio } from './effect-compiler-patterns.js';
-import { createEffectBudgetState } from './effect-dispatch.js';
+import { promoteCompiledEffectContext } from './effect-compiler-runtime.js';
 import {
   makeCompiledLifecycleEffectKey,
   type CompiledEffectFn,
@@ -11,13 +10,14 @@ import {
 } from './effect-compiler-types.js';
 import { createDraftTracker, createMutableState, freezeState, type MutableGameState } from './state-draft.js';
 import type { PhaseId } from './branded.js';
+import type { DecisionScope } from './decision-scope.js';
 import type { EffectAST, GameDef, GameState, TriggerEvent } from './types.js';
 import type { NormalizedEffectResult, PartialEffectResult } from './effect-context.js';
 
 const normalizeFragmentResult = (
   result: PartialEffectResult,
   bindings: Readonly<Record<string, unknown>>,
-  decisionScope: ReturnType<typeof emptyScope>,
+  decisionScope: DecisionScope,
 ): NormalizedEffectResult => ({
   state: result.state,
   rng: result.rng,
@@ -30,22 +30,19 @@ const normalizeFragmentResult = (
 export const composeFragments = (
   fragments: readonly CompiledEffectFragment[],
 ): CompiledEffectFn => (state, rng, bindings, ctx) => {
-  const compiledCtx = ctx.effectBudget === undefined
-    ? { ...ctx, effectBudget: createEffectBudgetState(ctx) }
-    : ctx;
   const mutableState = createMutableState(state);
   const tracker = createDraftTracker();
+  const compiledCtx = promoteCompiledEffectContext(ctx, tracker);
   let currentState: GameState = mutableState as GameState;
   let currentRng = rng;
   let currentBindings = bindings;
-  let currentDecisionScope = compiledCtx.decisionScope ?? emptyScope();
+  let currentDecisionScope = compiledCtx.decisionScope;
   const emittedEvents: TriggerEvent[] = [];
 
   for (const fragment of fragments) {
     const result = normalizeFragmentResult(fragment.execute(currentState, currentRng, currentBindings, {
       ...compiledCtx,
       decisionScope: currentDecisionScope,
-      tracker,
     }), currentBindings, currentDecisionScope);
     currentState = result.state;
     currentRng = result.rng;

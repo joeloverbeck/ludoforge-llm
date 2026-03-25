@@ -178,6 +178,12 @@ describe('compiled lifecycle runtime integration', () => {
       activePlayer: state.activePlayer,
       actorPlayer: state.activePlayer,
       moveParams: {},
+      mode: 'execution' as const,
+      decisionAuthority: {
+        source: 'engineRuntime' as const,
+        player: state.activePlayer,
+        ownershipEnforcement: 'strict' as const,
+      },
       maxEffectOps: 3,
     } as const;
 

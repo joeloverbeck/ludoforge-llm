@@ -353,6 +353,68 @@ describe('effect-compiler orchestrator', () => {
     );
   });
 
+  it('treats iteration/reduction lifecycle sequences as fully compilable with interpreter parity', () => {
+    const def = makeTokenDef();
+    const effects: readonly EffectAST[] = [
+      eff({
+        forEach: {
+          bind: '$zone',
+          over: { query: 'enums', values: [] },
+          effects: [],
+        },
+      }),
+      eff({
+        reduce: {
+          itemBind: '$card',
+          accBind: '$sum',
+          over: { query: 'tokensInZone', zone: 'deck:none' },
+          initial: 0,
+          next: { _t: 6, op: '+', left: { _t: 2, ref: 'binding', name: '$sum' }, right: 1 },
+          resultBind: '$counted',
+          in: [eff({ setVar: { scope: 'global', var: 'count', value: { _t: 2, ref: 'binding', name: '$counted' } } })],
+        },
+      }),
+      eff({
+        removeByPriority: {
+          budget: 1,
+          groups: [
+            {
+              bind: '$card',
+              over: { query: 'tokensInZone', zone: 'deck:none' },
+              to: 'hand:none',
+              countBind: '$removed',
+            },
+          ],
+          remainingBind: '$remaining',
+        },
+      }),
+    ];
+    const state = makeTokenState();
+    const rng = createRng(59n);
+    const compiled = compileEffectSequence(asPhaseId('main'), 'onEnter', effects);
+
+    assert.equal(compiled.coverageRatio, 1);
+    compareResults(
+      def,
+      compiled.execute(state, rng, {}, makeCompiledContext(def)),
+      applyEffects(
+        effects,
+        createExecutionEffectContext({
+          def,
+          adjacencyGraph: buildAdjacencyGraph(def.zones),
+          runtimeTableIndex: buildRuntimeTableIndex(def),
+          state,
+          rng,
+          activePlayer: asPlayerId(1),
+          actorPlayer: asPlayerId(0),
+          bindings: {},
+          moveParams: {},
+          resources: createEvalRuntimeResources(),
+        }),
+      ),
+    );
+  });
+
   it('composeFragments creates a mutable scope — output state is not identity-equal to input', () => {
     const noopFragment: CompiledEffectFragment = {
       nodeCount: 1,

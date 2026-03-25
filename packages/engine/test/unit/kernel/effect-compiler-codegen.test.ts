@@ -11,6 +11,7 @@ import {
   buildRuntimeTableIndex,
   compilePatternDescriptor,
   computeFullHash,
+  createCollector,
   createDraftTracker,
   createExecutionEffectContext,
   createEvalRuntimeResources,
@@ -186,11 +187,14 @@ const compileEffects = (effects: readonly EffectAST[]): CompiledEffectFragment |
   };
 };
 
-const makeCompiledContext = (def: GameDef): CompiledEffectContext => ({
+const makeCompiledContext = (
+  def: GameDef,
+  options?: { readonly trace?: boolean },
+): CompiledEffectContext => ({
   def,
   adjacencyGraph: buildAdjacencyGraph(def.zones),
   runtimeTableIndex: buildRuntimeTableIndex(def),
-  resources: createEvalRuntimeResources(),
+  resources: createEvalRuntimeResources(options?.trace === true ? { collector: createCollector({ trace: true }) } : undefined),
   activePlayer: asPlayerId(1),
   actorPlayer: asPlayerId(0),
   moveParams: {},
@@ -222,6 +226,7 @@ const runCompiled = (
   effect: EffectAST,
   bindings: Readonly<Record<string, unknown>> = {},
   rng: Rng = createRng(17n),
+  options?: { readonly trace?: boolean },
 ): EffectResult => {
   const descriptor = classifyEffect(effect);
   assert.ok(descriptor !== null);
@@ -229,7 +234,7 @@ const runCompiled = (
   const fragment = compilePatternDescriptor(descriptor, compileEffects);
   assert.ok(fragment !== null);
 
-  return fragment.execute(state, rng, bindings, makeCompiledContext(def));
+  return fragment.execute(state, rng, bindings, makeCompiledContext(def, options));
 };
 
 const runInterpreted = (
@@ -238,6 +243,7 @@ const runInterpreted = (
   effect: EffectAST,
   bindings: Readonly<Record<string, unknown>> = {},
   rng: Rng = createRng(17n),
+  options?: { readonly trace?: boolean },
 ): EffectResult => applyEffect(effect, createExecutionEffectContext({
   def,
   adjacencyGraph: buildAdjacencyGraph(def.zones),
@@ -248,7 +254,7 @@ const runInterpreted = (
   actorPlayer: asPlayerId(0),
   bindings,
   moveParams: {},
-  resources: createEvalRuntimeResources(),
+  resources: createEvalRuntimeResources(options?.trace === true ? { collector: createCollector({ trace: true }) } : undefined),
 }));
 
 describe('effect-compiler-codegen', () => {
@@ -296,7 +302,7 @@ describe('effect-compiler-codegen', () => {
     compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
   });
 
-  it('compileForEachPlayers matches interpreter for player iteration, limit, and countBind', () => {
+  it('compileForEach matches interpreter for player iteration, limit, and countBind', () => {
     const def = makeDef();
     const state = makeState();
     const effect: EffectAST = eff({
@@ -313,7 +319,7 @@ describe('effect-compiler-codegen', () => {
     compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
   });
 
-  it('compileForEachPlayers matches interpreter when player query is empty', () => {
+  it('compileForEach matches interpreter when player query is empty', () => {
     const def = makeDef();
     const state = { ...makeState(), playerCount: 0, perPlayerVars: {} };
     const effect: EffectAST = eff({
@@ -323,6 +329,45 @@ describe('effect-compiler-codegen', () => {
         effects: [eff({ addVar: { scope: 'global', var: 'score', delta: 1 } })],
         countBind: '$counted',
         in: [eff({ setVar: { scope: 'global', var: 'count', value: { _t: 2, ref: 'binding', name: '$counted' } } })],
+      },
+    });
+
+    compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
+  });
+
+  it('compileForEach matches interpreter for zone iteration', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = eff({
+      forEach: {
+        bind: '$zone',
+        over: { query: 'zones' },
+        effects: [eff({ bindValue: { bind: '$lastZone', value: { _t: 2, ref: 'binding', name: '$zone' } } })],
+        countBind: '$zoneCount',
+        in: [eff({ setVar: { scope: 'global', var: 'count', value: { _t: 2, ref: 'binding', name: '$zoneCount' } } })],
+      },
+    });
+
+    compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
+  });
+
+  it('compileForEach matches interpreter for token query iteration', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = eff({
+      forEach: {
+        bind: '$token',
+        over: { query: 'tokensInZone', zone: 'deck:none' },
+        limit: 2,
+        effects: [
+          eff({
+            setTokenProp: {
+              token: '$token',
+              prop: 'face',
+              value: 'up',
+            },
+          }),
+        ],
       },
     });
 
@@ -454,6 +499,122 @@ describe('effect-compiler-codegen', () => {
     });
 
     compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
+  });
+
+  it('compileReduce matches interpreter for accumulation and exported binding filtering', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = eff({
+      reduce: {
+        itemBind: '$seat',
+        accBind: '$sum',
+        over: { query: 'players' },
+        initial: 0,
+        next: { _t: 6, op: '+', left: { _t: 2, ref: 'binding', name: '$sum' }, right: 1 },
+        resultBind: '$result',
+        in: [
+          eff({ bindValue: { bind: '$visible', value: { _t: 2, ref: 'binding', name: '$result' } } }),
+          eff({ bindValue: { bind: 'hidden', value: 99 } }),
+        ],
+      },
+    });
+
+    compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
+  });
+
+  it('compileReduce matches interpreter for empty collections', () => {
+    const def = makeDef();
+    const state = { ...makeState(), playerCount: 0, perPlayerVars: {} };
+    const effect: EffectAST = eff({
+      reduce: {
+        itemBind: '$seat',
+        accBind: '$sum',
+        over: { query: 'players' },
+        initial: 7,
+        next: { _t: 6, op: '+', left: { _t: 2, ref: 'binding', name: '$sum' }, right: 1 },
+        resultBind: '$result',
+        in: [eff({ bindValue: { bind: '$visible', value: { _t: 2, ref: 'binding', name: '$result' } } })],
+      },
+    });
+
+    compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
+  });
+
+  it('compileRemoveByPriority matches interpreter for multi-group budgets and exported counts', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = eff({
+      removeByPriority: {
+        budget: 2,
+        groups: [
+          {
+            bind: '$card',
+            over: { query: 'tokensInZone', zone: 'deck:none' },
+            to: 'discard:none',
+            countBind: '$cardsRemoved',
+          },
+          {
+            bind: '$pawn',
+            over: { query: 'tokensInZone', zone: 'city:none' },
+            to: 'province:none',
+            countBind: '$pawnsRemoved',
+          },
+        ],
+        remainingBind: '$remaining',
+        in: [
+          eff({ bindValue: { bind: '$cardsSeen', value: { _t: 2, ref: 'binding', name: '$cardsRemoved' } } }),
+        ],
+      },
+    });
+
+    compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
+  });
+
+  it('compileRemoveByPriority matches interpreter with zero budget', () => {
+    const def = makeDef();
+    const state = makeState();
+    const effect: EffectAST = eff({
+      removeByPriority: {
+        budget: 0,
+        groups: [
+          {
+            bind: '$card',
+            over: { query: 'tokensInZone', zone: 'deck:none' },
+            to: 'discard:none',
+            countBind: '$cardsRemoved',
+          },
+        ],
+        remainingBind: '$remaining',
+      },
+    });
+
+    compareResults(def, runCompiled(def, state, effect), runInterpreted(def, state, effect));
+  });
+
+  it('compileForEach and compileReduce emit the same control-flow trace entries as the interpreter', () => {
+    const def = makeDef();
+    const state = makeState();
+    const forEachEffect: EffectAST = eff({
+      forEach: {
+        bind: '$zone',
+        over: { query: 'zones' },
+        effects: [],
+      },
+    });
+    const reduceEffect: EffectAST = eff({
+      reduce: {
+        itemBind: '$seat',
+        accBind: '$sum',
+        over: { query: 'players' },
+        initial: 0,
+        next: { _t: 6, op: '+', left: { _t: 2, ref: 'binding', name: '$sum' }, right: 1 },
+        resultBind: '$result',
+        in: [],
+      },
+    });
+
+    compareResults(def, runCompiled(def, state, forEachEffect, {}, createRng(17n), { trace: true }), runInterpreted(def, state, forEachEffect, {}, createRng(17n), { trace: true }));
+    compareResults(def, runCompiled(def, state, reduceEffect, {}, createRng(17n), { trace: true }), runInterpreted(def, state, reduceEffect, {}, createRng(17n), { trace: true }));
   });
 
   it('compileSetMarker matches interpreter for zone marker writes', () => {
@@ -648,6 +809,8 @@ describe('effect-compiler-codegen', () => {
       eff({ addVar: { scope: 'global', var: 'score', delta: 1 } }),
       eff({ if: { when: { op: '==', left: 1, right: 1 }, then: [] } }),
       eff({ forEach: { bind: '$seat', over: { query: 'players' }, effects: [] } }),
+      eff({ reduce: { itemBind: '$seat', accBind: '$acc', over: { query: 'players' }, initial: 0, next: 0, resultBind: '$result', in: [] } }),
+      eff({ removeByPriority: { budget: 1, groups: [] } }),
       eff({ gotoPhaseExact: { phase: 'cleanup' } }),
       eff({ setActivePlayer: { player: 'active' } }),
       eff({ advancePhase: {} }),
@@ -890,7 +1053,7 @@ describe('effect-compiler-codegen', () => {
     // Use an if whose then-branch contains an effect that classifyEffect returns
     // null for — this makes compileBody return null for the then fragment,
     // triggering the fallback in executeEffectList.
-    // setActivePlayer is a valid EffectAST but not compilable by the pattern compiler.
+    // rollRandom is still not compilable by the pattern compiler.
     const effect: EffectAST = eff({
       if: {
         when: { op: '==', left: 1, right: 1 },

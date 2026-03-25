@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — effect-compiler-patterns.ts, effect-compiler-codegen.ts
-**Deps**: archive/tickets/81WHOSEQEFFCOM-001-classifyEffect-switch-dispatch.md, archive/tickets/81WHOSEQEFFCOM-002-variable-binding-leaf-effects.md, archive/tickets/81WHOSEQEFFCOM/81WHOSEQEFFCOM-005-token-effects.md, tickets/81WHOSEQEFFCOM-006-iteration-reduction-effects.md
+**Deps**: archive/tickets/81WHOSEQEFFCOM-001-classifyEffect-switch-dispatch.md, archive/tickets/81WHOSEQEFFCOM-002-variable-binding-leaf-effects.md, archive/tickets/81WHOSEQEFFCOM/81WHOSEQEFFCOM-005-token-effects.md, archive/tickets/81WHOSEQEFFCOM/81WHOSEQEFFCOM-006-iteration-reduction-effects.md
 
 ## Problem
 
@@ -17,6 +17,7 @@ Three complex control flow effects (tags 33, 27, 25) fall back to the interprete
 3. `pushInterruptPhase` (tag 25) is implemented in `effects-turn-flow.ts`. Pushes a phase onto `state.interruptPhaseStack` with state manipulation.
 4. `evaluateSubset` is marked "Extreme" complexity in the spec. It has the highest per-compilation performance impact due to C(7,5) * ~15 effects per showdown in Texas Hold'em.
 5. The combination cap (`countCombinations(n, k)` capped at 10K) is a Foundation 6 (Bounded Computation) requirement.
+6. Ticket 006 exposed a broader architectural issue: compiled and interpreted control-flow effects currently duplicate loop/continuation plumbing (`forEach`, `reduce`, `removeByPriority` in codegen vs `effects-control.ts`). If left unaddressed, `evaluateSubset` and `rollRandom` will add more duplication.
 
 ## Architecture Check
 
@@ -25,6 +26,7 @@ Three complex control flow effects (tags 33, 27, 25) fall back to the interprete
 3. `rollRandom` is straightforward in lifecycle context — always deterministic (no player suspension). Consume RNG, bind result, execute optional inner effects.
 4. `pushInterruptPhase` pushes to the interrupt stack. Similar to `popInterruptPhase` (ticket 004) but in reverse.
 5. If `pushInterruptPhase` is implemented as a thin delegate to existing turn-flow handlers, it should reuse the shared compiled delegate helper established in earlier tickets instead of adding another one-off wrapper.
+6. This ticket is the right place to introduce a shared kernel-internal control-flow helper layer if needed. That helper should be game-agnostic and own common loop/continuation mechanics used by both interpreted and compiled paths: bounded iteration, decision-scope rebasing, continuation execution, binding export filtering, and trace emission. Doing that here aligns with Foundations 8, 9, and 10 better than letting duplication spread further and trying to clean it up in ticket 010.
 
 ## What to Change
 
@@ -46,6 +48,18 @@ In `effect-compiler-codegen.ts`:
 - If `compilePushInterruptPhase` delegates to an existing runtime handler, implement it via the shared codegen delegate helper
 - Wire into `compilePatternDescriptor` dispatcher
 
+### 3. Preferred architectural cleanup while implementing complex control flow
+
+If the implementation starts repeating control-flow plumbing already present in `effects-control.ts` and `effect-compiler-codegen.ts`, introduce a shared internal helper module for control-flow mechanics instead of copying the pattern again.
+
+Candidate responsibilities:
+- bounded collection iteration and continuation handling
+- decision-scope rebasing/restoration for iterative control flow
+- trace emission helpers for control-flow effects
+- binding export filtering for scoped/batched control-flow constructs
+
+This helper must stay kernel-internal and game-agnostic. It is not a compatibility layer and must not preserve obsolete compiler-only naming splits.
+
 ## Files to Touch
 
 - `packages/engine/src/kernel/effect-compiler-patterns.ts` (modify)
@@ -58,6 +72,7 @@ In `effect-compiler-codegen.ts`:
 - Optimizing combination enumeration algorithm (use existing `countCombinations` infrastructure)
 - Action-context effects (`grantFreeOperation`)
 - CPS/coroutine compilation for action effects (future spec)
+- Broad refactors outside control-flow ownership areas unrelated to this duplication problem
 
 ## Acceptance Criteria
 

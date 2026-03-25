@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — effect-compiler.ts, effect-compiler-codegen.ts, effect-compiler-patterns.ts
-**Deps**: archive/tickets/81WHOSEQEFFCOM-001-classifyEffect-switch-dispatch.md, archive/tickets/81WHOSEQEFFCOM-002-variable-binding-leaf-effects.md, archive/tickets/81WHOSEQEFFCOM-003-marker-effects.md, archive/tickets/81WHOSEQEFFCOM/81WHOSEQEFFCOM-004-turn-flow-effects.md, archive/tickets/81WHOSEQEFFCOM/81WHOSEQEFFCOM-005-token-effects.md, tickets/81WHOSEQEFFCOM-006-iteration-reduction-effects.md, tickets/81WHOSEQEFFCOM-007-information-effects.md, tickets/81WHOSEQEFFCOM-008-complex-control-flow-effects.md, tickets/81WHOSEQEFFCOM-009-lifecycle-choice-effects.md
+**Deps**: archive/tickets/81WHOSEQEFFCOM-001-classifyEffect-switch-dispatch.md, archive/tickets/81WHOSEQEFFCOM-002-variable-binding-leaf-effects.md, archive/tickets/81WHOSEQEFFCOM-003-marker-effects.md, archive/tickets/81WHOSEQEFFCOM/81WHOSEQEFFCOM-004-turn-flow-effects.md, archive/tickets/81WHOSEQEFFCOM/81WHOSEQEFFCOM-005-token-effects.md, archive/tickets/81WHOSEQEFFCOM/81WHOSEQEFFCOM-006-iteration-reduction-effects.md, tickets/81WHOSEQEFFCOM-007-information-effects.md, tickets/81WHOSEQEFFCOM-008-complex-control-flow-effects.md, tickets/81WHOSEQEFFCOM-009-lifecycle-choice-effects.md
 
 ## Problem
 
@@ -18,6 +18,7 @@ Once all 33 lifecycle effect types have compiled closures (tickets 001-009), the
 4. `composeFragments` in `effect-compiler.ts` chains fragments — currently handles both compiled and fallback fragments uniformly.
 5. `grantFreeOperation` (tag 22) is explicitly excluded from lifecycle compilation. A runtime assertion must verify it never appears in lifecycle effect sequences.
 6. The interpreter (`applyEffects` pipeline) remains needed for: (a) action effects (including `grantFreeOperation`), (b) verification mode dual execution.
+7. Any shared control-flow helper extraction to reduce duplication between interpreted and compiled loop-like effects should land before this ticket, not inside it.
 
 ## Architecture Check
 
@@ -27,6 +28,7 @@ Once all 33 lifecycle effect types have compiled closures (tickets 001-009), the
 4. A runtime assertion in `compileFragmentList` or `classifyEffect` ensures `grantFreeOperation` is never encountered in lifecycle effect sequences. If encountered, throw an error (this would indicate a bug in the phase/lifecycle classification).
 5. CI assertion: `coverageRatio === 1.0` for all compiled lifecycle sequences in both FITL and Texas Hold'em.
 6. Before this cleanup lands, the delegate-style compiled leaf wrappers introduced in earlier tickets should already be consolidated behind a shared helper. Ticket 010 is not the place to introduce that helper for the first time; at most it should remove any dead or superseded adapter code left after tickets 004-009.
+7. The same rule applies to shared control-flow helpers: if ticket 008 introduces them, ticket 010 should only consume that result by deleting dead fallback-era plumbing, not create the abstraction for the first time.
 
 ## What to Change
 

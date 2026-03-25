@@ -12,7 +12,7 @@ import {
   matchCreateToken,
   matchDestroyToken,
   matchDraw,
-  matchForEachPlayers,
+  matchForEach,
   matchFlipGlobalMarker,
   matchGotoPhaseExact,
   matchIf,
@@ -22,6 +22,8 @@ import {
   matchMoveToken,
   matchMoveTokenAdjacent,
   matchPopInterruptPhase,
+  matchReduce,
+  matchRemoveByPriority,
   matchSetActivePlayer,
   matchSetGlobalMarker,
   matchSetMarker,
@@ -186,7 +188,7 @@ describe('effect-compiler-patterns', () => {
       );
     });
 
-    it('matches if, forEach players, gotoPhaseExact, and turn-flow leaves', () => {
+    it('matches if, forEach, gotoPhaseExact, and turn-flow leaves', () => {
       const thenEffects: readonly EffectAST[] = [eff({ setVar: { scope: 'global', var: 'pot', value: 1 } })];
       const elseEffects: readonly EffectAST[] = [eff({ addVar: { scope: 'global', var: 'pot', delta: 2 } })];
 
@@ -222,7 +224,7 @@ describe('effect-compiler-patterns', () => {
       );
 
       assert.deepEqual(
-        matchForEachPlayers(eff({
+        matchForEach(eff({
           forEach: {
             bind: 'player',
             over: { query: 'players' },
@@ -232,23 +234,29 @@ describe('effect-compiler-patterns', () => {
           },
         })),
         {
-          kind: 'forEachPlayers',
+          kind: 'forEach',
           bind: 'player',
+          over: { query: 'players' },
           effects: thenEffects,
           countBind: 'count',
           inEffects: elseEffects,
         },
       );
 
-      assert.equal(
-        matchForEachPlayers(eff({
+      assert.deepEqual(
+        matchForEach(eff({
           forEach: {
             bind: 'zone',
             over: { query: 'zones' },
             effects: thenEffects,
           },
         })),
-        null,
+        {
+          kind: 'forEach',
+          bind: 'zone',
+          over: { query: 'zones' },
+          effects: thenEffects,
+        },
       );
 
       assert.deepEqual(matchGotoPhaseExact(eff({ gotoPhaseExact: { phase: 'cleanup' } })), {
@@ -270,7 +278,7 @@ describe('effect-compiler-patterns', () => {
       });
     });
 
-    it('matches bindValue, transferVar, let, and marker effects without narrowing away full payload support', () => {
+    it('matches bindValue, transferVar, let, reduce, removeByPriority, and marker effects without narrowing away full payload support', () => {
       assert.deepEqual(
         matchBindValue(eff({ bindValue: { bind: '$sum', value: { _t: 6, op: '+', left: 1, right: 2 } } })),
         {
@@ -312,6 +320,66 @@ describe('effect-compiler-patterns', () => {
           bind: 'tmp',
           value: { _t: 6, op: '+', left: 1, right: 2 },
           inEffects,
+        },
+      );
+
+      assert.deepEqual(
+        matchReduce(eff({
+          reduce: {
+            itemBind: '$item',
+            accBind: '$acc',
+            over: { query: 'zones' },
+            initial: 0,
+            next: { _t: 6, op: '+', left: { _t: 2, ref: 'binding', name: '$acc' }, right: 1 },
+            resultBind: '$result',
+            in: inEffects,
+          },
+        })),
+        {
+          kind: 'reduce',
+          payload: {
+            itemBind: '$item',
+            accBind: '$acc',
+            over: { query: 'zones' },
+            initial: 0,
+            next: { _t: 6, op: '+', left: { _t: 2, ref: 'binding', name: '$acc' }, right: 1 },
+            resultBind: '$result',
+            in: inEffects,
+          },
+        },
+      );
+
+      assert.deepEqual(
+        matchRemoveByPriority(eff({
+          removeByPriority: {
+            budget: 2,
+            groups: [
+              {
+                bind: '$token',
+                over: { query: 'tokensInZone', zone: 'city:none' },
+                to: 'discard:none',
+                countBind: '$removed',
+              },
+            ],
+            remainingBind: '$remaining',
+            in: inEffects,
+          },
+        })),
+        {
+          kind: 'removeByPriority',
+          payload: {
+            budget: 2,
+            groups: [
+              {
+                bind: '$token',
+                over: { query: 'tokensInZone', zone: 'city:none' },
+                to: 'discard:none',
+                countBind: '$removed',
+              },
+            ],
+            remainingBind: '$remaining',
+            in: inEffects,
+          },
         },
       );
 
@@ -438,7 +506,15 @@ describe('effect-compiler-patterns', () => {
       );
       assert.equal(
         classifyEffect(eff({ forEach: { bind: 'player', over: { query: 'players' }, effects: [] } }))?.kind,
-        'forEachPlayers',
+        'forEach',
+      );
+      assert.equal(
+        classifyEffect(eff({ reduce: { itemBind: 'x', accBind: 'acc', over: { query: 'players' }, initial: 0, next: 0, resultBind: 'r', in: [] } }))?.kind,
+        'reduce',
+      );
+      assert.equal(
+        classifyEffect(eff({ removeByPriority: { budget: 1, groups: [] } }))?.kind,
+        'removeByPriority',
       );
       assert.equal(classifyEffect(eff({ gotoPhaseExact: { phase: 'main' } }))?.kind, 'gotoPhaseExact');
       assert.equal(classifyEffect(eff({ setActivePlayer: { player: 'active' } }))?.kind, 'setActivePlayer');
@@ -473,7 +549,17 @@ describe('effect-compiler-patterns', () => {
       const forEachDesc = classifyEffect(eff({
         forEach: { bind: 'p', over: { query: 'players' }, effects: [] },
       }));
-      assert.equal(forEachDesc?.kind, 'forEachPlayers');
+      assert.equal(forEachDesc?.kind, 'forEach');
+
+      const reduceDesc = classifyEffect(eff({
+        reduce: { itemBind: 'x', accBind: 'acc', over: { query: 'players' }, initial: 0, next: 0, resultBind: 'r', in: [] },
+      }));
+      assert.equal(reduceDesc?.kind, 'reduce');
+
+      const removeByPriorityDesc = classifyEffect(eff({
+        removeByPriority: { budget: 1, groups: [] },
+      }));
+      assert.equal(removeByPriorityDesc?.kind, 'removeByPriority');
 
       const gotoDesc = classifyEffect(eff({ gotoPhaseExact: { phase: 'end' } }));
       assert.equal(gotoDesc?.kind, 'gotoPhaseExact');
@@ -540,8 +626,6 @@ describe('effect-compiler-patterns', () => {
       const stubTags: Array<{ tag: string; node: EffectAST }> = [
         { tag: 'reveal', node: eff({ reveal: { zone: 'hand', to: 'all' } }) },
         { tag: 'conceal', node: eff({ conceal: { zone: 'hand' } }) },
-        { tag: 'reduce', node: eff({ reduce: { itemBind: 'x', accBind: 'acc', over: { query: 'players' }, initial: 0, next: 0, resultBind: 'r', in: [] } }) },
-        { tag: 'removeByPriority', node: eff({ removeByPriority: { budget: 1, groups: [] } }) },
         { tag: 'rollRandom', node: eff({ rollRandom: { bind: 'roll', min: 1, max: 6, in: [] } }) },
         { tag: 'pushInterruptPhase', node: eff({ pushInterruptPhase: { phase: 'int', resumePhase: 'main' } }) },
         { tag: 'evaluateSubset', node: eff({ evaluateSubset: { source: { query: 'players' }, subsetSize: 2, subsetBind: 's', compute: [], scoreExpr: 0, resultBind: 'r', in: [] } }) },
@@ -664,8 +748,8 @@ describe('effect-compiler-patterns', () => {
           },
         }),
       ];
-      // 2 nodes: reduce (not compiled) + addVar (compiled) = 1/2
-      assert.equal(computeCoverageRatio(effects), 1 / 2);
+      // 2 nodes: reduce + addVar are both compiled.
+      assert.equal(computeCoverageRatio(effects), 1);
     });
 
     it('traverses rollRandom.in bodies via walkEffects', () => {
@@ -719,8 +803,8 @@ describe('effect-compiler-patterns', () => {
           },
         }),
       ];
-      // 2 nodes: removeByPriority (not compiled) + gotoPhaseExact (compiled) = 1/2
-      assert.equal(computeCoverageRatio(effects), 1 / 2);
+      // 2 nodes: removeByPriority + gotoPhaseExact are both compiled.
+      assert.equal(computeCoverageRatio(effects), 1);
     });
   });
 });

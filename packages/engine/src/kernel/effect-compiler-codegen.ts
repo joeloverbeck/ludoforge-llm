@@ -7,6 +7,7 @@ import { typeMismatchError } from './eval-error.js';
 import { buildEffectEnvFromCompiledCtx, createCompiledExecutionContext } from './effect-compiler-runtime.js';
 import { applyEffectsWithBudgetState, consumeEffectBudget, createEffectBudgetState } from './effect-dispatch.js';
 import type { MutableGameState } from './state-draft.js';
+import { buildForEachTraceEntry, buildReduceTraceEntry } from './control-flow-trace.js';
 import {
   type AddVarPattern,
   type AdvancePhasePattern,
@@ -16,7 +17,7 @@ import {
   type DestroyTokenPattern,
   type DrawPattern,
   type FlipGlobalMarkerPattern,
-  type ForEachPlayersPattern,
+  type ForEachPattern,
   type GotoPhaseExactPattern,
   type IfPattern,
   type LetPattern,
@@ -26,6 +27,8 @@ import {
   type MoveTokenPattern,
   type PatternDescriptor,
   type PopInterruptPhasePattern,
+  type ReducePattern,
+  type RemoveByPriorityPattern,
   type SetActivePlayerPattern,
   type SetGlobalMarkerPattern,
   type SetMarkerPattern,
@@ -61,6 +64,7 @@ import {
 } from './effects-token.js';
 import { applyAdvancePhase, applyGotoPhaseExact, applyPopInterruptPhase } from './effects-turn-flow.js';
 import { applySetActivePlayer } from './effects-var.js';
+import { emitTrace } from './execution-collector.js';
 import {
   advancePhase as advancePhaseBuilder,
   createToken as createTokenBuilder,
@@ -78,6 +82,8 @@ import {
 import { toEffectEnv, toEffectCursor } from './effect-context.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import { resolveRef } from './resolve-ref.js';
+import { resolveRuntimeTokenBindingValue } from './token-binding.js';
+import { resolveTraceProvenance } from './trace-provenance.js';
 import {
   readScopedIntVarValue,
   readScopedVarValue,
@@ -92,7 +98,7 @@ import { emitVarChangeTraceIfChanged } from './var-change-trace.js';
 import { clampIntVarValue } from './var-runtime-utils.js';
 import { resolveControlFlowIterationLimit } from './control-flow-limit.js';
 import { EFFECT_KIND_TAG, VALUE_EXPR_TAG } from './types.js';
-import type { EffectAST, GameState, IntVariableDef, NumericValueExpr, Reference, Rng, TriggerEvent, ValueExpr } from './types.js';
+import type { EffectAST, EffectTraceProvenance, GameState, IntVariableDef, NumericValueExpr, Reference, Rng, TriggerEvent, ValueExpr } from './types.js';
 
 export interface CompiledEffectFragment {
   readonly execute: CompiledEffectFn;
@@ -235,9 +241,24 @@ const countEffectNodes = (effects: readonly EffectAST[]): number => {
     if ('let' in effect) {
       total += countEffectNodes(effect.let.in);
     }
+    if ('reduce' in effect) {
+      total += countEffectNodes(effect.reduce.in);
+    }
+    if ('removeByPriority' in effect && effect.removeByPriority.in !== undefined) {
+      total += countEffectNodes(effect.removeByPriority.in);
+    }
   }
   return total;
 };
+
+const compiledTraceProvenance = (
+  state: GameState,
+  ctx: CompiledEffectContext,
+): EffectTraceProvenance => resolveTraceProvenance({
+  state,
+  ...(ctx.traceContext === undefined ? {} : { traceContext: ctx.traceContext }),
+  ...(ctx.effectPath === undefined ? {} : { effectPath: ctx.effectPath }),
+});
 
 const executeEffectList = (
   effects: readonly EffectAST[],
@@ -544,8 +565,8 @@ export const compileIf = (
   };
 };
 
-export const compileForEachPlayers = (
-  desc: ForEachPlayersPattern,
+export const compileForEach = (
+  desc: ForEachPattern,
   compileBody: BodyCompiler,
 ): CompiledEffectFragment => {
   const bodyFragment = compileBody(desc.effects);
@@ -564,7 +585,7 @@ export const compileForEachPlayers = (
           limit: evaluatedLimit,
         });
       });
-      const queryResult = evalQuery({ query: 'players' }, evalCtx);
+      const queryResult = evalQuery(desc.over, evalCtx);
       const boundedItems = queryResult.slice(0, limit);
 
       let currentState = state;
@@ -604,6 +625,17 @@ export const compileForEachPlayers = (
         }
       }
 
+      if (ctx.resources.collector.trace !== null) {
+        emitTrace(ctx.resources.collector, buildForEachTraceEntry({
+          bind: desc.bind,
+          matchCount: queryResult.length,
+          iteratedCount: boundedItems.length,
+          explicitLimit: desc.limit !== undefined,
+          resolvedLimit: limit,
+          provenance: compiledTraceProvenance(state, ctx),
+        }));
+      }
+
       if (desc.countBind !== undefined && desc.inEffects !== undefined) {
         const countResult = executeEffectList(
           desc.inEffects,
@@ -636,6 +668,232 @@ export const compileForEachPlayers = (
         rng: currentRng,
         emittedEvents,
         bindings,
+        decisionScope: currentDecisionScope,
+      };
+    },
+  };
+};
+
+export const compileReduce = (
+  desc: ReducePattern,
+  compileBody: BodyCompiler,
+): CompiledEffectFragment => {
+  const inFragment = compileBody(desc.payload.in);
+
+  return {
+    nodeCount: 1 + countEffectNodes(desc.payload.in),
+    execute: (state, rng, bindings, ctx) => {
+      if (ctx.effectBudget !== undefined) {
+        consumeEffectBudget(ctx.effectBudget, 'reduce');
+      }
+      const evalCtx = createCompiledEvalContext(state, bindings, ctx);
+      const limit = resolveControlFlowIterationLimit('reduce', desc.payload.limit, evalCtx, (evaluatedLimit) => {
+        throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CONTROL_FLOW_RUNTIME_VALIDATION_FAILED, 'reduce.limit must evaluate to a non-negative integer', {
+          effectType: 'reduce',
+          limit: evaluatedLimit,
+        });
+      });
+      const queryResult = evalQuery(desc.payload.over, evalCtx);
+      const boundedItems = queryResult.slice(0, limit);
+
+      let accumulator = evalCompiledValue(desc.payload.initial, state, bindings, ctx);
+      for (const item of boundedItems) {
+        accumulator = evalCompiledValue(desc.payload.next, state, {
+          ...bindings,
+          [desc.payload.itemBind]: item,
+          [desc.payload.accBind]: accumulator,
+        }, ctx);
+      }
+
+      if (ctx.resources.collector.trace !== null) {
+        emitTrace(ctx.resources.collector, buildReduceTraceEntry({
+          itemBind: desc.payload.itemBind,
+          accBind: desc.payload.accBind,
+          resultBind: desc.payload.resultBind,
+          ...(desc.payload.itemMacroOrigin === undefined ? {} : { itemMacroOrigin: desc.payload.itemMacroOrigin }),
+          ...(desc.payload.accMacroOrigin === undefined ? {} : { accMacroOrigin: desc.payload.accMacroOrigin }),
+          ...(desc.payload.resultMacroOrigin === undefined ? {} : { resultMacroOrigin: desc.payload.resultMacroOrigin }),
+          matchCount: queryResult.length,
+          iteratedCount: boundedItems.length,
+          explicitLimit: desc.payload.limit !== undefined,
+          resolvedLimit: limit,
+          provenance: compiledTraceProvenance(state, ctx),
+        }));
+      }
+
+      const continuationBindings = {
+        ...bindings,
+        [desc.payload.resultBind]: accumulator,
+      };
+      const continuationResult = executeEffectList(
+        desc.payload.in,
+        inFragment,
+        state,
+        rng,
+        continuationBindings,
+        ctx,
+      );
+      if (continuationResult.pendingChoice !== undefined) {
+        return {
+          state: continuationResult.state,
+          rng: continuationResult.rng,
+          ...(continuationResult.emittedEvents === undefined ? {} : { emittedEvents: continuationResult.emittedEvents }),
+          bindings,
+          ...(continuationResult.decisionScope === undefined ? {} : { decisionScope: continuationResult.decisionScope }),
+          pendingChoice: continuationResult.pendingChoice,
+        };
+      }
+
+      const resolvedBindings = continuationResult.bindings ?? continuationBindings;
+      const exportedBindings: Record<string, unknown> = {};
+      for (const [name, value] of Object.entries(resolvedBindings)) {
+        if (name === desc.payload.resultBind || !name.startsWith('$')) {
+          continue;
+        }
+        exportedBindings[name] = value;
+      }
+
+      return {
+        state: continuationResult.state,
+        rng: continuationResult.rng,
+        ...(continuationResult.emittedEvents === undefined ? {} : { emittedEvents: continuationResult.emittedEvents }),
+        ...(continuationResult.decisionScope === undefined ? {} : { decisionScope: continuationResult.decisionScope }),
+        bindings: {
+          ...bindings,
+          ...exportedBindings,
+        },
+      };
+    },
+  };
+};
+
+const resolveRemovalBudget = (budgetExpr: unknown): number => {
+  if (typeof budgetExpr !== 'number' || !Number.isSafeInteger(budgetExpr) || budgetExpr < 0) {
+    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CONTROL_FLOW_RUNTIME_VALIDATION_FAILED, 'removeByPriority.budget must evaluate to a non-negative integer', {
+      effectType: 'removeByPriority',
+      budget: budgetExpr,
+    });
+  }
+  return budgetExpr;
+};
+
+export const compileRemoveByPriority = (
+  desc: RemoveByPriorityPattern,
+  compileBody: BodyCompiler,
+): CompiledEffectFragment => {
+  const groupExecutions = desc.payload.groups.map((group) => {
+    const moveEffects: readonly EffectAST[] = [
+      moveTokenBuilder({
+        token: group.bind,
+        from: group.from ?? { zoneExpr: { _t: VALUE_EXPR_TAG.REF, ref: 'tokenZone', token: group.bind } as ValueExpr },
+        to: group.to,
+      }),
+    ];
+    return {
+      group,
+      moveEffects,
+      fragment: compileBody(moveEffects),
+    };
+  });
+  const inEffects = desc.payload.in ?? [];
+  const inFragment = desc.payload.in === undefined ? null : compileBody(desc.payload.in);
+
+  return {
+    nodeCount: 1 + countEffectNodes(inEffects),
+    execute: (state, rng, bindings, ctx) => {
+      if (ctx.effectBudget !== undefined) {
+        consumeEffectBudget(ctx.effectBudget, 'removeByPriority');
+      }
+      let remainingBudget = resolveRemovalBudget(evalCompiledValue(desc.payload.budget, state, bindings, ctx));
+      let currentState = state;
+      let currentRng = rng;
+      let currentDecisionScope = ctx.decisionScope ?? emptyScope();
+      const emittedEvents: TriggerEvent[] = [];
+      const countBindings: Record<string, number> = {};
+
+      for (const { group, moveEffects, fragment } of groupExecutions) {
+        let removedInGroup = 0;
+
+        if (remainingBudget > 0) {
+          const queried = evalQuery(group.over, createCompiledEvalContext(currentState, bindings, ctx));
+          const bounded = queried.slice(0, remainingBudget);
+
+          for (const item of bounded) {
+            if (resolveRuntimeTokenBindingValue(item) === null) {
+              throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CONTROL_FLOW_RUNTIME_VALIDATION_FAILED, 'removeByPriority groups must resolve to token items', {
+                effectType: 'removeByPriority',
+                bind: group.bind,
+                actualType: typeof item,
+                value: item,
+              });
+            }
+
+            const moveResult = executeEffectList(
+              moveEffects,
+              fragment,
+              currentState,
+              currentRng,
+              { ...bindings, [group.bind]: item },
+              { ...ctx, decisionScope: currentDecisionScope },
+            );
+
+            currentState = moveResult.state;
+            currentRng = moveResult.rng;
+            currentDecisionScope = moveResult.decisionScope ?? currentDecisionScope;
+            for (const event of moveResult.emittedEvents ?? []) {
+              emittedEvents.push(event);
+            }
+            removedInGroup += 1;
+            remainingBudget -= 1;
+            if (remainingBudget === 0) {
+              break;
+            }
+          }
+        }
+
+        if (group.countBind !== undefined) {
+          countBindings[group.countBind] = removedInGroup;
+        }
+      }
+
+      const exportedBindings: Record<string, unknown> = {
+        ...bindings,
+        ...countBindings,
+        ...(desc.payload.remainingBind === undefined ? {} : { [desc.payload.remainingBind]: remainingBudget }),
+      };
+
+      if (desc.payload.in !== undefined) {
+        const inResult = executeEffectList(
+          desc.payload.in,
+          inFragment,
+          currentState,
+          currentRng,
+          exportedBindings,
+          { ...ctx, decisionScope: currentDecisionScope },
+        );
+        currentState = inResult.state;
+        currentRng = inResult.rng;
+        currentDecisionScope = inResult.decisionScope ?? currentDecisionScope;
+        for (const event of inResult.emittedEvents ?? []) {
+          emittedEvents.push(event);
+        }
+        if (inResult.pendingChoice !== undefined) {
+          return {
+            state: currentState,
+            rng: currentRng,
+            emittedEvents,
+            bindings: exportedBindings,
+            decisionScope: currentDecisionScope,
+            pendingChoice: inResult.pendingChoice,
+          };
+        }
+      }
+
+      return {
+        state: currentState,
+        rng: currentRng,
+        emittedEvents,
+        bindings: exportedBindings,
         decisionScope: currentDecisionScope,
       };
     },
@@ -1048,8 +1306,12 @@ export const compilePatternDescriptor = (
       return compileAddVar(desc);
     case 'if':
       return compileIf(desc, compileBody);
-    case 'forEachPlayers':
-      return compileForEachPlayers(desc, compileBody);
+    case 'forEach':
+      return compileForEach(desc, compileBody);
+    case 'reduce':
+      return compileReduce(desc, compileBody);
+    case 'removeByPriority':
+      return compileRemoveByPriority(desc, compileBody);
     case 'gotoPhaseExact':
       return compileGotoPhaseExact(desc);
     case 'setActivePlayer':

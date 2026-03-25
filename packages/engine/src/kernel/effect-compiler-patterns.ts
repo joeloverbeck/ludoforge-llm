@@ -3,6 +3,7 @@ import type {
   ConditionAST,
   EffectAST,
   NumericValueExpr,
+  OptionsQuery,
   PlayerSel,
   ScopedVarNameExpr,
   SetVarPayload,
@@ -65,13 +66,27 @@ export type IfPattern = {
   readonly elseEffects: readonly EffectAST[];
 };
 
-export type ForEachPlayersPattern = {
-  readonly kind: 'forEachPlayers';
+export type ForEachPattern = {
+  readonly kind: 'forEach';
   readonly bind: string;
+  readonly over: OptionsQuery;
   readonly effects: readonly EffectAST[];
   readonly limit?: NumericValueExpr;
   readonly countBind?: string;
   readonly inEffects?: readonly EffectAST[];
+};
+
+type ReducePayload = Extract<EffectAST, { readonly reduce: unknown }>['reduce'];
+type RemoveByPriorityPayload = Extract<EffectAST, { readonly removeByPriority: unknown }>['removeByPriority'];
+
+export type ReducePattern = {
+  readonly kind: 'reduce';
+  readonly payload: ReducePayload;
+};
+
+export type RemoveByPriorityPattern = {
+  readonly kind: 'removeByPriority';
+  readonly payload: RemoveByPriorityPayload;
 };
 
 export type GotoPhaseExactPattern = {
@@ -196,7 +211,9 @@ export type PatternDescriptor =
   | SetVarPattern
   | AddVarPattern
   | IfPattern
-  | ForEachPlayersPattern
+  | ForEachPattern
+  | ReducePattern
+  | RemoveByPriorityPattern
   | GotoPhaseExactPattern
   | SetActivePlayerPattern
   | AdvancePhasePattern
@@ -377,18 +394,41 @@ export const matchIf = (node: EffectAST): IfPattern | null => {
   };
 };
 
-export const matchForEachPlayers = (node: EffectAST): ForEachPlayersPattern | null => {
-  if (!('forEach' in node) || node.forEach.over.query !== 'players') {
+export const matchForEach = (node: EffectAST): ForEachPattern | null => {
+  if (!('forEach' in node)) {
     return null;
   }
 
   return {
-    kind: 'forEachPlayers',
+    kind: 'forEach',
     bind: node.forEach.bind,
+    over: node.forEach.over,
     effects: node.forEach.effects,
     ...(node.forEach.limit === undefined ? {} : { limit: node.forEach.limit }),
     ...(node.forEach.countBind === undefined ? {} : { countBind: node.forEach.countBind }),
     ...(node.forEach.in === undefined ? {} : { inEffects: node.forEach.in }),
+  };
+};
+
+export const matchReduce = (node: EffectAST): ReducePattern | null => {
+  if (!('reduce' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'reduce',
+    payload: node.reduce,
+  };
+};
+
+export const matchRemoveByPriority = (node: EffectAST): RemoveByPriorityPattern | null => {
+  if (!('removeByPriority' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'removeByPriority',
+    payload: node.removeByPriority,
   };
 };
 
@@ -641,9 +681,9 @@ export const matchSetTokenProp = (node: EffectAST): SetTokenPropPattern | null =
  * 26  popInterruptPhase   — compiled (Phase 1)
  * 27  rollRandom          — stub (Phase 5)
  * 28  if                  — compiled (Phase 0)
- * 29  forEach             — compiled (Phase 0, players-only; general in Phase 3)
- * 30  reduce              — stub (Phase 3)
- * 31  removeByPriority    — stub (Phase 3)
+ * 29  forEach             — compiled (Phase 3, generic OptionsQuery support)
+ * 30  reduce              — compiled (Phase 3)
+ * 31  removeByPriority    — compiled (Phase 3)
  * 32  let                 — compiled (Phase 1)
  * 33  evaluateSubset      — stub (Phase 5)
  */
@@ -656,7 +696,11 @@ export const classifyEffect = (node: EffectAST): PatternDescriptor | null => {
     case EFFECT_KIND_TAG.if:
       return matchIf(node);
     case EFFECT_KIND_TAG.forEach:
-      return matchForEachPlayers(node);
+      return matchForEach(node);
+    case EFFECT_KIND_TAG.reduce:
+      return matchReduce(node);
+    case EFFECT_KIND_TAG.removeByPriority:
+      return matchRemoveByPriority(node);
     case EFFECT_KIND_TAG.gotoPhaseExact:
       return matchGotoPhaseExact(node);
     case EFFECT_KIND_TAG.setActivePlayer:
@@ -704,8 +748,6 @@ export const classifyEffect = (node: EffectAST): PatternDescriptor | null => {
     // Not-yet-compiled lifecycle tags — stubs for future tickets (002-009)
     case EFFECT_KIND_TAG.reveal:
     case EFFECT_KIND_TAG.conceal:
-    case EFFECT_KIND_TAG.reduce:
-    case EFFECT_KIND_TAG.removeByPriority:
     case EFFECT_KIND_TAG.rollRandom:
     case EFFECT_KIND_TAG.pushInterruptPhase:
     case EFFECT_KIND_TAG.evaluateSubset:

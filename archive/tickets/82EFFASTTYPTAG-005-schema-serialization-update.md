@@ -1,6 +1,6 @@
 # 82EFFASTTYPTAG-005: Schema Serialization Update for _k Field
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/kernel/schemas-ast.ts`, schema artifacts
@@ -35,20 +35,22 @@ must validate its presence.
 
 ## What to Change
 
-### 1. Update `schemas-ast.ts`
+### 1. Update `schemas-ast.ts` — ALREADY DONE
 
-For each of the 34 effect schema entries in `effectAstSchemaInternal`, add
-`_k: z.number().int()` as a required field. This can be done by intersecting
-each entry with a `_k` field, or by adding `_k` to each `z.object()` call.
+All 34 effect schema entries in `effectAstSchemaInternal` already include
+`_k: IntegerSchema` as a required field (added as part of tickets 001-004).
 
-The cleanest approach: define a base schema fragment
-`const effectTagSchema = z.object({ _k: z.number().int() })` and intersect
-it with each effect variant schema.
+### 2. Regenerate JSON Schema artifacts — ALREADY DONE
 
-### 2. Regenerate JSON Schema artifacts
+JSON Schema artifacts in `packages/engine/schemas/` already include `_k` as
+a required integer field on all 34 effect variants. Verified via deep scan
+of `GameDef.schema.json`.
 
-Run `pnpm turbo schema:artifacts` to update the generated JSON Schema files
-in `packages/engine/schemas/`.
+### 3. Add explicit rejection test for missing `_k` — REMAINING
+
+Add a test to `schemas-ast.test.ts` that constructs an EffectAST literal
+without `_k` and asserts that `EffectASTSchema.safeParse()` rejects it.
+This covers AC #3.
 
 ## Files to Touch
 
@@ -100,3 +102,14 @@ in `packages/engine/schemas/`.
 1. `pnpm turbo schema:artifacts`
 2. `pnpm -F @ludoforge/engine build && pnpm -F @ludoforge/engine test`
 3. `pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-25
+- **What changed**:
+  - Zod schemas (`schemas-ast.ts`) and JSON Schema artifacts already included `_k` as a required integer field from tickets 001-004. No schema changes needed.
+  - Added two tests to `packages/engine/test/unit/schemas-ast.test.ts`:
+    1. Rejection test: verifies `EffectASTSchema` rejects 5 representative effect kinds (`setVar`, `addVar`, `moveToken`, `if`, `forEach`) when `_k` is missing.
+    2. Acceptance test: verifies `EffectASTSchema` accepts `setVar` with valid `_k`.
+- **Deviations**: Schema update work was already done by earlier tickets; only the explicit rejection test was missing.
+- **Verification**: 4775/4775 engine tests pass, typecheck clean, `schema:artifacts` succeeds.

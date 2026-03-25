@@ -1456,6 +1456,29 @@ describe('AST and selector schemas', () => {
     }
   });
 
+  it('rejects EffectAST nodes missing the required _k tag', () => {
+    const cases = [
+      { name: 'setVar without _k', effect: { setVar: { scope: 'global', var: 'gold', value: 1 } } },
+      { name: 'addVar without _k', effect: { addVar: { scope: 'global', var: 'vp', delta: 2 } } },
+      { name: 'moveToken without _k', effect: { moveToken: { token: '$card', from: 'deck:none', to: 'hand:actor' } } },
+      { name: 'if without _k', effect: { if: { condition: { op: '==', left: 1, right: 1 }, then: [] } } },
+      { name: 'forEach without _k', effect: { forEach: { items: { ref: 'tokens', zone: 'board:none' }, bind: '$t', effects: [] } } },
+    ];
+
+    for (const { name, effect } of cases) {
+      const result = EffectASTSchema.safeParse(effect);
+      assert.equal(result.success, false, `Expected rejection for: ${name}`);
+    }
+  });
+
+  it('accepts EffectAST nodes with a valid _k tag', () => {
+    const result = EffectASTSchema.safeParse({
+      _k: EFFECT_KIND_TAG.setVar,
+      setVar: { scope: 'global', var: 'gold', value: 1 },
+    });
+    assert.equal(result.success, true, 'setVar with _k should be accepted');
+  });
+
   it('enforces strict object policy for selector and AST objects', () => {
     assert.equal(OBJECT_STRICTNESS_POLICY, 'strict');
 

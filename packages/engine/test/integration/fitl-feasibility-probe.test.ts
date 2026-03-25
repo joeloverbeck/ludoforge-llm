@@ -12,6 +12,7 @@ import {
   type GameDef,
   type GameState,
 } from '../../src/kernel/index.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 /**
  * Integration test verifying that plain (non-pipeline) actions with
@@ -69,13 +70,13 @@ describe('plain-action feasibility probe integration', () => {
       pre: null,
       cost: [],
       effects: [
-        {
+        eff({
           chooseOne: {
             internalDecisionId: 'decision:$target',
             bind: '$target',
             options: { query: 'enums', values: [] },
           },
-        } as GameDef['actions'][number]['effects'][number],
+        }) as GameDef['actions'][number]['effects'][number],
       ],
       limits: [],
     };
@@ -97,13 +98,13 @@ describe('plain-action feasibility probe integration', () => {
       pre: null,
       cost: [],
       effects: [
-        {
+        eff({
           chooseOne: {
             internalDecisionId: 'decision:$target',
             bind: '$target',
             options: { query: 'enums', values: ['alpha', 'bravo'] },
           },
-        } as GameDef['actions'][number]['effects'][number],
+        }) as GameDef['actions'][number]['effects'][number],
       ],
       limits: [],
     };
@@ -126,20 +127,20 @@ describe('plain-action feasibility probe integration', () => {
       pre: null,
       cost: [],
       effects: [
-        {
+        eff({
           chooseOne: {
             internalDecisionId: 'decision:$a',
             bind: '$a',
             options: { query: 'enums', values: ['x'] },
           },
-        } as GameDef['actions'][number]['effects'][number],
-        {
+        }) as GameDef['actions'][number]['effects'][number],
+        eff({
           chooseOne: {
             internalDecisionId: 'decision:$b',
             bind: '$b',
             options: { query: 'enums', values: ['y'] },
           },
-        } as GameDef['actions'][number]['effects'][number],
+        }) as GameDef['actions'][number]['effects'][number],
       ],
       limits: [],
     };

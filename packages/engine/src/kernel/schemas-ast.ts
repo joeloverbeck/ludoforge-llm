@@ -539,11 +539,13 @@ tokenFilterExprSchemaInternal = z.union([
 effectAstSchemaInternal = z.union([
   z
     .object({
+      _k: IntegerSchema,
       setVar: SetVarPayloadSchema,
     })
     .strict(),
   z
     .object({
+      _k: IntegerSchema,
       setActivePlayer: z
         .object({
           player: PlayerSelSchema,
@@ -553,11 +555,13 @@ effectAstSchemaInternal = z.union([
     .strict(),
   z
     .object({
+      _k: IntegerSchema,
       addVar: AddVarPayloadSchema,
     })
     .strict(),
   z
     .object({
+      _k: IntegerSchema,
       transferVar: z
         .object({
           from: TransferVarEndpointSchema,
@@ -573,6 +577,7 @@ effectAstSchemaInternal = z.union([
     .strict(),
   z
     .object({
+      _k: IntegerSchema,
       moveToken: z
         .object({
           token: TokenSelSchema,
@@ -585,6 +590,7 @@ effectAstSchemaInternal = z.union([
     .strict(),
   z
     .object({
+      _k: IntegerSchema,
       moveAll: z
         .object({
           from: ZoneRefSchema,
@@ -596,6 +602,7 @@ effectAstSchemaInternal = z.union([
     .strict(),
   z
     .object({
+      _k: IntegerSchema,
       moveTokenAdjacent: z
         .object({
           token: TokenSelSchema,
@@ -607,6 +614,7 @@ effectAstSchemaInternal = z.union([
     .strict(),
   z
     .object({
+      _k: IntegerSchema,
       draw: z
         .object({
           from: ZoneRefSchema,
@@ -618,6 +626,7 @@ effectAstSchemaInternal = z.union([
     .strict(),
   z
     .object({
+      _k: IntegerSchema,
       reveal: z
         .object({
           zone: ZoneRefSchema,
@@ -629,6 +638,7 @@ effectAstSchemaInternal = z.union([
     .strict(),
   z
     .object({
+      _k: IntegerSchema,
       conceal: z
         .object({
           zone: ZoneRefSchema,
@@ -638,9 +648,10 @@ effectAstSchemaInternal = z.union([
         .strict(),
     })
     .strict(),
-  z.object({ shuffle: z.object({ zone: ZoneRefSchema }).strict() }).strict(),
+  z.object({ _k: IntegerSchema, shuffle: z.object({ zone: ZoneRefSchema }).strict() }).strict(),
   z
     .object({
+      _k: IntegerSchema,
       createToken: z
         .object({
           type: StringSchema,
@@ -650,9 +661,10 @@ effectAstSchemaInternal = z.union([
         .strict(),
     })
     .strict(),
-  z.object({ destroyToken: z.object({ token: TokenSelSchema }).strict() }).strict(),
+  z.object({ _k: IntegerSchema, destroyToken: z.object({ token: TokenSelSchema }).strict() }).strict(),
   z
     .object({
+      _k: IntegerSchema,
       setTokenProp: z
         .object({
           token: TokenSelSchema,
@@ -664,6 +676,7 @@ effectAstSchemaInternal = z.union([
     .strict(),
   z
     .object({
+      _k: IntegerSchema,
       if: z
         .object({
           when: ConditionASTSchema,
@@ -675,6 +688,7 @@ effectAstSchemaInternal = z.union([
     .strict(),
   z
     .object({
+      _k: IntegerSchema,
       forEach: z
         .object({
           bind: CanonicalBindingIdentifierSchema,
@@ -690,6 +704,7 @@ effectAstSchemaInternal = z.union([
     .strict(),
   z
     .object({
+      _k: IntegerSchema,
       reduce: z
         .object({
           itemBind: CanonicalBindingIdentifierSchema,
@@ -709,6 +724,7 @@ effectAstSchemaInternal = z.union([
     .strict(),
   z
     .object({
+      _k: IntegerSchema,
       removeByPriority: z
         .object({
           budget: NumericValueExprSchema,
@@ -733,6 +749,7 @@ effectAstSchemaInternal = z.union([
     .strict(),
   z
     .object({
+      _k: IntegerSchema,
       let: z
         .object({
           bind: CanonicalBindingIdentifierSchema,
@@ -745,6 +762,7 @@ effectAstSchemaInternal = z.union([
     .strict(),
   z
     .object({
+      _k: IntegerSchema,
       bindValue: z
         .object({
           bind: CanonicalBindingIdentifierSchema,
@@ -756,6 +774,7 @@ effectAstSchemaInternal = z.union([
     .strict(),
   z
     .object({
+      _k: IntegerSchema,
       evaluateSubset: z
         .object({
           source: OptionsQuerySchema,
@@ -773,6 +792,7 @@ effectAstSchemaInternal = z.union([
     .strict(),
   z
     .object({
+      _k: IntegerSchema,
       chooseOne: z
         .object({
           internalDecisionId: StringSchema,
@@ -787,6 +807,7 @@ effectAstSchemaInternal = z.union([
     .strict(),
   z
     .object({
+      _k: IntegerSchema,
       chooseN: z.union([
         z
           .object({
@@ -816,6 +837,7 @@ effectAstSchemaInternal = z.union([
     .strict(),
   z
     .object({
+      _k: IntegerSchema,
       rollRandom: z
         .object({
           bind: CanonicalBindingIdentifierSchema,
@@ -829,6 +851,7 @@ effectAstSchemaInternal = z.union([
     .strict(),
   z
     .object({
+      _k: IntegerSchema,
       setMarker: z
         .object({
           space: ZoneRefSchema,
@@ -840,6 +863,7 @@ effectAstSchemaInternal = z.union([
     .strict(),
   z
     .object({
+      _k: IntegerSchema,
       shiftMarker: z
         .object({
           space: ZoneRefSchema,
@@ -851,6 +875,7 @@ effectAstSchemaInternal = z.union([
     .strict(),
   z
     .object({
+      _k: IntegerSchema,
       setGlobalMarker: z
         .object({
           marker: StringSchema,
@@ -861,6 +886,7 @@ effectAstSchemaInternal = z.union([
     .strict(),
   z
     .object({
+      _k: IntegerSchema,
       flipGlobalMarker: z
         .object({
           marker: ValueExprSchema,
@@ -872,6 +898,7 @@ effectAstSchemaInternal = z.union([
     .strict(),
   z
     .object({
+      _k: IntegerSchema,
       shiftGlobalMarker: z
         .object({
           marker: StringSchema,
@@ -882,6 +909,7 @@ effectAstSchemaInternal = z.union([
     .strict(),
   z
     .object({
+      _k: IntegerSchema,
       grantFreeOperation: createTurnFlowFreeOperationGrantSchema({
         id: StringSchema.optional(),
         seat: StringSchema,
@@ -911,6 +939,7 @@ effectAstSchemaInternal = z.union([
     .strict(),
   z
     .object({
+      _k: IntegerSchema,
       gotoPhaseExact: z
         .object({
           phase: StringSchema,
@@ -920,11 +949,13 @@ effectAstSchemaInternal = z.union([
     .strict(),
   z
     .object({
+      _k: IntegerSchema,
       advancePhase: z.object({}).strict(),
     })
     .strict(),
   z
     .object({
+      _k: IntegerSchema,
       pushInterruptPhase: z
         .object({
           phase: StringSchema,
@@ -935,6 +966,7 @@ effectAstSchemaInternal = z.union([
     .strict(),
   z
     .object({
+      _k: IntegerSchema,
       popInterruptPhase: z.object({}).strict(),
     })
     .strict(),

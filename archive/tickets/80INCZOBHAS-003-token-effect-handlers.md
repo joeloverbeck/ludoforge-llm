@@ -1,6 +1,6 @@
 # 80INCZOBHAS-003: Instrument Token Effect Handlers with Incremental Hash Updates
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — effects-token.ts
@@ -115,3 +115,14 @@ Token properties are not part of the Zobrist hash (placement key uses tokenId on
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`
 3. `pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-24
+- **What changed**:
+  - New file `packages/engine/src/kernel/zobrist-token-hash.ts` — `updateZoneTokenHash` helper that XORs out all old tokenPlacement features for a zone and XORs in all new ones.
+  - `packages/engine/src/kernel/effects-token.ts` — instrumented `applyMoveToken`, `applyCreateToken`, `applyDestroyToken`, `applyDraw` (including reshuffle path), `applyMoveAll`, `applyShuffle` with incremental hash updates. Added comment to `applySetTokenProp` documenting no hash update needed.
+  - `packages/engine/src/kernel/index.ts` — exported `zobrist-token-hash.ts`.
+  - New test file `packages/engine/test/unit/kernel/zobrist-incremental-tokens.test.ts` — 11 tests covering all 8 handlers + graceful degradation without zobristTable.
+- **Deviations**: Rather than per-token XOR pairs, used zone-level `updateZoneTokenHash` that XORs out all old placements and XORs in all new placements. This correctly handles slot-index shifts when tokens are inserted/removed from zones. Same net hash result, simpler implementation.
+- **Verification**: 4710 tests pass, 0 failures. Typecheck and lint clean.

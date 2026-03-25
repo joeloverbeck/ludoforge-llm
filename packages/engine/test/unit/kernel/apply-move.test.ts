@@ -34,6 +34,8 @@ import {
   makeCardSeatOrderRuntimeZones,
   makeCardSeatOrderTurnOrder,
 } from '../../helpers/card-seat-order-fixtures.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
+import { asTaggedGameDef } from '../../helpers/gamedef-fixtures.js';
 
 const resourcesVar: VariableDef = { name: 'resources', type: 'int', init: 10, min: 0, max: 100 };
 
@@ -43,7 +45,7 @@ const makeBaseDef = (overrides?: {
   globalVars?: readonly VariableDef[];
   zones?: GameDef['zones'];
 }): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'apply-move-test', players: { min: 2, max: 2 } },
     seats: [{ id: '0' }, { id: '1' }, { id: '2' }, { id: '3' }],
     constants: {},
@@ -62,7 +64,7 @@ const makeBaseDef = (overrides?: {
     actionPipelines: overrides?.actionPipelines,
     triggers: [],
     terminal: { conditions: [] },
-  }) as unknown as GameDef;
+  });
 
 const makeBaseState = (overrides?: Partial<GameState>): GameState => ({
   globalVars: { resources: 10 },
@@ -95,12 +97,12 @@ const makeBaseState = (overrides?: Partial<GameState>): GameState => ({
  *       then:
  *         - addVar: { scope: global, var: resources, delta: -3 }
  */
-const conditionalCostEffect: EffectAST = {
+const conditionalCostEffect: EffectAST = eff({
   if: {
     when: { op: '!=', left: { _t: 2 as const, ref: 'binding', name: '__freeOperation' }, right: true },
-    then: [{ addVar: { scope: 'global', var: 'resources', delta: -3 } }],
+    then: [eff({ addVar: { scope: 'global', var: 'resources', delta: -3 } })],
   },
-};
+});
 
 const makeOperationAction = (): ActionDef => ({
   id: asActionId('trainOp'),
@@ -177,12 +179,12 @@ describe('applyMove() __freeOperation binding (KERDECSEQMOD-004)', () => {
     // Use a setVar that stores 1 when __freeOperation is true, 0 when false,
     // proving the binding is readable in stages effects.
     const flagVar: VariableDef = { name: 'wasFree', type: 'int', init: 0, min: 0, max: 1 };
-    const setFlagEffect: EffectAST = {
+    const setFlagEffect: EffectAST = eff({
       if: {
         when: { op: '==', left: { _t: 2 as const, ref: 'binding', name: '__freeOperation' }, right: true },
-        then: [{ setVar: { scope: 'global', var: 'wasFree', value: 1 } }],
+        then: [eff({ setVar: { scope: 'global', var: 'wasFree', value: 1 } })],
       },
-    };
+    });
 
     const action = makeOperationAction();
     const profile = makeOperationProfile([setFlagEffect]);
@@ -248,7 +250,7 @@ describe('applyMove() declared int-range params respect full domain membership',
       ],
       pre: null,
       cost: [],
-      effects: [{ setVar: { scope: 'global', var: 'resources', value: { _t: 2 as const, ref: 'binding', name: 'amount' } } }],
+      effects: [eff({ setVar: { scope: 'global', var: 'resources', value: { _t: 2 as const, ref: 'binding', name: 'amount' } } })],
       limits: [],
     };
     const def = makeBaseDef({ actions: [action] });
@@ -301,7 +303,7 @@ describe('applyMove() declared int-range params respect full domain membership',
       ],
       pre: null,
       cost: [],
-      effects: [{ setVar: { scope: 'global', var: 'resources', value: { _t: 2 as const, ref: 'binding', name: 'amount' } } }],
+      effects: [eff({ setVar: { scope: 'global', var: 'resources', value: { _t: 2 as const, ref: 'binding', name: 'amount' } } })],
       limits: [],
     };
     const def = makeBaseDef({ actions: [action] });
@@ -345,7 +347,7 @@ describe('applyMove() declared int-range params respect full domain membership',
       ],
       pre: null,
       cost: [],
-      effects: [{ setVar: { scope: 'global', var: 'resources', value: { _t: 2 as const, ref: 'binding', name: 'amount' } } }],
+      effects: [eff({ setVar: { scope: 'global', var: 'resources', value: { _t: 2 as const, ref: 'binding', name: 'amount' } } })],
       limits: [],
     };
     const def = makeBaseDef({ actions: [action] });
@@ -375,13 +377,13 @@ describe('applyMove() maxPhaseTransitionsPerMove replay boundary', () => {
       pre: null,
       cost: [],
       effects: [
-        { gotoPhaseExact: { phase: asPhaseId('street1') } },
-        { gotoPhaseExact: { phase: asPhaseId('street2') } },
+        eff({ gotoPhaseExact: { phase: asPhaseId('street1') } }),
+        eff({ gotoPhaseExact: { phase: asPhaseId('street2') } }),
       ],
       limits: [],
     };
     const def = makeBaseDef({ actions: [action] }) as GameDef;
-    const cappedDef: GameDef = {
+    const cappedDef: GameDef = asTaggedGameDef({
       ...def,
       turnStructure: {
         phases: [
@@ -390,7 +392,7 @@ describe('applyMove() maxPhaseTransitionsPerMove replay boundary', () => {
           { id: asPhaseId('street2') },
         ],
       },
-    };
+    });
     const state = makeBaseState({ currentPhase: asPhaseId('main') });
 
     const uncapped = applyMove(
@@ -443,7 +445,7 @@ describe('applyMove() maxPhaseTransitionsPerMove replay boundary', () => {
       effects: [],
       limits: [],
     };
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({ actions: [action] }),
       turnStructure: {
         phases: [
@@ -457,12 +459,12 @@ describe('applyMove() maxPhaseTransitionsPerMove replay boundary', () => {
           id: asTriggerId('on_noop'),
           event: { type: 'actionResolved', action: asActionId('noop') },
           effects: [
-            { gotoPhaseExact: { phase: asPhaseId('street1') } },
-            { gotoPhaseExact: { phase: asPhaseId('street2') } },
+            eff({ gotoPhaseExact: { phase: asPhaseId('street1') } }),
+            eff({ gotoPhaseExact: { phase: asPhaseId('street2') } }),
           ],
         },
       ],
-    } as GameDef;
+    });
     const state = makeBaseState({ currentPhase: asPhaseId('main') });
 
     const uncapped = applyMove(
@@ -498,7 +500,7 @@ describe('applyMove() maxPhaseTransitionsPerMove replay boundary', () => {
       effects: [],
       limits: [],
     };
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({ actions: [action] }),
       turnStructure: {
         phases: [
@@ -519,15 +521,15 @@ describe('applyMove() maxPhaseTransitionsPerMove replay boundary', () => {
               sideMode: 'single',
               unshaded: {
                 effects: [
-                  { gotoPhaseExact: { phase: asPhaseId('street1') } },
-                  { gotoPhaseExact: { phase: asPhaseId('street2') } },
+                  eff({ gotoPhaseExact: { phase: asPhaseId('street1') } }),
+                  eff({ gotoPhaseExact: { phase: asPhaseId('street2') } }),
                 ],
               },
             },
           ],
         },
       ],
-    } as GameDef;
+    });
     const state = makeBaseState({ currentPhase: asPhaseId('main') });
     const move: Move = {
       actionId: asActionId('event'),
@@ -553,10 +555,10 @@ describe('applyMove() maxPhaseTransitionsPerMove replay boundary', () => {
       params: [],
       pre: null,
       cost: [],
-      effects: [{ advancePhase: {} }],
+      effects: [eff({ advancePhase: {} })],
       limits: [],
     };
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({ actions: [action] }),
       turnStructure: {
         phases: [
@@ -568,7 +570,7 @@ describe('applyMove() maxPhaseTransitionsPerMove replay boundary', () => {
           { id: asPhaseId('street2') },
         ],
       },
-    } as GameDef;
+    });
     const state = makeBaseState({ currentPhase: asPhaseId('main') });
 
     const uncapped = applyMove(
@@ -597,7 +599,7 @@ describe('applyMove() maxPhaseTransitionsPerMove replay boundary', () => {
       params: [],
       pre: null,
       cost: [],
-      effects: [{ gotoPhaseExact: { phase: asPhaseId('street2') } }],
+      effects: [eff({ gotoPhaseExact: { phase: asPhaseId('street2') } })],
       limits: [],
     };
     const specialActivity: ActionDef = {
@@ -608,13 +610,13 @@ describe('applyMove() maxPhaseTransitionsPerMove replay boundary', () => {
       params: [],
       pre: null,
       cost: [],
-      effects: [{ gotoPhaseExact: { phase: asPhaseId('street1') } }],
+      effects: [eff({ gotoPhaseExact: { phase: asPhaseId('street1') } })],
       limits: [],
     };
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({ actions: [operation, specialActivity] }),
       turnStructure: { phases: [{ id: asPhaseId('main') }, { id: asPhaseId('street1') }, { id: asPhaseId('street2') }] },
-    } as GameDef;
+    });
     const state = makeBaseState({ currentPhase: asPhaseId('main') });
     const move: Move = {
       actionId: asActionId('operation'),
@@ -651,7 +653,7 @@ describe('applyMove() maxPhaseTransitionsPerMove replay boundary', () => {
       stages: [
         {
           stage: 'resolve',
-          effects: [{ gotoPhaseExact: { phase: asPhaseId('street1') } }],
+          effects: [eff({ gotoPhaseExact: { phase: asPhaseId('street1') } })],
         },
       ],
       atomicity: 'atomic',
@@ -664,16 +666,16 @@ describe('applyMove() maxPhaseTransitionsPerMove replay boundary', () => {
       params: [],
       pre: null,
       cost: [],
-      effects: [{ gotoPhaseExact: { phase: asPhaseId('street2') } }],
+      effects: [eff({ gotoPhaseExact: { phase: asPhaseId('street2') } })],
       limits: [],
     };
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({
         actions: [operation, specialActivity],
         actionPipelines: [operationPipeline],
       }),
       turnStructure: { phases: [{ id: asPhaseId('main') }, { id: asPhaseId('street1') }, { id: asPhaseId('street2') }] },
-    } as GameDef;
+    });
     const state = makeBaseState({ currentPhase: asPhaseId('main') });
     const move: Move = {
       actionId: asActionId('operation'),
@@ -698,7 +700,7 @@ describe('applyMove() maxPhaseTransitionsPerMove replay boundary', () => {
       params: [],
       pre: null,
       cost: [],
-      effects: [{ gotoPhaseExact: { phase: asPhaseId('street1') } }],
+      effects: [eff({ gotoPhaseExact: { phase: asPhaseId('street1') } })],
       limits: [],
     };
     const specialActivity: ActionDef = {
@@ -709,13 +711,13 @@ describe('applyMove() maxPhaseTransitionsPerMove replay boundary', () => {
       params: [],
       pre: null,
       cost: [],
-      effects: [{ gotoPhaseExact: { phase: asPhaseId('street2') } }],
+      effects: [eff({ gotoPhaseExact: { phase: asPhaseId('street2') } })],
       limits: [],
     };
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({ actions: [operation, specialActivity] }),
       turnStructure: { phases: [{ id: asPhaseId('main') }, { id: asPhaseId('street1') }, { id: asPhaseId('street2') }] },
-    } as GameDef;
+    });
     const state = makeBaseState({ currentPhase: asPhaseId('main') });
     const move: Move = {
       actionId: asActionId('operation'),
@@ -736,12 +738,12 @@ describe('applyMove() maxPhaseTransitionsPerMove replay boundary', () => {
  *
  * Sets a flag variable to 1 when __actionClass is 'limitedOperation'.
  */
-const actionClassCheckEffect: EffectAST = {
+const actionClassCheckEffect: EffectAST = eff({
   if: {
     when: { op: '==', left: { _t: 2 as const, ref: 'binding', name: '__actionClass' }, right: 'limitedOperation' },
-    then: [{ setVar: { scope: 'global', var: 'isLimited', value: 1 } }],
+    then: [eff({ setVar: { scope: 'global', var: 'isLimited', value: 1 } })],
   },
-};
+});
 
 describe('applyMove() __actionClass binding (FITLOPEFULEFF-001)', () => {
   const isLimitedVar: VariableDef = { name: 'isLimited', type: 'int', init: 0, min: 0, max: 1 };
@@ -787,12 +789,12 @@ describe('applyMove() __actionClass binding (FITLOPEFULEFF-001)', () => {
   });
 
   it('3. move.actionClass = "operationPlusSpecialActivity" → bindings contain correct value', () => {
-    const opSACheckEffect: EffectAST = {
+    const opSACheckEffect: EffectAST = eff({
       if: {
         when: { op: '==', left: { _t: 2 as const, ref: 'binding', name: '__actionClass' }, right: 'operationPlusSpecialActivity' },
-        then: [{ setVar: { scope: 'global', var: 'isLimited', value: 1 } }],
+        then: [eff({ setVar: { scope: 'global', var: 'isLimited', value: 1 } })],
       },
-    };
+    });
 
     const action = makeOperationAction();
     const profile = makeOperationProfile([opSACheckEffect]);
@@ -871,7 +873,7 @@ phase: [asPhaseId('main')],
         {
           stage: 'resolve',
           effects: [
-            {
+            eff({
               if: {
                 when: {
                   op: 'zonePropIncludes',
@@ -879,9 +881,9 @@ phase: [asPhaseId('main')],
                   prop: 'terrainTags',
                   value: 'urban',
                 },
-                then: [{ setVar: { scope: 'global', var: 'mapFlag', value: 1 } }],
+                then: [eff({ setVar: { scope: 'global', var: 'mapFlag', value: 1 } })],
               },
-            },
+            }),
           ],
         },
       ],
@@ -918,7 +920,7 @@ phase: [asPhaseId('main')],
       limits: [],
     };
 
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({ actions: [action], globalVars: [] }),
       turnOrder: {
         type: 'cardDriven',
@@ -936,7 +938,7 @@ phase: [asPhaseId('main')],
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const state = makeBaseState({
       turnOrderState: {
@@ -1003,7 +1005,7 @@ phase: [asPhaseId('main')],
       limits: [],
     };
 
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({
         actions: [action],
         globalVars: [],
@@ -1027,7 +1029,7 @@ phase: [asPhaseId('main')],
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const state = makeBaseState({
       zones: { 'board:cambodia': [] },
@@ -1140,7 +1142,7 @@ describe('applyMove() required free-operation grant enforcement', () => {
       limits: [],
     };
 
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({ actions: [action], globalVars: [] }),
       turnOrder: {
         type: 'cardDriven',
@@ -1158,7 +1160,7 @@ describe('applyMove() required free-operation grant enforcement', () => {
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const state = makeBaseState({
       turnOrderState: {
@@ -1223,7 +1225,7 @@ describe('applyMove() required free-operation grant enforcement', () => {
       limits: [],
     };
 
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({ actions: [action], globalVars: [] }),
       turnOrder: {
         type: 'cardDriven',
@@ -1240,7 +1242,7 @@ describe('applyMove() required free-operation grant enforcement', () => {
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const state = makeBaseState({
       turnOrderState: {
@@ -1294,11 +1296,11 @@ describe('applyMove() required free-operation grant enforcement', () => {
       params: [],
       pre: null,
       cost: [],
-      effects: [{ addVar: { scope: 'global', var: 'airLiftCount', delta: 1 } }],
+      effects: [eff({ addVar: { scope: 'global', var: 'airLiftCount', delta: 1 } })],
       limits: [],
     };
 
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({
         actions: [action],
         globalVars: [{ name: 'airLiftCount', type: 'int', init: 0, min: 0, max: 10, material: false }],
@@ -1319,7 +1321,7 @@ describe('applyMove() required free-operation grant enforcement', () => {
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const state = makeBaseState({
       globalVars: { airLiftCount: 0 },
@@ -1382,7 +1384,7 @@ describe('applyMove() required free-operation grant enforcement', () => {
       limits: [],
     };
 
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({ actions: [action], globalVars: [] }),
       turnOrder: {
         type: 'cardDriven',
@@ -1400,7 +1402,7 @@ describe('applyMove() required free-operation grant enforcement', () => {
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const baseRuntime = {
       seatOrder: ['0', '1'],
@@ -1455,11 +1457,11 @@ describe('applyMove() required free-operation grant enforcement', () => {
       params: [],
       pre: null,
       cost: [],
-      effects: [{ addVar: { scope: 'global', var: 'opMarker', delta: 1 } }],
+      effects: [eff({ addVar: { scope: 'global', var: 'opMarker', delta: 1 } })],
       limits: [],
     };
 
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({ actions: [action], globalVars: [{ name: 'opMarker', type: 'int', init: 0, min: 0, max: 10 }] }),
       turnOrder: {
         type: 'cardDriven',
@@ -1477,7 +1479,7 @@ describe('applyMove() required free-operation grant enforcement', () => {
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const baseRuntime = {
       seatOrder: ['0', '1'],
@@ -1531,11 +1533,11 @@ describe('applyMove() required free-operation grant enforcement', () => {
       params: [],
       pre: null,
       cost: [],
-      effects: [{ addVar: { scope: 'global', var: 'opCount', delta: 1 } }],
+      effects: [eff({ addVar: { scope: 'global', var: 'opCount', delta: 1 } })],
       limits: [],
     };
 
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({ actions: [action], globalVars: [{ name: 'opCount', type: 'int', init: 0, min: 0, max: 10 }] }),
       turnOrder: {
         type: 'cardDriven',
@@ -1553,7 +1555,7 @@ describe('applyMove() required free-operation grant enforcement', () => {
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const state = makeBaseState({
       globalVars: { opCount: 0 },
@@ -1615,11 +1617,11 @@ describe('applyMove() required free-operation grant enforcement', () => {
       params: [],
       pre: null,
       cost: [],
-      effects: [{ addVar: { scope: 'global', var: 'opCount', delta: 1 } }],
+      effects: [eff({ addVar: { scope: 'global', var: 'opCount', delta: 1 } })],
       limits: [],
     };
 
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({ actions: [action], globalVars: [{ name: 'opCount', type: 'int', init: 0, min: 0, max: 10 }] }),
       turnOrder: {
         type: 'cardDriven',
@@ -1636,7 +1638,7 @@ describe('applyMove() required free-operation grant enforcement', () => {
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const state = makeBaseState({
       globalVars: { opCount: 0 },
@@ -1707,11 +1709,11 @@ describe('applyMove() required free-operation grant enforcement', () => {
       params: [],
       pre: null,
       cost: [],
-      effects: [{ addVar: { scope: 'global', var: 'opCount', delta: 1 } }],
+      effects: [eff({ addVar: { scope: 'global', var: 'opCount', delta: 1 } })],
       limits: [],
     };
 
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({ actions: [action], globalVars: [{ name: 'opCount', type: 'int', init: 0, min: 0, max: 10 }] }),
       turnOrder: {
         type: 'cardDriven',
@@ -1729,7 +1731,7 @@ describe('applyMove() required free-operation grant enforcement', () => {
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const result = applyMove(def, makeBaseState({
       globalVars: { opCount: 0 },
@@ -1800,7 +1802,7 @@ describe('applyMove() required free-operation grant enforcement', () => {
       limits: [],
     };
 
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({ actions: [passAction, action], globalVars: [] }),
       turnOrder: {
         type: 'cardDriven',
@@ -1818,7 +1820,7 @@ describe('applyMove() required free-operation grant enforcement', () => {
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const state = makeBaseState({
       turnOrderState: {
@@ -1876,7 +1878,7 @@ describe('applyMove() required free-operation grant enforcement', () => {
       limits: [],
     };
 
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({ actions: [action], globalVars: [] }),
       turnOrder: {
         type: 'cardDriven',
@@ -1894,7 +1896,7 @@ describe('applyMove() required free-operation grant enforcement', () => {
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const state = makeBaseState({
       turnOrderState: {
@@ -1961,7 +1963,7 @@ describe('applyMove() card seat-order boundary invariants', () => {
       limits: [],
     };
 
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({
         actions: [operationAction],
         globalVars: [],
@@ -1979,7 +1981,7 @@ describe('applyMove() card seat-order boundary invariants', () => {
         eligibilitySeats: ['us', 'nva'],
         actionClassByActionId: { operation: 'operation' },
       }),
-    } as unknown as GameDef;
+    });
 
     const state = makeBaseState({
       activePlayer: asPlayerId(0),
@@ -2054,7 +2056,7 @@ phase: [asPhaseId('main')],
       atomicity: 'partial',
     };
 
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({ actions: [action], actionPipelines: [profile] }),
       turnOrder: {
         type: 'cardDriven',
@@ -2072,7 +2074,7 @@ phase: [asPhaseId('main')],
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const state = makeBaseState({
       activePlayer: asPlayerId(0),
@@ -2139,7 +2141,7 @@ phase: [asPhaseId('main')],
       stages: [],
       atomicity: 'partial',
     };
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({ actions: [action], actionPipelines: [profile] }),
       turnOrder: {
         type: 'cardDriven',
@@ -2157,7 +2159,7 @@ phase: [asPhaseId('main')],
           },
         },
       },
-    } as unknown as GameDef;
+    });
     const state = makeBaseState({
       activePlayer: asPlayerId(0),
       turnOrderState: {
@@ -2231,7 +2233,7 @@ phase: [asPhaseId('main')],
       stages: [],
       atomicity: 'partial',
     };
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({
         actions: [action],
         actionPipelines: [profile],
@@ -2256,7 +2258,7 @@ phase: [asPhaseId('main')],
           },
         },
       },
-    } as unknown as GameDef;
+    });
     const state = makeBaseState({
       turnOrderState: {
         type: 'cardDriven',
@@ -2713,10 +2715,10 @@ describe('applyMove() simultaneous commit preflight parity', () => {
       atomicity: 'atomic',
     };
 
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({ actions: [costlyAction, passAction], actionPipelines: [costlyPipeline] }),
       turnOrder: { type: 'simultaneous' as const },
-    } as unknown as GameDef;
+    });
     const state = makeBaseState({
       globalVars: { resources: 1 },
       activePlayer: asPlayerId(1),
@@ -2790,7 +2792,7 @@ describe('applyMove() compound timing validation and replaceRemainingStages', ()
     params: [],
     pre: null,
     cost: [],
-    effects: [{ addVar: { scope: 'global', var: 'saEffect', delta: 1 } }],
+    effects: [eff({ addVar: { scope: 'global', var: 'saEffect', delta: 1 } })],
     limits: [],
   };
   const noPipelineDef = makeBaseDef({
@@ -2807,8 +2809,8 @@ describe('applyMove() compound timing validation and replaceRemainingStages', ()
     targeting: {},
     stages: [
       { stage: 'select-spaces', effects: [] },
-      { stage: 'cost-per-space', effects: [{ addVar: { scope: 'global', var: 'cost', delta: 1 } }] },
-      { stage: 'resolve-per-space', effects: [{ addVar: { scope: 'global', var: 'combat', delta: 1 } }] },
+      { stage: 'cost-per-space', effects: [eff({ addVar: { scope: 'global', var: 'cost', delta: 1 } })] },
+      { stage: 'resolve-per-space', effects: [eff({ addVar: { scope: 'global', var: 'combat', delta: 1 } })] },
     ],
     atomicity: 'atomic',
   };

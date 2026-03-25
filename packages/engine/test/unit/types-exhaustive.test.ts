@@ -42,6 +42,7 @@ import type {
   RecursiveOptionsQueryKindCoverage,
 } from '../../src/kernel/query-partition-types.js';
 import type { RecursiveOptionsQueryDispatchCoverage } from '../../src/kernel/query-walk.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 type UnionToIntersection<T> = (
   T extends unknown ? (arg: T) => void : never
@@ -338,9 +339,9 @@ describe('exhaustive kernel unions', () => {
 
   it('keeps exhaustive checks type-safe', () => {
     void exhaustPlayerSel('actor');
-    void exhaustEffectAST({
+    void exhaustEffectAST(eff({
       setVar: { scope: 'global', var: 'x', value: 1 },
-    });
+    }));
     void exhaustConditionAST({ op: 'adjacent', left: 'zone:a', right: 'zone:b' });
     void exhaustOptionsQuery({ query: 'players' });
   });

@@ -27,6 +27,7 @@ import {
   type GameState,
   type TriggerEvent,
 } from '../../../src/kernel/index.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
 
 const makeDef = (): GameDef => ({
   metadata: { id: 'effect-compiler-orchestrator-test', players: { min: 2, max: 3 } },
@@ -48,22 +49,22 @@ const makeDef = (): GameDef => ({
       {
         id: asPhaseId('main'),
         onEnter: [
-          { setVar: { scope: 'global', var: 'score', value: 1 } },
-          { addVar: { scope: 'global', var: 'score', delta: 2 } },
+          eff({ setVar: { scope: 'global', var: 'score', value: 1 } }),
+          eff({ addVar: { scope: 'global', var: 'score', delta: 2 } }),
         ],
         onExit: [],
       },
       {
         id: asPhaseId('cleanup'),
         onExit: [
-          {
+          eff({
             rollRandom: {
               bind: '$roll',
               min: 1,
               max: 6,
-              in: [{ setVar: { scope: 'global', var: 'count', value: { _t: 2, ref: 'binding', name: '$roll' } } }],
+              in: [eff({ setVar: { scope: 'global', var: 'count', value: { _t: 2, ref: 'binding', name: '$roll' } } })],
             },
-          },
+          }),
         ],
       },
       {
@@ -130,15 +131,15 @@ describe('effect-compiler orchestrator', () => {
   it('compiles a fully compilable sequence with full coverage and interpreter parity', () => {
     const def = makeDef();
     const effects: readonly EffectAST[] = [
-      { setVar: { scope: 'global', var: 'score', value: 1 } },
-      { addVar: { scope: 'global', var: 'score', delta: 2 } },
-      {
+      eff({ setVar: { scope: 'global', var: 'score', value: 1 } }),
+      eff({ addVar: { scope: 'global', var: 'score', delta: 2 } }),
+      eff({
         if: {
           when: { op: '==', left: { _t: 2, ref: 'gvar', var: 'score' }, right: 3 },
-          then: [{ setVar: { scope: 'global', var: 'flag', value: true } }],
-          else: [{ setVar: { scope: 'global', var: 'flag', value: false } }],
+          then: [eff({ setVar: { scope: 'global', var: 'flag', value: true } })],
+          else: [eff({ setVar: { scope: 'global', var: 'flag', value: false } })],
         },
-      },
+      }),
     ];
     const state = makeState();
     const rng = createRng(23n);
@@ -169,16 +170,16 @@ describe('effect-compiler orchestrator', () => {
   it('mixes compiled fragments with fallback fragments without changing behavior', () => {
     const def = makeDef();
     const effects: readonly EffectAST[] = [
-      { setVar: { scope: 'global', var: 'score', value: 1 } },
-      {
+      eff({ setVar: { scope: 'global', var: 'score', value: 1 } }),
+      eff({
         rollRandom: {
           bind: '$roll',
           min: 1,
           max: 6,
-          in: [{ setVar: { scope: 'global', var: 'count', value: { _t: 2, ref: 'binding', name: '$roll' } } }],
+          in: [eff({ setVar: { scope: 'global', var: 'count', value: { _t: 2, ref: 'binding', name: '$roll' } } })],
         },
-      },
-      { addVar: { scope: 'global', var: 'score', delta: 2 } },
+      }),
+      eff({ addVar: { scope: 'global', var: 'score', delta: 2 } }),
     ];
     const state = makeState();
     const rng = createRng(29n);
@@ -209,20 +210,22 @@ describe('effect-compiler orchestrator', () => {
   it('falls back for fully unsupported sequences while preserving coverage accounting', () => {
     const def = makeDef();
     const effects: readonly EffectAST[] = [
-      {
+      eff({
         rollRandom: {
           bind: '$roll',
           min: 1,
           max: 6,
-          in: [{ setVar: { scope: 'global', var: 'count', value: { _t: 2, ref: 'binding', name: '$roll' } } }],
+          in: [eff({ setVar: { scope: 'global', var: 'count', value: { _t: 2, ref: 'binding', name: '$roll' } } })],
         },
-      },
+      }),
     ];
     const state = makeState();
     const rng = createRng(31n);
     const compiled = compileEffectSequence(asPhaseId('cleanup'), 'onExit', effects);
 
-    assert.equal(compiled.coverageRatio, 0);
+    // walkEffects now traverses rollRandom.in, finding the nested setVar (compiled).
+    // 2 nodes: rollRandom (not compiled) + setVar (compiled) = 1/2
+    assert.equal(compiled.coverageRatio, 0.5);
     compareResults(
       def,
       compiled.execute(state, rng, {}, makeCompiledContext(def)),
@@ -348,14 +351,14 @@ describe('effect-compiler orchestrator', () => {
   it('createFallbackFragment uses lightweight env+cursor bridging with interpreter parity', () => {
     const def = makeDef();
     const effects: readonly EffectAST[] = [
-      {
+      eff({
         rollRandom: {
           bind: '$roll',
           min: 1,
           max: 6,
-          in: [{ setVar: { scope: 'global', var: 'count', value: { _t: 2, ref: 'binding', name: '$roll' } } }],
+          in: [eff({ setVar: { scope: 'global', var: 'count', value: { _t: 2, ref: 'binding', name: '$roll' } } })],
         },
-      },
+      }),
     ];
     const state = makeState();
     const rng = createRng(53n);

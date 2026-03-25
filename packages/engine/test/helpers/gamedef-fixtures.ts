@@ -1,18 +1,20 @@
 import type { EffectAST, GameDef } from '../../src/kernel/index.js';
+import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
 import { readFixtureJson } from './fixture-reader.js';
 import { tagValueExprs } from './tag-value-exprs.js';
 
 /**
  * Casts an untyped GameDef-shaped object to GameDef, adding `_t` type-tag
- * discriminants to any inline ValueExpr objects. Use this instead of bare
+ * discriminants to any inline ValueExpr objects and `_k` kind-tag
+ * discriminants to any inline EffectAST objects. Use this instead of bare
  * `as unknown as GameDef` in tests to ensure runtime dispatch works.
  */
-export const asTaggedGameDef = (obj: unknown): GameDef => tagValueExprs(obj) as GameDef;
+export const asTaggedGameDef = (obj: unknown): GameDef => tagEffectAsts(tagValueExprs(obj)) as GameDef;
 
-export const readGameDefFixture = (fixtureName: string): GameDef => readFixtureJson<GameDef>(`gamedef/${fixtureName}`);
+export const readGameDefFixture = (fixtureName: string): GameDef => tagEffectAsts(readFixtureJson<GameDef>(`gamedef/${fixtureName}`)) as GameDef;
 
 export const createValidGameDef = (): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'test-game', players: { min: 2, max: 4 } },
     constants: {},
     globalVars: [{ name: 'money', type: 'int', init: 0, min: 0, max: 99 }],
@@ -48,7 +50,7 @@ export const createValidGameDef = (): GameDef =>
     ],
     triggers: [{ id: 'onPlay', event: { type: 'actionResolved', action: 'playCard' }, effects: [] }],
     terminal: { conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }] },
-  }) as unknown as GameDef;
+  });
 
 export const withSingleActionEffect = (effect: EffectAST | unknown): GameDef => {
   const base = createValidGameDef();
@@ -57,7 +59,7 @@ export const withSingleActionEffect = (effect: EffectAST | unknown): GameDef => 
     actions: [
       {
         ...base.actions[0],
-        effects: [effect],
+        effects: [tagEffectAsts(effect)],
       },
     ],
   } as unknown as GameDef;

@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import { assertValidatedGameDef, asActionId, asPhaseId, type Agent, type ValidatedGameDef } from '../../../src/kernel/index.js';
 import { runGame } from '../../../src/sim/index.js';
 import { trustedMove } from '../../helpers/classified-move-fixtures.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
 
 const firstLegalAgent: Agent = {
   chooseMove(input) {
@@ -37,7 +38,7 @@ phase: [asPhaseId('p1')],
             params: [],
             pre: null,
             cost: [],
-            effects: [{ addVar: { scope: 'global' as const, var: 'score', delta: 1 } }],
+            effects: [eff({ addVar: { scope: 'global' as const, var: 'score', delta: 1 } })],
             limits: [{ id: 'step1::turn::0', scope: 'turn' as const, max: 1 }],
           },
           {
@@ -61,7 +62,7 @@ phase: [asPhaseId('main')],
             params: [],
             pre: null,
             cost: [],
-            effects: [{ addVar: { scope: 'global' as const, var: 'score', delta: 1 } }],
+            effects: [eff({ addVar: { scope: 'global' as const, var: 'score', delta: 1 } })],
             limits: [],
           },
         ];

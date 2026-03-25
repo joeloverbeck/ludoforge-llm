@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { lowerEffectArray, type EffectLoweringContext } from '../../src/cnl/compile-effects.js';
+import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
 
 const context: EffectLoweringContext = {
   ownershipByBase: {
@@ -219,7 +220,7 @@ describe('compile-effects binding scope validation', () => {
       result.diagnostics.filter((diagnostic) => diagnostic.severity === 'error'),
       [],
     );
-    assert.deepEqual(result.value, [
+    assert.deepEqual(result.value, tagEffectAsts([
       {
         let: {
           bind: '$targetFactions',
@@ -234,7 +235,7 @@ describe('compile-effects binding scope validation', () => {
           ],
         },
       },
-    ]);
+    ]));
   });
 
   it('allows then-only binders inside later if branches guarded by the same condition', () => {

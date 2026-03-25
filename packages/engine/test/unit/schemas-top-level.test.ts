@@ -1,5 +1,6 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
 
 import {
   DataAssetEnvelopeSchema,
@@ -28,7 +29,7 @@ const minimalGameDef = {
   terminal: { conditions: [] },
 } as const;
 
-const fullGameDef = {
+const fullGameDef = tagEffectAsts({
   metadata: {
     id: 'full-game',
     name: 'Full Game',
@@ -116,7 +117,7 @@ phase: ['main'],
     ranking: { order: 'desc' },
     scoring: { method: 'highest', value: 1 },
   },
-} as const;
+} as const);
 
 const validGameState = {
   globalVars: {},
@@ -457,7 +458,7 @@ describe('top-level runtime schemas', () => {
   });
 
   it('parses valid event-deck payloads with dual-use sides and lasting effects', () => {
-    const result = EventDeckSchema.safeParse({
+    const result = EventDeckSchema.safeParse(tagEffectAsts({
       id: 'fitl-events-initial',
       drawZone: 'leader:none',
       discardZone: 'played:none',
@@ -496,7 +497,7 @@ describe('top-level runtime schemas', () => {
           },
         },
       ],
-    });
+    }));
 
     assert.equal(result.success, true);
   });
@@ -1208,7 +1209,7 @@ describe('GameDefSchema with stackingConstraints', () => {
 
 describe('GameDefSchema with PhaseDef.actionDefaults', () => {
   it('accepts GameDef with valid actionDefaults containing pre and afterEffects', () => {
-    const result = GameDefSchema.safeParse({
+    const result = GameDefSchema.safeParse(tagEffectAsts({
       ...minimalGameDef,
       turnStructure: {
         phases: [
@@ -1221,7 +1222,7 @@ describe('GameDefSchema with PhaseDef.actionDefaults', () => {
           },
         ],
       },
-    });
+    }));
 
     assert.equal(result.success, true);
   });
@@ -1245,7 +1246,7 @@ describe('GameDefSchema with PhaseDef.actionDefaults', () => {
   });
 
   it('accepts GameDef with actionDefaults containing only afterEffects', () => {
-    const result = GameDefSchema.safeParse({
+    const result = GameDefSchema.safeParse(tagEffectAsts({
       ...minimalGameDef,
       turnStructure: {
         phases: [
@@ -1257,7 +1258,7 @@ describe('GameDefSchema with PhaseDef.actionDefaults', () => {
           },
         ],
       },
-    });
+    }));
 
     assert.equal(result.success, true);
   });

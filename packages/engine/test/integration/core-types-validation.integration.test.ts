@@ -10,7 +10,7 @@ import {
   validateGameDef,
 } from '../../src/kernel/index.js';
 import { readFixtureJson } from '../helpers/fixture-reader.js';
-import { createValidGameDef, readGameDefFixture } from '../helpers/gamedef-fixtures.js';
+import { asTaggedGameDef, createValidGameDef, readGameDefFixture } from '../helpers/gamedef-fixtures.js';
 
 const readSerializedTraceFixture = (name: string): SerializedGameTrace => {
   return readFixtureJson<SerializedGameTrace>(`trace/${name}`);
@@ -43,7 +43,7 @@ describe('core-types validation integration', () => {
 
   it('suppresses secondary choose-options runtime-shape diagnostics when options query validation already fails', () => {
     const base = createValidGameDef();
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       actions: [
         {
@@ -65,7 +65,7 @@ describe('core-types validation integration', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const diagnostics = validateGameDef(def);
     assert.equal(

@@ -22,6 +22,7 @@ import {
 import type { CompiledEffectContext, CompiledEffectFn } from './effect-compiler-types.js';
 import { effectRuntimeError } from './effect-error.js';
 import { applyGotoPhaseExact } from './effects-turn-flow.js';
+import { gotoPhaseExact as gotoPhaseExactBuilder } from './ast-builders.js';
 import { toEffectEnv, toEffectCursor } from './effect-context.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import { resolveRef } from './resolve-ref.js';
@@ -552,7 +553,7 @@ export const compileGotoPhaseExact = (desc: GotoPhaseExactPattern): CompiledEffe
     }
     const effectCtx = createCompiledExecutionContext(state, rng, bindings, ctx);
     const result = applyGotoPhaseExact(
-      { gotoPhaseExact: { phase: desc.phase } },
+      gotoPhaseExactBuilder({ phase: desc.phase }),
       toEffectEnv(effectCtx),
       toEffectCursor(effectCtx),
       { remaining: 10_000, max: 10_000 },

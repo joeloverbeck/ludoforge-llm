@@ -8,6 +8,7 @@ import type {
   SetVarPayload,
   ValueExpr,
 } from './types.js';
+import { EFFECT_KIND_TAG } from './types.js';
 
 type ScalarLiteral = number | boolean | string;
 type NumericScalarLiteral = number;
@@ -270,12 +271,94 @@ export const matchGotoPhaseExact = (node: EffectAST): GotoPhaseExactPattern | nu
   };
 };
 
-export const classifyEffect = (node: EffectAST): PatternDescriptor | null =>
-  matchSetVar(node)
-  ?? matchAddVar(node)
-  ?? matchIf(node)
-  ?? matchForEachPlayers(node)
-  ?? matchGotoPhaseExact(node);
+/*
+ * Effect compilation status by EFFECT_KIND_TAG (34 tags, 0-33):
+ *
+ *  0  setVar              — compiled (Phase 0)
+ *  1  addVar              — compiled (Phase 0)
+ *  2  setActivePlayer     — stub (Phase 1)
+ *  3  transferVar         — stub (Phase 1)
+ *  4  moveToken           — stub (Phase 2)
+ *  5  moveAll             — stub (Phase 2)
+ *  6  moveTokenAdjacent   — stub (Phase 2)
+ *  7  draw                — stub (Phase 2)
+ *  8  shuffle             — stub (Phase 2)
+ *  9  createToken         — stub (Phase 2)
+ * 10  destroyToken        — stub (Phase 2)
+ * 11  setTokenProp        — stub (Phase 2)
+ * 12  reveal              — stub (Phase 4)
+ * 13  conceal             — stub (Phase 4)
+ * 14  bindValue           — stub (Phase 1)
+ * 15  chooseOne           — stub (Phase 6)
+ * 16  chooseN             — stub (Phase 6)
+ * 17  setMarker           — stub (Phase 1)
+ * 18  shiftMarker         — stub (Phase 1)
+ * 19  setGlobalMarker     — stub (Phase 1)
+ * 20  flipGlobalMarker    — stub (Phase 1)
+ * 21  shiftGlobalMarker   — stub (Phase 1)
+ * 22  grantFreeOperation  — deferred (action-context-heavy, future spec)
+ * 23  gotoPhaseExact      — compiled (Phase 0)
+ * 24  advancePhase        — stub (Phase 1)
+ * 25  pushInterruptPhase  — stub (Phase 5)
+ * 26  popInterruptPhase   — stub (Phase 1)
+ * 27  rollRandom          — stub (Phase 5)
+ * 28  if                  — compiled (Phase 0)
+ * 29  forEach             — compiled (Phase 0, players-only; general in Phase 3)
+ * 30  reduce              — stub (Phase 3)
+ * 31  removeByPriority    — stub (Phase 3)
+ * 32  let                 — stub (Phase 1)
+ * 33  evaluateSubset      — stub (Phase 5)
+ */
+export const classifyEffect = (node: EffectAST): PatternDescriptor | null => {
+  switch (node._k) {
+    case EFFECT_KIND_TAG.setVar:
+      return matchSetVar(node);
+    case EFFECT_KIND_TAG.addVar:
+      return matchAddVar(node);
+    case EFFECT_KIND_TAG.if:
+      return matchIf(node);
+    case EFFECT_KIND_TAG.forEach:
+      return matchForEachPlayers(node);
+    case EFFECT_KIND_TAG.gotoPhaseExact:
+      return matchGotoPhaseExact(node);
+    // Deferred: action-context-heavy, depends on __freeOperation/__actionClass
+    // bindings only available during the operation pipeline. See Spec 81.
+    case EFFECT_KIND_TAG.grantFreeOperation:
+      return null;
+    // Not-yet-compiled lifecycle tags — stubs for future tickets (002-009)
+    case EFFECT_KIND_TAG.setActivePlayer:
+    case EFFECT_KIND_TAG.transferVar:
+    case EFFECT_KIND_TAG.bindValue:
+    case EFFECT_KIND_TAG.let:
+    case EFFECT_KIND_TAG.setMarker:
+    case EFFECT_KIND_TAG.shiftMarker:
+    case EFFECT_KIND_TAG.setGlobalMarker:
+    case EFFECT_KIND_TAG.flipGlobalMarker:
+    case EFFECT_KIND_TAG.shiftGlobalMarker:
+    case EFFECT_KIND_TAG.advancePhase:
+    case EFFECT_KIND_TAG.popInterruptPhase:
+    case EFFECT_KIND_TAG.moveToken:
+    case EFFECT_KIND_TAG.moveAll:
+    case EFFECT_KIND_TAG.moveTokenAdjacent:
+    case EFFECT_KIND_TAG.draw:
+    case EFFECT_KIND_TAG.shuffle:
+    case EFFECT_KIND_TAG.createToken:
+    case EFFECT_KIND_TAG.destroyToken:
+    case EFFECT_KIND_TAG.setTokenProp:
+    case EFFECT_KIND_TAG.reveal:
+    case EFFECT_KIND_TAG.conceal:
+    case EFFECT_KIND_TAG.reduce:
+    case EFFECT_KIND_TAG.removeByPriority:
+    case EFFECT_KIND_TAG.rollRandom:
+    case EFFECT_KIND_TAG.pushInterruptPhase:
+    case EFFECT_KIND_TAG.evaluateSubset:
+    case EFFECT_KIND_TAG.chooseOne:
+    case EFFECT_KIND_TAG.chooseN:
+      return null;
+    default:
+      return null;
+  }
+};
 
 const walkEffects = (
   effects: readonly EffectAST[],
@@ -283,17 +366,39 @@ const walkEffects = (
 ): void => {
   for (const effect of effects) {
     visit(effect);
-    if ('if' in effect) {
-      walkEffects(effect.if.then, visit);
-      if (effect.if.else !== undefined) {
-        walkEffects(effect.if.else, visit);
-      }
-    }
-    if ('forEach' in effect) {
-      walkEffects(effect.forEach.effects, visit);
-      if (effect.forEach.in !== undefined) {
-        walkEffects(effect.forEach.in, visit);
-      }
+    switch (effect._k) {
+      case EFFECT_KIND_TAG.if:
+        walkEffects(effect.if.then, visit);
+        if (effect.if.else !== undefined) {
+          walkEffects(effect.if.else, visit);
+        }
+        break;
+      case EFFECT_KIND_TAG.forEach:
+        walkEffects(effect.forEach.effects, visit);
+        if (effect.forEach.in !== undefined) {
+          walkEffects(effect.forEach.in, visit);
+        }
+        break;
+      case EFFECT_KIND_TAG.let:
+        walkEffects(effect.let.in, visit);
+        break;
+      case EFFECT_KIND_TAG.reduce:
+        walkEffects(effect.reduce.in, visit);
+        break;
+      case EFFECT_KIND_TAG.rollRandom:
+        walkEffects(effect.rollRandom.in, visit);
+        break;
+      case EFFECT_KIND_TAG.evaluateSubset:
+        walkEffects(effect.evaluateSubset.compute, visit);
+        walkEffects(effect.evaluateSubset.in, visit);
+        break;
+      case EFFECT_KIND_TAG.removeByPriority:
+        if (effect.removeByPriority.in !== undefined) {
+          walkEffects(effect.removeByPriority.in, visit);
+        }
+        break;
+      default:
+        break;
     }
   }
 };

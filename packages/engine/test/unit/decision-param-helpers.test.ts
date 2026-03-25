@@ -16,6 +16,7 @@ import {
 } from '../../src/kernel/index.js';
 import { decisionParamEntriesMatching, decisionParamKeysMatching } from '../helpers/decision-key-matchers.js';
 import { applyMoveWithResolvedDecisionIds, normalizeDecisionParamsForMove } from '../helpers/decision-param-helpers.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 const makeBaseDef = (overrides?: {
   actions?: readonly ActionDef[];
@@ -82,21 +83,21 @@ phase: [asPhaseId('main')],
     stages: [
       {
         effects: [
-          {
+          eff({
             forEach: {
               over: { query: 'enums', values: ['north', 'south'] },
               bind: '$region',
               effects: [
-                {
+                eff({
                   chooseOne: {
                     internalDecisionId: `${decisionIdPrefix}:$mode@{$region}`,
                     bind: '$mode@{$region}',
                     options: { query: 'enums', values: ['advance', 'hold'] },
                   },
-                },
+                }),
               ],
             },
-          } as GameDef['actions'][number]['effects'][number],
+          }) as GameDef['actions'][number]['effects'][number],
         ],
       },
     ],
@@ -132,21 +133,21 @@ const makeDefWithRepeatedNamedChoices = (
     stages: [
       {
         effects: [
-          {
+          eff({
             forEach: {
               over: { query: 'enums', values: ['north', 'south'] },
               bind: '$region',
               effects: [
-                {
+                eff({
                   chooseOne: {
                     internalDecisionId: `${decisionIdPrefix}:${bindName}`,
                     bind: bindName,
                     options: { query: 'enums', values: ['advance', 'hold'] },
                   },
-                },
+                }),
               ],
             },
-          } as GameDef['actions'][number]['effects'][number],
+          }) as GameDef['actions'][number]['effects'][number],
         ],
       },
     ],
@@ -188,13 +189,13 @@ const makeDefWithCompoundAccompanyingConstraintAndUnresolvedSa = (): GameDef => 
     pre: null,
     cost: [],
     effects: [
-      {
+      eff({
         chooseOne: {
           internalDecisionId: 'decision:$target',
           bind: '$target',
           options: { query: 'enums', values: [] },
         },
-      } as ActionDef['effects'][number],
+      }) as ActionDef['effects'][number],
     ],
     limits: [],
   };
@@ -250,38 +251,38 @@ const makeDefWithStochasticChoice = (): GameDef => {
     stages: [
       {
         effects: [
-          {
+          eff({
             rollRandom: {
               bind: '$roll',
               min: 1,
               max: 2,
               in: [
-                {
+                eff({
                   if: {
                     when: { op: '==', left: { _t: 2 as const, ref: 'binding' as const, name: '$roll' }, right: 1 },
                     then: [
-                      {
+                      eff({
                         chooseOne: {
                           internalDecisionId: 'decision:$alpha',
                           bind: '$alpha',
                           options: { query: 'enums', values: ['a1', 'a2'] },
                         },
-                      } as GameDef['actions'][number]['effects'][number],
+                      }) as GameDef['actions'][number]['effects'][number],
                     ],
                     else: [
-                      {
+                      eff({
                         chooseOne: {
                           internalDecisionId: 'decision:$beta',
                           bind: '$beta',
                           options: { query: 'enums', values: ['b1', 'b2'] },
                         },
-                      } as GameDef['actions'][number]['effects'][number],
+                      }) as GameDef['actions'][number]['effects'][number],
                     ],
                   },
-                } as GameDef['actions'][number]['effects'][number],
+                }) as GameDef['actions'][number]['effects'][number],
               ],
             },
-          } as GameDef['actions'][number]['effects'][number],
+          }) as GameDef['actions'][number]['effects'][number],
         ],
       },
     ],
@@ -487,13 +488,13 @@ describe('decision param helper', () => {
           pre: null,
           cost: [],
           effects: [
-            {
+            eff({
               chooseOne: {
                 internalDecisionId: 'decision:$target',
                 bind: '$target',
                 options: { query: 'enums', values: [] },
               },
-            } as GameDef['actions'][number]['effects'][number],
+            }) as GameDef['actions'][number]['effects'][number],
           ],
           limits: [],
         },

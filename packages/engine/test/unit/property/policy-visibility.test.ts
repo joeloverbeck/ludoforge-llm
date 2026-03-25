@@ -16,6 +16,7 @@ import {
   type CompiledAgentPolicyRef,
   type GameDef,
 } from '../../../src/kernel/index.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
 
 const phaseId = asPhaseId('main');
 const literal = (value: AgentPolicyLiteral): AgentPolicyExpr => ({ kind: 'literal', value });
@@ -133,7 +134,7 @@ function createDef(): GameDef {
         params: [],
         pre: null,
         cost: [],
-        effects: [{ addVar: { scope: 'global', var: 'usMargin', delta: 3 } }],
+        effects: [eff({ addVar: { scope: 'global', var: 'usMargin', delta: 3 } })],
         limits: [],
       },
     ],

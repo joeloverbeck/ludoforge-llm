@@ -20,6 +20,7 @@ import {
 } from '../../src/kernel/index.js';
 import { generateGrid, generateHex } from '../../src/cnl/index.js';
 import { makeEvalContext } from '../helpers/eval-context-test-helpers.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 const makeRuntimeDef = (): GameDef => ({
   metadata: { id: 'spatial-kernel-integration', players: { min: 1, max: 2 }, maxTriggerDepth: 8 },
@@ -44,7 +45,7 @@ const makeRuntimeDef = (): GameDef => ({
     { id: asZoneId('c:none'), owner: 'none', visibility: 'public', ordering: 'set' },
   ],
   tokenTypes: [{ id: 'pawn', props: {} }],
-  setup: [{ createToken: { type: 'pawn', zone: 'a:none' } }],
+  setup: [eff({ createToken: { type: 'pawn', zone: 'a:none' } })],
   turnStructure: { phases: [{ id: asPhaseId('main') }] },
   actions: [
     {
@@ -55,7 +56,7 @@ phase: [asPhaseId('main')],
       params: [{ name: '$token', domain: { query: 'tokensInZone', zone: 'a:none' } }],
       pre: null,
       cost: [],
-      effects: [{ moveTokenAdjacent: { token: '$token', from: 'a:none', direction: 'b:none' } }],
+      effects: [eff({ moveTokenAdjacent: { token: '$token', from: 'a:none', direction: 'b:none' } })],
       limits: [],
     },
   ],
@@ -63,7 +64,7 @@ phase: [asPhaseId('main')],
     {
       id: asTriggerId('onEnteredB'),
       event: { type: 'tokenEntered', zone: asZoneId('b:none') },
-      effects: [{ addVar: { scope: 'global', var: 'entered', delta: 1 } }],
+      effects: [eff({ addVar: { scope: 'global', var: 'entered', delta: 1 } })],
     },
   ],
   terminal: { conditions: [{ when: { op: '>=', left: { _t: 2 as const, ref: 'gvar', var: 'entered' }, right: 1 }, result: { type: 'draw' } }] },

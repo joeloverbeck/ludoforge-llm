@@ -15,6 +15,7 @@ import {
   type GameDef,
   type GameState,
 } from '../../src/kernel/index.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 const createState = (overrides: Partial<GameState> = {}): GameState => ({
   globalVars: { enabled: 1, score: 0, enteredB: 0, enteredC: 0 },
@@ -118,7 +119,7 @@ describe('dispatchTriggers', () => {
         {
           id: asTriggerId('onTurnStart'),
           event: { type: 'turnStart' },
-          effects: [{ addVar: { scope: 'global', var: 'score', delta: 1 } }],
+          effects: [eff({ addVar: { scope: 'global', var: 'score', delta: 1 } })],
         },
       ],
       terminal: { conditions: [] },
@@ -375,18 +376,18 @@ describe('dispatchTriggers', () => {
           id: asTriggerId('byMatch'),
           event: { type: 'actionResolved' },
           match: { op: '==', left: { _t: 2 as const, ref: 'binding', name: '$action' }, right: asActionId('play') },
-          effects: [{ addVar: { scope: 'global', var: 'score', delta: 1 } }],
+          effects: [eff({ addVar: { scope: 'global', var: 'score', delta: 1 } })],
         },
         {
           id: asTriggerId('byWhen'),
           event: { type: 'actionResolved', action: asActionId('play') },
           when: { op: '==', left: { _t: 2 as const, ref: 'gvar', var: 'enabled' }, right: 1 },
-          effects: [{ addVar: { scope: 'global', var: 'score', delta: 2 } }],
+          effects: [eff({ addVar: { scope: 'global', var: 'score', delta: 2 } })],
         },
         {
           id: asTriggerId('noMatch'),
           event: { type: 'actionResolved', action: asActionId('other') },
-          effects: [{ addVar: { scope: 'global', var: 'score', delta: 50 } }],
+          effects: [eff({ addVar: { scope: 'global', var: 'score', delta: 50 } })],
         },
       ],
       terminal: { conditions: [] },
@@ -430,9 +431,9 @@ describe('dispatchTriggers', () => {
           event: { type: 'varChanged', scope: 'global', var: 'trail' },
           when: { op: '>', left: { _t: 2 as const, ref: 'binding', name: '$newValue' }, right: { _t: 2 as const, ref: 'binding', name: '$oldValue' } },
           effects: [
-            { setVar: { scope: 'global', var: 'capturedOld', value: { _t: 2 as const, ref: 'binding', name: '$oldValue' } } },
-            { setVar: { scope: 'global', var: 'capturedNew', value: { _t: 2 as const, ref: 'binding', name: '$newValue' } } },
-            { addVar: { scope: 'global', var: 'score', delta: 1 } },
+            eff({ setVar: { scope: 'global', var: 'capturedOld', value: { _t: 2 as const, ref: 'binding', name: '$oldValue' } } }),
+            eff({ setVar: { scope: 'global', var: 'capturedNew', value: { _t: 2 as const, ref: 'binding', name: '$newValue' } } }),
+            eff({ addVar: { scope: 'global', var: 'score', delta: 1 } }),
           ],
         },
       ],
@@ -496,20 +497,20 @@ describe('dispatchTriggers', () => {
         {
           id: asTriggerId('onTurnStart'),
           event: { type: 'turnStart' },
-          effects: [{ moveAll: { from: 'a:none', to: 'b:none' } }],
+          effects: [eff({ moveAll: { from: 'a:none', to: 'b:none' } })],
         },
         {
           id: asTriggerId('onEnterB'),
           event: { type: 'tokenEntered', zone: asZoneId('b:none') },
           effects: [
-            { addVar: { scope: 'global', var: 'enteredB', delta: 1 } },
-            { moveAll: { from: 'b:none', to: 'c:none' } },
+            eff({ addVar: { scope: 'global', var: 'enteredB', delta: 1 } }),
+            eff({ moveAll: { from: 'b:none', to: 'c:none' } }),
           ],
         },
         {
           id: asTriggerId('onEnterC'),
           event: { type: 'tokenEntered', zone: asZoneId('c:none') },
-          effects: [{ addVar: { scope: 'global', var: 'enteredC', delta: 1 } }],
+          effects: [eff({ addVar: { scope: 'global', var: 'enteredC', delta: 1 } })],
         },
       ],
       terminal: { conditions: [] },
@@ -566,20 +567,20 @@ describe('dispatchTriggers', () => {
         {
           id: asTriggerId('onTurnStart'),
           event: { type: 'turnStart' },
-          effects: [{ moveAll: { from: 'a:none', to: 'b:none' } }],
+          effects: [eff({ moveAll: { from: 'a:none', to: 'b:none' } })],
         },
         {
           id: asTriggerId('onEnterB'),
           event: { type: 'tokenEntered', zone: asZoneId('b:none') },
           effects: [
-            { addVar: { scope: 'global', var: 'enteredB', delta: 1 } },
-            { moveAll: { from: 'b:none', to: 'c:none' } },
+            eff({ addVar: { scope: 'global', var: 'enteredB', delta: 1 } }),
+            eff({ moveAll: { from: 'b:none', to: 'c:none' } }),
           ],
         },
         {
           id: asTriggerId('onEnterC'),
           event: { type: 'tokenEntered', zone: asZoneId('c:none') },
-          effects: [{ addVar: { scope: 'global', var: 'enteredC', delta: 1 } }],
+          effects: [eff({ addVar: { scope: 'global', var: 'enteredC', delta: 1 } })],
         },
       ],
       terminal: { conditions: [] },

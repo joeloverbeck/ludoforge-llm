@@ -22,6 +22,8 @@ import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { fromEnvAndCursor } from './effect-context.js';
 import { ensureMarkerCloned, type MutableGameState } from './state-draft.js';
+import { addToRunningHash, updateRunningHash } from './zobrist.js';
+import type { ZobristFeature } from './types-core.js';
 import type { EffectContext, EffectCursor, EffectEnv, EffectResult } from './effect-context.js';
 import type {
   ChoicePendingRequest,
@@ -1150,8 +1152,21 @@ export const applySetMarker = (
   }
 
   if (cursor.tracker) {
-    ensureMarkerCloned(cursor.state as MutableGameState, cursor.tracker, String(spaceId));
-    (cursor.state.markers[String(spaceId)] as Record<string, string>)[marker] = evaluatedState;
+    const sid = String(spaceId);
+    const oldExplicit = cursor.state.markers[sid]?.[marker];
+    ensureMarkerCloned(cursor.state as MutableGameState, cursor.tracker, sid);
+    (cursor.state.markers[sid] as Record<string, string>)[marker] = evaluatedState;
+    const table = env.cachedRuntime?.zobristTable;
+    if (table) {
+      const ms = cursor.state as MutableGameState;
+      const newF: ZobristFeature = { kind: 'markerState', spaceId: sid, markerId: marker, state: evaluatedState };
+      if (oldExplicit !== undefined) {
+        const oldF: ZobristFeature = { kind: 'markerState', spaceId: sid, markerId: marker, state: oldExplicit };
+        updateRunningHash(ms, table, oldF, newF);
+      } else {
+        addToRunningHash(ms, table, newF);
+      }
+    }
     return { state: cursor.state, rng: cursor.rng };
   }
 
@@ -1239,8 +1254,21 @@ export const applyShiftMarker = (
   }
 
   if (cursor.tracker) {
-    ensureMarkerCloned(cursor.state as MutableGameState, cursor.tracker, String(spaceId));
-    (cursor.state.markers[String(spaceId)] as Record<string, string>)[marker] = newState;
+    const sid = String(spaceId);
+    const oldExplicit = spaceMarkers[marker];
+    ensureMarkerCloned(cursor.state as MutableGameState, cursor.tracker, sid);
+    (cursor.state.markers[sid] as Record<string, string>)[marker] = newState;
+    const table = env.cachedRuntime?.zobristTable;
+    if (table) {
+      const ms = cursor.state as MutableGameState;
+      const newF: ZobristFeature = { kind: 'markerState', spaceId: sid, markerId: marker, state: newState };
+      if (oldExplicit !== undefined) {
+        const oldF: ZobristFeature = { kind: 'markerState', spaceId: sid, markerId: marker, state: oldExplicit };
+        updateRunningHash(ms, table, oldF, newF);
+      } else {
+        addToRunningHash(ms, table, newF);
+      }
+    }
     return { state: cursor.state, rng: cursor.rng };
   }
 
@@ -1290,7 +1318,19 @@ export const applySetGlobalMarker = (
   }
 
   if (cursor.tracker) {
+    const oldExplicit = cursor.state.globalMarkers?.[marker];
     ((cursor.state as { globalMarkers: Record<string, string> }).globalMarkers ??= {})[marker] = evaluatedState;
+    const table = env.cachedRuntime?.zobristTable;
+    if (table) {
+      const ms = cursor.state as MutableGameState;
+      const newF: ZobristFeature = { kind: 'globalMarkerState', markerId: marker, state: evaluatedState };
+      if (oldExplicit !== undefined) {
+        const oldF: ZobristFeature = { kind: 'globalMarkerState', markerId: marker, state: oldExplicit };
+        updateRunningHash(ms, table, oldF, newF);
+      } else {
+        addToRunningHash(ms, table, newF);
+      }
+    }
     return { state: cursor.state, rng: cursor.rng };
   }
 
@@ -1347,7 +1387,19 @@ export const applyShiftGlobalMarker = (
   }
 
   if (cursor.tracker) {
+    const oldExplicit = cursor.state.globalMarkers?.[marker];
     ((cursor.state as { globalMarkers: Record<string, string> }).globalMarkers ??= {})[marker] = newState;
+    const table = env.cachedRuntime?.zobristTable;
+    if (table) {
+      const ms = cursor.state as MutableGameState;
+      const newF: ZobristFeature = { kind: 'globalMarkerState', markerId: marker, state: newState };
+      if (oldExplicit !== undefined) {
+        const oldF: ZobristFeature = { kind: 'globalMarkerState', markerId: marker, state: oldExplicit };
+        updateRunningHash(ms, table, oldF, newF);
+      } else {
+        addToRunningHash(ms, table, newF);
+      }
+    }
     return { state: cursor.state, rng: cursor.rng };
   }
 
@@ -1454,7 +1506,19 @@ export const applyFlipGlobalMarker = (
   }
 
   if (cursor.tracker) {
+    const oldExplicit = cursor.state.globalMarkers?.[evaluatedMarker];
     ((cursor.state as { globalMarkers: Record<string, string> }).globalMarkers ??= {})[evaluatedMarker] = nextState;
+    const table = env.cachedRuntime?.zobristTable;
+    if (table) {
+      const ms = cursor.state as MutableGameState;
+      const newF: ZobristFeature = { kind: 'globalMarkerState', markerId: evaluatedMarker, state: nextState };
+      if (oldExplicit !== undefined) {
+        const oldF: ZobristFeature = { kind: 'globalMarkerState', markerId: evaluatedMarker, state: oldExplicit };
+        updateRunningHash(ms, table, oldF, newF);
+      } else {
+        addToRunningHash(ms, table, newF);
+      }
+    }
     return { state: cursor.state, rng: cursor.rng };
   }
 

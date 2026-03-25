@@ -1,4 +1,5 @@
 import { buildAdjacencyGraph } from './spatial.js';
+import { chooseOne, chooseN, forEach } from './ast-builders.js';
 import { applyEffects } from './effects.js';
 import { createExecutionEffectContext } from './effect-context.js';
 import { evalCondition, evalConditionTraced } from './eval-condition.js';
@@ -115,33 +116,27 @@ const synthesizeEventTargetSelectionEffect = (target: EventTargetDef, index: num
   const internalDecisionId = synthesizeEventTargetDecisionId(target, index);
   const cardinality = target.cardinality;
   if (isSingleSelectTarget(target)) {
-    return {
-      chooseOne: {
-        internalDecisionId,
-        bind: target.id,
-        options: target.selector,
-      },
-    };
-  }
-  if ('n' in cardinality) {
-    return {
-      chooseN: {
-        internalDecisionId,
-        bind: target.id,
-        options: target.selector,
-        n: cardinality.n,
-      },
-    };
-  }
-  return {
-    chooseN: {
+    return chooseOne({
       internalDecisionId,
       bind: target.id,
       options: target.selector,
-      ...(cardinality.min === undefined ? {} : { min: cardinality.min }),
-      max: cardinality.max,
-    },
-  };
+    });
+  }
+  if ('n' in cardinality) {
+    return chooseN({
+      internalDecisionId,
+      bind: target.id,
+      options: target.selector,
+      n: cardinality.n,
+    });
+  }
+  return chooseN({
+    internalDecisionId,
+    bind: target.id,
+    options: target.selector,
+    ...(cardinality.min === undefined ? {} : { min: cardinality.min }),
+    max: cardinality.max,
+  });
 };
 
 const synthesizeEventTargetApplicationEffects = (target: EventTargetDef): readonly EffectAST[] => {
@@ -149,13 +144,11 @@ const synthesizeEventTargetApplicationEffects = (target: EventTargetDef): readon
   if (target.application === 'aggregate' || isSingleSelectTarget(target)) {
     return targetEffects;
   }
-  return [{
-    forEach: {
-      bind: target.id,
-      over: { query: 'binding', name: target.id },
-      effects: targetEffects,
-    },
-  }];
+  return [forEach({
+    bind: target.id,
+    over: { query: 'binding', name: target.id },
+    effects: targetEffects,
+  })];
 };
 
 export const synthesizeEventTargetEffects = (targets: readonly EventTargetDef[]): readonly EffectAST[] =>

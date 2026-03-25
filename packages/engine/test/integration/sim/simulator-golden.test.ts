@@ -13,6 +13,7 @@ import {
 import { runGame } from '../../../src/sim/index.js';
 import { readFixtureJson } from '../../helpers/fixture-reader.js';
 import { trustedMove } from '../../helpers/classified-move-fixtures.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
 
 const firstLegalAgent: Agent = {
   chooseMove(input) {
@@ -43,7 +44,7 @@ phase: [asPhaseId('p1')],
         params: [],
         pre: null,
         cost: [],
-        effects: [{ addVar: { scope: 'global', var: 'score', delta: 1 } }],
+        effects: [eff({ addVar: { scope: 'global', var: 'score', delta: 1 } })],
         limits: [{ id: 'step1::turn::0', scope: 'turn', max: 1 }],
       },
       {

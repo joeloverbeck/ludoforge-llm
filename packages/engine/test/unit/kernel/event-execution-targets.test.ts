@@ -19,9 +19,11 @@ import {
   type GameState,
   type Move,
 } from '../../../src/kernel/index.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
+import { asTaggedGameDef } from '../../helpers/gamedef-fixtures.js';
 
 const makeBaseDef = (card: EventCardDef): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'event-target-test', players: { min: 2, max: 2 } },
     constants: {},
     globalVars: [],
@@ -44,7 +46,7 @@ const makeBaseDef = (card: EventCardDef): GameDef =>
         cards: [card],
       },
     ],
-  }) as unknown as GameDef;
+  });
 
 const makeBaseState = (cardId: string): GameState => ({
   globalVars: {},
@@ -68,7 +70,7 @@ const makeBaseState = (cardId: string): GameState => ({
 });
 
 const withActions = (def: GameDef, actions: readonly unknown[]): GameDef =>
-  ({ ...def, actions: [...actions] }) as unknown as GameDef;
+  asTaggedGameDef({ ...def, actions: [...actions] });
 
 const withCardDrivenState = (state: GameState): GameState =>
   ({
@@ -84,7 +86,7 @@ describe('event target synthesis', () => {
         selector: { query: 'enums', values: ['saigon:none', 'hue:none'] },
         cardinality: { n: 1 },
         application: 'aggregate',
-        effects: [{ addVar: { scope: 'global', var: 'counter', delta: 1 } }],
+        effects: [eff({ addVar: { scope: 'global', var: 'counter', delta: 1 } })],
       },
     ];
 
@@ -96,7 +98,7 @@ describe('event target synthesis', () => {
     }
     assert.equal(effects[0].chooseOne.bind, '$targetCity');
     assert.deepEqual(effects[0].chooseOne.options, { query: 'enums', values: ['saigon:none', 'hue:none'] });
-    assert.deepEqual(effects[1], { addVar: { scope: 'global', var: 'counter', delta: 1 } });
+    assert.deepEqual(effects[1], eff({ addVar: { scope: 'global', var: 'counter', delta: 1 } }));
   });
 
   it('maps exact n>1 to chooseN with exact n', () => {
@@ -106,7 +108,7 @@ describe('event target synthesis', () => {
         selector: { query: 'enums', values: ['a', 'b', 'c'] },
         cardinality: { n: 2 },
         application: 'aggregate',
-        effects: [{ addVar: { scope: 'global', var: 'counter', delta: 1 } }],
+        effects: [eff({ addVar: { scope: 'global', var: 'counter', delta: 1 } })],
       },
     ];
 
@@ -118,7 +120,7 @@ describe('event target synthesis', () => {
     }
     assert.equal(effects[0].chooseN.bind, '$targets');
     assert.equal(effects[0].chooseN.n, 2);
-    assert.deepEqual(effects[1], { addVar: { scope: 'global', var: 'counter', delta: 1 } });
+    assert.deepEqual(effects[1], eff({ addVar: { scope: 'global', var: 'counter', delta: 1 } }));
   });
 
   it('maps range min/max to choice effects, using chooseOne for max=1', () => {
@@ -128,14 +130,14 @@ describe('event target synthesis', () => {
         selector: { query: 'enums', values: ['x'] },
         cardinality: { max: 1 },
         application: 'aggregate',
-        effects: [{ addVar: { scope: 'global', var: 'counter', delta: 1 } }],
+        effects: [eff({ addVar: { scope: 'global', var: 'counter', delta: 1 } })],
       },
       {
         id: '$range',
         selector: { query: 'enums', values: ['x', 'y', 'z'] },
         cardinality: { min: 1, max: 2 },
         application: 'aggregate',
-        effects: [{ addVar: { scope: 'global', var: 'counter', delta: 1 } }],
+        effects: [eff({ addVar: { scope: 'global', var: 'counter', delta: 1 } })],
       },
     ];
 
@@ -155,8 +157,8 @@ describe('event target synthesis', () => {
     assert.equal(effects[1].chooseN.bind, '$range');
     assert.equal(effects[1].chooseN.min, 1);
     assert.equal(effects[1].chooseN.max, 2);
-    assert.deepEqual(effects[2], { addVar: { scope: 'global', var: 'counter', delta: 1 } });
-    assert.deepEqual(effects[3], { addVar: { scope: 'global', var: 'counter', delta: 1 } });
+    assert.deepEqual(effects[2], eff({ addVar: { scope: 'global', var: 'counter', delta: 1 } }));
+    assert.deepEqual(effects[3], eff({ addVar: { scope: 'global', var: 'counter', delta: 1 } }));
   });
 
   it('returns an empty list when no targets are provided', () => {
@@ -170,7 +172,7 @@ describe('event target synthesis', () => {
         selector: { query: 'enums', values: ['a:none', 'b:none', 'c:none'] },
         cardinality: { n: 2 },
         application: 'each',
-        effects: [{ setMarker: { space: '$spaces', marker: 'support', state: 'passiveSupport' } }],
+        effects: [eff({ setMarker: { space: '$spaces', marker: 'support', state: 'passiveSupport' } })],
       },
     ];
 
@@ -185,7 +187,7 @@ describe('event target synthesis', () => {
     assert.equal(effects[0].chooseN.bind, '$spaces');
     assert.equal(effects[1].forEach.bind, '$spaces');
     assert.deepEqual(effects[1].forEach.over, { query: 'binding', name: '$spaces' });
-    assert.deepEqual(effects[1].forEach.effects, [{ setMarker: { space: '$spaces', marker: 'support', state: 'passiveSupport' } }]);
+    assert.deepEqual(effects[1].forEach.effects, [eff({ setMarker: { space: '$spaces', marker: 'support', state: 'passiveSupport' } })]);
   });
 
   it('keeps aggregate-application target effects single-run after selection', () => {
@@ -195,14 +197,14 @@ describe('event target synthesis', () => {
         selector: { query: 'enums', values: ['a:none', 'b:none', 'c:none'] },
         cardinality: { n: 2 },
         application: 'aggregate',
-        effects: [{ addVar: { scope: 'global', var: 'counter', delta: 1 } }],
+        effects: [eff({ addVar: { scope: 'global', var: 'counter', delta: 1 } })],
       },
     ];
 
     const effects = synthesizeEventTargetEffects(targets);
     assert.equal(effects.length, 2);
     assert.ok('chooseN' in effects[0]!);
-    assert.deepEqual(effects[1], { addVar: { scope: 'global', var: 'counter', delta: 1 } });
+    assert.deepEqual(effects[1], eff({ addVar: { scope: 'global', var: 'counter', delta: 1 } }));
   });
 });
 
@@ -215,14 +217,14 @@ describe('event target resolution and effect ordering', () => {
           selector: { query: 'enums', values: ['a'] },
           cardinality: { n: 1 },
           application: 'aggregate',
-          effects: [{ addVar: { scope: 'global', var: 'sideCounterA', delta: 1 } }],
+          effects: [eff({ addVar: { scope: 'global', var: 'sideCounterA', delta: 1 } })],
         },
         {
           id: '$sideB',
           selector: { query: 'enums', values: ['b'] },
           cardinality: { n: 1 },
           application: 'aggregate',
-          effects: [{ addVar: { scope: 'global', var: 'sideCounterB', delta: 1 } }],
+          effects: [eff({ addVar: { scope: 'global', var: 'sideCounterB', delta: 1 } })],
         },
       ],
       effects: [],
@@ -235,7 +237,7 @@ describe('event target resolution and effect ordering', () => {
               selector: { query: 'enums', values: ['c'] },
               cardinality: { n: 1 },
               application: 'aggregate',
-              effects: [{ addVar: { scope: 'global', var: 'branchCounterA', delta: 1 } }],
+              effects: [eff({ addVar: { scope: 'global', var: 'branchCounterA', delta: 1 } })],
             },
           ],
         },
@@ -259,10 +261,10 @@ describe('event target resolution and effect ordering', () => {
             selector: { query: 'enums', values: ['saigon:none'] },
             cardinality: { n: 1 },
             application: 'aggregate',
-            effects: [{ addVar: { scope: 'global', var: 'sideTargetCounter', delta: 1 } }],
+            effects: [eff({ addVar: { scope: 'global', var: 'sideTargetCounter', delta: 1 } })],
           },
         ],
-        effects: [{ addVar: { scope: 'global', var: 'sideCounter', delta: 1 } }],
+        effects: [eff({ addVar: { scope: 'global', var: 'sideCounter', delta: 1 } })],
         branches: [
           {
             id: 'branch-a',
@@ -272,10 +274,10 @@ describe('event target resolution and effect ordering', () => {
                 selector: { query: 'enums', values: ['hue:none'] },
                 cardinality: { max: 1 },
                 application: 'aggregate',
-                effects: [{ addVar: { scope: 'global', var: 'branchTargetCounter', delta: 1 } }],
+                effects: [eff({ addVar: { scope: 'global', var: 'branchTargetCounter', delta: 1 } })],
               },
             ],
-            effects: [{ addVar: { scope: 'global', var: 'branchCounter', delta: 1 } }],
+            effects: [eff({ addVar: { scope: 'global', var: 'branchCounter', delta: 1 } })],
           },
         ],
       },
@@ -294,7 +296,7 @@ describe('event target resolution and effect ordering', () => {
 
     const effects = resolveEventEffectList(def, state, move);
     assert.deepEqual(
-      effects.map((effect) => Object.keys(effect)[0]),
+      effects.map((effect) => Object.keys(effect).find((k) => k !== '_k')),
       ['chooseOne', 'chooseOne', 'addVar', 'addVar', 'addVar', 'addVar'],
     );
     assert.deepEqual(
@@ -327,7 +329,7 @@ describe('event playability context parity', () => {
     },
     unshaded: {
       effectTiming: 'afterGrants',
-      effects: [{ addVar: { scope: 'global', var: 'resolved', delta: 1 } }],
+      effects: [eff({ addVar: { scope: 'global', var: 'resolved', delta: 1 } })],
       freeOperationGrants: [{ seat: '0', sequence: { batch: 'seq', step: 0 }, operationClass: 'operation', actionIds: ['operation'] }],
       eligibilityOverrides: [{ target: { kind: 'active' }, eligible: true, windowId: 'window-a' }],
     },
@@ -376,10 +378,10 @@ describe('event playability context parity', () => {
 
   it('returns no grants/overrides, no deferred leniency, and no event execution when playCondition is false', () => {
     const def = withActions(
-      {
+      asTaggedGameDef({
         ...makeBaseDef(eventCard),
         globalVars: [{ name: 'canPlay', type: 'int', init: 0, min: 0, max: 1 }, { name: 'resolved', type: 'int', init: 0, min: 0, max: 10 }],
-      } as unknown as GameDef,
+      }),
       [eventAction],
     );
     const state = withCardDrivenState({
@@ -400,10 +402,10 @@ describe('event playability context parity', () => {
 
   it('returns grants/overrides and enables deferred leniency for playable afterGrants event moves', () => {
     const def = withActions(
-      {
+      asTaggedGameDef({
         ...makeBaseDef(eventCard),
         globalVars: [{ name: 'canPlay', type: 'int', init: 1, min: 0, max: 1 }, { name: 'resolved', type: 'int', init: 0, min: 0, max: 10 }],
-      } as unknown as GameDef,
+      }),
       [eventAction],
     );
     const state = withCardDrivenState({
@@ -445,10 +447,10 @@ describe('event playability context parity', () => {
       },
     };
     const def = withActions(
-      {
+      asTaggedGameDef({
         ...makeBaseDef(conditionalCard),
         globalVars: [{ name: 'canPlay', type: 'int', init: 1, min: 0, max: 1 }, { name: 'resolved', type: 'int', init: 0, min: 0, max: 10 }],
-      } as unknown as GameDef,
+      }),
       [eventAction],
     );
     const state = withCardDrivenState({

@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import { lowerEffectArray, type EffectLoweringContext } from '../../src/cnl/compile-effects.js';
 import type { GameSpecTurnFlowActionClass } from '../../src/cnl/game-spec-doc.js';
 import { EffectASTSchema } from '../../src/kernel/schemas-ast.js';
+import { EFFECT_KIND_TAG } from '../../src/kernel/types-ast.js';
 import {
   TURN_FLOW_ACTION_CLASS_VALUES,
   type TurnFlowActionClass,
@@ -28,6 +29,7 @@ describe('turn-flow action-class surface parity', () => {
   it('keeps EffectAST grantFreeOperation schema acceptance aligned with canonical action classes', () => {
     for (const actionClass of TURN_FLOW_ACTION_CLASS_VALUES) {
       const parsed = EffectASTSchema.safeParse({
+        _k: EFFECT_KIND_TAG.grantFreeOperation,
         grantFreeOperation: {
           seat: 'self',
           operationClass: actionClass,

@@ -18,6 +18,7 @@ import {
   type Token,
   createCollector,
 } from '../../src/kernel/index.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 import { isNormalizedEffectRuntimeFailure } from '../helpers/effect-error-assertions.js';
 
 const makeDef = (): GameDef => ({
@@ -83,7 +84,7 @@ describe('effects moveAll and shuffle', () => {
   it('moveAll without filter moves all tokens and preserves source order', () => {
     const ctx = makeCtx();
 
-    const result = applyEffect({ moveAll: { from: 'deck:none', to: 'discard:none' } }, ctx);
+    const result = applyEffect(eff({ moveAll: { from: 'deck:none', to: 'discard:none' } }), ctx);
 
     assert.equal(result.state.zones['deck:none']?.length, 0);
     assert.deepEqual(
@@ -97,7 +98,7 @@ describe('effects moveAll and shuffle', () => {
     const ctx = makeCtx();
 
     const result = applyEffect(
-      {
+      eff({
         moveAll: {
           from: 'deck:none',
           to: 'discard:none',
@@ -107,7 +108,7 @@ describe('effects moveAll and shuffle', () => {
             right: 2,
           },
         },
-      },
+      }),
       ctx,
     );
 
@@ -124,7 +125,7 @@ describe('effects moveAll and shuffle', () => {
   it('moveAll same source and destination is a no-op', () => {
     const ctx = makeCtx();
 
-    const result = applyEffect({ moveAll: { from: 'deck:none', to: 'deck:none' } }, ctx);
+    const result = applyEffect(eff({ moveAll: { from: 'deck:none', to: 'deck:none' } }), ctx);
 
     assert.equal(result.state, ctx.state);
     assert.equal(result.rng, ctx.rng);
@@ -142,7 +143,7 @@ describe('effects moveAll and shuffle', () => {
       },
     });
 
-    const result = applyEffect({ moveAll: { from: 'deck:none', to: 'discard:none' } }, ctx);
+    const result = applyEffect(eff({ moveAll: { from: 'deck:none', to: 'discard:none' } }), ctx);
 
     assert.equal(result.state, ctx.state);
     assert.equal(result.rng, ctx.rng);
@@ -164,7 +165,7 @@ describe('effects moveAll and shuffle', () => {
       }
     }
 
-    const result = applyEffect({ shuffle: { zone: 'deck:none' } }, ctx);
+    const result = applyEffect(eff({ shuffle: { zone: 'deck:none' } }), ctx);
 
     assert.deepEqual(
       result.state.zones['deck:none']?.map((entry) => entry.id),
@@ -176,7 +177,7 @@ describe('effects moveAll and shuffle', () => {
   it('shuffle advances rng state for zone size >= 2', () => {
     const ctx = makeCtx({ rng: createRng(11n) });
 
-    const result = applyEffect({ shuffle: { zone: 'deck:none' } }, ctx);
+    const result = applyEffect(eff({ shuffle: { zone: 'deck:none' } }), ctx);
 
     assert.notDeepEqual(result.rng.state, ctx.rng.state);
   });
@@ -195,11 +196,11 @@ describe('effects moveAll and shuffle', () => {
       },
     });
 
-    const emptyResult = applyEffect({ shuffle: { zone: 'board:none' } }, ctx);
+    const emptyResult = applyEffect(eff({ shuffle: { zone: 'board:none' } }), ctx);
     assert.equal(emptyResult.state, ctx.state);
     assert.equal(emptyResult.rng, ctx.rng);
 
-    const singleResult = applyEffect({ shuffle: { zone: 'discard:none' } }, ctx);
+    const singleResult = applyEffect(eff({ shuffle: { zone: 'discard:none' } }), ctx);
     assert.equal(singleResult.state, ctx.state);
     assert.equal(singleResult.rng, ctx.rng);
   });
@@ -211,7 +212,7 @@ describe('effects moveAll and shuffle', () => {
       effectPath: '',
     });
 
-    applyEffect({ moveAll: { from: 'deck:none', to: 'discard:none' } }, ctx);
+    applyEffect(eff({ moveAll: { from: 'deck:none', to: 'discard:none' } }), ctx);
 
     const trace = ctx.collector.trace ?? [];
     assert.equal(trace.length, 4);
@@ -236,7 +237,7 @@ describe('effects moveAll and shuffle', () => {
     });
 
     applyEffect(
-      {
+      eff({
         moveAll: {
           from: 'deck:none',
           to: 'discard:none',
@@ -246,7 +247,7 @@ describe('effects moveAll and shuffle', () => {
             right: 2,
           },
         },
-      },
+      }),
       ctx,
     );
 
@@ -267,7 +268,7 @@ describe('effects moveAll and shuffle', () => {
       effectPath: '',
     });
 
-    applyEffect({ moveAll: { from: 'deck:none', to: 'discard:none' } }, ctx);
+    applyEffect(eff({ moveAll: { from: 'deck:none', to: 'discard:none' } }), ctx);
 
     assert.deepEqual(ctx.collector.trace, []);
   });
@@ -279,14 +280,14 @@ describe('effects moveAll and shuffle', () => {
       effectPath: '',
     });
 
-    applyEffect({ moveAll: { from: 'deck:none', to: 'deck:none' } }, ctx);
+    applyEffect(eff({ moveAll: { from: 'deck:none', to: 'deck:none' } }), ctx);
 
     assert.deepEqual(ctx.collector.trace, []);
   });
 
   it('moveTokenAdjacent without direction throws SPATIAL_DESTINATION_REQUIRED', () => {
     const ctx = makeCtx();
-    const effect = { moveTokenAdjacent: { token: '$token', from: 'board:none' } } as const;
+    const effect = eff({ moveTokenAdjacent: { token: '$token', from: 'board:none' } });
 
     assert.throws(() => applyEffect(effect, ctx), (error: unknown) => {
       return isEffectErrorCode(error, 'SPATIAL_DESTINATION_REQUIRED');
@@ -299,12 +300,12 @@ describe('effects moveAll and shuffle', () => {
     assert.throws(
       () =>
         applyEffect(
-          {
+          eff({
             moveAll: {
               from: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$missingFromZone' } },
               to: 'discard:none',
             },
-          },
+          }),
           ctx,
         ),
       (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'moveAll.from zone resolution failed'),
@@ -317,12 +318,12 @@ describe('effects moveAll and shuffle', () => {
     assert.throws(
       () =>
         applyEffect(
-          {
+          eff({
             moveAll: {
               from: 'deck:none',
               to: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$missingToZone' } },
             },
-          },
+          }),
           ctx,
         ),
       (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'moveAll.to zone resolution failed'),
@@ -333,7 +334,7 @@ describe('effects moveAll and shuffle', () => {
     const ctx = makeCtx();
 
     assert.throws(
-      () => applyEffect({ shuffle: { zone: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$missingZone' } } } }, ctx),
+      () => applyEffect(eff({ shuffle: { zone: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$missingZone' } } } }), ctx),
       (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'shuffle.zone resolution failed'),
     );
   });
@@ -344,13 +345,13 @@ describe('effects moveAll and shuffle', () => {
     assert.throws(
       () =>
         applyEffect(
-          {
+          eff({
             moveTokenAdjacent: {
               token: '$token',
               from: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$missingFromZone' } },
               direction: 'discard:none',
             },
-          },
+          }),
           ctx,
         ),
       (error: unknown) => isNormalizedEffectRuntimeFailure(error, 'moveTokenAdjacent.from zone resolution failed'),

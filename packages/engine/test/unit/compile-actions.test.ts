@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import { compileGameSpecToGameDef, createEmptyGameSpecDoc } from '../../src/cnl/index.js';
 import { CNL_XREF_DIAGNOSTIC_CODES } from '../../src/cnl/cross-validate-diagnostic-codes.js';
 import { assertNoDiagnostics } from '../helpers/diagnostic-helpers.js';
+import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
 
 const minimalCardDrivenTurnFlow = {
   cardLifecycle: { played: 'deck:none', lookahead: 'deck:none', leader: 'deck:none' },
@@ -58,7 +59,7 @@ describe('compile actions', () => {
     assert.equal(action?.params[0]?.name, 'count');
     assert.deepEqual(action?.params[0]?.domain, { query: 'intsInRange', min: 1, max: 2 });
     assert.deepEqual(action?.limits, [{ id: 'play::turn::0', scope: 'turn', max: 1 }]);
-    assert.deepEqual(action?.effects, [{ draw: { from: 'deck:none', to: 'hand:0', count: 1 } }]);
+    assert.deepEqual(action?.effects, tagEffectAsts([{ draw: { from: 'deck:none', to: 'hand:0', count: 1 } }]));
     assert.deepEqual(action?.phase, ['main']);
   });
 

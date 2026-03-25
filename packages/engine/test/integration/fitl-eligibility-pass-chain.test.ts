@@ -13,6 +13,7 @@ import {
   type GameState,
 } from '../../src/kernel/index.js';
 import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 const createDef = (): GameDef =>
   ({
@@ -236,8 +237,8 @@ describe('FITL eligibility/pass-chain integration', () => {
           sourceCardId: playedCardId!,
           side: 'unshaded',
           duration: 'turn',
-          setupEffects: [{ addVar: { scope: 'global', var: 'aid', delta: 3 } }],
-          teardownEffects: [{ addVar: { scope: 'global', var: 'aid', delta: -3 } }],
+          setupEffects: [eff({ addVar: { scope: 'global', var: 'aid', delta: 3 } })],
+          teardownEffects: [eff({ addVar: { scope: 'global', var: 'aid', delta: -3 } })],
           remainingTurnBoundaries: 1,
         },
       ],

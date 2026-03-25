@@ -20,6 +20,7 @@ import {
   type ReduceMacroOriginBindingAnnotationSpec,
 } from '../../src/cnl/binder-surface-registry.js';
 import { NON_EFFECT_BINDER_SURFACE_CONTRACT } from '../../src/contracts/index.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 import { SUPPORTED_EFFECT_KINDS } from '../../src/cnl/effect-kind-registry.js';
 
 function discoverDiscriminatorKinds(
@@ -600,18 +601,18 @@ describe('binder-surface-registry', () => {
 
   it('returns only sequentially-visible bindings for stage carry-over', () => {
     assert.deepEqual(
-      collectSequentialBindings({
+      collectSequentialBindings(eff({
         chooseN: {
           internalDecisionId: 'decision:$targets',
           bind: '$targets',
           options: { query: 'players' },
           max: 1,
         },
-      }),
+      })),
       ['$targets'],
     );
     assert.deepEqual(
-      collectSequentialBindings({
+      collectSequentialBindings(eff({
         removeByPriority: {
           budget: 1,
           groups: [
@@ -624,42 +625,42 @@ describe('binder-surface-registry', () => {
           ],
           remainingBind: '$remaining',
         },
-      }),
+      })),
       ['$removed', '$remaining'],
     );
     assert.deepEqual(
-      collectSequentialBindings({
+      collectSequentialBindings(eff({
         transferVar: {
           from: { scope: 'pvar', player: 'actor', var: 'coins' },
           to: { scope: 'global', var: 'pot' },
           amount: 3,
           actualBind: '$actual',
         },
-      }),
+      })),
       ['$actual'],
     );
     assert.deepEqual(
-      collectSequentialBindings({
+      collectSequentialBindings(eff({
         forEach: {
           bind: '$tok',
           over: { query: 'players' },
           effects: [],
         },
-      }),
+      })),
       [],
     );
     assert.deepEqual(
-      collectSequentialBindings({
+      collectSequentialBindings(eff({
         let: {
           bind: 'local',
           value: 0,
-          in: [{ bindValue: { bind: 'exported', value: 1 } }],
+          in: [eff({ bindValue: { bind: 'exported', value: 1 } })],
         },
-      }),
+      })),
       ['exported'],
     );
     assert.deepEqual(
-      collectSequentialBindings({
+      collectSequentialBindings(eff({
         reduce: {
           itemBind: 'item',
           accBind: 'acc',
@@ -667,13 +668,13 @@ describe('binder-surface-registry', () => {
           initial: 0,
           next: 0,
           resultBind: 'result',
-          in: [{ bindValue: { bind: 'exported', value: { _t: 2 as const, ref: 'binding', name: 'result' } } }],
+          in: [eff({ bindValue: { bind: 'exported', value: { _t: 2 as const, ref: 'binding', name: 'result' } } })],
         },
-      }),
+      })),
       ['exported'],
     );
     assert.deepEqual(
-      collectSequentialBindings({
+      collectSequentialBindings(eff({
         evaluateSubset: {
           source: { query: 'players' },
           subsetSize: 1,
@@ -684,29 +685,29 @@ describe('binder-surface-registry', () => {
           bestSubsetBind: '$best',
           in: [],
         },
-      }),
+      })),
       ['$score', '$best'],
     );
     assert.deepEqual(
-      collectSequentialBindings({
+      collectSequentialBindings(eff({
         if: {
           when: true,
-          then: [{ bindValue: { bind: '$thenOnly', value: 1 } }],
+          then: [eff({ bindValue: { bind: '$thenOnly', value: 1 } })],
         },
-      }),
+      })),
       [],
     );
     assert.deepEqual(
-      collectSequentialBindings({
+      collectSequentialBindings(eff({
         if: {
           when: true,
           then: [
-            { bindValue: { bind: '$shared', value: 1 } },
-            { bindValue: { bind: '$thenOnly', value: 2 } },
+            eff({ bindValue: { bind: '$shared', value: 1 } }),
+            eff({ bindValue: { bind: '$thenOnly', value: 2 } }),
           ],
-          else: [{ bindValue: { bind: '$shared', value: 3 } }],
+          else: [eff({ bindValue: { bind: '$shared', value: 3 } })],
         },
-      }),
+      })),
       ['$shared'],
     );
   });

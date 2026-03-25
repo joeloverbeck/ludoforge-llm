@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { applyMove, asActionId, asPhaseId, initialState, legalMoves, type GameDef, type TriggerLogEntry } from '../../src/kernel/index.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 const createLifecycleDef = (): GameDef =>
   ({
@@ -99,10 +100,10 @@ describe('FITL card lifecycle integration', () => {
       ...baseDef,
       turnStructure: { phases: [{ id: asPhaseId('main') }, { id: asPhaseId('victory') }] },
       setup: [
-        { createToken: { type: 'card', zone: 'deck:none', props: { isCoup: false } } },
-        { createToken: { type: 'card', zone: 'deck:none', props: { isCoup: true } } },
-        { createToken: { type: 'card', zone: 'deck:none', props: { isCoup: true } } },
-        { createToken: { type: 'card', zone: 'deck:none', props: { isCoup: false } } },
+        eff({ createToken: { type: 'card', zone: 'deck:none', props: { isCoup: false } } }),
+        eff({ createToken: { type: 'card', zone: 'deck:none', props: { isCoup: true } } }),
+        eff({ createToken: { type: 'card', zone: 'deck:none', props: { isCoup: true } } }),
+        eff({ createToken: { type: 'card', zone: 'deck:none', props: { isCoup: false } } }),
       ],
       turnOrder: {
         type: 'cardDriven',

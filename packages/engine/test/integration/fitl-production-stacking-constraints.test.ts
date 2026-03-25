@@ -14,6 +14,7 @@ import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { makeExecutionEffectContext } from '../helpers/effect-context-test-helpers.js';
 import { makeIsolatedInitialState } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 const makeToken = (id: string, type: string, faction: string): Token => ({
   id: asTokenId(id),
@@ -70,7 +71,7 @@ describe('FITL production stacking constraints', () => {
       assert.throws(
         () =>
           applyEffect(
-            { moveToken: { token: '$token', from: fromZone, to: cityZone } },
+            eff({ moveToken: { token: '$token', from: fromZone, to: cityZone } }),
             { ...ctx, bindings: { $token: 'base_3' } },
           ),
         (error: unknown) => isEffectErrorCode(error, 'STACKING_VIOLATION'),
@@ -88,7 +89,7 @@ describe('FITL production stacking constraints', () => {
       const ctx = makeCtx(state, def);
 
       assert.throws(
-        () => applyEffect({ createToken: { type: 'us-bases', zone: locZone, props: { faction: 'US' } } }, ctx),
+        () => applyEffect(eff({ createToken: { type: 'us-bases', zone: locZone, props: { faction: 'US' } } }), ctx),
         (error: unknown) => isEffectErrorCode(error, 'STACKING_VIOLATION'),
       );
     });
@@ -114,7 +115,7 @@ describe('FITL production stacking constraints', () => {
       assert.throws(
         () =>
           applyEffect(
-            { moveToken: { token: '$token', from: 'available-US:none', to: northVietnamZone } },
+            eff({ moveToken: { token: '$token', from: 'available-US:none', to: northVietnamZone } }),
             { ...blockedCtx, bindings: { $token: 'us_troops_1' } },
           ),
         (error: unknown) => isEffectErrorCode(error, 'STACKING_VIOLATION'),
@@ -122,7 +123,7 @@ describe('FITL production stacking constraints', () => {
 
       const allowedCtx = makeCtx(state, def);
       const result = applyEffect(
-        { moveToken: { token: '$token', from: 'available-NVA:none', to: northVietnamZone } },
+        eff({ moveToken: { token: '$token', from: 'available-NVA:none', to: northVietnamZone } }),
         { ...allowedCtx, bindings: { $token: 'nva_troops_1' } },
       );
       assert.equal(result.state.zones[northVietnamZone]?.some((token) => token.id === asTokenId('nva_troops_1')), true);

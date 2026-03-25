@@ -1,5 +1,6 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import type { EffectAST, EventDeckDef, GameDef, NumericTrackDef, RuntimeTableContract, TokenTypeDef, VariableDef, ZoneDef } from '../kernel/types.js';
+import { createToken, draw, moveAll, shuffle } from '../kernel/ast-builders.js';
 import type { TypeInferenceContext } from './type-inference.js';
 import { asActionId, asZoneId } from '../kernel/branded.js';
 import { isCardEventAction } from '../kernel/action-capabilities.js';
@@ -1348,17 +1349,15 @@ function buildScenarioDeckSetupEffects(options: {
     }
     const count = placement.count ?? 1;
     for (let current = 0; current < count; current += 1) {
-      placementEffects.push({
-        createToken: {
-          type: options.cardTokenTypeId,
-          zone: placement.zoneId,
-          props: {
-            cardId: card.id,
-            eventDeckId: eventDeck.id,
-            isCoup: isCoupCard(card),
-          },
+      placementEffects.push(createToken({
+        type: options.cardTokenTypeId,
+        zone: placement.zoneId,
+        props: {
+          cardId: card.id,
+          eventDeckId: eventDeck.id,
+          isCoup: isCoupCard(card),
         },
-      });
+      }));
     }
   }
 
@@ -1419,65 +1418,55 @@ function materializePileCoupMixDeck(options: {
 
   for (const pool of eventPools) {
     for (const eventCard of pool.cards) {
-      effects.push({
-        createToken: {
-          type: options.cardTokenTypeId,
-          zone: pool.zoneId,
-          props: {
-            cardId: eventCard.id,
-            eventDeckId: options.eventDeck.id,
-            isCoup: false,
-          },
+      effects.push(createToken({
+        type: options.cardTokenTypeId,
+        zone: pool.zoneId,
+        props: {
+          cardId: eventCard.id,
+          eventDeckId: options.eventDeck.id,
+          isCoup: false,
         },
-      });
+      }));
     }
   }
   for (const coupCard of coupCards) {
-    effects.push({
-      createToken: {
-        type: options.cardTokenTypeId,
-        zone: coupsPoolZoneId,
-        props: {
-          cardId: coupCard.id,
-          eventDeckId: options.eventDeck.id,
-          isCoup: true,
-        },
+    effects.push(createToken({
+      type: options.cardTokenTypeId,
+      zone: coupsPoolZoneId,
+      props: {
+        cardId: coupCard.id,
+        eventDeckId: options.eventDeck.id,
+        isCoup: true,
       },
-    });
+    }));
   }
 
   for (const pool of eventPools) {
-    effects.push({ shuffle: { zone: pool.zoneId } });
+    effects.push(shuffle({ zone: pool.zoneId }));
   }
-  effects.push({ shuffle: { zone: coupsPoolZoneId } });
+  effects.push(shuffle({ zone: coupsPoolZoneId }));
 
   for (let pileIndex = deckComposition.pileCount - 1; pileIndex >= 0; pileIndex -= 1) {
     const eventPoolZoneId = eventPools[pileFilterPlan.perPilePoolIndex[pileIndex]!]!.zoneId;
     if (deckComposition.eventsPerPile > 0) {
-      effects.push({
-        draw: {
-          from: eventPoolZoneId,
-          to: pileWorkZoneId,
-          count: deckComposition.eventsPerPile,
-        },
-      });
+      effects.push(draw({
+        from: eventPoolZoneId,
+        to: pileWorkZoneId,
+        count: deckComposition.eventsPerPile,
+      }));
     }
     if (deckComposition.coupsPerPile > 0) {
-      effects.push({
-        draw: {
-          from: coupsPoolZoneId,
-          to: pileWorkZoneId,
-          count: deckComposition.coupsPerPile,
-        },
-      });
+      effects.push(draw({
+        from: coupsPoolZoneId,
+        to: pileWorkZoneId,
+        count: deckComposition.coupsPerPile,
+      }));
     }
-    effects.push({ shuffle: { zone: pileWorkZoneId } });
-    effects.push({
-      moveAll: {
-        from: pileWorkZoneId,
-        to: options.eventDeck.drawZone,
-      },
-    });
+    effects.push(shuffle({ zone: pileWorkZoneId }));
+    effects.push(moveAll({
+      from: pileWorkZoneId,
+      to: options.eventDeck.drawZone,
+    }));
   }
 
   return {

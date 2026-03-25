@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { effectKindOf } from '../../src/kernel/effect-registry.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 import {
   buildEffect,
   setVar,
@@ -45,12 +46,12 @@ describe('ast-builders', () => {
   describe('buildEffect generic', () => {
     it('produces correct tagged shape for setVar', () => {
       const effect = buildEffect('setVar', { scope: 'global', var: 'x', value: 1 });
-      assert.deepEqual(effect, { setVar: { scope: 'global', var: 'x', value: 1 } });
+      assert.deepEqual(effect, eff({ setVar: { scope: 'global', var: 'x', value: 1 } }));
     });
 
     it('produces correct tagged shape for advancePhase', () => {
       const effect = buildEffect('advancePhase', {});
-      assert.deepEqual(effect, { advancePhase: {} });
+      assert.deepEqual(effect, eff({ advancePhase: {} }));
     });
   });
 

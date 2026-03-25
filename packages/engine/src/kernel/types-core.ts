@@ -1369,6 +1369,15 @@ export interface ExecutionOptions {
   readonly profiler?: import('./perf-profiler.js').PerfProfiler;
   /** When true, the simulator skips delta computation between moves (trace-only data). */
   readonly skipDeltas?: boolean;
+  /**
+   * Opt-in incremental Zobrist hash verification.
+   * When `true`, every move verifies `_runningHash === computeFullHash(table, state)`.
+   * When `{ interval: N }`, verifies every Nth move (by turnCount).
+   * Throws `KernelRuntimeError` with code `HASH_DRIFT` on mismatch.
+   */
+  readonly verifyIncrementalHash?: boolean | {
+    readonly interval: number;
+  };
 }
 
 export interface ExecutionCollector {

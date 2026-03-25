@@ -7,6 +7,7 @@ import {
   type MoveParamValue,
   type PlayerId,
 } from '../../src/kernel/index.js';
+import { eff } from './effect-tag-helper.js';
 
 export type ChoiceOwnershipPrimitive = 'chooseOne' | 'chooseN';
 
@@ -19,17 +20,17 @@ export const buildChooserOwnedChoiceEffect = (
   values: readonly string[],
 ): EffectAST => {
   if (primitive === 'chooseOne') {
-    return {
+    return eff({
       chooseOne: {
         internalDecisionId: decisionKey,
         bind,
         chooser: { id: CHOICE_OWNER_PLAYER },
         options: { query: 'enums', values },
       },
-    };
+    });
   }
 
-  return {
+  return eff({
     chooseN: {
       internalDecisionId: decisionKey,
       bind,
@@ -37,7 +38,7 @@ export const buildChooserOwnedChoiceEffect = (
       options: { query: 'enums', values },
       n: 1,
     },
-  };
+  });
 };
 
 export const ownershipSelection = (

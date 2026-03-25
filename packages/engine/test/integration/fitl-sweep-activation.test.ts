@@ -14,6 +14,7 @@ import {
   type Token,
 } from '../../src/kernel/index.js';
 import { makeExecutionEffectContext } from '../helpers/effect-context-test-helpers.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 const makeToken = (id: string, type: string, faction: string, extra?: Record<string, unknown>): Token => ({
   id: asTokenId(id),
@@ -78,7 +79,7 @@ function buildSweepActivationEffects(zone: string, cubeCount: number, sfCount: n
     return []; // No activations when limit is 0 (kernel rejects forEach.limit=0)
   }
   return [
-    {
+    eff({
       forEach: {
         bind: '$guerrilla',
         over: {
@@ -90,10 +91,10 @@ function buildSweepActivationEffects(zone: string, cubeCount: number, sfCount: n
         },
         limit: activationLimit,
         effects: [
-          { setTokenProp: { token: '$guerrilla', prop: 'activity', value: 'active' } },
+          eff({ setTokenProp: { token: '$guerrilla', prop: 'activity', value: 'active' } }),
         ],
       },
-    },
+    }),
   ];
 }
 

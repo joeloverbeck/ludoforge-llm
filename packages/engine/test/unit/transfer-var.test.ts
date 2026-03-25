@@ -18,6 +18,8 @@ import {
 } from '../../src/kernel/index.js';
 import { isNormalizedEffectRuntimeFailure } from '../helpers/effect-error-assertions.js';
 import { asTaggedGameDef } from '../helpers/gamedef-fixtures.js';
+import { eff } from '../helpers/effect-tag-helper.js';
+import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
 
 const makeDef = (): GameDef => asTaggedGameDef({
   metadata: { id: 'transfer-var-test', players: { min: 2, max: 2 } },
@@ -84,13 +86,13 @@ const makeCtx = (overrides?: EffectContextTestOverrides): EffectContext => makeE
 describe('transferVar effect', () => {
   it('transfers exact amount when source and destination both have capacity', () => {
     const ctx = makeCtx();
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       transferVar: {
         from: { scope: 'pvar', player: 'actor', var: 'coins' },
         to: { scope: 'global', var: 'pot' },
         amount: 3,
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
 
@@ -106,13 +108,13 @@ describe('transferVar effect', () => {
     const ctx = makeCtx();
 
     const result = applyEffect(
-      {
+      eff({
         transferVar: {
           from: { scope: 'pvar', player: 'actor', var: 'coins' },
           to: { scope: 'global', var: 'pot' },
           amount: 999,
         },
-      },
+      }),
       ctx,
     );
 
@@ -132,14 +134,14 @@ describe('transferVar effect', () => {
     });
 
     const result = applyEffect(
-      {
+      eff({
         transferVar: {
           from: { scope: 'pvar', player: 'actor', var: 'coins' },
           to: { scope: 'global', var: 'pot' },
           amount: 2,
           min: 4,
         },
-      },
+      }),
       ctx,
     );
 
@@ -151,14 +153,14 @@ describe('transferVar effect', () => {
     const ctx = makeCtx();
 
     const result = applyEffect(
-      {
+      eff({
         transferVar: {
           from: { scope: 'pvar', player: 'actor', var: 'coins' },
           to: { scope: 'global', var: 'pot' },
           amount: 9,
           max: 4,
         },
-      },
+      }),
       ctx,
     );
 
@@ -170,15 +172,15 @@ describe('transferVar effect', () => {
     const ctx = makeCtx();
     const result = applyEffects(
       [
-        {
+        eff({
           transferVar: {
             from: { scope: 'pvar', player: 'actor', var: 'coins' },
             to: { scope: 'global', var: 'pot' },
             amount: 999,
             actualBind: '$actual',
           },
-        },
-        { addVar: { scope: 'global', var: 'pot', delta: { _t: 2 as const, ref: 'binding', name: '$actual' } } },
+        }),
+        eff({ addVar: { scope: 'global', var: 'pot', delta: { _t: 2 as const, ref: 'binding', name: '$actual' } } }),
       ],
       ctx,
     );
@@ -190,15 +192,15 @@ describe('transferVar effect', () => {
     const ctx = makeCtx();
     const result = applyEffects(
       [
-        {
+        eff({
           transferVar: {
             from: { scope: 'pvar', player: 'actor', var: 'coins' },
             to: { scope: 'global', var: 'pot' },
             amount: 0,
             actualBind: '$actual',
           },
-        },
-        { addVar: { scope: 'global', var: 'pot', delta: { _t: 2 as const, ref: 'binding', name: '$actual' } } },
+        }),
+        eff({ addVar: { scope: 'global', var: 'pot', delta: { _t: 2 as const, ref: 'binding', name: '$actual' } } }),
       ],
       ctx,
     );
@@ -215,7 +217,7 @@ describe('transferVar effect', () => {
         for (const max of [undefined, 2, 7, 30] as const) {
           const ctx = makeCtx();
           const beforeTotal = Number(ctx.state.perPlayerVars['0']?.coins ?? 0) + Number(ctx.state.globalVars.pot ?? 0);
-          const effect: EffectAST = {
+          const effect: EffectAST = eff({
             transferVar: {
               from: { scope: 'pvar', player: 'actor', var: 'coins' },
               to: { scope: 'global', var: 'pot' },
@@ -223,7 +225,7 @@ describe('transferVar effect', () => {
               ...(min === undefined ? {} : { min }),
               ...(max === undefined ? {} : { max }),
             },
-          };
+          });
           const result = applyEffect(effect, ctx);
           const afterTotal = Number(result.state.perPlayerVars['0']?.coins ?? 0) + Number(result.state.globalVars.pot ?? 0);
           assert.equal(afterTotal, beforeTotal);
@@ -235,13 +237,13 @@ describe('transferVar effect', () => {
   it('transfers to another player per-player variable', () => {
     const ctx = makeCtx();
     const result = applyEffect(
-      {
+      eff({
         transferVar: {
           from: { scope: 'pvar', player: 'actor', var: 'coins' },
           to: { scope: 'pvar', player: 'active', var: 'committed' },
           amount: 5,
         },
-      },
+      }),
       ctx,
     );
 
@@ -252,13 +254,13 @@ describe('transferVar effect', () => {
   it('supports global->pvar transfers', () => {
     const ctx = makeCtx();
     const result = applyEffect(
-      {
+      eff({
         transferVar: {
           from: { scope: 'global', var: 'pot' },
           to: { scope: 'pvar', player: 'actor', var: 'coins' },
           amount: 3,
         },
-      },
+      }),
       ctx,
     );
 
@@ -283,13 +285,13 @@ describe('transferVar effect', () => {
     });
 
     const result = applyEffect(
-      {
+      eff({
         transferVar: {
           from: { scope: 'global', var: 'pot' },
           to: { scope: 'global', var: 'bank' },
           amount: 2,
         },
-      },
+      }),
       ctx,
     );
 
@@ -300,13 +302,13 @@ describe('transferVar effect', () => {
   it('supports zoneVar->zoneVar transfers', () => {
     const ctx = makeCtx();
     const result = applyEffect(
-      {
+      eff({
         transferVar: {
           from: { scope: 'zoneVar', zone: 'zone-a:none', var: 'supply' },
           to: { scope: 'zoneVar', zone: 'zone-b:none', var: 'supply' },
           amount: 4,
         },
-      },
+      }),
       ctx,
     );
 
@@ -335,13 +337,13 @@ describe('transferVar effect', () => {
   it('zoneVar->zoneVar transfer preserves unrelated global/per-player branch references', () => {
     const ctx = makeCtx();
     const result = applyEffect(
-      {
+      eff({
         transferVar: {
           from: { scope: 'zoneVar', zone: 'zone-a:none', var: 'supply' },
           to: { scope: 'zoneVar', zone: 'zone-b:none', var: 'supply' },
           amount: 2,
         },
-      },
+      }),
       ctx,
     );
 
@@ -362,13 +364,13 @@ describe('transferVar effect', () => {
     });
 
     const result = applyEffect(
-      {
+      eff({
         transferVar: {
           from: { scope: 'pvar', player: 'actor', var: 'coins' },
           to: { scope: 'pvar', player: 'active', var: 'committed' },
           amount: 6,
         },
-      },
+      }),
       ctx,
     );
 
@@ -386,13 +388,13 @@ describe('transferVar effect', () => {
     assert.throws(
       () =>
         applyEffect(
-          {
+          eff({
             transferVar: {
               from: { scope: 'pvar', player: 'actor', var: 'locked' },
               to: { scope: 'global', var: 'pot' },
               amount: 1,
             },
-          },
+          }),
           ctx,
         ),
       (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('non-int variable'),
@@ -401,13 +403,13 @@ describe('transferVar effect', () => {
     assert.throws(
       () =>
         applyEffect(
-          {
+          eff({
             transferVar: {
               from: { scope: 'pvar', player: 'actor', var: 'coins' },
               to: { scope: 'global', var: 'globalFlag' },
               amount: 1,
             },
-          },
+          }),
           ctx,
         ),
       (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('non-int variable'),
@@ -432,13 +434,13 @@ describe('transferVar effect', () => {
     assert.throws(
       () =>
         applyEffect(
-          {
+          eff({
             transferVar: {
               from: { scope: 'pvar', player: 'actor', var: 'coins' },
               to: { scope: 'global', var: 'pot' },
               amount: 1,
             },
-          },
+          }),
           ctx,
         ),
       (error: unknown) =>
@@ -449,13 +451,13 @@ describe('transferVar effect', () => {
 
   it('throws EFFECT_RUNTIME when pvar endpoint payload omits player selector', () => {
     const ctx = makeCtx();
-    const malformed = {
+    const malformed = tagEffectAsts({
       transferVar: {
         from: { scope: 'pvar', var: 'coins' },
         to: { scope: 'global', var: 'pot' },
         amount: 1,
       },
-    } as unknown as EffectAST;
+    }) as unknown as EffectAST;
 
     assert.throws(
       () => applyEffect(malformed, ctx),
@@ -466,13 +468,13 @@ describe('transferVar effect', () => {
 
   it('throws EFFECT_RUNTIME when zoneVar endpoint payload omits zone selector', () => {
     const ctx = makeCtx();
-    const malformed = {
+    const malformed = tagEffectAsts({
       transferVar: {
         from: { scope: 'zoneVar', var: 'supply' },
         to: { scope: 'global', var: 'pot' },
         amount: 1,
       },
-    } as unknown as EffectAST;
+    }) as unknown as EffectAST;
 
     assert.throws(
       () => applyEffect(malformed, ctx),
@@ -482,13 +484,13 @@ describe('transferVar effect', () => {
 
   it('wraps pvar endpoint selector resolution failures into EFFECT_RUNTIME', () => {
     const ctx = makeCtx();
-    const unresolvedSelectorEffect = {
+    const unresolvedSelectorEffect = tagEffectAsts({
       transferVar: {
         from: { scope: 'pvar', player: { chosen: '$missingPlayer' }, var: 'coins' },
         to: { scope: 'global', var: 'pot' },
         amount: 1,
       },
-    } as unknown as EffectAST;
+    }) as unknown as EffectAST;
 
     assert.throws(
       () => applyEffect(unresolvedSelectorEffect, ctx),
@@ -498,13 +500,13 @@ describe('transferVar effect', () => {
 
   it('wraps source zoneVar endpoint selector resolution failures into EFFECT_RUNTIME', () => {
     const ctx = makeCtx();
-    const unresolvedSourceZone = {
+    const unresolvedSourceZone = tagEffectAsts({
       transferVar: {
         from: { scope: 'zoneVar', zone: { zoneExpr: { _t: 2, ref: 'binding', name: '$missingSourceZone' } }, var: 'supply' },
         to: { scope: 'global', var: 'pot' },
         amount: 1,
       },
-    } as unknown as EffectAST;
+    }) as unknown as EffectAST;
 
     assert.throws(
       () => applyEffect(unresolvedSourceZone, ctx),
@@ -514,13 +516,13 @@ describe('transferVar effect', () => {
 
   it('wraps destination zoneVar endpoint selector resolution failures into EFFECT_RUNTIME', () => {
     const ctx = makeCtx();
-    const unresolvedDestinationZone = {
+    const unresolvedDestinationZone = tagEffectAsts({
       transferVar: {
         from: { scope: 'global', var: 'pot' },
         to: { scope: 'zoneVar', zone: { zoneExpr: { _t: 2, ref: 'binding', name: '$missingDestinationZone' } }, var: 'supply' },
         amount: 1,
       },
-    } as unknown as EffectAST;
+    }) as unknown as EffectAST;
 
     assert.throws(
       () => applyEffect(unresolvedDestinationZone, ctx),
@@ -532,33 +534,33 @@ describe('transferVar effect', () => {
     const cases: readonly { readonly name: string; readonly effect: EffectAST }[] = [
       {
         name: 'pvar->global',
-        effect: {
+        effect: eff({
           transferVar: {
             from: { scope: 'pvar', player: 'actor', var: 'coins' },
             to: { scope: 'global', var: 'pot' },
             amount: 2,
           },
-        },
+        }),
       },
       {
         name: 'global->pvar',
-        effect: {
+        effect: eff({
           transferVar: {
             from: { scope: 'global', var: 'pot' },
             to: { scope: 'pvar', player: 'actor', var: 'coins' },
             amount: 2,
           },
-        },
+        }),
       },
       {
         name: 'zoneVar->zoneVar',
-        effect: {
+        effect: eff({
           transferVar: {
             from: { scope: 'zoneVar', zone: 'zone-a:none', var: 'supply' },
             to: { scope: 'zoneVar', zone: 'zone-b:none', var: 'supply' },
             amount: 2,
           },
-        },
+        }),
       },
     ];
 

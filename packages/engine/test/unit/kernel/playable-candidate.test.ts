@@ -15,6 +15,7 @@ import {
   type Move,
 } from '../../../src/kernel/index.js';
 import { createTemplateChooseOneAction, createTemplateChooseOneProfile } from '../../helpers/agent-template-fixtures.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
 
 const phaseId = asPhaseId('main');
 
@@ -59,13 +60,13 @@ const createEmptyOptionsProfile = (actionId: string): ActionPipelineDef => ({
     {
       stage: 'resolve',
       effects: [
-        {
+        eff({
           chooseOne: {
             internalDecisionId: 'decision:$target',
             bind: '$target',
             options: { query: 'enums', values: [] },
           },
-        },
+        }),
       ],
     },
   ],
@@ -75,7 +76,7 @@ const createEmptyOptionsProfile = (actionId: string): ActionPipelineDef => ({
 describe('playable-candidate evaluator', () => {
   it('classifies a concrete legal move as fully playable with apply parity', () => {
     const def = createDef([
-      createAction('advance', [{ setVar: { scope: 'global', var: 'score', value: 1 } }]),
+      createAction('advance', [eff({ setVar: { scope: 'global', var: 'score', value: 1 } })]),
     ]);
     const state = initialState(def, 3, 2).state;
     const move: Move = { actionId: asActionId('advance'), params: {} };

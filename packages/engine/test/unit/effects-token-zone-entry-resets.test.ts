@@ -18,6 +18,7 @@ import {
   type TokenTypeDef,
   type ZoneDef,
 } from '../../src/kernel/index.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 import { applyZoneEntryResets } from '../../src/kernel/effects-token.js';
 
 // ── Helper: applyZoneEntryResets unit tests ──────────────────────
@@ -272,7 +273,7 @@ describe('moveToken with onZoneEntry resets', () => {
   it('resets tunneled base when moved to aux zone', () => {
     const ctx = makeCtx({ bindings: { $token: tunneledBase } });
     const result = applyEffect(
-      { moveToken: { token: '$token', from: 'board:none', to: 'available:none' } },
+      eff({ moveToken: { token: '$token', from: 'board:none', to: 'available:none' } }),
       ctx,
     );
     const movedToken = result.state.zones['available:none']?.[0];
@@ -287,7 +288,7 @@ describe('moveToken with onZoneEntry resets', () => {
     });
     const ctx = makeCtx({ state, bindings: { $token: tunneledBase } });
     const result = applyEffect(
-      { moveToken: { token: '$token', from: 'available:none', to: 'board:none' } },
+      eff({ moveToken: { token: '$token', from: 'available:none', to: 'board:none' } }),
       ctx,
     );
     const movedToken = result.state.zones['board:none']?.[0];
@@ -298,7 +299,7 @@ describe('moveToken with onZoneEntry resets', () => {
   it('resets when moved to out-of-play zone', () => {
     const ctx = makeCtx({ bindings: { $token: tunneledBase } });
     const result = applyEffect(
-      { moveToken: { token: '$token', from: 'board:none', to: 'out-of-play:none' } },
+      eff({ moveToken: { token: '$token', from: 'board:none', to: 'out-of-play:none' } }),
       ctx,
     );
     const movedToken = result.state.zones['out-of-play:none']?.[0];
@@ -310,7 +311,7 @@ describe('moveToken with onZoneEntry resets', () => {
     const state = makeState({ 'board:none': [untunneledBase] });
     const ctx = makeCtx({ state, bindings: { $token: untunneledBase } });
     const result = applyEffect(
-      { moveToken: { token: '$token', from: 'board:none', to: 'available:none' } },
+      eff({ moveToken: { token: '$token', from: 'board:none', to: 'available:none' } }),
       ctx,
     );
     const movedToken = result.state.zones['available:none']?.[0];
@@ -322,7 +323,7 @@ describe('moveToken with onZoneEntry resets', () => {
     const state = makeState({ 'board:none': [troop] });
     const ctx = makeCtx({ state, bindings: { $token: troop } });
     const result = applyEffect(
-      { moveToken: { token: '$token', from: 'board:none', to: 'available:none' } },
+      eff({ moveToken: { token: '$token', from: 'board:none', to: 'available:none' } }),
       ctx,
     );
     const movedToken = result.state.zones['available:none']?.[0];
@@ -335,7 +336,7 @@ describe('moveToken with onZoneEntry resets', () => {
     const collector = createCollector({ trace: true });
     const ctx = makeCtx({ bindings: { $token: tunneledBase }, collector });
     applyEffect(
-      { moveToken: { token: '$token', from: 'board:none', to: 'available:none' } },
+      eff({ moveToken: { token: '$token', from: 'board:none', to: 'available:none' } }),
       ctx,
     );
     const traces = collector.trace;

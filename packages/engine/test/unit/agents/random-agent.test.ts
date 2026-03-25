@@ -26,6 +26,7 @@ import {
   type Move,
   type ActionPipelineDef,
 } from '../../../src/kernel/index.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
 
 const phaseId = asPhaseId('main');
 
@@ -104,13 +105,13 @@ const createEmptyOptionsProfile = (actionId: string): ActionPipelineDef => ({
     {
       stage: 'resolve',
       effects: [
-        {
+        eff({
           chooseOne: {
             internalDecisionId: 'decision:$target',
             bind: '$target',
             options: { query: 'enums', values: [] },
           },
-        },
+        }),
       ],
     },
   ],
@@ -336,22 +337,22 @@ describe('RandomAgent', () => {
         {
           stage: 'resolve',
           effects: [
-            {
+            eff({
               rollRandom: {
                 bind: '$roll',
                 min: 1,
                 max: 2,
                 in: [
-                  {
+                  eff({
                     if: {
                       when: { op: '==' as const, left: { _t: 2 as const, ref: 'binding' as const, name: '$roll' }, right: 1 },
-                      then: [{ chooseOne: { internalDecisionId: 'decision:$targetA', bind: '$targetA', options: { query: 'enums' as const, values: ['alpha'] } } }],
-                      else: [{ chooseOne: { internalDecisionId: 'decision:$targetB', bind: '$targetB', options: { query: 'enums' as const, values: ['beta'] } } }],
+                      then: [eff({ chooseOne: { internalDecisionId: 'decision:$targetA', bind: '$targetA', options: { query: 'enums' as const, values: ['alpha'] } } })],
+                      else: [eff({ chooseOne: { internalDecisionId: 'decision:$targetB', bind: '$targetB', options: { query: 'enums' as const, values: ['beta'] } } })],
                     },
-                  },
+                  }),
                 ],
               },
-            },
+            }),
           ],
         },
       ],
@@ -396,22 +397,22 @@ describe('RandomAgent', () => {
         {
           stage: 'resolve',
           effects: [
-            {
+            eff({
               rollRandom: {
                 bind: '$roll',
                 min: 1,
                 max: 2,
                 in: [
-                  {
+                  eff({
                     if: {
                       when: { op: '==' as const, left: { _t: 2 as const, ref: 'binding' as const, name: '$roll' }, right: 1 },
-                      then: [{ chooseOne: { internalDecisionId: 'decision:$targetA', bind: '$targetA', options: { query: 'enums' as const, values: ['alpha'] } } }],
-                      else: [{ chooseOne: { internalDecisionId: 'decision:$targetB', bind: '$targetB', options: { query: 'enums' as const, values: ['beta'] } } }],
+                      then: [eff({ chooseOne: { internalDecisionId: 'decision:$targetA', bind: '$targetA', options: { query: 'enums' as const, values: ['alpha'] } } })],
+                      else: [eff({ chooseOne: { internalDecisionId: 'decision:$targetB', bind: '$targetB', options: { query: 'enums' as const, values: ['beta'] } } })],
                     },
-                  },
+                  }),
                 ],
               },
-            },
+            }),
           ],
         },
       ],
@@ -480,22 +481,22 @@ describe('RandomAgent', () => {
         {
           stage: 'resolve',
           effects: [
-            {
+            eff({
               rollRandom: {
                 bind: '$roll',
                 min: 1,
                 max: 2,
                 in: [
-                  {
+                  eff({
                     if: {
                       when: { op: '==' as const, left: { _t: 2 as const, ref: 'binding' as const, name: '$roll' }, right: 1 },
-                      then: [{ chooseOne: { internalDecisionId: 'decision:$targetA', bind: '$targetA', options: { query: 'enums' as const, values: ['alpha'] } } }],
-                      else: [{ chooseOne: { internalDecisionId: 'decision:$targetB', bind: '$targetB', options: { query: 'enums' as const, values: ['alpha'] } } }],
+                      then: [eff({ chooseOne: { internalDecisionId: 'decision:$targetA', bind: '$targetA', options: { query: 'enums' as const, values: ['alpha'] } } })],
+                      else: [eff({ chooseOne: { internalDecisionId: 'decision:$targetB', bind: '$targetB', options: { query: 'enums' as const, values: ['alpha'] } } })],
                     },
-                  },
+                  }),
                 ],
               },
-            },
+            }),
           ],
         },
       ],

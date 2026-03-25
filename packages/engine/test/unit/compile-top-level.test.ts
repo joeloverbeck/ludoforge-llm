@@ -6,6 +6,7 @@ import type { GameSpecDoc } from '../../src/cnl/game-spec-doc.js';
 import type { EventCardDef } from '../../src/kernel/types.js';
 import { TURN_FLOW_REQUIRED_KEYS } from '../../src/contracts/turn-flow-contract.js';
 import { assertNoDiagnostics } from '../helpers/diagnostic-helpers.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 const minimalCardDrivenTurnFlow = {
   cardLifecycle: { played: 'deck:none', lookahead: 'deck:none', leader: 'deck:none' },
@@ -20,21 +21,21 @@ const minimalCardDrivenTurnFlow = {
 
 function createEventDeckSequenceParityDoc(freeOperationActionIds: readonly string[]): GameSpecDoc {
   const riskySequenceEffects = [
-    {
+    eff({
       grantFreeOperation: {
         seat: 'us',
         operationClass: 'operation' as const,
         actionIds: ['limitedOp'],
         sequence: { batch: 'event-deck-chain', step: 0 },
       },
-    },
-    {
+    }),
+    eff({
       grantFreeOperation: {
         seat: 'us',
         operationClass: 'operation' as const,
         sequence: { batch: 'event-deck-chain', step: 1 },
       },
-    },
+    }),
   ];
 
   return {
@@ -847,21 +848,21 @@ describe('compile top-level actions/triggers/end conditions', () => {
               cardinality: { max: 1 },
               application: 'aggregate',
               effects: [
-                {
+                eff({
                   grantFreeOperation: {
                     seat: 'us',
                     operationClass: 'operation' as const,
                     actionIds: ['limitedOp'],
                     sequence: { batch: 'event-deck-chain-target', step: 0 },
                   },
-                },
-                {
+                }),
+                eff({
                   grantFreeOperation: {
                     seat: 'us',
                     operationClass: 'operation' as const,
                     sequence: { batch: 'event-deck-chain-target', step: 1 },
                   },
-                },
+                }),
               ],
             },
           ],
@@ -1009,21 +1010,21 @@ describe('compile top-level actions/triggers/end conditions', () => {
         unshaded: { effects: [] },
         shaded: {
           effects: [
-            {
+            eff({
               grantFreeOperation: {
                 seat: 'us',
                 operationClass: 'operation' as const,
                 actionIds: ['limitedOp'],
                 sequence: { batch: 'event-deck-chain-shaded', step: 0 },
               },
-            },
-            {
+            }),
+            eff({
               grantFreeOperation: {
                 seat: 'us',
                 operationClass: 'operation' as const,
                 sequence: { batch: 'event-deck-chain-shaded', step: 1 },
               },
-            },
+            }),
           ],
         },
       }),
@@ -1052,21 +1053,21 @@ describe('compile top-level actions/triggers/end conditions', () => {
             {
               id: 'branch-a',
               effects: [
-                {
+                eff({
                   grantFreeOperation: {
                     seat: 'us',
                     operationClass: 'operation' as const,
                     actionIds: ['limitedOp'],
                     sequence: { batch: 'event-deck-chain-branch', step: 0 },
                   },
-                },
-                {
+                }),
+                eff({
                   grantFreeOperation: {
                     seat: 'us',
                     operationClass: 'operation' as const,
                     sequence: { batch: 'event-deck-chain-branch', step: 1 },
                   },
-                },
+                }),
               ],
             },
           ],
@@ -1098,21 +1099,21 @@ describe('compile top-level actions/triggers/end conditions', () => {
               id: 'lasting-a',
               duration: 'nextTurn' as const,
               setupEffects: [
-                {
+                eff({
                   grantFreeOperation: {
                     seat: 'us',
                     operationClass: 'operation' as const,
                     actionIds: ['limitedOp'],
                     sequence: { batch: 'event-deck-chain-lasting-setup', step: 0 },
                   },
-                },
-                {
+                }),
+                eff({
                   grantFreeOperation: {
                     seat: 'us',
                     operationClass: 'operation' as const,
                     sequence: { batch: 'event-deck-chain-lasting-setup', step: 1 },
                   },
-                },
+                }),
               ],
               teardownEffects: [],
             },
@@ -1146,21 +1147,21 @@ describe('compile top-level actions/triggers/end conditions', () => {
               duration: 'nextTurn' as const,
               setupEffects: [],
               teardownEffects: [
-                {
+                eff({
                   grantFreeOperation: {
                     seat: 'us',
                     operationClass: 'operation' as const,
                     actionIds: ['limitedOp'],
                     sequence: { batch: 'event-deck-chain-lasting-teardown', step: 0 },
                   },
-                },
-                {
+                }),
+                eff({
                   grantFreeOperation: {
                     seat: 'us',
                     operationClass: 'operation' as const,
                     sequence: { batch: 'event-deck-chain-lasting-teardown', step: 1 },
                   },
-                },
+                }),
               ],
             },
           ],

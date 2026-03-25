@@ -4,6 +4,7 @@ import {
 } from './effect-error.js';
 import { resetPhaseUsage } from './action-usage.js';
 import { advancePhase, buildAdvancePhaseRequest } from './phase-advance.js';
+import { updatePhaseHash, updatePhaseUsageResetHash } from './zobrist-phase-hash.js';
 import { findPhaseDef } from './phase-lookup.js';
 import { dispatchLifecycleEvent } from './phase-lifecycle.js';
 import { resolveBindingTemplate } from './binding-template.js';
@@ -427,10 +428,15 @@ export const applyGotoPhaseExact = (
     type: 'phaseExit',
     phase: cursor.state.currentPhase,
   }, undefined, lifecycleBudgetOptions(env), lifecycleResources, 'lifecycle', env.cachedRuntime, env.profiler);
-  const enteredState = resetPhaseUsage({
+  const table = env.cachedRuntime?.zobristTable;
+  const phaseChangedState = {
     ...exitedState,
     currentPhase: targetPhaseId,
-  });
+    ...(table ? { _runningHash: updatePhaseHash(exitedState._runningHash, table, exitedState.currentPhase, targetPhaseId) } : {}),
+  };
+  const enteredState = resetPhaseUsage(
+    table ? { ...phaseChangedState, _runningHash: updatePhaseUsageResetHash(phaseChangedState._runningHash, table, phaseChangedState.actionUsage) } : phaseChangedState,
+  );
   const finalState = dispatchLifecycleEvent(env.def, enteredState, {
     type: 'phaseEnter',
     phase: targetPhaseId,
@@ -514,11 +520,16 @@ export const applyPushInterruptPhase = (
     ...(exitedState.interruptPhaseStack ?? []),
     { phase: targetPhase, resumePhase },
   ] as const;
-  const enteredState = resetPhaseUsage({
+  const pushTable = env.cachedRuntime?.zobristTable;
+  const phaseChangedPush = {
     ...exitedState,
     currentPhase: targetPhase,
     interruptPhaseStack: nextStack,
-  });
+    ...(pushTable ? { _runningHash: updatePhaseHash(exitedState._runningHash, pushTable, exitedState.currentPhase, targetPhase) } : {}),
+  };
+  const enteredState = resetPhaseUsage(
+    pushTable ? { ...phaseChangedPush, _runningHash: updatePhaseUsageResetHash(phaseChangedPush._runningHash, pushTable, phaseChangedPush.actionUsage) } : phaseChangedPush,
+  );
   const finalState = dispatchLifecycleEvent(env.def, enteredState, {
     type: 'phaseEnter',
     phase: targetPhase,
@@ -562,19 +573,25 @@ export const applyPopInterruptPhase = (
   }
 
   const nextStack = stackAfterExit.slice(0, -1);
+  const popTable = env.cachedRuntime?.zobristTable;
+  const phaseHashPop = popTable
+    ? updatePhaseHash(exitedState._runningHash, popTable, exitedState.currentPhase, resumeFrame.resumePhase)
+    : exitedState._runningHash;
   const resumeBaseState: GameState = {
     ...exitedState,
     currentPhase: resumeFrame.resumePhase,
+    _runningHash: phaseHashPop,
   };
   const { interruptPhaseStack, ...resumeStateWithoutStack } = resumeBaseState;
   void interruptPhaseStack;
+  const preResetState = nextStack.length === 0
+    ? resumeStateWithoutStack
+    : {
+        ...resumeBaseState,
+        interruptPhaseStack: nextStack,
+      };
   const resumedState = resetPhaseUsage(
-    nextStack.length === 0
-      ? resumeStateWithoutStack
-      : {
-          ...resumeBaseState,
-          interruptPhaseStack: nextStack,
-        },
+    popTable ? { ...preResetState, _runningHash: updatePhaseUsageResetHash(preResetState._runningHash, popTable, preResetState.actionUsage) } : preResetState,
   );
   const finalState = dispatchLifecycleEvent(env.def, resumedState, {
     type: 'phaseEnter',

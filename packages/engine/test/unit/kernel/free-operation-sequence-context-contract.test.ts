@@ -14,6 +14,7 @@ import {
 } from '../../../src/contracts/turn-flow-free-operation-grant-contract.js';
 import { FreeOperationSequenceContextSchema } from '../../../src/kernel/free-operation-sequence-context-schema.js';
 import { EffectASTSchema } from '../../../src/kernel/schemas-ast.js';
+import { EFFECT_KIND_TAG } from '../../../src/kernel/types-ast.js';
 import { EventCardFreeOperationGrantSchema, TurnFlowRuntimeStateSchema } from '../../../src/kernel/schemas-extensions.js';
 
 const canonicalSchemaModuleSpecifier = './free-operation-sequence-context-schema.js';
@@ -94,6 +95,7 @@ describe('free-operation sequence-context canonical schema contract', () => {
       assert.equal(FreeOperationSequenceContextSchema.safeParse(sequenceContext).success, true);
       assert.equal(
         EffectASTSchema.safeParse({
+          _k: EFFECT_KIND_TAG.grantFreeOperation,
           grantFreeOperation: {
             seat: 'self',
             operationClass: 'operation',
@@ -129,6 +131,7 @@ describe('free-operation sequence-context canonical schema contract', () => {
       assert.equal(FreeOperationSequenceContextSchema.safeParse(sequenceContext).success, false);
       assert.equal(
         EffectASTSchema.safeParse({
+          _k: EFFECT_KIND_TAG.grantFreeOperation,
           grantFreeOperation: {
             seat: 'self',
             operationClass: 'operation',

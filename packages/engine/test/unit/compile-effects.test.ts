@@ -14,6 +14,8 @@ import { expandEffectMacros } from '../../src/cnl/expand-effect-macros.js';
 import { createEmptyGameSpecDoc, type EffectMacroDef } from '../../src/cnl/game-spec-doc.js';
 import { canonicalizeNamedSets } from '../../src/cnl/named-set-utils.js';
 import { assertNoDiagnostics } from '../helpers/diagnostic-helpers.js';
+import { effs } from '../helpers/effect-tag-helper.js';
+import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
 import { buildDiscriminatedEndpointMatrix } from '../helpers/transfer-endpoint-matrix.js';
 
 const context: EffectLoweringContext = {
@@ -111,7 +113,7 @@ describe('compile-effects lowering', () => {
 
     assert.deepEqual(first, second);
     assertNoDiagnostics(first);
-    assert.deepEqual(first.value, [
+    assert.deepEqual(first.value, tagEffectAsts([
       { draw: { from: 'deck:none', to: 'hand:$actor', count: 1 } },
       { setActivePlayer: { player: { chosen: '$actor' } } },
       { transferVar: { from: { scope: 'pvar', player: 'actor', var: 'coins' }, to: { scope: 'global', var: 'pot' }, amount: 2 } },
@@ -147,7 +149,7 @@ describe('compile-effects lowering', () => {
           value: { _t: 6, op: '+', left: 1, right: 2 },
         },
       },
-    ]);
+    ]));
   });
 
   it('lowers conceal effect optional from/filter fields without changing zone-only behavior', () => {
@@ -177,7 +179,7 @@ describe('compile-effects lowering', () => {
     );
 
     assertNoDiagnostics(result);
-    assert.deepEqual(result.value, [
+    assert.deepEqual(result.value, tagEffectAsts([
       {
         conceal: {
           zone: 'hand:$actor',
@@ -196,7 +198,7 @@ describe('compile-effects lowering', () => {
           zone: 'hand:$actor',
         },
       },
-    ]);
+    ]));
   });
 
   it('rejects legacy array token filters in reveal/conceal effects', () => {
@@ -330,7 +332,7 @@ describe('compile-effects lowering', () => {
     );
 
     assertNoDiagnostics(result);
-    assert.deepEqual(result.value, [
+    assert.deepEqual(result.value, tagEffectAsts([
       {
         reveal: {
           zone: 'hand:$actor',
@@ -350,7 +352,7 @@ describe('compile-effects lowering', () => {
           },
         },
       },
-    ]);
+    ]));
   });
 
   it('resolves seat-name selectors in effect-local player and zone selectors when seatIds are provided', () => {
@@ -367,10 +369,10 @@ describe('compile-effects lowering', () => {
     );
 
     assertNoDiagnostics(result);
-    assert.deepEqual(result.value, [
+    assert.deepEqual(result.value, tagEffectAsts([
       { setVar: { scope: 'pvar', player: { id: 2 }, var: 'resources', value: 1 } },
       { moveAll: { from: 'deck:none', to: 'hand:3' } },
-    ]);
+    ]));
   });
 
   it('rejects reduce effects with conflicting binder identifiers', () => {
@@ -876,7 +878,7 @@ describe('compile-effects lowering', () => {
     );
 
     assertNoDiagnostics(result);
-    assert.deepEqual(result.value, [
+    assert.deepEqual(result.value, tagEffectAsts([
       {
         createToken: {
           type: 'unit',
@@ -886,7 +888,7 @@ describe('compile-effects lowering', () => {
           },
         },
       },
-    ]);
+    ]));
   });
 
   it('emits missing capability diagnostics for unsupported effect nodes', () => {
@@ -922,7 +924,7 @@ describe('compile-effects lowering', () => {
     );
 
     assertNoDiagnostics(result);
-    assert.deepEqual(result.value, [
+    assert.deepEqual(result.value, tagEffectAsts([
       {
         transferVar: {
           from: { scope: 'pvar', player: { chosen: '$actor' }, var: 'coins' },
@@ -933,7 +935,7 @@ describe('compile-effects lowering', () => {
           actualBind: '$actual',
         },
       },
-    ]);
+    ]));
   });
 
   it('lowers transferVar with a global source endpoint', () => {
@@ -952,7 +954,7 @@ describe('compile-effects lowering', () => {
     );
 
     assertNoDiagnostics(result);
-    assert.deepEqual(result.value, [
+    assert.deepEqual(result.value, tagEffectAsts([
       {
         transferVar: {
           from: { scope: 'global', var: 'bank' },
@@ -960,7 +962,7 @@ describe('compile-effects lowering', () => {
           amount: 3,
         },
       },
-    ]);
+    ]));
   });
 
   it('lowers transferVar with zoneVar endpoints and canonical zone selectors', () => {
@@ -979,7 +981,7 @@ describe('compile-effects lowering', () => {
     );
 
     assertNoDiagnostics(result);
-    assert.deepEqual(result.value, [
+    assert.deepEqual(result.value, tagEffectAsts([
       {
         transferVar: {
           from: { scope: 'zoneVar', zone: 'board:none', var: 'supply' },
@@ -987,7 +989,7 @@ describe('compile-effects lowering', () => {
           amount: 3,
         },
       },
-    ]);
+    ]));
   });
 
   it('lowers scoped variable name expressions across setVar/addVar/transferVar', () => {
@@ -1008,7 +1010,7 @@ describe('compile-effects lowering', () => {
     );
 
     assertNoDiagnostics(result);
-    assert.deepEqual(result.value, [
+    assert.deepEqual(result.value, tagEffectAsts([
       { setVar: { scope: 'global', var: { ref: 'binding', name: '$track' }, value: 1 } },
       { addVar: { scope: 'pvar', player: 'active', var: { ref: 'grantContext', key: 'targetVar' }, delta: 2 } },
       {
@@ -1018,7 +1020,7 @@ describe('compile-effects lowering', () => {
           amount: 3,
         },
       },
-    ]);
+    ]));
   });
 
   it('rejects invalid transferVar endpoint field combinations by scope for both endpoints', () => {
@@ -1083,7 +1085,7 @@ describe('compile-effects lowering', () => {
     const result = lowerEffectArray(source, context, 'doc.actions.0.effects');
 
     assertNoDiagnostics(result);
-    assert.deepEqual(result.value, [
+    assert.deepEqual(result.value, tagEffectAsts([
       {
         chooseN: {
           internalDecisionId: 'decision:doc.actions.0.effects.0.chooseN',
@@ -1110,7 +1112,7 @@ describe('compile-effects lowering', () => {
           max: { _t: 2, ref: 'gvar', var: 'maxTargets' },
         },
       },
-    ]);
+    ]));
   });
 
   it('rejects chooseN cardinality mixes and contradictory ranges', () => {
@@ -1139,7 +1141,7 @@ describe('compile-effects lowering', () => {
     );
 
     assertNoDiagnostics(result);
-    assert.deepEqual(result.value, [
+    assert.deepEqual(result.value, tagEffectAsts([
       {
         chooseOne: {
           internalDecisionId: 'decision:doc.actions.0.effects.0.chooseOne',
@@ -1157,7 +1159,7 @@ describe('compile-effects lowering', () => {
           max: 2,
         },
       },
-    ]);
+    ]));
   });
 
   it('keeps non-distribute query contracts explicitly domain-agnostic', () => {
@@ -1278,7 +1280,7 @@ describe('compile-effects lowering', () => {
     );
 
     assertNoDiagnostics(result);
-    assert.deepEqual(result.value, [
+    assert.deepEqual(result.value, tagEffectAsts([
       {
         chooseN: {
           internalDecisionId: 'decision:doc.actions.0.effects.0.distributeTokens.selectTokens',
@@ -1332,7 +1334,7 @@ describe('compile-effects lowering', () => {
           ],
         },
       },
-    ]);
+    ]));
   });
 
   it('accepts all zone-domain destination query families for distributeTokens', () => {
@@ -1542,7 +1544,7 @@ describe('compile-effects lowering', () => {
     );
 
     assertNoDiagnostics(result);
-    assert.deepEqual(result.value, [
+    assert.deepEqual(result.value, tagEffectAsts([
       {
         chooseOne: {
           internalDecisionId: 'decision:doc.actions.0.effects.0.chooseOne',
@@ -1557,7 +1559,7 @@ describe('compile-effects lowering', () => {
           stateB: 'shaded',
         },
       },
-    ]);
+    ]));
   });
 
   it('lowers grantFreeOperation effect with optional sequencing and zone filter', () => {
@@ -1583,7 +1585,7 @@ describe('compile-effects lowering', () => {
     );
 
     assertNoDiagnostics(result);
-    assert.deepEqual(result.value, [
+    assert.deepEqual(result.value, tagEffectAsts([
       {
         grantFreeOperation: {
           id: 'apc-vc-uprising',
@@ -1598,7 +1600,7 @@ describe('compile-effects lowering', () => {
           zoneFilter: { op: '==', left: { _t: 2, ref: 'zoneProp', zone: 'saigon:none', prop: 'country' }, right: 'southVietnam' },
         },
       },
-    ]);
+    ]));
   });
 
   it('lowers grantFreeOperation sequence progressionPolicy through the CNL effect compiler', () => {
@@ -1617,7 +1619,7 @@ describe('compile-effects lowering', () => {
     );
 
     assertNoDiagnostics(result);
-    assert.deepEqual(result.value, [
+    assert.deepEqual(result.value, tagEffectAsts([
       {
         grantFreeOperation: {
           seat: '3',
@@ -1625,7 +1627,7 @@ describe('compile-effects lowering', () => {
           sequence: { batch: 'ctx-chain', step: 0, progressionPolicy: 'implementWhatCanInOrder' },
         },
       },
-    ]);
+    ]));
   });
 
   it('lowers grantFreeOperation sequenceContext through the CNL effect compiler', () => {
@@ -1648,7 +1650,7 @@ describe('compile-effects lowering', () => {
     );
 
     assertNoDiagnostics(result);
-    assert.deepEqual(result.value, [
+    assert.deepEqual(result.value, tagEffectAsts([
       {
         grantFreeOperation: {
           seat: '3',
@@ -1660,7 +1662,7 @@ describe('compile-effects lowering', () => {
           },
         },
       },
-    ]);
+    ]));
   });
 
   it('rejects malformed grantFreeOperation.sequenceContext values', () => {
@@ -1847,7 +1849,7 @@ describe('compile-effects lowering', () => {
     );
 
     assertNoDiagnostics(result);
-    assert.deepEqual(result.value, [
+    assert.deepEqual(result.value, tagEffectAsts([
       {
         grantFreeOperation: {
           seat: '1',
@@ -1856,7 +1858,7 @@ describe('compile-effects lowering', () => {
           postResolutionTurnFlow: 'resumeCardFlow',
         },
       },
-    ]);
+    ]));
   });
 
   it('emits warning diagnostics for risky free-operation sequence transitions', () => {
@@ -2029,7 +2031,7 @@ describe('compile-effects lowering', () => {
     );
 
     assertNoDiagnostics(result);
-    assert.deepEqual(result.value, [
+    assert.deepEqual(result.value, tagEffectAsts([
       {
         gotoPhaseExact: {
           phase: 'commitment',
@@ -2047,7 +2049,7 @@ describe('compile-effects lowering', () => {
       {
         popInterruptPhase: {},
       },
-    ]);
+    ]));
   });
 
   it('lowers dynamic zone expression (tokenZone ref) to zoneExpr', () => {

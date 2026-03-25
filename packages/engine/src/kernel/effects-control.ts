@@ -3,6 +3,7 @@ import { evalQuery } from './eval-query.js';
 import { evalValue } from './eval-value.js';
 import { rebaseIterationPath, withIterationSegment } from './decision-scope.js';
 import { resolveControlFlowIterationLimit } from './control-flow-limit.js';
+import { moveToken as moveTokenBuilder } from './ast-builders.js';
 import { buildForEachTraceEntry, buildReduceTraceEntry } from './control-flow-trace.js';
 import { effectRuntimeError } from './effect-error.js';
 import { emitTrace } from './execution-collector.js';
@@ -406,13 +407,11 @@ export const applyRemoveByPriority = (
 
         const moveResult = applyEffectsWithBudget(
           [
-            {
-              moveToken: {
-                token: group.bind,
-                from: group.from ?? { zoneExpr: { _t: VALUE_EXPR_TAG.REF, ref: 'tokenZone', token: group.bind } as ValueExpr },
-                to: group.to,
-              },
-            },
+            moveTokenBuilder({
+              token: group.bind,
+              from: group.from ?? { zoneExpr: { _t: VALUE_EXPR_TAG.REF, ref: 'tokenZone', token: group.bind } as ValueExpr },
+              to: group.to,
+            }),
           ],
           env,
           withCursorTrace(env, iterationCursor, `.removeByPriority.groups[${groupIndex}].effects`),

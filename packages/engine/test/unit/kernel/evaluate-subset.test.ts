@@ -15,6 +15,7 @@ import {
   type Token,
 } from '../../../src/kernel/index.js';
 import { makeExecutionEffectContext } from '../../helpers/effect-context-test-helpers.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
 
 const sourceZone = asZoneId('source:none');
 const sinkZone = asZoneId('sink:none');
@@ -100,7 +101,7 @@ describe('evaluateSubset effect', () => {
       makeToken('t3', 3),
     ]);
 
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       evaluateSubset: {
         source: { query: 'tokensInZone', zone: sourceZone },
         subsetSize: 2,
@@ -117,10 +118,10 @@ describe('evaluateSubset effect', () => {
         },
         resultBind: '$bestScore',
         in: [
-          { setVar: { scope: 'global', var: 'winner', value: { _t: 2, ref: 'binding', name: '$bestScore' } } },
+          eff({ setVar: { scope: 'global', var: 'winner', value: { _t: 2, ref: 'binding', name: '$bestScore' } } }),
         ],
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state.globalVars.winner, 7);
@@ -136,7 +137,7 @@ describe('evaluateSubset effect', () => {
       bindings: { $extra: extraTokens },
     };
 
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       evaluateSubset: {
         source: {
           query: 'concat',
@@ -158,9 +159,9 @@ describe('evaluateSubset effect', () => {
           },
         },
         resultBind: '$bestScore',
-        in: [{ setVar: { scope: 'global', var: 'winner', value: { _t: 2, ref: 'binding', name: '$bestScore' } } }],
+        in: [eff({ setVar: { scope: 'global', var: 'winner', value: { _t: 2, ref: 'binding', name: '$bestScore' } } })],
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state.globalVars.winner, 13);
@@ -173,7 +174,7 @@ describe('evaluateSubset effect', () => {
       makeToken('t3', 3),
     ]);
 
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       evaluateSubset: {
         source: { query: 'tokensInZone', zone: sourceZone },
         subsetSize: 2,
@@ -191,7 +192,7 @@ describe('evaluateSubset effect', () => {
         resultBind: '$bestScore',
         bestSubsetBind: '$bestSubset',
         in: [
-          {
+          eff({
             removeByPriority: {
               budget: 2,
               groups: [
@@ -202,10 +203,10 @@ describe('evaluateSubset effect', () => {
                 },
               ],
             },
-          },
+          }),
         ],
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.deepEqual(
@@ -221,13 +222,13 @@ describe('evaluateSubset effect', () => {
       makeToken('t3', 3),
     ]);
 
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       evaluateSubset: {
         source: { query: 'tokensInZone', zone: sourceZone },
         subsetSize: 2,
         subsetBind: '$subset',
         compute: [
-          {
+          eff({
             removeByPriority: {
               budget: 2,
               groups: [
@@ -239,15 +240,15 @@ describe('evaluateSubset effect', () => {
                 },
               ],
             },
-          },
+          }),
         ],
         scoreExpr: { _t: 2, ref: 'binding', name: '$removed' },
         resultBind: '$bestScore',
         in: [
-          { setVar: { scope: 'global', var: 'winner', value: { _t: 2, ref: 'binding', name: '$bestScore' } } },
+          eff({ setVar: { scope: 'global', var: 'winner', value: { _t: 2, ref: 'binding', name: '$bestScore' } } }),
         ],
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state.globalVars.winner, 2);
@@ -261,7 +262,7 @@ describe('evaluateSubset effect', () => {
       makeToken('t3', 1),
     ]);
 
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       evaluateSubset: {
         source: { query: 'tokensInZone', zone: sourceZone },
         subsetSize: 2,
@@ -279,7 +280,7 @@ describe('evaluateSubset effect', () => {
         resultBind: '$bestScore',
         bestSubsetBind: '$bestSubset',
         in: [
-          {
+          eff({
             removeByPriority: {
               budget: 2,
               groups: [
@@ -290,10 +291,10 @@ describe('evaluateSubset effect', () => {
                 },
               ],
             },
-          },
+          }),
         ],
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.deepEqual(
@@ -304,7 +305,7 @@ describe('evaluateSubset effect', () => {
 
   it('supports edge cases K=N and K=0', () => {
     const kEqualsN = makeCtx([makeToken('t1', 2), makeToken('t2', 3)]);
-    const fullSetEffect: EffectAST = {
+    const fullSetEffect: EffectAST = eff({
       evaluateSubset: {
         source: { query: 'tokensInZone', zone: sourceZone },
         subsetSize: 2,
@@ -320,14 +321,14 @@ describe('evaluateSubset effect', () => {
           },
         },
         resultBind: '$bestScore',
-        in: [{ setVar: { scope: 'global', var: 'winner', value: { _t: 2, ref: 'binding', name: '$bestScore' } } }],
+        in: [eff({ setVar: { scope: 'global', var: 'winner', value: { _t: 2, ref: 'binding', name: '$bestScore' } } })],
       },
-    };
+    });
     const fullSetResult = applyEffect(fullSetEffect, kEqualsN);
     assert.equal(fullSetResult.state.globalVars.winner, 5);
 
     const kZero = makeCtx([]);
-    const emptySubsetEffect: EffectAST = {
+    const emptySubsetEffect: EffectAST = eff({
       evaluateSubset: {
         source: { query: 'tokensInZone', zone: sourceZone },
         subsetSize: 0,
@@ -335,16 +336,16 @@ describe('evaluateSubset effect', () => {
         compute: [],
         scoreExpr: { _t: 5, aggregate: { op: 'count', query: { query: 'binding', name: '$subset' } } },
         resultBind: '$bestScore',
-        in: [{ setVar: { scope: 'global', var: 'winner', value: { _t: 2, ref: 'binding', name: '$bestScore' } } }],
+        in: [eff({ setVar: { scope: 'global', var: 'winner', value: { _t: 2, ref: 'binding', name: '$bestScore' } } })],
       },
-    };
+    });
     const emptySubsetResult = applyEffect(emptySubsetEffect, kZero);
     assert.equal(emptySubsetResult.state.globalVars.winner, 0);
   });
 
   it('throws when K > N', () => {
     const ctx = makeCtx([makeToken('t1', 1), makeToken('t2', 2)]);
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       evaluateSubset: {
         source: { query: 'tokensInZone', zone: sourceZone },
         subsetSize: 3,
@@ -354,14 +355,14 @@ describe('evaluateSubset effect', () => {
         resultBind: '$bestScore',
         in: [],
       },
-    };
+    });
 
     assert.throws(() => applyEffect(effect, ctx), /evaluateSubset requires 0 <= subsetSize <= source item count/);
   });
 
   it('throws when C(N, K) exceeds the hard cap', () => {
     const ctx = makeCtx([]);
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       evaluateSubset: {
         source: { query: 'intsInRange', min: 1, max: 30 },
         subsetSize: 15,
@@ -371,24 +372,24 @@ describe('evaluateSubset effect', () => {
         resultBind: '$bestScore',
         in: [],
       },
-    };
+    });
 
     assert.throws(() => applyEffect(effect, ctx), /combination count exceeds safety cap/);
   });
 
   it('sandboxes compute state mutations per subset', () => {
     const ctx = makeCtx([], { winner: 0, scratch: 0 });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       evaluateSubset: {
         source: { query: 'intsInRange', min: 1, max: 3 },
         subsetSize: 1,
         subsetBind: '$subset',
-        compute: [{ addVar: { scope: 'global', var: 'scratch', delta: 1 } }],
+        compute: [eff({ addVar: { scope: 'global', var: 'scratch', delta: 1 } })],
         scoreExpr: { _t: 2, ref: 'gvar', var: 'scratch' },
         resultBind: '$bestScore',
-        in: [{ setVar: { scope: 'global', var: 'winner', value: { _t: 2, ref: 'binding', name: '$bestScore' } } }],
+        in: [eff({ setVar: { scope: 'global', var: 'winner', value: { _t: 2, ref: 'binding', name: '$bestScore' } } })],
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state.globalVars.winner, 1);

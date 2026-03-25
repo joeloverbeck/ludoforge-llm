@@ -13,6 +13,7 @@ import {
   type GameState,
   type Move,
 } from '../../../src/kernel/index.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
 
 const makeBaseDef = (card: EventCardDef): GameDef =>
   ({
@@ -65,22 +66,22 @@ const dualUseCard: EventCardDef = {
   id: 'card-dual',
   title: 'Dual Use Card',
   sideMode: 'dual',
-  unshaded: { effects: [{ addVar: { scope: 'global', var: 'x', delta: 1 } }] },
-  shaded: { effects: [{ addVar: { scope: 'global', var: 'x', delta: -1 } }] },
+  unshaded: { effects: [eff({ addVar: { scope: 'global', var: 'x', delta: 1 } })] },
+  shaded: { effects: [eff({ addVar: { scope: 'global', var: 'x', delta: -1 } })] },
 };
 
 const singleUnshadedCard: EventCardDef = {
   id: 'card-single-u',
   title: 'Single Unshaded',
   sideMode: 'single',
-  unshaded: { effects: [{ addVar: { scope: 'global', var: 'x', delta: 1 } }] },
+  unshaded: { effects: [eff({ addVar: { scope: 'global', var: 'x', delta: 1 } })] },
 };
 
 const singleShadedCard: EventCardDef = {
   id: 'card-single-s',
   title: 'Single Shaded',
   sideMode: 'single',
-  shaded: { effects: [{ addVar: { scope: 'global', var: 'x', delta: -1 } }] },
+  shaded: { effects: [eff({ addVar: { scope: 'global', var: 'x', delta: -1 } })] },
 };
 
 const dualUseBranchedCard: EventCardDef = {
@@ -90,11 +91,11 @@ const dualUseBranchedCard: EventCardDef = {
   unshaded: {
     effects: [],
     branches: [
-      { id: 'branch-a', effects: [{ addVar: { scope: 'global', var: 'x', delta: 1 } }] },
-      { id: 'branch-b', effects: [{ addVar: { scope: 'global', var: 'x', delta: 2 } }] },
+      { id: 'branch-a', effects: [eff({ addVar: { scope: 'global', var: 'x', delta: 1 } })] },
+      { id: 'branch-b', effects: [eff({ addVar: { scope: 'global', var: 'x', delta: 2 } })] },
     ],
   },
-  shaded: { effects: [{ addVar: { scope: 'global', var: 'x', delta: -1 } }] },
+  shaded: { effects: [eff({ addVar: { scope: 'global', var: 'x', delta: -1 } })] },
 };
 
 const dualUseSingleBranchCard: EventCardDef = {
@@ -104,10 +105,10 @@ const dualUseSingleBranchCard: EventCardDef = {
   unshaded: {
     effects: [],
     branches: [
-      { id: 'only-branch', effects: [{ addVar: { scope: 'global', var: 'x', delta: 1 } }] },
+      { id: 'only-branch', effects: [eff({ addVar: { scope: 'global', var: 'x', delta: 1 } })] },
     ],
   },
-  shaded: { effects: [{ addVar: { scope: 'global', var: 'x', delta: -1 } }] },
+  shaded: { effects: [eff({ addVar: { scope: 'global', var: 'x', delta: -1 } })] },
 };
 
 const makeMove = (params: Move['params'] = {}): Move => ({

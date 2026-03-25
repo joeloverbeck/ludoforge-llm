@@ -36,6 +36,8 @@ import {
   makeCardSeatOrderRuntimeZones,
   makeCardSeatOrderTurnOrder,
 } from '../../helpers/card-seat-order-fixtures.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
+import { asTaggedGameDef } from '../../helpers/gamedef-fixtures.js';
 
 const makeBaseDef = (overrides?: {
   actions?: readonly ActionDef[];
@@ -43,7 +45,7 @@ const makeBaseDef = (overrides?: {
   globalVars?: GameDef['globalVars'];
   zones?: GameDef['zones'];
 }): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'legal-moves-test', players: { min: 2, max: 2 } },
     seats: [{ id: '0' }, { id: '1' }, { id: '2' }, { id: '3' }],
     constants: {},
@@ -62,7 +64,7 @@ const makeBaseDef = (overrides?: {
     actionPipelines: overrides?.actionPipelines,
     triggers: [],
     terminal: { conditions: [] },
-  }) as unknown as GameDef;
+  });
 
 const makeBaseState = (overrides?: Partial<GameState>): GameState => ({
   globalVars: {},
@@ -126,7 +128,7 @@ const makeEventLegalMovesFixture = (card: EventCardDef): { def: GameDef; state: 
     limits: [],
     capabilities: ['cardEvent'],
   };
-  const def = {
+  const def = asTaggedGameDef({
     ...makeBaseDef({
       actions: [eventAction],
       zones: [
@@ -142,7 +144,7 @@ const makeEventLegalMovesFixture = (card: EventCardDef): { def: GameDef; state: 
         cards: [card],
       },
     ],
-  } as unknown as GameDef;
+  });
   const state = makeBaseState({
     zones: {
       'draw:none': [],
@@ -234,7 +236,7 @@ phase: [asPhaseId('main')],
         {
           stage: 'selectSpaces',
           effects: [
-            {
+            eff({
               chooseN: {
                 internalDecisionId: 'decision:$spaces',
                 bind: '$spaces',
@@ -242,7 +244,7 @@ phase: [asPhaseId('main')],
                 min: 1,
                 max: 10,
               },
-            } as GameDef['actions'][number]['effects'][number],
+            }) as GameDef['actions'][number]['effects'][number],
           ],
         },
       ],
@@ -304,7 +306,7 @@ phase: [asPhaseId('main')],
       atomicity: 'partial',
     };
 
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({
         actions: [passAction, operationAction, limitedOperationAction],
         actionPipelines: [operationProfile],
@@ -329,7 +331,7 @@ phase: [asPhaseId('main')],
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const state = makeBaseState({
       playerCount: 3,
@@ -372,7 +374,7 @@ phase: [asPhaseId('main')],
       limits: [],
     };
 
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({ actions: [action] }),
       seats: [{ id: 'us' }, { id: 'nva' }],
       turnOrder: {
@@ -390,7 +392,7 @@ phase: [asPhaseId('main')],
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const state = makeBaseState({
       turnOrderState: {
@@ -428,7 +430,7 @@ phase: [asPhaseId('main')],
   });
 
   it('throws when initialization firstEligible cannot resolve from configured seat order', () => {
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef(),
       seats: [{ id: 'us' }, { id: 'nva' }],
       turnOrder: {
@@ -446,7 +448,7 @@ phase: [asPhaseId('main')],
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const state = makeBaseState();
 
@@ -460,7 +462,7 @@ phase: [asPhaseId('main')],
   });
 
   it('initializes card-driven active player from mapped card seat-order metadata', () => {
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef(),
       seats: [{ id: 'us' }, { id: 'nva' }],
       eventDecks: [makeCardSeatOrderEventDeck([{ id: 'card-1', seatOrder: ['US', 'NVA'] }])],
@@ -468,7 +470,7 @@ phase: [asPhaseId('main')],
         mapping: { US: 'us', NVA: 'nva' },
         eligibilitySeats: ['nva', 'us'],
       }),
-    } as unknown as GameDef;
+    });
 
     const state = makeBaseState({
       zones: makeCardSeatOrderRuntimeZones({ playedCardId: 'card-1' }),
@@ -483,7 +485,7 @@ phase: [asPhaseId('main')],
   });
 
   it('throws when played card token cardId cannot resolve to event card for metadata seat-order', () => {
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef(),
       seats: [{ id: 'us' }, { id: 'nva' }],
       eventDecks: [makeCardSeatOrderEventDeck([{ id: 'card-1', seatOrder: ['US', 'NVA'] }])],
@@ -491,7 +493,7 @@ phase: [asPhaseId('main')],
         mapping: { US: 'us', NVA: 'nva' },
         eligibilitySeats: ['nva', 'us'],
       }),
-    } as unknown as GameDef;
+    });
 
     const state = makeBaseState({
       zones: makeCardSeatOrderRuntimeZones({ playedCardId: 'missing-card' }),
@@ -508,7 +510,7 @@ phase: [asPhaseId('main')],
   });
 
   it('throws when card metadata seat-order resolves duplicate seats at runtime', () => {
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef(),
       seats: [{ id: 'us' }, { id: 'nva' }],
       eventDecks: [makeCardSeatOrderEventDeck([{ id: 'card-1', seatOrder: ['US', 'US'] }])],
@@ -516,7 +518,7 @@ phase: [asPhaseId('main')],
         mapping: { US: 'us' },
         eligibilitySeats: ['nva', 'us'],
       }),
-    } as unknown as GameDef;
+    });
 
     const state = makeBaseState({
       zones: makeCardSeatOrderRuntimeZones({ playedCardId: 'card-1' }),
@@ -544,7 +546,7 @@ phase: [asPhaseId('main')],
   });
 
   it('throws when card metadata seat-order distinct raw values collapse to duplicate mapped seats at runtime', () => {
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef(),
       seats: [{ id: 'us' }, { id: 'nva' }],
       eventDecks: [makeCardSeatOrderEventDeck([{ id: 'card-1', seatOrder: ['US', 'UNITED_STATES'] }])],
@@ -552,7 +554,7 @@ phase: [asPhaseId('main')],
         mapping: { US: 'us', UNITED_STATES: 'us' },
         eligibilitySeats: ['nva', 'us'],
       }),
-    } as unknown as GameDef;
+    });
 
     const state = makeBaseState({
       zones: makeCardSeatOrderRuntimeZones({ playedCardId: 'card-1' }),
@@ -580,7 +582,7 @@ phase: [asPhaseId('main')],
   });
 
   it('throws when card metadata seat-order resolves fewer than policy distinct seats at runtime', () => {
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef(),
       seats: [{ id: 'us' }, { id: 'nva' }],
       eventDecks: [makeCardSeatOrderEventDeck([{ id: 'card-1', seatOrder: ['US'] }])],
@@ -588,7 +590,7 @@ phase: [asPhaseId('main')],
         mapping: { US: 'us' },
         eligibilitySeats: ['nva', 'us'],
       }),
-    } as unknown as GameDef;
+    });
 
     const state = makeBaseState({
       zones: makeCardSeatOrderRuntimeZones({ playedCardId: 'card-1' }),
@@ -650,7 +652,7 @@ phase: [asPhaseId('main')],
       limits: [],
     };
 
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({
         actions: [passAction, operationAction, limitedOperationAction],
       }),
@@ -674,7 +676,7 @@ phase: [asPhaseId('main')],
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const state = makeBaseState({
       playerCount: 3,
@@ -717,7 +719,7 @@ phase: [asPhaseId('main')],
   });
 
   it('lets a ready required free-operation grant override option-matrix gating for the active seat', () => {
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({
         actions: [
           {
@@ -751,7 +753,7 @@ phase: [asPhaseId('main')],
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const state = makeBaseState({
       playerCount: 2,
@@ -795,7 +797,7 @@ phase: [asPhaseId('main')],
   });
 
   it('surfaces required special-activity grants as direct free moves even without executionContext', () => {
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({
         actions: [
           {
@@ -829,7 +831,7 @@ phase: [asPhaseId('main')],
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const state = makeCardDrivenState({
       currentCard: {
@@ -1107,7 +1109,7 @@ phase: [asPhaseId('main')],
       limits: [],
     };
 
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({ actions: [action], globalVars: [] }),
       turnOrder: {
         type: 'cardDriven',
@@ -1124,7 +1126,7 @@ phase: [asPhaseId('main')],
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const state = makeCardDrivenState({
       pendingFreeOperationGrants: [
@@ -1297,7 +1299,7 @@ phase: [asPhaseId('main')],
       stages: [
         {
           effects: [
-            {
+            eff({
               chooseN: {
                 internalDecisionId: 'decision:$spaces',
                 bind: '$spaces',
@@ -1305,7 +1307,7 @@ phase: [asPhaseId('main')],
                 min: 1,
                 max: 1,
               },
-            } as GameDef['actions'][number]['effects'][number],
+            }) as GameDef['actions'][number]['effects'][number],
           ],
         },
       ],
@@ -1340,13 +1342,13 @@ phase: [asPhaseId('main')],
       stages: [
         {
           effects: [
-            {
+            eff({
               chooseOne: {
                 internalDecisionId: 'decision:$space',
                 bind: '$space',
                 options: { query: 'enums', values: [] },
               },
-            } as GameDef['actions'][number]['effects'][number],
+            }) as GameDef['actions'][number]['effects'][number],
           ],
         },
       ],
@@ -1549,12 +1551,12 @@ phase: [asPhaseId('main')],
       stages: [
         {
           effects: [
-            {
+            eff({
               if: {
                 when: { op: '==', left: { _t: 2, ref: 'gvar', var: 'missingVar' }, right: 1 },
                 then: [],
               },
-            } as GameDef['actions'][number]['effects'][number],
+            }) as GameDef['actions'][number]['effects'][number],
           ],
         },
       ],
@@ -1603,7 +1605,7 @@ phase: [asPhaseId('main')],
       atomicity: 'partial',
     };
 
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({ actions: [action], actionPipelines: [profile] }),
       turnOrder: {
         type: 'cardDriven',
@@ -1621,7 +1623,7 @@ phase: [asPhaseId('main')],
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const state = makeBaseState({
       turnOrderState: {
@@ -1705,7 +1707,7 @@ phase: [asPhaseId('main')],
       atomicity: 'partial',
     };
 
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({
         actions: [action],
         actionPipelines: [profile],
@@ -1730,7 +1732,7 @@ phase: [asPhaseId('main')],
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const state = makeBaseState({
       zones: { 'board:cambodia': [], 'board:vietnam': [] },
@@ -1809,7 +1811,7 @@ phase: [asPhaseId('main')],
       atomicity: 'partial',
     };
 
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({
         actions: [action],
         actionPipelines: [profile],
@@ -1834,7 +1836,7 @@ phase: [asPhaseId('main')],
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const state = makeBaseState({
       zones: { 'board:cambodia': [], 'board:vietnam': [] },
@@ -2075,13 +2077,13 @@ phase: [asPhaseId('main')],
       stages: [
         {
           effects: [
-            {
+            eff({
               chooseOne: {
                 internalDecisionId: 'decision:$target',
                 bind: '$target',
                 options: { query: 'enums', values: ['a'] },
               },
-            } as GameDef['actions'][number]['effects'][number],
+            }) as GameDef['actions'][number]['effects'][number],
           ],
         },
       ],
@@ -2119,20 +2121,20 @@ phase: [asPhaseId('main')],
       stages: [
         {
           effects: [
-            {
+            eff({
               chooseOne: {
                 internalDecisionId: 'decision:$target',
                 bind: '$target',
                 options: { query: 'enums', values: ['a'] },
               },
-            } as GameDef['actions'][number]['effects'][number],
+            }) as GameDef['actions'][number]['effects'][number],
           ],
         },
       ],
       atomicity: 'partial',
     };
 
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({ actions: [action], actionPipelines: [profile] }),
       turnOrder: {
         type: 'cardDriven',
@@ -2150,7 +2152,7 @@ phase: [asPhaseId('main')],
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const state = makeCardDrivenState({
       pendingFreeOperationGrants: [
@@ -2197,20 +2199,20 @@ phase: [asPhaseId('main')],
       stages: [
         {
           effects: [
-            {
+            eff({
               chooseOne: {
                 internalDecisionId: 'decision:$target',
                 bind: '$target',
                 options: { query: 'enums', values: [] },
               },
-            } as GameDef['actions'][number]['effects'][number],
+            }) as GameDef['actions'][number]['effects'][number],
           ],
         },
       ],
       atomicity: 'partial',
     };
 
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({ actions: [action], actionPipelines: [profile] }),
       turnOrder: {
         type: 'cardDriven',
@@ -2228,7 +2230,7 @@ phase: [asPhaseId('main')],
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const state = makeCardDrivenState({
       pendingFreeOperationGrants: [
@@ -2271,19 +2273,19 @@ phase: [asPhaseId('main')],
       stages: [
         {
           effects: [
-            {
+            eff({
               chooseOne: {
                 internalDecisionId: 'decision:$target',
                 bind: '$target',
                 options: { query: 'enums', values: ['a'] },
               },
-            } as GameDef['actions'][number]['effects'][number],
-            {
+            }) as GameDef['actions'][number]['effects'][number],
+            eff({
               if: {
                 when: { op: '==', left: { _t: 2, ref: 'binding', name: '$missingBinding' }, right: 1 },
                 then: [],
               },
-            } as GameDef['actions'][number]['effects'][number],
+            }) as GameDef['actions'][number]['effects'][number],
           ],
         },
       ],
@@ -2317,19 +2319,19 @@ phase: [asPhaseId('main')],
       stages: [
         {
           effects: [
-            {
+            eff({
               chooseOne: {
                 internalDecisionId: 'decision:$target',
                 bind: '$target',
                 options: { query: 'enums', values: ['a'] },
               },
-            } as GameDef['actions'][number]['effects'][number],
-            {
+            }) as GameDef['actions'][number]['effects'][number],
+            eff({
               if: {
                 when: { op: '==', left: { _t: 2, ref: 'gvar', var: 'missingVar' }, right: 1 },
                 then: [],
               },
-            } as GameDef['actions'][number]['effects'][number],
+            }) as GameDef['actions'][number]['effects'][number],
           ],
         },
       ],
@@ -2349,24 +2351,24 @@ phase: [asPhaseId('main')],
       pre: null,
       cost: [],
       effects: [
-        {
+        eff({
           chooseOne: {
             internalDecisionId: 'decision:$target',
             bind: '$target',
             options: { query: 'enums', values: ['a'] },
           },
-        } as GameDef['actions'][number]['effects'][number],
-        {
+        }) as GameDef['actions'][number]['effects'][number],
+        eff({
           if: {
             when: { op: '==', left: { _t: 2, ref: 'binding', name: '$missingBinding' }, right: 1 },
             then: [],
           },
-        } as GameDef['actions'][number]['effects'][number],
+        }) as GameDef['actions'][number]['effects'][number],
       ],
       limits: [],
     };
 
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({ actions: [action] }),
       turnOrder: {
         type: 'cardDriven',
@@ -2384,7 +2386,7 @@ phase: [asPhaseId('main')],
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const state = makeCardDrivenState({
       pendingFreeOperationGrants: [
@@ -2415,24 +2417,24 @@ phase: [asPhaseId('main')],
       pre: null,
       cost: [],
       effects: [
-        {
+        eff({
           chooseOne: {
             internalDecisionId: 'decision:$target',
             bind: '$target',
             options: { query: 'enums', values: ['a'] },
           },
-        } as GameDef['actions'][number]['effects'][number],
-        {
+        }) as GameDef['actions'][number]['effects'][number],
+        eff({
           if: {
             when: { op: '==', left: { _t: 2, ref: 'gvar', var: 'missingVar' }, right: 1 },
             then: [],
           },
-        } as GameDef['actions'][number]['effects'][number],
+        }) as GameDef['actions'][number]['effects'][number],
       ],
       limits: [],
     };
 
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({ actions: [action] }),
       turnOrder: {
         type: 'cardDriven',
@@ -2450,7 +2452,7 @@ phase: [asPhaseId('main')],
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const state = makeCardDrivenState({
       pendingFreeOperationGrants: [
@@ -2480,7 +2482,7 @@ phase: [asPhaseId('main')],
       limits: [],
     };
 
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({ actions: [action] }),
       turnOrder: {
         type: 'cardDriven',
@@ -2498,7 +2500,7 @@ phase: [asPhaseId('main')],
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const state = makeBaseState({
       turnOrderState: {
@@ -2568,7 +2570,7 @@ phase: [asPhaseId('main')],
       atomicity: 'atomic',
     };
 
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({ actions: [action], actionPipelines: [profile] }),
       turnOrder: {
         type: 'cardDriven',
@@ -2585,7 +2587,7 @@ phase: [asPhaseId('main')],
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const state = makeCardDrivenState({
       pendingFreeOperationGrants: [
@@ -2628,7 +2630,7 @@ phase: [asPhaseId('main')],
       limits: [],
     };
 
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({ actions: [action] }),
       turnOrder: {
         type: 'cardDriven',
@@ -2645,7 +2647,7 @@ phase: [asPhaseId('main')],
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const state = makeBaseState({
       turnOrderState: {
@@ -2691,7 +2693,7 @@ phase: [asPhaseId('main')],
       limits: [],
     };
 
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({ actions: [action] }),
       turnOrder: {
         type: 'cardDriven',
@@ -2709,7 +2711,7 @@ phase: [asPhaseId('main')],
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const state = makeBaseState({
       turnOrderState: {
@@ -2755,7 +2757,7 @@ phase: [asPhaseId('main')],
       limits: [],
     };
 
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({ actions: [action] }),
       turnOrder: {
         type: 'cardDriven',
@@ -2773,7 +2775,7 @@ phase: [asPhaseId('main')],
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const state = makeBaseState({
       turnOrderState: {
@@ -2828,7 +2830,7 @@ phase: [asPhaseId('main')],
       limits: [],
     };
 
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({
         actions: [action],
         zones: [
@@ -2878,7 +2880,7 @@ phase: [asPhaseId('main')],
           atomicity: 'partial',
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const state = makeBaseState({
       zones: { 'board:none': [], 'city:none': [] },
@@ -2935,7 +2937,7 @@ phase: [asPhaseId('main')],
       limits: [],
     };
 
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({
         actions: [action],
         zones: [
@@ -2983,7 +2985,7 @@ phase: [asPhaseId('main')],
           atomicity: 'partial',
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const state = makeBaseState({
       zones: { 'board:none': [], 'city:none': [] },
@@ -3051,7 +3053,7 @@ phase: [asPhaseId('main')],
       limits: [],
     };
 
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({ actions: [passAction, action] }),
       turnOrder: {
         type: 'cardDriven',
@@ -3069,7 +3071,7 @@ phase: [asPhaseId('main')],
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const state = makeCardDrivenState({
       currentCard: {
@@ -3112,7 +3114,7 @@ phase: [asPhaseId('main')],
       limits: [],
     };
 
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({ actions: [action] }),
       turnOrder: {
         type: 'cardDriven',
@@ -3130,7 +3132,7 @@ phase: [asPhaseId('main')],
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const start = makeCardDrivenState({
       currentCard: {
@@ -3194,7 +3196,7 @@ phase: [asPhaseId('main')],
       atomicity: 'atomic',
     };
 
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({ actions: [action], actionPipelines: [profile] }),
       turnOrder: {
         type: 'cardDriven',
@@ -3212,7 +3214,7 @@ phase: [asPhaseId('main')],
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const state = makeCardDrivenState({
       currentCard: {
@@ -3283,7 +3285,7 @@ phase: [asPhaseId('main')],
       atomicity: 'partial',
     });
 
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({
         actions: [airLift, sweep],
         actionPipelines: [
@@ -3307,7 +3309,7 @@ phase: [asPhaseId('main')],
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const start = makeCardDrivenState({
       currentCard: {
@@ -3377,12 +3379,12 @@ phase: [asPhaseId('main')],
       sideMode: 'single',
       unshaded: {
         effects: [
-          {
+          eff({
             if: {
               when: { op: '==', left: { _t: 2, ref: 'binding', name: '$missing' }, right: 1 },
               then: [],
             },
-          } as GameDef['actions'][number]['effects'][number],
+          }) as GameDef['actions'][number]['effects'][number],
         ],
       },
     });
@@ -3406,13 +3408,13 @@ phase: [asPhaseId('main')],
       sideMode: 'single',
       unshaded: {
         effects: [
-          {
+          eff({
             chooseOne: {
               internalDecisionId: 'decision:$target',
               bind: '$target',
               options: { query: 'enums', values: ['a'] },
             },
-          } as GameDef['actions'][number]['effects'][number],
+          }) as GameDef['actions'][number]['effects'][number],
         ],
       },
     });
@@ -3441,7 +3443,7 @@ phase: [asPhaseId('main')],
       sideMode: 'single',
       unshaded: {
         effects: [
-          {
+          eff({
             chooseN: {
               internalDecisionId: 'decision:$targets',
               bind: '$targets',
@@ -3449,7 +3451,7 @@ phase: [asPhaseId('main')],
               min: 2,
               max: 2,
             },
-          } as GameDef['actions'][number]['effects'][number],
+          }) as GameDef['actions'][number]['effects'][number],
         ],
       },
     });
@@ -3481,13 +3483,13 @@ phase: [asPhaseId('main')],
       sideMode: 'single',
       unshaded: {
         effects: [
-          {
+          eff({
             chooseOne: {
               internalDecisionId: 'decision:$target',
               bind: '$target',
               options: { query: 'enums', values: [] },
             },
-          } as GameDef['actions'][number]['effects'][number],
+          }) as GameDef['actions'][number]['effects'][number],
         ],
       },
     });
@@ -3502,12 +3504,12 @@ phase: [asPhaseId('main')],
       sideMode: 'single',
       unshaded: {
         effects: [
-          {
+          eff({
             if: {
               when: { op: '==', left: { _t: 2, ref: 'gvar', var: 'missingVar' }, right: 1 },
               then: [],
             },
-          } as GameDef['actions'][number]['effects'][number],
+          }) as GameDef['actions'][number]['effects'][number],
         ],
       },
     });
@@ -3639,13 +3641,13 @@ describe('legalMoves plain-action feasibility probe', () => {
       pre: null,
       cost: [],
       effects: [
-        {
+        eff({
           chooseOne: {
             internalDecisionId: 'decision:$target',
             bind: '$target',
             options: { query: 'enums', values: [] },
           },
-        } as GameDef['actions'][number]['effects'][number],
+        }) as GameDef['actions'][number]['effects'][number],
       ],
       limits: [],
     };
@@ -3667,13 +3669,13 @@ describe('legalMoves plain-action feasibility probe', () => {
       pre: null,
       cost: [],
       effects: [
-        {
+        eff({
           chooseOne: {
             internalDecisionId: 'decision:$target',
             bind: '$target',
             options: { query: 'enums', values: ['loc1', 'loc2'] },
           },
-        } as GameDef['actions'][number]['effects'][number],
+        }) as GameDef['actions'][number]['effects'][number],
       ],
       limits: [],
     };
@@ -3696,13 +3698,13 @@ describe('legalMoves plain-action feasibility probe', () => {
       pre: null,
       cost: [],
       effects: [
-        {
+        eff({
           chooseOne: {
             internalDecisionId: 'decision:$target',
             bind: '$target',
             options: { query: 'enums', values: ['loc1'] },
           },
-        } as GameDef['actions'][number]['effects'][number],
+        }) as GameDef['actions'][number]['effects'][number],
       ],
       limits: [],
     };
@@ -3739,7 +3741,7 @@ describe('legalMoves plain-action feasibility probe', () => {
         {
           stage: 'selectSpaces',
           effects: [
-            {
+            eff({
               chooseN: {
                 internalDecisionId: 'decision:$spaces',
                 bind: '$spaces',
@@ -3747,7 +3749,7 @@ describe('legalMoves plain-action feasibility probe', () => {
                 min: 1,
                 max: 10,
               },
-            } as GameDef['actions'][number]['effects'][number],
+            }) as GameDef['actions'][number]['effects'][number],
           ],
         },
       ],
@@ -3847,7 +3849,7 @@ describe('legalMoves seat-resolution lifecycle architecture guard', () => {
       limits: [],
     };
 
-    const def = {
+    const def = asTaggedGameDef({
       ...makeBaseDef({
         actions: [action],
         zones: [
@@ -3874,7 +3876,7 @@ describe('legalMoves seat-resolution lifecycle architecture guard', () => {
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const baseRuntime = {
       seatOrder: ['0', '1'],

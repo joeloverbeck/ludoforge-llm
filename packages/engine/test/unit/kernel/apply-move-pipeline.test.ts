@@ -16,6 +16,7 @@ import {
 } from '../../../src/kernel/index.js';
 import type { ReadContext } from '../../../src/kernel/eval-context.js';
 import { makeEvalContext } from '../../helpers/eval-context-test-helpers.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
 
 const makeDef = (overrides?: {
   readonly actionPipelines?: readonly ActionPipelineDef[];
@@ -204,7 +205,7 @@ describe('toExecutionPipeline()', () => {
       params: [],
       pre: null,
       cost: [],
-      effects: [{ setVar: { scope: 'global', var: 'resources', value: 1 } }],
+      effects: [eff({ setVar: { scope: 'global', var: 'resources', value: 1 } })],
       limits: [],
     };
     const profile: ActionPipelineDef = {

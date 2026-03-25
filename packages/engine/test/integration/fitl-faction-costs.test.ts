@@ -15,6 +15,7 @@ import {
 import { findDeep } from '../helpers/ast-search-helpers.js';
 import { makeExecutionEffectContext, type EffectContextTestOverrides } from '../helpers/effect-context-test-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 const mapZones: readonly ZoneDef[] = [
   { id: asZoneId('quangTri:none'), owner: 'none', visibility: 'public', ordering: 'set', category: 'province', attributes: { population: 1, econ: 0, terrainTags: ['highland'], country: 'southVietnam', coastal: true } },
@@ -78,7 +79,7 @@ describe('FITL per-province-city-cost macro', () => {
   describe('runtime behavior', () => {
     it('charges cost for Province space', () => {
       const effects: readonly EffectAST[] = [
-        { if: {
+        eff({ if: {
           when: {
             op: 'and',
             args: [
@@ -86,8 +87,8 @@ describe('FITL per-province-city-cost macro', () => {
               { op: '!=', left: { _t: 2 as const, ref: 'zoneProp', zone: 'quangTri:none', prop: 'category' }, right: 'loc' },
             ],
           },
-          then: [{ addVar: { scope: 'global', var: 'resources', delta: -3 } }],
-        } },
+          then: [eff({ addVar: { scope: 'global', var: 'resources', delta: -3 } })],
+        } }),
       ];
 
       const ctx = makeCtx({ bindings: { __freeOperation: false } });
@@ -97,7 +98,7 @@ describe('FITL per-province-city-cost macro', () => {
 
     it('charges cost for City space', () => {
       const effects: readonly EffectAST[] = [
-        { if: {
+        eff({ if: {
           when: {
             op: 'and',
             args: [
@@ -105,8 +106,8 @@ describe('FITL per-province-city-cost macro', () => {
               { op: '!=', left: { _t: 2 as const, ref: 'zoneProp', zone: 'saigon:none', prop: 'category' }, right: 'loc' },
             ],
           },
-          then: [{ addVar: { scope: 'global', var: 'resources', delta: -3 } }],
-        } },
+          then: [eff({ addVar: { scope: 'global', var: 'resources', delta: -3 } })],
+        } }),
       ];
 
       const ctx = makeCtx({ bindings: { __freeOperation: false } });
@@ -116,7 +117,7 @@ describe('FITL per-province-city-cost macro', () => {
 
     it('does NOT charge cost for LoC space', () => {
       const effects: readonly EffectAST[] = [
-        { if: {
+        eff({ if: {
           when: {
             op: 'and',
             args: [
@@ -124,8 +125,8 @@ describe('FITL per-province-city-cost macro', () => {
               { op: '!=', left: { _t: 2 as const, ref: 'zoneProp', zone: 'route1:none', prop: 'category' }, right: 'loc' },
             ],
           },
-          then: [{ addVar: { scope: 'global', var: 'resources', delta: -3 } }],
-        } },
+          then: [eff({ addVar: { scope: 'global', var: 'resources', delta: -3 } })],
+        } }),
       ];
 
       const ctx = makeCtx({ bindings: { __freeOperation: false } });
@@ -135,7 +136,7 @@ describe('FITL per-province-city-cost macro', () => {
 
     it('skips cost when __freeOperation is true', () => {
       const effects: readonly EffectAST[] = [
-        { if: {
+        eff({ if: {
           when: {
             op: 'and',
             args: [
@@ -143,8 +144,8 @@ describe('FITL per-province-city-cost macro', () => {
               { op: '!=', left: { _t: 2 as const, ref: 'zoneProp', zone: 'quangTri:none', prop: 'category' }, right: 'loc' },
             ],
           },
-          then: [{ addVar: { scope: 'global', var: 'resources', delta: -3 } }],
-        } },
+          then: [eff({ addVar: { scope: 'global', var: 'resources', delta: -3 } })],
+        } }),
       ];
 
       const ctx = makeCtx({ bindings: { __freeOperation: true } });

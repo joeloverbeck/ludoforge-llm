@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import { compileGameSpecToGameDef, parseGameSpec } from '../../src/cnl/index.js';
 import type { GameDef } from '../../src/kernel/index.js';
+import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
 import { readCompilerFixture } from '../helpers/production-spec-helpers.js';
 
 interface ValidCompileGolden {
@@ -19,7 +20,7 @@ interface MalformedCompileGolden {
   }[];
 }
 
-const readCompilerGolden = <T>(name: string): T => JSON.parse(readCompilerFixture(name)) as T;
+const readCompilerGolden = <T>(name: string): T => tagEffectAsts(JSON.parse(readCompilerFixture(name))) as T;
 
 describe('compiler golden fixtures', () => {
   it('matches full valid GameSpecDoc -> GameDef golden snapshot', () => {

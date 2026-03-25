@@ -1,4 +1,5 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
+import { createToken, setVar, setMarker, setGlobalMarker } from '../kernel/ast-builders.js';
 import { validateDataAssetEnvelope } from '../kernel/data-assets.js';
 import { RuntimeTableConstraintSchema } from '../kernel/schemas-core.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
@@ -585,32 +586,26 @@ const buildScenarioSetupEffects = ({
   const effects: EffectAST[] = [];
   for (const entry of scenario.initializations ?? []) {
     if ('var' in entry) {
-      effects.push({
-        setVar: {
-          scope: 'global',
-          var: entry.var,
-          value: entry.value,
-        },
-      });
+      effects.push(setVar({
+        scope: 'global',
+        var: entry.var,
+        value: entry.value,
+      }));
       continue;
     }
     if ('spaceId' in entry) {
-      effects.push({
-        setMarker: {
-          space: entry.spaceId,
-          marker: entry.markerId,
-          state: entry.state,
-        },
-      });
+      effects.push(setMarker({
+        space: entry.spaceId,
+        marker: entry.markerId,
+        state: entry.state,
+      }));
       continue;
     }
     if ('markerId' in entry) {
-      effects.push({
-        setGlobalMarker: {
-          marker: entry.markerId,
-          state: entry.state,
-        },
-      });
+      effects.push(setGlobalMarker({
+        marker: entry.markerId,
+        state: entry.state,
+      }));
     }
   }
   const usedByPieceType = new Map<string, number>();
@@ -641,13 +636,11 @@ const buildScenarioSetupEffects = ({
     }
     const props = resolveScenarioTokenProps(pieceType, placement.status);
     for (let index = 0; index < placement.count; index += 1) {
-      effects.push({
-        createToken: {
-          type: placement.pieceTypeId,
-          zone: placement.spaceId,
-          ...(Object.keys(props).length === 0 ? {} : { props }),
-        },
-      });
+      effects.push(createToken({
+        type: placement.pieceTypeId,
+        zone: placement.spaceId,
+        ...(Object.keys(props).length === 0 ? {} : { props }),
+      }));
     }
     usedByPieceType.set(placement.pieceTypeId, (usedByPieceType.get(placement.pieceTypeId) ?? 0) + placement.count);
   }
@@ -674,13 +667,11 @@ const buildScenarioSetupEffects = ({
 
     const props = resolveScenarioTokenProps(pieceType, undefined);
     for (let count = 0; count < outOfPlay.count; count += 1) {
-      effects.push({
-        createToken: {
-          type: outOfPlay.pieceTypeId,
-          zone: pool.outOfPlayZoneId,
-          ...(Object.keys(props).length === 0 ? {} : { props }),
-        },
-      });
+      effects.push(createToken({
+        type: outOfPlay.pieceTypeId,
+        zone: pool.outOfPlayZoneId,
+        ...(Object.keys(props).length === 0 ? {} : { props }),
+      }));
     }
     usedByPieceType.set(outOfPlay.pieceTypeId, (usedByPieceType.get(outOfPlay.pieceTypeId) ?? 0) + outOfPlay.count);
   }
@@ -711,13 +702,11 @@ const buildScenarioSetupEffects = ({
     }
     const props = resolveScenarioTokenProps(pieceType, undefined);
     for (let count = 0; count < remaining; count += 1) {
-      effects.push({
-        createToken: {
-          type: pieceTypeId,
-          zone: pool.availableZoneId,
-          ...(Object.keys(props).length === 0 ? {} : { props }),
-        },
-      });
+      effects.push(createToken({
+        type: pieceTypeId,
+        zone: pool.availableZoneId,
+        ...(Object.keys(props).length === 0 ? {} : { props }),
+      }));
     }
   }
 

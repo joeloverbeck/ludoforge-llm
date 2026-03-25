@@ -33,12 +33,14 @@ import {
   createSequenceContextMismatchZoneState,
   createSequenceContextMismatchZones,
 } from '../../helpers/free-operation-sequence-context-fixtures.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
+import { asTaggedGameDef } from '../../helpers/gamedef-fixtures.js';
 
 const makeBaseDef = (overrides?: {
   actions?: readonly ActionDef[];
   actionPipelines?: readonly ActionPipelineDef[];
 }): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'move-decision-sequence-test', players: { min: 2, max: 2 } },
     seats: [{ id: '0' }, { id: '1' }, { id: '2' }, { id: '3' }],
     constants: {},
@@ -52,7 +54,7 @@ const makeBaseDef = (overrides?: {
     actionPipelines: overrides?.actionPipelines,
     triggers: [],
     terminal: { conditions: [] },
-  }) as unknown as GameDef;
+  });
 
 const makeBaseState = (overrides?: Partial<GameState>): GameState => ({
   globalVars: {},
@@ -102,13 +104,13 @@ phase: [asPhaseId('main')],
       stages: [
         {
           effects: [
-            {
+            eff({
               chooseOne: {
                 internalDecisionId: 'decision:$target',
                 bind: '$target',
                 options: { query: 'enums', values: ['a', 'b'] },
               },
-            } as GameDef['actions'][number]['effects'][number],
+            }) as GameDef['actions'][number]['effects'][number],
           ],
         },
       ],
@@ -144,13 +146,13 @@ phase: [asPhaseId('main')],
       stages: [
         {
           effects: [
-            {
+            eff({
               chooseOne: {
                 internalDecisionId: 'decision:$target',
                 bind: '$target',
                 options: { query: 'enums', values: ['a', 'b'] },
               },
-            } as GameDef['actions'][number]['effects'][number],
+            }) as GameDef['actions'][number]['effects'][number],
           ],
         },
       ],
@@ -203,22 +205,22 @@ phase: [asPhaseId('main')],
       pre: null,
       cost: [],
       effects: [
-        {
+        eff({
           rollRandom: {
             bind: '$roll',
             min: 1,
             max: 6,
             in: [
-              {
+              eff({
                 chooseOne: {
                   internalDecisionId: 'decision:$target',
                   bind: '$target',
                   options: { query: 'enums', values: ['a', 'b'] },
                 },
-              } as GameDef['actions'][number]['effects'][number],
+              }) as GameDef['actions'][number]['effects'][number],
             ],
           },
-        } as GameDef['actions'][number]['effects'][number],
+        }) as GameDef['actions'][number]['effects'][number],
       ],
       limits: [],
     };
@@ -244,38 +246,38 @@ phase: [asPhaseId('main')],
       pre: null,
       cost: [],
       effects: [
-        {
+        eff({
           rollRandom: {
             bind: '$roll',
             min: 1,
             max: 2,
             in: [
-              {
+              eff({
                 if: {
                   when: { op: '==', left: { _t: 2, ref: 'binding', name: '$roll' }, right: 1 },
                   then: [
-                    {
+                    eff({
                       chooseOne: {
                         internalDecisionId: 'decision:$alpha',
                         bind: '$alpha',
                         options: { query: 'enums', values: ['a1', 'a2'] },
                       },
-                    } as GameDef['actions'][number]['effects'][number],
+                    }) as GameDef['actions'][number]['effects'][number],
                   ],
                   else: [
-                    {
+                    eff({
                       chooseOne: {
                         internalDecisionId: 'decision:$beta',
                         bind: '$beta',
                         options: { query: 'enums', values: ['b1', 'b2'] },
                       },
-                    } as GameDef['actions'][number]['effects'][number],
+                    }) as GameDef['actions'][number]['effects'][number],
                   ],
                 },
-              } as GameDef['actions'][number]['effects'][number],
+              }) as GameDef['actions'][number]['effects'][number],
             ],
           },
-        } as GameDef['actions'][number]['effects'][number],
+        }) as GameDef['actions'][number]['effects'][number],
       ],
       limits: [],
     };
@@ -301,13 +303,13 @@ phase: [asPhaseId('main')],
       pre: null,
       cost: [],
       effects: [
-        {
+        eff({
           rollRandom: {
             bind: '$roll',
             min: 1,
             max: 2,
             in: [
-              {
+              eff({
                 chooseN: {
                   internalDecisionId: 'decision:$targets',
                   bind: '$targets',
@@ -315,10 +317,10 @@ phase: [asPhaseId('main')],
                   min: { _t: 2, ref: 'binding', name: '$roll' },
                   max: { _t: 2, ref: 'binding', name: '$roll' },
                 },
-              } as GameDef['actions'][number]['effects'][number],
+              }) as GameDef['actions'][number]['effects'][number],
             ],
           },
-        } as GameDef['actions'][number]['effects'][number],
+        }) as GameDef['actions'][number]['effects'][number],
       ],
       limits: [],
     };
@@ -367,7 +369,7 @@ phase: [asPhaseId('main')],
       stages: [
         {
           effects: [
-            {
+            eff({
               chooseN: {
                 internalDecisionId: 'decision:$targets',
                 bind: '$targets',
@@ -375,7 +377,7 @@ phase: [asPhaseId('main')],
                 min: 1,
                 max: 1,
               },
-            } as GameDef['actions'][number]['effects'][number],
+            }) as GameDef['actions'][number]['effects'][number],
           ],
         },
       ],
@@ -413,36 +415,36 @@ phase: [asPhaseId('main')],
       stages: [
         {
           effects: [
-            {
+            eff({
               chooseOne: {
                 internalDecisionId: 'decision:$mode',
                 bind: '$mode',
                 options: { query: 'enums', values: ['trap', 'safe'] },
               },
-            } as GameDef['actions'][number]['effects'][number],
-            {
+            }) as GameDef['actions'][number]['effects'][number],
+            eff({
               if: {
                 when: { op: '==', left: { _t: 2, ref: 'binding', name: '$mode' }, right: 'trap' },
                 then: [
-                  {
+                  eff({
                     chooseOne: {
                       internalDecisionId: 'decision:$trapChoice',
                       bind: '$trapChoice',
                       options: { query: 'enums', values: [] },
                     },
-                  } as GameDef['actions'][number]['effects'][number],
+                  }) as GameDef['actions'][number]['effects'][number],
                 ],
                 else: [
-                  {
+                  eff({
                     chooseOne: {
                       internalDecisionId: 'decision:$safeChoice',
                       bind: '$safeChoice',
                       options: { query: 'enums', values: ['ok'] },
                     },
-                  } as GameDef['actions'][number]['effects'][number],
+                  }) as GameDef['actions'][number]['effects'][number],
                 ],
               },
-            } as GameDef['actions'][number]['effects'][number],
+            }) as GameDef['actions'][number]['effects'][number],
           ],
         },
       ],
@@ -479,13 +481,13 @@ phase: [asPhaseId('main')],
       stages: [
         {
           effects: [
-            {
+            eff({
               chooseOne: {
                 internalDecisionId: 'decision:$target',
                 bind: '$target',
                 options: { query: 'enums', values: ['a', 'b', 'c'] },
               },
-            } as GameDef['actions'][number]['effects'][number],
+            }) as GameDef['actions'][number]['effects'][number],
           ],
         },
       ],
@@ -523,13 +525,13 @@ phase: [asPhaseId('main')],
       stages: [
         {
           effects: [
-            {
+            eff({
               chooseOne: {
                 internalDecisionId: 'decision:$target',
                 bind: '$target',
                 options: { query: 'enums', values: ['a'] },
               },
-            } as GameDef['actions'][number]['effects'][number],
+            }) as GameDef['actions'][number]['effects'][number],
           ],
         },
       ],
@@ -574,13 +576,13 @@ phase: [asPhaseId('main')],
       stages: [
         {
           effects: [
-            {
+            eff({
               chooseOne: {
                 internalDecisionId: 'decision:$target',
                 bind: '$target',
                 options: { query: 'enums', values: [] },
               },
-            } as GameDef['actions'][number]['effects'][number],
+            }) as GameDef['actions'][number]['effects'][number],
           ],
         },
       ],
@@ -629,12 +631,12 @@ phase: [asPhaseId('main')],
       stages: [
         {
           effects: [
-            {
+            eff({
               if: {
                 when: { op: '==', left: { _t: 2, ref: 'binding', name: '$missing' }, right: 1 },
                 then: [],
               },
-            } as GameDef['actions'][number]['effects'][number],
+            }) as GameDef['actions'][number]['effects'][number],
           ],
         },
       ],
@@ -683,12 +685,12 @@ phase: [asPhaseId('main')],
       stages: [
         {
           effects: [
-            {
+            eff({
               if: {
                 when: { op: '==', left: { _t: 2, ref: 'gvar', var: 'missingVar' }, right: 1 },
                 then: [],
               },
-            } as GameDef['actions'][number]['effects'][number],
+            }) as GameDef['actions'][number]['effects'][number],
           ],
         },
       ],
@@ -773,21 +775,21 @@ phase: [asPhaseId('main')],
       stages: [
         {
           effects: [
-            {
+            eff({
               forEach: {
                 over: { query: 'enums', values: ['north', 'south'] },
                 bind: '$region',
                 effects: [
-                  {
+                  eff({
                     chooseOne: {
                       internalDecisionId: 'decision:$mode@{$region}',
                       bind: '$mode@{$region}',
                       options: { query: 'enums', values: ['a', 'b'] },
                     },
-                  },
+                  }),
                 ],
               },
-            } as GameDef['actions'][number]['effects'][number],
+            }) as GameDef['actions'][number]['effects'][number],
           ],
         },
       ],
@@ -835,12 +837,12 @@ phase: [asPhaseId('main')],
       stages: [
         {
           effects: [
-            {
+            eff({
               if: {
                 when: { op: '==', left: { _t: 2, ref: 'gvar', var: 'missingVar' }, right: 1 },
                 then: [],
               },
-            } as GameDef['actions'][number]['effects'][number],
+            }) as GameDef['actions'][number]['effects'][number],
           ],
         },
       ],
@@ -890,7 +892,7 @@ phase: [asPhaseId('main')],
       atomicity: 'partial',
     };
 
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       ...makeBaseDef({ actions: [action], actionPipelines: [profile] }),
       zones: createSequenceContextMismatchZones({ includeAdjacency: true }),
       turnOrder: {
@@ -909,7 +911,7 @@ phase: [asPhaseId('main')],
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const state = makeBaseState({
       zones: { 'board:cambodia': [], 'board:vietnam': [] },
@@ -993,7 +995,7 @@ phase: [asPhaseId('main')],
       atomicity: 'partial',
     };
 
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       ...makeBaseDef({ actions: [action], actionPipelines: [profile] }),
       zones: [
         { id: asZoneId('board:cambodia'), owner: 'none', visibility: 'public', ordering: 'set', category: 'province', attributes: { population: 1, econ: 0, terrainTags: [], country: 'cambodia', coastal: false }, adjacentTo: [] },
@@ -1015,7 +1017,7 @@ phase: [asPhaseId('main')],
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const state = makeBaseState({
       zones: { 'board:cambodia': [], 'board:vietnam': [] },
@@ -1099,7 +1101,7 @@ phase: [asPhaseId('main')],
       atomicity: 'partial',
     };
 
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       ...makeBaseDef({ actions: [action], actionPipelines: [profile] }),
       zones: [
         { id: asZoneId('board:cambodia'), owner: 'none', visibility: 'public', ordering: 'set', category: 'province', attributes: { population: 1, econ: 0, terrainTags: [], country: 'cambodia', coastal: false }, adjacentTo: [] },
@@ -1121,7 +1123,7 @@ phase: [asPhaseId('main')],
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const state = makeBaseState({
       zones: { 'board:cambodia': [], 'board:vietnam': [] },
@@ -1205,7 +1207,7 @@ phase: [asPhaseId('main')],
       atomicity: 'partial',
     };
 
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       ...makeBaseDef({ actions: [action], actionPipelines: [profile] }),
       zones: [
         { id: asZoneId('board:cambodia'), owner: 'none', visibility: 'public', ordering: 'set', category: 'province', attributes: { population: 1, econ: 0, terrainTags: [], country: 'cambodia', coastal: false }, adjacentTo: [] },
@@ -1227,7 +1229,7 @@ phase: [asPhaseId('main')],
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const state = makeBaseState({
       zones: { 'board:cambodia': [], 'board:vietnam': [] },
@@ -1321,7 +1323,7 @@ phase: [asPhaseId('main')],
       atomicity: 'partial',
     };
 
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       ...makeBaseDef({ actions: [action], actionPipelines: [profile] }),
       zones: [
         { id: asZoneId('board:cambodia'), owner: 'none', visibility: 'public', ordering: 'set', category: 'province', attributes: { population: 1, econ: 0, terrainTags: [], country: 'cambodia', coastal: false }, adjacentTo: [] },
@@ -1343,7 +1345,7 @@ phase: [asPhaseId('main')],
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const state = makeBaseState({
       zones: { 'board:cambodia': [], 'board:vietnam': [] },
@@ -1428,7 +1430,7 @@ phase: [asPhaseId('main')],
       atomicity: 'partial',
     };
 
-    const def: GameDef = {
+    const def: GameDef = asTaggedGameDef({
       ...makeBaseDef({ actions: [action], actionPipelines: [profile] }),
       zones: [
         { id: asZoneId('board:cambodia'), owner: 'none', visibility: 'public', ordering: 'set', category: 'province', attributes: { population: 1, econ: 0, terrainTags: [], country: 'cambodia', coastal: false }, adjacentTo: [] },
@@ -1450,7 +1452,7 @@ phase: [asPhaseId('main')],
           },
         },
       },
-    } as unknown as GameDef;
+    });
 
     const state = makeBaseState({
       zones: createSequenceContextMismatchZoneState(),

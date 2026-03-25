@@ -1,6 +1,6 @@
 # 80INCZOBHAS-004: Instrument Marker Effect Handlers with Incremental Hash Updates
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — effects-choice.ts
@@ -99,3 +99,12 @@ Capture old state, shift produces new state. Same `updateRunningHash` pattern.
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`
 3. `pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-24
+- **What changed**:
+  - `packages/engine/src/kernel/effects-choice.ts` — added `addToRunningHash`, `updateRunningHash`, and `ZobristFeature` imports; instrumented all 5 marker handlers (`applySetMarker`, `applyShiftMarker`, `applySetGlobalMarker`, `applyShiftGlobalMarker`, `applyFlipGlobalMarker`) with incremental hash updates in their mutable (`cursor.tracker`) branches.
+  - `packages/engine/test/unit/kernel/zobrist-incremental-markers.test.ts` — new test file with 10 tests covering all 5 handlers, no-op, double-flip, guard (no cachedRuntime), and multi-effect sequence.
+- **Deviations from original plan**: `computeFullHash` only hashes markers explicitly present in state dicts — default-state markers absent from the dict are not hashed. Therefore, when a marker transitions from default (absent) to explicit, `addToRunningHash` (XOR in new only) is used instead of `updateRunningHash` (XOR out old + XOR in new). The ticket's assumption of "one `updateRunningHash` call per handler" was adjusted to conditionally use `addToRunningHash` vs `updateRunningHash` based on whether the old state was explicitly in the dict.
+- **Verification**: 4720 engine tests pass, typecheck clean, lint clean.

@@ -17,6 +17,7 @@ import {
 } from '../../src/kernel/index.js';
 import { makeExecutionEffectContext } from '../helpers/effect-context-test-helpers.js';
 import type { EffectMacroDef, GameSpecEffect } from '../../src/cnl/game-spec-doc.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 const makeToken = (id: string, type: string, faction: string, extra?: Record<string, unknown>): Token => ({
   id: asTokenId(id),
@@ -296,7 +297,7 @@ describe('FITL removal ordering macros', () => {
 
       // Test the Aid-addition logic: basesRemoved = 1 → add 6 Aid
       const aidEffects: readonly EffectAST[] = [
-        { addVar: { scope: 'global', var: 'aid', delta: 6 } },
+        eff({ addVar: { scope: 'global', var: 'aid', delta: 6 } }),
       ];
 
       const ctx: EffectContext = makeExecutionEffectContext({ def: makeDef(), state });
@@ -340,7 +341,7 @@ describe('FITL removal ordering macros', () => {
 
       // Simulate: basesRemoved = 2, so Aid += 2 * 6 = 12
       const aidEffects: readonly EffectAST[] = [
-        { addVar: { scope: 'global', var: 'aid', delta: 12 } },
+        eff({ addVar: { scope: 'global', var: 'aid', delta: 12 } }),
       ];
 
       const ctx: EffectContext = makeExecutionEffectContext({ def, state });
@@ -408,11 +409,11 @@ describe('FITL removal ordering macros', () => {
       };
 
       const effects: readonly EffectAST[] = [
-        { let: {
+        eff({ let: {
           bind: '$usPiecesBefore',
           value: { _t: 5 as const, aggregate: { op: 'count', query: { query: 'tokensInZone', zone: 'quangTri:none', filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US' }] } } } },
           in: [
-            {
+            eff({
               removeByPriority: {
                 budget: 2,
                 groups: [
@@ -433,27 +434,27 @@ describe('FITL removal ordering macros', () => {
                   },
                 ],
               },
-            },
-            { let: {
+            }),
+            eff({ let: {
               bind: '$usPiecesAfter',
               value: { _t: 5 as const, aggregate: { op: 'count', query: { query: 'tokensInZone', zone: 'quangTri:none', filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US' }] } } } },
-              in: [{
+              in: [eff({
                 let: {
                   bind: '$usRemoved',
                   value: { _t: 6 as const, op: '-', left: { _t: 2 as const, ref: 'binding', name: '$usPiecesBefore' }, right: { _t: 2 as const, ref: 'binding', name: '$usPiecesAfter' } },
-                  in: [{
+                  in: [eff({
                     forEach: {
                       bind: '$attritionPiece',
                       over: { query: 'tokensInZone', zone: 'quangTri:none', filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'NVA' }] } },
                       limit: { _t: 2 as const, ref: 'binding', name: '$usRemoved' },
-                      effects: [{ moveToken: { token: '$attritionPiece', from: 'quangTri:none', to: 'available-NVA:none' } }],
+                      effects: [eff({ moveToken: { token: '$attritionPiece', from: 'quangTri:none', to: 'available-NVA:none' } })],
                     },
-                  }],
+                  })],
                 },
-              }],
-            } },
+              })],
+            } }),
           ],
-        } },
+        } }),
       ];
 
       const ctx: EffectContext = makeExecutionEffectContext({ def, state });

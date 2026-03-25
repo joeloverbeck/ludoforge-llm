@@ -15,6 +15,7 @@ import {
   type ZoneDef,
 } from '../../src/kernel/index.js';
 import { makeExecutionEffectContext } from '../helpers/effect-context-test-helpers.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 const makeToken = (id: string, type: string, faction: string, extra?: Record<string, unknown>): Token => ({
   id: asTokenId(id),
@@ -101,7 +102,7 @@ function makeCtx(state: GameState, bindings?: Record<string, unknown>): EffectCo
  * we test the underlying moveToken-with-dynamic-from mechanics directly.
  */
 function buildMoveCubeEffects(cubeIds: readonly string[], targetZone: string): readonly EffectAST[] {
-  return cubeIds.map((cubeId) => ({
+  return cubeIds.map((cubeId) => eff({
     moveToken: {
       token: cubeId,
       from: { zoneExpr: { _t: 2 as const, ref: 'tokenZone' as const, token: cubeId } },
@@ -118,7 +119,7 @@ function buildMoveCubeEffects(cubeIds: readonly string[], targetZone: string): r
 function buildActivateGuerrillaEffects(zone: string, activationLimit: number): readonly EffectAST[] {
   if (activationLimit <= 0) return [];
   return [
-    {
+    eff({
       forEach: {
         bind: '$guerrilla',
         over: {
@@ -131,10 +132,10 @@ function buildActivateGuerrillaEffects(zone: string, activationLimit: number): r
         },
         limit: activationLimit,
         effects: [
-          { setTokenProp: { token: '$guerrilla', prop: 'activity', value: 'active' } },
+          eff({ setTokenProp: { token: '$guerrilla', prop: 'activity', value: 'active' } }),
         ],
       },
-    },
+    }),
   ];
 }
 
@@ -172,13 +173,13 @@ function buildSweepHopMoveEffects(
   }
 
   return [
-    {
+    eff({
       moveToken: {
         token: sourceTroopBinding,
         from: { zoneExpr: { _t: 2 as const, ref: 'tokenZone', token: sourceTroopBinding } },
         to: targetZone,
       },
-    },
+    }),
   ];
 }
 

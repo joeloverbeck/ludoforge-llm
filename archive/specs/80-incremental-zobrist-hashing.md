@@ -1,6 +1,6 @@
 # Spec 80 — Incremental Zobrist Hashing
 
-**Status**: Draft
+**Status**: ✅ COMPLETED
 **Dependencies**: Spec 78 (Draft State, completed)
 **Enables**: Faster simulation for all games, especially those with large state
 (FITL, future complex games).
@@ -226,3 +226,14 @@ copy-on-write pattern (Spec 78) handles propagation.
    move.
 4. **Edge cases**: Token creation/destruction, phase cycling, marker
    operations, empty zones, player elimination.
+
+## Outcome
+
+**Completion date**: 2026-03-25
+
+**What was delivered**: All 7 tickets in the 80INCZOBHAS series implemented incremental Zobrist hashing as designed. The running hash (`_runningHash`) is maintained on `GameState` and updated incrementally by effect handlers for vars, tokens, markers, and phase transitions. `computeFullHash` is only called at initial state creation and during opt-in verification. A verification mode (`ExecutionOptions.verifyIncrementalHash`) catches hash drift in CI. Parity tests across Texas Hold'em and FITL confirm bit-identical hashes. Slow parity/property tests run in the `determinism` lane with a dedicated GitHub workflow.
+
+**Deviations from spec**:
+- The main `applyMoveCore` path uses `reconcileRunningHash` (full-state diff) rather than relying solely on per-effect incremental updates, providing a safety net for immutable code paths (phase advance, boundary expiry)
+- Verification uses `KernelRuntimeError` with `HASH_DRIFT` code rather than a dedicated `DeterminismError` class
+- Property tests run 120+ games (not 1000) to keep CI time reasonable

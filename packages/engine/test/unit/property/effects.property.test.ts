@@ -17,6 +17,7 @@ import {
   type Token,
   createCollector,
 } from '../../../src/kernel/index.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
 
 const token = (id: string): Token => ({ id: asTokenId(id), type: 'card', props: {} });
 
@@ -81,9 +82,9 @@ describe('effects property-style invariants', () => {
       for (const tokenId of ['d1', 'd2', 'd3', 'd4'] as const) {
         const ctx = makeCtx({ rng: createRng(seed), bindings: { $t: asTokenId(tokenId) } });
         const before = totalTokens(ctx.state);
-        const moved = applyEffect({ moveToken: { token: '$t', from: 'deck:none', to: 'discard:none', position: 'random' } }, ctx);
+        const moved = applyEffect(eff({ moveToken: { token: '$t', from: 'deck:none', to: 'discard:none', position: 'random' } }), ctx);
         const afterMove = totalTokens(moved.state);
-        const movedAll = applyEffect({ moveAll: { from: 'discard:none', to: 'deck:none' } }, { ...ctx, state: moved.state, rng: moved.rng });
+        const movedAll = applyEffect(eff({ moveAll: { from: 'discard:none', to: 'deck:none' } }), { ...ctx, state: moved.state, rng: moved.rng });
         const afterMoveAll = totalTokens(movedAll.state);
 
         assert.equal(afterMove, before);
@@ -96,7 +97,7 @@ describe('effects property-style invariants', () => {
     const candidates = [-100, -11, -1, 0, 1, 3, 9, 10, 11, 100] as const;
 
     for (const value of candidates) {
-      const setResult = applyEffect({ setVar: { scope: 'global', var: 'meter', value } }, makeCtx());
+      const setResult = applyEffect(eff({ setVar: { scope: 'global', var: 'meter', value } }), makeCtx());
       const meter = setResult.state.globalVars.meter;
       if (typeof meter !== 'number') {
         throw new Error('Expected numeric meter');
@@ -106,7 +107,7 @@ describe('effects property-style invariants', () => {
     }
 
     for (const delta of candidates) {
-      const addResult = applyEffect({ addVar: { scope: 'global', var: 'meter', delta } }, makeCtx());
+      const addResult = applyEffect(eff({ addVar: { scope: 'global', var: 'meter', delta } }), makeCtx());
       const meter = addResult.state.globalVars.meter;
       if (typeof meter !== 'number') {
         throw new Error('Expected numeric meter');
@@ -131,14 +132,14 @@ describe('effects property-style invariants', () => {
         globalVars: { meter: 0 },
       };
       const ctx = makeCtx({ state });
-      const effect: EffectAST = {
+      const effect: EffectAST = eff({
         forEach: {
           bind: '$n',
           over: { query: 'intsInRange', min: 1, max: scenario.size },
           limit: scenario.limit,
-          effects: [{ addVar: { scope: 'global', var: 'meter', delta: 1 } }],
+          effects: [eff({ addVar: { scope: 'global', var: 'meter', delta: 1 } })],
         },
-      };
+      });
 
       const result = applyEffect(effect, ctx);
       assert.equal(result.state.globalVars.meter, Math.min(scenario.size, scenario.limit));
@@ -149,7 +150,7 @@ describe('effects property-style invariants', () => {
     const ctx = makeCtx();
     const before = totalTokens(ctx.state);
 
-    const created = applyEffect({ createToken: { type: 'card', zone: 'deck:none' } }, ctx);
+    const created = applyEffect(eff({ createToken: { type: 'card', zone: 'deck:none' } }), ctx);
     const createdTotal = totalTokens(created.state);
     assert.equal(createdTotal, before + 1);
 
@@ -157,7 +158,7 @@ describe('effects property-style invariants', () => {
     assert.ok(createdId !== undefined);
 
     const destroyed = applyEffect(
-      { destroyToken: { token: '$created' } },
+      eff({ destroyToken: { token: '$created' } }),
       { ...ctx, state: created.state, rng: created.rng, bindings: { $created: createdId } },
     );
     const destroyedTotal = totalTokens(destroyed.state);
@@ -175,14 +176,14 @@ describe('effects property-style invariants', () => {
     for (const picks of selections) {
       const ctx = makeCtx({ moveParams: { '$picks': [...picks] } });
       const result = applyEffect(
-        {
+        eff({
           chooseN: {
             internalDecisionId: 'decision:$picks',
             bind: '$picks',
             options: { query: 'enums', values: ['alpha', 'beta', 'gamma', 'delta'] },
             n: picks.length,
           },
-        },
+        }),
         ctx,
       );
 

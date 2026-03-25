@@ -15,6 +15,7 @@ import {
   type GameDef,
   type GameState,
 } from '../../src/kernel/index.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 const makeDef = (): GameDef => ({
   metadata: { id: 'bind-value-test', players: { min: 1, max: 1 } },
@@ -64,12 +65,12 @@ const makeCtx = (overrides?: EffectContextTestOverrides): EffectContext => makeE
 describe('bindValue effect', () => {
   it('binds computed values without mutating state', () => {
     const ctx = makeCtx();
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       bindValue: {
         bind: '$computed',
         value: { _t: 6 as const, op: '+' as const, left: 4, right: 5 },
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state, ctx.state);
@@ -80,13 +81,13 @@ describe('bindValue effect', () => {
     const ctx = makeCtx();
     const result = applyEffects(
       [
-        {
+        eff({
           bindValue: {
             bind: '$computed',
             value: { _t: 6 as const, op: '+' as const, left: 4, right: 5 },
           },
-        },
-        { setVar: { scope: 'global', var: 'score', value: { _t: 2 as const, ref: 'binding', name: '$computed' } } },
+        }),
+        eff({ setVar: { scope: 'global', var: 'score', value: { _t: 2 as const, ref: 'binding', name: '$computed' } } }),
       ],
       ctx,
     );
@@ -98,21 +99,21 @@ describe('bindValue effect', () => {
     const ctx = makeCtx();
     const result = applyEffects(
       [
-        {
+        eff({
           let: {
             bind: '$local',
             value: 4,
             in: [
-              {
+              eff({
                 bindValue: {
                   bind: '$computed',
                   value: { _t: 6 as const, op: '+' as const, left: { _t: 2 as const, ref: 'binding', name: '$local' }, right: 5 },
                 },
-              },
+              }),
             ],
           },
-        },
-        { setVar: { scope: 'global', var: 'score', value: { _t: 2 as const, ref: 'binding', name: '$computed' } } },
+        }),
+        eff({ setVar: { scope: 'global', var: 'score', value: { _t: 2 as const, ref: 'binding', name: '$computed' } } }),
       ],
       ctx,
     );

@@ -79,7 +79,7 @@ const isRemovalZone = (zone: string): boolean =>
   zone.startsWith('available-') || zone.startsWith('casualties-');
 
 const getEffectKey = (effect: EffectAST): string =>
-  Object.keys(effect)[0] ?? '';
+  Object.keys(effect).find((k) => k !== '_k') ?? '';
 
 // --- Variable rules (1-8) ---
 
@@ -361,9 +361,9 @@ const tryLeafMacroOverride = (
   if (ctx.verbalization === undefined) return undefined;
 
   // Scan string-valued fields in the effect payload for __macro_ bindings
-  const key = Object.keys(effect)[0];
+  const key = Object.keys(effect).find((k) => k !== '_k');
   if (key === undefined) return undefined;
-  const payload = (effect as Record<string, Record<string, unknown>>)[key]!;
+  const payload = (effect as unknown as Record<string, Record<string, unknown>>)[key]!;
 
   for (const val of Object.values(payload)) {
     if (typeof val !== 'string' || !val.startsWith('__macro_')) continue;

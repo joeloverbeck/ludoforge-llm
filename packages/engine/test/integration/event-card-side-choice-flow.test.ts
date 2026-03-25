@@ -15,6 +15,7 @@ import {
   type GameState,
   type Move,
 } from '../../src/kernel/index.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 const eventAction: ActionDef = {
   id: asActionId('event'),
@@ -33,15 +34,15 @@ const dualUseCard: EventCardDef = {
   id: 'card-dual',
   title: 'Dual Use Test Card',
   sideMode: 'dual',
-  unshaded: { effects: [{ addVar: { scope: 'global', var: 'x', delta: 1 } }] },
-  shaded: { effects: [{ addVar: { scope: 'global', var: 'x', delta: -1 } }] },
+  unshaded: { effects: [eff({ addVar: { scope: 'global', var: 'x', delta: 1 } })] },
+  shaded: { effects: [eff({ addVar: { scope: 'global', var: 'x', delta: -1 } })] },
 };
 
 const singleCard: EventCardDef = {
   id: 'card-single',
   title: 'Single Test Card',
   sideMode: 'single',
-  unshaded: { effects: [{ addVar: { scope: 'global', var: 'x', delta: 1 } }] },
+  unshaded: { effects: [eff({ addVar: { scope: 'global', var: 'x', delta: 1 } })] },
 };
 
 const branchedDualCard: EventCardDef = {
@@ -51,11 +52,11 @@ const branchedDualCard: EventCardDef = {
   unshaded: {
     effects: [],
     branches: [
-      { id: 'branch-a', effects: [{ addVar: { scope: 'global', var: 'x', delta: 1 } }] },
-      { id: 'branch-b', effects: [{ addVar: { scope: 'global', var: 'x', delta: 2 } }] },
+      { id: 'branch-a', effects: [eff({ addVar: { scope: 'global', var: 'x', delta: 1 } })] },
+      { id: 'branch-b', effects: [eff({ addVar: { scope: 'global', var: 'x', delta: 2 } })] },
     ],
   },
-  shaded: { effects: [{ addVar: { scope: 'global', var: 'x', delta: -1 } }] },
+  shaded: { effects: [eff({ addVar: { scope: 'global', var: 'x', delta: -1 } })] },
 };
 
 const makeDef = (card: EventCardDef): GameDef =>

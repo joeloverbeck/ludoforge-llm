@@ -12,6 +12,7 @@ import {
   type MoveExecutionPolicy,
 } from '../../src/kernel/index.js';
 import { advancePhaseBounded, replayScript } from '../helpers/replay-harness.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 const createReplayDef = (): GameDef => {
   const tick: ActionDef = {
@@ -23,8 +24,8 @@ const createReplayDef = (): GameDef => {
     pre: null,
     cost: [],
     effects: [
-      { addVar: { scope: 'global', var: 'ticks', delta: 1 } },
-      { advancePhase: {} },
+      eff({ addVar: { scope: 'global', var: 'ticks', delta: 1 } }),
+      eff({ advancePhase: {} }),
     ],
     limits: [],
   };
@@ -56,7 +57,7 @@ const createPolicyAdvanceDef = (): GameDef => ({
     {
       id: asTriggerId('autoAdvanceOnP2Enter'),
       event: { type: 'phaseEnter', phase: asPhaseId('p2') },
-      effects: [{ advancePhase: {} }],
+      effects: [eff({ advancePhase: {} })],
     },
   ],
 }) as unknown as GameDef;

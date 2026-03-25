@@ -1,6 +1,6 @@
 # 80INCZOBHAS-007: Verification Mode and Comprehensive Parity Tests
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — types-core.ts (ExecutionOptions), apply-move.ts (verification logic), new test files
@@ -52,17 +52,15 @@ When `true`, verify every move. When `{ interval: N }`, verify every Nth move.
 After the switchover assignment (`stateHash: progressedState._runningHash`), if verification is enabled:
 
 ```typescript
-if (shouldVerify(options, moveCount)) {
+if (shouldVerifyHash(options, stateWithHash.turnCount)) {
   const table = cachedRuntime?.zobristTable ?? createZobristTable(def);
   const fullHash = computeFullHash(table, stateWithHash);
   if (fullHash !== stateWithHash.stateHash) {
-    throw new DeterminismError({
-      message: 'Incremental Zobrist hash drift detected',
-      expected: fullHash,
-      actual: stateWithHash.stateHash,
-      moveIndex: moveCount,
-      // Include diagnostic context
-    });
+    throw new KernelRuntimeError('HASH_DRIFT', [
+      `Incremental Zobrist hash drift detected at turnCount=${stateWithHash.turnCount}`,
+      `expected=${fullHash}`,
+      `actual=${stateWithHash.stateHash}`,
+    ].join('; '));
   }
 }
 ```
@@ -99,7 +97,7 @@ Verify that existing golden trace files still produce identical `stateHash` valu
 - `packages/engine/src/kernel/apply-move.ts` (modify — add verification logic after switchover)
 - `packages/engine/test/unit/kernel/zobrist-incremental-parity.test.ts` (new — per-move parity tests)
 - `packages/engine/test/unit/kernel/zobrist-incremental-edge-cases.test.ts` (new — edge case tests)
-- `packages/engine/test/integration/kernel/zobrist-incremental-property.test.ts` (new — random-play property tests)
+- `packages/engine/test/integration/zobrist-incremental-property.test.ts` (new — random-play property tests)
 
 ## Out of Scope
 
@@ -135,7 +133,7 @@ Verify that existing golden trace files still produce identical `stateHash` valu
 
 1. `packages/engine/test/unit/kernel/zobrist-incremental-parity.test.ts` — per-move parity across games and seeds.
 2. `packages/engine/test/unit/kernel/zobrist-incremental-edge-cases.test.ts` — edge case coverage.
-3. `packages/engine/test/integration/kernel/zobrist-incremental-property.test.ts` — random-play property tests.
+3. `packages/engine/test/integration/zobrist-incremental-property.test.ts` — random-play property tests.
 
 ### Commands
 
@@ -143,3 +141,26 @@ Verify that existing golden trace files still produce identical `stateHash` valu
 2. `pnpm -F @ludoforge/engine test:e2e`
 3. `pnpm turbo typecheck`
 4. `pnpm turbo lint`
+
+## Outcome
+
+**Completion date**: 2026-03-25
+
+**What changed**:
+- Added `HASH_DRIFT` error code to `KernelRuntimeErrorCode` with context type in `runtime-error.ts`
+- Added `verifyIncrementalHash` option to `ExecutionOptions` in `types-core.ts` (supports `true` or `{ interval: N }`)
+- Added `shouldVerifyHash` helper and verification logic in `applyMoveCore` in `apply-move.ts` — compares reconciled hash against `computeFullHash` after every move (or every Nth move)
+- Created `test/unit/kernel/zobrist-incremental-edge-cases.test.ts` — 9 fast tests (double-flip, create/destroy, phase cycling, empty zone, single-token shuffle, self-transfer, XOR commutativity, key determinism)
+- Created `test/determinism/zobrist-incremental-parity.test.ts` — per-move parity across Texas Hold'em (5 seeds) and FITL (3 seeds), plus interval mode
+- Created `test/determinism/zobrist-incremental-property.test.ts` — 120+ random-play games with full verification (swallows non-hash runtime errors like stall loops)
+- Added lane exclusion test in `engine-test-lane-taxonomy-policy.test.ts` proving slow tests don't run in default lane
+- Created `.github/workflows/engine-zobrist-parity.yml` dedicated workflow
+
+**Deviations from plan**:
+- Used `kernelRuntimeError` factory (already imported) instead of creating a new `DeterminismError` class — `HASH_DRIFT` code added to existing error system
+- Verification compares `reconciledHash` vs `computeFullHash` (not `_runningHash` directly) since the switchover uses `reconcileRunningHash`
+- Used `turnCount` for interval-based verification instead of `moveCount` (not available in `applyMoveCore`)
+- Parity and property tests moved to `test/determinism/` to avoid slowing the default test lane (~37s default vs ~180s+ with slow tests)
+- Integration property test file placed at `test/determinism/zobrist-incremental-property.test.ts` (not `test/integration/kernel/`)
+
+**Verification**: build, typecheck, lint all pass. Default test suite: 4739 tests, 0 failures, ~37s. Edge case tests: 9/9 pass in ~300ms. Parity tests: 9/9 pass (verified separately via determinism lane).

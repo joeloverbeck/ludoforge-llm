@@ -37,7 +37,8 @@ export type KernelRuntimeErrorCode =
   | 'TERMINAL_WINNER_SEAT_UNMAPPED'
   | 'DERIVED_VALUE_FORMULA_NON_NUMERIC_VAR'
 | 'DERIVED_VALUE_CONTRACT_MISSING'
-  | 'DERIVED_VALUE_ZONE_ATTRIBUTE_INVALID';
+  | 'DERIVED_VALUE_ZONE_ATTRIBUTE_INVALID'
+  | 'HASH_DRIFT';
 
 export type SelectorBoundarySurface = 'applyMove' | 'legalChoices' | 'legalMoves';
 
@@ -235,6 +236,12 @@ export interface KernelRuntimeErrorContextByCode {
     readonly attributeKey: string;
     readonly expectedType: 'number';
     readonly actualType: string;
+  }>;
+  readonly HASH_DRIFT: Readonly<{
+    readonly expected: bigint;
+    readonly actual: bigint;
+    readonly turnCount: number;
+    readonly currentPhase: string;
   }>;
 }
 

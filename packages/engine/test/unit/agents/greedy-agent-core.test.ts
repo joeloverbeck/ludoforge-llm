@@ -29,6 +29,7 @@ import {
   type Move,
   type ActionPipelineDef,
 } from '../../../src/kernel/index.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
 
 const phaseId = asPhaseId('main');
 
@@ -160,8 +161,8 @@ describe('GreedyAgent core', () => {
 
   it('chooses move with higher immediate VP-like score', () => {
     const def = createDef([
-      createAction('low', [{ addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 1 } }]),
-      createAction('high', [{ addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 2 } }]),
+      createAction('low', [eff({ addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 1 } })]),
+      createAction('high', [eff({ addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 2 } })]),
     ]);
 
     const result = choose(def, 10n);
@@ -171,8 +172,8 @@ describe('GreedyAgent core', () => {
   it('prefers immediate winning move over higher-resource nonterminal move', () => {
     const def = createDef(
       [
-        createAction('resource', [{ addVar: { scope: 'pvar', player: 'actor', var: 'coins', delta: 10 } }]),
-        createAction('win', [{ setVar: { scope: 'global', var: 'winNow', value: 1 } }]),
+        createAction('resource', [eff({ addVar: { scope: 'pvar', player: 'actor', var: 'coins', delta: 10 } })]),
+        createAction('win', [eff({ setVar: { scope: 'global', var: 'winNow', value: 1 } })]),
       ],
       [{ when: { op: '==', left: { _t: 2 as const, ref: 'gvar', var: 'winNow' }, right: 1 }, result: { type: 'win', player: { id: asPlayerId(0) } } }],
     );
@@ -184,8 +185,8 @@ describe('GreedyAgent core', () => {
   it('avoids immediate terminal non-win move when nonterminal alternative exists', () => {
     const def = createDef(
       [
-        createAction('lose', [{ setVar: { scope: 'global', var: 'loseNow', value: 1 } }]),
-        createAction('safe', [{ addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 1 } }]),
+        createAction('lose', [eff({ setVar: { scope: 'global', var: 'loseNow', value: 1 } })]),
+        createAction('safe', [eff({ addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 1 } })]),
       ],
       [{ when: { op: '==', left: { _t: 2 as const, ref: 'gvar', var: 'loseNow' }, right: 1 }, result: { type: 'win', player: { id: asPlayerId(1) } } }],
     );
@@ -196,8 +197,8 @@ describe('GreedyAgent core', () => {
 
   it('same input plus same rng returns same move and rng when no tie path exists', () => {
     const def = createDef([
-      createAction('best', [{ addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 2 } }]),
-      createAction('worse', [{ addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 1 } }]),
+      createAction('best', [eff({ addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 2 } })]),
+      createAction('worse', [eff({ addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 1 } })]),
     ]);
     const state = initialState(def, 6, 2).state;
     const moves = legalMoves(def, state);
@@ -222,8 +223,8 @@ describe('GreedyAgent core', () => {
 
   it('breaks equal-score ties via shared random selector and advances rng exactly once', () => {
     const def = createDef([
-      createAction('a', [{ addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 1 } }]),
-      createAction('b', [{ addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 1 } }]),
+      createAction('a', [eff({ addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 1 } })]),
+      createAction('b', [eff({ addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 1 } })]),
     ]);
     const state = initialState(def, 14, 2).state;
     const moves = legalMoves(def, state);
@@ -244,8 +245,8 @@ describe('GreedyAgent core', () => {
 
   it('does not draw tie-break rng when no tie exists', () => {
     const def = createDef([
-      createAction('best', [{ addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 2 } }]),
-      createAction('worse', [{ addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 1 } }]),
+      createAction('best', [eff({ addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 2 } })]),
+      createAction('worse', [eff({ addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 1 } })]),
     ]);
     const state = initialState(def, 6, 2).state;
     const moves = legalMoves(def, state);
@@ -291,8 +292,8 @@ describe('GreedyAgent core', () => {
 
   it('still works with simple (non-template) moves as before', () => {
     const def = createDef([
-      createAction('best', [{ addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 2 } }]),
-      createAction('worse', [{ addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 1 } }]),
+      createAction('best', [eff({ addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 2 } })]),
+      createAction('worse', [eff({ addVar: { scope: 'pvar', player: 'actor', var: 'vp', delta: 1 } })]),
     ]);
 
     const result = choose(def, 10n);
@@ -389,22 +390,22 @@ describe('GreedyAgent core', () => {
         {
           stage: 'resolve',
           effects: [
-            {
+            eff({
               rollRandom: {
                 bind: '$roll',
                 min: 1,
                 max: 2,
                 in: [
-                  {
+                  eff({
                     if: {
                       when: { op: '==' as const, left: { _t: 2 as const, ref: 'binding' as const, name: '$roll' }, right: 1 },
-                      then: [{ chooseOne: { internalDecisionId: 'decision:$targetA', bind: '$targetA', options: { query: 'enums' as const, values: ['alpha'] } } }],
-                      else: [{ chooseOne: { internalDecisionId: 'decision:$targetB', bind: '$targetB', options: { query: 'enums' as const, values: ['beta'] } } }],
+                      then: [eff({ chooseOne: { internalDecisionId: 'decision:$targetA', bind: '$targetA', options: { query: 'enums' as const, values: ['alpha'] } } })],
+                      else: [eff({ chooseOne: { internalDecisionId: 'decision:$targetB', bind: '$targetB', options: { query: 'enums' as const, values: ['beta'] } } })],
                     },
-                  },
+                  }),
                 ],
               },
-            },
+            }),
           ],
         },
       ],
@@ -460,22 +461,22 @@ describe('GreedyAgent core', () => {
         {
           stage: 'resolve',
           effects: [
-            {
+            eff({
               rollRandom: {
                 bind: '$roll',
                 min: 1,
                 max: 2,
                 in: [
-                  {
+                  eff({
                     if: {
                       when: { op: '==' as const, left: { _t: 2 as const, ref: 'binding' as const, name: '$roll' }, right: 1 },
-                      then: [{ chooseOne: { internalDecisionId: 'decision:$targetA', bind: '$targetA', options: { query: 'enums' as const, values: ['alpha'] } } }],
-                      else: [{ chooseOne: { internalDecisionId: 'decision:$targetB', bind: '$targetB', options: { query: 'enums' as const, values: ['beta'] } } }],
+                      then: [eff({ chooseOne: { internalDecisionId: 'decision:$targetA', bind: '$targetA', options: { query: 'enums' as const, values: ['alpha'] } } })],
+                      else: [eff({ chooseOne: { internalDecisionId: 'decision:$targetB', bind: '$targetB', options: { query: 'enums' as const, values: ['beta'] } } })],
                     },
-                  },
+                  }),
                 ],
               },
-            },
+            }),
           ],
         },
       ],
@@ -528,22 +529,22 @@ describe('GreedyAgent core', () => {
         {
           stage: 'resolve',
           effects: [
-            {
+            eff({
               rollRandom: {
                 bind: '$roll',
                 min: 1,
                 max: 2,
                 in: [
-                  {
+                  eff({
                     if: {
                       when: { op: '==' as const, left: { _t: 2 as const, ref: 'binding' as const, name: '$roll' }, right: 1 },
-                      then: [{ chooseOne: { internalDecisionId: 'decision:$targetA', bind: '$targetA', options: { query: 'enums' as const, values: ['alpha'] } } }],
-                      else: [{ chooseOne: { internalDecisionId: 'decision:$targetB', bind: '$targetB', options: { query: 'enums' as const, values: ['beta'] } } }],
+                      then: [eff({ chooseOne: { internalDecisionId: 'decision:$targetA', bind: '$targetA', options: { query: 'enums' as const, values: ['alpha'] } } })],
+                      else: [eff({ chooseOne: { internalDecisionId: 'decision:$targetB', bind: '$targetB', options: { query: 'enums' as const, values: ['beta'] } } })],
                     },
-                  },
+                  }),
                 ],
               },
-            },
+            }),
           ],
         },
       ],

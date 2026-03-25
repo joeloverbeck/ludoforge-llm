@@ -1,6 +1,6 @@
 # 80INCZOBHAS-006: Switchover — Replace computeFullHash in applyMoveCore with _runningHash
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — apply-move.ts
@@ -107,3 +107,33 @@ None — this ticket relies entirely on existing tests passing. The switchover i
 2. `pnpm -F @ludoforge/engine test:e2e`
 3. `pnpm turbo typecheck`
 4. `pnpm turbo lint`
+
+## Outcome
+
+**Completion date**: 2026-03-25
+
+### What changed
+
+1. **`zobrist-phase-hash.ts`**: Replaced `patchPhaseTransitionHash` (partial patch covering only phase/player/turn/usage) with `reconcileRunningHash` — a comprehensive function that diffs ALL hashed feature categories (tokens, globalVars, perPlayerVars, zoneVars, activePlayer, currentPhase, turnCount, actionUsage, markers, globalMarkers, reveals, lastingEffects, interruptPhaseStack) between a baseline state and a target state. Returns the correct incremental hash as a `bigint`.
+
+2. **`apply-move.ts`**: Replaced the `computeFullHash` call in `applyMoveCore` with a single `reconcileRunningHash(table, inputState, outputState)` call at the end. Removed all intermediate hash-patching calls (action-usage patch, turn-flow patch). Both `stateHash` and `_runningHash` are set to the reconciled value. Falls back to `computeFullHash` when no `cachedRuntime.zobristTable` is available.
+
+3. **`phase-advance.ts`**: Updated 4 call sites from `patchPhaseTransitionHash` to `reconcileRunningHash` (intermediate patches within `advancePhase` and `advanceToDecisionPoint`).
+
+### Deviations from original plan
+
+The ticket assumed a simple one-line change (`stateHash: progressedState._runningHash`). Implementation revealed two design gaps:
+
+- **Bug in ticket 005**: `patchPhaseTransitionHash` XOR'd out phantom `count=0` features for brand-new `actionUsage` entries that were never part of the hash. Fixed by the new comprehensive function's symmetric XOR-out/XOR-in pattern.
+
+- **Incomplete coverage**: `patchPhaseTransitionHash` only covered 4 of 13 hashed feature categories. State mutations from turn-flow eligibility (globalVars via pass rewards, tokens via card boundary lifecycle) and other immutable code paths went untracked. Resolved by generalizing to `reconcileRunningHash` which covers all categories with reference-identity fast paths.
+
+- **Architecture change**: Instead of incremental hash updates within effect handlers being the sole source of truth, `reconcileRunningHash` serves as the single authoritative hash computation — it diffs the original input state against the final output state, making the result correct by construction regardless of which intermediate code paths modified state.
+
+### Verification results
+
+- `pnpm turbo typecheck`: 3/3 packages pass
+- `pnpm -F @ludoforge/engine test`: 4729/4729 pass, 0 failures
+- `pnpm -F @ludoforge/engine test:e2e`: 36/36 pass, 0 failures
+- `pnpm turbo lint`: 0 warnings, 0 errors
+- Manual hash verification: `stateHash === computeFullHash(table, state)` for all 12 moves in a Texas Hold'em simulation with `cachedRuntime`

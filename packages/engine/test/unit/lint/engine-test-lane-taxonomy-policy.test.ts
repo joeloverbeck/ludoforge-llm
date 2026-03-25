@@ -116,6 +116,48 @@ describe('engine test lane taxonomy policy', () => {
     assert.equal(totalCount, gamePackagesLane.length, 'sub-lanes must not overlap');
   });
 
+  it('zobrist incremental parity and property tests live in determinism lane, not default', async () => {
+    const thisDir = dirname(fileURLToPath(import.meta.url));
+    const repoRoot = dirname(findRepoRootFile(thisDir, 'pnpm-workspace.yaml'));
+    const manifestPath = resolve(repoRoot, 'packages/engine/scripts/test-lane-manifest.mjs');
+    const manifest = (await import(pathToFileURL(manifestPath).href)) as {
+      readonly ALL_DETERMINISM_TESTS: readonly string[];
+      readonly listIntegrationTestsForLane: (lane: string) => readonly string[];
+    };
+
+    const slowZobristTests = [
+      'test/determinism/zobrist-incremental-parity.test.ts',
+      'test/determinism/zobrist-incremental-property.test.ts',
+    ];
+
+    // They must exist in the determinism lane
+    for (const testPath of slowZobristTests) {
+      assert.equal(
+        manifest.ALL_DETERMINISM_TESTS.includes(testPath),
+        true,
+        `${testPath} must be in ALL_DETERMINISM_TESTS`,
+      );
+      assert.equal(
+        existsSync(resolve(repoRoot, 'packages/engine', testPath)),
+        true,
+        `${testPath} must exist on disk`,
+      );
+    }
+
+    // They must NOT be in any integration lane (default includes integration:core)
+    const coreLane = manifest.listIntegrationTestsForLane('integration:core');
+    const allIntegrationLane = manifest.listIntegrationTestsForLane('integration');
+    for (const testPath of slowZobristTests) {
+      assert.equal(coreLane.includes(testPath), false, `${testPath} must not be in integration:core`);
+      assert.equal(allIntegrationLane.includes(testPath), false, `${testPath} must not be in integration`);
+    }
+
+    // They must NOT match the unit glob (dist/test/unit/**/*.test.js) since they're in test/determinism/
+    for (const testPath of slowZobristTests) {
+      assert.equal(testPath.startsWith('test/unit/'), false, `${testPath} must not be under test/unit/`);
+    }
+  });
+
   it('classifies e2e lanes explicitly and keeps fast, slow, and aggregate coverage aligned', async () => {
     const thisDir = dirname(fileURLToPath(import.meta.url));
     const repoRoot = dirname(findRepoRootFile(thisDir, 'pnpm-workspace.yaml'));

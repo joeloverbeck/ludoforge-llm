@@ -86,9 +86,17 @@ import type {
 import { asPlayerId } from './branded.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
 import { computeFullHash, createZobristTable } from './zobrist.js';
+import { reconcileRunningHash } from './zobrist-phase-hash.js';
 import { resolveMoveDecisionSequence } from './move-decision-sequence.js';
 
 const DEFAULT_MAX_TRIGGER_DEPTH = 8;
+
+const shouldVerifyHash = (options: ExecutionOptions | undefined, turnCount: number): boolean => {
+  const flag = options?.verifyIncrementalHash;
+  if (flag === undefined || flag === false) return false;
+  if (flag === true) return true;
+  return flag.interval > 0 && turnCount % flag.interval === 0;
+};
 
 const findAction = (def: GameDef, actionId: Move['actionId']): ActionDef | undefined =>
   def.actions.find((action) => action.id === actionId);
@@ -1336,12 +1344,33 @@ const applyMoveCore = (
     : boundaryExpiryResult.state;
   perfEnd(profiler, 'advanceToDecisionPoint', t0_advance);
 
+  // Reconcile _runningHash by diffing the original input state against the
+  // final progressed state. This single call replaces all intermediate hash
+  // patches and is correct by construction — it covers every hashed feature
+  // category. When no zobrist table is available, fall back to full recompute.
   const t0_hash = perfStart(profiler);
+  const reconciledHash = cachedRuntime?.zobristTable
+    ? reconcileRunningHash(cachedRuntime.zobristTable, state, progressedState)
+    : computeFullHash(createZobristTable(def), progressedState);
   const stateWithHash = {
     ...progressedState,
-    stateHash: computeFullHash(cachedRuntime?.zobristTable ?? createZobristTable(def), progressedState),
+    stateHash: reconciledHash,
+    _runningHash: reconciledHash,
   };
   perfEnd(profiler, 'computeFullHash', t0_hash);
+
+  if (shouldVerifyHash(options, stateWithHash.turnCount)) {
+    const verifyTable = cachedRuntime?.zobristTable ?? createZobristTable(def);
+    const fullHash = computeFullHash(verifyTable, stateWithHash);
+    if (fullHash !== stateWithHash.stateHash) {
+      throw kernelRuntimeError('HASH_DRIFT', 'Incremental Zobrist hash drift detected', {
+        expected: fullHash,
+        actual: stateWithHash.stateHash,
+        turnCount: stateWithHash.turnCount,
+        currentPhase: stateWithHash.currentPhase as string,
+      });
+    }
+  }
 
   return {
     state: stateWithHash,

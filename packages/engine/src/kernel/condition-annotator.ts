@@ -1,4 +1,5 @@
 import type { PlayerId } from './branded.js';
+import { ifEffect } from './ast-builders.js';
 import type {
   AnnotatedActionDescription,
   DisplayAnnotationNode,
@@ -329,12 +330,10 @@ const collectRuleCardEffects = (
     if (pipeline.applicability === undefined) {
       return pipelineEffects;
     }
-    return [{
-      if: {
-        when: pipeline.applicability,
-        then: pipelineEffects,
-      },
-    }];
+    return [ifEffect({
+      when: pipeline.applicability,
+      then: pipelineEffects,
+    })];
   });
 };
 

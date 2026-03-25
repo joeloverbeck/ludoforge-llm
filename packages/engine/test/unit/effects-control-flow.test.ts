@@ -20,6 +20,7 @@ import {
   type Token,
   createCollector,
 } from '../../src/kernel/index.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 const makeDef = (): GameDef => ({
   metadata: { id: 'effects-control-flow-test', players: { min: 1, max: 2 } },
@@ -82,13 +83,13 @@ const makeToken = (id: string, type: string, faction: string): Token => ({
 describe('effects control-flow handlers', () => {
   it('if executes then branch when predicate is true', () => {
     const ctx = makeCtx();
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       if: {
         when: { op: '==', left: 1, right: 1 },
-        then: [{ setVar: { scope: 'global', var: 'x', value: 3 } }],
-        else: [{ setVar: { scope: 'global', var: 'x', value: 9 } }],
+        then: [eff({ setVar: { scope: 'global', var: 'x', value: 3 } })],
+        else: [eff({ setVar: { scope: 'global', var: 'x', value: 9 } })],
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state.globalVars.x, 3);
@@ -96,13 +97,13 @@ describe('effects control-flow handlers', () => {
 
   it('if executes else branch when predicate is false', () => {
     const ctx = makeCtx();
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       if: {
         when: { op: '==', left: 1, right: 2 },
-        then: [{ setVar: { scope: 'global', var: 'x', value: 3 } }],
-        else: [{ setVar: { scope: 'global', var: 'x', value: 9 } }],
+        then: [eff({ setVar: { scope: 'global', var: 'x', value: 3 } })],
+        else: [eff({ setVar: { scope: 'global', var: 'x', value: 9 } })],
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state.globalVars.x, 9);
@@ -110,12 +111,12 @@ describe('effects control-flow handlers', () => {
 
   it('if with false predicate and no else is a no-op', () => {
     const ctx = makeCtx();
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       if: {
         when: { op: '==', left: 1, right: 2 },
-        then: [{ setVar: { scope: 'global', var: 'x', value: 3 } }],
+        then: [eff({ setVar: { scope: 'global', var: 'x', value: 3 } })],
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state, ctx.state);
@@ -124,13 +125,13 @@ describe('effects control-flow handlers', () => {
 
   it('let binding is visible inside the in block', () => {
     const ctx = makeCtx();
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       let: {
         bind: '$value',
         value: 7,
-        in: [{ addVar: { scope: 'global', var: 'sum', delta: { _t: 2 as const, ref: 'binding', name: '$value' } } }],
+        in: [eff({ addVar: { scope: 'global', var: 'sum', delta: { _t: 2 as const, ref: 'binding', name: '$value' } } })],
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state.globalVars.sum, 7);
@@ -139,14 +140,14 @@ describe('effects control-flow handlers', () => {
   it('let binding does not leak outside the in block', () => {
     const ctx = makeCtx();
     const effects: readonly EffectAST[] = [
-      {
+      eff({
         let: {
           bind: '$value',
           value: 4,
-          in: [{ addVar: { scope: 'global', var: 'sum', delta: { _t: 2 as const, ref: 'binding', name: '$value' } } }],
+          in: [eff({ addVar: { scope: 'global', var: 'sum', delta: { _t: 2 as const, ref: 'binding', name: '$value' } } })],
         },
-      },
-      { addVar: { scope: 'global', var: 'sum', delta: { _t: 2 as const, ref: 'binding', name: '$value' } } },
+      }),
+      eff({ addVar: { scope: 'global', var: 'sum', delta: { _t: 2 as const, ref: 'binding', name: '$value' } } }),
     ];
 
     assert.throws(() => applyEffects(effects, ctx), (error: unknown) => {
@@ -156,14 +157,14 @@ describe('effects control-flow handlers', () => {
 
   it('forEach iterates every element when collection size is within limit', () => {
     const ctx = makeCtx();
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       forEach: {
         bind: '$n',
         over: { query: 'intsInRange', min: 1, max: 3 },
-        effects: [{ addVar: { scope: 'global', var: 'sum', delta: { _t: 2 as const, ref: 'binding', name: '$n' } } }],
+        effects: [eff({ addVar: { scope: 'global', var: 'sum', delta: { _t: 2 as const, ref: 'binding', name: '$n' } } })],
         limit: 3,
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state.globalVars.sum, 6);
@@ -171,13 +172,13 @@ describe('effects control-flow handlers', () => {
 
   it('forEach with empty collection performs zero iterations', () => {
     const ctx = makeCtx();
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       forEach: {
         bind: '$n',
         over: { query: 'intsInRange', min: 5, max: 4 },
-        effects: [{ addVar: { scope: 'global', var: 'sum', delta: 1 } }],
+        effects: [eff({ addVar: { scope: 'global', var: 'sum', delta: 1 } })],
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state, ctx.state);
@@ -186,13 +187,13 @@ describe('effects control-flow handlers', () => {
 
   it('forEach enforces default limit of 100', () => {
     const ctx = makeCtx();
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       forEach: {
         bind: '$n',
         over: { query: 'intsInRange', min: 1, max: 120 },
-        effects: [{ addVar: { scope: 'global', var: 'count', delta: 1 } }],
+        effects: [eff({ addVar: { scope: 'global', var: 'count', delta: 1 } })],
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state.globalVars.count, 100);
@@ -200,14 +201,14 @@ describe('effects control-flow handlers', () => {
 
   it('forEach enforces explicit limit and truncates deterministically to first results', () => {
     const ctx = makeCtx();
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       forEach: {
         bind: '$n',
         over: { query: 'intsInRange', min: 1, max: 5 },
-        effects: [{ addVar: { scope: 'global', var: 'sum', delta: { _t: 2 as const, ref: 'binding', name: '$n' } } }],
+        effects: [eff({ addVar: { scope: 'global', var: 'sum', delta: { _t: 2 as const, ref: 'binding', name: '$n' } } })],
         limit: 2,
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state.globalVars.sum, 3);
@@ -215,13 +216,13 @@ describe('effects control-flow handlers', () => {
 
   it('forEach propagates emittedEvents from nested effects in deterministic order', () => {
     const ctx = makeCtx();
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       forEach: {
         bind: '$n',
         over: { query: 'intsInRange', min: 1, max: 2 },
-        effects: [{ addVar: { scope: 'global', var: 'sum', delta: { _t: 2 as const, ref: 'binding', name: '$n' } } }],
+        effects: [eff({ addVar: { scope: 'global', var: 'sum', delta: { _t: 2 as const, ref: 'binding', name: '$n' } } })],
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.deepEqual(result.emittedEvents, [
@@ -237,28 +238,28 @@ describe('effects control-flow handlers', () => {
         '$pick[1]': 'beta',
       },
     });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       forEach: {
         bind: '$n',
         over: { query: 'intsInRange', min: 1, max: 2 },
         effects: [
-          {
+          eff({
             chooseOne: {
               internalDecisionId: 'decision:$pick',
               bind: '$pick',
               options: { query: 'enums', values: ['alpha', 'beta'] },
             },
-          },
-          {
+          }),
+          eff({
             if: {
               when: { op: '==', left: { _t: 2 as const, ref: 'binding', name: '$pick' }, right: 'alpha' },
-              then: [{ addVar: { scope: 'global', var: 'sum', delta: 1 } }],
-              else: [{ addVar: { scope: 'global', var: 'sum', delta: 10 } }],
+              then: [eff({ addVar: { scope: 'global', var: 'sum', delta: 1 } })],
+              else: [eff({ addVar: { scope: 'global', var: 'sum', delta: 10 } })],
             },
-          },
+          }),
         ],
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state.globalVars.sum, 11);
@@ -273,36 +274,36 @@ describe('effects control-flow handlers', () => {
         '$pick[1][1]': 'alpha',
       },
     });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       forEach: {
         bind: '$outer',
         over: { query: 'intsInRange', min: 1, max: 2 },
         effects: [
-          {
+          eff({
             forEach: {
               bind: '$inner',
               over: { query: 'intsInRange', min: 1, max: 2 },
               effects: [
-                {
+                eff({
                   chooseOne: {
                     internalDecisionId: 'decision:$pick',
                     bind: '$pick',
                     options: { query: 'enums', values: ['alpha', 'beta'] },
                   },
-                },
-                {
+                }),
+                eff({
                   if: {
                     when: { op: '==', left: { _t: 2 as const, ref: 'binding', name: '$pick' }, right: 'alpha' },
-                    then: [{ addVar: { scope: 'global', var: 'sum', delta: 1 } }],
-                    else: [{ addVar: { scope: 'global', var: 'sum', delta: 10 } }],
+                    then: [eff({ addVar: { scope: 'global', var: 'sum', delta: 1 } })],
+                    else: [eff({ addVar: { scope: 'global', var: 'sum', delta: 10 } })],
                   },
-                },
+                }),
               ],
             },
-          },
+          }),
         ],
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state.globalVars.sum, 22);
@@ -314,14 +315,14 @@ describe('effects control-flow handlers', () => {
     assert.throws(
       () =>
         applyEffect(
-          {
+          eff({
             forEach: {
               bind: '$n',
               over: { query: 'intsInRange', min: 1, max: 3 },
               effects: [],
               limit: -1,
             },
-          },
+          }),
           ctx,
         ),
       (error: unknown) => {
@@ -333,14 +334,14 @@ describe('effects control-flow handlers', () => {
     assert.throws(
       () =>
         applyEffect(
-          {
+          eff({
             forEach: {
               bind: '$n',
               over: { query: 'intsInRange', min: 1, max: 3 },
               effects: [],
               limit: 1.5,
             },
-          },
+          }),
           ctx,
         ),
       (error: unknown) => {
@@ -352,29 +353,29 @@ describe('effects control-flow handlers', () => {
 
   it('nested forEach/let/if composition threads state across iterations', () => {
     const ctx = makeCtx();
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       forEach: {
         bind: '$n',
         over: { query: 'intsInRange', min: 1, max: 3 },
         effects: [
-          {
+          eff({
             let: {
               bind: '$delta',
               value: { _t: 6 as const, op: '*' as const, left: { _t: 2 as const, ref: 'binding', name: '$n' }, right: 2 },
               in: [
-                {
+                eff({
                   if: {
                     when: { op: '>', left: { _t: 2 as const, ref: 'binding', name: '$delta' }, right: 4 },
-                    then: [{ addVar: { scope: 'global', var: 'bonus', delta: 1 } }],
-                    else: [{ addVar: { scope: 'global', var: 'sum', delta: { _t: 2 as const, ref: 'binding', name: '$delta' } } }],
+                    then: [eff({ addVar: { scope: 'global', var: 'bonus', delta: 1 } })],
+                    else: [eff({ addVar: { scope: 'global', var: 'sum', delta: { _t: 2 as const, ref: 'binding', name: '$delta' } } })],
                   },
-                },
+                }),
               ],
             },
-          },
+          }),
         ],
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state.globalVars.sum, 6);
@@ -383,14 +384,14 @@ describe('effects control-flow handlers', () => {
 
   it('forEach accepts dynamic limit via ValueExpr (binding ref)', () => {
     const ctx = makeCtx({ bindings: { '$maxItems': 2 } });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       forEach: {
         bind: '$n',
         over: { query: 'intsInRange', min: 1, max: 5 },
-        effects: [{ addVar: { scope: 'global', var: 'sum', delta: { _t: 2 as const, ref: 'binding', name: '$n' } } }],
+        effects: [eff({ addVar: { scope: 'global', var: 'sum', delta: { _t: 2 as const, ref: 'binding', name: '$n' } } })],
         limit: { _t: 2 as const, ref: 'binding', name: '$maxItems' },
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state.globalVars.sum, 3);
@@ -398,22 +399,22 @@ describe('effects control-flow handlers', () => {
 
   it('forEach resolves limit from a let binding in the same authored scope', () => {
     const ctx = makeCtx();
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       let: {
         bind: '$loopLimit',
         value: 2,
         in: [
-          {
+          eff({
             forEach: {
               bind: '$n',
               over: { query: 'intsInRange', min: 1, max: 5 },
               limit: { _t: 2 as const, ref: 'binding', name: '$loopLimit' },
-              effects: [{ addVar: { scope: 'global', var: 'sum', delta: { _t: 2 as const, ref: 'binding', name: '$n' } } }],
+              effects: [eff({ addVar: { scope: 'global', var: 'sum', delta: { _t: 2 as const, ref: 'binding', name: '$n' } } })],
             },
-          },
+          }),
         ],
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state.globalVars.sum, 3);
@@ -421,15 +422,15 @@ describe('effects control-flow handlers', () => {
 
   it('forEach with countBind and in binds iteration count after loop', () => {
     const ctx = makeCtx();
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       forEach: {
         bind: '$n',
         over: { query: 'intsInRange', min: 1, max: 3 },
-        effects: [{ addVar: { scope: 'global', var: 'sum', delta: { _t: 2 as const, ref: 'binding', name: '$n' } } }],
+        effects: [eff({ addVar: { scope: 'global', var: 'sum', delta: { _t: 2 as const, ref: 'binding', name: '$n' } } })],
         countBind: '$total',
-        in: [{ setVar: { scope: 'global', var: 'count', value: { _t: 2 as const, ref: 'binding', name: '$total' } } }],
+        in: [eff({ setVar: { scope: 'global', var: 'count', value: { _t: 2 as const, ref: 'binding', name: '$total' } } })],
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state.globalVars.sum, 6);
@@ -438,16 +439,16 @@ describe('effects control-flow handlers', () => {
 
   it('forEach countBind reflects actual iteration count when limited', () => {
     const ctx = makeCtx();
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       forEach: {
         bind: '$n',
         over: { query: 'intsInRange', min: 1, max: 10 },
-        effects: [{ addVar: { scope: 'global', var: 'count', delta: 1 } }],
+        effects: [eff({ addVar: { scope: 'global', var: 'count', delta: 1 } })],
         limit: 4,
         countBind: '$actual',
-        in: [{ setVar: { scope: 'global', var: 'bonus', value: { _t: 2 as const, ref: 'binding', name: '$actual' } } }],
+        in: [eff({ setVar: { scope: 'global', var: 'bonus', value: { _t: 2 as const, ref: 'binding', name: '$actual' } } })],
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state.globalVars.count, 4);
@@ -456,15 +457,15 @@ describe('effects control-flow handlers', () => {
 
   it('forEach countBind is 0 when collection is empty', () => {
     const ctx = makeCtx();
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       forEach: {
         bind: '$n',
         over: { query: 'intsInRange', min: 5, max: 4 },
-        effects: [{ addVar: { scope: 'global', var: 'count', delta: 1 } }],
+        effects: [eff({ addVar: { scope: 'global', var: 'count', delta: 1 } })],
         countBind: '$total',
-        in: [{ setVar: { scope: 'global', var: 'x', value: { _t: 2 as const, ref: 'binding', name: '$total' } } }],
+        in: [eff({ setVar: { scope: 'global', var: 'x', value: { _t: 2 as const, ref: 'binding', name: '$total' } } })],
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state.globalVars.x, 0);
@@ -472,7 +473,7 @@ describe('effects control-flow handlers', () => {
 
   it('reduce folds values deterministically and binds final result into continuation', () => {
     const ctx = makeCtx();
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       reduce: {
         itemBind: '$n',
         accBind: '$acc',
@@ -480,9 +481,9 @@ describe('effects control-flow handlers', () => {
         initial: 0,
         next: { _t: 6 as const, op: '+' as const, left: { _t: 2 as const, ref: 'binding', name: '$acc' }, right: { _t: 2 as const, ref: 'binding', name: '$n' } },
         resultBind: '$sum',
-        in: [{ setVar: { scope: 'global', var: 'sum', value: { _t: 2 as const, ref: 'binding', name: '$sum' } } }],
+        in: [eff({ setVar: { scope: 'global', var: 'sum', value: { _t: 2 as const, ref: 'binding', name: '$sum' } } })],
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state.globalVars.sum, 10);
@@ -490,7 +491,7 @@ describe('effects control-flow handlers', () => {
 
   it('reduce supports non-numeric (string) accumulators', () => {
     const ctx = makeCtx();
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       reduce: {
         itemBind: '$n',
         accBind: '$acc',
@@ -499,15 +500,15 @@ describe('effects control-flow handlers', () => {
         next: { _t: 3 as const, concat: [{ _t: 2 as const, ref: 'binding' as const, name: '$acc' }, { _t: 2 as const, ref: 'binding' as const, name: '$n' }] },
         resultBind: '$joined',
         in: [
-          {
+          eff({
             if: {
               when: { op: '==', left: { _t: 2 as const, ref: 'binding', name: '$joined' }, right: '123' },
-              then: [{ setVar: { scope: 'global', var: 'bonus', value: 1 } }],
+              then: [eff({ setVar: { scope: 'global', var: 'bonus', value: 1 } })],
             },
-          },
+          }),
         ],
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state.globalVars.bonus, 1);
@@ -517,7 +518,7 @@ describe('effects control-flow handlers', () => {
     const ctx = makeCtx();
     const result = applyEffects(
       [
-        {
+        eff({
           reduce: {
             itemBind: '$n',
             accBind: '$acc',
@@ -526,16 +527,16 @@ describe('effects control-flow handlers', () => {
             next: { _t: 6 as const, op: '+' as const, left: { _t: 2 as const, ref: 'binding', name: '$acc' }, right: { _t: 2 as const, ref: 'binding', name: '$n' } },
             resultBind: '$sum',
             in: [
-              {
+              eff({
                 bindValue: {
                   bind: '$exported',
                   value: { _t: 6 as const, op: '*' as const, left: { _t: 2 as const, ref: 'binding', name: '$sum' }, right: 2 },
                 },
-              },
+              }),
             ],
           },
-        },
-        { setVar: { scope: 'global', var: 'sum', value: { _t: 2 as const, ref: 'binding', name: '$exported' } } },
+        }),
+        eff({ setVar: { scope: 'global', var: 'sum', value: { _t: 2 as const, ref: 'binding', name: '$exported' } } }),
       ],
       ctx,
     );
@@ -545,7 +546,7 @@ describe('effects control-flow handlers', () => {
 
   it('reduce enforces default limit of 100 and explicit dynamic limits', () => {
     const defaultCtx = makeCtx();
-    const defaultEffect: EffectAST = {
+    const defaultEffect: EffectAST = eff({
       reduce: {
         itemBind: '$n',
         accBind: '$acc',
@@ -553,14 +554,14 @@ describe('effects control-flow handlers', () => {
         initial: 0,
         next: { _t: 6 as const, op: '+' as const, left: { _t: 2 as const, ref: 'binding', name: '$acc' }, right: 1 },
         resultBind: '$count',
-        in: [{ setVar: { scope: 'global', var: 'count', value: { _t: 2 as const, ref: 'binding', name: '$count' } } }],
+        in: [eff({ setVar: { scope: 'global', var: 'count', value: { _t: 2 as const, ref: 'binding', name: '$count' } } })],
       },
-    };
+    });
     const defaultResult = applyEffect(defaultEffect, defaultCtx);
     assert.equal(defaultResult.state.globalVars.count, 100);
 
     const dynamicCtx = makeCtx({ bindings: { '$max': 3 } });
-    const dynamicEffect: EffectAST = {
+    const dynamicEffect: EffectAST = eff({
       reduce: {
         itemBind: '$n',
         accBind: '$acc',
@@ -569,9 +570,9 @@ describe('effects control-flow handlers', () => {
         next: { _t: 6 as const, op: '+' as const, left: { _t: 2 as const, ref: 'binding', name: '$acc' }, right: 1 },
         limit: { _t: 2 as const, ref: 'binding', name: '$max' },
         resultBind: '$count',
-        in: [{ setVar: { scope: 'global', var: 'count', value: { _t: 2 as const, ref: 'binding', name: '$count' } } }],
+        in: [eff({ setVar: { scope: 'global', var: 'count', value: { _t: 2 as const, ref: 'binding', name: '$count' } } })],
       },
-    };
+    });
     const dynamicResult = applyEffect(dynamicEffect, dynamicCtx);
     assert.equal(dynamicResult.state.globalVars.count, 3);
   });
@@ -581,7 +582,7 @@ describe('effects control-flow handlers', () => {
     assert.throws(
       () =>
         applyEffect(
-          {
+          eff({
             reduce: {
               itemBind: '$n',
               accBind: '$acc',
@@ -592,7 +593,7 @@ describe('effects control-flow handlers', () => {
               resultBind: '$out',
               in: [],
             },
-          },
+          }),
           ctx,
         ),
       (error: unknown) => {
@@ -649,7 +650,7 @@ describe('effects control-flow handlers', () => {
       markers: {},
     };
     const ctx = makeCtx({ def, state });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       removeByPriority: {
         budget: 2,
         groups: [
@@ -668,11 +669,11 @@ describe('effects control-flow handlers', () => {
         ],
         remainingBind: '$remaining',
         in: [
-          { setVar: { scope: 'global', var: 'count', value: { _t: 2 as const, ref: 'binding', name: '$troopsRemoved' } } },
-          { setVar: { scope: 'global', var: 'bonus', value: { _t: 2 as const, ref: 'binding', name: '$remaining' } } },
+          eff({ setVar: { scope: 'global', var: 'count', value: { _t: 2 as const, ref: 'binding', name: '$troopsRemoved' } } }),
+          eff({ setVar: { scope: 'global', var: 'bonus', value: { _t: 2 as const, ref: 'binding', name: '$remaining' } } }),
         ],
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.equal(result.state.zones['space:none']?.length, 1);
@@ -720,7 +721,7 @@ describe('effects control-flow handlers', () => {
       markers: {},
     };
     const ctx = makeCtx({ def, state });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       removeByPriority: {
         budget: 0,
         groups: [
@@ -731,9 +732,9 @@ describe('effects control-flow handlers', () => {
             countBind: '$removed',
           },
         ],
-        in: [{ setVar: { scope: 'global', var: 'count', value: { _t: 2 as const, ref: 'binding', name: '$removed' } } }],
+        in: [eff({ setVar: { scope: 'global', var: 'count', value: { _t: 2 as const, ref: 'binding', name: '$removed' } } })],
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.deepEqual(result.state, ctx.state);
@@ -781,7 +782,7 @@ describe('effects control-flow handlers', () => {
     };
     const ctx = makeCtx({ def, state });
     const effects: readonly EffectAST[] = [
-      {
+      eff({
         removeByPriority: {
           budget: 3,
           groups: [
@@ -794,9 +795,9 @@ describe('effects control-flow handlers', () => {
           ],
           remainingBind: '$remaining',
         },
-      },
-      { setVar: { scope: 'global', var: 'count', value: { _t: 2 as const, ref: 'binding', name: '$removed' } } },
-      { setVar: { scope: 'global', var: 'bonus', value: { _t: 2 as const, ref: 'binding', name: '$remaining' } } },
+      }),
+      eff({ setVar: { scope: 'global', var: 'count', value: { _t: 2 as const, ref: 'binding', name: '$removed' } } }),
+      eff({ setVar: { scope: 'global', var: 'bonus', value: { _t: 2 as const, ref: 'binding', name: '$remaining' } } }),
     ];
 
     const result = applyEffects(effects, ctx);
@@ -848,7 +849,7 @@ describe('effects control-flow handlers', () => {
         $items: [{ id: 't1' }],
       },
     });
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       removeByPriority: {
         budget: 1,
         groups: [
@@ -859,7 +860,7 @@ describe('effects control-flow handlers', () => {
           },
         ],
       },
-    };
+    });
 
     assert.throws(
       () => applyEffect(effect, ctx),
@@ -872,14 +873,14 @@ describe('effects control-flow handlers', () => {
 
   it('rollRandom generates a deterministic integer and binds it within scope', () => {
     const ctx = makeCtx();
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       rollRandom: {
         bind: '$die',
         min: 1,
         max: 6,
-        in: [{ setVar: { scope: 'global', var: 'x', value: { _t: 2 as const, ref: 'binding', name: '$die' } } }],
+        in: [eff({ setVar: { scope: 'global', var: 'x', value: { _t: 2 as const, ref: 'binding', name: '$die' } } })],
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     const rolled = result.state.globalVars.x;
@@ -888,14 +889,14 @@ describe('effects control-flow handlers', () => {
   });
 
   it('rollRandom is deterministic for the same seed', () => {
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       rollRandom: {
         bind: '$die',
         min: 1,
         max: 6,
-        in: [{ setVar: { scope: 'global', var: 'x', value: { _t: 2 as const, ref: 'binding', name: '$die' } } }],
+        in: [eff({ setVar: { scope: 'global', var: 'x', value: { _t: 2 as const, ref: 'binding', name: '$die' } } })],
       },
-    };
+    });
 
     const result1 = applyEffect(effect, makeCtx());
     const result2 = applyEffect(effect, makeCtx());
@@ -904,14 +905,14 @@ describe('effects control-flow handlers', () => {
 
   it('rollRandom advances RNG state', () => {
     const ctx = makeCtx();
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       rollRandom: {
         bind: '$die',
         min: 1,
         max: 6,
         in: [],
       },
-    };
+    });
 
     const result = applyEffect(effect, ctx);
     assert.notDeepEqual(result.rng.state.state, ctx.rng.state.state);
@@ -919,14 +920,14 @@ describe('effects control-flow handlers', () => {
 
   it('rollRandom throws when min > max', () => {
     const ctx = makeCtx();
-    const effect: EffectAST = {
+    const effect: EffectAST = eff({
       rollRandom: {
         bind: '$die',
         min: 10,
         max: 3,
         in: [],
       },
-    };
+    });
 
     assert.throws(
       () => applyEffect(effect, ctx),
@@ -937,16 +938,16 @@ describe('effects control-flow handlers', () => {
   it('rollRandom binding is only available inside in-scope', () => {
     const ctx = makeCtx();
     const effects: readonly EffectAST[] = [
-      {
+      eff({
         rollRandom: {
           bind: '$die',
           min: 1,
           max: 6,
-          in: [{ setVar: { scope: 'global', var: 'x', value: { _t: 2 as const, ref: 'binding', name: '$die' } } }],
+          in: [eff({ setVar: { scope: 'global', var: 'x', value: { _t: 2 as const, ref: 'binding', name: '$die' } } })],
         },
-      },
+      }),
       // $die should not be available here
-      { setVar: { scope: 'global', var: 'count', value: { _t: 2 as const, ref: 'binding', name: '$die' } } },
+      eff({ setVar: { scope: 'global', var: 'count', value: { _t: 2 as const, ref: 'binding', name: '$die' } } }),
     ];
 
     assert.throws(

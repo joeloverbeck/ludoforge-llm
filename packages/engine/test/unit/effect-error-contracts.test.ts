@@ -34,6 +34,7 @@ import {
   makeTurnFlowActiveSeatUnresolvableEffectRuntimeContext,
   TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS,
 } from '../../src/kernel/index.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 describe('effect error context contracts', () => {
   const baseDef: GameDef = {
@@ -92,7 +93,7 @@ describe('effect error context contracts', () => {
   });
 
   it('effectNotImplementedError emits typed EFFECT_NOT_IMPLEMENTED context', () => {
-    const effect: EffectAST = { draw: { from: 'deck', to: 'hand', count: 1 } };
+    const effect: EffectAST = eff({ draw: { from: 'deck', to: 'hand', count: 1 } });
     const error = effectNotImplementedError('draw', { effect });
 
     assert.equal(error.code, 'EFFECT_NOT_IMPLEMENTED');
@@ -141,7 +142,7 @@ describe('effect error context contracts', () => {
 
   it('effectRuntimeError helper emits canonical reasons on runtime failures', () => {
     assert.throws(
-      () => applyEffect({ setVar: { scope: 'global', var: 'x', value: 'bad' } }, makeContext()),
+      () => applyEffect(eff({ setVar: { scope: 'global', var: 'x', value: 'bad' } }), makeContext()),
       (error: unknown) => {
         assert.ok(isEffectErrorCode(error, 'EFFECT_RUNTIME'));
         assert.equal(error.context?.reason, EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED);
@@ -151,7 +152,7 @@ describe('effect error context contracts', () => {
 
     assert.throws(
       () => applyEffect(
-        { reveal: { zone: asZoneId('board:none'), to: 'all' } },
+        eff({ reveal: { zone: asZoneId('board:none'), to: 'all' } }),
         makeContext({
           state: {
             ...baseState,
@@ -168,7 +169,7 @@ describe('effect error context contracts', () => {
 
     assert.throws(
       () => applyEffect(
-        { conceal: { zone: asZoneId('board:none') } },
+        eff({ conceal: { zone: asZoneId('board:none') } }),
         makeContext({
           state: {
             ...baseState,
@@ -450,8 +451,8 @@ describe('effect error context contracts', () => {
     } as unknown as EffectContext;
 
     for (const invoke of [
-      () => applyEffect({ bindValue: { bind: '$noop', value: 1 } }, malformedContext),
-      () => applyEffects([{ bindValue: { bind: '$noop', value: 1 } }], malformedContext),
+      () => applyEffect(eff({ bindValue: { bind: '$noop', value: 1 } }), malformedContext),
+      () => applyEffects([eff({ bindValue: { bind: '$noop', value: 1 } })], malformedContext),
     ]) {
       assert.throws(invoke, (error: unknown) => {
         assert.ok(isEffectErrorCode(error, 'EFFECT_RUNTIME'));

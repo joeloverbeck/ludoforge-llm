@@ -20,6 +20,7 @@ import {
   createCollector,
 } from '../../src/kernel/index.js';
 import { assertSelectorResolutionPolicyBoundary } from '../helpers/effect-error-assertions.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 
 const makeDef = (): GameDef => ({
   metadata: { id: 'effects-token-move-draw-test', players: { min: 1, max: 2 } },
@@ -98,7 +99,7 @@ describe('effects moveToken and draw', () => {
     assert.ok(movingToken !== undefined);
 
     const result = applyEffect(
-      { moveToken: { token: '$token', from: 'deck:none', to: 'discard:none', position: 'top' } },
+      eff({ moveToken: { token: '$token', from: 'deck:none', to: 'discard:none', position: 'top' } }),
       { ...ctx, bindings: { $token: movingToken } },
     );
 
@@ -111,7 +112,7 @@ describe('effects moveToken and draw', () => {
     assert.ok(movingToken !== undefined);
 
     const result = applyEffect(
-      { moveToken: { token: '$token', from: 'deck:none', to: 'discard:none', position: 'bottom' } },
+      eff({ moveToken: { token: '$token', from: 'deck:none', to: 'discard:none', position: 'bottom' } }),
       { ...ctx, bindings: { $token: movingToken } },
     );
 
@@ -129,7 +130,7 @@ describe('effects moveToken and draw', () => {
     const [expectedIndex, expectedRng] = nextInt(ctx.rng, 0, destinationSizeAfterRemoval);
 
     const result = applyEffect(
-      { moveToken: { token: '$token', from: 'deck:none', to: 'discard:none', position: 'random' } },
+      eff({ moveToken: { token: '$token', from: 'deck:none', to: 'discard:none', position: 'random' } }),
       { ...ctx, bindings: { $token: movingToken } },
     );
 
@@ -147,7 +148,7 @@ describe('effects moveToken and draw', () => {
     const totalBefore = Object.values(ctx.state.zones).reduce((sum, zone) => sum + zone.length, 0);
 
     const result = applyEffect(
-      { moveToken: { token: '$token', from: 'deck:none', to: 'discard:none' } },
+      eff({ moveToken: { token: '$token', from: 'deck:none', to: 'discard:none' } }),
       { ...ctx, bindings: { $token: movingToken } },
     );
 
@@ -166,7 +167,7 @@ describe('effects moveToken and draw', () => {
     assert.ok(movingToken !== undefined);
 
     const result = applyEffect(
-      { moveToken: { token: '$token', from: 'deck:none', to: 'discard:none' } },
+      eff({ moveToken: { token: '$token', from: 'deck:none', to: 'discard:none' } }),
       { ...ctx, bindings: { $token: movingToken } },
     );
 
@@ -185,7 +186,7 @@ describe('effects moveToken and draw', () => {
     assert.throws(
       () =>
         applyEffect(
-          { moveToken: { token: '$token', from: 'deck:none', to: 'discard:none' } },
+          eff({ moveToken: { token: '$token', from: 'deck:none', to: 'discard:none' } }),
           { ...ctx, bindings: { $token: tokenInDiscard } },
         ),
       (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('resolved from zone'),
@@ -200,7 +201,7 @@ describe('effects moveToken and draw', () => {
     assert.throws(
       () =>
         applyEffect(
-          { moveToken: { token: '$token', from: 'deck:none', to: 'discard:none' } },
+          eff({ moveToken: { token: '$token', from: 'deck:none', to: 'discard:none' } }),
           ctx,
         ),
       (error: unknown) =>
@@ -225,7 +226,7 @@ describe('effects moveToken and draw', () => {
     assert.throws(
       () =>
         applyEffect(
-          { moveToken: { token: '$token', from: 'deck:none', to: 'hand:0' } },
+          eff({ moveToken: { token: '$token', from: 'deck:none', to: 'hand:0' } }),
           { ...ctx, bindings: { $token: duplicate } },
         ),
       (error: unknown) =>
@@ -251,7 +252,7 @@ describe('effects moveToken and draw', () => {
     assert.throws(
       () =>
         applyEffect(
-          { moveToken: { token: '$token', from: 'deck:none', to: 'hand:0' } },
+          eff({ moveToken: { token: '$token', from: 'deck:none', to: 'hand:0' } }),
           { ...ctx, bindings: { $token: duplicate } },
         ),
       (error: unknown) =>
@@ -264,7 +265,7 @@ describe('effects moveToken and draw', () => {
   it('draw moves min(count, sourceSize) tokens from source front', () => {
     const ctx = makeCtx();
 
-    const result = applyEffect({ draw: { from: 'deck:none', to: 'discard:none', count: 5 } }, ctx);
+    const result = applyEffect(eff({ draw: { from: 'deck:none', to: 'discard:none', count: 5 } }), ctx);
 
     assert.equal(result.state.zones['deck:none']?.length, 0);
     assert.equal(result.state.zones['discard:none']?.length, 5);
@@ -276,7 +277,7 @@ describe('effects moveToken and draw', () => {
   it('draw transition returns new state and zones containers when tokens move', () => {
     const ctx = makeCtx();
 
-    const result = applyEffect({ draw: { from: 'deck:none', to: 'discard:none', count: 1 } }, ctx);
+    const result = applyEffect(eff({ draw: { from: 'deck:none', to: 'discard:none', count: 1 } }), ctx);
 
     assert.notEqual(result.state, ctx.state);
     assert.notEqual(result.state.zones, ctx.state.zones);
@@ -297,7 +298,7 @@ describe('effects moveToken and draw', () => {
       },
     });
 
-    const result = applyEffect({ draw: { from: 'deck:none', to: 'discard:none', count: 2 } }, ctx);
+    const result = applyEffect(eff({ draw: { from: 'deck:none', to: 'discard:none', count: 2 } }), ctx);
     assert.equal(result.state, ctx.state);
     assert.equal(result.rng, ctx.rng);
   });
@@ -306,12 +307,12 @@ describe('effects moveToken and draw', () => {
     const ctx = makeCtx();
 
     assert.throws(
-      () => applyEffect({ draw: { from: 'deck:none', to: 'discard:none', count: -1 } }, ctx),
+      () => applyEffect(eff({ draw: { from: 'deck:none', to: 'discard:none', count: -1 } }), ctx),
       (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('draw.count'),
     );
 
     assert.throws(
-      () => applyEffect({ draw: { from: 'deck:none', to: 'discard:none', count: 1.5 } }, ctx),
+      () => applyEffect(eff({ draw: { from: 'deck:none', to: 'discard:none', count: 1.5 } }), ctx),
       (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('draw.count'),
     );
   });
@@ -320,12 +321,12 @@ describe('effects moveToken and draw', () => {
     assertSelectorResolutionPolicyBoundary({
       executionRun: () =>
         applyEffect(
-          { draw: { from: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$missingFromZone' } }, to: 'discard:none', count: 1 } },
+          eff({ draw: { from: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$missingFromZone' } }, to: 'discard:none', count: 1 } }),
           makeCtx(),
         ),
       discoveryRun: () =>
         applyEffect(
-          { draw: { from: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$missingFromZone' } }, to: 'discard:none', count: 1 } },
+          eff({ draw: { from: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$missingFromZone' } }, to: 'discard:none', count: 1 } }),
           makeDiscoveryCtx(),
         ),
       normalizedMessage: 'draw.from zone resolution failed',
@@ -336,24 +337,24 @@ describe('effects moveToken and draw', () => {
     assertSelectorResolutionPolicyBoundary({
       executionRun: () =>
         applyEffect(
-          {
+          eff({
             moveToken: {
               token: '$token',
               from: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$missingFromZone' } },
               to: 'discard:none',
             },
-          },
+          }),
           makeCtx(),
         ),
       discoveryRun: () =>
         applyEffect(
-          {
+          eff({
             moveToken: {
               token: '$token',
               from: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$missingFromZone' } },
               to: 'discard:none',
             },
-          },
+          }),
           makeDiscoveryCtx(),
         ),
       normalizedMessage: 'moveToken.from zone resolution failed',
@@ -364,24 +365,24 @@ describe('effects moveToken and draw', () => {
     assertSelectorResolutionPolicyBoundary({
       executionRun: () =>
         applyEffect(
-          {
+          eff({
             moveToken: {
               token: '$token',
               from: 'deck:none',
               to: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$missingToZone' } },
             },
-          },
+          }),
           makeCtx(),
         ),
       discoveryRun: () =>
         applyEffect(
-          {
+          eff({
             moveToken: {
               token: '$token',
               from: 'deck:none',
               to: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$missingToZone' } },
             },
-          },
+          }),
           makeDiscoveryCtx(),
         ),
       normalizedMessage: 'moveToken.to zone resolution failed',
@@ -404,7 +405,7 @@ describe('effects moveToken and draw', () => {
     assert.ok(movingToken !== undefined);
 
     const result = applyEffect(
-      { moveToken: { token: '$token', from: 'deck:none', to: 'discard:none', position: 'random' } },
+      eff({ moveToken: { token: '$token', from: 'deck:none', to: 'discard:none', position: 'random' } }),
       { ...ctx, bindings: { $token: movingToken } },
     );
 
@@ -431,7 +432,7 @@ describe('draw trace emission', () => {
   it('draw emits one moveToken trace entry per token drawn', () => {
     const ctx = makeTraceCtx();
 
-    applyEffect({ draw: { from: 'deck:none', to: 'hand:0', count: 2 } }, ctx);
+    applyEffect(eff({ draw: { from: 'deck:none', to: 'hand:0', count: 2 } }), ctx);
 
     const trace = ctx.collector.trace ?? [];
     assert.equal(trace.length, 2);
@@ -457,7 +458,7 @@ describe('draw trace emission', () => {
       },
     });
 
-    applyEffect({ draw: { from: 'deck:none', to: 'hand:0', count: 2 } }, ctx);
+    applyEffect(eff({ draw: { from: 'deck:none', to: 'hand:0', count: 2 } }), ctx);
 
     assert.deepEqual(ctx.collector.trace, []);
   });
@@ -465,7 +466,7 @@ describe('draw trace emission', () => {
   it('draw with count 0 emits no trace entries', () => {
     const ctx = makeTraceCtx();
 
-    applyEffect({ draw: { from: 'deck:none', to: 'hand:0', count: 0 } }, ctx);
+    applyEffect(eff({ draw: { from: 'deck:none', to: 'hand:0', count: 0 } }), ctx);
 
     assert.deepEqual(ctx.collector.trace, []);
   });
@@ -473,7 +474,7 @@ describe('draw trace emission', () => {
   it('draw with count > source length emits entries for actual count', () => {
     const ctx = makeTraceCtx();
 
-    applyEffect({ draw: { from: 'deck:none', to: 'hand:0', count: 5 } }, ctx);
+    applyEffect(eff({ draw: { from: 'deck:none', to: 'hand:0', count: 5 } }), ctx);
 
     const trace = ctx.collector.trace ?? [];
     assert.equal(trace.length, 3);
@@ -519,7 +520,7 @@ describe('effects moveToken stacking enforcement', () => {
     assert.throws(
       () =>
         applyEffect(
-          { moveToken: { token: '$token', from: 'deck:none', to: 'discard:none' } },
+          eff({ moveToken: { token: '$token', from: 'deck:none', to: 'discard:none' } }),
           { ...ctx, bindings: { $token: 'b3' } },
         ),
       (error: unknown) => isEffectErrorCode(error, 'STACKING_VIOLATION'),
@@ -539,7 +540,7 @@ describe('effects moveToken stacking enforcement', () => {
     const ctx = makeCtx({ def, state });
 
     const result = applyEffect(
-      { moveToken: { token: '$token', from: 'deck:none', to: 'discard:none' } },
+      eff({ moveToken: { token: '$token', from: 'deck:none', to: 'discard:none' } }),
       { ...ctx, bindings: { $token: 'b2' } },
     );
 

@@ -1,4 +1,5 @@
-import type { EffectKind, EffectKindMap, EffectAST } from './types.js';
+import type { EffectKind, EffectAST, EffectKindTag, WithKindTag } from './types.js';
+import { EFFECT_KIND_TAG } from './types.js';
 import type { EffectCursor, EffectEnv, EffectResult } from './effect-context.js';
 import type { EffectBudgetState } from './effects-control.js';
 
@@ -44,7 +45,7 @@ export type ApplyEffectsWithBudget = (
 ) => EffectResult;
 
 export type EffectHandler<K extends EffectKind> = (
-  effect: EffectKindMap[K],
+  effect: WithKindTag<K>,
   env: EffectEnv,
   cursor: EffectCursor,
   budget: EffectBudgetState,
@@ -90,8 +91,11 @@ export const registry: EffectRegistry = {
   evaluateSubset: applyEvaluateSubset,
 };
 
+/** Reverse lookup: tag number → string kind name. Derived from EFFECT_KIND_TAG. */
+export const TAG_TO_KIND: readonly EffectKind[] = Object.entries(EFFECT_KIND_TAG)
+  .sort(([, a], [, b]) => a - b)
+  .map(([k]) => k as EffectKind);
+
 export function effectKindOf(effect: EffectAST): EffectKind {
-  // Avoid Object.keys() array allocation (~300K calls). for-in returns the first own key.
-  for (const key in effect) return key as EffectKind;
-  return Object.keys(effect)[0] as EffectKind;
+  return TAG_TO_KIND[(effect as { readonly _k: EffectKindTag })._k]!;
 }

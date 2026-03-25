@@ -1,6 +1,6 @@
 # 82EFFASTTYPTAG-003: Tag-Based Effect Dispatch and effectKindOf Update
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/kernel/effect-registry.ts`, `effect-dispatch.ts`
@@ -126,3 +126,15 @@ const handler = dispatchTable[tag];
 
 1. `pnpm -F @ludoforge/engine build && pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-25
+- **What changed**:
+  - `effect-registry.ts`: Added `TAG_TO_KIND` reverse-lookup array; replaced `effectKindOf`'s `for-in` with O(1) tag-based lookup (`TAG_TO_KIND[effect._k]`); updated `EffectHandler<K>` to accept `WithKindTag<K>`.
+  - `effect-dispatch.ts`: Added `dispatchTable` array derived from `TAG_TO_KIND.map(kind => registry[kind])`; updated `applyEffectWithBudget` to use `effect._k` for O(1) dispatch via `dispatchTable[tag]`.
+  - `index.ts`: Exported `TAG_TO_KIND` and `effectKindOf` from kernel barrel.
+  - New test file `test/unit/effect-registry.test.ts` with 6 tests (TAG_TO_KIND consistency, contiguity, effectKindOf correctness for all 34 kinds).
+- **Deviations from plan**:
+  - `EffectHandler<K>` parameter type changed from `EffectKindMap[K]` to `WithKindTag<K>` — necessary to align with actual handler implementations after ticket 001 changed `EffectAST` to require `_k`. The ticket's out-of-scope note assumed compatibility, but contravariant parameter types required the update.
+- **Verification**: All 6 new tests pass; all 8 existing `effect-builders.test.ts` tests pass; `effect-registry.ts` and `effect-dispatch.ts` have zero type errors. Full build is blocked by pre-existing errors from ticket 001 (compiler/test fixtures missing `_k` — tickets 004 and 006).

@@ -12,6 +12,20 @@ import {
 import { createDraftTracker, createMutableState, freezeState, type MutableGameState } from './state-draft.js';
 import type { PhaseId } from './branded.js';
 import type { EffectAST, GameDef, GameState, TriggerEvent } from './types.js';
+import type { NormalizedEffectResult, PartialEffectResult } from './effect-context.js';
+
+const normalizeFragmentResult = (
+  result: PartialEffectResult,
+  bindings: Readonly<Record<string, unknown>>,
+  decisionScope: ReturnType<typeof emptyScope>,
+): NormalizedEffectResult => ({
+  state: result.state,
+  rng: result.rng,
+  emittedEvents: result.emittedEvents ?? [],
+  bindings: result.bindings ?? bindings,
+  decisionScope: result.decisionScope ?? decisionScope,
+  ...(result.pendingChoice === undefined ? {} : { pendingChoice: result.pendingChoice }),
+});
 
 export const composeFragments = (
   fragments: readonly CompiledEffectFragment[],
@@ -28,16 +42,16 @@ export const composeFragments = (
   const emittedEvents: TriggerEvent[] = [];
 
   for (const fragment of fragments) {
-    const result = fragment.execute(currentState, currentRng, currentBindings, {
+    const result = normalizeFragmentResult(fragment.execute(currentState, currentRng, currentBindings, {
       ...compiledCtx,
       decisionScope: currentDecisionScope,
       tracker,
-    });
+    }), currentBindings, currentDecisionScope);
     currentState = result.state;
     currentRng = result.rng;
-    currentBindings = result.bindings ?? currentBindings;
-    currentDecisionScope = result.decisionScope ?? currentDecisionScope;
-    for (const event of result.emittedEvents ?? []) {
+    currentBindings = result.bindings;
+    currentDecisionScope = result.decisionScope;
+    for (const event of result.emittedEvents) {
       emittedEvents.push(event);
     }
     if (result.pendingChoice !== undefined) {
@@ -93,7 +107,7 @@ export const compileEffectSequence = (
   return {
     phaseId,
     lifecycle,
-    execute: fragment.execute,
+    execute: fragment.execute as CompiledEffectFn,
     coverageRatio,
   };
 };

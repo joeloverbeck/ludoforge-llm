@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — compiled effect context/types, composeFragments/codegen plumbing, compiled parity tests
-**Deps**: specs/81-whole-sequence-effect-compilation.md, tickets/81WHOSEQEFFCOM-013-normalized-effect-result-contract.md, archive/tickets/81WHOSEQEFFCOM/81WHOSEQEFFCOM-012-decision-scope-contract-alignment.md
+**Deps**: specs/81-whole-sequence-effect-compilation.md, archive/tickets/81WHOSEQEFFCOM/81WHOSEQEFFCOM-013-normalized-effect-result-contract.md, archive/tickets/81WHOSEQEFFCOM/81WHOSEQEFFCOM-012-decision-scope-contract-alignment.md
 
 ## Problem
 

@@ -13,7 +13,7 @@ import { resolveRuntimeTokenBindingValue } from './token-binding.js';
 import { getTokenStateIndexEntry, invalidateTokenStateIndex } from './token-state-index.js';
 import { resolveTraceProvenance } from './trace-provenance.js';
 import { fromEnvAndCursor, resolveEffectBindings } from './effect-context.js';
-import type { EffectContext, EffectCursor, EffectEnv, EffectResult } from './effect-context.js';
+import type { EffectContext, EffectCursor, EffectEnv, PartialEffectResult } from './effect-context.js';
 import type { EffectBudgetState } from './effects-control.js';
 import type { ApplyEffectsWithBudget } from './effect-registry.js';
 import { ensureZoneCloned, type MutableGameState } from './state-draft.js';
@@ -319,7 +319,7 @@ export const applyMoveToken = (
   cursor: EffectCursor,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
-): EffectResult => {
+): PartialEffectResult => {
   const resolvedBindings = resolveEffectBindings(env, cursor);
   const evalCursor = resolvedBindings === cursor.bindings ? cursor : { ...cursor, bindings: resolvedBindings };
   const evalCtx = fromEnvAndCursor(env, evalCursor);
@@ -447,7 +447,7 @@ export const applyMoveTokenAdjacent = (
   cursor: EffectCursor,
   budget: EffectBudgetState,
   applyBatch: ApplyEffectsWithBudget,
-): EffectResult => {
+): PartialEffectResult => {
   const resolvedBindings = resolveEffectBindings(env, cursor);
   const evalCursor = resolvedBindings === cursor.bindings ? cursor : { ...cursor, bindings: resolvedBindings };
   const evalCtx = fromEnvAndCursor(env, evalCursor);
@@ -491,7 +491,7 @@ export const applyCreateToken = (
   cursor: EffectCursor,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
-): EffectResult => {
+): PartialEffectResult => {
   const resolvedBindings = resolveEffectBindings(env, cursor);
   const evalCursor = resolvedBindings === cursor.bindings ? cursor : { ...cursor, bindings: resolvedBindings };
   const evalCtx = fromEnvAndCursor(env, evalCursor);
@@ -570,7 +570,7 @@ export const applyDestroyToken = (
   cursor: EffectCursor,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
-): EffectResult => {
+): PartialEffectResult => {
   const resolvedBindings = resolveEffectBindings(env, cursor);
   const tokenId = resolveBoundTokenId(resolvedBindings, effect.destroyToken.token, 'destroyToken');
   const evalCtx = fromEnvAndCursor(env, cursor);
@@ -619,7 +619,7 @@ export const applySetTokenProp = (
   cursor: EffectCursor,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
-): EffectResult => {
+): PartialEffectResult => {
   const { token: tokenBinding, prop, value } = effect.setTokenProp;
   const resolvedBindings = resolveEffectBindings(env, cursor);
   const tokenId = resolveBoundTokenId(resolvedBindings, tokenBinding, 'setTokenProp');
@@ -717,7 +717,7 @@ export const applyDraw = (
   cursor: EffectCursor,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
-): EffectResult => {
+): PartialEffectResult => {
   const count = effect.draw.count;
   if (!Number.isSafeInteger(count) || count < 0) {
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED, 'draw.count must be a non-negative integer', {
@@ -927,7 +927,7 @@ export const applyMoveAll = (
   cursor: EffectCursor,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
-): EffectResult => {
+): PartialEffectResult => {
   const resolvedBindings = resolveEffectBindings(env, cursor);
   const evalCursor = resolvedBindings === cursor.bindings ? cursor : { ...cursor, bindings: resolvedBindings };
   const evalCtx = fromEnvAndCursor(env, evalCursor);
@@ -1062,7 +1062,7 @@ export const applyShuffle = (
   cursor: EffectCursor,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
-): EffectResult => {
+): PartialEffectResult => {
   const resolvedBindings = resolveEffectBindings(env, cursor);
   const evalCursor = resolvedBindings === cursor.bindings ? cursor : { ...cursor, bindings: resolvedBindings };
   const evalCtx = fromEnvAndCursor(env, evalCursor);

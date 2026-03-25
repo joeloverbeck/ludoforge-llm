@@ -17,7 +17,7 @@ import { clampIntVarValue } from './var-runtime-utils.js';
 import { updateRunningHash } from './zobrist.js';
 import { updateVarRunningHash } from './zobrist-var-hash.js';
 import { fromEnvAndCursor, resolveEffectBindings } from './effect-context.js';
-import type { EffectCursor, EffectEnv, EffectResult } from './effect-context.js';
+import type { EffectCursor, EffectEnv, PartialEffectResult } from './effect-context.js';
 import type { EffectBudgetState } from './effects-control.js';
 import type { ApplyEffectsWithBudget } from './effect-registry.js';
 import type { MutableGameState } from './state-draft.js';
@@ -70,7 +70,7 @@ export const applySetVar = (
   cursor: EffectCursor,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
-): EffectResult => {
+): PartialEffectResult => {
   const profiler = env.profiler;
   const { value } = effect.setVar;
   const t0_bindings = profiler !== undefined ? performance.now() : 0;
@@ -155,7 +155,7 @@ export const applyAddVar = (
   cursor: EffectCursor,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
-): EffectResult => {
+): PartialEffectResult => {
   const { delta } = effect.addVar;
   const resolvedBindings = resolveEffectBindings(env, cursor);
   const evalCursor = resolvedBindings === cursor.bindings ? cursor : { ...cursor, bindings: resolvedBindings };
@@ -217,7 +217,7 @@ export const applySetActivePlayer = (
   cursor: EffectCursor,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
-): EffectResult => {
+): PartialEffectResult => {
   const resolvedBindings = resolveEffectBindings(env, cursor);
   const evalCursor = resolvedBindings === cursor.bindings ? cursor : { ...cursor, bindings: resolvedBindings };
   const evalCtx = fromEnvAndCursor(env, evalCursor);

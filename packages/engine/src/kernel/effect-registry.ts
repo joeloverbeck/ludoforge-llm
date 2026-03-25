@@ -1,6 +1,6 @@
 import type { EffectKind, EffectAST, EffectKindTag, WithKindTag } from './types.js';
 import { EFFECT_KIND_TAG } from './types.js';
-import type { EffectCursor, EffectEnv, EffectResult } from './effect-context.js';
+import type { EffectCursor, EffectEnv, PartialEffectResult } from './effect-context.js';
 import type { EffectBudgetState } from './effects-control.js';
 
 import { applySetVar, applyAddVar, applySetActivePlayer } from './effects-var.js';
@@ -42,7 +42,7 @@ export type ApplyEffectsWithBudget = (
   env: EffectEnv,
   cursor: EffectCursor,
   budget: EffectBudgetState,
-) => EffectResult;
+) => PartialEffectResult;
 
 export type EffectHandler<K extends EffectKind> = (
   effect: WithKindTag<K>,
@@ -50,7 +50,7 @@ export type EffectHandler<K extends EffectKind> = (
   cursor: EffectCursor,
   budget: EffectBudgetState,
   applyBatch: ApplyEffectsWithBudget,
-) => EffectResult;
+) => PartialEffectResult;
 
 type EffectRegistry = { readonly [K in EffectKind]: EffectHandler<K> };
 

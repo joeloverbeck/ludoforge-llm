@@ -25,12 +25,13 @@ import {
   type CompiledEffectFragment,
   type DraftTracker,
   type EffectAST,
-  type EffectResult,
   type GameDef,
   type GameState,
   type MutableGameState,
   type MoveParamScalar,
   type MoveParamValue,
+  type NormalizedEffectResult,
+  type PartialEffectResult,
   type Rng,
   type TriggerEvent,
 } from '../../../src/kernel/index.js';
@@ -216,8 +217,8 @@ const makeCompiledContext = (
 
 const compareResults = (
   def: GameDef,
-  compiled: EffectResult,
-  interpreted: EffectResult,
+  compiled: PartialEffectResult,
+  interpreted: NormalizedEffectResult,
 ) => {
   const table = createZobristTable(def);
 
@@ -246,7 +247,7 @@ const runCompiled = (
     readonly transientDecisionSelections?: Readonly<Record<string, readonly MoveParamScalar[]>>;
     readonly chooseNTemplateCallback?: (template: ChooseNTemplate) => void;
   },
-): EffectResult => {
+): PartialEffectResult => {
   const descriptor = classifyEffect(effect);
   assert.ok(descriptor !== null);
 
@@ -267,7 +268,7 @@ const runInterpreted = (
     readonly transientDecisionSelections?: Readonly<Record<string, readonly MoveParamScalar[]>>;
     readonly chooseNTemplateCallback?: (template: ChooseNTemplate) => void;
   },
-): EffectResult => {
+): NormalizedEffectResult => {
   const shared = {
     def,
     adjacencyGraph: buildAdjacencyGraph(def.zones),
@@ -1107,19 +1108,19 @@ describe('effect-compiler-codegen', () => {
   const makeDraftCompiledContext = (
     def: GameDef,
     tracker: DraftTracker,
-  ): CompiledEffectContext => ({
+): CompiledEffectContext => ({
     ...makeCompiledContext(def),
     tracker,
   });
 
-  const runCompiledWithTracker = (
+const runCompiledWithTracker = (
     def: GameDef,
     mutableState: MutableGameState,
     effect: EffectAST,
     tracker: DraftTracker,
     bindings: Readonly<Record<string, unknown>> = {},
     rng: Rng = createRng(17n),
-  ): EffectResult => {
+): PartialEffectResult => {
     const descriptor = classifyEffect(effect);
     assert.ok(descriptor !== null);
     const fragment = compilePatternDescriptor(descriptor, compileEffects);
@@ -1186,7 +1187,7 @@ describe('effect-compiler-codegen', () => {
     const mutableState = createMutableState(makeState());
     const tracker = createDraftTracker();
     const compiledResult = runCompiledWithTracker(def, mutableState, effect, tracker);
-    const frozenResult: EffectResult = { ...compiledResult, state: freezeState(mutableState) };
+    const frozenResult: PartialEffectResult = { ...compiledResult, state: freezeState(mutableState) };
 
     const interpretedResult = runInterpreted(def, makeState(), effect);
     compareResults(def, frozenResult, interpretedResult);
@@ -1199,7 +1200,7 @@ describe('effect-compiler-codegen', () => {
     const mutableState = createMutableState(makeState());
     const tracker = createDraftTracker();
     const compiledResult = runCompiledWithTracker(def, mutableState, effect, tracker);
-    const frozenResult: EffectResult = { ...compiledResult, state: freezeState(mutableState) };
+    const frozenResult: PartialEffectResult = { ...compiledResult, state: freezeState(mutableState) };
 
     const interpretedResult = runInterpreted(def, makeState(), effect);
     compareResults(def, frozenResult, interpretedResult);
@@ -1219,7 +1220,7 @@ describe('effect-compiler-codegen', () => {
     const mutableState = createMutableState(makeState());
     const tracker = createDraftTracker();
     const compiledResult = runCompiledWithTracker(def, mutableState, effect, tracker);
-    const frozenResult: EffectResult = { ...compiledResult, state: freezeState(mutableState) };
+    const frozenResult: PartialEffectResult = { ...compiledResult, state: freezeState(mutableState) };
 
     const interpretedResult = runInterpreted(def, makeState(), effect);
     compareResults(def, frozenResult, interpretedResult);
@@ -1240,7 +1241,7 @@ describe('effect-compiler-codegen', () => {
     const mutableState = createMutableState(state);
     const tracker = createDraftTracker();
     const compiledResult = runCompiledWithTracker(def, mutableState, effect, tracker, bindings);
-    const frozenResult: EffectResult = { ...compiledResult, state: freezeState(mutableState) };
+    const frozenResult: PartialEffectResult = { ...compiledResult, state: freezeState(mutableState) };
 
     const interpretedResult = runInterpreted(def, makeState(), effect, bindings);
     compareResults(def, frozenResult, interpretedResult);
@@ -1259,7 +1260,7 @@ describe('effect-compiler-codegen', () => {
     const mutableState = createMutableState(makeState());
     const tracker = createDraftTracker();
     const compiledResult = runCompiledWithTracker(def, mutableState, effect, tracker);
-    const frozenResult: EffectResult = { ...compiledResult, state: freezeState(mutableState) };
+    const frozenResult: PartialEffectResult = { ...compiledResult, state: freezeState(mutableState) };
 
     const interpretedResult = runInterpreted(def, makeState(), effect);
     compareResults(def, frozenResult, interpretedResult);
@@ -1278,7 +1279,7 @@ describe('effect-compiler-codegen', () => {
     const mutableState = createMutableState(makeState());
     const tracker = createDraftTracker();
     const compiledResult = runCompiledWithTracker(def, mutableState, effect, tracker);
-    const frozenResult: EffectResult = { ...compiledResult, state: freezeState(mutableState) };
+    const frozenResult: PartialEffectResult = { ...compiledResult, state: freezeState(mutableState) };
 
     const interpretedResult = runInterpreted(def, makeState(), effect);
     compareResults(def, frozenResult, interpretedResult);
@@ -1297,7 +1298,7 @@ describe('effect-compiler-codegen', () => {
     const mutableState = createMutableState(makeState());
     const tracker = createDraftTracker();
     const compiledResult = runCompiledWithTracker(def, mutableState, effect, tracker);
-    const frozenResult: EffectResult = { ...compiledResult, state: freezeState(mutableState) };
+    const frozenResult: PartialEffectResult = { ...compiledResult, state: freezeState(mutableState) };
 
     const interpretedResult = runInterpreted(def, makeState(), effect);
     compareResults(def, frozenResult, interpretedResult);

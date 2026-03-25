@@ -1,6 +1,6 @@
 import { rebaseIterationPath, withIterationSegment, emptyScope } from './decision-scope.js';
 import { combinations, countCombinations } from './combinatorics.js';
-import type { EffectCursor, EffectResult } from './effect-context.js';
+import type { EffectCursor, NormalizedEffectResult, PartialEffectResult } from './effect-context.js';
 import { createEvalContext } from './eval-context.js';
 import { evalCondition } from './eval-condition.js';
 import { evalQuery } from './eval-query.js';
@@ -53,7 +53,7 @@ import {
   type SimpleValuePattern,
   type TransferVarPattern,
 } from './effect-compiler-patterns.js';
-import type { CompiledEffectContext, CompiledEffectFn } from './effect-compiler-types.js';
+import type { CompiledEffectContext, CompiledEffectFragmentFn } from './effect-compiler-types.js';
 import { effectRuntimeError } from './effect-error.js';
 import {
   applyChooseN,
@@ -124,7 +124,7 @@ import type { EffectAST, EffectTraceProvenance, GameState, IntVariableDef, Numer
 const MAX_SUBSET_COMBINATIONS = 10_000;
 
 export interface CompiledEffectFragment {
-  readonly execute: CompiledEffectFn;
+  readonly execute: CompiledEffectFragmentFn;
   readonly nodeCount: number;
 }
 
@@ -315,16 +315,16 @@ const executeCompiledFragment = (
   rng: Rng,
   bindings: Readonly<Record<string, unknown>>,
   ctx: CompiledEffectContext,
-): EffectResult => fragment.execute(state, rng, bindings, ctx);
+): PartialEffectResult => fragment.execute(state, rng, bindings, ctx);
 
 const normalizeBranchResult = (
-  result: EffectResult,
+  result: PartialEffectResult,
   bindings: Readonly<Record<string, unknown>>,
   decisionScope: NonNullable<CompiledEffectContext['decisionScope']>,
-): EffectResult => ({
+): NormalizedEffectResult => ({
   state: result.state,
   rng: result.rng,
-  ...(result.emittedEvents === undefined ? {} : { emittedEvents: result.emittedEvents }),
+  emittedEvents: result.emittedEvents ?? [],
   bindings: result.bindings ?? bindings,
   decisionScope: result.decisionScope ?? decisionScope,
   ...(result.pendingChoice === undefined ? {} : { pendingChoice: result.pendingChoice }),
@@ -353,8 +353,8 @@ const executeCompiledDelegate = (
   handler: (
     env: ReturnType<typeof buildEffectEnvFromCompiledCtx>,
     cursor: EffectCursor,
-  ) => EffectResult,
-): EffectResult => {
+  ) => PartialEffectResult,
+): PartialEffectResult => {
   if (ctx.effectBudget !== undefined) {
     consumeEffectBudget(ctx.effectBudget, effectType);
   }
@@ -417,7 +417,7 @@ type CompiledDelegateInvoker<TEffect extends EffectAST> = (
   cursor: EffectCursor,
   budget: ReturnType<typeof createCompiledDelegateBudget>,
   applyBatch: typeof applyEffectsWithBudgetState,
-) => EffectResult;
+) => PartialEffectResult;
 
 const createCompiledDelegateLeafFragment = <TEffect extends EffectAST>(
   effectType: string,

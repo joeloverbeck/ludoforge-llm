@@ -23,9 +23,9 @@ import {
   type CompiledEffectFragment,
   type DraftTracker,
   type EffectAST,
-  type EffectResult,
   type GameDef,
   type GameState,
+  type NormalizedEffectResult,
   type TriggerEvent,
 } from '../../../src/kernel/index.js';
 import { eff } from '../../helpers/effect-tag-helper.js';
@@ -136,15 +136,15 @@ const makeCompiledContext = (def: GameDef): CompiledEffectContext => ({
 
 const compareResults = (
   def: GameDef,
-  compiled: EffectResult,
-  interpreted: EffectResult,
+  compiled: NormalizedEffectResult,
+  interpreted: NormalizedEffectResult,
 ): void => {
   const zobrist = createZobristTable(def);
   assert.deepEqual(compiled.state, interpreted.state);
   assert.deepEqual(compiled.rng, interpreted.rng);
-  assert.deepEqual(compiled.emittedEvents ?? [], interpreted.emittedEvents ?? []);
-  assert.deepEqual(compiled.bindings ?? {}, interpreted.bindings ?? {});
-  assert.deepEqual(compiled.decisionScope ?? emptyScope(), interpreted.decisionScope ?? emptyScope());
+  assert.deepEqual(compiled.emittedEvents, interpreted.emittedEvents);
+  assert.deepEqual(compiled.bindings, interpreted.bindings);
+  assert.deepEqual(compiled.decisionScope, interpreted.decisionScope);
   assert.equal(
     computeFullHash(zobrist, compiled.state),
     computeFullHash(zobrist, interpreted.state),
@@ -278,9 +278,9 @@ describe('effect-compiler orchestrator', () => {
 
     assert.deepEqual(compiledResult.state, interpretedResult.state);
     assert.deepEqual(compiledResult.rng, interpretedResult.rng);
-    assert.deepEqual(compiledResult.emittedEvents ?? [], interpretedResult.emittedEvents ?? []);
-    assert.deepEqual(compiledResult.bindings ?? {}, interpretedResult.bindings ?? {});
-    assert.deepEqual(compiledResult.decisionScope ?? emptyScope(), interpretedResult.decisionScope ?? emptyScope());
+    assert.deepEqual(compiledResult.emittedEvents, interpretedResult.emittedEvents);
+    assert.deepEqual(compiledResult.bindings, interpretedResult.bindings);
+    assert.deepEqual(compiledResult.decisionScope, interpretedResult.decisionScope);
     assert.equal(computeFullHash(zobrist, compiledResult.state), computeFullHash(zobrist, interpretedResult.state));
   });
 
@@ -321,9 +321,9 @@ describe('effect-compiler orchestrator', () => {
 
     assert.deepEqual(compiledResult.state, interpretedResult.state);
     assert.deepEqual(compiledResult.rng, interpretedResult.rng);
-    assert.deepEqual(compiledResult.emittedEvents ?? [], interpretedResult.emittedEvents ?? []);
-    assert.deepEqual(compiledResult.bindings ?? {}, interpretedResult.bindings ?? {});
-    assert.deepEqual(compiledResult.decisionScope ?? emptyScope(), interpretedResult.decisionScope ?? emptyScope());
+    assert.deepEqual(compiledResult.emittedEvents, interpretedResult.emittedEvents);
+    assert.deepEqual(compiledResult.bindings, interpretedResult.bindings);
+    assert.deepEqual(compiledResult.decisionScope, interpretedResult.decisionScope);
     assert.equal(computeFullHash(zobrist, compiledResult.state), computeFullHash(zobrist, interpretedResult.state));
   });
 
@@ -466,6 +466,24 @@ describe('effect-compiler orchestrator', () => {
     // Output must be structurally equal but NOT the same object reference
     assert.deepEqual(result.state, inputState);
     assert.notEqual(result.state, inputState);
+  });
+
+  it('composeFragments normalizes defaults when fragments omit optional fields', () => {
+    const composed = composeFragments([
+      {
+        nodeCount: 1,
+        execute: (state, rng) => ({
+          state: { ...state, globalVars: { ...state.globalVars, score: Number(state.globalVars.score) + 1 } },
+          rng,
+        }),
+      },
+    ]);
+
+    const result = composed(makeState(), createRng(43n), { $seed: 'kept' }, makeCompiledContext(makeDef()));
+
+    assert.deepEqual(result.bindings, { $seed: 'kept' });
+    assert.deepEqual(result.emittedEvents, []);
+    assert.deepEqual(result.decisionScope, emptyScope());
   });
 
   it('composeFragments threads tracker through fragment calls as a DraftTracker', () => {

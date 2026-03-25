@@ -13,6 +13,7 @@ import {
   asTokenId,
   asZoneId,
   createRng,
+  emptyScope,
   getMaxEffectOps,
   isEffectErrorCode,
   type EffectAST,
@@ -188,6 +189,28 @@ describe('effects runtime foundation', () => {
       assert.ok(error instanceof EffectBudgetExceededError);
       return true;
     });
+  });
+
+  it('applyEffect returns normalized defaults when a handler omits optional result fields', () => {
+    const ctx = makeCtx({ bindings: { $seed: 'kept' } });
+
+    const result = applyEffect(setVarEffect, ctx);
+
+    assert.deepEqual(result.bindings, { $seed: 'kept' });
+    assert.ok(Array.isArray(result.emittedEvents));
+    assert.equal(result.emittedEvents.length, 1);
+    assert.deepEqual(result.decisionScope, emptyScope());
+  });
+
+  it('applyEffects returns normalized defaults across multi-effect execution', () => {
+    const ctx = makeCtx({ bindings: { $seed: 'kept' } });
+
+    const result = applyEffects([setVarEffect, addVarEffect], ctx);
+
+    assert.deepEqual(result.bindings, { $seed: 'kept' });
+    assert.ok(Array.isArray(result.emittedEvents));
+    assert.equal(result.emittedEvents.length, 2);
+    assert.deepEqual(result.decisionScope, emptyScope());
   });
 
   it('gotoPhaseExact jumps without executing intermediate phase onEnter effects', () => {

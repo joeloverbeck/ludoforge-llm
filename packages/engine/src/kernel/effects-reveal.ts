@@ -17,7 +17,7 @@ import { resolveTraceProvenance } from './trace-provenance.js';
 import { omitOptionalStateKey } from './state-shape.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import { fromEnvAndCursor, resolveEffectBindings } from './effect-context.js';
-import type { EffectCursor, EffectEnv, EffectResult } from './effect-context.js';
+import type { EffectCursor, EffectEnv, PartialEffectResult } from './effect-context.js';
 import type { EffectBudgetState } from './effects-control.js';
 import type { ApplyEffectsWithBudget } from './effect-registry.js';
 import type { EffectAST, RevealGrant, TokenFilterExpr } from './types.js';
@@ -36,7 +36,7 @@ export const applyConceal = (
   cursor: EffectCursor,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
-): EffectResult => {
+): PartialEffectResult => {
   const resolvedBindings = resolveEffectBindings(env, cursor);
   const evalCtx = fromEnvAndCursor(env, resolvedBindings === cursor.bindings ? cursor : { ...cursor, bindings: resolvedBindings });
   const onResolutionFailure = selectorResolutionFailurePolicyForMode(env.mode);
@@ -135,7 +135,7 @@ export const applyReveal = (
   cursor: EffectCursor,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
-): EffectResult => {
+): PartialEffectResult => {
   const resolvedBindings = resolveEffectBindings(env, cursor);
   const evalCtx = fromEnvAndCursor(env, resolvedBindings === cursor.bindings ? cursor : { ...cursor, bindings: resolvedBindings });
   const onResolutionFailure = selectorResolutionFailurePolicyForMode(env.mode);

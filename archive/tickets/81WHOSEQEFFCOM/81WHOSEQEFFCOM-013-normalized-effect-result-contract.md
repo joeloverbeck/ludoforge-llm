@@ -1,6 +1,6 @@
 # 81WHOSEQEFFCOM-013: Introduce explicit normalized effect result contracts
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — effect-context/result types, effect-dispatch normalization, compiled-effect typing, targeted runtime/compiler tests
@@ -18,11 +18,17 @@ Per Foundations 9, 10, and 11, normalized execution boundaries should have one e
 
 ## Assumption Reassessment (2026-03-25)
 
-1. `applyEffect`, `applyEffects`, `applyEffectsWithBudgetState`, and `composeFragments` now all return a public result that includes normalized `decisionScope` in practice.
-2. Current effect handlers and compiled fragments still benefit from partial result authoring: many handlers omit `bindings`, `emittedEvents`, or `decisionScope` and rely on outer normalization.
-3. The current single `EffectResult` type conflates those two layers: partial internal handler outputs and normalized public execution outputs.
-4. `CompiledEffectFn` in `effect-compiler-types.ts` also returns `EffectResult`, so compiled lifecycle execution inherits the same imprecise contract.
-5. The clean follow-up is not to make every handler manually emit fully normalized fields. The clean follow-up is to separate partial internal result authoring from normalized boundary results with distinct types.
+1. `applyEffectsWithBudgetState` and `composeFragments` already normalize `bindings`, `emittedEvents`, and `decisionScope` on every completed return path, including pending-choice short-circuits.
+2. `applyEffect` and `applyEffects` sit on top of those normalized internals, but they still expose the broader `EffectResult` type and re-spread fields as though normalization were optional.
+3. Runtime handlers and compiled fragments genuinely still author partial results internally. Many handlers omit `bindings`, `emittedEvents`, or `decisionScope` and rely on the boundary normalizer.
+4. The current single `EffectResult` type therefore conflates two distinct contracts:
+   - partial internal handler/fragment outputs
+   - normalized execution-boundary outputs
+5. `CompiledEffectFn` and `CompiledEffectFragment` also currently inherit that conflation. The compiler boundary should return the normalized contract, while individual fragment helpers should remain free to return partial results.
+6. The ticket's original file/test list was slightly stale:
+   - compiled normalization helpers also live in `packages/engine/src/kernel/effect-compiler-codegen.ts`
+   - runtime verification/parity logic in `packages/engine/src/kernel/phase-lifecycle.ts` still compares with `??` fallback semantics
+   - the helper test path is `packages/engine/test/unit/effect-context-test-helpers.test.ts`, not `packages/engine/test/unit/kernel/...`
 
 ## Architecture Check
 
@@ -31,7 +37,8 @@ Per Foundations 9, 10, and 11, normalized execution boundaries should have one e
    - normalized boundary result type for public/runtime/compiled sequence outputs
 2. This is more robust than leaving a single optional-everything type in place because it makes invariants explicit at the boundaries where the engine promises deterministic execution state.
 3. This remains fully engine-agnostic. It changes execution plumbing only, not any game-specific behavior or schema shape.
-4. No backwards-compatibility shim is needed. Existing call sites should be migrated directly to the new current-truth types in one pass.
+4. This is preferable to the current architecture. It tightens the type system around contracts the runtime already guarantees without forcing every internal handler to emit boilerplate defaults.
+5. No backwards-compatibility shim is needed. Existing call sites should be migrated directly to the new current-truth types in one pass.
 
 ## What to Change
 
@@ -45,7 +52,7 @@ In `effect-context.ts` and related runtime typing:
 
 ### 2. Centralize normalization around the new types
 
-In `effect-dispatch.ts`, `effect-compiler.ts`, and any shared helpers:
+In `effect-dispatch.ts`, `effect-compiler.ts`, `effect-compiler-codegen.ts`, and any shared helpers:
 
 - Make normalization helpers return the normalized result type explicitly.
 - Remove redundant post-normalization optional-field fallback logic where the new type already guarantees presence.
@@ -61,10 +68,14 @@ In `effect-dispatch.ts`, `effect-compiler.ts`, and any shared helpers:
 - `packages/engine/src/kernel/effect-context.ts` (modify)
 - `packages/engine/src/kernel/effect-dispatch.ts` (modify)
 - `packages/engine/src/kernel/effect-compiler.ts` (modify)
+- `packages/engine/src/kernel/effect-compiler-codegen.ts` (modify)
 - `packages/engine/src/kernel/effect-compiler-types.ts` (modify)
+- `packages/engine/src/kernel/effect-registry.ts` (modify)
+- `packages/engine/src/kernel/phase-lifecycle.ts` (modify if boundary comparisons can rely on normalized contracts directly)
 - `packages/engine/test/unit/effects-runtime.test.ts` (modify)
 - `packages/engine/test/unit/kernel/effect-compiler.test.ts` (modify)
-- `packages/engine/test/unit/effect-context-test-helpers.test.ts` (modify if needed)
+- `packages/engine/test/unit/kernel/effect-compiler-codegen.test.ts` (modify if needed)
+- `packages/engine/test/unit/effect-context-test-helpers.test.ts` (modify only if helper/export typing changes require it)
 
 ## Out of Scope
 
@@ -95,12 +106,33 @@ In `effect-dispatch.ts`, `effect-compiler.ts`, and any shared helpers:
 
 1. `packages/engine/test/unit/effects-runtime.test.ts` — prove public interpreted execution always returns normalized defaults, not optional omissions.
 2. `packages/engine/test/unit/kernel/effect-compiler.test.ts` — prove compiled sequence outputs expose the same normalized boundary shape as interpreted execution.
-3. `packages/engine/test/unit/effect-context-test-helpers.test.ts` — update helper/type expectations if the new normalized/public result surface changes test scaffolding.
+3. `packages/engine/test/unit/kernel/effect-compiler-codegen.test.ts` — keep fragment/helper expectations honest where partial internal results are still allowed before normalization.
+4. `packages/engine/test/unit/effect-context-test-helpers.test.ts` — update helper/type expectations only if the public export surface used by helpers changes.
 
 ### Commands
 
 1. `pnpm -F @ludoforge/engine build`
-2. `node --test packages/engine/dist/test/unit/effects-runtime.test.js packages/engine/dist/test/unit/kernel/effect-compiler.test.js packages/engine/dist/test/unit/effect-context-test-helpers.test.js`
+2. `node --test packages/engine/dist/test/unit/effects-runtime.test.js packages/engine/dist/test/unit/kernel/effect-compiler.test.js packages/engine/dist/test/unit/kernel/effect-compiler-codegen.test.js packages/engine/dist/test/unit/effect-context-test-helpers.test.js`
 3. `pnpm -F @ludoforge/engine test`
 4. `pnpm turbo typecheck`
 5. `pnpm turbo lint`
+
+## Outcome
+
+- Completion date: 2026-03-25
+- What actually changed:
+  - split the old broad `EffectResult` contract into `PartialEffectResult` for internal handlers/fragments and `NormalizedEffectResult` for normalized runtime/compiler boundaries
+  - updated interpreted and compiled boundary APIs to return the normalized contract directly
+  - removed redundant normalized-boundary fallback logic where the stronger type now guarantees `bindings`, `emittedEvents`, and `decisionScope`
+  - strengthened focused runtime/compiler tests to lock the normalized-boundary defaults in place
+- Deviations from original plan:
+  - `packages/engine/src/kernel/effect-registry.ts` and `packages/engine/src/kernel/phase-lifecycle.ts` were updated as part of the real blast radius
+  - `packages/engine/test/unit/kernel/effect-compiler-codegen.test.ts` needed type updates to keep explicit coverage of partial fragment behavior
+  - `packages/engine/test/unit/effect-context-test-helpers.test.ts` did not require changes
+- Verification results:
+  - `pnpm -F @ludoforge/engine build`
+  - `node --test packages/engine/dist/test/unit/effects-runtime.test.js packages/engine/dist/test/unit/kernel/effect-compiler.test.js packages/engine/dist/test/unit/kernel/effect-compiler-codegen.test.js packages/engine/dist/test/unit/effect-context-test-helpers.test.js`
+  - `pnpm -F @ludoforge/engine test`
+  - `pnpm turbo test`
+  - `pnpm turbo typecheck`
+  - `pnpm turbo lint`

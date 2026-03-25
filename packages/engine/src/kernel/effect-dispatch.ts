@@ -5,7 +5,8 @@ import {
   type EffectContext,
   type EffectCursor,
   type EffectEnv,
-  type EffectResult,
+  type NormalizedEffectResult,
+  type PartialEffectResult,
   type FreeOperationProbeScope,
 } from './effect-context.js';
 import { emptyScope } from './decision-scope.js';
@@ -48,7 +49,7 @@ const EMPTY_EVENTS: readonly TriggerEvent[] = [];
 // TAG_TO_KIND maps each numeric tag to its EffectKind string; we use that
 // to pull the corresponding handler from the registry. The result is an
 // array where dispatchTable[tag] is the handler function for that tag.
-type DispatchFn = (effect: EffectAST, env: EffectEnv, cursor: EffectCursor, budget: EffectBudgetState, applyBatch: typeof applyEffectsWithBudgetState) => EffectResult;
+type DispatchFn = (effect: EffectAST, env: EffectEnv, cursor: EffectCursor, budget: EffectBudgetState, applyBatch: typeof applyEffectsWithBudgetState) => PartialEffectResult;
 let _dispatchTable: readonly DispatchFn[] | null = null;
 const getDispatchTable = (): readonly DispatchFn[] => {
   if (_dispatchTable === null) {
@@ -62,7 +63,7 @@ const applyEffectWithBudget = (
   env: EffectEnv,
   cursor: EffectCursor,
   budget: EffectBudgetState,
-): EffectResult => {
+): NormalizedEffectResult => {
   const tag = (effect as { readonly _k: EffectKindTag })._k;
   const kind = TAG_TO_KIND[tag]!;
   consumeEffectBudget(budget, kind);
@@ -73,7 +74,7 @@ const applyEffectWithBudget = (
   const profiler = env.profiler;
   const t0 = perfStart(profiler);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const result = (handler as any)(effect, env, cursor, budget, applyEffectsWithBudgetState) as EffectResult;
+  const result = (handler as any)(effect, env, cursor, budget, applyEffectsWithBudgetState) as PartialEffectResult;
   perfDynEnd(profiler, `effect:${kind}`, t0);
   // Normalize result: use shared empty array to avoid per-call allocation,
   // apply defaults for bindings/decisionScope only when handler omitted them.
@@ -91,7 +92,7 @@ export const applyEffectsWithBudgetState = (
   env: EffectEnv,
   cursor: EffectCursor,
   budget: EffectBudgetState,
-): EffectResult => {
+): NormalizedEffectResult => {
   // Create a mutable state clone ONCE for this scope (Spec 78).
   const mutableState = createMutableState(cursor.state);
   const tracker = createDraftTracker();
@@ -125,9 +126,9 @@ export const applyEffectsWithBudgetState = (
     );
     currentState = result.state;
     currentRng = result.rng;
-    currentBindings = result.bindings ?? currentBindings;
-    currentDecisionScope = result.decisionScope ?? currentDecisionScope;
-    if (result.emittedEvents !== undefined && result.emittedEvents.length > 0) {
+    currentBindings = result.bindings;
+    currentDecisionScope = result.decisionScope;
+    if (result.emittedEvents.length > 0) {
       for (let i = 0; i < result.emittedEvents.length; i++) emittedEvents.push(result.emittedEvents[i]!);
     }
     if (result.pendingChoice !== undefined) {
@@ -151,7 +152,7 @@ export const applyEffectsWithBudgetState = (
   };
 };
 
-export function applyEffect(effect: EffectAST, ctx: EffectContext): EffectResult {
+export function applyEffect(effect: EffectAST, ctx: EffectContext): NormalizedEffectResult {
   assertEffectContextEntryInvariant(ctx);
   const budget = createEffectBudgetState(ctx);
   const freeOperationProbeScope: FreeOperationProbeScope = ctx.freeOperationProbeScope ?? {
@@ -161,18 +162,10 @@ export function applyEffect(effect: EffectAST, ctx: EffectContext): EffectResult
   const fullCtx = { ...ctx, freeOperationProbeScope, decisionScope: ctx.decisionScope ?? emptyScope() };
   const env = toEffectEnv(fullCtx);
   const cursor = toEffectCursor(fullCtx);
-  const result = applyEffectWithBudget(effect, env, cursor, budget);
-  return {
-    state: result.state,
-    rng: result.rng,
-    ...(result.emittedEvents === undefined ? {} : { emittedEvents: result.emittedEvents }),
-    ...(result.bindings === undefined ? {} : { bindings: result.bindings }),
-    decisionScope: result.decisionScope ?? fullCtx.decisionScope,
-    ...(result.pendingChoice === undefined ? {} : { pendingChoice: result.pendingChoice }),
-  };
+  return applyEffectWithBudget(effect, env, cursor, budget);
 }
 
-export function applyEffects(effects: readonly EffectAST[], ctx: EffectContext): EffectResult {
+export function applyEffects(effects: readonly EffectAST[], ctx: EffectContext): NormalizedEffectResult {
   assertEffectContextEntryInvariant(ctx);
   const budget = createEffectBudgetState(ctx);
   const freeOperationProbeScope: FreeOperationProbeScope = ctx.freeOperationProbeScope ?? {
@@ -183,12 +176,5 @@ export function applyEffects(effects: readonly EffectAST[], ctx: EffectContext):
   const env = toEffectEnv(fullCtx);
   const cursor = toEffectCursor(fullCtx);
   const result = applyEffectsWithBudgetState(effects, env, cursor, budget);
-  return {
-    state: result.state,
-    rng: result.rng,
-    ...(result.emittedEvents === undefined ? {} : { emittedEvents: result.emittedEvents }),
-    ...(result.bindings === undefined ? {} : { bindings: result.bindings }),
-    decisionScope: result.decisionScope ?? fullCtx.decisionScope,
-    ...(result.pendingChoice === undefined ? {} : { pendingChoice: result.pendingChoice }),
-  };
+  return result;
 }

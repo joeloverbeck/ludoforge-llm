@@ -15,7 +15,7 @@ import {
   resolveEffectBindings,
   type EffectCursor,
   type EffectEnv,
-  type EffectResult,
+  type PartialEffectResult,
 } from './effect-context.js';
 import { VALUE_EXPR_TAG } from './types.js';
 import type { EffectAST, EffectTraceProvenance, TriggerEvent, ValueExpr } from './types.js';
@@ -30,7 +30,7 @@ type ApplyEffectsWithBudget = (
   env: EffectEnv,
   cursor: EffectCursor,
   budget: EffectBudgetState,
-) => EffectResult;
+) => PartialEffectResult;
 
 /**
  * Append a trace path suffix to a cursor. Only 5-field spread (vs ~24 previously).
@@ -55,7 +55,7 @@ export const applyIf = (
   cursor: EffectCursor,
   budget: EffectBudgetState,
   applyEffectsWithBudget: ApplyEffectsWithBudget,
-): EffectResult => {
+): PartialEffectResult => {
   const evalCtx = mergeToEvalContext(env, cursor);
   // Skip trace provenance construction when condition tracing is disabled (saves ~131K object allocations)
   const predicate = env.collector.conditionTrace !== null
@@ -95,7 +95,7 @@ export const applyLet = (
   cursor: EffectCursor,
   budget: EffectBudgetState,
   applyEffectsWithBudget: ApplyEffectsWithBudget,
-): EffectResult => {
+): PartialEffectResult => {
   const evalCtx = mergeToEvalContext(env, cursor);
   const evaluatedValue = evalValue(effect.let.value, evalCtx);
   // KEY OPTIMIZATION: only 5 fields spread instead of ~24
@@ -144,7 +144,7 @@ export const applyForEach = (
   cursor: EffectCursor,
   budget: EffectBudgetState,
   applyEffectsWithBudget: ApplyEffectsWithBudget,
-): EffectResult => {
+): PartialEffectResult => {
   const evalCtx = mergeToEvalContext(env, cursor);
   const limit = resolveControlFlowIterationLimit('forEach', effect.forEach.limit, evalCtx, (evaluatedLimit) => {
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CONTROL_FLOW_RUNTIME_VALIDATION_FAILED, 'forEach.limit must evaluate to a non-negative integer', {
@@ -258,7 +258,7 @@ export const applyReduce = (
   cursor: EffectCursor,
   budget: EffectBudgetState,
   applyEffectsWithBudget: ApplyEffectsWithBudget,
-): EffectResult => {
+): PartialEffectResult => {
   const evalCtx = mergeToEvalContext(env, cursor);
   const limit = resolveControlFlowIterationLimit('reduce', effect.reduce.limit, evalCtx, (evaluatedLimit) => {
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CONTROL_FLOW_RUNTIME_VALIDATION_FAILED, 'reduce.limit must evaluate to a non-negative integer', {
@@ -357,7 +357,7 @@ export const applyRemoveByPriority = (
   cursor: EffectCursor,
   budget: EffectBudgetState,
   applyEffectsWithBudget: ApplyEffectsWithBudget,
-): EffectResult => {
+): PartialEffectResult => {
   const evalCtx = mergeToEvalContext(env, cursor);
   let remainingBudget = resolveRemovalBudget(evalValue(effect.removeByPriority.budget, evalCtx), 'removeByPriority');
   let currentState = cursor.state;

@@ -3,7 +3,7 @@ import { evalQuery } from './eval-query.js';
 import { evalValue } from './eval-value.js';
 import { effectRuntimeError } from './effect-error.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
-import type { EffectCursor, EffectEnv, EffectResult } from './effect-context.js';
+import type { EffectCursor, EffectEnv, PartialEffectResult } from './effect-context.js';
 import { fromEnvAndCursor, resolveEffectBindings } from './effect-context.js';
 import type { EffectAST, TriggerEvent } from './types.js';
 import type { EffectBudgetState } from './effects-control.js';
@@ -37,7 +37,7 @@ export const applyEvaluateSubset = (
   cursor: EffectCursor,
   budget: EffectBudgetState,
   applyBatch: ApplyEffectsWithBudget,
-): EffectResult => {
+): PartialEffectResult => {
   const evaluateSubset = effect.evaluateSubset;
   const resolvedBindings = resolveEffectBindings(env, cursor);
   const evalCtx = fromEnvAndCursor(env, { ...cursor, bindings: resolvedBindings });

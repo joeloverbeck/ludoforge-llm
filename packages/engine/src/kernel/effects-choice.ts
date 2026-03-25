@@ -24,7 +24,7 @@ import { fromEnvAndCursor } from './effect-context.js';
 import { ensureMarkerCloned, type MutableGameState } from './state-draft.js';
 import { addToRunningHash, updateRunningHash } from './zobrist.js';
 import type { ZobristFeature } from './types-core.js';
-import type { EffectContext, EffectCursor, EffectEnv, EffectResult } from './effect-context.js';
+import type { EffectContext, EffectCursor, EffectEnv, PartialEffectResult } from './effect-context.js';
 import type {
   ChoicePendingRequest,
   ChoiceStochasticOutcome,
@@ -592,7 +592,7 @@ export const applyChooseOne = (
   cursor: EffectCursor,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
-): EffectResult => {
+): PartialEffectResult => {
   const resolvedBind = resolveBindingTemplate(effect.chooseOne.bind, cursor.bindings);
   const resolvedDecisionIdentity = resolveBindingTemplate(
     effect.chooseOne.decisionIdentity ?? effect.chooseOne.bind,
@@ -712,7 +712,7 @@ export const applyChooseN = (
   cursor: EffectCursor,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
-): EffectResult => {
+): PartialEffectResult => {
   const chooseN = effect.chooseN;
   const bindTemplate = chooseN.bind;
   const bind = resolveBindingTemplate(bindTemplate, cursor.bindings);
@@ -956,7 +956,7 @@ export const applyRollRandom = (
   cursor: EffectCursor,
   budget: EffectBudgetState,
   applyBatch: ApplyEffectsWithBudget,
-): EffectResult => {
+): PartialEffectResult => {
   const resolvedBindings = resolveChoiceBindings(env, cursor);
   const evalCtx = fromEnvAndCursor(env, { ...cursor, bindings: resolvedBindings });
   const minValue = evalValue(effect.rollRandom.min, evalCtx);
@@ -1103,7 +1103,7 @@ export const applySetMarker = (
   cursor: EffectCursor,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
-): EffectResult => {
+): PartialEffectResult => {
   const { space, marker, state: stateExpr } = effect.setMarker;
   const resolvedBindings = resolveChoiceBindings(env, cursor);
   const evalCtx = fromEnvAndCursor(env, { ...cursor, bindings: resolvedBindings });
@@ -1192,7 +1192,7 @@ export const applyShiftMarker = (
   cursor: EffectCursor,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
-): EffectResult => {
+): PartialEffectResult => {
   const { space, marker, delta: deltaExpr } = effect.shiftMarker;
   const resolvedBindings = resolveChoiceBindings(env, cursor);
   const evalCtx = fromEnvAndCursor(env, { ...cursor, bindings: resolvedBindings });
@@ -1293,7 +1293,7 @@ export const applySetGlobalMarker = (
   cursor: EffectCursor,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
-): EffectResult => {
+): PartialEffectResult => {
   const { marker, state: stateExpr } = effect.setGlobalMarker;
   const resolvedBindings = resolveChoiceBindings(env, cursor);
   const evalCtx = fromEnvAndCursor(env, { ...cursor, bindings: resolvedBindings });
@@ -1352,7 +1352,7 @@ export const applyShiftGlobalMarker = (
   cursor: EffectCursor,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
-): EffectResult => {
+): PartialEffectResult => {
   const { marker, delta: deltaExpr } = effect.shiftGlobalMarker;
   const resolvedBindings = resolveChoiceBindings(env, cursor);
   const evalCtx = fromEnvAndCursor(env, { ...cursor, bindings: resolvedBindings });
@@ -1421,7 +1421,7 @@ export const applyFlipGlobalMarker = (
   cursor: EffectCursor,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
-): EffectResult => {
+): PartialEffectResult => {
   const { marker: markerExpr, stateA: stateAExpr, stateB: stateBExpr } = effect.flipGlobalMarker;
   const resolvedBindings = resolveChoiceBindings(env, cursor);
   const evalCtx = fromEnvAndCursor(env, { ...cursor, bindings: resolvedBindings });

@@ -1,6 +1,7 @@
 import type { PhaseId, PlayerId } from './branded.js';
 import type {
-  EffectResult,
+  NormalizedEffectResult,
+  PartialEffectResult,
   EffectTraceContext,
   PhaseTransitionBudget,
 } from './effect-context.js';
@@ -32,7 +33,14 @@ export type CompiledEffectFn = (
   rng: Rng,
   bindings: Readonly<Record<string, unknown>>,
   ctx: CompiledEffectContext,
-) => EffectResult;
+) => NormalizedEffectResult;
+
+export type CompiledEffectFragmentFn = (
+  state: GameState,
+  rng: Rng,
+  bindings: Readonly<Record<string, unknown>>,
+  ctx: CompiledEffectContext,
+) => PartialEffectResult;
 
 export interface CompiledEffectContext {
   readonly def: GameDef;

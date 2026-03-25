@@ -17,7 +17,7 @@ import { updateVarRunningHash } from './zobrist-var-hash.js';
 import { fromEnvAndCursor, resolveEffectBindings } from './effect-context.js';
 import type { RuntimeScopedVarEndpoint } from './scoped-var-runtime-mapping.js';
 import type { PlayerId, ZoneId } from './branded.js';
-import type { EffectContext, EffectCursor, EffectEnv, EffectResult } from './effect-context.js';
+import type { EffectContext, EffectCursor, EffectEnv, PartialEffectResult } from './effect-context.js';
 import type { EffectBudgetState } from './effects-control.js';
 import type { ApplyEffectsWithBudget } from './effect-registry.js';
 import type { MutableGameState } from './state-draft.js';
@@ -178,7 +178,7 @@ export const applyTransferVar = (
   cursor: EffectCursor,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
-): EffectResult => {
+): PartialEffectResult => {
   const resolvedBindings = resolveEffectBindings(env, cursor);
   const evalCursor = resolvedBindings === cursor.bindings ? cursor : { ...cursor, bindings: resolvedBindings };
   const evalCtx = fromEnvAndCursor(env, evalCursor);

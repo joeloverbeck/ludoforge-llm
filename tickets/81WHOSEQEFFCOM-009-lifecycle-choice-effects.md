@@ -26,6 +26,7 @@ Two choice effects (tags 15, 16) fall back to the interpreter. In lifecycle effe
 4. Template effects within options: if option templates contain effects that need execution (e.g., to compute option viability), those effects should use the compiled path when available.
 5. Because this ticket is likely to delegate to existing choice handlers, it SHOULD reuse the shared compiled delegate helper for the outer adapter layer and keep any choice-specific logic focused on lifecycle/bot-resolution behavior rather than repeating bridge mechanics.
 6. The explicit ownership ticket for consolidating delegate-backed leaf wrappers is `tickets/81WHOSEQEFFCOM-011-delegate-leaf-wrapper-consolidation.md`. Any new delegate-backed choice wrapper introduced here should align with that planned abstraction rather than adding another one-off pattern.
+7. Sequencing clarification: this ticket is expected to land before ticket 011. If it introduces new delegate-backed choice wrappers, ticket 011 remains the explicit follow-on ticket that consolidates those wrappers behind the shared helper.
 
 ## What to Change
 

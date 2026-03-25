@@ -19,6 +19,7 @@ If left as repeated bespoke wrappers, tickets 008 and 009 will add even more nea
 3. The existing delegate-backed approach is architecturally correct because it preserves one source of truth for runtime semantics while removing interpreter fallback from compiled lifecycle execution.
 4. The remaining cleanup gap is not semantic; it is structural duplication inside compiler codegen ownership areas.
 5. No active ticket currently owns this consolidation as an explicit deliverable. Tickets 008, 009, and 010 only reference it as a recommendation or precondition.
+6. Sequencing clarification: the deps on tickets 008 and 009 are intentional. This ticket is the post-implementation consolidation pass that absorbs any additional delegate-backed wrappers introduced while compiling those effects.
 
 ## Architecture Check
 

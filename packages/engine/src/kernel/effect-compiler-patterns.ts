@@ -43,21 +43,41 @@ export interface LogicalConditionPattern {
   readonly args: readonly CompilableConditionPattern[];
 }
 
+export interface GenericConditionPattern {
+  readonly kind: 'generic';
+  readonly condition: ConditionAST;
+}
+
 export type CompilableConditionPattern =
   | SimpleComparisonPattern
-  | LogicalConditionPattern;
+  | LogicalConditionPattern
+  | GenericConditionPattern;
 
-export type SetVarPattern = {
-  readonly kind: 'setVar';
-  readonly target: SimpleScopedTargetPattern;
-  readonly value: SimpleValuePattern;
-};
+export type SetVarPattern =
+  | {
+    readonly kind: 'setVar';
+    readonly mode: 'optimized';
+    readonly target: SimpleScopedTargetPattern;
+    readonly value: SimpleValuePattern;
+  }
+  | {
+    readonly kind: 'setVar';
+    readonly mode: 'delegate';
+    readonly payload: SetVarPayload;
+  };
 
-export type AddVarPattern = {
-  readonly kind: 'addVar';
-  readonly target: SimpleScopedTargetPattern;
-  readonly delta: SimpleNumericValuePattern;
-};
+export type AddVarPattern =
+  | {
+    readonly kind: 'addVar';
+    readonly mode: 'optimized';
+    readonly target: SimpleScopedTargetPattern;
+    readonly delta: SimpleNumericValuePattern;
+  }
+  | {
+    readonly kind: 'addVar';
+    readonly mode: 'delegate';
+    readonly payload: AddVarPayload;
+  };
 
 export type IfPattern = {
   readonly kind: 'if';
@@ -362,7 +382,7 @@ export const matchCompilableCondition = (
   condition: ConditionAST,
 ): CompilableConditionPattern | null => {
   if (typeof condition === 'boolean') {
-    return null;
+    return { kind: 'generic', condition };
   }
 
   if (condition.op === 'and' || condition.op === 'or') {
@@ -378,13 +398,13 @@ export const matchCompilableCondition = (
   }
 
   if (!isComparisonCondition(condition)) {
-    return null;
+    return { kind: 'generic', condition };
   }
 
   const left = matchSimpleValue(condition.left);
   const right = matchSimpleValue(condition.right);
   if (left === null || right === null) {
-    return null;
+    return { kind: 'generic', condition };
   }
 
   return {
@@ -406,10 +426,10 @@ export const matchSetVar = (node: EffectAST): SetVarPattern | null => {
   const target = matchSimpleScopedTarget(node.setVar);
   const value = matchSimpleValue(node.setVar.value);
   if (target === null || value === null) {
-    return null;
+    return { kind: 'setVar', mode: 'delegate', payload: node.setVar };
   }
 
-  return { kind: 'setVar', target, value };
+  return { kind: 'setVar', mode: 'optimized', target, value };
 };
 
 export const matchAddVar = (node: EffectAST): AddVarPattern | null => {
@@ -420,10 +440,10 @@ export const matchAddVar = (node: EffectAST): AddVarPattern | null => {
   const target = matchSimpleScopedTarget(node.addVar);
   const delta = matchSimpleNumericValue(node.addVar.delta);
   if (target === null || delta === null) {
-    return null;
+    return { kind: 'addVar', mode: 'delegate', payload: node.addVar };
   }
 
-  return { kind: 'addVar', target, delta };
+  return { kind: 'addVar', mode: 'optimized', target, delta };
 };
 
 export const matchIf = (node: EffectAST): IfPattern | null => {
@@ -889,6 +909,23 @@ export const classifyEffect = (node: EffectAST): PatternDescriptor | null => {
     default:
       return null;
   }
+};
+
+export const classifyLifecycleEffect = (node: EffectAST): PatternDescriptor => {
+  const descriptor = classifyEffect(node);
+  if (descriptor !== null) {
+    return descriptor;
+  }
+
+  if (node._k === EFFECT_KIND_TAG.grantFreeOperation) {
+    throw new Error(
+      'grantFreeOperation is an action-context effect and must not appear in lifecycle effect sequences',
+    );
+  }
+
+  throw new Error(
+    `Lifecycle effect compilation does not support effect tag ${String(node._k)}; lifecycle compilation must be total`,
+  );
 };
 
 const walkEffects = (

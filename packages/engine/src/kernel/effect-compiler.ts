@@ -1,9 +1,7 @@
 import { emptyScope } from './decision-scope.js';
-import { type EffectCursor } from './effect-context.js';
 import { compilePatternDescriptor, type BodyCompiler, type CompiledEffectFragment } from './effect-compiler-codegen.js';
-import { classifyEffect, computeCoverageRatio } from './effect-compiler-patterns.js';
-import { buildEffectEnvFromCompiledCtx } from './effect-compiler-runtime.js';
-import { applyEffectsWithBudgetState, createEffectBudgetState } from './effect-dispatch.js';
+import { classifyLifecycleEffect, computeCoverageRatio } from './effect-compiler-patterns.js';
+import { createEffectBudgetState } from './effect-dispatch.js';
 import {
   makeCompiledLifecycleEffectKey,
   type CompiledEffectFn,
@@ -14,39 +12,6 @@ import {
 import { createDraftTracker, createMutableState, freezeState, type MutableGameState } from './state-draft.js';
 import type { PhaseId } from './branded.js';
 import type { EffectAST, GameDef, GameState, TriggerEvent } from './types.js';
-
-const countEffectNodes = (effects: readonly EffectAST[]): number => {
-  let total = 0;
-  for (const effect of effects) {
-    total += 1;
-    if ('if' in effect) {
-      total += countEffectNodes(effect.if.then);
-      if (effect.if.else !== undefined) {
-        total += countEffectNodes(effect.if.else);
-      }
-    }
-    if ('forEach' in effect) {
-      total += countEffectNodes(effect.forEach.effects);
-      if (effect.forEach.in !== undefined) {
-        total += countEffectNodes(effect.forEach.in);
-      }
-    }
-    if ('rollRandom' in effect) {
-      total += countEffectNodes(effect.rollRandom.in);
-    }
-    if ('reduce' in effect) {
-      total += countEffectNodes(effect.reduce.in);
-    }
-    if ('evaluateSubset' in effect) {
-      total += countEffectNodes(effect.evaluateSubset.compute);
-      total += countEffectNodes(effect.evaluateSubset.in);
-    }
-    if ('removeByPriority' in effect && effect.removeByPriority.in !== undefined) {
-      total += countEffectNodes(effect.removeByPriority.in);
-    }
-  }
-  return total;
-};
 
 export const composeFragments = (
   fragments: readonly CompiledEffectFragment[],
@@ -96,61 +61,15 @@ export const composeFragments = (
   };
 };
 
-export const createFallbackFragment = (
-  effects: readonly EffectAST[],
-): CompiledEffectFragment => ({
-  nodeCount: countEffectNodes(effects),
-  execute: (state, rng, bindings, ctx) => {
-    const env = buildEffectEnvFromCompiledCtx(
-      ctx,
-      ctx.resources.collector,
-      { source: 'engineRuntime' as const, player: ctx.activePlayer, ownershipEnforcement: 'strict' as const },
-      'execution',
-    );
-    const cursor: EffectCursor = {
-      state,
-      rng,
-      bindings,
-      decisionScope: ctx.decisionScope ?? emptyScope(),
-      ...(ctx.effectPath === undefined ? {} : { effectPath: ctx.effectPath }),
-      ...(ctx.tracker === undefined ? {} : { tracker: ctx.tracker }),
-    };
-    const budget = createEffectBudgetState(env);
-    return applyEffectsWithBudgetState(effects, env, cursor, budget);
-  },
-});
-
 const compileFragmentList = (
   effects: readonly EffectAST[],
 ): CompiledEffectFragment => {
   const fragments: CompiledEffectFragment[] = [];
-  let fallbackBatch: EffectAST[] = [];
-
-  const flushFallbackBatch = (): void => {
-    if (fallbackBatch.length === 0) {
-      return;
-    }
-    fragments.push(createFallbackFragment(fallbackBatch));
-    fallbackBatch = [];
-  };
-
   const compileBody: BodyCompiler = (nestedEffects) => compileFragmentList(nestedEffects);
 
   for (const effect of effects) {
-    const descriptor = classifyEffect(effect);
-    if (descriptor === null) {
-      fallbackBatch.push(effect);
-      continue;
-    }
-
-    flushFallbackBatch();
-    fragments.push(
-      compilePatternDescriptor(descriptor, compileBody)
-      ?? createFallbackFragment([effect]),
-    );
+    fragments.push(compilePatternDescriptor(classifyLifecycleEffect(effect), compileBody));
   }
-
-  flushFallbackBatch();
 
   return {
     nodeCount: fragments.reduce((sum, fragment) => sum + fragment.nodeCount, 0),
@@ -164,11 +83,18 @@ export const compileEffectSequence = (
   effects: readonly EffectAST[],
 ): CompiledEffectSequence => {
   const fragment = compileFragmentList(effects);
+  const coverageRatio = computeCoverageRatio(effects);
+  if (coverageRatio !== 1) {
+    throw new Error(
+      `Lifecycle effect compilation for ${String(phaseId)}:${lifecycle} must have full coverage; received ${coverageRatio}`,
+    );
+  }
+
   return {
     phaseId,
     lifecycle,
     execute: fragment.execute,
-    coverageRatio: computeCoverageRatio(effects),
+    coverageRatio,
   };
 };
 

@@ -2,11 +2,12 @@ import { rebaseIterationPath, withIterationSegment, emptyScope } from './decisio
 import { combinations, countCombinations } from './combinatorics.js';
 import type { EffectCursor, EffectResult } from './effect-context.js';
 import { createEvalContext } from './eval-context.js';
+import { evalCondition } from './eval-condition.js';
 import { evalQuery } from './eval-query.js';
 import { evalValue } from './eval-value.js';
 import { typeMismatchError } from './eval-error.js';
 import { buildEffectEnvFromCompiledCtx, createCompiledExecutionContext } from './effect-compiler-runtime.js';
-import { applyEffectsWithBudgetState, consumeEffectBudget, createEffectBudgetState } from './effect-dispatch.js';
+import { consumeEffectBudget } from './effect-dispatch.js';
 import type { MutableGameState } from './state-draft.js';
 import { buildForEachTraceEntry, buildReduceTraceEntry } from './control-flow-trace.js';
 import {
@@ -23,6 +24,7 @@ import {
   type EvaluateSubsetPattern,
   type FlipGlobalMarkerPattern,
   type ForEachPattern,
+  type GenericConditionPattern,
   type GotoPhaseExactPattern,
   type IfPattern,
   type LetPattern,
@@ -74,9 +76,10 @@ import {
   applyShuffle,
 } from './effects-token.js';
 import { applyAdvancePhase, applyGotoPhaseExact, applyPopInterruptPhase, applyPushInterruptPhase } from './effects-turn-flow.js';
-import { applySetActivePlayer } from './effects-var.js';
+import { applyAddVar, applySetActivePlayer, applySetVar } from './effects-var.js';
 import { emitTrace } from './execution-collector.js';
 import {
+  addVar as addVarBuilder,
   advancePhase as advancePhaseBuilder,
   chooseN as chooseNBuilder,
   chooseOne as chooseOneBuilder,
@@ -91,6 +94,7 @@ import {
   pushInterruptPhase as pushInterruptPhaseBuilder,
   popInterruptPhase as popInterruptPhaseBuilder,
   reveal as revealBuilder,
+  setVar as setVarBuilder,
   setActivePlayer as setActivePlayerBuilder,
   setTokenProp as setTokenPropBuilder,
   shuffle as shuffleBuilder,
@@ -135,7 +139,7 @@ export type CompiledConditionEvaluator = (
   ctx: CompiledEffectContext,
 ) => boolean;
 
-export type BodyCompiler = (effects: readonly EffectAST[]) => CompiledEffectFragment | null;
+export type BodyCompiler = (effects: readonly EffectAST[]) => CompiledEffectFragment;
 
 const expectInteger = (value: unknown, effectType: 'setVar' | 'addVar', field: 'value' | 'delta'): number => {
   if (typeof value !== 'number' || !Number.isFinite(value) || !Number.isSafeInteger(value)) {
@@ -304,35 +308,13 @@ const compiledTraceProvenance = (
   ...(ctx.effectPath === undefined ? {} : { effectPath: ctx.effectPath }),
 });
 
-const executeEffectList = (
-  effects: readonly EffectAST[],
-  fragment: CompiledEffectFragment | null,
+const executeCompiledFragment = (
+  fragment: CompiledEffectFragment,
   state: GameState,
   rng: Rng,
   bindings: Readonly<Record<string, unknown>>,
   ctx: CompiledEffectContext,
-): EffectResult => {
-  if (fragment !== null) {
-    return fragment.execute(state, rng, bindings, ctx);
-  }
-
-  const env = buildEffectEnvFromCompiledCtx(
-    ctx,
-    ctx.resources.collector,
-    { source: 'engineRuntime' as const, player: ctx.activePlayer, ownershipEnforcement: 'strict' as const },
-    'execution',
-  );
-  const cursor: EffectCursor = {
-    state,
-    rng,
-    bindings,
-    decisionScope: ctx.decisionScope ?? emptyScope(),
-    ...(ctx.effectPath === undefined ? {} : { effectPath: ctx.effectPath }),
-    ...(ctx.tracker === undefined ? {} : { tracker: ctx.tracker }),
-  };
-  const budget = createEffectBudgetState(env);
-  return applyEffectsWithBudgetState(effects, env, cursor, budget);
-};
+): EffectResult => fragment.execute(state, rng, bindings, ctx);
 
 const normalizeBranchResult = (
   result: EffectResult,
@@ -470,14 +452,39 @@ const compileLogicalCondition = (pattern: LogicalConditionPattern): CompiledCond
   return (state, bindings, ctx) => evaluators.some((entry) => entry(state, bindings, ctx));
 };
 
+const compileGenericCondition = (pattern: GenericConditionPattern): CompiledConditionEvaluator =>
+  (state, bindings, ctx) => evalCondition(pattern.condition, createCompiledEvalContext(state, bindings, ctx));
+
 export const compileConditionEvaluator = (
   pattern: CompilableConditionPattern,
 ): CompiledConditionEvaluator =>
   pattern.kind === 'comparison'
     ? compileSimpleComparison(pattern)
-    : compileLogicalCondition(pattern);
+    : pattern.kind === 'logical'
+      ? compileLogicalCondition(pattern)
+      : compileGenericCondition(pattern);
 
 export const compileSetVar = (desc: SetVarPattern): CompiledEffectFragment => {
+  if (desc.mode === 'delegate') {
+    return {
+      nodeCount: 1,
+      execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+        'setVar',
+        state,
+        rng,
+        bindings,
+        ctx,
+        (env, cursor) => applySetVar(
+          setVarBuilder(desc.payload),
+          env,
+          cursor,
+          { remaining: 10_000, max: 10_000 },
+          () => { throw new Error('applyBatch not available in compiled setVar'); },
+        ),
+      ),
+    };
+  }
+
   const valueAccessor = compileValueAccessor(desc.value);
 
   return {
@@ -545,6 +552,26 @@ export const compileSetVar = (desc: SetVarPattern): CompiledEffectFragment => {
 };
 
 export const compileAddVar = (desc: AddVarPattern): CompiledEffectFragment => {
+  if (desc.mode === 'delegate') {
+    return {
+      nodeCount: 1,
+      execute: (state, rng, bindings, ctx) => executeCompiledDelegate(
+        'addVar',
+        state,
+        rng,
+        bindings,
+        ctx,
+        (env, cursor) => applyAddVar(
+          addVarBuilder(desc.payload),
+          env,
+          cursor,
+          { remaining: 10_000, max: 10_000 },
+          () => { throw new Error('applyBatch not available in compiled addVar'); },
+        ),
+      ),
+    };
+  }
+
   const deltaAccessor = compileValueAccessor(desc.delta);
 
   return {
@@ -626,7 +653,7 @@ export const compileIf = (
       const decisionScope = ctx.decisionScope ?? emptyScope();
       if (conditionEvaluator(state, bindings, ctx)) {
         return normalizeBranchResult(
-          executeEffectList(desc.thenEffects, thenFragment, state, rng, bindings, ctx),
+          executeCompiledFragment(thenFragment, state, rng, bindings, ctx),
           bindings,
           decisionScope,
         );
@@ -634,7 +661,7 @@ export const compileIf = (
 
       if (desc.elseEffects.length > 0) {
         return normalizeBranchResult(
-          executeEffectList(desc.elseEffects, elseFragment, state, rng, bindings, ctx),
+          executeCompiledFragment(elseFragment!, state, rng, bindings, ctx),
           bindings,
           decisionScope,
         );
@@ -679,8 +706,7 @@ export const compileForEach = (
           rebaseIterationPath(currentDecisionScope, parentIterationPath),
           index,
         );
-        const iterationResult = executeEffectList(
-          desc.effects,
+        const iterationResult = executeCompiledFragment(
           bodyFragment,
           currentState,
           currentRng,
@@ -717,9 +743,8 @@ export const compileForEach = (
       }
 
       if (desc.countBind !== undefined && desc.inEffects !== undefined) {
-        const countResult = executeEffectList(
-          desc.inEffects,
-          inFragment,
+        const countResult = executeCompiledFragment(
+          inFragment!,
           currentState,
           currentRng,
           { ...bindings, [desc.countBind]: boundedItems.length },
@@ -805,8 +830,7 @@ export const compileReduce = (
         ...bindings,
         [desc.payload.resultBind]: accumulator,
       };
-      const continuationResult = executeEffectList(
-        desc.payload.in,
+      const continuationResult = executeCompiledFragment(
         inFragment,
         state,
         rng,
@@ -891,7 +915,7 @@ export const compileRemoveByPriority = (
       const emittedEvents: TriggerEvent[] = [];
       const countBindings: Record<string, number> = {};
 
-      for (const { group, moveEffects, fragment } of groupExecutions) {
+      for (const { group, fragment } of groupExecutions) {
         let removedInGroup = 0;
 
         if (remainingBudget > 0) {
@@ -908,8 +932,7 @@ export const compileRemoveByPriority = (
               });
             }
 
-            const moveResult = executeEffectList(
-              moveEffects,
+            const moveResult = executeCompiledFragment(
               fragment,
               currentState,
               currentRng,
@@ -943,9 +966,8 @@ export const compileRemoveByPriority = (
       };
 
       if (desc.payload.in !== undefined) {
-        const inResult = executeEffectList(
-          desc.payload.in,
-          inFragment,
+        const inResult = executeCompiledFragment(
+          inFragment!,
           currentState,
           currentRng,
           exportedBindings,
@@ -1098,8 +1120,7 @@ export const compileRollRandom = (
         );
       }
 
-      const nestedResult = executeEffectList(
-        desc.payload.in,
+      const nestedResult = executeCompiledFragment(
         inFragment,
         state,
         nextRng,
@@ -1285,7 +1306,7 @@ export const compileLet = (
         ...bindings,
         [desc.bind]: evaluatedValue,
       };
-      const nestedResult = executeEffectList(desc.inEffects, bodyFragment, state, rng, nestedBindings, ctx);
+      const nestedResult = executeCompiledFragment(bodyFragment, state, rng, nestedBindings, ctx);
       if (nestedResult.pendingChoice !== undefined) {
         return {
           state: nestedResult.state,
@@ -1365,8 +1386,7 @@ export const compileEvaluateSubset = (
           ...bindings,
           [desc.payload.subsetBind]: subset,
         };
-        const computeResult = executeEffectList(
-          desc.payload.compute,
+        const computeResult = executeCompiledFragment(
           computeFragment,
           state,
           rng,
@@ -1417,8 +1437,7 @@ export const compileEvaluateSubset = (
         [desc.payload.resultBind]: bestScore,
         ...(desc.payload.bestSubsetBind === undefined ? {} : { [desc.payload.bestSubsetBind]: bestSubset }),
       };
-      const inResult = executeEffectList(
-        desc.payload.in,
+      const inResult = executeCompiledFragment(
         inFragment,
         state,
         rng,
@@ -1669,7 +1688,7 @@ export const compileChooseN = (desc: ChooseNPattern): CompiledEffectFragment => 
 export const compilePatternDescriptor = (
   desc: PatternDescriptor,
   compileBody: BodyCompiler,
-): CompiledEffectFragment | null => {
+): CompiledEffectFragment => {
   switch (desc.kind) {
     case 'setVar':
       return compileSetVar(desc);
@@ -1738,6 +1757,6 @@ export const compilePatternDescriptor = (
     case 'conceal':
       return compileConceal(desc);
     default:
-      return null;
+      throw new Error(`Unsupported compiled effect pattern: ${(desc as { kind: string }).kind}`);
   }
 };

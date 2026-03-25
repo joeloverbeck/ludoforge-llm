@@ -15,11 +15,11 @@ If left as repeated bespoke wrappers, tickets 008 and 009 will add even more nea
 ## Assumption Reassessment (2026-03-25)
 
 1. `packages/engine/src/kernel/effect-compiler-codegen.ts` already contains a shared low-level bridge function, `executeCompiledDelegate`, but each delegate-backed compiled effect still repeats its own one-off wrapper around builder + handler wiring.
-2. Delegate-backed compiled leaves already exist across turn-flow, marker, token, and information effects, and tickets 008 and 009 are expected to add more.
+2. Delegate-backed compiled leaves already exist across turn-flow, marker, token, and information effects, and ticket 010 additionally introduced delegate-backed lifecycle `setVar` / `addVar` wrappers to close the final descriptor gaps required for safe fallback deletion.
 3. The existing delegate-backed approach is architecturally correct because it preserves one source of truth for runtime semantics while removing interpreter fallback from compiled lifecycle execution.
-4. The remaining cleanup gap is not semantic; it is structural duplication inside compiler codegen ownership areas.
-5. No active ticket currently owns this consolidation as an explicit deliverable. Tickets 008, 009, and 010 only reference it as a recommendation or precondition.
-6. Sequencing clarification: the deps on tickets 008 and 009 are intentional. This ticket is the post-implementation consolidation pass that absorbs any additional delegate-backed wrappers introduced while compiling those effects.
+4. The remaining cleanup gap is not semantic; it is structural duplication inside compiler codegen ownership areas. Ticket 010 increased the duplication slightly by adding two more delegate-backed wrappers in `compileSetVar(...)` and `compileAddVar(...)`.
+5. No active ticket currently owns this consolidation as an explicit deliverable. Tickets 008, 009, and 010 only reference it as a recommendation or adjacent follow-up, and 010 is now completed/archived.
+6. Sequencing clarification: the deps on tickets 008 and 009 are intentional. This ticket is the post-implementation consolidation pass that absorbs any additional delegate-backed wrappers introduced while compiling those effects, including the `setVar` / `addVar` delegates added by ticket 010.
 7. The public `decisionScope` contract asymmetry between interpreted and compiled execution is adjacent but distinct. It belongs to runtime contract normalization, not delegate-wrapper consolidation, and is tracked in `tickets/81WHOSEQEFFCOM-012-decision-scope-contract-alignment.md`.
 
 ## Architecture Check
@@ -52,6 +52,7 @@ Expected coverage includes current delegate-backed leaves such as:
 - marker leaves
 - token leaves
 - information leaves
+- lifecycle `setVar` / `addVar` delegates introduced while removing lifecycle fallback in ticket 010
 
 If tickets 008 and 009 have already landed when this work is done, include their delegate-backed leaves as part of the same consolidation.
 
@@ -105,6 +106,7 @@ Add or update tests so the abstraction is proven safe:
 
 1. `packages/engine/test/unit/kernel/effect-compiler-codegen.test.ts` — strengthen dispatch/parity coverage for delegate-backed compiled leaves after consolidation.
 2. `packages/engine/test/unit/kernel/effect-compiler.test.ts` — keep sequence-level parity coverage intact across refactored delegate-backed fragments.
+3. `packages/engine/test/integration/compiled-lifecycle-runtime.test.ts` or another focused lifecycle suite — ensure lifecycle `setVar` / `addVar` delegate-backed wrappers still preserve the no-fallback, full-coverage invariant after consolidation.
 
 ### Commands
 

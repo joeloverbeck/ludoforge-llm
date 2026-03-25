@@ -15,7 +15,6 @@ import {
   computeFullHash,
   createEvalRuntimeResources,
   createExecutionEffectContext,
-  createFallbackFragment,
   createRng,
   createZobristTable,
   emptyScope,
@@ -554,42 +553,19 @@ describe('effect-compiler orchestrator', () => {
     assert.deepEqual(result.bindings, { $first: true });
   });
 
-  it('createFallbackFragment uses lightweight env+cursor bridging with interpreter parity', () => {
-    const def = makeDef();
+  it('throws when grantFreeOperation appears in a lifecycle sequence', () => {
     const effects: readonly EffectAST[] = [
       eff({
-        rollRandom: {
-          bind: '$roll',
-          min: 1,
-          max: 6,
-          in: [eff({ setVar: { scope: 'global', var: 'count', value: { _t: 2, ref: 'binding', name: '$roll' } } })],
+        grantFreeOperation: {
+          seat: 'self',
+          operationClass: 'operation',
         },
       }),
     ];
-    const state = makeState();
-    const rng = createRng(53n);
-    const ctx = makeCompiledContext(def);
-    const fragment = createFallbackFragment(effects);
-    const result = fragment.execute(state, rng, {}, ctx);
 
-    compareResults(
-      def,
-      result,
-      applyEffects(
-        effects,
-        createExecutionEffectContext({
-          def,
-          adjacencyGraph: buildAdjacencyGraph(def.zones),
-          runtimeTableIndex: buildRuntimeTableIndex(def),
-          state,
-          rng,
-          activePlayer: asPlayerId(1),
-          actorPlayer: asPlayerId(0),
-          bindings: {},
-          moveParams: {},
-          resources: createEvalRuntimeResources(),
-        }),
-      ),
+    assert.throws(
+      () => compileEffectSequence(asPhaseId('main'), 'onEnter', effects),
+      /grantFreeOperation is an action-context effect and must not appear in lifecycle effect sequences/,
     );
   });
 

@@ -75,11 +75,14 @@ const createState = (): GameState => ({
 });
 
 describe('compiled lifecycle runtime integration', () => {
-  it('matches the current production lifecycle coverage: Texas compiles entries and FITL currently compiles none', () => {
+  it('keeps production lifecycle coverage aligned with the current Texas/FITL fixtures', () => {
     const texasRuntime = createGameDefRuntime(compileTexasProductionSpec().compiled.gameDef);
     const fitlRuntime = createGameDefRuntime(compileProductionSpec().compiled.gameDef);
 
     assert.ok(texasRuntime.compiledLifecycleEffects.size > 0);
+    for (const compiled of texasRuntime.compiledLifecycleEffects.values()) {
+      assert.equal(compiled.coverageRatio, 1);
+    }
     assert.equal(fitlRuntime.compiledLifecycleEffects.size, 0);
   });
 

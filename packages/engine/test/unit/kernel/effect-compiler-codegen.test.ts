@@ -136,17 +136,13 @@ const makeState = (): GameState => ({
 const tokenById = (state: GameState, tokenId: string) =>
   Object.values(state.zones).flat().find((token) => String(token.id) === tokenId);
 
-const compileEffects = (effects: readonly EffectAST[]): CompiledEffectFragment | null => {
-  const fragments = effects.map((effect) => {
+const compileEffects = (effects: readonly EffectAST[]): CompiledEffectFragment => {
+  const compiledFragments = effects.map((effect) => {
     const descriptor = classifyEffect(effect);
-    return descriptor === null ? null : compilePatternDescriptor(descriptor, compileEffects);
+    assert.ok(descriptor !== null, 'test helper expects fully compilable effects');
+    return compilePatternDescriptor(descriptor, compileEffects);
   });
 
-  if (fragments.some((entry) => entry === null)) {
-    return null;
-  }
-
-  const compiledFragments = fragments as readonly CompiledEffectFragment[];
   return {
     nodeCount: compiledFragments.reduce((sum, fragment) => sum + fragment.nodeCount, 0),
     execute: (state, rng, bindings, ctx) => {
@@ -255,8 +251,6 @@ const runCompiled = (
   assert.ok(descriptor !== null);
 
   const fragment = compilePatternDescriptor(descriptor, compileEffects);
-  assert.ok(fragment !== null);
-
   return fragment.execute(state, rng, bindings, makeCompiledContext(def, options));
 };
 
@@ -1042,7 +1036,7 @@ describe('effect-compiler-codegen', () => {
     for (const effect of effects) {
       const descriptor = classifyEffect(effect);
       assert.ok(descriptor !== null);
-      assert.ok(compilePatternDescriptor(descriptor, compileEffects) !== null);
+      assert.ok(compilePatternDescriptor(descriptor, compileEffects));
     }
   });
 
@@ -1067,7 +1061,6 @@ describe('effect-compiler-codegen', () => {
     const descriptor = classifyEffect(effect);
     assert.ok(descriptor !== null);
     const fragment = compilePatternDescriptor(descriptor, compileEffects);
-    assert.ok(fragment !== null);
     return fragment.execute(mutableState as GameState, rng, bindings, makeDraftCompiledContext(def, tracker));
   };
 
@@ -1357,18 +1350,10 @@ describe('effect-compiler-codegen', () => {
     assert.deepEqual(compiledTemplates, interpretedTemplates);
   });
 
-  it('executeEffectList fallback produces correct EffectResult via applyEffectsWithBudgetState', () => {
-    // Force the fallback path by wrapping a non-compilable effect inside an if.
-    // The if is compilable, but its then-branch body compiler returns null when
-    // it encounters the non-compilable effect, so executeEffectList falls through
-    // to the new buildEffectEnvFromCompiledCtx + applyEffectsWithBudgetState path.
+  it('compiled if execution preserves interpreter parity without nullable body fallback', () => {
     const def = makeDef();
     const state = makeState();
 
-    // Use an if whose then-branch contains an effect that classifyEffect returns
-    // null for — this makes compileBody return null for the then fragment,
-    // triggering the fallback in executeEffectList.
-    // rollRandom is still not compilable by the pattern compiler.
     const effect: EffectAST = eff({
       if: {
         when: { op: '==', left: 1, right: 1 },

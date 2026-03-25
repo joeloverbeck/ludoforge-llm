@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import type { ConditionAST, EffectAST, ValueExpr } from '../../../src/kernel/types.js';
 import {
   classifyEffect,
+  classifyLifecycleEffect,
   computeCoverageRatio,
   isCompilableCondition,
   matchAddVar,
@@ -133,10 +134,16 @@ describe('effect-compiler-patterns', () => {
       assert.equal(isCompilableCondition(condition), true);
     });
 
-    it('rejects unsupported condition operators', () => {
-      assert.equal(matchCompilableCondition({ op: 'not', arg: true }), null);
-      assert.equal(matchCompilableCondition({ op: 'in', item: 'a', set: 'abc' }), null);
-      assert.equal(isCompilableCondition({ op: 'zonePropIncludes', zone: 'x', prop: 'tags', value: 'hot' }), false);
+    it('falls back to generic condition descriptors for unsupported optimized shapes', () => {
+      assert.deepEqual(matchCompilableCondition({ op: 'not', arg: true }), {
+        kind: 'generic',
+        condition: { op: 'not', arg: true },
+      });
+      assert.deepEqual(matchCompilableCondition({ op: 'in', item: 'a', set: 'abc' }), {
+        kind: 'generic',
+        condition: { op: 'in', item: 'a', set: 'abc' },
+      });
+      assert.equal(isCompilableCondition({ op: 'zonePropIncludes', zone: 'x', prop: 'tags', value: 'hot' }), true);
     });
   });
 
@@ -146,6 +153,7 @@ describe('effect-compiler-patterns', () => {
         matchSetVar(eff({ setVar: { scope: 'global', var: 'pot', value: 0 } })),
         {
           kind: 'setVar',
+          mode: 'optimized',
           target: { scope: 'global', varName: 'pot' },
           value: { kind: 'literal', value: 0 },
         },
@@ -155,6 +163,7 @@ describe('effect-compiler-patterns', () => {
         matchSetVar(eff({ setVar: { scope: 'pvar', player: 'active', var: 'chips', value: { _t: 2, ref: 'binding', name: 'seat' } } })),
         {
           kind: 'setVar',
+          mode: 'optimized',
           target: { scope: 'pvar', player: 'active', varName: 'chips' },
           value: { kind: 'binding', name: 'seat' },
         },
@@ -162,13 +171,21 @@ describe('effect-compiler-patterns', () => {
     });
 
     it('rejects zoneVar and complex setVar payloads', () => {
-      assert.equal(
+      assert.deepEqual(
         matchSetVar(eff({ setVar: { scope: 'zoneVar', zone: 'board', var: 'threat', value: 1 } })),
-        null,
+        {
+          kind: 'setVar',
+          mode: 'delegate',
+          payload: { scope: 'zoneVar', zone: 'board', var: 'threat', value: 1 },
+        },
       );
-      assert.equal(
+      assert.deepEqual(
         matchSetVar(eff({ setVar: { scope: 'global', var: 'pot', value: { _t: 6, op: '+', left: 1, right: 2 } } })),
-        null,
+        {
+          kind: 'setVar',
+          mode: 'delegate',
+          payload: { scope: 'global', var: 'pot', value: { _t: 6, op: '+', left: 1, right: 2 } },
+        },
       );
     });
 
@@ -177,18 +194,27 @@ describe('effect-compiler-patterns', () => {
         matchAddVar(eff({ addVar: { scope: 'global', var: 'pot', delta: { _t: 2, ref: 'gvar', var: 'ante' } } })),
         {
           kind: 'addVar',
+          mode: 'optimized',
           target: { scope: 'global', varName: 'pot' },
           delta: { kind: 'gvar', varName: 'ante' },
         },
       );
 
-      assert.equal(
+      assert.deepEqual(
         matchAddVar(eff({ addVar: { scope: 'global', var: 'pot', delta: { _t: 2, ref: 'zoneVar', zone: 'board', var: 'threat' } } })),
-        null,
+        {
+          kind: 'addVar',
+          mode: 'delegate',
+          payload: { scope: 'global', var: 'pot', delta: { _t: 2, ref: 'zoneVar', zone: 'board', var: 'threat' } },
+        },
       );
-      assert.equal(
+      assert.deepEqual(
         matchAddVar(eff({ addVar: { scope: 'pvar', player: 'active', var: 'chips', delta: { _t: 6, op: '+', left: 1, right: 2 } } })),
-        null,
+        {
+          kind: 'addVar',
+          mode: 'delegate',
+          payload: { scope: 'pvar', player: 'active', var: 'chips', delta: { _t: 6, op: '+', left: 1, right: 2 } },
+        },
       );
     });
 
@@ -217,14 +243,43 @@ describe('effect-compiler-patterns', () => {
         },
       );
 
-      assert.equal(
+      assert.deepEqual(
         matchIf(eff({
           if: {
             when: { op: 'not', arg: { op: '==', left: 1, right: 1 } },
             then: thenEffects,
           },
         })),
-        null,
+        {
+          kind: 'if',
+          condition: {
+            kind: 'generic',
+            condition: { op: 'not', arg: { op: '==', left: 1, right: 1 } },
+          },
+          thenEffects,
+          elseEffects: [],
+        },
+      );
+
+      assert.deepEqual(
+        matchIf(eff({
+          if: {
+            when: { op: '==', left: { _t: 2, ref: 'gvar', var: 'phase' }, right: 'deal' },
+            then: thenEffects,
+            else: elseEffects,
+          },
+        })),
+        {
+          kind: 'if',
+          condition: {
+            kind: 'comparison',
+            op: '==',
+            left: { kind: 'gvar', varName: 'phase' },
+            right: { kind: 'literal', value: 'deal' },
+          },
+          thenEffects,
+          elseEffects,
+        },
       );
 
       assert.deepEqual(
@@ -701,6 +756,21 @@ describe('effect-compiler-patterns', () => {
         },
       });
       assert.equal(classifyEffect(node), null);
+    });
+
+    it('throws for grantFreeOperation in lifecycle compilation', () => {
+      const node = eff({
+        grantFreeOperation: {
+          seat: 'NVA',
+          operationClass: 'operation' as const,
+          actionIds: ['march'],
+        },
+      });
+
+      assert.throws(
+        () => classifyLifecycleEffect(node),
+        /grantFreeOperation is an action-context effect and must not appear in lifecycle effect sequences/,
+      );
     });
   });
 

@@ -240,7 +240,7 @@ describe('effect-compiler-patterns', () => {
   });
 
   describe('classifyEffect', () => {
-    it('classifies supported Phase 1 families and rejects unsupported effects', () => {
+    it('classifies supported Phase 0 families and rejects unsupported effects', () => {
       assert.equal(classifyEffect(eff({ setVar: { scope: 'global', var: 'pot', value: 0 } }))?.kind, 'setVar');
       assert.equal(classifyEffect(eff({ addVar: { scope: 'global', var: 'pot', delta: 1 } }))?.kind, 'addVar');
       assert.equal(
@@ -256,6 +256,75 @@ describe('effect-compiler-patterns', () => {
       assert.equal(classifyEffect(eff({ chooseOne: { internalDecisionId: 'd1', bind: 'choice', options: { query: 'players' } } })), null);
       assert.equal(classifyEffect(eff({ moveToken: { token: 't1', from: 'deck', to: 'discard' } })), null);
       assert.equal(classifyEffect(eff({ rollRandom: { bind: 'roll', min: 1, max: 6, in: [] } })), null);
+    });
+
+    it('returns correct PatternDescriptor for each compiled _k tag', () => {
+      const setVarDesc = classifyEffect(eff({ setVar: { scope: 'global', var: 'pot', value: 0 } }));
+      assert.equal(setVarDesc?.kind, 'setVar');
+
+      const addVarDesc = classifyEffect(eff({ addVar: { scope: 'global', var: 'pot', delta: 1 } }));
+      assert.equal(addVarDesc?.kind, 'addVar');
+
+      const ifDesc = classifyEffect(eff({
+        if: { when: { op: '==', left: 1, right: 1 }, then: [], else: [] },
+      }));
+      assert.equal(ifDesc?.kind, 'if');
+
+      const forEachDesc = classifyEffect(eff({
+        forEach: { bind: 'p', over: { query: 'players' }, effects: [] },
+      }));
+      assert.equal(forEachDesc?.kind, 'forEachPlayers');
+
+      const gotoDesc = classifyEffect(eff({ gotoPhaseExact: { phase: 'end' } }));
+      assert.equal(gotoDesc?.kind, 'gotoPhaseExact');
+    });
+
+    it('returns null for every not-yet-compiled _k tag', () => {
+      const stubTags: Array<{ tag: string; node: EffectAST }> = [
+        { tag: 'setActivePlayer', node: eff({ setActivePlayer: { player: 'active' } }) },
+        { tag: 'transferVar', node: eff({ transferVar: { from: { scope: 'global', var: 'a' }, to: { scope: 'global', var: 'b' }, amount: 1 } }) },
+        { tag: 'bindValue', node: eff({ bindValue: { bind: 'x', value: 1 } }) },
+        { tag: 'let', node: eff({ let: { bind: 'x', value: 1, in: [] } }) },
+        { tag: 'setMarker', node: eff({ setMarker: { space: 'zone1', marker: 'm', state: 0 } }) },
+        { tag: 'shiftMarker', node: eff({ shiftMarker: { space: 'zone1', marker: 'm', delta: 1 } }) },
+        { tag: 'setGlobalMarker', node: eff({ setGlobalMarker: { marker: 'm', state: 0 } }) },
+        { tag: 'flipGlobalMarker', node: eff({ flipGlobalMarker: { marker: 'm', stateA: 0, stateB: 1 } }) },
+        { tag: 'shiftGlobalMarker', node: eff({ shiftGlobalMarker: { marker: 'm', delta: 1 } }) },
+        { tag: 'moveToken', node: eff({ moveToken: { token: 't1', from: 'z1', to: 'z2' } }) },
+        { tag: 'moveAll', node: eff({ moveAll: { from: 'z1', to: 'z2' } }) },
+        { tag: 'moveTokenAdjacent', node: eff({ moveTokenAdjacent: { token: 't1', from: 'z1' } }) },
+        { tag: 'draw', node: eff({ draw: { from: 'deck', to: 'hand', count: 2 } }) },
+        { tag: 'shuffle', node: eff({ shuffle: { zone: 'deck' } }) },
+        { tag: 'createToken', node: eff({ createToken: { type: 'card', zone: 'z1' } }) },
+        { tag: 'destroyToken', node: eff({ destroyToken: { token: 't1' } }) },
+        { tag: 'setTokenProp', node: eff({ setTokenProp: { token: 't1', prop: 'face', value: 'up' } }) },
+        { tag: 'reveal', node: eff({ reveal: { zone: 'hand', to: 'all' } }) },
+        { tag: 'conceal', node: eff({ conceal: { zone: 'hand' } }) },
+        { tag: 'reduce', node: eff({ reduce: { itemBind: 'x', accBind: 'acc', over: { query: 'players' }, initial: 0, next: 0, resultBind: 'r', in: [] } }) },
+        { tag: 'removeByPriority', node: eff({ removeByPriority: { budget: 1, groups: [] } }) },
+        { tag: 'rollRandom', node: eff({ rollRandom: { bind: 'roll', min: 1, max: 6, in: [] } }) },
+        { tag: 'pushInterruptPhase', node: eff({ pushInterruptPhase: { phase: 'int', resumePhase: 'main' } }) },
+        { tag: 'popInterruptPhase', node: eff({ popInterruptPhase: {} }) },
+        { tag: 'evaluateSubset', node: eff({ evaluateSubset: { source: { query: 'players' }, subsetSize: 2, subsetBind: 's', compute: [], scoreExpr: 0, resultBind: 'r', in: [] } }) },
+        { tag: 'chooseOne', node: eff({ chooseOne: { internalDecisionId: 'd1', bind: 'c', options: { query: 'players' } } }) },
+        { tag: 'chooseN', node: eff({ chooseN: { internalDecisionId: 'd1', bind: 'c', options: { query: 'players' }, n: 2 } }) },
+        { tag: 'advancePhase', node: eff({ advancePhase: {} }) },
+      ];
+
+      for (const { tag, node } of stubTags) {
+        assert.equal(classifyEffect(node), null, `expected null for not-yet-compiled tag: ${tag}`);
+      }
+    });
+
+    it('returns null for grantFreeOperation (deferred)', () => {
+      const node = eff({
+        grantFreeOperation: {
+          seat: 'NVA',
+          operationClass: 'operation' as const,
+          actionIds: ['march'],
+        },
+      });
+      assert.equal(classifyEffect(node), null);
     });
   });
 
@@ -311,6 +380,98 @@ describe('effect-compiler-patterns', () => {
       ];
 
       assert.equal(computeCoverageRatio(effects), 1);
+    });
+
+    it('traverses let.in bodies via walkEffects', () => {
+      const effects: readonly EffectAST[] = [
+        eff({
+          let: {
+            bind: 'x',
+            value: 1,
+            in: [
+              eff({ setVar: { scope: 'global', var: 'pot', value: 0 } }),
+              eff({ moveToken: { token: 't1', from: 'z1', to: 'z2' } }),
+            ],
+          },
+        }),
+      ];
+      // 3 nodes: let (not compiled) + setVar (compiled) + moveToken (not compiled) = 1/3
+      assert.equal(computeCoverageRatio(effects), 1 / 3);
+    });
+
+    it('traverses reduce.in bodies via walkEffects', () => {
+      const effects: readonly EffectAST[] = [
+        eff({
+          reduce: {
+            itemBind: 'x',
+            accBind: 'acc',
+            over: { query: 'players' },
+            initial: 0,
+            next: 0,
+            resultBind: 'r',
+            in: [
+              eff({ addVar: { scope: 'global', var: 'pot', delta: 1 } }),
+            ],
+          },
+        }),
+      ];
+      // 2 nodes: reduce (not compiled) + addVar (compiled) = 1/2
+      assert.equal(computeCoverageRatio(effects), 1 / 2);
+    });
+
+    it('traverses rollRandom.in bodies via walkEffects', () => {
+      const effects: readonly EffectAST[] = [
+        eff({
+          rollRandom: {
+            bind: 'roll',
+            min: 1,
+            max: 6,
+            in: [
+              eff({ setVar: { scope: 'global', var: 'result', value: 0 } }),
+            ],
+          },
+        }),
+      ];
+      // 2 nodes: rollRandom (not compiled) + setVar (compiled) = 1/2
+      assert.equal(computeCoverageRatio(effects), 1 / 2);
+    });
+
+    it('traverses evaluateSubset.compute and evaluateSubset.in bodies via walkEffects', () => {
+      const effects: readonly EffectAST[] = [
+        eff({
+          evaluateSubset: {
+            source: { query: 'players' },
+            subsetSize: 2,
+            subsetBind: 's',
+            compute: [
+              eff({ addVar: { scope: 'global', var: 'score', delta: 1 } }),
+            ],
+            scoreExpr: 0,
+            resultBind: 'r',
+            in: [
+              eff({ setVar: { scope: 'global', var: 'best', value: 0 } }),
+            ],
+          },
+        }),
+      ];
+      // 3 nodes: evaluateSubset (not compiled) + addVar (compiled) + setVar (compiled) = 2/3
+      assert.equal(computeCoverageRatio(effects), 2 / 3);
+    });
+
+    it('traverses removeByPriority.in bodies via walkEffects', () => {
+      const effects: readonly EffectAST[] = [
+        eff({
+          removeByPriority: {
+            budget: 3,
+            groups: [],
+            in: [
+              eff({ gotoPhaseExact: { phase: 'cleanup' } }),
+            ],
+          },
+        }),
+      ];
+      // 2 nodes: removeByPriority (not compiled) + gotoPhaseExact (compiled) = 1/2
+      assert.equal(computeCoverageRatio(effects), 1 / 2);
     });
   });
 });

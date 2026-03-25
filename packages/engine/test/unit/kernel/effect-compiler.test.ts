@@ -223,7 +223,9 @@ describe('effect-compiler orchestrator', () => {
     const rng = createRng(31n);
     const compiled = compileEffectSequence(asPhaseId('cleanup'), 'onExit', effects);
 
-    assert.equal(compiled.coverageRatio, 0);
+    // walkEffects now traverses rollRandom.in, finding the nested setVar (compiled).
+    // 2 nodes: rollRandom (not compiled) + setVar (compiled) = 1/2
+    assert.equal(compiled.coverageRatio, 0.5);
     compareResults(
       def,
       compiled.execute(state, rng, {}, makeCompiledContext(def)),

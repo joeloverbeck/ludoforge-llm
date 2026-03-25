@@ -1,6 +1,6 @@
 # 81WHOSEQEFFCOM-001: Rewrite classifyEffect to switch dispatch on `_k` tags
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — effect-compiler-patterns.ts
@@ -83,3 +83,13 @@ Add a block comment listing all 34 tags and their compilation status (compiled /
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`
 3. `pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-25
+- **What changed**:
+  - `effect-compiler-patterns.ts`: `classifyEffect` rewritten from `??` matcher chain to `switch(effect._k)` with all 34 tags enumerated. `walkEffects` rewritten from key-probing to `switch(effect._k)`, now traversing all 7 effect types with nested bodies (previously only `if` and `forEach`). Roadmap comment added listing all tags with compilation status.
+  - `effect-compiler-patterns.test.ts`: All effect literals wrapped with `eff()` for `_k` tag injection. Added 9 new tests: per-compiled-tag descriptor verification, all 28 stub tags return null, grantFreeOperation deferred, and walkEffects traversal for `let.in`, `reduce.in`, `rollRandom.in`, `evaluateSubset.compute+in`, `removeByPriority.in`.
+  - `effect-compiler.test.ts`: Updated coverage ratio assertion for `rollRandom` with nested `setVar` from 0 to 0.5 (walkEffects now correctly counts nested nodes).
+- **Deviations**: Branch required rebase onto `feat/80INCZOBHAS-004-marker-effect-handlers` because Spec 82 `_k` type changes had not yet been merged to main. One existing test updated due to improved walkEffects traversal depth.
+- **Verification**: 4790/4790 engine tests pass, typecheck clean, lint clean on modified files.

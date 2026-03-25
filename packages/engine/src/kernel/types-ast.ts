@@ -79,6 +79,45 @@ export const VALUE_EXPR_TAG = {
 
 export type ValueExprTag = typeof VALUE_EXPR_TAG[keyof typeof VALUE_EXPR_TAG];
 
+export const EFFECT_KIND_TAG = {
+  setVar: 0,
+  addVar: 1,
+  setActivePlayer: 2,
+  transferVar: 3,
+  moveToken: 4,
+  moveAll: 5,
+  moveTokenAdjacent: 6,
+  draw: 7,
+  shuffle: 8,
+  createToken: 9,
+  destroyToken: 10,
+  setTokenProp: 11,
+  reveal: 12,
+  conceal: 13,
+  bindValue: 14,
+  chooseOne: 15,
+  chooseN: 16,
+  setMarker: 17,
+  shiftMarker: 18,
+  setGlobalMarker: 19,
+  flipGlobalMarker: 20,
+  shiftGlobalMarker: 21,
+  grantFreeOperation: 22,
+  gotoPhaseExact: 23,
+  advancePhase: 24,
+  pushInterruptPhase: 25,
+  popInterruptPhase: 26,
+  rollRandom: 27,
+  if: 28,
+  forEach: 29,
+  reduce: 30,
+  removeByPriority: 31,
+  let: 32,
+  evaluateSubset: 33,
+} as const;
+
+export type EffectKindTag = typeof EFFECT_KIND_TAG[keyof typeof EFFECT_KIND_TAG];
+
 export type ValueExpr =
   | number
   | boolean
@@ -605,8 +644,14 @@ export interface EffectKindMap {
 }
 
 export type EffectKind = keyof EffectKindMap;
-export type EffectOfKind<K extends EffectKind> = EffectKindMap[K];
-export type EffectAST = EffectKindMap[EffectKind];
+
+type WithKindTag<K extends EffectKind> =
+  EffectKindMap[K] & { readonly _k: typeof EFFECT_KIND_TAG[K] };
+
+export type EffectOfKind<K extends EffectKind> = WithKindTag<K>;
+export type EffectAST = { [K in EffectKind]: WithKindTag<K> }[EffectKind];
+
+const _effectTagExhaustive: Record<EffectKind, number> = EFFECT_KIND_TAG;
 
 export type MoveParamScalar = number | string | boolean | TokenId | ZoneId | PlayerId;
 export type MoveParamValue = MoveParamScalar | readonly MoveParamScalar[];

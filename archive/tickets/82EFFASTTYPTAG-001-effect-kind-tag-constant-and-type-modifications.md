@@ -1,6 +1,6 @@
 # 82EFFASTTYPTAG-001: Effect Kind Tag Constant and Type Modifications
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/kernel/types-ast.ts`
@@ -157,3 +157,10 @@ This will cause type errors at every construction site that doesn't include
 `_k`. Those errors are resolved by tickets 002-006. During development,
 tickets 001-006 should be implemented as a single branch or the branch
 should not be expected to build cleanly until ticket 004 completes.
+
+## Outcome
+
+- **Completed**: 2026-03-25
+- **What changed**: Added `EFFECT_KIND_TAG` (34-entry, 0..33), `EffectKindTag` type, `WithKindTag<K>` helper, updated `EffectAST` and `EffectOfKind<K>` to require `_k`, and added compile-time exhaustiveness check — all in `packages/engine/src/kernel/types-ast.ts`.
+- **Deviations**: None. Implemented exactly as specified.
+- **Verification**: `types-ast.ts` compiles cleanly. All build errors are downstream construction sites missing `_k`, as expected per the ticket's build breakage note.

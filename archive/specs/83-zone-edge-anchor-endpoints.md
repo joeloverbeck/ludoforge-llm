@@ -1,6 +1,6 @@
 # Spec 83 — Zone Edge Anchor Endpoints
 
-**Status**: NOT STARTED
+**Status**: ✅ COMPLETED
 
 ## Problem
 
@@ -257,6 +257,13 @@ These must be passed as additional parameters to the drag handler attachment fun
 **`packages/runner/src/map-editor/map-editor-store.ts`**
 
 Add to `MapEditorStoreActions`:
+
+## Outcome
+
+- Completion date: 2026-03-26
+- What actually changed: Spec 83 was implemented across the runner in the staged ticket sequence. The visual-config schema now accepts optional zone-endpoint `anchor` angles, shared edge-point math exists in `shape-utils.ts`, the presentation resolver and map-editor route geometry both resolve anchored zone endpoints to zone edges, the map editor store and drag flow preserve zone-linked endpoint editing, and FITL now authors the Hue↔Da Nang route with zone-edge anchors in `visual-config.yaml`.
+- Deviations from original plan: implementation was split across multiple focused tickets instead of landing as a single change. The spec’s broad direction held up, but some ticket-level assumptions needed correction during execution, especially once parts of the infrastructure were already in place. The FITL authoring follow-up became primarily a data-plus-test-hardening task rather than additional runner feature work.
+- Verification results: the completed ticket chain includes targeted runner tests for schema validation, shape math, presentation resolver behavior, editor route geometry, editor store actions, and drag behavior, plus final FITL integration coverage in `packages/runner/test/config/visual-config-files.test.ts`. On 2026-03-26, `pnpm -F @ludoforge/runner test`, `pnpm -F @ludoforge/runner typecheck`, and `pnpm -F @ludoforge/runner lint` passed while finalizing the FITL authoring ticket.
 
 ```typescript
 setEndpointAnchor(routeId: string, pointIndex: number, anchor: number): void;

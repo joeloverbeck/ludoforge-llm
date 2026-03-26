@@ -159,8 +159,8 @@ zones:
         - { kind: straight }
     "loc-hue-da-nang:none":
       points:
-        - { kind: zone, zoneId: "da-nang:none" }
-        - { kind: zone, zoneId: "hue:none" }
+        - { kind: zone, zoneId: "da-nang:none", anchor: 90 }
+        - { kind: zone, zoneId: "hue:none", anchor: 270 }
       segments:
         - kind: quadratic
           control: { kind: position, x: 480, y: 40 }

@@ -338,6 +338,81 @@ describe('createEditorRouteRenderer', () => {
     });
   });
 
+  it('updates curve geometry from preview route state while dragging', () => {
+    const fixture = createFixture();
+    createEditorRouteRenderer(
+      fixture.routeLayer as unknown as Container,
+      fixture.store,
+      fixture.gameDef,
+      fixture.provider,
+    );
+
+    const root = fixture.routeLayer.children[0] as InstanceType<typeof MockContainer>;
+    const graphics = root.children[0] as InstanceType<typeof MockGraphics>;
+    expect(graphics.quadraticCurveToArgs[0]).toEqual([40, 30, 80, 0]);
+
+    fixture.store.getState().beginInteraction();
+    fixture.store.getState().setDragging(true);
+    fixture.store.getState().previewControlPointMove('route:road', 0, { x: 30, y: 10 });
+
+    expect(fixture.routeLayer.children[0]).toBe(root);
+    expect(root.children[0]).toBe(graphics);
+    expect(graphics.quadraticCurveToArgs[0]).toEqual([30, 10, 80, 0]);
+  });
+
+  it('keeps committed preview geometry after drag end when the renderer next re-renders', () => {
+    const fixture = createFixture();
+    createEditorRouteRenderer(
+      fixture.routeLayer as unknown as Container,
+      fixture.store,
+      fixture.gameDef,
+      fixture.provider,
+    );
+
+    const root = fixture.routeLayer.children[0] as InstanceType<typeof MockContainer>;
+    const graphics = root.children[0] as InstanceType<typeof MockGraphics>;
+
+    fixture.store.getState().beginInteraction();
+    fixture.store.getState().setDragging(true);
+    fixture.store.getState().previewControlPointMove('route:road', 0, { x: 30, y: 10 });
+    fixture.store.getState().commitInteraction();
+    fixture.store.getState().setDragging(false);
+    fixture.store.getState().selectRoute('route:road');
+
+    expect(fixture.store.getState().connectionRoutes.get('route:road')?.segments[0]).toEqual({
+      kind: 'quadratic',
+      control: { kind: 'position', x: 30, y: 10 },
+    });
+    expect(fixture.routeLayer.children[0]).toBe(root);
+    expect(root.children[0]).toBe(graphics);
+    expect(graphics.quadraticCurveToArgs[0]).toEqual([30, 10, 80, 0]);
+  });
+
+  it('updates only from store-backed route changes, not drag flags alone', () => {
+    const fixture = createFixture();
+    createEditorRouteRenderer(
+      fixture.routeLayer as unknown as Container,
+      fixture.store,
+      fixture.gameDef,
+      fixture.provider,
+    );
+
+    const root = fixture.routeLayer.children[0] as InstanceType<typeof MockContainer>;
+    const graphics = root.children[0] as InstanceType<typeof MockGraphics>;
+    expect(graphics.quadraticCurveToArgs[0]).toEqual([40, 30, 80, 0]);
+
+    fixture.store.getState().beginInteraction();
+    fixture.store.getState().setDragging(true);
+
+    expect(graphics.quadraticCurveToArgs[0]).toEqual([40, 30, 80, 0]);
+
+    fixture.store.getState().previewControlPointMove('route:road', 0, { x: 20, y: 5 });
+
+    expect(fixture.routeLayer.children[0]).toBe(root);
+    expect(root.children[0]).toBe(graphics);
+    expect(graphics.quadraticCurveToArgs[0]).toEqual([20, 5, 80, 0]);
+  });
+
   it('inserts a waypoint on double-click at the nearest point on the targeted segment', () => {
     const fixture = createFixture();
     createEditorRouteRenderer(

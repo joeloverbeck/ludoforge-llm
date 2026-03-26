@@ -335,7 +335,28 @@ describe('createMapEditorStore', () => {
 
     expect(store.getState().connectionRoutes.get('river:none')?.segments[0]).toEqual({
       kind: 'quadratic',
-      control: { kind: 'curvature', offset: 0.5, angle: 90 },
+      control: { kind: 'curvature', offset: -0.5 },
+    });
+  });
+
+  it('moves curvature controls on the default perpendicular side without adding an angle override', () => {
+    const store = makeStore({
+      routes: new Map<string, ConnectionRouteDefinition>([
+        ['river:none', {
+          points: [
+            { kind: 'zone', zoneId: 'zone:a' },
+            { kind: 'zone', zoneId: 'zone:b' },
+          ],
+          segments: [{ kind: 'quadratic', control: { kind: 'curvature', offset: -0.2 } }],
+        }],
+      ]),
+    });
+
+    store.getState().moveControlPoint('river:none', 0, { x: 30, y: 18 });
+
+    expect(store.getState().connectionRoutes.get('river:none')?.segments[0]).toEqual({
+      kind: 'quadratic',
+      control: { kind: 'curvature', offset: 0.3 },
     });
   });
 

@@ -69,18 +69,42 @@ describe('bezier-utils', () => {
     expect(resolveCurvatureControlPoint({ x: 0, y: 0 }, { x: 10, y: 0 }, 0.3)).toEqual({ x: 5, y: 3 });
   });
 
+  it('resolves zero curvature to the midpoint for vertical endpoints', () => {
+    expect(resolveCurvatureControlPoint({ x: 0, y: 0 }, { x: 0, y: 10 }, 0)).toEqual({ x: 0, y: 5 });
+  });
+
+  it('resolves negative curvature offsets on the opposite perpendicular side', () => {
+    expect(resolveCurvatureControlPoint({ x: 0, y: 0 }, { x: 10, y: 0 }, -0.3)).toEqual({ x: 5, y: -3 });
+  });
+
   it('resolves curvature angles in screen coordinates', () => {
     const point = resolveCurvatureControlPoint({ x: 0, y: 0 }, { x: 10, y: 0 }, 0.5, 90);
     expect(point.x).toBeCloseTo(5);
     expect(point.y).toBeCloseTo(-5);
   });
 
-  it('derives explicit curvature controls from dragged control points', () => {
+  it('derives signed perpendicular curvature controls without angle aliases', () => {
     expect(deriveCurvatureControl(
       { x: 0, y: 0 },
       { x: 10, y: 0 },
       { x: 5, y: -5 },
-    )).toEqual({ offset: 0.5, angle: 90 });
+    )).toEqual({ offset: -0.5 });
+    expect(deriveCurvatureControl(
+      { x: 0, y: 0 },
+      { x: 10, y: 0 },
+      { x: 5, y: 5 },
+    )).toEqual({ offset: 0.5 });
+  });
+
+  it('derives explicit angles only for non-perpendicular curvature controls', () => {
+    const derived = deriveCurvatureControl(
+      { x: 0, y: 0 },
+      { x: 10, y: 0 },
+      { x: 8, y: -4 },
+    );
+
+    expect(derived.offset).toBeCloseTo(0.5);
+    expect(derived.angle).toBeCloseTo(53.13010235415598);
   });
 
   it('returns an orthogonal perpendicular vector', () => {

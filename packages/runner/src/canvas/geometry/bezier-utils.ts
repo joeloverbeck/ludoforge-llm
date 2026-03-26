@@ -1,6 +1,7 @@
 import type { Point2D } from './point2d.js';
 
 const EPSILON = 1e-10;
+const CANONICAL_COMPONENT_EPSILON = 1e-6;
 
 export function quadraticBezierPoint(t: number, p0: Point2D, cp: Point2D, p2: Point2D): Point2D {
   const mt = 1 - t;
@@ -84,6 +85,19 @@ export function deriveCurvatureControl(
     return { offset: 0 };
   }
 
+  const tangent = normalize({
+    x: p2.x - p0.x,
+    y: p2.y - p0.y,
+  });
+  const normal = perpendicular(tangent);
+  const tangentComponent = dot(vector, tangent);
+  const normalComponent = dot(vector, normal);
+  const canonicalTolerance = CANONICAL_COMPONENT_EPSILON * Math.max(1, span, Math.abs(normalComponent));
+
+  if (Math.abs(tangentComponent) <= canonicalTolerance) {
+    return { offset: normalComponent / span };
+  }
+
   return {
     offset: Math.sqrt((vector.x ** 2) + (vector.y ** 2)) / span,
     angle: normalizeScreenAngle(Math.atan2(-vector.y, vector.x) * (180 / Math.PI)),
@@ -147,6 +161,10 @@ function directionFromScreenAngle(angle: number): Point2D {
 function normalizeScreenAngle(angle: number): number {
   const normalized = angle % 360;
   return normalized < 0 ? normalized + 360 : normalized;
+}
+
+function dot(a: Point2D, b: Point2D): number {
+  return (a.x * b.x) + (a.y * b.y);
 }
 
 function resolveCurveDirection(t: number, p0: Point2D, cp: Point2D, p2: Point2D): Point2D {

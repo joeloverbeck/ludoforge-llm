@@ -16,6 +16,7 @@ import {
   type EditorRouteGeometry,
 } from './map-editor-route-geometry.js';
 import type { Position } from './map-editor-types.js';
+import { resolveMapEditorZoneVisuals } from './map-editor-zone-visuals.js';
 
 const DEFAULT_ROUTE_STROKE = {
   color: 0x6b7280,
@@ -61,6 +62,7 @@ export function createEditorRouteRenderer(
   visualConfigProvider: VisualConfigProvider,
 ): EditorRouteRenderer {
   const connectionZones = indexConnectionZones(gameDef, visualConfigProvider);
+  const zoneVisuals = resolveMapEditorZoneVisuals(gameDef, visualConfigProvider);
   const routeSlots = new Map<string, RouteSlot>();
   const routeContainers = new Map<string, Container>();
 
@@ -85,13 +87,13 @@ export function createEditorRouteRenderer(
         continue;
       }
 
-      const slot = getOrCreateRouteSlot(routeId, routeSlots, routeContainers, routeLayer, store);
+      const slot = getOrCreateRouteSlot(routeId, routeSlots, routeContainers, routeLayer, store, zoneVisuals);
       const stroke = resolveRouteStroke(
         zone,
         visualConfigProvider,
         state.selectedRouteId === routeId,
       );
-      const geometry = resolveRouteGeometry(route, state.zonePositions, state.connectionAnchors, {
+      const geometry = resolveRouteGeometry(route, state.zonePositions, state.connectionAnchors, zoneVisuals, {
         curveSegments: DEFAULT_CURVE_SEGMENTS,
         hitAreaPadding: DEFAULT_HIT_AREA_PADDING,
         strokeWidth: stroke.width,
@@ -139,6 +141,7 @@ function getOrCreateRouteSlot(
   routeContainers: Map<string, Container>,
   routeLayer: Container,
   store: MapEditorStoreApi,
+  zoneVisuals: ReadonlyMap<string, import('./map-editor-route-geometry.js').EditorRouteZoneVisual>,
 ): RouteSlot {
   const existing = routeSlots.get(routeId);
   if (existing !== undefined) {
@@ -183,7 +186,7 @@ function getOrCreateRouteSlot(
       return;
     }
 
-    const geometry = resolveRouteGeometry(route, state.zonePositions, state.connectionAnchors, {
+    const geometry = resolveRouteGeometry(route, state.zonePositions, state.connectionAnchors, zoneVisuals, {
       curveSegments: DEFAULT_CURVE_SEGMENTS,
       hitAreaPadding: DEFAULT_HIT_AREA_PADDING,
     });
@@ -217,7 +220,7 @@ function getOrCreateRouteSlot(
       return;
     }
 
-    const geometry = resolveRouteGeometry(route, state.zonePositions, state.connectionAnchors, {
+    const geometry = resolveRouteGeometry(route, state.zonePositions, state.connectionAnchors, zoneVisuals, {
       curveSegments: DEFAULT_CURVE_SEGMENTS,
       hitAreaPadding: DEFAULT_HIT_AREA_PADDING,
     });

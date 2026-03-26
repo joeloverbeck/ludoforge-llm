@@ -168,6 +168,7 @@ vi.mock('pixi.js', () => ({
   Polygon: MockPolygon,
 }));
 
+import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 import { createMapEditorStore } from '../../src/map-editor/map-editor-store.js';
 import { createEditorHandleRenderer } from '../../src/map-editor/map-editor-handle-renderer.js';
 import type { VisualConfig } from '../../src/map-editor/map-editor-types.js';
@@ -179,6 +180,8 @@ describe('createEditorHandleRenderer', () => {
     createEditorHandleRenderer(
       fixture.handleLayer as unknown as Container,
       fixture.store,
+      fixture.gameDef,
+      fixture.provider,
     );
 
     const root = fixture.handleLayer.children[0] as InstanceType<typeof MockContainer>;
@@ -191,6 +194,8 @@ describe('createEditorHandleRenderer', () => {
     const renderer = createEditorHandleRenderer(
       fixture.handleLayer as unknown as Container,
       fixture.store,
+      fixture.gameDef,
+      fixture.provider,
     );
 
     fixture.store.getState().selectRoute('route:road');
@@ -237,6 +242,8 @@ describe('createEditorHandleRenderer', () => {
     createEditorHandleRenderer(
       fixture.handleLayer as unknown as Container,
       fixture.store,
+      fixture.gameDef,
+      fixture.provider,
       { dragSurface: dragSurface as unknown as Container },
     );
 
@@ -268,6 +275,8 @@ describe('createEditorHandleRenderer', () => {
     createEditorHandleRenderer(
       fixture.handleLayer as unknown as Container,
       fixture.store,
+      fixture.gameDef,
+      fixture.provider,
       { dragSurface: dragSurface as unknown as Container },
     );
 
@@ -292,6 +301,8 @@ describe('createEditorHandleRenderer', () => {
     createEditorHandleRenderer(
       fixture.handleLayer as unknown as Container,
       fixture.store,
+      fixture.gameDef,
+      fixture.provider,
       { dragSurface: fixture.handleLayer as unknown as Container },
     );
 
@@ -328,6 +339,8 @@ describe('createEditorHandleRenderer', () => {
     createEditorHandleRenderer(
       fixture.handleLayer as unknown as Container,
       fixture.store,
+      fixture.gameDef,
+      fixture.provider,
       { dragSurface: fixture.handleLayer as unknown as Container },
     );
 
@@ -357,6 +370,8 @@ describe('createEditorHandleRenderer', () => {
     createEditorHandleRenderer(
       fixture.handleLayer as unknown as Container,
       fixture.store,
+      fixture.gameDef,
+      fixture.provider,
       { dragSurface: dragSurface as unknown as Container },
     );
 
@@ -377,18 +392,52 @@ describe('createEditorHandleRenderer', () => {
     expect(dragSurface.listenerCount('pointerupoutside')).toBe(0);
     expect(fixture.store.getState().isDragging).toBe(false);
   });
+
+  it('positions anchored zone endpoint handles on the resolved zone edge', () => {
+    const fixture = createFixture({
+      overrides: {
+        'zone:a': { shape: 'circle', width: 100, height: 100 },
+        'zone:b': { shape: 'circle', width: 100, height: 100 },
+      },
+      connectionRoutes: {
+        'route:road': {
+          points: [
+            { kind: 'zone', zoneId: 'zone:a', anchor: 0 },
+            { kind: 'zone', zoneId: 'zone:b', anchor: 180 },
+          ],
+          segments: [{ kind: 'straight' }],
+        },
+      },
+    });
+
+    createEditorHandleRenderer(
+      fixture.handleLayer as unknown as Container,
+      fixture.store,
+      fixture.gameDef,
+      fixture.provider,
+    );
+
+    fixture.store.getState().selectRoute('route:road');
+
+    const root = fixture.handleLayer.children[0] as InstanceType<typeof MockContainer>;
+    const startHandle = root.children[0] as InstanceType<typeof MockGraphics>;
+    const endHandle = root.children[1] as InstanceType<typeof MockGraphics>;
+    expect(startHandle.position).toEqual(expect.objectContaining({ x: 50, y: 0 }));
+    expect(endHandle.position).toEqual(expect.objectContaining({ x: 30, y: 0 }));
+  });
 });
 
 function createFixture(overrides?: Partial<NonNullable<VisualConfig['zones']>>) {
+  const gameDef = {
+    metadata: {
+      id: 'editor-test',
+      players: { min: 1, max: 4 },
+    },
+    zones: [{ id: 'zone:a' }, { id: 'zone:b' }, { id: 'route:road' }],
+  } as unknown as GameDef;
   const handleLayer = new MockContainer();
   const store = createMapEditorStore(
-    {
-      metadata: {
-        id: 'editor-test',
-        players: { min: 1, max: 4 },
-      },
-      zones: [{ id: 'zone:a' }, { id: 'zone:b' }, { id: 'route:road' }],
-    } as unknown as GameDef,
+    gameDef,
     {
       version: 1,
       zones: {
@@ -410,6 +459,7 @@ function createFixture(overrides?: Partial<NonNullable<VisualConfig['zones']>>) 
           },
           ...overrides?.connectionRoutes,
         },
+        ...overrides,
       },
     } as VisualConfig,
     new Map([
@@ -420,7 +470,9 @@ function createFixture(overrides?: Partial<NonNullable<VisualConfig['zones']>>) 
   );
 
   return {
+    gameDef,
     handleLayer,
+    provider: new VisualConfigProvider(store.getState().originalVisualConfig),
     store,
   };
 }

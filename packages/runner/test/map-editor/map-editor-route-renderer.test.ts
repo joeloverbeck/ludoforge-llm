@@ -267,6 +267,43 @@ describe('createEditorRouteRenderer', () => {
     expect(graphics.hitArea).toBeInstanceOf(MockPolygon);
   });
 
+  it('renders anchored zone endpoints from zone edges instead of centers', () => {
+    const fixture = createFixture({
+      overrides: {
+        overrides: {
+          'zone:a': { shape: 'circle', width: 100, height: 100 },
+          'zone:b': { shape: 'circle', width: 100, height: 100 },
+        },
+        connectionRoutes: {
+          'route:road': {
+            points: [
+              { kind: 'zone', zoneId: 'zone:a', anchor: 0 },
+              { kind: 'zone', zoneId: 'zone:b', anchor: 180 },
+            ],
+            segments: [{ kind: 'straight' }],
+          },
+        },
+      },
+      zonePositions: new Map([
+        ['zone:a', { x: 0, y: 0 }],
+        ['zone:b', { x: 200, y: 0 }],
+        ['route:road', { x: 100, y: 0 }],
+      ]),
+    });
+
+    createEditorRouteRenderer(
+      fixture.routeLayer as unknown as Container,
+      fixture.store,
+      fixture.gameDef,
+      fixture.provider,
+    );
+
+    const root = fixture.routeLayer.children[0] as InstanceType<typeof MockContainer>;
+    const graphics = root.children[0] as InstanceType<typeof MockGraphics>;
+    expect(graphics.moveToArgs).toEqual([50, 0]);
+    expect(graphics.lineToArgs[0]).toEqual([150, 0]);
+  });
+
   it('re-renders selected routes with explicit highlight styling and removes it on deselect', () => {
     const fixture = createFixture();
     createEditorRouteRenderer(

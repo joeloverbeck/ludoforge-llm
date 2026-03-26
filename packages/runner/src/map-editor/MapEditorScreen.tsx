@@ -1,3 +1,4 @@
+import type { GameDef } from '@ludoforge/engine/runtime';
 import { type ReactElement, useEffect, useRef, useState } from 'react';
 
 import { getOrComputeLayout } from '../layout/layout-cache.js';
@@ -22,6 +23,7 @@ interface MapEditorScreenProps {
 
 interface ReadyEditorState {
   readonly gameName: string;
+  readonly gameDef: GameDef;
   readonly visualConfigProvider: VisualConfigProvider;
   readonly store: MapEditorStoreApi;
 }
@@ -74,6 +76,7 @@ export function MapEditorScreen({ gameId, onBack }: MapEditorScreenProps): React
           status: 'ready',
           editor: {
             gameName: resolved.descriptor.gameMetadata.name,
+            gameDef: resolved.gameDef,
             visualConfigProvider: resolved.visualConfigProvider,
             store: createMapEditorStore(
               resolved.gameDef,
@@ -134,12 +137,14 @@ export function MapEditorScreen({ gameId, onBack }: MapEditorScreenProps): React
         const routeRenderer = createEditorRouteRenderer(
           canvas.layers.route,
           screenState.editor.store,
-          screenState.editor.store.getState().gameDef,
+          screenState.editor.gameDef,
           screenState.editor.visualConfigProvider,
         );
         const handleRenderer = createEditorHandleRenderer(
           canvas.layers.handle,
           screenState.editor.store,
+          screenState.editor.gameDef,
+          screenState.editor.visualConfigProvider,
           { dragSurface: canvas.viewport },
         );
 

@@ -1,6 +1,8 @@
+import type { GameDef } from '@ludoforge/engine/runtime';
 import { Circle, Container, Graphics, Polygon } from 'pixi.js';
 
 import { safeDestroyChildren, safeDestroyDisplayObject } from '../canvas/renderers/safe-destroy.js';
+import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import type { MapEditorStoreApi } from './map-editor-store.js';
 import {
   attachAnchorDragHandlers,
@@ -8,6 +10,7 @@ import {
   attachZoneEndpointConvertDragHandlers,
 } from './map-editor-drag.js';
 import { resolveRouteGeometry } from './map-editor-route-geometry.js';
+import { resolveMapEditorZoneVisuals } from './map-editor-zone-visuals.js';
 
 const HANDLE_STROKE_COLOR = 0xffffff;
 const HANDLE_RADIUS = 8;
@@ -21,11 +24,14 @@ export interface EditorHandleRenderer {
 export function createEditorHandleRenderer(
   handleLayer: Container,
   store: MapEditorStoreApi,
+  gameDef: GameDef,
+  visualConfigProvider: VisualConfigProvider,
   options: {
     readonly dragSurface?: Container;
   } = {},
 ): EditorHandleRenderer {
   const dragSurface = options.dragSurface ?? handleLayer;
+  const zoneVisuals = resolveMapEditorZoneVisuals(gameDef, visualConfigProvider);
   const root = new Container();
   root.eventMode = 'none';
   root.interactiveChildren = true;
@@ -53,7 +59,7 @@ export function createEditorHandleRenderer(
       return;
     }
 
-    const geometry = resolveRouteGeometry(route, state.zonePositions, state.connectionAnchors);
+    const geometry = resolveRouteGeometry(route, state.zonePositions, state.connectionAnchors, zoneVisuals);
     if (geometry === null) {
       return;
     }

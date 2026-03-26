@@ -5,13 +5,32 @@ import type {
   ConnectionRouteSegment,
   Position,
 } from './map-editor-types.js';
+import type { ZoneShape } from '../config/visual-config-defaults.js';
 import {
   normalize,
   perpendicular,
   quadraticBezierPoint,
 } from '../canvas/geometry/bezier-utils.js';
+import {
+  getEdgePointAtAngle,
+  resolveVisualDimensions,
+} from '../canvas/renderers/shape-utils.js';
+import {
+  ZONE_RENDER_HEIGHT,
+  ZONE_RENDER_WIDTH,
+} from '../layout/layout-constants.js';
 
 const DEFAULT_CURVE_SEGMENTS = 24;
+const DEFAULT_ZONE_DIMENSIONS = {
+  width: ZONE_RENDER_WIDTH,
+  height: ZONE_RENDER_HEIGHT,
+} as const;
+
+export interface EditorRouteZoneVisual {
+  readonly shape?: ZoneShape;
+  readonly width?: number;
+  readonly height?: number;
+}
 
 export interface ResolvedEditorRoutePoint {
   readonly endpoint: ConnectionEndpoint;
@@ -55,9 +74,29 @@ export function resolveEndpointPosition(
   endpoint: ConnectionEndpoint,
   zonePositions: ReadonlyMap<string, Position>,
   connectionAnchors: ReadonlyMap<string, Position>,
+  zoneVisuals: ReadonlyMap<string, EditorRouteZoneVisual>,
 ): Position | null {
   if (endpoint.kind === 'zone') {
-    return clonePosition(zonePositions.get(endpoint.zoneId));
+    const center = clonePosition(zonePositions.get(endpoint.zoneId));
+    if (center === null) {
+      return null;
+    }
+
+    if (endpoint.anchor === undefined) {
+      return center;
+    }
+
+    const visual = zoneVisuals.get(endpoint.zoneId);
+    if (visual === undefined) {
+      return null;
+    }
+
+    const dimensions = resolveVisualDimensions(visual, DEFAULT_ZONE_DIMENSIONS);
+    const offset = getEdgePointAtAngle(visual.shape, dimensions, endpoint.anchor);
+    return {
+      x: center.x + offset.x,
+      y: center.y + offset.y,
+    };
   }
 
   return clonePosition(connectionAnchors.get(endpoint.anchorId));
@@ -67,6 +106,7 @@ export function resolveRouteGeometry(
   route: ConnectionRouteDefinition,
   zonePositions: ReadonlyMap<string, Position>,
   connectionAnchors: ReadonlyMap<string, Position>,
+  zoneVisuals: ReadonlyMap<string, EditorRouteZoneVisual>,
   options: {
     readonly curveSegments?: number;
     readonly hitAreaPadding?: number;
@@ -75,7 +115,7 @@ export function resolveRouteGeometry(
 ): EditorRouteGeometry | null {
   const points = route.points
     .map((endpoint) => {
-      const position = resolveEndpointPosition(endpoint, zonePositions, connectionAnchors);
+      const position = resolveEndpointPosition(endpoint, zonePositions, connectionAnchors, zoneVisuals);
       if (position === null) {
         return null;
       }

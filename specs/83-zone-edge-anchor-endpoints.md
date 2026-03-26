@@ -197,15 +197,18 @@ export function resolveEndpointPosition(
   endpoint: ConnectionEndpoint,
   zonePositions: ReadonlyMap<string, Position>,
   connectionAnchors: ReadonlyMap<string, Position>,
-  zoneVisuals?: ReadonlyMap<string, { shape?: ZoneShape; width?: number; height?: number }>,
+  zoneVisuals: ReadonlyMap<string, { shape?: ZoneShape; width?: number; height?: number }>,
 ): Position | null
 ```
 
-The `zoneVisuals` parameter is optional for backward compatibility with existing callers that don't need edge resolution.
+`zoneVisuals` is required. The editor geometry path must be updated comprehensively rather than preserving a center-only fallback. This keeps the geometry helpers pure while enforcing one endpoint contract across presentation and editor rendering.
 
-All callers of `resolveEndpointPosition` must be updated to pass `zoneVisuals` when available. Audit callers in:
-- `resolveRouteGeometry()` (same file)
-- Any map editor canvas code that calls this function
+`resolveRouteGeometry()` must also take and forward `zoneVisuals` as a required argument.
+
+Zone visual resolution belongs at the renderer boundary, not inside the geometry helpers and not inside mutable editor store state. The concrete editor wiring is:
+- `createEditorRouteRenderer(...)` derives a shared `zoneVisuals` map from `gameDef + VisualConfigProvider` and passes it into `resolveRouteGeometry(...)`.
+- `createEditorHandleRenderer(...)` derives or receives the same `zoneVisuals` context and passes it into `resolveRouteGeometry(...)`.
+- `MapEditorScreen.tsx` wires the required visual context explicitly when constructing the editor renderers.
 
 ---
 

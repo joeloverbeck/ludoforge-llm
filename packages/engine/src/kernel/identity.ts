@@ -112,12 +112,31 @@ export const buildSeatResolutionIndex = (
 /** Alias for buildSeatResolutionIndex — preferred name for new code. */
 export const buildIdentityIndex = buildSeatResolutionIndex;
 
+// Cache seat resolution context per seats array reference + playerCount.
+// The seats array is a stable object reference for a given GameDef, and
+// playerCount never changes during a game, so this avoids rebuilding
+// 5 Maps + arrays on every probeMoveViability call (~30K times per benchmark).
+const seatResolutionCache = new WeakMap<
+  readonly { readonly id: string }[],
+  { readonly playerCount: number; readonly context: SeatResolutionContext }
+>();
+
 export const createSeatResolutionContext = (
   def: Pick<GameDef, 'seats' | 'turnOrder'>,
   playerCount: number,
-): SeatResolutionContext => ({
-  index: buildSeatResolutionIndex(def, playerCount),
-});
+): SeatResolutionContext => {
+  const seats = def.seats;
+  if (seats !== undefined) {
+    const cached = seatResolutionCache.get(seats);
+    if (cached !== undefined && cached.playerCount === playerCount) {
+      return cached.context;
+    }
+    const context: SeatResolutionContext = { index: buildSeatResolutionIndex(def, playerCount) };
+    seatResolutionCache.set(seats, { playerCount, context });
+    return context;
+  }
+  return { index: buildSeatResolutionIndex(def, playerCount) };
+};
 
 export const resolvePlayerIndexForSeatValue = (
   seatValue: string,

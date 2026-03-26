@@ -44,15 +44,10 @@ export type EvalContextInput = Omit<ReadContext, 'collector'> & {
 };
 
 export function createEvalContext(input: EvalContextInput): ReadContext {
-  const {
-    resources,
-    ...ctx
-  } = input;
-  return {
-    ...ctx,
-    resources,
-    collector: resources.collector,
-  };
+  // Single spread: input already contains all ReadContext fields except collector.
+  // Previous version destructured { resources, ...ctx } then re-spread ctx,
+  // creating an unnecessary intermediate object on every call.
+  return { ...input, collector: input.resources.collector };
 }
 
 export function getMaxQueryResults(ctx: Pick<ReadContext, 'maxQueryResults'>): number {

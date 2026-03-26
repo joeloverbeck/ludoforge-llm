@@ -37,7 +37,7 @@ describe('eval/effect resource constructor contract guard', () => {
     );
     assert.match(
       block,
-      /collector:\s*resources\.collector/u,
+      /collector:\s*(?:input\.)?resources\.collector/u,
       'createEvalContext must derive collector from canonical resources identity',
     );
   });

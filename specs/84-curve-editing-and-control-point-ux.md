@@ -22,7 +22,7 @@ This spec fixes both issues and adds a relative `curvature` control point mode p
 - **F1 (Engine Agnostic):** Changes are runner-only; no engine code touched
 - **F3 (Visual Separation):** Curvature data lives in visual-config.yaml, not GameSpecDoc
 - **F7 (Pure Functions):** All curvature math is side-effect-free
-- **F9 (Backwards Compatible):** Existing `{ kind: position }` and `{ kind: anchor }` control point modes remain valid
+- **F9 (No Backwards Compatibility):** This spec introduces no aliasing, compatibility shims, or legacy fallback paths; `{ kind: 'position' }`, `{ kind: 'anchor' }`, and `{ kind: 'curvature' }` are current first-class control variants in the active schema
 
 ---
 

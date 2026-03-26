@@ -360,6 +360,45 @@ describe('createMapEditorStore', () => {
     });
   });
 
+  it('previews curvature control drags without degrading to absolute positions and commits them as one interaction', () => {
+    const store = makeStore({
+      routes: new Map<string, ConnectionRouteDefinition>([
+        ['river:none', {
+          points: [
+            { kind: 'zone', zoneId: 'zone:a' },
+            { kind: 'zone', zoneId: 'zone:b' },
+          ],
+          segments: [{ kind: 'quadratic', control: { kind: 'curvature', offset: 0.2 } }],
+        }],
+      ]),
+    });
+
+    store.getState().beginInteraction();
+    store.getState().previewControlPointMove('river:none', 0, { x: 30, y: -30 });
+
+    expect(store.getState().connectionRoutes.get('river:none')?.segments[0]).toEqual({
+      kind: 'quadratic',
+      control: { kind: 'curvature', offset: -0.5 },
+    });
+    expect(store.getState().undoStack).toHaveLength(0);
+    expect(store.getState().savedSnapshot.connectionRoutes.get('river:none')?.segments[0]).toEqual({
+      kind: 'quadratic',
+      control: { kind: 'curvature', offset: 0.2 },
+    });
+
+    store.getState().commitInteraction();
+
+    expect(store.getState().undoStack).toHaveLength(1);
+    expect(store.getState().undoStack[0]?.connectionRoutes.get('river:none')?.segments[0]).toEqual({
+      kind: 'quadratic',
+      control: { kind: 'curvature', offset: 0.2 },
+    });
+    expect(store.getState().connectionRoutes.get('river:none')?.segments[0]).toEqual({
+      kind: 'quadratic',
+      control: { kind: 'curvature', offset: -0.5 },
+    });
+  });
+
   it('setEndpointAnchor updates a zone endpoint and records undo history', () => {
     const store = makeStore();
     const previousRoutes = store.getState().connectionRoutes;

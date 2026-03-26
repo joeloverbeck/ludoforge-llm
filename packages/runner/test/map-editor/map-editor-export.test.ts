@@ -202,6 +202,46 @@ describe('map-editor-export', () => {
     });
   });
 
+  it('preserves offset-only curvature controls without synthesizing an angle', () => {
+    const input = makeExportInput();
+    input.connectionRoutes = new Map<string, ConnectionRouteDefinition>([
+      ['route:none', {
+        points: [
+          { kind: 'zone', zoneId: 'zone:a' },
+          { kind: 'zone', zoneId: 'zone:b' },
+        ],
+        segments: [
+          { kind: 'quadratic', control: { kind: 'curvature', offset: 0.3 } },
+        ],
+      }],
+    ]);
+
+    expect(buildExportConfig(input).zones?.connectionRoutes?.['route:none']).toEqual({
+      points: [
+        { kind: 'zone', zoneId: 'zone:a' },
+        { kind: 'zone', zoneId: 'zone:b' },
+      ],
+      segments: [
+        { kind: 'quadratic', control: { kind: 'curvature', offset: 0.3 } },
+      ],
+    });
+
+    const yaml = exportVisualConfig(input);
+    expect(yaml).toContain('offset: 0.3');
+    expect(yaml).not.toContain('angle:');
+
+    const reparsed = parseVisualConfigStrict(parse(yaml));
+    expect(reparsed?.zones?.connectionRoutes?.['route:none']).toEqual({
+      points: [
+        { kind: 'zone', zoneId: 'zone:a' },
+        { kind: 'zone', zoneId: 'zone:b' },
+      ],
+      segments: [
+        { kind: 'quadratic', control: { kind: 'curvature', offset: 0.3 } },
+      ],
+    });
+  });
+
   it('triggerDownload creates a blob url, clicks an anchor, and revokes the url', () => {
     const createObjectURL = vi.fn(() => 'blob:visual-config');
     const revokeObjectURL = vi.fn();

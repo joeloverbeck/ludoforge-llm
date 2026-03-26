@@ -167,6 +167,37 @@ describe('evaluateSubset effect', () => {
     assert.equal(result.state.globalVars.winner, 13);
   });
 
+  it('merges moveParams into the initial source and subset-size evaluation context', () => {
+    const ctx = {
+      ...makeCtx([]),
+      moveParams: {
+        '$rangeMax': 3,
+        '$subsetSize': 2,
+      },
+    };
+
+    const effect: EffectAST = eff({
+      evaluateSubset: {
+        source: {
+          query: 'intsInRange',
+          min: 1,
+          max: { _t: 2, ref: 'binding', name: '$rangeMax' },
+        },
+        subsetSize: { _t: 2, ref: 'binding', name: '$subsetSize' },
+        subsetBind: '$subset',
+        compute: [],
+        scoreExpr: { _t: 5, aggregate: { op: 'sum', query: { query: 'binding', name: '$subset' }, bind: '$n', valueExpr: { _t: 2, ref: 'binding', name: '$n' } } },
+        resultBind: '$bestScore',
+        in: [
+          eff({ setVar: { scope: 'global', var: 'winner', value: { _t: 2, ref: 'binding', name: '$bestScore' } } }),
+        ],
+      },
+    });
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.state.globalVars.winner, 5);
+  });
+
   it('exports bestSubsetBind and allows continuation effects to use it', () => {
     const ctx = makeCtx([
       makeToken('t1', 1),
@@ -253,6 +284,59 @@ describe('evaluateSubset effect', () => {
     const result = applyEffect(effect, ctx);
     assert.equal(result.state.globalVars.winner, 2);
     assert.deepEqual(result.state.zones[sinkZone], []);
+  });
+
+  it('evaluates scoreExpr against computed state and move-param-aware bindings', () => {
+    const ctx = {
+      ...makeCtx([], { winner: 0, scratch: 0 }),
+      moveParams: {
+        '$bonus': 5,
+      },
+    };
+
+    const effect: EffectAST = eff({
+      evaluateSubset: {
+        source: { query: 'intsInRange', min: 1, max: 2 },
+        subsetSize: 1,
+        subsetBind: '$subset',
+        compute: [
+          eff({
+            setVar: {
+              scope: 'global',
+              var: 'scratch',
+              value: {
+                _t: 6,
+                op: '+',
+                left: {
+                  _t: 5,
+                  aggregate: {
+                    op: 'sum',
+                    query: { query: 'binding', name: '$subset' },
+                    bind: '$n',
+                    valueExpr: { _t: 2, ref: 'binding', name: '$n' },
+                  },
+                },
+                right: { _t: 2, ref: 'binding', name: '$bonus' },
+              },
+            },
+          }),
+        ],
+        scoreExpr: {
+          _t: 6,
+          op: '+',
+          left: { _t: 2, ref: 'gvar', var: 'scratch' },
+          right: { _t: 2, ref: 'binding', name: '$bonus' },
+        },
+        resultBind: '$bestScore',
+        in: [
+          eff({ setVar: { scope: 'global', var: 'winner', value: { _t: 2, ref: 'binding', name: '$bestScore' } } }),
+        ],
+      },
+    });
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.state.globalVars.winner, 12);
+    assert.equal(result.state.globalVars.scratch, 0);
   });
 
   it('uses deterministic first-subset tiebreaking', () => {

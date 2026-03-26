@@ -4,7 +4,7 @@ import { evalValue } from './eval-value.js';
 import { effectRuntimeError } from './effect-error.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import type { EffectCursor, EffectEnv, PartialEffectResult } from './effect-context.js';
-import { fromEnvAndCursor, resolveEffectBindings } from './effect-context.js';
+import { mergeToEvalContext, mergeToReadContext, resolveEffectBindings } from './effect-context.js';
 import type { EffectAST, TriggerEvent } from './types.js';
 import type { EffectBudgetState } from './effects-control.js';
 import type { ApplyEffectsWithBudget } from './effect-registry.js';
@@ -39,8 +39,7 @@ export const applyEvaluateSubset = (
   applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
   const evaluateSubset = effect.evaluateSubset;
-  const resolvedBindings = resolveEffectBindings(env, cursor);
-  const evalCtx = fromEnvAndCursor(env, { ...cursor, bindings: resolvedBindings });
+  const evalCtx = mergeToEvalContext(env, cursor);
   const items = evalQuery(evaluateSubset.source, evalCtx);
   const subsetSize = resolveSubsetSize(evalValue(evaluateSubset.subsetSize, evalCtx));
 
@@ -88,18 +87,18 @@ export const applyEvaluateSubset = (
         pendingChoice: computeResult.pendingChoice,
       };
     }
-    const scoreResolvedBindings = resolveEffectBindings(env, {
+    const scoreCursor: EffectCursor = {
       ...cursor,
       state: computeResult.state,
       rng: computeResult.rng,
-      bindings: computeResult.bindings ?? computeCursor.bindings,
-    });
-    const scoreCtx = fromEnvAndCursor(env, {
-      ...cursor,
-      state: computeResult.state,
-      rng: computeResult.rng,
-      bindings: scoreResolvedBindings,
-    });
+      bindings: resolveEffectBindings(env, {
+        ...cursor,
+        state: computeResult.state,
+        rng: computeResult.rng,
+        bindings: computeResult.bindings ?? computeCursor.bindings,
+      }),
+    };
+    const scoreCtx = mergeToReadContext(env, scoreCursor);
     const score = resolveScore(evalValue(evaluateSubset.scoreExpr, scoreCtx));
 
     if (score > bestScore) {

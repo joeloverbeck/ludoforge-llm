@@ -13,11 +13,12 @@ After tickets -003 through -009 replace all 28 `fromEnvAndCursor` call sites, th
 ## Assumption Reassessment (2026-03-26)
 
 1. `fromEnvAndCursor` is exported from `effect-context.ts` at lines ~252-253 — confirmed
-2. After -003 through -009, zero call sites should remain — verify by grep
-3. Check whether `effect-compiler-runtime.ts` has a comment referencing `fromEnvAndCursor` — spec says yes
-4. Check whether a `compat()` function exists — exploration found none, but verify at implementation time
-5. Check whether any test files import `fromEnvAndCursor` directly — must also be cleaned up
-6. The migrated files are likely to end with repeated env/cursor trace-provenance builders or repeated `{ collector, state, traceContext, effectPath }` picks; if that duplication is present, this cleanup ticket is the right place to centralize it because all remaining migrations will already be complete
+2. Archived tickets `85COMEFFCONMIG-003`, `85COMEFFCONMIG-004`, and `85COMEFFCONMIG-005` are already complete; active tickets `85COMEFFCONMIG-006` through `85COMEFFCONMIG-009` still own the remaining handler-local migrations
+3. After the remaining handler tickets land, zero legitimate runtime call sites should remain — verify with `rg "fromEnvAndCursor" packages/engine/`
+4. `effect-compiler-runtime.ts` still has a comment referencing `fromEnvAndCursor` — confirmed in current source
+5. No `compat()` helper is currently present in `effect-context.ts`; keep this as a verification checkpoint rather than an expected edit
+6. Existing migration tickets already defer any cross-file provenance-helper decision to this ticket, so this is the explicit series-end owner for deciding whether that extraction is warranted
+7. The ideal architectural endpoint is not merely "no callers"; it is "no compatibility bridge left behind once the migration is complete" (Foundations 9 and 10)
 
 ## Architecture Check
 
@@ -25,6 +26,7 @@ After tickets -003 through -009 replace all 28 `fromEnvAndCursor` call sites, th
 2. Completes the Spec 77 migration — Foundation 10 (Architectural Completeness)
 3. No shims, no deprecation markers — clean removal
 4. Shared provenance-helper extraction, if duplication remains after -003 through -009, is cleaner here than in any single migration ticket because it can be done once against the final post-migration surface
+5. This ticket is the architectural completion step for the series: per-file tickets keep local changes narrow, and this ticket owns the final delete-or-extract decisions that should only be made against the fully migrated codebase
 
 ## What to Change
 
@@ -66,6 +68,13 @@ Run `grep -r "fromEnvAndCursor" packages/engine/` to confirm zero remaining refe
 - If the duplication is real across multiple files, extract a shared helper in the kernel layer with a narrow contract based on `EffectEnv` + `EffectCursor`
 - Update migrated handlers to consume the shared helper instead of keeping file-local provenance builders
 - Do not reintroduce broad `EffectContext` plumbing while doing this; the helper must preserve the narrow env/cursor architecture established by the migration
+- If the duplication does not justify a shared helper after reassessment, document that conclusion in the completed ticket outcome and keep the local picks/helpers; do not force an abstraction that is weaker than the final concrete call surface
+
+### 7. Series-end architecture check
+
+- Reassess whether any remaining helper signatures, comments, or tiny adapters still preserve `EffectContext`-shaped plumbing out of historical convenience rather than current need
+- Remove or narrow them in the same change when the owner is clear and the contract can be expressed cleanly with `ReadContext`, `EffectEnv` + `EffectCursor`, or explicit small picks
+- Do not broaden this into unrelated refactoring outside the effect-context migration surface
 
 ### Note
 
@@ -110,6 +119,7 @@ This cleanup ticket should also verify whether any file-local helper signatures 
 4. Determinism parity maintained
 5. Spec 77 migration is architecturally complete
 6. If shared provenance-helper extraction is performed, it is based on `EffectEnv` + `EffectCursor` rather than resurrecting full merged-context plumbing
+7. If no shared provenance helper is extracted, that is an explicit post-migration design decision rather than an accidental omission
 
 ## Test Plan
 
@@ -123,4 +133,4 @@ This cleanup ticket should also verify whether any file-local helper signatures 
 1. `pnpm turbo typecheck` — verify no broken references
 2. `pnpm turbo test` — full suite passes
 3. `pnpm turbo lint` — no lint regressions
-4. `grep -r "fromEnvAndCursor" packages/engine/` — confirms zero results
+4. `rg "fromEnvAndCursor" packages/engine/` — confirms zero results

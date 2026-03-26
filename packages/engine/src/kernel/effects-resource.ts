@@ -14,14 +14,15 @@ import { emitVarChangeTraceIfChanged } from './var-change-trace.js';
 import { toTraceResourceEndpoint, toTraceVarChangePayload, toVarChangedEvent } from './scoped-var-runtime-mapping.js';
 import { resolveTraceProvenance } from './trace-provenance.js';
 import { updateVarRunningHash } from './zobrist-var-hash.js';
-import { fromEnvAndCursor, resolveEffectBindings } from './effect-context.js';
+import { mergeToEvalContext, mergeToReadContext } from './effect-context.js';
 import type { RuntimeScopedVarEndpoint } from './scoped-var-runtime-mapping.js';
 import type { PlayerId, ZoneId } from './branded.js';
-import type { EffectContext, EffectCursor, EffectEnv, PartialEffectResult } from './effect-context.js';
+import type { ReadContext } from './eval-context.js';
+import type { EffectCursor, EffectEnv, PartialEffectResult } from './effect-context.js';
 import type { EffectBudgetState } from './effects-control.js';
 import type { ApplyEffectsWithBudget } from './effect-registry.js';
 import type { MutableGameState } from './state-draft.js';
-import type { EffectAST } from './types.js';
+import type { EffectAST, EffectTraceProvenance } from './types.js';
 
 const expectInteger = (
   value: unknown,
@@ -82,12 +83,32 @@ type ResolvedEndpoint =
       readonly before: number;
     };
 
+type ResourceTraceContext = Readonly<{
+  collector: EffectEnv['collector'];
+  state: EffectCursor['state'];
+  traceContext?: NonNullable<EffectEnv['traceContext']>;
+  effectPath?: NonNullable<EffectCursor['effectPath']>;
+}>;
+
+type ResourceReadContext = Pick<ReadContext, 'def' | 'state'>;
+
+const buildResourceTraceContext = (env: EffectEnv, cursor: EffectCursor): ResourceTraceContext => ({
+  collector: env.collector,
+  state: cursor.state,
+  ...(env.traceContext === undefined ? {} : { traceContext: env.traceContext }),
+  ...(cursor.effectPath === undefined ? {} : { effectPath: cursor.effectPath }),
+});
+
+const resolveResourceTraceProvenance = (traceCtx: ResourceTraceContext): EffectTraceProvenance =>
+  resolveTraceProvenance(traceCtx);
+
 const resolveEndpoint = (
   endpoint: TransferEndpoint,
-  evalCtx: EffectContext,
-  ctx: EffectContext,
+  evalCtx: ReadContext,
+  readCtx: ResourceReadContext,
+  mode: EffectEnv['mode'],
 ): ResolvedEndpoint => {
-  const runtimeEndpoint = resolveRuntimeScopedEndpointWithMalformedSupport(endpoint, evalCtx, evalCtx.mode, {
+  const runtimeEndpoint = resolveRuntimeScopedEndpointWithMalformedSupport(endpoint, evalCtx, mode, {
     code: EFFECT_RUNTIME_REASONS.RESOURCE_RUNTIME_VALIDATION_FAILED,
     effectType: 'transferVar',
     pvarCardinalityMessage: 'Per-player variable operations require exactly one resolved player',
@@ -103,13 +124,13 @@ const resolveEndpoint = (
       scope: 'global',
       var: runtimeEndpoint.var,
     };
-    const variableDef = resolveScopedIntVarDef(ctx, { scope: 'global', var: runtimeEndpoint.var }, 'transferVar', EFFECT_RUNTIME_REASONS.RESOURCE_RUNTIME_VALIDATION_FAILED);
+    const variableDef = resolveScopedIntVarDef(readCtx, { scope: 'global', var: runtimeEndpoint.var }, 'transferVar', EFFECT_RUNTIME_REASONS.RESOURCE_RUNTIME_VALIDATION_FAILED);
     return {
       scope: 'global',
       var: runtimeEndpoint.var,
       min: variableDef.min,
       max: variableDef.max,
-      before: readScopedIntVarValue(ctx, resolvedEndpoint, 'transferVar', EFFECT_RUNTIME_REASONS.RESOURCE_RUNTIME_VALIDATION_FAILED),
+      before: readScopedIntVarValue(readCtx, resolvedEndpoint, 'transferVar', EFFECT_RUNTIME_REASONS.RESOURCE_RUNTIME_VALIDATION_FAILED),
     };
   }
 
@@ -120,7 +141,7 @@ const resolveEndpoint = (
       player: runtimeEndpoint.player,
     };
     const perPlayerVarDef = resolveScopedIntVarDef(
-      ctx,
+      readCtx,
       { scope: 'pvar', var: runtimeEndpoint.var },
       'transferVar',
       EFFECT_RUNTIME_REASONS.RESOURCE_RUNTIME_VALIDATION_FAILED,
@@ -131,7 +152,7 @@ const resolveEndpoint = (
       player: runtimeEndpoint.player,
       min: perPlayerVarDef.min,
       max: perPlayerVarDef.max,
-      before: readScopedIntVarValue(ctx, resolvedEndpoint, 'transferVar', EFFECT_RUNTIME_REASONS.RESOURCE_RUNTIME_VALIDATION_FAILED),
+      before: readScopedIntVarValue(readCtx, resolvedEndpoint, 'transferVar', EFFECT_RUNTIME_REASONS.RESOURCE_RUNTIME_VALIDATION_FAILED),
     };
   }
 
@@ -141,7 +162,7 @@ const resolveEndpoint = (
     zone: runtimeEndpoint.zone,
   };
   const zoneVarDef = resolveScopedIntVarDef(
-    ctx,
+    readCtx,
     { scope: 'zoneVar', var: runtimeEndpoint.var },
     'transferVar',
     EFFECT_RUNTIME_REASONS.RESOURCE_RUNTIME_VALIDATION_FAILED,
@@ -152,7 +173,7 @@ const resolveEndpoint = (
     zone: runtimeEndpoint.zone,
     min: zoneVarDef.min,
     max: zoneVarDef.max,
-    before: readScopedIntVarValue(ctx, resolvedEndpoint, 'transferVar', EFFECT_RUNTIME_REASONS.RESOURCE_RUNTIME_VALIDATION_FAILED),
+    before: readScopedIntVarValue(readCtx, resolvedEndpoint, 'transferVar', EFFECT_RUNTIME_REASONS.RESOURCE_RUNTIME_VALIDATION_FAILED),
   };
 };
 
@@ -179,12 +200,11 @@ export const applyTransferVar = (
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
-  const resolvedBindings = resolveEffectBindings(env, cursor);
-  const evalCursor = resolvedBindings === cursor.bindings ? cursor : { ...cursor, bindings: resolvedBindings };
-  const evalCtx = fromEnvAndCursor(env, evalCursor);
-  const ctx = fromEnvAndCursor(env, cursor);
-  const source = resolveEndpoint(effect.transferVar.from, evalCtx, ctx);
-  const destination = resolveEndpoint(effect.transferVar.to, evalCtx, ctx);
+  const evalCtx = mergeToEvalContext(env, cursor);
+  const readCtx = mergeToReadContext(env, cursor);
+  const traceCtx = buildResourceTraceContext(env, cursor);
+  const source = resolveEndpoint(effect.transferVar.from, evalCtx, readCtx, env.mode);
+  const destination = resolveEndpoint(effect.transferVar.to, evalCtx, readCtx, env.mode);
 
   const requestedAmount = expectInteger(evalValue(effect.transferVar.amount, evalCtx), 'transferVar', 'amount');
   const sourceAvailable = Math.max(0, source.before - source.min);
@@ -220,7 +240,7 @@ export const applyTransferVar = (
 
   const sourceAfter = source.before - actual;
   const destinationAfter = destination.before + actual;
-  const provenance = resolveTraceProvenance(ctx);
+  const provenance = resolveResourceTraceProvenance(traceCtx);
   const sourceVarChange = toTraceVarChangePayload(source, source.before, sourceAfter);
   const destinationVarChange = toTraceVarChangePayload(destination, destination.before, destinationAfter);
 
@@ -236,8 +256,8 @@ export const applyTransferVar = (
     ...(maxAmount === undefined ? {} : { maxAmount }),
     provenance,
   });
-  emitVarChangeTraceIfChanged(ctx, { ...sourceVarChange, provenance });
-  emitVarChangeTraceIfChanged(ctx, { ...destinationVarChange, provenance });
+  emitVarChangeTraceIfChanged(traceCtx, { ...sourceVarChange, provenance });
+  emitVarChangeTraceIfChanged(traceCtx, { ...destinationVarChange, provenance });
 
   const writes = [
     toScopedVarWrite(source, sourceAfter),

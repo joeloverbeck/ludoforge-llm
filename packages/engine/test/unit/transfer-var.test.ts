@@ -188,6 +188,29 @@ describe('transferVar effect', () => {
     assert.equal(result.state.globalVars.pot, 24);
   });
 
+  it('resolves transfer amount and endpoint selectors from moveParams via eval context merging', () => {
+    const ctx = makeCtx({
+      moveParams: {
+        $recipient: asPlayerId(1),
+        $amount: 3,
+      },
+    });
+
+    const result = applyEffect(
+      eff({
+        transferVar: {
+          from: { scope: 'pvar', player: 'actor', var: 'coins' },
+          to: { scope: 'pvar', player: { chosen: '$recipient' }, var: 'committed' },
+          amount: { _t: 2 as const, ref: 'binding', name: '$amount' },
+        },
+      }),
+      ctx,
+    );
+
+    assert.equal(result.state.perPlayerVars['0']?.coins, 7);
+    assert.equal(result.state.perPlayerVars['1']?.committed, 5);
+  });
+
   it('is a no-op for zero transfer and still exports actualBind=0', () => {
     const ctx = makeCtx();
     const result = applyEffects(

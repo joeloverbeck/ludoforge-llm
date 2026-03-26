@@ -56,6 +56,10 @@ If a `compat()` adapter exists in `effect-context.ts`, verify it has no remainin
 
 Run `grep -r "fromEnvAndCursor" packages/engine/` to confirm zero remaining references in source AND test files.
 
+### Note
+
+This cleanup ticket should also verify whether any file-local helper signatures or `EffectContext`-indexed type aliases remain broader than necessary after -003 through -009. If a handler no longer needs `EffectContext` after its migration, remove the stale broad typing in the same cleanup rather than leaving it as historical residue.
+
 ## Files to Touch
 
 - `packages/engine/src/kernel/effect-context.ts` (modify — remove function)

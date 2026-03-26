@@ -19,6 +19,8 @@ Similar to -006: this ticket calls `resolveRuntimeScopedEndpointWithMalformedSup
 3. Both are used for `resolveEndpoint` which calls `resolveRuntimeScopedEndpointWithMalformedSupport` — confirmed
 4. `evalValue` is called for amount evaluation — confirmed
 5. Trace functions may be called — check for `emitVarChangeTraceIfChanged` usage
+6. `resolveRuntimeScopedEndpointWithMalformedSupport`, `resolveScopedIntVarDef`, and `readScopedIntVarValue` were narrowed in -001, so `resolveEndpoint` itself should be reconsidered as a narrow helper rather than left on `EffectContext`
+7. The exported scoped-endpoint caller already threads `mode` in current code; the remaining work is eliminating the merged full contexts and narrowing local helper contracts accordingly
 
 ## Architecture Check
 
@@ -39,6 +41,10 @@ Similar to -006: this ticket calls `resolveRuntimeScopedEndpointWithMalformedSup
 
 - Remove `fromEnvAndCursor`, add `mergeToReadContext`/`mergeToEvalContext`
 - Remove `EffectContext` from imports if no longer used
+
+### Note
+
+For architectural completeness, this ticket should not just swap one context-construction helper for another. `resolveEndpoint` should be narrowed so it consumes only the read surface and storage fragments it actually needs, instead of preserving `EffectContext` as a local catch-all type.
 
 ## Files to Touch
 

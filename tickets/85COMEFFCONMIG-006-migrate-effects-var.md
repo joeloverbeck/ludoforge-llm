@@ -20,6 +20,8 @@ This ticket is more involved than -003/-004/-005 because:
 2. `applyAddVar` at line ~162: same pattern as setVar — confirmed
 3. `applySetActivePlayer` at line ~223: simpler, mainly `evalValue` — confirmed
 4. `resolveRuntimeScopedEndpoint` now accepts `ReadContext` + `mode` param (from -001) — dependency confirmed
+5. `resolveScopedVarDef` / `readScopedVarValue` / `readScopedIntVarValue` were also narrowed in -001, so this ticket should stop passing a full merged context to those helpers and instead thread `{ def }` / `{ state }` explicitly
+6. The `env.mode` threading step has already landed in current code; the remaining value of this ticket is removing the unnecessary full-context merge and finishing the narrowing at the file boundary
 
 ## Architecture Check
 
@@ -49,6 +51,12 @@ This ticket is more involved than -003/-004/-005 because:
 
 - Remove `fromEnvAndCursor`, add `mergeToReadContext`/`mergeToEvalContext`
 - Remove `EffectContext` from imports if no longer used
+
+### Note
+
+This ticket should preserve the architectural direction introduced by -001:
+- do not keep passing a broad `evalCtx` to helpers that now accept `{ def }` or `{ state }`
+- prefer explicit narrow objects plus a tiny trace pick over retaining `EffectContext`-shaped plumbing out of convenience
 
 ## Files to Touch
 

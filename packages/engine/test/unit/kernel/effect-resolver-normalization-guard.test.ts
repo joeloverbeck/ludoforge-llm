@@ -51,10 +51,13 @@ const isCanonicalPolicyDerivationCall = (expression: ts.Expression): boolean => 
   if (arg === undefined) {
     return false;
   }
+  if (ts.isIdentifier(arg)) {
+    return arg.text === 'mode';
+  }
   if (!ts.isPropertyAccessExpression(arg) || !ts.isIdentifier(arg.expression) || arg.name.text !== 'mode') {
     return false;
   }
-  // Accept both evalCtx.mode (legacy EffectContext pattern) and env.mode (native EffectEnv pattern)
+  // Accept evalCtx.mode, env.mode, and the explicitly threaded mode parameter.
   return arg.expression.text === 'evalCtx' || arg.expression.text === 'env';
 };
 
@@ -112,7 +115,7 @@ describe('effect resolver normalization architecture guard', () => {
       const canonicalIdentifiers = collectVariableIdentifiersByInitializer(sourceFile, isCanonicalPolicyDerivationCall);
       assert.ok(
         canonicalIdentifiers.length > 0,
-        `${moduleName} must derive at least one canonical onResolutionFailure identifier from selectorResolutionFailurePolicyForMode(evalCtx.mode)`,
+        `${moduleName} must derive at least one canonical onResolutionFailure identifier from selectorResolutionFailurePolicyForMode(<canonical mode source>)`,
       );
 
       for (const helperName of resolverHelpers) {
@@ -155,7 +158,7 @@ describe('effect resolver normalization architecture guard', () => {
           }
           assert.ok(
             canonicalIdentifiers.includes(onResolutionFailureExpression.text),
-            `${moduleName} ${helperName} onResolutionFailure identifier "${onResolutionFailureExpression.text}" must be canonically derived from selectorResolutionFailurePolicyForMode(evalCtx.mode)`,
+            `${moduleName} ${helperName} onResolutionFailure identifier "${onResolutionFailureExpression.text}" must be canonically derived from selectorResolutionFailurePolicyForMode(<canonical mode source>)`,
           );
         }
       }

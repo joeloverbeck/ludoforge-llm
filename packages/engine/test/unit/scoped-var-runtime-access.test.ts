@@ -109,6 +109,10 @@ type IsEqual<A, B> =
 type IsOptionalKey<T, K extends keyof T> = Omit<T, K> extends T ? true : false;
 
 const assertScopedEndpointTypingContracts = () => {
+  type ResolverContext = Parameters<typeof resolveRuntimeScopedEndpoint>[1];
+  type ResolverMode = Parameters<typeof resolveRuntimeScopedEndpoint>[2];
+  type DefOnlyContext = Parameters<typeof resolveScopedVarDef>[0];
+  type StateOnlyContext = Parameters<typeof readScopedVarValue>[0];
   type StrictGlobalEndpoint = Extract<ScopedVarResolvableEndpoint, { scope: 'global' }>;
   type StrictPvarEndpoint = Extract<ScopedVarResolvableEndpoint, { scope: 'pvar' }>;
   type StrictZoneEndpoint = Extract<ScopedVarResolvableEndpoint, { scope: 'zoneVar' }>;
@@ -127,6 +131,10 @@ const assertScopedEndpointTypingContracts = () => {
   type TolerantPvarSelectorOptional = AssertTrue<IsEqual<IsOptionalKey<TolerantPvarEndpoint, 'player'>, true>>;
   type StrictZoneSelectorRequired = AssertTrue<IsEqual<IsOptionalKey<StrictZoneEndpoint, 'zone'>, false>>;
   type TolerantZoneSelectorOptional = AssertTrue<IsEqual<IsOptionalKey<TolerantZoneEndpoint, 'zone'>, true>>;
+  type ResolverUsesReadFields = AssertTrue<IsEqual<keyof ResolverContext, 'def' | 'adjacencyGraph' | 'state' | 'activePlayer' | 'actorPlayer' | 'bindings' | 'resources' | 'runtimeTableIndex' | 'freeOperationOverlay' | 'maxQueryResults' | 'collector'>>;
+  type ResolverModeMatchesEffectContext = AssertTrue<IsEqual<ResolverMode, EffectContext['mode']>>;
+  type DefLookupUsesOnlyDef = AssertTrue<IsEqual<keyof DefOnlyContext, 'def'>>;
+  type StateReaderUsesOnlyState = AssertTrue<IsEqual<keyof StateOnlyContext, 'state'>>;
 
   void (null as unknown as GlobalShapeParity);
   void (null as unknown as PvarSharedShapeParity);
@@ -135,11 +143,19 @@ const assertScopedEndpointTypingContracts = () => {
   void (null as unknown as TolerantPvarSelectorOptional);
   void (null as unknown as StrictZoneSelectorRequired);
   void (null as unknown as TolerantZoneSelectorOptional);
+  void (null as unknown as ResolverUsesReadFields);
+  void (null as unknown as ResolverModeMatchesEffectContext);
+  void (null as unknown as DefLookupUsesOnlyDef);
+  void (null as unknown as StateReaderUsesOnlyState);
 
   const strictPvarEndpoint: ScopedVarResolvableEndpoint = { scope: 'pvar', player: 'actor', var: 'hp' };
   const strictZoneEndpoint: ScopedVarResolvableEndpoint = { scope: 'zoneVar', zone: 'zone-a:none', var: 'supply' };
   const tolerantPvarEndpoint: ScopedVarMalformedResolvableEndpoint = { scope: 'pvar', var: 'hp' };
   const tolerantZoneEndpoint: ScopedVarMalformedResolvableEndpoint = { scope: 'zoneVar', var: 'supply' };
+  const resolverContext: ResolverContext = makeCtx();
+  const defOnlyContext: DefOnlyContext = { def: makeCtx().def };
+  const stateOnlyContext: StateOnlyContext = { state: makeCtx().state };
+  const mode: ResolverMode = 'execution';
 
   // @ts-expect-error strict endpoint contract requires a player selector for pvar scope.
   const malformedStrictPvar: ScopedVarResolvableEndpoint = { scope: 'pvar', var: 'hp' };
@@ -150,6 +166,10 @@ const assertScopedEndpointTypingContracts = () => {
   void strictZoneEndpoint;
   void tolerantPvarEndpoint;
   void tolerantZoneEndpoint;
+  void resolverContext;
+  void defOnlyContext;
+  void stateOnlyContext;
+  void mode;
   void malformedStrictPvar;
   void malformedStrictZone;
 };
@@ -221,7 +241,7 @@ assertScopedWriteTypingContracts();
 
 describe('scoped-var-runtime-access', () => {
   it('resolves scoped variable definitions across global/pvar/zoneVar', () => {
-    const ctx = makeCtx();
+    const ctx = { def: makeCtx().def };
 
     const globalDef = resolveScopedVarDef(ctx, { scope: 'global', var: 'score' }, 'setVar', 'variableRuntimeValidationFailed');
     const pvarDef = resolveScopedVarDef(ctx, { scope: 'pvar', var: 'ready' }, 'setVar', 'variableRuntimeValidationFailed');
@@ -233,7 +253,7 @@ describe('scoped-var-runtime-access', () => {
   });
 
   it('enforces int-only contracts through resolveScopedIntVarDef', () => {
-    const ctx = makeCtx();
+    const ctx = { def: makeCtx().def };
     assert.throws(
       () => resolveScopedIntVarDef(ctx, { scope: 'global', var: 'flag' }, 'transferVar', 'resourceRuntimeValidationFailed'),
       (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('non-int variable'),
@@ -241,7 +261,7 @@ describe('scoped-var-runtime-access', () => {
   });
 
   it('reads scoped runtime values across global/pvar/zone endpoints', () => {
-    const ctx = makeCtx();
+    const ctx = { state: makeCtx().state };
 
     const globalValue = readScopedVarValue(ctx, { scope: 'global', var: 'flag' }, 'setVar', 'variableRuntimeValidationFailed');
     const pvarValue = readScopedVarValue(
@@ -263,7 +283,7 @@ describe('scoped-var-runtime-access', () => {
   });
 
   it('reads int-only scoped runtime values across global/pvar/zone endpoints', () => {
-    const ctx = makeCtx();
+    const ctx = { state: makeCtx().state };
 
     const globalValue = readScopedIntVarValue(ctx, { scope: 'global', var: 'score' }, 'addVar', 'variableRuntimeValidationFailed');
     const pvarValue = readScopedIntVarValue(
@@ -285,20 +305,21 @@ describe('scoped-var-runtime-access', () => {
   });
 
   it('throws canonical int-read runtime diagnostics for corrupted global/pvar/zone bool payloads', () => {
-    const corruptedCtx = makeCtx({
+    const baseState = makeState();
+    const corruptedCtx = {
       state: {
-        ...makeState(),
-        globalVars: { ...makeState().globalVars, score: true as unknown as number },
+        ...baseState,
+        globalVars: { ...baseState.globalVars, score: true as unknown as number },
         perPlayerVars: {
-          ...makeState().perPlayerVars,
-          '0': { ...makeState().perPlayerVars['0'], hp: false as unknown as number },
+          ...baseState.perPlayerVars,
+          '0': { ...baseState.perPlayerVars['0'], hp: false as unknown as number },
         },
         zoneVars: {
-          ...makeState().zoneVars,
+          ...baseState.zoneVars,
           'zone-a:none': { supply: true as unknown as number },
         },
       },
-    });
+    };
 
     assert.throws(
       () => readScopedIntVarValue(corruptedCtx, { scope: 'global', var: 'score' }, 'addVar', 'variableRuntimeValidationFailed'),
@@ -336,12 +357,12 @@ describe('scoped-var-runtime-access', () => {
 
   it('throws canonical int-read runtime diagnostics for non-finite and non-integer numbers', () => {
     const baseState = makeState();
-    const globalNanCtx = makeCtx({
+    const globalNanCtx = {
       state: {
         ...baseState,
         globalVars: { ...baseState.globalVars, score: Number.NaN },
       },
-    });
+    };
 
     assert.throws(
       () => readScopedIntVarValue(globalNanCtx, { scope: 'global', var: 'score' }, 'addVar', 'variableRuntimeValidationFailed'),
@@ -350,7 +371,7 @@ describe('scoped-var-runtime-access', () => {
         String(error).includes('Global variable state must be a finite safe integer: score'),
     );
 
-    const pvarFractionalCtx = makeCtx({
+    const pvarFractionalCtx = {
       state: {
         ...baseState,
         perPlayerVars: {
@@ -358,7 +379,7 @@ describe('scoped-var-runtime-access', () => {
           '0': { ...baseState.perPlayerVars['0'], hp: 1.5 as unknown as number },
         },
       },
-    });
+    };
     assert.throws(
       () =>
         readScopedIntVarValue(
@@ -671,6 +692,7 @@ describe('scoped-var-runtime-access', () => {
     const globalEndpoint = resolveRuntimeScopedEndpoint(
       { scope: 'global', var: 'score' },
       ctx,
+      ctx.mode,
       {
         code: 'variableRuntimeValidationFailed',
         effectType: 'setVar',
@@ -682,6 +704,7 @@ describe('scoped-var-runtime-access', () => {
     const pvarEndpoint = resolveRuntimeScopedEndpoint(
       { scope: 'pvar', player: 'actor', var: 'hp' },
       ctx,
+      ctx.mode,
       {
         code: 'variableRuntimeValidationFailed',
         effectType: 'setVar',
@@ -693,6 +716,7 @@ describe('scoped-var-runtime-access', () => {
     const zoneEndpoint = resolveRuntimeScopedEndpoint(
       { scope: 'zoneVar', zone: 'zone-a:none', var: 'supply' },
       ctx,
+      ctx.mode,
       {
         code: 'resourceRuntimeValidationFailed',
         effectType: 'transferVar',
@@ -713,6 +737,7 @@ describe('scoped-var-runtime-access', () => {
     const endpoint = resolveRuntimeScopedEndpointWithMalformedSupport(
       { scope: 'pvar', player: 'actor', var: 'hp' },
       ctx,
+      ctx.mode,
       {
         code: 'resourceRuntimeValidationFailed',
         effectType: 'transferVar',
@@ -733,6 +758,7 @@ describe('scoped-var-runtime-access', () => {
         resolveRuntimeScopedEndpointWithMalformedSupport(
           { scope: 'pvar', var: 'hp' },
           ctx,
+          ctx.mode,
           {
             code: 'resourceRuntimeValidationFailed',
             effectType: 'transferVar',
@@ -753,6 +779,7 @@ describe('scoped-var-runtime-access', () => {
         resolveRuntimeScopedEndpointWithMalformedSupport(
           { scope: 'zoneVar', var: 'supply' },
           ctx,
+          ctx.mode,
           {
             code: 'resourceRuntimeValidationFailed',
             effectType: 'transferVar',

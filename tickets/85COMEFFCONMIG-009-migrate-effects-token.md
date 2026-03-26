@@ -17,6 +17,7 @@
 3. Token handlers are performance-critical — FITL benchmarks show high token movement frequency
 4. Some handlers call `resolveTraceProvenance` / `emitVarChangeTraceIfChanged` — these need inline pick objects
 5. No calls to `resolveRuntimeScopedEndpoint` in this file — no `mode` param threading needed
+6. `effects-token.ts` also contains several file-local helpers typed to `EffectContext` that appear to read only `def` and/or `state`; this ticket should reassess and narrow those helpers while the file is open instead of preserving broad context coupling
 
 ## Architecture Check
 
@@ -43,6 +44,10 @@ Verify the exact handler function names at implementation time. Expected handler
 
 - Remove `fromEnvAndCursor`, add `mergeToReadContext`/`mergeToEvalContext`
 - Remove `EffectContext` from imports if no longer used
+
+### Note
+
+Because this is the largest migration file, it should absorb helper-signature cleanup as part of the same change. If helpers such as stacking/state lookup/provenance support can be expressed in terms of `{ def }`, `{ state }`, or tiny explicit picks, prefer that over leaving `EffectContext` in place after the call-site migration.
 
 ## Files to Touch
 

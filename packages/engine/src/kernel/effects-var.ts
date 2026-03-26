@@ -86,7 +86,7 @@ export const applySetVar = (
     const k = 'setVar:evalValue'; const b = profiler.dynamic.get(k); if (b) { b.totalMs += performance.now() - t0_eval; b.count += 1; } else profiler.dynamic.set(k, { count: 1, totalMs: performance.now() - t0_eval });
   }
   const t0_endpoint = profiler !== undefined ? performance.now() : 0;
-  const endpoint = resolveRuntimeScopedEndpoint(effect.setVar, evalCtx, {
+  const endpoint = resolveRuntimeScopedEndpoint(effect.setVar, evalCtx, env.mode, {
     code: EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED,
     effectType: 'setVar',
     pvarCardinalityMessage: 'Per-player variable operations require exactly one resolved player',
@@ -161,7 +161,7 @@ export const applyAddVar = (
   const evalCursor = resolvedBindings === cursor.bindings ? cursor : { ...cursor, bindings: resolvedBindings };
   const evalCtx = fromEnvAndCursor(env, evalCursor);
   const evaluatedDelta = expectInteger(evalValue(delta, evalCtx), 'addVar', 'delta');
-  const endpoint = resolveRuntimeScopedEndpoint(effect.addVar, evalCtx, {
+  const endpoint = resolveRuntimeScopedEndpoint(effect.addVar, evalCtx, env.mode, {
     code: EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED,
     effectType: 'addVar',
     pvarCardinalityMessage: 'Per-player variable operations require exactly one resolved player',

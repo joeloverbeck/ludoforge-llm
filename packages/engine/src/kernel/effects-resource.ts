@@ -87,7 +87,7 @@ const resolveEndpoint = (
   evalCtx: EffectContext,
   ctx: EffectContext,
 ): ResolvedEndpoint => {
-  const runtimeEndpoint = resolveRuntimeScopedEndpointWithMalformedSupport(endpoint, evalCtx, {
+  const runtimeEndpoint = resolveRuntimeScopedEndpointWithMalformedSupport(endpoint, evalCtx, evalCtx.mode, {
     code: EFFECT_RUNTIME_REASONS.RESOURCE_RUNTIME_VALIDATION_FAILED,
     effectType: 'transferVar',
     pvarCardinalityMessage: 'Per-player variable operations require exactly one resolved player',

@@ -18,6 +18,7 @@ This is the second-largest migration file (8 sites) and depends on both -001 (wi
 2. Results are passed to: `resolveChoiceDecisionPlayer` (widened in -002), `evalQuery`, `evalCondition`, `evalValue`, `resolveRef` — all accept `ReadContext`
 3. Some call sites use resolved bindings (`resolveChoiceBindings`) — these need `mergeToReadContext(env, evalCursor)` pattern
 4. Check whether any call site passes the context to trace functions — if so, inline pick objects needed
+5. `resolvePrioritizedTierEntries` currently still accepts `EffectContext` even though it only delegates to `evalQuery`; if this file is being touched for migration anyway, that helper should be narrowed in the same ticket instead of carrying forward unnecessary context coupling
 
 ## Architecture Check
 
@@ -40,6 +41,10 @@ For each of the 8 call sites, determine the pattern:
 - Remove `fromEnvAndCursor`, add `mergeToReadContext`/`mergeToEvalContext`
 - Remove `EffectContext` from imports if no longer used in the file
 - Keep `EffectContext` if still referenced in handler function signatures (which take `env: EffectEnv, cursor: EffectCursor`)
+
+### Note
+
+This ticket is the right place to finish file-local helper cleanup in `effects-choice.ts`, not just the 8 call sites. Any internal helper that still accepts `EffectContext` while only using `ReadContext`-level fields should be narrowed during the same edit for architectural completeness.
 
 ## Files to Touch
 

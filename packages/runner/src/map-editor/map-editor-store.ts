@@ -1,6 +1,7 @@
 import type { GameDef } from '@ludoforge/engine/runtime';
 import { create, type StoreApi, type UseBoundStore } from 'zustand';
 
+import { VisualConfigProvider } from '../config/visual-config-provider.js';
 import type {
   ConnectionEndpoint,
   ConnectionRouteDefinition,
@@ -10,6 +11,11 @@ import type {
   Position,
   VisualConfig,
 } from './map-editor-types.js';
+import {
+  resolveEndpointPosition as resolveRouteEndpointPosition,
+  type EditorRouteZoneVisual,
+} from './map-editor-route-geometry.js';
+import { resolveMapEditorZoneVisuals } from './map-editor-zone-visuals.js';
 
 const DEFAULT_GRID_SIZE = 20;
 const UNDO_STACK_LIMIT = 50;
@@ -67,6 +73,7 @@ export function createMapEditorStore(
   return create<MapEditorStore>()((set, get) => {
     let interactionSnapshot: EditorSnapshot | null = null;
     let interactionChanged = false;
+    const zoneVisuals = resolveMapEditorZoneVisuals(gameDef, new VisualConfigProvider(visualConfig));
     const initialDocumentState: EditorSnapshot = {
       zonePositions: clonePositionMap(initialPositions),
       connectionAnchors: cloneAnchorMap(visualConfig),
@@ -180,7 +187,7 @@ export function createMapEditorStore(
       },
 
       convertSegment(routeId, segmentIndex, kind) {
-        applyCommittedEdit((state) => convertSegmentInDocument(state, routeId, segmentIndex, kind));
+        applyCommittedEdit((state) => convertSegmentInDocument(state, zoneVisuals, routeId, segmentIndex, kind));
       },
 
       selectZone(zoneId) {
@@ -759,6 +766,7 @@ function removeWaypointInDocument(
 
 function convertSegmentInDocument(
   state: MapEditorDocumentState,
+  zoneVisuals: ReadonlyMap<string, EditorRouteZoneVisual>,
   routeId: string,
   segmentIndex: number,
   kind: 'straight' | 'quadratic',
@@ -773,8 +781,8 @@ function convertSegmentInDocument(
   const connectionAnchors = new Map(state.connectionAnchors);
 
   if (kind === 'quadratic') {
-    const start = resolveEndpointPosition(route.points[segmentIndex], state);
-    const end = resolveEndpointPosition(route.points[segmentIndex + 1], state);
+    const start = resolveEndpointPosition(route.points[segmentIndex], state, zoneVisuals);
+    const end = resolveEndpointPosition(route.points[segmentIndex + 1], state, zoneVisuals);
     if (start === null || end === null) {
       return null;
     }
@@ -819,16 +827,18 @@ function convertSegmentInDocument(
 function resolveEndpointPosition(
   endpoint: ConnectionEndpoint | undefined,
   state: MapEditorDocumentState,
+  zoneVisuals: ReadonlyMap<string, EditorRouteZoneVisual>,
 ): Position | null {
   if (endpoint === undefined) {
     return null;
   }
 
-  if (endpoint.kind === 'zone') {
-    return state.zonePositions.get(endpoint.zoneId) ?? null;
-  }
-
-  return state.connectionAnchors.get(endpoint.anchorId) ?? null;
+  return resolveRouteEndpointPosition(
+    endpoint,
+    state.zonePositions,
+    state.connectionAnchors,
+    zoneVisuals,
+  );
 }
 
 function createWaypointAnchorId(

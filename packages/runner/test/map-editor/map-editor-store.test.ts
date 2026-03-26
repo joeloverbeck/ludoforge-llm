@@ -9,7 +9,11 @@ const GAME_DEF = {
     id: 'editor-test',
     players: { min: 1, max: 4 },
   },
-} as GameDef;
+  zones: [
+    { id: 'zone:a' },
+    { id: 'zone:b' },
+  ],
+} as unknown as GameDef;
 
 describe('createMapEditorStore', () => {
   it('initializes cloned document state from positions and visual config', () => {
@@ -267,6 +271,31 @@ describe('createMapEditorStore', () => {
     expect(store.getState().connectionRoutes.get('road:none')?.segments[0]).toEqual({ kind: 'straight' });
   });
 
+  it('convertSegment seeds quadratic controls from anchored endpoint geometry instead of zone centers', () => {
+    const store = makeStore({
+      zoneOverrides: {
+        'zone:a': { shape: 'rectangle', width: 40, height: 20 },
+        'zone:b': { shape: 'rectangle', width: 40, height: 40 },
+      },
+      routes: new Map<string, ConnectionRouteDefinition>([
+        ['road:none', {
+          points: [
+            { kind: 'zone', zoneId: 'zone:a', anchor: 90 },
+            { kind: 'zone', zoneId: 'zone:b', anchor: 180 },
+          ],
+          segments: [{ kind: 'straight' }],
+        }],
+      ]),
+    });
+
+    store.getState().convertSegment('road:none', 0, 'quadratic');
+
+    expect(store.getState().connectionRoutes.get('road:none')?.segments[0]).toEqual({
+      kind: 'quadratic',
+      control: { kind: 'position', x: 20, y: -5 },
+    });
+  });
+
   it('moves anchor-backed control points by updating the referenced anchor', () => {
     const store = makeStore({
       routes: new Map<string, ConnectionRouteDefinition>([
@@ -491,6 +520,7 @@ describe('createMapEditorStore', () => {
 function makeStore(overrides?: {
   readonly anchors?: ReadonlyMap<string, { readonly x: number; readonly y: number }>;
   readonly routes?: ReadonlyMap<string, ConnectionRouteDefinition>;
+  readonly zoneOverrides?: NonNullable<VisualConfig['zones']>['overrides'];
 }) {
   return createMapEditorStore(
     GAME_DEF,
@@ -510,6 +540,7 @@ function makeInitialPositions(): ReadonlyMap<string, { readonly x: number; reado
 function makeVisualConfig(overrides?: {
   readonly anchors?: ReadonlyMap<string, { readonly x: number; readonly y: number }>;
   readonly routes?: ReadonlyMap<string, ConnectionRouteDefinition>;
+  readonly zoneOverrides?: NonNullable<VisualConfig['zones']>['overrides'];
 }): VisualConfig {
   const anchors = overrides?.anchors ?? new Map([
     ['bend-1', { x: 20, y: 30 }],
@@ -528,6 +559,7 @@ function makeVisualConfig(overrides?: {
   return {
     version: 1,
     zones: {
+      overrides: overrides?.zoneOverrides,
       connectionAnchors: Object.fromEntries(anchors),
       connectionRoutes: Object.fromEntries(routes),
     },

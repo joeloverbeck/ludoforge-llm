@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
+import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
 
 const expectedCards = [
   { id: 'card-15', order: 15, title: 'Medevac', seatOrder: ['US', 'ARVN', 'NVA', 'VC'] },
@@ -56,14 +57,14 @@ describe('FITL 1964 remaining event-card production spec', () => {
     const unshadedMomentum = card?.unshaded?.lastingEffects?.find((effect) => effect.id === 'mom-medevac-unshaded');
     assert.notEqual(unshadedMomentum, undefined);
     assert.equal(unshadedMomentum?.duration, 'round');
-    assert.deepEqual(unshadedMomentum?.setupEffects, [{ setVar: { scope: 'global', var: 'mom_medevacUnshaded', value: true } }]);
-    assert.deepEqual(unshadedMomentum?.teardownEffects, [{ setVar: { scope: 'global', var: 'mom_medevacUnshaded', value: false } }]);
+    assert.deepEqual(unshadedMomentum?.setupEffects, tagEffectAsts([{ setVar: { scope: 'global', var: 'mom_medevacUnshaded', value: true } }]));
+    assert.deepEqual(unshadedMomentum?.teardownEffects, tagEffectAsts([{ setVar: { scope: 'global', var: 'mom_medevacUnshaded', value: false } }]));
 
     const shadedMomentum = card?.shaded?.lastingEffects?.find((effect) => effect.id === 'mom-medevac-shaded');
     assert.notEqual(shadedMomentum, undefined);
     assert.equal(shadedMomentum?.duration, 'round');
-    assert.deepEqual(shadedMomentum?.setupEffects, [{ setVar: { scope: 'global', var: 'mom_medevacShaded', value: true } }]);
-    assert.deepEqual(shadedMomentum?.teardownEffects, [{ setVar: { scope: 'global', var: 'mom_medevacShaded', value: false } }]);
+    assert.deepEqual(shadedMomentum?.setupEffects, tagEffectAsts([{ setVar: { scope: 'global', var: 'mom_medevacShaded', value: true } }]));
+    assert.deepEqual(shadedMomentum?.teardownEffects, tagEffectAsts([{ setVar: { scope: 'global', var: 'mom_medevacShaded', value: false } }]));
   });
 
   it('encodes card 31 (AAA) as capability marker toggles for cap_aaa', () => {
@@ -79,8 +80,8 @@ describe('FITL 1964 remaining event-card production spec', () => {
     assert.equal(card?.tags?.includes('NVA'), true);
     assert.equal(card?.unshaded?.text, 'Rally that Improves Trail may select 1 space only. NVA CAPABILITY.');
     assert.equal(card?.shaded?.text, 'Air Strike does not Degrade Trail below 2.');
-    assert.deepEqual(card?.unshaded?.effects, [{ setGlobalMarker: { marker: 'cap_aaa', state: 'unshaded' } }]);
-    assert.deepEqual(card?.shaded?.effects, [{ setGlobalMarker: { marker: 'cap_aaa', state: 'shaded' } }]);
+    assert.deepEqual(card?.unshaded?.effects, tagEffectAsts([{ setGlobalMarker: { marker: 'cap_aaa', state: 'unshaded' } }]));
+    assert.deepEqual(card?.shaded?.effects, tagEffectAsts([{ setGlobalMarker: { marker: 'cap_aaa', state: 'shaded' } }]));
   });
 
   it('encodes card 50 (Uncle Ho) exact text, corrected branches, and limited-operation sequencing', () => {

@@ -14,12 +14,13 @@ import {
   updateHashTokenPlacement,
 } from '../../src/kernel/index.js';
 import type { GameDef, GameState, Token } from '../../src/kernel/index.js';
+import { asTaggedGameDef } from '../helpers/gamedef-fixtures.js';
 
 const STEP_COUNT = 20;
 const ZONE_IDS = ['bag:none', 'lane:none', 'vault:none'] as const;
 
 const createGameDef = (): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'determinism-full', players: { min: 2, max: 2 } },
     constants: {},
     globalVars: [],
@@ -50,7 +51,7 @@ phase: ['main'],
     ],
     triggers: [],
     terminal: { conditions: [{ when: { op: '==', left: 0, right: 1 }, result: { type: 'draw' } }] },
-  }) as unknown as GameDef;
+  });
 
 const createInitialState = (seed: bigint): GameState => {
   const tokens: readonly Token[] = [

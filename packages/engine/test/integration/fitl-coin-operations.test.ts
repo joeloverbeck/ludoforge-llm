@@ -13,6 +13,7 @@ import {
   type Move,
 } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
 import { findDeep } from '../helpers/ast-search-helpers.js';
 import { makeIsolatedInitialState } from '../helpers/isolated-state-helpers.js';
 import { completeMoveDecisionSequenceOrThrow, pickDeterministicDecisionValue } from '../helpers/move-decision-helpers.js';
@@ -1805,14 +1806,14 @@ describe('FITL COIN operations integration', () => {
 
     it('AC2: ARVN Patrol spends 3 upfront unless Body Count is active', () => {
       const profile = getPatrolProfile();
-      assert.deepEqual(profile.costEffects, [
+      assert.deepEqual(profile.costEffects, tagEffectAsts([
         {
           if: {
             when: { op: '!=', left: { _t: 2, ref: 'gvar', var: 'mom_bodyCount' }, right: true },
             then: [{ addVar: { scope: 'global', var: 'arvnResources', delta: -3 } }],
           },
         },
-      ]);
+      ]));
     });
 
     it('AC3: legality and costValidation allow Body Count override or arvnResources >= 3', () => {

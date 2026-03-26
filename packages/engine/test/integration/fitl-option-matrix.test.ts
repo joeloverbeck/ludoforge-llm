@@ -17,9 +17,10 @@ import {
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
+import { asTaggedGameDef } from '../helpers/gamedef-fixtures.js';
 
 const createDef = (): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'fitl-option-matrix-int', players: { min: 3, max: 3 }, maxTriggerDepth: 8 },
     seats: [{ id: 'us' }, { id: 'arvn' }, { id: 'nva' }],
     constants: {},
@@ -113,7 +114,7 @@ phase: [asPhaseId('main')],
     ],
     triggers: [],
     terminal: { conditions: [] },
-  }) as unknown as GameDef;
+  });
 
 const compileProductionDef = (): GameDef => {
   const { parsed, validatorDiagnostics, compiled } = compileProductionSpec();
@@ -220,7 +221,7 @@ describe('FITL option matrix integration', () => {
   });
 
   it('applies option-matrix gating to pipeline-backed operation templates', () => {
-    const def = { ...createDef(), actionPipelines: [operationPipeline] } as unknown as GameDef;
+    const def = asTaggedGameDef({ ...createDef(), actionPipelines: [operationPipeline] });
     const start = initialState(def, 53, 3).state;
     const firstMove: Move = { actionId: asActionId('operation'), params: {} };
     const afterFirst = applyMove(def, start, firstMove).state;
@@ -274,7 +275,7 @@ describe('FITL option matrix integration', () => {
   });
 
   it('does not apply option-matrix filtering during interrupt phases', () => {
-    const def = {
+    const def = asTaggedGameDef({
       ...createDef(),
       turnStructure: {
         phases: [{ id: asPhaseId('main') }],
@@ -284,7 +285,7 @@ describe('FITL option matrix integration', () => {
         ...action,
         phase: [asPhaseId('main'), asPhaseId('commitment')],
       })),
-    } as unknown as GameDef;
+    });
 
     const start = initialState(def, 109, 3).state;
     const inInterrupt: GameState = {

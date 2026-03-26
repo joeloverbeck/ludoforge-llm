@@ -23,6 +23,7 @@ import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-help
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { clearAllZones } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
+import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
 
 const makeToken = (id: string, type: string, faction: string): Token => ({
   id: asTokenId(id),
@@ -78,9 +79,9 @@ describe('FITL commitment phase production wiring', () => {
 
     const card73 = compiled.gameDef?.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-73');
     assert.notEqual(card73, undefined);
-    assert.deepEqual(card73?.unshaded?.effects, [
+    assert.deepEqual(card73?.unshaded?.effects, tagEffectAsts([
       { pushInterruptPhase: { phase: 'commitment', resumePhase: 'main' } },
-    ]);
+    ]));
   });
 
   it('executes card-73 unshaded by running commitment casualty transfer', () => {

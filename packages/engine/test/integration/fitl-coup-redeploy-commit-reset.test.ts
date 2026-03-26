@@ -7,18 +7,18 @@ import {
   asPhaseId,
   initialState,
   type EffectAST,
-  type GameDef,
   type TriggerLogEntry,
 } from '../../src/kernel/index.js';
 import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
 import { eff } from '../helpers/effect-tag-helper.js';
+import { asTaggedGameDef } from '../helpers/gamedef-fixtures.js';
 
 interface CoupFixtureOptions {
   readonly isFinalCoup: boolean;
   readonly trail: number;
 }
 
-const createRedeployCommitResetDef = (options: CoupFixtureOptions): GameDef => {
+const createRedeployCommitResetDef = (options: CoupFixtureOptions) => {
   const recomputeControlValue = {
     _t: 6 as const,
     op: '+',
@@ -79,7 +79,7 @@ const createRedeployCommitResetDef = (options: CoupFixtureOptions): GameDef => {
     }),
   ];
 
-  return {
+  return asTaggedGameDef({
     metadata: { id: 'fitl-coup-redeploy-commit-reset-int', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
     seats: [{ id: 'US' }, { id: 'ARVN' }],
     constants: {},
@@ -182,7 +182,7 @@ phase: [asPhaseId('main')],
       { id: 'on_reset_enter', event: { type: 'phaseEnter', phase: asPhaseId('reset') }, effects: resetEffects },
     ],
     terminal: { conditions: [] },
-  } as unknown as GameDef;
+  });
 };
 
 describe('FITL coup redeploy/commitment/reset integration', () => {

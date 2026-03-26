@@ -1,6 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
@@ -21,8 +22,8 @@ describe('FITL tutorial capability/momentum event-card production spec', () => {
     assert.equal((boobyFactionOrder as readonly string[]).join(','), 'VC,NVA,US,ARVN');
     assert.equal(card?.tags?.includes('capability'), true);
 
-    assert.deepEqual(card?.unshaded?.effects, [{ setGlobalMarker: { marker: 'cap_boobyTraps', state: 'unshaded' } }]);
-    assert.deepEqual(card?.shaded?.effects, [{ setGlobalMarker: { marker: 'cap_boobyTraps', state: 'shaded' } }]);
+    assert.deepEqual(card?.unshaded?.effects, tagEffectAsts([{ setGlobalMarker: { marker: 'cap_boobyTraps', state: 'unshaded' } }]));
+    assert.deepEqual(card?.shaded?.effects, tagEffectAsts([{ setGlobalMarker: { marker: 'cap_boobyTraps', state: 'shaded' } }]));
   });
 
   it('compiles card 17 (Claymores) as a dual-use momentum with round lasting effect and stay-eligible override', () => {
@@ -53,14 +54,14 @@ describe('FITL tutorial capability/momentum event-card production spec', () => {
     assert.deepEqual(card?.unshaded?.eligibilityOverrides, [
       { target: { kind: 'active' }, eligible: true, windowId: 'remain-eligible' },
     ]);
-    assert.deepEqual(card?.unshaded?.lastingEffects, [
+    assert.deepEqual(card?.unshaded?.lastingEffects, tagEffectAsts([
       {
         id: 'mom-claymores',
         duration: 'round',
         setupEffects: [{ setVar: { scope: 'global', var: 'mom_claymores', value: true } }],
         teardownEffects: [{ setVar: { scope: 'global', var: 'mom_claymores', value: false } }],
       },
-    ]);
+    ]));
 
     const shadedRemovals = (card?.shaded?.targets?.[0]?.effects ?? []).filter((effect) => 'removeByPriority' in effect);
     assert.equal(shadedRemovals.length, 2);

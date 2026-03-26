@@ -13,6 +13,7 @@ import {
   type GameState,
 } from '../../src/kernel/index.js';
 import { eff } from '../helpers/effect-tag-helper.js';
+import { asTaggedGameDef } from '../helpers/gamedef-fixtures.js';
 
 /**
  * Integration test verifying that plain (non-pipeline) actions with
@@ -24,7 +25,7 @@ import { eff } from '../helpers/effect-tag-helper.js';
  */
 
 const makeMinimalDef = (actions: readonly ActionDef[]): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'feasibility-probe-test', players: { min: 2, max: 2 } },
     seats: [{ id: '0' }, { id: '1' }],
     constants: {},
@@ -39,7 +40,7 @@ const makeMinimalDef = (actions: readonly ActionDef[]): GameDef =>
     actions,
     triggers: [],
     terminal: { conditions: [] },
-  }) as unknown as GameDef;
+  });
 
 const makeMinimalState = (): GameState => ({
   globalVars: {},

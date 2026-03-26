@@ -13,6 +13,7 @@ import {
   type Move,
   type Token,
 } from '../../src/kernel/index.js';
+import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
 import {
   applyMoveWithResolvedDecisionIds,
   normalizeDecisionParamsForMove,
@@ -138,15 +139,15 @@ describe('FITL card-74 Lam Son 719', () => {
     const unshadedEffects = card?.unshaded?.effects ?? [];
     const unshadedTarget = card?.unshaded?.targets?.[0];
     const targetEffects = unshadedTarget?.effects ?? [];
-    assert.deepEqual(unshadedEffects[0], { setActivePlayer: { player: { id: 1 } } });
+    assert.deepEqual(unshadedEffects[0], tagEffectAsts({ setActivePlayer: { player: { id: 1 } } }));
     assert.equal(unshadedTarget?.id, '$lamSon719LaosSpace');
     assert.equal(unshadedTarget?.selector?.query, 'mapSpaces');
     assert.deepEqual(unshadedTarget?.cardinality, { max: 1 });
     assert.equal(unshadedTarget?.application, 'aggregate');
     assert.equal((targetEffects[0] as { chooseN?: { bind?: string; min?: unknown } }).chooseN?.bind, '$lamSon719ArvnTroops');
     assert.equal((targetEffects[0] as { chooseN?: { min?: unknown } }).chooseN?.min, 0);
-    assert.deepEqual(targetEffects[2], { addVar: { scope: 'global', var: 'trail', delta: -2 } });
-    assert.deepEqual((targetEffects[3] as { if?: unknown }).if, {
+    assert.deepEqual(targetEffects[2], tagEffectAsts({ addVar: { scope: 'global', var: 'trail', delta: -2 } }));
+    assert.deepEqual((targetEffects[3] as { if?: unknown }).if, tagEffectAsts({
       when: {
         op: '>',
         left: {
@@ -190,9 +191,9 @@ describe('FITL card-74 Lam Son 719', () => {
           },
         },
       ],
-    });
+    }));
 
-    assert.deepEqual(card?.shaded?.effects, [
+    assert.deepEqual(card?.shaded?.effects, tagEffectAsts([
       {
         addVar: {
           scope: 'global',
@@ -225,7 +226,7 @@ describe('FITL card-74 Lam Son 719', () => {
           },
         },
       },
-    ]);
+    ]));
   });
 
   it('unshaded places ARVN troops in the chosen Laos space, immediately hands ARVN the required Laos-scoped LimOp, and clears the window after a legal resolution', () => {

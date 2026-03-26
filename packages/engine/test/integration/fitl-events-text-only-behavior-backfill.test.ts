@@ -1,6 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
@@ -144,7 +145,7 @@ describe('FITL text-only card behavior backfill', () => {
     const card76 = cardById.get('card-76');
     assert.equal(card76?.unshaded?.text, 'NVA and VC -1 Resource each per space with both. Patronage +2.');
     assert.equal(typeof (card76?.unshaded?.effects?.[0] as { let?: unknown } | undefined)?.let, 'object');
-    assert.deepEqual(card76?.unshaded?.effects?.[1], { addVar: { scope: 'global', var: 'patronage', delta: 2 } });
+    assert.deepEqual(card76?.unshaded?.effects?.[1], tagEffectAsts({ addVar: { scope: 'global', var: 'patronage', delta: 2 } }));
     assert.equal(card76?.shaded?.text, 'Remove Support from Hue, Da Nang, and an adjacent Province.');
     assert.equal(typeof (card76?.shaded?.effects?.[0] as { if?: unknown } | undefined)?.if, 'object');
     assert.equal(typeof (card76?.shaded?.effects?.[1] as { if?: unknown } | undefined)?.if, 'object');
@@ -153,9 +154,9 @@ describe('FITL text-only card behavior backfill', () => {
 
     const card73 = cardById.get('card-73');
     assert.equal(card73?.unshaded?.text, 'Conduct a Commitment Phase.');
-    assert.deepEqual(card73?.unshaded?.effects, [
+    assert.deepEqual(card73?.unshaded?.effects, tagEffectAsts([
       { pushInterruptPhase: { phase: 'commitment', resumePhase: 'main' } },
-    ]);
+    ]));
     assert.equal((card73?.shaded?.effects?.[0] as { chooseN?: { bind?: string; chooser?: unknown } })?.chooseN?.bind, '$greatSocietyUsPieces');
     assert.deepEqual((card73?.shaded?.effects?.[0] as { chooseN?: { chooser?: unknown } })?.chooseN?.chooser, { id: 0 });
     assert.equal(typeof (card73?.shaded?.effects?.[1] as { forEach?: unknown } | undefined)?.forEach, 'object');

@@ -20,11 +20,12 @@ import {
   type KernelRuntimeErrorContext,
 } from '../../src/kernel/index.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
+import { asTaggedGameDef } from '../helpers/gamedef-fixtures.js';
 import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
 import { eff } from '../helpers/effect-tag-helper.js';
 
 const createDef = (): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'event-turn-flow-directives-int', players: { min: 4, max: 4 }, maxTriggerDepth: 8 },
     seats: [{ id: 'US' }, { id: 'ARVN' }, { id: 'NVA' }, { id: 'VC' }],
     constants: {},
@@ -263,7 +264,7 @@ phase: [asPhaseId('main')],
         ],
       } as EventDeckDef,
     ],
-  }) as unknown as GameDef;
+  });
 
 const createClassAwareDedupDef = (): GameDef => {
   const def = createDef() as unknown as {
@@ -304,11 +305,11 @@ const createClassAwareDedupDef = (): GameDef => {
     def.eventDecks[0] = { ...primaryDeck, cards: [...primaryDeck.cards, card10] };
   }
 
-  return def as unknown as GameDef;
+  return asTaggedGameDef(def);
 };
 
 const createRequiredGrantResumeDef = (): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'event-required-grant-resume-int', players: { min: 4, max: 4 }, maxTriggerDepth: 8 },
     seats: [{ id: 'US' }, { id: 'ARVN' }, { id: 'NVA' }, { id: 'VC' }],
     constants: {},
@@ -405,7 +406,7 @@ const createRequiredGrantResumeDef = (): GameDef =>
         ],
       } as EventDeckDef,
     ],
-  }) as unknown as GameDef;
+  });
 
 const createActionIdMismatchDef = (): GameDef => {
   const def = createDef() as unknown as {
@@ -479,10 +480,10 @@ const createActionIdMismatchDef = (): GameDef => {
       }),
     };
   }
-  return def as unknown as GameDef;
+  return asTaggedGameDef(def);
 };
 
-const createExecutionContextGrantDef = (): GameDef => ({
+const createExecutionContextGrantDef = (): GameDef => asTaggedGameDef({
   metadata: { id: 'event-turn-flow-grant-execution-context', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
   seats: [{ id: 'US' }, { id: 'NVA' }],
   constants: {},
@@ -711,7 +712,7 @@ const makeGrantReadyState = (
 };
 
 const createZoneFilteredDef = (): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'event-free-op-zone-filter-int', players: { min: 3, max: 3 }, maxTriggerDepth: 8 },
     seats: [{ id: 'US' }, { id: 'ARVN' }, { id: 'NVA' }],
     constants: {},
@@ -840,10 +841,10 @@ phase: [asPhaseId('main')],
         ],
       } as EventDeckDef,
     ],
-  }) as unknown as GameDef;
+  });
 
 const createSequenceContextDef = (): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'event-free-op-sequence-context-int', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
     seats: [{ id: 'US' }, { id: 'NVA' }],
     constants: {},
@@ -1153,10 +1154,10 @@ phase: [asPhaseId('main')],
         ],
       } as EventDeckDef,
     ],
-  }) as unknown as GameDef;
+  });
 
 const createExecuteAsSeatDef = (): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'event-free-op-execute-as-faction-int', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
     seats: [{ id: 'US' }, { id: 'ARVN' }],
     constants: {},
@@ -1264,10 +1265,10 @@ phase: [asPhaseId('main')],
         ],
       } as EventDeckDef,
     ],
-  }) as unknown as GameDef;
+  });
 
 const createExecuteAsSeatZoneBindingDef = (): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'event-free-op-execute-as-zone-binding-int', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
     seats: [{ id: 'US' }, { id: 'ARVN' }],
     constants: {},
@@ -1409,11 +1410,11 @@ const createExecuteAsSeatZoneBindingDef = (): GameDef =>
         ],
       } as EventDeckDef,
     ],
-  }) as unknown as GameDef;
+  });
 
 
 const createGrantViabilityPolicyDef = (): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'event-free-op-viability-policy-int', players: { min: 3, max: 3 }, maxTriggerDepth: 8 },
     seats: [{ id: 'US' }, { id: 'ARVN' }, { id: 'NVA' }],
     constants: {},
@@ -1787,7 +1788,7 @@ phase: [asPhaseId('main')],
         ],
       } as EventDeckDef,
     ],
-  }) as unknown as GameDef;
+  });
 
 const createImplementWhatCanInOrderGrantDef = (): GameDef => {
   const def = createGrantViabilityPolicyDef() as unknown as {
@@ -1872,7 +1873,7 @@ const createImplementWhatCanInOrderGrantDef = (): GameDef => {
     };
   }
 
-  return def as unknown as GameDef;
+  return asTaggedGameDef(def);
 };
 
 const createStrictInOrderGrantDef = (): GameDef => {
@@ -2014,11 +2015,11 @@ const createStrictInOrderGrantDef = (): GameDef => {
     };
   }
 
-  return def as unknown as GameDef;
+  return asTaggedGameDef(def);
 };
 
 const createExecuteAsSeatSpecialActivityDef = (): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'event-free-op-execute-as-special-activity-int', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
     seats: [{ id: 'US' }, { id: 'ARVN' }],
     constants: {},
@@ -2126,7 +2127,7 @@ phase: [asPhaseId('main')],
         ],
       } as EventDeckDef,
     ],
-  }) as unknown as GameDef;
+  });
 
 const createMonsoonGrantBypassDef = (): GameDef => {
   const def = createDef() as unknown as {
@@ -2198,7 +2199,7 @@ const createMonsoonGrantBypassDef = (): GameDef => {
     def.eventDecks[0] = { ...primaryDeck, cards: [...primaryDeck.cards, card11, card12] };
   }
 
-  return def as unknown as GameDef;
+  return asTaggedGameDef(def);
 };
 
 describe('event free-operation grants integration', () => {

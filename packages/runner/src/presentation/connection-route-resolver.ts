@@ -1,14 +1,27 @@
 import type { Position } from '../canvas/geometry.js';
+import {
+  getEdgePointAtAngle,
+  resolveVisualDimensions,
+} from '../canvas/renderers/shape-utils.js';
 import type {
   ConnectionEndpoint,
   ConnectionRouteControl,
   ConnectionRouteDefinition,
   ConnectionRouteSegment,
 } from '../config/visual-config-types.js';
+import {
+  ZONE_RENDER_HEIGHT,
+  ZONE_RENDER_WIDTH,
+} from '../layout/layout-constants.js';
 import type {
   PresentationAdjacencyNode,
   PresentationZoneNode,
 } from './presentation-scene.js';
+
+const DEFAULT_ZONE_DIMENSIONS = {
+  width: ZONE_RENDER_WIDTH,
+  height: ZONE_RENDER_HEIGHT,
+} as const;
 
 export interface ResolvedConnectionPoint {
   readonly kind: 'zone' | 'anchor';
@@ -282,6 +295,22 @@ function resolveConfiguredEndpoint(
     const position = positions.get(endpoint.zoneId);
     if (position === undefined) {
       return null;
+    }
+
+    if (endpoint.anchor !== undefined) {
+      const zone = zoneById.get(endpoint.zoneId);
+      if (zone !== undefined) {
+        const dimensions = resolveVisualDimensions(zone.visual, DEFAULT_ZONE_DIMENSIONS);
+        const offset = getEdgePointAtAngle(zone.visual.shape, dimensions, endpoint.anchor);
+        return {
+          kind: 'zone',
+          id: endpoint.zoneId,
+          position: {
+            x: position.x + offset.x,
+            y: position.y + offset.y,
+          },
+        };
+      }
     }
 
     return {

@@ -17,13 +17,15 @@ The map editor store has no actions to set or preview an anchor angle on a zone 
 3. Preview actions mutate state within a `beginInteraction`/`commitInteraction` pair — no undo entry until commit.
 4. `cloneRouteDefinition` in the store (lines 401-419) already handles zone/anchor endpoint cloning.
 5. Immutable update pattern: clone maps with `new Map()`, spread objects, return new state.
+6. The remaining architectural gap is not just missing actions; the editor currently defaults to detaching zone endpoints into free anchors. These actions are part of replacing that default with zone-linked edge anchors.
 
 ## Architecture Check
 
 1. Follows existing store action patterns exactly — no new patterns introduced.
 2. `setEndpointAnchor` is a committed action (creates undo entry). `previewEndpointAnchor` is a preview-only mutation within an interaction.
 3. Both actions validate that the target endpoint is `kind: 'zone'` before modifying — no-op for anchor endpoints.
-4. Immutable updates throughout (F7).
+4. These actions are the canonical store contract for zone-linked endpoint editing. Ticket 006 should use them instead of converting zone endpoints into free anchors during ordinary endpoint drags.
+5. Immutable updates throughout (F7).
 
 ## What to Change
 
@@ -62,7 +64,7 @@ Same logic as `setEndpointAnchor` but used within an active interaction (between
 - Drag UX implementation — ticket 006
 - FITL visual config — ticket 007
 - Undo/redo system changes (existing system handles this)
-- `convertEndpointToAnchor` modifications
+- Large-scale route model redesign beyond adding anchor-angle editing to existing zone endpoints
 
 ## Acceptance Criteria
 
@@ -85,6 +87,7 @@ Same logic as `setEndpointAnchor` but used within an active interaction (between
 2. Undo/redo stack integrity maintained — `setEndpointAnchor` pushes snapshot, `previewEndpointAnchor` does not.
 3. Only zone endpoints are modified — anchor endpoints are ignored.
 4. `dirty` flag is set when anchor is changed.
+5. These actions become the normal editing path for zone endpoints with semantic zone linkage preserved.
 
 ## Test Plan
 

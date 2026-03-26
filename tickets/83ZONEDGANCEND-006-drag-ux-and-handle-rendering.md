@@ -16,21 +16,23 @@ When the user drags a zone endpoint in the map editor, the current behavior call
 2. On first pointer move, it calls `state.convertEndpointToAnchor(routeId, pointIndex)` to get an `anchorId`, then switches to free anchor dragging.
 3. The function returns a cleanup function removing event listeners.
 4. Other drag handlers follow the pattern: `attachZoneDragHandlers`, `attachAnchorDragHandlers`, `attachControlPointDragHandlers`, `attachPositionDragHandlers`.
-5. Handle rendering for route endpoints is done in the map editor canvas layer — needs audit to find exact file and function.
+5. Handle rendering for route endpoints is done in `packages/runner/src/map-editor/map-editor-handle-renderer.ts`, which currently positions zone endpoint handles from editor route geometry and still attaches the conversion-based drag handler.
 6. The drag handler needs zone center position, shape, and dimensions — currently not passed.
+7. This ticket is the primary owner of the remaining design gap: zone endpoint drags must preserve zone linkage by default, and the old detach-on-first-move behavior should cease to be the normal path.
 
 ## Architecture Check
 
 1. Replaces the existing conversion-based approach with edge-snapping — cleaner UX, preserves zone semantics.
-2. Escape hatch preserved: dragging far from zone (>2× max dimension) falls back to `convertEndpointToAnchor`.
-3. Uses existing store interaction pattern (`beginInteraction` → `previewEndpointAnchor` → `commitInteraction`).
-4. Pure angle computation from cursor position (F7).
+2. The primary interaction path must be zone-linked endpoint editing, not conversion to free anchors. Any escape hatch must be explicit and secondary.
+3. Uses existing store interaction pattern (`beginInteraction` → `previewEndpointAnchor` → `commitInteraction`) and the geometry contract from ticket 004.
+4. Handle rendering must derive from shared route geometry so authored anchors and drag previews stay visually consistent.
+5. Pure angle computation from cursor position (F7).
 
 ## What to Change
 
 ### 1. Replace `attachZoneEndpointConvertDragHandlers`
 
-In `packages/runner/src/map-editor/map-editor-drag.ts`, replace with `attachZoneEdgeAnchorDragHandlers`:
+In `packages/runner/src/map-editor/map-editor-drag.ts`, replace `attachZoneEndpointConvertDragHandlers` with `attachZoneEdgeAnchorDragHandlers` and update every caller in the same change:
 
 **Parameters** (extended from current):
 - `handle`: drag target
@@ -49,25 +51,25 @@ In `packages/runner/src/map-editor/map-editor-drag.ts`, replace with `attachZone
    - Compute edge point via `getEdgePointAtAngle(shape, dimensions, angle)`
    - Move handle to `center + offset`
    - Call `store.getState().previewEndpointAnchor(routeId, pointIndex, angle)`
-3. **On pointer up**: Call `store.getState().setEndpointAnchor(routeId, pointIndex, angle)` via commit interaction
-4. **Escape hatch**: If cursor distance from center > `2 * Math.max(width, height)`, fall back to `convertEndpointToAnchor`
+3. **On pointer up**: The committed route state must retain a `kind: 'zone'` endpoint with the computed `anchor`
+4. **Escape hatch**: If cursor distance from center > `2 * Math.max(width, height)`, an explicit detach to free anchor is acceptable, but it must remain a secondary branch rather than the default flow
 
 ### 2. Update callers of the drag handler
 
-The code that attaches drag handlers to zone endpoint handles must call the new function with the additional zone data parameters.
+The code that attaches drag handlers to zone endpoint handles in `map-editor-handle-renderer.ts` must call the new function with the additional zone data parameters.
 
 ### 3. Update handle rendering
 
-In the map editor canvas code that creates endpoint drag handles:
+In `map-editor-handle-renderer.ts` and any editor geometry helpers it depends on:
 - If zone endpoint has `anchor`: position handle at edge via `getEdgePointAtAngle`
 - If no `anchor`: position at zone center (existing behavior)
-
-Audit map editor canvas files to identify the exact rendering code.
+- Keep route polyline sampling, hit areas, and endpoint handles on the same resolved geometry contract.
 
 ## Files to Touch
 
 - `packages/runner/src/map-editor/map-editor-drag.ts` (modify — replace handler)
-- Map editor canvas file(s) that attach drag handlers and render handles (modify — pass zone data, position handles at edge)
+- `packages/runner/src/map-editor/map-editor-handle-renderer.ts` (modify — pass zone data, position handles from resolved geometry)
+- Any shared editor geometry caller updated by ticket 004 (modify as needed)
 
 ## Out of Scope
 
@@ -78,7 +80,7 @@ Audit map editor canvas files to identify the exact rendering code.
 - Store action implementation — ticket 005
 - FITL visual config — ticket 007
 - `attachZoneDragHandlers`, `attachAnchorDragHandlers`, `attachControlPointDragHandlers` — unchanged
-- `convertEndpointToAnchor` store action — preserved for escape hatch, not modified
+- Broad redesign of non-endpoint drag behavior
 
 ## Acceptance Criteria
 
@@ -88,7 +90,7 @@ Audit map editor canvas files to identify the exact rendering code.
 2. Angle normalization: cursor positions in all four quadrants produce angles in [0, 360)
 3. Edge snap: handle position matches `center + getEdgePointAtAngle(shape, dims, angle)` during drag
 4. Preview: `previewEndpointAnchor` is called during drag move with computed angle
-5. Commit: `setEndpointAnchor` is called on pointer up
+5. Commit: the final route state keeps a `kind: 'zone'` endpoint and records the computed `anchor` on pointer up
 6. Escape hatch: dragging beyond `2 * max(w, h)` triggers `convertEndpointToAnchor` instead
 7. Handle rendering: zone endpoint with `anchor: 90` on circle renders handle at top edge
 8. Handle rendering: zone endpoint without `anchor` renders handle at center
@@ -97,10 +99,11 @@ Audit map editor canvas files to identify the exact rendering code.
 
 ### Invariants
 
-1. `convertEndpointToAnchor` remains available as escape hatch — not removed.
-2. Drag behavior for non-zone endpoints (anchors, control points) is unchanged.
-3. No mutation during drag — all position updates go through store actions (F7).
-4. Cleanup function removes all event listeners (no memory leaks).
+1. Zone endpoint dragging preserves semantic zone linkage in the normal path.
+2. `convertEndpointToAnchor` remains available only as an explicit escape hatch path.
+3. Drag behavior for non-zone endpoints (anchors, control points) is unchanged.
+4. No mutation during drag — all position updates go through store actions (F7).
+5. Cleanup function removes all event listeners (no memory leaks).
 
 ## Test Plan
 

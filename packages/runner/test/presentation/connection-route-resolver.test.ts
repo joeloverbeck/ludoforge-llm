@@ -424,4 +424,188 @@ describe('resolveConnectionRoutes', () => {
       }),
     ]);
   });
+
+  it('keeps unanchored zone endpoints at zone centers', () => {
+    const zones = [
+      makeZone('alpha:none', 'circle'),
+      makeZone('beta:none'),
+      makeZone('loc-alpha-beta:none', 'connection'),
+    ];
+    const adjacencies = [
+      makeAdjacency('loc-alpha-beta:none', 'alpha:none'),
+      makeAdjacency('loc-alpha-beta:none', 'beta:none'),
+    ];
+
+    const result = resolveConnectionRoutes(makeOptions({
+      zones,
+      adjacencies,
+      positions: new Map([
+        ['alpha:none', { x: 100, y: 120 }],
+        ['beta:none', { x: 300, y: 120 }],
+      ]),
+      routeDefinitions: new Map([
+        ['loc-alpha-beta:none', {
+          points: [
+            { kind: 'zone', zoneId: 'alpha:none' },
+            { kind: 'zone', zoneId: 'beta:none' },
+          ],
+          segments: [
+            { kind: 'straight' },
+          ],
+        }],
+      ]),
+    }));
+
+    expect(result.connectionRoutes[0]?.path).toEqual([
+      { kind: 'zone', id: 'alpha:none', position: { x: 100, y: 120 } },
+      { kind: 'zone', id: 'beta:none', position: { x: 300, y: 120 } },
+    ]);
+  });
+
+  it('offsets anchored circle zone endpoints to the zone edge', () => {
+    const zones = [
+      makeZone('alpha:none', 'circle'),
+      makeZone('beta:none'),
+      makeZone('loc-alpha-beta:none', 'connection'),
+    ];
+    const adjacencies = [
+      makeAdjacency('loc-alpha-beta:none', 'alpha:none'),
+      makeAdjacency('loc-alpha-beta:none', 'beta:none'),
+    ];
+
+    const result = resolveConnectionRoutes(makeOptions({
+      zones,
+      adjacencies,
+      positions: new Map([
+        ['alpha:none', { x: 100, y: 120 }],
+        ['beta:none', { x: 300, y: 120 }],
+      ]),
+      routeDefinitions: new Map([
+        ['loc-alpha-beta:none', {
+          points: [
+            { kind: 'zone', zoneId: 'alpha:none', anchor: 0 },
+            { kind: 'zone', zoneId: 'beta:none', anchor: 90 },
+          ],
+          segments: [
+            { kind: 'straight' },
+          ],
+        }],
+      ]),
+    }));
+
+    expect(result.connectionRoutes[0]?.path).toEqual([
+      { kind: 'zone', id: 'alpha:none', position: { x: 150, y: 120 } },
+      { kind: 'zone', id: 'beta:none', position: { x: 300, y: 70 } },
+    ]);
+  });
+
+  it('supports mixed anchored and center zone endpoints in one route', () => {
+    const zones = [
+      makeZone('alpha:none', 'circle'),
+      makeZone('beta:none', 'rectangle'),
+      makeZone('loc-alpha-beta:none', 'connection'),
+    ];
+    const adjacencies = [
+      makeAdjacency('loc-alpha-beta:none', 'alpha:none'),
+      makeAdjacency('loc-alpha-beta:none', 'beta:none'),
+    ];
+
+    const result = resolveConnectionRoutes(makeOptions({
+      zones,
+      adjacencies,
+      positions: new Map([
+        ['alpha:none', { x: 100, y: 120 }],
+        ['beta:none', { x: 300, y: 120 }],
+      ]),
+      routeDefinitions: new Map([
+        ['loc-alpha-beta:none', {
+          points: [
+            { kind: 'zone', zoneId: 'alpha:none', anchor: 180 },
+            { kind: 'zone', zoneId: 'beta:none' },
+          ],
+          segments: [
+            { kind: 'straight' },
+          ],
+        }],
+      ]),
+    }));
+
+    expect(result.connectionRoutes[0]?.path).toEqual([
+      { kind: 'zone', id: 'alpha:none', position: { x: 50, y: 120 } },
+      { kind: 'zone', id: 'beta:none', position: { x: 300, y: 120 } },
+    ]);
+  });
+
+  it('offsets anchored rectangle zone endpoints to the matching edge midpoint', () => {
+    const zones = [
+      makeZone('alpha:none', 'rectangle'),
+      makeZone('beta:none', 'rectangle'),
+      makeZone('loc-alpha-beta:none', 'connection'),
+    ];
+    const adjacencies = [
+      makeAdjacency('loc-alpha-beta:none', 'alpha:none'),
+      makeAdjacency('loc-alpha-beta:none', 'beta:none'),
+    ];
+
+    const result = resolveConnectionRoutes(makeOptions({
+      zones,
+      adjacencies,
+      positions: new Map([
+        ['alpha:none', { x: 100, y: 120 }],
+        ['beta:none', { x: 300, y: 120 }],
+      ]),
+      routeDefinitions: new Map([
+        ['loc-alpha-beta:none', {
+          points: [
+            { kind: 'zone', zoneId: 'alpha:none', anchor: 270 },
+            { kind: 'zone', zoneId: 'beta:none', anchor: 180 },
+          ],
+          segments: [
+            { kind: 'straight' },
+          ],
+        }],
+      ]),
+    }));
+
+    expect(result.connectionRoutes[0]?.path).toEqual([
+      { kind: 'zone', id: 'alpha:none', position: { x: 100, y: 170 } },
+      { kind: 'zone', id: 'beta:none', position: { x: 220, y: 120 } },
+    ]);
+  });
+
+  it('fails closed when a configured anchored zone endpoint references a missing zone', () => {
+    const zones = [
+      makeZone('alpha:none'),
+      makeZone('beta:none'),
+      makeZone('loc-alpha-beta:none', 'connection'),
+    ];
+    const adjacencies = [
+      makeAdjacency('loc-alpha-beta:none', 'alpha:none'),
+      makeAdjacency('loc-alpha-beta:none', 'beta:none'),
+    ];
+
+    const result = resolveConnectionRoutes(makeOptions({
+      zones,
+      adjacencies,
+      positions: new Map([
+        ['alpha:none', { x: 100, y: 120 }],
+        ['beta:none', { x: 300, y: 120 }],
+      ]),
+      routeDefinitions: new Map([
+        ['loc-alpha-beta:none', {
+          points: [
+            { kind: 'zone', zoneId: 'alpha:none' },
+            { kind: 'zone', zoneId: 'missing:none', anchor: 90 },
+          ],
+          segments: [
+            { kind: 'straight' },
+          ],
+        }],
+      ]),
+    }));
+
+    expect(result.connectionRoutes).toEqual([]);
+    expect(result.filteredZones).toEqual(zones);
+    expect(result.filteredAdjacencies).toEqual(adjacencies);
+  });
 });

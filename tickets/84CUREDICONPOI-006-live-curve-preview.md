@@ -1,5 +1,10 @@
 # 84CUREDICONPOI-006 — Live Curve Preview During Drag
 
+**Status**: PENDING
+**Priority**: MEDIUM
+**Effort**: Small
+**Engine Changes**: None — runner-only
+
 **Spec:** 84 (Curve Editing & Control Point UX), Deliverable 3B
 **Deps**: `archive/tickets/MAPEDIT/84CUREDICONPOI-001-fix-handle-event-propagation.md`
 **Depends on:** 84CUREDICONPOI-001
@@ -10,6 +15,16 @@
 ## Summary
 
 During control point drag, the Bezier curve does not update in real-time. The route renderer (`map-editor-route-renderer.ts`) skips updates during drag for performance. This ticket removes the optimization for the selected route so the curve redraws as the control point moves.
+
+## Assumption Reassessment (2026-03-26)
+
+1. The current route renderer does not suppress drag-time updates. It already re-renders when `connectionRoutes`, `connectionAnchors`, `zonePositions`, or selection change.
+2. The user-visible live curve preview behavior appears to be already satisfied by the active architecture; this ticket must therefore be treated as a regression-proofing reassessment ticket before any implementation work.
+3. The remaining drag-preview architecture issue is not route redraw, but split ownership of drag visuals between imperative handle motion and renderer-driven geometry. That cleanup belongs in `tickets/84CUREDICONPOI-009-unify-drag-preview-visual-ownership.md`, not here.
+
+## Note
+
+Before implementing anything here, verify whether any missing behavior remains beyond additional route-renderer regression coverage. If no gap remains, this ticket should be closed or repurposed rather than used to introduce duplicate drag-preview logic.
 
 ## Task
 

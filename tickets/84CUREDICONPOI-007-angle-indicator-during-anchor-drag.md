@@ -1,5 +1,10 @@
 # 84CUREDICONPOI-007 — Angle Indicator During Zone-Edge Anchor Drag
 
+**Status**: PENDING
+**Priority**: MEDIUM
+**Effort**: Medium
+**Engine Changes**: None — runner-only
+
 **Spec:** 84 (Curve Editing & Control Point UX), Deliverable 3C
 **Deps**: `archive/tickets/MAPEDIT/84CUREDICONPOI-001-fix-handle-event-propagation.md`
 **Depends on:** 84CUREDICONPOI-001
@@ -10,6 +15,16 @@
 ## Summary
 
 During zone-edge anchor endpoint drag, there is no visual indication of the computed angle. This ticket adds a BitmapText label that appears during drag, showing the angle rounded to the nearest degree (e.g., `"90deg"`).
+
+## Assumption Reassessment (2026-03-26)
+
+1. The angle label is still unimplemented, so the user-facing gap remains real.
+2. The active drag architecture already mixes imperative handle position updates with store-driven route/tangent geometry updates.
+3. This ticket should not add another isolated drag-visual code path if `tickets/84CUREDICONPOI-009-unify-drag-preview-visual-ownership.md` lands first. The preferred implementation is to build on a shared drag-preview visual owner rather than layering bespoke label lifecycle logic onto `map-editor-drag.ts`.
+
+## Note
+
+If `84CUREDICONPOI-009` is completed first, implement the angle indicator on top of that shared drag-preview visual abstraction. If not, keep this ticket narrowly scoped and avoid duplicating geometry resolution or drag-session ownership in multiple places.
 
 ## Task
 

@@ -110,6 +110,13 @@ const {
 
     moveToArgs: Array<[number, number]> = [];
 
+    clear(): this {
+      this.strokeStyle = undefined;
+      this.lineToArgs = [];
+      this.moveToArgs = [];
+      return this;
+    }
+
     moveTo(x: number, y: number): this {
       this.moveToArgs.push([x, y]);
       return this;
@@ -236,6 +243,55 @@ describe('createEditorHandleRenderer', () => {
     expect(updatedAnchorHandle.position).toEqual(expect.objectContaining({ x: 45, y: 25 }));
 
     renderer.destroy();
+  });
+
+  it('updates tangent graphics in place from preview geometry while dragging', () => {
+    const fixture = createFixture();
+
+    createEditorHandleRenderer(
+      fixture.handleLayer as unknown as Container,
+      fixture.store,
+      fixture.gameDef,
+      fixture.provider,
+    );
+
+    fixture.store.getState().selectRoute('route:road');
+
+    const root = fixture.handleLayer.children[0] as InstanceType<typeof MockContainer>;
+    const tangent = root.children[0] as InstanceType<typeof MockGraphics>;
+    const controlHandle = root.children[4] as InstanceType<typeof MockGraphics>;
+
+    fixture.store.getState().beginInteraction();
+    fixture.store.getState().setDragging(true);
+    fixture.store.getState().previewControlPointMove('route:road', 0, { x: 30, y: 10 });
+
+    expect(root.children[0]).toBe(tangent);
+    expect(root.children[4]).toBe(controlHandle);
+    expect(tangent.moveToArgs).toEqual([[0, 0], [40, 20]]);
+    expect(tangent.lineToArgs).toEqual([[30, 10], [30, 10]]);
+  });
+
+  it('still rebuilds handle graphics when document changes outside drag mode', () => {
+    const fixture = createFixture();
+
+    createEditorHandleRenderer(
+      fixture.handleLayer as unknown as Container,
+      fixture.store,
+      fixture.gameDef,
+      fixture.provider,
+    );
+
+    fixture.store.getState().selectRoute('route:road');
+
+    const root = fixture.handleLayer.children[0] as InstanceType<typeof MockContainer>;
+    const tangent = root.children[0] as InstanceType<typeof MockGraphics>;
+    const anchorHandle = root.children[2] as InstanceType<typeof MockGraphics>;
+
+    fixture.store.getState().moveAnchor('anchor:mid', { x: 45, y: 25 });
+
+    const updatedRoot = fixture.handleLayer.children[0] as InstanceType<typeof MockContainer>;
+    expect(updatedRoot.children[0]).not.toBe(tangent);
+    expect(updatedRoot.children[2]).not.toBe(anchorHandle);
   });
 
   it('routes anchor drag interactions through the editor store', () => {

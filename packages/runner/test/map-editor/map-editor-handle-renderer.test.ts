@@ -185,6 +185,8 @@ describe('createEditorHandleRenderer', () => {
     );
 
     const root = fixture.handleLayer.children[0] as InstanceType<typeof MockContainer>;
+    expect(root.eventMode).toBe('passive');
+    expect(root.interactiveChildren).toBe(true);
     expect(root.children).toHaveLength(0);
   });
 

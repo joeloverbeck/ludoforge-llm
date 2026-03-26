@@ -1,6 +1,7 @@
 # 84CUREDICONPOI-006 — Live Curve Preview During Drag
 
 **Spec:** 84 (Curve Editing & Control Point UX), Deliverable 3B
+**Deps**: `archive/tickets/MAPEDIT/84CUREDICONPOI-001-fix-handle-event-propagation.md`
 **Depends on:** 84CUREDICONPOI-001
 **Blocks:** None
 

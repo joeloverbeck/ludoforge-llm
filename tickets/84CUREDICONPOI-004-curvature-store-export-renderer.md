@@ -1,6 +1,7 @@
 # 84CUREDICONPOI-004 — Curvature Support in Store, Export & Renderer
 
 **Spec:** 84 (Curve Editing & Control Point UX), Deliverable 2 (integration layer)
+**Deps**: `tickets/84CUREDICONPOI-002-curvature-control-schema.md`, `tickets/84CUREDICONPOI-003-curvature-resolution-algorithm.md`
 **Depends on:** 84CUREDICONPOI-002, 84CUREDICONPOI-003
 **Blocks:** 84CUREDICONPOI-008
 

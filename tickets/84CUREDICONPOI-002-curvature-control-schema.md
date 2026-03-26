@@ -1,6 +1,7 @@
 # 84CUREDICONPOI-002 — Add CurvatureControl Schema Type
 
 **Spec:** 84 (Curve Editing & Control Point UX), Deliverable 2 (schema layer)
+**Deps**: None
 **Depends on:** None
 **Blocks:** 84CUREDICONPOI-003, 84CUREDICONPOI-004, 84CUREDICONPOI-008
 

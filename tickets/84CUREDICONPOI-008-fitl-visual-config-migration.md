@@ -1,6 +1,7 @@
 # 84CUREDICONPOI-008 — FITL Visual Config Migration to Curvature
 
 **Spec:** 84 (Curve Editing & Control Point UX), Deliverable 4
+**Deps**: `tickets/84CUREDICONPOI-002-curvature-control-schema.md`, `tickets/84CUREDICONPOI-003-curvature-resolution-algorithm.md`, `tickets/84CUREDICONPOI-004-curvature-store-export-renderer.md`
 **Depends on:** 84CUREDICONPOI-002, 84CUREDICONPOI-003, 84CUREDICONPOI-004
 **Blocks:** None
 

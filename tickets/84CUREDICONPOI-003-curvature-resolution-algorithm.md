@@ -1,6 +1,7 @@
 # 84CUREDICONPOI-003 — Curvature Resolution Algorithm
 
 **Spec:** 84 (Curve Editing & Control Point UX), Deliverable 2 (resolution logic)
+**Deps**: `tickets/84CUREDICONPOI-002-curvature-control-schema.md`
 **Depends on:** 84CUREDICONPOI-002
 **Blocks:** 84CUREDICONPOI-004, 84CUREDICONPOI-008
 

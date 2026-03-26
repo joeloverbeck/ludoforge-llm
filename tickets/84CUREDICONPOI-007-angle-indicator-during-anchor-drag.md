@@ -1,6 +1,7 @@
 # 84CUREDICONPOI-007 — Angle Indicator During Zone-Edge Anchor Drag
 
 **Spec:** 84 (Curve Editing & Control Point UX), Deliverable 3C
+**Deps**: `archive/tickets/MAPEDIT/84CUREDICONPOI-001-fix-handle-event-propagation.md`
 **Depends on:** 84CUREDICONPOI-001
 **Blocks:** None
 

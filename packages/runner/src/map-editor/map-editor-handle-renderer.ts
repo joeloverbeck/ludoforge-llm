@@ -42,7 +42,7 @@ export function createEditorHandleRenderer(
   const dragSurface = options.dragSurface ?? handleLayer;
   const zoneVisuals = resolveMapEditorZoneVisuals(gameDef, visualConfigProvider);
   const root = new Container();
-  root.eventMode = 'none';
+  root.eventMode = 'passive';
   root.interactiveChildren = true;
   handleLayer.addChild(root);
   let cleanupDisposers: Array<() => void> = [];

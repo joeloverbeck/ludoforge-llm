@@ -1,6 +1,7 @@
 # 84CUREDICONPOI-005 — Live Tangent Line Updates During Drag
 
 **Spec:** 84 (Curve Editing & Control Point UX), Deliverable 3A
+**Deps**: `archive/tickets/MAPEDIT/84CUREDICONPOI-001-fix-handle-event-propagation.md`
 **Depends on:** 84CUREDICONPOI-001
 **Blocks:** None
 

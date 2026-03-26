@@ -57,6 +57,7 @@ This ticket is more involved than -003/-004/-005 because:
 This ticket should preserve the architectural direction introduced by -001:
 - do not keep passing a broad `evalCtx` to helpers that now accept `{ def }` or `{ state }`
 - prefer explicit narrow objects plus a tiny trace pick over retaining `EffectContext`-shaped plumbing out of convenience
+- do not broaden scope into a shared cross-file provenance helper here; that consolidation belongs in `85COMEFFCONMIG-010` once all migrated handlers expose the final duplication surface
 
 ## Files to Touch
 

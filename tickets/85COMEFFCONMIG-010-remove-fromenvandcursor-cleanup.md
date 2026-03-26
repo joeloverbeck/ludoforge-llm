@@ -17,12 +17,14 @@ After tickets -003 through -009 replace all 28 `fromEnvAndCursor` call sites, th
 3. Check whether `effect-compiler-runtime.ts` has a comment referencing `fromEnvAndCursor` — spec says yes
 4. Check whether a `compat()` function exists — exploration found none, but verify at implementation time
 5. Check whether any test files import `fromEnvAndCursor` directly — must also be cleaned up
+6. The migrated files are likely to end with repeated env/cursor trace-provenance builders or repeated `{ collector, state, traceContext, effectPath }` picks; if that duplication is present, this cleanup ticket is the right place to centralize it because all remaining migrations will already be complete
 
 ## Architecture Check
 
 1. Dead code removal aligns with Foundation 9 (No Backwards Compatibility)
 2. Completes the Spec 77 migration — Foundation 10 (Architectural Completeness)
 3. No shims, no deprecation markers — clean removal
+4. Shared provenance-helper extraction, if duplication remains after -003 through -009, is cleaner here than in any single migration ticket because it can be done once against the final post-migration surface
 
 ## What to Change
 
@@ -56,6 +58,15 @@ If a `compat()` adapter exists in `effect-context.ts`, verify it has no remainin
 
 Run `grep -r "fromEnvAndCursor" packages/engine/` to confirm zero remaining references in source AND test files.
 
+### 6. Consolidate duplicated env/cursor trace helpers if they remain
+
+- Reassess the migrated handler files for repeated helpers or repeated inline objects that only exist to supply:
+  - `resolveTraceProvenance({ state, traceContext?, effectPath? })`
+  - `emitVarChangeTraceIfChanged({ collector, state, traceContext?, effectPath? }, ...)`
+- If the duplication is real across multiple files, extract a shared helper in the kernel layer with a narrow contract based on `EffectEnv` + `EffectCursor`
+- Update migrated handlers to consume the shared helper instead of keeping file-local provenance builders
+- Do not reintroduce broad `EffectContext` plumbing while doing this; the helper must preserve the narrow env/cursor architecture established by the migration
+
 ### Note
 
 This cleanup ticket should also verify whether any file-local helper signatures or `EffectContext`-indexed type aliases remain broader than necessary after -003 through -009. If a handler no longer needs `EffectContext` after its migration, remove the stale broad typing in the same cleanup rather than leaving it as historical residue.
@@ -71,6 +82,8 @@ This cleanup ticket should also verify whether any file-local helper signatures 
 - `packages/engine/src/kernel/effects-choice.ts` (modify — remove stale import, if applicable)
 - `packages/engine/src/kernel/effects-token.ts` (modify — remove stale import, if applicable)
 - `packages/engine/src/kernel/effect-compiler-runtime.ts` (modify — update comment, if applicable)
+- `packages/engine/src/kernel/trace-provenance.ts` (modify only if shared provenance helper extraction is warranted)
+- `packages/engine/src/kernel/var-change-trace.ts` (modify only if shared trace-pick helper extraction is warranted)
 
 ## Out of Scope
 
@@ -79,6 +92,7 @@ This cleanup ticket should also verify whether any file-local helper signatures 
 - Any changes to `ReadContext` interface
 - Performance benchmarking
 - Any changes to eval function signatures
+- Any new backwards-compatibility adapter around the removed helper
 
 ## Acceptance Criteria
 
@@ -95,12 +109,14 @@ This cleanup ticket should also verify whether any file-local helper signatures 
 3. `EffectContext` type remains available for any code that still needs it (e.g., type annotations in scope boundaries)
 4. Determinism parity maintained
 5. Spec 77 migration is architecturally complete
+6. If shared provenance-helper extraction is performed, it is based on `EffectEnv` + `EffectCursor` rather than resurrecting full merged-context plumbing
 
 ## Test Plan
 
 ### New/Modified Tests
 
 1. No new tests needed — removal of dead code
+2. If helper extraction touches trace plumbing, strengthen existing trace tests only where needed to prove provenance/event parity remains unchanged
 
 ### Commands
 

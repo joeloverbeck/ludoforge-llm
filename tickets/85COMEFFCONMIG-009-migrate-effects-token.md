@@ -49,6 +49,8 @@ Verify the exact handler function names at implementation time. Expected handler
 
 Because this is the largest migration file, it should absorb helper-signature cleanup as part of the same change. If helpers such as stacking/state lookup/provenance support can be expressed in terms of `{ def }`, `{ state }`, or tiny explicit picks, prefer that over leaving `EffectContext` in place after the call-site migration.
 
+Do not turn this ticket into a cross-file helper-extraction pass. Keep provenance construction local here, then let `85COMEFFCONMIG-010` decide whether the repeated env/cursor trace helper should be centralized once all migrated files are visible together.
+
 ## Files to Touch
 
 - `packages/engine/src/kernel/effects-token.ts` (modify)

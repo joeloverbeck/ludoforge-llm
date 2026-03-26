@@ -46,6 +46,8 @@ Similar to -006: this ticket calls `resolveRuntimeScopedEndpointWithMalformedSup
 
 For architectural completeness, this ticket should not just swap one context-construction helper for another. `resolveEndpoint` should be narrowed so it consumes only the read surface and storage fragments it actually needs, instead of preserving `EffectContext` as a local catch-all type.
 
+Shared extraction of the env/cursor trace-provenance pattern is intentionally deferred to `85COMEFFCONMIG-010`; this ticket should keep the change local and make the final duplication explicit for cleanup.
+
 ## Files to Touch
 
 - `packages/engine/src/kernel/effects-resource.ts` (modify)

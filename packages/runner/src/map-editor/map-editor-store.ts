@@ -41,7 +41,7 @@ interface MapEditorStoreActions {
   moveControlPoint(routeId: string, segmentIndex: number, position: Position): void;
   setEndpointAnchor(routeId: string, pointIndex: number, anchor: number): void;
   previewEndpointAnchor(routeId: string, pointIndex: number, anchor: number): void;
-  convertEndpointToAnchor(routeId: string, pointIndex: number): string | null;
+  detachEndpointToAnchor(routeId: string, pointIndex: number, position: Position): string | null;
   insertWaypoint(routeId: string, segmentIndex: number, position: Position): void;
   removeWaypoint(routeId: string, pointIndex: number): void;
   convertSegment(routeId: string, segmentIndex: number, kind: 'straight' | 'quadratic'): void;
@@ -164,10 +164,10 @@ export function createMapEditorStore(
         applyPreviewEdit((state) => setEndpointAnchorInDocument(state, routeId, pointIndex, anchor));
       },
 
-      convertEndpointToAnchor(routeId, pointIndex) {
+      detachEndpointToAnchor(routeId, pointIndex, position) {
         let anchorId: string | null = null;
         applyPreviewEdit((state) => {
-          const converted = convertEndpointToAnchorInDocument(state, routeId, pointIndex);
+          const converted = detachEndpointToAnchorInDocument(state, routeId, pointIndex, position);
           if (converted === null) {
             return null;
           }
@@ -649,19 +649,15 @@ function insertWaypointInDocument(
   };
 }
 
-function convertEndpointToAnchorInDocument(
+function detachEndpointToAnchorInDocument(
   state: MapEditorDocumentState,
   routeId: string,
   pointIndex: number,
+  position: Position,
 ): { readonly anchorId: string; readonly document: MapEditorDocumentState } | null {
   const route = state.connectionRoutes.get(routeId);
   const point = route?.points[pointIndex];
   if (route === undefined || point === undefined || point.kind !== 'zone') {
-    return null;
-  }
-
-  const position = state.zonePositions.get(point.zoneId);
-  if (position === undefined) {
     return null;
   }
 

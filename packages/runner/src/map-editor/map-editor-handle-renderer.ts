@@ -2,12 +2,17 @@ import type { GameDef } from '@ludoforge/engine/runtime';
 import { Circle, Container, Graphics, Polygon } from 'pixi.js';
 
 import { safeDestroyChildren, safeDestroyDisplayObject } from '../canvas/renderers/safe-destroy.js';
+import { resolveVisualDimensions } from '../canvas/renderers/shape-utils.js';
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
+import {
+  ZONE_RENDER_HEIGHT,
+  ZONE_RENDER_WIDTH,
+} from '../layout/layout-constants.js';
 import type { MapEditorStoreApi } from './map-editor-store.js';
 import {
   attachAnchorDragHandlers,
   attachControlPointDragHandlers,
-  attachZoneEndpointConvertDragHandlers,
+  attachZoneEdgeAnchorDragHandlers,
 } from './map-editor-drag.js';
 import { resolveRouteGeometry } from './map-editor-route-geometry.js';
 import { resolveMapEditorZoneVisuals } from './map-editor-zone-visuals.js';
@@ -16,6 +21,10 @@ const HANDLE_STROKE_COLOR = 0xffffff;
 const HANDLE_RADIUS = 8;
 const CONTROL_HANDLE_SIZE = 10;
 const TANGENT_LINE_ALPHA = 0.5;
+const DEFAULT_ZONE_DIMENSIONS = {
+  width: ZONE_RENDER_WIDTH,
+  height: ZONE_RENDER_HEIGHT,
+} as const;
 
 export interface EditorHandleRenderer {
   destroy(): void;
@@ -94,6 +103,13 @@ export function createEditorHandleRenderer(
       handle.interactiveChildren = false;
 
       if (point.endpoint.kind === 'zone') {
+        const zoneCenter = state.zonePositions.get(point.endpoint.zoneId);
+        const zoneVisual = zoneVisuals.get(point.endpoint.zoneId);
+        if (zoneCenter === undefined || zoneVisual === undefined) {
+          continue;
+        }
+
+        const zoneDimensions = resolveVisualDimensions(zoneVisual, DEFAULT_ZONE_DIMENSIONS);
         handle.eventMode = 'static';
         handle.cursor = 'grab';
         handle.hitArea = new Circle(0, 0, HANDLE_RADIUS);
@@ -104,7 +120,16 @@ export function createEditorHandleRenderer(
             alpha: 1,
           });
         cleanupDisposers.push(
-          attachZoneEndpointConvertDragHandlers(handle, routeId, pointIndex, dragSurface, store),
+          attachZoneEdgeAnchorDragHandlers(
+            handle,
+            routeId,
+            pointIndex,
+            dragSurface,
+            store,
+            zoneCenter,
+            zoneVisual.shape,
+            zoneDimensions,
+          ),
         );
       } else {
         handle.eventMode = 'static';

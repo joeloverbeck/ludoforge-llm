@@ -259,7 +259,7 @@ describe('createEditorHandleRenderer', () => {
     expect(fixture.store.getState().undoStack).toHaveLength(1);
   });
 
-  it('routes zone endpoint drag promotion through the editor store', () => {
+  it('routes zone endpoint drag through linked endpoint anchoring by default', () => {
     const fixture = createFixture({
       connectionRoutes: {
         'route:road': {
@@ -284,15 +284,16 @@ describe('createEditorHandleRenderer', () => {
 
     const root = fixture.handleLayer.children[0] as InstanceType<typeof MockContainer>;
     const zoneHandle = root.children[0] as InstanceType<typeof MockGraphics>;
-    zoneHandle.emit('pointerdown', pointer(1, 1));
-    dragSurface.emit('globalpointermove', pointer(16, 11));
+    zoneHandle.emit('pointerdown', pointer(0, 0));
+    dragSurface.emit('globalpointermove', pointer(50, 0));
     dragSurface.emit('pointerup');
 
     expect(fixture.store.getState().connectionRoutes.get('route:road')?.points[0]).toEqual({
-      kind: 'anchor',
-      anchorId: 'route:road:endpoint:zone:a:0',
+      kind: 'zone',
+      zoneId: 'zone:a',
+      anchor: 0,
     });
-    expect(fixture.store.getState().connectionAnchors.get('route:road:endpoint:zone:a:0')).toEqual({ x: 15, y: 10 });
+    expect(fixture.store.getState().connectionAnchors.has('route:road:endpoint:zone:a:0')).toBe(false);
     expect(fixture.store.getState().undoStack).toHaveLength(1);
   });
 

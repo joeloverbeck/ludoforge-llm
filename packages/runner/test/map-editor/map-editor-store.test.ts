@@ -444,7 +444,7 @@ describe('createMapEditorStore', () => {
     expect(store.getState().dirty).toBe(false);
   });
 
-  it('convertEndpointToAnchor promotes a zone endpoint into a new anchor at the current zone position', () => {
+  it('detachEndpointToAnchor promotes a zone endpoint into a new anchor at the provided resolved position', () => {
     const store = makeStore({
       routes: new Map<string, ConnectionRouteDefinition>([
         ['road:none', {
@@ -457,10 +457,10 @@ describe('createMapEditorStore', () => {
       ]),
     });
 
-    const anchorId = store.getState().convertEndpointToAnchor('road:none', 0);
+    const anchorId = store.getState().detachEndpointToAnchor('road:none', 0, { x: 15, y: -20 });
 
     expect(anchorId).toBe('road:none:endpoint:zone:a:0');
-    expect(store.getState().connectionAnchors.get('road:none:endpoint:zone:a:0')).toEqual({ x: 0, y: 0 });
+    expect(store.getState().connectionAnchors.get('road:none:endpoint:zone:a:0')).toEqual({ x: 15, y: -20 });
     expect(store.getState().connectionRoutes.get('road:none')).toEqual({
       points: [
         { kind: 'anchor', anchorId: 'road:none:endpoint:zone:a:0' },
@@ -470,7 +470,7 @@ describe('createMapEditorStore', () => {
     });
   });
 
-  it('convertEndpointToAnchor returns null for non-zone points', () => {
+  it('detachEndpointToAnchor returns null for non-zone points', () => {
     const store = makeStore({
       routes: new Map<string, ConnectionRouteDefinition>([
         ['road:none', {
@@ -483,11 +483,11 @@ describe('createMapEditorStore', () => {
       ]),
     });
 
-    expect(store.getState().convertEndpointToAnchor('road:none', 0)).toBeNull();
+    expect(store.getState().detachEndpointToAnchor('road:none', 0, { x: 5, y: 5 })).toBeNull();
     expect(store.getState().connectionAnchors.get('bend-1')).toEqual({ x: 20, y: 30 });
   });
 
-  it('convertEndpointToAnchor generates a unique id when the base endpoint anchor id already exists', () => {
+  it('detachEndpointToAnchor generates a unique id when the base endpoint anchor id already exists', () => {
     const store = makeStore({
       anchors: new Map([
         ['bend-1', { x: 20, y: 30 }],
@@ -496,10 +496,33 @@ describe('createMapEditorStore', () => {
       ]),
     });
 
-    const anchorId = store.getState().convertEndpointToAnchor('road:none', 0);
+    const anchorId = store.getState().detachEndpointToAnchor('road:none', 0, { x: 25, y: 35 });
 
     expect(anchorId).toBe('road:none:endpoint:zone:a:0:2');
-    expect(store.getState().connectionAnchors.get('road:none:endpoint:zone:a:0:2')).toEqual({ x: 0, y: 0 });
+    expect(store.getState().connectionAnchors.get('road:none:endpoint:zone:a:0:2')).toEqual({ x: 25, y: 35 });
+  });
+
+  it('detachEndpointToAnchor ignores any authored zone anchor metadata and preserves the supplied resolved position', () => {
+    const store = makeStore({
+      routes: new Map<string, ConnectionRouteDefinition>([
+        ['road:none', {
+          points: [
+            { kind: 'zone', zoneId: 'zone:a', anchor: 90 },
+            { kind: 'zone', zoneId: 'zone:b' },
+          ],
+          segments: [{ kind: 'straight' }],
+        }],
+      ]),
+    });
+
+    const anchorId = store.getState().detachEndpointToAnchor('road:none', 0, { x: 20, y: -40 });
+
+    expect(anchorId).toBe('road:none:endpoint:zone:a:0');
+    expect(store.getState().connectionAnchors.get('road:none:endpoint:zone:a:0')).toEqual({ x: 20, y: -40 });
+    expect(store.getState().connectionRoutes.get('road:none')?.points[0]).toEqual({
+      kind: 'anchor',
+      anchorId: 'road:none:endpoint:zone:a:0',
+    });
   });
 
   it('preserves previous map and route instances during immutable updates', () => {

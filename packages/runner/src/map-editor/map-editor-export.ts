@@ -2,9 +2,9 @@ import { stringify } from 'yaml';
 
 import {
   VisualConfigSchema,
-  type ConnectionRouteDefinition,
   type VisualConfig,
 } from '../config/visual-config-types.js';
+import { cloneConnectionRouteDefinition } from '../config/connection-route-utils.js';
 import type { MapEditorDocumentState } from './map-editor-types.js';
 
 export interface EditorExportInput extends MapEditorDocumentState {
@@ -45,7 +45,7 @@ export function buildExportConfig({
     connectionRoutes: Object.fromEntries(
       [...connectionRoutes.entries()].map(([routeId, route]) => [
         routeId,
-        cloneRouteDefinition(route),
+        cloneConnectionRouteDefinition(route),
       ]),
     ),
   };
@@ -83,22 +83,6 @@ export function triggerDownload(yamlString: string, filename: string): void {
   anchor.download = filename;
   anchor.click();
   URL.revokeObjectURL(objectUrl);
-}
-
-function cloneRouteDefinition(route: ConnectionRouteDefinition): ConnectionRouteDefinition {
-  return {
-    points: route.points.map((point) => ({ ...point })),
-    segments: route.segments.map((segment) => (
-      segment.kind === 'straight'
-        ? { kind: 'straight' }
-        : {
-            kind: 'quadratic',
-            control: segment.control.kind === 'anchor'
-              ? { kind: 'anchor', anchorId: segment.control.anchorId }
-              : { kind: 'position', x: segment.control.x, y: segment.control.y },
-          }
-    )),
-  };
 }
 
 function cloneSerializable<T>(value: T): T {

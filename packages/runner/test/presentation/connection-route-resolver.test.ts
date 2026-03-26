@@ -156,6 +156,86 @@ describe('resolveConnectionRoutes', () => {
     ]);
   });
 
+  it('resolves curvature controls from configured route definitions', () => {
+    const result = resolveConnectionRoutes(makeOptions({
+      zones: [
+        makeZone('alpha:none'),
+        makeZone('beta:none'),
+        makeZone('loc-alpha-beta:none', 'connection', 'highway'),
+      ],
+      adjacencies: [
+        makeAdjacency('loc-alpha-beta:none', 'alpha:none'),
+        makeAdjacency('loc-alpha-beta:none', 'beta:none'),
+      ],
+      positions: new Map([
+        ['alpha:none', { x: 0, y: 0 }],
+        ['beta:none', { x: 100, y: 0 }],
+      ]),
+      routeDefinitions: new Map([
+        ['loc-alpha-beta:none', {
+          points: [
+            { kind: 'zone', zoneId: 'alpha:none' },
+            { kind: 'zone', zoneId: 'beta:none' },
+          ],
+          segments: [
+            { kind: 'quadratic', control: { kind: 'curvature', offset: 0.2 } },
+          ],
+        }],
+      ]),
+    }));
+
+    expect(result.connectionRoutes).toEqual([
+      expect.objectContaining({
+        segments: [
+          {
+            kind: 'quadratic',
+            controlPoint: { kind: 'curvature', id: null, position: { x: 50, y: 20 } },
+          },
+        ],
+      }),
+    ]);
+  });
+
+  it('resolves explicit curvature angles in screen coordinates', () => {
+    const result = resolveConnectionRoutes(makeOptions({
+      zones: [
+        makeZone('alpha:none'),
+        makeZone('beta:none'),
+        makeZone('loc-alpha-beta:none', 'connection'),
+      ],
+      adjacencies: [
+        makeAdjacency('loc-alpha-beta:none', 'alpha:none'),
+        makeAdjacency('loc-alpha-beta:none', 'beta:none'),
+      ],
+      positions: new Map([
+        ['alpha:none', { x: 0, y: 0 }],
+        ['beta:none', { x: 100, y: 0 }],
+      ]),
+      routeDefinitions: new Map([
+        ['loc-alpha-beta:none', {
+          points: [
+            { kind: 'zone', zoneId: 'alpha:none' },
+            { kind: 'zone', zoneId: 'beta:none' },
+          ],
+          segments: [
+            { kind: 'quadratic', control: { kind: 'curvature', offset: 0.25, angle: 90 } },
+          ],
+        }],
+      ]),
+    }));
+
+    const segment = result.connectionRoutes[0]?.segments[0];
+    expect(segment).toMatchObject({
+      kind: 'quadratic',
+      controlPoint: { kind: 'curvature', id: null },
+    });
+    expect(segment?.kind).toBe('quadratic');
+    if (segment?.kind === 'quadratic') {
+      expect(segment.controlPoint.position.x).toBeCloseTo(50);
+      expect(segment.controlPoint.position.y).toBeCloseTo(-25);
+    }
+  });
+
   it('fails closed when configured anchor geometry is missing', () => {
     const zones = [
       makeZone('hue:none'),

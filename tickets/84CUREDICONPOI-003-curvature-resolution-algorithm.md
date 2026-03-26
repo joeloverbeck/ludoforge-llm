@@ -1,7 +1,7 @@
 # 84CUREDICONPOI-003 — Curvature Resolution Algorithm
 
 **Spec:** 84 (Curve Editing & Control Point UX), Deliverable 2 (resolution logic)
-**Deps**: `tickets/84CUREDICONPOI-002-curvature-control-schema.md`
+**Deps**: `archive/tickets/MAPEDIT/84CUREDICONPOI-002-curvature-control-schema.md`
 **Depends on:** 84CUREDICONPOI-002
 **Blocks:** 84CUREDICONPOI-004, 84CUREDICONPOI-008
 
@@ -10,6 +10,16 @@
 ## Summary
 
 Implement the pure function that resolves a `{ kind: 'curvature' }` control point into an absolute `{ x, y }` position given two endpoint positions. This resolution must be added to both the presentation resolver and the editor route geometry resolver.
+
+## Note
+
+The core deliverable described here was implemented as part of `84CUREDICONPOI-002` because the current runner architecture could not safely accept the new control kind without shared resolution support in both resolvers.
+
+Before implementing anything else under this ticket, reassess whether it should now be:
+- closed as already satisfied, or
+- narrowed to any remaining math/test gaps not covered by `84CUREDICONPOI-002`
+
+Do not reintroduce duplicate curvature math in presentation/editor code; shared geometry logic is now the architectural baseline.
 
 ## Algorithm
 

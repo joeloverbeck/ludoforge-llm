@@ -97,6 +97,43 @@ describe('map-editor-route-geometry', () => {
     });
   });
 
+  it('resolves curvature controls against segment endpoints', () => {
+    const geometry = resolveRouteGeometry(
+      {
+        points: [
+          { kind: 'zone', zoneId: 'zone:a' },
+          { kind: 'zone', zoneId: 'zone:b' },
+        ],
+        segments: [
+          { kind: 'quadratic', control: { kind: 'curvature', offset: 0.25, angle: 90 } },
+        ],
+      },
+      new Map([
+        ['zone:a', { x: 0, y: 0 }],
+        ['zone:b', { x: 80, y: 0 }],
+      ]),
+      new Map(),
+      new Map([
+        ['zone:a', { shape: 'rectangle' as const, width: 120, height: 80 }],
+        ['zone:b', { shape: 'rectangle' as const, width: 120, height: 80 }],
+      ]),
+    );
+
+    expect(geometry?.segments[0]).toMatchObject({
+      kind: 'quadratic',
+      controlPoint: {
+        kind: 'curvature',
+        id: null,
+      },
+    });
+    const segment = geometry?.segments[0];
+    expect(segment?.kind).toBe('quadratic');
+    if (segment?.kind === 'quadratic') {
+      expect(segment.controlPoint.position.x).toBeCloseTo(40);
+      expect(segment.controlPoint.position.y).toBeCloseTo(-20);
+    }
+  });
+
   it('samples multi-segment routes into a polyline and hit polygon', () => {
     const geometry = resolveRouteGeometry(
       makeRouteDefinition(),

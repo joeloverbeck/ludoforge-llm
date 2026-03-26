@@ -388,7 +388,7 @@ describe('createEditorRouteRenderer', () => {
 
     expect(fixture.store.getState().connectionRoutes.get('route:road')?.segments[0]).toEqual({
       kind: 'quadratic',
-      control: { kind: 'position', x: 40, y: 0 },
+      control: { kind: 'curvature', offset: 0 },
     });
   });
 

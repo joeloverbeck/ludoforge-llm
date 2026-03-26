@@ -136,9 +136,16 @@ const ConnectionRouteControlPositionSchema = z.object({
   y: z.number(),
 }).strict();
 
+const ConnectionRouteControlCurvatureSchema = z.object({
+  kind: z.literal('curvature'),
+  offset: z.number(),
+  angle: z.number().min(0).max(360).optional(),
+}).strict();
+
 const ConnectionRouteControlSchema = z.discriminatedUnion('kind', [
   ConnectionRouteControlAnchorSchema,
   ConnectionRouteControlPositionSchema,
+  ConnectionRouteControlCurvatureSchema,
 ]);
 
 const StraightConnectionRouteSegmentSchema = z.object({
@@ -609,6 +616,7 @@ export type AnchorConnectionEndpoint = z.infer<typeof AnchorConnectionEndpointSc
 export type ConnectionEndpoint = z.infer<typeof ConnectionEndpointSchema>;
 export type ConnectionRouteControlAnchor = z.infer<typeof ConnectionRouteControlAnchorSchema>;
 export type ConnectionRouteControlPosition = z.infer<typeof ConnectionRouteControlPositionSchema>;
+export type ConnectionRouteControlCurvature = z.infer<typeof ConnectionRouteControlCurvatureSchema>;
 export type ConnectionRouteControl = z.infer<typeof ConnectionRouteControlSchema>;
 export type StraightConnectionRouteSegment = z.infer<typeof StraightConnectionRouteSegmentSchema>;
 export type QuadraticConnectionRouteSegment = z.infer<typeof QuadraticConnectionRouteSegmentSchema>;

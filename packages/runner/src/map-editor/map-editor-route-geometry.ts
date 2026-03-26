@@ -7,6 +7,7 @@ import type {
 } from './map-editor-types.js';
 import type { ZoneShape } from '../config/visual-config-defaults.js';
 import {
+  resolveCurvatureControlPoint,
   normalize,
   perpendicular,
   quadraticBezierPoint,
@@ -38,7 +39,7 @@ export interface ResolvedEditorRoutePoint {
 }
 
 export interface ResolvedEditorRouteControlPoint {
-  readonly kind: 'anchor' | 'position';
+  readonly kind: 'anchor' | 'position' | 'curvature';
   readonly id: string | null;
   readonly position: Position;
 }
@@ -267,7 +268,7 @@ function resolveSegment(
     };
   }
 
-  const controlPoint = resolveControlPoint(segment.control, connectionAnchors);
+  const controlPoint = resolveControlPoint(segment.control, start, end, connectionAnchors);
   if (controlPoint === null) {
     return null;
   }
@@ -282,6 +283,8 @@ function resolveSegment(
 
 function resolveControlPoint(
   control: ConnectionRouteControl,
+  start: Position,
+  end: Position,
   connectionAnchors: ReadonlyMap<string, Position>,
 ): ResolvedEditorRouteControlPoint | null {
   if (control.kind === 'position') {
@@ -289,6 +292,14 @@ function resolveControlPoint(
       kind: 'position',
       id: null,
       position: { x: control.x, y: control.y },
+    };
+  }
+
+  if (control.kind === 'curvature') {
+    return {
+      kind: 'curvature',
+      id: null,
+      position: resolveCurvatureControlPoint(start, end, control.offset, control.angle),
     };
   }
 

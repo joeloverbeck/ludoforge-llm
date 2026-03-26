@@ -1,7 +1,7 @@
 # 84CUREDICONPOI-008 — FITL Visual Config Migration to Curvature
 
 **Spec:** 84 (Curve Editing & Control Point UX), Deliverable 4
-**Deps**: `tickets/84CUREDICONPOI-002-curvature-control-schema.md`, `tickets/84CUREDICONPOI-003-curvature-resolution-algorithm.md`, `tickets/84CUREDICONPOI-004-curvature-store-export-renderer.md`
+**Deps**: `archive/tickets/MAPEDIT/84CUREDICONPOI-002-curvature-control-schema.md`, `tickets/84CUREDICONPOI-003-curvature-resolution-algorithm.md`, `tickets/84CUREDICONPOI-004-curvature-store-export-renderer.md`
 **Depends on:** 84CUREDICONPOI-002, 84CUREDICONPOI-003, 84CUREDICONPOI-004
 **Blocks:** None
 
@@ -10,6 +10,14 @@
 ## Summary
 
 Two FITL routes currently use `{ kind: position }` control points with absolute world coordinates that do not correspond to actual zone positions computed by the ForceAtlas2 layout engine. Migrate both to `{ kind: curvature }` with relative offsets.
+
+## Note
+
+The dependency chain here is now conservative rather than exact:
+- `84CUREDICONPOI-002` already landed the schema, shared curvature resolution, and store/export preservation needed for this data migration
+- `84CUREDICONPOI-004` may no longer be a hard architectural prerequisite unless new renderer/editor gaps are discovered during reassessment
+
+Treat this ticket primarily as a data migration plus visual tuning task. Before implementation, confirm whether any remaining work in `84CUREDICONPOI-003` / `84CUREDICONPOI-004` is still materially blocking the FITL config change.
 
 ## Task
 

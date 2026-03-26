@@ -246,7 +246,7 @@ describe('createMapEditorStore', () => {
     expect(store.getState().connectionAnchors.has('bend-1')).toBe(false);
   });
 
-  it('convertSegment toggles between straight and quadratic using midpoint control positions', () => {
+  it('convertSegment toggles between straight and quadratic using zero-offset curvature controls', () => {
     const store = makeStore({
       routes: new Map<string, ConnectionRouteDefinition>([
         ['road:none', {
@@ -263,7 +263,7 @@ describe('createMapEditorStore', () => {
 
     expect(store.getState().connectionRoutes.get('road:none')?.segments[0]).toEqual({
       kind: 'quadratic',
-      control: { kind: 'position', x: 30, y: 0 },
+      control: { kind: 'curvature', offset: 0 },
     });
 
     store.getState().convertSegment('road:none', 0, 'straight');
@@ -271,7 +271,7 @@ describe('createMapEditorStore', () => {
     expect(store.getState().connectionRoutes.get('road:none')?.segments[0]).toEqual({ kind: 'straight' });
   });
 
-  it('convertSegment seeds quadratic controls from anchored endpoint geometry instead of zone centers', () => {
+  it('convertSegment seeds quadratic controls from anchored endpoint geometry without absolute positions', () => {
     const store = makeStore({
       zoneOverrides: {
         'zone:a': { shape: 'rectangle', width: 40, height: 20 },
@@ -292,7 +292,7 @@ describe('createMapEditorStore', () => {
 
     expect(store.getState().connectionRoutes.get('road:none')?.segments[0]).toEqual({
       kind: 'quadratic',
-      control: { kind: 'position', x: 20, y: -5 },
+      control: { kind: 'curvature', offset: 0 },
     });
   });
 
@@ -315,6 +315,27 @@ describe('createMapEditorStore', () => {
     expect(store.getState().connectionRoutes.get('river:none')?.segments[0]).toEqual({
       kind: 'quadratic',
       control: { kind: 'anchor', anchorId: 'curve-ctrl' },
+    });
+  });
+
+  it('moves curvature controls by preserving the curvature model', () => {
+    const store = makeStore({
+      routes: new Map<string, ConnectionRouteDefinition>([
+        ['river:none', {
+          points: [
+            { kind: 'zone', zoneId: 'zone:a' },
+            { kind: 'zone', zoneId: 'zone:b' },
+          ],
+          segments: [{ kind: 'quadratic', control: { kind: 'curvature', offset: 0.2 } }],
+        }],
+      ]),
+    });
+
+    store.getState().moveControlPoint('river:none', 0, { x: 30, y: -30 });
+
+    expect(store.getState().connectionRoutes.get('river:none')?.segments[0]).toEqual({
+      kind: 'quadratic',
+      control: { kind: 'curvature', offset: 0.5, angle: 90 },
     });
   });
 

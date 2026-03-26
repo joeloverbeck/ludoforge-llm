@@ -3,12 +3,14 @@ import { describe, expect, it } from 'vitest';
 import {
   approximateBezierHitPolygon,
   computeControlPoint,
+  deriveCurvatureControl,
   normalize,
   perpendicular,
   quadraticBezierMidpoint,
   quadraticBezierMidpointTangent,
   quadraticBezierPoint,
   quadraticBezierTangent,
+  resolveCurvatureControlPoint,
 } from '../../../src/canvas/geometry/bezier-utils.js';
 import type { Point2D } from '../../../src/canvas/geometry/point2d.js';
 
@@ -61,6 +63,24 @@ describe('bezier-utils', () => {
 
     expect(dot(segment, offset)).toBeCloseTo(0);
     expect(controlPoint).toEqual({ x: 5, y: 3 });
+  });
+
+  it('resolves curvature controls relative to endpoint span', () => {
+    expect(resolveCurvatureControlPoint({ x: 0, y: 0 }, { x: 10, y: 0 }, 0.3)).toEqual({ x: 5, y: 3 });
+  });
+
+  it('resolves curvature angles in screen coordinates', () => {
+    const point = resolveCurvatureControlPoint({ x: 0, y: 0 }, { x: 10, y: 0 }, 0.5, 90);
+    expect(point.x).toBeCloseTo(5);
+    expect(point.y).toBeCloseTo(-5);
+  });
+
+  it('derives explicit curvature controls from dragged control points', () => {
+    expect(deriveCurvatureControl(
+      { x: 0, y: 0 },
+      { x: 10, y: 0 },
+      { x: 5, y: -5 },
+    )).toEqual({ offset: 0.5, angle: 90 });
   });
 
   it('returns an orthogonal perpendicular vector', () => {

@@ -166,6 +166,42 @@ describe('map-editor-export', () => {
     });
   });
 
+  it('buildExportConfig and exportVisualConfig preserve curvature controls', () => {
+    const input = makeExportInput();
+    input.connectionRoutes = new Map<string, ConnectionRouteDefinition>([
+      ['route:none', {
+        points: [
+          { kind: 'zone', zoneId: 'zone:a' },
+          { kind: 'zone', zoneId: 'zone:b' },
+        ],
+        segments: [
+          { kind: 'quadratic', control: { kind: 'curvature', offset: 0.3, angle: 90 } },
+        ],
+      }],
+    ]);
+
+    expect(buildExportConfig(input).zones?.connectionRoutes?.['route:none']).toEqual({
+      points: [
+        { kind: 'zone', zoneId: 'zone:a' },
+        { kind: 'zone', zoneId: 'zone:b' },
+      ],
+      segments: [
+        { kind: 'quadratic', control: { kind: 'curvature', offset: 0.3, angle: 90 } },
+      ],
+    });
+
+    const reparsed = parseVisualConfigStrict(parse(exportVisualConfig(input)));
+    expect(reparsed?.zones?.connectionRoutes?.['route:none']).toEqual({
+      points: [
+        { kind: 'zone', zoneId: 'zone:a' },
+        { kind: 'zone', zoneId: 'zone:b' },
+      ],
+      segments: [
+        { kind: 'quadratic', control: { kind: 'curvature', offset: 0.3, angle: 90 } },
+      ],
+    });
+  });
+
   it('triggerDownload creates a blob url, clicks an anchor, and revokes the url', () => {
     const createObjectURL = vi.fn(() => 'blob:visual-config');
     const revokeObjectURL = vi.fn();

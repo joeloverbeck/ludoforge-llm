@@ -1,9 +1,17 @@
 import type { GameDef } from '@ludoforge/engine/runtime';
 import { create, type StoreApi, type UseBoundStore } from 'zustand';
 
+import { deriveCurvatureControl } from '../canvas/geometry/bezier-utils.js';
+import {
+  cloneConnectionRouteDefinition,
+  cloneConnectionRouteSegment,
+  connectionRouteControlsEqual,
+  connectionRouteSegmentsEqual,
+} from '../config/connection-route-utils.js';
 import { VisualConfigProvider } from '../config/visual-config-provider.js';
 import type {
   ConnectionEndpoint,
+  ConnectionRouteControl,
   ConnectionRouteDefinition,
   ConnectionRouteSegment,
   EditorSnapshot,
@@ -153,7 +161,7 @@ export function createMapEditorStore(
       },
 
       moveControlPoint(routeId, segmentIndex, position) {
-        applyCommittedEdit((state) => moveControlPointInDocument(state, routeId, segmentIndex, position));
+        applyCommittedEdit((state) => moveControlPointInDocument(state, zoneVisuals, routeId, segmentIndex, position));
       },
 
       setEndpointAnchor(routeId, pointIndex, anchor) {
@@ -230,7 +238,7 @@ export function createMapEditorStore(
       },
 
       previewControlPointMove(routeId, segmentIndex, position) {
-        applyPreviewEdit((state) => moveControlPointInDocument(state, routeId, segmentIndex, position));
+        applyPreviewEdit((state) => moveControlPointInDocument(state, zoneVisuals, routeId, segmentIndex, position));
       },
 
       commitInteraction() {
@@ -396,7 +404,7 @@ function cloneRouteMap(visualConfig: VisualConfig): ReadonlyMap<string, Connecti
   return new Map(
     Object.entries(visualConfig.zones?.connectionRoutes ?? {}).map(([routeId, route]) => [
       routeId,
-      cloneRouteDefinition(route),
+      cloneConnectionRouteDefinition(route),
     ]),
   );
 }
@@ -411,15 +419,12 @@ function cloneRouteDefinitions(
   routes: ReadonlyMap<string, ConnectionRouteDefinition>,
 ): ReadonlyMap<string, ConnectionRouteDefinition> {
   return new Map(
-    [...routes.entries()].map(([routeId, route]) => [routeId, cloneRouteDefinition(route)]),
+    [...routes.entries()].map(([routeId, route]) => [routeId, cloneConnectionRouteDefinition(route)]),
   );
 }
 
 function cloneRouteDefinition(route: ConnectionRouteDefinition): ConnectionRouteDefinition {
-  return {
-    points: route.points.map(cloneEndpoint),
-    segments: route.segments.map(cloneSegment),
-  };
+  return cloneConnectionRouteDefinition(route);
 }
 
 function pushUndoSnapshot(
@@ -506,31 +511,7 @@ function endpointsEqual(left: ConnectionEndpoint, right: ConnectionEndpoint): bo
 }
 
 function segmentsEqual(left: ConnectionRouteSegment, right: ConnectionRouteSegment): boolean {
-  if (left.kind !== right.kind) {
-    return false;
-  }
-
-  if (left.kind === 'straight' && right.kind === 'straight') {
-    return true;
-  }
-
-  if (left.kind !== 'quadratic' || right.kind !== 'quadratic') {
-    return false;
-  }
-
-  if (left.control.kind !== right.control.kind) {
-    return false;
-  }
-
-  if (left.control.kind === 'anchor' && right.control.kind === 'anchor') {
-    return left.control.anchorId === right.control.anchorId;
-  }
-
-  if (left.control.kind === 'position' && right.control.kind === 'position') {
-    return left.control.x === right.control.x && left.control.y === right.control.y;
-  }
-
-  return false;
+  return connectionRouteSegmentsEqual(left, right);
 }
 
 function moveZoneInDocument(
@@ -573,6 +554,7 @@ function moveAnchorInDocument(
 
 function moveControlPointInDocument(
   state: MapEditorDocumentState,
+  zoneVisuals: ReadonlyMap<string, EditorRouteZoneVisual>,
   routeId: string,
   segmentIndex: number,
   position: Position,
@@ -587,7 +569,8 @@ function moveControlPointInDocument(
     return moveAnchorInDocument(state, segment.control.anchorId, position);
   }
 
-  if (positionsEqual(segment.control, position)) {
+  const nextControl = resolveMovedControlPoint(segment.control, route, segmentIndex, state, zoneVisuals, position);
+  if (nextControl === null || connectionRouteControlsEqual(segment.control, nextControl)) {
     return null;
   }
 
@@ -597,7 +580,7 @@ function moveControlPointInDocument(
       ? entry
       : {
           kind: 'quadratic' as const,
-          control: { kind: 'position' as const, x: position.x, y: position.y },
+          control: nextControl,
         }
   ));
   connectionRoutes.set(routeId, {
@@ -610,6 +593,30 @@ function moveControlPointInDocument(
     connectionAnchors: state.connectionAnchors,
     connectionRoutes,
   };
+}
+
+function resolveMovedControlPoint(
+  control: ConnectionRouteControl,
+  route: ConnectionRouteDefinition,
+  segmentIndex: number,
+  state: MapEditorDocumentState,
+  zoneVisuals: ReadonlyMap<string, EditorRouteZoneVisual>,
+  position: Position,
+): ConnectionRouteControl | null {
+  if (control.kind === 'position') {
+    return { kind: 'position', x: position.x, y: position.y };
+  }
+
+  const start = resolveEndpointPosition(route.points[segmentIndex], state, zoneVisuals);
+  const end = resolveEndpointPosition(route.points[segmentIndex + 1], state, zoneVisuals);
+  if (start === null || end === null) {
+    return null;
+  }
+
+  const derived = deriveCurvatureControl(start, end, position);
+  return derived.angle === undefined
+    ? { kind: 'curvature', offset: derived.offset }
+    : { kind: 'curvature', offset: derived.offset, angle: derived.angle };
 }
 
 function insertWaypointInDocument(
@@ -777,18 +784,18 @@ function convertSegmentInDocument(
   const connectionAnchors = new Map(state.connectionAnchors);
 
   if (kind === 'quadratic') {
-    const start = resolveEndpointPosition(route.points[segmentIndex], state, zoneVisuals);
-    const end = resolveEndpointPosition(route.points[segmentIndex + 1], state, zoneVisuals);
-    if (start === null || end === null) {
+    if (
+      resolveEndpointPosition(route.points[segmentIndex], state, zoneVisuals) === null
+      || resolveEndpointPosition(route.points[segmentIndex + 1], state, zoneVisuals) === null
+    ) {
       return null;
     }
 
     nextSegments[segmentIndex] = {
       kind: 'quadratic',
       control: {
-        kind: 'position',
-        x: (start.x + end.x) / 2,
-        y: (start.y + end.y) / 2,
+        kind: 'curvature',
+        offset: 0,
       },
     };
   } else {
@@ -896,12 +903,5 @@ function cloneEndpoint(endpoint: ConnectionEndpoint): ConnectionEndpoint {
 }
 
 function cloneSegment(segment: ConnectionRouteSegment): ConnectionRouteSegment {
-  return segment.kind === 'straight'
-    ? { kind: 'straight' }
-    : {
-        kind: 'quadratic',
-        control: segment.control.kind === 'anchor'
-          ? { kind: 'anchor', anchorId: segment.control.anchorId }
-          : { kind: 'position', x: segment.control.x, y: segment.control.y },
-      };
+  return cloneConnectionRouteSegment(segment);
 }

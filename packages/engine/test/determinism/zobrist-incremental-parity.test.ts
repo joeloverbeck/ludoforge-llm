@@ -42,10 +42,11 @@ describe('Zobrist incremental parity — Texas Hold\'em', () => {
   const TEXAS_MAX_TURNS = 100;
   const TEXAS_SEEDS = [1, 17, 42, 99, 256];
 
+  const def = compileTexasDef();
+  const runtime = createGameDefRuntime(def);
+
   for (const seed of TEXAS_SEEDS) {
     it(`seed=${seed}: incremental hash matches full recompute every move`, () => {
-      const def = compileTexasDef();
-      const runtime = createGameDefRuntime(def);
       const agents = createRandomAgents(TEXAS_PLAYER_COUNT);
 
       // Run with verification enabled — throws HASH_DRIFT on mismatch
@@ -63,10 +64,11 @@ describe('Zobrist incremental parity — FITL', () => {
   const FITL_MAX_TURNS = 200;
   const FITL_SEEDS = [42, 77, 123];
 
+  const def = compileFitlDef();
+  const runtime = createGameDefRuntime(def);
+
   for (const seed of FITL_SEEDS) {
     it(`seed=${seed}: incremental hash matches full recompute every move`, () => {
-      const def = compileFitlDef();
-      const runtime = createGameDefRuntime(def);
       const agents = createRandomAgents(FITL_PLAYER_COUNT);
 
       const trace = runGame(def, seed, agents, FITL_MAX_TURNS, FITL_PLAYER_COUNT, {
@@ -79,9 +81,10 @@ describe('Zobrist incremental parity — FITL', () => {
 });
 
 describe('Zobrist incremental parity — interval mode', () => {
+  const def = compileTexasDef();
+  const runtime = createGameDefRuntime(def);
+
   it('verifies every 5th move without error', () => {
-    const def = compileTexasDef();
-    const runtime = createGameDefRuntime(def);
     const agents = createRandomAgents(4);
 
     const trace = runGame(def, 42, agents, 100, 4, {

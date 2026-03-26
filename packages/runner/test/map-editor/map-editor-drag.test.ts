@@ -124,6 +124,7 @@ describe('map-editor-drag', () => {
     expect(dragSurface.listenerCount('pointerupoutside')).toBe(0);
     expect(store.getState().zonePositions.get('zone:a')).toEqual({ x: 10, y: 20 });
     expect(store.getState().isDragging).toBe(false);
+    expect(store.getState().dragPreview).toBeNull();
     expect(zoneContainer.cursor).toBe('default');
   });
 
@@ -175,6 +176,7 @@ describe('map-editor-drag', () => {
 
     expect(store.getState().selectedRouteId).toBe('river:none');
     expect(store.getState().connectionAnchors.get('curve-ctrl')).toEqual({ x: 77, y: 90 });
+    expect(store.getState().dragPreview).toBeNull();
     expect(store.getState().undoStack).toHaveLength(0);
 
     dragSurface.emit('pointerup');
@@ -205,6 +207,13 @@ describe('map-editor-drag', () => {
     zoneEndpointHandle.emit('pointerdown', pointer(10, 20));
     expect(store.getState().selectedRouteId).toBe('road:none');
     expect(store.getState().isDragging).toBe(true);
+    expect(store.getState().dragPreview).toEqual({
+      kind: 'zone-edge-anchor',
+      routeId: 'road:none',
+      pointIndex: 0,
+      handlePosition: { x: 10, y: 20 },
+      angle: null,
+    });
 
     dragSurface.emit('globalpointermove', pointer(40, 20));
 
@@ -214,6 +223,13 @@ describe('map-editor-drag', () => {
       anchor: 0,
     });
     expect(zoneEndpointHandle.position).toEqual(expect.objectContaining({ x: 30, y: 20 }));
+    expect(store.getState().dragPreview).toEqual({
+      kind: 'zone-edge-anchor',
+      routeId: 'road:none',
+      pointIndex: 0,
+      handlePosition: { x: 30, y: 20 },
+      angle: 0,
+    });
     expect(store.getState().connectionAnchors.get('road:none:endpoint:zone:a:0')).toBeUndefined();
     expect(store.getState().undoStack).toHaveLength(0);
 
@@ -230,6 +246,7 @@ describe('map-editor-drag', () => {
       anchor: 0,
     });
     expect(store.getState().isDragging).toBe(false);
+    expect(store.getState().dragPreview).toBeNull();
     expect(zoneEndpointHandle.cursor).toBe('grab');
 
     cleanup();
@@ -318,6 +335,13 @@ describe('map-editor-drag', () => {
       zoneId: 'zone:a',
       anchor: 0,
     });
+    expect(store.getState().dragPreview).toEqual({
+      kind: 'zone-edge-anchor',
+      routeId: 'road:none',
+      pointIndex: 0,
+      handlePosition: { x: 30, y: 20 },
+      angle: 0,
+    });
 
     dragSurface.emit('globalpointermove', pointer(100, 20));
 
@@ -326,6 +350,7 @@ describe('map-editor-drag', () => {
       anchorId: 'road:none:endpoint:zone:a:0',
     });
     expect(store.getState().connectionAnchors.get('road:none:endpoint:zone:a:0')).toEqual({ x: 30, y: 20 });
+    expect(store.getState().dragPreview).toBeNull();
     expect(zoneEndpointHandle.position).toEqual(expect.objectContaining({ x: 30, y: 20 }));
 
     dragSurface.emit('globalpointermove', pointer(120, 30));

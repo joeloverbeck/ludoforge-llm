@@ -3,6 +3,8 @@ import { Circle, Container, Graphics, Polygon } from 'pixi.js';
 
 import { safeDestroyChildren, safeDestroyDisplayObject } from '../canvas/renderers/safe-destroy.js';
 import { resolveVisualDimensions } from '../canvas/renderers/shape-utils.js';
+import { STROKE_LABEL_FONT_NAME } from '../canvas/text/bitmap-font-registry.js';
+import { createManagedBitmapText, destroyManagedBitmapText } from '../canvas/text/bitmap-text-runtime.js';
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import {
   ZONE_RENDER_HEIGHT,
@@ -21,6 +23,8 @@ const HANDLE_STROKE_COLOR = 0xffffff;
 const HANDLE_RADIUS = 8;
 const CONTROL_HANDLE_SIZE = 10;
 const TANGENT_LINE_ALPHA = 0.5;
+const ANGLE_LABEL_OFFSET_X = 18;
+const ANGLE_LABEL_OFFSET_Y = -18;
 const DEFAULT_ZONE_DIMENSIONS = {
   width: ZONE_RENDER_WIDTH,
   height: ZONE_RENDER_HEIGHT,
@@ -45,6 +49,23 @@ export function createEditorHandleRenderer(
   root.eventMode = 'passive';
   root.interactiveChildren = true;
   handleLayer.addChild(root);
+  const overlayRoot = new Container();
+  overlayRoot.eventMode = 'none';
+  overlayRoot.interactiveChildren = false;
+  handleLayer.addChild(overlayRoot);
+  const angleLabel = createManagedBitmapText({
+    parent: overlayRoot,
+    text: '',
+    style: {
+      fontName: STROKE_LABEL_FONT_NAME,
+      fontSize: 12,
+      fill: '#f8fafc',
+      stroke: { color: '#000000', width: 3 },
+    },
+    anchor: { x: 0.5, y: 0.5 },
+    visible: false,
+    renderable: false,
+  });
   let cleanupDisposers: Array<() => void> = [];
   let tangentGraphics: Graphics[] = [];
 
@@ -239,18 +260,42 @@ export function createEditorHandleRenderer(
     return true;
   };
 
+  const syncAngleIndicator = (state: ReturnType<MapEditorStoreApi['getState']>): void => {
+    const dragPreview = state.dragPreview;
+    if (
+      dragPreview?.kind !== 'zone-edge-anchor'
+      || dragPreview.routeId !== state.selectedRouteId
+      || dragPreview.angle === null
+    ) {
+      angleLabel.visible = false;
+      angleLabel.renderable = false;
+      return;
+    }
+
+    angleLabel.text = `${Math.round(dragPreview.angle)}deg`;
+    angleLabel.position.set(
+      dragPreview.handlePosition.x + ANGLE_LABEL_OFFSET_X,
+      dragPreview.handlePosition.y + ANGLE_LABEL_OFFSET_Y,
+    );
+    angleLabel.visible = true;
+    angleLabel.renderable = true;
+  };
+
   render(store.getState());
+  syncAngleIndicator(store.getState());
 
   const unsubscribe = store.subscribe((state, previousState) => {
     const routeSelectionChanged = state.selectedRouteId !== previousState.selectedRouteId;
     const documentChanged = state.zonePositions !== previousState.zonePositions
       || state.connectionAnchors !== previousState.connectionAnchors
       || state.connectionRoutes !== previousState.connectionRoutes;
+    const dragPreviewChanged = state.dragPreview !== previousState.dragPreview;
     const dragEnded = previousState.isDragging && !state.isDragging;
 
     if (
       !routeSelectionChanged
       && !documentChanged
+      && !dragPreviewChanged
       && !dragEnded
     ) {
       return;
@@ -260,17 +305,21 @@ export function createEditorHandleRenderer(
       if (!syncTangentsDuringDrag(state)) {
         render(state);
       }
+      syncAngleIndicator(state);
       return;
     }
 
     render(state);
+    syncAngleIndicator(state);
   });
 
   return {
     destroy(): void {
       unsubscribe();
       releaseInteractionDisposers();
+      destroyManagedBitmapText(angleLabel);
       safeDestroyDisplayObject(root, { children: true });
+      safeDestroyDisplayObject(overlayRoot, { children: true });
     },
   };
 }

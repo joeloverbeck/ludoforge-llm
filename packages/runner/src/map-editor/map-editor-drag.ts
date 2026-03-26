@@ -70,6 +70,28 @@ export function attachZoneEdgeAnchorDragHandlers(
   let anchorId: string | null = null;
   let detached = false;
 
+  const syncZoneEdgeDragPreview = (position: Position, angle: number | null): void => {
+    store.getState().setDragPreview({
+      kind: 'zone-edge-anchor',
+      routeId,
+      pointIndex,
+      handlePosition: position,
+      angle,
+    });
+  };
+
+  const clearZoneEdgeDragPreview = (): void => {
+    const dragPreview = store.getState().dragPreview;
+    if (
+      dragPreview?.kind !== 'zone-edge-anchor'
+      || dragPreview.routeId !== routeId
+      || dragPreview.pointIndex !== pointIndex
+    ) {
+      return;
+    }
+    store.getState().clearDragPreview();
+  };
+
   const onPointerDown = (event: PointerEventLike): void => {
     if (event.button !== undefined && event.button !== 0) {
       return;
@@ -91,6 +113,10 @@ export function attachZoneEdgeAnchorDragHandlers(
     state.selectRoute(routeId);
     state.beginInteraction();
     state.setDragging(true);
+    syncZoneEdgeDragPreview(
+      { x: handle.position.x, y: handle.position.y },
+      null,
+    );
 
     dragSurface.on('globalpointermove', onPointerMove);
     dragSurface.on('pointerup', finishDrag);
@@ -117,6 +143,7 @@ export function attachZoneEdgeAnchorDragHandlers(
       if (anchorId !== null) {
         state.previewAnchorMove(anchorId, nextPosition);
       }
+      clearZoneEdgeDragPreview();
       return;
     }
 
@@ -129,6 +156,7 @@ export function attachZoneEdgeAnchorDragHandlers(
       y: zoneCenter.y + edgeOffset.y,
     };
     handle.position.set(snappedEdgePosition.x, snappedEdgePosition.y);
+    syncZoneEdgeDragPreview(snappedEdgePosition, angle);
 
     const detachThreshold = 2 * Math.max(zoneDimensions.width, zoneDimensions.height);
     const distanceFromCenter = Math.hypot(nextPosition.x - zoneCenter.x, nextPosition.y - zoneCenter.y);
@@ -138,6 +166,7 @@ export function attachZoneEdgeAnchorDragHandlers(
         return;
       }
       detached = true;
+      clearZoneEdgeDragPreview();
       return;
     }
 
@@ -159,6 +188,7 @@ export function attachZoneEdgeAnchorDragHandlers(
     const state = store.getState();
     state.commitInteraction();
     state.setDragging(false);
+    clearZoneEdgeDragPreview();
   };
 
   handle.on('pointerdown', onPointerDown);
@@ -176,6 +206,7 @@ export function attachZoneEdgeAnchorDragHandlers(
       const state = store.getState();
       state.cancelInteraction();
       state.setDragging(false);
+      clearZoneEdgeDragPreview();
     }
 
     handle.cursor = 'default';

@@ -1237,20 +1237,12 @@ export const applyShiftMarker = (
     return { state: cursor.state, rng: cursor.rng };
   }
 
-  const shiftViolation = resolution.violation;
-  if (shiftViolation !== null) {
-    throw effectRuntimeError(
-      EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
-      `Marker state "${newState}" is illegal for lattice "${marker}" in space "${String(spaceId)}"`,
-      {
-        effectType: 'shiftMarker',
-        marker,
-        state: newState,
-        spaceId: String(spaceId),
-        constraintIndex: shiftViolation.constraintIndex,
-        allowedStates: shiftViolation.constraint.allowedStates,
-      },
-    );
+  // If the destination state violates a space marker constraint, treat the
+  // shift as a no-op (same as boundary clamping).  A game may define
+  // constraints that lock certain spaces to specific marker states — a
+  // shift attempt there is structurally valid but has no effect.
+  if (resolution.violation !== null) {
+    return { state: cursor.state, rng: cursor.rng };
   }
 
   if (cursor.tracker) {

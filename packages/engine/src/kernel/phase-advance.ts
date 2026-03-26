@@ -21,6 +21,7 @@ import {
 import { terminalResult } from './terminal.js';
 import type { GameDef, GameState, TriggerLogEntry } from './types.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';
+import { expireUnfulfillableRequiredFreeOperationGrants } from './turn-flow-eligibility.js';
 
 const firstPhaseId = (def: GameDef): GameState['currentPhase'] => {
   const phaseId = def.turnStructure.phases.at(0)?.id;
@@ -470,7 +471,13 @@ export const advanceToDecisionPoint = (
     );
   }
 
-  const maxAutoAdvancesPerMove = 2 * state.playerCount * phaseCount + 1;
+  // Use the total phase count (not just current effective phases) because
+  // effective phases can change mid-loop (e.g., coup→non-coup transitions
+  // when advancePhase promotes a new card).  The total count is a safe
+  // upper bound that prevents false stall detection across phase-set
+  // transitions.
+  const totalPhaseCount = def.turnStructure.phases.length + (def.turnStructure.interrupts?.length ?? 0);
+  const maxAutoAdvancesPerMove = 2 * state.playerCount * totalPhaseCount + 1;
   const seatResolution = createSeatResolutionContext(def, state.playerCount);
   let nextState = state;
   const interrupts = def.turnStructure.interrupts;
@@ -484,6 +491,18 @@ export const advanceToDecisionPoint = (
     perfDynEnd(profiler, 'adp:legalMoves', t0_lm);
     if (hasLegal) {
       break;
+    }
+
+    // If a required free-operation grant blocks all moves but no free ops are
+    // legal, expire the unfulfillable grant and re-check legal moves.
+    if (phaseValid) {
+      const expired = expireUnfulfillableRequiredFreeOperationGrants(def, nextState, seatResolution);
+      if (expired !== null) {
+        const tableExp = cachedRuntime?.zobristTable;
+        nextState = tableExp ? { ...expired, _runningHash: reconcileRunningHash(tableExp, nextState, expired) } : expired;
+        advances += 1;
+        continue;
+      }
     }
 
     if (advances >= maxAutoAdvancesPerMove) {

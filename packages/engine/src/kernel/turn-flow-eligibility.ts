@@ -894,6 +894,63 @@ export const hasActiveSeatRequiredPendingFreeOperationGrant = (
   );
 };
 
+/**
+ * When the active seat has a required pending free-operation grant but no legal
+ * free-operation moves exist to fulfill it, the grant blocks all moves (including
+ * pass), violating the kernel contract that every non-terminal state has at least
+ * one legal move.  This function detects that scenario and removes the
+ * unfulfillable required grants, returning the updated state.  Returns `null` if
+ * no unfulfillable grants are present.
+ */
+export const expireUnfulfillableRequiredFreeOperationGrants = (
+  def: GameDef,
+  state: GameState,
+  seatResolution: SeatResolutionContext,
+): GameState | null => {
+  const runtime = cardDrivenRuntime(state);
+  if (runtime === null) {
+    return null;
+  }
+  const pending = runtime.pendingFreeOperationGrants ?? [];
+  if (pending.length === 0) {
+    return null;
+  }
+  const activeSeat = requireCardDrivenActiveSeat(
+    def,
+    state,
+    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.ELIGIBILITY_CHECK,
+    seatResolution,
+  );
+  if (!hasReadyRequiredPendingFreeOperationGrantForSeat(pending, runtime.freeOperationSequenceContexts, activeSeat)) {
+    return null;
+  }
+
+  // Filter out the ready required grants for the active seat.
+  const expiredGrantIds = new Set(
+    pending
+      .filter((grant) =>
+        grant.seat === activeSeat
+        && isRequiredPendingFreeOperationGrant(grant)
+        && isPendingFreeOperationGrantSequenceReady(pending, grant, runtime.freeOperationSequenceContexts),
+      )
+      .map((grant) => grant.grantId),
+  );
+  if (expiredGrantIds.size === 0) {
+    return null;
+  }
+  const remainingGrants = pending.filter((grant) => !expiredGrantIds.has(grant.grantId));
+  return {
+    ...state,
+    turnOrderState: {
+      type: 'cardDriven',
+      runtime: withPendingFreeOperationGrants(
+        runtime,
+        remainingGrants.length === 0 ? undefined : remainingGrants,
+      ),
+    },
+  };
+};
+
 export const isMoveAllowedByRequiredPendingFreeOperationGrant = (
   def: GameDef,
   state: GameState,

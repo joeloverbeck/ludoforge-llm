@@ -4772,6 +4772,8 @@ conditionMacros:
                   args:
                     - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { param: targetSpaceExpr } }
                     - { op: '==', left: { ref: zoneVar, zone: $zone, var: terrorCount }, right: 0 }
+                    # Rule 1.6.1 NOTE: Pop 0 Provinces are always Neutral, never at Support or Opposition.
+                    - { op: '>', left: { ref: zoneProp, zone: $zone, prop: population }, right: 0 }
           right: 0
         - conditionMacro: fitl-space-marker-state-is-not
           args:
@@ -4809,6 +4811,8 @@ conditionMacros:
                   args:
                     - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { param: targetSpaceExpr } }
                     - { op: '==', left: { ref: zoneVar, zone: $zone, var: terrorCount }, right: 0 }
+                    # Rule 1.6.1 NOTE: Pop 0 Provinces are always Neutral, never at Support or Opposition.
+                    - { op: '>', left: { ref: zoneProp, zone: $zone, prop: population }, right: 0 }
           right: 0
         - conditionMacro: fitl-space-marker-state-is-not
           args:

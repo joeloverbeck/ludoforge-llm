@@ -1205,4 +1205,59 @@ describe('effects choice assertions', () => {
 
     assert.throws(() => applyEffect(effect, ctx), (error: unknown) => isEvalErrorCode(error, 'MISSING_BINDING'));
   });
+
+  it('shiftMarker is a no-op when destination state violates a space marker constraint', () => {
+    const constrainedDef: GameDef = {
+      ...makeDef(),
+      zones: [
+        {
+          id: asZoneId('constrained-zone:none'),
+          owner: 'none' as const,
+          visibility: 'public' as const,
+          ordering: 'stack' as const,
+          attributes: { population: 0 },
+        },
+      ],
+      markerLattices: [
+        {
+          id: 'mood',
+          states: ['negative', 'neutral', 'positive'],
+          defaultState: 'neutral',
+          constraints: [
+            {
+              when: true as unknown as import('../../src/kernel/types.js').ConditionAST,
+              allowedStates: ['neutral'],
+            },
+          ],
+        },
+      ],
+    } as unknown as GameDef;
+
+    const constrainedState: GameState = {
+      ...makeState(),
+      zones: { 'constrained-zone:none': [] },
+      markers: {},
+    };
+
+    const ctx = makeCtx({
+      def: constrainedDef,
+      adjacencyGraph: buildAdjacencyGraph(constrainedDef.zones),
+      state: constrainedState,
+    });
+
+    const effect: EffectAST = eff({
+      shiftMarker: {
+        space: 'constrained-zone:none',
+        marker: 'mood',
+        delta: 1,
+      },
+    });
+
+    // Should be a no-op: the shift from neutral to positive violates the
+    // pop-0 constraint, so the marker stays at neutral.
+    const result = applyEffect(effect, ctx);
+    const markers = result.state.markers['constrained-zone:none'] ?? {};
+    const moodState = markers['mood'] ?? 'neutral';
+    assert.equal(moodState, 'neutral', 'marker should stay at neutral when constraint blocks the shift');
+  });
 });

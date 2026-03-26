@@ -191,6 +191,9 @@ describe('space marker lattice rules', () => {
       /illegal for lattice "supportOpposition"/,
     );
 
+    // shiftMarker on a constrained space is a no-op (not an error) — the
+    // marker stays at its current state when the destination violates a
+    // constraint, analogous to boundary clamping.
     const shiftBase = {
       ...base,
       markers: {
@@ -204,15 +207,17 @@ describe('space marker lattice rules', () => {
       rng: { state: shiftBase.rng },
     });
 
-    assert.throws(
-      () => applyEffects([eff({
-        shiftMarker: {
-          space: 'central-laos:none',
-          marker: 'supportOpposition',
-          delta: 1,
-        },
-      })], shiftCtx),
-      /illegal for lattice "supportOpposition"/,
+    const shiftResult = applyEffects([eff({
+      shiftMarker: {
+        space: 'central-laos:none',
+        marker: 'supportOpposition',
+        delta: 1,
+      },
+    })], shiftCtx);
+    assert.equal(
+      shiftResult.state.markers['central-laos:none']?.['supportOpposition'] ?? 'neutral',
+      'neutral',
+      'shiftMarker should be a no-op when constraint blocks the destination state',
     );
   });
 

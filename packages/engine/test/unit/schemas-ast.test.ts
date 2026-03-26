@@ -17,7 +17,6 @@ import { AST_SCOPED_VAR_SCOPES } from '../../src/kernel/scoped-var-contract.js';
 import { buildDiscriminatedEndpointMatrix } from '../helpers/transfer-endpoint-matrix.js';
 import { eff } from '../helpers/effect-tag-helper.js';
 import { EFFECT_KIND_TAG } from '../../src/kernel/types-ast.js';
-import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
 
 const collectIssuePaths = (issue: unknown): string[] => {
   if (!issue || typeof issue !== 'object') {

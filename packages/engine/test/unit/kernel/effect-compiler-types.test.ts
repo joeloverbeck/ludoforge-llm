@@ -8,6 +8,7 @@ import {
   createGameDefRuntime,
   makeCompiledLifecycleEffectKey,
   type CompiledEffectContext,
+  type CompiledExecutionContext,
   type CompiledEffectSequence,
   type GameDef,
 } from '../../../src/kernel/index.js';
@@ -96,7 +97,9 @@ describe('effect-compiler-types', () => {
 
     const _sequence: CompiledEffectSequence | null = null;
     const _context: CompiledEffectContext | null = null;
+    const _executionContext: CompiledExecutionContext | null = null;
     assert.equal(_sequence, null);
     assert.equal(_context, null);
+    assert.equal(_executionContext, null);
   });
 });

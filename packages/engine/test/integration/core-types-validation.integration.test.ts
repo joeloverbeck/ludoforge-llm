@@ -3,7 +3,6 @@ import { describe, it } from 'node:test';
 
 import {
   deserializeTrace,
-  type GameDef,
   GameDefSchema,
   serializeTrace,
   type SerializedGameTrace,

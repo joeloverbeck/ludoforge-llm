@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import { applyMove, asActionId, asPlayerId, initialState, legalMoves, type GameDef, type GameState } from '../../src/kernel/index.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
+import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
 import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
 
 const OWNED_PIVOTAL_CARD_BY_SEAT: Readonly<Record<string, string>> = {
@@ -191,7 +192,7 @@ describe('FITL pivotal single-use integration', () => {
         },
       ],
     });
-    assert.deepEqual(pivotalAction?.effects, [
+    assert.deepEqual(pivotalAction?.effects, tagEffectAsts([
       {
         if: {
           when: { op: '==', left: { _t: 2, ref: 'binding', name: 'eventCardId' }, right: 'card-121' },
@@ -268,7 +269,7 @@ describe('FITL pivotal single-use integration', () => {
           ],
         },
       },
-    ]);
+    ]));
   });
 
   it('initializes pivotal cards in leader zone for full scenario setup', () => {

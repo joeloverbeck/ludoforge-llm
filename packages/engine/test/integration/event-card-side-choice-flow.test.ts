@@ -16,6 +16,7 @@ import {
   type Move,
 } from '../../src/kernel/index.js';
 import { eff } from '../helpers/effect-tag-helper.js';
+import { asTaggedGameDef } from '../helpers/gamedef-fixtures.js';
 
 const eventAction: ActionDef = {
   id: asActionId('event'),
@@ -60,7 +61,7 @@ const branchedDualCard: EventCardDef = {
 };
 
 const makeDef = (card: EventCardDef): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'event-side-choice-test', players: { min: 2, max: 2 } },
     seats: [{ id: '0' }, { id: '1' }],
     constants: {},
@@ -85,7 +86,7 @@ const makeDef = (card: EventCardDef): GameDef =>
         cards: [card],
       },
     ],
-  }) as unknown as GameDef;
+  });
 
 const makeState = (cardId: string): GameState => ({
   globalVars: { x: 0 },

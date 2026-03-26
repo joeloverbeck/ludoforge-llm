@@ -225,6 +225,7 @@ PIVOT_CHECK_INTERVAL = 10       # PROCEED/REFINE/PIVOT every 10 experiments
 HARNESS_RUNS = 3                # 3 runs per experiment, take median
 HARNESS_SEEDS = 1               # seeds handled internally by run-benchmark.mjs
 meta_improvement = false        # meta-loop disabled for this campaign
+METRIC_DIRECTION = lower-is-better  # minimize combined_duration_ms
 ```
 
 ## OBSERVE Phase Protocol (profiling-first)

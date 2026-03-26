@@ -81,13 +81,22 @@ export type DiscoveryEffectContext = DiscoveryStrictEffectContext | DiscoveryPro
 
 export type EffectContext = ExecutionEffectContext | DiscoveryEffectContext;
 
-export interface EffectResult {
+export interface PartialEffectResult {
   readonly state: GameState;
   readonly rng: Rng;
   readonly emittedEvents?: readonly TriggerEvent[];
   readonly bindings?: Readonly<Record<string, unknown>>;
   readonly pendingChoice?: ChoicePendingRequest | ChoiceStochasticPendingRequest;
   readonly decisionScope?: DecisionScope;
+}
+
+export interface NormalizedEffectResult {
+  readonly state: GameState;
+  readonly rng: Rng;
+  readonly emittedEvents: readonly TriggerEvent[];
+  readonly bindings: Readonly<Record<string, unknown>>;
+  readonly pendingChoice?: ChoicePendingRequest | ChoiceStochasticPendingRequest;
+  readonly decisionScope: DecisionScope;
 }
 
 interface RuntimeEffectContextOptions extends Omit<EffectContextBase, 'collector' | 'resources' | 'decisionScope'> {

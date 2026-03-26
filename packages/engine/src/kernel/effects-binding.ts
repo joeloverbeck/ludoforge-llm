@@ -1,6 +1,6 @@
 import { evalValue } from './eval-value.js';
 import { fromEnvAndCursor, resolveEffectBindings } from './effect-context.js';
-import type { EffectCursor, EffectEnv, EffectResult } from './effect-context.js';
+import type { EffectCursor, EffectEnv, PartialEffectResult } from './effect-context.js';
 import type { EffectBudgetState } from './effects-control.js';
 import type { ApplyEffectsWithBudget } from './effect-registry.js';
 import type { EffectAST } from './types.js';
@@ -11,7 +11,7 @@ export const applyBindValue = (
   cursor: EffectCursor,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
-): EffectResult => {
+): PartialEffectResult => {
   const resolvedBindings = resolveEffectBindings(env, cursor);
   const evalCursor = resolvedBindings === cursor.bindings ? cursor : { ...cursor, bindings: resolvedBindings };
   const evalCtx = fromEnvAndCursor(env, evalCursor);

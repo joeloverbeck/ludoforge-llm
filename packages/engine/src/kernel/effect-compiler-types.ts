@@ -1,6 +1,7 @@
 import type { PhaseId, PlayerId } from './branded.js';
 import type {
-  EffectResult,
+  NormalizedEffectResult,
+  PartialEffectResult,
   EffectTraceContext,
   PhaseTransitionBudget,
 } from './effect-context.js';
@@ -12,7 +13,9 @@ import type { AdjacencyGraph } from './spatial.js';
 import type { RuntimeTableIndex } from './runtime-table-index.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
 import type { DraftTracker } from './state-draft.js';
-import type { GameDef, GameState, MoveParamValue, Rng } from './types.js';
+import type { ChooseNTemplate } from './choose-n-session.js';
+import type { GameDef, GameState, MoveParamScalar, MoveParamValue, Rng } from './types.js';
+import type { DecisionAuthorityProbeContext, DecisionAuthorityStrictContext } from './types-core.js';
 
 export type CompiledLifecycle = 'onEnter' | 'onExit';
 
@@ -30,7 +33,14 @@ export type CompiledEffectFn = (
   rng: Rng,
   bindings: Readonly<Record<string, unknown>>,
   ctx: CompiledEffectContext,
-) => EffectResult;
+) => NormalizedEffectResult;
+
+export type CompiledEffectFragmentFn = (
+  state: GameState,
+  rng: Rng,
+  bindings: Readonly<Record<string, unknown>>,
+  ctx: CompiledExecutionContext,
+) => PartialEffectResult;
 
 export interface CompiledEffectContext {
   readonly def: GameDef;
@@ -50,6 +60,18 @@ export interface CompiledEffectContext {
   readonly effectBudget?: EffectBudgetState;
   readonly cachedRuntime?: GameDefRuntime;
   readonly tracker?: DraftTracker;
+  readonly mode: 'execution' | 'discovery';
+  readonly decisionAuthority: DecisionAuthorityStrictContext | DecisionAuthorityProbeContext;
+  readonly transientDecisionSelections?: Readonly<Record<string, readonly MoveParamScalar[]>>;
+  readonly chooseNTemplateCallback?: (template: ChooseNTemplate) => void;
+}
+
+export interface CompiledExecutionContext extends CompiledEffectContext {
+  readonly decisionScope: DecisionScope;
+  readonly effectBudget: EffectBudgetState;
+  readonly tracker: DraftTracker;
+  readonly mode: 'execution' | 'discovery';
+  readonly decisionAuthority: DecisionAuthorityStrictContext | DecisionAuthorityProbeContext;
 }
 
 export type CompiledEffectVerificationMismatchKind =

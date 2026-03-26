@@ -14,7 +14,6 @@ import { createCollectorLike, emitTrace } from './execution-collector.js';
 import { createEvalRuntimeResources, type EvalRuntimeResources } from './eval-context.js';
 import { assertEvalRuntimeResourcesContract } from './eval-runtime-resources-contract.js';
 import { dispatchTriggers } from './trigger-dispatch.js';
-import { emptyScope } from './decision-scope.js';
 import { deepEqual } from './deep-equal.js';
 import type { EffectAST, GameDef, GameState, TriggerEvent, TriggerLogEntry } from './types.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';
@@ -198,6 +197,12 @@ const executeLifecycleEffect = ({
     activePlayer: state.activePlayer,
     actorPlayer: state.activePlayer,
     moveParams: {},
+    mode: 'execution' as const,
+    decisionAuthority: {
+      source: 'engineRuntime' as const,
+      player: state.activePlayer,
+      ownershipEnforcement: 'strict' as const,
+    },
     traceContext,
     effectPath: '',
     ...(cachedRuntime === undefined ? {} : { cachedRuntime }),
@@ -274,14 +279,14 @@ const verifyLifecycleResultParity = (
       interpretedValue: interpretedResult.rng,
     });
   }
-  if (!deepEqual(compiledResult.emittedEvents ?? [], interpretedResult.emittedEvents ?? [])) {
+  if (!deepEqual(compiledResult.emittedEvents, interpretedResult.emittedEvents)) {
     throw new CompiledEffectVerificationError({
       phaseId: compiledEffect.phaseId,
       lifecycle: compiledEffect.lifecycle,
       coverageRatio: compiledEffect.coverageRatio,
       mismatchKind: 'emittedEvents',
-      compiledValue: compiledResult.emittedEvents ?? [],
-      interpretedValue: interpretedResult.emittedEvents ?? [],
+      compiledValue: compiledResult.emittedEvents,
+      interpretedValue: interpretedResult.emittedEvents,
     });
   }
   if (!deepEqual(compiledResult.pendingChoice, interpretedResult.pendingChoice)) {
@@ -294,25 +299,25 @@ const verifyLifecycleResultParity = (
       interpretedValue: interpretedResult.pendingChoice,
     });
   }
+  if (!deepEqual(compiledResult.decisionScope, interpretedResult.decisionScope)) {
+    throw new CompiledEffectVerificationError({
+      phaseId: compiledEffect.phaseId,
+      lifecycle: compiledEffect.lifecycle,
+      coverageRatio: compiledEffect.coverageRatio,
+      mismatchKind: 'decisionScope',
+      compiledValue: compiledResult.decisionScope,
+      interpretedValue: interpretedResult.decisionScope,
+    });
+  }
   if (compiledResult.pendingChoice !== undefined || interpretedResult.pendingChoice !== undefined) {
-    if (!deepEqual(compiledResult.bindings ?? {}, interpretedResult.bindings ?? {})) {
+    if (!deepEqual(compiledResult.bindings, interpretedResult.bindings)) {
       throw new CompiledEffectVerificationError({
         phaseId: compiledEffect.phaseId,
         lifecycle: compiledEffect.lifecycle,
         coverageRatio: compiledEffect.coverageRatio,
         mismatchKind: 'bindings',
-        compiledValue: compiledResult.bindings ?? {},
-        interpretedValue: interpretedResult.bindings ?? {},
-      });
-    }
-    if (!deepEqual(compiledResult.decisionScope ?? emptyScope(), interpretedResult.decisionScope ?? emptyScope())) {
-      throw new CompiledEffectVerificationError({
-        phaseId: compiledEffect.phaseId,
-        lifecycle: compiledEffect.lifecycle,
-        coverageRatio: compiledEffect.coverageRatio,
-        mismatchKind: 'decisionScope',
-        compiledValue: compiledResult.decisionScope ?? emptyScope(),
-        interpretedValue: interpretedResult.decisionScope ?? emptyScope(),
+        compiledValue: compiledResult.bindings,
+        interpretedValue: interpretedResult.bindings,
       });
     }
   }

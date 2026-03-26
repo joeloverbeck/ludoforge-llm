@@ -14,7 +14,6 @@ import { expandEffectMacros } from '../../src/cnl/expand-effect-macros.js';
 import { createEmptyGameSpecDoc, type EffectMacroDef } from '../../src/cnl/game-spec-doc.js';
 import { canonicalizeNamedSets } from '../../src/cnl/named-set-utils.js';
 import { assertNoDiagnostics } from '../helpers/diagnostic-helpers.js';
-import { effs } from '../helpers/effect-tag-helper.js';
 import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
 import { buildDiscriminatedEndpointMatrix } from '../helpers/transfer-endpoint-matrix.js';
 

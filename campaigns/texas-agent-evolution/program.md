@@ -224,6 +224,7 @@ PIVOT_CHECK_INTERVAL = 10       # PROCEED/REFINE/PIVOT every 10 experiments
 HARNESS_RUNS = 1                # single run per experiment (50 seeds already averages variance)
 HARNESS_SEEDS = 1               # no multi-seed harness re-runs (seeds handled internally)
 meta_improvement = false        # meta-loop disabled for this campaign
+METRIC_DIRECTION = higher-is-better  # maximize win_rate
 ```
 
 ## OBSERVE Phase Enhancement

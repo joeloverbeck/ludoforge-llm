@@ -25,6 +25,7 @@ import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { matchesDecisionKey } from '../helpers/decision-key-matchers.js';
 import { clearAllZones } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
+import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
 
 const makeToken = (id: string, type: string, faction: string): Token => ({
   id: asTokenId(id),
@@ -118,7 +119,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
 
     const shadedAid = card?.shaded?.effects?.find((effect) => 'addVar' in effect);
     assert.notEqual(shadedAid, undefined);
-    assert.deepEqual(shadedAid, {
+    assert.deepEqual(shadedAid, tagEffectAsts({
       addVar: {
         scope: 'global',
         var: 'aid',
@@ -139,15 +140,15 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
           right: -1,
         },
       },
-    });
+    }));
 
     const shadedMoveAll = card?.shaded?.effects?.find((effect) => 'moveAll' in effect);
-    assert.deepEqual(shadedMoveAll, {
+    assert.deepEqual(shadedMoveAll, tagEffectAsts({
       moveAll: {
         from: 'casualties-US:none',
         to: 'out-of-play-US:none',
       },
-    });
+    }));
   });
 
   it('routes Gulf of Tonkin free Air Strike through seat grant consumption and executeAs delegation at runtime', () => {

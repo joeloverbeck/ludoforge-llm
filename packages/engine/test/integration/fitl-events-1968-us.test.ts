@@ -11,6 +11,7 @@ import {
   type GameState,
   type Token,
 } from '../../src/kernel/index.js';
+import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { matchesDecisionRequest } from '../helpers/decision-key-matchers.js';
 import {
@@ -285,8 +286,8 @@ describe('FITL 1968 US-first event-card production spec', () => {
       assert.notEqual(card, undefined);
       assert.equal(card?.tags?.includes('capability'), true, `${expected.id} must include capability tag`);
       assert.equal(card?.tags?.includes('US'), true, `${expected.id} must include US tag`);
-      assert.deepEqual(card?.unshaded?.effects, [{ setGlobalMarker: { marker: expected.marker, state: 'unshaded' } }]);
-      assert.deepEqual(card?.shaded?.effects, [{ setGlobalMarker: { marker: expected.marker, state: 'shaded' } }]);
+      assert.deepEqual(card?.unshaded?.effects, tagEffectAsts([{ setGlobalMarker: { marker: expected.marker, state: 'unshaded' } }]));
+      assert.deepEqual(card?.shaded?.effects, tagEffectAsts([{ setGlobalMarker: { marker: expected.marker, state: 'shaded' } }]));
       if (expected.id === 'card-19') {
         assert.equal(card?.unshaded?.text, 'US Training may Pacify in 2 selected spaces. US CAPABILITY.');
         assert.equal(card?.shaded?.text, 'US Training may Pacify only to Passive Support.');
@@ -379,8 +380,8 @@ describe('FITL 1968 US-first event-card production spec', () => {
     const momentum = card?.unshaded?.lastingEffects?.find((effect) => effect.id === 'mom-blowtorch-komer');
     assert.notEqual(momentum, undefined);
     assert.equal(momentum?.duration, 'round');
-    assert.deepEqual(momentum?.setupEffects, [{ setVar: { scope: 'global', var: 'mom_blowtorchKomer', value: true } }]);
-    assert.deepEqual(momentum?.teardownEffects, [{ setVar: { scope: 'global', var: 'mom_blowtorchKomer', value: false } }]);
+    assert.deepEqual(momentum?.setupEffects, tagEffectAsts([{ setVar: { scope: 'global', var: 'mom_blowtorchKomer', value: true } }]));
+    assert.deepEqual(momentum?.teardownEffects, tagEffectAsts([{ setVar: { scope: 'global', var: 'mom_blowtorchKomer', value: false } }]));
   });
 
   it('encodes card 3 (Peace Talks) with Linebacker eligibility state wiring and shaded trail floor', () => {
@@ -490,7 +491,7 @@ describe('FITL 1968 US-first event-card production spec', () => {
       card?.shaded?.text,
       'NVA places 2 pieces in Cambodia. US moves any 2 US Troops to out of play. Aid -6.',
     );
-    assert.deepEqual(card?.shaded?.effects?.at(-1), { addVar: { scope: 'global', var: 'aid', delta: -6 } });
+    assert.deepEqual(card?.shaded?.effects?.at(-1), tagEffectAsts([{ addVar: { scope: 'global', var: 'aid', delta: -6 } }])[0]);
   });
 
   it('applies card-2 shaded by placing up to 2 NVA pieces in Cambodia, moving 2 US troops to out-of-play, and reducing aid by 6', () => {

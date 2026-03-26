@@ -1,6 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
 import { findDeep } from '../helpers/ast-search-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
@@ -33,10 +34,10 @@ describe('FITL remaining coup event-card production spec', () => {
     assert.equal(card126?.tags?.includes('coup'), true);
     assert.equal(card126?.shaded, undefined);
     assert.equal(card126?.unshaded?.lastingEffects, undefined);
-    assert.deepEqual(card126?.unshaded?.effects, [
+    assert.deepEqual(card126?.unshaded?.effects, tagEffectAsts([
       { setGlobalMarker: { marker: 'activeLeader', state: 'youngTurks' } },
       { addVar: { scope: 'global', var: 'leaderBoxCardCount', delta: 1 } },
-    ]);
+    ]));
 
     assert.equal(card127?.title, 'Nguyen Cao Ky');
     assert.equal(card127?.sideMode, 'single');
@@ -44,10 +45,10 @@ describe('FITL remaining coup event-card production spec', () => {
     assert.equal(card127?.tags?.includes('coup'), true);
     assert.equal(card127?.shaded, undefined);
     assert.equal(card127?.unshaded?.lastingEffects, undefined);
-    assert.deepEqual(card127?.unshaded?.effects, [
+    assert.deepEqual(card127?.unshaded?.effects, tagEffectAsts([
       { setGlobalMarker: { marker: 'activeLeader', state: 'ky' } },
       { addVar: { scope: 'global', var: 'leaderBoxCardCount', delta: 1 } },
-    ]);
+    ]));
 
     assert.equal(card128?.title, 'Nguyen Van Thieu');
     assert.equal(card128?.sideMode, 'single');
@@ -55,10 +56,10 @@ describe('FITL remaining coup event-card production spec', () => {
     assert.equal(card128?.tags?.includes('coup'), true);
     assert.equal(card128?.shaded, undefined);
     assert.equal(card128?.unshaded?.lastingEffects, undefined);
-    assert.deepEqual(card128?.unshaded?.effects, [
+    assert.deepEqual(card128?.unshaded?.effects, tagEffectAsts([
       { setGlobalMarker: { marker: 'activeLeader', state: 'thieu' } },
       { addVar: { scope: 'global', var: 'leaderBoxCardCount', delta: 1 } },
-    ]);
+    ]));
 
     assert.equal(card129?.title, 'Failed Attempt');
     assert.equal(card129?.sideMode, 'single');

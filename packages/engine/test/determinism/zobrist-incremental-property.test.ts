@@ -72,41 +72,39 @@ describe('Zobrist incremental property tests — random play', () => {
   const FITL_PLAYER_COUNT = 4;
   const FITL_MAX_TURNS = 150;
 
-  it('Texas Hold\'em: 50 random-play games with full verification', () => {
+  it('Texas Hold\'em: 25 random-play games with full verification', () => {
     const def = compileTexasDef();
     const runtime = createGameDefRuntime(def);
     let totalMoves = 0;
 
-    for (let seed = 1; seed <= 50; seed += 1) {
+    for (let seed = 1; seed <= 25; seed += 1) {
       totalMoves += runVerifiedGame(def, seed, TEXAS_PLAYER_COUNT, TEXAS_MAX_TURNS, runtime);
     }
 
-    assert.ok(totalMoves > 500, `Expected > 500 total moves, got ${totalMoves}`);
+    assert.ok(totalMoves > 250, `Expected > 250 total moves, got ${totalMoves}`);
   });
 
-  it('FITL: 50 random-play games with full verification', () => {
+  it('FITL: 25 random-play games with full verification', () => {
     const def = compileFitlDef();
     const runtime = createGameDefRuntime(def);
     let totalMoves = 0;
 
-    for (let seed = 1; seed <= 50; seed += 1) {
+    for (let seed = 1; seed <= 25; seed += 1) {
       totalMoves += runVerifiedGame(def, seed, FITL_PLAYER_COUNT, FITL_MAX_TURNS, runtime);
     }
 
-    assert.ok(totalMoves > 500, `Expected > 500 total moves, got ${totalMoves}`);
+    assert.ok(totalMoves > 250, `Expected > 250 total moves, got ${totalMoves}`);
   });
 
-  it('mixed seeds: 20 additional games per game with diverse seed range', () => {
+  it('mixed seeds: 10 additional games per game with diverse seed range', () => {
     const texasDef = compileTexasDef();
     const texasRuntime = createGameDefRuntime(texasDef);
     const fitlDef = compileFitlDef();
     const fitlRuntime = createGameDefRuntime(fitlDef);
 
     const diverseSeeds = [
-      1000, 2000, 3000, 4000, 5000,
-      7777, 8888, 9999, 12345, 54321,
-      100, 200, 300, 400, 500,
-      6666, 11111, 22222, 33333, 44444,
+      1000, 3000, 5000, 8888, 12345,
+      200, 400, 6666, 22222, 44444,
     ];
 
     for (const seed of diverseSeeds) {

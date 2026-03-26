@@ -27,7 +27,7 @@ import {
 import { resolveFreeOperationGrantSeatToken } from './free-operation-seat-resolution.js';
 import { resolveFreeOperationExecutionContext } from './free-operation-execution-context.js';
 import { toMoveExecutionPolicy, type MoveExecutionPolicy } from './execution-policy.js';
-import type { EffectCursor, EffectEnv, EffectResult } from './effect-context.js';
+import type { EffectCursor, EffectEnv, PartialEffectResult } from './effect-context.js';
 import type {
   EffectAST,
   GameState,
@@ -120,7 +120,7 @@ export const applyGrantFreeOperation = (
   cursor: EffectCursor,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
-): EffectResult => {
+): PartialEffectResult => {
   if (cursor.state.turnOrderState.type !== 'cardDriven') {
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TURN_FLOW_RUNTIME_VALIDATION_FAILED, 'grantFreeOperation requires cardDriven turn order state', {
       effectType: 'grantFreeOperation',
@@ -380,7 +380,7 @@ export const applyGotoPhaseExact = (
   cursor: EffectCursor,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
-): EffectResult => {
+): PartialEffectResult => {
   const targetPhase = effect.gotoPhaseExact.phase;
   const phases = env.def.turnStructure.phases;
   if (!phases.some((phase) => phase.id === targetPhase)) {
@@ -453,7 +453,7 @@ export const applyAdvancePhase = (
   cursor: EffectCursor,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
-): EffectResult => {
+): PartialEffectResult => {
   if (!consumePhaseTransitionBudget(env, 'advancePhase')) {
     return { state: cursor.state, rng: cursor.rng };
   }
@@ -503,7 +503,7 @@ export const applyPushInterruptPhase = (
   cursor: EffectCursor,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
-): EffectResult => {
+): PartialEffectResult => {
   if (!consumePhaseTransitionBudget(env, 'pushInterruptPhase')) {
     return { state: cursor.state, rng: cursor.rng };
   }
@@ -546,7 +546,7 @@ export const applyPopInterruptPhase = (
   cursor: EffectCursor,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
-): EffectResult => {
+): PartialEffectResult => {
   if (!consumePhaseTransitionBudget(env, 'popInterruptPhase')) {
     return { state: cursor.state, rng: cursor.rng };
   }

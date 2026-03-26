@@ -13,6 +13,7 @@ import {
   asTokenId,
   asZoneId,
   createRng,
+  emptyScope,
   getMaxEffectOps,
   isEffectErrorCode,
   type EffectAST,
@@ -153,6 +154,10 @@ describe('effects runtime foundation', () => {
 
     assert.equal(result.state.globalVars.x, 2);
     assert.equal(result.rng, ctx.rng);
+    assert.deepEqual(result.decisionScope, {
+      iterationPath: '',
+      counters: { '$choice': 1 },
+    });
   });
 
   it('shares the same effect budget across nested control-flow execution', () => {
@@ -184,6 +189,28 @@ describe('effects runtime foundation', () => {
       assert.ok(error instanceof EffectBudgetExceededError);
       return true;
     });
+  });
+
+  it('applyEffect returns normalized defaults when a handler omits optional result fields', () => {
+    const ctx = makeCtx({ bindings: { $seed: 'kept' } });
+
+    const result = applyEffect(setVarEffect, ctx);
+
+    assert.deepEqual(result.bindings, { $seed: 'kept' });
+    assert.ok(Array.isArray(result.emittedEvents));
+    assert.equal(result.emittedEvents.length, 1);
+    assert.deepEqual(result.decisionScope, emptyScope());
+  });
+
+  it('applyEffects returns normalized defaults across multi-effect execution', () => {
+    const ctx = makeCtx({ bindings: { $seed: 'kept' } });
+
+    const result = applyEffects([setVarEffect, addVarEffect], ctx);
+
+    assert.deepEqual(result.bindings, { $seed: 'kept' });
+    assert.ok(Array.isArray(result.emittedEvents));
+    assert.equal(result.emittedEvents.length, 2);
+    assert.deepEqual(result.decisionScope, emptyScope());
   });
 
   it('gotoPhaseExact jumps without executing intermediate phase onEnter effects', () => {
@@ -232,6 +259,23 @@ describe('effects runtime foundation', () => {
     assert.equal(result.state.currentPhase, asPhaseId('commitment'));
     assert.equal(result.state.globalVars.x, 5);
     assert.equal(result.state.turnCount, 1);
+  });
+
+  it('applyEffect returns advanced decisionScope after successful chooseOne completion', () => {
+    const effect: EffectAST = eff({
+      chooseOne: {
+        internalDecisionId: 'd1',
+        bind: '$choice',
+        options: { query: 'enums', values: ['a', 'b'] },
+      },
+    });
+
+    const result = applyEffect(effect, makeCtx({ moveParams: { 'd1::$choice': 'b' } }));
+
+    assert.deepEqual(result.decisionScope, {
+      iterationPath: '',
+      counters: { 'd1::$choice': 1 },
+    });
   });
 
   it('gotoPhaseExact rejects crossing a turn boundary to an earlier phase', () => {

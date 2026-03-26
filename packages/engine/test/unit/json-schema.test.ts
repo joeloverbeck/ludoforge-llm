@@ -17,7 +17,6 @@ import type { GameDef, GameTrace } from '../../src/kernel/index.js';
 import { AST_SCOPED_VAR_SCOPES, TRACE_SCOPED_VAR_SCOPES } from '../../src/kernel/scoped-var-contract.js';
 import { buildDiscriminatedEndpointMatrix } from '../helpers/transfer-endpoint-matrix.js';
 import { eff } from '../helpers/effect-tag-helper.js';
-import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
 import { EFFECT_KIND_TAG } from '../../src/kernel/types-ast.js';
 
 const readSchema = (filename: string): Record<string, unknown> => {

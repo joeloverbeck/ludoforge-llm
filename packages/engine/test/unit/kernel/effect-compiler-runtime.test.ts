@@ -7,12 +7,17 @@ import {
   buildEffectEnvFromCompiledCtx,
   buildRuntimeTableIndex,
   createCollector,
+  createDraftTracker,
   createEvalRuntimeResources,
+  createExecutionContextFromCompiled,
+  createRng,
   emptyScope,
+  promoteCompiledEffectContext,
   type CompiledEffectContext,
-  type DecisionAuthorityStrictContext,
+  type CompiledExecutionContext,
   type EffectEnv,
   type GameDef,
+  type GameState,
 } from '../../../src/kernel/index.js';
 
 
@@ -39,20 +44,41 @@ const makeCompiledCtx = (): CompiledEffectContext => ({
   activePlayer: asPlayerId(0),
   actorPlayer: asPlayerId(1),
   moveParams: { foo: 'bar' },
+  mode: 'execution',
+  decisionAuthority: {
+    source: 'engineRuntime',
+    player: asPlayerId(0),
+    ownershipEnforcement: 'strict',
+  },
   decisionScope: emptyScope(),
 });
 
-describe('buildEffectEnvFromCompiledCtx', () => {
-  it('maps all required EffectEnv fields from CompiledEffectContext + explicit params', () => {
-    const ctx = makeCompiledCtx();
-    const collector = createCollector();
-    const authority: DecisionAuthorityStrictContext = {
-      source: 'engineRuntime',
-      player: asPlayerId(0),
-      ownershipEnforcement: 'strict',
-    };
+const makeExecutionCtx = (ctx: CompiledEffectContext = makeCompiledCtx()): CompiledExecutionContext =>
+  promoteCompiledEffectContext(ctx, createDraftTracker());
 
-    const env: EffectEnv = buildEffectEnvFromCompiledCtx(ctx, collector, authority, 'execution');
+const minimalState: GameState = {
+  globalVars: {},
+  perPlayerVars: { '0': {}, '1': {} },
+  zoneVars: {},
+  playerCount: 2,
+  zones: {},
+  nextTokenOrdinal: 0,
+  currentPhase: 'main' as never,
+  activePlayer: asPlayerId(0),
+  turnCount: 0,
+  rng: createRng(1n).state,
+  stateHash: 0n,
+  _runningHash: 0n,
+  actionUsage: {},
+  turnOrderState: { type: 'roundRobin' },
+  markers: {},
+};
+
+describe('buildEffectEnvFromCompiledCtx', () => {
+  it('maps all required EffectEnv fields from promoted compiled execution context', () => {
+    const ctx = makeExecutionCtx();
+    const collector = createCollector();
+    const env: EffectEnv = buildEffectEnvFromCompiledCtx(ctx, collector);
 
     assert.equal(env.def, ctx.def);
     assert.equal(env.adjacencyGraph, ctx.adjacencyGraph);
@@ -61,25 +87,19 @@ describe('buildEffectEnvFromCompiledCtx', () => {
     assert.equal(env.actorPlayer, ctx.actorPlayer);
     assert.deepEqual(env.moveParams, ctx.moveParams);
     assert.equal(env.collector, collector);
-    assert.equal(env.decisionAuthority, authority);
+    assert.equal(env.decisionAuthority, ctx.decisionAuthority);
     assert.equal(env.mode, 'execution');
   });
 
-  it('includes optional fields from CompiledEffectContext when present', () => {
-    const ctx: CompiledEffectContext = {
+  it('includes optional fields from promoted compiled execution context when present', () => {
+    const ctx = makeExecutionCtx({
       ...makeCompiledCtx(),
       traceContext: { eventContext: 'lifecycleEffect', effectPathRoot: 'main/onEnter' },
       maxEffectOps: 500,
       verifyCompiledEffects: true,
-    };
+    });
     const collector = createCollector();
-    const authority: DecisionAuthorityStrictContext = {
-      source: 'engineRuntime',
-      player: asPlayerId(0),
-      ownershipEnforcement: 'strict',
-    };
-
-    const env = buildEffectEnvFromCompiledCtx(ctx, collector, authority, 'discovery');
+    const env = buildEffectEnvFromCompiledCtx({ ...ctx, mode: 'discovery' }, collector);
 
     assert.deepEqual(env.traceContext, { eventContext: 'lifecycleEffect', effectPathRoot: 'main/onEnter' });
     assert.equal(env.maxEffectOps, 500);
@@ -87,16 +107,10 @@ describe('buildEffectEnvFromCompiledCtx', () => {
     assert.equal(env.mode, 'discovery');
   });
 
-  it('omits optional fields when CompiledEffectContext does not carry them', () => {
-    const ctx = makeCompiledCtx();
+  it('omits optional fields when the promoted context does not carry them', () => {
+    const ctx = makeExecutionCtx();
     const collector = createCollector();
-    const authority: DecisionAuthorityStrictContext = {
-      source: 'engineRuntime',
-      player: asPlayerId(0),
-      ownershipEnforcement: 'strict',
-    };
-
-    const env = buildEffectEnvFromCompiledCtx(ctx, collector, authority, 'execution');
+    const env = buildEffectEnvFromCompiledCtx(ctx, collector);
 
     assert.equal('traceContext' in env, false);
     assert.equal('maxEffectOps' in env, false);
@@ -109,17 +123,48 @@ describe('buildEffectEnvFromCompiledCtx', () => {
   });
 
   it('is a pure function — does not mutate the input context', () => {
-    const ctx = makeCompiledCtx();
+    const ctx = makeExecutionCtx();
     const ctxSnapshot = { ...ctx };
     const collector = createCollector();
-    const authority: DecisionAuthorityStrictContext = {
-      source: 'engineRuntime',
-      player: asPlayerId(0),
-      ownershipEnforcement: 'strict',
-    };
-
-    buildEffectEnvFromCompiledCtx(ctx, collector, authority, 'execution');
+    buildEffectEnvFromCompiledCtx(ctx, collector);
 
     assert.deepEqual(ctx, ctxSnapshot);
+  });
+});
+
+describe('promoteCompiledEffectContext', () => {
+  it('fills required execution invariants once from a loose boundary context', () => {
+    const tracker = createDraftTracker();
+    const promoted = promoteCompiledEffectContext(
+      (({ decisionScope: _ignored, ...rest }) => rest)(makeCompiledCtx()),
+      tracker,
+    );
+
+    assert.deepEqual(promoted.decisionScope, emptyScope());
+    assert.equal(promoted.tracker, tracker);
+    assert.equal(promoted.mode, 'execution');
+    assert.equal(promoted.decisionAuthority.player, asPlayerId(0));
+    assert.equal(promoted.effectBudget.remaining, promoted.effectBudget.max);
+  });
+});
+
+describe('createExecutionContextFromCompiled', () => {
+  it('reuses required execution invariants without re-normalizing them locally', () => {
+    const compiledCtx = makeExecutionCtx({
+      ...makeCompiledCtx(),
+      mode: 'discovery',
+    });
+
+    const execCtx = createExecutionContextFromCompiled(
+      minimalState,
+      createRng(2n),
+      { answer: 42 },
+      compiledCtx,
+    );
+
+    assert.equal(execCtx.mode, 'execution');
+    assert.deepEqual(execCtx.decisionScope, compiledCtx.decisionScope);
+    assert.equal(execCtx.decisionAuthority.player, compiledCtx.activePlayer);
+    assert.deepEqual(execCtx.bindings, { answer: 42 });
   });
 });

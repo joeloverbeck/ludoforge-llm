@@ -1,6 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
@@ -94,8 +95,8 @@ describe('FITL VC-first event-card production spec batch', () => {
       assert.notEqual(card, undefined);
       assert.equal(card?.tags?.includes('capability'), true, `${expected.id} must include capability tag`);
       assert.equal(card?.tags?.includes('VC'), true, `${expected.id} must include VC tag`);
-      assert.deepEqual(card?.unshaded?.effects, [{ setGlobalMarker: { marker: expected.marker, state: 'unshaded' } }]);
-      assert.deepEqual(card?.shaded?.effects, [{ setGlobalMarker: { marker: expected.marker, state: 'shaded' } }]);
+      assert.deepEqual(card?.unshaded?.effects, tagEffectAsts([{ setGlobalMarker: { marker: expected.marker, state: 'unshaded' } }]));
+      assert.deepEqual(card?.shaded?.effects, tagEffectAsts([{ setGlobalMarker: { marker: expected.marker, state: 'shaded' } }]));
     }
   });
 

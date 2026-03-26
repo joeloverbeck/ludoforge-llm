@@ -1,6 +1,6 @@
 # Spec 81 — Whole-Sequence Effect Compilation
 
-**Status**: Draft
+**Status**: COMPLETED
 **Dependencies**: Spec 79 (Compiled Effect Path Redesign, completed), Spec 82
 (Effect AST Type Tags, **completed** — the `_k` discriminant enables
 `switch`-based dispatch in the compiler, matching the proven `_t` pattern from
@@ -775,3 +775,21 @@ both FITL and Texas Hold'em GameDefs:
 9. **Edge case tests**: Empty effect sequences, nested forEach, deeply nested
    let chains, evaluateSubset with 0 items, reduce over empty collection,
    marker effects on non-existent markers, token effects on empty zones.
+
+## Outcome
+
+- Completion date: 2026-03-25
+- What actually changed:
+  - lifecycle effect compilation reached full coverage with `coverageRatio === 1.0` enforced for compiled lifecycle sequences
+  - interpreter fallback batching for lifecycle compilation was removed, leaving compiled lifecycle execution as the current architecture
+  - compiled lifecycle parity/verification coverage was expanded across unit and integration tests, including control flow, token, marker, reveal/conceal, and lifecycle runtime boundaries
+  - compiled execution context contracts were tightened in follow-up work so compiled fragments run with explicit execution invariants rather than scattered local repairs
+- Deviations from original plan:
+  - `grantFreeOperation` remains outside lifecycle compilation, consistent with the spec’s non-goals
+  - the final context architecture kept explicit `mode` and `decisionAuthority` at the compiled boundary because kernel architecture guards forbid implicit execution-mode fallback semantics
+  - some completion work landed through the archived `81WHOSEQEFFCOM-*` tickets rather than as a single monolithic implementation step
+- Verification results:
+  - `pnpm -F @ludoforge/engine build`
+  - `pnpm -F @ludoforge/engine test`
+  - `pnpm turbo typecheck`
+  - `pnpm turbo lint`

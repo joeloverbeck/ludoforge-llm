@@ -3,9 +3,10 @@ import { describe, it } from 'node:test';
 
 import { applyMove, asActionId, asPhaseId, initialState, legalMoves, type GameDef, type TriggerLogEntry } from '../../src/kernel/index.js';
 import { eff } from '../helpers/effect-tag-helper.js';
+import { asTaggedGameDef } from '../helpers/gamedef-fixtures.js';
 
 const createLifecycleDef = (): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'fitl-card-lifecycle-int', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
     seats: [{ id: '0' }, { id: '1' }],
     constants: {},
@@ -54,7 +55,7 @@ phase: [asPhaseId('main')],
     ],
     triggers: [],
     terminal: { conditions: [] },
-  }) as unknown as GameDef;
+  });
 
 const lifecycleSteps = (entries: readonly TriggerLogEntry[]): readonly string[] =>
   entries

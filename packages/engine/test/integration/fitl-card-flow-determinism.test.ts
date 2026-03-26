@@ -24,7 +24,7 @@ import { completeMoveDecisionSequenceOrThrow, pickDeterministicDecisionValue } f
 const REPEATED_RUN_COUNT = 20;
 
 const createDef = (): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'fitl-card-flow-determinism-int', players: { min: 4, max: 4 }, maxTriggerDepth: 8 },
     seats: [{ id: 'US' }, { id: 'ARVN' }, { id: 'NVA' }, { id: 'VC' }],
     constants: {},
@@ -125,7 +125,7 @@ phase: [asPhaseId('main')],
     ],
     triggers: [],
     terminal: { conditions: [] },
-  }) as unknown as GameDef;
+  });
 
 const scriptedMoves: readonly Move[] = [
   { actionId: asActionId('event'), params: { eventCardId: 'card-overrides', side: 'unshaded' } },
@@ -351,7 +351,7 @@ describe('FITL card-flow determinism integration', () => {
     assert.notEqual(baseDeck, undefined);
     const baseCard = baseDeck!.cards[0];
     assert.notEqual(baseCard, undefined);
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       turnOrder: {
         type: 'cardDriven',
@@ -375,7 +375,7 @@ describe('FITL card-flow determinism integration', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     const run = () => {
       const start = initialState(def, 97, 4).state;

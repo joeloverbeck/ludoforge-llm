@@ -11,7 +11,6 @@ import {
   legalChoicesEvaluate,
   type ActionDef,
   type DecisionKey,
-  type EffectAST,
   type GameDef,
   type GameState,
   type Move,

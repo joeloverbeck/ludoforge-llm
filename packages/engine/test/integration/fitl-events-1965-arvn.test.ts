@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js';
+import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
 
 const FITL_PRODUCTION_FIXTURE = getFitlProductionFixture();
 const ROKS_SWEEP_ZONE_FILTER = {
@@ -105,8 +106,8 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
     assert.equal(card?.tags?.includes('ARVN'), true);
     assert.equal(card?.unshaded?.text, '1 Govern space may transfer Aid to Patronage without shifting Support. ARVN CAPABILITY.');
     assert.equal(card?.shaded?.text, 'ARVN Govern and Pacify maximum 1 space.');
-    assert.deepEqual(card?.unshaded?.effects, [{ setGlobalMarker: { marker: 'cap_mandateOfHeaven', state: 'unshaded' } }]);
-    assert.deepEqual(card?.shaded?.effects, [{ setGlobalMarker: { marker: 'cap_mandateOfHeaven', state: 'shaded' } }]);
+    assert.deepEqual(card?.unshaded?.effects, tagEffectAsts([{ setGlobalMarker: { marker: 'cap_mandateOfHeaven', state: 'unshaded' } }]));
+    assert.deepEqual(card?.shaded?.effects, tagEffectAsts([{ setGlobalMarker: { marker: 'cap_mandateOfHeaven', state: 'shaded' } }]));
   });
 
   it('encodes card 70 (ROKs) as dual US-or-ARVN mixed-cube as-if-US grants plus shaded opposition shifts', () => {
@@ -185,11 +186,11 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
         tokenInterpretations: ROKS_TOKEN_INTERPRETATIONS,
       },
     ]);
-    assert.deepEqual(card?.shaded?.effects, [
+    assert.deepEqual(card?.shaded?.effects, tagEffectAsts([
       { shiftMarker: { space: 'qui-nhon:none', marker: 'supportOpposition', delta: -1 } },
       { shiftMarker: { space: 'phu-bon-phu-yen:none', marker: 'supportOpposition', delta: -1 } },
       { shiftMarker: { space: 'khanh-hoa:none', marker: 'supportOpposition', delta: -1 } },
-    ]);
+    ]));
   });
 
   it('encodes card 69 (MACV) as a stay-eligible paired special-activity branch choice', () => {
@@ -266,7 +267,7 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
     assert.equal(card?.unshaded?.text, 'NVA and VC -1 Resource each per space with both. Patronage +2.');
     assert.equal(card?.shaded?.text, 'Remove Support from Hue, Da Nang, and an adjacent Province.');
     assert.equal(typeof (card?.unshaded?.effects?.[0] as { let?: unknown } | undefined)?.let, 'object');
-    assert.deepEqual(card?.unshaded?.effects?.[1], { addVar: { scope: 'global', var: 'patronage', delta: 2 } });
+    assert.deepEqual(card?.unshaded?.effects?.[1], tagEffectAsts({ addVar: { scope: 'global', var: 'patronage', delta: 2 } }));
     assert.equal(typeof (card?.shaded?.effects?.[0] as { if?: unknown } | undefined)?.if, 'object');
     assert.equal(typeof (card?.shaded?.effects?.[1] as { if?: unknown } | undefined)?.if, 'object');
     assert.equal((card?.shaded?.effects?.[2] as { chooseN?: { bind?: string } } | undefined)?.chooseN?.bind, '$annamAdjacentProvince');
@@ -442,8 +443,8 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
       const effect = side?.lastingEffects?.find((entry) => entry.id === expected.effectId);
       assert.notEqual(effect, undefined, `${expected.id} ${expected.side} must include ${expected.effectId}`);
       assert.equal(effect?.duration, 'round');
-      assert.deepEqual(effect?.setupEffects, [{ setVar: { scope: 'global', var: expected.varName, value: true } }]);
-      assert.deepEqual(effect?.teardownEffects, [{ setVar: { scope: 'global', var: expected.varName, value: false } }]);
+      assert.deepEqual(effect?.setupEffects, tagEffectAsts([{ setVar: { scope: 'global', var: expected.varName, value: true } }]));
+      assert.deepEqual(effect?.teardownEffects, tagEffectAsts([{ setVar: { scope: 'global', var: expected.varName, value: false } }]));
     }
   });
 
@@ -456,9 +457,9 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
     const card = compiled.gameDef?.eventDecks?.[0]?.cards.find((entry) => entry.id === 'card-73');
     assert.notEqual(card, undefined);
     assert.equal(card?.unshaded?.text, 'Conduct a Commitment Phase.');
-    assert.deepEqual(card?.unshaded?.effects, [
+    assert.deepEqual(card?.unshaded?.effects, tagEffectAsts([
       { pushInterruptPhase: { phase: 'commitment', resumePhase: 'main' } },
-    ]);
+    ]));
     assert.equal(card?.shaded?.effects?.length, 2);
     const choosePieces = (card?.shaded?.effects?.[0] as { chooseN?: Record<string, unknown> } | undefined)?.chooseN;
     assert.notEqual(choosePieces, undefined);
@@ -501,7 +502,7 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
         },
       },
     });
-    assert.deepEqual(card?.shaded?.effects?.[1], {
+    assert.deepEqual(card?.shaded?.effects?.[1], tagEffectAsts({
       forEach: {
         bind: '$greatSocietyUsPiece',
         over: {
@@ -526,7 +527,7 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
           },
         ],
       },
-    });
+    }));
   });
 
   it('encodes card 90 (Walt Rostow) with anywhere-ARVN placement and immediate no-base redeploy structure', () => {

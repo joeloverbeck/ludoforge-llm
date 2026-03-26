@@ -1,6 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
@@ -20,10 +21,10 @@ describe('FITL tutorial coup event-card production spec', () => {
     assert.equal(card?.metadata?.flavorText, 'Corps commanders ascendant.');
     assert.equal(card?.unshaded?.text, 'Transport uses max 1 LoC space.');
 
-    assert.deepEqual(card?.unshaded?.effects, [
+    assert.deepEqual(card?.unshaded?.effects, tagEffectAsts([
       { setGlobalMarker: { marker: 'activeLeader', state: 'khanh' } },
       { addVar: { scope: 'global', var: 'leaderBoxCardCount', delta: 1 } },
-    ]);
+    ]));
 
     // Transport restriction is derived from activeLeader checks in shared action logic.
     assert.equal(card?.unshaded?.lastingEffects, undefined);

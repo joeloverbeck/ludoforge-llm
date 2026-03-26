@@ -16,6 +16,7 @@ import {
   type Move,
   type Token,
 } from '../../src/kernel/index.js';
+import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
 import { clearAllZones } from '../helpers/isolated-state-helpers.js';
@@ -73,15 +74,15 @@ describe('FITL card-46 559th Transport Grp', () => {
       card?.unshaded?.text,
       'Degrade the Trail by 2 boxes. Until Coup, Infiltrate is max 1 space. MOMENTUM',
     );
-    assert.deepEqual(card?.unshaded?.effects, [{ addVar: { scope: 'global', var: 'trail', delta: -2 } }]);
-    assert.deepEqual(card?.unshaded?.lastingEffects, [
+    assert.deepEqual(card?.unshaded?.effects, tagEffectAsts([{ addVar: { scope: 'global', var: 'trail', delta: -2 } }]));
+    assert.deepEqual(card?.unshaded?.lastingEffects, tagEffectAsts([
       {
         id: 'mom-559th-transport-grp',
         duration: 'round',
         setupEffects: [{ setVar: { scope: 'global', var: 'mom_559thTransportGrp', value: true } }],
         teardownEffects: [{ setVar: { scope: 'global', var: 'mom_559thTransportGrp', value: false } }],
       },
-    ]);
+    ]));
 
     assert.equal(
       card?.shaded?.text,
@@ -99,7 +100,7 @@ describe('FITL card-46 559th Transport Grp', () => {
         actionIds: ['infiltrate'],
       },
     ]);
-    assert.deepEqual(card?.shaded?.effects, [
+    assert.deepEqual(card?.shaded?.effects, tagEffectAsts([
       {
         let: {
           bind: '$trailValue',
@@ -122,7 +123,7 @@ describe('FITL card-46 559th Transport Grp', () => {
           ],
         },
       },
-    ]);
+    ]));
   });
 
   it('unshaded degrades Trail immediately, caps Infiltrate to 1 space until Coup reset, and then releases the cap', () => {

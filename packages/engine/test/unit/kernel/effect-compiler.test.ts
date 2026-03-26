@@ -5,6 +5,8 @@ import {
   applyEffects,
   asPhaseId,
   asPlayerId,
+  asTokenId,
+  asZoneId,
   buildAdjacencyGraph,
   buildRuntimeTableIndex,
   compileAllLifecycleEffects,
@@ -13,18 +15,18 @@ import {
   computeFullHash,
   createEvalRuntimeResources,
   createExecutionEffectContext,
-  createFallbackFragment,
   createRng,
   createZobristTable,
   emptyScope,
   makeCompiledLifecycleEffectKey,
   type CompiledEffectContext,
   type CompiledEffectFragment,
+  type CompiledExecutionContext,
   type DraftTracker,
   type EffectAST,
-  type EffectResult,
   type GameDef,
   type GameState,
+  type NormalizedEffectResult,
   type TriggerEvent,
 } from '../../../src/kernel/index.js';
 import { eff } from '../../helpers/effect-tag-helper.js';
@@ -36,9 +38,11 @@ const makeDef = (): GameDef => ({
     { name: 'score', type: 'int', init: 0, min: 0, max: 20 },
     { name: 'count', type: 'int', init: 0, min: 0, max: 20 },
     { name: 'flag', type: 'boolean', init: false },
+    { name: 'bank', type: 'int', init: 0, min: 0, max: 20 },
   ],
   perPlayerVars: [
     { name: 'hp', type: 'int', init: 0, min: 0, max: 20 },
+    { name: 'coins', type: 'int', init: 0, min: 0, max: 20 },
   ],
   zoneVars: [],
   zones: [],
@@ -78,11 +82,11 @@ const makeDef = (): GameDef => ({
 });
 
 const makeState = (): GameState => ({
-  globalVars: { score: 3, count: 0, flag: false },
+  globalVars: { score: 3, count: 0, flag: false, bank: 6 },
   perPlayerVars: {
-    '0': { hp: 5 },
-    '1': { hp: 7 },
-    '2': { hp: 9 },
+    '0': { hp: 5, coins: 4 },
+    '1': { hp: 7, coins: 6 },
+    '2': { hp: 9, coins: 8 },
   },
   zoneVars: {},
   playerCount: 3,
@@ -99,6 +103,27 @@ const makeState = (): GameState => ({
   markers: {},
 });
 
+const makeTokenDef = (): GameDef => ({
+  ...makeDef(),
+  zones: [
+    { id: asZoneId('deck:none'), zoneKind: 'board', owner: 'none', visibility: 'public', ordering: 'stack' },
+    { id: asZoneId('hand:none'), zoneKind: 'board', owner: 'none', visibility: 'public', ordering: 'stack' },
+  ],
+  tokenTypes: [{ id: 'card', props: { face: 'string' } }],
+});
+
+const makeTokenState = (): GameState => ({
+  ...makeState(),
+  zones: {
+    'deck:none': [
+      { id: asTokenId('tok_card_0'), type: 'card', props: { face: 'down' } },
+      { id: asTokenId('tok_card_1'), type: 'card', props: { face: 'down' } },
+    ],
+    'hand:none': [],
+  },
+  nextTokenOrdinal: 2,
+});
+
 const makeCompiledContext = (def: GameDef): CompiledEffectContext => ({
   def,
   adjacencyGraph: buildAdjacencyGraph(def.zones),
@@ -107,20 +132,26 @@ const makeCompiledContext = (def: GameDef): CompiledEffectContext => ({
   activePlayer: asPlayerId(1),
   actorPlayer: asPlayerId(0),
   moveParams: {},
+  mode: 'execution',
+  decisionAuthority: {
+    source: 'engineRuntime',
+    player: asPlayerId(1),
+    ownershipEnforcement: 'strict',
+  },
   decisionScope: emptyScope(),
 });
 
 const compareResults = (
   def: GameDef,
-  compiled: EffectResult,
-  interpreted: EffectResult,
+  compiled: NormalizedEffectResult,
+  interpreted: NormalizedEffectResult,
 ): void => {
   const zobrist = createZobristTable(def);
   assert.deepEqual(compiled.state, interpreted.state);
   assert.deepEqual(compiled.rng, interpreted.rng);
-  assert.deepEqual(compiled.emittedEvents ?? [], interpreted.emittedEvents ?? []);
-  assert.deepEqual(compiled.bindings ?? {}, interpreted.bindings ?? {});
-  assert.deepEqual(compiled.decisionScope ?? emptyScope(), interpreted.decisionScope ?? emptyScope());
+  assert.deepEqual(compiled.emittedEvents, interpreted.emittedEvents);
+  assert.deepEqual(compiled.bindings, interpreted.bindings);
+  assert.deepEqual(compiled.decisionScope, interpreted.decisionScope);
   assert.equal(
     computeFullHash(zobrist, compiled.state),
     computeFullHash(zobrist, interpreted.state),
@@ -167,25 +198,33 @@ describe('effect-compiler orchestrator', () => {
     );
   });
 
-  it('mixes compiled fragments with fallback fragments without changing behavior', () => {
+  it('treats bindValue, transferVar, and let sequences as fully compilable', () => {
     const def = makeDef();
     const effects: readonly EffectAST[] = [
-      eff({ setVar: { scope: 'global', var: 'score', value: 1 } }),
+      eff({ bindValue: { bind: '$bonus', value: { _t: 6, op: '+', left: 1, right: 2 } } }),
       eff({
-        rollRandom: {
-          bind: '$roll',
-          min: 1,
-          max: 6,
-          in: [eff({ setVar: { scope: 'global', var: 'count', value: { _t: 2, ref: 'binding', name: '$roll' } } })],
+        let: {
+          bind: 'tmp',
+          value: { _t: 2, ref: 'binding', name: '$bonus' },
+          in: [
+            eff({ bindValue: { bind: '$visible', value: { _t: 2, ref: 'binding', name: 'tmp' } } }),
+          ],
         },
       }),
-      eff({ addVar: { scope: 'global', var: 'score', delta: 2 } }),
+      eff({
+        transferVar: {
+          from: { scope: 'global', var: 'bank' },
+          to: { scope: 'pvar', player: 'active', var: 'coins' },
+          amount: { _t: 2, ref: 'binding', name: '$visible' },
+          actualBind: '$actual',
+        },
+      }),
     ];
     const state = makeState();
-    const rng = createRng(29n);
+    const rng = createRng(31n);
     const compiled = compileEffectSequence(asPhaseId('main'), 'onEnter', effects);
 
-    assert.ok(compiled.coverageRatio > 0 && compiled.coverageRatio < 1);
+    assert.equal(compiled.coverageRatio, 1);
     compareResults(
       def,
       compiled.execute(state, rng, {}, makeCompiledContext(def)),
@@ -207,25 +246,200 @@ describe('effect-compiler orchestrator', () => {
     );
   });
 
-  it('falls back for fully unsupported sequences while preserving coverage accounting', () => {
+  it('treats mixed sequences with chooseOne as fully compilable', () => {
+    const def = makeDef();
+    const effects: readonly EffectAST[] = [
+      eff({ setVar: { scope: 'global', var: 'score', value: 1 } }),
+      eff({
+        chooseOne: {
+          internalDecisionId: 'd1',
+          bind: '$choice',
+          options: { query: 'players' },
+        },
+      }),
+      eff({ addVar: { scope: 'global', var: 'score', delta: 2 } }),
+    ];
+    const state = makeState();
+    const rng = createRng(29n);
+    const compiled = compileEffectSequence(asPhaseId('main'), 'onEnter', effects);
+    const moveParams = { 'd1::$choice': asPlayerId(2) } as const;
+
+    assert.equal(compiled.coverageRatio, 1);
+    const compiledResult = compiled.execute(state, rng, {}, { ...makeCompiledContext(def), moveParams });
+    const interpretedResult = applyEffects(
+      effects,
+      createExecutionEffectContext({
+        def,
+        adjacencyGraph: buildAdjacencyGraph(def.zones),
+        runtimeTableIndex: buildRuntimeTableIndex(def),
+        state,
+        rng,
+        activePlayer: asPlayerId(1),
+        actorPlayer: asPlayerId(0),
+        bindings: {},
+        moveParams,
+        resources: createEvalRuntimeResources(),
+      }),
+    );
+    const zobrist = createZobristTable(def);
+
+    assert.deepEqual(compiledResult.state, interpretedResult.state);
+    assert.deepEqual(compiledResult.rng, interpretedResult.rng);
+    assert.deepEqual(compiledResult.emittedEvents, interpretedResult.emittedEvents);
+    assert.deepEqual(compiledResult.bindings, interpretedResult.bindings);
+    assert.deepEqual(compiledResult.decisionScope, interpretedResult.decisionScope);
+    assert.equal(computeFullHash(zobrist, compiledResult.state), computeFullHash(zobrist, interpretedResult.state));
+  });
+
+  it('treats chooseOne-only lifecycle sequences as fully compilable', () => {
     const def = makeDef();
     const effects: readonly EffectAST[] = [
       eff({
-        rollRandom: {
-          bind: '$roll',
-          min: 1,
-          max: 6,
-          in: [eff({ setVar: { scope: 'global', var: 'count', value: { _t: 2, ref: 'binding', name: '$roll' } } })],
+        chooseOne: {
+          internalDecisionId: 'd1',
+          bind: '$choice',
+          options: { query: 'players' },
         },
       }),
     ];
     const state = makeState();
     const rng = createRng(31n);
     const compiled = compileEffectSequence(asPhaseId('cleanup'), 'onExit', effects);
+    const moveParams = { 'd1::$choice': asPlayerId(0) } as const;
 
-    // walkEffects now traverses rollRandom.in, finding the nested setVar (compiled).
-    // 2 nodes: rollRandom (not compiled) + setVar (compiled) = 1/2
-    assert.equal(compiled.coverageRatio, 0.5);
+    assert.equal(compiled.coverageRatio, 1);
+    const compiledResult = compiled.execute(state, rng, {}, { ...makeCompiledContext(def), moveParams });
+    const interpretedResult = applyEffects(
+      effects,
+      createExecutionEffectContext({
+        def,
+        adjacencyGraph: buildAdjacencyGraph(def.zones),
+        runtimeTableIndex: buildRuntimeTableIndex(def),
+        state,
+        rng,
+        activePlayer: asPlayerId(1),
+        actorPlayer: asPlayerId(0),
+        bindings: {},
+        moveParams,
+        resources: createEvalRuntimeResources(),
+      }),
+    );
+    const zobrist = createZobristTable(def);
+
+    assert.deepEqual(compiledResult.state, interpretedResult.state);
+    assert.deepEqual(compiledResult.rng, interpretedResult.rng);
+    assert.deepEqual(compiledResult.emittedEvents, interpretedResult.emittedEvents);
+    assert.deepEqual(compiledResult.bindings, interpretedResult.bindings);
+    assert.deepEqual(compiledResult.decisionScope, interpretedResult.decisionScope);
+    assert.equal(computeFullHash(zobrist, compiledResult.state), computeFullHash(zobrist, interpretedResult.state));
+  });
+
+  it('treats token-only lifecycle sequences as fully compilable with interpreter parity', () => {
+    const def = makeTokenDef();
+    const effects: readonly EffectAST[] = [
+      eff({ shuffle: { zone: 'deck:none' } }),
+      eff({ draw: { from: 'deck:none', to: 'hand:none', count: 1 } }),
+      eff({ createToken: { type: 'card', zone: 'hand:none', props: { face: 'up' } } }),
+    ];
+    const state = makeTokenState();
+    const rng = createRng(37n);
+    const compiled = compileEffectSequence(asPhaseId('main'), 'onEnter', effects);
+
+    assert.equal(compiled.coverageRatio, 1);
+    compareResults(
+      def,
+      compiled.execute(state, rng, {}, makeCompiledContext(def)),
+      applyEffects(
+        effects,
+        createExecutionEffectContext({
+          def,
+          adjacencyGraph: buildAdjacencyGraph(def.zones),
+          runtimeTableIndex: buildRuntimeTableIndex(def),
+          state,
+          rng,
+          activePlayer: asPlayerId(1),
+          actorPlayer: asPlayerId(0),
+          bindings: {},
+          moveParams: {},
+          resources: createEvalRuntimeResources(),
+        }),
+      ),
+    );
+  });
+
+  it('treats information-effect lifecycle sequences as fully compilable with interpreter parity', () => {
+    const def = makeTokenDef();
+    const effects: readonly EffectAST[] = [
+      eff({ reveal: { zone: 'hand:none', to: 'all' } }),
+      eff({ conceal: { zone: 'hand:none', from: 'all' } }),
+    ];
+    const state = makeTokenState();
+    const rng = createRng(41n);
+    const compiled = compileEffectSequence(asPhaseId('main'), 'onEnter', effects);
+
+    assert.equal(compiled.coverageRatio, 1);
+    compareResults(
+      def,
+      compiled.execute(state, rng, {}, makeCompiledContext(def)),
+      applyEffects(
+        effects,
+        createExecutionEffectContext({
+          def,
+          adjacencyGraph: buildAdjacencyGraph(def.zones),
+          runtimeTableIndex: buildRuntimeTableIndex(def),
+          state,
+          rng,
+          activePlayer: asPlayerId(1),
+          actorPlayer: asPlayerId(0),
+          bindings: {},
+          moveParams: {},
+          resources: createEvalRuntimeResources(),
+        }),
+      ),
+    );
+  });
+
+  it('treats iteration/reduction lifecycle sequences as fully compilable with interpreter parity', () => {
+    const def = makeTokenDef();
+    const effects: readonly EffectAST[] = [
+      eff({
+        forEach: {
+          bind: '$zone',
+          over: { query: 'enums', values: [] },
+          effects: [],
+        },
+      }),
+      eff({
+        reduce: {
+          itemBind: '$card',
+          accBind: '$sum',
+          over: { query: 'tokensInZone', zone: 'deck:none' },
+          initial: 0,
+          next: { _t: 6, op: '+', left: { _t: 2, ref: 'binding', name: '$sum' }, right: 1 },
+          resultBind: '$counted',
+          in: [eff({ setVar: { scope: 'global', var: 'count', value: { _t: 2, ref: 'binding', name: '$counted' } } })],
+        },
+      }),
+      eff({
+        removeByPriority: {
+          budget: 1,
+          groups: [
+            {
+              bind: '$card',
+              over: { query: 'tokensInZone', zone: 'deck:none' },
+              to: 'hand:none',
+              countBind: '$removed',
+            },
+          ],
+          remainingBind: '$remaining',
+        },
+      }),
+    ];
+    const state = makeTokenState();
+    const rng = createRng(59n);
+    const compiled = compileEffectSequence(asPhaseId('main'), 'onEnter', effects);
+
+    assert.equal(compiled.coverageRatio, 1);
     compareResults(
       def,
       compiled.execute(state, rng, {}, makeCompiledContext(def)),
@@ -261,11 +475,31 @@ describe('effect-compiler orchestrator', () => {
     assert.notEqual(result.state, inputState);
   });
 
+  it('composeFragments normalizes defaults when fragments omit optional fields', () => {
+    const composed = composeFragments([
+      {
+        nodeCount: 1,
+        execute: (state, rng) => ({
+          state: { ...state, globalVars: { ...state.globalVars, score: Number(state.globalVars.score) + 1 } },
+          rng,
+        }),
+      },
+    ]);
+
+    const result = composed(makeState(), createRng(43n), { $seed: 'kept' }, makeCompiledContext(makeDef()));
+
+    assert.deepEqual(result.bindings, { $seed: 'kept' });
+    assert.deepEqual(result.emittedEvents, []);
+    assert.deepEqual(result.decisionScope, emptyScope());
+  });
+
   it('composeFragments threads tracker through fragment calls as a DraftTracker', () => {
     let capturedTracker: DraftTracker | undefined;
+    let capturedCtx: CompiledExecutionContext | undefined;
     const spyFragment: CompiledEffectFragment = {
       nodeCount: 1,
       execute: (state, rng, bindings, ctx) => {
+        capturedCtx = ctx;
         capturedTracker = ctx.tracker;
         return { state, rng, bindings };
       },
@@ -278,6 +512,9 @@ describe('effect-compiler orchestrator', () => {
     assert.ok(capturedTracker!.zoneVars instanceof Set, 'tracker.zoneVars must be a Set');
     assert.ok(capturedTracker!.zones instanceof Set, 'tracker.zones must be a Set');
     assert.ok(capturedTracker!.markers instanceof Set, 'tracker.markers must be a Set');
+    assert.equal(capturedCtx?.mode, 'execution');
+    assert.equal(capturedCtx?.decisionAuthority.player, asPlayerId(1));
+    assert.ok(capturedCtx !== undefined && capturedCtx.effectBudget.remaining > 0);
   });
 
   it('composeFragments threads bindings, decision scope, and emitted events in order', () => {
@@ -348,42 +585,19 @@ describe('effect-compiler orchestrator', () => {
     assert.deepEqual(result.bindings, { $first: true });
   });
 
-  it('createFallbackFragment uses lightweight env+cursor bridging with interpreter parity', () => {
-    const def = makeDef();
+  it('throws when grantFreeOperation appears in a lifecycle sequence', () => {
     const effects: readonly EffectAST[] = [
       eff({
-        rollRandom: {
-          bind: '$roll',
-          min: 1,
-          max: 6,
-          in: [eff({ setVar: { scope: 'global', var: 'count', value: { _t: 2, ref: 'binding', name: '$roll' } } })],
+        grantFreeOperation: {
+          seat: 'self',
+          operationClass: 'operation',
         },
       }),
     ];
-    const state = makeState();
-    const rng = createRng(53n);
-    const ctx = makeCompiledContext(def);
-    const fragment = createFallbackFragment(effects);
-    const result = fragment.execute(state, rng, {}, ctx);
 
-    compareResults(
-      def,
-      result,
-      applyEffects(
-        effects,
-        createExecutionEffectContext({
-          def,
-          adjacencyGraph: buildAdjacencyGraph(def.zones),
-          runtimeTableIndex: buildRuntimeTableIndex(def),
-          state,
-          rng,
-          activePlayer: asPlayerId(1),
-          actorPlayer: asPlayerId(0),
-          bindings: {},
-          moveParams: {},
-          resources: createEvalRuntimeResources(),
-        }),
-      ),
+    assert.throws(
+      () => compileEffectSequence(asPhaseId('main'), 'onEnter', effects),
+      /grantFreeOperation is an action-context effect and must not appear in lifecycle effect sequences/,
     );
   });
 

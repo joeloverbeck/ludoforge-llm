@@ -156,7 +156,7 @@ const formatComparison = (compiled: BenchmarkResult, interpreted: BenchmarkResul
 
 const FITL_PLAYER_COUNT = 4;
 const TEXAS_PLAYER_COUNT = 6;
-const TEXAS_MAX_TURNS = 500;
+const TEXAS_MAX_TURNS = 300;
 const TEXAS_GAME_COUNT = 15;
 const FITL_MAX_TURNS = 200;
 const FITL_GAME_COUNT = 5;

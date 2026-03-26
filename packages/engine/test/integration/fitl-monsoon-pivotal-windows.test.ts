@@ -7,13 +7,13 @@ import {
   asPhaseId,
   initialState,
   legalMoves,
-  type GameDef,
   type Move,
 } from '../../src/kernel/index.js';
 import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
+import { asTaggedGameDef } from '../helpers/gamedef-fixtures.js';
 
-const createDef = (): GameDef =>
-  ({
+const createDef = () =>
+  asTaggedGameDef({
     metadata: { id: 'fitl-monsoon-pivotal-int', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
     seats: [{ id: 'US' }, { id: 'ARVN' }],
     constants: {},
@@ -117,7 +117,7 @@ phase: [asPhaseId('main')],
     ],
     triggers: [],
     terminal: { conditions: [] },
-  }) as unknown as GameDef;
+  });
 
 describe('FITL monsoon/pivotal windows integration', () => {
   it('applies monsoon restrictions and only allows configured pivotal override metadata', () => {

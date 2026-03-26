@@ -17,6 +17,7 @@ import {
   type GameState,
   type Token,
 } from '../../src/kernel/index.js';
+import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { matchesDecisionRequest } from '../helpers/decision-key-matchers.js';
 import { applyMoveWithResolvedDecisionIds, type DecisionOverrideRule } from '../helpers/decision-param-helpers.js';
@@ -143,10 +144,10 @@ describe('FITL card-41 Bombing Pause', () => {
     assert.equal(card?.unshaded?.text, 'Set any two spaces to Passive Support. Patronage +2. No Air Strike until Coup. MOMENTUM');
     assert.deepEqual(card?.unshaded?.targets?.[0]?.cardinality, { n: 2 });
     assert.equal(card?.unshaded?.targets?.[0]?.application, 'each');
-    assert.deepEqual(card?.unshaded?.targets?.[0]?.effects, [
+    assert.deepEqual(card?.unshaded?.targets?.[0]?.effects, tagEffectAsts([
       { setMarker: { space: '$targetSpace', marker: 'supportOpposition', state: 'passiveSupport' } },
-    ]);
-    assert.deepEqual(card?.unshaded?.effects, [{ addVar: { scope: 'global', var: 'patronage', delta: 2 } }]);
+    ]));
+    assert.deepEqual(card?.unshaded?.effects, tagEffectAsts([{ addVar: { scope: 'global', var: 'patronage', delta: 2 } }]));
   });
 
   it('rejects target selections that do not meet exact-two or options-domain constraints', () => {

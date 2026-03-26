@@ -14,6 +14,7 @@ import {
   type Move,
   type TriggerLogEntry,
 } from '../../src/kernel/index.js';
+import { asTaggedGameDef } from '../helpers/gamedef-fixtures.js';
 import { readFixtureJson } from '../helpers/fixture-reader.js';
 
 interface FitlTurnFlowGolden {
@@ -29,7 +30,7 @@ interface FitlTurnFlowGolden {
 }
 
 const createDef = (): GameDef =>
-  ({
+  asTaggedGameDef({
     metadata: { id: 'fitl-turn-flow-golden-int', players: { min: 4, max: 4 }, maxTriggerDepth: 8 },
     seats: [{ id: 'US' }, { id: 'ARVN' }, { id: 'NVA' }, { id: 'VC' }],
     constants: {},
@@ -154,7 +155,7 @@ phase: [asPhaseId('main')],
     ],
     triggers: [],
     terminal: { conditions: [{ when: { op: '==', left: 1, right: 1 }, result: { type: 'draw' } }] },
-  }) as unknown as GameDef;
+  });
 
 describe('FITL turn-flow golden trace', () => {
   it('rejects unresolved card metadata seat order at GameDef validation time', () => {
@@ -164,7 +165,7 @@ describe('FITL turn-flow golden trace', () => {
     assert.notEqual(baseDeck, undefined);
     const baseCard = baseDeck!.cards[0];
     assert.notEqual(baseCard, undefined);
-    const def = {
+    const def = asTaggedGameDef({
       ...base,
       turnOrder: {
         type: 'cardDriven',
@@ -188,7 +189,7 @@ describe('FITL turn-flow golden trace', () => {
           ],
         },
       ],
-    } as unknown as GameDef;
+    });
 
     assert.throws(() => initialState(def, 71, 4), (error: unknown) => {
       assert.ok(error instanceof Error);

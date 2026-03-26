@@ -651,7 +651,7 @@ export type WithKindTag<K extends EffectKind> =
 export type EffectOfKind<K extends EffectKind> = WithKindTag<K>;
 export type EffectAST = { [K in EffectKind]: WithKindTag<K> }[EffectKind];
 
-const _effectTagExhaustive: Record<EffectKind, number> = EFFECT_KIND_TAG;
+void (EFFECT_KIND_TAG satisfies Record<EffectKind, number>);
 
 export type MoveParamScalar = number | string | boolean | TokenId | ZoneId | PlayerId;
 export type MoveParamValue = MoveParamScalar | readonly MoveParamScalar[];

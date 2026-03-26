@@ -44,7 +44,7 @@
     "test:integration:fitl-rules": "node scripts/run-tests.mjs --lane integration:fitl-rules",
     "test:integration:texas-cross-game": "node scripts/run-tests.mjs --lane integration:texas-cross-game",
     "test:performance": "node --test \"dist/test/performance/**/*.test.js\"",
-    "test:memory": "node --test \"dist/test/memory/**/*.test.js\"",
+    "test:memory": "node --expose-gc --test \"dist/test/memory/**/*.test.js\"",
     "test:e2e": "node scripts/run-tests.mjs --lane e2e",
     "test:e2e:slow": "RUN_SLOW_E2E=1 node scripts/run-tests.mjs --lane e2e:slow",
     "test:e2e:all": "RUN_SLOW_E2E=1 node scripts/run-tests.mjs --lane e2e:all",

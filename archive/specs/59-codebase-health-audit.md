@@ -1,5 +1,7 @@
 # Spec 59 — Codebase Health Audit
 
+**Status**: REJECTED
+
 ## Section 0: Summary & Motivation
 
 ### Why This Audit
@@ -323,3 +325,10 @@ CODEHEALTH-008 (store decomposition) → depends on CODEHEALTH-006 (render model
 2. **Wave 2 (file splits — engine)**: 001, 002, 004, 005
 3. **Wave 3 (file splits — compiler + runner)**: 003, 006
 4. **Wave 4 (store)**: 008
+
+## Rejection Rationale
+
+- Rejected on 2026-03-25.
+- This document is a stale point-in-time audit rather than a reliable current implementation plan.
+- Parts of the audit are already obsolete or resolved, while the remaining items need targeted ownership and fresh assumption checks before implementation.
+- Ongoing codebase health work should proceed through focused tickets and newer specs instead of treating this audit as an authoritative roadmap.

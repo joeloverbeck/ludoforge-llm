@@ -12,6 +12,7 @@ import {
   type Move,
   type Token,
 } from '../../src/kernel/index.js';
+import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { matchesDecisionRequest } from '../helpers/decision-key-matchers.js';
 import {
@@ -153,13 +154,13 @@ describe('FITL card-68 Green Berets', () => {
     const shadedEffects = shadedTarget?.effects ?? [];
     assert.equal(typeof (shadedEffects[0] as { chooseN?: unknown } | undefined)?.chooseN, 'object');
     assert.equal(typeof (shadedEffects[1] as { chooseN?: unknown } | undefined)?.chooseN, 'object');
-    assert.deepEqual(shadedEffects.at(-1), {
+    assert.deepEqual(shadedEffects.at(-1), tagEffectAsts({
       setMarker: {
         space: '$oppositionProvince',
         marker: 'supportOpposition',
         state: 'activeOpposition',
       },
-    });
+    }));
   });
 
   it('unshaded branches only target populated provinces without NVA Control and place up to 3 available pieces', () => {

@@ -1,8 +1,9 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { advancePhase, asPhaseId, createEvalRuntimeResources, initialState, type ConditionAST, type EffectAST, type GameDef, type TriggerLogEntry } from '../../src/kernel/index.js';
+import { advancePhase, asPhaseId, createEvalRuntimeResources, initialState, type ConditionAST, type EffectAST, type TriggerLogEntry } from '../../src/kernel/index.js';
 import { eff } from '../helpers/effect-tag-helper.js';
+import { asTaggedGameDef } from '../helpers/gamedef-fixtures.js';
 
 const pacifyCondition = (spaceVar: string, trackerVar: string, actor: 'us' | 'arvn'): ConditionAST => {
   const spendConstraints: readonly ConditionAST[] =
@@ -82,7 +83,7 @@ const attemptAgitationShift = (spaceVar: string, trackerVar: string): EffectAST 
   },
 }));
 
-const createSupportFixtureDef = (): GameDef => {
+const createSupportFixtureDef = () => {
   const usPlan = [
     ['supportA', 'pacA'],
     ['supportA', 'pacA'],
@@ -129,7 +130,7 @@ const createSupportFixtureDef = (): GameDef => {
     ...vcPlan.map(([spaceVar, trackerVar]) => attemptAgitationShift(spaceVar, trackerVar)),
   ];
 
-  return {
+  return asTaggedGameDef({
     metadata: { id: 'fitl-coup-support-phase-int', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
     constants: {},
     globalVars: [
@@ -180,7 +181,7 @@ phase: [asPhaseId('main')],
     ],
     triggers: [{ id: 'on_support_enter', event: { type: 'phaseEnter', phase: asPhaseId('support') }, effects: supportEffects }],
     terminal: { conditions: [] },
-  } as unknown as GameDef;
+  });
 };
 
 describe('FITL coup support phase integration', () => {

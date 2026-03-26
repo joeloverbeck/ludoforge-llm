@@ -3,6 +3,7 @@ import type {
   ConditionAST,
   EffectAST,
   NumericValueExpr,
+  OptionsQuery,
   PlayerSel,
   ScopedVarNameExpr,
   SetVarPayload,
@@ -42,21 +43,41 @@ export interface LogicalConditionPattern {
   readonly args: readonly CompilableConditionPattern[];
 }
 
+export interface GenericConditionPattern {
+  readonly kind: 'generic';
+  readonly condition: ConditionAST;
+}
+
 export type CompilableConditionPattern =
   | SimpleComparisonPattern
-  | LogicalConditionPattern;
+  | LogicalConditionPattern
+  | GenericConditionPattern;
 
-export type SetVarPattern = {
-  readonly kind: 'setVar';
-  readonly target: SimpleScopedTargetPattern;
-  readonly value: SimpleValuePattern;
-};
+export type SetVarPattern =
+  | {
+    readonly kind: 'setVar';
+    readonly mode: 'optimized';
+    readonly target: SimpleScopedTargetPattern;
+    readonly value: SimpleValuePattern;
+  }
+  | {
+    readonly kind: 'setVar';
+    readonly mode: 'delegate';
+    readonly payload: SetVarPayload;
+  };
 
-export type AddVarPattern = {
-  readonly kind: 'addVar';
-  readonly target: SimpleScopedTargetPattern;
-  readonly delta: SimpleNumericValuePattern;
-};
+export type AddVarPattern =
+  | {
+    readonly kind: 'addVar';
+    readonly mode: 'optimized';
+    readonly target: SimpleScopedTargetPattern;
+    readonly delta: SimpleNumericValuePattern;
+  }
+  | {
+    readonly kind: 'addVar';
+    readonly mode: 'delegate';
+    readonly payload: AddVarPayload;
+  };
 
 export type IfPattern = {
   readonly kind: 'if';
@@ -65,13 +86,27 @@ export type IfPattern = {
   readonly elseEffects: readonly EffectAST[];
 };
 
-export type ForEachPlayersPattern = {
-  readonly kind: 'forEachPlayers';
+export type ForEachPattern = {
+  readonly kind: 'forEach';
   readonly bind: string;
+  readonly over: OptionsQuery;
   readonly effects: readonly EffectAST[];
   readonly limit?: NumericValueExpr;
   readonly countBind?: string;
   readonly inEffects?: readonly EffectAST[];
+};
+
+type ReducePayload = Extract<EffectAST, { readonly reduce: unknown }>['reduce'];
+type RemoveByPriorityPayload = Extract<EffectAST, { readonly removeByPriority: unknown }>['removeByPriority'];
+
+export type ReducePattern = {
+  readonly kind: 'reduce';
+  readonly payload: ReducePayload;
+};
+
+export type RemoveByPriorityPattern = {
+  readonly kind: 'removeByPriority';
+  readonly payload: RemoveByPriorityPayload;
 };
 
 export type GotoPhaseExactPattern = {
@@ -79,12 +114,196 @@ export type GotoPhaseExactPattern = {
   readonly phase: string;
 };
 
+export type SetActivePlayerPattern = {
+  readonly kind: 'setActivePlayer';
+  readonly player: PlayerSel;
+};
+
+export type AdvancePhasePattern = {
+  readonly kind: 'advancePhase';
+};
+
+export type PopInterruptPhasePattern = {
+  readonly kind: 'popInterruptPhase';
+};
+
+type RollRandomPayload = Extract<EffectAST, { readonly rollRandom: unknown }>['rollRandom'];
+type PushInterruptPhasePayload = Extract<EffectAST, { readonly pushInterruptPhase: unknown }>['pushInterruptPhase'];
+type EvaluateSubsetPayload = Extract<EffectAST, { readonly evaluateSubset: unknown }>['evaluateSubset'];
+type ChooseOnePayload = Extract<EffectAST, { readonly chooseOne: unknown }>['chooseOne'];
+type ChooseNPayload = Extract<EffectAST, { readonly chooseN: unknown }>['chooseN'];
+
+type BindValuePayload = Extract<EffectAST, { readonly bindValue: unknown }>['bindValue'];
+type TransferVarPayload = Extract<EffectAST, { readonly transferVar: unknown }>['transferVar'];
+type LetPayload = Extract<EffectAST, { readonly let: unknown }>['let'];
+type SetMarkerPayload = Extract<EffectAST, { readonly setMarker: unknown }>['setMarker'];
+type ShiftMarkerPayload = Extract<EffectAST, { readonly shiftMarker: unknown }>['shiftMarker'];
+type SetGlobalMarkerPayload = Extract<EffectAST, { readonly setGlobalMarker: unknown }>['setGlobalMarker'];
+type FlipGlobalMarkerPayload = Extract<EffectAST, { readonly flipGlobalMarker: unknown }>['flipGlobalMarker'];
+type ShiftGlobalMarkerPayload = Extract<EffectAST, { readonly shiftGlobalMarker: unknown }>['shiftGlobalMarker'];
+type MoveTokenPayload = Extract<EffectAST, { readonly moveToken: unknown }>['moveToken'];
+type MoveAllPayload = Extract<EffectAST, { readonly moveAll: unknown }>['moveAll'];
+type MoveTokenAdjacentPayload = Extract<EffectAST, { readonly moveTokenAdjacent: unknown }>['moveTokenAdjacent'];
+type DrawPayload = Extract<EffectAST, { readonly draw: unknown }>['draw'];
+type ShufflePayload = Extract<EffectAST, { readonly shuffle: unknown }>['shuffle'];
+type CreateTokenPayload = Extract<EffectAST, { readonly createToken: unknown }>['createToken'];
+type DestroyTokenPayload = Extract<EffectAST, { readonly destroyToken: unknown }>['destroyToken'];
+type SetTokenPropPayload = Extract<EffectAST, { readonly setTokenProp: unknown }>['setTokenProp'];
+type RevealPayload = Extract<EffectAST, { readonly reveal: unknown }>['reveal'];
+type ConcealPayload = Extract<EffectAST, { readonly conceal: unknown }>['conceal'];
+
+export type BindValuePattern = {
+  readonly kind: 'bindValue';
+  readonly bind: BindValuePayload['bind'];
+  readonly value: BindValuePayload['value'];
+};
+
+export type RollRandomPattern = {
+  readonly kind: 'rollRandom';
+  readonly payload: RollRandomPayload;
+};
+
+export type ChooseOnePattern = {
+  readonly kind: 'chooseOne';
+  readonly payload: ChooseOnePayload;
+};
+
+export type ChooseNPattern = {
+  readonly kind: 'chooseN';
+  readonly payload: ChooseNPayload;
+};
+
+export type PushInterruptPhasePattern = {
+  readonly kind: 'pushInterruptPhase';
+  readonly payload: PushInterruptPhasePayload;
+};
+
+export type EvaluateSubsetPattern = {
+  readonly kind: 'evaluateSubset';
+  readonly payload: EvaluateSubsetPayload;
+};
+
+export type TransferVarPattern = {
+  readonly kind: 'transferVar';
+  readonly payload: TransferVarPayload;
+};
+
+export type LetPattern = {
+  readonly kind: 'let';
+  readonly bind: LetPayload['bind'];
+  readonly value: LetPayload['value'];
+  readonly inEffects: LetPayload['in'];
+};
+
+export type SetMarkerPattern = {
+  readonly kind: 'setMarker';
+  readonly payload: SetMarkerPayload;
+};
+
+export type ShiftMarkerPattern = {
+  readonly kind: 'shiftMarker';
+  readonly payload: ShiftMarkerPayload;
+};
+
+export type SetGlobalMarkerPattern = {
+  readonly kind: 'setGlobalMarker';
+  readonly payload: SetGlobalMarkerPayload;
+};
+
+export type FlipGlobalMarkerPattern = {
+  readonly kind: 'flipGlobalMarker';
+  readonly payload: FlipGlobalMarkerPayload;
+};
+
+export type ShiftGlobalMarkerPattern = {
+  readonly kind: 'shiftGlobalMarker';
+  readonly payload: ShiftGlobalMarkerPayload;
+};
+
+export type MoveTokenPattern = {
+  readonly kind: 'moveToken';
+  readonly payload: MoveTokenPayload;
+};
+
+export type MoveAllPattern = {
+  readonly kind: 'moveAll';
+  readonly payload: MoveAllPayload;
+};
+
+export type MoveTokenAdjacentPattern = {
+  readonly kind: 'moveTokenAdjacent';
+  readonly payload: MoveTokenAdjacentPayload;
+};
+
+export type DrawPattern = {
+  readonly kind: 'draw';
+  readonly payload: DrawPayload;
+};
+
+export type ShufflePattern = {
+  readonly kind: 'shuffle';
+  readonly payload: ShufflePayload;
+};
+
+export type CreateTokenPattern = {
+  readonly kind: 'createToken';
+  readonly payload: CreateTokenPayload;
+};
+
+export type DestroyTokenPattern = {
+  readonly kind: 'destroyToken';
+  readonly payload: DestroyTokenPayload;
+};
+
+export type SetTokenPropPattern = {
+  readonly kind: 'setTokenProp';
+  readonly payload: SetTokenPropPayload;
+};
+
+export type RevealPattern = {
+  readonly kind: 'reveal';
+  readonly payload: RevealPayload;
+};
+
+export type ConcealPattern = {
+  readonly kind: 'conceal';
+  readonly payload: ConcealPayload;
+};
+
 export type PatternDescriptor =
   | SetVarPattern
   | AddVarPattern
   | IfPattern
-  | ForEachPlayersPattern
-  | GotoPhaseExactPattern;
+  | ForEachPattern
+  | ReducePattern
+  | RemoveByPriorityPattern
+  | GotoPhaseExactPattern
+  | SetActivePlayerPattern
+  | AdvancePhasePattern
+  | PopInterruptPhasePattern
+  | RollRandomPattern
+  | ChooseOnePattern
+  | ChooseNPattern
+  | PushInterruptPhasePattern
+  | BindValuePattern
+  | TransferVarPattern
+  | LetPattern
+  | EvaluateSubsetPattern
+  | SetMarkerPattern
+  | ShiftMarkerPattern
+  | SetGlobalMarkerPattern
+  | FlipGlobalMarkerPattern
+  | ShiftGlobalMarkerPattern
+  | MoveTokenPattern
+  | MoveAllPattern
+  | MoveTokenAdjacentPattern
+  | DrawPattern
+  | ShufflePattern
+  | CreateTokenPattern
+  | DestroyTokenPattern
+  | SetTokenPropPattern
+  | RevealPattern
+  | ConcealPattern;
 
 const isScalarLiteral = (expr: ValueExpr): expr is ScalarLiteral =>
   typeof expr === 'number' || typeof expr === 'boolean' || typeof expr === 'string';
@@ -163,7 +382,7 @@ export const matchCompilableCondition = (
   condition: ConditionAST,
 ): CompilableConditionPattern | null => {
   if (typeof condition === 'boolean') {
-    return null;
+    return { kind: 'generic', condition };
   }
 
   if (condition.op === 'and' || condition.op === 'or') {
@@ -179,13 +398,13 @@ export const matchCompilableCondition = (
   }
 
   if (!isComparisonCondition(condition)) {
-    return null;
+    return { kind: 'generic', condition };
   }
 
   const left = matchSimpleValue(condition.left);
   const right = matchSimpleValue(condition.right);
   if (left === null || right === null) {
-    return null;
+    return { kind: 'generic', condition };
   }
 
   return {
@@ -207,10 +426,10 @@ export const matchSetVar = (node: EffectAST): SetVarPattern | null => {
   const target = matchSimpleScopedTarget(node.setVar);
   const value = matchSimpleValue(node.setVar.value);
   if (target === null || value === null) {
-    return null;
+    return { kind: 'setVar', mode: 'delegate', payload: node.setVar };
   }
 
-  return { kind: 'setVar', target, value };
+  return { kind: 'setVar', mode: 'optimized', target, value };
 };
 
 export const matchAddVar = (node: EffectAST): AddVarPattern | null => {
@@ -221,10 +440,10 @@ export const matchAddVar = (node: EffectAST): AddVarPattern | null => {
   const target = matchSimpleScopedTarget(node.addVar);
   const delta = matchSimpleNumericValue(node.addVar.delta);
   if (target === null || delta === null) {
-    return null;
+    return { kind: 'addVar', mode: 'delegate', payload: node.addVar };
   }
 
-  return { kind: 'addVar', target, delta };
+  return { kind: 'addVar', mode: 'optimized', target, delta };
 };
 
 export const matchIf = (node: EffectAST): IfPattern | null => {
@@ -245,18 +464,41 @@ export const matchIf = (node: EffectAST): IfPattern | null => {
   };
 };
 
-export const matchForEachPlayers = (node: EffectAST): ForEachPlayersPattern | null => {
-  if (!('forEach' in node) || node.forEach.over.query !== 'players') {
+export const matchForEach = (node: EffectAST): ForEachPattern | null => {
+  if (!('forEach' in node)) {
     return null;
   }
 
   return {
-    kind: 'forEachPlayers',
+    kind: 'forEach',
     bind: node.forEach.bind,
+    over: node.forEach.over,
     effects: node.forEach.effects,
     ...(node.forEach.limit === undefined ? {} : { limit: node.forEach.limit }),
     ...(node.forEach.countBind === undefined ? {} : { countBind: node.forEach.countBind }),
     ...(node.forEach.in === undefined ? {} : { inEffects: node.forEach.in }),
+  };
+};
+
+export const matchReduce = (node: EffectAST): ReducePattern | null => {
+  if (!('reduce' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'reduce',
+    payload: node.reduce,
+  };
+};
+
+export const matchRemoveByPriority = (node: EffectAST): RemoveByPriorityPattern | null => {
+  if (!('removeByPriority' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'removeByPriority',
+    payload: node.removeByPriority,
   };
 };
 
@@ -271,43 +513,326 @@ export const matchGotoPhaseExact = (node: EffectAST): GotoPhaseExactPattern | nu
   };
 };
 
+export const matchSetActivePlayer = (node: EffectAST): SetActivePlayerPattern | null => {
+  if (!('setActivePlayer' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'setActivePlayer',
+    player: node.setActivePlayer.player,
+  };
+};
+
+export const matchAdvancePhase = (node: EffectAST): AdvancePhasePattern | null => {
+  if (!('advancePhase' in node)) {
+    return null;
+  }
+
+  return { kind: 'advancePhase' };
+};
+
+export const matchPopInterruptPhase = (node: EffectAST): PopInterruptPhasePattern | null => {
+  if (!('popInterruptPhase' in node)) {
+    return null;
+  }
+
+  return { kind: 'popInterruptPhase' };
+};
+
+export const matchRollRandom = (node: EffectAST): RollRandomPattern | null => {
+  if (!('rollRandom' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'rollRandom',
+    payload: node.rollRandom,
+  };
+};
+
+export const matchChooseOne = (node: EffectAST): ChooseOnePattern | null => {
+  if (!('chooseOne' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'chooseOne',
+    payload: node.chooseOne,
+  };
+};
+
+export const matchChooseN = (node: EffectAST): ChooseNPattern | null => {
+  if (!('chooseN' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'chooseN',
+    payload: node.chooseN,
+  };
+};
+
+export const matchPushInterruptPhase = (node: EffectAST): PushInterruptPhasePattern | null => {
+  if (!('pushInterruptPhase' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'pushInterruptPhase',
+    payload: node.pushInterruptPhase,
+  };
+};
+
+export const matchBindValue = (node: EffectAST): BindValuePattern | null => {
+  if (!('bindValue' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'bindValue',
+    bind: node.bindValue.bind,
+    value: node.bindValue.value,
+  };
+};
+
+export const matchTransferVar = (node: EffectAST): TransferVarPattern | null => {
+  if (!('transferVar' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'transferVar',
+    payload: node.transferVar,
+  };
+};
+
+export const matchLet = (node: EffectAST): LetPattern | null => {
+  if (!('let' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'let',
+    bind: node.let.bind,
+    value: node.let.value,
+    inEffects: node.let.in,
+  };
+};
+
+export const matchEvaluateSubset = (node: EffectAST): EvaluateSubsetPattern | null => {
+  if (!('evaluateSubset' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'evaluateSubset',
+    payload: node.evaluateSubset,
+  };
+};
+
+export const matchSetMarker = (node: EffectAST): SetMarkerPattern | null => {
+  if (!('setMarker' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'setMarker',
+    payload: node.setMarker,
+  };
+};
+
+export const matchShiftMarker = (node: EffectAST): ShiftMarkerPattern | null => {
+  if (!('shiftMarker' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'shiftMarker',
+    payload: node.shiftMarker,
+  };
+};
+
+export const matchSetGlobalMarker = (node: EffectAST): SetGlobalMarkerPattern | null => {
+  if (!('setGlobalMarker' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'setGlobalMarker',
+    payload: node.setGlobalMarker,
+  };
+};
+
+export const matchFlipGlobalMarker = (node: EffectAST): FlipGlobalMarkerPattern | null => {
+  if (!('flipGlobalMarker' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'flipGlobalMarker',
+    payload: node.flipGlobalMarker,
+  };
+};
+
+export const matchShiftGlobalMarker = (node: EffectAST): ShiftGlobalMarkerPattern | null => {
+  if (!('shiftGlobalMarker' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'shiftGlobalMarker',
+    payload: node.shiftGlobalMarker,
+  };
+};
+
+export const matchMoveToken = (node: EffectAST): MoveTokenPattern | null => {
+  if (!('moveToken' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'moveToken',
+    payload: node.moveToken,
+  };
+};
+
+export const matchMoveAll = (node: EffectAST): MoveAllPattern | null => {
+  if (!('moveAll' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'moveAll',
+    payload: node.moveAll,
+  };
+};
+
+export const matchMoveTokenAdjacent = (node: EffectAST): MoveTokenAdjacentPattern | null => {
+  if (!('moveTokenAdjacent' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'moveTokenAdjacent',
+    payload: node.moveTokenAdjacent,
+  };
+};
+
+export const matchDraw = (node: EffectAST): DrawPattern | null => {
+  if (!('draw' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'draw',
+    payload: node.draw,
+  };
+};
+
+export const matchShuffle = (node: EffectAST): ShufflePattern | null => {
+  if (!('shuffle' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'shuffle',
+    payload: node.shuffle,
+  };
+};
+
+export const matchCreateToken = (node: EffectAST): CreateTokenPattern | null => {
+  if (!('createToken' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'createToken',
+    payload: node.createToken,
+  };
+};
+
+export const matchDestroyToken = (node: EffectAST): DestroyTokenPattern | null => {
+  if (!('destroyToken' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'destroyToken',
+    payload: node.destroyToken,
+  };
+};
+
+export const matchSetTokenProp = (node: EffectAST): SetTokenPropPattern | null => {
+  if (!('setTokenProp' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'setTokenProp',
+    payload: node.setTokenProp,
+  };
+};
+
+export const matchReveal = (node: EffectAST): RevealPattern | null => {
+  if (!('reveal' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'reveal',
+    payload: node.reveal,
+  };
+};
+
+export const matchConceal = (node: EffectAST): ConcealPattern | null => {
+  if (!('conceal' in node)) {
+    return null;
+  }
+
+  return {
+    kind: 'conceal',
+    payload: node.conceal,
+  };
+};
+
 /*
  * Effect compilation status by EFFECT_KIND_TAG (34 tags, 0-33):
  *
  *  0  setVar              — compiled (Phase 0)
  *  1  addVar              — compiled (Phase 0)
- *  2  setActivePlayer     — stub (Phase 1)
- *  3  transferVar         — stub (Phase 1)
- *  4  moveToken           — stub (Phase 2)
- *  5  moveAll             — stub (Phase 2)
- *  6  moveTokenAdjacent   — stub (Phase 2)
- *  7  draw                — stub (Phase 2)
- *  8  shuffle             — stub (Phase 2)
- *  9  createToken         — stub (Phase 2)
- * 10  destroyToken        — stub (Phase 2)
- * 11  setTokenProp        — stub (Phase 2)
- * 12  reveal              — stub (Phase 4)
- * 13  conceal             — stub (Phase 4)
- * 14  bindValue           — stub (Phase 1)
- * 15  chooseOne           — stub (Phase 6)
- * 16  chooseN             — stub (Phase 6)
- * 17  setMarker           — stub (Phase 1)
- * 18  shiftMarker         — stub (Phase 1)
- * 19  setGlobalMarker     — stub (Phase 1)
- * 20  flipGlobalMarker    — stub (Phase 1)
- * 21  shiftGlobalMarker   — stub (Phase 1)
+ *  2  setActivePlayer     — compiled (Phase 1)
+ *  3  transferVar         — compiled (Phase 1)
+ *  4  moveToken           — compiled (Phase 2)
+ *  5  moveAll             — compiled (Phase 2)
+ *  6  moveTokenAdjacent   — compiled (Phase 2)
+ *  7  draw                — compiled (Phase 2)
+ *  8  shuffle             — compiled (Phase 2)
+ *  9  createToken         — compiled (Phase 2)
+ * 10  destroyToken        — compiled (Phase 2)
+ * 11  setTokenProp        — compiled (Phase 2)
+ * 12  reveal              — compiled (Phase 4)
+ * 13  conceal             — compiled (Phase 4)
+ * 14  bindValue           — compiled (Phase 1)
+ * 15  chooseOne           — compiled (Phase 6)
+ * 16  chooseN             — compiled (Phase 6)
+ * 17  setMarker           — compiled (Phase 1)
+ * 18  shiftMarker         — compiled (Phase 1)
+ * 19  setGlobalMarker     — compiled (Phase 1)
+ * 20  flipGlobalMarker    — compiled (Phase 1)
+ * 21  shiftGlobalMarker   — compiled (Phase 1)
  * 22  grantFreeOperation  — deferred (action-context-heavy, future spec)
  * 23  gotoPhaseExact      — compiled (Phase 0)
- * 24  advancePhase        — stub (Phase 1)
- * 25  pushInterruptPhase  — stub (Phase 5)
- * 26  popInterruptPhase   — stub (Phase 1)
- * 27  rollRandom          — stub (Phase 5)
+ * 24  advancePhase        — compiled (Phase 1)
+ * 25  pushInterruptPhase  — compiled (Phase 5)
+ * 26  popInterruptPhase   — compiled (Phase 1)
+ * 27  rollRandom          — compiled (Phase 5)
  * 28  if                  — compiled (Phase 0)
- * 29  forEach             — compiled (Phase 0, players-only; general in Phase 3)
- * 30  reduce              — stub (Phase 3)
- * 31  removeByPriority    — stub (Phase 3)
- * 32  let                 — stub (Phase 1)
- * 33  evaluateSubset      — stub (Phase 5)
+ * 29  forEach             — compiled (Phase 3, generic OptionsQuery support)
+ * 30  reduce              — compiled (Phase 3)
+ * 31  removeByPriority    — compiled (Phase 3)
+ * 32  let                 — compiled (Phase 1)
+ * 33  evaluateSubset      — compiled (Phase 5)
  */
 export const classifyEffect = (node: EffectAST): PatternDescriptor | null => {
   switch (node._k) {
@@ -318,46 +843,89 @@ export const classifyEffect = (node: EffectAST): PatternDescriptor | null => {
     case EFFECT_KIND_TAG.if:
       return matchIf(node);
     case EFFECT_KIND_TAG.forEach:
-      return matchForEachPlayers(node);
+      return matchForEach(node);
+    case EFFECT_KIND_TAG.reduce:
+      return matchReduce(node);
+    case EFFECT_KIND_TAG.removeByPriority:
+      return matchRemoveByPriority(node);
     case EFFECT_KIND_TAG.gotoPhaseExact:
       return matchGotoPhaseExact(node);
+    case EFFECT_KIND_TAG.setActivePlayer:
+      return matchSetActivePlayer(node);
+    case EFFECT_KIND_TAG.advancePhase:
+      return matchAdvancePhase(node);
+    case EFFECT_KIND_TAG.pushInterruptPhase:
+      return matchPushInterruptPhase(node);
+    case EFFECT_KIND_TAG.popInterruptPhase:
+      return matchPopInterruptPhase(node);
+    case EFFECT_KIND_TAG.rollRandom:
+      return matchRollRandom(node);
+    case EFFECT_KIND_TAG.chooseOne:
+      return matchChooseOne(node);
+    case EFFECT_KIND_TAG.chooseN:
+      return matchChooseN(node);
+    case EFFECT_KIND_TAG.bindValue:
+      return matchBindValue(node);
+    case EFFECT_KIND_TAG.transferVar:
+      return matchTransferVar(node);
+    case EFFECT_KIND_TAG.let:
+      return matchLet(node);
+    case EFFECT_KIND_TAG.evaluateSubset:
+      return matchEvaluateSubset(node);
+    case EFFECT_KIND_TAG.setMarker:
+      return matchSetMarker(node);
+    case EFFECT_KIND_TAG.shiftMarker:
+      return matchShiftMarker(node);
+    case EFFECT_KIND_TAG.setGlobalMarker:
+      return matchSetGlobalMarker(node);
+    case EFFECT_KIND_TAG.flipGlobalMarker:
+      return matchFlipGlobalMarker(node);
+    case EFFECT_KIND_TAG.shiftGlobalMarker:
+      return matchShiftGlobalMarker(node);
+    case EFFECT_KIND_TAG.moveToken:
+      return matchMoveToken(node);
+    case EFFECT_KIND_TAG.moveAll:
+      return matchMoveAll(node);
+    case EFFECT_KIND_TAG.moveTokenAdjacent:
+      return matchMoveTokenAdjacent(node);
+    case EFFECT_KIND_TAG.draw:
+      return matchDraw(node);
+    case EFFECT_KIND_TAG.shuffle:
+      return matchShuffle(node);
+    case EFFECT_KIND_TAG.createToken:
+      return matchCreateToken(node);
+    case EFFECT_KIND_TAG.destroyToken:
+      return matchDestroyToken(node);
+    case EFFECT_KIND_TAG.setTokenProp:
+      return matchSetTokenProp(node);
+    case EFFECT_KIND_TAG.reveal:
+      return matchReveal(node);
+    case EFFECT_KIND_TAG.conceal:
+      return matchConceal(node);
     // Deferred: action-context-heavy, depends on __freeOperation/__actionClass
     // bindings only available during the operation pipeline. See Spec 81.
     case EFFECT_KIND_TAG.grantFreeOperation:
       return null;
-    // Not-yet-compiled lifecycle tags — stubs for future tickets (002-009)
-    case EFFECT_KIND_TAG.setActivePlayer:
-    case EFFECT_KIND_TAG.transferVar:
-    case EFFECT_KIND_TAG.bindValue:
-    case EFFECT_KIND_TAG.let:
-    case EFFECT_KIND_TAG.setMarker:
-    case EFFECT_KIND_TAG.shiftMarker:
-    case EFFECT_KIND_TAG.setGlobalMarker:
-    case EFFECT_KIND_TAG.flipGlobalMarker:
-    case EFFECT_KIND_TAG.shiftGlobalMarker:
-    case EFFECT_KIND_TAG.advancePhase:
-    case EFFECT_KIND_TAG.popInterruptPhase:
-    case EFFECT_KIND_TAG.moveToken:
-    case EFFECT_KIND_TAG.moveAll:
-    case EFFECT_KIND_TAG.moveTokenAdjacent:
-    case EFFECT_KIND_TAG.draw:
-    case EFFECT_KIND_TAG.shuffle:
-    case EFFECT_KIND_TAG.createToken:
-    case EFFECT_KIND_TAG.destroyToken:
-    case EFFECT_KIND_TAG.setTokenProp:
-    case EFFECT_KIND_TAG.reveal:
-    case EFFECT_KIND_TAG.conceal:
-    case EFFECT_KIND_TAG.reduce:
-    case EFFECT_KIND_TAG.removeByPriority:
-    case EFFECT_KIND_TAG.rollRandom:
-    case EFFECT_KIND_TAG.pushInterruptPhase:
-    case EFFECT_KIND_TAG.evaluateSubset:
-    case EFFECT_KIND_TAG.chooseOne:
-    case EFFECT_KIND_TAG.chooseN:
-      return null;
     default:
       return null;
   }
+};
+
+export const classifyLifecycleEffect = (node: EffectAST): PatternDescriptor => {
+  const descriptor = classifyEffect(node);
+  if (descriptor !== null) {
+    return descriptor;
+  }
+
+  if (node._k === EFFECT_KIND_TAG.grantFreeOperation) {
+    throw new Error(
+      'grantFreeOperation is an action-context effect and must not appear in lifecycle effect sequences',
+    );
+  }
+
+  throw new Error(
+    `Lifecycle effect compilation does not support effect tag ${String(node._k)}; lifecycle compilation must be total`,
+  );
 };
 
 const walkEffects = (

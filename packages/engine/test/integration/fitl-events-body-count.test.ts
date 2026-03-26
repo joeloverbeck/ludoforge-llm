@@ -11,6 +11,7 @@ import {
   type GameState,
   type Token,
 } from '../../src/kernel/index.js';
+import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
 import { findDeep } from '../helpers/ast-search-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
@@ -82,12 +83,12 @@ describe('FITL card-72 Body Count', () => {
       "'If it's dead, it's VC': Place 1 VC Guerrilla in each Active Opposition space, 2 NVA Troops in each Laos/Cambodia space.",
     );
     assert.equal(card?.tags?.includes('momentum'), true);
-    assert.deepEqual(card?.unshaded?.lastingEffects?.[0]?.setupEffects, [
+    assert.deepEqual(card?.unshaded?.lastingEffects?.[0]?.setupEffects, tagEffectAsts([
       { setVar: { scope: 'global', var: 'mom_bodyCount', value: true } },
-    ]);
-    assert.deepEqual(card?.unshaded?.lastingEffects?.[0]?.teardownEffects, [
+    ]));
+    assert.deepEqual(card?.unshaded?.lastingEffects?.[0]?.teardownEffects, tagEffectAsts([
       { setVar: { scope: 'global', var: 'mom_bodyCount', value: false } },
-    ]);
+    ]));
 
     const parsedCard = parsed.doc.eventDecks?.[0]?.cards.find((entry) => entry.id === CARD_ID);
     assert.notEqual(parsedCard, undefined, 'Expected parsed card-72 definition');

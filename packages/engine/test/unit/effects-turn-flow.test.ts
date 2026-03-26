@@ -33,8 +33,8 @@ import { eff } from '../helpers/effect-tag-helper.js';
 const dummyBudget: EffectBudgetState = { remaining: 10_000, max: 10_000 };
 const dummyApplyBatch: ApplyEffectsWithBudget = () => { throw new Error('unexpected applyBatch call'); };
 
-type SimpleHandler<E> = (effect: E, ctx: EffectContext) => import('../../src/kernel/effect-context.js').EffectResult;
-const adaptHandler = <E>(native: (effect: E, env: import('../../src/kernel/effect-context.js').EffectEnv, cursor: import('../../src/kernel/effect-context.js').EffectCursor, budget: EffectBudgetState, applyBatch: ApplyEffectsWithBudget) => import('../../src/kernel/effect-context.js').EffectResult): SimpleHandler<E> =>
+type SimpleHandler<E> = (effect: E, ctx: EffectContext) => import('../../src/kernel/effect-context.js').PartialEffectResult;
+const adaptHandler = <E>(native: (effect: E, env: import('../../src/kernel/effect-context.js').EffectEnv, cursor: import('../../src/kernel/effect-context.js').EffectCursor, budget: EffectBudgetState, applyBatch: ApplyEffectsWithBudget) => import('../../src/kernel/effect-context.js').PartialEffectResult): SimpleHandler<E> =>
   (effect, ctx) => native(effect, toEffectEnv(ctx), toEffectCursor(ctx), dummyBudget, dummyApplyBatch);
 
 const applyGrantFreeOperation = adaptHandler(applyGrantFreeOperationNative);

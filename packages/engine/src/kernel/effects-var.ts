@@ -16,13 +16,20 @@ import { emitVarChangeTraceIfChanged } from './var-change-trace.js';
 import { clampIntVarValue } from './var-runtime-utils.js';
 import { updateRunningHash } from './zobrist.js';
 import { updateVarRunningHash } from './zobrist-var-hash.js';
-import { fromEnvAndCursor, resolveEffectBindings } from './effect-context.js';
+import { mergeToReadContext, resolveEffectBindings } from './effect-context.js';
 import type { EffectCursor, EffectEnv, PartialEffectResult } from './effect-context.js';
 import type { EffectBudgetState } from './effects-control.js';
 import type { ApplyEffectsWithBudget } from './effect-registry.js';
 import type { MutableGameState } from './state-draft.js';
 import type { EffectAST } from './types.js';
 import type { TriggerEvent } from './types.js';
+
+type VarTraceContext = Readonly<{
+  collector: EffectEnv['collector'];
+  state: EffectCursor['state'];
+  traceContext?: NonNullable<EffectEnv['traceContext']>;
+  effectPath?: NonNullable<EffectCursor['effectPath']>;
+}>;
 
 const expectInteger = (value: unknown, effectType: 'setVar' | 'addVar', field: 'value' | 'delta'): number => {
   if (typeof value !== 'number' || !Number.isFinite(value) || !Number.isSafeInteger(value)) {
@@ -51,7 +58,7 @@ const expectBoolean = (value: unknown, effectType: 'setVar', field: 'value'): bo
 };
 
 const emitVarChangeArtifacts = (
-  traceCtx: Pick<import('./effect-context.js').EffectContext, 'collector' | 'state' | 'traceContext' | 'effectPath'>,
+  traceCtx: VarTraceContext,
   endpoint: RuntimeScopedVarEndpoint,
   oldValue: number | boolean,
   newValue: number | boolean,
@@ -63,6 +70,13 @@ const emitVarChangeArtifacts = (
 
   return toVarChangedEvent(endpoint, oldValue, newValue);
 };
+
+const buildVarTraceContext = (env: EffectEnv, cursor: EffectCursor): VarTraceContext => ({
+  collector: env.collector,
+  state: cursor.state,
+  ...(env.traceContext === undefined ? {} : { traceContext: env.traceContext }),
+  ...(cursor.effectPath === undefined ? {} : { effectPath: cursor.effectPath }),
+});
 
 export const applySetVar = (
   effect: Extract<EffectAST, { readonly setVar: unknown }>,
@@ -76,7 +90,7 @@ export const applySetVar = (
   const t0_bindings = profiler !== undefined ? performance.now() : 0;
   const resolvedBindings = resolveEffectBindings(env, cursor);
   const evalCursor = resolvedBindings === cursor.bindings ? cursor : { ...cursor, bindings: resolvedBindings };
-  const evalCtx = fromEnvAndCursor(env, evalCursor);
+  const evalCtx = mergeToReadContext(env, evalCursor);
   if (profiler !== undefined) {
     const k = 'setVar:bindings'; const b = profiler.dynamic.get(k); if (b) b.totalMs += performance.now() - t0_bindings; else profiler.dynamic.set(k, { count: 0, totalMs: performance.now() - t0_bindings });
   }
@@ -98,7 +112,7 @@ export const applySetVar = (
     const k = 'setVar:resolveEndpoint'; const b = profiler.dynamic.get(k); if (b) { b.totalMs += performance.now() - t0_endpoint; b.count += 1; } else profiler.dynamic.set(k, { count: 1, totalMs: performance.now() - t0_endpoint });
   }
   const variableDef = resolveScopedVarDef(
-    evalCtx,
+    { def: env.def },
     { scope: effect.setVar.scope, var: endpoint.var },
     'setVar',
     EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED,
@@ -114,13 +128,13 @@ export const applySetVar = (
 
   const currentValue =
     variableDef.type === 'int'
-      ? readScopedIntVarValue(evalCtx, endpoint, 'setVar', EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED)
-      : readScopedVarValue(evalCtx, endpoint, 'setVar', EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED);
+      ? readScopedIntVarValue({ state: cursor.state }, endpoint, 'setVar', EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED)
+      : readScopedVarValue({ state: cursor.state }, endpoint, 'setVar', EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED);
   const nextValue =
     variableDef.type === 'int'
       ? clampIntVarValue(expectInteger(evaluatedValue, 'setVar', 'value'), variableDef)
       : expectBoolean(evaluatedValue, 'setVar', 'value');
-  const emittedEvent = emitVarChangeArtifacts(evalCtx, endpoint, currentValue, nextValue);
+  const emittedEvent = emitVarChangeArtifacts(buildVarTraceContext(env, cursor), endpoint, currentValue, nextValue);
   if (emittedEvent === undefined) {
     return { state: cursor.state, rng: cursor.rng };
   }
@@ -159,7 +173,7 @@ export const applyAddVar = (
   const { delta } = effect.addVar;
   const resolvedBindings = resolveEffectBindings(env, cursor);
   const evalCursor = resolvedBindings === cursor.bindings ? cursor : { ...cursor, bindings: resolvedBindings };
-  const evalCtx = fromEnvAndCursor(env, evalCursor);
+  const evalCtx = mergeToReadContext(env, evalCursor);
   const evaluatedDelta = expectInteger(evalValue(delta, evalCtx), 'addVar', 'delta');
   const endpoint = resolveRuntimeScopedEndpoint(effect.addVar, evalCtx, env.mode, {
     code: EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED,
@@ -170,7 +184,7 @@ export const applyAddVar = (
     context: { endpoint: effect.addVar },
   });
   const variableDef = resolveScopedVarDef(
-    evalCtx,
+    { def: env.def },
     { scope: effect.addVar.scope, var: endpoint.var },
     'addVar',
     EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED,
@@ -188,9 +202,9 @@ export const applyAddVar = (
     });
   }
 
-  const currentValue = readScopedIntVarValue(evalCtx, endpoint, 'addVar', EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED);
+  const currentValue = readScopedIntVarValue({ state: cursor.state }, endpoint, 'addVar', EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED);
   const nextValue = clampIntVarValue(currentValue + evaluatedDelta, variableDef);
-  const emittedEvent = emitVarChangeArtifacts(evalCtx, endpoint, currentValue, nextValue);
+  const emittedEvent = emitVarChangeArtifacts(buildVarTraceContext(env, cursor), endpoint, currentValue, nextValue);
   if (emittedEvent === undefined) {
     return { state: cursor.state, rng: cursor.rng };
   }
@@ -220,8 +234,8 @@ export const applySetActivePlayer = (
 ): PartialEffectResult => {
   const resolvedBindings = resolveEffectBindings(env, cursor);
   const evalCursor = resolvedBindings === cursor.bindings ? cursor : { ...cursor, bindings: resolvedBindings };
-  const evalCtx = fromEnvAndCursor(env, evalCursor);
-  const onResolutionFailure = selectorResolutionFailurePolicyForMode(evalCtx.mode);
+  const evalCtx = mergeToReadContext(env, evalCursor);
+  const onResolutionFailure = selectorResolutionFailurePolicyForMode(env.mode);
   const nextActive = resolveSinglePlayerWithNormalization(effect.setActivePlayer.player, evalCtx, {
     code: EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED,
     effectType: 'setActivePlayer',

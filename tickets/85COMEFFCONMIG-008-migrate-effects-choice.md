@@ -32,6 +32,8 @@ This is the second-largest migration file (8 sites) and depends on both -001 (wi
 
 `85COMEFFCONMIG-002` is complete and archived. Its work is already reflected in the codebase, so this ticket should treat `resolveChoiceDecisionPlayer` as a `ReadContext` consumer and avoid redoing that helper cleanup while migrating the 8 remaining `fromEnvAndCursor` call sites.
 
+If `effects-choice.ts` needs tiny env/cursor trace picks during migration, keep them file-local here. Do not extract a shared cross-file provenance helper from this ticket; that series-end decision remains owned by `85COMEFFCONMIG-010` once the final duplicated surface is visible across `effects-resource.ts`, `effects-choice.ts`, and `effects-token.ts`.
+
 ## What to Change
 
 ### 1. Replace 8 fromEnvAndCursor call sites
@@ -50,6 +52,8 @@ For each of the 8 call sites, determine the pattern:
 ### Note
 
 This ticket is the right place to finish file-local helper cleanup in `effects-choice.ts`, not just the 8 call sites. Any internal helper that still accepts `EffectContext` while only using `ReadContext`-level fields should be narrowed during the same edit for architectural completeness.
+
+Keep any trace/provenance cleanup local to `effects-choice.ts`. If this migration exposes repeated env/cursor trace builders or repeated inline trace picks that seem shareable, make that duplication explicit but defer the cross-file extraction decision to `85COMEFFCONMIG-010`.
 
 ## Files to Touch
 

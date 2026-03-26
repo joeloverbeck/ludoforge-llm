@@ -10,15 +10,18 @@
 
 After tickets -003 through -009 replace all 28 `fromEnvAndCursor` call sites, the function itself becomes dead code. Per Foundation 9 (No Backwards Compatibility), dead code must be removed — not deprecated, not commented out.
 
-## Assumption Reassessment (2026-03-26)
+## Assumption Reassessment (2026-03-27)
 
 1. `fromEnvAndCursor` is exported from `effect-context.ts` at lines ~252-253 — confirmed
-2. Archived tickets `85COMEFFCONMIG-003`, `85COMEFFCONMIG-004`, and `85COMEFFCONMIG-005` are already complete; active tickets `85COMEFFCONMIG-006` through `85COMEFFCONMIG-009` still own the remaining handler-local migrations
+2. Archived tickets `85COMEFFCONMIG-003`, `85COMEFFCONMIG-004`, `85COMEFFCONMIG-005`, and `85COMEFFCONMIG-006` are already complete; active tickets `85COMEFFCONMIG-007` through `85COMEFFCONMIG-009` still own the remaining handler-local migrations
 3. After the remaining handler tickets land, zero legitimate runtime call sites should remain — verify with `rg "fromEnvAndCursor" packages/engine/`
 4. `effect-compiler-runtime.ts` still has a comment referencing `fromEnvAndCursor` — confirmed in current source
 5. No `compat()` helper is currently present in `effect-context.ts`; keep this as a verification checkpoint rather than an expected edit
 6. Existing migration tickets already defer any cross-file provenance-helper decision to this ticket, so this is the explicit series-end owner for deciding whether that extraction is warranted
-7. The ideal architectural endpoint is not merely "no callers"; it is "no compatibility bridge left behind once the migration is complete" (Foundations 9 and 10)
+7. Archived ticket `85COMEFFCONMIG-006` confirms one concrete post-migration duplication shape already exists: `effects-var.ts` now carries a local narrow var-trace context/builder instead of any shared helper
+8. Active tickets `85COMEFFCONMIG-007` and `85COMEFFCONMIG-009` already expect local inline picks or local trace builders, and `85COMEFFCONMIG-008` may expose similar trace/provenance duplication depending on the final call-site audit
+9. The right decision boundary for this ticket is therefore not "extract something because duplication exists somewhere"; it is "reassess the final migrated set and only extract a helper if at least two files share a stable, semantically identical env/cursor trace shape"
+10. The ideal architectural endpoint is not merely "no callers"; it is "no compatibility bridge left behind once the migration is complete" (Foundations 9 and 10)
 
 ## Architecture Check
 
@@ -27,6 +30,7 @@ After tickets -003 through -009 replace all 28 `fromEnvAndCursor` call sites, th
 3. No shims, no deprecation markers — clean removal
 4. Shared provenance-helper extraction, if duplication remains after -003 through -009, is cleaner here than in any single migration ticket because it can be done once against the final post-migration surface
 5. This ticket is the architectural completion step for the series: per-file tickets keep local changes narrow, and this ticket owns the final delete-or-extract decisions that should only be made against the fully migrated codebase
+6. Any extracted helper must be justified by a stable repeated contract across files, not by superficial similarity. A helper that papers over materially different trace semantics would violate Foundation 10 by hiding, rather than resolving, architectural differences.
 
 ## What to Change
 
@@ -65,9 +69,13 @@ Run `grep -r "fromEnvAndCursor" packages/engine/` to confirm zero remaining refe
 - Reassess the migrated handler files for repeated helpers or repeated inline objects that only exist to supply:
   - `resolveTraceProvenance({ state, traceContext?, effectPath? })`
   - `emitVarChangeTraceIfChanged({ collector, state, traceContext?, effectPath? }, ...)`
+- Use the completed `85COMEFFCONMIG-006` outcome plus the final `85COMEFFCONMIG-007` through `85COMEFFCONMIG-009` implementations as the concrete audit set; do not speculate from the pre-migration ticket text once the files are available
 - If the duplication is real across multiple files, extract a shared helper in the kernel layer with a narrow contract based on `EffectEnv` + `EffectCursor`
 - Update migrated handlers to consume the shared helper instead of keeping file-local provenance builders
 - Do not reintroduce broad `EffectContext` plumbing while doing this; the helper must preserve the narrow env/cursor architecture established by the migration
+- Prefer one of two outcomes only:
+  - extract a helper because the same env/cursor-to-trace shape truly repeats across files
+  - keep local helpers/picks because the repeated code is only superficially similar or diverges by trace payload semantics
 - If the duplication does not justify a shared helper after reassessment, document that conclusion in the completed ticket outcome and keep the local picks/helpers; do not force an abstraction that is weaker than the final concrete call surface
 
 ### 7. Series-end architecture check

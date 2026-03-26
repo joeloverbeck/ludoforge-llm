@@ -15,10 +15,11 @@ This is the second-largest migration file (8 sites) and depends on both -001 (wi
 ## Assumption Reassessment (2026-03-26)
 
 1. 8 `fromEnvAndCursor` call sites at lines ~604, 723, 961, 1109, 1198, 1291, 1350, 1419 — confirmed
-2. Results are passed to: `resolveChoiceDecisionPlayer` (widened in -002), `evalQuery`, `evalCondition`, `evalValue`, `resolveRef` — all accept `ReadContext`
+2. Results are passed to: `resolveChoiceDecisionPlayer` (completed in archived ticket `85COMEFFCONMIG-002`), `evalQuery`, `evalCondition`, `evalValue`, `resolveRef` — all accept `ReadContext`
 3. Some call sites use resolved bindings (`resolveChoiceBindings`) — these need `mergeToReadContext(env, evalCursor)` pattern
 4. Check whether any call site passes the context to trace functions — if so, inline pick objects needed
 5. `resolvePrioritizedTierEntries` currently still accepts `EffectContext` even though it only delegates to `evalQuery`; if this file is being touched for migration anyway, that helper should be narrowed in the same ticket instead of carrying forward unnecessary context coupling
+6. Ticket `85COMEFFCONMIG-002` narrowed `resolveChoiceDecisionPlayer` to `ReadContext` without migrating any runtime call sites; this ticket still owns all 8 `fromEnvAndCursor` replacements in `effects-choice.ts`
 
 ## Architecture Check
 
@@ -26,6 +27,10 @@ This is the second-largest migration file (8 sites) and depends on both -001 (wi
 2. `resolveChoiceDecisionPlayer` already widened to `ReadContext` in -002
 3. No game-specific logic (Foundation 1)
 4. No shims (Foundation 9)
+
+## Coordination Note
+
+`85COMEFFCONMIG-002` is complete and archived. Its work is already reflected in the codebase, so this ticket should treat `resolveChoiceDecisionPlayer` as a `ReadContext` consumer and avoid redoing that helper cleanup while migrating the 8 remaining `fromEnvAndCursor` call sites.
 
 ## What to Change
 

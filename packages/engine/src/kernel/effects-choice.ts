@@ -25,6 +25,7 @@ import { ensureMarkerCloned, type MutableGameState } from './state-draft.js';
 import { addToRunningHash, updateRunningHash } from './zobrist.js';
 import type { ZobristFeature } from './types-core.js';
 import type { EffectContext, EffectCursor, EffectEnv, PartialEffectResult } from './effect-context.js';
+import type { ReadContext } from './eval-context.js';
 import type {
   ChoicePendingRequest,
   ChoiceStochasticOutcome,
@@ -525,7 +526,7 @@ const resolveGlobalMarkerLattice = (def: EffectContext['def'], markerId: string,
 const resolveChoiceDecisionPlayer = (
   effectType: 'chooseOne' | 'chooseN',
   chooser: PlayerSel,
-  evalCtx: EffectContext,
+  evalCtx: ReadContext,
   bind: string,
   decisionId: string,
 ): ReturnType<typeof resolveSinglePlayerSel> => {

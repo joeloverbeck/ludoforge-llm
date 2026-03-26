@@ -103,12 +103,67 @@ describe('map-editor-export', () => {
     });
   });
 
+  it('buildExportConfig preserves optional zone endpoint anchor metadata', () => {
+    const input = makeExportInput();
+    input.connectionRoutes = new Map<string, ConnectionRouteDefinition>([
+      ['route:none', {
+        points: [
+          { kind: 'zone', zoneId: 'zone:a', anchor: 45 },
+          { kind: 'zone', zoneId: 'zone:b' },
+        ],
+        segments: [{ kind: 'straight' }],
+      }],
+    ]);
+
+    const exported = buildExportConfig(input);
+
+    expect(exported.zones?.connectionRoutes?.['route:none']).toEqual({
+      points: [
+        { kind: 'zone', zoneId: 'zone:a', anchor: 45 },
+        { kind: 'zone', zoneId: 'zone:b' },
+      ],
+      segments: [{ kind: 'straight' }],
+    });
+    expect(exported.zones?.connectionRoutes?.['route:none']?.points[1]).not.toHaveProperty('anchor');
+  });
+
   it('serializeVisualConfig emits yaml text', () => {
     const yaml = serializeVisualConfig(buildExportConfig(makeExportInput()));
 
     expect(yaml).toContain('version: 1');
     expect(yaml).toContain('fixed:');
     expect(yaml).toContain('connectionRoutes:');
+  });
+
+  it('exportVisualConfig round-trips optional zone endpoint anchor metadata', () => {
+    const input = makeExportInput();
+    input.connectionRoutes = new Map<string, ConnectionRouteDefinition>([
+      ['route:none', {
+        points: [
+          { kind: 'zone', zoneId: 'zone:a', anchor: 180 },
+          { kind: 'anchor', anchorId: 'bend' },
+          { kind: 'zone', zoneId: 'zone:b' },
+        ],
+        segments: [
+          { kind: 'straight' },
+          { kind: 'quadratic', control: { kind: 'anchor', anchorId: 'ctrl' } },
+        ],
+      }],
+    ]);
+
+    const reparsed = parseVisualConfigStrict(parse(exportVisualConfig(input)));
+
+    expect(reparsed?.zones?.connectionRoutes?.['route:none']).toEqual({
+      points: [
+        { kind: 'zone', zoneId: 'zone:a', anchor: 180 },
+        { kind: 'anchor', anchorId: 'bend' },
+        { kind: 'zone', zoneId: 'zone:b' },
+      ],
+      segments: [
+        { kind: 'straight' },
+        { kind: 'quadratic', control: { kind: 'anchor', anchorId: 'ctrl' } },
+      ],
+    });
   });
 
   it('triggerDownload creates a blob url, clicks an anchor, and revokes the url', () => {

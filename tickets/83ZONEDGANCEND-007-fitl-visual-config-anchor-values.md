@@ -4,7 +4,7 @@
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: None — runner-only (data file only)
-**Deps**: 83ZONEDGANCEND-001 (schema), 83ZONEDGANCEND-003 (presentation resolver)
+**Deps**: `archive/tickets/83ZONEDGANCEND-001-schema-extension-and-export-serialization.md`, `tickets/83ZONEDGANCEND-003-presentation-resolver-integration.md`
 
 ## Problem
 

@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — runner-only
-**Deps**: 83ZONEDGANCEND-001 (schema — `anchor` field must exist on type)
+**Deps**: `archive/tickets/83ZONEDGANCEND-001-schema-extension-and-export-serialization.md`
 
 ## Problem
 

@@ -87,11 +87,7 @@ export function triggerDownload(yamlString: string, filename: string): void {
 
 function cloneRouteDefinition(route: ConnectionRouteDefinition): ConnectionRouteDefinition {
   return {
-    points: route.points.map((point) => (
-      point.kind === 'zone'
-        ? { kind: 'zone', zoneId: point.zoneId }
-        : { kind: 'anchor', anchorId: point.anchorId }
-    )),
+    points: route.points.map((point) => ({ ...point })),
     segments: route.segments.map((segment) => (
       segment.kind === 'straight'
         ? { kind: 'straight' }

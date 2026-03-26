@@ -400,21 +400,8 @@ function cloneRouteDefinitions(
 
 function cloneRouteDefinition(route: ConnectionRouteDefinition): ConnectionRouteDefinition {
   return {
-    points: route.points.map((point) => (
-      point.kind === 'zone'
-        ? { kind: 'zone', zoneId: point.zoneId }
-        : { kind: 'anchor', anchorId: point.anchorId }
-    )),
-    segments: route.segments.map((segment) => (
-      segment.kind === 'straight'
-        ? { kind: 'straight' }
-        : {
-            kind: 'quadratic',
-            control: segment.control.kind === 'anchor'
-              ? { kind: 'anchor', anchorId: segment.control.anchorId }
-              : { kind: 'position', x: segment.control.x, y: segment.control.y },
-          }
-    )),
+    points: route.points.map(cloneEndpoint),
+    segments: route.segments.map(cloneSegment),
   };
 }
 
@@ -491,7 +478,7 @@ function endpointsEqual(left: ConnectionEndpoint, right: ConnectionEndpoint): bo
   }
 
   if (left.kind === 'zone' && right.kind === 'zone') {
-    return left.zoneId === right.zoneId;
+    return left.zoneId === right.zoneId && left.anchor === right.anchor;
   }
 
   if (left.kind === 'anchor' && right.kind === 'anchor') {
@@ -855,9 +842,7 @@ function positionsEqual(left: Position, right: Position): boolean {
 }
 
 function cloneEndpoint(endpoint: ConnectionEndpoint): ConnectionEndpoint {
-  return endpoint.kind === 'zone'
-    ? { kind: 'zone', zoneId: endpoint.zoneId }
-    : { kind: 'anchor', anchorId: endpoint.anchorId };
+  return { ...endpoint };
 }
 
 function cloneSegment(segment: ConnectionRouteSegment): ConnectionRouteSegment {

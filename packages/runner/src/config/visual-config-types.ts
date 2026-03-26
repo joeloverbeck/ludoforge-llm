@@ -112,6 +112,7 @@ const ConnectionAnchorConfigSchema = z.object({
 const ZoneConnectionEndpointSchema = z.object({
   kind: z.literal('zone'),
   zoneId: z.string(),
+  anchor: z.number().min(0).max(360).optional(),
 }).strict();
 
 const AnchorConnectionEndpointSchema = z.object({

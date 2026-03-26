@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — runner-only
-**Deps**: None (self-contained pure math)
+**Deps**: None
 
 ## Problem
 

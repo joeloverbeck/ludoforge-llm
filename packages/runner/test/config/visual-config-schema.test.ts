@@ -421,6 +421,65 @@ describe('VisualConfigSchema', () => {
     expect(result.success).toBe(true);
   });
 
+  it('accepts optional anchor angles on zone connection endpoints', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      zones: {
+        connectionRoutes: {
+          'loc-alpha-beta:none': {
+            points: [
+              { kind: 'zone', zoneId: 'alpha:none', anchor: 90 },
+              { kind: 'zone', zoneId: 'beta:none' },
+            ],
+            segments: [
+              { kind: 'straight' },
+            ],
+          },
+        },
+      },
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects out-of-range anchor angles on zone connection endpoints', () => {
+    const negative = VisualConfigSchema.safeParse({
+      version: 1,
+      zones: {
+        connectionRoutes: {
+          'loc-alpha-beta:none': {
+            points: [
+              { kind: 'zone', zoneId: 'alpha:none', anchor: -1 },
+              { kind: 'zone', zoneId: 'beta:none' },
+            ],
+            segments: [
+              { kind: 'straight' },
+            ],
+          },
+        },
+      },
+    });
+    const tooLarge = VisualConfigSchema.safeParse({
+      version: 1,
+      zones: {
+        connectionRoutes: {
+          'loc-alpha-beta:none': {
+            points: [
+              { kind: 'zone', zoneId: 'alpha:none', anchor: 361 },
+              { kind: 'zone', zoneId: 'beta:none' },
+            ],
+            segments: [
+              { kind: 'straight' },
+            ],
+          },
+        },
+      },
+    });
+
+    expect(negative.success).toBe(false);
+    expect(tooLarge.success).toBe(false);
+  });
+
   it('rejects connection routes with mismatched segment counts', () => {
     const result = VisualConfigSchema.safeParse({
       version: 1,

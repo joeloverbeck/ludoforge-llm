@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — runner-only
-**Deps**: 83ZONEDGANCEND-001 (schema), 83ZONEDGANCEND-002 (edge math)
+**Deps**: `archive/tickets/83ZONEDGANCEND-001-schema-extension-and-export-serialization.md`, `tickets/83ZONEDGANCEND-002-edge-position-math-utilities.md`
 
 ## Problem
 

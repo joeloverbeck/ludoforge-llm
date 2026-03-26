@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — runner-only
-**Deps**: 83ZONEDGANCEND-002 (edge math), 83ZONEDGANCEND-004 (editor route geometry), 83ZONEDGANCEND-005 (store actions)
+**Deps**: `tickets/83ZONEDGANCEND-002-edge-position-math-utilities.md`, `tickets/83ZONEDGANCEND-004-editor-route-geometry-update.md`, `tickets/83ZONEDGANCEND-005-store-actions-set-and-preview-anchor.md`
 
 ## Problem
 

@@ -45,6 +45,28 @@ describe('createMapEditorStore', () => {
     expect(state.dirty).toBe(true);
   });
 
+  it('initializes route snapshots with optional zone endpoint anchor metadata intact', () => {
+    const anchoredRoute: ConnectionRouteDefinition = {
+      points: [
+        { kind: 'zone', zoneId: 'zone:a', anchor: 45 },
+        { kind: 'zone', zoneId: 'zone:b' },
+      ],
+      segments: [{ kind: 'straight' }],
+    };
+    const visualConfig = makeVisualConfig({
+      routes: new Map([
+        ['road:none', anchoredRoute],
+      ]),
+    });
+
+    const store = createMapEditorStore(GAME_DEF, visualConfig, makeInitialPositions());
+    const route = store.getState().connectionRoutes.get('road:none');
+
+    expect(route).toEqual(anchoredRoute);
+    expect(route).not.toBe(anchoredRoute);
+    expect(route?.points[0]).not.toBe(anchoredRoute.points[0]);
+  });
+
   it('undo and redo restore committed document state', () => {
     const store = makeStore();
     store.getState().moveZone('zone:a', { x: 100, y: 200 });
@@ -138,6 +160,33 @@ describe('createMapEditorStore', () => {
     expect(store.getState().dirty).toBe(true);
 
     store.getState().undo();
+    expect(store.getState().dirty).toBe(false);
+  });
+
+  it('preserves endpoint anchor metadata through saved snapshots and undo', () => {
+    const store = makeStore({
+      routes: new Map<string, ConnectionRouteDefinition>([
+        ['road:none', {
+          points: [
+            { kind: 'zone', zoneId: 'zone:a', anchor: 135 },
+            { kind: 'zone', zoneId: 'zone:b' },
+          ],
+          segments: [{ kind: 'straight' }],
+        }],
+      ]),
+    });
+
+    store.getState().markSaved();
+    store.getState().moveZone('zone:a', { x: 100, y: 200 });
+    store.getState().undo();
+
+    expect(store.getState().connectionRoutes.get('road:none')).toEqual({
+      points: [
+        { kind: 'zone', zoneId: 'zone:a', anchor: 135 },
+        { kind: 'zone', zoneId: 'zone:b' },
+      ],
+      segments: [{ kind: 'straight' }],
+    });
     expect(store.getState().dirty).toBe(false);
   });
 

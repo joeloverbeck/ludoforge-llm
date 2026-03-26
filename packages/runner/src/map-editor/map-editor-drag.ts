@@ -1,5 +1,7 @@
 import type { Container, FederatedPointerEvent } from 'pixi.js';
 
+import type { ZoneShape } from '../config/visual-config-defaults.js';
+import { getEdgePointAtAngle, type ShapeDimensions } from '../canvas/renderers/shape-utils.js';
 import type { MapEditorStoreApi } from './map-editor-store.js';
 import type { Position } from './map-editor-types.js';
 
@@ -54,15 +56,19 @@ export function attachAnchorDragHandlers(
   });
 }
 
-export function attachZoneEndpointConvertDragHandlers(
+export function attachZoneEdgeAnchorDragHandlers(
   handle: Container,
   routeId: string,
   pointIndex: number,
   dragSurface: Container,
   store: MapEditorStoreApi,
+  zoneCenter: Position,
+  zoneShape: ZoneShape | undefined,
+  zoneDimensions: ShapeDimensions,
 ): () => void {
   let activeDrag: ActiveDrag | null = null;
   let anchorId: string | null = null;
+  let detached = false;
 
   const onPointerDown = (event: PointerEventLike): void => {
     if (event.button !== undefined && event.button !== 0) {
@@ -105,16 +111,37 @@ export function attachZoneEndpointConvertDragHandlers(
     const nextPosition = state.snapToGrid
       ? snapToGrid(unsnappedPosition, state.gridSize)
       : unsnappedPosition;
-    handle.position.set(nextPosition.x, nextPosition.y);
 
-    if (anchorId === null) {
-      anchorId = state.convertEndpointToAnchor(routeId, pointIndex);
+    if (detached) {
+      handle.position.set(nextPosition.x, nextPosition.y);
+      if (anchorId !== null) {
+        state.previewAnchorMove(anchorId, nextPosition);
+      }
+      return;
+    }
+
+    const angle = normalizeAngleDegrees(
+      Math.atan2(-(nextPosition.y - zoneCenter.y), nextPosition.x - zoneCenter.x) * (180 / Math.PI),
+    );
+    const edgeOffset = getEdgePointAtAngle(zoneShape, zoneDimensions, angle);
+    const snappedEdgePosition = {
+      x: zoneCenter.x + edgeOffset.x,
+      y: zoneCenter.y + edgeOffset.y,
+    };
+    handle.position.set(snappedEdgePosition.x, snappedEdgePosition.y);
+
+    const detachThreshold = 2 * Math.max(zoneDimensions.width, zoneDimensions.height);
+    const distanceFromCenter = Math.hypot(nextPosition.x - zoneCenter.x, nextPosition.y - zoneCenter.y);
+    if (distanceFromCenter > detachThreshold) {
+      anchorId = state.detachEndpointToAnchor(routeId, pointIndex, snappedEdgePosition);
       if (anchorId === null) {
         return;
       }
+      detached = true;
+      return;
     }
 
-    state.previewAnchorMove(anchorId, nextPosition);
+    state.previewEndpointAnchor(routeId, pointIndex, angle);
   };
 
   const finishDrag = (): void => {
@@ -124,6 +151,7 @@ export function attachZoneEndpointConvertDragHandlers(
 
     activeDrag = null;
     anchorId = null;
+    detached = false;
     handle.cursor = 'grab';
     dragSurface.off('globalpointermove', onPointerMove);
     dragSurface.off('pointerup', finishDrag);
@@ -144,6 +172,7 @@ export function attachZoneEndpointConvertDragHandlers(
     if (activeDrag !== null) {
       activeDrag = null;
       anchorId = null;
+      detached = false;
       const state = store.getState();
       state.cancelInteraction();
       state.setDragging(false);
@@ -151,6 +180,10 @@ export function attachZoneEndpointConvertDragHandlers(
 
     handle.cursor = 'default';
   };
+}
+
+function normalizeAngleDegrees(angle: number): number {
+  return ((angle % 360) + 360) % 360;
 }
 
 export function attachControlPointDragHandlers(

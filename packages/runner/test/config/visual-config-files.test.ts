@@ -79,8 +79,8 @@ const EXPECTED_FITL_CONNECTION_ROUTES = {
   },
   'loc-hue-da-nang:none': {
     points: [
-      { kind: 'zone', zoneId: 'da-nang:none' },
-      { kind: 'zone', zoneId: 'hue:none' },
+      { kind: 'zone', zoneId: 'da-nang:none', anchor: 90 },
+      { kind: 'zone', zoneId: 'hue:none', anchor: 270 },
     ],
     segments: [
       { kind: 'quadratic', control: { kind: 'position', x: 480, y: 40 } },
@@ -433,6 +433,21 @@ describe('visual-config.yaml files', () => {
       anchorPositions: provider.getConnectionAnchors(),
     });
     expect(resolution.connectionRoutes).toHaveLength(17);
+    const hueDaNangRoute = resolution.connectionRoutes.find((route) => route.zoneId === 'loc-hue-da-nang:none');
+    const daNangCenter = positions.get('da-nang:none');
+    const hueCenter = positions.get('hue:none');
+    expect(hueDaNangRoute?.path).toEqual([
+      {
+        kind: 'zone',
+        id: 'da-nang:none',
+        position: { x: daNangCenter!.x, y: daNangCenter!.y - 80 },
+      },
+      {
+        kind: 'zone',
+        id: 'hue:none',
+        position: { x: hueCenter!.x, y: hueCenter!.y + 80 },
+      },
+    ]);
     expect(Object.fromEntries(
       resolution.connectionRoutes.map((route) => [route.zoneId, {
         points: route.path.map((point) => (
@@ -456,7 +471,19 @@ describe('visual-config.yaml files', () => {
         )),
       }]),
     )).toEqual({
-      ...EXPECTED_FITL_CONNECTION_ROUTES,
+      ...Object.fromEntries(
+        Object.entries(EXPECTED_FITL_CONNECTION_ROUTES).map(([routeId, route]) => [
+          routeId,
+          {
+            points: route.points.map((point) => (
+              point.kind === 'zone'
+                ? { kind: 'zone', zoneId: point.zoneId }
+                : { kind: 'anchor', anchorId: point.anchorId }
+            )),
+            segments: route.segments,
+          },
+        ]),
+      ),
     });
     expect(resolution.junctions).toEqual(EXPECTED_FITL_SHARED_JUNCTIONS);
 

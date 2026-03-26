@@ -6,12 +6,12 @@ import type { GameDef } from '@ludoforge/engine/runtime';
 import {
   attachAnchorDragHandlers,
   attachControlPointDragHandlers,
-  attachZoneEndpointConvertDragHandlers,
+  attachZoneEdgeAnchorDragHandlers,
   attachZoneDragHandlers,
   snapToGrid,
 } from '../../src/map-editor/map-editor-drag.js';
 import { createMapEditorStore } from '../../src/map-editor/map-editor-store.js';
-import type { VisualConfig } from '../../src/map-editor/map-editor-types.js';
+import type { ConnectionRouteDefinition, VisualConfig } from '../../src/map-editor/map-editor-types.js';
 
 class MockPoint {
   x = 0;
@@ -186,30 +186,35 @@ describe('map-editor-drag', () => {
     cleanup();
   });
 
-  it('promotes a zone endpoint on first movement and commits convert plus drag as one undo entry', () => {
+  it('keeps zone endpoint dragging linked to the zone and commits the computed anchor', () => {
     const { dragSurface, store } = createFixture();
     const zoneEndpointHandle = new MockContainer();
     zoneEndpointHandle.parent = dragSurface;
     zoneEndpointHandle.position.set(10, 20);
-    const cleanup = attachZoneEndpointConvertDragHandlers(
+    const cleanup = attachZoneEdgeAnchorDragHandlers(
       zoneEndpointHandle as never,
       'road:none',
       0,
       dragSurface as never,
       store,
+      { x: 10, y: 20 },
+      'rectangle',
+      { width: 40, height: 20 },
     );
 
-    zoneEndpointHandle.emit('pointerdown', pointer(12, 23));
+    zoneEndpointHandle.emit('pointerdown', pointer(10, 20));
     expect(store.getState().selectedRouteId).toBe('road:none');
     expect(store.getState().isDragging).toBe(true);
 
-    dragSurface.emit('globalpointermove', pointer(32, 43));
+    dragSurface.emit('globalpointermove', pointer(40, 20));
 
     expect(store.getState().connectionRoutes.get('road:none')?.points[0]).toEqual({
-      kind: 'anchor',
-      anchorId: 'road:none:endpoint:zone:a:0',
+      kind: 'zone',
+      zoneId: 'zone:a',
+      anchor: 0,
     });
-    expect(store.getState().connectionAnchors.get('road:none:endpoint:zone:a:0')).toEqual({ x: 30, y: 40 });
+    expect(zoneEndpointHandle.position).toEqual(expect.objectContaining({ x: 30, y: 20 }));
+    expect(store.getState().connectionAnchors.get('road:none:endpoint:zone:a:0')).toBeUndefined();
     expect(store.getState().undoStack).toHaveLength(0);
 
     dragSurface.emit('pointerup');
@@ -219,14 +224,123 @@ describe('map-editor-drag', () => {
       kind: 'zone',
       zoneId: 'zone:a',
     });
+    expect(store.getState().connectionRoutes.get('road:none')?.points[0]).toEqual({
+      kind: 'zone',
+      zoneId: 'zone:a',
+      anchor: 0,
+    });
     expect(store.getState().isDragging).toBe(false);
     expect(zoneEndpointHandle.cursor).toBe('grab');
 
     cleanup();
   });
+
+  it('normalizes zone endpoint drag angles across all four quadrants', () => {
+    const { dragSurface, store } = createFixture();
+    const zoneEndpointHandle = new MockContainer();
+    zoneEndpointHandle.parent = dragSurface;
+    zoneEndpointHandle.position.set(10, 20);
+    const cleanup = attachZoneEdgeAnchorDragHandlers(
+      zoneEndpointHandle as never,
+      'road:none',
+      0,
+      dragSurface as never,
+      store,
+      { x: 10, y: 20 },
+      'rectangle',
+      { width: 40, height: 20 },
+    );
+
+    zoneEndpointHandle.emit('pointerdown', pointer(10, 20));
+    dragSurface.emit('globalpointermove', pointer(40, 20));
+    expect(store.getState().connectionRoutes.get('road:none')?.points[0]).toEqual({
+      kind: 'zone',
+      zoneId: 'zone:a',
+      anchor: 0,
+    });
+
+    dragSurface.emit('globalpointermove', pointer(10, -10));
+    expect(store.getState().connectionRoutes.get('road:none')?.points[0]).toEqual({
+      kind: 'zone',
+      zoneId: 'zone:a',
+      anchor: 90,
+    });
+
+    dragSurface.emit('globalpointermove', pointer(-20, 20));
+    expect(store.getState().connectionRoutes.get('road:none')?.points[0]).toEqual({
+      kind: 'zone',
+      zoneId: 'zone:a',
+      anchor: 180,
+    });
+
+    dragSurface.emit('globalpointermove', pointer(10, 50));
+    expect(store.getState().connectionRoutes.get('road:none')?.points[0]).toEqual({
+      kind: 'zone',
+      zoneId: 'zone:a',
+      anchor: 270,
+    });
+
+    dragSurface.emit('pointerup');
+    cleanup();
+  });
+
+  it('detaches only after crossing the explicit threshold and seeds the free anchor from the snapped edge position', () => {
+    const { dragSurface, store } = createFixture({
+      routes: {
+        'road:none': {
+          points: [
+            { kind: 'zone', zoneId: 'zone:a', anchor: 90 },
+            { kind: 'zone', zoneId: 'zone:b' },
+          ],
+          segments: [{ kind: 'straight' }],
+        },
+      },
+    });
+    const zoneEndpointHandle = new MockContainer();
+    zoneEndpointHandle.parent = dragSurface;
+    zoneEndpointHandle.position.set(10, 10);
+    const cleanup = attachZoneEdgeAnchorDragHandlers(
+      zoneEndpointHandle as never,
+      'road:none',
+      0,
+      dragSurface as never,
+      store,
+      { x: 10, y: 20 },
+      'rectangle',
+      { width: 40, height: 20 },
+    );
+
+    zoneEndpointHandle.emit('pointerdown', pointer(10, 10));
+    dragSurface.emit('globalpointermove', pointer(89, 20));
+
+    expect(store.getState().connectionRoutes.get('road:none')?.points[0]).toEqual({
+      kind: 'zone',
+      zoneId: 'zone:a',
+      anchor: 0,
+    });
+
+    dragSurface.emit('globalpointermove', pointer(100, 20));
+
+    expect(store.getState().connectionRoutes.get('road:none')?.points[0]).toEqual({
+      kind: 'anchor',
+      anchorId: 'road:none:endpoint:zone:a:0',
+    });
+    expect(store.getState().connectionAnchors.get('road:none:endpoint:zone:a:0')).toEqual({ x: 30, y: 20 });
+    expect(zoneEndpointHandle.position).toEqual(expect.objectContaining({ x: 30, y: 20 }));
+
+    dragSurface.emit('globalpointermove', pointer(120, 30));
+    expect(store.getState().connectionAnchors.get('road:none:endpoint:zone:a:0')).toEqual({ x: 120, y: 30 });
+
+    dragSurface.emit('pointerup');
+    expect(store.getState().undoStack).toHaveLength(1);
+
+    cleanup();
+  });
 });
 
-function createFixture() {
+function createFixture(overrides?: {
+  routes?: Record<string, ConnectionRouteDefinition>;
+}) {
   const dragSurface = new MockContainer();
   dragSurface.eventMode = 'passive';
 
@@ -270,6 +384,7 @@ function createFixture() {
               { kind: 'quadratic', control: { kind: 'anchor', anchorId: 'curve-ctrl' } },
             ],
           },
+          ...overrides?.routes,
         },
       },
     } as VisualConfig,

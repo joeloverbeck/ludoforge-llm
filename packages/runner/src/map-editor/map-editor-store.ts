@@ -1,8 +1,17 @@
 import type { GameDef } from '@ludoforge/engine/runtime';
 import { create, type StoreApi, type UseBoundStore } from 'zustand';
 
+import { deriveCurvatureControl } from '../canvas/geometry/bezier-utils.js';
+import {
+  cloneConnectionRouteDefinition,
+  cloneConnectionRouteSegment,
+  connectionRouteControlsEqual,
+  connectionRouteSegmentsEqual,
+} from '../config/connection-route-utils.js';
+import { VisualConfigProvider } from '../config/visual-config-provider.js';
 import type {
   ConnectionEndpoint,
+  ConnectionRouteControl,
   ConnectionRouteDefinition,
   ConnectionRouteSegment,
   EditorSnapshot,
@@ -10,6 +19,11 @@ import type {
   Position,
   VisualConfig,
 } from './map-editor-types.js';
+import {
+  resolveEndpointPosition as resolveRouteEndpointPosition,
+  type EditorRouteZoneVisual,
+} from './map-editor-route-geometry.js';
+import { resolveMapEditorZoneVisuals } from './map-editor-zone-visuals.js';
 
 const DEFAULT_GRID_SIZE = 20;
 const UNDO_STACK_LIMIT = 50;
@@ -33,7 +47,9 @@ interface MapEditorStoreActions {
   moveZone(zoneId: string, position: Position): void;
   moveAnchor(anchorId: string, position: Position): void;
   moveControlPoint(routeId: string, segmentIndex: number, position: Position): void;
-  convertEndpointToAnchor(routeId: string, pointIndex: number): string | null;
+  setEndpointAnchor(routeId: string, pointIndex: number, anchor: number): void;
+  previewEndpointAnchor(routeId: string, pointIndex: number, anchor: number): void;
+  detachEndpointToAnchor(routeId: string, pointIndex: number, position: Position): string | null;
   insertWaypoint(routeId: string, segmentIndex: number, position: Position): void;
   removeWaypoint(routeId: string, pointIndex: number): void;
   convertSegment(routeId: string, segmentIndex: number, kind: 'straight' | 'quadratic'): void;
@@ -65,6 +81,7 @@ export function createMapEditorStore(
   return create<MapEditorStore>()((set, get) => {
     let interactionSnapshot: EditorSnapshot | null = null;
     let interactionChanged = false;
+    const zoneVisuals = resolveMapEditorZoneVisuals(gameDef, new VisualConfigProvider(visualConfig));
     const initialDocumentState: EditorSnapshot = {
       zonePositions: clonePositionMap(initialPositions),
       connectionAnchors: cloneAnchorMap(visualConfig),
@@ -144,13 +161,21 @@ export function createMapEditorStore(
       },
 
       moveControlPoint(routeId, segmentIndex, position) {
-        applyCommittedEdit((state) => moveControlPointInDocument(state, routeId, segmentIndex, position));
+        applyCommittedEdit((state) => moveControlPointInDocument(state, zoneVisuals, routeId, segmentIndex, position));
       },
 
-      convertEndpointToAnchor(routeId, pointIndex) {
+      setEndpointAnchor(routeId, pointIndex, anchor) {
+        applyCommittedEdit((state) => setEndpointAnchorInDocument(state, routeId, pointIndex, anchor));
+      },
+
+      previewEndpointAnchor(routeId, pointIndex, anchor) {
+        applyPreviewEdit((state) => setEndpointAnchorInDocument(state, routeId, pointIndex, anchor));
+      },
+
+      detachEndpointToAnchor(routeId, pointIndex, position) {
         let anchorId: string | null = null;
         applyPreviewEdit((state) => {
-          const converted = convertEndpointToAnchorInDocument(state, routeId, pointIndex);
+          const converted = detachEndpointToAnchorInDocument(state, routeId, pointIndex, position);
           if (converted === null) {
             return null;
           }
@@ -170,7 +195,7 @@ export function createMapEditorStore(
       },
 
       convertSegment(routeId, segmentIndex, kind) {
-        applyCommittedEdit((state) => convertSegmentInDocument(state, routeId, segmentIndex, kind));
+        applyCommittedEdit((state) => convertSegmentInDocument(state, zoneVisuals, routeId, segmentIndex, kind));
       },
 
       selectZone(zoneId) {
@@ -213,7 +238,7 @@ export function createMapEditorStore(
       },
 
       previewControlPointMove(routeId, segmentIndex, position) {
-        applyPreviewEdit((state) => moveControlPointInDocument(state, routeId, segmentIndex, position));
+        applyPreviewEdit((state) => moveControlPointInDocument(state, zoneVisuals, routeId, segmentIndex, position));
       },
 
       commitInteraction() {
@@ -379,7 +404,7 @@ function cloneRouteMap(visualConfig: VisualConfig): ReadonlyMap<string, Connecti
   return new Map(
     Object.entries(visualConfig.zones?.connectionRoutes ?? {}).map(([routeId, route]) => [
       routeId,
-      cloneRouteDefinition(route),
+      cloneConnectionRouteDefinition(route),
     ]),
   );
 }
@@ -394,28 +419,12 @@ function cloneRouteDefinitions(
   routes: ReadonlyMap<string, ConnectionRouteDefinition>,
 ): ReadonlyMap<string, ConnectionRouteDefinition> {
   return new Map(
-    [...routes.entries()].map(([routeId, route]) => [routeId, cloneRouteDefinition(route)]),
+    [...routes.entries()].map(([routeId, route]) => [routeId, cloneConnectionRouteDefinition(route)]),
   );
 }
 
 function cloneRouteDefinition(route: ConnectionRouteDefinition): ConnectionRouteDefinition {
-  return {
-    points: route.points.map((point) => (
-      point.kind === 'zone'
-        ? { kind: 'zone', zoneId: point.zoneId }
-        : { kind: 'anchor', anchorId: point.anchorId }
-    )),
-    segments: route.segments.map((segment) => (
-      segment.kind === 'straight'
-        ? { kind: 'straight' }
-        : {
-            kind: 'quadratic',
-            control: segment.control.kind === 'anchor'
-              ? { kind: 'anchor', anchorId: segment.control.anchorId }
-              : { kind: 'position', x: segment.control.x, y: segment.control.y },
-          }
-    )),
-  };
+  return cloneConnectionRouteDefinition(route);
 }
 
 function pushUndoSnapshot(
@@ -491,7 +500,7 @@ function endpointsEqual(left: ConnectionEndpoint, right: ConnectionEndpoint): bo
   }
 
   if (left.kind === 'zone' && right.kind === 'zone') {
-    return left.zoneId === right.zoneId;
+    return left.zoneId === right.zoneId && left.anchor === right.anchor;
   }
 
   if (left.kind === 'anchor' && right.kind === 'anchor') {
@@ -502,31 +511,7 @@ function endpointsEqual(left: ConnectionEndpoint, right: ConnectionEndpoint): bo
 }
 
 function segmentsEqual(left: ConnectionRouteSegment, right: ConnectionRouteSegment): boolean {
-  if (left.kind !== right.kind) {
-    return false;
-  }
-
-  if (left.kind === 'straight' && right.kind === 'straight') {
-    return true;
-  }
-
-  if (left.kind !== 'quadratic' || right.kind !== 'quadratic') {
-    return false;
-  }
-
-  if (left.control.kind !== right.control.kind) {
-    return false;
-  }
-
-  if (left.control.kind === 'anchor' && right.control.kind === 'anchor') {
-    return left.control.anchorId === right.control.anchorId;
-  }
-
-  if (left.control.kind === 'position' && right.control.kind === 'position') {
-    return left.control.x === right.control.x && left.control.y === right.control.y;
-  }
-
-  return false;
+  return connectionRouteSegmentsEqual(left, right);
 }
 
 function moveZoneInDocument(
@@ -569,6 +554,7 @@ function moveAnchorInDocument(
 
 function moveControlPointInDocument(
   state: MapEditorDocumentState,
+  zoneVisuals: ReadonlyMap<string, EditorRouteZoneVisual>,
   routeId: string,
   segmentIndex: number,
   position: Position,
@@ -583,7 +569,8 @@ function moveControlPointInDocument(
     return moveAnchorInDocument(state, segment.control.anchorId, position);
   }
 
-  if (positionsEqual(segment.control, position)) {
+  const nextControl = resolveMovedControlPoint(segment.control, route, segmentIndex, state, zoneVisuals, position);
+  if (nextControl === null || connectionRouteControlsEqual(segment.control, nextControl)) {
     return null;
   }
 
@@ -593,7 +580,7 @@ function moveControlPointInDocument(
       ? entry
       : {
           kind: 'quadratic' as const,
-          control: { kind: 'position' as const, x: position.x, y: position.y },
+          control: nextControl,
         }
   ));
   connectionRoutes.set(routeId, {
@@ -606,6 +593,30 @@ function moveControlPointInDocument(
     connectionAnchors: state.connectionAnchors,
     connectionRoutes,
   };
+}
+
+function resolveMovedControlPoint(
+  control: ConnectionRouteControl,
+  route: ConnectionRouteDefinition,
+  segmentIndex: number,
+  state: MapEditorDocumentState,
+  zoneVisuals: ReadonlyMap<string, EditorRouteZoneVisual>,
+  position: Position,
+): ConnectionRouteControl | null {
+  if (control.kind === 'position') {
+    return { kind: 'position', x: position.x, y: position.y };
+  }
+
+  const start = resolveEndpointPosition(route.points[segmentIndex], state, zoneVisuals);
+  const end = resolveEndpointPosition(route.points[segmentIndex + 1], state, zoneVisuals);
+  if (start === null || end === null) {
+    return null;
+  }
+
+  const derived = deriveCurvatureControl(start, end, position);
+  return derived.angle === undefined
+    ? { kind: 'curvature', offset: derived.offset }
+    : { kind: 'curvature', offset: derived.offset, angle: derived.angle };
 }
 
 function insertWaypointInDocument(
@@ -645,19 +656,15 @@ function insertWaypointInDocument(
   };
 }
 
-function convertEndpointToAnchorInDocument(
+function detachEndpointToAnchorInDocument(
   state: MapEditorDocumentState,
   routeId: string,
   pointIndex: number,
+  position: Position,
 ): { readonly anchorId: string; readonly document: MapEditorDocumentState } | null {
   const route = state.connectionRoutes.get(routeId);
   const point = route?.points[pointIndex];
   if (route === undefined || point === undefined || point.kind !== 'zone') {
-    return null;
-  }
-
-  const position = state.zonePositions.get(point.zoneId);
-  if (position === undefined) {
     return null;
   }
 
@@ -684,6 +691,40 @@ function convertEndpointToAnchorInDocument(
       connectionAnchors,
       connectionRoutes,
     },
+  };
+}
+
+function setEndpointAnchorInDocument(
+  state: MapEditorDocumentState,
+  routeId: string,
+  pointIndex: number,
+  anchor: number,
+): MapEditorDocumentState | null {
+  if (!Number.isFinite(anchor)) {
+    return null;
+  }
+
+  const route = state.connectionRoutes.get(routeId);
+  const point = route?.points[pointIndex];
+  if (route === undefined || point === undefined || point.kind !== 'zone' || point.anchor === anchor) {
+    return null;
+  }
+
+  const points = route.points.map((entry, index) => (
+    index === pointIndex
+      ? { ...entry, anchor }
+      : cloneEndpoint(entry)
+  ));
+  const connectionRoutes = new Map(state.connectionRoutes);
+  connectionRoutes.set(routeId, {
+    points,
+    segments: route.segments.map(cloneSegment),
+  });
+
+  return {
+    zonePositions: state.zonePositions,
+    connectionAnchors: state.connectionAnchors,
+    connectionRoutes,
   };
 }
 
@@ -728,6 +769,7 @@ function removeWaypointInDocument(
 
 function convertSegmentInDocument(
   state: MapEditorDocumentState,
+  zoneVisuals: ReadonlyMap<string, EditorRouteZoneVisual>,
   routeId: string,
   segmentIndex: number,
   kind: 'straight' | 'quadratic',
@@ -742,18 +784,18 @@ function convertSegmentInDocument(
   const connectionAnchors = new Map(state.connectionAnchors);
 
   if (kind === 'quadratic') {
-    const start = resolveEndpointPosition(route.points[segmentIndex], state);
-    const end = resolveEndpointPosition(route.points[segmentIndex + 1], state);
-    if (start === null || end === null) {
+    if (
+      resolveEndpointPosition(route.points[segmentIndex], state, zoneVisuals) === null
+      || resolveEndpointPosition(route.points[segmentIndex + 1], state, zoneVisuals) === null
+    ) {
       return null;
     }
 
     nextSegments[segmentIndex] = {
       kind: 'quadratic',
       control: {
-        kind: 'position',
-        x: (start.x + end.x) / 2,
-        y: (start.y + end.y) / 2,
+        kind: 'curvature',
+        offset: 0,
       },
     };
   } else {
@@ -788,16 +830,18 @@ function convertSegmentInDocument(
 function resolveEndpointPosition(
   endpoint: ConnectionEndpoint | undefined,
   state: MapEditorDocumentState,
+  zoneVisuals: ReadonlyMap<string, EditorRouteZoneVisual>,
 ): Position | null {
   if (endpoint === undefined) {
     return null;
   }
 
-  if (endpoint.kind === 'zone') {
-    return state.zonePositions.get(endpoint.zoneId) ?? null;
-  }
-
-  return state.connectionAnchors.get(endpoint.anchorId) ?? null;
+  return resolveRouteEndpointPosition(
+    endpoint,
+    state.zonePositions,
+    state.connectionAnchors,
+    zoneVisuals,
+  );
 }
 
 function createWaypointAnchorId(
@@ -855,18 +899,9 @@ function positionsEqual(left: Position, right: Position): boolean {
 }
 
 function cloneEndpoint(endpoint: ConnectionEndpoint): ConnectionEndpoint {
-  return endpoint.kind === 'zone'
-    ? { kind: 'zone', zoneId: endpoint.zoneId }
-    : { kind: 'anchor', anchorId: endpoint.anchorId };
+  return { ...endpoint };
 }
 
 function cloneSegment(segment: ConnectionRouteSegment): ConnectionRouteSegment {
-  return segment.kind === 'straight'
-    ? { kind: 'straight' }
-    : {
-        kind: 'quadratic',
-        control: segment.control.kind === 'anchor'
-          ? { kind: 'anchor', anchorId: segment.control.anchorId }
-          : { kind: 'position', x: segment.control.x, y: segment.control.y },
-      };
+  return cloneConnectionRouteSegment(segment);
 }

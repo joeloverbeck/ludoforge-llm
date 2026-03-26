@@ -103,12 +103,143 @@ describe('map-editor-export', () => {
     });
   });
 
+  it('buildExportConfig preserves optional zone endpoint anchor metadata', () => {
+    const input = makeExportInput();
+    input.connectionRoutes = new Map<string, ConnectionRouteDefinition>([
+      ['route:none', {
+        points: [
+          { kind: 'zone', zoneId: 'zone:a', anchor: 45 },
+          { kind: 'zone', zoneId: 'zone:b' },
+        ],
+        segments: [{ kind: 'straight' }],
+      }],
+    ]);
+
+    const exported = buildExportConfig(input);
+
+    expect(exported.zones?.connectionRoutes?.['route:none']).toEqual({
+      points: [
+        { kind: 'zone', zoneId: 'zone:a', anchor: 45 },
+        { kind: 'zone', zoneId: 'zone:b' },
+      ],
+      segments: [{ kind: 'straight' }],
+    });
+    expect(exported.zones?.connectionRoutes?.['route:none']?.points[1]).not.toHaveProperty('anchor');
+  });
+
   it('serializeVisualConfig emits yaml text', () => {
     const yaml = serializeVisualConfig(buildExportConfig(makeExportInput()));
 
     expect(yaml).toContain('version: 1');
     expect(yaml).toContain('fixed:');
     expect(yaml).toContain('connectionRoutes:');
+  });
+
+  it('exportVisualConfig round-trips optional zone endpoint anchor metadata', () => {
+    const input = makeExportInput();
+    input.connectionRoutes = new Map<string, ConnectionRouteDefinition>([
+      ['route:none', {
+        points: [
+          { kind: 'zone', zoneId: 'zone:a', anchor: 180 },
+          { kind: 'anchor', anchorId: 'bend' },
+          { kind: 'zone', zoneId: 'zone:b' },
+        ],
+        segments: [
+          { kind: 'straight' },
+          { kind: 'quadratic', control: { kind: 'anchor', anchorId: 'ctrl' } },
+        ],
+      }],
+    ]);
+
+    const reparsed = parseVisualConfigStrict(parse(exportVisualConfig(input)));
+
+    expect(reparsed?.zones?.connectionRoutes?.['route:none']).toEqual({
+      points: [
+        { kind: 'zone', zoneId: 'zone:a', anchor: 180 },
+        { kind: 'anchor', anchorId: 'bend' },
+        { kind: 'zone', zoneId: 'zone:b' },
+      ],
+      segments: [
+        { kind: 'straight' },
+        { kind: 'quadratic', control: { kind: 'anchor', anchorId: 'ctrl' } },
+      ],
+    });
+  });
+
+  it('buildExportConfig and exportVisualConfig preserve curvature controls', () => {
+    const input = makeExportInput();
+    input.connectionRoutes = new Map<string, ConnectionRouteDefinition>([
+      ['route:none', {
+        points: [
+          { kind: 'zone', zoneId: 'zone:a' },
+          { kind: 'zone', zoneId: 'zone:b' },
+        ],
+        segments: [
+          { kind: 'quadratic', control: { kind: 'curvature', offset: 0.3, angle: 90 } },
+        ],
+      }],
+    ]);
+
+    expect(buildExportConfig(input).zones?.connectionRoutes?.['route:none']).toEqual({
+      points: [
+        { kind: 'zone', zoneId: 'zone:a' },
+        { kind: 'zone', zoneId: 'zone:b' },
+      ],
+      segments: [
+        { kind: 'quadratic', control: { kind: 'curvature', offset: 0.3, angle: 90 } },
+      ],
+    });
+
+    const reparsed = parseVisualConfigStrict(parse(exportVisualConfig(input)));
+    expect(reparsed?.zones?.connectionRoutes?.['route:none']).toEqual({
+      points: [
+        { kind: 'zone', zoneId: 'zone:a' },
+        { kind: 'zone', zoneId: 'zone:b' },
+      ],
+      segments: [
+        { kind: 'quadratic', control: { kind: 'curvature', offset: 0.3, angle: 90 } },
+      ],
+    });
+  });
+
+  it('preserves offset-only curvature controls without synthesizing an angle', () => {
+    const input = makeExportInput();
+    input.connectionRoutes = new Map<string, ConnectionRouteDefinition>([
+      ['route:none', {
+        points: [
+          { kind: 'zone', zoneId: 'zone:a' },
+          { kind: 'zone', zoneId: 'zone:b' },
+        ],
+        segments: [
+          { kind: 'quadratic', control: { kind: 'curvature', offset: 0.3 } },
+        ],
+      }],
+    ]);
+
+    expect(buildExportConfig(input).zones?.connectionRoutes?.['route:none']).toEqual({
+      points: [
+        { kind: 'zone', zoneId: 'zone:a' },
+        { kind: 'zone', zoneId: 'zone:b' },
+      ],
+      segments: [
+        { kind: 'quadratic', control: { kind: 'curvature', offset: 0.3 } },
+      ],
+    });
+
+    const yaml = exportVisualConfig(input);
+    expect(yaml).toContain('offset: 0.3');
+    expect(yaml).not.toContain('angle:');
+
+    const reparsed = parseVisualConfigStrict(parse(yaml));
+    expect(reparsed?.zones?.connectionRoutes?.['route:none']).toEqual({
+      points: [
+        { kind: 'zone', zoneId: 'zone:a' },
+        { kind: 'zone', zoneId: 'zone:b' },
+      ],
+      segments: [
+        { kind: 'quadratic', control: { kind: 'curvature', offset: 0.3 } },
+      ],
+    });
   });
 
   it('triggerDownload creates a blob url, clicks an anchor, and revokes the url', () => {

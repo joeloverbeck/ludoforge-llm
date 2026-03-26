@@ -153,12 +153,14 @@ describe('MapEditorScreen', () => {
     expect(testDoubles.createEditorRouteRenderer).toHaveBeenCalledWith(
       editorCanvas.layers.route,
       store,
-      undefined,
+      { metadata: { id: 'fitl' } },
       { tag: 'provider' },
     );
     expect(testDoubles.createEditorHandleRenderer).toHaveBeenCalledWith(
       editorCanvas.layers.handle,
       store,
+      { metadata: { id: 'fitl' } },
+      { tag: 'provider' },
       { dragSurface: editorCanvas.viewport },
     );
     expect(editorCanvas.centerOnContent).toHaveBeenCalledTimes(1);

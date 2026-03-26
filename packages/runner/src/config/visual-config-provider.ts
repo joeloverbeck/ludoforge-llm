@@ -49,6 +49,7 @@ import type {
   ConnectionStyleConfig,
   ConnectionRouteDefinition,
 } from './visual-config-types.js';
+import { cloneConnectionRouteDefinition } from './connection-route-utils.js';
 
 export interface ResolvedZoneVisual {
   readonly shape: ZoneShape;
@@ -183,19 +184,7 @@ export class VisualConfigProvider {
     return new Map(
       Object.entries(configured).map(([zoneId, route]) => [
         zoneId,
-        {
-          points: [...route.points],
-          segments: route.segments.map((segment) => (
-            segment.kind === 'straight'
-              ? { kind: 'straight' }
-              : {
-                  kind: 'quadratic',
-                  control: segment.control.kind === 'anchor'
-                    ? { kind: 'anchor', anchorId: segment.control.anchorId }
-                    : { kind: 'position', x: segment.control.x, y: segment.control.y },
-                }
-          )),
-        },
+        cloneConnectionRouteDefinition(route),
       ]),
     );
   }

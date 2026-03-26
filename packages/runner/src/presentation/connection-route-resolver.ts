@@ -1,14 +1,28 @@
 import type { Position } from '../canvas/geometry.js';
+import { resolveCurvatureControlPoint } from '../canvas/geometry/bezier-utils.js';
+import {
+  getEdgePointAtAngle,
+  resolveVisualDimensions,
+} from '../canvas/renderers/shape-utils.js';
 import type {
   ConnectionEndpoint,
   ConnectionRouteControl,
   ConnectionRouteDefinition,
   ConnectionRouteSegment,
 } from '../config/visual-config-types.js';
+import {
+  ZONE_RENDER_HEIGHT,
+  ZONE_RENDER_WIDTH,
+} from '../layout/layout-constants.js';
 import type {
   PresentationAdjacencyNode,
   PresentationZoneNode,
 } from './presentation-scene.js';
+
+const DEFAULT_ZONE_DIMENSIONS = {
+  width: ZONE_RENDER_WIDTH,
+  height: ZONE_RENDER_HEIGHT,
+} as const;
 
 export interface ResolvedConnectionPoint {
   readonly kind: 'zone' | 'anchor';
@@ -17,7 +31,7 @@ export interface ResolvedConnectionPoint {
 }
 
 export interface ResolvedConnectionRouteControlPoint {
-  readonly kind: 'anchor' | 'position';
+  readonly kind: 'anchor' | 'position' | 'curvature';
   readonly id: string | null;
   readonly position: Position;
 }
@@ -209,8 +223,15 @@ function validateRouteDefinition(
   }
 
   const segments: ResolvedConnectionRouteSegment[] = [];
-  for (const segment of definition.segments) {
-    const resolvedSegment = resolveSegment(segment, anchorPositions);
+  for (let index = 0; index < definition.segments.length; index += 1) {
+    const segment = definition.segments[index];
+    const start = path[index]?.position;
+    const end = path[index + 1]?.position;
+    if (segment === undefined || start === undefined || end === undefined) {
+      return null;
+    }
+
+    const resolvedSegment = resolveSegment(segment, start, end, anchorPositions);
     if (resolvedSegment === null) {
       return null;
     }
@@ -284,6 +305,22 @@ function resolveConfiguredEndpoint(
       return null;
     }
 
+    if (endpoint.anchor !== undefined) {
+      const zone = zoneById.get(endpoint.zoneId);
+      if (zone !== undefined) {
+        const dimensions = resolveVisualDimensions(zone.visual, DEFAULT_ZONE_DIMENSIONS);
+        const offset = getEdgePointAtAngle(zone.visual.shape, dimensions, endpoint.anchor);
+        return {
+          kind: 'zone',
+          id: endpoint.zoneId,
+          position: {
+            x: position.x + offset.x,
+            y: position.y + offset.y,
+          },
+        };
+      }
+    }
+
     return {
       kind: 'zone',
       id: endpoint.zoneId,
@@ -304,13 +341,15 @@ function resolveConfiguredEndpoint(
 
 function resolveSegment(
   segment: ConnectionRouteSegment,
+  start: Position,
+  end: Position,
   anchorPositions: ReadonlyMap<string, Position> | undefined,
 ): ResolvedConnectionRouteSegment | null {
   if (segment.kind === 'straight') {
     return { kind: 'straight' };
   }
 
-  const controlPoint = resolveControlPoint(segment.control, anchorPositions);
+  const controlPoint = resolveControlPoint(segment.control, start, end, anchorPositions);
   if (controlPoint === null) {
     return null;
   }
@@ -323,6 +362,8 @@ function resolveSegment(
 
 function resolveControlPoint(
   control: ConnectionRouteControl,
+  start: Position,
+  end: Position,
   anchorPositions: ReadonlyMap<string, Position> | undefined,
 ): ResolvedConnectionRouteControlPoint | null {
   if (control.kind === 'position') {
@@ -330,6 +371,14 @@ function resolveControlPoint(
       kind: 'position',
       id: null,
       position: { x: control.x, y: control.y },
+    };
+  }
+
+  if (control.kind === 'curvature') {
+    return {
+      kind: 'curvature',
+      id: null,
+      position: resolveCurvatureControlPoint(start, end, control.offset, control.angle),
     };
   }
 

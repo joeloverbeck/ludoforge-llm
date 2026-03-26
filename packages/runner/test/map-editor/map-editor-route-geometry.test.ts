@@ -17,9 +17,39 @@ describe('map-editor-route-geometry', () => {
     const anchors = new Map([
       ['anchor:1', { x: 30, y: 40 }],
     ]);
+    const zoneVisuals = new Map([
+      ['zone:a', { shape: 'circle' as const, width: 80, height: 80 }],
+    ]);
 
-    expect(resolveEndpointPosition({ kind: 'zone', zoneId: 'zone:a' }, zonePositions, anchors)).toEqual({ x: 10, y: 20 });
-    expect(resolveEndpointPosition({ kind: 'anchor', anchorId: 'anchor:1' }, zonePositions, anchors)).toEqual({ x: 30, y: 40 });
+    expect(resolveEndpointPosition({ kind: 'zone', zoneId: 'zone:a' }, zonePositions, anchors, zoneVisuals)).toEqual({ x: 10, y: 20 });
+    expect(resolveEndpointPosition({ kind: 'anchor', anchorId: 'anchor:1' }, zonePositions, anchors, zoneVisuals)).toEqual({ x: 30, y: 40 });
+  });
+
+  it('offsets anchored zone endpoints to the authored edge position and fails closed without visuals', () => {
+    const zonePositions = new Map([
+      ['zone:a', { x: 100, y: 120 }],
+    ]);
+    const zoneVisuals = new Map([
+      ['zone:a', { shape: 'circle' as const, width: 100, height: 100 }],
+    ]);
+
+    expect(
+      resolveEndpointPosition(
+        { kind: 'zone', zoneId: 'zone:a', anchor: 90 },
+        zonePositions,
+        new Map(),
+        zoneVisuals,
+      ),
+    ).toEqual({ x: 100, y: 70 });
+
+    expect(
+      resolveEndpointPosition(
+        { kind: 'zone', zoneId: 'zone:a', anchor: 90 },
+        zonePositions,
+        new Map(),
+        new Map(),
+      ),
+    ).toBeNull();
   });
 
   it('resolves inline and anchor-backed quadratic controls into shared geometry', () => {
@@ -43,6 +73,10 @@ describe('map-editor-route-geometry', () => {
         ['anchor:mid', { x: 40, y: 20 }],
         ['anchor:ctrl', { x: 60, y: 25 }],
       ]),
+      new Map([
+        ['zone:a', { shape: 'rectangle' as const, width: 120, height: 80 }],
+        ['zone:b', { shape: 'rectangle' as const, width: 120, height: 80 }],
+      ]),
     );
 
     expect(geometry?.segments[0]).toMatchObject({
@@ -63,6 +97,43 @@ describe('map-editor-route-geometry', () => {
     });
   });
 
+  it('resolves curvature controls against segment endpoints', () => {
+    const geometry = resolveRouteGeometry(
+      {
+        points: [
+          { kind: 'zone', zoneId: 'zone:a' },
+          { kind: 'zone', zoneId: 'zone:b' },
+        ],
+        segments: [
+          { kind: 'quadratic', control: { kind: 'curvature', offset: 0.25, angle: 90 } },
+        ],
+      },
+      new Map([
+        ['zone:a', { x: 0, y: 0 }],
+        ['zone:b', { x: 80, y: 0 }],
+      ]),
+      new Map(),
+      new Map([
+        ['zone:a', { shape: 'rectangle' as const, width: 120, height: 80 }],
+        ['zone:b', { shape: 'rectangle' as const, width: 120, height: 80 }],
+      ]),
+    );
+
+    expect(geometry?.segments[0]).toMatchObject({
+      kind: 'quadratic',
+      controlPoint: {
+        kind: 'curvature',
+        id: null,
+      },
+    });
+    const segment = geometry?.segments[0];
+    expect(segment?.kind).toBe('quadratic');
+    if (segment?.kind === 'quadratic') {
+      expect(segment.controlPoint.position.x).toBeCloseTo(40);
+      expect(segment.controlPoint.position.y).toBeCloseTo(-20);
+    }
+  });
+
   it('samples multi-segment routes into a polyline and hit polygon', () => {
     const geometry = resolveRouteGeometry(
       makeRouteDefinition(),
@@ -72,6 +143,10 @@ describe('map-editor-route-geometry', () => {
       ]),
       new Map([
         ['anchor:mid', { x: 40, y: 20 }],
+      ]),
+      new Map([
+        ['zone:a', { shape: 'rectangle' as const, width: 120, height: 80 }],
+        ['zone:b', { shape: 'rectangle' as const, width: 120, height: 80 }],
       ]),
       {
         curveSegments: 6,
@@ -85,6 +160,32 @@ describe('map-editor-route-geometry', () => {
     expect(geometry?.sampledPath[0]).toEqual({ x: 0, y: 0 });
     expect(geometry?.sampledPath.at(-1)).toEqual({ x: 80, y: 0 });
     expect(geometry?.hitAreaPoints.length).toBeGreaterThan(geometry?.sampledPath.length ?? 0);
+  });
+
+  it('samples anchored routes from resolved edge endpoints instead of zone centers', () => {
+    const geometry = resolveRouteGeometry(
+      {
+        points: [
+          { kind: 'zone', zoneId: 'zone:a', anchor: 0 },
+          { kind: 'zone', zoneId: 'zone:b', anchor: 180 },
+        ],
+        segments: [
+          { kind: 'straight' },
+        ],
+      },
+      new Map([
+        ['zone:a', { x: 0, y: 0 }],
+        ['zone:b', { x: 120, y: 0 }],
+      ]),
+      new Map(),
+      new Map([
+        ['zone:a', { shape: 'rectangle' as const, width: 40, height: 20 }],
+        ['zone:b', { shape: 'rectangle' as const, width: 40, height: 20 }],
+      ]),
+    );
+
+    expect(geometry?.sampledPath[0]).toEqual({ x: 20, y: 0 });
+    expect(geometry?.sampledPath.at(-1)).toEqual({ x: 100, y: 0 });
   });
 
   it('projects nearest points onto straight segments and clamps to endpoints', () => {
@@ -136,6 +237,10 @@ describe('map-editor-route-geometry', () => {
       ]),
       new Map([
         ['anchor:mid', { x: 40, y: 0 }],
+      ]),
+      new Map([
+        ['zone:a', { shape: 'rectangle' as const, width: 120, height: 80 }],
+        ['zone:b', { shape: 'rectangle' as const, width: 120, height: 80 }],
       ]),
     );
 

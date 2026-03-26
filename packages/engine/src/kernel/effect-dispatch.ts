@@ -93,10 +93,12 @@ export const applyEffectsWithBudgetState = (
   cursor: EffectCursor,
   budget: EffectBudgetState,
 ): NormalizedEffectResult => {
-  // Create a mutable state clone ONCE for this scope (Spec 78).
-  const mutableState = createMutableState(cursor.state);
-  const tracker = createDraftTracker();
-  let currentState: GameState = mutableState as GameState;
+  // Reuse parent scope's mutable state + tracker when already in a scope
+  // (cursor.tracker is set by the parent). Only create fresh clones at
+  // the outermost scope entry (cursor.tracker is undefined).
+  const isNestedScope = cursor.tracker !== undefined;
+  const tracker = isNestedScope ? cursor.tracker! : createDraftTracker();
+  let currentState: GameState = isNestedScope ? cursor.state : createMutableState(cursor.state) as GameState;
   let currentRng = cursor.rng;
   let currentBindings = cursor.bindings;
   let currentDecisionScope = cursor.decisionScope;
@@ -107,6 +109,8 @@ export const applyEffectsWithBudgetState = (
   // Reusable mutable cursor — mutated in place between iterations.
   // Only 5 fields instead of the previous ~25-field workCtx spread.
   // Tracker is set once (stable for the scope) so handlers can access it.
+  // Always create a fresh object — the parent may share the same cursor reference
+  // when tracing is disabled (withCursorTrace returns cursor unchanged).
   const workCursor: EffectCursor = { ...cursor, tracker };
 
   for (let effectIndex = 0; effectIndex < effects.length; effectIndex++) {

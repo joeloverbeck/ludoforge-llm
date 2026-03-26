@@ -421,6 +421,150 @@ describe('VisualConfigSchema', () => {
     expect(result.success).toBe(true);
   });
 
+  it('accepts optional anchor angles on zone connection endpoints', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      zones: {
+        connectionRoutes: {
+          'loc-alpha-beta:none': {
+            points: [
+              { kind: 'zone', zoneId: 'alpha:none', anchor: 90 },
+              { kind: 'zone', zoneId: 'beta:none' },
+            ],
+            segments: [
+              { kind: 'straight' },
+            ],
+          },
+        },
+      },
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts curvature route controls', () => {
+    const result = VisualConfigSchema.safeParse({
+      version: 1,
+      zones: {
+        connectionRoutes: {
+          'loc-alpha-beta:none': {
+            points: [
+              { kind: 'zone', zoneId: 'alpha:none' },
+              { kind: 'zone', zoneId: 'beta:none' },
+            ],
+            segments: [
+              { kind: 'quadratic', control: { kind: 'curvature', offset: 0.3 } },
+            ],
+          },
+          'loc-beta-gamma:none': {
+            points: [
+              { kind: 'zone', zoneId: 'beta:none' },
+              { kind: 'zone', zoneId: 'gamma:none' },
+            ],
+            segments: [
+              { kind: 'quadratic', control: { kind: 'curvature', offset: -0.5, angle: 45 } },
+            ],
+          },
+        },
+      },
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects invalid curvature control angles and extra properties', () => {
+    const invalidAngle = VisualConfigSchema.safeParse({
+      version: 1,
+      zones: {
+        connectionRoutes: {
+          'loc-alpha-beta:none': {
+            points: [
+              { kind: 'zone', zoneId: 'alpha:none' },
+              { kind: 'zone', zoneId: 'beta:none' },
+            ],
+            segments: [
+              { kind: 'quadratic', control: { kind: 'curvature', offset: 0.3, angle: 400 } },
+            ],
+          },
+        },
+      },
+    });
+    const negativeAngle = VisualConfigSchema.safeParse({
+      version: 1,
+      zones: {
+        connectionRoutes: {
+          'loc-alpha-beta:none': {
+            points: [
+              { kind: 'zone', zoneId: 'alpha:none' },
+              { kind: 'zone', zoneId: 'beta:none' },
+            ],
+            segments: [
+              { kind: 'quadratic', control: { kind: 'curvature', offset: 0.3, angle: -10 } },
+            ],
+          },
+        },
+      },
+    });
+    const extraProperty = VisualConfigSchema.safeParse({
+      version: 1,
+      zones: {
+        connectionRoutes: {
+          'loc-alpha-beta:none': {
+            points: [
+              { kind: 'zone', zoneId: 'alpha:none' },
+              { kind: 'zone', zoneId: 'beta:none' },
+            ],
+            segments: [
+              { kind: 'quadratic', control: { kind: 'curvature', offset: 0.3, extra: true } },
+            ],
+          },
+        },
+      },
+    });
+
+    expect(invalidAngle.success).toBe(false);
+    expect(negativeAngle.success).toBe(false);
+    expect(extraProperty.success).toBe(false);
+  });
+
+  it('rejects out-of-range anchor angles on zone connection endpoints', () => {
+    const negative = VisualConfigSchema.safeParse({
+      version: 1,
+      zones: {
+        connectionRoutes: {
+          'loc-alpha-beta:none': {
+            points: [
+              { kind: 'zone', zoneId: 'alpha:none', anchor: -1 },
+              { kind: 'zone', zoneId: 'beta:none' },
+            ],
+            segments: [
+              { kind: 'straight' },
+            ],
+          },
+        },
+      },
+    });
+    const tooLarge = VisualConfigSchema.safeParse({
+      version: 1,
+      zones: {
+        connectionRoutes: {
+          'loc-alpha-beta:none': {
+            points: [
+              { kind: 'zone', zoneId: 'alpha:none', anchor: 361 },
+              { kind: 'zone', zoneId: 'beta:none' },
+            ],
+            segments: [
+              { kind: 'straight' },
+            ],
+          },
+        },
+      },
+    });
+
+    expect(negative.success).toBe(false);
+    expect(tooLarge.success).toBe(false);
+  });
+
   it('rejects connection routes with mismatched segment counts', () => {
     const result = VisualConfigSchema.safeParse({
       version: 1,

@@ -1,14 +1,14 @@
-# 83ZONEDGANCEND-006: Drag UX and Handle Rendering
+# 83ZONEDGANCEND-006: Drag UX and Zone-Linked Endpoint Editing
 
 **Status**: PENDING
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — runner-only
-**Deps**: `archive/tickets/83ZONEDGANCEND-002-edge-position-math-utilities.md`, `archive/tickets/83ZONEDGANCEND/83ZONEDGANCEND-004-editor-route-geometry-update.md`, `tickets/83ZONEDGANCEND-005-store-actions-set-and-preview-anchor.md`
+**Deps**: `archive/tickets/83ZONEDGANCEND-002-edge-position-math-utilities.md`, `archive/tickets/83ZONEDGANCEND/83ZONEDGANCEND-004-editor-route-geometry-update.md`, `archive/tickets/83ZONEDGANCEND/83ZONEDGANCEND-005-store-actions-set-and-preview-anchor.md`
 
 ## Problem
 
-When the user drags a zone endpoint in the map editor, the current behavior calls `convertEndpointToAnchor()` which permanently breaks the semantic link between the endpoint and the zone. The new behavior should snap the endpoint to the zone's edge at the dragged angle, preserving the zone link. Additionally, endpoint drag handles are always rendered at the zone center — they must be rendered at the edge position when `anchor` is set.
+When the user drags a zone endpoint in the map editor, the current behavior calls `convertEndpointToAnchor()` which permanently breaks the semantic link between the endpoint and the zone. The remaining work is to replace that default drag path with zone-linked endpoint editing driven by `previewEndpointAnchor` / `setEndpointAnchor`.
 
 ## Assumption Reassessment (2026-03-26)
 
@@ -16,8 +16,8 @@ When the user drags a zone endpoint in the map editor, the current behavior call
 2. On first pointer move, it calls `state.convertEndpointToAnchor(routeId, pointIndex)` to get an `anchorId`, then switches to free anchor dragging.
 3. The function returns a cleanup function removing event listeners.
 4. Other drag handlers follow the pattern: `attachZoneDragHandlers`, `attachAnchorDragHandlers`, `attachControlPointDragHandlers`, `attachPositionDragHandlers`.
-5. Handle rendering for route endpoints is done in `packages/runner/src/map-editor/map-editor-handle-renderer.ts`, which currently positions zone endpoint handles from editor route geometry and still attaches the conversion-based drag handler.
-6. The drag handler needs zone center position, shape, and dimensions — currently not passed.
+5. Handle rendering for anchored zone endpoints is already implemented through shared editor route geometry. `map-editor-handle-renderer.ts` positions handles from resolved geometry, so that portion of the original scope is no longer pending.
+6. The remaining drag change still needs zone center position plus zone shape/dimensions at the handler boundary.
 7. This ticket is the primary owner of the remaining design gap: zone endpoint drags must preserve zone linkage by default, and the old detach-on-first-move behavior should cease to be the normal path.
 
 ## Architecture Check
@@ -25,7 +25,7 @@ When the user drags a zone endpoint in the map editor, the current behavior call
 1. Replaces the existing conversion-based approach with edge-snapping — cleaner UX, preserves zone semantics.
 2. The primary interaction path must be zone-linked endpoint editing, not conversion to free anchors. Any escape hatch must be explicit and secondary.
 3. Uses existing store interaction pattern (`beginInteraction` → `previewEndpointAnchor` → `commitInteraction`) and the geometry contract from ticket 004.
-4. Handle rendering must derive from shared route geometry so authored anchors and drag previews stay visually consistent.
+4. Drag-time snapping must use the same zone shape/dimension contract as route geometry so editing and rendering cannot drift.
 5. Pure angle computation from cursor position (F7).
 
 ## What to Change
@@ -58,17 +58,10 @@ In `packages/runner/src/map-editor/map-editor-drag.ts`, replace `attachZoneEndpo
 
 The code that attaches drag handlers to zone endpoint handles in `map-editor-handle-renderer.ts` must call the new function with the additional zone data parameters.
 
-### 3. Update handle rendering
-
-In `map-editor-handle-renderer.ts` and any editor geometry helpers it depends on:
-- If zone endpoint has `anchor`: position handle at edge via `getEdgePointAtAngle`
-- If no `anchor`: position at zone center (existing behavior)
-- Keep route polyline sampling, hit areas, and endpoint handles on the same resolved geometry contract.
-
 ## Files to Touch
 
 - `packages/runner/src/map-editor/map-editor-drag.ts` (modify — replace handler)
-- `packages/runner/src/map-editor/map-editor-handle-renderer.ts` (modify — pass zone data, position handles from resolved geometry)
+- `packages/runner/src/map-editor/map-editor-handle-renderer.ts` (modify — pass zone data into the drag handler)
 - Any shared editor geometry caller updated by ticket 004 (modify as needed)
 
 ## Out of Scope
@@ -92,10 +85,10 @@ In `map-editor-handle-renderer.ts` and any editor geometry helpers it depends on
 4. Preview: `previewEndpointAnchor` is called during drag move with computed angle
 5. Commit: the final route state keeps a `kind: 'zone'` endpoint and records the computed `anchor` on pointer up
 6. Escape hatch: dragging beyond `2 * max(w, h)` triggers `convertEndpointToAnchor` instead
-7. Handle rendering: zone endpoint with `anchor: 90` on circle renders handle at top edge
-8. Handle rendering: zone endpoint without `anchor` renders handle at center
-9. Existing suite: `pnpm -F @ludoforge/runner test`
-10. Existing suite: `pnpm -F @ludoforge/runner typecheck`
+7. Existing handle rendering behavior for authored anchors remains intact during and after the drag refactor
+8. Existing suite: `pnpm -F @ludoforge/runner test`
+9. Existing suite: `pnpm -F @ludoforge/runner typecheck`
+10. Existing suite: `pnpm -F @ludoforge/runner lint`
 
 ### Invariants
 
@@ -110,9 +103,11 @@ In `map-editor-handle-renderer.ts` and any editor geometry helpers it depends on
 ### New/Modified Tests
 
 1. `packages/runner/test/map-editor/map-editor-drag.test.ts` — test angle computation, edge snap, escape hatch, preview/commit flow
+2. `packages/runner/test/map-editor/map-editor-handle-renderer.test.ts` — keep existing anchored-handle coverage green to prove the drag refactor does not regress the already-delivered rendering contract
 
 ### Commands
 
 1. `pnpm -F @ludoforge/runner test -- --reporter=verbose packages/runner/test/map-editor/map-editor-drag.test.ts`
 2. `pnpm -F @ludoforge/runner test`
 3. `pnpm -F @ludoforge/runner typecheck`
+4. `pnpm -F @ludoforge/runner lint`

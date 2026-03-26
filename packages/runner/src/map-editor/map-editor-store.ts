@@ -33,6 +33,8 @@ interface MapEditorStoreActions {
   moveZone(zoneId: string, position: Position): void;
   moveAnchor(anchorId: string, position: Position): void;
   moveControlPoint(routeId: string, segmentIndex: number, position: Position): void;
+  setEndpointAnchor(routeId: string, pointIndex: number, anchor: number): void;
+  previewEndpointAnchor(routeId: string, pointIndex: number, anchor: number): void;
   convertEndpointToAnchor(routeId: string, pointIndex: number): string | null;
   insertWaypoint(routeId: string, segmentIndex: number, position: Position): void;
   removeWaypoint(routeId: string, pointIndex: number): void;
@@ -145,6 +147,14 @@ export function createMapEditorStore(
 
       moveControlPoint(routeId, segmentIndex, position) {
         applyCommittedEdit((state) => moveControlPointInDocument(state, routeId, segmentIndex, position));
+      },
+
+      setEndpointAnchor(routeId, pointIndex, anchor) {
+        applyCommittedEdit((state) => setEndpointAnchorInDocument(state, routeId, pointIndex, anchor));
+      },
+
+      previewEndpointAnchor(routeId, pointIndex, anchor) {
+        applyPreviewEdit((state) => setEndpointAnchorInDocument(state, routeId, pointIndex, anchor));
       },
 
       convertEndpointToAnchor(routeId, pointIndex) {
@@ -671,6 +681,40 @@ function convertEndpointToAnchorInDocument(
       connectionAnchors,
       connectionRoutes,
     },
+  };
+}
+
+function setEndpointAnchorInDocument(
+  state: MapEditorDocumentState,
+  routeId: string,
+  pointIndex: number,
+  anchor: number,
+): MapEditorDocumentState | null {
+  if (!Number.isFinite(anchor)) {
+    return null;
+  }
+
+  const route = state.connectionRoutes.get(routeId);
+  const point = route?.points[pointIndex];
+  if (route === undefined || point === undefined || point.kind !== 'zone' || point.anchor === anchor) {
+    return null;
+  }
+
+  const points = route.points.map((entry, index) => (
+    index === pointIndex
+      ? { ...entry, anchor }
+      : cloneEndpoint(entry)
+  ));
+  const connectionRoutes = new Map(state.connectionRoutes);
+  connectionRoutes.set(routeId, {
+    points,
+    segments: route.segments.map(cloneSegment),
+  });
+
+  return {
+    zonePositions: state.zonePositions,
+    connectionAnchors: state.connectionAnchors,
+    connectionRoutes,
   };
 }
 

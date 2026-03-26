@@ -289,6 +289,132 @@ describe('createMapEditorStore', () => {
     });
   });
 
+  it('setEndpointAnchor updates a zone endpoint and records undo history', () => {
+    const store = makeStore();
+    const previousRoutes = store.getState().connectionRoutes;
+    const previousRoute = previousRoutes.get('road:none');
+
+    store.getState().setEndpointAnchor('road:none', 0, 90);
+
+    const state = store.getState();
+    expect(state.connectionRoutes).not.toBe(previousRoutes);
+    expect(state.connectionRoutes.get('road:none')).not.toBe(previousRoute);
+    expect(state.connectionRoutes.get('road:none')).toEqual({
+      points: [
+        { kind: 'zone', zoneId: 'zone:a', anchor: 90 },
+        { kind: 'zone', zoneId: 'zone:b' },
+      ],
+      segments: [{ kind: 'straight' }],
+    });
+    expect(previousRoute).toEqual({
+      points: [
+        { kind: 'zone', zoneId: 'zone:a' },
+        { kind: 'zone', zoneId: 'zone:b' },
+      ],
+      segments: [{ kind: 'straight' }],
+    });
+    expect(state.undoStack).toHaveLength(1);
+    expect(state.undoStack[0]?.connectionRoutes.get('road:none')).toEqual(previousRoute);
+    expect(state.redoStack).toHaveLength(0);
+    expect(state.dirty).toBe(true);
+  });
+
+  it('setEndpointAnchor is a no-op for anchor endpoints, invalid targets, and unchanged values', () => {
+    const store = makeStore({
+      routes: new Map<string, ConnectionRouteDefinition>([
+        ['road:none', {
+          points: [
+            { kind: 'anchor', anchorId: 'bend-1' },
+            { kind: 'zone', zoneId: 'zone:b', anchor: 180 },
+          ],
+          segments: [{ kind: 'straight' }],
+        }],
+      ]),
+    });
+    const initialRoutes = store.getState().connectionRoutes;
+
+    store.getState().setEndpointAnchor('road:none', 0, 90);
+    store.getState().setEndpointAnchor('road:none', 1, 180);
+    store.getState().setEndpointAnchor('road:none', 5, 90);
+    store.getState().setEndpointAnchor('missing:none', 0, 90);
+
+    const state = store.getState();
+    expect(state.connectionRoutes).toBe(initialRoutes);
+    expect(state.connectionRoutes.get('road:none')).toEqual({
+      points: [
+        { kind: 'anchor', anchorId: 'bend-1' },
+        { kind: 'zone', zoneId: 'zone:b', anchor: 180 },
+      ],
+      segments: [{ kind: 'straight' }],
+    });
+    expect(state.undoStack).toHaveLength(0);
+    expect(state.redoStack).toHaveLength(0);
+    expect(state.dirty).toBe(false);
+  });
+
+  it('previewEndpointAnchor previews within an interaction and commit makes it undoable', () => {
+    const store = makeStore();
+
+    store.getState().beginInteraction();
+    store.getState().previewEndpointAnchor('road:none', 0, 45);
+
+    expect(store.getState().connectionRoutes.get('road:none')).toEqual({
+      points: [
+        { kind: 'zone', zoneId: 'zone:a', anchor: 45 },
+        { kind: 'zone', zoneId: 'zone:b' },
+      ],
+      segments: [{ kind: 'straight' }],
+    });
+    expect(store.getState().undoStack).toHaveLength(0);
+    expect(store.getState().dirty).toBe(true);
+
+    store.getState().commitInteraction();
+
+    expect(store.getState().undoStack).toHaveLength(1);
+    expect(store.getState().undoStack[0]?.connectionRoutes.get('road:none')).toEqual({
+      points: [
+        { kind: 'zone', zoneId: 'zone:a' },
+        { kind: 'zone', zoneId: 'zone:b' },
+      ],
+      segments: [{ kind: 'straight' }],
+    });
+
+    store.getState().undo();
+
+    expect(store.getState().connectionRoutes.get('road:none')).toEqual({
+      points: [
+        { kind: 'zone', zoneId: 'zone:a' },
+        { kind: 'zone', zoneId: 'zone:b' },
+      ],
+      segments: [{ kind: 'straight' }],
+    });
+  });
+
+  it('cancelInteraction discards previewEndpointAnchor changes', () => {
+    const store = makeStore();
+
+    store.getState().beginInteraction();
+    store.getState().previewEndpointAnchor('road:none', 0, 135);
+    expect(store.getState().connectionRoutes.get('road:none')?.points[0]).toEqual({
+      kind: 'zone',
+      zoneId: 'zone:a',
+      anchor: 135,
+    });
+
+    store.getState().cancelInteraction();
+
+    expect(store.getState().connectionRoutes.get('road:none')).toEqual({
+      points: [
+        { kind: 'zone', zoneId: 'zone:a' },
+        { kind: 'zone', zoneId: 'zone:b' },
+      ],
+      segments: [{ kind: 'straight' }],
+    });
+    expect(store.getState().undoStack).toHaveLength(0);
+    expect(store.getState().redoStack).toHaveLength(0);
+    expect(store.getState().dirty).toBe(false);
+  });
+
   it('convertEndpointToAnchor promotes a zone endpoint into a new anchor at the current zone position', () => {
     const store = makeStore({
       routes: new Map<string, ConnectionRouteDefinition>([

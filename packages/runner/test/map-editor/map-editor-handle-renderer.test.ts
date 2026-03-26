@@ -472,6 +472,53 @@ describe('createEditorHandleRenderer', () => {
     expect(angleLabel.renderable).toBe(false);
   });
 
+  it('updates zone-edge drag overlays without rebuilding the active handle objects', () => {
+    const fixture = createFixture({
+      connectionRoutes: {
+        'route:road': {
+          points: [
+            { kind: 'zone', zoneId: 'zone:a' },
+            { kind: 'zone', zoneId: 'zone:b' },
+          ],
+          segments: [{ kind: 'straight' }],
+        },
+      },
+    });
+    const dragSurface = new MockContainer();
+    createEditorHandleRenderer(
+      fixture.handleLayer as unknown as Container,
+      fixture.store,
+      fixture.gameDef,
+      fixture.provider,
+      { dragSurface: dragSurface as unknown as Container },
+    );
+
+    fixture.store.getState().selectRoute('route:road');
+
+    const root = fixture.handleLayer.children[0] as InstanceType<typeof MockContainer>;
+    const overlayRoot = fixture.handleLayer.children[1] as InstanceType<typeof MockContainer>;
+    const startHandle = root.children[0] as InstanceType<typeof MockGraphics>;
+    const endHandle = root.children[1] as InstanceType<typeof MockGraphics>;
+    const angleLabel = overlayRoot.children[0] as InstanceType<typeof MockBitmapText>;
+    const initialPosition = { x: startHandle.position.x, y: startHandle.position.y };
+
+    startHandle.emit('pointerdown', pointer(0, 0));
+    dragSurface.emit('globalpointermove', pointer(0, -40));
+
+    expect(root.children[0]).toBe(startHandle);
+    expect(root.children[1]).toBe(endHandle);
+    expect(startHandle.position).not.toEqual(expect.objectContaining(initialPosition));
+    expect(angleLabel.text).toBe('90deg');
+    expect(angleLabel.visible).toBe(true);
+
+    dragSurface.emit('globalpointermove', pointer(40, 0));
+
+    expect(root.children[0]).toBe(startHandle);
+    expect(root.children[1]).toBe(endHandle);
+    expect(angleLabel.text).toBe('0deg');
+    expect(angleLabel.visible).toBe(true);
+  });
+
   it('hides the angle label after a zone-edge endpoint detaches into a free anchor', () => {
     const fixture = createFixture({
       connectionRoutes: {

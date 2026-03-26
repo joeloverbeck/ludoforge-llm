@@ -413,6 +413,33 @@ describe('createEditorRouteRenderer', () => {
     expect(graphics.quadraticCurveToArgs[0]).toEqual([20, 5, 80, 0]);
   });
 
+  it('ignores drag preview metadata when route geometry itself has not changed', () => {
+    const fixture = createFixture();
+    createEditorRouteRenderer(
+      fixture.routeLayer as unknown as Container,
+      fixture.store,
+      fixture.gameDef,
+      fixture.provider,
+    );
+
+    const root = fixture.routeLayer.children[0] as InstanceType<typeof MockContainer>;
+    const graphics = root.children[0] as InstanceType<typeof MockGraphics>;
+    expect(graphics.quadraticCurveToArgs[0]).toEqual([40, 30, 80, 0]);
+
+    fixture.store.getState().setDragging(true);
+    fixture.store.getState().setDragPreview({
+      kind: 'zone-edge-anchor',
+      routeId: 'route:road',
+      pointIndex: 0,
+      handlePosition: { x: 10, y: -20 },
+      angle: 90,
+    });
+
+    expect(fixture.routeLayer.children[0]).toBe(root);
+    expect(root.children[0]).toBe(graphics);
+    expect(graphics.quadraticCurveToArgs[0]).toEqual([40, 30, 80, 0]);
+  });
+
   it('inserts a waypoint on double-click at the nearest point on the targeted segment', () => {
     const fixture = createFixture();
     createEditorRouteRenderer(

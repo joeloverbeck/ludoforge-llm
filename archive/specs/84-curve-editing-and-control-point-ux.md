@@ -1,5 +1,7 @@
 # Spec 84 — Curve Editing & Control Point UX
 
+**Status**: ✅ COMPLETED
+
 ## Context
 
 Spec 83 added zone-edge anchor endpoints for connection routes, allowing endpoints to attach to specific edges of zones rather than their centers. While the anchor system works correctly, two remaining issues prevent effective curve editing in the map editor:
@@ -173,3 +175,10 @@ Deliverables 1 and 2 are independent and can be implemented in parallel. Deliver
 4. **FITL routes:** The Hue↔Da Nang road renders as a gentle curve from Hue's south edge to Da Nang's north edge without wild looping. The Saigon→An Loc→Ban Me Thuot road renders with a reasonable curve.
 5. **Existing routes unaffected:** All `{ kind: straight }` routes render unchanged. Any remaining `{ kind: position }` or `{ kind: anchor }` control points continue to work.
 6. **Tests pass:** `pnpm -F @ludoforge/runner test`, `pnpm -F @ludoforge/runner typecheck`, `pnpm -F @ludoforge/runner lint`
+
+## Outcome
+
+- **Completion date:** 2026-03-26
+- **What actually changed:** Spec 84 was completed across the related map-editor tickets. The runner now supports interactive curve editing, curvature controls, live selected-route preview during drag, tangent-line synchronization, and a transient zone-edge angle indicator. FITL route data was migrated onto the supported control model during the earlier ticket sequence.
+- **Deviations from original plan:** The final architecture did not need a new centralized drag-preview visual-owner abstraction. Instead, the completed implementation kept a cleaner split: drag handlers own pointer-session and immediate dragged-handle motion, the store owns previewed document geometry plus minimal ephemeral drag metadata, the route renderer owns route redraws, and the handle renderer owns transient handle-layer overlays.
+- **Verification results:** Verified by the current runner suite including `pnpm -F @ludoforge/runner test`, `pnpm -F @ludoforge/runner typecheck`, and `pnpm -F @ludoforge/runner lint` on 2026-03-26.

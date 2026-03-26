@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildRegularPolygonPoints,
   drawZoneShape,
+  getEdgePointAtAngle,
   parseHexColor,
   resolveVisualDimensions,
 } from '../../../src/canvas/renderers/shape-utils';
@@ -107,5 +108,72 @@ describe('shape-utils', () => {
     expect(base.circleArgs).toBeNull();
     expect(base.ellipseArgs).toBeNull();
     expect(base.polyArgs).toBeNull();
+  });
+
+  it('computes circle edge points at cardinal angles using the smaller dimension as the radius', () => {
+    expect(getEdgePointAtAngle('circle', { width: 80, height: 40 }, 0)).toEqual({ x: 20, y: 0 });
+    expect(getEdgePointAtAngle('circle', { width: 80, height: 40 }, 90)).toEqual({ x: 0, y: -20 });
+    expect(getEdgePointAtAngle('circle', { width: 80, height: 40 }, 180)).toEqual({ x: -20, y: 0 });
+    expect(getEdgePointAtAngle('circle', { width: 80, height: 40 }, 270)).toEqual({ x: 0, y: 20 });
+  });
+
+  it('normalizes angles outside the canonical range', () => {
+    expect(getEdgePointAtAngle('rectangle', { width: 60, height: 40 }, -90)).toEqual({ x: 0, y: 20 });
+    expect(getEdgePointAtAngle('rectangle', { width: 60, height: 40 }, 450)).toEqual({ x: 0, y: -20 });
+  });
+
+  it('computes true ray intersections for ellipses', () => {
+    const point = getEdgePointAtAngle('ellipse', { width: 120, height: 80 }, 45);
+    const semiX = 60;
+    const semiY = 40;
+
+    expect((point.x * point.x) / (semiX * semiX) + (point.y * point.y) / (semiY * semiY)).toBeCloseTo(1, 6);
+    expect(point.y / point.x).toBeCloseTo(-1, 6);
+  });
+
+  it('treats rectangles and lines as box intersections from the center ray', () => {
+    expect(getEdgePointAtAngle('rectangle', { width: 80, height: 40 }, 0)).toEqual({ x: 40, y: 0 });
+    expect(getEdgePointAtAngle('rectangle', { width: 80, height: 40 }, 90)).toEqual({ x: 0, y: -20 });
+    expect(getEdgePointAtAngle('rectangle', { width: 80, height: 40 }, 180)).toEqual({ x: -40, y: 0 });
+    expect(getEdgePointAtAngle('rectangle', { width: 80, height: 40 }, 270)).toEqual({ x: 0, y: 20 });
+    expect(getEdgePointAtAngle('rectangle', { width: 80, height: 80 }, 45)).toEqual({ x: 40, y: -40 });
+    expect(getEdgePointAtAngle('rectangle', { width: 80, height: 80 }, 135)).toEqual({ x: -40, y: -40 });
+    expect(getEdgePointAtAngle('rectangle', { width: 80, height: 80 }, 225)).toEqual({ x: -40, y: 40 });
+    expect(getEdgePointAtAngle('rectangle', { width: 80, height: 80 }, 315)).toEqual({ x: 40, y: 40 });
+    expect(getEdgePointAtAngle('line', { width: 100, height: 20 }, 0)).toEqual({ x: 50, y: 0 });
+    expect(getEdgePointAtAngle(undefined, { width: 100, height: 20 }, 180)).toEqual({ x: -50, y: 0 });
+  });
+
+  it('computes polygon intersections for diamond, triangle, hexagon, and octagon', () => {
+    expect(getEdgePointAtAngle('diamond', { width: 80, height: 40 }, 0)).toEqual({ x: 40, y: 0 });
+    const diamondDiagonal = getEdgePointAtAngle('diamond', { width: 80, height: 40 }, 45);
+    expect(diamondDiagonal.x).toBeCloseTo(13.333333333333334, 6);
+    expect(diamondDiagonal.y).toBeCloseTo(-13.333333333333334, 6);
+
+    const triangleTop = getEdgePointAtAngle('triangle', { width: 80, height: 80 }, 90);
+    expect(triangleTop.x).toBeCloseTo(0, 6);
+    expect(triangleTop.y).toBeCloseTo(-40, 6);
+
+    const hexagonRight = getEdgePointAtAngle('hexagon', { width: 80, height: 80 }, 0);
+    expect(hexagonRight.x).toBeCloseTo(34.64101615137755, 6);
+    expect(hexagonRight.y).toBeCloseTo(0, 6);
+
+    const octagonTop = getEdgePointAtAngle('octagon', { width: 80, height: 80 }, 90);
+    expect(octagonTop.x).toBeCloseTo(0, 6);
+    expect(octagonTop.y).toBeCloseTo(-40, 6);
+  });
+
+  it('returns the center for connection zones', () => {
+    expect(getEdgePointAtAngle('connection', { width: 80, height: 40 }, 123)).toEqual({ x: 0, y: 0 });
+  });
+
+  it('does not mutate the provided dimensions object and returns stable values across calls', () => {
+    const dimensions = { width: 120, height: 80 };
+
+    const first = getEdgePointAtAngle('ellipse', dimensions, 33);
+    const second = getEdgePointAtAngle('ellipse', dimensions, 33);
+
+    expect(first).toEqual(second);
+    expect(dimensions).toEqual({ width: 120, height: 80 });
   });
 });

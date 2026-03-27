@@ -440,6 +440,8 @@ describe('draw trace emission', () => {
       assert.equal(entry.kind, 'moveToken');
       assert.equal(entry.from, 'deck:none');
       assert.equal(entry.to, 'hand:0');
+      assert.equal(entry.provenance.actionId, 'test-draw');
+      assert.equal(entry.provenance.effectPath, 'test.effects');
     }
     const first = trace[0]!;
     const second = trace[1]!;

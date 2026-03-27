@@ -2,6 +2,7 @@ import { asTokenId } from './branded.js';
 import { moveToken as moveTokenBuilder } from './ast-builders.js';
 import { getZoneMap } from './def-lookup.js';
 import { evalCondition } from './eval-condition.js';
+import type { ReadContext } from './eval-context.js';
 import { evalValue } from './eval-value.js';
 import { emitTrace } from './execution-collector.js';
 import { nextInt } from './prng.js';
@@ -12,8 +13,8 @@ import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import { resolveRuntimeTokenBindingValue } from './token-binding.js';
 import { getTokenStateIndexEntry, invalidateTokenStateIndex } from './token-state-index.js';
 import { resolveTraceProvenance } from './trace-provenance.js';
-import { fromEnvAndCursor, resolveEffectBindings } from './effect-context.js';
-import type { EffectContext, EffectCursor, EffectEnv, PartialEffectResult } from './effect-context.js';
+import { mergeToReadContext, resolveEffectBindings } from './effect-context.js';
+import type { EffectCursor, EffectEnv, PartialEffectResult } from './effect-context.js';
 import type { EffectBudgetState } from './effects-control.js';
 import type { ApplyEffectsWithBudget } from './effect-registry.js';
 import { ensureZoneCloned, type MutableGameState } from './state-draft.js';
@@ -64,7 +65,12 @@ const expectScalarTokenPropValue = (
   );
 };
 
-const enforceStacking = (ctx: EffectContext, zoneId: string, zoneContentsAfter: readonly Token[], effectType: string): void => {
+const enforceStacking = (
+  ctx: Pick<ReadContext, 'def'>,
+  zoneId: string,
+  zoneContentsAfter: readonly Token[],
+  effectType: string,
+): void => {
   const constraints = ctx.def.stackingConstraints;
   if (constraints === undefined || constraints.length === 0) {
     return;
@@ -130,7 +136,7 @@ const enforceStacking = (ctx: EffectContext, zoneId: string, zoneContentsAfter: 
 };
 
 const resolveZoneTokens = (
-  ctx: EffectContext,
+  ctx: Pick<ReadContext, 'state'>,
   zoneId: string,
   effectType: 'moveToken' | 'moveAll' | 'draw' | 'shuffle' | 'createToken',
   field: 'from' | 'to' | 'zone',
@@ -206,7 +212,7 @@ const buildDuplicateTokenOccurrenceError = (
   });
 };
 
-const resolveTokenOccurrence = (ctx: EffectContext, tokenId: string): {
+const resolveTokenOccurrence = (ctx: Pick<ReadContext, 'state'>, tokenId: string): {
   readonly occurrence: TokenOccurrence | null;
   readonly occurrenceCount: number;
   readonly occurrenceZoneIds: readonly string[];
@@ -322,7 +328,12 @@ export const applyMoveToken = (
 ): PartialEffectResult => {
   const resolvedBindings = resolveEffectBindings(env, cursor);
   const evalCursor = resolvedBindings === cursor.bindings ? cursor : { ...cursor, bindings: resolvedBindings };
-  const evalCtx = fromEnvAndCursor(env, evalCursor);
+  const evalCtx = mergeToReadContext(env, evalCursor);
+  const traceCtx = {
+    state: evalCursor.state,
+    ...(env.traceContext === undefined ? {} : { traceContext: env.traceContext }),
+    ...(evalCursor.effectPath === undefined ? {} : { effectPath: evalCursor.effectPath }),
+  };
   const onResolutionFailure = selectorResolutionFailurePolicyForMode(env.mode);
   const fromZone = resolveZoneWithNormalization(effect.moveToken.from, evalCtx, {
     code: EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED,
@@ -406,7 +417,7 @@ export const applyMoveToken = (
     tokenId: String(tokenId),
     from: fromZoneId,
     to: toZoneId,
-    provenance: resolveTraceProvenance(evalCtx),
+    provenance: resolveTraceProvenance(traceCtx),
   });
 
   if (resetToken !== occurrence.token) {
@@ -418,7 +429,7 @@ export const applyMoveToken = (
           prop,
           oldValue: occurrence.token.props[prop],
           newValue,
-          provenance: resolveTraceProvenance(evalCtx),
+          provenance: resolveTraceProvenance(traceCtx),
         });
       }
     }
@@ -450,7 +461,7 @@ export const applyMoveTokenAdjacent = (
 ): PartialEffectResult => {
   const resolvedBindings = resolveEffectBindings(env, cursor);
   const evalCursor = resolvedBindings === cursor.bindings ? cursor : { ...cursor, bindings: resolvedBindings };
-  const evalCtx = fromEnvAndCursor(env, evalCursor);
+  const evalCtx = mergeToReadContext(env, evalCursor);
   const onResolutionFailure = selectorResolutionFailurePolicyForMode(env.mode);
   const fromZone = resolveZoneWithNormalization(effect.moveTokenAdjacent.from, evalCtx, {
     code: EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED,
@@ -494,7 +505,12 @@ export const applyCreateToken = (
 ): PartialEffectResult => {
   const resolvedBindings = resolveEffectBindings(env, cursor);
   const evalCursor = resolvedBindings === cursor.bindings ? cursor : { ...cursor, bindings: resolvedBindings };
-  const evalCtx = fromEnvAndCursor(env, evalCursor);
+  const evalCtx = mergeToReadContext(env, evalCursor);
+  const traceCtx = {
+    state: evalCursor.state,
+    ...(env.traceContext === undefined ? {} : { traceContext: env.traceContext }),
+    ...(evalCursor.effectPath === undefined ? {} : { effectPath: evalCursor.effectPath }),
+  };
   const onResolutionFailure = selectorResolutionFailurePolicyForMode(env.mode);
   const zoneId = String(
     resolveZoneWithNormalization(effect.createToken.zone, evalCtx, {
@@ -539,7 +555,7 @@ export const applyCreateToken = (
     tokenId: String(createdToken.id),
     type: createdToken.type,
     zone: zoneId,
-    provenance: resolveTraceProvenance(evalCtx),
+    provenance: resolveTraceProvenance(traceCtx),
   });
 
   if (cursor.tracker) {
@@ -573,7 +589,12 @@ export const applyDestroyToken = (
 ): PartialEffectResult => {
   const resolvedBindings = resolveEffectBindings(env, cursor);
   const tokenId = resolveBoundTokenId(resolvedBindings, effect.destroyToken.token, 'destroyToken');
-  const evalCtx = fromEnvAndCursor(env, cursor);
+  const evalCtx = mergeToReadContext(env, cursor);
+  const traceCtx = {
+    state: cursor.state,
+    ...(env.traceContext === undefined ? {} : { traceContext: env.traceContext }),
+    ...(cursor.effectPath === undefined ? {} : { effectPath: cursor.effectPath }),
+  };
   const resolvedOccurrence = resolveTokenOccurrence(evalCtx, tokenId);
 
   if (resolvedOccurrence.occurrenceCount === 0 || resolvedOccurrence.occurrence === null) {
@@ -601,7 +622,7 @@ export const applyDestroyToken = (
     tokenId: String(tokenId),
     type: occurrence.token.type,
     zone: occurrence.zoneId,
-    provenance: resolveTraceProvenance(evalCtx),
+    provenance: resolveTraceProvenance(traceCtx),
   });
 
   if (cursor.tracker) {
@@ -623,7 +644,12 @@ export const applySetTokenProp = (
   const { token: tokenBinding, prop, value } = effect.setTokenProp;
   const resolvedBindings = resolveEffectBindings(env, cursor);
   const tokenId = resolveBoundTokenId(resolvedBindings, tokenBinding, 'setTokenProp');
-  const evalCtx = fromEnvAndCursor(env, cursor);
+  const evalCtx = mergeToReadContext(env, cursor);
+  const traceCtx = {
+    state: cursor.state,
+    ...(env.traceContext === undefined ? {} : { traceContext: env.traceContext }),
+    ...(cursor.effectPath === undefined ? {} : { effectPath: cursor.effectPath }),
+  };
   const resolvedOccurrence = resolveTokenOccurrence(evalCtx, tokenId);
 
   if (resolvedOccurrence.occurrenceCount === 0 || resolvedOccurrence.occurrence === null) {
@@ -659,7 +685,7 @@ export const applySetTokenProp = (
   }
 
   const evalCursor = resolvedBindings === cursor.bindings ? cursor : { ...cursor, bindings: resolvedBindings };
-  const evalCtxWithBindings = fromEnvAndCursor(env, evalCursor);
+  const evalCtxWithBindings = mergeToReadContext(env, evalCursor);
   const evaluatedValue = expectScalarTokenPropValue(
     evalValue(value, evalCtxWithBindings),
     'setTokenProp',
@@ -701,7 +727,7 @@ export const applySetTokenProp = (
     prop,
     oldValue,
     newValue: evaluatedValue,
-    provenance: resolveTraceProvenance(evalCtx),
+    provenance: resolveTraceProvenance(traceCtx),
   });
 
   const sourceTokens = cursor.state.zones[occurrence.zoneId]!;
@@ -728,7 +754,12 @@ export const applyDraw = (
 
   const resolvedBindings = resolveEffectBindings(env, cursor);
   const evalCursor = resolvedBindings === cursor.bindings ? cursor : { ...cursor, bindings: resolvedBindings };
-  const evalCtx = fromEnvAndCursor(env, evalCursor);
+  const evalCtx = mergeToReadContext(env, evalCursor);
+  const traceCtx = {
+    state: evalCursor.state,
+    ...(env.traceContext === undefined ? {} : { traceContext: env.traceContext }),
+    ...(evalCursor.effectPath === undefined ? {} : { effectPath: evalCursor.effectPath }),
+  };
   const onResolutionFailure = selectorResolutionFailurePolicyForMode(env.mode);
   const fromZone = resolveZoneWithNormalization(effect.draw.from, evalCtx, {
     code: EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED,
@@ -798,13 +829,13 @@ export const applyDraw = (
           tokenId: String(reshuffledToken.id),
           from: reshuffleZoneId,
           to: fromZoneId,
-          provenance: resolveTraceProvenance(evalCtx),
+          provenance: resolveTraceProvenance(traceCtx),
         });
       }
       emitTrace(env.collector, {
         kind: 'shuffle',
         zone: fromZoneId,
-        provenance: resolveTraceProvenance(evalCtx),
+        provenance: resolveTraceProvenance(traceCtx),
       });
     }
   }
@@ -869,7 +900,7 @@ export const applyDraw = (
       tokenId: String(original.id),
       from: fromZoneId,
       to: toZoneId,
-      provenance: resolveTraceProvenance(evalCtx),
+      provenance: resolveTraceProvenance(traceCtx),
     });
     if (reset !== original) {
       for (const [prop, newValue] of Object.entries(reset.props)) {
@@ -880,7 +911,7 @@ export const applyDraw = (
             prop,
             oldValue: original.props[prop],
             newValue,
-            provenance: resolveTraceProvenance(evalCtx),
+            provenance: resolveTraceProvenance(traceCtx),
           });
         }
       }
@@ -930,7 +961,12 @@ export const applyMoveAll = (
 ): PartialEffectResult => {
   const resolvedBindings = resolveEffectBindings(env, cursor);
   const evalCursor = resolvedBindings === cursor.bindings ? cursor : { ...cursor, bindings: resolvedBindings };
-  const evalCtx = fromEnvAndCursor(env, evalCursor);
+  const evalCtx = mergeToReadContext(env, evalCursor);
+  const traceCtx = {
+    state: evalCursor.state,
+    ...(env.traceContext === undefined ? {} : { traceContext: env.traceContext }),
+    ...(evalCursor.effectPath === undefined ? {} : { effectPath: evalCursor.effectPath }),
+  };
   const onResolutionFailure = selectorResolutionFailurePolicyForMode(env.mode);
   const fromZone = resolveZoneWithNormalization(effect.moveAll.from, evalCtx, {
     code: EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED,
@@ -963,7 +999,7 @@ export const applyMoveAll = (
     const filteredRemaining: Token[] = [];
 
     for (const token of sourceTokens) {
-      const filterEvalCtx = fromEnvAndCursor(env, {
+      const filterEvalCtx = mergeToReadContext(env, {
         ...evalCursor,
         bindings: {
           ...resolvedBindings,
@@ -1007,7 +1043,7 @@ export const applyMoveAll = (
       tokenId: String(original.id),
       from: fromZoneId,
       to: toZoneId,
-      provenance: resolveTraceProvenance(evalCtx),
+      provenance: resolveTraceProvenance(traceCtx),
     });
     if (reset !== original) {
       for (const [prop, newValue] of Object.entries(reset.props)) {
@@ -1018,7 +1054,7 @@ export const applyMoveAll = (
             prop,
             oldValue: original.props[prop],
             newValue,
-            provenance: resolveTraceProvenance(evalCtx),
+            provenance: resolveTraceProvenance(traceCtx),
           });
         }
       }
@@ -1065,7 +1101,12 @@ export const applyShuffle = (
 ): PartialEffectResult => {
   const resolvedBindings = resolveEffectBindings(env, cursor);
   const evalCursor = resolvedBindings === cursor.bindings ? cursor : { ...cursor, bindings: resolvedBindings };
-  const evalCtx = fromEnvAndCursor(env, evalCursor);
+  const evalCtx = mergeToReadContext(env, evalCursor);
+  const traceCtx = {
+    state: evalCursor.state,
+    ...(env.traceContext === undefined ? {} : { traceContext: env.traceContext }),
+    ...(evalCursor.effectPath === undefined ? {} : { effectPath: evalCursor.effectPath }),
+  };
   const onResolutionFailure = selectorResolutionFailurePolicyForMode(env.mode);
   const zoneId = String(
     resolveZoneWithNormalization(effect.shuffle.zone, evalCtx, {
@@ -1087,7 +1128,7 @@ export const applyShuffle = (
   emitTrace(env.collector, {
     kind: 'shuffle',
     zone: zoneId,
-    provenance: resolveTraceProvenance(evalCtx),
+    provenance: resolveTraceProvenance(traceCtx),
   });
 
   if (cursor.tracker) {

@@ -20,8 +20,9 @@ After tickets -003 through -009 replace all 28 `fromEnvAndCursor` call sites, th
 6. Existing migration tickets already defer any cross-file provenance-helper decision to this ticket, so this is the explicit series-end owner for deciding whether that extraction is warranted
 7. Archived ticket `85COMEFFCONMIG-006` confirms one concrete post-migration duplication shape already exists: `effects-var.ts` now carries a local narrow var-trace context/builder instead of any shared helper
 8. Active tickets `85COMEFFCONMIG-007` and `85COMEFFCONMIG-009` already expect local inline picks or local trace builders, and `85COMEFFCONMIG-008` may expose similar trace/provenance duplication depending on the final call-site audit
-9. The right decision boundary for this ticket is therefore not "extract something because duplication exists somewhere"; it is "reassess the final migrated set and only extract a helper if at least two files share a stable, semantically identical env/cursor trace shape"
-10. The ideal architectural endpoint is not merely "no callers"; it is "no compatibility bridge left behind once the migration is complete" (Foundations 9 and 10)
+9. Archived ticket `85COMEFFCONMIG-009` now confirms a second concrete duplication shape in `effects-token.ts`: repeated file-local `traceCtx` builders that feed `resolveTraceProvenance` while intentionally avoiding any full `EffectContext` merge
+10. The right decision boundary for this ticket is therefore not "extract something because duplication exists somewhere"; it is "reassess the final migrated set and only extract a helper if at least two files share a stable, semantically identical env/cursor trace shape"
+11. The ideal architectural endpoint is not merely "no callers"; it is "no compatibility bridge left behind once the migration is complete" (Foundations 9 and 10)
 
 ## Architecture Check
 
@@ -70,6 +71,7 @@ Run `grep -r "fromEnvAndCursor" packages/engine/` to confirm zero remaining refe
   - `resolveTraceProvenance({ state, traceContext?, effectPath? })`
   - `emitVarChangeTraceIfChanged({ collector, state, traceContext?, effectPath? }, ...)`
 - Use the completed `85COMEFFCONMIG-006` outcome plus the final `85COMEFFCONMIG-007` through `85COMEFFCONMIG-009` implementations as the concrete audit set; do not speculate from the pre-migration ticket text once the files are available
+- Treat `effects-token.ts` as a strong audit signal rather than a vague possibility: if `effects-var.ts`, `effects-choice.ts`, and `effects-token.ts` converge on the same narrow env/cursor-to-provenance shape, extraction is likely warranted here; if their shapes diverge in optional fields or downstream trace consumers, keep them local and document why
 - If the duplication is real across multiple files, extract a shared helper in the kernel layer with a narrow contract based on `EffectEnv` + `EffectCursor`
 - Update migrated handlers to consume the shared helper instead of keeping file-local provenance builders
 - Do not reintroduce broad `EffectContext` plumbing while doing this; the helper must preserve the narrow env/cursor architecture established by the migration

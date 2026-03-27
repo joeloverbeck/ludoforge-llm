@@ -127,6 +127,7 @@ export function MapEditorScreen({ gameId, onBack }: MapEditorScreenProps): React
         const adjacencyRenderer = createEditorAdjacencyRenderer(
           canvas.layers.adjacency,
           screenState.editor.store,
+          screenState.editor.visualConfigProvider,
         );
         const zoneRenderer = createEditorZoneRenderer(
           canvas.layers.zone,

@@ -1,13 +1,13 @@
 import { Graphics, type Container } from 'pixi.js';
 
+import {
+  DEFAULT_EDGE_STYLE,
+  type EdgeStrokeStyle,
+  type VisualConfigProvider,
+} from '../config/visual-config-provider.js';
+import { parseHexColor } from '../canvas/renderers/shape-utils.js';
 import { collectLayoutAdjacencyPairs, partitionZones } from '../layout/build-layout-graph.js';
 import type { MapEditorStoreApi } from './map-editor-store.js';
-
-const DEFAULT_LINE_STYLE = {
-  color: 0xffffff,
-  width: 4,
-  alpha: 0.9,
-} as const;
 
 export interface EditorAdjacencyRenderer {
   destroy(): void;
@@ -16,6 +16,7 @@ export interface EditorAdjacencyRenderer {
 export function createEditorAdjacencyRenderer(
   adjacencyLayer: Container,
   store: MapEditorStoreApi,
+  visualConfigProvider: VisualConfigProvider,
 ): EditorAdjacencyRenderer {
   const pairs = collectLayoutAdjacencyPairs(partitionZones(store.getState().gameDef).board);
   const graphics = new Graphics();
@@ -25,6 +26,7 @@ export function createEditorAdjacencyRenderer(
 
   const render = (state: ReturnType<MapEditorStoreApi['getState']>): void => {
     graphics.clear();
+    const strokeStyle = resolveStrokeStyle(visualConfigProvider.resolveEdgeStyle(null, false));
 
     let hasVisibleLines = false;
     for (const pair of pairs) {
@@ -40,7 +42,7 @@ export function createEditorAdjacencyRenderer(
     }
 
     if (hasVisibleLines) {
-      graphics.stroke(DEFAULT_LINE_STYLE);
+      graphics.stroke(strokeStyle);
     }
 
     graphics.visible = hasVisibleLines;
@@ -62,5 +64,22 @@ export function createEditorAdjacencyRenderer(
       unsubscribe();
       graphics.destroy();
     },
+  };
+}
+
+function resolveStrokeStyle(
+  resolved: { color: string | null; width: number; alpha: number },
+): EdgeStrokeStyle {
+  const fallbackColor = parseHexColor(DEFAULT_EDGE_STYLE.color ?? undefined, {
+    allowNamedColors: true,
+  });
+  const parsedColor = parseHexColor(resolved.color ?? undefined, {
+    allowNamedColors: true,
+  });
+
+  return {
+    color: parsedColor ?? fallbackColor ?? 0xffffff,
+    width: resolved.width,
+    alpha: resolved.alpha,
   };
 }

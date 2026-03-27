@@ -6,7 +6,6 @@ import type { ResolvedZoneVisual } from '../../../src/config/visual-config-provi
 const {
   MockContainer,
   MockGraphics,
-  drawDashedLineMock,
 } = vi.hoisted(() => {
   class HoistedMockContainer {
     children: HoistedMockContainer[] = [];
@@ -43,6 +42,12 @@ const {
 
     strokeStyle: unknown;
 
+    moveCalls: Array<{ x: number; y: number }> = [];
+
+    lineCalls: Array<{ x: number; y: number }> = [];
+
+    strokeCalls: unknown[] = [];
+
     clearCalls = 0;
 
     isDestroyed = false;
@@ -52,21 +57,27 @@ const {
       this.drawnFrom = null;
       this.drawnTo = null;
       this.strokeStyle = undefined;
+      this.moveCalls = [];
+      this.lineCalls = [];
+      this.strokeCalls = [];
       return this;
     }
 
     moveTo(x: number, y: number): this {
       this.drawnFrom = { x, y };
+      this.moveCalls.push({ x, y });
       return this;
     }
 
     lineTo(x: number, y: number): this {
       this.drawnTo = { x, y };
+      this.lineCalls.push({ x, y });
       return this;
     }
 
     stroke(style: unknown): this {
       this.strokeStyle = style;
+      this.strokeCalls.push(style);
       return this;
     }
 
@@ -79,20 +90,12 @@ const {
   return {
     MockContainer: HoistedMockContainer,
     MockGraphics: HoistedMockGraphics,
-    drawDashedLineMock: vi.fn((graphics: HoistedMockGraphics, from: { x: number; y: number }, to: { x: number; y: number }) => {
-      graphics.moveTo(from.x, from.y);
-      graphics.lineTo(to.x, to.y);
-    }),
   };
 });
 
 vi.mock('pixi.js', () => ({
   Container: MockContainer,
   Graphics: MockGraphics,
-}));
-
-vi.mock('../../../src/canvas/geometry/dashed-line.js', () => ({
-  drawDashedLine: drawDashedLineMock,
 }));
 
 import { createAdjacencyRenderer } from '../../../src/canvas/renderers/adjacency-renderer';
@@ -276,10 +279,9 @@ describe('createAdjacencyRenderer', () => {
     expect(parent.children).toHaveLength(2);
   });
 
-  it('clips rectangle endpoints to zone edges and reuses the dashed-line helper', () => {
+  it('clips rectangle endpoints to zone edges and strokes each dash segment explicitly', () => {
     const parent = new MockContainer();
     const { renderer } = createRenderer(parent, new VisualConfigProvider(null));
-    drawDashedLineMock.mockClear();
 
     renderer.update(
       [makeAdjacency({ from: 'zone:a', to: 'zone:b' })],
@@ -294,16 +296,23 @@ describe('createAdjacencyRenderer', () => {
     );
 
     const graphics = parent.children[0] as InstanceType<typeof MockGraphics>;
-    expect(drawDashedLineMock).toHaveBeenCalledTimes(1);
-    expect(drawDashedLineMock).toHaveBeenCalledWith(
-      graphics,
+    expect(graphics.moveCalls).toEqual([
       { x: 20, y: 20 },
+      { x: 35, y: 20 },
+      { x: 50, y: 20 },
+      { x: 65, y: 20 },
+      { x: 80, y: 20 },
+      { x: 95, y: 20 },
+    ]);
+    expect(graphics.lineCalls).toEqual([
+      { x: 30, y: 20 },
+      { x: 45, y: 20 },
+      { x: 60, y: 20 },
+      { x: 75, y: 20 },
+      { x: 90, y: 20 },
       { x: 100, y: 20 },
-      10,
-      5,
-    );
-    expect(graphics.drawnFrom).toEqual({ x: 20, y: 20 });
-    expect(graphics.drawnTo).toEqual({ x: 100, y: 20 });
+    ]);
+    expect(graphics.strokeCalls).toEqual(new Array(6).fill({ color: 0xffffff, width: 3.5, alpha: 0.85 }));
     expect(graphics.clearCalls).toBe(1);
   });
 
@@ -324,8 +333,8 @@ describe('createAdjacencyRenderer', () => {
     );
 
     const graphics = parent.children[0] as InstanceType<typeof MockGraphics>;
-    expect(graphics.drawnFrom).toEqual({ x: 20, y: 20 });
-    expect(graphics.drawnTo).toEqual({ x: 100, y: 20 });
+    expect(graphics.moveCalls[0]).toEqual({ x: 20, y: 20 });
+    expect(graphics.lineCalls.at(-1)).toEqual({ x: 100, y: 20 });
 
     renderer.update(
       [makeAdjacency({ from: 'zone:a', to: 'zone:b' })],
@@ -340,15 +349,14 @@ describe('createAdjacencyRenderer', () => {
     );
 
     expect(parent.children[0]).toBe(graphics);
-    expect(graphics.drawnFrom).toEqual({ x: 110, y: 200 });
-    expect(graphics.drawnTo).toEqual({ x: 290, y: 200 });
+    expect(graphics.moveCalls[0]).toEqual({ x: 110, y: 200 });
+    expect(graphics.lineCalls.at(-1)).toEqual({ x: 285, y: 200 });
     expect(graphics.clearCalls).toBe(2);
   });
 
   it('uses highlighted style when adjacency is highlighted (including merged bidirectional pairs)', () => {
     const parent = new MockContainer();
     const { renderer } = createRenderer(parent, new VisualConfigProvider(null));
-    drawDashedLineMock.mockClear();
 
     renderer.update(
       [
@@ -357,7 +365,7 @@ describe('createAdjacencyRenderer', () => {
       ],
       createPositions([
         ['zone:a', { x: 10, y: 20 }],
-        ['zone:b', { x: 30, y: 40 }],
+        ['zone:b', { x: 110, y: 20 }],
       ]),
       createZones([
         ['zone:a'],
@@ -367,13 +375,8 @@ describe('createAdjacencyRenderer', () => {
 
     const graphics = parent.children[0] as InstanceType<typeof MockGraphics>;
     expect(graphics.strokeStyle).toEqual({ color: 0xffffff, width: 4.5, alpha: 1.0 });
-    expect(drawDashedLineMock).toHaveBeenCalledWith(
-      graphics,
-      expect.any(Object),
-      expect.any(Object),
-      12,
-      4,
-    );
+    expect(graphics.strokeCalls.length).toBeGreaterThan(0);
+    expect(graphics.strokeCalls).toEqual(new Array(graphics.strokeCalls.length).fill({ color: 0xffffff, width: 4.5, alpha: 1.0 }));
   });
 
   it('uses category style from visual config provider when present', () => {
@@ -394,7 +397,7 @@ describe('createAdjacencyRenderer', () => {
       [makeAdjacency({ from: 'zone:a', to: 'zone:b', category: 'loc', isHighlighted: false })],
       createPositions([
         ['zone:a', { x: 10, y: 20 }],
-        ['zone:b', { x: 30, y: 40 }],
+        ['zone:b', { x: 110, y: 20 }],
       ]),
       createZones([
         ['zone:a'],
@@ -429,7 +432,7 @@ describe('createAdjacencyRenderer', () => {
       [makeAdjacency({ from: 'zone:a', to: 'zone:b', category: 'loc', isHighlighted: true })],
       createPositions([
         ['zone:a', { x: 10, y: 20 }],
-        ['zone:b', { x: 30, y: 40 }],
+        ['zone:b', { x: 110, y: 20 }],
       ]),
       createZones([
         ['zone:a'],
@@ -461,7 +464,7 @@ describe('createAdjacencyRenderer', () => {
       [makeAdjacency({ from: 'zone:a', to: 'zone:b' })],
       createPositions([
         ['zone:a', { x: 10, y: 20 }],
-        ['zone:b', { x: 30, y: 40 }],
+        ['zone:b', { x: 110, y: 20 }],
       ]),
       createZones([
         ['zone:a'],
@@ -493,7 +496,7 @@ describe('createAdjacencyRenderer', () => {
       [makeAdjacency({ from: 'zone:a', to: 'zone:b', isHighlighted: true })],
       createPositions([
         ['zone:a', { x: 10, y: 20 }],
-        ['zone:b', { x: 30, y: 40 }],
+        ['zone:b', { x: 110, y: 20 }],
       ]),
       createZones([
         ['zone:a'],

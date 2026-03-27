@@ -1,6 +1,6 @@
 import { Graphics, type Container } from 'pixi.js';
 
-import { drawDashedLine } from '../geometry/dashed-line.js';
+import { buildDashedSegments } from '../geometry/dashed-segments.js';
 import { getEdgePointAtAngle, type ShapeDimensions } from './shape-utils.js';
 import {
   DEFAULT_EDGE_STYLE,
@@ -12,6 +12,7 @@ import type { Position } from '../geometry';
 import type { DisposalQueue } from './disposal-queue.js';
 import type { AdjacencyRenderer } from './renderer-types';
 import type { PresentationAdjacencyNode, PresentationZoneNode } from '../../presentation/presentation-scene.js';
+import { strokeDashedSegments } from './stroke-dashed-segments.js';
 
 const DEFAULT_DASH_LENGTH = 10;
 const DEFAULT_GAP_LENGTH = 5;
@@ -134,8 +135,8 @@ function drawAdjacencyLine(
     : { dashLength: DEFAULT_DASH_LENGTH, gapLength: DEFAULT_GAP_LENGTH };
 
   graphics.clear();
-  drawDashedLine(graphics, fromEdge, toEdge, dashPattern.dashLength, dashPattern.gapLength);
-  graphics.stroke(strokeStyle);
+  const segments = buildDashedSegments([fromEdge, toEdge], dashPattern.dashLength, dashPattern.gapLength);
+  strokeDashedSegments(graphics, segments, strokeStyle);
 
   graphics.visible = true;
 }

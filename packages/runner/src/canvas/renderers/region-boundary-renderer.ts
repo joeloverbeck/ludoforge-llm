@@ -4,9 +4,10 @@ import type { RegionBoundaryRenderer } from './renderer-types';
 import { convexHull } from '../geometry/convex-hull.js';
 import type { Point2D } from '../geometry/point2d.js';
 import { padHull, roundHullCorners } from '../geometry/hull-padding.js';
-import { drawDashedPolygon } from '../geometry/dashed-polygon.js';
+import { buildDashedSegments } from '../geometry/dashed-segments.js';
 import type { PresentationRegionNode } from '../../presentation/presentation-scene.js';
 import { createKeyedTextReconciler } from '../text/text-runtime.js';
+import { strokeDashedSegments } from './stroke-dashed-segments.js';
 
 const DEFAULT_FILL_ALPHA = 0.15;
 const DEFAULT_BORDER_STYLE = 'dashed' as const;
@@ -144,9 +145,8 @@ function drawRegionGraphics(
   if (borderStyle === 'dashed') {
     const dashLength = borderWidth * DASH_WIDTH_MULTIPLIER;
     const gapLength = borderWidth * GAP_WIDTH_MULTIPLIER;
-    graphics.setStrokeStyle({ color: borderColor, width: borderWidth });
-    drawDashedPolygon(graphics, roundedHull, dashLength, gapLength);
-    graphics.stroke();
+    const dashedSegments = buildDashedSegments(roundedHull, dashLength, gapLength, { closed: true });
+    strokeDashedSegments(graphics, dashedSegments, { color: borderColor, width: borderWidth });
   } else {
     graphics.poly(flatCoords);
     graphics.stroke({ color: borderColor, width: borderWidth });

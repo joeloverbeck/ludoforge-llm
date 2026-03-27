@@ -3,14 +3,12 @@ import type { Graphics } from 'pixi.js';
 import { drawDashedPath } from './dashed-path.js';
 import type { Point2D } from './point2d.js';
 
-/**
- * Draw dashed line segments along a closed polygon path.
- */
-export function drawDashedPolygon(
+export function drawDashedLine(
   graphics: Graphics,
-  points: readonly Point2D[],
+  from: Point2D,
+  to: Point2D,
   dashLength: number,
   gapLength: number,
 ): void {
-  drawDashedPath(graphics, points, dashLength, gapLength, { closed: true });
+  drawDashedPath(graphics, [from, to], dashLength, gapLength);
 }

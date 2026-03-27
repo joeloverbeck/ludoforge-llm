@@ -40,6 +40,31 @@ describe('drawDashedPolygon', () => {
     expect(g.moveTo.mock.calls.length).toBe(g.lineTo.mock.calls.length);
   });
 
+  it('preserves dash state across polygon edges', () => {
+    const g = createMockGraphics();
+    const square: Point2D[] = [
+      { x: 0, y: 0 },
+      { x: 10, y: 0 },
+      { x: 10, y: 10 },
+      { x: 0, y: 10 },
+    ];
+
+    drawDashedPolygon(g as never, square, 7, 4);
+
+    expect(g.moveTo.mock.calls).toEqual([
+      [0, 0],
+      [10, 1],
+      [8, 10],
+      [0, 7],
+    ]);
+    expect(g.lineTo.mock.calls).toEqual([
+      [7, 0],
+      [10, 8],
+      [1, 10],
+      [0, 0],
+    ]);
+  });
+
   it('handles very small polygons without crashing', () => {
     const g = createMockGraphics();
     const tiny: Point2D[] = [

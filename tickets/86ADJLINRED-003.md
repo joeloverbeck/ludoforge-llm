@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — runner-only
-**Deps**: tickets/86ADJLINRED-002.md
+**Deps**: archive/tickets/86ADJLINRED/86ADJLINRED-002.md
 
 ## Problem
 

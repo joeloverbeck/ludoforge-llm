@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel/scoped-var-runtime-access.ts
-**Deps**: `archive/specs/77-effect-context-static-dynamic-split.md`, `specs/85-complete-effect-context-migration.md`
+**Deps**: `archive/specs/77-effect-context-static-dynamic-split.md`, `archive/specs/85-complete-effect-context-migration.md`
 
 ## Problem
 

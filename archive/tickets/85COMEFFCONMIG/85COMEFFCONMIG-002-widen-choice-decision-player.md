@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel/effects-choice.ts
-**Deps**: `specs/85-complete-effect-context-migration.md`
+**Deps**: `archive/specs/85-complete-effect-context-migration.md`
 
 ## Problem
 

@@ -11,6 +11,11 @@ import type {
   ConnectionRouteSegment,
 } from '../config/visual-config-types.js';
 import {
+  DEFAULT_CONNECTION_ROUTE_CURVE_SEGMENTS,
+  nearestPointOnPolyline,
+  sampleResolvedRoutePath,
+} from './connection-route-geometry.js';
+import {
   ZONE_RENDER_HEIGHT,
   ZONE_RENDER_WIDTH,
 } from '../layout/layout-constants.js';
@@ -49,8 +54,15 @@ export interface ConnectionRouteNode {
   readonly path: readonly ResolvedConnectionPoint[];
   readonly segments: readonly ResolvedConnectionRouteSegment[];
   readonly touchingZoneIds: readonly string[];
+  readonly spurs: readonly SpurSegment[];
   readonly connectionStyleKey: string | null;
   readonly zone: PresentationZoneNode;
+}
+
+export interface SpurSegment {
+  readonly from: Position;
+  readonly to: Position;
+  readonly targetZoneId: string;
 }
 
 export interface JunctionNode {
@@ -115,6 +127,16 @@ export function resolveConnectionRoutes(
     const touchingZoneIds = nonConnectionNeighbors
       .filter((neighborId) => !pathZoneIdSet.has(neighborId))
       .sort(compareStrings);
+    const spurs = resolveSpurs(
+      touchingZoneIds,
+      sampleResolvedRoutePath(
+        resolvedGeometry.path.map((point) => point.position),
+        resolvedGeometry.segments,
+        DEFAULT_CONNECTION_ROUTE_CURVE_SEGMENTS,
+      ),
+      positions,
+      zoneById,
+    );
 
     resolvedRoutes.push({
       zoneId: zone.id,
@@ -122,6 +144,7 @@ export function resolveConnectionRoutes(
       path: resolvedGeometry.path,
       segments: resolvedGeometry.segments,
       touchingZoneIds,
+      spurs,
       connectionStyleKey: zone.visual.connectionStyleKey,
       zone,
     });
@@ -410,6 +433,43 @@ function resolveZoneEndpoints(
   ];
 }
 
+function resolveSpurs(
+  touchingZoneIds: readonly string[],
+  routePolyline: readonly Position[],
+  positions: ReadonlyMap<string, Position>,
+  zoneById: ReadonlyMap<string, PresentationZoneNode>,
+): readonly SpurSegment[] {
+  const spurs: SpurSegment[] = [];
+
+  for (const targetZoneId of touchingZoneIds) {
+    const zone = zoneById.get(targetZoneId);
+    const zonePosition = positions.get(targetZoneId);
+    if (zone === undefined || zonePosition === undefined) {
+      continue;
+    }
+
+    const nearestPoint = nearestPointOnPolyline(routePolyline, zonePosition);
+    if (nearestPoint === null) {
+      continue;
+    }
+
+    const dimensions = resolveVisualDimensions(zone.visual, DEFAULT_ZONE_DIMENSIONS);
+    const angle = computeAngleDegrees(nearestPoint, zonePosition);
+    const offset = getEdgePointAtAngle(zone.visual.shape, dimensions, angle);
+
+    spurs.push({
+      from: nearestPoint,
+      to: {
+        x: zonePosition.x + offset.x,
+        y: zonePosition.y + offset.y,
+      },
+      targetZoneId,
+    });
+  }
+
+  return spurs;
+}
+
 function resolveJunctions(
   routes: readonly ConnectionRouteNode[],
 ): readonly JunctionNode[] {
@@ -457,6 +517,10 @@ function resolveJunctions(
 
 function sortPair(left: string, right: string): readonly [string, string] {
   return left.localeCompare(right) <= 0 ? [left, right] : [right, left];
+}
+
+function computeAngleDegrees(from: Position, to: Position): number {
+  return Math.atan2(from.y - to.y, to.x - from.x) * (180 / Math.PI);
 }
 
 function compareStrings(left: string, right: string): number {

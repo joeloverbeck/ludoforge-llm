@@ -238,6 +238,7 @@ function makeRoute(overrides: Partial<ConnectionRouteNode> = {}): ConnectionRout
       },
     ],
     touchingZoneIds: [],
+    spurs: [],
     connectionStyleKey: 'highway',
     zone,
     ...overrides,
@@ -553,6 +554,42 @@ describe('createConnectionRouteRenderer', () => {
     expect(routeRoot.hitArea).toBeInstanceOf(MockPolygon);
     expect(midpoint.position.x).toBeGreaterThan(100);
     expect(midpoint.position.x).toBeLessThan(220);
+  });
+
+  it('renders spur segments using the parent route stroke', () => {
+    const parent = new MockContainer();
+    const provider = new VisualConfigProvider({
+      version: 1,
+      zones: {
+        connectionStyles: {
+          highway: { strokeWidth: 8, strokeColor: '#8b7355', strokeAlpha: 0.8 },
+        },
+      },
+    });
+    const renderer = createConnectionRouteRenderer(parent as unknown as Container, provider);
+
+    renderer.update(
+      [makeRoute({
+        spurs: [
+          {
+            from: { x: 80, y: 10 },
+            to: { x: 80, y: 60 },
+            targetZoneId: 'quang-tin-quang-ngai:none',
+          },
+        ],
+      })],
+      [],
+      new Map([
+        ['alpha:none', { x: 0, y: 0 }],
+        ['beta:none', { x: 200, y: 0 }],
+      ]),
+    );
+
+    const routeRoot = parent.children[0] as InstanceType<typeof MockContainer>;
+    const routeCurve = routeRoot.children[0] as InstanceType<typeof MockGraphics>;
+
+    expect(routeCurve.lineToArgs).toEqual([[80, 60]]);
+    expect(routeCurve.strokeStyle).toEqual({ color: 0x8b7355, width: 8, alpha: 0.8 });
   });
 
   it('renders from embedded route geometry without consulting the positions map and destroys all children on destroy', () => {

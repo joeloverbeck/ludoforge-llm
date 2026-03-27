@@ -1,19 +1,33 @@
 import { spawnSync } from 'node:child_process';
 import { basename } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { ALL_DETERMINISM_TESTS, listE2eTestsForLane, listIntegrationTestsForLane, toDistTestPath } from './test-lane-manifest.mjs';
 
-const lanePatterns = {
-  default: ['dist/test/unit/**/*.test.js', ...listIntegrationTestsForLane('integration:core').map(toDistTestPath)],
-  e2e: listE2eTestsForLane('e2e').map(toDistTestPath),
-  'e2e:slow': listE2eTestsForLane('e2e:slow').map(toDistTestPath),
-  'e2e:all': listE2eTestsForLane('e2e:all').map(toDistTestPath),
-  integration: listIntegrationTestsForLane('integration').map(toDistTestPath),
-  'integration:core': listIntegrationTestsForLane('integration:core').map(toDistTestPath),
-  'integration:game-packages': listIntegrationTestsForLane('integration:game-packages').map(toDistTestPath),
-  'integration:fitl-events': listIntegrationTestsForLane('integration:fitl-events').map(toDistTestPath),
-  'integration:fitl-rules': listIntegrationTestsForLane('integration:fitl-rules').map(toDistTestPath),
-  'integration:texas-cross-game': listIntegrationTestsForLane('integration:texas-cross-game').map(toDistTestPath),
-  determinism: ALL_DETERMINISM_TESTS.map(toDistTestPath),
+const DEFAULT_DETERMINISM_TIMEOUT_MS = 20 * 60 * 1000;
+const KILL_SIGNAL = 'SIGTERM';
+
+const laneConfigs = {
+  default: {
+    execution: 'batched',
+    patterns: ['dist/test/unit/**/*.test.js', ...listIntegrationTestsForLane('integration:core').map(toDistTestPath)],
+  },
+  e2e: { execution: 'batched', patterns: listE2eTestsForLane('e2e').map(toDistTestPath) },
+  'e2e:slow': { execution: 'batched', patterns: listE2eTestsForLane('e2e:slow').map(toDistTestPath) },
+  'e2e:all': { execution: 'batched', patterns: listE2eTestsForLane('e2e:all').map(toDistTestPath) },
+  integration: { execution: 'batched', patterns: listIntegrationTestsForLane('integration').map(toDistTestPath) },
+  'integration:core': { execution: 'batched', patterns: listIntegrationTestsForLane('integration:core').map(toDistTestPath) },
+  'integration:game-packages': { execution: 'batched', patterns: listIntegrationTestsForLane('integration:game-packages').map(toDistTestPath) },
+  'integration:fitl-events': { execution: 'batched', patterns: listIntegrationTestsForLane('integration:fitl-events').map(toDistTestPath) },
+  'integration:fitl-rules': { execution: 'batched', patterns: listIntegrationTestsForLane('integration:fitl-rules').map(toDistTestPath) },
+  'integration:texas-cross-game': {
+    execution: 'batched',
+    patterns: listIntegrationTestsForLane('integration:texas-cross-game').map(toDistTestPath),
+  },
+  determinism: {
+    execution: 'sequential',
+    patterns: ALL_DETERMINISM_TESTS.map(toDistTestPath),
+    timeoutMs: DEFAULT_DETERMINISM_TIMEOUT_MS,
+  },
 };
 
 const normalizeRequestedPattern = (pattern) => {
@@ -54,23 +68,121 @@ function parseArgs(argv) {
   return { lane, rawPatterns };
 }
 
-const { lane, rawPatterns } = parseArgs(process.argv.slice(2));
-const requestedPatterns = rawPatterns
-  .map(normalizeRequestedPattern)
-  .filter((pattern) => pattern !== null);
-const patterns = requestedPatterns.length > 0 ? requestedPatterns : lanePatterns[lane];
+const toPositiveInteger = (value) => {
+  if (value === undefined) {
+    return null;
+  }
+  const parsed = Number.parseInt(value, 10);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
+};
 
-if (!patterns) {
-  throw new Error(`Unknown test lane: ${lane}`);
+const formatDuration = (durationMs) => {
+  const totalSeconds = Math.ceil(durationMs / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return minutes === 0 ? `${seconds}s` : `${minutes}m ${seconds}s`;
+};
+
+export function buildExecutionPlan(argv, env = process.env) {
+  const { lane, rawPatterns } = parseArgs(argv);
+  const requestedPatterns = rawPatterns
+    .map(normalizeRequestedPattern)
+    .filter((pattern) => pattern !== null);
+  const laneConfig = laneConfigs[lane];
+
+  if (!laneConfig) {
+    throw new Error(`Unknown test lane: ${lane}`);
+  }
+
+  if (requestedPatterns.length > 0) {
+    return {
+      lane,
+      execution: 'batched',
+      patterns: requestedPatterns,
+    };
+  }
+
+  return {
+    lane,
+    execution: laneConfig.execution,
+    patterns: laneConfig.patterns,
+    ...(lane === 'determinism'
+      ? {
+          timeoutMs: toPositiveInteger(env.ENGINE_DETERMINISM_TEST_TIMEOUT_MS) ?? laneConfig.timeoutMs,
+        }
+      : {}),
+  };
 }
 
-const result = spawnSync('node', ['--test', ...patterns], {
-  stdio: 'inherit',
-  env: process.env,
-});
-
-if (result.error) {
-  throw result.error;
+function logLine(stream, line) {
+  stream.write(`${line}\n`);
 }
 
-process.exit(result.status ?? 1);
+export function runExecutionPlan(plan, options = {}) {
+  const spawnSyncImpl = options.spawnSyncImpl ?? spawnSync;
+  const stdout = options.stdout ?? process.stdout;
+  const stderr = options.stderr ?? process.stderr;
+  const execPath = options.execPath ?? process.execPath;
+  const env = options.env ?? process.env;
+  const now = options.now ?? (() => Date.now());
+
+  if (plan.execution === 'batched') {
+    const result = spawnSyncImpl(execPath, ['--test', ...plan.patterns], {
+      stdio: 'inherit',
+      env,
+    });
+    if (result.error) {
+      throw result.error;
+    }
+    return result.status ?? 1;
+  }
+
+  const timeoutMs = plan.timeoutMs;
+  if (timeoutMs === undefined) {
+    throw new Error(`Sequential lane ${plan.lane} requires a timeout.`);
+  }
+
+  let completed = 0;
+  for (const pattern of plan.patterns) {
+    const startedAt = now();
+    logLine(stdout, `[run-tests] [${plan.lane}] start ${pattern}`);
+    const result = spawnSyncImpl(execPath, ['--test', pattern], {
+      stdio: 'inherit',
+      env,
+      timeout: timeoutMs,
+      killSignal: KILL_SIGNAL,
+    });
+    const duration = formatDuration(now() - startedAt);
+
+    if (result.error?.code === 'ETIMEDOUT') {
+      logLine(stderr, `[run-tests] [${plan.lane}] timeout ${pattern} after ${duration} (limit ${formatDuration(timeoutMs)})`);
+      return 1;
+    }
+
+    if (result.error) {
+      throw result.error;
+    }
+
+    const exitCode = result.status ?? (result.signal === null ? 0 : 1);
+    if (exitCode !== 0) {
+      const signalSuffix = result.signal === null ? '' : ` signal=${result.signal}`;
+      logLine(stderr, `[run-tests] [${plan.lane}] failed ${pattern} exit=${exitCode}${signalSuffix} after ${duration}`);
+      return exitCode;
+    }
+
+    completed += 1;
+    logLine(stdout, `[run-tests] [${plan.lane}] done ${pattern} (${duration})`);
+  }
+
+  logLine(stdout, `[run-tests] [${plan.lane}] summary ${completed}/${plan.patterns.length} files passed`);
+  return 0;
+}
+
+export function main(argv = process.argv.slice(2), env = process.env) {
+  const plan = buildExecutionPlan(argv, env);
+  return runExecutionPlan(plan, { env });
+}
+
+if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  process.exit(main());
+}

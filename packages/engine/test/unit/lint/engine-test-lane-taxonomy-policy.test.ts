@@ -116,7 +116,7 @@ describe('engine test lane taxonomy policy', () => {
     assert.equal(totalCount, gamePackagesLane.length, 'sub-lanes must not overlap');
   });
 
-  it('zobrist incremental parity and property tests live in determinism lane, not default', async () => {
+  it('zobrist incremental parity and bounded property proof files live in determinism lane, not default', async () => {
     const thisDir = dirname(fileURLToPath(import.meta.url));
     const repoRoot = dirname(findRepoRootFile(thisDir, 'pnpm-workspace.yaml'));
     const manifestPath = resolve(repoRoot, 'packages/engine/scripts/test-lane-manifest.mjs');
@@ -127,7 +127,9 @@ describe('engine test lane taxonomy policy', () => {
 
     const slowZobristTests = [
       'test/determinism/zobrist-incremental-parity.test.ts',
-      'test/determinism/zobrist-incremental-property.test.ts',
+      'test/determinism/zobrist-incremental-property-fitl-medium-diverse.test.ts',
+      'test/determinism/zobrist-incremental-property-fitl-short-diverse.test.ts',
+      'test/determinism/zobrist-incremental-property-texas.test.ts',
     ];
 
     // They must exist in the determinism lane

@@ -135,6 +135,7 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
         completionPolicy: 'required',
         outcomePolicy: 'mustChangeGameplayState',
         postResolutionTurnFlow: 'resumeCardFlow',
+        allowDuringMonsoon: true,
         operationClass: 'operation',
         actionIds: ['airLift'],
         moveZoneBindings: ['$usLiftDestination', '$coinLiftDestination'],

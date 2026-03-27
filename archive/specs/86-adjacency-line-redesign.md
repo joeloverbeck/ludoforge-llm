@@ -1,6 +1,6 @@
 # Spec 86 — Adjacency Line Redesign
 
-**Status**: Draft
+**Status**: ✅ COMPLETED
 **Dependencies**: Spec 71 (connection route rendering), Spec 83 (zone edge anchor endpoints)
 **Blocked by**: None
 **Enables**: Visual polish for the FITL map; generalizable to any game with adjacency + LoC overlays
@@ -177,3 +177,22 @@ This spec is game-agnostic in design:
 | `packages/runner/src/config/visual-config-provider.ts` | Modify | Update default/highlighted edge styles |
 | `packages/runner/src/canvas/renderers/shape-utils.ts` | Reuse | `getEdgePointAtAngle()` for edge clipping |
 | `packages/runner/src/canvas/geometry/dashed-polygon.ts` | Reuse | Reference for dash/gap walking algorithm |
+
+## Outcome
+
+- **Completion date**: 2026-03-27
+- **What actually changed**:
+  - Connection-shaped zones were excluded from world-layout positioning in the runner layout pipeline, eliminating the LoC nexus artifacts without relying on FITL `hiddenZones` data tweaks.
+  - Dashed-path geometry was introduced as a shared primitive, with `drawDashedLine()` added as a thin wrapper and `drawDashedPolygon()` refactored onto the shared walker.
+  - Adjacency rendering was upgraded to dashed, white, edge-clipped lines using existing presentation-zone visuals as the geometry source of truth.
+  - Connection routes gained spur geometry and rendering so intermediate LoC adjacencies remain visible after connection-shaped zones stop participating in layout.
+  - Highlighted adjacency rendering now keeps the white stroke defaults and uses tighter highlighted dash cadence (`8/3` versus normal `6/4`).
+- **Deviations from original plan**:
+  - The LoC-layout fix was implemented architecturally in the runner layout/presentation pipeline, not by adding FITL LoC ids to `hiddenZones`.
+  - `drawDashedLine()` was not implemented as a standalone duplicated walker; a shared dashed-path primitive was introduced instead because that is cleaner and more extensible.
+  - The adjacency renderer consumes `scene.zones` visuals directly rather than introducing a parallel `zoneDimensions` channel.
+  - FITL `edges.default` was updated as planned, but no FITL `edges.highlighted` override was needed because highlighted stroke defaults already lived in the generic runner config provider.
+- **Verification results**:
+  - `pnpm -F @ludoforge/runner test` ✅
+  - `pnpm -F @ludoforge/runner lint` ✅
+  - `pnpm -F @ludoforge/runner typecheck` ✅

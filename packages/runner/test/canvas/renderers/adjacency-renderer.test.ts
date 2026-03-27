@@ -348,6 +348,7 @@ describe('createAdjacencyRenderer', () => {
   it('uses highlighted style when adjacency is highlighted (including merged bidirectional pairs)', () => {
     const parent = new MockContainer();
     const { renderer } = createRenderer(parent, new VisualConfigProvider(null));
+    drawDashedLineMock.mockClear();
 
     renderer.update(
       [
@@ -366,6 +367,13 @@ describe('createAdjacencyRenderer', () => {
 
     const graphics = parent.children[0] as InstanceType<typeof MockGraphics>;
     expect(graphics.strokeStyle).toEqual({ color: 0xffffff, width: 3, alpha: 0.85 });
+    expect(drawDashedLineMock).toHaveBeenCalledWith(
+      graphics,
+      expect.any(Object),
+      expect.any(Object),
+      8,
+      3,
+    );
   });
 
   it('uses category style from visual config provider when present', () => {

@@ -22,6 +22,8 @@ const HIGHLIGHTED_LINE_STYLE = {
 
 const DEFAULT_DASH_LENGTH = 6;
 const DEFAULT_GAP_LENGTH = 4;
+const HIGHLIGHTED_DASH_LENGTH = 8;
+const HIGHLIGHTED_GAP_LENGTH = 3;
 
 interface PairRenderState {
   readonly from: string;
@@ -134,9 +136,12 @@ function drawAdjacencyLine(
     x: toPosition.x + toEdgeOffset.x,
     y: toPosition.y + toEdgeOffset.y,
   };
+  const dashPattern = adjacency.isHighlighted
+    ? { dashLength: HIGHLIGHTED_DASH_LENGTH, gapLength: HIGHLIGHTED_GAP_LENGTH }
+    : { dashLength: DEFAULT_DASH_LENGTH, gapLength: DEFAULT_GAP_LENGTH };
 
   graphics.clear();
-  drawDashedLine(graphics, fromEdge, toEdge, DEFAULT_DASH_LENGTH, DEFAULT_GAP_LENGTH);
+  drawDashedLine(graphics, fromEdge, toEdge, dashPattern.dashLength, dashPattern.gapLength);
   graphics.stroke(strokeStyle);
 
   graphics.visible = true;

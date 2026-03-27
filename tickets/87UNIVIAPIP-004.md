@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel/legal-moves.ts, kernel/apply-move.ts
-**Deps**: archive/tickets/87UNIVIAPIP/87UNIVIAPIP-002.md, tickets/87UNIVIAPIP-003.md
+**Deps**: archive/tickets/87UNIVIAPIP/87UNIVIAPIP-002.md, archive/tickets/87UNIVIAPIP-003.md
 
 ## Problem
 

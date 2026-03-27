@@ -4,6 +4,7 @@ import ts from 'typescript';
 import {
   collectNamedImportsByLocalName,
   collectCallExpressionsByIdentifier,
+  expressionToText,
   isPropertyAccessOnIdentifier,
   parseTypeScriptSource,
   unwrapTypeScriptExpression,
@@ -3784,6 +3785,84 @@ describe('legalMoves plain-action feasibility probe', () => {
       }),
       true,
       'plain-action path admission must use canonical helper with legalMoves.plainActionDecisionSequence context',
+    );
+  });
+
+  it('37. threads cached discoverer only through root-state admission sites and classification', () => {
+    const source = readKernelSource('src/kernel/legal-moves.ts');
+    const sourceFile = parseTypeScriptSource(source, 'legal-moves.ts');
+
+    const hasDiscovererProperty = (argument: ts.Expression): boolean => {
+      const argumentText = expressionToText(sourceFile, argument);
+      return (
+        argumentText.includes('discoverer')
+        && (argumentText.includes('cachedDiscover') || argumentText.includes('{ discoverer }'))
+      );
+    };
+
+    const enumerateParamsCalls = collectCallExpressionsByIdentifier(sourceFile, 'enumerateParams');
+    const helperCalls = collectCallExpressionsByIdentifier(sourceFile, 'isMoveDecisionSequenceAdmittedForLegalMove');
+    const classifyCalls = collectCallExpressionsByIdentifier(sourceFile, 'classifyMoveDecisionSequenceAdmissionForLegalMove');
+
+    const hasRootStateDiscoverer = (contextName: string): boolean =>
+      helperCalls.some((call) =>
+        call.arguments.length >= 5
+        && expressionToText(sourceFile, call.arguments[1]!).includes('state')
+        && expressionToText(sourceFile, call.arguments[3]!).includes(contextName)
+        && hasDiscovererProperty(call.arguments[4]!),
+      );
+
+    assert.equal(
+      enumerateParamsCalls.some((call) =>
+        call.arguments.length >= 11
+        && expressionToText(sourceFile, call.arguments[5]!) === 'state'
+        && hasDiscovererProperty(call.arguments[10]!),
+      ),
+      true,
+      'root-state enumerateParams calls should receive cachedDiscover for plain-action admission reuse',
+    );
+    assert.equal(
+      hasRootStateDiscoverer('LEGAL_MOVES_EVENT_DECISION_SEQUENCE'),
+      true,
+      'event admission should receive cachedDiscover for root-state enumeration reuse',
+    );
+    assert.equal(
+      hasRootStateDiscoverer('LEGAL_MOVES_PIPELINE_DECISION_SEQUENCE'),
+      true,
+      'pipeline admission should receive cachedDiscover for root-state enumeration reuse',
+    );
+
+    assert.equal(
+      helperCalls.some((call) =>
+        call.arguments.length >= 5
+        && expressionToText(sourceFile, call.arguments[1]!) === 'candidateScopedState'
+        && hasDiscovererProperty(call.arguments[4]!),
+      ),
+      false,
+      'derived-state free-operation admission must not reuse cachedDiscover from the root state',
+    );
+    assert.equal(
+      classifyCalls.some((call) =>
+        call.arguments.length >= 5
+        && expressionToText(sourceFile, call.arguments[1]!) === 'candidateState'
+        && hasDiscovererProperty(call.arguments[4]!),
+      ),
+      false,
+      'derived-state free-operation classification must not reuse cachedDiscover from the root state',
+    );
+
+    const probeCalls = collectCallExpressionsByIdentifier(sourceFile, 'probeMoveViability');
+    assert.equal(
+      probeCalls.some((call) =>
+        call.arguments.length === 5
+        && expressionToText(sourceFile, call.arguments[0]!) === 'def'
+        && expressionToText(sourceFile, call.arguments[1]!) === 'state'
+        && expressionToText(sourceFile, call.arguments[2]!) === 'move'
+        && expressionToText(sourceFile, call.arguments[3]!) === 'runtime'
+        && expressionToText(sourceFile, call.arguments[4]!) === 'discoveryCache',
+      ),
+      true,
+      'classified move probing must receive the discoveryCache created during raw enumeration',
     );
   });
 });

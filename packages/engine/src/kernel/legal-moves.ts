@@ -9,7 +9,10 @@ import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-o
 import {
   classifyMoveDecisionSequenceAdmissionForLegalMove,
   isMoveDecisionSequenceAdmittedForLegalMove,
+  type DiscoveryCache,
+  type MoveDecisionSequenceSatisfiabilityOptions,
 } from './move-decision-sequence.js';
+import { createMoveDecisionSequenceChoiceDiscoverer } from './move-decision-discoverer.js';
 import {
   applyTurnFlowWindowFilters,
   isMoveAllowedByTurnFlowOptionMatrix,
@@ -101,7 +104,10 @@ export interface LegalMoveEnumerationResult {
 interface RawLegalMoveEnumerationResult {
   readonly moves: readonly Move[];
   readonly warnings: readonly RuntimeWarning[];
+  readonly discoveryCache: DiscoveryCache;
 }
+
+type EnumerationDecisionDiscoverer = MoveDecisionSequenceSatisfiabilityOptions['discoverer'];
 
 interface MoveEnumerationState {
   readonly budgets: MoveEnumerationBudgets;
@@ -255,6 +261,7 @@ const classifyEnumeratedMoves = (
   moves: readonly Move[],
   warnings: RuntimeWarning[],
   runtime?: GameDefRuntime,
+  discoveryCache?: DiscoveryCache,
 ): readonly ClassifiedMove[] => {
   const alwaysCompleteActionIds = runtime?.alwaysCompleteActionIds ?? computeAlwaysCompleteActionIds(def);
   const classified: ClassifiedMove[] = [];
@@ -274,7 +281,7 @@ const classifyEnumeratedMoves = (
       continue;
     }
 
-    const viability = probeMoveViability(def, state, move, runtime);
+    const viability = probeMoveViability(def, state, move, runtime, discoveryCache);
     if (viability.viable) {
       classified.push({
         move,
@@ -360,6 +367,7 @@ function enumerateParams(
     readonly freeOperationOverlay?: FreeOperationExecutionOverlay;
     readonly moveOverrides?: Partial<Move>;
     readonly moveFilter?: (move: Move) => boolean;
+    readonly discoverer?: EnumerationDecisionDiscoverer;
     readonly runtime?: GameDefRuntime;
   },
 ): void {
@@ -446,6 +454,7 @@ function enumerateParams(
             {
               budgets: enumeration.budgets,
               onWarning: (warning) => emitEnumerationWarning(enumeration, warning),
+              ...(options?.discoverer === undefined ? {} : { discoverer: options.discoverer }),
             },
             options?.runtime,
           )
@@ -997,6 +1006,7 @@ function enumerateCurrentEventMoves(
   def: GameDef,
   state: GameState,
   enumeration: MoveEnumerationState,
+  discoverer?: EnumerationDecisionDiscoverer,
   runtime?: GameDefRuntime,
 ): void {
   if (enumeration.templateBudgetExceeded) {
@@ -1062,6 +1072,7 @@ function enumerateCurrentEventMoves(
         {
           budgets: enumeration.budgets,
           onWarning: (warning) => emitEnumerationWarning(enumeration, warning),
+          ...(discoverer === undefined ? {} : { discoverer }),
         },
         runtime,
       )
@@ -1084,9 +1095,10 @@ const enumerateRawLegalMoves = (
   const budgets = resolveMoveEnumerationBudgets(options?.budgets);
   const warnings: RuntimeWarning[] = [];
   const seatResolution = createSeatResolutionContext(def, state.playerCount);
+  const discoveryCache: DiscoveryCache = new Map();
 
   if (!isActiveSeatEligibleForTurnFlow(def, state, seatResolution)) {
-    return { moves: [], warnings };
+    return { moves: [], warnings, discoveryCache };
   }
 
   const enumeration: MoveEnumerationState = {
@@ -1102,6 +1114,16 @@ const enumerateRawLegalMoves = (
   const runtimeTableIndex = runtime?.runtimeTableIndex ?? buildRuntimeTableIndex(def);
   const evalRuntimeResources = createEvalRuntimeResources();
   const currentPhaseDef = findPhaseDef(def, state.currentPhase);
+  const defaultDiscover = createMoveDecisionSequenceChoiceDiscoverer(def, state, runtime);
+  const cachedDiscover: EnumerationDecisionDiscoverer = (move, discoverOptions) => {
+    const cached = discoveryCache.get(move);
+    if (cached !== undefined) {
+      return cached;
+    }
+    const result = defaultDiscover(move, discoverOptions);
+    discoveryCache.set(move, result);
+    return result;
+  };
 
   const earlyExitAfterFirst = options?.earlyExitAfterFirst === true;
 
@@ -1134,7 +1156,10 @@ const enumerateRawLegalMoves = (
       });
       if (preflight.kind !== 'applicable') continue;
       enumerateParams(action, def, adjacencyGraph, runtimeTableIndex, evalRuntimeResources, state, 0, {}, enumeration, currentPhaseDef,
-        runtime === undefined ? undefined : { runtime },
+        {
+          ...(runtime === undefined ? {} : { runtime }),
+          discoverer: cachedDiscover,
+        },
       );
       if (enumeration.moves.length > 0) break;
     }
@@ -1180,7 +1205,7 @@ const enumerateRawLegalMoves = (
 
     const eventAction = isCardEventAction(action);
     const beforeEventCount = enumeration.moves.length;
-    enumerateCurrentEventMoves(action, def, state, enumeration, runtime);
+    enumerateCurrentEventMoves(action, def, state, enumeration, cachedDiscover, runtime);
     if (eventAction) {
       if (enumeration.moves.length > beforeEventCount) {
         continue;
@@ -1203,7 +1228,10 @@ const enumerateRawLegalMoves = (
 
     if (!hasActionPipeline) {
       enumerateParams(action, def, adjacencyGraph, runtimeTableIndex, evalRuntimeResources, state, 0, {}, enumeration, currentPhaseDef,
-        runtime === undefined ? undefined : { runtime },
+        {
+          ...(runtime === undefined ? {} : { runtime }),
+          discoverer: cachedDiscover,
+        },
       );
       continue;
     }
@@ -1233,6 +1261,7 @@ const enumerateRawLegalMoves = (
           {
             budgets: enumeration.budgets,
             onWarning: (warning) => emitEnumerationWarning(enumeration, warning),
+            discoverer: cachedDiscover,
           },
           runtime,
         )
@@ -1257,7 +1286,7 @@ const enumerateRawLegalMoves = (
   );
 
   const finalMoves = applyTurnFlowWindowFilters(def, state, enumeration.moves, seatResolution);
-  return { moves: finalMoves, warnings };
+  return { moves: finalMoves, warnings, discoveryCache };
 };
 
 export const enumerateLegalMoves = (
@@ -1266,10 +1295,10 @@ export const enumerateLegalMoves = (
   options?: LegalMoveEnumerationOptions,
   runtime?: GameDefRuntime,
 ): LegalMoveEnumerationResult => {
-  const { moves, warnings: rawWarnings } = enumerateRawLegalMoves(def, state, options, runtime);
+  const { moves, warnings: rawWarnings, discoveryCache } = enumerateRawLegalMoves(def, state, options, runtime);
   const warnings = [...rawWarnings];
   return {
-    moves: classifyEnumeratedMoves(def, state, moves, warnings, runtime),
+    moves: classifyEnumeratedMoves(def, state, moves, warnings, runtime, discoveryCache),
     warnings,
   };
 };

@@ -24,6 +24,7 @@ import {
   type GameState,
   type Move,
   type ActionPipelineDef,
+  type DiscoveryCache,
   type OperationCompoundStagesReplacedTraceEntry,
   type TurnFlowPendingFreeOperationGrant,
   type VariableDef,
@@ -3193,6 +3194,37 @@ describe('applyMove() compound timing validation and replaceRemainingStages', ()
   });
 });
 
+it('uses injected discoveryCache for decision-sequence probing', () => {
+  const action: ActionDef = {
+    id: asActionId('cached-probe-op'),
+    actor: 'active',
+    executor: 'actor',
+    phase: [asPhaseId('main')],
+    params: [],
+    pre: null,
+    cost: [],
+    effects: [],
+    limits: [],
+  };
+
+  const def = makeBaseDef({ actions: [action], globalVars: [] });
+  const state = makeBaseState({ globalVars: {} });
+  const move: Move = { actionId: action.id, params: {} };
+  const discoveryCache: DiscoveryCache = new Map([[
+    move,
+    { kind: 'illegal', complete: false, reason: 'pipelineLegalityFailed' },
+  ]]);
+
+  const viability = probeMoveViability(def, state, move, undefined, discoveryCache);
+  assert.equal(viability.viable, false);
+  if (viability.viable) {
+    assert.fail('expected cached illegal decision-sequence request to make the move non-viable');
+  }
+  assert.equal(viability.code, 'ILLEGAL_MOVE');
+  assert.equal(viability.context.reason, ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE);
+  assert.equal(viability.context.detail, 'pipelineLegalityFailed');
+});
+
 describe('applyMove seat-resolution lifecycle architecture guard', () => {
   it('threads explicit seatResolution through turn-flow preflight window filtering', () => {
     const source = readKernelSource('src/kernel/apply-move.ts');
@@ -3223,6 +3255,33 @@ describe('applyMove seat-resolution lifecycle architecture guard', () => {
       ),
       true,
       'validateTurnFlowWindowAccess must pass explicit seatResolution to applyTurnFlowWindowFilters',
+    );
+  });
+
+  it('threads discoveryCache into resolveMoveDecisionSequence during probeMoveViability', () => {
+    const source = readKernelSource('src/kernel/apply-move.ts');
+    const sourceFile = parseTypeScriptSource(source, 'apply-move.ts');
+
+    const resolveCalls = collectCallExpressionsByIdentifier(sourceFile, 'resolveMoveDecisionSequence');
+    assert.equal(
+      resolveCalls.some((call) => {
+        if (
+          call.arguments.length !== 5
+          || expressionToText(sourceFile, call.arguments[0]!) !== 'def'
+          || expressionToText(sourceFile, call.arguments[1]!) !== 'state'
+          || expressionToText(sourceFile, call.arguments[2]!) !== 'move'
+          || expressionToText(sourceFile, call.arguments[4]!) !== 'runtime'
+        ) {
+          return false;
+        }
+        const optionsText = expressionToText(sourceFile, call.arguments[3]!);
+        return (
+          optionsText.includes('choose: () => undefined')
+          && optionsText.includes('...(discoveryCache === undefined ? {} : { discoveryCache })')
+        );
+      }),
+      true,
+      'probeMoveViability must forward discoveryCache into resolveMoveDecisionSequence',
     );
   });
 });

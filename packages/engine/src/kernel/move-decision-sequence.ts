@@ -4,6 +4,7 @@ import {
   type DecisionSequenceChoiceDiscoverer,
   type DecisionSequenceSatisfiabilityResult,
 } from './decision-sequence-satisfiability.js';
+import { createMoveDecisionSequenceChoiceDiscoverer } from './move-decision-discoverer.js';
 import { pickDeterministicChoiceValue } from './choice-option-policy.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
 import { shouldDeferMissingBinding, type MissingBindingPolicyContext } from './missing-binding-policy.js';
@@ -200,12 +201,7 @@ export const classifyMoveDecisionSequenceSatisfiability = (
   options?: MoveDecisionSequenceSatisfiabilityOptions,
   runtime?: GameDefRuntime,
 ): MoveDecisionSequenceSatisfiabilityResult => {
-  const discoverChoices = options?.discoverer ?? ((move, discoverOptions) =>
-    legalChoicesDiscover(def, state, move, {
-      ...(discoverOptions?.onDeferredPredicatesEvaluated === undefined
-        ? {}
-        : { onDeferredPredicatesEvaluated: discoverOptions.onDeferredPredicatesEvaluated }),
-    }, runtime));
+  const discoverChoices = options?.discoverer ?? createMoveDecisionSequenceChoiceDiscoverer(def, state, runtime);
   return classifyDecisionSequenceSatisfiability(
     baseMove,
     discoverChoices,

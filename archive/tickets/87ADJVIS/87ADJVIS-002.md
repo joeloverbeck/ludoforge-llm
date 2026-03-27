@@ -1,10 +1,10 @@
 # 87ADJVIS-002: Set production adjacency line values for visual prominence
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — runner-only
-**Deps**: `tickets/87ADJVIS-001.md` (must confirm rendering pipeline works first)
+**Deps**: archive/tickets/87ADJVIS/87ADJVIS-001.md
 
 ## Problem
 
@@ -12,64 +12,47 @@ Adjacency lines must be visually prominent — dashed white lines that rival roa
 
 ## Assumption Reassessment (2026-03-27)
 
-1. `adjacency-renderer.ts` hardcoded defaults serve as fallbacks when the visual config doesn't override — confirmed at lines 11-26 and 174-188.
-2. `visual-config-provider.ts` `resolveEdgeStyle()` starts with hardcoded defaults (`#ffffff`, 2, 0.6), then layers `edges.default`, `categoryStyles[category]`, and `highlighted` overrides — confirmed at lines 337-361.
-3. `visual-config.yaml` `edges.default` currently specifies `color: "#ffffff"`, `width: 2`, `alpha: 0.6` — confirmed at lines 409-413.
+1. `adjacency-renderer.ts` no longer owns separate hardcoded edge-style defaults. It uses shared defaults exported from `visual-config-provider.ts` for invalid-color fallback, while still preserving resolved width/alpha.
+2. `visual-config-provider.ts` now owns the shared default and highlighted adjacency edge values, then layers `edges.default`, `categoryStyles[category]`, and `highlighted` overrides.
+3. `visual-config.yaml` `edges.default` currently specifies `color: "#ffffff"`, `width: 2`, `alpha: 0.6`.
 4. `categoryStyles.loc` has `color: "#8b7355"`, `width: 2` — but no FITL zone has category `loc`. Zone categories are "city" and "province" (confirmed in `fitl-game-def.json`). This entry is dead config.
 5. Road/river connectors use `DEFAULT_ROUTE_STROKE` at `{ color: 0x6b7280, width: 4, alpha: 0.85 }` in `connection-route-renderer.ts` — the target visual weight to rival.
 
 ## Architecture Check
 
-1. Styling stays in `visual-config.yaml` consumed through `VisualConfigProvider` (Foundation 3). Hardcoded fallbacks in the renderer and config provider are updated to match, providing sensible defaults for games without a visual config.
+1. Styling stays in `visual-config.yaml` consumed through `VisualConfigProvider` (Foundation 3). Shared defaults should be updated in one place so provider resolution and renderer fallback remain aligned for games without a visual config.
 2. No game-specific logic introduced. The renderer remains agnostic — it resolves styles through the generic `resolveEdgeStyle()` API.
 3. Removing unused `categoryStyles.loc` aligns with Foundation 9 (no backwards-compat shims for dead config).
 
 ## What to Change
 
-### 1. Update adjacency renderer hardcoded fallback defaults
+### 1. Update shared adjacency edge defaults
+
+In `packages/runner/src/config/visual-config-provider.ts`:
+
+```typescript
+export const DEFAULT_EDGE_STYLE = {
+  color: '#ffffff',
+  width: 3.5,   // was 2 — now rivals connection routes (4px)
+  alpha: 0.85,  // was 0.6 — matches connection route opacity
+} as const;
+
+export const HIGHLIGHTED_EDGE_STYLE = {
+  color: '#ffffff',
+  width: 4.5,   // was 3
+  alpha: 1.0,   // was 0.85
+} as const;
+```
+
+### 2. Update adjacency renderer dash cadence
 
 In `packages/runner/src/canvas/renderers/adjacency-renderer.ts`:
 
 ```typescript
-const DEFAULT_LINE_STYLE = {
-  color: 0xffffff,
-  width: 3.5,       // was 2 — now rivals connection routes (4px)
-  alpha: 0.85,      // was 0.6 — matches connection route opacity
-} as const;
-
-const HIGHLIGHTED_LINE_STYLE = {
-  color: 0xffffff,
-  width: 4.5,       // was 3
-  alpha: 1.0,       // was 0.85
-} as const;
-
-const DEFAULT_DASH_LENGTH = 10;   // was 6 — larger, clearly visible dashes
-const DEFAULT_GAP_LENGTH = 5;     // was 4
-const HIGHLIGHTED_DASH_LENGTH = 12; // was 8
-const HIGHLIGHTED_GAP_LENGTH = 4;   // was 3
-```
-
-### 2. Update visual-config-provider defaults
-
-In `packages/runner/src/config/visual-config-provider.ts`, update `resolveEdgeStyle()` starting defaults:
-
-```typescript
-const resolved: ResolvedEdgeVisual = {
-  color: '#ffffff',
-  width: 3.5,    // was 2
-  alpha: 0.85,   // was 0.6
-};
-```
-
-And the highlighted overlay:
-
-```typescript
-if (isHighlighted) {
-  applyEdgeStyle(resolved, {
-    color: '#ffffff',
-    width: 4.5,   // was 3
-    alpha: 1.0,    // was 0.85
-  });
+const DEFAULT_DASH_LENGTH = 10;      // was 6 — larger, clearly visible dashes
+const DEFAULT_GAP_LENGTH = 5;        // was 4
+const HIGHLIGHTED_DASH_LENGTH = 12;  // was 8
+const HIGHLIGHTED_GAP_LENGTH = 4;    // was 3
 ```
 
 ### 3. Update FITL visual-config.yaml
@@ -100,8 +83,8 @@ Update test expectations that reference the old default values (width 2, alpha 0
 
 ## Files to Touch
 
-- `packages/runner/src/canvas/renderers/adjacency-renderer.ts` (modify)
 - `packages/runner/src/config/visual-config-provider.ts` (modify)
+- `packages/runner/src/canvas/renderers/adjacency-renderer.ts` (modify)
 - `data/games/fire-in-the-lake/visual-config.yaml` (modify)
 - `packages/runner/test/canvas/renderers/adjacency-renderer.test.ts` (modify)
 - `packages/runner/test/config/visual-config-provider.test.ts` (modify)
@@ -110,7 +93,7 @@ Update test expectations that reference the old default values (width 2, alpha 0
 
 - Connection route styling (already at desired visual weight)
 - Adding new `categoryStyles` entries for "city" or "province" (unnecessary — default style applies to all adjacency edges equally)
-- Highlighted adjacency line behavior (covered by the updated highlighted defaults)
+- Highlighted adjacency line behavior beyond the updated highlighted defaults and dash cadence
 
 ## Acceptance Criteria
 
@@ -143,3 +126,16 @@ Update test expectations that reference the old default values (width 2, alpha 0
 2. `pnpm -F @ludoforge/runner typecheck`
 3. `pnpm -F @ludoforge/runner lint`
 4. `pnpm -F @ludoforge/runner dev` — visual verification: adjacency lines should appear as clearly visible white dashed lines, comparable in weight to road/river connectors
+
+## Outcome
+
+- **Completion date**: 2026-03-27
+- **What changed**:
+  - `visual-config-provider.ts`: `DEFAULT_EDGE_STYLE` width 2→3.5, alpha 0.6→0.85; `HIGHLIGHTED_EDGE_STYLE` width 3→4.5, alpha 0.85→1.0
+  - `adjacency-renderer.ts`: dash cadence 6/4→10/5 (default), 8/3→12/4 (highlighted)
+  - `visual-config.yaml`: edge defaults updated, dead `categoryStyles.loc` removed
+  - `adjacency-renderer.test.ts`: updated dash and stroke expectations
+  - `visual-config-provider.test.ts`: updated edge style default expectations
+  - `visual-config-files.test.ts`: updated FITL YAML assertions, removed `categoryStyles.loc` assertion
+- **Deviations**: None — implemented as specified
+- **Verification**: 2016/2016 runner tests pass, typecheck clean, lint clean

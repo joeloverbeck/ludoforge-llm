@@ -356,13 +356,10 @@ describe('visual-config.yaml files', () => {
 
     expect(parsed.edges?.default).toEqual({
       color: '#ffffff',
-      width: 2,
-      alpha: 0.6,
+      width: 3.5,
+      alpha: 0.85,
     });
-    expect(parsed.edges?.categoryStyles?.loc).toEqual({
-      color: '#8b7355',
-      width: 2,
-    });
+    expect(parsed.edges?.categoryStyles).toBeUndefined();
     expect(parsed.factions).toMatchObject({
       us: { color: '#808000', displayName: 'United States' },
       arvn: { color: '#ffff00', displayName: 'ARVN' },

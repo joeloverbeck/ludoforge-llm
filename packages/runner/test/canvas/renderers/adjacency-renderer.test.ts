@@ -299,8 +299,8 @@ describe('createAdjacencyRenderer', () => {
       graphics,
       { x: 20, y: 20 },
       { x: 100, y: 20 },
-      6,
-      4,
+      10,
+      5,
     );
     expect(graphics.drawnFrom).toEqual({ x: 20, y: 20 });
     expect(graphics.drawnTo).toEqual({ x: 100, y: 20 });
@@ -366,13 +366,13 @@ describe('createAdjacencyRenderer', () => {
     );
 
     const graphics = parent.children[0] as InstanceType<typeof MockGraphics>;
-    expect(graphics.strokeStyle).toEqual({ color: 0xffffff, width: 3, alpha: 0.85 });
+    expect(graphics.strokeStyle).toEqual({ color: 0xffffff, width: 4.5, alpha: 1.0 });
     expect(drawDashedLineMock).toHaveBeenCalledWith(
       graphics,
       expect.any(Object),
       expect.any(Object),
-      8,
-      3,
+      12,
+      4,
     );
   });
 
@@ -439,6 +439,70 @@ describe('createAdjacencyRenderer', () => {
 
     const graphics = parent.children[0] as InstanceType<typeof MockGraphics>;
     expect(graphics.strokeStyle).toEqual({ color: 0x00ffff, width: 6, alpha: 0.95 });
+  });
+
+  it('falls back to the shared default color when the resolved color is invalid', () => {
+    const parent = new MockContainer();
+    const { renderer } = createRenderer(
+      parent,
+      new VisualConfigProvider({
+        version: 1,
+        edges: {
+          default: {
+            color: 'not-a-color',
+            width: 7,
+            alpha: 0.25,
+          },
+        },
+      }),
+    );
+
+    renderer.update(
+      [makeAdjacency({ from: 'zone:a', to: 'zone:b' })],
+      createPositions([
+        ['zone:a', { x: 10, y: 20 }],
+        ['zone:b', { x: 30, y: 40 }],
+      ]),
+      createZones([
+        ['zone:a'],
+        ['zone:b'],
+      ]),
+    );
+
+    const graphics = parent.children[0] as InstanceType<typeof MockGraphics>;
+    expect(graphics.strokeStyle).toEqual({ color: 0xffffff, width: 7, alpha: 0.25 });
+  });
+
+  it('falls back to the shared highlighted color when the highlighted resolved color is invalid', () => {
+    const parent = new MockContainer();
+    const { renderer } = createRenderer(
+      parent,
+      new VisualConfigProvider({
+        version: 1,
+        edges: {
+          highlighted: {
+            color: 'not-a-color',
+            width: 9,
+            alpha: 0.4,
+          },
+        },
+      }),
+    );
+
+    renderer.update(
+      [makeAdjacency({ from: 'zone:a', to: 'zone:b', isHighlighted: true })],
+      createPositions([
+        ['zone:a', { x: 10, y: 20 }],
+        ['zone:b', { x: 30, y: 40 }],
+      ]),
+      createZones([
+        ['zone:a'],
+        ['zone:b'],
+      ]),
+    );
+
+    const graphics = parent.children[0] as InstanceType<typeof MockGraphics>;
+    expect(graphics.strokeStyle).toEqual({ color: 0xffffff, width: 9, alpha: 0.4 });
   });
 
   it('skips missing positions without throwing and toggles visibility until positions exist', () => {

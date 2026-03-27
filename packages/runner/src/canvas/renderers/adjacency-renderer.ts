@@ -2,28 +2,21 @@ import { Graphics, type Container } from 'pixi.js';
 
 import { drawDashedLine } from '../geometry/dashed-line.js';
 import { getEdgePointAtAngle, parseHexColor, type ShapeDimensions } from './shape-utils.js';
-import type { EdgeStrokeStyle, VisualConfigProvider } from '../../config/visual-config-provider.js';
+import {
+  DEFAULT_EDGE_STYLE,
+  HIGHLIGHTED_EDGE_STYLE,
+  type EdgeStrokeStyle,
+  type VisualConfigProvider,
+} from '../../config/visual-config-provider.js';
 import type { Position } from '../geometry';
 import type { DisposalQueue } from './disposal-queue.js';
 import type { AdjacencyRenderer } from './renderer-types';
 import type { PresentationAdjacencyNode, PresentationZoneNode } from '../../presentation/presentation-scene.js';
 
-const DEFAULT_LINE_STYLE = {
-  color: 0xffffff,
-  width: 2,
-  alpha: 0.6,
-} as const;
-
-const HIGHLIGHTED_LINE_STYLE = {
-  color: 0xffffff,
-  width: 3,
-  alpha: 0.85,
-} as const;
-
-const DEFAULT_DASH_LENGTH = 6;
-const DEFAULT_GAP_LENGTH = 4;
-const HIGHLIGHTED_DASH_LENGTH = 8;
-const HIGHLIGHTED_GAP_LENGTH = 3;
+const DEFAULT_DASH_LENGTH = 10;
+const DEFAULT_GAP_LENGTH = 5;
+const HIGHLIGHTED_DASH_LENGTH = 12;
+const HIGHLIGHTED_GAP_LENGTH = 4;
 
 interface PairRenderState {
   readonly from: string;
@@ -175,13 +168,16 @@ function resolveStrokeStyle(
   resolved: { color: string | null; width: number; alpha: number },
   isHighlighted: boolean,
 ): EdgeStrokeStyle {
-  const fallbackStyle = isHighlighted ? HIGHLIGHTED_LINE_STYLE : DEFAULT_LINE_STYLE;
+  const fallbackColor = parseHexColor(
+    (isHighlighted ? HIGHLIGHTED_EDGE_STYLE : DEFAULT_EDGE_STYLE).color ?? undefined,
+    { allowNamedColors: true },
+  );
   const parsedColor = parseHexColor(resolved.color ?? undefined, {
     allowNamedColors: true,
   });
 
   return {
-    color: parsedColor ?? fallbackStyle.color,
+    color: parsedColor ?? fallbackColor ?? 0xffffff,
     width: resolved.width,
     alpha: resolved.alpha,
   };

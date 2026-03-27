@@ -102,9 +102,9 @@ describe('createEditorAdjacencyRenderer', () => {
       { from: { x: 0, y: 0 }, to: { x: 50, y: 50 } },
     ]);
     expect(graphics.strokeStyle).toEqual({
-      color: 0x6b7280,
-      width: 1.5,
-      alpha: 0.3,
+      color: 0xffffff,
+      width: 4,
+      alpha: 0.9,
     });
   });
 

@@ -4,9 +4,9 @@ import { collectLayoutAdjacencyPairs, partitionZones } from '../layout/build-lay
 import type { MapEditorStoreApi } from './map-editor-store.js';
 
 const DEFAULT_LINE_STYLE = {
-  color: 0x6b7280,
-  width: 1.5,
-  alpha: 0.3,
+  color: 0xffffff,
+  width: 4,
+  alpha: 0.9,
 } as const;
 
 export interface EditorAdjacencyRenderer {

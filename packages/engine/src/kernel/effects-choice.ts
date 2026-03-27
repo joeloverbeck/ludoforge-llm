@@ -20,7 +20,7 @@ import { validateChooseNSelectedSequence } from './choose-n-selected-validation.
 import { normalizeChoiceDomain, toChoiceComparableValue, type MembershipScalar } from './value-membership.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
-import { fromEnvAndCursor } from './effect-context.js';
+import { mergeToReadContext } from './effect-context.js';
 import { ensureMarkerCloned, type MutableGameState } from './state-draft.js';
 import { addToRunningHash, updateRunningHash } from './zobrist.js';
 import type { ZobristFeature } from './types-core.js';
@@ -53,7 +53,7 @@ const isTokenQueryResult = (value: unknown): value is Token =>
 
 const resolvePrioritizedTierEntries = (
   query: OptionsQuery,
-  evalCtx: EffectContext,
+  evalCtx: ReadContext,
   bind: string,
   decisionKey: string,
 ): readonly (readonly PrioritizedTierEntry[])[] | null => {
@@ -497,6 +497,19 @@ const resolveChoiceBindings = (env: EffectEnv, cursor: EffectCursor): Readonly<R
   return merged;
 };
 
+const mergeChoiceToReadContext = (env: EffectEnv, cursor: EffectCursor): ReadContext =>
+  mergeToReadContext(env, {
+    ...cursor,
+    bindings: resolveChoiceBindings(env, cursor),
+  });
+
+const resolveChoiceTraceProvenance = (env: EffectEnv, cursor: EffectCursor): ReturnType<typeof resolveTraceProvenance> =>
+  resolveTraceProvenance({
+    state: cursor.state,
+    ...(env.traceContext === undefined ? {} : { traceContext: env.traceContext }),
+    ...(cursor.effectPath === undefined ? {} : { effectPath: cursor.effectPath }),
+  });
+
 const resolveMarkerLattice = (def: EffectContext['def'], markerId: string, effectType: string): NonNullable<EffectContext['def']['markerLattices']>[number] => {
   const lattice = getLatticeMap(def)?.get(markerId);
   if (lattice === undefined) {
@@ -601,8 +614,7 @@ export const applyChooseOne = (
   );
   const scopeAdvance = advanceScope(cursor.decisionScope, effect.chooseOne.internalDecisionId, resolvedDecisionIdentity);
   const decisionKey = scopeAdvance.key;
-  const resolvedBindings = resolveChoiceBindings(env, cursor);
-  const evalCtx = fromEnvAndCursor(env, { ...cursor, bindings: resolvedBindings });
+  const evalCtx = mergeChoiceToReadContext(env, cursor);
   const chooser = effect.chooseOne.chooser ?? 'active';
   const choiceDecisionPlayer = resolveChoiceDecisionPlayer('chooseOne', chooser, evalCtx, resolvedBind, decisionKey);
   const providedDecisionPlayer = env.decisionAuthority.player;
@@ -693,7 +705,7 @@ export const applyChooseOne = (
     player: choiceDecisionPlayer,
     options: normalizedOptions,
     selected: [selected as MoveParamScalar],
-    provenance: resolveTraceProvenance(evalCtx),
+    provenance: resolveChoiceTraceProvenance(env, cursor),
   });
 
   return {
@@ -720,8 +732,7 @@ export const applyChooseN = (
   const resolvedDecisionIdentity = resolveBindingTemplate(chooseN.decisionIdentity ?? chooseN.bind, cursor.bindings);
   const scopeAdvance = advanceScope(cursor.decisionScope, chooseN.internalDecisionId, resolvedDecisionIdentity);
   const decisionKey = scopeAdvance.key;
-  const resolvedBindings = resolveChoiceBindings(env, cursor);
-  const evalCtx = fromEnvAndCursor(env, { ...cursor, bindings: resolvedBindings });
+  const evalCtx = mergeChoiceToReadContext(env, cursor);
   const chooser = chooseN.chooser ?? 'active';
   const choiceDecisionPlayer = resolveChoiceDecisionPlayer('chooseN', chooser, evalCtx, bind, decisionKey);
   const providedDecisionPlayer = env.decisionAuthority.player;
@@ -937,7 +948,7 @@ export const applyChooseN = (
     selected: selectedSequence,
     min: minCardinality,
     max: clampedMax,
-    provenance: resolveTraceProvenance(evalCtx),
+    provenance: resolveChoiceTraceProvenance(env, cursor),
   });
 
   return {
@@ -958,8 +969,8 @@ export const applyRollRandom = (
   budget: EffectBudgetState,
   applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
-  const resolvedBindings = resolveChoiceBindings(env, cursor);
-  const evalCtx = fromEnvAndCursor(env, { ...cursor, bindings: resolvedBindings });
+  const evalCtx = mergeChoiceToReadContext(env, cursor);
+  const resolvedBindings = evalCtx.bindings;
   const minValue = evalValue(effect.rollRandom.min, evalCtx);
   const maxValue = evalValue(effect.rollRandom.max, evalCtx);
 
@@ -1106,8 +1117,7 @@ export const applySetMarker = (
   _applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
   const { space, marker, state: stateExpr } = effect.setMarker;
-  const resolvedBindings = resolveChoiceBindings(env, cursor);
-  const evalCtx = fromEnvAndCursor(env, { ...cursor, bindings: resolvedBindings });
+  const evalCtx = mergeChoiceToReadContext(env, cursor);
   const onResolutionFailure = selectorResolutionFailurePolicyForMode(env.mode);
   const spaceId = resolveZoneWithNormalization(space, evalCtx, {
     code: EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
@@ -1195,8 +1205,7 @@ export const applyShiftMarker = (
   _applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
   const { space, marker, delta: deltaExpr } = effect.shiftMarker;
-  const resolvedBindings = resolveChoiceBindings(env, cursor);
-  const evalCtx = fromEnvAndCursor(env, { ...cursor, bindings: resolvedBindings });
+  const evalCtx = mergeChoiceToReadContext(env, cursor);
   const onResolutionFailure = selectorResolutionFailurePolicyForMode(env.mode);
   const spaceId = resolveZoneWithNormalization(space, evalCtx, {
     code: EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
@@ -1288,8 +1297,7 @@ export const applySetGlobalMarker = (
   _applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
   const { marker, state: stateExpr } = effect.setGlobalMarker;
-  const resolvedBindings = resolveChoiceBindings(env, cursor);
-  const evalCtx = fromEnvAndCursor(env, { ...cursor, bindings: resolvedBindings });
+  const evalCtx = mergeChoiceToReadContext(env, cursor);
   const evaluatedState = evalValue(stateExpr, evalCtx);
 
   if (typeof evaluatedState !== 'string') {
@@ -1347,8 +1355,7 @@ export const applyShiftGlobalMarker = (
   _applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
   const { marker, delta: deltaExpr } = effect.shiftGlobalMarker;
-  const resolvedBindings = resolveChoiceBindings(env, cursor);
-  const evalCtx = fromEnvAndCursor(env, { ...cursor, bindings: resolvedBindings });
+  const evalCtx = mergeChoiceToReadContext(env, cursor);
   const evaluatedDelta = evalValue(deltaExpr, evalCtx);
 
   if (typeof evaluatedDelta !== 'number' || !Number.isSafeInteger(evaluatedDelta)) {
@@ -1416,8 +1423,7 @@ export const applyFlipGlobalMarker = (
   _applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
   const { marker: markerExpr, stateA: stateAExpr, stateB: stateBExpr } = effect.flipGlobalMarker;
-  const resolvedBindings = resolveChoiceBindings(env, cursor);
-  const evalCtx = fromEnvAndCursor(env, { ...cursor, bindings: resolvedBindings });
+  const evalCtx = mergeChoiceToReadContext(env, cursor);
   const evaluatedMarker = evalValue(markerExpr, evalCtx);
   const evaluatedStateA = evalValue(stateAExpr, evalCtx);
   const evaluatedStateB = evalValue(stateBExpr, evalCtx);

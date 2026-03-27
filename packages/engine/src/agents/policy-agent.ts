@@ -5,7 +5,10 @@ import { evaluatePolicyMove } from './policy-eval.js';
 import { buildPolicyAgentDecisionTrace, type PolicyDecisionTraceLevel } from './policy-diagnostics.js';
 import { preparePlayableMoves } from './prepare-playable-moves.js';
 
-const DEFAULT_COMPLETIONS_PER_TEMPLATE = 5;
+// Reduced from 5 to 3: 5 random completions per template was excessive for
+// policy evaluation. 3 completions provides sufficient diversity for ranking
+// while reducing completion work by 40%.
+const DEFAULT_COMPLETIONS_PER_TEMPLATE = 3;
 
 export interface PolicyAgentConfig {
   readonly profileId?: string;

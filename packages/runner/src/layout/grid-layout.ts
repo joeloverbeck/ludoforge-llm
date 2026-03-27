@@ -1,12 +1,12 @@
-import type { GameDef, ZoneDef } from '@ludoforge/engine/runtime';
+import type { ZoneDef } from '@ludoforge/engine/runtime';
 
-import { centerOnOrigin, computeBounds, EMPTY_BOUNDS, type MutablePosition, selectPrimaryLayoutZones } from './layout-helpers.js';
+import { centerOnOrigin, computeBounds, EMPTY_BOUNDS, type MutablePosition } from './layout-helpers.js';
 import type { LayoutResult } from './layout-types.js';
 
 const GRID_SPACING = 140;
 
-export function computeGridLayout(def: GameDef): LayoutResult {
-  const gridZones = [...selectPrimaryLayoutZones(def)].sort((left, right) => left.id.localeCompare(right.id));
+export function computeGridLayout(gridZonesInput: readonly ZoneDef[]): LayoutResult {
+  const gridZones = [...gridZonesInput].sort((left, right) => left.id.localeCompare(right.id));
   if (gridZones.length === 0) {
     return {
       positions: new Map(),

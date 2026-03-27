@@ -308,6 +308,65 @@ describe('buildPresentationScene', () => {
     ]);
   });
 
+  it('projects connection routes without requiring a layout position for the connection zone', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      zones: {
+        categoryStyles: {
+          province: { shape: 'rectangle', width: 120, height: 90, color: '#2a6e3f' },
+          loc: { shape: 'connection', connectionStyleKey: 'highway' },
+        },
+        connectionStyles: {
+          highway: { strokeWidth: 8, strokeColor: '#8b7355', strokeAlpha: 0.8 },
+        },
+      },
+    });
+
+    const scene = buildPresentationScene({
+      runnerFrame: makeRunnerFrame({
+        zones: [
+          makeZone('alpha:none'),
+          makeZone('beta:none'),
+          makeZone('loc-alpha-beta:none', {}, {
+            category: 'loc',
+            markers: [{ id: 'sabotage', state: 'sabotage', possibleStates: [] }],
+          }),
+        ],
+        adjacencies: [
+          { from: 'loc-alpha-beta:none', to: 'alpha:none', category: null, isHighlighted: false },
+          { from: 'loc-alpha-beta:none', to: 'beta:none', category: null, isHighlighted: false },
+        ],
+        tokens: [
+          { id: 'token:route', type: 'troop', zoneID: 'loc-alpha-beta:none', ownerID: asPlayerId(0), factionId: null, faceUp: true, properties: {}, isSelectable: false, isSelected: false },
+        ],
+      }),
+      overlays: [],
+      positions: new Map([
+        ['alpha:none', { x: 0, y: 0 }],
+        ['beta:none', { x: 200, y: 0 }],
+      ]),
+      visualConfigProvider: provider,
+      tokenRenderStyleProvider: new VisualConfigTokenRenderStyleProvider(provider),
+      interactionHighlights: { zoneIDs: [], tokenIDs: [] },
+    });
+
+    expect(scene.zones.map((zone) => zone.id)).toEqual(['alpha:none', 'beta:none']);
+    expect(scene.connectionRoutes).toEqual([
+      expect.objectContaining({
+        zoneId: 'loc-alpha-beta:none',
+        path: [
+          { kind: 'zone', id: 'alpha:none', position: { x: 0, y: 0 } },
+          { kind: 'zone', id: 'beta:none', position: { x: 200, y: 0 } },
+        ],
+      }),
+    ]);
+    expect(scene.tokens).toEqual([
+      expect.objectContaining({
+        zoneId: 'loc-alpha-beta:none',
+      }),
+    ]);
+  });
+
   it('uses provider-owned unified route definitions for otherwise ambiguous connection routes', () => {
     const provider = new VisualConfigProvider({
       version: 1,
@@ -376,6 +435,18 @@ describe('buildPresentationScene', () => {
           },
         ],
         touchingZoneIds: ['ba-xuyen:none', 'kien-hoa-vinh-binh:none'],
+        spurs: [
+          {
+            from: expect.any(Object),
+            to: expect.any(Object),
+            targetZoneId: 'ba-xuyen:none',
+          },
+          {
+            from: expect.any(Object),
+            to: expect.any(Object),
+            targetZoneId: 'kien-hoa-vinh-binh:none',
+          },
+        ],
         connectionStyleKey: 'mekong',
       }),
     ]);
@@ -456,6 +527,13 @@ describe('buildPresentationScene', () => {
           },
         ],
         touchingZoneIds: ['phu-bon:none'],
+        spurs: [
+          {
+            from: expect.any(Object),
+            to: expect.any(Object),
+            targetZoneId: 'phu-bon:none',
+          },
+        ],
         connectionStyleKey: 'highway',
       }),
     ]);

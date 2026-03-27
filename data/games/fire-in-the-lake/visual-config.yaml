@@ -408,13 +408,9 @@ zones:
 
 edges:
   default:
-    color: "#6b7280"
-    width: 1.5
-    alpha: 0.3
-  categoryStyles:
-    loc:
-      color: "#8b7355"
-      width: 2
+    color: "#ffffff"
+    width: 3.5
+    alpha: 0.85
 
 tokens:
   stackBadge:

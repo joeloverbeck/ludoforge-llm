@@ -1,4 +1,4 @@
-import type { GameDef } from '@ludoforge/engine/runtime';
+import type { GameDef, ZoneDef } from '@ludoforge/engine/runtime';
 
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import { hashStableValue } from '../utils/stable-hash.js';
@@ -36,13 +36,14 @@ export function getOrComputeLayout(def: GameDef, visualConfigProvider: VisualCon
     }
   }
   const promoted = promoteCardRoleZones(partitioned, roleZoneIds);
+  const layoutEligible = filterLayoutEligibleZones(promoted, visualConfigProvider);
   const hints = visualConfigProvider.getLayoutHints();
   const boardLayout = computeLayout(def, mode, {
     layoutHints: hints,
-    boardZones: promoted.board,
+    boardZones: layoutEligible.board,
     tableZoneRoles: cardAnimation?.zoneRoles ?? null,
   });
-  const auxLayout = computeAuxLayout(promoted.aux, boardLayout.boardBounds, visualConfigProvider);
+  const auxLayout = computeAuxLayout(layoutEligible.aux, boardLayout.boardBounds, visualConfigProvider);
 
   const positions = new Map<string, Position>();
   for (const [zoneID, position] of boardLayout.positions) {
@@ -105,6 +106,20 @@ function computeUnifiedBounds(positions: ReadonlyMap<string, Position>): ZonePos
 
 function createLayoutCacheKey(def: GameDef, configHash: string): string {
   return `${def.metadata.id}:${getOrComputeDefHash(def)}:${configHash}`;
+}
+
+function filterLayoutEligibleZones(
+  partitioned: { board: readonly ZoneDef[]; aux: readonly ZoneDef[] },
+  visualConfigProvider: VisualConfigProvider,
+): { board: readonly ZoneDef[]; aux: readonly ZoneDef[] } {
+  const isEligible = (zone: ZoneDef): boolean => (
+    visualConfigProvider.resolveZoneVisual(zone.id, zone.category ?? null, zone.attributes ?? null).shape !== 'connection'
+  );
+
+  return {
+    board: partitioned.board.filter(isEligible),
+    aux: partitioned.aux.filter(isEligible),
+  };
 }
 
 function getOrComputeDefHash(def: GameDef): string {

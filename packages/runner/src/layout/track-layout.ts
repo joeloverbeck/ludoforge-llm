@@ -1,7 +1,7 @@
-import type { GameDef } from '@ludoforge/engine/runtime';
+import type { ZoneDef } from '@ludoforge/engine/runtime';
 
 import { buildLayoutGraph } from './build-layout-graph.js';
-import { centerOnOrigin, computeBounds, EMPTY_BOUNDS, type MutablePosition, selectPrimaryLayoutZones } from './layout-helpers.js';
+import { centerOnOrigin, computeBounds, EMPTY_BOUNDS, type MutablePosition } from './layout-helpers.js';
 import type { LayoutResult } from './layout-types.js';
 
 const TRACK_SPACING = 120;
@@ -9,8 +9,7 @@ const TRACK_WRAP_THRESHOLD = 15;
 const TRACK_WRAP_COLUMNS = 10;
 const TRACK_COMPONENT_SPACING = 280;
 
-export function computeTrackLayout(def: GameDef): LayoutResult {
-  const trackZones = selectPrimaryLayoutZones(def);
+export function computeTrackLayout(trackZones: readonly ZoneDef[]): LayoutResult {
   const graph = buildLayoutGraph(trackZones);
   const nodeIDs = [...graph.nodes()].sort((left, right) => left.localeCompare(right));
 

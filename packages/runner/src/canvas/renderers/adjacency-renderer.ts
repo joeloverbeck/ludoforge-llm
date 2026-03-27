@@ -1,23 +1,23 @@
 import { Graphics, type Container } from 'pixi.js';
 
-import { parseHexColor } from './shape-utils.js';
-import type { EdgeStrokeStyle, VisualConfigProvider } from '../../config/visual-config-provider.js';
+import { buildDashedSegments } from '../geometry/dashed-segments.js';
+import { getEdgePointAtAngle, type ShapeDimensions } from './shape-utils.js';
+import {
+  DEFAULT_EDGE_STYLE,
+  HIGHLIGHTED_EDGE_STYLE,
+  type VisualConfigProvider,
+} from '../../config/visual-config-provider.js';
+import { resolveEdgeStrokeStyle } from '../../rendering/resolve-edge-stroke-style.js';
 import type { Position } from '../geometry';
 import type { DisposalQueue } from './disposal-queue.js';
 import type { AdjacencyRenderer } from './renderer-types';
-import type { PresentationAdjacencyNode } from '../../presentation/presentation-scene.js';
+import type { PresentationAdjacencyNode, PresentationZoneNode } from '../../presentation/presentation-scene.js';
+import { strokeDashedSegments } from './stroke-dashed-segments.js';
 
-const DEFAULT_LINE_STYLE = {
-  color: 0x6b7280,
-  width: 1.5,
-  alpha: 0.3,
-} as const;
-
-const HIGHLIGHTED_LINE_STYLE = {
-  color: 0x93c5fd,
-  width: 3,
-  alpha: 0.7,
-} as const;
+const DEFAULT_DASH_LENGTH = 10;
+const DEFAULT_GAP_LENGTH = 5;
+const HIGHLIGHTED_DASH_LENGTH = 12;
+const HIGHLIGHTED_GAP_LENGTH = 4;
 
 interface PairRenderState {
   readonly from: string;
@@ -41,7 +41,9 @@ export function createAdjacencyRenderer(
     update(
       adjacencies: readonly PresentationAdjacencyNode[],
       positions: ReadonlyMap<string, Position>,
+      zones: readonly PresentationZoneNode[],
     ): void {
+      const zonesById = new Map(zones.map((zone) => [zone.id, zone] as const));
       const nextPairs = new Map<string, PairRenderState>();
       for (const adjacency of adjacencies) {
         const pairKey = toPairKey(adjacency.from, adjacency.to);
@@ -70,9 +72,11 @@ export function createAdjacencyRenderer(
       for (const [pairKey, adjacency] of nextPairs) {
         const fromPosition = positions.get(adjacency.from);
         const toPosition = positions.get(adjacency.to);
+        const fromZone = zonesById.get(adjacency.from);
+        const toZone = zonesById.get(adjacency.to);
 
         let graphics = graphicsByPair.get(pairKey);
-        if (fromPosition === undefined || toPosition === undefined) {
+        if (fromPosition === undefined || toPosition === undefined || fromZone === undefined || toZone === undefined) {
           if (graphics !== undefined) {
             graphics.visible = false;
           }
@@ -85,7 +89,7 @@ export function createAdjacencyRenderer(
           parentContainer.addChild(graphics);
         }
 
-        drawAdjacencyLine(graphics, fromPosition, toPosition, adjacency, visualConfigProvider);
+        drawAdjacencyLine(graphics, fromPosition, toPosition, fromZone, toZone, adjacency, visualConfigProvider);
       }
     },
 
@@ -106,21 +110,46 @@ function drawAdjacencyLine(
   graphics: Graphics,
   fromPosition: Position,
   toPosition: Position,
+  fromZone: Pick<PresentationZoneNode, 'visual'>,
+  toZone: Pick<PresentationZoneNode, 'visual'>,
   adjacency: PairRenderState,
   visualConfigProvider: VisualConfigProvider,
 ): void {
-  const strokeStyle = resolveStrokeStyle(
+  const strokeStyle = resolveEdgeStrokeStyle(
     visualConfigProvider.resolveEdgeStyle(adjacency.category, adjacency.isHighlighted),
-    adjacency.isHighlighted,
+    adjacency.isHighlighted ? HIGHLIGHTED_EDGE_STYLE : DEFAULT_EDGE_STYLE,
   );
+  const angleDeg = computeAngleDegrees(fromPosition, toPosition);
+  const fromEdgeOffset = getEdgePointAtAngle(fromZone.visual.shape, toShapeDimensions(fromZone), angleDeg);
+  const toEdgeOffset = getEdgePointAtAngle(toZone.visual.shape, toShapeDimensions(toZone), angleDeg + 180);
+  const fromEdge = {
+    x: fromPosition.x + fromEdgeOffset.x,
+    y: fromPosition.y + fromEdgeOffset.y,
+  };
+  const toEdge = {
+    x: toPosition.x + toEdgeOffset.x,
+    y: toPosition.y + toEdgeOffset.y,
+  };
+  const dashPattern = adjacency.isHighlighted
+    ? { dashLength: HIGHLIGHTED_DASH_LENGTH, gapLength: HIGHLIGHTED_GAP_LENGTH }
+    : { dashLength: DEFAULT_DASH_LENGTH, gapLength: DEFAULT_GAP_LENGTH };
 
-  graphics
-    .clear()
-    .moveTo(fromPosition.x, fromPosition.y)
-    .lineTo(toPosition.x, toPosition.y)
-    .stroke(strokeStyle);
+  graphics.clear();
+  const segments = buildDashedSegments([fromEdge, toEdge], dashPattern.dashLength, dashPattern.gapLength);
+  strokeDashedSegments(graphics, segments, strokeStyle);
 
   graphics.visible = true;
+}
+
+function toShapeDimensions(zone: Pick<PresentationZoneNode, 'visual'>): ShapeDimensions {
+  return {
+    width: zone.visual.width,
+    height: zone.visual.height,
+  };
+}
+
+function computeAngleDegrees(from: Position, to: Position): number {
+  return Math.atan2(from.y - to.y, to.x - from.x) * (180 / Math.PI);
 }
 
 function mergeCategory(left: string | null, right: string | null): string | null {
@@ -134,20 +163,4 @@ function mergeCategory(left: string | null, right: string | null): string | null
     return left;
   }
   return left.localeCompare(right) <= 0 ? left : right;
-}
-
-function resolveStrokeStyle(
-  resolved: { color: string | null; width: number; alpha: number },
-  isHighlighted: boolean,
-): EdgeStrokeStyle {
-  const fallbackStyle = isHighlighted ? HIGHLIGHTED_LINE_STYLE : DEFAULT_LINE_STYLE;
-  const parsedColor = parseHexColor(resolved.color ?? undefined, {
-    allowNamedColors: true,
-  });
-
-  return {
-    color: parsedColor ?? fallbackStyle.color,
-    width: resolved.width,
-    alpha: resolved.alpha,
-  };
 }

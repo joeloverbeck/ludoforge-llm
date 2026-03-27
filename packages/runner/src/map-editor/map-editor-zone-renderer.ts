@@ -1,9 +1,9 @@
 import { BitmapText, Container, Graphics, Rectangle } from 'pixi.js';
 import type { GameDef, ZoneDef } from '@ludoforge/engine/runtime';
 
+import { parseHexColor } from '../rendering/color-utils.js';
 import {
   drawZoneShape,
-  parseHexColor,
   resolveVisualDimensions,
 } from '../canvas/renderers/shape-utils.js';
 import { STROKE_LABEL_FONT_NAME } from '../canvas/text/bitmap-font-registry.js';

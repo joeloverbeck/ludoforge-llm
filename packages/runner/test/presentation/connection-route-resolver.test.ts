@@ -92,6 +92,7 @@ describe('resolveConnectionRoutes', () => {
           { kind: 'straight' },
         ],
         touchingZoneIds: [],
+        spurs: [],
         connectionStyleKey: 'highway',
       }),
     ]);
@@ -151,6 +152,18 @@ describe('resolveConnectionRoutes', () => {
           },
         ],
         touchingZoneIds: ['central-laos:none', 'quang-tri-thua-thien:none'],
+        spurs: [
+          {
+            from: { x: 160, y: -40 },
+            to: { x: 300, y: 6.666666666666682 },
+            targetZoneId: 'central-laos:none',
+          },
+          {
+            from: { x: 83.85739513218846, y: -25.9442581834003 },
+            to: { x: 112.23958333333331, y: 90 },
+            targetZoneId: 'quang-tri-thua-thien:none',
+          },
+        ],
         connectionStyleKey: 'highway',
       }),
     ]);
@@ -501,8 +514,90 @@ describe('resolveConnectionRoutes', () => {
           },
         ],
         touchingZoneIds: ['phu-bon:none'],
+        spurs: [
+          {
+            from: { x: 240, y: -10 },
+            to: { x: 340, y: 40 },
+            targetZoneId: 'phu-bon:none',
+          },
+        ],
       }),
     ]);
+  });
+
+  it('derives one spur per touching zone on the nearest sampled route point', () => {
+    const result = resolveConnectionRoutes(makeOptions({
+      zones: [
+        makeZone('alpha:none'),
+        makeZone('beta:none'),
+        makeZone('gamma:none'),
+        makeZone('loc-alpha-beta:none', 'connection', 'highway'),
+      ],
+      adjacencies: [
+        makeAdjacency('loc-alpha-beta:none', 'alpha:none'),
+        makeAdjacency('loc-alpha-beta:none', 'beta:none'),
+        makeAdjacency('loc-alpha-beta:none', 'gamma:none'),
+      ],
+      positions: new Map([
+        ['alpha:none', { x: 0, y: 0 }],
+        ['beta:none', { x: 200, y: 0 }],
+        ['gamma:none', { x: 80, y: 60 }],
+      ]),
+      routeDefinitions: new Map([
+        ['loc-alpha-beta:none', {
+          points: [
+            { kind: 'zone', zoneId: 'alpha:none' },
+            { kind: 'zone', zoneId: 'beta:none' },
+          ],
+          segments: [
+            { kind: 'straight' },
+          ],
+        }],
+      ]),
+    }));
+
+    expect(result.connectionRoutes[0]?.spurs).toEqual([
+      {
+        from: { x: 80, y: 0 },
+        to: { x: 80, y: 110 },
+        targetZoneId: 'gamma:none',
+      },
+    ]);
+  });
+
+  it('skips spurs when touching-zone geometry is incomplete while keeping the route', () => {
+    const result = resolveConnectionRoutes(makeOptions({
+      zones: [
+        makeZone('alpha:none'),
+        makeZone('beta:none'),
+        makeZone('gamma:none'),
+        makeZone('loc-alpha-beta:none', 'connection', 'highway'),
+      ],
+      adjacencies: [
+        makeAdjacency('loc-alpha-beta:none', 'alpha:none'),
+        makeAdjacency('loc-alpha-beta:none', 'beta:none'),
+        makeAdjacency('loc-alpha-beta:none', 'gamma:none'),
+      ],
+      positions: new Map([
+        ['alpha:none', { x: 0, y: 0 }],
+        ['beta:none', { x: 200, y: 0 }],
+      ]),
+      routeDefinitions: new Map([
+        ['loc-alpha-beta:none', {
+          points: [
+            { kind: 'zone', zoneId: 'alpha:none' },
+            { kind: 'zone', zoneId: 'beta:none' },
+          ],
+          segments: [
+            { kind: 'straight' },
+          ],
+        }],
+      ]),
+    }));
+
+    expect(result.connectionRoutes).toHaveLength(1);
+    expect(result.connectionRoutes[0]?.spurs).toEqual([]);
+    expect(result.connectionRoutes[0]?.touchingZoneIds).toEqual(['gamma:none']);
   });
 
   it('keeps unanchored zone endpoints at zone centers', () => {

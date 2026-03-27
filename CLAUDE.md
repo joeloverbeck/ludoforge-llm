@@ -65,6 +65,7 @@ Engine source modules are under `packages/engine/src/`, with a separate runner p
 | `packages/runner/src/model/` | Render model derivation — transforms GameState into UI-friendly structures |
 | `packages/runner/src/utils/` | Runner utilities (display name formatting, etc.) |
 | `packages/runner/src/canvas/` | PixiJS canvas layer — renderers (zone, token, adjacency), interactions (keyboard, pointer, ARIA), viewport (pan/zoom/clamp), position store, canvas updater |
+| `packages/runner/src/map-editor/` | Map editor screen, editor store, editor-specific renderers, and editor canvas wrapper built on shared canvas infrastructure |
 | `packages/runner/src/ui/` | React DOM UI layer — panels (scoreboard, choice, variables, events, hand, effects), overlays (terminal, AI turn, interrupt), toolbar, phase indicator, tooltip, error boundary |
 | `packages/runner/src/animation/` | GSAP animation system — controller, queue, presets, AI playback, reduced motion, timeline builder, trace-to-descriptor mapping |
 | `packages/runner/src/input/` | Keyboard coordinator — unified shortcut handling across canvas and DOM layers |
@@ -72,6 +73,17 @@ Engine source modules are under `packages/engine/src/`, with a separate runner p
 | `packages/runner/src/bootstrap/` | Default game definition for dev bootstrapping |
 | `packages/runner/src/` | React entry point (`App.tsx`, `main.tsx`) |
 | `data/` | Optional game reference artifacts and fixtures — `data/games/fire-in-the-lake/` and `data/games/texas-holdem/` (not required at runtime) |
+
+### Runner Rendering Architecture
+
+The runner has two screen-specific rendering flows mounted from [`App.tsx`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/src/App.tsx):
+
+- **Active game flow**: `sessionState.screen === 'activeGame'` mounts [`GameCanvas.tsx`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/src/canvas/GameCanvas.tsx), which creates [`createGameCanvasRuntime`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/src/canvas/game-canvas-runtime.ts) and drives renderer updates through [`createCanvasUpdater`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/src/canvas/canvas-updater.ts). Game renderers live under [`packages/runner/src/canvas/renderers/`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/src/canvas/renderers).
+- **Map editor flow**: `sessionState.screen === 'mapEditor'` mounts [`MapEditorScreen.tsx`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/src/map-editor/MapEditorScreen.tsx), which creates [`createEditorCanvas`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/src/map-editor/map-editor-canvas.ts) and wires editor-specific renderers from [`packages/runner/src/map-editor/`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/src/map-editor) via direct editor-store subscriptions.
+
+These flows are separate where debugging usually happens: renderer modules, screen logic, and store/runtime orchestration. A change to the game adjacency, zone, or route renderers will not change the map editor renderer behavior, and vice versa.
+
+They are not fully isolated stacks. Both flows reuse shared Pixi bootstrapping from [`create-app.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/src/canvas/create-app.ts), and the editor also reuses shared viewport setup from [`viewport-setup.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/src/canvas/viewport-setup.ts). Changes in that shared canvas substrate can affect both flows.
 
 ### Core Design Constraints
 

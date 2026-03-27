@@ -1,13 +1,12 @@
 import { Graphics, type Container } from 'pixi.js';
 
+import {
+  DEFAULT_EDGE_STYLE,
+  type VisualConfigProvider,
+} from '../config/visual-config-provider.js';
 import { collectLayoutAdjacencyPairs, partitionZones } from '../layout/build-layout-graph.js';
+import { resolveEdgeStrokeStyle } from '../rendering/resolve-edge-stroke-style.js';
 import type { MapEditorStoreApi } from './map-editor-store.js';
-
-const DEFAULT_LINE_STYLE = {
-  color: 0x6b7280,
-  width: 1.5,
-  alpha: 0.3,
-} as const;
 
 export interface EditorAdjacencyRenderer {
   destroy(): void;
@@ -16,6 +15,7 @@ export interface EditorAdjacencyRenderer {
 export function createEditorAdjacencyRenderer(
   adjacencyLayer: Container,
   store: MapEditorStoreApi,
+  visualConfigProvider: VisualConfigProvider,
 ): EditorAdjacencyRenderer {
   const pairs = collectLayoutAdjacencyPairs(partitionZones(store.getState().gameDef).board);
   const graphics = new Graphics();
@@ -25,6 +25,10 @@ export function createEditorAdjacencyRenderer(
 
   const render = (state: ReturnType<MapEditorStoreApi['getState']>): void => {
     graphics.clear();
+    const strokeStyle = resolveEdgeStrokeStyle(
+      visualConfigProvider.resolveEdgeStyle(null, false),
+      DEFAULT_EDGE_STYLE,
+    );
 
     let hasVisibleLines = false;
     for (const pair of pairs) {
@@ -40,7 +44,7 @@ export function createEditorAdjacencyRenderer(
     }
 
     if (hasVisibleLines) {
-      graphics.stroke(DEFAULT_LINE_STYLE);
+      graphics.stroke(strokeStyle);
     }
 
     graphics.visible = hasVisibleLines;

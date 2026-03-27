@@ -87,12 +87,17 @@ vi.mock('pixi.js', () => ({
 import { createMapEditorStore } from '../../src/map-editor/map-editor-store.js';
 import { createEditorAdjacencyRenderer } from '../../src/map-editor/map-editor-adjacency-renderer.js';
 import type { VisualConfig } from '../../src/map-editor/map-editor-types.js';
+import type { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 
 describe('createEditorAdjacencyRenderer', () => {
   it('renders one line per undirected board adjacency pair and skips aux/internal/self edges', () => {
     const fixture = createFixture();
 
-    createEditorAdjacencyRenderer(fixture.layer as unknown as Container, fixture.store);
+    createEditorAdjacencyRenderer(
+      fixture.layer as unknown as Container,
+      fixture.store,
+      fixture.visualConfigProvider,
+    );
 
     const graphics = fixture.layer.children[0] as InstanceType<typeof MockGraphics>;
     expect(fixture.layer.eventMode).toBe('none');
@@ -102,15 +107,20 @@ describe('createEditorAdjacencyRenderer', () => {
       { from: { x: 0, y: 0 }, to: { x: 50, y: 50 } },
     ]);
     expect(graphics.strokeStyle).toEqual({
-      color: 0x6b7280,
-      width: 1.5,
-      alpha: 0.3,
+      color: 0x123456,
+      width: 6,
+      alpha: 0.7,
     });
+    expect(fixture.visualConfigProvider.resolveEdgeStyle).toHaveBeenCalledWith(null, false);
   });
 
   it('redraws adjacency line endpoints when zone positions change', () => {
     const fixture = createFixture();
-    createEditorAdjacencyRenderer(fixture.layer as unknown as Container, fixture.store);
+    createEditorAdjacencyRenderer(
+      fixture.layer as unknown as Container,
+      fixture.store,
+      fixture.visualConfigProvider,
+    );
 
     const graphics = fixture.layer.children[0] as InstanceType<typeof MockGraphics>;
     expect(graphics.segments[0]).toEqual({
@@ -126,9 +136,32 @@ describe('createEditorAdjacencyRenderer', () => {
     });
   });
 
+  it('falls back to the default edge color when the provider returns an unparsable color', () => {
+    const fixture = createFixture({
+      resolvedEdgeStyle: { color: 'invalid', width: 2.5, alpha: 0.4 },
+    });
+
+    createEditorAdjacencyRenderer(
+      fixture.layer as unknown as Container,
+      fixture.store,
+      fixture.visualConfigProvider,
+    );
+
+    const graphics = fixture.layer.children[0] as InstanceType<typeof MockGraphics>;
+    expect(graphics.strokeStyle).toEqual({
+      color: 0xffffff,
+      width: 2.5,
+      alpha: 0.4,
+    });
+  });
+
   it('removes its graphics object on destroy', () => {
     const fixture = createFixture();
-    const renderer = createEditorAdjacencyRenderer(fixture.layer as unknown as Container, fixture.store);
+    const renderer = createEditorAdjacencyRenderer(
+      fixture.layer as unknown as Container,
+      fixture.store,
+      fixture.visualConfigProvider,
+    );
 
     expect(fixture.layer.children).toHaveLength(1);
     renderer.destroy();
@@ -137,7 +170,9 @@ describe('createEditorAdjacencyRenderer', () => {
   });
 });
 
-function createFixture() {
+function createFixture(options?: {
+  resolvedEdgeStyle?: { color: string | null; width: number; alpha: number };
+}) {
   const layer = new MockContainer();
   layer.eventMode = 'none';
   layer.interactiveChildren = false;
@@ -165,9 +200,21 @@ function createFixture() {
       ['internal:y', { x: 150, y: 150 }],
     ]),
   );
+  const visualConfigProvider = {
+    resolveEdgeStyle: vi.fn().mockReturnValue(
+      options?.resolvedEdgeStyle ?? {
+        color: '#123456',
+        width: 6,
+        alpha: 0.7,
+      },
+    ),
+  } as unknown as VisualConfigProvider & {
+    resolveEdgeStyle: ReturnType<typeof vi.fn>;
+  };
 
   return {
     layer,
     store,
+    visualConfigProvider,
   };
 }

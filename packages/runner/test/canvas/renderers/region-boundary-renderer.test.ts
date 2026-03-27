@@ -1,5 +1,146 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Container } from 'pixi.js';
+
+const { MockContainer, MockGraphics, MockText } = vi.hoisted(() => {
+  class HoistedMockContainer {
+    children: HoistedMockContainer[] = [];
+
+    parent: HoistedMockContainer | null = null;
+
+    visible = true;
+
+    renderable = true;
+
+    alpha = 1;
+
+    rotation = 0;
+
+    eventMode = 'auto';
+
+    interactiveChildren = true;
+
+    addChild(...children: HoistedMockContainer[]): void {
+      for (const child of children) {
+        child.parent = this;
+        this.children.push(child);
+      }
+    }
+
+    removeFromParent(): void {
+      if (this.parent === null) {
+        return;
+      }
+      this.parent.children = this.parent.children.filter((child) => child !== this);
+      this.parent = null;
+    }
+
+    destroy(): void {
+      this.removeFromParent();
+    }
+  }
+
+  class HoistedMockGraphics extends HoistedMockContainer {
+    clearCalls = 0;
+
+    polyCalls: number[][] = [];
+
+    fillCalls: unknown[] = [];
+
+    moveCalls: Array<{ x: number; y: number }> = [];
+
+    lineCalls: Array<{ x: number; y: number }> = [];
+
+    strokeCalls: unknown[] = [];
+
+    clear(): this {
+      this.clearCalls += 1;
+      this.polyCalls = [];
+      this.fillCalls = [];
+      this.moveCalls = [];
+      this.lineCalls = [];
+      this.strokeCalls = [];
+      return this;
+    }
+
+    poly(points: number[]): this {
+      this.polyCalls.push(points);
+      return this;
+    }
+
+    fill(style: unknown): this {
+      this.fillCalls.push(style);
+      return this;
+    }
+
+    moveTo(x: number, y: number): this {
+      this.moveCalls.push({ x, y });
+      return this;
+    }
+
+    lineTo(x: number, y: number): this {
+      this.lineCalls.push({ x, y });
+      return this;
+    }
+
+    stroke(style?: unknown): this {
+      this.strokeCalls.push(style);
+      return this;
+    }
+  }
+
+  class HoistedMockText extends HoistedMockContainer {
+    text = '';
+
+    style: unknown = {};
+
+    width = 0;
+
+    anchor = {
+      x: 0,
+      y: 0,
+      set: (x: number, y: number) => {
+        this.anchor.x = x;
+        this.anchor.y = y;
+      },
+    };
+
+    position = {
+      x: 0,
+      y: 0,
+      set: (x: number, y: number) => {
+        this.position.x = x;
+        this.position.y = y;
+      },
+    };
+
+    scale = {
+      x: 1,
+      y: 1,
+      set: (x: number, y: number) => {
+        this.scale.x = x;
+        this.scale.y = y;
+      },
+    };
+
+    constructor(options: { text?: string; style?: unknown } = {}) {
+      super();
+      this.text = options.text ?? '';
+      this.style = options.style ?? {};
+    }
+  }
+
+  return {
+    MockContainer: HoistedMockContainer,
+    MockGraphics: HoistedMockGraphics,
+    MockText: HoistedMockText,
+  };
+});
+
+vi.mock('pixi.js', () => ({
+  Container: MockContainer,
+  Graphics: MockGraphics,
+  Text: MockText,
+}));
 
 import {
   createRegionBoundaryRenderer,
@@ -99,6 +240,45 @@ describe('createRegionBoundaryRenderer', () => {
     updateRenderer(renderer, provider, zones, positions);
     // Should have added Graphics + Text for one region
     expect(parentContainer.children.length).toBe(2);
+  });
+
+  it('strokes dashed region borders as isolated dash segments', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      regions: {
+        groupByAttribute: 'country',
+        styles: {
+          southVietnam: {
+            fillColor: '#2a6e3f',
+            borderColor: '#4a9e6f',
+            borderStyle: 'dashed',
+            borderWidth: 2,
+            label: 'South Vietnam',
+          },
+        },
+      },
+    });
+    const renderer = createRegionBoundaryRenderer(parentContainer, { visualConfigProvider: provider });
+
+    const zones = [
+      makeZone('zone-a', 'province', { country: 'southVietnam' }),
+      makeZone('zone-b', 'province', { country: 'southVietnam' }),
+    ];
+    const positions = makePositions([
+      ['zone-a', 100, 100],
+      ['zone-b', 300, 100],
+    ]);
+
+    updateRenderer(renderer, provider, zones, positions);
+
+    const graphics = parentContainer.children[0] as unknown as InstanceType<typeof MockGraphics>;
+    expect(graphics.fillCalls).toHaveLength(1);
+    expect(graphics.moveCalls.length).toBeGreaterThan(0);
+    expect(graphics.lineCalls).toHaveLength(graphics.moveCalls.length);
+    expect(graphics.strokeCalls.length).toBe(graphics.moveCalls.length);
+    expect(graphics.strokeCalls).toEqual(
+      new Array(graphics.moveCalls.length).fill({ color: '#4a9e6f', width: 2 }),
+    );
   });
 
   it('creates separate region graphics per attribute value', () => {
@@ -223,6 +403,42 @@ describe('createRegionBoundaryRenderer', () => {
     updateRenderer(renderer, provider, zones, positions);
     // Only highland has a style
     expect(parentContainer.children.length).toBe(2);
+  });
+
+  it('keeps solid region borders as a single polygon stroke', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      regions: {
+        groupByAttribute: 'country',
+        styles: {
+          cambodia: {
+            fillColor: '#3b4f8a',
+            borderColor: '#6b82cc',
+            borderStyle: 'solid',
+            borderWidth: 3,
+            label: 'Cambodia',
+          },
+        },
+      },
+    });
+    const renderer = createRegionBoundaryRenderer(parentContainer, { visualConfigProvider: provider });
+
+    const zones = [
+      makeZone('zone-a', 'province', { country: 'cambodia' }),
+      makeZone('zone-b', 'province', { country: 'cambodia' }),
+    ];
+    const positions = makePositions([
+      ['zone-a', 100, 100],
+      ['zone-b', 300, 100],
+    ]);
+
+    updateRenderer(renderer, provider, zones, positions);
+
+    const graphics = parentContainer.children[0] as unknown as InstanceType<typeof MockGraphics>;
+    expect(graphics.polyCalls).toHaveLength(2);
+    expect(graphics.moveCalls).toEqual([]);
+    expect(graphics.lineCalls).toEqual([]);
+    expect(graphics.strokeCalls).toEqual([{ color: '#6b82cc', width: 3 }]);
   });
 });
 

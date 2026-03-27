@@ -5,8 +5,8 @@ import type {
   TableOverlayMarkerNode,
   TableOverlayTextNode,
 } from '../../presentation/project-table-overlay-surface.js';
+import { parseHexColor } from '../../rendering/color-utils.js';
 import { safeDestroyDisplayObject } from './safe-destroy.js';
-import { parseHexColor } from './shape-utils.js';
 import {
   createKeyedBitmapTextReconciler,
   createManagedBitmapText,

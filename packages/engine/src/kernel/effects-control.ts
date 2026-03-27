@@ -13,6 +13,7 @@ import { resolveTraceProvenance } from './trace-provenance.js';
 import {
   mergeToEvalContext,
   resolveEffectBindings,
+  toTraceProvenanceContext,
   type EffectCursor,
   type EffectEnv,
   type PartialEffectResult,
@@ -43,11 +44,7 @@ const withCursorTrace = (env: EffectEnv, cursor: EffectCursor, suffix: string): 
 
 /** Build trace provenance from env + cursor (avoids full EffectContext reconstruction). */
 const envCursorProvenance = (env: EffectEnv, cursor: EffectCursor): EffectTraceProvenance =>
-  resolveTraceProvenance({
-    state: cursor.state,
-    ...(env.traceContext === undefined ? {} : { traceContext: env.traceContext }),
-    ...(cursor.effectPath === undefined ? {} : { effectPath: cursor.effectPath }),
-  });
+  resolveTraceProvenance(toTraceProvenanceContext(env, cursor));
 
 export const applyIf = (
   effect: Extract<EffectAST, { readonly if: unknown }>,

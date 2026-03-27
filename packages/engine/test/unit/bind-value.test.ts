@@ -120,4 +120,25 @@ describe('bindValue effect', () => {
 
     assert.equal(result.state.globalVars.score, 9);
   });
+
+  it('evaluates bindValue against move params without exporting them as bindings', () => {
+    const ctx = makeCtx({
+      moveParams: { selectedScore: 11 },
+    });
+    const result = applyEffects(
+      [
+        eff({
+          bindValue: {
+            bind: '$computed',
+            value: { _t: 2 as const, ref: 'binding', name: 'selectedScore' },
+          },
+        }),
+        eff({ setVar: { scope: 'global', var: 'score', value: { _t: 2 as const, ref: 'binding', name: '$computed' } } }),
+      ],
+      ctx,
+    );
+
+    assert.equal(result.state.globalVars.score, 11);
+    assert.equal(Object.hasOwn(result.bindings, 'selectedScore'), false);
+  });
 });

@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import {
   applyEffect,
   applyEffects,
+  asActionId,
   asPhaseId,
   asPlayerId,
   asZoneId,
@@ -94,6 +95,21 @@ describe('effects reveal', () => {
     });
   });
 
+  it('resolves reveal.zone bindings from moveParams via eval context merging', () => {
+    const effect: EffectAST = eff({
+      reveal: {
+        zone: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$targetZone' } },
+        to: 'all',
+      },
+    });
+
+    const result = applyEffect(effect, makeCtx({ moveParams: { $targetZone: 'hand:0' } }));
+
+    assert.deepEqual(result.state.reveals, {
+      'hand:0': [{ observers: 'all' }],
+    });
+  });
+
   it('accumulates multiple reveal grants for the same zone', () => {
     const effects: readonly EffectAST[] = [
       eff({ reveal: { zone: 'hand:0', to: { id: asPlayerId(0) } } }),
@@ -167,7 +183,15 @@ describe('effects reveal', () => {
   });
 
   it('emits reveal trace entry on successful grant addition', () => {
-    const ctx = makeCtx({ collector: createCollector({ trace: true }) });
+    const ctx = makeCtx({
+      collector: createCollector({ trace: true }),
+      traceContext: {
+        eventContext: 'triggerEffect',
+        actionId: asActionId('triggeredReveal'),
+        effectPathRoot: 'triggers[0].effects',
+      },
+      effectPath: '.then[0]',
+    });
     const effect: EffectAST = eff({
       reveal: {
         zone: 'hand:0',
@@ -186,8 +210,9 @@ describe('effects reveal', () => {
         filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US' }] },
         provenance: {
           phase: 'main',
-          eventContext: 'actionEffect',
-          effectPath: 'effects',
+          eventContext: 'triggerEffect',
+          actionId: 'triggeredReveal',
+          effectPath: 'triggers[0].effects.then[0]',
         },
         seq: 0,
       },
@@ -328,6 +353,25 @@ describe('effects conceal', () => {
 
     const effect: EffectAST = eff({ conceal: { zone: 'hand:0' } });
     const result = applyEffect(effect, ctx);
+
+    assert.equal(result.state.reveals, undefined);
+  });
+
+  it('resolves conceal.zone bindings from moveParams via eval context merging', () => {
+    const ctx = makeCtx({
+      moveParams: { $targetZone: 'hand:0' },
+      state: {
+        ...makeState(),
+        reveals: {
+          'hand:0': [{ observers: 'all' }],
+        },
+      },
+    });
+
+    const result = applyEffect(
+      eff({ conceal: { zone: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$targetZone' } } } }),
+      ctx,
+    );
 
     assert.equal(result.state.reveals, undefined);
   });
@@ -577,6 +621,12 @@ describe('effects conceal', () => {
   it('emits conceal trace entry with removal metadata', () => {
     const ctx = makeCtx({
       collector: createCollector({ trace: true }),
+      traceContext: {
+        eventContext: 'triggerEffect',
+        actionId: asActionId('triggeredConceal'),
+        effectPathRoot: 'triggers[0].effects',
+      },
+      effectPath: '.else[1]',
       state: {
         ...makeState(),
         reveals: {
@@ -609,8 +659,9 @@ describe('effects conceal', () => {
         grantsRemoved: 1,
         provenance: {
           phase: 'main',
-          eventContext: 'actionEffect',
-          effectPath: 'effects',
+          eventContext: 'triggerEffect',
+          actionId: 'triggeredConceal',
+          effectPath: 'triggers[0].effects.else[1]',
         },
         seq: 0,
       },

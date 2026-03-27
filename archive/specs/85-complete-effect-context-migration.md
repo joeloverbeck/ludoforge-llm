@@ -1,6 +1,6 @@
 # Spec 85 — Complete Effect Context Migration
 
-**Status**: Draft
+**Status**: ✅ COMPLETED
 **Dependencies**: Spec 77 (EffectContext static/dynamic split), Spec 78 (draft state)
 **Blocked by**: None
 **Enables**: Future perf campaigns targeting effect handler allocation overhead
@@ -157,3 +157,10 @@ cursor fields (~4 fields, cheaper than 13-field mergeToReadContext).
 | V8 JIT deopt from `mergeToReadContext` producing different hidden class than `fromEnvAndCursor` | LOW | `mergeToReadContext` is already used in 6 call sites in `effects-control.ts` without issues. Same spread pattern, fewer fields. |
 | Missed `mode` parameter in `resolveRuntimeScopedEndpoint` callers | LOW | TypeScript strict mode catches missing required parameters at compile time. |
 | `resolveTraceProvenance` receives incomplete pick object | LOW | Existing `Pick<EffectContext, ...>` type annotation catches missing fields. |
+
+## Outcome
+
+- Completion date: 2026-03-27
+- What actually changed: completed the remaining Spec 77 migration by narrowing the scoped-var runtime helpers to `ReadContext` fragments plus explicit `mode`, migrating the remaining handler call sites in `effects-binding.ts`, `effects-reveal.ts`, `effects-subset.ts`, `effects-var.ts`, `effects-resource.ts`, `effects-choice.ts`, and `effects-token.ts` from `fromEnvAndCursor` to `mergeToReadContext` / `mergeToEvalContext` or narrower trace-context helpers, then removing the dead `fromEnvAndCursor` bridge from `packages/engine/src/kernel/effect-context.ts` and updating the stale migration comment in `effect-compiler-runtime.ts`
+- Deviations from original plan: the live codebase had already partially surpassed the draft spec before the ticket series started, so some work shifted from broad signature migration to file-local cleanup; several handlers correctly needed `mergeToEvalContext` or dedicated provenance helpers instead of `mergeToReadContext` alone; and the final cleanup centralized shared trace bridge helpers in `effect-context.ts` rather than only deleting dead code
+- Verification results: the implementing ticket series recorded passing `pnpm turbo typecheck`, `pnpm turbo lint`, targeted `node --test` kernel suites for scoped-var, choice, reveal, subset, var, resource, token, trace, and effect-context construction coverage, `pnpm -F @ludoforge/engine test`, `pnpm -F @ludoforge/engine test:e2e` where applicable, and `pnpm turbo test`; current repo state also confirms zero `fromEnvAndCursor` matches remain under `packages/engine/`

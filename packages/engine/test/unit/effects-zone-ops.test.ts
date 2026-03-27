@@ -220,6 +220,8 @@ describe('effects moveAll and shuffle', () => {
       assert.equal(entry.kind, 'moveToken');
       assert.equal(entry.from, 'deck:none');
       assert.equal(entry.to, 'discard:none');
+      assert.equal(entry.provenance.actionId, 'test-moveAll');
+      assert.equal(entry.provenance.effectPath, 'test.effects');
     }
     const first = trace[0]!;
     const last = trace[3]!;
@@ -257,6 +259,24 @@ describe('effects moveAll and shuffle', () => {
     const second = trace[1]!;
     if (first.kind === 'moveToken') assert.equal(first.tokenId, 'd2');
     if (second.kind === 'moveToken') assert.equal(second.tokenId, 'd3');
+  });
+
+  it('shuffle emits a shuffle trace entry with provenance', () => {
+    const ctx = makeCtx({
+      collector: createCollector({ trace: true }),
+      traceContext: { eventContext: 'actionEffect', actionId: 'test-shuffle', effectPathRoot: 'test.effects' },
+      effectPath: '',
+    });
+
+    applyEffect(eff({ shuffle: { zone: 'deck:none' } }), ctx);
+
+    const trace = ctx.collector.trace ?? [];
+    assert.equal(trace.length, 1);
+    const entry = trace[0]!;
+    assert.equal(entry.kind, 'shuffle');
+    assert.equal(entry.zone, 'deck:none');
+    assert.equal(entry.provenance.actionId, 'test-shuffle');
+    assert.equal(entry.provenance.effectPath, 'test.effects');
   });
 
   it('moveAll on empty source emits no trace entries', () => {

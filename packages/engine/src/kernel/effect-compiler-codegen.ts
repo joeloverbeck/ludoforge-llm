@@ -505,6 +505,7 @@ export const compileSetVar = (desc: SetVarPattern): CompiledEffectFragment => {
           ? { scope: 'global', var: desc.target.varName }
           : { scope: 'pvar', player: desc.target.player, var: desc.target.varName },
         evalCtx,
+        execCtx.mode,
         {
           code: EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED,
           effectType: 'setVar',
@@ -568,6 +569,7 @@ export const compileAddVar = (desc: AddVarPattern): CompiledEffectFragment => {
           ? { scope: 'global', var: desc.target.varName }
           : { scope: 'pvar', player: desc.target.player, var: desc.target.varName },
         evalCtx,
+        execCtx.mode,
         {
           code: EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED,
           effectType: 'addVar',

@@ -416,6 +416,41 @@ describe('effects var handlers', () => {
     assert.equal(result.state.perPlayerVars['1']?.mana, 9);
   });
 
+  it('resolves dynamic scoped variable names from moveParams after binding merge', () => {
+    const ctx = makeCtx({
+      moveParams: {
+        targetGlobalVar: 'score',
+        $targetPlayer: asPlayerId(1),
+        targetPlayerVar: 'mana',
+      },
+    });
+
+    const setResult = applyEffect(
+      eff({
+        setVar: {
+          scope: 'global',
+          var: { ref: 'binding', name: 'targetGlobalVar' },
+          value: 7,
+        },
+      }),
+      ctx,
+    );
+    assert.equal(setResult.state.globalVars.score, 7);
+
+    const addResult = applyEffect(
+      eff({
+        addVar: {
+          scope: 'pvar',
+          player: { chosen: '$targetPlayer' },
+          var: { ref: 'binding', name: 'targetPlayerVar' },
+          delta: 2,
+        },
+      }),
+      ctx,
+    );
+    assert.equal(addResult.state.perPlayerVars['1']?.mana, 6);
+  });
+
   it('returns original state reference when clamped/updated value is unchanged', () => {
     const ctx = makeCtx();
     const effect: EffectAST = eff({ setVar: { scope: 'global', var: 'score', value: 3 } });

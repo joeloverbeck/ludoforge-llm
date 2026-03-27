@@ -16,7 +16,7 @@ import { emitTrace } from './execution-collector.js';
 import { resolveTraceProvenance } from './trace-provenance.js';
 import { omitOptionalStateKey } from './state-shape.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
-import { fromEnvAndCursor, resolveEffectBindings } from './effect-context.js';
+import { mergeToEvalContext, toTraceProvenanceContext } from './effect-context.js';
 import type { EffectCursor, EffectEnv, PartialEffectResult } from './effect-context.js';
 import type { EffectBudgetState } from './effects-control.js';
 import type { ApplyEffectsWithBudget } from './effect-registry.js';
@@ -30,6 +30,9 @@ const canonicalTokenFilterKeyForRuntime = (filter: TokenFilterExpr): string => {
   }
 };
 
+const revealTraceProvenance = (env: EffectEnv, cursor: EffectCursor): ReturnType<typeof resolveTraceProvenance> =>
+  resolveTraceProvenance(toTraceProvenanceContext(env, cursor));
+
 export const applyConceal = (
   effect: Extract<EffectAST, { readonly conceal: unknown }>,
   env: EffectEnv,
@@ -37,8 +40,7 @@ export const applyConceal = (
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
-  const resolvedBindings = resolveEffectBindings(env, cursor);
-  const evalCtx = fromEnvAndCursor(env, resolvedBindings === cursor.bindings ? cursor : { ...cursor, bindings: resolvedBindings });
+  const evalCtx = mergeToEvalContext(env, cursor);
   const onResolutionFailure = selectorResolutionFailurePolicyForMode(env.mode);
   const zoneId = String(
     resolveZoneWithNormalization(effect.conceal.zone, evalCtx, {
@@ -99,7 +101,7 @@ export const applyConceal = (
     ...(from === undefined ? {} : { from }),
     ...(effect.conceal.filter === undefined ? {} : { filter: effect.conceal.filter }),
     grantsRemoved: removal.removedCount,
-    provenance: resolveTraceProvenance(evalCtx),
+    provenance: revealTraceProvenance(env, cursor),
   });
 
   if (cursor.tracker) {
@@ -136,8 +138,7 @@ export const applyReveal = (
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
-  const resolvedBindings = resolveEffectBindings(env, cursor);
-  const evalCtx = fromEnvAndCursor(env, resolvedBindings === cursor.bindings ? cursor : { ...cursor, bindings: resolvedBindings });
+  const evalCtx = mergeToEvalContext(env, cursor);
   const onResolutionFailure = selectorResolutionFailurePolicyForMode(env.mode);
   const zoneId = String(
     resolveZoneWithNormalization(effect.reveal.zone, evalCtx, {
@@ -195,7 +196,7 @@ export const applyReveal = (
     zone: zoneId,
     observers,
     ...(effect.reveal.filter === undefined ? {} : { filter: effect.reveal.filter }),
-    provenance: resolveTraceProvenance(evalCtx),
+    provenance: revealTraceProvenance(env, cursor),
   });
 
   if (cursor.tracker) {

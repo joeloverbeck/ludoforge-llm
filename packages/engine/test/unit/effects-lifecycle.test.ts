@@ -193,9 +193,13 @@ describe('effects token lifecycle', () => {
     assert.equal(result.state.nextTokenOrdinal, ctx.state.nextTokenOrdinal);
   });
 
-  it('destroyToken emits a destroyToken trace entry with token type and zone', () => {
+  it('destroyToken emits a destroyToken trace entry with token type, zone, and provenance', () => {
     const collector = createCollector({ trace: true });
-    const ctx = makeCtx({ collector });
+    const ctx = makeCtx({
+      collector,
+      traceContext: { eventContext: 'actionEffect', actionId: 'test-destroy', effectPathRoot: 'test.effects' },
+      effectPath: '',
+    });
     const doomed = ctx.state.zones['deck:none']?.[1];
     assert.ok(doomed !== undefined);
 
@@ -209,7 +213,8 @@ describe('effects token lifecycle', () => {
     assert.equal(entry.tokenId, String(doomed.id));
     assert.equal(entry.type, doomed.type);
     assert.equal(entry.zone, 'deck:none');
-    assert.ok(entry.provenance !== undefined);
+    assert.equal(entry.provenance.actionId, 'test-destroy');
+    assert.equal(entry.provenance.effectPath, 'test.effects');
   });
 
   it('destroyToken throws when token is not found', () => {

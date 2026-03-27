@@ -7,6 +7,7 @@ import {
 } from './selector-resolution-normalization.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import type { EffectContext } from './effect-context.js';
+import type { ReadContext } from './eval-context.js';
 import type { RuntimeScopedVarEndpoint } from './scoped-var-runtime-mapping.js';
 import type { DraftTracker, MutableGameState } from './state-draft.js';
 import { ensurePlayerVarCloned, ensureZoneVarCloned } from './state-draft.js';
@@ -75,6 +76,10 @@ export type ScopedVarWrite = ScopedZoneVarWrite | ScopedNonZoneVarWrite;
 const isZoneScopedWrite = (write: ScopedVarWrite): write is ScopedZoneVarWrite => write.endpoint.scope === 'zone';
 const isFiniteSafeInteger = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value) && Number.isSafeInteger(value);
+type ScopedVarDefContext = Pick<ReadContext, 'def'>;
+type ScopedVarStateContext = Pick<ReadContext, 'state'>;
+type ScopedVarReadContext = ReadContext;
+type ScopedVarMode = EffectContext['mode'];
 const throwScopedVarWriteInvariantViolation = (write: ScopedVarWrite): never => {
   throw effectRuntimeError(
     EFFECT_RUNTIME_REASONS.INTERNAL_INVARIANT_VIOLATION,
@@ -155,11 +160,11 @@ export function toScopedVarWrite(endpoint: RuntimeScopedVarEndpoint, value: Vari
   return { endpoint, value };
 }
 
-const availableZoneVarNames = (ctx: EffectContext): readonly string[] => (ctx.def.zoneVars ?? []).map((variable) => variable.name).sort();
+const availableZoneVarNames = (ctx: ScopedVarDefContext): readonly string[] => (ctx.def.zoneVars ?? []).map((variable) => variable.name).sort();
 
 const resolveScopedVarName = (
   variable: ScopedVarNameExpr,
-  evalCtx: EffectContext,
+  evalCtx: ScopedVarReadContext,
   options: Readonly<{
     code: ScopedVarRuntimeErrorCode;
     effectType: ScopedVarEffectType;
@@ -218,7 +223,8 @@ const resolveScopedVarName = (
 
 const resolveRuntimeScopedEndpointImpl = (
   endpoint: ScopedVarMalformedResolvableEndpoint,
-  evalCtx: EffectContext,
+  evalCtx: ScopedVarReadContext,
+  mode: ScopedVarMode,
   options: Readonly<{
     code: ScopedVarRuntimeErrorCode;
     effectType: ScopedVarEffectType;
@@ -230,7 +236,7 @@ const resolveRuntimeScopedEndpointImpl = (
     context?: Readonly<Record<string, unknown>>;
   }>,
 ): RuntimeScopedVarEndpoint => {
-  const onResolutionFailure = selectorResolutionFailurePolicyForMode(evalCtx.mode);
+  const onResolutionFailure = selectorResolutionFailurePolicyForMode(mode);
 
   if (endpoint.scope === 'global') {
     return {
@@ -320,18 +326,20 @@ const resolveRuntimeScopedEndpointImpl = (
 
 export const resolveRuntimeScopedEndpoint = (
   endpoint: ScopedVarResolvableEndpoint,
-  evalCtx: EffectContext,
-  options: Parameters<typeof resolveRuntimeScopedEndpointImpl>[2],
-): RuntimeScopedVarEndpoint => resolveRuntimeScopedEndpointImpl(endpoint, evalCtx, options);
+  evalCtx: ScopedVarReadContext,
+  mode: ScopedVarMode,
+  options: Parameters<typeof resolveRuntimeScopedEndpointImpl>[3],
+): RuntimeScopedVarEndpoint => resolveRuntimeScopedEndpointImpl(endpoint, evalCtx, mode, options);
 
 export const resolveRuntimeScopedEndpointWithMalformedSupport = (
   endpoint: ScopedVarMalformedResolvableEndpoint,
-  evalCtx: EffectContext,
-  options: Parameters<typeof resolveRuntimeScopedEndpointImpl>[2],
-): RuntimeScopedVarEndpoint => resolveRuntimeScopedEndpointImpl(endpoint, evalCtx, options);
+  evalCtx: ScopedVarReadContext,
+  mode: ScopedVarMode,
+  options: Parameters<typeof resolveRuntimeScopedEndpointImpl>[3],
+): RuntimeScopedVarEndpoint => resolveRuntimeScopedEndpointImpl(endpoint, evalCtx, mode, options);
 
 export const resolveScopedVarDef = (
-  ctx: EffectContext,
+  ctx: ScopedVarDefContext,
   endpoint: DefinitionScopeEndpoint,
   effectType: ScopedVarEffectType,
   code: ScopedVarRuntimeErrorCode,
@@ -376,7 +384,7 @@ export const resolveScopedVarDef = (
 };
 
 export const resolveScopedIntVarDef = (
-  ctx: EffectContext,
+  ctx: ScopedVarDefContext,
   endpoint: DefinitionScopeEndpoint,
   effectType: ScopedVarEffectType,
   code: ScopedVarRuntimeErrorCode,
@@ -395,7 +403,7 @@ export const resolveScopedIntVarDef = (
 };
 
 export const readScopedVarValue = (
-  ctx: EffectContext,
+  ctx: ScopedVarStateContext,
   endpoint: RuntimeScopedVarEndpoint,
   effectType: ScopedVarEffectType,
   code: ScopedVarRuntimeErrorCode,
@@ -464,7 +472,7 @@ export const readScopedVarValue = (
 };
 
 export const readScopedIntVarValue = (
-  ctx: EffectContext,
+  ctx: ScopedVarStateContext,
   endpoint: RuntimeScopedVarEndpoint,
   effectType: ScopedVarEffectType,
   code: ScopedVarRuntimeErrorCode,

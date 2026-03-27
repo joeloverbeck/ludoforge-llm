@@ -1003,6 +1003,29 @@ describe('effects choice assertions', () => {
     assert.equal(result.rng, ctx.rng);
   });
 
+  it('chooseN resolves templated binding refs through choice binding aliases', () => {
+    const ctx = makeCtx({
+      bindings: {
+        $space: 'hand:0',
+        '$limit@{$space}': 1,
+      },
+      moveParams: {
+        'decision:$picks@{$space}::$picks@hand:0': ['alpha'],
+      },
+    });
+    const effect: EffectAST = eff({
+      chooseN: {
+        internalDecisionId: 'decision:$picks@{$space}',
+        bind: '$picks@{$space}',
+        options: { query: 'enums', values: ['alpha', 'beta'] },
+        max: { _t: 2 as const, ref: 'binding' as const, name: '$limit@{$space}' },
+      },
+    });
+
+    const result = applyEffect(effect, ctx);
+    assert.deepEqual(result.bindings?.['$picks@hand:0'], ['alpha']);
+  });
+
   it('chooseN throws when expression-valued bounds evaluate to non-integers', () => {
     const ctx = makeCtx({ moveParams: { '$picks': ['alpha'] } });
     const effect: EffectAST = eff({
@@ -1108,6 +1131,51 @@ describe('effects choice assertions', () => {
     const result = applyEffect(effect, ctx);
     assert.equal(result.state, ctx.state);
     assert.equal(result.rng, ctx.rng);
+  });
+
+  it('chooseOne decision traces preserve effectPath provenance', () => {
+    const collector = createCollector({ decisionTrace: true });
+    const ctx = makeCtx({
+      collector,
+      traceContext: { eventContext: 'actionEffect', actionId: 'test-action', effectPathRoot: 'test.effects' },
+      effectPath: '[3]',
+      moveParams: { '$choice': 'beta' },
+    });
+    const effect: EffectAST = eff({
+      chooseOne: {
+        internalDecisionId: 'decision:$choice',
+        bind: '$choice',
+        options: { query: 'enums', values: ['alpha', 'beta'] },
+      },
+    });
+
+    applyEffect(effect, ctx);
+
+    assert.equal(collector.decisionTrace?.length, 1);
+    assert.equal(collector.decisionTrace?.[0]?.provenance.effectPath, 'test.effects[3]');
+  });
+
+  it('chooseN decision traces preserve effectPath provenance', () => {
+    const collector = createCollector({ decisionTrace: true });
+    const ctx = makeCtx({
+      collector,
+      traceContext: { eventContext: 'actionEffect', actionId: 'test-action', effectPathRoot: 'test.effects' },
+      effectPath: '[4]',
+      moveParams: { '$picks': ['alpha'] },
+    });
+    const effect: EffectAST = eff({
+      chooseN: {
+        internalDecisionId: 'decision:$picks',
+        bind: '$picks',
+        options: { query: 'enums', values: ['alpha', 'beta'] },
+        n: 1,
+      },
+    });
+
+    applyEffect(effect, ctx);
+
+    assert.equal(collector.decisionTrace?.length, 1);
+    assert.equal(collector.decisionTrace?.[0]?.provenance.effectPath, 'test.effects[4]');
   });
 
   it('setMarker throws when marker lattice is missing', () => {

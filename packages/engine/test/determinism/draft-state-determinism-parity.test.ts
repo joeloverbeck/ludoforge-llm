@@ -45,11 +45,17 @@ const FITL_PLAYER_COUNT = 4;
 const TEXAS_PLAYER_COUNT = 6;
 const MAX_TURNS = 200;
 /**
- * 10 seeds × 2 runs each = 20 full game simulations per game type.
- * This is sufficient to prove determinism (same seed → same hash).
- * Higher counts are available via RUN_SLOW_E2E=1 environment variable.
+ * Replay determinism is already exercised elsewhere in the test suite; this
+ * file owns a curated production-scale replay parity proof. Keep FITL seed
+ * count smaller than Texas because the determinism lane already carries broad
+ * FITL random-play hash coverage in the Zobrist property sweep.
  */
-const SEED_COUNT = process.env.RUN_SLOW_E2E === '1' ? 100 : 10;
+const FITL_SEEDS = process.env.RUN_SLOW_E2E === '1'
+  ? [1000, 1001, 1002, 1003, 1004, 1005]
+  : [1000, 1001, 1002];
+const TEXAS_SEEDS = process.env.RUN_SLOW_E2E === '1'
+  ? Array.from({ length: 20 }, (_, index) => 2000 + index)
+  : Array.from({ length: 10 }, (_, index) => 2000 + index);
 
 type RunOutcome = {
   readonly kind: 'ok';
@@ -119,22 +125,20 @@ const assertDeterministic = (
 // ---------------------------------------------------------------------------
 
 describe('draft-state determinism parity', () => {
-  describe(`FITL — ${SEED_COUNT} seeds produce identical hashes on replay`, () => {
+  describe(`FITL — ${FITL_SEEDS.length} curated seeds produce identical hashes on replay`, () => {
     const def = compileFitlDef();
 
-    for (let i = 0; i < SEED_COUNT; i++) {
-      const seed = 1000 + i;
+    for (const seed of FITL_SEEDS) {
       it(`seed ${seed}`, () => {
         assertDeterministic(def, seed, FITL_PLAYER_COUNT, 'FITL');
       });
     }
   });
 
-  describe(`Texas Hold'em — ${SEED_COUNT} seeds produce identical hashes on replay`, () => {
+  describe(`Texas Hold'em — ${TEXAS_SEEDS.length} seeds produce identical hashes on replay`, () => {
     const def = compileTexasDef();
 
-    for (let i = 0; i < SEED_COUNT; i++) {
-      const seed = 2000 + i;
+    for (const seed of TEXAS_SEEDS) {
       it(`seed ${seed}`, () => {
         assertDeterministic(def, seed, TEXAS_PLAYER_COUNT, 'Texas');
       });

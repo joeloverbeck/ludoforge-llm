@@ -49,7 +49,7 @@ export const createExecutionContextFromCompiled = (
  *
  * This is the lightweight alternative to {@link createExecutionContextFromCompiled}:
  * callers that already have an `EffectCursor` can combine the returned env
- * with the cursor via `fromEnvAndCursor` instead of reconstructing a full
+ * with narrow env/cursor bridge helpers instead of reconstructing a full
  * `ExecutionEffectContext`.
  */
 export const buildEffectEnvFromCompiledCtx = (

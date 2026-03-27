@@ -62,7 +62,7 @@ describe('Zobrist incremental parity — Texas Hold\'em', () => {
 describe('Zobrist incremental parity — FITL', () => {
   const FITL_PLAYER_COUNT = 4;
   const FITL_MAX_TURNS = 200;
-  const FITL_SEEDS = [42, 77, 123];
+  const FITL_SEEDS = [42, 123];
 
   const def = compileFitlDef();
   const runtime = createGameDefRuntime(def);

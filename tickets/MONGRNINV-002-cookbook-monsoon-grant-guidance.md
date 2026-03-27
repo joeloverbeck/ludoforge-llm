@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: No — docs only
-**Deps**: MONGRNINV-001 (invariant test should exist before documenting the rule)
+**Deps**: archive/tickets/MONGRNINV/MONGRNINV-001-monsoon-grant-compilation-invariant.md
 
 ## Problem
 

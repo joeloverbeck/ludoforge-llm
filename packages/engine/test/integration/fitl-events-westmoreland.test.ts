@@ -157,6 +157,7 @@ describe('FITL card-95 Westmoreland', () => {
     assert.equal(grants[0]?.sequence?.batch, 'westmoreland-us');
     assert.equal(grants[0]?.sequence?.step, 0);
     assert.deepEqual(grants[0]?.actionIds, ['airLift']);
+    assert.equal(grants[0]?.allowDuringMonsoon, true, 'Air Lift grant must allow during Monsoon');
 
     // Step 1: Sweep or Assault with constraints
     assert.equal(grants[1]?.seat, 'us');
@@ -173,6 +174,7 @@ describe('FITL card-95 Westmoreland', () => {
     assert.equal(grants[2]?.sequence?.batch, 'westmoreland-us');
     assert.equal(grants[2]?.sequence?.step, 2);
     assert.deepEqual(grants[2]?.actionIds, ['airStrike']);
+    assert.equal(grants[2]?.allowDuringMonsoon, true, 'Air Strike grant must allow during Monsoon');
   });
 
   it('compiles shaded effects with chooseN, forEach, and shift-support-opposition', () => {

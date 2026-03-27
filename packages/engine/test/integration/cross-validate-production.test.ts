@@ -10,6 +10,18 @@ describe('crossValidateSpec production coverage', () => {
     assert.deepEqual(crossRefDiagnostics, []);
   });
 
+  it('FITL production spec contains no monsoon-grant cross-ref violations', () => {
+    const production = compileProductionSpec();
+    const monsoonGrantDiagnostics = production.compiled.diagnostics.filter(
+      (diagnostic) => diagnostic.code === 'CNL_XREF_EVENT_DECK_GRANT_MONSOON_ALLOW_MISSING',
+    );
+    assert.deepEqual(
+      monsoonGrantDiagnostics,
+      [],
+      `Expected zero Monsoon grant invariant diagnostics but found ${monsoonGrantDiagnostics.length}:\n${monsoonGrantDiagnostics.map((d) => `  ${d.path}: ${d.message}`).join('\n')}`,
+    );
+  });
+
   it('Texas production spec produces zero cross-ref diagnostics', () => {
     const production = compileTexasProductionSpec();
     const crossRefDiagnostics = production.compiled.diagnostics.filter((diagnostic) => diagnostic.code.startsWith('CNL_XREF_'));

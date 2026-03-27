@@ -63,6 +63,7 @@ describe('FITL card-111 Agent Orange', () => {
     assert.equal(grants.length, 1, 'Expected exactly 1 free operation grant');
     assert.equal(grants[0]?.seat, 'us');
     assert.deepEqual(grants[0]?.actionIds, ['airStrike']);
+    assert.equal(grants[0]?.allowDuringMonsoon, true);
 
     // Verify lastingEffects structure
     const lasting = card.unshaded?.lastingEffects ?? [];
@@ -194,6 +195,7 @@ describe('FITL card-111 Agent Orange', () => {
     assert.equal(pendingGrants.length, 1, 'Should queue exactly one free operation grant');
     assert.equal(pendingGrants[0]?.seat, 'us', 'Grant must belong to US seat');
     assert.deepEqual(pendingGrants[0]?.actionIds, ['airStrike']);
+    assert.equal(pendingGrants[0]?.allowDuringMonsoon, true);
 
     // Set up for free Air Strike resolution
     const grantReadyState: GameState = {

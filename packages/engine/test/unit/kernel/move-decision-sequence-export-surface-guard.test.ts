@@ -8,6 +8,8 @@ import { readKernelSource } from '../../helpers/kernel-source-guard.js';
 
 const moveDecisionSequenceModule = 'src/kernel/move-decision-sequence.ts';
 const expectedMoveDecisionSequenceExports = [
+  'DiscoveryCache',
+  'MoveDecisionSequenceSatisfiabilityOptions',
   'ResolveMoveDecisionSequenceOptions',
   'ResolveMoveDecisionSequenceResult',
   'MoveDecisionSequenceSatisfiabilityResult',

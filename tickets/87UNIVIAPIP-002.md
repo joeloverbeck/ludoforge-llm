@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel/move-decision-sequence.ts
-**Deps**: 87UNIVIAPIP-001 (DiscoveryCache type must exist)
+**Deps**: archive/tickets/87UNIVIAPIP-001.md
 
 ## Problem
 

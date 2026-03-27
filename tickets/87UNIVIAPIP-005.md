@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — test-only
-**Deps**: 87UNIVIAPIP-004 (full pipeline wired)
+**Deps**: tickets/87UNIVIAPIP-004.md
 
 ## Problem
 
@@ -27,6 +27,14 @@ The discovery cache mechanism needs explicit test coverage to verify:
 1. Tests verify the cache mechanism without coupling to internal implementation details — they observe cache hits via a spy/wrapper, not by inspecting private state.
 2. The parity test is the primary correctness proof — if classified moves are identical with and without the cache, the optimization is safe.
 3. Performance assertion is a regression guard, not a hard target — uses relative comparison.
+
+## Architectural Note
+
+87UNIVIAPIP-001 established two separate contracts:
+- `MoveDecisionSequenceSatisfiabilityOptions` for classification/admission helpers
+- `ResolveMoveDecisionSequenceOptions` for resolve/probe helpers
+
+Test coverage in this ticket should preserve that separation rather than validating an older shared-options assumption.
 
 ## What to Change
 

@@ -6,6 +6,7 @@ import {
   asPhaseId,
   asPlayerId,
   asZoneId,
+  classifyMoveDecisionSequenceAdmissionForLegalMove,
   classifyMoveDecisionSequenceSatisfiability,
   isMoveDecisionSequenceAdmittedForLegalMove,
   isMoveDecisionSequenceSatisfiable,
@@ -456,6 +457,91 @@ phase: [asPhaseId('main')],
 
     assert.equal(resolveMoveDecisionSequence(def, state, makeMove('branching-op')).complete, false);
     assert.equal(isMoveDecisionSequenceSatisfiable(def, state, makeMove('branching-op')), true);
+  });
+
+  it('uses an injected discoverer instead of the default legalChoicesDiscover path', () => {
+    const state = makeBaseState();
+    const move = makeMove('external-discoverer-op');
+    const seenMoves: Move[] = [];
+
+    const result = classifyMoveDecisionSequenceSatisfiability(
+      makeBaseDef(),
+      state,
+      move,
+      {
+        discoverer: (candidateMove) => {
+          seenMoves.push(candidateMove);
+          if ('$target' in candidateMove.params) {
+            return { kind: 'complete', complete: true };
+          }
+          return {
+            kind: 'pending',
+            complete: false,
+            decisionKey: asDecisionKey('$target'),
+            name: '$target',
+            type: 'chooseOne',
+            options: [
+              { value: 'a', legality: 'illegal', illegalReason: null },
+              { value: 'b', legality: 'legal', illegalReason: null },
+            ],
+            targetKinds: [],
+          };
+        },
+      },
+    );
+
+    assert.equal(result.classification, 'satisfiable');
+    assert.deepEqual(seenMoves, [
+      move,
+      {
+        actionId: move.actionId,
+        params: { '$target': 'b' },
+      },
+    ]);
+  });
+
+  it('forwards injected discoverers through legal-move admission helpers', () => {
+    const state = makeBaseState();
+    const move = makeMove('external-admission-discoverer-op');
+    let calls = 0;
+
+    const discoverer = (candidateMove: Move) => {
+      calls += 1;
+      if ('$target' in candidateMove.params) {
+        return { kind: 'complete', complete: true } as const;
+      }
+      return {
+        kind: 'pending',
+        complete: false,
+        decisionKey: asDecisionKey('$target'),
+        name: '$target',
+        type: 'chooseOne',
+        options: [{ value: 'allowed', legality: 'legal', illegalReason: null }],
+        targetKinds: [],
+      } as const;
+    };
+
+    assert.equal(
+      classifyMoveDecisionSequenceAdmissionForLegalMove(
+        makeBaseDef(),
+        state,
+        move,
+        MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_EVENT_DECISION_SEQUENCE,
+        { discoverer },
+      ),
+      'satisfiable',
+    );
+    assert.equal(
+      isMoveDecisionSequenceAdmittedForLegalMove(
+        makeBaseDef(),
+        state,
+        move,
+        MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_EVENT_DECISION_SEQUENCE,
+        { discoverer },
+      ),
+      true,
+    );
+    assert.equal(calls >= 2, true);
   });
 
   it('respects custom chooser for decision sequence completion', () => {

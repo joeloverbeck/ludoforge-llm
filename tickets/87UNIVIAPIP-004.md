@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel/legal-moves.ts, kernel/apply-move.ts
-**Deps**: 87UNIVIAPIP-002 (discoveryCache on ResolveMoveDecisionSequenceOptions), 87UNIVIAPIP-003 (cache populated in enumeration)
+**Deps**: tickets/87UNIVIAPIP-002.md, tickets/87UNIVIAPIP-003.md
 
 ## Problem
 
@@ -25,6 +25,10 @@ After 87UNIVIAPIP-003, the discovery cache is populated during enumeration and r
 1. Threading an optional parameter through two functions is minimal and non-breaking. Both `classifyEnumeratedMoves` (private) and `probeMoveViability` (exported) gain an optional trailing parameter.
 2. `probeMoveViability`'s public API remains backwards-compatible — the new parameter is optional and defaults to undefined (no cache).
 3. No V8 hidden class risk: `probeMoveViability` is on the classification path (cold relative to enumeration), and the parameter is a function argument, not an object field.
+
+## Architectural Note
+
+Keep the option-type boundary introduced in 87UNIVIAPIP-001 intact. This ticket should thread `DiscoveryCache` only through the resolve/probe path; it should not re-couple classification helpers back to `ResolveMoveDecisionSequenceOptions`.
 
 ## What to Change
 

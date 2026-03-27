@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel/legal-moves.ts
-**Deps**: 87UNIVIAPIP-001 (DiscoveryCache type + discoverer param on classifyMoveDecisionSequenceSatisfiability)
+**Deps**: archive/tickets/87UNIVIAPIP-001.md
 
 ## Problem
 
@@ -14,7 +14,7 @@ During enumeration, `isMoveDecisionSequenceAdmittedForLegalMove` calls `classify
 
 1. `enumerateRawLegalMoves` (legal-moves.ts:1077) returns `RawLegalMoveEnumerationResult` with `{ moves, warnings }` — confirmed at line 1082.
 2. `isMoveDecisionSequenceAdmittedForLegalMove` is called at lines 441, 963, 1057, and 1228 in legal-moves.ts — confirmed via grep.
-3. All four call sites pass `(def, state, move, context, { budgets, onWarning }, runtime)` — the `options` parameter maps to `Omit<ResolveMoveDecisionSequenceOptions, 'choose'>` which, after 87UNIVIAPIP-001, will also accept `discoverer`.
+3. All four call sites pass `(def, state, move, context, { budgets, onWarning }, runtime)` — after 87UNIVIAPIP-001, those helper options use `MoveDecisionSequenceSatisfiabilityOptions`, which now also accepts `discoverer`.
 4. `applyTurnFlowWindowFilters` (line 1259) calls `Array.prototype.filter` on `enumeration.moves`, preserving Move object references — confirmed by reading legal-moves-turn-order.ts.
 5. `RawLegalMoveEnumerationResult` is a private interface (line 101) — extending it with `discoveryCache` does not affect public API.
 
@@ -23,6 +23,11 @@ During enumeration, `isMoveDecisionSequenceAdmittedForLegalMove` calls `classify
 1. The cached discoverer wraps `legalChoicesDiscover` with a Map keyed by Move object reference. This avoids identity-key computation cost and leverages reference stability through the pipeline.
 2. The cache is created once in `enumerateRawLegalMoves` and discarded after `enumerateLegalMoves` completes — no lifecycle management needed.
 3. No backwards-compatibility shims. The `discoverer` parameter added by 87UNIVIAPIP-001 is optional, so existing tests and callers are unaffected.
+
+## Architectural Note
+
+87UNIVIAPIP-001 did **not** add `discoverer` through `Omit<ResolveMoveDecisionSequenceOptions, 'choose'>`.
+It introduced a dedicated `MoveDecisionSequenceSatisfiabilityOptions` type instead. Implement this ticket against that explicit classification-options contract so resolve-time and classification-time concerns remain separated.
 
 ## What to Change
 
@@ -68,7 +73,7 @@ isMoveDecisionSequenceAdmittedForLegalMove(
 )
 ```
 
-**Note**: The `cachedDiscover` function must be accessible at all four call sites. Since all four are inside functions called within `enumerateRawLegalMoves`'s scope (either directly or via helper functions that accept parameters), the discoverer needs to be threaded as a parameter to internal helpers `enumerateEventMoves`, `enumeratePipelineParamExpansions`, and any other helper that calls `isMoveDecisionSequenceAdmittedForLegalMove`.
+**Note**: The `cachedDiscover` function must be accessible at all four call sites. Since all four are inside functions called within `enumerateRawLegalMoves`'s scope (either directly or via helper functions that accept parameters), the discoverer needs to be threaded as a parameter to internal helpers that call `isMoveDecisionSequenceAdmittedForLegalMove` or `classifyMoveDecisionSequenceAdmissionForLegalMove`.
 
 Verify each helper's signature and add a `discoverer` parameter where needed. These are all module-private functions — no public API change.
 

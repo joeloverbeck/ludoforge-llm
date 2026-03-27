@@ -1,6 +1,7 @@
 import { legalChoicesDiscover } from './legal-choices.js';
 import {
   classifyDecisionSequenceSatisfiability,
+  type DecisionSequenceChoiceDiscoverer,
   type DecisionSequenceSatisfiabilityResult,
 } from './decision-sequence-satisfiability.js';
 import { pickDeterministicChoiceValue } from './choice-option-policy.js';
@@ -10,6 +11,7 @@ import { resolveMoveEnumerationBudgets, type MoveEnumerationBudgets } from './mo
 import type {
   ChoiceIllegalRequest,
   ChoicePendingRequest,
+  ChoiceRequest,
   ChoiceStochasticPendingRequest,
   GameDef,
   GameState,
@@ -22,6 +24,14 @@ export interface ResolveMoveDecisionSequenceOptions {
   readonly choose?: (request: ChoicePendingRequest) => MoveParamValue | undefined;
   readonly budgets?: Partial<MoveEnumerationBudgets>;
   readonly onWarning?: (warning: RuntimeWarning) => void;
+}
+
+export type DiscoveryCache = Map<Move, ChoiceRequest>;
+
+export interface MoveDecisionSequenceSatisfiabilityOptions {
+  readonly budgets?: Partial<MoveEnumerationBudgets>;
+  readonly onWarning?: (warning: RuntimeWarning) => void;
+  readonly discoverer?: DecisionSequenceChoiceDiscoverer;
 }
 
 export interface ResolveMoveDecisionSequenceResult {
@@ -141,7 +151,7 @@ export const isMoveDecisionSequenceSatisfiable = (
   def: GameDef,
   state: GameState,
   baseMove: Move,
-  options?: Omit<ResolveMoveDecisionSequenceOptions, 'choose'>,
+  options?: MoveDecisionSequenceSatisfiabilityOptions,
   runtime?: GameDefRuntime,
 ): boolean => {
   return classifyMoveDecisionSequenceSatisfiability(def, state, baseMove, options, runtime).classification === 'satisfiable';
@@ -152,7 +162,7 @@ export const classifyMoveDecisionSequenceAdmissionForLegalMove = (
   state: GameState,
   baseMove: Move,
   context: MissingBindingPolicyContext,
-  options?: Omit<ResolveMoveDecisionSequenceOptions, 'choose'>,
+  options?: MoveDecisionSequenceSatisfiabilityOptions,
   runtime?: GameDefRuntime,
 ): MoveDecisionSequenceSatisfiabilityResult['classification'] => {
   try {
@@ -170,7 +180,7 @@ export const isMoveDecisionSequenceAdmittedForLegalMove = (
   state: GameState,
   baseMove: Move,
   context: MissingBindingPolicyContext,
-  options?: Omit<ResolveMoveDecisionSequenceOptions, 'choose'>,
+  options?: MoveDecisionSequenceSatisfiabilityOptions,
   runtime?: GameDefRuntime,
 ): boolean => classifyMoveDecisionSequenceAdmissionForLegalMove(
   def,
@@ -185,17 +195,18 @@ export const classifyMoveDecisionSequenceSatisfiability = (
   def: GameDef,
   state: GameState,
   baseMove: Move,
-  options?: Omit<ResolveMoveDecisionSequenceOptions, 'choose'>,
+  options?: MoveDecisionSequenceSatisfiabilityOptions,
   runtime?: GameDefRuntime,
 ): MoveDecisionSequenceSatisfiabilityResult => {
+  const discoverChoices = options?.discoverer ?? ((move, discoverOptions) =>
+    legalChoicesDiscover(def, state, move, {
+      ...(discoverOptions?.onDeferredPredicatesEvaluated === undefined
+        ? {}
+        : { onDeferredPredicatesEvaluated: discoverOptions.onDeferredPredicatesEvaluated }),
+    }, runtime));
   return classifyDecisionSequenceSatisfiability(
     baseMove,
-    (move, discoverOptions) =>
-      legalChoicesDiscover(def, state, move, {
-        ...(discoverOptions?.onDeferredPredicatesEvaluated === undefined
-          ? {}
-          : { onDeferredPredicatesEvaluated: discoverOptions.onDeferredPredicatesEvaluated }),
-      }, runtime),
+    discoverChoices,
     {
       ...(options?.budgets === undefined ? {} : { budgets: options.budgets }),
       ...(options?.onWarning === undefined ? {} : { onWarning: options.onWarning }),

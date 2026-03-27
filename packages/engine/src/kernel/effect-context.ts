@@ -245,16 +245,29 @@ export const toEffectCursor = (ctx: EffectContext): EffectCursor => ({
   ...(ctx.effectPath === undefined ? {} : { effectPath: ctx.effectPath }),
 });
 
-/**
- * Reconstruct a full EffectContext from env + cursor.
- * Used as a compatibility bridge for code that still expects EffectContext.
- */
-export const fromEnvAndCursor = (env: EffectEnv, cursor: EffectCursor): EffectContext =>
-  ({ ...env, ...cursor }) as EffectContext;
+export type TraceProvenanceContext = Pick<EffectContext, 'state' | 'traceContext' | 'effectPath'>;
+export type TraceEmissionContext = Pick<EffectContext, 'collector' | 'state' | 'traceContext' | 'effectPath'>;
+
+export const toTraceProvenanceContext = (
+  env: Pick<EffectEnv, 'traceContext'>,
+  cursor: Pick<EffectCursor, 'state' | 'effectPath'>,
+): TraceProvenanceContext => ({
+  state: cursor.state,
+  ...(env.traceContext === undefined ? {} : { traceContext: env.traceContext }),
+  ...(cursor.effectPath === undefined ? {} : { effectPath: cursor.effectPath }),
+});
+
+export const toTraceEmissionContext = (
+  env: Pick<EffectEnv, 'collector' | 'traceContext'>,
+  cursor: Pick<EffectCursor, 'state' | 'effectPath'>,
+): TraceEmissionContext => ({
+  collector: env.collector,
+  ...toTraceProvenanceContext(env, cursor),
+});
 
 /**
  * Merge env + cursor into a ReadContext for eval functions (evalValue, evalCondition, etc.).
- * Cheaper than fromEnvAndCursor — spreads env (which is already allocated) and overlays cursor fields.
+ * Spreads env (which is already allocated) and overlays cursor state/bindings.
  */
 export const mergeToReadContext = (env: EffectEnv, cursor: EffectCursor): ReadContext =>
   ({ ...env, state: cursor.state, bindings: cursor.bindings }) as ReadContext;

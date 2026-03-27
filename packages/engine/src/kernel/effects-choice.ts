@@ -20,7 +20,7 @@ import { validateChooseNSelectedSequence } from './choose-n-selected-validation.
 import { normalizeChoiceDomain, toChoiceComparableValue, type MembershipScalar } from './value-membership.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
-import { mergeToReadContext } from './effect-context.js';
+import { mergeToReadContext, toTraceProvenanceContext } from './effect-context.js';
 import { ensureMarkerCloned, type MutableGameState } from './state-draft.js';
 import { addToRunningHash, updateRunningHash } from './zobrist.js';
 import type { ZobristFeature } from './types-core.js';
@@ -504,11 +504,7 @@ const mergeChoiceToReadContext = (env: EffectEnv, cursor: EffectCursor): ReadCon
   });
 
 const resolveChoiceTraceProvenance = (env: EffectEnv, cursor: EffectCursor): ReturnType<typeof resolveTraceProvenance> =>
-  resolveTraceProvenance({
-    state: cursor.state,
-    ...(env.traceContext === undefined ? {} : { traceContext: env.traceContext }),
-    ...(cursor.effectPath === undefined ? {} : { effectPath: cursor.effectPath }),
-  });
+  resolveTraceProvenance(toTraceProvenanceContext(env, cursor));
 
 const resolveMarkerLattice = (def: EffectContext['def'], markerId: string, effectType: string): NonNullable<EffectContext['def']['markerLattices']>[number] => {
   const lattice = getLatticeMap(def)?.get(markerId);

@@ -16,7 +16,7 @@ import { emitTrace } from './execution-collector.js';
 import { resolveTraceProvenance } from './trace-provenance.js';
 import { omitOptionalStateKey } from './state-shape.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
-import { mergeToEvalContext } from './effect-context.js';
+import { mergeToEvalContext, toTraceProvenanceContext } from './effect-context.js';
 import type { EffectCursor, EffectEnv, PartialEffectResult } from './effect-context.js';
 import type { EffectBudgetState } from './effects-control.js';
 import type { ApplyEffectsWithBudget } from './effect-registry.js';
@@ -31,11 +31,7 @@ const canonicalTokenFilterKeyForRuntime = (filter: TokenFilterExpr): string => {
 };
 
 const revealTraceProvenance = (env: EffectEnv, cursor: EffectCursor): ReturnType<typeof resolveTraceProvenance> =>
-  resolveTraceProvenance({
-    state: cursor.state,
-    ...(env.traceContext === undefined ? {} : { traceContext: env.traceContext }),
-    ...(cursor.effectPath === undefined ? {} : { effectPath: cursor.effectPath }),
-  });
+  resolveTraceProvenance(toTraceProvenanceContext(env, cursor));
 
 export const applyConceal = (
   effect: Extract<EffectAST, { readonly conceal: unknown }>,

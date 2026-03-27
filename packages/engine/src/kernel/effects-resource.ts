@@ -14,7 +14,7 @@ import { emitVarChangeTraceIfChanged } from './var-change-trace.js';
 import { toTraceResourceEndpoint, toTraceVarChangePayload, toVarChangedEvent } from './scoped-var-runtime-mapping.js';
 import { resolveTraceProvenance } from './trace-provenance.js';
 import { updateVarRunningHash } from './zobrist-var-hash.js';
-import { mergeToEvalContext, mergeToReadContext } from './effect-context.js';
+import { mergeToEvalContext, mergeToReadContext, toTraceEmissionContext } from './effect-context.js';
 import type { RuntimeScopedVarEndpoint } from './scoped-var-runtime-mapping.js';
 import type { PlayerId, ZoneId } from './branded.js';
 import type { ReadContext } from './eval-context.js';
@@ -83,23 +83,8 @@ type ResolvedEndpoint =
       readonly before: number;
     };
 
-type ResourceTraceContext = Readonly<{
-  collector: EffectEnv['collector'];
-  state: EffectCursor['state'];
-  traceContext?: NonNullable<EffectEnv['traceContext']>;
-  effectPath?: NonNullable<EffectCursor['effectPath']>;
-}>;
-
 type ResourceReadContext = Pick<ReadContext, 'def' | 'state'>;
-
-const buildResourceTraceContext = (env: EffectEnv, cursor: EffectCursor): ResourceTraceContext => ({
-  collector: env.collector,
-  state: cursor.state,
-  ...(env.traceContext === undefined ? {} : { traceContext: env.traceContext }),
-  ...(cursor.effectPath === undefined ? {} : { effectPath: cursor.effectPath }),
-});
-
-const resolveResourceTraceProvenance = (traceCtx: ResourceTraceContext): EffectTraceProvenance =>
+const resolveResourceTraceProvenance = (traceCtx: ReturnType<typeof toTraceEmissionContext>): EffectTraceProvenance =>
   resolveTraceProvenance(traceCtx);
 
 const resolveEndpoint = (
@@ -202,7 +187,7 @@ export const applyTransferVar = (
 ): PartialEffectResult => {
   const evalCtx = mergeToEvalContext(env, cursor);
   const readCtx = mergeToReadContext(env, cursor);
-  const traceCtx = buildResourceTraceContext(env, cursor);
+  const traceCtx = toTraceEmissionContext(env, cursor);
   const source = resolveEndpoint(effect.transferVar.from, evalCtx, readCtx, env.mode);
   const destination = resolveEndpoint(effect.transferVar.to, evalCtx, readCtx, env.mode);
 

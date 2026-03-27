@@ -16,20 +16,13 @@ import { emitVarChangeTraceIfChanged } from './var-change-trace.js';
 import { clampIntVarValue } from './var-runtime-utils.js';
 import { updateRunningHash } from './zobrist.js';
 import { updateVarRunningHash } from './zobrist-var-hash.js';
-import { mergeToReadContext, resolveEffectBindings } from './effect-context.js';
+import { mergeToReadContext, resolveEffectBindings, toTraceEmissionContext } from './effect-context.js';
 import type { EffectCursor, EffectEnv, PartialEffectResult } from './effect-context.js';
 import type { EffectBudgetState } from './effects-control.js';
 import type { ApplyEffectsWithBudget } from './effect-registry.js';
 import type { MutableGameState } from './state-draft.js';
 import type { EffectAST } from './types.js';
 import type { TriggerEvent } from './types.js';
-
-type VarTraceContext = Readonly<{
-  collector: EffectEnv['collector'];
-  state: EffectCursor['state'];
-  traceContext?: NonNullable<EffectEnv['traceContext']>;
-  effectPath?: NonNullable<EffectCursor['effectPath']>;
-}>;
 
 const expectInteger = (value: unknown, effectType: 'setVar' | 'addVar', field: 'value' | 'delta'): number => {
   if (typeof value !== 'number' || !Number.isFinite(value) || !Number.isSafeInteger(value)) {
@@ -58,7 +51,7 @@ const expectBoolean = (value: unknown, effectType: 'setVar', field: 'value'): bo
 };
 
 const emitVarChangeArtifacts = (
-  traceCtx: VarTraceContext,
+  traceCtx: ReturnType<typeof toTraceEmissionContext>,
   endpoint: RuntimeScopedVarEndpoint,
   oldValue: number | boolean,
   newValue: number | boolean,
@@ -70,13 +63,6 @@ const emitVarChangeArtifacts = (
 
   return toVarChangedEvent(endpoint, oldValue, newValue);
 };
-
-const buildVarTraceContext = (env: EffectEnv, cursor: EffectCursor): VarTraceContext => ({
-  collector: env.collector,
-  state: cursor.state,
-  ...(env.traceContext === undefined ? {} : { traceContext: env.traceContext }),
-  ...(cursor.effectPath === undefined ? {} : { effectPath: cursor.effectPath }),
-});
 
 export const applySetVar = (
   effect: Extract<EffectAST, { readonly setVar: unknown }>,
@@ -134,7 +120,7 @@ export const applySetVar = (
     variableDef.type === 'int'
       ? clampIntVarValue(expectInteger(evaluatedValue, 'setVar', 'value'), variableDef)
       : expectBoolean(evaluatedValue, 'setVar', 'value');
-  const emittedEvent = emitVarChangeArtifacts(buildVarTraceContext(env, cursor), endpoint, currentValue, nextValue);
+  const emittedEvent = emitVarChangeArtifacts(toTraceEmissionContext(env, cursor), endpoint, currentValue, nextValue);
   if (emittedEvent === undefined) {
     return { state: cursor.state, rng: cursor.rng };
   }
@@ -204,7 +190,7 @@ export const applyAddVar = (
 
   const currentValue = readScopedIntVarValue({ state: cursor.state }, endpoint, 'addVar', EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED);
   const nextValue = clampIntVarValue(currentValue + evaluatedDelta, variableDef);
-  const emittedEvent = emitVarChangeArtifacts(buildVarTraceContext(env, cursor), endpoint, currentValue, nextValue);
+  const emittedEvent = emitVarChangeArtifacts(toTraceEmissionContext(env, cursor), endpoint, currentValue, nextValue);
   if (emittedEvent === undefined) {
     return { state: cursor.state, rng: cursor.rng };
   }

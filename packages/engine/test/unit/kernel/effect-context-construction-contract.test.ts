@@ -6,6 +6,10 @@ import {
   createDiscoveryProbeEffectContext,
   createDiscoveryStrictEffectContext,
   createExecutionEffectContext,
+  toEffectCursor,
+  toEffectEnv,
+  toTraceEmissionContext,
+  toTraceProvenanceContext,
 } from '../../../src/kernel/effect-context.js';
 import * as effectContextModule from '../../../src/kernel/effect-context.js';
 import { emptyScope } from '../../../src/kernel/decision-scope.js';
@@ -165,6 +169,55 @@ describe('effect-context construction contract', () => {
       false,
       'effect-context module must expose only explicit discovery constructors',
     );
+  });
+
+  it('does not export the legacy merged-context bridge', () => {
+    const legacyBridgeName = `fromEnv${'AndCursor'}`;
+    assert.equal(
+      Object.hasOwn(effectContextModule, legacyBridgeName),
+      false,
+      'effect-context module must not expose the removed merged-context compatibility bridge',
+    );
+  });
+
+  it('builds narrow trace bridge helpers without inventing optional fields', () => {
+    const context = createExecutionEffectContext(makeRuntimeEffectContextOptions());
+    const env = toEffectEnv(context);
+    const cursor = toEffectCursor(context);
+
+    const provenanceCtx = toTraceProvenanceContext(env, cursor);
+    const emissionCtx = toTraceEmissionContext(env, cursor);
+
+    assert.deepEqual(provenanceCtx, { state: context.state });
+    assert.deepEqual(emissionCtx, {
+      collector: context.collector,
+      state: context.state,
+    });
+    assert.equal('traceContext' in provenanceCtx, false);
+    assert.equal('effectPath' in provenanceCtx, false);
+    assert.equal('traceContext' in emissionCtx, false);
+    assert.equal('effectPath' in emissionCtx, false);
+  });
+
+  it('preserves trace optional fields when present in the env/cursor split', () => {
+    const context = createExecutionEffectContext(makeRuntimeEffectContextOptions({
+      traceContext: { eventContext: 'actionEffect', actionId: 'action:test', effectPathRoot: 'test.effects' },
+      effectPath: '[3].then',
+    }));
+    const env = toEffectEnv(context);
+    const cursor = toEffectCursor(context);
+
+    assert.deepEqual(toTraceProvenanceContext(env, cursor), {
+      state: context.state,
+      traceContext: context.traceContext,
+      effectPath: context.effectPath,
+    });
+    assert.deepEqual(toTraceEmissionContext(env, cursor), {
+      collector: context.collector,
+      state: context.state,
+      traceContext: context.traceContext,
+      effectPath: context.effectPath,
+    });
   });
 
   it('preserves free-operation overlay payloads as one object', () => {

@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed (revised 2026-03-27)
+Completed (archived 2026-03-27)
 
 ## Problem
 
@@ -404,3 +404,22 @@ The discovery cache pattern established here can be extended in future specs:
   calls (requires careful invalidation based on state hash).
 - **Agent completion caching**: The cache from classification could be passed
   to `evaluatePlayableMoveCandidate` to eliminate step 3 redundancy.
+
+## Outcome
+
+- Completion date: 2026-03-27
+- What actually changed:
+  - The discovery-cache architecture described here is already present in the kernel: `DiscoveryCache` is defined in `move-decision-sequence.ts`, raw enumeration creates and populates it, classification threads it into `probeMoveViability`, and probing forwards it into `resolveMoveDecisionSequence`.
+  - Final closure work strengthened proof rather than rewriting architecture: a focused architecture-guard test now verifies that filtered raw-enumeration `Move` objects flow into classification without losing identity, which preserves cache-key correctness.
+- Deviations from original plan:
+  - The spec's implementation had largely landed before final archival work. The remaining work was reassessment, one targeted test strengthening, and verification rather than broad new kernel changes.
+  - No extra indirection, aliasing, or hot-path object-shape changes were introduced.
+- Verification results:
+  - `pnpm -F @ludoforge/engine test -- test/unit/kernel/move-decision-sequence.test.ts` passed.
+  - `pnpm -F @ludoforge/engine test -- test/unit/kernel/apply-move.test.ts` passed.
+  - `pnpm -F @ludoforge/engine test -- test/unit/kernel/legal-moves.test.ts` passed.
+  - `pnpm -F @ludoforge/engine test -- test/integration/classified-move-parity.test.ts` passed.
+  - `node --test dist/test/performance/policy-agent.perf.test.js` passed.
+  - `pnpm turbo test` passed.
+  - `pnpm turbo typecheck` passed.
+  - `pnpm turbo lint` passed.

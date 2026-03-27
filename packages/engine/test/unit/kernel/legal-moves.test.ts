@@ -3865,6 +3865,45 @@ describe('legalMoves plain-action feasibility probe', () => {
       'classified move probing must receive the discoveryCache created during raw enumeration',
     );
   });
+
+  it('37a. preserves filtered move identity between raw enumeration and classification for cache reuse', () => {
+    const source = readKernelSource('src/kernel/legal-moves.ts');
+    const sourceFile = parseTypeScriptSource(source, 'legal-moves.ts');
+
+    assert.match(
+      source,
+      /const\s+\{\s*moves,\s*warnings:\s*rawWarnings,\s*discoveryCache\s*\}\s*=\s*enumerateRawLegalMoves\(def,\s*state,\s*options,\s*runtime\);/u,
+      'enumerateLegalMoves must destructure moves and discoveryCache directly from enumerateRawLegalMoves',
+    );
+
+    const filterCalls = collectCallExpressionsByIdentifier(sourceFile, 'applyTurnFlowWindowFilters');
+    assert.equal(
+      filterCalls.some((call) =>
+        call.arguments.length === 4
+        && expressionToText(sourceFile, call.arguments[0]!) === 'def'
+        && expressionToText(sourceFile, call.arguments[1]!) === 'state'
+        && expressionToText(sourceFile, call.arguments[2]!) === 'enumeration.moves'
+        && expressionToText(sourceFile, call.arguments[3]!) === 'seatResolution',
+      ),
+      true,
+      'raw enumeration must filter the original enumeration.moves array in place of rebuilding move objects',
+    );
+
+    const classifyCalls = collectCallExpressionsByIdentifier(sourceFile, 'classifyEnumeratedMoves');
+    assert.equal(
+      classifyCalls.some((call) =>
+        call.arguments.length === 6
+        && expressionToText(sourceFile, call.arguments[0]!) === 'def'
+        && expressionToText(sourceFile, call.arguments[1]!) === 'state'
+        && expressionToText(sourceFile, call.arguments[2]!) === 'moves'
+        && expressionToText(sourceFile, call.arguments[3]!) === 'warnings'
+        && expressionToText(sourceFile, call.arguments[4]!) === 'runtime'
+        && expressionToText(sourceFile, call.arguments[5]!) === 'discoveryCache',
+      ),
+      true,
+      'classification must consume the filtered moves array directly so the Move object identities remain valid cache keys',
+    );
+  });
 });
 
 describe('legalMoves seat-resolution lifecycle architecture guard', () => {

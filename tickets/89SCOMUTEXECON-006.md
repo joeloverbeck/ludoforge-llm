@@ -23,6 +23,17 @@ After Phases 1-2, approximately 23 `createEvalContext` call sites remain across 
 2. Cold-path sites (called once per move or less) have negligible optimization value — the spec explicitly says to leave them unchanged.
 3. Game-agnostic: all candidate sites are in generic kernel code.
 4. No backwards-compatibility: converted sites stop calling `createEvalContext`; if all callers are gone, delete `createEvalContext` (Foundation 9).
+5. Architectural caution from ticket `002`: do not assume every hot site should grow a shared mutable-scope abstraction. Some sites may be better served by a tiny local fixed-shape helper, and that can be the cleaner end state.
+
+## Architectural Note
+
+The audit must explicitly compare:
+
+1. Replacing a site with `MutableReadScope`.
+2. Replacing a site with a smaller local fixed-shape eval helper.
+3. Leaving the site on `createEvalContext`.
+
+Recommendation: prefer the smallest clean abstraction per site, not blanket convergence on `MutableReadScope`.
 
 ## What to Change
 
@@ -33,13 +44,14 @@ For each call site, document:
 - Call frequency (per-game, per-turn, per-move, per-effect)
 - Whether context escapes (stored, returned, passed to callback)
 - Recommendation: convert to MutableReadScope or leave as-is
+- Alternative, when cleaner: convert to a local fixed-shape helper rather than `MutableReadScope`
 
 ### 2. Convert hot-path sites
 
 For sites called per-move or more frequently where context does not escape:
-- Create `MutableReadScope` at the enclosing function entry
+- Choose the smallest clean abstraction (`MutableReadScope` or a local fixed-shape helper)
 - Update fields between calls
-- Pass scope to `evalCondition`/`evalValue`
+- Pass the reused eval object to `evalCondition`/`evalValue`
 
 ### 3. Leave cold-path sites unchanged
 
@@ -88,7 +100,7 @@ NOT candidates (cold path, per-game or per-turn):
 
 ### Invariants
 
-1. Hot-path `createEvalContext` call sites (per-move or higher frequency) are converted to `MutableReadScope`.
+1. Hot-path `createEvalContext` call sites (per-move or higher frequency) are converted to the smallest clean reuse abstraction, which may be `MutableReadScope` or a local fixed-shape helper.
 2. Cold-path sites (per-turn or lower) remain as `createEvalContext` — explicitly documented in the audit.
 3. If `createEvalContext` has zero remaining callers, it is deleted (Foundation 9).
 4. No scope escapes its synchronous call boundary.

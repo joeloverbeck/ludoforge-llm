@@ -61,6 +61,12 @@ describe('createEvalContext', () => {
 
     assert.equal(ctx.resources, resources);
     assert.equal(ctx.collector, resources.collector);
+    assert.equal(ctx.runtimeTableIndex, undefined);
+    assert.equal(ctx.freeOperationOverlay, undefined);
+    assert.equal(ctx.maxQueryResults, undefined);
+    assert.equal(Object.hasOwn(ctx, 'runtimeTableIndex'), true);
+    assert.equal(Object.hasOwn(ctx, 'freeOperationOverlay'), true);
+    assert.equal(Object.hasOwn(ctx, 'maxQueryResults'), true);
   });
 
   it('preserves provided collector instance', () => {

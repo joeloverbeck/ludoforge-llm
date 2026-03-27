@@ -24,6 +24,11 @@
 2. Game-agnostic: parameter enumeration is generic across all games.
 3. `makeEvalContext` itself uses a conditional spread for `freeOperationOverlay` — the mutable scope avoids this by always having the field present (same monomorphism principle).
 4. No backwards-compatibility: `makeEvalContext` can be deleted or inlined once all call sites are migrated. If `makeEvalContext` has callers outside `enumerateParams`, keep it; otherwise delete.
+5. Architectural caution from ticket `002`: keep the mutable scope local to enumeration unless there is a compelling reason to widen another boundary. This ticket should not introduce a broader shared abstraction than `enumerateParams` needs.
+
+## Architectural Note
+
+Prefer a recursion-local or top-level enumeration-local scope helper over any attempt to generalize the move-enumeration API around `MutableReadScope`. The goal here is hot-path cleanup, not exporting a new architectural surface.
 
 ## What to Change
 

@@ -2,6 +2,9 @@ import type { PlayerId } from './branded.js';
 import type { ChooseNTemplate } from './choose-n-session.js';
 import { emptyScope, type DecisionScope } from './decision-scope.js';
 import type { DraftTracker } from './state-draft.js';
+import type { FreeOperationExecutionOverlay } from './free-operation-overlay.js';
+import type { RuntimeTableIndex } from './runtime-table-index.js';
+import type { AdjacencyGraph } from './spatial.js';
 import type {
   DecisionAuthorityProbeContext,
   DecisionAuthorityStrictContext,
@@ -12,7 +15,9 @@ import {
 } from './eval-context.js';
 import type {
   ChoicePendingRequest,
+  ExecutionCollector,
   ChoiceStochasticPendingRequest,
+  GameDef,
   EffectTraceEventContext,
   GameState,
   MoveParamScalar,
@@ -99,10 +104,16 @@ export interface NormalizedEffectResult {
   readonly decisionScope: DecisionScope;
 }
 
-interface RuntimeEffectContextOptions extends Omit<EffectContextBase, 'collector' | 'resources' | 'decisionScope'> {
+interface RuntimeEffectContextOptions extends Omit<
+  EffectContextBase,
+  'collector' | 'resources' | 'decisionScope' | 'runtimeTableIndex' | 'freeOperationOverlay' | 'maxQueryResults'
+> {
   readonly resources: EvalRuntimeResources;
   readonly decisionAuthorityPlayer?: PlayerId;
   readonly decisionScope?: DecisionScope;
+  readonly runtimeTableIndex?: RuntimeTableIndex | undefined;
+  readonly freeOperationOverlay?: FreeOperationExecutionOverlay | undefined;
+  readonly maxQueryResults?: number | undefined;
 }
 
 export const createExecutionEffectContext = (options: RuntimeEffectContextOptions): ExecutionEffectContext => {
@@ -116,6 +127,9 @@ export const createExecutionEffectContext = (options: RuntimeEffectContextOption
     ...ctx,
     activePlayer,
     resources,
+    runtimeTableIndex: ctx.runtimeTableIndex,
+    freeOperationOverlay: ctx.freeOperationOverlay,
+    maxQueryResults: ctx.maxQueryResults,
     collector: resources.collector,
     decisionAuthority: {
       source: 'engineRuntime',
@@ -138,6 +152,9 @@ export const createDiscoveryStrictEffectContext = (options: RuntimeEffectContext
     ...ctx,
     activePlayer,
     resources,
+    runtimeTableIndex: ctx.runtimeTableIndex,
+    freeOperationOverlay: ctx.freeOperationOverlay,
+    maxQueryResults: ctx.maxQueryResults,
     collector: resources.collector,
     decisionAuthority: {
       source: 'engineRuntime',
@@ -162,6 +179,9 @@ export const createDiscoveryProbeEffectContext = (
     ...ctx,
     activePlayer,
     resources,
+    runtimeTableIndex: ctx.runtimeTableIndex,
+    freeOperationOverlay: ctx.freeOperationOverlay,
+    maxQueryResults: ctx.maxQueryResults,
     collector: resources.collector,
     decisionAuthority: {
       source: 'engineRuntime',
@@ -228,6 +248,20 @@ export interface EffectCursor {
   tracker?: DraftTracker;
 }
 
+export interface MutableReadScope {
+  def: GameDef;
+  adjacencyGraph: AdjacencyGraph;
+  state: GameState;
+  activePlayer: PlayerId;
+  actorPlayer: PlayerId;
+  bindings: Readonly<Record<string, unknown>>;
+  resources: EvalRuntimeResources;
+  runtimeTableIndex: RuntimeTableIndex | undefined;
+  freeOperationOverlay: FreeOperationExecutionOverlay | undefined;
+  maxQueryResults: number | undefined;
+  collector: ExecutionCollector;
+}
+
 /** Extract the static environment from a full EffectContext. */
 export const toEffectEnv = (ctx: EffectContext): EffectEnv => {
   // Destructure out cursor fields; the rest is the env.
@@ -292,6 +326,34 @@ export const resolveEffectBindings = (env: EffectEnv, cursor: EffectCursor): Rea
     return { ...mp, ...cursor.bindings };
   }
   return cursor.bindings;
+};
+
+export const createMutableReadScope = (env: EffectEnv, cursor: EffectCursor): MutableReadScope => ({
+  def: env.def,
+  adjacencyGraph: env.adjacencyGraph,
+  state: cursor.state,
+  activePlayer: env.activePlayer,
+  actorPlayer: env.actorPlayer,
+  bindings: resolveEffectBindings(env, cursor),
+  resources: env.resources,
+  runtimeTableIndex: env.runtimeTableIndex,
+  freeOperationOverlay: env.freeOperationOverlay,
+  maxQueryResults: env.maxQueryResults,
+  collector: env.collector,
+});
+
+export const updateReadScope = (
+  scope: MutableReadScope,
+  cursor: EffectCursor,
+  env: EffectEnv,
+): void => {
+  scope.state = cursor.state;
+  scope.bindings = resolveEffectBindings(env, cursor);
+};
+
+export const updateReadScopeRaw = (scope: MutableReadScope, cursor: EffectCursor): void => {
+  scope.state = cursor.state;
+  scope.bindings = cursor.bindings;
 };
 
 /**

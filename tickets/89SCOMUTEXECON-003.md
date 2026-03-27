@@ -17,18 +17,30 @@
 3. Handler type currently receives `(effect, env, cursor, budget, applyBatch)` — **confirmed**. Adding `scope: MutableReadScope` as a 6th parameter.
 4. Simple handlers (effects-binding.ts, effects-var.ts, effects-resource.ts, effects-reveal.ts) use `mergeToEvalContext` and/or `mergeToReadContext` with straightforward patterns — **confirmed**.
 5. Complex handlers (effects-control.ts, effects-choice.ts, effects-subset.ts, effects-token.ts) have nested iteration, recursive dispatch, or multi-site merge calls — deferred to ticket 004.
+6. Ticket `002` proved the `MutableReadScope` foundation and the fixed-shape `ReadContext` contract, but it did **not** prove that adding `scope` as a sixth parameter to every handler is the cleanest long-term handler API — **confirmed architectural caution**.
 
 ## Architecture Check
 
-1. Adding `scope` to the handler signature is a clean extension — no shims. All handlers receive scope from dispatch; simple handlers use it immediately, complex handlers use it in ticket 004.
-2. Game-agnostic: scope carries the same engine-internal context as before, just reused instead of recreated.
-3. No backwards-compatibility: `mergeToEvalContext`/`mergeToReadContext` calls are removed from migrated handlers. They remain available (temporarily) for handlers migrated in ticket 004.
+1. This ticket must treat handler-signature expansion as a design decision to re-justify during implementation, not as a foregone conclusion. The cleaner outcome may still be to keep the mutable scope local to dispatch/eval boundaries if that avoids widening every handler interface.
+2. If the implementation does widen the handler signature, it must do so because that option is measurably cleaner than localized helper updates, not just because the spec sequence originally assumed it.
+3. Game-agnostic: scope carries the same engine-internal context as before, just reused instead of recreated.
+4. No backwards-compatibility: `mergeToEvalContext`/`mergeToReadContext` calls are removed from migrated handlers. They remain available (temporarily) for handlers migrated in ticket 004.
+
+## Architectural Note
+
+Before changing `effect-registry.ts`, re-evaluate whether the ideal architecture is:
+
+1. A widened handler contract that passes `scope` into every handler.
+2. A dispatch-local eval helper layer that reuses one mutable scope without widening every handler signature.
+3. A mixed approach where only the hot handlers that truly benefit receive `scope`.
+
+Default recommendation: prefer the narrowest interface expansion that still removes the hot-path allocations cleanly.
 
 ## What to Change
 
-### 1. Update handler type signature in `effect-registry.ts`
+### 1. Reassess the handler-boundary design before editing `effect-registry.ts`
 
-Add `scope: MutableReadScope` as the 6th parameter to the `EffectHandler` type.
+Choose the narrowest clean architecture that removes the hot-path bridge allocations. Do **not** assume upfront that all handlers must receive `scope`.
 
 ### 2. Create scope in `applyEffectsWithBudgetState` (effect-dispatch.ts)
 
@@ -56,9 +68,9 @@ Replace `mergeToEvalContext(env, cursor)` and `mergeToReadContext(env, cursor)` 
 
 Replace `mergeToEvalContext(env, cursor)` calls with `scope`. Remove merge import.
 
-### 8. Update remaining handler files to accept (but not yet use) scope
+### 8. If the chosen design widens handler signatures, update remaining handler files consistently
 
-`effects-choice.ts`, `effects-control.ts`, `effects-subset.ts`, `effects-token.ts`, `effects-turn-flow.ts` — add `scope` parameter to handler function signatures. These files continue to call `mergeToEvalContext`/`mergeToReadContext` internally until ticket 004.
+`effects-choice.ts`, `effects-control.ts`, `effects-subset.ts`, `effects-token.ts`, `effects-turn-flow.ts` — only accept a new `scope` parameter if step 1 concludes that widening the handler contract is the cleanest design. Otherwise, keep those signatures unchanged and localize the reuse strategy.
 
 ## Files to Touch
 
@@ -99,12 +111,12 @@ Replace `mergeToEvalContext(env, cursor)` calls with `scope`. Remove merge impor
 
 ### Invariants
 
-1. Handler type signature includes `scope: MutableReadScope` as 6th parameter across ALL handler files.
+1. The chosen dispatch/eval architecture is explicitly justified in the implementation notes, especially if it widens the handler contract.
 2. `applyEffectsWithBudgetState` creates exactly ONE `MutableReadScope` per invocation and calls `updateReadScope` before each handler dispatch.
 3. Migrated handlers (binding, var, resource, reveal) do NOT import or call `mergeToEvalContext`/`mergeToReadContext`.
-4. Non-migrated handlers (choice, control, subset, token, turn-flow) still call merge functions — they accept but do not use the `scope` parameter.
+4. If non-migrated handlers receive `scope`, that temporary widening is intentional and documented; otherwise their signatures remain unchanged.
 5. External contract unchanged: `applyMove(state) -> newState` remains immutable.
-6. Scope does not escape handler calls (no storing in closures, return values, or result objects).
+6. Scope does not escape handler calls or dispatch-local helper boundaries (no storing in closures, return values, or result objects).
 
 ## Test Plan
 

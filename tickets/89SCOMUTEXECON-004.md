@@ -18,18 +18,29 @@ After ticket 003, the complex effect handlers (effects-choice.ts, effects-contro
 4. `effects-token.ts` uses `mergeToReadContext`, `resolveEffectBindings`, and `toTraceProvenanceContext` — **confirmed**. Token handlers resolve zone/token references.
 5. Nested scope isolation: each `applyEffectsWithBudgetState` call already creates its own scope (from ticket 003). Inner handlers see the inner scope, not the parent — **confirmed** by the workCursor nesting pattern.
 6. 0 context retention sites across all handler files — **confirmed** from spec's risk assessment. All contexts are ephemeral.
+7. Ticket `002` landed the mutable-scope foundation but explicitly did **not** settle that “every handler should receive `scope`” is the ideal long-term interface — **confirmed architectural caution**.
 
 ## Architecture Check
 
-1. Complex handlers use scope the same way as simple handlers — the difference is they have more call sites and some handlers call `resolveEffectBindings` directly for binding manipulation. These calls may remain where they construct custom binding objects outside the scope's binding merge.
+1. This ticket must not assume that complex handlers should blindly “use scope the same way as simple handlers.” For nested control-flow and custom-binding cases, a dispatch-local helper or localized scope reuse may be cleaner than a globally widened handler API.
 2. Nested forEach/let/reduce bodies dispatch via `applyEffectsWithBudgetState`, which creates its own `MutableReadScope`. The parent scope is not visible to the child — same isolation as the existing workCursor pattern.
-3. After migration, `mergeToEvalContext` and `mergeToReadContext` have zero callers and are deleted (Foundation 9: no deprecated fallbacks).
+3. After migration, `mergeToEvalContext` and `mergeToReadContext` should have zero callers and be deleted (Foundation 9: no deprecated fallbacks), but only after the chosen architecture is shown to be cleaner than the current handler boundary.
+
+## Architectural Note
+
+Before migrating the complex handlers, re-evaluate whether the ideal architecture is:
+
+1. Reusing one mutable scope that is threaded through all handlers.
+2. Keeping complex-handler signatures narrow and introducing small local helpers that update a shared scope only where evaluation occurs.
+3. Using specialized per-handler mutable eval helpers for the deeply nested control/token cases.
+
+Default recommendation: prefer the smallest interface surface that still removes `mergeToEvalContext` / `mergeToReadContext` cleanly.
 
 ## What to Change
 
-### 1. Migrate `effects-choice.ts`
+### 1. Reassess the per-handler migration shape before replacing merge calls
 
-Replace `mergeToReadContext(env, cursor)` calls with `scope`. The `toTraceProvenanceContext` calls remain (they serve a different purpose — trace emission, not eval context).
+For each complex handler, decide whether direct `scope` usage is actually cleaner than a small local helper around evaluation.
 
 ### 2. Migrate `effects-control.ts`
 
@@ -86,7 +97,7 @@ If test helpers reference `mergeToEvalContext`/`mergeToReadContext`, remove thos
 ### Invariants
 
 1. `mergeToEvalContext` and `mergeToReadContext` do not exist in the codebase (zero grep matches across `packages/engine/src/`).
-2. ALL effect handler files use `scope` parameter instead of creating ReadContext objects.
+2. The final handler/eval architecture is explicitly justified; if some handlers do not directly receive `scope`, that is acceptable as long as the merge helpers are gone and the replacement is cleaner.
 3. Nested scope isolation: each `applyEffectsWithBudgetState` invocation creates its own `MutableReadScope`.
 4. External contract unchanged: `applyMove(state) -> newState` remains immutable.
 5. `resolveEffectBindings` remains available for custom binding construction where needed.

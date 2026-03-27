@@ -2,9 +2,9 @@ import type { ScopedVarNameExpr } from './types.js';
 
 export interface ScopedVarNameRuntimeContext {
   readonly bindings: Readonly<Record<string, unknown>>;
-  readonly freeOperationOverlay?: {
+  readonly freeOperationOverlay: {
     readonly grantContext?: Readonly<Record<string, unknown>>;
-  };
+  } | undefined;
 }
 
 export const isDynamicScopedVarNameExpr = (expr: ScopedVarNameExpr): expr is Exclude<ScopedVarNameExpr, string> =>

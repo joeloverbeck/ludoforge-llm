@@ -32,24 +32,30 @@ export interface ReadContext {
   readonly actorPlayer: PlayerId;
   readonly bindings: Readonly<Record<string, unknown>>;
   readonly resources: EvalRuntimeResources;
-  readonly runtimeTableIndex?: RuntimeTableIndex;
-  readonly freeOperationOverlay?: FreeOperationExecutionOverlay;
-  readonly maxQueryResults?: number;
+  readonly runtimeTableIndex: RuntimeTableIndex | undefined;
+  readonly freeOperationOverlay: FreeOperationExecutionOverlay | undefined;
+  readonly maxQueryResults: number | undefined;
   readonly collector: ExecutionCollector;
 }
 
 
-export type EvalContextInput = Omit<ReadContext, 'collector'> & {
+export type EvalContextInput = Omit<ReadContext, 'collector' | 'runtimeTableIndex' | 'freeOperationOverlay' | 'maxQueryResults'> & {
   readonly resources: EvalRuntimeResources;
+  readonly runtimeTableIndex?: RuntimeTableIndex | undefined;
+  readonly freeOperationOverlay?: FreeOperationExecutionOverlay | undefined;
+  readonly maxQueryResults?: number | undefined;
 };
 
 export function createEvalContext(input: EvalContextInput): ReadContext {
-  // Single spread: input already contains all ReadContext fields except collector.
-  // Previous version destructured { resources, ...ctx } then re-spread ctx,
-  // creating an unnecessary intermediate object on every call.
-  return { ...input, collector: input.resources.collector };
+  return {
+    ...input,
+    runtimeTableIndex: input.runtimeTableIndex,
+    freeOperationOverlay: input.freeOperationOverlay,
+    maxQueryResults: input.maxQueryResults,
+    collector: input.resources.collector,
+  };
 }
 
-export function getMaxQueryResults(ctx: Pick<ReadContext, 'maxQueryResults'>): number {
+export function getMaxQueryResults(ctx: { readonly maxQueryResults?: number | undefined }): number {
   return ctx.maxQueryResults ?? DEFAULT_MAX_QUERY_RESULTS;
 }

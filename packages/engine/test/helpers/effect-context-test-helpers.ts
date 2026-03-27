@@ -35,14 +35,14 @@ interface EffectContextTestOptions {
   readonly actorPlayer?: PlayerId;
   readonly decisionAuthorityPlayer?: PlayerId;
   readonly bindings?: Readonly<Record<string, unknown>>;
-  readonly runtimeTableIndex?: RuntimeTableIndex;
+  readonly runtimeTableIndex?: RuntimeTableIndex | undefined;
   readonly moveParams?: Readonly<Record<string, MoveParamValue>>;
   readonly traceContext?: EffectTraceContext;
   readonly effectPath?: string;
   readonly maxEffectOps?: number;
   readonly freeOperation?: boolean;
-  readonly freeOperationOverlay?: FreeOperationExecutionOverlay;
-  readonly maxQueryResults?: number;
+  readonly freeOperationOverlay?: FreeOperationExecutionOverlay | undefined;
+  readonly maxQueryResults?: number | undefined;
   readonly transientDecisionSelections?: Readonly<Record<string, readonly MoveParamScalar[]>>;
   readonly collector?: ExecutionCollector;
   readonly resources?: RuntimeEffectContextOptions['resources'];

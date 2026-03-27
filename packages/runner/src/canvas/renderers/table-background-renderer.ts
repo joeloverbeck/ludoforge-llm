@@ -1,7 +1,7 @@
 import { Graphics, type Container } from 'pixi.js';
 
 import type { TableBackgroundConfig } from '../../config/visual-config-types.js';
-import { parseHexColor } from './shape-utils.js';
+import { parseHexColor } from '../../rendering/color-utils.js';
 import { safeDestroyChildren } from './safe-destroy.js';
 
 export interface TableBounds {

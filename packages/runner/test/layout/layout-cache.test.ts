@@ -228,6 +228,33 @@ describe('layout-cache', () => {
     expect(result.worldLayout.positions.get('a')).toEqual({ x: 100, y: 200 });
     expect(result.worldLayout.positions.get('b')).toBeDefined();
   });
+
+  it('excludes connection-shaped zones from computed layout positions', () => {
+    const def = makeDef('connection-layout', [
+      zone('alpha:none', { zoneKind: 'board', adjacentTo: [{ to: 'loc-alpha-beta:none' }] }),
+      zone('beta:none', { zoneKind: 'board', adjacentTo: [{ to: 'loc-alpha-beta:none' }] }),
+      zone('loc-alpha-beta:none', {
+        zoneKind: 'board',
+        adjacentTo: [{ to: 'alpha:none' }, { to: 'beta:none' }],
+      }),
+    ], 'graph');
+
+    const result = getOrComputeLayout(def, new VisualConfigProvider({
+      version: 1,
+      zones: {
+        categoryStyles: {
+          loc: { shape: 'connection', connectionStyleKey: 'highway' },
+        },
+        overrides: {
+          'loc-alpha-beta:none': { shape: 'connection', connectionStyleKey: 'highway' },
+        },
+      },
+    }));
+
+    expect(result.worldLayout.positions.get('alpha:none')).toBeDefined();
+    expect(result.worldLayout.positions.get('beta:none')).toBeDefined();
+    expect(result.worldLayout.positions.get('loc-alpha-beta:none')).toBeUndefined();
+  });
 });
 
 function makeDef(

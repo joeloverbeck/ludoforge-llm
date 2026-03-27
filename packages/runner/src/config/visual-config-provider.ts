@@ -124,6 +124,18 @@ export interface EdgeStrokeStyle {
   readonly alpha: number;
 }
 
+export const DEFAULT_EDGE_STYLE = {
+  color: '#ffffff',
+  width: 3.5,
+  alpha: 0.85,
+} as const satisfies ResolvedEdgeVisual;
+
+export const HIGHLIGHTED_EDGE_STYLE = {
+  color: '#ffffff',
+  width: 4.5,
+  alpha: 1.0,
+} as const satisfies ResolvedEdgeVisual;
+
 export interface ResolvedZoneHighlightPolicy {
   readonly enabled: boolean;
   readonly includeKinds: readonly ZoneHighlightSourceKind[];
@@ -335,11 +347,7 @@ export class VisualConfigProvider {
   }
 
   resolveEdgeStyle(edgeCategory: string | null, isHighlighted: boolean): ResolvedEdgeVisual {
-    const resolved: ResolvedEdgeVisual = {
-      color: '#6b7280',
-      width: 1.5,
-      alpha: 0.3,
-    };
+    const resolved: ResolvedEdgeVisual = { ...DEFAULT_EDGE_STYLE };
 
     applyEdgeStyle(resolved, this.config?.edges?.default);
 
@@ -349,11 +357,7 @@ export class VisualConfigProvider {
     applyEdgeStyle(resolved, categoryStyle);
 
     if (isHighlighted) {
-      applyEdgeStyle(resolved, {
-        color: '#93c5fd',
-        width: 3,
-        alpha: 0.7,
-      });
+      applyEdgeStyle(resolved, HIGHLIGHTED_EDGE_STYLE);
       applyEdgeStyle(resolved, this.config?.edges?.highlighted);
     }
 

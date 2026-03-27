@@ -355,14 +355,11 @@ describe('visual-config.yaml files', () => {
     expect(parsed.zones?.tokenLayouts?.assignments?.byCategory?.loc).toBeUndefined();
 
     expect(parsed.edges?.default).toEqual({
-      color: '#6b7280',
-      width: 1.5,
-      alpha: 0.3,
+      color: '#ffffff',
+      width: 3.5,
+      alpha: 0.85,
     });
-    expect(parsed.edges?.categoryStyles?.loc).toEqual({
-      color: '#8b7355',
-      width: 2,
-    });
+    expect(parsed.edges?.categoryStyles).toBeUndefined();
     expect(parsed.factions).toMatchObject({
       us: { color: '#808000', displayName: 'United States' },
       arvn: { color: '#ffff00', displayName: 'ARVN' },

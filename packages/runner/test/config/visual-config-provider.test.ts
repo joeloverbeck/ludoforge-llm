@@ -879,14 +879,14 @@ describe('VisualConfigProvider', () => {
     const provider = new VisualConfigProvider(null);
 
     expect(provider.resolveEdgeStyle(null, false)).toEqual({
-      color: '#6b7280',
-      width: 1.5,
-      alpha: 0.3,
+      color: '#ffffff',
+      width: 3.5,
+      alpha: 0.85,
     });
     expect(provider.resolveEdgeStyle(null, true)).toEqual({
-      color: '#93c5fd',
-      width: 3,
-      alpha: 0.7,
+      color: '#ffffff',
+      width: 4.5,
+      alpha: 1.0,
     });
   });
 
@@ -903,7 +903,7 @@ describe('VisualConfigProvider', () => {
     expect(provider.resolveEdgeStyle('loc', false)).toEqual({
       color: '#8b7355',
       width: 2,
-      alpha: 0.3,
+      alpha: 0.85,
     });
   });
 
@@ -923,6 +923,16 @@ describe('VisualConfigProvider', () => {
       color: '#ff00ff',
       width: 5,
       alpha: 0.9,
+    });
+  });
+
+  it('resolves adjacency edge styles from the real FITL visual config', () => {
+    const provider = new VisualConfigProvider(loadVisualConfig('data/games/fire-in-the-lake/visual-config.yaml'));
+
+    expect(provider.resolveEdgeStyle(null, false)).toEqual({
+      color: '#ffffff',
+      width: 3.5,
+      alpha: 0.85,
     });
   });
 

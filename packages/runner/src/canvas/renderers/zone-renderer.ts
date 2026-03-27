@@ -1,11 +1,11 @@
 import { BitmapText, Container, Graphics, Rectangle } from 'pixi.js';
 
 import type { Position } from '../geometry';
+import { parseHexColor } from '../../rendering/color-utils.js';
 import type { ZoneRenderer } from './renderer-types';
 import { ContainerPool } from './container-pool';
 import {
   drawZoneShape,
-  parseHexColor,
   resolveVisualDimensions,
 } from './shape-utils';
 import {

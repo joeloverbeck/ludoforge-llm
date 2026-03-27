@@ -1,9 +1,9 @@
 import { type BitmapText, Graphics } from 'pixi.js';
 
 import type { PresentationZoneRenderSpec } from '../../presentation/presentation-scene.js';
+import { parseHexColor } from '../../rendering/color-utils.js';
 import { LABEL_FONT_NAME, STROKE_LABEL_FONT_NAME } from '../text/bitmap-font-registry.js';
 import { createManagedBitmapText } from '../text/bitmap-text-runtime.js';
-import { parseHexColor } from './shape-utils.js';
 
 type PresentationZoneLabelSpec = PresentationZoneRenderSpec['markersLabel'];
 type PresentationZoneBadgeSpec = NonNullable<PresentationZoneRenderSpec['badge']>;

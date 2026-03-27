@@ -1,17 +1,18 @@
 import { Container, Graphics, Polygon, type BitmapText } from 'pixi.js';
 
 import type { VisualConfigProvider } from '../../config/visual-config-provider.js';
+import { sampleResolvedRoutePath } from '../../presentation/connection-route-geometry.js';
+import type { ConnectionRouteNode, JunctionNode } from '../../presentation/connection-route-resolver.js';
 import type { Position } from '../geometry.js';
 import {
   normalize,
   perpendicular,
-  quadraticBezierPoint,
 } from '../geometry/bezier-utils.js';
 import {
   STROKE_LABEL_FONT_NAME,
 } from '../text/bitmap-font-registry.js';
 import { createManagedBitmapText, destroyManagedBitmapText } from '../text/bitmap-text-runtime.js';
-import { parseHexColor } from './shape-utils.js';
+import { parseHexColor } from '../../rendering/color-utils.js';
 import { safeDestroyDisplayObject } from './safe-destroy.js';
 import {
   createZoneBadgeVisuals,
@@ -21,7 +22,6 @@ import {
   type ZoneBadgeVisuals,
 } from './zone-presentation-visuals.js';
 import type { ConnectionRouteRenderer } from './renderer-types.js';
-import type { ConnectionRouteNode, JunctionNode } from '../../presentation/connection-route-resolver.js';
 
 interface ConnectionRouteRendererOptions {
   readonly junctionRadius?: number;
@@ -119,7 +119,7 @@ export function createConnectionRouteRenderer(
           stroke: resolvedStroke,
         });
 
-        drawRouteCurve(slot.curve, routeGeometry);
+        drawRouteCurve(slot.curve, routeGeometry, route.spurs);
 
         slot.root.visible = true;
         slot.root.renderable = true;
@@ -337,6 +337,7 @@ function isDefaultZoneStroke(stroke: {
 function drawRouteCurve(
   graphics: Graphics,
   geometry: RouteGeometry,
+  spurs: ConnectionRouteNode['spurs'],
 ): void {
   const { drawMode, points, segments, stroke } = geometry;
   graphics.clear();
@@ -359,6 +360,7 @@ function drawRouteCurve(
         segment.end.y,
       );
     }
+    drawSpurSegments(graphics, spurs);
     graphics.stroke({
       color: stroke.color,
       width: stroke.width,
@@ -380,6 +382,7 @@ function drawRouteCurve(
     }
     graphics.lineTo(point.x, point.y);
   }
+  drawSpurSegments(graphics, spurs);
 
   graphics.stroke({
     color: stroke.color,
@@ -400,7 +403,7 @@ function resolveRouteGeometry(
   const { hitAreaPadding, curveSegments, wavySegments, stroke } = options;
   const routePoints = route.path.map((point) => point.position);
   const segmentCommands = buildSegmentCommands(route);
-  const sampledPath = sampleRoutePath(routePoints, route.segments, curveSegments);
+  const sampledPath = sampleResolvedRoutePath(routePoints, route.segments, curveSegments);
   const renderedPoints = stroke.wavy
     ? samplePolylineWavePoints(sampledPath, stroke, wavySegments)
     : sampledPath;
@@ -448,44 +451,11 @@ function buildSegmentCommands(
   return commands;
 }
 
-function sampleRoutePath(
-  points: readonly Position[],
-  segments: ConnectionRouteNode['segments'],
-  curveSegments: number,
-): readonly Position[] {
-  if (points.length === 0) {
-    return [];
+function drawSpurSegments(graphics: Graphics, spurs: ConnectionRouteNode['spurs']): void {
+  for (const spur of spurs) {
+    graphics.moveTo(spur.from.x, spur.from.y);
+    graphics.lineTo(spur.to.x, spur.to.y);
   }
-
-  const sampled: Position[] = [points[0] ?? { x: 0, y: 0 }];
-  const segmentCount = Math.max(2, Math.trunc(curveSegments));
-
-  for (let index = 0; index < segments.length; index += 1) {
-    const segment = segments[index];
-    const start = points[index];
-    const end = points[index + 1];
-    if (segment === undefined || start === undefined || end === undefined) {
-      continue;
-    }
-
-    if (segment.kind === 'straight') {
-      sampled.push(end);
-      continue;
-    }
-
-    for (let sampleIndex = 1; sampleIndex <= segmentCount; sampleIndex += 1) {
-      sampled.push(
-        quadraticBezierPoint(
-          sampleIndex / segmentCount,
-          start,
-          segment.controlPoint.position,
-          end,
-        ),
-      );
-    }
-  }
-
-  return sampled;
 }
 
 function samplePolylineWavePoints(

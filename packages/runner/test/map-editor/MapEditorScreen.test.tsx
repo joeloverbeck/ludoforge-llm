@@ -143,6 +143,7 @@ describe('MapEditorScreen', () => {
     expect(testDoubles.createEditorAdjacencyRenderer).toHaveBeenCalledWith(
       editorCanvas.layers.adjacency,
       store,
+      { tag: 'provider' },
     );
     expect(testDoubles.createEditorZoneRenderer).toHaveBeenCalledWith(
       editorCanvas.layers.zone,

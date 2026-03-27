@@ -53,6 +53,7 @@ export interface AdjacencyRenderer {
   update(
     adjacencies: readonly PresentationAdjacencyNode[],
     positions: ReadonlyMap<string, Position>,
+    zones: readonly PresentationZoneNode[],
   ): void;
   destroy(): void;
 }

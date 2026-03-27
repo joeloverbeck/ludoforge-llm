@@ -67,18 +67,20 @@ export function computeLayout(
   mode: LayoutMode,
   options?: ComputeLayoutOptions,
 ): LayoutResult {
+  const resolvedBoardZones = options?.boardZones ?? partitionZones(def).board;
+  const resolvedPrimaryZones = options?.boardZones ?? selectPrimaryLayoutZones(def);
   switch (mode) {
     case 'graph':
-      return computeGraphLayout(def, options?.layoutHints ?? null);
+      return computeGraphLayout(resolvedBoardZones, options?.layoutHints ?? null);
     case 'table':
       return computeTableLayout(
-        options?.boardZones ?? selectPrimaryLayoutZones(def),
+        resolvedPrimaryZones,
         options?.tableZoneRoles ?? null,
       );
     case 'track':
-      return computeTrackLayout(def);
+      return computeTrackLayout(resolvedPrimaryZones);
     case 'grid':
-      return computeGridLayout(def);
+      return computeGridLayout(resolvedPrimaryZones);
   }
 }
 
@@ -120,11 +122,10 @@ function computeTableLayout(
 }
 
 function computeGraphLayout(
-  def: GameDef,
+  boardZones: readonly ZoneDef[],
   layoutHints: LayoutHints | null,
 ): LayoutResult {
-  const { board } = partitionZones(def);
-  const graph = buildLayoutGraph(board);
+  const graph = buildLayoutGraph(boardZones);
   const nodeIDs = [...graph.nodes()].sort((left, right) => left.localeCompare(right));
 
   if (nodeIDs.length === 0) {

@@ -110,6 +110,8 @@ Focused unit tests that call these helpers directly must also be updated to matc
 
 ## Outcome
 
+- Outcome amended: 2026-03-27
+
 - **Completion date**: 2026-03-26
 - **What actually changed**: Narrowed `scoped-var-runtime-access.ts` helper contracts to `ReadContext` fragments plus explicit `mode`, updated the direct resolver callers in `effects-var.ts`, `effects-resource.ts`, and `effect-compiler-codegen.ts`, strengthened `packages/engine/test/unit/scoped-var-runtime-access.test.ts` to exercise the narrower contracts directly, and updated `packages/engine/test/unit/kernel/effect-resolver-normalization-guard.test.ts` so the architecture guard accepts the cleaner explicit-`mode` threading pattern.
 - **Deviations from original plan**: The original ticket understated scope. `readScopedVarValue` and `readScopedIntVarValue` were narrowed to `Pick<ReadContext, 'state'>` for cleaner architecture even without an allocation win, direct external callers of `resolveRuntimeScopedEndpoint*` had to be updated in the same ticket because the exported signature changed, and active ticket dependency metadata in `85COMEFFCONMIG-001` plus preexisting `85COMEFFCONMIG-002` had to be corrected to satisfy the repo's ticket-integrity guard before full tests could run.

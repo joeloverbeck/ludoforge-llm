@@ -3,6 +3,8 @@ import { Circle, Container, Graphics, Polygon } from 'pixi.js';
 
 import { safeDestroyChildren, safeDestroyDisplayObject } from '../canvas/renderers/safe-destroy.js';
 import { resolveVisualDimensions } from '../canvas/renderers/shape-utils.js';
+import { STROKE_LABEL_FONT_NAME } from '../canvas/text/bitmap-font-registry.js';
+import { createManagedBitmapText, destroyManagedBitmapText } from '../canvas/text/bitmap-text-runtime.js';
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import {
   ZONE_RENDER_HEIGHT,
@@ -14,13 +16,15 @@ import {
   attachControlPointDragHandlers,
   attachZoneEdgeAnchorDragHandlers,
 } from './map-editor-drag.js';
-import { resolveRouteGeometry } from './map-editor-route-geometry.js';
+import { resolveRouteGeometry, type ResolvedEditorRouteSegment } from './map-editor-route-geometry.js';
 import { resolveMapEditorZoneVisuals } from './map-editor-zone-visuals.js';
 
 const HANDLE_STROKE_COLOR = 0xffffff;
 const HANDLE_RADIUS = 8;
 const CONTROL_HANDLE_SIZE = 10;
 const TANGENT_LINE_ALPHA = 0.5;
+const ANGLE_LABEL_OFFSET_X = 18;
+const ANGLE_LABEL_OFFSET_Y = -18;
 const DEFAULT_ZONE_DIMENSIONS = {
   width: ZONE_RENDER_WIDTH,
   height: ZONE_RENDER_HEIGHT,
@@ -45,7 +49,25 @@ export function createEditorHandleRenderer(
   root.eventMode = 'passive';
   root.interactiveChildren = true;
   handleLayer.addChild(root);
+  const overlayRoot = new Container();
+  overlayRoot.eventMode = 'none';
+  overlayRoot.interactiveChildren = false;
+  handleLayer.addChild(overlayRoot);
+  const angleLabel = createManagedBitmapText({
+    parent: overlayRoot,
+    text: '',
+    style: {
+      fontName: STROKE_LABEL_FONT_NAME,
+      fontSize: 12,
+      fill: '#f8fafc',
+      stroke: { color: '#000000', width: 3 },
+    },
+    anchor: { x: 0.5, y: 0.5 },
+    visible: false,
+    renderable: false,
+  });
   let cleanupDisposers: Array<() => void> = [];
+  let tangentGraphics: Graphics[] = [];
 
   const releaseInteractionDisposers = (): void => {
     for (const dispose of cleanupDisposers) {
@@ -57,6 +79,7 @@ export function createEditorHandleRenderer(
   const render = (state: ReturnType<MapEditorStoreApi['getState']>): void => {
     releaseInteractionDisposers();
     safeDestroyChildren(root, { children: true });
+    tangentGraphics = [];
 
     const routeId = state.selectedRouteId;
     if (routeId === null) {
@@ -79,17 +102,9 @@ export function createEditorHandleRenderer(
       }
 
       const tangent = new Graphics();
-      tangent
-        .moveTo(segment.start.x, segment.start.y)
-        .lineTo(segment.controlPoint.position.x, segment.controlPoint.position.y)
-        .moveTo(segment.end.x, segment.end.y)
-        .lineTo(segment.controlPoint.position.x, segment.controlPoint.position.y)
-        .stroke({
-          color: HANDLE_STROKE_COLOR,
-          width: 1,
-          alpha: TANGENT_LINE_ALPHA,
-        });
+      syncTangentGraphic(tangent, segment);
       root.addChild(tangent);
+      tangentGraphics.push(tangent);
     }
 
     for (let pointIndex = 0; pointIndex < geometry.points.length; pointIndex += 1) {
@@ -212,35 +227,116 @@ export function createEditorHandleRenderer(
     }
   };
 
+  const syncTangentsDuringDrag = (state: ReturnType<MapEditorStoreApi['getState']>): boolean => {
+    const routeId = state.selectedRouteId;
+    if (routeId === null) {
+      return false;
+    }
+
+    const route = state.connectionRoutes.get(routeId);
+    if (route === undefined) {
+      return false;
+    }
+
+    const geometry = resolveRouteGeometry(route, state.zonePositions, state.connectionAnchors, zoneVisuals);
+    if (geometry === null) {
+      return false;
+    }
+
+    const quadraticSegments = geometry.segments.filter((segment) => segment.kind === 'quadratic');
+    if (quadraticSegments.length !== tangentGraphics.length) {
+      return false;
+    }
+
+    for (let index = 0; index < quadraticSegments.length; index += 1) {
+      const segment = quadraticSegments[index];
+      const tangent = tangentGraphics[index];
+      if (segment === undefined || tangent === undefined) {
+        return false;
+      }
+      syncTangentGraphic(tangent, segment);
+    }
+
+    return true;
+  };
+
+  const syncAngleIndicator = (state: ReturnType<MapEditorStoreApi['getState']>): void => {
+    const dragPreview = state.dragPreview;
+    if (
+      dragPreview?.kind !== 'zone-edge-anchor'
+      || dragPreview.routeId !== state.selectedRouteId
+      || dragPreview.angle === null
+    ) {
+      angleLabel.visible = false;
+      angleLabel.renderable = false;
+      return;
+    }
+
+    angleLabel.text = `${Math.round(dragPreview.angle)}deg`;
+    angleLabel.position.set(
+      dragPreview.handlePosition.x + ANGLE_LABEL_OFFSET_X,
+      dragPreview.handlePosition.y + ANGLE_LABEL_OFFSET_Y,
+    );
+    angleLabel.visible = true;
+    angleLabel.renderable = true;
+  };
+
   render(store.getState());
+  syncAngleIndicator(store.getState());
 
   const unsubscribe = store.subscribe((state, previousState) => {
     const routeSelectionChanged = state.selectedRouteId !== previousState.selectedRouteId;
     const documentChanged = state.zonePositions !== previousState.zonePositions
       || state.connectionAnchors !== previousState.connectionAnchors
       || state.connectionRoutes !== previousState.connectionRoutes;
+    const dragPreviewChanged = state.dragPreview !== previousState.dragPreview;
     const dragEnded = previousState.isDragging && !state.isDragging;
 
     if (
       !routeSelectionChanged
       && !documentChanged
+      && !dragPreviewChanged
       && !dragEnded
     ) {
       return;
     }
 
     if (!routeSelectionChanged && state.isDragging) {
+      if (!syncTangentsDuringDrag(state)) {
+        render(state);
+      }
+      syncAngleIndicator(state);
       return;
     }
 
     render(state);
+    syncAngleIndicator(state);
   });
 
   return {
     destroy(): void {
       unsubscribe();
       releaseInteractionDisposers();
+      destroyManagedBitmapText(angleLabel);
       safeDestroyDisplayObject(root, { children: true });
+      safeDestroyDisplayObject(overlayRoot, { children: true });
     },
   };
+}
+
+function syncTangentGraphic(
+  tangent: Graphics,
+  segment: Extract<ResolvedEditorRouteSegment, { kind: 'quadratic' }>,
+): void {
+  tangent.clear();
+  tangent
+    .moveTo(segment.start.x, segment.start.y)
+    .lineTo(segment.controlPoint.position.x, segment.controlPoint.position.y)
+    .moveTo(segment.end.x, segment.end.y)
+    .lineTo(segment.controlPoint.position.x, segment.controlPoint.position.y)
+    .stroke({
+      color: HANDLE_STROKE_COLOR,
+      width: 1,
+      alpha: TANGENT_LINE_ALPHA,
+    });
 }

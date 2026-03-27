@@ -1,8 +1,10 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GameDef } from '@ludoforge/engine/runtime';
 import type { Container } from 'pixi.js';
 
 const {
+  destroyManagedBitmapText,
+  MockBitmapText,
   MockContainer,
   MockCircle,
   MockGraphics,
@@ -97,6 +99,17 @@ const {
     }
   }
 
+  class MockPoint {
+    x = 0;
+
+    y = 0;
+
+    set(x: number, y: number): void {
+      this.x = x;
+      this.y = y;
+    }
+  }
+
   class HoistedMockGraphics extends HoistedMockContainer {
     strokeStyle: unknown;
 
@@ -109,6 +122,13 @@ const {
     lineToArgs: Array<[number, number]> = [];
 
     moveToArgs: Array<[number, number]> = [];
+
+    clear(): this {
+      this.strokeStyle = undefined;
+      this.lineToArgs = [];
+      this.moveToArgs = [];
+      return this;
+    }
 
     moveTo(x: number, y: number): this {
       this.moveToArgs.push([x, y]);
@@ -153,7 +173,23 @@ const {
     constructor(public readonly points: number[]) {}
   }
 
+  class HoistedMockBitmapText extends HoistedMockContainer {
+    text: string;
+
+    style: unknown;
+
+    anchor = new MockPoint();
+
+    constructor(options: { text: string; style?: unknown }) {
+      super();
+      this.text = options.text;
+      this.style = options.style;
+    }
+  }
+
   return {
+    destroyManagedBitmapText: vi.fn(),
+    MockBitmapText: HoistedMockBitmapText,
     MockContainer: HoistedMockContainer,
     MockCircle: HoistedMockCircle,
     MockGraphics: HoistedMockGraphics,
@@ -168,12 +204,51 @@ vi.mock('pixi.js', () => ({
   Polygon: MockPolygon,
 }));
 
+vi.mock('../../src/canvas/text/bitmap-font-registry.js', () => ({
+  STROKE_LABEL_FONT_NAME: 'ludoforge-label-stroke',
+}));
+
+vi.mock('../../src/canvas/text/bitmap-text-runtime.js', () => ({
+  createManagedBitmapText: (options: {
+    text?: string;
+    style: unknown;
+    anchor?: { x: number; y: number };
+    position?: { x: number; y: number };
+    visible?: boolean;
+    renderable?: boolean;
+    parent?: InstanceType<typeof MockContainer>;
+  }) => {
+    const text = new MockBitmapText({ text: options.text ?? '', style: options.style });
+    if (options.anchor !== undefined) {
+      text.anchor.set(options.anchor.x, options.anchor.y);
+    }
+    if (options.position !== undefined) {
+      text.position.set(options.position.x, options.position.y);
+    }
+    if (options.visible !== undefined) {
+      text.visible = options.visible;
+    }
+    if (options.renderable !== undefined) {
+      text.renderable = options.renderable;
+    }
+    text.eventMode = 'none';
+    text.interactiveChildren = false;
+    options.parent?.addChild(text);
+    return text;
+  },
+  destroyManagedBitmapText,
+}));
+
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 import { createMapEditorStore } from '../../src/map-editor/map-editor-store.js';
 import { createEditorHandleRenderer } from '../../src/map-editor/map-editor-handle-renderer.js';
 import type { VisualConfig } from '../../src/map-editor/map-editor-types.js';
 
 describe('createEditorHandleRenderer', () => {
+  beforeEach(() => {
+    destroyManagedBitmapText.mockClear();
+  });
+
   it('renders no handles when no route is selected', () => {
     const fixture = createFixture();
 
@@ -185,9 +260,12 @@ describe('createEditorHandleRenderer', () => {
     );
 
     const root = fixture.handleLayer.children[0] as InstanceType<typeof MockContainer>;
+    const overlayRoot = fixture.handleLayer.children[1] as InstanceType<typeof MockContainer>;
     expect(root.eventMode).toBe('passive');
     expect(root.interactiveChildren).toBe(true);
     expect(root.children).toHaveLength(0);
+    expect(overlayRoot.children).toHaveLength(1);
+    expect(overlayRoot.children[0]).toBeInstanceOf(MockBitmapText);
   });
 
   it('renders point handles, control handles, and tangent lines for the selected route', () => {
@@ -236,6 +314,55 @@ describe('createEditorHandleRenderer', () => {
     expect(updatedAnchorHandle.position).toEqual(expect.objectContaining({ x: 45, y: 25 }));
 
     renderer.destroy();
+  });
+
+  it('updates tangent graphics in place from preview geometry while dragging', () => {
+    const fixture = createFixture();
+
+    createEditorHandleRenderer(
+      fixture.handleLayer as unknown as Container,
+      fixture.store,
+      fixture.gameDef,
+      fixture.provider,
+    );
+
+    fixture.store.getState().selectRoute('route:road');
+
+    const root = fixture.handleLayer.children[0] as InstanceType<typeof MockContainer>;
+    const tangent = root.children[0] as InstanceType<typeof MockGraphics>;
+    const controlHandle = root.children[4] as InstanceType<typeof MockGraphics>;
+
+    fixture.store.getState().beginInteraction();
+    fixture.store.getState().setDragging(true);
+    fixture.store.getState().previewControlPointMove('route:road', 0, { x: 30, y: 10 });
+
+    expect(root.children[0]).toBe(tangent);
+    expect(root.children[4]).toBe(controlHandle);
+    expect(tangent.moveToArgs).toEqual([[0, 0], [40, 20]]);
+    expect(tangent.lineToArgs).toEqual([[30, 10], [30, 10]]);
+  });
+
+  it('still rebuilds handle graphics when document changes outside drag mode', () => {
+    const fixture = createFixture();
+
+    createEditorHandleRenderer(
+      fixture.handleLayer as unknown as Container,
+      fixture.store,
+      fixture.gameDef,
+      fixture.provider,
+    );
+
+    fixture.store.getState().selectRoute('route:road');
+
+    const root = fixture.handleLayer.children[0] as InstanceType<typeof MockContainer>;
+    const tangent = root.children[0] as InstanceType<typeof MockGraphics>;
+    const anchorHandle = root.children[2] as InstanceType<typeof MockGraphics>;
+
+    fixture.store.getState().moveAnchor('anchor:mid', { x: 45, y: 25 });
+
+    const updatedRoot = fixture.handleLayer.children[0] as InstanceType<typeof MockContainer>;
+    expect(updatedRoot.children[0]).not.toBe(tangent);
+    expect(updatedRoot.children[2]).not.toBe(anchorHandle);
   });
 
   it('routes anchor drag interactions through the editor store', () => {
@@ -297,6 +424,175 @@ describe('createEditorHandleRenderer', () => {
     });
     expect(fixture.store.getState().connectionAnchors.has('route:road:endpoint:zone:a:0')).toBe(false);
     expect(fixture.store.getState().undoStack).toHaveLength(1);
+  });
+
+  it('shows and clears an angle label for active zone-edge anchor drags only', () => {
+    const fixture = createFixture({
+      connectionRoutes: {
+        'route:road': {
+          points: [
+            { kind: 'zone', zoneId: 'zone:a' },
+            { kind: 'zone', zoneId: 'zone:b' },
+          ],
+          segments: [{ kind: 'straight' }],
+        },
+      },
+    });
+    const dragSurface = new MockContainer();
+    createEditorHandleRenderer(
+      fixture.handleLayer as unknown as Container,
+      fixture.store,
+      fixture.gameDef,
+      fixture.provider,
+      { dragSurface: dragSurface as unknown as Container },
+    );
+
+    fixture.store.getState().selectRoute('route:road');
+
+    const root = fixture.handleLayer.children[0] as InstanceType<typeof MockContainer>;
+    const overlayRoot = fixture.handleLayer.children[1] as InstanceType<typeof MockContainer>;
+    const zoneHandle = root.children[0] as InstanceType<typeof MockGraphics>;
+    const angleLabel = overlayRoot.children[0] as InstanceType<typeof MockBitmapText>;
+
+    expect(angleLabel.visible).toBe(false);
+    expect(angleLabel.renderable).toBe(false);
+
+    zoneHandle.emit('pointerdown', pointer(0, 0));
+    dragSurface.emit('globalpointermove', pointer(0, -40));
+
+    expect(angleLabel.text).toBe('90deg');
+    expect(angleLabel.visible).toBe(true);
+    expect(angleLabel.renderable).toBe(true);
+    expect(angleLabel.position.x).toBe(18);
+    expect(angleLabel.position.y).toBeLessThan(-40);
+
+    dragSurface.emit('pointerup');
+
+    expect(angleLabel.visible).toBe(false);
+    expect(angleLabel.renderable).toBe(false);
+  });
+
+  it('updates zone-edge drag overlays without rebuilding the active handle objects', () => {
+    const fixture = createFixture({
+      connectionRoutes: {
+        'route:road': {
+          points: [
+            { kind: 'zone', zoneId: 'zone:a' },
+            { kind: 'zone', zoneId: 'zone:b' },
+          ],
+          segments: [{ kind: 'straight' }],
+        },
+      },
+    });
+    const dragSurface = new MockContainer();
+    createEditorHandleRenderer(
+      fixture.handleLayer as unknown as Container,
+      fixture.store,
+      fixture.gameDef,
+      fixture.provider,
+      { dragSurface: dragSurface as unknown as Container },
+    );
+
+    fixture.store.getState().selectRoute('route:road');
+
+    const root = fixture.handleLayer.children[0] as InstanceType<typeof MockContainer>;
+    const overlayRoot = fixture.handleLayer.children[1] as InstanceType<typeof MockContainer>;
+    const startHandle = root.children[0] as InstanceType<typeof MockGraphics>;
+    const endHandle = root.children[1] as InstanceType<typeof MockGraphics>;
+    const angleLabel = overlayRoot.children[0] as InstanceType<typeof MockBitmapText>;
+    const initialPosition = { x: startHandle.position.x, y: startHandle.position.y };
+
+    startHandle.emit('pointerdown', pointer(0, 0));
+    dragSurface.emit('globalpointermove', pointer(0, -40));
+
+    expect(root.children[0]).toBe(startHandle);
+    expect(root.children[1]).toBe(endHandle);
+    expect(startHandle.position).not.toEqual(expect.objectContaining(initialPosition));
+    expect(angleLabel.text).toBe('90deg');
+    expect(angleLabel.visible).toBe(true);
+
+    dragSurface.emit('globalpointermove', pointer(40, 0));
+
+    expect(root.children[0]).toBe(startHandle);
+    expect(root.children[1]).toBe(endHandle);
+    expect(angleLabel.text).toBe('0deg');
+    expect(angleLabel.visible).toBe(true);
+  });
+
+  it('hides the angle label after a zone-edge endpoint detaches into a free anchor', () => {
+    const fixture = createFixture({
+      connectionRoutes: {
+        'route:road': {
+          points: [
+            { kind: 'zone', zoneId: 'zone:a', anchor: 90 },
+            { kind: 'zone', zoneId: 'zone:b' },
+          ],
+          segments: [{ kind: 'straight' }],
+        },
+      },
+    });
+    const dragSurface = new MockContainer();
+    createEditorHandleRenderer(
+      fixture.handleLayer as unknown as Container,
+      fixture.store,
+      fixture.gameDef,
+      fixture.provider,
+      { dragSurface: dragSurface as unknown as Container },
+    );
+
+    fixture.store.getState().selectRoute('route:road');
+
+    const root = fixture.handleLayer.children[0] as InstanceType<typeof MockContainer>;
+    const overlayRoot = fixture.handleLayer.children[1] as InstanceType<typeof MockContainer>;
+    const zoneHandle = root.children[0] as InstanceType<typeof MockGraphics>;
+    const angleLabel = overlayRoot.children[0] as InstanceType<typeof MockBitmapText>;
+
+    zoneHandle.emit('pointerdown', pointer(0, -110));
+    dragSurface.emit('globalpointermove', pointer(0, -90));
+
+    expect(angleLabel.visible).toBe(true);
+    expect(fixture.store.getState().dragPreview).toEqual({
+      kind: 'zone-edge-anchor',
+      routeId: 'route:road',
+      pointIndex: 0,
+      handlePosition: { x: 0, y: -50 },
+      angle: 90,
+    });
+
+    dragSurface.emit('globalpointermove', pointer(800, -110));
+
+    expect(fixture.store.getState().connectionRoutes.get('route:road')?.points[0]).toEqual({
+      kind: 'anchor',
+      anchorId: 'route:road:endpoint:zone:a:0',
+    });
+    expect(angleLabel.visible).toBe(false);
+    expect(angleLabel.renderable).toBe(false);
+  });
+
+  it('does not show an angle label for control-point drags', () => {
+    const fixture = createFixture();
+    const dragSurface = new MockContainer();
+    createEditorHandleRenderer(
+      fixture.handleLayer as unknown as Container,
+      fixture.store,
+      fixture.gameDef,
+      fixture.provider,
+      { dragSurface: dragSurface as unknown as Container },
+    );
+
+    fixture.store.getState().selectRoute('route:road');
+
+    const root = fixture.handleLayer.children[0] as InstanceType<typeof MockContainer>;
+    const overlayRoot = fixture.handleLayer.children[1] as InstanceType<typeof MockContainer>;
+    const controlHandle = root.children[4] as InstanceType<typeof MockGraphics>;
+    const angleLabel = overlayRoot.children[0] as InstanceType<typeof MockBitmapText>;
+
+    controlHandle.emit('pointerdown', pointer(20, 0));
+    dragSurface.emit('globalpointermove', pointer(40, 20));
+
+    expect(fixture.store.getState().dragPreview).toBeNull();
+    expect(angleLabel.visible).toBe(false);
+    expect(angleLabel.renderable).toBe(false);
   });
 
   it('removes only non-endpoint anchor waypoints on right-click', () => {
@@ -394,6 +690,7 @@ describe('createEditorHandleRenderer', () => {
     expect(dragSurface.listenerCount('pointerup')).toBe(0);
     expect(dragSurface.listenerCount('pointerupoutside')).toBe(0);
     expect(fixture.store.getState().isDragging).toBe(false);
+    expect(fixture.store.getState().dragPreview).toBeNull();
   });
 
   it('positions anchored zone endpoint handles on the resolved zone edge', () => {
@@ -427,6 +724,21 @@ describe('createEditorHandleRenderer', () => {
     const endHandle = root.children[1] as InstanceType<typeof MockGraphics>;
     expect(startHandle.position).toEqual(expect.objectContaining({ x: 50, y: 0 }));
     expect(endHandle.position).toEqual(expect.objectContaining({ x: 30, y: 0 }));
+  });
+
+  it('destroys the managed angle label when the renderer is destroyed', () => {
+    const fixture = createFixture();
+
+    const renderer = createEditorHandleRenderer(
+      fixture.handleLayer as unknown as Container,
+      fixture.store,
+      fixture.gameDef,
+      fixture.provider,
+    );
+
+    renderer.destroy();
+
+    expect(destroyManagedBitmapText).toHaveBeenCalledTimes(1);
   });
 });
 

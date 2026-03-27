@@ -36,6 +36,9 @@ export function crossValidateSpec(
   const zoneTargets = collectIdentifierTargets(sections.zones?.map((zone) => zone.id));
   const tokenTypeTargets = collectIdentifierTargets(sections.tokenTypes?.map((tokenType) => tokenType.id));
   const cardDrivenTurnFlow = sections.turnOrder?.type === 'cardDriven' ? sections.turnOrder.config.turnFlow : null;
+  const monsoonRestrictedActionTargets = collectIdentifierTargets(
+    cardDrivenTurnFlow?.monsoon?.restrictedActions.map((restriction) => restriction.actionId),
+  );
   const eventEligibilityWindowIds = collectTurnFlowEligibilityOverrideWindowIds(cardDrivenTurnFlow);
   const actionPipelineWindowIds = collectTurnFlowActionPipelineWindowIds(cardDrivenTurnFlow);
   const seatTargets = collectIdentifierTargets(seatIdentityContract.referenceSeatIds);
@@ -473,6 +476,7 @@ export function crossValidateSpec(
           seatTargets,
           eventWindowTargets,
           actionTargets,
+          monsoonRestrictedActionTargets,
           cardDrivenTurnFlow !== null && validateSeatReferences,
         );
         validateEventCardSide(
@@ -484,6 +488,7 @@ export function crossValidateSpec(
           seatTargets,
           eventWindowTargets,
           actionTargets,
+          monsoonRestrictedActionTargets,
           cardDrivenTurnFlow !== null && validateSeatReferences,
         );
 
@@ -785,6 +790,7 @@ function validateEventCardSide(
   seatTargets: { readonly values: readonly string[]; readonly normalizedSet: ReadonlySet<string> },
   windowTargets: { readonly values: readonly string[]; readonly normalizedSet: ReadonlySet<string> },
   actionTargets: { readonly values: readonly string[]; readonly normalizedSet: ReadonlySet<string> },
+  monsoonRestrictedActionTargets: { readonly values: readonly string[]; readonly normalizedSet: ReadonlySet<string> },
   validateSeats: boolean,
 ): void {
   if (side === undefined) {
@@ -798,6 +804,7 @@ function validateEventCardSide(
     cardId,
     seatTargets,
     actionTargets,
+    monsoonRestrictedActionTargets,
     validateSeats,
   );
   validateEventEligibilityOverrides(
@@ -831,6 +838,7 @@ function validateEventCardSide(
       cardId,
       seatTargets,
       actionTargets,
+      monsoonRestrictedActionTargets,
       validateSeats,
     );
     validateEventEligibilityOverrides(
@@ -895,6 +903,7 @@ function validateEventFreeOperationGrants(
   cardId: string,
   seatTargets: { readonly values: readonly string[]; readonly normalizedSet: ReadonlySet<string> },
   actionTargets: { readonly values: readonly string[]; readonly normalizedSet: ReadonlySet<string> },
+  monsoonRestrictedActionTargets: { readonly values: readonly string[]; readonly normalizedSet: ReadonlySet<string> },
   validateSeats: boolean,
 ): void {
   if (grants === undefined) {
@@ -937,6 +946,18 @@ function validateEventFreeOperationGrants(
         `Event card "${cardId}" freeOperationGrant references unknown action "${actionId}".`,
         'Use one of the declared action ids.',
       );
+    }
+
+    const referencesMonsoonRestrictedAction = (grant.actionIds ?? []).some((actionId) =>
+      monsoonRestrictedActionTargets.normalizedSet.has(normalizeIdentifier(actionId)));
+    if (referencesMonsoonRestrictedAction && grant.allowDuringMonsoon !== true) {
+      diagnostics.push({
+        code: CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_EVENT_DECK_GRANT_MONSOON_ALLOW_MISSING,
+        severity: 'error',
+        path: `${pathPrefix}.${grantIndex}.allowDuringMonsoon`,
+        message: `Event card "${cardId}" freeOperationGrant targets a Monsoon-restricted action and must set allowDuringMonsoon: true.`,
+        suggestion: 'Set allowDuringMonsoon: true or remove Monsoon-restricted actionIds from the grant.',
+      });
     }
   }
 }

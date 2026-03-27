@@ -23,6 +23,16 @@ export interface MapEditorDocumentState {
   readonly connectionRoutes: ReadonlyMap<string, ConnectionRouteDefinition>;
 }
 
+export interface ZoneEdgeAnchorDragPreview {
+  readonly kind: 'zone-edge-anchor';
+  readonly routeId: string;
+  readonly pointIndex: number;
+  readonly handlePosition: Position;
+  readonly angle: number | null;
+}
+
+export type EditorDragPreview = ZoneEdgeAnchorDragPreview | null;
+
 export interface EditorLayerSet {
   readonly background: Container;
   readonly adjacency: Container;

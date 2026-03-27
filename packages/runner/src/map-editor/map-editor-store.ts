@@ -14,6 +14,7 @@ import type {
   ConnectionRouteControl,
   ConnectionRouteDefinition,
   ConnectionRouteSegment,
+  EditorDragPreview,
   EditorSnapshot,
   MapEditorDocumentState,
   Position,
@@ -35,6 +36,7 @@ interface MapEditorStoreState extends MapEditorDocumentState {
   readonly selectedZoneId: string | null;
   readonly selectedRouteId: string | null;
   readonly isDragging: boolean;
+  readonly dragPreview: EditorDragPreview;
   readonly showGrid: boolean;
   readonly snapToGrid: boolean;
   readonly gridSize: number;
@@ -56,6 +58,8 @@ interface MapEditorStoreActions {
   selectZone(zoneId: string | null): void;
   selectRoute(routeId: string | null): void;
   setDragging(value: boolean): void;
+  setDragPreview(preview: EditorDragPreview): void;
+  clearDragPreview(): void;
   toggleGrid(): void;
   setGridSize(value: number): void;
   setSnapToGrid(value: boolean): void;
@@ -145,6 +149,7 @@ export function createMapEditorStore(
       selectedZoneId: null,
       selectedRouteId: null,
       isDragging: false,
+      dragPreview: null,
       showGrid: false,
       snapToGrid: false,
       gridSize: DEFAULT_GRID_SIZE,
@@ -208,6 +213,14 @@ export function createMapEditorStore(
 
       setDragging(value) {
         set({ isDragging: value });
+      },
+
+      setDragPreview(preview) {
+        set({ dragPreview: preview });
+      },
+
+      clearDragPreview() {
+        set({ dragPreview: null });
       },
 
       toggleGrid() {

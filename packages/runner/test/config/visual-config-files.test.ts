@@ -7,7 +7,9 @@ import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 
 import { assertBootstrapTargetDefinitions } from '../../src/bootstrap/bootstrap-registry';
+import { resolveCurvatureControlPoint } from '../../src/canvas/geometry/bezier-utils';
 import { VisualConfigProvider } from '../../src/config/visual-config-provider';
+import type { ConnectionRouteDefinition } from '../../src/config/visual-config-types';
 import { VisualConfigSchema } from '../../src/config/visual-config-types';
 import {
   buildRefValidationContext,
@@ -15,6 +17,7 @@ import {
   validateVisualConfigRefs,
 } from '../../src/config/validate-visual-config-refs';
 import { resolveConnectionRoutes } from '../../src/presentation/connection-route-resolver';
+import type { ResolvedConnectionPoint } from '../../src/presentation/connection-route-resolver';
 
 const EXPECTED_FITL_CONNECTION_ANCHORS = {
   'an-loc': { x: 420, y: 250 },
@@ -83,7 +86,7 @@ const EXPECTED_FITL_CONNECTION_ROUTES = {
       { kind: 'zone', zoneId: 'hue:none', anchor: 270 },
     ],
     segments: [
-      { kind: 'quadratic', control: { kind: 'position', x: 480, y: 40 } },
+      { kind: 'quadratic', control: { kind: 'curvature', offset: 0.3 } },
     ],
   },
   'loc-hue-khe-sanh:none': {
@@ -129,7 +132,7 @@ const EXPECTED_FITL_CONNECTION_ROUTES = {
     ],
     segments: [
       { kind: 'straight' },
-      { kind: 'quadratic', control: { kind: 'position', x: 500, y: 200 } },
+      { kind: 'quadratic', control: { kind: 'curvature', offset: 0.3 } },
     ],
   },
   'loc-saigon-cam-ranh:none': {
@@ -217,6 +220,53 @@ function compileProductionGameDef(pathFromRepoRoot: string) {
     throw new Error(`Expected non-null gameDef for ${pathFromRepoRoot}`);
   }
   return compiled.gameDef;
+}
+
+function resolveExpectedRouteSegments(
+  route: {
+    readonly points: readonly ConnectionRouteDefinition['points'][number][];
+    readonly segments: readonly ConnectionRouteDefinition['segments'][number][];
+  },
+  path: readonly ResolvedConnectionPoint[],
+) {
+  return route.segments.map((segment, index) => {
+    if (segment.kind === 'straight') {
+      return { kind: 'straight' } as const;
+    }
+
+    const control = segment.control;
+    if (control.kind === 'anchor') {
+      return {
+        kind: 'quadratic',
+        controlPoint: { kind: 'anchor', id: control.anchorId },
+      } as const;
+    }
+
+    if (control.kind === 'position') {
+      return {
+        kind: 'quadratic',
+        controlPoint: {
+          kind: 'position',
+          id: null,
+          position: { x: control.x, y: control.y },
+        },
+      } as const;
+    }
+
+    return {
+      kind: 'quadratic',
+      controlPoint: {
+        kind: 'curvature',
+        id: null,
+        position: resolveCurvatureControlPoint(
+          path[index]!.position,
+          path[index + 1]!.position,
+          control.offset,
+          control.angle,
+        ),
+      },
+    } as const;
+  });
 }
 
 describe('visual-config.yaml files', () => {
@@ -455,36 +505,27 @@ describe('visual-config.yaml files', () => {
             ? { kind: 'zone', zoneId: point.id }
             : { kind: 'anchor', anchorId: point.id }
         )),
-        segments: route.segments.map((segment) => (
-          segment.kind === 'straight'
-            ? { kind: 'straight' }
-            : segment.controlPoint.kind === 'anchor'
-              ? { kind: 'quadratic', control: { kind: 'anchor', anchorId: segment.controlPoint.id } }
-              : {
-                  kind: 'quadratic',
-                  control: {
-                    kind: 'position',
-                    x: segment.controlPoint.position.x,
-                    y: segment.controlPoint.position.y,
-                  },
-                }
-        )),
+        segments: route.segments,
       }]),
-    )).toEqual({
-      ...Object.fromEntries(
-        Object.entries(EXPECTED_FITL_CONNECTION_ROUTES).map(([routeId, route]) => [
-          routeId,
-          {
-            points: route.points.map((point) => (
-              point.kind === 'zone'
-                ? { kind: 'zone', zoneId: point.zoneId }
-                : { kind: 'anchor', anchorId: point.anchorId }
-            )),
-            segments: route.segments,
-          },
-        ]),
+    )).toEqual(
+      Object.fromEntries(
+        Object.entries(EXPECTED_FITL_CONNECTION_ROUTES).map(([routeId, route]) => {
+          const resolvedRoute = resolution.connectionRoutes.find((entry) => entry.zoneId === routeId);
+          expect(resolvedRoute).toBeDefined();
+          return [
+            routeId,
+            {
+              points: route.points.map((point) => (
+                point.kind === 'zone'
+                  ? { kind: 'zone', zoneId: point.zoneId }
+                  : { kind: 'anchor', anchorId: point.anchorId }
+              )),
+              segments: resolveExpectedRouteSegments(route, resolvedRoute!.path),
+            },
+          ];
+        }),
       ),
-    });
+    );
     expect(resolution.junctions).toEqual(EXPECTED_FITL_SHARED_JUNCTIONS);
 
     expect(parsed.tokenTypes?.['us-irregulars']?.shape).toBe('beveled-cylinder');

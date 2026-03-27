@@ -219,6 +219,7 @@ describe('FITL 1965 ARVN-first event-card production spec', () => {
         seat: 'us',
         sequence: { batch: 'macv-us-then-arvn', step: 0, progressionPolicy: 'implementWhatCanInOrder' },
         actionIds: ['advise', 'airLift', 'airStrike'],
+        allowDuringMonsoon: true,
         viabilityPolicy: 'requireUsableAtIssue',
         completionPolicy: 'required',
         postResolutionTurnFlow: 'resumeCardFlow',

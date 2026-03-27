@@ -163,6 +163,7 @@ describe('FITL card-30 USS New Jersey', () => {
     assert.equal(pendingAfterEvent[0]?.seat, 'vc');
     assert.equal(pendingAfterEvent[0]?.executeAsSeat, 'us');
     assert.deepEqual(pendingAfterEvent[0]?.actionIds, ['airStrike']);
+    assert.equal(pendingAfterEvent[0]?.allowDuringMonsoon, true);
     assert.equal(afterEvent.globalVars.fitl_airStrikeWindowMode, 2);
 
     const grantReadyState: GameState = {

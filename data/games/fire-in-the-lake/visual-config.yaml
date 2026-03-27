@@ -163,7 +163,7 @@ zones:
         - { kind: zone, zoneId: "hue:none", anchor: 270 }
       segments:
         - kind: quadratic
-          control: { kind: position, x: 480, y: 40 }
+          control: { kind: curvature, offset: 0.3 }
     "loc-hue-khe-sanh:none":
       points:
         - { kind: zone, zoneId: "hue:none" }
@@ -202,7 +202,7 @@ zones:
       segments:
         - { kind: straight }
         - kind: quadratic
-          control: { kind: position, x: 500, y: 200 }
+          control: { kind: curvature, offset: 0.3 }
     "loc-saigon-cam-ranh:none":
       points:
         - { kind: zone, zoneId: "cam-ranh:none" }

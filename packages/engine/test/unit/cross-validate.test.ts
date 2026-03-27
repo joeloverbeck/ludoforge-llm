@@ -858,6 +858,122 @@ describe('crossValidateSpec', () => {
     assert.equal(diagnostic?.suggestion, 'Did you mean "act"?');
   });
 
+  it('eventDeck freeOperationGrants for monsoon-restricted actions require allowDuringMonsoon', () => {
+    const sections = compileRichSections();
+    assert.equal(sections.turnOrder?.type, 'cardDriven');
+    const turnOrder = requireValue(sections.turnOrder?.type === 'cardDriven' ? sections.turnOrder : undefined);
+    const deck = requireValue(sections.eventDecks?.[0]);
+    const card = requireValue(deck.cards[0]);
+    const diagnostics = crossValidate({
+      ...sections,
+      turnOrder: {
+        ...turnOrder,
+        config: {
+          ...turnOrder.config,
+          turnFlow: {
+            ...turnOrder.config.turnFlow,
+            monsoon: {
+              restrictedActions: [{ actionId: 'act' }],
+            },
+          },
+        },
+      },
+      eventDecks: [
+        {
+          ...deck,
+          cards: [
+            {
+              ...card,
+              unshaded: {
+                ...(card.unshaded ?? {}),
+                freeOperationGrants: [
+                  {
+                    seat: 'us',
+                    sequence: { batch: 'monsoon-side-grant', step: 0 },
+                    operationClass: 'operation',
+                    actionIds: ['act'],
+                  },
+                ],
+                branches: [
+                  {
+                    id: 'branch-a',
+                    freeOperationGrants: [
+                      {
+                        seat: 'arvn',
+                        sequence: { batch: 'monsoon-branch-grant', step: 0 },
+                        operationClass: 'operation',
+                        actionIds: ['act'],
+                      },
+                    ],
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const monsoonDiagnostics = diagnostics.filter((entry) => entry.code === 'CNL_XREF_EVENT_DECK_GRANT_MONSOON_ALLOW_MISSING');
+    assert.deepEqual(
+      monsoonDiagnostics.map((entry) => entry.path).sort(),
+      [
+        'doc.eventDecks.0.cards.0.unshaded.branches.0.freeOperationGrants.0.allowDuringMonsoon',
+        'doc.eventDecks.0.cards.0.unshaded.freeOperationGrants.0.allowDuringMonsoon',
+      ],
+    );
+  });
+
+  it('eventDeck freeOperationGrants for monsoon-restricted actions pass when allowDuringMonsoon is true', () => {
+    const sections = compileRichSections();
+    assert.equal(sections.turnOrder?.type, 'cardDriven');
+    const turnOrder = requireValue(sections.turnOrder?.type === 'cardDriven' ? sections.turnOrder : undefined);
+    const deck = requireValue(sections.eventDecks?.[0]);
+    const card = requireValue(deck.cards[0]);
+    const diagnostics = crossValidate({
+      ...sections,
+      turnOrder: {
+        ...turnOrder,
+        config: {
+          ...turnOrder.config,
+          turnFlow: {
+            ...turnOrder.config.turnFlow,
+            monsoon: {
+              restrictedActions: [{ actionId: 'act' }],
+            },
+          },
+        },
+      },
+      eventDecks: [
+        {
+          ...deck,
+          cards: [
+            {
+              ...card,
+              unshaded: {
+                ...(card.unshaded ?? {}),
+                freeOperationGrants: [
+                  {
+                    seat: 'us',
+                    sequence: { batch: 'monsoon-valid-grant', step: 0 },
+                    operationClass: 'operation',
+                    actionIds: ['act'],
+                    allowDuringMonsoon: true,
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    assert.equal(
+      diagnostics.some((entry) => entry.code === 'CNL_XREF_EVENT_DECK_GRANT_MONSOON_ALLOW_MISSING'),
+      false,
+    );
+  });
+
   it('eventDeck freeOperationGrants with unknown executeAsSeat emits CNL_XREF_EVENT_DECK_GRANT_EXECUTE_AS_SEAT_MISSING', () => {
     const sections = compileRichSections();
     const deck = requireValue(sections.eventDecks?.[0]);

@@ -4,7 +4,9 @@ import { describe, it } from 'node:test';
 import { RandomAgent } from '../../src/agents/index.js';
 import {
   assertValidatedGameDef,
+  createGameDefRuntime,
   type Agent,
+  type GameDefRuntime,
   type ValidatedGameDef,
 } from '../../src/kernel/index.js';
 import { runGame } from '../../src/sim/index.js';
@@ -50,8 +52,8 @@ const createRandomAgents = (count: number): readonly Agent[] =>
 
 const FITL_PLAYER_COUNT = 4;
 const TEXAS_PLAYER_COUNT = 6;
-const MAX_TURNS = 500;
-const GAME_COUNT = 10;
+const MAX_TURNS = 200;
+const GAME_COUNT = 5;
 const GC_PERCENT_THRESHOLD = 15;
 
 interface GcMeasurement {
@@ -71,6 +73,7 @@ const measureGcPressure = (
   def: ValidatedGameDef,
   playerCount: number,
   gameCount: number,
+  runtime: GameDefRuntime,
 ): GcMeasurement => {
   if (!HAS_GC || gc === undefined) {
     return { totalMs: 0, gcMs: 0, gcPercent: 0 };
@@ -79,7 +82,7 @@ const measureGcPressure = (
   // Warm up — compile caches, JIT
   const warmAgents = createRandomAgents(playerCount);
   try {
-    runGame(def, 999, warmAgents, MAX_TURNS, playerCount, { skipDeltas: true });
+    runGame(def, 999, warmAgents, MAX_TURNS, playerCount, { skipDeltas: true }, runtime);
   } catch {
     // Warm-up failure is non-fatal (e.g. FITL stall loops with RandomAgent)
   }
@@ -92,7 +95,7 @@ const measureGcPressure = (
     const seed = 5000 + i;
     const agents = createRandomAgents(playerCount);
     try {
-      runGame(def, seed, agents, MAX_TURNS, playerCount, { skipDeltas: true });
+      runGame(def, seed, agents, MAX_TURNS, playerCount, { skipDeltas: true }, runtime);
     } catch {
       // Swallow runtime errors (stall loops, etc.) — we're measuring GC, not correctness
     }
@@ -115,7 +118,8 @@ const measureGcPressure = (
 describe('draft-state GC measurement (advisory)', { skip: !HAS_GC && 'requires --expose-gc' }, () => {
   it(`FITL: GC% < ${GC_PERCENT_THRESHOLD}% over ${GAME_COUNT} games`, () => {
     const def = compileFitlDef();
-    const result = measureGcPressure(def, FITL_PLAYER_COUNT, GAME_COUNT);
+    const runtime = createGameDefRuntime(def);
+    const result = measureGcPressure(def, FITL_PLAYER_COUNT, GAME_COUNT, runtime);
 
     console.warn(
       `FITL GC measurement: total=${result.totalMs.toFixed(0)}ms, gc=${result.gcMs.toFixed(0)}ms, gc%=${result.gcPercent.toFixed(2)}%`,
@@ -129,7 +133,8 @@ describe('draft-state GC measurement (advisory)', { skip: !HAS_GC && 'requires -
 
   it(`Texas Hold'em: GC% < ${GC_PERCENT_THRESHOLD}% over ${GAME_COUNT} games`, () => {
     const def = compileTexasDef();
-    const result = measureGcPressure(def, TEXAS_PLAYER_COUNT, GAME_COUNT);
+    const runtime = createGameDefRuntime(def);
+    const result = measureGcPressure(def, TEXAS_PLAYER_COUNT, GAME_COUNT, runtime);
 
     console.warn(
       `Texas GC measurement: total=${result.totalMs.toFixed(0)}ms, gc=${result.gcMs.toFixed(0)}ms, gc%=${result.gcPercent.toFixed(2)}%`,

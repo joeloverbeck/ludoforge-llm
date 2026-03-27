@@ -140,6 +140,8 @@ describe('FITL 1965 US-first event-card production spec', () => {
     assert.equal(card?.unshaded?.freeOperationGrants?.length, 3);
     assert.deepEqual(card?.unshaded?.freeOperationGrants?.map((grant) => grant.actionIds?.[0]), ['airLift', 'sweep', 'assault']);
     assert.equal(card?.unshaded?.freeOperationGrants?.every((grant) => grant.zoneFilter !== undefined), true);
+    assert.equal(card?.unshaded?.freeOperationGrants?.[0]?.allowDuringMonsoon, true);
+    assert.equal(card?.unshaded?.freeOperationGrants?.[1]?.allowDuringMonsoon, true);
 
     const tunnelWindow = card?.unshaded?.lastingEffects?.find((effect) => effect.id === 'evt-operation-attleboro-tunnel-window');
     assert.notEqual(tunnelWindow, undefined);

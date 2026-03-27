@@ -527,6 +527,37 @@ Production reference:
 
 - Card 92 (`SEALORDS`) integration tests demonstrate both patterns: the full-event test verifies ordered grant surfacing and single-grant activation, while isolated-grant tests verify in-place Sweep restrictions and US no-followup behavior independently.
 
+## Monsoon-Restricted Free-Operation Grants
+
+When a FITL event grants a free operation during Monsoon, author against the declared turn-flow restriction contract, not against trial-and-error runtime behavior.
+
+Use `turnOrder.config.turnFlow.monsoon.restrictedActions` as the source of truth for which actions are Monsoon-restricted. In current production FITL data, that list includes `sweep`, `march`, `airStrike`, and `airLift`, with additional turn-flow parameters on some actions to cap spaces during Monsoon. Do not hardcode this list mentally and assume it will never change; inspect the authored turn-flow config when adding or reviewing a Monsoon-sensitive grant.
+
+Per FITL rule 5.1.1, Events override Monsoon restrictions. When an event card issues a `freeOperationGrant` whose `actionIds` include a Monsoon-restricted action, the grant must set `allowDuringMonsoon: true`.
+
+```yaml
+freeOperationGrants:
+  - seat: us
+    operationClass: operation
+    actionIds: [airLift]
+    allowDuringMonsoon: true
+```
+
+Why this matters:
+
+- Historically, omitting `allowDuringMonsoon: true` caused the runtime Monsoon window filter to remove the move, which could leave `legalMoves` with no usable grant and cause required grant chains to expire unusably.
+- Today, the compiler rejects that authored content earlier via shared cross-validation. Treat the flag as part of the authoring contract, not as an optional runtime tweak.
+
+Canonical production reference:
+
+- Card 62 (`Cambodian Civil War`) grants ordered US and ARVN `airLift` then `sweep` operations into Cambodia. Those grants set `allowDuringMonsoon: true` because the sequence must remain legal even when the lookahead card makes the current event a Monsoon turn. If the opening `airLift` grant omitted the flag, the sequence would fail at step 0 and the downstream `sweep` follow-up would never surface.
+
+Relevant automated proof:
+
+- `packages/engine/test/unit/cross-validate.test.ts` rejects event grants that target Monsoon-restricted actions without `allowDuringMonsoon: true`.
+- `packages/engine/test/unit/kernel/legal-moves.test.ts` covers the runtime Monsoon filtering behavior with and without explicit grant allowance.
+- FITL production integration tests for cards 44 (`Ia Drang`) and 62 (`Cambodian Civil War`) exercise real Monsoon-sensitive event grant flows.
+
 ## Global Variable Window Lifecycle
 
 When a card sets a global variable "window" (e.g., `fitl_airStrikeWindowMode`) and grants a free operation that depends on it, follow this lifecycle pattern:
@@ -601,3 +632,4 @@ Before considering a new FITL event complete, verify:
 9. An integration test covers any nontrivial chooser, replacement, routing, or fallback behavior.
 10. Geography-sensitive cards encode explicit target sets and test both inclusion and exclusion.
 11. Ordered free-op events test grant surfacing sequence and use isolated grant helpers for per-grant behavior.
+12. Every `freeOperationGrant` whose `actionIds` include a Monsoon-restricted action sets `allowDuringMonsoon: true`.

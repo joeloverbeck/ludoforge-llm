@@ -114,6 +114,7 @@ describe('FITL VC-first event-card production spec batch', () => {
         sequence: { batch: 'westmoreland-us', step: 0 },
         operationClass: 'operation',
         actionIds: ['airLift'],
+        allowDuringMonsoon: true,
       },
       {
         seat: 'us',
@@ -132,6 +133,7 @@ describe('FITL VC-first event-card production spec batch', () => {
         sequence: { batch: 'westmoreland-us', step: 2 },
         operationClass: 'operation',
         actionIds: ['airStrike'],
+        allowDuringMonsoon: true,
       },
     ]);
   });

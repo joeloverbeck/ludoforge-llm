@@ -1104,12 +1104,52 @@ const enumerateRawLegalMoves = (
   const currentPhaseDef = findPhaseDef(def, state.currentPhase);
 
   const earlyExitAfterFirst = options?.earlyExitAfterFirst === true;
+
+  // When only checking existence (earlyExitAfterFirst), try trivial actions
+  // first — those with no params, no precondition, and always-complete.
+  // These generate exactly one move with minimal cost, avoiding iteration
+  // through complex parameterized operations. This is game-agnostic: any
+  // action that matches these criteria (e.g., 'pass' in COIN games) benefits.
+  const alwaysComplete = runtime?.alwaysCompleteActionIds ?? computeAlwaysCompleteActionIds(def);
+  let earlyExitTriedTrivial = false;
+  if (earlyExitAfterFirst) {
+    for (const action of def.actions) {
+      // Trivial = no params + always-complete + no precondition + no pipeline
+      if (action.params.length > 0 || !alwaysComplete.has(action.id)) continue;
+      if (action.pre !== null) continue;
+      if ((def.actionPipelines ?? []).some((p) => p.actionId === action.id)) continue;
+      if (isCardEventAction(action)) continue;
+      earlyExitTriedTrivial = true;
+      const preflight = resolveActionApplicabilityPreflight({
+        def,
+        state,
+        action,
+        adjacencyGraph,
+        decisionPlayer: state.activePlayer,
+        bindings: buildMoveRuntimeBindings({ actionId: action.id, params: {} }),
+        runtimeTableIndex,
+        evalRuntimeResources,
+        skipExecutorCheck: true,
+        skipPipelineDispatch: true,
+      });
+      if (preflight.kind !== 'applicable') continue;
+      enumerateParams(action, def, adjacencyGraph, runtimeTableIndex, evalRuntimeResources, state, 0, {}, enumeration, currentPhaseDef,
+        runtime === undefined ? undefined : { runtime },
+      );
+      if (enumeration.moves.length > 0) break;
+    }
+  }
+
   for (const action of def.actions) {
     if (enumeration.templateBudgetExceeded) {
       break;
     }
     if (earlyExitAfterFirst && enumeration.moves.length > 0) {
       break;
+    }
+    // Skip trivial actions already tried in the early-exit pass.
+    if (earlyExitTriedTrivial && action.params.length === 0 && alwaysComplete.has(action.id) && action.pre === null) {
+      continue;
     }
     const hasActionPipeline = (def.actionPipelines ?? []).some((pipeline) => pipeline.actionId === action.id);
     const preflight = resolveActionApplicabilityPreflight({

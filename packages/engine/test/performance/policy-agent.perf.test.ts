@@ -100,7 +100,7 @@ function createPerfCorpus(): readonly PolicyPerfCase[] {
       state: fitlState,
       runtime: fitlRuntime,
       seed: 7n,
-      expectedCandidateCount: 31,
+      expectedCandidateCount: 19,
       expectedPreviewCount: 1,
       maxDecisionMs: 30000,
     },

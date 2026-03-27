@@ -24,6 +24,7 @@ export interface ResolveMoveDecisionSequenceOptions {
   readonly choose?: (request: ChoicePendingRequest) => MoveParamValue | undefined;
   readonly budgets?: Partial<MoveEnumerationBudgets>;
   readonly onWarning?: (warning: RuntimeWarning) => void;
+  readonly discoveryCache?: DiscoveryCache;
 }
 
 export type DiscoveryCache = Map<Move, ChoiceRequest>;
@@ -69,7 +70,8 @@ export const resolveMoveDecisionSequence = (
   let move = baseMove;
 
   for (let step = 0; step < maxSteps; step += 1) {
-    const request = legalChoicesDiscover(def, state, move, {
+    const cached = options?.discoveryCache?.get(move);
+    const request = cached ?? legalChoicesDiscover(def, state, move, {
       onDeferredPredicatesEvaluated: (count) => {
         deferredPredicatesEvaluated += count;
       },

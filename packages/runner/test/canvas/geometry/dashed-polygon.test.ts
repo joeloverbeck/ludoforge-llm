@@ -1,6 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { drawDashedPolygon } from '../../../src/canvas/geometry/dashed-polygon.js';
-import type { Point2D } from '../../../src/canvas/geometry/point2d.js';
+import { buildDashedSegments } from '../../../src/canvas/geometry/dashed-segments.js';
 
 function createMockGraphics(): { moveTo: ReturnType<typeof vi.fn>; lineTo: ReturnType<typeof vi.fn> } {
   return {
@@ -9,69 +10,48 @@ function createMockGraphics(): { moveTo: ReturnType<typeof vi.fn>; lineTo: Retur
   };
 }
 
+vi.mock('../../../src/canvas/geometry/dashed-segments.js', () => ({
+  buildDashedSegments: vi.fn(),
+}));
+
 describe('drawDashedPolygon', () => {
-  it('does nothing for empty points', () => {
-    const g = createMockGraphics();
-    drawDashedPolygon(g as never, [], 10, 5);
-    expect(g.moveTo).not.toHaveBeenCalled();
-    expect(g.lineTo).not.toHaveBeenCalled();
+  beforeEach(() => {
+    vi.mocked(buildDashedSegments).mockReset();
   });
 
-  it('does nothing for single point', () => {
+  it('builds closed-path segments and emits matching Pixi commands', () => {
     const g = createMockGraphics();
-    drawDashedPolygon(g as never, [{ x: 0, y: 0 }], 10, 5);
-    expect(g.moveTo).not.toHaveBeenCalled();
-    expect(g.lineTo).not.toHaveBeenCalled();
-  });
-
-  it('draws dashes along a square', () => {
-    const g = createMockGraphics();
-    const square: Point2D[] = [
-      { x: 0, y: 0 },
-      { x: 100, y: 0 },
-      { x: 100, y: 100 },
-      { x: 0, y: 100 },
-    ];
-    drawDashedPolygon(g as never, square, 10, 5);
-    // Should have drawn multiple dash segments
-    expect(g.moveTo.mock.calls.length).toBeGreaterThan(0);
-    expect(g.lineTo.mock.calls.length).toBeGreaterThan(0);
-    // Each moveTo should be paired with a lineTo
-    expect(g.moveTo.mock.calls.length).toBe(g.lineTo.mock.calls.length);
-  });
-
-  it('preserves dash state across polygon edges', () => {
-    const g = createMockGraphics();
-    const square: Point2D[] = [
+    const square = [
       { x: 0, y: 0 },
       { x: 10, y: 0 },
       { x: 10, y: 10 },
       { x: 0, y: 10 },
     ];
+    vi.mocked(buildDashedSegments).mockReturnValue([
+      { from: { x: 0, y: 0 }, to: { x: 7, y: 0 } },
+      { from: { x: 10, y: 1 }, to: { x: 10, y: 8 } },
+    ]);
 
     drawDashedPolygon(g as never, square, 7, 4);
 
+    expect(buildDashedSegments).toHaveBeenCalledWith(square, 7, 4, { closed: true });
     expect(g.moveTo.mock.calls).toEqual([
       [0, 0],
       [10, 1],
-      [8, 10],
-      [0, 7],
     ]);
     expect(g.lineTo.mock.calls).toEqual([
       [7, 0],
       [10, 8],
-      [1, 10],
-      [0, 0],
     ]);
   });
 
-  it('handles very small polygons without crashing', () => {
+  it('does nothing when no segments are produced', () => {
     const g = createMockGraphics();
-    const tiny: Point2D[] = [
-      { x: 0, y: 0 },
-      { x: 1, y: 0 },
-      { x: 0.5, y: 1 },
-    ];
-    expect(() => drawDashedPolygon(g as never, tiny, 10, 5)).not.toThrow();
+    vi.mocked(buildDashedSegments).mockReturnValue([]);
+
+    drawDashedPolygon(g as never, [], 10, 5);
+
+    expect(g.moveTo).not.toHaveBeenCalled();
+    expect(g.lineTo).not.toHaveBeenCalled();
   });
 });

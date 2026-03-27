@@ -1,6 +1,6 @@
 import type { Graphics } from 'pixi.js';
 
-import { drawDashedPath } from './dashed-path.js';
+import { buildDashedSegments } from './dashed-segments.js';
 import type { Point2D } from './point2d.js';
 
 export function drawDashedLine(
@@ -10,5 +10,9 @@ export function drawDashedLine(
   dashLength: number,
   gapLength: number,
 ): void {
-  drawDashedPath(graphics, [from, to], dashLength, gapLength);
+  const segments = buildDashedSegments([from, to], dashLength, gapLength);
+  for (const segment of segments) {
+    graphics.moveTo(segment.from.x, segment.from.y);
+    graphics.lineTo(segment.to.x, segment.to.y);
+  }
 }

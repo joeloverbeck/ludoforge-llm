@@ -1,33 +1,38 @@
-import type { Graphics } from 'pixi.js';
-
 import type { Point2D } from './point2d.js';
 
 export interface DashedPathOptions {
   readonly closed?: boolean;
 }
 
+export interface DashedSegment {
+  readonly from: Point2D;
+  readonly to: Point2D;
+}
+
 const EPSILON = 1e-10;
 
-export function drawDashedPath(
-  graphics: Graphics,
+export function buildDashedSegments(
   points: readonly Point2D[],
   dashLength: number,
   gapLength: number,
   options: DashedPathOptions = {},
-): void {
+): readonly DashedSegment[] {
+  validateDashPattern(dashLength, gapLength);
+
   const segmentCount = resolveSegmentCount(points.length, options.closed === true);
   if (segmentCount === 0) {
-    return;
+    return [];
   }
 
+  const segments: DashedSegment[] = [];
   let drawing = true;
   let remaining = dashLength;
 
   for (let index = 0; index < segmentCount; index += 1) {
     const from = points[index]!;
     const to = points[(index + 1) % points.length]!;
-    let dx = to.x - from.x;
-    let dy = to.y - from.y;
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
     let edgeLength = Math.sqrt((dx * dx) + (dy * dy));
 
     if (edgeLength < EPSILON) {
@@ -45,8 +50,10 @@ export function drawDashedPath(
       const nextY = currentY + (uy * step);
 
       if (drawing) {
-        graphics.moveTo(currentX, currentY);
-        graphics.lineTo(nextX, nextY);
+        segments.push({
+          from: { x: currentX, y: currentY },
+          to: { x: nextX, y: nextY },
+        });
       }
 
       currentX = nextX;
@@ -60,6 +67,8 @@ export function drawDashedPath(
       }
     }
   }
+
+  return segments;
 }
 
 function resolveSegmentCount(pointCount: number, closed: boolean): number {
@@ -67,4 +76,13 @@ function resolveSegmentCount(pointCount: number, closed: boolean): number {
     return 0;
   }
   return closed ? pointCount : pointCount - 1;
+}
+
+function validateDashPattern(dashLength: number, gapLength: number): void {
+  if (!Number.isFinite(dashLength) || dashLength <= 0) {
+    throw new RangeError(`dashLength must be a finite number greater than zero. Received: ${dashLength}`);
+  }
+  if (!Number.isFinite(gapLength) || gapLength < 0) {
+    throw new RangeError(`gapLength must be a finite number greater than or equal to zero. Received: ${gapLength}`);
+  }
 }

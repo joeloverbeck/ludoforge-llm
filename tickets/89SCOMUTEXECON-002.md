@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel/effect-context.ts
-**Deps**: 89SCOMUTEXECON-001 (Phase 0 monomorphism prerequisite)
+**Deps**: archive/tickets/89SCOMUTEXECON/89SCOMUTEXECON-001-effect-context-shape-contract.md
 
 ## Problem
 

@@ -1,8 +1,8 @@
-import type { EffectContext } from './effect-context.js';
+import type { EffectContext, TraceProvenanceContext } from './effect-context.js';
 import type { EffectTraceProvenance } from './types.js';
 
 export const resolveTraceProvenance = (
-  ctx: Pick<EffectContext, 'state' | 'traceContext' | 'effectPath'>,
+  ctx: TraceProvenanceContext,
 ): EffectTraceProvenance => {
   const traceContext = ctx.traceContext ?? {
     eventContext: 'actionEffect' as const,

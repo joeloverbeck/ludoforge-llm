@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel effect dispatch + handler signatures + 4 handler files
-**Deps**: 89SCOMUTEXECON-002 (MutableReadScope type and factories must exist)
+**Deps**: tickets/89SCOMUTEXECON-002.md
 
 ## Problem
 

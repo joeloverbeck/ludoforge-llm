@@ -256,7 +256,12 @@ const emitVarChangeArtifacts = (
 ): ReturnType<typeof toVarChangedEvent> | undefined => {
   const evalCtx = createExecutionContextFromCompiled(state, { state: state.rng }, {}, ctx);
   const tracePayload = toTraceVarChangePayload(endpoint, oldValue, newValue);
-  if (!emitVarChangeTraceIfChanged(evalCtx, tracePayload)) {
+  if (!emitVarChangeTraceIfChanged({
+    collector: evalCtx.collector,
+    state,
+    traceContext: ctx.traceContext,
+    effectPath: ctx.effectPath,
+  }, tracePayload)) {
     return undefined;
   }
 
@@ -304,8 +309,8 @@ const compiledTraceProvenance = (
   ctx: CompiledExecutionContext,
 ): EffectTraceProvenance => resolveTraceProvenance({
   state,
-  ...(ctx.traceContext === undefined ? {} : { traceContext: ctx.traceContext }),
-  ...(ctx.effectPath === undefined ? {} : { effectPath: ctx.effectPath }),
+  traceContext: ctx.traceContext,
+  effectPath: ctx.effectPath,
 });
 
 const executeCompiledFragment = (
@@ -361,7 +366,7 @@ const executeCompiledDelegate = (
     rng,
     bindings,
     decisionScope: ctx.decisionScope,
-    ...(ctx.effectPath === undefined ? {} : { effectPath: ctx.effectPath }),
+    effectPath: ctx.effectPath,
     tracker: ctx.tracker,
   };
   const result = handler(

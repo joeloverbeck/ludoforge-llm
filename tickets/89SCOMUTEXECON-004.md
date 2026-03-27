@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel effect handlers + effect-context.ts cleanup
-**Deps**: 89SCOMUTEXECON-003 (scope wired into dispatch, simple handlers migrated)
+**Deps**: tickets/89SCOMUTEXECON-003.md
 
 ## Problem
 

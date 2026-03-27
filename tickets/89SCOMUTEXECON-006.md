@@ -4,7 +4,7 @@
 **Priority**: LOW
 **Effort**: Medium
 **Engine Changes**: Yes — multiple kernel files (scope determined by audit)
-**Deps**: 89SCOMUTEXECON-004 (Phase 1 complete), 89SCOMUTEXECON-005 (Phase 2 complete)
+**Deps**: tickets/89SCOMUTEXECON-004.md, tickets/89SCOMUTEXECON-005.md
 
 ## Problem
 

@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — kernel/legal-moves.ts
-**Deps**: 89SCOMUTEXECON-002 (MutableReadScope factories must exist). Independent of 003/004 (can run in parallel after 002).
+**Deps**: tickets/89SCOMUTEXECON-002.md
 
 ## Problem
 

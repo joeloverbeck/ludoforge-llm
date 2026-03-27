@@ -180,7 +180,7 @@ describe('effect-context construction contract', () => {
     );
   });
 
-  it('builds narrow trace bridge helpers without inventing optional fields', () => {
+  it('builds narrow trace bridge helpers with stable own-property layouts', () => {
     const context = createExecutionEffectContext(makeRuntimeEffectContextOptions());
     const env = toEffectEnv(context);
     const cursor = toEffectCursor(context);
@@ -188,15 +188,29 @@ describe('effect-context construction contract', () => {
     const provenanceCtx = toTraceProvenanceContext(env, cursor);
     const emissionCtx = toTraceEmissionContext(env, cursor);
 
-    assert.deepEqual(provenanceCtx, { state: context.state });
+    assert.deepEqual(cursor, {
+      state: context.state,
+      rng: context.rng,
+      bindings: context.bindings,
+      decisionScope: context.decisionScope,
+      effectPath: undefined,
+    });
+    assert.deepEqual(provenanceCtx, {
+      state: context.state,
+      traceContext: undefined,
+      effectPath: undefined,
+    });
     assert.deepEqual(emissionCtx, {
       collector: context.collector,
       state: context.state,
+      traceContext: undefined,
+      effectPath: undefined,
     });
-    assert.equal('traceContext' in provenanceCtx, false);
-    assert.equal('effectPath' in provenanceCtx, false);
-    assert.equal('traceContext' in emissionCtx, false);
-    assert.equal('effectPath' in emissionCtx, false);
+    assert.equal(Object.hasOwn(cursor, 'effectPath'), true);
+    assert.equal(Object.hasOwn(provenanceCtx, 'traceContext'), true);
+    assert.equal(Object.hasOwn(provenanceCtx, 'effectPath'), true);
+    assert.equal(Object.hasOwn(emissionCtx, 'traceContext'), true);
+    assert.equal(Object.hasOwn(emissionCtx, 'effectPath'), true);
   });
 
   it('preserves trace optional fields when present in the env/cursor split', () => {

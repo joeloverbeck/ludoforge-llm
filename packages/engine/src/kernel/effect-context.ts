@@ -223,7 +223,7 @@ export interface EffectCursor {
   rng: Rng;
   bindings: Readonly<Record<string, unknown>>;
   decisionScope: DecisionScope;
-  effectPath?: string;
+  effectPath: string | undefined;
   /** Present when inside a mutable-state scope (Spec 78 draft execution). */
   tracker?: DraftTracker;
 }
@@ -242,19 +242,26 @@ export const toEffectCursor = (ctx: EffectContext): EffectCursor => ({
   rng: ctx.rng,
   bindings: ctx.bindings,
   decisionScope: ctx.decisionScope,
-  ...(ctx.effectPath === undefined ? {} : { effectPath: ctx.effectPath }),
+  effectPath: ctx.effectPath,
 });
 
-export type TraceProvenanceContext = Pick<EffectContext, 'state' | 'traceContext' | 'effectPath'>;
-export type TraceEmissionContext = Pick<EffectContext, 'collector' | 'state' | 'traceContext' | 'effectPath'>;
+export interface TraceProvenanceContext {
+  readonly state: GameState;
+  readonly traceContext: EffectTraceContext | undefined;
+  readonly effectPath: string | undefined;
+}
+
+export interface TraceEmissionContext extends TraceProvenanceContext {
+  readonly collector: import('./types.js').ExecutionCollector;
+}
 
 export const toTraceProvenanceContext = (
   env: Pick<EffectEnv, 'traceContext'>,
   cursor: Pick<EffectCursor, 'state' | 'effectPath'>,
 ): TraceProvenanceContext => ({
   state: cursor.state,
-  ...(env.traceContext === undefined ? {} : { traceContext: env.traceContext }),
-  ...(cursor.effectPath === undefined ? {} : { effectPath: cursor.effectPath }),
+  traceContext: env.traceContext,
+  effectPath: cursor.effectPath,
 });
 
 export const toTraceEmissionContext = (
@@ -262,7 +269,9 @@ export const toTraceEmissionContext = (
   cursor: Pick<EffectCursor, 'state' | 'effectPath'>,
 ): TraceEmissionContext => ({
   collector: env.collector,
-  ...toTraceProvenanceContext(env, cursor),
+  state: cursor.state,
+  traceContext: env.traceContext,
+  effectPath: cursor.effectPath,
 });
 
 /**

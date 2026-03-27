@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel effect handlers + effect-context.ts cleanup
-**Deps**: tickets/89SCOMUTEXECON-003.md
+**Deps**: archive/tickets/89SCOMUTEXECON/89SCOMUTEXECON-003-dispatch-owned-mutable-read-scope.md
 
 ## Problem
 
@@ -13,34 +13,40 @@ After ticket 003, the complex effect handlers (effects-choice.ts, effects-contro
 ## Assumption Reassessment (2026-03-28)
 
 1. `effects-choice.ts` uses `mergeToReadContext` and `toTraceProvenanceContext` — **confirmed**. Choice handlers evaluate conditions to determine valid choices.
-2. `effects-control.ts` uses types only — **confirmed**. It dispatches to `applyEffectsWithBudgetState` recursively for forEach/let/reduce bodies. Each recursive call creates its own scope (nested scope isolation per spec).
+2. `effects-control.ts` still uses `mergeToEvalContext` at multiple direct evaluation sites (`if`, `let`, `forEach`, `reduce`, `removeByPriority`) and also dispatches recursively via `applyEffectsWithBudgetState` — **confirmed discrepancy with the original ticket**.
 3. `effects-subset.ts` uses `mergeToEvalContext`, `mergeToReadContext`, and `resolveEffectBindings` — **confirmed**. Subset handlers evaluate multiple conditions.
 4. `effects-token.ts` uses `mergeToReadContext`, `resolveEffectBindings`, and `toTraceProvenanceContext` — **confirmed**. Token handlers resolve zone/token references.
-5. Nested scope isolation: each `applyEffectsWithBudgetState` call already creates its own scope (from ticket 003). Inner handlers see the inner scope, not the parent — **confirmed** by the workCursor nesting pattern.
-6. 0 context retention sites across all handler files — **confirmed** from spec's risk assessment. All contexts are ephemeral.
-7. Ticket `002` landed the mutable-scope foundation but explicitly did **not** settle that “every handler should receive `scope`” is the ideal long-term interface — **confirmed architectural caution**.
+5. Ticket `003` already widened the interpreted handler contract and compiled delegate plumbing to pass a dispatch-owned `MutableReadScope` explicitly. This ticket no longer needs to re-litigate that boundary decision — **confirmed discrepancy with the original architectural note**.
+6. Nested scope isolation: each `applyEffectsWithBudgetState` call already creates its own scope (from ticket 003). Inner handlers see the inner scope, not the parent — **confirmed** by the workCursor nesting pattern.
+7. The remaining complexity is not handler-signature design anymore; it is localized binding/state updates inside nested evaluation sites where direct reuse of the incoming scope may or may not be sufficient — **confirmed refined scope**.
 
 ## Architecture Check
 
-1. This ticket must not assume that complex handlers should blindly “use scope the same way as simple handlers.” For nested control-flow and custom-binding cases, a dispatch-local helper or localized scope reuse may be cleaner than a globally widened handler API.
-2. Nested forEach/let/reduce bodies dispatch via `applyEffectsWithBudgetState`, which creates its own `MutableReadScope`. The parent scope is not visible to the child — same isolation as the existing workCursor pattern.
-3. After migration, `mergeToEvalContext` and `mergeToReadContext` should have zero callers and be deleted (Foundation 9: no deprecated fallbacks), but only after the chosen architecture is shown to be cleaner than the current handler boundary.
+1. The widened handler contract is already the chosen architecture. This ticket should exploit that existing scope parameter instead of introducing a second parallel eval-context strategy.
+2. Complex handlers should still avoid blind search-and-replace. For nested control-flow and custom-binding cases, small local helpers that mutate a temporary or incoming scope are acceptable if they keep the code clearer than inlining repeated field updates.
+3. Nested forEach/let/reduce bodies dispatch via `applyEffectsWithBudgetState`, which creates its own `MutableReadScope`. The parent scope is not visible to the child — same isolation as the existing workCursor pattern.
+4. After migration, `mergeToEvalContext` and `mergeToReadContext` should have zero callers and be deleted (Foundation 9: no deprecated fallbacks).
 
 ## Architectural Note
 
-Before migrating the complex handlers, re-evaluate whether the ideal architecture is:
+The architectural question is now narrower than the original ticket assumed:
 
-1. Reusing one mutable scope that is threaded through all handlers.
-2. Keeping complex-handler signatures narrow and introducing small local helpers that update a shared scope only where evaluation occurs.
-3. Using specialized per-handler mutable eval helpers for the deeply nested control/token cases.
+1. Prefer direct reuse of the existing `scope` parameter where the handler's eval
+   bindings match dispatch semantics.
+2. Use small local helper updates only at the sites that need raw bindings or
+   custom temporary bindings.
+3. Do not introduce a second handler API or move scope ownership out of dispatch.
 
-Default recommendation: prefer the smallest interface surface that still removes `mergeToEvalContext` / `mergeToReadContext` cleanly.
+Default recommendation: finish convergence on the dispatch-owned scope model and
+keep any per-handler helpers purely local.
 
 ## What to Change
 
-### 1. Reassess the per-handler migration shape before replacing merge calls
+### 1. Reassess only the local binding-update shape before replacing merge calls
 
-For each complex handler, decide whether direct `scope` usage is actually cleaner than a small local helper around evaluation.
+The handler boundary decision is already settled by ticket 003. For each complex
+handler, decide only whether direct `scope` reuse or a tiny local helper is
+cleaner at each nested/custom-binding evaluation site.
 
 ### 2. Migrate `effects-control.ts`
 
@@ -58,9 +64,11 @@ Replace `mergeToReadContext` calls with `scope`. Where `resolveEffectBindings` i
 
 Remove function definitions and exports. Remove from `index.ts`/`runtime.ts` re-exports if present.
 
-### 6. Update effect-context-test-helpers if needed
+### 6. Strengthen regression coverage where scope reuse can miss updated bindings/state
 
-If test helpers reference `mergeToEvalContext`/`mergeToReadContext`, remove those references.
+If migration reveals subtle state/binding sequencing risks, add focused tests in
+the existing handler test files rather than relying only on broad integration
+coverage.
 
 ## Files to Touch
 
@@ -70,7 +78,7 @@ If test helpers reference `mergeToEvalContext`/`mergeToReadContext`, remove thos
 - `packages/engine/src/kernel/effects-token.ts` (modify) — migrate to scope
 - `packages/engine/src/kernel/effect-context.ts` (modify) — delete `mergeToEvalContext`, `mergeToReadContext`
 - `packages/engine/src/kernel/index.ts` (modify, if re-exports merge functions)
-- `packages/engine/test/helpers/effect-context-test-helpers.ts` (modify, if references merge functions)
+- targeted existing handler test files, if scope migration exposes missing invariants
 
 ## Out of Scope
 
@@ -97,7 +105,9 @@ If test helpers reference `mergeToEvalContext`/`mergeToReadContext`, remove thos
 ### Invariants
 
 1. `mergeToEvalContext` and `mergeToReadContext` do not exist in the codebase (zero grep matches across `packages/engine/src/`).
-2. The final handler/eval architecture is explicitly justified; if some handlers do not directly receive `scope`, that is acceptable as long as the merge helpers are gone and the replacement is cleaner.
+2. The final handler/eval architecture converges on the existing dispatch-owned
+   scope model from ticket 003; any local helper is only a binding-update aid,
+   not a replacement architectural layer.
 3. Nested scope isolation: each `applyEffectsWithBudgetState` invocation creates its own `MutableReadScope`.
 4. External contract unchanged: `applyMove(state) -> newState` remains immutable.
 5. `resolveEffectBindings` remains available for custom binding construction where needed.
@@ -107,7 +117,8 @@ If test helpers reference `mergeToEvalContext`/`mergeToReadContext`, remove thos
 
 ### New/Modified Tests
 
-1. No new test files — existing integration and golden tests comprehensively exercise all handler paths.
+1. Use existing handler and integration test files, but add focused assertions if
+   migration exposes uncovered state/binding sequencing invariants.
 2. Verify via grep that merge functions are fully removed.
 
 ### Commands

@@ -27,7 +27,7 @@ import {
 import { resolveFreeOperationGrantSeatToken } from './free-operation-seat-resolution.js';
 import { resolveFreeOperationExecutionContext } from './free-operation-execution-context.js';
 import { toMoveExecutionPolicy, type MoveExecutionPolicy } from './execution-policy.js';
-import type { EffectCursor, EffectEnv, PartialEffectResult } from './effect-context.js';
+import type { EffectCursor, EffectEnv, MutableReadScope, PartialEffectResult } from './effect-context.js';
 import type {
   EffectAST,
   GameState,
@@ -118,6 +118,7 @@ export const applyGrantFreeOperation = (
   effect: Extract<EffectAST, { readonly grantFreeOperation: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
+  _scope: MutableReadScope,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
@@ -378,6 +379,7 @@ export const applyGotoPhaseExact = (
   effect: Extract<EffectAST, { readonly gotoPhaseExact: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
+  _scope: MutableReadScope,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
@@ -451,6 +453,7 @@ export const applyAdvancePhase = (
   _effect: Extract<EffectAST, { readonly advancePhase: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
+  _scope: MutableReadScope,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
@@ -501,6 +504,7 @@ export const applyPushInterruptPhase = (
   effect: Extract<EffectAST, { readonly pushInterruptPhase: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
+  _scope: MutableReadScope,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
@@ -544,6 +548,7 @@ export const applyPopInterruptPhase = (
   _effect: Extract<EffectAST, { readonly popInterruptPhase: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
+  _scope: MutableReadScope,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {

@@ -1,6 +1,7 @@
 import { rebaseIterationPath, withIterationSegment } from './decision-scope.js';
 import { combinations, countCombinations } from './combinatorics.js';
-import type { EffectCursor, NormalizedEffectResult, PartialEffectResult } from './effect-context.js';
+import { createMutableReadScope } from './effect-context.js';
+import type { EffectCursor, MutableReadScope, NormalizedEffectResult, PartialEffectResult } from './effect-context.js';
 import { createEvalContext } from './eval-context.js';
 import { evalCondition } from './eval-condition.js';
 import { evalQuery } from './eval-query.js';
@@ -357,6 +358,7 @@ const executeCompiledDelegate = (
   handler: (
     env: ReturnType<typeof buildEffectEnvFromCompiledCtx>,
     cursor: EffectCursor,
+    scope: MutableReadScope,
   ) => PartialEffectResult,
 ): PartialEffectResult => {
   consumeEffectBudget(ctx.effectBudget, effectType);
@@ -369,9 +371,11 @@ const executeCompiledDelegate = (
     effectPath: ctx.effectPath,
     tracker: ctx.tracker,
   };
+  const env = buildEffectEnvFromCompiledCtx(ctx, effectCtx.collector);
   const result = handler(
-    buildEffectEnvFromCompiledCtx(ctx, effectCtx.collector),
+    env,
     cursor,
+    createMutableReadScope(env, cursor),
   );
   return {
     state: result.state,
@@ -397,6 +401,7 @@ type CompiledDelegateInvoker<TEffect extends EffectAST> = (
   effect: TEffect,
   env: ReturnType<typeof buildEffectEnvFromCompiledCtx>,
   cursor: EffectCursor,
+  scope: MutableReadScope,
   budget: ReturnType<typeof createCompiledDelegateBudget>,
   applyBatch: typeof applyEffectsWithBudgetState,
 ) => PartialEffectResult;
@@ -413,10 +418,11 @@ const createCompiledDelegateLeafFragment = <TEffect extends EffectAST>(
     rng,
     bindings,
     ctx,
-    (env, cursor) => invoke(
+    (env, cursor, scope) => invoke(
       effect,
       env,
       cursor,
+      scope,
       createCompiledDelegateBudget(),
       unavailableCompiledApplyBatch(effectType),
     ),

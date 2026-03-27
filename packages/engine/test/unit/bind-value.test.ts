@@ -95,6 +95,25 @@ describe('bindValue effect', () => {
     assert.equal(result.state.globalVars.score, 9);
   });
 
+  it('reads updated global state from earlier effects in the same sequence', () => {
+    const ctx = makeCtx();
+    const result = applyEffects(
+      [
+        eff({ setVar: { scope: 'global', var: 'score', value: 4 } }),
+        eff({
+          bindValue: {
+            bind: '$seen',
+            value: { _t: 2 as const, ref: 'gvar', var: 'score' },
+          },
+        }),
+        eff({ addVar: { scope: 'global', var: 'score', delta: { _t: 2 as const, ref: 'binding', name: '$seen' } } }),
+      ],
+      ctx,
+    );
+
+    assert.equal(result.state.globalVars.score, 8);
+  });
+
   it('propagates nested bindValue outputs through let while keeping let.bind local', () => {
     const ctx = makeCtx();
     const result = applyEffects(

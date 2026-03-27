@@ -14,7 +14,7 @@ import { resolveRuntimeTokenBindingValue } from './token-binding.js';
 import { getTokenStateIndexEntry, invalidateTokenStateIndex } from './token-state-index.js';
 import { resolveTraceProvenance } from './trace-provenance.js';
 import { mergeToReadContext, resolveEffectBindings, toTraceProvenanceContext } from './effect-context.js';
-import type { EffectCursor, EffectEnv, PartialEffectResult } from './effect-context.js';
+import type { EffectCursor, EffectEnv, MutableReadScope, PartialEffectResult } from './effect-context.js';
 import type { EffectBudgetState } from './effects-control.js';
 import type { ApplyEffectsWithBudget } from './effect-registry.js';
 import { ensureZoneCloned, type MutableGameState } from './state-draft.js';
@@ -323,6 +323,7 @@ export const applyMoveToken = (
   effect: Extract<EffectAST, { readonly moveToken: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
+  _scope: MutableReadScope,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
@@ -452,6 +453,7 @@ export const applyMoveTokenAdjacent = (
   effect: Extract<EffectAST, { readonly moveTokenAdjacent: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
+  _scope: MutableReadScope,
   budget: EffectBudgetState,
   applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
@@ -487,6 +489,7 @@ export const applyMoveTokenAdjacent = (
     }),
     env,
     cursor,
+    _scope,
     budget,
     applyBatch,
   );
@@ -496,6 +499,7 @@ export const applyCreateToken = (
   effect: Extract<EffectAST, { readonly createToken: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
+  _scope: MutableReadScope,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
@@ -576,6 +580,7 @@ export const applyDestroyToken = (
   effect: Extract<EffectAST, { readonly destroyToken: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
+  _scope: MutableReadScope,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
@@ -626,6 +631,7 @@ export const applySetTokenProp = (
   effect: Extract<EffectAST, { readonly setTokenProp: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
+  _scope: MutableReadScope,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
@@ -725,6 +731,7 @@ export const applyDraw = (
   effect: Extract<EffectAST, { readonly draw: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
+  _scope: MutableReadScope,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
@@ -936,6 +943,7 @@ export const applyMoveAll = (
   effect: Extract<EffectAST, { readonly moveAll: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
+  _scope: MutableReadScope,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
@@ -1072,6 +1080,7 @@ export const applyShuffle = (
   effect: Extract<EffectAST, { readonly shuffle: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
+  _scope: MutableReadScope,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {

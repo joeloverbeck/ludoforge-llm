@@ -5,6 +5,7 @@ import { makeDiscoveryEffectContext, makeExecutionEffectContext, type EffectCont
 import {
   buildAdjacencyGraph,
   applyEffect,
+  applyEffects,
   asPhaseId,
   asPlayerId,
   createRng,
@@ -165,6 +166,19 @@ describe('effects var handlers', () => {
 
     const pvarResult = applyEffect(eff({ addVar: { scope: 'pvar', player: 'active', var: 'hp', delta: 5 } }), ctx);
     assert.equal(pvarResult.state.perPlayerVars['1']?.hp, 13);
+  });
+
+  it('evaluates later var effects against state updated earlier in the same sequence', () => {
+    const ctx = makeCtx();
+    const result = applyEffects(
+      [
+        eff({ setVar: { scope: 'global', var: 'score', value: 5 } }),
+        eff({ addVar: { scope: 'global', var: 'score', delta: { _t: 2 as const, ref: 'gvar', var: 'score' } } }),
+      ],
+      ctx,
+    );
+
+    assert.equal(result.state.globalVars.score, 10);
   });
 
   it('addVar clamps values to min/max bounds', () => {

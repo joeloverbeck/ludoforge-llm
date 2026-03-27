@@ -14,11 +14,11 @@ import { emitVarChangeTraceIfChanged } from './var-change-trace.js';
 import { toTraceResourceEndpoint, toTraceVarChangePayload, toVarChangedEvent } from './scoped-var-runtime-mapping.js';
 import { resolveTraceProvenance } from './trace-provenance.js';
 import { updateVarRunningHash } from './zobrist-var-hash.js';
-import { mergeToEvalContext, mergeToReadContext, toTraceEmissionContext } from './effect-context.js';
+import { toTraceEmissionContext } from './effect-context.js';
 import type { RuntimeScopedVarEndpoint } from './scoped-var-runtime-mapping.js';
 import type { PlayerId, ZoneId } from './branded.js';
 import type { ReadContext } from './eval-context.js';
-import type { EffectCursor, EffectEnv, PartialEffectResult } from './effect-context.js';
+import type { EffectCursor, EffectEnv, MutableReadScope, PartialEffectResult } from './effect-context.js';
 import type { EffectBudgetState } from './effects-control.js';
 import type { ApplyEffectsWithBudget } from './effect-registry.js';
 import type { MutableGameState } from './state-draft.js';
@@ -182,11 +182,12 @@ export const applyTransferVar = (
   effect: Extract<EffectAST, { readonly transferVar: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
+  scope: MutableReadScope,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
-  const evalCtx = mergeToEvalContext(env, cursor);
-  const readCtx = mergeToReadContext(env, cursor);
+  const evalCtx = scope;
+  const readCtx = scope;
   const traceCtx = toTraceEmissionContext(env, cursor);
   const source = resolveEndpoint(effect.transferVar.from, evalCtx, readCtx, env.mode);
   const destination = resolveEndpoint(effect.transferVar.to, evalCtx, readCtx, env.mode);

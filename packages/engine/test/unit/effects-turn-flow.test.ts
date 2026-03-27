@@ -25,7 +25,7 @@ import {
   applyPushInterruptPhase as applyPushInterruptPhaseNative,
   applyPopInterruptPhase as applyPopInterruptPhaseNative,
 } from '../../src/kernel/effects-turn-flow.js';
-import { toEffectEnv, toEffectCursor } from '../../src/kernel/effect-context.js';
+import { createMutableReadScope, toEffectEnv, toEffectCursor } from '../../src/kernel/effect-context.js';
 import type { EffectBudgetState } from '../../src/kernel/effects-control.js';
 import type { ApplyEffectsWithBudget } from '../../src/kernel/effect-registry.js';
 import { eff } from '../helpers/effect-tag-helper.js';
@@ -34,8 +34,12 @@ const dummyBudget: EffectBudgetState = { remaining: 10_000, max: 10_000 };
 const dummyApplyBatch: ApplyEffectsWithBudget = () => { throw new Error('unexpected applyBatch call'); };
 
 type SimpleHandler<E> = (effect: E, ctx: EffectContext) => import('../../src/kernel/effect-context.js').PartialEffectResult;
-const adaptHandler = <E>(native: (effect: E, env: import('../../src/kernel/effect-context.js').EffectEnv, cursor: import('../../src/kernel/effect-context.js').EffectCursor, budget: EffectBudgetState, applyBatch: ApplyEffectsWithBudget) => import('../../src/kernel/effect-context.js').PartialEffectResult): SimpleHandler<E> =>
-  (effect, ctx) => native(effect, toEffectEnv(ctx), toEffectCursor(ctx), dummyBudget, dummyApplyBatch);
+const adaptHandler = <E>(native: (effect: E, env: import('../../src/kernel/effect-context.js').EffectEnv, cursor: import('../../src/kernel/effect-context.js').EffectCursor, scope: import('../../src/kernel/effect-context.js').MutableReadScope, budget: EffectBudgetState, applyBatch: ApplyEffectsWithBudget) => import('../../src/kernel/effect-context.js').PartialEffectResult): SimpleHandler<E> =>
+  (effect, ctx) => {
+    const env = toEffectEnv(ctx);
+    const cursor = toEffectCursor(ctx);
+    return native(effect, env, cursor, createMutableReadScope(env, cursor), dummyBudget, dummyApplyBatch);
+  };
 
 const applyGrantFreeOperation = adaptHandler(applyGrantFreeOperationNative);
 const applyGotoPhaseExact = adaptHandler(applyGotoPhaseExactNative);

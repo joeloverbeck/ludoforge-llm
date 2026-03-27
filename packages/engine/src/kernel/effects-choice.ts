@@ -24,7 +24,7 @@ import { mergeToReadContext, toTraceProvenanceContext } from './effect-context.j
 import { ensureMarkerCloned, type MutableGameState } from './state-draft.js';
 import { addToRunningHash, updateRunningHash } from './zobrist.js';
 import type { ZobristFeature } from './types-core.js';
-import type { EffectContext, EffectCursor, EffectEnv, PartialEffectResult } from './effect-context.js';
+import type { EffectContext, EffectCursor, EffectEnv, MutableReadScope, PartialEffectResult } from './effect-context.js';
 import type { ReadContext } from './eval-context.js';
 import type {
   ChoicePendingRequest,
@@ -600,6 +600,7 @@ export const applyChooseOne = (
   effect: Extract<EffectAST, { readonly chooseOne: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
+  _scope: MutableReadScope,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
@@ -719,6 +720,7 @@ export const applyChooseN = (
   effect: Extract<EffectAST, { readonly chooseN: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
+  _scope: MutableReadScope,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
@@ -962,6 +964,7 @@ export const applyRollRandom = (
   effect: Extract<EffectAST, { readonly rollRandom: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
+  _scope: MutableReadScope,
   budget: EffectBudgetState,
   applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
@@ -1109,6 +1112,7 @@ export const applySetMarker = (
   effect: Extract<EffectAST, { readonly setMarker: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
+  _scope: MutableReadScope,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
@@ -1197,6 +1201,7 @@ export const applyShiftMarker = (
   effect: Extract<EffectAST, { readonly shiftMarker: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
+  _scope: MutableReadScope,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
@@ -1289,6 +1294,7 @@ export const applySetGlobalMarker = (
   effect: Extract<EffectAST, { readonly setGlobalMarker: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
+  _scope: MutableReadScope,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
@@ -1347,6 +1353,7 @@ export const applyShiftGlobalMarker = (
   effect: Extract<EffectAST, { readonly shiftGlobalMarker: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
+  _scope: MutableReadScope,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
@@ -1415,6 +1422,7 @@ export const applyFlipGlobalMarker = (
   effect: Extract<EffectAST, { readonly flipGlobalMarker: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
+  _scope: MutableReadScope,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {

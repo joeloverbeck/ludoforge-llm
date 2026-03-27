@@ -16,6 +16,7 @@ import {
   toTraceProvenanceContext,
   type EffectCursor,
   type EffectEnv,
+  type MutableReadScope,
   type PartialEffectResult,
 } from './effect-context.js';
 import { VALUE_EXPR_TAG } from './types.js';
@@ -50,6 +51,7 @@ export const applyIf = (
   effect: Extract<EffectAST, { readonly if: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
+  _scope: MutableReadScope,
   budget: EffectBudgetState,
   applyEffectsWithBudget: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
@@ -90,6 +92,7 @@ export const applyLet = (
   effect: Extract<EffectAST, { readonly let: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
+  _scope: MutableReadScope,
   budget: EffectBudgetState,
   applyEffectsWithBudget: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
@@ -139,6 +142,7 @@ export const applyForEach = (
   effect: Extract<EffectAST, { readonly forEach: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
+  _scope: MutableReadScope,
   budget: EffectBudgetState,
   applyEffectsWithBudget: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
@@ -253,6 +257,7 @@ export const applyReduce = (
   effect: Extract<EffectAST, { readonly reduce: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
+  _scope: MutableReadScope,
   budget: EffectBudgetState,
   applyEffectsWithBudget: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
@@ -352,6 +357,7 @@ export const applyRemoveByPriority = (
   effect: Extract<EffectAST, { readonly removeByPriority: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
+  _scope: MutableReadScope,
   budget: EffectBudgetState,
   applyEffectsWithBudget: ApplyEffectsWithBudget,
 ): PartialEffectResult => {

@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — kernel/legal-moves.ts
-**Deps**: tickets/89SCOMUTEXECON-002.md
+**Deps**: archive/tickets/89SCOMUTEXECON/89SCOMUTEXECON-002-mutable-read-scope-foundations.md
 
 ## Problem
 
@@ -17,13 +17,23 @@
 3. `enumerateParams` is recursive (calls itself with incremented `paramIndex`) — **confirmed**. Each recursion level evaluates conditions with a different `bindings` object.
 4. `createEvalContext` (eval-context.ts) constructs a ReadContext from individual fields — **confirmed**.
 5. The ReadContext created here is used only for `evalCondition` / `evalValue` calls within the same synchronous frame — it does not escape — **confirmed**.
+6. Ticket `003` already established the dispatch-owned scope model for effect
+   execution. This ticket should stay local to move enumeration and must not
+   couple `legal-moves.ts` to effect-dispatch plumbing — **confirmed scope
+   boundary**.
+7. `createEvalContext` still has many non-`legal-moves.ts` callers across the
+   kernel, so deleting `createEvalContext` is not a realistic outcome of this
+   ticket alone — **confirmed discrepancy with the original cleanup option**.
 
 ## Architecture Check
 
 1. Replace per-combination object creation with a mutable scope created once at `enumerateParams` entry, updated per parameter combination. Same pattern as Phase 1 but for the move enumeration hot path.
 2. Game-agnostic: parameter enumeration is generic across all games.
 3. `makeEvalContext` itself uses a conditional spread for `freeOperationOverlay` — the mutable scope avoids this by always having the field present (same monomorphism principle).
-4. No backwards-compatibility: `makeEvalContext` can be deleted or inlined once all call sites are migrated. If `makeEvalContext` has callers outside `enumerateParams`, keep it; otherwise delete.
+4. No backwards-compatibility: `makeEvalContext` can be deleted or inlined once
+   `enumerateParams` no longer needs it. `createEvalContext` is broader kernel
+   infrastructure and should not be deleted by this ticket unless the audit
+   unexpectedly proves it has no remaining callers.
 5. Architectural caution from ticket `002`: keep the mutable scope local to enumeration unless there is a compelling reason to widen another boundary. This ticket should not introduce a broader shared abstraction than `enumerateParams` needs.
 
 ## Architectural Note
@@ -46,18 +56,22 @@ Set `scope.freeOperationOverlay = options?.freeOperationOverlay ?? undefined` at
 
 ### 4. Audit `makeEvalContext` callers
 
-If `makeEvalContext` has no remaining callers after this migration, delete it (Foundation 9). If other callers exist, leave it.
+If `makeEvalContext` has no remaining callers after this migration, delete it
+(Foundation 9). Do not broaden this ticket into a `createEvalContext`
+decommissioning effort; that belongs to ticket 006.
 
 ## Files to Touch
 
 - `packages/engine/src/kernel/legal-moves.ts` (modify) — scope creation, field updates, replace makeEvalContext calls
-- `packages/engine/src/kernel/eval-context.ts` (modify, conditional) — delete `createEvalContext` if zero callers remain outside legal-moves.ts; otherwise leave unchanged
+- `packages/engine/src/kernel/eval-context.ts` (modify, only if enumeration-local helper extraction genuinely requires it)
 
 ## Out of Scope
 
 - Changes to effect-dispatch.ts or any effects-*.ts files (Phase 1 tickets).
 - Changes to `effect-context.ts` (already handled by tickets 001-004).
-- Migrating `createEvalContext` call sites in trigger-dispatch.ts, apply-move.ts, event-execution.ts, etc. (ticket 006).
+- Migrating non-`legal-moves.ts` `createEvalContext` call sites in
+  `trigger-dispatch.ts`, `apply-move.ts`, `event-execution.ts`, etc. (ticket
+  006).
 - Changes to `MutableReadScope` interface or factory functions.
 - Performance benchmarking of the combined Phase 1 + Phase 2 impact.
 

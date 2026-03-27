@@ -16,8 +16,8 @@ import { emitVarChangeTraceIfChanged } from './var-change-trace.js';
 import { clampIntVarValue } from './var-runtime-utils.js';
 import { updateRunningHash } from './zobrist.js';
 import { updateVarRunningHash } from './zobrist-var-hash.js';
-import { mergeToReadContext, resolveEffectBindings, toTraceEmissionContext } from './effect-context.js';
-import type { EffectCursor, EffectEnv, PartialEffectResult } from './effect-context.js';
+import { toTraceEmissionContext } from './effect-context.js';
+import type { EffectCursor, EffectEnv, MutableReadScope, PartialEffectResult } from './effect-context.js';
 import type { EffectBudgetState } from './effects-control.js';
 import type { ApplyEffectsWithBudget } from './effect-registry.js';
 import type { MutableGameState } from './state-draft.js';
@@ -68,15 +68,14 @@ export const applySetVar = (
   effect: Extract<EffectAST, { readonly setVar: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
+  scope: MutableReadScope,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
   const profiler = env.profiler;
   const { value } = effect.setVar;
   const t0_bindings = profiler !== undefined ? performance.now() : 0;
-  const resolvedBindings = resolveEffectBindings(env, cursor);
-  const evalCursor = resolvedBindings === cursor.bindings ? cursor : { ...cursor, bindings: resolvedBindings };
-  const evalCtx = mergeToReadContext(env, evalCursor);
+  const evalCtx = scope;
   if (profiler !== undefined) {
     const k = 'setVar:bindings'; const b = profiler.dynamic.get(k); if (b) b.totalMs += performance.now() - t0_bindings; else profiler.dynamic.set(k, { count: 0, totalMs: performance.now() - t0_bindings });
   }
@@ -153,13 +152,12 @@ export const applyAddVar = (
   effect: Extract<EffectAST, { readonly addVar: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
+  scope: MutableReadScope,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
   const { delta } = effect.addVar;
-  const resolvedBindings = resolveEffectBindings(env, cursor);
-  const evalCursor = resolvedBindings === cursor.bindings ? cursor : { ...cursor, bindings: resolvedBindings };
-  const evalCtx = mergeToReadContext(env, evalCursor);
+  const evalCtx = scope;
   const evaluatedDelta = expectInteger(evalValue(delta, evalCtx), 'addVar', 'delta');
   const endpoint = resolveRuntimeScopedEndpoint(effect.addVar, evalCtx, env.mode, {
     code: EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED,
@@ -215,12 +213,11 @@ export const applySetActivePlayer = (
   effect: Extract<EffectAST, { readonly setActivePlayer: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
+  scope: MutableReadScope,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
-  const resolvedBindings = resolveEffectBindings(env, cursor);
-  const evalCursor = resolvedBindings === cursor.bindings ? cursor : { ...cursor, bindings: resolvedBindings };
-  const evalCtx = mergeToReadContext(env, evalCursor);
+  const evalCtx = scope;
   const onResolutionFailure = selectorResolutionFailurePolicyForMode(env.mode);
   const nextActive = resolveSinglePlayerWithNormalization(effect.setActivePlayer.player, evalCtx, {
     code: EFFECT_RUNTIME_REASONS.VARIABLE_RUNTIME_VALIDATION_FAILED,

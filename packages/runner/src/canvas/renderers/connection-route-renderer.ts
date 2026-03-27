@@ -12,7 +12,7 @@ import {
   STROKE_LABEL_FONT_NAME,
 } from '../text/bitmap-font-registry.js';
 import { createManagedBitmapText, destroyManagedBitmapText } from '../text/bitmap-text-runtime.js';
-import { parseHexColor } from './shape-utils.js';
+import { parseHexColor } from '../../rendering/color-utils.js';
 import { safeDestroyDisplayObject } from './safe-destroy.js';
 import {
   createZoneBadgeVisuals,

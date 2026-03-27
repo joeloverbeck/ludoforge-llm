@@ -2,9 +2,10 @@ import { BitmapText, Circle, Container, Graphics, Polygon, Rectangle } from 'pix
 
 import type { RenderToken } from '../../model/render-model';
 import type { TokenShape } from '../../config/visual-config-defaults.js';
+import { parseHexColor } from '../../rendering/color-utils.js';
 import type { DisposalQueue } from './disposal-queue.js';
 import type { TokenFaceController, TokenRenderer } from './renderer-types';
-import { buildRegularPolygonPoints, parseHexColor } from './shape-utils';
+import { buildRegularPolygonPoints } from './shape-utils';
 import { drawTokenShape } from './token-shape-drawer.js';
 import { drawTokenSymbol } from './token-symbol-drawer.js';
 import { destroyCardContentPool, drawResolvedCardContent } from './card-template-renderer.js';

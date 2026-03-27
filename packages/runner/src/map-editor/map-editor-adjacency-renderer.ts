@@ -2,11 +2,10 @@ import { Graphics, type Container } from 'pixi.js';
 
 import {
   DEFAULT_EDGE_STYLE,
-  type EdgeStrokeStyle,
   type VisualConfigProvider,
 } from '../config/visual-config-provider.js';
-import { parseHexColor } from '../canvas/renderers/shape-utils.js';
 import { collectLayoutAdjacencyPairs, partitionZones } from '../layout/build-layout-graph.js';
+import { resolveEdgeStrokeStyle } from '../rendering/resolve-edge-stroke-style.js';
 import type { MapEditorStoreApi } from './map-editor-store.js';
 
 export interface EditorAdjacencyRenderer {
@@ -26,7 +25,10 @@ export function createEditorAdjacencyRenderer(
 
   const render = (state: ReturnType<MapEditorStoreApi['getState']>): void => {
     graphics.clear();
-    const strokeStyle = resolveStrokeStyle(visualConfigProvider.resolveEdgeStyle(null, false));
+    const strokeStyle = resolveEdgeStrokeStyle(
+      visualConfigProvider.resolveEdgeStyle(null, false),
+      DEFAULT_EDGE_STYLE,
+    );
 
     let hasVisibleLines = false;
     for (const pair of pairs) {
@@ -64,22 +66,5 @@ export function createEditorAdjacencyRenderer(
       unsubscribe();
       graphics.destroy();
     },
-  };
-}
-
-function resolveStrokeStyle(
-  resolved: { color: string | null; width: number; alpha: number },
-): EdgeStrokeStyle {
-  const fallbackColor = parseHexColor(DEFAULT_EDGE_STYLE.color ?? undefined, {
-    allowNamedColors: true,
-  });
-  const parsedColor = parseHexColor(resolved.color ?? undefined, {
-    allowNamedColors: true,
-  });
-
-  return {
-    color: parsedColor ?? fallbackColor ?? 0xffffff,
-    width: resolved.width,
-    alpha: resolved.alpha,
   };
 }

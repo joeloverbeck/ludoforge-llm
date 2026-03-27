@@ -4,7 +4,6 @@ import {
   buildRegularPolygonPoints,
   drawZoneShape,
   getEdgePointAtAngle,
-  parseHexColor,
   resolveVisualDimensions,
 } from '../../../src/canvas/renderers/shape-utils';
 
@@ -39,15 +38,6 @@ class MockGraphics {
 }
 
 describe('shape-utils', () => {
-  it('parseHexColor enforces strict #RRGGBB by default and supports optional #RGB mode', () => {
-    expect(parseHexColor('#e63946')).toBe(0xe63946);
-    expect(parseHexColor('#abc')).toBeNull();
-    expect(parseHexColor('#abc', { allowShortHex: true })).toBe(0xaabbcc);
-    expect(parseHexColor('bright-blue', { allowNamedColors: true })).toBe(0x00bfff);
-    expect(parseHexColor('olive', { allowNamedColors: true })).toBe(0x808000);
-    expect(parseHexColor('invalid')).toBeNull();
-  });
-
   it('resolveVisualDimensions sanitizes missing and invalid dimensions', () => {
     expect(resolveVisualDimensions({ width: 120, height: 80 }, { width: 180, height: 110 })).toEqual({
       width: 120,

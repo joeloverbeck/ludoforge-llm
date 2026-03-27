@@ -2,8 +2,8 @@ import type { GameDef, ZoneDef } from '@ludoforge/engine/runtime';
 import { Container, Graphics, Polygon, type BitmapText, type FederatedPointerEvent } from 'pixi.js';
 
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
+import { parseHexColor } from '../rendering/color-utils.js';
 import { normalize, perpendicular } from '../canvas/geometry/bezier-utils.js';
-import { parseHexColor } from '../canvas/renderers/shape-utils.js';
 import { safeDestroyDisplayObject } from '../canvas/renderers/safe-destroy.js';
 import { STROKE_LABEL_FONT_NAME } from '../canvas/text/bitmap-font-registry.js';
 import { createManagedBitmapText, destroyManagedBitmapText } from '../canvas/text/bitmap-text-runtime.js';

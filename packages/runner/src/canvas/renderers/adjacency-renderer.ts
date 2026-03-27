@@ -1,13 +1,13 @@
 import { Graphics, type Container } from 'pixi.js';
 
 import { drawDashedLine } from '../geometry/dashed-line.js';
-import { getEdgePointAtAngle, parseHexColor, type ShapeDimensions } from './shape-utils.js';
+import { getEdgePointAtAngle, type ShapeDimensions } from './shape-utils.js';
 import {
   DEFAULT_EDGE_STYLE,
   HIGHLIGHTED_EDGE_STYLE,
-  type EdgeStrokeStyle,
   type VisualConfigProvider,
 } from '../../config/visual-config-provider.js';
+import { resolveEdgeStrokeStyle } from '../../rendering/resolve-edge-stroke-style.js';
 import type { Position } from '../geometry';
 import type { DisposalQueue } from './disposal-queue.js';
 import type { AdjacencyRenderer } from './renderer-types';
@@ -114,9 +114,9 @@ function drawAdjacencyLine(
   adjacency: PairRenderState,
   visualConfigProvider: VisualConfigProvider,
 ): void {
-  const strokeStyle = resolveStrokeStyle(
+  const strokeStyle = resolveEdgeStrokeStyle(
     visualConfigProvider.resolveEdgeStyle(adjacency.category, adjacency.isHighlighted),
-    adjacency.isHighlighted,
+    adjacency.isHighlighted ? HIGHLIGHTED_EDGE_STYLE : DEFAULT_EDGE_STYLE,
   );
   const angleDeg = computeAngleDegrees(fromPosition, toPosition);
   const fromEdgeOffset = getEdgePointAtAngle(fromZone.visual.shape, toShapeDimensions(fromZone), angleDeg);
@@ -162,23 +162,4 @@ function mergeCategory(left: string | null, right: string | null): string | null
     return left;
   }
   return left.localeCompare(right) <= 0 ? left : right;
-}
-
-function resolveStrokeStyle(
-  resolved: { color: string | null; width: number; alpha: number },
-  isHighlighted: boolean,
-): EdgeStrokeStyle {
-  const fallbackColor = parseHexColor(
-    (isHighlighted ? HIGHLIGHTED_EDGE_STYLE : DEFAULT_EDGE_STYLE).color ?? undefined,
-    { allowNamedColors: true },
-  );
-  const parsedColor = parseHexColor(resolved.color ?? undefined, {
-    allowNamedColors: true,
-  });
-
-  return {
-    color: parsedColor ?? fallbackColor ?? 0xffffff,
-    width: resolved.width,
-    alpha: resolved.alpha,
-  };
 }

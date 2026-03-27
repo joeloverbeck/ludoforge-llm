@@ -796,7 +796,14 @@ describe('createCanvasUpdater', () => {
       [],
       runtimeLayoutStore.getSnapshot().positions,
     );
-    expect(renderers.adjacencyRenderer.update).toHaveBeenCalledWith([], runtimeLayoutStore.getSnapshot().positions);
+    expect(renderers.adjacencyRenderer.update).toHaveBeenCalledWith(
+      [],
+      runtimeLayoutStore.getSnapshot().positions,
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'alpha:none' }),
+        expect.objectContaining({ id: 'beta:none' }),
+      ]),
+    );
     expect(renderers.tokenRenderer.update).toHaveBeenCalledWith(
       expect.arrayContaining([
         expect.objectContaining({

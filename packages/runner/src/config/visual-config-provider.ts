@@ -336,9 +336,9 @@ export class VisualConfigProvider {
 
   resolveEdgeStyle(edgeCategory: string | null, isHighlighted: boolean): ResolvedEdgeVisual {
     const resolved: ResolvedEdgeVisual = {
-      color: '#6b7280',
-      width: 1.5,
-      alpha: 0.3,
+      color: '#ffffff',
+      width: 2,
+      alpha: 0.6,
     };
 
     applyEdgeStyle(resolved, this.config?.edges?.default);
@@ -350,9 +350,9 @@ export class VisualConfigProvider {
 
     if (isHighlighted) {
       applyEdgeStyle(resolved, {
-        color: '#93c5fd',
+        color: '#ffffff',
         width: 3,
-        alpha: 0.7,
+        alpha: 0.85,
       });
       applyEdgeStyle(resolved, this.config?.edges?.highlighted);
     }

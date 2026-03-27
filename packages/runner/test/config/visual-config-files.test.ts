@@ -355,9 +355,9 @@ describe('visual-config.yaml files', () => {
     expect(parsed.zones?.tokenLayouts?.assignments?.byCategory?.loc).toBeUndefined();
 
     expect(parsed.edges?.default).toEqual({
-      color: '#6b7280',
-      width: 1.5,
-      alpha: 0.3,
+      color: '#ffffff',
+      width: 2,
+      alpha: 0.6,
     });
     expect(parsed.edges?.categoryStyles?.loc).toEqual({
       color: '#8b7355',

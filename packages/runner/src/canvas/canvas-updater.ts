@@ -108,7 +108,7 @@ export function createCanvasUpdater(deps: CanvasUpdaterDeps): CanvasUpdater {
     });
     deps.regionBoundaryRenderer?.update(scene.regions);
     deps.zoneRenderer.update(scene.zones, latestRuntimeLayoutSnapshot.positions);
-    deps.adjacencyRenderer.update(scene.adjacencies, latestRuntimeLayoutSnapshot.positions);
+    deps.adjacencyRenderer.update(scene.adjacencies, latestRuntimeLayoutSnapshot.positions, scene.zones);
     deps.connectionRouteRenderer.update(
       scene.connectionRoutes,
       scene.junctions,

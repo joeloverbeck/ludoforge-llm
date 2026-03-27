@@ -879,14 +879,14 @@ describe('VisualConfigProvider', () => {
     const provider = new VisualConfigProvider(null);
 
     expect(provider.resolveEdgeStyle(null, false)).toEqual({
-      color: '#6b7280',
-      width: 1.5,
-      alpha: 0.3,
+      color: '#ffffff',
+      width: 2,
+      alpha: 0.6,
     });
     expect(provider.resolveEdgeStyle(null, true)).toEqual({
-      color: '#93c5fd',
+      color: '#ffffff',
       width: 3,
-      alpha: 0.7,
+      alpha: 0.85,
     });
   });
 
@@ -903,7 +903,7 @@ describe('VisualConfigProvider', () => {
     expect(provider.resolveEdgeStyle('loc', false)).toEqual({
       color: '#8b7355',
       width: 2,
-      alpha: 0.3,
+      alpha: 0.6,
     });
   });
 

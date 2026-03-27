@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — runner-only
-**Deps**: tickets/86ADJLINRED-003.md
+**Deps**: archive/tickets/86ADJLINRED/86ADJLINRED-003.md
 
 ## Problem
 

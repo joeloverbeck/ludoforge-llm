@@ -25,6 +25,7 @@ import {
   type VerbalizationDef,
 } from '../../../src/kernel/index.js';
 import { eff } from '../../helpers/effect-tag-helper.js';
+import { readKernelSource } from '../../helpers/kernel-source-guard.js';
 
 // ---------------------------------------------------------------------------
 // Test helpers
@@ -929,6 +930,70 @@ describe('describeAction (condition annotator)', () => {
     assert.ok(!text.includes('BASE_RESOURCE_LABEL'), `Base action effect leaked into RuleCard text: ${text}`);
   });
 
+  it('preserves authored pipeline order when building RuleCard content from multiple pipelines', () => {
+    const action = minimalActionDef();
+    const pipelines: ActionPipelineDef[] = [
+      {
+        id: 'pipeline-a',
+        actionId: action.id,
+        legality: null,
+        costValidation: null,
+        costEffects: [eff({ addVar: { scope: 'global', var: 'pipelineAResource', delta: 1 } })],
+        targeting: {},
+        stages: [],
+        atomicity: 'atomic',
+      },
+      {
+        id: 'pipeline-b',
+        actionId: action.id,
+        legality: null,
+        costValidation: null,
+        costEffects: [eff({ addVar: { scope: 'global', var: 'pipelineBResource', delta: 1 } })],
+        targeting: {},
+        stages: [],
+        atomicity: 'atomic',
+      },
+    ];
+    const verbalization: VerbalizationDef = {
+      labels: {
+        pipelineAResource: { singular: 'PIPELINE_A_LABEL', plural: 'PIPELINE_A_LABEL' },
+        pipelineBResource: { singular: 'PIPELINE_B_LABEL', plural: 'PIPELINE_B_LABEL' },
+      },
+      stages: {},
+      macros: {},
+      sentencePlans: {},
+      suppressPatterns: [],
+      stageDescriptions: {},
+      modifierEffects: {},
+    };
+    const def = makeDef({
+      actions: [action],
+      globalVars: [
+        { name: 'gold', type: 'int', init: 0, min: 0, max: 999 },
+        { name: 'pipelineAResource', type: 'int', init: 0, min: 0, max: 999 },
+        { name: 'pipelineBResource', type: 'int', init: 0, min: 0, max: 999 },
+      ],
+      verbalization,
+      actionPipelines: pipelines,
+    });
+
+    const result = describeAction(action, makeContext({ def }));
+
+    assert.ok(result.tooltipPayload !== undefined);
+    const text = result.tooltipPayload.ruleCard.steps
+      .flatMap((step) => step.lines.map((line) => line.text))
+      .join(' ');
+    const pipelineAIndex = text.indexOf('PIPELINE_A_LABEL');
+    const pipelineBIndex = text.indexOf('PIPELINE_B_LABEL');
+
+    assert.ok(pipelineAIndex >= 0, `Expected PIPELINE_A_LABEL in RuleCard text, got: ${text}`);
+    assert.ok(pipelineBIndex >= 0, `Expected PIPELINE_B_LABEL in RuleCard text, got: ${text}`);
+    assert.ok(
+      pipelineAIndex < pipelineBIndex,
+      `Expected authored pipeline order to be preserved in RuleCard text, got: ${text}`,
+    );
+  });
+
   it('represents pipeline applicability as RuleCard modifier conditions', () => {
     const applicability: ConditionAST = {
       op: '>=',
@@ -1253,5 +1318,26 @@ describe('describeAction (condition annotator)', () => {
     assert.deepEqual(cloned.sections, result.sections);
     assert.deepEqual(cloned.limitUsage, result.limitUsage);
     assert.deepEqual(cloned.tooltipPayload, result.tooltipPayload);
+  });
+
+  it('reads grouped pipelines through the shared lookup helper', () => {
+    const source = readKernelSource('src/kernel/condition-annotator.ts');
+
+    assert.match(
+      source,
+      /import\s+\{\s*getActionPipelinesForAction\s*\}\s+from\s+'\.\/action-pipeline-lookup\.js';/u,
+    );
+    assert.equal(
+      (source.match(/getActionPipelinesForAction\(\s*(?:context\.def|def)\s*,\s*action\.id\s*\)/gu) ?? []).length,
+      3,
+    );
+    assert.doesNotMatch(
+      source,
+      /\(def\.actionPipelines\s*\?\?\s*\[\]\)\.filter\(\(pipeline\)\s*=>\s*pipeline\.actionId\s*===\s*action\.id\)/u,
+    );
+    assert.doesNotMatch(
+      source,
+      /\(context\.def\.actionPipelines\s*\?\?\s*\[\]\)\.filter\(\(p\)\s*=>\s*p\.actionId\s*===\s*action\.id\)/u,
+    );
   });
 });

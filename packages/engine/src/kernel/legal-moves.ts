@@ -1,3 +1,4 @@
+import { hasActionPipeline } from './action-pipeline-lookup.js';
 import { evalCondition } from './eval-condition.js';
 import { resolveActionExecutor } from './action-executor.js';
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
@@ -66,6 +67,7 @@ import { createTrustedExecutableMove } from './trusted-move.js';
 import { requireCardDrivenActiveSeat, validateTurnFlowRuntimeStateInvariants } from './turn-flow-runtime-invariants.js';
 import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
 import { findPhaseDef } from './phase-lookup.js';
+import { getPhaseActionIndex } from './phase-action-index.js';
 import type {
   ActionDef,
   ActionPipelineDef,
@@ -703,7 +705,7 @@ function enumeratePendingFreeOperationMoves(
         continue;
       }
 
-      const hasActionPipeline = (def.actionPipelines ?? []).some((pipeline) => pipeline.actionId === action.id);
+      const hasPipeline = hasActionPipeline(def, action.id);
       const mappedActionClass = resolveTurnFlowActionClass(def, { actionId: action.id, params: {} });
       const grantActionClassOverride = resolveGrantMoveActionClassOverride(def, action.id, grant.operationClass);
       const targetActionClass = grantActionClassOverride ?? mappedActionClass ?? 'operation';
@@ -744,8 +746,8 @@ function enumeratePendingFreeOperationMoves(
         bindings: buildMoveRuntimeBindings(grantRootedProbeMove),
         runtimeTableIndex,
         evalRuntimeResources,
-        skipExecutorCheck: !hasActionPipeline,
-        skipPipelineDispatch: !hasActionPipeline,
+        skipExecutorCheck: !hasPipeline,
+        skipPipelineDispatch: !hasPipeline,
         ...freeOperationPreflightOverlay,
       });
       if (preflight.kind === 'invalidSpec') {
@@ -797,7 +799,7 @@ function enumeratePendingFreeOperationMoves(
         continue;
       }
 
-      if (!hasActionPipeline) {
+      if (!hasPipeline) {
         if (preflight.kind === 'notApplicable') {
           continue;
         }
@@ -914,8 +916,8 @@ function enumeratePendingFreeOperationMoves(
             }),
             runtimeTableIndex,
             evalRuntimeResources,
-            skipExecutorCheck: !hasActionPipeline,
-            skipPipelineDispatch: !hasActionPipeline,
+            skipExecutorCheck: !hasPipeline,
+            skipPipelineDispatch: !hasPipeline,
             ...candidatePreflightOverlay,
           });
           if (candidatePreflight.kind === 'invalidSpec') {
@@ -1161,13 +1163,14 @@ const enumerateRawLegalMoves = (
   // through complex parameterized operations. This is game-agnostic: any
   // action that matches these criteria (e.g., 'pass' in COIN games) benefits.
   const alwaysComplete = runtime?.alwaysCompleteActionIds ?? computeAlwaysCompleteActionIds(def);
+  const actionsForPhase = getPhaseActionIndex(def).actionsByPhase.get(state.currentPhase) ?? [];
   let earlyExitTriedTrivial = false;
   if (earlyExitAfterFirst) {
-    for (const action of def.actions) {
+    for (const action of actionsForPhase) {
       // Trivial = no params + always-complete + no precondition + no pipeline
       if (action.params.length > 0 || !alwaysComplete.has(action.id)) continue;
       if (action.pre !== null) continue;
-      if ((def.actionPipelines ?? []).some((p) => p.actionId === action.id)) continue;
+      if (hasActionPipeline(def, action.id)) continue;
       if (isCardEventAction(action)) continue;
       earlyExitTriedTrivial = true;
       const preflight = resolveActionApplicabilityPreflight({
@@ -1193,7 +1196,7 @@ const enumerateRawLegalMoves = (
     }
   }
 
-  for (const action of def.actions) {
+  for (const action of actionsForPhase) {
     if (enumeration.templateBudgetExceeded) {
       break;
     }
@@ -1204,7 +1207,7 @@ const enumerateRawLegalMoves = (
     if (earlyExitTriedTrivial && action.params.length === 0 && alwaysComplete.has(action.id) && action.pre === null) {
       continue;
     }
-    const hasActionPipeline = (def.actionPipelines ?? []).some((pipeline) => pipeline.actionId === action.id);
+    const hasPipeline = hasActionPipeline(def, action.id);
     const preflight = resolveActionApplicabilityPreflight({
       def,
       state,
@@ -1214,8 +1217,8 @@ const enumerateRawLegalMoves = (
       bindings: buildMoveRuntimeBindings({ actionId: action.id, params: {} }),
       runtimeTableIndex,
       evalRuntimeResources,
-      skipExecutorCheck: !hasActionPipeline,
-      skipPipelineDispatch: !hasActionPipeline,
+      skipExecutorCheck: !hasPipeline,
+      skipPipelineDispatch: !hasPipeline,
     });
     if (preflight.kind === 'notApplicable') {
       void shouldEnumerateLegalMoveForOutcome(preflight.reason);
@@ -1245,7 +1248,7 @@ const enumerateRawLegalMoves = (
       // or when the action explicitly binds eventCardId and can be satisfied
       // without a currently resolved card token.
       const hasEventDecks = (def.eventDecks?.length ?? 0) > 0;
-      if (hasEventDecks && !hasActionPipeline) {
+      if (hasEventDecks && !hasPipeline) {
         const hasResolvedCurrentCard = resolveCurrentEventCardState(def, state) !== null;
         const actionDeclaresEventCardId = action.params.some((param) => param.name === 'eventCardId');
         if (hasResolvedCurrentCard || !actionDeclaresEventCardId) {
@@ -1254,7 +1257,7 @@ const enumerateRawLegalMoves = (
       }
     }
 
-    if (!hasActionPipeline) {
+    if (!hasPipeline) {
       enumerateParams(action, def, adjacencyGraph, runtimeTableIndex, evalRuntimeResources, state, 0, {}, enumeration, currentPhaseDef,
         {
           ...(runtime === undefined ? {} : { runtime }),

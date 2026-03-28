@@ -3973,6 +3973,113 @@ describe('legalMoves plain-action feasibility probe', () => {
   });
 });
 
+describe('legalMoves phase-aware action enumeration', () => {
+  it('only emits actions for the current phase', () => {
+    const mainAction: ActionDef = {
+      id: asActionId('mainAction'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+    const coupAction: ActionDef = {
+      id: asActionId('coupAction'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('coup')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+    const dualPhaseAction: ActionDef = {
+      id: asActionId('dualPhaseAction'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main'), asPhaseId('coup')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+    const def = asTaggedGameDef({
+      ...makeBaseDef({
+        actions: [mainAction, coupAction, dualPhaseAction],
+      }),
+      turnStructure: {
+        phases: [{ id: asPhaseId('main') }, { id: asPhaseId('coup') }],
+      },
+    });
+
+    const mainMoves = legalMoves(def, makeBaseState({ currentPhase: asPhaseId('main') }));
+    assert.deepEqual(
+      mainMoves.map((move) => move.actionId),
+      [mainAction.id, dualPhaseAction.id],
+    );
+
+    const coupMoves = legalMoves(def, makeBaseState({ currentPhase: asPhaseId('coup') }));
+    assert.deepEqual(
+      coupMoves.map((move) => move.actionId),
+      [coupAction.id, dualPhaseAction.id],
+    );
+  });
+
+  it('imports and uses getPhaseActionIndex for raw enumeration loops', () => {
+    const source = readKernelSource('src/kernel/legal-moves.ts');
+    const sourceFile = parseTypeScriptSource(source, 'legal-moves.ts');
+    const imports = collectNamedImportsByLocalName(sourceFile, './phase-action-index.js');
+
+    assert.equal(
+      imports.get('getPhaseActionIndex'),
+      'getPhaseActionIndex',
+      'legal-moves.ts must import getPhaseActionIndex from the dedicated phase-action-index module',
+    );
+    assert.match(
+      source,
+      /const actionsForPhase = getPhaseActionIndex\(def\)\.actionsByPhase\.get\(state\.currentPhase\) \?\? \[\];/u,
+      'enumerateRawLegalMoves must derive a per-phase action list once per call',
+    );
+    assert.equal(
+      (source.match(/for \(const action of actionsForPhase\) \{/gu) ?? []).length,
+      2,
+      'both raw enumeration loops must iterate actionsForPhase',
+    );
+    assert.doesNotMatch(
+      source,
+      /for \(const action of def\.actions\) \{/u,
+      'enumerateRawLegalMoves must not scan def.actions directly once the phase index is in place',
+    );
+  });
+
+  it('imports and uses hasActionPipeline for runtime pipeline membership checks', () => {
+    const source = readKernelSource('src/kernel/legal-moves.ts');
+    const sourceFile = parseTypeScriptSource(source, 'legal-moves.ts');
+    const imports = collectNamedImportsByLocalName(sourceFile, './action-pipeline-lookup.js');
+
+    assert.equal(
+      imports.get('hasActionPipeline'),
+      'hasActionPipeline',
+      'legal-moves.ts must import hasActionPipeline from the dedicated action-pipeline-lookup module',
+    );
+    assert.match(
+      source,
+      /const hasPipeline = hasActionPipeline\(def,\s*action\.id\);/u,
+      'runtime pipeline checks should route through the shared lookup helper',
+    );
+    assert.doesNotMatch(
+      source,
+      /\(def\.actionPipelines\s*\?\?\s*\[\]\)\.some\(/u,
+      'legal-moves.ts must not rescan def.actionPipelines directly once the shared lookup is in place',
+    );
+  });
+});
+
 describe('legalMoves seat-resolution lifecycle architecture guard', () => {
   const isIdentifierArgument = (argument: ts.Expression, identifier: string): boolean => {
     const unwrapped = unwrapTypeScriptExpression(argument);

@@ -28,6 +28,7 @@ import { planContent } from './tooltip-content-planner.js';
 import { realizeContentPlan } from './tooltip-template-realizer.js';
 import { extractBlockers } from './tooltip-blocker-extractor.js';
 import { isCardEventAction } from './action-capabilities.js';
+import { getActionPipelinesForAction } from './action-pipeline-lookup.js';
 import type { EventCardDef } from './types-events.js';
 
 // ---------------------------------------------------------------------------
@@ -317,7 +318,7 @@ const collectRuleCardEffects = (
   action: ActionDef,
   def: GameDef,
 ): readonly EffectAST[] => {
-  const pipelines = (def.actionPipelines ?? []).filter((pipeline) => pipeline.actionId === action.id);
+  const pipelines = getActionPipelinesForAction(def, action.id);
   if (pipelines.length === 0) {
     return [...action.cost, ...action.effects];
   }
@@ -535,7 +536,7 @@ export function describeAction(
     });
 
     // Append pipeline sections for pipeline-backed actions
-    const pipelines = (context.def.actionPipelines ?? []).filter((p) => p.actionId === action.id);
+    const pipelines = getActionPipelinesForAction(context.def, action.id);
     const applicablePipelines = pipelines.filter((p) => pipelineApplicabilityPasses(p, evalCtx));
     const pipelineSections = applicablePipelines.map((p) => buildAnnotatedPipelineSection(p, evalCtx));
 
@@ -550,7 +551,7 @@ export function describeAction(
   } catch {
     // Safety net: never throw from describeAction
     const sections = actionDefToDisplayTree(action);
-    const pipelines = (context.def.actionPipelines ?? []).filter((p) => p.actionId === action.id);
+    const pipelines = getActionPipelinesForAction(context.def, action.id);
     const pipelineSections = pipelines.map((p) => actionPipelineDefToDisplayTree(p));
     return { sections: [...sections, ...pipelineSections], limitUsage: [] };
   }

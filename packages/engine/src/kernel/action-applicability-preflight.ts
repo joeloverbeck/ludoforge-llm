@@ -1,3 +1,4 @@
+import { hasActionPipeline } from './action-pipeline-lookup.js';
 import { resolveActionActorCore } from './action-actor.js';
 import { resolveActionExecutorCore } from './action-executor.js';
 import { resolveActionPipelineDispatch, type ActionPipelineDispatch } from './apply-move-pipeline.js';
@@ -90,14 +91,13 @@ export const resolveActionApplicabilityPreflight = ({
     );
   }
   const evalRuntimeResources = providedEvalRuntimeResources ?? createEvalRuntimeResources();
-  const hasActionPipeline = (def.actionPipelines ?? []).some((pipeline) => pipeline.actionId === action.id);
   const selectorContractViolations = evaluateActionSelectorContracts({
     selectors: {
       actor: action.actor,
       executor: action.executor,
     },
     declaredBindings: action.params.map((param) => param.name),
-    hasPipeline: hasActionPipeline,
+    hasPipeline: hasActionPipeline(def, action.id),
   });
   if (selectorContractViolations.length > 0) {
     const violation = selectorContractViolations[0]!;

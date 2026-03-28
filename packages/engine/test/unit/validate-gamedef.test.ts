@@ -30,6 +30,7 @@ import { booleanArityMessage } from '../../src/kernel/boolean-arity-policy.js';
 import { collectEffectDeclaredBinderPolicyPatternsForTest } from '../../src/kernel/validate-gamedef-behavior.js';
 import { asTaggedGameDef, createValidGameDef, readGameDefFixture } from '../helpers/gamedef-fixtures.js';
 import { eff } from '../helpers/effect-tag-helper.js';
+import { readKernelSource } from '../helpers/kernel-source-guard.js';
 
 const withCardDrivenTurnFlow = (
   base: GameDef,
@@ -4403,6 +4404,40 @@ describe('validateGameDef reference checks', () => {
     );
   });
 
+  it('accepts multi-profile action mappings when every pipeline has applicability', () => {
+    const base = createValidGameDef();
+    const def = asTaggedGameDef({
+      ...base,
+      actionPipelines: [
+        {
+          id: 'profile-a',
+          actionId: 'playCard',
+          applicability: { op: '==', left: 1, right: 1 },
+          legality: null,
+          costValidation: null, costEffects: [],
+          targeting: {},
+          stages: [{ stage: 'resolve' }],
+          atomicity: 'atomic',
+        },
+        {
+          id: 'profile-b',
+          actionId: 'playCard',
+          applicability: { op: '==', left: 1, right: 1 },
+          legality: null,
+          costValidation: null, costEffects: [],
+          targeting: {},
+          stages: [{ stage: 'resolve' }],
+          atomicity: 'partial',
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.ok(
+      !diagnostics.some((diag) => diag.code === 'ACTION_PIPELINE_ACTION_MAPPING_AMBIGUOUS'),
+    );
+  });
+
   it('accepts linkedWindows that reference declared turn-flow eligibility override windows', () => {
     const def = withPipelineLinkedWindows(['special-window']);
 
@@ -7192,5 +7227,20 @@ describe('validated GameDef boundary', () => {
       (d) => d.code === 'DUPLICATE_LIMIT_ID' || d.code === 'NON_CANONICAL_LIMIT_ID',
     );
     assert.equal(limitDiags.length, 0, `unexpected limit diagnostics: ${JSON.stringify(limitDiags)}`);
+  });
+
+  it('reads ambiguous multi-profile candidates through the shared lookup helper', () => {
+    const source = readKernelSource('src/kernel/validate-gamedef-extensions.ts');
+
+    assert.ok(
+      source.includes("import { getActionPipelinesForAction } from './action-pipeline-lookup.js';"),
+    );
+    assert.ok(
+      source.includes('const profilesForAction = getActionPipelinesForAction(def, asActionId(actionId));'),
+    );
+    assert.doesNotMatch(
+      source,
+      /\(def\.actionPipelines\s*\?\?\s*\[\]\)\.filter\(\(profile\)\s*=>\s*profile\.actionId\s*===\s*actionId\)/u,
+    );
   });
 });

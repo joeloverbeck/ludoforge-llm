@@ -101,6 +101,7 @@ export * from './zobrist-token-hash.js';
 export * from './display-node.js';
 export * from './ast-to-display.js';
 export * from './condition-annotator.js';
+export * from './compiled-condition-cache.js';
 export * from './condition-compiler.js';
 export * from './condition-operator-meta.js';
 export * from './tooltip-ir.js';

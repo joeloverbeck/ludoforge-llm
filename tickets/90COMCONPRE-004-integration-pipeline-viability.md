@@ -22,13 +22,16 @@ Both apply to pipeline-level and stage-level evaluation, in both discovery and e
 4. The execution path uses `evalActionPipelinePredicate` which calls `evalCondition` directly and throws on failure — confirmed.
 5. `evalCtx` in the pipeline evaluation functions is a `ReadContext` containing `def`, `state`, `activePlayer`, `bindings`, `adjacencyGraph`, `runtimeTableIndex` — confirmed. All needed fields are accessible.
 6. The `condition == null` check already exists for null conditions returning `'passed'` — confirmed. Boolean `true` is not caught by this check.
+7. Ticket 003 implemented `getCompiledPipelinePredicates(def)` as a `WeakMap<actionPipelines, ReadonlyMap<ConditionAST, CompiledConditionPredicate>>` keyed by `ConditionAST` object identity. The older synthetic cache-key / stage-index assumption is stale and must not drive this integration.
 
 ## Architecture Check
 
 1. **Boolean literal fast-path**: `typeof condition === 'boolean'` is a zero-overhead check that eliminates function call dispatch for ~40% of FITL pipeline conditions that are `legality: true`. This is the simplest possible optimization with the highest ROI.
 2. **Compiled predicate integration**: The compiled predicate lookup happens AFTER the boolean literal check and BEFORE the interpreter fallback. This is a clean fast-path chain: `null check -> boolean check -> compiled check -> interpreter`.
-3. **Discovery vs execution semantics preserved**: In discovery mode, compiled predicates that throw missing-binding errors are caught by the existing `shouldDeferMissingBinding` wrapper. In execution mode, missing-binding errors propagate as real errors (same as interpreter).
-4. **No changes to existing interpreter functions**: `evalCondition`, `evalValue`, `resolveRef` are untouched. The integration only modifies the caller path in `pipeline-viability-policy.ts`.
+3. **Object-identity lookup is the right API**: the evaluation functions already receive the exact `ConditionAST` object being evaluated. Looking up `compiledPredicates.get(condition)` is simpler and more robust than reconstructing synthetic pipeline/stage keys.
+4. **Shared helper preferred**: both discovery and execution should use a small shared helper for `null/boolean/compiled/interpreter` dispatch so pipeline- and stage-level evaluation stay behaviorally aligned.
+5. **Discovery vs execution semantics preserved**: In discovery mode, compiled predicates that throw missing-binding errors are caught by the existing `shouldDeferMissingBinding` wrapper. In execution mode, missing-binding errors propagate as real errors (same as interpreter).
+6. **No changes to existing interpreter functions**: `evalCondition`, `evalValue`, `resolveRef` are untouched. The integration only modifies the caller path in `pipeline-viability-policy.ts`.
 
 ## What to Change
 
@@ -43,7 +46,7 @@ if (typeof condition === 'boolean') return condition ? 'passed' : 'failed';
 
 After the boolean literal check, look up the compiled predicate:
 ```typescript
-const compiled = compiledPredicates?.get(cacheKey);
+const compiled = compiledPredicates.get(condition);
 if (compiled !== undefined) {
   try {
     return compiled(evalCtx.state, evalCtx.activePlayer, evalCtx.bindings) ? 'passed' : 'failed';
@@ -58,7 +61,7 @@ if (compiled !== undefined) {
 
 ### 3. Apply same pattern to stage-level evaluation
 
-The stage-level functions (`evaluateDiscoveryStagePredicateStatus`, `evaluateStagePredicateStatus`) need the same boolean literal fast-path and compiled predicate lookup, using the stage-indexed cache key.
+The stage-level functions (`evaluateDiscoveryStagePredicateStatus`, `evaluateStagePredicateStatus`) need the same boolean literal fast-path and compiled predicate lookup, using the stage condition object itself as the cache lookup key.
 
 ### 4. Apply to execution path
 
@@ -108,12 +111,13 @@ The second option is preferred — it requires no signature changes to the evalu
 3. `evalCondition` is still called for non-compilable conditions (fallback path is intact)
 4. Boolean literal fast-path precedes compiled predicate lookup precedes interpreter fallback (correct ordering)
 5. The compiled predicates map is obtained via `getCompiledPipelinePredicates` (WeakMap-cached, no repeated compilation)
+6. Cache lookup uses the `ConditionAST` object being evaluated; no synthetic pipeline/stage key encoding is introduced
 
 ## Test Plan
 
 ### New/Modified Tests
 
-1. `packages/engine/test/unit/pipeline-viability-policy.test.ts` — test boolean literal fast-path for both discovery and execution paths; test compiled predicate integration with mock compiled closures; test fallback to interpreter for non-compilable conditions
+1. `packages/engine/test/unit/pipeline-viability-policy.test.ts` — test boolean literal fast-path for both discovery and execution paths; test compiled predicate integration through real condition-object lookup; test fallback to interpreter for non-compilable conditions
 
 ### Commands
 

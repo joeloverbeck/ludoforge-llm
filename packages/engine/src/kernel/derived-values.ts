@@ -198,6 +198,25 @@ export function isSoloSeatControlled(
   return soloCount > othersCount;
 }
 
+// ─── Marker State Helpers ───────────────────────────────────────────────────
+
+/**
+ * Build a spaceId → markerState map for a specific marker from state.markers.
+ * state.markers is keyed by spaceId: { [spaceId]: { [markerId]: state } }.
+ * This produces { [spaceId]: markerState } suitable for computeMarkerTotal.
+ */
+function buildMarkerStatesBySpace(
+  state: GameState,
+  markerId: string,
+  defaultState: string = 'neutral',
+): Readonly<Record<string, string>> {
+  const result: Record<string, string> = {};
+  for (const [spaceId, markers] of Object.entries(state.markers)) {
+    result[spaceId] = markers[markerId] ?? defaultState;
+  }
+  return result;
+}
+
 // ─── Population-Weighted Aggregates ──────────────────────────────────────────
 
 /**
@@ -312,7 +331,7 @@ export function computeDerivedMetricValue(
 
   switch (metric.runtime.kind) {
     case 'markerTotal': {
-      const markerStates = state.markers[metric.runtime.markerId] ?? {};
+      const markerStates = buildMarkerStatesBySpace(state, metric.runtime.markerId, metric.runtime.defaultMarkerState);
       return computeMarkerTotal(
         gameDef,
         spaces,
@@ -550,7 +569,7 @@ export function computeAllVictoryStandings(
   standings: VictoryStandingsDef,
 ): readonly VictoryStandingResult[] {
   const spaces = gameDef.zones.filter((z) => z.zoneKind === 'board');
-  const markerStates = state.markers[standings.markerName] ?? {};
+  const markerStates = buildMarkerStatesBySpace(state, standings.markerName);
 
   const results: VictoryStandingResult[] = standings.entries.map((entry) => {
     const score = computeVictoryMarker(

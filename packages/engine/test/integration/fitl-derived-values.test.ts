@@ -474,4 +474,58 @@ describe('FITL compilation produces auto-synthesized derivedMetrics', () => {
     assert.ok(Array.isArray(results), 'Should return an array of standings');
     assert.equal(results.length, gameDef.victoryStandings.entries.length);
   });
+
+  it('computeAllVictoryStandings reflects marker states on spaces', () => {
+    const { compiled } = compileProductionSpec();
+    const gameDef = compiled.gameDef;
+    assert.ok(gameDef, 'FITL production spec should compile');
+    assert.ok(gameDef.victoryStandings, 'GameDef should have victoryStandings');
+
+    // Quang Duc Long Khanh has population 1.
+    // At activeOpposition, VC Total Opposition should include 1 × 2 = 2.
+    // Saigon has population 6.
+    // At passiveSupport, US Total Support should include 6 × 1 = 6.
+    const state: GameState = {
+      globalVars: { patronage: 15, aid: 20, trail: 0 },
+      perPlayerVars: {},
+      zoneVars: {},
+      playerCount: 4,
+      zones: {},
+      nextTokenOrdinal: 0,
+      currentPhase: asPhaseId('main'),
+      activePlayer: asPlayerId(0),
+      turnCount: 1,
+      rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [1n, 2n] },
+      stateHash: 0n,
+      _runningHash: 0n,
+      actionUsage: {},
+      turnOrderState: { type: 'roundRobin' },
+      markers: {
+        'quang-duc-long-khanh:none': { supportOpposition: 'activeOpposition' },
+        'saigon:none': { supportOpposition: 'passiveSupport' },
+      },
+    };
+
+    const results = computeAllVictoryStandings(gameDef, state, gameDef.victoryStandings);
+
+    // Find VC and US results
+    const vcResult = results.find((r) => r.seat === 'VC');
+    const usResult = results.find((r) => r.seat === 'US');
+    assert.ok(vcResult, 'Should have VC result');
+    assert.ok(usResult, 'Should have US result');
+
+    // VC Total Opposition component (first component of markerTotalPlusMapBases)
+    // activeOpposition on pop-1 space → 1 × 2 = 2
+    assert.ok(vcResult!.components.values.length >= 1, 'VC should have at least 1 component');
+    const vcOpposition = vcResult!.components.values[0] as number;
+    assert.ok(vcOpposition >= 2,
+      `VC Total Opposition should be >= 2 (got ${vcOpposition})`);
+
+    // US Total Support component (first component of markerTotalPlusZoneCount)
+    // passiveSupport on pop-6 space → 6 × 1 = 6
+    assert.ok(usResult!.components.values.length >= 1, 'US should have at least 1 component');
+    const usSupport = usResult!.components.values[0] as number;
+    assert.ok(usSupport >= 6,
+      `US Total Support should be >= 6 (got ${usSupport})`);
+  });
 });

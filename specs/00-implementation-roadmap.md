@@ -170,8 +170,13 @@ This is the longest dependency chain and determines minimum time-to-MVP.
 | 12 | CLI | P1 | M | 08a, 08b, 10, 11 | 2-3 | 3 |
 | 13 | Mechanic Bundle IR | P2 | L | 02, 08b | 3-5 | 4 |
 | 14 | Evolution Pipeline | P2 | XL | 13, 10, 11 | 5-7 | 4 |
+| 15 | GameSpec Agent Policy IR | P1 | L | 09 | 3-4 | 3 |
+| 30 | FITL Non-Player AI | P1 | L | 09, 15 | 3-5 | 3 |
+| 90 | Compiled Condition Predicates | P1 | M | 76, 82 (completed) | 2-3 | Perf |
+| 91 | First-Decision-Domain Compilation | P1 | L | 90 | 3-5 | Perf |
+| 92 | Enumeration-Time State Snapshot | P1 | M | none | 2-3 | Perf |
 
-**Total estimated effort**: 35-52 days (MVP: 25-38 days, post-MVP: 8-12 days)
+**Total estimated effort**: 35-52 days (MVP: 25-38 days, post-MVP: 8-12 days, perf: 7-11 days)
 
 ## Cross-Spec Integration Points
 

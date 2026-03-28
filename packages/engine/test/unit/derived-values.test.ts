@@ -509,8 +509,8 @@ describe('computeDerivedMetricValue', () => {
     const state = {
       ...makeState({}),
       markers: {
-        support: {
-          'city-a': 'activeSupport',
+        'city-a': {
+          support: 'activeSupport',
         },
       },
     };

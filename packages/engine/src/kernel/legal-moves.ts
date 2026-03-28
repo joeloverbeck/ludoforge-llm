@@ -3,7 +3,7 @@ import { resolveActionExecutor } from './action-executor.js';
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
 import { resolveDeclaredActionParamDomainOptions } from './declared-action-param-domain.js';
 import type { ReadContext, EvalRuntimeResources } from './eval-context.js';
-import { createEvalContext, createEvalRuntimeResources } from './eval-context.js';
+import { createEvalRuntimeResources } from './eval-context.js';
 import { resolveCapturedSequenceZonesByKey } from './free-operation-captured-sequence-zones.js';
 import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-overlay.js';
 import {
@@ -118,6 +118,10 @@ interface MoveEnumerationState {
   templateBudgetExceeded: boolean;
   paramExpansionBudgetExceeded: boolean;
 }
+
+type MutableEnumerationReadContext = {
+  -readonly [K in keyof ReadContext]: ReadContext[K];
+};
 
 const emitEnumerationWarning = (state: MoveEnumerationState, warning: RuntimeWarning): void => {
   state.warnings.push(warning);
@@ -325,7 +329,7 @@ const classifyEnumeratedMoves = (
   return classified;
 };
 
-function makeEvalContext(
+function createMutableEnumerationReadContext(
   def: GameDef,
   adjacencyGraph: AdjacencyGraph,
   runtimeTableIndex: RuntimeTableIndex,
@@ -336,18 +340,33 @@ function makeEvalContext(
   options?: {
     readonly freeOperationOverlay?: FreeOperationExecutionOverlay;
   },
-): ReadContext {
-  return createEvalContext({
+): MutableEnumerationReadContext {
+  return {
     def,
     adjacencyGraph,
     state,
     activePlayer: executionPlayer,
     actorPlayer: executionPlayer,
     bindings,
-    runtimeTableIndex,
     resources: evalRuntimeResources,
-    ...(options?.freeOperationOverlay === undefined ? {} : { freeOperationOverlay: options.freeOperationOverlay }),
-  });
+    runtimeTableIndex,
+    freeOperationOverlay: options?.freeOperationOverlay,
+    maxQueryResults: undefined,
+    collector: evalRuntimeResources.collector,
+  };
+}
+
+function updateMutableEnumerationReadContext(
+  scope: MutableEnumerationReadContext,
+  state: GameState,
+  executionPlayer: GameState['activePlayer'],
+  bindings: Readonly<Record<string, unknown>>,
+): ReadContext {
+  scope.state = state;
+  scope.activePlayer = executionPlayer;
+  scope.actorPlayer = executionPlayer;
+  scope.bindings = bindings;
+  return scope;
 }
 
 function enumerateParams(
@@ -370,10 +389,22 @@ function enumerateParams(
     readonly discoverer?: EnumerationDecisionDiscoverer;
     readonly runtime?: GameDefRuntime;
   },
+  scope?: MutableEnumerationReadContext,
 ): void {
   if (enumeration.paramExpansionBudgetExceeded || enumeration.templateBudgetExceeded) {
     return;
   }
+
+  const readScope = scope ?? createMutableEnumerationReadContext(
+    def,
+    adjacencyGraph,
+    runtimeTableIndex,
+    evalRuntimeResources,
+    state,
+    state.activePlayer,
+    bindings,
+    options,
+  );
 
   const resolveExecutionPlayerForBindings = (allowPendingBinding: boolean): GameState['activePlayer'] | null => {
     if (options?.executionPlayerOverride !== undefined) {
@@ -412,9 +443,7 @@ function enumerateParams(
     if (executionPlayer === null) {
       return;
     }
-    const ctx = makeEvalContext(def, adjacencyGraph, runtimeTableIndex, evalRuntimeResources, state, executionPlayer, bindings, {
-      ...(options?.freeOperationOverlay === undefined ? {} : { freeOperationOverlay: options.freeOperationOverlay }),
-    });
+    const ctx = updateMutableEnumerationReadContext(readScope, state, executionPlayer, bindings);
     if (currentPhaseDef?.actionDefaults?.pre !== undefined) {
       if (!evalCondition(currentPhaseDef.actionDefaults.pre, ctx)) {
         return;
@@ -485,9 +514,7 @@ function enumerateParams(
   if (executionPlayer === null) {
     return;
   }
-  const ctx = makeEvalContext(def, adjacencyGraph, runtimeTableIndex, evalRuntimeResources, state, executionPlayer, bindings, {
-    ...(options?.freeOperationOverlay === undefined ? {} : { freeOperationOverlay: options.freeOperationOverlay }),
-  });
+  const ctx = updateMutableEnumerationReadContext(readScope, state, executionPlayer, bindings);
   const resolution = resolveDeclaredActionParamDomainOptions(param, ctx);
   if (resolution.invalidOption !== undefined) {
     throw kernelRuntimeError(
@@ -516,6 +543,7 @@ function enumerateParams(
       enumeration,
       currentPhaseDef,
       options,
+      readScope,
     );
     if (enumeration.paramExpansionBudgetExceeded || enumeration.templateBudgetExceeded) {
       return;

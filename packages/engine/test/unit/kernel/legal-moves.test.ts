@@ -2000,6 +2000,41 @@ phase: [asPhaseId('main')],
     );
   });
 
+  it('21b. reuses recursive enumeration context while updating executor-derived activePlayer', () => {
+    const action: ActionDef = {
+      id: asActionId('executorBindingTwoParams'),
+      actor: 'active',
+      executor: { chosen: '$owner' },
+      phase: [asPhaseId('main')],
+      params: [
+        { name: '$owner', domain: { query: 'players' } },
+        { name: '$witness', domain: { query: 'players' } },
+      ],
+      pre: {
+        op: '==',
+        left: { _t: 2, ref: 'activePlayer' },
+        right: { _t: 2, ref: 'binding', name: '$owner' },
+      },
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const def = makeBaseDef({ actions: [action] });
+    const moves = legalMoves(def, makeBaseState());
+
+    assert.equal(moves.length, 4);
+    assert.deepEqual(
+      moves.map((move) => [move.params.$owner, move.params.$witness]),
+      [
+        [asPlayerId(0), asPlayerId(0)],
+        [asPlayerId(0), asPlayerId(1)],
+        [asPlayerId(1), asPlayerId(0)],
+        [asPlayerId(1), asPlayerId(1)],
+      ],
+    );
+  });
+
   it('22. truncates templates deterministically when maxTemplates budget is reached', () => {
     const firstAction: ActionDef = {
       id: asActionId('first'),
@@ -3627,6 +3662,38 @@ phase: [asPhaseId('main')],
       legacyAdmissionCalls.length,
       0,
       'legal-moves.ts should not use legacy unsatisfiable-only helper for legal-move admission',
+    );
+  });
+
+  it('31b. keeps enumerateParams on a local mutable ReadContext path instead of rebuilding eval contexts', () => {
+    const source = readKernelSource('src/kernel/legal-moves.ts');
+    const sourceFile = parseTypeScriptSource(source, 'legal-moves.ts');
+    const evalContextImports = collectNamedImportsByLocalName(sourceFile, './eval-context.js');
+
+    assert.equal(
+      evalContextImports.has('createEvalContext'),
+      false,
+      'legal-moves.ts should not import createEvalContext after enumeration-local mutable scope migration',
+    );
+
+    const createEvalContextCalls = collectCallExpressionsByIdentifier(sourceFile, 'createEvalContext');
+    assert.equal(
+      createEvalContextCalls.length,
+      0,
+      'legal-moves.ts should not rebuild eval contexts inline during param enumeration',
+    );
+
+    const enumerateParamsCalls = collectCallExpressionsByIdentifier(sourceFile, 'enumerateParams');
+    assert.equal(
+      enumerateParamsCalls.some((call) => {
+        if (call.arguments.length < 12) {
+          return false;
+        }
+        const scopeArg = unwrapTypeScriptExpression(call.arguments[11]!);
+        return ts.isIdentifier(scopeArg) && scopeArg.text === 'readScope';
+      }),
+      true,
+      'recursive enumerateParams calls should thread the shared readScope argument',
     );
   });
 });

@@ -64,6 +64,15 @@ export const evaluateActionSelectorContracts = ({
   enforceBindingDeclaration = true,
   enforcePipelineBindingCompatibility = true,
 }: EvaluateActionSelectorContractsInput): readonly ActionSelectorContractViolation[] => {
+  // Fast path: if neither selector uses a binding reference ({chosen: ...}),
+  // no violations are possible. Skip Set allocation and loop iteration.
+  if (
+    resolveSelectorBindingToken(selectors.actor) === null
+    && resolveSelectorBindingToken(selectors.executor) === null
+  ) {
+    return [];
+  }
+
   const violations: ActionSelectorContractViolation[] = [];
   const declared = new Set(declaredBindings);
 

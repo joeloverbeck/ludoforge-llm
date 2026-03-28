@@ -77,7 +77,7 @@ const compileReferenceAccessor = (expr: Extract<ValueExpr, { readonly _t: 2 }>):
         return null;
       }
       return (state, activePlayer, _bindings, snapshot) => {
-        const playerVars = snapshot?.activePlayerVars ?? state.perPlayerVars[activePlayer];
+        const playerVars = snapshot?.perPlayerVars[activePlayer] ?? state.perPlayerVars[activePlayer];
         if (playerVars === undefined) {
           throw missingVarError(`Per-player vars missing for player ${activePlayer}`, {
             reference: expr,

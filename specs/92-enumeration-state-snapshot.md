@@ -85,11 +85,8 @@ interface EnumerationStateSnapshot {
   /** All global variable values, keyed by variable name. Eager — O(1) reference copy. */
   readonly globalVars: Readonly<Record<string, number | boolean | string>>;
 
-  /** Active player's per-player variable values, keyed by variable name. Eager — O(1) reference copy. */
-  readonly activePlayerVars: Readonly<Record<string, number | boolean | string>>;
-
-  /** Active player ID (avoids repeated state.activePlayer access). */
-  readonly activePlayer: PlayerId;
+  /** All per-player variable values, keyed by player ID then variable name. Eager — O(1) reference copy. */
+  readonly perPlayerVars: GameState['perPlayerVars'];
 
   /**
    * Lazy per-zone token counts with composite keys.
@@ -162,9 +159,8 @@ export type CompiledConditionPredicate = (
 ```
 
 The `snapshot` parameter is optional. When present, compiled closures prefer
-snapshot reads over raw state reads. When absent (e.g., outside legalMoves
-context), closures fall back to raw state — maintaining full backwards
-compatibility.
+snapshot reads over raw state reads. When absent (for call sites outside the
+legal-moves enumeration path), closures read from raw state.
 
 **Step 2 — Compiled closures read from snapshot**:
 
@@ -264,7 +260,7 @@ state access across pipeline actions.
 
 Computing the snapshot involves:
 - Copying `state.globalVars` reference: O(1) — globalVars is already an object
-- Copying `state.perPlayerVars[activePlayer]` reference: O(1)
+- Copying `state.perPlayerVars` reference: O(1)
 - Creating lazy accessor closures: O(1) — just closure allocation, no iteration
 - Zone token count (lazy, per access): O(tokens in zone) per unique key
 - Zone variable (lazy, per access): O(1) per unique (zone, var) pair
@@ -285,11 +281,9 @@ For FITL with ~40 zones and ~200 tokens:
 export const createEnumerationSnapshot = (
   def: GameDef,
   state: GameState,
-  activePlayer: PlayerId,
 ): EnumerationStateSnapshot => ({
   globalVars: state.globalVars,
-  activePlayerVars: state.perPlayerVars[activePlayer] ?? {},
-  activePlayer,
+  perPlayerVars: state.perPlayerVars,
   zoneTotals: createLazyZoneTotals(state, def),
   zoneVars: createLazyZoneVars(state),
   markerStates: createLazyMarkerStates(state),
@@ -334,7 +328,7 @@ The `computeZoneTotal` function parses the composite key (`zoneId:tokenType` or
 | F9 (No Backwards Compatibility) | The `CompiledConditionPredicate` signature change is a clean extension (optional parameter). All consumers are updated in the same change. No compatibility shims. |
 | F10 (Completeness) | Addresses root cause (redundant state queries across pipeline actions) rather than symptom. Integrates cleanly with existing Spec 90 compiled predicate architecture. |
 | F11 (Testing as Proof) | Equivalence test: verify compiled-with-snapshot evaluation matches compiled-without-snapshot evaluation for all pipeline predicates across N random states. Benchmark proves performance. |
-| F12 (Branded Types) | Snapshot uses `PlayerId` for `activePlayer`. Zone and marker keys are strings matching existing kernel conventions. |
+| F12 (Branded Types) | Snapshot no longer privileges one `PlayerId`; compiled `pvar(active)` accessors still resolve a branded invocation player and index `perPlayerVars` with it. Zone and marker keys are strings matching existing kernel conventions. |
 
 ## Acceptance Criteria
 

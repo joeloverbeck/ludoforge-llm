@@ -68,8 +68,7 @@ const evaluateCompiledPredicate = (
   if (compiled === undefined) {
     return undefined;
   }
-  const eligibleSnapshot = snapshot?.activePlayer === evalCtx.activePlayer ? snapshot : undefined;
-  return compiled(evalCtx.state, evalCtx.activePlayer, evalCtx.bindings, eligibleSnapshot);
+  return compiled(evalCtx.state, evalCtx.activePlayer, evalCtx.bindings, snapshot);
 };
 
 const evaluatePredicate = (

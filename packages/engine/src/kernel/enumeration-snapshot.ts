@@ -1,7 +1,5 @@
-import type { PlayerId, ZoneId } from './branded.js';
-import type { GameDef, GameState, VariableValue } from './types.js';
-
-const EMPTY_ACTIVE_PLAYER_VARS: Readonly<Record<string, VariableValue>> = Object.freeze({});
+import type { ZoneId } from './branded.js';
+import type { GameDef, GameState } from './types.js';
 
 export interface LazyZoneTotals {
   get(key: string): number;
@@ -17,8 +15,7 @@ export interface LazyMarkerStates {
 
 export interface EnumerationStateSnapshot {
   readonly globalVars: GameState['globalVars'];
-  readonly activePlayerVars: Readonly<Record<string, VariableValue>>;
-  readonly activePlayer: PlayerId;
+  readonly perPlayerVars: GameState['perPlayerVars'];
   readonly zoneTotals: LazyZoneTotals;
   readonly zoneVars: LazyZoneVars;
   readonly markerStates: LazyMarkerStates;
@@ -146,11 +143,9 @@ export const createLazyMarkerStates = (
 export const createEnumerationSnapshot = (
   def: GameDef,
   state: GameState,
-  activePlayer: PlayerId,
 ): EnumerationStateSnapshot => ({
   globalVars: state.globalVars,
-  activePlayerVars: state.perPlayerVars[activePlayer] ?? EMPTY_ACTIVE_PLAYER_VARS,
-  activePlayer,
+  perPlayerVars: state.perPlayerVars,
   zoneTotals: createLazyZoneTotals(state, def),
   zoneVars: createLazyZoneVars(state),
   markerStates: createLazyMarkerStates(state),

@@ -1184,7 +1184,7 @@ const enumerateRawLegalMoves = (
   const adjacencyGraph = runtime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones);
   const runtimeTableIndex = runtime?.runtimeTableIndex ?? buildRuntimeTableIndex(def);
   const evalRuntimeResources = createEvalRuntimeResources();
-  const snapshot = createEnumerationSnapshot(def, state, state.activePlayer);
+  const snapshot = createEnumerationSnapshot(def, state);
   const currentPhaseDef = findPhaseDef(def, state.currentPhase);
   const defaultDiscover = createMoveDecisionSequenceChoiceDiscoverer(def, state, runtime);
   const cachedDiscover: EnumerationDecisionDiscoverer = (move, discoverOptions) => {

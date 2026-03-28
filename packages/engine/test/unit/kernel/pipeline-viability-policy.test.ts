@@ -99,23 +99,16 @@ const makeEvalCtx = (
 const makeSnapshot = (
   state: GameState,
   options?: {
-    readonly activePlayer?: GameState['activePlayer'];
     readonly resources?: number;
-    readonly activePlayerResources?: number;
+    readonly perPlayerVars?: GameState['perPlayerVars'];
   },
 ): EnumerationStateSnapshot => {
-  const snapshotActivePlayer = options?.activePlayer ?? state.activePlayer;
-  const livePlayerVars = state.perPlayerVars[snapshotActivePlayer] ?? {};
   return {
     globalVars: {
       ...state.globalVars,
       ...(options?.resources === undefined ? {} : { resources: options.resources }),
     },
-    activePlayerVars: {
-      ...livePlayerVars,
-      ...(options?.activePlayerResources === undefined ? {} : { resources: options.activePlayerResources }),
-    },
-    activePlayer: snapshotActivePlayer,
+    perPlayerVars: options?.perPlayerVars ?? state.perPlayerVars,
     zoneTotals: { get: (_key: string) => 0 },
     zoneVars: { get: (_zoneId: string, _varName: string) => undefined },
     markerStates: { get: (_spaceId: string, _markerName: string) => undefined },
@@ -363,12 +356,12 @@ describe('pipeline viability predicate fast-path routing', () => {
     assert.equal(status.legalityPassed, false);
   });
 
-  it('ignores snapshot player vars when evaluation player differs from snapshot player', () => {
+  it('uses snapshot player vars when evaluation player differs from state.activePlayer', () => {
     const action = makeAction();
     const pipeline: ActionPipelineDef = {
       id: 'profile',
       actionId: action.id,
-      legality: { op: '==', left: { _t: 2, ref: 'pvar', player: 'active', var: 'resources' }, right: 8 },
+      legality: { op: '==', left: { _t: 2, ref: 'pvar', player: 'active', var: 'resources' }, right: 13 },
       costValidation: null,
       costEffects: [],
       targeting: {},
@@ -377,16 +370,27 @@ describe('pipeline viability predicate fast-path routing', () => {
     };
     const def = makeDef(action, pipeline);
     const state = makeState(3);
-    const snapshot = makeSnapshot(state, { activePlayer: asPlayerId(0), activePlayerResources: 99 });
+    const snapshot = makeSnapshot(state, {
+      perPlayerVars: {
+        ...state.perPlayerVars,
+        1: { ...(state.perPlayerVars[1] ?? {}), resources: 13 },
+      },
+    });
 
-    const status = evaluatePipelinePredicateStatus(
+    const withoutSnapshot = evaluatePipelinePredicateStatus(
+      action,
+      pipeline,
+      makeEvalCtx(def, state, {}, { activePlayer: asPlayerId(1) }),
+    );
+    const withSnapshot = evaluatePipelinePredicateStatus(
       action,
       pipeline,
       makeEvalCtx(def, state, {}, { activePlayer: asPlayerId(1) }),
       { snapshot },
     );
 
-    assert.equal(status.legalityPassed, true);
+    assert.equal(withoutSnapshot.legalityPassed, false);
+    assert.equal(withSnapshot.legalityPassed, true);
   });
 
   it('evaluates boolean pipeline predicates directly', () => {

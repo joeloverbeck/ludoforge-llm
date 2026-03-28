@@ -69,27 +69,26 @@ const makeState = (): GameState => ({
 });
 
 describe('enumeration snapshot', () => {
-  it('creates a plain snapshot with global vars and active player vars references', () => {
+  it('creates a plain snapshot with direct global and per-player var references', () => {
     const def = makeDef();
     const state = makeState();
-    const snapshot = createEnumerationSnapshot(def, state, state.activePlayer);
+    const snapshot = createEnumerationSnapshot(def, state);
 
     assert.equal(Object.getPrototypeOf(snapshot), Object.prototype);
     assert.equal(snapshot.globalVars, state.globalVars);
-    assert.equal(snapshot.activePlayerVars, state.perPlayerVars[state.activePlayer]);
-    assert.equal(snapshot.activePlayer, state.activePlayer);
+    assert.equal(snapshot.perPlayerVars, state.perPlayerVars);
+    assert.equal(Object.prototype.hasOwnProperty.call(snapshot, 'activePlayerVars'), false);
+    assert.equal(Object.prototype.hasOwnProperty.call(snapshot, 'activePlayer'), false);
   });
 
-  it('uses an empty object when the active player has no per-player vars', () => {
+  it('exposes multiple players through the same snapshot', () => {
     const def = makeDef();
-    const state = {
-      ...makeState(),
-      perPlayerVars: { 0: { resources: 2, ready: false } },
-    } as GameState;
+    const state = makeState();
 
-    const snapshot = createEnumerationSnapshot(def, state, asPlayerId(1));
+    const snapshot = createEnumerationSnapshot(def, state);
 
-    assert.deepEqual(snapshot.activePlayerVars, {});
+    assert.equal(snapshot.perPlayerVars[0]?.resources, 2);
+    assert.equal(snapshot.perPlayerVars[1]?.resources, 5);
   });
 });
 

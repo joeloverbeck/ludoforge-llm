@@ -88,7 +88,7 @@ const evaluateCompiled = (
   const compiled = tryCompileCondition(condition);
   assert.ok(compiled !== null);
   const snapshot = options?.useSnapshot === true
-    ? createEnumerationSnapshot(ctx.def, ctx.state, ctx.activePlayer)
+    ? createEnumerationSnapshot(ctx.def, ctx.state)
     : undefined;
   return compiled(ctx.state, ctx.activePlayer, ctx.bindings, snapshot);
 };
@@ -149,8 +149,10 @@ describe('condition compiler', () => {
 
     const snapshot: EnumerationStateSnapshot = {
       globalVars: { ...ctx.state.globalVars, resources: 9 },
-      activePlayerVars: { ...(ctx.state.perPlayerVars[ctx.activePlayer] ?? {}), resources: 7 },
-      activePlayer: ctx.activePlayer,
+      perPlayerVars: {
+        ...ctx.state.perPlayerVars,
+        [ctx.activePlayer]: { ...(ctx.state.perPlayerVars[ctx.activePlayer] ?? {}), resources: 7 },
+      },
       zoneTotals: { get: (_key: string) => 0 },
       zoneVars: { get: (_zoneId: string, _varName: string) => undefined },
       markerStates: { get: (_spaceId: string, _markerName: string) => undefined },
@@ -223,7 +225,7 @@ describe('condition compiler', () => {
         },
       },
     });
-    const snapshot = createEnumerationSnapshot(ctx.def, ctx.state, ctx.activePlayer);
+    const snapshot = createEnumerationSnapshot(ctx.def, ctx.state);
     const originalGet = snapshot.zoneTotals.get.bind(snapshot.zoneTotals);
     let calls = 0;
     snapshot.zoneTotals.get = (key: string): number => {
@@ -320,8 +322,10 @@ describe('condition compiler', () => {
 
     const snapshot: EnumerationStateSnapshot = {
       globalVars: { ...ctx.state.globalVars, resources: 9, phaseFlag: false },
-      activePlayerVars: { ...(ctx.state.perPlayerVars[ctx.activePlayer] ?? {}), resources: 7 },
-      activePlayer: ctx.activePlayer,
+      perPlayerVars: {
+        ...ctx.state.perPlayerVars,
+        [ctx.activePlayer]: { ...(ctx.state.perPlayerVars[ctx.activePlayer] ?? {}), resources: 7 },
+      },
       zoneTotals: { get: (_key: string) => 0 },
       zoneVars: { get: (_zoneId: string, _varName: string) => undefined },
       markerStates: { get: (_spaceId: string, _markerName: string) => undefined },
@@ -329,6 +333,30 @@ describe('condition compiler', () => {
 
     assert.equal(compiled(ctx.state, ctx.activePlayer, ctx.bindings), false);
     assert.equal(compiled(ctx.state, ctx.activePlayer, ctx.bindings, snapshot), true);
+  });
+
+  it('reuses one snapshot across different invocation active players', () => {
+    const condition: ConditionAST = {
+      op: '>=',
+      left: { _t: 2, ref: 'pvar', player: 'active', var: 'resources' },
+      right: 5,
+    };
+    const compiled = tryCompileCondition(condition);
+    assert.ok(compiled !== null);
+
+    const ctx = makeCtx();
+    const snapshot = createEnumerationSnapshot(ctx.def, ctx.state);
+
+    assert.equal(compiled(ctx.state, asPlayerId(0), ctx.bindings, snapshot), false);
+    assert.equal(compiled(ctx.state, asPlayerId(1), ctx.bindings, snapshot), true);
+    assert.equal(
+      compiled(ctx.state, asPlayerId(0), ctx.bindings, snapshot),
+      compiled(ctx.state, asPlayerId(0), ctx.bindings),
+    );
+    assert.equal(
+      compiled(ctx.state, asPlayerId(1), ctx.bindings, snapshot),
+      compiled(ctx.state, asPlayerId(1), ctx.bindings),
+    );
   });
 
   it('returns null for non-compilable expressions and selectors', () => {

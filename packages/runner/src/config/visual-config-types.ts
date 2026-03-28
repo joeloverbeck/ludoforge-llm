@@ -533,8 +533,7 @@ const VictoryComponentIdSchema = z.enum([
   'globalVar',
 ]) satisfies z.ZodType<VictoryComponentId>;
 
-const VictoryTooltipComponentSchema = z.object({
-  componentId: VictoryComponentIdSchema,
+const VictoryTooltipComponentMetadataSchema = z.object({
   label: z.string(),
   description: z.string().optional(),
   detailTemplate: z.string().optional(),
@@ -542,7 +541,7 @@ const VictoryTooltipComponentSchema = z.object({
 
 const VictoryTooltipBreakdownSchema = z.object({
   seat: z.string(),
-  components: z.array(VictoryTooltipComponentSchema),
+  componentsById: z.partialRecord(VictoryComponentIdSchema, VictoryTooltipComponentMetadataSchema),
 });
 
 const VictoryStandingsVisualSchema = z.object({
@@ -675,7 +674,7 @@ export type ShowdownZoneSelectorConfig = z.infer<typeof ShowdownZoneSelectorSche
 export type ShowdownSurfaceConfig = z.infer<typeof ShowdownSurfaceSchema>;
 export type RunnerSurfacesConfig = z.infer<typeof RunnerSurfacesConfigSchema>;
 export type PhaseBannersConfig = z.infer<typeof PhaseBannersSchema>;
-export type VictoryTooltipComponent = z.infer<typeof VictoryTooltipComponentSchema>;
+export type VictoryTooltipComponentMetadata = z.infer<typeof VictoryTooltipComponentMetadataSchema>;
 export type VictoryTooltipBreakdown = z.infer<typeof VictoryTooltipBreakdownSchema>;
 export type VictoryStandingsVisualConfig = z.infer<typeof VictoryStandingsVisualSchema>;
 export type ActionChoiceOptionVisual = z.infer<typeof ActionChoiceOptionVisualSchema>;

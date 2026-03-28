@@ -626,42 +626,42 @@ actionGroupPolicy:
 victoryStandings:
   tooltipBreakdowns:
     - seat: us
-      components:
-        - componentId: markerTotal
+      componentsById:
+        markerTotal:
           label: "Total Support"
           description: "Population-weighted support (active x2, passive x1)"
           detailTemplate: "(pop {population}) x{multiplier} = {contribution}"
-        - componentId: zoneCount
+        zoneCount:
           label: "Available US Pieces"
           description: "Troops and bases in Available space"
           detailTemplate: "{contribution}"
     - seat: arvn
-      components:
-        - componentId: controlledPopulation
+      componentsById:
+        controlledPopulation:
           label: "COIN-Controlled Population"
           description: "Population where US+ARVN pieces > NVA+VC pieces"
           detailTemplate: "(pop {population}) = {contribution}"
-        - componentId: globalVar
+        globalVar:
           label: "Patronage"
           description: "ARVN political support (global variable)"
           detailTemplate: "{contribution}"
     - seat: nva
-      components:
-        - componentId: controlledPopulation
+      componentsById:
+        controlledPopulation:
           label: "NVA-Controlled Population"
           description: "Population where NVA pieces > all others combined"
           detailTemplate: "(pop {population}) = {contribution}"
-        - componentId: mapBases
+        mapBases:
           label: "NVA Bases on Map"
           description: "NVA bases across all map spaces"
           detailTemplate: "{contribution}"
     - seat: vc
-      components:
-        - componentId: markerTotal
+      componentsById:
+        markerTotal:
           label: "Total Opposition"
           description: "Population-weighted opposition (active x2, passive x1)"
           detailTemplate: "(pop {population}) x{multiplier} = {contribution}"
-        - componentId: mapBases
+        mapBases:
           label: "VC Bases on Map"
           description: "VC bases across all map spaces"
           detailTemplate: "{contribution}"

@@ -175,17 +175,15 @@ describe('VisualConfigSchema', () => {
         tooltipBreakdowns: [
           {
             seat: 'vc',
-            components: [
-              {
-                componentId: 'markerTotal',
+            componentsById: {
+              markerTotal: {
                 label: 'Total Opposition',
                 detailTemplate: '(pop {population}) x{multiplier} = {contribution}',
               },
-              {
-                componentId: 'mapBases',
+              mapBases: {
                 label: 'VC Bases on Map',
               },
-            ],
+            },
           },
         ],
       },
@@ -194,7 +192,7 @@ describe('VisualConfigSchema', () => {
     expect(withTemplate.success).toBe(true);
   });
 
-  it('rejects victory tooltip components that omit componentId', () => {
+  it('rejects removed array-shaped victory tooltip metadata', () => {
     const result = VisualConfigSchema.safeParse({
       version: 1,
       victoryStandings: {
@@ -203,6 +201,7 @@ describe('VisualConfigSchema', () => {
             seat: 'vc',
             components: [
               {
+                componentId: 'markerTotal',
                 label: 'Total Opposition',
               },
             ],

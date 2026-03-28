@@ -41,7 +41,7 @@ import type {
   LayoutMode,
   LayoutRole,
   StackBadgeStyle,
-  VictoryTooltipBreakdown,
+  VictoryTooltipComponentMetadata,
   VisualConfig,
   RunnerChromeTopBarStatusAlignment,
   ZoneTokenLayout,
@@ -49,6 +49,7 @@ import type {
   ConnectionStyleConfig,
   ConnectionRouteDefinition,
 } from './visual-config-types.js';
+import type { VictoryComponentId } from '@ludoforge/engine/runtime';
 import { cloneConnectionRouteDefinition } from './connection-route-utils.js';
 
 export interface ResolvedZoneVisual {
@@ -443,12 +444,19 @@ export class VisualConfigProvider {
     return new Set(phases);
   }
 
-  getVictoryTooltipBreakdown(seat: string): VictoryTooltipBreakdown | null {
+  getVictoryTooltipComponentMetadata(
+    seat: string,
+    componentId: VictoryComponentId,
+  ): VictoryTooltipComponentMetadata | null {
     const breakdowns = this.config?.victoryStandings?.tooltipBreakdowns;
     if (breakdowns === undefined) {
       return null;
     }
-    return breakdowns.find((b) => b.seat === seat) ?? null;
+    const breakdown = breakdowns.find((entry) => entry.seat === seat);
+    if (breakdown === undefined) {
+      return null;
+    }
+    return breakdown.componentsById[componentId] ?? null;
   }
 
   getActionDisplayName(actionId: string): string | null {

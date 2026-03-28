@@ -78,20 +78,20 @@ function renderVictoryStandingsBar(includeMapBasesMetadata: boolean = true) {
       tooltipBreakdowns: [
         {
           seat: 'vc',
-          components: [
+          componentsById: {
             ...(includeMapBasesMetadata
-              ? [{
-                  componentId: 'mapBases' as const,
-                  label: 'VC Bases on Map',
-                }]
-              : []),
-            {
-              componentId: 'markerTotal',
+              ? {
+                  mapBases: {
+                    label: 'VC Bases on Map',
+                  },
+                }
+              : {}),
+            markerTotal: {
               label: 'Total Opposition',
               description: 'Population-weighted opposition',
               detailTemplate: '(pop {population}) x{multiplier} = {contribution}',
             },
-          ],
+          },
         },
       ],
     },
@@ -154,5 +154,54 @@ describe('VictoryStandingsBar', () => {
     expect(screen.getByText('Map Bases')).toBeTruthy();
     expect(within(breakdown).getByText('Tay Ninh')).toBeTruthy();
     expect(within(breakdown).getByText('1')).toBeTruthy();
+  });
+
+  it('renders runtime breakdown rows even when the seat has no configured metadata', () => {
+    const store = createRenderModelStore(makeRenderModelFixture({
+      victoryStandings: [
+        {
+          seat: 'vc',
+          score: 18,
+          threshold: 25,
+          rank: 1,
+          components: [
+            {
+              componentId: 'markerTotal',
+              aggregate: 11,
+              spaces: [],
+            },
+            {
+              componentId: 'mapBases',
+              aggregate: 7,
+              spaces: [],
+            },
+          ],
+        },
+      ],
+    }));
+
+    const provider = new VisualConfigProvider({
+      version: 1,
+      factions: {
+        vc: {
+          displayName: 'Viet Cong',
+        },
+      },
+    });
+
+    render(
+      createElement(
+        VisualConfigContext.Provider,
+        { value: provider },
+        createElement(VictoryStandingsBar, { store }),
+      ),
+    );
+
+    fireEvent.pointerEnter(screen.getByTestId('victory-entry-vc'));
+
+    expect(screen.getByText('Marker Total')).toBeTruthy();
+    expect(screen.getByText('Map Bases')).toBeTruthy();
+    expect(screen.getByText('11')).toBeTruthy();
+    expect(screen.getByText('7')).toBeTruthy();
   });
 });

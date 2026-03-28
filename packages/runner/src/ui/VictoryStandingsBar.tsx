@@ -143,7 +143,6 @@ interface TooltipRow {
 
 function VictoryTooltip({ entry, anchorRect, tooltipRef, onPointerLeave }: VictoryTooltipProps): ReactElement {
   const visualConfig = useContext(VisualConfigContext);
-  const breakdown = visualConfig?.getVictoryTooltipBreakdown(entry.seat) ?? null;
   const [expandedIndices, setExpandedIndices] = useState<ReadonlySet<RenderComponentBreakdown['componentId']>>(
     () => new Set<RenderComponentBreakdown['componentId']>(),
   );
@@ -153,18 +152,16 @@ function VictoryTooltip({ entry, anchorRect, tooltipRef, onPointerLeave }: Victo
 
   const displayName = visualConfig?.getFactionDisplayName(entry.seat)
     ?? formatIdAsDisplayName(entry.seat);
-  const componentMetadataById = new Map(
-    (breakdown?.components ?? []).map((component) => [component.componentId, component] as const),
-  );
-  const rows: readonly TooltipRow[] = breakdown === null
-    ? []
-    : entry.components.map((component) => ({
+  const rows: readonly TooltipRow[] = entry.components.map((component) => {
+    const metadata = visualConfig?.getVictoryTooltipComponentMetadata(entry.seat, component.componentId) ?? null;
+    return {
       componentId: component.componentId,
-      label: componentMetadataById.get(component.componentId)?.label ?? formatIdAsDisplayName(component.componentId),
-      description: componentMetadataById.get(component.componentId)?.description,
-      detailTemplate: componentMetadataById.get(component.componentId)?.detailTemplate,
+      label: metadata?.label ?? formatIdAsDisplayName(component.componentId),
+      description: metadata?.description,
+      detailTemplate: metadata?.detailTemplate,
       breakdown: component,
-    }));
+    };
+  });
 
   const toggleExpanded = (componentId: RenderComponentBreakdown['componentId']): void => {
     setExpandedIndices((current) => {
@@ -190,7 +187,7 @@ function VictoryTooltip({ entry, anchorRect, tooltipRef, onPointerLeave }: Victo
         <div className={styles.tooltipTitle}>
           {displayName} &mdash; {entry.score} / {entry.threshold}
         </div>
-        {breakdown !== null && rows.length > 0 ? (
+        {rows.length > 0 ? (
           <>
             {rows.map((row) => {
               const isExpanded = expandedIndices.has(row.componentId);

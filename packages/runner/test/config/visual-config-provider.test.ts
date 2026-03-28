@@ -1224,6 +1224,39 @@ describe('VisualConfigProvider', () => {
     expect(phases.has('showdown')).toBe(false);
   });
 
+  it('getVictoryTooltipComponentMetadata resolves metadata by seat and componentId', () => {
+    const provider = new VisualConfigProvider({
+      version: 1,
+      victoryStandings: {
+        tooltipBreakdowns: [
+          {
+            seat: 'vc',
+            componentsById: {
+              markerTotal: {
+                label: 'Total Opposition',
+                description: 'Population-weighted opposition',
+                detailTemplate: '(pop {population}) x{multiplier} = {contribution}',
+              },
+            },
+          },
+        ],
+      },
+    });
+
+    expect(provider.getVictoryTooltipComponentMetadata('vc', 'markerTotal')).toEqual({
+      label: 'Total Opposition',
+      description: 'Population-weighted opposition',
+      detailTemplate: '(pop {population}) x{multiplier} = {contribution}',
+    });
+    expect(provider.getVictoryTooltipComponentMetadata('vc', 'mapBases')).toBeNull();
+    expect(provider.getVictoryTooltipComponentMetadata('nva', 'markerTotal')).toBeNull();
+  });
+
+  it('getVictoryTooltipComponentMetadata returns null when victory metadata is omitted', () => {
+    expect(new VisualConfigProvider(null).getVictoryTooltipComponentMetadata('vc', 'markerTotal')).toBeNull();
+    expect(new VisualConfigProvider({ version: 1 }).getVictoryTooltipComponentMetadata('vc', 'markerTotal')).toBeNull();
+  });
+
   it('getActionDisplayName returns configured string or null', () => {
     const provider = new VisualConfigProvider({
       version: 1,

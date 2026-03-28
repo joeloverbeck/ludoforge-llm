@@ -1,6 +1,7 @@
 import type { PlayerId } from './branded.js';
 import { missingBindingError, missingVarError, typeMismatchError } from './eval-error.js';
 import { resolveBindingTemplate } from './binding-template.js';
+import type { EnumerationStateSnapshot } from './enumeration-snapshot.js';
 import { tryStaticScopedVarNameExpr } from './scoped-var-name-resolution.js';
 import type { ConditionAST, ScalarArrayValue, ScalarValue, ValueExpr, GameState } from './types.js';
 
@@ -8,12 +9,14 @@ export type CompiledConditionPredicate = (
   state: GameState,
   activePlayer: PlayerId,
   bindings: Readonly<Record<string, unknown>>,
+  snapshot?: EnumerationStateSnapshot,
 ) => boolean;
 
 export type CompiledConditionValueAccessor = (
   state: GameState,
   activePlayer: PlayerId,
   bindings: Readonly<Record<string, unknown>>,
+  snapshot?: EnumerationStateSnapshot,
 ) => ScalarValue | ScalarArrayValue;
 
 type ComparisonCondition = Extract<ConditionAST, { readonly op: '==' | '!=' | '<' | '<=' | '>' | '>=' }>;
@@ -26,7 +29,11 @@ const isScalarArrayValue = (value: unknown): value is ScalarArrayValue =>
   Array.isArray(value) && value.every((entry) => isScalarValue(entry));
 
 const compileZoneCountAccessor = (zoneId: string, context: ValueExpr): CompiledConditionValueAccessor =>
-  (state) => {
+  (state, _activePlayer, _bindings, snapshot) => {
+    if (snapshot !== undefined) {
+      return snapshot.zoneTotals.get(`${zoneId}:*`);
+    }
+
     const zoneTokens = state.zones[zoneId];
     if (zoneTokens === undefined) {
       throw missingVarError(`Zone state not found for selector result: ${zoneId}`, {
@@ -46,8 +53,10 @@ const compileReferenceAccessor = (expr: Extract<ValueExpr, { readonly _t: 2 }>):
       if (variableName === null) {
         return null;
       }
-      return (state) => {
-        const value = state.globalVars[variableName];
+      return (state, _activePlayer, _bindings, snapshot) => {
+        const value = snapshot === undefined
+          ? state.globalVars[variableName]
+          : snapshot.globalVars[variableName];
         if (value === undefined) {
           throw missingVarError(`Global variable not found: ${variableName}`, {
             reference: expr,
@@ -67,8 +76,8 @@ const compileReferenceAccessor = (expr: Extract<ValueExpr, { readonly _t: 2 }>):
       if (variableName === null) {
         return null;
       }
-      return (state, activePlayer) => {
-        const playerVars = state.perPlayerVars[activePlayer];
+      return (state, activePlayer, _bindings, snapshot) => {
+        const playerVars = snapshot?.activePlayerVars ?? state.perPlayerVars[activePlayer];
         if (playerVars === undefined) {
           throw missingVarError(`Per-player vars missing for player ${activePlayer}`, {
             reference: expr,
@@ -156,27 +165,27 @@ const compileComparison = (
 ): CompiledConditionPredicate => {
   switch (op) {
     case '==':
-      return (state, activePlayer, bindings) =>
-        leftAccessor(state, activePlayer, bindings) === rightAccessor(state, activePlayer, bindings);
+      return (state, activePlayer, bindings, snapshot) =>
+        leftAccessor(state, activePlayer, bindings, snapshot) === rightAccessor(state, activePlayer, bindings, snapshot);
     case '!=':
-      return (state, activePlayer, bindings) =>
-        leftAccessor(state, activePlayer, bindings) !== rightAccessor(state, activePlayer, bindings);
+      return (state, activePlayer, bindings, snapshot) =>
+        leftAccessor(state, activePlayer, bindings, snapshot) !== rightAccessor(state, activePlayer, bindings, snapshot);
     case '<':
-      return (state, activePlayer, bindings) =>
-        expectOrderingNumber(leftAccessor(state, activePlayer, bindings), 'left', cond)
-        < expectOrderingNumber(rightAccessor(state, activePlayer, bindings), 'right', cond);
+      return (state, activePlayer, bindings, snapshot) =>
+        expectOrderingNumber(leftAccessor(state, activePlayer, bindings, snapshot), 'left', cond)
+        < expectOrderingNumber(rightAccessor(state, activePlayer, bindings, snapshot), 'right', cond);
     case '<=':
-      return (state, activePlayer, bindings) =>
-        expectOrderingNumber(leftAccessor(state, activePlayer, bindings), 'left', cond)
-        <= expectOrderingNumber(rightAccessor(state, activePlayer, bindings), 'right', cond);
+      return (state, activePlayer, bindings, snapshot) =>
+        expectOrderingNumber(leftAccessor(state, activePlayer, bindings, snapshot), 'left', cond)
+        <= expectOrderingNumber(rightAccessor(state, activePlayer, bindings, snapshot), 'right', cond);
     case '>':
-      return (state, activePlayer, bindings) =>
-        expectOrderingNumber(leftAccessor(state, activePlayer, bindings), 'left', cond)
-        > expectOrderingNumber(rightAccessor(state, activePlayer, bindings), 'right', cond);
+      return (state, activePlayer, bindings, snapshot) =>
+        expectOrderingNumber(leftAccessor(state, activePlayer, bindings, snapshot), 'left', cond)
+        > expectOrderingNumber(rightAccessor(state, activePlayer, bindings, snapshot), 'right', cond);
     case '>=':
-      return (state, activePlayer, bindings) =>
-        expectOrderingNumber(leftAccessor(state, activePlayer, bindings), 'left', cond)
-        >= expectOrderingNumber(rightAccessor(state, activePlayer, bindings), 'right', cond);
+      return (state, activePlayer, bindings, snapshot) =>
+        expectOrderingNumber(leftAccessor(state, activePlayer, bindings, snapshot), 'left', cond)
+        >= expectOrderingNumber(rightAccessor(state, activePlayer, bindings, snapshot), 'right', cond);
   }
 };
 
@@ -231,8 +240,8 @@ export const tryCompileCondition = (
         }
         compiledArgs.push(compiledArg);
       }
-      return (state, activePlayer, bindings) =>
-        compiledArgs.every((arg) => arg(state, activePlayer, bindings));
+      return (state, activePlayer, bindings, snapshot) =>
+        compiledArgs.every((arg) => arg(state, activePlayer, bindings, snapshot));
     }
 
     case 'or': {
@@ -244,8 +253,8 @@ export const tryCompileCondition = (
         }
         compiledArgs.push(compiledArg);
       }
-      return (state, activePlayer, bindings) =>
-        compiledArgs.some((arg) => arg(state, activePlayer, bindings));
+      return (state, activePlayer, bindings, snapshot) =>
+        compiledArgs.some((arg) => arg(state, activePlayer, bindings, snapshot));
     }
 
     case 'not': {
@@ -253,7 +262,7 @@ export const tryCompileCondition = (
       if (compiledArg === null) {
         return null;
       }
-      return (state, activePlayer, bindings) => !compiledArg(state, activePlayer, bindings);
+      return (state, activePlayer, bindings, snapshot) => !compiledArg(state, activePlayer, bindings, snapshot);
     }
 
     default:

@@ -7,11 +7,13 @@ import {
   asTokenId,
   asZoneId,
   buildAdjacencyGraph,
+  createEnumerationSnapshot,
   evalCondition,
   isEvalErrorCode,
   tryCompileCondition,
   tryCompileValueExpr,
   type ConditionAST,
+  type EnumerationStateSnapshot,
   type GameDef,
   type GameState,
   type ReadContext,
@@ -78,10 +80,17 @@ const makeCtx = (
   });
 };
 
-const evaluateCompiled = (condition: ConditionAST, ctx: ReadContext): boolean => {
+const evaluateCompiled = (
+  condition: ConditionAST,
+  ctx: ReadContext,
+  options?: { readonly useSnapshot?: boolean },
+): boolean => {
   const compiled = tryCompileCondition(condition);
   assert.ok(compiled !== null);
-  return compiled(ctx.state, ctx.activePlayer, ctx.bindings);
+  const snapshot = options?.useSnapshot === true
+    ? createEnumerationSnapshot(ctx.def, ctx.state, ctx.activePlayer)
+    : undefined;
+  return compiled(ctx.state, ctx.activePlayer, ctx.bindings, snapshot);
 };
 
 describe('condition compiler', () => {
@@ -118,6 +127,39 @@ describe('condition compiler', () => {
     assert.equal(evaluateCompiled(gvarCondition, ctx), evalCondition(gvarCondition, ctx));
     assert.equal(evaluateCompiled(pvarCondition, ctx), evalCondition(pvarCondition, ctx));
     assert.equal(evaluateCompiled(bindingCondition, ctx), evalCondition(bindingCondition, ctx));
+  });
+
+  it('prefers snapshot reads for gvar and active pvar accessors when provided', () => {
+    const liveState = makeState();
+    const ctx = makeCtx({ state: liveState });
+    const gvarCondition: ConditionAST = {
+      op: '==',
+      left: { _t: 2, ref: 'gvar', var: 'resources' },
+      right: 9,
+    };
+    const pvarCondition: ConditionAST = {
+      op: '==',
+      left: { _t: 2, ref: 'pvar', player: 'active', var: 'resources' },
+      right: 7,
+    };
+    const compiledGvar = tryCompileCondition(gvarCondition);
+    const compiledPvar = tryCompileCondition(pvarCondition);
+    assert.ok(compiledGvar !== null);
+    assert.ok(compiledPvar !== null);
+
+    const snapshot: EnumerationStateSnapshot = {
+      globalVars: { ...ctx.state.globalVars, resources: 9 },
+      activePlayerVars: { ...(ctx.state.perPlayerVars[ctx.activePlayer] ?? {}), resources: 7 },
+      activePlayer: ctx.activePlayer,
+      zoneTotals: { get: (_key: string) => 0 },
+      zoneVars: { get: (_zoneId: string, _varName: string) => undefined },
+      markerStates: { get: (_spaceId: string, _markerName: string) => undefined },
+    };
+
+    assert.equal(compiledGvar(ctx.state, ctx.activePlayer, ctx.bindings), false);
+    assert.equal(compiledPvar(ctx.state, ctx.activePlayer, ctx.bindings), false);
+    assert.equal(compiledGvar(ctx.state, ctx.activePlayer, ctx.bindings, snapshot), true);
+    assert.equal(compiledPvar(ctx.state, ctx.activePlayer, ctx.bindings, snapshot), true);
   });
 
   it('supports all six comparison operators for Tier 1 value accessors', () => {
@@ -159,6 +201,42 @@ describe('condition compiler', () => {
 
     assert.equal(accessor(ctx.state, ctx.activePlayer, ctx.bindings), 2);
     assert.equal(evaluateCompiled(condition, ctx), evalCondition(condition, ctx));
+  });
+
+  it('prefers snapshot-backed zone totals for compiled aggregate counts when provided', () => {
+    const expr: ValueExpr = {
+      _t: 5,
+      aggregate: { op: 'count', query: { query: 'tokensInZone', zone: 'board:none' } },
+    };
+    const condition: ConditionAST = { op: '==', left: expr, right: 4 };
+    const compiled = tryCompileCondition(condition);
+    assert.ok(compiled !== null);
+
+    const ctx = makeCtx({
+      state: {
+        ...makeState(),
+        zones: {
+          'board:none': [
+            { id: asTokenId('t1'), type: 'piece', props: {} },
+            { id: asTokenId('t2'), type: 'piece', props: {} },
+          ],
+        },
+      },
+    });
+    const snapshot = createEnumerationSnapshot(ctx.def, ctx.state, ctx.activePlayer);
+    const originalGet = snapshot.zoneTotals.get.bind(snapshot.zoneTotals);
+    let calls = 0;
+    snapshot.zoneTotals.get = (key: string): number => {
+      calls += 1;
+      if (key === 'board:none:*') {
+        return 4;
+      }
+      return originalGet(key);
+    };
+
+    assert.equal(compiled(ctx.state, ctx.activePlayer, ctx.bindings), false);
+    assert.equal(compiled(ctx.state, ctx.activePlayer, ctx.bindings, snapshot), true);
+    assert.equal(calls, 1);
   });
 
   it('preserves missing-zone error behavior for compiled aggregate counts', () => {
@@ -217,6 +295,40 @@ describe('condition compiler', () => {
     assert.equal(evaluateCompiled(orCondition, orCtx), evalCondition(orCondition, orCtx));
     assert.equal(evaluateCompiled(notCondition, andCtx), true);
     assert.equal(evaluateCompiled(notCondition, andCtx), evalCondition(notCondition, andCtx));
+  });
+
+  it('threads snapshot through nested boolean combinators', () => {
+    const ctx = makeCtx();
+    const condition: ConditionAST = {
+      op: 'and',
+      args: [
+        {
+          op: 'or',
+          args: [
+            { op: '==', left: { _t: 2, ref: 'gvar', var: 'resources' }, right: 9 },
+            { op: '==', left: { _t: 2, ref: 'pvar', player: 'active', var: 'resources' }, right: 7 },
+          ],
+        },
+        {
+          op: 'not',
+          arg: { op: '==', left: { _t: 2, ref: 'gvar', var: 'phaseFlag' }, right: true },
+        },
+      ],
+    };
+    const compiled = tryCompileCondition(condition);
+    assert.ok(compiled !== null);
+
+    const snapshot: EnumerationStateSnapshot = {
+      globalVars: { ...ctx.state.globalVars, resources: 9, phaseFlag: false },
+      activePlayerVars: { ...(ctx.state.perPlayerVars[ctx.activePlayer] ?? {}), resources: 7 },
+      activePlayer: ctx.activePlayer,
+      zoneTotals: { get: (_key: string) => 0 },
+      zoneVars: { get: (_zoneId: string, _varName: string) => undefined },
+      markerStates: { get: (_spaceId: string, _markerName: string) => undefined },
+    };
+
+    assert.equal(compiled(ctx.state, ctx.activePlayer, ctx.bindings), false);
+    assert.equal(compiled(ctx.state, ctx.activePlayer, ctx.bindings, snapshot), true);
   });
 
   it('returns null for non-compilable expressions and selectors', () => {

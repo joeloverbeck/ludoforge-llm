@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — extends `first-decision-compiler.ts`
-**Deps**: 91FIRDECDOMCOM-001 (walker + types)
+**Deps**: archive/tickets/91FIRDECDOMCOM/91FIRDECDOMCOM-001.md
 
 ## Problem
 
@@ -30,6 +30,11 @@ pattern fall through to the interpreter.
    `ChoiceOption[]` matching interpreter output.
 5. `insideForEach` flag from 001 indicates Pattern 3 (forEach + nested
    decision). The forEach collection query determines iteration elements.
+6. 001 already introduced the series-local structural walker and path
+   metadata in `first-decision-compiler.ts`. 002 should extend that module
+   and consume `findFirstDecisionNode` / `countDecisionNodes` directly
+   rather than introducing another parallel effect-tree traversal helper
+   elsewhere in the kernel.
 
 ## Architecture Check
 
@@ -41,6 +46,11 @@ pattern fall through to the interpreter.
 3. F1 (agnosticism): patterns match structural EffectAST shapes, not
    game-specific identifiers. F5 (determinism): closures are pure functions
    of `(state, activePlayer)`. F7 (immutability): closures are read-only.
+4. 002 is the correct place to prevent traversal sprawl inside this series.
+   If compilation needs more structural metadata than 001 currently exposes,
+   extend the `FirstDecisionNode` descriptor or add adjacent helpers inside
+   `first-decision-compiler.ts`; do NOT add a second bespoke walker in
+   `legal-moves.ts`, cache modules, or unrelated kernel files.
 
 ## What to Change
 
@@ -109,6 +119,11 @@ to find the first decision across stages. Compose with stage predicates
 For plain actions, call `compileFirstDecisionDomain(def, action.effects)`
 directly.
 
+This wrapper must remain a thin composition layer over the 001 walker.
+If pipeline traversal needs helper code, keep it in
+`first-decision-compiler.ts` next to the existing walker instead of
+introducing a second generalized effect traversal utility elsewhere.
+
 ## Files to Touch
 
 - `packages/engine/src/kernel/first-decision-compiler.ts` (modify — add compilation)
@@ -123,6 +138,10 @@ directly.
   closures must use EXISTING kernel query functions only.
 - Modifying `condition-compiler.ts` or `compiled-condition-cache.ts`.
 - Modifying `gamedef-runtime.ts`.
+- Broad repo-wide consolidation of all existing effect walkers. 002 should
+  avoid creating new duplication, but a cross-kernel shared traversal
+  abstraction is larger than this ticket unless the implementation proves
+  it is the smallest correct change.
 
 ## Acceptance Criteria
 
@@ -166,6 +185,9 @@ directly.
 4. For single-decision actions, `domain` ChoiceOption values must have
    `legality: 'legal'` and `illegalReason: null` matching the interpreter's
    default for option construction.
+5. 002 does not introduce a new parallel effect-tree walker outside
+   `first-decision-compiler.ts`; the series keeps a single structural
+   source of truth for first-decision traversal.
 
 ## Test Plan
 

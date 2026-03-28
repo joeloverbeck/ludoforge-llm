@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — new cache module + modify `legal-moves.ts`
-**Deps**: 91FIRDECDOMCOM-002 (domain check compilation)
+**Deps**: tickets/91FIRDECDOMCOM-002.md
 
 ## Problem
 

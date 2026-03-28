@@ -3,6 +3,7 @@ export * from './gamedef-runtime.js';
 export * from './always-complete-actions.js';
 export * from './choice-option-policy.js';
 export * from './decision-scope.js';
+export * from './first-decision-compiler.js';
 export * from './choose-n-cardinality.js';
 export * from './choose-n-option-resolution.js';
 export * from './choose-n-selected-validation.js';

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — tests only
-**Deps**: 91FIRDECDOMCOM-003 (cache + integration)
+**Deps**: tickets/91FIRDECDOMCOM-003.md
 
 ## Problem
 

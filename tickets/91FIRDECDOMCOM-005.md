@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — tests only
-**Deps**: 91FIRDECDOMCOM-004 (equivalence tests proving correctness)
+**Deps**: tickets/91FIRDECDOMCOM-004.md
 
 ## Problem
 

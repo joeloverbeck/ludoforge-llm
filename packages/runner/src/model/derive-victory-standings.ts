@@ -26,6 +26,6 @@ export function deriveVictoryStandings(
     score: result.score,
     threshold: result.threshold,
     rank: index + 1,
-    components: result.components.values,
+    components: result.components.breakdowns.map((breakdown) => breakdown.aggregate),
   }));
 }

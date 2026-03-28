@@ -516,15 +516,15 @@ describe('FITL compilation produces auto-synthesized derivedMetrics', () => {
 
     // VC Total Opposition component (first component of markerTotalPlusMapBases)
     // activeOpposition on pop-1 space → 1 × 2 = 2
-    assert.ok(vcResult!.components.values.length >= 1, 'VC should have at least 1 component');
-    const vcOpposition = vcResult!.components.values[0] as number;
+    assert.ok(vcResult!.components.breakdowns.length >= 1, 'VC should have at least 1 component');
+    const vcOpposition = vcResult!.components.breakdowns[0]?.aggregate as number;
     assert.ok(vcOpposition >= 2,
       `VC Total Opposition should be >= 2 (got ${vcOpposition})`);
 
     // US Total Support component (first component of markerTotalPlusZoneCount)
     // passiveSupport on pop-6 space → 6 × 1 = 6
-    assert.ok(usResult!.components.values.length >= 1, 'US should have at least 1 component');
-    const usSupport = usResult!.components.values[0] as number;
+    assert.ok(usResult!.components.breakdowns.length >= 1, 'US should have at least 1 component');
+    const usSupport = usResult!.components.breakdowns[0]?.aggregate as number;
     assert.ok(usSupport >= 6,
       `US Total Support should be >= 6 (got ${usSupport})`);
   });

@@ -437,6 +437,154 @@ export function countBasesOnMap(
 
 // ─── Victory Marker Composite ────────────────────────────────────────────────
 
+export interface SpaceContribution {
+  readonly spaceId: string;
+  readonly contribution: number;
+  readonly factors: Readonly<Record<string, number>>;
+}
+
+export interface ComponentBreakdown {
+  readonly aggregate: number;
+  readonly spaces: readonly SpaceContribution[];
+}
+
+function sumBreakdownContributions(spaces: readonly SpaceContribution[]): number {
+  let total = 0;
+  for (const space of spaces) {
+    total += space.contribution;
+  }
+  return total;
+}
+
+function toComponentBreakdown(spaces: readonly SpaceContribution[]): ComponentBreakdown {
+  return {
+    aggregate: sumBreakdownContributions(spaces),
+    spaces,
+  };
+}
+
+export function computeMarkerTotalBreakdown(
+  gameDef: DerivedMetricsContext,
+  spaces: readonly ZoneDef[],
+  markerStates: Readonly<Record<string, string>>,
+  config: MarkerWeightConfig,
+  defaultMarkerState: string = 'neutral',
+): ComponentBreakdown {
+  const contributions: SpaceContribution[] = [];
+  for (const space of spaces) {
+    const marker = markerStates[space.id] ?? defaultMarkerState;
+    const population = requireNumericZoneAttribute(gameDef, space, 'population', 'computeMarkerTotal', 'markerTotal');
+    const multiplier = getPopulationMultiplier(marker, config);
+    contributions.push({
+      spaceId: space.id,
+      contribution: population * multiplier,
+      factors: { population, multiplier },
+    });
+  }
+  return toComponentBreakdown(contributions);
+}
+
+export function countBasesOnMapBreakdown(
+  state: GameState,
+  spaces: readonly ZoneDef[],
+  seat: string,
+  basePieceTypes: readonly string[],
+  seatProp: string,
+): ComponentBreakdown {
+  const contributions: SpaceContribution[] = [];
+  for (const space of spaces) {
+    const tokens = getZoneTokens(state, space.id);
+    let count = 0;
+    for (const token of tokens) {
+      if (basePieceTypes.includes(token.type) && resolveTokenViewFieldValue(token, seatProp) === seat) {
+        count++;
+      }
+    }
+    if (count > 0) {
+      contributions.push({
+        spaceId: space.id,
+        contribution: count,
+        factors: { count },
+      });
+    }
+  }
+  return toComponentBreakdown(contributions);
+}
+
+export function sumControlledPopulationBreakdown(
+  gameDef: DerivedMetricsContext,
+  state: GameState,
+  spaces: readonly ZoneDef[],
+  controlFn: (state: GameState, spaceId: string, seatGroupConfig: SeatGroupConfig) => boolean,
+  seatGroupConfig: SeatGroupConfig,
+): ComponentBreakdown {
+  const contributions: SpaceContribution[] = [];
+  for (const space of spaces) {
+    if (!controlFn(state, space.id, seatGroupConfig)) {
+      continue;
+    }
+    const population = requireNumericZoneAttribute(gameDef, space, 'population', 'sumControlledPopulation', 'controlledPopulation');
+    contributions.push({
+      spaceId: space.id,
+      contribution: population,
+      factors: { population },
+    });
+  }
+  return toComponentBreakdown(contributions);
+}
+
+function getNumericGlobalVar(state: GameState, varName: string): number {
+  const varValue = state.globalVars[varName];
+  if (typeof varValue !== 'number') {
+    throw kernelRuntimeError(
+      'DERIVED_VALUE_FORMULA_NON_NUMERIC_VAR',
+      `Derived value formula requires numeric global var: ${varName}`,
+      { varName },
+    );
+  }
+  return varValue;
+}
+
+function computeVictoryComponentBreakdowns(
+  gameDef: DerivedMetricsContext,
+  state: GameState,
+  spaces: readonly ZoneDef[],
+  markerStates: Readonly<Record<string, string>>,
+  seatGroupConfig: SeatGroupConfig,
+  formula: VictoryFormula,
+): readonly ComponentBreakdown[] {
+  switch (formula.type) {
+    case 'markerTotalPlusZoneCount': {
+      const markerTotal = computeMarkerTotalBreakdown(gameDef, spaces, markerStates, formula.markerConfig);
+      const zoneCount = countTokensInZone(
+        state,
+        formula.countZone,
+        formula.countTokenTypes !== undefined
+          ? { kind: 'byTokenType', tokenTypes: formula.countTokenTypes }
+          : undefined,
+      );
+      return [markerTotal, { aggregate: zoneCount, spaces: [] }];
+    }
+    case 'markerTotalPlusMapBases': {
+      const markerTotal = computeMarkerTotalBreakdown(gameDef, spaces, markerStates, formula.markerConfig);
+      const bases = countBasesOnMapBreakdown(state, spaces, formula.baseSeat, formula.basePieceTypes, seatGroupConfig.seatProp);
+      return [markerTotal, bases];
+    }
+    case 'controlledPopulationPlusMapBases': {
+      const controlFn = formula.controlFn === 'coin' ? isCoinControlled : isSoloSeatControlled;
+      const population = sumControlledPopulationBreakdown(gameDef, state, spaces, controlFn, seatGroupConfig);
+      const bases = countBasesOnMapBreakdown(state, spaces, formula.baseSeat, formula.basePieceTypes, seatGroupConfig.seatProp);
+      return [population, bases];
+    }
+    case 'controlledPopulationPlusGlobalVar': {
+      const controlFn = formula.controlFn === 'coin' ? isCoinControlled : isSoloSeatControlled;
+      const population = sumControlledPopulationBreakdown(gameDef, state, spaces, controlFn, seatGroupConfig);
+      const varValue = getNumericGlobalVar(state, formula.varName);
+      return [population, { aggregate: varValue, spaces: [] }];
+    }
+  }
+}
+
 /**
  * Compute a victory marker value using a game-agnostic formula.
  */
@@ -448,61 +596,18 @@ export function computeVictoryMarker(
   seatGroupConfig: SeatGroupConfig,
   formula: VictoryFormula,
 ): number {
-  switch (formula.type) {
-    case 'markerTotalPlusZoneCount': {
-      const markerTotal = computeMarkerTotal(gameDef, spaces, markerStates, formula.markerConfig);
-      const zoneCount = countTokensInZone(
-        state,
-        formula.countZone,
-        formula.countTokenTypes !== undefined
-          ? { kind: 'byTokenType', tokenTypes: formula.countTokenTypes }
-          : undefined,
-      );
-      return markerTotal + zoneCount;
-    }
-    case 'markerTotalPlusMapBases': {
-      const markerTotal = computeMarkerTotal(gameDef, spaces, markerStates, formula.markerConfig);
-      const bases = countBasesOnMap(
-        state,
-        spaces,
-        formula.baseSeat,
-        formula.basePieceTypes,
-        seatGroupConfig.seatProp,
-      );
-      return markerTotal + bases;
-    }
-    case 'controlledPopulationPlusMapBases': {
-      const controlFn = formula.controlFn === 'coin' ? isCoinControlled : isSoloSeatControlled;
-      const pop = sumControlledPopulation(gameDef, state, spaces, controlFn, seatGroupConfig);
-      const bases = countBasesOnMap(
-        state,
-        spaces,
-        formula.baseSeat,
-        formula.basePieceTypes,
-        seatGroupConfig.seatProp,
-      );
-      return pop + bases;
-    }
-    case 'controlledPopulationPlusGlobalVar': {
-      const controlFn = formula.controlFn === 'coin' ? isCoinControlled : isSoloSeatControlled;
-      const pop = sumControlledPopulation(gameDef, state, spaces, controlFn, seatGroupConfig);
-      const varValue = state.globalVars[formula.varName];
-      if (typeof varValue !== 'number') {
-        throw kernelRuntimeError(
-          'DERIVED_VALUE_FORMULA_NON_NUMERIC_VAR',
-          `Derived value formula requires numeric global var: ${formula.varName}`,
-          { varName: formula.varName },
-        );
-      }
-      return pop + varValue;
-    }
+  const breakdowns = computeVictoryComponentBreakdowns(gameDef, state, spaces, markerStates, seatGroupConfig, formula);
+  let total = 0;
+  for (const breakdown of breakdowns) {
+    total += breakdown.aggregate;
   }
+  return total;
 }
 
 // ─── Victory Components (for tooltip breakdown) ──────────────────────────────
 
 export interface VictoryComponents {
-  readonly values: readonly number[];
+  readonly breakdowns: readonly ComponentBreakdown[];
 }
 
 /**
@@ -517,36 +622,9 @@ export function computeVictoryComponents(
   seatGroupConfig: SeatGroupConfig,
   formula: VictoryFormula,
 ): VictoryComponents {
-  switch (formula.type) {
-    case 'markerTotalPlusZoneCount': {
-      const markerTotal = computeMarkerTotal(gameDef, spaces, markerStates, formula.markerConfig);
-      const zoneCount = countTokensInZone(
-        state,
-        formula.countZone,
-        formula.countTokenTypes !== undefined
-          ? { kind: 'byTokenType', tokenTypes: formula.countTokenTypes }
-          : undefined,
-      );
-      return { values: [markerTotal, zoneCount] };
-    }
-    case 'markerTotalPlusMapBases': {
-      const markerTotal = computeMarkerTotal(gameDef, spaces, markerStates, formula.markerConfig);
-      const bases = countBasesOnMap(state, spaces, formula.baseSeat, formula.basePieceTypes, seatGroupConfig.seatProp);
-      return { values: [markerTotal, bases] };
-    }
-    case 'controlledPopulationPlusMapBases': {
-      const controlFn = formula.controlFn === 'coin' ? isCoinControlled : isSoloSeatControlled;
-      const pop = sumControlledPopulation(gameDef, state, spaces, controlFn, seatGroupConfig);
-      const bases = countBasesOnMap(state, spaces, formula.baseSeat, formula.basePieceTypes, seatGroupConfig.seatProp);
-      return { values: [pop, bases] };
-    }
-    case 'controlledPopulationPlusGlobalVar': {
-      const controlFn = formula.controlFn === 'coin' ? isCoinControlled : isSoloSeatControlled;
-      const pop = sumControlledPopulation(gameDef, state, spaces, controlFn, seatGroupConfig);
-      const varValue = state.globalVars[formula.varName];
-      return { values: [pop, typeof varValue === 'number' ? varValue : 0] };
-    }
-  }
+  return {
+    breakdowns: computeVictoryComponentBreakdowns(gameDef, state, spaces, markerStates, seatGroupConfig, formula),
+  };
 }
 
 // ─── Victory Standings Aggregate ─────────────────────────────────────────────

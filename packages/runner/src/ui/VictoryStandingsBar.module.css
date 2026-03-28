@@ -54,15 +54,19 @@
 .tooltip {
   position: fixed;
   z-index: 9999;
+  pointer-events: auto;
+  min-width: 220px;
+  max-width: 280px;
+  padding-top: 6px;
+}
+
+.tooltipPanel {
   padding: 8px 12px;
   background: rgba(20, 20, 30, 0.95);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 6px;
   font-size: 0.75rem;
   color: #e0e0e0;
-  pointer-events: none;
-  min-width: 220px;
-  max-width: 280px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
@@ -79,6 +83,13 @@
   padding: 1px 0;
 }
 
+.tooltipRowLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
 .tooltipLabel {
   opacity: 0.8;
 }
@@ -93,6 +104,58 @@
   opacity: 0.5;
   margin-top: -1px;
   margin-bottom: 2px;
+}
+
+.toggle {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  width: 0.9rem;
+  font-size: 0.65rem;
+  line-height: 1;
+  opacity: 0.8;
+}
+
+.toggle:hover {
+  opacity: 1;
+}
+
+.toggleSpacer {
+  width: 0.9rem;
+  flex-shrink: 0;
+}
+
+.breakdownList {
+  margin: 4px 0 6px 18px;
+  padding: 6px 8px;
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 4px;
+}
+
+.breakdownItem {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 1px 0;
+  font-size: 0.68rem;
+}
+
+.breakdownSpace {
+  opacity: 0.78;
+}
+
+.breakdownDetail {
+  opacity: 0.62;
+  font-family: var(--font-mono, monospace);
+}
+
+.breakdownSummary {
+  margin-top: 4px;
+  font-size: 0.64rem;
+  opacity: 0.52;
 }
 
 .tooltipTotal {

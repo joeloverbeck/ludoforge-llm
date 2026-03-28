@@ -1,16 +1,25 @@
-import { useContext, useRef, useState, type ReactElement } from 'react';
+import {
+  useContext,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type ReactElement,
+  type RefObject,
+} from 'react';
 import { createPortal } from 'react-dom';
 import type { StoreApi } from 'zustand';
 import { useStore } from 'zustand';
 
-import type { RenderVictoryStandingEntry } from '../model/render-model.js';
+import type { RenderComponentBreakdown, RenderVictoryStandingEntry } from '../model/render-model.js';
 import type { GameStore } from '../store/game-store.js';
 import { VisualConfigContext } from '../config/visual-config-context.js';
 import { buildFactionColorValue } from './faction-color-style.js';
 import { formatIdAsDisplayName } from '../utils/format-display-name.js';
+import { applyDetailTemplate } from '../utils/apply-detail-template.js';
 import styles from './VictoryStandingsBar.module.css';
 
 const EMPTY_STANDINGS: readonly RenderVictoryStandingEntry[] = [];
+const DEFAULT_DETAIL_TEMPLATE = '{contribution}';
 
 interface TooltipState {
   readonly entry: RenderVictoryStandingEntry;
@@ -20,10 +29,35 @@ interface TooltipState {
 export function VictoryStandingsBar({ store }: { readonly store: StoreApi<GameStore> }): ReactElement | null {
   const standings = useStore(store, (state) => state.renderModel?.victoryStandings ?? EMPTY_STANDINGS);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
+  const tooltipRef = useRef<HTMLDivElement | null>(null);
 
   if (standings.length === 0) {
     return null;
   }
+
+  const handleEntryPointerEnter = (entry: RenderVictoryStandingEntry, element: HTMLDivElement): void => {
+    setTooltip({ entry, rect: element.getBoundingClientRect() });
+  };
+
+  const handleEntryPointerLeave = (event: ReactPointerEvent<HTMLDivElement>): void => {
+    const nextTarget = event.relatedTarget;
+    if (nextTarget instanceof Node && tooltipRef.current?.contains(nextTarget)) {
+      return;
+    }
+    setTooltip(null);
+  };
+
+  const handleTooltipPointerLeave = (event: ReactPointerEvent<HTMLDivElement>): void => {
+    const nextTarget = event.relatedTarget;
+    if (
+      nextTarget instanceof HTMLElement
+      && tooltip !== null
+      && nextTarget.closest(`[data-victory-seat="${tooltip.entry.seat}"]`) !== null
+    ) {
+      return;
+    }
+    setTooltip(null);
+  };
 
   return (
     <div className={styles.bar} data-testid="victory-standings-bar">
@@ -33,11 +67,18 @@ export function VictoryStandingsBar({ store }: { readonly store: StoreApi<GameSt
           entry={entry}
           index={index}
           isLast={index === standings.length - 1}
-          onHover={setTooltip}
+          onPointerEnter={handleEntryPointerEnter}
+          onPointerLeave={handleEntryPointerLeave}
         />
       ))}
       {tooltip !== null && createPortal(
-        <VictoryTooltip entry={tooltip.entry} anchorRect={tooltip.rect} />,
+        <VictoryTooltip
+          key={tooltip.entry.seat}
+          entry={tooltip.entry}
+          anchorRect={tooltip.rect}
+          tooltipRef={tooltipRef}
+          onPointerLeave={handleTooltipPointerLeave}
+        />,
         document.body,
       )}
     </div>
@@ -48,10 +89,11 @@ interface VictoryEntryProps {
   readonly entry: RenderVictoryStandingEntry;
   readonly index: number;
   readonly isLast: boolean;
-  readonly onHover: (state: TooltipState | null) => void;
+  readonly onPointerEnter: (entry: RenderVictoryStandingEntry, element: HTMLDivElement) => void;
+  readonly onPointerLeave: (event: ReactPointerEvent<HTMLDivElement>) => void;
 }
 
-function VictoryEntry({ entry, index, isLast, onHover }: VictoryEntryProps): ReactElement {
+function VictoryEntry({ entry, index, isLast, onPointerEnter, onPointerLeave }: VictoryEntryProps): ReactElement {
   const ref = useRef<HTMLDivElement>(null);
   const isWinning = entry.score >= entry.threshold;
   const factionColor = buildFactionColorValue(entry.seat, index);
@@ -61,11 +103,7 @@ function VictoryEntry({ entry, index, isLast, onHover }: VictoryEntryProps): Rea
     if (el === null) {
       return;
     }
-    onHover({ entry, rect: el.getBoundingClientRect() });
-  };
-
-  const handlePointerLeave = (): void => {
-    onHover(null);
+    onPointerEnter(entry, el);
   };
 
   return (
@@ -75,7 +113,8 @@ function VictoryEntry({ entry, index, isLast, onHover }: VictoryEntryProps): Rea
         className={`${styles.entry} ${isWinning ? styles.winning : ''}`}
         style={{ color: factionColor }}
         onPointerEnter={handlePointerEnter}
-        onPointerLeave={handlePointerLeave}
+        onPointerLeave={onPointerLeave}
+        data-victory-seat={entry.seat}
         data-testid={`victory-entry-${entry.seat}`}
       >
         <span className={styles.factionDot} style={{ backgroundColor: factionColor }} />
@@ -90,53 +129,129 @@ function VictoryEntry({ entry, index, isLast, onHover }: VictoryEntryProps): Rea
 interface VictoryTooltipProps {
   readonly entry: RenderVictoryStandingEntry;
   readonly anchorRect: DOMRect;
+  readonly tooltipRef: RefObject<HTMLDivElement | null>;
+  readonly onPointerLeave: (event: ReactPointerEvent<HTMLDivElement>) => void;
 }
 
-function VictoryTooltip({ entry, anchorRect }: VictoryTooltipProps): ReactElement {
+interface TooltipRow {
+  readonly index: number;
+  readonly label: string;
+  readonly description: string | undefined;
+  readonly detailTemplate: string | undefined;
+  readonly breakdown: RenderComponentBreakdown;
+}
+
+function VictoryTooltip({ entry, anchorRect, tooltipRef, onPointerLeave }: VictoryTooltipProps): ReactElement {
   const visualConfig = useContext(VisualConfigContext);
   const breakdown = visualConfig?.getVictoryTooltipBreakdown(entry.seat) ?? null;
+  const [expandedIndices, setExpandedIndices] = useState<ReadonlySet<number>>(() => new Set<number>());
 
-  const top = anchorRect.bottom + 6;
+  const top = anchorRect.bottom;
   const left = anchorRect.left + anchorRect.width / 2;
 
   const displayName = visualConfig?.getFactionDisplayName(entry.seat)
     ?? formatIdAsDisplayName(entry.seat);
+  const rows: readonly TooltipRow[] = breakdown === null
+    ? []
+    : entry.components.map((component, index) => ({
+      index,
+      label: breakdown.components[index]?.label ?? `Component ${index + 1}`,
+      description: breakdown.components[index]?.description,
+      detailTemplate: breakdown.components[index]?.detailTemplate,
+      breakdown: component,
+    }));
+
+  const toggleExpanded = (index: number): void => {
+    setExpandedIndices((current) => {
+      const next = new Set(current);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
+  };
 
   return (
     <div
+      ref={tooltipRef}
       className={styles.tooltip}
       style={{ top, left, transform: 'translateX(-50%)' }}
+      onPointerLeave={onPointerLeave}
       data-testid={`victory-tooltip-${entry.seat}`}
     >
-      <div className={styles.tooltipTitle}>
-        {displayName} &mdash; {entry.score} / {entry.threshold}
-      </div>
-      {breakdown !== null && entry.components.length > 0 ? (
-        <>
-          {breakdown.components.map((comp, i) => (
-            <div key={comp.label}>
-              <div className={styles.tooltipRow}>
-                <span className={styles.tooltipLabel}>{comp.label}</span>
-                <span className={styles.tooltipValue}>
-                  {i < entry.components.length ? entry.components[i]?.aggregate : '?'}
-                </span>
-              </div>
-              {comp.description !== undefined && (
-                <div className={styles.tooltipDescription}>{comp.description}</div>
-              )}
+      <div className={styles.tooltipPanel}>
+        <div className={styles.tooltipTitle}>
+          {displayName} &mdash; {entry.score} / {entry.threshold}
+        </div>
+        {breakdown !== null && rows.length > 0 ? (
+          <>
+            {rows.map((row) => {
+              const isExpanded = expandedIndices.has(row.index);
+              const hasSpaces = row.breakdown.spaces.length > 0;
+              const contributingSpaces = [...row.breakdown.spaces]
+                .filter((space) => space.contribution > 0)
+                .sort((leftSpace, rightSpace) => rightSpace.contribution - leftSpace.contribution);
+
+              return (
+                <div key={`${row.label}-${row.index}`}>
+                  <div className={styles.tooltipRow}>
+                    <div className={styles.tooltipRowLabel}>
+                      {hasSpaces ? (
+                        <button
+                          type="button"
+                          className={styles.toggle}
+                          onClick={() => toggleExpanded(row.index)}
+                          aria-expanded={isExpanded}
+                          aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${row.label}`}
+                        >
+                          {isExpanded ? '▼' : '▶'}
+                        </button>
+                      ) : (
+                        <span className={styles.toggleSpacer} aria-hidden="true" />
+                      )}
+                      <span className={styles.tooltipLabel}>{row.label}</span>
+                    </div>
+                    <span className={styles.tooltipValue}>{row.breakdown.aggregate}</span>
+                  </div>
+                  {row.description !== undefined && (
+                    <div className={styles.tooltipDescription}>{row.description}</div>
+                  )}
+                  {isExpanded && hasSpaces ? (
+                    <div className={styles.breakdownList} data-testid={`victory-breakdown-${entry.seat}-${row.index}`}>
+                      {contributingSpaces.map((space) => (
+                        <div key={space.spaceId} className={styles.breakdownItem}>
+                          <span className={styles.breakdownSpace}>{space.displayName}</span>
+                          <span className={styles.breakdownDetail}>
+                            {applyDetailTemplate(
+                              row.detailTemplate ?? DEFAULT_DETAIL_TEMPLATE,
+                              space.factors,
+                              space.contribution,
+                            )}
+                          </span>
+                        </div>
+                      ))}
+                      <div className={styles.breakdownSummary}>
+                        ({contributingSpaces.length} of {row.breakdown.spaces.length} spaces contribute)
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+            <div className={`${styles.tooltipRow} ${styles.tooltipTotal}`}>
+              <span>Total</span>
+              <span className={styles.tooltipValue}>{entry.score}</span>
             </div>
-          ))}
-          <div className={`${styles.tooltipRow} ${styles.tooltipTotal}`}>
-            <span>Total</span>
+          </>
+        ) : (
+          <div className={styles.tooltipRow}>
+            <span className={styles.tooltipLabel}>Score</span>
             <span className={styles.tooltipValue}>{entry.score}</span>
           </div>
-        </>
-      ) : (
-        <div className={styles.tooltipRow}>
-          <span className={styles.tooltipLabel}>Score</span>
-          <span className={styles.tooltipValue}>{entry.score}</span>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

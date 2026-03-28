@@ -6,7 +6,16 @@
     "jsx": "react-jsx",
     "outDir": "dist",
     "rootDir": ".",
-    "noEmit": true
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@ludoforge/engine": ["../engine/src/kernel/index.ts"],
+      "@ludoforge/engine/runtime": ["../engine/src/kernel/runtime.ts"],
+      "@ludoforge/engine/cnl": ["../engine/src/cnl/index.ts"],
+      "@ludoforge/engine/agents": ["../engine/src/agents/index.ts"],
+      "@ludoforge/engine/sim": ["../engine/src/sim/index.ts"],
+      "@ludoforge/engine/trace": ["../engine/src/trace/index.ts"]
+    }
   },
   "include": ["src/**/*", "test/**/*"],
   "exclude": ["node_modules", "dist"],

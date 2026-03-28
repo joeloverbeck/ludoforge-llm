@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  createEnumerationSnapshot,
   evalCondition,
   isEvalErrorCode,
   MISSING_BINDING_POLICY_CONTEXTS,
@@ -18,6 +19,24 @@ const DEF = compileFitlValidatedGameDef();
 const COVERAGE = summarizePredicateCoverage(DEF);
 const STATE_CORPUS = buildDeterministicFitlStateCorpus(DEF);
 const SAMPLES = buildCompiledPredicateSamples(DEF, STATE_CORPUS);
+
+const assertCompatiblePredicateError = (actual: unknown, expected: unknown, label: string): void => {
+  assert.notEqual(actual, undefined, `${label} should fail when the comparison path fails`);
+  assert.notEqual(expected, undefined, `${label} comparison error should be present`);
+  if (isEvalErrorCode(actual, 'MISSING_BINDING')) {
+    assert.ok(isEvalErrorCode(expected, 'MISSING_BINDING'));
+    return;
+  }
+  if (isEvalErrorCode(actual, 'MISSING_VAR')) {
+    assert.ok(isEvalErrorCode(expected, 'MISSING_VAR'));
+    return;
+  }
+  if (isEvalErrorCode(actual, 'TYPE_MISMATCH')) {
+    assert.ok(isEvalErrorCode(expected, 'TYPE_MISMATCH'));
+    return;
+  }
+  assert.fail(`Unexpected predicate error for ${label}`);
+};
 
 describe('compiled FITL production predicate equivalence', () => {
   it('reports descriptive coverage for production pipeline and stage predicates', () => {
@@ -41,12 +60,21 @@ describe('compiled FITL production predicate equivalence', () => {
 
   it('matches interpreter results across the compiled production predicate corpus', () => {
     for (const sample of SAMPLES) {
+      const snapshot = createEnumerationSnapshot(sample.ctx.def, sample.state);
       let compiledResult: boolean | undefined;
       let compiledError: unknown;
       try {
         compiledResult = sample.compiled(sample.state, sample.ctx.activePlayer, sample.bindings);
       } catch (error) {
         compiledError = error;
+      }
+
+      let snapshotCompiledResult: boolean | undefined;
+      let snapshotCompiledError: unknown;
+      try {
+        snapshotCompiledResult = sample.compiled(sample.state, sample.ctx.activePlayer, sample.bindings, snapshot);
+      } catch (error) {
+        snapshotCompiledError = error;
       }
 
       let interpretedResult: boolean | undefined;
@@ -57,25 +85,28 @@ describe('compiled FITL production predicate equivalence', () => {
         interpretedError = error;
       }
 
-      if (compiledError !== undefined || interpretedError !== undefined) {
-        assert.notEqual(compiledError, undefined, `Compiled path should fail when interpreter fails for ${sample.entry.profileId}`);
-        assert.notEqual(interpretedError, undefined, `Interpreter should fail when compiled path fails for ${sample.entry.profileId}`);
-        if (isEvalErrorCode(compiledError, 'MISSING_BINDING')) {
-          assert.ok(isEvalErrorCode(interpretedError, 'MISSING_BINDING'));
-        } else if (isEvalErrorCode(compiledError, 'MISSING_VAR')) {
-          assert.ok(isEvalErrorCode(interpretedError, 'MISSING_VAR'));
-        } else if (isEvalErrorCode(compiledError, 'TYPE_MISMATCH')) {
-          assert.ok(isEvalErrorCode(interpretedError, 'TYPE_MISMATCH'));
-        } else {
-          assert.fail(`Unexpected compiled predicate error for ${sample.entry.profileId}/${sample.entry.predicate}`);
-        }
+      const label = `${sample.entry.scope}:${sample.entry.profileId}:${sample.entry.stageIndex ?? 'pipeline'}:${sample.entry.predicate}`;
+      if (compiledError !== undefined || snapshotCompiledError !== undefined || interpretedError !== undefined) {
+        assertCompatiblePredicateError(compiledError, interpretedError, `${label}:compiled-vs-interpreter`);
+        assertCompatiblePredicateError(snapshotCompiledError, interpretedError, `${label}:snapshot-vs-interpreter`);
+        assertCompatiblePredicateError(snapshotCompiledError, compiledError, `${label}:snapshot-vs-raw-compiled`);
         continue;
       }
 
       assert.equal(
         compiledResult,
         interpretedResult,
-        `Expected compiled parity for ${sample.entry.scope}:${sample.entry.profileId}:${sample.entry.stageIndex ?? 'pipeline'}:${sample.entry.predicate}`,
+        `Expected compiled parity for ${label}`,
+      );
+      assert.equal(
+        snapshotCompiledResult,
+        interpretedResult,
+        `Expected snapshot parity for ${label}`,
+      );
+      assert.equal(
+        snapshotCompiledResult,
+        compiledResult,
+        `Expected snapshot-vs-raw compiled parity for ${label}`,
       );
     }
   });

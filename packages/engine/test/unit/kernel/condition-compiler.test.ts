@@ -241,6 +241,33 @@ describe('condition compiler', () => {
     assert.equal(calls, 1);
   });
 
+  it('keeps compiled aggregate zone totals equivalent with and without a real snapshot', () => {
+    const expr: ValueExpr = {
+      _t: 5,
+      aggregate: { op: 'count', query: { query: 'tokensInZone', zone: 'board:none' } },
+    };
+    const condition: ConditionAST = { op: '==', left: expr, right: 2 };
+    const compiled = tryCompileCondition(condition);
+    assert.ok(compiled !== null);
+
+    const ctx = makeCtx({
+      state: {
+        ...makeState(),
+        zones: {
+          'board:none': [
+            { id: asTokenId('t1'), type: 'piece', props: {} },
+            { id: asTokenId('t2'), type: 'piece', props: {} },
+          ],
+        },
+      },
+    });
+    const snapshot = createEnumerationSnapshot(ctx.def, ctx.state);
+
+    assert.equal(compiled(ctx.state, ctx.activePlayer, ctx.bindings), true);
+    assert.equal(compiled(ctx.state, ctx.activePlayer, ctx.bindings, snapshot), true);
+    assert.equal(compiled(ctx.state, ctx.activePlayer, ctx.bindings, snapshot), evalCondition(condition, ctx));
+  });
+
   it('preserves missing-zone error behavior for compiled aggregate counts', () => {
     const expr: ValueExpr = {
       _t: 5,
@@ -356,6 +383,33 @@ describe('condition compiler', () => {
     assert.equal(
       compiled(ctx.state, asPlayerId(1), ctx.bindings, snapshot),
       compiled(ctx.state, asPlayerId(1), ctx.bindings),
+    );
+  });
+
+  it('keeps executor-shifted pvar(active) evaluation equivalent with and without snapshot', () => {
+    const condition: ConditionAST = {
+      op: '==',
+      left: { _t: 2, ref: 'pvar', player: 'active', var: 'resources' },
+      right: 1,
+    };
+    const compiled = tryCompileCondition(condition);
+    assert.ok(compiled !== null);
+
+    const shiftedCtx = makeCtx({
+      activePlayer: asPlayerId(0),
+      actorPlayer: asPlayerId(1),
+      state: {
+        ...makeState(),
+        activePlayer: asPlayerId(1),
+      },
+    });
+    const snapshot = createEnumerationSnapshot(shiftedCtx.def, shiftedCtx.state);
+
+    assert.equal(compiled(shiftedCtx.state, shiftedCtx.activePlayer, shiftedCtx.bindings), true);
+    assert.equal(compiled(shiftedCtx.state, shiftedCtx.activePlayer, shiftedCtx.bindings, snapshot), true);
+    assert.equal(
+      compiled(shiftedCtx.state, shiftedCtx.activePlayer, shiftedCtx.bindings, snapshot),
+      evalCondition(condition, shiftedCtx),
     );
   });
 

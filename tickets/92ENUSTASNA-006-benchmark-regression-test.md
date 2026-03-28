@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — test-only
-**Deps**: tickets/92ENUSTASNA-005-equivalence-tests.md, archive/tickets/92ENUSTASNA/92ENUSTASNA-008-generalize-snapshot-player-access.md
+**Deps**: archive/tickets/92ENUSTASNA/92ENUSTASNA-005-equivalence-tests.md, archive/tickets/92ENUSTASNA/92ENUSTASNA-008-generalize-snapshot-player-access.md
 
 ## Problem
 

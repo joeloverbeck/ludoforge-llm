@@ -4223,6 +4223,58 @@ describe('legalMoves phase-aware action enumeration', () => {
       'legal-moves.ts must not rescan def.actionPipelines directly once the shared lookup is in place',
     );
   });
+
+  it('creates one enumeration snapshot and threads it through raw discovery evaluation', () => {
+    const source = readKernelSource('src/kernel/legal-moves.ts');
+    const sourceFile = parseTypeScriptSource(source, 'legal-moves.ts');
+    const imports = collectNamedImportsByLocalName(sourceFile, './enumeration-snapshot.js');
+
+    const hasSnapshotProperty = (argument: ts.Expression): boolean => {
+      const argumentText = expressionToText(sourceFile, argument);
+      return /(?:^|[,{]\s*)snapshot(?:\s*:|[\s,}])/u.test(argumentText);
+    };
+
+    const createSnapshotCalls = collectCallExpressionsByIdentifier(sourceFile, 'createEnumerationSnapshot');
+    const rootStateEnumerateParamsCalls = collectCallExpressionsByIdentifier(sourceFile, 'enumerateParams')
+      .filter((call) =>
+        call.arguments.length >= 11
+        && expressionToText(sourceFile, call.arguments[5]!) === 'state'
+        && expressionToText(sourceFile, call.arguments[6]!) === '0'
+      );
+    const discoveryPredicateCalls = collectCallExpressionsByIdentifier(sourceFile, 'evaluateDiscoveryPipelinePredicateStatus');
+
+    assert.equal(
+      imports.get('createEnumerationSnapshot'),
+      'createEnumerationSnapshot',
+      'legal-moves.ts must import createEnumerationSnapshot from the dedicated snapshot module',
+    );
+    assert.equal(
+      createSnapshotCalls.filter((call) =>
+        call.arguments.length === 2
+        && expressionToText(sourceFile, call.arguments[0]!) === 'def'
+        && expressionToText(sourceFile, call.arguments[1]!) === 'state'
+      ).length,
+      1,
+      'enumerateRawLegalMoves must create exactly one enumeration snapshot from (def, state)',
+    );
+    assert.match(
+      source,
+      /const snapshot = createEnumerationSnapshot\(def,\s*state\);/u,
+      'enumerateRawLegalMoves must bind the shared snapshot once per raw enumeration call',
+    );
+    assert.ok(rootStateEnumerateParamsCalls.length >= 1, 'expected root-state enumerateParams call sites');
+    assert.equal(
+      rootStateEnumerateParamsCalls.every((call) => hasSnapshotProperty(call.arguments[10]!)),
+      true,
+      'root-state enumerateParams calls must receive the shared snapshot so nested discovery evaluation sees the same data',
+    );
+    assert.ok(discoveryPredicateCalls.length >= 1, 'expected evaluateDiscoveryPipelinePredicateStatus call sites');
+    assert.equal(
+      discoveryPredicateCalls.every((call) => call.arguments.length >= 4 && hasSnapshotProperty(call.arguments[3]!)),
+      true,
+      'legal-moves.ts discovery predicate checks must pass the shared snapshot explicitly',
+    );
+  });
 });
 
 describe('legalMoves seat-resolution lifecycle architecture guard', () => {

@@ -1,10 +1,13 @@
 # Spec 92 — Enumeration-Time State Snapshot
 
-**Status**: Not started
+**Status**: COMPLETED
 **Dependencies**: Spec 90 (compiled condition predicates) — snapshot feeds compiled closures
 **Blocked by**: None
 **Enables**: Faster condition and value evaluation during legal move enumeration
 by pre-materializing commonly queried state metrics
+
+Implemented via archived tickets `92ENUSTASNA-001`, `92ENUSTASNA-002`,
+`92ENUSTASNA-003`, `92ENUSTASNA-004`, and `92ENUSTASNA-008`.
 
 ## Problem
 

@@ -3,13 +3,16 @@ import { resolveActionExecutor } from './action-executor.js';
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
 import { resolveDeclaredActionParamDomainOptions } from './declared-action-param-domain.js';
 import type { ReadContext, EvalRuntimeResources } from './eval-context.js';
-import { createEvalContext, createEvalRuntimeResources } from './eval-context.js';
+import { createEvalRuntimeResources } from './eval-context.js';
 import { resolveCapturedSequenceZonesByKey } from './free-operation-captured-sequence-zones.js';
 import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-overlay.js';
 import {
   classifyMoveDecisionSequenceAdmissionForLegalMove,
   isMoveDecisionSequenceAdmittedForLegalMove,
+  type DiscoveryCache,
+  type MoveDecisionSequenceSatisfiabilityOptions,
 } from './move-decision-sequence.js';
+import { createMoveDecisionSequenceChoiceDiscoverer } from './move-decision-discoverer.js';
 import {
   applyTurnFlowWindowFilters,
   isMoveAllowedByTurnFlowOptionMatrix,
@@ -101,7 +104,10 @@ export interface LegalMoveEnumerationResult {
 interface RawLegalMoveEnumerationResult {
   readonly moves: readonly Move[];
   readonly warnings: readonly RuntimeWarning[];
+  readonly discoveryCache: DiscoveryCache;
 }
+
+type EnumerationDecisionDiscoverer = MoveDecisionSequenceSatisfiabilityOptions['discoverer'];
 
 interface MoveEnumerationState {
   readonly budgets: MoveEnumerationBudgets;
@@ -112,6 +118,10 @@ interface MoveEnumerationState {
   templateBudgetExceeded: boolean;
   paramExpansionBudgetExceeded: boolean;
 }
+
+type MutableEnumerationReadContext = {
+  -readonly [K in keyof ReadContext]: ReadContext[K];
+};
 
 const emitEnumerationWarning = (state: MoveEnumerationState, warning: RuntimeWarning): void => {
   state.warnings.push(warning);
@@ -255,6 +265,7 @@ const classifyEnumeratedMoves = (
   moves: readonly Move[],
   warnings: RuntimeWarning[],
   runtime?: GameDefRuntime,
+  discoveryCache?: DiscoveryCache,
 ): readonly ClassifiedMove[] => {
   const alwaysCompleteActionIds = runtime?.alwaysCompleteActionIds ?? computeAlwaysCompleteActionIds(def);
   const classified: ClassifiedMove[] = [];
@@ -274,7 +285,7 @@ const classifyEnumeratedMoves = (
       continue;
     }
 
-    const viability = probeMoveViability(def, state, move, runtime);
+    const viability = probeMoveViability(def, state, move, runtime, discoveryCache);
     if (viability.viable) {
       classified.push({
         move,
@@ -318,7 +329,7 @@ const classifyEnumeratedMoves = (
   return classified;
 };
 
-function makeEvalContext(
+function createMutableEnumerationReadContext(
   def: GameDef,
   adjacencyGraph: AdjacencyGraph,
   runtimeTableIndex: RuntimeTableIndex,
@@ -329,18 +340,33 @@ function makeEvalContext(
   options?: {
     readonly freeOperationOverlay?: FreeOperationExecutionOverlay;
   },
-): ReadContext {
-  return createEvalContext({
+): MutableEnumerationReadContext {
+  return {
     def,
     adjacencyGraph,
     state,
     activePlayer: executionPlayer,
     actorPlayer: executionPlayer,
     bindings,
-    runtimeTableIndex,
     resources: evalRuntimeResources,
-    ...(options?.freeOperationOverlay === undefined ? {} : { freeOperationOverlay: options.freeOperationOverlay }),
-  });
+    runtimeTableIndex,
+    freeOperationOverlay: options?.freeOperationOverlay,
+    maxQueryResults: undefined,
+    collector: evalRuntimeResources.collector,
+  };
+}
+
+function updateMutableEnumerationReadContext(
+  scope: MutableEnumerationReadContext,
+  state: GameState,
+  executionPlayer: GameState['activePlayer'],
+  bindings: Readonly<Record<string, unknown>>,
+): ReadContext {
+  scope.state = state;
+  scope.activePlayer = executionPlayer;
+  scope.actorPlayer = executionPlayer;
+  scope.bindings = bindings;
+  return scope;
 }
 
 function enumerateParams(
@@ -360,12 +386,25 @@ function enumerateParams(
     readonly freeOperationOverlay?: FreeOperationExecutionOverlay;
     readonly moveOverrides?: Partial<Move>;
     readonly moveFilter?: (move: Move) => boolean;
+    readonly discoverer?: EnumerationDecisionDiscoverer;
     readonly runtime?: GameDefRuntime;
   },
+  scope?: MutableEnumerationReadContext,
 ): void {
   if (enumeration.paramExpansionBudgetExceeded || enumeration.templateBudgetExceeded) {
     return;
   }
+
+  const readScope = scope ?? createMutableEnumerationReadContext(
+    def,
+    adjacencyGraph,
+    runtimeTableIndex,
+    evalRuntimeResources,
+    state,
+    state.activePlayer,
+    bindings,
+    options,
+  );
 
   const resolveExecutionPlayerForBindings = (allowPendingBinding: boolean): GameState['activePlayer'] | null => {
     if (options?.executionPlayerOverride !== undefined) {
@@ -404,9 +443,7 @@ function enumerateParams(
     if (executionPlayer === null) {
       return;
     }
-    const ctx = makeEvalContext(def, adjacencyGraph, runtimeTableIndex, evalRuntimeResources, state, executionPlayer, bindings, {
-      ...(options?.freeOperationOverlay === undefined ? {} : { freeOperationOverlay: options.freeOperationOverlay }),
-    });
+    const ctx = updateMutableEnumerationReadContext(readScope, state, executionPlayer, bindings);
     if (currentPhaseDef?.actionDefaults?.pre !== undefined) {
       if (!evalCondition(currentPhaseDef.actionDefaults.pre, ctx)) {
         return;
@@ -446,6 +483,7 @@ function enumerateParams(
             {
               budgets: enumeration.budgets,
               onWarning: (warning) => emitEnumerationWarning(enumeration, warning),
+              ...(options?.discoverer === undefined ? {} : { discoverer: options.discoverer }),
             },
             options?.runtime,
           )
@@ -476,9 +514,7 @@ function enumerateParams(
   if (executionPlayer === null) {
     return;
   }
-  const ctx = makeEvalContext(def, adjacencyGraph, runtimeTableIndex, evalRuntimeResources, state, executionPlayer, bindings, {
-    ...(options?.freeOperationOverlay === undefined ? {} : { freeOperationOverlay: options.freeOperationOverlay }),
-  });
+  const ctx = updateMutableEnumerationReadContext(readScope, state, executionPlayer, bindings);
   const resolution = resolveDeclaredActionParamDomainOptions(param, ctx);
   if (resolution.invalidOption !== undefined) {
     throw kernelRuntimeError(
@@ -507,6 +543,7 @@ function enumerateParams(
       enumeration,
       currentPhaseDef,
       options,
+      readScope,
     );
     if (enumeration.paramExpansionBudgetExceeded || enumeration.templateBudgetExceeded) {
       return;
@@ -997,6 +1034,7 @@ function enumerateCurrentEventMoves(
   def: GameDef,
   state: GameState,
   enumeration: MoveEnumerationState,
+  discoverer?: EnumerationDecisionDiscoverer,
   runtime?: GameDefRuntime,
 ): void {
   if (enumeration.templateBudgetExceeded) {
@@ -1062,6 +1100,7 @@ function enumerateCurrentEventMoves(
         {
           budgets: enumeration.budgets,
           onWarning: (warning) => emitEnumerationWarning(enumeration, warning),
+          ...(discoverer === undefined ? {} : { discoverer }),
         },
         runtime,
       )
@@ -1084,9 +1123,10 @@ const enumerateRawLegalMoves = (
   const budgets = resolveMoveEnumerationBudgets(options?.budgets);
   const warnings: RuntimeWarning[] = [];
   const seatResolution = createSeatResolutionContext(def, state.playerCount);
+  const discoveryCache: DiscoveryCache = new Map();
 
   if (!isActiveSeatEligibleForTurnFlow(def, state, seatResolution)) {
-    return { moves: [], warnings };
+    return { moves: [], warnings, discoveryCache };
   }
 
   const enumeration: MoveEnumerationState = {
@@ -1102,6 +1142,16 @@ const enumerateRawLegalMoves = (
   const runtimeTableIndex = runtime?.runtimeTableIndex ?? buildRuntimeTableIndex(def);
   const evalRuntimeResources = createEvalRuntimeResources();
   const currentPhaseDef = findPhaseDef(def, state.currentPhase);
+  const defaultDiscover = createMoveDecisionSequenceChoiceDiscoverer(def, state, runtime);
+  const cachedDiscover: EnumerationDecisionDiscoverer = (move, discoverOptions) => {
+    const cached = discoveryCache.get(move);
+    if (cached !== undefined) {
+      return cached;
+    }
+    const result = defaultDiscover(move, discoverOptions);
+    discoveryCache.set(move, result);
+    return result;
+  };
 
   const earlyExitAfterFirst = options?.earlyExitAfterFirst === true;
 
@@ -1134,7 +1184,10 @@ const enumerateRawLegalMoves = (
       });
       if (preflight.kind !== 'applicable') continue;
       enumerateParams(action, def, adjacencyGraph, runtimeTableIndex, evalRuntimeResources, state, 0, {}, enumeration, currentPhaseDef,
-        runtime === undefined ? undefined : { runtime },
+        {
+          ...(runtime === undefined ? {} : { runtime }),
+          discoverer: cachedDiscover,
+        },
       );
       if (enumeration.moves.length > 0) break;
     }
@@ -1180,7 +1233,7 @@ const enumerateRawLegalMoves = (
 
     const eventAction = isCardEventAction(action);
     const beforeEventCount = enumeration.moves.length;
-    enumerateCurrentEventMoves(action, def, state, enumeration, runtime);
+    enumerateCurrentEventMoves(action, def, state, enumeration, cachedDiscover, runtime);
     if (eventAction) {
       if (enumeration.moves.length > beforeEventCount) {
         continue;
@@ -1203,7 +1256,10 @@ const enumerateRawLegalMoves = (
 
     if (!hasActionPipeline) {
       enumerateParams(action, def, adjacencyGraph, runtimeTableIndex, evalRuntimeResources, state, 0, {}, enumeration, currentPhaseDef,
-        runtime === undefined ? undefined : { runtime },
+        {
+          ...(runtime === undefined ? {} : { runtime }),
+          discoverer: cachedDiscover,
+        },
       );
       continue;
     }
@@ -1233,6 +1289,7 @@ const enumerateRawLegalMoves = (
           {
             budgets: enumeration.budgets,
             onWarning: (warning) => emitEnumerationWarning(enumeration, warning),
+            discoverer: cachedDiscover,
           },
           runtime,
         )
@@ -1257,7 +1314,7 @@ const enumerateRawLegalMoves = (
   );
 
   const finalMoves = applyTurnFlowWindowFilters(def, state, enumeration.moves, seatResolution);
-  return { moves: finalMoves, warnings };
+  return { moves: finalMoves, warnings, discoveryCache };
 };
 
 export const enumerateLegalMoves = (
@@ -1266,10 +1323,10 @@ export const enumerateLegalMoves = (
   options?: LegalMoveEnumerationOptions,
   runtime?: GameDefRuntime,
 ): LegalMoveEnumerationResult => {
-  const { moves, warnings: rawWarnings } = enumerateRawLegalMoves(def, state, options, runtime);
+  const { moves, warnings: rawWarnings, discoveryCache } = enumerateRawLegalMoves(def, state, options, runtime);
   const warnings = [...rawWarnings];
   return {
-    moves: classifyEnumeratedMoves(def, state, moves, warnings, runtime),
+    moves: classifyEnumeratedMoves(def, state, moves, warnings, runtime, discoveryCache),
     warnings,
   };
 };

@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import { asPhaseId, asPlayerId, asZoneId, type PlayerId } from '../../../src/kernel/branded.js';
 import {
+  createMutableReadScope,
   createDiscoveryProbeEffectContext,
   createDiscoveryStrictEffectContext,
   createExecutionEffectContext,
@@ -10,12 +11,15 @@ import {
   toEffectEnv,
   toTraceEmissionContext,
   toTraceProvenanceContext,
+  updateReadScope,
+  updateReadScopeRaw,
 } from '../../../src/kernel/effect-context.js';
 import * as effectContextModule from '../../../src/kernel/effect-context.js';
 import { emptyScope } from '../../../src/kernel/decision-scope.js';
-import { createEvalRuntimeResources } from '../../../src/kernel/eval-context.js';
+import { createEvalRuntimeResources, type ReadContext } from '../../../src/kernel/eval-context.js';
 import { createCollector } from '../../../src/kernel/execution-collector.js';
 import { createRng } from '../../../src/kernel/prng.js';
+import type { RuntimeTableIndex } from '../../../src/kernel/runtime-table-index.js';
 import { buildAdjacencyGraph } from '../../../src/kernel/spatial.js';
 import type { GameDef, GameState } from '../../../src/kernel/types.js';
 
@@ -102,6 +106,8 @@ const assertAuthority = (
   });
 };
 
+const assertReadContextCompatibility = (_ctx: ReadContext): void => {};
+
 describe('effect-context construction contract', () => {
   it('enforces execution defaults when no decisionAuthorityPlayer override is provided', () => {
     const activePlayer = asPlayerId(1);
@@ -180,7 +186,22 @@ describe('effect-context construction contract', () => {
     );
   });
 
-  it('builds narrow trace bridge helpers without inventing optional fields', () => {
+  it('does not export legacy merge-to-context helpers', () => {
+    const legacyEvalHelper = `mergeTo${'Eval'}Context`;
+    const legacyReadHelper = `mergeTo${'Read'}Context`;
+    assert.equal(
+      Object.hasOwn(effectContextModule, legacyEvalHelper),
+      false,
+      `effect-context module must not expose ${legacyEvalHelper} after scope convergence`,
+    );
+    assert.equal(
+      Object.hasOwn(effectContextModule, legacyReadHelper),
+      false,
+      `effect-context module must not expose ${legacyReadHelper} after scope convergence`,
+    );
+  });
+
+  it('builds narrow trace bridge helpers with stable own-property layouts', () => {
     const context = createExecutionEffectContext(makeRuntimeEffectContextOptions());
     const env = toEffectEnv(context);
     const cursor = toEffectCursor(context);
@@ -188,15 +209,29 @@ describe('effect-context construction contract', () => {
     const provenanceCtx = toTraceProvenanceContext(env, cursor);
     const emissionCtx = toTraceEmissionContext(env, cursor);
 
-    assert.deepEqual(provenanceCtx, { state: context.state });
+    assert.deepEqual(cursor, {
+      state: context.state,
+      rng: context.rng,
+      bindings: context.bindings,
+      decisionScope: context.decisionScope,
+      effectPath: undefined,
+    });
+    assert.deepEqual(provenanceCtx, {
+      state: context.state,
+      traceContext: undefined,
+      effectPath: undefined,
+    });
     assert.deepEqual(emissionCtx, {
       collector: context.collector,
       state: context.state,
+      traceContext: undefined,
+      effectPath: undefined,
     });
-    assert.equal('traceContext' in provenanceCtx, false);
-    assert.equal('effectPath' in provenanceCtx, false);
-    assert.equal('traceContext' in emissionCtx, false);
-    assert.equal('effectPath' in emissionCtx, false);
+    assert.equal(Object.hasOwn(cursor, 'effectPath'), true);
+    assert.equal(Object.hasOwn(provenanceCtx, 'traceContext'), true);
+    assert.equal(Object.hasOwn(provenanceCtx, 'effectPath'), true);
+    assert.equal(Object.hasOwn(emissionCtx, 'traceContext'), true);
+    assert.equal(Object.hasOwn(emissionCtx, 'effectPath'), true);
   });
 
   it('preserves trace optional fields when present in the env/cursor split', () => {
@@ -243,5 +278,115 @@ describe('effect-context construction contract', () => {
     const context = createExecutionEffectContext(options);
 
     assert.deepEqual(context.freeOperationOverlay, options.freeOperationOverlay);
+  });
+
+  it('constructs MutableReadScope with a stable 11-field ReadContext layout', () => {
+    const runtimeTableIndex: RuntimeTableIndex = {
+      tableIds: [],
+      tablesById: new Map(),
+    };
+    const freeOperationOverlay = {
+      zoneFilter: {
+        op: '==',
+        left: { _t: 2, ref: 'zoneProp', zone: '$zone', prop: 'category' },
+        right: 'board',
+      },
+      zoneFilterDiagnostics: {
+        source: 'turnFlowEligibility',
+        actionId: 'action:test',
+        moveParams: { zone: 'zone:main' },
+      },
+      grantContext: {
+        allowedTargets: [0],
+        effectCode: 1,
+      },
+    } as const;
+    const context = createExecutionEffectContext(makeRuntimeEffectContextOptions({
+      moveParams: { '$fromMove': 'move-value' },
+      bindings: { '$fromCursor': 'cursor-value' },
+      runtimeTableIndex,
+      freeOperationOverlay,
+      maxQueryResults: 25,
+    }));
+    const env = toEffectEnv(context);
+    const cursor = toEffectCursor(context);
+
+    const scope = createMutableReadScope(env, cursor);
+
+    assertReadContextCompatibility(scope);
+    assert.deepEqual(scope, {
+      def: env.def,
+      adjacencyGraph: env.adjacencyGraph,
+      state: cursor.state,
+      activePlayer: env.activePlayer,
+      actorPlayer: env.actorPlayer,
+      bindings: { '$fromMove': 'move-value', '$fromCursor': 'cursor-value' },
+      resources: env.resources,
+      runtimeTableIndex,
+      freeOperationOverlay,
+      maxQueryResults: 25,
+      collector: env.collector,
+    });
+    assert.equal(Object.keys(scope).length, 11);
+    assert.equal(Object.hasOwn(scope, 'runtimeTableIndex'), true);
+    assert.equal(Object.hasOwn(scope, 'freeOperationOverlay'), true);
+    assert.equal(Object.hasOwn(scope, 'maxQueryResults'), true);
+  });
+
+  it('materializes undefined-capable MutableReadScope fields as own properties', () => {
+    const context = createExecutionEffectContext(makeRuntimeEffectContextOptions());
+    const scope = createMutableReadScope(toEffectEnv(context), toEffectCursor(context));
+
+    assert.equal(scope.runtimeTableIndex, undefined);
+    assert.equal(scope.freeOperationOverlay, undefined);
+    assert.equal(scope.maxQueryResults, undefined);
+    assert.equal(Object.hasOwn(scope, 'runtimeTableIndex'), true);
+    assert.equal(Object.hasOwn(scope, 'freeOperationOverlay'), true);
+    assert.equal(Object.hasOwn(scope, 'maxQueryResults'), true);
+  });
+
+  it('updates MutableReadScope in place with resolved eval bindings', () => {
+    const context = createExecutionEffectContext(makeRuntimeEffectContextOptions({
+      moveParams: { '$move': 'base' },
+      bindings: { '$cursor': 'original' },
+    }));
+    const env = toEffectEnv(context);
+    const scope = createMutableReadScope(env, toEffectCursor(context));
+    const nextState = makeState();
+    const nextCursor = {
+      ...toEffectCursor(context),
+      state: nextState,
+      bindings: { '$cursor': 'updated' },
+    };
+
+    const updateResult = updateReadScope(scope, nextCursor, env);
+
+    assert.equal(updateResult, undefined);
+    assert.equal(scope.state, nextState);
+    assert.deepEqual(scope.bindings, { '$move': 'base', '$cursor': 'updated' });
+    assert.equal(scope.def, env.def);
+    assert.equal(scope.resources, env.resources);
+    assert.equal(scope.collector, env.collector);
+  });
+
+  it('updates MutableReadScope in place with raw cursor bindings', () => {
+    const context = createExecutionEffectContext(makeRuntimeEffectContextOptions({
+      moveParams: { '$move': 'base' },
+      bindings: { '$cursor': 'original' },
+    }));
+    const scope = createMutableReadScope(toEffectEnv(context), toEffectCursor(context));
+    const nextState = makeState();
+    const nextCursor = {
+      ...toEffectCursor(context),
+      state: nextState,
+      bindings: { '$cursor': 'updated' },
+    };
+
+    const updateResult = updateReadScopeRaw(scope, nextCursor);
+
+    assert.equal(updateResult, undefined);
+    assert.equal(scope.state, nextState);
+    assert.deepEqual(scope.bindings, { '$cursor': 'updated' });
+    assert.equal(Object.keys(scope).length, 11);
   });
 });

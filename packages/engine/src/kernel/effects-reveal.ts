@@ -16,8 +16,8 @@ import { emitTrace } from './execution-collector.js';
 import { resolveTraceProvenance } from './trace-provenance.js';
 import { omitOptionalStateKey } from './state-shape.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
-import { mergeToEvalContext, toTraceProvenanceContext } from './effect-context.js';
-import type { EffectCursor, EffectEnv, PartialEffectResult } from './effect-context.js';
+import { toTraceProvenanceContext } from './effect-context.js';
+import type { EffectCursor, EffectEnv, MutableReadScope, PartialEffectResult } from './effect-context.js';
 import type { EffectBudgetState } from './effects-control.js';
 import type { ApplyEffectsWithBudget } from './effect-registry.js';
 import type { EffectAST, RevealGrant, TokenFilterExpr } from './types.js';
@@ -37,13 +37,13 @@ export const applyConceal = (
   effect: Extract<EffectAST, { readonly conceal: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
+  scope: MutableReadScope,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
-  const evalCtx = mergeToEvalContext(env, cursor);
   const onResolutionFailure = selectorResolutionFailurePolicyForMode(env.mode);
   const zoneId = String(
-    resolveZoneWithNormalization(effect.conceal.zone, evalCtx, {
+    resolveZoneWithNormalization(effect.conceal.zone, scope, {
       code: EFFECT_RUNTIME_REASONS.CONCEAL_RUNTIME_VALIDATION_FAILED,
       effectType: 'conceal',
       scope: 'zone',
@@ -73,7 +73,7 @@ export const applyConceal = (
       from = 'all';
     } else {
       from = canonicalizeObserverSelection(
-        resolvePlayersWithNormalization(effect.conceal.from, evalCtx, {
+        resolvePlayersWithNormalization(effect.conceal.from, scope, {
           code: EFFECT_RUNTIME_REASONS.CONCEAL_RUNTIME_VALIDATION_FAILED,
           effectType: 'conceal',
           scope: 'from',
@@ -135,13 +135,13 @@ export const applyReveal = (
   effect: Extract<EffectAST, { readonly reveal: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
+  scope: MutableReadScope,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
-  const evalCtx = mergeToEvalContext(env, cursor);
   const onResolutionFailure = selectorResolutionFailurePolicyForMode(env.mode);
   const zoneId = String(
-    resolveZoneWithNormalization(effect.reveal.zone, evalCtx, {
+    resolveZoneWithNormalization(effect.reveal.zone, scope, {
       code: EFFECT_RUNTIME_REASONS.REVEAL_RUNTIME_VALIDATION_FAILED,
       effectType: 'reveal',
       scope: 'zone',
@@ -164,7 +164,7 @@ export const applyReveal = (
     observers = 'all';
   } else {
     observers = canonicalizeObserverSelection(
-      resolvePlayersWithNormalization(effect.reveal.to, evalCtx, {
+      resolvePlayersWithNormalization(effect.reveal.to, scope, {
         code: EFFECT_RUNTIME_REASONS.REVEAL_RUNTIME_VALIDATION_FAILED,
         effectType: 'reveal',
         scope: 'to',

@@ -4,6 +4,7 @@ import ts from 'typescript';
 import {
   collectNamedImportsByLocalName,
   collectCallExpressionsByIdentifier,
+  expressionToText,
   isPropertyAccessOnIdentifier,
   parseTypeScriptSource,
   unwrapTypeScriptExpression,
@@ -1999,6 +2000,41 @@ phase: [asPhaseId('main')],
     );
   });
 
+  it('21b. reuses recursive enumeration context while updating executor-derived activePlayer', () => {
+    const action: ActionDef = {
+      id: asActionId('executorBindingTwoParams'),
+      actor: 'active',
+      executor: { chosen: '$owner' },
+      phase: [asPhaseId('main')],
+      params: [
+        { name: '$owner', domain: { query: 'players' } },
+        { name: '$witness', domain: { query: 'players' } },
+      ],
+      pre: {
+        op: '==',
+        left: { _t: 2, ref: 'activePlayer' },
+        right: { _t: 2, ref: 'binding', name: '$owner' },
+      },
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const def = makeBaseDef({ actions: [action] });
+    const moves = legalMoves(def, makeBaseState());
+
+    assert.equal(moves.length, 4);
+    assert.deepEqual(
+      moves.map((move) => [move.params.$owner, move.params.$witness]),
+      [
+        [asPlayerId(0), asPlayerId(0)],
+        [asPlayerId(0), asPlayerId(1)],
+        [asPlayerId(1), asPlayerId(0)],
+        [asPlayerId(1), asPlayerId(1)],
+      ],
+    );
+  });
+
   it('22. truncates templates deterministically when maxTemplates budget is reached', () => {
     const firstAction: ActionDef = {
       id: asActionId('first'),
@@ -3628,6 +3664,38 @@ phase: [asPhaseId('main')],
       'legal-moves.ts should not use legacy unsatisfiable-only helper for legal-move admission',
     );
   });
+
+  it('31b. keeps enumerateParams on a local mutable ReadContext path instead of rebuilding eval contexts', () => {
+    const source = readKernelSource('src/kernel/legal-moves.ts');
+    const sourceFile = parseTypeScriptSource(source, 'legal-moves.ts');
+    const evalContextImports = collectNamedImportsByLocalName(sourceFile, './eval-context.js');
+
+    assert.equal(
+      evalContextImports.has('createEvalContext'),
+      false,
+      'legal-moves.ts should not import createEvalContext after enumeration-local mutable scope migration',
+    );
+
+    const createEvalContextCalls = collectCallExpressionsByIdentifier(sourceFile, 'createEvalContext');
+    assert.equal(
+      createEvalContextCalls.length,
+      0,
+      'legal-moves.ts should not rebuild eval contexts inline during param enumeration',
+    );
+
+    const enumerateParamsCalls = collectCallExpressionsByIdentifier(sourceFile, 'enumerateParams');
+    assert.equal(
+      enumerateParamsCalls.some((call) => {
+        if (call.arguments.length < 12) {
+          return false;
+        }
+        const scopeArg = unwrapTypeScriptExpression(call.arguments[11]!);
+        return ts.isIdentifier(scopeArg) && scopeArg.text === 'readScope';
+      }),
+      true,
+      'recursive enumerateParams calls should thread the shared readScope argument',
+    );
+  });
 });
 
 describe('legalMoves plain-action feasibility probe', () => {
@@ -3784,6 +3852,123 @@ describe('legalMoves plain-action feasibility probe', () => {
       }),
       true,
       'plain-action path admission must use canonical helper with legalMoves.plainActionDecisionSequence context',
+    );
+  });
+
+  it('37. threads cached discoverer only through root-state admission sites and classification', () => {
+    const source = readKernelSource('src/kernel/legal-moves.ts');
+    const sourceFile = parseTypeScriptSource(source, 'legal-moves.ts');
+
+    const hasDiscovererProperty = (argument: ts.Expression): boolean => {
+      const argumentText = expressionToText(sourceFile, argument);
+      return (
+        argumentText.includes('discoverer')
+        && (argumentText.includes('cachedDiscover') || argumentText.includes('{ discoverer }'))
+      );
+    };
+
+    const enumerateParamsCalls = collectCallExpressionsByIdentifier(sourceFile, 'enumerateParams');
+    const helperCalls = collectCallExpressionsByIdentifier(sourceFile, 'isMoveDecisionSequenceAdmittedForLegalMove');
+    const classifyCalls = collectCallExpressionsByIdentifier(sourceFile, 'classifyMoveDecisionSequenceAdmissionForLegalMove');
+
+    const hasRootStateDiscoverer = (contextName: string): boolean =>
+      helperCalls.some((call) =>
+        call.arguments.length >= 5
+        && expressionToText(sourceFile, call.arguments[1]!).includes('state')
+        && expressionToText(sourceFile, call.arguments[3]!).includes(contextName)
+        && hasDiscovererProperty(call.arguments[4]!),
+      );
+
+    assert.equal(
+      enumerateParamsCalls.some((call) =>
+        call.arguments.length >= 11
+        && expressionToText(sourceFile, call.arguments[5]!) === 'state'
+        && hasDiscovererProperty(call.arguments[10]!),
+      ),
+      true,
+      'root-state enumerateParams calls should receive cachedDiscover for plain-action admission reuse',
+    );
+    assert.equal(
+      hasRootStateDiscoverer('LEGAL_MOVES_EVENT_DECISION_SEQUENCE'),
+      true,
+      'event admission should receive cachedDiscover for root-state enumeration reuse',
+    );
+    assert.equal(
+      hasRootStateDiscoverer('LEGAL_MOVES_PIPELINE_DECISION_SEQUENCE'),
+      true,
+      'pipeline admission should receive cachedDiscover for root-state enumeration reuse',
+    );
+
+    assert.equal(
+      helperCalls.some((call) =>
+        call.arguments.length >= 5
+        && expressionToText(sourceFile, call.arguments[1]!) === 'candidateScopedState'
+        && hasDiscovererProperty(call.arguments[4]!),
+      ),
+      false,
+      'derived-state free-operation admission must not reuse cachedDiscover from the root state',
+    );
+    assert.equal(
+      classifyCalls.some((call) =>
+        call.arguments.length >= 5
+        && expressionToText(sourceFile, call.arguments[1]!) === 'candidateState'
+        && hasDiscovererProperty(call.arguments[4]!),
+      ),
+      false,
+      'derived-state free-operation classification must not reuse cachedDiscover from the root state',
+    );
+
+    const probeCalls = collectCallExpressionsByIdentifier(sourceFile, 'probeMoveViability');
+    assert.equal(
+      probeCalls.some((call) =>
+        call.arguments.length === 5
+        && expressionToText(sourceFile, call.arguments[0]!) === 'def'
+        && expressionToText(sourceFile, call.arguments[1]!) === 'state'
+        && expressionToText(sourceFile, call.arguments[2]!) === 'move'
+        && expressionToText(sourceFile, call.arguments[3]!) === 'runtime'
+        && expressionToText(sourceFile, call.arguments[4]!) === 'discoveryCache',
+      ),
+      true,
+      'classified move probing must receive the discoveryCache created during raw enumeration',
+    );
+  });
+
+  it('37a. preserves filtered move identity between raw enumeration and classification for cache reuse', () => {
+    const source = readKernelSource('src/kernel/legal-moves.ts');
+    const sourceFile = parseTypeScriptSource(source, 'legal-moves.ts');
+
+    assert.match(
+      source,
+      /const\s+\{\s*moves,\s*warnings:\s*rawWarnings,\s*discoveryCache\s*\}\s*=\s*enumerateRawLegalMoves\(def,\s*state,\s*options,\s*runtime\);/u,
+      'enumerateLegalMoves must destructure moves and discoveryCache directly from enumerateRawLegalMoves',
+    );
+
+    const filterCalls = collectCallExpressionsByIdentifier(sourceFile, 'applyTurnFlowWindowFilters');
+    assert.equal(
+      filterCalls.some((call) =>
+        call.arguments.length === 4
+        && expressionToText(sourceFile, call.arguments[0]!) === 'def'
+        && expressionToText(sourceFile, call.arguments[1]!) === 'state'
+        && expressionToText(sourceFile, call.arguments[2]!) === 'enumeration.moves'
+        && expressionToText(sourceFile, call.arguments[3]!) === 'seatResolution',
+      ),
+      true,
+      'raw enumeration must filter the original enumeration.moves array in place of rebuilding move objects',
+    );
+
+    const classifyCalls = collectCallExpressionsByIdentifier(sourceFile, 'classifyEnumeratedMoves');
+    assert.equal(
+      classifyCalls.some((call) =>
+        call.arguments.length === 6
+        && expressionToText(sourceFile, call.arguments[0]!) === 'def'
+        && expressionToText(sourceFile, call.arguments[1]!) === 'state'
+        && expressionToText(sourceFile, call.arguments[2]!) === 'moves'
+        && expressionToText(sourceFile, call.arguments[3]!) === 'warnings'
+        && expressionToText(sourceFile, call.arguments[4]!) === 'runtime'
+        && expressionToText(sourceFile, call.arguments[5]!) === 'discoveryCache',
+      ),
+      true,
+      'classification must consume the filtered moves array directly so the Move object identities remain valid cache keys',
     );
   });
 });

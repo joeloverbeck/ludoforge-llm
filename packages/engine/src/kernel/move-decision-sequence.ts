@@ -1,8 +1,10 @@
 import { legalChoicesDiscover } from './legal-choices.js';
 import {
   classifyDecisionSequenceSatisfiability,
+  type DecisionSequenceChoiceDiscoverer,
   type DecisionSequenceSatisfiabilityResult,
 } from './decision-sequence-satisfiability.js';
+import { createMoveDecisionSequenceChoiceDiscoverer } from './move-decision-discoverer.js';
 import { pickDeterministicChoiceValue } from './choice-option-policy.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
 import { shouldDeferMissingBinding, type MissingBindingPolicyContext } from './missing-binding-policy.js';
@@ -10,6 +12,7 @@ import { resolveMoveEnumerationBudgets, type MoveEnumerationBudgets } from './mo
 import type {
   ChoiceIllegalRequest,
   ChoicePendingRequest,
+  ChoiceRequest,
   ChoiceStochasticPendingRequest,
   GameDef,
   GameState,
@@ -22,6 +25,15 @@ export interface ResolveMoveDecisionSequenceOptions {
   readonly choose?: (request: ChoicePendingRequest) => MoveParamValue | undefined;
   readonly budgets?: Partial<MoveEnumerationBudgets>;
   readonly onWarning?: (warning: RuntimeWarning) => void;
+  readonly discoveryCache?: DiscoveryCache;
+}
+
+export type DiscoveryCache = Map<Move, ChoiceRequest>;
+
+export interface MoveDecisionSequenceSatisfiabilityOptions {
+  readonly budgets?: Partial<MoveEnumerationBudgets>;
+  readonly onWarning?: (warning: RuntimeWarning) => void;
+  readonly discoverer?: DecisionSequenceChoiceDiscoverer;
 }
 
 export interface ResolveMoveDecisionSequenceResult {
@@ -59,7 +71,8 @@ export const resolveMoveDecisionSequence = (
   let move = baseMove;
 
   for (let step = 0; step < maxSteps; step += 1) {
-    const request = legalChoicesDiscover(def, state, move, {
+    const cached = options?.discoveryCache?.get(move);
+    const request = cached ?? legalChoicesDiscover(def, state, move, {
       onDeferredPredicatesEvaluated: (count) => {
         deferredPredicatesEvaluated += count;
       },
@@ -141,7 +154,7 @@ export const isMoveDecisionSequenceSatisfiable = (
   def: GameDef,
   state: GameState,
   baseMove: Move,
-  options?: Omit<ResolveMoveDecisionSequenceOptions, 'choose'>,
+  options?: MoveDecisionSequenceSatisfiabilityOptions,
   runtime?: GameDefRuntime,
 ): boolean => {
   return classifyMoveDecisionSequenceSatisfiability(def, state, baseMove, options, runtime).classification === 'satisfiable';
@@ -152,7 +165,7 @@ export const classifyMoveDecisionSequenceAdmissionForLegalMove = (
   state: GameState,
   baseMove: Move,
   context: MissingBindingPolicyContext,
-  options?: Omit<ResolveMoveDecisionSequenceOptions, 'choose'>,
+  options?: MoveDecisionSequenceSatisfiabilityOptions,
   runtime?: GameDefRuntime,
 ): MoveDecisionSequenceSatisfiabilityResult['classification'] => {
   try {
@@ -170,7 +183,7 @@ export const isMoveDecisionSequenceAdmittedForLegalMove = (
   state: GameState,
   baseMove: Move,
   context: MissingBindingPolicyContext,
-  options?: Omit<ResolveMoveDecisionSequenceOptions, 'choose'>,
+  options?: MoveDecisionSequenceSatisfiabilityOptions,
   runtime?: GameDefRuntime,
 ): boolean => classifyMoveDecisionSequenceAdmissionForLegalMove(
   def,
@@ -185,17 +198,13 @@ export const classifyMoveDecisionSequenceSatisfiability = (
   def: GameDef,
   state: GameState,
   baseMove: Move,
-  options?: Omit<ResolveMoveDecisionSequenceOptions, 'choose'>,
+  options?: MoveDecisionSequenceSatisfiabilityOptions,
   runtime?: GameDefRuntime,
 ): MoveDecisionSequenceSatisfiabilityResult => {
+  const discoverChoices = options?.discoverer ?? createMoveDecisionSequenceChoiceDiscoverer(def, state, runtime);
   return classifyDecisionSequenceSatisfiability(
     baseMove,
-    (move, discoverOptions) =>
-      legalChoicesDiscover(def, state, move, {
-        ...(discoverOptions?.onDeferredPredicatesEvaluated === undefined
-          ? {}
-          : { onDeferredPredicatesEvaluated: discoverOptions.onDeferredPredicatesEvaluated }),
-      }, runtime),
+    discoverChoices,
     {
       ...(options?.budgets === undefined ? {} : { budgets: options.budgets }),
       ...(options?.onWarning === undefined ? {} : { onWarning: options.onWarning }),

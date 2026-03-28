@@ -1,13 +1,16 @@
 import {
+  createMutableReadScope,
   getMaxEffectOps,
   toEffectEnv,
   toEffectCursor,
   type EffectContext,
   type EffectCursor,
   type EffectEnv,
+  type MutableReadScope,
   type NormalizedEffectResult,
   type PartialEffectResult,
   type FreeOperationProbeScope,
+  updateReadScope,
 } from './effect-context.js';
 import { emptyScope } from './decision-scope.js';
 import {
@@ -49,7 +52,14 @@ const EMPTY_EVENTS: readonly TriggerEvent[] = [];
 // TAG_TO_KIND maps each numeric tag to its EffectKind string; we use that
 // to pull the corresponding handler from the registry. The result is an
 // array where dispatchTable[tag] is the handler function for that tag.
-type DispatchFn = (effect: EffectAST, env: EffectEnv, cursor: EffectCursor, budget: EffectBudgetState, applyBatch: typeof applyEffectsWithBudgetState) => PartialEffectResult;
+type DispatchFn = (
+  effect: EffectAST,
+  env: EffectEnv,
+  cursor: EffectCursor,
+  scope: MutableReadScope,
+  budget: EffectBudgetState,
+  applyBatch: typeof applyEffectsWithBudgetState,
+) => PartialEffectResult;
 let _dispatchTable: readonly DispatchFn[] | null = null;
 const getDispatchTable = (): readonly DispatchFn[] => {
   if (_dispatchTable === null) {
@@ -62,6 +72,7 @@ const applyEffectWithBudget = (
   effect: EffectAST,
   env: EffectEnv,
   cursor: EffectCursor,
+  scope: MutableReadScope,
   budget: EffectBudgetState,
 ): NormalizedEffectResult => {
   const tag = (effect as { readonly _k: EffectKindTag })._k;
@@ -74,17 +85,17 @@ const applyEffectWithBudget = (
   const profiler = env.profiler;
   const t0 = perfStart(profiler);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const result = (handler as any)(effect, env, cursor, budget, applyEffectsWithBudgetState) as PartialEffectResult;
+  const result = (handler as any)(effect, env, cursor, scope, budget, applyEffectsWithBudgetState) as PartialEffectResult;
   perfDynEnd(profiler, `effect:${kind}`, t0);
   // Normalize result: use shared empty array to avoid per-call allocation,
   // apply defaults for bindings/decisionScope only when handler omitted them.
   const emitted = result.emittedEvents ?? EMPTY_EVENTS;
   const bindings = result.bindings ?? cursor.bindings;
-  const scope = result.decisionScope ?? cursor.decisionScope;
+  const decisionScope = result.decisionScope ?? cursor.decisionScope;
   if (result.pendingChoice !== undefined) {
-    return { state: result.state, rng: result.rng, emittedEvents: emitted, bindings, decisionScope: scope, pendingChoice: result.pendingChoice };
+    return { state: result.state, rng: result.rng, emittedEvents: emitted, bindings, decisionScope, pendingChoice: result.pendingChoice };
   }
-  return { state: result.state, rng: result.rng, emittedEvents: emitted, bindings, decisionScope: scope };
+  return { state: result.state, rng: result.rng, emittedEvents: emitted, bindings, decisionScope };
 };
 
 export const applyEffectsWithBudgetState = (
@@ -112,6 +123,7 @@ export const applyEffectsWithBudgetState = (
   // Always create a fresh object — the parent may share the same cursor reference
   // when tracing is disabled (withCursorTrace returns cursor unchanged).
   const workCursor: EffectCursor = { ...cursor, tracker };
+  const readScope = createMutableReadScope(env, cursor);
 
   for (let effectIndex = 0; effectIndex < effects.length; effectIndex++) {
     // Update only the fields that change between iterations
@@ -122,10 +134,12 @@ export const applyEffectsWithBudgetState = (
     if (tracingEnabled) {
       workCursor.effectPath = `${cursor.effectPath ?? ''}[${effectIndex}]`;
     }
+    updateReadScope(readScope, workCursor, env);
     const result = applyEffectWithBudget(
       effects[effectIndex]!,
       env,
       workCursor,
+      readScope,
       budget,
     );
     currentState = result.state;
@@ -166,7 +180,7 @@ export function applyEffect(effect: EffectAST, ctx: EffectContext): NormalizedEf
   const fullCtx = { ...ctx, freeOperationProbeScope, decisionScope: ctx.decisionScope ?? emptyScope() };
   const env = toEffectEnv(fullCtx);
   const cursor = toEffectCursor(fullCtx);
-  return applyEffectWithBudget(effect, env, cursor, budget);
+  return applyEffectWithBudget(effect, env, cursor, createMutableReadScope(env, cursor), budget);
 }
 
 export function applyEffects(effects: readonly EffectAST[], ctx: EffectContext): NormalizedEffectResult {

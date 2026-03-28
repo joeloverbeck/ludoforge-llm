@@ -1,6 +1,6 @@
 import { emitTrace } from './execution-collector.js';
 import { resolveTraceProvenance } from './trace-provenance.js';
-import type { EffectContext } from './effect-context.js';
+import type { TraceEmissionContext } from './effect-context.js';
 import type { EffectTraceProvenance, EffectTraceVarChange } from './types.js';
 
 type WithOptionalProvenance<T> = Omit<T, 'kind' | 'provenance'> & {
@@ -12,7 +12,7 @@ type VarChangeTraceInput =
   | WithOptionalProvenance<Extract<EffectTraceVarChange, { readonly scope: 'zone' }>>;
 
 export const emitVarChangeTraceIfChanged = (
-  ctx: Pick<EffectContext, 'collector' | 'state' | 'traceContext' | 'effectPath'>,
+  ctx: TraceEmissionContext,
   entry: VarChangeTraceInput,
 ): boolean => {
   if (entry.oldValue === entry.newValue) {

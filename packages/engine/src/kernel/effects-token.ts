@@ -13,8 +13,8 @@ import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import { resolveRuntimeTokenBindingValue } from './token-binding.js';
 import { getTokenStateIndexEntry, invalidateTokenStateIndex } from './token-state-index.js';
 import { resolveTraceProvenance } from './trace-provenance.js';
-import { mergeToReadContext, resolveEffectBindings, toTraceProvenanceContext } from './effect-context.js';
-import type { EffectCursor, EffectEnv, PartialEffectResult } from './effect-context.js';
+import { resolveEffectBindings, toTraceProvenanceContext, updateReadScopeRaw } from './effect-context.js';
+import type { EffectCursor, EffectEnv, MutableReadScope, PartialEffectResult } from './effect-context.js';
 import type { EffectBudgetState } from './effects-control.js';
 import type { ApplyEffectsWithBudget } from './effect-registry.js';
 import { ensureZoneCloned, type MutableGameState } from './state-draft.js';
@@ -323,12 +323,15 @@ export const applyMoveToken = (
   effect: Extract<EffectAST, { readonly moveToken: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
+  scope: MutableReadScope,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
   const resolvedBindings = resolveEffectBindings(env, cursor);
   const evalCursor = resolvedBindings === cursor.bindings ? cursor : { ...cursor, bindings: resolvedBindings };
-  const evalCtx = mergeToReadContext(env, evalCursor);
+  scope.state = evalCursor.state;
+  scope.bindings = evalCursor.bindings;
+  const evalCtx = scope;
   const traceCtx = toTraceProvenanceContext(env, evalCursor);
   const onResolutionFailure = selectorResolutionFailurePolicyForMode(env.mode);
   const fromZone = resolveZoneWithNormalization(effect.moveToken.from, evalCtx, {
@@ -452,12 +455,15 @@ export const applyMoveTokenAdjacent = (
   effect: Extract<EffectAST, { readonly moveTokenAdjacent: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
+  scope: MutableReadScope,
   budget: EffectBudgetState,
   applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
   const resolvedBindings = resolveEffectBindings(env, cursor);
   const evalCursor = resolvedBindings === cursor.bindings ? cursor : { ...cursor, bindings: resolvedBindings };
-  const evalCtx = mergeToReadContext(env, evalCursor);
+  scope.state = evalCursor.state;
+  scope.bindings = evalCursor.bindings;
+  const evalCtx = scope;
   const onResolutionFailure = selectorResolutionFailurePolicyForMode(env.mode);
   const fromZone = resolveZoneWithNormalization(effect.moveTokenAdjacent.from, evalCtx, {
     code: EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED,
@@ -487,6 +493,7 @@ export const applyMoveTokenAdjacent = (
     }),
     env,
     cursor,
+    scope,
     budget,
     applyBatch,
   );
@@ -496,12 +503,15 @@ export const applyCreateToken = (
   effect: Extract<EffectAST, { readonly createToken: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
+  scope: MutableReadScope,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
   const resolvedBindings = resolveEffectBindings(env, cursor);
   const evalCursor = resolvedBindings === cursor.bindings ? cursor : { ...cursor, bindings: resolvedBindings };
-  const evalCtx = mergeToReadContext(env, evalCursor);
+  scope.state = evalCursor.state;
+  scope.bindings = evalCursor.bindings;
+  const evalCtx = scope;
   const traceCtx = toTraceProvenanceContext(env, evalCursor);
   const onResolutionFailure = selectorResolutionFailurePolicyForMode(env.mode);
   const zoneId = String(
@@ -576,12 +586,14 @@ export const applyDestroyToken = (
   effect: Extract<EffectAST, { readonly destroyToken: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
+  scope: MutableReadScope,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
   const resolvedBindings = resolveEffectBindings(env, cursor);
   const tokenId = resolveBoundTokenId(resolvedBindings, effect.destroyToken.token, 'destroyToken');
-  const evalCtx = mergeToReadContext(env, cursor);
+  updateReadScopeRaw(scope, cursor);
+  const evalCtx = scope;
   const traceCtx = toTraceProvenanceContext(env, cursor);
   const resolvedOccurrence = resolveTokenOccurrence(evalCtx, tokenId);
 
@@ -626,13 +638,15 @@ export const applySetTokenProp = (
   effect: Extract<EffectAST, { readonly setTokenProp: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
+  scope: MutableReadScope,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
   const { token: tokenBinding, prop, value } = effect.setTokenProp;
   const resolvedBindings = resolveEffectBindings(env, cursor);
   const tokenId = resolveBoundTokenId(resolvedBindings, tokenBinding, 'setTokenProp');
-  const evalCtx = mergeToReadContext(env, cursor);
+  updateReadScopeRaw(scope, cursor);
+  const evalCtx = scope;
   const traceCtx = toTraceProvenanceContext(env, cursor);
   const resolvedOccurrence = resolveTokenOccurrence(evalCtx, tokenId);
 
@@ -669,7 +683,9 @@ export const applySetTokenProp = (
   }
 
   const evalCursor = resolvedBindings === cursor.bindings ? cursor : { ...cursor, bindings: resolvedBindings };
-  const evalCtxWithBindings = mergeToReadContext(env, evalCursor);
+  scope.state = evalCursor.state;
+  scope.bindings = evalCursor.bindings;
+  const evalCtxWithBindings = scope;
   const evaluatedValue = expectScalarTokenPropValue(
     evalValue(value, evalCtxWithBindings),
     'setTokenProp',
@@ -725,6 +741,7 @@ export const applyDraw = (
   effect: Extract<EffectAST, { readonly draw: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
+  scope: MutableReadScope,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
@@ -738,7 +755,9 @@ export const applyDraw = (
 
   const resolvedBindings = resolveEffectBindings(env, cursor);
   const evalCursor = resolvedBindings === cursor.bindings ? cursor : { ...cursor, bindings: resolvedBindings };
-  const evalCtx = mergeToReadContext(env, evalCursor);
+  scope.state = evalCursor.state;
+  scope.bindings = evalCursor.bindings;
+  const evalCtx = scope;
   const traceCtx = toTraceProvenanceContext(env, evalCursor);
   const onResolutionFailure = selectorResolutionFailurePolicyForMode(env.mode);
   const fromZone = resolveZoneWithNormalization(effect.draw.from, evalCtx, {
@@ -936,12 +955,15 @@ export const applyMoveAll = (
   effect: Extract<EffectAST, { readonly moveAll: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
+  scope: MutableReadScope,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
   const resolvedBindings = resolveEffectBindings(env, cursor);
   const evalCursor = resolvedBindings === cursor.bindings ? cursor : { ...cursor, bindings: resolvedBindings };
-  const evalCtx = mergeToReadContext(env, evalCursor);
+  scope.state = evalCursor.state;
+  scope.bindings = evalCursor.bindings;
+  const evalCtx = scope;
   const traceCtx = toTraceProvenanceContext(env, evalCursor);
   const onResolutionFailure = selectorResolutionFailurePolicyForMode(env.mode);
   const fromZone = resolveZoneWithNormalization(effect.moveAll.from, evalCtx, {
@@ -975,15 +997,13 @@ export const applyMoveAll = (
     const filteredRemaining: Token[] = [];
 
     for (const token of sourceTokens) {
-      const filterEvalCtx = mergeToReadContext(env, {
-        ...evalCursor,
-        bindings: {
-          ...resolvedBindings,
-          $token: token,
-        },
-      });
+      scope.state = evalCursor.state;
+      scope.bindings = {
+        ...resolvedBindings,
+        $token: token,
+      };
 
-      if (evalCondition(effect.moveAll.filter, filterEvalCtx)) {
+      if (evalCondition(effect.moveAll.filter, scope)) {
         filteredMoved.push(token);
       } else {
         filteredRemaining.push(token);
@@ -1072,12 +1092,15 @@ export const applyShuffle = (
   effect: Extract<EffectAST, { readonly shuffle: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
+  scope: MutableReadScope,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
   const resolvedBindings = resolveEffectBindings(env, cursor);
   const evalCursor = resolvedBindings === cursor.bindings ? cursor : { ...cursor, bindings: resolvedBindings };
-  const evalCtx = mergeToReadContext(env, evalCursor);
+  scope.state = evalCursor.state;
+  scope.bindings = evalCursor.bindings;
+  const evalCtx = scope;
   const traceCtx = toTraceProvenanceContext(env, evalCursor);
   const onResolutionFailure = selectorResolutionFailurePolicyForMode(env.mode);
   const zoneId = String(

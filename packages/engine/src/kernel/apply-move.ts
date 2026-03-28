@@ -87,7 +87,7 @@ import { asPlayerId } from './branded.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
 import { computeFullHash, createZobristTable } from './zobrist.js';
 import { reconcileRunningHash } from './zobrist-phase-hash.js';
-import { resolveMoveDecisionSequence } from './move-decision-sequence.js';
+import { resolveMoveDecisionSequence, type DiscoveryCache } from './move-decision-sequence.js';
 
 const DEFAULT_MAX_TRIGGER_DEPTH = 8;
 
@@ -1661,6 +1661,7 @@ export const probeMoveViability = (
   state: GameState,
   move: Move,
   runtime?: GameDefRuntime,
+  discoveryCache?: DiscoveryCache,
 ): MoveViabilityProbeResult => {
   try {
     const seatResolution = createSeatResolutionContext(def, state.playerCount);
@@ -1720,7 +1721,16 @@ export const probeMoveViability = (
     }
     validateTurnFlowWindowAccess(def, state, move, preflight.actionPipeline, seatResolution);
 
-    const sequence = resolveMoveDecisionSequence(def, state, move, { choose: () => undefined }, runtime);
+    const sequence = resolveMoveDecisionSequence(
+      def,
+      state,
+      move,
+      {
+        choose: () => undefined,
+        ...(discoveryCache === undefined ? {} : { discoveryCache }),
+      },
+      runtime,
+    );
     if (sequence.illegal !== undefined) {
       throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE, {
         detail: sequence.illegal.reason,

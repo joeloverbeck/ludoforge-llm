@@ -1,6 +1,7 @@
 import { rebaseIterationPath, withIterationSegment } from './decision-scope.js';
 import { combinations, countCombinations } from './combinatorics.js';
-import type { EffectCursor, NormalizedEffectResult, PartialEffectResult } from './effect-context.js';
+import { createMutableReadScope } from './effect-context.js';
+import type { EffectCursor, MutableReadScope, NormalizedEffectResult, PartialEffectResult } from './effect-context.js';
 import { createEvalContext } from './eval-context.js';
 import { evalCondition } from './eval-condition.js';
 import { evalQuery } from './eval-query.js';
@@ -256,7 +257,12 @@ const emitVarChangeArtifacts = (
 ): ReturnType<typeof toVarChangedEvent> | undefined => {
   const evalCtx = createExecutionContextFromCompiled(state, { state: state.rng }, {}, ctx);
   const tracePayload = toTraceVarChangePayload(endpoint, oldValue, newValue);
-  if (!emitVarChangeTraceIfChanged(evalCtx, tracePayload)) {
+  if (!emitVarChangeTraceIfChanged({
+    collector: evalCtx.collector,
+    state,
+    traceContext: ctx.traceContext,
+    effectPath: ctx.effectPath,
+  }, tracePayload)) {
     return undefined;
   }
 
@@ -304,8 +310,8 @@ const compiledTraceProvenance = (
   ctx: CompiledExecutionContext,
 ): EffectTraceProvenance => resolveTraceProvenance({
   state,
-  ...(ctx.traceContext === undefined ? {} : { traceContext: ctx.traceContext }),
-  ...(ctx.effectPath === undefined ? {} : { effectPath: ctx.effectPath }),
+  traceContext: ctx.traceContext,
+  effectPath: ctx.effectPath,
 });
 
 const executeCompiledFragment = (
@@ -352,6 +358,7 @@ const executeCompiledDelegate = (
   handler: (
     env: ReturnType<typeof buildEffectEnvFromCompiledCtx>,
     cursor: EffectCursor,
+    scope: MutableReadScope,
   ) => PartialEffectResult,
 ): PartialEffectResult => {
   consumeEffectBudget(ctx.effectBudget, effectType);
@@ -361,12 +368,14 @@ const executeCompiledDelegate = (
     rng,
     bindings,
     decisionScope: ctx.decisionScope,
-    ...(ctx.effectPath === undefined ? {} : { effectPath: ctx.effectPath }),
+    effectPath: ctx.effectPath,
     tracker: ctx.tracker,
   };
+  const env = buildEffectEnvFromCompiledCtx(ctx, effectCtx.collector);
   const result = handler(
-    buildEffectEnvFromCompiledCtx(ctx, effectCtx.collector),
+    env,
     cursor,
+    createMutableReadScope(env, cursor),
   );
   return {
     state: result.state,
@@ -392,6 +401,7 @@ type CompiledDelegateInvoker<TEffect extends EffectAST> = (
   effect: TEffect,
   env: ReturnType<typeof buildEffectEnvFromCompiledCtx>,
   cursor: EffectCursor,
+  scope: MutableReadScope,
   budget: ReturnType<typeof createCompiledDelegateBudget>,
   applyBatch: typeof applyEffectsWithBudgetState,
 ) => PartialEffectResult;
@@ -408,10 +418,11 @@ const createCompiledDelegateLeafFragment = <TEffect extends EffectAST>(
     rng,
     bindings,
     ctx,
-    (env, cursor) => invoke(
+    (env, cursor, scope) => invoke(
       effect,
       env,
       cursor,
+      scope,
       createCompiledDelegateBudget(),
       unavailableCompiledApplyBatch(effectType),
     ),

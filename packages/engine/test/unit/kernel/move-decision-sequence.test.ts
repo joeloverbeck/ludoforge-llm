@@ -6,6 +6,7 @@ import {
   asPhaseId,
   asPlayerId,
   asZoneId,
+  classifyMoveDecisionSequenceAdmissionForLegalMove,
   classifyMoveDecisionSequenceSatisfiability,
   isMoveDecisionSequenceAdmittedForLegalMove,
   isMoveDecisionSequenceSatisfiable,
@@ -14,6 +15,7 @@ import {
   resolveMoveDecisionSequence,
   type DecisionKey,
   type ChoicePendingRequest,
+  type DiscoveryCache,
   type ActionDef,
   type ActionPipelineDef,
   type GameDef,
@@ -456,6 +458,212 @@ phase: [asPhaseId('main')],
 
     assert.equal(resolveMoveDecisionSequence(def, state, makeMove('branching-op')).complete, false);
     assert.equal(isMoveDecisionSequenceSatisfiable(def, state, makeMove('branching-op')), true);
+  });
+
+  it('uses an injected discoverer instead of the default legalChoicesDiscover path', () => {
+    const state = makeBaseState();
+    const move = makeMove('external-discoverer-op');
+    const seenMoves: Move[] = [];
+
+    const result = classifyMoveDecisionSequenceSatisfiability(
+      makeBaseDef(),
+      state,
+      move,
+      {
+        discoverer: (candidateMove) => {
+          seenMoves.push(candidateMove);
+          if ('$target' in candidateMove.params) {
+            return { kind: 'complete', complete: true };
+          }
+          return {
+            kind: 'pending',
+            complete: false,
+            decisionKey: asDecisionKey('$target'),
+            name: '$target',
+            type: 'chooseOne',
+            options: [
+              { value: 'a', legality: 'illegal', illegalReason: null },
+              { value: 'b', legality: 'legal', illegalReason: null },
+            ],
+            targetKinds: [],
+          };
+        },
+      },
+    );
+
+    assert.equal(result.classification, 'satisfiable');
+    assert.deepEqual(seenMoves, [
+      move,
+      {
+        actionId: move.actionId,
+        params: { '$target': 'b' },
+      },
+    ]);
+  });
+
+  it('uses discoveryCache for the first resolve step when the original move is cached', () => {
+    const action: ActionDef = {
+      id: asActionId('cached-resolve-op'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'cached-resolve-profile',
+      actionId: action.id,
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          effects: [
+            eff({
+              chooseOne: {
+                internalDecisionId: 'decision:$target',
+                bind: '$target',
+                options: { query: 'enums', values: ['pipeline-a', 'pipeline-b'] },
+              },
+            }) as GameDef['actions'][number]['effects'][number],
+          ],
+        },
+      ],
+      atomicity: 'partial',
+    };
+
+    const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
+    const state = makeBaseState();
+    const move = makeMove('cached-resolve-op');
+    const cachedRequest: ChoicePendingRequest = {
+      kind: 'pending',
+      complete: false,
+      decisionKey: asDecisionKey('$target'),
+      name: '$target',
+      type: 'chooseOne',
+      options: [
+        { value: 'pipeline-b', legality: 'legal', illegalReason: null },
+        { value: 'pipeline-a', legality: 'illegal', illegalReason: null },
+      ],
+      targetKinds: [],
+    };
+    const discoveryCache: DiscoveryCache = new Map([[move, cachedRequest]]);
+
+    const result = resolveMoveDecisionSequence(def, state, move, { discoveryCache });
+
+    assert.equal(result.complete, true);
+    assert.equal(result.move.params.$target, 'pipeline-b');
+  });
+
+  it('falls back to legalChoicesDiscover when discoveryCache misses by move identity', () => {
+    const action: ActionDef = {
+      id: asActionId('cache-miss-resolve-op'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'cache-miss-resolve-profile',
+      actionId: action.id,
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          effects: [
+            eff({
+              chooseOne: {
+                internalDecisionId: 'decision:$target',
+                bind: '$target',
+                options: { query: 'enums', values: ['pipeline-a', 'pipeline-b'] },
+              },
+            }) as GameDef['actions'][number]['effects'][number],
+          ],
+        },
+      ],
+      atomicity: 'partial',
+    };
+
+    const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
+    const state = makeBaseState();
+    const move = makeMove('cache-miss-resolve-op');
+    const structurallyEqualMove: Move = { actionId: move.actionId, params: {} };
+    const discoveryCache: DiscoveryCache = new Map([[
+      structurallyEqualMove,
+      {
+        kind: 'pending',
+        complete: false,
+        decisionKey: asDecisionKey('$target'),
+        name: '$target',
+        type: 'chooseOne',
+        options: [
+          { value: 'cached-a', legality: 'legal', illegalReason: null },
+          { value: 'cached-b', legality: 'illegal', illegalReason: null },
+        ],
+        targetKinds: [],
+      },
+    ]]);
+
+    const result = resolveMoveDecisionSequence(def, state, move, { discoveryCache });
+
+    assert.equal(result.complete, true);
+    assert.equal(result.move.params.$target, 'pipeline-a');
+  });
+
+  it('forwards injected discoverers through legal-move admission helpers', () => {
+    const state = makeBaseState();
+    const move = makeMove('external-admission-discoverer-op');
+    let calls = 0;
+
+    const discoverer = (candidateMove: Move) => {
+      calls += 1;
+      if ('$target' in candidateMove.params) {
+        return { kind: 'complete', complete: true } as const;
+      }
+      return {
+        kind: 'pending',
+        complete: false,
+        decisionKey: asDecisionKey('$target'),
+        name: '$target',
+        type: 'chooseOne',
+        options: [{ value: 'allowed', legality: 'legal', illegalReason: null }],
+        targetKinds: [],
+      } as const;
+    };
+
+    assert.equal(
+      classifyMoveDecisionSequenceAdmissionForLegalMove(
+        makeBaseDef(),
+        state,
+        move,
+        MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_EVENT_DECISION_SEQUENCE,
+        { discoverer },
+      ),
+      'satisfiable',
+    );
+    assert.equal(
+      isMoveDecisionSequenceAdmittedForLegalMove(
+        makeBaseDef(),
+        state,
+        move,
+        MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_EVENT_DECISION_SEQUENCE,
+        { discoverer },
+      ),
+      true,
+    );
+    assert.equal(calls >= 2, true);
   });
 
   it('respects custom chooser for decision sequence completion', () => {

@@ -17,12 +17,27 @@ export type CompiledConditionValueAccessor = (
 ) => ScalarValue | ScalarArrayValue;
 
 type ComparisonCondition = Extract<ConditionAST, { readonly op: '==' | '!=' | '<' | '<=' | '>' | '>=' }>;
+type AggregateCountExpr = Extract<ValueExpr, { readonly _t: 5; readonly aggregate: { readonly op: 'count' } }>;
 
 const isScalarValue = (value: unknown): value is ScalarValue =>
   typeof value === 'number' || typeof value === 'boolean' || typeof value === 'string';
 
 const isScalarArrayValue = (value: unknown): value is ScalarArrayValue =>
   Array.isArray(value) && value.every((entry) => isScalarValue(entry));
+
+const compileZoneCountAccessor = (zoneId: string, context: ValueExpr): CompiledConditionValueAccessor =>
+  (state) => {
+    const zoneTokens = state.zones[zoneId];
+    if (zoneTokens === undefined) {
+      throw missingVarError(`Zone state not found for selector result: ${zoneId}`, {
+        reference: context,
+        zoneId,
+        availableZoneIds: Object.keys(state.zones).sort(),
+      });
+    }
+
+    return zoneTokens.length;
+  };
 
 const compileReferenceAccessor = (expr: Extract<ValueExpr, { readonly _t: 2 }>): CompiledConditionValueAccessor | null => {
   switch (expr.ref) {
@@ -106,6 +121,17 @@ const compileReferenceAccessor = (expr: Extract<ValueExpr, { readonly _t: 2 }>):
   }
 };
 
+const compileAggregateCountAccessor = (
+  expr: AggregateCountExpr,
+): CompiledConditionValueAccessor | null => {
+  const query = expr.aggregate.query;
+  if (query.query !== 'tokensInZone' || query.filter !== undefined || typeof query.zone !== 'string') {
+    return null;
+  }
+
+  return compileZoneCountAccessor(query.zone, expr);
+};
+
 const expectOrderingNumber = (
   value: ScalarValue | ScalarArrayValue,
   side: 'left' | 'right',
@@ -161,11 +187,17 @@ export const tryCompileValueExpr = (
     return () => expr;
   }
 
-  if (expr._t !== 2) {
-    return null;
+  switch (expr._t) {
+    case 2:
+      return compileReferenceAccessor(expr as Extract<ValueExpr, { readonly _t: 2 }>);
+    case 5:
+      if (expr.aggregate.op !== 'count') {
+        return null;
+      }
+      return compileAggregateCountAccessor(expr as AggregateCountExpr);
+    default:
+      return null;
   }
-
-  return compileReferenceAccessor(expr as Extract<ValueExpr, { readonly _t: 2 }>);
 };
 
 export const tryCompileCondition = (
@@ -188,6 +220,40 @@ export const tryCompileCondition = (
         return null;
       }
       return compileComparison(cond.op, leftAccessor, rightAccessor, cond);
+    }
+
+    case 'and': {
+      const compiledArgs: CompiledConditionPredicate[] = [];
+      for (const arg of cond.args) {
+        const compiledArg = tryCompileCondition(arg);
+        if (compiledArg === null) {
+          return null;
+        }
+        compiledArgs.push(compiledArg);
+      }
+      return (state, activePlayer, bindings) =>
+        compiledArgs.every((arg) => arg(state, activePlayer, bindings));
+    }
+
+    case 'or': {
+      const compiledArgs: CompiledConditionPredicate[] = [];
+      for (const arg of cond.args) {
+        const compiledArg = tryCompileCondition(arg);
+        if (compiledArg === null) {
+          return null;
+        }
+        compiledArgs.push(compiledArg);
+      }
+      return (state, activePlayer, bindings) =>
+        compiledArgs.some((arg) => arg(state, activePlayer, bindings));
+    }
+
+    case 'not': {
+      const compiledArg = tryCompileCondition(cond.arg);
+      if (compiledArg === null) {
+        return null;
+      }
+      return (state, activePlayer, bindings) => !compiledArg(state, activePlayer, bindings);
     }
 
     default:

@@ -11,6 +11,7 @@ import {
   buildRuntimeTableIndex,
   compileFirstDecisionDomain,
   compilePipelineFirstDecisionDomain,
+  createGameDefRuntime,
   createEvalContext,
   createEvalRuntimeResources,
   type ActionDef,
@@ -233,5 +234,36 @@ describe('first-decision compiler', () => {
     const compiled = compilePipelineFirstDecisionDomain(def.actionPipelines![0]!);
     assert.equal(compiled.compilable, false);
     assert.match(compiled.description ?? '', /unsupportedStageFirstDecision/);
+  });
+
+  it('precomputes first-decision domains on GameDefRuntime for actions and pipelines', () => {
+    const def = makeDef(
+      [
+        eff({
+          chooseOne: {
+            internalDecisionId: 'decision:$target',
+            bind: '$target',
+            options: { query: 'enums', values: ['a'] },
+          },
+        }),
+      ],
+      [
+        {
+          stage: 'decide',
+          effects: [eff({
+            chooseOne: {
+              internalDecisionId: 'decision:$space',
+              bind: '$space',
+              options: { query: 'zones' },
+            },
+          })],
+        },
+      ],
+    );
+
+    const runtime = createGameDefRuntime(def);
+
+    assert.equal(runtime.firstDecisionDomains.byActionId.get(asActionId('act'))?.compilable, true);
+    assert.equal(runtime.firstDecisionDomains.byPipelineProfileId.get('profile-1')?.compilable, true);
   });
 });

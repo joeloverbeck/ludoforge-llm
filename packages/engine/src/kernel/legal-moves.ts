@@ -1122,6 +1122,9 @@ function enumerateCurrentEventMoves(
       continue;
     }
 
+    // Event effects resolve from the current card/branch runtime state.
+    // Keep event admission on the canonical interpreter path; the compiled
+    // first-decision guard only applies to static action/pipeline effect trees.
     if (
       !isMoveDecisionSequenceAdmittedForLegalMove(
         def,

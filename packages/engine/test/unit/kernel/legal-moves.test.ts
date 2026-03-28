@@ -3951,6 +3951,32 @@ describe('legalMoves plain-action feasibility probe', () => {
     assert.equal(moves.length, 0, 'compiled unconditional pipeline domain should reject empty domains early');
   });
 
+  it('35b. keeps current event admission on the interpreter path instead of compiled first-decision guards', () => {
+    const source = readKernelSource('src/kernel/legal-moves.ts');
+    const eventFunctionMatch = source.match(
+      /function enumerateCurrentEventMoves\([\s\S]*?\n\}\n\nconst enumerateRawLegalMoves =/u,
+    );
+
+    assert.notEqual(eventFunctionMatch, null, 'enumerateCurrentEventMoves should remain a distinct helper');
+    const eventFunctionSource = eventFunctionMatch?.[0] ?? '';
+
+    assert.match(
+      eventFunctionSource,
+      /isMoveDecisionSequenceAdmittedForLegalMove/u,
+      'event admission should continue to use the canonical interpreter-backed helper',
+    );
+    assert.doesNotMatch(
+      eventFunctionSource,
+      /isCompiledFirstDecisionRejected/u,
+      'event admission should not use compiled first-decision rejection guards',
+    );
+    assert.doesNotMatch(
+      eventFunctionSource,
+      /firstDecisionDomains/u,
+      'event admission should not depend on runtime-owned firstDecisionDomains directly',
+    );
+  });
+
   it('36. routes plain-action decision admission through canonical helper with plainActionDecisionSequence context', () => {
     const source = readKernelSource('src/kernel/legal-moves.ts');
     const sourceFile = parseTypeScriptSource(source, 'legal-moves.ts');

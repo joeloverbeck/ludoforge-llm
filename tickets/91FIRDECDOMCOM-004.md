@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — tests only
-**Deps**: tickets/91FIRDECDOMCOM-003.md
+**Deps**: archive/tickets/91FIRDECDOMCOM/91FIRDECDOMCOM-003.md
 
 ## Problem
 

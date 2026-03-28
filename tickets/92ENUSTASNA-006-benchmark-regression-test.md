@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — test-only
-**Deps**: 92ENUSTASNA-004, 92ENUSTASNA-005
+**Deps**: tickets/92ENUSTASNA-005-equivalence-tests.md, tickets/92ENUSTASNA-008-generalize-snapshot-player-access.md
 
 ## Problem
 
@@ -16,12 +16,13 @@ The spec's acceptance criterion #7 requires a performance benchmark proving eith
 2. `compileProductionSpec()` is available for FITL production spec compilation.
 3. `legalMoves(def, state)` is the primary benchmark target — it internally creates and uses the snapshot.
 4. The benchmark should measure wall-clock time for `legalMoves` across multiple game states with multiple iterations to reduce noise.
-5. The benchmark in this ticket measures the currently wired snapshot surface only. It should not be treated as justification for keeping the composite-string `zoneTotals` API when future aggregate consumers are added.
+5. The benchmark should measure the final intended snapshot architecture, including the player-generalized path from `92ENUSTASNA-008`, not just the temporary guarded subset currently present in production.
+6. This ticket still should not be treated as justification for keeping the composite-string `zoneTotals` API when future aggregate consumers are added.
 
 ## Architecture Check
 
 1. This is a pure test ticket — no production code changes.
-2. The benchmark complements the equivalence test: equivalence proves correctness, the benchmark proves no performance regression.
+2. The benchmark complements the equivalence test: equivalence proves correctness, the benchmark proves no performance regression for the finalized snapshot architecture.
 3. Benchmark methodology: measure `legalMoves` duration across a fixed set of game states, multiple iterations, report mean and P95.
 
 ## What to Change
@@ -54,7 +55,8 @@ The benchmark should:
 - Modifying any production code
 - Modifying existing benchmarks
 - Establishing CI baseline infrastructure (this is a reportable benchmark, not a CI gate)
-- Optimizing snapshot creation itself (if benchmark shows no benefit, that's an acceptable result per AC#7)
+- Redesigning snapshot player access itself; that belongs in `92ENUSTASNA-008`
+- Optimizing snapshot creation itself beyond the architecture already chosen (if benchmark shows no benefit, that's an acceptable result per AC#7)
 - Benchmarking future structured zone-total consumers before `92ENUSTASNA-007` is implemented
 
 ## Acceptance Criteria

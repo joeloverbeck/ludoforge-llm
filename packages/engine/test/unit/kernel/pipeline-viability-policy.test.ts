@@ -19,6 +19,7 @@ import {
   type ActionPipelineDef,
   type ActionResolutionStageDef,
   type ConditionAST,
+  type EnumerationStateSnapshot,
   type ReadContext,
   type GameDef,
   type GameState,
@@ -31,7 +32,10 @@ import { makeEvalContext } from '../../helpers/eval-context-test-helpers.js';
 
 const makeState = (resources: number): GameState => ({
   globalVars: { resources },
-  perPlayerVars: {},
+  perPlayerVars: {
+    0: { resources },
+    1: { resources: resources + 5 },
+  },
   zoneVars: {},
   playerCount: 2,
   zones: { 'board:none': [] },
@@ -79,16 +83,43 @@ const makeEvalCtx = (
   def: GameDef,
   state: GameState,
   bindings: Readonly<Record<string, unknown>> = {},
+  options?: { readonly activePlayer?: GameState['activePlayer'] },
 ): ReadContext => {
   return makeEvalContext({
     def,
     adjacencyGraph: buildAdjacencyGraph(def.zones),
     state,
-    activePlayer: state.activePlayer,
-    actorPlayer: state.activePlayer,
+    activePlayer: options?.activePlayer ?? state.activePlayer,
+    actorPlayer: options?.activePlayer ?? state.activePlayer,
     bindings,
     collector: createCollector(),
   });
+};
+
+const makeSnapshot = (
+  state: GameState,
+  options?: {
+    readonly activePlayer?: GameState['activePlayer'];
+    readonly resources?: number;
+    readonly activePlayerResources?: number;
+  },
+): EnumerationStateSnapshot => {
+  const snapshotActivePlayer = options?.activePlayer ?? state.activePlayer;
+  const livePlayerVars = state.perPlayerVars[snapshotActivePlayer] ?? {};
+  return {
+    globalVars: {
+      ...state.globalVars,
+      ...(options?.resources === undefined ? {} : { resources: options.resources }),
+    },
+    activePlayerVars: {
+      ...livePlayerVars,
+      ...(options?.activePlayerResources === undefined ? {} : { resources: options.activePlayerResources }),
+    },
+    activePlayer: snapshotActivePlayer,
+    zoneTotals: { get: (_key: string) => 0 },
+    zoneVars: { get: (_zoneId: string, _varName: string) => undefined },
+    markerStates: { get: (_spaceId: string, _markerName: string) => undefined },
+  };
 };
 
 describe('pipeline viability policy', () => {
@@ -260,6 +291,104 @@ describe('evaluateDiscoveryPipelinePredicateStatus()', () => {
 });
 
 describe('pipeline viability predicate fast-path routing', () => {
+  it('threads snapshot through execution pipeline checks', () => {
+    const action = makeAction();
+    const pipeline: ActionPipelineDef = {
+      id: 'profile',
+      actionId: action.id,
+      legality: { op: '==', left: { _t: 2, ref: 'gvar', var: 'resources' }, right: 9 },
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [],
+      atomicity: 'partial',
+    };
+    const def = makeDef(action, pipeline);
+    const state = makeState(3);
+    const snapshot = makeSnapshot(state, { resources: 9 });
+
+    const withoutSnapshot = evaluatePipelinePredicateStatus(action, pipeline, makeEvalCtx(def, state));
+    const withSnapshot = evaluatePipelinePredicateStatus(action, pipeline, makeEvalCtx(def, state), { snapshot });
+
+    assert.equal(withoutSnapshot.legalityPassed, false);
+    assert.equal(withSnapshot.legalityPassed, true);
+  });
+
+  it('threads snapshot through discovery stage checks', () => {
+    const action = makeAction();
+    const stage: ActionResolutionStageDef = {
+      legality: { op: '==', left: { _t: 2, ref: 'gvar', var: 'resources' }, right: 9 },
+      effects: [],
+    };
+    const def = makeDef(action, {
+      id: 'profile',
+      actionId: action.id,
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [stage],
+      atomicity: 'partial',
+    });
+    const state = makeState(3);
+    const snapshot = makeSnapshot(state, { resources: 9 });
+
+    const status = evaluateDiscoveryStagePredicateStatus(
+      action,
+      'profile',
+      stage,
+      'partial',
+      makeEvalCtx(def, state),
+      { snapshot },
+    );
+
+    assert.equal(status.legality, 'passed');
+  });
+
+  it('uses raw state semantics when snapshot is omitted', () => {
+    const action = makeAction();
+    const pipeline: ActionPipelineDef = {
+      id: 'profile',
+      actionId: action.id,
+      legality: { op: '==', left: { _t: 2, ref: 'gvar', var: 'resources' }, right: 9 },
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [],
+      atomicity: 'partial',
+    };
+    const def = makeDef(action, pipeline);
+    const status = evaluatePipelinePredicateStatus(action, pipeline, makeEvalCtx(def, makeState(3)));
+
+    assert.equal(status.legalityPassed, false);
+  });
+
+  it('ignores snapshot player vars when evaluation player differs from snapshot player', () => {
+    const action = makeAction();
+    const pipeline: ActionPipelineDef = {
+      id: 'profile',
+      actionId: action.id,
+      legality: { op: '==', left: { _t: 2, ref: 'pvar', player: 'active', var: 'resources' }, right: 8 },
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [],
+      atomicity: 'partial',
+    };
+    const def = makeDef(action, pipeline);
+    const state = makeState(3);
+    const snapshot = makeSnapshot(state, { activePlayer: asPlayerId(0), activePlayerResources: 99 });
+
+    const status = evaluatePipelinePredicateStatus(
+      action,
+      pipeline,
+      makeEvalCtx(def, state, {}, { activePlayer: asPlayerId(1) }),
+      { snapshot },
+    );
+
+    assert.equal(status.legalityPassed, true);
+  });
+
   it('evaluates boolean pipeline predicates directly', () => {
     const action = makeAction();
     const pipeline: ActionPipelineDef = {

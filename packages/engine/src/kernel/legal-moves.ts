@@ -3,6 +3,7 @@ import { evalCondition } from './eval-condition.js';
 import { resolveActionExecutor } from './action-executor.js';
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
 import { resolveDeclaredActionParamDomainOptions } from './declared-action-param-domain.js';
+import { createEnumerationSnapshot, type EnumerationStateSnapshot } from './enumeration-snapshot.js';
 import type { ReadContext, EvalRuntimeResources } from './eval-context.js';
 import { createEvalRuntimeResources } from './eval-context.js';
 import { resolveCapturedSequenceZonesByKey } from './free-operation-captured-sequence-zones.js';
@@ -407,6 +408,7 @@ function enumerateParams(
     readonly discoverer?: EnumerationDecisionDiscoverer;
     readonly runtime?: GameDefRuntime;
     readonly firstDecisionDomains?: FirstDecisionRuntimeCompilation;
+    readonly snapshot?: EnumerationStateSnapshot;
   },
   scope?: MutableEnumerationReadContext,
 ): void {
@@ -475,6 +477,7 @@ function enumerateParams(
     if (options?.pipeline !== undefined) {
       const status = evaluateDiscoveryPipelinePredicateStatus(action, options.pipeline, ctx, {
         includeCostValidation: options.pipeline.atomicity === 'atomic',
+        snapshot: options.snapshot,
       });
       const viabilityDecision = decideDiscoveryLegalChoicesPipelineViability(status);
       if (viabilityDecision.kind === 'illegalChoice') {
@@ -589,6 +592,7 @@ function enumeratePendingFreeOperationMoves(
   firstDecisionDomains: FirstDecisionRuntimeCompilation,
   currentPhaseDef: PhaseDef | undefined,
   seatResolution: ReturnType<typeof createSeatResolutionContext>,
+  snapshot: EnumerationStateSnapshot,
 ): void {
   if (state.turnOrderState.type !== 'cardDriven') {
     return;
@@ -815,6 +819,7 @@ function enumeratePendingFreeOperationMoves(
             ),
             ...freeOperationPreflightOverlay,
             firstDecisionDomains,
+            snapshot,
             moveOverrides: {
               freeOperation: true,
               ...(needsGrantActionClassOverride ? { actionClass: targetActionClass } : {}),
@@ -844,6 +849,7 @@ function enumeratePendingFreeOperationMoves(
           currentPhaseDef,
           {
             firstDecisionDomains,
+            snapshot,
             moveOverrides: {
               freeOperation: true,
               ...(needsGrantActionClassOverride ? { actionClass: targetActionClass } : {}),
@@ -891,6 +897,7 @@ function enumeratePendingFreeOperationMoves(
         }
         const status = evaluateDiscoveryPipelinePredicateStatus(action, pipeline, preflight.evalCtx, {
           includeCostValidation: pipeline.atomicity === 'atomic',
+          snapshot,
         });
         const viabilityDecision = decideDiscoveryLegalMovesPipelineViability(status);
         if (viabilityDecision.kind === 'excludeTemplate') {
@@ -985,6 +992,7 @@ function enumeratePendingFreeOperationMoves(
               candidatePreflight.evalCtx,
               {
                 includeCostValidation: candidatePipeline.atomicity === 'atomic',
+                snapshot,
               },
             );
             const candidateViabilityDecision = decideDiscoveryLegalMovesPipelineViability(candidateStatus);
@@ -1176,6 +1184,7 @@ const enumerateRawLegalMoves = (
   const adjacencyGraph = runtime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones);
   const runtimeTableIndex = runtime?.runtimeTableIndex ?? buildRuntimeTableIndex(def);
   const evalRuntimeResources = createEvalRuntimeResources();
+  const snapshot = createEnumerationSnapshot(def, state, state.activePlayer);
   const currentPhaseDef = findPhaseDef(def, state.currentPhase);
   const defaultDiscover = createMoveDecisionSequenceChoiceDiscoverer(def, state, runtime);
   const cachedDiscover: EnumerationDecisionDiscoverer = (move, discoverOptions) => {
@@ -1224,6 +1233,7 @@ const enumerateRawLegalMoves = (
           ...(runtime === undefined ? {} : { runtime }),
           firstDecisionDomains,
           discoverer: cachedDiscover,
+          snapshot,
         },
       );
       if (enumeration.moves.length > 0) break;
@@ -1297,6 +1307,7 @@ const enumerateRawLegalMoves = (
           ...(runtime === undefined ? {} : { runtime }),
           firstDecisionDomains,
           discoverer: cachedDiscover,
+          snapshot,
         },
       );
       continue;
@@ -1306,6 +1317,7 @@ const enumerateRawLegalMoves = (
       const pipeline = preflight.pipelineDispatch.profile;
       const status = evaluateDiscoveryPipelinePredicateStatus(action, pipeline, preflight.evalCtx, {
         includeCostValidation: pipeline.atomicity === 'atomic',
+        snapshot,
       });
       const viabilityDecision = decideDiscoveryLegalMovesPipelineViability(status);
       if (viabilityDecision.kind === 'excludeTemplate') {
@@ -1359,6 +1371,7 @@ const enumerateRawLegalMoves = (
     firstDecisionDomains,
     currentPhaseDef,
     seatResolution,
+    snapshot,
   );
 
   const finalMoves = applyTurnFlowWindowFilters(def, state, enumeration.moves, seatResolution);

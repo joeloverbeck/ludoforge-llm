@@ -1,10 +1,10 @@
 # 92ENUSTASNA-004: Wire snapshot creation in enumerateRawLegalMoves
 
-**Status**: PENDING
+**Status**: DEFERRED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — legal-moves.ts snapshot creation and threading
-**Deps**: 92ENUSTASNA-003
+**Deps**: archive/tickets/92ENUSTASNA/92ENUSTASNA-003-thread-snapshot-through-pipeline-policy.md
 
 ## Problem
 
@@ -14,86 +14,55 @@ The snapshot module exists (001), compiled predicates accept it (002), and the p
 
 1. `enumerateRawLegalMoves` is defined at line ~1150 of `legal-moves.ts` — confirmed. Signature: `(def, state, options?, runtime?) => RawLegalMoveEnumerationResult`.
 2. There are 4 call sites of `evaluateDiscoveryPipelinePredicateStatus` in `legal-moves.ts` — confirmed (lines ~476, ~892, ~982, ~1307).
-3. `state.activePlayer` is accessed within `enumerateRawLegalMoves` to determine the active player — need to verify the exact access pattern.
-4. The snapshot is a local variable — not stored on any object, discarded when the function returns.
-5. This ticket only wires snapshot creation and transport. It should not expand snapshot usage into new aggregate consumers while `zoneTotals` still exposes a composite-string API.
+3. The core wiring described here has already been delivered as part of the implementation for archived ticket `92ENUSTASNA-003`: `enumerateRawLegalMoves` now creates a snapshot once and threads it through the relevant `legal-moves.ts` discovery call sites.
+4. Because that work is already landed, implementing this ticket as originally written would duplicate already-delivered architecture, violating the ticket authoring contract.
+5. The remaining architectural gap is not "wire the snapshot into legal moves" but "generalize snapshot player access so enumeration-time compiled predicates can use snapshot data safely even when evaluation runs under a non-`state.activePlayer` executor context." That follow-up belongs in a separate ticket.
 
 ## Architecture Check
 
-1. The snapshot is created as a `const` local variable at the top of `enumerateRawLegalMoves`, immediately after parameter extraction. It is passed by reference to evaluation calls — no copying overhead.
-2. No new fields on any kernel object. The snapshot lives only in the function's local scope (F7 immutability exception: lazy caches are scoped to this single synchronous call).
-3. The snapshot is computed from `def`, `state`, and `activePlayer` — all available at function entry. O(1) creation cost (eager fields are reference copies; lazy fields are closure allocations).
+1. No standalone implementation remains here. The intended architecture for legal-move wiring already exists in production code.
+2. Keeping this ticket active as a code-change ticket would be misleading and would duplicate architecture already delivered elsewhere.
+3. Any future ticket that touches this area should address the deeper player-context design gap, not re-land the already-completed snapshot transport.
 
 ## What to Change
 
-### 1. Import `createEnumerationSnapshot`
+### 1. Do not re-implement the legal-moves wiring
 
-Add import of `createEnumerationSnapshot` and `EnumerationStateSnapshot` type from `./enumeration-snapshot.js`.
+No production code changes should be made under this ticket as currently written.
 
-### 2. Create snapshot at function entry
+### 2. Treat this ticket as superseded by the archived 003 delivery
 
-At the top of `enumerateRawLegalMoves`, after determining `activePlayer`:
-
-```typescript
-const snapshot = createEnumerationSnapshot(def, state, activePlayer);
-```
-
-Where `activePlayer` is resolved from `state` (using the same mechanism already used in the function).
-
-### 3. Pass snapshot to all `evaluateDiscoveryPipelinePredicateStatus` call sites
-
-All 4 call sites of `evaluateDiscoveryPipelinePredicateStatus` in `legal-moves.ts` gain the snapshot as the final argument:
-
-```typescript
-evaluateDiscoveryPipelinePredicateStatus(action, pipeline, preflight.evalCtx, {
-  includeCostValidation: pipeline.atomicity === 'atomic',
-}, snapshot)
-```
-
-### 4. Pass snapshot to `evaluateDiscoveryStagePredicateStatus` call sites (if any)
-
-Verify and update any stage-level evaluation calls within `enumerateRawLegalMoves`.
+If further work is needed in this area, it should start from the current code and from the follow-up player-generalization ticket rather than from this original wiring plan.
 
 ## Files to Touch
 
-- `packages/engine/src/kernel/legal-moves.ts` (modify)
+- None
 
 ## Out of Scope
 
-- Creating the snapshot module (ticket 001)
-- Modifying compiled closure bodies (ticket 002)
-- Modifying pipeline policy signatures (ticket 003)
-- Passing snapshot to non-enumeration contexts (e.g., `applyMove`, effect execution, `legalChoicesDiscover` outside of legalMoves)
-- Modifying the `legalMoves` or `enumerateLegalMoves` public wrappers' signatures
+- Re-landing wiring already completed by archived ticket `92ENUSTASNA-003`
+- The player-generalization architecture follow-up
 - Performance benchmarking (ticket 006)
-- Adding any new compiled aggregate consumer of `snapshot.zoneTotals`; that follow-up belongs in `92ENUSTASNA-007`
+- Any new compiled aggregate consumer of `snapshot.zoneTotals`; that follow-up belongs in `92ENUSTASNA-007`
 
 ## Acceptance Criteria
 
 ### Tests That Must Pass
 
-1. Integration test: `enumerateRawLegalMoves` on a FITL game state produces identical moves with and without the snapshot wiring (determinism check — same def + same state + same seed = same legal moves).
-2. Integration test: `legalMoves` public API produces identical results to before this change for multiple game states.
-3. Existing suite: `pnpm turbo test --force`
-4. Existing FITL e2e tests pass without any assertion changes.
+1. No implementation should proceed from this ticket as currently written.
+2. Follow-up work should be tracked in the updated active tickets instead of duplicating delivered wiring.
 
 ### Invariants
 
-1. `enumerateRawLegalMoves` produces identical move sets before and after this change for all inputs (behavioral equivalence).
-2. The snapshot is a local variable — not stored on `GameDefRuntime`, `ReadContext`, `EffectCursor`, `Move`, or any other kernel object.
-3. The snapshot is created once per `enumerateRawLegalMoves` call and discarded when the function returns.
-4. No changes to the public `legalMoves` or `enumerateLegalMoves` function signatures.
+1. The active ticket set should not duplicate already-delivered architecture.
+2. Any future implementation in this area must start from the current codebase, not from the stale assumptions in this original ticket.
 
 ## Test Plan
 
 ### New/Modified Tests
 
-1. `packages/engine/test/integration/enumeration-snapshot-wiring.test.ts` — compiles a production FITL spec, creates multiple game states, verifies `legalMoves` output is identical before and after snapshot wiring. Uses `compileProductionSpec()` helper.
+1. None. Superseded by completed work and by the active equivalence/benchmark/player-generalization tickets.
 
 ### Commands
 
-1. `pnpm turbo build`
-2. `node --test packages/engine/dist/test/integration/enumeration-snapshot-wiring.test.js`
-3. `pnpm -F @ludoforge/engine test:e2e`
-4. `pnpm turbo test --force`
-5. `pnpm turbo typecheck`
+1. None

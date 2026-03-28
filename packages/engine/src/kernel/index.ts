@@ -105,6 +105,7 @@ export * from './condition-annotator.js';
 export * from './compiled-condition-cache.js';
 export * from './condition-compiler.js';
 export * from './condition-operator-meta.js';
+export * from './enumeration-snapshot.js';
 export * from './tooltip-ir.js';
 export * from './tooltip-rule-card.js';
 export * from './verbalization-types.js';

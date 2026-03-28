@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — test-only
-**Deps**: 92ENUSTASNA-004 (full wiring must be in place), 92ENUSTASNA-005 (equivalence proven first)
+**Deps**: 92ENUSTASNA-004, 92ENUSTASNA-005
 
 ## Problem
 
@@ -16,6 +16,7 @@ The spec's acceptance criterion #7 requires a performance benchmark proving eith
 2. `compileProductionSpec()` is available for FITL production spec compilation.
 3. `legalMoves(def, state)` is the primary benchmark target — it internally creates and uses the snapshot.
 4. The benchmark should measure wall-clock time for `legalMoves` across multiple game states with multiple iterations to reduce noise.
+5. The benchmark in this ticket measures the currently wired snapshot surface only. It should not be treated as justification for keeping the composite-string `zoneTotals` API when future aggregate consumers are added.
 
 ## Architecture Check
 
@@ -54,6 +55,7 @@ The benchmark should:
 - Modifying existing benchmarks
 - Establishing CI baseline infrastructure (this is a reportable benchmark, not a CI gate)
 - Optimizing snapshot creation itself (if benchmark shows no benefit, that's an acceptable result per AC#7)
+- Benchmarking future structured zone-total consumers before `92ENUSTASNA-007` is implemented
 
 ## Acceptance Criteria
 
@@ -79,5 +81,6 @@ The benchmark should:
 
 ### Commands
 
-1. `pnpm -F @ludoforge/engine test -- --test-name-pattern="enumeration-snapshot-benchmark"`
-2. `pnpm turbo test --force`
+1. `pnpm turbo build`
+2. `node --test packages/engine/dist/test/performance/enumeration-snapshot-benchmark.test.js`
+3. `pnpm turbo test --force`

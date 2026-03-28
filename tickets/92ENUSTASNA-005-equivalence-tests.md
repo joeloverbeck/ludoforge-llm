@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — test-only
-**Deps**: 92ENUSTASNA-004 (full wiring must be in place)
+**Deps**: 92ENUSTASNA-004
 
 ## Problem
 
@@ -17,6 +17,7 @@ The spec's acceptance criterion #3 requires proving that compiled-with-snapshot 
 3. `createEnumerationSnapshot(def, state, activePlayer)` will exist after ticket 001 — dependency.
 4. `initialState(def, seed)` creates a deterministic starting state — standard kernel API.
 5. Random state generation can be done by applying N random moves from `legalMoves` with different seeds.
+6. This ticket proves equivalence only for the snapshot consumers that exist after tickets `002` through `004`. It does not cover future zone-total compiled reads, which need their own dedicated coverage once `92ENUSTASNA-007` lands.
 
 ## Architecture Check
 
@@ -57,6 +58,7 @@ This can be done by comparing the legalMoves output against a baseline captured 
 - Testing non-compiled conditions (they don't use the snapshot — spec explicitly states this)
 - Testing snapshot correctness in isolation (covered by ticket 001 tests)
 - Testing compiled closure snapshot reads in isolation (covered by ticket 002 tests)
+- Proving equivalence for future structured zone-total snapshot consumers; that belongs with `92ENUSTASNA-007` and any later aggregate-compiler ticket
 
 ## Acceptance Criteria
 
@@ -81,5 +83,6 @@ This can be done by comparing the legalMoves output against a baseline captured 
 
 ### Commands
 
-1. `pnpm -F @ludoforge/engine test -- --test-name-pattern="enumeration-snapshot-equivalence"`
-2. `pnpm turbo test --force`
+1. `pnpm turbo build`
+2. `node --test packages/engine/dist/test/unit/kernel/enumeration-snapshot-equivalence.test.js`
+3. `pnpm turbo test --force`

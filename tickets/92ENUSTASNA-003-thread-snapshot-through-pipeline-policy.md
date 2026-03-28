@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — pipeline-viability-policy function signatures
-**Deps**: 92ENUSTASNA-002 (predicate type must accept snapshot)
+**Deps**: 92ENUSTASNA-002
 
 ## Problem
 
@@ -16,6 +16,7 @@
 2. `evaluateCompiledPredicate` is called from two internal functions: `evaluatePredicate` (line 82) and `evaluateDiscoveryPredicate` (line 108) — confirmed.
 3. The public API surface is: `evaluatePipelinePredicateStatus`, `evaluateStagePredicateStatus`, `evaluateDiscoveryPipelinePredicateStatus`, `evaluateDiscoveryStagePredicateStatus` — confirmed at lines 162-196.
 4. These public functions are called from `legal-moves.ts` — confirmed (4 call sites).
+5. This ticket only threads an opaque snapshot parameter. It does not create new snapshot consumers and therefore should not introduce any dependency on the current composite-string `zoneTotals` accessor shape.
 
 ## Architecture Check
 
@@ -71,6 +72,7 @@ Add `import type { EnumerationStateSnapshot } from './enumeration-snapshot.js'`.
 - Modifying `ReadContext`, `EffectCursor`, `GameDefRuntime`, or `Move` types
 - Changing the non-compiled interpreter fallback path (`evalActionPipelinePredicate`)
 - Modifying `action-pipeline-predicates.ts`
+- Introducing any new zone-total snapshot consumer; that work must wait for `92ENUSTASNA-007`
 
 ## Acceptance Criteria
 
@@ -96,6 +98,7 @@ Add `import type { EnumerationStateSnapshot } from './enumeration-snapshot.js'`.
 
 ### Commands
 
-1. `pnpm -F @ludoforge/engine test -- --test-name-pattern="pipeline-viability-snapshot"`
-2. `pnpm turbo test --force`
-3. `pnpm turbo typecheck`
+1. `pnpm turbo build`
+2. `node --test packages/engine/dist/test/unit/kernel/pipeline-viability-snapshot-threading.test.js`
+3. `pnpm turbo test --force`
+4. `pnpm turbo typecheck`

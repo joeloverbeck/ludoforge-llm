@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — condition-compiler type + closure bodies
-**Deps**: 92ENUSTASNA-001 (snapshot types must exist)
+**Deps**: 92ENUSTASNA-001
 
 ## Problem
 
@@ -16,6 +16,7 @@ Spec 90's compiled condition predicates read state properties via `state.globalV
 2. `tryCompileCondition` compiles comparison conditions with `compileComparisonAccessor` producing closures that read `state.globalVars`, `state.perPlayerVars` — confirmed.
 3. `CompiledConditionPredicate` is referenced in `compiled-condition-cache.ts` — the type flows through; no structural cache changes needed.
 4. Compiled closures for `and`, `or`, `not` delegate to sub-closures — these must also thread the snapshot parameter.
+5. Ticket `001` introduced `snapshot.zoneTotals`, but this ticket still does not consume it. The remaining Spec 92 series only wires snapshot reads for `globalVars` and active-player `perPlayerVars`. Any future compiled aggregate use of zone totals should move off the composite-string accessor first.
 
 ## Architecture Check
 
@@ -85,6 +86,7 @@ Add import of `EnumerationStateSnapshot` from `./enumeration-snapshot.js` in `co
 - Modifying `pipeline-viability-policy.ts` to pass snapshot (ticket 003)
 - Modifying `legal-moves.ts` (ticket 004)
 - Adding snapshot reads for `zoneTotals`, `zoneVars`, or `markerStates` (those require aggregate/zone-level compiled closures — future enhancement beyond current `tryCompileCondition` scope)
+- Introducing any new compiled consumer of the composite-string `snapshot.zoneTotals.get(key)` API; that follow-up belongs in `92ENUSTASNA-007`
 - Modifying `compiled-condition-cache.ts` (type flows automatically from the re-exported `CompiledConditionPredicate`)
 - Modifying any other kernel types or hot-path objects
 
@@ -117,6 +119,7 @@ Add import of `EnumerationStateSnapshot` from `./enumeration-snapshot.js` in `co
 
 ### Commands
 
-1. `pnpm -F @ludoforge/engine test -- --test-name-pattern="compiled-predicate-snapshot"`
-2. `pnpm turbo test --force`
-3. `pnpm turbo typecheck`
+1. `pnpm turbo build`
+2. `node --test packages/engine/dist/test/unit/kernel/compiled-predicate-snapshot.test.js`
+3. `pnpm turbo test --force`
+4. `pnpm turbo typecheck`

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — legal-moves.ts snapshot creation and threading
-**Deps**: 92ENUSTASNA-003 (pipeline policy must accept snapshot parameter)
+**Deps**: 92ENUSTASNA-003
 
 ## Problem
 
@@ -16,6 +16,7 @@ The snapshot module exists (001), compiled predicates accept it (002), and the p
 2. There are 4 call sites of `evaluateDiscoveryPipelinePredicateStatus` in `legal-moves.ts` — confirmed (lines ~476, ~892, ~982, ~1307).
 3. `state.activePlayer` is accessed within `enumerateRawLegalMoves` to determine the active player — need to verify the exact access pattern.
 4. The snapshot is a local variable — not stored on any object, discarded when the function returns.
+5. This ticket only wires snapshot creation and transport. It should not expand snapshot usage into new aggregate consumers while `zoneTotals` still exposes a composite-string API.
 
 ## Architecture Check
 
@@ -65,6 +66,7 @@ Verify and update any stage-level evaluation calls within `enumerateRawLegalMove
 - Passing snapshot to non-enumeration contexts (e.g., `applyMove`, effect execution, `legalChoicesDiscover` outside of legalMoves)
 - Modifying the `legalMoves` or `enumerateLegalMoves` public wrappers' signatures
 - Performance benchmarking (ticket 006)
+- Adding any new compiled aggregate consumer of `snapshot.zoneTotals`; that follow-up belongs in `92ENUSTASNA-007`
 
 ## Acceptance Criteria
 
@@ -90,7 +92,8 @@ Verify and update any stage-level evaluation calls within `enumerateRawLegalMove
 
 ### Commands
 
-1. `pnpm -F @ludoforge/engine test -- --test-name-pattern="enumeration-snapshot-wiring"`
-2. `pnpm -F @ludoforge/engine test:e2e`
-3. `pnpm turbo test --force`
-4. `pnpm turbo typecheck`
+1. `pnpm turbo build`
+2. `node --test packages/engine/dist/test/integration/enumeration-snapshot-wiring.test.js`
+3. `pnpm -F @ludoforge/engine test:e2e`
+4. `pnpm turbo test --force`
+5. `pnpm turbo typecheck`

@@ -7,65 +7,63 @@ Proposed
 ## Problem
 
 `enumerateRawLegalMoves` iterates ALL `def.actions` (45 for FITL) on every
-game step, running `resolveActionApplicabilityPreflight` for each. Many
-actions are inapplicable in the current phase:
+game step. For each action, it calls `resolveActionApplicabilityPreflight`,
+which performs several checks before reaching the phase filter:
 
-- ~10 coup-specific actions (`coupPacifyUS`, `coupAgitateVC`,
-  `coupArvnRedeployMandatory`, etc.) are only valid during coup phases.
-- ~20 operation/special-activity actions (`train`, `sweep`, `assault`, etc.)
-  are only valid during the main phase.
-- Event and pass actions span multiple phases.
+1. `buildMoveRuntimeBindings()` — allocates a bindings object.
+2. Linear `.some()` scan of `def.actionPipelines` — in both the caller
+   (line 1207) and inside the preflight (line 93).
+3. `evaluateActionSelectorContracts()` — validates actor/executor selectors.
+4. Only then: `action.phase.includes(state.currentPhase)` — the actual
+   phase check (line 112).
 
-Currently, there is no phase-based pre-filtering -- every action goes through
-the full preflight on every step regardless of phase. The preflight evaluates
-executor resolution, selector contracts, pipeline dispatch, and preconditions.
-While individual preflights are cheap (<0.5ms), the cumulative cost of ~30
-unnecessary preflights per step over 600 steps is significant.
+When the phase check fails, all preceding work is wasted. In FITL, ~30 of 45
+actions are inapplicable in any given phase (e.g., ~10 coup actions during
+main phase, ~20 operation actions during coup phases). Over 600+ simulation
+steps, this accumulates into significant unnecessary computation.
 
-More importantly, this creates an **architectural gap**: the kernel has no
-mechanism to express which actions are applicable in which phases, forcing
-runtime evaluation of a compile-time-determinable property.
+The kernel already has the data to avoid this: every `ActionDef` carries an
+explicit `phase: readonly PhaseId[]` array populated by the compiler. The
+missing piece is a **phase-to-actions index** that lets the enumeration loop
+skip inapplicable actions without entering the preflight at all.
 
 ## Objective
 
-Pre-compute phase-to-action mappings so that `enumerateRawLegalMoves` only
-iterates actions applicable to the current phase.
+Pre-compute a phase-to-actions index so that `enumerateRawLegalMoves` only
+iterates actions whose `phase` array includes the current phase.
 
 ## Design
 
-### Static Phase Applicability Analysis
+### Phase-to-Actions Index
 
-At `GameDefRuntime` creation time (or via a module-level WeakMap cache keyed
-on `def.actions`), analyze each action to determine which phases it can be
-active in.
-
-**Analysis inputs** (all available at compile time / runtime init):
-
-1. **Pipeline phase restrictions**: Each `ActionPipelineDef` profile may
-   declare phase restrictions in its predicates. If ALL profiles for an action
-   restrict to specific phases, the action is phase-restricted.
-
-2. **Turn structure phase membership**: Actions are declared within phase
-   definitions in `def.turnStructure.phases` and `def.turnStructure.interrupts`.
-   The phase that CONTAINS an action's definition determines its phase scope.
-
-3. **Action preconditions**: Some preconditions explicitly check the current
-   phase (e.g., `{ op: '==', left: { ref: 'currentPhase' }, right: 'coup' }`).
-   Static analysis of simple phase-equality conditions can tighten the mapping.
-
-**Analysis output**:
+At `GameDef` initialization time (cached via module-level WeakMap), invert
+each action's `phase` array into a `Map<PhaseId, ActionDef[]>`:
 
 ```typescript
 interface PhaseActionIndex {
-  /** Actions known to be valid only in specific phases. */
-  readonly actionsByPhase: ReadonlyMap<string, readonly ActionDef[]>;
-  /** Actions valid in ALL phases (no phase restriction detected). */
-  readonly universalActions: readonly ActionDef[];
+  readonly actionsByPhase: ReadonlyMap<PhaseId, readonly ActionDef[]>;
+}
+
+function buildPhaseActionIndex(def: GameDef): PhaseActionIndex {
+  const map = new Map<PhaseId, ActionDef[]>();
+  for (const action of def.actions) {
+    for (const phaseId of action.phase) {
+      let list = map.get(phaseId);
+      if (list === undefined) {
+        list = [];
+        map.set(phaseId, list);
+      }
+      list.push(action);
+    }
+  }
+  return { actionsByPhase: map };
 }
 ```
 
-For a given `state.currentPhase`, the enumeration iterates:
-`[...universalActions, ...(actionsByPhase.get(currentPhase) ?? [])]`
+No `universalActions` bucket is needed. The compiler enforces that every
+action has a non-empty `phase` array (`compile-lowering.ts:842-846` rejects
+empty arrays). Actions spanning multiple phases (e.g., `coupPacifyUS` with
+`["coupSupport", "honoluluPacify"]`) simply appear in multiple buckets.
 
 ### Cache Strategy
 
@@ -74,7 +72,7 @@ class deoptimization (proven across 5 experiments). The phase index MUST use
 the existing module-level WeakMap cache pattern from `def-lookup.ts`.
 
 ```typescript
-// In a new file: phase-action-index.ts (or in def-lookup.ts)
+// In a new file: phase-action-index.ts
 const phaseActionIndexCache = new WeakMap<readonly ActionDef[], PhaseActionIndex>();
 
 export function getPhaseActionIndex(def: GameDef): PhaseActionIndex {
@@ -87,85 +85,72 @@ export function getPhaseActionIndex(def: GameDef): PhaseActionIndex {
 }
 ```
 
-This follows the exact pattern of `getZoneMap`, `getLatticeMap`, and
-`seatResolutionCache` -- all proven to work without V8 deopt because the
-WeakMap is keyed on a STABLE array reference, not created in the hot loop.
+This follows the exact pattern of `getZoneMap` and `getLatticeMap` — keyed on
+a stable array reference, not created in the hot loop.
 
 ### Enumeration Integration
 
-In `enumerateRawLegalMoves`, replace the `for (const action of def.actions)`
-loop with:
+In `enumerateRawLegalMoves`, replace `for (const action of def.actions)` with:
 
 ```typescript
 const phaseIndex = getPhaseActionIndex(def);
-const phaseActions = phaseIndex.actionsByPhase.get(String(state.currentPhase)) ?? [];
-const actionsToEnumerate = [...phaseIndex.universalActions, ...phaseActions];
+const actionsForPhase = phaseIndex.actionsByPhase.get(state.currentPhase) ?? [];
 
-for (const action of actionsToEnumerate) {
+for (const action of actionsForPhase) {
   // ... existing preflight + enumeration logic
 }
 ```
 
-### Conservative Analysis
+The same replacement applies to the early-exit trivial-action pass
+(lines 1158-1194), which also iterates all `def.actions`.
 
-The analysis MUST be conservative -- if phase applicability cannot be
-determined statically, the action goes into `universalActions` (always
-iterated). This ensures correctness: no action is ever incorrectly excluded.
-
-Actions classified as universal:
-- Actions with no pipeline and no phase-related precondition.
-- Actions whose pipeline predicates reference dynamic state (not just phase).
-- `pass` and `event` (applicable in multiple phases).
-
-Actions classified as phase-restricted:
-- Coup actions whose pipeline predicates check `currentPhase === 'coup*'`.
-- Actions whose `pre` condition is a simple phase-equality check.
-- Actions declared exclusively within a single phase's action list.
-
-### Fallback
-
-If the analysis produces an empty `actionsByPhase` (no restrictions detected),
-the optimization has zero effect -- `universalActions` contains all actions and
-the loop iterates them all. This is the safe default.
+The preflight's phase check (line 112) becomes redundant for actions obtained
+from the index, but SHOULD be retained as a belt-and-suspenders safety check.
+Its cost is negligible (~nanoseconds for `.includes()` on a 1-2 element
+array) and it guards against future index bugs.
 
 ## FOUNDATIONS Alignment
 
 | Foundation | Alignment |
 |-----------|-----------|
 | F1 (Agnosticism) | Phase filtering uses the generic phase system, not game IDs |
-| F5 (Determinism) | Conservative analysis -- never excludes an action that could be legal |
+| F5 (Determinism) | Index is derived from immutable `ActionDef.phase` arrays |
 | F6 (Bounded Computation) | Tighter iteration bounds: O(phase_actions) vs O(all_actions) |
-| F8 (Compiler-Kernel Boundary) | Phase restrictions are compile-time properties analyzed at runtime init |
+| F8 (Compiler-Kernel Boundary) | Phase membership is compiler-assigned; kernel just indexes it |
 | F9 (No Backwards Compat) | Clean replacement, no fallback paths |
-| F10 (Completeness) | Addresses the root cause (unnecessary iteration) |
+| F10 (Completeness) | Addresses the root cause (unnecessary iteration and preflight entry) |
 | F11 (Testing as Proof) | Parity test proves same legal moves in all phases |
 
 ## Acceptance Criteria
 
-1. `getPhaseActionIndex(def)` returns a correct phase-action mapping for FITL
-   (coup actions restricted to coup phases, operations to main phase).
-2. `enumerateRawLegalMoves` only iterates phase-applicable actions.
+1. `getPhaseActionIndex(def)` correctly groups FITL's 45 actions across 7
+   phases (43 single-phase actions, 2 dual-phase actions).
+2. `enumerateRawLegalMoves` iterates only phase-applicable actions in both
+   the main loop and the early-exit trivial-action pass.
 3. All existing tests pass (including `classified-move-parity`,
    `no-hardcoded FITL audit`).
 4. The phase index uses a module-level WeakMap cache (NOT on GameDefRuntime).
-5. Conservative analysis: any action whose phase cannot be statically
-   determined is included in `universalActions`.
-6. FITL benchmark shows measurable improvement (target: >3% reduction in
-   `simLegalMoves`).
+5. The preflight phase check is retained as a safety assertion.
 
 ## Estimated Impact
 
-For FITL with ~10 coup-specific actions and ~20 main-phase operations:
-- During main phase: skip 10 coup actions (22% fewer iterations).
-- During coup phases: skip 20 operation actions (44% fewer iterations).
+For FITL with 45 actions across 7 phases:
+- During main phase: skip ~35 non-main actions (iterate ~10 instead of 45).
+- During any coup sub-phase: skip ~30+ non-coup actions.
 
-Estimated 10-20% reduction in enumeration preflight cost.
+Per skipped action, the optimization avoids:
+- `buildMoveRuntimeBindings()` allocation
+- Two linear `.some()` pipeline scans (`def.actionPipelines`)
+- `evaluateActionSelectorContracts()` validation
+- Function call overhead into `resolveActionApplicabilityPreflight`
+
+Estimated 60-75% reduction in preflight invocations per step.
 
 ## Files to Create
 
-- `packages/engine/src/kernel/phase-action-index.ts` -- analysis + cache
+- `packages/engine/src/kernel/phase-action-index.ts` — index builder + WeakMap cache
 
 ## Files to Modify
 
-- `packages/engine/src/kernel/legal-moves.ts` -- use phase index in enumeration
-- `packages/engine/test/` -- phase index unit tests
+- `packages/engine/src/kernel/legal-moves.ts` — use phase index in both enumeration loops
+- `packages/engine/test/` — phase index unit tests, enumeration parity tests

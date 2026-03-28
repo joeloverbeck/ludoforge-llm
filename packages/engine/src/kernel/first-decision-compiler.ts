@@ -1,6 +1,7 @@
-import type { PlayerId } from './branded.js';
-import { EFFECT_KIND_TAG, type ConditionAST, type EffectAST, type GameState, type OptionsQuery } from './types.js';
-import type { ChoiceOption } from './types-core.js';
+import type { ActionId } from './branded.js';
+import type { ReadContext } from './eval-context.js';
+import { evalQuery } from './eval-query.js';
+import { EFFECT_KIND_TAG, type ActionPipelineDef, type ConditionAST, type EffectAST, type GameDef, type OptionsQuery } from './types.js';
 
 export interface FirstDecisionNode {
   readonly kind: 'chooseOne' | 'chooseN';
@@ -13,17 +14,17 @@ export interface FirstDecisionNode {
 
 export interface FirstDecisionCheckResult {
   readonly admissible: boolean;
-  readonly domain?: readonly ChoiceOption[];
 }
 
 export interface FirstDecisionDomainResult {
   readonly compilable: boolean;
-  readonly check?: (
-    state: GameState,
-    activePlayer: PlayerId,
-  ) => FirstDecisionCheckResult;
+  readonly check?: (ctx: ReadContext) => FirstDecisionCheckResult;
   readonly description?: string;
-  readonly isSingleDecision?: boolean;
+}
+
+export interface FirstDecisionRuntimeCompilation {
+  readonly byActionId: ReadonlyMap<ActionId, FirstDecisionDomainResult>;
+  readonly byPipelineProfileId: ReadonlyMap<string, FirstDecisionDomainResult>;
 }
 
 interface WalkContext {
@@ -222,3 +223,102 @@ export const findFirstDecisionNode = (
 export const countDecisionNodes = (
   effects: readonly EffectAST[],
 ): number => countDecisionNodesInternal(effects);
+
+const getDecisionOptionsQuery = (
+  node: FirstDecisionNode,
+): OptionsQuery => {
+  if (node.kind === 'chooseOne') {
+    return (node.node as Extract<EffectAST, { readonly _k: 15 }>).chooseOne.options;
+  }
+  return (node.node as Extract<EffectAST, { readonly _k: 16 }>).chooseN.options;
+};
+
+const compileDirectFirstDecisionNode = (
+  node: FirstDecisionNode,
+): FirstDecisionDomainResult => {
+  const options = getDecisionOptionsQuery(node);
+  return {
+    compilable: true,
+    description: `direct:${options.query}`,
+    check: (ctx) => ({
+      admissible: evalQuery(options, ctx).length > 0,
+    }),
+  };
+};
+
+export const compileFirstDecisionDomain = (
+  effects: readonly EffectAST[],
+): FirstDecisionDomainResult => {
+  const firstDecision = findFirstDecisionNode(effects);
+  if (firstDecision === null) {
+    return {
+      compilable: false,
+      description: 'noDecision',
+    };
+  }
+
+  if (firstDecision.guardConditions.length > 0) {
+    return {
+      compilable: false,
+      description: 'guardedFirstDecision',
+    };
+  }
+
+  if (firstDecision.insideForEach) {
+    return {
+      compilable: false,
+      description: 'loopScopedFirstDecision',
+    };
+  }
+
+  return compileDirectFirstDecisionNode(firstDecision);
+};
+
+export const compilePipelineFirstDecisionDomain = (
+  pipeline: ActionPipelineDef,
+): FirstDecisionDomainResult => {
+  for (const stage of pipeline.stages) {
+    const compiled = compileFirstDecisionDomain(stage.effects);
+    if (compiled.compilable) {
+      return {
+        ...compiled,
+        description: stage.stage === undefined
+          ? `pipeline:${pipeline.id}:${compiled.description ?? 'compiled'}`
+          : `pipeline:${pipeline.id}:${stage.stage}:${compiled.description ?? 'compiled'}`,
+      };
+    }
+
+    if (findFirstDecisionNode(stage.effects) !== null) {
+      return {
+        compilable: false,
+        description: stage.stage === undefined
+          ? `pipeline:${pipeline.id}:unsupportedStageFirstDecision`
+          : `pipeline:${pipeline.id}:${stage.stage}:unsupportedStageFirstDecision`,
+      };
+    }
+  }
+
+  return {
+    compilable: false,
+    description: `pipeline:${pipeline.id}:noDecision`,
+  };
+};
+
+export const compileGameDefFirstDecisionDomains = (
+  def: GameDef,
+): FirstDecisionRuntimeCompilation => {
+  const byActionId = new Map<ActionId, FirstDecisionDomainResult>();
+  for (const action of def.actions) {
+    byActionId.set(action.id, compileFirstDecisionDomain(action.effects));
+  }
+
+  const byPipelineProfileId = new Map<string, FirstDecisionDomainResult>();
+  for (const pipeline of def.actionPipelines ?? []) {
+    byPipelineProfileId.set(pipeline.id, compilePipelineFirstDecisionDomain(pipeline));
+  }
+
+  return {
+    byActionId,
+    byPipelineProfileId,
+  };
+};

@@ -19,6 +19,7 @@ import {
   asPlayerId,
   asTokenId,
   asZoneId,
+  createGameDefRuntime,
   enumerateLegalMoves,
   isKernelErrorCode,
   legalMoves,
@@ -3785,6 +3786,79 @@ describe('legalMoves plain-action feasibility probe', () => {
     assert.equal(result.moves[0]?.move.actionId, asActionId('patrol'));
   });
 
+  it('34a. runtime first-decision compilation filters unconditional empty token domains', () => {
+    const action: ActionDef = {
+      id: asActionId('tokenProbe'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [
+        eff({
+          chooseOne: {
+            internalDecisionId: 'decision:$token',
+            bind: '$token',
+            options: { query: 'tokensInZone', zone: 'board:none' },
+          },
+        }) as GameDef['actions'][number]['effects'][number],
+      ],
+      limits: [],
+    };
+
+    const def = makeBaseDef({
+      actions: [action],
+      zones: [
+        { id: asZoneId('board:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+      ],
+    });
+    const state = makeBaseState({
+      zones: {
+        'board:none': [],
+      },
+    });
+    const runtime = createGameDefRuntime(def);
+
+    const moves = legalMoves(def, state, { probePlainActionFeasibility: true }, runtime);
+    assert.equal(runtime.firstDecisionDomains.byActionId.get(action.id)?.compilable, true);
+    assert.equal(moves.length, 0, 'compiled unconditional token domain should reject empty domains early');
+  });
+
+  it('34b. guarded first decisions remain interpreter-backed and keep observable behavior', () => {
+    const action: ActionDef = {
+      id: asActionId('guardedProbe'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [
+        eff({
+          if: {
+            when: true,
+            then: [eff({
+              chooseOne: {
+                internalDecisionId: 'decision:$target',
+                bind: '$target',
+                options: { query: 'enums', values: [] },
+              },
+            })],
+          },
+        }) as GameDef['actions'][number]['effects'][number],
+      ],
+      limits: [],
+    };
+
+    const def = makeBaseDef({ actions: [action] });
+    const runtime = createGameDefRuntime(def);
+
+    const moves = legalMoves(def, makeBaseState(), { probePlainActionFeasibility: true }, runtime);
+    assert.equal(runtime.firstDecisionDomains.byActionId.get(action.id)?.compilable, false);
+    assert.equal(moves.length, 0, 'guarded first decisions should still be filtered by the canonical interpreter path');
+  });
+
   it('35. pipeline actions are not double-probed', () => {
     const action: ActionDef = {
       id: asActionId('trainOp'),
@@ -3830,6 +3904,51 @@ describe('legalMoves plain-action feasibility probe', () => {
     const moves = legalMoves(def, state);
     assert.equal(moves.length, 1, 'pipeline action should still be emitted (probed by pipeline path only)');
     assert.equal(moves[0]?.actionId, asActionId('trainOp'));
+  });
+
+  it('35a. runtime first-decision compilation filters unconditional empty pipeline domains', () => {
+    const action: ActionDef = {
+      id: asActionId('trainOp'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'trainProfileEmpty',
+      actionId: asActionId('trainOp'),
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          stage: 'selectSpaces',
+          effects: [
+            eff({
+              chooseOne: {
+                internalDecisionId: 'decision:$space',
+                bind: '$space',
+                options: { query: 'enums', values: [] },
+              },
+            }) as GameDef['actions'][number]['effects'][number],
+          ],
+        },
+      ],
+      atomicity: 'partial',
+    };
+
+    const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
+    const runtime = createGameDefRuntime(def);
+
+    const moves = legalMoves(def, makeBaseState(), undefined, runtime);
+    assert.equal(runtime.firstDecisionDomains.byPipelineProfileId.get(profile.id)?.compilable, true);
+    assert.equal(moves.length, 0, 'compiled unconditional pipeline domain should reject empty domains early');
   });
 
   it('36. routes plain-action decision admission through canonical helper with plainActionDecisionSequence context', () => {

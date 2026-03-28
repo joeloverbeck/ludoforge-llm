@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — new cache module + modify `legal-moves.ts`
-**Deps**: tickets/91FIRDECDOMCOM-002.md
+**Deps**: archive/tickets/91FIRDECDOMCOM/91FIRDECDOMCOM-002.md
 
 ## Problem
 

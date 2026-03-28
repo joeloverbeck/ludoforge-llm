@@ -12,6 +12,7 @@ import type {
 } from './effect-compiler-types.js';
 import { compileAllLifecycleEffects } from './effect-compiler.js';
 import { computeAlwaysCompleteActionIds } from './always-complete-actions.js';
+import { compileGameDefFirstDecisionDomains, type FirstDecisionRuntimeCompilation } from './first-decision-compiler.js';
 
 /**
  * Pre-computed, immutable runtime structures derived from a GameDef.
@@ -29,6 +30,7 @@ export interface GameDefRuntime {
   readonly runtimeTableIndex: RuntimeTableIndex;
   readonly zobristTable: ZobristTable;
   readonly alwaysCompleteActionIds: ReadonlySet<ActionId>;
+  readonly firstDecisionDomains: FirstDecisionRuntimeCompilation;
   readonly ruleCardCache: Map<string, RuleCard>;
   readonly compiledLifecycleEffects: ReadonlyMap<CompiledLifecycleEffectKey, CompiledEffectSequence>;
 }
@@ -36,11 +38,13 @@ export interface GameDefRuntime {
 export function createGameDefRuntime(def: GameDef): GameDefRuntime {
   const compiledLifecycleEffects = compileAllLifecycleEffects(def);
   const alwaysCompleteActionIds = computeAlwaysCompleteActionIds(def);
+  const firstDecisionDomains = compileGameDefFirstDecisionDomains(def);
   return {
     adjacencyGraph: buildAdjacencyGraph(def.zones),
     runtimeTableIndex: buildRuntimeTableIndex(def),
     zobristTable: createZobristTable(def),
     alwaysCompleteActionIds,
+    firstDecisionDomains,
     ruleCardCache: new Map(),
     compiledLifecycleEffects,
   };

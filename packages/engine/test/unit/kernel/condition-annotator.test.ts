@@ -8,6 +8,7 @@ import {
   asZoneId,
   buildAdjacencyGraph,
   buildRuntimeTableIndex,
+  compileGameDefFirstDecisionDomains,
   createZobristTable,
   describeAction,
   type ActionDef,
@@ -103,6 +104,7 @@ const makeRuntime = (def: GameDef): GameDefRuntime => ({
   runtimeTableIndex: buildRuntimeTableIndex(def),
   zobristTable: createZobristTable(def),
   alwaysCompleteActionIds: new Set(),
+  firstDecisionDomains: compileGameDefFirstDecisionDomains(def),
   ruleCardCache: new Map(),
   compiledLifecycleEffects: new Map(),
 });

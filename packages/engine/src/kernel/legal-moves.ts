@@ -56,6 +56,7 @@ import { selectorInvalidSpecError } from './selector-runtime-contract.js';
 import { isActiveSeatEligibleForTurnFlow } from './turn-flow-eligibility.js';
 import { resolveCurrentEventCardState } from './event-execution.js';
 import { isCardEventAction } from './action-capabilities.js';
+import { compileGameDefFirstDecisionDomains, type FirstDecisionDomainResult, type FirstDecisionRuntimeCompilation } from './first-decision-compiler.js';
 import { buildRuntimeTableIndex, type RuntimeTableIndex } from './runtime-table-index.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
 import type { FreeOperationExecutionOverlay } from './free-operation-overlay.js';
@@ -371,6 +372,21 @@ function updateMutableEnumerationReadContext(
   return scope;
 }
 
+const isCompiledFirstDecisionRejected = (
+  compiled: FirstDecisionDomainResult,
+  ctx: ReadContext,
+): boolean => {
+  if (!compiled.compilable || compiled.check === undefined) {
+    return false;
+  }
+
+  try {
+    return !compiled.check(ctx).admissible;
+  } catch {
+    return false;
+  }
+};
+
 function enumerateParams(
   action: ActionDef,
   def: GameDef,
@@ -390,6 +406,7 @@ function enumerateParams(
     readonly moveFilter?: (move: Move) => boolean;
     readonly discoverer?: EnumerationDecisionDiscoverer;
     readonly runtime?: GameDefRuntime;
+    readonly firstDecisionDomains?: FirstDecisionRuntimeCompilation;
   },
   scope?: MutableEnumerationReadContext,
 ): void {
@@ -463,6 +480,15 @@ function enumerateParams(
       if (viabilityDecision.kind === 'illegalChoice') {
         return;
       }
+    }
+
+    if (
+      enumeration.probePlainActionFeasibility
+      && options?.pipeline === undefined
+      && options?.firstDecisionDomains !== undefined
+      && isCompiledFirstDecisionRejected(options.firstDecisionDomains.byActionId.get(action.id) ?? { compilable: false }, ctx)
+    ) {
+      return;
     }
 
     const params = Object.fromEntries(
@@ -560,6 +586,7 @@ function enumeratePendingFreeOperationMoves(
   adjacencyGraph: AdjacencyGraph,
   runtimeTableIndex: RuntimeTableIndex,
   evalRuntimeResources: EvalRuntimeResources,
+  firstDecisionDomains: FirstDecisionRuntimeCompilation,
   currentPhaseDef: PhaseDef | undefined,
   seatResolution: ReturnType<typeof createSeatResolutionContext>,
 ): void {
@@ -787,6 +814,7 @@ function enumeratePendingFreeOperationMoves(
                 : {}
             ),
             ...freeOperationPreflightOverlay,
+            firstDecisionDomains,
             moveOverrides: {
               freeOperation: true,
               ...(needsGrantActionClassOverride ? { actionClass: targetActionClass } : {}),
@@ -815,6 +843,7 @@ function enumeratePendingFreeOperationMoves(
           enumeration,
           currentPhaseDef,
           {
+            firstDecisionDomains,
             moveOverrides: {
               freeOperation: true,
               ...(needsGrantActionClassOverride ? { actionClass: targetActionClass } : {}),
@@ -1126,6 +1155,7 @@ const enumerateRawLegalMoves = (
   const warnings: RuntimeWarning[] = [];
   const seatResolution = createSeatResolutionContext(def, state.playerCount);
   const discoveryCache: DiscoveryCache = new Map();
+  const firstDecisionDomains = runtime?.firstDecisionDomains ?? compileGameDefFirstDecisionDomains(def);
 
   if (!isActiveSeatEligibleForTurnFlow(def, state, seatResolution)) {
     return { moves: [], warnings, discoveryCache };
@@ -1189,6 +1219,7 @@ const enumerateRawLegalMoves = (
       enumerateParams(action, def, adjacencyGraph, runtimeTableIndex, evalRuntimeResources, state, 0, {}, enumeration, currentPhaseDef,
         {
           ...(runtime === undefined ? {} : { runtime }),
+          firstDecisionDomains,
           discoverer: cachedDiscover,
         },
       );
@@ -1261,6 +1292,7 @@ const enumerateRawLegalMoves = (
       enumerateParams(action, def, adjacencyGraph, runtimeTableIndex, evalRuntimeResources, state, 0, {}, enumeration, currentPhaseDef,
         {
           ...(runtime === undefined ? {} : { runtime }),
+          firstDecisionDomains,
           discoverer: cachedDiscover,
         },
       );
@@ -1281,6 +1313,15 @@ const enumerateRawLegalMoves = (
         } else {
           continue;
         }
+      }
+
+      if (
+        isCompiledFirstDecisionRejected(
+          firstDecisionDomains.byPipelineProfileId.get(pipeline.id) ?? { compilable: false },
+          preflight.evalCtx,
+        )
+      ) {
+        continue;
       }
 
       if (
@@ -1312,6 +1353,7 @@ const enumerateRawLegalMoves = (
     adjacencyGraph,
     runtimeTableIndex,
     evalRuntimeResources,
+    firstDecisionDomains,
     currentPhaseDef,
     seatResolution,
   );

@@ -32,10 +32,6 @@ function listPlayers(ctx: Pick<ReadContext, 'state'>): readonly PlayerId[] {
   return cached;
 }
 
-function sortAndDedupePlayers(players: readonly PlayerId[]): readonly PlayerId[] {
-  return [...new Set(players)].sort((left, right) => left - right);
-}
-
 function sortAndDedupeZones(zones: readonly ZoneId[]): readonly ZoneId[] {
   return [...new Set(zones)].sort((left, right) => left.localeCompare(right));
 }
@@ -152,14 +148,44 @@ export function resolvePlayerSel(sel: PlayerSel, ctx: ReadContext): readonly Pla
     return resolved;
   }
 
+  // Fast path: 'actor' and 'active' selectors resolve to a single known
+  // player. Skip listPlayers array allocation and sortAndDedupePlayers
+  // (Set + array spread + sort) entirely — a plain single-element array
+  // is sufficient and avoids 4 allocations per call.
+  if (sel === 'actor') {
+    const resolved: readonly PlayerId[] = [ctx.actorPlayer];
+    if (ctx.collector.selectorTrace !== null) {
+      emitSelectorTrace(ctx.collector, {
+        kind: 'selectorResolution',
+        selectorType: 'player',
+        selectorExpr: sel,
+        candidateCount: ctx.state.playerCount,
+        resolvedIds: resolved.map(String),
+        provenance: { phase: String(ctx.state.currentPhase), eventContext: 'actionEffect', effectPath: 'selectorResolution' },
+      });
+    }
+    return resolved;
+  }
+
+  if (sel === 'active') {
+    const resolved: readonly PlayerId[] = [ctx.activePlayer];
+    if (ctx.collector.selectorTrace !== null) {
+      emitSelectorTrace(ctx.collector, {
+        kind: 'selectorResolution',
+        selectorType: 'player',
+        selectorExpr: sel,
+        candidateCount: ctx.state.playerCount,
+        resolvedIds: resolved.map(String),
+        provenance: { phase: String(ctx.state.currentPhase), eventContext: 'actionEffect', effectPath: 'selectorResolution' },
+      });
+    }
+    return resolved;
+  }
+
   const players = listPlayers(ctx);
   let resolved: readonly PlayerId[];
 
-  if (sel === 'actor') {
-    resolved = sortAndDedupePlayers([ctx.actorPlayer]);
-  } else if (sel === 'active') {
-    resolved = sortAndDedupePlayers([ctx.activePlayer]);
-  } else if (sel === 'all') {
+  if (sel === 'all') {
     resolved = players;
   } else if (sel === 'allOther') {
     resolved = players.filter((playerId) => playerId !== ctx.actorPlayer);

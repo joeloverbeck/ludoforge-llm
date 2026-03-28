@@ -17,6 +17,12 @@ const describeType = (value: unknown): string => {
   return Array.isArray(value) ? 'array' : typeof value;
 };
 
+// Cache of resources that have already passed validation. Since the same
+// EvalRuntimeResources object is reused across all action preflights within
+// a single legalMoves call, the WeakSet check (O(1) hash lookup) avoids
+// repeating 2 for-in loops + 8 Set.has calls + 2 Array.isArray checks per action.
+const validatedResourcesCache = new WeakSet<object>();
+
 export const assertEvalRuntimeResourcesContract: (
   value: unknown,
   resourcePath: string,
@@ -24,6 +30,9 @@ export const assertEvalRuntimeResourcesContract: (
   value: unknown,
   resourcePath: string,
 ) => {
+  if (typeof value === 'object' && value !== null && validatedResourcesCache.has(value as object)) {
+    return;
+  }
   if (!isObjectRecord(value)) {
     throw kernelRuntimeError(
       'RUNTIME_CONTRACT_INVALID',
@@ -67,4 +76,6 @@ export const assertEvalRuntimeResourcesContract: (
       `${resourcePath}.collector.trace must be an array or null; received ${describeType(collectorTrace)}`,
     );
   }
+  // Mark as validated so subsequent calls with the same object skip validation.
+  validatedResourcesCache.add(value);
 };

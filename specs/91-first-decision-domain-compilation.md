@@ -15,8 +15,8 @@ The dominant cost in `legalMoves` enumeration is
 `isMoveDecisionSequenceAdmittedForLegalMove`, which calls
 `legalChoicesDiscover → legalChoicesWithPreparedContextStrict →
 legalChoicesWithPreparedContextInternal → executeDiscoveryEffectsStrict`. This
-partially executes the action's ENTIRE effect tree up to the first
-`chooseOne`/`chooseN` node, evaluating cost effects, forEach conditions, and
+partially executes the action's effect tree up to the first
+`chooseOne`/`chooseN` node, evaluating conditions, forEach iterations, and
 token queries along the way.
 
 ### Profiling Evidence
@@ -30,17 +30,22 @@ From the `fitl-perf-optimization` campaign (12 experiments, FITL benchmark):
 
 The partial effect execution involves:
 1. Creating an effect execution context (EffectEnv + EffectCursor)
-2. Executing cost effects (which may themselves involve condition evaluation,
-   aggregate queries, and value resolution)
-3. Executing the first stage's effects sequentially until a `chooseOne` or
+2. Executing the stage's effects sequentially until a `chooseOne` or
    `chooseN` node is encountered
-4. At the choice node: resolving the options query to determine the domain
-5. Returning the choice request with the resolved domain
+3. At the choice node: resolving the options query to determine the domain
+4. Returning the choice request with the resolved domain
 
-Steps 1-3 are overhead — the engine runs through potentially dozens of effects
-just to REACH the first decision point. For FITL operations like Train, this
-involves iterating zones, checking preconditions, evaluating cost deductions —
-all via the AST interpreter.
+**Clarification on pipeline actions**: For pipeline actions, `costEffects` are
+NOT executed during discovery. The pipeline-level and stage-level predicates
+(`legality`, `costValidation`) are evaluated instead — and these are already
+compiled into fast boolean predicates by Spec 90. The remaining overhead is in
+step 2: executing `stage.effects` up to the first choice node via the AST
+interpreter. This is the target of this optimization.
+
+**Non-pipeline actions**: For plain actions and event card actions, the
+discovery path executes `action.effects` (or the resolved event effect list)
+through the same interpreter. The same overhead applies — the interpreter walks
+through effects sequentially until it hits a choice node.
 
 ### Why This Is Architecturally Solvable
 
@@ -59,40 +64,87 @@ as close to the data source as possible.
 
 ## Objective
 
-At `createGameDefRuntime` time, statically analyze each pipeline action's effect
-tree to extract the "first-decision-domain function" — a compiled closure that
-directly queries game state for the first decision's option domain WITHOUT
-executing the preceding effect chain.
+At `createGameDefRuntime` time, statically analyze each action's effect tree to
+extract the "first-decision-domain function" — a compiled closure that directly
+queries game state for the first decision's option domain WITHOUT executing the
+preceding effect chain.
 
-When the first-decision-domain function returns a non-empty result, the decision
+When the first-decision-domain function returns a non-empty domain, the decision
 sequence is admissible. When it returns empty, the action has no legal options
 and can be skipped.
 
+**Scope**: All three admission check call sites in `legal-moves.ts`:
+1. Plain action feasibility probe (~line 480)
+2. Event card decision sequence validation (~line 1097)
+3. Pipeline action decision sequence validation (~line 1287)
+
+The analysis/compiler operates on generic `EffectAST[]` and is agnostic to the
+call site context (F1). Each call site wraps the compiled check with the same
+guard pattern.
+
 ## Design
+
+### Effect Tree Walk Order
+
+The static analysis must account for the structural differences between action
+types:
+
+**Pipeline actions** (`pipelineDispatch.kind === 'matched'`):
+- Pipeline predicates (`legality`, `costValidation`) are already compiled by
+  Spec 90 and evaluated before stage effects. These are NOT walked by this spec.
+- `pipeline.costEffects` are execution-only — NOT executed during discovery.
+  They are irrelevant to this optimization.
+- Walk order: `stages[0].effects → stages[1].effects → ... → stages[N].effects`
+- The first `chooseOne`/`chooseN` encountered in this walk is the first
+  decision point.
+
+**Plain actions** (no pipeline match):
+- Walk `action.effects` directly.
+- Precondition (`action.pre`) is evaluated before effects. It is a
+  `ConditionAST` — if compilable by Spec 90, it can be composed with the
+  first-decision check.
+
+**Event card actions** (`isCardEventActionId`):
+- The discovery path resolves event effects via `resolveEventEffectList`, then
+  walks the resolved effect list.
+- Event effects are resolved at runtime (depend on which card is active), so
+  static analysis is limited. These MAY fall through to the interpreter.
 
 ### Static Analysis Phase
 
-For each pipeline action, walk the effect AST from root to find the first
+For each action, walk the effect AST from root to find the first
 `chooseOne` or `chooseN` node. The walk follows the "always taken" path:
 
 ```
 effects[0] → effects[1] → ... → effects[N]
   │
-  ├── if: take BOTH branches (first decision in either counts)
+  ├── if (_k: 28): take BOTH branches (first decision in either counts)
   │     ├── then[0] → then[1] → ...
   │     └── else[0] → else[1] → ...
   │
-  ├── forEach: first decision inside the forEach body
+  ├── forEach (_k: 29): first decision inside the forEach body
   │     └── forEach.effects[0] → ...
   │
-  ├── let: walk into let.in
+  ├── let (_k: 32): walk into let.in
   │     └── let.in[0] → ...
   │
-  ├── chooseOne: FOUND — extract options query
-  ├── chooseN: FOUND — extract options query
+  ├── evaluateSubset (_k: 33): walk into evaluateSubset.effects
+  │     └── evaluateSubset.effects[0] → ...
   │
-  └── setVar/moveToken/etc.: no decision — continue to next effect
+  ├── reduce (_k: 30): walk into reduce.effects
+  │     └── reduce.effects[0] → ...
+  │
+  ├── chooseOne (_k: 15): FOUND — extract options query
+  ├── chooseN (_k: 16): FOUND — extract options query
+  │
+  └── setVar/addVar/moveToken/etc.: no decision — continue to next effect
 ```
+
+For pipeline actions with multiple stages, the walk proceeds through stages in
+order: if `stages[0].effects` contains no decision, continue to
+`stages[1].effects`, etc. Stage predicates (legality, costValidation) are
+pre-filters — if a stage predicate is a compiled Spec 90 predicate, compose it
+with the first-decision check.
 
 ### Compilation Output
 
@@ -100,25 +152,41 @@ effects[0] → effects[1] → ... → effects[N]
 interface FirstDecisionDomainResult {
   /** Whether the compiled function can evaluate this action's first decision. */
   readonly compilable: boolean;
-  /** When compilable, the direct domain check function. */
-  readonly check?: (state: GameState, activePlayer: PlayerId) => boolean;
+  /**
+   * When compilable, the direct domain check function.
+   * Returns { admissible: true, domain } when the first decision has options.
+   * Returns { admissible: false } when the first decision has 0 options.
+   * For single-decision actions, `domain` contains the actual ChoiceOption[],
+   * enabling complete bypass of the discovery call.
+   * For multi-decision actions, `domain` is undefined — the boolean result
+   * serves as a fast rejection filter only.
+   */
+  readonly check?: (
+    state: GameState,
+    activePlayer: PlayerId,
+  ) => FirstDecisionCheckResult;
   /** Human-readable description of what was compiled (for diagnostics). */
   readonly description?: string;
+  /** Whether this action has exactly 1 decision (aggressive optimization). */
+  readonly isSingleDecision?: boolean;
+}
+
+interface FirstDecisionCheckResult {
+  readonly admissible: boolean;
+  /** Populated only for single-decision actions. */
+  readonly domain?: readonly ChoiceOption[];
 }
 ```
-
-The `check` function returns `true` if the first decision has at least one legal
-option (admissible), `false` if empty (not admissible).
 
 ### Compilable Patterns
 
 #### Pattern 1: Direct token query domain
 
-The first decision is `chooseOne` with options query `{ query: 'tokens', ... }`.
+The first decision is `chooseOne` with options query `{ query: 'tokensInZone', ... }`.
 The compiled function resolves the token query directly against game state.
 
 ```yaml
-# Effect tree: chooseOne { options: { query: 'tokens', zone: 'provinces:active', ... } }
+# Effect tree: chooseOne { options: { query: 'tokensInZone', zone: 'provinces:active', ... } }
 # Compiles to: (state, player) => tokenQueryHasResults(state, querySpec, player)
 ```
 
@@ -133,14 +201,37 @@ token query domain.
 # Compiles to: (state, player) => compiledCondition(state, player) && tokenQueryHasResults(...)
 ```
 
-#### Pattern 3: ForEach zone iteration + nested decision
+#### Pattern 3: ForEach iteration + nested decision
 
-The first decision is inside a `forEach` over zones. The compiled function
-checks if ANY zone in the iteration produces a non-empty decision domain.
+The first decision is inside a `forEach` over zones or tokens. The compiled
+function checks if ANY element in the iteration produces a non-empty decision
+domain.
 
 ```yaml
 # Effect tree: forEach { query: zones, effects: [chooseOne { options: ... }] }
-# Compiles to: (state, player) => zones.some(zone => tokenQueryHasResults(state, querySpec, zone))
+# Compiles to: (state, player) => elements.some(el => tokenQueryHasResults(state, querySpec, el))
+```
+
+#### Pattern 4: Zone query domain
+
+The first decision is `chooseOne` with options query `{ query: 'zones', ... }`
+or `{ query: 'mapSpaces', ... }`. The compiled function resolves the zone query
+with any filter conditions.
+
+```yaml
+# Effect tree: chooseOne { options: { query: 'zones', filter: { condition: ... } } }
+# Compiles to: (state, player) => zoneQueryHasResults(state, filter, player)
+```
+
+#### Pattern 5: Enum/range domain (always non-empty)
+
+The first decision is `chooseOne` with a static domain (`{ query: 'enums', ... }`
+or `{ query: 'intsInRange', ... }` with literal bounds). The compiled function
+returns `true` unconditionally (domain is always non-empty).
+
+```yaml
+# Effect tree: chooseOne { options: { query: 'enums', values: ['a', 'b', 'c'] } }
+# Compiles to: () => true
 ```
 
 #### Fallback
@@ -148,31 +239,48 @@ checks if ANY zone in the iteration produces a non-empty decision domain.
 Actions whose first-decision path doesn't match any compilable pattern fall
 through to the existing `legalChoicesDiscover` interpreter.
 
-### Integration Point
+### Integration Points
 
-In `enumerateRawLegalMoves`, the admission check for pipeline actions
-(legal-moves.ts ~line 1287) currently calls
-`isMoveDecisionSequenceAdmittedForLegalMove`. The compiled first-decision-domain
-function would be checked BEFORE this call:
+The admission check is called at three sites in `legal-moves.ts`. Each site
+gets the same guard pattern:
+
+#### Site 1: Pipeline actions (~line 1287)
 
 ```typescript
-// Try compiled first-decision-domain check
-const domainCheck = getCompiledFirstDecisionDomain(def, action.id);
-if (domainCheck !== undefined) {
-  if (!domainCheck(state, state.activePlayer)) {
-    continue; // No legal options — skip without partial effect execution
+// Before: always calls isMoveDecisionSequenceAdmittedForLegalMove
+// After:
+const domainResult = getCompiledFirstDecisionDomain(def, action.id);
+if (domainResult !== undefined) {
+  const checkResult = domainResult.check(state, state.activePlayer);
+  if (!checkResult.admissible) {
+    continue; // Fast rejection — no legal options
   }
-  // Domain has options — still need full admission check for multi-step sequences
-  // OR: if the action has exactly 1 decision, the domain check IS the admission check
+  if (domainResult.isSingleDecision && checkResult.domain !== undefined) {
+    // Single-decision action: domain check IS the admission check.
+    // Emit the move directly without calling legalChoicesDiscover.
+    // ...
+    continue;
+  }
+  // Multi-decision action: first decision has options, but subsequent
+  // decisions still need the full admission check.
 }
+// Fall through to existing isMoveDecisionSequenceAdmittedForLegalMove
 ```
 
-**Critical consideration**: The compiled domain check replaces the
-`legalChoicesDiscover` call ONLY for actions where the first decision IS the
-admission gate. For actions with multiple decision steps, the compiled check
-confirms the first decision has options, but subsequent decisions still need the
-full admission check. The spec must define precisely when the compiled check
-is sufficient vs. when the full check is still needed.
+#### Site 2: Plain actions (~line 480)
+
+Same pattern. The compiled check operates on `action.effects`.
+
+#### Site 3: Event card actions (~line 1097)
+
+For event cards, the effect tree is resolved at runtime (depends on the active
+card). Static analysis at `createGameDefRuntime` time cannot pre-compile event
+effects because the card varies per game state. These fall through to the
+existing interpreter unless a per-card cache is added (out of scope for v1).
+
+**Revised scope for event cards**: Event card admission checks fall through to
+the interpreter. The optimization targets pipeline and plain actions, which
+account for the vast majority of the admission check cost.
 
 ### Sufficiency Analysis
 
@@ -182,18 +290,17 @@ The admission check (`isMoveDecisionSequenceAdmittedForLegalMove`) returns
 - `unknown` — evaluation hit a missing binding or deferred predicate
 - `unsatisfiable` — a decision has 0 options
 
-For the first decision, if the compiled domain check returns non-empty, the
-first decision is satisfiable. But subsequent decisions might be unsatisfiable.
+**Fast rejection filter** (multi-decision actions): If the compiled first-
+decision check returns `admissible: false`, the action is `unsatisfiable` —
+skip it. If `admissible: true`, fall through to the full admission check. The
+discovery cache will have the first-decision result, making subsequent steps
+cheaper.
 
-**Safe optimization**: use the compiled domain check as a **fast rejection
-filter** only. If the first decision has 0 options → skip (same as current).
-If non-empty → still call the full admission check (but the discovery cache
-from Spec 87 will have the first-decision result cached, making subsequent
-steps cheaper).
-
-**Aggressive optimization** (future): for actions with exactly 1 decision in
-the effect tree, the compiled domain check IS the admission check. No fallback
-needed.
+**Full bypass** (single-decision actions): If the action has exactly 1 decision
+in the effect tree AND the compiled check returns `admissible: true` with a
+populated `domain`, the action is `satisfiable`. No fallback needed — the
+compiled domain IS the admission result. The `domain` can be used to construct
+the `ChoiceRequest` directly without calling `legalChoicesDiscover`.
 
 ### V8 Safety Analysis
 
@@ -203,8 +310,9 @@ needed.
   dispatch). Adding one more conditional is a LOW-RISK change because:
   1. The condition is a FUNCTION CALL (not a new branch pattern), which V8
      handles efficiently
-  2. The condition is checked BEFORE the expensive `isMoveDecisionSequenceAdmittedForLegalMove`
-     call — it's a guard, not a restructuring
+  2. The condition is checked BEFORE the expensive
+     `isMoveDecisionSequenceAdmittedForLegalMove` call — it's a guard, not a
+     restructuring
 - No fields added to GameDefRuntime (stored in module-level WeakMap)
 - No changes to any kernel computation function
 - No changes to the effect execution pipeline
@@ -213,35 +321,45 @@ needed.
 
 | Foundation | Alignment |
 |-----------|-----------|
-| F1 (Agnosticism) | Static analysis operates on generic EffectAST/ConditionAST — no game-specific patterns. Any action with a compilable first-decision structure benefits. |
+| F1 (Agnosticism) | Static analysis operates on generic EffectAST/ConditionAST — no game-specific patterns. Any action with a compilable first-decision structure benefits. All three call sites use the same compiler. |
 | F5 (Determinism) | Compiled domain checks are pure functions of state, producing identical results to the interpreter. |
 | F6 (Bounded Computation) | Static analysis is bounded by the finite effect tree depth. Compiled functions execute bounded queries (same as interpreter). |
-| F7 (Immutability) | Compiled closures are read-only. Cache is populated once per GameDef. |
+| F7 (Immutability) | Compiled closures are read-only. Cache is populated once per GameDef and stored in an immutable ReadonlyMap. |
 | F8 (Compiler-Kernel Boundary) | The static analysis operates at KERNEL level (on compiled EffectASTs from GameDef), not at COMPILER level (on GameSpecDoc YAML). This is an optimization of kernel evaluation, not a compiler change. |
-| F10 (Completeness) | Addresses root cause (expensive partial effect execution for admission checks) rather than symptom. |
+| F9 (No Backwards Compat) | No shims or fallback paths. Actions that don't match a compilable pattern use the existing interpreter — this is the normal path, not a compatibility layer. |
+| F10 (Completeness) | Addresses root cause (expensive partial effect execution for admission checks) across all applicable call sites. Event cards are excluded with explicit justification (runtime-resolved effect trees). |
 | F11 (Testing as Proof) | Equivalence test: for every compilable action, verify compiled domain check agrees with interpreter admission result across N random states. |
+| F12 (Branded Types) | ActionId used for cache keys, PlayerId in check function signature. |
 
 ## Acceptance Criteria
 
 1. Static analysis correctly identifies the first `chooseOne`/`chooseN` node in
-   each pipeline action's effect tree.
+   each action's effect tree (pipeline stages walked in order, non-pipeline
+   actions walked directly).
 2. Compiled domain check functions produce identical admissibility results to
    `isMoveDecisionSequenceAdmittedForLegalMove` for all game states (proven by
    equivalence test).
-3. Actions with non-compilable first-decision patterns fall through to the
+3. For single-decision actions, the compiled domain matches the interpreter's
+   `ChoiceRequest.options` exactly (proven by domain equivalence test).
+4. Actions with non-compilable first-decision patterns fall through to the
    existing interpreter without error.
-4. No fields added to GameDefRuntime or any hot-path object.
-5. All existing tests pass without weakening assertions.
-6. Performance benchmark shows measurable reduction in `legalMoves` time.
+5. No fields added to GameDefRuntime or any hot-path object.
+6. All existing tests pass without weakening assertions.
+7. Performance benchmark shows measurable reduction in `legalMoves` time.
 
 ## Estimated Impact
 
 **Conservative estimate: 10-25% reduction in total benchmark time.**
 
 Decision sequence admission accounts for ~47% of total runtime. If 50-70% of
-FITL pipeline actions have compilable first-decision patterns, and the compiled
-check is 10-50x faster than partial effect execution (direct state query vs.
-full interpreter chain), the admission cost drops significantly.
+pipeline actions have compilable first-decision patterns, and the compiled check
+is 10-50x faster than partial effect execution (direct state query vs. full
+interpreter chain), the admission cost drops significantly.
+
+**Single-decision bypass bonus**: Actions with exactly 1 decision skip both the
+admission check AND the subsequent discovery call during move construction. This
+compounds the savings for simple actions (which are common — many FITL operations
+have a single "choose target zone" decision).
 
 Even as a FAST REJECTION FILTER only (skipping actions with 0 first-decision
 options), the savings are proportional to the fraction of pipeline actions that
@@ -252,30 +370,39 @@ of partial effect execution.
 
 ## Files to Create
 
-- `packages/engine/src/kernel/first-decision-analysis.ts` — static analysis of
-  effect trees to find first decision point
-- `packages/engine/src/kernel/first-decision-compiler.ts` — compiles
-  first-decision domain checks into closures
+- `packages/engine/src/kernel/first-decision-compiler.ts` — static analysis of
+  effect trees to find first decision point + compilation of first-decision
+  domain checks into closures
 - `packages/engine/src/kernel/first-decision-cache.ts` — WeakMap cache for
-  compiled domain checks
+  compiled domain checks + lookup API
 
 ## Files to Modify
 
 - `packages/engine/src/kernel/legal-moves.ts` — add compiled domain check
-  before `isMoveDecisionSequenceAdmittedForLegalMove`
-- `packages/engine/test/unit/` — add equivalence tests
+  before `isMoveDecisionSequenceAdmittedForLegalMove` at all applicable call
+  sites (pipeline ~line 1287, plain ~line 480; event cards fall through)
+- `packages/engine/test/unit/kernel/` — add equivalence tests (compiled vs.
+  interpreter admissibility) and domain equivalence tests (single-decision
+  actions)
 - `packages/engine/test/integration/` — add benchmark test
 
 ## Risks
 
 - **False negatives**: The compiled domain check might determine "no options"
   when the interpreter would find options (due to bindings or runtime context
-  not captured by the static analysis). Mitigation: start with the fast-rejection-
-  only strategy — a false positive (compiled says "has options" but interpreter
-  rejects) is safe, while a false negative (compiled says "no options" but
-  interpreter would accept) would incorrectly filter legal moves. The
-  equivalence test must prove zero false negatives.
-- **Compilation coverage**: Some FITL operations have deeply nested effect trees
-  with multiple guard conditions before the first decision. These may not match
-  any compilable pattern, limiting the optimization's coverage. This can be
+  not captured by the static analysis). Mitigation: start with the fast-
+  rejection-only strategy for multi-decision actions. The equivalence test must
+  prove zero false negatives across all compilable patterns.
+- **Compilation coverage**: Some actions have deeply nested effect trees with
+  multiple guard conditions before the first decision. These may not match any
+  compilable pattern, limiting the optimization's coverage. This can be
   iteratively improved by adding more patterns to the compiler.
+- **Single-decision domain fidelity**: For the aggressive optimization
+  (single-decision bypass), the compiled domain must exactly match the
+  interpreter's `ChoiceOption[]` format. Any divergence (missing options,
+  wrong legality flags, missing metadata) would produce incorrect legal moves.
+  Mitigation: domain equivalence test with comprehensive state coverage.
+- **Event card limitation**: Event card effects are resolved at runtime, so
+  static pre-compilation is not possible for the event call site. This limits
+  the optimization to pipeline and plain actions. If event card admission
+  becomes a bottleneck, a per-card cache could be added in a follow-up spec.

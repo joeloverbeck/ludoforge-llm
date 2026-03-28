@@ -1,8 +1,6 @@
 # Spec 89 -- Scoped Mutable Execution Context
 
-## Status
-
-Proposed
+**Status**: ✅ COMPLETED
 
 ## Problem
 
@@ -404,3 +402,23 @@ that currently fail due to V8 hidden class sensitivity.
 - Audit: `trigger-dispatch.ts`, `apply-move.ts`, `action-executor.ts`,
   `event-execution.ts`, `turn-flow-eligibility.ts`, and other
   `createEvalContext` consumers
+
+## Outcome
+
+- Completion date: 2026-03-28
+- What actually changed:
+  - implemented the spec through the archived `89SCOMUTEXECON` ticket chain, covering the effect-context shape contract, `MutableReadScope` foundations, dispatch-owned scope threading, complex-handler convergence, `legal-moves.ts` enumeration reuse, and the remaining hot-path `createEvalContext` audit/migrations
+  - `effect-context.ts` now uses fixed-shape internal context objects, exposes `MutableReadScope` helpers, and no longer carries `mergeToEvalContext` or `mergeToReadContext`
+  - effect dispatch and interpreted handlers now reuse scoped mutable read context instead of rebuilding `ReadContext` objects on the main hot path
+  - additional loop-heavy callers in `legal-moves.ts`, `trigger-dispatch.ts`, `free-operation-grant-authorization.ts`, and `effects-turn-flow.ts` now reuse fixed-shape eval context objects instead of allocating per iteration
+  - regression coverage was expanded to lock the new shape and hot-path invariants in source-guard and behavior tests
+- Deviations from original plan:
+  - the work landed as a phased ticket series rather than a single changeset
+  - some cold-path `createEvalContext` callers were intentionally left unchanged after audit because forced convergence would add ceremony without architectural benefit
+  - `effect-compiler-codegen.ts` was audited but not fully converged in this spec’s final phase because that remaining helper-local path wants a broader compiled-runtime redesign
+- Verification results:
+  - `pnpm -F @ludoforge/engine build`
+  - `pnpm -F @ludoforge/engine test`
+  - `pnpm -F @ludoforge/engine test:e2e`
+  - `pnpm turbo typecheck`
+  - `pnpm turbo lint`

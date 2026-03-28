@@ -1,7 +1,7 @@
 import { applyEffects } from './effects.js';
 import { createExecutionEffectContext } from './effect-context.js';
 import { evalConditionTraced } from './eval-condition.js';
-import { createEvalContext, createEvalRuntimeResources, type EvalRuntimeResources } from './eval-context.js';
+import { createEvalRuntimeResources, type EvalRuntimeResources } from './eval-context.js';
 import { assertEvalRuntimeResourcesContract } from './eval-runtime-resources-contract.js';
 import { kernelRuntimeError } from './runtime-error.js';
 import type { AdjacencyGraph } from './spatial.js';
@@ -10,6 +10,20 @@ import { buildRuntimeTableIndex, type RuntimeTableIndex } from './runtime-table-
 import type { MoveExecutionPolicy } from './execution-policy.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
 import type { GameDef, GameState, Rng, TriggerDef, TriggerEvent, TriggerLogEntry } from './types.js';
+
+interface MutableTriggerEvalContext {
+  def: GameDef;
+  adjacencyGraph: AdjacencyGraph;
+  state: GameState;
+  activePlayer: GameState['activePlayer'];
+  actorPlayer: GameState['activePlayer'];
+  bindings: Readonly<Record<string, unknown>>;
+  resources: EvalRuntimeResources;
+  runtimeTableIndex: RuntimeTableIndex;
+  freeOperationOverlay: undefined;
+  maxQueryResults: undefined;
+  collector: EvalRuntimeResources['collector'];
+}
 
 export interface DispatchTriggersResult {
   readonly state: GameState;
@@ -69,22 +83,29 @@ export const dispatchTriggers = (request: DispatchTriggersRequest): DispatchTrig
   let nextState = state;
   let nextRng = rng;
   let nextTriggerLog: TriggerLogEntry[] = [...triggerLog];
+  const eventBindings = createEventBindings(event);
+  const evalCtx: MutableTriggerEvalContext = {
+    def,
+    adjacencyGraph,
+    state: nextState,
+    activePlayer: nextState.activePlayer,
+    actorPlayer: nextState.activePlayer,
+    bindings: eventBindings,
+    resources: runtimeResources,
+    runtimeTableIndex,
+    freeOperationOverlay: undefined,
+    maxQueryResults: undefined,
+    collector: runtimeResources.collector,
+  };
 
   for (const trigger of def.triggers) {
     if (!matchesEvent(trigger, event)) {
       continue;
     }
 
-    const evalCtx = createEvalContext({
-      def,
-      adjacencyGraph,
-      state: nextState,
-      activePlayer: nextState.activePlayer,
-      actorPlayer: nextState.activePlayer,
-      bindings: createEventBindings(event),
-      runtimeTableIndex,
-      resources: runtimeResources,
-    });
+    evalCtx.state = nextState;
+    evalCtx.activePlayer = nextState.activePlayer;
+    evalCtx.actorPlayer = nextState.activePlayer;
 
     const triggerProvenance = {
       phase: String(nextState.currentPhase),

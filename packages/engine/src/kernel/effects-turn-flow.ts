@@ -14,7 +14,7 @@ import {
   renderTurnFlowFreeOperationGrantContractViolation,
 } from '../contracts/index.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
-import { createEvalContext, createEvalRuntimeResources } from './eval-context.js';
+import { createEvalRuntimeResources } from './eval-context.js';
 import {
   grantRequiresUsableProbe,
   isFreeOperationGrantUsableInCurrentState,
@@ -27,6 +27,7 @@ import {
 import { resolveFreeOperationGrantSeatToken } from './free-operation-seat-resolution.js';
 import { resolveFreeOperationExecutionContext } from './free-operation-execution-context.js';
 import { toMoveExecutionPolicy, type MoveExecutionPolicy } from './execution-policy.js';
+import { updateReadScopeRaw } from './effect-context.js';
 import type { EffectCursor, EffectEnv, MutableReadScope, PartialEffectResult } from './effect-context.js';
 import type {
   EffectAST,
@@ -118,7 +119,7 @@ export const applyGrantFreeOperation = (
   effect: Extract<EffectAST, { readonly grantFreeOperation: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
-  _scope: MutableReadScope,
+  scope: MutableReadScope,
   _budget: EffectBudgetState,
   _applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
@@ -260,18 +261,8 @@ export const applyGrantFreeOperation = (
         ...grant,
         zoneFilter: resolvedZoneFilter,
       };
-  const grantEvalContext = createEvalContext({
-    def: env.def,
-    adjacencyGraph: env.adjacencyGraph,
-    state: cursor.state,
-    activePlayer: env.activePlayer,
-    actorPlayer: env.actorPlayer,
-    bindings: cursor.bindings,
-    resources: env.resources,
-    ...(env.runtimeTableIndex === undefined ? {} : { runtimeTableIndex: env.runtimeTableIndex }),
-    ...(env.freeOperationOverlay === undefined ? {} : { freeOperationOverlay: env.freeOperationOverlay }),
-    ...(env.maxQueryResults === undefined ? {} : { maxQueryResults: env.maxQueryResults }),
-  });
+  updateReadScopeRaw(scope, cursor);
+  const grantEvalContext = scope;
   const resolvedExecutionContext = resolveFreeOperationExecutionContext(
     grant.executionContext,
     grantEvalContext,

@@ -2,7 +2,7 @@ import { asZoneId } from './branded.js';
 import { compareTurnFlowFreeOperationGrantPriority, isTurnFlowActionClass } from '../contracts/index.js';
 import { createCollector } from './execution-collector.js';
 import { evalCondition } from './eval-condition.js';
-import { createEvalContext, createEvalRuntimeResources } from './eval-context.js';
+import { createEvalRuntimeResources, type EvalRuntimeResources, type ReadContext } from './eval-context.js';
 import { resolveCapturedSequenceZonesByKey } from './free-operation-captured-sequence-zones.js';
 import { resolveGrantFreeOperationActionDomain } from './free-operation-action-domain.js';
 import {
@@ -29,6 +29,20 @@ import type {
   TurnFlowPendingFreeOperationGrant,
   TurnFlowRuntimeState,
 } from './types.js';
+
+interface MutableGrantZoneFilterEvalContext {
+  def: GameDef;
+  adjacencyGraph: ReturnType<typeof buildAdjacencyGraph>;
+  state: GameState;
+  activePlayer: GameState['activePlayer'];
+  actorPlayer: GameState['activePlayer'];
+  bindings: Readonly<Record<string, unknown>>;
+  resources: EvalRuntimeResources;
+  runtimeTableIndex: undefined;
+  freeOperationOverlay: ReadContext['freeOperationOverlay'];
+  maxQueryResults: undefined;
+  collector: EvalRuntimeResources['collector'];
+}
 
 export const grantActionIds = (
   def: GameDef,
@@ -155,28 +169,36 @@ export const evaluateZoneFilterForMove = (
   const capturedSequenceZonesByKey = resolveCapturedSequenceZonesByKey(state, grant);
   const rebindableAliases = collectFreeOperationZoneFilterProbeRebindableAliases(zoneFilter);
   const zones = collectGrantMoveZoneCandidates(def, state, move, grant);
+  const evalRuntimeResources = createEvalRuntimeResources({ collector: createCollector() });
+  const freeOperationOverlay = grant.executionContext === undefined && capturedSequenceZonesByKey === undefined
+    ? undefined
+    : {
+        ...(grant.executionContext === undefined ? {} : { grantContext: grant.executionContext }),
+        ...(capturedSequenceZonesByKey === undefined ? {} : { capturedSequenceZonesByKey }),
+      };
+  const evalContext: MutableGrantZoneFilterEvalContext = {
+    def,
+    adjacencyGraph,
+    state,
+    activePlayer: state.activePlayer,
+    actorPlayer: state.activePlayer,
+    bindings: baseBindings,
+    resources: evalRuntimeResources,
+    runtimeTableIndex: undefined,
+    freeOperationOverlay,
+    maxQueryResults: undefined,
+    collector: evalRuntimeResources.collector,
+  };
+  const evaluateWithBindings = (bindings: Readonly<Record<string, unknown>>): boolean => {
+    evalContext.bindings = bindings;
+    return evalCondition(zoneFilter, evalContext);
+  };
   if (zones.length === 0) {
     if (grant.moveZoneBindings !== undefined && grant.moveZoneBindings.length > 0) {
       return surface === 'legalChoices';
     }
     try {
-      return evalCondition(zoneFilter, createEvalContext({
-        def,
-        adjacencyGraph,
-        state,
-        activePlayer: state.activePlayer,
-        actorPlayer: state.activePlayer,
-        bindings: baseBindings,
-        resources: createEvalRuntimeResources({ collector: createCollector() }),
-        ...(grant.executionContext === undefined && capturedSequenceZonesByKey === undefined
-          ? {}
-          : {
-              freeOperationOverlay: {
-                ...(grant.executionContext === undefined ? {} : { grantContext: grant.executionContext }),
-                ...(capturedSequenceZonesByKey === undefined ? {} : { capturedSequenceZonesByKey }),
-              },
-            }),
-      }));
+      return evaluateWithBindings(baseBindings);
     } catch (cause) {
       if (shouldDeferZoneFilterFailure(cause)) {
         return true;
@@ -197,23 +219,7 @@ export const evaluateZoneFilterForMove = (
         zoneId: asZoneId(zone),
         baseBindings,
         rebindableAliases,
-        evaluateWithBindings: (bindings) => evalCondition(zoneFilter, createEvalContext({
-          def,
-          adjacencyGraph,
-          state,
-          activePlayer: state.activePlayer,
-          actorPlayer: state.activePlayer,
-          bindings,
-          resources: createEvalRuntimeResources({ collector: createCollector() }),
-          ...(grant.executionContext === undefined && capturedSequenceZonesByKey === undefined
-            ? {}
-            : {
-                freeOperationOverlay: {
-                  ...(grant.executionContext === undefined ? {} : { grantContext: grant.executionContext }),
-                  ...(capturedSequenceZonesByKey === undefined ? {} : { capturedSequenceZonesByKey }),
-                },
-              }),
-        })),
+        evaluateWithBindings,
       })) {
         return true;
       }

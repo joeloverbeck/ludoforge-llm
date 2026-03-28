@@ -133,6 +133,42 @@ describe('first-decision compiler', () => {
     );
   });
 
+  it('treats chooseN with min 0 and an empty domain as admissible', () => {
+    const def = makeDef([
+      eff({
+        chooseN: {
+          internalDecisionId: 'decision:$targets',
+          bind: '$targets',
+          options: { query: 'tokensInZone', zone: 'board:none' },
+          min: 0,
+          max: 2,
+        },
+      }),
+    ]);
+
+    const compiled = compileFirstDecisionDomain(def.actions[0]!.effects);
+    assert.equal(compiled.compilable, true);
+    assert.equal(compiled.check?.(makeContext(def, makeState())).admissible, true);
+  });
+
+  it('treats chooseN with required selections and an empty domain as inadmissible', () => {
+    const def = makeDef([
+      eff({
+        chooseN: {
+          internalDecisionId: 'decision:$targets',
+          bind: '$targets',
+          options: { query: 'tokensInZone', zone: 'board:none' },
+          min: 1,
+          max: 2,
+        },
+      }),
+    ]);
+
+    const compiled = compileFirstDecisionDomain(def.actions[0]!.effects);
+    assert.equal(compiled.compilable, true);
+    assert.equal(compiled.check?.(makeContext(def, makeState())).admissible, false);
+  });
+
   it('marks guarded first decisions as non-compilable', () => {
     const def = makeDef([
       eff({

@@ -1,4 +1,5 @@
 import type { ActionId } from './branded.js';
+import { canConfirmChooseNSelection, resolveChooseNCardinality } from './choose-n-cardinality.js';
 import type { ReadContext } from './eval-context.js';
 import { evalQuery } from './eval-query.js';
 import { EFFECT_KIND_TAG, type ActionPipelineDef, type ConditionAST, type EffectAST, type GameDef, type OptionsQuery } from './types.js';
@@ -240,9 +241,27 @@ const compileDirectFirstDecisionNode = (
   return {
     compilable: true,
     description: `direct:${options.query}`,
-    check: (ctx) => ({
-      admissible: evalQuery(options, ctx).length > 0,
-    }),
+    check: (ctx) => {
+      const optionCount = evalQuery(options, ctx).length;
+      if (optionCount > 0) {
+        return { admissible: true };
+      }
+
+      if (node.kind === 'chooseN') {
+        const { minCardinality, maxCardinality } = resolveChooseNCardinality(
+          (node.node as Extract<EffectAST, { readonly _k: 16 }>).chooseN,
+          ctx,
+          (issue) => {
+            throw new Error(`first-decision-compiler: invalid chooseN cardinality (${issue.code})`);
+          },
+        );
+        return {
+          admissible: canConfirmChooseNSelection(0, minCardinality, maxCardinality),
+        };
+      }
+
+      return { admissible: false };
+    },
   };
 };
 

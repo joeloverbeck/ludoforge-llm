@@ -799,6 +799,7 @@ describe('victory breakdown helpers', () => {
     assert.deepEqual(
       computeMarkerTotalBreakdown(DERIVED_METRICS_CONTEXT, spaces, markerStates, SUPPORT_CONFIG),
       {
+        componentId: 'markerTotal',
         aggregate: 5,
         spaces: [
           { spaceId: 's1', contribution: 4, factors: { population: 2, multiplier: 2 } },
@@ -827,6 +828,7 @@ describe('victory breakdown helpers', () => {
     const breakdown = countBasesOnMapBreakdown(state, spaces, 'VC', ['base'], 'faction');
     assert.equal(breakdown.aggregate, countBasesOnMap(state, spaces, 'VC', ['base'], 'faction'));
     assert.deepEqual(breakdown, {
+      componentId: 'mapBases',
       aggregate: 3,
       spaces: [
         { spaceId: 's1', contribution: 2, factors: { count: 2 } },
@@ -860,6 +862,7 @@ describe('victory breakdown helpers', () => {
       sumControlledPopulation(DERIVED_METRICS_CONTEXT, state, spaces, isCoinControlled, DEFAULT_FACTION_CONFIG),
     );
     assert.deepEqual(breakdown, {
+      componentId: 'controlledPopulation',
       aggregate: 3,
       spaces: [
         { spaceId: 's1', contribution: 3, factors: { population: 3 } },
@@ -900,6 +903,7 @@ describe('computeVictoryComponents', () => {
     assert.deepEqual(computeVictoryComponents(DERIVED_METRICS_CONTEXT, state, spaces, markerStates, DEFAULT_FACTION_CONFIG, formula), {
       breakdowns: [
         {
+          componentId: 'markerTotal',
           aggregate: 5,
           spaces: [
             { spaceId: 's1', contribution: 4, factors: { population: 2, multiplier: 2 } },
@@ -908,6 +912,7 @@ describe('computeVictoryComponents', () => {
           ],
         },
         {
+          componentId: 'zoneCount',
           aggregate: 2,
           spaces: [],
         },
@@ -938,6 +943,7 @@ describe('computeVictoryComponents', () => {
     assert.deepEqual(computeVictoryComponents(DERIVED_METRICS_CONTEXT, state, spaces, markerStates, DEFAULT_FACTION_CONFIG, formula), {
       breakdowns: [
         {
+          componentId: 'markerTotal',
           aggregate: 3,
           spaces: [
             { spaceId: 's1', contribution: 2, factors: { population: 1, multiplier: 2 } },
@@ -945,6 +951,7 @@ describe('computeVictoryComponents', () => {
           ],
         },
         {
+          componentId: 'mapBases',
           aggregate: 1,
           spaces: [
             { spaceId: 's1', contribution: 1, factors: { count: 1 } },
@@ -989,6 +996,7 @@ describe('computeVictoryComponents', () => {
     assert.deepEqual(computeVictoryComponents(DERIVED_METRICS_CONTEXT, state, spaces, {}, DEFAULT_FACTION_CONFIG, formula), {
       breakdowns: [
         {
+          componentId: 'controlledPopulation',
           aggregate: 6,
           spaces: [
             { spaceId: 's1', contribution: 3, factors: { population: 3 } },
@@ -996,6 +1004,7 @@ describe('computeVictoryComponents', () => {
           ],
         },
         {
+          componentId: 'mapBases',
           aggregate: 2,
           spaces: [
             { spaceId: 's1', contribution: 1, factors: { count: 1 } },
@@ -1029,6 +1038,7 @@ describe('computeVictoryComponents', () => {
     assert.deepEqual(computeVictoryComponents(DERIVED_METRICS_CONTEXT, state, spaces, {}, DEFAULT_FACTION_CONFIG, formula), {
       breakdowns: [
         {
+          componentId: 'controlledPopulation',
           aggregate: 4,
           spaces: [
             { spaceId: 's1', contribution: 2, factors: { population: 2 } },
@@ -1036,6 +1046,7 @@ describe('computeVictoryComponents', () => {
           ],
         },
         {
+          componentId: 'globalVar',
           aggregate: 18,
           spaces: [],
         },
@@ -1093,6 +1104,65 @@ describe('computeVictoryComponents', () => {
       }
       const totalFromSpaces = breakdown.spaces.reduce((total, space) => total + space.contribution, 0);
       assert.equal(breakdown.aggregate, totalFromSpaces);
+    }
+  });
+
+  it('emits stable semantic component ids for each supported formula shape', () => {
+    const formulas: readonly [VictoryFormula, readonly string[]][] = [
+      [
+        {
+          type: 'markerTotalPlusZoneCount',
+          markerConfig: SUPPORT_CONFIG,
+          countZone: 'available',
+        },
+        ['markerTotal', 'zoneCount'],
+      ],
+      [
+        {
+          type: 'markerTotalPlusMapBases',
+          markerConfig: SUPPORT_CONFIG,
+          baseSeat: 'US',
+          basePieceTypes: ['base'],
+        },
+        ['markerTotal', 'mapBases'],
+      ],
+      [
+        {
+          type: 'controlledPopulationPlusMapBases',
+          controlFn: 'coin',
+          baseSeat: 'US',
+          basePieceTypes: ['base'],
+        },
+        ['controlledPopulation', 'mapBases'],
+      ],
+      [
+        {
+          type: 'controlledPopulationPlusGlobalVar',
+          controlFn: 'coin',
+          varName: 'patronage',
+        },
+        ['controlledPopulation', 'globalVar'],
+      ],
+    ];
+    const spaces: readonly ZoneDef[] = [makeSpace({ id: 's1', population: 2 })];
+    const state = makeState(
+      {
+        s1: [{ id: asTokenId('b1'), type: 'base', props: { faction: 'US' } }],
+        available: [{ id: asTokenId('t1'), type: 'troops', props: { faction: 'US' } }],
+      },
+      { patronage: 5 },
+    );
+
+    for (const [formula, expectedIds] of formulas) {
+      const breakdownIds = computeVictoryComponents(
+        DERIVED_METRICS_CONTEXT,
+        state,
+        spaces,
+        { s1: 'activeSupport' },
+        DEFAULT_FACTION_CONFIG,
+        formula,
+      ).breakdowns.map((breakdown) => breakdown.componentId);
+      assert.deepEqual(breakdownIds, expectedIds);
     }
   });
 });

@@ -27,6 +27,7 @@ export function deriveVictoryStandings(
     threshold: result.threshold,
     rank: index + 1,
     components: result.components.breakdowns.map((breakdown) => ({
+      componentId: breakdown.componentId,
       aggregate: breakdown.aggregate,
       spaces: breakdown.spaces.map((space) => ({
         spaceId: space.spaceId,

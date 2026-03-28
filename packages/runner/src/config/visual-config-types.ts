@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { VictoryComponentId } from '@ludoforge/engine/runtime';
 import { ANIMATION_PRESET_OVERRIDE_KEYS } from '../animation/animation-types.js';
 
 export const BitmapFontRoleSchema = z.enum(['label', 'labelStroke']);
@@ -524,7 +525,16 @@ const PhaseBannersSchema = z.object({
   phases: z.array(z.string()).min(1),
 });
 
+const VictoryComponentIdSchema = z.enum([
+  'markerTotal',
+  'zoneCount',
+  'mapBases',
+  'controlledPopulation',
+  'globalVar',
+]) satisfies z.ZodType<VictoryComponentId>;
+
 const VictoryTooltipComponentSchema = z.object({
+  componentId: VictoryComponentIdSchema,
   label: z.string(),
   description: z.string().optional(),
   detailTemplate: z.string().optional(),

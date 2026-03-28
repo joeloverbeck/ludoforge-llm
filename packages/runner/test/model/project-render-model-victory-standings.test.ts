@@ -35,6 +35,7 @@ function createBundle(): RunnerProjectionBundle {
           rank: 1,
           components: [
             {
+              componentId: 'markerTotal',
               aggregate: 11,
               spaces: [
                 {
@@ -83,6 +84,7 @@ describe('projectRenderModel victory standings', () => {
         rank: 1,
         components: [
           {
+            componentId: 'markerTotal',
             aggregate: 11,
             spaces: [
               {

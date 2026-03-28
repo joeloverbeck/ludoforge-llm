@@ -32,6 +32,7 @@ describe('deriveVictoryStandings', () => {
         components: {
           breakdowns: [
             {
+              componentId: 'markerTotal',
               aggregate: 11,
               spaces: [
                 {
@@ -47,6 +48,7 @@ describe('deriveVictoryStandings', () => {
               ],
             },
             {
+              componentId: 'mapBases',
               aggregate: 7,
               spaces: [
                 {
@@ -74,6 +76,7 @@ describe('deriveVictoryStandings', () => {
         rank: 1,
         components: [
           {
+            componentId: 'markerTotal',
             aggregate: 11,
             spaces: [
               {
@@ -89,6 +92,7 @@ describe('deriveVictoryStandings', () => {
             ],
           },
           {
+            componentId: 'mapBases',
             aggregate: 7,
             spaces: [
               {

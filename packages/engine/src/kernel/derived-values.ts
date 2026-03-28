@@ -443,7 +443,15 @@ export interface SpaceContribution {
   readonly factors: Readonly<Record<string, number>>;
 }
 
+export type VictoryComponentId =
+  | 'markerTotal'
+  | 'zoneCount'
+  | 'mapBases'
+  | 'controlledPopulation'
+  | 'globalVar';
+
 export interface ComponentBreakdown {
+  readonly componentId: VictoryComponentId;
   readonly aggregate: number;
   readonly spaces: readonly SpaceContribution[];
 }
@@ -456,8 +464,12 @@ function sumBreakdownContributions(spaces: readonly SpaceContribution[]): number
   return total;
 }
 
-function toComponentBreakdown(spaces: readonly SpaceContribution[]): ComponentBreakdown {
+function toComponentBreakdown(
+  componentId: VictoryComponentId,
+  spaces: readonly SpaceContribution[],
+): ComponentBreakdown {
   return {
+    componentId,
     aggregate: sumBreakdownContributions(spaces),
     spaces,
   };
@@ -481,7 +493,7 @@ export function computeMarkerTotalBreakdown(
       factors: { population, multiplier },
     });
   }
-  return toComponentBreakdown(contributions);
+  return toComponentBreakdown('markerTotal', contributions);
 }
 
 export function countBasesOnMapBreakdown(
@@ -508,7 +520,7 @@ export function countBasesOnMapBreakdown(
       });
     }
   }
-  return toComponentBreakdown(contributions);
+  return toComponentBreakdown('mapBases', contributions);
 }
 
 export function sumControlledPopulationBreakdown(
@@ -530,7 +542,7 @@ export function sumControlledPopulationBreakdown(
       factors: { population },
     });
   }
-  return toComponentBreakdown(contributions);
+  return toComponentBreakdown('controlledPopulation', contributions);
 }
 
 function getNumericGlobalVar(state: GameState, varName: string): number {
@@ -563,7 +575,7 @@ function computeVictoryComponentBreakdowns(
           ? { kind: 'byTokenType', tokenTypes: formula.countTokenTypes }
           : undefined,
       );
-      return [markerTotal, { aggregate: zoneCount, spaces: [] }];
+      return [markerTotal, { componentId: 'zoneCount', aggregate: zoneCount, spaces: [] }];
     }
     case 'markerTotalPlusMapBases': {
       const markerTotal = computeMarkerTotalBreakdown(gameDef, spaces, markerStates, formula.markerConfig);
@@ -580,7 +592,7 @@ function computeVictoryComponentBreakdowns(
       const controlFn = formula.controlFn === 'coin' ? isCoinControlled : isSoloSeatControlled;
       const population = sumControlledPopulationBreakdown(gameDef, state, spaces, controlFn, seatGroupConfig);
       const varValue = getNumericGlobalVar(state, formula.varName);
-      return [population, { aggregate: varValue, spaces: [] }];
+      return [population, { componentId: 'globalVar', aggregate: varValue, spaces: [] }];
     }
   }
 }

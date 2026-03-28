@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — runner/config only after `componentId` lands
-**Deps**: tickets/GRANTOOLTIP-004.md, archive/tickets/GRANTOOLTIP/GRANTOOLTIP-003.md
+**Deps**: archive/tickets/GRANTOOLTIP-004.md, archive/tickets/GRANTOOLTIP/GRANTOOLTIP-003.md
 
 ## Problem
 

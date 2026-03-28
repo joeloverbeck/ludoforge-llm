@@ -17,7 +17,7 @@ afterEach(() => {
   cleanup();
 });
 
-function renderVictoryStandingsBar() {
+function renderVictoryStandingsBar(includeMapBasesMetadata: boolean = true) {
   const store = createRenderModelStore(makeRenderModelFixture({
     victoryStandings: [
       {
@@ -27,6 +27,7 @@ function renderVictoryStandingsBar() {
         rank: 1,
         components: [
           {
+            componentId: 'markerTotal',
             aggregate: 11,
             spaces: [
               {
@@ -50,6 +51,7 @@ function renderVictoryStandingsBar() {
             ],
           },
           {
+            componentId: 'mapBases',
             aggregate: 7,
             spaces: [
               {
@@ -77,7 +79,14 @@ function renderVictoryStandingsBar() {
         {
           seat: 'vc',
           components: [
+            ...(includeMapBasesMetadata
+              ? [{
+                  componentId: 'mapBases' as const,
+                  label: 'VC Bases on Map',
+                }]
+              : []),
             {
+              componentId: 'markerTotal',
               label: 'Total Opposition',
               description: 'Population-weighted opposition',
               detailTemplate: '(pop {population}) x{multiplier} = {contribution}',
@@ -104,7 +113,7 @@ describe('VictoryStandingsBar', () => {
     fireEvent.pointerEnter(screen.getByTestId('victory-entry-vc'));
     fireEvent.click(screen.getByRole('button', { name: 'Expand Total Opposition' }));
 
-    const breakdown = screen.getByTestId('victory-breakdown-vc-0');
+    const breakdown = screen.getByTestId('victory-breakdown-vc-markerTotal');
     const itemTexts = Array.from(breakdown.querySelectorAll('div'))
       .map((element) => element.textContent)
       .filter((value): value is string => value !== null && value.includes('='));
@@ -129,20 +138,20 @@ describe('VictoryStandingsBar', () => {
     expect(screen.getByTestId('victory-tooltip-vc')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Expand Total Opposition' }));
-    expect(screen.getByTestId('victory-breakdown-vc-0')).toBeTruthy();
+    expect(screen.getByTestId('victory-breakdown-vc-markerTotal')).toBeTruthy();
 
     fireEvent.pointerLeave(tooltip, { relatedTarget: null });
     expect(screen.queryByTestId('victory-tooltip-vc')).toBeNull();
   });
 
-  it('falls back to a generic label and contribution-only detail when metadata is shorter than runtime data', () => {
-    renderVictoryStandingsBar();
+  it('falls back to a formatted component id and contribution-only detail when metadata is missing', () => {
+    renderVictoryStandingsBar(false);
 
     fireEvent.pointerEnter(screen.getByTestId('victory-entry-vc'));
-    fireEvent.click(screen.getByRole('button', { name: 'Expand Component 2' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Expand Map Bases' }));
 
-    const breakdown = screen.getByTestId('victory-breakdown-vc-1');
-    expect(screen.getByText('Component 2')).toBeTruthy();
+    const breakdown = screen.getByTestId('victory-breakdown-vc-mapBases');
+    expect(screen.getByText('Map Bases')).toBeTruthy();
     expect(within(breakdown).getByText('Tay Ninh')).toBeTruthy();
     expect(within(breakdown).getByText('1')).toBeTruthy();
   });

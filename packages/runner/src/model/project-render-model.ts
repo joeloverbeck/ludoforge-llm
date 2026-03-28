@@ -119,6 +119,7 @@ function projectVictoryComponentBreakdown(
   visualConfigProvider: VisualConfigProvider,
 ): RenderComponentBreakdown {
   return {
+    componentId: component.componentId,
     aggregate: component.aggregate,
     spaces: component.spaces.map((space) => ({
       ...space,

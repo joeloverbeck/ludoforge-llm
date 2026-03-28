@@ -4,6 +4,7 @@ import type {
   DecisionKey,
   MoveParamValue,
   PlayerId,
+  VictoryComponentId,
 } from '@ludoforge/engine/runtime';
 import type { ResolvedZoneVisual } from '../config/visual-config-provider.js';
 
@@ -23,6 +24,7 @@ export interface RenderSpaceContribution {
 }
 
 export interface RenderComponentBreakdown {
+  readonly componentId: VictoryComponentId;
   readonly aggregate: number;
   readonly spaces: readonly RenderSpaceContribution[];
 }

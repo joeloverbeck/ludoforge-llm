@@ -134,7 +134,7 @@ interface VictoryTooltipProps {
 }
 
 interface TooltipRow {
-  readonly index: number;
+  readonly componentId: RenderComponentBreakdown['componentId'];
   readonly label: string;
   readonly description: string | undefined;
   readonly detailTemplate: string | undefined;
@@ -144,30 +144,35 @@ interface TooltipRow {
 function VictoryTooltip({ entry, anchorRect, tooltipRef, onPointerLeave }: VictoryTooltipProps): ReactElement {
   const visualConfig = useContext(VisualConfigContext);
   const breakdown = visualConfig?.getVictoryTooltipBreakdown(entry.seat) ?? null;
-  const [expandedIndices, setExpandedIndices] = useState<ReadonlySet<number>>(() => new Set<number>());
+  const [expandedIndices, setExpandedIndices] = useState<ReadonlySet<RenderComponentBreakdown['componentId']>>(
+    () => new Set<RenderComponentBreakdown['componentId']>(),
+  );
 
   const top = anchorRect.bottom;
   const left = anchorRect.left + anchorRect.width / 2;
 
   const displayName = visualConfig?.getFactionDisplayName(entry.seat)
     ?? formatIdAsDisplayName(entry.seat);
+  const componentMetadataById = new Map(
+    (breakdown?.components ?? []).map((component) => [component.componentId, component] as const),
+  );
   const rows: readonly TooltipRow[] = breakdown === null
     ? []
-    : entry.components.map((component, index) => ({
-      index,
-      label: breakdown.components[index]?.label ?? `Component ${index + 1}`,
-      description: breakdown.components[index]?.description,
-      detailTemplate: breakdown.components[index]?.detailTemplate,
+    : entry.components.map((component) => ({
+      componentId: component.componentId,
+      label: componentMetadataById.get(component.componentId)?.label ?? formatIdAsDisplayName(component.componentId),
+      description: componentMetadataById.get(component.componentId)?.description,
+      detailTemplate: componentMetadataById.get(component.componentId)?.detailTemplate,
       breakdown: component,
     }));
 
-  const toggleExpanded = (index: number): void => {
+  const toggleExpanded = (componentId: RenderComponentBreakdown['componentId']): void => {
     setExpandedIndices((current) => {
       const next = new Set(current);
-      if (next.has(index)) {
-        next.delete(index);
+      if (next.has(componentId)) {
+        next.delete(componentId);
       } else {
-        next.add(index);
+        next.add(componentId);
       }
       return next;
     });
@@ -188,21 +193,21 @@ function VictoryTooltip({ entry, anchorRect, tooltipRef, onPointerLeave }: Victo
         {breakdown !== null && rows.length > 0 ? (
           <>
             {rows.map((row) => {
-              const isExpanded = expandedIndices.has(row.index);
+              const isExpanded = expandedIndices.has(row.componentId);
               const hasSpaces = row.breakdown.spaces.length > 0;
               const contributingSpaces = [...row.breakdown.spaces]
                 .filter((space) => space.contribution > 0)
                 .sort((leftSpace, rightSpace) => rightSpace.contribution - leftSpace.contribution);
 
               return (
-                <div key={`${row.label}-${row.index}`}>
+                <div key={row.componentId}>
                   <div className={styles.tooltipRow}>
                     <div className={styles.tooltipRowLabel}>
                       {hasSpaces ? (
                         <button
                           type="button"
                           className={styles.toggle}
-                          onClick={() => toggleExpanded(row.index)}
+                          onClick={() => toggleExpanded(row.componentId)}
                           aria-expanded={isExpanded}
                           aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${row.label}`}
                         >
@@ -219,7 +224,10 @@ function VictoryTooltip({ entry, anchorRect, tooltipRef, onPointerLeave }: Victo
                     <div className={styles.tooltipDescription}>{row.description}</div>
                   )}
                   {isExpanded && hasSpaces ? (
-                    <div className={styles.breakdownList} data-testid={`victory-breakdown-${entry.seat}-${row.index}`}>
+                    <div
+                      className={styles.breakdownList}
+                      data-testid={`victory-breakdown-${entry.seat}-${row.componentId}`}
+                    >
                       {contributingSpaces.map((space) => (
                         <div key={space.spaceId} className={styles.breakdownItem}>
                           <span className={styles.breakdownSpace}>{space.displayName}</span>

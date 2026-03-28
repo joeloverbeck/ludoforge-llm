@@ -1,14 +1,19 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { findBootstrapDescriptorById } from '../../src/bootstrap/bootstrap-registry.js';
+import {
+  resolveRunnerBootstrapByGameId,
+  resolveRunnerBootstrapHandle,
+  resolveRuntimeBootstrap,
+} from '../../src/bootstrap/runner-bootstrap.js';
 import { createAgentSeatController, createHumanSeatController } from '../../src/seat/seat-controller.js';
 
-async function importFreshRunnerBootstrap() {
+async function importIsolatedRunnerBootstrap() {
   return import('../../src/bootstrap/runner-bootstrap.js');
 }
 
 describe('runner-bootstrap', () => {
   it('resolves full bootstrap state and centralized capabilities for FITL', async () => {
-    const { resolveRunnerBootstrapByGameId } = await importFreshRunnerBootstrap();
     const resolved = await resolveRunnerBootstrapByGameId('fitl');
 
     expect(resolved).not.toBeNull();
@@ -19,12 +24,10 @@ describe('runner-bootstrap', () => {
   }, 20000);
 
   it('returns null for unknown descriptor ids', async () => {
-    const { resolveRunnerBootstrapByGameId } = await importFreshRunnerBootstrap();
     await expect(resolveRunnerBootstrapByGameId('missing-game')).resolves.toBeNull();
   });
 
   it('derives runtime playerId from the human seat and falls back to descriptor defaults', async () => {
-    const { resolveRuntimeBootstrap } = await importFreshRunnerBootstrap();
     const explicitHuman = resolveRuntimeBootstrap(
       'fitl',
       77,
@@ -41,6 +44,33 @@ describe('runner-bootstrap', () => {
 
     expect(explicitHuman?.playerId).toBe(3);
     expect(defaultSeat?.playerId).toBe(0);
+  });
+
+  it('reuses the cached bootstrap handle and resolved happy-path bootstrap state per descriptor', async () => {
+    const descriptor = findBootstrapDescriptorById('fitl');
+
+    expect(descriptor).not.toBeNull();
+    if (descriptor === null) {
+      return;
+    }
+
+    const firstHandle = resolveRunnerBootstrapHandle(descriptor);
+    const secondHandle = resolveRunnerBootstrapHandle(descriptor);
+    const runtimeBootstrap = resolveRuntimeBootstrap(
+      'fitl',
+      77,
+      [{ playerId: 1, controller: createAgentSeatController() }],
+    );
+
+    const [firstResolved, secondResolved] = await Promise.all([
+      firstHandle.resolve(),
+      secondHandle.resolve(),
+    ]);
+
+    expect(secondHandle).toBe(firstHandle);
+    expect(secondResolved).toBe(firstResolved);
+    expect(runtimeBootstrap?.visualConfigProvider).toBe(firstHandle.visualConfigProvider);
+    expect(await runtimeBootstrap?.resolveGameDef()).toBe(firstResolved.gameDef);
   });
 });
 
@@ -77,7 +107,7 @@ describe('runner-bootstrap with mocked bootstrap inputs', () => {
       };
     });
 
-    const { resolveRunnerBootstrapByGameId } = await importFreshRunnerBootstrap();
+    const { resolveRunnerBootstrapByGameId } = await importIsolatedRunnerBootstrap();
     await expect(resolveRunnerBootstrapByGameId('texas')).rejects.toThrowError(/Invalid visual config schema/u);
   });
 });

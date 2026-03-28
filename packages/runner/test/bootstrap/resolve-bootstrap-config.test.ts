@@ -1,12 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-async function importFreshResolver() {
+import { resolveBootstrapConfig } from '../../src/bootstrap/resolve-bootstrap-config.js';
+
+async function importIsolatedResolver() {
   return import('../../src/bootstrap/resolve-bootstrap-config.js');
 }
 
 describe('resolveBootstrapConfig', () => {
   it('returns Texas bootstrap config when query is empty (default fallback)', async () => {
-    const { resolveBootstrapConfig } = await importFreshResolver();
     const resolved = resolveBootstrapConfig('');
     const gameDef = await resolved.resolveGameDef();
 
@@ -18,7 +19,6 @@ describe('resolveBootstrapConfig', () => {
   }, 20000);
 
   it('returns FITL bootstrap config when game=fitl and applies params', async () => {
-    const { resolveBootstrapConfig } = await importFreshResolver();
     const resolved = resolveBootstrapConfig('?game=fitl&seed=77&player=3');
     const gameDef = await resolved.resolveGameDef();
 
@@ -30,7 +30,6 @@ describe('resolveBootstrapConfig', () => {
   });
 
   it('returns Texas bootstrap config when game=texas and applies params', async () => {
-    const { resolveBootstrapConfig } = await importFreshResolver();
     const resolved = resolveBootstrapConfig('?game=texas&seed=77&player=3');
     const gameDef = await resolved.resolveGameDef();
 
@@ -42,7 +41,6 @@ describe('resolveBootstrapConfig', () => {
   });
 
   it('returns FITL bootstrap config with visual-provider category style invariants needed by generic rendering', async () => {
-    const { resolveBootstrapConfig } = await importFreshResolver();
     const resolved = resolveBootstrapConfig('?game=fitl');
     const gameDef = await resolved.resolveGameDef();
     const allZones = gameDef.zones;
@@ -96,7 +94,6 @@ describe('resolveBootstrapConfig', () => {
   });
 
   it('falls back to defaults for invalid seed/player query params', async () => {
-    const { resolveBootstrapConfig } = await importFreshResolver();
     const resolved = resolveBootstrapConfig('?game=fitl&seed=NaN&player=-4');
     const gameDef = await resolved.resolveGameDef();
 
@@ -106,7 +103,6 @@ describe('resolveBootstrapConfig', () => {
   });
 
   it('falls back to Texas bootstrap descriptor for unknown game ids', async () => {
-    const { resolveBootstrapConfig } = await importFreshResolver();
     const resolved = resolveBootstrapConfig('?game=unknown-game-id');
     const gameDef = await resolved.resolveGameDef();
 
@@ -140,7 +136,7 @@ describe('resolveBootstrapConfig with mocked bootstrap inputs', () => {
       }),
     }));
 
-    const { resolveBootstrapConfig } = await importFreshResolver();
+    const { resolveBootstrapConfig } = await importIsolatedResolver();
     const resolved = resolveBootstrapConfig('?game=fitl');
     await expect(resolved.resolveGameDef()).rejects.toThrowError(
       /Invalid GameDef input from FITL bootstrap fixture/u,
@@ -163,7 +159,7 @@ describe('resolveBootstrapConfig with mocked bootstrap inputs', () => {
       }),
     }));
 
-    const { resolveBootstrapConfig } = await importFreshResolver();
+    const { resolveBootstrapConfig } = await importIsolatedResolver();
     const resolved = resolveBootstrapConfig('?game=texas');
     await expect(resolved.resolveGameDef()).rejects.toThrowError(
       /Invalid GameDef input from Texas Hold'em bootstrap fixture/u,
@@ -189,7 +185,7 @@ describe('resolveBootstrapConfig with mocked bootstrap inputs', () => {
       };
     });
 
-    const { resolveBootstrapConfig } = await importFreshResolver();
+    const { resolveBootstrapConfig } = await importIsolatedResolver();
     expect(() => resolveBootstrapConfig('')).toThrowError(/Invalid visual config schema/u);
   });
 
@@ -217,7 +213,7 @@ describe('resolveBootstrapConfig with mocked bootstrap inputs', () => {
       };
     });
 
-    const { resolveBootstrapConfig } = await importFreshResolver();
+    const { resolveBootstrapConfig } = await importIsolatedResolver();
     const resolved = resolveBootstrapConfig('');
     await expect(resolved.resolveGameDef()).rejects.toThrowError(
       /Invalid visual config references/u,

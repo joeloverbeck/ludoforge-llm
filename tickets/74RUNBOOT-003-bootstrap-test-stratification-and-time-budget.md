@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — runner-only
-**Deps**: tickets/74RUNBOOT-002-runner-bootstrap-test-harness-cache.md
+**Deps**: archive/tickets/74RUNBOOT/74RUNBOOT-002-bootstrap-test-cache-clarity.md
 
 ## Problem
 

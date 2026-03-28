@@ -19,6 +19,7 @@ import {
   asPlayerId,
   asTokenId,
   asZoneId,
+  createGameDefRuntime,
   enumerateLegalMoves,
   isKernelErrorCode,
   legalMoves,
@@ -3785,6 +3786,79 @@ describe('legalMoves plain-action feasibility probe', () => {
     assert.equal(result.moves[0]?.move.actionId, asActionId('patrol'));
   });
 
+  it('34a. runtime first-decision compilation filters unconditional empty token domains', () => {
+    const action: ActionDef = {
+      id: asActionId('tokenProbe'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [
+        eff({
+          chooseOne: {
+            internalDecisionId: 'decision:$token',
+            bind: '$token',
+            options: { query: 'tokensInZone', zone: 'board:none' },
+          },
+        }) as GameDef['actions'][number]['effects'][number],
+      ],
+      limits: [],
+    };
+
+    const def = makeBaseDef({
+      actions: [action],
+      zones: [
+        { id: asZoneId('board:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+      ],
+    });
+    const state = makeBaseState({
+      zones: {
+        'board:none': [],
+      },
+    });
+    const runtime = createGameDefRuntime(def);
+
+    const moves = legalMoves(def, state, { probePlainActionFeasibility: true }, runtime);
+    assert.equal(runtime.firstDecisionDomains.byActionId.get(action.id)?.compilable, true);
+    assert.equal(moves.length, 0, 'compiled unconditional token domain should reject empty domains early');
+  });
+
+  it('34b. guarded first decisions remain interpreter-backed and keep observable behavior', () => {
+    const action: ActionDef = {
+      id: asActionId('guardedProbe'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [
+        eff({
+          if: {
+            when: true,
+            then: [eff({
+              chooseOne: {
+                internalDecisionId: 'decision:$target',
+                bind: '$target',
+                options: { query: 'enums', values: [] },
+              },
+            })],
+          },
+        }) as GameDef['actions'][number]['effects'][number],
+      ],
+      limits: [],
+    };
+
+    const def = makeBaseDef({ actions: [action] });
+    const runtime = createGameDefRuntime(def);
+
+    const moves = legalMoves(def, makeBaseState(), { probePlainActionFeasibility: true }, runtime);
+    assert.equal(runtime.firstDecisionDomains.byActionId.get(action.id)?.compilable, false);
+    assert.equal(moves.length, 0, 'guarded first decisions should still be filtered by the canonical interpreter path');
+  });
+
   it('35. pipeline actions are not double-probed', () => {
     const action: ActionDef = {
       id: asActionId('trainOp'),
@@ -3830,6 +3904,77 @@ describe('legalMoves plain-action feasibility probe', () => {
     const moves = legalMoves(def, state);
     assert.equal(moves.length, 1, 'pipeline action should still be emitted (probed by pipeline path only)');
     assert.equal(moves[0]?.actionId, asActionId('trainOp'));
+  });
+
+  it('35a. runtime first-decision compilation filters unconditional empty pipeline domains', () => {
+    const action: ActionDef = {
+      id: asActionId('trainOp'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'trainProfileEmpty',
+      actionId: asActionId('trainOp'),
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          stage: 'selectSpaces',
+          effects: [
+            eff({
+              chooseOne: {
+                internalDecisionId: 'decision:$space',
+                bind: '$space',
+                options: { query: 'enums', values: [] },
+              },
+            }) as GameDef['actions'][number]['effects'][number],
+          ],
+        },
+      ],
+      atomicity: 'partial',
+    };
+
+    const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
+    const runtime = createGameDefRuntime(def);
+
+    const moves = legalMoves(def, makeBaseState(), undefined, runtime);
+    assert.equal(runtime.firstDecisionDomains.byPipelineProfileId.get(profile.id)?.compilable, true);
+    assert.equal(moves.length, 0, 'compiled unconditional pipeline domain should reject empty domains early');
+  });
+
+  it('35b. keeps current event admission on the interpreter path instead of compiled first-decision guards', () => {
+    const source = readKernelSource('src/kernel/legal-moves.ts');
+    const eventFunctionMatch = source.match(
+      /function enumerateCurrentEventMoves\([\s\S]*?\n\}\n\nconst enumerateRawLegalMoves =/u,
+    );
+
+    assert.notEqual(eventFunctionMatch, null, 'enumerateCurrentEventMoves should remain a distinct helper');
+    const eventFunctionSource = eventFunctionMatch?.[0] ?? '';
+
+    assert.match(
+      eventFunctionSource,
+      /isMoveDecisionSequenceAdmittedForLegalMove/u,
+      'event admission should continue to use the canonical interpreter-backed helper',
+    );
+    assert.doesNotMatch(
+      eventFunctionSource,
+      /isCompiledFirstDecisionRejected/u,
+      'event admission should not use compiled first-decision rejection guards',
+    );
+    assert.doesNotMatch(
+      eventFunctionSource,
+      /firstDecisionDomains/u,
+      'event admission should not depend on runtime-owned firstDecisionDomains directly',
+    );
   });
 
   it('36. routes plain-action decision admission through canonical helper with plainActionDecisionSequence context', () => {
@@ -4076,6 +4221,58 @@ describe('legalMoves phase-aware action enumeration', () => {
       source,
       /\(def\.actionPipelines\s*\?\?\s*\[\]\)\.some\(/u,
       'legal-moves.ts must not rescan def.actionPipelines directly once the shared lookup is in place',
+    );
+  });
+
+  it('creates one enumeration snapshot and threads it through raw discovery evaluation', () => {
+    const source = readKernelSource('src/kernel/legal-moves.ts');
+    const sourceFile = parseTypeScriptSource(source, 'legal-moves.ts');
+    const imports = collectNamedImportsByLocalName(sourceFile, './enumeration-snapshot.js');
+
+    const hasSnapshotProperty = (argument: ts.Expression): boolean => {
+      const argumentText = expressionToText(sourceFile, argument);
+      return /(?:^|[,{]\s*)snapshot(?:\s*:|[\s,}])/u.test(argumentText);
+    };
+
+    const createSnapshotCalls = collectCallExpressionsByIdentifier(sourceFile, 'createEnumerationSnapshot');
+    const rootStateEnumerateParamsCalls = collectCallExpressionsByIdentifier(sourceFile, 'enumerateParams')
+      .filter((call) =>
+        call.arguments.length >= 11
+        && expressionToText(sourceFile, call.arguments[5]!) === 'state'
+        && expressionToText(sourceFile, call.arguments[6]!) === '0'
+      );
+    const discoveryPredicateCalls = collectCallExpressionsByIdentifier(sourceFile, 'evaluateDiscoveryPipelinePredicateStatus');
+
+    assert.equal(
+      imports.get('createEnumerationSnapshot'),
+      'createEnumerationSnapshot',
+      'legal-moves.ts must import createEnumerationSnapshot from the dedicated snapshot module',
+    );
+    assert.equal(
+      createSnapshotCalls.filter((call) =>
+        call.arguments.length === 2
+        && expressionToText(sourceFile, call.arguments[0]!) === 'def'
+        && expressionToText(sourceFile, call.arguments[1]!) === 'state'
+      ).length,
+      1,
+      'enumerateRawLegalMoves must create exactly one enumeration snapshot from (def, state)',
+    );
+    assert.match(
+      source,
+      /const snapshot = createEnumerationSnapshot\(def,\s*state\);/u,
+      'enumerateRawLegalMoves must bind the shared snapshot once per raw enumeration call',
+    );
+    assert.ok(rootStateEnumerateParamsCalls.length >= 1, 'expected root-state enumerateParams call sites');
+    assert.equal(
+      rootStateEnumerateParamsCalls.every((call) => hasSnapshotProperty(call.arguments[10]!)),
+      true,
+      'root-state enumerateParams calls must receive the shared snapshot so nested discovery evaluation sees the same data',
+    );
+    assert.ok(discoveryPredicateCalls.length >= 1, 'expected evaluateDiscoveryPipelinePredicateStatus call sites');
+    assert.equal(
+      discoveryPredicateCalls.every((call) => call.arguments.length >= 4 && hasSnapshotProperty(call.arguments[3]!)),
+      true,
+      'legal-moves.ts discovery predicate checks must pass the shared snapshot explicitly',
     );
   });
 });

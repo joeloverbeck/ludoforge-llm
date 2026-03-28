@@ -14,9 +14,12 @@ import {
   evaluateDiscoveryStagePredicateStatus,
   evaluatePipelinePredicateStatus,
   evaluateStagePredicateStatus,
+  getCompiledPipelinePredicates,
   type ActionDef,
   type ActionPipelineDef,
   type ActionResolutionStageDef,
+  type ConditionAST,
+  type EnumerationStateSnapshot,
   type ReadContext,
   type GameDef,
   type GameState,
@@ -29,7 +32,10 @@ import { makeEvalContext } from '../../helpers/eval-context-test-helpers.js';
 
 const makeState = (resources: number): GameState => ({
   globalVars: { resources },
-  perPlayerVars: {},
+  perPlayerVars: {
+    0: { resources },
+    1: { resources: resources + 5 },
+  },
   zoneVars: {},
   playerCount: 2,
   zones: { 'board:none': [] },
@@ -77,16 +83,36 @@ const makeEvalCtx = (
   def: GameDef,
   state: GameState,
   bindings: Readonly<Record<string, unknown>> = {},
+  options?: { readonly activePlayer?: GameState['activePlayer'] },
 ): ReadContext => {
   return makeEvalContext({
     def,
     adjacencyGraph: buildAdjacencyGraph(def.zones),
     state,
-    activePlayer: state.activePlayer,
-    actorPlayer: state.activePlayer,
+    activePlayer: options?.activePlayer ?? state.activePlayer,
+    actorPlayer: options?.activePlayer ?? state.activePlayer,
     bindings,
     collector: createCollector(),
   });
+};
+
+const makeSnapshot = (
+  state: GameState,
+  options?: {
+    readonly resources?: number;
+    readonly perPlayerVars?: GameState['perPlayerVars'];
+  },
+): EnumerationStateSnapshot => {
+  return {
+    globalVars: {
+      ...state.globalVars,
+      ...(options?.resources === undefined ? {} : { resources: options.resources }),
+    },
+    perPlayerVars: options?.perPlayerVars ?? state.perPlayerVars,
+    zoneTotals: { get: (_zoneId: string, _tokenType?: string) => 0 },
+    zoneVars: { get: (_zoneId: string, _varName: string) => undefined },
+    markerStates: { get: (_spaceId: string, _markerName: string) => undefined },
+  };
 };
 
 describe('pipeline viability policy', () => {
@@ -254,6 +280,326 @@ describe('evaluateDiscoveryPipelinePredicateStatus()', () => {
         return true;
       },
     );
+  });
+});
+
+describe('pipeline viability predicate fast-path routing', () => {
+  it('threads snapshot through execution pipeline checks', () => {
+    const action = makeAction();
+    const pipeline: ActionPipelineDef = {
+      id: 'profile',
+      actionId: action.id,
+      legality: { op: '==', left: { _t: 2, ref: 'gvar', var: 'resources' }, right: 9 },
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [],
+      atomicity: 'partial',
+    };
+    const def = makeDef(action, pipeline);
+    const state = makeState(3);
+    const snapshot = makeSnapshot(state, { resources: 9 });
+
+    const withoutSnapshot = evaluatePipelinePredicateStatus(action, pipeline, makeEvalCtx(def, state));
+    const withSnapshot = evaluatePipelinePredicateStatus(action, pipeline, makeEvalCtx(def, state), { snapshot });
+
+    assert.equal(withoutSnapshot.legalityPassed, false);
+    assert.equal(withSnapshot.legalityPassed, true);
+  });
+
+  it('threads snapshot through discovery stage checks', () => {
+    const action = makeAction();
+    const stage: ActionResolutionStageDef = {
+      legality: { op: '==', left: { _t: 2, ref: 'gvar', var: 'resources' }, right: 9 },
+      effects: [],
+    };
+    const def = makeDef(action, {
+      id: 'profile',
+      actionId: action.id,
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [stage],
+      atomicity: 'partial',
+    });
+    const state = makeState(3);
+    const snapshot = makeSnapshot(state, { resources: 9 });
+
+    const status = evaluateDiscoveryStagePredicateStatus(
+      action,
+      'profile',
+      stage,
+      'partial',
+      makeEvalCtx(def, state),
+      { snapshot },
+    );
+
+    assert.equal(status.legality, 'passed');
+  });
+
+  it('uses raw state semantics when snapshot is omitted', () => {
+    const action = makeAction();
+    const pipeline: ActionPipelineDef = {
+      id: 'profile',
+      actionId: action.id,
+      legality: { op: '==', left: { _t: 2, ref: 'gvar', var: 'resources' }, right: 9 },
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [],
+      atomicity: 'partial',
+    };
+    const def = makeDef(action, pipeline);
+    const status = evaluatePipelinePredicateStatus(action, pipeline, makeEvalCtx(def, makeState(3)));
+
+    assert.equal(status.legalityPassed, false);
+  });
+
+  it('uses snapshot player vars when evaluation player differs from state.activePlayer', () => {
+    const action = makeAction();
+    const pipeline: ActionPipelineDef = {
+      id: 'profile',
+      actionId: action.id,
+      legality: { op: '==', left: { _t: 2, ref: 'pvar', player: 'active', var: 'resources' }, right: 13 },
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [],
+      atomicity: 'partial',
+    };
+    const def = makeDef(action, pipeline);
+    const state = makeState(3);
+    const snapshot = makeSnapshot(state, {
+      perPlayerVars: {
+        ...state.perPlayerVars,
+        1: { ...(state.perPlayerVars[1] ?? {}), resources: 13 },
+      },
+    });
+
+    const withoutSnapshot = evaluatePipelinePredicateStatus(
+      action,
+      pipeline,
+      makeEvalCtx(def, state, {}, { activePlayer: asPlayerId(1) }),
+    );
+    const withSnapshot = evaluatePipelinePredicateStatus(
+      action,
+      pipeline,
+      makeEvalCtx(def, state, {}, { activePlayer: asPlayerId(1) }),
+      { snapshot },
+    );
+
+    assert.equal(withoutSnapshot.legalityPassed, false);
+    assert.equal(withSnapshot.legalityPassed, true);
+  });
+
+  it('evaluates boolean pipeline predicates directly', () => {
+    const action = makeAction();
+    const pipeline: ActionPipelineDef = {
+      id: 'profile',
+      actionId: action.id,
+      legality: true,
+      costValidation: false,
+      costEffects: [],
+      targeting: {},
+      stages: [],
+      atomicity: 'atomic',
+    };
+    const def = makeDef(action, pipeline);
+    const compiledPredicates = getCompiledPipelinePredicates(def);
+    const status = evaluatePipelinePredicateStatus(action, pipeline, makeEvalCtx(def, makeState(3)));
+
+    assert.equal(compiledPredicates.size, 0);
+    assert.equal(status.legalityPassed, true);
+    assert.equal(status.costValidationPassed, false);
+  });
+
+  it('evaluates boolean stage predicates directly in discovery mode', () => {
+    const action = makeAction();
+    const stage: ActionResolutionStageDef = {
+      legality: false,
+      costValidation: true,
+      effects: [],
+    };
+    const def = makeDef(action, {
+      id: 'profile',
+      actionId: action.id,
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [stage],
+      atomicity: 'partial',
+    });
+    const compiledPredicates = getCompiledPipelinePredicates(def);
+    const status = evaluateDiscoveryStagePredicateStatus(
+      action,
+      'profile',
+      stage,
+      'partial',
+      makeEvalCtx(def, makeState(3)),
+    );
+
+    assert.equal(compiledPredicates.size, 0);
+    assert.equal(status.legality, 'failed');
+    assert.equal(status.costValidation, 'passed');
+  });
+
+  it('uses cached compiled predicates for execution checks keyed by condition identity', () => {
+    const action = makeAction();
+    const legality: ConditionAST = {
+      op: '>=',
+      left: { _t: 2, ref: 'gvar', var: 'resources' },
+      right: 2,
+    };
+    const pipeline: ActionPipelineDef = {
+      id: 'profile',
+      actionId: action.id,
+      legality,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [],
+      atomicity: 'partial',
+    };
+    const def = makeDef(action, pipeline);
+    const compiledPredicates = getCompiledPipelinePredicates(def);
+
+    assert.ok(compiledPredicates.get(legality) !== undefined);
+
+    (legality as { right: number }).right = 99;
+
+    const status = evaluatePipelinePredicateStatus(action, pipeline, makeEvalCtx(def, makeState(3)));
+
+    assert.equal(status.legalityPassed, true);
+  });
+
+  it('uses cached compiled predicates in discovery mode and still defers missing bindings', () => {
+    const action = makeAction();
+    const costValidation: ConditionAST = {
+      op: '==',
+      left: { _t: 2, ref: 'binding', name: '$cost' },
+      right: 2,
+    };
+    const pipeline: ActionPipelineDef = {
+      id: 'profile',
+      actionId: action.id,
+      legality: null,
+      costValidation,
+      costEffects: [],
+      targeting: {},
+      stages: [],
+      atomicity: 'atomic',
+    };
+    const def = makeDef(action, pipeline);
+    const compiledPredicates = getCompiledPipelinePredicates(def);
+
+    assert.ok(compiledPredicates.get(costValidation) !== undefined);
+
+    (costValidation as { left: { ref: string } }).left = { _t: 2, ref: 'gvar', var: 'resources' } as never;
+    (costValidation as { right: number }).right = 3;
+
+    const status = evaluateDiscoveryPipelinePredicateStatus(action, pipeline, makeEvalCtx(def, makeState(3)));
+
+    assert.equal(status.legality, 'passed');
+    assert.equal(status.costValidation, 'deferred');
+  });
+
+  it('propagates wrapped execution errors for compiled missing-binding predicates', () => {
+    const action = makeAction();
+    const costValidation: ConditionAST = {
+      op: '==',
+      left: { _t: 2, ref: 'binding', name: '$cost' },
+      right: 2,
+    };
+    const pipeline: ActionPipelineDef = {
+      id: 'profile',
+      actionId: action.id,
+      legality: null,
+      costValidation,
+      costEffects: [],
+      targeting: {},
+      stages: [],
+      atomicity: 'atomic',
+    };
+    const def = makeDef(action, pipeline);
+    const compiledPredicates = getCompiledPipelinePredicates(def);
+
+    assert.ok(compiledPredicates.get(costValidation) !== undefined);
+
+    (costValidation as { left: { ref: string } }).left = { _t: 2, ref: 'gvar', var: 'resources' } as never;
+
+    assert.throws(
+      () => evaluatePipelinePredicateStatus(action, pipeline, makeEvalCtx(def, makeState(3))),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { code?: unknown; context?: Record<string, unknown> };
+        assert.equal(details.code, 'ACTION_PIPELINE_PREDICATE_EVALUATION_FAILED');
+        assert.equal(details.context?.predicate, 'costValidation');
+        return true;
+      },
+    );
+  });
+
+  it('uses cached compiled predicates for stage execution checks keyed by condition identity', () => {
+    const action = makeAction();
+    const stageLegality: ConditionAST = {
+      op: '>=',
+      left: { _t: 2, ref: 'gvar', var: 'resources' },
+      right: 2,
+    };
+    const stage: ActionResolutionStageDef = {
+      legality: stageLegality,
+      effects: [],
+    };
+    const def = makeDef(action, {
+      id: 'profile',
+      actionId: action.id,
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [stage],
+      atomicity: 'partial',
+    });
+    const compiledPredicates = getCompiledPipelinePredicates(def);
+
+    assert.ok(compiledPredicates.get(stageLegality) !== undefined);
+
+    (stageLegality as { right: number }).right = 99;
+
+    const status = evaluateStagePredicateStatus(action, 'profile', stage, 'partial', makeEvalCtx(def, makeState(3)));
+
+    assert.equal(status.legalityPassed, true);
+  });
+
+  it('falls through to interpreter semantics for non-compilable conditions', () => {
+    const action = makeAction();
+    const legality: ConditionAST = {
+      op: 'in',
+      item: 'a',
+      set: { _t: 1, scalarArray: ['a', 'b'] },
+    };
+    const pipeline: ActionPipelineDef = {
+      id: 'profile',
+      actionId: action.id,
+      legality,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [],
+      atomicity: 'partial',
+    };
+    const def = makeDef(action, pipeline);
+    const compiledPredicates = getCompiledPipelinePredicates(def);
+
+    assert.equal(compiledPredicates.get(legality), undefined);
+
+    (legality as { item: string }).item = 'z';
+
+    const status = evaluatePipelinePredicateStatus(action, pipeline, makeEvalCtx(def, makeState(3)));
+
+    assert.equal(status.legalityPassed, false);
   });
 });
 

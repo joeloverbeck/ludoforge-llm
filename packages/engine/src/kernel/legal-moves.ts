@@ -3,6 +3,7 @@ import { evalCondition } from './eval-condition.js';
 import { resolveActionExecutor } from './action-executor.js';
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
 import { resolveDeclaredActionParamDomainOptions } from './declared-action-param-domain.js';
+import { createEnumerationSnapshot, type EnumerationStateSnapshot } from './enumeration-snapshot.js';
 import type { ReadContext, EvalRuntimeResources } from './eval-context.js';
 import { createEvalRuntimeResources } from './eval-context.js';
 import { resolveCapturedSequenceZonesByKey } from './free-operation-captured-sequence-zones.js';
@@ -56,6 +57,7 @@ import { selectorInvalidSpecError } from './selector-runtime-contract.js';
 import { isActiveSeatEligibleForTurnFlow } from './turn-flow-eligibility.js';
 import { resolveCurrentEventCardState } from './event-execution.js';
 import { isCardEventAction } from './action-capabilities.js';
+import { compileGameDefFirstDecisionDomains, type FirstDecisionDomainResult, type FirstDecisionRuntimeCompilation } from './first-decision-compiler.js';
 import { buildRuntimeTableIndex, type RuntimeTableIndex } from './runtime-table-index.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
 import type { FreeOperationExecutionOverlay } from './free-operation-overlay.js';
@@ -371,6 +373,21 @@ function updateMutableEnumerationReadContext(
   return scope;
 }
 
+const isCompiledFirstDecisionRejected = (
+  compiled: FirstDecisionDomainResult,
+  ctx: ReadContext,
+): boolean => {
+  if (!compiled.compilable || compiled.check === undefined) {
+    return false;
+  }
+
+  try {
+    return !compiled.check(ctx).admissible;
+  } catch {
+    return false;
+  }
+};
+
 function enumerateParams(
   action: ActionDef,
   def: GameDef,
@@ -390,6 +407,8 @@ function enumerateParams(
     readonly moveFilter?: (move: Move) => boolean;
     readonly discoverer?: EnumerationDecisionDiscoverer;
     readonly runtime?: GameDefRuntime;
+    readonly firstDecisionDomains?: FirstDecisionRuntimeCompilation;
+    readonly snapshot?: EnumerationStateSnapshot;
   },
   scope?: MutableEnumerationReadContext,
 ): void {
@@ -458,11 +477,21 @@ function enumerateParams(
     if (options?.pipeline !== undefined) {
       const status = evaluateDiscoveryPipelinePredicateStatus(action, options.pipeline, ctx, {
         includeCostValidation: options.pipeline.atomicity === 'atomic',
+        snapshot: options.snapshot,
       });
       const viabilityDecision = decideDiscoveryLegalChoicesPipelineViability(status);
       if (viabilityDecision.kind === 'illegalChoice') {
         return;
       }
+    }
+
+    if (
+      enumeration.probePlainActionFeasibility
+      && options?.pipeline === undefined
+      && options?.firstDecisionDomains !== undefined
+      && isCompiledFirstDecisionRejected(options.firstDecisionDomains.byActionId.get(action.id) ?? { compilable: false }, ctx)
+    ) {
+      return;
     }
 
     const params = Object.fromEntries(
@@ -560,8 +589,10 @@ function enumeratePendingFreeOperationMoves(
   adjacencyGraph: AdjacencyGraph,
   runtimeTableIndex: RuntimeTableIndex,
   evalRuntimeResources: EvalRuntimeResources,
+  firstDecisionDomains: FirstDecisionRuntimeCompilation,
   currentPhaseDef: PhaseDef | undefined,
   seatResolution: ReturnType<typeof createSeatResolutionContext>,
+  snapshot: EnumerationStateSnapshot,
 ): void {
   if (state.turnOrderState.type !== 'cardDriven') {
     return;
@@ -787,6 +818,8 @@ function enumeratePendingFreeOperationMoves(
                 : {}
             ),
             ...freeOperationPreflightOverlay,
+            firstDecisionDomains,
+            snapshot,
             moveOverrides: {
               freeOperation: true,
               ...(needsGrantActionClassOverride ? { actionClass: targetActionClass } : {}),
@@ -815,6 +848,8 @@ function enumeratePendingFreeOperationMoves(
           enumeration,
           currentPhaseDef,
           {
+            firstDecisionDomains,
+            snapshot,
             moveOverrides: {
               freeOperation: true,
               ...(needsGrantActionClassOverride ? { actionClass: targetActionClass } : {}),
@@ -862,6 +897,7 @@ function enumeratePendingFreeOperationMoves(
         }
         const status = evaluateDiscoveryPipelinePredicateStatus(action, pipeline, preflight.evalCtx, {
           includeCostValidation: pipeline.atomicity === 'atomic',
+          snapshot,
         });
         const viabilityDecision = decideDiscoveryLegalMovesPipelineViability(status);
         if (viabilityDecision.kind === 'excludeTemplate') {
@@ -956,6 +992,7 @@ function enumeratePendingFreeOperationMoves(
               candidatePreflight.evalCtx,
               {
                 includeCostValidation: candidatePipeline.atomicity === 'atomic',
+                snapshot,
               },
             );
             const candidateViabilityDecision = decideDiscoveryLegalMovesPipelineViability(candidateStatus);
@@ -1093,6 +1130,9 @@ function enumerateCurrentEventMoves(
       continue;
     }
 
+    // Event effects resolve from the current card/branch runtime state.
+    // Keep event admission on the canonical interpreter path; the compiled
+    // first-decision guard only applies to static action/pipeline effect trees.
     if (
       !isMoveDecisionSequenceAdmittedForLegalMove(
         def,
@@ -1126,6 +1166,7 @@ const enumerateRawLegalMoves = (
   const warnings: RuntimeWarning[] = [];
   const seatResolution = createSeatResolutionContext(def, state.playerCount);
   const discoveryCache: DiscoveryCache = new Map();
+  const firstDecisionDomains = runtime?.firstDecisionDomains ?? compileGameDefFirstDecisionDomains(def);
 
   if (!isActiveSeatEligibleForTurnFlow(def, state, seatResolution)) {
     return { moves: [], warnings, discoveryCache };
@@ -1143,6 +1184,7 @@ const enumerateRawLegalMoves = (
   const adjacencyGraph = runtime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones);
   const runtimeTableIndex = runtime?.runtimeTableIndex ?? buildRuntimeTableIndex(def);
   const evalRuntimeResources = createEvalRuntimeResources();
+  const snapshot = createEnumerationSnapshot(def, state);
   const currentPhaseDef = findPhaseDef(def, state.currentPhase);
   const defaultDiscover = createMoveDecisionSequenceChoiceDiscoverer(def, state, runtime);
   const cachedDiscover: EnumerationDecisionDiscoverer = (move, discoverOptions) => {
@@ -1189,7 +1231,9 @@ const enumerateRawLegalMoves = (
       enumerateParams(action, def, adjacencyGraph, runtimeTableIndex, evalRuntimeResources, state, 0, {}, enumeration, currentPhaseDef,
         {
           ...(runtime === undefined ? {} : { runtime }),
+          firstDecisionDomains,
           discoverer: cachedDiscover,
+          snapshot,
         },
       );
       if (enumeration.moves.length > 0) break;
@@ -1261,7 +1305,9 @@ const enumerateRawLegalMoves = (
       enumerateParams(action, def, adjacencyGraph, runtimeTableIndex, evalRuntimeResources, state, 0, {}, enumeration, currentPhaseDef,
         {
           ...(runtime === undefined ? {} : { runtime }),
+          firstDecisionDomains,
           discoverer: cachedDiscover,
+          snapshot,
         },
       );
       continue;
@@ -1271,6 +1317,7 @@ const enumerateRawLegalMoves = (
       const pipeline = preflight.pipelineDispatch.profile;
       const status = evaluateDiscoveryPipelinePredicateStatus(action, pipeline, preflight.evalCtx, {
         includeCostValidation: pipeline.atomicity === 'atomic',
+        snapshot,
       });
       const viabilityDecision = decideDiscoveryLegalMovesPipelineViability(status);
       if (viabilityDecision.kind === 'excludeTemplate') {
@@ -1281,6 +1328,15 @@ const enumerateRawLegalMoves = (
         } else {
           continue;
         }
+      }
+
+      if (
+        isCompiledFirstDecisionRejected(
+          firstDecisionDomains.byPipelineProfileId.get(pipeline.id) ?? { compilable: false },
+          preflight.evalCtx,
+        )
+      ) {
+        continue;
       }
 
       if (
@@ -1312,8 +1368,10 @@ const enumerateRawLegalMoves = (
     adjacencyGraph,
     runtimeTableIndex,
     evalRuntimeResources,
+    firstDecisionDomains,
     currentPhaseDef,
     seatResolution,
+    snapshot,
   );
 
   const finalMoves = applyTurnFlowWindowFilters(def, state, enumeration.moves, seatResolution);

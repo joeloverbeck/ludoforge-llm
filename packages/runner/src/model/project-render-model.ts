@@ -2,6 +2,7 @@ import type { PlayerId } from '@ludoforge/engine/runtime';
 
 import type {
   RenderAction,
+  RenderComponentBreakdown,
   RenderChoiceContext,
   RenderChoiceOption,
   RenderChoiceTarget,
@@ -12,6 +13,7 @@ import type {
 } from './render-model.js';
 import type {
   RunnerActionGroup,
+  RunnerComponentBreakdown,
   RunnerChoiceUi,
   RunnerFrame,
   RunnerProjectionBundle,
@@ -95,11 +97,34 @@ export function projectRenderModel(
       tableOverlays: EMPTY_RENDER_SURFACES.tableOverlays,
       showdown: projectShowdownSurface(bundle, players, visualConfigProvider),
     },
-    victoryStandings: frame.victoryStandings,
+    victoryStandings: projectVictoryStandings(frame.victoryStandings, visualConfigProvider),
     terminal: frame.terminal,
   };
 
   return stabilizeRenderModel(previousModel, nextModel);
+}
+
+function projectVictoryStandings(
+  victoryStandings: RunnerFrame['victoryStandings'],
+  visualConfigProvider: VisualConfigProvider,
+): RenderModel['victoryStandings'] {
+  return victoryStandings?.map((entry) => ({
+    ...entry,
+    components: entry.components.map((component) => projectVictoryComponentBreakdown(component, visualConfigProvider)),
+  })) ?? null;
+}
+
+function projectVictoryComponentBreakdown(
+  component: RunnerComponentBreakdown,
+  visualConfigProvider: VisualConfigProvider,
+): RenderComponentBreakdown {
+  return {
+    aggregate: component.aggregate,
+    spaces: component.spaces.map((space) => ({
+      ...space,
+      displayName: visualConfigProvider.getZoneLabel(space.spaceId) ?? formatIdAsDisplayName(space.spaceId),
+    })),
+  };
 }
 
 function projectZones(

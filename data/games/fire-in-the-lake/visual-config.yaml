@@ -629,26 +629,34 @@ victoryStandings:
       components:
         - label: "Total Support"
           description: "Population-weighted support (active x2, passive x1)"
+          detailTemplate: "(pop {population}) x{multiplier} = {contribution}"
         - label: "Available US Pieces"
           description: "Troops and bases in Available space"
+          detailTemplate: "{contribution}"
     - seat: arvn
       components:
         - label: "COIN-Controlled Population"
           description: "Population where US+ARVN pieces > NVA+VC pieces"
+          detailTemplate: "(pop {population}) = {contribution}"
         - label: "Patronage"
           description: "ARVN political support (global variable)"
+          detailTemplate: "{contribution}"
     - seat: nva
       components:
         - label: "NVA-Controlled Population"
           description: "Population where NVA pieces > all others combined"
+          detailTemplate: "(pop {population}) = {contribution}"
         - label: "NVA Bases on Map"
           description: "NVA bases across all map spaces"
+          detailTemplate: "{contribution}"
     - seat: vc
       components:
         - label: "Total Opposition"
           description: "Population-weighted opposition (active x2, passive x1)"
+          detailTemplate: "(pop {population}) x{multiplier} = {contribution}"
         - label: "VC Bases on Map"
           description: "VC bases across all map spaces"
+          detailTemplate: "{contribution}"
 
 regions:
   groupByAttribute: country

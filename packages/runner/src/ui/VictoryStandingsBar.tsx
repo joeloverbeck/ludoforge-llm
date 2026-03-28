@@ -118,7 +118,7 @@ function VictoryTooltip({ entry, anchorRect }: VictoryTooltipProps): ReactElemen
               <div className={styles.tooltipRow}>
                 <span className={styles.tooltipLabel}>{comp.label}</span>
                 <span className={styles.tooltipValue}>
-                  {i < entry.components.length ? entry.components[i] : '?'}
+                  {i < entry.components.length ? entry.components[i]?.aggregate : '?'}
                 </span>
               </div>
               {comp.description !== undefined && (

@@ -11,7 +11,18 @@ export interface RunnerVictoryStandingEntry {
   readonly score: number;
   readonly threshold: number;
   readonly rank: number;
-  readonly components: readonly number[];
+  readonly components: readonly RunnerComponentBreakdown[];
+}
+
+export interface RunnerSpaceContribution {
+  readonly spaceId: string;
+  readonly contribution: number;
+  readonly factors: Readonly<Record<string, number>>;
+}
+
+export interface RunnerComponentBreakdown {
+  readonly aggregate: number;
+  readonly spaces: readonly RunnerSpaceContribution[];
 }
 
 export interface RunnerRuntimeEligibleFaction {

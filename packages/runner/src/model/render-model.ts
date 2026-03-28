@@ -12,7 +12,19 @@ export interface RenderVictoryStandingEntry {
   readonly score: number;
   readonly threshold: number;
   readonly rank: number;
-  readonly components: readonly number[];
+  readonly components: readonly RenderComponentBreakdown[];
+}
+
+export interface RenderSpaceContribution {
+  readonly spaceId: string;
+  readonly displayName: string;
+  readonly contribution: number;
+  readonly factors: Readonly<Record<string, number>>;
+}
+
+export interface RenderComponentBreakdown {
+  readonly aggregate: number;
+  readonly spaces: readonly RenderSpaceContribution[];
 }
 
 export interface RenderRuntimeEligibleFaction {

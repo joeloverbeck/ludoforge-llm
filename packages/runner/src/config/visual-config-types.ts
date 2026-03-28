@@ -527,6 +527,7 @@ const PhaseBannersSchema = z.object({
 const VictoryTooltipComponentSchema = z.object({
   label: z.string(),
   description: z.string().optional(),
+  detailTemplate: z.string().optional(),
 });
 
 const VictoryTooltipBreakdownSchema = z.object({

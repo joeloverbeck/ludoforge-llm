@@ -168,6 +168,30 @@ describe('VisualConfigSchema', () => {
     expect(result.success).toBe(true);
   });
 
+  it('accepts victory tooltip detail templates and keeps them optional', () => {
+    const withTemplate = VisualConfigSchema.safeParse({
+      version: 1,
+      victoryStandings: {
+        tooltipBreakdowns: [
+          {
+            seat: 'vc',
+            components: [
+              {
+                label: 'Total Opposition',
+                detailTemplate: '(pop {population}) x{multiplier} = {contribution}',
+              },
+              {
+                label: 'VC Bases on Map',
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    expect(withTemplate.success).toBe(true);
+  });
+
   it('accepts runnerChrome top-bar presentation hints', () => {
     const result = VisualConfigSchema.safeParse({
       version: 1,

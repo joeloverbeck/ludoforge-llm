@@ -3,8 +3,11 @@ import {
   evalActionPipelinePredicateForDiscovery,
   type DiscoveryPredicateState,
 } from './action-pipeline-predicates.js';
+import { getCompiledPipelinePredicates } from './compiled-condition-cache.js';
 import { toApplyMoveIllegalMetadataCode, type ApplyMoveIllegalMetadataCode } from './legality-outcome.js';
 import type { ReadContext } from './eval-context.js';
+import { MISSING_BINDING_POLICY_CONTEXTS, shouldDeferMissingBinding } from './missing-binding-policy.js';
+import { pipelinePredicateEvaluationError } from './runtime-error.js';
 import type { ActionDef, ActionPipelineDef, ActionResolutionStageDef, ConditionAST } from './types.js';
 
 export type PipelineViabilityOutcome =
@@ -28,6 +31,8 @@ interface PredicateCheckpoint {
   readonly costValidation?: ConditionAST | null;
 }
 
+type PipelinePredicateName = 'legality' | 'costValidation';
+
 export type ApplyMovePipelineDecision =
   | {
       readonly kind: 'allowExecution';
@@ -48,6 +53,72 @@ export type LegalMovesPipelineDecision =
   | { readonly kind: 'includeTemplate' }
   | { readonly kind: 'excludeTemplate'; readonly outcome: PipelineViabilityOutcome };
 
+const evaluateCompiledPredicate = (
+  condition: Exclude<ConditionAST, boolean>,
+  evalCtx: ReadContext,
+): boolean | undefined => {
+  const compiled = getCompiledPipelinePredicates(evalCtx.def).get(condition);
+  if (compiled === undefined) {
+    return undefined;
+  }
+  return compiled(evalCtx.state, evalCtx.activePlayer, evalCtx.bindings);
+};
+
+const evaluatePredicate = (
+  action: ActionDef,
+  profileId: string,
+  predicate: PipelinePredicateName,
+  condition: ConditionAST | null | undefined,
+  evalCtx: ReadContext,
+): boolean => {
+  if (condition == null) {
+    return true;
+  }
+  if (typeof condition === 'boolean') {
+    return condition;
+  }
+
+  try {
+    const compiledResult = evaluateCompiledPredicate(condition, evalCtx);
+    if (compiledResult !== undefined) {
+      return compiledResult;
+    }
+  } catch (error) {
+    throw pipelinePredicateEvaluationError(action, profileId, predicate, error);
+  }
+
+  return evalActionPipelinePredicate(action, profileId, predicate, condition, evalCtx);
+};
+
+const evaluateDiscoveryPredicate = (
+  action: ActionDef,
+  profileId: string,
+  predicate: PipelinePredicateName,
+  condition: ConditionAST | null | undefined,
+  evalCtx: ReadContext,
+): DiscoveryPredicateState => {
+  if (condition == null) {
+    return 'passed';
+  }
+  if (typeof condition === 'boolean') {
+    return condition ? 'passed' : 'failed';
+  }
+
+  try {
+    const compiledResult = evaluateCompiledPredicate(condition, evalCtx);
+    if (compiledResult !== undefined) {
+      return compiledResult ? 'passed' : 'failed';
+    }
+  } catch (error) {
+    if (shouldDeferMissingBinding(error, MISSING_BINDING_POLICY_CONTEXTS.PIPELINE_DISCOVERY_PREDICATE)) {
+      return 'deferred';
+    }
+    throw pipelinePredicateEvaluationError(action, profileId, predicate, error);
+  }
+
+  return evalActionPipelinePredicateForDiscovery(action, profileId, predicate, condition, evalCtx);
+};
+
 const evaluateCheckpointPredicateStatus = (
   action: ActionDef,
   profileId: string,
@@ -56,31 +127,16 @@ const evaluateCheckpointPredicateStatus = (
   evalCtx: ReadContext,
   options?: { readonly includeCostValidation?: boolean },
 ): PipelinePredicateStatus => {
-  const legalityPassed = checkpoint.legality == null
-    ? true
-    : evalActionPipelinePredicate(action, profileId, 'legality', checkpoint.legality, evalCtx);
+  const legalityPassed = evaluatePredicate(action, profileId, 'legality', checkpoint.legality, evalCtx);
   const includeCostValidation = options?.includeCostValidation ?? true;
   const costValidationPassed = !includeCostValidation || checkpoint.costValidation == null
     ? true
-    : evalActionPipelinePredicate(action, profileId, 'costValidation', checkpoint.costValidation, evalCtx);
+    : evaluatePredicate(action, profileId, 'costValidation', checkpoint.costValidation, evalCtx);
   return {
     legalityPassed,
     costValidationPassed,
     atomicity,
   };
-};
-
-const evalDiscoveryPredicate = (
-  action: ActionDef,
-  profileId: string,
-  predicate: 'legality' | 'costValidation',
-  condition: ConditionAST | null | undefined,
-  evalCtx: ReadContext,
-): DiscoveryPredicateState => {
-  if (condition == null) {
-    return 'passed';
-  }
-  return evalActionPipelinePredicateForDiscovery(action, profileId, predicate, condition, evalCtx);
 };
 
 const evaluateDiscoveryCheckpointPredicateStatus = (
@@ -91,11 +147,11 @@ const evaluateDiscoveryCheckpointPredicateStatus = (
   evalCtx: ReadContext,
   options?: { readonly includeCostValidation?: boolean },
 ): DiscoveryPipelinePredicateStatus => {
-  const legality = evalDiscoveryPredicate(action, profileId, 'legality', checkpoint.legality, evalCtx);
+  const legality = evaluateDiscoveryPredicate(action, profileId, 'legality', checkpoint.legality, evalCtx);
   const includeCostValidation = options?.includeCostValidation ?? true;
   const costValidation = !includeCostValidation
     ? 'passed'
-    : evalDiscoveryPredicate(action, profileId, 'costValidation', checkpoint.costValidation, evalCtx);
+    : evaluateDiscoveryPredicate(action, profileId, 'costValidation', checkpoint.costValidation, evalCtx);
   return {
     legality,
     costValidation,

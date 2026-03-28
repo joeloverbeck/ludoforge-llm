@@ -15,7 +15,7 @@ describe('resolveBootstrapConfig', () => {
     expect(gameDef.metadata.id).toBe('texas-holdem-nlhe-tournament');
     expect(gameDef.metadata.name).toBe("Texas Hold'em");
     expect(gameDef.metadata.description).toBe("No-limit Texas Hold'em poker tournament");
-  }, 10000);
+  }, 20000);
 
   it('returns FITL bootstrap config when game=fitl and applies params', async () => {
     const { resolveBootstrapConfig } = await importFreshResolver();

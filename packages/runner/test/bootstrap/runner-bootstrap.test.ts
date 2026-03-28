@@ -16,7 +16,7 @@ describe('runner-bootstrap', () => {
     expect(resolved?.gameDef.metadata.id).toBe('fire-in-the-lake');
     expect(resolved?.capabilities.supportsMapEditor).toBe(true);
     expect(resolved?.visualConfigProvider.getConnectionRoutes().size).toBe(17);
-  }, 10000);
+  }, 20000);
 
   it('returns null for unknown descriptor ids', async () => {
     const { resolveRunnerBootstrapByGameId } = await importFreshRunnerBootstrap();

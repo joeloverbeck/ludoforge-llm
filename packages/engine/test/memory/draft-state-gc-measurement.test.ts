@@ -53,7 +53,8 @@ const createRandomAgents = (count: number): readonly Agent[] =>
 const FITL_PLAYER_COUNT = 4;
 const TEXAS_PLAYER_COUNT = 6;
 const MAX_TURNS = 200;
-const GAME_COUNT = 5;
+const FITL_GAME_COUNT = 5;
+const TEXAS_GAME_COUNT = 20;
 const GC_PERCENT_THRESHOLD = 16;
 
 interface GcMeasurement {
@@ -116,10 +117,10 @@ const measureGcPressure = (
 // ---------------------------------------------------------------------------
 
 describe('draft-state GC measurement (advisory)', { skip: !HAS_GC && 'requires --expose-gc' }, () => {
-  it(`FITL: GC% < ${GC_PERCENT_THRESHOLD}% over ${GAME_COUNT} games`, () => {
+  it(`FITL: GC% < ${GC_PERCENT_THRESHOLD}% over ${FITL_GAME_COUNT} games`, () => {
     const def = compileFitlDef();
     const runtime = createGameDefRuntime(def);
-    const result = measureGcPressure(def, FITL_PLAYER_COUNT, GAME_COUNT, runtime);
+    const result = measureGcPressure(def, FITL_PLAYER_COUNT, FITL_GAME_COUNT, runtime);
 
     console.warn(
       `FITL GC measurement: total=${result.totalMs.toFixed(0)}ms, gc=${result.gcMs.toFixed(0)}ms, gc%=${result.gcPercent.toFixed(2)}%`,
@@ -131,10 +132,10 @@ describe('draft-state GC measurement (advisory)', { skip: !HAS_GC && 'requires -
     );
   });
 
-  it(`Texas Hold'em: GC% < ${GC_PERCENT_THRESHOLD}% over ${GAME_COUNT} games`, () => {
+  it(`Texas Hold'em: GC% < ${GC_PERCENT_THRESHOLD}% over ${TEXAS_GAME_COUNT} games`, () => {
     const def = compileTexasDef();
     const runtime = createGameDefRuntime(def);
-    const result = measureGcPressure(def, TEXAS_PLAYER_COUNT, GAME_COUNT, runtime);
+    const result = measureGcPressure(def, TEXAS_PLAYER_COUNT, TEXAS_GAME_COUNT, runtime);
 
     console.warn(
       `Texas GC measurement: total=${result.totalMs.toFixed(0)}ms, gc=${result.gcMs.toFixed(0)}ms, gc%=${result.gcPercent.toFixed(2)}%`,

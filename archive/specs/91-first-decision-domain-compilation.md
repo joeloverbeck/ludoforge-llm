@@ -1,6 +1,6 @@
 # Spec 91 — First-Decision-Domain Compilation
 
-**Status**: Not started
+**Status**: ✅ COMPLETED
 **Dependencies**: Spec 90 (Compiled Condition Predicates) — the condition
 compiler provides the foundation for compiling the cost-effect guard conditions
 that precede the first decision point
@@ -406,3 +406,37 @@ of partial effect execution.
   static pre-compilation is not possible for the event call site. This limits
   the optimization to pipeline and plain actions. If event card admission
   becomes a bottleneck, a per-card cache could be added in a follow-up spec.
+
+## Outcome
+
+- Completion date: 2026-03-28
+- What actually changed:
+  - Added
+    `packages/engine/src/kernel/first-decision-compiler.ts` and integrated its
+    results into `GameDefRuntime.firstDecisionDomains` so first-decision
+    compilation is owned by the runtime rather than a hidden cache layer.
+  - Added first-decision walker/compiler unit coverage and FITL production
+    parity coverage, including:
+    `packages/engine/test/unit/kernel/first-decision-walker.test.ts`,
+    `packages/engine/test/unit/kernel/first-decision-compiler.test.ts`,
+    `packages/engine/test/integration/first-decision-runtime-parity.test.ts`,
+    `packages/engine/test/helpers/first-decision-production-helpers.ts`, and
+    `packages/engine/test/performance/first-decision-benchmark.test.ts`.
+  - Integrated compiled first-decision checks into the real `legalMoves`
+    boundary as additive early-rejection guards for plain-action feasibility
+    probing and matched pipeline profile admission.
+- Deviations from original plan:
+  - The implemented architecture is narrower and cleaner than the original
+    spec text in several places. It does not synthesize `ChoiceOption[]`,
+    does not expose `domain` / `isSingleDecision`, and does not perform the
+    proposed single-decision full bypass.
+  - Event-card admission remained on the canonical interpreter path, which is
+    now explicitly enforced by tests.
+  - The runtime owns `firstDecisionDomains`; the spec’s proposed separate
+    `first-decision-cache.ts` file was not introduced.
+- Verification results:
+  - FITL runtime parity tests passed with compiled first-decision guards
+    enabled vs disabled.
+  - FITL benchmark coverage and timing output were added and pass.
+  - Engine test, lint, and typecheck verification passed during completion of
+    the related implementation tickets.

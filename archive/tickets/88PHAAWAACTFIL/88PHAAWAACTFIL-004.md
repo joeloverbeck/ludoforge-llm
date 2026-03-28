@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel lookup module and hot-path caller cleanup
-**Deps**: specs/88-phase-aware-action-filtering.md, archive/tickets/88PHAAWAACTFIL/88PHAAWAACTFIL-001.md
+**Deps**: archive/specs/88-phase-aware-action-filtering.md, archive/tickets/88PHAAWAACTFIL/88PHAAWAACTFIL-001.md
 
 ## Problem
 

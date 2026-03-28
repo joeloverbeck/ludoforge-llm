@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+COMPLETED
 
 ## Problem
 
@@ -154,3 +154,26 @@ Estimated 60-75% reduction in preflight invocations per step.
 
 - `packages/engine/src/kernel/legal-moves.ts` — use phase index in both enumeration loops
 - `packages/engine/test/` — phase index unit tests, enumeration parity tests
+
+## Outcome
+
+Completed: 2026-03-28
+
+What actually changed:
+- Added `packages/engine/src/kernel/phase-action-index.ts` as the canonical WeakMap-cached `PhaseId -> ActionDef[]` runtime index keyed by `def.actions`.
+- Updated `packages/engine/src/kernel/legal-moves.ts` so both raw enumeration loops derive `actionsForPhase` once and iterate the narrowed phase bucket instead of scanning all actions.
+- Retained the phase check in `packages/engine/src/kernel/action-applicability-preflight.ts` as the semantic safety guard.
+- Added proof in `packages/engine/test/unit/kernel/phase-action-index.test.ts` and `packages/engine/test/unit/kernel/legal-moves.test.ts`.
+- Followed up with the shared action-pipeline lookup cleanup captured separately in archived ticket `88PHAAWAACTFIL-004`.
+
+Deviations from original plan:
+- The original split across separate implementation, integration, and test tickets was collapsed in practice into a cleaner architectural unit documented in archived `88PHAAWAACTFIL-001`.
+- The anticipated standalone parity test file was not kept as a separate ownership point; the durable proof now lives with the index module tests and `legal-moves` behavior/source-guard tests.
+
+Verification results:
+- `pnpm turbo build`
+- `node --test packages/engine/dist/test/unit/kernel/phase-action-index.test.js`
+- `node --test packages/engine/dist/test/unit/kernel/legal-moves.test.js`
+- `pnpm turbo typecheck`
+- `pnpm turbo lint`
+- `pnpm turbo test`

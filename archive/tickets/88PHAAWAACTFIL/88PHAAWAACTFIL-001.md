@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel module, legal-moves integration, and tests
-**Deps**: specs/88-phase-aware-action-filtering.md
+**Deps**: archive/specs/88-phase-aware-action-filtering.md
 
 ## Problem
 

@@ -153,7 +153,7 @@ describe('condition compiler', () => {
         ...ctx.state.perPlayerVars,
         [ctx.activePlayer]: { ...(ctx.state.perPlayerVars[ctx.activePlayer] ?? {}), resources: 7 },
       },
-      zoneTotals: { get: (_key: string) => 0 },
+      zoneTotals: { get: (_zoneId: string, _tokenType?: string) => 0 },
       zoneVars: { get: (_zoneId: string, _varName: string) => undefined },
       markerStates: { get: (_spaceId: string, _markerName: string) => undefined },
     };
@@ -228,12 +228,12 @@ describe('condition compiler', () => {
     const snapshot = createEnumerationSnapshot(ctx.def, ctx.state);
     const originalGet = snapshot.zoneTotals.get.bind(snapshot.zoneTotals);
     let calls = 0;
-    snapshot.zoneTotals.get = (key: string): number => {
+    snapshot.zoneTotals.get = (zoneId: string, tokenType?: string): number => {
       calls += 1;
-      if (key === 'board:none:*') {
+      if (zoneId === 'board:none' && tokenType === undefined) {
         return 4;
       }
-      return originalGet(key);
+      return originalGet(zoneId, tokenType);
     };
 
     assert.equal(compiled(ctx.state, ctx.activePlayer, ctx.bindings), false);
@@ -353,7 +353,7 @@ describe('condition compiler', () => {
         ...ctx.state.perPlayerVars,
         [ctx.activePlayer]: { ...(ctx.state.perPlayerVars[ctx.activePlayer] ?? {}), resources: 7 },
       },
-      zoneTotals: { get: (_key: string) => 0 },
+      zoneTotals: { get: (_zoneId: string, _tokenType?: string) => 0 },
       zoneVars: { get: (_zoneId: string, _varName: string) => undefined },
       markerStates: { get: (_spaceId: string, _markerName: string) => undefined },
     };

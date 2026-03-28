@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — new kernel module
-**Deps**: archive/tickets/90COMCONPRE/90COMCONPRE-001-condition-compiler-tier1-scalar.md, specs/92-enumeration-state-snapshot.md
+**Deps**: archive/tickets/90COMCONPRE/90COMCONPRE-001-condition-compiler-tier1-scalar.md, archive/specs/92-enumeration-state-snapshot.md
 
 ## Problem
 

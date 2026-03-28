@@ -7,7 +7,8 @@
 by pre-materializing commonly queried state metrics
 
 Implemented via archived tickets `92ENUSTASNA-001`, `92ENUSTASNA-002`,
-`92ENUSTASNA-003`, `92ENUSTASNA-004`, and `92ENUSTASNA-008`.
+`92ENUSTASNA-003`, `92ENUSTASNA-004`, `92ENUSTASNA-007`, and
+`92ENUSTASNA-008`.
 
 ## Problem
 
@@ -92,14 +93,14 @@ interface EnumerationStateSnapshot {
   readonly perPlayerVars: GameState['perPlayerVars'];
 
   /**
-   * Lazy per-zone token counts with composite keys.
+   * Lazy per-zone token counts with structured arguments.
    *
-   * Key formats:
-   *   - `"zoneId:tokenType"` — count of tokens with that type in that zone
-   *   - `"zoneId:*"` — total token count in that zone
+   * `zoneTotals.get(zoneId)` returns the total token count in that zone.
+   * `zoneTotals.get(zoneId, tokenType)` returns the count of tokens with that
+   * type in that zone.
    *
-   * First access for a key computes and caches the count. Subsequent
-   * accesses are O(1) Map lookups.
+   * First access for a `(zoneId, tokenType?)` pair computes and caches the
+   * count. Subsequent accesses are O(1) Map lookups.
    */
   readonly zoneTotals: LazyZoneTotals;
 
@@ -125,8 +126,8 @@ interface EnumerationStateSnapshot {
 
 ```typescript
 interface LazyZoneTotals {
-  /** Get token count for the given composite key. Computes on first access. */
-  get(key: string): number;
+  /** Get token count for the given zone and optional token type. Computes on first access. */
+  get(zoneId: ZoneId | string, tokenType?: string): number;
 }
 
 interface LazyZoneVars {
@@ -186,7 +187,7 @@ For zone-level queries, the closure uses the lazy accessor:
 // Compiled aggregate: count(tokens in zone_X with type NVA_troop) > 3
 (state, activePlayer, _bindings, snapshot) =>
   (snapshot
-    ? snapshot.zoneTotals.get('zone_X:NVA_troop')
+    ? snapshot.zoneTotals.get('zone_X', 'NVA_troop')
     : countTokensInZone(state, 'zone_X', 'NVA_troop')
   ) > 3;
 ```
@@ -300,12 +301,13 @@ computes on first access:
 const createLazyZoneTotals = (state: GameState, def: GameDef): LazyZoneTotals => {
   const cache = new Map<string, number>();
   return {
-    get(key: string): number {
+    get(zoneId: ZoneId | string, tokenType?: string): number {
+      const key = tokenType === undefined ? `${String(zoneId)}\u0000*` : `${String(zoneId)}\u0000${tokenType}`;
       let cached = cache.get(key);
       if (cached !== undefined) {
         return cached;
       }
-      cached = computeZoneTotal(state, def, key);
+      cached = computeZoneTotal(state, def, zoneId, tokenType);
       cache.set(key, cached);
       return cached;
     },
@@ -313,8 +315,9 @@ const createLazyZoneTotals = (state: GameState, def: GameDef): LazyZoneTotals =>
 };
 ```
 
-The `computeZoneTotal` function parses the composite key (`zoneId:tokenType` or
-`zoneId:*`) and iterates the appropriate zone's tokens once.
+The `computeZoneTotal` function receives `zoneId` and optional `tokenType`
+directly, validates the zone against `def.zones`, and iterates that zone's
+tokens once.
 
 ## FOUNDATIONS Alignment
 
@@ -405,3 +408,22 @@ snapshot), the combined impact could reach 10-15%.
   operates at the effect-execution level. The snapshot operates at the
   predicate-evaluation level. They address different redundancy sources and
   compose independently.
+
+## Outcome
+
+Completion date: 2026-03-28
+
+What actually changed:
+- Added the enumeration snapshot module, threaded it through compiled condition evaluation, and generalized snapshot player access across invocation active players.
+- Finalized the `zoneTotals` contract as `get(zoneId, tokenType?)` rather than a composite string API, and updated the compiled aggregate fast path to consume that structured interface directly.
+- Landed the accompanying unit, integration, and benchmark verification described by the spec’s ticket set.
+
+Deviations from original plan:
+- The final `zoneTotals` contract is structured rather than composite-string based. This is a deliberate architectural correction to keep zone-id parsing out of public consumers.
+- The broader snapshot architecture and legal-moves integration strategy remain unchanged.
+
+Verification results:
+- `pnpm turbo build` ✅
+- `pnpm turbo test --force` ✅
+- `pnpm turbo typecheck` ✅
+- `pnpm turbo lint` ✅

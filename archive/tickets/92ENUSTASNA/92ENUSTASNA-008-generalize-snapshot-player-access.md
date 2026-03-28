@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — enumeration snapshot shape, snapshot factory signature, compiled condition accessors, pipeline snapshot eligibility policy
-**Deps**: specs/92-enumeration-state-snapshot.md, archive/tickets/92ENUSTASNA/92ENUSTASNA-003-thread-snapshot-through-pipeline-policy.md
+**Deps**: archive/specs/92-enumeration-state-snapshot.md, archive/tickets/92ENUSTASNA/92ENUSTASNA-003-thread-snapshot-through-pipeline-policy.md
 
 ## Problem
 

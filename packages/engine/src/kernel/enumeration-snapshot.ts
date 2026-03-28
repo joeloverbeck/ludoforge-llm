@@ -2,7 +2,7 @@ import type { ZoneId } from './branded.js';
 import type { GameDef, GameState } from './types.js';
 
 export interface LazyZoneTotals {
-  get(key: string): number;
+  get(zoneId: ZoneId | string, tokenType?: string): number;
 }
 
 export interface LazyZoneVars {
@@ -21,58 +21,33 @@ export interface EnumerationStateSnapshot {
   readonly markerStates: LazyMarkerStates;
 }
 
-interface ParsedZoneTotalKey {
-  readonly zoneId: string;
-  readonly tokenType: string | null;
-}
+const hasDeclaredZone = (def: GameDef, zoneId: string): boolean =>
+  def.zones.some((zone) => String(zone.id) === zoneId);
 
-const zoneIdsByDescendingLength = (def: GameDef): readonly string[] =>
-  [...def.zones]
-    .map((zone) => String(zone.id))
-    .sort((left, right) => right.length - left.length || left.localeCompare(right));
-
-const parseZoneTotalKey = (def: GameDef, key: string): ParsedZoneTotalKey => {
-  if (key.length === 0) {
-    throw new Error('Zone total key must not be empty');
-  }
-
-  if (key.endsWith(':*')) {
-    const zoneId = key.slice(0, -2);
-    if (!def.zones.some((zone) => String(zone.id) === zoneId)) {
-      throw new Error(`Zone total key references unknown zone: ${key}`);
-    }
-    return { zoneId, tokenType: null };
-  }
-
-  for (const zoneId of zoneIdsByDescendingLength(def)) {
-    const prefix = `${zoneId}:`;
-    if (!key.startsWith(prefix)) {
-      continue;
-    }
-
-    const tokenType = key.slice(prefix.length);
-    if (tokenType.length === 0) {
-      throw new Error(`Zone total key is missing token type: ${key}`);
-    }
-
-    return { zoneId, tokenType };
-  }
-
-  throw new Error(`Zone total key must match "<zoneId>:*" or "<zoneId>:<tokenType>": ${key}`);
-};
+const zoneTotalsCacheKey = (zoneId: string, tokenType?: string): string =>
+  tokenType === undefined ? `${zoneId}\u0000*` : `${zoneId}\u0000${tokenType}`;
 
 export const computeZoneTotal = (
   state: GameState,
   def: GameDef,
-  key: string,
+  zoneId: ZoneId | string,
+  tokenType?: string,
 ): number => {
-  const { zoneId, tokenType } = parseZoneTotalKey(def, key);
-  const zoneTokens = state.zones[zoneId];
-  if (zoneTokens === undefined) {
-    throw new Error(`Zone total key references missing state zone: ${zoneId}`);
+  const normalizedZoneId = String(zoneId);
+  if (normalizedZoneId.length === 0) {
+    throw new Error('Zone id must not be empty');
   }
 
-  if (tokenType === null) {
+  if (!hasDeclaredZone(def, normalizedZoneId)) {
+    throw new Error(`Zone totals reference unknown zone: ${normalizedZoneId}`);
+  }
+
+  const zoneTokens = state.zones[normalizedZoneId];
+  if (zoneTokens === undefined) {
+    throw new Error(`Zone totals reference missing state zone: ${normalizedZoneId}`);
+  }
+
+  if (tokenType === undefined) {
     return zoneTokens.length;
   }
 
@@ -91,14 +66,15 @@ export const createLazyZoneTotals = (
 ): LazyZoneTotals => {
   const cache = new Map<string, number>();
   return {
-    get(key: string): number {
-      const cached = cache.get(key);
+    get(zoneId: ZoneId | string, tokenType?: string): number {
+      const cacheKey = zoneTotalsCacheKey(String(zoneId), tokenType);
+      const cached = cache.get(cacheKey);
       if (cached !== undefined) {
         return cached;
       }
 
-      const computed = computeZoneTotal(state, def, key);
-      cache.set(key, computed);
+      const computed = computeZoneTotal(state, def, zoneId, tokenType);
+      cache.set(cacheKey, computed);
       return computed;
     },
   };

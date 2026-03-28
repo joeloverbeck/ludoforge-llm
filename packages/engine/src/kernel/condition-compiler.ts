@@ -31,7 +31,7 @@ const isScalarArrayValue = (value: unknown): value is ScalarArrayValue =>
 const compileZoneCountAccessor = (zoneId: string, context: ValueExpr): CompiledConditionValueAccessor =>
   (state, _activePlayer, _bindings, snapshot) => {
     if (snapshot !== undefined) {
-      return snapshot.zoneTotals.get(`${zoneId}:*`);
+      return snapshot.zoneTotals.get(zoneId);
     }
 
     const zoneTokens = state.zones[zoneId];

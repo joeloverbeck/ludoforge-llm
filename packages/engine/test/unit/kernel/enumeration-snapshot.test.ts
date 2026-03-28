@@ -96,18 +96,25 @@ describe('createLazyZoneTotals()', () => {
   it('returns token-type and total counts for a zone', () => {
     const totals = createLazyZoneTotals(makeState(), makeDef());
 
-    assert.equal(totals.get('board:none:troop'), 2);
-    assert.equal(totals.get('board:none:*'), 3);
-    assert.equal(totals.get('province:alpha:troop:red'), 1);
+    assert.equal(totals.get('board:none', 'troop'), 2);
+    assert.equal(totals.get('board:none'), 3);
+    assert.equal(totals.get('province:alpha', 'troop:red'), 1);
   });
 
-  it('caches each key after the first computation', () => {
+  it('caches each zone/token pair after the first computation', () => {
     const state = makeState();
     const totals = createLazyZoneTotals(state, makeDef());
 
-    assert.equal(totals.get('board:none:troop'), 2);
+    assert.equal(totals.get('board:none', 'troop'), 2);
     (state.zones as Record<string, unknown>)['board:none'] = [];
-    assert.equal(totals.get('board:none:troop'), 2);
+    assert.equal(totals.get('board:none', 'troop'), 2);
+  });
+
+  it('supports zone ids containing colons without parsing ambiguity', () => {
+    const totals = createLazyZoneTotals(makeState(), makeDef());
+
+    assert.equal(totals.get('board:none', 'base'), 1);
+    assert.equal(totals.get('province:alpha'), 1);
   });
 });
 
@@ -132,12 +139,20 @@ describe('createLazyMarkerStates()', () => {
 });
 
 describe('computeZoneTotal()', () => {
-  it('rejects malformed composite keys', () => {
+  it('rejects unknown or empty structured zone requests', () => {
     const state = makeState();
     const def = makeDef();
 
     assert.throws(() => computeZoneTotal(state, def, ''), /must not be empty/u);
-    assert.throws(() => computeZoneTotal(state, def, 'board:none:'), /missing token type/u);
-    assert.throws(() => computeZoneTotal(state, def, 'missing:none:*'), /unknown zone/u);
+    assert.throws(() => computeZoneTotal(state, def, 'missing:none'), /unknown zone/u);
+  });
+
+  it('returns totals for declared zones with optional token filtering', () => {
+    const state = makeState();
+    const def = makeDef();
+
+    assert.equal(computeZoneTotal(state, def, 'board:none'), 3);
+    assert.equal(computeZoneTotal(state, def, 'board:none', 'troop'), 2);
+    assert.equal(computeZoneTotal(state, def, 'province:alpha', 'troop:red'), 1);
   });
 });

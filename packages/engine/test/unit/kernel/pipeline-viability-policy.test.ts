@@ -109,7 +109,7 @@ const makeSnapshot = (
       ...(options?.resources === undefined ? {} : { resources: options.resources }),
     },
     perPlayerVars: options?.perPlayerVars ?? state.perPlayerVars,
-    zoneTotals: { get: (_key: string) => 0 },
+    zoneTotals: { get: (_zoneId: string, _tokenType?: string) => 0 },
     zoneVars: { get: (_zoneId: string, _varName: string) => undefined },
     markerStates: { get: (_spaceId: string, _markerName: string) => undefined },
   };

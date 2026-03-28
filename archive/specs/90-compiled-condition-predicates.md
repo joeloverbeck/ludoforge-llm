@@ -1,6 +1,6 @@
 # Spec 90 — Compiled Condition Predicates
 
-**Status**: Not started
+**Status**: Completed
 **Dependencies**: Spec 76 (ValueExpr type-tag discriminants, completed), Spec 82
 (Effect AST type tags, completed)
 **Blocked by**: None
@@ -372,3 +372,19 @@ dispatch), compared to 3-10 intermediate objects per interpreter evaluation.
   interpreted condition evaluation (pipeline-level and stage-level)
 - `packages/engine/test/integration/` — add benchmark test verifying
   performance improvement
+
+## Outcome
+
+- Completed: 2026-03-28
+- What actually changed:
+  - Implemented the condition compiler, WeakMap-backed compiled predicate cache, and policy-layer fast-path integration in tickets 001-004.
+  - Added production-proof coverage in ticket 005 with a shared FITL predicate-corpus helper, a production equivalence integration test, and a predicate benchmark harness.
+- Deviation from the original spec narrative:
+  - The cache implementation uses `ConditionAST` object identity rather than encoded pipeline/stage keys.
+  - The benchmark validates the compiled predicate abstraction directly against `evalCondition(...)` instead of introducing an interpreter-only `legalMoves(...)` mode.
+  - Coverage reporting is descriptive rather than threshold-gated to avoid brittle CI behavior.
+- Verification:
+  - `pnpm -F @ludoforge/engine test`
+  - `pnpm turbo test`
+  - `pnpm turbo typecheck`
+  - `pnpm turbo lint`

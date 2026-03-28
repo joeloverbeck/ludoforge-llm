@@ -509,8 +509,8 @@ describe('FITL compilation produces auto-synthesized derivedMetrics', () => {
     const results = computeAllVictoryStandings(gameDef, state, gameDef.victoryStandings);
 
     // Find VC and US results
-    const vcResult = results.find((r) => r.seat === 'VC');
-    const usResult = results.find((r) => r.seat === 'US');
+    const vcResult = results.find((r) => r.seat === 'vc');
+    const usResult = results.find((r) => r.seat === 'us');
     assert.ok(vcResult, 'Should have VC result');
     assert.ok(usResult, 'Should have US result');
 

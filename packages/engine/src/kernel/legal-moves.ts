@@ -66,6 +66,7 @@ import { createTrustedExecutableMove } from './trusted-move.js';
 import { requireCardDrivenActiveSeat, validateTurnFlowRuntimeStateInvariants } from './turn-flow-runtime-invariants.js';
 import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
 import { findPhaseDef } from './phase-lookup.js';
+import { getPhaseActionIndex } from './phase-action-index.js';
 import type {
   ActionDef,
   ActionPipelineDef,
@@ -1161,9 +1162,10 @@ const enumerateRawLegalMoves = (
   // through complex parameterized operations. This is game-agnostic: any
   // action that matches these criteria (e.g., 'pass' in COIN games) benefits.
   const alwaysComplete = runtime?.alwaysCompleteActionIds ?? computeAlwaysCompleteActionIds(def);
+  const actionsForPhase = getPhaseActionIndex(def).actionsByPhase.get(state.currentPhase) ?? [];
   let earlyExitTriedTrivial = false;
   if (earlyExitAfterFirst) {
-    for (const action of def.actions) {
+    for (const action of actionsForPhase) {
       // Trivial = no params + always-complete + no precondition + no pipeline
       if (action.params.length > 0 || !alwaysComplete.has(action.id)) continue;
       if (action.pre !== null) continue;
@@ -1193,7 +1195,7 @@ const enumerateRawLegalMoves = (
     }
   }
 
-  for (const action of def.actions) {
+  for (const action of actionsForPhase) {
     if (enumeration.templateBudgetExceeded) {
       break;
     }

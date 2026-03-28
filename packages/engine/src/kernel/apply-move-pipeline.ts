@@ -1,3 +1,4 @@
+import { getActionPipelinesForAction } from './action-pipeline-lookup.js';
 import { evalCondition } from './eval-condition.js';
 import type { ReadContext } from './eval-context.js';
 import { pipelineApplicabilityEvaluationError } from './runtime-error.js';
@@ -33,7 +34,7 @@ export const resolveActionPipelineDispatch = (
     }
   };
 
-  const candidates = (def.actionPipelines ?? []).filter((profile) => profile.actionId === action.id);
+  const candidates = getActionPipelinesForAction(def, action.id);
   if (candidates.length === 0) {
     return { kind: 'noneConfigured' };
   }

@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import { resolveActionPipelineDispatch, toExecutionPipeline } from '../../../src/kernel/apply-move-pipeline.js';
 import { createCollector } from '../../../src/kernel/execution-collector.js';
 import { buildAdjacencyGraph } from '../../../src/kernel/spatial.js';
+import { readKernelSource } from '../../helpers/kernel-source-guard.js';
 import {
   asActionId,
   asPhaseId,
@@ -192,6 +193,23 @@ describe('resolveActionPipelineDispatch()', () => {
 
     const result = resolveActionPipelineDispatch(def, action, makeCtx(def, makeState(0)));
     assert.equal(result.kind, 'noneConfigured');
+  });
+
+  it('reads candidate profiles through the shared lookup helper', () => {
+    const source = readKernelSource('src/kernel/apply-move-pipeline.ts');
+
+    assert.match(
+      source,
+      /import\s+\{\s*getActionPipelinesForAction\s*\}\s+from\s+'\.\/action-pipeline-lookup\.js';/u,
+    );
+    assert.match(
+      source,
+      /const candidates = getActionPipelinesForAction\(def,\s*action\.id\);/u,
+    );
+    assert.doesNotMatch(
+      source,
+      /\(def\.actionPipelines\s*\?\?\s*\[\]\)\.filter\(/u,
+    );
   });
 });
 

@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { resolveActionApplicabilityPreflight } from '../../../src/kernel/action-applicability-preflight.js';
+import { readKernelSource } from '../../helpers/kernel-source-guard.js';
 import {
   asActionId,
   asPhaseId,
@@ -487,6 +488,23 @@ describe('resolveActionApplicabilityPreflight()', () => {
         assert.match(String(details.message), /resolveActionApplicabilityPreflight evalRuntimeResources/i);
         return true;
       },
+    );
+  });
+
+  it('reads selector-contract pipeline membership through the shared lookup helper', () => {
+    const source = readKernelSource('src/kernel/action-applicability-preflight.ts');
+
+    assert.match(
+      source,
+      /import\s+\{\s*hasActionPipeline\s*\}\s+from\s+'\.\/action-pipeline-lookup\.js';/u,
+    );
+    assert.match(
+      source,
+      /hasPipeline:\s*hasActionPipeline\(def,\s*action\.id\)/u,
+    );
+    assert.doesNotMatch(
+      source,
+      /\(def\.actionPipelines\s*\?\?\s*\[\]\)\.some\(/u,
     );
   });
 });

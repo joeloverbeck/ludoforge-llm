@@ -4056,6 +4056,28 @@ describe('legalMoves phase-aware action enumeration', () => {
       'enumerateRawLegalMoves must not scan def.actions directly once the phase index is in place',
     );
   });
+
+  it('imports and uses hasActionPipeline for runtime pipeline membership checks', () => {
+    const source = readKernelSource('src/kernel/legal-moves.ts');
+    const sourceFile = parseTypeScriptSource(source, 'legal-moves.ts');
+    const imports = collectNamedImportsByLocalName(sourceFile, './action-pipeline-lookup.js');
+
+    assert.equal(
+      imports.get('hasActionPipeline'),
+      'hasActionPipeline',
+      'legal-moves.ts must import hasActionPipeline from the dedicated action-pipeline-lookup module',
+    );
+    assert.match(
+      source,
+      /const hasPipeline = hasActionPipeline\(def,\s*action\.id\);/u,
+      'runtime pipeline checks should route through the shared lookup helper',
+    );
+    assert.doesNotMatch(
+      source,
+      /\(def\.actionPipelines\s*\?\?\s*\[\]\)\.some\(/u,
+      'legal-moves.ts must not rescan def.actionPipelines directly once the shared lookup is in place',
+    );
+  });
 });
 
 describe('legalMoves seat-resolution lifecycle architecture guard', () => {

@@ -30,6 +30,7 @@ export * from './phase-lookup.js';
 export * from './hidden-info-grants.js';
 export * from './observation.js';
 export * from './action-actor.js';
+export * from './action-pipeline-lookup.js';
 export * from './action-usage.js';
 export * from './terminal.js';
 export * from './determinism.js';

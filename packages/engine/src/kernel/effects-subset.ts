@@ -4,7 +4,7 @@ import { evalValue } from './eval-value.js';
 import { effectRuntimeError } from './effect-error.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import type { EffectCursor, EffectEnv, MutableReadScope, PartialEffectResult } from './effect-context.js';
-import { mergeToEvalContext, mergeToReadContext, resolveEffectBindings } from './effect-context.js';
+import { resolveEffectBindings, updateReadScope } from './effect-context.js';
 import type { EffectAST, TriggerEvent } from './types.js';
 import type { EffectBudgetState } from './effects-control.js';
 import type { ApplyEffectsWithBudget } from './effect-registry.js';
@@ -35,12 +35,13 @@ export const applyEvaluateSubset = (
   effect: Extract<EffectAST, { readonly evaluateSubset: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
-  _scope: MutableReadScope,
+  scope: MutableReadScope,
   budget: EffectBudgetState,
   applyBatch: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
   const evaluateSubset = effect.evaluateSubset;
-  const evalCtx = mergeToEvalContext(env, cursor);
+  updateReadScope(scope, cursor, env);
+  const evalCtx = scope;
   const items = evalQuery(evaluateSubset.source, evalCtx);
   const subsetSize = resolveSubsetSize(evalValue(evaluateSubset.subsetSize, evalCtx));
 
@@ -88,19 +89,14 @@ export const applyEvaluateSubset = (
         pendingChoice: computeResult.pendingChoice,
       };
     }
-    const scoreCursor: EffectCursor = {
+    scope.state = computeResult.state;
+    scope.bindings = resolveEffectBindings(env, {
       ...cursor,
       state: computeResult.state,
       rng: computeResult.rng,
-      bindings: resolveEffectBindings(env, {
-        ...cursor,
-        state: computeResult.state,
-        rng: computeResult.rng,
-        bindings: computeResult.bindings ?? computeCursor.bindings,
-      }),
-    };
-    const scoreCtx = mergeToReadContext(env, scoreCursor);
-    const score = resolveScore(evalValue(evaluateSubset.scoreExpr, scoreCtx));
+      bindings: computeResult.bindings ?? computeCursor.bindings,
+    });
+    const score = resolveScore(evalValue(evaluateSubset.scoreExpr, scope));
 
     if (score > bestScore) {
       bestScore = score;

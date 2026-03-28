@@ -122,6 +122,46 @@ describe('effects moveAll and shuffle', () => {
     );
   });
 
+  it('moveAll filter can combine move params with the temporary $token binding', () => {
+    const ctx = makeCtx({
+      moveParams: { '$minRank': 2 },
+    });
+
+    const result = applyEffect(
+      eff({
+        moveAll: {
+          from: 'deck:none',
+          to: 'discard:none',
+          filter: {
+            op: 'and',
+            args: [
+              {
+                op: '>=',
+                left: { _t: 2 as const, ref: 'tokenProp', token: '$token', prop: 'rank' },
+                right: { _t: 2 as const, ref: 'binding', name: '$minRank' },
+              },
+              {
+                op: '==',
+                left: { _t: 2 as const, ref: 'binding', name: '$minRank' },
+                right: 2,
+              },
+            ],
+          },
+        },
+      }),
+      ctx,
+    );
+
+    assert.deepEqual(
+      result.state.zones['deck:none']?.map((entry) => entry.id),
+      [asTokenId('d1'), asTokenId('d4')],
+    );
+    assert.deepEqual(
+      result.state.zones['discard:none']?.map((entry) => entry.id),
+      [asTokenId('d2'), asTokenId('d3'), asTokenId('x1')],
+    );
+  });
+
   it('moveAll same source and destination is a no-op', () => {
     const ctx = makeCtx();
 

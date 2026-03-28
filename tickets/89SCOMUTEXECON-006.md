@@ -4,7 +4,7 @@
 **Priority**: LOW
 **Effort**: Medium
 **Engine Changes**: Yes — multiple kernel files (scope determined by audit)
-**Deps**: tickets/89SCOMUTEXECON-004.md, tickets/89SCOMUTEXECON-005.md
+**Deps**: archive/tickets/89SCOMUTEXECON/89SCOMUTEXECON-004-finish-scope-convergence-in-complex-handlers.md, tickets/89SCOMUTEXECON-005.md
 
 ## Problem
 

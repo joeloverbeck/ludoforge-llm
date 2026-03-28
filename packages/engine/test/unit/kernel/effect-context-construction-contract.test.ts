@@ -186,6 +186,21 @@ describe('effect-context construction contract', () => {
     );
   });
 
+  it('does not export legacy merge-to-context helpers', () => {
+    const legacyEvalHelper = `mergeTo${'Eval'}Context`;
+    const legacyReadHelper = `mergeTo${'Read'}Context`;
+    assert.equal(
+      Object.hasOwn(effectContextModule, legacyEvalHelper),
+      false,
+      `effect-context module must not expose ${legacyEvalHelper} after scope convergence`,
+    );
+    assert.equal(
+      Object.hasOwn(effectContextModule, legacyReadHelper),
+      false,
+      `effect-context module must not expose ${legacyReadHelper} after scope convergence`,
+    );
+  });
+
   it('builds narrow trace bridge helpers with stable own-property layouts', () => {
     const context = createExecutionEffectContext(makeRuntimeEffectContextOptions());
     const env = toEffectEnv(context);

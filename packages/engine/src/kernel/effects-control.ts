@@ -11,9 +11,9 @@ import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import { resolveRuntimeTokenBindingValue } from './token-binding.js';
 import { resolveTraceProvenance } from './trace-provenance.js';
 import {
-  mergeToEvalContext,
   resolveEffectBindings,
   toTraceProvenanceContext,
+  updateReadScope,
   type EffectCursor,
   type EffectEnv,
   type MutableReadScope,
@@ -51,11 +51,12 @@ export const applyIf = (
   effect: Extract<EffectAST, { readonly if: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
-  _scope: MutableReadScope,
+  scope: MutableReadScope,
   budget: EffectBudgetState,
   applyEffectsWithBudget: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
-  const evalCtx = mergeToEvalContext(env, cursor);
+  updateReadScope(scope, cursor, env);
+  const evalCtx = scope;
   // Skip trace provenance construction when condition tracing is disabled (saves ~131K object allocations)
   const predicate = env.collector.conditionTrace !== null
     ? evalConditionTraced(effect.if.when, evalCtx, 'ifBranch', envCursorProvenance(env, cursor))
@@ -92,11 +93,12 @@ export const applyLet = (
   effect: Extract<EffectAST, { readonly let: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
-  _scope: MutableReadScope,
+  scope: MutableReadScope,
   budget: EffectBudgetState,
   applyEffectsWithBudget: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
-  const evalCtx = mergeToEvalContext(env, cursor);
+  updateReadScope(scope, cursor, env);
+  const evalCtx = scope;
   const evaluatedValue = evalValue(effect.let.value, evalCtx);
   // KEY OPTIMIZATION: only 5 fields spread instead of ~24
   const nestedCursor: EffectCursor = {
@@ -142,11 +144,12 @@ export const applyForEach = (
   effect: Extract<EffectAST, { readonly forEach: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
-  _scope: MutableReadScope,
+  scope: MutableReadScope,
   budget: EffectBudgetState,
   applyEffectsWithBudget: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
-  const evalCtx = mergeToEvalContext(env, cursor);
+  updateReadScope(scope, cursor, env);
+  const evalCtx = scope;
   const limit = resolveControlFlowIterationLimit('forEach', effect.forEach.limit, evalCtx, (evaluatedLimit) => {
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CONTROL_FLOW_RUNTIME_VALIDATION_FAILED, 'forEach.limit must evaluate to a non-negative integer', {
       effectType: 'forEach',
@@ -257,11 +260,12 @@ export const applyReduce = (
   effect: Extract<EffectAST, { readonly reduce: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
-  _scope: MutableReadScope,
+  scope: MutableReadScope,
   budget: EffectBudgetState,
   applyEffectsWithBudget: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
-  const evalCtx = mergeToEvalContext(env, cursor);
+  updateReadScope(scope, cursor, env);
+  const evalCtx = scope;
   const limit = resolveControlFlowIterationLimit('reduce', effect.reduce.limit, evalCtx, (evaluatedLimit) => {
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CONTROL_FLOW_RUNTIME_VALIDATION_FAILED, 'reduce.limit must evaluate to a non-negative integer', {
       effectType: 'reduce',
@@ -272,15 +276,14 @@ export const applyReduce = (
   const boundedItems = queryResult.slice(0, limit);
 
   let accumulator = evalValue(effect.reduce.initial, evalCtx);
+  const baseBindings = evalCtx.bindings;
   for (const item of boundedItems) {
-    accumulator = evalValue(effect.reduce.next, {
-      ...evalCtx,
-      bindings: {
-        ...evalCtx.bindings,
-        [effect.reduce.itemBind]: item,
-        [effect.reduce.accBind]: accumulator,
-      },
-    });
+    scope.bindings = {
+      ...baseBindings,
+      [effect.reduce.itemBind]: item,
+      [effect.reduce.accBind]: accumulator,
+    };
+    accumulator = evalValue(effect.reduce.next, scope);
   }
 
   if (env.collector.trace !== null) {
@@ -357,11 +360,12 @@ export const applyRemoveByPriority = (
   effect: Extract<EffectAST, { readonly removeByPriority: unknown }>,
   env: EffectEnv,
   cursor: EffectCursor,
-  _scope: MutableReadScope,
+  scope: MutableReadScope,
   budget: EffectBudgetState,
   applyEffectsWithBudget: ApplyEffectsWithBudget,
 ): PartialEffectResult => {
-  const evalCtx = mergeToEvalContext(env, cursor);
+  updateReadScope(scope, cursor, env);
+  const evalCtx = scope;
   let remainingBudget = resolveRemovalBudget(evalValue(effect.removeByPriority.budget, evalCtx), 'removeByPriority');
   let currentState = cursor.state;
   let currentRng = cursor.rng;
@@ -378,12 +382,9 @@ export const applyRemoveByPriority = (
         state: currentState,
         rng: currentRng,
       });
-      const groupEvalCtx = {
-        ...evalCtx,
-        state: currentState,
-        bindings: resolvedGroupBindings,
-      };
-      const queried = evalQuery(group.over, groupEvalCtx);
+      scope.state = currentState;
+      scope.bindings = resolvedGroupBindings;
+      const queried = evalQuery(group.over, scope);
       const bounded = queried.slice(0, remainingBudget);
 
       for (const item of bounded) {

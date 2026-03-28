@@ -309,13 +309,6 @@ export const toTraceEmissionContext = (
 });
 
 /**
- * Merge env + cursor into a ReadContext for eval functions (evalValue, evalCondition, etc.).
- * Spreads env (which is already allocated) and overlays cursor state/bindings.
- */
-export const mergeToReadContext = (env: EffectEnv, cursor: EffectCursor): ReadContext =>
-  ({ ...env, state: cursor.state, bindings: cursor.bindings }) as ReadContext;
-
-/**
  * Merge moveParams into bindings. Shared utility replacing per-file duplicates.
  * Fast path: return bindings directly when moveParams is empty.
  */
@@ -354,13 +347,4 @@ export const updateReadScope = (
 export const updateReadScopeRaw = (scope: MutableReadScope, cursor: EffectCursor): void => {
   scope.state = cursor.state;
   scope.bindings = cursor.bindings;
-};
-
-/**
- * Build a ReadContext with resolved bindings (moveParams merged) for eval calls.
- * Common pattern extracted to avoid repeated inline merging.
- */
-export const mergeToEvalContext = (env: EffectEnv, cursor: EffectCursor): ReadContext => {
-  const resolvedBindings = resolveEffectBindings(env, cursor);
-  return { ...env, state: cursor.state, bindings: resolvedBindings } as ReadContext;
 };

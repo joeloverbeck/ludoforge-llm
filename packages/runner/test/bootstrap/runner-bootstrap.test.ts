@@ -12,17 +12,7 @@ async function importIsolatedRunnerBootstrap() {
   return import('../../src/bootstrap/runner-bootstrap.js');
 }
 
-describe('runner-bootstrap', () => {
-  it('resolves full bootstrap state and centralized capabilities for FITL', async () => {
-    const resolved = await resolveRunnerBootstrapByGameId('fitl');
-
-    expect(resolved).not.toBeNull();
-    expect(resolved?.descriptor.id).toBe('fitl');
-    expect(resolved?.gameDef.metadata.id).toBe('fire-in-the-lake');
-    expect(resolved?.capabilities.supportsMapEditor).toBe(true);
-    expect(resolved?.visualConfigProvider.getConnectionRoutes().size).toBe(17);
-  }, 20000);
-
+describe('runner-bootstrap contract', () => {
   it('returns null for unknown descriptor ids', async () => {
     await expect(resolveRunnerBootstrapByGameId('missing-game')).resolves.toBeNull();
   });
@@ -74,11 +64,92 @@ describe('runner-bootstrap', () => {
   });
 });
 
-describe('runner-bootstrap with mocked bootstrap inputs', () => {
+describe('runner-bootstrap integration', () => {
+  it('resolves full bootstrap state for Texas using production fixtures', async () => {
+    const resolved = await resolveRunnerBootstrapByGameId('texas');
+
+    expect(resolved).not.toBeNull();
+    expect(resolved?.descriptor.id).toBe('texas');
+    expect(resolved?.gameDef.metadata.id).toBe('texas-holdem-nlhe-tournament');
+    expect(resolved?.capabilities.supportsMapEditor).toBe(false);
+    expect(resolved?.visualConfigProvider.resolveZoneVisual('sample:seat', null, {})).toBeDefined();
+  });
+
+  it('resolves full bootstrap state and centralized capabilities for FITL using production fixtures', async () => {
+    const resolved = await resolveRunnerBootstrapByGameId('fitl');
+
+    expect(resolved).not.toBeNull();
+    expect(resolved?.descriptor.id).toBe('fitl');
+    expect(resolved?.gameDef.metadata.id).toBe('fire-in-the-lake');
+    expect(resolved?.capabilities.supportsMapEditor).toBe(true);
+    expect(resolved?.visualConfigProvider.getConnectionRoutes().size).toBe(17);
+  });
+});
+
+describe('runner-bootstrap validation failures', () => {
   afterEach(() => {
     vi.resetModules();
     vi.doUnmock('../../src/bootstrap/bootstrap-registry.js');
+    vi.doUnmock('../../src/bootstrap/fitl-game-def.json');
     vi.doUnmock('../../src/bootstrap/texas-game-def.json');
+  });
+
+  it('fails fast when FITL bootstrap fixture is invalid', async () => {
+    vi.resetModules();
+    vi.doMock('../../src/bootstrap/bootstrap-registry.js', () => ({
+      findBootstrapDescriptorById: () => ({
+        id: 'fitl',
+        queryValue: 'fitl',
+        defaultSeed: 42,
+        defaultPlayerId: 0,
+        sourceLabel: 'FITL bootstrap fixture',
+        gameMetadata: {
+          name: 'Fire in the Lake',
+          description: '',
+          playerMin: 4,
+          playerMax: 4,
+          factionIds: ['us', 'arvn', 'nva', 'vc'],
+        },
+        resolveGameDefInput: async () => ({ invalid: true }),
+        resolveVisualConfigYaml: () => ({
+          version: 1,
+        }),
+      }),
+    }));
+
+    const { resolveRunnerBootstrapByGameId } = await importIsolatedRunnerBootstrap();
+    await expect(resolveRunnerBootstrapByGameId('fitl')).rejects.toThrowError(
+      /Invalid GameDef input from FITL bootstrap fixture/u,
+    );
+  });
+
+  it("fails fast when Texas Hold'em bootstrap fixture is invalid", async () => {
+    vi.resetModules();
+    vi.doMock('../../src/bootstrap/bootstrap-registry.js', () => ({
+      findBootstrapDescriptorById: () => ({
+        id: 'texas',
+        queryValue: 'texas',
+        defaultSeed: 42,
+        defaultPlayerId: 0,
+        sourceLabel: 'Texas Hold\'em bootstrap fixture',
+        gameMetadata: {
+          name: "Texas Hold'em",
+          description: '',
+          playerMin: 2,
+          playerMax: 10,
+          factionIds: ['neutral'],
+        },
+        resolveGameDefInput: async () => ({ invalid: true }),
+        resolveVisualConfigYaml: () => ({
+          version: 1,
+        }),
+      }),
+    }));
+
+    const { resolveRunnerBootstrapByGameId } = await importIsolatedRunnerBootstrap();
+    await expect(resolveRunnerBootstrapByGameId('texas')).rejects.toThrowError(
+      /Invalid GameDef input from Texas Hold'em bootstrap fixture/u,
+    );
   });
 
   it('fails immediately when shared visual config schema is malformed', async () => {
@@ -109,5 +180,42 @@ describe('runner-bootstrap with mocked bootstrap inputs', () => {
 
     const { resolveRunnerBootstrapByGameId } = await importIsolatedRunnerBootstrap();
     await expect(resolveRunnerBootstrapByGameId('texas')).rejects.toThrowError(/Invalid visual config schema/u);
+  });
+
+  it('fails fast when visual config contains invalid cross-reference ids', async () => {
+    vi.resetModules();
+    vi.doMock('../../src/bootstrap/bootstrap-registry.js', async () => {
+      const texasFixture = (await import('../../src/bootstrap/texas-game-def.json')).default;
+      return {
+        findBootstrapDescriptorById: () => ({
+          id: 'texas',
+          queryValue: 'texas',
+          defaultSeed: 42,
+          defaultPlayerId: 0,
+          sourceLabel: 'Texas Hold\'em bootstrap fixture',
+          gameMetadata: {
+            name: "Texas Hold'em",
+            description: '',
+            playerMin: 2,
+            playerMax: 10,
+            factionIds: [],
+          },
+          resolveGameDefInput: async () => texasFixture,
+          resolveVisualConfigYaml: () => ({
+            version: 1,
+            zones: {
+              overrides: {
+                'not-a-real-zone': { label: 'bad' },
+              },
+            },
+          }),
+        }),
+      };
+    });
+
+    const { resolveRunnerBootstrapByGameId } = await importIsolatedRunnerBootstrap();
+    await expect(resolveRunnerBootstrapByGameId('texas')).rejects.toThrowError(
+      /Invalid visual config references/u,
+    );
   });
 });

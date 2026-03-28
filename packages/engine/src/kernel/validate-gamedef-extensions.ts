@@ -1,4 +1,5 @@
 import type { Diagnostic } from './diagnostics.js';
+import { asActionId } from './branded.js';
 import {
   analyzeSeatOrderShape,
   buildSeatResolutionIndex,
@@ -20,6 +21,7 @@ import {
   conditionSurfacePathForTerminalCheckpointWhen,
   findMissingTurnFlowLinkedWindows,
 } from '../contracts/index.js';
+import { getActionPipelinesForAction } from './action-pipeline-lookup.js';
 
 export const validateCoupPlan = (diagnostics: Diagnostic[], def: GameDef): void => {
   const coupPlan = def.turnOrder?.type === 'cardDriven' ? def.turnOrder.config.coupPlan : undefined;
@@ -494,7 +496,7 @@ export const validateActionPipelines = (
     if (count <= 1) {
       continue;
     }
-    const profilesForAction = (def.actionPipelines ?? []).filter((profile) => profile.actionId === actionId);
+    const profilesForAction = getActionPipelinesForAction(def, asActionId(actionId));
     const missingApplicability = profilesForAction.some((profile) => profile.applicability === undefined);
     if (missingApplicability) {
       diagnostics.push({

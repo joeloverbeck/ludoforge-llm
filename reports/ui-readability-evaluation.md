@@ -667,3 +667,132 @@ N/A (baseline evaluation)
 4. **[LOW] Strengthen visual distinction for unavailable options.** In screenshot 2, unselected options (Kontum, Quang Tri, Saigon) are subtly lighter. The strong selected-state styling (blue checkmarks) makes this less urgent, but stronger dimming would help at-a-glance scanning. *(Recurring: 4 consecutive evaluations — #5, #6, #7, #8)*
 
 5. **[LOW] Investigate the dark rectangle overlay.** The semi-transparent dark rectangle overlapping the map canvas behind the choice panel may persist — hard to distinguish from the normal panel background in these screenshots. If still present, it has persisted across all eight evaluations. *(Recurring: potentially 8 consecutive evaluations)*
+
+---
+
+## EVALUATION #9
+
+**Date**: 2026-03-29
+**Screenshots analyzed**: fitl-train-1.png through fitl-train-11.png
+**Note**: Screenshot set expanded from 5 to 11, revealing deeper decision states (source space confirmation, sub-action choice, pacification levels, final confirmation) not captured in previous evaluations.
+
+### Screenshot Analysis
+
+#### fitl-train-1.png — Initial Target Space Selection (Empty)
+**What's shown**: The Train choice panel at the start. Player must select target spaces. No spaces selected. Six zone checkbox buttons displayed.
+**Issues observed**:
+- Prompt reads "Target Spaces: Select spaces to train in (1 to 6)" — clean, human-readable. The trailing "— Target Spaces" suffix from Eval #8 is **gone**. This is a fix.
+- Counter reads "Selected: 0 of 1 to 6" — harmonized format, consistent.
+- No lone "Current" badge — clean.
+- Zone names clean and readable.
+- "Confirm selection" correctly grayed out, "Back" grayed out, "Cancel" active.
+
+#### fitl-train-2.png — Target Space Selection (3 Selected)
+**What's shown**: Player has selected 3 spaces (Binh Dinh, Da Nang, Pleiku Darlac). Selected options show blue checkmarks with solid blue borders. Unselected options dimmed.
+**Issues observed**:
+- Prompt dynamically updated to "Target Spaces: Select spaces to train in (1 to 3)" — correct range constraint. No trailing suffix.
+- Counter reads "Selected: 3 of 1 to 3" — harmonized and consistent.
+- No misleading error messages under selected options — clean.
+- Blue checkmark selection styling maintained from Eval #6 — proper positive indicators, no strikethrough.
+- Unselected options (Kontum, Quang Tri, Saigon) appear lighter/dimmed. Distinction is adequate.
+
+#### fitl-train-3.png — Train Sub-Choice (Place Irregulars vs Place At Base), 1st iteration
+**What's shown**: Binary choice between "Place Irregulars" and "Place At Base" after selecting target spaces.
+**Issues observed**:
+- Prompt reads "Train Choice: How do you want to train?" — natural language, no trailing suffix. Clean.
+- Breadcrumb shows "Target Spaces (1x)" group header with pill and "Current" badge.
+- Both option buttons well-labeled and clear.
+- Panel compact and well-organized. This screen is essentially fully resolved.
+
+#### fitl-train-4.png — Train Sub-Choice, later iteration (forEach context visible)
+**What's shown**: The same binary choice appears again — the player is in a later forEach iteration. Breadcrumb now shows completed iterations.
+**Issues observed**:
+- Prompt reads "Train Choice: How do you want to train?" — identical to screenshot 3. Clean.
+- Breadcrumb shows "Target Spaces (1x)" pill and "Train Choice (2x)" group header with two completed pills: "Train Choice: Place Irregulars" and "Train Choice: Place At Base", plus "Current". The "(2x)" multiplicity indicator tells the player 2 iterations have been completed.
+- However, the player still **cannot tell which target space** each iteration corresponds to. "Train Choice: Place Irregulars" and "Train Choice: Place At Base" — for which spaces? This is the forEach iteration context gap persisting since Eval #3 — **7th consecutive evaluation**.
+
+#### fitl-train-5.png — Source Spaces Selection (Empty)
+**What's shown**: Inside the forEach loop, player selects source spaces (up to 3) for reinforcements. No selections yet.
+**Issues observed**:
+- Prompt reads "Source Spaces: Select source spaces for reinforcements (up to 3)" — clean, human-readable. **No AST path, no trailing suffix.** The AST path regression from Eval #6-7 remains fixed.
+- Breadcrumb: "Target Spaces (1x)" pill, "Train Choice (3x)" with 3 pills: "Train Choice: Place Irregulars", "Train Choice: Place At Base", "Train Choice: Place Irregulars", then "Current".
+- Counter: "Selected: 0 of up to 3" — harmonized.
+- Zone options (Binh Dinh, Pleiku Darlac, Quang Tri) clean.
+
+#### fitl-train-6.png — Source Spaces Selection (3 Selected)
+**What's shown**: Player has selected all 3 source spaces (Binh Dinh, Pleiku Darlac, Quang Tri). Blue checkmarks on all options.
+**Issues observed**:
+- Prompt reads "Source Spaces: Select source spaces for reinforcements" — the "(up to 3)" range indicator has **disappeared** now that selections are made. Minor loss of context.
+- **Counter reads "Selected: 3 of 0"** — this is **broken**. "3 of 0" is nonsensical. The counter should read "3 of up to 3" or "3 of 3". This is a **new regression** not present in any previous evaluation.
+- Blue checkmark styling is correct — all 3 options selected with proper visual indicators.
+- Breadcrumb same as screenshot 5 — clean.
+
+#### fitl-train-7.png — Additional Space Selection (Empty), deepest nesting
+**What's shown**: Deepest nesting level from previous evaluations. Player selects an additional space (up to 1).
+**Issues observed**:
+- Prompt reads "Additional Space: Select additional space for this action (up to 1) — Sub Action Spaces". The prefix is now **"Additional Space:"** instead of the previous "Sub Action Spaces:" — this is a partial fix of Eval #8's MEDIUM #3 (replace "Sub Action Spaces" jargon). However, the **trailing suffix "— Sub Action Spaces"** persists, showing the internal name. The suffix was flagged in Eval #8 as HIGH #2.
+- Breadcrumb: "Target Spaces (1x)" → pill, "Train Choice (3x)" → 3 pills, "Source Spaces (1x)" → pill "Source Spaces: Binh Dinh, Pleiku Darlac, Quang Tri", "Current". Clean — no AST paths.
+- Counter: "Selected: 0 of up to 1" — harmonized.
+- Zone options (Binh Dinh, Da Nang, Pleiku Darlac) clean.
+- Panel is compact but readable at this depth.
+
+#### fitl-train-8.png — Additional Space Selection (1 Selected, with errors)
+**What's shown**: Player selected Da Nang. Binh Dinh and Pleiku Darlac show red error indicators.
+**Issues observed**:
+- Prompt reads "Additional Space: Select additional space for this action — Sub Action Spaces". Same trailing suffix issue.
+- **Counter reads "Selected: 1 of 0"** — same broken counter as screenshot 6. "1 of 0" is nonsensical.
+- Error text "! Does not meet current requirements" appears under **unavailable** options (Binh Dinh, Pleiku Darlac), NOT under the selected option (Da Nang). This is **correct error placement** — a fix from the original Eval #1-2 issue where errors appeared under selected options. Positive progress.
+- However, the error text itself remains vague — no explanation of WHY these spaces don't meet requirements.
+
+#### fitl-train-9.png — Sub-Action Choice (Pacify / Saigon Transfer / None)
+**What's shown**: A new decision depth not seen in previous evaluations. Player chooses a sub-action type.
+**Issues observed**:
+- Prompt reads just **"Sub Action"** — bare internal label with no description. Unlike the well-crafted prompts on earlier screens ("How do you want to train?", "Select source spaces for reinforcements"), this shows only the raw decision name with zero contextual guidance.
+- Options: "Pacify", "Saigon Transfer", "None" — the action names are readable, but **"None"** is ambiguous. Does it mean "skip this step" or "no sub-action"? A label like "Skip" or "No additional action" would be clearer.
+- Breadcrumb: "..." → "Train Choice (3x)" pills, "Source Spaces (1x)" pill, "Sub Action Spaces (1x)" pill "Sub Action Spaces: Da Nang", then "Current". The "Sub Action Spaces" label in the breadcrumb pill is internal jargon.
+- This screen would benefit from a descriptive prompt like "Choose a sub-action for Da Nang" or "What would you like to do in Da Nang?".
+
+#### fitl-train-10.png — Pac Levels Choice (1 or 2)
+**What's shown**: A numeric choice for pacification levels. Two options: "1" and "2".
+**Issues observed**:
+- Prompt reads just **"Pac Levels"** — bare internal jargon. A player has no idea what "Pac Levels" means or what choosing "1" vs "2" implies. This should read something like "Choose pacification level" or "How many levels of pacification?".
+- **Options "1" and "2" are bare numbers with zero context.** The player doesn't know what these numbers represent — cost? intensity? effect magnitude? This is the most opaque decision in the entire sequence.
+- Breadcrumb: "..." → "Source Spaces (1x)" pill, "Sub Action Spaces (1x)" pill, "Sub Action (1x)" pill "Sub Action: Pacify", "Current". The trail is clean and shows the path.
+
+#### fitl-train-11.png — Final Confirmation
+**What's shown**: A confirmation screen at the end of the decision sequence. No prompt text visible — the panel shows the completed breadcrumb trail and "Back", "Cancel", "Confirm" buttons.
+**Issues observed**:
+- Breadcrumb: "..." → "Sub Action Spaces (1x)" pill "Sub Action Spaces: Da Nang", "Sub Action (1x)" pill "Sub Action: Pacify", "Pac Levels (1x)" pill "Pac Levels: 2".
+- The "Confirm" button is present and active — good.
+- No visible prompt or summary of what's being confirmed. A brief summary like "Confirm your Train operation choices" would help the player understand this is the final step.
+- The breadcrumb labels use internal jargon ("Sub Action Spaces", "Pac Levels") — the player sees these as the summary of their decisions.
+
+### Scores
+
+| # | Metric | Score | Previous | Delta | Justification |
+|---|--------|-------|----------|-------|---------------|
+| 1 | Decision Prompt Clarity | 6 | 7 | -1 | Screenshots 1-6 are excellent — clean prompts, no AST paths, no trailing suffixes, dynamic ranges. The trailing suffix from Eval #8 is mostly eliminated. However, the expanded screenshot set reveals deeper decisions with bare jargon prompts: "Sub Action" (screenshot 9) and "Pac Levels" (screenshot 10) have no descriptions at all. Screenshot 7 retains the trailing "— Sub Action Spaces" suffix. |
+| 2 | Option Legibility | 7 | 8 | -1 | Blue checkmark selection styling is strong. Zone and action names clean. Error placement improved (under unavailable options, not selected ones). However, screenshot 10 shows bare numeric options "1" and "2" with no context — completely opaque. Screenshot 9's "None" option is ambiguous. |
+| 3 | Breadcrumb Navigability | 6 | 6 | 0 | No AST paths in any breadcrumb — sustained fix. Group headers with multiplicity indicators work well. "..." collapse effective. forEach iteration context **still absent** — "Train Choice" entries don't identify target spaces. Some breadcrumb labels use jargon ("Sub Action Spaces", "Pac Levels"). *(forEach context gap: 7th consecutive evaluation)* |
+| 4 | Error Communication | 5 | 7 | -2 | **New regression**: Counter displays "Selected: 3 of 0" (screenshot 6) and "Selected: 1 of 0" (screenshot 8) — nonsensical values. The counter worked correctly in Eval #8 ("0 of up to 3"). Error placement is now correct (under unavailable options, not selected ones — positive progress from Eval #1-2). Error text remains vague ("Does not meet current requirements"). |
+| 5 | Information Density | 7 | 7 | 0 | No AST paths wasting space. Breadcrumbs compact. Adequate space for decisions even at deepest nesting (screenshots 9-11). The expanded 11-screenshot set shows the panel remains well-proportioned throughout the full decision tree. |
+| 6 | Visual Hierarchy | 7 | 7 | 0 | "Train" badge prominent. Blue checkmark styling provides clear selection feedback. Visual flow (badge → prompt → breadcrumb → options → buttons) reads naturally on most screens. Bare prompts on screenshots 9-10 weaken guidance at deeper levels but don't break the structural hierarchy. |
+| | **Average** | **6.3** | **7.0** | **-0.7** | |
+
+### Prioritized Recommendations
+
+1. **[CRITICAL] Fix the broken selection counter.** Screenshots 6 and 8 show "Selected: 3 of 0" and "Selected: 1 of 0" — the counter displays nonsensical values when options are selected. This is a **new regression** — previous evaluations showed correct values like "0 of up to 3". The counter logic likely breaks when the maximum is dynamically constrained or when all valid options are selected. *(New regression)*
+
+2. **[HIGH] Add descriptive prompts for deeper decisions.** Screenshot 9 shows bare "Sub Action" and screenshot 10 shows bare "Pac Levels" — internal labels with no player-facing descriptions. These need the same treatment that transformed "$target Spaces" into "Select spaces to train in" back in Eval #2. Suggested prompts: "Sub Action" → "Choose a sub-action for this space", "Pac Levels" → "Choose pacification level". *(New — first time these screens are captured)*
+
+3. **[HIGH] Add forEach iteration context to breadcrumbs.** The repeated "Train Choice" entries still don't identify which target space each iteration processes. Labels like "Binh Dinh: Place Irregulars (1/3)" would orient the player. This has been the top structural issue for **seven consecutive evaluations** (#3-#9). While impact is moderate (it causes disorientation, not unusability), persistence warrants escalation consideration. *(Recurring: 7 consecutive evaluations)*
+
+4. **[HIGH] Remove the trailing "— Sub Action Spaces" suffix from screenshot 7's prompt.** The prefix was improved to "Additional Space:" (fixing Eval #8 MEDIUM #3) but the trailing suffix still exposes the internal decision name. The suffix was eliminated from other screens (screenshots 1-6 are clean) — this screen's suffix is likely a separate code path that wasn't updated. *(Recurring: 2 consecutive evaluations — #8, #9)*
+
+5. **[MEDIUM] Add context to bare numeric options.** Screenshot 10 shows "1" and "2" as options for "Pac Levels" — a player has no idea what these numbers represent. Either the prompt should explain ("Choose 1 or 2 levels of pacification — higher costs more resources") or the option labels should be enriched ("1 level", "2 levels"). *(New)*
+
+6. **[MEDIUM] Replace "None" option label with "Skip" or "No additional action".** Screenshot 9's "None" option is ambiguous — it could mean "skip this step" or "nothing selected". A clearer label would reduce confusion. *(New)*
+
+7. **[MEDIUM] Clean up jargon in breadcrumb labels.** Breadcrumb pills show "Sub Action Spaces: Da Nang", "Sub Action: Pacify", "Pac Levels: 2" — these use internal decision names as labels. Player-friendly labels like "Additional Space: Da Nang", "Action: Pacify", "Pacification: 2" would improve readability of the decision trail. *(New)*
+
+8. **[LOW] Strengthen visual distinction for unavailable options.** Unselected/unavailable options remain only subtly lighter. The strong selected-state styling (blue checkmarks) makes this less urgent. *(Recurring: 5 consecutive evaluations — #5 through #9)*

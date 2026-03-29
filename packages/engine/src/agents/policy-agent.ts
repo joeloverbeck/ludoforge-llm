@@ -61,6 +61,7 @@ export class PolicyAgent implements Agent {
       legalMoves: playableMoves.map((move) => move.move),
       trustedMoveIndex,
       rng: prepared.rng,
+      completionStatistics: prepared.statistics,
       ...(this.profileId === undefined ? {} : { profileIdOverride: this.profileId }),
       ...(this.fallbackOnError === undefined ? {} : { fallbackOnError: this.fallbackOnError }),
     });

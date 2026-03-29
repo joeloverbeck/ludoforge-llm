@@ -533,16 +533,33 @@ describe('PolicyAgent', () => {
     assert.equal(result.agentDecision.emergencyFallback, false);
     assert.deepEqual(result.agentDecision.previewUsage.refIds, ['globalVar.usMargin']);
     assert.equal(result.agentDecision.previewUsage.evaluatedCandidateCount, 2);
+    assert.deepEqual(result.agentDecision.previewUsage.outcomeBreakdown, {
+      ready: 2,
+      unknownRandom: 0,
+      unknownHidden: 0,
+      unknownUnresolved: 0,
+      unknownFailed: 0,
+    });
+    assert.deepEqual(result.agentDecision.completionStatistics, {
+      totalClassifiedMoves: 2,
+      completedCount: 1,
+      stochasticCount: 0,
+      rejectedNotViable: 0,
+      templateCompletionAttempts: 3,
+      templateCompletionSuccesses: 3,
+      templateCompletionUnsatisfiable: 0,
+    });
     if (result.agentDecision.candidates === undefined) {
       assert.fail('expected verbose policy candidates');
     }
 
     const completedTemplateCandidate = result.agentDecision.candidates.find(
-      (candidate) => candidate.actionId === 'chooseTarget',
+      (candidate) => candidate.actionId === 'chooseTarget' && candidate.previewRefIds?.length === 1,
     );
     assert.ok(completedTemplateCandidate);
     assert.deepEqual(completedTemplateCandidate.previewRefIds, ['globalVar.usMargin']);
     assert.deepEqual(completedTemplateCandidate.unknownPreviewRefs, []);
+    assert.equal(completedTemplateCandidate.previewOutcome, 'ready');
   });
 
   it('throws a typed no-playable-move error when every classified move is unsatisfiable', () => {

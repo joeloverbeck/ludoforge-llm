@@ -3,16 +3,21 @@ import { describe, it } from 'node:test';
 
 import { preparePlayableMoves } from '../../src/agents/prepare-playable-moves.js';
 import { PolicyAgent } from '../../src/agents/policy-agent.js';
+import { createTemplateChooseOneAction, createTemplateChooseOneProfile } from '../helpers/agent-template-fixtures.js';
+import { completeClassifiedMove, pendingClassifiedMove, stochasticClassifiedMove } from '../helpers/classified-move-fixtures.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 import {
+  type ActionPipelineDef,
   applyMove,
   asActionId,
   asPhaseId,
   assertValidatedGameDef,
-  createTrustedExecutableMove,
   createRng,
   createGameDefRuntime,
   enumerateLegalMoves,
+  illegalMoveError,
   initialState,
+  ILLEGAL_MOVE_REASONS,
   probeMoveViability,
   type ClassifiedMove,
   type Move,
@@ -39,28 +44,8 @@ describe('preparePlayableMoves', () => {
     const completeMove: Move = { actionId: asActionId('complete'), params: {} };
     const stochasticMove: Move = { actionId: asActionId('stochastic'), params: {} };
     const legalMoves: readonly ClassifiedMove[] = [
-      {
-        move: completeMove,
-        viability: { viable: true, complete: true, move: completeMove, warnings: [] },
-        trustedMove: createTrustedExecutableMove(completeMove, state.stateHash, 'enumerateLegalMoves'),
-      },
-      {
-        move: stochasticMove,
-        viability: {
-          viable: true,
-          complete: false,
-          stochasticDecision: {
-            kind: 'pendingStochastic',
-            complete: false,
-            source: 'rollRandom',
-            alternatives: [],
-            outcomes: [],
-          },
-          move: stochasticMove,
-          warnings: [],
-        },
-        trustedMove: createTrustedExecutableMove(stochasticMove, state.stateHash, 'enumerateLegalMoves'),
-      },
+      completeClassifiedMove(completeMove, state.stateHash),
+      stochasticClassifiedMove(stochasticMove, state.stateHash),
     ];
 
     const prepared = preparePlayableMoves({
@@ -78,6 +63,82 @@ describe('preparePlayableMoves', () => {
       prepared.stochasticMoves.map((move) => move.move),
       [stochasticMove],
     );
+    assert.deepEqual(prepared.statistics, {
+      totalClassifiedMoves: 2,
+      completedCount: 1,
+      stochasticCount: 1,
+      rejectedNotViable: 0,
+      templateCompletionAttempts: 0,
+      templateCompletionSuccesses: 0,
+      templateCompletionUnsatisfiable: 0,
+    });
+  });
+
+  it('reports completion statistics across direct, rejected, completed-template, and unsatisfiable-template paths', () => {
+    const completeMove: Move = { actionId: asActionId('complete'), params: {} };
+    const stochasticMove: Move = { actionId: asActionId('stochastic'), params: {} };
+    const satisfiableTemplateMove: Move = { actionId: asActionId('chooseTarget'), params: {} };
+    const unsatisfiableTemplateMove: Move = { actionId: asActionId('blockedTarget'), params: {} };
+    const rejectedMove: Move = { actionId: asActionId('rejected'), params: {} };
+    const def = assertValidatedGameDef({
+      metadata: { id: 'prepare-playable-stats', players: { min: 2, max: 2 } },
+      constants: {},
+      globalVars: [],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      actions: [
+        createTemplateChooseOneAction(asActionId('chooseTarget'), asPhaseId('main')),
+        createTemplateChooseOneAction(asActionId('blockedTarget'), asPhaseId('main')),
+      ],
+      actionPipelines: [
+        createTemplateChooseOneProfile(asActionId('chooseTarget')),
+        createEmptyOptionsProfile('blockedTarget'),
+      ] as readonly ActionPipelineDef[],
+      triggers: [],
+      terminal: { conditions: [] },
+    });
+    const state = initialState(def, 1, 2).state;
+
+    const prepared = preparePlayableMoves({
+      def,
+      state,
+      legalMoves: (() => {
+        const rejectedError = illegalMoveError(rejectedMove, ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE, {
+          detail: 'blocked',
+        });
+        return [
+          completeClassifiedMove(completeMove, state.stateHash),
+          stochasticClassifiedMove(stochasticMove, state.stateHash),
+          pendingClassifiedMove(satisfiableTemplateMove),
+          pendingClassifiedMove(unsatisfiableTemplateMove),
+          {
+            move: rejectedMove,
+            viability: {
+              viable: false,
+              code: 'ILLEGAL_MOVE',
+              context: rejectedError.context!,
+              error: rejectedError,
+            },
+          },
+        ];
+      })(),
+      rng: createRng(3n),
+    });
+
+    assert.equal(prepared.completedMoves.length, 2);
+    assert.equal(prepared.stochasticMoves.length, 1);
+    assert.deepEqual(prepared.statistics, {
+      totalClassifiedMoves: 5,
+      completedCount: 1,
+      stochasticCount: 1,
+      rejectedNotViable: 1,
+      templateCompletionAttempts: 2,
+      templateCompletionSuccesses: 1,
+      templateCompletionUnsatisfiable: 1,
+    });
   });
 
   describe('zone-filtered free-operation templates', () => {
@@ -190,3 +251,29 @@ describe('preparePlayableMoves', () => {
     });
   });
 });
+
+function createEmptyOptionsProfile(actionId: string): ActionPipelineDef {
+  return {
+    id: `profile-${actionId}`,
+    actionId: asActionId(actionId),
+    legality: null,
+    costValidation: null,
+    costEffects: [],
+    targeting: {},
+    stages: [
+      {
+        stage: 'resolve',
+        effects: [
+          eff({
+            chooseOne: {
+              internalDecisionId: 'decision:$target',
+              bind: '$target',
+              options: { query: 'enums', values: [] },
+            },
+          }),
+        ],
+      },
+    ],
+    atomicity: 'atomic',
+  };
+}

@@ -155,6 +155,7 @@ describe('policy-preview', () => {
 
     assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), { kind: 'value', value: 4 });
     assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), { kind: 'value', value: 4 });
+    assert.equal(runtime.getOutcome(candidate), 'ready');
     assert.equal(probeCalls, 1);
     assert.equal(applyCalls, 1);
     assert.equal(observationCalls, 1);
@@ -182,6 +183,7 @@ describe('policy-preview', () => {
     });
 
     assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), { kind: 'unknown', reason: 'unresolved' });
+    assert.equal(runtime.getOutcome(candidate), 'unresolved');
     assert.equal(applyCalls, 0);
   });
 
@@ -215,6 +217,7 @@ describe('policy-preview', () => {
     });
 
     assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), { kind: 'unknown', reason: 'random' });
+    assert.equal(runtime.getOutcome(candidate), 'random');
   });
 
   it('keeps safe preview refs available while masking unsafe refs when hidden sampling remains', () => {
@@ -449,6 +452,7 @@ describe('policy-preview', () => {
     });
 
     assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), { kind: 'unknown', reason: 'failed' });
+    assert.equal(runtime.getOutcome(candidate), 'failed');
     assert.equal(applyCalls, 0);
   });
 

@@ -59,9 +59,11 @@ export interface PolicyPreviewRuntime {
     candidate: PolicyPreviewCandidate,
     ref: CompiledAgentPolicyPreviewSurfaceRef,
   ): PolicyPreviewSurfaceResolution;
+  getOutcome(candidate: PolicyPreviewCandidate): PolicyPreviewTraceOutcome;
 }
 
 export type PolicyPreviewUnavailabilityReason = 'random' | 'hidden' | 'unresolved' | 'failed';
+export type PolicyPreviewTraceOutcome = 'ready' | PolicyPreviewUnavailabilityReason;
 
 export type PolicyPreviewSurfaceResolution =
   | {
@@ -169,6 +171,9 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
       }
       return { kind: 'unavailable' };
     },
+    getOutcome(candidate) {
+      return toPreviewTraceOutcome(getPreviewOutcome(candidate));
+    },
   };
 
   function getPreviewOutcome(candidate: PolicyPreviewCandidate): PreviewOutcome {
@@ -221,6 +226,10 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
       return { kind: 'unknown', reason: 'failed' };
     }
   }
+}
+
+function toPreviewTraceOutcome(outcome: PreviewOutcome): PolicyPreviewTraceOutcome {
+  return outcome.kind === 'ready' ? 'ready' : outcome.reason;
 }
 
 function resolvePerPlayerTargetIndex(

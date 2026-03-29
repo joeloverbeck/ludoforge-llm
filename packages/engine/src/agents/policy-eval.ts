@@ -11,12 +11,14 @@ import type {
   GameDef,
   GameState,
   Move,
+  PolicyCompletionStatisticsTrace,
+  PolicyPreviewOutcomeBreakdownTrace,
   Rng,
   TrustedExecutableMove,
 } from '../kernel/types.js';
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
 import { pickRandom } from './agent-move-selection.js';
-import type { PolicyPreviewUnavailabilityReason } from './policy-preview.js';
+import type { PolicyPreviewTraceOutcome, PolicyPreviewUnavailabilityReason } from './policy-preview.js';
 import {
   createPolicyRuntimeProviders,
   type PolicyRuntimeProviders,
@@ -55,6 +57,7 @@ export interface PolicyEvaluationCandidateMetadata {
   }[];
   readonly previewRefIds: readonly string[];
   readonly unknownPreviewRefs: readonly PolicyPreviewUnknownRef[];
+  readonly previewOutcome?: PolicyPreviewTraceOutcome;
 }
 
 export interface PolicyEvaluationPruningStep {
@@ -73,6 +76,7 @@ export interface PolicyEvaluationPreviewUsage {
   readonly evaluatedCandidateCount: number;
   readonly refIds: readonly string[];
   readonly unknownRefs: readonly PolicyPreviewUnknownRef[];
+  readonly outcomeBreakdown: PolicyPreviewOutcomeBreakdownTrace;
 }
 
 export interface PolicyEvaluationMetadata {
@@ -85,6 +89,7 @@ export interface PolicyEvaluationMetadata {
   readonly pruningSteps: readonly PolicyEvaluationPruningStep[];
   readonly tieBreakChain: readonly PolicyEvaluationTieBreakStep[];
   readonly previewUsage: PolicyEvaluationPreviewUsage;
+  readonly completionStatistics?: PolicyCompletionStatisticsTrace;
   readonly selectedStableMoveKey: string | null;
   readonly finalScore: number | null;
   readonly usedFallback: boolean;
@@ -105,6 +110,7 @@ export interface EvaluatePolicyMoveInput {
   readonly trustedMoveIndex: ReadonlyMap<string, TrustedExecutableMove>;
   readonly rng: Rng;
   readonly runtime?: GameDefRuntime;
+  readonly completionStatistics?: PolicyCompletionStatisticsTrace;
   readonly fallbackOnError?: boolean;
   readonly profileIdOverride?: string;
 }
@@ -130,6 +136,7 @@ interface CandidateEntry {
   readonly scoreContributions: { readonly termId: string; readonly contribution: number }[];
   readonly previewRefIds: Set<string>;
   readonly unknownPreviewRefs: Map<string, PolicyPreviewUnavailabilityReason>;
+  previewOutcome?: PolicyPreviewTraceOutcome;
   score: number;
 }
 
@@ -559,8 +566,12 @@ class EvaluationContext {
       candidate.previewRefIds.add(refId);
       const resolution = this.runtimeProviders.previewSurface.resolveSurface(candidate, ref);
       if (resolution.kind === 'unknown') {
+        candidate.previewOutcome = resolution.reason;
         candidate.unknownPreviewRefs.set(refId, resolution.reason);
         return undefined;
+      }
+      if (candidate.previewOutcome === undefined) {
+        candidate.previewOutcome = this.runtimeProviders.previewSurface.getOutcome(candidate);
       }
       return resolution.kind === 'value' ? resolution.value : undefined;
     }
@@ -598,6 +609,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
         pruningSteps: [],
         tieBreakChain: [],
         previewUsage: emptyPreviewUsage(),
+        ...(input.completionStatistics === undefined ? {} : { completionStatistics: input.completionStatistics }),
         selectedStableMoveKey: null,
         finalScore: null,
         usedFallback: false,
@@ -614,7 +626,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
     return failureWithMetadata(candidates, null, requestedProfileId, null, {
       code: 'POLICY_CATALOG_MISSING',
       message: 'GameDef.agents is required to evaluate an authored policy.',
-    });
+    }, null, input.completionStatistics);
   }
 
   const seatId = resolvePolicyBindingSeatId(input.def, input.playerId);
@@ -632,7 +644,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
       code: 'PROFILE_BINDING_MISSING',
       message: `Seat "${seatId}" is not bound to an authored policy profile.`,
       detail: { seatId },
-    });
+    }, null, input.completionStatistics);
   }
 
   const profile = catalog.profiles[profileId];
@@ -641,7 +653,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
       code: 'PROFILE_MISSING',
       message: `Compiled policy profile "${profileId}" is missing from GameDef.agents.profiles.`,
       detail: { seatId, profileId },
-    });
+    }, null, input.completionStatistics);
   }
 
   try {
@@ -757,6 +769,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
         pruningSteps,
         tieBreakChain,
         previewUsage: summarizePreviewUsage(candidates),
+        ...(input.completionStatistics === undefined ? {} : { completionStatistics: input.completionStatistics }),
         selectedStableMoveKey: selected.stableMoveKey,
         finalScore: Number.isFinite(selected.score) ? selected.score : null,
         usedFallback: false,
@@ -770,7 +783,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
           code: 'RUNTIME_EVALUATION_ERROR' as const,
           message: error instanceof Error ? error.message : 'Unknown policy evaluation failure.',
         };
-    return failureWithMetadata(candidates, seatId, requestedProfileId, profileId, failure, profile.fingerprint);
+    return failureWithMetadata(candidates, seatId, requestedProfileId, profileId, failure, profile.fingerprint, input.completionStatistics);
   }
 }
 
@@ -806,6 +819,7 @@ function failureWithMetadata(
   profileId: string | null,
   failure: PolicyEvaluationFailure,
   profileFingerprint: string | null = null,
+  completionStatistics?: PolicyCompletionStatisticsTrace,
 ): PolicyEvaluationCoreResult {
   return {
     kind: 'failure',
@@ -820,6 +834,7 @@ function failureWithMetadata(
       pruningSteps: [],
       tieBreakChain: [],
       previewUsage: summarizePreviewUsage(candidates),
+      ...(completionStatistics === undefined ? {} : { completionStatistics }),
       selectedStableMoveKey: null,
       finalScore: null,
       usedFallback: false,
@@ -854,26 +869,25 @@ function candidateMetadata(candidate: CandidateEntry): PolicyEvaluationCandidate
     unknownPreviewRefs: [...candidate.unknownPreviewRefs.entries()]
       .sort(([leftId], [rightId]) => leftId.localeCompare(rightId))
       .map(([refId, reason]) => ({ refId, reason })),
+    ...(candidate.previewOutcome === undefined ? {} : { previewOutcome: candidate.previewOutcome }),
   };
 }
 
 function summarizePreviewUsage(candidates: readonly CandidateEntry[]): PolicyEvaluationPreviewUsage {
   const refIds = new Set<string>();
   const unknownRefs = new Map<string, PolicyPreviewUnavailabilityReason>();
-  let evaluatedCandidateCount = 0;
-  for (const candidate of candidates) {
-    if (candidate.previewRefIds.size > 0) {
-      evaluatedCandidateCount += 1;
-      candidate.previewRefIds.forEach((refId) => refIds.add(refId));
-    }
+  const evaluatedCandidates = candidates.filter((candidate) => candidate.previewRefIds.size > 0);
+  for (const candidate of evaluatedCandidates) {
+    candidate.previewRefIds.forEach((refId) => refIds.add(refId));
     candidate.unknownPreviewRefs.forEach((reason, refId) => unknownRefs.set(refId, reason));
   }
   return {
-    evaluatedCandidateCount,
+    evaluatedCandidateCount: evaluatedCandidates.length,
     refIds: [...refIds].sort(),
     unknownRefs: [...unknownRefs.entries()]
       .sort(([leftId], [rightId]) => leftId.localeCompare(rightId))
       .map(([refId, reason]) => ({ refId, reason })),
+    outcomeBreakdown: summarizePreviewOutcomes(evaluatedCandidates),
   };
 }
 
@@ -882,6 +896,60 @@ function emptyPreviewUsage(): PolicyEvaluationPreviewUsage {
     evaluatedCandidateCount: 0,
     refIds: [],
     unknownRefs: [],
+    outcomeBreakdown: {
+      ready: 0,
+      unknownRandom: 0,
+      unknownHidden: 0,
+      unknownUnresolved: 0,
+      unknownFailed: 0,
+    },
+  };
+}
+
+function summarizePreviewOutcomes(evaluatedCandidates: readonly CandidateEntry[]): PolicyPreviewOutcomeBreakdownTrace {
+  if (evaluatedCandidates.length === 0) {
+    return {
+      ready: 0,
+      unknownRandom: 0,
+      unknownHidden: 0,
+      unknownUnresolved: 0,
+      unknownFailed: 0,
+    };
+  }
+
+  let ready = 0;
+  let random = 0;
+  let hidden = 0;
+  let unresolved = 0;
+  let failed = 0;
+
+  for (const candidate of evaluatedCandidates) {
+    const outcome = candidate.previewOutcome;
+    if (outcome === 'ready') {
+      ready += 1;
+      continue;
+    }
+    if (outcome === 'random') {
+      random += 1;
+      continue;
+    }
+    if (outcome === 'hidden') {
+      hidden += 1;
+      continue;
+    }
+    if (outcome === 'unresolved') {
+      unresolved += 1;
+      continue;
+    }
+    failed += 1;
+  }
+
+  return {
+    ready,
+    unknownRandom: random,
+    unknownHidden: hidden,
+    unknownUnresolved: unresolved,
+    unknownFailed: failed,
   };
 }
 

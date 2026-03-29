@@ -120,7 +120,12 @@ export function buildPolicyAgentDecisionTrace(
     previewUsage: metadata.previewUsage,
     emergencyFallback: metadata.usedFallback,
     failure: metadata.failure === null ? null : { code: metadata.failure.code, message: metadata.failure.message },
-    ...(traceLevel === 'verbose' ? { candidates: metadata.candidates } : {}),
+    ...(traceLevel === 'verbose'
+      ? {
+          candidates: metadata.candidates,
+          ...(metadata.completionStatistics === undefined ? {} : { completionStatistics: metadata.completionStatistics }),
+        }
+      : {}),
   };
 }
 

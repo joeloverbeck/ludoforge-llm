@@ -45,8 +45,8 @@ standard for future campaigns and the browser-based game runner.
 
 - `avgMargin`: average VC victory margin at game end across all seeds
 - `winRate`: fraction of completed games where VC won (crossed threshold at Coup)
-- Measurements within 0.5 composite points of each other are considered equal
-  (noise tolerance due to stochastic game outcomes and limited seed count)
+- Measurements within 0.3 composite points of each other are considered equal
+  (noise tolerance due to stochastic game outcomes across 15 seeds)
 
 ## Secondary Metric
 
@@ -141,7 +141,7 @@ are always welcome. Tier 4 only when absolutely necessary.
 IF harness fails (crash, build failure, test failure, runner failure):
     REJECT (allow up to 3 trivial-fix retries per experiment)
 
-IF compositeScore improved by > 0.5 (noise tolerance):
+IF compositeScore improved by > 0.3 (noise tolerance):
     IF improvement > 50% relative AND lines_delta > +50:
         FLAG as suspicious — verify game traces show realistic play
         IF traces look realistic: ACCEPT with note
@@ -149,13 +149,13 @@ IF compositeScore improved by > 0.5 (noise tolerance):
     ELSE:
         ACCEPT
 
-IF compositeScore within 0.5 of best (equal):
+IF compositeScore within 0.3 of best (equal):
     IF lines_delta < 0 (fewer lines = simplification):
         ACCEPT
     ELSE:
         REJECT (near-miss → stash)
 
-IF compositeScore worsened by > 0.5:
+IF compositeScore worsened by > 0.3:
     REJECT
 ```
 
@@ -255,7 +255,7 @@ Starting hypotheses for the first experiments:
 ## Thresholds
 
 ```
-NOISE_TOLERANCE = 0.5           # 0.5 composite points
+NOISE_TOLERANCE = 0.3           # 0.3 composite points (tighter with 15 seeds)
 PLATEAU_THRESHOLD = 5           # consecutive rejects before strategy shift
 MAX_IMPROVEMENT_PCT = 50        # flag relative gains > 50% as suspicious
 REGRESSION_CHECK_INTERVAL = 5   # re-verify baseline every 5 accepts
@@ -265,8 +265,8 @@ PIVOT_CHECK_INTERVAL = 10       # PROCEED/REFINE/PIVOT every 10 experiments
 ## Configuration
 
 ```
-HARNESS_RUNS = 1                # single run per experiment (3 seeds average variance)
-HARNESS_SEEDS = 1               # seeds handled internally by run-tournament.mjs
+HARNESS_RUNS = 1                # single run per experiment (15 seeds average variance)
+HARNESS_SEEDS = 1               # seeds handled internally by run-tournament.mjs (15 seeds)
 meta_improvement = false        # meta-loop disabled for this campaign
 METRIC_DIRECTION = higher-is-better  # maximize compositeScore
 MAX_ITERATIONS = unlimited      # run until externally interrupted

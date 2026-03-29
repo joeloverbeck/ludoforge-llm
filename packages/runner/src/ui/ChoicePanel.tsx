@@ -159,7 +159,7 @@ function MultiSelectMode({ choiceUi, addChooseNItem, removeChooseNItem, confirmC
         {choiceUi.options.map((option) => {
           const isSelected = selectedChoiceValueIdSet.has(option.choiceValueId);
           const isLegalScalar = option.legality !== 'illegal' && isChoiceScalar(option.value);
-          const isDisabled = !isLegalScalar;
+          const isDisabled = !isLegalScalar && !isSelected;
 
           const resCss = resolutionCssClass(option.resolution);
           const unselectedCss = !isSelected && selectedCount > 0 ? ` ${styles.optionUnselected}` : '';
@@ -178,18 +178,18 @@ function MultiSelectMode({ choiceUi, addChooseNItem, removeChooseNItem, confirmC
                 aria-label={resolutionAriaLabel(option.displayName, option.resolution)}
                 data-testid={`choice-multi-option-${option.choiceValueId}`}
                 onClick={() => {
-                  if (!isLegalScalar) {
+                  if (isSelected && isChoiceScalar(option.value)) {
+                    void removeChooseNItem(option.value);
                     return;
                   }
-                  if (isSelected) {
-                    void removeChooseNItem(option.value);
+                  if (!isLegalScalar) {
                     return;
                   }
                   void addChooseNItem(option.value);
                 }}
               >
-                <span className={styles.checkboxIndicator} aria-hidden="true">
-                  {isSelected ? 'x' : ''}
+                <span className={`${styles.checkboxIndicator}${isSelected ? ` ${styles.checkboxChecked}` : ''}`} aria-hidden="true">
+                  {isSelected ? '✓' : ''}
                 </span>
                 <span>{option.displayName}</span>
                 {indicator !== null ? (

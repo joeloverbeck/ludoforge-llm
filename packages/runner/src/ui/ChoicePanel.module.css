@@ -175,6 +175,13 @@
   font-size: var(--font-size-sm);
 }
 
+.checkboxChecked {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--text-primary);
+  font-weight: bold;
+}
+
 .optionProvisional {
   border-style: dashed;
   border-color: var(--text-muted);
@@ -199,7 +206,6 @@
   opacity: 0.4;
   cursor: default;
   border-style: dashed;
-  text-decoration: line-through;
 }
 
 .multiSelectConfirm {

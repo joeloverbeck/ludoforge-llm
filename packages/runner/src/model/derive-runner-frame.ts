@@ -1216,6 +1216,15 @@ function deriveChoiceContext(
     iterationTotal = iterCtx.iterationTotal;
   }
 
+  // When the decision key has template resolution but no iteration path,
+  // derive the entity from the resolved bind for display purposes.
+  if (iterationEntityId === null) {
+    const parsedKey = parseDecisionKey(choicePending.decisionKey);
+    if (parsedKey !== null && parsedKey.baseId !== parsedKey.resolvedBind) {
+      iterationEntityId = parsedKey.resolvedBind;
+    }
+  }
+
   return {
     selectedActionId: selectedAction,
     decisionParamName: choicePending.name,
@@ -1244,7 +1253,17 @@ function deriveChoiceBreadcrumb(
   return context.choiceStack.map((step, index) => {
     const choiceStackUpToHere = context.choiceStack.slice(0, index + 1);
     const iterCtx = parseIterationContext(step.decisionKey, choiceStackUpToHere, zonesById);
-    const iterationGroupId = iterCtx !== null ? extractIterationGroupId(step.decisionKey) : null;
+    const iterationGroupId = extractIterationGroupId(step.decisionKey);
+
+    // When the decision key has template resolution (baseId !== resolvedBind)
+    // but no iteration path, derive the entity from the resolved bind.
+    let iterationEntityId = iterCtx?.currentEntityId ?? null;
+    if (iterationEntityId === null && iterationGroupId !== null) {
+      const parsedKey = parseDecisionKey(step.decisionKey);
+      if (parsedKey !== null && parsedKey.baseId !== parsedKey.resolvedBind) {
+        iterationEntityId = parsedKey.resolvedBind;
+      }
+    }
 
     return {
       decisionKey: step.decisionKey,
@@ -1252,7 +1271,7 @@ function deriveChoiceBreadcrumb(
       chosenValueId: serializeChoiceValueIdentity(step.value),
       chosenValue: step.value,
       iterationGroupId,
-      iterationEntityId: iterCtx?.currentEntityId ?? null,
+      iterationEntityId,
     };
   });
 }

@@ -1299,6 +1299,11 @@ export interface AgentDecisionScoreContribution {
   readonly contribution: number;
 }
 
+export interface PolicyPreviewUnknownRefTrace {
+  readonly refId: string;
+  readonly reason: 'random' | 'hidden' | 'unresolved' | 'failed';
+}
+
 export interface PolicyCandidateDecisionTrace {
   readonly actionId: string;
   readonly stableMoveKey: string;
@@ -1306,7 +1311,7 @@ export interface PolicyCandidateDecisionTrace {
   readonly prunedBy: readonly string[];
   readonly scoreContributions?: readonly AgentDecisionScoreContribution[];
   readonly previewRefIds?: readonly string[];
-  readonly unknownPreviewRefIds?: readonly string[];
+  readonly unknownPreviewRefs?: readonly PolicyPreviewUnknownRefTrace[];
 }
 
 export interface PolicyPruningStepTrace {
@@ -1324,7 +1329,7 @@ export interface PolicyTieBreakStepTrace {
 export interface PolicyPreviewUsageTrace {
   readonly evaluatedCandidateCount: number;
   readonly refIds: readonly string[];
-  readonly unknownRefIds: readonly string[];
+  readonly unknownRefs: readonly PolicyPreviewUnknownRefTrace[];
 }
 
 export interface BuiltinAgentDecisionTrace {

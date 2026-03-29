@@ -135,6 +135,7 @@ describe('policy determinism', () => {
       state,
       playerId: asPlayerId(0),
       legalMoves,
+      trustedMoveIndex: new Map(),
       rng: createRng(42n),
     });
 
@@ -159,6 +160,7 @@ describe('policy determinism', () => {
         state,
         playerId: asPlayerId(0),
         legalMoves,
+        trustedMoveIndex: new Map(),
         rng: createRng(42n),
       }),
     );
@@ -186,6 +188,7 @@ describe('policy determinism', () => {
         state,
         playerId: asPlayerId(0),
         legalMoves,
+        trustedMoveIndex: new Map(),
         rng: createRng(17n),
       });
 

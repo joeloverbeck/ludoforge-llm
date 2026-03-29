@@ -128,6 +128,7 @@ describe('policy-preview', () => {
       state,
       playerId: asPlayerId(0),
       seatId: 'us',
+      trustedMoveIndex: new Map(),
       dependencies: {
         classifyPlayableMoveCandidate: () => {
           probeCalls += 1;
@@ -152,8 +153,8 @@ describe('policy-preview', () => {
       },
     });
 
-    assert.equal(runtime.resolveSurface(candidate, previewScoreRef), 4);
-    assert.equal(runtime.resolveSurface(candidate, previewScoreRef), 4);
+    assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), { kind: 'value', value: 4 });
+    assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), { kind: 'value', value: 4 });
     assert.equal(probeCalls, 1);
     assert.equal(applyCalls, 1);
     assert.equal(observationCalls, 1);
@@ -169,6 +170,7 @@ describe('policy-preview', () => {
       state,
       playerId: asPlayerId(0),
       seatId: 'us',
+      trustedMoveIndex: new Map(),
       dependencies: {
         classifyPlayableMoveCandidate: () => ({ kind: 'rejected', move: candidate.move, rejection: 'notDecisionComplete' }),
         applyMove: () => {
@@ -179,7 +181,7 @@ describe('policy-preview', () => {
       },
     });
 
-    assert.equal(runtime.resolveSurface(candidate, previewScoreRef), undefined);
+    assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), { kind: 'unknown', reason: 'unresolved' });
     assert.equal(applyCalls, 0);
   });
 
@@ -192,6 +194,7 @@ describe('policy-preview', () => {
       state,
       playerId: asPlayerId(0),
       seatId: 'us',
+      trustedMoveIndex: new Map(),
       dependencies: {
         classifyPlayableMoveCandidate: () => ({
           kind: 'playableComplete',
@@ -211,7 +214,7 @@ describe('policy-preview', () => {
       },
     });
 
-    assert.equal(runtime.resolveSurface(candidate, previewScoreRef), undefined);
+    assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), { kind: 'unknown', reason: 'random' });
   });
 
   it('keeps safe preview refs available while masking unsafe refs when hidden sampling remains', () => {
@@ -219,10 +222,26 @@ describe('policy-preview', () => {
     const state = initialState(def, 1, 2).state;
     const candidate = createCandidate();
     const runtime = createPolicyPreviewRuntime({
-      def,
+      def: {
+        ...def,
+        agents: {
+          ...def.agents!,
+          surfaceVisibility: {
+            ...def.agents!.surfaceVisibility,
+            victory: {
+              ...def.agents!.surfaceVisibility.victory,
+              currentMargin: {
+                current: 'hidden',
+                preview: { visibility: 'public', allowWhenHiddenSampling: false },
+              },
+            },
+          },
+        },
+      },
       state,
       playerId: asPlayerId(0),
       seatId: 'us',
+      trustedMoveIndex: new Map(),
       dependencies: {
         classifyPlayableMoveCandidate: () => ({
           kind: 'playableComplete',
@@ -242,8 +261,8 @@ describe('policy-preview', () => {
       },
     });
 
-    assert.equal(runtime.resolveSurface(candidate, previewScoreRef), 9);
-    assert.equal(runtime.resolveSurface(candidate, previewMarginRef), undefined);
+    assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), { kind: 'value', value: 9 });
+    assert.deepEqual(runtime.resolveSurface(candidate, previewMarginRef), { kind: 'unknown', reason: 'hidden' });
   });
 
   it('resolves player-scoped preview per-player refs by runtime player identity', () => {
@@ -266,6 +285,7 @@ describe('policy-preview', () => {
       state,
       playerId: asPlayerId(1),
       seatId: 'neutral',
+      trustedMoveIndex: new Map(),
       dependencies: {
         classifyPlayableMoveCandidate: () => ({
           kind: 'playableComplete',
@@ -277,6 +297,200 @@ describe('policy-preview', () => {
       },
     });
 
-    assert.equal(runtime.resolveSurface(candidate, previewSelfTempoRef), 7);
+    assert.deepEqual(runtime.resolveSurface(candidate, previewSelfTempoRef), { kind: 'value', value: 7 });
+  });
+
+  it('uses a trusted move from the index instead of reclassifying the candidate', () => {
+    const def = createDef();
+    const state = initialState(def, 1, 2).state;
+    const candidate = createCandidate();
+    let probeCalls = 0;
+    let applyCalls = 0;
+    const trustedMove = createTrustedExecutableMove(candidate.move, state.stateHash, 'templateCompletion');
+    const runtime = createPolicyPreviewRuntime({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      seatId: 'us',
+      trustedMoveIndex: new Map([[candidate.stableMoveKey, trustedMove]]),
+      dependencies: {
+        classifyPlayableMoveCandidate: () => {
+          probeCalls += 1;
+          return { kind: 'rejected', move: candidate.move, rejection: 'notDecisionComplete' };
+        },
+        applyMove: () => {
+          applyCalls += 1;
+          return {
+            state: {
+              ...state,
+              globalVars: {
+                ...state.globalVars,
+                score: 8,
+              },
+            },
+          };
+        },
+        derivePlayerObservation: () => createObservation(false),
+      },
+    });
+
+    assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), { kind: 'value', value: 8 });
+    assert.equal(probeCalls, 0);
+    assert.equal(applyCalls, 1);
+  });
+
+  it('masks trusted indexed preview states when the move consumes rng', () => {
+    const def = createDef();
+    const state = initialState(def, 1, 2).state;
+    const candidate = createCandidate();
+    let probeCalls = 0;
+    const runtime = createPolicyPreviewRuntime({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      seatId: 'us',
+      trustedMoveIndex: new Map([[
+        candidate.stableMoveKey,
+        createTrustedExecutableMove(candidate.move, state.stateHash, 'templateCompletion'),
+      ]]),
+      dependencies: {
+        classifyPlayableMoveCandidate: () => {
+          probeCalls += 1;
+          return { kind: 'rejected', move: candidate.move, rejection: 'notDecisionComplete' };
+        },
+        applyMove: () => ({
+          state: {
+            ...state,
+            rng: {
+              ...state.rng,
+              state: [2n, 3n],
+            },
+          },
+        }),
+        derivePlayerObservation: () => createObservation(false),
+      },
+    });
+
+    assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), { kind: 'unknown', reason: 'random' });
+    assert.equal(probeCalls, 0);
+  });
+
+  it('caches trusted indexed preview application per candidate', () => {
+    const def = createDef();
+    const state = initialState(def, 1, 2).state;
+    const candidate = createCandidate();
+    let probeCalls = 0;
+    let applyCalls = 0;
+    let observationCalls = 0;
+    const runtime = createPolicyPreviewRuntime({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      seatId: 'us',
+      trustedMoveIndex: new Map([[
+        candidate.stableMoveKey,
+        createTrustedExecutableMove(candidate.move, state.stateHash, 'templateCompletion'),
+      ]]),
+      dependencies: {
+        classifyPlayableMoveCandidate: () => {
+          probeCalls += 1;
+          return { kind: 'rejected', move: candidate.move, rejection: 'notDecisionComplete' };
+        },
+        applyMove: () => {
+          applyCalls += 1;
+          return {
+            state: {
+              ...state,
+              globalVars: {
+                ...state.globalVars,
+                score: 6,
+              },
+            },
+          };
+        },
+        derivePlayerObservation: () => {
+          observationCalls += 1;
+          return createObservation(false);
+        },
+      },
+    });
+
+    assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), { kind: 'value', value: 6 });
+    assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), { kind: 'value', value: 6 });
+    assert.equal(probeCalls, 0);
+    assert.equal(applyCalls, 1);
+    assert.equal(observationCalls, 1);
+  });
+
+  it('rejects trusted preview application when the move source hash does not match the current state', () => {
+    const def = createDef();
+    const state = initialState(def, 1, 2).state;
+    const candidate = createCandidate();
+    let applyCalls = 0;
+    const runtime = createPolicyPreviewRuntime({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      seatId: 'us',
+      trustedMoveIndex: new Map([[
+        candidate.stableMoveKey,
+        createTrustedExecutableMove(candidate.move, state.stateHash + 1n, 'templateCompletion'),
+      ]]),
+      dependencies: {
+        classifyPlayableMoveCandidate: () => {
+          assert.fail('trusted preview path should not fall back to classification');
+        },
+        applyMove: () => {
+          applyCalls += 1;
+          return { state };
+        },
+        derivePlayerObservation: () => createObservation(false),
+      },
+    });
+
+    assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), { kind: 'unknown', reason: 'failed' });
+    assert.equal(applyCalls, 0);
+  });
+
+  it('falls back to classification when the trusted move index is empty', () => {
+    const def = createDef();
+    const state = initialState(def, 1, 2).state;
+    const candidate = createCandidate();
+    let probeCalls = 0;
+    let applyCalls = 0;
+    const runtime = createPolicyPreviewRuntime({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      seatId: 'us',
+      trustedMoveIndex: new Map(),
+      dependencies: {
+        classifyPlayableMoveCandidate: () => {
+          probeCalls += 1;
+          return {
+            kind: 'playableComplete',
+            move: createTrustedExecutableMove(candidate.move, state.stateHash, 'templateCompletion'),
+            warnings: [],
+          };
+        },
+        applyMove: () => {
+          applyCalls += 1;
+          return {
+            state: {
+              ...state,
+              globalVars: {
+                ...state.globalVars,
+                score: 5,
+              },
+            },
+          };
+        },
+        derivePlayerObservation: () => createObservation(false),
+      },
+    });
+
+    assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), { kind: 'value', value: 5 });
+    assert.equal(probeCalls, 1);
+    assert.equal(applyCalls, 1);
   });
 });

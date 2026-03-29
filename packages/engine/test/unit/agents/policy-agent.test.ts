@@ -3,7 +3,7 @@ import { describe, it } from 'node:test';
 
 import { NoPlayableMovesAfterPreparationError } from '../../../src/agents/no-playable-move.js';
 import { PolicyAgent } from '../../../src/agents/policy-agent.js';
-import { completeClassifiedMoves, pendingClassifiedMove } from '../../helpers/classified-move-fixtures.js';
+import { completeClassifiedMove, completeClassifiedMoves, pendingClassifiedMove } from '../../helpers/classified-move-fixtures.js';
 import { createTemplateChooseOneAction, createTemplateChooseOneProfile } from '../../helpers/agent-template-fixtures.js';
 import { eff } from '../../helpers/effect-tag-helper.js';
 import {
@@ -211,6 +211,144 @@ function createTemplateDef(): GameDef {
   });
 }
 
+function createTemplatePreviewDef(): GameDef {
+  const actionId = asActionId('chooseTarget');
+  const templateProfile: ActionPipelineDef = {
+    id: `profile-${actionId}`,
+    actionId,
+    legality: null,
+    costValidation: null,
+    costEffects: [],
+    targeting: {},
+    stages: [
+      {
+        stage: 'resolve',
+        effects: [
+          eff({
+            chooseOne: {
+              internalDecisionId: 'decision:$target',
+              bind: '$target',
+              options: { query: 'enums', values: ['gamma'] },
+            },
+          }),
+        ],
+      },
+    ],
+    atomicity: 'atomic',
+  };
+
+  return {
+    metadata: { id: 'policy-agent-template-preview', players: { min: 2, max: 2 } },
+    constants: {},
+    globalVars: [{ name: 'usMargin', type: 'int', init: 1, min: -10, max: 10 }],
+    perPlayerVars: [],
+    zones: [],
+    derivedMetrics: [],
+    seats: [{ id: 'us' }, { id: 'arvn' }],
+    tokenTypes: [],
+    setup: [],
+    turnStructure: { phases: [{ id: phaseId }] },
+    agents: {
+      schemaVersion: 2,
+      catalogFingerprint: 'template-preview-catalog',
+      surfaceVisibility: {
+        globalVars: {
+          usMargin: {
+            current: 'public',
+            preview: { visibility: 'public', allowWhenHiddenSampling: true },
+          },
+        },
+        perPlayerVars: {},
+        derivedMetrics: {},
+        victory: {
+          currentMargin: { current: 'public', preview: { visibility: 'public', allowWhenHiddenSampling: true } },
+          currentRank: { current: 'public', preview: { visibility: 'public', allowWhenHiddenSampling: true } },
+        },
+      },
+      parameterDefs: {},
+      candidateParamDefs: {
+        '$target': { type: 'id' },
+      },
+      library: {
+        stateFeatures: {},
+        candidateFeatures: {
+          projectedMargin: {
+            type: 'number',
+            costClass: 'preview',
+            expr: refExpr({ kind: 'previewSurface', family: 'globalVar', id: 'usMargin' }),
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          },
+        },
+        candidateAggregates: {},
+        pruningRules: {},
+        scoreTerms: {
+          preferProjectedMargin: {
+            costClass: 'preview',
+            weight: literal(1),
+            value: refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'projectedMargin' }),
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['projectedMargin'], aggregates: [] },
+          },
+        },
+        tieBreakers: {
+          stableMoveKey: {
+            kind: 'stableMoveKey',
+            costClass: 'state',
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          },
+        },
+      },
+      profiles: {
+        passive: {
+          fingerprint: 'template-preview-profile',
+          params: {},
+          use: {
+            pruningRules: [],
+            scoreTerms: ['preferProjectedMargin'],
+            tieBreakers: ['stableMoveKey'],
+          },
+          plan: {
+            stateFeatures: [],
+            candidateFeatures: ['projectedMargin'],
+            candidateAggregates: [],
+          },
+        },
+      },
+      bindingsBySeat: {
+        us: 'passive',
+      },
+    },
+    actions: [
+      {
+        id: asActionId('pass'),
+        actor: 'active',
+        executor: 'actor',
+        phase: [phaseId],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      },
+      {
+        id: actionId,
+        actor: 'active',
+        executor: 'actor',
+        phase: [phaseId],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [
+          eff({ setVar: { scope: 'global', var: 'usMargin', value: 8 } }),
+        ],
+        limits: [],
+      },
+    ],
+    actionPipelines: [templateProfile] as readonly ActionPipelineDef[],
+    triggers: [],
+    terminal: { conditions: [] },
+  };
+}
+
 function createEmptyOptionsProfile(actionId: string): ActionPipelineDef {
   return {
     id: `profile-${actionId}`,
@@ -370,6 +508,41 @@ describe('PolicyAgent', () => {
       assert.fail('expected policy decision trace');
     }
     assert.equal(result.agentDecision.emergencyFallback, false);
+  });
+
+  it('evaluates preview surfaces for completed template moves in the production path', () => {
+    const def = createTemplatePreviewDef();
+    const state = initialState(def, 7, 2).state;
+    const agent = new PolicyAgent({ traceLevel: 'verbose' });
+
+    const result = agent.chooseMove({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      legalMoves: [
+        completeClassifiedMove({ actionId: asActionId('pass'), params: {} }, state.stateHash),
+        pendingClassifiedMove({ actionId: asActionId('chooseTarget'), params: {} }),
+      ],
+      rng: createRng(42n),
+    });
+
+    assert.equal(result.agentDecision?.kind, 'policy');
+    if (result.agentDecision?.kind !== 'policy') {
+      assert.fail('expected policy decision trace');
+    }
+    assert.equal(result.agentDecision.emergencyFallback, false);
+    assert.deepEqual(result.agentDecision.previewUsage.refIds, ['globalVar.usMargin']);
+    assert.equal(result.agentDecision.previewUsage.evaluatedCandidateCount, 2);
+    if (result.agentDecision.candidates === undefined) {
+      assert.fail('expected verbose policy candidates');
+    }
+
+    const completedTemplateCandidate = result.agentDecision.candidates.find(
+      (candidate) => candidate.actionId === 'chooseTarget',
+    );
+    assert.ok(completedTemplateCandidate);
+    assert.deepEqual(completedTemplateCandidate.previewRefIds, ['globalVar.usMargin']);
+    assert.deepEqual(completedTemplateCandidate.unknownPreviewRefs, []);
   });
 
   it('throws a typed no-playable-move error when every classified move is unsatisfiable', () => {

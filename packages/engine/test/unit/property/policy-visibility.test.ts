@@ -177,6 +177,7 @@ describe('policy visibility', () => {
       state: leftState,
       playerId: asPlayerId(0),
       legalMoves,
+      trustedMoveIndex: new Map(),
       rng: createRng(7n),
     });
     const right = evaluatePolicyMove({
@@ -184,6 +185,7 @@ describe('policy visibility', () => {
       state: rightState,
       playerId: asPlayerId(0),
       legalMoves,
+      trustedMoveIndex: new Map(),
       rng: createRng(7n),
     });
 

@@ -11,9 +11,13 @@ import type {
   GameDef,
   GameState,
   Move,
+  TrustedExecutableMove,
 } from '../kernel/types.js';
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
-import { createPolicyPreviewRuntime } from './policy-preview.js';
+import {
+  createPolicyPreviewRuntime,
+  type PolicyPreviewSurfaceResolution,
+} from './policy-preview.js';
 import {
   buildPolicyVictorySurface,
   getPolicySurfaceVisibility,
@@ -51,7 +55,7 @@ export interface PolicyPreviewSurfaceProvider {
   resolveSurface(
     candidate: PolicyRuntimeCandidate,
     ref: CompiledAgentPolicyPreviewSurfaceRef,
-  ): PolicyValue;
+  ): PolicyPreviewSurfaceResolution;
 }
 
 export interface PolicyRuntimeProviders {
@@ -66,6 +70,7 @@ export interface CreatePolicyRuntimeProvidersInput {
   readonly state: GameState;
   readonly playerId: PlayerId;
   readonly seatId: string;
+  readonly trustedMoveIndex: ReadonlyMap<string, TrustedExecutableMove>;
   readonly catalog: AgentPolicyCatalog;
   readonly runtime?: GameDefRuntime;
   readonly runtimeError: (code: string, message: string, detail?: Readonly<Record<string, unknown>>) => Error;
@@ -79,6 +84,7 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
     state: input.state,
     playerId: input.playerId,
     seatId: input.seatId,
+    trustedMoveIndex: input.trustedMoveIndex,
     ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
   });
   const metricCache = new Map<string, number>();

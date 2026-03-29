@@ -1,52 +1,174 @@
 version: 1
-
 layout:
   mode: graph
   hints:
     regions:
       - name: North Vietnam
+        zones:
+          - north-vietnam:none
         position: n
-        zones:
-          - "north-vietnam:none"
       - name: Laos
+        zones:
+          - central-laos:none
+          - southern-laos:none
         position: nw
-        zones:
-          - "central-laos:none"
-          - "southern-laos:none"
       - name: Cambodia
+        zones:
+          - northeast-cambodia:none
+          - the-fishhook:none
+          - the-parrots-beak:none
+          - sihanoukville:none
         position: sw
-        zones:
-          - "northeast-cambodia:none"
-          - "the-fishhook:none"
-          - "the-parrots-beak:none"
-          - "sihanoukville:none"
       - name: South Vietnam
-        position: e
         zones:
-          - "saigon:none"
-          - "hue:none"
-          - "da-nang:none"
-          - "kontum:none"
-          - "qui-nhon:none"
-          - "cam-ranh:none"
-          - "an-loc:none"
-          - "can-tho:none"
-          - "quang-tri-thua-thien:none"
-          - "quang-nam:none"
-          - "quang-tin-quang-ngai:none"
-          - "binh-dinh:none"
-          - "pleiku-darlac:none"
-          - "phu-bon-phu-yen:none"
-          - "khanh-hoa:none"
-          - "phuoc-long:none"
-          - "quang-duc-long-khanh:none"
-          - "binh-tuy-binh-thuan:none"
-          - "tay-ninh:none"
-          - "kien-phong:none"
-          - "kien-hoa-vinh-binh:none"
-          - "ba-xuyen:none"
-          - "kien-giang-an-xuyen:none"
-
+          - saigon:none
+          - hue:none
+          - da-nang:none
+          - kontum:none
+          - qui-nhon:none
+          - cam-ranh:none
+          - an-loc:none
+          - can-tho:none
+          - quang-tri-thua-thien:none
+          - quang-nam:none
+          - quang-tin-quang-ngai:none
+          - binh-dinh:none
+          - pleiku-darlac:none
+          - phu-bon-phu-yen:none
+          - khanh-hoa:none
+          - phuoc-long:none
+          - quang-duc-long-khanh:none
+          - binh-tuy-binh-thuan:none
+          - tay-ninh:none
+          - kien-phong:none
+          - kien-hoa-vinh-binh:none
+          - ba-xuyen:none
+          - kien-giang-an-xuyen:none
+        position: e
+    fixed:
+      - zone: an-loc:none
+        x: 140
+        y: 1080
+      - zone: ba-xuyen:none
+        x: -253.24334975270563
+        y: 3255.8494786720184
+      - zone: binh-dinh:none
+        x: 1200
+        y: -1380
+      - zone: binh-tuy-binh-thuan:none
+        x: 1320.5950395663865
+        y: 1773.892063382643
+      - zone: cam-ranh:none
+        x: 1825.9959417091295
+        y: 1140.8146641222907
+      - zone: can-tho:none
+        x: -423.7520293453216
+        y: 2619.681201178031
+      - zone: central-laos:none
+        x: -749.3965338037254
+        y: -2901.4547609812466
+      - zone: da-nang:none
+        x: 1101.6473813613854
+        y: -2516.7434719971047
+      - zone: hue:none
+        x: 420
+        y: -3700
+      - zone: khanh-hoa:none
+        x: 1340
+        y: 280
+      - zone: kien-giang-an-xuyen:none
+        x: -975.3520847637932
+        y: 3241.1368920161412
+      - zone: kien-hoa-vinh-binh:none
+        x: 277.88382681456244
+        y: 2784.009896338519
+      - zone: kien-phong:none
+        x: -155.74226718621478
+        y: 2111.330216835735
+      - zone: kontum:none
+        x: 513.3901726710391
+        y: -931.6052884680901
+      - zone: north-vietnam:none
+        x: -460
+        y: -4020
+      - zone: northeast-cambodia:none
+        x: -1046.2725947095018
+        y: -497.76612577397736
+      - zone: phu-bon-phu-yen:none
+        x: 1465.3303939219816
+        y: -447.8990759464958
+      - zone: phuoc-long:none
+        x: 600
+        y: 800
+      - zone: pleiku-darlac:none
+        x: 340
+        y: -180
+      - zone: quang-duc-long-khanh:none
+        x: 1205.988092757083
+        y: 1113.082198236745
+      - zone: quang-nam:none
+        x: 217.45202860644866
+        y: -2453.042526949201
+      - zone: quang-tin-quang-ngai:none
+        x: 1180
+        y: -1980
+      - zone: quang-tri-thua-thien:none
+        x: 100
+        y: -3160
+      - zone: qui-nhon:none
+        x: 1776.402815096716
+        y: -831.8902814655199
+      - zone: saigon:none
+        x: 527.5773735290484
+        y: 2285.8892941374115
+      - zone: sihanoukville:none
+        x: -1492.1037117425562
+        y: 2101.0268952396473
+      - zone: southern-laos:none
+        x: -920.4915503986673
+        y: -1690.0837187643233
+      - zone: tay-ninh:none
+        x: 140
+        y: 1580
+      - zone: the-fishhook:none
+        x: -1134.5763747049946
+        y: 404.4935595752164
+      - zone: the-parrots-beak:none
+        x: -1303.6119935386898
+        y: 1322.958529343848
+      - zone: leader:none
+        x: 2225.9959417091295
+        y: -3780
+      - zone: available-ARVN:none
+        x: 2225.9959417091295
+        y: -3020
+      - zone: available-NVA:none
+        x: 2225.9959417091295
+        y: -2780
+      - zone: available-US:none
+        x: 2225.9959417091295
+        y: -2540
+      - zone: available-VC:none
+        x: 2225.9959417091295
+        y: -2300
+      - zone: casualties-US:none
+        x: 2225.9959417091295
+        y: -2060
+      - zone: out-of-play-ARVN:none
+        x: 2225.9959417091295
+        y: -1820
+      - zone: out-of-play-NVA:none
+        x: 2225.9959417091295
+        y: -1580
+      - zone: out-of-play-US:none
+        x: 2225.9959417091295
+        y: -1340
+      - zone: out-of-play-VC:none
+        x: 2225.9959417091295
+        y: -1100
+      - zone: trucks-base-staging:none
+        x: 2225.9959417091295
+        y: -820
 factions:
   us:
     color: "#808000"
@@ -60,7 +182,6 @@ factions:
   vc:
     color: "#00bfff"
     displayName: Viet Cong
-
 zones:
   categoryStyles:
     city:
@@ -74,7 +195,6 @@ zones:
       height: 220
     loc:
       shape: connection
-
   connectionStyles:
     highway:
       strokeWidth: 8
@@ -87,7 +207,6 @@ zones:
       wavy: true
       waveAmplitude: 4
       waveFrequency: 0.08
-
   connectionAnchors:
     an-loc:
       x: 420
@@ -96,302 +215,323 @@ zones:
       x: 560
       y: 220
     bac-lieu:
-      x: 360
-      y: 520
+      x: -688.2524155538835
+      y: 3201.090345385517
     chau-doc:
-      x: 200
-      y: 420
+      x: -836.2225463876869
+      y: 2127.540527724862
     da-lat:
       x: 640
       y: 360
     dak-to:
-      x: 520
-      y: 60
+      x: 531.8295401573785
+      y: -1861.4532306383767
     khe-sanh:
-      x: 360
-      y: 20
+      x: -300
+      y: -3660
     long-phu:
-      x: 420
-      y: 460
-
+      x: 18.798184327553713
+      y: 2975.179536069467
   connectionRoutes:
-    "loc-ban-me-thuot-da-lat:none":
+    loc-ban-me-thuot-da-lat:none:
       points:
-        - { kind: anchor, anchorId: "ban-me-thuot" }
-        - { kind: anchor, anchorId: "da-lat" }
+        - kind: anchor
+          anchorId: ban-me-thuot
+        - kind: anchor
+          anchorId: da-lat
       segments:
-        - { kind: straight }
-    "loc-cam-ranh-da-lat:none":
+        - kind: straight
+    loc-cam-ranh-da-lat:none:
       points:
-        - { kind: zone, zoneId: "cam-ranh:none" }
-        - { kind: anchor, anchorId: "da-lat" }
+        - kind: zone
+          zoneId: cam-ranh:none
+        - kind: anchor
+          anchorId: da-lat
       segments:
-        - { kind: straight }
-    "loc-can-tho-bac-lieu:none":
+        - kind: straight
+    loc-can-tho-bac-lieu:none:
       points:
-        - { kind: zone, zoneId: "can-tho:none" }
-        - { kind: anchor, anchorId: "bac-lieu" }
+        - kind: zone
+          zoneId: can-tho:none
+        - kind: anchor
+          anchorId: bac-lieu
       segments:
-        - { kind: straight }
-    "loc-can-tho-chau-doc:none":
+        - kind: straight
+    loc-can-tho-chau-doc:none:
       points:
-        - { kind: zone, zoneId: "can-tho:none" }
-        - { kind: anchor, anchorId: "chau-doc" }
+        - kind: zone
+          zoneId: can-tho:none
+        - kind: anchor
+          anchorId: chau-doc
       segments:
-        - { kind: straight }
-    "loc-can-tho-long-phu:none":
+        - kind: straight
+    loc-can-tho-long-phu:none:
       points:
-        - { kind: zone, zoneId: "can-tho:none" }
-        - { kind: anchor, anchorId: "long-phu" }
+        - kind: zone
+          zoneId: can-tho:none
+        - kind: anchor
+          anchorId: long-phu
       segments:
-        - { kind: straight }
-    "loc-da-nang-dak-to:none":
+        - kind: straight
+    loc-da-nang-dak-to:none:
       points:
-        - { kind: zone, zoneId: "da-nang:none" }
-        - { kind: anchor, anchorId: "dak-to" }
+        - kind: zone
+          zoneId: da-nang:none
+        - kind: anchor
+          anchorId: dak-to
       segments:
-        - { kind: straight }
-    "loc-da-nang-qui-nhon:none":
+        - kind: straight
+    loc-da-nang-qui-nhon:none:
       points:
-        - { kind: zone, zoneId: "da-nang:none" }
-        - { kind: zone, zoneId: "qui-nhon:none" }
+        - kind: zone
+          zoneId: da-nang:none
+        - kind: zone
+          zoneId: qui-nhon:none
       segments:
-        - { kind: straight }
-    "loc-hue-da-nang:none":
+        - kind: straight
+    loc-hue-da-nang:none:
       points:
-        - { kind: zone, zoneId: "da-nang:none", anchor: 90 }
-        - { kind: zone, zoneId: "hue:none", anchor: 270 }
+        - kind: zone
+          zoneId: da-nang:none
+          anchor: 108.768277436591
+        - kind: zone
+          zoneId: hue:none
+          anchor: 310.3800982106113
       segments:
         - kind: quadratic
-          control: { kind: curvature, offset: 0.3 }
-    "loc-hue-khe-sanh:none":
+          control:
+            kind: curvature
+            offset: 0.07697466730587194
+            angle: 69.23538545589986
+    loc-hue-khe-sanh:none:
       points:
-        - { kind: zone, zoneId: "hue:none" }
-        - { kind: anchor, anchorId: "khe-sanh" }
+        - kind: zone
+          zoneId: hue:none
+        - kind: anchor
+          anchorId: khe-sanh
       segments:
-        - { kind: straight }
-    "loc-kontum-ban-me-thuot:none":
+        - kind: straight
+    loc-kontum-ban-me-thuot:none:
       points:
-        - { kind: zone, zoneId: "kontum:none" }
-        - { kind: anchor, anchorId: "ban-me-thuot" }
+        - kind: zone
+          zoneId: kontum:none
+        - kind: anchor
+          anchorId: ban-me-thuot
       segments:
-        - { kind: straight }
-    "loc-kontum-dak-to:none":
+        - kind: straight
+    loc-kontum-dak-to:none:
       points:
-        - { kind: zone, zoneId: "kontum:none" }
-        - { kind: anchor, anchorId: "dak-to" }
+        - kind: zone
+          zoneId: kontum:none
+        - kind: anchor
+          anchorId: dak-to
       segments:
-        - { kind: straight }
-    "loc-kontum-qui-nhon:none":
+        - kind: straight
+    loc-kontum-qui-nhon:none:
       points:
-        - { kind: zone, zoneId: "kontum:none" }
-        - { kind: zone, zoneId: "qui-nhon:none" }
+        - kind: zone
+          zoneId: kontum:none
+        - kind: zone
+          zoneId: qui-nhon:none
       segments:
-        - { kind: straight }
-    "loc-qui-nhon-cam-ranh:none":
+        - kind: straight
+    loc-qui-nhon-cam-ranh:none:
       points:
-        - { kind: zone, zoneId: "cam-ranh:none" }
-        - { kind: zone, zoneId: "qui-nhon:none" }
+        - kind: zone
+          zoneId: cam-ranh:none
+        - kind: zone
+          zoneId: qui-nhon:none
       segments:
-        - { kind: straight }
-    "loc-saigon-an-loc-ban-me-thuot:none":
+        - kind: straight
+    loc-saigon-an-loc-ban-me-thuot:none:
       points:
-        - { kind: zone, zoneId: "saigon:none" }
-        - { kind: anchor, anchorId: "an-loc" }
-        - { kind: anchor, anchorId: "ban-me-thuot" }
+        - kind: zone
+          zoneId: saigon:none
+        - kind: anchor
+          anchorId: an-loc
+        - kind: anchor
+          anchorId: ban-me-thuot
       segments:
-        - { kind: straight }
+        - kind: straight
         - kind: quadratic
-          control: { kind: curvature, offset: 0.3 }
-    "loc-saigon-cam-ranh:none":
+          control:
+            kind: curvature
+            offset: 0.26023445680592805
+            angle: 289.50202781725375
+    loc-saigon-cam-ranh:none:
       points:
-        - { kind: zone, zoneId: "cam-ranh:none" }
-        - { kind: zone, zoneId: "saigon:none" }
+        - kind: zone
+          zoneId: cam-ranh:none
+        - kind: zone
+          zoneId: saigon:none
       segments:
-        - { kind: straight }
-    "loc-saigon-can-tho:none":
+        - kind: straight
+    loc-saigon-can-tho:none:
       points:
-        - { kind: zone, zoneId: "can-tho:none" }
-        - { kind: zone, zoneId: "saigon:none" }
+        - kind: zone
+          zoneId: can-tho:none
+        - kind: zone
+          zoneId: saigon:none
       segments:
-        - { kind: straight }
-    "loc-saigon-da-lat:none":
+        - kind: straight
+    loc-saigon-da-lat:none:
       points:
-        - { kind: zone, zoneId: "saigon:none" }
-        - { kind: anchor, anchorId: "da-lat" }
+        - kind: zone
+          zoneId: saigon:none
+        - kind: anchor
+          anchorId: da-lat
       segments:
-        - { kind: straight }
-
-  markerBadge:
-    markerId: support
-    colorMap:
-      activeOpposition:
-        color: "#dc2626"
-        abbreviation: AO
-      passiveOpposition:
-        color: "#f97316"
-        abbreviation: PO
-      neutral:
-        color: "#6b7280"
-        abbreviation: "N"
-      passiveSupport:
-        color: "#93c5fd"
-        abbreviation: PS
-      activeSupport:
-        color: "#3b82f6"
-        abbreviation: AS
-
+        - kind: straight
   attributeRules:
     - match:
-        category: [province]
+        category:
+          - province
         attributeContains:
           terrainTags: highland
       style:
         color: "#6b5b3e"
     - match:
-        category: [province]
+        category:
+          - province
         attributeContains:
           terrainTags: jungle
       style:
         color: "#3d5c3a"
     - match:
-        category: [province]
+        category:
+          - province
         attributeContains:
           terrainTags: lowland
       style:
         color: "#5a7a52"
     - match:
-        category: [loc]
+        category:
+          - loc
         attributeContains:
           terrainTags: highway
       style:
         connectionStyleKey: highway
     - match:
-        category: [loc]
+        category:
+          - loc
         attributeContains:
           terrainTags: mekong
       style:
         connectionStyleKey: mekong
-
   overrides:
-    "an-loc:none":
-      label: "An Loc"
-    "ba-xuyen:none":
-      label: "Ba Xuyen"
-    "binh-dinh:none":
-      label: "Binh Dinh"
-    "binh-tuy-binh-thuan:none":
-      label: "Binh Tuy Binh Thuan"
-    "cam-ranh:none":
-      label: "Cam Ranh"
-    "can-tho:none":
-      label: "Can Tho"
-    "central-laos:none":
-      label: "Central Laos"
-    "da-nang:none":
-      label: "Da Nang"
-    "hue:none":
-      label: "Hue"
-    "khanh-hoa:none":
-      label: "Khanh Hoa"
-    "kien-giang-an-xuyen:none":
-      label: "Kien Giang An Xuyen"
-    "kien-hoa-vinh-binh:none":
-      label: "Kien Hoa Vinh Binh"
-    "kien-phong:none":
-      label: "Kien Phong"
-    "kontum:none":
-      label: "Kontum"
-    "loc-ban-me-thuot-da-lat:none":
-      label: "Ban Me Thuot-Da Lat"
-    "loc-cam-ranh-da-lat:none":
-      label: "Cam Ranh-Da Lat"
-    "loc-can-tho-bac-lieu:none":
-      label: "Can Tho-Bac Lieu"
-    "loc-can-tho-chau-doc:none":
-      label: "Can Tho-Chau Doc"
-    "loc-can-tho-long-phu:none":
-      label: "Can Tho-Long Phu"
-    "loc-da-nang-dak-to:none":
-      label: "Da Nang-Dak To"
-    "loc-da-nang-qui-nhon:none":
-      label: "Da Nang-Qui Nhon"
-    "loc-hue-da-nang:none":
-      label: "Hue-Da Nang"
-    "loc-hue-khe-sanh:none":
-      label: "Hue-Khe Sanh"
-    "loc-kontum-ban-me-thuot:none":
-      label: "Kontum-Ban Me Thuot"
-    "loc-kontum-dak-to:none":
-      label: "Kontum-Dak To"
-    "loc-kontum-qui-nhon:none":
-      label: "Kontum-Qui Nhon"
-    "loc-qui-nhon-cam-ranh:none":
-      label: "Qui Nhon-Cam Ranh"
-    "loc-saigon-an-loc-ban-me-thuot:none":
-      label: "Saigon-An Loc-Ban Me Thuot"
-    "loc-saigon-cam-ranh:none":
-      label: "Saigon-Cam Ranh"
-    "loc-saigon-can-tho:none":
-      label: "Saigon-Can Tho"
-    "loc-saigon-da-lat:none":
-      label: "Saigon-Da Lat"
-    "north-vietnam:none":
-      label: "North Vietnam"
-    "northeast-cambodia:none":
-      label: "Northeast Cambodia"
-    "phu-bon-phu-yen:none":
-      label: "Phu Bon Phu Yen"
-    "phuoc-long:none":
-      label: "Phuoc Long"
-    "pleiku-darlac:none":
-      label: "Pleiku Darlac"
-    "quang-duc-long-khanh:none":
-      label: "Quang Duc Long Khanh"
-    "quang-nam:none":
-      label: "Quang Nam"
-    "quang-tin-quang-ngai:none":
-      label: "Quang Tin Quang Ngai"
-    "quang-tri-thua-thien:none":
-      label: "Quang Tri"
-    "qui-nhon:none":
-      label: "Qui Nhon"
-    "saigon:none":
-      label: "Saigon"
-    "sihanoukville:none":
-      label: "Sihanoukville"
-    "southern-laos:none":
-      label: "Southern Laos"
-    "tay-ninh:none":
-      label: "Tay Ninh"
-    "the-fishhook:none":
-      label: "The Fishhook"
-    "the-parrots-beak:none":
-      label: "The Parrots Beak"
-
-  hiddenZones:
-    - "deck:none"
-    - "lookahead:none"
-    - "played:none"
-
+    an-loc:none:
+      label: An Loc
+    ba-xuyen:none:
+      label: Ba Xuyen
+    binh-dinh:none:
+      label: Binh Dinh
+    binh-tuy-binh-thuan:none:
+      label: Binh Tuy Binh Thuan
+    cam-ranh:none:
+      label: Cam Ranh
+    can-tho:none:
+      label: Can Tho
+    central-laos:none:
+      label: Central Laos
+    da-nang:none:
+      label: Da Nang
+    hue:none:
+      label: Hue
+    khanh-hoa:none:
+      label: Khanh Hoa
+    kien-giang-an-xuyen:none:
+      label: Kien Giang An Xuyen
+    kien-hoa-vinh-binh:none:
+      label: Kien Hoa Vinh Binh
+    kien-phong:none:
+      label: Kien Phong
+    kontum:none:
+      label: Kontum
+    loc-ban-me-thuot-da-lat:none:
+      label: Ban Me Thuot-Da Lat
+    loc-cam-ranh-da-lat:none:
+      label: Cam Ranh-Da Lat
+    loc-can-tho-bac-lieu:none:
+      label: Can Tho-Bac Lieu
+    loc-can-tho-chau-doc:none:
+      label: Can Tho-Chau Doc
+    loc-can-tho-long-phu:none:
+      label: Can Tho-Long Phu
+    loc-da-nang-dak-to:none:
+      label: Da Nang-Dak To
+    loc-da-nang-qui-nhon:none:
+      label: Da Nang-Qui Nhon
+    loc-hue-da-nang:none:
+      label: Hue-Da Nang
+    loc-hue-khe-sanh:none:
+      label: Hue-Khe Sanh
+    loc-kontum-ban-me-thuot:none:
+      label: Kontum-Ban Me Thuot
+    loc-kontum-dak-to:none:
+      label: Kontum-Dak To
+    loc-kontum-qui-nhon:none:
+      label: Kontum-Qui Nhon
+    loc-qui-nhon-cam-ranh:none:
+      label: Qui Nhon-Cam Ranh
+    loc-saigon-an-loc-ban-me-thuot:none:
+      label: Saigon-An Loc-Ban Me Thuot
+    loc-saigon-cam-ranh:none:
+      label: Saigon-Cam Ranh
+    loc-saigon-can-tho:none:
+      label: Saigon-Can Tho
+    loc-saigon-da-lat:none:
+      label: Saigon-Da Lat
+    north-vietnam:none:
+      label: North Vietnam
+    northeast-cambodia:none:
+      label: Northeast Cambodia
+    phu-bon-phu-yen:none:
+      label: Phu Bon Phu Yen
+    phuoc-long:none:
+      label: Phuoc Long
+    pleiku-darlac:none:
+      label: Pleiku Darlac
+    quang-duc-long-khanh:none:
+      label: Quang Duc Long Khanh
+    quang-nam:none:
+      label: Quang Nam
+    quang-tin-quang-ngai:none:
+      label: Quang Tin Quang Ngai
+    quang-tri-thua-thien:none:
+      label: Quang Tri
+    qui-nhon:none:
+      label: Qui Nhon
+    saigon:none:
+      label: Saigon
+    sihanoukville:none:
+      label: Sihanoukville
+    southern-laos:none:
+      label: Southern Laos
+    tay-ninh:none:
+      label: Tay Ninh
+    the-fishhook:none:
+      label: The Fishhook
+    the-parrots-beak:none:
+      label: The Parrots Beak
   layoutRoles:
-    "available-ARVN:none": forcePool
-    "available-NVA:none": forcePool
-    "available-US:none": forcePool
-    "available-VC:none": forcePool
-    "casualties-US:none": forcePool
-    "leader:none": card
-    "out-of-play-ARVN:none": forcePool
-    "out-of-play-US:none": forcePool
-    "out-of-play-NVA:none": forcePool
-    "out-of-play-VC:none": forcePool
-
+    available-ARVN:none: forcePool
+    available-NVA:none: forcePool
+    available-US:none: forcePool
+    available-VC:none: forcePool
+    casualties-US:none: forcePool
+    leader:none: card
+    out-of-play-ARVN:none: forcePool
+    out-of-play-US:none: forcePool
+    out-of-play-NVA:none: forcePool
+    out-of-play-VC:none: forcePool
   tokenLayouts:
     presets:
       fitl-map-space:
         mode: lanes
         laneGap: 24
-        laneOrder: [regular, base]
+        laneOrder:
+          - regular
+          - base
         lanes:
           regular:
             anchor: center
@@ -405,13 +545,33 @@ zones:
       byCategory:
         city: fitl-map-space
         province: fitl-map-space
-
+  hiddenZones:
+    - deck:none
+    - lookahead:none
+    - played:none
+  markerBadge:
+    markerId: support
+    colorMap:
+      activeOpposition:
+        color: "#dc2626"
+        abbreviation: AO
+      passiveOpposition:
+        color: "#f97316"
+        abbreviation: PO
+      neutral:
+        color: "#6b7280"
+        abbreviation: N
+      passiveSupport:
+        color: "#93c5fd"
+        abbreviation: PS
+      activeSupport:
+        color: "#3b82f6"
+        abbreviation: AS
 edges:
   default:
     color: "#ffffff"
     width: 3.5
     alpha: 0.85
-
 tokens:
   stackBadge:
     fontSize: 13
@@ -422,7 +582,6 @@ tokens:
     anchorY: 0
     offsetX: 4
     offsetY: -4
-
 tokenTypes:
   us-troops:
     shape: square
@@ -439,14 +598,14 @@ tokenTypes:
   us-irregulars:
     shape: beveled-cylinder
     color: olive
-    presentation:
-      lane: regular
-      scale: 1
     symbolRules:
       - when:
           - prop: activity
             equals: active
         symbol: star
+    presentation:
+      lane: regular
+      scale: 1
   arvn-troops:
     shape: square
     color: yellow
@@ -462,14 +621,14 @@ tokenTypes:
   arvn-rangers:
     shape: beveled-cylinder
     color: yellow
-    presentation:
-      lane: regular
-      scale: 1
     symbolRules:
       - when:
           - prop: activity
             equals: active
         symbol: star
+    presentation:
+      lane: regular
+      scale: 1
   arvn-bases:
     shape: round-disk
     color: yellow
@@ -485,14 +644,14 @@ tokenTypes:
   nva-guerrillas:
     shape: beveled-cylinder
     color: red
-    presentation:
-      lane: regular
-      scale: 1
     symbolRules:
       - when:
           - prop: activity
             equals: active
         symbol: star
+    presentation:
+      lane: regular
+      scale: 1
   nva-bases:
     shape: round-disk
     color: red
@@ -502,109 +661,105 @@ tokenTypes:
   vc-guerrillas:
     shape: beveled-cylinder
     color: bright-blue
-    presentation:
-      lane: regular
-      scale: 1
     symbolRules:
       - when:
           - prop: activity
             equals: active
         symbol: star
+    presentation:
+      lane: regular
+      scale: 1
   vc-bases:
     shape: round-disk
     color: bright-blue
     presentation:
       lane: base
       scale: 1.5
-
 actions:
-  # Core operations -- single-word IDs auto-format fine, but choice prompts add value
   train:
     choices:
       targetSpaces:
-        prompt: "Select spaces to train in"
+        prompt: Select spaces to train in
   patrol:
     choices:
       targetSpaces:
-        prompt: "Select LoCs to patrol"
+        prompt: Select LoCs to patrol
   sweep:
     choices:
       targetSpaces:
-        prompt: "Select spaces to sweep"
+        prompt: Select spaces to sweep
   assault:
     choices:
       targetSpaces:
-        prompt: "Select spaces to assault"
+        prompt: Select spaces to assault
   rally:
     choices:
       targetSpaces:
-        prompt: "Select spaces to rally in"
+        prompt: Select spaces to rally in
   march:
     choices:
       targetSpaces:
-        prompt: "Select destination spaces"
+        prompt: Select destination spaces
   attack:
     choices:
       targetSpaces:
-        prompt: "Select spaces to attack"
+        prompt: Select spaces to attack
   terror:
     choices:
       targetSpaces:
-        prompt: "Select spaces for terror"
-  # Special activities -- some need display name fixes, all benefit from choice prompts
+        prompt: Select spaces for terror
   advise:
     choices:
       targetSpaces:
-        prompt: "Select spaces to advise in"
+        prompt: Select spaces to advise in
   airLift:
-    displayName: "Airlift"
+    displayName: Airlift
     choices:
       spaces:
-        prompt: "Select spaces for airlift"
+        prompt: Select spaces for airlift
   airStrike:
-    displayName: "Air Strike"
+    displayName: Air Strike
     choices:
       spaces:
-        prompt: "Select spaces for air strike"
+        prompt: Select spaces for air strike
   govern:
     choices:
       targetSpaces:
-        prompt: "Select spaces to govern"
+        prompt: Select spaces to govern
   transport:
     choices:
       transportOrigin:
-        prompt: "Select origin space for transport"
+        prompt: Select origin space for transport
   raid:
     choices:
       targetSpaces:
-        prompt: "Select spaces to raid"
+        prompt: Select spaces to raid
   infiltrate:
     choices:
       targetSpaces:
-        prompt: "Select spaces to infiltrate"
+        prompt: Select spaces to infiltrate
   bombard:
     choices:
       targetSpaces:
-        prompt: "Select spaces to bombard"
+        prompt: Select spaces to bombard
   ambushNva:
-    displayName: "NVA Ambush"
+    displayName: NVA Ambush
     choices:
       targetSpaces:
-        prompt: "Select spaces for ambush"
+        prompt: Select spaces for ambush
   tax:
     choices:
       targetSpaces:
-        prompt: "Select spaces to tax"
+        prompt: Select spaces to tax
   subvert:
     choices:
       targetSpaces:
-        prompt: "Select spaces to subvert"
+        prompt: Select spaces to subvert
   ambushVc:
-    displayName: "VC Ambush"
+    displayName: VC Ambush
     choices:
       targetSpaces:
-        prompt: "Select spaces for ambush"
-  # Coup-phase actions with bad auto-formatting
+        prompt: Select spaces for ambush
   coupArvnRedeployMandatory:
     displayName: "Coup: ARVN Mandatory Redeploy"
   coupArvnRedeployOptionalTroops:
@@ -613,7 +768,48 @@ actions:
     displayName: "Coup: ARVN Police Redeploy"
   coupNvaRedeployTroops:
     displayName: "Coup: NVA Troop Redeploy"
-
+victoryStandings:
+  tooltipBreakdowns:
+    - seat: us
+      componentsById:
+        markerTotal:
+          label: Total Support
+          description: Population-weighted support (active x2, passive x1)
+          detailTemplate: (pop {population}) x{multiplier} = {contribution}
+        zoneCount:
+          label: Available US Pieces
+          description: Troops and bases in Available space
+          detailTemplate: "{contribution}"
+    - seat: arvn
+      componentsById:
+        controlledPopulation:
+          label: COIN-Controlled Population
+          description: Population where US+ARVN pieces > NVA+VC pieces
+          detailTemplate: (pop {population}) = {contribution}
+        globalVar:
+          label: Patronage
+          description: ARVN political support (global variable)
+          detailTemplate: "{contribution}"
+    - seat: nva
+      componentsById:
+        controlledPopulation:
+          label: NVA-Controlled Population
+          description: Population where NVA pieces > all others combined
+          detailTemplate: (pop {population}) = {contribution}
+        mapBases:
+          label: NVA Bases on Map
+          description: NVA bases across all map spaces
+          detailTemplate: "{contribution}"
+    - seat: vc
+      componentsById:
+        markerTotal:
+          label: Total Opposition
+          description: Population-weighted opposition (active x2, passive x1)
+          detailTemplate: (pop {population}) x{multiplier} = {contribution}
+        mapBases:
+          label: VC Bases on Map
+          description: VC bases across all map spaces
+          detailTemplate: "{contribution}"
 actionGroupPolicy:
   synthesize:
     - fromClass: operation
@@ -622,50 +818,6 @@ actionGroupPolicy:
         - specialActivity
   hide:
     - specialActivity
-
-victoryStandings:
-  tooltipBreakdowns:
-    - seat: us
-      componentsById:
-        markerTotal:
-          label: "Total Support"
-          description: "Population-weighted support (active x2, passive x1)"
-          detailTemplate: "(pop {population}) x{multiplier} = {contribution}"
-        zoneCount:
-          label: "Available US Pieces"
-          description: "Troops and bases in Available space"
-          detailTemplate: "{contribution}"
-    - seat: arvn
-      componentsById:
-        controlledPopulation:
-          label: "COIN-Controlled Population"
-          description: "Population where US+ARVN pieces > NVA+VC pieces"
-          detailTemplate: "(pop {population}) = {contribution}"
-        globalVar:
-          label: "Patronage"
-          description: "ARVN political support (global variable)"
-          detailTemplate: "{contribution}"
-    - seat: nva
-      componentsById:
-        controlledPopulation:
-          label: "NVA-Controlled Population"
-          description: "Population where NVA pieces > all others combined"
-          detailTemplate: "(pop {population}) = {contribution}"
-        mapBases:
-          label: "NVA Bases on Map"
-          description: "NVA bases across all map spaces"
-          detailTemplate: "{contribution}"
-    - seat: vc
-      componentsById:
-        markerTotal:
-          label: "Total Opposition"
-          description: "Population-weighted opposition (active x2, passive x1)"
-          detailTemplate: "(pop {population}) x{multiplier} = {contribution}"
-        mapBases:
-          label: "VC Bases on Map"
-          description: "VC bases across all map spaces"
-          detailTemplate: "{contribution}"
-
 regions:
   groupByAttribute: country
   padding: 40

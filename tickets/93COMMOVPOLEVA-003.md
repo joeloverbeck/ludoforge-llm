@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-agent.ts`
-**Deps**: `tickets/93COMMOVPOLEVA-002.md`
+**Deps**: `archive/tickets/93COMMOVPOLEVA-002.md`
 
 ## Problem
 

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — test-only
-**Deps**: `tickets/93COMMOVPOLEVA-002.md`
+**Deps**: `archive/tickets/93COMMOVPOLEVA-002.md`
 
 ## Problem
 

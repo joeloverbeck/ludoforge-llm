@@ -4,7 +4,7 @@ import {
   type GameState,
 } from '@ludoforge/engine/runtime';
 
-import type { RenderVictoryStandingEntry } from './render-model.js';
+import type { RunnerVictoryStandingEntry } from './runner-frame.js';
 
 /**
  * Derive victory standing entries from the current game state.
@@ -13,7 +13,7 @@ import type { RenderVictoryStandingEntry } from './render-model.js';
 export function deriveVictoryStandings(
   def: GameDef,
   state: GameState,
-): readonly RenderVictoryStandingEntry[] | null {
+): readonly RunnerVictoryStandingEntry[] | null {
   const standings = def.victoryStandings;
   if (standings === undefined) {
     return null;
@@ -26,6 +26,14 @@ export function deriveVictoryStandings(
     score: result.score,
     threshold: result.threshold,
     rank: index + 1,
-    components: result.components.values,
+    components: result.components.breakdowns.map((breakdown) => ({
+      componentId: breakdown.componentId,
+      aggregate: breakdown.aggregate,
+      spaces: breakdown.spaces.map((space) => ({
+        spaceId: space.spaceId,
+        contribution: space.contribution,
+        factors: space.factors,
+      })),
+    })),
   }));
 }

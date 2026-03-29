@@ -411,6 +411,22 @@
       "min": -1,
       "max": 1,
       "default": 0
+    },
+    "rallyWeight": {
+      "type": "number",
+      "required": false,
+      "tunable": true,
+      "min": 0,
+      "max": 10,
+      "default": 1
+    },
+    "taxWeight": {
+      "type": "number",
+      "required": false,
+      "tunable": true,
+      "min": 0,
+      "max": 10,
+      "default": 1
     }
   },
   "candidateParamDefs": {
@@ -1375,6 +1391,37 @@
           "aggregates": []
         }
       },
+      "preferRallyWeighted": {
+        "costClass": "candidate",
+        "weight": {
+          "kind": "param",
+          "id": "rallyWeight"
+        },
+        "value": {
+          "kind": "op",
+          "op": "boolToNumber",
+          "args": [
+            {
+              "kind": "ref",
+              "ref": {
+                "kind": "library",
+                "refKind": "candidateFeature",
+                "id": "isRally"
+              }
+            }
+          ]
+        },
+        "dependencies": {
+          "parameters": [
+            "rallyWeight"
+          ],
+          "stateFeatures": [],
+          "candidateFeatures": [
+            "isRally"
+          ],
+          "aggregates": []
+        }
+      },
       "preferMarchAction": {
         "costClass": "candidate",
         "weight": {
@@ -1484,6 +1531,37 @@
         },
         "dependencies": {
           "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [
+            "isTax"
+          ],
+          "aggregates": []
+        }
+      },
+      "preferTaxWeighted": {
+        "costClass": "candidate",
+        "weight": {
+          "kind": "param",
+          "id": "taxWeight"
+        },
+        "value": {
+          "kind": "op",
+          "op": "boolToNumber",
+          "args": [
+            {
+              "kind": "ref",
+              "ref": {
+                "kind": "library",
+                "refKind": "candidateFeature",
+                "id": "isTax"
+              }
+            }
+          ]
+        },
+        "dependencies": {
+          "parameters": [
+            "taxWeight"
+          ],
           "stateFeatures": [],
           "candidateFeatures": [
             "isTax"
@@ -1774,13 +1852,46 @@
         ]
       },
       "fingerprint": "6390874b4c326703cab37b9e9bd3197af645cea492bac3ac0f961aea0a513ec9"
+    },
+    "vc-evolved": {
+      "params": {
+        "eventWeight": 1.5,
+        "rallyWeight": 3,
+        "taxWeight": 2
+      },
+      "use": {
+        "pruningRules": [
+          "dropPassWhenOtherMovesExist"
+        ],
+        "scoreTerms": [
+          "preferEvent",
+          "preferRallyWeighted",
+          "preferTaxWeighted"
+        ],
+        "tieBreakers": [
+          "stableMoveKey"
+        ]
+      },
+      "plan": {
+        "stateFeatures": [],
+        "candidateFeatures": [
+          "isPass",
+          "isEvent",
+          "isRally",
+          "isTax"
+        ],
+        "candidateAggregates": [
+          "hasNonPassAlternative"
+        ]
+      },
+      "fingerprint": "a7ffd2329dc137a291c4ef055c4479bf5906bcb03c2749c467b675224844e5f5"
     }
   },
   "bindingsBySeat": {
     "us": "us-baseline",
     "arvn": "arvn-baseline",
     "nva": "nva-baseline",
-    "vc": "vc-baseline"
+    "vc": "vc-evolved"
   },
-  "catalogFingerprint": "32a0c47eb074dcd676d3655df9783825105f4d5fa13966ad8aaf86eb4a7a5f92"
+  "catalogFingerprint": "d7b4dea40cbbe6d94fc64421270565e4d643c4b2442364e6084f161feafa1e11"
 }

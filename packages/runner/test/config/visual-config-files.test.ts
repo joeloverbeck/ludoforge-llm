@@ -366,6 +366,74 @@ describe('visual-config.yaml files', () => {
       nva: { color: '#ff0000', displayName: 'NVA' },
       vc: { color: '#00bfff', displayName: 'Viet Cong' },
     });
+    expect(parsed.victoryStandings?.tooltipBreakdowns).toEqual([
+      {
+        seat: 'us',
+        componentsById: {
+          markerTotal: {
+            label: 'Total Support',
+            description: 'Population-weighted support (active x2, passive x1)',
+            detailTemplate: '(pop {population}) x{multiplier} = {contribution}',
+          },
+          zoneCount: {
+            label: 'Available US Pieces',
+            description: 'Troops and bases in Available space',
+            detailTemplate: '{contribution}',
+          },
+        },
+      },
+      {
+        seat: 'arvn',
+        componentsById: {
+          controlledPopulation: {
+            label: 'COIN-Controlled Population',
+            description: 'Population where US+ARVN pieces > NVA+VC pieces',
+            detailTemplate: '(pop {population}) = {contribution}',
+          },
+          globalVar: {
+            label: 'Patronage',
+            description: 'ARVN political support (global variable)',
+            detailTemplate: '{contribution}',
+          },
+        },
+      },
+      {
+        seat: 'nva',
+        componentsById: {
+          controlledPopulation: {
+            label: 'NVA-Controlled Population',
+            description: 'Population where NVA pieces > all others combined',
+            detailTemplate: '(pop {population}) = {contribution}',
+          },
+          mapBases: {
+            label: 'NVA Bases on Map',
+            description: 'NVA bases across all map spaces',
+            detailTemplate: '{contribution}',
+          },
+        },
+      },
+      {
+        seat: 'vc',
+        componentsById: {
+          markerTotal: {
+            label: 'Total Opposition',
+            description: 'Population-weighted opposition (active x2, passive x1)',
+            detailTemplate: '(pop {population}) x{multiplier} = {contribution}',
+          },
+          mapBases: {
+            label: 'VC Bases on Map',
+            description: 'VC bases across all map spaces',
+            detailTemplate: '{contribution}',
+          },
+        },
+      },
+    ]);
+    expect(provider.getVictoryTooltipComponentMetadata('vc', 'markerTotal')).toEqual({
+      label: 'Total Opposition',
+      description: 'Population-weighted opposition (active x2, passive x1)',
+      detailTemplate: '(pop {population}) x{multiplier} = {contribution}',
+    });
+    expect(provider.getVictoryTooltipComponentMetadata('vc', 'zoneCount')).toBeNull();
     expect(parsed.tokens?.stackBadge).toEqual({
       fontSize: 13,
       fill: '#f8fafc',

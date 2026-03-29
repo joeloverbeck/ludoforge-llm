@@ -16,9 +16,13 @@ import {
   isSabotaged,
   computeTotalEcon,
   sumControlledPopulation,
+  sumControlledPopulationBreakdown,
   countTokensInZone,
   countBasesOnMap,
+  countBasesOnMapBreakdown,
   computeVictoryMarker,
+  computeVictoryComponents,
+  computeMarkerTotalBreakdown,
   isKernelErrorCode,
   type SeatGroupConfig,
   type GameDef,
@@ -774,5 +778,391 @@ describe('computeVictoryMarker', () => {
         return true;
       },
     );
+  });
+});
+
+// ─── Victory breakdowns ─────────────────────────────────────────────────────
+
+describe('victory breakdown helpers', () => {
+  it('computeMarkerTotalBreakdown returns per-space contributions including zeros', () => {
+    const spaces: readonly ZoneDef[] = [
+      makeSpace({ id: 's1', population: 2 }),
+      makeSpace({ id: 's2', population: 1 }),
+      makeSpace({ id: 's3', population: 3 }),
+    ];
+    const markerStates: Record<string, string> = {
+      s1: 'activeSupport',
+      s2: 'passiveSupport',
+      s3: 'neutral',
+    };
+
+    assert.deepEqual(
+      computeMarkerTotalBreakdown(DERIVED_METRICS_CONTEXT, spaces, markerStates, SUPPORT_CONFIG),
+      {
+        componentId: 'markerTotal',
+        aggregate: 5,
+        spaces: [
+          { spaceId: 's1', contribution: 4, factors: { population: 2, multiplier: 2 } },
+          { spaceId: 's2', contribution: 1, factors: { population: 1, multiplier: 1 } },
+          { spaceId: 's3', contribution: 0, factors: { population: 3, multiplier: 0 } },
+        ],
+      },
+    );
+  });
+
+  it('countBasesOnMapBreakdown returns per-space base counts matching the aggregate helper', () => {
+    const spaces: readonly ZoneDef[] = [
+      makeSpace({ id: 's1' }),
+      makeSpace({ id: 's2' }),
+      makeSpace({ id: 's3' }),
+    ];
+    const state = makeState({
+      s1: [
+        { id: asTokenId('b1'), type: 'base', props: { faction: 'VC' } },
+        { id: asTokenId('b2'), type: 'base', props: { faction: 'VC' } },
+      ],
+      s2: [{ id: asTokenId('b3'), type: 'base', props: { faction: 'NVA' } }],
+      s3: [{ id: asTokenId('b4'), type: 'base', props: { faction: 'VC' } }],
+    });
+
+    const breakdown = countBasesOnMapBreakdown(state, spaces, 'VC', ['base'], 'faction');
+    assert.equal(breakdown.aggregate, countBasesOnMap(state, spaces, 'VC', ['base'], 'faction'));
+    assert.deepEqual(breakdown, {
+      componentId: 'mapBases',
+      aggregate: 3,
+      spaces: [
+        { spaceId: 's1', contribution: 2, factors: { count: 2 } },
+        { spaceId: 's3', contribution: 1, factors: { count: 1 } },
+      ],
+    });
+  });
+
+  it('sumControlledPopulationBreakdown returns population for controlled spaces only', () => {
+    const spaces: readonly ZoneDef[] = [
+      makeSpace({ id: 's1', population: 3 }),
+      makeSpace({ id: 's2', population: 2 }),
+      makeSpace({ id: 's3', population: 4 }),
+    ];
+    const state = makeState({
+      s1: [makeFactionToken('u1', 'US'), makeFactionToken('a1', 'ARVN')],
+      s2: [makeFactionToken('u2', 'US'), makeFactionToken('n1', 'NVA')],
+      s3: [makeFactionToken('n2', 'NVA')],
+    });
+
+    const breakdown = sumControlledPopulationBreakdown(
+      DERIVED_METRICS_CONTEXT,
+      state,
+      spaces,
+      isCoinControlled,
+      DEFAULT_FACTION_CONFIG,
+    );
+
+    assert.equal(
+      breakdown.aggregate,
+      sumControlledPopulation(DERIVED_METRICS_CONTEXT, state, spaces, isCoinControlled, DEFAULT_FACTION_CONFIG),
+    );
+    assert.deepEqual(breakdown, {
+      componentId: 'controlledPopulation',
+      aggregate: 3,
+      spaces: [
+        { spaceId: 's1', contribution: 3, factors: { population: 3 } },
+      ],
+    });
+  });
+});
+
+describe('computeVictoryComponents', () => {
+  it('returns breakdowns for markerTotalPlusZoneCount', () => {
+    const spaces: readonly ZoneDef[] = [
+      makeSpace({ id: 's1', population: 2 }),
+      makeSpace({ id: 's2', population: 1 }),
+      makeSpace({ id: 's3', population: 3 }),
+    ];
+    const markerStates: Record<string, string> = {
+      s1: 'activeSupport',
+      s2: 'passiveSupport',
+      s3: 'neutral',
+    };
+    const state = makeState({
+      s1: [],
+      s2: [],
+      s3: [],
+      available: [
+        { id: asTokenId('a1'), type: 'troops', props: { faction: 'US' } },
+        { id: asTokenId('a2'), type: 'base', props: { faction: 'US' } },
+        { id: asTokenId('a3'), type: 'irregular', props: { faction: 'US' } },
+      ],
+    });
+    const formula: VictoryFormula = {
+      type: 'markerTotalPlusZoneCount',
+      markerConfig: SUPPORT_CONFIG,
+      countZone: 'available',
+      countTokenTypes: ['troops', 'base'],
+    };
+
+    assert.deepEqual(computeVictoryComponents(DERIVED_METRICS_CONTEXT, state, spaces, markerStates, DEFAULT_FACTION_CONFIG, formula), {
+      breakdowns: [
+        {
+          componentId: 'markerTotal',
+          aggregate: 5,
+          spaces: [
+            { spaceId: 's1', contribution: 4, factors: { population: 2, multiplier: 2 } },
+            { spaceId: 's2', contribution: 1, factors: { population: 1, multiplier: 1 } },
+            { spaceId: 's3', contribution: 0, factors: { population: 3, multiplier: 0 } },
+          ],
+        },
+        {
+          componentId: 'zoneCount',
+          aggregate: 2,
+          spaces: [],
+        },
+      ],
+    });
+  });
+
+  it('returns breakdowns for markerTotalPlusMapBases', () => {
+    const spaces: readonly ZoneDef[] = [
+      makeSpace({ id: 's1', population: 1 }),
+      makeSpace({ id: 's2', population: 1 }),
+    ];
+    const markerStates: Record<string, string> = {
+      s1: 'activeOpposition',
+      s2: 'passiveOpposition',
+    };
+    const state = makeState({
+      s1: [{ id: asTokenId('b1'), type: 'base', props: { faction: 'VC' } }],
+      s2: [],
+    });
+    const formula: VictoryFormula = {
+      type: 'markerTotalPlusMapBases',
+      markerConfig: OPPOSITION_CONFIG,
+      baseSeat: 'VC',
+      basePieceTypes: ['base'],
+    };
+
+    assert.deepEqual(computeVictoryComponents(DERIVED_METRICS_CONTEXT, state, spaces, markerStates, DEFAULT_FACTION_CONFIG, formula), {
+      breakdowns: [
+        {
+          componentId: 'markerTotal',
+          aggregate: 3,
+          spaces: [
+            { spaceId: 's1', contribution: 2, factors: { population: 1, multiplier: 2 } },
+            { spaceId: 's2', contribution: 1, factors: { population: 1, multiplier: 1 } },
+          ],
+        },
+        {
+          componentId: 'mapBases',
+          aggregate: 1,
+          spaces: [
+            { spaceId: 's1', contribution: 1, factors: { count: 1 } },
+          ],
+        },
+      ],
+    });
+  });
+
+  it('returns breakdowns for controlledPopulationPlusMapBases', () => {
+    const spaces: readonly ZoneDef[] = [
+      makeSpace({ id: 's1', population: 3 }),
+      makeSpace({ id: 's2', population: 3 }),
+      makeSpace({ id: 's3', population: 2 }),
+    ];
+    const state = makeState({
+      s1: [
+        makeFactionToken('n1', 'NVA'),
+        makeFactionToken('n2', 'NVA'),
+        makeFactionToken('n3', 'NVA'),
+        makeFactionToken('u1', 'US'),
+        { id: asTokenId('b1'), type: 'base', props: { faction: 'NVA' } },
+      ],
+      s2: [
+        makeFactionToken('n4', 'NVA'),
+        makeFactionToken('n5', 'NVA'),
+        makeFactionToken('v1', 'VC'),
+        { id: asTokenId('b2'), type: 'base', props: { faction: 'NVA' } },
+      ],
+      s3: [
+        makeFactionToken('n6', 'NVA'),
+        makeFactionToken('u2', 'US'),
+      ],
+    });
+    const formula: VictoryFormula = {
+      type: 'controlledPopulationPlusMapBases',
+      controlFn: 'solo',
+      baseSeat: 'NVA',
+      basePieceTypes: ['base'],
+    };
+
+    assert.deepEqual(computeVictoryComponents(DERIVED_METRICS_CONTEXT, state, spaces, {}, DEFAULT_FACTION_CONFIG, formula), {
+      breakdowns: [
+        {
+          componentId: 'controlledPopulation',
+          aggregate: 6,
+          spaces: [
+            { spaceId: 's1', contribution: 3, factors: { population: 3 } },
+            { spaceId: 's2', contribution: 3, factors: { population: 3 } },
+          ],
+        },
+        {
+          componentId: 'mapBases',
+          aggregate: 2,
+          spaces: [
+            { spaceId: 's1', contribution: 1, factors: { count: 1 } },
+            { spaceId: 's2', contribution: 1, factors: { count: 1 } },
+          ],
+        },
+      ],
+    });
+  });
+
+  it('returns breakdowns for controlledPopulationPlusGlobalVar', () => {
+    const spaces: readonly ZoneDef[] = [
+      makeSpace({ id: 's1', population: 2 }),
+      makeSpace({ id: 's2', population: 2 }),
+      makeSpace({ id: 's3', population: 3 }),
+    ];
+    const state = makeState(
+      {
+        s1: [makeFactionToken('u1', 'US'), makeFactionToken('a1', 'ARVN'), makeFactionToken('n1', 'NVA')],
+        s2: [makeFactionToken('a2', 'ARVN')],
+        s3: [makeFactionToken('n2', 'NVA')],
+      },
+      { patronage: 18 },
+    );
+    const formula: VictoryFormula = {
+      type: 'controlledPopulationPlusGlobalVar',
+      controlFn: 'coin',
+      varName: 'patronage',
+    };
+
+    assert.deepEqual(computeVictoryComponents(DERIVED_METRICS_CONTEXT, state, spaces, {}, DEFAULT_FACTION_CONFIG, formula), {
+      breakdowns: [
+        {
+          componentId: 'controlledPopulation',
+          aggregate: 4,
+          spaces: [
+            { spaceId: 's1', contribution: 2, factors: { population: 2 } },
+            { spaceId: 's2', contribution: 2, factors: { population: 2 } },
+          ],
+        },
+        {
+          componentId: 'globalVar',
+          aggregate: 18,
+          spaces: [],
+        },
+      ],
+    });
+  });
+
+  it('throws typed error when controlledPopulationPlusGlobalVar references a non-numeric global var', () => {
+    const spaces: readonly ZoneDef[] = [makeSpace({ id: 's1', population: 2 })];
+    const state = makeState({ s1: [makeFactionToken('u1', 'US')] });
+    const formula: VictoryFormula = {
+      type: 'controlledPopulationPlusGlobalVar',
+      controlFn: 'coin',
+      varName: 'patronage',
+    };
+
+    assert.throws(
+      () => computeVictoryComponents(DERIVED_METRICS_CONTEXT, state, spaces, {}, DEFAULT_FACTION_CONFIG, formula),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { code?: unknown };
+        assert.equal(details.code, 'DERIVED_VALUE_FORMULA_NON_NUMERIC_VAR');
+        return true;
+      },
+    );
+  });
+
+  it('keeps space-based aggregates equal to the sum of space contributions', () => {
+    const spaces: readonly ZoneDef[] = [
+      makeSpace({ id: 's1', population: 2 }),
+      makeSpace({ id: 's2', population: 1 }),
+      makeSpace({ id: 's3', population: 3 }),
+    ];
+    const markerStates: Record<string, string> = {
+      s1: 'activeSupport',
+      s2: 'passiveSupport',
+      s3: 'neutral',
+    };
+    const state = makeState({
+      s1: [{ id: asTokenId('b1'), type: 'base', props: { faction: 'US' } }],
+      s2: [],
+      s3: [],
+    });
+    const formula: VictoryFormula = {
+      type: 'markerTotalPlusMapBases',
+      markerConfig: SUPPORT_CONFIG,
+      baseSeat: 'US',
+      basePieceTypes: ['base'],
+    };
+
+    const components = computeVictoryComponents(DERIVED_METRICS_CONTEXT, state, spaces, markerStates, DEFAULT_FACTION_CONFIG, formula);
+    for (const breakdown of components.breakdowns) {
+      if (breakdown.spaces.length === 0) {
+        continue;
+      }
+      const totalFromSpaces = breakdown.spaces.reduce((total, space) => total + space.contribution, 0);
+      assert.equal(breakdown.aggregate, totalFromSpaces);
+    }
+  });
+
+  it('emits stable semantic component ids for each supported formula shape', () => {
+    const formulas: readonly [VictoryFormula, readonly string[]][] = [
+      [
+        {
+          type: 'markerTotalPlusZoneCount',
+          markerConfig: SUPPORT_CONFIG,
+          countZone: 'available',
+        },
+        ['markerTotal', 'zoneCount'],
+      ],
+      [
+        {
+          type: 'markerTotalPlusMapBases',
+          markerConfig: SUPPORT_CONFIG,
+          baseSeat: 'US',
+          basePieceTypes: ['base'],
+        },
+        ['markerTotal', 'mapBases'],
+      ],
+      [
+        {
+          type: 'controlledPopulationPlusMapBases',
+          controlFn: 'coin',
+          baseSeat: 'US',
+          basePieceTypes: ['base'],
+        },
+        ['controlledPopulation', 'mapBases'],
+      ],
+      [
+        {
+          type: 'controlledPopulationPlusGlobalVar',
+          controlFn: 'coin',
+          varName: 'patronage',
+        },
+        ['controlledPopulation', 'globalVar'],
+      ],
+    ];
+    const spaces: readonly ZoneDef[] = [makeSpace({ id: 's1', population: 2 })];
+    const state = makeState(
+      {
+        s1: [{ id: asTokenId('b1'), type: 'base', props: { faction: 'US' } }],
+        available: [{ id: asTokenId('t1'), type: 'troops', props: { faction: 'US' } }],
+      },
+      { patronage: 5 },
+    );
+
+    for (const [formula, expectedIds] of formulas) {
+      const breakdownIds = computeVictoryComponents(
+        DERIVED_METRICS_CONTEXT,
+        state,
+        spaces,
+        { s1: 'activeSupport' },
+        DEFAULT_FACTION_CONFIG,
+        formula,
+      ).breakdowns.map((breakdown) => breakdown.componentId);
+      assert.deepEqual(breakdownIds, expectedIds);
+    }
   });
 });

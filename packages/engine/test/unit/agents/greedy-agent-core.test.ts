@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import { pickRandom } from '../../../src/agents/agent-move-selection.js';
 import { GreedyAgent } from '../../../src/agents/greedy-agent.js';
+import { NoPlayableMovesAfterPreparationError } from '../../../src/agents/no-playable-move.js';
 import {
   completeClassifiedMove,
   completeClassifiedMoves,
@@ -116,6 +117,30 @@ const createDefWithProfile = (
   triggers: [],
   terminal: { conditions: [] },
   actionPipelines: profiles,
+});
+
+const createEmptyOptionsProfile = (actionId: string): ActionPipelineDef => ({
+  id: `profile-${actionId}`,
+  actionId: asActionId(actionId),
+  legality: null,
+  costValidation: null,
+  costEffects: [],
+  targeting: {},
+  stages: [
+    {
+      stage: 'resolve',
+      effects: [
+        eff({
+          chooseOne: {
+            internalDecisionId: 'decision:$target',
+            bind: '$target',
+            options: { query: 'enums', values: [] },
+          },
+        }),
+      ],
+    },
+  ],
+  atomicity: 'atomic',
 });
 
 describe('GreedyAgent core', () => {
@@ -364,6 +389,29 @@ describe('GreedyAgent core', () => {
     assert.equal(new Set(selected).size, 2);
     assert.equal(selected.includes('alpha'), true);
     assert.equal(selected.includes('beta'), true);
+  });
+
+  it('throws a typed no-playable-move error when every classified move is unsatisfiable', () => {
+    const action = createTemplateChooseOneAction(asActionId('unplayable'), phaseId);
+    const emptyProfile = createEmptyOptionsProfile('unplayable');
+    const def = createDefWithProfile([action], [emptyProfile]);
+    const templateMove: Move = { actionId: asActionId('unplayable'), params: {} };
+    const agent = new GreedyAgent();
+
+    assert.throws(
+      () => agent.chooseMove({
+        def,
+        state: stateStub,
+        playerId: asPlayerId(0),
+        legalMoves: [pendingClassifiedMove(templateMove)],
+        rng: createRng(42n),
+      }),
+      (error: unknown) => (
+        error instanceof NoPlayableMovesAfterPreparationError
+        && error.agentId === 'greedy'
+        && error.legalMoveCount === 1
+      ),
+    );
   });
 
   // --- Stochastic unresolved template tests ---

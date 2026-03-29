@@ -1,6 +1,7 @@
 import type { Agent } from '../kernel/types.js';
 import { perfStart, perfDynEnd } from '../kernel/perf-profiler.js';
 import { toMoveIdentityKey } from '../kernel/move-identity.js';
+import { NoPlayableMovesAfterPreparationError } from './no-playable-move.js';
 import { evaluatePolicyMove } from './policy-eval.js';
 import { buildPolicyAgentDecisionTrace, type PolicyDecisionTraceLevel } from './policy-diagnostics.js';
 import { preparePlayableMoves } from './prepare-playable-moves.js';
@@ -47,6 +48,9 @@ export class PolicyAgent implements Agent {
     perfDynEnd(profiler, 'agent:preparePlayableMoves', t0_prepare);
 
     const playableMoves = prepared.completedMoves.length > 0 ? prepared.completedMoves : prepared.stochasticMoves;
+    if (playableMoves.length === 0) {
+      throw new NoPlayableMovesAfterPreparationError('policy', input.legalMoves.length);
+    }
 
     const t0_eval = perfStart(profiler);
     const result = evaluatePolicyMove({

@@ -14,6 +14,7 @@ import type {
   TerminalResult,
   ValidatedGameDef,
 } from '../kernel/index.js';
+import { isNoPlayableMovesAfterPreparationError } from '../agents/no-playable-move.js';
 import { computeDeltas } from './delta.js';
 
 const AGENT_RNG_MIX = 0x9e3779b97f4a7c15n;
@@ -129,15 +130,25 @@ export const runGame = (
       throw new Error(`missing agent or agent RNG for player ${String(player)}`);
     }
 
+    let selected;
     const t0_agent = perfStart(profiler);
-    const selected = agent.chooseMove({
-      def: validatedDef,
-      state,
-      playerId: player,
-      legalMoves: legalMoveResult.moves,
-      rng: agentRng,
-      runtime: resolvedRuntime,
-    });
+    try {
+      selected = agent.chooseMove({
+        def: validatedDef,
+        state,
+        playerId: player,
+        legalMoves: legalMoveResult.moves,
+        rng: agentRng,
+        runtime: resolvedRuntime,
+      });
+    } catch (error) {
+      perfEnd(profiler, 'simAgentChooseMove', t0_agent);
+      if (isNoPlayableMovesAfterPreparationError(error)) {
+        stopReason = 'noLegalMoves';
+        break;
+      }
+      throw error;
+    }
     perfEnd(profiler, 'simAgentChooseMove', t0_agent);
     agentRngByPlayer[player] = selected.rng;
 

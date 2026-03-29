@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { VictoryComponentId } from '@ludoforge/engine/runtime';
 import { ANIMATION_PRESET_OVERRIDE_KEYS } from '../animation/animation-types.js';
 
 export const BitmapFontRoleSchema = z.enum(['label', 'labelStroke']);
@@ -524,14 +525,23 @@ const PhaseBannersSchema = z.object({
   phases: z.array(z.string()).min(1),
 });
 
-const VictoryTooltipComponentSchema = z.object({
+const VictoryComponentIdSchema = z.enum([
+  'markerTotal',
+  'zoneCount',
+  'mapBases',
+  'controlledPopulation',
+  'globalVar',
+]) satisfies z.ZodType<VictoryComponentId>;
+
+const VictoryTooltipComponentMetadataSchema = z.object({
   label: z.string(),
   description: z.string().optional(),
+  detailTemplate: z.string().optional(),
 });
 
 const VictoryTooltipBreakdownSchema = z.object({
   seat: z.string(),
-  components: z.array(VictoryTooltipComponentSchema),
+  componentsById: z.partialRecord(VictoryComponentIdSchema, VictoryTooltipComponentMetadataSchema),
 });
 
 const VictoryStandingsVisualSchema = z.object({
@@ -664,7 +674,7 @@ export type ShowdownZoneSelectorConfig = z.infer<typeof ShowdownZoneSelectorSche
 export type ShowdownSurfaceConfig = z.infer<typeof ShowdownSurfaceSchema>;
 export type RunnerSurfacesConfig = z.infer<typeof RunnerSurfacesConfigSchema>;
 export type PhaseBannersConfig = z.infer<typeof PhaseBannersSchema>;
-export type VictoryTooltipComponent = z.infer<typeof VictoryTooltipComponentSchema>;
+export type VictoryTooltipComponentMetadata = z.infer<typeof VictoryTooltipComponentMetadataSchema>;
 export type VictoryTooltipBreakdown = z.infer<typeof VictoryTooltipBreakdownSchema>;
 export type VictoryStandingsVisualConfig = z.infer<typeof VictoryStandingsVisualSchema>;
 export type ActionChoiceOptionVisual = z.infer<typeof ActionChoiceOptionVisualSchema>;

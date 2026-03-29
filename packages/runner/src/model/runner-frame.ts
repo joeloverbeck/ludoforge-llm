@@ -4,6 +4,7 @@ import type {
   DecisionKey,
   MoveParamValue,
   PlayerId,
+  VictoryComponentId,
 } from '@ludoforge/engine/runtime';
 
 export interface RunnerVictoryStandingEntry {
@@ -11,7 +12,19 @@ export interface RunnerVictoryStandingEntry {
   readonly score: number;
   readonly threshold: number;
   readonly rank: number;
-  readonly components: readonly number[];
+  readonly components: readonly RunnerComponentBreakdown[];
+}
+
+export interface RunnerSpaceContribution {
+  readonly spaceId: string;
+  readonly contribution: number;
+  readonly factors: Readonly<Record<string, number>>;
+}
+
+export interface RunnerComponentBreakdown {
+  readonly componentId: VictoryComponentId;
+  readonly aggregate: number;
+  readonly spaces: readonly RunnerSpaceContribution[];
 }
 
 export interface RunnerRuntimeEligibleFaction {

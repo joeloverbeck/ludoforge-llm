@@ -27,7 +27,7 @@ describe('FITL policy agent integration', () => {
       us: 'us-baseline',
       arvn: 'arvn-baseline',
       nva: 'nva-baseline',
-      vc: 'vc-baseline',
+      vc: 'vc-evolved',
     });
   });
 
@@ -102,7 +102,7 @@ describe('FITL policy agent integration', () => {
         move.agentDecision.resolvedProfileId === 'us-baseline'
           || move.agentDecision.resolvedProfileId === 'arvn-baseline'
           || move.agentDecision.resolvedProfileId === 'nva-baseline'
-          || move.agentDecision.resolvedProfileId === 'vc-baseline',
+          || move.agentDecision.resolvedProfileId === 'vc-evolved',
       );
     }
   });

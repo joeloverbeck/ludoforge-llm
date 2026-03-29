@@ -473,6 +473,23 @@ describe('FITL compilation produces auto-synthesized derivedMetrics', () => {
     const results = computeAllVictoryStandings(gameDef, state, gameDef.victoryStandings);
     assert.ok(Array.isArray(results), 'Should return an array of standings');
     assert.equal(results.length, gameDef.victoryStandings.entries.length);
+    const componentIdsBySeat = new Map<string, string[]>();
+    for (const result of results) {
+      const componentIds: string[] = [];
+      for (const breakdown of result.components.breakdowns) {
+        componentIds.push(breakdown.componentId);
+      }
+      componentIdsBySeat.set(result.seat, componentIds);
+    }
+    assert.deepEqual(
+      componentIdsBySeat,
+      new Map([
+        ['us', ['markerTotal', 'zoneCount']],
+        ['arvn', ['controlledPopulation', 'globalVar']],
+        ['nva', ['controlledPopulation', 'mapBases']],
+        ['vc', ['markerTotal', 'mapBases']],
+      ]),
+    );
   });
 
   it('computeAllVictoryStandings reflects marker states on spaces', () => {
@@ -514,17 +531,19 @@ describe('FITL compilation produces auto-synthesized derivedMetrics', () => {
     assert.ok(vcResult, 'Should have VC result');
     assert.ok(usResult, 'Should have US result');
 
-    // VC Total Opposition component (first component of markerTotalPlusMapBases)
+    // VC Total Opposition component
     // activeOpposition on pop-1 space → 1 × 2 = 2
-    assert.ok(vcResult!.components.values.length >= 1, 'VC should have at least 1 component');
-    const vcOpposition = vcResult!.components.values[0] as number;
+    assert.ok(vcResult!.components.breakdowns.length >= 1, 'VC should have at least 1 component');
+    const vcOpposition = vcResult!.components.breakdowns.find((breakdown) => breakdown.componentId === 'markerTotal')
+      ?.aggregate as number;
     assert.ok(vcOpposition >= 2,
       `VC Total Opposition should be >= 2 (got ${vcOpposition})`);
 
-    // US Total Support component (first component of markerTotalPlusZoneCount)
+    // US Total Support component
     // passiveSupport on pop-6 space → 6 × 1 = 6
-    assert.ok(usResult!.components.values.length >= 1, 'US should have at least 1 component');
-    const usSupport = usResult!.components.values[0] as number;
+    assert.ok(usResult!.components.breakdowns.length >= 1, 'US should have at least 1 component');
+    const usSupport = usResult!.components.breakdowns.find((breakdown) => breakdown.componentId === 'markerTotal')
+      ?.aggregate as number;
     assert.ok(usSupport >= 6,
       `US Total Support should be >= 6 (got ${usSupport})`);
   });

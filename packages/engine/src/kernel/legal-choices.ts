@@ -187,8 +187,23 @@ interface LegalChoicesInternalOptions extends LegalChoicesRuntimeOptions {
   readonly _diagnosticsAccumulator?: ChooseNDiagnosticsAccumulator;
 }
 
+const actionMapCache = new WeakMap<readonly ActionDef[], ReadonlyMap<ActionDef['id'], ActionDef>>();
+
+const getActionMap = (actions: readonly ActionDef[]): ReadonlyMap<ActionDef['id'], ActionDef> => {
+  let cached = actionMapCache.get(actions);
+  if (cached === undefined) {
+    const map = new Map<ActionDef['id'], ActionDef>();
+    for (const action of actions) {
+      map.set(action.id, action);
+    }
+    cached = map;
+    actionMapCache.set(actions, cached);
+  }
+  return cached;
+};
+
 const findAction = (def: GameDef, actionId: Move['actionId']): ActionDef | undefined =>
-  def.actions.find((action) => action.id === actionId);
+  getActionMap(def.actions).get(actionId);
 
 export interface LegalChoicesPreparedContext {
   readonly def: GameDef;

@@ -45,6 +45,13 @@ export const resolveActionActorCore = ({
   runtimeTableIndex,
   evalRuntimeResources,
 }: ResolveActionActorCoreInput): ActionActorResolution => {
+  // Fast path: when actor is 'active', the resolved actors are always
+  // [ctx.activePlayer] and decisionPlayer IS activePlayer in enumeration
+  // context. Skip eval context creation and player selector resolution.
+  if (action.actor === 'active') {
+    return { kind: 'applicable' };
+  }
+
   const selectorContext = createEvalContext({
     def,
     adjacencyGraph,

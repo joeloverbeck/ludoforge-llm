@@ -7,9 +7,18 @@
 **Estimated effort**: 2-3 days
 **Source sections**: Brainstorming sections 2.4B, 2.4C, 6.5
 
+## Additional Context: Agent Campaign Dependency
+
+The FITL VC agent evolution campaign (2026-03-29) revealed that Spec 11 is not just an evolution pipeline prerequisite — it is needed for **agent evaluation quality**. Seed 1009 in the 15-seed tournament terminates after 3 moves with `noLegalMoves` (a `NO_LEGAL_MOVES` degeneracy), producing VC margin=-8 that drags down the composite score. Without Spec 11, the campaign harness cannot distinguish "VC lost strategically" from "game terminated due to game-definition degeneracy." This conflation distorts the fitness signal and wastes campaign experiments trying to improve a fundamentally unfixable seed.
+
+When implemented, agent campaign harnesses should use `detectDegeneracy` to:
+- Exclude degenerate games from strategy-evaluation metrics
+- Track degeneracy frequency as a game-definition quality metric
+- Categorize losses by cause (strategic vs structural)
+
 ## Overview
 
-Implement the evaluation layer that analyzes game traces to produce quality metrics and detect degenerate game designs. Given one or more GameTraces from the simulator (Spec 10), compute 7 quality metrics (game length, branching factor, action diversity, resource tension, interaction, dominant action frequency, drama) and check for 6 degeneracy flags (loops, stalls, dominant actions, trivial wins, no legal moves, trigger depth exceeded). Output a structured `EvalReport` for use by the CLI (Spec 12) and evolution pipeline (Spec 14).
+Implement the evaluation layer that analyzes game traces to produce quality metrics and detect degenerate game designs. Given one or more GameTraces from the simulator (Spec 10), compute 7 quality metrics (game length, branching factor, action diversity, resource tension, interaction, dominant action frequency, drama) and check for 6 degeneracy flags (loops, stalls, dominant actions, trivial wins, no legal moves, trigger depth exceeded). Output a structured `EvalReport` for use by the CLI (Spec 12), evolution pipeline (Spec 14), and agent evolution campaigns.
 
 ## Scope
 

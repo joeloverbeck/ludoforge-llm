@@ -626,29 +626,45 @@ actionGroupPolicy:
 victoryStandings:
   tooltipBreakdowns:
     - seat: us
-      components:
-        - label: "Total Support"
+      componentsById:
+        markerTotal:
+          label: "Total Support"
           description: "Population-weighted support (active x2, passive x1)"
-        - label: "Available US Pieces"
+          detailTemplate: "(pop {population}) x{multiplier} = {contribution}"
+        zoneCount:
+          label: "Available US Pieces"
           description: "Troops and bases in Available space"
+          detailTemplate: "{contribution}"
     - seat: arvn
-      components:
-        - label: "COIN-Controlled Population"
+      componentsById:
+        controlledPopulation:
+          label: "COIN-Controlled Population"
           description: "Population where US+ARVN pieces > NVA+VC pieces"
-        - label: "Patronage"
+          detailTemplate: "(pop {population}) = {contribution}"
+        globalVar:
+          label: "Patronage"
           description: "ARVN political support (global variable)"
+          detailTemplate: "{contribution}"
     - seat: nva
-      components:
-        - label: "NVA-Controlled Population"
+      componentsById:
+        controlledPopulation:
+          label: "NVA-Controlled Population"
           description: "Population where NVA pieces > all others combined"
-        - label: "NVA Bases on Map"
+          detailTemplate: "(pop {population}) = {contribution}"
+        mapBases:
+          label: "NVA Bases on Map"
           description: "NVA bases across all map spaces"
+          detailTemplate: "{contribution}"
     - seat: vc
-      components:
-        - label: "Total Opposition"
+      componentsById:
+        markerTotal:
+          label: "Total Opposition"
           description: "Population-weighted opposition (active x2, passive x1)"
-        - label: "VC Bases on Map"
+          detailTemplate: "(pop {population}) x{multiplier} = {contribution}"
+        mapBases:
+          label: "VC Bases on Map"
           description: "VC bases across all map spaces"
+          detailTemplate: "{contribution}"
 
 regions:
   groupByAttribute: country

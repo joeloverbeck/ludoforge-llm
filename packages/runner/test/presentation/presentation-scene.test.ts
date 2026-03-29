@@ -55,6 +55,7 @@ function makeRunnerFrame(overrides: Partial<RunnerFrame> = {}): RunnerFrame {
     actionGroups: [],
     choiceBreadcrumb: [],
     choiceContext: null,
+    selectedActionId: null,
     choiceUi: { kind: 'none' },
     moveEnumerationWarnings: [],
     runtimeEligible: [],

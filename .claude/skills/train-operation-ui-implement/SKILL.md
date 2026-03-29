@@ -12,7 +12,7 @@ Improve the runner UI based on the latest evaluation's scores and recommendation
 ## Checklist
 
 1. Read `reports/ui-readability-evaluation.md` — focus on the latest EVALUATION #N
-2. Identify the CRITICAL and HIGH recommendations
+2. Identify the CRITICAL and HIGH recommendations. If none exist, target the top 2-3 MEDIUM recommendations instead.
 3. Note which metrics scored lowest — these are the priority targets
 4. Read the relevant source files (see Key Files below)
 5. Trace the data flow (see Data Flow Reference) and use Fix Category Triage to classify each issue as data pipeline or display logic
@@ -38,7 +38,9 @@ Improve the runner UI based on the latest evaluation's scores and recommendation
 | `packages/runner/src/model/choice-value-utils.ts` | Choice value formatting with fallback strategies |
 | `packages/runner/src/config/visual-config-types.ts` | Zod schemas for visual config (`ActionChoiceVisualSchema`, `ActionVisualSchema`, etc.) — must be updated when extending the config contract |
 | `packages/runner/src/config/visual-config-provider.ts` | Visual config accessor methods (zone labels, display names, choice prompts, choice labels, choice option display names) |
+| `packages/runner/src/ui/bottom-bar-mode.ts` | Maps `choiceUi.kind` to `ChoicePanelMode` — determines whether the panel shows pending choice, confirm, or invalid state |
 | `packages/runner/src/ui/GameContainer.tsx` | Top-level layout that positions the choice panel |
+| `packages/runner/src/store/store-types.ts` | Defines `RenderContext` — the input shape for all `derive-runner-frame.ts` derivation functions (`selectedAction`, `choicePending`, `choiceStack`, etc.) |
 | `data/games/fire-in-the-lake/visual-config.yaml` | FITL-specific visual configuration overrides |
 
 ## Key Test Files
@@ -47,6 +49,7 @@ Improve the runner UI based on the latest evaluation's scores and recommendation
 |------|---------------|
 | `packages/runner/test/model/project-render-model-state.test.ts` | Render model projection tests — `choiceContext`, `decisionPrompt`, `decisionLabel`, breadcrumbs, `iterationLabel` |
 | `packages/runner/test/ui/ChoicePanel.test.ts` | ChoicePanel component rendering — `ChoiceContextHeader`, breadcrumb display, multi-select mode |
+| `packages/runner/test/ui/helpers/render-model-fixture.ts` | Central `RenderModel` fixture factory — must be updated when adding fields to `RenderModel` |
 
 ## Data Flow Reference
 
@@ -87,6 +90,25 @@ Most eval issues fall into one of two categories:
 
 - **Data pipeline fix** (wrong *content*): The rendered values are incorrect, duplicated, or missing. Fix in `derive-runner-frame.ts` (entity extraction) or `project-render-model.ts` (display name resolution). Examples: raw AST paths, missing iteration labels, duplicated label suffixes.
 - **Display logic fix** (wrong *presentation*): The values are correct but shown poorly. Fix in `ChoicePanel.tsx` (layout, concatenation) or `ChoicePanel.module.css` (spacing, colors, typography). Examples: cramped breadcrumbs, weak visual distinction, layout hierarchy issues.
+- **Model extension** (missing *plumbing*): The data exists in the derivation context (`RenderContext` in `store-types.ts`) but isn't exposed on `RunnerFrame` or `RenderModel`. Add the field to the interface, set it in `derive-runner-frame.ts`, resolve the display name in `project-render-model.ts`, and update all test fixtures (~9 files construct `RunnerFrame` or `RenderModel` manually). Examples: exposing `selectedActionId` for confirm screen prompts, adding new display name fields.
+
+### Confirm Screen State
+
+On the final confirmation screen (`choiceUi.kind === 'confirmReady'`), `choicePending` is null but `selectedAction` is still available in the derivation context. This means:
+- `choiceContext` on `RunnerFrame` and `RenderModel` is `null` (no pending decision)
+- `selectedActionId` on `RunnerFrame` is still set (the action is selected, just fully parameterized)
+- `selectedActionDisplayName` on `RenderModel` resolves the action's display name
+- `ChoicePanel.tsx` receives `mode === 'choiceConfirm'` (from `bottom-bar-mode.ts`)
+- The `ChoiceContextHeader` is skipped when `choiceContext` is null — any confirm-specific prompt must be rendered separately
+
+### Breadcrumb Group Header Labels
+
+Breadcrumb group headers (e.g., "Additional Space (1x)") get their display text from:
+1. `CollapsedBreadcrumb` in `ChoicePanel.tsx` reads `firstStep.displayName` from the first step in the group (line ~410)
+2. `displayName` is set in `project-render-model.ts` breadcrumb mapping — it checks visual config `getChoiceLabel()` first, then falls back to `humanizeDecisionParamName(step.name)`
+3. Visual config labels (e.g., `subActionSpaces.label: "Additional Space"`) override the auto-generated Title Case conversion
+
+To add a new group header override: add a `label` field under the action's `choices.<paramName>` in `visual-config.yaml`. The breadcrumb projection will pick it up automatically.
 
 ## Architecture Context
 
@@ -174,7 +196,7 @@ These are hard-won lessons from previous implementation sessions. Check this sec
 - **Label duplication**: Don't embed labels into `decisionPrompt` if `iterationLabel` or the `ChoiceContextHeader` also renders a label. There should be exactly one place that controls label display.
 - **AST path fallback**: `formatIdAsDisplayName()` does NOT strip AST path prefixes. Use `humanizeDecisionParamName()` when the input might be an AST path (e.g., `iterationEntityId` fallback, breadcrumb step names).
 - **Prompt composition check**: When changing how `decisionPrompt`, `decisionLabel`, or `iterationLabel` are set, always verify what `ChoiceContextHeader` concatenates — it combines multiple fields into one visible string.
-- **Test field contracts**: `RenderChoiceContext` is constructed directly in `ChoicePanel.test.ts` — any new fields added to the interface must also be added to those test fixtures.
+- **Test field contracts**: `RenderChoiceContext` is constructed directly in `ChoicePanel.test.ts`, and `RunnerFrame` / `RenderModel` are constructed manually in ~9 test fixture files (`canvas-updater.test.ts`, `table-overlay-renderer.test.ts`, `render-model-types.test.ts`, `presentation-scene.test.ts`, `project-table-overlay-surface.test.ts`, `GameContainer.test.ts`, `bottom-bar-mode.test.ts`, `render-model-fixture.ts`, `project-render-model-victory-standings.test.ts`). Adding a new field to any of these interfaces requires updating all constructing fixtures.
 
 ## Scope Constraints
 

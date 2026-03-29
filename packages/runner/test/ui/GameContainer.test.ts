@@ -256,6 +256,7 @@ function makeRenderModel(overrides: Partial<NonNullable<GameStore['renderModel']
     hiddenActionsByClass: new Map(),
     choiceBreadcrumb: [],
     choiceContext: null,
+    selectedActionDisplayName: null,
     choiceUi: { kind: 'none' },
     moveEnumerationWarnings: [],
     runtimeEligible: [],

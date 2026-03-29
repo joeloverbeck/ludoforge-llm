@@ -108,6 +108,7 @@ export interface RenderModel {
   readonly actionGroups: readonly RenderActionGroup[];
   readonly hiddenActionsByClass: ReadonlyMap<string, readonly RenderAction[]>;
   readonly choiceBreadcrumb: readonly RenderChoiceStep[];
+  readonly selectedActionDisplayName: string | null;
   readonly choiceContext: RenderChoiceContext | null;
   readonly choiceUi: RenderChoiceUi;
   readonly moveEnumerationWarnings: readonly RenderWarning[];

@@ -133,6 +133,7 @@ export function deriveRunnerFrame(
     eventDecks,
     actionGroups: deriveActionGroups((context.legalMoveResult?.moves ?? []).map(({ move }) => move)),
     choiceBreadcrumb: deriveChoiceBreadcrumb(context, zonesById),
+    selectedActionId: context.selectedAction ?? null,
     choiceContext,
     choiceUi,
     moveEnumerationWarnings: (context.legalMoveResult?.warnings ?? []).map((warning) => ({

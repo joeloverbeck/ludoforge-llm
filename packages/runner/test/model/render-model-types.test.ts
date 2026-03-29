@@ -122,6 +122,7 @@ describe('render-model types', () => {
         },
       ],
       choiceContext: null,
+      selectedActionDisplayName: null,
       choiceUi: {
         kind: 'discreteMany',
         decisionKey: asDecisionKey('pick-tokens'),

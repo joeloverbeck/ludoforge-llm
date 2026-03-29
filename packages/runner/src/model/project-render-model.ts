@@ -74,18 +74,31 @@ export function projectRenderModel(
       displayName: formatIdAsDisplayName(deck.id),
     })),
     ...projectActionGroups(frame.actionGroups, visualConfigProvider),
-    choiceBreadcrumb: frame.choiceBreadcrumb.map((step) => ({
-      decisionKey: step.decisionKey,
-      name: step.name,
-      displayName: humanizeDecisionParamName(step.name),
-      chosenValueId: step.chosenValueId,
-      chosenValue: step.chosenValue,
-      chosenDisplayName: formatChoiceValueResolved(step.chosenValue, zonesById),
-      iterationGroupId: step.iterationGroupId,
-      iterationLabel: step.iterationEntityId === null
-        ? null
-        : resolveIterationEntityDisplayName(step.iterationEntityId, zonesById),
-    })),
+    choiceBreadcrumb: (() => {
+      const actionId = frame.selectedActionId ?? '';
+      return frame.choiceBreadcrumb.map((step) => {
+        const strippedName = stripDecisionParamPrefix(step.name);
+        const astTail = extractAstParamTail(step.name);
+        const configLabel = visualConfigProvider.getChoiceLabel(actionId, strippedName)
+          ?? (astTail !== null ? visualConfigProvider.getChoiceLabel(actionId, astTail) : null);
+        return {
+          decisionKey: step.decisionKey,
+          name: step.name,
+          displayName: configLabel ?? humanizeDecisionParamName(step.name),
+          chosenValueId: step.chosenValueId,
+          chosenValue: step.chosenValue,
+          chosenDisplayName: formatChoiceValueResolved(step.chosenValue, zonesById),
+          iterationGroupId: step.iterationGroupId,
+          iterationLabel: step.iterationEntityId === null
+            ? null
+            : resolveIterationEntityDisplayName(step.iterationEntityId, zonesById),
+        };
+      });
+    })(),
+    selectedActionDisplayName: frame.selectedActionId === null
+      ? null
+      : visualConfigProvider.getActionDisplayName(frame.selectedActionId)
+        ?? formatIdAsDisplayName(frame.selectedActionId),
     choiceContext,
     choiceUi,
     moveEnumerationWarnings: frame.moveEnumerationWarnings,

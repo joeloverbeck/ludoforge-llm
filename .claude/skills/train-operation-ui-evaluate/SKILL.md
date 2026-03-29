@@ -11,7 +11,8 @@ Score the current UI state from screenshots and append a structured evaluation t
 
 1. Read `reports/ui-readability-evaluation.md` — absorb the rubric and the last 2-3 evaluations. The file grows with each evaluation; use this strategy:
    - Read the first ~30 lines for the rubric and scoring guide
-   - Read backward from the end of the file in ~100-line chunks until you have the last 2-3 complete evaluations (each evaluation is ~70-100 lines)
+   - Count total lines (`wc -l`), then read from `offset = totalLines - 200` to get the last 2-3 evaluations in one pass (each evaluation is ~70-100 lines)
+   - To build the Score Trend table efficiently, grep for `\*\*Average\*\*` in the report file — this returns all historical averages in one pass
    - Skip intermediate evaluations unless checking recurring issue history
 2. Glob for `screenshots/fitl-train-*.png` to discover all available screenshots, then read them in **parallel batches of 5-6** (use multiple Read tool calls in a single message). This minimizes tool call rounds.
 3. Determine the next evaluation number from the last `## EVALUATION #N` heading
@@ -110,6 +111,7 @@ Append exactly this structure:
 When the number of screenshots changes between evaluations:
 - Note the change in the evaluation header
 - Describe what the new (or removed) screenshots capture
+- Update the **Screenshot Reference** section near the top of the report file to describe all current screenshots
 - Mark issues found only in new screenshots as "newly visible" rather than "regression" — these issues may have always existed but were not captured before
 - Scores may drop due to expanded coverage without any code change. Add the comparability note to the scores section to prevent misinterpreting this as a regression.
 
@@ -140,7 +142,26 @@ If the Score Trend shows oscillation (alternating positive/negative deltas for 4
 
 ## Report File Maintenance
 
-When the report file exceeds ~500 lines or ~10 evaluations, archive older evaluations:
-- Keep the rubric and the last 5 evaluations in the active file
-- Move archived evaluations to `reports/ui-readability-evaluation-archive.md`
-- Preserve the archive file's existing content (append, don't overwrite)
+When the report file exceeds ~500 lines or ~10 evaluations, archive older evaluations.
+
+**What to keep in the active file**: The rubric/header (everything before the first `---` separator) and the last 5 evaluations.
+
+**Archival procedure**:
+1. Identify which evaluations to archive — keep the rubric + last 5 evaluations
+2. Grep for `^## EVALUATION #` to find all evaluation line numbers
+3. Find the line number of the `---` separator immediately before the oldest evaluation to keep
+4. Read the content to be archived (everything between the rubric and that separator)
+5. Write or append to `reports/ui-readability-evaluation-archive.md`:
+   - If the archive file does not exist, create it with a header: `# UI Readability Evaluation — Archive` and a brief description line
+   - If it already exists, append the new archived evaluations after the existing content
+6. Archive evaluations **verbatim** — do not condense or summarize. The archive is a historical record.
+7. Remove the archived evaluations from the active file using bash: `head -N file > trimmed && tail -n +M file >> trimmed && mv trimmed file` (where N = last rubric line, M = first line of the oldest kept evaluation's `---` separator)
+8. Verify: grep for `## EVALUATION #` in both files to confirm the correct split
+
+## Graduation
+
+If the average score reaches **8.0+** and no CRITICAL or HIGH recommendations remain, note in the evaluation that the UI has graduated to acceptable quality. Further evaluations are optional — invoke only after significant UI changes.
+
+## Scope
+
+This skill is scoped to the FITL Train operation (`screenshots/fitl-train-*.png`). To evaluate other operations or games, create a copy with adjusted screenshot glob pattern and report file path. The evaluation methodology and 6 metrics apply unchanged.

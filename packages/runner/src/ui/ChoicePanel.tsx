@@ -494,6 +494,11 @@ export function ChoicePanel({ store, mode }: ChoicePanelProps): ReactElement | n
     <section className={styles.panel} aria-label="Choice panel" data-testid="choice-panel">
       {effectiveContext != null ? (
         <ChoiceContextHeader context={effectiveContext} />
+      ) : showConfirm && choiceModel.selectedActionDisplayName != null ? (
+        <div className={styles.choiceContextHeader} data-testid="choice-context-header">
+          <span className={styles.actionBadge}>{choiceModel.selectedActionDisplayName}</span>
+          <span className={styles.decisionPrompt}>Confirm your selections</span>
+        </div>
       ) : null}
       {mode !== 'choiceInvalid' ? (
         <CollapsedBreadcrumb

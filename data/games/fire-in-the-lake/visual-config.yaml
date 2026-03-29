@@ -695,6 +695,11 @@ actions:
       pacLevels:
         label: Pacification Level
         prompt: Choose pacification level
+        options:
+          1:
+            displayName: 1 level
+          2:
+            displayName: 2 levels
   patrol:
     choices:
       targetSpaces:

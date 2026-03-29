@@ -24,6 +24,7 @@ function createBundle(): RunnerProjectionBundle {
       actionGroups: [],
       choiceBreadcrumb: [],
       choiceContext: null,
+      selectedActionId: null,
       choiceUi: { kind: 'none' },
       moveEnumerationWarnings: [],
       runtimeEligible: [],

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — golden fixture update + new integration test
-**Deps**: `tickets/93COMMOVPOLEVA-003.md`, `tickets/93COMMOVPOLEVA-004.md`
+**Deps**: `archive/tickets/93COMMOVPOLEVA-003.md`, `tickets/93COMMOVPOLEVA-004.md`
 
 ## Problem
 

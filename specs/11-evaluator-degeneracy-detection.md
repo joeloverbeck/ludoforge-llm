@@ -1,226 +1,281 @@
 # Spec 11: Evaluator & Degeneracy Detection
 
-**Status**: Draft
-**Priority**: P1 (required for MVP)
+**Status**: Ready
+**Priority**: P1
 **Complexity**: M
-**Dependencies**: Spec 10
-**Estimated effort**: 2-3 days
+**Dependencies**: Spec 10 (simulator + trace recording)
 **Source sections**: Brainstorming sections 2.4B, 2.4C, 6.5
 
 ## Additional Context: Agent Campaign Dependency
 
 The FITL VC agent evolution campaign (2026-03-29) revealed that Spec 11 is not just an evolution pipeline prerequisite — it is needed for **agent evaluation quality**. Seed 1009 in the 15-seed tournament terminates after 3 moves with `noLegalMoves` (a `NO_LEGAL_MOVES` degeneracy), producing VC margin=-8 that drags down the composite score. Without Spec 11, the campaign harness cannot distinguish "VC lost strategically" from "game terminated due to game-definition degeneracy." This conflation distorts the fitness signal and wastes campaign experiments trying to improve a fundamentally unfixable seed.
 
-When implemented, agent campaign harnesses should use `detectDegeneracy` to:
+When implemented, agent campaign harnesses should use `evaluateTrace` to:
 - Exclude degenerate games from strategy-evaluation metrics
 - Track degeneracy frequency as a game-definition quality metric
 - Categorize losses by cause (strategic vs structural)
 
 ## Overview
 
-Implement the evaluation layer that analyzes game traces to produce quality metrics and detect degenerate game designs. Given one or more GameTraces from the simulator (Spec 10), compute 7 quality metrics (game length, branching factor, action diversity, resource tension, interaction, dominant action frequency, drama) and check for 6 degeneracy flags (loops, stalls, dominant actions, trivial wins, no legal moves, trigger depth exceeded). Output a structured `EvalReport` for use by the CLI (Spec 12), evolution pipeline (Spec 14), and agent evolution campaigns.
+Implement the evaluation layer that analyzes game traces to produce quality metrics and detect degenerate game definitions. The primary consumer is **agent campaign harnesses** — evaluator output enables campaigns to distinguish strategic losses from structural degeneracy, exclude degenerate seeds from strategy-evaluation metrics, and track game-definition quality over time. Secondary consumer: CLI (Spec 12) for ad-hoc game analysis.
+
+The API is split into two levels:
+1. **Per-trace**: `evaluateTrace(trace, config?)` computes 7 quality metrics and checks 6 degeneracy flags for a single `GameTrace`.
+2. **Aggregate**: `aggregateEvals(gameDefId, evals[])` combines per-trace results into an `EvalReport` with mean metrics, union of flags, and per-seed breakdown.
+
+All computation uses trace data only — no re-simulation needed.
 
 ## Scope
 
 ### In Scope
-- `computeMetrics(traces)` — compute 7 quality metrics from trace data
-- `detectDegeneracy(traces)` — check for 6 degeneracy flags
-- `generateEvalReport(def, traces)` — combine metrics + flags into structured report
-- All computation from trace data only (no re-simulation needed)
-- Configurable thresholds for degeneracy detection
+- `evaluateTrace(trace, config?)` — per-trace metrics + degeneracy flags
+- `aggregateEvals(gameDefId, evals[])` — aggregate into EvalReport
+- `generateEvalReport(def, traces, config?)` — convenience wrapper
+- Delta reconstruction for per-turn perPlayerVars state (resourceTension, dramaMeasure)
+- Configurable thresholds via `EvalConfig`
+- Explicit `scoringVar` configuration for dramaMeasure
 
 ### Out of Scope
-- Fitness function tiers (Spec 14 — uses metrics from this spec)
-- MAP-Elites archive management (Spec 14)
-- BehaviorCharacterization computation (Spec 14 — but uses metrics from here)
-- Human evaluation gates (post-MVP)
-- Highlight/interesting-moment detection (nice-to-have, not MVP)
+- Composite scores / fitness functions (consumers compute their own)
+- MAP-Elites / evolution pipeline integration (Spec 14, deferred)
+- BehaviorCharacterization computation (Spec 14, deferred)
+- Human evaluation gates
 - Trace generation (Spec 10)
 
 ## Key Types & Interfaces
 
-### Public API
+### Per-Trace Evaluation
 
 ```typescript
-// Compute quality metrics from one or more game traces
-function computeMetrics(traces: readonly GameTrace[]): Metrics;
+/** Metrics computed from a single trace. */
+interface TraceMetrics {
+  readonly gameLength: number;          // = turnsCount
+  readonly avgBranchingFactor: number;  // mean legalMoveCount across moves
+  readonly actionDiversity: number;     // normalized Shannon entropy [0, 1]
+  readonly resourceTension: number;     // mean per-turn cross-player var variance
+  readonly interactionProxy: number;    // cross-player delta ratio [0, 1]
+  readonly dominantActionFreq: number;  // frequency of most-used action [0, 1]
+  readonly dramaMeasure: number;        // lead changes / gameLength (0 if no scoringVar)
+}
 
-// Detect degeneracy flags from one or more game traces
-function detectDegeneracy(
-  traces: readonly GameTrace[],
-  config?: DegeneracyConfig
-): readonly DegeneracyFlag[];
-
-// Generate complete evaluation report
-function generateEvalReport(
-  def: GameDef,
-  traces: readonly GameTrace[],
-  config?: DegeneracyConfig
-): EvalReport;
-```
-
-### Metrics (from Spec 02 types)
-
-```typescript
-interface Metrics {
-  readonly avgGameLength: number;        // mean turns across traces
-  readonly avgBranchingFactor: number;   // mean legal moves per turn
-  readonly actionDiversity: number;      // normalized entropy [0, 1]
-  readonly resourceTension: number;      // variance in resource levels
-  readonly interactionProxy: number;     // effects targeting other players / total
-  readonly dominantActionFreq: number;   // frequency of most-used action
-  readonly dramaMeasure: number;         // lead changes / game length
+/** Result of evaluating a single trace. */
+interface TraceEval {
+  readonly seed: number;
+  readonly turnCount: number;
+  readonly stopReason: SimulationStopReason;
+  readonly metrics: TraceMetrics;
+  readonly degeneracyFlags: readonly DegeneracyFlag[];
 }
 ```
 
-### DegeneracyConfig
+### Configuration
 
 ```typescript
-interface DegeneracyConfig {
-  readonly trivialWinThreshold: number;  // games shorter than this are trivial (default: 5)
-  readonly stallTurnThreshold: number;   // consecutive same-hash turns to flag stall (default: 10)
-  readonly dominantActionThreshold: number; // frequency above this flags dominant (default: 0.8)
+interface EvalConfig {
+  readonly trivialWinThreshold?: number;     // default: 5
+  readonly stallTurnThreshold?: number;      // default: 10
+  readonly dominantActionThreshold?: number; // default: 0.8
+  readonly scoringVar?: string;              // per-player var name for dramaMeasure
 }
 
-const DEFAULT_DEGENERACY_CONFIG: DegeneracyConfig = {
+const DEFAULT_EVAL_CONFIG: Required<Omit<EvalConfig, 'scoringVar'>> = {
   trivialWinThreshold: 5,
   stallTurnThreshold: 10,
   dominantActionThreshold: 0.8,
 };
 ```
 
-### EvalReport (from Spec 02 types)
+### Aggregated Report
 
 ```typescript
+/** Aggregated metrics (means of per-trace TraceMetrics). */
+interface Metrics {
+  readonly avgGameLength: number;
+  readonly avgBranchingFactor: number;
+  readonly actionDiversity: number;
+  readonly resourceTension: number;
+  readonly interactionProxy: number;
+  readonly dominantActionFreq: number;
+  readonly dramaMeasure: number;
+}
+
+/**
+ * Full evaluation report. No full traces — perSeed provides
+ * per-seed breakdown for diagnostics.
+ */
 interface EvalReport {
   readonly gameDefId: string;
   readonly runCount: number;
   readonly metrics: Metrics;
   readonly degeneracyFlags: readonly DegeneracyFlag[];
-  readonly traces: readonly GameTrace[];
+  readonly perSeed: readonly TraceEval[];
 }
 ```
 
-### Required Trace Field from Spec 10
+### Required Trace Fields (from Spec 10)
 
-Degeneracy detection relies on the Spec 10 `GameTrace` amendment:
+The evaluator relies on `GameTrace` and `MoveLog` as defined in `types-core.ts`:
 
 ```typescript
+interface GameTrace {
+  readonly gameDefId: string;
+  readonly seed: number;
+  readonly moves: readonly MoveLog[];
+  readonly finalState: GameState;
+  readonly result: TerminalResult | null;
+  readonly turnsCount: number;
+  readonly stopReason: SimulationStopReason;
+}
+
+interface MoveLog {
+  readonly stateHash: bigint;
+  readonly player: PlayerId;
+  readonly move: Move;                           // move.actionId used for action metrics
+  readonly legalMoveCount: number;               // used for avgBranchingFactor
+  readonly deltas: readonly StateDelta[];         // used for resourceTension, interactionProxy, dramaMeasure
+  readonly triggerFirings: readonly TriggerLogEntry[];  // used for TRIGGER_DEPTH_EXCEEDED
+  // ... other optional trace fields omitted
+}
+
+interface StateDelta {
+  readonly path: string;    // e.g. "perPlayerVars.0.resources", "zones.saigon"
+  readonly before: unknown;
+  readonly after: unknown;
+}
+
 type SimulationStopReason = 'terminal' | 'maxTurns' | 'noLegalMoves';
 ```
 
-`GameTrace.stopReason` is required to deterministically detect `NO_LEGAL_MOVES` without re-simulation.
+## Public API
+
+```typescript
+/** Evaluate a single trace: compute per-trace metrics and degeneracy flags. */
+function evaluateTrace(
+  trace: GameTrace,
+  config?: EvalConfig
+): TraceEval;
+
+/** Aggregate multiple TraceEvals into a report with mean metrics. */
+function aggregateEvals(
+  gameDefId: string,
+  evals: readonly TraceEval[]
+): EvalReport;
+
+/** Convenience: evaluate all traces and aggregate. */
+function generateEvalReport(
+  def: GameDef,
+  traces: readonly GameTrace[],
+  config?: EvalConfig
+): EvalReport;
+```
 
 ## Implementation Requirements
 
-### computeMetrics
+### Per-Trace Metrics
 
-All metrics are computed from trace data only — no re-simulation.
+All formulas operate on a single `GameTrace`. The `Metrics` in `EvalReport` are means across `TraceEval.metrics`.
 
-#### 1. avgGameLength
+#### 1. gameLength
 
 ```
-avgGameLength = mean(traces.map(t => t.turnsCount))
+gameLength = trace.turnsCount
 ```
 
-Simple arithmetic mean of turn counts across all traces.
+Simple pass-through of the trace's turn count.
 
 #### 2. avgBranchingFactor
 
-The branching factor at each turn is the number of legal moves available. Spec 02/10 requires this as `MoveLog.legalMoveCount`, so no re-simulation is needed:
+```
+avgBranchingFactor = mean(trace.moves.map(m => m.legalMoveCount))
+```
 
-```
-avgBranchingFactor = mean(
-  traces.flatMap(t => t.moves.map(m => m.legalMoveCount))
-)
-```
+Mean legal moves per turn, computed directly from `MoveLog.legalMoveCount`.
 
 #### 3. actionDiversity (normalized Shannon entropy)
 
 ```
-For each trace:
-  Count frequency of each actionId across all moves
-  H = -sum(p_i * log2(p_i)) for each action with p_i > 0
-  H_max = log2(numDistinctActions)
-  normalizedEntropy = H / H_max (or 0 if only 1 action)
-
-actionDiversity = mean(normalizedEntropy across traces)
+Count frequency of each actionId across trace.moves
+H = -sum(p_i * log2(p_i)) for each action with p_i > 0
+H_max = log2(numDistinctActions)
+actionDiversity = H / H_max (or 0 if only 1 distinct action)
 ```
 
-Range: [0, 1] where 0 = one action used exclusively, 1 = perfectly uniform action distribution.
+Range: [0, 1] where 0 = one action used exclusively, 1 = perfectly uniform distribution.
 
-#### 4. resourceTension
+#### 4. resourceTension (delta reconstruction)
 
-Proxy for resource scarcity/competition between players:
+Proxy for resource scarcity/competition between players. Requires reconstructing per-player variable state at each turn from trace deltas.
 
 ```
-For each trace, at each turn:
-  For each per-player variable:
-    Compute variance across players
-  Average the variances across variables and turns
+Delta reconstruction:
+  1. Start from trace.finalState.perPlayerVars
+  2. Reverse all deltas (last move to first) to obtain initial perPlayerVars
+     - For each delta with path matching perPlayerVars.<playerId>.<varName>:
+       restore the 'before' value
+  3. Replay forward, applying deltas to track perPlayerVars at each turn
 
-resourceTension = mean across traces
+At each turn, for each per-player variable:
+  Compute variance across players
+Average the variances across variables and turns.
 ```
 
-Higher tension = more variance in resource levels between players = more competitive dynamics.
+Implementation notes:
+- Only deltas with path matching `perPlayerVars.<playerId>.<varName>` are relevant. Other deltas (zones, globalVars, etc.) are skipped.
+- Higher tension = more variance in resource levels between players = more competitive dynamics.
+- `GameState.perPlayerVars` type: `Record<number, Record<string, VariableValue>>` where keys are player indices (0-based).
 
 #### 5. interactionProxy
 
 Measures how much players' actions affect each other:
 
 ```
-For each trace:
-  Count effects that target other players (setVar/addVar with player != actor,
-    moveToken from other player's zone, etc.)
-  Count total effects applied
-  ratio = otherPlayerEffects / totalEffects
+For each MoveLog entry:
+  actor = entry.player (PlayerId, which is a number)
+  For each delta in entry.deltas:
+    If delta.path matches perPlayerVars.<id>.* where <id> != actor → interaction delta
+  ratio = interactionDeltas / totalPerPlayerVarDeltas (0 if no perPlayerVar deltas)
 
-interactionProxy = mean(ratio across traces)
+interactionProxy = mean(ratio across all moves with perPlayerVar deltas)
 ```
 
-Range: [0, 1] where 0 = purely solitaire, 1 = all effects target others.
+Range: [0, 1] where 0 = purely solitaire, 1 = all per-player effects target others.
 
-**Approximation from deltas**: Since MoveLog contains deltas, count deltas that modify other players' state:
-- Delta path starts with `perPlayerVars.<otherPlayerId>` → interaction
-- Delta path is a zone owned by another player → interaction
+Note: zone ownership analysis is deferred — `StateDelta.path` for zones (e.g., `zones.saigon`) doesn't encode which player owns the zone. Only `perPlayerVars` deltas are used for interaction classification.
 
 #### 6. dominantActionFreq
 
 ```
-For each trace:
-  Count frequency of each actionId
-  maxFreq = max(frequencies) / totalMoves
-
-dominantActionFreq = mean(maxFreq across traces)
+Count frequency of each actionId across trace.moves
+dominantActionFreq = max(frequencies) / totalMoves
 ```
 
 Range: [0, 1] where values near 1.0 indicate one action dominates play.
 
 #### 7. dramaMeasure
 
-Measures how often the leading player changes:
-
 ```
-For each trace:
-  At each turn, determine the leading player (highest score/VP)
+If config.scoringVar is not provided → dramaMeasure = 0
+
+Otherwise:
+  Reconstruct scoring var trajectory per player from deltas:
+    - Use the same delta reconstruction as resourceTension, but filtered to
+      deltas matching perPlayerVars.<playerId>.<scoringVar>
+  At each turn, determine leader (player with highest scoringVar value)
   Count lead changes (leader at turn T differs from leader at turn T-1)
-  drama = leadChanges / turnsCount
-
-dramaMeasure = mean(drama across traces)
+  dramaMeasure = leadChanges / turnsCount
 ```
 
-Requires identifying which variable represents "score" — use `def.scoring` if available, otherwise use the first per-player variable or VP if named.
+The `scoringVar` must be specified explicitly in `EvalConfig` because `GameDef` has no generic `scoring` field — games use diverse victory conditions (e.g., FITL uses `totalOpposition + vcBases - 35`). The caller knows which variable represents "score" for their game.
 
-### detectDegeneracy
+### Degeneracy Detection
 
-Each flag is computed independently. Detecting one does not skip checking others.
+Each flag is checked independently per-trace. Detecting one does not skip checking others. `EvalReport.degeneracyFlags` is the **union** of all per-trace flags (deduplicated).
 
 #### LOOP_DETECTED
 
 ```
-For each trace:
-  Collect all stateHash values from MoveLog entries
-  If any hash appears more than once → LOOP_DETECTED
+Collect all stateHash values from trace.moves
+If any hash appears more than once → LOOP_DETECTED
 
 Implementation: Use a Set<bigint> for O(n) scan per trace.
 ```
@@ -228,174 +283,217 @@ Implementation: Use a Set<bigint> for O(n) scan per trace.
 #### NO_LEGAL_MOVES
 
 ```
-For each trace:
-  If trace.stopReason === 'noLegalMoves'
-  → NO_LEGAL_MOVES
-
-Without an explicit stop reason in GameTrace, treat this as best-effort only and avoid false positives.
-Legacy traces without `stopReason` should skip `NO_LEGAL_MOVES` detection rather than guess.
+If trace.stopReason === 'noLegalMoves' → NO_LEGAL_MOVES
 ```
 
 #### DOMINANT_ACTION
 
 ```
-For each trace:
-  Compute dominantActionFreq (same as metric)
-  If dominantActionFreq > config.dominantActionThreshold (default 0.8)
-  → DOMINANT_ACTION
+If dominantActionFreq > config.dominantActionThreshold (default 0.8) → DOMINANT_ACTION
 ```
+
+Reuses the dominantActionFreq metric already computed.
 
 #### TRIVIAL_WIN
 
 ```
-For each trace:
-  If trace.result is non-null AND trace.turnsCount < config.trivialWinThreshold (default 5)
-  → TRIVIAL_WIN
+If trace.result is non-null AND trace.turnsCount < config.trivialWinThreshold (default 5)
+→ TRIVIAL_WIN
 ```
 
 #### STALL
 
 ```
-For each trace:
-  Scan consecutive MoveLog entries
-  If config.stallTurnThreshold consecutive entries have identical stateHash
-  → STALL
+Scan consecutive MoveLog entries
+If config.stallTurnThreshold consecutive entries have identical stateHash → STALL
 ```
 
-Note: Identical stateHash with different moves means the move had no effect — a degenerate pattern.
+Note: identical stateHash with different moves means the move had no effect — a degenerate pattern.
 
 #### TRIGGER_DEPTH_EXCEEDED
 
 ```
-For each trace:
-  Scan all MoveLog.triggerFirings
-  If any trigger log entry has kind === 'truncated'
-  → TRIGGER_DEPTH_EXCEEDED
+Scan all MoveLog.triggerFirings across trace.moves
+If any trigger log entry has kind === 'truncated' → TRIGGER_DEPTH_EXCEEDED
 ```
 
-### generateEvalReport
+### Aggregation
 
 ```typescript
-function generateEvalReport(def, traces, config?): EvalReport {
-  const mergedConfig = { ...DEFAULT_DEGENERACY_CONFIG, ...config };
-  return {
-    gameDefId: def.metadata.id,
-    runCount: traces.length,
-    metrics: computeMetrics(traces),
-    degeneracyFlags: detectDegeneracy(traces, mergedConfig),
-    traces,
+function aggregateEvals(gameDefId: string, evals: readonly TraceEval[]): EvalReport {
+  if (evals.length === 0) {
+    return {
+      gameDefId,
+      runCount: 0,
+      metrics: { avgGameLength: 0, avgBranchingFactor: 0, actionDiversity: 0,
+                 resourceTension: 0, interactionProxy: 0, dominantActionFreq: 0,
+                 dramaMeasure: 0 },
+      degeneracyFlags: [],
+      perSeed: [],
+    };
+  }
+
+  const metrics: Metrics = {
+    avgGameLength: mean(evals.map(e => e.metrics.gameLength)),
+    avgBranchingFactor: mean(evals.map(e => e.metrics.avgBranchingFactor)),
+    actionDiversity: mean(evals.map(e => e.metrics.actionDiversity)),
+    resourceTension: mean(evals.map(e => e.metrics.resourceTension)),
+    interactionProxy: mean(evals.map(e => e.metrics.interactionProxy)),
+    dominantActionFreq: mean(evals.map(e => e.metrics.dominantActionFreq)),
+    dramaMeasure: mean(evals.map(e => e.metrics.dramaMeasure)),
   };
+
+  const allFlags = [...new Set(evals.flatMap(e => [...e.degeneracyFlags]))];
+
+  return { gameDefId, runCount: evals.length, metrics, degeneracyFlags: allFlags, perSeed: evals };
 }
 ```
 
-### MoveLog Contract
+### Campaign Integration Example
 
-Spec 02 defines `MoveLog.legalMoveCount` and Spec 10 records it during simulation:
+Agent campaign harnesses use per-trace evaluation to filter degenerate seeds:
 
 ```typescript
-interface MoveLog {
-  readonly stateHash: bigint;
-  readonly player: PlayerId;
-  readonly move: Move;
-  readonly deltas: readonly StateDelta[];
-  readonly triggerFirings: readonly TriggerLogEntry[];
-  readonly legalMoveCount: number; // number of legal moves available this turn
+// In campaign harness (e.g., run-tournament.mjs):
+import { evaluateTrace, aggregateEvals } from '@ludoforge/engine';
+
+const evals = traces.map(t => evaluateTrace(t, { scoringVar: 'totalOpposition' }));
+
+// Filter degenerate seeds from strategy metrics
+const healthyEvals = evals.filter(e => e.degeneracyFlags.length === 0);
+const degenerateEvals = evals.filter(e => e.degeneracyFlags.length > 0);
+
+// Compute strategy metrics only from healthy seeds
+const avgMargin = mean(healthyEvals.map(e => computeSeatMargin(e)));
+
+// Track degeneracy as a game-definition quality metric
+const degeneracyRate = degenerateEvals.length / evals.length;
+
+// Per-seed diagnostics
+for (const e of degenerateEvals) {
+  console.log(`Seed ${e.seed}: ${e.degeneracyFlags.join(', ')} (${e.turnCount} turns, ${e.stopReason})`);
 }
 ```
 
 ## Invariants
 
-1. Metrics are computed from trace data only (no re-simulation needed)
-2. All metrics are numeric — no NaN, no Infinity
-3. `avgBranchingFactor >= 0`
-4. `actionDiversity` in [0, 1] range (normalized entropy)
-5. `interactionProxy` in [0, 1] range
-6. `dominantActionFreq` in [0, 1] range
-7. `dramaMeasure >= 0`
-8. Degeneracy flags are computed independently (detecting one doesn't skip others)
-9. `LOOP_DETECTED` uses Zobrist hashes from MoveLog (O(n) scan per trace, not O(n^2))
-10. EvalReport includes results for all 6 degeneracy flag checks (even if none triggered)
-11. Empty traces array → metrics default to 0, no degeneracy flags
+1. All per-trace metrics are finite numbers (not NaN, not Infinity)
+2. `actionDiversity`, `interactionProxy`, `dominantActionFreq` in [0, 1]
+3. `dramaMeasure >= 0`
+4. `avgBranchingFactor >= 0`
+5. Degeneracy flags computed independently per trace
+6. `LOOP_DETECTED` uses O(n) hash scan (Set-based)
+7. Empty moves array in a trace → metrics default to 0, no flags except possibly NO_LEGAL_MOVES or TRIVIAL_WIN
+8. Empty evals array to `aggregateEvals` → all metrics 0, no flags, empty perSeed
+9. Delta reconstruction is deterministic: same finalState + same deltas → same reconstructed trajectory
 
 ## Required Tests
 
-### Unit Tests
+### Unit: evaluateTrace
 
-**computeMetrics**:
-- Known traces (2 games, 10 turns each) → expected avgGameLength = 10
-- Known traces with varying legal move counts → expected avgBranchingFactor
+**Per-trace metrics**:
+- Known trace (10 turns) → gameLength = 10
+- Known trace with varying legalMoveCount → expected avgBranchingFactor
 - Trace where 1 action used exclusively → actionDiversity = 0
 - Trace where 3 actions used equally → actionDiversity ≈ 1.0
-- Trace with no interaction effects → interactionProxy = 0
-- Trace where 90% of moves are same action → dominantActionFreq ≈ 0.9
-- Trace with 5 lead changes in 20 turns → dramaMeasure = 0.25
-- Single trace → metrics computed correctly (edge case: N=1)
-- Empty traces array → all metrics = 0
+- Trace with no cross-player deltas → interactionProxy = 0
+- Trace where 90% moves are same action → dominantActionFreq ≈ 0.9
+- Trace with scoringVar provided and 5 lead changes in 20 turns → dramaMeasure = 0.25
+- Trace without scoringVar → dramaMeasure = 0
+- Trace with empty moves → metrics all 0
 
-**detectDegeneracy**:
-- Trace with repeated state hash → LOOP_DETECTED
-- Trace with no repeated hashes → LOOP_DETECTED not flagged
-- Trace marked with stop reason `noLegalMoves` → NO_LEGAL_MOVES
-- Trace with stop reason `maxTurns` → NO_LEGAL_MOVES not flagged
-- Trace where same action used 85% of time → DOMINANT_ACTION (with default threshold 0.8)
-- Trace where most-used action is 70% → DOMINANT_ACTION not flagged
-- 3-turn game with terminal result → TRIVIAL_WIN (with threshold 5)
+**Per-trace degeneracy**:
+- Repeated stateHash → LOOP_DETECTED
+- No repeated hashes → LOOP_DETECTED not flagged
+- stopReason 'noLegalMoves' → NO_LEGAL_MOVES
+- stopReason 'maxTurns' → NO_LEGAL_MOVES not flagged
+- 85% same action → DOMINANT_ACTION (default threshold 0.8)
+- 70% same action → DOMINANT_ACTION not flagged
+- 3-turn game with terminal result → TRIVIAL_WIN (threshold 5)
 - 10-turn game → TRIVIAL_WIN not flagged
-- 10 consecutive identical state hashes → STALL
+- 10 consecutive identical stateHashes → STALL
 - No consecutive identical hashes → STALL not flagged
-- Trigger log contains `kind: truncated` entry → TRIGGER_DEPTH_EXCEEDED
-- No truncation entries → TRIGGER_DEPTH_EXCEEDED not flagged
-- Healthy game trace → zero degeneracy flags
+- triggerFirings with kind: 'truncated' → TRIGGER_DEPTH_EXCEEDED
+- Healthy trace → zero flags
 
 **Custom config**:
 - TRIVIAL_WIN with threshold=3: 4-turn game → not flagged
 - DOMINANT_ACTION with threshold=0.9: 85% same action → not flagged
 
-**generateEvalReport**:
-- Combines metrics and flags correctly
-- Report has correct gameDefId and runCount
+### Unit: aggregateEvals
 
-### Integration Tests
+- Two TraceEvals with known metrics → means computed correctly
+- Union of degeneracy flags across traces
+- Empty evals array → all metrics 0, no flags
+- Single TraceEval → metrics match per-trace metrics
 
-- Run 5 game simulations (from Spec 10), feed traces to evaluator → valid EvalReport with reasonable metrics
-- Deliberately degenerate game (infinite loop setup) → LOOP_DETECTED flag set
+### Unit: delta reconstruction
 
-### Property Tests
+- Known finalState + known deltas → correct initial state reconstruction
+- Forward replay matches original delta sequence
+- Deltas targeting non-perPlayerVars paths are skipped
+- Empty deltas → initial state equals finalState
 
-- For any set of valid traces, all metrics are finite numbers (not NaN, not Infinity)
-- `actionDiversity` is always in [0, 1]
-- `interactionProxy` is always in [0, 1]
-- `dominantActionFreq` is always in [0, 1]
-- `computeMetrics` is deterministic: same traces → same metrics
+### Integration
 
-### Golden Tests
+- Run 5 simulations (Spec 10), feed traces to evaluateTrace + aggregateEvals → valid EvalReport with reasonable metrics
+- Deliberately degenerate game (loop setup) → LOOP_DETECTED in perSeed entry
 
-- Known traces with precomputed metrics → exact metric values match
-- Known traces with specific degeneracy patterns → expected flags
+### Property
+
+- For any valid trace, all metrics are finite (not NaN, not Infinity)
+- actionDiversity always in [0, 1]
+- interactionProxy always in [0, 1]
+- dominantActionFreq always in [0, 1]
+- evaluateTrace is deterministic: same trace + config → same TraceEval
+
+### Golden
+
+- Known trace with precomputed metrics → exact metric values match
+- Known trace with specific degeneracy pattern → expected flags
 
 ## Acceptance Criteria
 
-- [ ] All 7 metrics computed correctly from trace data
-- [ ] All 6 degeneracy flags detected correctly
+- [ ] `evaluateTrace` computes all 7 per-trace metrics correctly
+- [ ] `evaluateTrace` detects all 6 degeneracy flags per-trace
+- [ ] `aggregateEvals` produces correct mean metrics and flag union
+- [ ] `generateEvalReport` convenience wrapper works end-to-end
 - [ ] No NaN or Infinity in any metric value
-- [ ] Action diversity normalized to [0, 1] range
-- [ ] Degeneracy flags computed independently
-- [ ] LOOP_DETECTED uses O(n) hash scan
-- [ ] Configurable thresholds for degeneracy detection
-- [ ] Empty traces handled gracefully (zero metrics, no flags)
-- [ ] EvalReport structure complete with all fields
-- [ ] MoveLog includes legalMoveCount and branching-factor metric uses it directly
+- [ ] Bounded metrics in [0, 1] range where specified
+- [ ] Delta reconstruction correctly recovers per-turn perPlayerVars
+- [ ] `scoringVar` config controls dramaMeasure (returns 0 if absent)
+- [ ] Configurable thresholds via EvalConfig
+- [ ] Empty traces/moves handled gracefully
+- [ ] EvalReport contains perSeed breakdown (no full traces)
 
 ## Files to Create/Modify
 
 ```
-src/sim/metrics.ts               # NEW — computeMetrics implementation
-src/sim/degeneracy.ts            # NEW — detectDegeneracy implementation
-src/sim/eval-report.ts           # NEW — generateEvalReport
-src/sim/index.ts                 # MODIFY — re-export evaluator APIs
-src/sim/simulator.ts             # MODIFY — record legalMoveCount in MoveLog
-test/unit/metrics.test.ts        # NEW — metric computation tests
-test/unit/degeneracy.test.ts     # NEW — degeneracy flag tests
-test/unit/eval-report.test.ts    # NEW — report generation tests
-test/integration/eval-full.test.ts  # NEW — evaluator with real simulation traces
+packages/engine/src/sim/trace-eval.ts           # NEW — evaluateTrace, per-trace metrics + flags
+packages/engine/src/sim/delta-reconstruct.ts     # NEW — delta reconstruction utilities
+packages/engine/src/sim/aggregate-evals.ts       # NEW — aggregateEvals
+packages/engine/src/sim/eval-report.ts           # NEW — generateEvalReport convenience wrapper
+packages/engine/src/sim/eval-config.ts           # NEW — EvalConfig, DEFAULT_EVAL_CONFIG
+packages/engine/src/sim/index.ts                 # MODIFY — re-export evaluator APIs
+packages/engine/src/kernel/types-core.ts         # MODIFY — update EvalReport, add TraceEval/TraceMetrics
+packages/engine/schemas/EvalReport.schema.json   # MODIFY — match new EvalReport shape (drop traces, add perSeed)
+packages/engine/test/unit/sim/trace-eval.test.ts         # NEW
+packages/engine/test/unit/sim/delta-reconstruct.test.ts  # NEW
+packages/engine/test/unit/sim/aggregate-evals.test.ts    # NEW
+packages/engine/test/unit/sim/eval-report.test.ts        # NEW
+packages/engine/test/integration/sim/eval-full.test.ts   # NEW
 ```
+
+## Schema Update Notes
+
+When this spec is implemented, `packages/engine/schemas/EvalReport.schema.json` must be updated:
+- Remove `traces` array property
+- Add `perSeed` array of TraceEval objects
+- Add `TraceMetrics` schema definition
+- Add `TraceEval` schema definition
+
+`packages/engine/src/kernel/types-core.ts` must be updated:
+- Update `EvalReport` interface: drop `traces`, add `perSeed: readonly TraceEval[]`
+- Add `TraceEval` and `TraceMetrics` interfaces
+- Keep existing `Metrics` interface (now represents aggregated means)
+- Keep existing `DegeneracyFlag` enum in `diagnostics.ts` (unchanged)

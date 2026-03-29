@@ -41,7 +41,7 @@ describe('formatIdAsDisplayName', () => {
   });
 
   it('formats non-numeric colon suffixes', () => {
-    expect(formatIdAsDisplayName('table:none')).toBe('Table None');
+    expect(formatIdAsDisplayName('table:none')).toBe('Table');
   });
 
   it('formats multi-colon IDs using the final segment as suffix', () => {

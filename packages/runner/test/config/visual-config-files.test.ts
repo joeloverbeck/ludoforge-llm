@@ -19,16 +19,16 @@ import {
 import { resolveConnectionRoutes } from '../../src/presentation/connection-route-resolver';
 import type { ResolvedConnectionPoint } from '../../src/presentation/connection-route-resolver';
 
-const EXPECTED_FITL_CONNECTION_ANCHOR_IDS = [
-  'an-loc',
-  'ban-me-thuot',
-  'bac-lieu',
-  'chau-doc',
-  'da-lat',
-  'dak-to',
-  'khe-sanh',
-  'long-phu',
-] as const;
+const EXPECTED_FITL_CONNECTION_ANCHORS = {
+  'an-loc': { x: 420, y: 250 },
+  'ban-me-thuot': { x: 560, y: 220 },
+  'bac-lieu': { x: -688.2524155538835, y: 3201.090345385517 },
+  'chau-doc': { x: -836.2225463876869, y: 2127.540527724862 },
+  'da-lat': { x: 640, y: 360 },
+  'dak-to': { x: 531.8295401573785, y: -1861.4532306383767 },
+  'khe-sanh': { x: -300, y: -3660 },
+  'long-phu': { x: 18.798184327553713, y: 2975.179536069467 },
+} as const;
 
 const EXPECTED_FITL_CONNECTION_ROUTE_SHAPES = {
   'loc-ban-me-thuot-da-lat:none': {
@@ -82,11 +82,11 @@ const EXPECTED_FITL_CONNECTION_ROUTE_SHAPES = {
   },
   'loc-hue-da-nang:none': {
     points: [
-      { kind: 'zone', zoneId: 'da-nang:none' },
-      { kind: 'zone', zoneId: 'hue:none' },
+      { kind: 'zone', zoneId: 'da-nang:none', anchor: 108.768277436591 },
+      { kind: 'zone', zoneId: 'hue:none', anchor: 310.3800982106113 },
     ],
     segments: [
-      { kind: 'quadratic', control: { kind: 'curvature' } },
+      { kind: 'quadratic', control: { kind: 'curvature', offset: 0.07697466730587194, angle: 69.23538545589986 } },
     ],
   },
   'loc-hue-khe-sanh:none': {
@@ -132,7 +132,7 @@ const EXPECTED_FITL_CONNECTION_ROUTE_SHAPES = {
     ],
     segments: [
       { kind: 'straight' },
-      { kind: 'quadratic', control: { kind: 'curvature' } },
+      { kind: 'quadratic', control: { kind: 'curvature', offset: 0.26023445680592805, angle: 289.50202781725375 } },
     ],
   },
   'loc-saigon-cam-ranh:none': {
@@ -158,12 +158,18 @@ const EXPECTED_FITL_CONNECTION_ROUTE_SHAPES = {
   },
 } as const satisfies Record<string, {
   readonly points: readonly (
-    | { readonly kind: 'zone'; readonly zoneId: string }
+    | { readonly kind: 'zone'; readonly zoneId: string; readonly anchor?: number }
     | { readonly kind: 'anchor'; readonly anchorId: string }
   )[];
   readonly segments: readonly (
     | { readonly kind: 'straight' }
-    | { readonly kind: 'quadratic'; readonly control: { readonly kind: 'curvature' | 'anchor' | 'position' } }
+    | {
+      readonly kind: 'quadratic';
+      readonly control:
+        | { readonly kind: 'curvature'; readonly offset?: number; readonly angle?: number }
+        | { readonly kind: 'anchor'; readonly anchorId?: string }
+        | { readonly kind: 'position'; readonly x?: number; readonly y?: number }
+    }
   )[];
 }>;
 
@@ -190,6 +196,7 @@ const EXPECTED_FITL_SHARED_JUNCTIONS = [
       'loc-da-nang-dak-to:none',
       'loc-kontum-dak-to:none',
     ],
+    position: { x: 531.8295401573785, y: -1861.4532306383767 },
   },
 ] as const;
 
@@ -202,13 +209,28 @@ function normalizeConnectionRouteDefinitions(
       {
         points: route.points.map((point) => (
           point.kind === 'zone'
-            ? { kind: 'zone', zoneId: point.zoneId }
+            ? { kind: 'zone', zoneId: point.zoneId, ...(point.anchor === undefined ? {} : { anchor: point.anchor }) }
             : { kind: 'anchor', anchorId: point.anchorId }
         )),
         segments: route.segments.map((segment) => (
           segment.kind === 'straight'
             ? { kind: 'straight' as const }
-            : { kind: 'quadratic' as const, control: { kind: segment.control.kind } }
+            : {
+              kind: 'quadratic' as const,
+              control: {
+                kind: segment.control.kind,
+                ...(segment.control.kind === 'curvature'
+                  ? {
+                    offset: segment.control.offset,
+                    ...(segment.control.angle === undefined ? {} : { angle: segment.control.angle }),
+                  }
+                  : {}),
+                ...(segment.control.kind === 'anchor' ? { anchorId: segment.control.anchorId } : {}),
+                ...(segment.control.kind === 'position'
+                  ? { x: segment.control.x, y: segment.control.y }
+                  : {}),
+              },
+            }
         )),
       },
     ]),
@@ -517,10 +539,9 @@ describe('visual-config.yaml files', () => {
     });
     const connectionAnchors = parsed.zones?.connectionAnchors ?? {};
     const connectionRoutes = parsed.zones?.connectionRoutes ?? {};
-    expect(Object.keys(connectionAnchors).sort()).toEqual([...EXPECTED_FITL_CONNECTION_ANCHOR_IDS].sort());
-    for (const anchor of Object.values(connectionAnchors)) {
-      expect(Number.isFinite(anchor.x)).toBe(true);
-      expect(Number.isFinite(anchor.y)).toBe(true);
+    expect(Object.keys(connectionAnchors).sort()).toEqual(Object.keys(EXPECTED_FITL_CONNECTION_ANCHORS).sort());
+    for (const [anchorId, anchor] of Object.entries(connectionAnchors)) {
+      expect(anchor).toEqual(EXPECTED_FITL_CONNECTION_ANCHORS[anchorId as keyof typeof EXPECTED_FITL_CONNECTION_ANCHORS]);
     }
     expect(normalizeConnectionRouteDefinitions(connectionRoutes)).toEqual(EXPECTED_FITL_CONNECTION_ROUTE_SHAPES);
 
@@ -587,12 +608,12 @@ describe('visual-config.yaml files', () => {
       {
         kind: 'zone',
         id: 'da-nang:none',
-        position: hueDaNangRoute!.path[0]!.position,
+        position: { x: expect.closeTo(-15.739321681978065, 5), y: expect.closeTo(-70.74620333291732, 5) },
       },
       {
         kind: 'zone',
         id: 'hue:none',
-        position: hueDaNangRoute!.path[1]!.position,
+        position: { x: expect.closeTo(51.828427224346214, 5), y: expect.closeTo(60.941070973938814, 5) },
       },
     ]);
     expect(Object.fromEntries(

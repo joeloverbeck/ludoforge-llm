@@ -865,7 +865,7 @@ describe('projectRenderModel state metadata', () => {
       kind: 'discreteMany',
       decisionKey: 'pick-target',
       options: [
-        expectedRenderChoiceOption('table:none', 'Table None', 'legal', null),
+        expectedRenderChoiceOption('table:none', 'Table', 'legal', null),
         expectedRenderChoiceOption('token-a', 'Token A', 'legal', null),
       ],
       min: 1,
@@ -912,7 +912,7 @@ describe('projectRenderModel state metadata', () => {
       kind: 'discreteOne',
       decisionKey: asDecisionKey('target'),
       options: [
-        expectedRenderChoiceOption('table:none', 'Table None', 'legal', null, {
+        expectedRenderChoiceOption('table:none', 'Table', 'legal', null, {
           kind: 'zone',
           entityId: 'table:none',
           displaySource: 'zone',
@@ -954,7 +954,7 @@ describe('projectRenderModel state metadata', () => {
       kind: 'discreteOne',
       decisionKey: asDecisionKey('target'),
       options: [
-        expectedRenderChoiceOption('table:none', 'Table None', 'legal', null),
+        expectedRenderChoiceOption('table:none', 'Table', 'legal', null),
         expectedRenderChoiceOption('blocked-zone', 'Blocked Zone', 'illegal', 'emptyDomain'),
       ],
     });
@@ -995,7 +995,7 @@ describe('projectRenderModel state metadata', () => {
       kind: 'discreteMany',
       decisionKey: asDecisionKey('target'),
       options: [
-        expectedRenderChoiceOption('table:none', 'Table None', 'legal', null),
+        expectedRenderChoiceOption('table:none', 'Table', 'legal', null),
       ],
       min: 1,
       max: 3,
@@ -1035,7 +1035,7 @@ describe('projectRenderModel state metadata', () => {
       kind: 'discreteOne',
       decisionKey: asDecisionKey('target'),
       options: [
-        expectedRenderChoiceOption('table:none', 'Table None', 'legal', null, {
+        expectedRenderChoiceOption('table:none', 'Table', 'legal', null, {
           kind: 'zone',
           entityId: 'table:none',
           displaySource: 'zone',
@@ -1167,7 +1167,7 @@ describe('projectRenderModel state metadata', () => {
         'previousChoice',
         'Previous Choice',
         ['table:none', 'token-a'],
-        'Table None, Token A',
+        'Table, Token A',
       ),
     ]);
   });
@@ -1203,7 +1203,7 @@ describe('projectRenderModel state metadata', () => {
       kind: 'discreteOne',
       decisionKey: asDecisionKey('target'),
       options: [
-        expectedRenderChoiceOption('table:none', 'Table None', 'legal', null, {
+        expectedRenderChoiceOption('table:none', 'Table', 'legal', null, {
           kind: 'zone',
           entityId: 'table:none',
           displaySource: 'zone',
@@ -1269,7 +1269,7 @@ describe('projectRenderModel state metadata', () => {
     expect(model.choiceUi).toEqual({
       kind: 'discreteMany',
       decisionKey: asDecisionKey('target'),
-      options: [expectedRenderChoiceOption('table:none', 'Table None', 'legal', null, {
+      options: [expectedRenderChoiceOption('table:none', 'Table', 'legal', null, {
         kind: 'zone',
         entityId: 'table:none',
         displaySource: 'zone',
@@ -2140,7 +2140,7 @@ describe('projectRenderModel choiceContext', () => {
 
     const step = model.choiceBreadcrumb[1]!;
     expect(step.iterationGroupId).toBe('decision:placeType');
-    expect(step.iterationLabel).toBe('Table None');
+    expect(step.iterationLabel).toBe('Table');
   });
 
   it('breadcrumb steps from index-based forEach iterations have shared iterationGroupId', () => {
@@ -2173,6 +2173,6 @@ describe('projectRenderModel choiceContext', () => {
 
     const step = model.choiceBreadcrumb[1]!;
     expect(step.iterationGroupId).toBe('placeType');
-    expect(step.iterationLabel).toBe('Table None');
+    expect(step.iterationLabel).toBe('Table');
   });
 });

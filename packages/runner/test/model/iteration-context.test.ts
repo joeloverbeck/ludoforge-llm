@@ -152,7 +152,7 @@ describe('parseIterationContext', () => {
     );
 
     expect(result).not.toBeNull();
-    expect(result!.currentEntityDisplayName).toBe('Da Nang None');
+    expect(result!.currentEntityDisplayName).toBe('Da Nang');
   });
 
   it('searches choice stack in reverse for the most recent array', () => {

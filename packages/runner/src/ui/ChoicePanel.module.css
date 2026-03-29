@@ -85,6 +85,13 @@
   background: rgba(255, 255, 255, 0.15);
 }
 
+.breadcrumbEllipsis {
+  padding: var(--space-xs) var(--space-sm);
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  letter-spacing: 0.15em;
+}
+
 .breadcrumbCurrent {
   padding: var(--space-xs) var(--space-sm);
   border: 1px solid var(--accent);

@@ -6,7 +6,7 @@ export interface IllegalityFeedbackProps {
   readonly illegalReason: string | null;
 }
 
-const FALLBACK_REASON = 'This option is currently unavailable.';
+const FALLBACK_REASON = 'Does not meet current requirements';
 
 function resolveReason(illegalReason: string | null): string {
   const trimmed = illegalReason?.trim();

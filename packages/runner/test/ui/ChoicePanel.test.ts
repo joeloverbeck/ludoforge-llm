@@ -856,7 +856,7 @@ describe('ChoicePanel', () => {
     expect(html).toContain('data-testid="choice-context-action"');
     expect(html).toContain('Train Troops');
     expect(html).toContain('data-testid="choice-context-prompt"');
-    expect(html).toContain('Da Nang: Select a space (1-3) - 1 of 3');
+    expect(html).toContain('Da Nang: Select a space (1 to 3) — step 1 of 3');
   });
 
   it('does not render ChoiceContextHeader when choiceContext is null', () => {

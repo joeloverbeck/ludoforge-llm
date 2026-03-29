@@ -141,7 +141,7 @@ describe('runner frame / render model boundary', () => {
     expect('playerVars' in (renderModel as object)).toBe(false);
     expect(renderModel.choiceUi.kind).toBe('discreteOne');
     if (renderModel.choiceUi.kind === 'discreteOne') {
-      expect(renderModel.choiceUi.options.map((option) => option.displayName)).toEqual(['Center Table', 'Reserve None']);
+      expect(renderModel.choiceUi.options.map((option) => option.displayName)).toEqual(['Center Table', 'Reserve']);
     }
   });
 });

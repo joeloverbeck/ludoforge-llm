@@ -335,7 +335,22 @@ function segmentBreadcrumb(steps: readonly RenderChoiceStep[]): readonly Breadcr
   return segments;
 }
 
+function formatBoundsForDisplay(boundsText: string | null): string | null {
+  if (boundsText === null) {
+    return null;
+  }
+  if (boundsText.includes('-')) {
+    const [min, max] = boundsText.split('-');
+    if (min === '0') {
+      return `up to ${max}`;
+    }
+    return `${min} to ${max}`;
+  }
+  return boundsText;
+}
+
 function ChoiceContextHeader({ context }: { readonly context: RenderChoiceContext }): ReactElement {
+  const humanBounds = formatBoundsForDisplay(context.boundsText);
   return (
     <div className={styles.choiceContextHeader} data-testid="choice-context-header">
       <span className={styles.actionBadge} data-testid="choice-context-action">
@@ -344,9 +359,77 @@ function ChoiceContextHeader({ context }: { readonly context: RenderChoiceContex
       <span className={styles.decisionPrompt} data-testid="choice-context-prompt">
         {context.iterationLabel != null ? `${context.iterationLabel}: ` : ''}
         {context.decisionPrompt}
-        {context.boundsText != null ? ` (${context.boundsText})` : ''}
-        {context.iterationProgress != null ? ` - ${context.iterationProgress}` : ''}
+        {humanBounds != null ? ` (${humanBounds})` : ''}
+        {context.iterationProgress != null ? ` — step ${context.iterationProgress}` : ''}
       </span>
+    </div>
+  );
+}
+
+const MAX_VISIBLE_BREADCRUMB_SEGMENTS = 3;
+
+interface CollapsedBreadcrumbProps {
+  readonly steps: readonly RenderChoiceStep[];
+  readonly totalSteps: number;
+  readonly store: StoreApi<GameStore>;
+  readonly showCurrent: boolean;
+}
+
+function CollapsedBreadcrumb({ steps, totalSteps, store, showCurrent }: CollapsedBreadcrumbProps): ReactElement {
+  const allSegments = segmentBreadcrumb(steps);
+  const shouldCollapse = allSegments.length > MAX_VISIBLE_BREADCRUMB_SEGMENTS;
+  const visibleSegments = shouldCollapse
+    ? allSegments.slice(allSegments.length - MAX_VISIBLE_BREADCRUMB_SEGMENTS)
+    : allSegments;
+
+  return (
+    <div className={styles.breadcrumb} data-testid="choice-breadcrumb">
+      {shouldCollapse ? (
+        <span className={styles.breadcrumbEllipsis} data-testid="choice-breadcrumb-ellipsis" aria-label={`${allSegments.length - MAX_VISIBLE_BREADCRUMB_SEGMENTS} earlier steps hidden`}>
+          ...
+        </span>
+      ) : null}
+      {visibleSegments.map((segment) => {
+        if (segment.kind === 'flat') {
+          return (
+            <button
+              key={`${segment.step.decisionKey}:${segment.step.chosenValueId}`}
+              type="button"
+              className={styles.breadcrumbStep}
+              data-testid={`choice-breadcrumb-step-${segment.originalIndex}`}
+              onClick={() => {
+                void rewindChoiceToBreadcrumb(store, totalSteps, segment.originalIndex);
+              }}
+            >
+              {segment.step.displayName}: {segment.step.chosenDisplayName}
+            </button>
+          );
+        }
+        return (
+          <div key={segment.groupId} className={styles.breadcrumbGroup} data-testid={`choice-breadcrumb-group-${segment.groupId}`}>
+            <div className={styles.breadcrumbGroupChildren}>
+              {segment.steps.map(({ step, originalIndex }) => (
+                <button
+                  key={`${step.decisionKey}:${step.chosenValueId}`}
+                  type="button"
+                  className={styles.breadcrumbStepIndented}
+                  data-testid={`choice-breadcrumb-step-${originalIndex}`}
+                  onClick={() => {
+                    void rewindChoiceToBreadcrumb(store, totalSteps, originalIndex);
+                  }}
+                >
+                  {step.iterationLabel != null ? `${step.iterationLabel}: ` : ''}{step.chosenDisplayName}
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+      {showCurrent ? (
+        <span className={styles.breadcrumbCurrent} data-testid="choice-breadcrumb-current">
+          Current
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -386,49 +469,12 @@ export function ChoicePanel({ store, mode }: ChoicePanelProps): ReactElement | n
         <ChoiceContextHeader context={choiceModel.choiceContext} />
       ) : null}
       {mode !== 'choiceInvalid' ? (
-        <div className={styles.breadcrumb} data-testid="choice-breadcrumb">
-          {segmentBreadcrumb(choiceModel.choiceBreadcrumb).map((segment) => {
-            if (segment.kind === 'flat') {
-              return (
-                <button
-                  key={`${segment.step.decisionKey}:${segment.step.chosenValueId}`}
-                  type="button"
-                  className={styles.breadcrumbStep}
-                  data-testid={`choice-breadcrumb-step-${segment.originalIndex}`}
-                  onClick={() => {
-                    void rewindChoiceToBreadcrumb(store, choiceModel.choiceBreadcrumb.length, segment.originalIndex);
-                  }}
-                >
-                  {segment.step.displayName}: {segment.step.chosenDisplayName}
-                </button>
-              );
-            }
-            return (
-              <div key={segment.groupId} className={styles.breadcrumbGroup} data-testid={`choice-breadcrumb-group-${segment.groupId}`}>
-                <div className={styles.breadcrumbGroupChildren}>
-                  {segment.steps.map(({ step, originalIndex }) => (
-                    <button
-                      key={`${step.decisionKey}:${step.chosenValueId}`}
-                      type="button"
-                      className={styles.breadcrumbStepIndented}
-                      data-testid={`choice-breadcrumb-step-${originalIndex}`}
-                      onClick={() => {
-                        void rewindChoiceToBreadcrumb(store, choiceModel.choiceBreadcrumb.length, originalIndex);
-                      }}
-                    >
-                      {step.iterationLabel != null ? `${step.iterationLabel}: ` : ''}{step.chosenDisplayName}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-          {isPendingChoice ? (
-            <span className={styles.breadcrumbCurrent} data-testid="choice-breadcrumb-current">
-              Current
-            </span>
-          ) : null}
-        </div>
+        <CollapsedBreadcrumb
+          steps={choiceModel.choiceBreadcrumb}
+          totalSteps={choiceModel.choiceBreadcrumb.length}
+          store={store}
+          showCurrent={isPendingChoice}
+        />
       ) : null}
 
       <div className={styles.body}>

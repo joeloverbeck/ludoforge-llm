@@ -95,7 +95,7 @@ describe('projectRenderModel victory standings', () => {
               },
               {
                 spaceId: 'central-highlands:none',
-                displayName: 'Central Highlands None',
+                displayName: 'Central Highlands',
                 contribution: 5,
                 factors: { population: 5, multiplier: 1 },
               },

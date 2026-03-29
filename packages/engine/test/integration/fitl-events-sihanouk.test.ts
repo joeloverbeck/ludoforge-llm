@@ -5,6 +5,9 @@ import {
   applyMove,
   asPlayerId,
   asTokenId,
+  createSeatResolutionContext,
+  enumerateLegalMoves,
+  hasLegalCompletedFreeOperationMoveInCurrentState,
   initialState,
   legalMoves,
   type GameDef,
@@ -411,11 +414,38 @@ describe('FITL card-75 Sihanouk', () => {
     const nvaWindow = applyMove(def, afterEvent, passToNva!).state;
     assert.equal(nvaWindow.activePlayer, asPlayerId(2), 'Expected the pass to hand control directly to NVA');
 
-    const freeRallies = legalMoves(def, nvaWindow).filter(
-      (move) => String(move.actionId) === 'rally' && move.freeOperation === true,
+    const classifiedNvaWindow = enumerateLegalMoves(def, nvaWindow);
+    const freeOperationTemplates = classifiedNvaWindow.moves.filter(
+      ({ move }) => move.freeOperation === true,
+    );
+    assert.equal(
+      freeOperationTemplates.every(({ move }) => String(move.actionId) === 'rally'),
+      true,
+      'The unusable VC batch must not leak phantom free-operation moves into the NVA grant window',
     );
 
-    assert.equal(freeRallies.length > 0, true, 'Expected a free Rally after the unusable VC batch is skipped');
+    const seatResolution = createSeatResolutionContext(def, nvaWindow.playerCount);
+    assert.equal(
+      freeOperationTemplates.every(({ move, viability }) => (
+        viability.viable
+        && (
+          viability.complete
+          || viability.stochasticDecision !== undefined
+          || hasLegalCompletedFreeOperationMoveInCurrentState(def, nvaWindow, move, seatResolution)
+        )
+      )),
+      true,
+      'Every surfaced free-operation template must remain existentially completable in the current state',
+    );
+
+    const freeRallies = freeOperationTemplates.filter(
+      ({ move }) => String(move.actionId) === 'rally',
+    ).map(({ move }) => move);
+    assert.equal(
+      freeRallies.length > 0,
+      true,
+      'Expected a free Rally after the unusable VC batch is skipped',
+    );
     const nvaRally = freeRallies[0];
     assert.notEqual(nvaRally, undefined, 'Expected NVA free Rally');
 

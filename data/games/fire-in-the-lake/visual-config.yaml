@@ -687,6 +687,14 @@ actions:
       subActionSpaces:
         label: Additional Space
         prompt: Select additional space for this action
+      subAction:
+        prompt: Choose a sub-action for this space
+        options:
+          none:
+            displayName: Skip
+      pacLevels:
+        label: Pacification Level
+        prompt: Choose pacification level
   patrol:
     choices:
       targetSpaces:

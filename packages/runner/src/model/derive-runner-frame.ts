@@ -1218,10 +1218,11 @@ function deriveChoiceContext(
   }
 
   // When the decision key has template resolution but no iteration path,
-  // derive the entity from the resolved bind for display purposes.
+  // derive the entity from the resolved bind — only if it's a known zone.
+  // Non-zone resolved binds (e.g., param names) add noise to the display.
   if (iterationEntityId === null) {
     const parsedKey = parseDecisionKey(choicePending.decisionKey);
-    if (parsedKey !== null && parsedKey.baseId !== parsedKey.resolvedBind) {
+    if (parsedKey !== null && parsedKey.baseId !== parsedKey.resolvedBind && isKnownZone(parsedKey.resolvedBind, zonesById)) {
       iterationEntityId = parsedKey.resolvedBind;
     }
   }
@@ -1235,6 +1236,20 @@ function deriveChoiceContext(
     iterationIndex,
     iterationTotal,
   };
+}
+
+function isKnownZone(entityId: string, zonesById: ReadonlyMap<string, RunnerZone>): boolean {
+  if (zonesById.has(entityId)) {
+    return true;
+  }
+  // Engine iteration entities may use base zone IDs without the :owner suffix.
+  const prefix = entityId + ':';
+  for (const zoneId of zonesById.keys()) {
+    if (zoneId.startsWith(prefix)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function extractIterationGroupId(decisionKey: DecisionKey): string | null {
@@ -1259,11 +1274,13 @@ function deriveChoiceBreadcrumb(
     const iterationGroupId = extractIterationGroupId(step.decisionKey);
 
     // When the decision key has template resolution (baseId !== resolvedBind)
-    // but no iteration path, derive the entity from the resolved bind.
+    // but no iteration path, derive the entity from the resolved bind —
+    // but only if the resolved bind is a known zone. Non-zone resolved binds
+    // (e.g., param names) should fall through to the array-index lookup below.
     let iterationEntityId = iterCtx?.currentEntityId ?? null;
     if (iterationEntityId === null && iterationGroupId !== null) {
       const parsedKey = parseDecisionKey(step.decisionKey);
-      if (parsedKey !== null && parsedKey.baseId !== parsedKey.resolvedBind) {
+      if (parsedKey !== null && parsedKey.baseId !== parsedKey.resolvedBind && isKnownZone(parsedKey.resolvedBind, zonesById)) {
         iterationEntityId = parsedKey.resolvedBind;
       }
     }

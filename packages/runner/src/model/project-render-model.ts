@@ -45,7 +45,7 @@ export function projectRenderModel(
   const tokens = projectTokens(frame.tokens, visibleZoneIds);
   const zonesById = new Map(zones.map((zone) => [zone.id, zone] as const));
   const choiceContext = projectChoiceContext(frame.choiceContext, zonesById, visualConfigProvider);
-  const choiceUi = projectChoiceUi(frame.choiceUi, zonesById, tokens, playersById);
+  const choiceUi = projectChoiceUi(frame.choiceUi, zonesById, tokens, playersById, visualConfigProvider, frame.choiceContext);
 
   const nextModel: RenderModel = {
     zones,
@@ -84,7 +84,7 @@ export function projectRenderModel(
       iterationGroupId: step.iterationGroupId,
       iterationLabel: step.iterationEntityId === null
         ? null
-        : zonesById.get(step.iterationEntityId)?.displayName ?? humanizeDecisionParamName(step.iterationEntityId),
+        : resolveIterationEntityDisplayName(step.iterationEntityId, zonesById),
     })),
     choiceContext,
     choiceUi,
@@ -267,8 +267,10 @@ function projectChoiceContext(
       if (choiceContext.iterationEntityId === null) {
         return null;
       }
-      const resolved = zonesById.get(choiceContext.iterationEntityId)?.displayName
-        ?? humanizeDecisionParamName(choiceContext.iterationEntityId);
+      const resolved = resolveIterationEntityDisplayName(choiceContext.iterationEntityId, zonesById);
+      if (resolved === null) {
+        return null;
+      }
       // Suppress iteration label when it duplicates the decision label (e.g., both resolve to "Target Spaces").
       const finalLabel = configLabel ?? shortLabel;
       return resolved === finalLabel ? null : resolved;
@@ -279,19 +281,49 @@ function projectChoiceContext(
   };
 }
 
+/**
+ * Resolve an iteration entity ID to a zone display name.
+ * Tries exact match first, then base-ID lookup (e.g., 'table' → 'table:none').
+ * Returns null for non-zone entities to suppress jargon in the UI.
+ */
+function resolveIterationEntityDisplayName(
+  entityId: string,
+  zonesById: ReadonlyMap<string, RenderZone>,
+): string | null {
+  const exact = zonesById.get(entityId);
+  if (exact !== undefined) {
+    return exact.displayName;
+  }
+  // Engine iteration entities may use base zone IDs without the :owner suffix.
+  // Check if any zone ID starts with entityId + ':'.
+  const prefix = entityId + ':';
+  for (const [zoneId, zone] of zonesById) {
+    if (zoneId.startsWith(prefix)) {
+      return zone.displayName;
+    }
+  }
+  return null;
+}
+
 function projectChoiceUi(
   choiceUi: RunnerChoiceUi,
   zonesById: ReadonlyMap<string, RenderZone>,
   tokens: readonly RenderToken[],
   playersById: ReadonlyMap<PlayerId, RenderPlayer>,
+  visualConfigProvider: VisualConfigProvider,
+  choiceContext: RunnerFrame['choiceContext'],
 ): RenderModel['choiceUi'] {
   if (choiceUi.kind !== 'discreteOne' && choiceUi.kind !== 'discreteMany') {
     return choiceUi;
   }
 
+  const actionId = choiceContext?.selectedActionId ?? null;
+  const paramName = choiceContext === null ? null : stripDecisionParamPrefix(choiceContext.decisionParamName);
+  const astTail = choiceContext === null ? null : extractAstParamTail(choiceContext.decisionParamName);
+
   const options = choiceUi.options.map((option) => ({
     ...option,
-    displayName: resolveChoiceOptionDisplayName(option, zonesById, tokens, playersById),
+    displayName: resolveChoiceOptionDisplayName(option, zonesById, tokens, playersById, visualConfigProvider, actionId, paramName, astTail),
     target: {
       ...option.target,
       displaySource: option.target.kind === 'scalar' ? 'fallback' : option.target.kind,
@@ -310,7 +342,19 @@ function resolveChoiceOptionDisplayName(
   zonesById: ReadonlyMap<string, RenderZone>,
   tokens: readonly RenderToken[],
   playersById: ReadonlyMap<PlayerId, RenderPlayer>,
+  visualConfigProvider: VisualConfigProvider,
+  actionId: string | null,
+  paramName: string | null,
+  astTail: string | null,
 ): string {
+  if (actionId !== null && paramName !== null && typeof option.value === 'string') {
+    const configName = visualConfigProvider.getChoiceOptionDisplayName(actionId, paramName, option.value)
+      ?? (astTail !== null ? visualConfigProvider.getChoiceOptionDisplayName(actionId, astTail, option.value) : null);
+    if (configName !== null) {
+      return configName;
+    }
+  }
+
   if (option.target.kind === 'zone' && option.target.entityId !== null) {
     return zonesById.get(option.target.entityId)?.displayName ?? formatIdAsDisplayName(option.target.entityId);
   }

@@ -1,6 +1,6 @@
 # Spec 94: Agent Evaluation Diagnostic Pipeline
 
-**Status**: Draft
+**Status**: COMPLETED
 **Priority**: P2
 **Complexity**: S
 **Dependencies**: Spec 15 (implemented), Spec 93 (implemented)
@@ -257,6 +257,22 @@ export function buildPolicyAgentDecisionTrace(
 - **F12 (Branded Types)**: No new domain IDs introduced; existing branded types remain unchanged.
 
 ## Acceptance Criteria
+
+## Outcome
+
+- Completion date: 2026-03-29
+- What actually changed:
+  - The diagnostic pipeline described here was already implemented in the codebase before this ticket pass.
+  - Policy trace types, zod schema definitions, generated JSON Schema artifacts, and diagnostic tests already included `previewUsage.outcomeBreakdown`, verbose `completionStatistics`, and candidate `previewOutcome`.
+  - This completion pass strengthened explicit AJV trace-schema validation coverage for those fields in `packages/engine/test/unit/json-schema.test.ts`.
+- Deviations from original plan:
+  - No new agent-layer implementation work was required during this pass.
+  - The only code change was stronger schema-proof coverage, because the production architecture already matched the spec intent.
+- Verification results:
+  - `pnpm -F @ludoforge/engine schema:artifacts:check` passed.
+  - `pnpm turbo lint` passed.
+  - `pnpm turbo typecheck` passed.
+  - `pnpm turbo test` passed.
 
 1. FITL policy traces at `verbose` level show `outcomeBreakdown` with counts matching the actual preview cache state
 2. FITL policy traces at `verbose` level show `completionStatistics` with accurate counts

@@ -6,6 +6,7 @@ import { describe, it } from 'node:test';
 import { Ajv, type ErrorObject } from 'ajv';
 
 import {
+  type AgentDecisionTrace,
   asActionId,
   asPhaseId,
   asPlayerId,
@@ -22,6 +23,11 @@ import { EFFECT_KIND_TAG } from '../../src/kernel/types-ast.js';
 const readSchema = (filename: string): Record<string, unknown> => {
   const schemaPath = path.join(process.cwd(), 'schemas', filename);
   return JSON.parse(readFileSync(schemaPath, 'utf8')) as Record<string, unknown>;
+};
+
+const readTraceFixture = <T>(filename: string): T => {
+  const fixturePath = path.join(process.cwd(), 'test', 'fixtures', 'trace', filename);
+  return JSON.parse(readFileSync(fixturePath, 'utf8')) as T;
 };
 
 const traceSchema = readSchema('Trace.schema.json');
@@ -283,6 +289,20 @@ const validRuntimeTrace: GameTrace = {
   stopReason: 'terminal',
 };
 
+interface PolicyDecisionGolden {
+  readonly move: unknown;
+  readonly agentDecision: Extract<AgentDecisionTrace, { readonly kind: 'policy' }>;
+}
+
+function toSerializedTraceMove(move: unknown): Record<string, unknown> {
+  if (move === null || typeof move !== 'object' || Array.isArray(move)) {
+    throw new TypeError('expected policy decision fixture move to be an object');
+  }
+  const serializedMove = { ...(move as Record<string, unknown>) };
+  delete serializedMove.actionClass;
+  return serializedMove;
+}
+
 describe('json schema artifacts', () => {
   it('each schema file is valid JSON and declares a draft version', () => {
     const schemas = [traceSchema, evalReportSchema, gameDefSchema];
@@ -297,6 +317,104 @@ describe('json schema artifacts', () => {
     const ajv = new Ajv({ allErrors: true, strict: false });
     const validate = ajv.compile(traceSchema);
     const serializedTrace = serializeTrace(validRuntimeTrace);
+
+    assert.equal(validate(serializedTrace), true, JSON.stringify(validate.errors, null, 2));
+  });
+
+  it('serialized trace with summary policy diagnostics validates against Trace.schema.json', () => {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(traceSchema);
+    const baseSerializedTrace = serializeTrace(validRuntimeTrace);
+    const fixture = readTraceFixture<PolicyDecisionGolden>('fitl-policy-summary.golden.json');
+    const serializedTrace = {
+      ...baseSerializedTrace,
+      moves: [
+        {
+          ...baseSerializedTrace.moves[0]!,
+          move: toSerializedTraceMove(fixture.move),
+          agentDecision: fixture.agentDecision,
+        },
+      ],
+    };
+
+    assert.equal(validate(serializedTrace), true, JSON.stringify(validate.errors, null, 2));
+  });
+
+  it('serialized trace with verbose policy diagnostics validates against Trace.schema.json', () => {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(traceSchema);
+    const baseSerializedTrace = serializeTrace(validRuntimeTrace);
+    const fixture = readTraceFixture<PolicyDecisionGolden>('fitl-policy-summary.golden.json');
+    const serializedTrace = {
+      ...baseSerializedTrace,
+      moves: [
+        {
+          ...baseSerializedTrace.moves[0]!,
+          move: toSerializedTraceMove(fixture.move),
+          agentDecision: {
+            ...fixture.agentDecision,
+            completionStatistics: {
+              totalClassifiedMoves: 3,
+              completedCount: 1,
+              stochasticCount: 1,
+              rejectedNotViable: 1,
+              templateCompletionAttempts: 2,
+              templateCompletionSuccesses: 1,
+              templateCompletionUnsatisfiable: 1,
+            },
+            candidates: [
+              {
+                actionId: 'advance',
+                stableMoveKey: 'advance|{}|false|event',
+                score: 7,
+                prunedBy: [],
+                previewRefIds: ['victoryCurrentMargin.currentMargin.self'],
+                unknownPreviewRefs: [],
+                previewOutcome: 'ready',
+              },
+              {
+                actionId: 'pass',
+                stableMoveKey: 'pass|{}|false|event',
+                score: 1,
+                prunedBy: ['dropPassWhenOtherMovesExist'],
+                previewRefIds: ['victoryCurrentMargin.currentMargin.self'],
+                unknownPreviewRefs: [
+                  { refId: 'victoryCurrentMargin.currentMargin.self', reason: 'hidden' },
+                ],
+                previewOutcome: 'hidden',
+              },
+            ],
+          },
+        },
+      ],
+    };
+
+    assert.equal(validate(serializedTrace), true, JSON.stringify(validate.errors, null, 2));
+  });
+
+  it('serialized trace without optional policy diagnostics still validates against Trace.schema.json', () => {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(traceSchema);
+    const baseSerializedTrace = serializeTrace(validRuntimeTrace);
+    const fixture = readTraceFixture<PolicyDecisionGolden>('fitl-policy-summary.golden.json');
+    const previewUsageWithoutBreakdown = {
+      evaluatedCandidateCount: fixture.agentDecision.previewUsage.evaluatedCandidateCount,
+      refIds: fixture.agentDecision.previewUsage.refIds,
+      unknownRefs: fixture.agentDecision.previewUsage.unknownRefs,
+    };
+    const serializedTrace = {
+      ...baseSerializedTrace,
+      moves: [
+        {
+          ...baseSerializedTrace.moves[0]!,
+          move: toSerializedTraceMove(fixture.move),
+          agentDecision: {
+            ...fixture.agentDecision,
+            previewUsage: previewUsageWithoutBreakdown,
+          },
+        },
+      ],
+    };
 
     assert.equal(validate(serializedTrace), true, JSON.stringify(validate.errors, null, 2));
   });

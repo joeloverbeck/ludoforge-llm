@@ -67,33 +67,78 @@ The completed moves already exist and are already `playableComplete`. The policy
 
 ## Proposed Design
 
-### Core Change: Pass Trusted Metadata Through to Policy Evaluation
+### Core Change: Index-Injection of Trusted Moves into Preview Runtime
 
-The `EvaluatePolicyMoveInput` currently accepts `readonly legalMoves: readonly Move[]`. The completed moves from `preparePlayableMoves` are `TrustedExecutableMove[]` — a superset of `Move` that includes `sourceStateHash` and `provenance`.
+The preview system currently re-probes every candidate via `classifyPlayableMoveCandidate` → `probeMoveViability`. Completed moves from `preparePlayableMoves` are `TrustedExecutableMove[]` — already verified as `playableComplete` — but this information is lost when `PolicyAgent.chooseMove` strips the wrappers via `.map(m => m.move)`.
 
-**Option A — Widen the input type**: Change `legalMoves` to accept `readonly (Move | TrustedExecutableMove)[]` and have the preview system recognize trusted moves as pre-completed.
+**Design**: Inject a `ReadonlyMap<string, TrustedExecutableMove>` (keyed by `stableMoveKey`) into the preview runtime at construction time. When resolving a candidate's preview, the runtime first checks this index. If a trusted move is found, it bypasses `classifyPlayableMoveCandidate` entirely and applies the trusted move directly.
 
-**Option B — Carry classification alongside moves**: Add an optional `readonly classifications?: ReadonlyMap<string, PlayableCandidateClassification>` to `EvaluatePolicyMoveInput`. When present, the preview system uses these pre-computed classifications instead of re-probing.
-
-**Option C — Change preview to accept TrustedExecutableMove directly**: Modify `PolicyPreviewCandidate` to optionally carry a `TrustedExecutableMove`, and have `getPreviewOutcome` skip the probe when one is present.
-
-**Recommendation: Option C** — it is the most surgical change with the smallest API surface impact. The preview system gains an optional fast-path for pre-completed moves without changing the policy evaluator's external contract.
+**Why index-injection over candidate-threading**: The alternative (adding `trustedMove?` to `PolicyPreviewCandidate` and `PolicyRuntimeCandidate`) requires type changes across the candidate pipeline. Index-injection adds the map once at construction — `PolicyPreviewCandidate`, `PolicyRuntimeCandidate`, and `CandidateEntry` types are unchanged. The lookup is by `stableMoveKey`, which is already the caching key.
 
 ### Detailed Changes
 
-#### 1. Extend `PolicyPreviewCandidate`
+#### 1. Add `trustedMoveIndex` to `CreatePolicyPreviewRuntimeInput`
 
 ```typescript
-export interface PolicyPreviewCandidate {
-  readonly move: Move;
-  readonly stableMoveKey: string;
-  readonly trustedMove?: TrustedExecutableMove;  // NEW
+export interface CreatePolicyPreviewRuntimeInput {
+  readonly def: GameDef;
+  readonly state: GameState;
+  readonly playerId: PlayerId;
+  readonly seatId: string;
+  readonly runtime?: GameDefRuntime;
+  readonly trustedMoveIndex: ReadonlyMap<string, TrustedExecutableMove>;  // NEW — required
 }
 ```
 
-When `trustedMove` is present, the preview runtime skips `classifyPlayableMoveCandidate` and directly applies the trusted move via `applyTrustedMove`.
+The index is keyed by `stableMoveKey` (computed via `toMoveIdentityKey(def, move.move)`). When present, the preview runtime uses the trusted move directly instead of re-probing.
 
-#### 2. Modify `getPreviewOutcome` in `policy-preview.ts`
+#### 2. Extract `tryApplyPreview` from `classifyPreviewOutcome` in `policy-preview.ts`
+
+The existing `classifyPreviewOutcome` function does: classify → apply → RNG-check → observation. Extract the apply → RNG-check → observation logic into `tryApplyPreview`:
+
+```typescript
+function tryApplyPreview(trustedMove: TrustedExecutableMove): PreviewOutcome {
+  // F5 safety: verify the trusted move was completed against the current state
+  if (trustedMove.sourceStateHash !== input.state.stateHash) {
+    return { kind: 'unknown', reason: 'failed' };
+  }
+  try {
+    const previewState = deps.applyMove(
+      input.def, input.state, trustedMove, undefined, input.runtime,
+    ).state;
+    if (!rngStatesEqual(previewState.rng, input.state.rng)) {
+      return { kind: 'unknown', reason: 'random' };
+    }
+    const observation = deps.derivePlayerObservation(input.def, previewState, input.playerId);
+    return {
+      kind: 'ready',
+      state: previewState,
+      requiresHiddenSampling: observation.requiresHiddenSampling,
+      metricCache: new Map<string, number>(),
+      victorySurface: null,
+    };
+  } catch {
+    return { kind: 'unknown', reason: 'failed' };
+  }
+}
+```
+
+`classifyPreviewOutcome` becomes a thin wrapper:
+
+```typescript
+function classifyPreviewOutcome(classification: PlayableCandidateClassification): PreviewOutcome {
+  return classification.kind !== 'playableComplete'
+    ? { kind: 'unknown', reason: 'unresolved' }
+    : tryApplyPreview(classification.move);
+}
+```
+
+Key design decisions:
+- Uses `deps.applyMove` (injected dependency), consistent with the existing DI pattern — not `applyTrustedMove` directly
+- Adds `sourceStateHash` validation (F5 safety invariant, cheap bigint comparison) — catches bugs where a trusted move is applied against a state it wasn't completed for
+- Shares the RNG-check and observation logic with the original path — no duplication
+
+#### 3. Modify `getPreviewOutcome` in `policy-preview.ts`
 
 ```typescript
 function getPreviewOutcome(candidate: PolicyPreviewCandidate): PreviewOutcome {
@@ -102,44 +147,89 @@ function getPreviewOutcome(candidate: PolicyPreviewCandidate): PreviewOutcome {
     return cached;
   }
 
-  let outcome: PreviewOutcome;
-  if (candidate.trustedMove !== undefined) {
-    // Fast path: move is already completed and trusted
-    outcome = tryApplyPreview(candidate.trustedMove);
-  } else {
-    // Original path: probe viability first
-    const classification = deps.classifyPlayableMoveCandidate(
-      input.def, input.state, candidate.move, input.runtime,
-    );
-    outcome = classification.kind === 'playableComplete'
-      ? tryApplyPreview(classification.move)
-      : { kind: 'unknown', reason: 'unresolved' };
-  }
+  const trusted = trustedMoveIndex.get(candidate.stableMoveKey);
+  const outcome = trusted !== undefined
+    ? tryApplyPreview(trusted)
+    : classifyPreviewOutcome(
+        deps.classifyPlayableMoveCandidate(input.def, input.state, candidate.move, input.runtime),
+      );
 
   cache.set(candidate.stableMoveKey, outcome);
   return outcome;
 }
 ```
 
-The extracted `tryApplyPreview` handles the common apply-check-rng-observe path.
+The trusted fast-path and the original classification path both resolve to `PreviewOutcome` through `tryApplyPreview`. Caching is unchanged — the outcome is cached by `stableMoveKey` regardless of path.
 
-#### 3. Thread `TrustedExecutableMove` from completion to evaluation
+#### 4. Thread `trustedMoveIndex` from `PolicyAgent` through evaluation
 
-In `PolicyAgent.chooseMove`, the completed moves are already `TrustedExecutableMove[]`. These need to reach the policy evaluator's candidate construction. Two sub-options:
+**In `EvaluatePolicyMoveInput`** (`policy-eval.ts`):
 
-**3a**: Extend `EvaluatePolicyMoveInput` to accept `readonly legalMoves: readonly Move[]` plus a parallel `readonly trustedMoves?: ReadonlyMap<string, TrustedExecutableMove>` keyed by stable move key. The evaluator's `canonicalizeCandidates` attaches the trusted move to each `CandidateEntry`, which flows to `PolicyPreviewCandidate`.
+```typescript
+export interface EvaluatePolicyMoveInput {
+  readonly def: GameDef;
+  readonly state: GameState;
+  readonly playerId: PlayerId;
+  readonly legalMoves: readonly Move[];
+  readonly rng: Rng;
+  readonly runtime?: GameDefRuntime;
+  readonly fallbackOnError?: boolean;
+  readonly profileIdOverride?: string;
+  readonly trustedMoveIndex: ReadonlyMap<string, TrustedExecutableMove>;  // NEW — required
+}
+```
 
-**3b**: Change `legalMoves` type to `readonly (Move & { readonly __trusted?: TrustedExecutableMove })[]`. Less clean, but avoids a second parameter.
+**In `CreatePolicyRuntimeProvidersInput`** (`policy-runtime.ts`):
 
-**Recommendation: 3a** — explicit is better than smuggling. A `ReadonlyMap` keyed by stable move key is clean, optional, and backward-compatible.
+```typescript
+export interface CreatePolicyRuntimeProvidersInput {
+  // ... existing fields ...
+  readonly trustedMoveIndex: ReadonlyMap<string, TrustedExecutableMove>;  // NEW — required
+}
+```
 
-#### 4. No changes to CandidateEntry internal scoring
+Forwarded to `createPolicyPreviewRuntime` in `createPolicyRuntimeProviders`.
 
-The evaluator's scoring, pruning, and tie-breaking logic is unchanged. The only difference is that `PolicyPreviewCandidate.trustedMove` is populated, causing the preview system to produce actual values instead of `unknown`.
+**In `PolicyAgent.chooseMove`** (`policy-agent.ts`):
+
+```typescript
+const playableMoves = prepared.completedMoves.length > 0
+  ? prepared.completedMoves
+  : prepared.stochasticMoves;
+
+const trustedMoveIndex = new Map(
+  playableMoves.map(tm => [toMoveIdentityKey(input.def, tm.move), tm]),
+);
+
+const result = evaluatePolicyMove({
+  ...input,
+  legalMoves: playableMoves.map(m => m.move),
+  rng: prepared.rng,
+  trustedMoveIndex,
+  // ... other fields ...
+});
+```
+
+#### 5. No changes to candidate types or kernel code
+
+The following types remain unchanged:
+- `PolicyPreviewCandidate` — still `{ move: Move; stableMoveKey: string }`
+- `PolicyRuntimeCandidate` — still `{ move: Move; stableMoveKey: string; actionId: string }`
+- `CandidateEntry` — internal to `policy-eval.ts`, unchanged
+- All kernel types and functions — untouched
+
+### Stochastic Move Handling
+
+`PolicyAgent.chooseMove` uses `completedMoves` when available, falling back to `stochasticMoves`. The `trustedMoveIndex` is built from whichever array is selected. For stochastic moves:
+
+- The index still contains `TrustedExecutableMove` wrappers (provenance: `'templateCompletion'`)
+- `tryApplyPreview` applies them, but the RNG-changed check will return `{ kind: 'unknown', reason: 'random' }` if the move consumes RNG
+- This is correct behavior — stochastic moves legitimately cannot be previewed deterministically
+- The fast-path still avoids the redundant re-probe via `probeMoveViability`, saving computation even when preview is ultimately `unknown`
 
 ### Safety Analysis
 
-**Determinism (F5)**: Preserved. The trusted move is the same move that would be completed — same decisions, same RNG consumption. Preview applies it deterministically. The RNG-changed check still rejects non-deterministic outcomes.
+**Determinism (F5)**: Preserved. The trusted move is the same move that was completed — same decisions, same RNG consumption. Preview applies it deterministically. The RNG-changed check still rejects non-deterministic outcomes. The new `sourceStateHash` assertion provides an additional F5 safety net.
 
 **Visibility (Spec 15 §Visibility)**: Preserved. Preview still masks hidden information through `getPolicySurfaceVisibility` and `isSurfaceVisibilityAccessible`. The change only affects whether preview can produce a state to inspect, not what it exposes from that state.
 
@@ -149,9 +239,15 @@ The evaluator's scoring, pruning, and tie-breaking logic is unchanged. The only 
 
 **No search (Spec 15 §V1)**: Preserved. This is still one-ply evaluation of concrete moves. The moves are concrete because they've been completed. No template expansion happens inside the evaluator.
 
+**Immutability (F7)**: Preserved. The `trustedMoveIndex` is a `ReadonlyMap`. `tryApplyPreview` returns new state objects via `deps.applyMove`.
+
+**No backwards compatibility shims (F9)**: Enforced. `trustedMoveIndex` is required on `EvaluatePolicyMoveInput`, not optional. All callers (production and test) are updated in the same change. Tests that don't exercise preview pass an empty map.
+
 ### Performance Impact
 
-**Additional cost**: One `applyTrustedMove` call per completed candidate that survives pruning (preview is lazy, computed only when a `preview.*` ref is evaluated). For FITL with ~120 completed moves per decision point (40 templates × 3 completions), this adds ~120 move applications.
+**Additional cost**: One `deps.applyMove` call per completed candidate that survives pruning (preview is lazy, computed only when a `preview.*` ref is evaluated). For FITL with ~120 completed moves per decision point (40 templates × 3 completions), this adds ~120 move applications.
+
+**Savings**: The fast-path avoids `classifyPlayableMoveCandidate` → `probeMoveViability` for every candidate — a meaningful saving since `probeMoveViability` validates action preconditions, decision sequences, and turn flow windows.
 
 **Mitigation**: Preview is already cached per `stableMoveKey`. Lazy evaluation means only candidates that reach the scoring phase (post-pruning) incur preview cost. The FITL campaign showed that pruning removes ~50% of candidates before scoring.
 
@@ -163,38 +259,33 @@ The evaluator's scoring, pruning, and tie-breaking logic is unchanged. The only 
 
 | File | Change |
 |------|--------|
-| `packages/engine/src/agents/policy-preview.ts` | Add `trustedMove` to `PolicyPreviewCandidate`, add fast-path in `getPreviewOutcome`, extract `tryApplyPreview` |
-| `packages/engine/src/agents/policy-eval.ts` | Extend `EvaluatePolicyMoveInput` with optional `trustedMoveIndex`, thread trusted moves to `CandidateEntry` and `PolicyPreviewCandidate` |
-| `packages/engine/src/agents/policy-agent.ts` | Build `trustedMoveIndex` map from `preparePlayableMoves` output and pass to `evaluatePolicyMove` |
-| `packages/engine/src/agents/policy-runtime.ts` | Update `PolicyRuntimeCandidate` to optionally carry `TrustedExecutableMove` |
+| `packages/engine/src/agents/policy-preview.ts` | Add `trustedMoveIndex` to `CreatePolicyPreviewRuntimeInput`, extract `tryApplyPreview` (with `sourceStateHash` guard), update `getPreviewOutcome` with index-lookup fast-path, reduce `classifyPreviewOutcome` to thin wrapper |
+| `packages/engine/src/agents/policy-eval.ts` | Add required `trustedMoveIndex` to `EvaluatePolicyMoveInput`, pass through to `createPolicyRuntimeProviders` |
+| `packages/engine/src/agents/policy-runtime.ts` | Add required `trustedMoveIndex` to `CreatePolicyRuntimeProvidersInput`, forward to `createPolicyPreviewRuntime` |
+| `packages/engine/src/agents/policy-agent.ts` | Build `trustedMoveIndex` map from selected playable moves, pass to `evaluatePolicyMove` |
 
 ### Test changes
 
 | Test | Purpose |
 |------|---------|
-| `test/unit/policy-preview.test.ts` | New: verify that `trustedMove` fast-path produces `ready` outcome for completed FITL moves |
-| `test/unit/policy-eval.test.ts` | New: verify that `trustedMoveIndex` causes preview refs to resolve (not `unknown`) |
-| `test/unit/policy-production-golden.test.ts` | Update: FITL policy summary golden will change (scores now reflect projected margins) |
+| `test/unit/agents/policy-preview.test.ts` | New: verify trusted index fast-path produces `ready` outcome for completed FITL moves; verify `sourceStateHash` mismatch returns `failed` |
+| `test/unit/agents/policy-eval.test.ts` | Update: all 7 existing callsites updated to pass `trustedMoveIndex` (empty map where preview is not under test) |
+| `test/unit/property/policy-determinism.test.ts` | Update: 3 callsites updated to pass `trustedMoveIndex` |
+| `test/unit/property/policy-visibility.test.ts` | Update: 2 callsites updated to pass `trustedMoveIndex` |
+| `test/unit/trace/policy-trace-events.test.ts` | Update: 1 callsite updated to pass `trustedMoveIndex` |
+| `test/unit/agents/policy-production-golden.test.ts` | Update: FITL policy summary golden will change (scores now reflect projected margins) |
 | `test/integration/policy-agent-preview.test.ts` | New: end-to-end test — compile FITL spec, enumerate+complete moves, verify PolicyAgent scores differ across candidates of the same action type |
 
 ### Golden fixture updates
 
 The FITL policy catalog golden (`fitl-policy-catalog.golden.json`) is unchanged — no compilation changes. The FITL policy summary golden (`fitl-policy-summary.golden.json`) will change because the agent now scores using actual projected margins instead of fallback constants.
 
-## Compatibility
-
-This change is **fully backward-compatible**:
-
-- `trustedMove` on `PolicyPreviewCandidate` is optional — existing callers that don't provide it get the current behavior (probe → classify → potentially `unknown`)
-- `trustedMoveIndex` on `EvaluatePolicyMoveInput` is optional — callers that don't provide it get current behavior
-- Games where moves are already `playableComplete` (simple action structures) see no behavior change
-- Games with nested decisions (FITL) see preview resolve to actual values instead of `unknown`
-
 ## Acceptance Criteria
 
 1. For FITL, `PolicyAgent` decision traces show `unknownRefIds: []` (empty) for completed moves that don't involve randomness
 2. Different parameterizations of the same FITL action produce different `projectedSelfMargin` values
-3. All existing engine tests pass without modification (except golden fixture updates)
+3. All existing engine tests pass (with test callsite updates for required `trustedMoveIndex`)
 4. Performance benchmark: FITL 15-seed tournament completes within 110% of current duration
 5. Texas Hold'em policy evaluation is unchanged (Texas moves are already `playableComplete` or legitimately `unknown` due to hidden information)
 6. No kernel source files modified
+7. `sourceStateHash` mismatch in `tryApplyPreview` returns `{ kind: 'unknown', reason: 'failed' }` (tested)

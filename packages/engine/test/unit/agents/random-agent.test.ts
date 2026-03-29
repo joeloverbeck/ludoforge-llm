@@ -1,6 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import { NoPlayableMovesAfterPreparationError } from '../../../src/agents/no-playable-move.js';
 import { RandomAgent } from '../../../src/agents/random-agent.js';
 import {
   completeClassifiedMove,
@@ -309,6 +310,29 @@ describe('RandomAgent', () => {
 
     // Should have skipped the unplayable template and selected the simple move
     assert.equal(result.move.actionId, asActionId('simple'));
+  });
+
+  it('throws a typed no-playable-move error when every classified move is unsatisfiable', () => {
+    const action = createTemplateChooseOneAction(asActionId('unplayable'), phaseId);
+    const emptyProfile = createEmptyOptionsProfile('unplayable');
+    const def = createDefWithProfile([action], [emptyProfile]);
+    const templateMove: Move = { actionId: asActionId('unplayable'), params: {} };
+    const agent = new RandomAgent();
+
+    assert.throws(
+      () => agent.chooseMove({
+        def,
+        state: stateStub,
+        playerId: asPlayerId(0),
+        legalMoves: [pendingClassifiedMove(templateMove)],
+        rng: createRng(42n),
+      }),
+      (error: unknown) => (
+        error instanceof NoPlayableMovesAfterPreparationError
+        && error.agentId === 'random'
+        && error.legalMoveCount === 1
+      ),
+    );
   });
 
   // --- Stochastic unresolved template tests ---

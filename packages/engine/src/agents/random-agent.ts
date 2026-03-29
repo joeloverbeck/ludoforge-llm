@@ -1,6 +1,7 @@
 import { toMoveIdentityKey } from '../kernel/move-identity.js';
 import type { Agent } from '../kernel/types.js';
 import { pickRandom, selectStochasticFallback } from './agent-move-selection.js';
+import { NoPlayableMovesAfterPreparationError } from './no-playable-move.js';
 import { preparePlayableMoves } from './prepare-playable-moves.js';
 
 export class RandomAgent implements Agent {
@@ -26,7 +27,7 @@ export class RandomAgent implements Agent {
     }
 
     if (completedMoves.length === 0) {
-      throw new Error('RandomAgent.chooseMove: no playable moves after template completion');
+      throw new NoPlayableMovesAfterPreparationError('random', input.legalMoves.length);
     }
 
     const { item: selected, rng: nextRng } = pickRandom(completedMoves, rng);

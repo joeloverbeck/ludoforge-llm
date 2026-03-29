@@ -1,9 +1,11 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import { NoPlayableMovesAfterPreparationError } from '../../../src/agents/no-playable-move.js';
 import { PolicyAgent } from '../../../src/agents/policy-agent.js';
 import { completeClassifiedMoves, pendingClassifiedMove } from '../../helpers/classified-move-fixtures.js';
 import { createTemplateChooseOneAction, createTemplateChooseOneProfile } from '../../helpers/agent-template-fixtures.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
 import {
   type ActionPipelineDef,
   asActionId,
@@ -209,6 +211,32 @@ function createTemplateDef(): GameDef {
   });
 }
 
+function createEmptyOptionsProfile(actionId: string): ActionPipelineDef {
+  return {
+    id: `profile-${actionId}`,
+    actionId: asActionId(actionId),
+    legality: null,
+    costValidation: null,
+    costEffects: [],
+    targeting: {},
+    stages: [
+      {
+        stage: 'resolve',
+        effects: [
+          eff({
+            chooseOne: {
+              internalDecisionId: 'decision:$target',
+              bind: '$target',
+              options: { query: 'enums', values: [] },
+            },
+          }),
+        ],
+      },
+    ],
+    atomicity: 'atomic',
+  };
+}
+
 function createInput(def: GameDef): Parameters<PolicyAgent['chooseMove']>[0] {
   const state = initialState(def, 7, 2).state;
   const legalMoves: readonly Move[] = [
@@ -342,5 +370,31 @@ describe('PolicyAgent', () => {
       assert.fail('expected policy decision trace');
     }
     assert.equal(result.agentDecision.emergencyFallback, false);
+  });
+
+  it('throws a typed no-playable-move error when every classified move is unsatisfiable', () => {
+    const actionId = asActionId('unplayable');
+    const def = createDef({
+      metadata: { id: 'policy-agent-unplayable-template', players: { min: 2, max: 2 } },
+      actions: [createTemplateChooseOneAction(actionId, phaseId)],
+      actionPipelines: [createEmptyOptionsProfile('unplayable')],
+    });
+    const state = initialState(def, 7, 2).state;
+    const agent = new PolicyAgent();
+
+    assert.throws(
+      () => agent.chooseMove({
+        def,
+        state,
+        playerId: asPlayerId(0),
+        legalMoves: [pendingClassifiedMove({ actionId, params: {} })],
+        rng: createRng(42n),
+      }),
+      (error: unknown) => (
+        error instanceof NoPlayableMovesAfterPreparationError
+        && error.agentId === 'policy'
+        && error.legalMoveCount === 1
+      ),
+    );
   });
 });

@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/kernel/legal-moves.ts`, `packages/engine/src/kernel/playable-candidate.ts`
-**Deps**: PHANTMOV-001 (defensive catch should be in place first)
+**Deps**: archive/tickets/PHANTMOV/PHANTMOV-001-simulator-defensive-catch.md
 
 ## Problem
 

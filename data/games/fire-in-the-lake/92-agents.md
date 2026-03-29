@@ -40,6 +40,18 @@ agents:
       min: -1
       max: 1
       tunable: true
+    rallyWeight:
+      type: number
+      default: 1
+      min: 0
+      max: 10
+      tunable: true
+    taxWeight:
+      type: number
+      default: 1
+      min: 0
+      max: 10
+      tunable: true
 
   library:
     stateFeatures:
@@ -221,6 +233,12 @@ agents:
         value:
           boolToNumber:
             ref: feature.isRally
+      preferRallyWeighted:
+        weight:
+          param: rallyWeight
+        value:
+          boolToNumber:
+            ref: feature.isRally
       preferMarchAction:
         weight: 1
         value:
@@ -238,6 +256,12 @@ agents:
             ref: feature.isTerror
       preferTaxAction:
         weight: 1
+        value:
+          boolToNumber:
+            ref: feature.isTax
+      preferTaxWeighted:
+        weight:
+          param: taxWeight
         value:
           boolToNumber:
             ref: feature.isTax
@@ -346,21 +370,15 @@ agents:
     vc-evolved:
       params:
         eventWeight: 1.5
-        projectedMarginWeight: 1
-        resourceWeight: 0.03
+        rallyWeight: 3
+        taxWeight: 2
       use:
         pruningRules:
           - dropPassWhenOtherMovesExist
         scoreTerms:
-          - preferProjectedSelfMargin
-          - preserveResources
           - preferEvent
-          - preferRallyAction
-          - preferMarchAction
-          - preferAttackAction
-          - preferTerrorAction
-          - preferTaxAction
-          - preferSubvertAction
+          - preferRallyWeighted
+          - preferTaxWeighted
         tieBreakers:
           - stableMoveKey
 

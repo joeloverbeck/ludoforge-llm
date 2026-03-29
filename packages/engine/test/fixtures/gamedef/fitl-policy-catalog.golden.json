@@ -411,6 +411,22 @@
       "min": -1,
       "max": 1,
       "default": 0
+    },
+    "rallyWeight": {
+      "type": "number",
+      "required": false,
+      "tunable": true,
+      "min": 0,
+      "max": 10,
+      "default": 1
+    },
+    "taxWeight": {
+      "type": "number",
+      "required": false,
+      "tunable": true,
+      "min": 0,
+      "max": 10,
+      "default": 1
     }
   },
   "candidateParamDefs": {
@@ -1375,6 +1391,37 @@
           "aggregates": []
         }
       },
+      "preferRallyWeighted": {
+        "costClass": "candidate",
+        "weight": {
+          "kind": "param",
+          "id": "rallyWeight"
+        },
+        "value": {
+          "kind": "op",
+          "op": "boolToNumber",
+          "args": [
+            {
+              "kind": "ref",
+              "ref": {
+                "kind": "library",
+                "refKind": "candidateFeature",
+                "id": "isRally"
+              }
+            }
+          ]
+        },
+        "dependencies": {
+          "parameters": [
+            "rallyWeight"
+          ],
+          "stateFeatures": [],
+          "candidateFeatures": [
+            "isRally"
+          ],
+          "aggregates": []
+        }
+      },
       "preferMarchAction": {
         "costClass": "candidate",
         "weight": {
@@ -1484,6 +1531,37 @@
         },
         "dependencies": {
           "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [
+            "isTax"
+          ],
+          "aggregates": []
+        }
+      },
+      "preferTaxWeighted": {
+        "costClass": "candidate",
+        "weight": {
+          "kind": "param",
+          "id": "taxWeight"
+        },
+        "value": {
+          "kind": "op",
+          "op": "boolToNumber",
+          "args": [
+            {
+              "kind": "ref",
+              "ref": {
+                "kind": "library",
+                "refKind": "candidateFeature",
+                "id": "isTax"
+              }
+            }
+          ]
+        },
+        "dependencies": {
+          "parameters": [
+            "taxWeight"
+          ],
           "stateFeatures": [],
           "candidateFeatures": [
             "isTax"
@@ -1778,49 +1856,35 @@
     "vc-evolved": {
       "params": {
         "eventWeight": 1.5,
-        "projectedMarginWeight": 1,
-        "resourceWeight": 0.03
+        "rallyWeight": 3,
+        "taxWeight": 2
       },
       "use": {
         "pruningRules": [
           "dropPassWhenOtherMovesExist"
         ],
         "scoreTerms": [
-          "preferProjectedSelfMargin",
-          "preserveResources",
           "preferEvent",
-          "preferRallyAction",
-          "preferMarchAction",
-          "preferAttackAction",
-          "preferTerrorAction",
-          "preferTaxAction",
-          "preferSubvertAction"
+          "preferRallyWeighted",
+          "preferTaxWeighted"
         ],
         "tieBreakers": [
           "stableMoveKey"
         ]
       },
       "plan": {
-        "stateFeatures": [
-          "selfMargin",
-          "selfResources"
-        ],
+        "stateFeatures": [],
         "candidateFeatures": [
           "isPass",
-          "projectedSelfMargin",
           "isEvent",
           "isRally",
-          "isMarch",
-          "isAttack",
-          "isTerror",
-          "isTax",
-          "isSubvert"
+          "isTax"
         ],
         "candidateAggregates": [
           "hasNonPassAlternative"
         ]
       },
-      "fingerprint": "6390874b4c326703cab37b9e9bd3197af645cea492bac3ac0f961aea0a513ec9"
+      "fingerprint": "a7ffd2329dc137a291c4ef055c4479bf5906bcb03c2749c467b675224844e5f5"
     }
   },
   "bindingsBySeat": {
@@ -1829,5 +1893,5 @@
     "nva": "nva-baseline",
     "vc": "vc-evolved"
   },
-  "catalogFingerprint": "85b1e3b03c0d941dd6c74006d9a833e2d1020c977e8e1122a721fa59b4c531ee"
+  "catalogFingerprint": "d7b4dea40cbbe6d94fc64421270565e4d643c4b2442364e6084f161feafa1e11"
 }

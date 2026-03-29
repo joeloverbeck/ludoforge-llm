@@ -175,8 +175,28 @@ This is the longest dependency chain and determines minimum time-to-MVP.
 | 90 | Compiled Condition Predicates | P1 | M | 76, 82 (completed) | 2-3 | Perf |
 | 91 | First-Decision-Domain Compilation | P1 | L | 90 | 3-5 | Perf |
 | 92 | Enumeration-Time State Snapshot | P1 | M | none | 2-3 | Perf |
+| 93 | Completed-Move Policy Evaluation | P1 | M | 15 | 3-5 | Agent |
+| 94 | Agent Evaluation Diagnostics | P2 | S | 15 | 1-2 | Agent |
 
-**Total estimated effort**: 35-52 days (MVP: 25-38 days, post-MVP: 8-12 days, perf: 7-11 days)
+**Total estimated effort**: 35-52 days (MVP: 25-38 days, post-MVP: 8-12 days, perf: 7-11 days, agent: 4-7 days)
+
+### Milestone 5: Agent Evolution Quality
+**Specs**: 93, 94
+**Gate**: PolicyAgent can score completed moves with working preview. Agent evaluation pipeline is observable.
+
+**Verification criteria**:
+- PolicyAgent decision traces show `unknownRefIds: []` for completed moves without randomness
+- Different parameterizations of the same action produce different `projectedSelfMargin` values
+- Agent campaign harnesses can inspect preview failure modes via `outcomeBreakdown` in traces
+- Move completion statistics available in detailed traces
+
+**Integration points**:
+- Spec 93 modifies the evaluation flow in `packages/engine/src/agents/` only — no kernel changes
+- Spec 93 enables the preview surface designed in Spec 15 to work for games with nested decisions
+- Spec 94 adds diagnostic output to the agent trace model defined in Spec 15
+- Both specs feed into Spec 14 (evolution pipeline) and Spec 11 (evaluator) for campaign quality
+
+**Parallelization**: Specs 93 and 94 can be implemented in parallel. Spec 94 benefits from Spec 93 (traces reflect actual preview success vs failure) but does not depend on it.
 
 ## Cross-Spec Integration Points
 

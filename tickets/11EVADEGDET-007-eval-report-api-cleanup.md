@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — evaluator API signature, dependent specs/docs/tests
-**Deps**: specs/11-evaluator-degeneracy-detection.md, specs/12-cli.md, specs/14-evolution-pipeline.md, archive/tickets/11EVADEGDET/11EVADEGDET-005-aggregation.md, tickets/11EVADEGDET-006-integration-and-exports.md
+**Deps**: specs/11-evaluator-degeneracy-detection.md, specs/12-cli.md, specs/14-evolution-pipeline.md, archive/tickets/11EVADEGDET/11EVADEGDET-005-aggregation.md, archive/tickets/11EVADEGDET/11EVADEGDET-006-evaluator-integration-golden-and-sim-surface.md
 
 ## Problem
 
@@ -15,7 +15,7 @@
 1. `generateEvalReport` is currently implemented in `packages/engine/src/sim/eval-report.ts` and exported via `packages/engine/src/sim/index.ts`.
 2. The current implementation reads only `def.metadata.id`; it does not inspect any other `GameDef` fields.
 3. The current public signature comes from Spec 11 rather than an implementation necessity. This is a spec-driven mismatch, not a runtime-driven one.
-4. `generateEvalReport` call sites are currently limited to its dedicated unit test file, but the signature is referenced in `specs/11-evaluator-degeneracy-detection.md`, `specs/12-cli.md`, `specs/14-evolution-pipeline.md`, the archived completion record for 11EVADEGDET-005, and the active follow-up ticket `tickets/11EVADEGDET-006-integration-and-exports.md`.
+4. `generateEvalReport` call sites are currently limited to its dedicated unit test file, but the signature is referenced in `specs/11-evaluator-degeneracy-detection.md`, `specs/12-cli.md`, `specs/14-evolution-pipeline.md`, the archived completion record for 11EVADEGDET-005, and the active follow-up ticket `archive/tickets/11EVADEGDET/11EVADEGDET-006-evaluator-integration-golden-and-sim-surface.md`.
 5. `aggregateEvals` already uses the cleaner contract, `(gameDefId, evals)`, so narrowing `generateEvalReport` would align the wrapper with the existing aggregate layer instead of introducing a second identifier source.
 6. Foundations §9 forbids compatibility shims and alias paths. If this API is corrected, the old `GameDef`-accepting signature should be removed outright and all in-repo consumers/specs updated in the same change.
 
@@ -58,7 +58,7 @@ Update the API contract and examples in:
 - `specs/11-evaluator-degeneracy-detection.md`
 - `specs/12-cli.md`
 - `specs/14-evolution-pipeline.md`
-- `tickets/11EVADEGDET-006-integration-and-exports.md`
+- `archive/tickets/11EVADEGDET/11EVADEGDET-006-evaluator-integration-golden-and-sim-surface.md`
 
 Required updates:
 - Replace `generateEvalReport(def, traces, config?)` with `generateEvalReport(gameDefId, traces, config?)`
@@ -81,7 +81,7 @@ Do not make this decision implicitly during implementation.
 - `specs/11-evaluator-degeneracy-detection.md` (modify)
 - `specs/12-cli.md` (modify)
 - `specs/14-evolution-pipeline.md` (modify)
-- `tickets/11EVADEGDET-006-integration-and-exports.md` (modify)
+- `archive/tickets/11EVADEGDET/11EVADEGDET-006-evaluator-integration-golden-and-sim-surface.md` (modify)
 - `archive/tickets/11EVADEGDET/11EVADEGDET-005-aggregation.md` (optional modify only if the implementation chooses to amend historical outcome notes)
 
 ## Out of Scope

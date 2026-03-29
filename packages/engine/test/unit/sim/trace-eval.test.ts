@@ -1,9 +1,10 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { DegeneracyFlag, asActionId, asPhaseId, asPlayerId } from '../../../src/kernel/index.js';
+import { DegeneracyFlag, asActionId, asPhaseId, asPlayerId, deserializeTrace } from '../../../src/kernel/index.js';
 import { evaluateTrace } from '../../../src/sim/index.js';
-import type { GameState, GameTrace, MoveLog, StateDelta, VariableValue } from '../../../src/kernel/index.js';
+import type { GameState, GameTrace, MoveLog, SerializedGameTrace, StateDelta, VariableValue } from '../../../src/kernel/index.js';
+import { readFixtureJson } from '../../helpers/fixture-reader.js';
 
 type PerPlayerVars = Readonly<Record<number, Readonly<Record<string, VariableValue>>>>;
 
@@ -251,6 +252,28 @@ describe('evaluateTrace', () => {
     for (const metric of allMetrics) {
       assert.equal(Number.isFinite(metric), true);
     }
+  });
+
+  it('matches the committed golden trace fixture exactly', () => {
+    const trace = deserializeTrace(readFixtureJson<SerializedGameTrace>('trace/eval-golden-trace.json'));
+
+    const evaluation = evaluateTrace(trace, { scoringVar: 'score' });
+
+    assert.deepEqual(evaluation, {
+      seed: 7,
+      turnCount: 3,
+      stopReason: 'terminal',
+      metrics: {
+        gameLength: 3,
+        avgBranchingFactor: 4,
+        actionDiversity: 1,
+        resourceTension: 11 / 24,
+        interactionProxy: 4 / 9,
+        dominantActionFreq: 1 / 3,
+        dramaMeasure: 2 / 3,
+      },
+      degeneracyFlags: [DegeneracyFlag.LOOP_DETECTED],
+    });
   });
 
   it('detects repeated post-move state hashes as LOOP_DETECTED', () => {

@@ -683,7 +683,6 @@ describe('json schema artifacts', () => {
     ajv.addSchema(traceSchema, 'Trace.schema.json');
     const validate = ajv.compile(evalReportSchema);
 
-    const serializedTrace = serializeTrace(validRuntimeTrace);
     const report = {
       gameDefId: 'full-game',
       runCount: 10,
@@ -697,10 +696,56 @@ describe('json schema artifacts', () => {
         dramaMeasure: 0.5,
       },
       degeneracyFlags: ['STALL'],
-      traces: [serializedTrace],
+      perSeed: [
+        {
+          seed: 1234,
+          turnCount: 1,
+          stopReason: 'terminal',
+          metrics: {
+            gameLength: 1,
+            avgBranchingFactor: 3,
+            actionDiversity: 0,
+            resourceTension: 0,
+            interactionProxy: 0,
+            dominantActionFreq: 1,
+            dramaMeasure: 0,
+          },
+          degeneracyFlags: ['STALL'],
+        },
+      ],
     };
 
     assert.equal(validate(report), true, JSON.stringify(validate.errors, null, 2));
+  });
+
+  it('eval report with legacy traces field fails EvalReport.schema.json validation', () => {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    ajv.addSchema(traceSchema, 'Trace.schema.json');
+    const validate = ajv.compile(evalReportSchema);
+
+    const report = {
+      gameDefId: 'full-game',
+      runCount: 10,
+      metrics: {
+        avgGameLength: 12,
+        avgBranchingFactor: 2.5,
+        actionDiversity: 0.6,
+        resourceTension: 0.4,
+        interactionProxy: 0.7,
+        dominantActionFreq: 0.3,
+        dramaMeasure: 0.5,
+      },
+      degeneracyFlags: ['STALL'],
+      traces: [serializeTrace(validRuntimeTrace)],
+    };
+
+    assert.equal(validate(report), false);
+    assert.ok(
+      validate.errors?.some(
+        (error: ErrorObject<string, Record<string, unknown>, unknown>) =>
+          error.instancePath === '' && error.keyword === 'required',
+      ),
+    );
   });
 
   it('known-good game def validates against GameDef.schema.json', () => {

@@ -338,7 +338,7 @@ function generateAndVerify(config, prompt):
          config.maxTurns,
          config.playerCount
        )
-    10. evalReport = generateEvalReport(gameDef, traces)
+    10. evalReport = generateEvalReport(gameDef.metadata.id, traces)
     11. { fitness, tier1Pass } = computeFitness(evalReport, traces)
     12. if !tier1Pass:
           prompt = appendFitnessFeedback(prompt, evalReport)

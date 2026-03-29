@@ -175,7 +175,7 @@ Trace written to trace.json
 3. Parse agent spec with `playerCount`
 4. Generate seeds: `[seedStart, seedStart+1, ..., seedStart+runs-1]`
 5. Call `runGames(def, seeds, agents, maxTurns, playerCount)` → traces
-6. Call `generateEvalReport(def, traces)` → report
+6. Call `generateEvalReport(def.metadata.id, traces)` → report
 7. If `--out` specified: write EvalReport JSON to file
 8. Output summary in human-readable (default) or JSON format
 

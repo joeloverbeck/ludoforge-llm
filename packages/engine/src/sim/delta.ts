@@ -1,4 +1,4 @@
-import type { GameState, StateDelta } from '../kernel/types.js';
+import type { GameState, MoveLog, StateDelta, VariableValue } from '../kernel/types.js';
 
 const sortedUnionKeys = (
   left: Readonly<Record<string, unknown>>,
@@ -28,6 +28,72 @@ const arraysEqual = (left: readonly unknown[], right: readonly unknown[]): boole
 
 const zoneTokenIds = (state: GameState, zoneId: string): readonly string[] =>
   (state.zones[zoneId] ?? []).map((token) => token.id);
+
+type PerPlayerVars = Readonly<Record<number, Readonly<Record<string, VariableValue>>>>;
+
+const PER_PLAYER_VAR_PATH = /^perPlayerVars\.(\d+)\.(.+)$/;
+
+export const parsePerPlayerVarPath = (path: string): { playerId: number; varName: string } | null => {
+  const match = PER_PLAYER_VAR_PATH.exec(path);
+  if (match === null) {
+    return null;
+  }
+  const playerIdText = match[1];
+  const varName = match[2];
+  if (playerIdText === undefined || varName === undefined) {
+    return null;
+  }
+
+  return {
+    playerId: Number(playerIdText),
+    varName,
+  };
+};
+
+const clonePerPlayerVars = (perPlayerVars: PerPlayerVars): Record<number, Record<string, VariableValue>> => {
+  const clone: Record<number, Record<string, VariableValue>> = {};
+  for (const [playerId, vars] of Object.entries(perPlayerVars)) {
+    clone[Number(playerId)] = { ...vars };
+  }
+  return clone;
+};
+
+const applyPerPlayerVarValue = (
+  perPlayerVars: Record<number, Record<string, VariableValue>>,
+  playerId: number,
+  varName: string,
+  value: unknown,
+): void => {
+  const currentVars = perPlayerVars[playerId];
+  if (value === undefined) {
+    if (currentVars === undefined) {
+      return;
+    }
+    const remainingVars = { ...currentVars };
+    delete remainingVars[varName];
+    perPlayerVars[playerId] = remainingVars;
+    return;
+  }
+
+  perPlayerVars[playerId] = {
+    ...(currentVars ?? {}),
+    [varName]: value as VariableValue,
+  };
+};
+
+const applyPerPlayerVarDeltas = (
+  perPlayerVars: Record<number, Record<string, VariableValue>>,
+  deltas: readonly StateDelta[],
+  direction: 'before' | 'after',
+): void => {
+  for (const delta of deltas) {
+    const parsedPath = parsePerPlayerVarPath(delta.path);
+    if (parsedPath === null) {
+      continue;
+    }
+    applyPerPlayerVarValue(perPlayerVars, parsedPath.playerId, parsedPath.varName, delta[direction]);
+  }
+};
 
 export const computeDeltas = (preState: GameState, postState: GameState): readonly StateDelta[] => {
   const deltas: StateDelta[] = [];
@@ -99,4 +165,28 @@ export const computeDeltas = (preState: GameState, postState: GameState): readon
 
   deltas.sort((left, right) => left.path.localeCompare(right.path));
   return deltas;
+};
+
+export const reconstructPerPlayerVarTrajectory = (
+  finalPerPlayerVars: PerPlayerVars,
+  moves: readonly MoveLog[],
+): readonly PerPlayerVars[] => {
+  const initialPerPlayerVars = clonePerPlayerVars(finalPerPlayerVars);
+  for (let moveIndex = moves.length - 1; moveIndex >= 0; moveIndex -= 1) {
+    const move = moves[moveIndex];
+    if (move === undefined) {
+      continue;
+    }
+    applyPerPlayerVarDeltas(initialPerPlayerVars, move.deltas, 'before');
+  }
+
+  const trajectory: PerPlayerVars[] = [clonePerPlayerVars(initialPerPlayerVars)];
+  const workingPerPlayerVars = clonePerPlayerVars(initialPerPlayerVars);
+
+  for (const move of moves) {
+    applyPerPlayerVarDeltas(workingPerPlayerVars, move.deltas, 'after');
+    trajectory.push(clonePerPlayerVars(workingPerPlayerVars));
+  }
+
+  return trajectory;
 };

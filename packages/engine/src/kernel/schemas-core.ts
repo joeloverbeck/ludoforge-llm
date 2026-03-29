@@ -1300,8 +1300,29 @@ export const MetricsSchema = z
   })
   .strict();
 
+export const TraceMetricsSchema = z
+  .object({
+    gameLength: NumberSchema,
+    avgBranchingFactor: NumberSchema,
+    actionDiversity: NumberSchema,
+    resourceTension: NumberSchema,
+    interactionProxy: NumberSchema,
+    dominantActionFreq: NumberSchema,
+    dramaMeasure: NumberSchema,
+  })
+  .strict();
+
 export const DegeneracyFlagSchema = z.nativeEnum(DegeneracyFlag);
 
+export const TraceEvalSchema = z
+  .object({
+    seed: NumberSchema,
+    turnCount: NumberSchema,
+    stopReason: SimulationStopReasonSchema,
+    metrics: TraceMetricsSchema,
+    degeneracyFlags: z.array(DegeneracyFlagSchema),
+  })
+  .strict();
 
 export const EvalReportSchema = z
   .object({
@@ -1309,7 +1330,7 @@ export const EvalReportSchema = z
     runCount: NumberSchema,
     metrics: MetricsSchema,
     degeneracyFlags: z.array(DegeneracyFlagSchema),
-    traces: z.array(GameTraceSchema),
+    perSeed: z.array(TraceEvalSchema),
   })
   .strict();
 
@@ -1378,6 +1399,6 @@ export const SerializedEvalReportSchema = z
     runCount: NumberSchema,
     metrics: MetricsSchema,
     degeneracyFlags: z.array(DegeneracyFlagSchema),
-    traces: z.array(SerializedGameTraceSchema),
+    perSeed: z.array(TraceEvalSchema),
   })
   .strict();

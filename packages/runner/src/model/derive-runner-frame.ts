@@ -31,6 +31,7 @@ import type {
   RunnerEventDeck,
   RunnerProjectionBundle,
   RunnerProjectionSource,
+  RunnerChoiceStep,
   RunnerFrame,
   RunnerLastingEffect,
   RunnerLastingEffectAttribute,
@@ -1250,7 +1251,9 @@ function deriveChoiceBreadcrumb(
   context: RenderContext,
   zonesById: ReadonlyMap<string, RunnerZone>,
 ): RunnerFrame['choiceBreadcrumb'] {
-  return context.choiceStack.map((step, index) => {
+  const result: RunnerChoiceStep[] = [];
+  for (let index = 0; index < context.choiceStack.length; index += 1) {
+    const step = context.choiceStack[index]!;
     const choiceStackUpToHere = context.choiceStack.slice(0, index + 1);
     const iterCtx = parseIterationContext(step.decisionKey, choiceStackUpToHere, zonesById);
     const iterationGroupId = extractIterationGroupId(step.decisionKey);
@@ -1265,15 +1268,41 @@ function deriveChoiceBreadcrumb(
       }
     }
 
-    return {
+    // Second fallback: for forEach group members without an entity, infer the
+    // iteration entity from the most recent array-valued choice in the stack.
+    // The step's position within its group indexes into that array.
+    if (iterationEntityId === null && iterationGroupId !== null) {
+      let groupIndex = 0;
+      for (const prior of result) {
+        if (prior.iterationGroupId === iterationGroupId) {
+          groupIndex += 1;
+        }
+      }
+      for (let j = index - 1; j >= 0; j -= 1) {
+        const priorChoice = context.choiceStack[j];
+        if (priorChoice !== undefined && Array.isArray(priorChoice.value)) {
+          const arr = priorChoice.value as readonly MoveParamValue[];
+          if (groupIndex < arr.length) {
+            const candidate = String(arr[groupIndex]);
+            if (zonesById.has(candidate)) {
+              iterationEntityId = candidate;
+            }
+          }
+          break;
+        }
+      }
+    }
+
+    result.push({
       decisionKey: step.decisionKey,
       name: step.name,
       chosenValueId: serializeChoiceValueIdentity(step.value),
       chosenValue: step.value,
       iterationGroupId,
       iterationEntityId,
-    };
-  });
+    });
+  }
+  return result;
 }
 
 function resolveChoiceTarget(

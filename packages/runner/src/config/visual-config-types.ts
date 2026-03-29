@@ -553,6 +553,7 @@ const ActionChoiceOptionVisualSchema = z.object({
 });
 
 const ActionChoiceVisualSchema = z.object({
+  label: z.string().optional(),
   prompt: z.string().optional(),
   description: z.string().optional(),
   options: z.record(z.string(), ActionChoiceOptionVisualSchema).optional(),

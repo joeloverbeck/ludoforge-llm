@@ -467,6 +467,10 @@ export class VisualConfigProvider {
     return this.config?.actions?.[actionId]?.description ?? null;
   }
 
+  getChoiceLabel(actionId: string, paramName: string): string | null {
+    return this.config?.actions?.[actionId]?.choices?.[paramName]?.label ?? null;
+  }
+
   getChoicePrompt(actionId: string, paramName: string): string | null {
     return this.config?.actions?.[actionId]?.choices?.[paramName]?.prompt ?? null;
   }

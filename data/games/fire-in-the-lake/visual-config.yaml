@@ -685,6 +685,7 @@ actions:
       sourceSpaces:
         prompt: Select source spaces for reinforcements
       subActionSpaces:
+        label: Additional Space
         prompt: Select additional space for this action
   patrol:
     choices:
@@ -705,6 +706,7 @@ actions:
       sourceSpaces:
         prompt: Select source spaces for reinforcements
       subActionSpaces:
+        label: Additional Space
         prompt: Select additional space for this action
   march:
     choices:

@@ -251,19 +251,28 @@ function projectChoiceContext(
   const strippedParamName = stripDecisionParamPrefix(choiceContext.decisionParamName);
   const astTail = extractAstParamTail(choiceContext.decisionParamName);
   const shortLabel = humanizeDecisionParamName(choiceContext.decisionParamName);
+  const configLabel = visualConfigProvider.getChoiceLabel(choiceContext.selectedActionId, strippedParamName)
+    ?? (astTail !== null ? visualConfigProvider.getChoiceLabel(choiceContext.selectedActionId, astTail) : null);
   const configPrompt = visualConfigProvider.getChoicePrompt(choiceContext.selectedActionId, strippedParamName)
     ?? (astTail !== null ? visualConfigProvider.getChoicePrompt(choiceContext.selectedActionId, astTail) : null);
 
   return {
     actionDisplayName: visualConfigProvider.getActionDisplayName(choiceContext.selectedActionId)
       ?? formatIdAsDisplayName(choiceContext.selectedActionId),
-    decisionLabel: shortLabel,
+    decisionLabel: configLabel ?? shortLabel,
     decisionPrompt: configPrompt,
     decisionParamName: choiceContext.decisionParamName,
     boundsText,
-    iterationLabel: choiceContext.iterationEntityId === null
-      ? null
-      : zonesById.get(choiceContext.iterationEntityId)?.displayName ?? humanizeDecisionParamName(choiceContext.iterationEntityId),
+    iterationLabel: (() => {
+      if (choiceContext.iterationEntityId === null) {
+        return null;
+      }
+      const resolved = zonesById.get(choiceContext.iterationEntityId)?.displayName
+        ?? humanizeDecisionParamName(choiceContext.iterationEntityId);
+      // Suppress iteration label when it duplicates the decision label (e.g., both resolve to "Target Spaces").
+      const finalLabel = configLabel ?? shortLabel;
+      return resolved === finalLabel ? null : resolved;
+    })(),
     iterationProgress: choiceContext.iterationIndex === null || choiceContext.iterationTotal === null
       ? null
       : `${choiceContext.iterationIndex + 1} of ${choiceContext.iterationTotal}`,

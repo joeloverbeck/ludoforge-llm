@@ -141,6 +141,46 @@ describe('preparePlayableMoves', () => {
     });
   });
 
+  it('counts repeated template completions according to pendingTemplateCompletions', () => {
+    const templateMove: Move = { actionId: asActionId('chooseTarget'), params: {} };
+    const def = assertValidatedGameDef({
+      metadata: { id: 'prepare-playable-repeated-template-counts', players: { min: 2, max: 2 } },
+      constants: {},
+      globalVars: [],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      actions: [createTemplateChooseOneAction(asActionId('chooseTarget'), asPhaseId('main'))],
+      actionPipelines: [createTemplateChooseOneProfile(asActionId('chooseTarget'))] as readonly ActionPipelineDef[],
+      triggers: [],
+      terminal: { conditions: [] },
+    });
+    const state = initialState(def, 5, 2).state;
+
+    const prepared = preparePlayableMoves({
+      def,
+      state,
+      legalMoves: [pendingClassifiedMove(templateMove)],
+      rng: createRng(9n),
+    }, {
+      pendingTemplateCompletions: 3,
+    });
+
+    assert.equal(prepared.completedMoves.length, 3);
+    assert.equal(prepared.stochasticMoves.length, 0);
+    assert.deepEqual(prepared.statistics, {
+      totalClassifiedMoves: 1,
+      completedCount: 0,
+      stochasticCount: 0,
+      rejectedNotViable: 0,
+      templateCompletionAttempts: 3,
+      templateCompletionSuccesses: 3,
+      templateCompletionUnsatisfiable: 0,
+    });
+  });
+
   describe('zone-filtered free-operation templates', () => {
     /**
      * Regression test for a scenario where a free-operation template move

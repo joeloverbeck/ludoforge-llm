@@ -1,6 +1,6 @@
 import { perfStart, perfDynEnd, type PerfProfiler } from '../kernel/perf-profiler.js';
 import { evaluatePlayableMoveCandidate } from '../kernel/playable-candidate.js';
-import type { Agent, ClassifiedMove, Move, PolicyCompletionStatisticsTrace, Rng, TrustedExecutableMove } from '../kernel/types.js';
+import type { Agent, ClassifiedMove, Move, PolicyCompletionStatistics, Rng, TrustedExecutableMove } from '../kernel/types.js';
 
 /**
  * Detect non-viable results that stem from premature zone-filter evaluation on
@@ -39,7 +39,7 @@ export interface PreparedPlayableMoves {
   readonly completedMoves: readonly TrustedExecutableMove[];
   readonly stochasticMoves: readonly TrustedExecutableMove[];
   readonly rng: Rng;
-  readonly statistics: PolicyCompletionStatisticsTrace;
+  readonly statistics: PolicyCompletionStatistics;
 }
 
 export function preparePlayableMoves(

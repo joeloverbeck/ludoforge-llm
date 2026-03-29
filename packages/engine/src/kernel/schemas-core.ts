@@ -1232,7 +1232,7 @@ const PolicyPreviewOutcomeBreakdownTraceSchema = z
   })
   .strict();
 
-const PolicyCompletionStatisticsTraceSchema = z
+const PolicyCompletionStatisticsSchema = z
   .object({
     totalClassifiedMoves: NumberSchema,
     completedCount: NumberSchema,
@@ -1279,7 +1279,7 @@ const AgentDecisionTraceSchema = z.union([
       previewUsage: PolicyPreviewUsageTraceSchema,
       emergencyFallback: BooleanSchema,
       failure: AgentDecisionFailureSummarySchema.nullable(),
-      completionStatistics: PolicyCompletionStatisticsTraceSchema.optional(),
+      completionStatistics: PolicyCompletionStatisticsSchema.optional(),
       candidates: z.array(PolicyCandidateDecisionTraceSchema).optional(),
     })
     .strict(),

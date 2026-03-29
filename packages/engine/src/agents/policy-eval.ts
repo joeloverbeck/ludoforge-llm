@@ -11,7 +11,7 @@ import type {
   GameDef,
   GameState,
   Move,
-  PolicyCompletionStatisticsTrace,
+  PolicyCompletionStatistics,
   PolicyPreviewOutcomeBreakdownTrace,
   Rng,
   TrustedExecutableMove,
@@ -89,7 +89,7 @@ export interface PolicyEvaluationMetadata {
   readonly pruningSteps: readonly PolicyEvaluationPruningStep[];
   readonly tieBreakChain: readonly PolicyEvaluationTieBreakStep[];
   readonly previewUsage: PolicyEvaluationPreviewUsage;
-  readonly completionStatistics?: PolicyCompletionStatisticsTrace;
+  readonly completionStatistics?: PolicyCompletionStatistics;
   readonly selectedStableMoveKey: string | null;
   readonly finalScore: number | null;
   readonly usedFallback: boolean;
@@ -110,7 +110,7 @@ export interface EvaluatePolicyMoveInput {
   readonly trustedMoveIndex: ReadonlyMap<string, TrustedExecutableMove>;
   readonly rng: Rng;
   readonly runtime?: GameDefRuntime;
-  readonly completionStatistics?: PolicyCompletionStatisticsTrace;
+  readonly completionStatistics?: PolicyCompletionStatistics;
   readonly fallbackOnError?: boolean;
   readonly profileIdOverride?: string;
 }
@@ -819,7 +819,7 @@ function failureWithMetadata(
   profileId: string | null,
   failure: PolicyEvaluationFailure,
   profileFingerprint: string | null = null,
-  completionStatistics?: PolicyCompletionStatisticsTrace,
+  completionStatistics?: PolicyCompletionStatistics,
 ): PolicyEvaluationCoreResult {
   return {
     kind: 'failure',

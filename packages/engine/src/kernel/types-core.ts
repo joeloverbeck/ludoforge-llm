@@ -1342,7 +1342,7 @@ export interface PolicyPreviewOutcomeBreakdownTrace {
   readonly unknownFailed: number;
 }
 
-export interface PolicyCompletionStatisticsTrace {
+export interface PolicyCompletionStatistics {
   readonly totalClassifiedMoves: number;
   readonly completedCount: number;
   readonly stochasticCount: number;
@@ -1375,7 +1375,7 @@ export interface PolicyAgentDecisionTrace {
   readonly previewUsage: PolicyPreviewUsageTrace;
   readonly emergencyFallback: boolean;
   readonly failure: AgentDecisionFailureSummary | null;
-  readonly completionStatistics?: PolicyCompletionStatisticsTrace;
+  readonly completionStatistics?: PolicyCompletionStatistics;
   readonly candidates?: readonly PolicyCandidateDecisionTrace[];
 }
 

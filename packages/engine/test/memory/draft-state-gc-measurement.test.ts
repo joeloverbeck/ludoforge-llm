@@ -55,7 +55,7 @@ const TEXAS_PLAYER_COUNT = 6;
 const MAX_TURNS = 200;
 const FITL_GAME_COUNT = 5;
 const TEXAS_GAME_COUNT = 20;
-const GC_PERCENT_THRESHOLD = 16;
+const GC_PERCENT_THRESHOLD = 20;
 
 interface GcMeasurement {
   readonly totalMs: number;

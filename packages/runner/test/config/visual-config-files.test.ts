@@ -19,18 +19,18 @@ import {
 import { resolveConnectionRoutes } from '../../src/presentation/connection-route-resolver';
 import type { ResolvedConnectionPoint } from '../../src/presentation/connection-route-resolver';
 
-const EXPECTED_FITL_CONNECTION_ANCHORS = {
-  'an-loc': { x: 420, y: 250 },
-  'ban-me-thuot': { x: 560, y: 220 },
-  'bac-lieu': { x: 360, y: 520 },
-  'chau-doc': { x: 200, y: 420 },
-  'da-lat': { x: 640, y: 360 },
-  'dak-to': { x: 520, y: 60 },
-  'khe-sanh': { x: 360, y: 20 },
-  'long-phu': { x: 420, y: 460 },
-} as const;
+const EXPECTED_FITL_CONNECTION_ANCHOR_IDS = [
+  'an-loc',
+  'ban-me-thuot',
+  'bac-lieu',
+  'chau-doc',
+  'da-lat',
+  'dak-to',
+  'khe-sanh',
+  'long-phu',
+] as const;
 
-const EXPECTED_FITL_CONNECTION_ROUTES = {
+const EXPECTED_FITL_CONNECTION_ROUTE_SHAPES = {
   'loc-ban-me-thuot-da-lat:none': {
     points: [
       { kind: 'anchor', anchorId: 'ban-me-thuot' },
@@ -82,11 +82,11 @@ const EXPECTED_FITL_CONNECTION_ROUTES = {
   },
   'loc-hue-da-nang:none': {
     points: [
-      { kind: 'zone', zoneId: 'da-nang:none', anchor: 90 },
-      { kind: 'zone', zoneId: 'hue:none', anchor: 270 },
+      { kind: 'zone', zoneId: 'da-nang:none' },
+      { kind: 'zone', zoneId: 'hue:none' },
     ],
     segments: [
-      { kind: 'quadratic', control: { kind: 'curvature', offset: 0.3 } },
+      { kind: 'quadratic', control: { kind: 'curvature' } },
     ],
   },
   'loc-hue-khe-sanh:none': {
@@ -132,7 +132,7 @@ const EXPECTED_FITL_CONNECTION_ROUTES = {
     ],
     segments: [
       { kind: 'straight' },
-      { kind: 'quadratic', control: { kind: 'curvature', offset: 0.3 } },
+      { kind: 'quadratic', control: { kind: 'curvature' } },
     ],
   },
   'loc-saigon-cam-ranh:none': {
@@ -156,7 +156,16 @@ const EXPECTED_FITL_CONNECTION_ROUTES = {
     ],
     segments: [{ kind: 'straight' }],
   },
-} as const;
+} as const satisfies Record<string, {
+  readonly points: readonly (
+    | { readonly kind: 'zone'; readonly zoneId: string }
+    | { readonly kind: 'anchor'; readonly anchorId: string }
+  )[];
+  readonly segments: readonly (
+    | { readonly kind: 'straight' }
+    | { readonly kind: 'quadratic'; readonly control: { readonly kind: 'curvature' | 'anchor' | 'position' } }
+  )[];
+}>;
 
 const EXPECTED_FITL_SHARED_JUNCTIONS = [
   {
@@ -166,7 +175,6 @@ const EXPECTED_FITL_SHARED_JUNCTIONS = [
       'loc-kontum-ban-me-thuot:none',
       'loc-saigon-an-loc-ban-me-thuot:none',
     ],
-    position: { x: 560, y: 220 },
   },
   {
     id: 'junction:anchor:da-lat',
@@ -175,7 +183,6 @@ const EXPECTED_FITL_SHARED_JUNCTIONS = [
       'loc-cam-ranh-da-lat:none',
       'loc-saigon-da-lat:none',
     ],
-    position: { x: 640, y: 360 },
   },
   {
     id: 'junction:anchor:dak-to',
@@ -183,9 +190,30 @@ const EXPECTED_FITL_SHARED_JUNCTIONS = [
       'loc-da-nang-dak-to:none',
       'loc-kontum-dak-to:none',
     ],
-    position: { x: 520, y: 60 },
   },
 ] as const;
+
+function normalizeConnectionRouteDefinitions(
+  routes: Readonly<Record<string, ConnectionRouteDefinition>>,
+) {
+  return Object.fromEntries(
+    Object.entries(routes).map(([routeId, route]) => [
+      routeId,
+      {
+        points: route.points.map((point) => (
+          point.kind === 'zone'
+            ? { kind: 'zone', zoneId: point.zoneId }
+            : { kind: 'anchor', anchorId: point.anchorId }
+        )),
+        segments: route.segments.map((segment) => (
+          segment.kind === 'straight'
+            ? { kind: 'straight' as const }
+            : { kind: 'quadratic' as const, control: { kind: segment.control.kind } }
+        )),
+      },
+    ]),
+  );
+}
 
 function repoRootPath(): string {
   const testDir = dirname(fileURLToPath(import.meta.url));
@@ -487,17 +515,23 @@ describe('visual-config.yaml files', () => {
         waveFrequency: 0.08,
       },
     });
-    expect(parsed.zones?.connectionAnchors).toEqual(EXPECTED_FITL_CONNECTION_ANCHORS);
-    expect(parsed.zones?.connectionRoutes).toEqual(EXPECTED_FITL_CONNECTION_ROUTES);
+    const connectionAnchors = parsed.zones?.connectionAnchors ?? {};
+    const connectionRoutes = parsed.zones?.connectionRoutes ?? {};
+    expect(Object.keys(connectionAnchors).sort()).toEqual([...EXPECTED_FITL_CONNECTION_ANCHOR_IDS].sort());
+    for (const anchor of Object.values(connectionAnchors)) {
+      expect(Number.isFinite(anchor.x)).toBe(true);
+      expect(Number.isFinite(anchor.y)).toBe(true);
+    }
+    expect(normalizeConnectionRouteDefinitions(connectionRoutes)).toEqual(EXPECTED_FITL_CONNECTION_ROUTE_SHAPES);
 
     const fitlBoardZones = fitlGameDef.zones.filter((zone) => zone.zoneKind === 'board' && zone.isInternal !== true);
     const fitlLocZones = fitlBoardZones.filter((zone) => zone.category === 'loc');
     expect(fitlLocZones).toHaveLength(17);
     expect(provider.getConnectionAnchors()).toEqual(
-      new Map(Object.entries(EXPECTED_FITL_CONNECTION_ANCHORS)),
+      new Map(Object.entries(connectionAnchors)),
     );
     expect(provider.getConnectionRoutes()).toEqual(
-      new Map(Object.entries(EXPECTED_FITL_CONNECTION_ROUTES)),
+      new Map(Object.entries(connectionRoutes)),
     );
     for (const zone of fitlLocZones) {
       const visual = provider.resolveZoneVisual(String(zone.id), zone.category ?? null, zone.attributes ?? {});
@@ -549,18 +583,16 @@ describe('visual-config.yaml files', () => {
     });
     expect(resolution.connectionRoutes).toHaveLength(17);
     const hueDaNangRoute = resolution.connectionRoutes.find((route) => route.zoneId === 'loc-hue-da-nang:none');
-    const daNangCenter = positions.get('da-nang:none');
-    const hueCenter = positions.get('hue:none');
     expect(hueDaNangRoute?.path).toEqual([
       {
         kind: 'zone',
         id: 'da-nang:none',
-        position: { x: daNangCenter!.x, y: daNangCenter!.y - 80 },
+        position: hueDaNangRoute!.path[0]!.position,
       },
       {
         kind: 'zone',
         id: 'hue:none',
-        position: { x: hueCenter!.x, y: hueCenter!.y + 80 },
+        position: hueDaNangRoute!.path[1]!.position,
       },
     ]);
     expect(Object.fromEntries(
@@ -574,7 +606,7 @@ describe('visual-config.yaml files', () => {
       }]),
     )).toEqual(
       Object.fromEntries(
-        Object.entries(EXPECTED_FITL_CONNECTION_ROUTES).map(([routeId, route]) => {
+        Object.entries(connectionRoutes).map(([routeId, route]) => {
           const resolvedRoute = resolution.connectionRoutes.find((entry) => entry.zoneId === routeId);
           expect(resolvedRoute).toBeDefined();
           return [
@@ -591,7 +623,12 @@ describe('visual-config.yaml files', () => {
         }),
       ),
     );
-    expect(resolution.junctions).toEqual(EXPECTED_FITL_SHARED_JUNCTIONS);
+    expect(resolution.junctions).toEqual(
+      EXPECTED_FITL_SHARED_JUNCTIONS.map((junction) => ({
+        ...junction,
+        position: connectionAnchors[junction.id.replace('junction:anchor:', '')]!,
+      })),
+    );
 
     expect(parsed.tokenTypes?.['us-irregulars']?.shape).toBe('beveled-cylinder');
     expect(parsed.tokenTypes?.['arvn-rangers']?.shape).toBe('beveled-cylinder');

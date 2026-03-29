@@ -3,10 +3,12 @@ import { describe, it } from 'node:test';
 
 import { evaluatePolicyMove, evaluatePolicyMoveCore } from '../../../src/agents/policy-eval.js';
 import { createPolicyRuntimeProviders } from '../../../src/agents/policy-runtime.js';
+import { toMoveIdentityKey } from '../../../src/kernel/move-identity.js';
 import {
   asActionId,
   asPhaseId,
   asPlayerId,
+  createTrustedExecutableMove,
   createRng,
   initialState,
   type AgentPolicyCatalog,
@@ -282,6 +284,7 @@ function createInput(agents: AgentPolicyCatalog, legalMoves: readonly Move[], se
     },
     playerId: asPlayerId(0),
     legalMoves,
+    trustedMoveIndex: new Map(),
     rng: createRng(seed),
   } as const;
 }
@@ -304,6 +307,7 @@ describe('policy-eval', () => {
       state: input.state,
       playerId: input.playerId,
       seatId: 'us',
+      trustedMoveIndex: new Map(),
       catalog: input.def.agents!,
       runtimeError: (code, message) => new Error(`${code}: ${message}`),
     });
@@ -354,6 +358,7 @@ describe('policy-eval', () => {
       state,
       playerId: asPlayerId(1),
       seatId: 'neutral',
+      trustedMoveIndex: new Map(),
       catalog: def.agents!,
       runtimeError: (code, message) => new Error(`${code}: ${message}`),
     });
@@ -535,6 +540,102 @@ describe('policy-eval', () => {
     );
     assert.equal(
       result.metadata.candidates.find((candidate) => candidate.actionId === 'alpha')?.score,
+      2,
+    );
+  });
+
+  it('evaluates preview-backed score terms for trusted completed moves that are already indexed', () => {
+    const chooseTargetAction = {
+      id: asActionId('chooseTarget'),
+      actor: 'active' as const,
+      executor: 'actor' as const,
+      phase: [phaseId],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [
+        eff({
+          chooseOne: {
+            internalDecisionId: 'decision:$targetMargin',
+            bind: '$targetMargin',
+            options: { query: 'enums', values: ['low', 'high'] },
+          },
+        }),
+        eff({
+          if: {
+            when: { op: '==', left: { _t: 2 as const, ref: 'binding', name: '$targetMargin' }, right: 'high' },
+            then: [eff({ setVar: { scope: 'global', var: 'usMargin', value: 8 } })],
+            else: [eff({ setVar: { scope: 'global', var: 'usMargin', value: 2 } })],
+          },
+        }),
+      ],
+      limits: [],
+    };
+    const agents = createCatalog(
+      {
+        candidateFeatures: {
+          projectedMargin: {
+            type: 'number',
+            costClass: 'preview',
+            expr: refExpr({ kind: 'previewSurface', family: 'globalVar', id: 'usMargin' }),
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          },
+        },
+        scoreTerms: {
+          preferProjectedMargin: {
+            costClass: 'preview',
+            weight: literal(1),
+            value: refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'projectedMargin' }),
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['projectedMargin'], aggregates: [] },
+          },
+        },
+      },
+      {
+        use: {
+          pruningRules: [],
+          scoreTerms: ['preferProjectedMargin'],
+          tieBreakers: ['stableMoveKey'],
+        },
+        plan: {
+          stateFeatures: [],
+          candidateFeatures: ['projectedMargin'],
+          candidateAggregates: [],
+        },
+      },
+    );
+    const def = {
+      ...createBaseDef(agents),
+      actions: [chooseTargetAction],
+    };
+    const state = initialState(def, 7, 2).state;
+    const lowMarginMove: Move = { actionId: asActionId('chooseTarget'), params: { '$targetMargin': 'low' } };
+    const highMarginMove: Move = { actionId: asActionId('chooseTarget'), params: { '$targetMargin': 'high' } };
+
+    const result = evaluatePolicyMove({
+      def,
+      state: {
+        ...state,
+        globalVars: {
+          ...state.globalVars,
+          usMargin: 1,
+        },
+      },
+      playerId: asPlayerId(0),
+      legalMoves: [lowMarginMove, highMarginMove],
+      trustedMoveIndex: new Map([
+        [toMoveIdentityKey(def, lowMarginMove), createTrustedExecutableMove(lowMarginMove, state.stateHash, 'templateCompletion')],
+        [toMoveIdentityKey(def, highMarginMove), createTrustedExecutableMove(highMarginMove, state.stateHash, 'templateCompletion')],
+      ]),
+      rng: createRng(7n),
+    });
+
+    assert.deepEqual(result.move, highMarginMove);
+    assert.equal(
+      result.metadata.candidates.find((candidate) => candidate.stableMoveKey === toMoveIdentityKey(def, highMarginMove))?.score,
+      8,
+    );
+    assert.equal(
+      result.metadata.candidates.find((candidate) => candidate.stableMoveKey === toMoveIdentityKey(def, lowMarginMove))?.score,
       2,
     );
   });

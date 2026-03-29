@@ -12,6 +12,7 @@ import type {
   GameState,
   Move,
   Rng,
+  TrustedExecutableMove,
 } from '../kernel/types.js';
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
 import { pickRandom } from './agent-move-selection.js';
@@ -95,6 +96,7 @@ export interface EvaluatePolicyMoveInput {
   readonly state: GameState;
   readonly playerId: PlayerId;
   readonly legalMoves: readonly Move[];
+  readonly trustedMoveIndex: ReadonlyMap<string, TrustedExecutableMove>;
   readonly rng: Rng;
   readonly runtime?: GameDefRuntime;
   readonly fallbackOnError?: boolean;
@@ -167,6 +169,7 @@ class EvaluationContext {
       state: input.state,
       playerId: input.playerId,
       seatId,
+      trustedMoveIndex: input.trustedMoveIndex,
       catalog,
       runtimeError: (code, message, detail) => this.runtimeError(code as PolicyEvaluationFailure['code'], message, detail),
       ...(input.runtime === undefined ? {} : { runtime: input.runtime }),

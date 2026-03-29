@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-preview.ts`, `policy-eval.ts`, `policy-runtime.ts`
-**Deps**: `tickets/93COMMOVPOLEVA-001.md`
+**Deps**: `archive/tickets/93COMMOVPOLEVA-001.md`
 
 ## Problem
 

@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import { buildPolicyDiagnosticsSnapshot } from '../../../src/agents/policy-diagnostics.js';
 import { PolicyAgent } from '../../../src/agents/policy-agent.js';
 import { evaluatePolicyMove } from '../../../src/agents/policy-eval.js';
+import { toMoveIdentityKey } from '../../../src/kernel/move-identity.js';
 import { completeClassifiedMoves } from '../../helpers/classified-move-fixtures.js';
 import { runGame } from '../../../src/sim/simulator.js';
 import {
@@ -196,7 +197,11 @@ describe('policy trace events', () => {
   it('formats a diagnostics snapshot from compiled policy data plus evaluator metadata', () => {
     const def = createDef();
     const input = createInput(def);
-    const evaluation = evaluatePolicyMove({ ...input, legalMoves: input.legalMoves.map(({ move }) => move) });
+    const evaluation = evaluatePolicyMove({
+      ...input,
+      legalMoves: input.legalMoves.map(({ move }) => move),
+      trustedMoveIndex: new Map(input.legalMoves.map((candidate) => [toMoveIdentityKey(def, candidate.move), candidate.trustedMove!] as const)),
+    });
     const snapshot = buildPolicyDiagnosticsSnapshot(def, evaluation.metadata, 'verbose');
 
     assert.deepEqual(snapshot.resolvedPlan.scoreTerms, ['preferEvent']);

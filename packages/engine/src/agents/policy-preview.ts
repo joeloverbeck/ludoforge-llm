@@ -10,6 +10,7 @@ import type {
   GameState,
   Move,
   RngState,
+  TrustedExecutableMove,
 } from '../kernel/types.js';
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
 import {
@@ -48,6 +49,7 @@ export interface CreatePolicyPreviewRuntimeInput {
   readonly state: GameState;
   readonly playerId: PlayerId;
   readonly seatId: string;
+  readonly trustedMoveIndex: ReadonlyMap<string, TrustedExecutableMove>;
   readonly runtime?: GameDefRuntime;
   readonly dependencies?: PolicyPreviewDependencies;
 }
@@ -157,8 +159,10 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
       return cached;
     }
 
-    const classification = deps.classifyPlayableMoveCandidate(input.def, input.state, candidate.move, input.runtime);
-    const outcome = classifyPreviewOutcome(classification);
+    const trustedMove = input.trustedMoveIndex.get(candidate.stableMoveKey);
+    const outcome = trustedMove === undefined
+      ? classifyPreviewOutcome(deps.classifyPlayableMoveCandidate(input.def, input.state, candidate.move, input.runtime))
+      : tryApplyPreview(trustedMove);
     cache.set(candidate.stableMoveKey, outcome);
     return outcome;
   }
@@ -168,11 +172,19 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
       return { kind: 'unknown', reason: 'unresolved' };
     }
 
+    return tryApplyPreview(classification.move);
+  }
+
+  function tryApplyPreview(trustedMove: TrustedExecutableMove): PreviewOutcome {
+    if (trustedMove.sourceStateHash !== input.state.stateHash) {
+      return { kind: 'unknown', reason: 'failed' };
+    }
+
     try {
       const previewState = deps.applyMove(
         input.def,
         input.state,
-        classification.move,
+        trustedMove,
         undefined,
         input.runtime,
       ).state;

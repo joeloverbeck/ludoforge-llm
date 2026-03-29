@@ -51,11 +51,15 @@ export class PolicyAgent implements Agent {
     if (playableMoves.length === 0) {
       throw new NoPlayableMovesAfterPreparationError('policy', input.legalMoves.length);
     }
+    const trustedMoveIndex = new Map(
+      playableMoves.map((trustedMove) => [toMoveIdentityKey(input.def, trustedMove.move), trustedMove] as const),
+    );
 
     const t0_eval = perfStart(profiler);
     const result = evaluatePolicyMove({
       ...input,
       legalMoves: playableMoves.map((move) => move.move),
+      trustedMoveIndex,
       rng: prepared.rng,
       ...(this.profileId === undefined ? {} : { profileIdOverride: this.profileId }),
       ...(this.fallbackOnError === undefined ? {} : { fallbackOnError: this.fallbackOnError }),

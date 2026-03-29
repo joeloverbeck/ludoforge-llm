@@ -128,6 +128,7 @@ describe('policy-preview', () => {
       state,
       playerId: asPlayerId(0),
       seatId: 'us',
+      trustedMoveIndex: new Map(),
       dependencies: {
         classifyPlayableMoveCandidate: () => {
           probeCalls += 1;
@@ -169,6 +170,7 @@ describe('policy-preview', () => {
       state,
       playerId: asPlayerId(0),
       seatId: 'us',
+      trustedMoveIndex: new Map(),
       dependencies: {
         classifyPlayableMoveCandidate: () => ({ kind: 'rejected', move: candidate.move, rejection: 'notDecisionComplete' }),
         applyMove: () => {
@@ -192,6 +194,7 @@ describe('policy-preview', () => {
       state,
       playerId: asPlayerId(0),
       seatId: 'us',
+      trustedMoveIndex: new Map(),
       dependencies: {
         classifyPlayableMoveCandidate: () => ({
           kind: 'playableComplete',
@@ -223,6 +226,7 @@ describe('policy-preview', () => {
       state,
       playerId: asPlayerId(0),
       seatId: 'us',
+      trustedMoveIndex: new Map(),
       dependencies: {
         classifyPlayableMoveCandidate: () => ({
           kind: 'playableComplete',
@@ -266,6 +270,7 @@ describe('policy-preview', () => {
       state,
       playerId: asPlayerId(1),
       seatId: 'neutral',
+      trustedMoveIndex: new Map(),
       dependencies: {
         classifyPlayableMoveCandidate: () => ({
           kind: 'playableComplete',
@@ -278,5 +283,74 @@ describe('policy-preview', () => {
     });
 
     assert.equal(runtime.resolveSurface(candidate, previewSelfTempoRef), 7);
+  });
+
+  it('uses a trusted move from the index instead of reclassifying the candidate', () => {
+    const def = createDef();
+    const state = initialState(def, 1, 2).state;
+    const candidate = createCandidate();
+    let probeCalls = 0;
+    let applyCalls = 0;
+    const trustedMove = createTrustedExecutableMove(candidate.move, state.stateHash, 'templateCompletion');
+    const runtime = createPolicyPreviewRuntime({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      seatId: 'us',
+      trustedMoveIndex: new Map([[candidate.stableMoveKey, trustedMove]]),
+      dependencies: {
+        classifyPlayableMoveCandidate: () => {
+          probeCalls += 1;
+          return { kind: 'rejected', move: candidate.move, rejection: 'notDecisionComplete' };
+        },
+        applyMove: () => {
+          applyCalls += 1;
+          return {
+            state: {
+              ...state,
+              globalVars: {
+                ...state.globalVars,
+                score: 8,
+              },
+            },
+          };
+        },
+        derivePlayerObservation: () => createObservation(false),
+      },
+    });
+
+    assert.equal(runtime.resolveSurface(candidate, previewScoreRef), 8);
+    assert.equal(probeCalls, 0);
+    assert.equal(applyCalls, 1);
+  });
+
+  it('rejects trusted preview application when the move source hash does not match the current state', () => {
+    const def = createDef();
+    const state = initialState(def, 1, 2).state;
+    const candidate = createCandidate();
+    let applyCalls = 0;
+    const runtime = createPolicyPreviewRuntime({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      seatId: 'us',
+      trustedMoveIndex: new Map([[
+        candidate.stableMoveKey,
+        createTrustedExecutableMove(candidate.move, state.stateHash + 1n, 'templateCompletion'),
+      ]]),
+      dependencies: {
+        classifyPlayableMoveCandidate: () => {
+          assert.fail('trusted preview path should not fall back to classification');
+        },
+        applyMove: () => {
+          applyCalls += 1;
+          return { state };
+        },
+        derivePlayerObservation: () => createObservation(false),
+      },
+    });
+
+    assert.equal(runtime.resolveSurface(candidate, previewScoreRef), undefined);
+    assert.equal(applyCalls, 0);
   });
 });

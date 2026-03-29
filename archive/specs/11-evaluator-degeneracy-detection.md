@@ -1,6 +1,6 @@
 # Spec 11: Evaluator & Degeneracy Detection
 
-**Status**: Ready
+**Status**: COMPLETED
 **Priority**: P1
 **Complexity**: M
 **Dependencies**: Spec 10 (simulator + trace recording)
@@ -30,7 +30,7 @@ All computation uses trace data only — no re-simulation needed.
 ### In Scope
 - `evaluateTrace(trace, config?)` — per-trace metrics + degeneracy flags
 - `aggregateEvals(gameDefId, evals[])` — aggregate into EvalReport
-- `generateEvalReport(def, traces, config?)` — convenience wrapper
+- `generateEvalReport(gameDefId, traces, config?)` — convenience wrapper
 - Delta reconstruction for per-turn perPlayerVars state (resourceTension, dramaMeasure)
 - Configurable thresholds via `EvalConfig`
 - Explicit `scoringVar` configuration for dramaMeasure
@@ -163,7 +163,7 @@ function aggregateEvals(
 
 /** Convenience: evaluate all traces and aggregate. */
 function generateEvalReport(
-  def: GameDef,
+  gameDefId: string,
   traces: readonly GameTrace[],
   config?: EvalConfig
 ): EvalReport;
@@ -497,3 +497,19 @@ When this spec is implemented, `packages/engine/schemas/EvalReport.schema.json` 
 - Add `TraceEval` and `TraceMetrics` interfaces
 - Keep existing `Metrics` interface (now represents aggregated means)
 - Keep existing `DegeneracyFlag` enum in `diagnostics.ts` (unchanged)
+
+## Outcome
+
+- Completion date: 2026-03-29
+- What actually changed:
+  - Implemented the evaluator stack across `evaluateTrace`, delta reconstruction, `aggregateEvals`, and `generateEvalReport`, with the report contract centered on `perSeed` diagnostics rather than embedded raw traces.
+  - Added the specified unit and integration coverage, including golden and simulator-produced evaluator tests.
+  - Finalized the convenience wrapper as `generateEvalReport(gameDefId, traces, config?)`, which is cleaner than the earlier spec draft that passed a full `GameDef`.
+- Deviations from original plan:
+  - The wrapper contract was tightened during follow-up cleanup because the implementation proved it only needed an explicit `gameDefId`; keeping full `GameDef` input would have preserved unnecessary coupling.
+  - The architecture remained on the explicit `@ludoforge/engine/sim` surface rather than adding any root export alias.
+- Verification results:
+  - Evaluator-focused tests passed, including `packages/engine/test/unit/sim/eval-report.test.ts` and `packages/engine/test/integration/sim/eval-full.test.ts`.
+  - `pnpm turbo typecheck` passed.
+  - `pnpm turbo lint` passed.
+  - `pnpm turbo test` passed.

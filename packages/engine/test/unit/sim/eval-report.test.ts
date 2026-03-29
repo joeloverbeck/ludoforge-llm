@@ -3,7 +3,7 @@ import { describe, it } from 'node:test';
 
 import { asActionId, asPhaseId, asPlayerId } from '../../../src/kernel/index.js';
 import { aggregateEvals, evaluateTrace, generateEvalReport } from '../../../src/sim/index.js';
-import type { GameDef, GameState, GameTrace, MoveLog, StateDelta, VariableValue } from '../../../src/kernel/index.js';
+import type { GameState, GameTrace, MoveLog, StateDelta, VariableValue } from '../../../src/kernel/index.js';
 
 type PerPlayerVars = Readonly<Record<number, Readonly<Record<string, VariableValue>>>>;
 
@@ -63,10 +63,6 @@ const makeTrace = (
   ...overrides,
 });
 
-const makeGameDef = (id: string): GameDef => ({
-  metadata: { id, players: { min: 2, max: 2 } },
-} as unknown as GameDef);
-
 describe('generateEvalReport', () => {
   it('matches manual evaluate-plus-aggregate output', () => {
     const traces = [
@@ -89,7 +85,7 @@ describe('generateEvalReport', () => {
     ] as const;
     const config = { scoringVar: 'score', dominantActionThreshold: 0.9 } as const;
 
-    const report = generateEvalReport(makeGameDef('definition-id'), traces, config);
+    const report = generateEvalReport('definition-id', traces, config);
     const expected = aggregateEvals(
       'definition-id',
       traces.map((trace) => evaluateTrace(trace, config)),
@@ -98,7 +94,7 @@ describe('generateEvalReport', () => {
     assert.deepEqual(report, expected);
   });
 
-  it('uses GameDef metadata.id rather than trace.gameDefId for the report id', () => {
+  it('uses the explicit gameDefId rather than trace.gameDefId for the report id', () => {
     const traces = [
       makeTrace(9, [
         makeMoveLog(0, 0, 'solo', 1, [{ path: 'perPlayerVars.0.score', before: 0, after: 1 }]),
@@ -110,13 +106,13 @@ describe('generateEvalReport', () => {
       }),
     ] as const;
 
-    const report = generateEvalReport(makeGameDef('def-owned-id'), traces, { scoringVar: 'score' });
+    const report = generateEvalReport('explicit-report-id', traces, { scoringVar: 'score' });
 
-    assert.equal(report.gameDefId, 'def-owned-id');
+    assert.equal(report.gameDefId, 'explicit-report-id');
   });
 
   it('handles empty traces as an empty aggregate report', () => {
-    const report = generateEvalReport(makeGameDef('empty-def'), [], { scoringVar: 'score' });
+    const report = generateEvalReport('empty-def', [], { scoringVar: 'score' });
 
     assert.deepEqual(report, {
       gameDefId: 'empty-def',

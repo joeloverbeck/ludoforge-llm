@@ -121,6 +121,7 @@ Strengthen evaluator tests where simulator-produced traces add coverage value:
 ## Outcome
 
 - Completion date: 2026-03-29
+- Outcome amended: 2026-03-29
 - What actually changed:
   - Corrected the ticket assumptions to match the existing engine package architecture and evaluator coverage.
   - Added `packages/engine/test/integration/sim/eval-full.test.ts` for real simulator-to-evaluator coverage, deterministic re-evaluation checks, `noLegalMoves` degeneracy coverage, and explicit `./sim` package-surface verification.
@@ -128,7 +129,7 @@ Strengthen evaluator tests where simulator-produced traces add coverage value:
   - Extended `packages/engine/test/unit/sim/trace-eval.test.ts` to evaluate the golden fixture exactly.
 - Deviations from original plan:
   - Did not add a root `@ludoforge/engine` export alias for evaluator APIs. The existing subpath boundary (`@ludoforge/engine/sim`) is the cleaner architecture and was preserved intentionally.
-  - No production source files needed changes; the missing work was proof coverage, not evaluator implementation.
+  - No production source files needed changes at the time; the missing work was proof coverage, not evaluator implementation. Ticket 11EVADEGDET-007 later narrowed `generateEvalReport` from `(def, traces, config?)` to `(gameDefId, traces, config?)`, so current consumers use the explicit identifier contract.
 - Verification results:
   - `pnpm turbo typecheck` passed.
   - `pnpm turbo lint` passed.

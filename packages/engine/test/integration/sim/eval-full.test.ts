@@ -106,7 +106,7 @@ describe('evaluator integration', () => {
     const traces = runGames(def, seeds, [rngDrivenAgent, rngDrivenAgent], 12);
     const evals = traces.map((trace) => evaluateTrace(trace));
     const report = aggregateEvals(def.metadata.id, evals);
-    const generated = generateEvalReport(def, traces);
+    const generated = generateEvalReport(def.metadata.id, traces);
 
     assert.deepEqual(
       traces.map((trace) => trace.seed),
@@ -149,7 +149,7 @@ describe('evaluator integration', () => {
     assert.equal(trace.stopReason, 'noLegalMoves');
     assert.deepEqual(evaluation.degeneracyFlags, [DegeneracyFlag.NO_LEGAL_MOVES]);
 
-    const report = generateEvalReport(def, [trace]);
+    const report = generateEvalReport(def.metadata.id, [trace]);
     assert.deepEqual(report.degeneracyFlags, [DegeneracyFlag.NO_LEGAL_MOVES]);
     assert.deepEqual(report.perSeed, [evaluation]);
   });

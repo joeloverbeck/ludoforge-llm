@@ -62,7 +62,7 @@ Implement:
 
 ```typescript
 export function generateEvalReport(
-  def: GameDef,
+  gameDefId: string,
   traces: readonly GameTrace[],
   config?: EvalConfig
 ): EvalReport;
@@ -105,7 +105,7 @@ Add `aggregateEvals` and `generateEvalReport` to the sim barrel.
 2. Union of degeneracy flags is deduplicated and stays in deterministic first-seen order.
 3. Empty `evals` produces `runCount = 0`, zeroed metrics, empty flags, and empty `perSeed`.
 4. Single `TraceEval` input produces aggregate metrics equal to the trace metrics, with `avgGameLength = trace.metrics.gameLength`.
-5. `generateEvalReport(def, traces, config)` returns the same report as `aggregateEvals(def.metadata.id, traces.map(trace => evaluateTrace(trace, config)))`.
+5. `generateEvalReport(gameDefId, traces, config)` returns the same report as `aggregateEvals(gameDefId, traces.map(trace => evaluateTrace(trace, config)))`.
 6. `perSeed` contains all input `TraceEval` values unchanged.
 7. `runCount` always equals the number of input evals.
 8. The report `gameDefId` equals the provided `gameDefId` for `aggregateEvals` and `def.metadata.id` for `generateEvalReport`.
@@ -151,15 +151,16 @@ Add `aggregateEvals` and `generateEvalReport` to the sim barrel.
 ## Outcome
 
 - Completion date: 2026-03-29
+- Outcome amended: 2026-03-29
 - What actually changed:
   - Added `packages/engine/src/sim/aggregate-evals.ts` with pure `aggregateEvals(gameDefId, evals)` aggregation logic for report metrics, stable deduplicated degeneracy-flag union, and explicit empty-input handling.
-  - Added `packages/engine/src/sim/eval-report.ts` with the thin `generateEvalReport(def, traces, config?)` wrapper that evaluates traces and aggregates them using `def.metadata.id`.
+  - Added `packages/engine/src/sim/eval-report.ts` with the thin `generateEvalReport(gameDefId, traces, config?)` wrapper that evaluates traces and aggregates them using the explicit identifier string.
   - Re-exported both functions from `packages/engine/src/sim/index.ts`.
   - Added focused unit coverage in `packages/engine/test/unit/sim/aggregate-evals.test.ts` and `packages/engine/test/unit/sim/eval-report.test.ts`.
 - Deviations from original plan:
   - The ticket was corrected first because the original assumptions were wrong about the `GameDef` identifier field, prerequisite ticket locations, and the engine's focused test command shape.
   - The original plan suggested verifying `generateEvalReport` by asserting helper calls. The implementation instead tests the architectural contract that wrapper output matches manual `evaluateTrace` plus `aggregateEvals`, which is cleaner and tool-agnostic.
-  - `generateEvalReport` still accepts the full `GameDef` because Spec 11 defines that API, but the implementation deliberately limits itself to `def.metadata.id` so the wrapper remains minimal if the spec is tightened later.
+  - Ticket 11EVADEGDET-007 later narrowed `generateEvalReport` from `(def, traces, config?)` to `(gameDefId, traces, config?)`, removing the unnecessary `GameDef` coupling from the wrapper.
 - Verification results:
   - `pnpm -F @ludoforge/engine build`
   - `node --test packages/engine/dist/test/unit/sim/aggregate-evals.test.js`

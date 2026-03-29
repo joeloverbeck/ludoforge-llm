@@ -1,5 +1,6 @@
 import type { GameTrace, MoveLog, TraceEval, TraceMetrics, VariableValue } from '../kernel/types.js';
 
+import { DegeneracyFlag } from '../kernel/diagnostics.js';
 import { reconstructPerPlayerVarTrajectory, parsePerPlayerVarPath } from './delta.js';
 import { DEFAULT_EVAL_CONFIG, type EvalConfig } from './eval-config.js';
 
@@ -189,14 +190,82 @@ const computeMetrics = (
   };
 };
 
+const hasRepeatedStateHash = (moves: readonly MoveLog[]): boolean => {
+  const seen = new Set<bigint>();
+  for (const move of moves) {
+    if (seen.has(move.stateHash)) {
+      return true;
+    }
+    seen.add(move.stateHash);
+  }
+  return false;
+};
+
+const hasStallRun = (
+  moves: readonly MoveLog[],
+  stallTurnThreshold: number,
+): boolean => {
+  if (moves.length === 0) {
+    return false;
+  }
+
+  let consecutiveCount = 1;
+  for (let index = 1; index < moves.length; index += 1) {
+    if (moves[index]?.stateHash === moves[index - 1]?.stateHash) {
+      consecutiveCount += 1;
+    } else {
+      consecutiveCount = 1;
+    }
+
+    if (consecutiveCount >= stallTurnThreshold) {
+      return true;
+    }
+  }
+
+  return stallTurnThreshold <= 1;
+};
+
+const hasTriggerDepthExceeded = (moves: readonly MoveLog[]): boolean =>
+  moves.some((move) => move.triggerFirings.some((entry) => entry.kind === 'truncated'));
+
+const computeDegeneracyFlags = (
+  trace: GameTrace,
+  metrics: TraceMetrics,
+  config: EvalConfig,
+): readonly DegeneracyFlag[] => {
+  const flags: DegeneracyFlag[] = [];
+
+  if (hasRepeatedStateHash(trace.moves)) {
+    flags.push(DegeneracyFlag.LOOP_DETECTED);
+  }
+  if (trace.stopReason === 'noLegalMoves') {
+    flags.push(DegeneracyFlag.NO_LEGAL_MOVES);
+  }
+  if (metrics.dominantActionFreq > (config.dominantActionThreshold ?? DEFAULT_EVAL_CONFIG.dominantActionThreshold)) {
+    flags.push(DegeneracyFlag.DOMINANT_ACTION);
+  }
+  if (trace.result !== null && trace.turnsCount < (config.trivialWinThreshold ?? DEFAULT_EVAL_CONFIG.trivialWinThreshold)) {
+    flags.push(DegeneracyFlag.TRIVIAL_WIN);
+  }
+  if (hasStallRun(trace.moves, config.stallTurnThreshold ?? DEFAULT_EVAL_CONFIG.stallTurnThreshold)) {
+    flags.push(DegeneracyFlag.STALL);
+  }
+  if (hasTriggerDepthExceeded(trace.moves)) {
+    flags.push(DegeneracyFlag.TRIGGER_DEPTH_EXCEEDED);
+  }
+
+  return flags;
+};
+
 export const evaluateTrace = (trace: GameTrace, config: EvalConfig = {}): TraceEval => {
   const effectiveConfig: EvalConfig = { ...DEFAULT_EVAL_CONFIG, ...config };
+  const metrics = computeMetrics(trace, effectiveConfig);
 
   return {
     seed: trace.seed,
     turnCount: trace.turnsCount,
     stopReason: trace.stopReason,
-    metrics: computeMetrics(trace, effectiveConfig),
-    degeneracyFlags: [],
+    metrics,
+    degeneracyFlags: computeDegeneracyFlags(trace, metrics, effectiveConfig),
   };
 };

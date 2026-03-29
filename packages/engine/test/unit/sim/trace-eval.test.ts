@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { asActionId, asPhaseId, asPlayerId } from '../../../src/kernel/index.js';
+import { DegeneracyFlag, asActionId, asPhaseId, asPlayerId } from '../../../src/kernel/index.js';
 import { evaluateTrace } from '../../../src/sim/index.js';
 import type { GameState, GameTrace, MoveLog, StateDelta, VariableValue } from '../../../src/kernel/index.js';
 
@@ -32,6 +32,7 @@ const makeMoveLog = (
   actionId: string,
   legalMoveCount: number,
   deltas: readonly StateDelta[] = [],
+  overrides: Partial<MoveLog> = {},
 ): MoveLog => ({
   stateHash: BigInt(index + 1),
   player: asPlayerId(player),
@@ -43,6 +44,7 @@ const makeMoveLog = (
   deltas,
   triggerFirings: [],
   warnings: [],
+  ...overrides,
 });
 
 const makeTrace = (
@@ -136,7 +138,7 @@ describe('evaluateTrace', () => {
       },
     );
 
-    const evaluation = evaluateTrace(trace);
+    const evaluation = evaluateTrace(trace, { dominantActionThreshold: 0.7, trivialWinThreshold: 5 });
 
     assert.equal(evaluation.metrics.actionDiversity, 0);
     assert.equal(evaluation.metrics.dominantActionFreq, 1);
@@ -249,5 +251,126 @@ describe('evaluateTrace', () => {
     for (const metric of allMetrics) {
       assert.equal(Number.isFinite(metric), true);
     }
+  });
+
+  it('detects repeated post-move state hashes as LOOP_DETECTED', () => {
+    const trace = makeTrace(
+      [
+        makeMoveLog(0, 0, 'a', 1, [], { stateHash: 101n }),
+        makeMoveLog(1, 1, 'b', 1, [], { stateHash: 202n }),
+        makeMoveLog(2, 0, 'c', 1, [], { stateHash: 101n }),
+      ],
+      {
+        '0': {},
+        '1': {},
+      },
+    );
+
+    const evaluation = evaluateTrace(trace);
+
+    assert.deepEqual(evaluation.degeneracyFlags, [DegeneracyFlag.LOOP_DETECTED]);
+  });
+
+  it('detects no-legal-moves, trivial wins, and dominant action independently', () => {
+    const trace = makeTrace(
+      [
+        makeMoveLog(0, 0, 'rush', 2),
+        makeMoveLog(1, 1, 'rush', 2),
+        makeMoveLog(2, 0, 'rush', 1),
+        makeMoveLog(3, 1, 'wait', 1),
+      ],
+      {
+        '0': { score: 3 },
+        '1': { score: 1 },
+      },
+      {
+        result: { type: 'win', player: asPlayerId(0) },
+        stopReason: 'noLegalMoves',
+      },
+    );
+
+    const evaluation = evaluateTrace(trace, {
+      dominantActionThreshold: 0.7,
+      trivialWinThreshold: 5,
+    });
+
+    assert.deepEqual(evaluation.degeneracyFlags, [
+      DegeneracyFlag.NO_LEGAL_MOVES,
+      DegeneracyFlag.DOMINANT_ACTION,
+      DegeneracyFlag.TRIVIAL_WIN,
+    ]);
+  });
+
+  it('detects stalls only when the consecutive hash run reaches the configured threshold', () => {
+    const trace = makeTrace(
+      [
+        makeMoveLog(0, 0, 'a', 1, [], { stateHash: 9n }),
+        makeMoveLog(1, 1, 'b', 1, [], { stateHash: 9n }),
+        makeMoveLog(2, 0, 'c', 1, [], { stateHash: 9n }),
+        makeMoveLog(3, 1, 'd', 1, [], { stateHash: 8n }),
+      ],
+      {
+        '0': {},
+        '1': {},
+      },
+    );
+
+    assert.deepEqual(evaluateTrace(trace, { stallTurnThreshold: 3 }).degeneracyFlags, [
+      DegeneracyFlag.LOOP_DETECTED,
+      DegeneracyFlag.STALL,
+    ]);
+    assert.deepEqual(evaluateTrace(trace, { stallTurnThreshold: 4 }).degeneracyFlags, [
+      DegeneracyFlag.LOOP_DETECTED,
+    ]);
+  });
+
+  it('detects truncated trigger logs as TRIGGER_DEPTH_EXCEEDED', () => {
+    const trace = makeTrace(
+      [
+        makeMoveLog(0, 0, 'safe', 1),
+        makeMoveLog(1, 1, 'chain', 1, [], {
+          triggerFirings: [
+            {
+              kind: 'truncated',
+              event: { type: 'turnStart' },
+              depth: 5,
+            },
+          ],
+        }),
+      ],
+      {
+        '0': {},
+        '1': {},
+      },
+    );
+
+    const evaluation = evaluateTrace(trace);
+
+    assert.deepEqual(evaluation.degeneracyFlags, [DegeneracyFlag.TRIGGER_DEPTH_EXCEEDED]);
+  });
+
+  it('treats threshold equality as healthy for dominant action and trivial win', () => {
+    const trace = makeTrace(
+      [
+        makeMoveLog(0, 0, 'wait', 1),
+        makeMoveLog(1, 1, 'wait', 1),
+        makeMoveLog(2, 0, 'other', 1),
+        makeMoveLog(3, 1, 'other', 1),
+      ],
+      {
+        '0': {},
+        '1': {},
+      },
+      {
+        result: { type: 'win', player: asPlayerId(1) },
+      },
+    );
+
+    const evaluation = evaluateTrace(trace, {
+      dominantActionThreshold: 0.5,
+      trivialWinThreshold: 4,
+    });
+
+    assert.deepEqual(evaluation.degeneracyFlags, []);
   });
 });

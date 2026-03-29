@@ -324,6 +324,89 @@ describe('policy-preview', () => {
     assert.equal(applyCalls, 1);
   });
 
+  it('masks trusted indexed preview states when the move consumes rng', () => {
+    const def = createDef();
+    const state = initialState(def, 1, 2).state;
+    const candidate = createCandidate();
+    let probeCalls = 0;
+    const runtime = createPolicyPreviewRuntime({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      seatId: 'us',
+      trustedMoveIndex: new Map([[
+        candidate.stableMoveKey,
+        createTrustedExecutableMove(candidate.move, state.stateHash, 'templateCompletion'),
+      ]]),
+      dependencies: {
+        classifyPlayableMoveCandidate: () => {
+          probeCalls += 1;
+          return { kind: 'rejected', move: candidate.move, rejection: 'notDecisionComplete' };
+        },
+        applyMove: () => ({
+          state: {
+            ...state,
+            rng: {
+              ...state.rng,
+              state: [2n, 3n],
+            },
+          },
+        }),
+        derivePlayerObservation: () => createObservation(false),
+      },
+    });
+
+    assert.equal(runtime.resolveSurface(candidate, previewScoreRef), undefined);
+    assert.equal(probeCalls, 0);
+  });
+
+  it('caches trusted indexed preview application per candidate', () => {
+    const def = createDef();
+    const state = initialState(def, 1, 2).state;
+    const candidate = createCandidate();
+    let probeCalls = 0;
+    let applyCalls = 0;
+    let observationCalls = 0;
+    const runtime = createPolicyPreviewRuntime({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      seatId: 'us',
+      trustedMoveIndex: new Map([[
+        candidate.stableMoveKey,
+        createTrustedExecutableMove(candidate.move, state.stateHash, 'templateCompletion'),
+      ]]),
+      dependencies: {
+        classifyPlayableMoveCandidate: () => {
+          probeCalls += 1;
+          return { kind: 'rejected', move: candidate.move, rejection: 'notDecisionComplete' };
+        },
+        applyMove: () => {
+          applyCalls += 1;
+          return {
+            state: {
+              ...state,
+              globalVars: {
+                ...state.globalVars,
+                score: 6,
+              },
+            },
+          };
+        },
+        derivePlayerObservation: () => {
+          observationCalls += 1;
+          return createObservation(false);
+        },
+      },
+    });
+
+    assert.equal(runtime.resolveSurface(candidate, previewScoreRef), 6);
+    assert.equal(runtime.resolveSurface(candidate, previewScoreRef), 6);
+    assert.equal(probeCalls, 0);
+    assert.equal(applyCalls, 1);
+    assert.equal(observationCalls, 1);
+  });
+
   it('rejects trusted preview application when the move source hash does not match the current state', () => {
     const def = createDef();
     const state = initialState(def, 1, 2).state;
@@ -352,5 +435,47 @@ describe('policy-preview', () => {
 
     assert.equal(runtime.resolveSurface(candidate, previewScoreRef), undefined);
     assert.equal(applyCalls, 0);
+  });
+
+  it('falls back to classification when the trusted move index is empty', () => {
+    const def = createDef();
+    const state = initialState(def, 1, 2).state;
+    const candidate = createCandidate();
+    let probeCalls = 0;
+    let applyCalls = 0;
+    const runtime = createPolicyPreviewRuntime({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      seatId: 'us',
+      trustedMoveIndex: new Map(),
+      dependencies: {
+        classifyPlayableMoveCandidate: () => {
+          probeCalls += 1;
+          return {
+            kind: 'playableComplete',
+            move: createTrustedExecutableMove(candidate.move, state.stateHash, 'templateCompletion'),
+            warnings: [],
+          };
+        },
+        applyMove: () => {
+          applyCalls += 1;
+          return {
+            state: {
+              ...state,
+              globalVars: {
+                ...state.globalVars,
+                score: 5,
+              },
+            },
+          };
+        },
+        derivePlayerObservation: () => createObservation(false),
+      },
+    });
+
+    assert.equal(runtime.resolveSurface(candidate, previewScoreRef), 5);
+    assert.equal(probeCalls, 1);
+    assert.equal(applyCalls, 1);
   });
 });

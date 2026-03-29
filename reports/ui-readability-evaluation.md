@@ -590,3 +590,80 @@ N/A (baseline evaluation)
 5. **[LOW] Investigate the dark rectangle overlay.** Persists across all seven evaluations. Not blocking but adds visual noise.
 
 6. **[LOW] Strengthen visual distinction for unavailable options.** Unselected options in screenshot 2 are subtly lighter. The strong selected-state styling makes this less urgent, but stronger dimming would help at-a-glance scanning.
+
+---
+
+## EVALUATION #8
+
+**Date**: 2026-03-29
+**Screenshots analyzed**: fitl-train-1.png through fitl-train-5.png
+
+### Screenshot Analysis
+
+#### fitl-train-1.png — Initial Target Space Selection (Empty)
+**What's shown**: The Train choice panel at the start. Player must select target spaces for training. No spaces selected. Six zone checkbox buttons displayed in a single row.
+**Issues observed**:
+- Prompt reads "Target Spaces: Select spaces to train in (1 to 6) — Target Spaces". The duplicated label prefix from Eval #7 ("Target Spaces: Target Spaces:") is **fixed** — the label now appears only once at the start. However, a **new trailing suffix** "— Target Spaces" is appended after the description. This is redundant with the prefix and adds visual noise, though it's far less jarring than the previous duplication.
+- Counter reads "Selected: 0 of 1 to 6" — harmonized format, consistent.
+- No lone "Current" badge — clean.
+- "Confirm selection" correctly grayed out, "Back" grayed out, "Cancel" active.
+- Zone names clean and readable.
+
+#### fitl-train-2.png — Target Space Selection (3 Selected)
+**What's shown**: Player has selected 3 spaces (Binh Dinh, Da Nang, Pleiku Darlac). Selected options show blue checkmarks with solid blue borders. Unselected options appear lighter.
+**Issues observed**:
+- Prompt dynamically updated to "Target Spaces: Select spaces to train in (1 to 3) — Target Spaces" — correct range constraint reflected. Same trailing suffix pattern.
+- Counter reads "Selected: 3 of 1 to 3" — harmonized and consistent.
+- No misleading error messages under selected options — clean.
+- Blue checkmark selection styling maintained from Eval #6 — proper positive selection indicators. No strikethrough.
+- Unselected options (Kontum, Quang Tri, Saigon) appear lighter/dimmed. The distinction is adequate with the strong selected-state styling.
+- "Confirm selection" button is active.
+
+#### fitl-train-3.png — Train Sub-Choice (Place Irregulars vs Place At Base)
+**What's shown**: Binary choice between "Place Irregulars" and "Place At Base" after selecting target spaces.
+**Issues observed**:
+- Prompt reads "Train Choice: How do you want to train? — Train Choice" — natural language with the same trailing suffix pattern. The duplicated prefix from Eval #7 ("Train Choice: Train Choice:") is fixed.
+- Breadcrumb shows "Target Spaces (1x)" group header with "Target Spaces: Binh Dinh, Da Nang, Pleiku Darlac" pill and "Current" badge — clean and informative.
+- Both option buttons are well-labeled and clear.
+- Panel is compact and well-organized.
+
+#### fitl-train-4.png — Deep Nested Choice (Source Spaces in forEach)
+**What's shown**: Inside a forEach loop, player selects source spaces (up to 3) for reinforcements.
+**Issues observed**:
+- Prompt reads "Source Spaces: Select source spaces for reinforcements (up to 3) — Source Spaces". The **raw AST path prefix is ELIMINATED** — this was the #1 CRITICAL issue in Eval #6-7 and was reported as regressed. It is now fixed again. The prompt is fully human-readable apart from the trailing suffix.
+- Breadcrumb shows "Target Spaces (1x)" and "Train Choice (3x)" group headers with pills: "Train Choice: Place Irregulars", "Train Choice: Place At Base", "Train Choice: Place Irregulars", and "Current" badge. The "(3x)" multiplicity indicator provides partial forEach context but individual entries still don't identify which target space each iteration corresponds to. This has been the top structural issue since Eval #3 — **six consecutive evaluations** without resolution.
+- Counter reads "Selected: 0 of up to 3" — harmonized.
+- Zone options (Binh Dinh, Pleiku Darlac, Quang Tri) are clean.
+
+#### fitl-train-5.png — Deepest Nested Choice (Sub-Action Spaces)
+**What's shown**: Deepest nesting level. Player selects additional space for the current action (up to 1).
+**Issues observed**:
+- Prompt reads "Sub Action Spaces: Select additional space for this action (up to 1) — Sub Action Spaces". The duplicated prefix from Eval #7 is fixed, but "Sub Action Spaces" remains internal jargon in both the prefix and the trailing suffix. The human description between them is clear.
+- Breadcrumb shows "Target Spaces (1x)" pill, "Train Choice (3x)" pills, "Source Spaces (1x)" with pill reading "Source Spaces: Binh Dinh, Pleiku Darlac, Quang Tri". The **raw AST path in the breadcrumb pill is ELIMINATED** — this was CRITICAL in Eval #6-7. The pill now shows a clean "Source Spaces: ..." label. Major fix.
+- Counter reads "Selected: 0 of up to 1" — harmonized.
+- Zone options (Binh Dinh, Da Nang, Pleiku Darlac) are clean.
+- The panel is more compact now that the breadcrumb pill no longer contains the AST path.
+
+### Scores
+
+| # | Metric | Score | Previous | Delta | Justification |
+|---|--------|-------|----------|-------|---------------|
+| 1 | Decision Prompt Clarity | 7 | 5 | +2 | The duplicated label prefixes from Eval #7 are fixed — major improvement. The raw AST path prefix in screenshot 4 is eliminated — the other major regression from Eval #6-7 is resolved. All 5 screens now have human-readable descriptions. New issue: a trailing "— Label" suffix on every prompt is redundant with the prefix. Screenshot 5 still uses "Sub Action Spaces" jargon. The suffix prevents reaching 8. |
+| 2 | Option Legibility | 8 | 8 | 0 | Blue checkmark selection styling maintained. Zone names clean, action names clear. No "None" suffixes. No misleading errors. Unchanged from Eval #6-7. |
+| 3 | Breadcrumb Navigability | 6 | 5 | +1 | The raw AST path in the Source Spaces breadcrumb pill (screenshot 5) is eliminated — was CRITICAL in Eval #6-7. Group multiplicity indicators "(1x)", "(3x)" still present. However, forEach iteration context is still absent — individual "Train Choice" entries don't identify target spaces. This has persisted for six consecutive evaluations (#3-#8). |
+| 4 | Error Communication | 7 | 7 | 0 | No misleading errors. Range format harmonized and consistent. Unchanged. |
+| 5 | Information Density | 7 | 6 | +1 | The AST path is gone from both the screenshot 4 prompt and the screenshot 5 breadcrumb pill, reclaiming significant space. The trailing suffix adds minor overhead but far less than the previous duplicated prefixes or AST paths. Decision areas have adequate room. |
+| 6 | Visual Hierarchy | 7 | 6 | +1 | No more duplicated prefixes creating visual stuttering. No AST paths competing for attention. The prompt flow is clean: "Train" badge → "Label: description — Label" → options → buttons. The trailing suffix is mildly distracting but doesn't break the hierarchy. Selection styling remains strong. |
+| | **Average** | **7.0** | **6.2** | **+0.8** | |
+
+### Prioritized Recommendations
+
+1. **[HIGH] Add forEach iteration context to breadcrumbs.** The repeated "Train Choice: Place Irregulars" / "Train Choice: Place At Base" entries in screenshots 4-5 give the player no information about which target space is being processed or which iteration they're on. Concrete fix: replace with labels like "Binh Dinh (1/3): Place Irregulars" or add a sub-header per iteration. This has been the top remaining structural issue for **six consecutive evaluations** (#3-#8) — escalating from HIGH toward CRITICAL if it persists. *(Recurring: 6 consecutive evaluations)*
+
+2. **[HIGH] Remove the redundant trailing "— Label" suffix from all prompts.** Every screen now shows "Label: description — Label" (e.g., "Target Spaces: Select spaces to train in (1 to 6) — Target Spaces"). The trailing "— Target Spaces" after the description is redundant with the "Target Spaces:" prefix. Removing it would make prompts cleaner and more concise. This is likely being appended by a secondary formatting step — check where the em-dash suffix is concatenated. *(New issue — regression from Eval #7's duplication fix)*
+
+3. **[MEDIUM] Replace "Sub Action Spaces" with player-friendly language.** Screenshot 5's prompt prefix and suffix both show "Sub Action Spaces" — internal terminology. Even once the trailing suffix is removed, the prefix "Sub Action Spaces:" should be replaced with something like "Additional Space:" or "Bonus Placement:". *(Recurring: 3 consecutive evaluations — #6, #7, #8)*
+
+4. **[LOW] Strengthen visual distinction for unavailable options.** In screenshot 2, unselected options (Kontum, Quang Tri, Saigon) are subtly lighter. The strong selected-state styling (blue checkmarks) makes this less urgent, but stronger dimming would help at-a-glance scanning. *(Recurring: 4 consecutive evaluations — #5, #6, #7, #8)*
+
+5. **[LOW] Investigate the dark rectangle overlay.** The semi-transparent dark rectangle overlapping the map canvas behind the choice panel may persist — hard to distinguish from the normal panel background in these screenshots. If still present, it has persisted across all eight evaluations. *(Recurring: potentially 8 consecutive evaluations)*

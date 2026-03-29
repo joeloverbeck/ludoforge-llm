@@ -9,8 +9,8 @@ Score the current UI state from screenshots and append a structured evaluation t
 
 ## Checklist
 
-1. Read `reports/ui-readability-evaluation.md` — absorb the rubric and all prior evaluations
-2. Read all `screenshots/fitl-train-*.png` files (use the Read tool — they are images)
+1. Read `reports/ui-readability-evaluation.md` — absorb the rubric and the last 2-3 evaluations. The file may exceed the Read tool's token limit; if so, read the rubric (top section) first, then read backward from the end of the file to capture recent evaluations. Skip intermediate evaluations unless checking recurring issue history.
+2. Glob for `screenshots/fitl-train-*.png` to discover all available screenshots, then read each one (use the Read tool — they are images)
 3. Determine the next evaluation number from the last `## EVALUATION #N` heading
 4. For each screenshot, write a paragraph describing what's shown and listing specific issues
 5. Score all 6 metrics (1-10) with brief justification per metric
@@ -29,7 +29,7 @@ Append exactly this structure:
 ## EVALUATION #N
 
 **Date**: YYYY-MM-DD
-**Screenshots analyzed**: fitl-train-1.png through fitl-train-5.png
+**Screenshots analyzed**: fitl-train-1.png through fitl-train-N.png
 
 ### Screenshot Analysis
 
@@ -69,20 +69,28 @@ Append exactly this structure:
 
 ## What to Look For
 
-- Raw `$variable` names or AST paths exposed to the player
-- Breadcrumb entries that are walls of unreadable text
+- Raw internal identifiers exposed to the player (AST paths, binding names, internal jargon)
+- Breadcrumb entries that are walls of unreadable text or lack iteration context
 - Missing or misleading error explanations
-- "None" suffixes or other formatting artifacts on zone/token names
+- Formatting artifacts on labels (duplicated prefixes, trailing suffixes, "None" appended to names)
 - Cramped layout where breadcrumbs dominate over the actual decision
-- Unclear selection ranges (e.g., `(0-3)` without context)
+- Unclear selection ranges without context
 - Visual clutter competing with the primary decision
-- **Duplicated label prefixes** — e.g., "Target Spaces: Target Spaces: ..." indicates the label is being added in two places (render model and UI component)
+- Semantically misleading styling (e.g., strikethrough on selected items)
 - **Regressions** — issues that were absent in previous evaluations but appeared after recent changes
 
 ## Recurring Issue Tracking
 
 When writing recommendations, check prior evaluations to determine if each issue is new or recurring:
 - If an issue appeared in the previous evaluation, note it as "Recurring: N consecutive evaluations"
-- Issues persisting for 3+ evaluations should be escalated in priority (e.g., HIGH -> CRITICAL)
+- Issues persisting for 3+ evaluations should be *considered* for escalation — weigh both persistence and impact severity when deciding (a LOW cosmetic issue persisting for 5 evaluations doesn't automatically become CRITICAL)
 - New regressions (issues not present in the previous evaluation) should be called out explicitly as regressions
 - If a previously reported issue is now resolved, note this in the screenshot analysis as positive progress
+
+## Stagnation Detection
+
+If 3+ consecutive evaluations report the same top recommendation without meaningful score improvement, note this explicitly in the evaluation and suggest shifting to the `train-operation-ui-implement` skill to address the structural issues before running another evaluation cycle.
+
+## Report File Maintenance
+
+When the report file exceeds ~15 evaluations, consider archiving older evaluations (keeping the rubric and last 5 evaluations in the active file) to prevent the file from growing unbounded. Move archived evaluations to `reports/ui-readability-evaluation-archive.md`.

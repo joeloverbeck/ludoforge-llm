@@ -33,7 +33,7 @@ type PerPlayerVars = Readonly<Record<number, Readonly<Record<string, VariableVal
 
 const PER_PLAYER_VAR_PATH = /^perPlayerVars\.(\d+)\.(.+)$/;
 
-const parsePerPlayerVarPath = (path: string): { playerId: number; varName: string } | null => {
+export const parsePerPlayerVarPath = (path: string): { playerId: number; varName: string } | null => {
   const match = PER_PLAYER_VAR_PATH.exec(path);
   if (match === null) {
     return null;

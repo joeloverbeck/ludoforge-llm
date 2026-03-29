@@ -343,9 +343,30 @@ agents:
         tieBreakers:
           - stableMoveKey
 
+    vc-evolved:
+      params:
+        eventWeight: 1.5
+        projectedMarginWeight: 1
+        resourceWeight: 0.03
+      use:
+        pruningRules:
+          - dropPassWhenOtherMovesExist
+        scoreTerms:
+          - preferProjectedSelfMargin
+          - preserveResources
+          - preferEvent
+          - preferRallyAction
+          - preferMarchAction
+          - preferAttackAction
+          - preferTerrorAction
+          - preferTaxAction
+          - preferSubvertAction
+        tieBreakers:
+          - stableMoveKey
+
   bindings:
     us: us-baseline
     arvn: arvn-baseline
     nva: nva-baseline
-    vc: vc-baseline
+    vc: vc-evolved
 ```

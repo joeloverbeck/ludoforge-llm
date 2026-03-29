@@ -1774,13 +1774,60 @@
         ]
       },
       "fingerprint": "6390874b4c326703cab37b9e9bd3197af645cea492bac3ac0f961aea0a513ec9"
+    },
+    "vc-evolved": {
+      "params": {
+        "eventWeight": 1.5,
+        "projectedMarginWeight": 1,
+        "resourceWeight": 0.03
+      },
+      "use": {
+        "pruningRules": [
+          "dropPassWhenOtherMovesExist"
+        ],
+        "scoreTerms": [
+          "preferProjectedSelfMargin",
+          "preserveResources",
+          "preferEvent",
+          "preferRallyAction",
+          "preferMarchAction",
+          "preferAttackAction",
+          "preferTerrorAction",
+          "preferTaxAction",
+          "preferSubvertAction"
+        ],
+        "tieBreakers": [
+          "stableMoveKey"
+        ]
+      },
+      "plan": {
+        "stateFeatures": [
+          "selfMargin",
+          "selfResources"
+        ],
+        "candidateFeatures": [
+          "isPass",
+          "projectedSelfMargin",
+          "isEvent",
+          "isRally",
+          "isMarch",
+          "isAttack",
+          "isTerror",
+          "isTax",
+          "isSubvert"
+        ],
+        "candidateAggregates": [
+          "hasNonPassAlternative"
+        ]
+      },
+      "fingerprint": "6390874b4c326703cab37b9e9bd3197af645cea492bac3ac0f961aea0a513ec9"
     }
   },
   "bindingsBySeat": {
     "us": "us-baseline",
     "arvn": "arvn-baseline",
     "nva": "nva-baseline",
-    "vc": "vc-baseline"
+    "vc": "vc-evolved"
   },
-  "catalogFingerprint": "32a0c47eb074dcd676d3655df9783825105f4d5fa13966ad8aaf86eb4a7a5f92"
+  "catalogFingerprint": "85b1e3b03c0d941dd6c74006d9a833e2d1020c977e8e1122a721fa59b4c531ee"
 }

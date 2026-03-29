@@ -1175,6 +1175,18 @@ const AgentDecisionScoreContributionSchema = z
   })
   .strict();
 
+const PolicyPreviewUnknownRefTraceSchema = z
+  .object({
+    refId: StringSchema,
+    reason: z.union([
+      z.literal('random'),
+      z.literal('hidden'),
+      z.literal('unresolved'),
+      z.literal('failed'),
+    ]),
+  })
+  .strict();
+
 const PolicyCandidateDecisionTraceSchema = z
   .object({
     actionId: StringSchema,
@@ -1183,7 +1195,7 @@ const PolicyCandidateDecisionTraceSchema = z
     prunedBy: z.array(StringSchema),
     scoreContributions: z.array(AgentDecisionScoreContributionSchema).optional(),
     previewRefIds: z.array(StringSchema).optional(),
-    unknownPreviewRefIds: z.array(StringSchema).optional(),
+    unknownPreviewRefs: z.array(PolicyPreviewUnknownRefTraceSchema).optional(),
   })
   .strict();
 
@@ -1207,7 +1219,7 @@ const PolicyPreviewUsageTraceSchema = z
   .object({
     evaluatedCandidateCount: NumberSchema,
     refIds: z.array(StringSchema),
-    unknownRefIds: z.array(StringSchema),
+    unknownRefs: z.array(PolicyPreviewUnknownRefTraceSchema),
   })
   .strict();
 

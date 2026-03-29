@@ -16,11 +16,17 @@ import type {
 } from '../kernel/types.js';
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
 import { pickRandom } from './agent-move-selection.js';
+import type { PolicyPreviewUnavailabilityReason } from './policy-preview.js';
 import {
   createPolicyRuntimeProviders,
   type PolicyRuntimeProviders,
   type PolicyValue,
 } from './policy-runtime.js';
+
+export interface PolicyPreviewUnknownRef {
+  readonly refId: string;
+  readonly reason: PolicyPreviewUnavailabilityReason;
+}
 
 export interface PolicyEvaluationFailure {
   readonly code:
@@ -48,7 +54,7 @@ export interface PolicyEvaluationCandidateMetadata {
     readonly contribution: number;
   }[];
   readonly previewRefIds: readonly string[];
-  readonly unknownPreviewRefIds: readonly string[];
+  readonly unknownPreviewRefs: readonly PolicyPreviewUnknownRef[];
 }
 
 export interface PolicyEvaluationPruningStep {
@@ -66,7 +72,7 @@ export interface PolicyEvaluationTieBreakStep {
 export interface PolicyEvaluationPreviewUsage {
   readonly evaluatedCandidateCount: number;
   readonly refIds: readonly string[];
-  readonly unknownRefIds: readonly string[];
+  readonly unknownRefs: readonly PolicyPreviewUnknownRef[];
 }
 
 export interface PolicyEvaluationMetadata {
@@ -123,7 +129,7 @@ interface CandidateEntry {
   readonly prunedBy: string[];
   readonly scoreContributions: { readonly termId: string; readonly contribution: number }[];
   readonly previewRefIds: Set<string>;
-  readonly unknownPreviewRefIds: Set<string>;
+  readonly unknownPreviewRefs: Map<string, PolicyPreviewUnavailabilityReason>;
   score: number;
 }
 
@@ -551,11 +557,12 @@ class EvaluationContext {
       }
       const refId = previewRefKey(ref);
       candidate.previewRefIds.add(refId);
-      const value = this.runtimeProviders.previewSurface.resolveSurface(candidate, ref);
-      if (value === undefined) {
-        candidate.unknownPreviewRefIds.add(refId);
+      const resolution = this.runtimeProviders.previewSurface.resolveSurface(candidate, ref);
+      if (resolution.kind === 'unknown') {
+        candidate.unknownPreviewRefs.set(refId, resolution.reason);
+        return undefined;
       }
-      return value;
+      return resolution.kind === 'value' ? resolution.value : undefined;
     }
     return this.runtimeProviders.currentSurface.resolveSurface(ref);
   }
@@ -830,7 +837,7 @@ function canonicalizeCandidates(def: GameDef, legalMoves: readonly Move[]): Cand
       prunedBy: [],
       scoreContributions: [],
       previewRefIds: new Set<string>(),
-      unknownPreviewRefIds: new Set<string>(),
+      unknownPreviewRefs: new Map<string, PolicyPreviewUnavailabilityReason>(),
       score: Number.NEGATIVE_INFINITY,
     }))
     .sort((left, right) => left.stableMoveKey.localeCompare(right.stableMoveKey));
@@ -844,25 +851,29 @@ function candidateMetadata(candidate: CandidateEntry): PolicyEvaluationCandidate
     prunedBy: [...candidate.prunedBy],
     scoreContributions: [...candidate.scoreContributions],
     previewRefIds: [...candidate.previewRefIds].sort(),
-    unknownPreviewRefIds: [...candidate.unknownPreviewRefIds].sort(),
+    unknownPreviewRefs: [...candidate.unknownPreviewRefs.entries()]
+      .sort(([leftId], [rightId]) => leftId.localeCompare(rightId))
+      .map(([refId, reason]) => ({ refId, reason })),
   };
 }
 
 function summarizePreviewUsage(candidates: readonly CandidateEntry[]): PolicyEvaluationPreviewUsage {
   const refIds = new Set<string>();
-  const unknownRefIds = new Set<string>();
+  const unknownRefs = new Map<string, PolicyPreviewUnavailabilityReason>();
   let evaluatedCandidateCount = 0;
   for (const candidate of candidates) {
     if (candidate.previewRefIds.size > 0) {
       evaluatedCandidateCount += 1;
       candidate.previewRefIds.forEach((refId) => refIds.add(refId));
     }
-    candidate.unknownPreviewRefIds.forEach((refId) => unknownRefIds.add(refId));
+    candidate.unknownPreviewRefs.forEach((reason, refId) => unknownRefs.set(refId, reason));
   }
   return {
     evaluatedCandidateCount,
     refIds: [...refIds].sort(),
-    unknownRefIds: [...unknownRefIds].sort(),
+    unknownRefs: [...unknownRefs.entries()]
+      .sort(([leftId], [rightId]) => leftId.localeCompare(rightId))
+      .map(([refId, reason]) => ({ refId, reason })),
   };
 }
 
@@ -870,7 +881,7 @@ function emptyPreviewUsage(): PolicyEvaluationPreviewUsage {
   return {
     evaluatedCandidateCount: 0,
     refIds: [],
-    unknownRefIds: [],
+    unknownRefs: [],
   };
 }
 

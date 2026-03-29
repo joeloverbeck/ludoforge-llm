@@ -132,7 +132,9 @@ describe('FITL policy agent integration', () => {
     }
     assert.equal(result.agentDecision.emergencyFallback, false);
     assert.deepEqual(result.agentDecision.previewUsage.refIds, ['victoryCurrentMargin.currentMargin.self']);
-    assert.deepEqual(result.agentDecision.previewUsage.unknownRefIds, ['victoryCurrentMargin.currentMargin.self']);
+    assert.deepEqual(result.agentDecision.previewUsage.unknownRefs, [
+      { refId: 'victoryCurrentMargin.currentMargin.self', reason: 'hidden' },
+    ]);
     if (result.agentDecision.candidates === undefined) {
       assert.fail('expected verbose policy candidates');
     }
@@ -141,8 +143,8 @@ describe('FITL policy agent integration', () => {
 
     assert.ok(evaluatedNonPassCandidate, 'expected at least one evaluated non-pass candidate');
     assert.deepEqual(
-      evaluatedNonPassCandidate?.unknownPreviewRefIds,
-      ['victoryCurrentMargin.currentMargin.self'],
+      evaluatedNonPassCandidate?.unknownPreviewRefs,
+      [{ refId: 'victoryCurrentMargin.currentMargin.self', reason: 'hidden' }],
     );
   });
 

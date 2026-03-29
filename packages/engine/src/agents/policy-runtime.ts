@@ -14,7 +14,10 @@ import type {
   TrustedExecutableMove,
 } from '../kernel/types.js';
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
-import { createPolicyPreviewRuntime } from './policy-preview.js';
+import {
+  createPolicyPreviewRuntime,
+  type PolicyPreviewSurfaceResolution,
+} from './policy-preview.js';
 import {
   buildPolicyVictorySurface,
   getPolicySurfaceVisibility,
@@ -52,7 +55,7 @@ export interface PolicyPreviewSurfaceProvider {
   resolveSurface(
     candidate: PolicyRuntimeCandidate,
     ref: CompiledAgentPolicyPreviewSurfaceRef,
-  ): PolicyValue;
+  ): PolicyPreviewSurfaceResolution;
 }
 
 export interface PolicyRuntimeProviders {

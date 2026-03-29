@@ -56,8 +56,11 @@
       "refIds": [
         "victoryCurrentMargin.currentMargin.self"
       ],
-      "unknownRefIds": [
-        "victoryCurrentMargin.currentMargin.self"
+      "unknownRefs": [
+        {
+          "refId": "victoryCurrentMargin.currentMargin.self",
+          "reason": "hidden"
+        }
       ]
     },
     "emergencyFallback": false,

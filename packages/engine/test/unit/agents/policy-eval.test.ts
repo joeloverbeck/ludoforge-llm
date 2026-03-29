@@ -330,13 +330,13 @@ describe('policy-eval', () => {
       } satisfies CompiledAgentPolicyCurrentSurfaceRef),
       1,
     );
-    assert.equal(
+    assert.deepEqual(
       providers.previewSurface.resolveSurface(candidate, {
         kind: 'previewSurface',
         family: 'globalVar',
         id: 'usMargin',
       } satisfies CompiledAgentPolicyPreviewSurfaceRef),
-      4,
+      { kind: 'value', value: 4 },
     );
   });
 

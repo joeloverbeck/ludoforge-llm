@@ -58,8 +58,23 @@ export interface PolicyPreviewRuntime {
   resolveSurface(
     candidate: PolicyPreviewCandidate,
     ref: CompiledAgentPolicyPreviewSurfaceRef,
-  ): number | undefined;
+  ): PolicyPreviewSurfaceResolution;
 }
+
+export type PolicyPreviewUnavailabilityReason = 'random' | 'hidden' | 'unresolved' | 'failed';
+
+export type PolicyPreviewSurfaceResolution =
+  | {
+      readonly kind: 'value';
+      readonly value: number;
+    }
+  | {
+      readonly kind: 'unknown';
+      readonly reason: PolicyPreviewUnavailabilityReason;
+    }
+  | {
+      readonly kind: 'unavailable';
+    };
 
 type PreviewOutcome =
   | {
@@ -71,7 +86,7 @@ type PreviewOutcome =
     }
   | {
       readonly kind: 'unknown';
-      readonly reason: 'random' | 'hidden' | 'unresolved' | 'failed';
+      readonly reason: PolicyPreviewUnavailabilityReason;
     };
 
 const defaultDependencies = {
@@ -93,11 +108,11 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
     resolveSurface(candidate, ref) {
       const preview = getPreviewOutcome(candidate);
       if (preview.kind !== 'ready') {
-        return undefined;
+        return preview;
       }
       const visibility = input.def.agents === undefined ? null : getPolicySurfaceVisibility(input.def.agents.surfaceVisibility, ref);
       if (visibility === null) {
-        return undefined;
+        return { kind: 'unavailable' };
       }
       const targetPlayerIndex = ref.family === 'perPlayerVar'
         ? resolvePerPlayerTargetIndex(input.def, preview.state, ref, input.playerId, input.seatId, seatResolutionIndex)
@@ -112,44 +127,47 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         Number(input.playerId),
         targetPlayerIndex,
       )) {
-        return undefined;
+        return { kind: 'unavailable' };
       }
       if (preview.requiresHiddenSampling && !visibility.preview.allowWhenHiddenSampling) {
-        return undefined;
+        return { kind: 'unknown', reason: 'hidden' };
       }
       if (ref.family === 'derivedMetric') {
         const cachedValue = preview.metricCache.get(ref.id);
         if (cachedValue !== undefined) {
-          return cachedValue;
+          return { kind: 'value', value: cachedValue };
         }
         const value = deps.computeDerivedMetricValue(input.def, preview.state, ref.id);
         preview.metricCache.set(ref.id, value);
-        return value;
+        return { kind: 'value', value };
       }
       if (ref.family === 'globalVar') {
         const value = preview.state.globalVars[ref.id];
-        return typeof value === 'number' ? value : undefined;
+        return typeof value === 'number' ? { kind: 'value', value } : { kind: 'unavailable' };
       }
       if (ref.family === 'perPlayerVar') {
-        return resolveSeatVarRef(preview.state, ref, targetPlayerIndex);
+        const value = resolveSeatVarRef(preview.state, ref, targetPlayerIndex);
+        return typeof value === 'number' ? { kind: 'value', value } : { kind: 'unavailable' };
       }
       if (ref.family === 'victoryCurrentMargin') {
         if (ref.selector?.kind !== 'role') {
-          return undefined;
+          return { kind: 'unavailable' };
         }
-        return getVictorySurface(input.def, preview, input.runtime).marginBySeat.get(
+        const value = getVictorySurface(input.def, preview, input.runtime).marginBySeat.get(
           resolvePolicyRoleSelector(input.def, preview.state, ref.selector, input.seatId),
         );
+        return typeof value === 'number' ? { kind: 'value', value } : { kind: 'unavailable' };
       }
       if (ref.family === 'victoryCurrentRank') {
         if (ref.selector?.kind !== 'role') {
-          return undefined;
+          return { kind: 'unavailable' };
         }
-        return getVictorySurface(input.def, preview, input.runtime).rankBySeat.get(
+        const value = getVictorySurface(input.def, preview, input.runtime).rankBySeat.get(
           resolvePolicyRoleSelector(input.def, preview.state, ref.selector, input.seatId),
         );
+        return typeof value === 'number' ? { kind: 'value', value } : { kind: 'unavailable' };
       }
-      return undefined;
+      return { kind: 'unavailable' };
     },
   };
 

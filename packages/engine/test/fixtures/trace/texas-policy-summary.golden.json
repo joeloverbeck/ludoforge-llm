@@ -20,7 +20,7 @@
     "previewUsage": {
       "evaluatedCandidateCount": 0,
       "refIds": [],
-      "unknownRefIds": []
+      "unknownRefs": []
     },
     "emergencyFallback": false,
     "failure": null

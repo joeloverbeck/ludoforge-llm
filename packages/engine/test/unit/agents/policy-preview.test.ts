@@ -153,8 +153,8 @@ describe('policy-preview', () => {
       },
     });
 
-    assert.equal(runtime.resolveSurface(candidate, previewScoreRef), 4);
-    assert.equal(runtime.resolveSurface(candidate, previewScoreRef), 4);
+    assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), { kind: 'value', value: 4 });
+    assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), { kind: 'value', value: 4 });
     assert.equal(probeCalls, 1);
     assert.equal(applyCalls, 1);
     assert.equal(observationCalls, 1);
@@ -181,7 +181,7 @@ describe('policy-preview', () => {
       },
     });
 
-    assert.equal(runtime.resolveSurface(candidate, previewScoreRef), undefined);
+    assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), { kind: 'unknown', reason: 'unresolved' });
     assert.equal(applyCalls, 0);
   });
 
@@ -214,7 +214,7 @@ describe('policy-preview', () => {
       },
     });
 
-    assert.equal(runtime.resolveSurface(candidate, previewScoreRef), undefined);
+    assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), { kind: 'unknown', reason: 'random' });
   });
 
   it('keeps safe preview refs available while masking unsafe refs when hidden sampling remains', () => {
@@ -222,7 +222,22 @@ describe('policy-preview', () => {
     const state = initialState(def, 1, 2).state;
     const candidate = createCandidate();
     const runtime = createPolicyPreviewRuntime({
-      def,
+      def: {
+        ...def,
+        agents: {
+          ...def.agents!,
+          surfaceVisibility: {
+            ...def.agents!.surfaceVisibility,
+            victory: {
+              ...def.agents!.surfaceVisibility.victory,
+              currentMargin: {
+                current: 'hidden',
+                preview: { visibility: 'public', allowWhenHiddenSampling: false },
+              },
+            },
+          },
+        },
+      },
       state,
       playerId: asPlayerId(0),
       seatId: 'us',
@@ -246,8 +261,8 @@ describe('policy-preview', () => {
       },
     });
 
-    assert.equal(runtime.resolveSurface(candidate, previewScoreRef), 9);
-    assert.equal(runtime.resolveSurface(candidate, previewMarginRef), undefined);
+    assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), { kind: 'value', value: 9 });
+    assert.deepEqual(runtime.resolveSurface(candidate, previewMarginRef), { kind: 'unknown', reason: 'hidden' });
   });
 
   it('resolves player-scoped preview per-player refs by runtime player identity', () => {
@@ -282,7 +297,7 @@ describe('policy-preview', () => {
       },
     });
 
-    assert.equal(runtime.resolveSurface(candidate, previewSelfTempoRef), 7);
+    assert.deepEqual(runtime.resolveSurface(candidate, previewSelfTempoRef), { kind: 'value', value: 7 });
   });
 
   it('uses a trusted move from the index instead of reclassifying the candidate', () => {
@@ -319,7 +334,7 @@ describe('policy-preview', () => {
       },
     });
 
-    assert.equal(runtime.resolveSurface(candidate, previewScoreRef), 8);
+    assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), { kind: 'value', value: 8 });
     assert.equal(probeCalls, 0);
     assert.equal(applyCalls, 1);
   });
@@ -356,7 +371,7 @@ describe('policy-preview', () => {
       },
     });
 
-    assert.equal(runtime.resolveSurface(candidate, previewScoreRef), undefined);
+    assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), { kind: 'unknown', reason: 'random' });
     assert.equal(probeCalls, 0);
   });
 
@@ -400,8 +415,8 @@ describe('policy-preview', () => {
       },
     });
 
-    assert.equal(runtime.resolveSurface(candidate, previewScoreRef), 6);
-    assert.equal(runtime.resolveSurface(candidate, previewScoreRef), 6);
+    assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), { kind: 'value', value: 6 });
+    assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), { kind: 'value', value: 6 });
     assert.equal(probeCalls, 0);
     assert.equal(applyCalls, 1);
     assert.equal(observationCalls, 1);
@@ -433,7 +448,7 @@ describe('policy-preview', () => {
       },
     });
 
-    assert.equal(runtime.resolveSurface(candidate, previewScoreRef), undefined);
+    assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), { kind: 'unknown', reason: 'failed' });
     assert.equal(applyCalls, 0);
   });
 
@@ -474,7 +489,7 @@ describe('policy-preview', () => {
       },
     });
 
-    assert.equal(runtime.resolveSurface(candidate, previewScoreRef), 5);
+    assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), { kind: 'value', value: 5 });
     assert.equal(probeCalls, 1);
     assert.equal(applyCalls, 1);
   });

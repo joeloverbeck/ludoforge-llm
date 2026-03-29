@@ -2758,17 +2758,47 @@
                           "type": "string"
                         }
                       },
-                      "unknownRefIds": {
+                      "unknownRefs": {
                         "type": "array",
                         "items": {
-                          "type": "string"
+                          "type": "object",
+                          "properties": {
+                            "refId": {
+                              "type": "string"
+                            },
+                            "reason": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "const": "random"
+                                },
+                                {
+                                  "type": "string",
+                                  "const": "hidden"
+                                },
+                                {
+                                  "type": "string",
+                                  "const": "unresolved"
+                                },
+                                {
+                                  "type": "string",
+                                  "const": "failed"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "refId",
+                            "reason"
+                          ],
+                          "additionalProperties": false
                         }
                       }
                     },
                     "required": [
                       "evaluatedCandidateCount",
                       "refIds",
-                      "unknownRefIds"
+                      "unknownRefs"
                     ],
                     "additionalProperties": false
                   },
@@ -2843,10 +2873,40 @@
                             "type": "string"
                           }
                         },
-                        "unknownPreviewRefIds": {
+                        "unknownPreviewRefs": {
                           "type": "array",
                           "items": {
-                            "type": "string"
+                            "type": "object",
+                            "properties": {
+                              "refId": {
+                                "type": "string"
+                              },
+                              "reason": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "const": "random"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "hidden"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "unresolved"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "failed"
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "refId",
+                              "reason"
+                            ],
+                            "additionalProperties": false
                           }
                         }
                       },

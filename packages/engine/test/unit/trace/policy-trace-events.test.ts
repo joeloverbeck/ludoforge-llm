@@ -174,6 +174,8 @@ describe('policy trace events', () => {
     assert.equal(summaryResult.agentDecision.initialCandidateCount, 2);
     assert.equal(summaryResult.agentDecision.selectedStableMoveKey !== null, true);
     assert.deepEqual(summaryResult.agentDecision.previewUsage.refIds, []);
+    assert.deepEqual(summaryResult.agentDecision.previewUsage.unknownRefs, []);
+    assert.equal('unknownRefIds' in (summaryResult.agentDecision.previewUsage as unknown as Record<string, unknown>), false);
     assert.equal(summaryResult.agentDecision.candidates, undefined);
 
     assert.equal(Array.isArray(verboseResult.agentDecision.candidates), true);

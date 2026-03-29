@@ -542,7 +542,7 @@ describe('PolicyAgent', () => {
     );
     assert.ok(completedTemplateCandidate);
     assert.deepEqual(completedTemplateCandidate.previewRefIds, ['globalVar.usMargin']);
-    assert.deepEqual(completedTemplateCandidate.unknownPreviewRefIds, []);
+    assert.deepEqual(completedTemplateCandidate.unknownPreviewRefs, []);
   });
 
   it('throws a typed no-playable-move error when every classified move is unsatisfiable', () => {

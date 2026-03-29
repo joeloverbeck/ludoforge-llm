@@ -3,19 +3,19 @@
 **Status**: Draft
 **Priority**: P2
 **Complexity**: S
-**Dependencies**: Spec 15 (implemented), Spec 93 (recommended but not required)
+**Dependencies**: Spec 15 (implemented), Spec 93 (implemented)
 **Estimated effort**: 1-2 days
 **Origin**: FITL VC agent evolution campaign — preview failure was invisible until manual diagnostic scripts were written. The agent decision trace lacked classification breakdowns, making it impossible to determine WHY preview returned `unknown`.
 
 ## Problem Statement
 
-The PolicyAgent's decision trace (`AgentDecisionTrace`) reports what the agent chose and how it scored, but not **why preview failed**. The `previewUsage` field reports `refIds` and `unknownRefIds`, but does not explain the failure path:
+The PolicyAgent's decision trace (`AgentDecisionTrace`) reports what the agent chose and how it scored, but not **why preview failed**. The `previewUsage` field reports `refIds` and `unknownRefs` (per-ref reason), but does not explain the aggregate failure profile:
 
-- Was the candidate classified as `playableComplete`, `playableStochastic`, or `rejected`?
-- If `rejected`, was it `notViable`, `notDecisionComplete`, or `completionUnsatisfiable`?
-- If preview reached the apply step, did the RNG change? Did the apply throw?
+- Of N evaluated candidates, how many resolved to a usable preview state?
+- How many failed because the move involved randomness (`random`)? Hidden information sampling (`hidden`)? Unresolved decisions (`unresolved`)? Apply errors (`failed`)?
 - How many candidates were completed vs rejected during `preparePlayableMoves`?
-- What was the completion success rate per template?
+- What was the completion success rate?
+- For a specific candidate, what was its preview outcome?
 
 Without this information, diagnosing agent behavior requires writing ad-hoc scripts that replicate the agent's internal flow — exactly what the FITL VC campaign required.
 
@@ -31,97 +31,153 @@ This spec adds structured diagnostic output to the agent evaluation path so that
 
 ## Non-Goals
 
-- Changing preview behavior (that is Spec 93)
+- Changing preview behavior (that is Spec 93, now implemented)
 - Adding interactive debugging or breakpoint facilities
 - Real-time monitoring or streaming diagnostics
 - Changing the trace serialization format
 
 ## Proposed Design
 
-### 1. Extend `previewUsage` in `AgentDecisionTrace`
+### 1. Extend `previewUsage` with outcome breakdown
 
-The existing `previewUsage` on policy decision traces:
+The existing `PolicyPreviewUsageTrace` on policy decision traces:
 
 ```typescript
-interface PolicyPreviewUsage {
+// packages/engine/src/kernel/types-core.ts
+interface PolicyPreviewUsageTrace {
   readonly evaluatedCandidateCount: number;
   readonly refIds: readonly string[];
-  readonly unknownRefIds: readonly string[];
+  readonly unknownRefs: readonly PolicyPreviewUnknownRefTrace[];
 }
 ```
 
-Add diagnostic fields:
+Add an aggregate outcome breakdown:
 
 ```typescript
-interface PolicyPreviewUsage {
+// packages/engine/src/kernel/types-core.ts (trace-serialized shape)
+interface PolicyPreviewUsageTrace {
   readonly evaluatedCandidateCount: number;
   readonly refIds: readonly string[];
-  readonly unknownRefIds: readonly string[];
-  // NEW: breakdown of preview outcome classifications
-  readonly outcomeBreakdown?: PolicyPreviewOutcomeBreakdown;
+  readonly unknownRefs: readonly PolicyPreviewUnknownRefTrace[];
+  // NEW: aggregate counts of preview outcome classifications
+  readonly outcomeBreakdown?: PolicyPreviewOutcomeBreakdownTrace;
 }
 
-interface PolicyPreviewOutcomeBreakdown {
+interface PolicyPreviewOutcomeBreakdownTrace {
   readonly ready: number;
-  readonly unknownUnresolved: number;
   readonly unknownRandom: number;
+  readonly unknownHidden: number;
+  readonly unknownUnresolved: number;
   readonly unknownFailed: number;
-  readonly skippedByPruning: number;
 }
 ```
 
-This tells consumers: "of N evaluated candidates, X resolved to usable preview state, Y failed because the move wasn't decision-complete, Z failed because the move involved randomness."
+These 5 categories directly mirror the code:
+- `ready` — `PreviewOutcome.kind === 'ready'` (line 79, `policy-preview.ts`)
+- `unknownRandom` — `PreviewOutcome.reason === 'random'` (RNG changed after apply, line 209)
+- `unknownHidden` — `PreviewOutcome.reason === 'hidden'` (hidden information sampling required)
+- `unknownUnresolved` — `PreviewOutcome.reason === 'unresolved'` (not decision-complete, line 190)
+- `unknownFailed` — `PreviewOutcome.reason === 'failed'` (apply threw or hash mismatch, lines 198/221)
 
-### 2. Add `completionStatistics` to `AgentDecisionTrace`
+This tells consumers: "of N evaluated candidates, X resolved to usable preview state, Y failed because of randomness, Z failed because of hidden information."
 
-Add a new optional field to the policy decision trace:
+### 2. Add `completionStatistics` to `PolicyAgentDecisionTrace`
+
+Add a new optional field to the policy decision trace. Statistics are **move-centric**, directly mirroring what `preparePlayableMoves` actually does:
 
 ```typescript
+// packages/engine/src/agents/prepare-playable-moves.ts (agent layer)
 interface PolicyCompletionStatistics {
-  readonly templateCount: number;
-  readonly completionAttempts: number;
-  readonly completedMoves: number;
-  readonly stochasticMoves: number;
-  readonly unsatisfiableTemplates: number;
-  readonly completionsPerTemplate: number;
+  readonly totalClassifiedMoves: number;
+  readonly completedCount: number;
+  readonly stochasticCount: number;
+  readonly rejectedNotViable: number;
+  readonly templateCompletionAttempts: number;
+  readonly templateCompletionSuccesses: number;
+  readonly templateCompletionUnsatisfiable: number;
 }
 ```
 
-This captures what `preparePlayableMoves` did: how many templates it attempted, how many completed successfully, and the configured completions-per-template.
+Fields track the actual classification flow in `preparePlayableMoves`:
+- `totalClassifiedMoves` — total moves entering the function
+- `completedCount` — moves with `viability.complete === true` (line 66)
+- `stochasticCount` — moves with `viability.stochasticDecision !== undefined` (line 73)
+- `rejectedNotViable` — moves with `!viability.viable` that don't qualify for zone-filter fallthrough
+- `templateCompletionAttempts` — total calls to `evaluatePlayableMoveCandidate` (line 109)
+- `templateCompletionSuccesses` — results with `kind === 'playableComplete'` (line 112)
+- `templateCompletionUnsatisfiable` — results with `rejection === 'completionUnsatisfiable'` (line 120)
 
-### 3. Trace level gating
+Trace-serialized shape in `types-core.ts`:
 
-- **`summary` level** (default): Include `outcomeBreakdown` (cheap — just counts). Exclude `completionStatistics` (requires tracking in `preparePlayableMoves`).
-- **`detailed` level**: Include both `outcomeBreakdown` and `completionStatistics`.
+```typescript
+// packages/engine/src/kernel/types-core.ts
+interface PolicyAgentDecisionTrace {
+  // ... existing fields ...
+  readonly completionStatistics?: PolicyCompletionStatisticsTrace;
+}
+
+interface PolicyCompletionStatisticsTrace {
+  readonly totalClassifiedMoves: number;
+  readonly completedCount: number;
+  readonly stochasticCount: number;
+  readonly rejectedNotViable: number;
+  readonly templateCompletionAttempts: number;
+  readonly templateCompletionSuccesses: number;
+  readonly templateCompletionUnsatisfiable: number;
+}
+```
+
+### 3. Add per-candidate preview outcome (verbose only)
+
+Add an optional field to `PolicyCandidateDecisionTrace`:
+
+```typescript
+// packages/engine/src/kernel/types-core.ts
+interface PolicyCandidateDecisionTrace {
+  // ... existing fields ...
+  readonly previewOutcome?: 'ready' | 'random' | 'hidden' | 'unresolved' | 'failed';
+}
+```
+
+This lets campaign harnesses see exactly which candidates failed preview and why — at the individual candidate level, not just aggregate. The outcome is already cached in the preview runtime's `Map<string, PreviewOutcome>` — it just needs to be exposed to the eval layer.
+
+### 4. Trace level gating
+
+Using the existing `PolicyDecisionTraceLevel = 'summary' | 'verbose'`:
+
+- **`summary` level** (default): Include `outcomeBreakdown` (cheap — just summarize the preview cache). Exclude `completionStatistics` and per-candidate `previewOutcome`.
+- **`verbose` level**: Include all: `outcomeBreakdown`, `completionStatistics`, and per-candidate `previewOutcome`.
 
 This keeps the default trace lightweight while making full diagnostics available when needed.
 
-### 4. Implementation path
+### 5. Implementation path
 
 #### In `policy-preview.ts`
 
-Track outcome classifications as they're computed:
+The preview runtime already caches outcomes in `cache: Map<string, PreviewOutcome>`. Add a summary function that reads the cache and counts by outcome kind/reason:
 
 ```typescript
-// Inside createPolicyPreviewRuntime
-const outcomes = { ready: 0, unknownUnresolved: 0, unknownRandom: 0, unknownFailed: 0 };
-
-function getPreviewOutcome(candidate: PolicyPreviewCandidate): PreviewOutcome {
-  // ... existing logic ...
-  if (outcome.kind === 'ready') outcomes.ready++;
-  else if (outcome.reason === 'unresolved') outcomes.unknownUnresolved++;
-  else if (outcome.reason === 'random') outcomes.unknownRandom++;
-  else outcomes.unknownFailed++;
-  // ...
+// NOT a method on PolicyPreviewRuntime — a standalone export
+export function summarizePreviewOutcomes(
+  cache: ReadonlyMap<string, PreviewOutcome>,
+): PolicyPreviewOutcomeBreakdown {
+  const breakdown = { ready: 0, unknownRandom: 0, unknownHidden: 0, unknownUnresolved: 0, unknownFailed: 0 };
+  for (const outcome of cache.values()) {
+    if (outcome.kind === 'ready') breakdown.ready++;
+    else if (outcome.reason === 'random') breakdown.unknownRandom++;
+    else if (outcome.reason === 'hidden') breakdown.unknownHidden++;
+    else if (outcome.reason === 'unresolved') breakdown.unknownUnresolved++;
+    else breakdown.unknownFailed++;
+  }
+  return breakdown;
 }
-
-// Expose as a method on the runtime
-getOutcomeBreakdown(): PolicyPreviewOutcomeBreakdown { return { ...outcomes, skippedByPruning: 0 }; }
 ```
+
+To expose the cache for summarization, `createPolicyPreviewRuntime` returns an extended object with a `getOutcomeCache()` accessor (not on the public `PolicyPreviewRuntime` interface — on the concrete return type used internally by the agent layer).
 
 #### In `prepare-playable-moves.ts`
 
-Track completion statistics:
+Add counters alongside the existing classification loop:
 
 ```typescript
 interface PreparedPlayableMoves {
@@ -132,9 +188,37 @@ interface PreparedPlayableMoves {
 }
 ```
 
+Track `totalClassifiedMoves`, `completedCount`, `stochasticCount`, `rejectedNotViable`, `templateCompletionAttempts`, `templateCompletionSuccesses`, `templateCompletionUnsatisfiable` as local variables in the main loop and `attemptTemplateCompletion`.
+
+#### In `policy-eval.ts`
+
+- Accept preview outcome cache from runtime
+- For each candidate, look up its `stableMoveKey` in the cache to get `previewOutcome`
+- Include in `PolicyEvaluationCandidateMetadata`
+- Summarize outcome breakdown from cache into `PolicyEvaluationPreviewUsage`
+
 #### In `policy-diagnostics.ts`
 
-Thread the new statistics into `buildPolicyAgentDecisionTrace`.
+Thread the new statistics into `buildPolicyAgentDecisionTrace`:
+
+```typescript
+export function buildPolicyAgentDecisionTrace(
+  metadata: PolicyEvaluationMetadata,
+  traceLevel: PolicyDecisionTraceLevel = 'summary',
+): PolicyAgentDecisionTrace {
+  return {
+    // ... existing fields ...
+    previewUsage: {
+      ...metadata.previewUsage,
+      outcomeBreakdown: metadata.previewUsage.outcomeBreakdown,  // always included
+    },
+    ...(traceLevel === 'verbose' ? {
+      candidates: metadata.candidates,
+      completionStatistics: metadata.completionStatistics,
+    } : {}),
+  };
+}
+```
 
 ## Deliverables
 
@@ -142,37 +226,42 @@ Thread the new statistics into `buildPolicyAgentDecisionTrace`.
 
 | File | Change |
 |------|--------|
-| `packages/engine/src/agents/policy-preview.ts` | Track and expose outcome classification counts |
-| `packages/engine/src/agents/policy-eval.ts` | Collect preview outcome breakdown from preview runtime, include in metadata |
-| `packages/engine/src/agents/prepare-playable-moves.ts` | Track and return completion statistics |
-| `packages/engine/src/agents/policy-diagnostics.ts` | Include new diagnostic fields in trace at appropriate trace levels |
-| `packages/engine/src/agents/policy-runtime.ts` | Add `getOutcomeBreakdown` to `PolicyPreviewRuntime` interface |
-| `packages/engine/src/kernel/types-core.ts` | Add `PolicyPreviewOutcomeBreakdown` and `PolicyCompletionStatistics` to agent trace types |
+| `packages/engine/src/agents/policy-preview.ts` | Export `summarizePreviewOutcomes()`. Extend `createPolicyPreviewRuntime` return to expose outcome cache. |
+| `packages/engine/src/agents/policy-eval.ts` | Collect preview outcome breakdown from cache. Thread per-candidate `previewOutcome` into candidate metadata. Add `outcomeBreakdown` to `PolicyEvaluationPreviewUsage`. |
+| `packages/engine/src/agents/prepare-playable-moves.ts` | Track and return `PolicyCompletionStatistics` on `PreparedPlayableMoves`. |
+| `packages/engine/src/agents/policy-diagnostics.ts` | Include `outcomeBreakdown` at summary level, `completionStatistics` and per-candidate `previewOutcome` at verbose level. |
+| `packages/engine/src/kernel/types-core.ts` | Add trace-serialized types: `PolicyPreviewOutcomeBreakdownTrace`, `PolicyCompletionStatisticsTrace`, `outcomeBreakdown?` on `PolicyPreviewUsageTrace`, `completionStatistics?` on `PolicyAgentDecisionTrace`, `previewOutcome?` on `PolicyCandidateDecisionTrace`. |
 
 ### Test changes
 
 | Test | Purpose |
 |------|---------|
-| `test/unit/policy-diagnostics.test.ts` | Verify outcome breakdown appears in traces at correct verbosity levels |
-| `test/unit/prepare-playable-moves.test.ts` | Verify completion statistics are accurate |
+| `test/unit/policy-diagnostics.test.ts` | Verify outcome breakdown appears in traces at summary level. Verify completionStatistics appears only at verbose level. Verify per-candidate previewOutcome appears only at verbose level. |
+| `test/unit/prepare-playable-moves.test.ts` | Verify completion statistics counts are accurate across all classification paths (complete, stochastic, rejected, template completion). |
+| `test/unit/policy-preview.test.ts` | Verify `summarizePreviewOutcomes` correctly counts each outcome category. |
 
 ### Schema changes
 
-`AgentDecisionTrace` schema in `packages/engine/schemas/` updated to include new optional fields.
+`AgentDecisionTrace` schema in `packages/engine/schemas/` updated to include new optional fields:
+- `PolicyPreviewUsageTrace.outcomeBreakdown` (optional object)
+- `PolicyAgentDecisionTrace.completionStatistics` (optional object)
+- `PolicyCandidateDecisionTrace.previewOutcome` (optional enum string)
 
 ## FOUNDATIONS Alignment
 
-- **F1 (Engine Agnosticism)**: Pure observability — no game-specific logic. Diagnostic types are generic.
+- **F1 (Engine Agnosticism)**: Pure observability — no game-specific logic. Diagnostic types are generic. Agent-layer types stay in agent modules.
 - **F5 (Determinism)**: No behavioral changes. Diagnostics are read-only metadata computed alongside existing operations.
-- **F7 (Immutability)**: Diagnostic accumulators are local to the evaluation scope.
+- **F7 (Immutability)**: Diagnostic accumulators are local to the evaluation scope. The preview cache is read-only when summarized.
 - **F9 (No Backwards Compatibility)**: New fields are additive to the trace. Existing consumers ignore unknown fields. No aliases or shims.
 - **F11 (Testing as Proof)**: The diagnostics themselves are testable. They also make policy behavior provable — consumers can assert on preview success rates.
+- **F12 (Branded Types)**: No new domain IDs introduced; existing branded types remain unchanged.
 
 ## Acceptance Criteria
 
-1. FITL policy traces at `detailed` level show `outcomeBreakdown` with `unknownUnresolved > 0` (before Spec 93) or `ready > 0` (after Spec 93)
-2. FITL policy traces at `detailed` level show `completionStatistics` with accurate counts
-3. `summary` level traces include `outcomeBreakdown` but not `completionStatistics`
-4. All existing tests pass without modification
-5. Trace JSON remains backward-compatible (new fields only, no removed fields)
-6. No measurable performance impact at `summary` trace level (< 1% overhead)
+1. FITL policy traces at `verbose` level show `outcomeBreakdown` with counts matching the actual preview cache state
+2. FITL policy traces at `verbose` level show `completionStatistics` with accurate counts
+3. FITL policy traces at `verbose` level show per-candidate `previewOutcome` values
+4. `summary` level traces include `outcomeBreakdown` but not `completionStatistics` or per-candidate `previewOutcome`
+5. All existing tests pass without modification
+6. Trace JSON remains backward-compatible (new fields only, no removed fields)
+7. No measurable performance impact at `summary` trace level (< 1% overhead)

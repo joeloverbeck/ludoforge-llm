@@ -162,7 +162,8 @@ function MultiSelectMode({ choiceUi, addChooseNItem, removeChooseNItem, confirmC
           const isDisabled = !isLegalScalar;
 
           const resCss = resolutionCssClass(option.resolution);
-          const baseClass = isSelected ? `${styles.optionButton} ${styles.optionSelected}` : styles.optionButton;
+          const unselectedCss = !isSelected && selectedCount > 0 ? ` ${styles.optionUnselected}` : '';
+          const baseClass = isSelected ? `${styles.optionButton} ${styles.optionSelected}` : `${styles.optionButton}${unselectedCss}`;
           const buttonClass = resCss !== '' ? `${baseClass} ${resCss}` : baseClass;
           const indicator = resolutionIndicatorText(option.resolution);
 

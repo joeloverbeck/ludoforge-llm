@@ -4,7 +4,8 @@
   gap: var(--space-sm);
   margin: var(--space-sm);
   padding: var(--space-sm);
-  background: var(--bg-panel);
+  background: rgba(11, 16, 32, 0.72);
+  backdrop-filter: blur(12px);
   border: 1px solid var(--border-subtle);
   border-radius: 8px;
   color: var(--text-primary);
@@ -155,6 +156,11 @@
 .optionSelected {
   border-color: var(--accent);
   background: rgba(74, 144, 217, 0.18);
+}
+
+.optionUnselected {
+  opacity: 0.55;
+  border-style: dashed;
 }
 
 .checkboxIndicator {

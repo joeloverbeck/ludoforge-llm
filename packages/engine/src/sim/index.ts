@@ -1,4 +1,4 @@
-export { computeDeltas } from './delta.js';
+export { computeDeltas, reconstructPerPlayerVarTrajectory } from './delta.js';
 export { DEFAULT_EVAL_CONFIG } from './eval-config.js';
 export type { EvalConfig } from './eval-config.js';
 export type { EnrichedGameTrace, EnrichedMoveLog } from './enriched-trace-types.js';

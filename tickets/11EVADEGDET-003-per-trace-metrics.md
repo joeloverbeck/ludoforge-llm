@@ -3,8 +3,8 @@
 **Status**: PENDING
 **Priority**: HIGH
 **Effort**: Medium
-**Engine Changes**: Yes — new sim module
-**Deps**: archive/tickets/11EVADEGDET/11EVADEGDET-001-types-and-config.md, tickets/11EVADEGDET-002-delta-reconstruction.md
+**Engine Changes**: Yes — add evaluator module on top of existing sim utilities
+**Deps**: archive/tickets/11EVADEGDET/11EVADEGDET-001-types-and-config.md, archive/tickets/11EVADEGDET/11EVADEGDET-002-delta-reconstruction.md
 
 ## Problem
 
@@ -12,19 +12,21 @@ Spec 11 defines 7 per-trace metrics that quantify game quality: `gameLength`, `a
 
 ## Assumption Reassessment (2026-03-29)
 
-1. `MoveLog.move.actionId` exists and is used for action frequency counting — need to confirm `Move` shape includes `actionId`.
-2. `MoveLog.legalMoveCount` is a number — confirmed at types-core.ts line ~1406.
+1. `MoveLog.move.actionId` exists on `Move` and is the correct source for action-frequency metrics.
+2. `MoveLog.legalMoveCount` is a number — confirmed.
 3. `MoveLog.player` is `PlayerId` (branded number) — confirmed.
 4. `MoveLog.deltas` is `readonly StateDelta[]` — confirmed.
-5. `TraceMetrics` interface from 11EVADEGDET-001 defines the exact 7 fields.
-6. `EvalConfig.scoringVar` controls `dramaMeasure` — if absent, `dramaMeasure = 0`.
+5. `TraceMetrics` from 11EVADEGDET-001 already defines the exact 7 per-trace metric fields to populate.
+6. `EvalConfig.scoringVar` controls `dramaMeasure`; if absent, `dramaMeasure = 0`.
+7. `reconstructPerPlayerVarTrajectory` now lives in `packages/engine/src/sim/delta.ts` and is exported via `sim/index.ts`, so this ticket should consume that established utility rather than invent a second reconstruction seam.
 
 ## Architecture Check
 
 1. All metric formulas are pure functions of trace data — no game-specific logic (Foundation §1).
-2. Shannon entropy uses `Math.log2` — this is fine since metrics are floating-point display values, not kernel state (Foundation §5 integer constraint applies to game state, not analysis).
-3. Placed in `sim/trace-eval.ts` as the core per-trace evaluation module.
-4. Uses `reconstructPerPlayerVarTrajectory` from 11EVADEGDET-002 for `resourceTension` and `dramaMeasure`.
+2. Shannon entropy uses `Math.log2`; that is acceptable because evaluator metrics are analysis outputs, not kernel state.
+3. A dedicated `packages/engine/src/sim/trace-eval.ts` module is still a good seam because per-trace evaluation is a separate concern from low-level delta path encoding/replay.
+4. `trace-eval.ts` should depend on `reconstructPerPlayerVarTrajectory` from `sim/delta.ts` for `resourceTension` and `dramaMeasure` instead of owning any duplicate replay logic.
+5. The module should expose small internal helpers for each metric, but keep replay/path parsing centralized in `sim/delta.ts` so the architecture has one source of truth for trace delta semantics.
 
 ## What to Change
 
@@ -47,6 +49,8 @@ Edge cases per spec:
 - Single distinct action → `actionDiversity = 0` (avoid division by zero in `H_max`)
 - No `perPlayerVars` deltas in a move → skip that move in `interactionProxy` mean
 - No `scoringVar` in config → `dramaMeasure = 0`
+- No per-player variables present in reconstructed snapshots → `resourceTension = 0`
+- Boolean per-player variables reconstructed from deltas must not be fed into numeric variance/drama calculations; only numeric values participate in those metrics
 
 ### 2. Re-export from `sim/index.ts`
 
@@ -102,11 +106,13 @@ Add `evaluateTrace` to sim barrel export.
    - Edge case: single action type
    - Edge case: no perPlayerVar deltas
    - Edge case: scoringVar absent vs present
+   - Edge case: boolean per-player vars are ignored by numeric metrics
    - Property: all metrics finite for any valid trace
    - Property: bounded metrics in [0, 1]
 
 ### Commands
 
-1. `pnpm -F @ludoforge/engine test -- --test-name-pattern trace-eval`
-2. `pnpm turbo typecheck`
-3. `pnpm turbo test`
+1. `pnpm -F @ludoforge/engine build`
+2. `node --test packages/engine/dist/test/unit/sim/trace-eval.test.js`
+3. `pnpm turbo typecheck`
+4. `pnpm turbo test`

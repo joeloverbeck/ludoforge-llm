@@ -2,6 +2,8 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { PolicyAgent } from '../../src/agents/policy-agent.js';
+import { preparePlayableMoves } from '../../src/agents/prepare-playable-moves.js';
+import { applyTrustedMove } from '../../src/kernel/apply-move.js';
 import {
   applyMove,
   assertValidatedGameDef,
@@ -14,8 +16,16 @@ import {
   legalMoves,
   probeMoveViability,
 } from '../../src/kernel/index.js';
+import { derivePlayerObservation } from '../../src/kernel/observation.js';
 import { runGame } from '../../src/sim/simulator.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
+
+function rngStatesEqual(left: { readonly algorithm: string; readonly version: number; readonly state: readonly bigint[] }, right: { readonly algorithm: string; readonly version: number; readonly state: readonly bigint[] }): boolean {
+  return left.algorithm === right.algorithm
+    && left.version === right.version
+    && left.state.length === right.state.length
+    && left.state.every((entry, index) => entry === right.state[index]);
+}
 
 describe('FITL policy agent integration', () => {
   it('compiles the production FITL spec with authored policy bindings for all four seats', () => {
@@ -82,6 +92,58 @@ describe('FITL policy agent integration', () => {
     }
     assert.equal(selected.agentDecision.resolvedProfileId, 'us-baseline');
     assert.equal(selected.agentDecision.emergencyFallback, false);
+  });
+
+  it('keeps FITL preview margins unknown in the fixed-seed opening because post-move observation still requires hidden sampling', () => {
+    const { compiled } = compileProductionSpec();
+    const def = assertValidatedGameDef(compiled.gameDef);
+    const runtime = createGameDefRuntime(def);
+    const state = initialState(def, 7, 4).state;
+    const legalMoves = enumerateLegalMoves(def, state, undefined, runtime).moves;
+    const input = {
+      def,
+      state,
+      playerId: state.activePlayer,
+      legalMoves,
+      rng: createRng(7n),
+      runtime,
+    } as const;
+    const prepared = preparePlayableMoves(input, {
+      pendingTemplateCompletions: 3,
+    });
+    const completedNonPassMove = prepared.completedMoves.find((candidate) => String(candidate.move.actionId) !== 'pass');
+
+    assert.ok(completedNonPassMove, 'expected at least one completed non-pass FITL move');
+    if (completedNonPassMove === undefined) {
+      return;
+    }
+
+    const previewState = applyTrustedMove(def, state, completedNonPassMove, undefined, runtime).state;
+    const observation = derivePlayerObservation(def, previewState, state.activePlayer);
+
+    assert.equal(rngStatesEqual(previewState.rng, state.rng), true);
+    assert.equal(observation.requiresHiddenSampling, true);
+
+    const result = new PolicyAgent({ traceLevel: 'verbose' }).chooseMove(input);
+
+    assert.equal(result.agentDecision?.kind, 'policy');
+    if (result.agentDecision?.kind !== 'policy') {
+      assert.fail('expected policy trace metadata');
+    }
+    assert.equal(result.agentDecision.emergencyFallback, false);
+    assert.deepEqual(result.agentDecision.previewUsage.refIds, ['victoryCurrentMargin.currentMargin.self']);
+    assert.deepEqual(result.agentDecision.previewUsage.unknownRefIds, ['victoryCurrentMargin.currentMargin.self']);
+    if (result.agentDecision.candidates === undefined) {
+      assert.fail('expected verbose policy candidates');
+    }
+
+    const evaluatedNonPassCandidate = result.agentDecision.candidates.find((candidate) => candidate.actionId !== 'pass');
+
+    assert.ok(evaluatedNonPassCandidate, 'expected at least one evaluated non-pass candidate');
+    assert.deepEqual(
+      evaluatedNonPassCandidate?.unknownPreviewRefIds,
+      ['victoryCurrentMargin.currentMargin.self'],
+    );
   });
 
   it('runs fixed-seed FITL policy self-play without runtime failures or fallback', () => {

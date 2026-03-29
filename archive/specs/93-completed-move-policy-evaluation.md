@@ -1,6 +1,6 @@
 # Spec 93: Completed-Move Policy Evaluation
 
-**Status**: Draft
+**Status**: ✅ COMPLETED
 **Priority**: P1
 **Complexity**: M
 **Dependencies**: Spec 15 (implemented)
@@ -258,6 +258,22 @@ The following types remain unchanged:
 ### Source changes
 
 | File | Change |
+
+## Outcome
+
+- Completion date: 2026-03-29
+- What actually changed:
+  - Implemented the trusted completed-move preview path in generic policy-agent code so completed moves can be previewed without being re-probed as unresolved templates.
+  - Added the missing unit and production-path tests across the 93COMMOVPOLEVA ticket set.
+  - Corrected the final ticket assumptions after verification showed the fixed-seed FITL opening trace still legitimately reports unknown preview refs because post-move observation requires hidden sampling for the acting player.
+- Deviations from original plan:
+  - The spec’s core architecture was delivered, but the expected FITL golden change described in the later ticket breakdown was not valid. The trusted fast-path worked; hidden-sampling gating still blocked that specific preview surface by design.
+  - No kernel rewrite or authored-visibility relaxation was needed or justified.
+- Verification results:
+  - `pnpm turbo build`
+  - `pnpm turbo test`
+  - `pnpm turbo typecheck`
+  - `pnpm turbo lint`
 |------|--------|
 | `packages/engine/src/agents/policy-preview.ts` | Add `trustedMoveIndex` to `CreatePolicyPreviewRuntimeInput`, extract `tryApplyPreview` (with `sourceStateHash` guard), update `getPreviewOutcome` with index-lookup fast-path, reduce `classifyPreviewOutcome` to thin wrapper |
 | `packages/engine/src/agents/policy-eval.ts` | Add required `trustedMoveIndex` to `EvaluatePolicyMoveInput`, pass through to `createPolicyRuntimeProviders` |

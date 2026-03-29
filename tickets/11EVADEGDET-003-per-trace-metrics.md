@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — new sim module
-**Deps**: 11EVADEGDET-001 (types/config), 11EVADEGDET-002 (delta reconstruction)
+**Deps**: archive/tickets/11EVADEGDET/11EVADEGDET-001-types-and-config.md, tickets/11EVADEGDET-002-delta-reconstruction.md
 
 ## Problem
 

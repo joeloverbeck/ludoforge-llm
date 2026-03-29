@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — barrel export, integration tests, golden fixture
-**Deps**: 11EVADEGDET-001 through 11EVADEGDET-005 (all prior tickets)
+**Deps**: archive/tickets/11EVADEGDET/11EVADEGDET-001-types-and-config.md, tickets/11EVADEGDET-002-delta-reconstruction.md, tickets/11EVADEGDET-003-per-trace-metrics.md, tickets/11EVADEGDET-004-degeneracy-detection.md, tickets/11EVADEGDET-005-aggregation.md
 
 ## Problem
 

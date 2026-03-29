@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — new sim modules
-**Deps**: 11EVADEGDET-001 (types), 11EVADEGDET-003 (evaluateTrace), 11EVADEGDET-004 (degeneracy flags)
+**Deps**: archive/tickets/11EVADEGDET/11EVADEGDET-001-types-and-config.md, tickets/11EVADEGDET-003-per-trace-metrics.md, tickets/11EVADEGDET-004-degeneracy-detection.md
 
 ## Problem
 

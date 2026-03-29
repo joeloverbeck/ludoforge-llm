@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — new sim module
-**Deps**: 11EVADEGDET-001 (types), Spec 10 (trace recording)
+**Deps**: archive/tickets/11EVADEGDET/11EVADEGDET-001-types-and-config.md, archive/specs/10-simulator-trace-logger.md
 
 ## Problem
 

@@ -1,4 +1,6 @@
 export { computeDeltas } from './delta.js';
+export { DEFAULT_EVAL_CONFIG } from './eval-config.js';
+export type { EvalConfig } from './eval-config.js';
 export type { EnrichedGameTrace, EnrichedMoveLog } from './enriched-trace-types.js';
 export { enrichTrace } from './trace-enrichment.js';
 export { runGame, runGames } from './simulator.js';

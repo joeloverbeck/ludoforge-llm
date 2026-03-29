@@ -156,6 +156,22 @@ const validGameTrace = {
   stopReason: 'terminal',
 } as const;
 
+const validTraceEval = {
+  seed: 1234,
+  turnCount: 1,
+  stopReason: 'terminal',
+  metrics: {
+    gameLength: 1,
+    avgBranchingFactor: 3,
+    actionDiversity: 0,
+    resourceTension: 0,
+    interactionProxy: 0,
+    dominantActionFreq: 1,
+    dramaMeasure: 0,
+  },
+  degeneracyFlags: ['STALL'],
+} as const;
+
 const validEvalReport = {
   gameDefId: 'full-game',
   runCount: 10,
@@ -169,7 +185,7 @@ const validEvalReport = {
     dramaMeasure: 0.5,
   },
   degeneracyFlags: ['STALL'],
-  traces: [validGameTrace],
+  perSeed: [validTraceEval],
 } as const;
 
 describe('top-level runtime schemas', () => {
@@ -1067,6 +1083,16 @@ describe('top-level runtime schemas', () => {
 
     assert.equal(result.success, false);
     assert.ok(result.error.issues.some((issue) => issue.path.join('.') === 'metrics.avgGameLength'));
+  });
+
+  it('rejects legacy EvalReport.traces in favor of perSeed', () => {
+    const result = EvalReportSchema.safeParse({
+      ...validEvalReport,
+      traces: [validGameTrace],
+    });
+
+    assert.equal(result.success, false);
+    assert.ok(result.error.issues.some((issue) => issue.path.join('.') === ''));
   });
 });
 

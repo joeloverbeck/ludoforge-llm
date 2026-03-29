@@ -1448,12 +1448,30 @@ export interface Metrics {
   readonly dramaMeasure: number;
 }
 
+export interface TraceMetrics {
+  readonly gameLength: number;
+  readonly avgBranchingFactor: number;
+  readonly actionDiversity: number;
+  readonly resourceTension: number;
+  readonly interactionProxy: number;
+  readonly dominantActionFreq: number;
+  readonly dramaMeasure: number;
+}
+
+export interface TraceEval {
+  readonly seed: number;
+  readonly turnCount: number;
+  readonly stopReason: SimulationStopReason;
+  readonly metrics: TraceMetrics;
+  readonly degeneracyFlags: readonly DegeneracyFlag[];
+}
+
 export interface EvalReport {
   readonly gameDefId: string;
   readonly runCount: number;
   readonly metrics: Metrics;
   readonly degeneracyFlags: readonly DegeneracyFlag[];
-  readonly traces: readonly GameTrace[];
+  readonly perSeed: readonly TraceEval[];
 }
 
 export type HexBigInt = string;

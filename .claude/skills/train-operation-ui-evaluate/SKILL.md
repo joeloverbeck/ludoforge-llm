@@ -1,5 +1,5 @@
 ---
-name: ui-evaluate
+name: train-operation-ui-evaluate
 description: Use when new UI screenshots have been captured and need evaluation. Reads screenshots/fitl-train-*.png, scores 6 readability metrics, and appends the next EVALUATION #N to reports/ui-readability-evaluation.md. Invoke after manually capturing screenshots of the Train operation.
 ---
 

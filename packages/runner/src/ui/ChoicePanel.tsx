@@ -153,7 +153,7 @@ function MultiSelectMode({ choiceUi, addChooseNItem, removeChooseNItem, confirmC
   return (
     <div className={styles.multiSelectMode} data-testid="choice-mode-discrete-many">
       <p className={styles.selectionCount} data-testid="choice-multi-count">
-        Selected: {selectedCount} of {formatSelectionBounds(bounds.min, bounds.max)}
+        Selected: {selectedCount} of {formatBoundsForDisplay(formatSelectionBounds(bounds.min, bounds.max)) ?? formatSelectionBounds(bounds.min, bounds.max)}
       </p>
       <div className={styles.options}>
         {choiceUi.options.map((option) => {
@@ -195,7 +195,7 @@ function MultiSelectMode({ choiceUi, addChooseNItem, removeChooseNItem, confirmC
                   <span className={styles.resolutionIndicator} aria-hidden="true">{indicator}</span>
                 ) : null}
               </button>
-              {!isLegalScalar ? <IllegalityFeedback illegalReason={option.illegalReason} /> : null}
+              {!isLegalScalar && !isSelected ? <IllegalityFeedback illegalReason={option.illegalReason} /> : null}
             </div>
           );
         })}
@@ -401,29 +401,36 @@ function CollapsedBreadcrumb({ steps, totalSteps, store, showCurrent }: Collapse
                 void rewindChoiceToBreadcrumb(store, totalSteps, segment.originalIndex);
               }}
             >
-              {segment.step.displayName}: {segment.step.chosenDisplayName}
+              {segment.step.displayName}
+              {segment.step.iterationLabel != null ? ` (${segment.step.iterationLabel})` : ''}
+              : {segment.step.chosenDisplayName}
             </button>
           );
         }
-        return (
-          <div key={segment.groupId} className={styles.breadcrumbGroup} data-testid={`choice-breadcrumb-group-${segment.groupId}`}>
-            <div className={styles.breadcrumbGroupChildren}>
-              {segment.steps.map(({ step, originalIndex }) => (
-                <button
-                  key={`${step.decisionKey}:${step.chosenValueId}`}
-                  type="button"
-                  className={styles.breadcrumbStepIndented}
-                  data-testid={`choice-breadcrumb-step-${originalIndex}`}
-                  onClick={() => {
-                    void rewindChoiceToBreadcrumb(store, totalSteps, originalIndex);
-                  }}
-                >
-                  {step.iterationLabel != null ? `${step.iterationLabel}: ` : ''}{step.chosenDisplayName}
-                </button>
-              ))}
+        {
+          const firstStep = segment.steps[0]?.step;
+          const groupLabel = firstStep?.displayName ?? segment.groupId;
+          return (
+            <div key={segment.groupId} className={styles.breadcrumbGroup} data-testid={`choice-breadcrumb-group-${segment.groupId}`}>
+              <span className={styles.breadcrumbGroupLabel}>{groupLabel} ({segment.steps.length}x)</span>
+              <div className={styles.breadcrumbGroupChildren}>
+                {segment.steps.map(({ step, originalIndex }) => (
+                  <button
+                    key={`${step.decisionKey}:${step.chosenValueId}`}
+                    type="button"
+                    className={styles.breadcrumbStepIndented}
+                    data-testid={`choice-breadcrumb-step-${originalIndex}`}
+                    onClick={() => {
+                      void rewindChoiceToBreadcrumb(store, totalSteps, originalIndex);
+                    }}
+                  >
+                    {step.iterationLabel != null ? `${step.iterationLabel}: ` : ''}{step.chosenDisplayName}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        );
+          );
+        }
       })}
       {showCurrent ? (
         <span className={styles.breadcrumbCurrent} data-testid="choice-breadcrumb-current">
@@ -463,17 +470,32 @@ export function ChoicePanel({ store, mode }: ChoicePanelProps): ReactElement | n
   const showConfirm = mode === 'choiceConfirm';
   const showNavigation = mode !== 'choiceInvalid';
 
+  const effectiveContext = useMemo(() => {
+    if (choiceModel.choiceContext == null || choiceUi.kind !== 'discreteMany') {
+      return choiceModel.choiceContext;
+    }
+    const legalCount = choiceUi.options.filter((o) => o.legality !== 'illegal').length;
+    const bounds = deriveMultiSelectBounds(choiceUi.min, choiceUi.max, legalCount);
+    const effectiveBoundsText = bounds.min === 0 && bounds.max === 0
+      ? null
+      : `${bounds.min}${bounds.max === bounds.min ? '' : `-${bounds.max}`}`;
+    if (effectiveBoundsText === choiceModel.choiceContext.boundsText) {
+      return choiceModel.choiceContext;
+    }
+    return { ...choiceModel.choiceContext, boundsText: effectiveBoundsText };
+  }, [choiceModel.choiceContext, choiceUi]);
+
   return (
     <section className={styles.panel} aria-label="Choice panel" data-testid="choice-panel">
-      {choiceModel.choiceContext != null ? (
-        <ChoiceContextHeader context={choiceModel.choiceContext} />
+      {effectiveContext != null ? (
+        <ChoiceContextHeader context={effectiveContext} />
       ) : null}
       {mode !== 'choiceInvalid' ? (
         <CollapsedBreadcrumb
           steps={choiceModel.choiceBreadcrumb}
           totalSteps={choiceModel.choiceBreadcrumb.length}
           store={store}
-          showCurrent={isPendingChoice}
+          showCurrent={isPendingChoice && choiceModel.choiceBreadcrumb.length > 0}
         />
       ) : null}
 

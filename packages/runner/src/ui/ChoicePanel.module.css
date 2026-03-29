@@ -61,6 +61,12 @@
   gap: var(--space-xs);
 }
 
+.breadcrumbGroupLabel {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  padding-left: var(--space-xs);
+}
+
 .breadcrumbGroupChildren {
   display: flex;
   flex-wrap: wrap;
@@ -184,8 +190,10 @@
 .optionButton:disabled,
 .optionButton[aria-disabled='true'] {
   color: var(--text-muted);
-  opacity: 0.65;
+  opacity: 0.4;
   cursor: default;
+  border-style: dashed;
+  text-decoration: line-through;
 }
 
 .multiSelectConfirm {

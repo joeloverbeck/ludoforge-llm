@@ -1,5 +1,5 @@
 ---
-name: ui-implement
+name: train-operation-ui-implement
 description: Use when the latest UI evaluation is ready and improvements need to be implemented. Reads the most recent EVALUATION from reports/ui-readability-evaluation.md, brainstorms solutions for the lowest-scoring metrics, and implements changes to the runner UI choice panel components.
 ---
 

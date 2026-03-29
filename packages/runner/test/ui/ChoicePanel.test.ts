@@ -347,7 +347,7 @@ describe('ChoicePanel', () => {
     expect(optionC.disabled).toBe(true);
 
     // Selection bounds should reflect unknown options (2 legal/unknown), not 0
-    expect(getByTestId('choice-multi-count').textContent).toContain('Selected: 0 of 1-2');
+    expect(getByTestId('choice-multi-count').textContent).toContain('Selected: 0 of 1 to 2');
 
     // Select dispatches incrementally
     fireEvent.click(optionA);
@@ -420,7 +420,7 @@ describe('ChoicePanel', () => {
     });
 
     expect(queryByTestId('choice-mode-discrete-many')).not.toBeNull();
-    expect(getByTestId('choice-multi-count').textContent).toContain('Selected: 0 of 1-2');
+    expect(getByTestId('choice-multi-count').textContent).toContain('Selected: 0 of 1 to 2');
     expect(getByTestId(`choice-multi-option-${serializeChoiceValueIdentity('zone-a')}`)).not.toBeNull();
     expect(getByTestId(`choice-multi-option-${serializeChoiceValueIdentity('zone-b')}`)).not.toBeNull();
   });
@@ -516,7 +516,7 @@ describe('ChoicePanel', () => {
       }),
     });
 
-    expect(getByTestId('choice-multi-count').textContent).toContain('Selected: 1 of 0-2');
+    expect(getByTestId('choice-multi-count').textContent).toContain('Selected: 1 of up to 2');
     fireEvent.click(getByTestId(`choice-multi-option-${serializeChoiceValueIdentity('zone-a')}`));
     fireEvent.click(getByTestId(`choice-multi-option-${serializeChoiceValueIdentity('zone-b')}`));
     expect(removeChooseNItem).toHaveBeenCalledWith('zone-a');

@@ -125,3 +125,159 @@ N/A (baseline evaluation)
 7. **[LOW] Investigate the dark rectangle overlay in screenshot 1.** A semi-transparent dark rectangle overlaps the map canvas behind the choice panel. This may be a tooltip container, a z-index issue, or a rendering artifact. It adds visual noise.
 
 8. **[LOW] Improve the visual distinction between available and unavailable options.** In screenshot 2, unavailable options (Kontum, Quang Tri, Saigon) are only subtly dimmed. A stronger visual signal (strikethrough, grayed-out text, or an explicit "unavailable" icon) would make the distinction clearer.
+
+---
+
+## EVALUATION #2
+
+**Date**: 2026-03-29
+**Screenshots analyzed**: fitl-train-1.png through fitl-train-5.png
+
+### Screenshot Analysis
+
+#### fitl-train-1.png — Initial Target Space Selection (Empty)
+**What's shown**: The Train choice panel at the beginning. The player must select target spaces for training. No spaces selected yet. Six zone options displayed as checkbox buttons.
+**Issues observed**:
+- The prompt now reads "Select spaces to train in (1 to 6)" — a massive improvement over the previous raw `$target Spaces (1-6)`. This is human-readable and explains what to do.
+- The "Current" badge still appears in the breadcrumb area with no prior entries, which is slightly confusing but harmless.
+- The dark semi-transparent rectangle still overlaps the map canvas behind the panel — same rendering artifact as Eval #1.
+- Zone names are clean and readable.
+
+#### fitl-train-2.png — Target Space Selection (3 Selected, Validation Errors)
+**What's shown**: The player has selected 3 spaces (Binh Dinh, Da Nang, Pleiku Darlac). Selected options show blue-tinted styling with "x" marks. Three selected options show red error text.
+**Issues observed**:
+- The prompt "Select spaces to train in (1 to 6)" remains human-readable — good.
+- The counter reads "Selected: 3 of 1-3" while the prompt says "(1 to 6)" — this mismatch is confusing. The dynamic constraint narrowed the range but the prompt wasn't updated.
+- Error messages changed from "This option is currently unavailable" to "Does not meet current requirements" — marginally better wording, but still lacks specifics (WHY doesn't it meet requirements?).
+- The errors still appear under the SELECTED options (Binh Dinh, Da Nang, Pleiku Darlac), not the unselected ones. This remains confusing — the player selected these spaces and now sees red warnings under them without understanding what went wrong.
+- Unselected options (Kontum, Quang Tri, Saigon) appear lighter/disabled — subtle but present.
+
+#### fitl-train-3.png — Train Sub-Choice (Place Irregulars vs Place At Base)
+**What's shown**: Binary choice between "Place Irregulars" and "Place At Base" after selecting target spaces.
+**Issues observed**:
+- The prompt now reads "Train Choice" — the `$` prefix is gone. Clear improvement.
+- The breadcrumb reads "Target Spaces: Binh Dinh, Da Nang, Pleiku Darlac" — the `$` prefix is removed here too. This is readable.
+- Both option buttons are well-labeled with clear, understandable action names.
+- The panel is compact and clean. This is the best screen in the sequence — essentially resolved.
+
+#### fitl-train-4.png — Deep Nested Choice (Source Spaces in forEach)
+**What's shown**: After choosing "Place Irregulars", the player is inside a forEach loop and must select source spaces (0 to 3).
+**Issues observed**:
+- The prompt still shows a raw AST path: "Macro Place From Available Or Map Action Pipelines 0 Stages 1 Effects 0 For Each Effects 1 If Then 0 Source Spaces (up to 3)". The `$` prefix is gone and the range now reads "(up to 3)" instead of "(0-3)" — both improvements — but the core AST path is still catastrophically unreadable.
+- The breadcrumb now has a "..." collapse indicator at the left edge — an improvement over Eval #1 where all entries were fully expanded.
+- Breadcrumb entries read "Train Choice: Place Irregulars", "Train Choice: Place At Base", "Train Choice: Place Irregulars" — the repeated "Train Choice" entries likely reflect forEach iterations but lack iteration context (e.g., "Iteration 1 of 3: Binh Dinh").
+- The "(up to 3)" range format is clearer than the previous "(0-3)" — signals optionality better.
+- Zone options (Binh Dinh, Pleiku Darlac, Quang Tri) are clean.
+
+#### fitl-train-5.png — Deepest Nested Choice (Sub-Action Spaces)
+**What's shown**: The deepest nesting level. Player selects sub-action spaces (0 to 1).
+**Issues observed**:
+- The prompt reads "Sub Action Spaces (up to 1)" — the `$` prefix is gone and the range format improved. However "Sub Action Spaces" is still internal jargon that doesn't explain what the player is choosing.
+- The breadcrumb has "..." collapse at the start, then: "Train Choice: Place At Base" → "Train Choice: Place Irregulars" → the full raw AST path with values appended ("Macro Place From Available Or Map...Source Spaces: Quang Tri, Pleiku Darlac, Binh Dinh") → "Current". The AST path entry in the breadcrumb is still a wall of text spanning most of the panel width.
+- The "None" suffix from Eval #1 is GONE — zone options now show clean names: "Binh Dinh", "Da Nang", "Pleiku Darlac". This is a direct fix from Recommendation #4.
+- "Selected: 0 of 0-1" uses the old range format inconsistently with the prompt's "(up to 1)".
+
+### Scores
+
+| # | Metric | Score | Previous | Delta | Justification |
+|---|--------|-------|----------|-------|---------------|
+| 1 | Decision Prompt Clarity | 5 | 2 | +3 | Screenshots 1-3 now have human-readable prompts ("Select spaces to train in", "Train Choice"). Screenshot 5 is improved but jargony ("Sub Action Spaces"). Screenshot 4 still shows a raw AST path — one catastrophic screen holds back the score. |
+| 2 | Option Legibility | 7 | 5 | +2 | "None" suffix eliminated. All zone names clean. Action names ("Place Irregulars", "Place At Base") remain clear. Error text still vague but wording improved slightly. |
+| 3 | Breadcrumb Navigability | 4 | 2 | +2 | `$` prefix removed from labels. "..." collapse added for deep trails. But the raw AST path still appears as a breadcrumb entry in screenshots 4-5, and repeated "Train Choice" entries lack forEach iteration context. |
+| 4 | Error Communication | 3 | 3 | 0 | "Does not meet current requirements" is marginal improvement over "currently unavailable" — neither explains WHY. Errors still appear under selected options, which is misleading. No progress on the core problem. |
+| 5 | Information Density | 5 | 3 | +2 | Breadcrumb collapse ("...") reclaims space. Shorter prompts on most screens. Screenshot 4 is still cluttered by the AST path prompt, but overall density improved. |
+| 6 | Visual Hierarchy | 5 | 4 | +1 | Human-readable prompts make the decision clearer on most screens. "Train" badge, "Current" marker, and button styling are consistent. The AST path prompt in screenshot 4 still competes for attention. |
+| | **Average** | **4.8** | **3.2** | **+1.6** | |
+
+### Prioritized Recommendations
+
+1. **[CRITICAL] Replace the raw AST path prompt in screenshot 4.** The prompt "Macro Place From Available Or Map Action Pipelines 0 Stages 1 Effects 0 For Each Effects 1 If Then 0 Source Spaces (up to 3)" is the single worst remaining readability problem. This needs a human-readable override like "Select source spaces for reinforcements (up to 3)" or "Choose where to draw troops from". This is the same CRITICAL #1 from Eval #1, partially fixed — the AST path fallback is still triggered for macro-generated decisions that lack display names.
+
+2. **[CRITICAL] Eliminate the AST path from breadcrumb entries.** In screenshot 5, the breadcrumb contains the full AST path with selected values appended. This entry should be replaced with a summary like "Source Spaces: Quang Tri, Pleiku Darlac, Binh Dinh" — dropping the "Macro Place From Available Or Map..." prefix entirely.
+
+3. **[HIGH] Fix error message placement and specificity.** Errors still appear under SELECTED options in screenshot 2, which is misleading. The player sees a selected (blue, checked) option with a red warning underneath. Either (a) the error should explain the issue ("No US pieces available to place here") or (b) the error placement should be reconsidered — perhaps showing errors only when a player hovers or tries to confirm, with a summary like "3 selected spaces cannot currently support training".
+
+4. **[HIGH] Resolve the range mismatch between prompt and counter.** Screenshot 2 shows "Select spaces to train in (1 to 6)" in the prompt but "Selected: 3 of 1-3" in the counter. The prompt range should update dynamically to match the actual constraint, or the counter should explain the narrowing (e.g., "3 spaces eligible, 3 selected").
+
+5. **[MEDIUM] Add forEach iteration context to breadcrumbs.** The repeated "Train Choice: Place Irregulars" / "Train Choice: Place At Base" entries in screenshots 4-5 don't indicate which forEach iteration the player is in. Something like "Training Binh Dinh (1/3)" would orient the player.
+
+6. **[MEDIUM] Replace "Sub Action Spaces" with a descriptive prompt.** Screenshot 5's prompt is no longer raw (`$` removed) but "Sub Action Spaces" is still internal terminology. A contextual prompt like "Select additional space for action (optional)" would be clearer.
+
+7. **[LOW] Harmonize range format between prompts and counters.** Prompts use "(up to 3)" while counters use "0-3". Pick one format and use it consistently — the "(up to N)" format is more readable.
+
+8. **[LOW] Investigate the dark rectangle overlay.** Same artifact from Eval #1 — a semi-transparent dark rectangle overlaps the map behind the choice panel in screenshots 1-2. Not blocking but adds visual noise.
+
+---
+
+## EVALUATION #3
+
+**Date**: 2026-03-29
+**Screenshots analyzed**: fitl-train-1.png through fitl-train-5.png
+
+### Screenshot Analysis
+
+#### fitl-train-1.png — Initial Target Space Selection (Empty)
+**What's shown**: The Train choice panel at the start. Player must select target spaces for training. No spaces selected. Six zone checkbox buttons displayed.
+**Issues observed**:
+- Prompt reads "Select spaces to train in (1 to 6)" — human-readable, same as Eval #2. Good.
+- "Current" breadcrumb badge appears with no prior entries — mildly confusing but harmless.
+- "Selected: 0 of 1-6" counter uses the "X-Y" format while the prompt uses "(1 to 6)" — minor format inconsistency.
+- The dark semi-transparent rectangle overlay on the map canvas persists from Eval #1 and #2.
+
+#### fitl-train-2.png — Target Space Selection (3 Selected)
+**What's shown**: Player has selected 3 spaces (Binh Dinh, Da Nang, Pleiku Darlac). Selected options show blue-tinted styling with "x" marks. Unselected options appear lighter.
+**Issues observed**:
+- Prompt now reads "Select spaces to train in (1 to 3)" — the range dynamically updated to match the actual constraint. This resolves the range mismatch from Eval #2 where the prompt said "(1 to 6)" while the counter said "1-3". Major fix.
+- Counter reads "Selected: 3 of 1-3" — consistent with the prompt range.
+- The misleading red error messages from Eval #1 and #2 ("This option is currently unavailable" / "Does not meet current requirements") are completely gone. No error text appears under selected options. This resolves the CRITICAL error placement issue.
+- Unselected options (Kontum, Quang Tri, Saigon) appear lighter — visual distinction is subtle but the misleading error text is no longer competing for attention.
+- "Confirm selection" button is active. Clean state.
+
+#### fitl-train-3.png — Train Sub-Choice (Place Irregulars vs Place At Base)
+**What's shown**: Binary choice between "Place Irregulars" and "Place At Base" after selecting target spaces.
+**Issues observed**:
+- Prompt now reads "How do you want to train?" — a significant upgrade from Eval #2's "Train Choice". This is natural language that a player can immediately understand.
+- Breadcrumb reads "Target Spaces: Binh Dinh, Da Nang, Pleiku Darlac" with "Current" badge — clean, no raw variable names.
+- Both option buttons are clear and well-labeled.
+- Panel is compact and well-organized. This screen is essentially fully resolved.
+
+#### fitl-train-4.png — Deep Nested Choice (Source Spaces in forEach)
+**What's shown**: Inside a forEach loop, player selects source spaces (up to 3) for reinforcements.
+**Issues observed**:
+- Prompt reads "Select source spaces for reinforcements (up to 3)" — the catastrophic raw AST path from Eval #1-2 is COMPLETELY ELIMINATED. This was the #1 CRITICAL issue in both previous evaluations. The prompt is now clear, contextual, and human-readable.
+- Breadcrumb shows "..." → "Train Choice: Place Irregulars" → "Train Choice: Place At Base" → "Train Choice: Place Irregulars" → "Current". The "..." collapse works. However, the repeated "Train Choice" entries still lack forEach iteration context — the player can't tell which target space is being processed (e.g., "Training Binh Dinh (1/3)").
+- "Selected: 0 of 0-3" counter uses "0-3" while the prompt uses "(up to 3)" — minor format inconsistency persists.
+- Zone options (Binh Dinh, Pleiku Darlac, Quang Tri) are clean.
+
+#### fitl-train-5.png — Deepest Nested Choice (Sub-Action Spaces)
+**What's shown**: Deepest nesting level. Player selects additional space for the current action (up to 1).
+**Issues observed**:
+- Prompt reads "Select additional space for this action (up to 1)" — fully human-readable. The internal "Sub Action Spaces" jargon from Eval #2 is replaced with natural language. Excellent improvement.
+- Breadcrumb shows "..." → "Train Choice: Place At Base" → "Train Choice: Place Irregulars" → "Source Spaces: Binh Dinh, Pleiku Darlac, Quang Tri" → "Current". The raw AST path that dominated this breadcrumb in Eval #1-2 is completely replaced with the clean "Source Spaces: ..." label. Major fix.
+- Zone options (Binh Dinh, Da Nang, Pleiku Darlac) are clean — no "None" suffix.
+- "Selected: 0 of 0-1" counter — minor format inconsistency with the "(up to 1)" prompt.
+- The breadcrumb is now compact enough that the decision area is no longer cramped.
+
+### Scores
+
+| # | Metric | Score | Previous | Delta | Justification |
+|---|--------|-------|----------|-------|---------------|
+| 1 | Decision Prompt Clarity | 8 | 5 | +3 | All 5 screenshots now have human-readable prompts. The catastrophic AST path (screenshot 4) is replaced with "Select source spaces for reinforcements". Screenshot 3 upgraded from "Train Choice" to "How do you want to train?". Screenshot 5 from "Sub Action Spaces" to "Select additional space for this action". No raw internal names remain in any prompt. |
+| 2 | Option Legibility | 8 | 7 | +1 | All zone names clean, no "None" suffix. Action names clear ("Place Irregulars", "Place At Base"). Misleading error text under selected options is gone entirely, removing a major source of confusion. |
+| 3 | Breadcrumb Navigability | 6 | 4 | +2 | Raw AST paths eliminated from breadcrumbs — the wall-of-text entry in screenshot 5 is now a clean "Source Spaces: Binh Dinh, Pleiku Darlac, Quang Tri". "..." collapse works well. Remaining issue: repeated "Train Choice" entries lack forEach iteration context (which iteration? which target space?). |
+| 4 | Error Communication | 6 | 3 | +3 | The misleading error messages under selected options are gone. The range mismatch between prompt and counter is fixed (prompt now dynamically updates). No error scenarios are triggered in the current screenshots, so we can't fully assess error quality, but removing the misleading errors is a major improvement. |
+| 5 | Information Density | 7 | 5 | +2 | AST paths no longer dominate any screen. Breadcrumbs are compact. Prompts are concise. The decision area has breathing room even at the deepest nesting level (screenshot 5). Minor issue: the counter still uses "0-3" format while prompts use "(up to 3)". |
+| 6 | Visual Hierarchy | 7 | 5 | +2 | Human-readable prompts are now the clear focal point on every screen. The visual flow — "Train" badge → descriptive prompt → breadcrumb trail → options → action buttons — reads naturally. No raw text competes for attention. The "Current" badge and "..." collapse support orientation. |
+| | **Average** | **7.0** | **4.8** | **+2.2** | |
+
+### Prioritized Recommendations
+
+1. **[HIGH] Add forEach iteration context to breadcrumbs.** The repeated "Train Choice: Place Irregulars" / "Train Choice: Place At Base" entries in screenshots 4-5 don't indicate which target space is being processed. Something like "Training Binh Dinh (1/3)" or grouping iterations with the target space name would help the player understand where they are in the decision sequence. This was MEDIUM in Eval #2 — upgrading to HIGH since it's now the most prominent remaining readability issue.
+
+2. **[MEDIUM] Harmonize range format between prompts and counters.** Prompts use "(up to 3)" while counters use "0-3" or "1-6". The "(up to N)" format is more readable — consider updating the counter to match (e.g., "Selected: 0, up to 3" or "0 of 3 max"). Carried from Eval #2.
+
+3. **[MEDIUM] Improve visual distinction for unavailable options.** In screenshot 2, unavailable options (Kontum, Quang Tri, Saigon) are only subtly lighter. A stronger visual signal — dimmed text, strikethrough, or an explicit unavailability indicator — would make the distinction clearer at a glance.
+
+4. **[LOW] Investigate the dark rectangle overlay.** The semi-transparent dark rectangle overlapping the map canvas behind the choice panel persists across all three evaluations. Not blocking but adds visual noise. Likely a z-index or background layer issue.
+
+5. **[LOW] Consider removing the lone "Current" badge on the first decision screen.** In screenshot 1, the "Current" badge appears with no prior breadcrumb entries. It's harmless but slightly confusing — the player hasn't navigated anywhere yet, so "Current" lacks context. Consider showing the breadcrumb area only after the first decision is made.

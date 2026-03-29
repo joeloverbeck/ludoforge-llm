@@ -680,6 +680,12 @@ actions:
     choices:
       targetSpaces:
         prompt: Select spaces to train in
+      trainChoice:
+        prompt: How do you want to train?
+      sourceSpaces:
+        prompt: Select source spaces for reinforcements
+      subActionSpaces:
+        prompt: Select additional space for this action
   patrol:
     choices:
       targetSpaces:
@@ -696,10 +702,16 @@ actions:
     choices:
       targetSpaces:
         prompt: Select spaces to rally in
+      sourceSpaces:
+        prompt: Select source spaces for reinforcements
+      subActionSpaces:
+        prompt: Select additional space for this action
   march:
     choices:
       targetSpaces:
         prompt: Select destination spaces
+      sourceSpaces:
+        prompt: Select origin spaces for march
   attack:
     choices:
       targetSpaces:

@@ -22,7 +22,7 @@ import type {
   RunnerZone,
 } from './runner-frame.js';
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
-import { formatIdAsDisplayName, humanizeDecisionParamName, stripDecisionParamPrefix } from '../utils/format-display-name.js';
+import { extractAstParamTail, formatIdAsDisplayName, humanizeDecisionParamName, stripDecisionParamPrefix } from '../utils/format-display-name.js';
 import { formatChoiceValueFallback, formatChoiceValueResolved } from './choice-value-utils.js';
 import { projectShowdownSurface, showdownSurfaceEqual } from './project-showdown-surface.js';
 
@@ -249,11 +249,13 @@ function projectChoiceContext(
     : `${min ?? 0}${max === null || max === min ? '' : `-${max}`}`;
 
   const strippedParamName = stripDecisionParamPrefix(choiceContext.decisionParamName);
+  const astTail = extractAstParamTail(choiceContext.decisionParamName);
 
   return {
     actionDisplayName: visualConfigProvider.getActionDisplayName(choiceContext.selectedActionId)
       ?? formatIdAsDisplayName(choiceContext.selectedActionId),
     decisionPrompt: visualConfigProvider.getChoicePrompt(choiceContext.selectedActionId, strippedParamName)
+      ?? (astTail !== null ? visualConfigProvider.getChoicePrompt(choiceContext.selectedActionId, astTail) : null)
       ?? humanizeDecisionParamName(choiceContext.decisionParamName),
     decisionParamName: choiceContext.decisionParamName,
     boundsText,

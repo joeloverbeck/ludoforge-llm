@@ -67,10 +67,37 @@ export function humanizeDecisionParamName(paramName: string): string {
   return formatIdAsDisplayName(paramName);
 }
 
-const AST_PATH_MARKERS = /\b(Pipelines?|Stages?|Effects?|For\s*Each|If\s*Then|Macro)\b/iu;
+/**
+ * Extract the last meaningful segment from a param name for config lookup.
+ * Returns `null` if the name is not an AST path.
+ * E.g. `_macroPlaceFromAvailableOrMap_..._sourceSpaces` → `sourceSpaces`.
+ */
+export function extractAstParamTail(paramName: string): string | null {
+  const stripped = stripBindingPrefix(paramName).trim();
+
+  if (!isAstPath(stripped)) {
+    return null;
+  }
+
+  const segment = extractLastAstSegment(stripped);
+  const camelCase = segment
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[_-]+/g, ' ')
+    .trim()
+    .split(/\s+/)
+    .map((word, index) => index === 0 ? word.toLowerCase() : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join('');
+
+  return camelCase;
+}
+
+const AST_PATH_KEYWORDS = /(?:^|\s)(pipelines?|stages?|effects?|foreach|ifthen|macro)(?:\s|$)/iu;
 
 function isAstPath(name: string): boolean {
-  return AST_PATH_MARKERS.test(name);
+  const normalized = name
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[_-]+/g, ' ');
+  return AST_PATH_KEYWORDS.test(normalized);
 }
 
 function extractLastAstSegment(name: string): string {

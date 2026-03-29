@@ -361,7 +361,7 @@ export type CompiledAgentPolicyRef =
   | CompiledAgentPolicySurfaceRef
   | {
       readonly kind: 'candidateIntrinsic';
-      readonly intrinsic: 'actionId' | 'stableMoveKey' | 'isPass';
+      readonly intrinsic: 'actionId' | 'stableMoveKey' | 'isPass' | 'paramCount';
     }
   | {
       readonly kind: 'candidateParam';

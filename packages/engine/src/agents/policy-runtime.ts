@@ -115,6 +115,9 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
         if (intrinsic === 'stableMoveKey') {
           return candidate.stableMoveKey;
         }
+        if (intrinsic === 'paramCount') {
+          return Object.keys(candidate.move.params).length;
+        }
         return candidate.actionId === 'pass' || resolveTurnFlowActionClass(input.def, candidate.move) === 'pass';
       },
       resolveCandidateParam(candidate, paramId) {
@@ -122,7 +125,17 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
         if (candidateParamDef === undefined) {
           return undefined;
         }
-        const paramValue = candidate.move.params[paramId];
+        let paramValue = candidate.move.params[paramId];
+        if (paramValue === undefined) {
+          const suffix = `::${paramId}`;
+          const indexedPrefix = `::${paramId}[`;
+          for (const key of Object.keys(candidate.move.params)) {
+            if (key.endsWith(suffix) || key.includes(indexedPrefix)) {
+              paramValue = candidate.move.params[key];
+              break;
+            }
+          }
+        }
         switch (candidateParamDef.type) {
           case 'number':
             return typeof paramValue === 'number' ? paramValue : undefined;

@@ -1375,6 +1375,13 @@ class AgentLibraryCompiler {
       }
       return { type: 'boolean', costClass: 'candidate', ref: { kind: 'candidateIntrinsic', intrinsic: 'isPass' } };
     }
+    if (refPath === 'candidate.paramCount') {
+      if (scope === 'stateFeature') {
+        this.reportUnknownLibraryRef(refPath, path);
+        return null;
+      }
+      return { type: 'number', costClass: 'candidate', ref: { kind: 'candidateIntrinsic', intrinsic: 'paramCount' } };
+    }
     if (refPath.startsWith('candidate.param.')) {
       if (scope === 'stateFeature') {
         this.reportInvalidCandidateParamRef(refPath, path);

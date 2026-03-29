@@ -167,19 +167,48 @@ describe('policy trace events', () => {
     if (summaryResult.agentDecision?.kind !== 'policy' || verboseResult.agentDecision?.kind !== 'policy') {
       assert.fail('expected policy decision traces');
     }
+    const summaryDecision = summaryResult.agentDecision;
+    const verboseDecision = verboseResult.agentDecision;
 
-    assert.equal('seatType' in (summaryResult.agentDecision as unknown as Record<string, unknown>), false);
-    assert.equal(summaryResult.agentDecision.resolvedProfileId, 'baseline');
-    assert.equal(summaryResult.agentDecision.profileFingerprint, 'baseline-fingerprint');
-    assert.equal(summaryResult.agentDecision.initialCandidateCount, 2);
-    assert.equal(summaryResult.agentDecision.selectedStableMoveKey !== null, true);
-    assert.deepEqual(summaryResult.agentDecision.previewUsage.refIds, []);
-    assert.deepEqual(summaryResult.agentDecision.previewUsage.unknownRefs, []);
-    assert.equal('unknownRefIds' in (summaryResult.agentDecision.previewUsage as unknown as Record<string, unknown>), false);
-    assert.equal(summaryResult.agentDecision.candidates, undefined);
+    assert.equal('seatType' in (summaryDecision as unknown as Record<string, unknown>), false);
+    assert.equal(summaryDecision.resolvedProfileId, 'baseline');
+    assert.equal(summaryDecision.profileFingerprint, 'baseline-fingerprint');
+    assert.equal(summaryDecision.initialCandidateCount, 2);
+    assert.equal(summaryDecision.selectedStableMoveKey !== null, true);
+    assert.deepEqual(summaryDecision.previewUsage.refIds, []);
+    assert.deepEqual(summaryDecision.previewUsage.unknownRefs, []);
+    assert.deepEqual(summaryDecision.previewUsage.outcomeBreakdown, {
+      ready: 0,
+      unknownRandom: 0,
+      unknownHidden: 0,
+      unknownUnresolved: 0,
+      unknownFailed: 0,
+    });
+    assert.equal('unknownRefIds' in (summaryDecision.previewUsage as unknown as Record<string, unknown>), false);
+    assert.equal(summaryDecision.completionStatistics, undefined);
+    assert.equal(summaryDecision.candidates, undefined);
 
-    assert.equal(Array.isArray(verboseResult.agentDecision.candidates), true);
-    assert.equal(verboseResult.agentDecision.candidates?.length, 2);
+    assert.deepEqual(verboseDecision.previewUsage.outcomeBreakdown, {
+      ready: 0,
+      unknownRandom: 0,
+      unknownHidden: 0,
+      unknownUnresolved: 0,
+      unknownFailed: 0,
+    });
+    assert.deepEqual(verboseDecision.completionStatistics, {
+      totalClassifiedMoves: 2,
+      completedCount: 2,
+      stochasticCount: 0,
+      rejectedNotViable: 0,
+      templateCompletionAttempts: 0,
+      templateCompletionSuccesses: 0,
+      templateCompletionUnsatisfiable: 0,
+    });
+    assert.equal(Array.isArray(verboseDecision.candidates), true);
+    assert.equal(verboseDecision.candidates?.length, 2);
+    const firstVerboseCandidate = verboseDecision.candidates?.[0];
+    assert.ok(firstVerboseCandidate);
+    assert.equal('previewOutcome' in (firstVerboseCandidate as unknown as Record<string, unknown>), false);
   });
 
   it('threads policy agent decision metadata into simulator move logs', () => {
@@ -192,8 +221,9 @@ describe('policy trace events', () => {
     if (firstMove.agentDecision?.kind !== 'policy') {
       assert.fail('expected policy decision in move log');
     }
-    assert.equal(firstMove.agentDecision.resolvedProfileId, 'baseline');
-    assert.equal(firstMove.agentDecision.profileFingerprint, 'baseline-fingerprint');
+    const firstDecision = firstMove.agentDecision;
+    assert.equal(firstDecision.resolvedProfileId, 'baseline');
+    assert.equal(firstDecision.profileFingerprint, 'baseline-fingerprint');
   });
 
   it('formats a diagnostics snapshot from compiled policy data plus evaluator metadata', () => {

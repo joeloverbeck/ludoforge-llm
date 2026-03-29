@@ -22,7 +22,7 @@ import type {
   RunnerZone,
 } from './runner-frame.js';
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
-import { formatIdAsDisplayName } from '../utils/format-display-name.js';
+import { extractAstParamTail, formatIdAsDisplayName, humanizeDecisionParamName, stripDecisionParamPrefix } from '../utils/format-display-name.js';
 import { formatChoiceValueFallback, formatChoiceValueResolved } from './choice-value-utils.js';
 import { projectShowdownSurface, showdownSurfaceEqual } from './project-showdown-surface.js';
 
@@ -77,7 +77,7 @@ export function projectRenderModel(
     choiceBreadcrumb: frame.choiceBreadcrumb.map((step) => ({
       decisionKey: step.decisionKey,
       name: step.name,
-      displayName: formatIdAsDisplayName(step.name),
+      displayName: humanizeDecisionParamName(step.name),
       chosenValueId: step.chosenValueId,
       chosenValue: step.chosenValue,
       chosenDisplayName: formatChoiceValueResolved(step.chosenValue, zonesById),
@@ -248,11 +248,15 @@ function projectChoiceContext(
     ? null
     : `${min ?? 0}${max === null || max === min ? '' : `-${max}`}`;
 
+  const strippedParamName = stripDecisionParamPrefix(choiceContext.decisionParamName);
+  const astTail = extractAstParamTail(choiceContext.decisionParamName);
+
   return {
     actionDisplayName: visualConfigProvider.getActionDisplayName(choiceContext.selectedActionId)
       ?? formatIdAsDisplayName(choiceContext.selectedActionId),
-    decisionPrompt: visualConfigProvider.getChoicePrompt(choiceContext.selectedActionId, choiceContext.decisionParamName)
-      ?? formatIdAsDisplayName(choiceContext.decisionParamName),
+    decisionPrompt: visualConfigProvider.getChoicePrompt(choiceContext.selectedActionId, strippedParamName)
+      ?? (astTail !== null ? visualConfigProvider.getChoicePrompt(choiceContext.selectedActionId, astTail) : null)
+      ?? humanizeDecisionParamName(choiceContext.decisionParamName),
     decisionParamName: choiceContext.decisionParamName,
     boundsText,
     iterationLabel: choiceContext.iterationEntityId === null

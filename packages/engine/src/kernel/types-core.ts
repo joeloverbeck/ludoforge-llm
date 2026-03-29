@@ -1312,6 +1312,7 @@ export interface PolicyCandidateDecisionTrace {
   readonly scoreContributions?: readonly AgentDecisionScoreContribution[];
   readonly previewRefIds?: readonly string[];
   readonly unknownPreviewRefs?: readonly PolicyPreviewUnknownRefTrace[];
+  readonly previewOutcome?: 'ready' | 'random' | 'hidden' | 'unresolved' | 'failed';
 }
 
 export interface PolicyPruningStepTrace {
@@ -1330,6 +1331,25 @@ export interface PolicyPreviewUsageTrace {
   readonly evaluatedCandidateCount: number;
   readonly refIds: readonly string[];
   readonly unknownRefs: readonly PolicyPreviewUnknownRefTrace[];
+  readonly outcomeBreakdown?: PolicyPreviewOutcomeBreakdownTrace;
+}
+
+export interface PolicyPreviewOutcomeBreakdownTrace {
+  readonly ready: number;
+  readonly unknownRandom: number;
+  readonly unknownHidden: number;
+  readonly unknownUnresolved: number;
+  readonly unknownFailed: number;
+}
+
+export interface PolicyCompletionStatistics {
+  readonly totalClassifiedMoves: number;
+  readonly completedCount: number;
+  readonly stochasticCount: number;
+  readonly rejectedNotViable: number;
+  readonly templateCompletionAttempts: number;
+  readonly templateCompletionSuccesses: number;
+  readonly templateCompletionUnsatisfiable: number;
 }
 
 export interface BuiltinAgentDecisionTrace {
@@ -1355,6 +1375,7 @@ export interface PolicyAgentDecisionTrace {
   readonly previewUsage: PolicyPreviewUsageTrace;
   readonly emergencyFallback: boolean;
   readonly failure: AgentDecisionFailureSummary | null;
+  readonly completionStatistics?: PolicyCompletionStatistics;
   readonly candidates?: readonly PolicyCandidateDecisionTrace[];
 }
 

@@ -153,16 +153,17 @@ function MultiSelectMode({ choiceUi, addChooseNItem, removeChooseNItem, confirmC
   return (
     <div className={styles.multiSelectMode} data-testid="choice-mode-discrete-many">
       <p className={styles.selectionCount} data-testid="choice-multi-count">
-        Selected: {selectedCount} of {formatSelectionBounds(bounds.min, bounds.max)}
+        Selected: {selectedCount} of {formatBoundsForDisplay(formatSelectionBounds(bounds.min, bounds.max)) ?? formatSelectionBounds(bounds.min, bounds.max)}
       </p>
       <div className={styles.options}>
         {choiceUi.options.map((option) => {
           const isSelected = selectedChoiceValueIdSet.has(option.choiceValueId);
           const isLegalScalar = option.legality !== 'illegal' && isChoiceScalar(option.value);
-          const isDisabled = !isLegalScalar;
+          const isDisabled = !isLegalScalar && !isSelected;
 
           const resCss = resolutionCssClass(option.resolution);
-          const baseClass = isSelected ? `${styles.optionButton} ${styles.optionSelected}` : styles.optionButton;
+          const unselectedCss = !isSelected && selectedCount > 0 ? ` ${styles.optionUnselected}` : '';
+          const baseClass = isSelected ? `${styles.optionButton} ${styles.optionSelected}` : `${styles.optionButton}${unselectedCss}`;
           const buttonClass = resCss !== '' ? `${baseClass} ${resCss}` : baseClass;
           const indicator = resolutionIndicatorText(option.resolution);
 
@@ -177,25 +178,25 @@ function MultiSelectMode({ choiceUi, addChooseNItem, removeChooseNItem, confirmC
                 aria-label={resolutionAriaLabel(option.displayName, option.resolution)}
                 data-testid={`choice-multi-option-${option.choiceValueId}`}
                 onClick={() => {
-                  if (!isLegalScalar) {
+                  if (isSelected && isChoiceScalar(option.value)) {
+                    void removeChooseNItem(option.value);
                     return;
                   }
-                  if (isSelected) {
-                    void removeChooseNItem(option.value);
+                  if (!isLegalScalar) {
                     return;
                   }
                   void addChooseNItem(option.value);
                 }}
               >
-                <span className={styles.checkboxIndicator} aria-hidden="true">
-                  {isSelected ? 'x' : ''}
+                <span className={`${styles.checkboxIndicator}${isSelected ? ` ${styles.checkboxChecked}` : ''}`} aria-hidden="true">
+                  {isSelected ? '✓' : ''}
                 </span>
                 <span>{option.displayName}</span>
                 {indicator !== null ? (
                   <span className={styles.resolutionIndicator} aria-hidden="true">{indicator}</span>
                 ) : null}
               </button>
-              {!isLegalScalar ? <IllegalityFeedback illegalReason={option.illegalReason} /> : null}
+              {!isLegalScalar && !isSelected ? <IllegalityFeedback illegalReason={option.illegalReason} /> : null}
             </div>
           );
         })}
@@ -335,7 +336,22 @@ function segmentBreadcrumb(steps: readonly RenderChoiceStep[]): readonly Breadcr
   return segments;
 }
 
+function formatBoundsForDisplay(boundsText: string | null): string | null {
+  if (boundsText === null) {
+    return null;
+  }
+  if (boundsText.includes('-')) {
+    const [min, max] = boundsText.split('-');
+    if (min === '0') {
+      return `up to ${max}`;
+    }
+    return `${min} to ${max}`;
+  }
+  return boundsText;
+}
+
 function ChoiceContextHeader({ context }: { readonly context: RenderChoiceContext }): ReactElement {
+  const humanBounds = formatBoundsForDisplay(context.boundsText);
   return (
     <div className={styles.choiceContextHeader} data-testid="choice-context-header">
       <span className={styles.actionBadge} data-testid="choice-context-action">
@@ -344,9 +360,84 @@ function ChoiceContextHeader({ context }: { readonly context: RenderChoiceContex
       <span className={styles.decisionPrompt} data-testid="choice-context-prompt">
         {context.iterationLabel != null ? `${context.iterationLabel}: ` : ''}
         {context.decisionPrompt}
-        {context.boundsText != null ? ` (${context.boundsText})` : ''}
-        {context.iterationProgress != null ? ` - ${context.iterationProgress}` : ''}
+        {humanBounds != null ? ` (${humanBounds})` : ''}
+        {context.iterationProgress != null ? ` — step ${context.iterationProgress}` : ''}
       </span>
+    </div>
+  );
+}
+
+const MAX_VISIBLE_BREADCRUMB_SEGMENTS = 3;
+
+interface CollapsedBreadcrumbProps {
+  readonly steps: readonly RenderChoiceStep[];
+  readonly totalSteps: number;
+  readonly store: StoreApi<GameStore>;
+  readonly showCurrent: boolean;
+}
+
+function CollapsedBreadcrumb({ steps, totalSteps, store, showCurrent }: CollapsedBreadcrumbProps): ReactElement {
+  const allSegments = segmentBreadcrumb(steps);
+  const shouldCollapse = allSegments.length > MAX_VISIBLE_BREADCRUMB_SEGMENTS;
+  const visibleSegments = shouldCollapse
+    ? allSegments.slice(allSegments.length - MAX_VISIBLE_BREADCRUMB_SEGMENTS)
+    : allSegments;
+
+  return (
+    <div className={styles.breadcrumb} data-testid="choice-breadcrumb">
+      {shouldCollapse ? (
+        <span className={styles.breadcrumbEllipsis} data-testid="choice-breadcrumb-ellipsis" aria-label={`${allSegments.length - MAX_VISIBLE_BREADCRUMB_SEGMENTS} earlier steps hidden`}>
+          ...
+        </span>
+      ) : null}
+      {visibleSegments.map((segment) => {
+        if (segment.kind === 'flat') {
+          return (
+            <button
+              key={`${segment.step.decisionKey}:${segment.step.chosenValueId}`}
+              type="button"
+              className={styles.breadcrumbStep}
+              data-testid={`choice-breadcrumb-step-${segment.originalIndex}`}
+              onClick={() => {
+                void rewindChoiceToBreadcrumb(store, totalSteps, segment.originalIndex);
+              }}
+            >
+              {segment.step.displayName}
+              {segment.step.iterationLabel != null ? ` (${segment.step.iterationLabel})` : ''}
+              : {segment.step.chosenDisplayName}
+            </button>
+          );
+        }
+        {
+          const firstStep = segment.steps[0]?.step;
+          const groupLabel = firstStep?.displayName ?? segment.groupId;
+          return (
+            <div key={segment.groupId} className={styles.breadcrumbGroup} data-testid={`choice-breadcrumb-group-${segment.groupId}`}>
+              <span className={styles.breadcrumbGroupLabel}>{groupLabel} ({segment.steps.length}x)</span>
+              <div className={styles.breadcrumbGroupChildren}>
+                {segment.steps.map(({ step, originalIndex }) => (
+                  <button
+                    key={`${step.decisionKey}:${step.chosenValueId}`}
+                    type="button"
+                    className={styles.breadcrumbStepIndented}
+                    data-testid={`choice-breadcrumb-step-${originalIndex}`}
+                    onClick={() => {
+                      void rewindChoiceToBreadcrumb(store, totalSteps, originalIndex);
+                    }}
+                  >
+                    {step.iterationLabel != null ? `${step.iterationLabel}: ` : ''}{step.chosenDisplayName}
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        }
+      })}
+      {showCurrent ? (
+        <span className={styles.breadcrumbCurrent} data-testid="choice-breadcrumb-current">
+          Current
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -380,55 +471,33 @@ export function ChoicePanel({ store, mode }: ChoicePanelProps): ReactElement | n
   const showConfirm = mode === 'choiceConfirm';
   const showNavigation = mode !== 'choiceInvalid';
 
+  const effectiveContext = useMemo(() => {
+    if (choiceModel.choiceContext == null || choiceUi.kind !== 'discreteMany') {
+      return choiceModel.choiceContext;
+    }
+    const legalCount = choiceUi.options.filter((o) => o.legality !== 'illegal').length;
+    const bounds = deriveMultiSelectBounds(choiceUi.min, choiceUi.max, legalCount);
+    const effectiveBoundsText = bounds.min === 0 && bounds.max === 0
+      ? null
+      : `${bounds.min}${bounds.max === bounds.min ? '' : `-${bounds.max}`}`;
+    if (effectiveBoundsText === choiceModel.choiceContext.boundsText) {
+      return choiceModel.choiceContext;
+    }
+    return { ...choiceModel.choiceContext, boundsText: effectiveBoundsText };
+  }, [choiceModel.choiceContext, choiceUi]);
+
   return (
     <section className={styles.panel} aria-label="Choice panel" data-testid="choice-panel">
-      {choiceModel.choiceContext != null ? (
-        <ChoiceContextHeader context={choiceModel.choiceContext} />
+      {effectiveContext != null ? (
+        <ChoiceContextHeader context={effectiveContext} />
       ) : null}
       {mode !== 'choiceInvalid' ? (
-        <div className={styles.breadcrumb} data-testid="choice-breadcrumb">
-          {segmentBreadcrumb(choiceModel.choiceBreadcrumb).map((segment) => {
-            if (segment.kind === 'flat') {
-              return (
-                <button
-                  key={`${segment.step.decisionKey}:${segment.step.chosenValueId}`}
-                  type="button"
-                  className={styles.breadcrumbStep}
-                  data-testid={`choice-breadcrumb-step-${segment.originalIndex}`}
-                  onClick={() => {
-                    void rewindChoiceToBreadcrumb(store, choiceModel.choiceBreadcrumb.length, segment.originalIndex);
-                  }}
-                >
-                  {segment.step.displayName}: {segment.step.chosenDisplayName}
-                </button>
-              );
-            }
-            return (
-              <div key={segment.groupId} className={styles.breadcrumbGroup} data-testid={`choice-breadcrumb-group-${segment.groupId}`}>
-                <div className={styles.breadcrumbGroupChildren}>
-                  {segment.steps.map(({ step, originalIndex }) => (
-                    <button
-                      key={`${step.decisionKey}:${step.chosenValueId}`}
-                      type="button"
-                      className={styles.breadcrumbStepIndented}
-                      data-testid={`choice-breadcrumb-step-${originalIndex}`}
-                      onClick={() => {
-                        void rewindChoiceToBreadcrumb(store, choiceModel.choiceBreadcrumb.length, originalIndex);
-                      }}
-                    >
-                      {step.iterationLabel != null ? `${step.iterationLabel}: ` : ''}{step.chosenDisplayName}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-          {isPendingChoice ? (
-            <span className={styles.breadcrumbCurrent} data-testid="choice-breadcrumb-current">
-              Current
-            </span>
-          ) : null}
-        </div>
+        <CollapsedBreadcrumb
+          steps={choiceModel.choiceBreadcrumb}
+          totalSteps={choiceModel.choiceBreadcrumb.length}
+          store={store}
+          showCurrent={isPendingChoice && choiceModel.choiceBreadcrumb.length > 0}
+        />
       ) : null}
 
       <div className={styles.body}>

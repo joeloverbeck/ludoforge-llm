@@ -2793,6 +2793,34 @@
                           ],
                           "additionalProperties": false
                         }
+                      },
+                      "outcomeBreakdown": {
+                        "type": "object",
+                        "properties": {
+                          "ready": {
+                            "type": "number"
+                          },
+                          "unknownRandom": {
+                            "type": "number"
+                          },
+                          "unknownHidden": {
+                            "type": "number"
+                          },
+                          "unknownUnresolved": {
+                            "type": "number"
+                          },
+                          "unknownFailed": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "ready",
+                          "unknownRandom",
+                          "unknownHidden",
+                          "unknownUnresolved",
+                          "unknownFailed"
+                        ],
+                        "additionalProperties": false
                       }
                     },
                     "required": [
@@ -2827,6 +2855,42 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "completionStatistics": {
+                    "type": "object",
+                    "properties": {
+                      "totalClassifiedMoves": {
+                        "type": "number"
+                      },
+                      "completedCount": {
+                        "type": "number"
+                      },
+                      "stochasticCount": {
+                        "type": "number"
+                      },
+                      "rejectedNotViable": {
+                        "type": "number"
+                      },
+                      "templateCompletionAttempts": {
+                        "type": "number"
+                      },
+                      "templateCompletionSuccesses": {
+                        "type": "number"
+                      },
+                      "templateCompletionUnsatisfiable": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "totalClassifiedMoves",
+                      "completedCount",
+                      "stochasticCount",
+                      "rejectedNotViable",
+                      "templateCompletionAttempts",
+                      "templateCompletionSuccesses",
+                      "templateCompletionUnsatisfiable"
+                    ],
+                    "additionalProperties": false
                   },
                   "candidates": {
                     "type": "array",
@@ -2908,6 +2972,30 @@
                             ],
                             "additionalProperties": false
                           }
+                        },
+                        "previewOutcome": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "ready"
+                            },
+                            {
+                              "type": "string",
+                              "const": "random"
+                            },
+                            {
+                              "type": "string",
+                              "const": "hidden"
+                            },
+                            {
+                              "type": "string",
+                              "const": "unresolved"
+                            },
+                            {
+                              "type": "string",
+                              "const": "failed"
+                            }
+                          ]
                         }
                       },
                       "required": [

@@ -61,7 +61,14 @@
           "refId": "victoryCurrentMargin.currentMargin.self",
           "reason": "hidden"
         }
-      ]
+      ],
+      "outcomeBreakdown": {
+        "ready": 0,
+        "unknownRandom": 0,
+        "unknownHidden": 18,
+        "unknownUnresolved": 0,
+        "unknownFailed": 0
+      }
     },
     "emergencyFallback": false,
     "failure": null

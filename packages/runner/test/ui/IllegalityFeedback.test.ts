@@ -29,8 +29,8 @@ describe('IllegalityFeedback', () => {
       }),
     );
 
-    expect(nullHtml).toContain('This option is currently unavailable.');
-    expect(blankHtml).toContain('This option is currently unavailable.');
+    expect(nullHtml).toContain('Does not meet current requirements');
+    expect(blankHtml).toContain('Does not meet current requirements');
   });
 
   it('uses role="note" accessibility semantics', () => {

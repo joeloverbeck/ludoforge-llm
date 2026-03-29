@@ -20,7 +20,14 @@
     "previewUsage": {
       "evaluatedCandidateCount": 0,
       "refIds": [],
-      "unknownRefs": []
+      "unknownRefs": [],
+      "outcomeBreakdown": {
+        "ready": 0,
+        "unknownRandom": 0,
+        "unknownHidden": 0,
+        "unknownUnresolved": 0,
+        "unknownFailed": 0
+      }
     },
     "emergencyFallback": false,
     "failure": null

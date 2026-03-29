@@ -16,6 +16,7 @@ import type {
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
 import {
   createPolicyPreviewRuntime,
+  type PolicyPreviewTraceOutcome,
   type PolicyPreviewSurfaceResolution,
 } from './policy-preview.js';
 import {
@@ -56,6 +57,7 @@ export interface PolicyPreviewSurfaceProvider {
     candidate: PolicyRuntimeCandidate,
     ref: CompiledAgentPolicyPreviewSurfaceRef,
   ): PolicyPreviewSurfaceResolution;
+  getOutcome(candidate: PolicyRuntimeCandidate): PolicyPreviewTraceOutcome;
 }
 
 export interface PolicyRuntimeProviders {
@@ -203,6 +205,9 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
     previewSurface: {
       resolveSurface(candidate, ref) {
         return previewRuntime.resolveSurface(candidate, ref);
+      },
+      getOutcome(candidate) {
+        return previewRuntime.getOutcome(candidate);
       },
     },
   };

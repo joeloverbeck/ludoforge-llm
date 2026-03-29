@@ -30,7 +30,7 @@ describe('choice-value-utils', () => {
     });
 
     it('falls back to formatIdAsDisplayName for unknown zone IDs', () => {
-      expect(formatChoiceValueResolved('unknown-zone:none', zonesById)).toBe('Unknown Zone None');
+      expect(formatChoiceValueResolved('unknown-zone:none', zonesById)).toBe('Unknown Zone');
     });
 
     it('resolves an array of zone IDs to comma-separated display names', () => {
@@ -38,7 +38,7 @@ describe('choice-value-utils', () => {
     });
 
     it('mixes resolved and fallback names in arrays', () => {
-      expect(formatChoiceValueResolved(['da-nang:none', 'unknown:none'], zonesById)).toBe('Da Nang, Unknown None');
+      expect(formatChoiceValueResolved(['da-nang:none', 'unknown:none'], zonesById)).toBe('Da Nang, Unknown');
     });
 
     it('passes through numeric values unchanged', () => {
@@ -52,13 +52,13 @@ describe('choice-value-utils', () => {
 
     it('returns the same result as fallback when map is empty', () => {
       const emptyMap = new Map<string, { displayName: string }>();
-      expect(formatChoiceValueResolved('da-nang:none', emptyMap)).toBe('Da Nang None');
+      expect(formatChoiceValueResolved('da-nang:none', emptyMap)).toBe('Da Nang');
     });
   });
 
   describe('formatChoiceValueFallback', () => {
     it('formats scalar string values using id display formatting', () => {
-      expect(formatChoiceValueFallback('table:none')).toBe('Table None');
+      expect(formatChoiceValueFallback('table:none')).toBe('Table');
     });
 
     it('formats booleans and numbers deterministically', () => {
@@ -68,7 +68,7 @@ describe('choice-value-utils', () => {
     });
 
     it('formats arrays deterministically with bracketed entry labels', () => {
-      expect(formatChoiceValueFallback(['table:none', 'token-a'])).toBe('[Table None, Token A]');
+      expect(formatChoiceValueFallback(['table:none', 'token-a'])).toBe('[Table, Token A]');
     });
   });
 });

@@ -152,14 +152,14 @@ describe('parseIterationContext', () => {
     );
 
     expect(result).not.toBeNull();
-    expect(result!.currentEntityDisplayName).toBe('Da Nang None');
+    expect(result!.currentEntityDisplayName).toBe('Da Nang');
   });
 
-  it('searches choice stack in reverse for the most recent array', () => {
+  it('uses depth-based forward scan to match the correct forEach array', () => {
     const choiceStack: readonly PartialChoice[] = [
-      makeChoice('decision:old', 'old-spaces', ['x', 'y']),
+      makeChoice('decision:outer', 'target-spaces', ['alpha', 'beta', 'gamma']),
       makeChoice('decision:scalar', 'action', 'train'),
-      makeChoice('decision:new', 'new-spaces', ['alpha', 'beta', 'gamma']),
+      makeChoice('decision:inner', 'source-spaces', ['x', 'y']),
     ];
     const zones = makeZonesMap(['beta', 'Beta']);
 
@@ -174,6 +174,28 @@ describe('parseIterationContext', () => {
       iterationTotal: 3,
       currentEntityId: 'beta',
       currentEntityDisplayName: 'Beta',
+    });
+  });
+
+  it('uses second array for depth-2 iteration path', () => {
+    const choiceStack: readonly PartialChoice[] = [
+      makeChoice('decision:outer', 'target-spaces', ['alpha', 'beta']),
+      makeChoice('decision:scalar', 'action', 'train'),
+      makeChoice('decision:inner', 'source-spaces', ['x', 'y', 'z']),
+    ];
+    const zones = makeZonesMap(['y', 'Y Zone']);
+
+    const result = parseIterationContext(
+      asDecisionKey('decision:sub::y[0][1]'),
+      choiceStack,
+      zones,
+    );
+
+    expect(result).toEqual({
+      iterationIndex: 1,
+      iterationTotal: 3,
+      currentEntityId: 'y',
+      currentEntityDisplayName: 'Y Zone',
     });
   });
 

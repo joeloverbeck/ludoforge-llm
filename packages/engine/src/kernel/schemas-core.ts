@@ -1196,6 +1196,13 @@ const PolicyCandidateDecisionTraceSchema = z
     scoreContributions: z.array(AgentDecisionScoreContributionSchema).optional(),
     previewRefIds: z.array(StringSchema).optional(),
     unknownPreviewRefs: z.array(PolicyPreviewUnknownRefTraceSchema).optional(),
+    previewOutcome: z.union([
+      z.literal('ready'),
+      z.literal('random'),
+      z.literal('hidden'),
+      z.literal('unresolved'),
+      z.literal('failed'),
+    ]).optional(),
   })
   .strict();
 
@@ -1215,11 +1222,34 @@ const PolicyTieBreakStepTraceSchema = z
   })
   .strict();
 
+const PolicyPreviewOutcomeBreakdownTraceSchema = z
+  .object({
+    ready: NumberSchema,
+    unknownRandom: NumberSchema,
+    unknownHidden: NumberSchema,
+    unknownUnresolved: NumberSchema,
+    unknownFailed: NumberSchema,
+  })
+  .strict();
+
+const PolicyCompletionStatisticsSchema = z
+  .object({
+    totalClassifiedMoves: NumberSchema,
+    completedCount: NumberSchema,
+    stochasticCount: NumberSchema,
+    rejectedNotViable: NumberSchema,
+    templateCompletionAttempts: NumberSchema,
+    templateCompletionSuccesses: NumberSchema,
+    templateCompletionUnsatisfiable: NumberSchema,
+  })
+  .strict();
+
 const PolicyPreviewUsageTraceSchema = z
   .object({
     evaluatedCandidateCount: NumberSchema,
     refIds: z.array(StringSchema),
     unknownRefs: z.array(PolicyPreviewUnknownRefTraceSchema),
+    outcomeBreakdown: PolicyPreviewOutcomeBreakdownTraceSchema.optional(),
   })
   .strict();
 
@@ -1249,6 +1279,7 @@ const AgentDecisionTraceSchema = z.union([
       previewUsage: PolicyPreviewUsageTraceSchema,
       emergencyFallback: BooleanSchema,
       failure: AgentDecisionFailureSummarySchema.nullable(),
+      completionStatistics: PolicyCompletionStatisticsSchema.optional(),
       candidates: z.array(PolicyCandidateDecisionTraceSchema).optional(),
     })
     .strict(),

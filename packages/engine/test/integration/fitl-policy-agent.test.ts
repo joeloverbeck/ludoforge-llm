@@ -135,6 +135,13 @@ describe('FITL policy agent integration', () => {
     assert.deepEqual(result.agentDecision.previewUsage.unknownRefs, [
       { refId: 'victoryCurrentMargin.currentMargin.self', reason: 'hidden' },
     ]);
+    assert.deepEqual(result.agentDecision.previewUsage.outcomeBreakdown, {
+      ready: 0,
+      unknownRandom: 0,
+      unknownHidden: 18,
+      unknownUnresolved: 0,
+      unknownFailed: 0,
+    });
     if (result.agentDecision.candidates === undefined) {
       assert.fail('expected verbose policy candidates');
     }
@@ -142,6 +149,7 @@ describe('FITL policy agent integration', () => {
     const evaluatedNonPassCandidate = result.agentDecision.candidates.find((candidate) => candidate.actionId !== 'pass');
 
     assert.ok(evaluatedNonPassCandidate, 'expected at least one evaluated non-pass candidate');
+    assert.equal(evaluatedNonPassCandidate?.previewOutcome, 'hidden');
     assert.deepEqual(
       evaluatedNonPassCandidate?.unknownPreviewRefs,
       [{ refId: 'victoryCurrentMargin.currentMargin.self', reason: 'hidden' }],

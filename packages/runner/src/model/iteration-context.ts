@@ -9,13 +9,28 @@ export interface IterationContext {
   readonly currentEntityDisplayName: string;
 }
 
-function findIterationArray(
+function countIterationDepth(iterationPath: string): number {
+  let count = 0;
+  for (const char of iterationPath) {
+    if (char === '[') {
+      count += 1;
+    }
+  }
+  return count;
+}
+
+function findIterationArrayByDepth(
   choiceStack: readonly PartialChoice[],
+  depth: number,
 ): readonly MoveParamValue[] | null {
-  for (let i = choiceStack.length - 1; i >= 0; i--) {
+  let arrayCount = 0;
+  for (let i = 0; i < choiceStack.length; i += 1) {
     const entry = choiceStack[i];
     if (entry !== undefined && Array.isArray(entry.value)) {
-      return entry.value as readonly MoveParamValue[];
+      arrayCount += 1;
+      if (arrayCount === depth) {
+        return entry.value as readonly MoveParamValue[];
+      }
     }
   }
   return null;
@@ -68,7 +83,8 @@ export function parseIterationContext(
     return null;
   }
 
-  const iterationArray = findIterationArray(choiceStack);
+  const depth = countIterationDepth(parsedDecisionKey.iterationPath);
+  const iterationArray = findIterationArrayByDepth(choiceStack, depth);
   if (iterationArray === null) {
     return null;
   }

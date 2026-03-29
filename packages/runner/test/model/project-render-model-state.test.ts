@@ -1956,6 +1956,7 @@ describe('projectRenderModel choiceContext', () => {
       },
     });
     const model = deriveModel(state, def, ctx, { visualConfigProvider });
+    expect(model.choiceContext!.decisionLabel).toBe('Target Space');
     expect(model.choiceContext!.decisionPrompt).toBe('Select a space to train in');
   });
 

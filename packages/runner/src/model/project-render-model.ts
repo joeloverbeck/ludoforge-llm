@@ -84,7 +84,7 @@ export function projectRenderModel(
       iterationGroupId: step.iterationGroupId,
       iterationLabel: step.iterationEntityId === null
         ? null
-        : zonesById.get(step.iterationEntityId)?.displayName ?? formatIdAsDisplayName(step.iterationEntityId),
+        : zonesById.get(step.iterationEntityId)?.displayName ?? humanizeDecisionParamName(step.iterationEntityId),
     })),
     choiceContext,
     choiceUi,
@@ -250,18 +250,20 @@ function projectChoiceContext(
 
   const strippedParamName = stripDecisionParamPrefix(choiceContext.decisionParamName);
   const astTail = extractAstParamTail(choiceContext.decisionParamName);
+  const shortLabel = humanizeDecisionParamName(choiceContext.decisionParamName);
+  const configPrompt = visualConfigProvider.getChoicePrompt(choiceContext.selectedActionId, strippedParamName)
+    ?? (astTail !== null ? visualConfigProvider.getChoicePrompt(choiceContext.selectedActionId, astTail) : null);
 
   return {
     actionDisplayName: visualConfigProvider.getActionDisplayName(choiceContext.selectedActionId)
       ?? formatIdAsDisplayName(choiceContext.selectedActionId),
-    decisionPrompt: visualConfigProvider.getChoicePrompt(choiceContext.selectedActionId, strippedParamName)
-      ?? (astTail !== null ? visualConfigProvider.getChoicePrompt(choiceContext.selectedActionId, astTail) : null)
-      ?? humanizeDecisionParamName(choiceContext.decisionParamName),
+    decisionLabel: shortLabel,
+    decisionPrompt: configPrompt,
     decisionParamName: choiceContext.decisionParamName,
     boundsText,
     iterationLabel: choiceContext.iterationEntityId === null
       ? null
-      : zonesById.get(choiceContext.iterationEntityId)?.displayName ?? formatIdAsDisplayName(choiceContext.iterationEntityId),
+      : zonesById.get(choiceContext.iterationEntityId)?.displayName ?? humanizeDecisionParamName(choiceContext.iterationEntityId),
     iterationProgress: choiceContext.iterationIndex === null || choiceContext.iterationTotal === null
       ? null
       : `${choiceContext.iterationIndex + 1} of ${choiceContext.iterationTotal}`,

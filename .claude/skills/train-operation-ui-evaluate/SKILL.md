@@ -16,7 +16,8 @@ Score the current UI state from screenshots and append a structured evaluation t
 5. Score all 6 metrics (1-10) with brief justification per metric
 6. Compute score deltas from the previous evaluation
 7. Write prioritized recommendations tagged CRITICAL / HIGH / MEDIUM / LOW
-8. Append the complete evaluation section to `reports/ui-readability-evaluation.md`
+8. Flag recurring issues — note how many consecutive evaluations each issue has persisted
+9. Append the complete evaluation section to `reports/ui-readability-evaluation.md`
 
 ## Evaluation Template
 
@@ -52,7 +53,7 @@ Append exactly this structure:
 
 ### Prioritized Recommendations
 
-1. **[CRITICAL]** ...
+1. **[CRITICAL]** ... *(Recurring: N consecutive evaluations)*
 2. **[HIGH]** ...
 3. **[MEDIUM]** ...
 4. **[LOW]** ...
@@ -75,3 +76,13 @@ Append exactly this structure:
 - Cramped layout where breadcrumbs dominate over the actual decision
 - Unclear selection ranges (e.g., `(0-3)` without context)
 - Visual clutter competing with the primary decision
+- **Duplicated label prefixes** — e.g., "Target Spaces: Target Spaces: ..." indicates the label is being added in two places (render model and UI component)
+- **Regressions** — issues that were absent in previous evaluations but appeared after recent changes
+
+## Recurring Issue Tracking
+
+When writing recommendations, check prior evaluations to determine if each issue is new or recurring:
+- If an issue appeared in the previous evaluation, note it as "Recurring: N consecutive evaluations"
+- Issues persisting for 3+ evaluations should be escalated in priority (e.g., HIGH -> CRITICAL)
+- New regressions (issues not present in the previous evaluation) should be called out explicitly as regressions
+- If a previously reported issue is now resolved, note this in the screenshot analysis as positive progress

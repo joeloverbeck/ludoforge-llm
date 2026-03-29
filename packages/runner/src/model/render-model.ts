@@ -38,7 +38,8 @@ export interface RenderRuntimeEligibleFaction {
 
 export interface RenderChoiceContext {
   readonly actionDisplayName: string;
-  readonly decisionPrompt: string;
+  readonly decisionLabel: string;
+  readonly decisionPrompt: string | null;
   readonly decisionParamName: string;
   readonly boundsText: string | null;
   readonly iterationLabel: string | null;

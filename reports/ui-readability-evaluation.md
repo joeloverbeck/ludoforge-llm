@@ -432,3 +432,161 @@ N/A (baseline evaluation)
 4. **[LOW] Investigate the dark rectangle overlay.** The semi-transparent dark rectangle overlapping the map canvas behind the choice panel persists across all five evaluations. Not blocking functionality but adds visual noise. Likely a z-index or background layer issue.
 
 5. **[LOW] Consider a contextual subtitle on deeper decision screens.** A one-line subtitle on screenshots 4-5 like "Placing Irregular troops in Binh Dinh" would reinforce what the player is doing within the broader Train operation. Carried from Eval #4.
+
+---
+
+## EVALUATION #6
+
+**Date**: 2026-03-29
+**Screenshots analyzed**: fitl-train-1.png through fitl-train-5.png
+
+### Screenshot Analysis
+
+#### fitl-train-1.png — Initial Target Space Selection (Empty)
+**What's shown**: The Train choice panel at the start. Player must select target spaces for training. No spaces selected. Six zone checkbox buttons displayed.
+**Issues observed**:
+- Prompt reads "Target Spaces: Select spaces to train in (1 to 6)" — human-readable, with a clean "Target Spaces:" label prefix followed by a natural language description. Good.
+- Counter reads "Selected: 0 of 1 to 6" — harmonized format, consistent with prompt.
+- No lone "Current" badge on the first screen — clean.
+- The dark semi-transparent rectangle overlay on the map canvas persists behind the panel — same artifact as Eval #1-5.
+- "Confirm selection" correctly grayed out, "Back" grayed out, "Cancel" active.
+- Zone names are clean and readable.
+
+#### fitl-train-2.png — Target Space Selection (3 Selected)
+**What's shown**: Player has selected 3 spaces (Binh Dinh, Da Nang, Pleiku Darlac). Selected options show blue checkmarks with solid blue borders. Unselected options appear lighter.
+**Issues observed**:
+- Prompt dynamically updated to "Target Spaces: Select spaces to train in (1 to 3)" — correct range constraint.
+- Counter reads "Selected: 3 of 1 to 3" — harmonized and consistent.
+- No misleading error messages under selected options — clean.
+- **Strikethrough styling is GONE.** Selected options now display with blue checkmarks and solid blue-tinted borders — a proper "selected" visual signal. This directly fixes Eval #5's HIGH #2 recommendation. The semantic confusion of strikethrough-as-selection is eliminated.
+- Unselected options (Kontum, Quang Tri, Saigon) appear lighter/dimmed. The distinction is clearer now that selected options use positive visual indicators (checkmarks, blue borders) rather than the contradictory strikethrough.
+
+#### fitl-train-3.png — Train Sub-Choice (Place Irregulars vs Place At Base)
+**What's shown**: Binary choice between "Place Irregulars" and "Place At Base" after selecting target spaces.
+**Issues observed**:
+- Prompt reads "Train Choice: How do you want to train?" — natural language with a readable label prefix.
+- Breadcrumb now shows a group header "Target Spaces (1x)" above the "Target Spaces: Binh Dinh, Da Nang, Pleiku Darlac" pill, with a "Current" badge. The "(1x)" multiplicity indicator is new — it tells the player this was a single-step selection.
+- Both option buttons are well-labeled and clear.
+- Panel is compact and well-organized. This screen remains the best in the sequence.
+
+#### fitl-train-4.png — Deep Nested Choice (Source Spaces in forEach)
+**What's shown**: Inside a forEach loop, player selects source spaces (up to 3) for reinforcements.
+**Issues observed**:
+- The prompt shows the raw AST path prefix followed by the human-readable description: "Macro Place From Available Or Map Action Pipelines 0 Stages 1 Effects 0 For Each Effects 1 If Then 0 Source Spaces: Select source spaces for reinforcements (up to 3)". The human-readable part IS present after the colon, but the catastrophic AST prefix has resurfaced. This is a regression from Eval #3-5 which reported this as eliminated.
+- Breadcrumb now shows grouped headers: "Target Spaces (1x)" and "Train Choice (3x)" with their respective pills. The "(3x)" multiplicity indicator provides some forEach iteration context — the player can see that "Train Choice" had 3 iterations. However, individual entries still read "Train Choice: Place Irregulars", "Train Choice: Place At Base", "Train Choice: Place Irregulars" without identifying which target space each iteration corresponds to.
+- Counter reads "Selected: 0 of up to 3" — harmonized format.
+- Zone options (Binh Dinh, Pleiku Darlac, Quang Tri) are clean.
+
+#### fitl-train-5.png — Deepest Nested Choice (Sub-Action Spaces)
+**What's shown**: Deepest nesting level. Player selects additional space for the current action (up to 1).
+**Issues observed**:
+- Prompt reads "Sub Action Spaces: Select additional space for this action (up to 1)" — the human description is good but the "Sub Action Spaces:" prefix is internal jargon. Not catastrophic like the AST path but not player-friendly either.
+- Breadcrumb shows grouped headers: "Target Spaces (1x)" → pill, "Train Choice (3x)" → 3 pills, "Source Spaces (1x)" → pill containing the full AST path with values: "Macro Place From Available Or Map Action Pipelines 0 Stages 1 Effects 0 For Each Effects 1 If Then 0 Source Spaces: Binh Dinh, Pleiku Darlac, Quang Tri". This AST path in the breadcrumb pill is a regression — Eval #3 reported it replaced with a clean "Source Spaces: ..." label.
+- Zone options (Binh Dinh, Da Nang, Pleiku Darlac) are clean.
+- Counter reads "Selected: 0 of up to 1" — harmonized.
+
+### Scores
+
+| # | Metric | Score | Previous | Delta | Justification |
+|---|--------|-------|----------|-------|---------------|
+| 1 | Decision Prompt Clarity | 6 | 8 | -2 | Screenshots 1-3 remain human-readable with clean label prefixes. However, screenshot 4 shows the raw AST path prefix has resurfaced: "Macro Place From Available Or Map...Source Spaces: Select source spaces for reinforcements (up to 3)". The human description is present after the colon, but the AST prefix is catastrophically long. Screenshot 5 uses internal jargon "Sub Action Spaces:" — not ideal but tolerable. The AST path regression is significant. |
+| 2 | Option Legibility | 8 | 7 | +1 | Strikethrough styling on selected options is eliminated — replaced with blue checkmarks and solid borders, a proper positive selection indicator. This directly fixes Eval #5's HIGH #2. Zone names clean, no "None" suffix, action names clear. |
+| 3 | Breadcrumb Navigability | 5 | 6 | -1 | New group multiplicity indicators "(1x)", "(3x)" provide partial forEach context — a step forward. However, the raw AST path has reappeared inside the Source Spaces breadcrumb pill in screenshot 5: "Macro Place From Available...Source Spaces: Binh Dinh, Pleiku Darlac, Quang Tri". Individual Train Choice entries still lack target-space identification (which iteration = which space?). Net regression due to AST path resurfacing. |
+| 4 | Error Communication | 7 | 7 | 0 | No misleading errors. Range format harmonized and consistent. Unchanged from Eval #4-5. |
+| 5 | Information Density | 7 | 8 | -1 | Screenshot 4's prompt is dominated by the long AST path prefix, consuming significant horizontal space. The AST path in the breadcrumb pill (screenshot 5) also wastes space. Other screens remain clean and well-spaced. |
+| 6 | Visual Hierarchy | 7 | 7 | 0 | Selected option styling is improved with proper checkmarks — the visual flow for screenshots 1-3 is strong. The AST path text in screenshot 4 competes for attention, but the "Train" badge and human-readable suffix still provide some orientation. Net neutral — selection styling improvement offsets AST path regression. |
+| | **Average** | **6.7** | **7.2** | **-0.5** | |
+
+### Prioritized Recommendations
+
+1. **[CRITICAL] Strip the raw AST path prefix from the screenshot 4 prompt.** The prompt "Macro Place From Available Or Map Action Pipelines 0 Stages 1 Effects 0 For Each Effects 1 If Then 0 Source Spaces: Select source spaces for reinforcements (up to 3)" has the human description appended after the colon — the fix is partially applied. The remaining task is to suppress the AST prefix entirely, showing only "Source Spaces: Select source spaces for reinforcements (up to 3)" or just "Select source spaces for reinforcements (up to 3)". This was reported fixed in Eval #3 but has regressed. The prompt label resolution logic needs to handle macro-generated decision nodes that lack explicit `displayName` overrides.
+
+2. **[CRITICAL] Strip the raw AST path from the Source Spaces breadcrumb pill.** In screenshot 5, the breadcrumb pill reads "Macro Place From Available Or Map...Source Spaces: Binh Dinh, Pleiku Darlac, Quang Tri". This should display only "Source Spaces: Binh Dinh, Pleiku Darlac, Quang Tri". The same label resolution fix needed for recommendation #1 should also clean up breadcrumb entries.
+
+3. **[HIGH] Add forEach iteration context to breadcrumbs.** The "(3x)" group multiplicity indicator is a welcome addition but doesn't tell the player WHICH iteration they're on or WHICH target space is being processed. Individual entries still read "Train Choice: Place Irregulars" without context like "Binh Dinh (1/3): Place Irregulars". This has been the top remaining issue since Eval #3 — five evaluations running.
+
+4. **[MEDIUM] Replace "Sub Action Spaces:" prompt prefix with a player-friendly label.** Screenshot 5's prompt "Sub Action Spaces: Select additional space for this action (up to 1)" uses internal terminology in the label prefix. Consider "Additional Space:" or simply dropping the label and showing only the description.
+
+5. **[LOW] Investigate the dark rectangle overlay.** The semi-transparent dark rectangle overlapping the map canvas behind the choice panel persists across all six evaluations. Not blocking functionality but adds visual noise.
+
+6. **[LOW] Strengthen visual distinction for unavailable options.** In screenshot 2, unselected options are subtly lighter. The improved selected-state styling (blue checkmarks) makes the distinction clearer than before, but stronger dimming or a muted unavailability indicator would help at-a-glance scanning.
+
+---
+
+## EVALUATION #7
+
+**Date**: 2026-03-29
+**Screenshots analyzed**: fitl-train-1.png through fitl-train-5.png
+
+### Screenshot Analysis
+
+#### fitl-train-1.png — Initial Target Space Selection (Empty)
+**What's shown**: The Train choice panel at the start. Player must select target spaces for training. No spaces selected. Six zone checkbox buttons displayed.
+**Issues observed**:
+- Prompt reads "Target Spaces: Target Spaces: Select spaces to train in (1 to 6)" — the label prefix "Target Spaces:" is **duplicated**. This is a new regression not present in any previous evaluation. The human-readable description is intact after the second colon, but the doubled label is visually noisy and looks like a bug.
+- Counter reads "Selected: 0 of 1 to 6" — harmonized format, consistent.
+- No lone "Current" badge — clean.
+- The dark semi-transparent rectangle overlay on the map canvas persists behind the panel.
+- "Confirm selection" correctly grayed out, "Back" grayed out, "Cancel" active.
+- Zone names clean and readable.
+
+#### fitl-train-2.png — Target Space Selection (3 Selected)
+**What's shown**: Player has selected 3 spaces (Binh Dinh, Da Nang, Pleiku Darlac). Selected options show blue checkmarks with solid blue borders. Unselected options appear lighter.
+**Issues observed**:
+- Prompt reads "Target Spaces: Target Spaces: Select spaces to train in (1 to 3)" — same duplicated label prefix as screenshot 1.
+- Counter reads "Selected: 3 of 1 to 3" — harmonized and consistent.
+- No misleading error messages under selected options — clean.
+- Selected option styling with blue checkmarks and solid borders is maintained from Eval #6 — proper positive selection indicators.
+- Unselected options (Kontum, Quang Tri, Saigon) appear lighter/dimmed. The distinction is adequate given the strong selected-state styling.
+- "Confirm selection" button is active.
+
+#### fitl-train-3.png — Train Sub-Choice (Place Irregulars vs Place At Base)
+**What's shown**: Binary choice between "Place Irregulars" and "Place At Base" after selecting target spaces.
+**Issues observed**:
+- Prompt reads "Train Choice: Train Choice: How do you want to train?" — **duplicated** "Train Choice:" label prefix. Same pattern as screenshots 1-2.
+- Breadcrumb shows "Target Spaces (1x)" group header with "Target Spaces: Binh Dinh, Da Nang, Pleiku Darlac" pill and "Current" badge — clean and informative.
+- Both option buttons well-labeled and clear.
+- Panel is compact and organized. This screen would be fully resolved if not for the duplicated prompt prefix.
+
+#### fitl-train-4.png — Deep Nested Choice (Source Spaces in forEach)
+**What's shown**: Inside a forEach loop, player selects source spaces (up to 3) for reinforcements.
+**Issues observed**:
+- Prompt reads "Macro Place From Available Or Map Action Pipelines 0 Stages 1 Effects 0 For Each Effects 1 If Then 0 Source Spaces: Source Spaces: Select source spaces for reinforcements (up to 3)". Two problems compound: (1) the raw AST path prefix persists from Eval #6, and (2) "Source Spaces:" is duplicated after the AST path, producing "...Source Spaces: Source Spaces: Select...".
+- Breadcrumb shows "Target Spaces (1x)" and "Train Choice (3x)" group headers with pills: "Train Choice: Place Irregulars", "Train Choice: Place At Base", "Train Choice: Place Irregulars", and "Current" badge. The "(3x)" multiplicity indicator provides partial forEach context but individual entries still don't identify which target space each iteration corresponds to.
+- Counter reads "Selected: 0 of up to 3" — harmonized.
+- Zone options (Binh Dinh, Pleiku Darlac, Quang Tri) are clean.
+
+#### fitl-train-5.png — Deepest Nested Choice (Sub-Action Spaces)
+**What's shown**: Deepest nesting level. Player selects additional space for the current action (up to 1).
+**Issues observed**:
+- Prompt reads "Sub Action Spaces: Sub Action Spaces: Select additional space for this action (up to 1)" — duplicated label prefix, same pattern as all other screens.
+- Breadcrumb shows "Target Spaces (1x)" pill, "Train Choice (3x)" pills, "Source Spaces (1x)" with a pill still containing the full AST path: "Macro Place From Available Or Map Action Pipelines 0 Stages 1 Effects 0 For Each Effects 1 If Then 0 Source Spaces: Binh Dinh, Pleiku Darlac, Quang Tri". This AST path in the breadcrumb is unchanged from Eval #6.
+- Counter reads "Selected: 0 of up to 1" — harmonized.
+- Zone options (Binh Dinh, Da Nang, Pleiku Darlac) are clean.
+- The overall panel is cramped at this deepest level — breadcrumb pills span most of the width.
+
+### Scores
+
+| # | Metric | Score | Previous | Delta | Justification |
+|---|--------|-------|----------|-------|---------------|
+| 1 | Decision Prompt Clarity | 5 | 6 | -1 | All 5 screens now show duplicated label prefixes ("Target Spaces: Target Spaces:", "Train Choice: Train Choice:", "Sub Action Spaces: Sub Action Spaces:") — a new regression. The human-readable descriptions after the duplication remain good, but the doubled labels look buggy and reduce clarity. Screenshot 4 still has the raw AST path prefix compounding the issue. |
+| 2 | Option Legibility | 8 | 8 | 0 | Blue checkmark selection styling maintained. Zone names clean, action names clear. No "None" suffixes. No misleading errors. Unchanged from Eval #6. |
+| 3 | Breadcrumb Navigability | 5 | 5 | 0 | Group multiplicity indicators "(1x)", "(3x)" still present. Raw AST path still appears in the Source Spaces breadcrumb pill (screenshot 5). forEach iteration context still absent — individual "Train Choice" entries don't identify target spaces. No change from Eval #6. |
+| 4 | Error Communication | 7 | 7 | 0 | No misleading errors. Range format harmonized. Unchanged. |
+| 5 | Information Density | 6 | 7 | -1 | The duplicated label prefixes waste horizontal space on every screen. Screenshot 4 is particularly dense with AST path + duplicated "Source Spaces:" + description all on one line. The breadcrumb AST path pill in screenshot 5 continues to consume space. |
+| 6 | Visual Hierarchy | 6 | 7 | -1 | The duplicated prefixes introduce visual stuttering — the eye reads "Target Spaces: Target Spaces:" and has to re-parse to find the actual description. This disrupts the clean prompt → options → buttons flow that was established in Eval #3-5. Selection styling remains good. |
+| | **Average** | **6.2** | **6.7** | **-0.5** | |
+
+### Prioritized Recommendations
+
+1. **[CRITICAL] Fix the duplicated label prefix in all prompts.** Every screen now shows "Label: Label: description" (e.g., "Target Spaces: Target Spaces: Select spaces to train in"). This is a new regression — likely the label is being prepended both by the render model's prompt formatting AND by the ChoicePanel display logic. The fix should ensure the label prefix appears exactly once. Check `project-render-model.ts` and `ChoicePanel.tsx` for where the prompt string is assembled — the label is probably concatenated in two places.
+
+2. **[CRITICAL] Strip the raw AST path prefix from the screenshot 4 prompt and screenshot 5 breadcrumb.** This has been reported as CRITICAL since Eval #1. Screenshot 4 shows "Macro Place From Available Or Map...Source Spaces: Source Spaces: Select source spaces for reinforcements (up to 3)" — both the AST path and the duplication are present. Screenshot 5's breadcrumb pill contains the same AST path. The label resolution logic for macro-generated decision nodes still falls through to the raw path.
+
+3. **[HIGH] Add forEach iteration context to breadcrumbs.** This has been the top remaining structural issue since Eval #3 — five consecutive evaluations. The "(3x)" multiplicity indicator helps but individual "Train Choice" entries need to show which target space they correspond to (e.g., "Binh Dinh: Place Irregulars (1/3)").
+
+4. **[MEDIUM] Replace "Sub Action Spaces:" prompt prefix with player-friendly language.** Screenshot 5 shows "Sub Action Spaces: Sub Action Spaces: ..." — even once the duplication is fixed, "Sub Action Spaces" is internal jargon. A contextual label like "Additional Space:" would be clearer.
+
+5. **[LOW] Investigate the dark rectangle overlay.** Persists across all seven evaluations. Not blocking but adds visual noise.
+
+6. **[LOW] Strengthen visual distinction for unavailable options.** Unselected options in screenshot 2 are subtly lighter. The strong selected-state styling makes this less urgent, but stronger dimming would help at-a-glance scanning.

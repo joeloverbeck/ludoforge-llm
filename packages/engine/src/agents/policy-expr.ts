@@ -12,6 +12,7 @@ import type {
 } from '../kernel/types.js';
 import type { GameSpecPolicyExpr } from '../cnl/game-spec-doc.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from '../cnl/compiler-diagnostic-codes.js';
+import { isAgentPolicyZoneTokenAggOwner } from '../contracts/index.js';
 
 export type InternalPolicyValueType = AgentPolicyValueType | 'unknown';
 
@@ -839,13 +840,13 @@ function analyzeZoneTokenAggOperator(
   const owner = obj['owner'];
   const prop = obj['prop'];
   const op = obj['op'];
-  if (typeof owner !== 'string' || owner.length === 0) {
+  if (typeof owner !== 'string' || !isAgentPolicyZoneTokenAggOwner(owner)) {
     diagnostics.push({
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
       path: `${path}.zoneTokenAgg.owner`,
       severity: 'error',
-      message: 'zoneTokenAgg.owner must be "self", "active", "none", or a literal seat id.',
-      suggestion: 'Set owner to "self" for the acting player\'s zone.',
+      message: 'zoneTokenAgg.owner must be "self", "active", "none", or a numeric runtime player id.',
+      suggestion: 'Set owner to "self", "active", "none", or a numeric player id such as "0".',
     });
     return null;
   }

@@ -2,6 +2,11 @@ import { fingerprintPolicyIr } from '../agents/policy-ir.js';
 import { parseAuthoredPolicySurfaceRef } from '../agents/policy-surface.js';
 import { analyzePolicyExpr, type AnalyzePolicyExprContext, type ResolvedPolicyRef } from '../agents/policy-expr.js';
 import type { Diagnostic } from '../kernel/diagnostics.js';
+import {
+  AGENT_POLICY_PROFILE_USE_BUCKETS,
+  AGENT_POLICY_PROFILE_USE_TO_LIBRARY_BUCKET,
+  isAgentPolicyCompletionGuidanceFallback,
+} from '../contracts/index.js';
 import { collectChoiceBindingSpecs } from '../kernel/move-runtime-bindings.js';
 import { inferQueryRuntimeShapes } from '../kernel/query-shape-inference.js';
 import type {
@@ -568,18 +573,18 @@ function lowerProfile(
     hasError = true;
   }
 
-  const use = {
-    pruningRules: lowerProfileUseIds(profileId, 'pruningRules', profileDef.use.pruningRules, authoredLibrary?.pruningRules, diagnostics),
-    scoreTerms: lowerProfileUseIds(profileId, 'scoreTerms', profileDef.use.scoreTerms, authoredLibrary?.scoreTerms, diagnostics),
-    completionScoreTerms: lowerProfileUseIds(
-      profileId,
-      'completionScoreTerms',
-      profileDef.use.completionScoreTerms,
-      authoredLibrary?.completionScoreTerms,
-      diagnostics,
-    ),
-    tieBreakers: lowerProfileUseIds(profileId, 'tieBreakers', profileDef.use.tieBreakers, authoredLibrary?.tieBreakers, diagnostics),
-  } satisfies CompiledAgentProfile['use'];
+  const use = Object.fromEntries(
+    AGENT_POLICY_PROFILE_USE_BUCKETS.map((key) => [
+      key,
+      lowerProfileUseIds(
+        profileId,
+        key,
+        profileDef.use[key],
+        authoredLibrary?.[AGENT_POLICY_PROFILE_USE_TO_LIBRARY_BUCKET[key]],
+        diagnostics,
+      ),
+    ]),
+  ) as CompiledAgentProfile['use'];
   const completionGuidance = lowerCompletionGuidance(profileId, profileDef, diagnostics);
   if (completionGuidance === null) {
     hasError = true;
@@ -653,7 +658,7 @@ function lowerCompletionGuidance(
   const path = `doc.agents.profiles.${profileId}.completionGuidance`;
   const enabled = authored.enabled ?? false;
   const fallback = authored.fallback ?? 'random';
-  if (fallback !== 'random' && fallback !== 'first') {
+  if (!isAgentPolicyCompletionGuidanceFallback(fallback)) {
     diagnostics.push({
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
       path: `${path}.fallback`,

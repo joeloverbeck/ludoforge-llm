@@ -245,6 +245,27 @@ describe('policy-expr analysis', () => {
     assert.equal(analysis?.costClass, 'state');
   });
 
+  it('accepts numeric runtime player ids for zoneTokenAgg owners', () => {
+    const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
+    const analysis = analyzePolicyExpr(
+      {
+        zoneTokenAgg: {
+          zone: 'frontier',
+          owner: '0',
+          prop: 'rank',
+          op: 'sum',
+        },
+      },
+      createContext(),
+      diagnostics,
+      'expr',
+    );
+
+    assert.deepEqual(diagnostics, []);
+    assert.equal(analysis?.expr.kind, 'zoneTokenAgg');
+    assert.equal(analysis?.expr.kind === 'zoneTokenAgg' ? analysis.expr.owner : null, '0');
+  });
+
   it('rejects dynamic zoneTokenAgg zones that do not resolve to ids', () => {
     const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
     const analysis = analyzePolicyExpr(
@@ -267,5 +288,27 @@ describe('policy-expr analysis', () => {
         diagnostic.code === 'CNL_COMPILER_AGENT_POLICY_TYPE_INVALID'
         && diagnostic.path === 'expr.zoneTokenAgg.zone'),
     );
+  });
+
+  it('rejects seat ids for zoneTokenAgg owners', () => {
+    const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
+    const analysis = analyzePolicyExpr(
+      {
+        zoneTokenAgg: {
+          zone: 'frontier',
+          owner: 'us',
+          prop: 'rank',
+          op: 'sum',
+        },
+      },
+      createContext(),
+      diagnostics,
+      'expr',
+    );
+
+    assert.equal(analysis, null);
+    assert.ok(diagnostics.some((diagnostic) =>
+      diagnostic.path === 'expr.zoneTokenAgg.owner'
+      && diagnostic.message.includes('numeric runtime player id')));
   });
 });

@@ -1,4 +1,5 @@
 import { asPlayerId, type PlayerId } from '../kernel/branded.js';
+import type { AgentPolicyZoneTokenAggOwner } from '../contracts/index.js';
 import { toOwnedZoneId } from '../kernel/zone-address.js';
 import type {
   AgentParameterValue,
@@ -59,7 +60,10 @@ export interface CreatePolicyEvaluationContextInput {
   };
 }
 
-function resolveZoneTokenAggOwner(owner: string, input: CreatePolicyEvaluationContextInput): 'none' | PlayerId | undefined {
+function resolveZoneTokenAggOwner(
+  owner: AgentPolicyZoneTokenAggOwner,
+  input: CreatePolicyEvaluationContextInput,
+): 'none' | PlayerId | undefined {
   if (owner === 'self') {
     return input.playerId;
   }

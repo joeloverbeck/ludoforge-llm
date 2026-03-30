@@ -317,6 +317,155 @@ describe('top-level runtime schemas', () => {
     assert.equal(result.success, true);
   });
 
+  it('accepts candidateIntrinsic.paramCount in compiled policy catalogs', () => {
+    const result = GameDefSchema.safeParse({
+      ...minimalGameDef,
+      agents: {
+        schemaVersion: 2,
+        catalogFingerprint: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+        surfaceVisibility: {
+          globalVars: {},
+          perPlayerVars: {},
+          derivedMetrics: {},
+          victory: {
+            currentMargin: {
+              current: 'hidden',
+              preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+            },
+            currentRank: {
+              current: 'hidden',
+              preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+            },
+          },
+        },
+        parameterDefs: {},
+        candidateParamDefs: {},
+        library: {
+          stateFeatures: {},
+          candidateFeatures: {
+            paramLoad: {
+              type: 'number',
+              costClass: 'candidate',
+              expr: {
+                kind: 'ref',
+                ref: { kind: 'candidateIntrinsic', intrinsic: 'paramCount' },
+              },
+              dependencies: {
+                parameters: [],
+                stateFeatures: [],
+                candidateFeatures: [],
+                aggregates: [],
+              },
+            },
+          },
+          candidateAggregates: {},
+          pruningRules: {},
+          scoreTerms: {},
+          completionScoreTerms: {},
+          tieBreakers: {},
+        },
+        profiles: {
+          baseline: {
+            fingerprint: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
+            params: {},
+            use: {
+              pruningRules: [],
+              scoreTerms: [],
+              completionScoreTerms: [],
+              tieBreakers: [],
+            },
+            plan: {
+              stateFeatures: [],
+              candidateFeatures: [],
+              candidateAggregates: [],
+            },
+          },
+        },
+        bindingsBySeat: {
+          us: 'baseline',
+        },
+      },
+    });
+
+    assert.equal(result.success, true);
+  });
+
+  it('rejects compiled zoneTokenAgg owners that use seat ids', () => {
+    const result = GameDefSchema.safeParse({
+      ...minimalGameDef,
+      agents: {
+        schemaVersion: 2,
+        catalogFingerprint: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+        surfaceVisibility: {
+          globalVars: {},
+          perPlayerVars: {},
+          derivedMetrics: {},
+          victory: {
+            currentMargin: {
+              current: 'hidden',
+              preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+            },
+            currentRank: {
+              current: 'hidden',
+              preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+            },
+          },
+        },
+        parameterDefs: {},
+        candidateParamDefs: {},
+        library: {
+          stateFeatures: {},
+          candidateFeatures: {
+            invalidOwner: {
+              type: 'number',
+              costClass: 'candidate',
+              expr: {
+                kind: 'zoneTokenAgg',
+                zone: 'frontier',
+                owner: 'us',
+                prop: 'strength',
+                aggOp: 'sum',
+              },
+              dependencies: {
+                parameters: [],
+                stateFeatures: [],
+                candidateFeatures: [],
+                aggregates: [],
+              },
+            },
+          },
+          candidateAggregates: {},
+          pruningRules: {},
+          scoreTerms: {},
+          completionScoreTerms: {},
+          tieBreakers: {},
+        },
+        profiles: {
+          baseline: {
+            fingerprint: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
+            params: {},
+            use: {
+              pruningRules: [],
+              scoreTerms: [],
+              completionScoreTerms: [],
+              tieBreakers: [],
+            },
+            plan: {
+              stateFeatures: [],
+              candidateFeatures: [],
+              candidateAggregates: [],
+            },
+          },
+        },
+        bindingsBySeat: {
+          us: 'baseline',
+        },
+      },
+    });
+
+    assert.equal(result.success, false);
+  });
+
   it('rejects legacy compiled agent expr string-ref shapes', () => {
     const result = GameDefSchema.safeParse({
       ...minimalGameDef,

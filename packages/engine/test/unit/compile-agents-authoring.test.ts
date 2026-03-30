@@ -601,6 +601,59 @@ describe('agents authoring surface', () => {
     });
   });
 
+  it('lowers candidate.paramCount refs through the shared candidate intrinsic contract', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: {
+        visibility: createVisibility(),
+        parameters: {},
+        library: {
+          candidateFeatures: {
+            paramLoad: {
+              type: 'number',
+              expr: { ref: 'candidate.paramCount' },
+            },
+          },
+          scoreTerms: {
+            rewardLoadedMoves: {
+              weight: 1,
+              value: { ref: 'feature.paramLoad' },
+            },
+          },
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              scoreTerms: ['rewardLoadedMoves'],
+              completionScoreTerms: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      },
+    });
+
+    assert.equal(result.gameDef === null, false);
+    assert.equal(result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
+    const paramLoad = result.gameDef?.agents?.library.candidateFeatures.paramLoad;
+    assert.ok(paramLoad !== undefined);
+    assert.deepEqual(paramLoad.expr, {
+      kind: 'ref',
+      ref: { kind: 'candidateIntrinsic', intrinsic: 'paramCount' },
+    });
+  });
+
   it('rejects invalid completion guidance fallback values', () => {
     const result = compileGameSpecToGameDef({
       ...createCompileReadyDoc(),

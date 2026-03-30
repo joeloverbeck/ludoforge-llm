@@ -1,4 +1,11 @@
 import { z } from 'zod';
+import {
+  AGENT_POLICY_CANDIDATE_INTRINSICS,
+  AGENT_POLICY_COMPLETION_GUIDANCE_FALLBACKS,
+  AGENT_POLICY_DECISION_INTRINSICS,
+  AGENT_POLICY_OPTION_INTRINSICS,
+  AGENT_POLICY_ZONE_TOKEN_AGG_OWNER_KEYWORDS,
+} from '../contracts/index.js';
 import { DegeneracyFlag } from './diagnostics.js';
 import { TRACE_SCOPED_VAR_SCOPES, createScopedVarContractSchema } from './scoped-var-contract.js';
 import {
@@ -612,7 +619,7 @@ const CompiledAgentPolicyRefSchema = z.union([
   }).strict(),
   z.object({
     kind: z.literal('candidateIntrinsic'),
-    intrinsic: z.union([z.literal('actionId'), z.literal('stableMoveKey'), z.literal('isPass'), z.literal('paramCount')]),
+    intrinsic: z.enum(AGENT_POLICY_CANDIDATE_INTRINSICS),
   }).strict(),
   z.object({
     kind: z.literal('candidateParam'),
@@ -620,11 +627,11 @@ const CompiledAgentPolicyRefSchema = z.union([
   }).strict(),
   z.object({
     kind: z.literal('decisionIntrinsic'),
-    intrinsic: z.union([z.literal('type'), z.literal('name'), z.literal('targetKind'), z.literal('optionCount')]),
+    intrinsic: z.enum(AGENT_POLICY_DECISION_INTRINSICS),
   }).strict(),
   z.object({
     kind: z.literal('optionIntrinsic'),
-    intrinsic: z.literal('value'),
+    intrinsic: z.enum(AGENT_POLICY_OPTION_INTRINSICS),
   }).strict(),
   z.object({
     kind: z.literal('seatIntrinsic'),
@@ -681,7 +688,10 @@ const AgentPolicyExprSchema: z.ZodTypeAny = z.lazy(() =>
     z.object({
       kind: z.literal('zoneTokenAgg'),
       zone: z.union([StringSchema, AgentPolicyExprSchema]),
-      owner: StringSchema,
+      owner: z.union([
+        z.enum(AGENT_POLICY_ZONE_TOKEN_AGG_OWNER_KEYWORDS),
+        z.string().regex(/^[0-9]+$/),
+      ]),
       prop: StringSchema,
       aggOp: z.union([
         z.literal('sum'),
@@ -801,7 +811,7 @@ const CompiledAgentProfileSchema = z
       .strict(),
     completionGuidance: z.object({
       enabled: BooleanSchema,
-      fallback: z.union([z.literal('random'), z.literal('first')]),
+      fallback: z.enum(AGENT_POLICY_COMPLETION_GUIDANCE_FALLBACKS),
     }).strict().optional(),
     plan: z
       .object({

@@ -46,6 +46,13 @@ import type {
 import type { SeatGroupConfig, MarkerWeightConfig, VictoryFormula } from './derived-values.js';
 import type { ScopedVarEndpointContract, ScopedVarPayloadContract } from './scoped-var-contract.js';
 import type { DecisionKey } from './decision-scope.js';
+import type {
+  AgentPolicyCandidateIntrinsic,
+  AgentPolicyCompletionGuidanceFallback,
+  AgentPolicyDecisionIntrinsic,
+  AgentPolicyOptionIntrinsic,
+  AgentPolicyZoneTokenAggOwner,
+} from '../contracts/index.js';
 
 export interface RngState {
   readonly algorithm: 'pcg-dxsm-128';
@@ -361,7 +368,7 @@ export type CompiledAgentPolicyRef =
   | CompiledAgentPolicySurfaceRef
   | {
       readonly kind: 'candidateIntrinsic';
-      readonly intrinsic: 'actionId' | 'stableMoveKey' | 'isPass' | 'paramCount';
+      readonly intrinsic: AgentPolicyCandidateIntrinsic;
     }
   | {
       readonly kind: 'candidateParam';
@@ -369,11 +376,11 @@ export type CompiledAgentPolicyRef =
     }
   | {
       readonly kind: 'decisionIntrinsic';
-      readonly intrinsic: 'type' | 'name' | 'targetKind' | 'optionCount';
+      readonly intrinsic: AgentPolicyDecisionIntrinsic;
     }
   | {
       readonly kind: 'optionIntrinsic';
-      readonly intrinsic: 'value';
+      readonly intrinsic: AgentPolicyOptionIntrinsic;
     }
   | {
       readonly kind: 'seatIntrinsic';
@@ -405,7 +412,7 @@ export type AgentPolicyExpr =
   | {
       readonly kind: 'zoneTokenAgg';
       readonly zone: string | AgentPolicyExpr;
-      readonly owner: string;
+      readonly owner: AgentPolicyZoneTokenAggOwner;
       readonly prop: string;
       readonly aggOp: AgentPolicyZoneTokenAggOp;
     };
@@ -519,7 +526,7 @@ export interface CompiledAgentLibraryIndex {
 
 export interface CompletionGuidanceConfig {
   readonly enabled: boolean;
-  readonly fallback: 'random' | 'first';
+  readonly fallback: AgentPolicyCompletionGuidanceFallback;
 }
 
 export interface CompiledAgentProfile {

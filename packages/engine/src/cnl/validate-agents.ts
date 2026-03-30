@@ -1,4 +1,10 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
+import {
+  AGENT_POLICY_COMPLETION_GUIDANCE_KEYS,
+  AGENT_POLICY_LIBRARY_BUCKETS,
+  AGENT_POLICY_PROFILE_USE_BUCKETS,
+  isAgentPolicyCompletionGuidanceFallback,
+} from '../contracts/index.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 import {
   isNonEmptyTrimmedString,
@@ -14,19 +20,8 @@ const AGENT_VISIBILITY_SECTION_KEYS = ['globalVars', 'perPlayerVars', 'derivedMe
 const AGENT_VISIBILITY_KEYS = ['current', 'preview'] as const;
 const AGENT_VISIBILITY_PREVIEW_KEYS = ['visibility', 'allowWhenHiddenSampling'] as const;
 const AGENT_VISIBILITY_VICTORY_KEYS = ['currentMargin', 'currentRank'] as const;
-const AGENT_LIBRARY_KEYS = [
-  'stateFeatures',
-  'candidateFeatures',
-  'candidateAggregates',
-  'pruningRules',
-  'scoreTerms',
-  'completionScoreTerms',
-  'tieBreakers',
-] as const;
 const AGENT_PROFILE_KEYS = ['params', 'use', 'completionGuidance'] as const;
-const AGENT_PROFILE_USE_KEYS = ['pruningRules', 'scoreTerms', 'completionScoreTerms', 'tieBreakers'] as const;
-const AGENT_COMPLETION_GUIDANCE_KEYS = ['enabled', 'fallback'] as const;
-type AgentProfileUseKey = typeof AGENT_PROFILE_USE_KEYS[number];
+type AgentProfileUseKey = typeof AGENT_POLICY_PROFILE_USE_BUCKETS[number];
 type AgentLibraryBucketMap = Partial<Record<AgentProfileUseKey, Record<string, unknown>>>;
 
 interface ProfileUseValidationSummary {
@@ -159,9 +154,9 @@ function validateLibrary(library: unknown, diagnostics: Diagnostic[]): void {
     return;
   }
 
-  validateUnknownKeys(library, AGENT_LIBRARY_KEYS, 'doc.agents.library', diagnostics, 'agents library');
+  validateUnknownKeys(library, AGENT_POLICY_LIBRARY_BUCKETS, 'doc.agents.library', diagnostics, 'agents library');
 
-  for (const key of AGENT_LIBRARY_KEYS) {
+  for (const key of AGENT_POLICY_LIBRARY_BUCKETS) {
     validateNamedDefinitionMap(library[key], `doc.agents.library.${key}`, diagnostics, `agents library ${key}`);
   }
 }
@@ -239,9 +234,9 @@ function validateProfileUse(
     return { completionScoreTermsValidCount: null };
   }
 
-  validateUnknownKeys(use, AGENT_PROFILE_USE_KEYS, path, diagnostics, 'agents profile use');
+  validateUnknownKeys(use, AGENT_POLICY_PROFILE_USE_BUCKETS, path, diagnostics, 'agents profile use');
   let completionScoreTermsValidCount: number | null = 0;
-  for (const key of AGENT_PROFILE_USE_KEYS) {
+  for (const key of AGENT_POLICY_PROFILE_USE_BUCKETS) {
     const listValue = use[key];
     if (listValue === undefined) {
       continue;
@@ -315,7 +310,7 @@ function validateCompletionGuidance(
     return;
   }
 
-  validateUnknownKeys(value, AGENT_COMPLETION_GUIDANCE_KEYS, path, diagnostics, 'agents profile completionGuidance');
+  validateUnknownKeys(value, AGENT_POLICY_COMPLETION_GUIDANCE_KEYS, path, diagnostics, 'agents profile completionGuidance');
   if (value.enabled !== undefined && typeof value.enabled !== 'boolean') {
     diagnostics.push({
       code: 'CNL_VALIDATOR_AGENTS_PROFILE_INVALID',
@@ -325,7 +320,7 @@ function validateCompletionGuidance(
       suggestion: 'Set completionGuidance.enabled to true or false.',
     });
   }
-  if (value.fallback !== undefined && value.fallback !== 'random' && value.fallback !== 'first') {
+  if (value.fallback !== undefined && !isAgentPolicyCompletionGuidanceFallback(value.fallback)) {
     diagnostics.push({
       code: 'CNL_VALIDATOR_AGENTS_PROFILE_INVALID',
       path: `${path}.fallback`,

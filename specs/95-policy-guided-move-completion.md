@@ -55,81 +55,213 @@ Policy-guided completion generates BETTER completions, not more.
 - Maintain determinism: policy evaluation is deterministic (same state + same policy = same choice)
 - Maintain bounded computation: same or fewer completion attempts, just smarter selection
 - Make the guided completion path opt-in per profile (existing random completion remains default)
-- No changes to kernel code (legal move enumeration, viability probing, effect execution)
+- Minimal kernel changes (thread an existing optional callback through one more layer)
 
 ## Non-Goals
 
 - Multi-ply search or tree search (lookahead beyond the immediate move)
-- Changes to the kernel's effect execution engine
+- New kernel types or interfaces (reuse existing `choose` callback)
 - Changes to `legalMoves()` enumeration
 - Opponent modeling or theory-of-mind reasoning
 - Unbounded completion attempts or retry loops
 - Breaking the `Agent.chooseMove` contract
+- Correlated chooseN scoring (selecting optimal subsets) -- v1 scores items independently
 
 ## Foundation Alignment
 
 | Foundation | Alignment |
 |------------|-----------|
-| #1 Engine Agnosticism | Guidance criteria live in YAML policy profiles. Engine code is game-agnostic -- it evaluates options using the compiled policy, not game-specific logic. |
-| #2 Evolution-First | Completion guidance criteria are YAML scoreTerms/features -- evolution can mutate them just like action-type scoring. The mutation surface (parameters, weights, features) is preserved. |
-| #5 Determinism | Policy evaluation is a pure function of state + policy. Same state + same policy + same PRNG = identical guided completion. No floating-point, no external state. |
-| #6 Bounded Computation | Each inner decision evaluates a FINITE set of options (the chooseOne/chooseN candidates). Scoring each option uses the same bounded expression evaluator as action-type scoring. Total work per completion is bounded by `sum(options per decision)`. |
-| #7 Immutability | Policy evaluation reads state but never mutates it. The completion engine produces new state objects as before. |
-| #10 Architectural Completeness | Fixes the root cause (random inner decisions) rather than papering over it (more tiebreakers, paramCount hacks). |
+| #1 Engine Agnosticism | Guidance criteria live in YAML policy profiles. The kernel's existing `choose` callback is generic -- the agent builds it, the kernel calls it. No game-specific logic in the kernel. |
+| #2 Evolution-First | Completion guidance criteria are YAML `completionScoreTerms` -- evolution can mutate their `when` conditions, weights, and value expressions. The mutation surface is preserved. |
+| #5 Determinism | The `choose` callback is a pure function of snapshot state + policy. Same state + same policy + same PRNG = identical guided completion. No floating-point, no external state. |
+| #6 Bounded Computation | Each inner decision evaluates a FINITE set of options (the chooseOne/chooseN candidates). Scoring uses the same bounded expression evaluator as action-type scoring. Total work per completion is bounded by `sum(options per decision)`. |
+| #7 Immutability | The `choose` callback closes over an immutable snapshot of the pre-move state. The kernel's internal state evolution during effect execution is not exposed to the callback. The kernel provides filtered option lists reflecting execution progress. |
+| #8 Compiler-Kernel Boundary | The compiler compiles `completionScoreTerms` from YAML. The kernel threads the generic `choose` callback without knowing its implementation. The agent builds the callback using compiled scoring terms. Clean separation. |
+| #10 Architectural Completeness | Fixes the root cause (random inner decisions) rather than papering over it (more tiebreakers, paramCount hacks). Reuses the existing `choose` callback pattern instead of inventing a parallel interface. |
 
 ## Proposed Design
 
-### Core Concept: Inner-Decision Scoring Callback
+### Core Concept: Reuse Existing `choose` Callback
 
-The kernel's `evaluatePlayableMoveCandidate` resolves inner decisions by calling a decision resolver. Currently this resolver consumes PRNG bits to pick randomly. The change introduces a **scoring callback** that the PolicyAgent provides:
+The kernel's `completeMoveDecisionSequence` already accepts an optional `choose` callback in `CompleteMoveDecisionSequenceOptions`:
 
 ```typescript
-interface InnerDecisionGuidance {
-  /**
-   * Score a set of options for a chooseOne/chooseN decision.
-   * Returns the option(s) to select, or undefined to fall back to random.
-   *
-   * @param decisionId - The binding name of the decision (e.g., "$targetSpaces", "$noBaseChoice")
-   * @param options - The available options (zone IDs, enum values, token IDs)
-   * @param state - The game state at this point in effect execution
-   * @param context - Additional context (current bindings, effect path)
-   */
-  scoreOptions(
-    decisionId: string,
-    options: readonly string[],
-    state: GameState,
-    context: InnerDecisionContext,
-  ): readonly string[] | undefined;
+// Already exists in move-decision-completion.ts
+export interface CompleteMoveDecisionSequenceOptions extends ResolveMoveDecisionSequenceOptions {
+  readonly choose?: (request: ChoicePendingRequest) => MoveParamValue | undefined;
+  readonly chooseStochastic?: (
+    request: ChoiceStochasticPendingRequest,
+  ) => Readonly<Record<string, MoveParamScalar>> | undefined;
 }
 ```
 
+Currently, `evaluatePlayableMoveCandidate` does NOT thread this callback through -- it uses an internal PRNG-based resolver. The change threads the optional `choose` parameter through `evaluatePlayableMoveCandidate` -> `completeTemplateMove` -> `completeMoveDecisionSequence`.
+
+**No new kernel types are needed.** The `choose` callback's existing signature (`ChoicePendingRequest -> MoveParamValue | undefined`) provides all necessary information:
+- `request.type`: 'chooseOne' | 'chooseN'
+- `request.name`: the bind name (e.g., "$targetSpaces")
+- `request.options`: available choices with legality info
+- `request.targetKinds`: 'zone' | 'token' (what type of thing is being chosen)
+
 ### Integration Points
 
-#### 1. `evaluatePlayableMoveCandidate` accepts an optional guidance callback
+#### 1. Kernel threading: `evaluatePlayableMoveCandidate` accepts optional `choose`
 
-The kernel's playable candidate evaluator already resolves decisions via an internal decision handler. The change adds an optional `guidance` parameter that, when provided, is consulted before the random fallback:
+Minimal change -- add an optional `choose` parameter and thread it through:
 
 ```
-For each inner decision (chooseOne/chooseN):
-  1. If guidance callback provided → call guidance.scoreOptions()
-  2. If guidance returns a selection → use it
-  3. If guidance returns undefined → fall back to random (PRNG)
+evaluatePlayableMoveCandidate(def, state, move, rng, runtime, budgets, choose?)
+  -> completeTemplateMove(def, state, move, rng, runtime, budgets, choose?)
+    -> completeMoveDecisionSequence(def, state, move, { choose, ... })
 ```
 
-This is NOT a kernel change in the sense of adding game-specific logic. The kernel calls a generic callback; the callback's implementation lives in the agent layer.
+When `choose` is not provided (default), behavior is identical to current PRNG-based resolution. This preserves backward compatibility for RandomAgent, GreedyAgent, and any profile without `completionGuidance`.
 
-#### 2. PolicyAgent provides guidance from profile's scoring criteria
+#### 2. PolicyAgent builds `choose` callback from profile
 
-The PolicyAgent creates an `InnerDecisionGuidance` implementation that evaluates each option against the profile's candidateFeatures and scoreTerms. For a chooseOne with options `["place-guerrilla", "replace-with-base"]`:
+The PolicyAgent creates a `choose` callback that:
+1. **Closes over** the immutable pre-move snapshot state (`input.state`) and compiled `completionScoreTerms`
+2. **Receives** a `ChoicePendingRequest` from the kernel
+3. **Scores** each legal option in `request.options` against the profile's `completionScoreTerms`
+4. **Returns** the highest-scoring option, or `undefined` to fall back to random
 
-1. Construct a temporary candidate-like context for each option
-2. Evaluate relevant candidateFeatures (e.g., `choosesReplaceWithBase`)
-3. Apply scoreTerms with weights
-4. Return the highest-scoring option
+```typescript
+// In policy-agent.ts
+function buildCompletionChooseCallback(
+  state: GameState,
+  def: GameDef,
+  profile: CompiledAgentProfile,
+  catalog: AgentPolicyCatalog,
+  playerId: PlayerId,
+): ((request: ChoicePendingRequest) => MoveParamValue | undefined) | undefined {
+  if (!profile.completionGuidance?.enabled) return undefined;
 
-#### 3. YAML configuration: `completionGuidance` in profile
+  const scoreTermIds = profile.use.completionScoreTerms;
+  if (!scoreTermIds || scoreTermIds.length === 0) return undefined;
 
-Profiles opt in to guided completion with a new `completionGuidance` section:
+  return (request: ChoicePendingRequest): MoveParamValue | undefined => {
+    const legalOptions = request.options.filter(o => o.legality !== 'illegal');
+    if (legalOptions.length <= 1) return undefined; // No meaningful choice
+
+    const evaluator = new CompletionGuidanceEvaluator(
+      state, def, catalog, playerId, request, scoreTermIds,
+    );
+
+    let bestScore = -Infinity;
+    let bestValue: MoveParamValue | undefined;
+
+    for (const option of legalOptions) {
+      const score = evaluator.scoreOption(option.value);
+      if (score > bestScore) {
+        bestScore = score;
+        bestValue = option.value;
+      }
+    }
+
+    // If all scores are 0 (no terms matched), fall back to random
+    return bestScore > 0 ? bestValue : undefined;
+  };
+}
+```
+
+#### 3. `completionScoreTerms` library section
+
+A new section in the agent library, parallel to existing `scoreTerms` but with a different reference domain. Follows the same `CompiledAgentScoreTerm` structure:
+
+```yaml
+library:
+  completionScoreTerms:
+    preferHighPopZone:
+      when:
+        eq:
+          - { ref: decision.targetKind }
+          - zone
+      weight: { param: zonePopWeight }
+      value:
+        zoneTokenAgg:
+          zone: { ref: option.value }   # Dynamic zone ref (new extension)
+          owner: self
+          prop: type
+          aggOp: count
+
+    preferBaseOverGuerrilla:
+      when:
+        and:
+          - { eq: [{ ref: decision.type }, "chooseOne"] }
+          - { eq: [{ ref: decision.targetKind }, "unknown"] }  # enum choices
+      weight: { param: basePrefWeight }
+      value:
+        if:
+          when: { eq: [{ ref: option.value }, "replace-with-base"] }
+          then: { literal: 1 }
+          else: { literal: 0 }
+
+    avoidLowValueZones:
+      when:
+        eq:
+          - { ref: decision.targetKind }
+          - zone
+      weight: { param: avoidLowValueWeight }
+      value:
+        neg:
+          - if:
+              when:
+                in:
+                  - { ref: option.value }
+                  - ["jungle-1", "jungle-2"]  # Example: hardcoded low-value zones
+              then: { literal: 1 }
+              else: { literal: 0 }
+```
+
+Each `completionScoreTerm` has the same shape as a regular scoreTerm (`when`, `weight`, `value`, `unknownAs`, `clamp`). The `when` condition filters which inner decisions the term applies to -- decisions where no term's `when` matches score 0, causing fallback to random. This provides feature-based selectivity without a separate filtering mechanism.
+
+#### 4. New reference domains for completion scoring
+
+Available only within `completionScoreTerms` evaluation:
+
+| Ref Kind | Ref ID | Type | Source |
+|----------|--------|------|--------|
+| `decisionIntrinsic` | `type` | `'chooseOne' \| 'chooseN'` | `ChoicePendingRequest.type` |
+| `decisionIntrinsic` | `name` | string | `ChoicePendingRequest.name` |
+| `decisionIntrinsic` | `targetKind` | `'zone' \| 'token' \| 'unknown'` | First of `ChoicePendingRequest.targetKinds`, or `'unknown'` |
+| `decisionIntrinsic` | `optionCount` | number | `ChoicePendingRequest.options.length` |
+| `optionIntrinsic` | `value` | string \| number | The current option being scored |
+
+Plus all existing `currentSurface.*` refs (globalVars, perPlayerVars, derivedMetrics, victory) -- evaluated against the snapshot state.
+
+YAML shorthand in expressions:
+```yaml
+{ ref: decision.type }        # -> { kind: 'ref', ref: { kind: 'decisionIntrinsic', intrinsic: 'type' } }
+{ ref: decision.targetKind }  # -> { kind: 'ref', ref: { kind: 'decisionIntrinsic', intrinsic: 'targetKind' } }
+{ ref: option.value }         # -> { kind: 'ref', ref: { kind: 'optionIntrinsic', intrinsic: 'value' } }
+```
+
+#### 5. `zoneTokenAgg` extension: dynamic zone reference
+
+Currently `zoneTokenAgg.zone` accepts only a static string zone ID. This spec extends it to accept either a string or an `AgentPolicyExpr`:
+
+```typescript
+// Before (types-core.ts):
+{ kind: 'zoneTokenAgg'; zone: string; owner: string; prop: string; aggOp: AgentPolicyZoneTokenAggOp }
+
+// After:
+{ kind: 'zoneTokenAgg'; zone: string | AgentPolicyExpr; owner: string; prop: string; aggOp: AgentPolicyZoneTokenAggOp }
+```
+
+When `zone` is an expression, it is evaluated at scoring time to produce a zone ID string. This enables:
+```yaml
+zoneTokenAgg:
+  zone: { ref: option.value }  # Score the zone being chosen
+  owner: self
+  prop: type
+  aggOp: count
+```
+
+Changes in `policy-eval.ts`: if `zone` is an object (expression), evaluate it first; if the result is not a valid zone ID string, return `undefined` (unknown).
+
+Changes in `policy-expr.ts`: accept `zone` as either string or nested expression during compilation.
+
+#### 6. Profile opt-in via `completionGuidance`
 
 ```yaml
 profiles:
@@ -137,47 +269,55 @@ profiles:
     params:
       rallyWeight: 3
       taxWeight: 2
+      zonePopWeight: 1
+      basePrefWeight: 2
     completionGuidance:
       enabled: true
-      # Which scoreTerms apply to inner decisions (subset of profile's scoreTerms)
-      innerScoreTerms:
-        - preferBasePlacement
-        - preferGuerrillaGrowth
-      # Fallback for decisions not covered by scoreTerms
-      fallback: random  # or "first" for deterministic default
+      fallback: random  # "random" (default) or "first" for deterministic fallback
     use:
+      completionScoreTerms:
+        - preferHighPopZone
+        - preferBaseOverGuerrilla
       pruningRules: [...]
       scoreTerms: [...]
       tieBreakers: [...]
 ```
 
-#### 4. Inner-decision-specific candidateFeatures
+When `completionGuidance.enabled` is `false` or absent, the profile uses pure PRNG completion (backward compatible).
 
-Existing candidateFeatures reference `candidate.param.*` which resolves against the outer move's params. For inner decisions, a new reference domain `innerOption.*` exposes the current option being evaluated:
+The `fallback` field controls what happens when the `choose` callback returns `undefined` (no completionScoreTerms matched or all scored 0):
+- `random` (default): fall back to PRNG selection (current behavior)
+- `first`: select the first legal option (fully deterministic, no PRNG consumption)
 
-```yaml
-candidateFeatures:
-  choosesReplaceWithBase:
-    type: boolean
-    expr:
-      eq:
-        - { ref: innerOption.value }
-        - replace-with-base
-```
+### chooseN Handling
 
-The `innerOption.value` ref is only available during completion guidance evaluation. During normal candidate scoring, it returns undefined.
+For `chooseN` decisions (select K from N), the kernel calls the `choose` callback once per item selection in a sequential loop. Each call presents the remaining options. The scoring callback scores each remaining option independently and returns the best one.
+
+This is **greedy per-item scoring** -- it doesn't optimize the full K-subset holistically. For v1, this covers the primary use cases (zone selection order, token type preference). Correlated subset scoring is a future enhancement.
+
+### State Visibility
+
+The `choose` callback **closes over the pre-move snapshot state** (`input.state`). It does NOT see the evolving state as the kernel executes effects within the move.
+
+This is correct because:
+1. The kernel's `ChoicePendingRequest.options` list IS filtered by execution state (e.g., stacking limits, zone availability after prior placements)
+2. The callback expresses strategic preference using the snapshot ("I prefer high-population zones"), not execution tracking
+3. Foundation #7 (Immutability) -- the callback works with an immutable snapshot
+4. Foundation #8 (Compiler-Kernel Boundary) -- the agent doesn't need to understand kernel execution internals
 
 ### Completion Flow with Guidance
 
 ```
 PolicyAgent.chooseMove(input):
-  1. Build guidance callback from profile's completionGuidance config
-  2. preparePlayableMoves(input, { guidance })
+  1. Build choose callback from profile's completionGuidance config
+     (closes over input.state, compiled completionScoreTerms)
+  2. preparePlayableMoves(input, { guidance: { choose } })
      For each template move:
-       evaluatePlayableMoveCandidate(def, state, move, rng, runtime, guidance)
-         For each inner decision:
-           If guidance.scoreOptions returns a selection → use it
-           Else → random (PRNG)
+       evaluatePlayableMoveCandidate(def, state, move, rng, runtime, budgets, choose)
+         -> completeTemplateMove(def, state, move, rng, runtime, budgets, choose)
+           -> completeMoveDecisionSequence(def, state, move, { choose })
+             For each inner decision:
+               choose(request) -> scored selection or undefined -> random fallback
   3. evaluatePolicyMove(completedMoves) with preview (Spec 93)
   4. Pick highest-scoring completed move
 ```
@@ -189,29 +329,39 @@ For a Rally action with 5 target zones and 2 options per zone (place-guerrilla /
 - Without guidance: 5 random choices = 5 PRNG draws
 - With guidance: 5 scoring evaluations, each comparing 2 options = 10 expression evaluations
 
-Each expression evaluation is the same bounded cost as a normal candidateFeature evaluation. Total additional cost per completion: `O(decisions * options * features)`. With typical FITL values (~5 decisions, ~3 options, ~3 features), this is ~45 expression evaluations per completion -- comparable to scoring 15 candidates in the normal path.
+Each expression evaluation is the same bounded cost as a normal candidateFeature evaluation. Total additional cost per completion: `O(decisions * options * terms)`. With typical FITL values (~5 decisions, ~3 options, ~3 terms), this is ~45 expression evaluations per completion -- comparable to scoring 15 candidates in the normal path.
+
+The `when` conditions on individual completionScoreTerms short-circuit evaluation for non-matching decisions, reducing actual cost further.
 
 ### Files to Modify
 
 | File | Change |
 |------|--------|
-| `packages/engine/src/kernel/playable-candidate.ts` | Accept optional `InnerDecisionGuidance` callback |
-| `packages/engine/src/agents/policy-agent.ts` | Build guidance callback from profile, pass to `preparePlayableMoves` |
-| `packages/engine/src/agents/prepare-playable-moves.ts` | Thread guidance through to `evaluatePlayableMoveCandidate` |
-| `packages/engine/src/agents/policy-eval.ts` | Implement `scoreOptions` using profile's innerScoreTerms |
-| `packages/engine/src/agents/policy-runtime.ts` | Add `innerOption.*` reference resolution |
-| `packages/engine/src/cnl/compile-agents.ts` | Compile `completionGuidance` section from YAML |
-| `packages/engine/src/cnl/validate-agents.ts` | Validate `completionGuidance` references |
-| `packages/engine/src/cnl/game-spec-doc.ts` | Add `completionGuidance` to profile type |
-| `packages/engine/src/kernel/types-core.ts` | Add `InnerDecisionGuidance` interface, `innerOption` ref kind |
+| `packages/engine/src/kernel/playable-candidate.ts` | Add optional `choose` callback param, thread to `completeTemplateMove` |
+| `packages/engine/src/kernel/move-completion.ts` | Thread optional `choose` through to `completeMoveDecisionSequence` |
+| `packages/engine/src/agents/policy-agent.ts` | Build `choose` callback from profile, pass to `preparePlayableMoves` |
+| `packages/engine/src/agents/prepare-playable-moves.ts` | Thread `choose` through to `evaluatePlayableMoveCandidate` |
+| `packages/engine/src/agents/policy-eval.ts` | New `CompletionGuidanceEvaluator` -- scores options using `completionScoreTerms` |
+| `packages/engine/src/agents/policy-runtime.ts` | Add `decisionIntrinsic.*` and `optionIntrinsic.*` reference resolution |
+| `packages/engine/src/agents/policy-expr.ts` | Compile `completionScoreTerms`; extend `zoneTokenAgg.zone` to accept expression |
+| `packages/engine/src/cnl/compile-agents.ts` | Compile `completionGuidance` section and `completionScoreTerms` from YAML |
+| `packages/engine/src/cnl/validate-agents.ts` | Validate `completionGuidance` references and `completionScoreTerms` |
+| `packages/engine/src/cnl/game-spec-doc.ts` | Add `completionGuidance` to profile type, `completionScoreTerms` to library type |
 
 ### Testing Strategy
 
-- **Unit**: Guidance callback with known options returns correct selection
+- **Unit**: `CompletionGuidanceEvaluator` with known options returns correct selection based on completionScoreTerms
+- **Unit**: `zoneTokenAgg` with expression zone ref evaluates correctly
+- **Unit**: `when` conditions on completionScoreTerms filter correctly (zone decisions vs enum decisions)
 - **Unit**: Profile without `completionGuidance` uses random (backward compatible)
+- **Unit**: `choose` callback returns `undefined` when all scores are 0 -- random fallback
+- **Unit**: `choose` callback with `fallback: "first"` returns first legal option when scores are 0
 - **Integration**: Compile FITL spec with guidance-enabled profile, verify compilation succeeds
 - **Integration**: Run guided completion for a known FITL Rally template, verify inner decisions match scoring criteria
+- **Integration**: Verify that `choose` callback's snapshot state doesn't see mid-execution changes
 - **E2E**: Full FITL simulation with guidance-enabled VC agent, verify determinism (same seed = same result)
+- **E2E**: Compare guided vs unguided VC agent outcomes across 15 seeds -- verify guided completion produces different (better) completions
 - **Golden**: Updated policy catalog golden for FITL with guidance config
 - **Property**: Guided completion never selects options outside the legal set
 - **Property**: Guided completion never increases total completion count
+- **Property**: Guided completion maintains determinism (same seed + same policy = same result)

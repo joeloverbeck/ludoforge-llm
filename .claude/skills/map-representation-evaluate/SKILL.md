@@ -22,7 +22,7 @@ Score the current FITL map rendering state from screenshots and append a structu
 4. **If the screenshot count changed** from the previous evaluation, note this prominently. Explain what new screenshots capture, add a comparability caveat (see Screenshot Set Changes below), and update the **Screenshot Reference** section at the top of the report file to describe all current screenshots.
 5. For each screenshot, write a paragraph describing what's shown and listing specific issues related to the 4 metrics.
 6. Score all 4 metrics (1-10) with brief justification per metric.
-7. Compute score deltas from the previous evaluation. For the first evaluation, use `—` for Previous and Delta columns.
+7. Compute score deltas from the previous evaluation. "Previous evaluation" means the most recent *scored* evaluation — skip any No Change stubs when looking up previous scores. For the first evaluation, use `—` for Previous and Delta columns.
 8. List resolved issues from the previous evaluation (see template). For the first evaluation, write: "No previous evaluation exists — this is the baseline evaluation."
 9. Write prioritized recommendations tagged CRITICAL / HIGH / MEDIUM / LOW.
 10. Flag recurring issues — note how many consecutive evaluations each issue has persisted.
@@ -71,6 +71,8 @@ For each screenshot analyzed, add a section:
 
 [If screenshot set changed: **Comparability note**: This evaluation covers N screenshots (previous: M). Score changes may partly reflect expanded coverage revealing pre-existing issues rather than regressions introduced since the last evaluation.]
 
+[If rendering changed but some metrics are unchanged: briefly explain why the visual change didn't affect those metrics — see "Visual Change Without Score Movement" section.]
+
 [If territory rendering is being tracked: **Territory coverage**: N/M province zones rendered as territories (vs. rectangles). Approximate counts from visual inspection are acceptable — use `~` prefix for estimates.]
 
 ### Score Trend (include if 3+ evaluations exist)
@@ -102,6 +104,13 @@ If the user disputes part of an already-appended evaluation:
 4. Re-verify the average and delta calculations after any score change.
 5. Add a `**Corrections**` line immediately after the `**Date**` line: `**Corrections**: [YYYY-MM-DD] Revised [metric name] score from X to Y after reviewing [screenshot/evidence]. [Brief reason.]`
 6. Move any newly-resolved items to the "Resolved Since Previous" section if the correction reveals they were already fixed.
+
+### Replacing a No Change Stub
+
+If the user disputes a No Change stub (indicating rendering did change):
+1. Replace the entire stub with a full evaluation following the standard Evaluation Template.
+2. Add a `**Corrections**` line immediately after the `**Date**` line: `**Corrections**: [YYYY-MM-DD] Replaced No Change stub after reviewing [screenshot/evidence]. [Brief reason.]`
+3. Proceed with the full evaluation checklist (screenshot analysis, scores, deltas, recommendations).
 
 ## Scoring Guide
 
@@ -209,6 +218,15 @@ Conversely, if screenshots are removed (e.g., a view is deprecated), do not infl
 
 If the rendering appears unchanged from the previous evaluation but the screenshot set changed, proceed with a full evaluation — the new screenshots may reveal previously invisible issues.
 
+Before concluding "no change," explicitly check each metric against the most recent scored evaluation's description:
+
+1. **Adjacency Clarity**: Are province borders/shared edges the same shape and style? Any new gaps or overlaps?
+2. **Road/River Integration**: Do routes render the same way — same z-order (under vs. over territory fills), same line style, same termination points (edge vs. through-territory)?
+3. **Terrain Distinction**: Are terrain colors, count of distinct colors, and any texture/pattern overlays the same?
+4. **Label/Token Readability**: Are label sizes, background pill styles, token sizes, and token shapes the same?
+
+Only if all 4 checks confirm no visible change should the no-change stub be used. If any metric's rendering differs, proceed with a full evaluation.
+
 If both rendering AND screenshots are unchanged since the previous evaluation, append a brief stub instead of a full evaluation:
 
 ```markdown
@@ -242,7 +260,7 @@ Optionally, when Road/River Integration is a focus area, include a route integra
 **Route integration**: N/M visible route segments flow through territory (vs. edge-to-edge).
 ```
 
-This is harder to count precisely from screenshots than territory coverage — use approximate counts with `~` prefix. Include only when route rendering is actively being improved or when per-metric stagnation has been flagged for Road/River Integration.
+This is harder to count precisely from screenshots than territory coverage — use approximate counts with `~` prefix. Include when Road/River Integration changed by +/-2 or more, or when per-metric stagnation was previously flagged for this metric.
 
 ## Scope
 

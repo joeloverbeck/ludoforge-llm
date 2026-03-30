@@ -437,11 +437,94 @@ Game canvas and editor views are consistent — same organic rounded blob shapes
 
 ---
 
-## EVALUATION #6 — No Change
+## EVALUATION #6
 
 **Date**: 2026-03-30
+**Corrections**: [2026-03-30] Replaced initial "No Change" stub after closer inspection revealed route rendering improvements — routes now flow through province territory rather than terminating at edges.
 **Screenshots analyzed**: fitl-game-map.png, fitl-game-map-overview.png, fitl-map-editor.png, fitl-map-editor-overview.png
 
-Rendering and screenshot set unchanged since Eval #5. All four screenshots show the same organic rounded blob shapes, three terrain colors (dark green, tan/golden, bright/lime green), route line rendering (brown roads, blue wavy rivers), label treatment (dark background pills), and token sizes as described in Eval #5. No new implementation cycle occurred between evaluations. Re-evaluate after the next implementation cycle.
+### Screenshot Analysis
 
-**Note — per-metric stagnation reminder**: Road/River Integration remains at 5 for 4 consecutive evaluations and Terrain Distinction at 6 for 2 consecutive evaluations. The `map-representation-plan` skill should research alternative approaches for these metrics before the next implementation cycle.
+#### fitl-game-map.png — Game Canvas Close-Up
+**What's shown**: Dark-themed game canvas showing ~7 provinces as smooth organic blob shapes. Visible provinces: Southern Laos (large dark green, upper-left), Northeast Cambodia (olive-green, left), The Fishhook (olive-green, bottom-left), a large tan/golden province cluster (Pleiku/Darlac center, Binh Dinh right-center), Quang Tin Quang Ngai (partially visible, upper), Phu Bon Phu Yen (bright green, right), Khanh Hoa (partially visible, lower-right). Blue sliver (Kontum) visible between provinces. Qui Nhon city as a gray-blue circle at the far right. Tokens: red circle (Southern Laos), cyan/blue circles, orange and olive squares near labels. Labels with dark semi-transparent background pills. Dashed teal coastline on the right.
+**Issues observed**:
+- Route lines (brown/gray) now visibly cross *through* province territory fills rather than just connecting at shape edges — this is a clear improvement over Eval #5. Lines pass over the tan/golden provinces and are visible traversing the blob shapes.
+- Organic rounded blob shapes maintained — same quality as Eval #5.
+- Three terrain colors maintained: dark green (jungle/Laos/Cambodia), tan/golden (lowlands), bright green (third category).
+- Some labels are partially obscured by route lines crossing over them — "Pleiku Darlac" label has route lines passing through it, reducing readability slightly.
+- Label background pills help but some labels still show garbled/overlapping characters where tokens or route lines intersect: "Phu Bo[n] [P]hu Yen" partially obscured.
+- Tokens remain small colored squares/circles — faction colors distinguishable but piece types not.
+- Qui Nhon city circle still sits at the far-right border edge, somewhat disconnected from surrounding territory.
+
+#### fitl-game-map-overview.png — Game Canvas Full Map
+**What's shown**: Full map at zoomed-out level on dark theme. All provinces rendered as organic rounded blobs. Dark green blobs (Laos, Cambodia, jungle) on the left. Tan/golden blobs in the center-right. Bright/lime green blobs in the southern Mekong Delta area. Cities as blue-gray circles along the right coast. Brown route lines and blue wavy river lines visible throughout — routes clearly pass through province territory fills, particularly visible in the central and southern regions. "Out of Play" boxes and "Trucks Base Staging" on the far right.
+**Issues observed**:
+- Routes now flow through province shapes — brown road lines cross over blob fills, visible as lines traversing territory rather than just connecting at edges. This is especially clear in the central highland region where routes pass through large tan provinces.
+- Blue wavy river lines in the southern Saigon/Mekong Delta area remain clearly distinct from brown road lines — good route type distinction maintained.
+- At overview zoom, labels with background pills are visible but text remains too small to read province names.
+- Southern area still shows visual congestion where many small bright/lime green provinces cluster with overlapping boundaries and route lines.
+- The vertically elongated S-curve layout is maintained — overall geographic approximation consistent with Eval #5.
+- Some dark gaps between non-adjacent provinces remain, which is acceptable for readability.
+
+#### fitl-map-editor.png — Map Editor Close-Up
+**What's shown**: Light cream-background editor view. Provinces as smooth organic blobs: Central Laos (dark green, upper-left), Quang Nam (tan/golden), Quang Tin Quang Ngai (bright green, horizontal ellipse), Southern Laos (large dark green), Binh Dinh (tan/golden, lower-right). Da Nang and Qui Nhon as blue circles. Brown route lines connecting cities. Blue sliver (Kontum) partially visible. Clean view without tokens.
+**Issues observed**:
+- Route lines (brown) now clearly pass *through* province territory fills. The route from Da Nang passes through/over the Quang Nam blob, continues through Quang Tin Quang Ngai, and into Binh Dinh — visible as lines crossing over the colored fills rather than connecting at edges. This is the most visible improvement.
+- Organic rounded blob shapes match the game canvas — consistent cross-view rendering.
+- Labels are readable on the light background: "Central Laos", "Southern Laos", "Quang Nam", "Quang Tin Quang Ngai", "Binh Dinh" all legible.
+- Da Nang city circle sits at the upper-right, connected by route lines passing through territory — slightly more integrated than before due to routes flowing through rather than to/from edges.
+- Qui Nhon at the far-right edge, still somewhat disconnected.
+- The cream background between non-adjacent provinces helps define boundaries.
+
+#### fitl-map-editor-overview.png — Map Editor Full Map
+**What's shown**: Full map on light cream background. All provinces rendered as organic rounded blobs from top to bottom. Dark green blobs (Laos, Cambodia) on the left. Tan/golden and bright green provinces throughout. Dark green (darker shade) provinces in the central-south War Zone area. Blue river lines visible in southern area. Brown route lines passing through province territory throughout. Cities as blue circles. "Casualties", "Out of Play", and "Trucks Base Staging" boxes on the right.
+**Issues observed**:
+- Route lines clearly pass through province territory fills map-wide. Brown road lines visibly cross over blob shapes — particularly clear in the editor's light background where the contrast between routes and territory fills is high.
+- Blue river lines in the Saigon/Mekong Delta area are distinct from brown road lines — good route type distinction maintained.
+- Full polygon coverage with organic shapes confirmed — all provinces rendered as blobs.
+- A fourth terrain color is now visible: dark forest green (darker than the standard dark green) for War Zone D / Tay Ninh area provinces in the central-south region. This adds terrain granularity beyond the previous 3 colors.
+- Labels are readable at this zoom on the light background.
+- Some visual congestion in the southern cluster remains but is manageable.
+- The overall vertically elongated layout with Laos/Cambodia on the left and coastal Vietnam on the right is maintained.
+
+### Cross-View Consistency
+
+Game canvas and editor views are consistent — same organic rounded blob shapes, same terrain colors, same city placement. The key improvement (routes flowing through territory) is visible in both views. Route type distinction (brown roads vs. blue rivers) is clear in both. The editor's light background makes routes-through-territory more visually apparent, but the game canvas dark theme also shows this improvement. The editor overview reveals a possible fourth terrain shade (dark forest green) that is harder to distinguish on the dark game canvas.
+
+### Resolved Since Previous
+
+- **Routes terminating at shape edges rather than flowing through territory** — was HIGH in Eval #5 (recurring for 5 consecutive evaluations, per-metric stagnation flagged at 4 evaluations). Now resolved. Route lines visibly pass through/over province territory fills in all four screenshots. This was the longest-running recommendation in the evaluation history and breaks the per-metric stagnation on Road/River Integration.
+
+### Scores
+
+| # | Metric | Score | Previous | Delta | Justification |
+|---|--------|-------|----------|-------|---------------|
+| 1 | Adjacency Clarity | 8 | 8 | 0 | Unchanged. Organic rounded shapes share borders naturally through proximity and overlap. Full coverage maintained. Adjacency clearly implied by shared boundaries. |
+| 2 | Road/River Integration | 7 | 5 | +2 | Major improvement. Routes now flow through province territory fills rather than terminating at edges. Road/river distinction maintained (brown vs. blue wavy). Routes feel like geographic features embedded in the landscape rather than abstract graph edges. Not yet 8 because routes are straight lines passing through fills — they don't follow terrain contours or river paths organically. |
+| 3 | Terrain Distinction | 6 | 6 | 0 | Three main terrain colors (dark green, tan/golden, bright/lime green) maintained. A possible fourth shade (dark forest green) visible in the editor overview for War Zone provinces, but the distinction is subtle. No texture/pattern variation or finer granularity within categories. |
+| 4 | Label/Token Readability | 5 | 5 | 0 | Labels with dark background pills readable at close-up. At overview zoom, labels remain too small. Route lines now passing through territory occasionally cross over labels, slightly reducing readability in some areas (e.g., "Pleiku Darlac"). Tokens unchanged — small colored squares/circles. |
+| | **Average** | **6.5** | **6.0** | **+0.5** | |
+
+**Territory coverage**: ~28-30/35 province zones rendered as organic territories. Full coverage maintained.
+
+### Score Trend
+
+| Eval | Avg | Delta |
+|------|-----|-------|
+| #1   | 2.5 | — |
+| #2   | 5.0 | +2.5 |
+| #3   | 4.5 | -0.5 |
+| #4   | 5.75 | +1.25 |
+| #5   | 6.0 | +0.25 |
+| #6   | 6.5 | +0.5 |
+
+### Prioritized Recommendations
+
+1. **[HIGH]** Add finer terrain granularity beyond the current 3-4 base colors. FITL distinguishes highlands, lowlands, jungle, LoCs, and other terrain types. Consider shade variations within categories (e.g., lighter tan for coastal lowlands vs. darker tan for inland plains) or subtle texture/pattern overlays. The possible fourth shade (dark forest green) in War Zone provinces is a step in the right direction — extend this approach. *(Recurring: 3 consecutive evaluations — per-metric stagnation: Terrain Distinction unchanged at 6 for 3 evaluations.)*
+2. **[MEDIUM]** Make routes follow terrain contours or curve naturally between cities rather than rendering as straight lines through territory. The improvement from edge-termination to through-territory is significant, but routes still feel like straight graph edges overlaid on the map rather than geographic paths. Consider Bezier curves or waypoints.
+3. **[MEDIUM]** Increase label font size at overview zoom or implement adaptive font sizing with a minimum size clamp. Labels are legible at close-up but unreadable at zoomed-out levels. *(Recurring: 5 consecutive evaluations)*
+4. **[MEDIUM]** Manage route-label overlap — now that routes pass through territory, they occasionally cross over label background pills, reducing readability. Consider rendering labels above route lines in the z-order, or adding slight offsets to avoid collisions.
+5. **[MEDIUM]** Embed city circles within their parent province shapes rather than placing them at the border edge. Da Nang, Qui Nhon, and other cities still appear at province edges. *(Recurring: 5 consecutive evaluations)*
+6. **[MEDIUM]** Increase token size and add faction-specific visual markers so pieces are identifiable at default zoom. *(Recurring: 6 consecutive evaluations)*
+7. **[MEDIUM]** Reduce visual congestion in the southern Mekong Delta area where many small bright green provinces overlap with route lines.
+8. **[LOW]** Refine the overall map layout to more closely match Vietnam's S-curve geography. *(Recurring: 5 consecutive evaluations)*

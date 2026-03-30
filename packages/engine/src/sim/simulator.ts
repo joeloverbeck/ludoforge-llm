@@ -16,6 +16,7 @@ import type {
 } from '../kernel/index.js';
 import { isNoPlayableMovesAfterPreparationError } from '../agents/no-playable-move.js';
 import { computeDeltas } from './delta.js';
+import { extractDecisionPointSnapshot } from './snapshot.js';
 
 const AGENT_RNG_MIX = 0x9e3779b97f4a7c15n;
 
@@ -80,6 +81,7 @@ export const runGame = (
   validateMaxTurns(maxTurns);
   const validatedDef = assertValidatedGameDef(def);
   const resolvedRuntime = runtime ?? createGameDefRuntime(validatedDef);
+  const snapshotDepth = options?.snapshotDepth ?? 'none';
 
   let state = initialState(validatedDef, seed, playerCount, options, resolvedRuntime).state;
   if (agents.length !== state.playerCount) {
@@ -131,6 +133,9 @@ export const runGame = (
     }
 
     let selected;
+    const snapshot = snapshotDepth === 'none'
+      ? undefined
+      : extractDecisionPointSnapshot(validatedDef, state, resolvedRuntime, snapshotDepth);
     const t0_agent = perfStart(profiler);
     try {
       selected = agent.chooseMove({
@@ -177,6 +182,7 @@ export const runGame = (
       ...(applied.selectorTrace !== undefined ? { selectorTrace: applied.selectorTrace } : {}),
       ...(moveContext !== undefined ? { moveContext } : {}),
       ...(selected.agentDecision !== undefined ? { agentDecision: selected.agentDecision } : {}),
+      ...(snapshot !== undefined ? { snapshot } : {}),
     });
   }
 

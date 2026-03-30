@@ -4,6 +4,15 @@ export { DEFAULT_EVAL_CONFIG } from './eval-config.js';
 export type { EvalConfig } from './eval-config.js';
 export { generateEvalReport } from './eval-report.js';
 export type { EnrichedGameTrace, EnrichedMoveLog } from './enriched-trace-types.js';
+export { extractDecisionPointSnapshot } from './snapshot.js';
+export type {
+  DecisionPointSnapshot,
+  SeatStandingSnapshot,
+  SnapshotDepth,
+  StandardDecisionPointSnapshot,
+  VerboseDecisionPointSnapshot,
+  ZoneSummary,
+} from './snapshot-types.js';
 export { evaluateTrace } from './trace-eval.js';
 export { enrichTrace } from './trace-enrichment.js';
 export { runGame, runGames } from './simulator.js';

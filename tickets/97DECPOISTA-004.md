@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — tests only (no production code changes expected)
-**Deps**: tickets/97DECPOISTA-003.md
+**Deps**: archive/tickets/97DECPOISTA/97DECPOISTA-003.md
 
 ## Problem
 

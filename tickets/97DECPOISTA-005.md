@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — sim API, simulator internals, call sites, tests
-**Deps**: tickets/97DECPOISTA-003.md, tickets/97DECPOISTA-004.md
+**Deps**: archive/tickets/97DECPOISTA/97DECPOISTA-003.md, tickets/97DECPOISTA-004.md
 
 ## Problem
 
@@ -14,17 +14,20 @@ The snapshot work exposed this design issue more clearly: adding `snapshotDepth`
 
 ## Assumption Reassessment (2026-03-30)
 
-1. `packages/engine/src/sim/simulator.ts` currently types its `options` parameter as `ExecutionOptions` and forwards that bag into `initialState()` / `applyTrustedMove()` after stripping `profiler` manually.
-2. `ExecutionOptions` in `packages/engine/src/kernel/types-core.ts` now contains both kernel-facing flags (`verifyCompiledEffects`, `verifyIncrementalHash`, `trace`, etc.) and sim-only flags (`skipDeltas`, `snapshotDepth`).
-3. Existing `runGame()` callers pass both classes of flags through the same object: for example `verifyCompiledEffects` / `verifyIncrementalHash` from tests and `skipDeltas` from performance/determinism tests.
-4. No dedicated sim options type currently exists under `packages/engine/src/sim/`.
-5. The current architecture can function as-is, so this refactor is a cleanup for ownership and extensibility, not a blocker for delivering Spec 97 snapshots.
+1. `packages/engine/src/sim/simulator.ts` still types its `options` parameter as `ExecutionOptions`, reads `snapshotDepth` / `skipDeltas` directly from that bag, and forwards the same bag into `initialState()` / `applyTrustedMove()` after stripping only `profiler`.
+2. `ExecutionOptions` in `packages/engine/src/kernel/types-core.ts` currently mixes kernel-facing flags (`verifyCompiledEffects`, `verifyIncrementalHash`, `trace`, etc.) with sim-only flags (`skipDeltas`, `snapshotDepth`), which violates clean ownership boundaries.
+3. The remaining active tickets do not otherwise own this issue. `tickets/97DECPOISTA-004.md` explicitly keeps options-layer cleanup out of scope, so this ticket is the right and only follow-up for the architectural boundary fix.
+4. The real callers that must be updated are broader than this ticket originally listed: current mixed-option usage exists in `packages/engine/test/integration/compiled-effects-verification.test.ts`, `packages/engine/test/determinism/zobrist-incremental-parity.test.ts`, `packages/engine/test/helpers/zobrist-incremental-property-helpers.ts`, `packages/engine/test/determinism/draft-state-determinism-parity.test.ts`, `packages/engine/test/performance/compiled-vs-interpreted-benchmark.test.ts`, `packages/engine/test/memory/draft-state-gc-measurement.test.ts`, and `packages/engine/test/unit/sim/simulator.test.ts`.
+5. `packages/engine/test/unit/types-exhaustive.test.ts` currently asserts that `ExecutionOptions` includes `snapshotDepth`; this test must be inverted as part of the refactor so type-level proof matches the new architecture.
+6. No dedicated sim options type currently exists under `packages/engine/src/sim/`, and `packages/engine/src/sim/index.ts` does not yet export one.
+7. The current architecture works functionally, so this is not a blocker for snapshot behavior. It is still the correct next cleanup because Foundations #8, #9, and #10 require ownership boundaries to match the real architecture rather than accreting mixed concerns indefinitely.
 
 ## Architecture Check
 
 1. **Cleaner ownership boundary**: Kernel execution options should describe kernel behavior only. Simulator concerns such as delta elision and snapshot capture belong to the sim layer, not the kernel contract (Foundation #8, #10).
 2. **No backwards-compatibility shims**: This refactor should replace the mixed bag with a dedicated sim options type and update all call sites in one pass. No alias interfaces, deprecated fallbacks, or dual signatures (Foundation #9).
 3. **Extensible without contamination**: Future simulator-only controls can grow on the sim options type without bloating kernel APIs, while kernel-specific flags remain authoritative and testable in the kernel module.
+4. **Tests for this issue belong here, not in 004**: serialization and snapshot-payload tests prove snapshot behavior; they do not prove option ownership. This ticket must carry the API-shape, caller-migration, and type-surface tests that demonstrate the boundary has been cleaned up.
 
 ## What to Change
 
@@ -74,9 +77,11 @@ Update tests that currently pass mixed option bags through `runGame()` / `runGam
 
 - simulator unit/integration tests
 - determinism tests using `verifyIncrementalHash`
+- determinism helpers and parity tests using `skipDeltas`
 - compiled-effects verification tests using `verifyCompiledEffects`
 - performance/memory tests using `skipDeltas`
-- snapshot integration/serialization tests from Spec 97
+- type-surface tests that currently assert `ExecutionOptions.snapshotDepth`
+- snapshot serialization tests from Spec 97 if `97DECPOISTA-004` has landed by implementation time
 
 ## Files to Touch
 
@@ -88,10 +93,11 @@ Update tests that currently pass mixed option bags through `runGame()` / `runGam
 - `packages/engine/test/integration/sim/simulator.test.ts` (modify)
 - `packages/engine/test/determinism/zobrist-incremental-parity.test.ts` (modify)
 - `packages/engine/test/helpers/zobrist-incremental-property-helpers.ts` (modify)
+- `packages/engine/test/determinism/draft-state-determinism-parity.test.ts` (modify)
 - `packages/engine/test/integration/compiled-effects-verification.test.ts` (modify)
 - `packages/engine/test/performance/compiled-vs-interpreted-benchmark.test.ts` (modify)
 - `packages/engine/test/memory/draft-state-gc-measurement.test.ts` (modify)
-- `packages/engine/test/integration/sim/snapshot-integration.test.ts` (modify if 003 has landed)
+- `packages/engine/test/unit/types-exhaustive.test.ts` (modify)
 - `packages/engine/test/integration/sim/snapshot-serialization.test.ts` (modify if 004 has landed)
 
 ## Out of Scope
@@ -108,15 +114,17 @@ Update tests that currently pass mixed option bags through `runGame()` / `runGam
 1. `runGame()` / `runGames()` accept the dedicated sim options type, and all existing callers are updated without aliases.
 2. Kernel entry points (`initialState`, `applyMove`, `applyTrustedMove`) no longer receive sim-only flags through `ExecutionOptions`.
 3. Existing snapshot behavior, delta skipping, compiled-effect verification, and incremental hash verification still work through the new options structure.
-4. Existing suite: `pnpm turbo test`
-5. Existing suite: `pnpm turbo typecheck`
-6. Existing suite: `pnpm turbo lint`
+4. Type-level proof no longer permits `ExecutionOptions['snapshotDepth']` or `ExecutionOptions['skipDeltas']`, and the sim surface exports the dedicated sim options contract instead.
+5. Existing suite: `pnpm turbo test`
+6. Existing suite: `pnpm turbo typecheck`
+7. Existing suite: `pnpm turbo lint`
 
 ### Invariants
 
 1. `ExecutionOptions` is kernel-owned and contains kernel execution concerns only.
 2. Simulator-only controls (`skipDeltas`, `snapshotDepth`) live only on the sim options contract.
 3. No dual-signature compatibility layer remains after the refactor.
+4. `runGame()` / `runGames()` callers express intent explicitly: kernel behavior under `kernel`, simulator behavior at the sim options level.
 
 ## Test Plan
 
@@ -126,7 +134,10 @@ Update tests that currently pass mixed option bags through `runGame()` / `runGam
 2. `packages/engine/test/integration/compiled-effects-verification.test.ts` — verify nested kernel options still reach kernel behavior toggles correctly.
 3. `packages/engine/test/determinism/zobrist-incremental-parity.test.ts` — verify incremental hash validation still works through the new nested kernel options.
 4. `packages/engine/test/performance/compiled-vs-interpreted-benchmark.test.ts` — verify `skipDeltas` remains available as a simulator-only flag.
-5. `packages/engine/test/integration/sim/snapshot-integration.test.ts` — verify `snapshotDepth` remains available as a simulator-only flag once snapshots are integrated.
+5. `packages/engine/test/memory/draft-state-gc-measurement.test.ts` — verify the memory-measurement harness still uses sim-local delta skipping after the split.
+6. `packages/engine/test/unit/types-exhaustive.test.ts` — verify `ExecutionOptions` no longer includes sim-only fields and the shared `MoveLog.snapshot` contract remains intact.
+7. `packages/engine/test/unit/sim/simulator.test.ts` — verify `snapshotDepth` remains available as a simulator-only flag once snapshots are integrated.
+8. `packages/engine/test/integration/sim/snapshot-serialization.test.ts` — update if `97DECPOISTA-004` lands first so the new sim options shape is covered end to end.
 
 ### Commands
 

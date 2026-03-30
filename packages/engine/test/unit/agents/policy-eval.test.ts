@@ -358,6 +358,48 @@ function createHelperTestState(): { def: GameDef; state: GameState } {
   };
 }
 
+function createStateFeatureScoreCatalog(
+  stateFeatures: Readonly<Record<string, AgentPolicyExpr>>,
+  scoreExpr: AgentPolicyExpr,
+  unknownAs?: number,
+): AgentPolicyCatalog {
+  const stateFeatureIds = Object.keys(stateFeatures);
+  return createCatalog(
+    {
+      stateFeatures: Object.fromEntries(
+        Object.entries(stateFeatures).map(([id, expr]) => [id, {
+          type: 'number',
+          costClass: 'state',
+          expr,
+          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+        }]),
+      ),
+      scoreTerms: {
+        scoreStateFeatures: {
+          costClass: 'candidate',
+          weight: literal(1),
+          value: scoreExpr,
+          ...(unknownAs === undefined ? {} : { unknownAs }),
+          dependencies: { parameters: [], stateFeatures: stateFeatureIds, candidateFeatures: [], aggregates: [] },
+        },
+      },
+    },
+    {
+      use: {
+        pruningRules: [],
+        scoreTerms: ['scoreStateFeatures'],
+        completionScoreTerms: [],
+        tieBreakers: ['stableMoveKey'],
+      },
+      plan: {
+        stateFeatures: stateFeatureIds,
+        candidateFeatures: [],
+        candidateAggregates: [],
+      },
+    },
+  );
+}
+
 describe('policy-eval', () => {
   describe('filter and scope matching helpers', () => {
     it('matches token filters by type, props, and combined predicates', () => {
@@ -514,6 +556,218 @@ describe('policy-eval', () => {
         matchesZoneFilter(missingVarsZone, { attribute: { prop: 'climate', op: 'gte', value: 'arid' } }, state),
         true,
       );
+    });
+  });
+
+  describe('globalTokenAgg evaluation', () => {
+    it('counts filtered board tokens across multiple zones and resolves self in token filters', () => {
+      const agents = createStateFeatureScoreCatalog(
+        {
+          selfBaseCount: {
+            kind: 'globalTokenAgg',
+            tokenFilter: {
+              type: 'base',
+              props: { seat: { eq: 'self' } },
+            },
+            aggOp: 'count',
+            zoneScope: 'board',
+          },
+        },
+        refExpr({ kind: 'library', refKind: 'stateFeature', id: 'selfBaseCount' }),
+      );
+      const baseInput = createInput(agents, createMoves('alpha'));
+      const input = {
+        ...baseInput,
+        state: {
+          ...baseInput.state,
+          zones: {
+            ...baseInput.state.zones,
+            'frontier:none': [
+              { id: asTokenId('frontier-base'), type: 'base', props: { seat: asPlayerId(0), strength: 2 } },
+            ],
+            'target-a:none': [
+              { id: asTokenId('province-base-a'), type: 'base', props: { seat: asPlayerId(0), strength: 3 } },
+              { id: asTokenId('province-troop'), type: 'troop', props: { seat: asPlayerId(1), strength: 5 } },
+            ],
+            'target-b:none': [
+              { id: asTokenId('province-base-b'), type: 'base', props: { seat: asPlayerId(0), strength: 4 } },
+              { id: asTokenId('province-base-c'), type: 'base', props: { seat: asPlayerId(1), strength: 1 } },
+            ],
+          },
+        },
+      } as const;
+
+      const result = evaluatePolicyMove(input);
+
+      assert.equal(result.metadata.candidates[0]?.score, 3);
+    });
+
+    it('sums numeric token props across filtered zones only', () => {
+      const agents = createStateFeatureScoreCatalog(
+        {
+          provinceTroopStrength: {
+            kind: 'globalTokenAgg',
+            tokenFilter: { type: 'troop' },
+            aggOp: 'sum',
+            prop: 'strength',
+            zoneFilter: { category: 'province' },
+            zoneScope: 'board',
+          },
+        },
+        refExpr({ kind: 'library', refKind: 'stateFeature', id: 'provinceTroopStrength' }),
+      );
+      const baseInput = createInput(agents, createMoves('alpha'));
+      const input = {
+        ...baseInput,
+        state: {
+          ...baseInput.state,
+          zones: {
+            ...baseInput.state.zones,
+            'frontier:none': [
+              { id: asTokenId('frontier-troop'), type: 'troop', props: { strength: 9 } },
+            ],
+            'target-a:none': [
+              { id: asTokenId('province-troop-a'), type: 'troop', props: { strength: 4 } },
+              { id: asTokenId('province-base'), type: 'base', props: { strength: 7 } },
+            ],
+            'target-b:none': [
+              { id: asTokenId('province-troop-b'), type: 'troop', props: { strength: 2 } },
+              { id: asTokenId('province-troop-c'), type: 'troop', props: { hidden: true } },
+            ],
+          },
+        },
+      } as const;
+
+      const result = evaluatePolicyMove(input);
+
+      assert.equal(result.metadata.candidates[0]?.score, 6);
+    });
+
+    it('computes extrema and preserves empty-input semantics by aggregate family', () => {
+      const agents = createStateFeatureScoreCatalog(
+        {
+          maxBaseStrength: {
+            kind: 'globalTokenAgg',
+            tokenFilter: { type: 'base' },
+            aggOp: 'max',
+            prop: 'strength',
+            zoneScope: 'board',
+          },
+          minBaseStrength: {
+            kind: 'globalTokenAgg',
+            tokenFilter: { type: 'base' },
+            aggOp: 'min',
+            prop: 'strength',
+            zoneScope: 'board',
+          },
+          missingBaseStrengthSum: {
+            kind: 'globalTokenAgg',
+            tokenFilter: { type: 'base', props: { seat: { eq: 'missing' } } },
+            aggOp: 'sum',
+            prop: 'strength',
+            zoneScope: 'board',
+          },
+          missingBaseStrengthMax: {
+            kind: 'globalTokenAgg',
+            tokenFilter: { type: 'base', props: { seat: { eq: 'missing' } } },
+            aggOp: 'max',
+            prop: 'strength',
+            zoneScope: 'board',
+          },
+        },
+        opExpr(
+          'add',
+          refExpr({ kind: 'library', refKind: 'stateFeature', id: 'maxBaseStrength' }),
+          refExpr({ kind: 'library', refKind: 'stateFeature', id: 'minBaseStrength' }),
+          refExpr({ kind: 'library', refKind: 'stateFeature', id: 'missingBaseStrengthSum' }),
+          opExpr(
+            'coalesce',
+            refExpr({ kind: 'library', refKind: 'stateFeature', id: 'missingBaseStrengthMax' }),
+            literal(-1),
+          ),
+        ),
+      );
+      const baseInput = createInput(agents, createMoves('alpha'));
+      const input = {
+        ...baseInput,
+        state: {
+          ...baseInput.state,
+          zones: {
+            ...baseInput.state.zones,
+            'frontier:none': [
+              { id: asTokenId('base-1'), type: 'base', props: { seat: 'alpha', strength: 6 } },
+            ],
+            'target-a:none': [
+              { id: asTokenId('base-2'), type: 'base', props: { seat: 'beta', strength: 2 } },
+            ],
+            'target-b:none': [
+              { id: asTokenId('base-3'), type: 'base', props: { seat: 'gamma', strength: 4 } },
+            ],
+          },
+        },
+      } as const;
+
+      const result = evaluatePolicyMove(input);
+
+      assert.equal(result.metadata.candidates[0]?.score, 7);
+    });
+
+    it('distinguishes board and all zone scopes', () => {
+      const agents = createStateFeatureScoreCatalog(
+        {
+          boardBaseCount: {
+            kind: 'globalTokenAgg',
+            tokenFilter: { type: 'base' },
+            aggOp: 'count',
+            zoneScope: 'board',
+          },
+          allBaseCount: {
+            kind: 'globalTokenAgg',
+            tokenFilter: { type: 'base' },
+            aggOp: 'count',
+            zoneScope: 'all',
+          },
+        },
+        opExpr(
+          'add',
+          refExpr({ kind: 'library', refKind: 'stateFeature', id: 'boardBaseCount' }),
+          refExpr({ kind: 'library', refKind: 'stateFeature', id: 'allBaseCount' }),
+        ),
+      );
+      const baseInput = createInput(agents, createMoves('alpha'));
+      const auxZoneId = asZoneId('reserve:none');
+      const input = {
+        ...baseInput,
+        def: {
+          ...baseInput.def,
+          zones: [
+            ...baseInput.def.zones,
+            {
+              id: auxZoneId,
+              owner: 'none',
+              visibility: 'public',
+              ordering: 'set',
+              zoneKind: 'aux',
+            },
+          ],
+        },
+        state: {
+          ...baseInput.state,
+          zones: {
+            ...baseInput.state.zones,
+            'frontier:none': [
+              { id: asTokenId('board-base'), type: 'base', props: { strength: 1 } },
+            ],
+            [auxZoneId]: [
+              { id: asTokenId('aux-base'), type: 'base', props: { strength: 1 } },
+            ],
+          },
+        },
+      } as const;
+
+      const result = evaluatePolicyMove(input);
+
+      assert.equal(result.metadata.candidates[0]?.score, 3);
     });
   });
 

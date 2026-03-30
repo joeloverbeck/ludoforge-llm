@@ -1,46 +1,33 @@
-# Map Representation Plan — Iteration 4
+# Map Representation Plan — Iteration 5
 
 **Date**: 2026-03-30
-**Based on**: EVALUATION #3 (average score: 4.5)
-**Problems targeted**: [CRITICAL] Extend polygon territory rendering to ALL province zones, [HIGH] Soften existing polygon shapes (addressed via redesign during tessellation)
+**Based on**: EVALUATION #4 (average score: 5.75)
+**Problems targeted**: [HIGH] Soften polygon shapes, [HIGH] Finer terrain granularity, [MEDIUM] Label readability
 
 ## Context
 
-Evaluation #3 revealed — through the newly added editor overview screenshot — that only 5 of ~23 province zones have polygon territory shapes. The remaining 18 provinces are still rendered as isolated dark green rectangles with no shared borders, no terrain distinction, and no spatial relationship to neighbors. This is the single highest-impact gap in the map rendering. The polygon rendering pipeline is fully functional; the bottleneck is purely missing vertex data in `visual-config.yaml`. This iteration focuses exclusively on authoring polygon vertices for all remaining provinces and adjusting the existing 5 to tessellate cleanly with new neighbors.
+Evaluation #4 confirmed that polygon territory rendering now covers all ~28-30 provinces (the CRITICAL gap from Eval #3 is fully resolved). The map reads as a contiguous territory rather than isolated rectangles. However, three persistent issues drag scores down: (1) polygon borders are straight-line geometric/crystalline shapes — recurring for 3 evaluations with no progress, (2) only 3 terrain colors exist despite meaningful sub-distinctions (Laos/Cambodia jungle vs. South Vietnam jungle, North Vietnam highlands vs. SVN highlands), and (3) labels remain small and hard to read — explicitly deferred from iteration 4 to this iteration.
 
-Deferred to iteration 5: label readability improvements (font size, interior placement, background pills — planned in iteration 3 but not yet implemented), LoC zone restyling, city embedding, route flow-through improvements.
+Road/River Integration (5/10, recurring 4 evaluations) is deferred to iteration 6 as it requires more fundamental route rendering changes.
+
+**Stalled iteration check**: Iteration 4 plan (polygon coverage expansion) was fully implemented — Eval #4 confirms all provinces now have polygon shapes. No stalled items to carry forward.
 
 ## Foundations Alignment
 
 | Foundation | Relevance | How This Plan Respects It |
 |-----------|-----------|--------------------------|
 | #1 Engine Agnosticism | Not relevant | No engine code changes |
-| #3 Visual Separation | Always relevant | All changes are polygon vertex data in visual-config.yaml — no GameSpecDoc or engine changes |
-| #7 Immutability | Not relevant | No state transition changes |
-| #9 No Backwards Compat | Relevant | Existing 5 polygon vertex sets are updated in-place to tessellate with new neighbors — no legacy fallbacks |
-| #10 Architectural Completeness | Always relevant | Addresses root cause (missing vertex data) for all provinces, not just a few more |
+| #3 Visual Separation | Always relevant | Polygon smoothing is a renderer code change; terrain sub-variants are visual-config.yaml data; label sizing is renderer code — no GameSpecDoc or engine changes |
+| #7 Immutability | Relevant | Smoothing function is pure (vertices in → smoothed vertices out); no state mutation |
+| #9 No Backwards Compat | Relevant | Smoothing applies to all polygon zones unconditionally — no opt-in flag or legacy path |
+| #10 Architectural Completeness | Always relevant | Smoothing addresses the root cause (straight edges in `poly()` call) not a symptom; terrain variants address the root cause (insufficient attribute rules) not just color tweaks |
 
 ## Current Code Architecture (reference for implementer)
 
-### Vertex Data Format
-
-Polygon vertices are defined in `visual-config.yaml` zone overrides as flat alternating coordinate arrays relative to zone center `(0, 0)`:
-
-```yaml
-# data/games/fire-in-the-lake/visual-config.yaml, lines 424-528
-overrides:
-  binh-dinh:none:
-    label: Binh Dinh
-    shape: polygon
-    vertices: [-400, -170, 400, -370, 450, 530, 200, 530, -300, 530, -400, 180]
-```
-
-Format: `[x1, y1, x2, y2, ..., xn, yn]` — minimum 6 values (3 coordinate pairs). Consumed by `Graphics.poly()` in PixiJS.
-
-### Rendering Pipeline (no changes needed)
+### Polygon Drawing Pipeline
 
 ```
-visual-config.yaml (vertices array)
+visual-config.yaml zone override: vertices: [x1, y1, x2, y2, ...]
     ↓
 ZoneVisualStyleSchema.vertices: z.array(z.number()).optional()
     (packages/runner/src/config/visual-config-types.ts:99)
@@ -58,268 +45,340 @@ shape-utils.ts:drawZoneShape() → case 'polygon': base.poly([...options.vertice
     (packages/runner/src/canvas/renderers/shape-utils.ts:71-76)
 ```
 
-The map editor renderer (`map-editor-zone-renderer.ts`) uses the same `drawZoneShape()` function and will automatically render new polygon zones.
+### Key Function: `drawZoneShape()` (shape-utils.ts:39-84)
 
-### Hit Area Computation
-
-`computeZoneHitArea()` in `zone-renderer.ts:298-324` computes a bounding-box Rectangle from polygon vertices for pointer interaction. No changes needed — it already handles arbitrary polygon vertices.
-
-### Edge Point Resolution (for adjacency lines)
-
-`getEdgePointAtAngle()` in `shape-utils.ts:112-115` uses `rayPolygonIntersection()` (lines 168-217) to find where adjacency lines intersect polygon edges. No changes needed.
-
-### Zone Category Defaults
-
-```yaml
-# visual-config.yaml lines 186-197
-categoryStyles:
-  city:
-    shape: circle     # Cities remain circles — NOT polygon candidates
-    width: 160
-    height: 160
-    color: "#5b7fa5"
-  province:
-    shape: rectangle  # Default for provinces WITHOUT override — polygon overrides replace this
-    width: 360
-    height: 220
-  loc:
-    shape: connection # LoCs rendered as route lines — NOT polygon candidates
+```typescript
+export function drawZoneShape(
+  base: ShapeGraphics,
+  shape: ZoneShape | undefined,
+  dimensions: ShapeDimensions,
+  options: DrawZoneShapeOptions,
+): void {
+  // ...
+  case 'polygon':
+    if (options.vertices !== undefined && options.vertices.length >= 6) {
+      base.poly([...options.vertices]);  // ← straight-line segments between vertices
+    } else {
+      base.roundRect(/* fallback */);
+    }
+}
 ```
 
-### Terrain Attribute Rules (already in place)
+### Key Function: `getEdgePointAtAngle()` (shape-utils.ts:86-124)
+
+Used by adjacency-renderer.ts to compute where dashed lines attach to polygon edges.
+
+```typescript
+case 'polygon':
+  if (vertices !== undefined && vertices.length >= 6) {
+    return rayPolygonIntersection(angleDeg, vertices);  // ← iterates straight edges
+  }
+```
+
+**Critical**: Both `drawZoneShape()` and `getEdgePointAtAngle()` consume the same vertices. If smoothing is applied to drawing but not edge intersection, adjacency lines will attach to the wrong points. Both must use the same smoothed vertices.
+
+### Key Function: `computeZoneHitArea()` (zone-renderer.ts:298-324)
+
+Computes bounding-box Rectangle from polygon vertices for pointer interaction. Uses `for (let i = 0; i < vertices.length; i += 2)` to iterate. Works with any vertex count — no change needed, but it will operate on smoothed vertices.
+
+### ShapeGraphics Interface (shape-utils.ts:9-14)
+
+```typescript
+export interface ShapeGraphics {
+  roundRect(x: number, y: number, width: number, height: number, radius: number): ShapeGraphics;
+  circle(x: number, y: number, radius: number): ShapeGraphics;
+  ellipse(x: number, y: number, halfWidth: number, halfHeight: number): ShapeGraphics;
+  poly(points: number[]): ShapeGraphics;
+}
+```
+
+Only `poly()` is available — no `moveTo`/`quadraticCurveTo`. Smoothing must produce more vertices for `poly()`, not use curve commands.
+
+### Label Rendering (zone-renderer.ts:169-174, 243-269)
+
+```typescript
+// Name label creation (line 169)
+const nameLabel = createBitmapLabel('', 0, 0, 20, {  // fontSize = 20
+  fontName: STROKE_LABEL_FONT_NAME,
+  fill: '#ffffff',
+  stroke: { color: '#000000', width: 3 },
+  anchor: { x: 0.5, y: 0.5 },
+});
+
+// Label background pill (lines 243-269)
+const LABEL_FONT_SIZE = 20;
+const LABEL_CHAR_WIDTH_FACTOR = 0.6;
+const LABEL_PILL_PADDING = 6;
+const LABEL_PILL_CORNER_RADIUS = 4;
+const LABEL_PILL_ALPHA = 0.45;
+```
+
+### Terrain Attribute Rules (visual-config.yaml:385-423)
 
 ```yaml
-# visual-config.yaml lines 385-423
 attributeRules:
   - match: { category: [province], attributeContains: { terrainTags: highland } }
-    style: { color: "#d4a656", strokeColor: "#8b6914" }
+    style: { color: "#d4a656", strokeColor: "#8b6914" }     # Tan
   - match: { category: [province], attributeContains: { terrainTags: jungle } }
-    style: { color: "#1a5c2a", strokeColor: "#0d3d18" }
+    style: { color: "#1a5c2a", strokeColor: "#0d3d18" }     # Dark green
   - match: { category: [province], attributeContains: { terrainTags: lowland } }
-    style: { color: "#5db85d", strokeColor: "#2d7a2d" }
+    style: { color: "#5db85d", strokeColor: "#2d7a2d" }     # Bright green
 ```
 
-These rules apply automatically to all province zones with matching terrain tags, including newly polygon-ified provinces. No changes needed.
+### Attribute Rule Resolution (visual-config-provider.ts)
 
-### Existing Polygon Zones (5)
+`resolveZoneVisual()` applies rules in order: categoryStyle → attributeRules → overrides. Later rules override earlier ones. Zone overrides (per-zone `color`) take highest priority.
 
-| Zone | Center (x, y) | Vertices (count) |
-|------|---------------|-----------------|
-| binh-dinh | (1200, -1380) | 6 vertices |
-| khanh-hoa | (1340, 280) | 4 vertices |
-| kontum | (513, -932) | 7 vertices |
-| phu-bon-phu-yen | (1465, -448) | 6 vertices |
-| pleiku-darlac | (340, -180) | 5 vertices |
+### Province Terrain + Country Data
 
-## Problem 1: Only 5 of 23 provinces have polygon territory shapes
+| Province | Terrain | Country |
+|----------|---------|---------|
+| north-vietnam | highland | northVietnam |
+| quang-tri-thua-thien | highland | southVietnam |
+| quang-nam | highland | southVietnam |
+| binh-dinh | highland | southVietnam |
+| pleiku-darlac | highland | southVietnam |
+| khanh-hoa | highland | southVietnam |
+| kontum | highland | southVietnam |
+| quang-tin-quang-ngai | lowland | southVietnam |
+| phu-bon-phu-yen | lowland | southVietnam |
+| kien-phong | lowland | southVietnam |
+| kien-hoa-vinh-binh | lowland | southVietnam |
+| ba-xuyen | lowland | southVietnam |
+| kien-giang-an-xuyen | lowland | southVietnam |
+| central-laos | jungle | laos |
+| southern-laos | jungle | laos |
+| northeast-cambodia | jungle | cambodia |
+| the-fishhook | jungle | cambodia |
+| the-parrots-beak | jungle | cambodia |
+| sihanoukville | jungle | cambodia |
+| phuoc-long | jungle | southVietnam |
+| quang-duc-long-khanh | jungle | southVietnam |
+| binh-tuy-binh-thuan | jungle | southVietnam |
+| tay-ninh | jungle | southVietnam |
 
-**Evaluation score**: Adjacency Clarity = 5/10, Terrain Distinction = 4/10 (full-map averages dragged down by rectangle provinces)
-**Root cause**: Missing `shape: polygon` and `vertices: [...]` in `visual-config.yaml` zone overrides for 18 province zones. The rendering pipeline fully supports polygons — the issue is purely absent data.
+**Key insight**: The physical FITL board visually distinguishes Laos/Cambodia zones (gray-green, "outside" feel) from South Vietnam jungle (darker green). North Vietnam also has a distinct appearance. The `country` attribute is available for differentiation but has no attribute rules yet.
+
+### Map Editor Renderer
+
+`map-editor-zone-renderer.ts` calls the same `drawZoneShape()` from `shape-utils.ts`. Any smoothing change in `drawZoneShape()` automatically applies to the editor.
+
+## Problem 1: Angular/geometric polygon shapes
+
+**Evaluation score**: Adjacency Clarity = 7/10
+**Root cause**: `drawZoneShape()` passes raw vertices directly to `base.poly()`, which draws straight lines between each vertex pair. With 5-8 vertices per province, this produces angular parallelograms and trapezoids rather than organic territorial outlines. The physical board uses curved, flowing borders.
+**Recurring**: 3 consecutive evaluations (Eval #2, #3, #4) — never addressed.
 
 ### Approaches Considered
 
-1. **Voronoi tessellation from zone centers**
-   - Feasibility: HIGH — compute Voronoi diagram from the 23 province center positions
-   - Visual impact: MEDIUM — mathematically correct tessellation but geographically wrong shapes (provinces have very different sizes; Voronoi assumes equal influence radius)
-   - Risk: Bizarre shapes for distant/large provinces like north-vietnam; doesn't follow geographic features
+1. **Chaikin's corner-cutting algorithm**
+   - Description: Apply 2 iterations of Chaikin's algorithm to polygon vertices before passing to `poly()`. Each iteration replaces each vertex with two new points at 25% and 75% along adjacent edges, producing progressively smoother curves. A 6-vertex polygon becomes ~24 vertices after 2 iterations.
+   - Feasibility: HIGH — pure function, ~15 lines of code. Uses existing `poly()` API. No new dependencies.
+   - Visual impact: HIGH — transforms angular shapes into smooth, organic-looking territories. 2 iterations is the sweet spot: 1 is still noticeably angular, 3 adds vertices with diminishing returns.
+   - Risk: LOW — `rayPolygonIntersection()` and hit area computation work with any vertex count. Performance: ~24 vertices per zone × 23 provinces = ~550 vertices total, trivial for PixiJS.
 
-2. **Midpoint-first edge-sharing approach (manual authoring guided by adjacency data)**
-   - Feasibility: MEDIUM — for each adjacent province pair, compute the midpoint between centers as a shared border vertex; add boundary vertices for map edges; express relative to each zone's center
-   - Visual impact: HIGH — tessellation correct by construction (shared edges use same absolute points); shapes follow adjacency topology
-   - Risk: Labor-intensive (18 provinces × 5-8 vertices each); requires careful coordinate math
+2. **Catmull-Rom spline interpolation**
+   - Description: Treat vertices as control points for a Catmull-Rom spline. Sample N points along the spline to produce a smooth polygon for `poly()`.
+   - Feasibility: MEDIUM — more complex math (spline evaluation), needs careful handling of closed curves.
+   - Visual impact: HIGH — very smooth curves, but can produce unexpected bulges if control points are close together.
+   - Risk: MEDIUM — spline overshoot can make provinces bulge beyond intended borders, breaking shared-edge alignment between neighbors.
 
-3. **Adaptive approach: midpoint-guided tessellation with geographic adjustment**
-   - Feasibility: MEDIUM — start with midpoint computation (Approach 2) but adjust shared vertices toward geographic features visible on the physical board (coast curves, river lines, ridgelines)
-   - Visual impact: HIGH — combines topological correctness with geographic plausibility
-   - Risk: Same labor as Approach 2 plus subjective geographic judgment; risk of inconsistent style
+3. **Quadratic Bezier corner rounding**
+   - Description: For each vertex, shorten the two adjacent edges by a rounding radius and insert a quadratic Bezier curve between the shortened endpoints.
+   - Feasibility: LOW — requires adding `moveTo`/`quadraticCurveTo` to the `ShapeGraphics` interface, which is a wider API change. Would also need to update `rayPolygonIntersection` to handle curved segments.
+   - Visual impact: HIGH — clean, predictable rounding like CSS border-radius.
+   - Risk: HIGH — API change affects all shape consumers; curved edge intersection is significantly more complex than straight-edge intersection.
 
-### Recommendation: Approach 2 (Midpoint-first edge-sharing)
+### Recommendation: Approach 1 (Chaikin's corner-cutting)
 
-**Why**: Guarantees tessellation correctness by construction. Every shared border between two provinces uses the exact same absolute world-space points (expressed relative to each zone's center). Geographic adjustment (Approach 3) is desirable but adds subjectivity and risk — it can be applied in iteration 5 as a refinement pass once all provinces have base polygons. The midpoint approach produces clean, consistent shapes that respect the adjacency topology.
+**Why**: Maximum feasibility with high visual impact. It's a pure function that transforms a vertex array into a denser vertex array — no API changes, no new dependencies, no curved-edge intersection math. Both `drawZoneShape()` and `getEdgePointAtAngle()` consume the smoothed vertices through `poly()` and `rayPolygonIntersection()` respectively, which already handle arbitrary vertex counts. The algorithm is well-known, deterministic, and produces predictable results.
 
-## Province Adjacency Reference
+**Critical implementation detail**: The smoothing function must be applied consistently wherever polygon vertices are consumed — both for drawing (shape-utils.ts `drawZoneShape`) and for edge intersection (shape-utils.ts `getEdgePointAtAngle`). The cleanest approach is a single exported utility function called in both code paths.
 
-Province-to-province adjacencies (excluding cities and LoCs):
+**Shared-edge preservation**: Chaikin's algorithm is a local operation — each output vertex depends only on two adjacent input vertices. If two provinces share an edge (same absolute vertex pair), applying Chaikin's to both polygons independently produces the same smoothed points along that shared edge. No cross-polygon coordination needed.
 
-| Province | Adjacent Provinces |
-|----------|-------------------|
-| north-vietnam | central-laos, quang-tri-thua-thien |
-| central-laos | north-vietnam, quang-tri-thua-thien, quang-nam, southern-laos |
-| southern-laos | central-laos, quang-nam, quang-tin-quang-ngai, binh-dinh, pleiku-darlac, northeast-cambodia |
-| quang-tri-thua-thien | central-laos, north-vietnam, quang-nam |
-| quang-nam | central-laos, southern-laos, quang-tri-thua-thien, quang-tin-quang-ngai |
-| quang-tin-quang-ngai | southern-laos, quang-nam, binh-dinh |
-| **binh-dinh** | kontum, southern-laos, quang-tin-quang-ngai, phu-bon-phu-yen, pleiku-darlac |
-| **kontum** | binh-dinh, pleiku-darlac |
-| **phu-bon-phu-yen** | binh-dinh, pleiku-darlac, khanh-hoa |
-| **pleiku-darlac** | kontum, southern-laos, northeast-cambodia, the-fishhook, binh-dinh, phu-bon-phu-yen, khanh-hoa, quang-duc-long-khanh |
-| **khanh-hoa** | pleiku-darlac, phu-bon-phu-yen, binh-tuy-binh-thuan, quang-duc-long-khanh |
-| northeast-cambodia | southern-laos, the-fishhook, pleiku-darlac |
-| the-fishhook | northeast-cambodia, the-parrots-beak, pleiku-darlac, quang-duc-long-khanh, phuoc-long, tay-ninh |
-| the-parrots-beak | the-fishhook, sihanoukville, tay-ninh, kien-phong, kien-giang-an-xuyen |
-| sihanoukville | the-parrots-beak, kien-giang-an-xuyen |
-| phuoc-long | the-fishhook, quang-duc-long-khanh, tay-ninh |
-| quang-duc-long-khanh | the-fishhook, pleiku-darlac, khanh-hoa, phuoc-long, binh-tuy-binh-thuan, tay-ninh |
-| binh-tuy-binh-thuan | khanh-hoa, quang-duc-long-khanh |
-| tay-ninh | the-fishhook, the-parrots-beak, phuoc-long, quang-duc-long-khanh, kien-phong |
-| kien-phong | the-parrots-beak, tay-ninh, kien-hoa-vinh-binh, kien-giang-an-xuyen |
-| kien-hoa-vinh-binh | kien-phong, ba-xuyen |
-| ba-xuyen | kien-hoa-vinh-binh, kien-giang-an-xuyen |
-| kien-giang-an-xuyen | the-parrots-beak, sihanoukville, kien-phong, ba-xuyen |
+## Problem 2: Insufficient terrain granularity
 
-**Bold** = existing polygon zones (5). All others need polygon vertices.
+**Evaluation score**: Terrain Distinction = 6/10
+**Root cause**: Only 3 attribute rules exist (highland, jungle, lowland), but FITL provinces span 4 countries (southVietnam, northVietnam, laos, cambodia). On the physical board, Laos/Cambodia zones have a distinctly different visual treatment from South Vietnam zones — they feel "outside" the main theater. North Vietnam also looks different from SVN highlands. The `country` attribute is available in zone data but has no visual rules.
 
-Note: Some provinces also border cities (e.g., binh-tuy-binh-thuan borders cam-ranh and saigon; kien-hoa-vinh-binh borders saigon and can-tho). City borders are free edges — the province polygon does NOT need to share vertices with city circles.
+### Approaches Considered
 
-## Zone Center Positions (from visual-config.yaml fixed layout hints)
+1. **Per-zone color overrides in visual-config.yaml**
+   - Description: Add explicit `color` overrides for each Laos, Cambodia, and North Vietnam province in the overrides section.
+   - Feasibility: HIGH — purely data changes, no code needed.
+   - Visual impact: MEDIUM — precise control per zone, but doesn't scale if zones change.
+   - Risk: LOW — overrides take highest priority in the resolution chain.
 
-| Province | Center X | Center Y |
-|----------|----------|----------|
-| north-vietnam | -460 | -4020 |
-| central-laos | -749 | -2901 |
-| southern-laos | -920 | -1690 |
-| quang-tri-thua-thien | 100 | -3160 |
-| quang-nam | 217 | -2453 |
-| quang-tin-quang-ngai | 1180 | -1980 |
-| **binh-dinh** | 1200 | -1380 |
-| **kontum** | 513 | -932 |
-| **phu-bon-phu-yen** | 1465 | -448 |
-| **pleiku-darlac** | 340 | -180 |
-| **khanh-hoa** | 1340 | 280 |
-| northeast-cambodia | -1046 | -498 |
-| the-fishhook | -1135 | 404 |
-| the-parrots-beak | -1304 | 1323 |
-| sihanoukville | -1492 | 2101 |
-| phuoc-long | 600 | 800 |
-| quang-duc-long-khanh | 1206 | 1113 |
-| binh-tuy-binh-thuan | 1321 | 1774 |
-| tay-ninh | 140 | 1580 |
-| kien-phong | -156 | 2111 |
-| kien-hoa-vinh-binh | 278 | 2784 |
-| ba-xuyen | -253 | 3256 |
-| kien-giang-an-xuyen | -975 | 3241 |
+2. **Country-based attribute rules**
+   - Description: Add new attribute rules matching `country` attribute values (laos, cambodia, northVietnam) with terrain-specific shade variants. These rules are placed after terrain rules so they override the base terrain color for specific countries.
+   - Feasibility: HIGH — purely data changes in visual-config.yaml. The attribute rule system already supports `attributeContains` matching.
+   - Visual impact: HIGH — 6 Laos/Cambodia jungle provinces get a distinct gray-green; North Vietnam gets a distinct tone; SVN provinces keep current colors. Creates 5-6 visually distinct province categories instead of 3.
+   - Risk: LOW — attribute rules are additive; later rules override earlier ones. If a zone has both `terrainTags: jungle` and `country: cambodia`, the country rule applied later overrides the jungle rule's color.
 
-## Vertex Authoring Method
+3. **Texture/pattern overlays per terrain**
+   - Description: Add subtle diagonal hatching or stippling patterns over terrain fills to differentiate provinces beyond just color.
+   - Feasibility: LOW — requires PixiJS Graphics pattern fills or texture generation, significant code change.
+   - Visual impact: HIGH — adds a second visual dimension beyond color.
+   - Risk: MEDIUM — patterns may interfere with label/token readability.
 
-For each province, vertices are computed using this procedure:
+### Recommendation: Approach 2 (Country-based attribute rules)
 
-**Step A — Identify province neighbors**: From the adjacency table above, list all adjacent provinces (excluding cities and LoCs).
+**Why**: Uses the existing attribute rule system with no code changes — just adding YAML rules. The `country` attribute is already present in every province's zone data (confirmed in `40-content-data-assets.md`). By placing country rules after terrain rules in the `attributeRules` list, they override the base terrain color for Laos/Cambodia/North Vietnam provinces while preserving the base colors for South Vietnam provinces.
 
-**Step B — Compute shared border midpoints**: For each adjacent province pair (A, B), the shared border vertex is at the midpoint between their centers in absolute world coordinates:
-```
-midpoint_x = (A.x + B.x) / 2
-midpoint_y = (A.y + B.y) / 2
-```
+**Proposed color palette** (6 visual categories):
 
-**Step C — Add boundary vertices**: For edges facing the map boundary (coast, international border, or non-province zones like cities), place vertices at geographic extent. Use ~180px outward from center as a guide (half of 360px default province width).
+| Category | Color | Stroke | Count | Description |
+|----------|-------|--------|-------|-------------|
+| SVN Highland | `#d4a656` | `#8b6914` | 6 | Tan/khaki (unchanged) |
+| SVN Lowland | `#5db85d` | `#2d7a2d` | 6 | Bright green (unchanged) |
+| SVN Jungle | `#1a5c2a` | `#0d3d18` | 4 | Dark green (unchanged) |
+| North Vietnam | `#8b4513` | `#5a2d0a` | 1 | Saddle brown — distinct "enemy territory" |
+| Laos Jungle | `#2d5a3a` | `#1a3d25` | 2 | Gray-green — "outside theater" |
+| Cambodia Jungle | `#3a5a3a` | `#254025` | 4 | Olive-gray — "outside theater", slightly lighter than Laos |
 
-**Step D — Order vertices clockwise** around the polygon.
+## Problem 3: Small, hard-to-read labels
 
-**Step E — Convert to relative coordinates**: Subtract the zone center from each absolute vertex:
-```
-relative_x = absolute_x - center_x
-relative_y = absolute_y - center_y
-```
+**Evaluation score**: Label/Token Readability = 5/10
+**Root cause**: Label font size is hardcoded at 20px (`LABEL_FONT_SIZE = 20` in zone-renderer.ts:243). The label background pill uses `LABEL_PILL_ALPHA = 0.45` which provides insufficient contrast on darker terrain fills (jungle, North Vietnam). At overview zoom, labels shrink proportionally and become illegible.
+**Recurring**: 3 consecutive evaluations (Eval #2, #3, #4). Explicitly deferred from iteration 4 plan ("Deferred to iteration 5: label readability improvements").
 
-**Step F — Round to integers**: All vertex coordinates should be integers in the YAML to avoid floating-point alignment drift.
+### Approaches Considered
 
-**Step G — Validate shared edges**: For each adjacent pair (A, B) sharing vertices V1 and V2:
-```
-A.center + A.relativeV1 == B.center + B.relativeV1  (same absolute position)
-```
+1. **Increase font size and pill opacity**
+   - Description: Increase `LABEL_FONT_SIZE` from 20 to 26, increase `LABEL_PILL_ALPHA` from 0.45 to 0.65, and increase `LABEL_PILL_PADDING` from 6 to 8 for better visual framing.
+   - Feasibility: HIGH — 3 constant changes in zone-renderer.ts.
+   - Visual impact: MEDIUM — labels are ~30% larger and pills are more opaque, improving readability on all terrain colors. However, labels still shrink at overview zoom.
+   - Risk: LOW — larger labels may clip polygon edges on very small provinces, but current polygon areas are designed ≥ default rectangle area (360×220).
 
-### Handling Multi-Neighbor Junctions
+2. **Adaptive font size based on zoom level**
+   - Description: Scale label font size inversely with viewport zoom so labels maintain a minimum readable size at overview zoom.
+   - Feasibility: LOW — requires hooking into viewport zoom events, updating label scale on every zoom change, and managing the label/pill size relationship dynamically.
+   - Visual impact: HIGH — labels stay readable at all zoom levels.
+   - Risk: MEDIUM — performance overhead from zoom-reactive label updates; visual jarring if scaling isn't smooth.
 
-Where 3+ provinces meet at a single point (e.g., southern-laos / quang-nam / quang-tin-quang-ngai), all three polygons share the same junction vertex. The absolute junction point is typically the centroid of the 3 province centers. Each province stores it as a relative offset from its own center.
+3. **Replace bitmap text with SDF (Signed Distance Field) text**
+   - Description: Use PixiJS SDF text rendering for sharp labels at any zoom level.
+   - Feasibility: LOW — significant architectural change to the text rendering pipeline.
+   - Visual impact: HIGH — crisp text at all scales.
+   - Risk: HIGH — requires new font asset pipeline, changes to bitmap-font-registry.ts.
 
-### Existing Polygon Adjustments
+### Recommendation: Approach 1 (Increase font size and pill opacity)
 
-The 5 existing polygon zones must have their vertices updated to align with the new midpoint-based tessellation. Their current vertices were authored independently and won't share edges with the new provinces. All 5 are redesigned using the same midpoint method so the entire map tessellates consistently.
+**Why**: Addresses the immediate readability problem with minimal code change (3 constants). The 30% size increase combined with stronger pill contrast will make labels clearly readable at default zoom on all terrain types including dark jungle and North Vietnam fills. Overview zoom readability (Approach 2) is a legitimate concern but is a more complex change that should be addressed separately — the current iteration targets the most impactful low-hanging fruit.
 
 ## Implementation Steps
 
-1. **Compute shared border midpoints for all 40+ province-province adjacency pairs** — **File**: working notes (not committed) — **Depends on**: none
-   - Use the zone center positions and adjacency table above
-   - Identify junction points where 3+ provinces meet
-   - Produce a lookup table: `{ [provinceA-provinceB]: { x, y } }`
+All steps target the same two files unless noted otherwise.
 
-2. **Design vertices for Group 1: Northern Coastal Chain** — **File**: `data/games/fire-in-the-lake/visual-config.yaml` — **Depends on**: Step 1
-   - Zones: quang-tri-thua-thien, quang-nam, quang-tin-quang-ngai, north-vietnam
-   - These extend the existing polygon cluster northward
-   - quang-tin-quang-ngai shares border with binh-dinh (existing polygon, will be updated)
-   - north-vietnam has only 2 province neighbors — large boundary edges face the map edge
+1. **Add `smoothPolygonVertices()` utility function** — **File**: `packages/runner/src/canvas/renderers/shape-utils.ts` — **Depends on**: none
+   - Export a pure function: `smoothPolygonVertices(vertices: readonly number[], iterations: number): number[]`
+   - Implements Chaikin's corner-cutting: for each iteration, replace each vertex pair with points at 25% and 75% along each edge
+   - Handle closed polygon (last vertex connects to first)
+   - Default iterations = 2
 
-3. **Design vertices for Group 2: Western Spine (Laos/Cambodia)** — **File**: `data/games/fire-in-the-lake/visual-config.yaml` — **Depends on**: Step 1
-   - Zones: central-laos, southern-laos, northeast-cambodia, the-fishhook, the-parrots-beak, sihanoukville
-   - southern-laos is a hub (6 province neighbors) — needs careful vertex placement
-   - These provinces border the western map edge (Laos/Cambodia international border)
+2. **Apply smoothing in `drawZoneShape()` polygon case** — **File**: `packages/runner/src/canvas/renderers/shape-utils.ts` — **Depends on**: Step 1
+   - In the `case 'polygon':` branch (line 71-77), call `smoothPolygonVertices(options.vertices, 2)` before passing to `base.poly()`
 
-4. **Design vertices for Group 3: Southern Interior** — **File**: `data/games/fire-in-the-lake/visual-config.yaml` — **Depends on**: Step 1
-   - Zones: phuoc-long, quang-duc-long-khanh, binh-tuy-binh-thuan, tay-ninh
-   - quang-duc-long-khanh is a hub (6 province neighbors)
-   - binh-tuy-binh-thuan has only 2 province neighbors + city neighbors (cam-ranh, saigon)
+3. **Apply smoothing in `getEdgePointAtAngle()` polygon case** — **File**: `packages/runner/src/canvas/renderers/shape-utils.ts` — **Depends on**: Step 1
+   - In the `case 'polygon':` branch (line 112-115), call `smoothPolygonVertices(vertices, 2)` before passing to `rayPolygonIntersection()`
 
-5. **Design vertices for Group 4: Mekong Delta** — **File**: `data/games/fire-in-the-lake/visual-config.yaml` — **Depends on**: Step 1
-   - Zones: kien-phong, kien-hoa-vinh-binh, ba-xuyen, kien-giang-an-xuyen
-   - Closely packed zones — polygons should extend toward map boundary to avoid tiny shapes
-   - City neighbors (saigon, can-tho) are free edges
+4. **Add country-based terrain attribute rules** — **File**: `data/games/fire-in-the-lake/visual-config.yaml` — **Depends on**: none
+   - Add 3 new attribute rules AFTER the existing terrain rules (so they override):
+     - `country: northVietnam` → saddle brown (`#8b4513` / `#5a2d0a`)
+     - `country: laos` → gray-green (`#2d5a3a` / `#1a3d25`)
+     - `country: cambodia` → olive-gray (`#3a5a3a` / `#254025`)
+   - Match on `category: [province]` and `attributeContains: { country: <value> }`
 
-6. **Update existing 5 polygon zones to use midpoint-based vertices** — **File**: `data/games/fire-in-the-lake/visual-config.yaml` — **Depends on**: Steps 2-5
-   - Redesign binh-dinh, khanh-hoa, kontum, phu-bon-phu-yen, pleiku-darlac vertices
-   - Must share edges with the newly authored neighbors
-   - Verify the central cluster still tessellates cleanly
+5. **Increase label font size and pill contrast** — **File**: `packages/runner/src/canvas/renderers/zone-renderer.ts` — **Depends on**: none
+   - Change `LABEL_FONT_SIZE` from `20` to `26` (line 243)
+   - Change font size in `createBitmapLabel()` call from `20` to `26` (line 169)
+   - Change `LABEL_PILL_ALPHA` from `0.45` to `0.65` (line 248)
+   - Change `LABEL_PILL_PADDING` from `6` to `8` (line 246)
 
-7. **Run typecheck and tests** — **Depends on**: Step 6
+6. **Add unit tests for `smoothPolygonVertices()`** — **File**: new test file under `packages/runner/test/canvas/renderers/` — **Depends on**: Step 1
+   - Test: 0 iterations returns original vertices
+   - Test: triangle (6 values) → smoothed has 12 values after 1 iteration
+   - Test: shared edge produces same absolute points for both polygons
+   - Test: empty or too-short arrays handled gracefully
+
+7. **Run typecheck and tests** — **Depends on**: Steps 1-6
    - `pnpm turbo typecheck` — must pass
    - `pnpm -F @ludoforge/runner test` — must pass
 
 8. **Visual verification** — **Depends on**: Step 7
-   - `pnpm -F @ludoforge/runner dev` — inspect the map in browser
-   - Check all 23 provinces render as polygons with shared borders
-   - Check terrain colors apply correctly to all polygon provinces
-   - Check cities and LoCs are unaffected
-   - Check tokens render inside polygon bounds
-   - Check map editor renders the same polygons
+   - `pnpm -F @ludoforge/runner dev` — inspect in browser
+   - Verify polygon provinces have smooth, organic-looking borders
+   - Verify adjacency dashed lines still connect cleanly to smoothed polygon edges
+   - Verify Laos/Cambodia provinces are visibly distinct from SVN jungle provinces
+   - Verify North Vietnam has a distinct brown tone
+   - Verify labels are noticeably larger and more readable on all terrain colors
+   - Check map editor renders the same smoothed polygons
 
 ## Map Editor Scope
 
 **Included in this iteration**:
-- All polygon rendering — the map editor uses the same `drawZoneShape()` function and reads the same `visual-config.yaml`. New polygon zones render automatically.
+- Polygon smoothing — the map editor uses the same `drawZoneShape()` function from `shape-utils.ts`. Smoothed polygons render automatically.
+- Terrain colors — the editor reads the same `visual-config.yaml`. Country-based attribute rules apply automatically.
+- Label sizing — the editor zone renderer uses its own label rendering; verify whether it shares the same constants. If it uses separate constants, update those as well.
 
 **Deferred to future iteration**:
-- No editor-specific changes needed. The editor already supports polygon zone selection, dragging, and rendering via `map-editor-zone-renderer.ts` calling `drawZoneShape()`.
+- No editor-specific changes needed beyond the automatic propagation described above.
 
 ## Visual Config Changes
 
-All changes are in `data/games/fire-in-the-lake/visual-config.yaml`, zone overrides section (lines 424-528).
+**File**: `data/games/fire-in-the-lake/visual-config.yaml`
 
-For each of the 18 new provinces, add `shape: polygon` and `vertices: [...]`:
+Add 3 new attribute rules after the existing terrain rules (after line 409):
+
 ```yaml
-quang-tri-thua-thien:none:
-  label: Quang Tri
-  shape: polygon
-  vertices: [x1, y1, x2, y2, ...]  # 5-8 vertices, relative to center
+    # Country-based terrain sub-variants (override base terrain colors)
+    - match:
+        category:
+          - province
+        attributeContains:
+          country: northVietnam
+      style:
+        color: "#8b4513"
+        strokeColor: "#5a2d0a"
+    - match:
+        category:
+          - province
+        attributeContains:
+          country: laos
+      style:
+        color: "#2d5a3a"
+        strokeColor: "#1a3d25"
+    - match:
+        category:
+          - province
+        attributeContains:
+          country: cambodia
+      style:
+        color: "#3a5a3a"
+        strokeColor: "#254025"
 ```
 
-For the 5 existing polygon provinces, update `vertices: [...]` to align with new midpoint-based tessellation.
-
-**No schema changes needed** — `ZoneVisualStyleSchema` already supports `shape` and `vertices` fields.
-**No code changes needed** — the rendering pipeline already handles polygon shapes.
+**No schema changes needed** — `attributeContains` already accepts arbitrary attribute keys.
 
 ## Verification
 
-1. `pnpm turbo typecheck` — must pass (no TypeScript changes, but verify YAML parsing)
+1. `pnpm turbo typecheck` — must pass
 2. `pnpm -F @ludoforge/runner test` — must pass
-3. Visual check — run dev server (`pnpm -F @ludoforge/runner dev`):
-   - All 23 provinces render as irregular polygons (no rectangles remaining for province-category zones)
-   - Adjacent provinces share borders without visible gaps
-   - Terrain colors (highland tan, lowland green, jungle dark green) apply to all polygon provinces
-   - Cities remain as circles, LoCs as route connections — unaffected
-   - Tokens render inside polygon bounds (no overflow)
-   - Map editor shows the same polygon shapes
-   - Adjacency lines connect correctly to polygon edges (via `rayPolygonIntersection`)
-   - No degenerate slivers or extremely narrow polygon shapes
-4. Take new screenshots for evaluation:
+3. Unit tests for `smoothPolygonVertices()` — must pass
+4. Visual check — run dev server (`pnpm -F @ludoforge/runner dev`):
+   - All 23 province polygons have smooth, curved borders (no straight-line angular edges)
+   - Adjacent provinces still share smoothed borders without visible gaps
+   - Adjacency dashed lines attach correctly to smoothed polygon edges
+   - North Vietnam is visibly brown/distinct from SVN highland provinces
+   - Laos provinces (central-laos, southern-laos) are gray-green, distinct from SVN jungle
+   - Cambodia provinces (northeast-cambodia, the-fishhook, the-parrots-beak, sihanoukville) are olive-gray
+   - SVN jungle provinces (phuoc-long, quang-duc-long-khanh, binh-tuy-binh-thuan, tay-ninh) retain original dark green
+   - Labels are noticeably larger (~30%) with stronger background pill contrast
+   - Labels are readable on dark jungle fills and on the new North Vietnam brown
+   - Map editor renders the same smoothed polygons and terrain colors
+   - Tokens still render correctly inside smoothed polygon bounds
+5. Take new screenshots for evaluation:
    - `fitl-game-map.png` (close-up)
    - `fitl-game-map-overview.png` (zoomed-out full map)
    - `fitl-map-editor.png` (close-up)
@@ -329,14 +388,15 @@ For the 5 existing polygon provinces, update `vertices: [...]` to align with new
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|------------|
-| Shared vertices don't align due to rounding | LOW | Thin gaps between provinces | Round all coordinates to integers; use exact same absolute point for both sides of each shared edge |
-| Hub provinces (southern-laos: 6 neighbors, pleiku-darlac: 8, quang-duc-long-khanh: 6) produce complex polygons | MEDIUM | 8+ vertices per polygon | Accept up to 10 vertices for hub provinces; not every neighbor pair needs a unique shared vertex — adjacent neighbors can share corner vertices at 3-way junctions |
-| Mekong Delta provinces are close together, producing tiny polygons | MEDIUM | Cramped text, token overflow | Extend Delta polygon boundaries outward toward map edge; these provinces are at the southern map boundary with room to grow |
-| Existing 5 polygon vertex changes break visual appearance of central cluster | LOW | Visual regression in the only area that currently looks good | Author all 23 provinces simultaneously with consistent midpoint method; verify central cluster first |
-| Token `fitl-map-space` lane layout doesn't fit inside irregular polygon | LOW | Tokens overflow polygon bounds | Lane layout uses `centeredRow` packing which adapts to bounding-box width; polygon areas are designed ≥ rectangle area (360×220 = 79,200 sq px) |
+| Smoothed shared edges don't align between adjacent provinces | LOW | Thin gaps between smoothed provinces | Chaikin's is a local operation — shared edge vertices produce identical smoothed points independently. Verify with 2-3 adjacent pairs in visual inspection. |
+| Smoothing creates degenerate slivers on small polygons (Mekong Delta) | LOW | Visual artifacts on compact provinces | Chaikin's preserves convexity and doesn't create degenerate shapes. 2 iterations on 5-8 vertex polygons are well within safe bounds. |
+| `attributeContains: { country: X }` not supported by rule matching | LOW | Country rules silently ignored, no color change | Verify the `attributeContains` schema accepts arbitrary string keys. If not, use per-zone color overrides as fallback. |
+| Larger labels clip polygon edges on small provinces | LOW | Text overflow outside province shape | Current polygon areas are designed ≥ 360×220 = 79,200 sq px. A 26px font label fits comfortably within any province. |
+| Performance regression from smoothed vertices (~24 per zone vs ~6) | VERY LOW | Frame rate drop | 24 vertices × 23 polygons = 552 total vertices — trivial for PixiJS. `rayPolygonIntersection` iterates ~24 edges per intersection, still O(1) per call. |
 
 ## Research Sources
 
-All solutions extend existing PixiJS `Graphics.poly()` and visual-config YAML patterns already in the codebase. No external research needed — the rendering pipeline fully supports polygon zones; this iteration is purely data authoring.
-
-Physical FITL board reference image (`screenshots/FITL_SC1.jpg`) serves as geographic orientation for province boundary placement.
+All solutions extend existing PixiJS `Graphics.poly()` and visual-config attribute rule patterns already in the codebase. No external research needed:
+- **Chaikin's algorithm** is a well-known subdivision scheme (1974) — the implementation is a simple loop, no library needed.
+- **Country-based attribute rules** extend the existing `attributeContains` matching already used for `terrainTags`.
+- **Label constants** are direct numeric changes to existing code.

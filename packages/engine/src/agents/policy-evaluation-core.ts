@@ -483,6 +483,7 @@ export class PolicyEvaluationContext {
       case 'zoneTokenAgg':
         return this.evaluateZoneTokenAggregate(expr, candidate);
       case 'globalTokenAgg':
+        return this.evaluateGlobalTokenAggregate(expr);
       case 'globalZoneAgg':
       case 'adjacentTokenAgg':
         throw this.runtimeError(
@@ -550,6 +551,60 @@ export class PolicyEvaluationContext {
       case 'max':
         return Math.max(...values);
     }
+  }
+
+  private evaluateGlobalTokenAggregate(
+    expr: Extract<AgentPolicyExpr, { readonly kind: 'globalTokenAgg' }>,
+  ): PolicyValue {
+    const resolvedFilter = resolveTokenFilter(expr.tokenFilter, this.input.playerId, this.input.state);
+    let count = 0;
+    let aggregate: number | undefined;
+
+    for (const zoneDef of this.input.def.zones) {
+      if (!matchesZoneScope(zoneDef, expr.zoneScope)) {
+        continue;
+      }
+      if (!matchesZoneFilter(zoneDef, expr.zoneFilter, this.input.state)) {
+        continue;
+      }
+
+      const tokens = this.input.state.zones[String(zoneDef.id)] ?? [];
+      for (const token of tokens) {
+        if (!matchesTokenFilter(token, resolvedFilter)) {
+          continue;
+        }
+        if (expr.aggOp === 'count') {
+          count += 1;
+          continue;
+        }
+        if (expr.prop === undefined) {
+          return undefined;
+        }
+        const value = token.props[expr.prop];
+        if (typeof value !== 'number') {
+          continue;
+        }
+        if (aggregate === undefined) {
+          aggregate = value;
+          continue;
+        }
+        if (expr.aggOp === 'sum') {
+          aggregate += value;
+        } else if (expr.aggOp === 'min') {
+          aggregate = Math.min(aggregate, value);
+        } else {
+          aggregate = Math.max(aggregate, value);
+        }
+      }
+    }
+
+    if (expr.aggOp === 'count') {
+      return count;
+    }
+    if (expr.aggOp === 'sum') {
+      return aggregate ?? 0;
+    }
+    return aggregate;
   }
 
   private evaluateExprList(

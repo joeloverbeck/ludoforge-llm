@@ -11,7 +11,7 @@ Read the latest evaluation, research rendering approaches, and produce a concret
 
 ## Checklist
 
-1. Read `reports/map-representation-evaluation.md` — focus on the latest EVALUATION #N. Note the scores, CRITICAL/HIGH recommendations, and any recurring or stagnating issues. Determine the iteration number: if the latest evaluation is #N, the plan iteration is N+1.
+1. Read `reports/map-representation-evaluation.md` — focus on the latest EVALUATION #N. Note the scores, CRITICAL/HIGH recommendations, and any recurring or stagnating issues. Determine the iteration number: the plan iteration is always `latest_evaluation_number + 1`. If the previous plan file exists and its iteration number doesn't equal N (i.e., there's a gap or collision), note the discrepancy in the Context section — gaps are acceptable when evaluations are added without corresponding plans.
 2. Read `docs/FOUNDATIONS.md` — **all proposals must align** with these principles. Pay special attention to:
    - **Foundation #1** (Engine Agnosticism): No game-specific logic in engine code
    - **Foundation #3** (Visual Separation): All visual changes in visual-config.yaml or runner code, never in GameSpecDoc or engine
@@ -19,8 +19,8 @@ Read the latest evaluation, research rendering approaches, and produce a concret
    - **Foundation #9** (No Backwards Compatibility): No shims or deprecated fallbacks
    - **Foundation #10** (Architectural Completeness): Solutions address root causes, not symptoms
 3. Identify the CRITICAL and HIGH recommendations from the evaluation. If none exist, target the top 2-3 MEDIUM recommendations.
-4. **Stalled iteration check**: If the previous evaluation shows no progress since the evaluation before it, check whether the previous plan was implemented. If not, decide whether to carry forward its recommendations (if still valid), supersede them (if priorities shifted), or incorporate them into the new plan. Note the decision in the Context section.
-5. Read the renderer source files relevant to the identified problems (see Key Files). Extract: key type definitions with line numbers, function signatures that will be modified, data flow from config through presentation to renderer. Use Explore sub-agents for parallel codebase exploration when multiple renderer subsystems are involved. The goal is to populate the "Current Code Architecture" section of the plan output. If the identified problems require only data changes (e.g., visual-config.yaml vertices or colors), the architecture section should document the pipeline that *consumes* the data to confirm no code changes are needed, rather than focusing on functions to be modified.
+4. **Stalled iteration check**: If the previous evaluation shows no progress since the evaluation before it, check whether the previous plan was implemented. If not, decide whether to carry forward its recommendations (if still valid), supersede them (if priorities shifted), or incorporate them into the new plan. Note the decision in the Context section. Also review the previous plan's Deferred Items section (if present) and carry forward any items that are still relevant into the new plan's Deferred Items table.
+5. Read the renderer source files relevant to the identified problems (see Key Files). Extract: key type definitions with line numbers, function signatures that will be modified, data flow from config through presentation to renderer. Scope the exploration to the specific problems identified in step 3 — do not request a full pipeline analysis of subsystems that are not targeted this iteration (e.g., if routes are deferred, don't explore the route renderer). Use Explore sub-agents for parallel codebase exploration when multiple renderer subsystems are involved. The goal is to populate the "Current Code Architecture" section of the plan output. If the identified problems require only data changes (e.g., visual-config.yaml vertices or colors), the architecture section should document the pipeline that *consumes* the data to confirm no code changes are needed, rather than focusing on functions to be modified. If proposing attribute rules or config patterns not already present in visual-config.yaml, verify the Zod schema and provider matching logic support them before recommending them. For hybrid iterations (code + data changes), include both the architecture section (for code changes) and the reference data section (for data changes). Implementation steps should clearly separate code steps from data-authoring steps.
 6. Optionally read the game's physical reference image (e.g., `screenshots/FITL_SC1.jpg`) for design inspiration when planning visual changes. Use it as a target aesthetic, not a rigid specification.
 7. **Research phase** (if needed): If the identified problems require techniques not already present in the codebase, use Tavily web search and/or Context7 to research rendering techniques. Skip external research when the solution extends existing patterns — if skipped, note in the Research Sources section why it was unnecessary (e.g., "All solutions extend existing PixiJS Graphics and BitmapText patterns already in the codebase"). Examples of research topics:
    - Voronoi tessellation / Delaunay triangulation in PixiJS or 2D canvas
@@ -39,7 +39,7 @@ Read the latest evaluation, research rendering approaches, and produce a concret
 10. **Map editor scope assessment**: For each proposed change, assess whether the map editor (`packages/runner/src/map-editor/`) needs updating in this iteration:
    - If the change is purely rendering (e.g., drawing polygons instead of rectangles from the same position data), the editor may just need to call the same drawing function — include it.
    - If the change requires new editor interaction patterns (e.g., vertex dragging for polygons), defer to a future iteration — note what's deferred and why.
-11. Write the new plan to `reports/map-representation-plan.md` (overwrites any existing file). The plan is **overwritten** each iteration, not appended. If the previous plan file exists, verify the iteration number is sequential with it; if there's a gap, note it in the Context section.
+11. Write the new plan to `reports/map-representation-plan.md` (overwrites any existing file). The plan is **overwritten** each iteration, not appended.
 12. **Stop.** This skill's sole output is `reports/map-representation-plan.md`. Do not proceed to implementation — the `map-representation-implement` skill consumes this plan in a separate invocation.
 
 ## Plan Output Format
@@ -57,6 +57,16 @@ Write `reports/map-representation-plan.md` with this structure:
 
 [1-3 sentences: why this change is needed, what prompted it, and the intended outcome]
 
+## Deferred Items
+
+Track items explicitly deferred from previous iterations to prevent silent drops.
+
+| Item | First recommended | Deferred since | Target iteration |
+|------|-------------------|---------------|-----------------|
+| [description] | Eval #N | Iteration M | [N+1 or "no target yet"] |
+
+If no items are deferred, write: "No deferred items."
+
 ## Foundations Alignment
 
 | Foundation | Relevance | How This Plan Respects It |
@@ -66,6 +76,8 @@ Write `reports/map-representation-plan.md` with this structure:
 | #7 Immutability | [relevant/not relevant] | [brief explanation] |
 | #9 No Backwards Compat | [relevant/not relevant] | [brief explanation] |
 | #10 Architectural Completeness | Always relevant | [root cause vs symptom] |
+
+For data-only iterations (no code changes), the Foundations Alignment table may be replaced with a single line: "All changes are visual-config.yaml data — no foundation concerns."
 
 ## Current Code Architecture (reference for implementer)
 
@@ -81,11 +93,12 @@ Include:
 - Current code snippets showing what will change (before state)
 - Schema inheritance relationships (e.g., override schemas extending base schemas)
 
-## Reference Data (optional — for data-authoring iterations)
+## Reference Data (optional — for iterations with data authoring)
 
-If the iteration is primarily data authoring (e.g., polygon vertices, color palettes, layout
-positions), include reference tables the implementer needs: adjacency maps, coordinate positions,
-design constraints. Omit this section if the iteration is code-focused.
+Include reference tables the implementer needs to author data correctly: province lists,
+color palettes, adjacency maps, coordinate positions, terrain assignments, design constraints.
+Include this section for any iteration that involves data authoring in visual-config.yaml,
+regardless of whether the iteration also includes code changes. Omit only for pure code iterations.
 
 ## Problem 1: [Problem title from evaluation]
 

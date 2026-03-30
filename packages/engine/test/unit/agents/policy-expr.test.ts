@@ -333,6 +333,168 @@ describe('policy-expr analysis', () => {
     assert.equal(analysis?.expr.kind === 'zoneTokenAgg' ? analysis.expr.owner : null, '0');
   });
 
+  it('analyzes globalTokenAgg expressions with filters and explicit scope', () => {
+    const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
+    const analysis = analyzePolicyExpr(
+      {
+        globalTokenAgg: {
+          tokenFilter: {
+            type: 'base',
+            props: {
+              seat: { eq: 'self' },
+              hidden: { eq: false },
+            },
+          },
+          aggOp: 'sum',
+          prop: 'strength',
+          zoneFilter: {
+            category: 'province',
+            attribute: {
+              prop: 'population',
+              op: 'gt',
+              value: 0,
+            },
+            variable: {
+              prop: 'opposition',
+              op: 'gte',
+              value: 1,
+            },
+          },
+          zoneScope: 'all',
+        },
+      },
+      createContext(),
+      diagnostics,
+      'expr',
+    );
+
+    assert.deepEqual(diagnostics, []);
+    assert.deepEqual(analysis, {
+      expr: {
+        kind: 'globalTokenAgg',
+        tokenFilter: {
+          type: 'base',
+          props: {
+            seat: { eq: 'self' },
+            hidden: { eq: false },
+          },
+        },
+        aggOp: 'sum',
+        prop: 'strength',
+        zoneFilter: {
+          category: 'province',
+          attribute: {
+            prop: 'population',
+            op: 'gt',
+            value: 0,
+          },
+          variable: {
+            prop: 'opposition',
+            op: 'gte',
+            value: 1,
+          },
+        },
+        zoneScope: 'all',
+      },
+      valueType: 'number',
+      costClass: 'state',
+      dependencies: {
+        parameters: [],
+        stateFeatures: [],
+        candidateFeatures: [],
+        aggregates: [],
+      },
+      isStaticallyZero: false,
+    });
+  });
+
+  it('defaults globalTokenAgg zoneScope to board and permits count without prop', () => {
+    const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
+    const analysis = analyzePolicyExpr(
+      {
+        globalTokenAgg: {
+          tokenFilter: { type: 'base' },
+          aggOp: 'count',
+        },
+      },
+      createContext(),
+      diagnostics,
+      'expr',
+    );
+
+    assert.deepEqual(diagnostics, []);
+    assert.deepEqual(analysis?.expr, {
+      kind: 'globalTokenAgg',
+      tokenFilter: { type: 'base' },
+      aggOp: 'count',
+      zoneScope: 'board',
+    });
+    assert.equal(analysis?.costClass, 'state');
+  });
+
+  it('rejects globalTokenAgg expressions without aggOp', () => {
+    const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
+    const analysis = analyzePolicyExpr(
+      {
+        globalTokenAgg: {
+          tokenFilter: { type: 'base' },
+        },
+      },
+      createContext(),
+      diagnostics,
+      'expr',
+    );
+
+    assert.equal(analysis, null);
+    assert.ok(diagnostics.some((diagnostic) =>
+      diagnostic.path === 'expr.globalTokenAgg.aggOp'
+      && diagnostic.message.includes('must be one of')));
+  });
+
+  it('rejects globalTokenAgg sum expressions without prop', () => {
+    const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
+    const analysis = analyzePolicyExpr(
+      {
+        globalTokenAgg: {
+          tokenFilter: { type: 'base' },
+          aggOp: 'sum',
+        },
+      },
+      createContext(),
+      diagnostics,
+      'expr',
+    );
+
+    assert.equal(analysis, null);
+    assert.ok(diagnostics.some((diagnostic) =>
+      diagnostic.path === 'expr.globalTokenAgg.prop'
+      && diagnostic.message.includes('required')));
+  });
+
+  it('rejects invalid globalTokenAgg tokenFilter prop comparison shapes', () => {
+    const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
+    const analysis = analyzePolicyExpr(
+      {
+        globalTokenAgg: {
+          tokenFilter: {
+            props: {
+              seat: { in: ['self'] },
+            },
+          },
+          aggOp: 'count',
+        },
+      },
+      createContext(),
+      diagnostics,
+      'expr',
+    );
+
+    assert.equal(analysis, null);
+    assert.ok(diagnostics.some((diagnostic) =>
+      diagnostic.path === 'expr.globalTokenAgg.tokenFilter.props.seat'
+      && diagnostic.message.includes('{ eq: <scalar> }')));
+  });
+
   it('rejects dynamic zoneTokenAgg zones that do not resolve to ids', () => {
     const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
     const analysis = analyzePolicyExpr(

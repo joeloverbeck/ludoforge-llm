@@ -17,7 +17,7 @@ Score the current FITL map rendering state from screenshots and append a structu
 2. Discover and read all current screenshots:
    - Glob `screenshots/fitl-game-map*.png` and `screenshots/fitl-map-editor*.png` to find all current screenshots. The minimum expected set is `fitl-game-map.png` and `fitl-map-editor.png` — any additional matches (e.g., `fitl-game-map-overview.png`) must also be read and evaluated.
    - Run `ls -la screenshots/fitl-*.png screenshots/fitl-*.jpg` to verify freshness — if any screenshot is older than 24 hours, warn the user that it may not reflect the current rendering state. (The Glob discovers the file list; `ls` is solely for timestamps.)
-   - Read all discovered screenshots in **parallel** (all Read tool calls in a single message). Also read `screenshots/FITL_SC1.jpg` (physical board reference) — **required** for the first evaluation to establish the ground truth baseline. For subsequent evaluations, read it only when evaluating geographic layout fidelity or when a recommendation references the physical board layout.
+   - Read all discovered screenshots in **parallel** (all Read tool calls in a single message). Also read `screenshots/FITL_SC1.jpg` (physical board reference) — **required** for the first evaluation to establish the ground truth baseline. For subsequent evaluations, read it when any of these apply: (a) evaluating geographic layout fidelity, (b) the _previous_ evaluation's recommendations reference the physical board layout, or (c) there is a significant layout change (e.g., polygon coverage extended to new provinces, major shape rework).
 3. Determine the next evaluation number from the last `## EVALUATION #N` heading.
 4. **If the screenshot count changed** from the previous evaluation, note this prominently. Explain what new screenshots capture, add a comparability caveat (see Screenshot Set Changes below), and update the **Screenshot Reference** section at the top of the report file to describe all current screenshots.
 5. For each screenshot, write a paragraph describing what's shown and listing specific issues related to the 4 metrics.
@@ -26,7 +26,7 @@ Score the current FITL map rendering state from screenshots and append a structu
 8. List resolved issues from the previous evaluation (see template). For the first evaluation, write: "No previous evaluation exists — this is the baseline evaluation."
 9. Write prioritized recommendations tagged CRITICAL / HIGH / MEDIUM / LOW.
 10. Flag recurring issues — note how many consecutive evaluations each issue has persisted.
-11. If 5+ evaluations exist, include a Score Trend table (see template).
+11. If 3+ evaluations exist, include a Score Trend table (see template).
 12. Append the complete evaluation section to `reports/map-representation-evaluation.md`.
 
 ## Evaluation Template
@@ -71,7 +71,9 @@ For each screenshot analyzed, add a section:
 
 [If screenshot set changed: **Comparability note**: This evaluation covers N screenshots (previous: M). Score changes may partly reflect expanded coverage revealing pre-existing issues rather than regressions introduced since the last evaluation.]
 
-### Score Trend (include if 5+ evaluations exist)
+[If polygon territory rendering is being tracked: **Polygon coverage**: N/M province zones rendered as territories (vs. rectangles). Approximate counts from visual inspection are acceptable — use `~` prefix for estimates.]
+
+### Score Trend (include if 3+ evaluations exist)
 
 | Eval | Avg | Delta |
 |------|-----|-------|
@@ -123,6 +125,7 @@ If the user disputes part of an already-appended evaluation:
 - Routes that cross provinces they shouldn't pass through
 - Cities (circles) feeling disconnected from their surrounding provinces
 - Province shapes that don't support natural route flow-through
+- Visual congestion in areas with many small provinces — overlapping polygon borders, route lines, and tokens that make individual zones hard to distinguish (score under Adjacency Clarity or Label/Token Readability as appropriate)
 - **Regressions** — issues absent in previous evaluations that appeared after recent changes
 
 ## Screenshot Set Changes
@@ -151,11 +154,21 @@ When writing recommendations, check prior evaluations to determine if each issue
 
 ## Stagnation Detection
 
+### Overall stagnation
+
 Stagnation occurs when **both** conditions are met:
 1. The same issue has been the top actionable recommendation for 3+ consecutive evaluations
 2. The average score has not improved by 0.5+ points across those evaluations
 
 When stagnation is detected, note it explicitly and suggest that the `map-representation-plan` skill research alternative approaches before the next implementation cycle.
+
+### Per-metric stagnation
+
+If any individual metric has a delta of 0 (unchanged score) for 3+ consecutive evaluations, note this in the recommendations section as per-metric stagnation — even if the issue is not the top recommendation and the overall average is improving. Example: "Road/River Integration has been unchanged at 5 for 3 evaluations — consider focused attention in the next plan."
+
+Per-metric stagnation does not automatically escalate the recommendation's severity, but it should be called out so the plan skill can prioritize it.
+
+### Oscillation
 
 If the Score Trend shows oscillation (alternating positive/negative deltas for 4+ evaluations), this suggests fixes are introducing regressions. Note this pattern and recommend a more cautious, incremental implementation approach.
 
@@ -216,7 +229,7 @@ When polygon territory rendering is a key differentiator (as in FITL), include a
 **Polygon coverage**: N/M province zones rendered as territories (vs. rectangles).
 ```
 
-This gives a quantitative progress indicator beyond the subjective 1-10 scores and directly tracks progress on recommendations to extend polygon treatment.
+This gives a quantitative progress indicator beyond the subjective 1-10 scores and directly tracks progress on recommendations to extend polygon treatment. Approximate counts from visual inspection are acceptable — use `~` prefix for estimates. If precision is needed, cross-reference the zone count from the visual config or GameDef.
 
 ## Scope
 

@@ -79,6 +79,7 @@ type KnownOperator =
   | 'sub'
   | 'globalTokenAgg'
   | 'globalZoneAgg'
+  | 'adjacentTokenAgg'
   | 'zoneProp'
   | 'zoneTokenAgg';
 
@@ -110,6 +111,7 @@ const KNOWN_OPERATORS = new Set<KnownOperator>([
   'sub',
   'globalTokenAgg',
   'globalZoneAgg',
+  'adjacentTokenAgg',
   'zoneProp',
   'zoneTokenAgg',
 ]);
@@ -227,6 +229,8 @@ export function analyzePolicyExpr(
       return analyzeGlobalTokenAggOperator(value, diagnostics, path);
     case 'globalZoneAgg':
       return analyzeGlobalZoneAggOperator(value, diagnostics, path);
+    case 'adjacentTokenAgg':
+      return analyzeAdjacentTokenAggOperator(value, diagnostics, path);
     case 'zoneTokenAgg':
       return analyzeZoneTokenAggOperator(value, context, diagnostics, path);
   }
@@ -1159,6 +1163,91 @@ function analyzeGlobalZoneAggSource(
     return null;
   }
   return expr;
+}
+
+function analyzeAdjacentTokenAggOperator(
+  expr: GameSpecPolicyExpr,
+  diagnostics: Diagnostic[],
+  path: string,
+): PolicyExprAnalysis | null {
+  if (typeof expr !== 'object' || expr === null || Array.isArray(expr)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path,
+      severity: 'error',
+      message: 'adjacentTokenAgg requires an object with anchorZone, aggOp, and optional tokenFilter and prop fields.',
+      suggestion: 'Use { adjacentTokenAgg: { anchorZone: "saigon:none", aggOp: "count" } }.',
+    });
+    return null;
+  }
+
+  const obj = expr as Readonly<Record<string, unknown>>;
+  const anchorZone = obj['anchorZone'];
+  const aggOp = obj['aggOp'];
+  const prop = obj['prop'];
+  const tokenFilter = analyzeGlobalTokenAggTokenFilter(obj['tokenFilter'], diagnostics, `${path}.adjacentTokenAgg.tokenFilter`);
+
+  if (typeof anchorZone !== 'string' || anchorZone.length === 0) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path: `${path}.adjacentTokenAgg.anchorZone`,
+      severity: 'error',
+      message: 'adjacentTokenAgg.anchorZone must be a non-empty string zone reference.',
+      suggestion: 'Set anchorZone to a concrete zone id or owned zone reference such as "frontier:self".',
+    });
+    return null;
+  }
+
+  if (typeof aggOp !== 'string' || !isAgentPolicyZoneTokenAggOp(aggOp)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path: `${path}.adjacentTokenAgg.aggOp`,
+      severity: 'error',
+      message: `adjacentTokenAgg.aggOp must be one of: ${AGENT_POLICY_ZONE_TOKEN_AGG_OPS.join(', ')}.`,
+      suggestion: 'Use "sum", "count", "min", or "max".',
+    });
+    return null;
+  }
+
+  if (prop !== undefined && (typeof prop !== 'string' || prop.length === 0)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path: `${path}.adjacentTokenAgg.prop`,
+      severity: 'error',
+      message: 'adjacentTokenAgg.prop must be a non-empty string token property name when provided.',
+      suggestion: 'Set prop to a token property name such as "strength".',
+    });
+    return null;
+  }
+
+  if (aggOp !== 'count' && prop === undefined) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path: `${path}.adjacentTokenAgg.prop`,
+      severity: 'error',
+      message: `adjacentTokenAgg.prop is required when aggOp is "${aggOp}".`,
+      suggestion: 'Set prop to the numeric token property to aggregate.',
+    });
+    return null;
+  }
+
+  if (tokenFilter === null) {
+    return null;
+  }
+
+  return {
+    expr: {
+      kind: 'adjacentTokenAgg',
+      anchorZone,
+      ...(tokenFilter === undefined ? {} : { tokenFilter }),
+      aggOp,
+      ...(prop === undefined ? {} : { prop }),
+    },
+    valueType: 'number',
+    costClass: 'state',
+    dependencies: emptyDependencies(),
+    isStaticallyZero: false,
+  };
 }
 
 function analyzeGlobalTokenAggTokenFilter(

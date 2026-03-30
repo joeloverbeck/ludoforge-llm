@@ -1,9 +1,9 @@
-import { asPlayerId, type PlayerId } from '../kernel/branded.js';
+import { asPlayerId, type PlayerId, type ZoneId } from '../kernel/branded.js';
 import type { AgentPolicyZoneScope, AgentPolicyZoneTokenAggOwner } from '../contracts/index.js';
 import { createEvalContext, createEvalRuntimeResources, type ReadContext } from '../kernel/eval-context.js';
 import { resolveZoneRefWithOwnerFallback } from '../kernel/resolve-zone-ref.js';
 import { buildRuntimeTableIndex } from '../kernel/runtime-table-index.js';
-import { buildAdjacencyGraph } from '../kernel/spatial.js';
+import { buildAdjacencyGraph, queryAdjacentZones } from '../kernel/spatial.js';
 import type {
   AttributeValue,
   AgentParameterValue,
@@ -487,11 +487,7 @@ export class PolicyEvaluationContext {
       case 'globalZoneAgg':
         return this.evaluateGlobalZoneAggregate(expr);
       case 'adjacentTokenAgg':
-        throw this.runtimeError(
-          'RUNTIME_EVALUATION_ERROR',
-          `Policy expression kind "${expr.kind}" is not implemented yet.`,
-          { kind: expr.kind },
-        );
+        return this.evaluateAdjacentTokenAggregate(expr, candidate);
     }
   }
 
@@ -558,8 +554,7 @@ export class PolicyEvaluationContext {
     expr: Extract<AgentPolicyExpr, { readonly kind: 'globalTokenAgg' }>,
   ): PolicyValue {
     const resolvedFilter = resolveTokenFilter(expr.tokenFilter, this.input.playerId, this.input.state);
-    let count = 0;
-    let aggregate: number | undefined;
+    const zoneIds: string[] = [];
 
     for (const zoneDef of this.input.def.zones) {
       if (!matchesZoneScope(zoneDef, expr.zoneScope)) {
@@ -568,44 +563,10 @@ export class PolicyEvaluationContext {
       if (!matchesZoneFilter(zoneDef, expr.zoneFilter, this.input.state)) {
         continue;
       }
-
-      const tokens = this.input.state.zones[String(zoneDef.id)] ?? [];
-      for (const token of tokens) {
-        if (!matchesTokenFilter(token, resolvedFilter)) {
-          continue;
-        }
-        if (expr.aggOp === 'count') {
-          count += 1;
-          continue;
-        }
-        if (expr.prop === undefined) {
-          return undefined;
-        }
-        const value = token.props[expr.prop];
-        if (typeof value !== 'number') {
-          continue;
-        }
-        if (aggregate === undefined) {
-          aggregate = value;
-          continue;
-        }
-        if (expr.aggOp === 'sum') {
-          aggregate += value;
-        } else if (expr.aggOp === 'min') {
-          aggregate = Math.min(aggregate, value);
-        } else {
-          aggregate = Math.max(aggregate, value);
-        }
-      }
+      zoneIds.push(String(zoneDef.id));
     }
 
-    if (expr.aggOp === 'count') {
-      return count;
-    }
-    if (expr.aggOp === 'sum') {
-      return aggregate ?? 0;
-    }
-    return aggregate;
+    return this.aggregateTokensAcrossZones(zoneIds, expr, resolvedFilter);
   }
 
   private evaluateGlobalZoneAggregate(
@@ -657,6 +618,20 @@ export class PolicyEvaluationContext {
     return aggregate;
   }
 
+  private evaluateAdjacentTokenAggregate(
+    expr: Extract<AgentPolicyExpr, { readonly kind: 'adjacentTokenAgg' }>,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): PolicyValue {
+    const anchorZoneId = this.resolvePolicyZoneId(expr.anchorZone, 'none', candidate);
+    if (anchorZoneId === undefined) {
+      return undefined;
+    }
+    const adjacencyGraph = this.input.runtime?.adjacencyGraph ?? buildAdjacencyGraph(this.input.def.zones);
+    const adjacentZoneIds = queryAdjacentZones(adjacencyGraph, anchorZoneId);
+    const resolvedFilter = resolveTokenFilter(expr.tokenFilter, this.input.playerId, this.input.state);
+    return this.aggregateTokensAcrossZones(adjacentZoneIds, expr, resolvedFilter);
+  }
+
   private evaluateExprList(
     expressions: readonly AgentPolicyExpr[],
     candidate: PolicyEvaluationCandidate | undefined,
@@ -703,7 +678,7 @@ export class PolicyEvaluationContext {
     zoneExpr: string | AgentPolicyExpr,
     owner: 'none' | PlayerId,
     candidate: PolicyEvaluationCandidate | undefined,
-  ): string | undefined {
+  ): ZoneId | undefined {
     const resolvedZone = typeof zoneExpr === 'string'
       ? zoneExpr
       : this.evaluateExpr(zoneExpr, candidate);
@@ -711,6 +686,54 @@ export class PolicyEvaluationContext {
       return undefined;
     }
     return resolveZoneRefWithOwnerFallback(resolvedZone, owner, this.getZoneReadContext());
+  }
+
+  private aggregateTokensAcrossZones(
+    zoneIds: readonly string[],
+    expr: Pick<Extract<AgentPolicyExpr, { readonly kind: 'globalTokenAgg' | 'adjacentTokenAgg' }>, 'aggOp' | 'prop'>,
+    resolvedFilter: ResolvedTokenFilter | undefined,
+  ): PolicyValue {
+    let count = 0;
+    let aggregate: number | undefined;
+
+    for (const zoneId of zoneIds) {
+      const tokens = this.input.state.zones[zoneId] ?? [];
+      for (const token of tokens) {
+        if (!matchesTokenFilter(token, resolvedFilter)) {
+          continue;
+        }
+        if (expr.aggOp === 'count') {
+          count += 1;
+          continue;
+        }
+        if (expr.prop === undefined) {
+          return undefined;
+        }
+        const value = token.props[expr.prop];
+        if (typeof value !== 'number') {
+          continue;
+        }
+        if (aggregate === undefined) {
+          aggregate = value;
+          continue;
+        }
+        if (expr.aggOp === 'sum') {
+          aggregate += value;
+        } else if (expr.aggOp === 'min') {
+          aggregate = Math.min(aggregate, value);
+        } else {
+          aggregate = Math.max(aggregate, value);
+        }
+      }
+    }
+
+    if (expr.aggOp === 'count') {
+      return count;
+    }
+    if (expr.aggOp === 'sum') {
+      return aggregate ?? 0;
+    }
+    return aggregate;
   }
 
   private resolveSurfaceRef(

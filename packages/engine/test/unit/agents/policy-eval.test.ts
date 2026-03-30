@@ -358,6 +358,46 @@ function createHelperTestState(): { def: GameDef; state: GameState } {
   };
 }
 
+function withAdjacency(def: GameDef): GameDef {
+  return {
+    ...def,
+    zones: def.zones.map((zone) => {
+      switch (String(zone.id)) {
+        case 'frontier:0':
+          return { ...zone, adjacentTo: [{ to: asZoneId('target-a:none'), direction: 'bidirectional' }] };
+        case 'frontier:1':
+          return { ...zone, adjacentTo: [{ to: asZoneId('target-b:none'), direction: 'bidirectional' }] };
+        case 'frontier:none':
+          return {
+            ...zone,
+            adjacentTo: [
+              { to: asZoneId('target-a:none'), direction: 'bidirectional' },
+              { to: asZoneId('target-b:none'), direction: 'bidirectional' },
+            ],
+          };
+        case 'target-a:none':
+          return {
+            ...zone,
+            adjacentTo: [
+              { to: asZoneId('frontier:0'), direction: 'bidirectional' },
+              { to: asZoneId('frontier:none'), direction: 'bidirectional' },
+            ],
+          };
+        case 'target-b:none':
+          return {
+            ...zone,
+            adjacentTo: [
+              { to: asZoneId('frontier:1'), direction: 'bidirectional' },
+              { to: asZoneId('frontier:none'), direction: 'bidirectional' },
+            ],
+          };
+        default:
+          return zone;
+      }
+    }),
+  };
+}
+
 function createStateFeatureScoreCatalog(
   stateFeatures: Readonly<Record<string, AgentPolicyExpr>>,
   scoreExpr: AgentPolicyExpr,
@@ -986,6 +1026,234 @@ describe('policy-eval', () => {
       const result = evaluatePolicyMove(input);
 
       assert.equal(result.metadata.candidates[0]?.score, 15);
+    });
+  });
+
+  describe('adjacentTokenAgg evaluation', () => {
+    it('counts matching tokens across zones adjacent to the resolved anchor', () => {
+      const agents = createStateFeatureScoreCatalog(
+        {
+          selfAdjacentBases: {
+            kind: 'adjacentTokenAgg',
+            anchorZone: 'frontier:none',
+            tokenFilter: {
+              type: 'base',
+              props: { seat: { eq: 'self' } },
+            },
+            aggOp: 'count',
+          },
+        },
+        refExpr({ kind: 'library', refKind: 'stateFeature', id: 'selfAdjacentBases' }),
+      );
+      const baseInput = createInput(agents, createMoves('alpha'));
+      const input = {
+        ...baseInput,
+        def: withAdjacency(baseInput.def),
+        state: {
+          ...baseInput.state,
+          zones: {
+            ...baseInput.state.zones,
+            'target-a:none': [
+              { id: asTokenId('adj-base-a'), type: 'base', props: { seat: asPlayerId(0), strength: 3 } },
+              { id: asTokenId('adj-troop-a'), type: 'troop', props: { seat: asPlayerId(0), strength: 1 } },
+            ],
+            'target-b:none': [
+              { id: asTokenId('adj-base-b'), type: 'base', props: { seat: asPlayerId(0), strength: 2 } },
+              { id: asTokenId('adj-base-c'), type: 'base', props: { seat: asPlayerId(1), strength: 5 } },
+            ],
+            'rear:none': [
+              { id: asTokenId('non-adj-base'), type: 'base', props: { seat: asPlayerId(0), strength: 9 } },
+            ],
+          },
+        },
+      } as const;
+
+      const result = evaluatePolicyMove(input);
+
+      assert.equal(result.metadata.candidates[0]?.score, 2);
+    });
+
+    it('sums numeric token props in adjacent zones only', () => {
+      const agents = createStateFeatureScoreCatalog(
+        {
+          adjacentTroopStrength: {
+            kind: 'adjacentTokenAgg',
+            anchorZone: 'frontier:none',
+            tokenFilter: { type: 'troop' },
+            aggOp: 'sum',
+            prop: 'strength',
+          },
+        },
+        refExpr({ kind: 'library', refKind: 'stateFeature', id: 'adjacentTroopStrength' }),
+      );
+      const baseInput = createInput(agents, createMoves('alpha'));
+      const input = {
+        ...baseInput,
+        def: withAdjacency(baseInput.def),
+        state: {
+          ...baseInput.state,
+          zones: {
+            ...baseInput.state.zones,
+            'target-a:none': [
+              { id: asTokenId('adj-troop-a'), type: 'troop', props: { strength: 4 } },
+            ],
+            'target-b:none': [
+              { id: asTokenId('adj-troop-b'), type: 'troop', props: { strength: 2 } },
+              { id: asTokenId('adj-troop-c'), type: 'troop', props: { hidden: true } },
+            ],
+            'rear:none': [
+              { id: asTokenId('non-adj-troop'), type: 'troop', props: { strength: 9 } },
+            ],
+          },
+        },
+      } as const;
+
+      const result = evaluatePolicyMove(input);
+
+      assert.equal(result.metadata.candidates[0]?.score, 6);
+    });
+
+    it('returns zero for anchors with no neighbors or no matching adjacent tokens', () => {
+      const agents = createStateFeatureScoreCatalog(
+        {
+          isolatedNeighborCount: {
+            kind: 'adjacentTokenAgg',
+            anchorZone: 'rear:none',
+            tokenFilter: { type: 'base' },
+            aggOp: 'count',
+          },
+          missingAdjacentStrength: {
+            kind: 'adjacentTokenAgg',
+            anchorZone: 'frontier:none',
+            tokenFilter: { type: 'base', props: { seat: { eq: 'missing' } } },
+            aggOp: 'sum',
+            prop: 'strength',
+          },
+        },
+        opExpr(
+          'add',
+          refExpr({ kind: 'library', refKind: 'stateFeature', id: 'isolatedNeighborCount' }),
+          refExpr({ kind: 'library', refKind: 'stateFeature', id: 'missingAdjacentStrength' }),
+        ),
+      );
+      const baseInput = createInput(agents, createMoves('alpha'));
+      const input = {
+        ...baseInput,
+        def: withAdjacency(baseInput.def),
+        state: {
+          ...baseInput.state,
+          zones: {
+            ...baseInput.state.zones,
+            'target-a:none': [
+              { id: asTokenId('adj-base-a'), type: 'base', props: { seat: asPlayerId(0), strength: 3 } },
+            ],
+          },
+        },
+      } as const;
+
+      const result = evaluatePolicyMove(input);
+
+      assert.equal(result.metadata.candidates[0]?.score, 0);
+    });
+
+    it('resolves actor and active owner segments in anchorZone strings', () => {
+      const agents = createStateFeatureScoreCatalog(
+        {
+          selfAnchorLoad: {
+            kind: 'adjacentTokenAgg',
+            anchorZone: 'frontier:actor',
+            tokenFilter: { type: 'troop' },
+            aggOp: 'sum',
+            prop: 'strength',
+          },
+          activeAnchorLoad: {
+            kind: 'adjacentTokenAgg',
+            anchorZone: 'frontier:active',
+            tokenFilter: { type: 'troop' },
+            aggOp: 'sum',
+            prop: 'strength',
+          },
+        },
+        opExpr(
+          'add',
+          refExpr({ kind: 'library', refKind: 'stateFeature', id: 'selfAnchorLoad' }),
+          refExpr({ kind: 'library', refKind: 'stateFeature', id: 'activeAnchorLoad' }),
+        ),
+      );
+      const baseInput = createInput(agents, createMoves('alpha'));
+      const input = {
+        ...baseInput,
+        def: withAdjacency(baseInput.def),
+        state: {
+          ...baseInput.state,
+          activePlayer: asPlayerId(1),
+          zones: {
+            ...baseInput.state.zones,
+            'target-a:none': [
+              { id: asTokenId('self-adj-troop'), type: 'troop', props: { strength: 4 } },
+            ],
+            'target-b:none': [
+              { id: asTokenId('active-adj-troop'), type: 'troop', props: { strength: 2 } },
+            ],
+          },
+        },
+      } as const;
+
+      const result = evaluatePolicyMove(input);
+
+      assert.equal(result.metadata.candidates[0]?.score, 6);
+    });
+
+    it('preserves empty extrema semantics for adjacent aggregates', () => {
+      const agents = createStateFeatureScoreCatalog(
+        {
+          missingAdjacentMax: {
+            kind: 'adjacentTokenAgg',
+            anchorZone: 'frontier:none',
+            tokenFilter: { type: 'base', props: { seat: { eq: 'missing' } } },
+            aggOp: 'max',
+            prop: 'strength',
+          },
+          missingAdjacentMin: {
+            kind: 'adjacentTokenAgg',
+            anchorZone: 'frontier:none',
+            tokenFilter: { type: 'base', props: { seat: { eq: 'missing' } } },
+            aggOp: 'min',
+            prop: 'strength',
+          },
+        },
+        opExpr(
+          'add',
+          opExpr(
+            'coalesce',
+            refExpr({ kind: 'library', refKind: 'stateFeature', id: 'missingAdjacentMax' }),
+            literal(-1),
+          ),
+          opExpr(
+            'coalesce',
+            refExpr({ kind: 'library', refKind: 'stateFeature', id: 'missingAdjacentMin' }),
+            literal(-2),
+          ),
+        ),
+      );
+      const baseInput = createInput(agents, createMoves('alpha'));
+      const input = {
+        ...baseInput,
+        def: withAdjacency(baseInput.def),
+        state: {
+          ...baseInput.state,
+          zones: {
+            ...baseInput.state.zones,
+            'target-a:none': [
+              { id: asTokenId('adj-base-a'), type: 'base', props: { seat: asPlayerId(0), strength: 3 } },
+            ],
+          },
+        },
+      } as const;
+
+      const result = evaluatePolicyMove(input);
+
+      assert.equal(result.metadata.candidates[0]?.score, -3);
     });
   });
 

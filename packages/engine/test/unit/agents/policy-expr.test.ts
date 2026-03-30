@@ -623,6 +623,128 @@ describe('policy-expr analysis', () => {
       && diagnostic.message.includes('must be one of')));
   });
 
+  it('analyzes adjacentTokenAgg expressions with count and optional token filters', () => {
+    const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
+    const analysis = analyzePolicyExpr(
+      {
+        adjacentTokenAgg: {
+          anchorZone: 'frontier:actor',
+          tokenFilter: {
+            type: 'base',
+            props: {
+              seat: { eq: 'self' },
+              hidden: { eq: false },
+            },
+          },
+          aggOp: 'count',
+        },
+      },
+      createContext(),
+      diagnostics,
+      'expr',
+    );
+
+    assert.deepEqual(diagnostics, []);
+    assert.deepEqual(analysis?.expr, {
+      kind: 'adjacentTokenAgg',
+      anchorZone: 'frontier:actor',
+      tokenFilter: {
+        type: 'base',
+        props: {
+          seat: { eq: 'self' },
+          hidden: { eq: false },
+        },
+      },
+      aggOp: 'count',
+    });
+    assert.equal(analysis?.costClass, 'state');
+  });
+
+  it('analyzes adjacentTokenAgg expressions with numeric props', () => {
+    const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
+    const analysis = analyzePolicyExpr(
+      {
+        adjacentTokenAgg: {
+          anchorZone: 'saigon:none',
+          tokenFilter: { type: 'troop' },
+          aggOp: 'sum',
+          prop: 'strength',
+        },
+      },
+      createContext(),
+      diagnostics,
+      'expr',
+    );
+
+    assert.deepEqual(diagnostics, []);
+    assert.deepEqual(analysis?.expr, {
+      kind: 'adjacentTokenAgg',
+      anchorZone: 'saigon:none',
+      tokenFilter: { type: 'troop' },
+      aggOp: 'sum',
+      prop: 'strength',
+    });
+  });
+
+  it('rejects adjacentTokenAgg expressions without anchorZone', () => {
+    const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
+    const analysis = analyzePolicyExpr(
+      {
+        adjacentTokenAgg: {
+          aggOp: 'count',
+        },
+      },
+      createContext(),
+      diagnostics,
+      'expr',
+    );
+
+    assert.equal(analysis, null);
+    assert.ok(diagnostics.some((diagnostic) =>
+      diagnostic.path === 'expr.adjacentTokenAgg.anchorZone'
+      && diagnostic.message.includes('non-empty string')));
+  });
+
+  it('rejects adjacentTokenAgg sum expressions without prop', () => {
+    const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
+    const analysis = analyzePolicyExpr(
+      {
+        adjacentTokenAgg: {
+          anchorZone: 'saigon:none',
+          aggOp: 'sum',
+        },
+      },
+      createContext(),
+      diagnostics,
+      'expr',
+    );
+
+    assert.equal(analysis, null);
+    assert.ok(diagnostics.some((diagnostic) =>
+      diagnostic.path === 'expr.adjacentTokenAgg.prop'
+      && diagnostic.message.includes('required')));
+  });
+
+  it('rejects invalid adjacentTokenAgg aggregation operators', () => {
+    const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
+    const analysis = analyzePolicyExpr(
+      {
+        adjacentTokenAgg: {
+          anchorZone: 'saigon:none',
+          aggOp: 'avg',
+        },
+      },
+      createContext(),
+      diagnostics,
+      'expr',
+    );
+
+    assert.equal(analysis, null);
+    assert.ok(diagnostics.some((diagnostic) =>
+      diagnostic.path === 'expr.adjacentTokenAgg.aggOp'
+      && diagnostic.message.includes('must be one of')));
+  });
+
   it('rejects dynamic zoneTokenAgg zones that do not resolve to ids', () => {
     const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
     const analysis = analyzePolicyExpr(

@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — sim API, simulator internals, call sites, tests
-**Deps**: archive/tickets/97DECPOISTA/97DECPOISTA-003.md, tickets/97DECPOISTA-004.md
+**Deps**: archive/tickets/97DECPOISTA/97DECPOISTA-003.md, archive/tickets/97DECPOISTA/97DECPOISTA-004.md
 
 ## Problem
 
@@ -16,7 +16,7 @@ The snapshot work exposed this design issue more clearly: adding `snapshotDepth`
 
 1. `packages/engine/src/sim/simulator.ts` still types its `options` parameter as `ExecutionOptions`, reads `snapshotDepth` / `skipDeltas` directly from that bag, and forwards the same bag into `initialState()` / `applyTrustedMove()` after stripping only `profiler`.
 2. `ExecutionOptions` in `packages/engine/src/kernel/types-core.ts` currently mixes kernel-facing flags (`verifyCompiledEffects`, `verifyIncrementalHash`, `trace`, etc.) with sim-only flags (`skipDeltas`, `snapshotDepth`), which violates clean ownership boundaries.
-3. The remaining active tickets do not otherwise own this issue. `tickets/97DECPOISTA-004.md` explicitly keeps options-layer cleanup out of scope, so this ticket is the right and only follow-up for the architectural boundary fix.
+3. The remaining active tickets do not otherwise own this issue. `archive/tickets/97DECPOISTA/97DECPOISTA-004.md` explicitly keeps options-layer cleanup out of scope, so this ticket is the right and only follow-up for the architectural boundary fix.
 4. The real callers that must be updated are broader than this ticket originally listed: current mixed-option usage exists in `packages/engine/test/integration/compiled-effects-verification.test.ts`, `packages/engine/test/determinism/zobrist-incremental-parity.test.ts`, `packages/engine/test/helpers/zobrist-incremental-property-helpers.ts`, `packages/engine/test/determinism/draft-state-determinism-parity.test.ts`, `packages/engine/test/performance/compiled-vs-interpreted-benchmark.test.ts`, `packages/engine/test/memory/draft-state-gc-measurement.test.ts`, and `packages/engine/test/unit/sim/simulator.test.ts`.
 5. `packages/engine/test/unit/types-exhaustive.test.ts` currently asserts that `ExecutionOptions` includes `snapshotDepth`; this test must be inverted as part of the refactor so type-level proof matches the new architecture.
 6. No dedicated sim options type currently exists under `packages/engine/src/sim/`, and `packages/engine/src/sim/index.ts` does not yet export one.

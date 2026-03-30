@@ -1,6 +1,6 @@
 # 97DECPOISTA-004: Serialization verification and property tests
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — tests only (no production code changes expected)
@@ -98,3 +98,17 @@ In `packages/engine/test/integration/sim/snapshot-serialization.test.ts`:
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/test/integration/sim/snapshot-serialization.test.ts`
 2. `pnpm turbo typecheck`
 3. `pnpm turbo test`
+
+## Outcome
+
+- **Completion date**: 2026-03-30
+- **What changed**: Created `packages/engine/test/integration/sim/snapshot-serialization.test.ts` (new file, 6 tests in 3 suites). No production code changes.
+- **Tests added**:
+  1. Serialization round-trip: `runGame` → `enrichTrace` → `writeEnrichedTrace` → JSON parse → verify snapshot fields survive
+  2. Snapshot field values match direct state inspection after round-trip
+  3. No BigInt or non-JSON-serializable values in snapshot objects
+  4. State immutability property test (hash before === hash after `extractDecisionPointSnapshot`)
+  5. Zero-overhead test (`snapshotDepth:'none'` produces MoveLog entries with `snapshot` key strictly absent)
+  6. FITL golden test: compiles production spec, verifies 4 seat standings (vc, nva, us, arvn), per-player vars, margins, globalVars, tokenCountOnBoard
+- **Deviations**: Ticket referenced `computeStateHash` — actual function is `computeFullHash` (used correctly in implementation). FITL seat IDs are lowercase (vc, nva, us, arvn), not uppercase as initially assumed.
+- **Verification**: `pnpm turbo typecheck` pass, `pnpm turbo test --force` 5149/5149 pass, 0 failures.

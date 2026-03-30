@@ -1,5 +1,5 @@
 import { asPlayerId, type PlayerId } from '../kernel/branded.js';
-import type { AgentPolicyZoneTokenAggOwner } from '../contracts/index.js';
+import type { AgentPolicyZoneScope, AgentPolicyZoneTokenAggOwner } from '../contracts/index.js';
 import { createEvalContext, createEvalRuntimeResources, type ReadContext } from '../kernel/eval-context.js';
 import { resolveZoneRefWithOwnerFallback } from '../kernel/resolve-zone-ref.js';
 import { buildRuntimeTableIndex } from '../kernel/runtime-table-index.js';
@@ -9,6 +9,8 @@ import type {
   AgentParameterValue,
   AgentPolicyCatalog,
   AgentPolicyExpr,
+  AgentPolicyTokenFilter,
+  AgentPolicyZoneFilter,
   ChoicePendingRequest,
   CompiledAgentPolicyRef,
   CompiledAgentPolicySurfaceRef,
@@ -16,7 +18,9 @@ import type {
   GameDef,
   GameState,
   MoveParamValue,
+  Token,
   TrustedExecutableMove,
+  ZoneDef,
 } from '../kernel/types.js';
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
 import {
@@ -81,6 +85,116 @@ function resolveZoneTokenAggOwner(
     return asPlayerId(Number(owner));
   }
   return undefined;
+}
+
+export interface ResolvedTokenFilter {
+  readonly type?: string;
+  readonly props?: Readonly<Record<string, { readonly eq: string | number | boolean }>>;
+}
+
+export function resolveTokenFilter(
+  filter: AgentPolicyTokenFilter | undefined,
+  playerId: PlayerId,
+  state: GameState,
+): ResolvedTokenFilter | undefined {
+  if (filter === undefined) {
+    return undefined;
+  }
+  if (filter.props === undefined) {
+    return filter;
+  }
+
+  const resolvedProps = Object.fromEntries(
+    Object.entries(filter.props).map(([key, comparison]) => {
+      const value = comparison.eq === 'self'
+        ? playerId
+        : comparison.eq === 'active'
+          ? state.activePlayer
+          : comparison.eq;
+      return [key, { eq: value }];
+    }),
+  );
+
+  return {
+    ...(filter.type === undefined ? {} : { type: filter.type }),
+    props: resolvedProps,
+  };
+}
+
+function applyComparisonOp(
+  actual: string | number | boolean | undefined,
+  op: 'eq' | 'gt' | 'gte' | 'lt' | 'lte',
+  expected: string | number | boolean,
+): boolean {
+  if (actual === undefined) {
+    return false;
+  }
+  if (op === 'eq') {
+    return actual === expected;
+  }
+  if (typeof actual !== typeof expected) {
+    return false;
+  }
+  if (typeof actual === 'number' || typeof actual === 'string') {
+    if (op === 'gt') return actual > expected;
+    if (op === 'gte') return actual >= expected;
+    if (op === 'lt') return actual < expected;
+    return actual <= expected;
+  }
+  return false;
+}
+
+export function matchesTokenFilter(
+  token: Token,
+  filter: ResolvedTokenFilter | undefined,
+): boolean {
+  if (filter === undefined) {
+    return true;
+  }
+  if (filter.type !== undefined && token.type !== filter.type) {
+    return false;
+  }
+  if (filter.props === undefined) {
+    return true;
+  }
+  return Object.entries(filter.props).every(([key, comparison]) => token.props[key] === comparison.eq);
+}
+
+export function matchesZoneScope(
+  zoneDef: ZoneDef,
+  scope: AgentPolicyZoneScope,
+): boolean {
+  if (scope === 'all') {
+    return true;
+  }
+  const zoneKind = zoneDef.zoneKind ?? 'board';
+  return zoneKind === scope;
+}
+
+export function matchesZoneFilter(
+  zoneDef: ZoneDef,
+  filter: AgentPolicyZoneFilter | undefined,
+  state: GameState,
+): boolean {
+  if (filter === undefined) {
+    return true;
+  }
+  if (filter.category !== undefined && zoneDef.category !== filter.category) {
+    return false;
+  }
+  if (filter.attribute !== undefined) {
+    const actualAttribute = scalarZonePropValue(zoneDef.attributes?.[filter.attribute.prop]);
+    if (!applyComparisonOp(actualAttribute, filter.attribute.op, filter.attribute.value)) {
+      return false;
+    }
+  }
+  if (filter.variable !== undefined) {
+    const actualVariable = state.zoneVars[String(zoneDef.id)]?.[filter.variable.prop];
+    if (!applyComparisonOp(actualVariable, filter.variable.op, filter.variable.value)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 export class PolicyEvaluationContext {
@@ -545,11 +659,10 @@ export class PolicyEvaluationContext {
   }
 }
 
-function scalarZonePropValue(value: AttributeValue | undefined): PolicyValue {
-  if (value === undefined || Array.isArray(value)) {
-    return undefined;
-  }
-  return value;
+function scalarZonePropValue(value: AttributeValue | undefined): string | number | boolean | undefined {
+  return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
+    ? value
+    : undefined;
 }
 
 function previewRefKey(ref: CompiledAgentPolicySurfaceRef): string {

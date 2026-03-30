@@ -245,3 +245,98 @@ No issues from the previous evaluation were resolved. The rendering appears unch
 7. **[MEDIUM]** Increase token size and add faction-specific visual markers so pieces are identifiable at default zoom. *(Recurring: 3 consecutive evaluations)*
 8. **[LOW]** Clean up polygon border seams where adjacent provinces meet. *(Recurring: 2 consecutive evaluations)*
 9. **[LOW]** Use Vietnam's geographic outline as a layout constraint so the overall map shape is recognizable to FITL players. *(Recurring: 3 consecutive evaluations)*
+
+---
+
+## EVALUATION #4
+
+**Date**: 2026-03-30
+**Screenshots analyzed**: fitl-game-map.png, fitl-game-map-overview.png, fitl-map-editor.png, fitl-map-editor-overview.png
+
+### Screenshot Analysis
+
+#### fitl-game-map.png — Game Canvas Close-Up
+**What's shown**: Dark-themed game canvas showing a cluster of large irregular polygons in the central-northern region. Visible provinces: Central Laos (dark green), Southern Laos (dark green), a large tan/khaki province (Quang Nam area), Quang Tin Quang Ngai (bright green), and several additional tan provinces extending south. Da Nang city as a blue-gray circle on the right edge. Tokens visible as colored squares (orange, yellow near Da Nang) and red circles (in Laos provinces). Dashed teal coast line on the right. Brown/gray route lines cross the map.
+**Issues observed**:
+- Polygon territory rendering now covers many more provinces than Eval #3 — the close-up reveals at least 8-10 polygon provinces with shared borders, up from ~5-6
+- Three distinct terrain fill colors are clearly visible: dark green (jungle/Laos), tan/khaki (lowlands), and bright green (a third terrain category)
+- Province labels have dark semi-transparent background pills ("Central Laos", "Southern Laos", "Quang Tin Quang Ngai") — improved legibility over previous evaluations
+- Polygon shapes remain angular/geometric with straight-line borders — no organic curves
+- Route lines (brown) are visible but still feel like graph edges connecting polygon borders rather than geographic features flowing through territory
+- City circle (Da Nang) still sits at the polygon border edge rather than being embedded within surrounding territory
+- Token icons are small but faction colors (red, orange, yellow, blue) are distinguishable at this zoom level — an improvement from previous evaluations
+
+#### fitl-game-map-overview.png — Game Canvas Full Map
+**What's shown**: Full map at zoomed-out level on dark theme. The map is now dominated by polygon territories covering the majority of visible area. The upper portion shows Northeast Cambodia, Central Laos areas (dark green), with tan/khaki provinces in the north-central area. The middle section shows large dark green polygons (Southern Laos, The Fishhook) alongside tan provinces. The southern portion around Saigon shows a cluster of lighter green polygons, with some congestion where many provinces and route lines overlap. Cities as blue circles along the right edge. "Out of Play" and "Trucks Base Staging" boxes on the far right.
+**Issues observed**:
+- Dramatic improvement: polygon territory rendering now covers the vast majority of the map — approximately 25-30 province zones rendered as territories, up from ~5-6 in Eval #3
+- Three terrain colors visible map-wide: dark green, tan/khaki, and light/bright green
+- The southern Saigon area is visually congested — many small polygons, overlapping route lines, and a darker rendering area where province boundaries are hard to distinguish
+- Labels are present but very small at overview zoom — province names are barely legible
+- The overall map shape is now roughly vertically elongated (north-south), which better approximates Vietnam's geography than previous evaluations, though it still doesn't clearly suggest the S-curve of the physical map
+- Route lines are visible connecting cities but styling details (road vs. river) are hard to distinguish at this zoom
+- Some dark rendering artifacts around Saigon area where polygon fills, route lines, and adjacency lines overlap
+
+#### fitl-map-editor.png — Map Editor Close-Up
+**What's shown**: Light cream-background editor view showing the same central region. Provinces as large irregular polygons: Quang Nam (tan), Southern Laos (dark green), Quang Tin Quang Ngai (bright green), Binh Dinh (tan). Da Nang and Qui Nhon as blue circles. Brown route lines connecting cities. Clean, uncluttered view without tokens.
+**Issues observed**:
+- Polygon shapes match the game canvas — consistent rendering between views (positive)
+- Labels are more readable on the light background than the dark game canvas ("Southern Laos", "Quang Nam", "Binh Dinh" clearly visible)
+- Province borders share edges cleanly in this region — good tessellation
+- Route lines (brown) connect between cities but still terminate at polygon edges rather than flowing through territory
+- Qui Nhon city circle sits at the far-right border edge, disconnected from surrounding territory
+- Polygon shapes still have straight-line angular borders — geometric rather than organic
+
+#### fitl-map-editor-overview.png — Map Editor Full Map
+**What's shown**: Full map in editor view on light cream background. This is the most revealing screenshot. The entire map is now covered with polygon territories from top (North Vietnam) to bottom (Mekong Delta area). Provinces visible include: North Vietnam (tan), Quang Tri (tan), Central Laos (dark green), Southern Laos (dark green), Northeast Cambodia (dark green), Northwest Cambodia (dark green), The Fishhook (dark green), Quang Tin Quang Ngai (bright green), Cam Lien Can Tho (bright green), and many more. Cities (blue circles): Hue, Da Nang, Qui Nhon, Cam Ranh, Saigon visible along the right edge. "Available", "Out of Play", and "Trucks Base Staging" boxes on the right side.
+**Issues observed**:
+- ALL province zones are now rendered as polygon territories with shared borders — no more isolated green rectangles. This resolves the CRITICAL recommendation from Eval #3
+- Three terrain colors applied map-wide: dark green (jungle/forest — Laos, Cambodia, southern forests), tan/khaki (lowlands — coastal Vietnam, northern plains), bright green (specific provinces — Quang Tin Quang Ngai, Cam Lien Can Tho, others)
+- One province near the bottom appears white/cream colored — possibly missing terrain assignment or representing a distinct terrain type (Tay Ninh area?)
+- The vertically elongated layout approximates Vietnam's geography — Laos/Cambodia provinces on the left, coastal Vietnam on the right with cities along the edge
+- Labels are readable throughout on the light background — small but legible at this zoom
+- Route lines (brown) connect cities along the coast — all appear as the same brown color; road/river distinction is not visible in the editor
+- Some polygon border seams visible where provinces meet, particularly in the southern congested area
+- The overall impression is now of a contiguous territory map rather than isolated zones — a fundamental quality improvement
+
+### Cross-View Consistency
+
+Game canvas and editor views are consistent for the overlapping areas — same polygon shapes, same terrain colors (dark green, tan, bright green), same city placement. The editor overview confirms full polygon coverage that was partially visible in the game canvas overview. One discrepancy: route type distinction (roads vs. rivers) appears clearer in the game canvas (different line weights/colors) than in the editor overview where routes appear uniformly brown. The congested Saigon area in the game canvas has darker rendering artifacts not present in the cleaner editor view.
+
+### Resolved Since Previous
+
+- **Limited polygon coverage (~5-6 provinces)** — was CRITICAL in Eval #3, now fully resolved. All province zones are rendered as polygon territories with shared borders. This was the highest-impact recommendation and has been comprehensively addressed.
+- **Uniform dark green for non-polygon zones** — was HIGH in Eval #3 (LoC zones, Laos/Cambodia all identical dark green rectangles). Now all zones have terrain-appropriate polygon fills with three distinct colors applied map-wide.
+- **Vietnam geographic outline** — was LOW in Eval #3. The vertically elongated layout with Laos/Cambodia on the left and coastal Vietnam on the right now better approximates the physical map geography, though the S-curve is not pronounced.
+
+### Scores
+
+| # | Metric | Score | Previous | Delta | Justification |
+|---|--------|-------|----------|-------|---------------|
+| 1 | Adjacency Clarity | 7 | 5 | +2 | All provinces now share borders as polygon territories — adjacency is implied by geography map-wide, not just for a small cluster. Shapes are still angular/geometric rather than organic, which prevents a higher score. Some border congestion in the Saigon area. |
+| 2 | Road/River Integration | 5 | 5 | 0 | Unchanged. Routes are visible and road/river distinction exists in the game canvas, but routes still terminate at polygon edges rather than flowing through territory. Editor view shows less route type distinction. |
+| 3 | Terrain Distinction | 6 | 4 | +2 | Three terrain colors now applied across the entire map (dark green, tan/khaki, bright green). Major improvement from the full-map uniform dark green in Eval #3. Still lacks finer terrain granularity (e.g., highlands vs. lowlands use the same tan) and one province may have a missing terrain assignment (white/cream fill). |
+| 4 | Label/Token Readability | 5 | 4 | +1 | Labels now have dark background pills in the game canvas, improving legibility. Editor labels readable on light background. At overview zoom, labels are still very small. Tokens are small but faction colors are more distinguishable than before. |
+| | **Average** | **5.75** | **4.5** | **+1.25** | |
+
+**Polygon coverage**: ~28-30/35 province zones rendered as territories (vs. ~5-6 in Eval #3). Effectively full coverage.
+
+### Score Trend (4 evaluations — included early for visibility)
+
+| Eval | Avg | Delta |
+|------|-----|-------|
+| #1   | 2.5 | — |
+| #2   | 5.0 | +2.5 |
+| #3   | 4.5 | -0.5 |
+| #4   | 5.75 | +1.25 |
+
+### Prioritized Recommendations
+
+1. **[HIGH]** Soften province polygon shapes — replace straight-line borders with slightly curved or irregular edges to give provinces an organic, territorial feel rather than the current geometric/crystalline appearance. The physical board uses curved boundaries following geographic features. *(Recurring: 3 consecutive evaluations)*
+2. **[HIGH]** Make routes flow through province territory rather than terminating at polygon edges. Route type distinction (roads vs. rivers) is visible in the game canvas but routes still feel like graph edges, not geographic features. Ensure road/river distinction is consistent in the editor view as well. *(Recurring: 4 consecutive evaluations)*
+3. **[HIGH]** Add finer terrain granularity — the 3 base colors are good but FITL distinguishes more terrain types. Consider shade variations within the three categories (e.g., lighter tan for coastal lowlands vs. darker tan for inland plains, or subtle pattern overlays). Investigate the white/cream-filled province near the bottom of the editor overview — likely a missing terrain assignment.
+4. **[MEDIUM]** Increase label font size at overview zoom. Labels are legible at close-up but become very small at zoomed-out levels. Consider adaptive font sizing or minimum size clamping. *(Recurring: 3 consecutive evaluations)*
+5. **[MEDIUM]** Reduce visual congestion in the Saigon area — the game canvas overview shows dark rendering artifacts where many small polygon provinces, route lines, and adjacency lines overlap. Consider simplifying line rendering or adjusting polygon opacity in dense areas.
+6. **[MEDIUM]** Embed city circles within their parent province shapes rather than placing them at the border edge. Da Nang and Qui Nhon still appear disconnected from surrounding territory. *(Recurring: 3 consecutive evaluations)*
+7. **[MEDIUM]** Increase token size and add faction-specific visual markers so pieces are identifiable at default zoom. Faction colors are more distinguishable now but tokens remain small. *(Recurring: 4 consecutive evaluations)*
+8. **[LOW]** Clean up polygon border seams in dense areas where adjacent provinces meet imprecisely. *(Recurring: 3 consecutive evaluations)*

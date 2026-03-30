@@ -1,6 +1,12 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import {
+  matchesTokenFilter,
+  matchesZoneFilter,
+  matchesZoneScope,
+  resolveTokenFilter,
+} from '../../../src/agents/policy-evaluation-core.js';
 import { evaluatePolicyMove, evaluatePolicyMoveCore } from '../../../src/agents/policy-eval.js';
 import { createPolicyCompletionProvider, createPolicyRuntimeProviders } from '../../../src/agents/policy-runtime.js';
 import { toMoveIdentityKey } from '../../../src/kernel/move-identity.js';
@@ -21,10 +27,14 @@ import {
   type CompiledAgentPolicyCurrentSurfaceRef,
   type CompiledAgentPolicyPreviewSurfaceRef,
   type CompiledAgentPolicyRef,
+  type GameState,
   type GameDef,
   type Move,
   type MoveParamValue,
   type ActionDef,
+  type AgentPolicyZoneFilter,
+  type Token,
+  type ZoneDef,
 } from '../../../src/kernel/index.js';
 import { eff } from '../../helpers/effect-tag-helper.js';
 
@@ -321,7 +331,192 @@ function createChoiceRequest(overrides: Partial<ChoicePendingRequest> = {}): Cho
   } as ChoicePendingRequest;
 }
 
+function createHelperTestState(): { def: GameDef; state: GameState } {
+  const def = createBaseDef(createCatalog());
+  const base = initialState(def, 11, 2).state;
+  return {
+    def,
+    state: {
+      ...base,
+      zones: {
+        ...base.zones,
+        'target-a:none': [
+          { id: asTokenId('token-a'), type: 'base', props: { seat: '0', strength: 3, hidden: false } },
+          { id: asTokenId('token-b'), type: 'troop', props: { seat: '1', strength: 5, hidden: true } },
+        ],
+        'target-b:none': [
+          { id: asTokenId('token-c'), type: 'base', props: { seat: '1', strength: 2, hidden: false } },
+        ],
+      },
+      zoneVars: {
+        ...base.zoneVars,
+        'target-a:none': { pressure: 3, control: 0 },
+        'target-b:none': { pressure: 0, control: 2 },
+      },
+      activePlayer: asPlayerId(1),
+    },
+  };
+}
+
 describe('policy-eval', () => {
+  describe('filter and scope matching helpers', () => {
+    it('matches token filters by type, props, and combined predicates', () => {
+      const token: Token = {
+        id: asTokenId('token-1'),
+        type: 'base',
+        props: { seat: '0', strength: 4, hidden: false },
+      };
+
+      assert.equal(matchesTokenFilter(token, undefined), true);
+      assert.equal(matchesTokenFilter(token, { type: 'base' }), true);
+      assert.equal(matchesTokenFilter(token, { type: 'troop' }), false);
+      assert.equal(matchesTokenFilter(token, { props: { seat: { eq: '0' } } }), true);
+      assert.equal(matchesTokenFilter(token, { props: { seat: { eq: '1' } } }), false);
+      assert.equal(
+        matchesTokenFilter(token, {
+          type: 'base',
+          props: { seat: { eq: '0' }, hidden: { eq: false } },
+        }),
+        true,
+      );
+      assert.equal(
+        matchesTokenFilter(token, {
+          type: 'base',
+          props: { missing: { eq: 'value' } },
+        }),
+        false,
+      );
+    });
+
+    it('resolves self and active token-filter values to concrete player ids', () => {
+      const { state } = createHelperTestState();
+
+      assert.deepEqual(
+        resolveTokenFilter(
+          {
+            type: 'base',
+            props: {
+              seat: { eq: 'self' },
+              target: { eq: 'active' },
+              hidden: { eq: false },
+            },
+          },
+          asPlayerId(0),
+          state,
+        ),
+        {
+          type: 'base',
+          props: {
+            seat: { eq: asPlayerId(0) },
+            target: { eq: asPlayerId(1) },
+            hidden: { eq: false },
+          },
+        },
+      );
+      assert.equal(resolveTokenFilter(undefined, asPlayerId(0), state), undefined);
+    });
+
+    it('matches zone scope using board-by-default semantics for omitted zoneKind', () => {
+      const boardZone: ZoneDef = {
+        id: asZoneId('board:none'),
+        owner: 'none',
+        visibility: 'public',
+        ordering: 'set',
+      };
+      const auxZone: ZoneDef = {
+        id: asZoneId('aux:none'),
+        owner: 'none',
+        visibility: 'public',
+        ordering: 'set',
+        zoneKind: 'aux',
+      };
+
+      assert.equal(matchesZoneScope(boardZone, 'board'), true);
+      assert.equal(matchesZoneScope(boardZone, 'aux'), false);
+      assert.equal(matchesZoneScope(auxZone, 'board'), false);
+      assert.equal(matchesZoneScope(auxZone, 'aux'), true);
+      assert.equal(matchesZoneScope(boardZone, 'all'), true);
+      assert.equal(matchesZoneScope(auxZone, 'all'), true);
+    });
+
+    it('matches zone filters across category, attributes, variables, and compound conditions', () => {
+      const { def, state } = createHelperTestState();
+      const province = def.zones.find((zone) => zone.id === asZoneId('target-a:none'))!;
+      const otherProvince = def.zones.find((zone) => zone.id === asZoneId('target-b:none'))!;
+
+      const attributeCases: readonly AgentPolicyZoneFilter[] = [
+        { attribute: { prop: 'population', op: 'eq', value: 0 } },
+        { attribute: { prop: 'population', op: 'gt', value: -1 } },
+        { attribute: { prop: 'population', op: 'gte', value: 0 } },
+        { attribute: { prop: 'population', op: 'lt', value: 1 } },
+        { attribute: { prop: 'population', op: 'lte', value: 0 } },
+      ];
+      for (const filter of attributeCases) {
+        assert.equal(matchesZoneFilter(province, filter, state), true);
+      }
+
+      const variableCases: readonly AgentPolicyZoneFilter[] = [
+        { variable: { prop: 'pressure', op: 'eq', value: 3 } },
+        { variable: { prop: 'pressure', op: 'gt', value: 2 } },
+        { variable: { prop: 'pressure', op: 'gte', value: 3 } },
+        { variable: { prop: 'pressure', op: 'lt', value: 4 } },
+        { variable: { prop: 'pressure', op: 'lte', value: 3 } },
+      ];
+      for (const filter of variableCases) {
+        assert.equal(matchesZoneFilter(province, filter, state), true);
+      }
+
+      assert.equal(matchesZoneFilter(province, { category: 'province' }, state), true);
+      assert.equal(
+        matchesZoneFilter(
+          province,
+          {
+            category: 'province',
+            attribute: { prop: 'population', op: 'eq', value: 0 },
+          },
+          state,
+        ),
+        true,
+      );
+      assert.equal(matchesZoneFilter(otherProvince, { variable: { prop: 'pressure', op: 'eq', value: 3 } }, state), false);
+      assert.equal(matchesZoneFilter(province, undefined, state), true);
+    });
+
+    it('fails closed for missing values and mismatched comparison types', () => {
+      const { def, state } = createHelperTestState();
+      const province = def.zones.find((zone) => zone.id === asZoneId('target-a:none'))!;
+      const missingVarsZone: ZoneDef = {
+        id: asZoneId('fresh:none'),
+        owner: 'none',
+        visibility: 'public',
+        ordering: 'set',
+        category: 'province',
+        attributes: { population: 0, climate: 'wet', hidden: false },
+      };
+
+      assert.equal(
+        matchesZoneFilter(province, { attribute: { prop: 'missing', op: 'eq', value: 0 } }, state),
+        false,
+      );
+      assert.equal(
+        matchesZoneFilter(missingVarsZone, { variable: { prop: 'pressure', op: 'eq', value: 0 } }, state),
+        false,
+      );
+      assert.equal(
+        matchesZoneFilter(province, { attribute: { prop: 'population', op: 'gt', value: '0' } }, state),
+        false,
+      );
+      assert.equal(
+        matchesZoneFilter(missingVarsZone, { attribute: { prop: 'hidden', op: 'gt', value: false } }, state),
+        false,
+      );
+      assert.equal(
+        matchesZoneFilter(missingVarsZone, { attribute: { prop: 'climate', op: 'gte', value: 'arid' } }, state),
+        true,
+      );
+    });
+  });
+
   it('routes intrinsic, candidate, current, preview, and completion reads through explicit runtime providers', () => {
     const input = createInput(
       createCatalog(

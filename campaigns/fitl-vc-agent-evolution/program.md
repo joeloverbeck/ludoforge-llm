@@ -45,8 +45,8 @@ standard for future campaigns and the browser-based game runner.
 
 - `avgMargin`: average VC victory margin at game end across all seeds
 - `winRate`: fraction of completed games where VC won (crossed threshold at Coup)
-- Measurements within 0.3 composite points of each other are considered equal
-  (noise tolerance due to stochastic game outcomes across 15 seeds)
+- Measurements within 0.05 composite points of each other are considered equal
+  (deterministic fixed seeds — minimum detectable improvement is ~0.0667 per seed)
 
 ## Secondary Metric
 
@@ -141,7 +141,7 @@ are always welcome. Tier 4 only when absolutely necessary.
 IF harness fails (crash, build failure, test failure, runner failure):
     REJECT (allow up to 3 trivial-fix retries per experiment)
 
-IF compositeScore improved by > 0.3 (noise tolerance):
+IF compositeScore improved by > 0.05 (noise tolerance):
     IF improvement > 50% relative AND lines_delta > +50:
         FLAG as suspicious — verify game traces show realistic play
         IF traces look realistic: ACCEPT with note
@@ -149,13 +149,13 @@ IF compositeScore improved by > 0.3 (noise tolerance):
     ELSE:
         ACCEPT
 
-IF compositeScore within 0.3 of best (equal):
+IF compositeScore within 0.05 of best (equal):
     IF lines_delta < 0 (fewer lines = simplification):
         ACCEPT
     ELSE:
         REJECT (near-miss → stash)
 
-IF compositeScore worsened by > 0.3:
+IF compositeScore worsened by > 0.05:
     REJECT
 ```
 
@@ -255,7 +255,7 @@ Starting hypotheses for the first experiments:
 ## Thresholds
 
 ```
-NOISE_TOLERANCE = 0.3           # 0.3 composite points (tighter with 15 seeds)
+NOISE_TOLERANCE = 0.05          # 0.05 composite points (deterministic fixed seeds — no stochastic noise)
 PLATEAU_THRESHOLD = 5           # consecutive rejects before strategy shift
 MAX_IMPROVEMENT_PCT = 50        # flag relative gains > 50% as suspicious
 REGRESSION_CHECK_INTERVAL = 5   # re-verify baseline every 5 accepts

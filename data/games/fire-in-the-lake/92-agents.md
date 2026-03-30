@@ -165,6 +165,14 @@ agents:
           eq:
             - { ref: candidate.actionId }
             - bombard
+      targetSpacePopulation:
+        type: number
+        expr:
+          coalesce:
+            - zoneProp:
+                zone: { ref: candidate.param.targetSpace }
+                prop: population
+            - 0
 
     candidateAggregates:
       hasNonPassAlternative:
@@ -282,7 +290,7 @@ agents:
             ref: feature.isBombard
 
     completionScoreTerms:
-      preferTargetSpaceSelection:
+      preferPopulousTargets:
         when:
           and:
             - eq:
@@ -294,12 +302,21 @@ agents:
             - eq:
                 - { ref: decision.targetKind }
                 - zone
-        weight: 1
-        value: 1
+        weight: 2
+        value:
+          coalesce:
+            - zoneProp:
+                zone: { ref: option.value }
+                prop: population
+            - 0
 
     tieBreakers:
       stableMoveKey:
         kind: stableMoveKey
+      preferCheapTargetSpaces:
+        kind: lowerExpr
+        value:
+          ref: feature.targetSpacePopulation
 
   profiles:
     us-baseline:
@@ -385,19 +402,18 @@ agents:
 
     vc-evolved:
       params:
-        eventWeight: 1.5
         rallyWeight: 3
         taxWeight: 2
       use:
         pruningRules:
           - dropPassWhenOtherMovesExist
         scoreTerms:
-          - preferEvent
           - preferRallyWeighted
           - preferTaxWeighted
         completionScoreTerms:
-          - preferTargetSpaceSelection
+          - preferPopulousTargets
         tieBreakers:
+          - preferCheapTargetSpaces
           - stableMoveKey
       completionGuidance:
         enabled: true

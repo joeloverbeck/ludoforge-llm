@@ -1037,6 +1037,37 @@
           "candidateFeatures": [],
           "aggregates": []
         }
+      },
+      "targetSpacePopulation": {
+        "type": "number",
+        "costClass": "candidate",
+        "expr": {
+          "kind": "op",
+          "op": "coalesce",
+          "args": [
+            {
+              "kind": "zoneProp",
+              "zone": {
+                "kind": "ref",
+                "ref": {
+                  "kind": "candidateParam",
+                  "id": "targetSpace"
+                }
+              },
+              "prop": "population"
+            },
+            {
+              "kind": "literal",
+              "value": 0
+            }
+          ]
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": []
+        }
       }
     },
     "candidateAggregates": {
@@ -1658,7 +1689,7 @@
       }
     },
     "completionScoreTerms": {
-      "preferTargetSpaceSelection": {
+      "preferPopulousTargets": {
         "costClass": "state",
         "when": {
           "kind": "op",
@@ -1719,11 +1750,28 @@
         },
         "weight": {
           "kind": "literal",
-          "value": 1
+          "value": 2
         },
         "value": {
-          "kind": "literal",
-          "value": 1
+          "kind": "op",
+          "op": "coalesce",
+          "args": [
+            {
+              "kind": "zoneProp",
+              "zone": {
+                "kind": "ref",
+                "ref": {
+                  "kind": "optionIntrinsic",
+                  "intrinsic": "value"
+                }
+              },
+              "prop": "population"
+            },
+            {
+              "kind": "literal",
+              "value": 0
+            }
+          ]
         },
         "dependencies": {
           "parameters": [],
@@ -1741,6 +1789,26 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
+          "aggregates": []
+        }
+      },
+      "preferCheapTargetSpaces": {
+        "kind": "lowerExpr",
+        "costClass": "candidate",
+        "value": {
+          "kind": "ref",
+          "ref": {
+            "kind": "library",
+            "refKind": "candidateFeature",
+            "id": "targetSpacePopulation"
+          }
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [
+            "targetSpacePopulation"
+          ],
           "aggregates": []
         }
       }
@@ -1935,7 +2003,6 @@
     },
     "vc-evolved": {
       "params": {
-        "eventWeight": 1.5,
         "rallyWeight": 3,
         "taxWeight": 2
       },
@@ -1944,14 +2011,14 @@
           "dropPassWhenOtherMovesExist"
         ],
         "scoreTerms": [
-          "preferEvent",
           "preferRallyWeighted",
           "preferTaxWeighted"
         ],
         "completionScoreTerms": [
-          "preferTargetSpaceSelection"
+          "preferPopulousTargets"
         ],
         "tieBreakers": [
+          "preferCheapTargetSpaces",
           "stableMoveKey"
         ]
       },
@@ -1963,15 +2030,15 @@
         "stateFeatures": [],
         "candidateFeatures": [
           "isPass",
-          "isEvent",
           "isRally",
-          "isTax"
+          "isTax",
+          "targetSpacePopulation"
         ],
         "candidateAggregates": [
           "hasNonPassAlternative"
         ]
       },
-      "fingerprint": "b1021e2d1e048f1ddd2267abc08344b927733e3268babb09ce9f361d7fe5f5f2"
+      "fingerprint": "a7fa46697e0f04ed916ab1e39e787646d39c01eea6d75b95aa25de24640337f7"
     }
   },
   "bindingsBySeat": {
@@ -1980,5 +2047,5 @@
     "nva": "nva-baseline",
     "vc": "vc-evolved"
   },
-  "catalogFingerprint": "26e744d633690385d2d05c3cd1bca6acda7f69f090d7e4d5deaec1aab7d7f9b8"
+  "catalogFingerprint": "dbca786776520c5866189382f71292adc73ae8f3da3e4ae85c581ebda4ecfcd2"
 }

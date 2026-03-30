@@ -203,7 +203,7 @@ export function analyzePolicyExpr(
     case 'boolToNumber':
       return analyzeBoolToNumberOperator(value, context, diagnostics, path);
     case 'zoneTokenAgg':
-      return analyzeZoneTokenAggOperator(value, diagnostics, path);
+      return analyzeZoneTokenAggOperator(value, context, diagnostics, path);
   }
 
   return null;
@@ -820,6 +820,7 @@ const ZONE_TOKEN_AGG_OPS = new Set<AgentPolicyZoneTokenAggOp>(['sum', 'count', '
 
 function analyzeZoneTokenAggOperator(
   expr: GameSpecPolicyExpr,
+  context: AnalyzePolicyExprContext,
   diagnostics: Diagnostic[],
   path: string,
 ): PolicyExprAnalysis | null {
@@ -838,16 +839,6 @@ function analyzeZoneTokenAggOperator(
   const owner = obj['owner'];
   const prop = obj['prop'];
   const op = obj['op'];
-  if (typeof zone !== 'string' || zone.length === 0) {
-    diagnostics.push({
-      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
-      path: `${path}.zoneTokenAgg.zone`,
-      severity: 'error',
-      message: 'zoneTokenAgg.zone must be a non-empty string zone id.',
-      suggestion: 'Set zone to a declared zone id (e.g., "hand", "community").',
-    });
-    return null;
-  }
   if (typeof owner !== 'string' || owner.length === 0) {
     diagnostics.push({
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
@@ -878,17 +869,48 @@ function analyzeZoneTokenAggOperator(
     });
     return null;
   }
+  let zoneExpr: string | AgentPolicyExpr;
+  let zoneAnalysis: PolicyExprAnalysis | null = null;
+  if (typeof zone === 'string') {
+    if (zone.length === 0) {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+        path: `${path}.zoneTokenAgg.zone`,
+        severity: 'error',
+        message: 'zoneTokenAgg.zone must be a non-empty string zone id or policy expression.',
+        suggestion: 'Set zone to a declared zone id (e.g., "hand", "community") or an id-valued policy expression.',
+      });
+      return null;
+    }
+    zoneExpr = zone;
+  } else {
+    zoneAnalysis = analyzePolicyExpr(zone as GameSpecPolicyExpr, context, diagnostics, `${path}.zoneTokenAgg.zone`);
+    if (zoneAnalysis === null) {
+      return null;
+    }
+    if (!matchesType(zoneAnalysis.valueType, 'id')) {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_TYPE_INVALID,
+        path: `${path}.zoneTokenAgg.zone`,
+        severity: 'error',
+        message: 'zoneTokenAgg.zone expressions must resolve to an id value.',
+        suggestion: 'Use a string literal zone id or an id-valued ref/expression such as { ref: "option.value" }.',
+      });
+      return null;
+    }
+    zoneExpr = zoneAnalysis.expr;
+  }
   return {
     expr: {
       kind: 'zoneTokenAgg',
-      zone,
+      zone: zoneExpr,
       owner,
       prop,
       aggOp: op as AgentPolicyZoneTokenAggOp,
     },
     valueType: 'number',
-    costClass: 'state',
-    dependencies: emptyDependencies(),
+    costClass: zoneAnalysis?.costClass ?? 'state',
+    dependencies: zoneAnalysis?.dependencies ?? emptyDependencies(),
     isStaticallyZero: false,
   };
 }

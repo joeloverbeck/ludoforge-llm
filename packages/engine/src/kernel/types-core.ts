@@ -404,7 +404,7 @@ export type AgentPolicyExpr =
     }
   | {
       readonly kind: 'zoneTokenAgg';
-      readonly zone: string;
+      readonly zone: string | AgentPolicyExpr;
       readonly owner: string;
       readonly prop: string;
       readonly aggOp: AgentPolicyZoneTokenAggOp;

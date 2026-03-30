@@ -482,12 +482,13 @@ class EvaluationContext {
         }
         return undefined;
       case 'zoneTokenAgg':
-        return this.evaluateZoneTokenAggregate(expr);
+        return this.evaluateZoneTokenAggregate(expr, candidate);
     }
   }
 
   private evaluateZoneTokenAggregate(
     expr: Extract<AgentPolicyExpr, { readonly kind: 'zoneTokenAgg' }>,
+    candidate: CandidateEntry | undefined,
   ): PolicyValue {
     const ownerSuffix =
       expr.owner === 'self'
@@ -495,7 +496,13 @@ class EvaluationContext {
         : expr.owner === 'active'
           ? String(this.input.state.activePlayer)
           : expr.owner;
-    const zoneId = `${expr.zone}:${ownerSuffix}`;
+    const resolvedZone = typeof expr.zone === 'string'
+      ? expr.zone
+      : this.evaluateExpr(expr.zone, candidate);
+    if (typeof resolvedZone !== 'string' || resolvedZone.length === 0) {
+      return undefined;
+    }
+    const zoneId = `${resolvedZone}:${ownerSuffix}`;
     const tokens = this.input.state.zones[zoneId];
     if (tokens === undefined || tokens.length === 0) {
       return expr.aggOp === 'count' ? 0 : expr.aggOp === 'sum' ? 0 : undefined;

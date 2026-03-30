@@ -680,7 +680,7 @@ const AgentPolicyExprSchema: z.ZodTypeAny = z.lazy(() =>
     }).strict(),
     z.object({
       kind: z.literal('zoneTokenAgg'),
-      zone: StringSchema,
+      zone: z.union([StringSchema, AgentPolicyExprSchema]),
       owner: StringSchema,
       prop: StringSchema,
       aggOp: z.union([

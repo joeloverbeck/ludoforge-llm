@@ -49,6 +49,12 @@ function createContext(parameterDefs: Readonly<Record<string, CompiledAgentParam
             ref: { kind: 'library' as const, refKind: 'aggregate' as const, id: 'bestProjectedMargin' },
             dependency: { kind: 'aggregates' as const, id: 'bestProjectedMargin' },
           };
+        case 'option.value':
+          return {
+            type: 'id' as const,
+            costClass: 'state' as const,
+            ref: { kind: 'optionIntrinsic' as const, intrinsic: 'value' as const },
+          };
         default:
           return null;
       }
@@ -173,5 +179,93 @@ describe('policy-expr analysis', () => {
 
     assert.equal(analysis, null);
     assert.ok(diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_AGENT_POLICY_DIVIDE_BY_ZERO' && diagnostic.path === 'expr'));
+  });
+
+  it('analyzes dynamic zoneTokenAgg zones through the normal expression pipeline', () => {
+    const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
+    const analysis = analyzePolicyExpr(
+      {
+        zoneTokenAgg: {
+          zone: { ref: 'candidate.param.eventCardId' },
+          owner: 'self',
+          prop: 'rank',
+          op: 'sum',
+        },
+      },
+      createContext(),
+      diagnostics,
+      'expr',
+    );
+
+    assert.deepEqual(diagnostics, []);
+    assert.deepEqual(analysis, {
+      expr: {
+        kind: 'zoneTokenAgg',
+        zone: refExpr({ kind: 'candidateParam', id: 'eventCardId' }),
+        owner: 'self',
+        prop: 'rank',
+        aggOp: 'sum',
+      },
+      valueType: 'number',
+      costClass: 'candidate',
+      dependencies: {
+        parameters: [],
+        stateFeatures: [],
+        candidateFeatures: [],
+        aggregates: [],
+      },
+      isStaticallyZero: false,
+    });
+  });
+
+  it('accepts completion-oriented option.value refs inside dynamic zoneTokenAgg zones', () => {
+    const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
+    const analysis = analyzePolicyExpr(
+      {
+        zoneTokenAgg: {
+          zone: { ref: 'option.value' },
+          owner: 'self',
+          prop: 'rank',
+          op: 'count',
+        },
+      },
+      createContext(),
+      diagnostics,
+      'expr',
+    );
+
+    assert.deepEqual(diagnostics, []);
+    assert.deepEqual(analysis?.expr, {
+      kind: 'zoneTokenAgg',
+      zone: refExpr({ kind: 'optionIntrinsic', intrinsic: 'value' }),
+      owner: 'self',
+      prop: 'rank',
+      aggOp: 'count',
+    });
+    assert.equal(analysis?.costClass, 'state');
+  });
+
+  it('rejects dynamic zoneTokenAgg zones that do not resolve to ids', () => {
+    const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
+    const analysis = analyzePolicyExpr(
+      {
+        zoneTokenAgg: {
+          zone: { ref: 'feature.currentMargin' },
+          owner: 'self',
+          prop: 'rank',
+          op: 'sum',
+        },
+      },
+      createContext(),
+      diagnostics,
+      'expr',
+    );
+
+    assert.equal(analysis, null);
+    assert.ok(
+      diagnostics.some((diagnostic) =>
+        diagnostic.code === 'CNL_COMPILER_AGENT_POLICY_TYPE_INVALID'
+        && diagnostic.path === 'expr.zoneTokenAgg.zone'),
+    );
   });
 });

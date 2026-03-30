@@ -942,6 +942,160 @@ describe('policy-eval', () => {
     );
   });
 
+  it('reads static scalar zone props and synthetic category values', () => {
+    const agents = createCatalog(
+      {
+        candidateFeatures: {
+          frontierPopulation: {
+            type: 'number',
+            costClass: 'candidate',
+            expr: {
+              kind: 'zoneProp',
+              zone: 'frontier:none',
+              prop: 'population',
+            },
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          },
+          targetCategoryMatches: {
+            type: 'boolean',
+            costClass: 'candidate',
+            expr: opExpr(
+              'eq',
+              {
+                kind: 'zoneProp',
+                zone: 'target-a:none',
+                prop: 'category',
+              },
+              literal('province'),
+            ),
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          },
+        },
+        scoreTerms: {
+          preferHigherPopulation: {
+            costClass: 'candidate',
+            weight: literal(1),
+            value: opExpr(
+              'add',
+              refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'frontierPopulation' }),
+              opExpr('boolToNumber', refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'targetCategoryMatches' })),
+            ),
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['frontierPopulation', 'targetCategoryMatches'], aggregates: [] },
+          },
+        },
+      },
+      {
+        use: {
+          pruningRules: [],
+          scoreTerms: ['preferHigherPopulation'],
+          completionScoreTerms: [],
+          tieBreakers: ['stableMoveKey'],
+        },
+        plan: {
+          stateFeatures: [],
+          candidateFeatures: ['frontierPopulation', 'targetCategoryMatches'],
+          candidateAggregates: [],
+        },
+      },
+    );
+    const input = createInput(agents, createMoves('alpha'));
+
+    const result = evaluatePolicyMove(input);
+
+    assert.equal(result.move.actionId, asActionId('alpha'));
+    assert.equal(
+      result.metadata.candidates.find((candidate) => candidate.actionId === 'alpha')?.score,
+      1,
+    );
+  });
+
+  it('evaluates dynamic zoneProp zones and fails closed for unresolved or non-scalar properties', () => {
+    const agents = createCatalog(
+      {
+        candidateFeatures: {
+          targetPopulation: {
+            type: 'number',
+            costClass: 'candidate',
+            expr: {
+              kind: 'zoneProp',
+              zone: refExpr({ kind: 'candidateParam', id: 'eventCardId' }),
+              prop: 'population',
+            },
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          },
+          nonScalarZoneProp: {
+            type: 'number',
+            costClass: 'candidate',
+            expr: {
+              kind: 'zoneProp',
+              zone: refExpr({ kind: 'candidateParam', id: 'eventCardId' }),
+              prop: 'terrainTags',
+            },
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          },
+        },
+        scoreTerms: {
+          preferKnownPopulation: {
+            costClass: 'candidate',
+            weight: literal(1),
+            value: refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'targetPopulation' }),
+            unknownAs: -5,
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['targetPopulation'], aggregates: [] },
+          },
+          rejectNonScalarZoneProp: {
+            costClass: 'candidate',
+            weight: literal(1),
+            value: refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'nonScalarZoneProp' }),
+            unknownAs: 0,
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['nonScalarZoneProp'], aggregates: [] },
+          },
+        },
+      },
+      {
+        use: {
+          pruningRules: [],
+          scoreTerms: ['preferKnownPopulation', 'rejectNonScalarZoneProp'],
+          completionScoreTerms: [],
+          tieBreakers: ['stableMoveKey'],
+        },
+        plan: {
+          stateFeatures: [],
+          candidateFeatures: ['targetPopulation', 'nonScalarZoneProp'],
+          candidateAggregates: [],
+        },
+      },
+      {
+        eventCardId: { type: 'id' },
+      },
+    );
+    const baseInput = createInput(agents, [
+      { actionId: asActionId('alpha'), params: { eventCardId: 'target-a:none' } },
+      { actionId: asActionId('beta'), params: { eventCardId: 'missing-space' } },
+    ]);
+    const input = {
+      ...baseInput,
+      def: {
+        ...baseInput.def,
+        zones: baseInput.def.zones.map((zone) =>
+          zone.id === asZoneId('target-a:none')
+            ? { ...zone, attributes: { ...(zone.attributes ?? {}), population: 4, terrainTags: ['highland'] } }
+            : zone),
+      },
+    } as const;
+
+    const result = evaluatePolicyMove(input);
+
+    assert.equal(result.move.actionId, asActionId('alpha'));
+    assert.equal(
+      result.metadata.candidates.find((candidate) => candidate.actionId === 'alpha')?.score,
+      4,
+    );
+    assert.equal(
+      result.metadata.candidates.find((candidate) => candidate.actionId === 'beta')?.score,
+      -5,
+    );
+  });
+
   it('evaluates dynamic zoneTokenAgg zones through existing runtime refs', () => {
     const agents = createCatalog(
       {

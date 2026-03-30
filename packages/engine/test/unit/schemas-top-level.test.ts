@@ -466,6 +466,83 @@ describe('top-level runtime schemas', () => {
     assert.equal(result.success, false);
   });
 
+  it('accepts compiled zoneProp expressions in agent policy catalogs', () => {
+    const result = GameDefSchema.safeParse({
+      ...minimalGameDef,
+      agents: {
+        schemaVersion: 2,
+        catalogFingerprint: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+        surfaceVisibility: {
+          globalVars: {},
+          perPlayerVars: {},
+          derivedMetrics: {},
+          victory: {
+            currentMargin: {
+              current: 'hidden',
+              preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+            },
+            currentRank: {
+              current: 'hidden',
+              preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+            },
+          },
+        },
+        parameterDefs: {},
+        candidateParamDefs: {},
+        library: {
+          stateFeatures: {},
+          candidateFeatures: {
+            frontierPopulation: {
+              type: 'number',
+              costClass: 'candidate',
+              expr: {
+                kind: 'zoneProp',
+                zone: {
+                  kind: 'ref',
+                  ref: { kind: 'candidateParam', id: 'targetZone' },
+                },
+                prop: 'population',
+              },
+              dependencies: {
+                parameters: [],
+                stateFeatures: [],
+                candidateFeatures: [],
+                aggregates: [],
+              },
+            },
+          },
+          candidateAggregates: {},
+          pruningRules: {},
+          scoreTerms: {},
+          completionScoreTerms: {},
+          tieBreakers: {},
+        },
+        profiles: {
+          baseline: {
+            fingerprint: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
+            params: {},
+            use: {
+              pruningRules: [],
+              scoreTerms: [],
+              completionScoreTerms: [],
+              tieBreakers: [],
+            },
+            plan: {
+              stateFeatures: [],
+              candidateFeatures: ['frontierPopulation'],
+              candidateAggregates: [],
+            },
+          },
+        },
+        bindingsBySeat: {
+          us: 'baseline',
+        },
+      },
+    });
+
+    assert.equal(result.success, true);
+  });
+
   it('rejects legacy compiled agent expr string-ref shapes', () => {
     const result = GameDefSchema.safeParse({
       ...minimalGameDef,

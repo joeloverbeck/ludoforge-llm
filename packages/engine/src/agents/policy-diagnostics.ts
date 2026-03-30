@@ -311,11 +311,14 @@ function walkExpr(expr: AgentPolicyExpr, visitRef: (ref: CompiledAgentPolicyRef)
     visitRef(expr.ref);
     return;
   }
-  if (expr.kind !== 'op') {
+  if (expr.kind === 'op') {
+    for (const arg of expr.args) {
+      walkExpr(arg, visitRef);
+    }
     return;
   }
-  for (const arg of expr.args) {
-    walkExpr(arg, visitRef);
+  if ((expr.kind === 'zoneProp' || expr.kind === 'zoneTokenAgg') && typeof expr.zone !== 'string') {
+    walkExpr(expr.zone, visitRef);
   }
 }
 

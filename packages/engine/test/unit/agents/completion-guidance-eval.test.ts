@@ -301,6 +301,69 @@ describe('completion-guidance-eval', () => {
     assert.equal(scoreB, 1);
   });
 
+  it('resolves dynamic zoneProp zones from option.value and fails closed for non-scalar props', () => {
+    const harness = createHarness({
+      targetPopulation: {
+        costClass: 'state',
+        when: literal(true),
+        weight: literal(1),
+        value: {
+          kind: 'zoneProp',
+          zone: refExpr({ kind: 'optionIntrinsic', intrinsic: 'value' }),
+          prop: 'population',
+        },
+        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+      },
+      targetTerrain: {
+        costClass: 'state',
+        when: literal(true),
+        weight: literal(1),
+        value: {
+          kind: 'zoneProp',
+          zone: refExpr({ kind: 'optionIntrinsic', intrinsic: 'value' }),
+          prop: 'terrainTags',
+        },
+        unknownAs: 0,
+        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+      },
+    });
+    const def = {
+      ...harness.def,
+      zones: harness.def.zones.map((zone) =>
+        zone.id === asZoneId('target-a:none')
+          ? { ...zone, attributes: { population: 4, terrainTags: ['highland'] } }
+          : zone.id === asZoneId('target-b:none')
+            ? { ...zone, attributes: { population: 1, terrainTags: ['river'] } }
+            : zone),
+    } satisfies GameDef;
+
+    const scoreA = scoreCompletionOption(
+      harness.state,
+      def,
+      harness.catalog,
+      harness.playerId,
+      harness.seatId,
+      {},
+      createChoiceRequest(),
+      'target-a:none',
+      ['targetPopulation', 'targetTerrain'],
+    );
+    const scoreB = scoreCompletionOption(
+      harness.state,
+      def,
+      harness.catalog,
+      harness.playerId,
+      harness.seatId,
+      {},
+      createChoiceRequest(),
+      'target-b:none',
+      ['targetPopulation', 'targetTerrain'],
+    );
+
+    assert.equal(scoreA, 4);
+    assert.equal(scoreB, 1);
+  });
+
   it('treats unresolved dynamic zone strings as unknown rather than zero', () => {
     const harness = createHarness({
       invalidZone: {

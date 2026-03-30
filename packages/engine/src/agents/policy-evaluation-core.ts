@@ -5,6 +5,7 @@ import { resolveZoneRefWithOwnerFallback } from '../kernel/resolve-zone-ref.js';
 import { buildRuntimeTableIndex } from '../kernel/runtime-table-index.js';
 import { buildAdjacencyGraph } from '../kernel/spatial.js';
 import type {
+  AttributeValue,
   AgentParameterValue,
   AgentPolicyCatalog,
   AgentPolicyExpr,
@@ -363,9 +364,32 @@ export class PolicyEvaluationContext {
           }
         }
         return undefined;
+      case 'zoneProp':
+        return this.evaluateZoneProp(expr, candidate);
       case 'zoneTokenAgg':
         return this.evaluateZoneTokenAggregate(expr, candidate);
     }
+  }
+
+  private evaluateZoneProp(
+    expr: Extract<AgentPolicyExpr, { readonly kind: 'zoneProp' }>,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): PolicyValue {
+    const zoneId = this.resolvePolicyZoneId(expr.zone, 'none', candidate);
+    if (zoneId === undefined) {
+      return undefined;
+    }
+    const zoneDef = this.input.def.zones.find((zone) => zone.id === zoneId);
+    if (zoneDef === undefined) {
+      return undefined;
+    }
+    if (expr.prop === 'id') {
+      return zoneDef.id;
+    }
+    if (expr.prop === 'category') {
+      return zoneDef.category;
+    }
+    return scalarZonePropValue(zoneDef.attributes?.[expr.prop]);
   }
 
   private evaluateZoneTokenAggregate(
@@ -376,13 +400,7 @@ export class PolicyEvaluationContext {
     if (resolvedOwner === undefined) {
       return undefined;
     }
-    const resolvedZone = typeof expr.zone === 'string'
-      ? expr.zone
-      : this.evaluateExpr(expr.zone, candidate);
-    if (typeof resolvedZone !== 'string' || resolvedZone.length === 0) {
-      return undefined;
-    }
-    const zoneId = resolveZoneRefWithOwnerFallback(resolvedZone, resolvedOwner, this.getZoneReadContext());
+    const zoneId = this.resolvePolicyZoneId(expr.zone, resolvedOwner, candidate);
     if (zoneId === undefined) {
       return undefined;
     }
@@ -454,6 +472,20 @@ export class PolicyEvaluationContext {
     }
   }
 
+  private resolvePolicyZoneId(
+    zoneExpr: string | AgentPolicyExpr,
+    owner: 'none' | PlayerId,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): string | undefined {
+    const resolvedZone = typeof zoneExpr === 'string'
+      ? zoneExpr
+      : this.evaluateExpr(zoneExpr, candidate);
+    if (typeof resolvedZone !== 'string' || resolvedZone.length === 0) {
+      return undefined;
+    }
+    return resolveZoneRefWithOwnerFallback(resolvedZone, owner, this.getZoneReadContext());
+  }
+
   private resolveSurfaceRef(
     ref: CompiledAgentPolicySurfaceRef,
     candidate: PolicyEvaluationCandidate | undefined,
@@ -503,6 +535,13 @@ export class PolicyEvaluationContext {
   ): PolicyRuntimeError {
     return new PolicyRuntimeError({ code, message, ...(detail === undefined ? {} : { detail }) });
   }
+}
+
+function scalarZonePropValue(value: AttributeValue | undefined): PolicyValue {
+  if (value === undefined || Array.isArray(value)) {
+    return undefined;
+  }
+  return value;
 }
 
 function previewRefKey(ref: CompiledAgentPolicySurfaceRef): string {

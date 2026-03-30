@@ -601,6 +601,86 @@ describe('agents authoring surface', () => {
     });
   });
 
+  it('lowers dynamic zoneProp completion guidance terms through the shared expression pipeline', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      zones: [
+        { id: 'target-a:none', owner: 'none', visibility: 'public', ordering: 'set', category: 'province', attributes: { population: 4 } },
+        { id: 'target-b:none', owner: 'none', visibility: 'public', ordering: 'set', category: 'province', attributes: { population: 1 } },
+      ],
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: {
+        visibility: createVisibility(),
+        parameters: {},
+        library: {
+          completionScoreTerms: {
+            preferHigherPopulation: {
+              when: { eq: [{ ref: 'decision.type' }, 'chooseOne'] },
+              weight: 1,
+              value: {
+                coalesce: [
+                  {
+                    zoneProp: {
+                      zone: { ref: 'option.value' },
+                      prop: 'population',
+                    },
+                  },
+                  0,
+                ],
+              },
+            },
+          },
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              scoreTerms: [],
+              completionScoreTerms: ['preferHigherPopulation'],
+              tieBreakers: ['stableMoveKey'],
+            },
+            completionGuidance: {
+              enabled: true,
+              fallback: 'first',
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      },
+    });
+
+    assert.equal(result.gameDef === null, false);
+    assert.equal(result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
+    assert.deepEqual(result.gameDef?.agents?.library.completionScoreTerms.preferHigherPopulation, {
+      costClass: 'state',
+      when: opExpr('eq', refExpr({ kind: 'decisionIntrinsic', intrinsic: 'type' }), literal('chooseOne')),
+      weight: literal(1),
+      value: opExpr(
+        'coalesce',
+        {
+          kind: 'zoneProp',
+          zone: refExpr({ kind: 'optionIntrinsic', intrinsic: 'value' }),
+          prop: 'population',
+        },
+        literal(0),
+      ),
+      dependencies: {
+        parameters: [],
+        stateFeatures: [],
+        candidateFeatures: [],
+        aggregates: [],
+      },
+    });
+  });
+
   it('lowers candidate.paramCount refs through the shared candidate intrinsic contract', () => {
     const result = compileGameSpecToGameDef({
       ...createCompileReadyDoc(),

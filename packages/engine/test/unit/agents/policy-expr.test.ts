@@ -245,6 +245,73 @@ describe('policy-expr analysis', () => {
     assert.equal(analysis?.costClass, 'state');
   });
 
+  it('analyzes zoneProp with static and dynamic zone expressions through the shared path', () => {
+    const staticDiagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
+    const staticAnalysis = analyzePolicyExpr(
+      {
+        zoneProp: {
+          zone: 'frontier:none',
+          prop: 'population',
+        },
+      },
+      createContext(),
+      staticDiagnostics,
+      'expr',
+    );
+
+    assert.deepEqual(staticDiagnostics, []);
+    assert.deepEqual(staticAnalysis?.expr, {
+      kind: 'zoneProp',
+      zone: 'frontier:none',
+      prop: 'population',
+    });
+    assert.equal(staticAnalysis?.valueType, 'unknown');
+    assert.equal(staticAnalysis?.costClass, 'state');
+
+    const dynamicDiagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
+    const dynamicAnalysis = analyzePolicyExpr(
+      {
+        zoneProp: {
+          zone: { ref: 'option.value' },
+          prop: 'category',
+        },
+      },
+      createContext(),
+      dynamicDiagnostics,
+      'expr',
+    );
+
+    assert.deepEqual(dynamicDiagnostics, []);
+    assert.deepEqual(dynamicAnalysis?.expr, {
+      kind: 'zoneProp',
+      zone: refExpr({ kind: 'optionIntrinsic', intrinsic: 'value' }),
+      prop: 'category',
+    });
+    assert.equal(dynamicAnalysis?.costClass, 'state');
+  });
+
+  it('rejects dynamic zoneProp zones that do not resolve to ids', () => {
+    const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
+    const analysis = analyzePolicyExpr(
+      {
+        zoneProp: {
+          zone: { ref: 'feature.currentMargin' },
+          prop: 'population',
+        },
+      },
+      createContext(),
+      diagnostics,
+      'expr',
+    );
+
+    assert.equal(analysis, null);
+    assert.ok(
+      diagnostics.some((diagnostic) =>
+        diagnostic.code === 'CNL_COMPILER_AGENT_POLICY_TYPE_INVALID'
+        && diagnostic.path === 'expr.zoneProp.zone'),
+    );
+  });
+
   it('accepts numeric runtime player ids for zoneTokenAgg owners', () => {
     const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
     const analysis = analyzePolicyExpr(

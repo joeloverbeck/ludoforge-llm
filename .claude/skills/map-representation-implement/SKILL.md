@@ -9,6 +9,8 @@ Improve the FITL game map rendering based on the latest plan's recommendations.
 
 ## Checklist
 
+> **Plan mode note**: If plan mode is active when this skill is invoked, steps 1-3 serve as the exploration phase. Write your execution plan to the plan file, exit plan mode, then continue with steps 4-10.
+
 1. Read `reports/map-representation-evaluation.md` — focus on the latest EVALUATION #N for context on what needs improving.
 2. Read `reports/map-representation-plan.md` — the implementation plan to execute. This is the primary guide for this session.
 3. Read `docs/FOUNDATIONS.md` — verify alignment before writing any code. Pay special attention to:
@@ -16,12 +18,14 @@ Improve the FITL game map rendering based on the latest plan's recommendations.
    - **Foundation #7** (Immutability): State transitions return new objects, no mutation
    - **Foundation #9** (No Backwards Compatibility): No shims or deprecated fallbacks
    - **Foundation #10** (Architectural Completeness): Complete solutions, not patches
-4. Collect the unique source file paths from all Implementation Steps in the plan. Read them in parallel (batch) to front-load context before starting edits.
+4. Collect the unique file paths (source files and config files) from all Implementation Steps in the plan. Read them in parallel (batch) to front-load context before starting edits. If the plan is data-only (e.g., visual-config.yaml vertex authoring), read the target data file(s) instead.
 5. Follow the plan's implementation steps **in order**, respecting noted dependencies.
-6. If a step is ambiguous or you discover the plan's assumptions about the code are wrong, apply the **1-3-1 rule** (1 problem, 3 options, 1 recommendation) before proceeding — per Foundation #10.
-7. If the plan includes map editor changes, implement those too.
-8. Run verification: `pnpm turbo typecheck` and `pnpm -F @ludoforge/runner test`.
-9. Do NOT update either report file — that happens in the next evaluate invocation.
+6. If vertices were authored or modified, verify shared borders: for each adjacent pair, confirm that converting relative vertices back to absolute world coordinates (`absoluteX = relativeX + centerX`) produces matching points on both sides of the shared edge.
+7. If a step is ambiguous or you discover the plan's assumptions about the code are wrong, apply the **1-3-1 rule** (1 problem, 3 options, 1 recommendation) before proceeding — per Foundation #10.
+8. If the plan includes map editor changes, implement those too.
+9. Run verification: `pnpm turbo typecheck` and `pnpm -F @ludoforge/runner test`.
+10. Visual verification: Run `pnpm -F @ludoforge/runner dev` and inspect the map in the browser. Verify: all targeted zones render with the new shapes, terrain colors apply correctly, tokens render inside polygon bounds, adjacency lines connect to polygon edges, and the map editor shows the same changes. Report any visual anomalies to the user before concluding.
+11. Do NOT update either report file — that happens in the next evaluate invocation.
 
 ## Key Files
 
@@ -105,6 +109,20 @@ When defining polygon vertices for province shapes:
    - In adjacent polygon vertex lists, the shared segment appears in **opposite winding order** (province A has points P1→P2, province B has P2→P1).
 3. **Verification**: After computing vertices, verify all shared borders by converting back to world coords and confirming the same absolute segment appears in both polygons.
 4. **External boundaries**: Non-shared edges (outer boundaries) can be placed freely to create a reasonable territory shape.
+
+### Batch Vertex Authoring
+
+When a plan requires authoring polygon vertices for many zones (10+), follow this workflow:
+
+1. **Compute all midpoints first**: For every adjacent province pair, compute `midpoint = ((A.x + B.x) / 2, (A.y + B.y) / 2)` in absolute world coordinates. Build a lookup table.
+2. **Identify 3-way junctions**: Where 3 provinces meet, compute the centroid of the 3 centers: `junction = ((A.x + B.x + C.x) / 3, (A.y + B.y + C.y) / 3)`.
+3. **Author in geographic groups**: Work outward from existing polygons or from one end of the map. This maintains spatial coherence and makes shared-border alignment easier to verify.
+4. **Spot-check after each group**: After authoring a group, pick 2-3 shared borders and manually verify that the absolute world coordinates match on both sides (`absolute = relative + center`).
+5. **Round all coordinates to integers**: Avoids floating-point alignment drift between adjacent polygons.
+
+### Tooling
+
+For iterations that require authoring polygon vertices for many zones, consider writing a temporary Node.js script that reads zone center positions and adjacency data from visual-config.yaml / GameSpecDoc, computes midpoints and junction points, and outputs vertex arrays in YAML format. Delete the script after use per workspace hygiene rules.
 
 ## Extending Visual Config
 

@@ -700,6 +700,11 @@ const AgentPolicyExprSchema: z.ZodTypeAny = z.lazy(() =>
         z.literal('max'),
       ]),
     }).strict(),
+    z.object({
+      kind: z.literal('zoneProp'),
+      zone: z.union([StringSchema, AgentPolicyExprSchema]),
+      prop: StringSchema,
+    }).strict(),
   ]),
 );
 

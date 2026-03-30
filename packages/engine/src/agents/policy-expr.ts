@@ -65,6 +65,7 @@ type KnownOperator =
   | 'param'
   | 'ref'
   | 'sub'
+  | 'zoneProp'
   | 'zoneTokenAgg';
 
 const KNOWN_OPERATORS = new Set<KnownOperator>([
@@ -93,6 +94,7 @@ const KNOWN_OPERATORS = new Set<KnownOperator>([
   'param',
   'ref',
   'sub',
+  'zoneProp',
   'zoneTokenAgg',
 ]);
 
@@ -203,6 +205,8 @@ export function analyzePolicyExpr(
       return analyzeClampOperator(value, context, diagnostics, path);
     case 'boolToNumber':
       return analyzeBoolToNumberOperator(value, context, diagnostics, path);
+    case 'zoneProp':
+      return analyzeZonePropOperator(value, context, diagnostics, path);
     case 'zoneTokenAgg':
       return analyzeZoneTokenAggOperator(value, context, diagnostics, path);
   }
@@ -819,6 +823,92 @@ function unifyCoalescedType(
 
 const ZONE_TOKEN_AGG_OPS = new Set<AgentPolicyZoneTokenAggOp>(['sum', 'count', 'min', 'max']);
 
+function analyzeZoneSource(
+  zone: unknown,
+  context: AnalyzePolicyExprContext,
+  diagnostics: Diagnostic[],
+  path: string,
+  operatorName: 'zoneProp' | 'zoneTokenAgg',
+): { zoneExpr: string | AgentPolicyExpr; zoneAnalysis: PolicyExprAnalysis | null } | null {
+  if (typeof zone === 'string') {
+    if (zone.length === 0) {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+        path,
+        severity: 'error',
+        message: `${operatorName}.zone must be a non-empty string zone id or policy expression.`,
+        suggestion: 'Set zone to a declared zone id (e.g., "hand", "community") or an id-valued policy expression.',
+      });
+      return null;
+    }
+    return { zoneExpr: zone, zoneAnalysis: null };
+  }
+
+  const zoneAnalysis = analyzePolicyExpr(zone as GameSpecPolicyExpr, context, diagnostics, path);
+  if (zoneAnalysis === null) {
+    return null;
+  }
+  if (!matchesType(zoneAnalysis.valueType, 'id')) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_TYPE_INVALID,
+      path,
+      severity: 'error',
+      message: `${operatorName}.zone expressions must resolve to an id value.`,
+      suggestion: 'Use a string literal zone id or an id-valued ref/expression such as { ref: "option.value" }.',
+    });
+    return null;
+  }
+  return { zoneExpr: zoneAnalysis.expr, zoneAnalysis };
+}
+
+function analyzeZonePropOperator(
+  expr: GameSpecPolicyExpr,
+  context: AnalyzePolicyExprContext,
+  diagnostics: Diagnostic[],
+  path: string,
+): PolicyExprAnalysis | null {
+  if (typeof expr !== 'object' || expr === null || Array.isArray(expr)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path,
+      severity: 'error',
+      message: 'zoneProp requires an object with zone and prop fields.',
+      suggestion: 'Use { zoneProp: { zone: "space-a:none", prop: "population" } }.',
+    });
+    return null;
+  }
+  const obj = expr as Readonly<Record<string, unknown>>;
+  const zone = obj['zone'];
+  const prop = obj['prop'];
+  if (typeof prop !== 'string' || prop.length === 0) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path: `${path}.zoneProp.prop`,
+      severity: 'error',
+      message: 'zoneProp.prop must be a non-empty string zone property name.',
+      suggestion: 'Set prop to a scalar zone property name such as "population" or "category".',
+    });
+    return null;
+  }
+
+  const zoneSource = analyzeZoneSource(zone, context, diagnostics, `${path}.zoneProp.zone`, 'zoneProp');
+  if (zoneSource === null) {
+    return null;
+  }
+
+  return {
+    expr: {
+      kind: 'zoneProp',
+      zone: zoneSource.zoneExpr,
+      prop,
+    },
+    valueType: 'unknown',
+    costClass: zoneSource.zoneAnalysis?.costClass ?? 'state',
+    dependencies: zoneSource.zoneAnalysis?.dependencies ?? emptyDependencies(),
+    isStaticallyZero: false,
+  };
+}
+
 function analyzeZoneTokenAggOperator(
   expr: GameSpecPolicyExpr,
   context: AnalyzePolicyExprContext,
@@ -870,48 +960,21 @@ function analyzeZoneTokenAggOperator(
     });
     return null;
   }
-  let zoneExpr: string | AgentPolicyExpr;
-  let zoneAnalysis: PolicyExprAnalysis | null = null;
-  if (typeof zone === 'string') {
-    if (zone.length === 0) {
-      diagnostics.push({
-        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
-        path: `${path}.zoneTokenAgg.zone`,
-        severity: 'error',
-        message: 'zoneTokenAgg.zone must be a non-empty string zone id or policy expression.',
-        suggestion: 'Set zone to a declared zone id (e.g., "hand", "community") or an id-valued policy expression.',
-      });
-      return null;
-    }
-    zoneExpr = zone;
-  } else {
-    zoneAnalysis = analyzePolicyExpr(zone as GameSpecPolicyExpr, context, diagnostics, `${path}.zoneTokenAgg.zone`);
-    if (zoneAnalysis === null) {
-      return null;
-    }
-    if (!matchesType(zoneAnalysis.valueType, 'id')) {
-      diagnostics.push({
-        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_TYPE_INVALID,
-        path: `${path}.zoneTokenAgg.zone`,
-        severity: 'error',
-        message: 'zoneTokenAgg.zone expressions must resolve to an id value.',
-        suggestion: 'Use a string literal zone id or an id-valued ref/expression such as { ref: "option.value" }.',
-      });
-      return null;
-    }
-    zoneExpr = zoneAnalysis.expr;
+  const zoneSource = analyzeZoneSource(zone, context, diagnostics, `${path}.zoneTokenAgg.zone`, 'zoneTokenAgg');
+  if (zoneSource === null) {
+    return null;
   }
   return {
     expr: {
       kind: 'zoneTokenAgg',
-      zone: zoneExpr,
+      zone: zoneSource.zoneExpr,
       owner,
       prop,
       aggOp: op as AgentPolicyZoneTokenAggOp,
     },
     valueType: 'number',
-    costClass: zoneAnalysis?.costClass ?? 'state',
-    dependencies: zoneAnalysis?.dependencies ?? emptyDependencies(),
+    costClass: zoneSource.zoneAnalysis?.costClass ?? 'state',
+    dependencies: zoneSource.zoneAnalysis?.dependencies ?? emptyDependencies(),
     isStaticallyZero: false,
   };
 }

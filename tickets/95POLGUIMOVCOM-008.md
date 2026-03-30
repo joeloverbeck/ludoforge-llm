@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — agents policy-agent, agents prepare-playable-moves
-**Deps**: 95POLGUIMOVCOM-001 (kernel threading), 95POLGUIMOVCOM-007 (evaluator)
+**Deps**: archive/tickets/95POLGUIMOVCOM/95POLGUIMOVCOM-001.md, tickets/95POLGUIMOVCOM-007.md
 
 ## Problem
 

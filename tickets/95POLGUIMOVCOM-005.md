@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — agents policy-runtime
-**Deps**: 95POLGUIMOVCOM-002 (type definitions for new ref kinds)
+**Deps**: tickets/95POLGUIMOVCOM-002.md
 
 ## Problem
 

@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — kernel types-core, agents policy-expr, agents policy-eval (or runtime evaluator)
-**Deps**: 95POLGUIMOVCOM-002 (type definitions for `optionIntrinsic`)
+**Deps**: tickets/95POLGUIMOVCOM-002.md
 
 ## Problem
 

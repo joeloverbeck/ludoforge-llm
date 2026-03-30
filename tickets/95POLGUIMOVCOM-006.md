@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — cnl compile-agents, agents policy-expr
-**Deps**: 95POLGUIMOVCOM-002 (types), 95POLGUIMOVCOM-003 (validation)
+**Deps**: tickets/95POLGUIMOVCOM-002.md, tickets/95POLGUIMOVCOM-003.md
 
 ## Problem
 

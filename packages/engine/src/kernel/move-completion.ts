@@ -23,6 +23,11 @@ export type TemplateCompletionResult =
   | { readonly kind: 'unsatisfiable' }
   | { readonly kind: 'stochasticUnresolved'; readonly move: Move; readonly rng: Rng };
 
+export interface TemplateMoveCompletionOptions {
+  readonly budgets?: Partial<MoveEnumerationBudgets>;
+  readonly choose?: (request: ChoicePendingRequest) => MoveParamValue | undefined;
+}
+
 const selectFromChooseOne = (
   options: readonly MoveParamValue[],
   rng: Rng,
@@ -68,20 +73,15 @@ export const completeTemplateMove = (
   templateMove: Move,
   rng: Rng,
   runtime?: GameDefRuntime,
-  budgets?: Partial<MoveEnumerationBudgets>,
+  options?: TemplateMoveCompletionOptions,
 ): TemplateCompletionResult => {
-  const resolved = resolveMoveEnumerationBudgets(budgets);
+  const resolved = resolveMoveEnumerationBudgets(options?.budgets);
   const maxDecisions = resolved.maxCompletionDecisions;
   let cursor = rng;
   let iterations = 0;
   let exceeded = false;
 
-  const choose = (request: ChoicePendingRequest): MoveParamValue | undefined => {
-    if (++iterations > maxDecisions) {
-      exceeded = true;
-      return undefined;
-    }
-
+  const chooseAtRandom = (request: ChoicePendingRequest): MoveParamValue | undefined => {
     const options = request.type === 'chooseN'
       ? selectUniqueChoiceOptionValuesByLegalityPrecedence(request)
       : selectChoiceOptionValuesByLegalityPrecedence(request);
@@ -109,6 +109,15 @@ export const completeTemplateMove = (
     const selection = selectFromChooseN(options, min, max, cursor);
     cursor = selection.rng;
     return selection.selected;
+  };
+
+  const choose = (request: ChoicePendingRequest): MoveParamValue | undefined => {
+    if (++iterations > maxDecisions) {
+      exceeded = true;
+      return undefined;
+    }
+    const selected = options?.choose?.(request);
+    return selected ?? chooseAtRandom(request);
   };
 
   const chooseStochastic = (

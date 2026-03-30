@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — cnl validate-agents
-**Deps**: 95POLGUIMOVCOM-002 (type definitions)
+**Deps**: tickets/95POLGUIMOVCOM-002.md
 
 ## Problem
 

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — test files only
-**Deps**: 95POLGUIMOVCOM-001 through 95POLGUIMOVCOM-008 (all implementation tickets)
+**Deps**: archive/tickets/95POLGUIMOVCOM/95POLGUIMOVCOM-001.md, tickets/95POLGUIMOVCOM-002.md, tickets/95POLGUIMOVCOM-003.md, tickets/95POLGUIMOVCOM-004.md, tickets/95POLGUIMOVCOM-005.md, tickets/95POLGUIMOVCOM-006.md, tickets/95POLGUIMOVCOM-007.md, tickets/95POLGUIMOVCOM-008.md
 
 ## Problem
 

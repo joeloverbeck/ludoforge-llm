@@ -1,6 +1,6 @@
 # 99MAPEDIREN-001: Extract shared polyline and stroke utilities
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — runner-only
@@ -28,11 +28,11 @@
 
 Extract from `connection-route-renderer.ts`:
 - `getPolylineLength(points: readonly Position[]): number`
-- `resolvePolylinePointAtDistance(points: readonly Position[], distance: number): Position`
-- `samplePolylineWavePoints(points: readonly Position[], config: WaveConfig): Position[]`
-- `approximatePolylineHitPolygon(points: readonly Position[], halfWidth: number): Position[]`
-- `resolvePolylineNormal(points: readonly Position[], distance: number): number`
-- `resolveLabelRotation(angle: number): number`
+- `resolvePolylinePointAtDistance(points: readonly Position[], distance: number): { position: Position; tangent: Position }`
+- `samplePolylineWavePoints(points: readonly Position[], config: WaveConfig, wavySegments: number): readonly Position[]` — `WaveConfig = { waveAmplitude: number; waveFrequency: number }`, structurally satisfied by `ResolvedStroke`
+- `approximatePolylineHitPolygon(points: readonly Position[], halfWidth: number): readonly Position[]`
+- `resolvePolylineNormal(points: readonly Position[], index: number): Position`
+- `resolveLabelRotation(angle: number): number` — map editor call site must change from `resolveLabelRotation(tangent)` to `resolveLabelRotation(Math.atan2(tangent.y, tangent.x))`
 - `normalizeAngle(angle: number): number`
 - `flattenPoints(points: readonly Position[]): number[]`
 
@@ -99,3 +99,18 @@ Remove local definitions of all 11 functions/types. Import from the new shared m
 3. `pnpm -F @ludoforge/runner test -- --reporter=verbose connection-route-renderer`
 4. `pnpm -F @ludoforge/runner test -- --reporter=verbose map-editor-route-renderer`
 5. `pnpm -F @ludoforge/runner typecheck && pnpm -F @ludoforge/runner lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-30
+- **What changed**:
+  - Created `packages/runner/src/rendering/polyline-utils.ts` — 8 pure geometry functions (`getPolylineLength`, `resolvePolylinePointAtDistance`, `samplePolylineWavePoints`, `approximatePolylineHitPolygon`, `resolvePolylineNormal`, `resolveLabelRotation`, `normalizeAngle`, `flattenPoints`) plus `WaveConfig` interface.
+  - Created `packages/runner/src/rendering/route-stroke-utils.ts` — `ResolvedStroke` interface, `sanitizePositiveNumber`, `sanitizeUnitInterval`.
+  - Updated `connection-route-renderer.ts` — removed 11 local definitions, imports from shared modules.
+  - Updated `map-editor-route-renderer.ts` — removed 11 local definitions, imports from shared modules.
+  - Created `test/rendering/polyline-utils.test.ts` (18 cases) and `test/rendering/route-stroke-utils.test.ts` (11 cases).
+- **Deviations from original plan**:
+  - `resolveLabelRotation` had different signatures in the two files (game canvas took `angle: number`, map editor took `tangent: Position`). Shared version uses `angle: number`; map editor call site adapted to compute `Math.atan2()` before calling.
+  - `samplePolylineWavePoints` uses a narrow `WaveConfig` interface (`waveAmplitude`, `waveFrequency`) instead of taking full `ResolvedStroke`, decoupling polyline-utils from route-stroke-utils. `ResolvedStroke` structurally satisfies `WaveConfig`, so callers needed no changes.
+  - Ticket signature docs corrected for `resolvePolylineNormal` (param is `index` not `distance`, returns `Position` not `number`) and `samplePolylineWavePoints` (three params, not two).
+- **Verification**: typecheck clean, lint clean, all 2088 runner tests pass (205 files).

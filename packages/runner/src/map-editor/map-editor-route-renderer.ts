@@ -3,7 +3,16 @@ import { Container, Graphics, Polygon, type BitmapText, type FederatedPointerEve
 
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import { parseHexColor } from '../rendering/color-utils.js';
-import { normalize, perpendicular } from '../canvas/geometry/bezier-utils.js';
+import {
+  approximatePolylineHitPolygon,
+  flattenPoints,
+  getPolylineLength,
+  resolveLabelRotation,
+  resolvePolylinePointAtDistance,
+  samplePolylineWavePoints,
+} from '../rendering/polyline-utils.js';
+import type { ResolvedStroke } from '../rendering/route-stroke-utils.js';
+import { sanitizePositiveNumber, sanitizeUnitInterval } from '../rendering/route-stroke-utils.js';
 import { safeDestroyDisplayObject } from '../canvas/renderers/safe-destroy.js';
 import { STROKE_LABEL_FONT_NAME } from '../canvas/text/bitmap-font-registry.js';
 import { createManagedBitmapText, destroyManagedBitmapText } from '../canvas/text/bitmap-text-runtime.js';
@@ -30,17 +39,6 @@ const DEFAULT_WAVE_FREQUENCY = 0.08;
 const DEFAULT_HIT_AREA_PADDING = 12;
 const DEFAULT_CURVE_SEGMENTS = 24;
 const DEFAULT_WAVY_SEGMENTS = 32;
-const UPSIDE_DOWN_MIN = Math.PI / 2;
-const UPSIDE_DOWN_MAX = (Math.PI * 3) / 2;
-
-interface ResolvedStroke {
-  readonly color: number;
-  readonly width: number;
-  readonly alpha: number;
-  readonly wavy: boolean;
-  readonly waveAmplitude: number;
-  readonly waveFrequency: number;
-}
 
 interface RouteSlot {
   readonly root: Container;
@@ -298,7 +296,7 @@ function syncRouteSlot(
   slot.midpoint.renderable = true;
   slot.midpoint.position.set(midpointSample.position.x, midpointSample.position.y);
   slot.label.text = resolveRouteLabel(routeId, visualConfigProvider);
-  slot.label.rotation = resolveLabelRotation(midpointSample.tangent);
+  slot.label.rotation = resolveLabelRotation(Math.atan2(midpointSample.tangent.y, midpointSample.tangent.x));
   slot.label.visible = true;
   slot.label.renderable = true;
 
@@ -424,208 +422,11 @@ function destroyRouteSlot(slot: RouteSlot): void {
   safeDestroyDisplayObject(slot.root, { children: true });
 }
 
-function samplePolylineWavePoints(
-  points: readonly Position[],
-  stroke: ResolvedStroke,
-  wavySegments: number,
-): readonly Position[] {
-  const totalLength = getPolylineLength(points);
-  if (totalLength === 0) {
-    return [...points];
-  }
-
-  const segmentCount = Math.max(2, Math.trunc(wavySegments));
-  const waveCycles = Math.max(1, totalLength * stroke.waveFrequency);
-  const displacedPoints: Position[] = [];
-
-  for (let index = 0; index <= segmentCount; index += 1) {
-    const distance = totalLength * (index / segmentCount);
-    const sample = resolvePolylinePointAtDistance(points, distance);
-    const normal = perpendicular(normalize(sample.tangent));
-    const offset = Math.sin((distance / totalLength) * Math.PI * 2 * waveCycles) * stroke.waveAmplitude;
-    displacedPoints.push({
-      x: sample.position.x + normal.x * offset,
-      y: sample.position.y + normal.y * offset,
-    });
-  }
-
-  return displacedPoints;
-}
-
-function getPolylineLength(points: readonly Position[]): number {
-  let totalLength = 0;
-  for (let index = 1; index < points.length; index += 1) {
-    const previous = points[index - 1];
-    const current = points[index];
-    if (previous === undefined || current === undefined) {
-      continue;
-    }
-    totalLength += Math.hypot(current.x - previous.x, current.y - previous.y);
-  }
-  return totalLength;
-}
-
-function resolvePolylinePointAtDistance(
-  points: readonly Position[],
-  distance: number,
-): { position: Position; tangent: Position } {
-  if (points.length === 0) {
-    return {
-      position: { x: 0, y: 0 },
-      tangent: { x: 1, y: 0 },
-    };
-  }
-
-  if (points.length === 1) {
-    return {
-      position: points[0] ?? { x: 0, y: 0 },
-      tangent: { x: 1, y: 0 },
-    };
-  }
-
-  let traversed = 0;
-  for (let index = 1; index < points.length; index += 1) {
-    const start = points[index - 1];
-    const end = points[index];
-    if (start === undefined || end === undefined) {
-      continue;
-    }
-
-    const segmentLength = Math.hypot(end.x - start.x, end.y - start.y);
-    if (segmentLength === 0) {
-      continue;
-    }
-
-    if (distance <= traversed + segmentLength || index === points.length - 1) {
-      const clampedDistance = Math.min(Math.max(distance - traversed, 0), segmentLength);
-      const t = clampedDistance / segmentLength;
-      return {
-        position: {
-          x: start.x + ((end.x - start.x) * t),
-          y: start.y + ((end.y - start.y) * t),
-        },
-        tangent: {
-          x: end.x - start.x,
-          y: end.y - start.y,
-        },
-      };
-    }
-
-    traversed += segmentLength;
-  }
-
-  const fallbackStart = points[points.length - 2] ?? points[0] ?? { x: 0, y: 0 };
-  const fallbackEnd = points[points.length - 1] ?? fallbackStart;
-  return {
-    position: fallbackEnd,
-    tangent: {
-      x: fallbackEnd.x - fallbackStart.x,
-      y: fallbackEnd.y - fallbackStart.y,
-    },
-  };
-}
-
 function resolveRouteLabel(
   routeId: string,
   visualConfigProvider: VisualConfigProvider,
 ): string {
   return visualConfigProvider.getZoneLabel(routeId) ?? formatIdAsDisplayName(routeId);
-}
-
-function approximatePolylineHitPolygon(
-  points: readonly Position[],
-  halfWidth: number,
-): readonly Position[] {
-  if (points.length === 0) {
-    return [];
-  }
-
-  const leftSide: Position[] = [];
-  const rightSide: Position[] = [];
-
-  for (let index = 0; index < points.length; index += 1) {
-    const point = points[index];
-    if (point === undefined) {
-      continue;
-    }
-    const normal = resolvePolylineNormal(points, index);
-    leftSide.push({
-      x: point.x + normal.x * halfWidth,
-      y: point.y + normal.y * halfWidth,
-    });
-    rightSide.push({
-      x: point.x - normal.x * halfWidth,
-      y: point.y - normal.y * halfWidth,
-    });
-  }
-
-  rightSide.reverse();
-  return [...leftSide, ...rightSide];
-}
-
-function resolvePolylineNormal(points: readonly Position[], index: number): Position {
-  const current = points[index];
-  if (current === undefined) {
-    return { x: 0, y: 1 };
-  }
-
-  const previous = index > 0 ? points[index - 1] : undefined;
-  const next = index < points.length - 1 ? points[index + 1] : undefined;
-  const previousNormal = previous === undefined
-    ? null
-    : perpendicular(normalize({
-        x: current.x - previous.x,
-        y: current.y - previous.y,
-      }));
-  const nextNormal = next === undefined
-    ? null
-    : perpendicular(normalize({
-        x: next.x - current.x,
-        y: next.y - current.y,
-      }));
-
-  if (previousNormal !== null && nextNormal !== null) {
-    const averaged = normalize({
-      x: previousNormal.x + nextNormal.x,
-      y: previousNormal.y + nextNormal.y,
-    });
-    if (averaged.x !== 0 || averaged.y !== 0) {
-      return averaged;
-    }
-  }
-
-  return nextNormal ?? previousNormal ?? { x: 0, y: 1 };
-}
-
-function flattenPoints(points: readonly Position[]): number[] {
-  return points.flatMap((point) => [point.x, point.y]);
-}
-
-function resolveLabelRotation(tangent: Position): number {
-  const angle = normalizeAngle(Math.atan2(tangent.y, tangent.x));
-  if (angle > UPSIDE_DOWN_MIN && angle < UPSIDE_DOWN_MAX) {
-    return normalizeAngle(angle + Math.PI);
-  }
-  return angle;
-}
-
-function normalizeAngle(angle: number): number {
-  let normalized = angle;
-  while (normalized < 0) {
-    normalized += Math.PI * 2;
-  }
-  while (normalized >= Math.PI * 2) {
-    normalized -= Math.PI * 2;
-  }
-  return normalized;
-}
-
-function sanitizePositiveNumber(value: number | undefined, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : fallback;
-}
-
-function sanitizeUnitInterval(value: number | undefined, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1 ? value : fallback;
 }
 
 function getPointerPosition(

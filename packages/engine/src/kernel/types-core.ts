@@ -51,6 +51,10 @@ import type {
   AgentPolicyCompletionGuidanceFallback,
   AgentPolicyDecisionIntrinsic,
   AgentPolicyOptionIntrinsic,
+  AgentPolicyZoneAggSource,
+  AgentPolicyZoneFilterOp,
+  AgentPolicyZoneScope,
+  AgentPolicyZoneTokenAggOp,
   AgentPolicyZoneTokenAggOwner,
 } from '../contracts/index.js';
 
@@ -390,8 +394,30 @@ export type CompiledAgentPolicyRef =
       readonly kind: 'turnIntrinsic';
       readonly intrinsic: 'phaseId' | 'stepId' | 'round';
     };
-export type AgentPolicyZoneTokenAggOp = 'sum' | 'count' | 'min' | 'max';
 export type AgentPolicyZoneSource = string | AgentPolicyExpr;
+export interface AgentPolicyTokenFilter {
+  readonly type?: string;
+  readonly props?: Readonly<Record<string, { readonly eq: string | number | boolean }>>;
+}
+
+export interface AgentPolicyZoneFilterComparison {
+  readonly prop: string;
+  readonly op: AgentPolicyZoneFilterOp;
+  readonly value: string | number | boolean;
+}
+
+export interface AgentPolicyZoneVariableFilterComparison {
+  readonly prop: string;
+  readonly op: AgentPolicyZoneFilterOp;
+  readonly value: number;
+}
+
+export interface AgentPolicyZoneFilter {
+  readonly category?: string;
+  readonly attribute?: AgentPolicyZoneFilterComparison;
+  readonly variable?: AgentPolicyZoneVariableFilterComparison;
+}
+
 export type AgentPolicyExpr =
   | {
       readonly kind: 'literal';
@@ -416,6 +442,29 @@ export type AgentPolicyExpr =
       readonly owner: AgentPolicyZoneTokenAggOwner;
       readonly prop: string;
       readonly aggOp: AgentPolicyZoneTokenAggOp;
+    }
+  | {
+      readonly kind: 'globalTokenAgg';
+      readonly tokenFilter?: AgentPolicyTokenFilter;
+      readonly aggOp: AgentPolicyZoneTokenAggOp;
+      readonly prop?: string;
+      readonly zoneFilter?: AgentPolicyZoneFilter;
+      readonly zoneScope: AgentPolicyZoneScope;
+    }
+  | {
+      readonly kind: 'globalZoneAgg';
+      readonly source: AgentPolicyZoneAggSource;
+      readonly field: string;
+      readonly aggOp: AgentPolicyZoneTokenAggOp;
+      readonly zoneFilter?: AgentPolicyZoneFilter;
+      readonly zoneScope: AgentPolicyZoneScope;
+    }
+  | {
+      readonly kind: 'adjacentTokenAgg';
+      readonly anchorZone: string;
+      readonly tokenFilter?: AgentPolicyTokenFilter;
+      readonly aggOp: AgentPolicyZoneTokenAggOp;
+      readonly prop?: string;
     }
   | {
       readonly kind: 'zoneProp';

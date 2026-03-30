@@ -368,6 +368,14 @@ export class PolicyEvaluationContext {
         return this.evaluateZoneProp(expr, candidate);
       case 'zoneTokenAgg':
         return this.evaluateZoneTokenAggregate(expr, candidate);
+      case 'globalTokenAgg':
+      case 'globalZoneAgg':
+      case 'adjacentTokenAgg':
+        throw this.runtimeError(
+          'RUNTIME_EVALUATION_ERROR',
+          `Policy expression kind "${expr.kind}" is not implemented yet.`,
+          { kind: expr.kind },
+        );
     }
   }
 

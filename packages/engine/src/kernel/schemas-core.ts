@@ -4,6 +4,10 @@ import {
   AGENT_POLICY_COMPLETION_GUIDANCE_FALLBACKS,
   AGENT_POLICY_DECISION_INTRINSICS,
   AGENT_POLICY_OPTION_INTRINSICS,
+  AGENT_POLICY_ZONE_AGG_SOURCES,
+  AGENT_POLICY_ZONE_FILTER_OPS,
+  AGENT_POLICY_ZONE_SCOPES,
+  AGENT_POLICY_ZONE_TOKEN_AGG_OPS,
   AGENT_POLICY_ZONE_TOKEN_AGG_OWNER_KEYWORDS,
 } from '../contracts/index.js';
 import { DegeneracyFlag } from './diagnostics.js';
@@ -643,6 +647,30 @@ const CompiledAgentPolicyRefSchema = z.union([
   }).strict(),
 ]);
 
+const AgentPolicyTokenFilterSchema = z.object({
+  type: StringSchema.optional(),
+  props: z.record(
+    StringSchema,
+    z.object({
+      eq: z.union([StringSchema, NumberSchema, BooleanSchema]),
+    }).strict(),
+  ).optional(),
+}).strict();
+
+const AgentPolicyZoneFilterSchema = z.object({
+  category: StringSchema.optional(),
+  attribute: z.object({
+    prop: StringSchema,
+    op: z.enum(AGENT_POLICY_ZONE_FILTER_OPS),
+    value: z.union([StringSchema, NumberSchema, BooleanSchema]),
+  }).strict().optional(),
+  variable: z.object({
+    prop: StringSchema,
+    op: z.enum(AGENT_POLICY_ZONE_FILTER_OPS),
+    value: NumberSchema,
+  }).strict().optional(),
+}).strict();
+
 const AgentPolicyExprSchema: z.ZodTypeAny = z.lazy(() =>
   z.union([
     z.object({
@@ -693,12 +721,30 @@ const AgentPolicyExprSchema: z.ZodTypeAny = z.lazy(() =>
         z.string().regex(/^[0-9]+$/),
       ]),
       prop: StringSchema,
-      aggOp: z.union([
-        z.literal('sum'),
-        z.literal('count'),
-        z.literal('min'),
-        z.literal('max'),
-      ]),
+      aggOp: z.enum(AGENT_POLICY_ZONE_TOKEN_AGG_OPS),
+    }).strict(),
+    z.object({
+      kind: z.literal('globalTokenAgg'),
+      tokenFilter: AgentPolicyTokenFilterSchema.optional(),
+      aggOp: z.enum(AGENT_POLICY_ZONE_TOKEN_AGG_OPS),
+      prop: StringSchema.optional(),
+      zoneFilter: AgentPolicyZoneFilterSchema.optional(),
+      zoneScope: z.enum(AGENT_POLICY_ZONE_SCOPES),
+    }).strict(),
+    z.object({
+      kind: z.literal('globalZoneAgg'),
+      source: z.enum(AGENT_POLICY_ZONE_AGG_SOURCES),
+      field: StringSchema,
+      aggOp: z.enum(AGENT_POLICY_ZONE_TOKEN_AGG_OPS),
+      zoneFilter: AgentPolicyZoneFilterSchema.optional(),
+      zoneScope: z.enum(AGENT_POLICY_ZONE_SCOPES),
+    }).strict(),
+    z.object({
+      kind: z.literal('adjacentTokenAgg'),
+      anchorZone: StringSchema,
+      tokenFilter: AgentPolicyTokenFilterSchema.optional(),
+      aggOp: z.enum(AGENT_POLICY_ZONE_TOKEN_AGG_OPS),
+      prop: StringSchema.optional(),
     }).strict(),
     z.object({
       kind: z.literal('zoneProp'),

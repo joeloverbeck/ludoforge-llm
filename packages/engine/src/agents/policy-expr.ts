@@ -5,14 +5,14 @@ import type {
   AgentPolicyLiteral,
   AgentPolicyOperator,
   AgentPolicyValueType,
-  AgentPolicyZoneTokenAggOp,
   CompiledAgentDependencyRefs,
   CompiledAgentPolicyRef,
   CompiledAgentParameterDef,
 } from '../kernel/types.js';
 import type { GameSpecPolicyExpr } from '../cnl/game-spec-doc.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from '../cnl/compiler-diagnostic-codes.js';
-import { isAgentPolicyZoneTokenAggOwner } from '../contracts/index.js';
+import type { AgentPolicyZoneTokenAggOp } from '../contracts/index.js';
+import { AGENT_POLICY_ZONE_TOKEN_AGG_OPS, isAgentPolicyZoneTokenAggOwner } from '../contracts/index.js';
 
 export type InternalPolicyValueType = AgentPolicyValueType | 'unknown';
 
@@ -821,7 +821,7 @@ function unifyCoalescedType(
   return left === right ? left : null;
 }
 
-const ZONE_TOKEN_AGG_OPS = new Set<AgentPolicyZoneTokenAggOp>(['sum', 'count', 'min', 'max']);
+const ZONE_TOKEN_AGG_OPS = new Set<AgentPolicyZoneTokenAggOp>(AGENT_POLICY_ZONE_TOKEN_AGG_OPS);
 
 function analyzeZoneSource(
   zone: unknown,

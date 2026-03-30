@@ -208,6 +208,9 @@ function resolveZoneRenderSpec(
     : visual.height / 2;
   const badge = resolveZoneBadge(zone, visual, markerBadgeConfig);
   const markersLabelText = resolveMarkerLabelText(zone, markerBadgeConfig);
+  const labelInsideZone = visual.shape !== 'circle';
+  const nameLabelY = labelInsideZone ? 0 : bottomEdge + LABEL_GAP;
+  const markersLabelY = labelInsideZone ? LABEL_LINE_HEIGHT : bottomEdge + LABEL_GAP + LABEL_LINE_HEIGHT;
 
   return {
     fillColor: resolveZoneFillColor(zone, visual.color),
@@ -216,13 +219,13 @@ function resolveZoneRenderSpec(
     nameLabel: {
       text: displayName,
       x: 0,
-      y: bottomEdge + LABEL_GAP,
+      y: nameLabelY,
       visible: true,
     },
     markersLabel: {
       text: markersLabelText,
       x: 0,
-      y: bottomEdge + LABEL_GAP + LABEL_LINE_HEIGHT,
+      y: markersLabelY,
       visible: markersLabelText.length > 0,
     },
     badge,

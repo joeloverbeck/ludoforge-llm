@@ -8,8 +8,8 @@
  * - LABEL_FONT_NAME: plain monospace for badges and counts
  * - STROKE_LABEL_FONT_NAME: monospace with black stroke for zone labels
  *
- * A single font at 14px (the largest needed size) scales down cleanly to
- * 10px and 11px. BitmapText handles this scaling internally.
+ * A single font at 22px (the largest needed size) scales down cleanly to
+ * smaller sizes. BitmapText handles this scaling internally.
  */
 import { BitmapFontManager } from 'pixi.js';
 
@@ -31,7 +31,7 @@ export function installLabelBitmapFonts(resolution?: number): void {
     name: LABEL_FONT_NAME,
     style: {
       fontFamily: 'monospace',
-      fontSize: 14,
+      fontSize: 22,
       fill: 0xffffff,
     },
     chars: BitmapFontManager.ASCII,
@@ -42,7 +42,7 @@ export function installLabelBitmapFonts(resolution?: number): void {
     name: STROKE_LABEL_FONT_NAME,
     style: {
       fontFamily: 'monospace',
-      fontSize: 14,
+      fontSize: 22,
       fill: 0xffffff,
       stroke: { color: 0x000000, width: 3 },
     },

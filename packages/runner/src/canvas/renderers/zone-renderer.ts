@@ -37,6 +37,7 @@ const LABEL_AREA_HEIGHT = 40;
 
 interface ZoneVisualElements extends ZoneBadgeVisuals {
   readonly base: Graphics;
+  readonly labelBackground: Graphics;
   readonly hiddenStack: HiddenZoneStackVisual;
   readonly nameLabel: BitmapText;
   readonly markersLabel: BitmapText;
@@ -94,6 +95,7 @@ export function createZoneRenderer(
           zoneContainer.addChild(
             visuals.base,
             visuals.hiddenStack.root,
+            visuals.labelBackground,
             visuals.nameLabel,
             visuals.markersLabel,
             visuals.badgeGraphics,
@@ -161,19 +163,21 @@ export function createZoneRenderer(
 
 function createZoneVisualElements(): ZoneVisualElements {
   const base = new Graphics();
+  const labelBackground = new Graphics();
   const hiddenStack = createHiddenZoneStackVisual();
 
-  const nameLabel = createBitmapLabel('', 0, 0, 16, {
+  const nameLabel = createBitmapLabel('', 0, 0, 20, {
     fontName: STROKE_LABEL_FONT_NAME,
     fill: '#ffffff',
     stroke: { color: '#000000', width: 3 },
-    anchor: { x: 0.5, y: 0 },
+    anchor: { x: 0.5, y: 0.5 },
   });
   const markersLabel = createZoneMarkersLabel();
   const { badgeGraphics, badgeLabel } = createZoneBadgeVisuals();
 
   return {
     base,
+    labelBackground,
     hiddenStack,
     nameLabel,
     markersLabel,
@@ -231,13 +235,47 @@ function updateZoneVisuals(
   visuals.nameLabel.text = zone.render.nameLabel.text;
   visuals.nameLabel.position.set(zone.render.nameLabel.x, zone.render.nameLabel.y);
   visuals.nameLabel.visible = zone.render.nameLabel.visible;
+  drawLabelBackground(visuals.labelBackground, zone.render.nameLabel);
   updateZoneMarkersLabel(visuals.markersLabel, zone.render.markersLabel);
   updateZoneBadgeVisuals(visuals, zone.render.badge);
 }
 
+const LABEL_FONT_SIZE = 20;
+const LABEL_CHAR_WIDTH_FACTOR = 0.6;
+const LABEL_PILL_PADDING = 6;
+const LABEL_PILL_CORNER_RADIUS = 4;
+const LABEL_PILL_ALPHA = 0.45;
+const DEFAULT_STROKE_SIGNATURE = { color: '#111827', width: 1, alpha: 0.7 } as const;
+
+function drawLabelBackground(
+  background: Graphics,
+  label: { readonly text: string; readonly x: number; readonly y: number; readonly visible: boolean },
+): void {
+  background.clear();
+  if (!label.visible || label.text.length === 0) {
+    return;
+  }
+  const estimatedWidth = label.text.length * LABEL_FONT_SIZE * LABEL_CHAR_WIDTH_FACTOR;
+  const estimatedHeight = LABEL_FONT_SIZE;
+  background
+    .roundRect(
+      label.x - estimatedWidth / 2 - LABEL_PILL_PADDING,
+      label.y - estimatedHeight / 2 - LABEL_PILL_PADDING,
+      estimatedWidth + LABEL_PILL_PADDING * 2,
+      estimatedHeight + LABEL_PILL_PADDING * 2,
+      LABEL_PILL_CORNER_RADIUS,
+    )
+    .fill({ color: 0x000000, alpha: LABEL_PILL_ALPHA });
+}
+
 function drawZoneBase(base: Graphics, zone: PresentationZoneNode): void {
   const fill = parseHexColor(zone.render.fillColor ?? undefined) ?? 0x4d5c6d;
-  const strokeColor = parseHexColor(zone.render.stroke.color ?? undefined) ?? 0x111827;
+  const isDefaultStroke = zone.render.stroke.color === DEFAULT_STROKE_SIGNATURE.color
+    && zone.render.stroke.width === DEFAULT_STROKE_SIGNATURE.width
+    && zone.render.stroke.alpha === DEFAULT_STROKE_SIGNATURE.alpha;
+  const strokeColor = isDefaultStroke
+    ? (parseHexColor(zone.visual.strokeColor ?? undefined) ?? 0x111827)
+    : (parseHexColor(zone.render.stroke.color ?? undefined) ?? 0x111827);
   const dimensions = resolveVisualDimensions(zone.visual, {
     width: ZONE_WIDTH,
     height: ZONE_HEIGHT,

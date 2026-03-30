@@ -215,6 +215,67 @@ function createTemplateDef(): GameDef {
   });
 }
 
+function createGuidedTemplateDef(
+  fallback: 'random' | 'first' = 'random',
+): GameDef {
+  const actionId = asActionId('op1');
+  const templateAction = createTemplateChooseOneAction(actionId, phaseId);
+  const templateProfile = createTemplateChooseOneProfile(actionId);
+  const catalog = createCatalog();
+
+  return createDef({
+    metadata: { id: `policy-agent-guided-template-${fallback}`, players: { min: 2, max: 2 } },
+    actions: [templateAction],
+    actionPipelines: [templateProfile] as readonly ActionPipelineDef[],
+    agents: {
+      ...catalog,
+      library: {
+        ...catalog.library,
+        completionScoreTerms: {
+          preferGamma: {
+            costClass: 'state',
+            when: literal(true),
+            weight: literal(10),
+            value: opExpr('boolToNumber', opExpr('eq', refExpr({ kind: 'optionIntrinsic', intrinsic: 'value' }), literal('gamma'))),
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          },
+          noMatch: {
+            costClass: 'state',
+            when: literal(false),
+            weight: literal(1),
+            value: literal(100),
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          },
+        },
+      },
+      profiles: {
+        passive: {
+          fingerprint: 'guided-template-profile',
+          params: {},
+          use: {
+            pruningRules: [],
+            scoreTerms: [],
+            completionScoreTerms: ['preferGamma'],
+            tieBreakers: ['stableMoveKey'],
+          },
+          completionGuidance: {
+            enabled: true,
+            fallback,
+          },
+          plan: {
+            stateFeatures: [],
+            candidateFeatures: [],
+            candidateAggregates: [],
+          },
+        },
+      },
+      candidateParamDefs: {
+        '$target': { type: 'id' },
+      },
+    },
+  });
+}
+
 function createTemplatePreviewDef(): GameDef {
   const actionId = asActionId('chooseTarget');
   const templateProfile: ActionPipelineDef = {
@@ -514,6 +575,46 @@ describe('PolicyAgent', () => {
       assert.fail('expected policy decision trace');
     }
     assert.equal(result.agentDecision.emergencyFallback, false);
+  });
+
+  it('uses completion guidance to prefer the highest-scoring template option', () => {
+    const def = createGuidedTemplateDef();
+    const state = initialState(def, 7, 2).state;
+    const agent = new PolicyAgent();
+
+    const result = agent.chooseMove({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      legalMoves: [pendingClassifiedMove({ actionId: asActionId('op1'), params: {} })],
+      rng: createRng(42n),
+    });
+
+    assert.equal(result.move.actionId, asActionId('op1'));
+    assert.equal(result.move.params['$target'], 'gamma');
+    assert.equal(result.agentDecision?.kind, 'policy');
+    if (result.agentDecision?.kind !== 'policy') {
+      assert.fail('expected policy decision trace');
+    }
+    assert.equal(result.agentDecision.emergencyFallback, false);
+  });
+
+  it('produces deterministic guided completions for the same seed and state', () => {
+    const def = createGuidedTemplateDef();
+    const state = initialState(def, 7, 2).state;
+    const input = {
+      def,
+      state,
+      playerId: asPlayerId(0),
+      legalMoves: [pendingClassifiedMove({ actionId: asActionId('op1'), params: {} })],
+      rng: createRng(42n),
+    } as const;
+
+    const first = new PolicyAgent().chooseMove(input);
+    const second = new PolicyAgent().chooseMove(input);
+
+    assert.deepEqual(first.move.move, second.move.move);
+    assert.equal(first.move.move.params['$target'], 'gamma');
   });
 
   it('evaluates preview surfaces for completed template moves in the production path', () => {

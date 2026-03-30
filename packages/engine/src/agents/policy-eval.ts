@@ -16,6 +16,7 @@ import { pickRandom } from './agent-move-selection.js';
 import type { PolicyPreviewTraceOutcome, PolicyPreviewUnavailabilityReason } from './policy-preview.js';
 import { type PolicyValue } from './policy-runtime.js';
 import { PolicyEvaluationContext, type PolicyEvaluationCandidate, PolicyRuntimeError } from './policy-evaluation-core.js';
+import { resolvePolicyBindingSeatId } from './policy-profile-resolution.js';
 
 export interface PolicyPreviewUnknownRef {
   readonly refId: string;
@@ -614,18 +615,4 @@ function selectByPreferredOrder(
     return candidates;
   }
   return ranked.filter((entry) => entry.rank === bestRank).map((entry) => entry.candidate);
-}
-
-function resolvePolicyBindingSeatId(def: GameDef, playerId: PlayerId): string | null {
-  const directSeatId = def.seats?.[playerId]?.id;
-  if (typeof directSeatId === 'string' && directSeatId.length > 0) {
-    return directSeatId;
-  }
-
-  if (def.seats?.length === 1) {
-    const sharedSeatId = def.seats[0]?.id;
-    return typeof sharedSeatId === 'string' && sharedSeatId.length > 0 ? sharedSeatId : null;
-  }
-
-  return null;
 }

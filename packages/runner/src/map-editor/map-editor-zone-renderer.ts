@@ -68,7 +68,7 @@ export function createEditorZoneRenderer(
       text: resolveZoneLabel(zoneId, visualConfigProvider),
       style: {
         fontName: STROKE_LABEL_FONT_NAME,
-        fontSize: 14,
+        fontSize: 20,
         fill: '#ffffff',
         stroke: { color: '#000000', width: 3 },
       },
@@ -179,7 +179,9 @@ function drawZoneBase(
   base.fill({
     color: parseHexColor(visual.color ?? undefined) ?? DEFAULT_FILL_COLOR,
   }).stroke({
-    color: isSelected ? SELECTED_STROKE_COLOR : DEFAULT_STROKE_COLOR,
+    color: isSelected
+      ? SELECTED_STROKE_COLOR
+      : (parseHexColor(visual.strokeColor ?? undefined) ?? DEFAULT_STROKE_COLOR),
     width: isSelected ? SELECTED_STROKE_WIDTH : DEFAULT_STROKE_WIDTH,
     alpha: 1,
   });

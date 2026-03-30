@@ -2,8 +2,10 @@ import type { Agent } from '../kernel/types.js';
 import { perfStart, perfDynEnd } from '../kernel/perf-profiler.js';
 import { toMoveIdentityKey } from '../kernel/move-identity.js';
 import { NoPlayableMovesAfterPreparationError } from './no-playable-move.js';
+import { buildCompletionChooseCallback } from './completion-guidance-choice.js';
 import { evaluatePolicyMove } from './policy-eval.js';
 import { buildPolicyAgentDecisionTrace, type PolicyDecisionTraceLevel } from './policy-diagnostics.js';
+import { resolveEffectivePolicyProfile } from './policy-profile-resolution.js';
 import { preparePlayableMoves } from './prepare-playable-moves.js';
 
 // Reduced from 5 to 3: 5 random completions per template was excessive for
@@ -40,10 +42,23 @@ export class PolicyAgent implements Agent {
 
   chooseMove(input: Parameters<Agent['chooseMove']>[0]): ReturnType<Agent['chooseMove']> {
     const profiler = input.profiler;
+    const resolvedProfile = resolveEffectivePolicyProfile(input.def, input.playerId, this.profileId);
+    const choose = resolvedProfile === null
+      ? undefined
+      : buildCompletionChooseCallback({
+        state: input.state,
+        def: input.def,
+        catalog: resolvedProfile.catalog,
+        playerId: input.playerId,
+        seatId: resolvedProfile.seatId,
+        profile: resolvedProfile.profile,
+        ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
+      });
 
     const t0_prepare = perfStart(profiler);
     const prepared = preparePlayableMoves(input, {
       pendingTemplateCompletions: this.completionsPerTemplate,
+      ...(choose === undefined ? {} : { choose }),
     });
     perfDynEnd(profiler, 'agent:preparePlayableMoves', t0_prepare);
 

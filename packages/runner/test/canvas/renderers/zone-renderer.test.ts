@@ -375,7 +375,7 @@ describe('createZoneRenderer', () => {
     );
 
     const zoneContainer = renderer.getContainerMap().get('zone:a') as InstanceType<typeof MockContainer>;
-    const nameLabel = zoneContainer.children[2] as InstanceType<typeof MockText>;
+    const nameLabel = zoneContainer.children[3] as InstanceType<typeof MockText>;
 
     expect(zoneContainer.position.x).toBe(5);
     expect(zoneContainer.position.y).toBe(6);
@@ -437,9 +437,9 @@ describe('createZoneRenderer', () => {
     );
 
     const container = renderer.getContainerMap().get('zone:a') as InstanceType<typeof MockContainer>;
-    const markers = container.children[3] as InstanceType<typeof MockText>;
+    const markers = container.children[4] as InstanceType<typeof MockText>;
 
-    expect(container.children).toHaveLength(6);
+    expect(container.children).toHaveLength(7);
     expect(markers.text).toContain('Control:red');
     expect(markers.text).toContain('Supply:on');
     expect(markers.visible).toBe(true);
@@ -561,8 +561,8 @@ describe('createZoneRenderer', () => {
     }], new Map());
 
     const zoneContainer = renderer.getContainerMap().get('zone:a') as InstanceType<typeof MockContainer>;
-    const nameLabel = zoneContainer.children[2] as InstanceType<typeof MockText>;
-    const markersLabel = zoneContainer.children[3] as InstanceType<typeof MockText>;
+    const nameLabel = zoneContainer.children[3] as InstanceType<typeof MockText>;
+    const markersLabel = zoneContainer.children[4] as InstanceType<typeof MockText>;
 
     expect(nameLabel.text).toBe('Saigon');
     expect(nameLabel.position.x).toBe(0);
@@ -602,7 +602,7 @@ describe('createZoneRenderer', () => {
     }], new Map());
 
     const zoneContainer = renderer.getContainerMap().get('zone:a') as InstanceType<typeof MockContainer>;
-    const nameLabel = zoneContainer.children[2] as InstanceType<typeof MockText>;
+    const nameLabel = zoneContainer.children[3] as InstanceType<typeof MockText>;
 
     expect(nameLabel.position.x).toBe(0);
     expect(nameLabel.position.y).toBe(88);
@@ -613,7 +613,7 @@ describe('createZoneRenderer', () => {
     renderer.update([makeZone()], new Map());
 
     const zoneContainer = renderer.getContainerMap().get('zone:a') as InstanceType<typeof MockContainer>;
-    const nameLabel = zoneContainer.children[2] as InstanceType<typeof MockText>;
+    const nameLabel = zoneContainer.children[3] as InstanceType<typeof MockText>;
 
     const style = nameLabel.style as { fill?: string; stroke?: { color: string; width: number } };
     expect(style.fill).toBe('#ffffff');
@@ -644,8 +644,8 @@ describe('createZoneRenderer', () => {
     );
 
     const zoneContainer = renderer.getContainerMap().get('zone:a') as InstanceType<typeof MockContainer>;
-    const badgeGraphics = zoneContainer.children[4] as InstanceType<typeof MockGraphics>;
-    const badgeLabel = zoneContainer.children[5] as InstanceType<typeof MockText>;
+    const badgeGraphics = zoneContainer.children[5] as InstanceType<typeof MockGraphics>;
+    const badgeLabel = zoneContainer.children[6] as InstanceType<typeof MockText>;
 
     expect(badgeGraphics.visible).toBe(true);
     expect(badgeLabel.visible).toBe(true);
@@ -671,9 +671,9 @@ describe('createZoneRenderer', () => {
     }], new Map());
 
     const zoneContainer = renderer.getContainerMap().get('zone:a') as InstanceType<typeof MockContainer>;
-    const markersLabel = zoneContainer.children[3] as InstanceType<typeof MockText>;
-    const badgeGraphics = zoneContainer.children[4] as InstanceType<typeof MockGraphics>;
-    const badgeLabel = zoneContainer.children[5] as InstanceType<typeof MockText>;
+    const markersLabel = zoneContainer.children[4] as InstanceType<typeof MockText>;
+    const badgeGraphics = zoneContainer.children[5] as InstanceType<typeof MockGraphics>;
+    const badgeLabel = zoneContainer.children[6] as InstanceType<typeof MockText>;
 
     expect(markersLabel.text).toBe('Sabotage');
     expect(markersLabel.visible).toBe(true);
@@ -696,18 +696,18 @@ describe('createZoneRenderer', () => {
       },
     }], new Map());
 
-    const updatedMarkersLabel = zoneContainer.children[3] as InstanceType<typeof MockText>;
-    const updatedBadgeGraphics = zoneContainer.children[4] as InstanceType<typeof MockGraphics>;
-    const updatedBadgeLabel = zoneContainer.children[5] as InstanceType<typeof MockText>;
+    const updatedMarkersLabel = zoneContainer.children[4] as InstanceType<typeof MockText>;
+    const updatedBadgeGraphics = zoneContainer.children[5] as InstanceType<typeof MockGraphics>;
+    const updatedBadgeLabel = zoneContainer.children[6] as InstanceType<typeof MockText>;
 
     expect(updatedMarkersLabel.text).toBe('Control:COIN');
     expect(updatedMarkersLabel.position.x).toBe(12);
     expect(updatedMarkersLabel.position.y).toBe(84);
     expect(updatedBadgeGraphics.visible).toBe(false);
     expect(updatedBadgeLabel.visible).toBe(false);
-    expect(zoneContainer.children[3]).toBe(markersLabel);
-    expect(zoneContainer.children[4]).toBe(badgeGraphics);
-    expect(zoneContainer.children[5]).toBe(badgeLabel);
+    expect(zoneContainer.children[4]).toBe(markersLabel);
+    expect(zoneContainer.children[5]).toBe(badgeGraphics);
+    expect(zoneContainer.children[6]).toBe(badgeLabel);
   });
 
   it('filters badge marker from markers text', () => {
@@ -737,7 +737,7 @@ describe('createZoneRenderer', () => {
     );
 
     const zoneContainer = renderer.getContainerMap().get('zone:a') as InstanceType<typeof MockContainer>;
-    const markersLabel = zoneContainer.children[3] as InstanceType<typeof MockText>;
+    const markersLabel = zoneContainer.children[4] as InstanceType<typeof MockText>;
 
     expect(markersLabel.text).toBe('Control:COIN');
     expect(markersLabel.text).not.toContain('Support');

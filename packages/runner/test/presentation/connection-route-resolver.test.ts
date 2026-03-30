@@ -27,7 +27,7 @@ function makeZone(
       height: 100,
       color: null,
       connectionStyleKey,
-      vertices: null,
+      vertices: null, strokeColor: null,
     },
     render: {
       fillColor: '#000000',

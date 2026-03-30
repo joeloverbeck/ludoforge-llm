@@ -1,6 +1,6 @@
 # 99MAPEDIREN-002: Align editor layer hierarchy to game canvas structure
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — runner-only
@@ -108,3 +108,10 @@ All files that reference `editorLayers.background`, `.adjacency`, `.route`, `.zo
 1. `pnpm -F @ludoforge/runner test -- --reporter=verbose map-editor-canvas`
 2. `pnpm -F @ludoforge/runner test -- --reporter=verbose MapEditorScreen`
 3. `pnpm -F @ludoforge/runner typecheck && pnpm -F @ludoforge/runner lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-30
+- **What changed**: `EditorLayerSet` expanded from 5 to 8 layers (`backgroundLayer`, `regionLayer`, `provinceZoneLayer`, `connectionRouteLayer`, `cityZoneLayer`, `adjacencyLayer`, `tableOverlayLayer`, `handleLayer`). All editor references updated to new layer names. Tests updated accordingly.
+- **Deviations**: None — implemented as specified.
+- **Verification**: Merged via PR #181 (commit cfe6e2ad).

@@ -96,10 +96,14 @@ describe('MapEditorScreen', () => {
     const vertexHandleRenderer = { destroy: vi.fn() };
     const editorCanvas = {
       layers: {
-        adjacency: { tag: 'adjacency-layer' },
-        zone: { tag: 'zone-layer' },
-        route: { tag: 'route-layer' },
-        handle: { tag: 'handle-layer' },
+        backgroundLayer: { tag: 'background-layer' },
+        regionLayer: { tag: 'region-layer' },
+        provinceZoneLayer: { tag: 'province-zone-layer' },
+        connectionRouteLayer: { tag: 'connection-route-layer' },
+        cityZoneLayer: { tag: 'city-zone-layer' },
+        adjacencyLayer: { tag: 'adjacency-layer' },
+        tableOverlayLayer: { tag: 'table-overlay-layer' },
+        handleLayer: { tag: 'handle-layer' },
       },
       viewport: { tag: 'viewport' },
       resize: vi.fn(),
@@ -149,24 +153,24 @@ describe('MapEditorScreen', () => {
       );
     });
     expect(testDoubles.createEditorAdjacencyRenderer).toHaveBeenCalledWith(
-      editorCanvas.layers.adjacency,
+      editorCanvas.layers.adjacencyLayer,
       store,
       { tag: 'provider' },
     );
     expect(testDoubles.createEditorZoneRenderer).toHaveBeenCalledWith(
-      editorCanvas.layers.zone,
+      editorCanvas.layers.cityZoneLayer,
       store,
       { tag: 'provider' },
       { dragSurface: editorCanvas.viewport },
     );
     expect(testDoubles.createEditorRouteRenderer).toHaveBeenCalledWith(
-      editorCanvas.layers.route,
+      editorCanvas.layers.connectionRouteLayer,
       store,
       { metadata: { id: 'fitl' } },
       { tag: 'provider' },
     );
     expect(testDoubles.createEditorHandleRenderer).toHaveBeenCalledWith(
-      editorCanvas.layers.handle,
+      editorCanvas.layers.handleLayer,
       store,
       { metadata: { id: 'fitl' } },
       { tag: 'provider' },
@@ -228,7 +232,7 @@ describe('MapEditorScreen', () => {
     });
     testDoubles.createMapEditorStore.mockReturnValue(store);
     testDoubles.createEditorCanvas.mockResolvedValue({
-      layers: { adjacency: {}, zone: {}, route: {}, handle: {} },
+      layers: { backgroundLayer: {}, regionLayer: {}, provinceZoneLayer: {}, connectionRouteLayer: {}, cityZoneLayer: {}, adjacencyLayer: {}, tableOverlayLayer: {}, handleLayer: {} },
       viewport: {},
       resize: vi.fn(),
       centerOnContent: vi.fn(),
@@ -272,7 +276,7 @@ describe('MapEditorScreen', () => {
     });
     testDoubles.createMapEditorStore.mockReturnValue(store);
     testDoubles.createEditorCanvas.mockResolvedValue({
-      layers: { adjacency: {}, zone: {}, route: {}, handle: {} },
+      layers: { backgroundLayer: {}, regionLayer: {}, provinceZoneLayer: {}, connectionRouteLayer: {}, cityZoneLayer: {}, adjacencyLayer: {}, tableOverlayLayer: {}, handleLayer: {} },
       viewport: {},
       resize: vi.fn(),
       centerOnContent: vi.fn(),
@@ -313,7 +317,7 @@ describe('MapEditorScreen', () => {
     });
     testDoubles.createMapEditorStore.mockReturnValue(store);
     testDoubles.createEditorCanvas.mockResolvedValue({
-      layers: { adjacency: {}, zone: {}, route: {}, handle: {} },
+      layers: { backgroundLayer: {}, regionLayer: {}, provinceZoneLayer: {}, connectionRouteLayer: {}, cityZoneLayer: {}, adjacencyLayer: {}, tableOverlayLayer: {}, handleLayer: {} },
       viewport: {},
       resize: vi.fn(),
       centerOnContent: vi.fn(),
@@ -373,7 +377,7 @@ describe('MapEditorScreen', () => {
     });
     testDoubles.createMapEditorStore.mockReturnValue(store);
     testDoubles.createEditorCanvas.mockResolvedValue({
-      layers: { adjacency: {}, zone: {}, route: {}, handle: {} },
+      layers: { backgroundLayer: {}, regionLayer: {}, provinceZoneLayer: {}, connectionRouteLayer: {}, cityZoneLayer: {}, adjacencyLayer: {}, tableOverlayLayer: {}, handleLayer: {} },
       viewport: {},
       resize: vi.fn(),
       centerOnContent: vi.fn(),

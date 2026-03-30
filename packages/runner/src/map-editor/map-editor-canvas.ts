@@ -43,7 +43,7 @@ export async function createEditorCanvas(
   viewportResult.updateWorldBounds(contentBounds);
   viewportResult.centerOnBounds(contentBounds);
 
-  const gridRenderer = createEditorGridRenderer(layers.background, viewportResult.viewport, store);
+  const gridRenderer = createEditorGridRenderer(layers.backgroundLayer, viewportResult.viewport, store);
 
   const unsubscribe = store.subscribe((state, previousState) => {
     if (state.zonePositions === previousState.zonePositions) {
@@ -90,41 +90,59 @@ export async function createEditorCanvas(
 }
 
 function createEditorLayers(interfaceGroup: Container): EditorLayerSet {
-  const background = new Container();
-  background.eventMode = 'none';
-  background.interactiveChildren = false;
-  background.sortableChildren = false;
+  const backgroundLayer = new Container();
+  backgroundLayer.eventMode = 'none';
+  backgroundLayer.interactiveChildren = false;
+  backgroundLayer.sortableChildren = false;
 
-  const adjacency = new Container();
-  adjacency.eventMode = 'none';
-  adjacency.interactiveChildren = false;
-  adjacency.sortableChildren = true;
+  const regionLayer = new Container();
+  regionLayer.eventMode = 'none';
+  regionLayer.interactiveChildren = false;
+  regionLayer.sortableChildren = false;
 
-  const route = new Container();
-  route.eventMode = 'passive';
-  route.interactiveChildren = true;
-  route.sortableChildren = true;
+  const provinceZoneLayer = new Container();
+  provinceZoneLayer.eventMode = 'passive';
+  provinceZoneLayer.interactiveChildren = true;
+  provinceZoneLayer.sortableChildren = true;
 
-  const zone = new Container();
-  zone.eventMode = 'passive';
-  zone.interactiveChildren = true;
-  zone.sortableChildren = true;
+  const connectionRouteLayer = new Container();
+  connectionRouteLayer.eventMode = 'passive';
+  connectionRouteLayer.interactiveChildren = true;
+  connectionRouteLayer.sortableChildren = true;
+
+  const cityZoneLayer = new Container();
+  cityZoneLayer.eventMode = 'passive';
+  cityZoneLayer.interactiveChildren = true;
+  cityZoneLayer.sortableChildren = true;
+
+  const adjacencyLayer = new Container();
+  adjacencyLayer.eventMode = 'none';
+  adjacencyLayer.interactiveChildren = false;
+  adjacencyLayer.sortableChildren = true;
+
+  const tableOverlayLayer = new Container();
+  tableOverlayLayer.eventMode = 'none';
+  tableOverlayLayer.interactiveChildren = false;
+  tableOverlayLayer.sortableChildren = true;
 
   interfaceGroup.eventMode = 'passive';
   interfaceGroup.interactiveChildren = true;
   interfaceGroup.sortableChildren = true;
 
-  const handle = new Container();
-  handle.eventMode = 'passive';
-  handle.interactiveChildren = true;
-  handle.sortableChildren = true;
+  const handleLayer = new Container();
+  handleLayer.eventMode = 'passive';
+  handleLayer.interactiveChildren = true;
+  handleLayer.sortableChildren = true;
 
   return {
-    background,
-    adjacency,
-    route,
-    zone,
-    handle,
+    backgroundLayer,
+    regionLayer,
+    provinceZoneLayer,
+    connectionRouteLayer,
+    cityZoneLayer,
+    adjacencyLayer,
+    tableOverlayLayer,
+    handleLayer,
   };
 }
 
@@ -132,19 +150,25 @@ function mountEditorLayers(
   sharedLayers: Awaited<ReturnType<typeof createGameCanvas>>['layers'],
   editorLayers: EditorLayerSet,
 ): void {
-  sharedLayers.backgroundLayer.addChild(editorLayers.background);
-  sharedLayers.adjacencyLayer.addChild(editorLayers.adjacency);
-  sharedLayers.connectionRouteLayer.addChild(editorLayers.route);
-  sharedLayers.cityZoneLayer.addChild(editorLayers.zone);
-  sharedLayers.interfaceGroup.addChild(editorLayers.handle);
+  sharedLayers.backgroundLayer.addChild(editorLayers.backgroundLayer);
+  sharedLayers.regionLayer.addChild(editorLayers.regionLayer);
+  sharedLayers.provinceZoneLayer.addChild(editorLayers.provinceZoneLayer);
+  sharedLayers.connectionRouteLayer.addChild(editorLayers.connectionRouteLayer);
+  sharedLayers.cityZoneLayer.addChild(editorLayers.cityZoneLayer);
+  sharedLayers.adjacencyLayer.addChild(editorLayers.adjacencyLayer);
+  sharedLayers.tableOverlayLayer.addChild(editorLayers.tableOverlayLayer);
+  sharedLayers.interfaceGroup.addChild(editorLayers.handleLayer);
 }
 
 function detachEditorLayers(layers: EditorLayerSet): void {
-  layers.background.removeFromParent();
-  layers.adjacency.removeFromParent();
-  layers.route.removeFromParent();
-  layers.zone.removeFromParent();
-  layers.handle.removeFromParent();
+  layers.backgroundLayer.removeFromParent();
+  layers.regionLayer.removeFromParent();
+  layers.provinceZoneLayer.removeFromParent();
+  layers.connectionRouteLayer.removeFromParent();
+  layers.cityZoneLayer.removeFromParent();
+  layers.adjacencyLayer.removeFromParent();
+  layers.tableOverlayLayer.removeFromParent();
+  layers.handleLayer.removeFromParent();
 }
 
 function removeCanvasFromDom(canvas: HTMLCanvasElement): void {

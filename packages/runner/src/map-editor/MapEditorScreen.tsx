@@ -126,31 +126,31 @@ export function MapEditorScreen({ gameId, onBack }: MapEditorScreenProps): React
         }
 
         const adjacencyRenderer = createEditorAdjacencyRenderer(
-          canvas.layers.adjacency,
+          canvas.layers.adjacencyLayer,
           screenState.editor.store,
           screenState.editor.visualConfigProvider,
         );
         const zoneRenderer = createEditorZoneRenderer(
-          canvas.layers.zone,
+          canvas.layers.cityZoneLayer,
           screenState.editor.store,
           screenState.editor.visualConfigProvider,
           { dragSurface: canvas.viewport },
         );
         const routeRenderer = createEditorRouteRenderer(
-          canvas.layers.route,
+          canvas.layers.connectionRouteLayer,
           screenState.editor.store,
           screenState.editor.gameDef,
           screenState.editor.visualConfigProvider,
         );
         const handleRenderer = createEditorHandleRenderer(
-          canvas.layers.handle,
+          canvas.layers.handleLayer,
           screenState.editor.store,
           screenState.editor.gameDef,
           screenState.editor.visualConfigProvider,
           { dragSurface: canvas.viewport },
         );
         const vertexHandleRenderer = createVertexHandleRenderer(
-          canvas.layers.handle,
+          canvas.layers.handleLayer,
           screenState.editor.store,
           { dragSurface: canvas.viewport },
         );

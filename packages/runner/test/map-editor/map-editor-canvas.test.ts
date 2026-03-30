@@ -50,24 +50,30 @@ describe('createEditorCanvas', () => {
       layers: fixture.sharedLayers,
     }));
     expect(testDoubles.createEditorGridRenderer).toHaveBeenCalledWith(
-      editorCanvas.layers.background,
+      editorCanvas.layers.backgroundLayer,
       fixture.viewportResult.viewport,
       fixture.store,
     );
 
-    expect(editorCanvas.layers.background.parent).toBe(fixture.sharedLayers.backgroundLayer);
-    expect(editorCanvas.layers.adjacency.parent).toBe(fixture.sharedLayers.adjacencyLayer);
-    expect(editorCanvas.layers.route.parent).toBe(fixture.sharedLayers.connectionRouteLayer);
-    expect(editorCanvas.layers.zone.parent).toBe(fixture.sharedLayers.cityZoneLayer);
-    expect(editorCanvas.layers.handle.parent).toBe(fixture.sharedLayers.interfaceGroup);
+    expect(editorCanvas.layers.backgroundLayer.parent).toBe(fixture.sharedLayers.backgroundLayer);
+    expect(editorCanvas.layers.regionLayer.parent).toBe(fixture.sharedLayers.regionLayer);
+    expect(editorCanvas.layers.provinceZoneLayer.parent).toBe(fixture.sharedLayers.provinceZoneLayer);
+    expect(editorCanvas.layers.connectionRouteLayer.parent).toBe(fixture.sharedLayers.connectionRouteLayer);
+    expect(editorCanvas.layers.cityZoneLayer.parent).toBe(fixture.sharedLayers.cityZoneLayer);
+    expect(editorCanvas.layers.adjacencyLayer.parent).toBe(fixture.sharedLayers.adjacencyLayer);
+    expect(editorCanvas.layers.tableOverlayLayer.parent).toBe(fixture.sharedLayers.tableOverlayLayer);
+    expect(editorCanvas.layers.handleLayer.parent).toBe(fixture.sharedLayers.interfaceGroup);
 
-    expect(fixture.sharedLayers.backgroundLayer.children.at(-1)).toBe(editorCanvas.layers.background);
-    expect(fixture.sharedLayers.adjacencyLayer.children.at(-1)).toBe(editorCanvas.layers.adjacency);
-    expect(fixture.sharedLayers.connectionRouteLayer.children.at(-1)).toBe(editorCanvas.layers.route);
-    expect(fixture.sharedLayers.cityZoneLayer.children.at(-1)).toBe(editorCanvas.layers.zone);
-    expect(fixture.sharedLayers.interfaceGroup.children.at(-1)).toBe(editorCanvas.layers.handle);
-    expect(editorCanvas.layers.adjacency.eventMode).toBe('none');
-    expect(editorCanvas.layers.adjacency.interactiveChildren).toBe(false);
+    expect(fixture.sharedLayers.backgroundLayer.children.at(-1)).toBe(editorCanvas.layers.backgroundLayer);
+    expect(fixture.sharedLayers.regionLayer.children.at(-1)).toBe(editorCanvas.layers.regionLayer);
+    expect(fixture.sharedLayers.provinceZoneLayer.children.at(-1)).toBe(editorCanvas.layers.provinceZoneLayer);
+    expect(fixture.sharedLayers.connectionRouteLayer.children.at(-1)).toBe(editorCanvas.layers.connectionRouteLayer);
+    expect(fixture.sharedLayers.cityZoneLayer.children.at(-1)).toBe(editorCanvas.layers.cityZoneLayer);
+    expect(fixture.sharedLayers.adjacencyLayer.children.at(-1)).toBe(editorCanvas.layers.adjacencyLayer);
+    expect(fixture.sharedLayers.tableOverlayLayer.children.at(-1)).toBe(editorCanvas.layers.tableOverlayLayer);
+    expect(fixture.sharedLayers.interfaceGroup.children.at(-1)).toBe(editorCanvas.layers.handleLayer);
+    expect(editorCanvas.layers.adjacencyLayer.eventMode).toBe('none');
+    expect(editorCanvas.layers.adjacencyLayer.interactiveChildren).toBe(false);
   });
 
   it('recomputes viewport bounds when zone positions change and ignores non-zone entries', async () => {
@@ -121,11 +127,14 @@ describe('createEditorCanvas', () => {
     editorCanvas.destroy();
 
     expect(fixture.container.contains(fixture.canvas)).toBe(false);
-    expect(editorCanvas.layers.background.parent).toBeNull();
-    expect(editorCanvas.layers.adjacency.parent).toBeNull();
-    expect(editorCanvas.layers.route.parent).toBeNull();
-    expect(editorCanvas.layers.zone.parent).toBeNull();
-    expect(editorCanvas.layers.handle.parent).toBeNull();
+    expect(editorCanvas.layers.backgroundLayer.parent).toBeNull();
+    expect(editorCanvas.layers.regionLayer.parent).toBeNull();
+    expect(editorCanvas.layers.provinceZoneLayer.parent).toBeNull();
+    expect(editorCanvas.layers.connectionRouteLayer.parent).toBeNull();
+    expect(editorCanvas.layers.cityZoneLayer.parent).toBeNull();
+    expect(editorCanvas.layers.adjacencyLayer.parent).toBeNull();
+    expect(editorCanvas.layers.tableOverlayLayer.parent).toBeNull();
+    expect(editorCanvas.layers.handleLayer.parent).toBeNull();
     expect(fixture.viewportResult.destroy).toHaveBeenCalledTimes(1);
     expect(fixture.gameCanvas.destroy).toHaveBeenCalledTimes(1);
 

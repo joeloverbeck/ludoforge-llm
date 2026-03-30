@@ -35,11 +35,14 @@ export interface ZoneEdgeAnchorDragPreview {
 export type EditorDragPreview = ZoneEdgeAnchorDragPreview | null;
 
 export interface EditorLayerSet {
-  readonly background: Container;
-  readonly adjacency: Container;
-  readonly route: Container;
-  readonly zone: Container;
-  readonly handle: Container;
+  readonly backgroundLayer: Container;
+  readonly regionLayer: Container;
+  readonly provinceZoneLayer: Container;
+  readonly connectionRouteLayer: Container;
+  readonly cityZoneLayer: Container;
+  readonly adjacencyLayer: Container;
+  readonly tableOverlayLayer: Container;
+  readonly handleLayer: Container;
 }
 
 export interface EditorCanvas {

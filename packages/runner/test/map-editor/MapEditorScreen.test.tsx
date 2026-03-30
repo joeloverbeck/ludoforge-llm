@@ -320,6 +320,16 @@ describe('MapEditorScreen', () => {
       expect(screen.getByTestId('map-editor-canvas-container')).toBeTruthy();
     });
 
+    await waitFor(() => {
+      expect(testDoubles.createEditorCanvas).toHaveBeenCalledWith(
+        expect.any(HTMLDivElement),
+        store,
+        expect.objectContaining({
+          onPointerWorldPositionChange: expect.any(Function),
+        }),
+      );
+    });
+
     const canvasOptions = testDoubles.createEditorCanvas.mock.calls[0]?.[2] as {
       onPointerWorldPositionChange?: (position: { x: number; y: number } | null) => void;
     };

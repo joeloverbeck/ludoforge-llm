@@ -66,7 +66,7 @@ describe('compiled effect verification integration', () => {
     assert.equal(initial.globalVars.score, 1);
 
     const trace = runGame(def, 17, [firstLegalAgent, firstLegalAgent], 3, 2, {
-      verifyCompiledEffects: true,
+      kernel: { verifyCompiledEffects: true },
     });
     assert.equal(trace.moves.length, 3);
     const finalScore = trace.finalState.globalVars.score;
@@ -78,7 +78,7 @@ describe('compiled effect verification integration', () => {
     const texasDef = compileTexasProductionSpec().compiled.gameDef as ValidatedGameDef;
 
     const trace = runGame(texasDef, 41, [firstLegalAgent, firstLegalAgent], 6, 2, {
-      verifyCompiledEffects: true,
+      kernel: { verifyCompiledEffects: true },
     });
 
     assert.ok(trace.moves.length > 0);

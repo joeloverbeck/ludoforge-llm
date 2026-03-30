@@ -14,7 +14,7 @@ describe('DefaultTokenRenderStyleProvider', () => {
     expect(provider.getTokenTypeVisual('vc-guerrillas')).toEqual({
       shape: 'circle',
       color: null,
-      size: 28,
+      size: 38,
       symbol: null,
       backSymbol: null,
     });
@@ -118,7 +118,7 @@ describe('VisualConfigTokenRenderStyleProvider', () => {
     expect(provider.getTokenTypeVisual('unknown')).toEqual({
       color: null,
       shape: 'circle',
-      size: 28,
+      size: 38,
       symbol: null,
       backSymbol: null,
     });

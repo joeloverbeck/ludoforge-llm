@@ -7,6 +7,7 @@ import {
   assertValidatedGameDef,
   asActionId,
   asPhaseId,
+  asPlayerId,
   asZoneId,
   computeFullHash,
   createGameDefRuntime,
@@ -22,6 +23,7 @@ import {
   type ValidatedGameDef,
 } from '../../../src/kernel/index.js';
 import { runGame } from '../../../src/sim/index.js';
+import { extractDecisionPointSnapshot } from '../../../src/sim/snapshot.js';
 import { createTemplateChooseOneAction } from '../../helpers/agent-template-fixtures.js';
 import { trustedMove } from '../../helpers/classified-move-fixtures.js';
 import { eff } from '../../helpers/effect-tag-helper.js';
@@ -149,6 +151,100 @@ const createUnsatisfiableTemplateDef = (): ValidatedGameDef => {
     terminal: { conditions: [] },
   } as const);
 };
+
+const createSnapshotDef = (): ValidatedGameDef =>
+  assertValidatedGameDef({
+    metadata: { id: 'sim-snapshot-test', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+    constants: {},
+    seats: [{ id: 'A' }, { id: 'B' }],
+    globalVars: [
+      { name: 'score', type: 'int', init: 7, min: 0, max: 99 },
+      { name: 'swing', type: 'int', init: 3, min: -99, max: 99 },
+    ],
+    perPlayerVars: [{ name: 'influence', type: 'int', init: 4, min: 0, max: 99 }],
+    zoneVars: [{ name: 'pressure', type: 'int', init: 2, min: 0, max: 99 }],
+    zones: [
+      { id: asZoneId('board-a:none'), zoneKind: 'board', owner: 'none', visibility: 'public', ordering: 'set' },
+      { id: asZoneId('board-b:none'), zoneKind: 'board', owner: 'none', visibility: 'public', ordering: 'set' },
+      { id: asZoneId('reserve:none'), zoneKind: 'aux', owner: 'none', visibility: 'hidden', ordering: 'stack' },
+    ],
+    tokenTypes: [{ id: 'piece', seat: 'A', props: { faction: 'string' } }],
+    setup: [
+      eff({ createToken: { type: 'piece', zone: asZoneId('board-a:none'), props: { faction: 'A' } } }),
+      eff({ createToken: { type: 'piece', zone: asZoneId('board-a:none'), props: { faction: 'A' } } }),
+      eff({ createToken: { type: 'piece', zone: asZoneId('board-a:none'), props: { faction: 'B' } } }),
+      eff({ createToken: { type: 'piece', zone: asZoneId('board-b:none'), props: { faction: 'A' } } }),
+      eff({ createToken: { type: 'piece', zone: asZoneId('board-b:none'), props: { faction: 'B' } } }),
+      eff({ createToken: { type: 'piece', zone: asZoneId('reserve:none'), props: { faction: 'A' } } }),
+    ],
+    turnStructure: { phases: [{ id: asPhaseId('main') }] },
+    actions: [
+      {
+        id: asActionId('step'),
+actor: 'active',
+executor: 'actor' as const,
+phase: [asPhaseId('main')],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [eff({ addVar: { scope: 'global' as const, var: 'score', delta: 1 } })],
+        limits: [],
+      },
+    ],
+    triggers: [],
+    terminal: {
+      conditions: [],
+      margins: [
+        {
+          seat: 'A',
+          value: {
+            _t: 6 as const,
+            op: '+',
+            left: { _t: 2 as const, ref: 'gvar', var: 'score' },
+            right: { _t: 2 as const, ref: 'gvar', var: 'swing' },
+          },
+        },
+        {
+          seat: 'B',
+          value: {
+            _t: 6 as const,
+            op: '-',
+            left: { _t: 2 as const, ref: 'gvar', var: 'score' },
+            right: 2,
+          },
+        },
+      ],
+    },
+    victoryStandings: {
+      seatGroupConfig: {
+        coinSeats: ['A'],
+        insurgentSeats: ['B'],
+        soloSeat: 'B',
+        seatProp: 'faction',
+      },
+      markerConfigs: {
+        support: {
+          activeState: 'active',
+          passiveState: 'passive',
+        },
+      },
+      markerName: 'support',
+      defaultMarkerState: 'neutral',
+      entries: [
+        {
+          seat: 'A',
+          threshold: 0,
+          formula: { type: 'controlledPopulationPlusGlobalVar', controlFn: 'coin', varName: 'score' },
+        },
+        {
+          seat: 'B',
+          threshold: 0,
+          formula: { type: 'controlledPopulationPlusGlobalVar', controlFn: 'coin', varName: 'score' },
+        },
+      ],
+      tieBreakOrder: ['A', 'B'],
+    },
+  } as const);
 
 describe('runGame', () => {
   it('single-turn terminal game yields one move log and terminal stop reason', () => {
@@ -290,6 +386,67 @@ describe('runGame', () => {
     }
     classifiedMoves = observedLegalMoves;
     assert.equal(trace.moves[0]?.legalMoveCount, classifiedMoves.length);
+  });
+
+  it('captures a standard snapshot from the same pre-decision state the agent receives', () => {
+    const def = createSnapshotDef();
+    const runtime = createGameDefRuntime(def);
+    const observedSnapshots: unknown[] = [];
+
+    const snapshotAgent: Agent = {
+      chooseMove(input) {
+        observedSnapshots.push(extractDecisionPointSnapshot(def, input.state, runtime, 'standard'));
+        const move = input.legalMoves[0]?.move;
+        if (move === undefined) {
+          throw new Error('snapshotAgent requires at least one legal move');
+        }
+        return { move: trustedMove(move, input.state.stateHash), rng: input.rng };
+      },
+    };
+
+    const trace = runGame(def, 17, [snapshotAgent, snapshotAgent], 1, 2, { snapshotDepth: 'standard' }, runtime);
+    const snapshot = trace.moves[0]?.snapshot;
+
+    assert.deepEqual(snapshot, observedSnapshots[0]);
+    assert.equal(snapshot?.turnCount, 0);
+    assert.equal(snapshot?.phaseId, asPhaseId('main'));
+    assert.equal(snapshot?.activePlayer, asPlayerId(0));
+    assert.deepEqual(snapshot?.seatStandings, [
+      { seat: 'A', margin: 10, perPlayerVars: { influence: 4 }, tokenCountOnBoard: 3 },
+      { seat: 'B', margin: 5, perPlayerVars: { influence: 4 }, tokenCountOnBoard: 2 },
+    ]);
+    assert.ok(snapshot !== undefined && 'globalVars' in snapshot);
+    assert.deepEqual(snapshot.globalVars, { score: 7, swing: 3 });
+  });
+
+  it('omits snapshots when snapshotDepth is omitted or none', () => {
+    const def = createSnapshotDef();
+
+    const omittedTrace = runGame(def, 17, [firstLegalAgent, firstLegalAgent], 1);
+    const noneTrace = runGame(def, 17, [firstLegalAgent, firstLegalAgent], 1, 2, { snapshotDepth: 'none' });
+
+    assert.equal(omittedTrace.moves[0]?.snapshot, undefined);
+    assert.equal(noneTrace.moves[0]?.snapshot, undefined);
+  });
+
+  it('attaches verbose zone summaries when requested', () => {
+    const def = createSnapshotDef();
+    const trace = runGame(def, 17, [firstLegalAgent, firstLegalAgent], 1, 2, { snapshotDepth: 'verbose' });
+    const snapshot = trace.moves[0]?.snapshot;
+
+    assert.ok(snapshot !== undefined && 'zoneSummaries' in snapshot);
+    assert.deepEqual(snapshot.zoneSummaries, [
+      {
+        zoneId: asZoneId('board-a:none'),
+        zoneVars: { pressure: 2 },
+        tokenCountBySeat: { A: 2, B: 1 },
+      },
+      {
+        zoneId: asZoneId('board-b:none'),
+        zoneVars: { pressure: 2 },
+        tokenCountBySeat: { A: 1, B: 1 },
+      },
+    ]);
   });
 
   it('matches a validated replay when simulator uses trusted execution', () => {

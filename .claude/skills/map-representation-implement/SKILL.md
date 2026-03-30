@@ -9,7 +9,7 @@ Improve the FITL game map rendering based on the latest plan's recommendations.
 
 ## Checklist
 
-> **Plan mode note**: If plan mode is active when this skill is invoked, steps 1-3 serve as the exploration phase. Write your execution plan to the plan file, exit plan mode, then continue with steps 4-10.
+> **Plan mode note**: If plan mode is active when this skill is invoked, steps 1-3 serve as the exploration phase. During exploration, also identify the specific file paths from the plan's implementation steps and read them via Explore agents to front-load context for the plan file. Write your execution plan to the plan file, exit plan mode, then continue with steps 4-13.
 
 1. Read `reports/map-representation-evaluation.md` — focus on the latest EVALUATION #N for context on what needs improving.
 2. Read `reports/map-representation-plan.md` — the implementation plan to execute. This is the primary guide for this session.
@@ -18,14 +18,19 @@ Improve the FITL game map rendering based on the latest plan's recommendations.
    - **Foundation #7** (Immutability): State transitions return new objects, no mutation
    - **Foundation #9** (No Backwards Compatibility): No shims or deprecated fallbacks
    - **Foundation #10** (Architectural Completeness): Complete solutions, not patches
-4. Collect the unique file paths (source files and config files) from all Implementation Steps in the plan. Read them in parallel (batch) to front-load context before starting edits. If the plan is data-only (e.g., visual-config.yaml vertex authoring), read the target data file(s) instead.
+4. Collect the unique file paths (source files, config files, and test files with golden assertions) from all Implementation Steps in the plan. Read them in parallel (batch) to front-load context before starting edits. If the plan is data-only (e.g., visual-config.yaml vertex authoring), read the target data file(s) instead. If the plan doesn't list test files (common for constants-only iterations), search for the old literal values being changed (e.g., grep for `28` when changing `DEFAULT_TOKEN_SIZE = 28`) across `packages/runner/test/` to pre-identify test files that may need updating.
 5. Follow the plan's implementation steps **in order**, respecting noted dependencies.
 6. If vertices were authored or modified, verify shared borders: for each adjacent pair, confirm that converting relative vertices back to absolute world coordinates (`absoluteX = relativeX + centerX`) produces matching points on both sides of the shared edge.
 7. If a step is ambiguous or you discover the plan's assumptions about the code are wrong, apply the **1-3-1 rule** (1 problem, 3 options, 1 recommendation) before proceeding — per Foundation #10.
 8. If the plan includes map editor changes, implement those too.
-9. Run verification: `pnpm turbo typecheck` and `pnpm -F @ludoforge/runner test`.
-10. Visual verification: Run `pnpm -F @ludoforge/runner dev` and inspect the map in the browser. Verify: all targeted zones render with the new shapes, terrain colors apply correctly, tokens render inside polygon bounds, adjacency lines connect to polygon edges, and the map editor shows the same changes. Report any visual anomalies to the user before concluding.
-11. Do NOT update either report file — that happens in the next evaluate invocation.
+9. **Pre-flight test impact analysis**: For each changed constant or default value, grep `packages/runner/test/` for the old literal value. Classify each hit as:
+   - **Golden assertion** (derives from production default or real FITL YAML) → must update to match the new value.
+   - **Independent fixture** (arbitrary test data that happens to use the same number) → leave unchanged.
+   Key judgment: if a test loads the real FITL YAML (`loadVisualConfig('data/games/fire-in-the-lake/visual-config.yaml')`) or asserts against a resolved default with no explicit override, it's a golden assertion. If a test constructs its own fixture data (e.g., `{ size: 28 }` in a mock or `{ laneGap: 24 }` in a hand-built config), it's an independent fixture.
+10. Update golden test assertions based on the impact analysis from Step 9. For schema/rendering changes, also check: `visual-config-files.test.ts` (attribute rules, colors, override counts), `layers.test.ts` (z-order indices if layer order changed), and `connection-route-renderer.test.ts` (route geometry expectations if route constants changed).
+11. Run verification: `pnpm turbo typecheck` and `pnpm -F @ludoforge/runner test`.
+12. Visual verification: Run `pnpm -F @ludoforge/runner dev` and inspect the map in the browser. Verify: all targeted zones render with the new shapes, terrain colors apply correctly, tokens render inside polygon bounds, adjacency lines connect to polygon edges, and the map editor shows the same changes. Report any visual anomalies to the user before concluding.
+13. Do NOT update either report file — that happens in the next evaluate invocation.
 
 ## Key Files
 
@@ -33,6 +38,7 @@ Improve the FITL game map rendering based on the latest plan's recommendations.
 
 | File | What It Controls |
 |------|-----------------|
+| `packages/runner/src/canvas/layers.ts` | Layer z-order hierarchy — controls rendering order of background, regions, adjacency, zones, routes, and overlays |
 | `packages/runner/src/canvas/renderers/zone-renderer.ts` | Game canvas zone rendering — shape, fill, stroke, labels, badges, hidden stack visual |
 | `packages/runner/src/canvas/renderers/shape-utils.ts` | Shape drawing primitives — `drawZoneShape()` dispatches shapes, `getEdgePointAtAngle()` computes edge intersections |
 | `packages/runner/src/canvas/renderers/adjacency-renderer.ts` | Adjacency line rendering — dashed segments between zone edges, highlighting |
@@ -60,10 +66,15 @@ Improve the FITL game map rendering based on the latest plan's recommendations.
 
 | File | What It Covers |
 |------|---------------|
-| `packages/runner/test/canvas/renderers/` | Zone renderer, adjacency renderer, connection route renderer tests |
-| `packages/runner/test/config/` | Visual config loading and provider tests |
-| `packages/runner/test/config/visual-config-files.test.ts` | **Golden assertions** on FITL visual-config.yaml structure and values — must be updated whenever YAML attribute rules, colors, or override counts change |
-| `packages/runner/test/canvas/` | Canvas layer tests (renderers, interactions, viewport) |
+| `packages/runner/test/canvas/layers.test.ts` | Layer z-order golden assertions — `boardGroup.children` indices must be updated when layer order changes |
+| `packages/runner/test/canvas/renderers/zone-renderer.test.ts` | Zone container children by index, label stroke width/fill, shape drawing assertions |
+| `packages/runner/test/canvas/renderers/token-renderer.test.ts` | Token positioning, hitArea radius, lane centering offsets. **Warning**: `createColorProvider()` mock has hardcoded `size: 28` fallback (line ~348) that shadows `DEFAULT_TOKEN_SIZE` — must be updated when default changes |
+| `packages/runner/test/canvas/renderers/token-render-style-provider.test.ts` | Default token visual assertions (`size`, `shape`) — tests both `DefaultTokenRenderStyleProvider` and `VisualConfigTokenRenderStyleProvider` |
+| `packages/runner/test/canvas/renderers/connection-route-renderer.test.ts` | Route geometry expectations — midpoint coordinates, label rotation, stroke width |
+| `packages/runner/test/canvas/text/bitmap-font-registry.test.ts` | Master bitmap font size and stroke width assertions |
+| `packages/runner/test/config/visual-config-files.test.ts` | **Golden assertions** on FITL visual-config.yaml structure and values — must be updated whenever YAML attribute rules, colors, lane spacing, or override counts change |
+| `packages/runner/test/config/visual-config-provider.test.ts` | Default token size resolution, real FITL lane layout assertions (loads actual YAML), zone token layout resolution |
+| `packages/runner/test/presentation/presentation-scene.test.ts` | Token grouping y-offsets (affected by token size changes), label line height |
 
 ## Architecture Context
 
@@ -77,6 +88,10 @@ To add a new shape type (e.g., `polygon` with arbitrary vertices):
 3. Update `visual-config.yaml` zone entries to use the new shape
 4. Ensure the adjacency renderer can compute edge intersection points for the new shape
 
+### Vertex Smoothing
+
+`smoothPolygonVertices()` in `shape-utils.ts` applies Chaikin's corner-cutting algorithm (2 iterations by default) to all polygon vertices. It is called in both `drawZoneShape()` (for rendering) and `getEdgePointAtAngle()` (for adjacency line edge intersection). This ensures the drawn shape and the computed edge attachment points always match. The function is a pure transform: `readonly number[] → number[]`. It preserves shared-edge alignment between adjacent polygons because Chaikin's is a local operation — each output vertex depends only on two adjacent input vertices, so the same edge in two polygons produces identical smoothed points independently.
+
 ### Adjacency Edge Computation
 
 Adjacency lines connect from edge point to edge point, not center to center. The edge point calculation is shape-specific — it finds the intersection of the line from center-to-center with the shape boundary. When adding a new shape, you must also update the edge intersection logic or the adjacency lines will connect to the wrong points.
@@ -87,7 +102,7 @@ Routes (roads, rivers) use Bezier curves with configurable geometry. Route geome
 
 ### Game Canvas vs Map Editor
 
-Both flows reuse `drawZoneShape()` from `shape-utils.ts`. The game canvas adds labels, badges, selection highlighting, and token rendering on top. The map editor adds drag handles and selection highlighting. A change to `drawZoneShape()` affects both flows — verify both after changes.
+Both flows reuse `drawZoneShape()` from `shape-utils.ts`. The game canvas adds labels, badges, selection highlighting, and token rendering on top. The map editor adds drag handles and selection highlighting. A change to `drawZoneShape()` affects both flows — verify both after changes. Label font size constants are NOT shared — `zone-renderer.ts` and `map-editor-zone-renderer.ts` each have their own. Check both when the plan modifies label sizing. The bitmap font master size in `bitmap-font-registry.ts` IS shared by both flows via `installLabelBitmapFonts()` — if runtime font sizes increase, the master size must be at least as large as the largest runtime size to avoid blurry upscaling.
 
 ### Interaction vs. Config Stroke Resolution
 
@@ -146,6 +161,9 @@ When the plan requires new config fields (e.g., polygon vertex data, terrain tex
 - **Visual config backward compatibility**: Other games (Texas Hold'em) also use visual-config. New schema fields must be optional so other games don't break. Test with `pnpm turbo typecheck` to catch schema issues.
 - **PixiJS Graphics API**: PixiJS 8 uses `Graphics.poly(points)` for arbitrary polygons where `points` is a flat array `[x1,y1, x2,y2, ...]`. Ensure the polygon is closed (first point = last point) or use `closePath()`.
 - **TypeScript exactOptionalPropertyTypes**: This project enables `exactOptionalPropertyTypes`. When adding optional fields that receive `foo ?? undefined`, the type must include `| undefined` explicitly. E.g., `readonly vertices?: readonly number[] | undefined`, not just `readonly vertices?: readonly number[]`.
+- **Vertex transforms affect edge intersection tests**: If smoothing or other vertex transformations are applied to `drawZoneShape()`, they must also be applied in `getEdgePointAtAngle()`, AND existing polygon edge intersection tests will need updated expectations since the shape boundary changes. The `smoothPolygonVertices()` function rounds corners inward, so edge intersection points move closer to center.
+- **Route overlap margin affects geometry tests**: Changing `ROUTE_OVERLAP_MARGIN` in `connection-route-renderer.ts` extends route endpoints, which shifts the sampled midpoint position and tangent direction. This breaks assertions on midpoint coordinates and label rotation in `connection-route-renderer.test.ts`. The rotation normalization can produce values near 2π (equivalent to 0) — test assertions must handle modular equivalence.
+- **Test mock default token size**: `token-renderer.test.ts` has a `createColorProvider()` mock with a hardcoded `size: 28` fallback (not imported from `DEFAULT_TOKEN_SIZE`). When changing the default token size, this mock must also be updated or hitArea/positioning assertions will fail with non-obvious errors — the mock still returns the old size while the test expects dimensions based on the new default.
 - **Zone renderer child ordering**: `zone-renderer.test.ts` accesses zone container children by numeric index (`children[0]` = base, `children[1]` = hiddenStack, etc.). Adding or reordering children in `createZoneVisualElements()` / `addChild()` shifts all subsequent indices. After modifying the child list, update indices in the test using Python or manual edits — do **not** use sequential sed replacements (e.g., `[2]→[3]` then `[3]→[4]`) as this causes double-shifting. Process from highest index to lowest, or use a script that replaces all in one pass. Also update any `toHaveLength(N)` assertions on `container.children`.
 
 ## Scope Constraints

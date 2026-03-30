@@ -119,6 +119,74 @@ phase: ['main'],
   },
 } as const);
 
+function buildGameDefWithAgentExpr(featureId: string, expr: Record<string, unknown>) {
+  return {
+    ...minimalGameDef,
+    agents: {
+      schemaVersion: 2,
+      catalogFingerprint: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+      surfaceVisibility: {
+        globalVars: {},
+        perPlayerVars: {},
+        derivedMetrics: {},
+        victory: {
+          currentMargin: {
+            current: 'hidden',
+            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+          },
+          currentRank: {
+            current: 'hidden',
+            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+          },
+        },
+      },
+      parameterDefs: {},
+      candidateParamDefs: {},
+      library: {
+        stateFeatures: {},
+        candidateFeatures: {
+          [featureId]: {
+            type: 'number',
+            costClass: 'state',
+            expr,
+            dependencies: {
+              parameters: [],
+              stateFeatures: [],
+              candidateFeatures: [],
+              aggregates: [],
+            },
+          },
+        },
+        candidateAggregates: {},
+        pruningRules: {},
+        scoreTerms: {},
+        completionScoreTerms: {},
+        tieBreakers: {},
+      },
+      profiles: {
+        baseline: {
+          fingerprint: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
+          params: {},
+          use: {
+            pruningRules: [],
+            scoreTerms: [],
+            completionScoreTerms: [],
+            tieBreakers: [],
+          },
+          plan: {
+            stateFeatures: [],
+            candidateFeatures: [featureId],
+            candidateAggregates: [],
+          },
+        },
+      },
+      bindingsBySeat: {
+        us: 'baseline',
+      },
+    },
+  };
+}
+
 const validGameState = {
   globalVars: {},
   perPlayerVars: {},
@@ -541,6 +609,94 @@ describe('top-level runtime schemas', () => {
     });
 
     assert.equal(result.success, true);
+  });
+
+  it('accepts compiled globalTokenAgg expressions in agent policy catalogs', () => {
+    const result = GameDefSchema.safeParse(buildGameDefWithAgentExpr('globalTokenStrength', {
+      kind: 'globalTokenAgg',
+      tokenFilter: {
+        type: 'guerrilla',
+        props: {
+          seat: { eq: 'self' },
+          hidden: { eq: false },
+        },
+      },
+      aggOp: 'sum',
+      prop: 'strength',
+      zoneFilter: {
+        category: 'province',
+        attribute: {
+          prop: 'population',
+          op: 'gt',
+          value: 0,
+        },
+      },
+      zoneScope: 'board',
+    }));
+
+    assert.equal(result.success, true);
+  });
+
+  it('accepts compiled globalZoneAgg and adjacentTokenAgg expressions in agent policy catalogs', () => {
+    const globalZoneAggResult = GameDefSchema.safeParse(buildGameDefWithAgentExpr('globalOpposition', {
+      kind: 'globalZoneAgg',
+      source: 'variable',
+      field: 'opposition',
+      aggOp: 'sum',
+      zoneFilter: {
+        variable: {
+          prop: 'support',
+          op: 'gte',
+          value: 1,
+        },
+      },
+      zoneScope: 'all',
+    }));
+
+    const adjacentTokenAggResult = GameDefSchema.safeParse(buildGameDefWithAgentExpr('threatNearSaigon', {
+      kind: 'adjacentTokenAgg',
+      anchorZone: 'saigon:none',
+      tokenFilter: {
+        type: 'troop',
+      },
+      aggOp: 'count',
+    }));
+
+    assert.equal(globalZoneAggResult.success, true);
+    assert.equal(adjacentTokenAggResult.success, true);
+  });
+
+  it('rejects compiled aggregation expressions with non-canonical scope, source, or filter operators', () => {
+    const invalidScope = GameDefSchema.safeParse(buildGameDefWithAgentExpr('invalidScope', {
+      kind: 'globalTokenAgg',
+      aggOp: 'count',
+      zoneScope: 'reserve',
+    }));
+    const invalidSource = GameDefSchema.safeParse(buildGameDefWithAgentExpr('invalidSource', {
+      kind: 'globalZoneAgg',
+      source: 'runtime',
+      field: 'opposition',
+      aggOp: 'sum',
+      zoneScope: 'board',
+    }));
+    const invalidFilterOp = GameDefSchema.safeParse(buildGameDefWithAgentExpr('invalidFilterOp', {
+      kind: 'globalZoneAgg',
+      source: 'attribute',
+      field: 'population',
+      aggOp: 'max',
+      zoneFilter: {
+        attribute: {
+          prop: 'population',
+          op: 'between',
+          value: 3,
+        },
+      },
+      zoneScope: 'board',
+    }));
+
+    assert.equal(invalidScope.success, false);
+    assert.equal(invalidSource.success, false);
+    assert.equal(invalidFilterOp.success, false);
   });
 
   it('rejects legacy compiled agent expr string-ref shapes', () => {

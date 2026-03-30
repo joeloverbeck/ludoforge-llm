@@ -496,7 +496,7 @@ describe('visual-config.yaml files', () => {
     });
 
     const attributeRules = parsed.zones?.attributeRules ?? [];
-    expect(attributeRules).toHaveLength(5);
+    expect(attributeRules).toHaveLength(8);
     expect(attributeRules).toEqual([
       {
         match: { category: ['province'], attributeContains: { terrainTags: 'highland' } },
@@ -509,6 +509,18 @@ describe('visual-config.yaml files', () => {
       {
         match: { category: ['province'], attributeContains: { terrainTags: 'lowland' } },
         style: { color: '#5db85d', strokeColor: '#2d7a2d' },
+      },
+      {
+        match: { category: ['province'], attributeContains: { country: 'northVietnam' } },
+        style: { color: '#8b4513', strokeColor: '#5a2d0a' },
+      },
+      {
+        match: { category: ['province'], attributeContains: { country: 'laos' } },
+        style: { color: '#2d5a3a', strokeColor: '#1a3d25' },
+      },
+      {
+        match: { category: ['province'], attributeContains: { country: 'cambodia' } },
+        style: { color: '#3a5a3a', strokeColor: '#254025' },
       },
       {
         match: { category: ['loc'], attributeContains: { terrainTags: 'highway' } },

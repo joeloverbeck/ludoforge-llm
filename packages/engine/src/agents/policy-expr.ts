@@ -12,11 +12,14 @@ import type {
 import type { GameSpecPolicyExpr } from '../cnl/game-spec-doc.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from '../cnl/compiler-diagnostic-codes.js';
 import type {
+  AgentPolicyZoneAggSource,
   AgentPolicyZoneScope,
   AgentPolicyZoneTokenAggOp,
 } from '../contracts/index.js';
 import {
+  AGENT_POLICY_ZONE_AGG_SOURCES,
   AGENT_POLICY_ZONE_TOKEN_AGG_OPS,
+  isAgentPolicyZoneAggSource,
   isAgentPolicyZoneFilterOp,
   isAgentPolicyZoneScope,
   isAgentPolicyZoneTokenAggOp,
@@ -75,6 +78,7 @@ type KnownOperator =
   | 'ref'
   | 'sub'
   | 'globalTokenAgg'
+  | 'globalZoneAgg'
   | 'zoneProp'
   | 'zoneTokenAgg';
 
@@ -105,6 +109,7 @@ const KNOWN_OPERATORS = new Set<KnownOperator>([
   'ref',
   'sub',
   'globalTokenAgg',
+  'globalZoneAgg',
   'zoneProp',
   'zoneTokenAgg',
 ]);
@@ -220,6 +225,8 @@ export function analyzePolicyExpr(
       return analyzeZonePropOperator(value, context, diagnostics, path);
     case 'globalTokenAgg':
       return analyzeGlobalTokenAggOperator(value, diagnostics, path);
+    case 'globalZoneAgg':
+      return analyzeGlobalZoneAggOperator(value, diagnostics, path);
     case 'zoneTokenAgg':
       return analyzeZoneTokenAggOperator(value, context, diagnostics, path);
   }
@@ -1012,8 +1019,8 @@ function analyzeGlobalTokenAggOperator(
   const aggOp = obj['aggOp'];
   const prop = obj['prop'];
   const tokenFilter = analyzeGlobalTokenAggTokenFilter(obj['tokenFilter'], diagnostics, `${path}.globalTokenAgg.tokenFilter`);
-  const zoneFilter = analyzeGlobalTokenAggZoneFilter(obj['zoneFilter'], diagnostics, `${path}.globalTokenAgg.zoneFilter`);
-  const zoneScope = analyzeGlobalTokenAggZoneScope(obj['zoneScope'], diagnostics, `${path}.globalTokenAgg.zoneScope`);
+  const zoneFilter = analyzePolicyAggregationZoneFilter('globalTokenAgg', obj['zoneFilter'], diagnostics, `${path}.globalTokenAgg.zoneFilter`);
+  const zoneScope = analyzePolicyAggregationZoneScope('globalTokenAgg', obj['zoneScope'], diagnostics, `${path}.globalTokenAgg.zoneScope`);
 
   if (typeof aggOp !== 'string' || !isAgentPolicyZoneTokenAggOp(aggOp)) {
     diagnostics.push({
@@ -1066,6 +1073,92 @@ function analyzeGlobalTokenAggOperator(
     dependencies: emptyDependencies(),
     isStaticallyZero: false,
   };
+}
+
+function analyzeGlobalZoneAggOperator(
+  expr: GameSpecPolicyExpr,
+  diagnostics: Diagnostic[],
+  path: string,
+): PolicyExprAnalysis | null {
+  if (typeof expr !== 'object' || expr === null || Array.isArray(expr)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path,
+      severity: 'error',
+      message: 'globalZoneAgg requires an object with field, aggOp, and optional source, zoneFilter, and zoneScope fields.',
+      suggestion: 'Use { globalZoneAgg: { field: "opposition", aggOp: "sum" } }.',
+    });
+    return null;
+  }
+
+  const obj = expr as Readonly<Record<string, unknown>>;
+  const source = analyzeGlobalZoneAggSource(obj['source'], diagnostics, `${path}.globalZoneAgg.source`);
+  const field = obj['field'];
+  const aggOp = obj['aggOp'];
+  const zoneFilter = analyzePolicyAggregationZoneFilter('globalZoneAgg', obj['zoneFilter'], diagnostics, `${path}.globalZoneAgg.zoneFilter`);
+  const zoneScope = analyzePolicyAggregationZoneScope('globalZoneAgg', obj['zoneScope'], diagnostics, `${path}.globalZoneAgg.zoneScope`);
+
+  if (typeof field !== 'string' || field.length === 0) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path: `${path}.globalZoneAgg.field`,
+      severity: 'error',
+      message: 'globalZoneAgg.field must be a non-empty string zone field name.',
+      suggestion: 'Set field to the zone variable or attribute name to aggregate.',
+    });
+    return null;
+  }
+
+  if (typeof aggOp !== 'string' || !isAgentPolicyZoneTokenAggOp(aggOp)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path: `${path}.globalZoneAgg.aggOp`,
+      severity: 'error',
+      message: `globalZoneAgg.aggOp must be one of: ${AGENT_POLICY_ZONE_TOKEN_AGG_OPS.join(', ')}.`,
+      suggestion: 'Use "sum", "count", "min", or "max".',
+    });
+    return null;
+  }
+
+  if (source === null || zoneFilter === null || zoneScope === null) {
+    return null;
+  }
+
+  return {
+    expr: {
+      kind: 'globalZoneAgg',
+      source,
+      field,
+      aggOp,
+      ...(zoneFilter === undefined ? {} : { zoneFilter }),
+      zoneScope,
+    },
+    valueType: 'number',
+    costClass: 'state',
+    dependencies: emptyDependencies(),
+    isStaticallyZero: false,
+  };
+}
+
+function analyzeGlobalZoneAggSource(
+  expr: unknown,
+  diagnostics: Diagnostic[],
+  path: string,
+): AgentPolicyZoneAggSource | null {
+  if (expr === undefined) {
+    return 'variable';
+  }
+  if (typeof expr !== 'string' || !isAgentPolicyZoneAggSource(expr)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path,
+      severity: 'error',
+      message: `globalZoneAgg.source must be one of: ${AGENT_POLICY_ZONE_AGG_SOURCES.join(', ')}.`,
+      suggestion: 'Use the default "variable" source or explicitly set source to "variable" or "attribute".',
+    });
+    return null;
+  }
+  return expr;
 }
 
 function analyzeGlobalTokenAggTokenFilter(
@@ -1168,7 +1261,8 @@ function analyzeGlobalTokenAggTokenFilterProps(
   return props;
 }
 
-function analyzeGlobalTokenAggZoneFilter(
+function analyzePolicyAggregationZoneFilter(
+  operatorName: 'globalTokenAgg' | 'globalZoneAgg',
   expr: unknown,
   diagnostics: Diagnostic[],
   path: string,
@@ -1181,23 +1275,23 @@ function analyzeGlobalTokenAggZoneFilter(
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
       path,
       severity: 'error',
-      message: 'globalTokenAgg.zoneFilter must be an object when provided.',
-      suggestion: 'Use { zoneFilter: { category?: string, attribute?: {...}, variable?: {...} } }.',
+      message: `${operatorName}.zoneFilter must be an object when provided.`,
+      suggestion: `Use { ${operatorName}: { zoneFilter: { category?: string, attribute?: {...}, variable?: {...} } } }.`,
     });
     return null;
   }
 
   const obj = expr as Readonly<Record<string, unknown>>;
   const category = obj['category'];
-  const attribute = analyzeGlobalTokenAggAttributeFilterComparison(obj['attribute'], diagnostics, `${path}.attribute`);
-  const variable = analyzeGlobalTokenAggVariableFilterComparison(obj['variable'], diagnostics, `${path}.variable`);
+  const attribute = analyzePolicyAggregationAttributeFilterComparison(operatorName, obj['attribute'], diagnostics, `${path}.attribute`);
+  const variable = analyzePolicyAggregationVariableFilterComparison(operatorName, obj['variable'], diagnostics, `${path}.variable`);
 
   if (category !== undefined && (typeof category !== 'string' || category.length === 0)) {
     diagnostics.push({
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
       path: `${path}.category`,
       severity: 'error',
-      message: 'globalTokenAgg.zoneFilter.category must be a non-empty string when provided.',
+      message: `${operatorName}.zoneFilter.category must be a non-empty string when provided.`,
       suggestion: 'Set category to a zone category such as "province".',
     });
     return null;
@@ -1214,7 +1308,8 @@ function analyzeGlobalTokenAggZoneFilter(
   };
 }
 
-function analyzeGlobalTokenAggAttributeFilterComparison(
+function analyzePolicyAggregationAttributeFilterComparison(
+  operatorName: 'globalTokenAgg' | 'globalZoneAgg',
   expr: unknown,
   diagnostics: Diagnostic[],
   path: string,
@@ -1227,7 +1322,7 @@ function analyzeGlobalTokenAggAttributeFilterComparison(
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
       path,
       severity: 'error',
-      message: 'globalTokenAgg zone-filter comparisons must be objects with prop, op, and value fields.',
+      message: `${operatorName} zone-filter comparisons must be objects with prop, op, and value fields.`,
       suggestion: 'Use { prop: "population", op: "gt", value: 0 }.',
     });
     return null;
@@ -1243,7 +1338,7 @@ function analyzeGlobalTokenAggAttributeFilterComparison(
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
       path: `${path}.prop`,
       severity: 'error',
-      message: 'globalTokenAgg zone-filter prop values must be non-empty strings.',
+      message: `${operatorName} zone-filter prop values must be non-empty strings.`,
       suggestion: 'Set prop to the zone attribute or variable name to compare.',
     });
     return null;
@@ -1254,7 +1349,7 @@ function analyzeGlobalTokenAggAttributeFilterComparison(
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
       path: `${path}.op`,
       severity: 'error',
-      message: 'globalTokenAgg zone-filter op must be one of: eq, gt, gte, lt, lte.',
+      message: `${operatorName} zone-filter op must be one of: eq, gt, gte, lt, lte.`,
       suggestion: 'Use one of the supported scalar comparison operators.',
     });
     return null;
@@ -1265,7 +1360,7 @@ function analyzeGlobalTokenAggAttributeFilterComparison(
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
       path: `${path}.value`,
       severity: 'error',
-      message: 'globalTokenAgg.zoneFilter.attribute.value must be a scalar string, number, or boolean.',
+      message: `${operatorName}.zoneFilter.attribute.value must be a scalar string, number, or boolean.`,
       suggestion: 'Use a scalar comparison value such as 0, "province", or false.',
     });
     return null;
@@ -1274,7 +1369,8 @@ function analyzeGlobalTokenAggAttributeFilterComparison(
   return { prop, op, value };
 }
 
-function analyzeGlobalTokenAggVariableFilterComparison(
+function analyzePolicyAggregationVariableFilterComparison(
+  operatorName: 'globalTokenAgg' | 'globalZoneAgg',
   expr: unknown,
   diagnostics: Diagnostic[],
   path: string,
@@ -1287,7 +1383,7 @@ function analyzeGlobalTokenAggVariableFilterComparison(
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
       path,
       severity: 'error',
-      message: 'globalTokenAgg zone-filter comparisons must be objects with prop, op, and value fields.',
+      message: `${operatorName} zone-filter comparisons must be objects with prop, op, and value fields.`,
       suggestion: 'Use { prop: "opposition", op: "gt", value: 0 }.',
     });
     return null;
@@ -1303,7 +1399,7 @@ function analyzeGlobalTokenAggVariableFilterComparison(
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
       path: `${path}.prop`,
       severity: 'error',
-      message: 'globalTokenAgg zone-filter prop values must be non-empty strings.',
+      message: `${operatorName} zone-filter prop values must be non-empty strings.`,
       suggestion: 'Set prop to the zone variable name to compare.',
     });
     return null;
@@ -1314,7 +1410,7 @@ function analyzeGlobalTokenAggVariableFilterComparison(
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
       path: `${path}.op`,
       severity: 'error',
-      message: 'globalTokenAgg zone-filter op must be one of: eq, gt, gte, lt, lte.',
+      message: `${operatorName} zone-filter op must be one of: eq, gt, gte, lt, lte.`,
       suggestion: 'Use one of the supported scalar comparison operators.',
     });
     return null;
@@ -1325,7 +1421,7 @@ function analyzeGlobalTokenAggVariableFilterComparison(
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
       path: `${path}.value`,
       severity: 'error',
-      message: 'globalTokenAgg.zoneFilter.variable.value must be a number.',
+      message: `${operatorName}.zoneFilter.variable.value must be a number.`,
       suggestion: 'Use a numeric comparison value such as 0 or 3.',
     });
     return null;
@@ -1334,7 +1430,8 @@ function analyzeGlobalTokenAggVariableFilterComparison(
   return { prop, op, value };
 }
 
-function analyzeGlobalTokenAggZoneScope(
+function analyzePolicyAggregationZoneScope(
+  operatorName: 'globalTokenAgg' | 'globalZoneAgg',
   expr: unknown,
   diagnostics: Diagnostic[],
   path: string,
@@ -1347,7 +1444,7 @@ function analyzeGlobalTokenAggZoneScope(
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
       path,
       severity: 'error',
-      message: 'globalTokenAgg.zoneScope must be "board", "aux", or "all" when provided.',
+      message: `${operatorName}.zoneScope must be "board", "aux", or "all" when provided.`,
       suggestion: 'Use the default board scope or explicitly set zoneScope to "board", "aux", or "all".',
     });
     return null;

@@ -485,6 +485,7 @@ export class PolicyEvaluationContext {
       case 'globalTokenAgg':
         return this.evaluateGlobalTokenAggregate(expr);
       case 'globalZoneAgg':
+        return this.evaluateGlobalZoneAggregate(expr);
       case 'adjacentTokenAgg':
         throw this.runtimeError(
           'RUNTIME_EVALUATION_ERROR',
@@ -595,6 +596,55 @@ export class PolicyEvaluationContext {
         } else {
           aggregate = Math.max(aggregate, value);
         }
+      }
+    }
+
+    if (expr.aggOp === 'count') {
+      return count;
+    }
+    if (expr.aggOp === 'sum') {
+      return aggregate ?? 0;
+    }
+    return aggregate;
+  }
+
+  private evaluateGlobalZoneAggregate(
+    expr: Extract<AgentPolicyExpr, { readonly kind: 'globalZoneAgg' }>,
+  ): PolicyValue {
+    let count = 0;
+    let aggregate: number | undefined;
+
+    for (const zoneDef of this.input.def.zones) {
+      if (!matchesZoneScope(zoneDef, expr.zoneScope)) {
+        continue;
+      }
+      if (!matchesZoneFilter(zoneDef, expr.zoneFilter, this.input.state)) {
+        continue;
+      }
+
+      if (expr.aggOp === 'count') {
+        count += 1;
+        continue;
+      }
+
+      const rawValue = expr.source === 'variable'
+        ? this.input.state.zoneVars[String(zoneDef.id)]?.[expr.field]
+        : scalarZonePropValue(zoneDef.attributes?.[expr.field]);
+      if (typeof rawValue !== 'number') {
+        continue;
+      }
+
+      if (aggregate === undefined) {
+        aggregate = rawValue;
+        continue;
+      }
+
+      if (expr.aggOp === 'sum') {
+        aggregate += rawValue;
+      } else if (expr.aggOp === 'min') {
+        aggregate = Math.min(aggregate, rawValue);
+      } else {
+        aggregate = Math.max(aggregate, rawValue);
       }
     }
 

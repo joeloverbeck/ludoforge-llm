@@ -70,7 +70,7 @@ export function drawZoneShape(
       return;
     case 'polygon':
       if (options.vertices !== undefined && options.vertices.length >= 6) {
-        base.poly([...options.vertices]);
+        base.poly(smoothPolygonVertices(options.vertices, 2));
       } else {
         base.roundRect(-width / 2, -height / 2, width, height, options.rectangleCornerRadius);
       }
@@ -111,7 +111,7 @@ export function getEdgePointAtAngle(
       return rayPolygonIntersection(angleDeg, buildRegularPolygonPoints(8, dimensions.width, dimensions.height));
     case 'polygon':
       if (vertices !== undefined && vertices.length >= 6) {
-        return rayPolygonIntersection(angleDeg, vertices);
+        return rayPolygonIntersection(angleDeg, smoothPolygonVertices(vertices, 2));
       }
       return { x: 0, y: 0 };
     case 'connection':
@@ -130,6 +130,40 @@ export function buildRegularPolygonPoints(sides: number, width: number, height: 
     points.push(Math.cos(angle) * (width / 2), Math.sin(angle) * (height / 2));
   }
   return points;
+}
+
+/**
+ * Chaikin's corner-cutting algorithm: smooths a closed polygon by replacing
+ * each vertex with two points at 25% and 75% along each edge per iteration.
+ * A 6-vertex polygon becomes ~24 vertices after 2 iterations.
+ */
+export function smoothPolygonVertices(
+  vertices: readonly number[],
+  iterations: number = 2,
+): number[] {
+  if (vertices.length < 6 || iterations <= 0) {
+    return [...vertices];
+  }
+
+  let current = vertices;
+  for (let iter = 0; iter < iterations; iter += 1) {
+    const pointCount = Math.trunc(current.length / 2);
+    const smoothed: number[] = [];
+    for (let i = 0; i < pointCount; i += 1) {
+      const ax = current[i * 2]!;
+      const ay = current[i * 2 + 1]!;
+      const bx = current[((i + 1) % pointCount) * 2]!;
+      const by = current[((i + 1) % pointCount) * 2 + 1]!;
+      smoothed.push(
+        ax * 0.75 + bx * 0.25,
+        ay * 0.75 + by * 0.25,
+        ax * 0.25 + bx * 0.75,
+        ay * 0.25 + by * 0.75,
+      );
+    }
+    current = smoothed;
+  }
+  return [...current];
 }
 
 function directionForAngle(angleDeg: number): Position {

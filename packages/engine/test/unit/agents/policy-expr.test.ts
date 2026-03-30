@@ -495,6 +495,134 @@ describe('policy-expr analysis', () => {
       && diagnostic.message.includes('{ eq: <scalar> }')));
   });
 
+  it('analyzes globalZoneAgg expressions with explicit attribute source and shared zone filters', () => {
+    const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
+    const analysis = analyzePolicyExpr(
+      {
+        globalZoneAgg: {
+          source: 'attribute',
+          field: 'population',
+          aggOp: 'max',
+          zoneFilter: {
+            category: 'province',
+            attribute: {
+              prop: 'population',
+              op: 'gt',
+              value: 0,
+            },
+            variable: {
+              prop: 'opposition',
+              op: 'gte',
+              value: 1,
+            },
+          },
+          zoneScope: 'all',
+        },
+      },
+      createContext(),
+      diagnostics,
+      'expr',
+    );
+
+    assert.deepEqual(diagnostics, []);
+    assert.deepEqual(analysis, {
+      expr: {
+        kind: 'globalZoneAgg',
+        source: 'attribute',
+        field: 'population',
+        aggOp: 'max',
+        zoneFilter: {
+          category: 'province',
+          attribute: {
+            prop: 'population',
+            op: 'gt',
+            value: 0,
+          },
+          variable: {
+            prop: 'opposition',
+            op: 'gte',
+            value: 1,
+          },
+        },
+        zoneScope: 'all',
+      },
+      valueType: 'number',
+      costClass: 'state',
+      dependencies: {
+        parameters: [],
+        stateFeatures: [],
+        candidateFeatures: [],
+        aggregates: [],
+      },
+      isStaticallyZero: false,
+    });
+  });
+
+  it('defaults globalZoneAgg source to variable and zoneScope to board', () => {
+    const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
+    const analysis = analyzePolicyExpr(
+      {
+        globalZoneAgg: {
+          field: 'opposition',
+          aggOp: 'sum',
+        },
+      },
+      createContext(),
+      diagnostics,
+      'expr',
+    );
+
+    assert.deepEqual(diagnostics, []);
+    assert.deepEqual(analysis?.expr, {
+      kind: 'globalZoneAgg',
+      source: 'variable',
+      field: 'opposition',
+      aggOp: 'sum',
+      zoneScope: 'board',
+    });
+  });
+
+  it('rejects globalZoneAgg expressions without field', () => {
+    const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
+    const analysis = analyzePolicyExpr(
+      {
+        globalZoneAgg: {
+          source: 'variable',
+          aggOp: 'count',
+        },
+      },
+      createContext(),
+      diagnostics,
+      'expr',
+    );
+
+    assert.equal(analysis, null);
+    assert.ok(diagnostics.some((diagnostic) =>
+      diagnostic.path === 'expr.globalZoneAgg.field'
+      && diagnostic.message.includes('non-empty string')));
+  });
+
+  it('rejects invalid globalZoneAgg aggregation operators', () => {
+    const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
+    const analysis = analyzePolicyExpr(
+      {
+        globalZoneAgg: {
+          source: 'attribute',
+          field: 'population',
+          aggOp: 'avg',
+        },
+      },
+      createContext(),
+      diagnostics,
+      'expr',
+    );
+
+    assert.equal(analysis, null);
+    assert.ok(diagnostics.some((diagnostic) =>
+      diagnostic.path === 'expr.globalZoneAgg.aggOp'
+      && diagnostic.message.includes('must be one of')));
+  });
+
   it('rejects dynamic zoneTokenAgg zones that do not resolve to ids', () => {
     const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
     const analysis = analyzePolicyExpr(

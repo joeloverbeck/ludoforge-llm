@@ -771,6 +771,224 @@ describe('policy-eval', () => {
     });
   });
 
+  describe('globalZoneAgg evaluation', () => {
+    it('sums filtered zone variables across board zones', () => {
+      const agents = createStateFeatureScoreCatalog(
+        {
+          totalProvinceOpposition: {
+            kind: 'globalZoneAgg',
+            source: 'variable',
+            field: 'opposition',
+            aggOp: 'sum',
+            zoneFilter: {
+              category: 'province',
+              variable: { prop: 'support', op: 'gte', value: 1 },
+            },
+            zoneScope: 'board',
+          },
+        },
+        refExpr({ kind: 'library', refKind: 'stateFeature', id: 'totalProvinceOpposition' }),
+      );
+      const baseInput = createInput(agents, createMoves('alpha'));
+      const input = {
+        ...baseInput,
+        state: {
+          ...baseInput.state,
+          zoneVars: {
+            ...baseInput.state.zoneVars,
+            'target-a:none': { opposition: 5, support: 1 },
+            'target-b:none': { opposition: 7, support: 0 },
+            'frontier:none': { opposition: 11, support: 1 },
+          },
+        },
+      } as const;
+
+      const result = evaluatePolicyMove(input);
+
+      assert.equal(result.metadata.candidates[0]?.score, 5);
+    });
+
+    it('counts matching zones while ignoring field values', () => {
+      const agents = createStateFeatureScoreCatalog(
+        {
+          contestedProvinceCount: {
+            kind: 'globalZoneAgg',
+            source: 'variable',
+            field: 'unusedForCount',
+            aggOp: 'count',
+            zoneFilter: {
+              category: 'province',
+              variable: { prop: 'opposition', op: 'gt', value: 0 },
+            },
+            zoneScope: 'board',
+          },
+        },
+        refExpr({ kind: 'library', refKind: 'stateFeature', id: 'contestedProvinceCount' }),
+      );
+      const baseInput = createInput(agents, createMoves('alpha'));
+      const input = {
+        ...baseInput,
+        state: {
+          ...baseInput.state,
+          zoneVars: {
+            ...baseInput.state.zoneVars,
+            'target-a:none': { opposition: 2 },
+            'target-b:none': { opposition: 1 },
+            'rear:none': { opposition: 4 },
+          },
+        },
+      } as const;
+
+      const result = evaluatePolicyMove(input);
+
+      assert.equal(result.metadata.candidates[0]?.score, 2);
+    });
+
+    it('reads attributes from zone definitions, ignores non-numeric values, and preserves empty extrema semantics', () => {
+      const agents = createStateFeatureScoreCatalog(
+        {
+          maxProvincePopulation: {
+            kind: 'globalZoneAgg',
+            source: 'attribute',
+            field: 'population',
+            aggOp: 'max',
+            zoneFilter: { category: 'province' },
+            zoneScope: 'board',
+          },
+          minProvincePopulation: {
+            kind: 'globalZoneAgg',
+            source: 'attribute',
+            field: 'population',
+            aggOp: 'min',
+            zoneFilter: { category: 'province' },
+            zoneScope: 'board',
+          },
+          populationTagSum: {
+            kind: 'globalZoneAgg',
+            source: 'attribute',
+            field: 'tags',
+            aggOp: 'sum',
+            zoneFilter: { category: 'province' },
+            zoneScope: 'board',
+          },
+          missingPopulationMax: {
+            kind: 'globalZoneAgg',
+            source: 'attribute',
+            field: 'missingPopulation',
+            aggOp: 'max',
+            zoneFilter: { category: 'province' },
+            zoneScope: 'board',
+          },
+        },
+        opExpr(
+          'add',
+          refExpr({ kind: 'library', refKind: 'stateFeature', id: 'maxProvincePopulation' }),
+          refExpr({ kind: 'library', refKind: 'stateFeature', id: 'minProvincePopulation' }),
+          refExpr({ kind: 'library', refKind: 'stateFeature', id: 'populationTagSum' }),
+          opExpr(
+            'coalesce',
+            refExpr({ kind: 'library', refKind: 'stateFeature', id: 'missingPopulationMax' }),
+            literal(-1),
+          ),
+        ),
+      );
+      const baseInput = createInput(agents, createMoves('alpha'));
+      const input = {
+        ...baseInput,
+        def: {
+          ...baseInput.def,
+          zones: baseInput.def.zones.map((zone) => {
+            if (zone.id === asZoneId('target-a:none')) {
+              return {
+                ...zone,
+                attributes: { population: 5, tags: ['remote', 'hot'] },
+              };
+            }
+            if (zone.id === asZoneId('target-b:none')) {
+              return {
+                ...zone,
+                attributes: { population: 2, tags: ['coastal'] },
+              };
+            }
+            if (zone.id === asZoneId('frontier:none')) {
+              return {
+                ...zone,
+                attributes: { population: 99 },
+              };
+            }
+            return zone;
+          }),
+        },
+      } as const;
+
+      const result = evaluatePolicyMove(input);
+
+      assert.equal(result.metadata.candidates[0]?.score, 6);
+    });
+
+    it('keeps variable and attribute sources isolated', () => {
+      const agents = createStateFeatureScoreCatalog(
+        {
+          variablePopulation: {
+            kind: 'globalZoneAgg',
+            source: 'variable',
+            field: 'population',
+            aggOp: 'sum',
+            zoneFilter: { category: 'province' },
+            zoneScope: 'board',
+          },
+          attributeOpposition: {
+            kind: 'globalZoneAgg',
+            source: 'attribute',
+            field: 'opposition',
+            aggOp: 'sum',
+            zoneFilter: { category: 'province' },
+            zoneScope: 'board',
+          },
+        },
+        opExpr(
+          'add',
+          refExpr({ kind: 'library', refKind: 'stateFeature', id: 'variablePopulation' }),
+          refExpr({ kind: 'library', refKind: 'stateFeature', id: 'attributeOpposition' }),
+        ),
+      );
+      const baseInput = createInput(agents, createMoves('alpha'));
+      const input = {
+        ...baseInput,
+        def: {
+          ...baseInput.def,
+          zones: baseInput.def.zones.map((zone) => {
+            if (zone.id === asZoneId('target-a:none')) {
+              return {
+                ...zone,
+                attributes: { population: 99, opposition: 4 },
+              };
+            }
+            if (zone.id === asZoneId('target-b:none')) {
+              return {
+                ...zone,
+                attributes: { population: 42, opposition: 6 },
+              };
+            }
+            return zone;
+          }),
+        },
+        state: {
+          ...baseInput.state,
+          zoneVars: {
+            ...baseInput.state.zoneVars,
+            'target-a:none': { population: 3, opposition: 100 },
+            'target-b:none': { population: 2, opposition: 200 },
+          },
+        },
+      } as const;
+
+      const result = evaluatePolicyMove(input);
+
+      assert.equal(result.metadata.candidates[0]?.score, 15);
+    });
+  });
+
   it('routes intrinsic, candidate, current, preview, and completion reads through explicit runtime providers', () => {
     const input = createInput(
       createCatalog(

@@ -9,7 +9,7 @@ Improve the FITL game map rendering based on the latest plan's recommendations.
 
 ## Checklist
 
-> **Plan mode note**: If plan mode is active when this skill is invoked, steps 1-3 serve as the exploration phase. Write your execution plan to the plan file, exit plan mode, then continue with steps 4-10.
+> **Plan mode note**: If plan mode is active when this skill is invoked, steps 1-3 serve as the exploration phase. Write your execution plan to the plan file, exit plan mode, then continue with steps 4-12.
 
 1. Read `reports/map-representation-evaluation.md` — focus on the latest EVALUATION #N for context on what needs improving.
 2. Read `reports/map-representation-plan.md` — the implementation plan to execute. This is the primary guide for this session.
@@ -18,14 +18,15 @@ Improve the FITL game map rendering based on the latest plan's recommendations.
    - **Foundation #7** (Immutability): State transitions return new objects, no mutation
    - **Foundation #9** (No Backwards Compatibility): No shims or deprecated fallbacks
    - **Foundation #10** (Architectural Completeness): Complete solutions, not patches
-4. Collect the unique file paths (source files and config files) from all Implementation Steps in the plan. Read them in parallel (batch) to front-load context before starting edits. If the plan is data-only (e.g., visual-config.yaml vertex authoring), read the target data file(s) instead.
+4. Collect the unique file paths (source files, config files, and test files with golden assertions) from all Implementation Steps in the plan. Read them in parallel (batch) to front-load context before starting edits. If the plan is data-only (e.g., visual-config.yaml vertex authoring), read the target data file(s) instead.
 5. Follow the plan's implementation steps **in order**, respecting noted dependencies.
 6. If vertices were authored or modified, verify shared borders: for each adjacent pair, confirm that converting relative vertices back to absolute world coordinates (`absoluteX = relativeX + centerX`) produces matching points on both sides of the shared edge.
 7. If a step is ambiguous or you discover the plan's assumptions about the code are wrong, apply the **1-3-1 rule** (1 problem, 3 options, 1 recommendation) before proceeding — per Foundation #10.
 8. If the plan includes map editor changes, implement those too.
-9. Run verification: `pnpm turbo typecheck` and `pnpm -F @ludoforge/runner test`.
-10. Visual verification: Run `pnpm -F @ludoforge/runner dev` and inspect the map in the browser. Verify: all targeted zones render with the new shapes, terrain colors apply correctly, tokens render inside polygon bounds, adjacency lines connect to polygon edges, and the map editor shows the same changes. Report any visual anomalies to the user before concluding.
-11. Do NOT update either report file — that happens in the next evaluate invocation.
+9. Update golden test assertions in `packages/runner/test/config/visual-config-files.test.ts` if attribute rules, override counts, or connection route counts changed.
+10. Run verification: `pnpm turbo typecheck` and `pnpm -F @ludoforge/runner test`.
+11. Visual verification: Run `pnpm -F @ludoforge/runner dev` and inspect the map in the browser. Verify: all targeted zones render with the new shapes, terrain colors apply correctly, tokens render inside polygon bounds, adjacency lines connect to polygon edges, and the map editor shows the same changes. Report any visual anomalies to the user before concluding.
+12. Do NOT update either report file — that happens in the next evaluate invocation.
 
 ## Key Files
 
@@ -77,6 +78,10 @@ To add a new shape type (e.g., `polygon` with arbitrary vertices):
 3. Update `visual-config.yaml` zone entries to use the new shape
 4. Ensure the adjacency renderer can compute edge intersection points for the new shape
 
+### Vertex Smoothing
+
+`smoothPolygonVertices()` in `shape-utils.ts` applies Chaikin's corner-cutting algorithm (2 iterations by default) to all polygon vertices. It is called in both `drawZoneShape()` (for rendering) and `getEdgePointAtAngle()` (for adjacency line edge intersection). This ensures the drawn shape and the computed edge attachment points always match. The function is a pure transform: `readonly number[] → number[]`. It preserves shared-edge alignment between adjacent polygons because Chaikin's is a local operation — each output vertex depends only on two adjacent input vertices, so the same edge in two polygons produces identical smoothed points independently.
+
 ### Adjacency Edge Computation
 
 Adjacency lines connect from edge point to edge point, not center to center. The edge point calculation is shape-specific — it finds the intersection of the line from center-to-center with the shape boundary. When adding a new shape, you must also update the edge intersection logic or the adjacency lines will connect to the wrong points.
@@ -87,7 +92,7 @@ Routes (roads, rivers) use Bezier curves with configurable geometry. Route geome
 
 ### Game Canvas vs Map Editor
 
-Both flows reuse `drawZoneShape()` from `shape-utils.ts`. The game canvas adds labels, badges, selection highlighting, and token rendering on top. The map editor adds drag handles and selection highlighting. A change to `drawZoneShape()` affects both flows — verify both after changes.
+Both flows reuse `drawZoneShape()` from `shape-utils.ts`. The game canvas adds labels, badges, selection highlighting, and token rendering on top. The map editor adds drag handles and selection highlighting. A change to `drawZoneShape()` affects both flows — verify both after changes. Label font size constants are NOT shared — `zone-renderer.ts` and `map-editor-zone-renderer.ts` each have their own. Check both when the plan modifies label sizing.
 
 ### Interaction vs. Config Stroke Resolution
 
@@ -146,6 +151,7 @@ When the plan requires new config fields (e.g., polygon vertex data, terrain tex
 - **Visual config backward compatibility**: Other games (Texas Hold'em) also use visual-config. New schema fields must be optional so other games don't break. Test with `pnpm turbo typecheck` to catch schema issues.
 - **PixiJS Graphics API**: PixiJS 8 uses `Graphics.poly(points)` for arbitrary polygons where `points` is a flat array `[x1,y1, x2,y2, ...]`. Ensure the polygon is closed (first point = last point) or use `closePath()`.
 - **TypeScript exactOptionalPropertyTypes**: This project enables `exactOptionalPropertyTypes`. When adding optional fields that receive `foo ?? undefined`, the type must include `| undefined` explicitly. E.g., `readonly vertices?: readonly number[] | undefined`, not just `readonly vertices?: readonly number[]`.
+- **Vertex transforms affect edge intersection tests**: If smoothing or other vertex transformations are applied to `drawZoneShape()`, they must also be applied in `getEdgePointAtAngle()`, AND existing polygon edge intersection tests will need updated expectations since the shape boundary changes. The `smoothPolygonVertices()` function rounds corners inward, so edge intersection points move closer to center.
 - **Zone renderer child ordering**: `zone-renderer.test.ts` accesses zone container children by numeric index (`children[0]` = base, `children[1]` = hiddenStack, etc.). Adding or reordering children in `createZoneVisualElements()` / `addChild()` shifts all subsequent indices. After modifying the child list, update indices in the test using Python or manual edits — do **not** use sequential sed replacements (e.g., `[2]→[3]` then `[3]→[4]`) as this causes double-shifting. Process from highest index to lowest, or use a script that replaces all in one pass. Also update any `toHaveLength(N)` assertions on `container.children`.
 
 ## Scope Constraints

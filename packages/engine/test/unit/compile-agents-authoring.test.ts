@@ -143,6 +143,7 @@ describe('agents authoring surface', () => {
               value: { boolToNumber: { ref: 'feature.isPass' } },
             },
           },
+          completionScoreTerms: {},
           tieBreakers: {
             stableMoveKey: {
               kind: 'stableMoveKey',
@@ -159,6 +160,7 @@ describe('agents authoring surface', () => {
             use: {
               pruningRules: ['dropPassWhenStrongerMoveExists'],
               scoreTerms: ['preferEvents'],
+              completionScoreTerms: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -319,6 +321,7 @@ describe('agents authoring surface', () => {
           },
         },
       },
+      completionScoreTerms: {},
       tieBreakers: {
         stableMoveKey: {
           kind: 'stableMoveKey',
@@ -340,6 +343,7 @@ describe('agents authoring surface', () => {
     assert.deepEqual(baselineProfile.use, {
       pruningRules: ['dropPassWhenStrongerMoveExists'],
       scoreTerms: ['preferEvents'],
+      completionScoreTerms: [],
       tieBreakers: ['stableMoveKey'],
     });
     assert.deepEqual(baselineProfile.plan, {
@@ -400,6 +404,7 @@ describe('agents authoring surface', () => {
               value: { boolToNumber: { ref: 'feature.isPass' } },
             },
           },
+          completionScoreTerms: {},
           tieBreakers: {
             stableMoveKey: {
               kind: 'stableMoveKey' as const,
@@ -417,6 +422,7 @@ describe('agents authoring surface', () => {
             use: {
               pruningRules: [],
               scoreTerms: ['preferEvents'],
+              completionScoreTerms: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -443,6 +449,7 @@ describe('agents authoring surface', () => {
             use: {
               tieBreakers: ['stableMoveKey'],
               scoreTerms: ['preferEvents'],
+              completionScoreTerms: [],
               pruningRules: [],
             },
           },
@@ -520,6 +527,433 @@ describe('agents authoring surface', () => {
     );
   });
 
+  it('lowers completion guidance authoring into compiled completion score terms and profile config', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: {
+        visibility: createVisibility(),
+        parameters: {},
+        library: {
+          completionScoreTerms: {
+            preferNamedOption: {
+              when: { eq: [{ ref: 'decision.type' }, 'chooseOne'] },
+              weight: 2,
+              value: {
+                if: [
+                  { eq: [{ ref: 'option.value' }, 'zone-a'] },
+                  1,
+                  0,
+                ],
+              },
+            },
+          },
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              scoreTerms: [],
+              completionScoreTerms: ['preferNamedOption'],
+              tieBreakers: ['stableMoveKey'],
+            },
+            completionGuidance: {
+              enabled: true,
+              fallback: 'first',
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      },
+    });
+
+    assert.equal(result.gameDef === null, false);
+    assert.equal(result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
+    assert.deepEqual(result.gameDef?.agents?.library.completionScoreTerms.preferNamedOption, {
+      costClass: 'state',
+      when: opExpr('eq', refExpr({ kind: 'decisionIntrinsic', intrinsic: 'type' }), literal('chooseOne')),
+      weight: literal(2),
+      value: opExpr(
+        'if',
+        opExpr('eq', refExpr({ kind: 'optionIntrinsic', intrinsic: 'value' }), literal('zone-a')),
+        literal(1),
+        literal(0),
+      ),
+      dependencies: {
+        parameters: [],
+        stateFeatures: [],
+        candidateFeatures: [],
+        aggregates: [],
+      },
+    });
+    assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.use.completionScoreTerms, ['preferNamedOption']);
+    assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.completionGuidance, {
+      enabled: true,
+      fallback: 'first',
+    });
+  });
+
+  it('lowers dynamic zoneProp completion guidance terms through the shared expression pipeline', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      zones: [
+        { id: 'target-a:none', owner: 'none', visibility: 'public', ordering: 'set', category: 'province', attributes: { population: 4 } },
+        { id: 'target-b:none', owner: 'none', visibility: 'public', ordering: 'set', category: 'province', attributes: { population: 1 } },
+      ],
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: {
+        visibility: createVisibility(),
+        parameters: {},
+        library: {
+          completionScoreTerms: {
+            preferHigherPopulation: {
+              when: { eq: [{ ref: 'decision.type' }, 'chooseOne'] },
+              weight: 1,
+              value: {
+                coalesce: [
+                  {
+                    zoneProp: {
+                      zone: { ref: 'option.value' },
+                      prop: 'population',
+                    },
+                  },
+                  0,
+                ],
+              },
+            },
+          },
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              scoreTerms: [],
+              completionScoreTerms: ['preferHigherPopulation'],
+              tieBreakers: ['stableMoveKey'],
+            },
+            completionGuidance: {
+              enabled: true,
+              fallback: 'first',
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      },
+    });
+
+    assert.equal(result.gameDef === null, false);
+    assert.equal(result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
+    assert.deepEqual(result.gameDef?.agents?.library.completionScoreTerms.preferHigherPopulation, {
+      costClass: 'state',
+      when: opExpr('eq', refExpr({ kind: 'decisionIntrinsic', intrinsic: 'type' }), literal('chooseOne')),
+      weight: literal(1),
+      value: opExpr(
+        'coalesce',
+        {
+          kind: 'zoneProp',
+          zone: refExpr({ kind: 'optionIntrinsic', intrinsic: 'value' }),
+          prop: 'population',
+        },
+        literal(0),
+      ),
+      dependencies: {
+        parameters: [],
+        stateFeatures: [],
+        candidateFeatures: [],
+        aggregates: [],
+      },
+    });
+  });
+
+  it('lowers candidate.paramCount refs through the shared candidate intrinsic contract', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: {
+        visibility: createVisibility(),
+        parameters: {},
+        library: {
+          candidateFeatures: {
+            paramLoad: {
+              type: 'number',
+              expr: { ref: 'candidate.paramCount' },
+            },
+          },
+          scoreTerms: {
+            rewardLoadedMoves: {
+              weight: 1,
+              value: { ref: 'feature.paramLoad' },
+            },
+          },
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              scoreTerms: ['rewardLoadedMoves'],
+              completionScoreTerms: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      },
+    });
+
+    assert.equal(result.gameDef === null, false);
+    assert.equal(result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
+    const paramLoad = result.gameDef?.agents?.library.candidateFeatures.paramLoad;
+    assert.ok(paramLoad !== undefined);
+    assert.deepEqual(paramLoad.expr, {
+      kind: 'ref',
+      ref: { kind: 'candidateIntrinsic', intrinsic: 'paramCount' },
+    });
+  });
+
+  it('rejects invalid completion guidance fallback values', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: {
+        visibility: createVisibility(),
+        parameters: {},
+        library: {
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              scoreTerms: [],
+              completionScoreTerms: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+            completionGuidance: {
+              enabled: true,
+              fallback: 'last' as 'random',
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      },
+    });
+
+    assert.equal(result.diagnostics.some((diagnostic) => diagnostic.path === 'doc.agents.profiles.baseline.completionGuidance.fallback'), true);
+    assert.equal(result.gameDef?.agents?.profiles.baseline, undefined);
+  });
+
+  it('validates profile.use library references during authoring validation', () => {
+    const diagnostics = validateGameSpec({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: {
+        visibility: createVisibility(),
+        library: {
+          pruningRules: {
+            knownPrune: {
+              when: true,
+              onEmpty: 'skipRule',
+            },
+          },
+          scoreTerms: {
+            knownScore: {
+              weight: 1,
+              value: 1,
+            },
+          },
+          completionScoreTerms: {
+            knownCompletion: {
+              weight: 1,
+              value: 1,
+            },
+          },
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: ['missingPrune'],
+              scoreTerms: ['missingScore'],
+              completionScoreTerms: ['missingCompletion'],
+              tieBreakers: ['missingTieBreaker'],
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      },
+    });
+
+    assert.ok(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_VALIDATOR_AGENTS_PROFILE_USE_UNKNOWN_ID'
+          && diagnostic.path === 'doc.agents.profiles.baseline.use.pruningRules.0',
+      ),
+    );
+    assert.ok(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_VALIDATOR_AGENTS_PROFILE_USE_UNKNOWN_ID'
+          && diagnostic.path === 'doc.agents.profiles.baseline.use.scoreTerms.0',
+      ),
+    );
+    assert.ok(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_VALIDATOR_AGENTS_PROFILE_USE_UNKNOWN_ID'
+          && diagnostic.path === 'doc.agents.profiles.baseline.use.completionScoreTerms.0',
+      ),
+    );
+    assert.ok(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_VALIDATOR_AGENTS_PROFILE_USE_UNKNOWN_ID'
+          && diagnostic.path === 'doc.agents.profiles.baseline.use.tieBreakers.0',
+      ),
+    );
+  });
+
+  it('warns when completion guidance is enabled without valid completion score terms', () => {
+    const diagnostics = validateGameSpec({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: {
+        visibility: createVisibility(),
+        library: {
+          completionScoreTerms: {},
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              scoreTerms: [],
+              completionScoreTerms: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+            completionGuidance: {
+              enabled: true,
+              fallback: 'first',
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      },
+    });
+
+    assert.ok(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_VALIDATOR_AGENTS_COMPLETION_GUIDANCE_MISSING_TERMS'
+          && diagnostic.path === 'doc.agents.profiles.baseline.completionGuidance'
+          && diagnostic.severity === 'warning',
+      ),
+    );
+  });
+
+  it('accepts valid completion guidance references without validator diagnostics', () => {
+    const diagnostics = validateGameSpec({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: {
+        visibility: createVisibility(),
+        library: {
+          completionScoreTerms: {
+            preferNamedOption: {
+              when: { eq: [{ ref: 'decision.type' }, 'chooseOne'] },
+              weight: 2,
+              value: {
+                if: [
+                  { eq: [{ ref: 'option.value' }, 'zone-a'] },
+                  1,
+                  0,
+                ],
+              },
+            },
+          },
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              scoreTerms: [],
+              completionScoreTerms: ['preferNamedOption'],
+              tieBreakers: ['stableMoveKey'],
+            },
+            completionGuidance: {
+              enabled: true,
+              fallback: 'first',
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      },
+    });
+
+    assert.equal(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_VALIDATOR_AGENTS_PROFILE_USE_UNKNOWN_ID'
+          || diagnostic.code === 'CNL_VALIDATOR_AGENTS_COMPLETION_GUIDANCE_MISSING_TERMS'
+          || diagnostic.path === 'doc.agents.profiles.baseline.completionGuidance.fallback',
+      ),
+      false,
+    );
+  });
+
   it('rejects refs whose shared visibility contract marks them hidden', () => {
     const compiled = compileGameSpecToGameDef({
       ...createCompileReadyDoc(),
@@ -555,6 +989,7 @@ describe('agents authoring surface', () => {
               expr: { ref: 'metric.knownMetric' },
             },
           },
+          completionScoreTerms: {},
           tieBreakers: {
             stableMoveKey: {
               kind: 'stableMoveKey',
@@ -567,6 +1002,7 @@ describe('agents authoring surface', () => {
             use: {
               pruningRules: [],
               scoreTerms: [],
+              completionScoreTerms: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -678,6 +1114,7 @@ describe('agents authoring surface', () => {
             use: {
               pruningRules: [],
               scoreTerms: [],
+              completionScoreTerms: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -712,6 +1149,7 @@ describe('agents authoring surface', () => {
             use: {
               pruningRules: [],
               scoreTerms: [],
+              completionScoreTerms: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -750,6 +1188,7 @@ describe('agents authoring surface', () => {
             use: {
               pruningRules: [],
               scoreTerms: [],
+              completionScoreTerms: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -798,6 +1237,7 @@ describe('agents authoring surface', () => {
             use: {
               pruningRules: [],
               scoreTerms: [],
+              completionScoreTerms: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -874,6 +1314,7 @@ describe('agents authoring surface', () => {
               value: { div: [1, 0] },
             },
           },
+          completionScoreTerms: {},
           tieBreakers: {
             stableMoveKey: {
               kind: 'stableMoveKey',
@@ -886,6 +1327,7 @@ describe('agents authoring surface', () => {
             use: {
               pruningRules: [],
               scoreTerms: ['divideByZero'],
+              completionScoreTerms: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -955,6 +1397,7 @@ describe('agents authoring surface', () => {
             use: {
               pruningRules: [],
               scoreTerms: [],
+              completionScoreTerms: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -1017,6 +1460,7 @@ describe('agents authoring surface', () => {
             use: {
               pruningRules: [],
               scoreTerms: [],
+              completionScoreTerms: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -1086,6 +1530,7 @@ describe('agents authoring surface', () => {
             use: {
               pruningRules: [],
               scoreTerms: [],
+              completionScoreTerms: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -1146,6 +1591,7 @@ describe('agents authoring surface', () => {
             use: {
               pruningRules: [],
               scoreTerms: [],
+              completionScoreTerms: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -1216,6 +1662,7 @@ describe('agents authoring surface', () => {
             use: {
               pruningRules: [],
               scoreTerms: [],
+              completionScoreTerms: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -1288,6 +1735,7 @@ describe('agents authoring surface', () => {
             use: {
               pruningRules: [],
               scoreTerms: [],
+              completionScoreTerms: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -1343,6 +1791,7 @@ describe('agents authoring surface', () => {
             use: {
               pruningRules: [],
               scoreTerms: [],
+              completionScoreTerms: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -1395,6 +1844,7 @@ describe('agents authoring surface', () => {
             use: {
               pruningRules: [],
               scoreTerms: [],
+              completionScoreTerms: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -1448,6 +1898,7 @@ describe('agents authoring surface', () => {
             use: {
               pruningRules: [],
               scoreTerms: [],
+              completionScoreTerms: [],
               tieBreakers: ['stableMoveKey'],
             },
           },

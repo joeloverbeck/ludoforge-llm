@@ -48,7 +48,7 @@ function makeZone(overrides: Partial<RenderZone> = {}): RenderZone {
     ownerID: null,
     category: null,
     attributes: {},
-    visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null },
+    visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null, vertices: null, strokeColor: null },
     metadata: {},
     ...overrides,
   };
@@ -98,6 +98,7 @@ function makeRenderModel(overrides: Partial<RenderModel> = {}): RenderModel {
     hiddenActionsByClass: new Map(),
     choiceBreadcrumb: [],
     choiceContext: null,
+    selectedActionDisplayName: null,
     choiceUi: { kind: 'none' },
     moveEnumerationWarnings: [],
     runtimeEligible: [],
@@ -251,6 +252,7 @@ function toRunnerFrame(renderModel: RenderModel): RunnerFrame {
       iterationEntityId: null,
     })),
     choiceContext: null,
+    selectedActionId: null,
     choiceUi: renderModel.choiceUi as RunnerFrame['choiceUi'],
     moveEnumerationWarnings: renderModel.moveEnumerationWarnings,
     runtimeEligible: renderModel.runtimeEligible.map(({ seatId, factionId, seatIndex }) => ({ seatId, factionId, seatIndex })),
@@ -397,7 +399,7 @@ describe('createCanvasUpdater', () => {
       {
         id: 'zone:a',
         displayName: 'Zone A',
-        visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null },
+        visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null, vertices: null, strokeColor: null },
         render: expect.objectContaining({
           fillColor: '#4d5c6d',
         }),
@@ -442,7 +444,7 @@ describe('createCanvasUpdater', () => {
         makeZone({
           category: 'city',
           displayName: 'Mixed Zone A',
-          visual: { shape: 'circle', width: 90, height: 90, color: '#ff00ff', connectionStyleKey: null },
+          visual: { shape: 'circle', width: 90, height: 90, color: '#ff00ff', connectionStyleKey: null, vertices: null, strokeColor: null },
         }),
       ],
     });
@@ -471,7 +473,7 @@ describe('createCanvasUpdater', () => {
       {
         id: 'zone:a',
         displayName: 'Configured Zone A',
-        visual: { shape: 'hexagon', width: 120, height: 80, color: '#123456', connectionStyleKey: null },
+        visual: { shape: 'hexagon', width: 120, height: 80, color: '#123456', connectionStyleKey: null, vertices: null, strokeColor: null },
       },
     ]);
   });
@@ -885,7 +887,7 @@ describe('createCanvasUpdater', () => {
         expect.objectContaining({
           id: 'zone:a',
           displayName: 'Zone A',
-          visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null },
+          visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null, vertices: null, strokeColor: null },
           render: expect.objectContaining({
             fillColor: '#4d5c6d',
           }),
@@ -1049,7 +1051,7 @@ describe('createCanvasUpdater', () => {
         expect.objectContaining({
           id: 'zone:a',
           displayName: 'Zone A',
-          visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null },
+          visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null, vertices: null, strokeColor: null },
           render: expect.objectContaining({
             stroke: { color: '#60a5fa', width: 3, alpha: 1 },
           }),

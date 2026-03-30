@@ -500,15 +500,15 @@ describe('visual-config.yaml files', () => {
     expect(attributeRules).toEqual([
       {
         match: { category: ['province'], attributeContains: { terrainTags: 'highland' } },
-        style: { color: '#6b5b3e' },
+        style: { color: '#d4a656', strokeColor: '#8b6914' },
       },
       {
         match: { category: ['province'], attributeContains: { terrainTags: 'jungle' } },
-        style: { color: '#3d5c3a' },
+        style: { color: '#1a5c2a', strokeColor: '#0d3d18' },
       },
       {
         match: { category: ['province'], attributeContains: { terrainTags: 'lowland' } },
-        style: { color: '#5a7a52' },
+        style: { color: '#5db85d', strokeColor: '#2d7a2d' },
       },
       {
         match: { category: ['loc'], attributeContains: { terrainTags: 'highway' } },
@@ -524,12 +524,12 @@ describe('visual-config.yaml files', () => {
     });
     expect(parsed.zones?.connectionStyles).toEqual({
       highway: {
-        strokeWidth: 8,
+        strokeWidth: 10,
         strokeColor: '#8b7355',
         strokeAlpha: 0.8,
       },
       mekong: {
-        strokeWidth: 12,
+        strokeWidth: 14,
         strokeColor: '#4a7a8c',
         strokeAlpha: 0.9,
         wavy: true,

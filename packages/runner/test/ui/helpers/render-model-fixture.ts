@@ -42,6 +42,7 @@ export function makeRenderModelFixture(
     hiddenActionsByClass: new Map(),
     choiceBreadcrumb: [],
     choiceContext: null,
+    selectedActionDisplayName: null,
     choiceUi: { kind: 'none' },
     moveEnumerationWarnings: [],
     runtimeEligible: [],

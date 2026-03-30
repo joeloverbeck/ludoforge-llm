@@ -46,6 +46,13 @@ import type {
 import type { SeatGroupConfig, MarkerWeightConfig, VictoryFormula } from './derived-values.js';
 import type { ScopedVarEndpointContract, ScopedVarPayloadContract } from './scoped-var-contract.js';
 import type { DecisionKey } from './decision-scope.js';
+import type {
+  AgentPolicyCandidateIntrinsic,
+  AgentPolicyCompletionGuidanceFallback,
+  AgentPolicyDecisionIntrinsic,
+  AgentPolicyOptionIntrinsic,
+  AgentPolicyZoneTokenAggOwner,
+} from '../contracts/index.js';
 
 export interface RngState {
   readonly algorithm: 'pcg-dxsm-128';
@@ -361,11 +368,19 @@ export type CompiledAgentPolicyRef =
   | CompiledAgentPolicySurfaceRef
   | {
       readonly kind: 'candidateIntrinsic';
-      readonly intrinsic: 'actionId' | 'stableMoveKey' | 'isPass';
+      readonly intrinsic: AgentPolicyCandidateIntrinsic;
     }
   | {
       readonly kind: 'candidateParam';
       readonly id: string;
+    }
+  | {
+      readonly kind: 'decisionIntrinsic';
+      readonly intrinsic: AgentPolicyDecisionIntrinsic;
+    }
+  | {
+      readonly kind: 'optionIntrinsic';
+      readonly intrinsic: AgentPolicyOptionIntrinsic;
     }
   | {
       readonly kind: 'seatIntrinsic';
@@ -376,6 +391,7 @@ export type CompiledAgentPolicyRef =
       readonly intrinsic: 'phaseId' | 'stepId' | 'round';
     };
 export type AgentPolicyZoneTokenAggOp = 'sum' | 'count' | 'min' | 'max';
+export type AgentPolicyZoneSource = string | AgentPolicyExpr;
 export type AgentPolicyExpr =
   | {
       readonly kind: 'literal';
@@ -396,10 +412,15 @@ export type AgentPolicyExpr =
     }
   | {
       readonly kind: 'zoneTokenAgg';
-      readonly zone: string;
-      readonly owner: string;
+      readonly zone: AgentPolicyZoneSource;
+      readonly owner: AgentPolicyZoneTokenAggOwner;
       readonly prop: string;
       readonly aggOp: AgentPolicyZoneTokenAggOp;
+    }
+  | {
+      readonly kind: 'zoneProp';
+      readonly zone: AgentPolicyZoneSource;
+      readonly prop: string;
     };
 
 export interface CompiledAgentPolicySurfacePreviewVisibility {
@@ -505,7 +526,13 @@ export interface CompiledAgentLibraryIndex {
   readonly candidateAggregates: Readonly<Record<string, CompiledAgentAggregate>>;
   readonly pruningRules: Readonly<Record<string, CompiledAgentPruningRule>>;
   readonly scoreTerms: Readonly<Record<string, CompiledAgentScoreTerm>>;
+  readonly completionScoreTerms: Readonly<Record<string, CompiledAgentScoreTerm>>;
   readonly tieBreakers: Readonly<Record<string, CompiledAgentTieBreaker>>;
+}
+
+export interface CompletionGuidanceConfig {
+  readonly enabled: boolean;
+  readonly fallback: AgentPolicyCompletionGuidanceFallback;
 }
 
 export interface CompiledAgentProfile {
@@ -514,8 +541,10 @@ export interface CompiledAgentProfile {
   readonly use: {
     readonly pruningRules: readonly string[];
     readonly scoreTerms: readonly string[];
+    readonly completionScoreTerms: readonly string[];
     readonly tieBreakers: readonly string[];
   };
+  readonly completionGuidance?: CompletionGuidanceConfig;
   readonly plan: {
     readonly stateFeatures: readonly string[];
     readonly candidateFeatures: readonly string[];

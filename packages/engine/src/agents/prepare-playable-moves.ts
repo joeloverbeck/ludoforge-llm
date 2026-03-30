@@ -1,6 +1,15 @@
 import { perfStart, perfDynEnd, type PerfProfiler } from '../kernel/perf-profiler.js';
 import { evaluatePlayableMoveCandidate } from '../kernel/playable-candidate.js';
-import type { Agent, ClassifiedMove, Move, PolicyCompletionStatistics, Rng, TrustedExecutableMove } from '../kernel/types.js';
+import type {
+  Agent,
+  ChoicePendingRequest,
+  ClassifiedMove,
+  Move,
+  MoveParamValue,
+  PolicyCompletionStatistics,
+  Rng,
+  TrustedExecutableMove,
+} from '../kernel/types.js';
 
 /**
  * Detect non-viable results that stem from premature zone-filter evaluation on
@@ -33,6 +42,7 @@ const isZoneFilterMismatchOnFreeOpTemplate = (
 
 export interface PreparePlayableMovesOptions {
   readonly pendingTemplateCompletions?: number;
+  readonly choose?: (request: ChoicePendingRequest) => MoveParamValue | undefined;
 }
 
 export interface PreparedPlayableMoves {
@@ -66,7 +76,16 @@ export function preparePlayableMoves(
       // selected during template completion.  Fall through to the completion
       // path so evaluatePlayableMoveCandidate can resolve zones and re-check.
       if (isZoneFilterMismatchOnFreeOpTemplate(classified)) {
-        const completion = attemptTemplateCompletion(input, move, rng, pendingTemplateCompletions, completedMoves, stochasticMoves, profiler);
+        const completion = attemptTemplateCompletion(
+          input,
+          move,
+          rng,
+          pendingTemplateCompletions,
+          options.choose,
+          completedMoves,
+          stochasticMoves,
+          profiler,
+        );
         rng = completion.rng;
         stochasticCount += completion.stochasticCount;
         templateCompletionAttempts += completion.templateCompletionAttempts;
@@ -95,7 +114,16 @@ export function preparePlayableMoves(
     }
 
     // Pending decisions: fall back to the template completion path
-    const completion = attemptTemplateCompletion(input, move, rng, pendingTemplateCompletions, completedMoves, stochasticMoves, profiler);
+    const completion = attemptTemplateCompletion(
+      input,
+      move,
+      rng,
+      pendingTemplateCompletions,
+      options.choose,
+      completedMoves,
+      stochasticMoves,
+      profiler,
+    );
     rng = completion.rng;
     stochasticCount += completion.stochasticCount;
     templateCompletionAttempts += completion.templateCompletionAttempts;
@@ -129,6 +157,7 @@ function attemptTemplateCompletion(
   move: Move,
   initialRng: Rng,
   pendingTemplateCompletions: number,
+  choose: ((request: ChoicePendingRequest) => MoveParamValue | undefined) | undefined,
   completedMoves: TrustedExecutableMove[],
   stochasticMoves: TrustedExecutableMove[],
   profiler: PerfProfiler | undefined,
@@ -147,7 +176,14 @@ function attemptTemplateCompletion(
   for (let attempt = 0; attempt < pendingTemplateCompletions; attempt += 1) {
     templateCompletionAttempts += 1;
     const t0_epc = perfStart(profiler);
-    const result = evaluatePlayableMoveCandidate(input.def, input.state, move, currentRng, input.runtime);
+    const result = evaluatePlayableMoveCandidate(
+      input.def,
+      input.state,
+      move,
+      currentRng,
+      input.runtime,
+      choose === undefined ? undefined : { choose },
+    );
     perfDynEnd(profiler, 'agent:evaluatePlayableCandidate', t0_epc);
     currentRng = result.rng;
     if (result.kind === 'playableComplete') {

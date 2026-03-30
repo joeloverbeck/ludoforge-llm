@@ -2,9 +2,9 @@ import { probeMoveViability, type MoveViabilityProbeResult } from './apply-move.
 import {
   completeTemplateMove,
   type TemplateCompletionResult,
+  type TemplateMoveCompletionOptions,
 } from './move-completion.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
-import type { MoveEnumerationBudgets } from './move-enumeration-budgets.js';
 import { createTrustedExecutableMove } from './trusted-move.js';
 import type { GameDef, GameState, Move, Rng, RuntimeWarning, TrustedExecutableMove } from './types.js';
 
@@ -29,6 +29,8 @@ export type PlayableCandidateClassification =
 
 export type PlayableCandidateEvaluation =
   | (PlayableCandidateClassification & Readonly<{ readonly rng: Rng }>);
+
+export type PlayableMoveCandidateOptions = TemplateMoveCompletionOptions;
 
 const classifyPlayableCandidateViability = (
   move: Move,
@@ -103,9 +105,9 @@ export const evaluatePlayableMoveCandidate = (
   move: Move,
   rng: Rng,
   runtime?: GameDefRuntime,
-  budgets?: Partial<MoveEnumerationBudgets>,
+  options?: PlayableMoveCandidateOptions,
 ): PlayableCandidateEvaluation => {
-  const completed = completeTemplateMove(def, state, move, rng, runtime, budgets);
+  const completed = completeTemplateMove(def, state, move, rng, runtime, options);
   return {
     ...classifyCompletedTemplateMove(move, completed, def, state, runtime),
     rng: completed.kind === 'unsatisfiable' ? rng : completed.rng,

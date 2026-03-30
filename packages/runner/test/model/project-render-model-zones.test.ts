@@ -208,7 +208,7 @@ describe('projectRenderModel zones/tokens/adjacencies', () => {
       displayName: 'Urban Center',
       category: 'city',
       attributes: { population: 2, canFortify: true },
-      visual: { shape: 'hexagon', width: 120, height: 80, color: '#123456', connectionStyleKey: null },
+      visual: { shape: 'hexagon', width: 120, height: 80, color: '#123456', connectionStyleKey: null, vertices: null, strokeColor: null },
       metadata: {
         zoneKind: 'board',
         category: 'city',
@@ -220,7 +220,7 @@ describe('projectRenderModel zones/tokens/adjacencies', () => {
     expect(plainZone).toMatchObject({
       category: null,
       attributes: {},
-      visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null },
+      visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null, vertices: null, strokeColor: null },
       metadata: { zoneKind: 'aux' },
     });
   });
@@ -290,7 +290,7 @@ describe('projectRenderModel zones/tokens/adjacencies', () => {
     expect(secondModel.zones[0]).not.toBe(firstModel.zones[0]);
     expect(secondModel.zones[0]).toMatchObject({
       category: 'city',
-      visual: { shape: 'rectangle', color: '#222222', connectionStyleKey: null },
+      visual: { shape: 'rectangle', color: '#222222', connectionStyleKey: null, vertices: null, strokeColor: null },
       metadata: {
         zoneKind: 'aux',
         category: 'city',

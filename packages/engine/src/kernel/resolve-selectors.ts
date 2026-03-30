@@ -14,6 +14,7 @@ import {
   selectorCardinalityZoneResolvedContext,
 } from './selector-cardinality-context.js';
 import type { PlayerSel, ZoneDef, ZoneSel } from './types.js';
+import { toOwnedZoneId } from './zone-address.js';
 
 const OWNER_SPEC_SEPARATOR = ':';
 
@@ -296,7 +297,7 @@ function resolveZoneSelCore(sel: ZoneSel, ctx: ReadContext): readonly ZoneId[] {
   }
 
   if (ownerSpec === 'none') {
-    const zoneId = asZoneId(`${zoneBase}:none`);
+    const zoneId = toOwnedZoneId(zoneBase, 'none');
     if (!candidatesForBase.includes(zoneId)) {
       throw missingVarError(`Unknown unowned zone variant: ${zoneId}`, {
         selector: sel,
@@ -313,7 +314,7 @@ function resolveZoneSelCore(sel: ZoneSel, ctx: ReadContext): readonly ZoneId[] {
     }
 
     const resolved = resolvedPlayers
-      .map((playerId) => asZoneId(`${zoneBase}:${playerId}`))
+      .map((playerId) => toOwnedZoneId(zoneBase, playerId))
       .filter((zoneId) => candidatesForBase.includes(zoneId));
 
     if (resolved.length === 0) {
@@ -341,7 +342,7 @@ function resolveZoneSelCore(sel: ZoneSel, ctx: ReadContext): readonly ZoneId[] {
   }
 
   const resolved = resolvedPlayers
-    .map((playerId) => asZoneId(`${zoneBase}:${playerId}`))
+    .map((playerId) => toOwnedZoneId(zoneBase, playerId))
     .filter((zoneId) => candidatesForBase.includes(zoneId));
 
   if (resolved.length === 0) {

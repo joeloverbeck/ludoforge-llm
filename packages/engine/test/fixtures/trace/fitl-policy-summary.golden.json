@@ -33,7 +33,7 @@
     "seatId": "us",
     "requestedProfileId": null,
     "resolvedProfileId": "us-baseline",
-    "profileFingerprint": "ddd5b06e6dd2067fbc73a72cf2fc0c81b2408409b56a99fa66866cbba2625d8c",
+    "profileFingerprint": "f56eb52571e5999063a69b9b4e1c5b74d9fca778e3eb192eb2a64d581d1666d6",
     "initialCandidateCount": 19,
     "selectedStableMoveKey": "event|{\"eventCardId\":\"card-29\",\"eventDeckId\":\"fitl-events-initial-card-pack\",\"side\":\"shaded\",\"decision:doc.eventDecks.0.cards.28.shaded.effects.0.let.in.0.if.then.0.chooseN::$irregularsOnMap\":[\"tok_us-irregulars_39\",\"tok_us-irregulars_34\",\"tok_us-irregulars_47\"],\"decision:doc.eventDecks.0.cards.28.shaded.effects.0.let.in.0.if.then.1.forEach.effects.0.let.in.0.chooseN::$vcReplacementGuerrillas@tok_us-irregulars_39[0]\":[\"tok_vc-guerrillas_220\"],\"decision:doc.eventDecks.0.cards.28.shaded.effects.0.let.in.0.if.then.1.forEach.effects.0.let.in.0.chooseN::$vcReplacementGuerrillas@tok_us-irregulars_34[1]\":[\"tok_vc-guerrillas_219\"],\"decision:doc.eventDecks.0.cards.28.shaded.effects.0.let.in.0.if.then.1.forEach.effects.0.let.in.0.chooseN::$vcReplacementGuerrillas@tok_us-irregulars_47[2]\":[\"tok_vc-guerrillas_218\"],\"decision:doc.eventDecks.0.cards.28.shaded.effects.1.let.in.0.if.then.0.chooseN::$neutralHighlandToShift[2][0]\":[\"quang-tri-thua-thien:none\"]}|false|event",
     "finalScore": -9.6,

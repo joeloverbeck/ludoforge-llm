@@ -127,25 +127,21 @@ interface MultiSelectModeProps {
   readonly confirmChooseN: () => Promise<void>;
 }
 
-function isLegalScalarChoiceOption(
-  option: Extract<NonNullable<GameStore['renderModel']>['choiceUi'], { readonly kind: 'discreteMany' }>['options'][number],
-): option is (typeof option & { readonly value: ChoiceScalar; readonly legality: 'legal' | 'unknown' }) {
-  return option.legality !== 'illegal' && isChoiceScalar(option.value);
-}
-
 function MultiSelectMode({ choiceUi, addChooseNItem, removeChooseNItem, confirmChooseN }: MultiSelectModeProps): ReactElement {
-  const legalScalarOptions = useMemo(
-    () => choiceUi.options.filter(isLegalScalarChoiceOption),
-    [choiceUi.options],
-  );
-  const bounds = useMemo(
-    () => deriveMultiSelectBounds(choiceUi.min, choiceUi.max, legalScalarOptions.length),
-    [choiceUi.max, choiceUi.min, legalScalarOptions.length],
-  );
   const selectedChoiceValueIds = choiceUi.selectedChoiceValueIds;
   const selectedChoiceValueIdSet = useMemo(
     () => new Set(selectedChoiceValueIds),
     [selectedChoiceValueIds],
+  );
+  const effectiveOptionCount = useMemo(
+    () => choiceUi.options.filter(
+      (o) => (o.legality !== 'illegal' && isChoiceScalar(o.value)) || selectedChoiceValueIdSet.has(o.choiceValueId),
+    ).length,
+    [choiceUi.options, selectedChoiceValueIdSet],
+  );
+  const bounds = useMemo(
+    () => deriveMultiSelectBounds(choiceUi.min, choiceUi.max, effectiveOptionCount),
+    [choiceUi.max, choiceUi.min, effectiveOptionCount],
   );
   const selectedCount = selectedChoiceValueIds.length;
   const canConfirm = choiceUi.canConfirm;
@@ -358,9 +354,10 @@ function ChoiceContextHeader({ context }: { readonly context: RenderChoiceContex
         {context.actionDisplayName}
       </span>
       <span className={styles.decisionPrompt} data-testid="choice-context-prompt">
-        {context.iterationLabel != null ? `${context.iterationLabel}: ` : ''}
-        {context.decisionPrompt}
+        {context.decisionLabel}
+        {context.decisionPrompt != null ? `: ${context.decisionPrompt}` : ''}
         {humanBounds != null ? ` (${humanBounds})` : ''}
+        {context.iterationLabel != null ? ` — ${context.iterationLabel}` : ''}
         {context.iterationProgress != null ? ` — step ${context.iterationProgress}` : ''}
       </span>
     </div>
@@ -415,7 +412,7 @@ function CollapsedBreadcrumb({ steps, totalSteps, store, showCurrent }: Collapse
             <div key={segment.groupId} className={styles.breadcrumbGroup} data-testid={`choice-breadcrumb-group-${segment.groupId}`}>
               <span className={styles.breadcrumbGroupLabel}>{groupLabel} ({segment.steps.length}x)</span>
               <div className={styles.breadcrumbGroupChildren}>
-                {segment.steps.map(({ step, originalIndex }) => (
+                {segment.steps.map(({ step, originalIndex }, stepIdx) => (
                   <button
                     key={`${step.decisionKey}:${step.chosenValueId}`}
                     type="button"
@@ -425,7 +422,11 @@ function CollapsedBreadcrumb({ steps, totalSteps, store, showCurrent }: Collapse
                       void rewindChoiceToBreadcrumb(store, totalSteps, originalIndex);
                     }}
                   >
-                    {step.iterationLabel != null ? `${step.iterationLabel}: ` : ''}{step.chosenDisplayName}
+                    {step.iterationLabel != null
+                      ? `${step.iterationLabel}: `
+                      : segment.steps.length > 1
+                        ? `(${stepIdx + 1}/${segment.steps.length}) `
+                        : ''}{step.chosenDisplayName}
                   </button>
                 ))}
               </div>
@@ -475,8 +476,11 @@ export function ChoicePanel({ store, mode }: ChoicePanelProps): ReactElement | n
     if (choiceModel.choiceContext == null || choiceUi.kind !== 'discreteMany') {
       return choiceModel.choiceContext;
     }
-    const legalCount = choiceUi.options.filter((o) => o.legality !== 'illegal').length;
-    const bounds = deriveMultiSelectBounds(choiceUi.min, choiceUi.max, legalCount);
+    const selectedSet = new Set(choiceUi.selectedChoiceValueIds);
+    const effectiveLegalCount = choiceUi.options.filter(
+      (o) => o.legality !== 'illegal' || selectedSet.has(o.choiceValueId),
+    ).length;
+    const bounds = deriveMultiSelectBounds(choiceUi.min, choiceUi.max, effectiveLegalCount);
     const effectiveBoundsText = bounds.min === 0 && bounds.max === 0
       ? null
       : `${bounds.min}${bounds.max === bounds.min ? '' : `-${bounds.max}`}`;
@@ -490,6 +494,11 @@ export function ChoicePanel({ store, mode }: ChoicePanelProps): ReactElement | n
     <section className={styles.panel} aria-label="Choice panel" data-testid="choice-panel">
       {effectiveContext != null ? (
         <ChoiceContextHeader context={effectiveContext} />
+      ) : showConfirm && choiceModel.selectedActionDisplayName != null ? (
+        <div className={styles.choiceContextHeader} data-testid="choice-context-header">
+          <span className={styles.actionBadge}>{choiceModel.selectedActionDisplayName}</span>
+          <span className={styles.decisionPrompt}>Confirm your selections</span>
+        </div>
       ) : null}
       {mode !== 'choiceInvalid' ? (
         <CollapsedBreadcrumb

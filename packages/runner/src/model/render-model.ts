@@ -38,7 +38,8 @@ export interface RenderRuntimeEligibleFaction {
 
 export interface RenderChoiceContext {
   readonly actionDisplayName: string;
-  readonly decisionPrompt: string;
+  readonly decisionLabel: string;
+  readonly decisionPrompt: string | null;
   readonly decisionParamName: string;
   readonly boundsText: string | null;
   readonly iterationLabel: string | null;
@@ -107,6 +108,7 @@ export interface RenderModel {
   readonly actionGroups: readonly RenderActionGroup[];
   readonly hiddenActionsByClass: ReadonlyMap<string, readonly RenderAction[]>;
   readonly choiceBreadcrumb: readonly RenderChoiceStep[];
+  readonly selectedActionDisplayName: string | null;
   readonly choiceContext: RenderChoiceContext | null;
   readonly choiceUi: RenderChoiceUi;
   readonly moveEnumerationWarnings: readonly RenderWarning[];

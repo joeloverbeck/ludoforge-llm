@@ -13,6 +13,7 @@ import {
   type GameState,
   type Move,
 } from '../../../src/kernel/index.js';
+import { createTemplateChooseOneAction, createTemplateChooseOneProfile } from '../../helpers/agent-template-fixtures.js';
 import { eff } from '../../helpers/effect-tag-helper.js';
 
 const phaseId = asPhaseId('main');
@@ -129,6 +130,39 @@ const createStochasticProfile = (actionId: string): ActionPipelineDef => ({
 });
 
 describe('template-completion chooseN bounds', () => {
+  it('uses a caller-provided choose callback when present', () => {
+    const actionId = asActionId('guided-template');
+    const def = createDef(
+      createTemplateChooseOneAction(actionId, phaseId),
+      createTemplateChooseOneProfile(actionId),
+    );
+    const templateMove: Move = { actionId, params: {} };
+
+    const result = completeTemplateMove(def, baseState, templateMove, createRng(5n), undefined, {
+      choose: () => 'gamma',
+    });
+
+    assert.equal(result.kind, 'completed');
+    if (result.kind !== 'completed') throw new Error('unreachable');
+    assert.equal(result.move.params.$target, 'gamma');
+  });
+
+  it('falls back to PRNG selection when choose returns undefined', () => {
+    const actionId = asActionId('guided-template-fallback');
+    const def = createDef(
+      createTemplateChooseOneAction(actionId, phaseId),
+      createTemplateChooseOneProfile(actionId),
+    );
+    const templateMove: Move = { actionId, params: {} };
+
+    const baseline = completeTemplateMove(def, baseState, templateMove, createRng(12n));
+    const guided = completeTemplateMove(def, baseState, templateMove, createRng(12n), undefined, {
+      choose: () => undefined,
+    });
+
+    assert.deepEqual(guided, baseline);
+  });
+
   it('clamps chooseN max to selectable options and never throws from RNG bounds', () => {
     const action = createChooseNAction('bounded-choose-n');
     const profile = createChooseNProfile('bounded-choose-n', 1, 3, ['a', 'b']);
@@ -219,7 +253,7 @@ describe('template-completion chooseN bounds', () => {
     // Set maxCompletionDecisions to 0 so the very first decision exceeds the budget
     const result = completeTemplateMove(
       def, baseState, templateMove, createRng(1n), undefined,
-      { maxCompletionDecisions: 0 },
+      { budgets: { maxCompletionDecisions: 0 } },
     );
     assert.equal(result.kind, 'unsatisfiable');
   });

@@ -13,6 +13,7 @@ export const ZoneShapeSchema = z.enum([
   'triangle',
   'line',
   'octagon',
+  'polygon',
   'connection',
 ]);
 export const TokenShapeSchema = z.enum([
@@ -93,7 +94,9 @@ const ZoneVisualStyleSchema = z.object({
   width: z.number().optional(),
   height: z.number().optional(),
   color: z.string().optional(),
+  strokeColor: z.string().optional(),
   connectionStyleKey: z.string().optional(),
+  vertices: z.array(z.number()).optional(),
 });
 
 const ConnectionStyleConfigSchema = z.object({
@@ -553,6 +556,7 @@ const ActionChoiceOptionVisualSchema = z.object({
 });
 
 const ActionChoiceVisualSchema = z.object({
+  label: z.string().optional(),
   prompt: z.string().optional(),
   description: z.string().optional(),
   options: z.record(z.string(), ActionChoiceOptionVisualSchema).optional(),

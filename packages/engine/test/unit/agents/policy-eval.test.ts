@@ -2,23 +2,28 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { evaluatePolicyMove, evaluatePolicyMoveCore } from '../../../src/agents/policy-eval.js';
-import { createPolicyRuntimeProviders } from '../../../src/agents/policy-runtime.js';
+import { createPolicyCompletionProvider, createPolicyRuntimeProviders } from '../../../src/agents/policy-runtime.js';
 import { toMoveIdentityKey } from '../../../src/kernel/move-identity.js';
 import {
   asActionId,
   asPhaseId,
   asPlayerId,
+  asTokenId,
+  asZoneId,
   createTrustedExecutableMove,
   createRng,
   initialState,
+  toOwnedZoneId,
   type AgentPolicyCatalog,
   type AgentPolicyExpr,
   type AgentPolicyLiteral,
+  type ChoicePendingRequest,
   type CompiledAgentPolicyCurrentSurfaceRef,
   type CompiledAgentPolicyPreviewSurfaceRef,
   type CompiledAgentPolicyRef,
   type GameDef,
   type Move,
+  type MoveParamValue,
   type ActionDef,
 } from '../../../src/kernel/index.js';
 import { eff } from '../../helpers/effect-tag-helper.js';
@@ -58,7 +63,16 @@ function createBaseDef(agents: AgentPolicyCatalog): GameDef {
     constants: {},
     globalVars: [{ name: 'usMargin', type: 'int', init: 1, min: -10, max: 10 }],
     perPlayerVars: [{ name: 'tempo', type: 'int', init: 0, min: 0, max: 10 }],
-    zones: [],
+    zones: [
+      { id: asZoneId('frontier:0'), owner: 'player', visibility: 'owner', ordering: 'set', attributes: { population: 0 } },
+      { id: asZoneId('frontier:1'), owner: 'player', visibility: 'owner', ordering: 'set', attributes: { population: 0 } },
+      { id: asZoneId('rear:0'), owner: 'player', visibility: 'owner', ordering: 'set', attributes: { population: 0 } },
+      { id: asZoneId('rear:1'), owner: 'player', visibility: 'owner', ordering: 'set', attributes: { population: 0 } },
+      { id: asZoneId('frontier:none'), owner: 'none', visibility: 'public', ordering: 'set', attributes: { population: 0 } },
+      { id: asZoneId('rear:none'), owner: 'none', visibility: 'public', ordering: 'set', attributes: { population: 0 } },
+      { id: asZoneId('target-a:none'), owner: 'none', visibility: 'public', ordering: 'set', category: 'province', attributes: { population: 0 } },
+      { id: asZoneId('target-b:none'), owner: 'none', visibility: 'public', ordering: 'set', category: 'province', attributes: { population: 0 } },
+    ],
     derivedMetrics: [
       {
         id: 'boardPressure',
@@ -229,6 +243,7 @@ function createCatalog(
         },
         ...(overrides.scoreTerms ?? {}),
       },
+      completionScoreTerms: {},
       tieBreakers: {
         stableMoveKey: {
           kind: 'stableMoveKey',
@@ -250,6 +265,7 @@ function createCatalog(
         use: {
           pruningRules: ['dropPassWhenMarginExists'],
           scoreTerms: ['preferEvents'],
+          completionScoreTerms: [],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
@@ -289,8 +305,24 @@ function createInput(agents: AgentPolicyCatalog, legalMoves: readonly Move[], se
   } as const;
 }
 
+function createChoiceRequest(overrides: Partial<ChoicePendingRequest> = {}): ChoicePendingRequest {
+  return {
+    kind: 'pending',
+    complete: false,
+    decisionKey: '$target',
+    type: 'chooseOne',
+    name: '$target',
+    options: [
+      { value: 'zone-a', legality: 'legal', illegalReason: null },
+      { value: 'zone-b', legality: 'legal', illegalReason: null },
+    ],
+    targetKinds: ['zone'],
+    ...overrides,
+  } as ChoicePendingRequest;
+}
+
 describe('policy-eval', () => {
-  it('routes intrinsic, candidate, current, and preview reads through explicit runtime providers', () => {
+  it('routes intrinsic, candidate, current, preview, and completion reads through explicit runtime providers', () => {
     const input = createInput(
       createCatalog(
         {},
@@ -309,6 +341,10 @@ describe('policy-eval', () => {
       seatId: 'us',
       trustedMoveIndex: new Map(),
       catalog: input.def.agents!,
+      completion: {
+        request: createChoiceRequest(),
+        optionValue: 'zone-b',
+      },
       runtimeError: (code, message) => new Error(`${code}: ${message}`),
     });
     const candidate = {
@@ -338,6 +374,49 @@ describe('policy-eval', () => {
       } satisfies CompiledAgentPolicyPreviewSurfaceRef),
       { kind: 'value', value: 4 },
     );
+    assert.equal(providers.completion?.resolveDecisionIntrinsic('type'), 'chooseOne');
+    assert.equal(providers.completion?.resolveDecisionIntrinsic('targetKind'), 'zone');
+    assert.equal(providers.completion?.resolveDecisionIntrinsic('optionCount'), 2);
+    assert.equal(providers.completion?.resolveOptionIntrinsic('value'), 'zone-b');
+  });
+
+  it('maps completion intrinsics from request metadata and falls back targetKind to unknown', () => {
+    const provider = createPolicyCompletionProvider(
+      createChoiceRequest({
+        type: 'chooseN',
+        name: '$pickZones',
+        options: [
+          { value: 'zone-a', legality: 'legal', illegalReason: null },
+          { value: 'zone-c', legality: 'legal', illegalReason: null },
+          { value: 'zone-d', legality: 'illegal', illegalReason: 'pipelineAtomicCostValidationFailed' },
+        ],
+        targetKinds: [],
+        selected: [],
+        canConfirm: true,
+      }),
+      ['zone-a', 'zone-c'] satisfies MoveParamValue,
+    );
+
+    assert.equal(provider.resolveDecisionIntrinsic('type'), 'chooseN');
+    assert.equal(provider.resolveDecisionIntrinsic('name'), '$pickZones');
+    assert.equal(provider.resolveDecisionIntrinsic('targetKind'), 'unknown');
+    assert.equal(provider.resolveDecisionIntrinsic('optionCount'), 3);
+    assert.deepEqual(provider.resolveOptionIntrinsic('value'), ['zone-a', 'zone-c']);
+  });
+
+  it('omits completion providers when no completion context is supplied', () => {
+    const input = createInput(createCatalog(), createMoves('event'));
+    const providers = createPolicyRuntimeProviders({
+      def: input.def,
+      state: input.state,
+      playerId: input.playerId,
+      seatId: 'us',
+      trustedMoveIndex: new Map(),
+      catalog: input.def.agents!,
+      runtimeError: (code, message) => new Error(`${code}: ${message}`),
+    });
+
+    assert.equal(providers.completion, undefined);
   });
 
   it('resolves player-scoped per-player refs by runtime player identity in symmetric seats', () => {
@@ -413,6 +492,7 @@ describe('policy-eval', () => {
         use: {
           pruningRules: ['pruneEverything'],
           scoreTerms: [],
+          completionScoreTerms: [],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
@@ -449,6 +529,7 @@ describe('policy-eval', () => {
         use: {
           pruningRules: ['pruneEverything'],
           scoreTerms: [],
+          completionScoreTerms: [],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
@@ -520,6 +601,7 @@ describe('policy-eval', () => {
         use: {
           pruningRules: [],
           scoreTerms: ['preferProjectedMargin', 'reinforceProjectedMargin', 'ignoreMaskedStanding'],
+          completionScoreTerms: [],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
@@ -594,6 +676,7 @@ describe('policy-eval', () => {
         use: {
           pruningRules: [],
           scoreTerms: ['preferProjectedMargin'],
+          completionScoreTerms: [],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
@@ -664,6 +747,7 @@ describe('policy-eval', () => {
         use: {
           pruningRules: [],
           scoreTerms: ['preferMetric'],
+          completionScoreTerms: [],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
@@ -706,6 +790,7 @@ describe('policy-eval', () => {
         use: {
           pruningRules: [],
           scoreTerms: ['preferUnknownSurface'],
+          completionScoreTerms: [],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
@@ -761,6 +846,7 @@ describe('policy-eval', () => {
         use: {
           pruningRules: [],
           scoreTerms: ['preferMatchingCard', 'preferHigherTargetCount'],
+          completionScoreTerms: [],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
@@ -792,6 +878,621 @@ describe('policy-eval', () => {
     );
   });
 
+  it('preserves static zoneTokenAgg behavior for string zones', () => {
+    const agents = createCatalog(
+      {
+        candidateFeatures: {
+          staticZoneLoad: {
+            type: 'number',
+            costClass: 'candidate',
+            expr: {
+              kind: 'zoneTokenAgg',
+              zone: 'frontier',
+              owner: 'self',
+              prop: 'strength',
+              aggOp: 'sum',
+            },
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          },
+        },
+        scoreTerms: {
+          preferStaticZone: {
+            costClass: 'candidate',
+            weight: literal(1),
+            value: refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'staticZoneLoad' }),
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['staticZoneLoad'], aggregates: [] },
+          },
+        },
+      },
+      {
+        use: {
+          pruningRules: [],
+          scoreTerms: ['preferStaticZone'],
+          completionScoreTerms: [],
+          tieBreakers: ['stableMoveKey'],
+        },
+        plan: {
+          stateFeatures: [],
+          candidateFeatures: ['staticZoneLoad'],
+          candidateAggregates: [],
+        },
+      },
+    );
+    const baseInput = createInput(agents, createMoves('alpha'));
+    const input = {
+      ...baseInput,
+      state: {
+        ...baseInput.state,
+        zones: {
+          ...baseInput.state.zones,
+          'frontier:0': [
+            { id: asTokenId('t0'), type: 'unit', props: { strength: 2 } },
+            { id: asTokenId('t1'), type: 'unit', props: { strength: 3 } },
+          ],
+        },
+      },
+    } as const;
+
+    const result = evaluatePolicyMove(input);
+
+    assert.equal(result.move.actionId, asActionId('alpha'));
+    assert.equal(
+      result.metadata.candidates.find((candidate) => candidate.actionId === 'alpha')?.score,
+      5,
+    );
+  });
+
+  it('reads static scalar zone props and synthetic category values', () => {
+    const agents = createCatalog(
+      {
+        candidateFeatures: {
+          frontierPopulation: {
+            type: 'number',
+            costClass: 'candidate',
+            expr: {
+              kind: 'zoneProp',
+              zone: 'frontier:none',
+              prop: 'population',
+            },
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          },
+          targetCategoryMatches: {
+            type: 'boolean',
+            costClass: 'candidate',
+            expr: opExpr(
+              'eq',
+              {
+                kind: 'zoneProp',
+                zone: 'target-a:none',
+                prop: 'category',
+              },
+              literal('province'),
+            ),
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          },
+        },
+        scoreTerms: {
+          preferHigherPopulation: {
+            costClass: 'candidate',
+            weight: literal(1),
+            value: opExpr(
+              'add',
+              refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'frontierPopulation' }),
+              opExpr('boolToNumber', refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'targetCategoryMatches' })),
+            ),
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['frontierPopulation', 'targetCategoryMatches'], aggregates: [] },
+          },
+        },
+      },
+      {
+        use: {
+          pruningRules: [],
+          scoreTerms: ['preferHigherPopulation'],
+          completionScoreTerms: [],
+          tieBreakers: ['stableMoveKey'],
+        },
+        plan: {
+          stateFeatures: [],
+          candidateFeatures: ['frontierPopulation', 'targetCategoryMatches'],
+          candidateAggregates: [],
+        },
+      },
+    );
+    const input = createInput(agents, createMoves('alpha'));
+
+    const result = evaluatePolicyMove(input);
+
+    assert.equal(result.move.actionId, asActionId('alpha'));
+    assert.equal(
+      result.metadata.candidates.find((candidate) => candidate.actionId === 'alpha')?.score,
+      1,
+    );
+  });
+
+  it('evaluates dynamic zoneProp zones and fails closed for unresolved or non-scalar properties', () => {
+    const agents = createCatalog(
+      {
+        candidateFeatures: {
+          targetPopulation: {
+            type: 'number',
+            costClass: 'candidate',
+            expr: {
+              kind: 'zoneProp',
+              zone: refExpr({ kind: 'candidateParam', id: 'eventCardId' }),
+              prop: 'population',
+            },
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          },
+          nonScalarZoneProp: {
+            type: 'number',
+            costClass: 'candidate',
+            expr: {
+              kind: 'zoneProp',
+              zone: refExpr({ kind: 'candidateParam', id: 'eventCardId' }),
+              prop: 'terrainTags',
+            },
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          },
+        },
+        scoreTerms: {
+          preferKnownPopulation: {
+            costClass: 'candidate',
+            weight: literal(1),
+            value: refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'targetPopulation' }),
+            unknownAs: -5,
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['targetPopulation'], aggregates: [] },
+          },
+          rejectNonScalarZoneProp: {
+            costClass: 'candidate',
+            weight: literal(1),
+            value: refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'nonScalarZoneProp' }),
+            unknownAs: 0,
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['nonScalarZoneProp'], aggregates: [] },
+          },
+        },
+      },
+      {
+        use: {
+          pruningRules: [],
+          scoreTerms: ['preferKnownPopulation', 'rejectNonScalarZoneProp'],
+          completionScoreTerms: [],
+          tieBreakers: ['stableMoveKey'],
+        },
+        plan: {
+          stateFeatures: [],
+          candidateFeatures: ['targetPopulation', 'nonScalarZoneProp'],
+          candidateAggregates: [],
+        },
+      },
+      {
+        eventCardId: { type: 'id' },
+      },
+    );
+    const baseInput = createInput(agents, [
+      { actionId: asActionId('alpha'), params: { eventCardId: 'target-a:none' } },
+      { actionId: asActionId('beta'), params: { eventCardId: 'missing-space' } },
+    ]);
+    const input = {
+      ...baseInput,
+      def: {
+        ...baseInput.def,
+        zones: baseInput.def.zones.map((zone) =>
+          zone.id === asZoneId('target-a:none')
+            ? { ...zone, attributes: { ...(zone.attributes ?? {}), population: 4, terrainTags: ['highland'] } }
+            : zone),
+      },
+    } as const;
+
+    const result = evaluatePolicyMove(input);
+
+    assert.equal(result.move.actionId, asActionId('alpha'));
+    assert.equal(
+      result.metadata.candidates.find((candidate) => candidate.actionId === 'alpha')?.score,
+      4,
+    );
+    assert.equal(
+      result.metadata.candidates.find((candidate) => candidate.actionId === 'beta')?.score,
+      -5,
+    );
+  });
+
+  it('evaluates dynamic zoneTokenAgg zones through existing runtime refs', () => {
+    const agents = createCatalog(
+      {
+        candidateFeatures: {
+          zoneLoad: {
+            type: 'number',
+            costClass: 'candidate',
+            expr: {
+              kind: 'zoneTokenAgg',
+              zone: refExpr({ kind: 'candidateParam', id: 'eventCardId' }),
+              owner: 'self',
+              prop: 'strength',
+              aggOp: 'sum',
+            },
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          },
+        },
+        scoreTerms: {
+          preferLoadedZone: {
+            costClass: 'candidate',
+            weight: literal(1),
+            value: refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'zoneLoad' }),
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['zoneLoad'], aggregates: [] },
+          },
+        },
+      },
+      {
+        use: {
+          pruningRules: [],
+          scoreTerms: ['preferLoadedZone'],
+          completionScoreTerms: [],
+          tieBreakers: ['stableMoveKey'],
+        },
+        plan: {
+          stateFeatures: [],
+          candidateFeatures: ['zoneLoad'],
+          candidateAggregates: [],
+        },
+      },
+      {
+        eventCardId: { type: 'id' },
+      },
+    );
+    const baseInput = createInput(agents, [
+      { actionId: asActionId('alpha'), params: { eventCardId: 'frontier' } },
+      { actionId: asActionId('beta'), params: { eventCardId: 'rear' } },
+    ]);
+    const input = {
+      ...baseInput,
+      state: {
+        ...baseInput.state,
+        zones: {
+          ...baseInput.state.zones,
+          'frontier:0': [
+            { id: asTokenId('t0'), type: 'unit', props: { strength: 2 } },
+            { id: asTokenId('t1'), type: 'unit', props: { strength: 3 } },
+          ],
+          'rear:0': [
+            { id: asTokenId('t2'), type: 'unit', props: { strength: 1 } },
+          ],
+        },
+      },
+    } as const;
+
+    const result = evaluatePolicyMove(input);
+
+    assert.equal(result.move.actionId, asActionId('alpha'));
+    assert.equal(
+      result.metadata.candidates.find((candidate) => candidate.actionId === 'alpha')?.score,
+      5,
+    );
+    assert.equal(
+      result.metadata.candidates.find((candidate) => candidate.actionId === 'beta')?.score,
+      1,
+    );
+  });
+
+  it('resolves exact runtime zone ids for dynamic zoneTokenAgg values', () => {
+    const agents = createCatalog(
+      {
+        candidateFeatures: {
+          zoneLoad: {
+            type: 'number',
+            costClass: 'candidate',
+            expr: {
+              kind: 'zoneTokenAgg',
+              zone: refExpr({ kind: 'candidateParam', id: 'eventCardId' }),
+              owner: 'self',
+              prop: 'strength',
+              aggOp: 'sum',
+            },
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          },
+        },
+        scoreTerms: {
+          preferLoadedZone: {
+            costClass: 'candidate',
+            weight: literal(1),
+            value: refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'zoneLoad' }),
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['zoneLoad'], aggregates: [] },
+          },
+        },
+      },
+      {
+        use: {
+          pruningRules: [],
+          scoreTerms: ['preferLoadedZone'],
+          completionScoreTerms: [],
+          tieBreakers: ['stableMoveKey'],
+        },
+        plan: {
+          stateFeatures: [],
+          candidateFeatures: ['zoneLoad'],
+          candidateAggregates: [],
+        },
+      },
+      {
+        eventCardId: { type: 'id' },
+      },
+    );
+    const baseInput = createInput(agents, [
+      { actionId: asActionId('alpha'), params: { eventCardId: 'target-a:none' } },
+      { actionId: asActionId('beta'), params: { eventCardId: 'target-b:none' } },
+    ]);
+    const input = {
+      ...baseInput,
+      state: {
+        ...baseInput.state,
+        zones: {
+          ...baseInput.state.zones,
+          'target-a:none': [
+            { id: asTokenId('t0'), type: 'unit', props: { strength: 4 } },
+            { id: asTokenId('t1'), type: 'unit', props: { strength: 1 } },
+          ],
+          'target-b:none': [
+            { id: asTokenId('t2'), type: 'unit', props: { strength: 2 } },
+          ],
+        },
+      },
+    } as const;
+
+    const result = evaluatePolicyMove(input);
+
+    assert.equal(result.move.actionId, asActionId('alpha'));
+    assert.equal(
+      result.metadata.candidates.find((candidate) => candidate.actionId === 'alpha')?.score,
+      5,
+    );
+    assert.equal(
+      result.metadata.candidates.find((candidate) => candidate.actionId === 'beta')?.score,
+      2,
+    );
+  });
+
+  it('resolves zoneTokenAgg active-owner zones through the shared runtime zone-address helper', () => {
+    const agents = createCatalog(
+      {
+        candidateFeatures: {
+          activeZoneLoad: {
+            type: 'number',
+            costClass: 'candidate',
+            expr: {
+              kind: 'zoneTokenAgg',
+              zone: 'frontier',
+              owner: 'active',
+              prop: 'strength',
+              aggOp: 'sum',
+            },
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          },
+        },
+        scoreTerms: {
+          preferActiveZone: {
+            costClass: 'candidate',
+            weight: literal(1),
+            value: refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'activeZoneLoad' }),
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['activeZoneLoad'], aggregates: [] },
+          },
+        },
+      },
+      {
+        use: {
+          pruningRules: [],
+          scoreTerms: ['preferActiveZone'],
+          completionScoreTerms: [],
+          tieBreakers: ['stableMoveKey'],
+        },
+        plan: {
+          stateFeatures: [],
+          candidateFeatures: ['activeZoneLoad'],
+          candidateAggregates: [],
+        },
+      },
+    );
+    const baseInput = createInput(agents, createMoves('alpha'));
+    const activeZoneId = toOwnedZoneId('frontier', baseInput.state.activePlayer);
+    const input = {
+      ...baseInput,
+      state: {
+        ...baseInput.state,
+        zones: {
+          ...baseInput.state.zones,
+          [activeZoneId]: [
+            { id: asTokenId('t0'), type: 'unit', props: { strength: 4 } },
+            { id: asTokenId('t1'), type: 'unit', props: { strength: 1 } },
+          ],
+        },
+      },
+    } as const;
+
+    const result = evaluatePolicyMove(input);
+
+    assert.equal(result.move.actionId, asActionId('alpha'));
+    assert.equal(
+      result.metadata.candidates.find((candidate) => candidate.actionId === 'alpha')?.score,
+      5,
+    );
+  });
+
+  it('returns unknown for dynamic zoneTokenAgg zones that do not evaluate to strings', () => {
+    const agents = createCatalog(
+      {
+        candidateFeatures: {
+          badZoneLoad: {
+            type: 'number',
+            costClass: 'candidate',
+            expr: {
+              kind: 'zoneTokenAgg',
+              zone: paramExpr('passFloor'),
+              owner: 'self',
+              prop: 'strength',
+              aggOp: 'sum',
+            },
+            dependencies: { parameters: ['passFloor'], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          },
+        },
+        scoreTerms: {
+          preferKnownZone: {
+            costClass: 'candidate',
+            weight: literal(1),
+            value: refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'badZoneLoad' }),
+            unknownAs: 0,
+            dependencies: { parameters: ['passFloor'], stateFeatures: [], candidateFeatures: ['badZoneLoad'], aggregates: [] },
+          },
+        },
+      },
+      {
+        use: {
+          pruningRules: [],
+          scoreTerms: ['preferKnownZone'],
+          completionScoreTerms: [],
+          tieBreakers: ['stableMoveKey'],
+        },
+        plan: {
+          stateFeatures: [],
+          candidateFeatures: ['badZoneLoad'],
+          candidateAggregates: [],
+        },
+      },
+    );
+    const input = createInput(agents, createMoves('beta', 'alpha'));
+
+    const result = evaluatePolicyMove(input);
+
+    assert.equal(result.move.actionId, asActionId('alpha'));
+    assert.equal(
+      result.metadata.candidates.find((candidate) => candidate.actionId === 'alpha')?.score,
+      0,
+    );
+    assert.equal(
+      result.metadata.candidates.find((candidate) => candidate.actionId === 'beta')?.score,
+      0,
+    );
+  });
+
+  it('fails closed for unresolved dynamic zoneTokenAgg strings', () => {
+    const agents = createCatalog(
+      {
+        candidateFeatures: {
+          badZoneLoad: {
+            type: 'number',
+            costClass: 'candidate',
+            expr: {
+              kind: 'zoneTokenAgg',
+              zone: refExpr({ kind: 'candidateParam', id: 'eventCardId' }),
+              owner: 'self',
+              prop: 'strength',
+              aggOp: 'sum',
+            },
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          },
+        },
+        scoreTerms: {
+          preferKnownZone: {
+            costClass: 'candidate',
+            weight: literal(1),
+            value: refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'badZoneLoad' }),
+            unknownAs: -3,
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['badZoneLoad'], aggregates: [] },
+          },
+        },
+      },
+      {
+        use: {
+          pruningRules: [],
+          scoreTerms: ['preferKnownZone'],
+          completionScoreTerms: [],
+          tieBreakers: ['stableMoveKey'],
+        },
+        plan: {
+          stateFeatures: [],
+          candidateFeatures: ['badZoneLoad'],
+          candidateAggregates: [],
+        },
+      },
+      {
+        eventCardId: { type: 'id' },
+      },
+    );
+    const input = createInput(agents, [
+      { actionId: asActionId('alpha'), params: { eventCardId: 'missing-space' } },
+      { actionId: asActionId('beta'), params: { eventCardId: 'target-b:none' } },
+    ]);
+
+    const result = evaluatePolicyMove(input);
+
+    assert.equal(result.move.actionId, asActionId('beta'));
+    assert.equal(
+      result.metadata.candidates.find((candidate) => candidate.actionId === 'alpha')?.score,
+      -3,
+    );
+  });
+
+  it('resolves numeric runtime player ids for zoneTokenAgg owners', () => {
+    const agents = createCatalog(
+      {
+        candidateFeatures: {
+          explicitOwnerZoneLoad: {
+            type: 'number',
+            costClass: 'candidate',
+            expr: {
+              kind: 'zoneTokenAgg',
+              zone: 'frontier',
+              owner: '0',
+              prop: 'strength',
+              aggOp: 'sum',
+            },
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          },
+        },
+        scoreTerms: {
+          preferExplicitOwnerZone: {
+            costClass: 'candidate',
+            weight: literal(1),
+            value: refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'explicitOwnerZoneLoad' }),
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['explicitOwnerZoneLoad'], aggregates: [] },
+          },
+        },
+      },
+      {
+        use: {
+          pruningRules: [],
+          scoreTerms: ['preferExplicitOwnerZone'],
+          completionScoreTerms: [],
+          tieBreakers: ['stableMoveKey'],
+        },
+        plan: {
+          stateFeatures: [],
+          candidateFeatures: ['explicitOwnerZoneLoad'],
+          candidateAggregates: [],
+        },
+      },
+    );
+    const baseInput = createInput(agents, createMoves('alpha'));
+    const input = {
+      ...baseInput,
+      state: {
+        ...baseInput.state,
+        zones: {
+          ...baseInput.state.zones,
+          [toOwnedZoneId('frontier', asPlayerId(0))]: [
+            { id: asTokenId('t0'), type: 'unit', props: { strength: 2 } },
+            { id: asTokenId('t1'), type: 'unit', props: { strength: 3 } },
+          ],
+        },
+      },
+    } as const;
+
+    const result = evaluatePolicyMove(input);
+
+    assert.equal(result.move.actionId, asActionId('alpha'));
+    assert.equal(
+      result.metadata.candidates.find((candidate) => candidate.actionId === 'alpha')?.score,
+      5,
+    );
+  });
+
   it('reads exact id-list candidate params through compiled candidate-param defs', () => {
     const agents = createCatalog(
       {
@@ -816,6 +1517,7 @@ describe('policy-eval', () => {
         use: {
           pruningRules: [],
           scoreTerms: ['preferZoneA'],
+          completionScoreTerms: [],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {

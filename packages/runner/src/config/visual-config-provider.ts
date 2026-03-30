@@ -57,7 +57,9 @@ export interface ResolvedZoneVisual {
   readonly width: number;
   readonly height: number;
   readonly color: string | null;
+  readonly strokeColor: string | null;
   readonly connectionStyleKey: string | null;
+  readonly vertices: readonly number[] | null;
 }
 
 export interface ResolvedTokenVisual {
@@ -166,7 +168,9 @@ export class VisualConfigProvider {
       width: DEFAULT_ZONE_WIDTH,
       height: DEFAULT_ZONE_HEIGHT,
       color: null,
+      strokeColor: null,
       connectionStyleKey: null,
+      vertices: null,
     };
 
     const categoryStyle = category === null
@@ -467,6 +471,10 @@ export class VisualConfigProvider {
     return this.config?.actions?.[actionId]?.description ?? null;
   }
 
+  getChoiceLabel(actionId: string, paramName: string): string | null {
+    return this.config?.actions?.[actionId]?.choices?.[paramName]?.label ?? null;
+  }
+
   getChoicePrompt(actionId: string, paramName: string): string | null {
     return this.config?.actions?.[actionId]?.choices?.[paramName]?.prompt ?? null;
   }
@@ -555,7 +563,9 @@ function applyZoneStyle(
     width: number;
     height: number;
     color: string | null;
+    strokeColor: string | null;
     connectionStyleKey: string | null;
+    vertices: readonly number[] | null;
   },
   source:
     | {
@@ -563,7 +573,9 @@ function applyZoneStyle(
       readonly width?: number | undefined;
       readonly height?: number | undefined;
       readonly color?: string | undefined;
+      readonly strokeColor?: string | undefined;
       readonly connectionStyleKey?: string | undefined;
+      readonly vertices?: readonly number[] | undefined;
     }
     | undefined,
 ): void {
@@ -582,8 +594,14 @@ function applyZoneStyle(
   if (source.color !== undefined) {
     target.color = source.color;
   }
+  if (source.strokeColor !== undefined) {
+    target.strokeColor = source.strokeColor;
+  }
   if (source.connectionStyleKey !== undefined) {
     target.connectionStyleKey = source.connectionStyleKey;
+  }
+  if (source.vertices !== undefined && source.vertices.length > 0) {
+    target.vertices = source.vertices;
   }
 }
 

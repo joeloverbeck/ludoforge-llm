@@ -49,6 +49,12 @@ function createContext(parameterDefs: Readonly<Record<string, CompiledAgentParam
             ref: { kind: 'library' as const, refKind: 'aggregate' as const, id: 'bestProjectedMargin' },
             dependency: { kind: 'aggregates' as const, id: 'bestProjectedMargin' },
           };
+        case 'option.value':
+          return {
+            type: 'id' as const,
+            costClass: 'state' as const,
+            ref: { kind: 'optionIntrinsic' as const, intrinsic: 'value' as const },
+          };
         default:
           return null;
       }
@@ -173,5 +179,203 @@ describe('policy-expr analysis', () => {
 
     assert.equal(analysis, null);
     assert.ok(diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_AGENT_POLICY_DIVIDE_BY_ZERO' && diagnostic.path === 'expr'));
+  });
+
+  it('analyzes dynamic zoneTokenAgg zones through the normal expression pipeline', () => {
+    const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
+    const analysis = analyzePolicyExpr(
+      {
+        zoneTokenAgg: {
+          zone: { ref: 'candidate.param.eventCardId' },
+          owner: 'self',
+          prop: 'rank',
+          op: 'sum',
+        },
+      },
+      createContext(),
+      diagnostics,
+      'expr',
+    );
+
+    assert.deepEqual(diagnostics, []);
+    assert.deepEqual(analysis, {
+      expr: {
+        kind: 'zoneTokenAgg',
+        zone: refExpr({ kind: 'candidateParam', id: 'eventCardId' }),
+        owner: 'self',
+        prop: 'rank',
+        aggOp: 'sum',
+      },
+      valueType: 'number',
+      costClass: 'candidate',
+      dependencies: {
+        parameters: [],
+        stateFeatures: [],
+        candidateFeatures: [],
+        aggregates: [],
+      },
+      isStaticallyZero: false,
+    });
+  });
+
+  it('accepts completion-oriented option.value refs inside dynamic zoneTokenAgg zones', () => {
+    const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
+    const analysis = analyzePolicyExpr(
+      {
+        zoneTokenAgg: {
+          zone: { ref: 'option.value' },
+          owner: 'self',
+          prop: 'rank',
+          op: 'count',
+        },
+      },
+      createContext(),
+      diagnostics,
+      'expr',
+    );
+
+    assert.deepEqual(diagnostics, []);
+    assert.deepEqual(analysis?.expr, {
+      kind: 'zoneTokenAgg',
+      zone: refExpr({ kind: 'optionIntrinsic', intrinsic: 'value' }),
+      owner: 'self',
+      prop: 'rank',
+      aggOp: 'count',
+    });
+    assert.equal(analysis?.costClass, 'state');
+  });
+
+  it('analyzes zoneProp with static and dynamic zone expressions through the shared path', () => {
+    const staticDiagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
+    const staticAnalysis = analyzePolicyExpr(
+      {
+        zoneProp: {
+          zone: 'frontier:none',
+          prop: 'population',
+        },
+      },
+      createContext(),
+      staticDiagnostics,
+      'expr',
+    );
+
+    assert.deepEqual(staticDiagnostics, []);
+    assert.deepEqual(staticAnalysis?.expr, {
+      kind: 'zoneProp',
+      zone: 'frontier:none',
+      prop: 'population',
+    });
+    assert.equal(staticAnalysis?.valueType, 'unknown');
+    assert.equal(staticAnalysis?.costClass, 'state');
+
+    const dynamicDiagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
+    const dynamicAnalysis = analyzePolicyExpr(
+      {
+        zoneProp: {
+          zone: { ref: 'option.value' },
+          prop: 'category',
+        },
+      },
+      createContext(),
+      dynamicDiagnostics,
+      'expr',
+    );
+
+    assert.deepEqual(dynamicDiagnostics, []);
+    assert.deepEqual(dynamicAnalysis?.expr, {
+      kind: 'zoneProp',
+      zone: refExpr({ kind: 'optionIntrinsic', intrinsic: 'value' }),
+      prop: 'category',
+    });
+    assert.equal(dynamicAnalysis?.costClass, 'state');
+  });
+
+  it('rejects dynamic zoneProp zones that do not resolve to ids', () => {
+    const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
+    const analysis = analyzePolicyExpr(
+      {
+        zoneProp: {
+          zone: { ref: 'feature.currentMargin' },
+          prop: 'population',
+        },
+      },
+      createContext(),
+      diagnostics,
+      'expr',
+    );
+
+    assert.equal(analysis, null);
+    assert.ok(
+      diagnostics.some((diagnostic) =>
+        diagnostic.code === 'CNL_COMPILER_AGENT_POLICY_TYPE_INVALID'
+        && diagnostic.path === 'expr.zoneProp.zone'),
+    );
+  });
+
+  it('accepts numeric runtime player ids for zoneTokenAgg owners', () => {
+    const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
+    const analysis = analyzePolicyExpr(
+      {
+        zoneTokenAgg: {
+          zone: 'frontier',
+          owner: '0',
+          prop: 'rank',
+          op: 'sum',
+        },
+      },
+      createContext(),
+      diagnostics,
+      'expr',
+    );
+
+    assert.deepEqual(diagnostics, []);
+    assert.equal(analysis?.expr.kind, 'zoneTokenAgg');
+    assert.equal(analysis?.expr.kind === 'zoneTokenAgg' ? analysis.expr.owner : null, '0');
+  });
+
+  it('rejects dynamic zoneTokenAgg zones that do not resolve to ids', () => {
+    const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
+    const analysis = analyzePolicyExpr(
+      {
+        zoneTokenAgg: {
+          zone: { ref: 'feature.currentMargin' },
+          owner: 'self',
+          prop: 'rank',
+          op: 'sum',
+        },
+      },
+      createContext(),
+      diagnostics,
+      'expr',
+    );
+
+    assert.equal(analysis, null);
+    assert.ok(
+      diagnostics.some((diagnostic) =>
+        diagnostic.code === 'CNL_COMPILER_AGENT_POLICY_TYPE_INVALID'
+        && diagnostic.path === 'expr.zoneTokenAgg.zone'),
+    );
+  });
+
+  it('rejects seat ids for zoneTokenAgg owners', () => {
+    const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
+    const analysis = analyzePolicyExpr(
+      {
+        zoneTokenAgg: {
+          zone: 'frontier',
+          owner: 'us',
+          prop: 'rank',
+          op: 'sum',
+        },
+      },
+      createContext(),
+      diagnostics,
+      'expr',
+    );
+
+    assert.equal(analysis, null);
+    assert.ok(diagnostics.some((diagnostic) =>
+      diagnostic.path === 'expr.zoneTokenAgg.owner'
+      && diagnostic.message.includes('numeric runtime player id')));
   });
 });

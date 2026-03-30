@@ -81,6 +81,7 @@ function createDef(): GameDef {
         candidateAggregates: {},
         pruningRules: {},
         scoreTerms: {},
+        completionScoreTerms: {},
         tieBreakers: {},
       },
       profiles: {},

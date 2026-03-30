@@ -836,6 +836,7 @@ describe('ChoicePanel', () => {
           renderModel: makeRenderModel({
             choiceContext: {
               actionDisplayName: 'Train Troops',
+              decisionLabel: 'Target Space',
               decisionPrompt: 'Select a space',
               decisionParamName: 'targetSpace',
               boundsText: '1-3',
@@ -856,7 +857,7 @@ describe('ChoicePanel', () => {
     expect(html).toContain('data-testid="choice-context-action"');
     expect(html).toContain('Train Troops');
     expect(html).toContain('data-testid="choice-context-prompt"');
-    expect(html).toContain('Da Nang: Select a space (1 to 3) — step 1 of 3');
+    expect(html).toContain('Target Space: Select a space (1 to 3) — Da Nang — step 1 of 3');
   });
 
   it('does not render ChoiceContextHeader when choiceContext is null', () => {
@@ -887,6 +888,7 @@ describe('ChoicePanel', () => {
           renderModel: makeRenderModel({
             choiceContext: {
               actionDisplayName: 'Pass',
+              decisionLabel: 'Confirm',
               decisionPrompt: 'Confirm action',
               decisionParamName: 'confirm',
               boundsText: null,
@@ -1016,6 +1018,33 @@ describe('ChoicePanel', () => {
     expect(html).not.toContain('breadcrumbGroup');
     expect(html).toContain('first: Zone A');
     expect(html).toContain('second: Zone B');
+  });
+
+  it('renders iteration indices in grouped breadcrumb steps when iterationLabel is null', () => {
+    const html = renderToStaticMarkup(
+      createElement(ChoicePanel, {
+        mode: 'choicePending',
+        store: createChoiceStore({
+          renderModel: makeRenderModel({
+            choiceUi: {
+              kind: 'discreteOne',
+              decisionKey: asDecisionKey('decision:placeType::zone-c'),
+              options: [makeChoiceOption('irregulars', 'Irregulars')],
+            },
+            choiceBreadcrumb: [
+              makeBreadcrumbStep('pick-spaces', 'pickSpaces', ['zone-a', 'zone-b', 'zone-c'], 'Zone A, Zone B, Zone C'),
+              makeBreadcrumbStep('decision:placeType::zone-a', 'placeType', 'irregulars', 'Irregulars', 'decision:placeType', null),
+              makeBreadcrumbStep('decision:placeType::zone-b', 'placeType', 'base', 'At Base', 'decision:placeType', null),
+              makeBreadcrumbStep('decision:placeType::zone-c', 'placeType', 'irregulars', 'Irregulars', 'decision:placeType', null),
+            ],
+          }),
+        }),
+      }),
+    );
+
+    expect(html).toContain('(1/3) Irregulars');
+    expect(html).toContain('(2/3) At Base');
+    expect(html).toContain('(3/3) Irregulars');
   });
 
   it('grouped breadcrumb step click handlers trigger rewind with correct original index', () => {

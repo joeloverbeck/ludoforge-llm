@@ -181,6 +181,45 @@ describe('preparePlayableMoves', () => {
     });
   });
 
+  it('forwards choose across repeated template completions', () => {
+    const templateMove: Move = { actionId: asActionId('chooseTarget'), params: {} };
+    const def = assertValidatedGameDef({
+      metadata: { id: 'prepare-playable-guided-template-completions', players: { min: 2, max: 2 } },
+      constants: {},
+      globalVars: [],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      actions: [createTemplateChooseOneAction(asActionId('chooseTarget'), asPhaseId('main'))],
+      actionPipelines: [createTemplateChooseOneProfile(asActionId('chooseTarget'))] as readonly ActionPipelineDef[],
+      triggers: [],
+      terminal: { conditions: [] },
+    });
+    const state = initialState(def, 6, 2).state;
+    let chooseCalls = 0;
+
+    const prepared = preparePlayableMoves({
+      def,
+      state,
+      legalMoves: [pendingClassifiedMove(templateMove)],
+      rng: createRng(9n),
+    }, {
+      pendingTemplateCompletions: 3,
+      choose: () => {
+        chooseCalls += 1;
+        return 'gamma';
+      },
+    });
+
+    assert.equal(chooseCalls, 3);
+    assert.deepEqual(
+      prepared.completedMoves.map((candidate) => candidate.move.params.$target),
+      ['gamma', 'gamma', 'gamma'],
+    );
+  });
+
   describe('zone-filtered free-operation templates', () => {
     /**
      * Regression test for a scenario where a free-operation template move

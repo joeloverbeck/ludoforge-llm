@@ -13,6 +13,7 @@ import {
   resolveSinglePlayerSel,
   resolveSingleZoneSel,
   resolveZoneSel,
+  toOwnedZoneId,
   type ReadContext,
   type GameDef,
   type GameState,
@@ -150,6 +151,18 @@ describe('resolveZoneSel', () => {
     assert.deepEqual(resolveZoneSel('hand:actor', ctx), ['hand:1']);
     assert.deepEqual(resolveZoneSel('hand:all', ctx), ['hand:0', 'hand:1', 'hand:2']);
     assert.deepEqual(resolveZoneSel('hand:$picked', ctx), ['hand:2']);
+  });
+
+  it('keeps selector results aligned with the shared runtime zone-address helper', () => {
+    const ctx = makeCtx();
+
+    assert.deepEqual(resolveZoneSel('deck:none', ctx), [toOwnedZoneId('deck', 'none')]);
+    assert.deepEqual(resolveZoneSel('hand:actor', ctx), [toOwnedZoneId('hand', asPlayerId(1))]);
+    assert.deepEqual(resolveZoneSel('hand:all', ctx), [
+      toOwnedZoneId('hand', asPlayerId(0)),
+      toOwnedZoneId('hand', asPlayerId(1)),
+      toOwnedZoneId('hand', asPlayerId(2)),
+    ]);
   });
 
   it('resolves bound zone selectors from string and string-array bindings', () => {

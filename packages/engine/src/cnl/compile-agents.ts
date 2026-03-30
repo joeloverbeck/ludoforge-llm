@@ -2,6 +2,11 @@ import { fingerprintPolicyIr } from '../agents/policy-ir.js';
 import { parseAuthoredPolicySurfaceRef } from '../agents/policy-surface.js';
 import { analyzePolicyExpr, type AnalyzePolicyExprContext, type ResolvedPolicyRef } from '../agents/policy-expr.js';
 import type { Diagnostic } from '../kernel/diagnostics.js';
+import {
+  AGENT_POLICY_PROFILE_USE_BUCKETS,
+  AGENT_POLICY_PROFILE_USE_TO_LIBRARY_BUCKET,
+  isAgentPolicyCompletionGuidanceFallback,
+} from '../contracts/index.js';
 import { collectChoiceBindingSpecs } from '../kernel/move-runtime-bindings.js';
 import { inferQueryRuntimeShapes } from '../kernel/query-shape-inference.js';
 import type {
@@ -42,7 +47,7 @@ import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 type ProfileUseKey = keyof CompiledAgentProfile['use'];
 type AggregateOp = 'max' | 'min' | 'count' | 'any' | 'all' | 'rankDense' | 'rankOrdinal';
 type TieBreakerKind = 'higherExpr' | 'lowerExpr' | 'preferredEnumOrder' | 'preferredIdOrder' | 'rng' | 'stableMoveKey';
-type LibraryRefScope = 'stateFeature' | 'candidateFeature' | 'aggregate' | 'rule' | 'scoreTerm' | 'tieBreaker';
+type LibraryRefScope = 'stateFeature' | 'candidateFeature' | 'aggregate' | 'rule' | 'scoreTerm' | 'completionScoreTerm' | 'tieBreaker';
 type LoweredAgentProfile = Omit<CompiledAgentProfile, 'fingerprint'>;
 
 const AGENT_PARAMETER_TYPES: readonly AgentParameterType[] = ['number', 'integer', 'boolean', 'enum', 'idOrder'];
@@ -568,11 +573,22 @@ function lowerProfile(
     hasError = true;
   }
 
-  const use = {
-    pruningRules: lowerProfileUseIds(profileId, 'pruningRules', profileDef.use.pruningRules, authoredLibrary?.pruningRules, diagnostics),
-    scoreTerms: lowerProfileUseIds(profileId, 'scoreTerms', profileDef.use.scoreTerms, authoredLibrary?.scoreTerms, diagnostics),
-    tieBreakers: lowerProfileUseIds(profileId, 'tieBreakers', profileDef.use.tieBreakers, authoredLibrary?.tieBreakers, diagnostics),
-  } satisfies CompiledAgentProfile['use'];
+  const use = Object.fromEntries(
+    AGENT_POLICY_PROFILE_USE_BUCKETS.map((key) => [
+      key,
+      lowerProfileUseIds(
+        profileId,
+        key,
+        profileDef.use[key],
+        authoredLibrary?.[AGENT_POLICY_PROFILE_USE_TO_LIBRARY_BUCKET[key]],
+        diagnostics,
+      ),
+    ]),
+  ) as CompiledAgentProfile['use'];
+  const completionGuidance = lowerCompletionGuidance(profileId, profileDef, diagnostics);
+  if (completionGuidance === null) {
+    hasError = true;
+  }
 
   const plan = buildProfilePlan(profileId, use, library, diagnostics);
 
@@ -583,6 +599,7 @@ function lowerProfile(
   return {
     params: compiledParams,
     use,
+    ...(completionGuidance == null ? {} : { completionGuidance }),
     plan,
   };
 }
@@ -626,6 +643,36 @@ function lowerProfileUseIds(
   }
 
   return lowered;
+}
+
+function lowerCompletionGuidance(
+  profileId: string,
+  profileDef: GameSpecAgentProfileDef,
+  diagnostics: Diagnostic[],
+): CompiledAgentProfile['completionGuidance'] | null {
+  const authored = profileDef.completionGuidance;
+  if (authored === undefined) {
+    return undefined;
+  }
+
+  const path = `doc.agents.profiles.${profileId}.completionGuidance`;
+  const enabled = authored.enabled ?? false;
+  const fallback = authored.fallback ?? 'random';
+  if (!isAgentPolicyCompletionGuidanceFallback(fallback)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path: `${path}.fallback`,
+      severity: 'error',
+      message: `Profile "${profileId}" completionGuidance fallback "${String(authored.fallback)}" is invalid.`,
+      suggestion: 'Use completionGuidance.fallback = "random" or "first".',
+    });
+    return undefined;
+  }
+
+  return {
+    enabled,
+    fallback,
+  };
 }
 
 function buildProfilePlan(
@@ -830,6 +877,7 @@ class AgentLibraryCompiler {
     readonly candidateAggregates: Record<string, CompiledAgentAggregate>;
     readonly pruningRules: Record<string, CompiledAgentPruningRule>;
     readonly scoreTerms: Record<string, CompiledAgentScoreTerm>;
+    readonly completionScoreTerms: Record<string, CompiledAgentScoreTerm>;
     readonly tieBreakers: Record<string, CompiledAgentTieBreaker>;
   };
 
@@ -838,6 +886,7 @@ class AgentLibraryCompiler {
   private readonly aggregateStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
   private readonly pruningRuleStatus = new Map<string, 'done' | 'failed'>();
   private readonly scoreTermStatus = new Map<string, 'done' | 'failed'>();
+  private readonly completionScoreTermStatus = new Map<string, 'done' | 'failed'>();
   private readonly tieBreakerStatus = new Map<string, 'done' | 'failed'>();
 
   private readonly stateFeatureStack: string[] = [];
@@ -859,6 +908,7 @@ class AgentLibraryCompiler {
       candidateAggregates: {},
       pruningRules: {},
       scoreTerms: {},
+      completionScoreTerms: {},
       tieBreakers: {},
     };
   }
@@ -880,6 +930,9 @@ class AgentLibraryCompiler {
     }
     for (const scoreTermId of Object.keys(this.authoredLibrary.scoreTerms ?? {})) {
       this.compileScoreTerm(scoreTermId);
+    }
+    for (const scoreTermId of Object.keys(this.authoredLibrary.completionScoreTerms ?? {})) {
+      this.compileCompletionScoreTerm(scoreTermId);
     }
     for (const tieBreakerId of Object.keys(this.authoredLibrary.tieBreakers ?? {})) {
       this.compileTieBreaker(tieBreakerId);
@@ -1200,6 +1253,77 @@ class AgentLibraryCompiler {
     return compiled;
   }
 
+  private compileCompletionScoreTerm(scoreTermId: string): CompiledAgentScoreTerm | null {
+    const status = this.completionScoreTermStatus.get(scoreTermId);
+    if (status === 'done') {
+      return this.compiled.completionScoreTerms[scoreTermId] ?? null;
+    }
+    if (status === 'failed') {
+      return null;
+    }
+    const def = this.authoredLibrary.completionScoreTerms?.[scoreTermId];
+    if (def === undefined) {
+      this.completionScoreTermStatus.set(scoreTermId, 'failed');
+      return null;
+    }
+    const context = this.createExprContext('completionScoreTerm');
+    const path = `doc.agents.library.completionScoreTerms.${scoreTermId}`;
+    const when = def.when === undefined
+      ? null
+      : analyzePolicyExpr(def.when, context, this.diagnostics, `${path}.when`);
+    const weight = analyzePolicyExpr(def.weight, context, this.diagnostics, `${path}.weight`);
+    const value = analyzePolicyExpr(def.value, context, this.diagnostics, `${path}.value`);
+    if (weight === null || value === null || (def.when !== undefined && when === null)) {
+      this.completionScoreTermStatus.set(scoreTermId, 'failed');
+      return null;
+    }
+    if (when !== null && when.valueType !== 'boolean') {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_TYPE_INVALID,
+        path: `${path}.when`,
+        severity: 'error',
+        message: `Completion score term "${scoreTermId}" when clauses must compile to boolean.`,
+        suggestion: 'Use a boolean policy expression for completionScoreTerm.when.',
+      });
+      this.completionScoreTermStatus.set(scoreTermId, 'failed');
+      return null;
+    }
+    if (weight.valueType !== 'number' || value.valueType !== 'number') {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_TYPE_INVALID,
+        path,
+        severity: 'error',
+        message: `Completion score term "${scoreTermId}" weight and value must both compile to number.`,
+        suggestion: 'Use numeric policy expressions for completionScoreTerm.weight and completionScoreTerm.value.',
+      });
+      this.completionScoreTermStatus.set(scoreTermId, 'failed');
+      return null;
+    }
+    if (def.clamp !== undefined && def.clamp.min !== undefined && def.clamp.max !== undefined && def.clamp.min > def.clamp.max) {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+        path: `${path}.clamp`,
+        severity: 'error',
+        message: `Completion score term "${scoreTermId}" clamp min must be less than or equal to max.`,
+        suggestion: 'Swap or correct the clamp bounds so min <= max.',
+      });
+      this.completionScoreTermStatus.set(scoreTermId, 'failed');
+      return null;
+    }
+    const compiled: CompiledAgentScoreTerm = {
+      costClass: maxCostClass(maxCostClass(weight.costClass, value.costClass), when?.costClass ?? 'state'),
+      ...(def.when === undefined ? {} : { when: when!.expr }),
+      weight: weight.expr,
+      value: value.expr,
+      ...(def.unknownAs === undefined ? {} : { unknownAs: def.unknownAs }),
+      ...(def.clamp === undefined ? {} : { clamp: def.clamp }),
+      dependencies: mergeDependencies([when?.dependencies ?? emptyDependencies(), weight.dependencies, value.dependencies]),
+    };
+    this.compiled.completionScoreTerms[scoreTermId] = compiled;
+    this.completionScoreTermStatus.set(scoreTermId, 'done');
+    return compiled;
+  }
+
   private compileTieBreaker(tieBreakerId: string): CompiledAgentTieBreaker | null {
     const status = this.tieBreakerStatus.get(tieBreakerId);
     if (status === 'done') {
@@ -1252,6 +1376,10 @@ class AgentLibraryCompiler {
 
   private resolveRef(scope: LibraryRefScope, refPath: string, path: string): ResolvedPolicyRef | null {
     if (refPath.startsWith('feature.')) {
+      if (scope === 'completionScoreTerm') {
+        this.reportUnknownLibraryRef(refPath, path);
+        return null;
+      }
       const featureId = refPath.slice('feature.'.length);
       if (featureId.length === 0) {
         this.reportUnknownLibraryRef(refPath, path);
@@ -1310,6 +1438,10 @@ class AgentLibraryCompiler {
     }
 
     if (refPath.startsWith('aggregate.')) {
+      if (scope === 'completionScoreTerm') {
+        this.reportUnknownLibraryRef(refPath, path);
+        return null;
+      }
       if (scope === 'stateFeature' || scope === 'candidateFeature') {
         this.diagnostics.push({
           code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_REF_UNKNOWN,
@@ -1337,6 +1469,18 @@ class AgentLibraryCompiler {
   }
 
   private resolveRuntimeRef(scope: LibraryRefScope, refPath: string, path: string): ResolvedPolicyRef | null {
+    if (scope === 'completionScoreTerm') {
+      const completionResolved = this.resolveCompletionRuntimeRef(refPath);
+      if (completionResolved !== null) {
+        return completionResolved;
+      }
+      const surfaceResolved = this.resolveSurfaceRuntimeRef(refPath, path, false);
+      if (surfaceResolved !== null) {
+        return { type: 'number', costClass: 'state', ref: surfaceResolved.ref };
+      }
+      this.reportUnknownLibraryRef(refPath, path);
+      return null;
+    }
     if (refPath === 'seat.self' || refPath === 'seat.active') {
       return {
         type: 'id',
@@ -1375,6 +1519,13 @@ class AgentLibraryCompiler {
       }
       return { type: 'boolean', costClass: 'candidate', ref: { kind: 'candidateIntrinsic', intrinsic: 'isPass' } };
     }
+    if (refPath === 'candidate.paramCount') {
+      if (scope === 'stateFeature') {
+        this.reportUnknownLibraryRef(refPath, path);
+        return null;
+      }
+      return { type: 'number', costClass: 'candidate', ref: { kind: 'candidateIntrinsic', intrinsic: 'paramCount' } };
+    }
     if (refPath.startsWith('candidate.param.')) {
       if (scope === 'stateFeature') {
         this.reportInvalidCandidateParamRef(refPath, path);
@@ -1409,6 +1560,23 @@ class AgentLibraryCompiler {
 
     this.reportUnknownLibraryRef(refPath, path);
     return null;
+  }
+
+  private resolveCompletionRuntimeRef(refPath: string): ResolvedPolicyRef | null {
+    switch (refPath) {
+      case 'decision.type':
+        return { type: 'id', costClass: 'state', ref: { kind: 'decisionIntrinsic', intrinsic: 'type' } };
+      case 'decision.name':
+        return { type: 'id', costClass: 'state', ref: { kind: 'decisionIntrinsic', intrinsic: 'name' } };
+      case 'decision.targetKind':
+        return { type: 'id', costClass: 'state', ref: { kind: 'decisionIntrinsic', intrinsic: 'targetKind' } };
+      case 'decision.optionCount':
+        return { type: 'number', costClass: 'state', ref: { kind: 'decisionIntrinsic', intrinsic: 'optionCount' } };
+      case 'option.value':
+        return { type: 'unknown', costClass: 'state', ref: { kind: 'optionIntrinsic', intrinsic: 'value' } };
+      default:
+        return null;
+    }
   }
 
   private resolvePreviewRuntimeRef(scope: LibraryRefScope, refPath: string, path: string): ResolvedPolicyRef | null {

@@ -1,6 +1,18 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
+import {
+  AGENT_POLICY_COMPLETION_GUIDANCE_KEYS,
+  AGENT_POLICY_LIBRARY_BUCKETS,
+  AGENT_POLICY_PROFILE_USE_BUCKETS,
+  isAgentPolicyCompletionGuidanceFallback,
+} from '../contracts/index.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
-import { isNonEmptyTrimmedString, isNonEmptyString, isRecord, validateUnknownKeys } from './validate-spec-shared.js';
+import {
+  isNonEmptyTrimmedString,
+  isNonEmptyString,
+  isRecord,
+  pushMissingReferenceDiagnostic,
+  validateUnknownKeys,
+} from './validate-spec-shared.js';
 
 const AGENTS_SECTION_KEYS = ['parameters', 'visibility', 'library', 'profiles', 'bindings'] as const;
 const AGENT_PARAMETER_KEYS = ['type', 'default', 'min', 'max', 'tunable', 'values', 'allowedIds'] as const;
@@ -8,16 +20,13 @@ const AGENT_VISIBILITY_SECTION_KEYS = ['globalVars', 'perPlayerVars', 'derivedMe
 const AGENT_VISIBILITY_KEYS = ['current', 'preview'] as const;
 const AGENT_VISIBILITY_PREVIEW_KEYS = ['visibility', 'allowWhenHiddenSampling'] as const;
 const AGENT_VISIBILITY_VICTORY_KEYS = ['currentMargin', 'currentRank'] as const;
-const AGENT_LIBRARY_KEYS = [
-  'stateFeatures',
-  'candidateFeatures',
-  'candidateAggregates',
-  'pruningRules',
-  'scoreTerms',
-  'tieBreakers',
-] as const;
-const AGENT_PROFILE_KEYS = ['params', 'use'] as const;
-const AGENT_PROFILE_USE_KEYS = ['pruningRules', 'scoreTerms', 'tieBreakers'] as const;
+const AGENT_PROFILE_KEYS = ['params', 'use', 'completionGuidance'] as const;
+type AgentProfileUseKey = typeof AGENT_POLICY_PROFILE_USE_BUCKETS[number];
+type AgentLibraryBucketMap = Partial<Record<AgentProfileUseKey, Record<string, unknown>>>;
+
+interface ProfileUseValidationSummary {
+  readonly completionScoreTermsValidCount: number | null;
+}
 
 const INLINE_PROFILE_LOGIC_KEYS = new Set([
   'expr',
@@ -49,10 +58,11 @@ export function validateAgents(doc: GameSpecDoc, diagnostics: Diagnostic[]): voi
   }
 
   validateUnknownKeys(doc.agents, AGENTS_SECTION_KEYS, 'doc.agents', diagnostics, 'agents');
+  const authoredLibrary = isRecord(doc.agents.library) ? doc.agents.library : undefined;
   validateNamedDefinitionMap(doc.agents.parameters, 'doc.agents.parameters', diagnostics, 'agents parameter map');
   validateVisibility(doc.agents.visibility, diagnostics);
   validateLibrary(doc.agents.library, diagnostics);
-  validateProfiles(doc.agents.profiles, diagnostics);
+  validateProfiles(doc.agents.profiles, authoredLibrary, diagnostics);
   validateBindings(doc.agents.bindings, diagnostics);
 }
 
@@ -144,14 +154,14 @@ function validateLibrary(library: unknown, diagnostics: Diagnostic[]): void {
     return;
   }
 
-  validateUnknownKeys(library, AGENT_LIBRARY_KEYS, 'doc.agents.library', diagnostics, 'agents library');
+  validateUnknownKeys(library, AGENT_POLICY_LIBRARY_BUCKETS, 'doc.agents.library', diagnostics, 'agents library');
 
-  for (const key of AGENT_LIBRARY_KEYS) {
+  for (const key of AGENT_POLICY_LIBRARY_BUCKETS) {
     validateNamedDefinitionMap(library[key], `doc.agents.library.${key}`, diagnostics, `agents library ${key}`);
   }
 }
 
-function validateProfiles(profiles: unknown, diagnostics: Diagnostic[]): void {
+function validateProfiles(profiles: unknown, library: AgentLibraryBucketMap | undefined, diagnostics: Diagnostic[]): void {
   if (!validateRecordMap(profiles, 'doc.agents.profiles', diagnostics, 'agents profiles')) {
     return;
   }
@@ -182,7 +192,8 @@ function validateProfiles(profiles: unknown, diagnostics: Diagnostic[]): void {
     validateUnknownKeys(profileDef, AGENT_PROFILE_KEYS, profilePath, diagnostics, 'agents profile');
     validateInlineProfileLogic(profileDef, profilePath, diagnostics);
     validateProfileParams(profileDef.params, `${profilePath}.params`, diagnostics);
-    validateProfileUse(profileDef.use, `${profilePath}.use`, diagnostics);
+    const useSummary = validateProfileUse(profileDef.use, `${profilePath}.use`, library, diagnostics);
+    validateCompletionGuidance(profileDef.completionGuidance, `${profilePath}.completionGuidance`, diagnostics, useSummary);
   }
 }
 
@@ -213,13 +224,19 @@ function validateProfileParams(params: unknown, path: string, diagnostics: Diagn
   validateRecordMap(params, path, diagnostics, 'agents profile params');
 }
 
-function validateProfileUse(use: unknown, path: string, diagnostics: Diagnostic[]): void {
+function validateProfileUse(
+  use: unknown,
+  path: string,
+  library: AgentLibraryBucketMap | undefined,
+  diagnostics: Diagnostic[],
+): ProfileUseValidationSummary {
   if (!validateRecordMap(use, path, diagnostics, 'agents profile use')) {
-    return;
+    return { completionScoreTermsValidCount: null };
   }
 
-  validateUnknownKeys(use, AGENT_PROFILE_USE_KEYS, path, diagnostics, 'agents profile use');
-  for (const key of AGENT_PROFILE_USE_KEYS) {
+  validateUnknownKeys(use, AGENT_POLICY_PROFILE_USE_BUCKETS, path, diagnostics, 'agents profile use');
+  let completionScoreTermsValidCount: number | null = 0;
+  for (const key of AGENT_POLICY_PROFILE_USE_BUCKETS) {
     const listValue = use[key];
     if (listValue === undefined) {
       continue;
@@ -232,11 +249,30 @@ function validateProfileUse(use: unknown, path: string, diagnostics: Diagnostic[
         message: `agents profile use.${key} must be an ordered list of library ids.`,
         suggestion: `Set ${key} to an array of authored library ids.`,
       });
+      if (key === 'completionScoreTerms') {
+        completionScoreTermsValidCount = null;
+      }
       continue;
     }
 
+    const libraryBucket = library?.[key];
     for (const [index, entry] of listValue.entries()) {
       if (isNonEmptyString(entry)) {
+        if (libraryBucket?.[entry] === undefined) {
+          pushMissingReferenceDiagnostic(
+            diagnostics,
+            'CNL_VALIDATOR_AGENTS_PROFILE_USE_UNKNOWN_ID',
+            `${path}.${key}.${index}`,
+            `agents profile use.${key} references unknown library id "${entry}".`,
+            entry,
+            Object.keys(libraryBucket ?? {}),
+            `Define "${entry}" in doc.agents.library.${key} before referencing it from profile.use.${key}.`,
+          );
+          continue;
+        }
+        if (key === 'completionScoreTerms' && completionScoreTermsValidCount !== null) {
+          completionScoreTermsValidCount += 1;
+        }
         continue;
       }
       diagnostics.push({
@@ -247,6 +283,60 @@ function validateProfileUse(use: unknown, path: string, diagnostics: Diagnostic[
         suggestion: 'Reference named library items by id only; inline objects are not allowed.',
       });
     }
+  }
+
+  return {
+    completionScoreTermsValidCount,
+  };
+}
+
+function validateCompletionGuidance(
+  value: unknown,
+  path: string,
+  diagnostics: Diagnostic[],
+  useSummary?: ProfileUseValidationSummary,
+): void {
+  if (value === undefined) {
+    return;
+  }
+  if (!isRecord(value)) {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_AGENTS_PROFILE_INVALID',
+      path,
+      severity: 'error',
+      message: 'agents profile completionGuidance must be an object.',
+      suggestion: 'Define completionGuidance with enabled and/or fallback fields.',
+    });
+    return;
+  }
+
+  validateUnknownKeys(value, AGENT_POLICY_COMPLETION_GUIDANCE_KEYS, path, diagnostics, 'agents profile completionGuidance');
+  if (value.enabled !== undefined && typeof value.enabled !== 'boolean') {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_AGENTS_PROFILE_INVALID',
+      path: `${path}.enabled`,
+      severity: 'error',
+      message: 'agents profile completionGuidance.enabled must be a boolean.',
+      suggestion: 'Set completionGuidance.enabled to true or false.',
+    });
+  }
+  if (value.fallback !== undefined && !isAgentPolicyCompletionGuidanceFallback(value.fallback)) {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_AGENTS_PROFILE_INVALID',
+      path: `${path}.fallback`,
+      severity: 'error',
+      message: 'agents profile completionGuidance.fallback must be "random" or "first".',
+      suggestion: 'Use completionGuidance.fallback = "random" or "first".',
+    });
+  }
+  if (value.enabled === true && useSummary?.completionScoreTermsValidCount === 0) {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_AGENTS_COMPLETION_GUIDANCE_MISSING_TERMS',
+      path,
+      severity: 'warning',
+      message: 'agents profile completionGuidance.enabled is true, but profile.use.completionScoreTerms references no valid completion score terms.',
+      suggestion: 'Add at least one valid completionScoreTerms id to profile.use.completionScoreTerms or disable completionGuidance.',
+    });
   }
 }
 

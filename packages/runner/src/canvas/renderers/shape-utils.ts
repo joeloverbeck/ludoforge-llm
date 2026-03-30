@@ -16,6 +16,7 @@ export interface ShapeGraphics {
 interface DrawZoneShapeOptions {
   readonly rectangleCornerRadius: number;
   readonly lineCornerRadius: number;
+  readonly vertices?: readonly number[] | undefined;
 }
 
 export function resolveVisualDimensions(
@@ -67,6 +68,13 @@ export function drawZoneShape(
     case 'line':
       base.roundRect(-width / 2, -height / 2, width, height, options.lineCornerRadius);
       return;
+    case 'polygon':
+      if (options.vertices !== undefined && options.vertices.length >= 6) {
+        base.poly([...options.vertices]);
+      } else {
+        base.roundRect(-width / 2, -height / 2, width, height, options.rectangleCornerRadius);
+      }
+      return;
     case 'connection':
       return;
     case 'rectangle':
@@ -79,6 +87,7 @@ export function getEdgePointAtAngle(
   shape: ZoneShape | undefined,
   dimensions: ShapeDimensions,
   angleDeg: number,
+  vertices?: readonly number[],
 ): Position {
   const direction = directionForAngle(angleDeg);
 
@@ -100,6 +109,11 @@ export function getEdgePointAtAngle(
       return rayPolygonIntersection(angleDeg, buildRegularPolygonPoints(3, dimensions.width, dimensions.height));
     case 'octagon':
       return rayPolygonIntersection(angleDeg, buildRegularPolygonPoints(8, dimensions.width, dimensions.height));
+    case 'polygon':
+      if (vertices !== undefined && vertices.length >= 6) {
+        return rayPolygonIntersection(angleDeg, vertices);
+      }
+      return { x: 0, y: 0 };
     case 'connection':
       return { x: 0, y: 0 };
     case 'line':

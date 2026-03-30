@@ -585,18 +585,24 @@ export interface GameSpecAgentLibrary {
   readonly candidateAggregates?: Readonly<Record<string, GameSpecCandidateAggregateDef>>;
   readonly pruningRules?: Readonly<Record<string, GameSpecPruningRuleDef>>;
   readonly scoreTerms?: Readonly<Record<string, GameSpecScoreTermDef>>;
+  readonly completionScoreTerms?: Readonly<Record<string, GameSpecScoreTermDef>>;
   readonly tieBreakers?: Readonly<Record<string, GameSpecTieBreakerDef>>;
 }
 
 export interface GameSpecAgentProfileUse {
   readonly pruningRules?: readonly string[];
   readonly scoreTerms?: readonly string[];
+  readonly completionScoreTerms?: readonly string[];
   readonly tieBreakers?: readonly string[];
 }
 
 export interface GameSpecAgentProfileDef {
   readonly params?: Readonly<Record<string, unknown>>;
   readonly use: GameSpecAgentProfileUse;
+  readonly completionGuidance?: {
+    readonly enabled?: boolean;
+    readonly fallback?: 'random' | 'first';
+  };
 }
 
 export type GameSpecSeatPolicyBindings = Readonly<Record<string, string>>;

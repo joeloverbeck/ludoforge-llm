@@ -29,6 +29,8 @@ describe('VisualConfigProvider', () => {
       height: 100,
       color: null,
       connectionStyleKey: null,
+      vertices: null,
+      strokeColor: null,
     });
   });
 
@@ -167,6 +169,8 @@ describe('VisualConfigProvider', () => {
       height: 100,
       color: null,
       connectionStyleKey: null,
+      vertices: null,
+      strokeColor: null,
     });
   });
 
@@ -197,6 +201,8 @@ describe('VisualConfigProvider', () => {
       height: 100,
       color: '#6b5b3e',
       connectionStyleKey: null,
+      vertices: null,
+      strokeColor: null,
     });
   });
 
@@ -225,6 +231,8 @@ describe('VisualConfigProvider', () => {
       height: 100,
       color: '#ffffff',
       connectionStyleKey: null,
+      vertices: null,
+      strokeColor: null,
     });
     expect(provider.getZoneLabel('zone:a')).toBe('Zone A');
   });
@@ -254,6 +262,8 @@ describe('VisualConfigProvider', () => {
       height: 100,
       color: '#0000ff',
       connectionStyleKey: null,
+      vertices: null,
+      strokeColor: null,
     });
   });
 
@@ -296,6 +306,8 @@ describe('VisualConfigProvider', () => {
       height: 100,
       color: null,
       connectionStyleKey: 'highway',
+      vertices: null,
+      strokeColor: null,
     });
     expect(provider.resolveZoneVisual('zone:b', 'loc', { terrainTags: ['mekong'] })).toEqual({
       shape: 'connection',
@@ -303,6 +315,8 @@ describe('VisualConfigProvider', () => {
       height: 100,
       color: null,
       connectionStyleKey: 'mekong',
+      vertices: null,
+      strokeColor: null,
     });
     expect(provider.resolveZoneVisual('zone:override', 'loc', { terrainTags: ['mekong'] })).toEqual({
       shape: 'connection',
@@ -310,6 +324,8 @@ describe('VisualConfigProvider', () => {
       height: 100,
       color: null,
       connectionStyleKey: 'override-style',
+      vertices: null,
+      strokeColor: null,
     });
     expect(provider.resolveConnectionStyle('highway')).toEqual({
       strokeWidth: 8,

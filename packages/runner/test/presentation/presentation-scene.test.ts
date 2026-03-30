@@ -55,6 +55,7 @@ function makeRunnerFrame(overrides: Partial<RunnerFrame> = {}): RunnerFrame {
     actionGroups: [],
     choiceBreadcrumb: [],
     choiceContext: null,
+    selectedActionId: null,
     choiceUi: { kind: 'none' },
     moveEnumerationWarnings: [],
     runtimeEligible: [],
@@ -152,7 +153,7 @@ describe('buildPresentationScene', () => {
     expect(scene.zones[0]).toMatchObject({
       id: 'zone:a',
       displayName: 'Configured Zone A',
-      visual: { shape: 'hexagon', width: 120, height: 90, color: '#2a6e3f', connectionStyleKey: null },
+      visual: { shape: 'hexagon', width: 120, height: 90, color: '#2a6e3f', connectionStyleKey: null, vertices: null, strokeColor: null },
       render: { fillColor: '#2a6e3f', nameLabel: { text: 'Configured Zone A' } },
     });
     expect(scene.zones).not.toBe(runnerFrame.zones);

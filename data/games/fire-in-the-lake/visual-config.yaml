@@ -197,11 +197,11 @@ zones:
       shape: connection
   connectionStyles:
     highway:
-      strokeWidth: 8
+      strokeWidth: 10
       strokeColor: "#8b7355"
       strokeAlpha: 0.8
     mekong:
-      strokeWidth: 12
+      strokeWidth: 14
       strokeColor: "#4a7a8c"
       strokeAlpha: 0.9
       wavy: true
@@ -389,21 +389,24 @@ zones:
         attributeContains:
           terrainTags: highland
       style:
-        color: "#6b5b3e"
+        color: "#d4a656"
+        strokeColor: "#8b6914"
     - match:
         category:
           - province
         attributeContains:
           terrainTags: jungle
       style:
-        color: "#3d5c3a"
+        color: "#1a5c2a"
+        strokeColor: "#0d3d18"
     - match:
         category:
           - province
         attributeContains:
           terrainTags: lowland
       style:
-        color: "#5a7a52"
+        color: "#5db85d"
+        strokeColor: "#2d7a2d"
     - match:
         category:
           - loc
@@ -423,30 +426,48 @@ zones:
       label: An Loc
     ba-xuyen:none:
       label: Ba Xuyen
+      shape: polygon
+      vertices: [453, -356, 266, -236, -361, -7, -147, 344, 453, 344]
     binh-dinh:none:
       label: Binh Dinh
+      shape: polygon
+      vertices: [300, -320, -713, -303, -993, 297, -516, 549, -198, 711, 300, 580]
     binh-tuy-binh-thuan:none:
       label: Binh Tuy Binh Thuan
+      shape: polygon
+      vertices: [379, -574, -32, -718, -57, -330, -221, 426, 379, 426]
     cam-ranh:none:
       label: Cam Ranh
     can-tho:none:
       label: Can Tho
     central-laos:none:
       label: Central Laos
+      shape: polygon
+      vertices: [-451, -599, 379, -459, 605, 63, 265, 553, -451, 501]
     da-nang:none:
       label: Da Nang
     hue:none:
       label: Hue
     khanh-hoa:none:
       label: Khanh Hoa
+      shape: polygon
+      vertices: [360, -380, -292, -396, -378, 124, -51, 776, 360, 820]
     kien-giang-an-xuyen:none:
       label: Kien Giang An Xuyen
+      shape: polygon
+      vertices: [163, -1016, 409, -565, 361, 8, 175, 359, -425, 359, -259, -570, -282, -1019]
     kien-hoa-vinh-binh:none:
       label: Kien Hoa Vinh Binh
+      shape: polygon
+      vertices: [322, -284, -217, -336, -265, 236, 322, 316]
     kien-phong:none:
       label: Kien Phong
+      shape: polygon
+      vertices: [148, -265, 456, -111, 217, 337, -410, 565, -656, 114, -284, -440]
     kontum:none:
       label: Kontum
+      shape: polygon
+      vertices: [-313, -468, 287, -268, 187, 332, -213, 432, -413, 132]
     loc-ban-me-thuot-da-lat:none:
       label: Ban Me Thuot-Da Lat
     loc-cam-ranh-da-lat:none:
@@ -483,36 +504,64 @@ zones:
       label: Saigon-Da Lat
     north-vietnam:none:
       label: North Vietnam
+      shape: polygon
+      vertices: [-340, -480, 660, -480, 660, 420, 90, 660, -340, 420]
     northeast-cambodia:none:
       label: Northeast Cambodia
+      shape: polygon
+      vertices: [-454, -402, 504, -291, 432, 407, -454, 398]
     phu-bon-phu-yen:none:
       label: Phu Bon Phu Yen
+      shape: polygon
+      vertices: [235, -252, -463, -221, -417, 332, 235, 348]
     phuoc-long:none:
       label: Phuoc Long
+      shape: polygon
+      vertices: [-200, -400, 300, -400, 303, 157, 49, 364, -732, 128, -376, -28]
     pleiku-darlac:none:
       label: Pleiku Darlac
+      shape: polygon
+      vertices: [-133, -903, 344, -651, 662, -489, 708, 64, 622, 584, -203, 626, -954, 89, -882, -609]
     quang-duc-long-khanh:none:
       label: Quang Duc Long Khanh
+      shape: polygon
+      vertices: [-244, -709, 83, -57, 58, 331, -533, 234, -557, 51, -982, -341, -1069, -667]
     quang-nam:none:
       label: Quang Nam
+      shape: polygon
+      vertices: [483, -347, -361, -385, -701, 105, -58, 412, 483, 353]
     quang-tin-quang-ngai:none:
       label: Quang Tin Quang Ngai
+      shape: polygon
+      vertices: [320, -220, -1021, -61, -693, 297, 320, 280]
     quang-tri-thua-thien:none:
       label: Quang Tri
+      shape: polygon
+      vertices: [400, -340, -470, -200, -244, 322, 400, 260]
     qui-nhon:none:
       label: Qui Nhon
     saigon:none:
       label: Saigon
     sihanoukville:none:
       label: Sihanoukville
+      shape: polygon
+      vertices: [-308, -301, 235, 121, 258, 570, -308, 399]
     southern-laos:none:
       label: Southern Laos
+      shape: polygon
+      vertices: [-480, -710, 436, -658, 1079, -351, 1407, 7, 1127, 607, 378, 901, -480, 790]
     tay-ninh:none:
       label: Tay Ninh
+      shape: polygon
+      vertices: [-272, -652, 509, -416, 533, -233, 360, 420, -148, 266, -580, 91, -906, -478]
     the-fishhook:none:
       label: The Fishhook
+      shape: polygon
+      vertices: [-365, -504, 521, -495, 1272, 42, 1359, 368, 1003, 524, 369, 698, -365, 496]
     the-parrots-beak:none:
       label: The Parrots Beak
+      shape: polygon
+      vertices: [-296, -423, 538, -221, 864, 348, 492, 902, 47, 899, -296, 477]
   layoutRoles:
     available-ARVN:none: forcePool
     available-NVA:none: forcePool
@@ -685,7 +734,21 @@ actions:
       sourceSpaces:
         prompt: Select source spaces for reinforcements
       subActionSpaces:
+        label: Additional Space
         prompt: Select additional space for this action
+      subAction:
+        prompt: Choose a sub-action for this space
+        options:
+          none:
+            displayName: Skip
+      pacLevels:
+        label: Pacification Level
+        prompt: Choose pacification level
+        options:
+          1:
+            displayName: 1 level
+          2:
+            displayName: 2 levels
   patrol:
     choices:
       targetSpaces:
@@ -705,6 +768,7 @@ actions:
       sourceSpaces:
         prompt: Select source spaces for reinforcements
       subActionSpaces:
+        label: Additional Space
         prompt: Select additional space for this action
   march:
     choices:

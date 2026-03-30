@@ -57,6 +57,7 @@ const DEFAULT_ROUTE_STROKE = {
   width: 4,
   alpha: 0.85,
 } as const;
+const ROUTE_OVERLAP_MARGIN = 35;
 const DEFAULT_ZONE_STROKE_SIGNATURE = {
   color: '#111827',
   width: 1,
@@ -391,6 +392,35 @@ function drawRouteCurve(
   });
 }
 
+function extendRouteEndpoints(
+  points: readonly Position[],
+  margin: number,
+): readonly Position[] {
+  if (points.length < 2) {
+    return points;
+  }
+  const result = [...points];
+  const first = points[0]!;
+  const second = points[1]!;
+  const len1 = Math.hypot(first.x - second.x, first.y - second.y);
+  if (len1 > 0) {
+    result[0] = {
+      x: first.x + ((first.x - second.x) / len1) * margin,
+      y: first.y + ((first.y - second.y) / len1) * margin,
+    };
+  }
+  const last = points[points.length - 1]!;
+  const prev = points[points.length - 2]!;
+  const len2 = Math.hypot(last.x - prev.x, last.y - prev.y);
+  if (len2 > 0) {
+    result[result.length - 1] = {
+      x: last.x + ((last.x - prev.x) / len2) * margin,
+      y: last.y + ((last.y - prev.y) / len2) * margin,
+    };
+  }
+  return result;
+}
+
 function resolveRouteGeometry(
   route: ConnectionRouteNode,
   options: {
@@ -402,8 +432,9 @@ function resolveRouteGeometry(
 ): RouteGeometry {
   const { hitAreaPadding, curveSegments, wavySegments, stroke } = options;
   const routePoints = route.path.map((point) => point.position);
+  const extendedPoints = extendRouteEndpoints(routePoints, ROUTE_OVERLAP_MARGIN);
   const segmentCommands = buildSegmentCommands(route);
-  const sampledPath = sampleResolvedRoutePath(routePoints, route.segments, curveSegments);
+  const sampledPath = sampleResolvedRoutePath(extendedPoints, route.segments, curveSegments);
   const renderedPoints = stroke.wavy
     ? samplePolylineWavePoints(sampledPath, stroke, wavySegments)
     : sampledPath;

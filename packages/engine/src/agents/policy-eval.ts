@@ -2,11 +2,6 @@ import type { PlayerId } from '../kernel/branded.js';
 import { toMoveIdentityKey } from '../kernel/move-identity.js';
 import type {
   AgentPolicyCatalog,
-  AgentPolicyExpr,
-  CompiledAgentPolicyRef,
-  CompiledAgentPolicySurfaceRef,
-  AgentParameterValue,
-  CompiledAgentProfile,
   CompiledAgentTieBreaker,
   GameDef,
   GameState,
@@ -19,11 +14,9 @@ import type {
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
 import { pickRandom } from './agent-move-selection.js';
 import type { PolicyPreviewTraceOutcome, PolicyPreviewUnavailabilityReason } from './policy-preview.js';
-import {
-  createPolicyRuntimeProviders,
-  type PolicyRuntimeProviders,
-  type PolicyValue,
-} from './policy-runtime.js';
+import { type PolicyValue } from './policy-runtime.js';
+import { PolicyEvaluationContext, type PolicyEvaluationCandidate, PolicyRuntimeError } from './policy-evaluation-core.js';
+import { resolvePolicyBindingSeatId } from './policy-profile-resolution.js';
 
 export interface PolicyPreviewUnknownRef {
   readonly refId: string;
@@ -128,462 +121,72 @@ export type PolicyEvaluationCoreResult =
       readonly metadata: PolicyEvaluationMetadata;
     };
 
-interface CandidateEntry {
+interface CandidateEntry extends PolicyEvaluationCandidate {
   readonly move: Move;
   readonly stableMoveKey: string;
   readonly actionId: string;
   readonly prunedBy: string[];
   readonly scoreContributions: { readonly termId: string; readonly contribution: number }[];
-  readonly previewRefIds: Set<string>;
-  readonly unknownPreviewRefs: Map<string, PolicyPreviewUnavailabilityReason>;
   previewOutcome?: PolicyPreviewTraceOutcome;
   score: number;
 }
 
-class PolicyRuntimeError extends Error {
-  readonly failure: PolicyEvaluationFailure;
-
-  constructor(failure: PolicyEvaluationFailure) {
-    super(failure.message);
-    this.name = 'PolicyRuntimeError';
-    this.failure = failure;
+function applyTieBreaker(
+  evaluation: PolicyEvaluationContext,
+  catalog: AgentPolicyCatalog,
+  candidates: readonly CandidateEntry[],
+  tieBreakerId: string,
+  rng: Rng,
+): { readonly candidates: readonly CandidateEntry[]; readonly rng: Rng } {
+  const tieBreaker = catalog.library.tieBreakers[tieBreakerId];
+  if (tieBreaker === undefined) {
+    throw new PolicyRuntimeError({
+      code: 'RUNTIME_EVALUATION_ERROR',
+      message: `Unknown tie-breaker "${tieBreakerId}".`,
+      detail: { tieBreakerId },
+    });
   }
-}
 
-class EvaluationContext {
-  private readonly catalog: AgentPolicyCatalog;
-  private readonly parameterValues: Readonly<Record<string, AgentParameterValue>>;
-  private currentCandidates: CandidateEntry[];
-  private readonly stateFeatureCache = new Map<string, PolicyValue>();
-  private readonly candidateFeatureCache = new Map<string, Map<string, PolicyValue>>();
-  private readonly aggregateCache = new Map<string, PolicyValue>();
-  private readonly runtimeProviders: PolicyRuntimeProviders;
-  private readonly seatId: string;
-
-  constructor(
-    private readonly input: EvaluatePolicyMoveInput,
-    candidates: CandidateEntry[],
-    seatId: string,
-    profile: CompiledAgentProfile,
-  ) {
-    this.seatId = seatId;
-    const catalog = input.def.agents;
-    if (catalog === undefined) {
+  switch (tieBreaker.kind) {
+    case 'stableMoveKey': {
+      const bestKey = candidates.reduce<string | null>((best, candidate) => (
+        best === null || candidate.stableMoveKey < best ? candidate.stableMoveKey : best
+      ), null);
+      return {
+        candidates: bestKey === null ? candidates : candidates.filter((candidate) => candidate.stableMoveKey === bestKey),
+        rng,
+      };
+    }
+    case 'higherExpr':
+    case 'lowerExpr':
+      return {
+        candidates: selectByScalarExpr(
+          candidates,
+          (left, right) => (tieBreaker.kind === 'higherExpr' ? left > right : left < right),
+          (candidate) => evaluation.evaluateExpr(tieBreaker.value!, candidate),
+        ),
+        rng,
+      };
+    case 'preferredEnumOrder':
+    case 'preferredIdOrder':
+      return {
+        candidates: selectByPreferredOrder(
+          candidates,
+          tieBreaker,
+          (candidate) => evaluation.evaluateExpr(tieBreaker.value!, candidate),
+        ),
+        rng,
+      };
+    case 'rng': {
+      const { item, rng: nextRng } = pickRandom(candidates, rng);
+      return { candidates: [item], rng: nextRng };
+    }
+    default:
       throw new PolicyRuntimeError({
-        code: 'POLICY_CATALOG_MISSING',
-        message: 'GameDef.agents is required to evaluate an authored policy.',
+        code: 'RUNTIME_EVALUATION_ERROR',
+        message: `Unsupported tie-breaker kind "${tieBreaker.kind}".`,
+        detail: { tieBreakerId, kind: tieBreaker.kind },
       });
-    }
-    this.catalog = catalog;
-    this.parameterValues = profile.params;
-    this.currentCandidates = candidates;
-    this.runtimeProviders = createPolicyRuntimeProviders({
-      def: input.def,
-      state: input.state,
-      playerId: input.playerId,
-      seatId,
-      trustedMoveIndex: input.trustedMoveIndex,
-      catalog,
-      runtimeError: (code, message, detail) => this.runtimeError(code as PolicyEvaluationFailure['code'], message, detail),
-      ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
-    });
-  }
-
-  invalidateAggregates(): void {
-    this.aggregateCache.clear();
-  }
-
-  setCurrentCandidates(candidates: CandidateEntry[]): void {
-    this.currentCandidates = candidates;
-    this.invalidateAggregates();
-  }
-
-  evaluateStateFeature(featureId: string): PolicyValue {
-    if (this.stateFeatureCache.has(featureId)) {
-      return this.stateFeatureCache.get(featureId);
-    }
-    const feature = this.catalog.library.stateFeatures[featureId];
-    if (feature === undefined) {
-      throw this.runtimeError('RUNTIME_EVALUATION_ERROR', `Unknown state feature "${featureId}".`, { featureId });
-    }
-    const value = this.evaluateExpr(feature.expr, undefined);
-    this.stateFeatureCache.set(featureId, value);
-    return value;
-  }
-
-  evaluateCandidateFeature(candidate: CandidateEntry, featureId: string): PolicyValue {
-    let candidateCache = this.candidateFeatureCache.get(candidate.stableMoveKey);
-    if (candidateCache === undefined) {
-      candidateCache = new Map<string, PolicyValue>();
-      this.candidateFeatureCache.set(candidate.stableMoveKey, candidateCache);
-    }
-    if (candidateCache.has(featureId)) {
-      return candidateCache.get(featureId);
-    }
-    const feature = this.catalog.library.candidateFeatures[featureId];
-    if (feature === undefined) {
-      throw this.runtimeError('RUNTIME_EVALUATION_ERROR', `Unknown candidate feature "${featureId}".`, { featureId });
-    }
-    const value = this.evaluateExpr(feature.expr, candidate);
-    candidateCache.set(featureId, value);
-    return value;
-  }
-
-  evaluateAggregate(aggregateId: string): PolicyValue {
-    if (this.aggregateCache.has(aggregateId)) {
-      return this.aggregateCache.get(aggregateId);
-    }
-    const aggregate = this.catalog.library.candidateAggregates[aggregateId];
-    if (aggregate === undefined) {
-      throw this.runtimeError('RUNTIME_EVALUATION_ERROR', `Unknown candidate aggregate "${aggregateId}".`, { aggregateId });
-    }
-
-    const included = this.currentCandidates.filter((candidate) => {
-      const where = aggregate.where === undefined ? true : this.evaluateExpr(aggregate.where, candidate);
-      return where === true;
-    });
-
-    let value: PolicyValue;
-    switch (aggregate.op) {
-      case 'count':
-        value = included.length;
-        break;
-      case 'max':
-      case 'min': {
-        const numericValues = included
-          .map((candidate) => this.evaluateExpr(aggregate.of, candidate))
-          .filter((entry): entry is number => typeof entry === 'number');
-        if (numericValues.length === 0) {
-          value = undefined;
-          break;
-        }
-        value = aggregate.op === 'max'
-          ? numericValues.reduce((best, entry) => Math.max(best, entry), Number.NEGATIVE_INFINITY)
-          : numericValues.reduce((best, entry) => Math.min(best, entry), Number.POSITIVE_INFINITY);
-        break;
-      }
-      case 'any': {
-        const booleanValues = included
-          .map((candidate) => this.evaluateExpr(aggregate.of, candidate))
-          .filter((entry): entry is boolean => typeof entry === 'boolean');
-        value = booleanValues.length === 0 ? undefined : booleanValues.some(Boolean);
-        break;
-      }
-      case 'all': {
-        const booleanValues = included
-          .map((candidate) => this.evaluateExpr(aggregate.of, candidate))
-          .filter((entry): entry is boolean => typeof entry === 'boolean');
-        value = booleanValues.length === 0 ? undefined : booleanValues.every(Boolean);
-        break;
-      }
-      case 'rankDense':
-      case 'rankOrdinal':
-        throw this.runtimeError(
-          'UNSUPPORTED_AGGREGATE_OP',
-          `Aggregate op "${aggregate.op}" is not implemented by the non-preview policy evaluator runtime.`,
-          { aggregateId, op: aggregate.op },
-        );
-      default:
-        throw this.runtimeError(
-          'UNSUPPORTED_AGGREGATE_OP',
-          `Aggregate op "${String((aggregate as { readonly op?: unknown }).op)}" is unsupported.`,
-          { aggregateId, op: (aggregate as { readonly op?: unknown }).op },
-        );
-    }
-
-    this.aggregateCache.set(aggregateId, value);
-    return value;
-  }
-
-  evaluateScoreTerm(candidate: CandidateEntry, scoreTermId: string): number {
-    const scoreTerm = this.catalog.library.scoreTerms[scoreTermId];
-    if (scoreTerm === undefined) {
-      throw this.runtimeError('RUNTIME_EVALUATION_ERROR', `Unknown score term "${scoreTermId}".`, { scoreTermId });
-    }
-
-    if (scoreTerm.when !== undefined) {
-      const when = this.evaluateExpr(scoreTerm.when, candidate);
-      if (when !== true) {
-        return 0;
-      }
-    }
-
-    const weight = this.evaluateExpr(scoreTerm.weight, candidate);
-    const value = this.evaluateExpr(scoreTerm.value, candidate);
-    if (typeof weight !== 'number' || typeof value !== 'number') {
-      const contribution = scoreTerm.unknownAs ?? 0;
-      candidate.scoreContributions.push({ termId: scoreTermId, contribution });
-      return contribution;
-    }
-
-    let contribution = weight * value;
-    if (scoreTerm.clamp !== undefined) {
-      if (scoreTerm.clamp.min !== undefined) {
-        contribution = Math.max(scoreTerm.clamp.min, contribution);
-      }
-      if (scoreTerm.clamp.max !== undefined) {
-        contribution = Math.min(scoreTerm.clamp.max, contribution);
-      }
-    }
-    candidate.scoreContributions.push({ termId: scoreTermId, contribution });
-    return contribution;
-  }
-
-  applyTieBreaker(
-    candidates: readonly CandidateEntry[],
-    tieBreakerId: string,
-    rng: Rng,
-  ): { readonly candidates: readonly CandidateEntry[]; readonly rng: Rng } {
-    const tieBreaker = this.catalog.library.tieBreakers[tieBreakerId];
-    if (tieBreaker === undefined) {
-      throw this.runtimeError('RUNTIME_EVALUATION_ERROR', `Unknown tie-breaker "${tieBreakerId}".`, { tieBreakerId });
-    }
-
-    switch (tieBreaker.kind) {
-      case 'stableMoveKey': {
-        const bestKey = candidates.reduce<string | null>((best, candidate) => (
-          best === null || candidate.stableMoveKey < best ? candidate.stableMoveKey : best
-        ), null);
-        return {
-          candidates: bestKey === null ? candidates : candidates.filter((candidate) => candidate.stableMoveKey === bestKey),
-          rng,
-        };
-      }
-      case 'higherExpr':
-      case 'lowerExpr':
-        return {
-          candidates: selectByScalarExpr(
-            candidates,
-            (left, right) => (tieBreaker.kind === 'higherExpr' ? left > right : left < right),
-            (candidate) => this.evaluateExpr(tieBreaker.value!, candidate),
-          ),
-          rng,
-        };
-      case 'preferredEnumOrder':
-      case 'preferredIdOrder':
-        return {
-          candidates: selectByPreferredOrder(candidates, tieBreaker, (candidate) => this.evaluateExpr(tieBreaker.value!, candidate)),
-          rng,
-        };
-      case 'rng': {
-        const { item, rng: nextRng } = pickRandom(candidates, rng);
-        return { candidates: [item], rng: nextRng };
-      }
-      default:
-        throw this.runtimeError(
-          'RUNTIME_EVALUATION_ERROR',
-          `Unsupported tie-breaker kind "${tieBreaker.kind}".`,
-          { tieBreakerId, kind: tieBreaker.kind },
-        );
-    }
-  }
-
-  evaluateExpr(expr: AgentPolicyExpr, candidate: CandidateEntry | undefined): PolicyValue {
-    switch (expr.kind) {
-      case 'literal':
-        return expr.value === null ? undefined : expr.value;
-      case 'param':
-        return this.parameterValues[expr.id];
-      case 'ref':
-        return this.resolveRef(expr.ref, candidate);
-      case 'op':
-        switch (expr.op) {
-          case 'add':
-            return sumValues(this.evaluateExprList(expr.args, candidate));
-          case 'sub':
-            return binaryNumeric(this.evaluateExprList(expr.args, candidate), (left, right) => left - right);
-          case 'mul':
-            return multiplyValues(this.evaluateExprList(expr.args, candidate));
-          case 'div':
-            return binaryNumeric(this.evaluateExprList(expr.args, candidate), (left, right) => {
-              if (right === 0) {
-                throw this.runtimeError('RUNTIME_EVALUATION_ERROR', 'Policy expression division evaluated with a zero denominator.');
-              }
-              return left / right;
-            });
-          case 'min':
-            return reduceNumeric(this.evaluateExprList(expr.args, candidate), (left, right) => Math.min(left, right));
-          case 'max':
-            return reduceNumeric(this.evaluateExprList(expr.args, candidate), (left, right) => Math.max(left, right));
-          case 'abs': {
-            const entry = this.evaluateFirstArg(expr, candidate);
-            return typeof entry === 'number' ? Math.abs(entry) : undefined;
-          }
-          case 'neg': {
-            const entry = this.evaluateFirstArg(expr, candidate);
-            return typeof entry === 'number' ? -entry : undefined;
-          }
-          case 'eq':
-          case 'ne': {
-            const entriesToCompare = this.evaluateExprList(expr.args, candidate);
-            if (entriesToCompare.length !== 2 || entriesToCompare[0] === undefined || entriesToCompare[1] === undefined) {
-              return undefined;
-            }
-            const equals = deepPolicyEqual(entriesToCompare[0], entriesToCompare[1]);
-            return expr.op === 'eq' ? equals : !equals;
-          }
-          case 'lt':
-          case 'lte':
-          case 'gt':
-          case 'gte': {
-            const compared = this.evaluateExprList(expr.args, candidate);
-            if (compared.length !== 2 || typeof compared[0] !== 'number' || typeof compared[1] !== 'number') {
-              return undefined;
-            }
-            if (expr.op === 'lt') return compared[0] < compared[1];
-            if (expr.op === 'lte') return compared[0] <= compared[1];
-            if (expr.op === 'gt') return compared[0] > compared[1];
-            return compared[0] >= compared[1];
-          }
-          case 'and':
-            return andValues(this.evaluateExprList(expr.args, candidate));
-          case 'or':
-            return orValues(this.evaluateExprList(expr.args, candidate));
-          case 'not': {
-            const entry = this.evaluateFirstArg(expr, candidate);
-            return typeof entry === 'boolean' ? !entry : undefined;
-          }
-          case 'if': {
-            const args = this.evaluateExprList(expr.args, candidate);
-            if (args.length !== 3 || typeof args[0] !== 'boolean') {
-              return undefined;
-            }
-            return args[0] ? args[1] : args[2];
-          }
-          case 'in': {
-            const args = this.evaluateExprList(expr.args, candidate);
-            if (args.length !== 2 || args[0] === undefined || args[1] === undefined) {
-              return undefined;
-            }
-            if (Array.isArray(args[1])) {
-              return args[1].includes(String(args[0]));
-            }
-            return undefined;
-          }
-          case 'coalesce': {
-            for (const entry of this.evaluateExprList(expr.args, candidate)) {
-              if (entry !== undefined) {
-                return entry;
-              }
-            }
-            return undefined;
-          }
-          case 'clamp': {
-            const args = this.evaluateExprList(expr.args, candidate);
-            if (args.length !== 3 || typeof args[0] !== 'number' || typeof args[1] !== 'number' || typeof args[2] !== 'number') {
-              return undefined;
-            }
-            return Math.max(args[1], Math.min(args[2], args[0]));
-          }
-          case 'boolToNumber': {
-            const entry = this.evaluateFirstArg(expr, candidate);
-            return typeof entry === 'boolean' ? (entry ? 1 : 0) : undefined;
-          }
-        }
-        return undefined;
-      case 'zoneTokenAgg':
-        return this.evaluateZoneTokenAggregate(expr);
-    }
-  }
-
-  private evaluateZoneTokenAggregate(
-    expr: Extract<AgentPolicyExpr, { readonly kind: 'zoneTokenAgg' }>,
-  ): PolicyValue {
-    const ownerSuffix =
-      expr.owner === 'self'
-        ? String(this.input.playerId)
-        : expr.owner === 'active'
-          ? String(this.input.state.activePlayer)
-          : expr.owner;
-    const zoneId = `${expr.zone}:${ownerSuffix}`;
-    const tokens = this.input.state.zones[zoneId];
-    if (tokens === undefined || tokens.length === 0) {
-      return expr.aggOp === 'count' ? 0 : expr.aggOp === 'sum' ? 0 : undefined;
-    }
-    const values: number[] = [];
-    for (const token of tokens) {
-      const val = token.props[expr.prop];
-      if (typeof val === 'number') {
-        values.push(val);
-      }
-    }
-    if (values.length === 0) {
-      return expr.aggOp === 'count' || expr.aggOp === 'sum' ? 0 : undefined;
-    }
-    switch (expr.aggOp) {
-      case 'sum':
-        return values.reduce((acc, v) => acc + v, 0);
-      case 'count':
-        return values.length;
-      case 'min':
-        return Math.min(...values);
-      case 'max':
-        return Math.max(...values);
-    }
-  }
-
-  private evaluateExprList(expressions: readonly AgentPolicyExpr[], candidate: CandidateEntry | undefined): readonly PolicyValue[] {
-    return expressions.map((entry) => this.evaluateExpr(entry, candidate));
-  }
-
-  private evaluateFirstArg(expr: Extract<AgentPolicyExpr, { readonly kind: 'op' }>, candidate: CandidateEntry | undefined): PolicyValue {
-    return expr.args.length === 0 ? undefined : this.evaluateExpr(expr.args[0]!, candidate);
-  }
-
-  private resolveRef(ref: CompiledAgentPolicyRef, candidate: CandidateEntry | undefined): PolicyValue {
-    switch (ref.kind) {
-      case 'library':
-        if (ref.refKind === 'aggregate') {
-          return this.evaluateAggregate(ref.id);
-        }
-        if (ref.refKind === 'candidateFeature') {
-          return candidate === undefined ? undefined : this.evaluateCandidateFeature(candidate, ref.id);
-        }
-        return this.evaluateStateFeature(ref.id);
-      case 'seatIntrinsic':
-        return this.runtimeProviders.intrinsics.resolveSeatIntrinsic(ref.intrinsic);
-      case 'turnIntrinsic':
-        return this.runtimeProviders.intrinsics.resolveTurnIntrinsic(ref.intrinsic);
-      case 'candidateIntrinsic':
-        return candidate === undefined ? undefined : this.runtimeProviders.candidates.resolveCandidateIntrinsic(candidate, ref.intrinsic);
-      case 'candidateParam':
-        return candidate === undefined ? undefined : this.runtimeProviders.candidates.resolveCandidateParam(candidate, ref.id);
-      case 'currentSurface':
-      case 'previewSurface':
-        return this.resolveSurfaceRef(ref, candidate);
-    }
-  }
-
-  private resolveSurfaceRef(
-    ref: CompiledAgentPolicySurfaceRef,
-    candidate: CandidateEntry | undefined,
-  ): PolicyValue {
-    if (ref.kind === 'previewSurface') {
-      if (candidate === undefined) {
-        return undefined;
-      }
-      const refId = previewRefKey(ref);
-      candidate.previewRefIds.add(refId);
-      const resolution = this.runtimeProviders.previewSurface.resolveSurface(candidate, ref);
-      if (resolution.kind === 'unknown') {
-        candidate.previewOutcome = resolution.reason;
-        candidate.unknownPreviewRefs.set(refId, resolution.reason);
-        return undefined;
-      }
-      if (candidate.previewOutcome === undefined) {
-        candidate.previewOutcome = this.runtimeProviders.previewSurface.getOutcome(candidate);
-      }
-      return resolution.kind === 'value' ? resolution.value : undefined;
-    }
-    return this.runtimeProviders.currentSurface.resolveSurface(ref);
-  }
-
-  private runtimeError(
-    code: PolicyEvaluationFailure['code'],
-    message: string,
-    detail?: Readonly<Record<string, unknown>>,
-  ): PolicyRuntimeError {
-    return new PolicyRuntimeError({ code, message, ...(detail === undefined ? {} : { detail }) });
   }
 }
 
@@ -657,7 +260,16 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
   }
 
   try {
-    const evaluation = new EvaluationContext(input, candidates, seatId, profile);
+    const evaluation = new PolicyEvaluationContext({
+      def: input.def,
+      state: input.state,
+      playerId: input.playerId,
+      seatId,
+      catalog,
+      parameterValues: profile.params,
+      trustedMoveIndex: input.trustedMoveIndex,
+      ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
+    }, candidates);
     let activeCandidates = [...candidates];
     const pruningSteps: PolicyEvaluationPruningStep[] = [];
     const tieBreakChain: PolicyEvaluationTieBreakStep[] = [];
@@ -726,7 +338,16 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
     }
 
     for (const candidate of activeCandidates) {
-      candidate.score = profile.use.scoreTerms.reduce((total, scoreTermId) => total + evaluation.evaluateScoreTerm(candidate, scoreTermId), 0);
+      candidate.score = profile.use.scoreTerms.reduce((total, scoreTermId) => (
+        total + evaluation.evaluateScoreTerm(
+          catalog.library.scoreTerms,
+          scoreTermId,
+          candidate,
+          (contribution) => {
+            candidate.scoreContributions.push({ termId: scoreTermId, contribution });
+          },
+        )
+      ), 0);
     }
     const bestScore = activeCandidates.reduce((best, candidate) => Math.max(best, candidate.score), Number.NEGATIVE_INFINITY);
     let bestCandidates = activeCandidates.filter((candidate) => candidate.score === bestScore);
@@ -737,7 +358,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
         break;
       }
       const candidateCountBefore = bestCandidates.length;
-      const tieBreakResult = evaluation.applyTieBreaker(bestCandidates, tieBreakerId, rng);
+      const tieBreakResult = applyTieBreaker(evaluation, catalog, bestCandidates, tieBreakerId, rng);
       bestCandidates = [...tieBreakResult.candidates];
       rng = tieBreakResult.rng;
       tieBreakChain.push({
@@ -778,7 +399,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
     };
   } catch (error) {
     const failure = error instanceof PolicyRuntimeError
-      ? error.failure
+      ? error.failure as PolicyEvaluationFailure
       : {
           code: 'RUNTIME_EVALUATION_ERROR' as const,
           message: error instanceof Error ? error.message : 'Unknown policy evaluation failure.',
@@ -953,86 +574,6 @@ function summarizePreviewOutcomes(evaluatedCandidates: readonly CandidateEntry[]
   };
 }
 
-function previewRefKey(ref: CompiledAgentPolicySurfaceRef): string {
-  if (ref.selector === undefined) {
-    return `${ref.family}.${ref.id}`;
-  }
-  return ref.selector.kind === 'role'
-    ? `${ref.family}.${ref.id}.${ref.selector.seatToken}`
-    : `${ref.family}.${ref.id}.${ref.selector.player}`;
-}
-
-function sumValues(values: readonly PolicyValue[]): PolicyValue {
-  const numericValues = values.filter((entry): entry is number => typeof entry === 'number');
-  return numericValues.length === values.length
-    ? numericValues.reduce((sum, entry) => sum + entry, 0)
-    : undefined;
-}
-
-function multiplyValues(values: readonly PolicyValue[]): PolicyValue {
-  const numericValues = values.filter((entry): entry is number => typeof entry === 'number');
-  return numericValues.length === values.length
-    ? numericValues.reduce((product, entry) => product * entry, 1)
-    : undefined;
-}
-
-function binaryNumeric(
-  values: readonly PolicyValue[],
-  reducer: (left: number, right: number) => number,
-): PolicyValue {
-  if (values.length !== 2 || typeof values[0] !== 'number' || typeof values[1] !== 'number') {
-    return undefined;
-  }
-  return reducer(values[0], values[1]);
-}
-
-function reduceNumeric(
-  values: readonly PolicyValue[],
-  reducer: (left: number, right: number) => number,
-): PolicyValue {
-  const numericValues = values.filter((entry): entry is number => typeof entry === 'number');
-  if (numericValues.length !== values.length || numericValues.length === 0) {
-    return undefined;
-  }
-  return numericValues.slice(1).reduce((total, entry) => reducer(total, entry), numericValues[0]!);
-}
-
-function andValues(values: readonly PolicyValue[]): PolicyValue {
-  let sawUnknown = false;
-  for (const value of values) {
-    if (value === false) {
-      return false;
-    }
-    if (value !== true) {
-      sawUnknown = true;
-    }
-  }
-  return sawUnknown ? undefined : true;
-}
-
-function orValues(values: readonly PolicyValue[]): PolicyValue {
-  let sawUnknown = false;
-  for (const value of values) {
-    if (value === true) {
-      return true;
-    }
-    if (value !== false) {
-      sawUnknown = true;
-    }
-  }
-  return sawUnknown ? undefined : false;
-}
-
-function deepPolicyEqual(left: AgentParameterValue, right: AgentParameterValue): boolean {
-  if (Array.isArray(left) || Array.isArray(right)) {
-    if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) {
-      return false;
-    }
-    return left.every((entry, index) => entry === right[index]);
-  }
-  return left === right;
-}
-
 function selectByScalarExpr(
   candidates: readonly CandidateEntry[],
   isBetter: (left: number, right: number) => boolean,
@@ -1074,18 +615,4 @@ function selectByPreferredOrder(
     return candidates;
   }
   return ranked.filter((entry) => entry.rank === bestRank).map((entry) => entry.candidate);
-}
-
-function resolvePolicyBindingSeatId(def: GameDef, playerId: PlayerId): string | null {
-  const directSeatId = def.seats?.[playerId]?.id;
-  if (typeof directSeatId === 'string' && directSeatId.length > 0) {
-    return directSeatId;
-  }
-
-  if (def.seats?.length === 1) {
-    const sharedSeatId = def.seats[0]?.id;
-    return typeof sharedSeatId === 'string' && sharedSeatId.length > 0 ? sharedSeatId : null;
-  }
-
-  return null;
 }

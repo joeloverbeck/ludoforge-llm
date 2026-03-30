@@ -5,11 +5,13 @@ import type { PlayerId } from '../kernel/branded.js';
 import type {
   AgentParameterValue,
   AgentPolicyCatalog,
+  ChoicePendingRequest,
   CompiledAgentPolicyRef,
   CompiledAgentPolicyCurrentSurfaceRef,
   CompiledAgentPolicyPreviewSurfaceRef,
   GameDef,
   GameState,
+  MoveParamValue,
   Move,
   TrustedExecutableMove,
 } from '../kernel/types.js';
@@ -60,11 +62,21 @@ export interface PolicyPreviewSurfaceProvider {
   getOutcome(candidate: PolicyRuntimeCandidate): PolicyPreviewTraceOutcome;
 }
 
+export interface PolicyCompletionProvider {
+  resolveDecisionIntrinsic(
+    intrinsic: Extract<CompiledAgentPolicyRef, { readonly kind: 'decisionIntrinsic' }>['intrinsic'],
+  ): PolicyValue;
+  resolveOptionIntrinsic(
+    intrinsic: Extract<CompiledAgentPolicyRef, { readonly kind: 'optionIntrinsic' }>['intrinsic'],
+  ): PolicyValue;
+}
+
 export interface PolicyRuntimeProviders {
   readonly intrinsics: PolicyIntrinsicProvider;
   readonly candidates: PolicyCandidateProvider;
   readonly currentSurface: PolicyCurrentSurfaceProvider;
   readonly previewSurface: PolicyPreviewSurfaceProvider;
+  readonly completion?: PolicyCompletionProvider;
 }
 
 export interface CreatePolicyRuntimeProvidersInput {
@@ -75,6 +87,10 @@ export interface CreatePolicyRuntimeProvidersInput {
   readonly trustedMoveIndex: ReadonlyMap<string, TrustedExecutableMove>;
   readonly catalog: AgentPolicyCatalog;
   readonly runtime?: GameDefRuntime;
+  readonly completion?: {
+    readonly request: ChoicePendingRequest;
+    readonly optionValue: MoveParamValue;
+  };
   readonly runtimeError: (code: string, message: string, detail?: Readonly<Record<string, unknown>>) => Error;
 }
 
@@ -115,6 +131,9 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
         if (intrinsic === 'stableMoveKey') {
           return candidate.stableMoveKey;
         }
+        if (intrinsic === 'paramCount') {
+          return Object.keys(candidate.move.params).length;
+        }
         return candidate.actionId === 'pass' || resolveTurnFlowActionClass(input.def, candidate.move) === 'pass';
       },
       resolveCandidateParam(candidate, paramId) {
@@ -122,7 +141,17 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
         if (candidateParamDef === undefined) {
           return undefined;
         }
-        const paramValue = candidate.move.params[paramId];
+        let paramValue = candidate.move.params[paramId];
+        if (paramValue === undefined) {
+          const suffix = `::${paramId}`;
+          const indexedPrefix = `::${paramId}[`;
+          for (const key of Object.keys(candidate.move.params)) {
+            if (key.endsWith(suffix) || key.includes(indexedPrefix)) {
+              paramValue = candidate.move.params[key];
+              break;
+            }
+          }
+        }
         switch (candidateParamDef.type) {
           case 'number':
             return typeof paramValue === 'number' ? paramValue : undefined;
@@ -210,7 +239,47 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
         return previewRuntime.getOutcome(candidate);
       },
     },
+    ...(input.completion === undefined
+      ? {}
+      : {
+          completion: createPolicyCompletionProvider(
+            input.completion.request,
+            input.completion.optionValue,
+          ),
+        }),
   };
+}
+
+export function createPolicyCompletionProvider(
+  request: ChoicePendingRequest,
+  optionValue: MoveParamValue,
+): PolicyCompletionProvider {
+  return {
+    resolveDecisionIntrinsic(intrinsic) {
+      switch (intrinsic) {
+        case 'type':
+          return request.type;
+        case 'name':
+          return request.name;
+        case 'targetKind':
+          return request.targetKinds[0] ?? 'unknown';
+        case 'optionCount':
+          return request.options.length;
+      }
+    },
+    resolveOptionIntrinsic(intrinsic) {
+      return intrinsic === 'value' ? normalizeCompletionOptionValue(optionValue) : undefined;
+    },
+  };
+}
+
+function normalizeCompletionOptionValue(optionValue: MoveParamValue): PolicyValue {
+  if (Array.isArray(optionValue)) {
+    return optionValue.every((entry) => typeof entry === 'string') ? optionValue as AgentParameterValue : undefined;
+  }
+  return typeof optionValue === 'string' || typeof optionValue === 'number' || typeof optionValue === 'boolean'
+    ? optionValue
+    : undefined;
 }
 
 function resolvePerPlayerTargetIndex(

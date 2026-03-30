@@ -31,6 +31,7 @@ import type {
   RunnerEventDeck,
   RunnerProjectionBundle,
   RunnerProjectionSource,
+  RunnerChoiceStep,
   RunnerFrame,
   RunnerLastingEffect,
   RunnerLastingEffectAttribute,
@@ -132,6 +133,7 @@ export function deriveRunnerFrame(
     eventDecks,
     actionGroups: deriveActionGroups((context.legalMoveResult?.moves ?? []).map(({ move }) => move)),
     choiceBreadcrumb: deriveChoiceBreadcrumb(context, zonesById),
+    selectedActionId: context.selectedAction ?? null,
     choiceContext,
     choiceUi,
     moveEnumerationWarnings: (context.legalMoveResult?.warnings ?? []).map((warning) => ({
@@ -1217,10 +1219,11 @@ function deriveChoiceContext(
   }
 
   // When the decision key has template resolution but no iteration path,
-  // derive the entity from the resolved bind for display purposes.
+  // derive the entity from the resolved bind — only if it's a known zone.
+  // Non-zone resolved binds (e.g., param names) add noise to the display.
   if (iterationEntityId === null) {
     const parsedKey = parseDecisionKey(choicePending.decisionKey);
-    if (parsedKey !== null && parsedKey.baseId !== parsedKey.resolvedBind) {
+    if (parsedKey !== null && parsedKey.baseId !== parsedKey.resolvedBind && isKnownZone(parsedKey.resolvedBind, zonesById)) {
       iterationEntityId = parsedKey.resolvedBind;
     }
   }
@@ -1234,6 +1237,20 @@ function deriveChoiceContext(
     iterationIndex,
     iterationTotal,
   };
+}
+
+function isKnownZone(entityId: string, zonesById: ReadonlyMap<string, RunnerZone>): boolean {
+  if (zonesById.has(entityId)) {
+    return true;
+  }
+  // Engine iteration entities may use base zone IDs without the :owner suffix.
+  const prefix = entityId + ':';
+  for (const zoneId of zonesById.keys()) {
+    if (zoneId.startsWith(prefix)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function extractIterationGroupId(decisionKey: DecisionKey): string | null {
@@ -1250,30 +1267,60 @@ function deriveChoiceBreadcrumb(
   context: RenderContext,
   zonesById: ReadonlyMap<string, RunnerZone>,
 ): RunnerFrame['choiceBreadcrumb'] {
-  return context.choiceStack.map((step, index) => {
+  const result: RunnerChoiceStep[] = [];
+  for (let index = 0; index < context.choiceStack.length; index += 1) {
+    const step = context.choiceStack[index]!;
     const choiceStackUpToHere = context.choiceStack.slice(0, index + 1);
     const iterCtx = parseIterationContext(step.decisionKey, choiceStackUpToHere, zonesById);
     const iterationGroupId = extractIterationGroupId(step.decisionKey);
 
     // When the decision key has template resolution (baseId !== resolvedBind)
-    // but no iteration path, derive the entity from the resolved bind.
+    // but no iteration path, derive the entity from the resolved bind —
+    // but only if the resolved bind is a known zone. Non-zone resolved binds
+    // (e.g., param names) should fall through to the array-index lookup below.
     let iterationEntityId = iterCtx?.currentEntityId ?? null;
     if (iterationEntityId === null && iterationGroupId !== null) {
       const parsedKey = parseDecisionKey(step.decisionKey);
-      if (parsedKey !== null && parsedKey.baseId !== parsedKey.resolvedBind) {
+      if (parsedKey !== null && parsedKey.baseId !== parsedKey.resolvedBind && isKnownZone(parsedKey.resolvedBind, zonesById)) {
         iterationEntityId = parsedKey.resolvedBind;
       }
     }
 
-    return {
+    // Second fallback: for forEach group members without an entity, infer the
+    // iteration entity from the most recent array-valued choice in the stack.
+    // The step's position within its group indexes into that array.
+    if (iterationEntityId === null && iterationGroupId !== null) {
+      let groupIndex = 0;
+      for (const prior of result) {
+        if (prior.iterationGroupId === iterationGroupId) {
+          groupIndex += 1;
+        }
+      }
+      for (let j = index - 1; j >= 0; j -= 1) {
+        const priorChoice = context.choiceStack[j];
+        if (priorChoice !== undefined && Array.isArray(priorChoice.value)) {
+          const arr = priorChoice.value as readonly MoveParamValue[];
+          if (groupIndex < arr.length) {
+            const candidate = String(arr[groupIndex]);
+            if (zonesById.has(candidate)) {
+              iterationEntityId = candidate;
+            }
+          }
+          break;
+        }
+      }
+    }
+
+    result.push({
       decisionKey: step.decisionKey,
       name: step.name,
       chosenValueId: serializeChoiceValueIdentity(step.value),
       chosenValue: step.value,
       iterationGroupId,
       iterationEntityId,
-    };
-  });
+    });
+  }
+  return result;
 }
 
 function resolveChoiceTarget(

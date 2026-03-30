@@ -64,6 +64,7 @@ export interface RunnerFrame {
   readonly eventDecks: readonly RunnerEventDeck[];
   readonly actionGroups: readonly RunnerActionGroup[];
   readonly choiceBreadcrumb: readonly RunnerChoiceStep[];
+  readonly selectedActionId: string | null;
   readonly choiceContext: RunnerChoiceContext | null;
   readonly choiceUi: RunnerChoiceUi;
   readonly moveEnumerationWarnings: readonly RunnerWarning[];

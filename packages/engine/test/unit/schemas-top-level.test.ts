@@ -247,6 +247,42 @@ describe('top-level runtime schemas', () => {
           candidateAggregates: {},
           pruningRules: {},
           scoreTerms: {},
+          completionScoreTerms: {
+            preferNamedOption: {
+              costClass: 'state',
+              when: {
+                kind: 'op',
+                op: 'eq',
+                args: [
+                  { kind: 'ref', ref: { kind: 'decisionIntrinsic', intrinsic: 'type' } },
+                  { kind: 'literal', value: 'chooseOne' },
+                ],
+              },
+              weight: { kind: 'literal', value: 1 },
+              value: {
+                kind: 'op',
+                op: 'if',
+                args: [
+                  {
+                    kind: 'op',
+                    op: 'eq',
+                    args: [
+                      { kind: 'ref', ref: { kind: 'optionIntrinsic', intrinsic: 'value' } },
+                      { kind: 'literal', value: 'zone-a' },
+                    ],
+                  },
+                  { kind: 'literal', value: 1 },
+                  { kind: 'literal', value: 0 },
+                ],
+              },
+              dependencies: {
+                parameters: [],
+                stateFeatures: [],
+                candidateFeatures: [],
+                aggregates: [],
+              },
+            },
+          },
           tieBreakers: {},
         },
         profiles: {
@@ -258,11 +294,242 @@ describe('top-level runtime schemas', () => {
             use: {
               pruningRules: [],
               scoreTerms: [],
+              completionScoreTerms: ['preferNamedOption'],
               tieBreakers: ['stableMoveKey'],
+            },
+            completionGuidance: {
+              enabled: true,
+              fallback: 'first',
             },
             plan: {
               stateFeatures: [],
               candidateFeatures: [],
+              candidateAggregates: [],
+            },
+          },
+        },
+        bindingsBySeat: {
+          us: 'baseline',
+        },
+      },
+    });
+
+    assert.equal(result.success, true);
+  });
+
+  it('accepts candidateIntrinsic.paramCount in compiled policy catalogs', () => {
+    const result = GameDefSchema.safeParse({
+      ...minimalGameDef,
+      agents: {
+        schemaVersion: 2,
+        catalogFingerprint: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+        surfaceVisibility: {
+          globalVars: {},
+          perPlayerVars: {},
+          derivedMetrics: {},
+          victory: {
+            currentMargin: {
+              current: 'hidden',
+              preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+            },
+            currentRank: {
+              current: 'hidden',
+              preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+            },
+          },
+        },
+        parameterDefs: {},
+        candidateParamDefs: {},
+        library: {
+          stateFeatures: {},
+          candidateFeatures: {
+            paramLoad: {
+              type: 'number',
+              costClass: 'candidate',
+              expr: {
+                kind: 'ref',
+                ref: { kind: 'candidateIntrinsic', intrinsic: 'paramCount' },
+              },
+              dependencies: {
+                parameters: [],
+                stateFeatures: [],
+                candidateFeatures: [],
+                aggregates: [],
+              },
+            },
+          },
+          candidateAggregates: {},
+          pruningRules: {},
+          scoreTerms: {},
+          completionScoreTerms: {},
+          tieBreakers: {},
+        },
+        profiles: {
+          baseline: {
+            fingerprint: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
+            params: {},
+            use: {
+              pruningRules: [],
+              scoreTerms: [],
+              completionScoreTerms: [],
+              tieBreakers: [],
+            },
+            plan: {
+              stateFeatures: [],
+              candidateFeatures: [],
+              candidateAggregates: [],
+            },
+          },
+        },
+        bindingsBySeat: {
+          us: 'baseline',
+        },
+      },
+    });
+
+    assert.equal(result.success, true);
+  });
+
+  it('rejects compiled zoneTokenAgg owners that use seat ids', () => {
+    const result = GameDefSchema.safeParse({
+      ...minimalGameDef,
+      agents: {
+        schemaVersion: 2,
+        catalogFingerprint: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+        surfaceVisibility: {
+          globalVars: {},
+          perPlayerVars: {},
+          derivedMetrics: {},
+          victory: {
+            currentMargin: {
+              current: 'hidden',
+              preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+            },
+            currentRank: {
+              current: 'hidden',
+              preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+            },
+          },
+        },
+        parameterDefs: {},
+        candidateParamDefs: {},
+        library: {
+          stateFeatures: {},
+          candidateFeatures: {
+            invalidOwner: {
+              type: 'number',
+              costClass: 'candidate',
+              expr: {
+                kind: 'zoneTokenAgg',
+                zone: 'frontier',
+                owner: 'us',
+                prop: 'strength',
+                aggOp: 'sum',
+              },
+              dependencies: {
+                parameters: [],
+                stateFeatures: [],
+                candidateFeatures: [],
+                aggregates: [],
+              },
+            },
+          },
+          candidateAggregates: {},
+          pruningRules: {},
+          scoreTerms: {},
+          completionScoreTerms: {},
+          tieBreakers: {},
+        },
+        profiles: {
+          baseline: {
+            fingerprint: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
+            params: {},
+            use: {
+              pruningRules: [],
+              scoreTerms: [],
+              completionScoreTerms: [],
+              tieBreakers: [],
+            },
+            plan: {
+              stateFeatures: [],
+              candidateFeatures: [],
+              candidateAggregates: [],
+            },
+          },
+        },
+        bindingsBySeat: {
+          us: 'baseline',
+        },
+      },
+    });
+
+    assert.equal(result.success, false);
+  });
+
+  it('accepts compiled zoneProp expressions in agent policy catalogs', () => {
+    const result = GameDefSchema.safeParse({
+      ...minimalGameDef,
+      agents: {
+        schemaVersion: 2,
+        catalogFingerprint: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+        surfaceVisibility: {
+          globalVars: {},
+          perPlayerVars: {},
+          derivedMetrics: {},
+          victory: {
+            currentMargin: {
+              current: 'hidden',
+              preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+            },
+            currentRank: {
+              current: 'hidden',
+              preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+            },
+          },
+        },
+        parameterDefs: {},
+        candidateParamDefs: {},
+        library: {
+          stateFeatures: {},
+          candidateFeatures: {
+            frontierPopulation: {
+              type: 'number',
+              costClass: 'candidate',
+              expr: {
+                kind: 'zoneProp',
+                zone: {
+                  kind: 'ref',
+                  ref: { kind: 'candidateParam', id: 'targetZone' },
+                },
+                prop: 'population',
+              },
+              dependencies: {
+                parameters: [],
+                stateFeatures: [],
+                candidateFeatures: [],
+                aggregates: [],
+              },
+            },
+          },
+          candidateAggregates: {},
+          pruningRules: {},
+          scoreTerms: {},
+          completionScoreTerms: {},
+          tieBreakers: {},
+        },
+        profiles: {
+          baseline: {
+            fingerprint: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
+            params: {},
+            use: {
+              pruningRules: [],
+              scoreTerms: [],
+              completionScoreTerms: [],
+              tieBreakers: [],
+            },
+            plan: {
+              stateFeatures: [],
+              candidateFeatures: ['frontierPopulation'],
               candidateAggregates: [],
             },
           },
@@ -317,6 +584,7 @@ describe('top-level runtime schemas', () => {
           candidateAggregates: {},
           pruningRules: {},
           scoreTerms: {},
+          completionScoreTerms: {},
           tieBreakers: {},
         },
         profiles: {},
@@ -355,6 +623,7 @@ describe('top-level runtime schemas', () => {
           candidateAggregates: {},
           pruningRules: {},
           scoreTerms: {},
+          completionScoreTerms: {},
           tieBreakers: {},
         },
         profiles: {
@@ -363,6 +632,7 @@ describe('top-level runtime schemas', () => {
             use: {
               pruningRules: [],
               scoreTerms: [],
+              completionScoreTerms: [],
               tieBreakers: ['stableMoveKey'],
             },
             plan: {

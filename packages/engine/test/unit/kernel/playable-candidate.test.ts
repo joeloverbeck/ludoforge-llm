@@ -109,6 +109,26 @@ describe('playable-candidate evaluator', () => {
     assert.doesNotThrow(() => applyMove(def, state, evaluated.move));
   });
 
+  it('forwards choose into template completion', () => {
+    const actionId = asActionId('guided-template-op');
+    const def = createDef(
+      [createTemplateChooseOneAction(actionId, phaseId)],
+      [createTemplateChooseOneProfile(actionId)],
+    );
+    const state = initialState(def, 17, 2).state;
+    const templateMove: Move = { actionId, params: {} };
+
+    const evaluated = evaluatePlayableMoveCandidate(def, state, templateMove, createRng(4n), undefined, {
+      choose: () => 'beta',
+    });
+
+    assert.equal(evaluated.kind, 'playableComplete');
+    if (evaluated.kind !== 'playableComplete') {
+      assert.fail('expected template move to become fully playable');
+    }
+    assert.equal(evaluated.move.params.$target, 'beta');
+  });
+
   it('rejects unsatisfiable template moves before agent selection work', () => {
     const actionId = asActionId('unplayable-template');
     const def = createDef(
@@ -125,5 +145,24 @@ describe('playable-candidate evaluator', () => {
       assert.fail('expected unplayable template rejection');
     }
     assert.equal(evaluated.rejection, 'completionUnsatisfiable');
+  });
+
+  it('does not call choose for already-complete legal moves', () => {
+    const def = createDef([
+      createAction('advance', [eff({ setVar: { scope: 'global', var: 'score', value: 1 } })]),
+    ]);
+    const state = initialState(def, 19, 2).state;
+    const move: Move = { actionId: asActionId('advance'), params: {} };
+    let chooseCalls = 0;
+
+    const evaluated = evaluatePlayableMoveCandidate(def, state, move, createRng(3n), undefined, {
+      choose: () => {
+        chooseCalls += 1;
+        return 'beta';
+      },
+    });
+
+    assert.equal(evaluated.kind, 'playableComplete');
+    assert.equal(chooseCalls, 0);
   });
 });

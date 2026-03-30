@@ -1,4 +1,11 @@
 import { z } from 'zod';
+import {
+  AGENT_POLICY_CANDIDATE_INTRINSICS,
+  AGENT_POLICY_COMPLETION_GUIDANCE_FALLBACKS,
+  AGENT_POLICY_DECISION_INTRINSICS,
+  AGENT_POLICY_OPTION_INTRINSICS,
+  AGENT_POLICY_ZONE_TOKEN_AGG_OWNER_KEYWORDS,
+} from '../contracts/index.js';
 import { DegeneracyFlag } from './diagnostics.js';
 import { TRACE_SCOPED_VAR_SCOPES, createScopedVarContractSchema } from './scoped-var-contract.js';
 import {
@@ -612,11 +619,19 @@ const CompiledAgentPolicyRefSchema = z.union([
   }).strict(),
   z.object({
     kind: z.literal('candidateIntrinsic'),
-    intrinsic: z.union([z.literal('actionId'), z.literal('stableMoveKey'), z.literal('isPass')]),
+    intrinsic: z.enum(AGENT_POLICY_CANDIDATE_INTRINSICS),
   }).strict(),
   z.object({
     kind: z.literal('candidateParam'),
     id: StringSchema,
+  }).strict(),
+  z.object({
+    kind: z.literal('decisionIntrinsic'),
+    intrinsic: z.enum(AGENT_POLICY_DECISION_INTRINSICS),
+  }).strict(),
+  z.object({
+    kind: z.literal('optionIntrinsic'),
+    intrinsic: z.enum(AGENT_POLICY_OPTION_INTRINSICS),
   }).strict(),
   z.object({
     kind: z.literal('seatIntrinsic'),
@@ -672,8 +687,11 @@ const AgentPolicyExprSchema: z.ZodTypeAny = z.lazy(() =>
     }).strict(),
     z.object({
       kind: z.literal('zoneTokenAgg'),
-      zone: StringSchema,
-      owner: StringSchema,
+      zone: z.union([StringSchema, AgentPolicyExprSchema]),
+      owner: z.union([
+        z.enum(AGENT_POLICY_ZONE_TOKEN_AGG_OWNER_KEYWORDS),
+        z.string().regex(/^[0-9]+$/),
+      ]),
       prop: StringSchema,
       aggOp: z.union([
         z.literal('sum'),
@@ -681,6 +699,11 @@ const AgentPolicyExprSchema: z.ZodTypeAny = z.lazy(() =>
         z.literal('min'),
         z.literal('max'),
       ]),
+    }).strict(),
+    z.object({
+      kind: z.literal('zoneProp'),
+      zone: z.union([StringSchema, AgentPolicyExprSchema]),
+      prop: StringSchema,
     }).strict(),
   ]),
 );
@@ -774,6 +797,7 @@ const CompiledAgentLibraryIndexSchema = z
     candidateAggregates: z.record(StringSchema, CompiledAgentAggregateSchema),
     pruningRules: z.record(StringSchema, CompiledAgentPruningRuleSchema),
     scoreTerms: z.record(StringSchema, CompiledAgentScoreTermSchema),
+    completionScoreTerms: z.record(StringSchema, CompiledAgentScoreTermSchema),
     tieBreakers: z.record(StringSchema, CompiledAgentTieBreakerSchema),
   })
   .strict();
@@ -786,9 +810,14 @@ const CompiledAgentProfileSchema = z
       .object({
         pruningRules: z.array(StringSchema),
         scoreTerms: z.array(StringSchema),
+        completionScoreTerms: z.array(StringSchema),
         tieBreakers: z.array(StringSchema),
       })
       .strict(),
+    completionGuidance: z.object({
+      enabled: BooleanSchema,
+      fallback: z.enum(AGENT_POLICY_COMPLETION_GUIDANCE_FALLBACKS),
+    }).strict().optional(),
     plan: z
       .object({
         stateFeatures: z.array(StringSchema),

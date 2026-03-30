@@ -1,6 +1,6 @@
 # 99MAPEDIREN-003: Create editor-to-PresentationScene adapter
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — runner-only
@@ -12,11 +12,12 @@ Game canvas renderers consume `PresentationScene` data. The map editor has its o
 
 ## Assumption Reassessment (2026-03-30)
 
-1. `PresentationScene` interface is stable at 7 fields: `zones`, `connectionRoutes`, `junctions`, `tokens`, `adjacencies`, `overlays`, `regions` — CONFIRMED in `presentation-scene.ts`.
-2. `PresentationZoneNode` requires fields: `id`, `x`, `y`, `width`, `height`, `shape`, `fillColor`, `strokeColor`, `strokeWidth`, `label`, `badge`, `isSelectable`, `ownerID`, `hiddenStackCount`, `markers`, `fontSize`, `vertices`, `terrainTags` — CONFIRMED.
-3. `resolveConnectionRoutes()` exists in `connection-route-resolver.ts` and can accept editor anchor/route data — CONFIRMED.
-4. `resolveRegionNodes()` exists in presentation-scene.ts — CONFIRMED.
-5. `computeProvinceBorders()` exists in `province-border-utils.ts` — CONFIRMED (new file in working tree).
+1. `PresentationScene` interface is stable at 7 fields: `zones`, `connectionRoutes`, `junctions`, `tokens`, `adjacencies`, `overlays`, `regions` — CONFIRMED in `presentation/presentation-scene.ts`.
+2. `PresentationZoneNode` has fields: `id`, `displayName`, `ownerID`, `isSelectable`, `category`, `attributes`, `visual` (ResolvedZoneVisual with shape/width/height/color/strokeColor/connectionStyleKey/vertices), `render` (PresentationZoneRenderSpec with fillColor/stroke/hiddenStackCount/nameLabel/markersLabel/badge) — CONFIRMED.
+3. `resolveConnectionRoutes()` exists in `presentation/connection-route-resolver.ts` and can accept editor anchor/route data — CONFIRMED.
+4. `resolveRegionNodes()` exists in `presentation/presentation-scene.ts` — CONFIRMED.
+5. `computeProvinceBorders()` exists in `canvas/renderers/province-border-utils.ts` — CONFIRMED.
+6. Editor store `zoneVertices` type is `ReadonlyMap<string, readonly number[]>` (flat `[x1,y1,x2,y2,...]`), NOT `Position[]` — CONFIRMED.
 
 ## Architecture Check
 
@@ -36,7 +37,7 @@ export function buildEditorPresentationScene(options: {
   gameDef: GameDef;
   visualConfigProvider: VisualConfigProvider;
   positions: ReadonlyMap<string, Position>;
-  zoneVertices: ReadonlyMap<string, readonly Position[]>;
+  zoneVertices: ReadonlyMap<string, readonly number[]>;
   connectionAnchors: ReadonlyMap<string, Position>;
   connectionRoutes: ReadonlyMap<string, ConnectionRouteDefinition>;
   selectedZoneId: string | null;
@@ -44,7 +45,7 @@ export function buildEditorPresentationScene(options: {
 ```
 
 Field mapping:
-- `zones`: Build `PresentationZoneNode[]` from `gameDef.zones` + `visualConfigProvider` + `positions` + `zoneVertices`. Set `ownerID: null`, `hiddenStackCount: 0`, `markers: ''`, `badge: null`, `isSelectable: true`. Apply selection highlight via `selectedZoneId`.
+- `zones`: Build `PresentationZoneNode[]` from `gameDef.zones` + `visualConfigProvider` + `positions` + `zoneVertices`. Set `ownerID: null`, `isSelectable: true`. Build `render` spec with `hiddenStackCount: 0`, `badge: null`, empty `markersLabel`. Build `visual` via `visualConfigProvider.resolveZoneVisual()`, overriding `vertices` from `zoneVertices` map when present. Apply selection highlight stroke via `selectedZoneId`.
 - `adjacencies`: Map `gameDef` adjacency pairs to `PresentationAdjacencyNode[]`. Set `isHighlighted: false`.
 - `connectionRoutes`: Call `resolveConnectionRoutes()` with editor route data.
 - `junctions`: From same `resolveConnectionRoutes()` call.
@@ -105,3 +106,15 @@ Test all field mappings with known inputs, verify defaults, verify empty arrays 
 
 1. `pnpm -F @ludoforge/runner test -- --reporter=verbose map-editor-presentation-adapter`
 2. `pnpm -F @ludoforge/runner typecheck`
+
+## Outcome
+
+- **Completion date**: 2026-03-30
+- **What changed**:
+  - Created `packages/runner/src/map-editor/map-editor-presentation-adapter.ts` (~160 lines) — pure function `buildEditorPresentationScene()` converting editor state to `PresentationScene`
+  - Created `packages/runner/test/map-editor/map-editor-presentation-adapter.test.ts` — 19 unit tests covering all acceptance criteria
+- **Deviations from original plan**:
+  - Ticket assumption #2 corrected: `PresentationZoneNode` uses `visual` (ResolvedZoneVisual) + `render` (PresentationZoneRenderSpec), not flat fields
+  - `zoneVertices` signature corrected from `ReadonlyMap<string, readonly Position[]>` to `ReadonlyMap<string, readonly number[]>` to match editor store
+  - VisualConfig key corrected from `categories` to `categoryStyles`
+- **Verification results**: typecheck clean, 206 test files / 2107 tests all passing

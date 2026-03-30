@@ -447,6 +447,9 @@ function resolveSpurs(
     if (zone === undefined || zonePosition === undefined) {
       continue;
     }
+    if (zone.category === 'province') {
+      continue;
+    }
 
     const nearestPoint = nearestPointOnPolyline(routePolyline, zonePosition);
     if (nearestPoint === null) {

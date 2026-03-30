@@ -60,6 +60,14 @@ export function createAdjacencyRenderer(
         });
       }
 
+      for (const [pairKey, adjacency] of nextPairs) {
+        const fromZone = zonesById.get(adjacency.from);
+        const toZone = zonesById.get(adjacency.to);
+        if (fromZone?.category === 'province' || toZone?.category === 'province') {
+          nextPairs.delete(pairKey);
+        }
+      }
+
       for (const [pairKey, graphics] of graphicsByPair) {
         if (nextPairs.has(pairKey)) {
           continue;

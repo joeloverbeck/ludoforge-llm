@@ -17,7 +17,8 @@ const {
   const layers = {
     boardGroup: { id: 'board' },
     adjacencyLayer: { id: 'adjacency' },
-    zoneLayer: { id: 'zone' },
+    provinceZoneLayer: { id: 'province-zone' },
+    cityZoneLayer: { id: 'city-zone' },
     tableOverlayLayer: { id: 'table-overlay' },
     tokenGroup: { id: 'token' },
     effectsGroup: { id: 'effects' },

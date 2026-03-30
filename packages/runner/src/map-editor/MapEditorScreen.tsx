@@ -12,6 +12,7 @@ import { createEditorRouteRenderer } from './map-editor-route-renderer.js';
 import { MapEditorToolbar } from './map-editor-toolbar.js';
 import { createMapEditorStore, type MapEditorStoreApi } from './map-editor-store.js';
 import { createEditorZoneRenderer } from './map-editor-zone-renderer.js';
+import { createVertexHandleRenderer } from './vertex-handle-renderer.js';
 import { useMapEditorKeyboardShortcuts } from './use-map-editor-keyboard-shortcuts.js';
 import type { Position } from './map-editor-types.js';
 import styles from './MapEditorScreen.module.css';
@@ -125,27 +126,32 @@ export function MapEditorScreen({ gameId, onBack }: MapEditorScreenProps): React
         }
 
         const adjacencyRenderer = createEditorAdjacencyRenderer(
-          canvas.layers.adjacency,
+          canvas.layers.adjacencyLayer,
           screenState.editor.store,
           screenState.editor.visualConfigProvider,
         );
         const zoneRenderer = createEditorZoneRenderer(
-          canvas.layers.zone,
+          canvas.layers.cityZoneLayer,
           screenState.editor.store,
           screenState.editor.visualConfigProvider,
           { dragSurface: canvas.viewport },
         );
         const routeRenderer = createEditorRouteRenderer(
-          canvas.layers.route,
+          canvas.layers.connectionRouteLayer,
           screenState.editor.store,
           screenState.editor.gameDef,
           screenState.editor.visualConfigProvider,
         );
         const handleRenderer = createEditorHandleRenderer(
-          canvas.layers.handle,
+          canvas.layers.handleLayer,
           screenState.editor.store,
           screenState.editor.gameDef,
           screenState.editor.visualConfigProvider,
+          { dragSurface: canvas.viewport },
+        );
+        const vertexHandleRenderer = createVertexHandleRenderer(
+          canvas.layers.handleLayer,
+          screenState.editor.store,
           { dragSurface: canvas.viewport },
         );
 
@@ -165,6 +171,7 @@ export function MapEditorScreen({ gameId, onBack }: MapEditorScreenProps): React
         destroyRuntime = () => {
           removeWindowListeners();
           adjacencyRenderer.destroy();
+          vertexHandleRenderer.destroy();
           handleRenderer.destroy();
           routeRenderer.destroy();
           zoneRenderer.destroy();
@@ -267,11 +274,12 @@ export function MapEditorScreen({ gameId, onBack }: MapEditorScreenProps): React
     }
 
     try {
-      const { originalVisualConfig, zonePositions, connectionAnchors, connectionRoutes, markSaved } =
+      const { originalVisualConfig, zonePositions, zoneVertices, connectionAnchors, connectionRoutes, markSaved } =
         screenState.editor.store.getState();
       const yaml = exportVisualConfig({
         originalVisualConfig,
         zonePositions,
+        zoneVertices,
         connectionAnchors,
         connectionRoutes,
       });

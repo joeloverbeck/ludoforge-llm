@@ -451,6 +451,8 @@ zones:
       label: An Loc
     ba-xuyen:none:
       label: Ba Xuyen
+      color: "#8ab050"
+      strokeColor: "#6a8838"
       shape: polygon
       vertices: [453, -356, 266, -236, -361, -7, -147, 344, 453, 344]
     binh-dinh:none:
@@ -479,14 +481,20 @@ zones:
       vertices: [360, -380, -292, -396, -378, 124, -51, 776, 360, 820]
     kien-giang-an-xuyen:none:
       label: Kien Giang An Xuyen
+      color: "#8ab050"
+      strokeColor: "#6a8838"
       shape: polygon
       vertices: [163, -1016, 409, -565, 361, 8, 175, 359, -425, 359, -259, -570, -282, -1019]
     kien-hoa-vinh-binh:none:
       label: Kien Hoa Vinh Binh
+      color: "#8ab050"
+      strokeColor: "#6a8838"
       shape: polygon
       vertices: [322, -284, -217, -336, -265, 236, 322, 316]
     kien-phong:none:
       label: Kien Phong
+      color: "#8ab050"
+      strokeColor: "#6a8838"
       shape: polygon
       vertices: [148, -265, 456, -111, 217, 337, -410, 565, -656, 114, -284, -440]
     kontum:none:
@@ -541,10 +549,14 @@ zones:
       vertices: [235, -252, -463, -221, -417, 332, 235, 348]
     phuoc-long:none:
       label: Phuoc Long
+      color: "#4a4a20"
+      strokeColor: "#353518"
       shape: polygon
       vertices: [-200, -400, 300, -400, 303, 157, 49, 364, -732, 128, -376, -28]
     pleiku-darlac:none:
       label: Pleiku Darlac
+      color: "#c08530"
+      strokeColor: "#8a6020"
       shape: polygon
       vertices: [-133, -903, 344, -651, 662, -489, 708, 64, 622, 584, -203, 626, -954, 89, -882, -609]
     quang-duc-long-khanh:none:
@@ -577,6 +589,8 @@ zones:
       vertices: [-480, -710, 436, -658, 1079, -351, 1407, 7, 1127, 607, 378, 901, -480, 790]
     tay-ninh:none:
       label: Tay Ninh
+      color: "#4a4a20"
+      strokeColor: "#353518"
       shape: polygon
       vertices: [-272, -652, 509, -416, 533, -233, 360, 420, -148, 266, -580, 91, -906, -478]
     the-fishhook:none:

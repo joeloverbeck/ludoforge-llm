@@ -4,9 +4,10 @@ export interface LayerHierarchy {
   readonly boardGroup: Container;
   readonly backgroundLayer: Container;
   readonly regionLayer: Container;
-  readonly adjacencyLayer: Container;
+  readonly provinceZoneLayer: Container;
   readonly connectionRouteLayer: Container;
-  readonly zoneLayer: Container;
+  readonly cityZoneLayer: Container;
+  readonly adjacencyLayer: Container;
   readonly tableOverlayLayer: Container;
   readonly tokenGroup: Container;
   readonly effectsGroup: Container;
@@ -28,9 +29,10 @@ export function createLayerHierarchy(): LayerHierarchy {
   const boardGroup = new Container();
   const backgroundLayer = new Container();
   const regionLayer = new Container();
-  const adjacencyLayer = new Container();
+  const provinceZoneLayer = new Container();
   const connectionRouteLayer = new Container();
-  const zoneLayer = new Container();
+  const cityZoneLayer = new Container();
+  const adjacencyLayer = new Container();
   const tableOverlayLayer = new Container();
   const tokenGroup = new Container();
   const effectsGroup = new Container();
@@ -59,9 +61,13 @@ export function createLayerHierarchy(): LayerHierarchy {
   regionLayer.interactiveChildren = false;
   regionLayer.sortableChildren = false;
 
-  zoneLayer.eventMode = 'passive';
-  zoneLayer.interactiveChildren = true;
-  zoneLayer.sortableChildren = true;
+  provinceZoneLayer.eventMode = 'passive';
+  provinceZoneLayer.interactiveChildren = true;
+  provinceZoneLayer.sortableChildren = true;
+
+  cityZoneLayer.eventMode = 'passive';
+  cityZoneLayer.interactiveChildren = true;
+  cityZoneLayer.sortableChildren = true;
 
   tableOverlayLayer.eventMode = 'none';
   tableOverlayLayer.interactiveChildren = false;
@@ -70,9 +76,10 @@ export function createLayerHierarchy(): LayerHierarchy {
   boardGroup.addChild(
     backgroundLayer,
     regionLayer,
-    adjacencyLayer,
-    zoneLayer,
+    provinceZoneLayer,
     connectionRouteLayer,
+    cityZoneLayer,
+    adjacencyLayer,
     tableOverlayLayer,
   );
 
@@ -80,9 +87,10 @@ export function createLayerHierarchy(): LayerHierarchy {
     boardGroup,
     backgroundLayer,
     regionLayer,
-    adjacencyLayer,
+    provinceZoneLayer,
     connectionRouteLayer,
-    zoneLayer,
+    cityZoneLayer,
+    adjacencyLayer,
     tableOverlayLayer,
     tokenGroup,
     effectsGroup,

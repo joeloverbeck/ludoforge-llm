@@ -47,6 +47,9 @@ interface MapEditorStoreState extends MapEditorDocumentState {
 
 interface MapEditorStoreActions {
   moveZone(zoneId: string, position: Position): void;
+  moveVertex(zoneId: string, vertexIndex: number, position: Position): void;
+  addVertex(zoneId: string, afterIndex: number): void;
+  removeVertex(zoneId: string, vertexIndex: number): void;
   moveAnchor(anchorId: string, position: Position): void;
   moveControlPoint(routeId: string, segmentIndex: number, position: Position): void;
   setEndpointAnchor(routeId: string, pointIndex: number, anchor: number): void;
@@ -88,6 +91,7 @@ export function createMapEditorStore(
     const zoneVisuals = resolveMapEditorZoneVisuals(gameDef, new VisualConfigProvider(visualConfig));
     const initialDocumentState: EditorSnapshot = {
       zonePositions: clonePositionMap(initialPositions),
+      zoneVertices: cloneVerticesMap(visualConfig),
       connectionAnchors: cloneAnchorMap(visualConfig),
       connectionRoutes: cloneRouteMap(visualConfig),
     };
@@ -159,6 +163,18 @@ export function createMapEditorStore(
 
       moveZone(zoneId, position) {
         applyCommittedEdit((state) => moveZoneInDocument(state, zoneId, position));
+      },
+
+      moveVertex(zoneId, vertexIndex, position) {
+        applyCommittedEdit((state) => moveVertexInDocument(state, zoneId, vertexIndex, position));
+      },
+
+      addVertex(zoneId, afterIndex) {
+        applyCommittedEdit((state) => addVertexInDocument(state, zoneId, afterIndex));
+      },
+
+      removeVertex(zoneId, vertexIndex) {
+        applyCommittedEdit((state) => removeVertexInDocument(state, zoneId, vertexIndex));
       },
 
       moveAnchor(anchorId, position) {
@@ -336,6 +352,7 @@ export function createMapEditorStore(
 function snapshotFromState(state: MapEditorDocumentState): EditorSnapshot {
   return {
     zonePositions: clonePositionMap(state.zonePositions),
+    zoneVertices: cloneVerticesMapFromState(state.zoneVertices),
     connectionAnchors: clonePositionMap(state.connectionAnchors),
     connectionRoutes: cloneRouteDefinitions(state.connectionRoutes),
   };
@@ -344,6 +361,7 @@ function snapshotFromState(state: MapEditorDocumentState): EditorSnapshot {
 function cloneSnapshot(snapshot: EditorSnapshot): EditorSnapshot {
   return {
     zonePositions: clonePositionMap(snapshot.zonePositions),
+    zoneVertices: cloneVerticesMapFromState(snapshot.zoneVertices),
     connectionAnchors: clonePositionMap(snapshot.connectionAnchors),
     connectionRoutes: cloneRouteDefinitions(snapshot.connectionRoutes),
   };
@@ -358,6 +376,7 @@ function documentMatchesSnapshot(
 
 function snapshotsEqual(left: EditorSnapshot, right: EditorSnapshot): boolean {
   return positionMapsEqual(left.zonePositions, right.zonePositions)
+    && verticesMapsEqual(left.zoneVertices, right.zoneVertices)
     && positionMapsEqual(left.connectionAnchors, right.connectionAnchors)
     && routeMapsEqual(left.connectionRoutes, right.connectionRoutes);
 }
@@ -541,6 +560,7 @@ function moveZoneInDocument(
   zonePositions.set(zoneId, { x: position.x, y: position.y });
   return {
     zonePositions,
+    zoneVertices: state.zoneVertices,
     connectionAnchors: state.connectionAnchors,
     connectionRoutes: state.connectionRoutes,
   };
@@ -560,6 +580,7 @@ function moveAnchorInDocument(
   connectionAnchors.set(anchorId, { x: position.x, y: position.y });
   return {
     zonePositions: state.zonePositions,
+    zoneVertices: state.zoneVertices,
     connectionAnchors,
     connectionRoutes: state.connectionRoutes,
   };
@@ -603,6 +624,7 @@ function moveControlPointInDocument(
 
   return {
     zonePositions: state.zonePositions,
+    zoneVertices: state.zoneVertices,
     connectionAnchors: state.connectionAnchors,
     connectionRoutes,
   };
@@ -664,6 +686,7 @@ function insertWaypointInDocument(
 
   return {
     zonePositions: state.zonePositions,
+    zoneVertices: state.zoneVertices,
     connectionAnchors,
     connectionRoutes,
   };
@@ -701,6 +724,7 @@ function detachEndpointToAnchorInDocument(
     anchorId,
     document: {
       zonePositions: state.zonePositions,
+      zoneVertices: state.zoneVertices,
       connectionAnchors,
       connectionRoutes,
     },
@@ -736,6 +760,7 @@ function setEndpointAnchorInDocument(
 
   return {
     zonePositions: state.zonePositions,
+    zoneVertices: state.zoneVertices,
     connectionAnchors: state.connectionAnchors,
     connectionRoutes,
   };
@@ -775,6 +800,7 @@ function removeWaypointInDocument(
 
   return {
     zonePositions: state.zonePositions,
+    zoneVertices: state.zoneVertices,
     connectionAnchors,
     connectionRoutes,
   };
@@ -835,6 +861,7 @@ function convertSegmentInDocument(
 
   return {
     zonePositions: state.zonePositions,
+    zoneVertices: state.zoneVertices,
     connectionAnchors,
     connectionRoutes,
   };
@@ -917,4 +944,140 @@ function cloneEndpoint(endpoint: ConnectionEndpoint): ConnectionEndpoint {
 
 function cloneSegment(segment: ConnectionRouteSegment): ConnectionRouteSegment {
   return cloneConnectionRouteSegment(segment);
+}
+
+function cloneVerticesMap(
+  visualConfig: VisualConfig,
+): ReadonlyMap<string, readonly number[]> {
+  const map = new Map<string, readonly number[]>();
+  const overrides = visualConfig.zones?.overrides;
+  if (overrides !== undefined) {
+    for (const [zoneId, override] of Object.entries(overrides)) {
+      if (override?.vertices !== undefined && Array.isArray(override.vertices)) {
+        map.set(zoneId, [...override.vertices]);
+      }
+    }
+  }
+  return map;
+}
+
+function cloneVerticesMapFromState(
+  vertices: ReadonlyMap<string, readonly number[]>,
+): ReadonlyMap<string, readonly number[]> {
+  return new Map(
+    [...vertices.entries()].map(([id, verts]) => [id, [...verts]]),
+  );
+}
+
+function verticesMapsEqual(
+  left: ReadonlyMap<string, readonly number[]>,
+  right: ReadonlyMap<string, readonly number[]>,
+): boolean {
+  if (left.size !== right.size) {
+    return false;
+  }
+  for (const [key, leftVerts] of left) {
+    const rightVerts = right.get(key);
+    if (rightVerts === undefined || leftVerts.length !== rightVerts.length) {
+      return false;
+    }
+    for (let i = 0; i < leftVerts.length; i++) {
+      if (leftVerts[i] !== rightVerts[i]) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+function moveVertexInDocument(
+  state: MapEditorDocumentState,
+  zoneId: string,
+  vertexIndex: number,
+  position: Position,
+): MapEditorDocumentState | null {
+  const vertices = state.zoneVertices.get(zoneId);
+  if (vertices === undefined || vertexIndex * 2 + 1 >= vertices.length) {
+    return null;
+  }
+
+  const updated = [...vertices];
+  updated[vertexIndex * 2] = position.x;
+  updated[vertexIndex * 2 + 1] = position.y;
+
+  const zoneVertices = new Map(state.zoneVertices);
+  zoneVertices.set(zoneId, updated);
+  return {
+    zonePositions: state.zonePositions,
+    zoneVertices,
+    connectionAnchors: state.connectionAnchors,
+    connectionRoutes: state.connectionRoutes,
+  };
+}
+
+function addVertexInDocument(
+  state: MapEditorDocumentState,
+  zoneId: string,
+  afterIndex: number,
+): MapEditorDocumentState | null {
+  const vertices = state.zoneVertices.get(zoneId);
+  if (vertices === undefined || vertices.length < 6) {
+    return null;
+  }
+  const pointCount = Math.trunc(vertices.length / 2);
+  if (afterIndex < 0 || afterIndex >= pointCount) {
+    return null;
+  }
+
+  const nextIndex = (afterIndex + 1) % pointCount;
+  const ax = vertices[afterIndex * 2]!;
+  const ay = vertices[afterIndex * 2 + 1]!;
+  const bx = vertices[nextIndex * 2]!;
+  const by = vertices[nextIndex * 2 + 1]!;
+  const midX = (ax + bx) / 2;
+  const midY = (ay + by) / 2;
+
+  const updated = [
+    ...vertices.slice(0, (afterIndex + 1) * 2),
+    midX, midY,
+    ...vertices.slice((afterIndex + 1) * 2),
+  ];
+
+  const zoneVertices = new Map(state.zoneVertices);
+  zoneVertices.set(zoneId, updated);
+  return {
+    zonePositions: state.zonePositions,
+    zoneVertices,
+    connectionAnchors: state.connectionAnchors,
+    connectionRoutes: state.connectionRoutes,
+  };
+}
+
+function removeVertexInDocument(
+  state: MapEditorDocumentState,
+  zoneId: string,
+  vertexIndex: number,
+): MapEditorDocumentState | null {
+  const vertices = state.zoneVertices.get(zoneId);
+  if (vertices === undefined || vertices.length <= 6) {
+    return null; // Minimum 3 vertices (6 numbers)
+  }
+  const pointCount = Math.trunc(vertices.length / 2);
+  if (vertexIndex < 0 || vertexIndex >= pointCount) {
+    return null;
+  }
+
+  const updated = [
+    ...vertices.slice(0, vertexIndex * 2),
+    ...vertices.slice((vertexIndex + 1) * 2),
+  ];
+
+  const zoneVertices = new Map(state.zoneVertices);
+  zoneVertices.set(zoneId, updated);
+  return {
+    zonePositions: state.zonePositions,
+    zoneVertices,
+    connectionAnchors: state.connectionAnchors,
+    connectionRoutes: state.connectionRoutes,
+  };
 }

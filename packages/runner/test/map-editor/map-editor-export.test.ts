@@ -315,6 +315,7 @@ function makeExportInput() {
       ['zone:a', { x: 10, y: 20 }],
       ['zone:b', { x: 40, y: 60 }],
     ]),
+    zoneVertices: new Map<string, readonly number[]>(),
     connectionAnchors: new Map([
       ['bend', { x: 22, y: 33 }],
       ['ctrl', { x: 44, y: 55 }],

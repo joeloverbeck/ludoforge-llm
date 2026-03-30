@@ -15,6 +15,7 @@ const testDoubles = vi.hoisted(() => ({
   createEditorZoneRenderer: vi.fn(),
   createEditorRouteRenderer: vi.fn(),
   createEditorHandleRenderer: vi.fn(),
+  createVertexHandleRenderer: vi.fn(),
 }));
 
 vi.mock('../../src/bootstrap/runner-bootstrap.js', () => ({
@@ -54,6 +55,10 @@ vi.mock('../../src/map-editor/map-editor-handle-renderer.js', () => ({
   createEditorHandleRenderer: testDoubles.createEditorHandleRenderer,
 }));
 
+vi.mock('../../src/map-editor/vertex-handle-renderer.js', () => ({
+  createVertexHandleRenderer: testDoubles.createVertexHandleRenderer,
+}));
+
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
@@ -72,6 +77,7 @@ describe('MapEditorScreen', () => {
     testDoubles.createEditorZoneRenderer.mockReset();
     testDoubles.createEditorRouteRenderer.mockReset();
     testDoubles.createEditorHandleRenderer.mockReset();
+    testDoubles.createVertexHandleRenderer.mockReset();
 
     testDoubles.getOrComputeLayout.mockReturnValue({
       worldLayout: {
@@ -87,12 +93,17 @@ describe('MapEditorScreen', () => {
     const zoneRenderer = { destroy: vi.fn() };
     const routeRenderer = { destroy: vi.fn() };
     const handleRenderer = { destroy: vi.fn() };
+    const vertexHandleRenderer = { destroy: vi.fn() };
     const editorCanvas = {
       layers: {
-        adjacency: { tag: 'adjacency-layer' },
-        zone: { tag: 'zone-layer' },
-        route: { tag: 'route-layer' },
-        handle: { tag: 'handle-layer' },
+        backgroundLayer: { tag: 'background-layer' },
+        regionLayer: { tag: 'region-layer' },
+        provinceZoneLayer: { tag: 'province-zone-layer' },
+        connectionRouteLayer: { tag: 'connection-route-layer' },
+        cityZoneLayer: { tag: 'city-zone-layer' },
+        adjacencyLayer: { tag: 'adjacency-layer' },
+        tableOverlayLayer: { tag: 'table-overlay-layer' },
+        handleLayer: { tag: 'handle-layer' },
       },
       viewport: { tag: 'viewport' },
       resize: vi.fn(),
@@ -113,6 +124,7 @@ describe('MapEditorScreen', () => {
     testDoubles.createEditorZoneRenderer.mockReturnValue(zoneRenderer);
     testDoubles.createEditorRouteRenderer.mockReturnValue(routeRenderer);
     testDoubles.createEditorHandleRenderer.mockReturnValue(handleRenderer);
+    testDoubles.createVertexHandleRenderer.mockReturnValue(vertexHandleRenderer);
 
     const { MapEditorScreen } = await import('../../src/map-editor/MapEditorScreen.js');
     const onBack = vi.fn();
@@ -141,24 +153,24 @@ describe('MapEditorScreen', () => {
       );
     });
     expect(testDoubles.createEditorAdjacencyRenderer).toHaveBeenCalledWith(
-      editorCanvas.layers.adjacency,
+      editorCanvas.layers.adjacencyLayer,
       store,
       { tag: 'provider' },
     );
     expect(testDoubles.createEditorZoneRenderer).toHaveBeenCalledWith(
-      editorCanvas.layers.zone,
+      editorCanvas.layers.cityZoneLayer,
       store,
       { tag: 'provider' },
       { dragSurface: editorCanvas.viewport },
     );
     expect(testDoubles.createEditorRouteRenderer).toHaveBeenCalledWith(
-      editorCanvas.layers.route,
+      editorCanvas.layers.connectionRouteLayer,
       store,
       { metadata: { id: 'fitl' } },
       { tag: 'provider' },
     );
     expect(testDoubles.createEditorHandleRenderer).toHaveBeenCalledWith(
-      editorCanvas.layers.handle,
+      editorCanvas.layers.handleLayer,
       store,
       { metadata: { id: 'fitl' } },
       { tag: 'provider' },
@@ -220,7 +232,7 @@ describe('MapEditorScreen', () => {
     });
     testDoubles.createMapEditorStore.mockReturnValue(store);
     testDoubles.createEditorCanvas.mockResolvedValue({
-      layers: { adjacency: {}, zone: {}, route: {}, handle: {} },
+      layers: { backgroundLayer: {}, regionLayer: {}, provinceZoneLayer: {}, connectionRouteLayer: {}, cityZoneLayer: {}, adjacencyLayer: {}, tableOverlayLayer: {}, handleLayer: {} },
       viewport: {},
       resize: vi.fn(),
       centerOnContent: vi.fn(),
@@ -230,6 +242,7 @@ describe('MapEditorScreen', () => {
     testDoubles.createEditorZoneRenderer.mockReturnValue({ destroy: vi.fn() });
     testDoubles.createEditorRouteRenderer.mockReturnValue({ destroy: vi.fn() });
     testDoubles.createEditorHandleRenderer.mockReturnValue({ destroy: vi.fn() });
+    testDoubles.createVertexHandleRenderer.mockReturnValue({ destroy: vi.fn() });
     testDoubles.exportVisualConfig.mockReturnValue('version: 1\n');
 
     const { MapEditorScreen } = await import('../../src/map-editor/MapEditorScreen.js');
@@ -244,6 +257,7 @@ describe('MapEditorScreen', () => {
     expect(testDoubles.exportVisualConfig).toHaveBeenCalledWith({
       originalVisualConfig: store.getState().originalVisualConfig,
       zonePositions: store.getState().zonePositions,
+      zoneVertices: store.getState().zoneVertices,
       connectionAnchors: store.getState().connectionAnchors,
       connectionRoutes: store.getState().connectionRoutes,
     });
@@ -262,7 +276,7 @@ describe('MapEditorScreen', () => {
     });
     testDoubles.createMapEditorStore.mockReturnValue(store);
     testDoubles.createEditorCanvas.mockResolvedValue({
-      layers: { adjacency: {}, zone: {}, route: {}, handle: {} },
+      layers: { backgroundLayer: {}, regionLayer: {}, provinceZoneLayer: {}, connectionRouteLayer: {}, cityZoneLayer: {}, adjacencyLayer: {}, tableOverlayLayer: {}, handleLayer: {} },
       viewport: {},
       resize: vi.fn(),
       centerOnContent: vi.fn(),
@@ -272,6 +286,7 @@ describe('MapEditorScreen', () => {
     testDoubles.createEditorZoneRenderer.mockReturnValue({ destroy: vi.fn() });
     testDoubles.createEditorRouteRenderer.mockReturnValue({ destroy: vi.fn() });
     testDoubles.createEditorHandleRenderer.mockReturnValue({ destroy: vi.fn() });
+    testDoubles.createVertexHandleRenderer.mockReturnValue({ destroy: vi.fn() });
     testDoubles.exportVisualConfig.mockImplementation(() => {
       throw new Error('schema mismatch');
     });
@@ -302,7 +317,7 @@ describe('MapEditorScreen', () => {
     });
     testDoubles.createMapEditorStore.mockReturnValue(store);
     testDoubles.createEditorCanvas.mockResolvedValue({
-      layers: { adjacency: {}, zone: {}, route: {}, handle: {} },
+      layers: { backgroundLayer: {}, regionLayer: {}, provinceZoneLayer: {}, connectionRouteLayer: {}, cityZoneLayer: {}, adjacencyLayer: {}, tableOverlayLayer: {}, handleLayer: {} },
       viewport: {},
       resize: vi.fn(),
       centerOnContent: vi.fn(),
@@ -312,6 +327,7 @@ describe('MapEditorScreen', () => {
     testDoubles.createEditorZoneRenderer.mockReturnValue({ destroy: vi.fn() });
     testDoubles.createEditorRouteRenderer.mockReturnValue({ destroy: vi.fn() });
     testDoubles.createEditorHandleRenderer.mockReturnValue({ destroy: vi.fn() });
+    testDoubles.createVertexHandleRenderer.mockReturnValue({ destroy: vi.fn() });
 
     const { MapEditorScreen } = await import('../../src/map-editor/MapEditorScreen.js');
     render(createElement(MapEditorScreen, { gameId: 'fitl', onBack: vi.fn() }));
@@ -361,7 +377,7 @@ describe('MapEditorScreen', () => {
     });
     testDoubles.createMapEditorStore.mockReturnValue(store);
     testDoubles.createEditorCanvas.mockResolvedValue({
-      layers: { adjacency: {}, zone: {}, route: {}, handle: {} },
+      layers: { backgroundLayer: {}, regionLayer: {}, provinceZoneLayer: {}, connectionRouteLayer: {}, cityZoneLayer: {}, adjacencyLayer: {}, tableOverlayLayer: {}, handleLayer: {} },
       viewport: {},
       resize: vi.fn(),
       centerOnContent: vi.fn(),
@@ -371,6 +387,7 @@ describe('MapEditorScreen', () => {
     testDoubles.createEditorZoneRenderer.mockReturnValue({ destroy: vi.fn() });
     testDoubles.createEditorRouteRenderer.mockReturnValue({ destroy: vi.fn() });
     testDoubles.createEditorHandleRenderer.mockReturnValue({ destroy: vi.fn() });
+    testDoubles.createVertexHandleRenderer.mockReturnValue({ destroy: vi.fn() });
 
     const { MapEditorScreen } = await import('../../src/map-editor/MapEditorScreen.js');
     const rendered = render(createElement(MapEditorScreen, { gameId: 'fitl', onBack: vi.fn() }));
@@ -423,6 +440,7 @@ function createMockEditorStore() {
     redoStack: unknown[];
     originalVisualConfig: { version: number };
     zonePositions: Map<string, { x: number; y: number }>;
+    zoneVertices: Map<string, readonly number[]>;
     connectionAnchors: Map<string, { x: number; y: number }>;
     connectionRoutes: Map<string, {
       points: Array<{ kind: string; zoneId?: string; anchorId?: string }>;
@@ -450,6 +468,7 @@ function createMockEditorStore() {
     redoStack: [],
     originalVisualConfig: { version: 1 },
     zonePositions: new Map([['zone:a', { x: 10, y: 20 }]]),
+    zoneVertices: new Map<string, readonly number[]>(),
     connectionAnchors: new Map([['bend', { x: 30, y: 40 }]]),
     connectionRoutes: new Map([
       ['route:none', {

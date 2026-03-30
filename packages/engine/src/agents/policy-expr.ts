@@ -13,10 +13,10 @@ import type {
 import type { GameSpecPolicyExpr } from '../cnl/game-spec-doc.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from '../cnl/compiler-diagnostic-codes.js';
 
-type InternalPolicyValueType = AgentPolicyValueType | 'unknown';
+export type InternalPolicyValueType = AgentPolicyValueType | 'unknown';
 
 export interface ResolvedPolicyRef {
-  readonly type: AgentPolicyValueType;
+  readonly type: InternalPolicyValueType;
   readonly costClass: AgentPolicyCostClass;
   readonly ref: CompiledAgentPolicyRef;
   readonly dependency?: {

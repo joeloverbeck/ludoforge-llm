@@ -133,12 +133,7 @@ export function createZoneRenderer(
           width: ZONE_WIDTH,
           height: ZONE_HEIGHT,
         });
-        zoneContainer.hitArea = new Rectangle(
-          -dimensions.width / 2,
-          -dimensions.height / 2,
-          dimensions.width,
-          dimensions.height + LABEL_AREA_HEIGHT,
-        );
+        zoneContainer.hitArea = computeZoneHitArea(zone, dimensions);
       }
     },
 
@@ -168,7 +163,7 @@ function createZoneVisualElements(): ZoneVisualElements {
   const base = new Graphics();
   const hiddenStack = createHiddenZoneStackVisual();
 
-  const nameLabel = createBitmapLabel('', 0, 0, 14, {
+  const nameLabel = createBitmapLabel('', 0, 0, 16, {
     fontName: STROKE_LABEL_FONT_NAME,
     fill: '#ffffff',
     stroke: { color: '#000000', width: 3 },
@@ -253,10 +248,39 @@ function drawZoneBase(base: Graphics, zone: PresentationZoneNode): void {
   drawZoneShape(base, shape, dimensions, {
     rectangleCornerRadius: ZONE_CORNER_RADIUS,
     lineCornerRadius: LINE_CORNER_RADIUS,
+    vertices: zone.visual.vertices ?? undefined,
   });
   base.fill({ color: fill }).stroke({
     color: strokeColor,
     width: zone.render.stroke.width,
     alpha: zone.render.stroke.alpha,
   });
+}
+
+function computeZoneHitArea(
+  zone: PresentationZoneNode,
+  dimensions: { readonly width: number; readonly height: number },
+): Rectangle {
+  const vertices = zone.visual.vertices;
+  if (zone.visual.shape === 'polygon' && vertices !== null && vertices.length >= 6) {
+    let minX = Number.POSITIVE_INFINITY;
+    let maxX = Number.NEGATIVE_INFINITY;
+    let minY = Number.POSITIVE_INFINITY;
+    let maxY = Number.NEGATIVE_INFINITY;
+    for (let i = 0; i < vertices.length; i += 2) {
+      const vx = vertices[i]!;
+      const vy = vertices[i + 1]!;
+      if (vx < minX) minX = vx;
+      if (vx > maxX) maxX = vx;
+      if (vy < minY) minY = vy;
+      if (vy > maxY) maxY = vy;
+    }
+    return new Rectangle(minX, minY, maxX - minX, maxY - minY + LABEL_AREA_HEIGHT);
+  }
+  return new Rectangle(
+    -dimensions.width / 2,
+    -dimensions.height / 2,
+    dimensions.width,
+    dimensions.height + LABEL_AREA_HEIGHT,
+  );
 }

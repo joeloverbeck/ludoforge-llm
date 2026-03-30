@@ -143,6 +143,7 @@ describe('agents authoring surface', () => {
               value: { boolToNumber: { ref: 'feature.isPass' } },
             },
           },
+          completionScoreTerms: {},
           tieBreakers: {
             stableMoveKey: {
               kind: 'stableMoveKey',
@@ -159,6 +160,7 @@ describe('agents authoring surface', () => {
             use: {
               pruningRules: ['dropPassWhenStrongerMoveExists'],
               scoreTerms: ['preferEvents'],
+              completionScoreTerms: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -319,6 +321,7 @@ describe('agents authoring surface', () => {
           },
         },
       },
+      completionScoreTerms: {},
       tieBreakers: {
         stableMoveKey: {
           kind: 'stableMoveKey',
@@ -340,6 +343,7 @@ describe('agents authoring surface', () => {
     assert.deepEqual(baselineProfile.use, {
       pruningRules: ['dropPassWhenStrongerMoveExists'],
       scoreTerms: ['preferEvents'],
+      completionScoreTerms: [],
       tieBreakers: ['stableMoveKey'],
     });
     assert.deepEqual(baselineProfile.plan, {
@@ -400,6 +404,7 @@ describe('agents authoring surface', () => {
               value: { boolToNumber: { ref: 'feature.isPass' } },
             },
           },
+          completionScoreTerms: {},
           tieBreakers: {
             stableMoveKey: {
               kind: 'stableMoveKey' as const,
@@ -417,6 +422,7 @@ describe('agents authoring surface', () => {
             use: {
               pruningRules: [],
               scoreTerms: ['preferEvents'],
+              completionScoreTerms: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -443,6 +449,7 @@ describe('agents authoring surface', () => {
             use: {
               tieBreakers: ['stableMoveKey'],
               scoreTerms: ['preferEvents'],
+              completionScoreTerms: [],
               pruningRules: [],
             },
           },
@@ -520,6 +527,119 @@ describe('agents authoring surface', () => {
     );
   });
 
+  it('lowers completion guidance authoring into compiled completion score terms and profile config', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: {
+        visibility: createVisibility(),
+        parameters: {},
+        library: {
+          completionScoreTerms: {
+            preferNamedOption: {
+              when: { eq: [{ ref: 'decision.type' }, 'chooseOne'] },
+              weight: 2,
+              value: {
+                if: [
+                  { eq: [{ ref: 'option.value' }, 'zone-a'] },
+                  1,
+                  0,
+                ],
+              },
+            },
+          },
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              scoreTerms: [],
+              completionScoreTerms: ['preferNamedOption'],
+              tieBreakers: ['stableMoveKey'],
+            },
+            completionGuidance: {
+              enabled: true,
+              fallback: 'first',
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      },
+    });
+
+    assert.equal(result.gameDef === null, false);
+    assert.equal(result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
+    assert.deepEqual(result.gameDef?.agents?.library.completionScoreTerms.preferNamedOption, {
+      costClass: 'state',
+      when: opExpr('eq', refExpr({ kind: 'decisionIntrinsic', intrinsic: 'type' }), literal('chooseOne')),
+      weight: literal(2),
+      value: opExpr(
+        'if',
+        opExpr('eq', refExpr({ kind: 'optionIntrinsic', intrinsic: 'value' }), literal('zone-a')),
+        literal(1),
+        literal(0),
+      ),
+      dependencies: {
+        parameters: [],
+        stateFeatures: [],
+        candidateFeatures: [],
+        aggregates: [],
+      },
+    });
+    assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.use.completionScoreTerms, ['preferNamedOption']);
+    assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.completionGuidance, {
+      enabled: true,
+      fallback: 'first',
+    });
+  });
+
+  it('rejects invalid completion guidance fallback values', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: {
+        visibility: createVisibility(),
+        parameters: {},
+        library: {
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              scoreTerms: [],
+              completionScoreTerms: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+            completionGuidance: {
+              enabled: true,
+              fallback: 'last' as 'random',
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      },
+    });
+
+    assert.equal(result.diagnostics.some((diagnostic) => diagnostic.path === 'doc.agents.profiles.baseline.completionGuidance.fallback'), true);
+    assert.equal(result.gameDef?.agents?.profiles.baseline, undefined);
+  });
+
   it('rejects refs whose shared visibility contract marks them hidden', () => {
     const compiled = compileGameSpecToGameDef({
       ...createCompileReadyDoc(),
@@ -555,6 +675,7 @@ describe('agents authoring surface', () => {
               expr: { ref: 'metric.knownMetric' },
             },
           },
+          completionScoreTerms: {},
           tieBreakers: {
             stableMoveKey: {
               kind: 'stableMoveKey',
@@ -567,6 +688,7 @@ describe('agents authoring surface', () => {
             use: {
               pruningRules: [],
               scoreTerms: [],
+              completionScoreTerms: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -678,6 +800,7 @@ describe('agents authoring surface', () => {
             use: {
               pruningRules: [],
               scoreTerms: [],
+              completionScoreTerms: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -712,6 +835,7 @@ describe('agents authoring surface', () => {
             use: {
               pruningRules: [],
               scoreTerms: [],
+              completionScoreTerms: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -750,6 +874,7 @@ describe('agents authoring surface', () => {
             use: {
               pruningRules: [],
               scoreTerms: [],
+              completionScoreTerms: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -798,6 +923,7 @@ describe('agents authoring surface', () => {
             use: {
               pruningRules: [],
               scoreTerms: [],
+              completionScoreTerms: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -874,6 +1000,7 @@ describe('agents authoring surface', () => {
               value: { div: [1, 0] },
             },
           },
+          completionScoreTerms: {},
           tieBreakers: {
             stableMoveKey: {
               kind: 'stableMoveKey',
@@ -886,6 +1013,7 @@ describe('agents authoring surface', () => {
             use: {
               pruningRules: [],
               scoreTerms: ['divideByZero'],
+              completionScoreTerms: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -955,6 +1083,7 @@ describe('agents authoring surface', () => {
             use: {
               pruningRules: [],
               scoreTerms: [],
+              completionScoreTerms: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -1017,6 +1146,7 @@ describe('agents authoring surface', () => {
             use: {
               pruningRules: [],
               scoreTerms: [],
+              completionScoreTerms: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -1086,6 +1216,7 @@ describe('agents authoring surface', () => {
             use: {
               pruningRules: [],
               scoreTerms: [],
+              completionScoreTerms: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -1146,6 +1277,7 @@ describe('agents authoring surface', () => {
             use: {
               pruningRules: [],
               scoreTerms: [],
+              completionScoreTerms: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -1216,6 +1348,7 @@ describe('agents authoring surface', () => {
             use: {
               pruningRules: [],
               scoreTerms: [],
+              completionScoreTerms: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -1288,6 +1421,7 @@ describe('agents authoring surface', () => {
             use: {
               pruningRules: [],
               scoreTerms: [],
+              completionScoreTerms: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -1343,6 +1477,7 @@ describe('agents authoring surface', () => {
             use: {
               pruningRules: [],
               scoreTerms: [],
+              completionScoreTerms: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -1395,6 +1530,7 @@ describe('agents authoring surface', () => {
             use: {
               pruningRules: [],
               scoreTerms: [],
+              completionScoreTerms: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -1448,6 +1584,7 @@ describe('agents authoring surface', () => {
             use: {
               pruningRules: [],
               scoreTerms: [],
+              completionScoreTerms: [],
               tieBreakers: ['stableMoveKey'],
             },
           },

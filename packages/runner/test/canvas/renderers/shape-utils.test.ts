@@ -157,6 +157,35 @@ describe('shape-utils', () => {
     expect(getEdgePointAtAngle('connection', { width: 80, height: 40 }, 123)).toEqual({ x: 0, y: 0 });
   });
 
+  it('drawZoneShape renders polygon when vertices are provided', () => {
+    const options = { rectangleCornerRadius: 12, lineCornerRadius: 4, vertices: [0, -50, 40, 25, -40, 25] };
+    const base = new MockGraphics();
+
+    drawZoneShape(base, 'polygon', { width: 80, height: 80 }, options);
+    expect(base.polyArgs).toEqual([0, -50, 40, 25, -40, 25]);
+    expect(base.roundRectArgs).toBeNull();
+  });
+
+  it('drawZoneShape falls back to rectangle for polygon without vertices', () => {
+    const options = { rectangleCornerRadius: 12, lineCornerRadius: 4 };
+    const base = new MockGraphics();
+
+    drawZoneShape(base, 'polygon', { width: 100, height: 80 }, options);
+    expect(base.roundRectArgs).toBeTruthy();
+    expect(base.polyArgs).toBeNull();
+  });
+
+  it('getEdgePointAtAngle computes ray intersection for polygon with vertices', () => {
+    const vertices = [0, -50, 50, 0, 0, 50, -50, 0];
+    const point = getEdgePointAtAngle('polygon', { width: 100, height: 100 }, 0, vertices);
+    expect(point.x).toBeCloseTo(50, 6);
+    expect(point.y).toBeCloseTo(0, 6);
+  });
+
+  it('getEdgePointAtAngle returns center for polygon without vertices', () => {
+    expect(getEdgePointAtAngle('polygon', { width: 80, height: 40 }, 45)).toEqual({ x: 0, y: 0 });
+  });
+
   it('does not mutate the provided dimensions object and returns stable values across calls', () => {
     const dimensions = { width: 120, height: 80 };
 

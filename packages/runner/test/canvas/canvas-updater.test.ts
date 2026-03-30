@@ -48,7 +48,7 @@ function makeZone(overrides: Partial<RenderZone> = {}): RenderZone {
     ownerID: null,
     category: null,
     attributes: {},
-    visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null },
+    visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null, vertices: null },
     metadata: {},
     ...overrides,
   };
@@ -399,7 +399,7 @@ describe('createCanvasUpdater', () => {
       {
         id: 'zone:a',
         displayName: 'Zone A',
-        visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null },
+        visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null, vertices: null },
         render: expect.objectContaining({
           fillColor: '#4d5c6d',
         }),
@@ -444,7 +444,7 @@ describe('createCanvasUpdater', () => {
         makeZone({
           category: 'city',
           displayName: 'Mixed Zone A',
-          visual: { shape: 'circle', width: 90, height: 90, color: '#ff00ff', connectionStyleKey: null },
+          visual: { shape: 'circle', width: 90, height: 90, color: '#ff00ff', connectionStyleKey: null, vertices: null },
         }),
       ],
     });
@@ -473,7 +473,7 @@ describe('createCanvasUpdater', () => {
       {
         id: 'zone:a',
         displayName: 'Configured Zone A',
-        visual: { shape: 'hexagon', width: 120, height: 80, color: '#123456', connectionStyleKey: null },
+        visual: { shape: 'hexagon', width: 120, height: 80, color: '#123456', connectionStyleKey: null, vertices: null },
       },
     ]);
   });
@@ -887,7 +887,7 @@ describe('createCanvasUpdater', () => {
         expect.objectContaining({
           id: 'zone:a',
           displayName: 'Zone A',
-          visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null },
+          visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null, vertices: null },
           render: expect.objectContaining({
             fillColor: '#4d5c6d',
           }),
@@ -1051,7 +1051,7 @@ describe('createCanvasUpdater', () => {
         expect.objectContaining({
           id: 'zone:a',
           displayName: 'Zone A',
-          visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null },
+          visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null, vertices: null },
           render: expect.objectContaining({
             stroke: { color: '#60a5fa', width: 3, alpha: 1 },
           }),

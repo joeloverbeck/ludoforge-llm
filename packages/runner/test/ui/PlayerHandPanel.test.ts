@@ -38,7 +38,7 @@ describe('PlayerHandPanel', () => {
             ownerID: asPlayerId(0),
             category: null,
             attributes: {},
-            visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null },
+            visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null, vertices: null },
             metadata: {},
           },
           {
@@ -54,7 +54,7 @@ describe('PlayerHandPanel', () => {
             ownerID: asPlayerId(1),
             category: null,
             attributes: {},
-            visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null },
+            visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null, vertices: null },
             metadata: {},
           },
         ],
@@ -118,7 +118,7 @@ describe('PlayerHandPanel', () => {
           ownerID: null,
           category: null,
           attributes: {},
-          visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null },
+          visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null, vertices: null },
           metadata: {},
         }],
         tokens: [{
@@ -154,7 +154,7 @@ describe('PlayerHandPanel', () => {
           ownerID: asPlayerId(0),
           category: null,
           attributes: {},
-          visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null },
+          visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null, vertices: null },
           metadata: {},
         }],
         tokens: [{
@@ -190,7 +190,7 @@ describe('PlayerHandPanel', () => {
           ownerID: asPlayerId(0),
           category: null,
           attributes: {},
-          visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null },
+          visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null, vertices: null },
           metadata: {},
         }],
         tokens: [{
@@ -226,7 +226,7 @@ describe('PlayerHandPanel', () => {
           ownerID: asPlayerId(0),
           category: null,
           attributes: {},
-          visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null },
+          visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null, vertices: null },
           metadata: {},
         }],
         tokens: [
@@ -276,7 +276,7 @@ describe('PlayerHandPanel', () => {
           ownerID: asPlayerId(0),
           category: null,
           attributes: {},
-          visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null },
+          visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null, vertices: null },
           metadata: {},
         }],
         tokens: [{
@@ -341,7 +341,7 @@ describe('PlayerHandPanel', () => {
               ownerID: asPlayerId(0),
               category: null,
               attributes: {},
-              visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null },
+              visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null, vertices: null },
               metadata: {},
             }],
             tokens: [{
@@ -403,7 +403,7 @@ describe('PlayerHandPanel', () => {
               ownerID: asPlayerId(0),
               category: null,
               attributes: {},
-              visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null },
+              visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null, vertices: null },
               metadata: {},
             }],
             tokens: [{

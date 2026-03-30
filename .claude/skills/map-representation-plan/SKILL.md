@@ -7,6 +7,8 @@ description: Use when the latest map evaluation is ready and a plan for improvem
 
 Read the latest evaluation, research rendering approaches, and produce a concrete implementation plan for the next improvement iteration.
 
+**This skill produces `reports/map-representation-plan.md` as its sole artifact.** If invoked within plan mode, the plan mode file is a working scratchpad — the report file is the deliverable. Do not proceed to implementation after writing the report — the `map-representation-implement` skill consumes this plan in a separate invocation.
+
 ## Checklist
 
 1. Read `reports/map-representation-evaluation.md` — focus on the latest EVALUATION #N. Note the scores, CRITICAL/HIGH recommendations, and any recurring or stagnating issues.
@@ -18,7 +20,7 @@ Read the latest evaluation, research rendering approaches, and produce a concret
    - **Foundation #10** (Architectural Completeness): Solutions address root causes, not symptoms
 3. Identify the CRITICAL and HIGH recommendations from the evaluation. If none exist, target the top 2-3 MEDIUM recommendations.
 4. Read the current renderer source files relevant to the identified problems (see Key Files below).
-5. **Research phase**: Use Tavily web search and/or Context7 to research rendering techniques relevant to the problems. Examples of research topics:
+5. **Research phase** (if needed): If the identified problems require techniques not already present in the codebase, use Tavily web search and/or Context7 to research rendering techniques. Skip external research when the solution extends existing patterns. Examples of research topics:
    - Voronoi tessellation / Delaunay triangulation in PixiJS or 2D canvas
    - Polygon-based territory rendering in strategy games
    - Procedural map border generation algorithms
@@ -36,6 +38,7 @@ Read the latest evaluation, research rendering approaches, and produce a concret
    - If the change is purely rendering (e.g., drawing polygons instead of rectangles from the same position data), the editor may just need to call the same drawing function — include it.
    - If the change requires new editor interaction patterns (e.g., vertex dragging for polygons), defer to a future iteration — note what's deferred and why.
 9. Write the plan to `reports/map-representation-plan.md` (**overwritten** each iteration, not appended).
+10. **Stop.** This skill's sole output is `reports/map-representation-plan.md`. Do not proceed to implementation — the `map-representation-implement` skill consumes this plan in a separate invocation.
 
 ## Plan Output Format
 
@@ -48,6 +51,10 @@ Write `reports/map-representation-plan.md` with this structure:
 **Based on**: EVALUATION #N (average score: X.X)
 **Problems targeted**: [list of CRITICAL/HIGH/MEDIUM items addressed]
 
+## Context
+
+[1-3 sentences: why this change is needed, what prompted it, and the intended outcome]
+
 ## Foundations Alignment
 
 | Foundation | Relevance | How This Plan Respects It |
@@ -56,6 +63,20 @@ Write `reports/map-representation-plan.md` with this structure:
 | #3 Visual Separation | Always relevant | [how changes stay in runner/visual-config] |
 | #7 Immutability | [relevant/not relevant] | [brief explanation] |
 | #10 Architectural Completeness | Always relevant | [root cause vs symptom] |
+
+## Current Code Architecture (reference for implementer)
+
+Document the exact interfaces, function signatures, and data flow relevant to the
+problems targeted. This section must make the plan self-sufficient — an implementer
+reading only this file should not need to re-explore the codebase.
+
+Include:
+- Key type/interface definitions with file paths and line numbers
+- Function signatures that will be modified
+- Data flow from config → presentation → renderer
+- Coordinate systems and conventions the implementer must follow
+- Current code snippets showing what will change (before state)
+- Schema inheritance relationships (e.g., override schemas extending base schemas)
 
 ## Problem 1: [Problem title from evaluation]
 
@@ -133,7 +154,9 @@ Ordered steps with dependencies noted:
 | `packages/runner/src/canvas/geometry/dashed-segments.ts` | Dashed line algorithm |
 | `packages/runner/src/canvas/renderers/stroke-dashed-segments.ts` | Rendering dashed segments to PixiJS Graphics |
 | `packages/runner/src/config/visual-config-types.ts` | Zod schemas for visual config (zone shapes, stroke styles) |
+| `packages/runner/src/config/visual-config-defaults.ts` | ZoneShape type union, default dimensions |
 | `packages/runner/src/config/visual-config-provider.ts` | Visual config accessor methods |
+| `packages/runner/src/canvas/renderers/region-boundary-renderer.ts` | Region boundary rendering (convex hull, labels, watermark alpha) |
 | `packages/runner/src/layout/world-layout-model.ts` | Layout model types (zone positions) |
 | `data/games/fire-in-the-lake/visual-config.yaml` | FITL-specific visual configuration |
 | `packages/runner/src/map-editor/map-editor-zone-renderer.ts` | Map editor zone rendering |
@@ -147,6 +170,17 @@ When using Tavily or Context7:
 - Check for **lightweight libraries** that could provide Voronoi/Delaunay without heavy dependencies
 - Prefer solutions that work with **Graphics primitives** (polygon, path) over shader-based approaches for maintainability
 - Note the **license** of any library considered — the project is GPL-3.0
+
+## Vertex Design Guidelines
+
+When the plan proposes custom polygon shapes for zones:
+
+- **Coordinate system**: Vertices are relative to zone center `(0, 0)`, matching how all existing shapes draw. The zone container is positioned at the zone's world `(x, y)` coordinates.
+- **Format**: Flat alternating `[x1, y1, x2, y2, ...]` array matching `Graphics.poly()` input.
+- **Shared borders**: Adjacent zones must share border edge coordinates (same vertex pair in reverse order) so territories tile without gaps.
+- **Vertex count**: 5-8 vertices per zone is reasonable for territory shapes. More adds visual fidelity but increases YAML verbosity.
+- **Incremental approach**: Start with a cluster of 4-5 adjacent zones to validate the rendering pipeline. Extend to full tessellation in subsequent iterations.
+- **Size reference**: Current default province rectangles are 360x220. Polygon vertices should produce shapes of comparable area.
 
 ## Scope Constraints
 

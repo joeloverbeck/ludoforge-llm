@@ -16,7 +16,7 @@ Improve the FITL game map rendering based on the latest plan's recommendations.
    - **Foundation #7** (Immutability): State transitions return new objects, no mutation
    - **Foundation #9** (No Backwards Compatibility): No shims or deprecated fallbacks
    - **Foundation #10** (Architectural Completeness): Complete solutions, not patches
-4. Read the specific source files identified in the plan's Implementation Steps.
+4. Collect the unique source file paths from all Implementation Steps in the plan. Read them in parallel (batch) to front-load context before starting edits.
 5. Follow the plan's implementation steps **in order**, respecting noted dependencies.
 6. If a step is ambiguous or you discover the plan's assumptions about the code are wrong, apply the **1-3-1 rule** (1 problem, 3 options, 1 recommendation) before proceeding — per Foundation #10.
 7. If the plan includes map editor changes, implement those too.
@@ -25,20 +25,29 @@ Improve the FITL game map rendering based on the latest plan's recommendations.
 
 ## Key Files
 
+### Frequently Modified
+
 | File | What It Controls |
 |------|-----------------|
 | `packages/runner/src/canvas/renderers/zone-renderer.ts` | Game canvas zone rendering — shape, fill, stroke, labels, badges, hidden stack visual |
-| `packages/runner/src/canvas/renderers/shape-utils.ts` | Shape drawing primitives — `drawZoneShape()` dispatches to rectangle, circle, polygon, etc. |
+| `packages/runner/src/canvas/renderers/shape-utils.ts` | Shape drawing primitives — `drawZoneShape()` dispatches shapes, `getEdgePointAtAngle()` computes edge intersections |
 | `packages/runner/src/canvas/renderers/adjacency-renderer.ts` | Adjacency line rendering — dashed segments between zone edges, highlighting |
+| `packages/runner/src/canvas/renderers/region-boundary-renderer.ts` | Region boundary rendering — convex hull, label alpha, border styles |
+| `packages/runner/src/config/visual-config-types.ts` | Zod schemas for visual config — must update when extending the config contract |
+| `packages/runner/src/config/visual-config-defaults.ts` | `ZoneShape` type union, default dimensions, faction palette |
+| `packages/runner/src/config/visual-config-provider.ts` | `ResolvedZoneVisual` interface, `resolveZoneVisual()` cascade, `applyZoneStyle()` |
+| `data/games/fire-in-the-lake/visual-config.yaml` | FITL visual configuration — zone shapes, positions, colors, routes |
+| `packages/runner/src/map-editor/map-editor-zone-renderer.ts` | Map editor zone rendering (if plan requires editor changes) |
+
+### Reference Only
+
+| File | What It Controls |
+|------|-----------------|
 | `packages/runner/src/canvas/renderers/connection-route-renderer.ts` | Road/river route rendering — Bezier curves, wave effects, stroke styles |
 | `packages/runner/src/canvas/geometry/dashed-segments.ts` | Dashed line segment algorithm — `buildDashedSegments()` |
 | `packages/runner/src/canvas/renderers/stroke-dashed-segments.ts` | Rendering dashed segments to PixiJS Graphics |
-| `packages/runner/src/config/visual-config-types.ts` | Zod schemas for visual config — must update when extending the config contract |
-| `packages/runner/src/config/visual-config-provider.ts` | Visual config accessor methods — zone shapes, labels, stroke styles |
 | `packages/runner/src/config/visual-config-loader.ts` | Loads and parses visual config YAML |
 | `packages/runner/src/layout/world-layout-model.ts` | Layout model types — `ZonePositionMap`, zone dimensions |
-| `data/games/fire-in-the-lake/visual-config.yaml` | FITL visual configuration — zone shapes, positions, colors, routes |
-| `packages/runner/src/map-editor/map-editor-zone-renderer.ts` | Map editor zone rendering (if plan requires editor changes) |
 | `packages/runner/src/map-editor/map-editor-adjacency-renderer.ts` | Map editor adjacency lines (if plan requires editor changes) |
 
 ## Key Test Files
@@ -47,13 +56,14 @@ Improve the FITL game map rendering based on the latest plan's recommendations.
 |------|---------------|
 | `packages/runner/test/canvas/renderers/` | Zone renderer, adjacency renderer, connection route renderer tests |
 | `packages/runner/test/config/` | Visual config loading and provider tests |
+| `packages/runner/test/config/visual-config-files.test.ts` | **Golden assertions** on FITL visual-config.yaml structure and values — must be updated whenever YAML attribute rules, colors, or override counts change |
 | `packages/runner/test/canvas/` | Canvas layer tests (renderers, interactions, viewport) |
 
 ## Architecture Context
 
 ### Zone Shape Drawing
 
-The `drawZoneShape()` function in `shape-utils.ts` is the central shape dispatcher. It receives a `Graphics` object, dimensions, and a shape type string, then draws the appropriate shape. Currently supported: `rectangle`, `circle`, `ellipse`, `diamond`, `hexagon`, `triangle`, `octagon`, `line`, `connection`.
+The `drawZoneShape()` function in `shape-utils.ts` is the central shape dispatcher. It receives a `Graphics` object, dimensions, and a shape type string, then draws the appropriate shape. See the `ZoneShape` type union in `visual-config-defaults.ts` for the full list of supported shapes.
 
 To add a new shape type (e.g., `polygon` with arbitrary vertices):
 1. Add the shape name to the shape type union in `visual-config-types.ts`
@@ -73,14 +83,30 @@ Routes (roads, rivers) use Bezier curves with configurable endpoints. The endpoi
 
 Both flows reuse `drawZoneShape()` from `shape-utils.ts`. The game canvas adds labels, badges, selection highlighting, and token rendering on top. The map editor adds drag handles and selection highlighting. A change to `drawZoneShape()` affects both flows — verify both after changes.
 
+### Polygon Vertex Design
+
+When defining polygon vertices for province shapes:
+
+1. **Coordinate system**: Vertices are relative to the zone's center `(0, 0)`. The zone container is positioned at the zone's world `(x, y)` coordinates. Vertices use the flat alternating format `[x1, y1, x2, y2, ...]` that `Graphics.poly()` expects.
+2. **Shared borders**: Adjacent provinces must share identical border coordinates. To achieve this:
+   - Define shared boundary points in **absolute world coordinates** first (e.g., the triple-point where three provinces meet).
+   - Convert to zone-relative coordinates by subtracting each zone's center position: `relativeX = worldX - zoneCenterX`, `relativeY = worldY - zoneCenterY`.
+   - In adjacent polygon vertex lists, the shared segment appears in **opposite winding order** (province A has points P1→P2, province B has P2→P1).
+3. **Verification**: After computing vertices, verify all shared borders by converting back to world coords and confirming the same absolute segment appears in both polygons.
+4. **External boundaries**: Non-shared edges (outer boundaries) can be placed freely to create a reasonable territory shape.
+
 ## Extending Visual Config
 
-When the plan requires new config fields (e.g., polygon vertex data, terrain texture settings):
+When the plan requires new config fields (e.g., polygon vertex data, terrain texture settings), follow all 6 steps in order:
 
-1. **Schema** (`visual-config-types.ts`): Add the field to the relevant Zod schema. Use `.optional()` for new fields to maintain backward compatibility with other games.
-2. **Accessor** (`visual-config-provider.ts`): Add a getter method that reads the new field from `this.config`.
-3. **Consumer** (renderer file): Call the new accessor where needed.
-4. **Game config** (`data/games/fire-in-the-lake/visual-config.yaml`): Add the actual values.
+1. **Schema** (`visual-config-types.ts`): Add the field to the relevant Zod schema (e.g., `ZoneVisualStyleSchema`). Use `.optional()` for new fields to maintain backward compatibility with other games.
+2. **Type union** (`visual-config-defaults.ts`): If adding a new shape or enum value, add it to the `ZoneShape` (or equivalent) type union here. The type union and the Zod enum must stay in sync.
+3. **Interface** (`visual-config-provider.ts`): Add the field to `ResolvedZoneVisual` (or the relevant resolved interface). This is the contract that renderers consume.
+4. **Cascade** (`visual-config-provider.ts`): Thread the field through `resolveZoneVisual()` (initialize with a default) and `applyZoneStyle()` (copy from source when present). This is the style-merge pipeline that applies category → attribute rules → overrides.
+5. **Consumer** (renderer files): Use the new field where needed — pass it to drawing functions, edge calculations, hit areas, etc.
+6. **Game config** (`data/games/fire-in-the-lake/visual-config.yaml`): Add the actual values.
+
+**Test breakage warning**: Adding a required field to `ResolvedZoneVisual` breaks every test file (~16 files) that constructs `ResolvedZoneVisual` literals inline. After step 3, plan a bulk fix of test files before running typecheck.
 
 ## Common Pitfalls
 
@@ -90,6 +116,7 @@ When the plan requires new config fields (e.g., polygon vertex data, terrain tex
 - **Map editor sync**: `drawZoneShape()` is shared, but the map editor has its own stroke colors and interaction handlers. Test both flows after shape changes.
 - **Visual config backward compatibility**: Other games (Texas Hold'em) also use visual-config. New schema fields must be optional so other games don't break. Test with `pnpm turbo typecheck` to catch schema issues.
 - **PixiJS Graphics API**: PixiJS 8 uses `Graphics.poly(points)` for arbitrary polygons where `points` is a flat array `[x1,y1, x2,y2, ...]`. Ensure the polygon is closed (first point = last point) or use `closePath()`.
+- **TypeScript exactOptionalPropertyTypes**: This project enables `exactOptionalPropertyTypes`. When adding optional fields that receive `foo ?? undefined`, the type must include `| undefined` explicitly. E.g., `readonly vertices?: readonly number[] | undefined`, not just `readonly vertices?: readonly number[]`.
 
 ## Scope Constraints
 

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — agents (new evaluator module)
-**Deps**: tickets/95POLGUIMOVCOM-002.md, tickets/95POLGUIMOVCOM-005.md, tickets/95POLGUIMOVCOM-006.md
+**Deps**: archive/tickets/95POLGUIMOVCOM-002.md, tickets/95POLGUIMOVCOM-005.md, tickets/95POLGUIMOVCOM-006.md
 
 ## Problem
 

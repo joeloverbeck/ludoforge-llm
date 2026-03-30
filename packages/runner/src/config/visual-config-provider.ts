@@ -58,6 +58,7 @@ export interface ResolvedZoneVisual {
   readonly height: number;
   readonly color: string | null;
   readonly connectionStyleKey: string | null;
+  readonly vertices: readonly number[] | null;
 }
 
 export interface ResolvedTokenVisual {
@@ -167,6 +168,7 @@ export class VisualConfigProvider {
       height: DEFAULT_ZONE_HEIGHT,
       color: null,
       connectionStyleKey: null,
+      vertices: null,
     };
 
     const categoryStyle = category === null
@@ -560,6 +562,7 @@ function applyZoneStyle(
     height: number;
     color: string | null;
     connectionStyleKey: string | null;
+    vertices: readonly number[] | null;
   },
   source:
     | {
@@ -568,6 +571,7 @@ function applyZoneStyle(
       readonly height?: number | undefined;
       readonly color?: string | undefined;
       readonly connectionStyleKey?: string | undefined;
+      readonly vertices?: readonly number[] | undefined;
     }
     | undefined,
 ): void {
@@ -588,6 +592,9 @@ function applyZoneStyle(
   }
   if (source.connectionStyleKey !== undefined) {
     target.connectionStyleKey = source.connectionStyleKey;
+  }
+  if (source.vertices !== undefined && source.vertices.length > 0) {
+    target.vertices = source.vertices;
   }
 }
 

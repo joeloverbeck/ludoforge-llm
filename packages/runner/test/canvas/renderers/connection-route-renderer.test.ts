@@ -209,6 +209,7 @@ function makeZone(overrides: Partial<PresentationZoneNode> = {}): PresentationZo
       height: 100,
       color: null,
       connectionStyleKey: 'highway',
+      vertices: null,
     },
     render: {
       fillColor: '#4d5c6d',
@@ -320,6 +321,7 @@ describe('createConnectionRouteRenderer', () => {
               height: 100,
               color: null,
               connectionStyleKey: 'river',
+              vertices: null,
             },
           }),
         }),
@@ -336,6 +338,7 @@ describe('createConnectionRouteRenderer', () => {
               height: 100,
               color: null,
               connectionStyleKey: 'trail',
+              vertices: null,
             },
           }),
         }),

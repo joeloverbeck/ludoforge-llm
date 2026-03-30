@@ -174,6 +174,7 @@ function drawZoneBase(
   drawZoneShape(base, visual.shape, dimensions, {
     rectangleCornerRadius: ZONE_CORNER_RADIUS,
     lineCornerRadius: LINE_CORNER_RADIUS,
+    vertices: visual.vertices ?? undefined,
   });
   base.fill({
     color: parseHexColor(visual.color ?? undefined) ?? DEFAULT_FILL_COLOR,

@@ -59,6 +59,7 @@ function createCatalog(): AgentPolicyCatalog {
       candidateAggregates: {},
       pruningRules: {},
       scoreTerms: {},
+      completionScoreTerms: {},
       tieBreakers: {
         rng: {
           kind: 'rng',
@@ -74,6 +75,7 @@ function createCatalog(): AgentPolicyCatalog {
         use: {
           pruningRules: [],
           scoreTerms: [],
+          completionScoreTerms: [],
           tieBreakers: ['rng'],
         },
         plan: {

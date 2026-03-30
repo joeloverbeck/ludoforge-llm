@@ -14,10 +14,12 @@ const AGENT_LIBRARY_KEYS = [
   'candidateAggregates',
   'pruningRules',
   'scoreTerms',
+  'completionScoreTerms',
   'tieBreakers',
 ] as const;
-const AGENT_PROFILE_KEYS = ['params', 'use'] as const;
-const AGENT_PROFILE_USE_KEYS = ['pruningRules', 'scoreTerms', 'tieBreakers'] as const;
+const AGENT_PROFILE_KEYS = ['params', 'use', 'completionGuidance'] as const;
+const AGENT_PROFILE_USE_KEYS = ['pruningRules', 'scoreTerms', 'completionScoreTerms', 'tieBreakers'] as const;
+const AGENT_COMPLETION_GUIDANCE_KEYS = ['enabled', 'fallback'] as const;
 
 const INLINE_PROFILE_LOGIC_KEYS = new Set([
   'expr',
@@ -183,6 +185,7 @@ function validateProfiles(profiles: unknown, diagnostics: Diagnostic[]): void {
     validateInlineProfileLogic(profileDef, profilePath, diagnostics);
     validateProfileParams(profileDef.params, `${profilePath}.params`, diagnostics);
     validateProfileUse(profileDef.use, `${profilePath}.use`, diagnostics);
+    validateCompletionGuidance(profileDef.completionGuidance, `${profilePath}.completionGuidance`, diagnostics);
   }
 }
 
@@ -247,6 +250,42 @@ function validateProfileUse(use: unknown, path: string, diagnostics: Diagnostic[
         suggestion: 'Reference named library items by id only; inline objects are not allowed.',
       });
     }
+  }
+}
+
+function validateCompletionGuidance(value: unknown, path: string, diagnostics: Diagnostic[]): void {
+  if (value === undefined) {
+    return;
+  }
+  if (!isRecord(value)) {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_AGENTS_PROFILE_INVALID',
+      path,
+      severity: 'error',
+      message: 'agents profile completionGuidance must be an object.',
+      suggestion: 'Define completionGuidance with enabled and/or fallback fields.',
+    });
+    return;
+  }
+
+  validateUnknownKeys(value, AGENT_COMPLETION_GUIDANCE_KEYS, path, diagnostics, 'agents profile completionGuidance');
+  if (value.enabled !== undefined && typeof value.enabled !== 'boolean') {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_AGENTS_PROFILE_INVALID',
+      path: `${path}.enabled`,
+      severity: 'error',
+      message: 'agents profile completionGuidance.enabled must be a boolean.',
+      suggestion: 'Set completionGuidance.enabled to true or false.',
+    });
+  }
+  if (value.fallback !== undefined && value.fallback !== 'random' && value.fallback !== 'first') {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_AGENTS_PROFILE_INVALID',
+      path: `${path}.fallback`,
+      severity: 'error',
+      message: 'agents profile completionGuidance.fallback must be "random" or "first".',
+      suggestion: 'Use completionGuidance.fallback = "random" or "first".',
+    });
   }
 }
 

@@ -389,21 +389,21 @@ zones:
         attributeContains:
           terrainTags: highland
       style:
-        color: "#6b5b3e"
+        color: "#c4a66a"
     - match:
         category:
           - province
         attributeContains:
           terrainTags: jungle
       style:
-        color: "#3d5c3a"
+        color: "#2d4a2d"
     - match:
         category:
           - province
         attributeContains:
           terrainTags: lowland
       style:
-        color: "#5a7a52"
+        color: "#7cb87c"
     - match:
         category:
           - loc
@@ -425,6 +425,8 @@ zones:
       label: Ba Xuyen
     binh-dinh:none:
       label: Binh Dinh
+      shape: polygon
+      vertices: [-400, -170, 400, -370, 450, 530, 200, 530, -300, 530, -400, 180]
     binh-tuy-binh-thuan:none:
       label: Binh Tuy Binh Thuan
     cam-ranh:none:
@@ -439,6 +441,8 @@ zones:
       label: Hue
     khanh-hoa:none:
       label: Khanh Hoa
+      shape: polygon
+      vertices: [-490, -430, 160, -430, 310, 370, -490, 370]
     kien-giang-an-xuyen:none:
       label: Kien Giang An Xuyen
     kien-hoa-vinh-binh:none:
@@ -447,6 +451,8 @@ zones:
       label: Kien Phong
     kontum:none:
       label: Kontum
+      shape: polygon
+      vertices: [-463, -468, 287, -618, 287, -268, 387, 82, 137, 382, -163, 382, -463, 382]
     loc-ban-me-thuot-da-lat:none:
       label: Ban Me Thuot-Da Lat
     loc-cam-ranh-da-lat:none:
@@ -487,10 +493,14 @@ zones:
       label: Northeast Cambodia
     phu-bon-phu-yen:none:
       label: Phu Bon Phu Yen
+      shape: polygon
+      vertices: [-815, -102, -565, -402, -65, -402, 285, 298, 35, 298, -615, 298]
     phuoc-long:none:
       label: Phuoc Long
     pleiku-darlac:none:
       label: Pleiku Darlac
+      shape: polygon
+      vertices: [-290, -370, 10, -370, 310, -370, 510, 30, -290, 430]
     quang-duc-long-khanh:none:
       label: Quang Duc Long Khanh
     quang-nam:none:

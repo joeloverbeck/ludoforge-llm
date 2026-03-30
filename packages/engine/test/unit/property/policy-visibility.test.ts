@@ -71,6 +71,7 @@ function createCatalog(): AgentPolicyCatalog {
           dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['projectedMargin'], aggregates: [] },
         },
       },
+      completionScoreTerms: {},
       tieBreakers: {
         stableMoveKey: {
           kind: 'stableMoveKey',
@@ -86,6 +87,7 @@ function createCatalog(): AgentPolicyCatalog {
         use: {
           pruningRules: [],
           scoreTerms: ['preferProjectedMargin'],
+          completionScoreTerms: [],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {

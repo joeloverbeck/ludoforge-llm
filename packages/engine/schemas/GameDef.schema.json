@@ -2268,7 +2268,7 @@
                     ]
                   },
                   "expr": {
-                    "$ref": "#/definitions/anon_6c333d7a"
+                    "$ref": "#/definitions/anon_090b80a5"
                   },
                   "dependencies": {
                     "type": "object",
@@ -2361,7 +2361,7 @@
                     ]
                   },
                   "expr": {
-                    "$ref": "#/definitions/anon_6c333d7a"
+                    "$ref": "#/definitions/anon_090b80a5"
                   },
                   "dependencies": {
                     "type": "object",
@@ -2457,12 +2457,12 @@
                     "type": "string"
                   },
                   "of": {
-                    "$ref": "#/definitions/anon_6c333d7a"
+                    "$ref": "#/definitions/anon_090b80a5"
                   },
                   "where": {
                     "allOf": [
                       {
-                        "$ref": "#/definitions/anon_6c333d7a"
+                        "$ref": "#/definitions/anon_090b80a5"
                       }
                     ]
                   },
@@ -2538,7 +2538,7 @@
                     ]
                   },
                   "when": {
-                    "$ref": "#/definitions/anon_6c333d7a"
+                    "$ref": "#/definitions/anon_090b80a5"
                   },
                   "dependencies": {
                     "type": "object",
@@ -2625,15 +2625,113 @@
                   "when": {
                     "allOf": [
                       {
-                        "$ref": "#/definitions/anon_6c333d7a"
+                        "$ref": "#/definitions/anon_090b80a5"
                       }
                     ]
                   },
                   "weight": {
-                    "$ref": "#/definitions/anon_6c333d7a"
+                    "$ref": "#/definitions/anon_090b80a5"
                   },
                   "value": {
-                    "$ref": "#/definitions/anon_6c333d7a"
+                    "$ref": "#/definitions/anon_090b80a5"
+                  },
+                  "unknownAs": {
+                    "type": "number"
+                  },
+                  "clamp": {
+                    "type": "object",
+                    "properties": {
+                      "min": {
+                        "type": "number"
+                      },
+                      "max": {
+                        "type": "number"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "dependencies": {
+                    "type": "object",
+                    "properties": {
+                      "parameters": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "stateFeatures": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "candidateFeatures": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "aggregates": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": [
+                      "parameters",
+                      "stateFeatures",
+                      "candidateFeatures",
+                      "aggregates"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "costClass",
+                  "weight",
+                  "value",
+                  "dependencies"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "completionScoreTerms": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "costClass": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "const": "state"
+                      },
+                      {
+                        "type": "string",
+                        "const": "candidate"
+                      },
+                      {
+                        "type": "string",
+                        "const": "preview"
+                      }
+                    ]
+                  },
+                  "when": {
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/anon_090b80a5"
+                      }
+                    ]
+                  },
+                  "weight": {
+                    "$ref": "#/definitions/anon_090b80a5"
+                  },
+                  "value": {
+                    "$ref": "#/definitions/anon_090b80a5"
                   },
                   "unknownAs": {
                     "type": "number"
@@ -2726,7 +2824,7 @@
                   "value": {
                     "allOf": [
                       {
-                        "$ref": "#/definitions/anon_6c333d7a"
+                        "$ref": "#/definitions/anon_090b80a5"
                       }
                     ]
                   },
@@ -2788,6 +2886,7 @@
             "candidateAggregates",
             "pruningRules",
             "scoreTerms",
+            "completionScoreTerms",
             "tieBreakers"
           ],
           "additionalProperties": false
@@ -2843,6 +2942,12 @@
                       "type": "string"
                     }
                   },
+                  "completionScoreTerms": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
                   "tieBreakers": {
                     "type": "array",
                     "items": {
@@ -2853,7 +2958,33 @@
                 "required": [
                   "pruningRules",
                   "scoreTerms",
+                  "completionScoreTerms",
                   "tieBreakers"
+                ],
+                "additionalProperties": false
+              },
+              "completionGuidance": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "fallback": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "const": "random"
+                      },
+                      {
+                        "type": "string",
+                        "const": "first"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "enabled",
+                  "fallback"
                 ],
                 "additionalProperties": false
               },
@@ -7422,6 +7553,611 @@
   ],
   "additionalProperties": false,
   "definitions": {
+    "anon_090b80a5": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "literal"
+            },
+            "value": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "param"
+            },
+            "id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "ref"
+            },
+            "ref": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "library"
+                    },
+                    "refKind": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "const": "stateFeature"
+                        },
+                        {
+                          "type": "string",
+                          "const": "candidateFeature"
+                        },
+                        {
+                          "type": "string",
+                          "const": "aggregate"
+                        }
+                      ]
+                    },
+                    "id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "refKind",
+                    "id"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "currentSurface"
+                    },
+                    "family": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "const": "globalVar"
+                        },
+                        {
+                          "type": "string",
+                          "const": "perPlayerVar"
+                        },
+                        {
+                          "type": "string",
+                          "const": "derivedMetric"
+                        },
+                        {
+                          "type": "string",
+                          "const": "victoryCurrentMargin"
+                        },
+                        {
+                          "type": "string",
+                          "const": "victoryCurrentRank"
+                        }
+                      ]
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "selector": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "role"
+                            },
+                            "seatToken": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "seatToken"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "player"
+                            },
+                            "player": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "const": "self"
+                                },
+                                {
+                                  "type": "string",
+                                  "const": "active"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "player"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "family",
+                    "id"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "previewSurface"
+                    },
+                    "family": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "const": "globalVar"
+                        },
+                        {
+                          "type": "string",
+                          "const": "perPlayerVar"
+                        },
+                        {
+                          "type": "string",
+                          "const": "derivedMetric"
+                        },
+                        {
+                          "type": "string",
+                          "const": "victoryCurrentMargin"
+                        },
+                        {
+                          "type": "string",
+                          "const": "victoryCurrentRank"
+                        }
+                      ]
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "selector": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "role"
+                            },
+                            "seatToken": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "seatToken"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "player"
+                            },
+                            "player": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "const": "self"
+                                },
+                                {
+                                  "type": "string",
+                                  "const": "active"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "player"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "family",
+                    "id"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "candidateIntrinsic"
+                    },
+                    "intrinsic": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "const": "actionId"
+                        },
+                        {
+                          "type": "string",
+                          "const": "stableMoveKey"
+                        },
+                        {
+                          "type": "string",
+                          "const": "isPass"
+                        },
+                        {
+                          "type": "string",
+                          "const": "paramCount"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "intrinsic"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "candidateParam"
+                    },
+                    "id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "id"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "decisionIntrinsic"
+                    },
+                    "intrinsic": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "const": "type"
+                        },
+                        {
+                          "type": "string",
+                          "const": "name"
+                        },
+                        {
+                          "type": "string",
+                          "const": "targetKind"
+                        },
+                        {
+                          "type": "string",
+                          "const": "optionCount"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "intrinsic"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "optionIntrinsic"
+                    },
+                    "intrinsic": {
+                      "type": "string",
+                      "const": "value"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "intrinsic"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "seatIntrinsic"
+                    },
+                    "intrinsic": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "const": "self"
+                        },
+                        {
+                          "type": "string",
+                          "const": "active"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "intrinsic"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "turnIntrinsic"
+                    },
+                    "intrinsic": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "const": "phaseId"
+                        },
+                        {
+                          "type": "string",
+                          "const": "stepId"
+                        },
+                        {
+                          "type": "string",
+                          "const": "round"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "intrinsic"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "ref"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "op"
+            },
+            "op": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "const": "abs"
+                },
+                {
+                  "type": "string",
+                  "const": "add"
+                },
+                {
+                  "type": "string",
+                  "const": "and"
+                },
+                {
+                  "type": "string",
+                  "const": "boolToNumber"
+                },
+                {
+                  "type": "string",
+                  "const": "clamp"
+                },
+                {
+                  "type": "string",
+                  "const": "coalesce"
+                },
+                {
+                  "type": "string",
+                  "const": "div"
+                },
+                {
+                  "type": "string",
+                  "const": "eq"
+                },
+                {
+                  "type": "string",
+                  "const": "gt"
+                },
+                {
+                  "type": "string",
+                  "const": "gte"
+                },
+                {
+                  "type": "string",
+                  "const": "if"
+                },
+                {
+                  "type": "string",
+                  "const": "in"
+                },
+                {
+                  "type": "string",
+                  "const": "lt"
+                },
+                {
+                  "type": "string",
+                  "const": "lte"
+                },
+                {
+                  "type": "string",
+                  "const": "max"
+                },
+                {
+                  "type": "string",
+                  "const": "min"
+                },
+                {
+                  "type": "string",
+                  "const": "mul"
+                },
+                {
+                  "type": "string",
+                  "const": "ne"
+                },
+                {
+                  "type": "string",
+                  "const": "neg"
+                },
+                {
+                  "type": "string",
+                  "const": "not"
+                },
+                {
+                  "type": "string",
+                  "const": "or"
+                },
+                {
+                  "type": "string",
+                  "const": "sub"
+                }
+              ]
+            },
+            "args": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/anon_090b80a5"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "op",
+            "args"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "zoneTokenAgg"
+            },
+            "zone": {
+              "type": "string"
+            },
+            "owner": {
+              "type": "string"
+            },
+            "prop": {
+              "type": "string"
+            },
+            "aggOp": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "const": "sum"
+                },
+                {
+                  "type": "string",
+                  "const": "count"
+                },
+                {
+                  "type": "string",
+                  "const": "min"
+                },
+                {
+                  "type": "string",
+                  "const": "max"
+                }
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "zone",
+            "owner",
+            "prop",
+            "aggOp"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
     "anon_15cb1372": {
       "anyOf": [
         {
@@ -8676,555 +9412,6 @@
           "required": [
             "query",
             "key"
-          ],
-          "additionalProperties": false
-        }
-      ]
-    },
-    "anon_6c333d7a": {
-      "anyOf": [
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "literal"
-            },
-            "value": {
-              "anyOf": [
-                {
-                  "type": "number"
-                },
-                {
-                  "type": "boolean"
-                },
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                },
-                {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                }
-              ]
-            }
-          },
-          "required": [
-            "kind",
-            "value"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "param"
-            },
-            "id": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "kind",
-            "id"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "ref"
-            },
-            "ref": {
-              "anyOf": [
-                {
-                  "type": "object",
-                  "properties": {
-                    "kind": {
-                      "type": "string",
-                      "const": "library"
-                    },
-                    "refKind": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "const": "stateFeature"
-                        },
-                        {
-                          "type": "string",
-                          "const": "candidateFeature"
-                        },
-                        {
-                          "type": "string",
-                          "const": "aggregate"
-                        }
-                      ]
-                    },
-                    "id": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "kind",
-                    "refKind",
-                    "id"
-                  ],
-                  "additionalProperties": false
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "kind": {
-                      "type": "string",
-                      "const": "currentSurface"
-                    },
-                    "family": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "const": "globalVar"
-                        },
-                        {
-                          "type": "string",
-                          "const": "perPlayerVar"
-                        },
-                        {
-                          "type": "string",
-                          "const": "derivedMetric"
-                        },
-                        {
-                          "type": "string",
-                          "const": "victoryCurrentMargin"
-                        },
-                        {
-                          "type": "string",
-                          "const": "victoryCurrentRank"
-                        }
-                      ]
-                    },
-                    "id": {
-                      "type": "string"
-                    },
-                    "selector": {
-                      "anyOf": [
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "role"
-                            },
-                            "seatToken": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "seatToken"
-                          ],
-                          "additionalProperties": false
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "player"
-                            },
-                            "player": {
-                              "anyOf": [
-                                {
-                                  "type": "string",
-                                  "const": "self"
-                                },
-                                {
-                                  "type": "string",
-                                  "const": "active"
-                                }
-                              ]
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "player"
-                          ],
-                          "additionalProperties": false
-                        }
-                      ]
-                    }
-                  },
-                  "required": [
-                    "kind",
-                    "family",
-                    "id"
-                  ],
-                  "additionalProperties": false
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "kind": {
-                      "type": "string",
-                      "const": "previewSurface"
-                    },
-                    "family": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "const": "globalVar"
-                        },
-                        {
-                          "type": "string",
-                          "const": "perPlayerVar"
-                        },
-                        {
-                          "type": "string",
-                          "const": "derivedMetric"
-                        },
-                        {
-                          "type": "string",
-                          "const": "victoryCurrentMargin"
-                        },
-                        {
-                          "type": "string",
-                          "const": "victoryCurrentRank"
-                        }
-                      ]
-                    },
-                    "id": {
-                      "type": "string"
-                    },
-                    "selector": {
-                      "anyOf": [
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "role"
-                            },
-                            "seatToken": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "seatToken"
-                          ],
-                          "additionalProperties": false
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "player"
-                            },
-                            "player": {
-                              "anyOf": [
-                                {
-                                  "type": "string",
-                                  "const": "self"
-                                },
-                                {
-                                  "type": "string",
-                                  "const": "active"
-                                }
-                              ]
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "player"
-                          ],
-                          "additionalProperties": false
-                        }
-                      ]
-                    }
-                  },
-                  "required": [
-                    "kind",
-                    "family",
-                    "id"
-                  ],
-                  "additionalProperties": false
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "kind": {
-                      "type": "string",
-                      "const": "candidateIntrinsic"
-                    },
-                    "intrinsic": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "const": "actionId"
-                        },
-                        {
-                          "type": "string",
-                          "const": "stableMoveKey"
-                        },
-                        {
-                          "type": "string",
-                          "const": "isPass"
-                        }
-                      ]
-                    }
-                  },
-                  "required": [
-                    "kind",
-                    "intrinsic"
-                  ],
-                  "additionalProperties": false
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "kind": {
-                      "type": "string",
-                      "const": "candidateParam"
-                    },
-                    "id": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "kind",
-                    "id"
-                  ],
-                  "additionalProperties": false
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "kind": {
-                      "type": "string",
-                      "const": "seatIntrinsic"
-                    },
-                    "intrinsic": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "const": "self"
-                        },
-                        {
-                          "type": "string",
-                          "const": "active"
-                        }
-                      ]
-                    }
-                  },
-                  "required": [
-                    "kind",
-                    "intrinsic"
-                  ],
-                  "additionalProperties": false
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "kind": {
-                      "type": "string",
-                      "const": "turnIntrinsic"
-                    },
-                    "intrinsic": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "const": "phaseId"
-                        },
-                        {
-                          "type": "string",
-                          "const": "stepId"
-                        },
-                        {
-                          "type": "string",
-                          "const": "round"
-                        }
-                      ]
-                    }
-                  },
-                  "required": [
-                    "kind",
-                    "intrinsic"
-                  ],
-                  "additionalProperties": false
-                }
-              ]
-            }
-          },
-          "required": [
-            "kind",
-            "ref"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "op"
-            },
-            "op": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "const": "abs"
-                },
-                {
-                  "type": "string",
-                  "const": "add"
-                },
-                {
-                  "type": "string",
-                  "const": "and"
-                },
-                {
-                  "type": "string",
-                  "const": "boolToNumber"
-                },
-                {
-                  "type": "string",
-                  "const": "clamp"
-                },
-                {
-                  "type": "string",
-                  "const": "coalesce"
-                },
-                {
-                  "type": "string",
-                  "const": "div"
-                },
-                {
-                  "type": "string",
-                  "const": "eq"
-                },
-                {
-                  "type": "string",
-                  "const": "gt"
-                },
-                {
-                  "type": "string",
-                  "const": "gte"
-                },
-                {
-                  "type": "string",
-                  "const": "if"
-                },
-                {
-                  "type": "string",
-                  "const": "in"
-                },
-                {
-                  "type": "string",
-                  "const": "lt"
-                },
-                {
-                  "type": "string",
-                  "const": "lte"
-                },
-                {
-                  "type": "string",
-                  "const": "max"
-                },
-                {
-                  "type": "string",
-                  "const": "min"
-                },
-                {
-                  "type": "string",
-                  "const": "mul"
-                },
-                {
-                  "type": "string",
-                  "const": "ne"
-                },
-                {
-                  "type": "string",
-                  "const": "neg"
-                },
-                {
-                  "type": "string",
-                  "const": "not"
-                },
-                {
-                  "type": "string",
-                  "const": "or"
-                },
-                {
-                  "type": "string",
-                  "const": "sub"
-                }
-              ]
-            },
-            "args": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/anon_6c333d7a"
-              }
-            }
-          },
-          "required": [
-            "kind",
-            "op",
-            "args"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "zoneTokenAgg"
-            },
-            "zone": {
-              "type": "string"
-            },
-            "owner": {
-              "type": "string"
-            },
-            "prop": {
-              "type": "string"
-            },
-            "aggOp": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "const": "sum"
-                },
-                {
-                  "type": "string",
-                  "const": "count"
-                },
-                {
-                  "type": "string",
-                  "const": "min"
-                },
-                {
-                  "type": "string",
-                  "const": "max"
-                }
-              ]
-            }
-          },
-          "required": [
-            "kind",
-            "zone",
-            "owner",
-            "prop",
-            "aggOp"
           ],
           "additionalProperties": false
         }

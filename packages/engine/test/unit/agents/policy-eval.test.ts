@@ -229,6 +229,7 @@ function createCatalog(
         },
         ...(overrides.scoreTerms ?? {}),
       },
+      completionScoreTerms: {},
       tieBreakers: {
         stableMoveKey: {
           kind: 'stableMoveKey',
@@ -250,6 +251,7 @@ function createCatalog(
         use: {
           pruningRules: ['dropPassWhenMarginExists'],
           scoreTerms: ['preferEvents'],
+          completionScoreTerms: [],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
@@ -413,6 +415,7 @@ describe('policy-eval', () => {
         use: {
           pruningRules: ['pruneEverything'],
           scoreTerms: [],
+          completionScoreTerms: [],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
@@ -449,6 +452,7 @@ describe('policy-eval', () => {
         use: {
           pruningRules: ['pruneEverything'],
           scoreTerms: [],
+          completionScoreTerms: [],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
@@ -520,6 +524,7 @@ describe('policy-eval', () => {
         use: {
           pruningRules: [],
           scoreTerms: ['preferProjectedMargin', 'reinforceProjectedMargin', 'ignoreMaskedStanding'],
+          completionScoreTerms: [],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
@@ -594,6 +599,7 @@ describe('policy-eval', () => {
         use: {
           pruningRules: [],
           scoreTerms: ['preferProjectedMargin'],
+          completionScoreTerms: [],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
@@ -664,6 +670,7 @@ describe('policy-eval', () => {
         use: {
           pruningRules: [],
           scoreTerms: ['preferMetric'],
+          completionScoreTerms: [],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
@@ -706,6 +713,7 @@ describe('policy-eval', () => {
         use: {
           pruningRules: [],
           scoreTerms: ['preferUnknownSurface'],
+          completionScoreTerms: [],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
@@ -761,6 +769,7 @@ describe('policy-eval', () => {
         use: {
           pruningRules: [],
           scoreTerms: ['preferMatchingCard', 'preferHigherTargetCount'],
+          completionScoreTerms: [],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
@@ -816,6 +825,7 @@ describe('policy-eval', () => {
         use: {
           pruningRules: [],
           scoreTerms: ['preferZoneA'],
+          completionScoreTerms: [],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {

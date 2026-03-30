@@ -171,7 +171,7 @@ function makeZone(
     ownerID: null,
     category,
     attributes,
-    visual: { shape: 'rectangle', width: 100, height: 80, color: null, connectionStyleKey: null },
+    visual: { shape: 'rectangle', width: 100, height: 80, color: null, connectionStyleKey: null, vertices: null },
     metadata: {},
   };
 }

@@ -71,6 +71,7 @@ function createCatalog(): AgentPolicyCatalog {
           dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['isEvent'], aggregates: [] },
         },
       },
+      completionScoreTerms: {},
       tieBreakers: {
         stableMoveKey: {
           kind: 'stableMoveKey',
@@ -86,6 +87,7 @@ function createCatalog(): AgentPolicyCatalog {
         use: {
           pruningRules: [],
           scoreTerms: ['preferPass'],
+          completionScoreTerms: [],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
@@ -100,6 +102,7 @@ function createCatalog(): AgentPolicyCatalog {
         use: {
           pruningRules: [],
           scoreTerms: ['preferEvent'],
+          completionScoreTerms: [],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
@@ -195,6 +198,7 @@ function createTemplateDef(): GameDef {
           use: {
             pruningRules: [],
             scoreTerms: ['preferGamma'],
+            completionScoreTerms: [],
             tieBreakers: ['stableMoveKey'],
           },
           plan: {
@@ -289,6 +293,7 @@ function createTemplatePreviewDef(): GameDef {
             dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['projectedMargin'], aggregates: [] },
           },
         },
+        completionScoreTerms: {},
         tieBreakers: {
           stableMoveKey: {
             kind: 'stableMoveKey',
@@ -304,6 +309,7 @@ function createTemplatePreviewDef(): GameDef {
           use: {
             pruningRules: [],
             scoreTerms: ['preferProjectedMargin'],
+            completionScoreTerms: [],
             tieBreakers: ['stableMoveKey'],
           },
           plan: {

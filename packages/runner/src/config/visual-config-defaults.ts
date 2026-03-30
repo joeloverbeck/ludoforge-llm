@@ -7,6 +7,7 @@ export type ZoneShape =
   | 'triangle'
   | 'line'
   | 'octagon'
+  | 'polygon'
   | 'connection';
 
 export type TokenShape =

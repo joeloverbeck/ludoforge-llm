@@ -247,6 +247,42 @@ describe('top-level runtime schemas', () => {
           candidateAggregates: {},
           pruningRules: {},
           scoreTerms: {},
+          completionScoreTerms: {
+            preferNamedOption: {
+              costClass: 'state',
+              when: {
+                kind: 'op',
+                op: 'eq',
+                args: [
+                  { kind: 'ref', ref: { kind: 'decisionIntrinsic', intrinsic: 'type' } },
+                  { kind: 'literal', value: 'chooseOne' },
+                ],
+              },
+              weight: { kind: 'literal', value: 1 },
+              value: {
+                kind: 'op',
+                op: 'if',
+                args: [
+                  {
+                    kind: 'op',
+                    op: 'eq',
+                    args: [
+                      { kind: 'ref', ref: { kind: 'optionIntrinsic', intrinsic: 'value' } },
+                      { kind: 'literal', value: 'zone-a' },
+                    ],
+                  },
+                  { kind: 'literal', value: 1 },
+                  { kind: 'literal', value: 0 },
+                ],
+              },
+              dependencies: {
+                parameters: [],
+                stateFeatures: [],
+                candidateFeatures: [],
+                aggregates: [],
+              },
+            },
+          },
           tieBreakers: {},
         },
         profiles: {
@@ -258,7 +294,12 @@ describe('top-level runtime schemas', () => {
             use: {
               pruningRules: [],
               scoreTerms: [],
+              completionScoreTerms: ['preferNamedOption'],
               tieBreakers: ['stableMoveKey'],
+            },
+            completionGuidance: {
+              enabled: true,
+              fallback: 'first',
             },
             plan: {
               stateFeatures: [],
@@ -317,6 +358,7 @@ describe('top-level runtime schemas', () => {
           candidateAggregates: {},
           pruningRules: {},
           scoreTerms: {},
+          completionScoreTerms: {},
           tieBreakers: {},
         },
         profiles: {},
@@ -355,6 +397,7 @@ describe('top-level runtime schemas', () => {
           candidateAggregates: {},
           pruningRules: {},
           scoreTerms: {},
+          completionScoreTerms: {},
           tieBreakers: {},
         },
         profiles: {
@@ -363,6 +406,7 @@ describe('top-level runtime schemas', () => {
             use: {
               pruningRules: [],
               scoreTerms: [],
+              completionScoreTerms: [],
               tieBreakers: ['stableMoveKey'],
             },
             plan: {

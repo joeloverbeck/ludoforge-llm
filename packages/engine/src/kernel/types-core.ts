@@ -368,6 +368,14 @@ export type CompiledAgentPolicyRef =
       readonly id: string;
     }
   | {
+      readonly kind: 'decisionIntrinsic';
+      readonly intrinsic: 'type' | 'name' | 'targetKind' | 'optionCount';
+    }
+  | {
+      readonly kind: 'optionIntrinsic';
+      readonly intrinsic: 'value';
+    }
+  | {
       readonly kind: 'seatIntrinsic';
       readonly intrinsic: 'self' | 'active';
     }
@@ -505,7 +513,13 @@ export interface CompiledAgentLibraryIndex {
   readonly candidateAggregates: Readonly<Record<string, CompiledAgentAggregate>>;
   readonly pruningRules: Readonly<Record<string, CompiledAgentPruningRule>>;
   readonly scoreTerms: Readonly<Record<string, CompiledAgentScoreTerm>>;
+  readonly completionScoreTerms: Readonly<Record<string, CompiledAgentScoreTerm>>;
   readonly tieBreakers: Readonly<Record<string, CompiledAgentTieBreaker>>;
+}
+
+export interface CompletionGuidanceConfig {
+  readonly enabled: boolean;
+  readonly fallback: 'random' | 'first';
 }
 
 export interface CompiledAgentProfile {
@@ -514,8 +528,10 @@ export interface CompiledAgentProfile {
   readonly use: {
     readonly pruningRules: readonly string[];
     readonly scoreTerms: readonly string[];
+    readonly completionScoreTerms: readonly string[];
     readonly tieBreakers: readonly string[];
   };
+  readonly completionGuidance?: CompletionGuidanceConfig;
   readonly plan: {
     readonly stateFeatures: readonly string[];
     readonly candidateFeatures: readonly string[];

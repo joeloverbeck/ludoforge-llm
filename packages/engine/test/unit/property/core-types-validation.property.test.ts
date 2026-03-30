@@ -49,6 +49,7 @@ describe('core-types validation property-style checks', () => {
             candidateAggregates: {},
             pruningRules: {},
             scoreTerms: {},
+            completionScoreTerms: {},
             tieBreakers: {},
           },
           profiles: {
@@ -58,6 +59,7 @@ describe('core-types validation property-style checks', () => {
               use: {
                 pruningRules: [],
                 scoreTerms: [],
+                completionScoreTerms: [],
                 tieBreakers: ['stableMoveKey'],
               },
               plan: {

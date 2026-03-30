@@ -500,15 +500,15 @@ describe('visual-config.yaml files', () => {
     expect(attributeRules).toEqual([
       {
         match: { category: ['province'], attributeContains: { terrainTags: 'highland' } },
-        style: { color: '#6b5b3e' },
+        style: { color: '#c4a66a' },
       },
       {
         match: { category: ['province'], attributeContains: { terrainTags: 'jungle' } },
-        style: { color: '#3d5c3a' },
+        style: { color: '#2d4a2d' },
       },
       {
         match: { category: ['province'], attributeContains: { terrainTags: 'lowland' } },
-        style: { color: '#5a7a52' },
+        style: { color: '#7cb87c' },
       },
       {
         match: { category: ['loc'], attributeContains: { terrainTags: 'highway' } },

@@ -612,11 +612,19 @@ const CompiledAgentPolicyRefSchema = z.union([
   }).strict(),
   z.object({
     kind: z.literal('candidateIntrinsic'),
-    intrinsic: z.union([z.literal('actionId'), z.literal('stableMoveKey'), z.literal('isPass')]),
+    intrinsic: z.union([z.literal('actionId'), z.literal('stableMoveKey'), z.literal('isPass'), z.literal('paramCount')]),
   }).strict(),
   z.object({
     kind: z.literal('candidateParam'),
     id: StringSchema,
+  }).strict(),
+  z.object({
+    kind: z.literal('decisionIntrinsic'),
+    intrinsic: z.union([z.literal('type'), z.literal('name'), z.literal('targetKind'), z.literal('optionCount')]),
+  }).strict(),
+  z.object({
+    kind: z.literal('optionIntrinsic'),
+    intrinsic: z.literal('value'),
   }).strict(),
   z.object({
     kind: z.literal('seatIntrinsic'),
@@ -774,6 +782,7 @@ const CompiledAgentLibraryIndexSchema = z
     candidateAggregates: z.record(StringSchema, CompiledAgentAggregateSchema),
     pruningRules: z.record(StringSchema, CompiledAgentPruningRuleSchema),
     scoreTerms: z.record(StringSchema, CompiledAgentScoreTermSchema),
+    completionScoreTerms: z.record(StringSchema, CompiledAgentScoreTermSchema),
     tieBreakers: z.record(StringSchema, CompiledAgentTieBreakerSchema),
   })
   .strict();
@@ -786,9 +795,14 @@ const CompiledAgentProfileSchema = z
       .object({
         pruningRules: z.array(StringSchema),
         scoreTerms: z.array(StringSchema),
+        completionScoreTerms: z.array(StringSchema),
         tieBreakers: z.array(StringSchema),
       })
       .strict(),
+    completionGuidance: z.object({
+      enabled: BooleanSchema,
+      fallback: z.union([z.literal('random'), z.literal('first')]),
+    }).strict().optional(),
     plan: z
       .object({
         stateFeatures: z.array(StringSchema),

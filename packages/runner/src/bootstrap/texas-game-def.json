@@ -13761,6 +13761,7 @@
           }
         }
       },
+      "completionScoreTerms": {},
       "tieBreakers": {
         "stableMoveKey": {
           "kind": "stableMoveKey",
@@ -13787,6 +13788,7 @@
             "alwaysRaise",
             "preferLargerRaise"
           ],
+          "completionScoreTerms": [],
           "tieBreakers": [
             "stableMoveKey"
           ]
@@ -13806,13 +13808,13 @@
           ],
           "candidateAggregates": []
         },
-        "fingerprint": "3739b3746bb662fe33f20837cb9fafa70a0d5881ce86f45498a8b9bc784142f2"
+        "fingerprint": "669a86537306635b7d5ed0d387e1cc5acc730b1db1740c297c5d55958aac62c0"
       }
     },
     "bindingsBySeat": {
       "neutral": "baseline"
     },
-    "catalogFingerprint": "16e2720f27d9830b043eef21265c0d850852f3127b029a4ecf9cd566b593333c"
+    "catalogFingerprint": "b366c9abbcb189da7d13d30076e16eb802b771bd7a4c7cbcd3cef3d902d6abb4"
   },
   "actions": [
     {

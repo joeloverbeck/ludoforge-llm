@@ -4,11 +4,15 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — cnl validate-agents
-**Deps**: tickets/95POLGUIMOVCOM-002.md
+**Deps**: archive/tickets/95POLGUIMOVCOM-002.md
 
 ## Problem
 
-The agent validation layer (`validate-agents.ts`) does not recognize `completionScoreTerms` in the library section or `completionGuidance` / `use.completionScoreTerms` in profile definitions. Without validation, malformed YAML (missing weight, invalid fallback values, referencing nonexistent library entries) would pass through silently and fail at compilation or runtime.
+Ticket `002` already had to extend `validate-agents.ts` so authored specs recognize `completionScoreTerms`, `completionGuidance`, and `use.completionScoreTerms` at the structural level. The remaining validation gap is narrower:
+
+- `use.completionScoreTerms` still needs early cross-reference validation against `library.completionScoreTerms`
+- `completionGuidance.enabled: true` with no referenced completion score terms should warn at authoring time
+- focused validator tests should prove this behavior explicitly instead of relying on broader compile-path tests
 
 ## Assumption Reassessment (2026-03-30)
 
@@ -16,56 +20,59 @@ The agent validation layer (`validate-agents.ts`) does not recognize `completion
 2. Profile validation checks `use.pruningRules`, `use.scoreTerms`, `use.tieBreakers` arrays against library keys. Confirmed — `use.completionScoreTerms` follows the same cross-reference pattern.
 3. `GameSpecScoreTermDef` is the shape for both `scoreTerms` and `completionScoreTerms` — same validation logic applies. Confirmed.
 4. No existing validation for `completionGuidance` or `fallback` values. Confirmed.
+5. Mismatch: ticket `002` already added key recognition plus `completionGuidance` shape and fallback validation to `validate-agents.ts`. This ticket must not duplicate that delivered work.
+6. `validateProfileUse` still validates `use.*` entries as string lists only; it does not cross-check `use.completionScoreTerms` ids against authored library keys. Confirmed.
 
 ## Architecture Check
 
-1. Cleanest approach: reuse the existing `validateScoreTermDef` helper (or equivalent validation path) for `completionScoreTerms`. Add `completionGuidance` as a simple shape check (enabled: boolean, fallback: enum).
+1. Cleanest approach: keep structural validation where it already lives, then add the remaining authored cross-reference and warning checks in `validate-agents.ts`. Do not re-open the completed shape-validation work from ticket `002`.
 2. Engine agnosticism: validation checks structural correctness, not game-specific content. No game identifiers in validation logic.
-3. No backwards-compatibility shims: validation only fires when the new fields are present.
+3. No backwards-compatibility shims: diagnostics apply only when the new fields are present.
+4. Single-source-of-truth cleanup for policy contract keys is a separate architectural concern and should not be folded into this ticket's validation-only scope.
 
 ## What to Change
 
-### 1. `validate-agents.ts` — validate `completionScoreTerms` library entries
+### 1. `validate-agents.ts` — add authored cross-reference validation for `use.completionScoreTerms`
 
-Iterate `library.completionScoreTerms` (if present) using the same validation path as `scoreTerms`:
-- Each entry must have `weight` (required expression) and `value` (required expression)
-- `when` is optional (expression)
-- `unknownAs` is optional (number)
-- `clamp` is optional (`{ min?: number; max?: number }`)
+For each profile:
+- validate every `use.completionScoreTerms` id against authored `library.completionScoreTerms`
+- emit an authoring diagnostic when a referenced id is missing
+- keep this in the validator rather than deferring the failure to compiler lowering
 
-### 2. `validate-agents.ts` — validate `completionGuidance` in profiles
+### 2. `validate-agents.ts` — warn when guidance is enabled without referenced completion score terms
 
-For each profile with `completionGuidance`:
-- `enabled` must be boolean (if present)
-- `fallback` must be `'random'` or `'first'` (if present)
-- If `completionGuidance.enabled` is true, `use.completionScoreTerms` should be non-empty (warning, not error)
+For each profile with `completionGuidance.enabled: true`:
+- if `use.completionScoreTerms` is absent or empty, emit a warning
+- keep this as a validator warning, not a compiler error, so authored intent is surfaced early without changing runtime semantics
 
-### 3. `validate-agents.ts` — validate `use.completionScoreTerms` cross-references
+### 3. Focused validator tests
 
-For each profile, validate that every entry in `use.completionScoreTerms` (if present) references an existing key in `library.completionScoreTerms`. Emit diagnostic error for missing references.
+Add dedicated validation tests for the remaining completion-guidance validator behavior instead of relying only on broader compile-path tests.
 
 ## Files to Touch
 
 - `packages/engine/src/cnl/validate-agents.ts` (modify)
+- `packages/engine/test/unit/cnl/validate-agents-completion.test.ts` (new or modify)
 
 ## Out of Scope
 
-- Compilation of `completionScoreTerms` (ticket 006)
+- Structural recognition of `completionScoreTerms` / `completionGuidance` keys or fallback enums (already delivered in ticket `002`)
+- Compilation of `completionScoreTerms` (ticket 006 was superseded by ticket `002`; no dependency on it should be added here)
 - Runtime evaluation (tickets 005, 007)
 - Expression-level validation (handled by existing expression validator, shared with `scoreTerms`)
 - `zoneTokenAgg` dynamic zone validation (ticket 004)
+- Policy contract centralization across types/schema/validator/compiler (tracked separately)
 
 ## Acceptance Criteria
 
 ### Tests That Must Pass
 
 1. New unit test: valid `completionScoreTerms` in library passes validation without diagnostics
-2. New unit test: `completionScoreTerms` entry missing `weight` emits error diagnostic
-3. New unit test: `completionScoreTerms` entry missing `value` emits error diagnostic
-4. New unit test: `completionGuidance.fallback` with invalid value emits error diagnostic
-5. New unit test: `use.completionScoreTerms` referencing nonexistent library key emits error diagnostic
-6. New unit test: `completionGuidance.enabled: true` with empty `use.completionScoreTerms` emits warning
-7. Existing suite: `pnpm -F @ludoforge/engine test` — all pass
+2. New unit test: `use.completionScoreTerms` referencing nonexistent library key emits error diagnostic
+3. New unit test: `completionGuidance.enabled: true` with empty `use.completionScoreTerms` emits warning
+4. Existing validator behavior for invalid `completionGuidance.fallback` remains covered and unchanged
+5. Existing suite: `pnpm -F @ludoforge/engine test` — all pass
+6. Existing suite: `pnpm turbo typecheck` — all pass
 
 ### Invariants
 

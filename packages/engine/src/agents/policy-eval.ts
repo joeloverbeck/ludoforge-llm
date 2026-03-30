@@ -548,6 +548,9 @@ class EvaluationContext {
         return candidate === undefined ? undefined : this.runtimeProviders.candidates.resolveCandidateIntrinsic(candidate, ref.intrinsic);
       case 'candidateParam':
         return candidate === undefined ? undefined : this.runtimeProviders.candidates.resolveCandidateParam(candidate, ref.id);
+      case 'decisionIntrinsic':
+      case 'optionIntrinsic':
+        return undefined;
       case 'currentSurface':
       case 'previewSurface':
         return this.resolveSurfaceRef(ref, candidate);

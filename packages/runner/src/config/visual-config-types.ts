@@ -13,6 +13,7 @@ export const ZoneShapeSchema = z.enum([
   'triangle',
   'line',
   'octagon',
+  'polygon',
   'connection',
 ]);
 export const TokenShapeSchema = z.enum([
@@ -94,6 +95,7 @@ const ZoneVisualStyleSchema = z.object({
   height: z.number().optional(),
   color: z.string().optional(),
   connectionStyleKey: z.string().optional(),
+  vertices: z.array(z.number()).optional(),
 });
 
 const ConnectionStyleConfigSchema = z.object({

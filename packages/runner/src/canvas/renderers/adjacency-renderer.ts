@@ -120,8 +120,8 @@ function drawAdjacencyLine(
     adjacency.isHighlighted ? HIGHLIGHTED_EDGE_STYLE : DEFAULT_EDGE_STYLE,
   );
   const angleDeg = computeAngleDegrees(fromPosition, toPosition);
-  const fromEdgeOffset = getEdgePointAtAngle(fromZone.visual.shape, toShapeDimensions(fromZone), angleDeg);
-  const toEdgeOffset = getEdgePointAtAngle(toZone.visual.shape, toShapeDimensions(toZone), angleDeg + 180);
+  const fromEdgeOffset = getEdgePointAtAngle(fromZone.visual.shape, toShapeDimensions(fromZone), angleDeg, fromZone.visual.vertices ?? undefined);
+  const toEdgeOffset = getEdgePointAtAngle(toZone.visual.shape, toShapeDimensions(toZone), angleDeg + 180, toZone.visual.vertices ?? undefined);
   const fromEdge = {
     x: fromPosition.x + fromEdgeOffset.x,
     y: fromPosition.y + fromEdgeOffset.y,

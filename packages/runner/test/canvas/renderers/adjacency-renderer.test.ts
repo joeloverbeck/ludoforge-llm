@@ -125,6 +125,7 @@ function makeZoneVisual(overrides: Partial<ResolvedZoneVisual> = {}): ResolvedZo
     height: 20,
     color: null,
     connectionStyleKey: null,
+    vertices: null,
     ...overrides,
   };
 }

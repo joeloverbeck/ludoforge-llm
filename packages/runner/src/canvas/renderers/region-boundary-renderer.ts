@@ -17,7 +17,7 @@ const DEFAULT_CORNER_RADIUS = 30;
 const DASH_WIDTH_MULTIPLIER = 5;
 const GAP_WIDTH_MULTIPLIER = 3;
 const LABEL_REFERENCE_FONT_SIZE = 64;
-const LABEL_ALPHA = 0.25;
+const LABEL_ALPHA = 0.12;
 const LABEL_SPAN_FRACTION = 0.7;
 
 export function createRegionBoundaryRenderer(

@@ -640,6 +640,187 @@ describe('agents authoring surface', () => {
     assert.equal(result.gameDef?.agents?.profiles.baseline, undefined);
   });
 
+  it('validates profile.use library references during authoring validation', () => {
+    const diagnostics = validateGameSpec({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: {
+        visibility: createVisibility(),
+        library: {
+          pruningRules: {
+            knownPrune: {
+              when: true,
+              onEmpty: 'skipRule',
+            },
+          },
+          scoreTerms: {
+            knownScore: {
+              weight: 1,
+              value: 1,
+            },
+          },
+          completionScoreTerms: {
+            knownCompletion: {
+              weight: 1,
+              value: 1,
+            },
+          },
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: ['missingPrune'],
+              scoreTerms: ['missingScore'],
+              completionScoreTerms: ['missingCompletion'],
+              tieBreakers: ['missingTieBreaker'],
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      },
+    });
+
+    assert.ok(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_VALIDATOR_AGENTS_PROFILE_USE_UNKNOWN_ID'
+          && diagnostic.path === 'doc.agents.profiles.baseline.use.pruningRules.0',
+      ),
+    );
+    assert.ok(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_VALIDATOR_AGENTS_PROFILE_USE_UNKNOWN_ID'
+          && diagnostic.path === 'doc.agents.profiles.baseline.use.scoreTerms.0',
+      ),
+    );
+    assert.ok(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_VALIDATOR_AGENTS_PROFILE_USE_UNKNOWN_ID'
+          && diagnostic.path === 'doc.agents.profiles.baseline.use.completionScoreTerms.0',
+      ),
+    );
+    assert.ok(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_VALIDATOR_AGENTS_PROFILE_USE_UNKNOWN_ID'
+          && diagnostic.path === 'doc.agents.profiles.baseline.use.tieBreakers.0',
+      ),
+    );
+  });
+
+  it('warns when completion guidance is enabled without valid completion score terms', () => {
+    const diagnostics = validateGameSpec({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: {
+        visibility: createVisibility(),
+        library: {
+          completionScoreTerms: {},
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              scoreTerms: [],
+              completionScoreTerms: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+            completionGuidance: {
+              enabled: true,
+              fallback: 'first',
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      },
+    });
+
+    assert.ok(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_VALIDATOR_AGENTS_COMPLETION_GUIDANCE_MISSING_TERMS'
+          && diagnostic.path === 'doc.agents.profiles.baseline.completionGuidance'
+          && diagnostic.severity === 'warning',
+      ),
+    );
+  });
+
+  it('accepts valid completion guidance references without validator diagnostics', () => {
+    const diagnostics = validateGameSpec({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: {
+        visibility: createVisibility(),
+        library: {
+          completionScoreTerms: {
+            preferNamedOption: {
+              when: { eq: [{ ref: 'decision.type' }, 'chooseOne'] },
+              weight: 2,
+              value: {
+                if: [
+                  { eq: [{ ref: 'option.value' }, 'zone-a'] },
+                  1,
+                  0,
+                ],
+              },
+            },
+          },
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              scoreTerms: [],
+              completionScoreTerms: ['preferNamedOption'],
+              tieBreakers: ['stableMoveKey'],
+            },
+            completionGuidance: {
+              enabled: true,
+              fallback: 'first',
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      },
+    });
+
+    assert.equal(
+      diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_VALIDATOR_AGENTS_PROFILE_USE_UNKNOWN_ID'
+          || diagnostic.code === 'CNL_VALIDATOR_AGENTS_COMPLETION_GUIDANCE_MISSING_TERMS'
+          || diagnostic.path === 'doc.agents.profiles.baseline.completionGuidance.fallback',
+      ),
+      false,
+    );
+  });
+
   it('rejects refs whose shared visibility contract marks them hidden', () => {
     const compiled = compileGameSpecToGameDef({
       ...createCompileReadyDoc(),

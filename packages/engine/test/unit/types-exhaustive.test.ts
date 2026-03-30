@@ -17,6 +17,7 @@ import type {
 import type {
   AssetRowPredicate,
   ConditionAST,
+  ExecutionOptions,
   EffectAST,
   MoveLog,
   OptionsQuery,
@@ -42,6 +43,7 @@ import type {
   RecursiveOptionsQueryKindCoverage,
 } from '../../src/kernel/query-partition-types.js';
 import type { RecursiveOptionsQueryDispatchCoverage } from '../../src/kernel/query-walk.js';
+import type { SimulationOptions } from '../../src/sim/index.js';
 import { eff } from '../helpers/effect-tag-helper.js';
 
 type UnionToIntersection<T> = (
@@ -282,6 +284,21 @@ describe('exhaustive kernel unions', () => {
     type HasLegalMoveCount = MoveLog extends { readonly legalMoveCount: number } ? true : false;
     const hasLegalMoveCount: HasLegalMoveCount = true;
     assert.equal(hasLegalMoveCount, true);
+  });
+
+  it('keeps snapshot trace contracts wired into shared types', () => {
+    // snapshotDepth must NOT be on ExecutionOptions (sim-only concern moved to SimulationOptions)
+    type KernelLacksSnapshotDepth = ExecutionOptions extends { readonly snapshotDepth?: unknown } ? false : true;
+    type SimHasSnapshotDepth = SimulationOptions extends { readonly snapshotDepth?: 'none' | 'minimal' | 'standard' | 'verbose' } ? true : false;
+    type HasSnapshot = MoveLog extends { readonly snapshot?: { readonly turnCount: number } } ? true : false;
+
+    const kernelLacksSnapshotDepth: KernelLacksSnapshotDepth = true;
+    const simHasSnapshotDepth: SimHasSnapshotDepth = true;
+    const hasSnapshot: HasSnapshot = true;
+
+    assert.equal(kernelLacksSnapshotDepth, true);
+    assert.equal(simHasSnapshotDepth, true);
+    assert.equal(hasSnapshot, true);
   });
 
   it('exports scenario payload interfaces with expected shape constraints', () => {

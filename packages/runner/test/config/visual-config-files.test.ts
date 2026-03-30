@@ -379,18 +379,18 @@ describe('visual-config.yaml files', () => {
       presets: {
         'fitl-map-space': {
           mode: 'lanes',
-          laneGap: 24,
+          laneGap: 30,
           laneOrder: ['regular', 'base'],
           lanes: {
             regular: {
               anchor: 'center',
               pack: 'centeredRow',
-              spacingX: 32,
+              spacingX: 42,
             },
             base: {
               anchor: 'belowPreviousLane',
               pack: 'centeredRow',
-              spacingX: 42,
+              spacingX: 54,
             },
           },
         },
@@ -496,7 +496,7 @@ describe('visual-config.yaml files', () => {
     });
 
     const attributeRules = parsed.zones?.attributeRules ?? [];
-    expect(attributeRules).toHaveLength(5);
+    expect(attributeRules).toHaveLength(8);
     expect(attributeRules).toEqual([
       {
         match: { category: ['province'], attributeContains: { terrainTags: 'highland' } },
@@ -509,6 +509,18 @@ describe('visual-config.yaml files', () => {
       {
         match: { category: ['province'], attributeContains: { terrainTags: 'lowland' } },
         style: { color: '#5db85d', strokeColor: '#2d7a2d' },
+      },
+      {
+        match: { category: ['province'], attributeContains: { country: 'northVietnam' } },
+        style: { color: '#8b5e3c', strokeColor: '#5a3d20' },
+      },
+      {
+        match: { category: ['province'], attributeContains: { country: 'laos' } },
+        style: { color: '#6b8f7b', strokeColor: '#4a6b58' },
+      },
+      {
+        match: { category: ['province'], attributeContains: { country: 'cambodia' } },
+        style: { color: '#7a8868', strokeColor: '#586345' },
       },
       {
         match: { category: ['loc'], attributeContains: { terrainTags: 'highway' } },

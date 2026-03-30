@@ -617,7 +617,7 @@ describe('createZoneRenderer', () => {
 
     const style = nameLabel.style as { fill?: string; stroke?: { color: string; width: number } };
     expect(style.fill).toBe('#ffffff');
-    expect(style.stroke).toEqual({ color: '#000000', width: 3 });
+    expect(style.stroke).toEqual({ color: '#000000', width: 4 });
   });
 
   it('renders badge when zone has matching marker and hides when absent', () => {

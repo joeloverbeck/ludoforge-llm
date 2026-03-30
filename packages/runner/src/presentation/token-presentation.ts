@@ -13,7 +13,7 @@ import type { RunnerToken, RunnerZone } from '../model/runner-frame.js';
 import { computeFanOffset } from '../layout/fan-offset.js';
 import type { TokenRenderStyleProvider } from '../canvas/renderers/renderer-types.js';
 
-const TOKEN_RADIUS = 14;
+const TOKEN_RADIUS = 19;
 const CARD_WIDTH = 24;
 const CARD_HEIGHT = 34;
 const STACK_OFFSET_X = 2;

@@ -587,6 +587,6 @@ describe('buildPresentationScene', () => {
 
     expect(scene.tokens).toHaveLength(2);
     expect(scene.tokens[0]).toMatchObject({ stackCount: 2, zoneId: 'zone:a', offset: { x: 0, y: 0 } });
-    expect(scene.tokens[1]).toMatchObject({ stackCount: 1, zoneId: 'zone:a', offset: { x: 0, y: 48 } });
+    expect(scene.tokens[1]).toMatchObject({ stackCount: 1, zoneId: 'zone:a', offset: { x: 0, y: 58 } });
   });
 });

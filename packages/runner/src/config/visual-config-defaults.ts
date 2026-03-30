@@ -27,7 +27,7 @@ export const DEFAULT_ZONE_WIDTH = 160;
 export const DEFAULT_ZONE_HEIGHT = 100;
 
 export const DEFAULT_TOKEN_SHAPE: TokenShape = 'circle';
-export const DEFAULT_TOKEN_SIZE = 28;
+export const DEFAULT_TOKEN_SIZE = 38;
 
 export const DEFAULT_FACTION_PALETTE = [
   '#e63946',

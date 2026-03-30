@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import { enrichTrace } from '../../src/sim/trace-enrichment.js';
 import { asPlayerId } from '../../src/kernel/branded.js';
 import type { GameTrace, GameDef } from '../../src/kernel/types.js';
+import type { DecisionPointSnapshot } from '../../src/sim/snapshot-types.js';
 
 const makeMockDef = (seatIds: readonly string[]): GameDef => ({
   metadata: { id: 'test-game', name: 'Test', version: '1.0' },
@@ -36,6 +37,13 @@ const makeMockTrace = (playerIndices: readonly number[]): GameTrace => ({
   result: null,
   turnsCount: playerIndices.length,
   stopReason: 'maxTurns',
+});
+
+const makeSnapshot = (): DecisionPointSnapshot => ({
+  turnCount: 3,
+  phaseId: 'main' as DecisionPointSnapshot['phaseId'],
+  activePlayer: asPlayerId(0),
+  seatStandings: [{ seat: 'VC', margin: 2 }],
 });
 
 describe('enrichTrace', () => {
@@ -78,5 +86,23 @@ describe('enrichTrace', () => {
     assert.equal(enriched.seed, 42);
     assert.equal(enriched.stopReason, 'maxTurns');
     assert.equal(enriched.result, null);
+  });
+
+  it('preserves snapshot payloads when enriching trace moves', () => {
+    const def = makeMockDef(['VC']);
+    const snapshot = makeSnapshot();
+    const trace = makeMockTrace([0]);
+    const traceWithSnapshot: GameTrace = {
+      ...trace,
+      moves: trace.moves.map((move) => ({
+        ...move,
+        snapshot,
+      })),
+    };
+
+    const enriched = enrichTrace(traceWithSnapshot, def);
+
+    assert.equal(enriched.moves[0]?.snapshot, snapshot);
+    assert.deepEqual(enriched.moves[0]?.snapshot?.seatStandings, [{ seat: 'VC', margin: 2 }]);
   });
 });

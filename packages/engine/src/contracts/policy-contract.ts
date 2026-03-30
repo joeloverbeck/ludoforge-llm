@@ -66,6 +66,42 @@ export const AGENT_POLICY_ZONE_TOKEN_AGG_OWNER_KEYWORDS = ['self', 'active', 'no
 export type AgentPolicyZoneTokenAggOwnerKeyword = typeof AGENT_POLICY_ZONE_TOKEN_AGG_OWNER_KEYWORDS[number];
 export type AgentPolicyZoneTokenAggOwner = AgentPolicyZoneTokenAggOwnerKeyword | `${number}`;
 
+export const AGENT_POLICY_ZONE_TOKEN_AGG_OPS = ['sum', 'count', 'min', 'max'] as const;
+
+export type AgentPolicyZoneTokenAggOp = typeof AGENT_POLICY_ZONE_TOKEN_AGG_OPS[number];
+
+export function isAgentPolicyZoneTokenAggOp(value: unknown): value is AgentPolicyZoneTokenAggOp {
+  return typeof value === 'string'
+    && AGENT_POLICY_ZONE_TOKEN_AGG_OPS.includes(value as AgentPolicyZoneTokenAggOp);
+}
+
+export const AGENT_POLICY_ZONE_FILTER_OPS = ['eq', 'gt', 'gte', 'lt', 'lte'] as const;
+
+export type AgentPolicyZoneFilterOp = typeof AGENT_POLICY_ZONE_FILTER_OPS[number];
+
+export function isAgentPolicyZoneFilterOp(value: unknown): value is AgentPolicyZoneFilterOp {
+  return typeof value === 'string'
+    && AGENT_POLICY_ZONE_FILTER_OPS.includes(value as AgentPolicyZoneFilterOp);
+}
+
+export const AGENT_POLICY_ZONE_SCOPES = ['board', 'aux', 'all'] as const;
+
+export type AgentPolicyZoneScope = typeof AGENT_POLICY_ZONE_SCOPES[number];
+
+export function isAgentPolicyZoneScope(value: unknown): value is AgentPolicyZoneScope {
+  return typeof value === 'string'
+    && AGENT_POLICY_ZONE_SCOPES.includes(value as AgentPolicyZoneScope);
+}
+
+export const AGENT_POLICY_ZONE_AGG_SOURCES = ['variable', 'attribute'] as const;
+
+export type AgentPolicyZoneAggSource = typeof AGENT_POLICY_ZONE_AGG_SOURCES[number];
+
+export function isAgentPolicyZoneAggSource(value: unknown): value is AgentPolicyZoneAggSource {
+  return typeof value === 'string'
+    && AGENT_POLICY_ZONE_AGG_SOURCES.includes(value as AgentPolicyZoneAggSource);
+}
+
 export function isAgentPolicyZoneTokenAggOwner(value: string): value is AgentPolicyZoneTokenAggOwner {
   return AGENT_POLICY_ZONE_TOKEN_AGG_OWNER_KEYWORDS.includes(value as AgentPolicyZoneTokenAggOwnerKeyword)
     || /^[0-9]+$/.test(value);

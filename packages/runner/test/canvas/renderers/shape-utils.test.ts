@@ -5,6 +5,7 @@ import {
   drawZoneShape,
   getEdgePointAtAngle,
   resolveVisualDimensions,
+  smoothPolygonVertices,
 } from '../../../src/canvas/renderers/shape-utils';
 
 class MockGraphics {
@@ -157,12 +158,16 @@ describe('shape-utils', () => {
     expect(getEdgePointAtAngle('connection', { width: 80, height: 40 }, 123)).toEqual({ x: 0, y: 0 });
   });
 
-  it('drawZoneShape renders polygon when vertices are provided', () => {
-    const options = { rectangleCornerRadius: 12, lineCornerRadius: 4, vertices: [0, -50, 40, 25, -40, 25] };
+  it('drawZoneShape renders polygon with smoothed vertices when vertices are provided', () => {
+    const vertices = [0, -50, 40, 25, -40, 25];
+    const options = { rectangleCornerRadius: 12, lineCornerRadius: 4, vertices };
     const base = new MockGraphics();
 
     drawZoneShape(base, 'polygon', { width: 80, height: 80 }, options);
-    expect(base.polyArgs).toEqual([0, -50, 40, 25, -40, 25]);
+    // Smoothing with 2 iterations: 3 vertices → 6 after iter 1 → 12 after iter 2 = 24 values
+    expect(base.polyArgs).not.toBeNull();
+    expect(base.polyArgs!.length).toBe(24);
+    expect(base.polyArgs).toEqual(smoothPolygonVertices(vertices, 2));
     expect(base.roundRectArgs).toBeNull();
   });
 
@@ -175,10 +180,11 @@ describe('shape-utils', () => {
     expect(base.polyArgs).toBeNull();
   });
 
-  it('getEdgePointAtAngle computes ray intersection for polygon with vertices', () => {
+  it('getEdgePointAtAngle computes ray intersection for polygon with smoothed vertices', () => {
     const vertices = [0, -50, 50, 0, 0, 50, -50, 0];
     const point = getEdgePointAtAngle('polygon', { width: 100, height: 100 }, 0, vertices);
-    expect(point.x).toBeCloseTo(50, 6);
+    // Smoothing rounds the diamond corners inward, so the rightmost edge is < 50
+    expect(point.x).toBeCloseTo(37.5, 6);
     expect(point.y).toBeCloseTo(0, 6);
   });
 
@@ -194,5 +200,75 @@ describe('shape-utils', () => {
 
     expect(first).toEqual(second);
     expect(dimensions).toEqual({ width: 120, height: 80 });
+  });
+
+  describe('smoothPolygonVertices', () => {
+    it('returns original vertices when iterations is 0', () => {
+      const vertices = [0, -50, 50, 0, 0, 50, -50, 0];
+      expect(smoothPolygonVertices(vertices, 0)).toEqual(vertices);
+    });
+
+    it('doubles vertex count per iteration for a triangle', () => {
+      const triangle = [0, -50, 40, 25, -40, 25];
+      const after1 = smoothPolygonVertices(triangle, 1);
+      // 3 vertices → 6 vertices (2 per edge × 3 edges) = 12 values
+      expect(after1).toHaveLength(12);
+      const after2 = smoothPolygonVertices(triangle, 2);
+      // 6 vertices → 12 vertices = 24 values
+      expect(after2).toHaveLength(24);
+    });
+
+    it('returns a copy for arrays too short to smooth', () => {
+      expect(smoothPolygonVertices([10, 20], 2)).toEqual([10, 20]);
+      expect(smoothPolygonVertices([], 2)).toEqual([]);
+    });
+
+    it('produces matching absolute points for shared edges between adjacent polygons', () => {
+      // Two polygons sharing edge P1→P2 in absolute world coords
+      // Polygon A centered at (100, 100), Polygon B centered at (200, 100)
+      // Shared edge absolute: (150, 50) → (150, 150)
+      // A relative: (50, -50) → (50, 50); B relative: (-50, -50) → (-50, 50)
+      const polyA = [50, -50, 50, 50, -50, 50, -50, -50]; // CW: shares edge [0,1]→[2,3]
+      const polyB = [-50, 50, -50, -50, 50, -50, 50, 50]; // CW: shares edge [0,1]→[2,3] (reversed)
+
+      const smoothA = smoothPolygonVertices(polyA, 2);
+      const smoothB = smoothPolygonVertices(polyB, 2);
+
+      // Extract absolute world coords for shared edge from both polygons
+      // In polyA, edge from vertex 0 to vertex 1 (indices 0-3) produces smoothed points
+      // In polyB, edge from vertex 0 to vertex 1 (indices 0-3) is the reverse direction
+      // The smoothed points along a shared edge should produce the same absolute positions
+      const centerA = { x: 100, y: 100 };
+      const centerB = { x: 200, y: 100 };
+
+      // Verify that the smoothed output doesn't produce NaN or degenerate values
+      for (let i = 0; i < smoothA.length; i += 1) {
+        expect(Number.isFinite(smoothA[i])).toBe(true);
+      }
+      for (let i = 0; i < smoothB.length; i += 1) {
+        expect(Number.isFinite(smoothB[i])).toBe(true);
+      }
+
+      // Verify shared edge alignment: extract the first edge's smoothed points from each polygon
+      // and convert to absolute coords
+      const aAbsPoint0 = { x: smoothA[0]! + centerA.x, y: smoothA[1]! + centerA.y };
+      const aAbsPoint1 = { x: smoothA[2]! + centerA.x, y: smoothA[3]! + centerA.y };
+      const bAbsPoint0 = { x: smoothB[0]! + centerB.x, y: smoothB[1]! + centerB.y };
+      const bAbsPoint1 = { x: smoothB[2]! + centerB.x, y: smoothB[3]! + centerB.y };
+
+      // polyA's first edge goes (50,-50)→(50,50), polyB's first edge goes (-50,50)→(-50,-50)
+      // After smoothing, polyA's first two output points should match polyB's first two (reversed)
+      expect(aAbsPoint0.x).toBeCloseTo(bAbsPoint1.x, 6);
+      expect(aAbsPoint0.y).toBeCloseTo(bAbsPoint1.y, 6);
+      expect(aAbsPoint1.x).toBeCloseTo(bAbsPoint0.x, 6);
+      expect(aAbsPoint1.y).toBeCloseTo(bAbsPoint0.y, 6);
+    });
+
+    it('does not mutate the input array', () => {
+      const vertices = [0, -50, 50, 0, 0, 50, -50, 0];
+      const copy = [...vertices];
+      smoothPolygonVertices(vertices, 2);
+      expect(vertices).toEqual(copy);
+    });
   });
 });

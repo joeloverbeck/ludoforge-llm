@@ -35,7 +35,7 @@ describe('bitmap-font-registry', () => {
     const plainCall = installMock.mock.calls[0]![0] as Record<string, unknown>;
     expect(plainCall.name).toBe(LABEL_FONT_NAME);
     expect((plainCall.style as Record<string, unknown>).fontFamily).toBe('monospace');
-    expect((plainCall.style as Record<string, unknown>).fontSize).toBe(22);
+    expect((plainCall.style as Record<string, unknown>).fontSize).toBe(36);
     expect((plainCall.style as Record<string, unknown>).fill).toBe(0xffffff);
     expect(plainCall.resolution).toBe(2);
     expect(plainCall.chars).toEqual([[' ', '~']]);

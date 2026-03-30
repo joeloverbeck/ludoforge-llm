@@ -3,7 +3,6 @@ import { assertValidatedGameDef } from '../kernel/index.js';
 import { perfStart, perfEnd } from '../kernel/perf-profiler.js';
 import type {
   Agent,
-  ExecutionOptions,
   GameDefRuntime,
   GameTrace,
   Move,
@@ -16,6 +15,8 @@ import type {
 } from '../kernel/index.js';
 import { isNoPlayableMovesAfterPreparationError } from '../agents/no-playable-move.js';
 import { computeDeltas } from './delta.js';
+import type { SimulationOptions } from './sim-options.js';
+import { extractDecisionPointSnapshot } from './snapshot.js';
 
 const AGENT_RNG_MIX = 0x9e3779b97f4a7c15n;
 
@@ -73,28 +74,29 @@ export const runGame = (
   agents: readonly Agent[],
   maxTurns: number,
   playerCount?: number,
-  options?: ExecutionOptions,
+  options?: SimulationOptions,
   runtime?: GameDefRuntime,
 ): GameTrace => {
   validateSeed(seed);
   validateMaxTurns(maxTurns);
   const validatedDef = assertValidatedGameDef(def);
   const resolvedRuntime = runtime ?? createGameDefRuntime(validatedDef);
+  const snapshotDepth = options?.snapshotDepth ?? 'none';
+  const kernelOptions = options?.kernel;
+  const profiler = options?.profiler;
 
-  let state = initialState(validatedDef, seed, playerCount, options, resolvedRuntime).state;
+  // initialState receives the profiler so lifecycle events during init are captured.
+  // applyTrustedMove does NOT receive the profiler to avoid 30%+ deep instrumentation overhead.
+  const initOptions = profiler !== undefined
+    ? (kernelOptions !== undefined ? { ...kernelOptions, profiler } : { profiler })
+    : kernelOptions;
+
+  let state = initialState(validatedDef, seed, playerCount, initOptions, resolvedRuntime).state;
   if (agents.length !== state.playerCount) {
     throw new RangeError(
       `agents length must equal resolved player count ${state.playerCount}, received ${agents.length}`,
     );
   }
-
-  const profiler = options?.profiler;
-  // Kernel options strip the profiler to avoid 30%+ overhead from deep instrumentation.
-  // The sim-level timing (simApplyMove, simLegalMoves, etc.) is handled externally here.
-  const kernelOptions: ExecutionOptions | undefined = (() => {
-    if (options === undefined || profiler === undefined) return options;
-    return Object.fromEntries(Object.entries(options).filter(([key]) => key !== 'profiler')) as typeof options;
-  })();
   const moveLogs: MoveLog[] = [];
   const agentRngByPlayer = [...createAgentRngByPlayer(seed, state.playerCount)];
   let result: TerminalResult | null = null;
@@ -131,6 +133,9 @@ export const runGame = (
     }
 
     let selected;
+    const snapshot = snapshotDepth === 'none'
+      ? undefined
+      : extractDecisionPointSnapshot(validatedDef, state, resolvedRuntime, snapshotDepth);
     const t0_agent = perfStart(profiler);
     try {
       selected = agent.chooseMove({
@@ -177,6 +182,7 @@ export const runGame = (
       ...(applied.selectorTrace !== undefined ? { selectorTrace: applied.selectorTrace } : {}),
       ...(moveContext !== undefined ? { moveContext } : {}),
       ...(selected.agentDecision !== undefined ? { agentDecision: selected.agentDecision } : {}),
+      ...(snapshot !== undefined ? { snapshot } : {}),
     });
   }
 
@@ -197,6 +203,6 @@ export const runGames = (
   agents: readonly Agent[],
   maxTurns: number,
   playerCount?: number,
-  options?: ExecutionOptions,
+  options?: SimulationOptions,
   runtime?: GameDefRuntime,
 ): readonly GameTrace[] => seeds.map((seed) => runGame(def, seed, agents, maxTurns, playerCount, options, runtime));

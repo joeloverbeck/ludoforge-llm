@@ -285,7 +285,10 @@ describe('createConnectionRouteRenderer', () => {
     expect(routeCurve.strokeStyle).toEqual({ color: 0x8b7355, width: 8, alpha: 0.8 });
     expect(midpoint.position.x).toBeCloseTo(100);
     expect(midpoint.position.y).toBeCloseTo(15);
-    expect(labelCluster.rotation).toBeCloseTo(0, 1);
+    const normalizedRotation = labelCluster.rotation % (Math.PI * 2);
+    const effectiveRotation = Math.abs(normalizedRotation) < 0.1 || Math.abs(normalizedRotation - Math.PI * 2) < 0.1
+      ? 0 : normalizedRotation;
+    expect(effectiveRotation).toBeCloseTo(0, 1);
     expect(label.text).toBe('Alpha Beta');
     expect(routeRoot.hitArea).toBeInstanceOf(MockPolygon);
     expect(junction.circleArgs).toEqual([100, 20, 6]);

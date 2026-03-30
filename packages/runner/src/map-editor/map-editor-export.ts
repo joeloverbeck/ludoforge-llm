@@ -14,10 +14,21 @@ export interface EditorExportInput extends MapEditorDocumentState {
 export function buildExportConfig({
   originalVisualConfig,
   zonePositions,
+  zoneVertices,
   connectionAnchors,
   connectionRoutes,
 }: EditorExportInput): VisualConfig {
   const config = cloneSerializable(originalVisualConfig);
+
+  // Merge updated vertices into zone overrides.
+  if (zoneVertices.size > 0) {
+    const overrides = config.zones?.overrides ?? {};
+    for (const [zoneId, vertices] of zoneVertices) {
+      const existing = overrides[zoneId] ?? {};
+      overrides[zoneId] = { ...existing, vertices: [...vertices] };
+    }
+    config.zones = { ...config.zones, overrides };
+  }
 
   const hiddenZoneSet = new Set(originalVisualConfig.zones?.hiddenZones ?? []);
   config.layout = {

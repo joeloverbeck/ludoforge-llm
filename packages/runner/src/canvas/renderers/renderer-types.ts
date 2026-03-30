@@ -18,6 +18,7 @@ import type {
   PresentationRegionNode,
   PresentationZoneNode,
 } from '../../presentation/presentation-scene.js';
+import type { ModifiedProvincePolygon } from './province-border-utils.js';
 import type {
   ConnectionRouteNode,
   JunctionNode,
@@ -29,6 +30,7 @@ export interface ZoneRenderer {
   update(
     zones: readonly PresentationZoneNode[],
     positions: ReadonlyMap<string, Position>,
+    provinceBorders?: ReadonlyMap<string, ModifiedProvincePolygon>,
   ): void;
   getContainerMap(): ReadonlyMap<string, Container>;
   destroy(): void;

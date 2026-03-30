@@ -19,6 +19,7 @@ export type {
 
 export interface MapEditorDocumentState {
   readonly zonePositions: ReadonlyMap<string, Position>;
+  readonly zoneVertices: ReadonlyMap<string, readonly number[]>;
   readonly connectionAnchors: ReadonlyMap<string, Position>;
   readonly connectionRoutes: ReadonlyMap<string, ConnectionRouteDefinition>;
 }

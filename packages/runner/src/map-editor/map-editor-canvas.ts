@@ -135,7 +135,7 @@ function mountEditorLayers(
   sharedLayers.backgroundLayer.addChild(editorLayers.background);
   sharedLayers.adjacencyLayer.addChild(editorLayers.adjacency);
   sharedLayers.connectionRouteLayer.addChild(editorLayers.route);
-  sharedLayers.zoneLayer.addChild(editorLayers.zone);
+  sharedLayers.cityZoneLayer.addChild(editorLayers.zone);
   sharedLayers.interfaceGroup.addChild(editorLayers.handle);
 }
 

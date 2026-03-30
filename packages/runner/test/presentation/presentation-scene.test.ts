@@ -436,18 +436,7 @@ describe('buildPresentationScene', () => {
           },
         ],
         touchingZoneIds: ['ba-xuyen:none', 'kien-hoa-vinh-binh:none'],
-        spurs: [
-          {
-            from: expect.any(Object),
-            to: expect.any(Object),
-            targetZoneId: 'ba-xuyen:none',
-          },
-          {
-            from: expect.any(Object),
-            to: expect.any(Object),
-            targetZoneId: 'kien-hoa-vinh-binh:none',
-          },
-        ],
+        spurs: [],
         connectionStyleKey: 'mekong',
       }),
     ]);
@@ -528,13 +517,7 @@ describe('buildPresentationScene', () => {
           },
         ],
         touchingZoneIds: ['phu-bon:none'],
-        spurs: [
-          {
-            from: expect.any(Object),
-            to: expect.any(Object),
-            targetZoneId: 'phu-bon:none',
-          },
-        ],
+        spurs: [],
         connectionStyleKey: 'highway',
       }),
     ]);

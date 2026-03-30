@@ -24,6 +24,7 @@ import type {
 } from './renderers/renderer-types';
 import type { ViewportResult } from './viewport-setup';
 import { buildPresentationScene } from '../presentation/presentation-scene.js';
+import { computeProvinceBorders } from './renderers/province-border-utils.js';
 import {
   projectTableOverlaySurface,
   tableOverlaySurfaceNodesEqual,
@@ -107,7 +108,12 @@ export function createCanvasUpdater(deps: CanvasUpdaterDeps): CanvasUpdater {
       interactionHighlights: latestInteractionHighlights,
     });
     deps.regionBoundaryRenderer?.update(scene.regions);
-    deps.zoneRenderer.update(scene.zones, latestRuntimeLayoutSnapshot.positions);
+    const provinceBorders = computeProvinceBorders(
+      scene.zones,
+      latestRuntimeLayoutSnapshot.positions,
+      scene.adjacencies,
+    );
+    deps.zoneRenderer.update(scene.zones, latestRuntimeLayoutSnapshot.positions, provinceBorders);
     deps.adjacencyRenderer.update(scene.adjacencies, latestRuntimeLayoutSnapshot.positions, scene.zones);
     deps.connectionRouteRenderer.update(
       scene.connectionRoutes,

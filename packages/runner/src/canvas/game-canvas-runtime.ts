@@ -277,7 +277,9 @@ export async function createGameCanvasRuntime(
   applyViewportSnapshot(viewportResult.viewport, options.initialViewport ?? null);
   const zonePool = new ContainerPool();
 
-  const zoneRenderer = deps.createZoneRenderer(gameCanvas.layers.zoneLayer, zonePool, {
+  const zoneLayerRouter = (category: string | null): Container =>
+    category === 'province' ? gameCanvas.layers.provinceZoneLayer : gameCanvas.layers.cityZoneLayer;
+  const zoneRenderer = deps.createZoneRenderer(zoneLayerRouter, zonePool, {
     bindSelection: (zoneContainer, zoneId, isSelectable) =>
       deps.attachZoneSelectHandlers(
         zoneContainer,

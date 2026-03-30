@@ -72,7 +72,7 @@ export const runVerifiedGame = (
   const agents = createRandomAgents(playerCount);
   try {
     const trace = runGame(def, seed, agents, maxTurns, playerCount, {
-      verifyIncrementalHash: { interval: PROPERTY_HASH_VERIFY_INTERVAL },
+      kernel: { verifyIncrementalHash: { interval: PROPERTY_HASH_VERIFY_INTERVAL } },
     }, runtime);
     return trace.moves.length;
   } catch (err) {

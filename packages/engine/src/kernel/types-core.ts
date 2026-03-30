@@ -57,7 +57,7 @@ import type {
   AgentPolicyZoneTokenAggOp,
   AgentPolicyZoneTokenAggOwner,
 } from '../contracts/index.js';
-import type { DecisionPointSnapshot, SnapshotDepth } from '../sim/snapshot-types.js';
+import type { DecisionPointSnapshot } from '../sim/snapshot-types.js';
 
 export interface RngState {
   readonly algorithm: 'pcg-dxsm-128';
@@ -1472,10 +1472,6 @@ export interface ExecutionOptions {
   readonly maxPhaseTransitionsPerMove?: number;
   /** Opt-in performance profiler. Accumulates sub-function timing when provided. */
   readonly profiler?: import('./perf-profiler.js').PerfProfiler;
-  /** When true, the simulator skips delta computation between moves (trace-only data). */
-  readonly skipDeltas?: boolean;
-  /** Snapshot depth captured by sim traces before each agent decision. */
-  readonly snapshotDepth?: SnapshotDepth;
   /**
    * Opt-in incremental Zobrist hash verification.
    * When `true`, every move verifies `_runningHash === computeFullHash(table, state)`.

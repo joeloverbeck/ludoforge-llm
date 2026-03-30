@@ -1,6 +1,6 @@
 # Spec 97: Decision-Point State Snapshots for Simulation Traces
 
-**Status**: Draft
+**Status**: ✅ COMPLETED
 **Priority**: P2
 **Complexity**: S
 **Dependencies**: Spec 94 (completed — agent evaluation diagnostics)
@@ -307,3 +307,15 @@ Non-trace seeds (14 out of 15) have `snapshotDepth: 'none'` and zero overhead.
 - **Golden**: Trace with snapshots for known FITL seed matches expected output
 - **Property**: Snapshot extraction never modifies game state (compare state hash before/after)
 - **Property**: `snapshotDepth: 'none'` adds zero overhead (no snapshot objects created)
+
+## Outcome
+
+- **Completion date**: 2026-03-30
+- **What changed**: All five tickets (97DECPOISTA-001 through 005) implemented:
+  - 001: Snapshot types (`SnapshotDepth`, `DecisionPointSnapshot`, `StandardDecisionPointSnapshot`, `VerboseDecisionPointSnapshot`) and extraction logic in `packages/engine/src/sim/snapshot.ts` and `snapshot-types.ts`
+  - 002: Simulator integration — `runGame` captures snapshots into `MoveLog` at the configured depth
+  - 003: `MoveLog.snapshot` wired into kernel types, enriched trace, and serialization
+  - 004: Snapshot serialization round-trip tests and integration coverage
+  - 005: Options-layer cleanup — `SimulationOptions` type introduced, `skipDeltas`/`snapshotDepth` moved out of kernel `ExecutionOptions` into sim-owned contract
+- **Deviations from plan**: The spec proposed adding `snapshotDepth` to `ExecutionOptions`; ticket 005 subsequently cleaned this up by introducing a dedicated `SimulationOptions` with nested `kernel` options, giving cleaner ownership boundaries.
+- **Verification**: `pnpm turbo typecheck` pass, `pnpm turbo test` 5149/5149 pass, `pnpm turbo lint` pass

@@ -1,6 +1,6 @@
 # 97DECPOISTA-005: Split simulator-only flags out of kernel ExecutionOptions
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — sim API, simulator internals, call sites, tests
@@ -145,3 +145,18 @@ Update tests that currently pass mixed option bags through `runGame()` / `runGam
 2. `pnpm turbo typecheck`
 3. `pnpm turbo test`
 4. `pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-30
+- **What changed**:
+  - Created `packages/engine/src/sim/sim-options.ts` with `SimulationOptions` interface (nests `kernel?: ExecutionOptions`, owns `skipDeltas`, `snapshotDepth`, `profiler`)
+  - Removed `skipDeltas` and `snapshotDepth` from `ExecutionOptions` in `types-core.ts`
+  - Updated `runGame`/`runGames` in `simulator.ts` to accept `SimulationOptions`; kernel options extracted via `options?.kernel`
+  - Exported `SimulationOptions` from `sim/index.ts`
+  - Migrated all test callers: kernel flags wrapped in `{ kernel: { ... } }`, sim flags unchanged at top level
+  - Inverted type-surface assertion in `types-exhaustive.test.ts` to prove `ExecutionOptions` no longer includes sim-only fields
+- **Deviations from plan**:
+  - `profiler` forwarding to `initialState` preserved explicitly (old code passed full options to `initialState` including profiler for lifecycle profiling, stripped it only for `applyTrustedMove`). The new sim code replicates this by building `initOptions` with profiler merged into kernel options for `initialState` only.
+  - `compiled-effects-texas-production-parity.test.ts` was not listed in the ticket's files-to-touch but required no code changes — it passes `{ profiler }` which is already a valid `SimulationOptions` top-level field.
+- **Verification**: `pnpm turbo typecheck` pass, `pnpm turbo test` 5149/5149 pass, `pnpm turbo lint` pass

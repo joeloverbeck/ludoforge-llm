@@ -51,7 +51,7 @@ describe('Zobrist incremental parity — Texas Hold\'em', () => {
 
       // Run with verification enabled — throws HASH_DRIFT on mismatch
       const trace = runGame(def, seed, agents, TEXAS_MAX_TURNS, TEXAS_PLAYER_COUNT, {
-        verifyIncrementalHash: true,
+        kernel: { verifyIncrementalHash: true },
       }, runtime);
 
       assert.ok(trace.moves.length > 0, `seed=${seed} should produce at least one move`);
@@ -72,7 +72,7 @@ describe('Zobrist incremental parity — FITL', () => {
       const agents = createRandomAgents(FITL_PLAYER_COUNT);
 
       const trace = runGame(def, seed, agents, FITL_MAX_TURNS, FITL_PLAYER_COUNT, {
-        verifyIncrementalHash: true,
+        kernel: { verifyIncrementalHash: true },
       }, runtime);
 
       assert.ok(trace.moves.length > 0, `seed=${seed} should produce at least one move`);
@@ -88,7 +88,7 @@ describe('Zobrist incremental parity — interval mode', () => {
     const agents = createRandomAgents(4);
 
     const trace = runGame(def, 42, agents, 100, 4, {
-      verifyIncrementalHash: { interval: 5 },
+      kernel: { verifyIncrementalHash: { interval: 5 } },
     }, runtime);
 
     assert.ok(trace.moves.length > 0, 'should produce at least one move');

@@ -71,8 +71,8 @@ export function createLayerHierarchy(): LayerHierarchy {
     backgroundLayer,
     regionLayer,
     adjacencyLayer,
-    connectionRouteLayer,
     zoneLayer,
+    connectionRouteLayer,
     tableOverlayLayer,
   );
 

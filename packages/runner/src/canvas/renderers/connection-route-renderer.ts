@@ -54,10 +54,10 @@ const UPSIDE_DOWN_MIN = Math.PI / 2;
 const UPSIDE_DOWN_MAX = (Math.PI * 3) / 2;
 const DEFAULT_ROUTE_STROKE = {
   color: 0x6b7280,
-  width: 4,
-  alpha: 0.85,
+  width: 6,
+  alpha: 0.75,
 } as const;
-const ROUTE_OVERLAP_MARGIN = 35;
+const ROUTE_OVERLAP_MARGIN = 80;
 const DEFAULT_ZONE_STROKE_SIGNATURE = {
   color: '#111827',
   width: 1,

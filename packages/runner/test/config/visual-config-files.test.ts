@@ -512,15 +512,15 @@ describe('visual-config.yaml files', () => {
       },
       {
         match: { category: ['province'], attributeContains: { country: 'northVietnam' } },
-        style: { color: '#8b4513', strokeColor: '#5a2d0a' },
+        style: { color: '#8b5e3c', strokeColor: '#5a3d20' },
       },
       {
         match: { category: ['province'], attributeContains: { country: 'laos' } },
-        style: { color: '#2d5a3a', strokeColor: '#1a3d25' },
+        style: { color: '#6b8f7b', strokeColor: '#4a6b58' },
       },
       {
         match: { category: ['province'], attributeContains: { country: 'cambodia' } },
-        style: { color: '#3a5a3a', strokeColor: '#254025' },
+        style: { color: '#7a8868', strokeColor: '#586345' },
       },
       {
         match: { category: ['loc'], attributeContains: { terrainTags: 'highway' } },

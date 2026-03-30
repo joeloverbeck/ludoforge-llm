@@ -41,8 +41,8 @@ describe('createLayerHierarchy', () => {
     expect(layers.boardGroup.children[0]).toBe(layers.backgroundLayer);
     expect(layers.boardGroup.children[1]).toBe(layers.regionLayer);
     expect(layers.boardGroup.children[2]).toBe(layers.adjacencyLayer);
-    expect(layers.boardGroup.children[3]).toBe(layers.connectionRouteLayer);
-    expect(layers.boardGroup.children[4]).toBe(layers.zoneLayer);
+    expect(layers.boardGroup.children[3]).toBe(layers.zoneLayer);
+    expect(layers.boardGroup.children[4]).toBe(layers.connectionRouteLayer);
     expect(layers.boardGroup.children[5]).toBe(layers.tableOverlayLayer);
   });
 

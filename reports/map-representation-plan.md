@@ -1,335 +1,243 @@
-# Map Representation Plan — Iteration 5
+# Map Representation Plan — Iteration 6
 
 **Date**: 2026-03-30
-**Based on**: EVALUATION #4 (average score: 5.75)
-**Problems targeted**: [HIGH] Soften polygon shapes, [HIGH] Finer terrain granularity, [MEDIUM] Label readability
+**Based on**: EVALUATION #5 (average score: 6.0)
+**Problems targeted**: [HIGH] Route flow through territory, [HIGH] Bolder terrain granularity
 
 ## Context
 
-Evaluation #4 confirmed that polygon territory rendering now covers all ~28-30 provinces (the CRITICAL gap from Eval #3 is fully resolved). The map reads as a contiguous territory rather than isolated rectangles. However, three persistent issues drag scores down: (1) polygon borders are straight-line geometric/crystalline shapes — recurring for 3 evaluations with no progress, (2) only 3 terrain colors exist despite meaningful sub-distinctions (Laos/Cambodia jungle vs. South Vietnam jungle, North Vietnam highlands vs. SVN highlands), and (3) labels remain small and hard to read — explicitly deferred from iteration 4 to this iteration.
+Evaluation #5 confirmed Chaikin polygon smoothing resolved the longest-recurring HIGH issue (angular shapes). However, two HIGH items remain: (1) Road/River Integration has stagnated at 5/10 for 4 consecutive evaluations — investigation reveals a z-order root cause where routes render below zone fills, making them invisible inside territory; (2) Terrain Distinction remains at 6/10 despite country-based attribute rules being added in Iteration 5 — the chosen colors (#2d5a3a Laos, #3a5a3a Cambodia) are too close to the base jungle fill (#1a5c2a) to create visible distinction.
 
-Road/River Integration (5/10, recurring 4 evaluations) is deferred to iteration 6 as it requires more fundamental route rendering changes.
+**Stalled iteration check**: Iteration 5's three changes were all implemented (Chaikin smoothing ✅, country attribute rules ✅, label constants ✅). Polygon smoothing resolved successfully. Country terrain rules produced no visible improvement — colors too similar. Label constants were updated but overview zoom readability remains a problem (addressed by adaptive sizing, not static constants). This iteration supersedes the Iteration 5 terrain approach with bolder colors and addresses the route rendering root cause.
 
-**Stalled iteration check**: Iteration 4 plan (polygon coverage expansion) was fully implemented — Eval #4 confirms all provinces now have polygon shapes. No stalled items to carry forward.
+## Deferred Items
+
+| Item | First recommended | Deferred since | Target iteration |
+|------|-------------------|---------------|-----------------|
+| Label readability at overview zoom | Eval #2 | Iteration 5 | 7 or later (requires adaptive font sizing) |
+| City circles embedded in territory | Eval #2 | Iteration 4 | No target yet |
+| Token size and faction markers | Eval #1 | Iteration 4 | No target yet |
+| Saigon area visual congestion | Eval #5 | Iteration 6 | No target yet |
 
 ## Foundations Alignment
 
 | Foundation | Relevance | How This Plan Respects It |
 |-----------|-----------|--------------------------|
 | #1 Engine Agnosticism | Not relevant | No engine code changes |
-| #3 Visual Separation | Always relevant | Polygon smoothing is a renderer code change; terrain sub-variants are visual-config.yaml data; label sizing is renderer code — no GameSpecDoc or engine changes |
-| #7 Immutability | Relevant | Smoothing function is pure (vertices in → smoothed vertices out); no state mutation |
-| #9 No Backwards Compat | Relevant | Smoothing applies to all polygon zones unconditionally — no opt-in flag or legacy path |
-| #10 Architectural Completeness | Always relevant | Smoothing addresses the root cause (straight edges in `poly()` call) not a symptom; terrain variants address the root cause (insufficient attribute rules) not just color tweaks |
+| #3 Visual Separation | Always relevant | Layer reorder and route constants are runner code; terrain colors are visual-config.yaml data. No GameSpecDoc or engine changes. |
+| #7 Immutability | Not relevant | No state transitions affected — changes are rendering constants and layer ordering |
+| #9 No Backwards Compat | Relevant | Layer order change applies unconditionally to all games — no opt-in flag |
+| #10 Architectural Completeness | Always relevant | Route visibility fix addresses the root cause (z-order) rather than the symptom (line thickness); terrain fix addresses the root cause (insufficient color contrast) rather than adding more subtle variants |
 
 ## Current Code Architecture (reference for implementer)
 
-### Polygon Drawing Pipeline
-
-```
-visual-config.yaml zone override: vertices: [x1, y1, x2, y2, ...]
-    ↓
-ZoneVisualStyleSchema.vertices: z.array(z.number()).optional()
-    (packages/runner/src/config/visual-config-types.ts:99)
-    ↓
-VisualConfigProvider.resolveZoneVisual() → ResolvedZoneVisual.vertices
-    (packages/runner/src/config/visual-config-provider.ts:161-189)
-    ↓
-PresentationZoneNode.visual.vertices
-    (packages/runner/src/presentation/presentation-scene.ts:82)
-    ↓
-zone-renderer.ts:drawZoneBase() → passes vertices to drawZoneShape()
-    (packages/runner/src/canvas/renderers/zone-renderer.ts:271-296)
-    ↓
-shape-utils.ts:drawZoneShape() → case 'polygon': base.poly([...options.vertices])
-    (packages/runner/src/canvas/renderers/shape-utils.ts:71-76)
-```
-
-### Key Function: `drawZoneShape()` (shape-utils.ts:39-84)
+### Layer Z-Order (layers.ts:70-77)
 
 ```typescript
-export function drawZoneShape(
-  base: ShapeGraphics,
-  shape: ZoneShape | undefined,
-  dimensions: ShapeDimensions,
-  options: DrawZoneShapeOptions,
-): void {
-  // ...
-  case 'polygon':
-    if (options.vertices !== undefined && options.vertices.length >= 6) {
-      base.poly([...options.vertices]);  // ← straight-line segments between vertices
-    } else {
-      base.roundRect(/* fallback */);
-    }
-}
+// packages/runner/src/canvas/layers.ts:70-77
+boardGroup.addChild(
+  backgroundLayer,     // 0: background
+  regionLayer,         // 1: region boundaries
+  adjacencyLayer,      // 2: adjacency dashed lines
+  connectionRouteLayer,// 3: road/river routes  ← BELOW zones
+  zoneLayer,           // 4: zone fills + labels ← COVERS routes
+  tableOverlayLayer,   // 5: table overlays
+);
 ```
 
-### Key Function: `getEdgePointAtAngle()` (shape-utils.ts:86-124)
+**Root cause**: Routes at z-index 3 are drawn before zones at z-index 4. Zone polygon fills completely cover the route strokes that extend into zone territory (via `ROUTE_OVERLAP_MARGIN = 35`). Routes are only visible in the narrow gaps between zone polygons, creating the "routes terminate at edges" appearance.
 
-Used by adjacency-renderer.ts to compute where dashed lines attach to polygon edges.
+**Fix**: Move `connectionRouteLayer` above `zoneLayer` so routes draw on top of zone fills, making road/river paths visible flowing through territory — exactly as shown on the physical FITL board.
+
+### Map Editor Layer Mounting (map-editor-canvas.ts:135-138)
 
 ```typescript
-case 'polygon':
-  if (vertices !== undefined && vertices.length >= 6) {
-    return rayPolygonIntersection(angleDeg, vertices);  // ← iterates straight edges
-  }
+sharedLayers.backgroundLayer.addChild(editorLayers.background);
+sharedLayers.adjacencyLayer.addChild(editorLayers.adjacency);
+sharedLayers.connectionRouteLayer.addChild(editorLayers.route);
+sharedLayers.zoneLayer.addChild(editorLayers.zone);
 ```
 
-**Critical**: Both `drawZoneShape()` and `getEdgePointAtAngle()` consume the same vertices. If smoothing is applied to drawing but not edge intersection, adjacency lines will attach to the wrong points. Both must use the same smoothed vertices.
+Editor layers are children of the shared layers. Reordering the shared layer z-order automatically propagates to both game canvas and map editor views. No editor-specific changes needed.
 
-### Key Function: `computeZoneHitArea()` (zone-renderer.ts:298-324)
-
-Computes bounding-box Rectangle from polygon vertices for pointer interaction. Uses `for (let i = 0; i < vertices.length; i += 2)` to iterate. Works with any vertex count — no change needed, but it will operate on smoothed vertices.
-
-### ShapeGraphics Interface (shape-utils.ts:9-14)
+### Route Rendering Constants (connection-route-renderer.ts:55-61)
 
 ```typescript
-export interface ShapeGraphics {
-  roundRect(x: number, y: number, width: number, height: number, radius: number): ShapeGraphics;
-  circle(x: number, y: number, radius: number): ShapeGraphics;
-  ellipse(x: number, y: number, halfWidth: number, halfHeight: number): ShapeGraphics;
-  poly(points: number[]): ShapeGraphics;
-}
+const DEFAULT_ROUTE_STROKE = {
+  color: 0x6b7280,  // gray
+  width: 4,         // thin
+  alpha: 0.85,
+} as const;
+const ROUTE_OVERLAP_MARGIN = 35;  // extends 35px into zones
 ```
 
-Only `poly()` is available — no `moveTo`/`quadraticCurveTo`. Smoothing must produce more vertices for `poly()`, not use curve commands.
+With routes above zones, these constants become visible on top of terrain. The current width (4) and gray color may appear too thin/faint against colored zone fills. Adjustments needed for visual clarity.
 
-### Label Rendering (zone-renderer.ts:169-174, 243-269)
+### Country Terrain Attribute Rules (visual-config.yaml:411-435)
+
+Current colors (added in Iteration 5):
+
+| Country | Current Hex | Current RGB | Base Jungle Hex | Distance |
+|---------|-------------|-------------|-----------------|----------|
+| northVietnam | `#8b4513` | (139, 69, 19) | N/A (highland) | Distinct (brown) |
+| laos | `#2d5a3a` | (45, 90, 58) | `#1a5c2a` (26, 92, 42) | ~25 — too close |
+| cambodia | `#3a5a3a` | (58, 90, 58) | `#1a5c2a` (26, 92, 42) | ~35 — too close |
+
+The Laos and Cambodia colors differ from SVN jungle by only ~25-35 RGB units — indistinguishable at overview zoom on a dark theme. Need color distance >80 for reliable distinction.
+
+### Attribute Rule Schema (visual-config-types.ts:188)
 
 ```typescript
-// Name label creation (line 169)
-const nameLabel = createBitmapLabel('', 0, 0, 20, {  // fontSize = 20
-  fontName: STROKE_LABEL_FONT_NAME,
-  fill: '#ffffff',
-  stroke: { color: '#000000', width: 3 },
-  anchor: { x: 0.5, y: 0.5 },
-});
-
-// Label background pill (lines 243-269)
-const LABEL_FONT_SIZE = 20;
-const LABEL_CHAR_WIDTH_FACTOR = 0.6;
-const LABEL_PILL_PADDING = 6;
-const LABEL_PILL_CORNER_RADIUS = 4;
-const LABEL_PILL_ALPHA = 0.45;
+attributeContains: z.record(z.string(), z.string()).optional(),
 ```
 
-### Terrain Attribute Rules (visual-config.yaml:385-423)
+Supports arbitrary string keys — `country` matching is confirmed working. No schema changes needed.
 
-```yaml
-attributeRules:
-  - match: { category: [province], attributeContains: { terrainTags: highland } }
-    style: { color: "#d4a656", strokeColor: "#8b6914" }     # Tan
-  - match: { category: [province], attributeContains: { terrainTags: jungle } }
-    style: { color: "#1a5c2a", strokeColor: "#0d3d18" }     # Dark green
-  - match: { category: [province], attributeContains: { terrainTags: lowland } }
-    style: { color: "#5db85d", strokeColor: "#2d7a2d" }     # Bright green
-```
+## Reference Data
 
-### Attribute Rule Resolution (visual-config-provider.ts)
+### Province Country Assignments (for terrain color verification)
 
-`resolveZoneVisual()` applies rules in order: categoryStyle → attributeRules → overrides. Later rules override earlier ones. Zone overrides (per-zone `color`) take highest priority.
+| Province | Terrain | Country | Current Color | Proposed Color |
+|----------|---------|---------|---------------|----------------|
+| north-vietnam | highland | northVietnam | `#8b4513` (brown) | `#8b5e3c` (lighter warm brown) |
+| central-laos | jungle | laos | `#2d5a3a` (dark gray-green) | `#6b8f7b` (sage gray-green) |
+| southern-laos | jungle | laos | `#2d5a3a` | `#6b8f7b` |
+| northeast-cambodia | jungle | cambodia | `#3a5a3a` (dark olive) | `#7a8868` (olive-khaki) |
+| the-fishhook | jungle | cambodia | `#3a5a3a` | `#7a8868` |
+| the-parrots-beak | jungle | cambodia | `#3a5a3a` | `#7a8868` |
+| sihanoukville | jungle | cambodia | `#3a5a3a` | `#7a8868` |
+| phuoc-long | jungle | southVietnam | `#1a5c2a` (unchanged) | `#1a5c2a` |
+| quang-duc-long-khanh | jungle | southVietnam | `#1a5c2a` | `#1a5c2a` |
+| binh-tuy-binh-thuan | jungle | southVietnam | `#1a5c2a` | `#1a5c2a` |
+| tay-ninh | jungle | southVietnam | `#1a5c2a` | `#1a5c2a` |
 
-### Province Terrain + Country Data
+### Proposed Color Palette (7 visual categories)
 
-| Province | Terrain | Country |
-|----------|---------|---------|
-| north-vietnam | highland | northVietnam |
-| quang-tri-thua-thien | highland | southVietnam |
-| quang-nam | highland | southVietnam |
-| binh-dinh | highland | southVietnam |
-| pleiku-darlac | highland | southVietnam |
-| khanh-hoa | highland | southVietnam |
-| kontum | highland | southVietnam |
-| quang-tin-quang-ngai | lowland | southVietnam |
-| phu-bon-phu-yen | lowland | southVietnam |
-| kien-phong | lowland | southVietnam |
-| kien-hoa-vinh-binh | lowland | southVietnam |
-| ba-xuyen | lowland | southVietnam |
-| kien-giang-an-xuyen | lowland | southVietnam |
-| central-laos | jungle | laos |
-| southern-laos | jungle | laos |
-| northeast-cambodia | jungle | cambodia |
-| the-fishhook | jungle | cambodia |
-| the-parrots-beak | jungle | cambodia |
-| sihanoukville | jungle | cambodia |
-| phuoc-long | jungle | southVietnam |
-| quang-duc-long-khanh | jungle | southVietnam |
-| binh-tuy-binh-thuan | jungle | southVietnam |
-| tay-ninh | jungle | southVietnam |
+| Category | Color | Stroke | RGB | Count | Description |
+|----------|-------|--------|-----|-------|-------------|
+| SVN Highland | `#d4a656` | `#8b6914` | (212,166,86) | 6 | Tan/khaki (unchanged) |
+| SVN Lowland | `#5db85d` | `#2d7a2d` | (93,184,93) | 6 | Bright green (unchanged) |
+| SVN Jungle | `#1a5c2a` | `#0d3d18` | (26,92,42) | 4 | Dark green (unchanged) |
+| North Vietnam | `#8b5e3c` | `#5a3d20` | (139,94,60) | 1 | Warm brown — "enemy territory" (lighter than before for visibility) |
+| Laos | `#6b8f7b` | `#4a6b58` | (107,143,123) | 2 | Sage gray-green — clearly "outside theater" (RGB distance ~95 from SVN jungle) |
+| Cambodia | `#7a8868` | `#586345` | (122,136,104) | 4 | Olive-khaki — clearly "outside theater" (RGB distance ~115 from SVN jungle) |
 
-**Key insight**: The physical FITL board visually distinguishes Laos/Cambodia zones (gray-green, "outside" feel) from South Vietnam jungle (darker green). North Vietnam also has a distinct appearance. The `country` attribute is available for differentiation but has no attribute rules yet.
+Color distances from SVN jungle (#1a5c2a):
+- Laos (#6b8f7b): √((107-26)² + (143-92)² + (123-42)²) ≈ 120 — highly distinguishable
+- Cambodia (#7a8868): √((122-26)² + (136-92)² + (104-42)²) ≈ 118 — highly distinguishable
+- NV (#8b5e3c): not jungle-based, distinct category
 
-### Map Editor Renderer
+## Problem 1: Routes don't flow through territory
 
-`map-editor-zone-renderer.ts` calls the same `drawZoneShape()` from `shape-utils.ts`. Any smoothing change in `drawZoneShape()` automatically applies to the editor.
-
-## Problem 1: Angular/geometric polygon shapes
-
-**Evaluation score**: Adjacency Clarity = 7/10
-**Root cause**: `drawZoneShape()` passes raw vertices directly to `base.poly()`, which draws straight lines between each vertex pair. With 5-8 vertices per province, this produces angular parallelograms and trapezoids rather than organic territorial outlines. The physical board uses curved, flowing borders.
-**Recurring**: 3 consecutive evaluations (Eval #2, #3, #4) — never addressed.
+**Evaluation score**: Road/River Integration = 5/10 (stagnant for 4 evaluations)
+**Root cause**: `connectionRouteLayer` renders at z-index 3, below `zoneLayer` at z-index 4. Zone polygon fills completely cover route strokes that extend into zone territory. Routes are only visible in narrow gaps between zones.
 
 ### Approaches Considered
 
-1. **Chaikin's corner-cutting algorithm**
-   - Description: Apply 2 iterations of Chaikin's algorithm to polygon vertices before passing to `poly()`. Each iteration replaces each vertex with two new points at 25% and 75% along adjacent edges, producing progressively smoother curves. A 6-vertex polygon becomes ~24 vertices after 2 iterations.
-   - Feasibility: HIGH — pure function, ~15 lines of code. Uses existing `poly()` API. No new dependencies.
-   - Visual impact: HIGH — transforms angular shapes into smooth, organic-looking territories. 2 iterations is the sweet spot: 1 is still noticeably angular, 3 adds vertices with diminishing returns.
-   - Risk: LOW — `rayPolygonIntersection()` and hit area computation work with any vertex count. Performance: ~24 vertices per zone × 23 provinces = ~550 vertices total, trivial for PixiJS.
+1. **Reorder layers: routes above zones**
+   - Description: Move `connectionRouteLayer` after `zoneLayer` in the `boardGroup.addChild()` call, so routes draw on top of zone fills. Increase route stroke width from 4 to 6 and overlap margin from 35 to 80 for visual prominence. Reduce route alpha slightly from 0.85 to 0.75 so zone terrain shows through.
+   - Feasibility: HIGH — 1-line layer reorder + 3 constant changes. No API changes, no new rendering code.
+   - Visual impact: HIGH — routes immediately become visible crossing through zone territory, matching the physical FITL board appearance.
+   - Risk: LOW — routes may partially cover zone labels in dense areas (Saigon). Route interaction (click on route midpoint) still works since hit areas are independent of z-order. Labels are centered on zones while routes follow paths between zone centers, so overlap is limited.
 
-2. **Catmull-Rom spline interpolation**
-   - Description: Treat vertices as control points for a Catmull-Rom spline. Sample N points along the spline to produce a smooth polygon for `poly()`.
-   - Feasibility: MEDIUM — more complex math (spline evaluation), needs careful handling of closed curves.
-   - Visual impact: HIGH — very smooth curves, but can produce unexpected bulges if control points are close together.
-   - Risk: MEDIUM — spline overshoot can make provinces bulge beyond intended borders, breaking shared-edge alignment between neighbors.
+2. **Split zone layer into fills and labels, sandwich routes between**
+   - Description: Create two zone sub-layers: one for polygon fills (below routes) and one for labels/badges (above routes). Routes draw between fills and labels.
+   - Feasibility: LOW — requires refactoring zone-renderer.ts to split visual elements across two containers. Zone container pooling and lifecycle become more complex. Significant code change.
+   - Visual impact: HIGH — routes visible through territory with labels always on top.
+   - Risk: MEDIUM — zone renderer refactor touches interaction binding, container pooling, and update lifecycle.
 
-3. **Quadratic Bezier corner rounding**
-   - Description: For each vertex, shorten the two adjacent edges by a rounding radius and insert a quadratic Bezier curve between the shortened endpoints.
-   - Feasibility: LOW — requires adding `moveTo`/`quadraticCurveTo` to the `ShapeGraphics` interface, which is a wider API change. Would also need to update `rayPolygonIntersection` to handle curved segments.
-   - Visual impact: HIGH — clean, predictable rounding like CSS border-radius.
-   - Risk: HIGH — API change affects all shape consumers; curved edge intersection is significantly more complex than straight-edge intersection.
+3. **Draw route "channels" on zone fills**
+   - Description: In zone-renderer, for each zone, determine which routes pass through it and draw semi-transparent route-colored stripes on the zone fill graphics.
+   - Feasibility: LOW — requires zone renderer to know about route paths (tight coupling). Route path resolution happens in connection-route-resolver, not available in zone renderer's update cycle.
+   - Visual impact: MEDIUM — routes look embedded in terrain but may be hard to align with the actual route paths.
+   - Risk: HIGH — coupling zone and route renderers, complex coordinate transformations, potential desync between route channels and actual route lines.
 
-### Recommendation: Approach 1 (Chaikin's corner-cutting)
+### Recommendation: Approach 1 (Reorder layers: routes above zones)
 
-**Why**: Maximum feasibility with high visual impact. It's a pure function that transforms a vertex array into a denser vertex array — no API changes, no new dependencies, no curved-edge intersection math. Both `drawZoneShape()` and `getEdgePointAtAngle()` consume the smoothed vertices through `poly()` and `rayPolygonIntersection()` respectively, which already handle arbitrary vertex counts. The algorithm is well-known, deterministic, and produces predictable results.
+**Why**: Maximum impact with minimum code change. One line in `layers.ts` moves routes above zone fills, immediately making road/river paths visible flowing through territory. The physical FITL board renders roads and rivers on top of terrain — this matches that treatment. Combined with slightly thicker strokes and increased overlap margin, routes will read as geographic features embedded in the landscape. The slight alpha reduction ensures zone terrain colors remain visible under routes.
 
-**Critical implementation detail**: The smoothing function must be applied consistently wherever polygon vertices are consumed — both for drawing (shape-utils.ts `drawZoneShape`) and for edge intersection (shape-utils.ts `getEdgePointAtAngle`). The cleanest approach is a single exported utility function called in both code paths.
+The risk of route-label overlap is low: zone labels are centered on zone shapes while routes follow paths between zone endpoints, typically crossing zone edges and passing through peripheral areas rather than zone centers. In the densest area (Saigon/Mekong Delta), some overlap may occur but at an acceptable level — the route's reduced alpha (0.75) makes labels partially visible through routes.
 
-**Shared-edge preservation**: Chaikin's algorithm is a local operation — each output vertex depends only on two adjacent input vertices. If two provinces share an edge (same absolute vertex pair), applying Chaikin's to both polygons independently produces the same smoothed points along that shared edge. No cross-polygon coordination needed.
+## Problem 2: Country terrain colors indistinguishable
 
-## Problem 2: Insufficient terrain granularity
-
-**Evaluation score**: Terrain Distinction = 6/10
-**Root cause**: Only 3 attribute rules exist (highland, jungle, lowland), but FITL provinces span 4 countries (southVietnam, northVietnam, laos, cambodia). On the physical board, Laos/Cambodia zones have a distinctly different visual treatment from South Vietnam zones — they feel "outside" the main theater. North Vietnam also looks different from SVN highlands. The `country` attribute is available in zone data but has no visual rules.
+**Evaluation score**: Terrain Distinction = 6/10 (unchanged for 2 evaluations)
+**Root cause**: Country-based attribute rules were added in Iteration 5 but the chosen colors (Laos: #2d5a3a, Cambodia: #3a5a3a) have RGB distances of only ~25-35 from the base SVN jungle color (#1a5c2a). At overview zoom on a dark theme, these are indistinguishable. The physical FITL board uses clearly distinct coloring for Laos/Cambodia zones (lighter, grayer) compared to South Vietnam jungle (darker, saturated green).
 
 ### Approaches Considered
 
-1. **Per-zone color overrides in visual-config.yaml**
-   - Description: Add explicit `color` overrides for each Laos, Cambodia, and North Vietnam province in the overrides section.
-   - Feasibility: HIGH — purely data changes, no code needed.
-   - Visual impact: MEDIUM — precise control per zone, but doesn't scale if zones change.
-   - Risk: LOW — overrides take highest priority in the resolution chain.
+1. **Bold desaturated colors for Laos/Cambodia**
+   - Description: Replace the current dark-green-adjacent colors with much lighter, desaturated tones. Laos: sage gray-green (#6b8f7b, RGB distance ~120 from SVN jungle). Cambodia: olive-khaki (#7a8868, RGB distance ~118). North Vietnam: lighter warm brown (#8b5e3c). These are inspired by the physical board where "outside theater" zones have a distinctly lighter, grayer appearance.
+   - Feasibility: HIGH — 3 color value changes in visual-config.yaml, plus 3 stroke colors.
+   - Visual impact: HIGH — immediately creates 5-6 visually distinct province categories instead of the current 3.
+   - Risk: LOW — purely data changes. Colors are tested against dark theme and light editor theme. Larger RGB distances guarantee visibility.
 
-2. **Country-based attribute rules**
-   - Description: Add new attribute rules matching `country` attribute values (laos, cambodia, northVietnam) with terrain-specific shade variants. These rules are placed after terrain rules so they override the base terrain color for specific countries.
-   - Feasibility: HIGH — purely data changes in visual-config.yaml. The attribute rule system already supports `attributeContains` matching.
-   - Visual impact: HIGH — 6 Laos/Cambodia jungle provinces get a distinct gray-green; North Vietnam gets a distinct tone; SVN provinces keep current colors. Creates 5-6 visually distinct province categories instead of 3.
-   - Risk: LOW — attribute rules are additive; later rules override earlier ones. If a zone has both `terrainTags: jungle` and `country: cambodia`, the country rule applied later overrides the jungle rule's color.
-
-3. **Texture/pattern overlays per terrain**
-   - Description: Add subtle diagonal hatching or stippling patterns over terrain fills to differentiate provinces beyond just color.
-   - Feasibility: LOW — requires PixiJS Graphics pattern fills or texture generation, significant code change.
+2. **Pattern overlays per country**
+   - Description: Add subtle diagonal hatching or stippling on Laos/Cambodia zones in addition to color changes.
+   - Feasibility: LOW — requires PixiJS Graphics pattern fills or texture generation.
    - Visual impact: HIGH — adds a second visual dimension beyond color.
    - Risk: MEDIUM — patterns may interfere with label/token readability.
 
-### Recommendation: Approach 2 (Country-based attribute rules)
+3. **Opacity-based distinction**
+   - Description: Keep similar base colors but apply different fill alpha values per country (e.g., Laos at 0.6, Cambodia at 0.7).
+   - Feasibility: MEDIUM — requires adding fill alpha support to attribute rules and zone rendering.
+   - Visual impact: MEDIUM — subtle distinction that works on dark backgrounds but may be less clear on light editor background.
+   - Risk: MEDIUM — alpha compositing with labels and tokens adds visual complexity.
 
-**Why**: Uses the existing attribute rule system with no code changes — just adding YAML rules. The `country` attribute is already present in every province's zone data (confirmed in `40-content-data-assets.md`). By placing country rules after terrain rules in the `attributeRules` list, they override the base terrain color for Laos/Cambodia/North Vietnam provinces while preserving the base colors for South Vietnam provinces.
+### Recommendation: Approach 1 (Bold desaturated colors)
 
-**Proposed color palette** (6 visual categories):
-
-| Category | Color | Stroke | Count | Description |
-|----------|-------|--------|-------|-------------|
-| SVN Highland | `#d4a656` | `#8b6914` | 6 | Tan/khaki (unchanged) |
-| SVN Lowland | `#5db85d` | `#2d7a2d` | 6 | Bright green (unchanged) |
-| SVN Jungle | `#1a5c2a` | `#0d3d18` | 4 | Dark green (unchanged) |
-| North Vietnam | `#8b4513` | `#5a2d0a` | 1 | Saddle brown — distinct "enemy territory" |
-| Laos Jungle | `#2d5a3a` | `#1a3d25` | 2 | Gray-green — "outside theater" |
-| Cambodia Jungle | `#3a5a3a` | `#254025` | 4 | Olive-gray — "outside theater", slightly lighter than Laos |
-
-## Problem 3: Small, hard-to-read labels
-
-**Evaluation score**: Label/Token Readability = 5/10
-**Root cause**: Label font size is hardcoded at 20px (`LABEL_FONT_SIZE = 20` in zone-renderer.ts:243). The label background pill uses `LABEL_PILL_ALPHA = 0.45` which provides insufficient contrast on darker terrain fills (jungle, North Vietnam). At overview zoom, labels shrink proportionally and become illegible.
-**Recurring**: 3 consecutive evaluations (Eval #2, #3, #4). Explicitly deferred from iteration 4 plan ("Deferred to iteration 5: label readability improvements").
-
-### Approaches Considered
-
-1. **Increase font size and pill opacity**
-   - Description: Increase `LABEL_FONT_SIZE` from 20 to 26, increase `LABEL_PILL_ALPHA` from 0.45 to 0.65, and increase `LABEL_PILL_PADDING` from 6 to 8 for better visual framing.
-   - Feasibility: HIGH — 3 constant changes in zone-renderer.ts.
-   - Visual impact: MEDIUM — labels are ~30% larger and pills are more opaque, improving readability on all terrain colors. However, labels still shrink at overview zoom.
-   - Risk: LOW — larger labels may clip polygon edges on very small provinces, but current polygon areas are designed ≥ default rectangle area (360×220).
-
-2. **Adaptive font size based on zoom level**
-   - Description: Scale label font size inversely with viewport zoom so labels maintain a minimum readable size at overview zoom.
-   - Feasibility: LOW — requires hooking into viewport zoom events, updating label scale on every zoom change, and managing the label/pill size relationship dynamically.
-   - Visual impact: HIGH — labels stay readable at all zoom levels.
-   - Risk: MEDIUM — performance overhead from zoom-reactive label updates; visual jarring if scaling isn't smooth.
-
-3. **Replace bitmap text with SDF (Signed Distance Field) text**
-   - Description: Use PixiJS SDF text rendering for sharp labels at any zoom level.
-   - Feasibility: LOW — significant architectural change to the text rendering pipeline.
-   - Visual impact: HIGH — crisp text at all scales.
-   - Risk: HIGH — requires new font asset pipeline, changes to bitmap-font-registry.ts.
-
-### Recommendation: Approach 1 (Increase font size and pill opacity)
-
-**Why**: Addresses the immediate readability problem with minimal code change (3 constants). The 30% size increase combined with stronger pill contrast will make labels clearly readable at default zoom on all terrain types including dark jungle and North Vietnam fills. Overview zoom readability (Approach 2) is a legitimate concern but is a more complex change that should be addressed separately — the current iteration targets the most impactful low-hanging fruit.
+**Why**: The root cause is insufficient color contrast, not a missing visual dimension. Bold, desaturated colors with RGB distances >100 from SVN jungle are guaranteed to be distinguishable at any zoom level and on both dark/light backgrounds. This is a 6-value data change in visual-config.yaml with zero code changes. The sage/olive/brown palette is inspired by the physical FITL board where "outside theater" zones are lighter and grayer.
 
 ## Implementation Steps
 
-All steps target the same two files unless noted otherwise.
+1. **Reorder layer z-order: routes above zones** — **File**: `packages/runner/src/canvas/layers.ts` — **Depends on**: none
+   - Change `boardGroup.addChild()` order from `[..., adjacencyLayer, connectionRouteLayer, zoneLayer, ...]` to `[..., adjacencyLayer, zoneLayer, connectionRouteLayer, ...]`
+   - This puts route strokes on top of zone polygon fills
 
-1. **Add `smoothPolygonVertices()` utility function** — **File**: `packages/runner/src/canvas/renderers/shape-utils.ts` — **Depends on**: none
-   - Export a pure function: `smoothPolygonVertices(vertices: readonly number[], iterations: number): number[]`
-   - Implements Chaikin's corner-cutting: for each iteration, replace each vertex pair with points at 25% and 75% along each edge
-   - Handle closed polygon (last vertex connects to first)
-   - Default iterations = 2
+2. **Increase route stroke width, overlap margin, and reduce alpha** — **File**: `packages/runner/src/canvas/renderers/connection-route-renderer.ts` — **Depends on**: none
+   - Change `DEFAULT_ROUTE_STROKE.width` from `4` to `6`
+   - Change `DEFAULT_ROUTE_STROKE.alpha` from `0.85` to `0.75`
+   - Change `ROUTE_OVERLAP_MARGIN` from `35` to `80`
 
-2. **Apply smoothing in `drawZoneShape()` polygon case** — **File**: `packages/runner/src/canvas/renderers/shape-utils.ts` — **Depends on**: Step 1
-   - In the `case 'polygon':` branch (line 71-77), call `smoothPolygonVertices(options.vertices, 2)` before passing to `base.poly()`
+3. **Update country terrain colors to bolder palette** — **File**: `data/games/fire-in-the-lake/visual-config.yaml` — **Depends on**: none
+   - North Vietnam: color `#8b4513` → `#8b5e3c`, strokeColor `#5a2d0a` → `#5a3d20`
+   - Laos: color `#2d5a3a` → `#6b8f7b`, strokeColor `#1a3d25` → `#4a6b58`
+   - Cambodia: color `#3a5a3a` → `#7a8868`, strokeColor `#254025` → `#586345`
 
-3. **Apply smoothing in `getEdgePointAtAngle()` polygon case** — **File**: `packages/runner/src/canvas/renderers/shape-utils.ts` — **Depends on**: Step 1
-   - In the `case 'polygon':` branch (line 112-115), call `smoothPolygonVertices(vertices, 2)` before passing to `rayPolygonIntersection()`
-
-4. **Add country-based terrain attribute rules** — **File**: `data/games/fire-in-the-lake/visual-config.yaml` — **Depends on**: none
-   - Add 3 new attribute rules AFTER the existing terrain rules (so they override):
-     - `country: northVietnam` → saddle brown (`#8b4513` / `#5a2d0a`)
-     - `country: laos` → gray-green (`#2d5a3a` / `#1a3d25`)
-     - `country: cambodia` → olive-gray (`#3a5a3a` / `#254025`)
-   - Match on `category: [province]` and `attributeContains: { country: <value> }`
-
-5. **Increase label font size and pill contrast** — **File**: `packages/runner/src/canvas/renderers/zone-renderer.ts` — **Depends on**: none
-   - Change `LABEL_FONT_SIZE` from `20` to `26` (line 243)
-   - Change font size in `createBitmapLabel()` call from `20` to `26` (line 169)
-   - Change `LABEL_PILL_ALPHA` from `0.45` to `0.65` (line 248)
-   - Change `LABEL_PILL_PADDING` from `6` to `8` (line 246)
-
-6. **Add unit tests for `smoothPolygonVertices()`** — **File**: new test file under `packages/runner/test/canvas/renderers/` — **Depends on**: Step 1
-   - Test: 0 iterations returns original vertices
-   - Test: triangle (6 values) → smoothed has 12 values after 1 iteration
-   - Test: shared edge produces same absolute points for both polygons
-   - Test: empty or too-short arrays handled gracefully
-
-7. **Run typecheck and tests** — **Depends on**: Steps 1-6
+4. **Run typecheck and tests** — **Depends on**: Steps 1-3
    - `pnpm turbo typecheck` — must pass
    - `pnpm -F @ludoforge/runner test` — must pass
 
-8. **Visual verification** — **Depends on**: Step 7
+5. **Visual verification** — **Depends on**: Step 4
    - `pnpm -F @ludoforge/runner dev` — inspect in browser
-   - Verify polygon provinces have smooth, organic-looking borders
-   - Verify adjacency dashed lines still connect cleanly to smoothed polygon edges
-   - Verify Laos/Cambodia provinces are visibly distinct from SVN jungle provinces
-   - Verify North Vietnam has a distinct brown tone
-   - Verify labels are noticeably larger and more readable on all terrain colors
-   - Check map editor renders the same smoothed polygons
+   - Verify route lines are visible crossing through zone territory (not just between zones)
+   - Verify road/river distinction (brown roads vs. blue wavy rivers) is clear on top of zone fills
+   - Verify route alpha (0.75) allows zone terrain colors to show through
+   - Verify Laos provinces are clearly sage gray-green, distinct from SVN dark green jungle
+   - Verify Cambodia provinces are clearly olive-khaki, distinct from both Laos and SVN
+   - Verify North Vietnam is warm brown, distinct from SVN highlands (tan)
+   - Verify labels remain readable where routes cross zone centers
+   - Check map editor renders the same route-above-zone ordering and terrain colors
+
+6. **Take new screenshots for evaluation** — **Depends on**: Step 5
+   - `fitl-game-map.png` (close-up)
+   - `fitl-game-map-overview.png` (zoomed-out full map)
+   - `fitl-map-editor.png` (close-up)
+   - `fitl-map-editor-overview.png` (zoomed-out full map)
 
 ## Map Editor Scope
 
 **Included in this iteration**:
-- Polygon smoothing — the map editor uses the same `drawZoneShape()` function from `shape-utils.ts`. Smoothed polygons render automatically.
-- Terrain colors — the editor reads the same `visual-config.yaml`. Country-based attribute rules apply automatically.
-- Label sizing — the editor zone renderer uses its own label rendering; verify whether it shares the same constants. If it uses separate constants, update those as well.
+- Layer z-order change — the editor mounts its layers as children of the shared layers (`map-editor-canvas.ts:135-138`). Reordering the shared `boardGroup.addChild()` call automatically puts editor route content above editor zone content. No editor-specific code changes needed.
+- Terrain colors — the editor reads the same `visual-config.yaml`. Bolder country colors apply automatically.
 
 **Deferred to future iteration**:
-- No editor-specific changes needed beyond the automatic propagation described above.
+- No editor-specific changes needed.
 
 ## Visual Config Changes
 
 **File**: `data/games/fire-in-the-lake/visual-config.yaml`
 
-Add 3 new attribute rules after the existing terrain rules (after line 409):
+Update 3 existing country-based attribute rules (already present from Iteration 5):
 
 ```yaml
     # Country-based terrain sub-variants (override base terrain colors)
@@ -339,64 +247,59 @@ Add 3 new attribute rules after the existing terrain rules (after line 409):
         attributeContains:
           country: northVietnam
       style:
-        color: "#8b4513"
-        strokeColor: "#5a2d0a"
+        color: "#8b5e3c"       # was "#8b4513"
+        strokeColor: "#5a3d20"  # was "#5a2d0a"
     - match:
         category:
           - province
         attributeContains:
           country: laos
       style:
-        color: "#2d5a3a"
-        strokeColor: "#1a3d25"
+        color: "#6b8f7b"       # was "#2d5a3a"
+        strokeColor: "#4a6b58"  # was "#1a3d25"
     - match:
         category:
           - province
         attributeContains:
           country: cambodia
       style:
-        color: "#3a5a3a"
-        strokeColor: "#254025"
+        color: "#7a8868"       # was "#3a5a3a"
+        strokeColor: "#586345"  # was "#254025"
 ```
 
-**No schema changes needed** — `attributeContains` already accepts arbitrary attribute keys.
+**No schema changes needed.**
 
 ## Verification
 
 1. `pnpm turbo typecheck` — must pass
 2. `pnpm -F @ludoforge/runner test` — must pass
-3. Unit tests for `smoothPolygonVertices()` — must pass
-4. Visual check — run dev server (`pnpm -F @ludoforge/runner dev`):
-   - All 23 province polygons have smooth, curved borders (no straight-line angular edges)
-   - Adjacent provinces still share smoothed borders without visible gaps
-   - Adjacency dashed lines attach correctly to smoothed polygon edges
-   - North Vietnam is visibly brown/distinct from SVN highland provinces
-   - Laos provinces (central-laos, southern-laos) are gray-green, distinct from SVN jungle
-   - Cambodia provinces (northeast-cambodia, the-fishhook, the-parrots-beak, sihanoukville) are olive-gray
-   - SVN jungle provinces (phuoc-long, quang-duc-long-khanh, binh-tuy-binh-thuan, tay-ninh) retain original dark green
-   - Labels are noticeably larger (~30%) with stronger background pill contrast
-   - Labels are readable on dark jungle fills and on the new North Vietnam brown
-   - Map editor renders the same smoothed polygons and terrain colors
-   - Tokens still render correctly inside smoothed polygon bounds
-5. Take new screenshots for evaluation:
-   - `fitl-game-map.png` (close-up)
-   - `fitl-game-map-overview.png` (zoomed-out full map)
-   - `fitl-map-editor.png` (close-up)
-   - `fitl-map-editor-overview.png` (zoomed-out full map)
+3. Visual check — run dev server (`pnpm -F @ludoforge/runner dev`):
+   - Road/river lines visible flowing across zone polygon fills (not just in gaps between zones)
+   - Brown road lines and blue wavy river lines clearly distinct on top of terrain colors
+   - Route strokes at 0.75 alpha allow zone terrain to show through
+   - Route stroke width (6) visible but not overwhelming at default zoom
+   - Laos provinces (central-laos, southern-laos) clearly sage gray-green, distinct from SVN jungle dark green
+   - Cambodia provinces (northeast-cambodia, the-fishhook, the-parrots-beak, sihanoukville) clearly olive-khaki
+   - North Vietnam warm brown, clearly distinct from SVN highland tan
+   - SVN jungle, lowland, and highland colors unchanged
+   - Zone labels remain readable where routes cross (routes semi-transparent)
+   - Map editor shows the same route-above-zone ordering and bold terrain colors
+   - No interaction regressions (clicking zones and routes still works)
 
 ## Risks and Mitigations
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|------------|
-| Smoothed shared edges don't align between adjacent provinces | LOW | Thin gaps between smoothed provinces | Chaikin's is a local operation — shared edge vertices produce identical smoothed points independently. Verify with 2-3 adjacent pairs in visual inspection. |
-| Smoothing creates degenerate slivers on small polygons (Mekong Delta) | LOW | Visual artifacts on compact provinces | Chaikin's preserves convexity and doesn't create degenerate shapes. 2 iterations on 5-8 vertex polygons are well within safe bounds. |
-| `attributeContains: { country: X }` not supported by rule matching | LOW | Country rules silently ignored, no color change | Verify the `attributeContains` schema accepts arbitrary string keys. If not, use per-zone color overrides as fallback. |
-| Larger labels clip polygon edges on small provinces | LOW | Text overflow outside province shape | Current polygon areas are designed ≥ 360×220 = 79,200 sq px. A 26px font label fits comfortably within any province. |
-| Performance regression from smoothed vertices (~24 per zone vs ~6) | VERY LOW | Frame rate drop | 24 vertices × 23 polygons = 552 total vertices — trivial for PixiJS. `rayPolygonIntersection` iterates ~24 edges per intersection, still O(1) per call. |
+| Routes partially cover zone labels in dense areas (Saigon) | MEDIUM | Reduced label readability in congested area | Route alpha 0.75 allows labels to show through. Labels are zone-centered while routes follow edges — limited overlap. Monitor in visual check. |
+| Route click/hover interaction changes with z-order | LOW | Clicking a zone might hit a route instead | Hit areas are per-container with independent event modes. Zone containers (eventMode: 'static') and route midpoint containers have separate hit areas. |
+| Bold Laos/Cambodia colors look unrealistic | LOW | Aesthetic mismatch with game theme | Colors inspired by physical FITL board. Sage and olive tones are natural territory colors used in cartography. |
+| Route overlap margin (80px) creates visual clutter in dense areas | LOW | Routes extend too far into small provinces | Current province areas are ≥ 360×220 equivalent. 80px extension is proportional. Can reduce to 60 if visual check shows clutter. |
+| Editor layer z-order doesn't update | VERY LOW | Editor shows routes below zones still | Editor mounts children of shared layers — z-order inherits from parent. Verified in map-editor-canvas.ts:135-138. |
 
 ## Research Sources
 
-All solutions extend existing PixiJS `Graphics.poly()` and visual-config attribute rule patterns already in the codebase. No external research needed:
-- **Chaikin's algorithm** is a well-known subdivision scheme (1974) — the implementation is a simple loop, no library needed.
-- **Country-based attribute rules** extend the existing `attributeContains` matching already used for `terrainTags`.
-- **Label constants** are direct numeric changes to existing code.
+All solutions extend existing patterns in the codebase. No external research needed:
+- **Layer z-order**: The `boardGroup.addChild()` call in `layers.ts` already establishes the rendering order. Reordering is a standard PixiJS Container operation.
+- **Route rendering constants**: `DEFAULT_ROUTE_STROKE` and `ROUTE_OVERLAP_MARGIN` are existing tunables in `connection-route-renderer.ts`.
+- **Country attribute rules**: Already implemented and validated in Iteration 5 — only color values change.
+- **Physical board reference**: `screenshots/FITL_SC1.jpg` confirms roads/rivers render on top of terrain fills on the physical board.

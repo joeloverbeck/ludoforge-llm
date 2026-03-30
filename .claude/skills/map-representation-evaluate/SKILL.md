@@ -10,14 +10,14 @@ Score the current FITL map rendering state from screenshots and append a structu
 ## Checklist
 
 1. Read `reports/map-representation-evaluation.md` — absorb the rubric and the last 2-3 evaluations. The file grows with each evaluation; use this strategy:
-   - If the file has fewer than ~300 lines, read the entire file in one pass — the two-pass strategy below is unnecessary.
+   - If the file has fewer than 400 lines, read the entire file in one pass — the two-pass strategy below is unnecessary.
    - Otherwise: read the first ~40 lines for the rubric, metrics, and scoring guide. Count total lines (`wc -l`), then read from `offset = totalLines - 200` to get the last 2-3 evaluations in one pass (each evaluation is ~60-80 lines).
    - To build the Score Trend table efficiently, grep for `\*\*Average\*\*` in the report file — this returns all historical averages in one pass.
    - Skip intermediate evaluations unless checking recurring issue history.
 2. Discover and read all current screenshots:
    - Glob `screenshots/fitl-game-map*.png` and `screenshots/fitl-map-editor*.png` to find all current screenshots. The minimum expected set is `fitl-game-map.png` and `fitl-map-editor.png` — any additional matches (e.g., `fitl-game-map-overview.png`) must also be read and evaluated.
    - Run `ls -la screenshots/fitl-*.png screenshots/fitl-*.jpg` to verify freshness — if any screenshot is older than 24 hours, warn the user that it may not reflect the current rendering state. (The Glob discovers the file list; `ls` is solely for timestamps.)
-   - Read all discovered screenshots in **parallel** (all Read tool calls in a single message). Also read `screenshots/FITL_SC1.jpg` (physical board reference) — **required** for the first evaluation to establish the ground truth baseline. For subsequent evaluations, read it when any of these apply: (a) evaluating geographic layout fidelity, (b) the _previous_ evaluation's recommendations reference the physical board layout, or (c) there is a significant layout change (e.g., polygon coverage extended to new provinces, major shape rework).
+   - Read all discovered screenshots in **parallel** (all Read tool calls in a single message). Also read `screenshots/FITL_SC1.jpg` (physical board reference) — **required** for the first evaluation to establish the ground truth baseline. For subsequent evaluations, read it when any of these apply: (a) evaluating geographic layout fidelity, (b) the _previous_ evaluation's recommendations reference the physical board layout, or (c) there is a significant layout change (e.g., territory coverage extended to new provinces, major shape rework).
 3. Determine the next evaluation number from the last `## EVALUATION #N` heading.
 4. **If the screenshot count changed** from the previous evaluation, note this prominently. Explain what new screenshots capture, add a comparability caveat (see Screenshot Set Changes below), and update the **Screenshot Reference** section at the top of the report file to describe all current screenshots.
 5. For each screenshot, write a paragraph describing what's shown and listing specific issues related to the 4 metrics.
@@ -71,7 +71,7 @@ For each screenshot analyzed, add a section:
 
 [If screenshot set changed: **Comparability note**: This evaluation covers N screenshots (previous: M). Score changes may partly reflect expanded coverage revealing pre-existing issues rather than regressions introduced since the last evaluation.]
 
-[If polygon territory rendering is being tracked: **Polygon coverage**: N/M province zones rendered as territories (vs. rectangles). Approximate counts from visual inspection are acceptable — use `~` prefix for estimates.]
+[If territory rendering is being tracked: **Territory coverage**: N/M province zones rendered as territories (vs. rectangles). Approximate counts from visual inspection are acceptable — use `~` prefix for estimates.]
 
 ### Score Trend (include if 3+ evaluations exist)
 
@@ -119,13 +119,14 @@ If the user disputes part of an already-appended evaluation:
 - Route types that are visually indistinguishable from each other (roads vs. rivers should have distinct styling)
 - Terrain types that are indistinguishable (all same shade/color regardless of terrain category)
 - Province labels obscured by shape borders, tokens, or adjacency lines
+- Label background pills that clip text, render over tokens, or produce garbled characters
 - Token stacks that overflow province boundaries
 - Wasted space between provinces where borders should be shared
 - Missing or misleading adjacency connections
 - Routes that cross provinces they shouldn't pass through
 - Cities (circles) feeling disconnected from their surrounding provinces
 - Province shapes that don't support natural route flow-through
-- Visual congestion in areas with many small provinces — overlapping polygon borders, route lines, and tokens that make individual zones hard to distinguish (score under Adjacency Clarity or Label/Token Readability as appropriate)
+- Visual congestion in areas with many small provinces — overlapping territory borders, route lines, and tokens that make individual zones hard to distinguish (score under Adjacency Clarity or Label/Token Readability as appropriate)
 - **Regressions** — issues absent in previous evaluations that appeared after recent changes
 
 ## Screenshot Set Changes
@@ -221,15 +222,27 @@ If both rendering AND screenshots are unchanged since the previous evaluation, a
 Rendering and screenshot set unchanged since Eval #N-1. No new evaluation needed. Re-evaluate after the next implementation cycle.
 ```
 
+## Visual Change Without Score Movement
+
+If rendering changed visibly (e.g., shape quality, color palette, layout) but most metric scores remain unchanged, note this explicitly in the evaluation. For each unchanged metric, briefly explain why the visual change didn't affect that metric — e.g., "Shape quality improved (organic curves replaced angular polygons) but route rendering — measured by Road/River Integration — was not affected by the shape change since routes still terminate at shape edges." This prevents future evaluators from misinterpreting stable scores as "nothing happened."
+
 ## Coverage Metrics
 
-When polygon territory rendering is a key differentiator (as in FITL), include a coverage line after the scores table:
+When territory rendering progress is a key differentiator (as in FITL), include a coverage line after the scores table:
 
 ```markdown
-**Polygon coverage**: N/M province zones rendered as territories (vs. rectangles).
+**Territory coverage**: N/M province zones rendered as territories (vs. rectangles).
 ```
 
-This gives a quantitative progress indicator beyond the subjective 1-10 scores and directly tracks progress on recommendations to extend polygon treatment. Approximate counts from visual inspection are acceptable — use `~` prefix for estimates. If precision is needed, cross-reference the zone count from the visual config or GameDef.
+This gives a quantitative progress indicator beyond the subjective 1-10 scores and directly tracks progress on recommendations to extend territory treatment. Approximate counts from visual inspection are acceptable — use `~` prefix for estimates. If precision is needed, cross-reference the zone count from the visual config or GameDef.
+
+Optionally, when Road/River Integration is a focus area, include a route integration line:
+
+```markdown
+**Route integration**: N/M visible route segments flow through territory (vs. edge-to-edge).
+```
+
+This is harder to count precisely from screenshots than territory coverage — use approximate counts with `~` prefix. Include only when route rendering is actively being improved or when per-metric stagnation has been flagged for Road/River Integration.
 
 ## Scope
 

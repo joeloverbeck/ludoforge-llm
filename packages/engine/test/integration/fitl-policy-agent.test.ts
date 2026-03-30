@@ -2,10 +2,15 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { PolicyAgent } from '../../src/agents/policy-agent.js';
+import { evaluatePolicyMove } from '../../src/agents/policy-eval.js';
 import { preparePlayableMoves } from '../../src/agents/prepare-playable-moves.js';
+import { compileGameSpecToGameDef, validateGameSpec } from '../../src/cnl/index.js';
+import type { GameSpecScoreTermDef, GameSpecStateFeatureDef } from '../../src/cnl/game-spec-doc.js';
 import { applyTrustedMove } from '../../src/kernel/apply-move.js';
 import {
   applyMove,
+  asPlayerId,
+  asZoneId,
   assertValidatedGameDef,
   classifyPlayableMoveCandidate,
   createRng,
@@ -15,8 +20,12 @@ import {
   initialState,
   legalMoves,
   probeMoveViability,
+  type GameDef,
+  type GameState,
+  type PlayerId,
 } from '../../src/kernel/index.js';
 import { derivePlayerObservation } from '../../src/kernel/observation.js';
+import { queryAdjacentZones } from '../../src/kernel/spatial.js';
 import { runGame } from '../../src/sim/simulator.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
@@ -85,7 +94,497 @@ function disableVcCompletionGuidance(def: ReturnType<typeof assertValidatedGameD
   });
 }
 
+function compileFitlPolicyOverlay(
+  seat: 'us' | 'vc',
+  overlay: {
+    readonly stateFeatures?: Readonly<Record<string, GameSpecStateFeatureDef>>;
+    readonly scoreTerms?: Readonly<Record<string, GameSpecScoreTermDef>>;
+    readonly profileId?: string;
+  },
+): GameDef {
+  const { parsed } = compileProductionSpec();
+  const doc = structuredClone(parsed.doc);
+
+  assert.ok(doc.agents, 'expected FITL production doc to author agents');
+  if (doc.agents === undefined) {
+    throw new Error('Expected FITL agents authoring');
+  }
+  assert.ok(doc.agents.library, 'expected FITL production doc to author agent library');
+  if (doc.agents.library === undefined) {
+    throw new Error('Expected FITL agent library authoring');
+  }
+
+  const profileId = overlay.profileId ?? `${seat}-aggregation-test`;
+  const scoreTermIds = Object.keys(overlay.scoreTerms ?? {});
+  const overlaidDoc = {
+    ...doc,
+    agents: {
+      ...doc.agents,
+      library: {
+        ...doc.agents.library,
+      stateFeatures: {
+        ...doc.agents.library.stateFeatures,
+        ...(overlay.stateFeatures ?? {}),
+      },
+      scoreTerms: {
+        ...doc.agents.library.scoreTerms,
+        ...(overlay.scoreTerms ?? {}),
+      },
+    },
+    profiles: {
+      ...doc.agents.profiles,
+      [profileId]: {
+        params: {},
+        use: {
+          pruningRules: [],
+          scoreTerms: scoreTermIds,
+          completionScoreTerms: [],
+          tieBreakers: ['stableMoveKey'],
+        },
+      },
+    },
+      bindings: {
+        ...doc.agents.bindings,
+        [seat]: profileId,
+      },
+    },
+  };
+
+  const validationDiagnostics = validateGameSpec(overlaidDoc);
+  assert.deepEqual(
+    validationDiagnostics.filter((diagnostic) => diagnostic.severity === 'error'),
+    [],
+    'FITL aggregation overlay should validate cleanly',
+  );
+
+  const compiled = compileGameSpecToGameDef(overlaidDoc, { sourceMap: parsed.sourceMap });
+  assert.deepEqual(
+    compiled.diagnostics.filter((diagnostic) => diagnostic.severity === 'error'),
+    [],
+    'FITL aggregation overlay should compile cleanly',
+  );
+  assert.ok(compiled.gameDef, 'expected compiled FITL aggregation overlay gameDef');
+
+  return assertValidatedGameDef(compiled.gameDef);
+}
+
+function evaluateUniformStateScore(def: GameDef, state: GameState, playerId: PlayerId): number {
+  const runtime = createGameDefRuntime(def);
+  const legalMoveCandidates = legalMoves(def, state, undefined, runtime);
+  const result = evaluatePolicyMove({
+    def,
+    state,
+    playerId,
+    legalMoves: legalMoveCandidates,
+    trustedMoveIndex: new Map(),
+    rng: createRng(17n),
+    runtime,
+  });
+  const scores = result.metadata.candidates
+    .map((candidate) => candidate.score)
+    .filter((score): score is number => typeof score === 'number');
+
+  assert.equal(scores.length > 0, true, 'expected at least one scored candidate');
+  assert.equal(scores.every((score) => score === scores[0]), true, 'expected a state-only score term to be uniform across candidates');
+
+  return scores[0]!;
+}
+
+function playerIdForSeat(def: GameDef, seatId: 'us' | 'vc'): PlayerId {
+  assert.ok(def.seats, 'expected seats in FITL definition');
+  const index = def.seats.findIndex((seat) => seat.id === seatId);
+  assert.notEqual(index, -1, `expected seat ${seatId}`);
+  return asPlayerId(index);
+}
+
+function countBoardTokens(
+  def: GameDef,
+  state: GameState,
+  predicate: (token: GameState['zones'][string][number]) => boolean,
+): number {
+  let total = 0;
+  for (const zone of def.zones) {
+    if ((zone.zoneKind ?? 'board') !== 'board') {
+      continue;
+    }
+    for (const token of state.zones[String(zone.id)] ?? []) {
+      if (predicate(token)) {
+        total += 1;
+      }
+    }
+  }
+  return total;
+}
+
+function sumProvinceVar(def: GameDef, state: GameState, field: string): number {
+  let total = 0;
+  for (const zone of def.zones) {
+    if ((zone.zoneKind ?? 'board') !== 'board' || zone.category !== 'province') {
+      continue;
+    }
+    const value = state.zoneVars[String(zone.id)]?.[field];
+    if (typeof value === 'number') {
+      total += value;
+    }
+  }
+  return total;
+}
+
+function countAdjacentTokens(
+  def: GameDef,
+  state: GameState,
+  anchorZoneId: string,
+  predicate: (token: GameState['zones'][string][number]) => boolean,
+): number {
+  const runtime = createGameDefRuntime(def);
+  let total = 0;
+  for (const zoneId of queryAdjacentZones(runtime.adjacencyGraph, asZoneId(anchorZoneId))) {
+    for (const token of state.zones[String(zoneId)] ?? []) {
+      if (predicate(token)) {
+        total += 1;
+      }
+    }
+  }
+  return total;
+}
+
+function advanceSeed1ToVcDecision() {
+  const { compiled } = compileProductionSpec();
+  const def = assertValidatedGameDef(compiled.gameDef);
+  const runtime = createGameDefRuntime(def);
+  const initial = initialState(def, 1, 4).state;
+  const openingChoice = new PolicyAgent().chooseMove({
+    def,
+    state: initial,
+    playerId: initial.activePlayer,
+    legalMoves: enumerateLegalMoves(def, initial, undefined, runtime).moves,
+    rng: createRng(1n),
+    runtime,
+  });
+  const state = applyMove(def, initial, openingChoice.move, undefined, runtime).state;
+  const legalMoveCandidates = legalMoves(def, state, undefined, runtime);
+  const actionIds = new Set(legalMoveCandidates.map((candidate) => String(candidate.actionId)));
+
+  assert.ok(def.seats, 'expected seats in FITL definition');
+  assert.equal(def.seats[Number(state.activePlayer)]?.id, 'vc');
+  assert.equal(actionIds.has('rally'), true, 'expected VC rally to be legal');
+  assert.equal(actionIds.has('tax'), true, 'expected VC tax to be legal');
+
+  return { def, state, legalMoveCandidates };
+}
+
 describe('FITL policy agent integration', () => {
+  it('compiles FITL-derived authored policy overlays with global and adjacent aggregation expressions', () => {
+    const def = compileFitlPolicyOverlay('us', {
+      stateFeatures: {
+        vcBaseCount: {
+          type: 'number',
+          expr: {
+            globalTokenAgg: {
+              tokenFilter: {
+                type: 'base',
+                props: {
+                  seat: { eq: '3' },
+                },
+              },
+              aggOp: 'count',
+            },
+          },
+        },
+        totalProvinceOpposition: {
+          type: 'number',
+          expr: {
+            globalZoneAgg: {
+              source: 'variable',
+              field: 'opposition',
+              aggOp: 'sum',
+              zoneFilter: { category: 'province' },
+            },
+          },
+        },
+        usTroopsNearSaigon: {
+          type: 'number',
+          expr: {
+            adjacentTokenAgg: {
+              anchorZone: 'saigon:none',
+              tokenFilter: {
+                type: 'troop',
+                props: {
+                  seat: { eq: '0' },
+                },
+              },
+              aggOp: 'count',
+            },
+          },
+        },
+      },
+      scoreTerms: {
+        reportVcBaseCount: {
+          weight: 1,
+          value: { ref: 'feature.vcBaseCount' },
+        },
+      },
+    });
+    const profile = def.agents?.profiles['us-aggregation-test'];
+
+    assert.ok(profile, 'expected compiled aggregation profile');
+    assert.equal(def.agents?.library.stateFeatures.vcBaseCount?.expr.kind, 'globalTokenAgg');
+    assert.equal(def.agents?.library.stateFeatures.totalProvinceOpposition?.expr.kind, 'globalZoneAgg');
+    assert.equal(def.agents?.library.stateFeatures.usTroopsNearSaigon?.expr.kind, 'adjacentTokenAgg');
+    assert.deepEqual(profile?.use.scoreTerms, ['reportVcBaseCount']);
+  });
+
+  it('evaluates authored globalTokenAgg against a manual FITL board count', () => {
+    const def = compileFitlPolicyOverlay('us', {
+      stateFeatures: {
+        vcBaseCount: {
+          type: 'number',
+          expr: {
+            globalTokenAgg: {
+              tokenFilter: {
+                type: 'base',
+                props: {
+                  seat: { eq: '3' },
+                },
+              },
+              aggOp: 'count',
+            },
+          },
+        },
+      },
+      scoreTerms: {
+        reportVcBaseCount: {
+          weight: 1,
+          value: { ref: 'feature.vcBaseCount' },
+        },
+      },
+    });
+    const baseState = initialState(def, 7, 4).state;
+    const state: GameState = {
+      ...baseState,
+      zones: {
+        ...baseState.zones,
+        'tay-ninh:none': [
+          ...(baseState.zones['tay-ninh:none'] ?? []),
+          { id: 'vc-base-a' as never, type: 'base', props: { seat: '3', strength: 1 } },
+        ],
+        'quang-tri-thua-thien:none': [
+          ...(baseState.zones['quang-tri-thua-thien:none'] ?? []),
+          { id: 'vc-base-b' as never, type: 'base', props: { seat: '3', strength: 1 } },
+        ],
+        'kien-phong:none': [
+          ...(baseState.zones['kien-phong:none'] ?? []),
+          { id: 'vc-base-c' as never, type: 'base', props: { seat: '3', strength: 1 } },
+        ],
+      },
+    };
+
+    const expected = countBoardTokens(def, state, (token) => token.type === 'base' && String(token.props?.seat) === '3');
+    const actual = evaluateUniformStateScore(def, state, playerIdForSeat(def, 'us'));
+
+    assert.equal(actual, expected);
+    assert.equal(actual, 3);
+  });
+
+  it('evaluates authored globalZoneAgg against a manual FITL province sum', () => {
+    const def = compileFitlPolicyOverlay('us', {
+      stateFeatures: {
+        totalProvinceOpposition: {
+          type: 'number',
+          expr: {
+            globalZoneAgg: {
+              source: 'variable',
+              field: 'opposition',
+              aggOp: 'sum',
+              zoneFilter: { category: 'province' },
+            },
+          },
+        },
+      },
+      scoreTerms: {
+        reportProvinceOpposition: {
+          weight: 1,
+          value: { ref: 'feature.totalProvinceOpposition' },
+        },
+      },
+    });
+    const baseState = initialState(def, 7, 4).state;
+    const state: GameState = {
+      ...baseState,
+      zoneVars: {
+        ...baseState.zoneVars,
+        'tay-ninh:none': { ...(baseState.zoneVars['tay-ninh:none'] ?? {}), opposition: 2 },
+        'quang-tri-thua-thien:none': { ...(baseState.zoneVars['quang-tri-thua-thien:none'] ?? {}), opposition: 5 },
+        'kien-phong:none': { ...(baseState.zoneVars['kien-phong:none'] ?? {}), opposition: 7 },
+        'saigon:none': { ...(baseState.zoneVars['saigon:none'] ?? {}), opposition: 99 },
+      },
+    };
+
+    const expected = sumProvinceVar(def, state, 'opposition');
+    const actual = evaluateUniformStateScore(def, state, playerIdForSeat(def, 'us'));
+
+    assert.equal(actual, expected);
+    assert.equal(actual, 14);
+  });
+
+  it('evaluates authored adjacentTokenAgg against a manual FITL adjacency count', () => {
+    const def = compileFitlPolicyOverlay('us', {
+      stateFeatures: {
+        usTroopsNearSaigon: {
+          type: 'number',
+          expr: {
+            adjacentTokenAgg: {
+              anchorZone: 'saigon:none',
+              tokenFilter: {
+                type: 'troop',
+                props: {
+                  seat: { eq: '0' },
+                },
+              },
+              aggOp: 'count',
+            },
+          },
+        },
+      },
+      scoreTerms: {
+        reportUsTroopsNearSaigon: {
+          weight: 1,
+          value: { ref: 'feature.usTroopsNearSaigon' },
+        },
+      },
+    });
+    const baseState = initialState(def, 7, 4).state;
+    const state: GameState = {
+      ...baseState,
+      zones: {
+        ...baseState.zones,
+        'tay-ninh:none': [
+          ...(baseState.zones['tay-ninh:none'] ?? []),
+          { id: 'us-troop-a' as never, type: 'troop', props: { seat: '0', strength: 1 } },
+          { id: 'us-troop-b' as never, type: 'troop', props: { seat: '0', strength: 1 } },
+        ],
+        'quang-duc-long-khanh:none': [
+          ...(baseState.zones['quang-duc-long-khanh:none'] ?? []),
+          { id: 'us-troop-c' as never, type: 'troop', props: { seat: '0', strength: 1 } },
+        ],
+        'hue:none': [
+          ...(baseState.zones['hue:none'] ?? []),
+          { id: 'us-troop-d' as never, type: 'troop', props: { seat: '0', strength: 1 } },
+        ],
+      },
+    };
+
+    const expected = countAdjacentTokens(
+      def,
+      state,
+      'saigon:none',
+      (token) => token.type === 'troop' && String(token.props?.seat) === '0',
+    );
+    const actual = evaluateUniformStateScore(def, state, playerIdForSeat(def, 'us'));
+
+    assert.equal(actual, expected);
+    assert.equal(actual, 3);
+  });
+
+  it('activates aggregation-driven scoreTerms at the intended VC base threshold', () => {
+    const def = compileFitlPolicyOverlay('vc', {
+      stateFeatures: {
+        selfBaseCount: {
+          type: 'number',
+          expr: {
+            globalTokenAgg: {
+              tokenFilter: {
+                type: 'base',
+                props: {
+                  seat: { eq: 'self' },
+                },
+              },
+              aggOp: 'count',
+            },
+          },
+        },
+      },
+      scoreTerms: {
+        preferRallyWhenFewBases: {
+          weight: 5,
+          when: {
+            lt: [
+              { ref: 'feature.selfBaseCount' },
+              4,
+            ],
+          },
+          value: {
+            boolToNumber: { ref: 'feature.isRally' },
+          },
+        },
+        preferTaxWhenManyBases: {
+          weight: 5,
+          when: {
+            gte: [
+              { ref: 'feature.selfBaseCount' },
+              4,
+            ],
+          },
+          value: {
+            boolToNumber: { ref: 'feature.isTax' },
+          },
+        },
+      },
+    });
+    const runtime = createGameDefRuntime(def);
+    const base = advanceSeed1ToVcDecision();
+    const fewBasesState: GameState = {
+      ...base.state,
+      zones: {
+        ...base.state.zones,
+      },
+    };
+    const manyBasesState: GameState = {
+      ...base.state,
+      zones: {
+        ...base.state.zones,
+        'tay-ninh:none': [
+          ...(base.state.zones['tay-ninh:none'] ?? []),
+          { id: 'vc-threshold-base-a' as never, type: 'base', props: { seat: base.state.activePlayer, strength: 1 } },
+        ],
+        'quang-tri-thua-thien:none': [
+          ...(base.state.zones['quang-tri-thua-thien:none'] ?? []),
+          { id: 'vc-threshold-base-b' as never, type: 'base', props: { seat: base.state.activePlayer, strength: 1 } },
+        ],
+        'kien-phong:none': [
+          ...(base.state.zones['kien-phong:none'] ?? []),
+          { id: 'vc-threshold-base-c' as never, type: 'base', props: { seat: base.state.activePlayer, strength: 1 } },
+        ],
+        'quang-duc-long-khanh:none': [
+          ...(base.state.zones['quang-duc-long-khanh:none'] ?? []),
+          { id: 'vc-threshold-base-d' as never, type: 'base', props: { seat: base.state.activePlayer, strength: 1 } },
+        ],
+      },
+    };
+
+    const fewBasesResult = evaluatePolicyMove({
+      def,
+      state: fewBasesState,
+      playerId: fewBasesState.activePlayer,
+      legalMoves: legalMoves(def, fewBasesState, undefined, runtime),
+      trustedMoveIndex: new Map(),
+      rng: createRng(23n),
+      runtime,
+    });
+    const manyBasesResult = evaluatePolicyMove({
+      def,
+      state: manyBasesState,
+      playerId: manyBasesState.activePlayer,
+      legalMoves: legalMoves(def, manyBasesState, undefined, runtime),
+      trustedMoveIndex: new Map(),
+      rng: createRng(23n),
+      runtime,
+    });
+
+    assert.equal(String(fewBasesResult.move.actionId), 'rally');
+    assert.equal(String(manyBasesResult.move.actionId), 'tax');
+  });
+
   it('compiles the production FITL spec with authored policy bindings for all four seats', () => {
     const { compiled } = compileProductionSpec();
     const agents = compiled.gameDef?.agents;

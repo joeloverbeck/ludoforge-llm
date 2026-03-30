@@ -11,7 +11,7 @@ Read the latest evaluation, research rendering approaches, and produce a concret
 
 ## Checklist
 
-1. Read `reports/map-representation-evaluation.md` — focus on the latest EVALUATION #N. Note the scores, CRITICAL/HIGH recommendations, and any recurring or stagnating issues. Determine the iteration number: the plan iteration is always `latest_evaluation_number + 1`. If the previous plan file exists and its iteration number doesn't equal N (i.e., there's a gap or collision), note the discrepancy in the Context section — gaps are acceptable when evaluations are added without corresponding plans.
+1. Read `reports/map-representation-evaluation.md` — focus on the latest EVALUATION #N. Note the scores, CRITICAL/HIGH recommendations, and any recurring or stagnating issues. Determine the iteration number: the plan iteration is always `latest_evaluation_number + 1`. If the previous plan file exists and its iteration number doesn't equal N (i.e., there's a gap or collision), note the discrepancy in the Context section — gaps are acceptable when evaluations are added without corresponding plans. **Large file handling**: If the file exceeds read limits, use `offset` to read from the end — evaluations are appended chronologically, so the latest is always at the bottom. A grep for `## EVALUATION #` can identify where each evaluation starts. Read the latest evaluation in full plus the Score Trend table (if present) for historical context.
 2. Read `docs/FOUNDATIONS.md` — **all proposals must align** with these principles. Pay special attention to:
    - **Foundation #1** (Engine Agnosticism): No game-specific logic in engine code
    - **Foundation #3** (Visual Separation): All visual changes in visual-config.yaml or runner code, never in GameSpecDoc or engine
@@ -20,7 +20,8 @@ Read the latest evaluation, research rendering approaches, and produce a concret
    - **Foundation #10** (Architectural Completeness): Solutions address root causes, not symptoms
 3. Identify the CRITICAL and HIGH recommendations from the evaluation. If none exist, target the top 2-3 MEDIUM recommendations.
 4. **Stalled iteration check**: If the previous evaluation shows no progress since the evaluation before it, check whether the previous plan was implemented. If not, decide whether to carry forward its recommendations (if still valid), supersede them (if priorities shifted), or incorporate them into the new plan. Note the decision in the Context section. Also review the previous plan's Deferred Items section (if present) and carry forward any items that are still relevant into the new plan's Deferred Items table.
-5. Read the renderer source files relevant to the identified problems (see Key Files). Extract: key type definitions with line numbers, function signatures that will be modified, data flow from config through presentation to renderer. Scope the exploration to the specific problems identified in step 3 — do not request a full pipeline analysis of subsystems that are not targeted this iteration (e.g., if routes are deferred, don't explore the route renderer). Use Explore sub-agents for parallel codebase exploration when multiple renderer subsystems are involved. The goal is to populate the "Current Code Architecture" section of the plan output. If the identified problems require only data changes (e.g., visual-config.yaml vertices or colors), the architecture section should document the pipeline that *consumes* the data to confirm no code changes are needed, rather than focusing on functions to be modified. If proposing attribute rules or config patterns not already present in visual-config.yaml, verify the Zod schema and provider matching logic support them before recommending them. For hybrid iterations (code + data changes), include both the architecture section (for code changes) and the reference data section (for data changes). Implementation steps should clearly separate code steps from data-authoring steps.
+   - **Implemented but ineffective**: If the previous plan was implemented but targeted metrics did not improve, diagnose the root cause before proposing the next change. Common causes: insufficient magnitude (e.g., color contrast too low — compute RGB Euclidean distance, target >80 for reliable distinction), wrong lever (e.g., static font size increase when the problem is zoom-dependent), or evaluator visibility (e.g., screenshot coverage doesn't capture the change). Note the diagnosis in the Context section, then decide whether to supersede the approach (different strategy) or amplify it (same strategy, stronger parameters).
+5. Read the renderer source files relevant to the identified problems (see Key Files). Extract: key type definitions with line numbers, function signatures that will be modified, data flow from config through presentation to renderer. Scope the exploration to the specific problems identified in step 3 — do not request a full pipeline analysis of subsystems that are not targeted this iteration (e.g., if routes are deferred, don't explore the route renderer). Use Explore sub-agents for parallel codebase exploration only when the investigation requires open-ended search across unknown files. When the Key Files table identifies the relevant files, prefer direct Read/Grep calls for efficiency. The goal is to populate the "Current Code Architecture" section of the plan output. If the identified problems require only data changes (e.g., visual-config.yaml vertices or colors), the architecture section should document the pipeline that *consumes* the data to confirm no code changes are needed, rather than focusing on functions to be modified. If proposing attribute rules or config patterns not already present in visual-config.yaml, verify the Zod schema and provider matching logic support them before recommending them. For hybrid iterations (code + data changes), include both the architecture section (for code changes) and the reference data section (for data changes). Implementation steps should clearly separate code steps from data-authoring steps.
 6. Optionally read the game's physical reference image (e.g., `screenshots/FITL_SC1.jpg`) for design inspiration when planning visual changes. Use it as a target aesthetic, not a rigid specification.
 7. **Research phase** (if needed): If the identified problems require techniques not already present in the codebase, use Tavily web search and/or Context7 to research rendering techniques. Skip external research when the solution extends existing patterns — if skipped, note in the Research Sources section why it was unnecessary (e.g., "All solutions extend existing PixiJS Graphics and BitmapText patterns already in the codebase"). Examples of research topics:
    - Voronoi tessellation / Delaunay triangulation in PixiJS or 2D canvas
@@ -67,6 +68,12 @@ Track items explicitly deferred from previous iterations to prevent silent drops
 
 If no items are deferred, write: "No deferred items."
 
+If any items from the previous plan are being **superseded** (replaced with a different approach
+rather than carried forward unchanged), note them in the Context section with the reason for
+supersession (e.g., "Iteration 5's Laos color #2d5a3a superseded — RGB distance 25 from base
+jungle was insufficient; replaced with #6b8f7b at distance 120"). This helps the implementer
+understand why previously-implemented work is being replaced.
+
 ## Foundations Alignment
 
 | Foundation | Relevance | How This Plan Respects It |
@@ -99,6 +106,12 @@ Include reference tables the implementer needs to author data correctly: provinc
 color palettes, adjacency maps, coordinate positions, terrain assignments, design constraints.
 Include this section for any iteration that involves data authoring in visual-config.yaml,
 regardless of whether the iteration also includes code changes. Omit only for pure code iterations.
+
+**Data change validation heuristics**: When a previous iteration's data changes failed to move
+the metric, quantify the gap before proposing new values:
+- **Colors**: Compute RGB Euclidean distance (√((R₁-R₂)² + (G₁-G₂)² + (B₁-B₂)²)). Values within 50 are indistinguishable at overview zoom on dark backgrounds; target >80 for reliable distinction. Include distances in the Reference Data table.
+- **Sizes**: Compare against the smallest zone dimensions to ensure visibility at 1:1 scale. Font sizes below 16px are unreadable at overview zoom.
+- **Spacing/margins**: Verify proportionality against average zone size (e.g., a 35px overlap margin is ~10% of a 360px zone — may be too subtle).
 
 ## Problem 1: [Problem title from evaluation]
 
@@ -162,6 +175,15 @@ component subsystem).
 |------|-----------|--------|------------|
 | [risk description] | LOW/MEDIUM/HIGH | [what breaks] | [how to prevent or recover] |
 
+## Implementation Verification Checklist
+
+Machine-readable list of specific changes for the evaluator to cross-reference against the
+codebase (independent of visual assessment). Helps diagnose "implemented but metric unchanged"
+in the next evaluation cycle.
+
+- [ ] `<file>`: <what changed> (e.g., "`layers.ts`: route layer moved above zone layer")
+- [ ] `<file>`: <what changed>
+
 ## Research Sources
 
 - [URL or description of research that informed the plan]
@@ -171,6 +193,7 @@ component subsystem).
 
 | File | What It Controls |
 |------|-----------------|
+| `packages/runner/src/canvas/layers.ts` | Canvas layer z-ordering (rendering order of zones, routes, adjacency, regions) |
 | `packages/runner/src/canvas/renderers/zone-renderer.ts` | Game canvas zone rendering (shape, fill, stroke, labels, badges) |
 | `packages/runner/src/canvas/renderers/shape-utils.ts` | Shape drawing primitives (`drawZoneShape()` — rectangle, circle, polygon, etc.) |
 | `packages/runner/src/canvas/renderers/adjacency-renderer.ts` | Adjacency line rendering (dashed segments between zone edges) |

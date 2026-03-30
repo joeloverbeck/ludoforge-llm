@@ -20,7 +20,7 @@ The argument is the skill directory path. The framework automatically resolves `
 ## Checklist
 
 1. **Read the target skill** — Read the SKILL.md file at the provided path. Parse its name, description, and full content. If the file does not exist or is not a skill file, stop and report the error.
-2. **Read alignment documents** — Read `docs/FOUNDATIONS.md` and the project-level `CLAUDE.md` to establish the quality bar (skip if already in context from the current session).
+2. **Read alignment documents** — Read `docs/FOUNDATIONS.md` — skip only if explicitly read earlier in this session (not from memory or training knowledge). `CLAUDE.md` is always available via system context injection and does not need explicit reading.
 3. **Session reflection** — Review the current conversation context to identify:
    - Moments where the skill's instructions were unclear or ambiguous
    - Steps that were skipped, reordered, or worked around
@@ -94,4 +94,5 @@ Output this structure to the conversation (do not write to a file):
 - **FOUNDATIONS alignment is mandatory** — Any suggestion that would violate a principle in `docs/FOUNDATIONS.md` must be flagged and rejected, even if it would otherwise be an improvement.
 - **Scope discipline** — Do not propose expanding the skill's scope beyond its stated intent. The audit evaluates the skill as written, not what it could become.
 - **Session evidence required** — Every Issue and Improvement must cite specific session evidence (what happened, what was expected). Findings based purely on hypothetical scenarios belong in Features, not Issues.
-- **Follow-up implementation** — After the report is presented, the user may request implementation of specific suggestions. At that point, edit the target skill file directly — the "report only" guardrail applies only to the audit phase, not to user-directed follow-up.
+- **Follow-up implementation** — After the report is presented, the user may request implementation of specific suggestions. At that point, edit the target skill file directly — the "report only" guardrail applies only to the audit phase, not to user-directed follow-up. After making follow-up edits, re-read the modified sections to verify edits don't conflict with each other or with unchanged skill content.
+- **Cross-skill consistency** — If the target skill is part of a multi-skill workflow (e.g., plan/implement/evaluate cycle), scan sibling skills for inconsistent file references, terminology, or shared constants. Report cross-skill inconsistencies as Issues.

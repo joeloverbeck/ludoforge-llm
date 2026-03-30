@@ -1,6 +1,6 @@
 # Spec 96: Global State Aggregation Expressions
 
-**Status**: Draft
+**Status**: COMPLETED
 **Priority**: P2
 **Complexity**: M
 **Dependencies**: Spec 15 (implemented), Spec 95 (implemented)
@@ -435,3 +435,20 @@ For games with many more zones (hypothetical 500-zone game), aggregation cost gr
 - Aggregation over empty state returns 0 (not undefined or NaN)
 - `globalTokenAgg` count with no filter equals total token count across board zones
 - `adjacentTokenAgg` result is subset of `globalTokenAgg` result (adjacent zones are a subset of all zones)
+
+## Outcome
+
+- Completion date: 2026-03-30
+- What actually changed:
+  - Added `globalTokenAgg`, `globalZoneAgg`, and `adjacentTokenAgg` to the policy expression compiler/runtime/schema surface.
+  - Added unit coverage for compilation, runtime evaluation, and schema acceptance.
+  - Added FITL-derived integration coverage proving authored aggregation expressions compile and evaluate correctly against real FITL-shaped state.
+  - Added property-oriented aggregation invariants and verified production policy goldens remain stable.
+- Deviations from original plan:
+  - Maintained production FITL/Texas agent authoring was not updated to use the new expressions yet, so production goldens remained unchanged.
+  - Seat-like ownership matching in FITL integration coverage relies on `self` resolution or runtime player ids, because FITL token props use runtime `PlayerId` values rather than authored seat-id strings.
+- Verification:
+  - `pnpm -F @ludoforge/engine test`
+  - `pnpm turbo lint`
+  - `pnpm turbo typecheck`
+  - `pnpm turbo test`

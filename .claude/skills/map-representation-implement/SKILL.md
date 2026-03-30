@@ -9,7 +9,7 @@ Improve the FITL game map rendering based on the latest plan's recommendations.
 
 ## Checklist
 
-> **Plan mode note**: If plan mode is active when this skill is invoked, steps 1-3 serve as the exploration phase. Write your execution plan to the plan file, exit plan mode, then continue with steps 4-12.
+> **Plan mode note**: If plan mode is active when this skill is invoked, steps 1-3 serve as the exploration phase. During exploration, also identify the specific file paths from the plan's implementation steps and read them via Explore agents to front-load context for the plan file. Write your execution plan to the plan file, exit plan mode, then continue with steps 4-12.
 
 1. Read `reports/map-representation-evaluation.md` — focus on the latest EVALUATION #N for context on what needs improving.
 2. Read `reports/map-representation-plan.md` — the implementation plan to execute. This is the primary guide for this session.
@@ -23,7 +23,7 @@ Improve the FITL game map rendering based on the latest plan's recommendations.
 6. If vertices were authored or modified, verify shared borders: for each adjacent pair, confirm that converting relative vertices back to absolute world coordinates (`absoluteX = relativeX + centerX`) produces matching points on both sides of the shared edge.
 7. If a step is ambiguous or you discover the plan's assumptions about the code are wrong, apply the **1-3-1 rule** (1 problem, 3 options, 1 recommendation) before proceeding — per Foundation #10.
 8. If the plan includes map editor changes, implement those too.
-9. Update golden test assertions in `packages/runner/test/config/visual-config-files.test.ts` if attribute rules, override counts, or connection route counts changed.
+9. Update golden test assertions. Check at minimum: `visual-config-files.test.ts` (attribute rules, colors, override counts), `layers.test.ts` (z-order indices if layer order changed), and `connection-route-renderer.test.ts` (route geometry expectations if route constants changed).
 10. Run verification: `pnpm turbo typecheck` and `pnpm -F @ludoforge/runner test`.
 11. Visual verification: Run `pnpm -F @ludoforge/runner dev` and inspect the map in the browser. Verify: all targeted zones render with the new shapes, terrain colors apply correctly, tokens render inside polygon bounds, adjacency lines connect to polygon edges, and the map editor shows the same changes. Report any visual anomalies to the user before concluding.
 12. Do NOT update either report file — that happens in the next evaluate invocation.
@@ -34,6 +34,7 @@ Improve the FITL game map rendering based on the latest plan's recommendations.
 
 | File | What It Controls |
 |------|-----------------|
+| `packages/runner/src/canvas/layers.ts` | Layer z-order hierarchy — controls rendering order of background, regions, adjacency, zones, routes, and overlays |
 | `packages/runner/src/canvas/renderers/zone-renderer.ts` | Game canvas zone rendering — shape, fill, stroke, labels, badges, hidden stack visual |
 | `packages/runner/src/canvas/renderers/shape-utils.ts` | Shape drawing primitives — `drawZoneShape()` dispatches shapes, `getEdgePointAtAngle()` computes edge intersections |
 | `packages/runner/src/canvas/renderers/adjacency-renderer.ts` | Adjacency line rendering — dashed segments between zone edges, highlighting |
@@ -61,6 +62,7 @@ Improve the FITL game map rendering based on the latest plan's recommendations.
 
 | File | What It Covers |
 |------|---------------|
+| `packages/runner/test/canvas/layers.test.ts` | Layer z-order golden assertions — `boardGroup.children` indices must be updated when layer order changes |
 | `packages/runner/test/canvas/renderers/` | Zone renderer, adjacency renderer, connection route renderer tests |
 | `packages/runner/test/config/` | Visual config loading and provider tests |
 | `packages/runner/test/config/visual-config-files.test.ts` | **Golden assertions** on FITL visual-config.yaml structure and values — must be updated whenever YAML attribute rules, colors, or override counts change |
@@ -152,6 +154,7 @@ When the plan requires new config fields (e.g., polygon vertex data, terrain tex
 - **PixiJS Graphics API**: PixiJS 8 uses `Graphics.poly(points)` for arbitrary polygons where `points` is a flat array `[x1,y1, x2,y2, ...]`. Ensure the polygon is closed (first point = last point) or use `closePath()`.
 - **TypeScript exactOptionalPropertyTypes**: This project enables `exactOptionalPropertyTypes`. When adding optional fields that receive `foo ?? undefined`, the type must include `| undefined` explicitly. E.g., `readonly vertices?: readonly number[] | undefined`, not just `readonly vertices?: readonly number[]`.
 - **Vertex transforms affect edge intersection tests**: If smoothing or other vertex transformations are applied to `drawZoneShape()`, they must also be applied in `getEdgePointAtAngle()`, AND existing polygon edge intersection tests will need updated expectations since the shape boundary changes. The `smoothPolygonVertices()` function rounds corners inward, so edge intersection points move closer to center.
+- **Route overlap margin affects geometry tests**: Changing `ROUTE_OVERLAP_MARGIN` in `connection-route-renderer.ts` extends route endpoints, which shifts the sampled midpoint position and tangent direction. This breaks assertions on midpoint coordinates and label rotation in `connection-route-renderer.test.ts`. The rotation normalization can produce values near 2π (equivalent to 0) — test assertions must handle modular equivalence.
 - **Zone renderer child ordering**: `zone-renderer.test.ts` accesses zone container children by numeric index (`children[0]` = base, `children[1]` = hiddenStack, etc.). Adding or reordering children in `createZoneVisualElements()` / `addChild()` shifts all subsequent indices. After modifying the child list, update indices in the test using Python or manual edits — do **not** use sequential sed replacements (e.g., `[2]→[3]` then `[3]→[4]`) as this causes double-shifting. Process from highest index to lowest, or use a script that replaces all in one pass. Also update any `toHaveLength(N)` assertions on `container.children`.
 
 ## Scope Constraints

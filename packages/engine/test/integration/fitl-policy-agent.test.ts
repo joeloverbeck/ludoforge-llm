@@ -27,6 +27,64 @@ function rngStatesEqual(left: { readonly algorithm: string; readonly version: nu
     && left.state.every((entry, index) => entry === right.state[index]);
 }
 
+function createPolicyAgents(count: number): PolicyAgent[] {
+  return Array.from({ length: count }, () => new PolicyAgent());
+}
+
+function advanceSeed11ToVcFreeRally() {
+  const { compiled } = compileProductionSpec();
+  const def = assertValidatedGameDef(compiled.gameDef);
+  const runtime = createGameDefRuntime(def);
+  let state = initialState(def, 11, 4).state;
+  const openingAgent = new PolicyAgent();
+  const openingLegalMoves = enumerateLegalMoves(def, state, undefined, runtime).moves;
+  const openingMove = openingAgent.chooseMove({
+    def,
+    state,
+    playerId: state.activePlayer,
+    legalMoves: openingLegalMoves,
+    rng: createRng(11n),
+    runtime,
+  });
+
+  state = applyMove(def, state, openingMove.move, undefined, runtime).state;
+  return {
+    def,
+    runtime,
+    state,
+    legalMoves: enumerateLegalMoves(def, state, undefined, runtime).moves,
+  } as const;
+}
+
+function disableVcCompletionGuidance(def: ReturnType<typeof assertValidatedGameDef>) {
+  const vcProfile = def.agents?.profiles['vc-evolved'];
+  assert.ok(vcProfile, 'expected vc-evolved profile in FITL production catalog');
+  if (vcProfile === undefined || def.agents === undefined) {
+    throw new Error('Expected vc-evolved policy profile');
+  }
+
+  return assertValidatedGameDef({
+    ...def,
+    agents: {
+      ...def.agents,
+      profiles: {
+        ...def.agents.profiles,
+        'vc-evolved': {
+          ...vcProfile,
+          use: {
+            ...vcProfile.use,
+            completionScoreTerms: [],
+          },
+          completionGuidance: {
+            enabled: false,
+            fallback: 'random',
+          },
+        },
+      },
+    },
+  });
+}
+
 describe('FITL policy agent integration', () => {
   it('compiles the production FITL spec with authored policy bindings for all four seats', () => {
     const { compiled } = compileProductionSpec();
@@ -39,6 +97,12 @@ describe('FITL policy agent integration', () => {
       nva: 'nva-baseline',
       vc: 'vc-evolved',
     });
+    assert.deepEqual(agents.profiles['vc-evolved']?.use.completionScoreTerms, ['preferTargetSpaceSelection']);
+    assert.deepEqual(agents.profiles['vc-evolved']?.completionGuidance, {
+      enabled: true,
+      fallback: 'random',
+    });
+    assert.ok(agents.library.completionScoreTerms.preferTargetSpaceSelection);
   });
 
   it('concretizes incomplete FITL legal-move templates before policy evaluation', () => {
@@ -159,7 +223,7 @@ describe('FITL policy agent integration', () => {
   it('runs fixed-seed FITL policy self-play without runtime failures or fallback', () => {
     const { compiled } = compileProductionSpec();
     const def = assertValidatedGameDef(compiled.gameDef);
-    const agents = [new PolicyAgent(), new PolicyAgent(), new PolicyAgent(), new PolicyAgent()];
+    const agents = createPolicyAgents(4);
 
     const trace = runGame(def, 11, agents, 5, 4);
 
@@ -182,7 +246,7 @@ describe('FITL policy agent integration', () => {
   it('handles seed 17 free-operation outcome-policy dead-end without runtime failure or fallback', () => {
     const { compiled } = compileProductionSpec();
     const def = assertValidatedGameDef(compiled.gameDef);
-    const agents = [new PolicyAgent(), new PolicyAgent(), new PolicyAgent(), new PolicyAgent()];
+    const agents = createPolicyAgents(4);
 
     const trace = runGame(def, 17, agents, 5, 4);
 
@@ -194,6 +258,86 @@ describe('FITL policy agent integration', () => {
         assert.fail('expected policy trace metadata');
       }
       assert.equal(move.agentDecision.emergencyFallback, false);
+    }
+  });
+
+  it('uses production VC guidance to fill the seed-11 free Rally target-space set instead of random undersampling', () => {
+    const guided = advanceSeed11ToVcFreeRally();
+    const unguidedDef = disableVcCompletionGuidance(guided.def);
+    const unguidedRuntime = createGameDefRuntime(unguidedDef);
+    const guidedAgent = new PolicyAgent();
+    const unguidedAgent = new PolicyAgent();
+
+    const guidedMove = guidedAgent.chooseMove({
+      def: guided.def,
+      state: guided.state,
+      playerId: guided.state.activePlayer,
+      legalMoves: guided.legalMoves,
+      rng: createRng(12n),
+      runtime: guided.runtime,
+    });
+    const unguidedMove = unguidedAgent.chooseMove({
+      def: unguidedDef,
+      state: guided.state,
+      playerId: guided.state.activePlayer,
+      legalMoves: enumerateLegalMoves(unguidedDef, guided.state, undefined, unguidedRuntime).moves,
+      rng: createRng(12n),
+      runtime: unguidedRuntime,
+    });
+
+    assert.equal(String(guidedMove.move.move.actionId), 'rally');
+    assert.equal(String(unguidedMove.move.move.actionId), 'rally');
+    assert.deepEqual(
+      guidedMove.move.move.params['decision:doc.actionPipelines.9.stages[0].effects.0.if.else.0.chooseN::$targetSpaces'],
+      [
+        'northeast-cambodia:none',
+        'sihanoukville:none',
+        'the-fishhook:none',
+        'the-parrots-beak:none',
+      ],
+    );
+    assert.deepEqual(
+      unguidedMove.move.move.params['decision:doc.actionPipelines.9.stages[0].effects.0.if.else.0.chooseN::$targetSpaces'],
+      ['sihanoukville:none'],
+    );
+  });
+
+  it('does not mutate the external pre-move snapshot while guided completion runs', () => {
+    const guided = advanceSeed11ToVcFreeRally();
+    const snapshot = structuredClone(guided.state);
+
+    void new PolicyAgent().chooseMove({
+      def: guided.def,
+      state: guided.state,
+      playerId: guided.state.activePlayer,
+      legalMoves: guided.legalMoves,
+      rng: createRng(12n),
+      runtime: guided.runtime,
+    });
+
+    assert.deepEqual(guided.state, snapshot);
+  });
+
+  it('replays guided FITL policy self-play deterministically across curated seeds without fallback', () => {
+    const { compiled } = compileProductionSpec();
+    const def = assertValidatedGameDef(compiled.gameDef);
+    const seeds = [11, 17, 23];
+
+    for (const seed of seeds) {
+      const first = runGame(def, seed, createPolicyAgents(4), 8, 4);
+      const second = runGame(def, seed, createPolicyAgents(4), 8, 4);
+
+      assert.equal(first.finalState.stateHash, second.finalState.stateHash, `seed ${seed} should replay to the same final hash`);
+      assert.equal(first.moves.length > 0, true, `seed ${seed} should produce at least one move`);
+      for (const trace of [first, second]) {
+        for (const move of trace.moves) {
+          assert.equal(move.agentDecision?.kind, 'policy');
+          if (move.agentDecision?.kind !== 'policy') {
+            assert.fail(`seed ${seed} expected policy trace metadata`);
+          }
+          assert.equal(move.agentDecision.emergencyFallback, false, `seed ${seed} should not trigger policy fallback`);
+        }
+      }
     }
   });
 });

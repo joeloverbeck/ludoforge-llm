@@ -141,6 +141,27 @@ function createChoiceRequest(overrides: Partial<ChoicePendingRequest> = {}): Cho
   } as ChoicePendingRequest;
 }
 
+function createChooseNRequest(overrides: Partial<ChoicePendingRequest> = {}): ChoicePendingRequest {
+  return {
+    kind: 'pending',
+    complete: false,
+    decisionKey: '$targets',
+    type: 'chooseN',
+    name: '$targets',
+    options: [
+      { value: 'zone-a', legality: 'unknown', illegalReason: null },
+      { value: 'zone-b', legality: 'unknown', illegalReason: null },
+      { value: 'zone-c', legality: 'unknown', illegalReason: null },
+    ],
+    targetKinds: ['zone'],
+    min: 0,
+    max: 3,
+    selected: [],
+    canConfirm: true,
+    ...overrides,
+  } as ChoicePendingRequest;
+}
+
 function createHarness(
   completionScoreTerms: AgentPolicyCatalog['library']['completionScoreTerms'],
   profile: CompiledAgentProfile = createProfile(),
@@ -334,5 +355,88 @@ describe('completion-guidance-choice', () => {
         { value: 'zone-b', legality: 'unknown', illegalReason: null },
       ],
     })), 'zone-b');
+  });
+
+  it('returns a chooseN subset containing all positive-scoring options up to max', () => {
+    const harness = createHarness({
+      preferZoneA: {
+        costClass: 'state',
+        when: literal(true),
+        weight: literal(4),
+        value: opExpr('boolToNumber', opExpr('eq', refExpr({ kind: 'optionIntrinsic', intrinsic: 'value' }), literal('zone-a'))),
+        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+      },
+      preferZoneC: {
+        costClass: 'state',
+        when: literal(true),
+        weight: literal(2),
+        value: opExpr('boolToNumber', opExpr('eq', refExpr({ kind: 'optionIntrinsic', intrinsic: 'value' }), literal('zone-c'))),
+        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+      },
+    }, createProfile({
+      use: { pruningRules: [], scoreTerms: [], completionScoreTerms: ['preferZoneA', 'preferZoneC'], tieBreakers: [] },
+    }));
+
+    const choose = buildCompletionChooseCallback({
+      state: harness.state,
+      def: harness.def,
+      catalog: harness.catalog,
+      playerId: asPlayerId(0),
+      seatId: 'us',
+      profile: harness.profile,
+    });
+
+    assert.deepEqual(choose?.(createChooseNRequest({ max: 2 })), ['zone-a', 'zone-c']);
+  });
+
+  it('pads chooseN selections up to min using highest-ranked remaining options', () => {
+    const harness = createHarness({
+      preferZoneB: {
+        costClass: 'state',
+        when: literal(true),
+        weight: literal(5),
+        value: opExpr('boolToNumber', opExpr('eq', refExpr({ kind: 'optionIntrinsic', intrinsic: 'value' }), literal('zone-b'))),
+        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+      },
+    }, createProfile({
+      use: { pruningRules: [], scoreTerms: [], completionScoreTerms: ['preferZoneB'], tieBreakers: [] },
+    }));
+
+    const choose = buildCompletionChooseCallback({
+      state: harness.state,
+      def: harness.def,
+      catalog: harness.catalog,
+      playerId: asPlayerId(0),
+      seatId: 'us',
+      profile: harness.profile,
+    });
+
+    assert.deepEqual(choose?.(createChooseNRequest({ min: 2, max: 2 })), ['zone-b', 'zone-a']);
+  });
+
+  it('returns the first deterministic chooseN subset when fallback is first', () => {
+    const harness = createHarness({
+      noMatch: {
+        costClass: 'state',
+        when: literal(false),
+        weight: literal(1),
+        value: literal(100),
+        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+      },
+    }, createProfile({
+      use: { pruningRules: [], scoreTerms: [], completionScoreTerms: ['noMatch'], tieBreakers: [] },
+      completionGuidance: { enabled: true, fallback: 'first' },
+    }));
+
+    const choose = buildCompletionChooseCallback({
+      state: harness.state,
+      def: harness.def,
+      catalog: harness.catalog,
+      playerId: asPlayerId(0),
+      seatId: 'us',
+      profile: harness.profile,
+    });
+
+    assert.deepEqual(choose?.(createChooseNRequest({ min: 2, max: 3 })), ['zone-a', 'zone-b']);
   });
 });

@@ -7,6 +7,7 @@ import {
   asPhaseId,
   asPlayerId,
   asTokenId,
+  asZoneId,
   initialState,
   type ActionDef,
   type AgentParameterValue,
@@ -104,7 +105,12 @@ function createDef(agents: AgentPolicyCatalog): GameDef {
     constants: {},
     globalVars: [],
     perPlayerVars: [],
-    zones: [],
+    zones: [
+      { id: asZoneId('target-a:none'), owner: 'none', visibility: 'public', ordering: 'set', category: 'province' },
+      { id: asZoneId('target-b:none'), owner: 'none', visibility: 'public', ordering: 'set', category: 'province' },
+      { id: asZoneId('zone-a:0'), owner: 'player', visibility: 'owner', ordering: 'set' },
+      { id: asZoneId('zone-b:0'), owner: 'player', visibility: 'owner', ordering: 'set' },
+    ],
     tokenTypes: [],
     setup: [],
     turnStructure: { phases: [{ id: phaseId }] },
@@ -123,8 +129,8 @@ function createChoiceRequest(overrides: Partial<ChoicePendingRequest> = {}): Cho
     type: 'chooseOne',
     name: '$target',
     options: [
-      { value: 'zone-a', legality: 'legal', illegalReason: null },
-      { value: 'zone-b', legality: 'legal', illegalReason: null },
+      { value: 'target-a:none', legality: 'legal', illegalReason: null },
+      { value: 'target-b:none', legality: 'legal', illegalReason: null },
     ],
     targetKinds: ['zone'],
     ...overrides,
@@ -258,11 +264,11 @@ describe('completion-guidance-eval', () => {
       ...harness.state,
       zones: {
         ...harness.state.zones,
-        'zone-a:0': [
+        'target-a:none': [
           { id: asTokenId('t0'), type: 'unit', props: { strength: 2 } },
           { id: asTokenId('t1'), type: 'unit', props: { strength: 3 } },
         ],
-        'zone-b:0': [
+        'target-b:none': [
           { id: asTokenId('t2'), type: 'unit', props: { strength: 1 } },
         ],
       },
@@ -276,7 +282,7 @@ describe('completion-guidance-eval', () => {
       harness.seatId,
       {},
       createChoiceRequest(),
-      'zone-a',
+      'target-a:none',
       ['zoneLoad'],
     );
     const scoreB = scoreCompletionOption(
@@ -287,12 +293,53 @@ describe('completion-guidance-eval', () => {
       harness.seatId,
       {},
       createChoiceRequest(),
-      'zone-b',
+      'target-b:none',
       ['zoneLoad'],
     );
 
     assert.equal(scoreA, 5);
     assert.equal(scoreB, 1);
+  });
+
+  it('treats unresolved dynamic zone strings as unknown rather than zero', () => {
+    const harness = createHarness({
+      invalidZone: {
+        costClass: 'state',
+        when: literal(true),
+        weight: literal(2),
+        value: {
+          kind: 'zoneTokenAgg',
+          zone: paramExpr('badZone'),
+          owner: 'self',
+          prop: 'strength',
+          aggOp: 'sum',
+        },
+        unknownAs: 7,
+        dependencies: { parameters: ['badZone'], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+      },
+    }, {
+      badZone: {
+        type: 'enum',
+        required: false,
+        tunable: true,
+        default: 'target-a:none',
+        values: ['target-a:none', 'missing-space'],
+      },
+    });
+
+    const score = scoreCompletionOption(
+      harness.state,
+      harness.def,
+      harness.catalog,
+      harness.playerId,
+      harness.seatId,
+      { badZone: 'missing-space' },
+      createChoiceRequest(),
+      'target-a:none',
+      ['invalidZone'],
+    );
+
+    assert.equal(score, 7);
   });
 
   it('applies unknownAs when the value expression resolves to undefined', () => {
@@ -331,7 +378,7 @@ describe('completion-guidance-eval', () => {
       harness.seatId,
       { badZone: 3 },
       createChoiceRequest(),
-      'zone-a',
+      'target-a:none',
       ['invalidZone'],
     );
 
@@ -358,7 +405,7 @@ describe('completion-guidance-eval', () => {
       harness.seatId,
       {},
       createChoiceRequest(),
-      'zone-a',
+      'target-a:none',
       ['clamped'],
     );
 
@@ -391,7 +438,7 @@ describe('completion-guidance-eval', () => {
       harness.seatId,
       {},
       createChoiceRequest(),
-      'zone-a',
+      'target-a:none',
       ['first', 'second'],
     );
 
@@ -429,7 +476,7 @@ describe('completion-guidance-eval', () => {
       harness.seatId,
       { zoneWeight: 2 },
       createChoiceRequest(),
-      'zone-a',
+      'target-a:none',
       ['weighted'],
     );
     const highScore = scoreCompletionOption(
@@ -440,7 +487,7 @@ describe('completion-guidance-eval', () => {
       harness.seatId,
       { zoneWeight: 5 },
       createChoiceRequest(),
-      'zone-a',
+      'target-a:none',
       ['weighted'],
     );
 
@@ -459,7 +506,7 @@ describe('completion-guidance-eval', () => {
       harness.seatId,
       {} satisfies Readonly<Record<string, AgentParameterValue>>,
       createChoiceRequest(),
-      'zone-a',
+      'target-a:none',
       [],
     );
 

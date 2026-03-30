@@ -9,6 +9,7 @@ import {
   asPhaseId,
   asPlayerId,
   asTokenId,
+  asZoneId,
   createTrustedExecutableMove,
   createRng,
   initialState,
@@ -62,7 +63,16 @@ function createBaseDef(agents: AgentPolicyCatalog): GameDef {
     constants: {},
     globalVars: [{ name: 'usMargin', type: 'int', init: 1, min: -10, max: 10 }],
     perPlayerVars: [{ name: 'tempo', type: 'int', init: 0, min: 0, max: 10 }],
-    zones: [],
+    zones: [
+      { id: asZoneId('frontier:0'), owner: 'player', visibility: 'owner', ordering: 'set', attributes: { population: 0 } },
+      { id: asZoneId('frontier:1'), owner: 'player', visibility: 'owner', ordering: 'set', attributes: { population: 0 } },
+      { id: asZoneId('rear:0'), owner: 'player', visibility: 'owner', ordering: 'set', attributes: { population: 0 } },
+      { id: asZoneId('rear:1'), owner: 'player', visibility: 'owner', ordering: 'set', attributes: { population: 0 } },
+      { id: asZoneId('frontier:none'), owner: 'none', visibility: 'public', ordering: 'set', attributes: { population: 0 } },
+      { id: asZoneId('rear:none'), owner: 'none', visibility: 'public', ordering: 'set', attributes: { population: 0 } },
+      { id: asZoneId('target-a:none'), owner: 'none', visibility: 'public', ordering: 'set', category: 'province', attributes: { population: 0 } },
+      { id: asZoneId('target-b:none'), owner: 'none', visibility: 'public', ordering: 'set', category: 'province', attributes: { population: 0 } },
+    ],
     derivedMetrics: [
       {
         id: 'boardPressure',
@@ -1009,6 +1019,83 @@ describe('policy-eval', () => {
     );
   });
 
+  it('resolves exact runtime zone ids for dynamic zoneTokenAgg values', () => {
+    const agents = createCatalog(
+      {
+        candidateFeatures: {
+          zoneLoad: {
+            type: 'number',
+            costClass: 'candidate',
+            expr: {
+              kind: 'zoneTokenAgg',
+              zone: refExpr({ kind: 'candidateParam', id: 'eventCardId' }),
+              owner: 'self',
+              prop: 'strength',
+              aggOp: 'sum',
+            },
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          },
+        },
+        scoreTerms: {
+          preferLoadedZone: {
+            costClass: 'candidate',
+            weight: literal(1),
+            value: refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'zoneLoad' }),
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['zoneLoad'], aggregates: [] },
+          },
+        },
+      },
+      {
+        use: {
+          pruningRules: [],
+          scoreTerms: ['preferLoadedZone'],
+          completionScoreTerms: [],
+          tieBreakers: ['stableMoveKey'],
+        },
+        plan: {
+          stateFeatures: [],
+          candidateFeatures: ['zoneLoad'],
+          candidateAggregates: [],
+        },
+      },
+      {
+        eventCardId: { type: 'id' },
+      },
+    );
+    const baseInput = createInput(agents, [
+      { actionId: asActionId('alpha'), params: { eventCardId: 'target-a:none' } },
+      { actionId: asActionId('beta'), params: { eventCardId: 'target-b:none' } },
+    ]);
+    const input = {
+      ...baseInput,
+      state: {
+        ...baseInput.state,
+        zones: {
+          ...baseInput.state.zones,
+          'target-a:none': [
+            { id: asTokenId('t0'), type: 'unit', props: { strength: 4 } },
+            { id: asTokenId('t1'), type: 'unit', props: { strength: 1 } },
+          ],
+          'target-b:none': [
+            { id: asTokenId('t2'), type: 'unit', props: { strength: 2 } },
+          ],
+        },
+      },
+    } as const;
+
+    const result = evaluatePolicyMove(input);
+
+    assert.equal(result.move.actionId, asActionId('alpha'));
+    assert.equal(
+      result.metadata.candidates.find((candidate) => candidate.actionId === 'alpha')?.score,
+      5,
+    );
+    assert.equal(
+      result.metadata.candidates.find((candidate) => candidate.actionId === 'beta')?.score,
+      2,
+    );
+  });
+
   it('resolves zoneTokenAgg active-owner zones through the shared runtime zone-address helper', () => {
     const agents = createCatalog(
       {
@@ -1127,6 +1214,64 @@ describe('policy-eval', () => {
     assert.equal(
       result.metadata.candidates.find((candidate) => candidate.actionId === 'beta')?.score,
       0,
+    );
+  });
+
+  it('fails closed for unresolved dynamic zoneTokenAgg strings', () => {
+    const agents = createCatalog(
+      {
+        candidateFeatures: {
+          badZoneLoad: {
+            type: 'number',
+            costClass: 'candidate',
+            expr: {
+              kind: 'zoneTokenAgg',
+              zone: refExpr({ kind: 'candidateParam', id: 'eventCardId' }),
+              owner: 'self',
+              prop: 'strength',
+              aggOp: 'sum',
+            },
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          },
+        },
+        scoreTerms: {
+          preferKnownZone: {
+            costClass: 'candidate',
+            weight: literal(1),
+            value: refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'badZoneLoad' }),
+            unknownAs: -3,
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['badZoneLoad'], aggregates: [] },
+          },
+        },
+      },
+      {
+        use: {
+          pruningRules: [],
+          scoreTerms: ['preferKnownZone'],
+          completionScoreTerms: [],
+          tieBreakers: ['stableMoveKey'],
+        },
+        plan: {
+          stateFeatures: [],
+          candidateFeatures: ['badZoneLoad'],
+          candidateAggregates: [],
+        },
+      },
+      {
+        eventCardId: { type: 'id' },
+      },
+    );
+    const input = createInput(agents, [
+      { actionId: asActionId('alpha'), params: { eventCardId: 'missing-space' } },
+      { actionId: asActionId('beta'), params: { eventCardId: 'target-b:none' } },
+    ]);
+
+    const result = evaluatePolicyMove(input);
+
+    assert.equal(result.move.actionId, asActionId('beta'));
+    assert.equal(
+      result.metadata.candidates.find((candidate) => candidate.actionId === 'alpha')?.score,
+      -3,
     );
   });
 

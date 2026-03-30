@@ -1,6 +1,6 @@
 # Spec 95: Policy-Guided Move Completion
 
-**Status**: Draft
+**Status**: COMPLETED
 **Priority**: P1
 **Complexity**: L
 **Dependencies**: Spec 15 (implemented), Spec 93 (completed)
@@ -365,3 +365,21 @@ The `when` conditions on individual completionScoreTerms short-circuit evaluatio
 - **Property**: Guided completion never selects options outside the legal set
 - **Property**: Guided completion never increases total completion count
 - **Property**: Guided completion maintains determinism (same seed + same policy = same result)
+
+## Outcome
+
+- Completion date: 2026-03-30
+- What actually changed:
+  - The completion-guidance path was implemented across the compiler, runtime, scorer, chooser, and policy-agent layers through the 95POLGUIMOVCOM ticket series.
+  - Production FITL now authors VC completion guidance in `data/games/fire-in-the-lake/92-agents.md`.
+  - The runtime chooser now handles `chooseN` guidance as legal subset selection instead of only scalar `chooseOne` picks.
+  - Production FITL guidance is proven through integration and golden coverage instead of only synthetic unit fixtures.
+- Deviations from original plan:
+  - Delivery was split across focused tickets rather than one spec-sized implementation.
+  - The first production FITL guidance term is intentionally narrow (`$targetSpaces` multi-select completion) because the current policy surface still lacks richer generic zone-value refs; that broader surface remains the cleaner future direction.
+  - The authored production step exposed a real `chooseN` contract gap that the spec’s narrative assumed away; the implementation fixed that gap before enabling production guidance.
+- Verification results:
+  - `pnpm -F @ludoforge/engine test`
+  - `pnpm turbo test`
+  - `pnpm turbo typecheck`
+  - `pnpm turbo lint`

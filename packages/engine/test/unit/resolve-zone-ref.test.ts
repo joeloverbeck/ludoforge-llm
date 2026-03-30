@@ -26,6 +26,7 @@ const makeDef = (): GameDef => ({
     { id: asZoneId('hand:0'), owner: 'player', visibility: 'owner', ordering: 'stack' },
     { id: asZoneId('hand:1'), owner: 'player', visibility: 'owner', ordering: 'stack' },
     { id: asZoneId('board:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+    { id: asZoneId('board:cambodia'), owner: 'none', visibility: 'public', ordering: 'set' },
   ],
   tokenTypes: [],
   setup: [],
@@ -53,6 +54,7 @@ const makeState = (): GameState => ({
     'hand:0': [cube1],
     'hand:1': [],
     'board:none': [makeToken('cube-2', { faction: 'NVA' })],
+    'board:cambodia': [],
   },
   nextTokenOrdinal: 0,
   currentPhase: asPhaseId('main'),
@@ -82,6 +84,12 @@ describe('resolveZoneRef', () => {
     const ctx = makeCtx();
     const ref: ZoneRef = 'deck:none';
     assert.equal(resolveZoneRef(ref, ctx), 'deck:none');
+  });
+
+  it('resolves an exact zone id that is not a selector owner-spec', () => {
+    const ctx = makeCtx();
+    const ref: ZoneRef = 'board:cambodia';
+    assert.equal(resolveZoneRef(ref, ctx), 'board:cambodia');
   });
 
   it('resolves a dynamic zoneExpr with tokenZone reference', () => {

@@ -281,6 +281,22 @@ agents:
           boolToNumber:
             ref: feature.isBombard
 
+    completionScoreTerms:
+      preferTargetSpaceSelection:
+        when:
+          and:
+            - eq:
+                - { ref: decision.type }
+                - chooseN
+            - eq:
+                - { ref: decision.name }
+                - "$targetSpaces"
+            - eq:
+                - { ref: decision.targetKind }
+                - zone
+        weight: 1
+        value: 1
+
     tieBreakers:
       stableMoveKey:
         kind: stableMoveKey
@@ -379,8 +395,13 @@ agents:
           - preferEvent
           - preferRallyWeighted
           - preferTaxWeighted
+        completionScoreTerms:
+          - preferTargetSpaceSelection
         tieBreakers:
           - stableMoveKey
+      completionGuidance:
+        enabled: true
+        fallback: random
 
   bindings:
     us: us-baseline

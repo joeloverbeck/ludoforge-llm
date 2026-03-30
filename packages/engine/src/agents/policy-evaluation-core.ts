@@ -1,6 +1,9 @@
 import { asPlayerId, type PlayerId } from '../kernel/branded.js';
 import type { AgentPolicyZoneTokenAggOwner } from '../contracts/index.js';
-import { toOwnedZoneId } from '../kernel/zone-address.js';
+import { createEvalContext, createEvalRuntimeResources, type ReadContext } from '../kernel/eval-context.js';
+import { resolveZoneRefWithOwnerFallback } from '../kernel/resolve-zone-ref.js';
+import { buildRuntimeTableIndex } from '../kernel/runtime-table-index.js';
+import { buildAdjacencyGraph } from '../kernel/spatial.js';
 import type {
   AgentParameterValue,
   AgentPolicyCatalog,
@@ -84,6 +87,7 @@ export class PolicyEvaluationContext {
   private readonly candidateFeatureCache = new Map<string, Map<string, PolicyValue>>();
   private readonly aggregateCache = new Map<string, PolicyValue>();
   private readonly runtimeProviders: PolicyRuntimeProviders;
+  private zoneReadContext?: ReadContext;
   private currentCandidates: PolicyEvaluationCandidate[];
 
   constructor(
@@ -378,7 +382,10 @@ export class PolicyEvaluationContext {
     if (typeof resolvedZone !== 'string' || resolvedZone.length === 0) {
       return undefined;
     }
-    const zoneId = toOwnedZoneId(resolvedZone, resolvedOwner);
+    const zoneId = resolveZoneRefWithOwnerFallback(resolvedZone, resolvedOwner, this.getZoneReadContext());
+    if (zoneId === undefined) {
+      return undefined;
+    }
     const tokens = this.input.state.zones[zoneId];
     if (tokens === undefined || tokens.length === 0) {
       return expr.aggOp === 'count' ? 0 : expr.aggOp === 'sum' ? 0 : undefined;
@@ -469,6 +476,24 @@ export class PolicyEvaluationContext {
       return resolution.kind === 'value' ? resolution.value : undefined;
     }
     return this.runtimeProviders.currentSurface.resolveSurface(ref);
+  }
+
+  private getZoneReadContext(): ReadContext {
+    if (this.zoneReadContext !== undefined) {
+      return this.zoneReadContext;
+    }
+    const resources = createEvalRuntimeResources();
+    this.zoneReadContext = createEvalContext({
+      def: this.input.def,
+      adjacencyGraph: this.input.runtime?.adjacencyGraph ?? buildAdjacencyGraph(this.input.def.zones),
+      state: this.input.state,
+      activePlayer: this.input.state.activePlayer,
+      actorPlayer: this.input.playerId,
+      bindings: {},
+      runtimeTableIndex: this.input.runtime?.runtimeTableIndex ?? buildRuntimeTableIndex(this.input.def),
+      resources,
+    });
+    return this.zoneReadContext;
   }
 
   private runtimeError(

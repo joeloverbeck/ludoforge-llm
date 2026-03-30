@@ -19,9 +19,10 @@ Read the latest evaluation, research rendering approaches, and produce a concret
    - **Foundation #9** (No Backwards Compatibility): No shims or deprecated fallbacks
    - **Foundation #10** (Architectural Completeness): Solutions address root causes, not symptoms
 3. Identify the CRITICAL and HIGH recommendations from the evaluation. If none exist, target the top 2-3 MEDIUM recommendations.
-4. Read the renderer source files relevant to the identified problems (see Key Files). Extract: key type definitions with line numbers, function signatures that will be modified, data flow from config through presentation to renderer. Use Explore sub-agents for parallel codebase exploration when multiple renderer subsystems are involved. The goal is to populate the "Current Code Architecture" section of the plan output.
-5. Optionally read the game's physical reference image (e.g., `screenshots/FITL_SC1.jpg`) for design inspiration when planning visual changes. Use it as a target aesthetic, not a rigid specification.
-6. **Research phase** (if needed): If the identified problems require techniques not already present in the codebase, use Tavily web search and/or Context7 to research rendering techniques. Skip external research when the solution extends existing patterns — if skipped, note in the Research Sources section why it was unnecessary (e.g., "All solutions extend existing PixiJS Graphics and BitmapText patterns already in the codebase"). Examples of research topics:
+4. **Stalled iteration check**: If the previous evaluation shows no progress since the evaluation before it, check whether the previous plan was implemented. If not, decide whether to carry forward its recommendations (if still valid), supersede them (if priorities shifted), or incorporate them into the new plan. Note the decision in the Context section.
+5. Read the renderer source files relevant to the identified problems (see Key Files). Extract: key type definitions with line numbers, function signatures that will be modified, data flow from config through presentation to renderer. Use Explore sub-agents for parallel codebase exploration when multiple renderer subsystems are involved. The goal is to populate the "Current Code Architecture" section of the plan output. If the identified problems require only data changes (e.g., visual-config.yaml vertices or colors), the architecture section should document the pipeline that *consumes* the data to confirm no code changes are needed, rather than focusing on functions to be modified.
+6. Optionally read the game's physical reference image (e.g., `screenshots/FITL_SC1.jpg`) for design inspiration when planning visual changes. Use it as a target aesthetic, not a rigid specification.
+7. **Research phase** (if needed): If the identified problems require techniques not already present in the codebase, use Tavily web search and/or Context7 to research rendering techniques. Skip external research when the solution extends existing patterns — if skipped, note in the Research Sources section why it was unnecessary (e.g., "All solutions extend existing PixiJS Graphics and BitmapText patterns already in the codebase"). Examples of research topics:
    - Voronoi tessellation / Delaunay triangulation in PixiJS or 2D canvas
    - Polygon-based territory rendering in strategy games
    - Procedural map border generation algorithms
@@ -29,17 +30,17 @@ Read the latest evaluation, research rendering approaches, and produce a concret
    - Route rendering through irregular polygons
    - PixiJS Graphics polygon drawing, mesh rendering, or shader approaches
    - How other digital COIN-series implementations render maps
-7. For the top 2-3 problems, brainstorm **2-3 solution approaches** each, with trade-offs:
+8. For the top 1-3 problems (prioritize CRITICAL items — a single large CRITICAL may consume the entire iteration), brainstorm **2-3 solution approaches** each, with trade-offs:
    - Feasibility (how much code change, how many files)
    - Visual impact (how much does it improve the metric)
    - Risk (what could break, what regressions are possible)
    - Foundation alignment (does it respect all relevant principles)
-8. Select the recommended approach for each problem, applying the **1-3-1 rule**: 1 clearly defined problem, 3 potential options, 1 recommendation. If the best recommendation combines elements of multiple approaches, present it as a hybrid with clear attribution (e.g., "Approach 1 + partial Approach 2"). Explain which elements are taken from each and why the combination is better than either alone.
-9. **Map editor scope assessment**: For each proposed change, assess whether the map editor (`packages/runner/src/map-editor/`) needs updating in this iteration:
+9. Select the recommended approach for each problem, applying the **1-3-1 rule**: 1 clearly defined problem, 3 potential options, 1 recommendation. If the best recommendation combines elements of multiple approaches, present it as a hybrid with clear attribution (e.g., "Approach 1 + partial Approach 2"). Explain which elements are taken from each and why the combination is better than either alone.
+10. **Map editor scope assessment**: For each proposed change, assess whether the map editor (`packages/runner/src/map-editor/`) needs updating in this iteration:
    - If the change is purely rendering (e.g., drawing polygons instead of rectangles from the same position data), the editor may just need to call the same drawing function — include it.
    - If the change requires new editor interaction patterns (e.g., vertex dragging for polygons), defer to a future iteration — note what's deferred and why.
-10. Delete `reports/map-representation-plan.md` if it exists, then write the new plan to that path. The plan is **overwritten** each iteration, not appended.
-11. **Stop.** This skill's sole output is `reports/map-representation-plan.md`. Do not proceed to implementation — the `map-representation-implement` skill consumes this plan in a separate invocation.
+11. Write the new plan to `reports/map-representation-plan.md` (overwrites any existing file). The plan is **overwritten** each iteration, not appended. If the previous plan file exists, verify the iteration number is sequential with it; if there's a gap, note it in the Context section.
+12. **Stop.** This skill's sole output is `reports/map-representation-plan.md`. Do not proceed to implementation — the `map-representation-implement` skill consumes this plan in a separate invocation.
 
 ## Plan Output Format
 
@@ -80,6 +81,12 @@ Include:
 - Current code snippets showing what will change (before state)
 - Schema inheritance relationships (e.g., override schemas extending base schemas)
 
+## Reference Data (optional — for data-authoring iterations)
+
+If the iteration is primarily data authoring (e.g., polygon vertices, color palettes, layout
+positions), include reference tables the implementer needs: adjacency maps, coordinate positions,
+design constraints. Omit this section if the iteration is code-focused.
+
 ## Problem 1: [Problem title from evaluation]
 
 **Evaluation score**: Metric X = Y/10
@@ -110,7 +117,9 @@ Include:
 
 ## Implementation Steps
 
-Ordered steps with dependencies noted:
+Ordered steps with dependencies noted. If all steps target the same file, state the file
+once here and use the steps to describe logical groupings (e.g., by geographic cluster or
+component subsystem).
 
 1. [Step description] — **File**: `path/to/file.ts` — **Depends on**: none
 2. [Step description] — **File**: `path/to/file.ts` — **Depends on**: Step 1
@@ -185,8 +194,9 @@ When the plan proposes custom polygon shapes for zones:
 - **Format**: Flat alternating `[x1, y1, x2, y2, ...]` array matching `Graphics.poly()` input.
 - **Shared borders**: Adjacent zones must share border edge coordinates (same vertex pair in reverse order) so territories tile without gaps.
 - **Vertex count**: 5-8 vertices per zone is reasonable for territory shapes. More adds visual fidelity but increases YAML verbosity.
-- **Incremental approach**: Start with a cluster of 4-5 adjacent zones to validate the rendering pipeline. Extend to full tessellation in subsequent iterations.
+- **Coverage strategy**: If the rendering pipeline is already validated (polygons render correctly for existing zones), author vertices for all remaining zones in a single iteration to avoid a jarring visual split between polygon and rectangle provinces. Group zones by geographic cluster for authoring order but include all in the same plan. Only use an incremental approach (4-5 zones at a time) when validating a new rendering technique for the first time.
 - **Size reference**: Current default province rectangles are 360x220. Polygon vertices should produce shapes of comparable area.
+- **Validation**: For each adjacent province pair sharing vertices, verify that absolute coordinates match: `centerA + relativeVertexA == centerB + relativeVertexB`. Include this validation as a step in the Verification section of the plan.
 
 ## Scope Constraints
 

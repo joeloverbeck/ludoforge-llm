@@ -1657,7 +1657,82 @@
         }
       }
     },
-    "completionScoreTerms": {},
+    "completionScoreTerms": {
+      "preferTargetSpaceSelection": {
+        "costClass": "state",
+        "when": {
+          "kind": "op",
+          "op": "and",
+          "args": [
+            {
+              "kind": "op",
+              "op": "eq",
+              "args": [
+                {
+                  "kind": "ref",
+                  "ref": {
+                    "kind": "decisionIntrinsic",
+                    "intrinsic": "type"
+                  }
+                },
+                {
+                  "kind": "literal",
+                  "value": "chooseN"
+                }
+              ]
+            },
+            {
+              "kind": "op",
+              "op": "eq",
+              "args": [
+                {
+                  "kind": "ref",
+                  "ref": {
+                    "kind": "decisionIntrinsic",
+                    "intrinsic": "name"
+                  }
+                },
+                {
+                  "kind": "literal",
+                  "value": "$targetSpaces"
+                }
+              ]
+            },
+            {
+              "kind": "op",
+              "op": "eq",
+              "args": [
+                {
+                  "kind": "ref",
+                  "ref": {
+                    "kind": "decisionIntrinsic",
+                    "intrinsic": "targetKind"
+                  }
+                },
+                {
+                  "kind": "literal",
+                  "value": "zone"
+                }
+              ]
+            }
+          ]
+        },
+        "weight": {
+          "kind": "literal",
+          "value": 1
+        },
+        "value": {
+          "kind": "literal",
+          "value": 1
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": []
+        }
+      }
+    },
     "tieBreakers": {
       "stableMoveKey": {
         "kind": "stableMoveKey",
@@ -1873,10 +1948,16 @@
           "preferRallyWeighted",
           "preferTaxWeighted"
         ],
-        "completionScoreTerms": [],
+        "completionScoreTerms": [
+          "preferTargetSpaceSelection"
+        ],
         "tieBreakers": [
           "stableMoveKey"
         ]
+      },
+      "completionGuidance": {
+        "enabled": true,
+        "fallback": "random"
       },
       "plan": {
         "stateFeatures": [],
@@ -1890,7 +1971,7 @@
           "hasNonPassAlternative"
         ]
       },
-      "fingerprint": "2e162511dfbb8db289a77abb5320b20f8c96e61d1b6e349abcb4b8569471cb40"
+      "fingerprint": "b1021e2d1e048f1ddd2267abc08344b927733e3268babb09ce9f361d7fe5f5f2"
     }
   },
   "bindingsBySeat": {
@@ -1899,5 +1980,5 @@
     "nva": "nva-baseline",
     "vc": "vc-evolved"
   },
-  "catalogFingerprint": "56b206712b00931510c1acc0c14b55f538ce39bf7035cdaca451e64549ab3508"
+  "catalogFingerprint": "26e744d633690385d2d05c3cd1bca6acda7f69f090d7e4d5deaec1aab7d7f9b8"
 }

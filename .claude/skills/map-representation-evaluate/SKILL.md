@@ -10,16 +10,16 @@ Score the current FITL map rendering state from screenshots and append a structu
 ## Checklist
 
 1. Read `reports/map-representation-evaluation.md` — absorb the rubric and the last 2-3 evaluations. The file grows with each evaluation; use this strategy:
-   - If the file has fewer than ~100 lines (e.g., first evaluation), read the entire file in one pass — the two-pass strategy below is unnecessary.
+   - If the file has fewer than ~300 lines, read the entire file in one pass — the two-pass strategy below is unnecessary.
    - Otherwise: read the first ~40 lines for the rubric, metrics, and scoring guide. Count total lines (`wc -l`), then read from `offset = totalLines - 200` to get the last 2-3 evaluations in one pass (each evaluation is ~60-80 lines).
    - To build the Score Trend table efficiently, grep for `\*\*Average\*\*` in the report file — this returns all historical averages in one pass.
    - Skip intermediate evaluations unless checking recurring issue history.
 2. Discover and read all current screenshots:
    - Glob `screenshots/fitl-game-map*.png` and `screenshots/fitl-map-editor*.png` to find all current screenshots. The minimum expected set is `fitl-game-map.png` and `fitl-map-editor.png` — any additional matches (e.g., `fitl-game-map-overview.png`) must also be read and evaluated.
-   - Run `ls -la screenshots/fitl-*.png screenshots/fitl-*.jpg` to check modification timestamps. If any screenshot is older than 24 hours, warn the user that it may not reflect the current rendering state.
-   - Read all discovered screenshots and `screenshots/FITL_SC1.jpg` in **parallel** (all Read tool calls in a single message). The physical board reference is **required** for the first evaluation (to establish the ground truth baseline) and optional for subsequent evaluations.
+   - Run `ls -la screenshots/fitl-*.png screenshots/fitl-*.jpg` to verify freshness — if any screenshot is older than 24 hours, warn the user that it may not reflect the current rendering state. (The Glob discovers the file list; `ls` is solely for timestamps.)
+   - Read all discovered screenshots in **parallel** (all Read tool calls in a single message). Also read `screenshots/FITL_SC1.jpg` (physical board reference) — **required** for the first evaluation to establish the ground truth baseline. For subsequent evaluations, read it only when evaluating geographic layout fidelity or when a recommendation references the physical board layout.
 3. Determine the next evaluation number from the last `## EVALUATION #N` heading.
-4. **If the screenshot count changed** from the previous evaluation, note this prominently. Explain what new screenshots capture and add a comparability caveat (see Screenshot Set Changes below).
+4. **If the screenshot count changed** from the previous evaluation, note this prominently. Explain what new screenshots capture, add a comparability caveat (see Screenshot Set Changes below), and update the **Screenshot Reference** section at the top of the report file to describe all current screenshots.
 5. For each screenshot, write a paragraph describing what's shown and listing specific issues related to the 4 metrics.
 6. Score all 4 metrics (1-10) with brief justification per metric.
 7. Compute score deltas from the previous evaluation. For the first evaluation, use `—` for Previous and Delta columns.
@@ -57,7 +57,7 @@ For each screenshot analyzed, add a section:
 ### Resolved Since Previous
 
 - [Issue description] — was [SEVERITY] in Eval #M, now fixed. [Brief description of the fix.]
-[If none: "No issues from the previous evaluation were resolved."]
+[If none: "No issues from the previous evaluation were resolved." Optionally add context: e.g., "rendering unchanged", "no implementation cycle between evaluations".]
 
 ### Scores
 
@@ -145,7 +145,7 @@ Classify regressions by the metric score drop they cause:
 
 When writing recommendations, check prior evaluations to determine if each issue is new or recurring:
 - If an issue appeared in the previous evaluation, note it as "Recurring: N consecutive evaluations"
-- Issues persisting for 3+ evaluations should be *considered* for escalation — weigh both persistence and impact severity when deciding
+- When tagging recurring issues, note whether the associated metric is stable, improving, or declining. Escalation at 3+ evaluations is a consideration trigger, not an automatic action — weigh persistence alongside metric trajectory
 - New regressions should be called out explicitly
 - If a previously reported issue is now resolved, note this in the "Resolved Since Previous" section
 
@@ -184,6 +184,39 @@ If the average score reaches **8.0+** and no CRITICAL or HIGH recommendations re
 ## Screenshot Expectations
 
 Screenshots should capture the full visible map at default zoom level. If only a portion of the map is visible, note which region is shown and caveat that scores reflect the visible portion only. Both the game canvas and map editor screenshots should show the same (or overlapping) geographic area to enable cross-view comparison.
+
+## Score Adjustment Policy for Coverage Changes
+
+When expanded screenshot coverage reveals pre-existing issues not visible before, scores SHOULD be adjusted to reflect the full-map reality. Tag each adjusted score with `*(Comparability adjustment — not a code regression)*` in the justification. This prevents artificial inflation from partial visibility while preserving trend interpretability through explicit tagging.
+
+Conversely, if screenshots are removed (e.g., a view is deprecated), do not inflate scores to compensate — note the reduced coverage and score only what is visible.
+
+## Unchanged Rendering
+
+If the rendering appears unchanged from the previous evaluation but the screenshot set changed, proceed with a full evaluation — the new screenshots may reveal previously invisible issues.
+
+If both rendering AND screenshots are unchanged since the previous evaluation, append a brief stub instead of a full evaluation:
+
+```markdown
+---
+
+## EVALUATION #N — No Change
+
+**Date**: YYYY-MM-DD
+**Screenshots analyzed**: [list]
+
+Rendering and screenshot set unchanged since Eval #N-1. No new evaluation needed. Re-evaluate after the next implementation cycle.
+```
+
+## Coverage Metrics
+
+When polygon territory rendering is a key differentiator (as in FITL), include a coverage line after the scores table:
+
+```markdown
+**Polygon coverage**: N/M province zones rendered as territories (vs. rectangles).
+```
+
+This gives a quantitative progress indicator beyond the subjective 1-10 scores and directly tracks progress on recommendations to extend polygon treatment.
 
 ## Scope
 

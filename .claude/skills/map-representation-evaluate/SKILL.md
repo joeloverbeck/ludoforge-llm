@@ -10,22 +10,21 @@ Score the current FITL map rendering state from screenshots and append a structu
 ## Checklist
 
 1. Read `reports/map-representation-evaluation.md` — absorb the rubric and the last 2-3 evaluations. The file grows with each evaluation; use this strategy:
-   - Read the first ~40 lines for the rubric, metrics, and scoring guide
-   - Count total lines (`wc -l`), then read from `offset = totalLines - 200` to get the last 2-3 evaluations in one pass (each evaluation is ~60-80 lines)
-   - To build the Score Trend table efficiently, grep for `\*\*Average\*\*` in the report file — this returns all historical averages in one pass
-   - Skip intermediate evaluations unless checking recurring issue history
-2. Read `screenshots/fitl-game-map.png` and `screenshots/fitl-map-editor.png` in **parallel** (two Read tool calls in a single message).
-3. Optionally read `screenshots/FITL_SC1.jpg` as a physical board reference — useful for comparing province shapes and adjacency patterns against the real game.
-4. Determine the next evaluation number from the last `## EVALUATION #N` heading.
-5. **If the screenshot count changed** from the previous evaluation, note this prominently. Explain what new screenshots capture and add a comparability caveat (see Screenshot Set Changes below).
-6. For each screenshot, write a paragraph describing what's shown and listing specific issues related to the 4 metrics.
-7. Score all 4 metrics (1-10) with brief justification per metric.
-8. Compute score deltas from the previous evaluation.
-9. List resolved issues from the previous evaluation (see template).
-10. Write prioritized recommendations tagged CRITICAL / HIGH / MEDIUM / LOW.
-11. Flag recurring issues — note how many consecutive evaluations each issue has persisted.
-12. If 5+ evaluations exist, include a Score Trend table (see template).
-13. Append the complete evaluation section to `reports/map-representation-evaluation.md`.
+   - If the file has fewer than ~100 lines (e.g., first evaluation), read the entire file in one pass — the two-pass strategy below is unnecessary.
+   - Otherwise: read the first ~40 lines for the rubric, metrics, and scoring guide. Count total lines (`wc -l`), then read from `offset = totalLines - 200` to get the last 2-3 evaluations in one pass (each evaluation is ~60-80 lines).
+   - To build the Score Trend table efficiently, grep for `\*\*Average\*\*` in the report file — this returns all historical averages in one pass.
+   - Skip intermediate evaluations unless checking recurring issue history.
+2. Read `screenshots/fitl-game-map.png`, `screenshots/fitl-map-editor.png`, and `screenshots/FITL_SC1.jpg` in **parallel** (all Read tool calls in a single message). The physical board reference is **required** for the first evaluation (to establish the ground truth baseline) and optional for subsequent evaluations.
+3. Determine the next evaluation number from the last `## EVALUATION #N` heading.
+4. **If the screenshot count changed** from the previous evaluation, note this prominently. Explain what new screenshots capture and add a comparability caveat (see Screenshot Set Changes below).
+5. For each screenshot, write a paragraph describing what's shown and listing specific issues related to the 4 metrics.
+6. Score all 4 metrics (1-10) with brief justification per metric.
+7. Compute score deltas from the previous evaluation. For the first evaluation, use `—` for Previous and Delta columns.
+8. List resolved issues from the previous evaluation (see template). For the first evaluation, write: "No previous evaluation exists — this is the baseline evaluation."
+9. Write prioritized recommendations tagged CRITICAL / HIGH / MEDIUM / LOW.
+10. Flag recurring issues — note how many consecutive evaluations each issue has persisted.
+11. If 5+ evaluations exist, include a Score Trend table (see template).
+12. Append the complete evaluation section to `reports/map-representation-evaluation.md`.
 
 ## Evaluation Template
 
@@ -165,6 +164,10 @@ When the report file exceeds ~500 lines or ~10 evaluations, archive older evalua
 ## Graduation
 
 If the average score reaches **8.0+** and no CRITICAL or HIGH recommendations remain, note in the evaluation that the map representation has graduated to acceptable quality. Further evaluations are optional — invoke only after significant rendering changes.
+
+## Screenshot Expectations
+
+Screenshots should capture the full visible map at default zoom level. If only a portion of the map is visible, note which region is shown and caveat that scores reflect the visible portion only. Both the game canvas and map editor screenshots should show the same (or overlapping) geographic area to enable cross-view comparison.
 
 ## Scope
 

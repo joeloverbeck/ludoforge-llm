@@ -11,7 +11,7 @@ Read the latest evaluation, research rendering approaches, and produce a concret
 
 ## Checklist
 
-1. Read `reports/map-representation-evaluation.md` — focus on the latest EVALUATION #N. Note the scores, CRITICAL/HIGH recommendations, and any recurring or stagnating issues. Determine the iteration number: the plan iteration is always `latest_evaluation_number + 1`. If the previous plan file exists and its iteration number doesn't equal N (i.e., there's a gap or collision), note the discrepancy in the Context section — gaps are acceptable when evaluations are added without corresponding plans. **Large file handling**: If the file exceeds read limits, use `offset` to read from the end — evaluations are appended chronologically, so the latest is always at the bottom. A grep for `## EVALUATION #` can identify where each evaluation starts. Read the latest evaluation in full plus the Score Trend table (if present) for historical context.
+1. Read `reports/map-representation-evaluation.md` — focus on the latest EVALUATION #N. Note the scores, CRITICAL/HIGH recommendations, and any recurring or stagnating issues. Determine the iteration number: the plan iteration is always `latest_evaluation_number + 1` (counting "No Change" stubs as evaluations for numbering purposes). If the previous plan file exists and its iteration number doesn't equal N (i.e., there's a gap or collision), note the discrepancy in the Context section — gaps are acceptable when evaluations are added without corresponding plans. **Large file handling**: If the file exceeds read limits, use `offset` to read from the end — evaluations are appended chronologically, so the latest is always at the bottom. A grep for `## EVALUATION #` can identify where each evaluation starts. Read the latest evaluation in full plus the Score Trend table (if present) for historical context.
 2. Read `docs/FOUNDATIONS.md` — **all proposals must align** with these principles. Pay special attention to:
    - **Foundation #1** (Engine Agnosticism): No game-specific logic in engine code
    - **Foundation #3** (Visual Separation): All visual changes in visual-config.yaml or runner code, never in GameSpecDoc or engine
@@ -20,6 +20,7 @@ Read the latest evaluation, research rendering approaches, and produce a concret
    - **Foundation #10** (Architectural Completeness): Solutions address root causes, not symptoms
 3. Identify the CRITICAL and HIGH recommendations from the evaluation. If none exist, target the top 2-3 MEDIUM recommendations.
 4. **Stalled iteration check**: If the previous evaluation shows no progress since the evaluation before it, check whether the previous plan was implemented. If not, decide whether to carry forward its recommendations (if still valid), supersede them (if priorities shifted), or incorporate them into the new plan. Note the decision in the Context section. Also review the previous plan's Deferred Items section (if present) and carry forward any items that are still relevant into the new plan's Deferred Items table.
+   - **Implemented but not re-evaluated**: If the previous evaluation says "No Change" or its screenshots predate the implementation (verify by grepping for the specific changes listed in the previous plan's Implementation Verification Checklist — e.g., constant values, layer order — rather than re-reading entire files), note this in the Context section and proceed to the next priority tier. The next evaluation cycle will capture the implemented changes alongside this iteration's changes.
    - **Implemented but ineffective**: If the previous plan was implemented but targeted metrics did not improve, diagnose the root cause before proposing the next change. Common causes: insufficient magnitude (e.g., color contrast too low — compute RGB Euclidean distance, target >80 for reliable distinction), wrong lever (e.g., static font size increase when the problem is zoom-dependent), or evaluator visibility (e.g., screenshot coverage doesn't capture the change). Note the diagnosis in the Context section, then decide whether to supersede the approach (different strategy) or amplify it (same strategy, stronger parameters).
 5. Read the renderer source files relevant to the identified problems (see Key Files). Extract: key type definitions with line numbers, function signatures that will be modified, data flow from config through presentation to renderer. Scope the exploration to the specific problems identified in step 3 — do not request a full pipeline analysis of subsystems that are not targeted this iteration (e.g., if routes are deferred, don't explore the route renderer). Use Explore sub-agents for parallel codebase exploration only when the investigation requires open-ended search across unknown files. When the Key Files table identifies the relevant files, prefer direct Read/Grep calls for efficiency. The goal is to populate the "Current Code Architecture" section of the plan output. If the identified problems require only data changes (e.g., visual-config.yaml vertices or colors), the architecture section should document the pipeline that *consumes* the data to confirm no code changes are needed, rather than focusing on functions to be modified. If proposing attribute rules or config patterns not already present in visual-config.yaml, verify the Zod schema and provider matching logic support them before recommending them. For hybrid iterations (code + data changes), include both the architecture section (for code changes) and the reference data section (for data changes). Implementation steps should clearly separate code steps from data-authoring steps.
 6. Optionally read the game's physical reference image (e.g., `screenshots/FITL_SC1.jpg`) for design inspiration when planning visual changes. Use it as a target aesthetic, not a rigid specification.
@@ -52,6 +53,8 @@ Write `reports/map-representation-plan.md` with this structure:
 
 **Date**: YYYY-MM-DD
 **Based on**: EVALUATION #N (average score: X.X)
+[If the latest evaluation is a "No Change" stub with no scores, reference the last evaluation
+with actual scores: `EVALUATION #N (no change; effective scores from EVALUATION #M, average: X.X)`]
 **Problems targeted**: [list of CRITICAL/HIGH/MEDIUM items addressed]
 
 ## Context
@@ -201,7 +204,7 @@ in the next evaluation cycle.
 | `packages/runner/src/canvas/geometry/dashed-segments.ts` | Dashed line algorithm |
 | `packages/runner/src/canvas/renderers/stroke-dashed-segments.ts` | Rendering dashed segments to PixiJS Graphics |
 | `packages/runner/src/config/visual-config-types.ts` | Zod schemas for visual config (zone shapes, stroke styles) |
-| `packages/runner/src/config/visual-config-defaults.ts` | ZoneShape type union, default dimensions |
+| `packages/runner/src/config/visual-config-defaults.ts` | ZoneShape type union, default dimensions, default token size |
 | `packages/runner/src/config/visual-config-provider.ts` | Visual config accessor methods |
 | `packages/runner/src/canvas/renderers/region-boundary-renderer.ts` | Region boundary rendering (convex hull, labels, watermark alpha) |
 | `packages/runner/src/layout/world-layout-model.ts` | Layout model types (zone positions) |
@@ -210,6 +213,8 @@ in the next evaluation cycle.
 | `packages/runner/src/canvas/renderers/zone-presentation-visuals.ts` | Marker labels, badge visuals |
 | `packages/runner/src/canvas/text/bitmap-font-registry.ts` | Bitmap font installation and configuration |
 | `packages/runner/src/canvas/renderers/token-renderer.ts` | Token rendering, sizing, and positioning |
+| `packages/runner/src/canvas/renderers/token-shape-drawer.ts` | Token shape drawing functions (circle, square, triangle, etc.) |
+| `packages/runner/src/presentation/token-presentation.ts` | Token render spec resolution (dimensions, radius, symbol sizing, stroke states) |
 | `packages/runner/src/map-editor/map-editor-zone-renderer.ts` | Map editor zone rendering |
 | `packages/runner/src/map-editor/map-editor-adjacency-renderer.ts` | Map editor adjacency lines |
 

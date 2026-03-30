@@ -17,6 +17,7 @@ import type {
 import type {
   AssetRowPredicate,
   ConditionAST,
+  ExecutionOptions,
   EffectAST,
   MoveLog,
   OptionsQuery,
@@ -282,6 +283,17 @@ describe('exhaustive kernel unions', () => {
     type HasLegalMoveCount = MoveLog extends { readonly legalMoveCount: number } ? true : false;
     const hasLegalMoveCount: HasLegalMoveCount = true;
     assert.equal(hasLegalMoveCount, true);
+  });
+
+  it('keeps snapshot trace contracts wired into shared types', () => {
+    type HasSnapshotDepth = ExecutionOptions extends { readonly snapshotDepth?: 'none' | 'minimal' | 'standard' | 'verbose' } ? true : false;
+    type HasSnapshot = MoveLog extends { readonly snapshot?: { readonly turnCount: number } } ? true : false;
+
+    const hasSnapshotDepth: HasSnapshotDepth = true;
+    const hasSnapshot: HasSnapshot = true;
+
+    assert.equal(hasSnapshotDepth, true);
+    assert.equal(hasSnapshot, true);
   });
 
   it('exports scenario payload interfaces with expected shape constraints', () => {

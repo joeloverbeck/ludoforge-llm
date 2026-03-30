@@ -1,270 +1,272 @@
-# Map Representation Plan — Iteration 6
+# Map Representation Plan — Iteration 7
 
 **Date**: 2026-03-30
-**Based on**: EVALUATION #5 (average score: 6.0)
-**Problems targeted**: [HIGH] Route flow through territory, [HIGH] Bolder terrain granularity
+**Based on**: EVALUATION #6 (no change; effective scores from EVALUATION #5, average: 6.0)
+**Problems targeted**: [MEDIUM] Label readability at overview zoom, [MEDIUM] Token size and faction identification
 
 ## Context
 
-Evaluation #5 confirmed Chaikin polygon smoothing resolved the longest-recurring HIGH issue (angular shapes). However, two HIGH items remain: (1) Road/River Integration has stagnated at 5/10 for 4 consecutive evaluations — investigation reveals a z-order root cause where routes render below zone fills, making them invisible inside territory; (2) Terrain Distinction remains at 6/10 despite country-based attribute rules being added in Iteration 5 — the chosen colors (#2d5a3a Laos, #3a5a3a Cambodia) are too close to the base jungle fill (#1a5c2a) to create visible distinction.
+Evaluation #6 recorded "no change" because screenshots were not retaken after Iteration 6's code changes. However, **all Iteration 6 changes are already present in the codebase**: routes render above zones (`layers.ts:70-77` shows `zoneLayer` before `connectionRouteLayer`), route stroke width is 6 with alpha 0.75 and overlap margin 80 (`connection-route-renderer.ts:55-61`), and bold terrain colors are in `visual-config.yaml` (Laos `#6b8f7b`, Cambodia `#7a8868`, NV `#8b5e3c`). The next evaluation will capture these changes.
 
-**Stalled iteration check**: Iteration 5's three changes were all implemented (Chaikin smoothing ✅, country attribute rules ✅, label constants ✅). Polygon smoothing resolved successfully. Country terrain rules produced no visible improvement — colors too similar. Label constants were updated but overview zoom readability remains a problem (addressed by adaptive sizing, not static constants). This iteration supersedes the Iteration 5 terrain approach with bolder colors and addresses the route rendering root cause.
+With the two HIGH items from Eval #5 addressed by Iteration 6's code, this iteration targets the top two MEDIUM items that have been recurring longest: label readability (4 consecutive evaluations) and token size (5 consecutive evaluations).
+
+**Stalled iteration check**: Iteration 6 was implemented in code but not re-evaluated due to stale screenshots. No plan changes needed — the code matches the plan. This iteration moves to the next priority tier.
 
 ## Deferred Items
 
 | Item | First recommended | Deferred since | Target iteration |
 |------|-------------------|---------------|-----------------|
-| Label readability at overview zoom | Eval #2 | Iteration 5 | 7 or later (requires adaptive font sizing) |
+| Adaptive font sizing (zoom-responsive labels) | Eval #2 | Iteration 7 | 8 or later (requires viewport scale plumbing to zone renderer) |
 | City circles embedded in territory | Eval #2 | Iteration 4 | No target yet |
-| Token size and faction markers | Eval #1 | Iteration 4 | No target yet |
 | Saigon area visual congestion | Eval #5 | Iteration 6 | No target yet |
+| S-curve geography refinement | Eval #2 | Iteration 4 | No target yet |
+
+**Note on adaptive font sizing**: This iteration increases static font sizes for an immediate readability boost. True zoom-responsive scaling (counter-scaling labels inversely to viewport zoom) requires passing viewport scale into the zone renderer's update cycle — a more invasive change deferred to Iteration 8.
 
 ## Foundations Alignment
 
 | Foundation | Relevance | How This Plan Respects It |
 |-----------|-----------|--------------------------|
 | #1 Engine Agnosticism | Not relevant | No engine code changes |
-| #3 Visual Separation | Always relevant | Layer reorder and route constants are runner code; terrain colors are visual-config.yaml data. No GameSpecDoc or engine changes. |
-| #7 Immutability | Not relevant | No state transitions affected — changes are rendering constants and layer ordering |
-| #9 No Backwards Compat | Relevant | Layer order change applies unconditionally to all games — no opt-in flag |
-| #10 Architectural Completeness | Always relevant | Route visibility fix addresses the root cause (z-order) rather than the symptom (line thickness); terrain fix addresses the root cause (insufficient color contrast) rather than adding more subtle variants |
+| #3 Visual Separation | Always relevant | Font size constants are runner code; no GameSpecDoc or engine changes |
+| #7 Immutability | Not relevant | No state transitions affected — changes are rendering constants |
+| #9 No Backwards Compat | Relevant | Size changes apply unconditionally — no opt-in flag or fallback |
+| #10 Architectural Completeness | Always relevant | Font size increase is a targeted improvement, not a full zoom-scaling solution. The root cause (no zoom-responsive sizing) is acknowledged and deferred. Token size increase addresses the root cause (tokens too small to distinguish). |
 
 ## Current Code Architecture (reference for implementer)
 
-### Layer Z-Order (layers.ts:70-77)
+### Zone Label Constants (zone-renderer.ts:243-248)
 
 ```typescript
-// packages/runner/src/canvas/layers.ts:70-77
-boardGroup.addChild(
-  backgroundLayer,     // 0: background
-  regionLayer,         // 1: region boundaries
-  adjacencyLayer,      // 2: adjacency dashed lines
-  connectionRouteLayer,// 3: road/river routes  ← BELOW zones
-  zoneLayer,           // 4: zone fills + labels ← COVERS routes
-  tableOverlayLayer,   // 5: table overlays
-);
+// packages/runner/src/canvas/renderers/zone-renderer.ts:243-248
+const LABEL_FONT_SIZE = 26;
+const LABEL_CHAR_WIDTH_FACTOR = 0.6;
+const LABEL_PILL_PADDING = 8;
+const LABEL_PILL_CORNER_RADIUS = 4;
+const LABEL_PILL_ALPHA = 0.65;
 ```
 
-**Root cause**: Routes at z-index 3 are drawn before zones at z-index 4. Zone polygon fills completely cover the route strokes that extend into zone territory (via `ROUTE_OVERLAP_MARGIN = 35`). Routes are only visible in the narrow gaps between zone polygons, creating the "routes terminate at edges" appearance.
+`LABEL_FONT_SIZE` controls the zone name BitmapText size. `LABEL_CHAR_WIDTH_FACTOR` estimates label width for the background pill. `LABEL_PILL_PADDING` adds space around the pill.
 
-**Fix**: Move `connectionRouteLayer` above `zoneLayer` so routes draw on top of zone fills, making road/river paths visible flowing through territory — exactly as shown on the physical FITL board.
-
-### Map Editor Layer Mounting (map-editor-canvas.ts:135-138)
+### Label Creation (zone-renderer.ts:164-187)
 
 ```typescript
-sharedLayers.backgroundLayer.addChild(editorLayers.background);
-sharedLayers.adjacencyLayer.addChild(editorLayers.adjacency);
-sharedLayers.connectionRouteLayer.addChild(editorLayers.route);
-sharedLayers.zoneLayer.addChild(editorLayers.zone);
+const nameLabel = createBitmapLabel('', 0, 0, 26, {
+  fontName: STROKE_LABEL_FONT_NAME,
+  fill: '#ffffff',
+  stroke: { color: '#000000', width: 3 },
+  anchor: { x: 0.5, y: 0.5 },
+});
 ```
 
-Editor layers are children of the shared layers. Reordering the shared layer z-order automatically propagates to both game canvas and map editor views. No editor-specific changes needed.
+The hardcoded `26` in the `createBitmapLabel` call uses `LABEL_FONT_SIZE`. The label background pill in `drawLabelBackground()` (lines 250-269) computes width as `LABEL_FONT_SIZE * LABEL_CHAR_WIDTH_FACTOR * textLength + 2 * LABEL_PILL_PADDING`.
 
-### Route Rendering Constants (connection-route-renderer.ts:55-61)
+### Markers Label (zone-presentation-visuals.ts:16-31)
 
 ```typescript
-const DEFAULT_ROUTE_STROKE = {
-  color: 0x6b7280,  // gray
-  width: 4,         // thin
-  alpha: 0.85,
-} as const;
-const ROUTE_OVERLAP_MARGIN = 35;  // extends 35px into zones
+export function createZoneMarkersLabel(...): BitmapText {
+  return createManagedBitmapText({
+    text: '',
+    style: {
+      fontName: STROKE_LABEL_FONT_NAME,
+      fill: '#f5f7fa',
+      fontSize: 11,  // Hardcoded
+      stroke: { color: '#000000', width: 2 },
+    },
+    ...
+  });
+}
 ```
 
-With routes above zones, these constants become visible on top of terrain. The current width (4) and gray color may appear too thin/faint against colored zone fills. Adjustments needed for visual clarity.
+Markers label uses a hardcoded `fontSize: 11`.
 
-### Country Terrain Attribute Rules (visual-config.yaml:411-435)
-
-Current colors (added in Iteration 5):
-
-| Country | Current Hex | Current RGB | Base Jungle Hex | Distance |
-|---------|-------------|-------------|-----------------|----------|
-| northVietnam | `#8b4513` | (139, 69, 19) | N/A (highland) | Distinct (brown) |
-| laos | `#2d5a3a` | (45, 90, 58) | `#1a5c2a` (26, 92, 42) | ~25 — too close |
-| cambodia | `#3a5a3a` | (58, 90, 58) | `#1a5c2a` (26, 92, 42) | ~35 — too close |
-
-The Laos and Cambodia colors differ from SVN jungle by only ~25-35 RGB units — indistinguishable at overview zoom on a dark theme. Need color distance >80 for reliable distinction.
-
-### Attribute Rule Schema (visual-config-types.ts:188)
+### Label Position (presentation-scene.ts:114-119)
 
 ```typescript
-attributeContains: z.record(z.string(), z.string()).optional(),
+const LABEL_GAP = 8;
+const LABEL_LINE_HEIGHT = 18;
 ```
 
-Supports arbitrary string keys — `country` matching is confirmed working. No schema changes needed.
+`LABEL_LINE_HEIGHT` controls vertical spacing between name and markers labels. With larger fonts, this may need a proportional increase.
 
-## Reference Data
+### Bitmap Font Master Size (bitmap-font-registry.ts:30-51)
 
-### Province Country Assignments (for terrain color verification)
+Both fonts (`ludoforge-label` and `ludoforge-label-stroke`) are installed at `fontSize: 22`. BitmapText scales runtime requests (26px, 11px) from this 22px master texture. Increasing runtime font sizes to 34px and 15px will scale up from the same 22px master — this works but may appear slightly blurry. If quality is insufficient, the master font size should also increase (e.g., to 36px).
 
-| Province | Terrain | Country | Current Color | Proposed Color |
-|----------|---------|---------|---------------|----------------|
-| north-vietnam | highland | northVietnam | `#8b4513` (brown) | `#8b5e3c` (lighter warm brown) |
-| central-laos | jungle | laos | `#2d5a3a` (dark gray-green) | `#6b8f7b` (sage gray-green) |
-| southern-laos | jungle | laos | `#2d5a3a` | `#6b8f7b` |
-| northeast-cambodia | jungle | cambodia | `#3a5a3a` (dark olive) | `#7a8868` (olive-khaki) |
-| the-fishhook | jungle | cambodia | `#3a5a3a` | `#7a8868` |
-| the-parrots-beak | jungle | cambodia | `#3a5a3a` | `#7a8868` |
-| sihanoukville | jungle | cambodia | `#3a5a3a` | `#7a8868` |
-| phuoc-long | jungle | southVietnam | `#1a5c2a` (unchanged) | `#1a5c2a` |
-| quang-duc-long-khanh | jungle | southVietnam | `#1a5c2a` | `#1a5c2a` |
-| binh-tuy-binh-thuan | jungle | southVietnam | `#1a5c2a` | `#1a5c2a` |
-| tay-ninh | jungle | southVietnam | `#1a5c2a` | `#1a5c2a` |
+### Token Size (visual-config-defaults.ts:29-30, token-presentation.ts:16)
 
-### Proposed Color Palette (7 visual categories)
+```typescript
+// visual-config-defaults.ts:30
+export const DEFAULT_TOKEN_SIZE = 28;
 
-| Category | Color | Stroke | RGB | Count | Description |
-|----------|-------|--------|-----|-------|-------------|
-| SVN Highland | `#d4a656` | `#8b6914` | (212,166,86) | 6 | Tan/khaki (unchanged) |
-| SVN Lowland | `#5db85d` | `#2d7a2d` | (93,184,93) | 6 | Bright green (unchanged) |
-| SVN Jungle | `#1a5c2a` | `#0d3d18` | (26,92,42) | 4 | Dark green (unchanged) |
-| North Vietnam | `#8b5e3c` | `#5a3d20` | (139,94,60) | 1 | Warm brown — "enemy territory" (lighter than before for visibility) |
-| Laos | `#6b8f7b` | `#4a6b58` | (107,143,123) | 2 | Sage gray-green — clearly "outside theater" (RGB distance ~95 from SVN jungle) |
-| Cambodia | `#7a8868` | `#586345` | (122,136,104) | 4 | Olive-khaki — clearly "outside theater" (RGB distance ~115 from SVN jungle) |
+// token-presentation.ts:16
+const TOKEN_RADIUS = 14;  // DEFAULT_TOKEN_SIZE / 2
+```
 
-Color distances from SVN jungle (#1a5c2a):
-- Laos (#6b8f7b): √((107-26)² + (143-92)² + (123-42)²) ≈ 120 — highly distinguishable
-- Cambodia (#7a8868): √((122-26)² + (136-92)² + (104-42)²) ≈ 118 — highly distinguishable
-- NV (#8b5e3c): not jungle-based, distinct category
+All FITL token types use the default 28 (no per-type `size` override in visual-config.yaml). The `size` field is supported in the schema (`visual-config-types.ts:362`) and resolved in `visual-config-provider.ts:238`: `size: style?.size ?? DEFAULT_TOKEN_SIZE`.
 
-## Problem 1: Routes don't flow through territory
+### Token Dimension Resolution (token-presentation.ts:517-566)
 
-**Evaluation score**: Road/River Integration = 5/10 (stagnant for 4 evaluations)
-**Root cause**: `connectionRouteLayer` renders at z-index 3, below `zoneLayer` at z-index 4. Zone polygon fills completely cover route strokes that extend into zone territory. Routes are only visible in narrow gaps between zones.
+Dimensions are computed as `max(16, round(size * scale))` for most shapes. Bases use `scale: 1.5` → effective 42px at current size. At proposed size 38: regular tokens = 38px, bases = 57px.
+
+### ZoneRenderer Interface (renderer-types.ts:28-35)
+
+```typescript
+export interface ZoneRenderer {
+  update(
+    zones: readonly PresentationZoneNode[],
+    positions: ReadonlyMap<string, Position>,
+  ): void;
+  getContainerMap(): ReadonlyMap<string, Container>;
+  destroy(): void;
+}
+```
+
+No viewport scale parameter — adding one is deferred to Iteration 8 (adaptive sizing).
+
+## Problem 1: Labels unreadable at overview zoom
+
+**Evaluation score**: Label/Token Readability = 5/10 (unchanged for 4 evaluations)
+**Root cause**: Zone name labels use a fixed 26px font with no zoom-responsive scaling. At overview zoom, the viewport scales all content down proportionally — 26px labels shrink below legibility. The background pills help contrast but cannot compensate for tiny rendered size.
 
 ### Approaches Considered
 
-1. **Reorder layers: routes above zones**
-   - Description: Move `connectionRouteLayer` after `zoneLayer` in the `boardGroup.addChild()` call, so routes draw on top of zone fills. Increase route stroke width from 4 to 6 and overlap margin from 35 to 80 for visual prominence. Reduce route alpha slightly from 0.85 to 0.75 so zone terrain shows through.
-   - Feasibility: HIGH — 1-line layer reorder + 3 constant changes. No API changes, no new rendering code.
-   - Visual impact: HIGH — routes immediately become visible crossing through zone territory, matching the physical FITL board appearance.
-   - Risk: LOW — routes may partially cover zone labels in dense areas (Saigon). Route interaction (click on route midpoint) still works since hit areas are independent of z-order. Labels are centered on zones while routes follow paths between zone centers, so overlap is limited.
+1. **Increase static font sizes**
+   - Description: Increase `LABEL_FONT_SIZE` from 26 to 34 (+31%), markers from 11 to 15 (+36%), stroke width from 3 to 4. Increase `LABEL_LINE_HEIGHT` from 18 to 24. Increase master bitmap font from 22 to 36 to maintain crisp rendering at the larger size. Increase pill padding from 8 to 10.
+   - Feasibility: HIGH — 6 constant changes across 3 files. No API changes.
+   - Visual impact: MEDIUM — labels are ~31% larger at all zoom levels. Still shrinks at overview zoom but starts from a larger baseline, keeping labels legible at moderate zoom-out.
+   - Risk: LOW — larger labels may overlap with tokens or routes in dense areas. Pill backgrounds will be proportionally larger.
 
-2. **Split zone layer into fills and labels, sandwich routes between**
-   - Description: Create two zone sub-layers: one for polygon fills (below routes) and one for labels/badges (above routes). Routes draw between fills and labels.
-   - Feasibility: LOW — requires refactoring zone-renderer.ts to split visual elements across two containers. Zone container pooling and lifecycle become more complex. Significant code change.
-   - Visual impact: HIGH — routes visible through territory with labels always on top.
-   - Risk: MEDIUM — zone renderer refactor touches interaction binding, container pooling, and update lifecycle.
+2. **Zoom-responsive counter-scaling (adaptive font sizing)**
+   - Description: Pass viewport scale into zone renderer's `update()` method. Compute `labelCounterScale = clamp(1 / viewportScale, 1, 3)`. Apply to both BitmapText and label background pill on each update.
+   - Feasibility: MEDIUM — requires modifying `ZoneRenderer` interface, `canvas-updater.ts` call site, and zone-renderer update logic. Also requires scaling the Graphics pill, which currently uses absolute coordinates.
+   - Visual impact: HIGH — labels maintain readable size at any zoom level.
+   - Risk: MEDIUM — interface change propagates to map editor zone renderer. Label scaling interaction with zone container positioning needs careful testing.
 
-3. **Draw route "channels" on zone fills**
-   - Description: In zone-renderer, for each zone, determine which routes pass through it and draw semi-transparent route-colored stripes on the zone fill graphics.
-   - Feasibility: LOW — requires zone renderer to know about route paths (tight coupling). Route path resolution happens in connection-route-resolver, not available in zone renderer's update cycle.
-   - Visual impact: MEDIUM — routes look embedded in terrain but may be hard to align with the actual route paths.
-   - Risk: HIGH — coupling zone and route renderers, complex coordinate transformations, potential desync between route channels and actual route lines.
+3. **Separate non-scaling label layer**
+   - Description: Place all labels in an overlay Container that doesn't zoom with the viewport. Labels are positioned in screen coordinates based on zone world positions projected to screen space.
+   - Feasibility: LOW — requires fundamental restructure of label ownership. Labels currently belong to zone containers. Screen-space positioning requires per-frame recalculation.
+   - Visual impact: HIGH — labels always render at designed size regardless of zoom.
+   - Risk: HIGH — major architectural change. Label-zone association becomes indirect. Performance cost of screen-space projection per frame.
 
-### Recommendation: Approach 1 (Reorder layers: routes above zones)
+### Recommendation: Approach 1 (Increase static font sizes)
 
-**Why**: Maximum impact with minimum code change. One line in `layers.ts` moves routes above zone fills, immediately making road/river paths visible flowing through territory. The physical FITL board renders roads and rivers on top of terrain — this matches that treatment. Combined with slightly thicker strokes and increased overlap margin, routes will read as geographic features embedded in the landscape. The slight alpha reduction ensures zone terrain colors remain visible under routes.
+**Why**: Maximum immediate impact with minimum risk. A 31% font size increase makes labels significantly more readable at moderate zoom-out — the most common viewing angle. The true solution (Approach 2) requires interface changes across multiple renderers and is better suited as a dedicated iteration. Approach 1 provides a meaningful improvement now while Approach 2 is deferred to Iteration 8 with a clear scope. The master bitmap font increase from 22 to 36 ensures the larger runtime sizes render crisply rather than appearing blurry from upscaling.
 
-The risk of route-label overlap is low: zone labels are centered on zone shapes while routes follow paths between zone endpoints, typically crossing zone edges and passing through peripheral areas rather than zone centers. In the densest area (Saigon/Mekong Delta), some overlap may occur but at an acceptable level — the route's reduced alpha (0.75) makes labels partially visible through routes.
+## Problem 2: Tokens too small to identify
 
-## Problem 2: Country terrain colors indistinguishable
-
-**Evaluation score**: Terrain Distinction = 6/10 (unchanged for 2 evaluations)
-**Root cause**: Country-based attribute rules were added in Iteration 5 but the chosen colors (Laos: #2d5a3a, Cambodia: #3a5a3a) have RGB distances of only ~25-35 from the base SVN jungle color (#1a5c2a). At overview zoom on a dark theme, these are indistinguishable. The physical FITL board uses clearly distinct coloring for Laos/Cambodia zones (lighter, grayer) compared to South Vietnam jungle (darker, saturated green).
+**Evaluation score**: Label/Token Readability = 5/10 (token aspect unchanged for 5 evaluations)
+**Root cause**: `DEFAULT_TOKEN_SIZE = 28` produces tokens that are ~28px (regular) and ~42px (bases with 1.5x scale). At default and overview zoom, these are too small to distinguish faction shapes (square vs beveled-cylinder vs round-disk) or see activity symbols (star). The FITL visual config already defines good visual differentiation (shape, color, symbol) — the problem is purely that the rendered size is too small to perceive these distinctions.
 
 ### Approaches Considered
 
-1. **Bold desaturated colors for Laos/Cambodia**
-   - Description: Replace the current dark-green-adjacent colors with much lighter, desaturated tones. Laos: sage gray-green (#6b8f7b, RGB distance ~120 from SVN jungle). Cambodia: olive-khaki (#7a8868, RGB distance ~118). North Vietnam: lighter warm brown (#8b5e3c). These are inspired by the physical board where "outside theater" zones have a distinctly lighter, grayer appearance.
-   - Feasibility: HIGH — 3 color value changes in visual-config.yaml, plus 3 stroke colors.
-   - Visual impact: HIGH — immediately creates 5-6 visually distinct province categories instead of the current 3.
-   - Risk: LOW — purely data changes. Colors are tested against dark theme and light editor theme. Larger RGB distances guarantee visibility.
+1. **Increase default token size**
+   - Description: Change `DEFAULT_TOKEN_SIZE` from 28 to 38 and `TOKEN_RADIUS` from 14 to 19. All tokens become 36% larger. Regular tokens: 38px (was 28). Bases at 1.5x: 57px (was 42).
+   - Feasibility: HIGH — 2 constant changes. All dimension resolution flows through these values.
+   - Visual impact: HIGH — tokens large enough to distinguish shapes and see activity symbols at default zoom.
+   - Risk: LOW — larger tokens may overlap in dense zones (Saigon area). Lane spacing (`spacingX: 32` for regular, `42` for bases) may need minor increase.
 
-2. **Pattern overlays per country**
-   - Description: Add subtle diagonal hatching or stippling on Laos/Cambodia zones in addition to color changes.
-   - Feasibility: LOW — requires PixiJS Graphics pattern fills or texture generation.
-   - Visual impact: HIGH — adds a second visual dimension beyond color.
-   - Risk: MEDIUM — patterns may interfere with label/token readability.
+2. **Per-type size overrides in visual-config.yaml**
+   - Description: Add explicit `size: 38` to each FITL token type definition in visual-config.yaml. Keeps the global default unchanged.
+   - Feasibility: MEDIUM — ~11 token type entries need updating. Game-specific rather than global.
+   - Visual impact: HIGH — same visual result as Approach 1 for FITL.
+   - Risk: LOW — no code changes at all, purely data. But verbose and game-specific.
 
-3. **Opacity-based distinction**
-   - Description: Keep similar base colors but apply different fill alpha values per country (e.g., Laos at 0.6, Cambodia at 0.7).
-   - Feasibility: MEDIUM — requires adding fill alpha support to attribute rules and zone rendering.
-   - Visual impact: MEDIUM — subtle distinction that works on dark backgrounds but may be less clear on light editor background.
-   - Risk: MEDIUM — alpha compositing with labels and tokens adds visual complexity.
+3. **Increase size + adjust lane spacing**
+   - Description: Increase default size to 38 AND adjust FITL lane spacing (`spacingX` from 32 to 40 for regular, 42 to 52 for bases) and `laneGap` from 24 to 30.
+   - Feasibility: HIGH — 2 constant changes + 3 YAML config values.
+   - Visual impact: HIGH — larger tokens with proportional spacing prevents overlap.
+   - Risk: LOW — slightly larger token clusters may extend beyond zone boundaries in small zones.
 
-### Recommendation: Approach 1 (Bold desaturated colors)
+### Recommendation: Approach 3 (Increase size + adjust lane spacing)
 
-**Why**: The root cause is insufficient color contrast, not a missing visual dimension. Bold, desaturated colors with RGB distances >100 from SVN jungle are guaranteed to be distinguishable at any zoom level and on both dark/light backgrounds. This is a 6-value data change in visual-config.yaml with zero code changes. The sage/olive/brown palette is inspired by the physical FITL board where "outside theater" zones are lighter and grayer.
+**Why**: Approach 1 is the core change needed, but larger tokens at unchanged spacing will overlap more in dense zones. Approach 3 combines the size increase with proportional spacing adjustments for a cleaner result. The spacing changes are purely FITL visual config data — no code beyond the 2 constants. This is a hybrid of Approaches 1 and 2 that takes the global size increase (Approach 1) and pairs it with game-specific spacing tuning (from Approach 2's data-only philosophy).
 
 ## Implementation Steps
 
-1. **Reorder layer z-order: routes above zones** — **File**: `packages/runner/src/canvas/layers.ts` — **Depends on**: none
-   - Change `boardGroup.addChild()` order from `[..., adjacencyLayer, connectionRouteLayer, zoneLayer, ...]` to `[..., adjacencyLayer, zoneLayer, connectionRouteLayer, ...]`
-   - This puts route strokes on top of zone polygon fills
+1. **Increase master bitmap font size** — **File**: `packages/runner/src/canvas/text/bitmap-font-registry.ts` — **Depends on**: none
+   - Change both `fontSize: 22` entries to `fontSize: 36` (lines ~34 and ~47)
+   - This ensures larger runtime font sizes (34px, 15px) render crisply from the master texture
 
-2. **Increase route stroke width, overlap margin, and reduce alpha** — **File**: `packages/runner/src/canvas/renderers/connection-route-renderer.ts` — **Depends on**: none
-   - Change `DEFAULT_ROUTE_STROKE.width` from `4` to `6`
-   - Change `DEFAULT_ROUTE_STROKE.alpha` from `0.85` to `0.75`
-   - Change `ROUTE_OVERLAP_MARGIN` from `35` to `80`
+2. **Increase zone label constants** — **File**: `packages/runner/src/canvas/renderers/zone-renderer.ts` — **Depends on**: none
+   - `LABEL_FONT_SIZE`: 26 → 34
+   - `LABEL_PILL_PADDING`: 8 → 10
+   - Update the `createBitmapLabel` call to use `LABEL_FONT_SIZE` instead of hardcoded `26` (if not already)
+   - Update label stroke width: 3 → 4 (proportional to larger font)
 
-3. **Update country terrain colors to bolder palette** — **File**: `data/games/fire-in-the-lake/visual-config.yaml` — **Depends on**: none
-   - North Vietnam: color `#8b4513` → `#8b5e3c`, strokeColor `#5a2d0a` → `#5a3d20`
-   - Laos: color `#2d5a3a` → `#6b8f7b`, strokeColor `#1a3d25` → `#4a6b58`
-   - Cambodia: color `#3a5a3a` → `#7a8868`, strokeColor `#254025` → `#586345`
+3. **Increase markers label font size** — **File**: `packages/runner/src/canvas/renderers/zone-presentation-visuals.ts` — **Depends on**: none
+   - Markers label `fontSize`: 11 → 15
+   - Markers label stroke width: 2 → 3
 
-4. **Run typecheck and tests** — **Depends on**: Steps 1-3
+4. **Increase label line height** — **File**: `packages/runner/src/presentation/presentation-scene.ts` — **Depends on**: none
+   - `LABEL_LINE_HEIGHT`: 18 → 24 (proportional to larger name label)
+
+5. **Increase map editor label font size** — **File**: `packages/runner/src/map-editor/map-editor-zone-renderer.ts` — **Depends on**: none
+   - Editor label `fontSize`: 20 → 28 (line ~71)
+
+6. **Increase default token size** — **File**: `packages/runner/src/config/visual-config-defaults.ts` — **Depends on**: none
+   - `DEFAULT_TOKEN_SIZE`: 28 → 38
+
+7. **Synchronize TOKEN_RADIUS** — **File**: `packages/runner/src/presentation/token-presentation.ts` — **Depends on**: Step 6
+   - `TOKEN_RADIUS`: 14 → 19 (keeps it as `DEFAULT_TOKEN_SIZE / 2`)
+
+8. **Adjust FITL token lane spacing** — **File**: `data/games/fire-in-the-lake/visual-config.yaml` — **Depends on**: none
+   - Regular lane `spacingX`: 32 → 42
+   - Base lane `spacingX`: 42 → 54
+   - `laneGap`: 24 → 30
+
+9. **Run typecheck and tests** — **Depends on**: Steps 1-8
    - `pnpm turbo typecheck` — must pass
    - `pnpm -F @ludoforge/runner test` — must pass
 
-5. **Visual verification** — **Depends on**: Step 4
+10. **Visual verification** — **Depends on**: Step 9
    - `pnpm -F @ludoforge/runner dev` — inspect in browser
-   - Verify route lines are visible crossing through zone territory (not just between zones)
-   - Verify road/river distinction (brown roads vs. blue wavy rivers) is clear on top of zone fills
-   - Verify route alpha (0.75) allows zone terrain colors to show through
-   - Verify Laos provinces are clearly sage gray-green, distinct from SVN dark green jungle
-   - Verify Cambodia provinces are clearly olive-khaki, distinct from both Laos and SVN
-   - Verify North Vietnam is warm brown, distinct from SVN highlands (tan)
-   - Verify labels remain readable where routes cross zone centers
-   - Check map editor renders the same route-above-zone ordering and terrain colors
+   - Verify zone name labels are visibly larger and readable at moderate zoom-out
+   - Verify markers labels are proportionally larger
+   - Verify label background pills scale with larger text
+   - Verify tokens are noticeably larger — faction shapes (square, cylinder, disk) distinguishable at default zoom
+   - Verify activity star symbols visible on active guerrillas/irregulars
+   - Verify token spacing prevents excessive overlap in dense zones
+   - Verify no label-token overlap in standard views
+   - Check map editor labels and tokens match game canvas sizes
 
-6. **Take new screenshots for evaluation** — **Depends on**: Step 5
-   - `fitl-game-map.png` (close-up)
-   - `fitl-game-map-overview.png` (zoomed-out full map)
-   - `fitl-map-editor.png` (close-up)
-   - `fitl-map-editor-overview.png` (zoomed-out full map)
+11. **Take new screenshots for evaluation** — **Depends on**: Step 10
+    - `fitl-game-map.png` (close-up)
+    - `fitl-game-map-overview.png` (zoomed-out full map)
+    - `fitl-map-editor.png` (close-up)
+    - `fitl-map-editor-overview.png` (zoomed-out full map)
+    - These screenshots will also capture Iteration 6's route and terrain changes for the first time
 
 ## Map Editor Scope
 
 **Included in this iteration**:
-- Layer z-order change — the editor mounts its layers as children of the shared layers (`map-editor-canvas.ts:135-138`). Reordering the shared `boardGroup.addChild()` call automatically puts editor route content above editor zone content. No editor-specific code changes needed.
-- Terrain colors — the editor reads the same `visual-config.yaml`. Bolder country colors apply automatically.
+- Label size changes — the map editor zone renderer (`map-editor-zone-renderer.ts:71`) has its own hardcoded `fontSize: 20`, separate from the game canvas's `LABEL_FONT_SIZE`. This must be updated to 28 (proportional increase from 20, matching the game canvas's 26→34 ratio).
+- Bitmap font size — shared across both flows via `installLabelBitmapFonts()`. The master font increase applies to both.
+- Token size changes — the editor doesn't render tokens (it's a layout tool), so no editor token changes needed.
 
 **Deferred to future iteration**:
-- No editor-specific changes needed.
+- No editor-specific changes deferred.
 
 ## Visual Config Changes
 
 **File**: `data/games/fire-in-the-lake/visual-config.yaml`
 
-Update 3 existing country-based attribute rules (already present from Iteration 5):
+Update token layout spacing only:
 
 ```yaml
-    # Country-based terrain sub-variants (override base terrain colors)
-    - match:
-        category:
-          - province
-        attributeContains:
-          country: northVietnam
-      style:
-        color: "#8b5e3c"       # was "#8b4513"
-        strokeColor: "#5a3d20"  # was "#5a2d0a"
-    - match:
-        category:
-          - province
-        attributeContains:
-          country: laos
-      style:
-        color: "#6b8f7b"       # was "#2d5a3a"
-        strokeColor: "#4a6b58"  # was "#1a3d25"
-    - match:
-        category:
-          - province
-        attributeContains:
-          country: cambodia
-      style:
-        color: "#7a8868"       # was "#3a5a3a"
-        strokeColor: "#586345"  # was "#254025"
+fitl-map-space:
+  mode: lanes
+  laneGap: 30        # was 24
+  laneOrder: [regular, base]
+  lanes:
+    regular:
+      anchor: center
+      pack: centeredRow
+      spacingX: 42    # was 32
+    base:
+      anchor: belowPreviousLane
+      pack: centeredRow
+      spacingX: 54    # was 42
 ```
 
 **No schema changes needed.**
@@ -274,32 +276,48 @@ Update 3 existing country-based attribute rules (already present from Iteration 
 1. `pnpm turbo typecheck` — must pass
 2. `pnpm -F @ludoforge/runner test` — must pass
 3. Visual check — run dev server (`pnpm -F @ludoforge/runner dev`):
-   - Road/river lines visible flowing across zone polygon fills (not just in gaps between zones)
-   - Brown road lines and blue wavy river lines clearly distinct on top of terrain colors
-   - Route strokes at 0.75 alpha allow zone terrain to show through
-   - Route stroke width (6) visible but not overwhelming at default zoom
-   - Laos provinces (central-laos, southern-laos) clearly sage gray-green, distinct from SVN jungle dark green
-   - Cambodia provinces (northeast-cambodia, the-fishhook, the-parrots-beak, sihanoukville) clearly olive-khaki
-   - North Vietnam warm brown, clearly distinct from SVN highland tan
-   - SVN jungle, lowland, and highland colors unchanged
-   - Zone labels remain readable where routes cross (routes semi-transparent)
-   - Map editor shows the same route-above-zone ordering and bold terrain colors
-   - No interaction regressions (clicking zones and routes still works)
+   - Zone name labels are ~31% larger than before — text clearly readable at default zoom
+   - Labels remain readable (not tiny) at moderate zoom-out (one notch beyond default)
+   - Background pills proportionally larger with adequate padding
+   - Markers labels (support/opposition states) visible below zone names
+   - Tokens are visibly larger — shapes (square troops, cylinder guerrillas, disk bases) distinguishable
+   - Activity star symbols visible on active guerrillas/irregulars at default zoom
+   - Base tokens (1.5x scale = 57px) are prominently larger than regular tokens (38px)
+   - Token clusters don't excessively overflow zone boundaries in standard-sized zones
+   - Saigon/Mekong Delta area: denser but still functional (some overlap acceptable)
+   - Map editor: labels render at same larger size
+   - No rendering errors or missing glyphs from font size change
 
 ## Risks and Mitigations
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|------------|
-| Routes partially cover zone labels in dense areas (Saigon) | MEDIUM | Reduced label readability in congested area | Route alpha 0.75 allows labels to show through. Labels are zone-centered while routes follow edges — limited overlap. Monitor in visual check. |
-| Route click/hover interaction changes with z-order | LOW | Clicking a zone might hit a route instead | Hit areas are per-container with independent event modes. Zone containers (eventMode: 'static') and route midpoint containers have separate hit areas. |
-| Bold Laos/Cambodia colors look unrealistic | LOW | Aesthetic mismatch with game theme | Colors inspired by physical FITL board. Sage and olive tones are natural territory colors used in cartography. |
-| Route overlap margin (80px) creates visual clutter in dense areas | LOW | Routes extend too far into small provinces | Current province areas are ≥ 360×220 equivalent. 80px extension is proportional. Can reduce to 60 if visual check shows clutter. |
-| Editor layer z-order doesn't update | VERY LOW | Editor shows routes below zones still | Editor mounts children of shared layers — z-order inherits from parent. Verified in map-editor-canvas.ts:135-138. |
+| Larger labels overlap with routes in dense areas | MEDIUM | Reduced readability where routes cross zone centers | Routes at 0.75 alpha; labels have opaque background pills that ensure text visibility over routes |
+| Larger tokens overflow small zone boundaries | MEDIUM | Visual clutter in Saigon/Mekong Delta | Increased lane spacing (Step 7) compensates. Some overflow acceptable — tokens sitting atop zone fills is standard in board games |
+| BitmapText upscaling appears blurry (34px from 22px master) | LOW | Fuzzy label text | Step 1 increases master font to 36px, so 34px runtime size renders at near-native quality |
+| Map editor label sizes don't update | VERY LOW | Editor labels remain small while game canvas labels grow | Step 5 explicitly updates `map-editor-zone-renderer.ts:71` from 20 to 28. Both flows share `installLabelBitmapFonts()`. |
+| Token lane spacing too generous | LOW | Token clusters appear sparse | Values tuned proportionally (38/28 ≈ 1.36x size increase, spacing increases match). Can reduce if visual check shows excessive gaps |
+
+## Implementation Verification Checklist
+
+- [ ] `bitmap-font-registry.ts`: Master font fontSize changed from 22 to 36 (both font variants)
+- [ ] `zone-renderer.ts`: `LABEL_FONT_SIZE` changed from 26 to 34
+- [ ] `zone-renderer.ts`: `LABEL_PILL_PADDING` changed from 8 to 10
+- [ ] `zone-renderer.ts`: Label stroke width changed from 3 to 4
+- [ ] `zone-presentation-visuals.ts`: Markers label fontSize changed from 11 to 15
+- [ ] `zone-presentation-visuals.ts`: Markers label stroke width changed from 2 to 3
+- [ ] `presentation-scene.ts`: `LABEL_LINE_HEIGHT` changed from 18 to 24
+- [ ] `map-editor-zone-renderer.ts`: Editor label fontSize changed from 20 to 28
+- [ ] `visual-config-defaults.ts`: `DEFAULT_TOKEN_SIZE` changed from 28 to 38
+- [ ] `token-presentation.ts`: `TOKEN_RADIUS` changed from 14 to 19
+- [ ] `visual-config.yaml`: `laneGap` changed from 24 to 30
+- [ ] `visual-config.yaml`: Regular lane `spacingX` changed from 32 to 42
+- [ ] `visual-config.yaml`: Base lane `spacingX` changed from 42 to 54
 
 ## Research Sources
 
 All solutions extend existing patterns in the codebase. No external research needed:
-- **Layer z-order**: The `boardGroup.addChild()` call in `layers.ts` already establishes the rendering order. Reordering is a standard PixiJS Container operation.
-- **Route rendering constants**: `DEFAULT_ROUTE_STROKE` and `ROUTE_OVERLAP_MARGIN` are existing tunables in `connection-route-renderer.ts`.
-- **Country attribute rules**: Already implemented and validated in Iteration 5 — only color values change.
-- **Physical board reference**: `screenshots/FITL_SC1.jpg` confirms roads/rivers render on top of terrain fills on the physical board.
+- **Label font sizing**: `LABEL_FONT_SIZE` and related constants are existing tunables in `zone-renderer.ts`.
+- **Bitmap font master size**: `installLabelBitmapFonts()` already parameterizes font size — just a value change.
+- **Token sizing**: `DEFAULT_TOKEN_SIZE` and `TOKEN_RADIUS` are existing constants consumed by the dimension resolution pipeline.
+- **Lane spacing**: Already configurable per-zone-category in visual-config.yaml.

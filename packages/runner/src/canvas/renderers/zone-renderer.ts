@@ -166,10 +166,10 @@ function createZoneVisualElements(): ZoneVisualElements {
   const labelBackground = new Graphics();
   const hiddenStack = createHiddenZoneStackVisual();
 
-  const nameLabel = createBitmapLabel('', 0, 0, 26, {
+  const nameLabel = createBitmapLabel('', 0, 0, LABEL_FONT_SIZE, {
     fontName: STROKE_LABEL_FONT_NAME,
     fill: '#ffffff',
-    stroke: { color: '#000000', width: 3 },
+    stroke: { color: '#000000', width: 4 },
     anchor: { x: 0.5, y: 0.5 },
   });
   const markersLabel = createZoneMarkersLabel();
@@ -240,9 +240,9 @@ function updateZoneVisuals(
   updateZoneBadgeVisuals(visuals, zone.render.badge);
 }
 
-const LABEL_FONT_SIZE = 26;
+const LABEL_FONT_SIZE = 34;
 const LABEL_CHAR_WIDTH_FACTOR = 0.6;
-const LABEL_PILL_PADDING = 8;
+const LABEL_PILL_PADDING = 10;
 const LABEL_PILL_CORNER_RADIUS = 4;
 const LABEL_PILL_ALPHA = 0.65;
 const DEFAULT_STROKE_SIGNATURE = { color: '#111827', width: 1, alpha: 0.7 } as const;

@@ -616,38 +616,38 @@ describe('VisualConfigProvider', () => {
 
     expect(provider.resolveZoneTokenLayout('saigon:none', 'city')).toEqual({
       mode: 'lanes',
-      laneGap: 24,
+      laneGap: 30,
       laneOrder: ['regular', 'base'],
       lanes: {
         regular: {
           anchor: 'center',
           pack: 'centeredRow',
-          spacingX: 32,
+          spacingX: 42,
           spacingY: 36,
         },
         base: {
           anchor: 'belowPreviousLane',
           pack: 'centeredRow',
-          spacingX: 42,
+          spacingX: 54,
           spacingY: 36,
         },
       },
     });
     expect(provider.resolveZoneTokenLayout('pleiku-darlac:none', 'province')).toEqual({
       mode: 'lanes',
-      laneGap: 24,
+      laneGap: 30,
       laneOrder: ['regular', 'base'],
       lanes: {
         regular: {
           anchor: 'center',
           pack: 'centeredRow',
-          spacingX: 32,
+          spacingX: 42,
           spacingY: 36,
         },
         base: {
           anchor: 'belowPreviousLane',
           pack: 'centeredRow',
-          spacingX: 42,
+          spacingX: 54,
           spacingY: 36,
         },
       },
@@ -703,7 +703,7 @@ describe('VisualConfigProvider', () => {
     expect(provider.getTokenTypeVisual('card-2S')).toEqual({
       shape: 'card',
       color: '#ffffff',
-      size: 28,
+      size: 38,
       symbol: null,
       backSymbol: 'diamond',
     });
@@ -769,7 +769,7 @@ describe('VisualConfigProvider', () => {
     expect(provider.getTokenTypeVisual('card-2S')).toEqual({
       shape: 'card',
       color: '#ffffff',
-      size: 28,
+      size: 38,
       symbol: null,
       backSymbol: null,
     });
@@ -789,7 +789,7 @@ describe('VisualConfigProvider', () => {
     expect(provider.getTokenTypeVisual('chip-5')).toEqual({
       shape: 'circle',
       color: null,
-      size: 28,
+      size: 38,
       symbol: null,
       backSymbol: null,
     });
@@ -881,7 +881,7 @@ describe('VisualConfigProvider', () => {
     expect(provider.getTokenTypeVisual('anything')).toEqual({
       shape: 'circle',
       color: null,
-      size: 28,
+      size: 38,
       symbol: null,
       backSymbol: null,
     });

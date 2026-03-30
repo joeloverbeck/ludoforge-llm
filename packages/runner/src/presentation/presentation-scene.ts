@@ -112,7 +112,7 @@ interface BuildPresentationSceneOptions {
 const EMPTY_OVERLAYS: readonly PresentationOverlayNode[] = [];
 const EMPTY_REGIONS: readonly PresentationRegionNode[] = [];
 const LABEL_GAP = 8;
-const LABEL_LINE_HEIGHT = 18;
+const LABEL_LINE_HEIGHT = 24;
 const ZONE_HIGHLIGHT_STROKE: PresentationStrokeSpec = { color: '#facc15', width: 4, alpha: 1 };
 const ZONE_INTERACTION_STROKE: PresentationStrokeSpec = { color: '#60a5fa', width: 3, alpha: 1 };
 const ZONE_SELECTABLE_STROKE: PresentationStrokeSpec = { color: '#93c5fd', width: 2, alpha: 0.95 };

@@ -31,7 +31,7 @@ export function installLabelBitmapFonts(resolution?: number): void {
     name: LABEL_FONT_NAME,
     style: {
       fontFamily: 'monospace',
-      fontSize: 22,
+      fontSize: 36,
       fill: 0xffffff,
     },
     chars: BitmapFontManager.ASCII,
@@ -42,7 +42,7 @@ export function installLabelBitmapFonts(resolution?: number): void {
     name: STROKE_LABEL_FONT_NAME,
     style: {
       fontFamily: 'monospace',
-      fontSize: 22,
+      fontSize: 36,
       fill: 0xffffff,
       stroke: { color: 0x000000, width: 3 },
     },

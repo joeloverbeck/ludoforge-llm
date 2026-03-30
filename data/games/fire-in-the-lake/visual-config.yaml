@@ -602,7 +602,7 @@ zones:
     presets:
       fitl-map-space:
         mode: lanes
-        laneGap: 24
+        laneGap: 30
         laneOrder:
           - regular
           - base
@@ -610,11 +610,11 @@ zones:
           regular:
             anchor: center
             pack: centeredRow
-            spacingX: 32
+            spacingX: 42
           base:
             anchor: belowPreviousLane
             pack: centeredRow
-            spacingX: 42
+            spacingX: 54
     assignments:
       byCategory:
         city: fitl-map-space

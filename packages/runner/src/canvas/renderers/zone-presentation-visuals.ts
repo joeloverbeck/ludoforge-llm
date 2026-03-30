@@ -21,8 +21,8 @@ export function createZoneMarkersLabel(
     style: {
       fontName: STROKE_LABEL_FONT_NAME,
       fill: '#f5f7fa',
-      fontSize: 11,
-      stroke: { color: '#000000', width: 2 },
+      fontSize: 15,
+      stroke: { color: '#000000', width: 3 },
     },
     anchor: { x: 0.5, y: 0 },
     position,

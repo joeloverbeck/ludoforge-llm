@@ -345,7 +345,7 @@ function createColorProvider(overrides: {
         color: tokenVisual?.color ?? null,
         symbol: tokenVisual?.symbol ?? null,
         backSymbol: tokenVisual?.backSymbol ?? null,
-        size: tokenVisual?.size ?? 28,
+        size: tokenVisual?.size ?? 38,
       };
     }),
     getTokenTypePresentation: vi.fn((tokenTypeId: string) => {
@@ -490,7 +490,7 @@ describe('createTokenRenderer', () => {
     expect(colorProvider.getColor).toHaveBeenCalledTimes(3);
     expect(colorProvider.getColor).toHaveBeenCalledWith('faction:a', asPlayerId(1));
     const tokenContainer = renderer.getContainerMap().get('token:1') as unknown as { hitArea?: { radius: number } };
-    expect(tokenContainer.hitArea?.radius).toBe(14);
+    expect(tokenContainer.hitArea?.radius).toBe(19);
   });
 
   it('uses neutral fallback for unowned tokens without calling color provider', () => {
@@ -1425,8 +1425,8 @@ describe('createTokenRenderer', () => {
     const t1 = renderer.getContainerMap().get('token:1') as InstanceType<typeof MockContainer>;
     const t2 = renderer.getContainerMap().get('token:2') as InstanceType<typeof MockContainer>;
 
-    expect(t1.position.x).toBe(370);
-    expect(t2.position.x).toBe(430);
+    expect(t1.position.x).toBe(365);
+    expect(t2.position.x).toBe(435);
     expect(t1.position.y).toBe(220);
     expect(t2.position.y).toBe(220);
   });

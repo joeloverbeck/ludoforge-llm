@@ -68,7 +68,7 @@ export function createEditorZoneRenderer(
       text: resolveZoneLabel(zoneId, visualConfigProvider),
       style: {
         fontName: STROKE_LABEL_FONT_NAME,
-        fontSize: 20,
+        fontSize: 28,
         fill: '#ffffff',
         stroke: { color: '#000000', width: 3 },
       },

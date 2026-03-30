@@ -3,10 +3,10 @@
 **Status**: Draft
 **Priority**: P2
 **Complexity**: S
-**Dependencies**: Spec 94 (completed -- agent evaluation diagnostics)
+**Dependencies**: Spec 94 (completed — agent evaluation diagnostics)
 **Independent of**: Spec 95, Spec 96 (can be implemented in parallel)
 **Estimated effort**: 2-3 days
-**Origin**: FITL VC agent evolution campaign -- the OBSERVE phase was severely limited because traces capture WHAT the agent chose but not the game state context at each decision point. Without state-at-decision, identifying pivotal moments and diagnosing losses requires replaying entire games.
+**Origin**: FITL VC agent evolution campaign — the OBSERVE phase was severely limited because traces capture WHAT the agent chose but not the game state context at each decision point. Without state-at-decision, identifying pivotal moments and diagnosing losses requires replaying entire games.
 
 ## Problem Statement
 
@@ -35,11 +35,12 @@ What's still missing: the **game state context** that makes those scores meaning
 ## Goals
 
 - Capture lightweight state snapshots at each agent decision point in the simulation trace
-- Include per-faction victory metrics, resource levels, and key aggregate counts
-- Make snapshot depth configurable (minimal / standard / verbose) to control trace size
+- Include per-seat victory margins, per-player variables, and token counts — all extracted generically from game state without game-specific logic
+- Make snapshot depth configurable (none / minimal / standard / verbose) to control trace size
 - Enable trace consumers (campaign harnesses, CLI, runner) to analyze state context
 - Maintain compatibility with existing trace consumers (snapshots are additive)
 - Keep snapshot overhead proportional to snapshot depth setting
+- Degrade gracefully for games without `victoryStandings` or `seatGroupConfig`
 
 ## Non-Goals
 
@@ -53,10 +54,10 @@ What's still missing: the **game state context** that makes those scores meaning
 
 | Foundation | Alignment |
 |------------|-----------|
-| #1 Engine Agnosticism | Snapshots capture generic game state properties (margins, resources, zone counts). No game-specific extraction logic. |
+| #1 Engine Agnosticism | Snapshots extract generic game state: margins from `terminal.margins` ValueExprs, per-player variables from `state.perPlayerVars`, token counts via `countSeatTokens()` with the game's `seatGroupConfig.seatProp`. No hardcoded game-specific field names or extraction logic. Games without `victoryStandings`/`seatGroupConfig` gracefully skip token counts. |
 | #3 Visual Separation | Snapshots are observability data in `sim/`, not presentation data. |
 | #5 Determinism | Snapshots are read-only observations of deterministic state. |
-| #7 Immutability | Snapshot extraction reads state, never modifies it. |
+| #7 Immutability | Snapshot extraction reads state, never modifies it. All snapshot objects are constructed immutably via spread — no cast-and-mutate patterns. |
 | #11 Testing as Proof | Snapshot correctness is verified by comparing against manual state inspection in golden tests. |
 
 ## Proposed Design
@@ -70,101 +71,150 @@ type SnapshotDepth = 'none' | 'minimal' | 'standard' | 'verbose';
 | Depth | Content | Approximate Size (FITL) |
 |-------|---------|------------------------|
 | `none` | No snapshots (current behavior) | 0 bytes |
-| `minimal` | Per-seat margin + resources | ~200 bytes |
-| `standard` | Minimal + piece counts per seat + key aggregates | ~500 bytes |
-| `verbose` | Standard + per-zone opposition/support + token distribution | ~2-5 KB |
+| `minimal` | Turn count, phase, active player, per-seat margin | ~200 bytes |
+| `standard` | Minimal + per-player variables + global variables + total token count per seat on board | ~500 bytes |
+| `verbose` | Standard + per-zone token counts by seat + zone variables | ~2-5 KB |
 
 ### 2. Snapshot Schema
 
 ```typescript
+// All depth levels
 interface DecisionPointSnapshot {
   readonly turnCount: number;
   readonly phaseId: string;
   readonly activePlayer: number;
-  readonly seatMetrics: readonly SeatMetricSnapshot[];
+  readonly seatStandings: readonly SeatStandingSnapshot[];
 }
 
-interface SeatMetricSnapshot {
-  readonly seatId: string;
-  readonly margin: number;                    // victory margin
-  readonly resources: number;                 // current resources
-  readonly pieceCount?: number;               // total pieces on map (standard+)
-  readonly basesOnMap?: number;               // bases on map (standard+)
-  readonly piecesInAvailable?: number;        // pieces in available pool (standard+)
+interface SeatStandingSnapshot {
+  readonly seat: string;
+  readonly margin: number;                                          // from terminal.margins ValueExpr
+  readonly perPlayerVars?: Readonly<Record<string, VariableValue>>; // standard+: all per-player vars
+  readonly tokenCountOnBoard?: number;                              // standard+: total tokens on board zones (requires seatGroupConfig)
 }
 
-// verbose only
-interface VerboseSnapshot extends DecisionPointSnapshot {
-  readonly zoneSummaries?: readonly ZoneSummary[];
+// standard+ adds global vars to the snapshot
+interface StandardDecisionPointSnapshot extends DecisionPointSnapshot {
+  readonly globalVars: Readonly<Record<string, VariableValue>>;
+}
+
+// verbose adds per-zone detail
+interface VerboseDecisionPointSnapshot extends StandardDecisionPointSnapshot {
+  readonly zoneSummaries: readonly ZoneSummary[];
 }
 
 interface ZoneSummary {
   readonly zoneId: string;
-  readonly controlLevel?: number;             // support/opposition numeric level
-  readonly tokenCounts: Record<string, number>; // seatId -> piece count
+  readonly zoneVars?: Readonly<Record<string, number>>;
+  readonly tokenCountBySeat?: Readonly<Record<string, number>>; // requires seatGroupConfig
 }
 ```
 
 ### 3. Integration with Simulation Runner
 
-The `runGame` function in `packages/engine/src/sim/` already iterates through the game loop calling `agent.chooseMove()` at each decision point. The snapshot is captured BEFORE the agent chooses:
+The `runGame` function in `packages/engine/src/sim/simulator.ts` already iterates through the game loop calling `agent.chooseMove()` at each decision point. The snapshot is captured BEFORE the agent chooses:
 
 ```typescript
-// In the game loop, before calling agent.chooseMove:
+// In the game loop (simulator.ts), before calling agent.chooseMove:
 if (snapshotDepth !== 'none') {
   const snapshot = extractDecisionPointSnapshot(def, state, runtime, snapshotDepth);
-  currentMoveEntry.snapshot = snapshot;
+  // snapshot is attached to the MoveLog entry after the move is made
 }
 ```
 
 ### 4. Snapshot Extraction
 
-The extraction function is a pure read-only operation on `GameState`:
+The extraction function is a pure read-only operation on `GameState`. It reuses existing kernel infrastructure:
+
+- **Margins**: Evaluates `def.terminal.margins` ValueExpr formulas via `evalValue()` + `buildEvalContext()` — the same pattern used by `finalVictoryRanking()` in `terminal.ts`
+- **Per-player variables**: Reads `state.perPlayerVars[seatIndex]` directly — all variables the game defines for each player
+- **Global variables**: Reads `state.globalVars` directly
+- **Token counts**: Uses `countSeatTokens()` from `derived-values.ts` with the game's `seatGroupConfig.seatProp` — only when `def.victoryStandings?.seatGroupConfig` is available
 
 ```typescript
 function extractDecisionPointSnapshot(
-  def: GameDef,
+  def: ValidatedGameDef,
   state: GameState,
   runtime: GameDefRuntime,
   depth: SnapshotDepth,
-): DecisionPointSnapshot {
-  const seatMetrics = def.seats.map((seat, playerIndex) => {
-    const margin = computeSeatMargin(def, runtime, state, seat.id);
-    const resources = state.playerVars[playerIndex]?.resources ?? 0;
+): DecisionPointSnapshot | StandardDecisionPointSnapshot | VerboseDecisionPointSnapshot {
+  const margins = def.terminal.margins ?? [];
+  const resources = createEvalRuntimeResources();
+  const seatGroupConfig = def.victoryStandings?.seatGroupConfig;
+  const boardZones = def.zones.filter((z) => z.zoneKind === 'board');
+
+  const seatStandings = margins.map((marginDef): SeatStandingSnapshot => {
+    const ctx = buildEvalContext(def, runtime.adjacencyGraph, runtime.runtimeTableIndex, state, resources);
+    const rawMargin = evalValue(marginDef.value, ctx);
+    const margin = typeof rawMargin === 'number' ? rawMargin : 0;
 
     if (depth === 'minimal') {
-      return { seatId: seat.id, margin, resources };
+      return { seat: marginDef.seat, margin };
     }
 
-    // standard: add piece counts
-    const pieceCount = countPlayerTokensOnMap(state, playerIndex);
-    const basesOnMap = countPlayerTokensByType(state, playerIndex, 'base');
-    const piecesInAvailable = countPlayerTokensInAvailable(state, playerIndex);
+    // standard+: add per-player vars and token count
+    const seatIndex = def.seats.findIndex((s) => s.id === marginDef.seat);
+    const perPlayerVars = seatIndex >= 0
+      ? (state.perPlayerVars[seatIndex] ?? {})
+      : {};
 
-    return { seatId: seat.id, margin, resources, pieceCount, basesOnMap, piecesInAvailable };
+    const tokenCountOnBoard = seatGroupConfig !== undefined
+      ? boardZones.reduce(
+          (sum, zone) => sum + countSeatTokens(state, zone.id, [marginDef.seat], seatGroupConfig.seatProp),
+          0,
+        )
+      : undefined;
+
+    return { seat: marginDef.seat, margin, perPlayerVars, tokenCountOnBoard };
   });
 
-  const snapshot: DecisionPointSnapshot = {
+  const base: DecisionPointSnapshot = {
     turnCount: state.turnCount,
     phaseId: String(state.currentPhase),
     activePlayer: state.activePlayer,
-    seatMetrics,
+    seatStandings,
   };
 
-  if (depth === 'verbose') {
-    (snapshot as VerboseSnapshot).zoneSummaries = extractZoneSummaries(state, def);
-  }
+  if (depth === 'minimal') return base;
 
-  return snapshot;
+  const standard: StandardDecisionPointSnapshot = {
+    ...base,
+    globalVars: state.globalVars,
+  };
+
+  if (depth === 'standard') return standard;
+
+  // verbose: add per-zone summaries
+  const zoneSummaries = boardZones.map((zoneDef): ZoneSummary => {
+    const zoneVars = state.zoneVars[zoneDef.id];
+    const tokenCountBySeat = seatGroupConfig !== undefined
+      ? Object.fromEntries(
+          def.seats.map((seat) => [
+            seat.id,
+            countSeatTokens(state, zoneDef.id, [seat.id], seatGroupConfig.seatProp),
+          ]),
+        )
+      : undefined;
+
+    return {
+      zoneId: zoneDef.id,
+      ...(zoneVars !== undefined ? { zoneVars } : {}),
+      ...(tokenCountBySeat !== undefined ? { tokenCountBySeat } : {}),
+    };
+  });
+
+  return { ...standard, zoneSummaries };
 }
 ```
 
 ### 5. Configuration
 
-Snapshot depth is configured on `runGame` options (simulator level), not on the agent:
+Snapshot depth is configured via `ExecutionOptions` (the existing options type for `runGame`):
 
 ```typescript
-interface RunGameOptions {
+// In packages/engine/src/kernel/types-core.ts, extend ExecutionOptions:
+interface ExecutionOptions {
+  // ... existing fields ...
   readonly snapshotDepth?: SnapshotDepth;  // default: 'none'
 }
 ```
@@ -180,26 +230,55 @@ const trace = runGame(def, seed, agents, MAX_TURNS, PLAYER_COUNT, {
 
 ### 6. Trace Output Extension
 
-The `MoveEntry` in the trace gains an optional `snapshot` field:
+The `MoveLog` type in `packages/engine/src/kernel/types-core.ts` gains an optional `snapshot` field:
 
 ```typescript
-interface MoveEntry {
+interface MoveLog {
+  readonly stateHash: bigint;
+  readonly player: PlayerId;
   readonly move: Move;
-  readonly player: number;
   readonly legalMoveCount: number;
+  readonly deltas: readonly StateDelta[];
+  readonly triggerFirings: readonly TriggerLogEntry[];
+  readonly warnings: readonly RuntimeWarning[];
+  readonly effectTrace?: readonly EffectTraceEntry[];
+  readonly conditionTrace?: readonly ConditionTraceEntry[];
+  readonly decisionTrace?: readonly DecisionTraceEntry[];
+  readonly selectorTrace?: readonly SelectorTraceEntry[];
+  readonly moveContext?: MoveContext;
   readonly agentDecision?: AgentDecisionTrace;
   readonly snapshot?: DecisionPointSnapshot;  // NEW
 }
 ```
 
+### 7. Trace Enrichment and Serialization
+
+The snapshot must propagate through the enrichment and serialization pipeline:
+
+**`packages/engine/src/sim/enriched-trace-types.ts`** — `EnrichedMoveLog` already extends `MoveLog`, so the `snapshot` field propagates automatically.
+
+**`packages/engine/src/sim/trace-enrichment.ts`** — No changes needed. `enrichTrace` spreads `MoveLog` fields into `EnrichedMoveLog`, so `snapshot` propagates.
+
+**`packages/engine/src/sim/trace-writer.ts`** — `writeEnrichedTrace` already serializes all `MoveLog` fields via spread. Snapshot types are plain objects with no BigInt or non-JSON-serializable fields, so they serialize cleanly with `JSON.stringify`. No explicit changes needed.
+
+### Graceful Degradation
+
+| Game Configuration | Behavior |
+|--------------------|----------|
+| Has `terminal.margins` + `victoryStandings.seatGroupConfig` | Full snapshots at all depth levels |
+| Has `terminal.margins`, no `victoryStandings` | Margins computed; `tokenCountOnBoard` and `tokenCountBySeat` are `undefined` |
+| No `terminal.margins` | `seatStandings` is empty array; global/zone vars still captured at standard+ |
+| No seats defined | `seatStandings` is empty; zone summaries (verbose) still work |
+
 ### Files to Modify
 
 | File | Change |
 |------|--------|
-| `packages/engine/src/sim/run-game.ts` | Accept `snapshotDepth` option, capture snapshots before agent decisions |
-| `packages/engine/src/sim/snapshot.ts` | NEW: `extractDecisionPointSnapshot` function |
-| `packages/engine/src/sim/types.ts` | Add `DecisionPointSnapshot`, `SeatMetricSnapshot` types |
-| `packages/engine/src/kernel/types.ts` | Add `snapshot` to `MoveEntry` type |
+| `packages/engine/src/sim/simulator.ts` | Read `snapshotDepth` from `ExecutionOptions`, capture snapshots before agent decisions, attach to `MoveLog` entries |
+| `packages/engine/src/sim/snapshot.ts` | NEW: `extractDecisionPointSnapshot` pure function |
+| `packages/engine/src/sim/snapshot-types.ts` | NEW: `DecisionPointSnapshot`, `SeatStandingSnapshot`, `StandardDecisionPointSnapshot`, `VerboseDecisionPointSnapshot`, `ZoneSummary`, `SnapshotDepth` types |
+| `packages/engine/src/kernel/types-core.ts` | Add `snapshot?: DecisionPointSnapshot` to `MoveLog`, add `snapshotDepth?: SnapshotDepth` to `ExecutionOptions` |
+| `packages/engine/src/sim/index.ts` | Re-export snapshot types |
 
 ### Trace Size Impact
 
@@ -218,9 +297,13 @@ Non-trace seeds (14 out of 15) have `snapshotDepth: 'none'` and zero overhead.
 ### Testing Strategy
 
 - **Unit**: `extractDecisionPointSnapshot` at each depth level with known state
-- **Unit**: Margin and resource extraction matches direct state inspection
-- **Unit**: Piece count aggregation is correct for multi-owner zones
-- **Integration**: `runGame` with `snapshotDepth: 'standard'` produces valid snapshots
+- **Unit**: Margin extraction evaluates `terminal.margins` ValueExprs correctly
+- **Unit**: Per-player variable extraction matches `state.perPlayerVars` for each seat
+- **Unit**: Token count aggregation uses `countSeatTokens` correctly for multi-owner zones
+- **Unit**: Games without `victoryStandings` produce snapshots with `undefined` token counts
+- **Unit**: Games without `terminal.margins` produce snapshots with empty `seatStandings`
+- **Integration**: `runGame` with `snapshotDepth: 'standard'` produces valid snapshots in `MoveLog`
+- **Integration**: Snapshots serialize and deserialize cleanly through `writeEnrichedTrace`
 - **Golden**: Trace with snapshots for known FITL seed matches expected output
-- **Property**: Snapshot extraction never modifies game state
+- **Property**: Snapshot extraction never modifies game state (compare state hash before/after)
 - **Property**: `snapshotDepth: 'none'` adds zero overhead (no snapshot objects created)

@@ -379,18 +379,18 @@ describe('visual-config.yaml files', () => {
       presets: {
         'fitl-map-space': {
           mode: 'lanes',
-          laneGap: 24,
+          laneGap: 30,
           laneOrder: ['regular', 'base'],
           lanes: {
             regular: {
               anchor: 'center',
               pack: 'centeredRow',
-              spacingX: 32,
+              spacingX: 42,
             },
             base: {
               anchor: 'belowPreviousLane',
               pack: 'centeredRow',
-              spacingX: 42,
+              spacingX: 54,
             },
           },
         },

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — test files only
-**Deps**: archive/tickets/95POLGUIMOVCOM/95POLGUIMOVCOM-001.md, archive/tickets/95POLGUIMOVCOM-002.md, archive/tickets/95POLGUIMOVCOM-003.md, archive/tickets/95POLGUIMOVCOM/95POLGUIMOVCOM-004.md, tickets/95POLGUIMOVCOM-005.md, tickets/95POLGUIMOVCOM-006.md, tickets/95POLGUIMOVCOM-007.md, tickets/95POLGUIMOVCOM-008.md
+**Deps**: archive/tickets/95POLGUIMOVCOM/95POLGUIMOVCOM-001.md, archive/tickets/95POLGUIMOVCOM-002.md, archive/tickets/95POLGUIMOVCOM-003.md, archive/tickets/95POLGUIMOVCOM/95POLGUIMOVCOM-004.md, archive/tickets/95POLGUIMOVCOM/95POLGUIMOVCOM-005.md, tickets/95POLGUIMOVCOM-007.md, tickets/95POLGUIMOVCOM-008.md
 
 ## Problem
 
@@ -93,6 +93,7 @@ Random play for N turns with guidance-enabled VC agent:
 - Evolution pipeline integration (spec 14, not yet started)
 - Runner/UI changes (guided completion is engine-only)
 - FITL event card guided completion (events don't use the agent pipeline)
+- Policy contract centralization across validator/compiler/schema ownership (ticket `010`)
 
 ## Acceptance Criteria
 

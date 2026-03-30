@@ -11,7 +11,7 @@ Read the latest evaluation, research rendering approaches, and produce a concret
 
 ## Checklist
 
-1. Read `reports/map-representation-evaluation.md` — focus on the latest EVALUATION #N. Note the scores, CRITICAL/HIGH recommendations, and any recurring or stagnating issues.
+1. Read `reports/map-representation-evaluation.md` — focus on the latest EVALUATION #N. Note the scores, CRITICAL/HIGH recommendations, and any recurring or stagnating issues. Determine the iteration number: if the latest evaluation is #N, the plan iteration is N+1.
 2. Read `docs/FOUNDATIONS.md` — **all proposals must align** with these principles. Pay special attention to:
    - **Foundation #1** (Engine Agnosticism): No game-specific logic in engine code
    - **Foundation #3** (Visual Separation): All visual changes in visual-config.yaml or runner code, never in GameSpecDoc or engine
@@ -19,8 +19,9 @@ Read the latest evaluation, research rendering approaches, and produce a concret
    - **Foundation #9** (No Backwards Compatibility): No shims or deprecated fallbacks
    - **Foundation #10** (Architectural Completeness): Solutions address root causes, not symptoms
 3. Identify the CRITICAL and HIGH recommendations from the evaluation. If none exist, target the top 2-3 MEDIUM recommendations.
-4. Read the current renderer source files relevant to the identified problems (see Key Files below).
-5. **Research phase** (if needed): If the identified problems require techniques not already present in the codebase, use Tavily web search and/or Context7 to research rendering techniques. Skip external research when the solution extends existing patterns. Examples of research topics:
+4. Read the renderer source files relevant to the identified problems (see Key Files). Extract: key type definitions with line numbers, function signatures that will be modified, data flow from config through presentation to renderer. Use Explore sub-agents for parallel codebase exploration when multiple renderer subsystems are involved. The goal is to populate the "Current Code Architecture" section of the plan output.
+5. Optionally read the game's physical reference image (e.g., `screenshots/FITL_SC1.jpg`) for design inspiration when planning visual changes. Use it as a target aesthetic, not a rigid specification.
+6. **Research phase** (if needed): If the identified problems require techniques not already present in the codebase, use Tavily web search and/or Context7 to research rendering techniques. Skip external research when the solution extends existing patterns — if skipped, note in the Research Sources section why it was unnecessary (e.g., "All solutions extend existing PixiJS Graphics and BitmapText patterns already in the codebase"). Examples of research topics:
    - Voronoi tessellation / Delaunay triangulation in PixiJS or 2D canvas
    - Polygon-based territory rendering in strategy games
    - Procedural map border generation algorithms
@@ -28,17 +29,17 @@ Read the latest evaluation, research rendering approaches, and produce a concret
    - Route rendering through irregular polygons
    - PixiJS Graphics polygon drawing, mesh rendering, or shader approaches
    - How other digital COIN-series implementations render maps
-6. For the top 2-3 problems, brainstorm **2-3 solution approaches** each, with trade-offs:
+7. For the top 2-3 problems, brainstorm **2-3 solution approaches** each, with trade-offs:
    - Feasibility (how much code change, how many files)
    - Visual impact (how much does it improve the metric)
    - Risk (what could break, what regressions are possible)
    - Foundation alignment (does it respect all relevant principles)
-7. Select the recommended approach for each problem, applying the **1-3-1 rule**: 1 clearly defined problem, 3 potential options, 1 recommendation.
-8. **Map editor scope assessment**: For each proposed change, assess whether the map editor (`packages/runner/src/map-editor/`) needs updating in this iteration:
+8. Select the recommended approach for each problem, applying the **1-3-1 rule**: 1 clearly defined problem, 3 potential options, 1 recommendation. If the best recommendation combines elements of multiple approaches, present it as a hybrid with clear attribution (e.g., "Approach 1 + partial Approach 2"). Explain which elements are taken from each and why the combination is better than either alone.
+9. **Map editor scope assessment**: For each proposed change, assess whether the map editor (`packages/runner/src/map-editor/`) needs updating in this iteration:
    - If the change is purely rendering (e.g., drawing polygons instead of rectangles from the same position data), the editor may just need to call the same drawing function — include it.
    - If the change requires new editor interaction patterns (e.g., vertex dragging for polygons), defer to a future iteration — note what's deferred and why.
-9. Write the plan to `reports/map-representation-plan.md` (**overwritten** each iteration, not appended).
-10. **Stop.** This skill's sole output is `reports/map-representation-plan.md`. Do not proceed to implementation — the `map-representation-implement` skill consumes this plan in a separate invocation.
+10. Delete `reports/map-representation-plan.md` if it exists, then write the new plan to that path. The plan is **overwritten** each iteration, not appended.
+11. **Stop.** This skill's sole output is `reports/map-representation-plan.md`. Do not proceed to implementation — the `map-representation-implement` skill consumes this plan in a separate invocation.
 
 ## Plan Output Format
 
@@ -62,6 +63,7 @@ Write `reports/map-representation-plan.md` with this structure:
 | #1 Engine Agnosticism | [relevant/not relevant] | [brief explanation] |
 | #3 Visual Separation | Always relevant | [how changes stay in runner/visual-config] |
 | #7 Immutability | [relevant/not relevant] | [brief explanation] |
+| #9 No Backwards Compat | [relevant/not relevant] | [brief explanation] |
 | #10 Architectural Completeness | Always relevant | [root cause vs symptom] |
 
 ## Current Code Architecture (reference for implementer)
@@ -159,6 +161,10 @@ Ordered steps with dependencies noted:
 | `packages/runner/src/canvas/renderers/region-boundary-renderer.ts` | Region boundary rendering (convex hull, labels, watermark alpha) |
 | `packages/runner/src/layout/world-layout-model.ts` | Layout model types (zone positions) |
 | `data/games/fire-in-the-lake/visual-config.yaml` | FITL-specific visual configuration |
+| `packages/runner/src/presentation/presentation-scene.ts` | Label positioning, zone render spec construction, fill color resolution |
+| `packages/runner/src/canvas/renderers/zone-presentation-visuals.ts` | Marker labels, badge visuals |
+| `packages/runner/src/canvas/text/bitmap-font-registry.ts` | Bitmap font installation and configuration |
+| `packages/runner/src/canvas/renderers/token-renderer.ts` | Token rendering, sizing, and positioning |
 | `packages/runner/src/map-editor/map-editor-zone-renderer.ts` | Map editor zone rendering |
 | `packages/runner/src/map-editor/map-editor-adjacency-renderer.ts` | Map editor adjacency lines |
 

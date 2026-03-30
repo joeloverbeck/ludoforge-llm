@@ -2,7 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { evaluatePolicyMove, evaluatePolicyMoveCore } from '../../../src/agents/policy-eval.js';
-import { createPolicyRuntimeProviders } from '../../../src/agents/policy-runtime.js';
+import { createPolicyCompletionProvider, createPolicyRuntimeProviders } from '../../../src/agents/policy-runtime.js';
 import { toMoveIdentityKey } from '../../../src/kernel/move-identity.js';
 import {
   asActionId,
@@ -16,11 +16,13 @@ import {
   type AgentPolicyCatalog,
   type AgentPolicyExpr,
   type AgentPolicyLiteral,
+  type ChoicePendingRequest,
   type CompiledAgentPolicyCurrentSurfaceRef,
   type CompiledAgentPolicyPreviewSurfaceRef,
   type CompiledAgentPolicyRef,
   type GameDef,
   type Move,
+  type MoveParamValue,
   type ActionDef,
 } from '../../../src/kernel/index.js';
 import { eff } from '../../helpers/effect-tag-helper.js';
@@ -293,8 +295,24 @@ function createInput(agents: AgentPolicyCatalog, legalMoves: readonly Move[], se
   } as const;
 }
 
+function createChoiceRequest(overrides: Partial<ChoicePendingRequest> = {}): ChoicePendingRequest {
+  return {
+    kind: 'pending',
+    complete: false,
+    decisionKey: '$target',
+    type: 'chooseOne',
+    name: '$target',
+    options: [
+      { value: 'zone-a', legality: 'legal', illegalReason: null },
+      { value: 'zone-b', legality: 'legal', illegalReason: null },
+    ],
+    targetKinds: ['zone'],
+    ...overrides,
+  } as ChoicePendingRequest;
+}
+
 describe('policy-eval', () => {
-  it('routes intrinsic, candidate, current, and preview reads through explicit runtime providers', () => {
+  it('routes intrinsic, candidate, current, preview, and completion reads through explicit runtime providers', () => {
     const input = createInput(
       createCatalog(
         {},
@@ -313,6 +331,10 @@ describe('policy-eval', () => {
       seatId: 'us',
       trustedMoveIndex: new Map(),
       catalog: input.def.agents!,
+      completion: {
+        request: createChoiceRequest(),
+        optionValue: 'zone-b',
+      },
       runtimeError: (code, message) => new Error(`${code}: ${message}`),
     });
     const candidate = {
@@ -342,6 +364,49 @@ describe('policy-eval', () => {
       } satisfies CompiledAgentPolicyPreviewSurfaceRef),
       { kind: 'value', value: 4 },
     );
+    assert.equal(providers.completion?.resolveDecisionIntrinsic('type'), 'chooseOne');
+    assert.equal(providers.completion?.resolveDecisionIntrinsic('targetKind'), 'zone');
+    assert.equal(providers.completion?.resolveDecisionIntrinsic('optionCount'), 2);
+    assert.equal(providers.completion?.resolveOptionIntrinsic('value'), 'zone-b');
+  });
+
+  it('maps completion intrinsics from request metadata and falls back targetKind to unknown', () => {
+    const provider = createPolicyCompletionProvider(
+      createChoiceRequest({
+        type: 'chooseN',
+        name: '$pickZones',
+        options: [
+          { value: 'zone-a', legality: 'legal', illegalReason: null },
+          { value: 'zone-c', legality: 'legal', illegalReason: null },
+          { value: 'zone-d', legality: 'illegal', illegalReason: 'pipelineAtomicCostValidationFailed' },
+        ],
+        targetKinds: [],
+        selected: [],
+        canConfirm: true,
+      }),
+      ['zone-a', 'zone-c'] satisfies MoveParamValue,
+    );
+
+    assert.equal(provider.resolveDecisionIntrinsic('type'), 'chooseN');
+    assert.equal(provider.resolveDecisionIntrinsic('name'), '$pickZones');
+    assert.equal(provider.resolveDecisionIntrinsic('targetKind'), 'unknown');
+    assert.equal(provider.resolveDecisionIntrinsic('optionCount'), 3);
+    assert.deepEqual(provider.resolveOptionIntrinsic('value'), ['zone-a', 'zone-c']);
+  });
+
+  it('omits completion providers when no completion context is supplied', () => {
+    const input = createInput(createCatalog(), createMoves('event'));
+    const providers = createPolicyRuntimeProviders({
+      def: input.def,
+      state: input.state,
+      playerId: input.playerId,
+      seatId: 'us',
+      trustedMoveIndex: new Map(),
+      catalog: input.def.agents!,
+      runtimeError: (code, message) => new Error(`${code}: ${message}`),
+    });
+
+    assert.equal(providers.completion, undefined);
   });
 
   it('resolves player-scoped per-player refs by runtime player identity in symmetric seats', () => {

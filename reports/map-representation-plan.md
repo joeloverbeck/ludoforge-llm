@@ -1,226 +1,246 @@
-# Map Representation Plan — Iteration 1
+# Map Representation Plan — Iteration 3
 
 **Date**: 2026-03-30
-**Based on**: EVALUATION #1 (average score: 2.5)
-**Problems targeted**: [CRITICAL] Terrain Distinction (2/10), [CRITICAL] Province Shapes / Adjacency Clarity (2/10)
+**Based on**: EVALUATION #2 (average score: 5.0)
+**Problems targeted**: Label/Token Readability [HIGH], Terrain Distinction [HIGH], Route Integration [HIGH]
 
 ## Context
 
-The FITL game map currently renders all provinces as uniform green rectangles floating in dark space. Adjacent provinces have no shared borders — adjacency is conveyed only through thin dashed lines. Terrain types (highland, lowland, jungle) are nearly indistinguishable because the three fill colors are too close in hue. This makes the map unrecognizable to FITL players who know the physical board's irregular territories with distinct terrain coloring.
+Evaluation #2 showed major progress (2.5 -> 5.0) from the polygon provinces and terrain colors added in iteration 2. However, labels remain nearly illegible at 16px monospace, terrain has only 3 color variants covering 3+ distinct types, and routes still terminate at polygon edges rather than flowing through territory. This iteration focuses on these three highest-impact readability and visual fidelity improvements.
 
-This iteration targets the two CRITICAL evaluation findings: terrain distinction (pure config change) and province shape infrastructure (add custom polygon support).
+Deferred to iteration 4: polygon shape softening (curved borders), LoC zone restyling, city embedding within provinces.
 
 ## Foundations Alignment
 
 | Foundation | Relevance | How This Plan Respects It |
 |-----------|-----------|--------------------------|
-| #1 Engine Agnosticism | Not relevant | All changes in runner code and visual-config |
-| #3 Visual Separation | Always relevant | Terrain colors in visual-config.yaml, shape logic in runner renderers |
-| #7 Immutability | Relevant for ResolvedZoneVisual | New `vertices` field is `readonly number[] | null` |
-| #9 No Backwards Compatibility | Relevant | `polygon` is a new shape value, no shims needed |
-| #10 Architectural Completeness | Always relevant | Root cause: missing polygon shape type + similar terrain colors |
-
-## Problem 1: Terrain Distinction
-
-**Evaluation score**: Terrain Distinction = 2/10
-**Root cause**: The three terrain fill colors (`#6b5b3e`, `#3d5c3a`, `#5a7a52`) are too close in hue and saturation. All provinces look the same shade of green/brown.
-
-### Approaches Considered
-
-1. **Update color palette in visual-config.yaml**: Change attributeRules color values to maximally distinct palette inspired by the physical FITL board.
-   - Feasibility: HIGH (pure YAML change, zero code)
-   - Visual impact: MEDIUM-HIGH (distinct terrain types immediately visible)
-   - Risk: Minimal — visual-config provider already reads and applies these correctly
-
-2. **Add texture patterns (crosshatch, dots) per terrain**: Draw overlay patterns on top of fill color in `drawZoneBase()`.
-   - Feasibility: MEDIUM (requires new rendering code in zone-renderer)
-   - Visual impact: HIGH (terrain types distinguishable even for colorblind users)
-   - Risk: Moderate — touches renderer code, needs careful performance management
-
-3. **Add terrain-specific border styling**: Different stroke color/width per terrain via attributeRules.
-   - Feasibility: MEDIUM (requires extending ZoneVisualStyleSchema with stroke properties)
-   - Visual impact: LOW-MEDIUM (subtle reinforcement, not primary distinction)
-   - Risk: Low — additive schema change
-
-### Recommendation: Approach 1 (updated color palette)
-
-**Why**: Maximum impact with zero code risk. The physical FITL board uses clearly distinct colors: sandy tan highlands, bright green lowlands, deep dark green jungle. Adjusting the YAML values achieves this immediately. Texture patterns (Approach 2) should be deferred to iteration 2 for additional terrain clarity.
-
-**New palette**:
-- Highland: `#c4a66a` (warm sandy tan)
-- Lowland: `#7cb87c` (bright medium green)
-- Jungle: `#2d4a2d` (deep dark green)
-- City stays `#5b7fa5` (blue-gray — already distinct)
-
-Also reduce region watermark label alpha from 0.25 to 0.12 to reduce visual competition with terrain colors (addresses MEDIUM recommendation #5).
-
-## Problem 2: Province Shapes / Adjacency Clarity
-
-**Evaluation score**: Adjacency Clarity = 2/10
-**Root cause**: No `polygon` shape type exists. All provinces are rectangles with fixed width/height. Adjacent provinces cannot share border edges because rectangles have no mechanism for custom vertex positions.
-
-### Approaches Considered
-
-1. **Add `polygon` shape type with custom `vertices` per zone in visual-config overrides**: Extend schema, add polygon case to shape-utils, define vertices in YAML.
-   - Feasibility: HIGH (infrastructure for `Graphics.poly()` already exists, `rayPolygonIntersection` works for edge points)
-   - Visual impact: HIGH (provinces become territory shapes with shared borders)
-   - Risk: Medium — schema change + renderer update + vertex data design
-
-2. **Voronoi tessellation from zone positions**: Auto-generate territory boundaries using Voronoi/Delaunay.
-   - Feasibility: LOW (needs external library or complex algorithm, clipping to map boundaries, edge cases)
-   - Visual impact: HIGH (automatic tessellation fills all space)
-   - Risk: High — algorithmic complexity, no manual control over shapes
-
-3. **Use varied existing shapes (hexagons, ellipses) per zone**: Assign different shapes per terrain type.
-   - Feasibility: HIGH (pure config change)
-   - Visual impact: LOW (provinces still isolated, still have gaps, no shared borders)
-   - Risk: Minimal
-
-### Recommendation: Approach 1 (custom polygon vertices)
-
-**Why**: The fundamental problem is that provinces need to share borders. Only custom polygon vertices achieve this. The rendering infrastructure (`Graphics.poly()`, `rayPolygonIntersection`) already exists. The work is mostly plumbing a `vertices` field through the pipeline and defining vertex data. Voronoi (Approach 2) could replace this later but is too complex for iteration 1.
-
-**Phase split**: In this iteration, implement the full polygon infrastructure + define vertices for a cluster of 4-5 adjacent provinces as proof of concept. Full tessellation of all ~30 zones will be a follow-up.
+| #1 Engine Agnosticism | Not relevant | No engine code changes |
+| #3 Visual Separation | Always relevant | All changes in visual-config.yaml, runner renderers, and presentation code |
+| #7 Immutability | Not relevant | No state transition changes |
+| #9 No Backwards Compat | Relevant | Font registry changes replace old fonts, no aliases |
+| #10 Architectural Completeness | Always relevant | Addresses root cause of each problem (font size, color palette, route geometry) |
 
 ## Current Code Architecture (reference for implementer)
 
-This section documents the exact interfaces, functions, and data flow that will be modified. An implementer should not need to re-explore the codebase.
+### Label Creation Pipeline
 
-### Data Flow: Visual Config → Presentation → Renderer
-
-```
-visual-config.yaml
-  → VisualConfigProvider.resolveZoneVisual(zoneId, category, attributes)
-    → ResolvedZoneVisual { shape, width, height, color, connectionStyleKey }
-      → stored in PresentationZoneNode.visual
-        → consumed by zone-renderer.ts drawZoneBase()
-          → calls drawZoneShape(base, shape, dimensions, options)
-            → PixiJS Graphics.poly() / .roundRect() / .circle()
-```
-
-### Key Type: `ResolvedZoneVisual`
-
-**File**: `packages/runner/src/config/visual-config-provider.ts` (lines 55-61)
-
+Labels are BitmapText objects created in `zone-renderer.ts:166-171`:
 ```typescript
-export interface ResolvedZoneVisual {
-  readonly shape: ZoneShape;
-  readonly width: number;
-  readonly height: number;
-  readonly color: string | null;
-  readonly connectionStyleKey: string | null;
-}
-```
-
-This interface gains a new field: `vertices: readonly number[] | null`.
-
-### Key Type: `ZoneShape`
-
-**File**: `packages/runner/src/config/visual-config-defaults.ts` (lines 1-10)
-
-```typescript
-export type ZoneShape =
-  | 'rectangle' | 'circle' | 'hexagon' | 'diamond'
-  | 'ellipse' | 'triangle' | 'line' | 'octagon' | 'connection';
-```
-
-The same values appear in `ZoneShapeSchema` in `visual-config-types.ts` (lines 7-17). Both must be updated together.
-
-### Key Function: `drawZoneShape()`
-
-**File**: `packages/runner/src/canvas/renderers/shape-utils.ts` (lines 38-76)
-
-Switch on `shape` — calls `base.roundRect()` for rectangle, `base.circle()` for circle, `base.poly(buildRegularPolygonPoints(...))` for hexagon/diamond/triangle/octagon. The `polygon` case will call `base.poly(options.vertices)` with custom vertex data.
-
-Current options interface:
-```typescript
-interface DrawZoneShapeOptions {
-  readonly rectangleCornerRadius: number;
-  readonly lineCornerRadius: number;
-}
-```
-
-Gains: `readonly vertices?: readonly number[]`.
-
-### Key Function: `getEdgePointAtAngle()`
-
-**File**: `packages/runner/src/canvas/renderers/shape-utils.ts` (lines 78-110)
-
-Switch on `shape` — computes where a ray from center intersects the shape edge. For hexagon/diamond/triangle/octagon, it calls `rayPolygonIntersection(angleDeg, polygonPoints)`. The `polygon` case will do the same but with custom vertices instead of `buildRegularPolygonPoints()`.
-
-**Signature change needed**: Currently takes `(shape, dimensions, angleDeg)`. Needs an optional `vertices` parameter for polygon shapes. New signature: `(shape, dimensions, angleDeg, vertices?)`.
-
-### Key Function: `resolveZoneVisual()` — visual property cascade
-
-**File**: `packages/runner/src/config/visual-config-provider.ts` (lines 159-186)
-
-Resolution order (lowest to highest priority):
-1. Defaults (`DEFAULT_ZONE_SHAPE`, `DEFAULT_ZONE_WIDTH`, etc.)
-2. Category styles from `categoryStyles[category]`
-3. Attribute rules from `attributeRules[]` (filtered by category + attribute matches)
-4. Zone-specific overrides from `overrides[zoneId]`
-
-Each layer is merged via `applyZoneStyle()` (lines 556-592), which copies non-undefined fields from source to target. This function needs to also copy `vertices` when present.
-
-### Key Schema: `ZoneVisualStyleSchema` and `ZoneVisualOverrideSchema`
-
-**File**: `packages/runner/src/config/visual-config-types.ts`
-
-```typescript
-// lines 91-97
-const ZoneVisualStyleSchema = z.object({
-  shape: ZoneShapeSchema.optional(),
-  width: z.number().optional(),
-  height: z.number().optional(),
-  color: z.string().optional(),
-  connectionStyleKey: z.string().optional(),
-});
-
-// lines 179-181
-const ZoneVisualOverrideSchema = ZoneVisualStyleSchema.extend({
-  label: z.string().optional(),
+const nameLabel = createBitmapLabel('', 0, 0, 16, {
+  fontName: STROKE_LABEL_FONT_NAME,  // 'ludoforge-label-stroke'
+  fill: '#ffffff',
+  stroke: { color: '#000000', width: 3 },
+  anchor: { x: 0.5, y: 0 },
 });
 ```
 
-`ZoneVisualOverrideSchema` extends `ZoneVisualStyleSchema`, so adding `vertices` to the base schema automatically makes it available in overrides.
+The bitmap font is installed in `bitmap-font-registry.ts:41-51` at **14px base size**, monospace family, with 3px black stroke. BitmapText scales this internally, but 16px usage is barely above the 14px install size, limiting quality.
 
-### Vertex Coordinate System
-
-All shapes draw relative to center `(0, 0)`. The zone container is positioned at the zone's world `(x, y)` coordinates. Vertices in the `vertices` array are flat alternating `[x1, y1, x2, y2, ...]` coordinates relative to center, matching the format `Graphics.poly()` expects. For example, a simple triangle: `[0, -100, 87, 50, -87, 50]`.
-
-### Game Canvas Zone Renderer — `drawZoneBase()`
-
-**File**: `packages/runner/src/canvas/renderers/zone-renderer.ts` (lines 243-262)
-
+Label **positioning** is computed in `presentation-scene.ts:206-221`:
 ```typescript
-function drawZoneBase(base: Graphics, zone: PresentationZoneNode): void {
-  // ...resolves fill, stroke, dimensions...
-  drawZoneShape(base, shape, dimensions, {
-    rectangleCornerRadius: ZONE_CORNER_RADIUS,
-    lineCornerRadius: LINE_CORNER_RADIUS,
-  });
-  // ...applies fill and stroke...
-}
+const bottomEdge = visual.shape === 'circle'
+  ? Math.min(visual.width, visual.height) / 2
+  : visual.height / 2;
+// ...
+nameLabel: {
+  text: displayName,
+  x: 0,
+  y: bottomEdge + LABEL_GAP,  // LABEL_GAP = 8
+  visible: true,
+},
 ```
 
-Change: pass `vertices: zone.visual.vertices ?? undefined` in the options object.
+Labels are placed **below** the zone shape. This means they sit in the dark background gap between provinces, competing with adjacency lines and route lines for visibility.
 
-### Map Editor Zone Renderer — `drawZoneBase()`
+The map editor uses the same font at 14px (`map-editor-zone-renderer.ts:67-76`) with `LABEL_OFFSET_Y = 14`.
 
-**File**: `packages/runner/src/map-editor/map-editor-zone-renderer.ts` (lines 167-185)
+### Terrain Color Resolution
 
-Same pattern as game canvas — calls `drawZoneShape(base, visual.shape, dimensions, { ... })`. Same change needed: pass `vertices` from resolved visual.
+Colors are resolved through a layered system in `visual-config-provider.ts:160-188`:
+1. Default (no color)
+2. `categoryStyles.province` — no color set (null)
+3. `attributeRules` — matches on `terrainTags` attribute:
+   - `highland` -> `#c4a66a` (tan)
+   - `jungle` -> `#2d4a2d` (dark green)
+   - `lowland` -> `#7cb87c` (light green)
+4. Per-zone `overrides` (highest priority)
 
-### Hit Area Calculation
+The `drawZoneBase()` function in `zone-renderer.ts:238-239` applies the resolved color:
+```typescript
+const fill = parseHexColor(zone.render.fillColor ?? undefined) ?? 0x4d5c6d;
+```
 
-**File**: `packages/runner/src/canvas/renderers/zone-renderer.ts` (lines 136-141)
+Current issue: only 3 terrain colors exist. The physical FITL board uses ~5 distinct terrain treatments (highlands, lowlands, jungle, plus cities have their own scheme, and LoCs are route-styled). Provinces with mixed terrain tags get only the first matching rule.
 
-Currently uses `new Rectangle(-w/2, -h/2, w, h + LABEL_AREA_HEIGHT)` for all shapes. For polygon shapes, compute bounding box from the vertices array: iterate vertices to find `minX, maxX, minY, maxY`, then create `new Rectangle(minX, minY, maxX-minX, maxY-minY + LABEL_AREA_HEIGHT)`.
+### Route Rendering
 
-### Terrain Color Locations in visual-config.yaml
+Routes are rendered in `connection-route-renderer.ts`. Route geometry is resolved from config-defined points/segments in `resolveRouteGeometry()` (line 394-424). Routes use `sampleResolvedRoutePath()` to generate polyline points, then `drawRouteCurve()` (line 337-392) draws via `Graphics.quadraticCurveTo()` or `Graphics.lineTo()`.
 
-**File**: `data/games/fire-in-the-lake/visual-config.yaml` (lines 385-406)
+Route endpoints are zone-center-based: they connect from one zone's center to another's. The `getEdgePointAtAngle()` function in `shape-utils.ts:86-124` computes where the route enters/exits a zone boundary, but the visual result is that routes terminate exactly at the polygon edge rather than extending slightly into/through the territory.
 
+### Key Type Definitions
+
+- `ZoneVisualStyleSchema` (`visual-config-types.ts:92-99`): `{ shape?, width?, height?, color?, connectionStyleKey?, vertices? }`
+- `ConnectionStyleConfigSchema` (`visual-config-types.ts:101-108`): `{ strokeWidth, strokeColor, strokeAlpha?, wavy?, waveAmplitude?, waveFrequency? }`
+- `PresentationZoneRenderSpec` (`presentation-scene.ts`): Contains `nameLabel: { text, x, y, visible }`, `fillColor`, `stroke`
+- `BitmapFontName` = `'ludoforge-label' | 'ludoforge-label-stroke'` (`bitmap-font-registry.ts:17`)
+
+## Problem 1: Label/Token Readability (Score: 4/10)
+
+**Root cause**: Labels use 16px monospace BitmapText installed at 14px base resolution, placed below zone shapes in the dark background gap. The monospace font is space-inefficient for province names. Black stroke on white text provides some contrast but the text is simply too small.
+
+### Approaches Considered
+
+1. **Increase font size to 20-22px and install bitmap font at matching resolution**
+   - Feasibility: HIGH — change font install size in `bitmap-font-registry.ts` and label creation in `zone-renderer.ts`
+   - Visual impact: HIGH — directly addresses the core readability issue
+   - Risk: Larger text may overflow small zones; bitmap font texture atlas grows (minor memory increase)
+
+2. **Move labels inside zone shapes (centered) instead of below**
+   - Feasibility: MEDIUM — requires changing label positioning from `bottomEdge + LABEL_GAP` to `(0, 0)` and handling text-on-fill contrast
+   - Visual impact: HIGH — labels on the terrain fill match the physical board design where names are inside provinces
+   - Risk: Labels may be obscured by tokens; needs dynamic contrast adjustment per terrain color
+
+3. **Switch from BitmapText to Pixi Text with a sans-serif font for better rendering quality**
+   - Feasibility: LOW — BitmapText was chosen specifically to avoid PixiJS TexturePool crashes (#11735)
+   - Visual impact: MEDIUM — better font rendering but doesn't fix the size/placement problem
+   - Risk: Reintroduces the crash bug that motivated the BitmapText switch
+
+### Recommendation: Approach 1 + partial Approach 2
+
+Increase the bitmap font install size to 22px (allowing clean rendering at 20-22px usage). Move name labels **inside** the zone shape (centered vertically and horizontally) for provinces and polygons, keeping the below-zone placement only for circles (cities) where interior space is limited. Add a semi-transparent dark background pill behind labels for legibility on light terrain fills.
+
+**Why**: Combining size increase with interior placement matches the physical board design (labels inside provinces) and maximizes readability. The background pill ensures contrast on all terrain colors without needing per-terrain color logic.
+
+## Problem 2: Terrain Distinction (Score: 5/10)
+
+**Root cause**: Only 3 attribute rules exist for terrain coloring (highland, jungle, lowland). The physical FITL board uses more nuanced terrain treatment: highlands are warm tan/brown, lowlands are bright green, jungle is dark green. The current colors are muted/desaturated, making them hard to distinguish from each other.
+
+### Approaches Considered
+
+1. **Expand color palette with more saturated, board-accurate colors**
+   - Feasibility: HIGH — purely YAML config changes in `visual-config.yaml` attributeRules
+   - Visual impact: HIGH — more saturated colors make terrain immediately identifiable
+   - Risk: LOW — only config changes, no code changes needed
+
+2. **Add pattern/texture overlays (hatching, stippling) per terrain type**
+   - Feasibility: LOW — PixiJS Graphics doesn't natively support fill patterns; would need shader or sprite-based textures
+   - Visual impact: HIGH — physical board uses subtle texture variations
+   - Risk: Significant code complexity, potential performance impact
+
+3. **Use border color variation per terrain type (brown borders for highlands, green borders for jungle)**
+   - Feasibility: HIGH — add `strokeColor` to attribute rules and apply in zone renderer
+   - Visual impact: MEDIUM — adds another dimension of distinction but may be subtle
+   - Risk: LOW — extends existing attribute rule system
+
+### Recommendation: Approach 1 + elements of Approach 3
+
+Update the terrain color palette to more saturated, board-accurate values. Add terrain-based stroke/border colors so province outlines reinforce terrain type.
+
+**Why**: Purely config-driven, high-impact, and zero-risk for Approach 1. Border color variation (Approach 3) adds a second visual channel. The current colors (#c4a66a, #2d4a2d, #7cb87c) are too muted and close in value.
+
+Proposed palette (inspired by physical board):
+- Highland: fill `#d4a656` (warmer tan), stroke `#8b6914` (golden brown)
+- Lowland: fill `#5db85d` (brighter green), stroke `#2d7a2d` (forest green)
+- Jungle: fill `#1a5c2a` (deeper green), stroke `#0d3d18` (very dark green)
+- City: fill `#5b7fa5` (existing steel blue), stroke `#3a5a7a` (darker blue)
+
+## Problem 3: Route Integration (Score: 5/10)
+
+**Root cause**: Routes terminate at the polygon edge because `getEdgePointAtAngle()` computes the boundary intersection and drawing stops there. On the physical board, roads and rivers flow visually through the territory.
+
+### Approaches Considered
+
+1. **Extend route lines slightly past polygon edges (inset into territory) using an overlap margin**
+   - Feasibility: HIGH — adjust start/end points in route geometry to move them inward by N pixels from the edge
+   - Visual impact: MEDIUM — routes would visually enter provinces but wouldn't fully flow through
+   - Risk: LOW — simple coordinate adjustment, easily tunable
+
+2. **Render routes beneath zone fills so routes appear to pass through provinces**
+   - Feasibility: MEDIUM — requires changing z-ordering of route containers relative to zone containers
+   - Visual impact: HIGH — routes would visually flow under province fills
+   - Risk: MEDIUM — routes become invisible under opaque fills; need partial transparency
+
+3. **Render routes connecting zone centers with zone fills drawn semi-transparently over them**
+   - Feasibility: LOW — complex rendering with masking/blending
+   - Visual impact: HIGH — most realistic road/river integration
+   - Risk: HIGH — significant architectural change to rendering pipeline
+
+### Recommendation: Approach 1
+
+Extend route endpoints inward past the polygon boundary by a configurable margin (~35px). Routes visually penetrate into province territory rather than stopping at the edge. Combined with slightly thicker route strokes, this creates the impression of roads/rivers flowing through provinces.
+
+**Why**: Simplest change with meaningful visual impact. Approach 2 requires transparent fills (conflicts with opaque territory tessellation). Approach 3 is architecturally heavy. The inset approach works with the existing architecture.
+
+Implementation: In `connection-route-renderer.ts`, after resolving route geometry, extend each endpoint further along the line direction past the polygon edge intersection.
+
+## Implementation Steps
+
+1. **Update bitmap font install size** — **File**: `packages/runner/src/canvas/text/bitmap-font-registry.ts` — **Depends on**: none
+   - Change `fontSize: 14` to `fontSize: 22` for the stroke label font (line 45)
+   - Change `fontSize: 14` to `fontSize: 22` for the plain label font (line 34)
+
+2. **Increase label font size in zone renderer** — **File**: `packages/runner/src/canvas/renderers/zone-renderer.ts` — **Depends on**: Step 1
+   - Change `createBitmapLabel('', 0, 0, 16, ...)` to fontSize 20 (line 166)
+   - Change label anchor to `{ x: 0.5, y: 0.5 }` for centered placement
+
+3. **Move label positioning inside zone shapes** — **File**: `packages/runner/src/presentation/presentation-scene.ts` — **Depends on**: none
+   - In `resolveZoneRenderSpec()` (line 199), change label y from `bottomEdge + LABEL_GAP` to `0` for polygon/rectangle shapes
+   - Keep `bottomEdge + LABEL_GAP` for circle shapes (cities)
+   - Move markers label to `LABEL_LINE_HEIGHT` below name label (inside zone)
+
+4. **Add label background pill rendering** — **File**: `packages/runner/src/canvas/renderers/zone-renderer.ts` — **Depends on**: Steps 2-3
+   - Add a Graphics object to `ZoneVisualElements` for the label background
+   - In `updateZoneVisuals()`, draw a `roundRect` behind the nameLabel sized to text bounds + 6px padding
+   - Fill: `0x000000` alpha `0.45`, corner radius 4px
+
+5. **Update terrain fill colors** — **File**: `data/games/fire-in-the-lake/visual-config.yaml` — **Depends on**: none
+   - Highland: `#c4a66a` -> `#d4a656`
+   - Lowland: `#7cb87c` -> `#5db85d`
+   - Jungle: `#2d4a2d` -> `#1a5c2a`
+
+6. **Add strokeColor to visual config schema** — **File**: `packages/runner/src/config/visual-config-types.ts` — **Depends on**: none
+   - Add `strokeColor: z.string().optional()` to `ZoneVisualStyleSchema`
+
+7. **Resolve strokeColor in visual config provider** — **File**: `packages/runner/src/config/visual-config-provider.ts` — **Depends on**: Step 6
+   - Include `strokeColor` in the layered resolution cascade alongside `color`
+   - Return it in the resolved zone visual
+
+8. **Apply resolved stroke color in zone renderer** — **File**: `packages/runner/src/canvas/renderers/zone-renderer.ts` — **Depends on**: Step 7
+   - In `drawZoneBase()`, use `zone.visual.strokeColor` (if present) instead of hardcoded `0x111827`
+   - Fall back to `zone.render.stroke.color` for interaction highlights
+
+9. **Add terrain stroke colors to FITL config** — **File**: `data/games/fire-in-the-lake/visual-config.yaml` — **Depends on**: Steps 6-8
+   - Highland: `strokeColor: "#8b6914"`
+   - Lowland: `strokeColor: "#2d7a2d"`
+   - Jungle: `strokeColor: "#0d3d18"`
+
+10. **Extend route endpoints past polygon edges** — **File**: `packages/runner/src/canvas/renderers/connection-route-renderer.ts` — **Depends on**: none
+    - After route geometry is resolved, extend start/end points by ~35px inward along the line direction
+    - Add constant `ROUTE_OVERLAP_MARGIN = 35`
+
+11. **Increase route stroke widths** — **File**: `data/games/fire-in-the-lake/visual-config.yaml` — **Depends on**: none
+    - Highway: `strokeWidth: 8` -> `strokeWidth: 10`
+    - Mekong: `strokeWidth: 12` -> `strokeWidth: 14`
+
+12. **Update map editor label font size** — **File**: `packages/runner/src/map-editor/map-editor-zone-renderer.ts` — **Depends on**: Step 1
+    - Update fontSize from 14 to 20
+
+## Map Editor Scope
+
+**Included in this iteration**:
+- Label font size increase (Step 12) — uses same bitmap font
+- Terrain color changes (Steps 5, 9) — automatic via shared visual-config.yaml
+
+**Deferred to future iteration**:
+- Label positioning inside zones — editor uses fixed below-zone layout with drag handles; moving labels inside shapes requires rethinking the editor interaction model
+- Label background pill — editor has light background, less needed for contrast
+
+## Visual Config Changes
+
+### `data/games/fire-in-the-lake/visual-config.yaml`
+
+**Attribute rules** — updated terrain colors with stroke colors:
 ```yaml
 attributeRules:
   - match:
@@ -228,113 +248,64 @@ attributeRules:
       attributeContains:
         terrainTags: highland
     style:
-      color: "#6b5b3e"       # ← change to "#c4a66a"
+      color: "#d4a656"
+      strokeColor: "#8b6914"
   - match:
       category: [province]
       attributeContains:
         terrainTags: jungle
     style:
-      color: "#3d5c3a"       # ← change to "#2d4a2d"
+      color: "#1a5c2a"
+      strokeColor: "#0d3d18"
   - match:
       category: [province]
       attributeContains:
         terrainTags: lowland
     style:
-      color: "#5a7a52"       # ← change to "#7cb87c"
+      color: "#5db85d"
+      strokeColor: "#2d7a2d"
 ```
 
-### Region Label Alpha
+**Connection styles** — thicker routes:
+```yaml
+connectionStyles:
+  highway:
+    strokeWidth: 10
+  mekong:
+    strokeWidth: 14
+```
 
-**File**: `packages/runner/src/canvas/renderers/region-boundary-renderer.ts` (line 19)
+### Schema changes
 
+Add to `ZoneVisualStyleSchema` in `visual-config-types.ts`:
 ```typescript
-const LABEL_ALPHA = 0.25;  // ← change to 0.12
+strokeColor: z.string().optional(),
 ```
-
-### Label Font Size
-
-**File**: `packages/runner/src/canvas/renderers/zone-renderer.ts` (line 171)
-
-```typescript
-const nameLabel = createBitmapLabel('', 0, 0, 14, { ... });  // ← change 14 to 16
-```
-
-### Existing Test File
-
-**File**: `packages/runner/test/canvas/renderers/shape-utils.test.ts`
-
-Tests for `drawZoneShape` and `getEdgePointAtAngle` exist here. New `polygon` cases should be added following the existing pattern.
-
----
-
-## Implementation Steps
-
-### Phase A: Terrain Colors (zero-code, immediate)
-
-1. Update terrain fill colors in `attributeRules` — **File**: `data/games/fire-in-the-lake/visual-config.yaml` (lines 392, 399, 406) — change `#6b5b3e` → `#c4a66a`, `#3d5c3a` → `#2d4a2d`, `#5a7a52` → `#7cb87c` — **Depends on**: none
-2. Reduce region label alpha from 0.25 to 0.12 — **File**: `packages/runner/src/canvas/renderers/region-boundary-renderer.ts` (line 19, `LABEL_ALPHA`) — **Depends on**: none
-
-### Phase B: Polygon Shape Infrastructure
-
-3. Add `'polygon'` to `ZoneShape` type union — **File**: `packages/runner/src/config/visual-config-defaults.ts` (line 1-10) — **Depends on**: none
-4. Add `'polygon'` to `ZoneShapeSchema` enum and add `vertices: z.array(z.number()).optional()` to `ZoneVisualStyleSchema` — **File**: `packages/runner/src/config/visual-config-types.ts` (lines 7-17 for schema enum, lines 91-97 for style schema) — `ZoneVisualOverrideSchema` extends `ZoneVisualStyleSchema` so it auto-inherits — **Depends on**: Step 3
-5. Add `vertices: readonly number[] | null` to `ResolvedZoneVisual` interface. Thread through `resolveZoneVisual()` (initialize as `null`, merge via `applyZoneStyle()`). In `applyZoneStyle()`, add: if `source.vertices` is a non-empty array, copy it to target — **File**: `packages/runner/src/config/visual-config-provider.ts` (interface at line 55, resolve at line 159, applyStyle at line 556) — **Depends on**: Step 4
-6. Add `readonly vertices?: readonly number[]` to `DrawZoneShapeOptions`. Add `case 'polygon':` to `drawZoneShape()` that calls `base.poly(options.vertices)` if vertices has ≥6 numbers, otherwise falls back to `base.roundRect()` (rectangle) — **File**: `packages/runner/src/canvas/renderers/shape-utils.ts` (options interface near line 16, function at line 38) — **Depends on**: Step 3
-7. Add optional 4th parameter `vertices?: readonly number[]` to `getEdgePointAtAngle()`. Add `case 'polygon':` that calls `rayPolygonIntersection(angleDeg, vertices)` if vertices provided, else returns `{ x: 0, y: 0 }` — **File**: `packages/runner/src/canvas/renderers/shape-utils.ts` (function at line 78) — **Depends on**: Step 6
-8. In game canvas `drawZoneBase()`, pass `vertices: zone.visual.vertices ?? undefined` in the options to `drawZoneShape()`. Also pass `zone.visual.vertices` to `getEdgePointAtAngle()` calls — **File**: `packages/runner/src/canvas/renderers/zone-renderer.ts` (line 253) — **Depends on**: Steps 5, 6
-9. In map editor `drawZoneBase()`, pass `vertices: visual.vertices ?? undefined` in the options to `drawZoneShape()` — **File**: `packages/runner/src/map-editor/map-editor-zone-renderer.ts` (line 174) — **Depends on**: Steps 5, 6
-10. In game canvas zone renderer, after computing `dimensions`, if `zone.visual.shape === 'polygon'` and vertices exist, compute bounding box from vertices for hit area instead of using `dimensions.width/height` — **File**: `packages/runner/src/canvas/renderers/zone-renderer.ts` (lines 136-141) — **Depends on**: Step 8
-11. In adjacency renderer `drawAdjacencyLine()`, pass vertices through to `getEdgePointAtAngle()` calls — the `fromZone` and `toZone` already carry `visual` which will include `vertices` — **File**: `packages/runner/src/canvas/renderers/adjacency-renderer.ts` (line 123-124) — **Depends on**: Steps 5, 7
-12. Add tests for `polygon` shape in `drawZoneShape` and `getEdgePointAtAngle` following existing test patterns — **File**: `packages/runner/test/canvas/renderers/shape-utils.test.ts` — **Depends on**: Steps 6, 7
-
-### Phase C: Proof-of-Concept Vertex Data
-
-13. Define `shape: polygon` and `vertices` for a cluster of 4-5 adjacent provinces (Kontum, Pleiku-Darlac, Binh Dinh, Phu Bon Phu Yen, Khanh Hoa) in zone overrides. Vertices should be relative to each zone's center position. Adjacent provinces must share border edges (same coordinates in reverse order) — **File**: `data/games/fire-in-the-lake/visual-config.yaml` overrides section — **Depends on**: Steps 4, 5
-14. Increase label font size from 14 to 16 in zone-renderer (addresses HIGH recommendation #4) — **File**: `packages/runner/src/canvas/renderers/zone-renderer.ts` (line 171, the `14` argument to `createBitmapLabel`) — **Depends on**: none
-
-## Map Editor Scope
-
-**Included in this iteration**:
-- Step 9: Map editor zone renderer passes vertices to `drawZoneShape()` — same drawing function, so polygons render correctly in both game canvas and editor.
-
-**Deferred to future iteration**:
-- Polygon vertex editing in map editor (drag handles to reshape provinces) — this requires new interaction patterns (vertex drag handlers, edge splitting, undo) that are substantial UI work beyond rendering.
-
-## Visual Config Changes
-
-In `visual-config-types.ts`:
-- `ZoneShapeSchema`: add `'polygon'` to enum
-- `ZoneVisualStyleSchema`: add `vertices: z.array(z.number()).optional()`
-
-In `visual-config.yaml`:
-- Update `attributeRules` terrain colors
-- Add `shape: polygon` + `vertices: [...]` per province override (proof of concept for 4-5 zones)
 
 ## Verification
 
 1. `pnpm turbo typecheck` — must pass
 2. `pnpm -F @ludoforge/runner test` — must pass
-3. Visual check game canvas:
-   - Highland provinces should be sandy tan, lowlands bright green, jungle dark green
-   - 4-5 proof-of-concept provinces should render as irregular polygons with shared border edges
-   - Adjacency lines between polygon provinces should connect to polygon edges (not rectangle corners)
-   - Labels should be slightly larger and readable
-4. Visual check map editor:
-   - Same polygon shapes render correctly in editor
-   - Drag behavior still works on polygon zones
+3. Visual check — run dev server (`pnpm -F @ludoforge/runner dev`):
+   - Province labels should be ~20px, centered inside polygon shapes, with dark background pill
+   - Labels readable at both close-up and moderate zoom levels
+   - Three terrain colors more saturated and distinct from each other
+   - Province borders should have terrain-specific colors (brown for highland, green for lowland/jungle)
+   - Route lines extend slightly into province territory rather than stopping at edges
+   - Route lines slightly thicker
+   - Map editor labels should be larger (20px)
+   - No regressions in city rendering, token placement, or adjacency lines
 
 ## Risks and Mitigations
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|------------|
-| Polygon vertices defined incorrectly (overlapping, wrong winding) | MEDIUM | Provinces render incorrectly | `polygon` falls back to rectangle if vertices < 6 numbers; visual review catches issues |
-| `getEdgePointAtAngle` returns wrong point for polygons | LOW | Adjacency lines connect to wrong spot on polygon | Reuses existing `rayPolygonIntersection` which already works for hexagons/diamonds |
-| Hit area doesn't match polygon shape | LOW | Click targets off | Compute bounding box from actual vertices |
-| Color palette doesn't look good | LOW | Still hard to distinguish terrain | Pure YAML change, easy to adjust in next iteration |
+| Larger bitmap font texture atlas increases memory | LOW | Minor VRAM increase | 22px is still small; BitmapFontManager handles atlas efficiently |
+| Labels inside zones overlap with tokens | MEDIUM | Labels partially obscured | Background pill ensures label is always readable; tokens sit on top but label remains visible through gaps |
+| Route overlap margin causes visual artifacts at route junctions | LOW | Minor rendering glitch | Clip overlap extension so it doesn't extend past zone center |
+| Stroke color resolution adds complexity to presentation pipeline | LOW | Minor code change | Follows exact same pattern as fill color resolution — layered cascade |
 
 ## Research Sources
 
-- Existing codebase analysis: `Graphics.poly()` already used for hexagon/diamond/triangle rendering
-- Existing `rayPolygonIntersection` function handles arbitrary polygon edge-point calculation
-- Existing `convexHull` + `padHull` infrastructure demonstrates polygon rendering patterns
-- PixiJS 8 `Graphics` API supports arbitrary polygon drawing via `poly(points: number[])`
+- Physical FITL board game reference image (`screenshots/FITL_SC1.jpg`) — terrain color palette inspiration
+- Existing codebase patterns — no external research needed; all changes extend existing PixiJS Graphics and BitmapText patterns

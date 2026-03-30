@@ -26,7 +26,8 @@ This is not a guided-completion-only problem. It is a generic policy-contract pr
 3. The problem is generic and engine-agnostic. It is about shared policy vocabulary ownership, not about FITL or any other game. Confirmed.
 4. Ticket `003` intentionally stopped at a focused validator fix. It did not centralize the shared `profile.use` bucket mapping or eliminate the duplicated validator/compiler ownership of that mapping. Confirmed.
 5. `zoneTokenAgg.owner` currently drifts across policy layers: `types-core.ts`/`schemas-core.ts` allow a raw string, `policy-expr.ts` diagnostics mention "literal seat id", while runtime zone lookup is player-qualified and does not meaningfully consume canonical seat ids for zone ownership. Confirmed.
-6. No other active Spec 95 ticket owns this cleanup better than ticket `010`. Tickets `003`, `006`, and `007` are adjacent, but none of them should absorb a broader cross-layer contract-centralization refactor. Confirmed.
+6. Archived ticket `006` no longer owns any compiler work; it is now an archival record confirming that the completion-guidance authored/compiled surface already landed via tickets `002` and `003`. Confirmed.
+7. No other active Spec 95 ticket owns this cleanup better than ticket `010`. Ticket `007` should stay focused on evaluator-core extraction, ticket `008` on PolicyAgent wiring, and ticket `009` on cross-cutting guided-completion tests. None of them should absorb a broader validator/compiler/schema contract-centralization refactor. Confirmed.
 
 ## Architecture Check
 
@@ -122,6 +123,7 @@ The tests should specifically guard against reintroducing the kinds of drift fou
 2. Validator/compiler/schema layers consume the same canonical contract for the targeted surfaces.
 3. The ticket reduces duplication for drift-prone policy vocabularies without introducing alias layers or compatibility shims.
 4. Policy authoring must not blur canonical seat ids with runtime player-qualified zone ownership.
+5. Ticket ownership stays clean: adjacent guided-completion tickets consume the centralized contract but do not reintroduce local allowlists or bucket mappings.
 
 ## Test Plan
 

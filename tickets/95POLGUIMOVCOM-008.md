@@ -80,6 +80,7 @@ Recommend (A): the `buildCompletionChooseCallback` returns a callback that handl
 - Multi-ply search or lookahead
 - Correlated `chooseN` subset optimization
 - Performance profiling of guided vs unguided completion
+- Policy contract centralization across validator/compiler/schema ownership (ticket `010`)
 
 ## Acceptance Criteria
 

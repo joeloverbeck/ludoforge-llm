@@ -1,6 +1,6 @@
 ---
 name: map-representation-evaluate
-description: Use when new map screenshots have been captured and need evaluation. Reads screenshots/fitl-game-map.png and screenshots/fitl-map-editor.png, scores 4 map representation metrics, and appends the next EVALUATION #N to reports/map-representation-evaluation.md. Invoke after manually capturing screenshots of the FITL game map and map editor.
+description: Use when new map screenshots have been captured and need evaluation. Reads screenshots/fitl-game-map*.png and screenshots/fitl-map-editor*.png, scores 4 map representation metrics, and appends the next EVALUATION #N to reports/map-representation-evaluation.md. Invoke after manually capturing screenshots of the FITL game map and map editor.
 ---
 
 # Map Representation Evaluation
@@ -14,7 +14,10 @@ Score the current FITL map rendering state from screenshots and append a structu
    - Otherwise: read the first ~40 lines for the rubric, metrics, and scoring guide. Count total lines (`wc -l`), then read from `offset = totalLines - 200` to get the last 2-3 evaluations in one pass (each evaluation is ~60-80 lines).
    - To build the Score Trend table efficiently, grep for `\*\*Average\*\*` in the report file — this returns all historical averages in one pass.
    - Skip intermediate evaluations unless checking recurring issue history.
-2. Read `screenshots/fitl-game-map.png`, `screenshots/fitl-map-editor.png`, and `screenshots/FITL_SC1.jpg` in **parallel** (all Read tool calls in a single message). The physical board reference is **required** for the first evaluation (to establish the ground truth baseline) and optional for subsequent evaluations.
+2. Discover and read all current screenshots:
+   - Glob `screenshots/fitl-game-map*.png` and `screenshots/fitl-map-editor*.png` to find all current screenshots. The minimum expected set is `fitl-game-map.png` and `fitl-map-editor.png` — any additional matches (e.g., `fitl-game-map-overview.png`) must also be read and evaluated.
+   - Run `ls -la screenshots/fitl-*.png screenshots/fitl-*.jpg` to check modification timestamps. If any screenshot is older than 24 hours, warn the user that it may not reflect the current rendering state.
+   - Read all discovered screenshots and `screenshots/FITL_SC1.jpg` in **parallel** (all Read tool calls in a single message). The physical board reference is **required** for the first evaluation (to establish the ground truth baseline) and optional for subsequent evaluations.
 3. Determine the next evaluation number from the last `## EVALUATION #N` heading.
 4. **If the screenshot count changed** from the previous evaluation, note this prominently. Explain what new screenshots capture and add a comparability caveat (see Screenshot Set Changes below).
 5. For each screenshot, write a paragraph describing what's shown and listing specific issues related to the 4 metrics.
@@ -41,13 +44,15 @@ Append exactly this structure:
 
 ### Screenshot Analysis
 
-#### fitl-game-map.png — Game Canvas Map
-**What's shown**: [1-2 sentences describing the game canvas state]
+For each screenshot analyzed, add a section:
+
+#### [screenshot-filename] — [View Description]
+**What's shown**: [1-2 sentences describing the view state]
 **Issues observed**: [bullet list of specific issues related to the 4 metrics]
 
-#### fitl-map-editor.png — Map Editor
-**What's shown**: [1-2 sentences describing the map editor state]
-**Issues observed**: [bullet list of specific issues]
+### Cross-View Consistency
+
+[Note any discrepancies between the game canvas and editor rendering of the same geographic area — e.g., different polygon shapes, missing routes, color mismatches, or elements visible in one view but absent in the other. If views are consistent, write: "Game canvas and editor views are consistent for the overlapping area."]
 
 ### Resolved Since Previous
 
@@ -86,6 +91,16 @@ Append exactly this structure:
 4. **[LOW]** ...
 ```
 
+## Correction Protocol
+
+If the user disputes part of an already-appended evaluation:
+1. Do NOT append a new evaluation — edit the existing one in-place.
+2. Re-read any additional screenshots or evidence the user points to.
+3. Update the specific observations, scores, and recommendations that are affected.
+4. Re-verify the average and delta calculations after any score change.
+5. Add a `**Corrections**` line immediately after the `**Date**` line: `**Corrections**: [YYYY-MM-DD] Revised [metric name] score from X to Y after reviewing [screenshot/evidence]. [Brief reason.]`
+6. Move any newly-resolved items to the "Resolved Since Previous" section if the correction reveals they were already fixed.
+
 ## Scoring Guide
 
 - **1-3**: Unusable — rectangles with disconnected lines, no spatial relationship between provinces
@@ -96,10 +111,11 @@ Append exactly this structure:
 
 ## What to Look For
 
-- Provinces rendered as isolated rectangles with no shared borders
-- Adjacency lines connecting to rectangle edges rather than flowing between territories
-- Roads and rivers terminating at rectangle corners instead of flowing through provinces
-- Terrain types that are indistinguishable (all same shade of green)
+- Provinces that lack shared borders — isolated shapes (rectangles, disconnected polygons) with gaps between them (worst case: uniform rectangles floating in empty space)
+- Adjacency conveyed only through explicit lines rather than implied by geography (shared borders, proximity)
+- Routes (roads, rivers) that terminate at province edges rather than flowing naturally through territory
+- Route types that are visually indistinguishable from each other (roads vs. rivers should have distinct styling)
+- Terrain types that are indistinguishable (all same shade/color regardless of terrain category)
 - Province labels obscured by shape borders, tokens, or adjacency lines
 - Token stacks that overflow province boundaries
 - Wasted space between provinces where borders should be shared
@@ -171,4 +187,4 @@ Screenshots should capture the full visible map at default zoom level. If only a
 
 ## Scope
 
-This skill is scoped to the FITL game map (`screenshots/fitl-game-map.png` and `screenshots/fitl-map-editor.png`). The 4 metrics are specific to map territory rendering. For other evaluation needs (e.g., UI readability), use the appropriate evaluation skill.
+This skill is scoped to the FITL game map (`screenshots/fitl-game-map*.png` and `screenshots/fitl-map-editor*.png`). The 4 metrics are specific to map territory rendering. For other evaluation needs (e.g., UI readability), use the appropriate evaluation skill.

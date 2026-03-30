@@ -83,6 +83,7 @@ export * from './prng.js';
 export * from './resolve-ref.js';
 export * from './resolve-selectors.js';
 export * from './resolve-zone-ref.js';
+export * from './zone-address.js';
 export * from './runtime-table-index.js';
 export * from './runtime-table-lookup-plan.js';
 export * from './identity.js';

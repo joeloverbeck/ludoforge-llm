@@ -43,7 +43,7 @@ None. Superseded by ticket `002`.
 - Re-implementing compiler work already finished in ticket `002`
 - Runtime evaluation of compiled `completionScoreTerms` (ticket 007)
 - `zoneTokenAgg` dynamic zone compilation (ticket 004 — separate concern)
-- Policy contract centralization across types/schema/validator/compiler (tracked separately)
+- Policy contract centralization across types/schema/validator/compiler (ticket `010`)
 
 ## Acceptance Criteria
 

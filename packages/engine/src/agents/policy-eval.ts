@@ -1,5 +1,6 @@
-import type { PlayerId } from '../kernel/branded.js';
+import { asPlayerId, type PlayerId } from '../kernel/branded.js';
 import { toMoveIdentityKey } from '../kernel/move-identity.js';
+import { toOwnedZoneId } from '../kernel/zone-address.js';
 import type {
   AgentPolicyCatalog,
   AgentPolicyExpr,
@@ -148,6 +149,22 @@ class PolicyRuntimeError extends Error {
     this.name = 'PolicyRuntimeError';
     this.failure = failure;
   }
+}
+
+function resolveZoneTokenAggOwner(owner: string, input: EvaluatePolicyMoveInput): 'none' | PlayerId | undefined {
+  if (owner === 'self') {
+    return input.playerId;
+  }
+  if (owner === 'active') {
+    return input.state.activePlayer;
+  }
+  if (owner === 'none') {
+    return 'none';
+  }
+  if (/^[0-9]+$/.test(owner)) {
+    return asPlayerId(Number(owner));
+  }
+  return undefined;
 }
 
 class EvaluationContext {
@@ -490,19 +507,17 @@ class EvaluationContext {
     expr: Extract<AgentPolicyExpr, { readonly kind: 'zoneTokenAgg' }>,
     candidate: CandidateEntry | undefined,
   ): PolicyValue {
-    const ownerSuffix =
-      expr.owner === 'self'
-        ? String(this.input.playerId)
-        : expr.owner === 'active'
-          ? String(this.input.state.activePlayer)
-          : expr.owner;
+    const resolvedOwner = resolveZoneTokenAggOwner(expr.owner, this.input);
+    if (resolvedOwner === undefined) {
+      return undefined;
+    }
     const resolvedZone = typeof expr.zone === 'string'
       ? expr.zone
       : this.evaluateExpr(expr.zone, candidate);
     if (typeof resolvedZone !== 'string' || resolvedZone.length === 0) {
       return undefined;
     }
-    const zoneId = `${resolvedZone}:${ownerSuffix}`;
+    const zoneId = toOwnedZoneId(resolvedZone, resolvedOwner);
     const tokens = this.input.state.zones[zoneId];
     if (tokens === undefined || tokens.length === 0) {
       return expr.aggOp === 'count' ? 0 : expr.aggOp === 'sum' ? 0 : undefined;

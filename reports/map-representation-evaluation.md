@@ -4,7 +4,8 @@ Iterative evaluation of the FITL game map rendering quality. Each evaluation sco
 
 ## Screenshot Reference
 
-- `screenshots/fitl-game-map.png` — Game canvas rendering of the FITL map (primary evaluation target)
+- `screenshots/fitl-game-map.png` — Game canvas rendering of the FITL map, close-up view (primary evaluation target)
+- `screenshots/fitl-game-map-overview.png` — Game canvas rendering of the FITL map, zoomed-out full map view (added Eval #2)
 - `screenshots/fitl-map-editor.png` — Map editor rendering of the FITL map (secondary evaluation target)
 - `screenshots/FITL_SC1.jpg` — Physical FITL board game (reference only, not scored)
 
@@ -93,3 +94,74 @@ No previous evaluation exists — this is the baseline evaluation.
 5. **[MEDIUM]** Remove or significantly reduce the opacity of the region watermark text ("Central", "South"). These large text overlays compete with actual game information and obscure provinces.
 6. **[MEDIUM]** Increase token size and add faction-specific visual markers (shapes, icons, or distinct color coding) so pieces are identifiable at a glance.
 7. **[LOW]** Consider using the Vietnam geographic outline as a layout constraint so the overall map shape is recognizable to FITL players.
+
+---
+
+## EVALUATION #2
+
+**Date**: 2026-03-30
+**Screenshots analyzed**: fitl-game-map.png, fitl-map-editor.png, fitl-game-map-overview.png
+**Screenshot set change**: Expanded from 2 to 3 scored screenshots. `fitl-game-map-overview.png` captures the full map at zoomed-out level, revealing route styling and overall layout that close-up shots obscured.
+
+### Screenshot Analysis
+
+#### fitl-game-map.png — Game Canvas Map
+**What's shown**: A dark-themed game canvas showing approximately 6 provinces rendered as irregular polygons with shared borders. Three distinct terrain fill colors are visible: steel blue (highlands — Kontum), tan/khaki (lowlands — Binh Dinh, Pleiku/Darlac, Khanh Hoa), and muted green (jungle — Phu Bon Phu Yen). Cities are rendered as blue-gray circles (Qui Nhon visible). Tokens appear as small colored squares and circles inside provinces. Brown route lines cross the dark background. "Out of Play" boxes and a "Trucks Base Staging" area are visible on the right side. Faint region watermark text is barely visible.
+**Issues observed**:
+- Province polygon shapes are angular/geometric (parallelograms, trapezoids) rather than organic territorial outlines — they look like Voronoi cells cut with straight lines, not like the curved, natural shapes on the physical board
+- Provinces share borders, which is a major improvement, but some borders produce awkward wedge-shaped gaps or overlaps rather than clean tessellation
+- Roads are visible as thin brown lines and rivers as distinct lighter/blue-toned lines — route types are visually differentiated (confirmed at overview zoom)
+- At close-up zoom, route styling differences are less obvious due to province fills partially occluding the lines — routes don't clearly flow through provinces
+- Province labels use a small bitmap font that is difficult to read, especially on the darker terrain fills (blue highlands)
+- Tokens are small and faction colors are still hard to distinguish at default zoom
+- The dashed teal line running vertically on the right edge may represent the coast or a region boundary, but its purpose is unclear
+
+#### fitl-map-editor.png — Map Editor
+**What's shown**: A light cream-background editor view showing the same provinces as irregular polygons with the same three terrain colors. Brown route lines are visible connecting and crossing through provinces. City (Qui Nhon) rendered as a blue circle on the right edge. Clean, uncluttered view without tokens or overlays.
+**Issues observed**:
+- Same angular polygon shapes — straight-line borders without curves give provinces a geometric rather than geographic feel
+- Route lines are visible but thin and connect between provinces rather than flowing naturally through territory — they still feel like graph edges
+- Rivers and roads use distinct styling (color/weight), which is a positive improvement; however, both route types still terminate at province edges rather than flowing through territory
+- Labels use small dark bitmap text that blends into the terrain fills, particularly on the tan/khaki provinces
+- Qui Nhon city circle sits at the far right edge, disconnected from the surrounding province shape rather than embedded within it
+- Some province border seams are visible where polygons meet imprecisely
+
+#### fitl-game-map-overview.png — Game Canvas Full Map
+**What's shown**: The full FITL game map at zoomed-out level. The upper portion shows the irregular polygon provinces (highlands, lowlands, jungle) with shared borders. The lower portion reveals many smaller green rectangular zones (LoC nodes/cities) connected by route lines in a graph layout. Route line styling differences are clearly visible at this zoom: roads and rivers use distinct colors/weights.
+**Issues observed**:
+- Route type distinction (roads vs. rivers) is clearly visible at overview zoom — this is a significant improvement from Eval #1
+- LoC zones in the lower map are still rendered as small green rectangles rather than as route segments or embedded nodes — they break the territorial feel established by the province polygons
+- The overall layout does not suggest the S-curve geography of Vietnam — the force-directed layout clusters provinces at the top with LoC rectangles scattered below
+- At overview zoom, province labels become illegible — the bitmap font does not scale well
+- The dashed teal boundary line (coast?) is more visible and adds useful geographic context
+
+### Resolved Since Previous
+
+- **Isolated rectangle provinces** — was CRITICAL in Eval #1, now addressed. Provinces are rendered as irregular polygons that share borders, replacing the floating green rectangles.
+- **Single terrain color** — was CRITICAL in Eval #1, now partially addressed. Three distinct terrain fill colors (blue, tan, green) replace the uniform green, corresponding roughly to highlands, lowlands, and jungle.
+- **Region watermark text** — was MEDIUM in Eval #1, now largely resolved. Watermarks are barely visible/absent compared to the prominent overlays in Eval #1.
+- **Route type distinction** — was HIGH in Eval #1 (roads and rivers looked identical). Rivers and roads now use distinct colors/weights, clearly visible at overview zoom.
+
+### Scores
+
+| # | Metric | Score | Previous | Delta | Justification |
+|---|--------|-------|----------|-------|---------------|
+| 1 | Adjacency Clarity | 6 | 2 | +4 | Provinces now share borders as irregular polygons — adjacency is implied by geography rather than requiring line-tracing. However, shapes are angular/geometric rather than organic, and some border joints are imprecise. |
+| 2 | Road/River Integration | 5 | 3 | +2 | Roads and rivers are now visually distinct (different colors/weights, confirmed at overview zoom). However, routes still terminate at province edges rather than flowing through territory, and at close-up zoom the distinction is less clear due to province fill occlusion. |
+| 3 | Terrain Distinction | 5 | 2 | +3 | Three terrain colors now visible (blue highlands, tan lowlands, green jungle). Big improvement but still lacks distinction for all FITL terrain types (e.g., no separate treatment for LoCs, no pattern/texture variation within categories). |
+| 4 | Label/Token Readability | 4 | 3 | +1 | Labels are still small bitmap text. Slightly improved context from province shapes, but text remains hard to read especially on darker fills. Tokens are small with indistinct faction colors. |
+| | **Average** | **5.0** | **2.5** | **+2.5** | |
+
+**Comparability note**: This evaluation covers 3 screenshots (previous: 2). Score changes may partly reflect expanded coverage revealing pre-existing issues rather than regressions introduced since the last evaluation.
+
+### Prioritized Recommendations
+
+1. **[HIGH]** Soften province polygon shapes — replace straight-line borders with slightly curved or irregular edges to give provinces an organic, territorial feel rather than geometric/crystalline shapes. The physical board uses curved province boundaries that follow geographic features.
+2. **[HIGH]** Increase label font size and add contrast treatment (text outline, drop shadow, or semi-transparent background pill) so province names are readable at default zoom on all terrain colors. Labels become illegible at overview zoom.
+3. **[HIGH]** Add terrain variation within categories — the 3 base colors are a good start but FITL has nuanced terrain. Consider subtle texture/pattern overlays or shade variations (e.g., darker green for dense jungle vs. lighter green for mixed terrain).
+4. **[HIGH]** Make routes flow through province territory rather than terminating at edges. Route type distinction (roads vs. rivers) is now good, but routes still connect to polygon borders as graph edges rather than flowing naturally through the landscape.
+5. **[MEDIUM]** Restyle LoC zones from small green rectangles to a more integrated representation (e.g., route segments with embedded labels, or smaller territory-like shapes) so the lower map matches the territorial quality of the province polygons.
+6. **[MEDIUM]** Embed city circles within their parent province shapes rather than placing them at the border edge. Qui Nhon appears disconnected from its surrounding territory.
+7. **[MEDIUM]** Increase token size and add faction-specific visual markers (shapes or icons) so pieces are identifiable at default zoom. *(Recurring: 2 consecutive evaluations)*
+8. **[LOW]** Clean up polygon border seams where adjacent provinces meet — small gaps/overlaps are visible at borders.
+9. **[LOW]** Consider using the Vietnam geographic outline as a layout constraint so the overall map shape is recognizable. *(Recurring: 2 consecutive evaluations)*

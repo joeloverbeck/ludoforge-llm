@@ -94,6 +94,7 @@ const ZoneVisualStyleSchema = z.object({
   width: z.number().optional(),
   height: z.number().optional(),
   color: z.string().optional(),
+  strokeColor: z.string().optional(),
   connectionStyleKey: z.string().optional(),
   vertices: z.array(z.number()).optional(),
 });

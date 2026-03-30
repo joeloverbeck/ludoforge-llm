@@ -57,6 +57,7 @@ export interface ResolvedZoneVisual {
   readonly width: number;
   readonly height: number;
   readonly color: string | null;
+  readonly strokeColor: string | null;
   readonly connectionStyleKey: string | null;
   readonly vertices: readonly number[] | null;
 }
@@ -167,6 +168,7 @@ export class VisualConfigProvider {
       width: DEFAULT_ZONE_WIDTH,
       height: DEFAULT_ZONE_HEIGHT,
       color: null,
+      strokeColor: null,
       connectionStyleKey: null,
       vertices: null,
     };
@@ -561,6 +563,7 @@ function applyZoneStyle(
     width: number;
     height: number;
     color: string | null;
+    strokeColor: string | null;
     connectionStyleKey: string | null;
     vertices: readonly number[] | null;
   },
@@ -570,6 +573,7 @@ function applyZoneStyle(
       readonly width?: number | undefined;
       readonly height?: number | undefined;
       readonly color?: string | undefined;
+      readonly strokeColor?: string | undefined;
       readonly connectionStyleKey?: string | undefined;
       readonly vertices?: readonly number[] | undefined;
     }
@@ -589,6 +593,9 @@ function applyZoneStyle(
   }
   if (source.color !== undefined) {
     target.color = source.color;
+  }
+  if (source.strokeColor !== undefined) {
+    target.strokeColor = source.strokeColor;
   }
   if (source.connectionStyleKey !== undefined) {
     target.connectionStyleKey = source.connectionStyleKey;

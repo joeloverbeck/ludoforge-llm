@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — agents policy-agent, agents prepare-playable-moves
-**Deps**: archive/tickets/95POLGUIMOVCOM/95POLGUIMOVCOM-001.md, tickets/95POLGUIMOVCOM-007.md
+**Deps**: archive/tickets/95POLGUIMOVCOM/95POLGUIMOVCOM-001.md, archive/tickets/95POLGUIMOVCOM-007.md
 
 ## Problem
 

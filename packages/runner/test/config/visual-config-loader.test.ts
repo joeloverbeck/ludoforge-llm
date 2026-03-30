@@ -42,6 +42,7 @@ describe('visual-config-loader', () => {
       color: null,
       connectionStyleKey: null,
       vertices: null,
+      strokeColor: null,
     });
   });
 

@@ -122,7 +122,7 @@ describe('TooltipLayer', () => {
         ownerID: asPlayerId(0),
         category: null,
         attributes: {},
-        visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null, vertices: null },
+        visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null, vertices: null, strokeColor: null },
         metadata: {},
       }],
     }));
@@ -208,7 +208,7 @@ describe('TooltipLayer', () => {
         ownerID: null,
         category: null,
         attributes: {},
-        visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null, vertices: null },
+        visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null, vertices: null, strokeColor: null },
         metadata: {},
       }],
     }));
@@ -255,7 +255,7 @@ describe('TooltipLayer', () => {
         ownerID: null,
         category: null,
         attributes: {},
-        visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null, vertices: null },
+        visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null, vertices: null, strokeColor: null },
         metadata: {},
       }],
     }));
@@ -285,7 +285,7 @@ describe('TooltipLayer', () => {
         ownerID: null,
         category: null,
         attributes: {},
-        visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null, vertices: null },
+        visual: { shape: 'rectangle', width: 160, height: 100, color: null, connectionStyleKey: null, vertices: null, strokeColor: null },
         metadata: {},
       }],
     }));

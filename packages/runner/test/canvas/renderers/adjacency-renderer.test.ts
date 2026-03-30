@@ -126,6 +126,7 @@ function makeZoneVisual(overrides: Partial<ResolvedZoneVisual> = {}): ResolvedZo
     color: null,
     connectionStyleKey: null,
     vertices: null,
+    strokeColor: null,
     ...overrides,
   };
 }

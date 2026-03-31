@@ -63,6 +63,7 @@ const RegionStyleSchema = z.object({
 });
 
 const RegionBoundaryConfigSchema = z.object({
+  enabled: z.boolean().optional(),
   groupByAttribute: z.string().optional(),
   padding: z.number().optional(),
   cornerRadius: z.number().optional(),

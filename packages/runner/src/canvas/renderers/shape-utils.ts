@@ -261,6 +261,110 @@ function canonicalizePosition(position: Position): Position {
   };
 }
 
+/**
+ * Finds the closest pair of points between two closed polygons (flat vertex arrays).
+ * Uses brute-force edge-to-edge closest-point calculation.
+ */
+export function closestPointsBetweenPolygons(
+  verticesA: readonly number[],
+  verticesB: readonly number[],
+): { pointA: Position; pointB: Position } {
+  const countA = Math.trunc(verticesA.length / 2);
+  const countB = Math.trunc(verticesB.length / 2);
+  let bestDistSq = Number.POSITIVE_INFINITY;
+  let bestA: Position = { x: 0, y: 0 };
+  let bestB: Position = { x: 0, y: 0 };
+
+  for (let i = 0; i < countA; i++) {
+    const a1x = verticesA[i * 2]!;
+    const a1y = verticesA[i * 2 + 1]!;
+    const a2x = verticesA[((i + 1) % countA) * 2]!;
+    const a2y = verticesA[((i + 1) % countA) * 2 + 1]!;
+
+    for (let j = 0; j < countB; j++) {
+      const b1x = verticesB[j * 2]!;
+      const b1y = verticesB[j * 2 + 1]!;
+      const b2x = verticesB[((j + 1) % countB) * 2]!;
+      const b2y = verticesB[((j + 1) % countB) * 2 + 1]!;
+
+      const result = closestPointsOnSegments(a1x, a1y, a2x, a2y, b1x, b1y, b2x, b2y);
+      if (result.distSq < bestDistSq) {
+        bestDistSq = result.distSq;
+        bestA = { x: result.ax, y: result.ay };
+        bestB = { x: result.bx, y: result.by };
+      }
+    }
+  }
+
+  return { pointA: bestA, pointB: bestB };
+}
+
+function closestPointsOnSegments(
+  a1x: number, a1y: number, a2x: number, a2y: number,
+  b1x: number, b1y: number, b2x: number, b2y: number,
+): { ax: number; ay: number; bx: number; by: number; distSq: number } {
+  const dax = a2x - a1x;
+  const day = a2y - a1y;
+  const dbx = b2x - b1x;
+  const dby = b2y - b1y;
+  const r = a1x - b1x;
+  const s = a1y - b1y;
+
+  const lenASq = dax * dax + day * day;
+  const lenBSq = dbx * dbx + dby * dby;
+  const f = dbx * r + dby * s;
+
+  let sN: number, sD: number, tN: number, tD: number;
+
+  if (lenASq < 1e-12 && lenBSq < 1e-12) {
+    const dx = a1x - b1x;
+    const dy = a1y - b1y;
+    return { ax: a1x, ay: a1y, bx: b1x, by: b1y, distSq: dx * dx + dy * dy };
+  }
+
+  if (lenASq < 1e-12) {
+    sN = 0; sD = 1;
+    tN = f; tD = lenBSq;
+  } else {
+    const c = dax * r + day * s;
+    if (lenBSq < 1e-12) {
+      tN = 0; tD = 1;
+      sN = -c; sD = lenASq;
+    } else {
+      const b = dax * dbx + day * dby;
+      const denom = lenASq * lenBSq - b * b;
+      sN = denom !== 0 ? (b * f - lenBSq * c) : 0;
+      sD = denom !== 0 ? denom : 1;
+      tN = b * sN + f * sD;
+      tD = lenBSq * sD;
+    }
+  }
+
+  if (sN < 0) { sN = 0; tN = f; tD = lenBSq; }
+  else if (sN > sD) { sN = sD; tN = f + dax * dbx + day * dby; tD = lenBSq; }
+
+  if (tN < 0) {
+    tN = 0;
+    sN = Math.max(0, Math.min(lenASq, -(dax * r + day * s)));
+    sD = lenASq;
+  } else if (tN > tD) {
+    tN = tD;
+    sN = Math.max(0, Math.min(lenASq, -(dax * r + day * s) + dax * dbx + day * dby));
+    sD = lenASq;
+  }
+
+  const sc = Math.abs(sN) < 1e-12 ? 0 : sN / sD;
+  const tc = Math.abs(tN) < 1e-12 ? 0 : tN / tD;
+
+  const ax = a1x + sc * dax;
+  const ay = a1y + sc * day;
+  const bx = b1x + tc * dbx;
+  const by = b1y + tc * dby;
+  const dx = ax - bx;
+  const dy = ay - by;
+  return { ax, ay, bx, by, distSq: dx * dx + dy * dy };
+}
+
 function canonicalizeCoordinate(value: number): number {
   if (Object.is(value, -0) || Math.abs(value) < 1e-12) {
     return 0;

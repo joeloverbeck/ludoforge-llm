@@ -9,10 +9,6 @@ import {
   resolveVisualDimensions,
 } from './shape-utils';
 import {
-  selectiveSmoothPolygon,
-  type ModifiedProvincePolygon,
-} from './province-border-utils.js';
-import {
   createHiddenZoneStackVisual,
   updateHiddenZoneStackVisual,
   type HiddenZoneStackVisual,
@@ -38,9 +34,12 @@ import type { PresentationZoneNode } from '../../presentation/presentation-scene
 const ZONE_CORNER_RADIUS = 12;
 const LINE_CORNER_RADIUS = 4;
 const LABEL_AREA_HEIGHT = 40;
+const ZONE_HOVER_OVERLAY_ALPHA = 0.12;
+const ZONE_HOVER_STROKE_ALPHA = 0.15;
 
 interface ZoneVisualElements extends ZoneBadgeVisuals {
   readonly base: Graphics;
+  readonly hoverOverlay: Graphics | null;
   readonly labelBackground: Graphics;
   readonly hiddenStack: HiddenZoneStackVisual;
   readonly nameLabel: BitmapText;
@@ -72,7 +71,6 @@ export function createZoneRenderer(
     update(
       zones: readonly PresentationZoneNode[],
       positions: ReadonlyMap<string, Position>,
-      provinceBorders?: ReadonlyMap<string, ModifiedProvincePolygon>,
     ): void {
       const nextZoneIds = new Set(zones.map((zone) => zone.id));
 
@@ -95,13 +93,19 @@ export function createZoneRenderer(
       for (const zone of zones) {
         let zoneContainer = zoneContainers.get(zone.id);
         if (zoneContainer === undefined) {
+          const editorMode = options.bindSelection !== undefined;
           zoneContainer = pool.acquire();
-          zoneContainer.eventMode = options.bindSelection === undefined ? 'none' : 'static';
+          zoneContainer.eventMode = editorMode ? 'static' : 'none';
           zoneContainer.interactiveChildren = false;
 
-          const visuals = createZoneVisualElements();
-          zoneContainer.addChild(
+          const visuals = createZoneVisualElements(editorMode);
+          const children: Container[] = [
             visuals.base,
+          ];
+          if (visuals.hoverOverlay !== null) {
+            children.push(visuals.hoverOverlay);
+          }
+          children.push(
             visuals.hiddenStack.root,
             visuals.labelBackground,
             visuals.nameLabel,
@@ -109,15 +113,25 @@ export function createZoneRenderer(
             visuals.badgeGraphics,
             visuals.badgeLabel,
           );
+          zoneContainer.addChild(...children);
 
           visualsByContainer.set(zoneContainer, visuals);
           zoneContainers.set(zone.id, zoneContainer);
           resolveParent(zone.category).addChild(zoneContainer);
 
-          if (options.bindSelection !== undefined) {
+          if (editorMode) {
+            const hoverOverlay = visuals.hoverOverlay!;
+            const container = zoneContainer;
+            container.on('pointerover', () => {
+              hoverOverlay.visible = true;
+            });
+            container.on('pointerout', () => {
+              hoverOverlay.visible = false;
+            });
+
             selectionCleanupByZoneId.set(
               zone.id,
-              options.bindSelection(
+              options.bindSelection!(
                 zoneContainer,
                 zone.id,
                 () => selectableByZoneId.get(zone.id) === true,
@@ -138,7 +152,7 @@ export function createZoneRenderer(
           zoneContainer.position.set(position.x, position.y);
         }
 
-        updateZoneVisuals(visuals, zone, provinceBorders?.get(zone.id));
+        updateZoneVisuals(visuals, zone);
         const dimensions = resolveVisualDimensions(zone.visual, {
           width: ZONE_WIDTH,
           height: ZONE_HEIGHT,
@@ -169,8 +183,12 @@ export function createZoneRenderer(
   };
 }
 
-function createZoneVisualElements(): ZoneVisualElements {
+function createZoneVisualElements(editorMode: boolean): ZoneVisualElements {
   const base = new Graphics();
+  const hoverOverlay = editorMode ? new Graphics() : null;
+  if (hoverOverlay !== null) {
+    hoverOverlay.visible = false;
+  }
   const labelBackground = new Graphics();
   const hiddenStack = createHiddenZoneStackVisual();
 
@@ -185,6 +203,7 @@ function createZoneVisualElements(): ZoneVisualElements {
 
   return {
     base,
+    hoverOverlay,
     labelBackground,
     hiddenStack,
     nameLabel,
@@ -228,13 +247,13 @@ function createBitmapLabel(
 function updateZoneVisuals(
   visuals: ZoneVisualElements,
   zone: PresentationZoneNode,
-  borderPolygon?: ModifiedProvincePolygon,
 ): void {
   const dimensions = resolveVisualDimensions(zone.visual, {
     width: ZONE_WIDTH,
     height: ZONE_HEIGHT,
   });
-  drawZoneBase(visuals.base, zone, borderPolygon);
+  drawZoneBase(visuals.base, zone);
+  drawHoverOverlay(visuals.hoverOverlay, zone);
   updateHiddenZoneStackVisual(
     visuals.hiddenStack,
     zone.render.hiddenStackCount,
@@ -280,7 +299,6 @@ function drawLabelBackground(
 function drawZoneBase(
   base: Graphics,
   zone: PresentationZoneNode,
-  borderPolygon?: ModifiedProvincePolygon,
 ): void {
   const fill = parseHexColor(zone.render.fillColor ?? undefined) ?? 0x4d5c6d;
   const isDefaultStroke = zone.render.stroke.color === DEFAULT_STROKE_SIGNATURE.color
@@ -293,27 +311,46 @@ function drawZoneBase(
     width: ZONE_WIDTH,
     height: ZONE_HEIGHT,
   });
-  const shape = zone.visual.shape;
 
   base.clear();
 
-  if (borderPolygon !== undefined && shape === 'polygon') {
-    // Use selectively smoothed border polygon for provinces with shared borders.
-    const smoothed = selectiveSmoothPolygon(borderPolygon);
-    base.poly(smoothed);
-  } else {
-    drawZoneShape(base, shape, dimensions, {
-      rectangleCornerRadius: ZONE_CORNER_RADIUS,
-      lineCornerRadius: LINE_CORNER_RADIUS,
-      vertices: zone.visual.vertices ?? undefined,
-    });
-  }
+  drawZoneShape(base, zone.visual.shape, dimensions, {
+    rectangleCornerRadius: ZONE_CORNER_RADIUS,
+    lineCornerRadius: LINE_CORNER_RADIUS,
+    vertices: zone.visual.vertices ?? undefined,
+  });
 
   base.fill({ color: fill }).stroke({
     color: strokeColor,
     width: zone.render.stroke.width,
     alpha: zone.render.stroke.alpha,
   });
+}
+
+function drawHoverOverlay(
+  overlay: Graphics | null,
+  zone: PresentationZoneNode,
+): void {
+  if (overlay === null) {
+    return;
+  }
+
+  const dimensions = resolveVisualDimensions(zone.visual, {
+    width: ZONE_WIDTH,
+    height: ZONE_HEIGHT,
+  });
+
+  overlay.clear();
+
+  drawZoneShape(overlay, zone.visual.shape, dimensions, {
+    rectangleCornerRadius: ZONE_CORNER_RADIUS,
+    lineCornerRadius: LINE_CORNER_RADIUS,
+    vertices: zone.visual.vertices ?? undefined,
+  });
+
+  overlay
+    .fill({ color: 0xffffff, alpha: ZONE_HOVER_OVERLAY_ALPHA })
+    .stroke({ color: 0xffffff, width: 1.5, alpha: ZONE_HOVER_STROKE_ALPHA });
 }
 
 function computeZoneHitArea(

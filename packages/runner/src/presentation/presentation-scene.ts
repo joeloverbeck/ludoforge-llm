@@ -325,7 +325,7 @@ export function resolveRegionNodes(
   visualConfigProvider: VisualConfigProvider,
 ): readonly PresentationRegionNode[] {
   const config = visualConfigProvider.getRegionBoundaryConfig();
-  if (config === null) {
+  if (config === null || config.enabled === false) {
     return EMPTY_REGIONS;
   }
 

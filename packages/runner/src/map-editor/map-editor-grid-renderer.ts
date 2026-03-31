@@ -3,7 +3,7 @@ import { Container, Graphics } from 'pixi.js';
 
 import type { MapEditorStoreApi } from './map-editor-store.js';
 
-const GRID_COLOR = 0x8f7751;
+const GRID_COLOR = 0x334155;
 const GRID_ALPHA = 0.18;
 const GRID_WIDTH = 1;
 

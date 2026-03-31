@@ -22,12 +22,12 @@ import type { ResolvedConnectionPoint } from '../../src/presentation/connection-
 const EXPECTED_FITL_CONNECTION_ANCHORS = {
   'an-loc': { x: 420, y: 250 },
   'ban-me-thuot': { x: 560, y: 220 },
-  'bac-lieu': { x: -688.2524155538835, y: 3201.090345385517 },
-  'chau-doc': { x: -836.2225463876869, y: 2127.540527724862 },
+  'bac-lieu': { x: -1031.9196623496318, y: 3866.6538107891906 },
+  'chau-doc': { x: -1247.6016868198367, y: 2736.735919630959 },
   'da-lat': { x: 640, y: 360 },
   'dak-to': { x: 531.8295401573785, y: -1861.4532306383767 },
   'khe-sanh': { x: -300, y: -3660 },
-  'long-phu': { x: 18.798184327553713, y: 2975.179536069467 },
+  'long-phu': { x: -556.9357381193425, y: 3720.189169836345 },
 } as const;
 
 const EXPECTED_FITL_CONNECTION_ROUTE_SHAPES = {
@@ -620,12 +620,12 @@ describe('visual-config.yaml files', () => {
       {
         kind: 'zone',
         id: 'da-nang:none',
-        position: { x: expect.closeTo(-15.739321681978065, 5), y: expect.closeTo(-70.74620333291732, 5) },
+        position: { x: expect.closeTo(-41.47864336395613, 5), y: expect.closeTo(-146.49240666583464, 5) },
       },
       {
         kind: 'zone',
         id: 'hue:none',
-        position: { x: expect.closeTo(51.828427224346214, 5), y: expect.closeTo(60.941070973938814, 5) },
+        position: { x: expect.closeTo(103.65685444869243, 5), y: expect.closeTo(121.88214194787763, 5) },
       },
     ]);
     expect(Object.fromEntries(

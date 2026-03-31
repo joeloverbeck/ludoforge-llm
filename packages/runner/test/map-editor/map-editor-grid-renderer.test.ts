@@ -151,7 +151,7 @@ describe('createEditorGridRenderer', () => {
       [60, 60],
     ]);
     expect(graphics.strokeStyle).toEqual({
-      color: 0x8f7751,
+      color: 0x334155,
       alpha: 0.18,
       width: 1,
     });

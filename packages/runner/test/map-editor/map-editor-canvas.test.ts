@@ -76,6 +76,17 @@ describe('createEditorCanvas', () => {
     expect(editorCanvas.layers.adjacencyLayer.interactiveChildren).toBe(false);
   });
 
+  it('creates ContainerPool and DisposalQueue and exposes them on the canvas result', async () => {
+    const fixture = createFixture();
+
+    const editorCanvas = await createEditorCanvas(fixture.container, fixture.store);
+
+    expect(editorCanvas.containerPool).toBeDefined();
+    expect(editorCanvas.disposalQueue).toBeDefined();
+    expect(typeof editorCanvas.disposalQueue.enqueue).toBe('function');
+    expect(typeof editorCanvas.disposalQueue.flush).toBe('function');
+  });
+
   it('recomputes viewport bounds when zone positions change and ignores non-zone entries', async () => {
     const fixture = createFixture();
     await createEditorCanvas(fixture.container, fixture.store);

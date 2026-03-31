@@ -734,7 +734,7 @@ dataAssets:
             population: 0
             econ: 0
             terrainTags:
-              - mekong
+              - highway
             country: southVietnam
             coastal: true
           adjacentTo:

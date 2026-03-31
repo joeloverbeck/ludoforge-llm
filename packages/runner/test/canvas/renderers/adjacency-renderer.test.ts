@@ -586,6 +586,124 @@ describe('createAdjacencyRenderer', () => {
     expect(graphics.visible).toBe(false);
   });
 
+  describe('province-to-province capsule bridge', () => {
+    function makeProvincePolygonVisual(vertices: number[]): ResolvedZoneVisual {
+      return makeZoneVisual({
+        shape: 'polygon',
+        width: 200,
+        height: 200,
+        vertices,
+      });
+    }
+
+    function makeProvinceZone(id: string, vertices: number[]): PresentationZoneNode {
+      const zone = makeZone(id, makeProvincePolygonVisual(vertices));
+      return { ...zone, category: 'province' };
+    }
+
+    // Two simple hexagon-like polygons (6 vertices each) separated horizontally.
+    // Province A centered at (0,0) with rightmost edge at x=50.
+    // Province B centered at (200,0) with leftmost edge at x=150.
+    const provinceAVertices = [50, 0, 25, 43, -25, 43, -50, 0, -25, -43, 25, -43];
+    const provinceBVertices = [50, 0, 25, 43, -25, 43, -50, 0, -25, -43, 25, -43];
+
+    it('renders a capsule (round-capped stroke) between closest polygon edges', () => {
+      const parent = new MockContainer();
+      const { renderer } = createRenderer(parent, new VisualConfigProvider(null));
+
+      renderer.update(
+        [makeAdjacency({ from: 'zone:a', to: 'zone:b' })],
+        createPositions([
+          ['zone:a', { x: 0, y: 0 }],
+          ['zone:b', { x: 200, y: 0 }],
+        ]),
+        [makeProvinceZone('zone:a', provinceAVertices), makeProvinceZone('zone:b', provinceBVertices)],
+      );
+
+      const graphics = parent.children[0] as InstanceType<typeof MockGraphics>;
+      expect(graphics.visible).toBe(true);
+      expect(graphics.clearCalls).toBe(1);
+      // Should have one moveTo and one lineTo (the capsule endpoints).
+      expect(graphics.moveCalls).toHaveLength(1);
+      expect(graphics.lineCalls).toHaveLength(1);
+      // Stroke should use capsule defaults: white, alpha 0.7, width 14, round cap.
+      expect(graphics.strokeCalls).toHaveLength(1);
+      expect(graphics.strokeCalls[0]).toEqual({
+        color: 0xffffff,
+        alpha: 0.7,
+        width: 14,
+        cap: 'round',
+      });
+    });
+
+    it('uses highlighted capsule style when adjacency is highlighted', () => {
+      const parent = new MockContainer();
+      const { renderer } = createRenderer(parent, new VisualConfigProvider(null));
+
+      renderer.update(
+        [makeAdjacency({ from: 'zone:a', to: 'zone:b', isHighlighted: true })],
+        createPositions([
+          ['zone:a', { x: 0, y: 0 }],
+          ['zone:b', { x: 200, y: 0 }],
+        ]),
+        [makeProvinceZone('zone:a', provinceAVertices), makeProvinceZone('zone:b', provinceBVertices)],
+      );
+
+      const graphics = parent.children[0] as InstanceType<typeof MockGraphics>;
+      expect(graphics.strokeCalls[0]).toEqual({
+        color: 0xffffff,
+        alpha: 1.0,
+        width: 18,
+        cap: 'round',
+      });
+    });
+
+    it('draws capsule endpoints at closest polygon edge points (not midpoint)', () => {
+      const parent = new MockContainer();
+      const { renderer } = createRenderer(parent, new VisualConfigProvider(null));
+
+      renderer.update(
+        [makeAdjacency({ from: 'zone:a', to: 'zone:b' })],
+        createPositions([
+          ['zone:a', { x: 0, y: 0 }],
+          ['zone:b', { x: 200, y: 0 }],
+        ]),
+        [makeProvinceZone('zone:a', provinceAVertices), makeProvinceZone('zone:b', provinceBVertices)],
+      );
+
+      const graphics = parent.children[0] as InstanceType<typeof MockGraphics>;
+      const movePoint = graphics.moveCalls[0]!;
+      const linePoint = graphics.lineCalls[0]!;
+      // The closest points should be on the facing edges: province A's right edge (~50,0)
+      // and province B's left edge (~150,0). They should NOT be the same point (midpoint).
+      expect(movePoint.x).not.toEqual(linePoint.x);
+      // Both should be roughly between the two province centers.
+      expect(movePoint.x).toBeGreaterThanOrEqual(0);
+      expect(linePoint.x).toBeLessThanOrEqual(200);
+    });
+
+    it('renders correctly when provinces are nearly touching (short distance)', () => {
+      const parent = new MockContainer();
+      const { renderer } = createRenderer(parent, new VisualConfigProvider(null));
+
+      // Place provinces very close together (edges almost touching).
+      renderer.update(
+        [makeAdjacency({ from: 'zone:a', to: 'zone:b' })],
+        createPositions([
+          ['zone:a', { x: 0, y: 0 }],
+          ['zone:b', { x: 55, y: 0 }],
+        ]),
+        [makeProvinceZone('zone:a', provinceAVertices), makeProvinceZone('zone:b', provinceBVertices)],
+      );
+
+      const graphics = parent.children[0] as InstanceType<typeof MockGraphics>;
+      expect(graphics.visible).toBe(true);
+      expect(graphics.moveCalls).toHaveLength(1);
+      expect(graphics.lineCalls).toHaveLength(1);
+      expect(graphics.strokeCalls).toHaveLength(1);
+    });
+  });
+
   it('destroy retires all graphics through the shared disposal queue', () => {
     const parent = new MockContainer();
     const disposalQueue = createDisposalQueue({ scheduleFlush: () => {} });

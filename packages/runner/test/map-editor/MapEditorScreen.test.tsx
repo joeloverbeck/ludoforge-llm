@@ -11,11 +11,17 @@ const testDoubles = vi.hoisted(() => ({
   exportVisualConfig: vi.fn(),
   triggerDownload: vi.fn(),
   createEditorCanvas: vi.fn(),
-  createEditorAdjacencyRenderer: vi.fn(),
-  createEditorZoneRenderer: vi.fn(),
-  createEditorRouteRenderer: vi.fn(),
+  createZoneRenderer: vi.fn(),
+  createAdjacencyRenderer: vi.fn(),
+  createConnectionRouteRenderer: vi.fn(),
+  createRegionBoundaryRenderer: vi.fn(),
+  drawTableBackground: vi.fn(),
   createEditorHandleRenderer: vi.fn(),
   createVertexHandleRenderer: vi.fn(),
+  buildEditorPresentationScene: vi.fn(),
+  computeProvinceBorders: vi.fn(),
+  attachZoneDragHandlers: vi.fn(),
+  resolveMapEditorZoneVisuals: vi.fn(),
 }));
 
 vi.mock('../../src/bootstrap/runner-bootstrap.js', () => ({
@@ -39,16 +45,32 @@ vi.mock('../../src/map-editor/map-editor-canvas.js', () => ({
   createEditorCanvas: testDoubles.createEditorCanvas,
 }));
 
-vi.mock('../../src/map-editor/map-editor-adjacency-renderer.js', () => ({
-  createEditorAdjacencyRenderer: testDoubles.createEditorAdjacencyRenderer,
+vi.mock('../../src/canvas/renderers/zone-renderer.js', () => ({
+  createZoneRenderer: testDoubles.createZoneRenderer,
 }));
 
-vi.mock('../../src/map-editor/map-editor-zone-renderer.js', () => ({
-  createEditorZoneRenderer: testDoubles.createEditorZoneRenderer,
+vi.mock('../../src/canvas/renderers/adjacency-renderer.js', () => ({
+  createAdjacencyRenderer: testDoubles.createAdjacencyRenderer,
 }));
 
-vi.mock('../../src/map-editor/map-editor-route-renderer.js', () => ({
-  createEditorRouteRenderer: testDoubles.createEditorRouteRenderer,
+vi.mock('../../src/canvas/renderers/connection-route-renderer.js', () => ({
+  createConnectionRouteRenderer: testDoubles.createConnectionRouteRenderer,
+}));
+
+vi.mock('../../src/canvas/renderers/region-boundary-renderer.js', () => ({
+  createRegionBoundaryRenderer: testDoubles.createRegionBoundaryRenderer,
+}));
+
+vi.mock('../../src/canvas/renderers/table-background-renderer.js', () => ({
+  drawTableBackground: testDoubles.drawTableBackground,
+}));
+
+vi.mock('../../src/canvas/renderers/province-border-utils.js', () => ({
+  computeProvinceBorders: testDoubles.computeProvinceBorders,
+}));
+
+vi.mock('../../src/map-editor/map-editor-drag.js', () => ({
+  attachZoneDragHandlers: testDoubles.attachZoneDragHandlers,
 }));
 
 vi.mock('../../src/map-editor/map-editor-handle-renderer.js', () => ({
@@ -59,25 +81,40 @@ vi.mock('../../src/map-editor/vertex-handle-renderer.js', () => ({
   createVertexHandleRenderer: testDoubles.createVertexHandleRenderer,
 }));
 
+vi.mock('../../src/map-editor/map-editor-presentation-adapter.js', () => ({
+  buildEditorPresentationScene: testDoubles.buildEditorPresentationScene,
+}));
+
+vi.mock('../../src/map-editor/map-editor-zone-visuals.js', () => ({
+  resolveMapEditorZoneVisuals: testDoubles.resolveMapEditorZoneVisuals,
+}));
+
+vi.mock('../../src/map-editor/map-editor-route-geometry.js', () => ({
+  findNearestRouteSegment: vi.fn(),
+  resolveRouteGeometry: vi.fn(),
+}));
+
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
 });
 
+const MOCK_SCENE = {
+  zones: [{ id: 'zone:a', displayName: 'A', ownerID: null, isSelectable: true, category: null, attributes: {}, visual: { shape: 'circle', width: 40, height: 40, color: '#aaa', vertices: null }, render: { fillColor: '#aaa', stroke: { color: '#111', width: 1, alpha: 0.7 }, hiddenStackCount: 0, nameLabel: { text: 'A', x: 0, y: 0, visible: true }, markersLabel: { text: '', x: 0, y: 0, visible: false }, badge: null } }],
+  adjacencies: [],
+  connectionRoutes: [],
+  junctions: [],
+  tokens: [],
+  overlays: [],
+  regions: [],
+};
+
 describe('MapEditorScreen', () => {
   beforeEach(() => {
     vi.resetModules();
-    testDoubles.resolveRunnerBootstrapByGameId.mockReset();
-    testDoubles.getOrComputeLayout.mockReset();
-    testDoubles.createMapEditorStore.mockReset();
-    testDoubles.exportVisualConfig.mockReset();
-    testDoubles.triggerDownload.mockReset();
-    testDoubles.createEditorCanvas.mockReset();
-    testDoubles.createEditorAdjacencyRenderer.mockReset();
-    testDoubles.createEditorZoneRenderer.mockReset();
-    testDoubles.createEditorRouteRenderer.mockReset();
-    testDoubles.createEditorHandleRenderer.mockReset();
-    testDoubles.createVertexHandleRenderer.mockReset();
+    for (const double of Object.values(testDoubles)) {
+      double.mockReset();
+    }
 
     testDoubles.getOrComputeLayout.mockReturnValue({
       worldLayout: {
@@ -85,16 +122,33 @@ describe('MapEditorScreen', () => {
       },
       mode: 'graph',
     });
+
+    testDoubles.buildEditorPresentationScene.mockReturnValue(MOCK_SCENE);
+    testDoubles.computeProvinceBorders.mockReturnValue(new Map());
+    testDoubles.resolveMapEditorZoneVisuals.mockReturnValue(new Map());
+    testDoubles.attachZoneDragHandlers.mockReturnValue(() => {});
   });
 
-  it('loads editor bootstrap, mounts canvas runtime, and cleans up on unmount', async () => {
-    const store = createMockEditorStore();
-    const adjacencyRenderer = { destroy: vi.fn() };
-    const zoneRenderer = { destroy: vi.fn() };
-    const routeRenderer = { destroy: vi.fn() };
+  function createMockRenderers() {
+    const zoneRenderer = { update: vi.fn(), getContainerMap: vi.fn(() => new Map()), destroy: vi.fn() };
+    const adjacencyRenderer = { update: vi.fn(), destroy: vi.fn() };
+    const routeRenderer = { update: vi.fn(), getContainerMap: vi.fn(() => new Map()), destroy: vi.fn() };
+    const regionRenderer = { update: vi.fn(), destroy: vi.fn() };
     const handleRenderer = { destroy: vi.fn() };
     const vertexHandleRenderer = { destroy: vi.fn() };
-    const editorCanvas = {
+
+    testDoubles.createZoneRenderer.mockReturnValue(zoneRenderer);
+    testDoubles.createAdjacencyRenderer.mockReturnValue(adjacencyRenderer);
+    testDoubles.createConnectionRouteRenderer.mockReturnValue(routeRenderer);
+    testDoubles.createRegionBoundaryRenderer.mockReturnValue(regionRenderer);
+    testDoubles.createEditorHandleRenderer.mockReturnValue(handleRenderer);
+    testDoubles.createVertexHandleRenderer.mockReturnValue(vertexHandleRenderer);
+
+    return { zoneRenderer, adjacencyRenderer, routeRenderer, regionRenderer, handleRenderer, vertexHandleRenderer };
+  }
+
+  function createMockEditorCanvas() {
+    return {
       layers: {
         backgroundLayer: { tag: 'background-layer' },
         regionLayer: { tag: 'region-layer' },
@@ -106,25 +160,28 @@ describe('MapEditorScreen', () => {
         handleLayer: { tag: 'handle-layer' },
       },
       viewport: { tag: 'viewport' },
+      containerPool: { tag: 'container-pool' },
+      disposalQueue: { tag: 'disposal-queue' },
       resize: vi.fn(),
       centerOnContent: vi.fn(),
       destroy: vi.fn(),
     };
+  }
+
+  it('loads editor bootstrap, mounts canvas runtime with game canvas renderers, and cleans up on unmount', async () => {
+    const store = createMockEditorStore();
+    const renderers = createMockRenderers();
+    const editorCanvas = createMockEditorCanvas();
 
     testDoubles.resolveRunnerBootstrapByGameId.mockResolvedValue({
       descriptor: { gameMetadata: { name: 'Fire in the Lake' } },
-      gameDef: { metadata: { id: 'fitl' } },
+      gameDef: { metadata: { id: 'fitl' }, zones: [] },
       visualConfig: { layout: {}, zones: {} },
-      visualConfigProvider: { tag: 'provider' },
+      visualConfigProvider: { tag: 'provider', getTableBackground: () => null, getHiddenZones: () => new Set() },
       capabilities: { supportsMapEditor: true },
     });
     testDoubles.createMapEditorStore.mockReturnValue(store);
     testDoubles.createEditorCanvas.mockResolvedValue(editorCanvas);
-    testDoubles.createEditorAdjacencyRenderer.mockReturnValue(adjacencyRenderer);
-    testDoubles.createEditorZoneRenderer.mockReturnValue(zoneRenderer);
-    testDoubles.createEditorRouteRenderer.mockReturnValue(routeRenderer);
-    testDoubles.createEditorHandleRenderer.mockReturnValue(handleRenderer);
-    testDoubles.createVertexHandleRenderer.mockReturnValue(vertexHandleRenderer);
 
     const { MapEditorScreen } = await import('../../src/map-editor/MapEditorScreen.js');
     const onBack = vi.fn();
@@ -133,7 +190,7 @@ describe('MapEditorScreen', () => {
     expect(screen.getByTestId('map-editor-loading')).toBeTruthy();
 
     await waitFor(() => {
-    expect(screen.getByTestId('map-editor-canvas-container')).toBeTruthy();
+      expect(screen.getByTestId('map-editor-canvas-container')).toBeTruthy();
     });
     expect((screen.getByTestId('map-editor-undo-button') as HTMLButtonElement).disabled).toBe(true);
     expect((screen.getByTestId('map-editor-export-button') as HTMLButtonElement).disabled).toBe(false);
@@ -152,41 +209,50 @@ describe('MapEditorScreen', () => {
         }),
       );
     });
-    expect(testDoubles.createEditorAdjacencyRenderer).toHaveBeenCalledWith(
+
+    expect(testDoubles.createZoneRenderer).toHaveBeenCalledWith(
+      expect.any(Function),
+      editorCanvas.containerPool,
+      expect.objectContaining({ bindSelection: expect.any(Function) }),
+    );
+    expect(testDoubles.createAdjacencyRenderer).toHaveBeenCalledWith(
       editorCanvas.layers.adjacencyLayer,
-      store,
-      { tag: 'provider' },
+      expect.objectContaining({ tag: 'provider' }),
+      expect.objectContaining({ disposalQueue: editorCanvas.disposalQueue }),
     );
-    expect(testDoubles.createEditorZoneRenderer).toHaveBeenCalledWith(
-      editorCanvas.layers.cityZoneLayer,
-      store,
-      { tag: 'provider' },
-      { dragSurface: editorCanvas.viewport },
-    );
-    expect(testDoubles.createEditorRouteRenderer).toHaveBeenCalledWith(
+    expect(testDoubles.createConnectionRouteRenderer).toHaveBeenCalledWith(
       editorCanvas.layers.connectionRouteLayer,
-      store,
-      { metadata: { id: 'fitl' } },
-      { tag: 'provider' },
+      expect.objectContaining({ tag: 'provider' }),
+      expect.objectContaining({ bindSelection: expect.any(Function) }),
+    );
+    expect(testDoubles.createRegionBoundaryRenderer).toHaveBeenCalledWith(
+      editorCanvas.layers.regionLayer,
     );
     expect(testDoubles.createEditorHandleRenderer).toHaveBeenCalledWith(
       editorCanvas.layers.handleLayer,
       store,
-      { metadata: { id: 'fitl' } },
-      { tag: 'provider' },
+      expect.anything(),
+      expect.objectContaining({ tag: 'provider' }),
       { dragSurface: editorCanvas.viewport },
     );
     expect(editorCanvas.centerOnContent).toHaveBeenCalledTimes(1);
+
+    expect(testDoubles.buildEditorPresentationScene).toHaveBeenCalled();
+    expect(renderers.zoneRenderer.update).toHaveBeenCalled();
+    expect(renderers.adjacencyRenderer.update).toHaveBeenCalled();
+    expect(renderers.routeRenderer.update).toHaveBeenCalled();
+    expect(renderers.regionRenderer.update).toHaveBeenCalled();
 
     fireEvent.click(screen.getByTestId('map-editor-back-button'));
     expect(onBack).toHaveBeenCalledTimes(1);
 
     rendered.unmount();
 
-    expect(adjacencyRenderer.destroy).toHaveBeenCalledTimes(1);
-    expect(zoneRenderer.destroy).toHaveBeenCalledTimes(1);
-    expect(routeRenderer.destroy).toHaveBeenCalledTimes(1);
-    expect(handleRenderer.destroy).toHaveBeenCalledTimes(1);
+    expect(renderers.adjacencyRenderer.destroy).toHaveBeenCalledTimes(1);
+    expect(renderers.zoneRenderer.destroy).toHaveBeenCalledTimes(1);
+    expect(renderers.routeRenderer.destroy).toHaveBeenCalledTimes(1);
+    expect(renderers.regionRenderer.destroy).toHaveBeenCalledTimes(1);
+    expect(renderers.handleRenderer.destroy).toHaveBeenCalledTimes(1);
     expect(editorCanvas.destroy).toHaveBeenCalledTimes(1);
   });
 
@@ -205,7 +271,7 @@ describe('MapEditorScreen', () => {
   it('shows an error state for unsupported games', async () => {
     testDoubles.resolveRunnerBootstrapByGameId.mockResolvedValue({
       descriptor: { gameMetadata: { name: "Texas Hold'em" } },
-      gameDef: { metadata: { id: 'texas' } },
+      gameDef: { metadata: { id: 'texas' }, zones: [] },
       visualConfig: { layout: {}, zones: {} },
       visualConfigProvider: { tag: 'provider' },
       capabilities: { supportsMapEditor: false },
@@ -223,26 +289,18 @@ describe('MapEditorScreen', () => {
 
   it('exports the current editor document and marks the store saved', async () => {
     const store = createMockEditorStore();
+    createMockRenderers();
+    const editorCanvas = createMockEditorCanvas();
+
     testDoubles.resolveRunnerBootstrapByGameId.mockResolvedValue({
       descriptor: { gameMetadata: { name: 'Fire in the Lake' } },
-      gameDef: { metadata: { id: 'fitl' } },
+      gameDef: { metadata: { id: 'fitl' }, zones: [] },
       visualConfig: { layout: {}, zones: {} },
-      visualConfigProvider: { tag: 'provider' },
+      visualConfigProvider: { tag: 'provider', getTableBackground: () => null, getHiddenZones: () => new Set() },
       capabilities: { supportsMapEditor: true },
     });
     testDoubles.createMapEditorStore.mockReturnValue(store);
-    testDoubles.createEditorCanvas.mockResolvedValue({
-      layers: { backgroundLayer: {}, regionLayer: {}, provinceZoneLayer: {}, connectionRouteLayer: {}, cityZoneLayer: {}, adjacencyLayer: {}, tableOverlayLayer: {}, handleLayer: {} },
-      viewport: {},
-      resize: vi.fn(),
-      centerOnContent: vi.fn(),
-      destroy: vi.fn(),
-    });
-    testDoubles.createEditorAdjacencyRenderer.mockReturnValue({ destroy: vi.fn() });
-    testDoubles.createEditorZoneRenderer.mockReturnValue({ destroy: vi.fn() });
-    testDoubles.createEditorRouteRenderer.mockReturnValue({ destroy: vi.fn() });
-    testDoubles.createEditorHandleRenderer.mockReturnValue({ destroy: vi.fn() });
-    testDoubles.createVertexHandleRenderer.mockReturnValue({ destroy: vi.fn() });
+    testDoubles.createEditorCanvas.mockResolvedValue(editorCanvas);
     testDoubles.exportVisualConfig.mockReturnValue('version: 1\n');
 
     const { MapEditorScreen } = await import('../../src/map-editor/MapEditorScreen.js');
@@ -267,26 +325,18 @@ describe('MapEditorScreen', () => {
 
   it('shows an inline export error when export fails', async () => {
     const store = createMockEditorStore();
+    createMockRenderers();
+    const editorCanvas = createMockEditorCanvas();
+
     testDoubles.resolveRunnerBootstrapByGameId.mockResolvedValue({
       descriptor: { gameMetadata: { name: 'Fire in the Lake' } },
-      gameDef: { metadata: { id: 'fitl' } },
+      gameDef: { metadata: { id: 'fitl' }, zones: [] },
       visualConfig: { layout: {}, zones: {} },
-      visualConfigProvider: { tag: 'provider' },
+      visualConfigProvider: { tag: 'provider', getTableBackground: () => null, getHiddenZones: () => new Set() },
       capabilities: { supportsMapEditor: true },
     });
     testDoubles.createMapEditorStore.mockReturnValue(store);
-    testDoubles.createEditorCanvas.mockResolvedValue({
-      layers: { backgroundLayer: {}, regionLayer: {}, provinceZoneLayer: {}, connectionRouteLayer: {}, cityZoneLayer: {}, adjacencyLayer: {}, tableOverlayLayer: {}, handleLayer: {} },
-      viewport: {},
-      resize: vi.fn(),
-      centerOnContent: vi.fn(),
-      destroy: vi.fn(),
-    });
-    testDoubles.createEditorAdjacencyRenderer.mockReturnValue({ destroy: vi.fn() });
-    testDoubles.createEditorZoneRenderer.mockReturnValue({ destroy: vi.fn() });
-    testDoubles.createEditorRouteRenderer.mockReturnValue({ destroy: vi.fn() });
-    testDoubles.createEditorHandleRenderer.mockReturnValue({ destroy: vi.fn() });
-    testDoubles.createVertexHandleRenderer.mockReturnValue({ destroy: vi.fn() });
+    testDoubles.createEditorCanvas.mockResolvedValue(editorCanvas);
     testDoubles.exportVisualConfig.mockImplementation(() => {
       throw new Error('schema mismatch');
     });
@@ -308,26 +358,18 @@ describe('MapEditorScreen', () => {
 
   it('shows pointer coordinates and falls back to the selected zone position', async () => {
     const store = createMockEditorStore();
+    createMockRenderers();
+    const editorCanvas = createMockEditorCanvas();
+
     testDoubles.resolveRunnerBootstrapByGameId.mockResolvedValue({
       descriptor: { gameMetadata: { name: 'Fire in the Lake' } },
-      gameDef: { metadata: { id: 'fitl' } },
+      gameDef: { metadata: { id: 'fitl' }, zones: [] },
       visualConfig: { layout: {}, zones: {} },
-      visualConfigProvider: { tag: 'provider' },
+      visualConfigProvider: { tag: 'provider', getTableBackground: () => null, getHiddenZones: () => new Set() },
       capabilities: { supportsMapEditor: true },
     });
     testDoubles.createMapEditorStore.mockReturnValue(store);
-    testDoubles.createEditorCanvas.mockResolvedValue({
-      layers: { backgroundLayer: {}, regionLayer: {}, provinceZoneLayer: {}, connectionRouteLayer: {}, cityZoneLayer: {}, adjacencyLayer: {}, tableOverlayLayer: {}, handleLayer: {} },
-      viewport: {},
-      resize: vi.fn(),
-      centerOnContent: vi.fn(),
-      destroy: vi.fn(),
-    });
-    testDoubles.createEditorAdjacencyRenderer.mockReturnValue({ destroy: vi.fn() });
-    testDoubles.createEditorZoneRenderer.mockReturnValue({ destroy: vi.fn() });
-    testDoubles.createEditorRouteRenderer.mockReturnValue({ destroy: vi.fn() });
-    testDoubles.createEditorHandleRenderer.mockReturnValue({ destroy: vi.fn() });
-    testDoubles.createVertexHandleRenderer.mockReturnValue({ destroy: vi.fn() });
+    testDoubles.createEditorCanvas.mockResolvedValue(editorCanvas);
 
     const { MapEditorScreen } = await import('../../src/map-editor/MapEditorScreen.js');
     render(createElement(MapEditorScreen, { gameId: 'fitl', onBack: vi.fn() }));
@@ -368,26 +410,18 @@ describe('MapEditorScreen', () => {
     const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
     const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener');
     const store = createMockEditorStore();
+    createMockRenderers();
+    const editorCanvas = createMockEditorCanvas();
+
     testDoubles.resolveRunnerBootstrapByGameId.mockResolvedValue({
       descriptor: { gameMetadata: { name: 'Fire in the Lake' } },
-      gameDef: { metadata: { id: 'fitl' } },
+      gameDef: { metadata: { id: 'fitl' }, zones: [] },
       visualConfig: { layout: {}, zones: {} },
-      visualConfigProvider: { tag: 'provider' },
+      visualConfigProvider: { tag: 'provider', getTableBackground: () => null, getHiddenZones: () => new Set() },
       capabilities: { supportsMapEditor: true },
     });
     testDoubles.createMapEditorStore.mockReturnValue(store);
-    testDoubles.createEditorCanvas.mockResolvedValue({
-      layers: { backgroundLayer: {}, regionLayer: {}, provinceZoneLayer: {}, connectionRouteLayer: {}, cityZoneLayer: {}, adjacencyLayer: {}, tableOverlayLayer: {}, handleLayer: {} },
-      viewport: {},
-      resize: vi.fn(),
-      centerOnContent: vi.fn(),
-      destroy: vi.fn(),
-    });
-    testDoubles.createEditorAdjacencyRenderer.mockReturnValue({ destroy: vi.fn() });
-    testDoubles.createEditorZoneRenderer.mockReturnValue({ destroy: vi.fn() });
-    testDoubles.createEditorRouteRenderer.mockReturnValue({ destroy: vi.fn() });
-    testDoubles.createEditorHandleRenderer.mockReturnValue({ destroy: vi.fn() });
-    testDoubles.createVertexHandleRenderer.mockReturnValue({ destroy: vi.fn() });
+    testDoubles.createEditorCanvas.mockResolvedValue(editorCanvas);
 
     const { MapEditorScreen } = await import('../../src/map-editor/MapEditorScreen.js');
     const rendered = render(createElement(MapEditorScreen, { gameId: 'fitl', onBack: vi.fn() }));
@@ -427,6 +461,42 @@ describe('MapEditorScreen', () => {
     expect(
       removeEventListenerSpy.mock.calls.filter(([eventName]) => eventName === 'beforeunload'),
     ).toHaveLength(2);
+  });
+
+  it('re-syncs renderers when editor store state changes', async () => {
+    const store = createMockEditorStore();
+    const renderers = createMockRenderers();
+    const editorCanvas = createMockEditorCanvas();
+
+    testDoubles.resolveRunnerBootstrapByGameId.mockResolvedValue({
+      descriptor: { gameMetadata: { name: 'Fire in the Lake' } },
+      gameDef: { metadata: { id: 'fitl' }, zones: [] },
+      visualConfig: { layout: {}, zones: {} },
+      visualConfigProvider: { tag: 'provider', getTableBackground: () => null, getHiddenZones: () => new Set() },
+      capabilities: { supportsMapEditor: true },
+    });
+    testDoubles.createMapEditorStore.mockReturnValue(store);
+    testDoubles.createEditorCanvas.mockResolvedValue(editorCanvas);
+
+    const { MapEditorScreen } = await import('../../src/map-editor/MapEditorScreen.js');
+    render(createElement(MapEditorScreen, { gameId: 'fitl', onBack: vi.fn() }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('map-editor-canvas-container')).toBeTruthy();
+    });
+
+    await waitFor(() => {
+      expect(renderers.zoneRenderer.update).toHaveBeenCalledTimes(1);
+    });
+
+    store.setState({ zonePositions: new Map([['zone:a', { x: 50, y: 60 }]]) });
+
+    await waitFor(() => {
+      expect(renderers.zoneRenderer.update).toHaveBeenCalledTimes(2);
+      expect(renderers.adjacencyRenderer.update).toHaveBeenCalledTimes(2);
+      expect(renderers.routeRenderer.update).toHaveBeenCalledTimes(2);
+      expect(renderers.regionRenderer.update).toHaveBeenCalledTimes(2);
+    });
   });
 });
 

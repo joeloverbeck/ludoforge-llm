@@ -199,11 +199,11 @@ function drawVertexHandleState(g: Graphics, hovered: boolean): void {
       .fill({ color: VERTEX_HANDLE_COLOR, alpha: VERTEX_GLOW_ALPHA });
     g.circle(0, 0, VERTEX_HANDLE_HOVER_RADIUS)
       .fill({ color: VERTEX_HANDLE_COLOR })
-      .stroke({ color: 0x000000, width: 1.5 });
+      .stroke({ color: 0xffffff, width: 1.5 });
   } else {
     g.circle(0, 0, VERTEX_HANDLE_RADIUS)
       .fill({ color: VERTEX_HANDLE_COLOR })
-      .stroke({ color: 0x000000, width: 1.5 });
+      .stroke({ color: 0xffffff, width: 1.5 });
   }
 }
 
@@ -222,7 +222,7 @@ function createMidpointHandle(x: number, y: number): Graphics {
   const g = new Graphics();
   g.circle(0, 0, MIDPOINT_HANDLE_RADIUS)
     .fill({ color: MIDPOINT_HANDLE_COLOR, alpha: MIDPOINT_HANDLE_ALPHA })
-    .stroke({ color: 0x000000, width: 1, alpha: 0.3 });
+    .stroke({ color: 0xffffff, width: 1, alpha: 0.3 });
   g.position.set(x, y);
   g.eventMode = 'static';
   g.cursor = 'pointer';

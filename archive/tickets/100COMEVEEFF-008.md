@@ -1,6 +1,6 @@
 # 100COMEVEEFF-008: Golden tests and cross-game validation
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — tests only
@@ -120,3 +120,15 @@ Resolve `preview.activeCard.annotation.unshaded.tokenPlacements.us` through the 
 1. `node --test packages/engine/dist/test/integration/cnl/compile-event-annotations-golden.test.js`
 2. `node --test packages/engine/dist/test/integration/agents/policy-annotation-e2e.test.js`
 3. `pnpm turbo test`
+
+## Outcome
+
+- **Completion date**: 2026-03-31
+- **What changed**:
+  - Created `packages/engine/test/integration/cnl/compile-event-annotations-golden.test.ts` (12 tests): completeness, spot checks, golden fixture comparison, Texas Hold'em cross-game, evolution resilience
+  - Created `packages/engine/test/fixtures/fitl-annotation-index-golden.json`: golden fixture with all 130 FITL card annotations
+  - Created `packages/engine/test/integration/agents/policy-annotation-e2e.test.ts` (13 tests): surface ref E2E resolution, self-seat resolution, visibility gating, preview path
+- **Deviations from plan**:
+  - Relaxed "every side has effectNodeCount > 0" to "every entry has at least one non-trivial side" — ~10 FITL cards have text-only sides where logic is handled via structural properties (grants, eligibility overrides) rather than effect AST nodes
+  - Evolution test validates determinism and per-card isolation structurally rather than injecting YAML modifications mid-stream (the annotation builder is a pure function of effect ASTs, so same input = same output)
+- **Verification**: lint clean, typecheck clean, all 25 new tests passing

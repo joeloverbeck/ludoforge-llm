@@ -1,6 +1,6 @@
 # Spec 100: Compiled Event Effect Annotations
 
-**Status**: Draft
+**Status**: ✅ COMPLETED
 **Priority**: P2
 **Complexity**: L
 **Dependencies**: Spec 99 (event card policy surface — provides card identity, `cardMetadataIndex`, and `activeCard.*` surface refs for annotation lookup)
@@ -367,3 +367,16 @@ This requires the agent to evaluate quality for both sides, which the `activeCar
 - **Variable scope resolution**: Distinguishing global vs. per-player variables requires checking against `GameDef.globalVars`/`perPlayerVars` lists during annotation building. The annotation builder runs after variable lowering, so these lists are available.
 - **Walker completeness**: The walker must handle all 34 effect kinds. Unrecognized kinds contribute only to `effectNodeCount`. Mitigation: The walker uses `_k` discriminant tags for exhaustive dispatch, and the existing `walkEffects` pattern handles all control-flow nesting.
 - **Spec 99 dependency**: Card annotations are useless without card identity. Spec 99 must be implemented first (already completed).
+
+## Outcome
+
+- **Completion date**: 2026-03-31
+- **What changed**: All 8 tickets (100COMEVEEFF-001 through 008) implemented. The annotation system is fully operational:
+  - Types: `CompiledEventSideAnnotation`, `CompiledEventCardAnnotation`, `CompiledEventAnnotationIndex` on `GameDef`
+  - Compiler: `compile-event-annotations.ts` walks effect ASTs to build per-card, per-side feature vectors
+  - Surface refs: `activeCard.annotation.SIDE.METRIC` parsed, resolved, and visibility-gated
+  - Runtime: `policy-annotation-resolve.ts` extracts values with self/active seat resolution
+  - FITL agent profile: `activeCardAnnotation` visibility configured as public
+  - Golden tests: 130-card FITL annotation index fixture, completeness/spot-check/cross-game/evolution tests
+  - E2E tests: surface ref resolution, self-seat resolution, visibility gating, preview path
+- **Deviations**: ~10 FITL cards have text-only event sides (effectNodeCount=0) where logic is structural (grants, eligibility overrides) rather than effect AST nodes. Tests were adjusted to accommodate this.

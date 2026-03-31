@@ -19,6 +19,10 @@ Break a numbered spec into a series of small, actionable implementation tickets.
 
 If either argument is missing, ask the user to provide it before proceeding.
 
+## Worktree Awareness
+
+If working inside a worktree (e.g., `.claude/worktrees/<name>/`), **all file paths in this skill** — reads, writes, globs, greps — must be prefixed with the worktree root. The default working directory is the main repo root; paths without an explicit worktree prefix will silently operate on main, not the worktree. This applies to every path reference below — `tickets/`, `docs/`, spec paths, and output files.
+
 ## Process
 
 Follow these steps in order. Do not skip any step.
@@ -38,6 +42,7 @@ Before decomposing, validate the spec's assumptions against the actual codebase:
 
 - **Grep/Glob** for file paths mentioned in the spec — confirm they exist
 - **Grep** for types, functions, and modules the spec references — confirm they are real and current
+- **Glob** for `tickets/<NAMESPACE>-*.md` — if any files with this namespace already exist, warn the user and ask whether to overwrite, continue numbering from the next available number, or abort
 - **Flag** any stale assumptions, missing files, or renamed entities
 - If you find discrepancies, present them to the user before proceeding
 
@@ -91,14 +96,23 @@ Every ticket MUST include:
   - **New/Modified Tests**: Paths with rationale
   - **Commands**: Targeted test commands and full suite verification
 
-### Step 6: Final Summary
+### Step 6: Validate Ticket Dependencies
+
+Run `pnpm run check:ticket-deps` to validate all ticket `Deps` paths. If validation fails, fix the offending `Deps` fields before proceeding.
+
+### Step 7: Final Summary
 
 After writing all files, list:
 - All ticket files created
 - The dependency graph (which tickets block which)
 - Suggested implementation order
+- Reminder: use `/implement-ticket tickets/<NAMESPACE>-<NNN>.md` to implement each ticket
 
 Do NOT commit. Leave files for user review.
+
+### Step 8: Spec Back-Link (Optional)
+
+If the spec does not already have a "Tickets" section, offer to append one listing the generated ticket IDs and their titles. This aids traceability when multiple specs are active.
 
 ## Constraints
 
@@ -108,3 +122,4 @@ Do NOT commit. Leave files for user review.
 - **Codebase truth**: File paths and type references in tickets must be validated against the actual codebase, not assumed from the spec
 - **Reviewable size**: Each ticket should be small enough to review as a single diff. When in doubt, split further
 - **Explicit dependencies**: Use the `Deps` field to declare inter-ticket dependencies; never leave implicit ordering
+- **Downstream workflow**: Tickets produced by this skill are designed to be implemented via `/implement-ticket tickets/<NAMESPACE>-<NNN>.md`. Ensure ticket structure and detail level support that workflow

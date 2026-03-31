@@ -1,6 +1,6 @@
 # 100COMEVEEFF-003: Implement effect AST walker and annotation builder
 
-**Status**: PENDING
+**Status**: DONE
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — new compiler module

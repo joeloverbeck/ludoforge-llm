@@ -7,7 +7,7 @@ import {
   asPlayerId,
   initialState,
   type AgentPolicyCatalog,
-  type CompiledAgentPolicySurfaceVisibility,
+  type CompiledSurfaceVisibility,
   type CompiledCardMetadataIndex,
   type GameDef,
   type GameState,
@@ -17,22 +17,22 @@ import type { EventDeckDef } from '../../../src/kernel/types-events.js';
 
 const phaseId = asPhaseId('main');
 
-const PUBLIC_VISIBILITY: CompiledAgentPolicySurfaceVisibility = {
+const PUBLIC_VISIBILITY: CompiledSurfaceVisibility = {
   current: 'public',
   preview: { visibility: 'public', allowWhenHiddenSampling: false },
 };
 
-const HIDDEN_VISIBILITY: CompiledAgentPolicySurfaceVisibility = {
+const HIDDEN_VISIBILITY: CompiledSurfaceVisibility = {
   current: 'hidden',
   preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
 };
 
 function createMinimalCatalog(overrides?: {
   readonly tolerateRngDivergence?: boolean;
-  readonly activeCardIdentity?: CompiledAgentPolicySurfaceVisibility;
-  readonly activeCardTag?: CompiledAgentPolicySurfaceVisibility;
-  readonly activeCardMetadata?: CompiledAgentPolicySurfaceVisibility;
-  readonly activeCardAnnotation?: CompiledAgentPolicySurfaceVisibility;
+  readonly activeCardIdentity?: CompiledSurfaceVisibility;
+  readonly activeCardTag?: CompiledSurfaceVisibility;
+  readonly activeCardMetadata?: CompiledSurfaceVisibility;
+  readonly activeCardAnnotation?: CompiledSurfaceVisibility;
 }): AgentPolicyCatalog {
   const profile = {
     fingerprint: 'test-profile',

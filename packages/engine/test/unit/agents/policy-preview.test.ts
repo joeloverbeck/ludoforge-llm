@@ -8,25 +8,25 @@ import {
   asPhaseId,
   asPlayerId,
   initialState,
-  type CompiledAgentPolicyPreviewSurfaceRef,
+  type CompiledPreviewSurfaceRef,
   type GameDef,
   type Move,
   type PlayerObservation,
 } from '../../../src/kernel/index.js';
 
 const phaseId = asPhaseId('main');
-const previewScoreRef: CompiledAgentPolicyPreviewSurfaceRef = {
+const previewScoreRef: CompiledPreviewSurfaceRef = {
   kind: 'previewSurface',
   family: 'globalVar',
   id: 'score',
 };
-const previewMarginRef: CompiledAgentPolicyPreviewSurfaceRef = {
+const previewMarginRef: CompiledPreviewSurfaceRef = {
   kind: 'previewSurface',
   family: 'victoryCurrentMargin',
   id: 'currentMargin',
   selector: { kind: 'role', seatToken: 'us' },
 };
-const previewSelfTempoRef: CompiledAgentPolicyPreviewSurfaceRef = {
+const previewSelfTempoRef: CompiledPreviewSurfaceRef = {
   kind: 'previewSurface',
   family: 'perPlayerVar',
   id: 'tempo',

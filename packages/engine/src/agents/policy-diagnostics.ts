@@ -3,7 +3,7 @@ import type {
   AgentPolicyExpr,
   AgentParameterValue,
   CompiledAgentPolicyRef,
-  CompiledAgentPolicySurfaceRef,
+  CompiledSurfaceRef,
   CompiledAgentProfile,
   GameDef,
   PolicyAgentDecisionTrace,
@@ -322,7 +322,7 @@ function walkExpr(expr: AgentPolicyExpr, visitRef: (ref: CompiledAgentPolicyRef)
   }
 }
 
-function surfaceRefKey(ref: CompiledAgentPolicySurfaceRef): string {
+function surfaceRefKey(ref: CompiledSurfaceRef): string {
   if (ref.selector === undefined) {
     return `${ref.family}.${ref.id}`;
   }

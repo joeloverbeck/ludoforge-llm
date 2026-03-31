@@ -13,7 +13,7 @@ import type {
   AgentPolicyZoneFilter,
   ChoicePendingRequest,
   CompiledAgentPolicyRef,
-  CompiledAgentPolicySurfaceRef,
+  CompiledSurfaceRef,
   CompiledAgentScoreTerm,
   GameDef,
   GameState,
@@ -778,7 +778,7 @@ export class PolicyEvaluationContext {
   }
 
   private resolveSurfaceRef(
-    ref: CompiledAgentPolicySurfaceRef,
+    ref: CompiledSurfaceRef,
     candidate: PolicyEvaluationCandidate | undefined,
   ): PolicyValue {
     if (ref.kind === 'previewSurface') {
@@ -834,7 +834,7 @@ function scalarZonePropValue(value: AttributeValue | undefined): string | number
     : undefined;
 }
 
-function previewRefKey(ref: CompiledAgentPolicySurfaceRef): string {
+function previewRefKey(ref: CompiledSurfaceRef): string {
   if (ref.selector === undefined) {
     return `${ref.family}.${ref.id}`;
   }

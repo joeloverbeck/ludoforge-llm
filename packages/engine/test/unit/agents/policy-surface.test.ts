@@ -6,21 +6,21 @@ import {
   getPolicySurfaceVisibility,
 } from '../../../src/agents/policy-surface.js';
 import type {
-  CompiledAgentPolicySurfaceCatalog,
-  CompiledAgentPolicySurfaceVisibility,
+  CompiledSurfaceCatalog,
+  CompiledSurfaceVisibility,
 } from '../../../src/kernel/index.js';
 
-const hiddenVis: CompiledAgentPolicySurfaceVisibility = {
+const hiddenVis: CompiledSurfaceVisibility = {
   current: 'hidden',
   preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
 };
 
-const publicVis: CompiledAgentPolicySurfaceVisibility = {
+const publicVis: CompiledSurfaceVisibility = {
   current: 'public',
   preview: { visibility: 'public', allowWhenHiddenSampling: true },
 };
 
-function createCatalog(overrides?: Partial<CompiledAgentPolicySurfaceCatalog>): CompiledAgentPolicySurfaceCatalog {
+function createCatalog(overrides?: Partial<CompiledSurfaceCatalog>): CompiledSurfaceCatalog {
   return {
     globalVars: { score: publicVis },
     perPlayerVars: { tempo: publicVis },

@@ -3,11 +3,11 @@ import { buildRuntimeTableIndex } from '../kernel/runtime-table-index.js';
 import { createEvalContext, createEvalRuntimeResources } from '../kernel/eval-context.js';
 import { evalValue } from '../kernel/eval-value.js';
 import type {
-  AgentPolicySurfaceVisibilityClass,
-  CompiledAgentPolicySurfaceRef,
-  CompiledAgentPolicySurfaceCatalog,
-  CompiledAgentPolicySurfaceSelector,
-  CompiledAgentPolicySurfaceVisibility,
+  SurfaceVisibilityClass,
+  CompiledSurfaceRef,
+  CompiledSurfaceCatalog,
+  SurfaceSelector,
+  CompiledSurfaceVisibility,
   CompiledStrategicCondition,
   GameDef,
   GameState,
@@ -19,16 +19,16 @@ export interface PolicyVictorySurface {
   readonly rankBySeat: ReadonlyMap<string, number>;
 }
 
-export type ResolvedPolicySurfaceRef = CompiledAgentPolicySurfaceRef & {
-  readonly visibility: CompiledAgentPolicySurfaceVisibility;
+export type ResolvedPolicySurfaceRef = CompiledSurfaceRef & {
+  readonly visibility: CompiledSurfaceVisibility;
 };
 
 export function parseAuthoredPolicySurfaceRef(
-  catalog: CompiledAgentPolicySurfaceCatalog,
+  catalog: CompiledSurfaceCatalog,
   refPath: string,
   scope: 'current' | 'preview',
 ): ResolvedPolicySurfaceRef | null {
-  const kind: CompiledAgentPolicySurfaceRef['kind'] = scope === 'preview' ? 'previewSurface' : 'currentSurface';
+  const kind: CompiledSurfaceRef['kind'] = scope === 'preview' ? 'previewSurface' : 'currentSurface';
   if (refPath.startsWith('var.global.')) {
     const variableId = refPath.slice('var.global.'.length);
     const visibility = catalog.globalVars[variableId];
@@ -192,7 +192,7 @@ export function parseAuthoredPolicySurfaceRef(
     }
     const id = seatSegment !== undefined ? `${side}.${metric}.${seatSegment}` : `${side}.${metric}`;
     if (seatSegment !== undefined) {
-      const selector: CompiledAgentPolicySurfaceSelector =
+      const selector: SurfaceSelector =
         seatSegment === 'self' || seatSegment === 'active'
           ? { kind: 'player', player: seatSegment }
           : { kind: 'role', seatToken: seatSegment };
@@ -216,9 +216,9 @@ export function parseAuthoredPolicySurfaceRef(
 }
 
 export function getPolicySurfaceVisibility(
-  catalog: CompiledAgentPolicySurfaceCatalog,
-  ref: CompiledAgentPolicySurfaceRef,
-): CompiledAgentPolicySurfaceVisibility | null {
+  catalog: CompiledSurfaceCatalog,
+  ref: CompiledSurfaceRef,
+): CompiledSurfaceVisibility | null {
   switch (ref.family) {
     case 'globalVar':
       return catalog.globalVars[ref.id] ?? null;
@@ -242,7 +242,7 @@ export function getPolicySurfaceVisibility(
 }
 
 export function isSurfaceVisibilityAccessible(
-  visibility: AgentPolicySurfaceVisibilityClass,
+  visibility: SurfaceVisibilityClass,
   actingSeatId: string,
   resolvedSeatId?: string,
   actingPlayerIndex?: number,
@@ -264,7 +264,7 @@ export function isSurfaceVisibilityAccessible(
 export function resolvePolicyRoleSelector(
   def: GameDef | undefined,
   state: GameState,
-  selector: Extract<CompiledAgentPolicySurfaceSelector, { readonly kind: 'role' }>,
+  selector: Extract<SurfaceSelector, { readonly kind: 'role' }>,
   actingSeatId: string,
 ): string {
   const { seatToken } = selector;

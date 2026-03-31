@@ -104,7 +104,6 @@ describe('FITL production map provinces and LoCs', () => {
     );
 
     const mekongLocs = new Set([
-      'loc-can-tho-bac-lieu:none',
       'loc-can-tho-chau-doc:none',
       'loc-can-tho-long-phu:none',
       'loc-saigon-can-tho:none',

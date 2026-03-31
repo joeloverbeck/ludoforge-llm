@@ -18,9 +18,11 @@ const DEFAULT_DASH_LENGTH = 10;
 const DEFAULT_GAP_LENGTH = 5;
 const HIGHLIGHTED_DASH_LENGTH = 12;
 const HIGHLIGHTED_GAP_LENGTH = 4;
-const BRIDGE_DOT_RADIUS = 8;
-const BRIDGE_DOT_COLOR = 0xffffff;
-const BRIDGE_DOT_ALPHA = 0.6;
+const BRIDGE_CAPSULE_COLOR = 0xffffff;
+const BRIDGE_CAPSULE_ALPHA = 0.7;
+const BRIDGE_CAPSULE_WIDTH = 14;
+const BRIDGE_CAPSULE_HIGHLIGHT_ALPHA = 1.0;
+const BRIDGE_CAPSULE_HIGHLIGHT_WIDTH = 18;
 
 interface PairRenderState {
   readonly from: string;
@@ -94,7 +96,7 @@ export function createAdjacencyRenderer(
 
         const bothProvincePolygons = isProvincePolygon(fromZone) && isProvincePolygon(toZone);
         if (bothProvincePolygons) {
-          drawBridgeDot(graphics, fromPosition, toPosition, fromZone, toZone);
+          drawBridgeCapsule(graphics, fromPosition, toPosition, fromZone, toZone, adjacency.isHighlighted);
         } else {
           drawAdjacencyLine(graphics, fromPosition, toPosition, fromZone, toZone, adjacency, visualConfigProvider);
         }
@@ -169,12 +171,13 @@ function isProvincePolygon(zone: PresentationZoneNode): boolean {
   );
 }
 
-function drawBridgeDot(
+function drawBridgeCapsule(
   graphics: Graphics,
   fromPosition: Position,
   toPosition: Position,
   fromZone: PresentationZoneNode,
   toZone: PresentationZoneNode,
+  isHighlighted: boolean,
 ): void {
   const fromVertices = fromZone.visual.vertices!;
   const toVertices = toZone.visual.vertices!;
@@ -184,12 +187,16 @@ function drawBridgeDot(
   const toWorld = offsetVertices(toVertices, toPosition);
 
   const { pointA, pointB } = closestPointsBetweenPolygons(fromWorld, toWorld);
-  const midX = (pointA.x + pointB.x) / 2;
-  const midY = (pointA.y + pointB.y) / 2;
 
   graphics.clear();
-  graphics.circle(midX, midY, BRIDGE_DOT_RADIUS);
-  graphics.fill({ color: BRIDGE_DOT_COLOR, alpha: BRIDGE_DOT_ALPHA });
+  graphics.moveTo(pointA.x, pointA.y);
+  graphics.lineTo(pointB.x, pointB.y);
+  graphics.stroke({
+    color: BRIDGE_CAPSULE_COLOR,
+    alpha: isHighlighted ? BRIDGE_CAPSULE_HIGHLIGHT_ALPHA : BRIDGE_CAPSULE_ALPHA,
+    width: isHighlighted ? BRIDGE_CAPSULE_HIGHLIGHT_WIDTH : BRIDGE_CAPSULE_WIDTH,
+    cap: 'round',
+  });
   graphics.visible = true;
 }
 

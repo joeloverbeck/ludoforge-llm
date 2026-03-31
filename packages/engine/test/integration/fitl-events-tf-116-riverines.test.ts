@@ -18,11 +18,11 @@ import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const CARD_ID = 'card-25';
 const MEKONG_CHAU_DOC = 'loc-can-tho-chau-doc:none';
-const MEKONG_BAC_LIEU = 'loc-can-tho-bac-lieu:none';
 const MEKONG_LONG_PHU = 'loc-can-tho-long-phu:none';
 const MEKONG_SAIGON_CAN_THO = 'loc-saigon-can-tho:none';
+const NON_MEKONG_BAC_LIEU = 'loc-can-tho-bac-lieu:none';
 
-const mekongLocs = [MEKONG_CHAU_DOC, MEKONG_BAC_LIEU, MEKONG_LONG_PHU] as const;
+const mekongLocs = [MEKONG_CHAU_DOC, MEKONG_LONG_PHU, MEKONG_SAIGON_CAN_THO] as const;
 
 const makeToken = (
   id: string,
@@ -108,7 +108,7 @@ describe('FITL card-25 TF-116 Riverines', () => {
     assert.equal(arvnGrants.every((grant) => grant.zoneFilter !== undefined), true);
   });
 
-  it('unshaded removes all NVA/VC from the 3 Mekong river LoCs touching Can Tho but not from non-river Mekong LoCs', () => {
+  it('unshaded removes all NVA/VC from all 3 Mekong LoCs but not from non-Mekong LoCs', () => {
     const def = compileDef();
     const eventDeck = def.eventDecks?.[0];
     assert.notEqual(eventDeck, undefined, 'Expected event deck');
@@ -126,15 +126,16 @@ describe('FITL card-25 TF-116 Riverines', () => {
           makeToken('tf116-vc-guerrilla-1', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
           makeToken('tf116-us-troop-stays', 'troops', 'US', { type: 'troops' }),
         ],
-        [MEKONG_BAC_LIEU]: [
-          makeToken('tf116-vc-base-1', 'base', 'VC', { type: 'base' }),
-          makeToken('tf116-arvn-troop-stays', 'troops', 'ARVN', { type: 'troops' }),
-        ],
         [MEKONG_LONG_PHU]: [
           makeToken('tf116-nva-base-1', 'base', 'NVA', { type: 'base', tunnel: 'tunneled' }),
         ],
+        [NON_MEKONG_BAC_LIEU]: [
+          makeToken('tf116-vc-base-bac-lieu', 'base', 'VC', { type: 'base' }),
+          makeToken('tf116-arvn-troop-stays', 'troops', 'ARVN', { type: 'troops' }),
+        ],
         [MEKONG_SAIGON_CAN_THO]: [
-          makeToken('tf116-vc-non-river-loc-stays', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+          makeToken('tf116-vc-saigon-cantho', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' }),
+          makeToken('tf116-us-troop-saigon-cantho', 'troops', 'US', { type: 'troops' }),
         ],
       },
     };
@@ -155,36 +156,41 @@ describe('FITL card-25 TF-116 Riverines', () => {
     assert.equal(
       countZoneTokens(final, MEKONG_CHAU_DOC, (token) => token.id === asTokenId('tf116-us-troop-stays')),
       1,
-      'US pieces in Mekong river LoCs should remain',
+      'US pieces in Mekong LoCs should remain',
     );
     assert.equal(
-      countZoneTokens(final, MEKONG_BAC_LIEU, (token) => token.id === asTokenId('tf116-arvn-troop-stays')),
+      countZoneTokens(final, MEKONG_SAIGON_CAN_THO, (token) => token.id === asTokenId('tf116-us-troop-saigon-cantho')),
       1,
-      'ARVN pieces in Mekong river LoCs should remain',
+      'US pieces in Saigon-Can Tho Mekong LoC should remain',
     );
 
     assert.equal(
-      countZoneTokens(final, MEKONG_SAIGON_CAN_THO, (token) => token.id === asTokenId('tf116-vc-non-river-loc-stays')),
+      countZoneTokens(final, NON_MEKONG_BAC_LIEU, (token) => token.id === asTokenId('tf116-vc-base-bac-lieu')),
       1,
-      'Non-river Mekong LoC should not be affected by card-25 removal',
+      'Can Tho-Bac Lieu is not a Mekong LoC — its VC base should not be removed by card-25',
+    );
+    assert.equal(
+      countZoneTokens(final, NON_MEKONG_BAC_LIEU, (token) => token.id === asTokenId('tf116-arvn-troop-stays')),
+      1,
+      'Can Tho-Bac Lieu ARVN troop should remain untouched',
     );
 
     assert.equal(
       countZoneTokens(final, 'available-NVA:none', (token) => token.id === asTokenId('tf116-nva-troop-1') || token.id === asTokenId('tf116-nva-base-1')),
       2,
-      'NVA pieces removed from river LoCs should move to available-NVA:none',
+      'NVA pieces removed from Mekong LoCs should move to available-NVA:none',
     );
     assert.equal(
-      countZoneTokens(final, 'available-VC:none', (token) => token.id === asTokenId('tf116-vc-guerrilla-1') || token.id === asTokenId('tf116-vc-base-1')),
+      countZoneTokens(final, 'available-VC:none', (token) =>
+        token.id === asTokenId('tf116-vc-guerrilla-1') || token.id === asTokenId('tf116-vc-saigon-cantho')),
       2,
-      'VC pieces removed from river LoCs should move to available-VC:none',
+      'VC pieces removed from Mekong LoCs should move to available-VC:none',
     );
   });
 
   it('unshaded and shaded target sets are invariant to Mekong LoC econ changes', () => {
     const def = withEconOverrides(compileDef(), {
       [MEKONG_CHAU_DOC]: 4,
-      [MEKONG_BAC_LIEU]: 5,
       [MEKONG_LONG_PHU]: 6,
       [MEKONG_SAIGON_CAN_THO]: 0,
     });
@@ -200,9 +206,8 @@ describe('FITL card-25 TF-116 Riverines', () => {
         ...unshadedBase.zones,
         [eventDeck!.discardZone]: [makeToken(CARD_ID, 'card', 'none')],
         [MEKONG_CHAU_DOC]: [makeToken('tf116-econ-nva-target-1', 'troops', 'NVA', { type: 'troops' })],
-        [MEKONG_BAC_LIEU]: [makeToken('tf116-econ-vc-target-1', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' })],
         [MEKONG_LONG_PHU]: [makeToken('tf116-econ-vc-target-2', 'base', 'VC', { type: 'base' })],
-        [MEKONG_SAIGON_CAN_THO]: [makeToken('tf116-econ-vc-nontarget', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' })],
+        [MEKONG_SAIGON_CAN_THO]: [makeToken('tf116-econ-vc-target-3', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' })],
       },
     };
 
@@ -217,11 +222,6 @@ describe('FITL card-25 TF-116 Riverines', () => {
         `Expected all insurgents removed from ${loc} despite econ overrides`,
       );
     }
-    assert.equal(
-      countZoneTokens(unshadedFinal, MEKONG_SAIGON_CAN_THO, (token) => token.id === asTokenId('tf116-econ-vc-nontarget')),
-      1,
-      'Saigon-Can Tho LoC must remain out-of-scope even when econ is reduced',
-    );
 
     const shadedBase = clearAllZones(initialState(def, 25004, 4).state);
     const shadedSetup: GameState = {
@@ -239,7 +239,6 @@ describe('FITL card-25 TF-116 Riverines', () => {
           makeToken('tf116-econ-vc-available-5', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
           makeToken('tf116-econ-vc-available-6', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
         ],
-        [MEKONG_SAIGON_CAN_THO]: [makeToken('tf116-econ-vc-scope-guard', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'active' })],
       },
     };
 
@@ -255,9 +254,9 @@ describe('FITL card-25 TF-116 Riverines', () => {
       );
     }
     assert.equal(
-      countZoneTokens(shadedFinal, MEKONG_SAIGON_CAN_THO, (token) => token.id === asTokenId('tf116-econ-vc-scope-guard')),
-      1,
-      'Saigon-Can Tho LoC must not receive shaded placements when econ is reduced',
+      countZoneTokens(shadedFinal, 'available-VC:none', (token) => token.props.faction === 'VC' && token.props.type === 'guerrilla'),
+      0,
+      'All 6 available VC guerrillas should be placed (2 per each of 3 Mekong LoCs)',
     );
   });
 
@@ -273,7 +272,7 @@ describe('FITL card-25 TF-116 Riverines', () => {
       turnOrderState: { type: 'roundRobin' },
       globalVars: {
         ...base.globalVars,
-        terrorSabotageMarkersPlaced: 14,
+        terrorSabotageMarkersPlaced: 13,
       },
       markers: {
         ...base.markers,
@@ -289,10 +288,6 @@ describe('FITL card-25 TF-116 Riverines', () => {
           makeToken('tf116-vc-available-4', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
           makeToken('tf116-vc-available-5', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
           makeToken('tf116-vc-available-6', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' }),
-        ],
-        [MEKONG_BAC_LIEU]: [
-          makeToken('tf116-coin-us-bac-lieu', 'troops', 'US', { type: 'troops' }),
-          makeToken('tf116-coin-arvn-bac-lieu', 'troops', 'ARVN', { type: 'troops' }),
         ],
         [MEKONG_LONG_PHU]: [
           makeToken('tf116-vc-base-long-phu', 'base', 'VC', { type: 'base' }),
@@ -314,15 +309,15 @@ describe('FITL card-25 TF-116 Riverines', () => {
       );
     }
 
-    assert.equal(final.markers[MEKONG_CHAU_DOC]?.sabotage, 'sabotage', 'Chau Doc river LoC should sabotage when VC > COIN');
-    assert.notEqual(final.markers[MEKONG_BAC_LIEU]?.sabotage, 'sabotage', 'Bac Lieu river LoC should not sabotage when VC is not greater than COIN');
+    assert.equal(final.markers[MEKONG_CHAU_DOC]?.sabotage, 'sabotage', 'Chau Doc should sabotage when VC > COIN');
+    assert.equal(final.markers[MEKONG_SAIGON_CAN_THO]?.sabotage, 'sabotage', 'Saigon-Can Tho should sabotage when VC > COIN');
     assert.equal(final.markers[MEKONG_LONG_PHU]?.sabotage, 'sabotage', 'Pre-existing sabotage should remain in place');
 
-    assert.equal(final.globalVars.terrorSabotageMarkersPlaced, 15, 'Only one new sabotage marker should be consumed at cap 15');
+    assert.equal(final.globalVars.terrorSabotageMarkersPlaced, 15, 'Two new sabotage markers should be consumed (Chau Doc + Saigon-Can Tho)');
     assert.equal(
       countZoneTokens(final, 'available-VC:none', (token) => token.props.faction === 'VC' && token.props.type === 'guerrilla'),
       0,
-      'All 6 available VC guerrillas should be placed onto Mekong river LoCs',
+      'All 6 available VC guerrillas should be placed (2 per each of 3 Mekong LoCs)',
     );
   });
 });

@@ -1,6 +1,6 @@
 # 99MAPEDIREN-005: Delete editor renderers and clean up
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — runner-only
@@ -97,3 +97,10 @@ None created. Only deletions.
 1. `pnpm -F @ludoforge/runner typecheck` — confirms no dangling imports
 2. `pnpm -F @ludoforge/runner test` — confirms no test references broken
 3. `pnpm -F @ludoforge/runner lint` — confirms no lint issues from deletions
+
+## Outcome
+
+- **Completion date**: 2026-03-31
+- **What changed**: Deleted 3 editor renderer source files (`map-editor-zone-renderer.ts`, `map-editor-adjacency-renderer.ts`, `map-editor-route-renderer.ts`) and their 3 corresponding test files. ~920 lines of dead source code removed plus associated test lines.
+- **Deviations**: `map-editor-zone-visuals.ts` was kept as expected — still imported by `MapEditorScreen.tsx`, `map-editor-handle-renderer.ts`, and `map-editor-store.ts`.
+- **Verification**: Typecheck clean, 2087 tests passed, zero lint warnings.

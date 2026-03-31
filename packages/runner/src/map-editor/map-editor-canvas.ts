@@ -1,6 +1,8 @@
 import { Container, type FederatedPointerEvent } from 'pixi.js';
 
 import { createGameCanvas } from '../canvas/create-app.js';
+import { ContainerPool } from '../canvas/renderers/container-pool.js';
+import { createDisposalQueue } from '../canvas/renderers/disposal-queue.js';
 import { setupViewport, type WorldBounds } from '../canvas/viewport-setup.js';
 import { ZONE_RENDER_HEIGHT, ZONE_RENDER_WIDTH } from '../layout/layout-constants.js';
 import type { MapEditorStoreApi } from './map-editor-store.js';
@@ -43,6 +45,8 @@ export async function createEditorCanvas(
   viewportResult.updateWorldBounds(contentBounds);
   viewportResult.centerOnBounds(contentBounds);
 
+  const containerPool = new ContainerPool();
+  const disposalQueue = createDisposalQueue();
   const gridRenderer = createEditorGridRenderer(layers.backgroundLayer, viewportResult.viewport, store);
 
   const unsubscribe = store.subscribe((state, previousState) => {
@@ -68,6 +72,8 @@ export async function createEditorCanvas(
     app: gameCanvas.app,
     viewport: viewportResult.viewport,
     layers,
+    containerPool,
+    disposalQueue,
     resize(width, height) {
       gameCanvas.app.renderer.resize(width, height);
       viewportResult.resize(width, height, contentBounds);

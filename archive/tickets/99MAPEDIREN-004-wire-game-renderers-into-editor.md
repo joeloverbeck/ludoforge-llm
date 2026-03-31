@@ -1,6 +1,6 @@
 # 99MAPEDIREN-004: Wire game canvas renderers into map editor
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: None — runner-only
@@ -121,3 +121,15 @@ Adjust `createEditorCanvas()` to initialize `ContainerPool`, `DisposalQueue`, an
 2. `pnpm -F @ludoforge/runner test -- --reporter=verbose map-editor-canvas`
 3. `pnpm -F @ludoforge/runner test`
 4. `pnpm -F @ludoforge/runner typecheck && pnpm -F @ludoforge/runner lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-31
+- **What changed**:
+  - `map-editor-types.ts`: Added `containerPool` and `disposalQueue` to `EditorCanvas` interface
+  - `map-editor-canvas.ts`: Instantiates `ContainerPool` + `DisposalQueue`, exposes on return
+  - `MapEditorScreen.tsx`: Replaced 3 editor renderers (`createEditorZoneRenderer`, `createEditorAdjacencyRenderer`, `createEditorRouteRenderer`) with 5 game canvas renderers (`createZoneRenderer`, `createAdjacencyRenderer`, `createConnectionRouteRenderer`, `createRegionBoundaryRenderer`, `drawTableBackground`). Wired adapter via store subscription. Zone drag via `bindSelection`. Route editor interactions (waypoint insert on double-click, segment convert on right-click) re-attached on containers from `getContainerMap()`.
+  - `MapEditorScreen.test.tsx`: Rewrote mocks for game canvas renderers; added re-sync test verifying renderers update on store changes.
+  - `map-editor-canvas.test.ts`: Added test verifying `ContainerPool` and `DisposalQueue` creation.
+- **Deviations from plan**: None. All deliverables implemented as specified.
+- **Verification results**: Typecheck clean, lint clean (0 warnings), 206 test files / 2109 tests all passing.

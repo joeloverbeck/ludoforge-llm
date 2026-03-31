@@ -1,17 +1,31 @@
 import type { GameDef } from '@ludoforge/engine/runtime';
+import type { Container, FederatedPointerEvent } from 'pixi.js';
+import type { TableBounds } from '../canvas/renderers/table-background-renderer.js';
 import { type ReactElement, useEffect, useRef, useState } from 'react';
 
 import { getOrComputeLayout } from '../layout/layout-cache.js';
 import { resolveRunnerBootstrapByGameId } from '../bootstrap/runner-bootstrap.js';
+import { createAdjacencyRenderer } from '../canvas/renderers/adjacency-renderer.js';
+import { createConnectionRouteRenderer } from '../canvas/renderers/connection-route-renderer.js';
+import { computeProvinceBorders } from '../canvas/renderers/province-border-utils.js';
+import { createRegionBoundaryRenderer } from '../canvas/renderers/region-boundary-renderer.js';
+import { drawTableBackground } from '../canvas/renderers/table-background-renderer.js';
+import { createZoneRenderer } from '../canvas/renderers/zone-renderer.js';
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import { createEditorCanvas } from './map-editor-canvas.js';
-import { createEditorAdjacencyRenderer } from './map-editor-adjacency-renderer.js';
 import { exportVisualConfig, triggerDownload } from './map-editor-export.js';
 import { createEditorHandleRenderer } from './map-editor-handle-renderer.js';
-import { createEditorRouteRenderer } from './map-editor-route-renderer.js';
+import { attachZoneDragHandlers } from './map-editor-drag.js';
+import {
+  buildEditorPresentationScene,
+} from './map-editor-presentation-adapter.js';
+import {
+  findNearestRouteSegment,
+  resolveRouteGeometry,
+} from './map-editor-route-geometry.js';
+import { resolveMapEditorZoneVisuals } from './map-editor-zone-visuals.js';
 import { MapEditorToolbar } from './map-editor-toolbar.js';
 import { createMapEditorStore, type MapEditorStoreApi } from './map-editor-store.js';
-import { createEditorZoneRenderer } from './map-editor-zone-renderer.js';
 import { createVertexHandleRenderer } from './vertex-handle-renderer.js';
 import { useMapEditorKeyboardShortcuts } from './use-map-editor-keyboard-shortcuts.js';
 import type { Position } from './map-editor-types.js';
@@ -125,35 +139,109 @@ export function MapEditorScreen({ gameId, onBack }: MapEditorScreenProps): React
           return;
         }
 
-        const adjacencyRenderer = createEditorAdjacencyRenderer(
+        const { store, gameDef, visualConfigProvider } = screenState.editor;
+
+        const zoneLayerRouter = (category: string | null): Container =>
+          category === 'province'
+            ? canvas.layers.provinceZoneLayer
+            : canvas.layers.cityZoneLayer;
+
+        const zoneRenderer = createZoneRenderer(zoneLayerRouter, canvas.containerPool, {
+          bindSelection: (zoneContainer, zoneId) =>
+            attachZoneDragHandlers(zoneContainer, zoneId, canvas.viewport, store),
+        });
+
+        const adjacencyRenderer = createAdjacencyRenderer(
           canvas.layers.adjacencyLayer,
-          screenState.editor.store,
-          screenState.editor.visualConfigProvider,
+          visualConfigProvider,
+          { disposalQueue: canvas.disposalQueue },
         );
-        const zoneRenderer = createEditorZoneRenderer(
-          canvas.layers.cityZoneLayer,
-          screenState.editor.store,
-          screenState.editor.visualConfigProvider,
-          { dragSurface: canvas.viewport },
-        );
-        const routeRenderer = createEditorRouteRenderer(
+
+        const routeRenderer = createConnectionRouteRenderer(
           canvas.layers.connectionRouteLayer,
-          screenState.editor.store,
-          screenState.editor.gameDef,
-          screenState.editor.visualConfigProvider,
+          visualConfigProvider,
+          {
+            bindSelection: (routeContainer, zoneId) => {
+              const onPointerTap = (): void => {
+                store.getState().selectZone(null);
+                store.getState().selectRoute(zoneId);
+              };
+              routeContainer.on('pointertap', onPointerTap);
+              return () => {
+                routeContainer.off('pointertap', onPointerTap);
+              };
+            },
+          },
         );
+
+        const regionRenderer = createRegionBoundaryRenderer(canvas.layers.regionLayer);
+
         const handleRenderer = createEditorHandleRenderer(
           canvas.layers.handleLayer,
-          screenState.editor.store,
-          screenState.editor.gameDef,
-          screenState.editor.visualConfigProvider,
+          store,
+          gameDef,
+          visualConfigProvider,
           { dragSurface: canvas.viewport },
         );
         const vertexHandleRenderer = createVertexHandleRenderer(
           canvas.layers.handleLayer,
-          screenState.editor.store,
+          store,
           { dragSurface: canvas.viewport },
         );
+
+        const zoneVisuals = resolveMapEditorZoneVisuals(gameDef, visualConfigProvider);
+        const routeInteractionCleanups: Array<() => void> = [];
+
+        const syncRenderers = (): void => {
+          const state = store.getState();
+          const scene = buildEditorPresentationScene({
+            gameDef,
+            visualConfigProvider,
+            positions: state.zonePositions,
+            zoneVertices: state.zoneVertices,
+            connectionAnchors: state.connectionAnchors,
+            connectionRoutes: state.connectionRoutes,
+            selectedZoneId: state.selectedZoneId,
+          });
+
+          const tableBackground = visualConfigProvider.getTableBackground();
+          const tableBounds = computeTableBounds(state.zonePositions);
+          drawTableBackground(canvas.layers.backgroundLayer, tableBackground, tableBounds);
+
+          regionRenderer.update(scene.regions);
+
+          const provinceBorders = computeProvinceBorders(
+            scene.zones,
+            state.zonePositions,
+            scene.adjacencies,
+          );
+          zoneRenderer.update(scene.zones, state.zonePositions, provinceBorders);
+          adjacencyRenderer.update(scene.adjacencies, state.zonePositions, scene.zones);
+          routeRenderer.update(scene.connectionRoutes, scene.junctions, state.zonePositions);
+
+          wireRouteEditorInteractions(
+            routeRenderer.getContainerMap(),
+            store,
+            zoneVisuals,
+            routeInteractionCleanups,
+          );
+        };
+
+        syncRenderers();
+
+        const unsubscribeSync = store.subscribe((state, previousState) => {
+          if (
+            state.zonePositions === previousState.zonePositions
+            && state.zoneVertices === previousState.zoneVertices
+            && state.connectionAnchors === previousState.connectionAnchors
+            && state.connectionRoutes === previousState.connectionRoutes
+            && state.selectedZoneId === previousState.selectedZoneId
+            && state.selectedRouteId === previousState.selectedRouteId
+          ) {
+            return;
+          }
+          syncRenderers();
+        });
 
         const syncCanvasSize = (): void => {
           const nextWidth = Math.max(container.clientWidth, 1);
@@ -170,7 +258,12 @@ export function MapEditorScreen({ gameId, onBack }: MapEditorScreenProps): React
 
         destroyRuntime = () => {
           removeWindowListeners();
+          unsubscribeSync();
+          for (const cleanup of routeInteractionCleanups) {
+            cleanup();
+          }
           adjacencyRenderer.destroy();
+          regionRenderer.destroy();
           vertexHandleRenderer.destroy();
           handleRenderer.destroy();
           routeRenderer.destroy();
@@ -364,4 +457,136 @@ function formatCoordinateReadout(
 
 function formatPosition(position: Position): string {
   return `(${Math.round(position.x)}, ${Math.round(position.y)})`;
+}
+
+const ROUTE_CURVE_SEGMENTS = 24;
+const ROUTE_HIT_AREA_PADDING = 12;
+
+function computeTableBounds(positions: ReadonlyMap<string, Position>): TableBounds {
+  if (positions.size === 0) {
+    return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+  }
+
+  let minX = Number.POSITIVE_INFINITY;
+  let minY = Number.POSITIVE_INFINITY;
+  let maxX = Number.NEGATIVE_INFINITY;
+  let maxY = Number.NEGATIVE_INFINITY;
+
+  for (const position of positions.values()) {
+    minX = Math.min(minX, position.x);
+    minY = Math.min(minY, position.y);
+    maxX = Math.max(maxX, position.x);
+    maxY = Math.max(maxY, position.y);
+  }
+
+  return { minX, minY, maxX, maxY };
+}
+
+function wireRouteEditorInteractions(
+  routeContainers: ReadonlyMap<string, Container>,
+  store: MapEditorStoreApi,
+  zoneVisuals: ReadonlyMap<string, import('./map-editor-route-geometry.js').EditorRouteZoneVisual>,
+  cleanups: Array<() => void>,
+): void {
+  for (const cleanup of cleanups) {
+    cleanup();
+  }
+  cleanups.length = 0;
+
+  for (const [routeId, midpointContainer] of routeContainers) {
+    const curveGraphics = midpointContainer.parent?.children.find(
+      (child) => child !== midpointContainer && child.eventMode === 'static',
+    );
+    if (curveGraphics === undefined) {
+      continue;
+    }
+
+    const onDoubleClick = (event: FederatedPointerEvent): void => {
+      if (event.detail < 2) {
+        return;
+      }
+
+      const state = store.getState();
+      const route = state.connectionRoutes.get(routeId);
+      if (route === undefined) {
+        return;
+      }
+
+      const geometry = resolveRouteGeometry(
+        route,
+        state.zonePositions,
+        state.connectionAnchors,
+        zoneVisuals,
+        { curveSegments: ROUTE_CURVE_SEGMENTS, hitAreaPadding: ROUTE_HIT_AREA_PADDING },
+      );
+      if (geometry === null) {
+        return;
+      }
+
+      const localPosition = event.getLocalPosition(curveGraphics.parent ?? curveGraphics);
+      const match = findNearestRouteSegment(geometry, {
+        x: localPosition.x,
+        y: localPosition.y,
+      });
+      if (match === null) {
+        return;
+      }
+
+      state.insertWaypoint(routeId, match.segmentIndex, match.position);
+    };
+
+    const onRightClick = (event: FederatedPointerEvent): void => {
+      if (event.button !== 2) {
+        return;
+      }
+      event.stopPropagation();
+
+      const state = store.getState();
+      state.selectZone(null);
+      state.selectRoute(routeId);
+
+      const route = state.connectionRoutes.get(routeId);
+      if (route === undefined) {
+        return;
+      }
+
+      const geometry = resolveRouteGeometry(
+        route,
+        state.zonePositions,
+        state.connectionAnchors,
+        zoneVisuals,
+        { curveSegments: ROUTE_CURVE_SEGMENTS, hitAreaPadding: ROUTE_HIT_AREA_PADDING },
+      );
+      if (geometry === null) {
+        return;
+      }
+
+      const localPosition = event.getLocalPosition(curveGraphics.parent ?? curveGraphics);
+      const match = findNearestRouteSegment(geometry, {
+        x: localPosition.x,
+        y: localPosition.y,
+      });
+      if (match === null) {
+        return;
+      }
+
+      const segment = route.segments[match.segmentIndex];
+      if (segment === undefined) {
+        return;
+      }
+
+      state.convertSegment(
+        routeId,
+        match.segmentIndex,
+        segment.kind === 'straight' ? 'quadratic' : 'straight',
+      );
+    };
+
+    curveGraphics.on('pointertap', onDoubleClick);
+    curveGraphics.on('pointerdown', onRightClick);
+    cleanups.push(() => {
+      curveGraphics.off('pointertap', onDoubleClick);
+      curveGraphics.off('pointerdown', onRightClick);
+    });
+  }
 }

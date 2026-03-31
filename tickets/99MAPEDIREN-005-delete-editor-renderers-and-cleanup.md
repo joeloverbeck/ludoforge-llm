@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — runner-only
-**Deps**: `specs/99-map-editor-renderer-unification.md`, `99MAPEDIREN-004` (renderers are now dead code)
+**Deps**: `specs/99-map-editor-renderer-unification.md`, `archive/tickets/99MAPEDIREN-004-wire-game-renderers-into-editor.md`
 
 ## Problem
 

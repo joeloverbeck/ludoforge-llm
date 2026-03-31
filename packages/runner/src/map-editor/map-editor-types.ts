@@ -1,6 +1,8 @@
 import type { Viewport } from 'pixi-viewport';
 import type { Application, Container } from 'pixi.js';
 
+import type { ContainerPool } from '../canvas/renderers/container-pool.js';
+import type { DisposalQueue } from '../canvas/renderers/disposal-queue.js';
 import type { ConnectionRouteDefinition } from '../config/visual-config-types.js';
 import type { Position } from '../spatial/position-types.js';
 
@@ -49,6 +51,8 @@ export interface EditorCanvas {
   readonly app: Application;
   readonly viewport: Viewport;
   readonly layers: EditorLayerSet;
+  readonly containerPool: ContainerPool;
+  readonly disposalQueue: DisposalQueue;
   resize(width: number, height: number): void;
   centerOnContent(): void;
   destroy(): void;

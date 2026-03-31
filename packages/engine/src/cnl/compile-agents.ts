@@ -14,7 +14,7 @@ import type {
   AgentParameterValue,
   AgentPolicyCatalog,
   AgentPolicyCostClass,
-  AgentPolicySurfaceVisibilityClass,
+  SurfaceVisibilityClass,
   AgentPolicyValueType,
   CompiledAgentAggregate,
   CompiledAgentCandidateParamDef,
@@ -22,8 +22,8 @@ import type {
   CompiledAgentDependencyRefs,
   CompiledAgentLibraryIndex,
   CompiledAgentParameterDef,
-  CompiledAgentPolicySurfaceCatalog,
-  CompiledAgentPolicySurfaceVisibility,
+  CompiledSurfaceCatalog,
+  CompiledSurfaceVisibility,
   CompiledAgentProfile,
   CompiledAgentPruningRule,
   CompiledAgentScoreTerm,
@@ -119,7 +119,7 @@ function lowerSurfaceVisibility(
   visibility: GameSpecAgentsSection['visibility'],
   diagnostics: Diagnostic[],
   options: LowerAgentsOptions,
-): CompiledAgentPolicySurfaceCatalog {
+): CompiledSurfaceCatalog {
   return {
     globalVars: lowerSurfaceVisibilityMap(
       options.globalVarIds ?? [],
@@ -203,9 +203,9 @@ function lowerSurfaceVisibilityMap(
   overrides: Readonly<Record<string, GameSpecPolicySurfaceVisibilityDef>> | undefined,
   diagnostics: Diagnostic[],
   path: string,
-  defaults: CompiledAgentPolicySurfaceVisibility,
-): Readonly<Record<string, CompiledAgentPolicySurfaceVisibility>> {
-  const compiled: Record<string, CompiledAgentPolicySurfaceVisibility> = {};
+  defaults: CompiledSurfaceVisibility,
+): Readonly<Record<string, CompiledSurfaceVisibility>> {
+  const compiled: Record<string, CompiledSurfaceVisibility> = {};
   const knownIdSet = new Set(knownIds);
   for (const id of knownIds) {
     compiled[id] = lowerSurfaceVisibilityEntry(overrides?.[id], diagnostics, `${path}.${id}`, defaults);
@@ -229,8 +229,8 @@ function lowerSurfaceVisibilityEntry(
   entry: GameSpecPolicySurfaceVisibilityDef | undefined,
   diagnostics: Diagnostic[],
   path: string,
-  defaults: CompiledAgentPolicySurfaceVisibility,
-): CompiledAgentPolicySurfaceVisibility {
+  defaults: CompiledSurfaceVisibility,
+): CompiledSurfaceVisibility {
   const current = normalizeSurfaceVisibilityClass(entry?.current, `${path}.current`, diagnostics) ?? defaults.current;
   const previewVisibility = normalizeSurfaceVisibilityClass(entry?.preview?.visibility, `${path}.preview.visibility`, diagnostics)
     ?? current;
@@ -250,7 +250,7 @@ function normalizeSurfaceVisibilityClass(
   value: unknown,
   path: string,
   diagnostics: Diagnostic[],
-): AgentPolicySurfaceVisibilityClass | null {
+): SurfaceVisibilityClass | null {
   if (value === undefined) {
     return null;
   }
@@ -955,7 +955,7 @@ class AgentLibraryCompiler {
 
   constructor(
     authoredLibrary: GameSpecAgentLibrary | undefined,
-    private readonly surfaceVisibility: CompiledAgentPolicySurfaceCatalog,
+    private readonly surfaceVisibility: CompiledSurfaceCatalog,
     private readonly parameterDefs: Readonly<Record<string, CompiledAgentParameterDef>>,
     private readonly candidateParamDefs: Readonly<Record<string, CompiledAgentCandidateParamDef>>,
     private readonly diagnostics: Diagnostic[],

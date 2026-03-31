@@ -8,7 +8,7 @@ import {
   asPlayerId,
   initialState,
   type AgentPolicyCatalog,
-  type CompiledAgentPolicySurfaceVisibility,
+  type CompiledSurfaceVisibility,
   type CompiledCardMetadataIndex,
   type CompiledEventAnnotationIndex,
   type CompiledEventCardAnnotation,
@@ -21,12 +21,12 @@ import type { EventDeckDef } from '../../../src/kernel/types-events.js';
 
 const phaseId = asPhaseId('main');
 
-const PUBLIC_VISIBILITY: CompiledAgentPolicySurfaceVisibility = {
+const PUBLIC_VISIBILITY: CompiledSurfaceVisibility = {
   current: 'public',
   preview: { visibility: 'public', allowWhenHiddenSampling: false },
 };
 
-const HIDDEN_VISIBILITY: CompiledAgentPolicySurfaceVisibility = {
+const HIDDEN_VISIBILITY: CompiledSurfaceVisibility = {
   current: 'hidden',
   preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
 };
@@ -66,7 +66,7 @@ const SAMPLE_ANNOTATION: CompiledEventCardAnnotation = {
 };
 
 function createMinimalCatalog(overrides?: {
-  readonly activeCardAnnotation?: CompiledAgentPolicySurfaceVisibility;
+  readonly activeCardAnnotation?: CompiledSurfaceVisibility;
 }): AgentPolicyCatalog {
   const profile = {
     fingerprint: 'test-profile',
@@ -508,7 +508,7 @@ describe('existing surface ref tests still pass', () => {
   it('activeCardIdentity still resolves correctly alongside annotation changes', () => {
     const catalog = createMinimalCatalog({ activeCardAnnotation: PUBLIC_VISIBILITY });
     // Add activeCardIdentity visibility
-    (catalog.surfaceVisibility as { activeCardIdentity: CompiledAgentPolicySurfaceVisibility }).activeCardIdentity = PUBLIC_VISIBILITY;
+    (catalog.surfaceVisibility as { activeCardIdentity: CompiledSurfaceVisibility }).activeCardIdentity = PUBLIC_VISIBILITY;
     const def = createDef(catalog, { cardAnnotationIndex: testAnnotationIndex });
     const state = placeCardInDiscard(initialState(def, 1, 2).state, 'card-1');
     const providers = makeProviders(state, def, catalog);

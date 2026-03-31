@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — `game-spec-doc.ts`
-**Deps**: `tickets/102SHAOBSMOD-001.md`, `specs/102-shared-observer-model.md`
+**Deps**: `archive/tickets/102SHAOBSMOD-001.md`, `specs/102-shared-observer-model.md`
 
 ## Problem
 

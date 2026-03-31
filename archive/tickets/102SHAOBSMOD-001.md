@@ -1,6 +1,6 @@
 # 102SHAOBSMOD-001: Rename shared visibility types (remove AgentPolicy prefix)
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `types-core.ts`, `schemas-core.ts`, 15 consuming source/test files
@@ -130,3 +130,10 @@ Update any golden JSON fixtures that reference the old type names in their expec
 2. `pnpm turbo typecheck` — type correctness
 3. `pnpm turbo lint` — lint compliance
 4. `pnpm turbo schema:artifacts` — schema regeneration
+
+## Outcome
+
+- **Completion date**: 2026-04-01
+- **What changed**: All 10 `AgentPolicy*` surface visibility types renamed to shared equivalents across 17 files (types-core.ts + 8 source + 8 test files). Schema artifacts regenerated. 129 insertions, 129 deletions — pure rename, zero net line changes.
+- **Deviations**: `packages/engine/test/unit/property/policy-visibility.test.ts` was listed in the ticket but contains zero references to any renamed type — correctly skipped (16 consuming files, not 17).
+- **Verification**: 5365 engine tests pass (0 failures), typecheck clean, lint clean, schema artifacts in sync, zero grep hits for old type names.

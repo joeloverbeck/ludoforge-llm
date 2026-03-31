@@ -9,7 +9,7 @@ import {
   assertValidatedGameDef,
   initialState,
   type AgentPolicyCatalog,
-  type CompiledAgentPolicySurfaceVisibility,
+  type CompiledSurfaceVisibility,
   type GameDef,
   type GameState,
   type Token,
@@ -54,7 +54,7 @@ function makeProviders(def: GameDef, state: GameState, catalog: AgentPolicyCatal
   });
 }
 
-function makeHiddenVisibility(): CompiledAgentPolicySurfaceVisibility {
+function makeHiddenVisibility(): CompiledSurfaceVisibility {
   return { current: 'hidden', preview: { visibility: 'hidden', allowWhenHiddenSampling: false } };
 }
 

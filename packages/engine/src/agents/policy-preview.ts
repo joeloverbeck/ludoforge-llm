@@ -6,7 +6,7 @@ import { buildSeatResolutionIndex, resolvePlayerIndexForSeatValue, type SeatReso
 import { classifyPlayableMoveCandidate, type PlayableCandidateClassification } from '../kernel/playable-candidate.js';
 import type { PlayerId } from '../kernel/branded.js';
 import type {
-  CompiledAgentPolicyPreviewSurfaceRef,
+  CompiledPreviewSurfaceRef,
   CompiledCardMetadataEntry,
   GameDef,
   GameState,
@@ -61,7 +61,7 @@ export interface CreatePolicyPreviewRuntimeInput {
 export interface PolicyPreviewRuntime {
   resolveSurface(
     candidate: PolicyPreviewCandidate,
-    ref: CompiledAgentPolicyPreviewSurfaceRef,
+    ref: CompiledPreviewSurfaceRef,
   ): PolicyPreviewSurfaceResolution;
   getOutcome(candidate: PolicyPreviewCandidate): PolicyPreviewTraceOutcome;
 }
@@ -288,7 +288,7 @@ function toPreviewTraceOutcome(outcome: PreviewOutcome): PolicyPreviewTraceOutco
 function resolvePerPlayerTargetIndex(
   def: GameDef,
   state: GameState,
-  ref: CompiledAgentPolicyPreviewSurfaceRef,
+  ref: CompiledPreviewSurfaceRef,
   actingPlayerId: PlayerId,
   seatId: string,
   seatResolutionIndex: SeatResolutionIndex,
@@ -329,7 +329,7 @@ function resolveActiveCardFamilyValue(
 
 function resolveSeatVarRef(
   state: GameState,
-  ref: CompiledAgentPolicyPreviewSurfaceRef,
+  ref: CompiledPreviewSurfaceRef,
   playerIndex: number | undefined,
 ): number | undefined {
   if (ref.family !== 'perPlayerVar' || playerIndex === undefined) {

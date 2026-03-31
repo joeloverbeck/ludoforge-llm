@@ -1,7 +1,7 @@
 import type {
   CompiledEventCardAnnotation,
   CompiledEventSideAnnotation,
-  CompiledAgentPolicySurfaceSelector,
+  SurfaceSelector,
 } from '../kernel/types.js';
 
 export type AnnotationValue = number | boolean | undefined;
@@ -15,7 +15,7 @@ const PER_SEAT_RECORD_METRICS: ReadonlySet<string> = new Set([
 
 export function extractAnnotationValue(
   annotation: CompiledEventCardAnnotation,
-  ref: { readonly id: string; readonly selector?: CompiledAgentPolicySurfaceSelector },
+  ref: { readonly id: string; readonly selector?: SurfaceSelector },
   evaluatingSeatId: string,
   activeSeatId?: string,
 ): AnnotationValue {

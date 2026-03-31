@@ -24,8 +24,8 @@ import {
   type AgentPolicyExpr,
   type AgentPolicyLiteral,
   type ChoicePendingRequest,
-  type CompiledAgentPolicyCurrentSurfaceRef,
-  type CompiledAgentPolicyPreviewSurfaceRef,
+  type CompiledCurrentSurfaceRef,
+  type CompiledPreviewSurfaceRef,
   type CompiledAgentPolicyRef,
   type GameState,
   type GameDef,
@@ -1317,7 +1317,7 @@ describe('policy-eval', () => {
         kind: 'currentSurface',
         family: 'globalVar',
         id: 'usMargin',
-      } satisfies CompiledAgentPolicyCurrentSurfaceRef),
+      } satisfies CompiledCurrentSurfaceRef),
       1,
     );
     assert.deepEqual(
@@ -1325,7 +1325,7 @@ describe('policy-eval', () => {
         kind: 'previewSurface',
         family: 'globalVar',
         id: 'usMargin',
-      } satisfies CompiledAgentPolicyPreviewSurfaceRef),
+      } satisfies CompiledPreviewSurfaceRef),
       { kind: 'value', value: 4 },
     );
     assert.equal(providers.completion?.resolveDecisionIntrinsic('type'), 'chooseOne');
@@ -1402,7 +1402,7 @@ describe('policy-eval', () => {
         family: 'perPlayerVar',
         id: 'tempo',
         selector: { kind: 'player', player: 'self' },
-      } satisfies CompiledAgentPolicyCurrentSurfaceRef),
+      } satisfies CompiledCurrentSurfaceRef),
       6,
     );
   });

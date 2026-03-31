@@ -9,8 +9,8 @@ import type {
   AgentPolicyCatalog,
   ChoicePendingRequest,
   CompiledAgentPolicyRef,
-  CompiledAgentPolicyCurrentSurfaceRef,
-  CompiledAgentPolicyPreviewSurfaceRef,
+  CompiledCurrentSurfaceRef,
+  CompiledPreviewSurfaceRef,
   GameDef,
   GameState,
   MoveParamValue,
@@ -54,13 +54,13 @@ export interface PolicyCandidateProvider {
 }
 
 export interface PolicyCurrentSurfaceProvider {
-  resolveSurface(ref: CompiledAgentPolicyCurrentSurfaceRef): PolicyValue;
+  resolveSurface(ref: CompiledCurrentSurfaceRef): PolicyValue;
 }
 
 export interface PolicyPreviewSurfaceProvider {
   resolveSurface(
     candidate: PolicyRuntimeCandidate,
-    ref: CompiledAgentPolicyPreviewSurfaceRef,
+    ref: CompiledPreviewSurfaceRef,
   ): PolicyPreviewSurfaceResolution;
   getOutcome(candidate: PolicyRuntimeCandidate): PolicyPreviewTraceOutcome;
 }
@@ -312,7 +312,7 @@ function normalizeCompletionOptionValue(optionValue: MoveParamValue): PolicyValu
 function resolvePerPlayerTargetIndex(
   def: GameDef,
   state: GameState,
-  ref: CompiledAgentPolicyCurrentSurfaceRef | CompiledAgentPolicyPreviewSurfaceRef,
+  ref: CompiledCurrentSurfaceRef | CompiledPreviewSurfaceRef,
   actingPlayerId: PlayerId,
   seatId: string,
   seatResolutionIndex: SeatResolutionIndex,
@@ -330,7 +330,7 @@ function resolvePerPlayerTargetIndex(
 
 function resolveSeatVarRef(
   state: GameState,
-  ref: CompiledAgentPolicyCurrentSurfaceRef | CompiledAgentPolicyPreviewSurfaceRef,
+  ref: CompiledCurrentSurfaceRef | CompiledPreviewSurfaceRef,
   playerIndex: number | undefined,
 ): number | undefined {
   if (ref.family !== 'perPlayerVar' || playerIndex === undefined) {

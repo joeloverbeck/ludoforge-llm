@@ -262,39 +262,39 @@ export const ScoringDefSchema = z
   })
   .strict();
 
-export const AgentPolicySurfaceVisibilityClassSchema = z.union([
+export const SurfaceVisibilityClassSchema = z.union([
   z.literal('public'),
   z.literal('seatVisible'),
   z.literal('hidden'),
 ]);
 
-export const CompiledAgentPolicySurfacePreviewVisibilitySchema = z
+export const CompiledSurfacePreviewVisibilitySchema = z
   .object({
-    visibility: AgentPolicySurfaceVisibilityClassSchema,
+    visibility: SurfaceVisibilityClassSchema,
     allowWhenHiddenSampling: BooleanSchema,
   })
   .strict();
 
-export const CompiledAgentPolicySurfaceVisibilitySchema = z
+export const CompiledSurfaceVisibilitySchema = z
   .object({
-    current: AgentPolicySurfaceVisibilityClassSchema,
-    preview: CompiledAgentPolicySurfacePreviewVisibilitySchema,
+    current: SurfaceVisibilityClassSchema,
+    preview: CompiledSurfacePreviewVisibilitySchema,
   })
   .strict();
 
-export const CompiledAgentPolicySurfaceCatalogSchema = z
+export const CompiledSurfaceCatalogSchema = z
   .object({
-    globalVars: z.record(StringSchema, CompiledAgentPolicySurfaceVisibilitySchema),
-    perPlayerVars: z.record(StringSchema, CompiledAgentPolicySurfaceVisibilitySchema),
-    derivedMetrics: z.record(StringSchema, CompiledAgentPolicySurfaceVisibilitySchema),
+    globalVars: z.record(StringSchema, CompiledSurfaceVisibilitySchema),
+    perPlayerVars: z.record(StringSchema, CompiledSurfaceVisibilitySchema),
+    derivedMetrics: z.record(StringSchema, CompiledSurfaceVisibilitySchema),
     victory: z.object({
-      currentMargin: CompiledAgentPolicySurfaceVisibilitySchema,
-      currentRank: CompiledAgentPolicySurfaceVisibilitySchema,
+      currentMargin: CompiledSurfaceVisibilitySchema,
+      currentRank: CompiledSurfaceVisibilitySchema,
     }).strict(),
-    activeCardIdentity: CompiledAgentPolicySurfaceVisibilitySchema,
-    activeCardTag: CompiledAgentPolicySurfaceVisibilitySchema,
-    activeCardMetadata: CompiledAgentPolicySurfaceVisibilitySchema,
-    activeCardAnnotation: CompiledAgentPolicySurfaceVisibilitySchema,
+    activeCardIdentity: CompiledSurfaceVisibilitySchema,
+    activeCardTag: CompiledSurfaceVisibilitySchema,
+    activeCardMetadata: CompiledSurfaceVisibilitySchema,
+    activeCardAnnotation: CompiledSurfaceVisibilitySchema,
   })
   .strict();
 
@@ -590,7 +590,7 @@ const AgentPolicyLiteralSchema = z.union([
   z.array(StringSchema),
 ]);
 
-const CompiledAgentPolicySurfaceRefBaseSchema = {
+const CompiledSurfaceRefBaseSchema = {
   family: z.union([
     z.literal('globalVar'),
     z.literal('perPlayerVar'),
@@ -619,11 +619,11 @@ const CompiledAgentPolicyRefSchema = z.union([
   }).strict(),
   z.object({
     kind: z.literal('currentSurface'),
-    ...CompiledAgentPolicySurfaceRefBaseSchema,
+    ...CompiledSurfaceRefBaseSchema,
   }).strict(),
   z.object({
     kind: z.literal('previewSurface'),
-    ...CompiledAgentPolicySurfaceRefBaseSchema,
+    ...CompiledSurfaceRefBaseSchema,
   }).strict(),
   z.object({
     kind: z.literal('candidateIntrinsic'),
@@ -905,7 +905,7 @@ const AgentPolicyCatalogSchema = z
   .object({
     schemaVersion: z.literal(2),
     catalogFingerprint: StringSchema,
-    surfaceVisibility: CompiledAgentPolicySurfaceCatalogSchema,
+    surfaceVisibility: CompiledSurfaceCatalogSchema,
     parameterDefs: z.record(StringSchema, CompiledAgentParameterDefSchema),
     candidateParamDefs: z.record(StringSchema, CompiledAgentCandidateParamDefSchema),
     library: CompiledAgentLibraryIndexSchema,

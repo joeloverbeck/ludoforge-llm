@@ -9,7 +9,7 @@ import {
   asZoneId,
   initialState,
   type AgentPolicyCatalog,
-  type CompiledAgentPolicySurfaceVisibility,
+  type CompiledSurfaceVisibility,
   type CompiledCardMetadataIndex,
   type CompiledEventAnnotationIndex,
   type CompiledEventCardAnnotation,
@@ -25,12 +25,12 @@ import type { EventDeckDef } from '../../../src/kernel/types-events.js';
 
 const phaseId = asPhaseId('main');
 
-const PUBLIC_VISIBILITY: CompiledAgentPolicySurfaceVisibility = {
+const PUBLIC_VISIBILITY: CompiledSurfaceVisibility = {
   current: 'public',
   preview: { visibility: 'public', allowWhenHiddenSampling: false },
 };
 
-const HIDDEN_VISIBILITY: CompiledAgentPolicySurfaceVisibility = {
+const HIDDEN_VISIBILITY: CompiledSurfaceVisibility = {
   current: 'hidden',
   preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
 };
@@ -102,7 +102,7 @@ const testCardMetadataIndex: CompiledCardMetadataIndex = {
 };
 
 function createCatalog(overrides?: {
-  readonly activeCardAnnotation?: CompiledAgentPolicySurfaceVisibility;
+  readonly activeCardAnnotation?: CompiledSurfaceVisibility;
 }): AgentPolicyCatalog {
   const profile = {
     fingerprint: 'test-profile',

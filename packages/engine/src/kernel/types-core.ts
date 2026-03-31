@@ -309,7 +309,7 @@ export type AgentParameterType = 'number' | 'integer' | 'boolean' | 'enum' | 'id
 export type AgentParameterValue = number | boolean | string | readonly string[];
 export type AgentPolicyValueType = 'number' | 'boolean' | 'id' | 'idList';
 export type AgentPolicyCostClass = 'state' | 'candidate' | 'preview';
-export type AgentPolicySurfaceVisibilityClass = 'public' | 'seatVisible' | 'hidden';
+export type SurfaceVisibilityClass = 'public' | 'seatVisible' | 'hidden';
 export type AgentPolicyLiteral = number | boolean | string | null | readonly string[];
 export type AgentPolicyOperator =
   | 'abs'
@@ -335,7 +335,7 @@ export type AgentPolicyOperator =
   | 'or'
   | 'sub';
 export type CompiledAgentPolicyLibraryRefKind = 'stateFeature' | 'candidateFeature' | 'aggregate';
-export type CompiledAgentPolicySurfaceRefFamily =
+export type SurfaceRefFamily =
   | 'globalVar'
   | 'perPlayerVar'
   | 'derivedMetric'
@@ -345,7 +345,7 @@ export type CompiledAgentPolicySurfaceRefFamily =
   | 'activeCardTag'
   | 'activeCardMetadata'
   | 'activeCardAnnotation';
-export type CompiledAgentPolicySurfaceSelector =
+export type SurfaceSelector =
   | {
       readonly kind: 'role';
       readonly seatToken: string;
@@ -354,27 +354,27 @@ export type CompiledAgentPolicySurfaceSelector =
       readonly kind: 'player';
       readonly player: 'self' | 'active';
     };
-export interface CompiledAgentPolicySurfaceRefBase {
-  readonly family: CompiledAgentPolicySurfaceRefFamily;
+export interface CompiledSurfaceRefBase {
+  readonly family: SurfaceRefFamily;
   readonly id: string;
-  readonly selector?: CompiledAgentPolicySurfaceSelector;
+  readonly selector?: SurfaceSelector;
 }
-export interface CompiledAgentPolicyCurrentSurfaceRef extends CompiledAgentPolicySurfaceRefBase {
+export interface CompiledCurrentSurfaceRef extends CompiledSurfaceRefBase {
   readonly kind: 'currentSurface';
 }
-export interface CompiledAgentPolicyPreviewSurfaceRef extends CompiledAgentPolicySurfaceRefBase {
+export interface CompiledPreviewSurfaceRef extends CompiledSurfaceRefBase {
   readonly kind: 'previewSurface';
 }
-export type CompiledAgentPolicySurfaceRef =
-  | CompiledAgentPolicyCurrentSurfaceRef
-  | CompiledAgentPolicyPreviewSurfaceRef;
+export type CompiledSurfaceRef =
+  | CompiledCurrentSurfaceRef
+  | CompiledPreviewSurfaceRef;
 export type CompiledAgentPolicyRef =
   | {
       readonly kind: 'library';
       readonly refKind: CompiledAgentPolicyLibraryRefKind;
       readonly id: string;
     }
-  | CompiledAgentPolicySurfaceRef
+  | CompiledSurfaceRef
   | {
       readonly kind: 'candidateIntrinsic';
       readonly intrinsic: AgentPolicyCandidateIntrinsic;
@@ -482,14 +482,14 @@ export type AgentPolicyExpr =
       readonly prop: string;
     };
 
-export interface CompiledAgentPolicySurfacePreviewVisibility {
-  readonly visibility: AgentPolicySurfaceVisibilityClass;
+export interface CompiledSurfacePreviewVisibility {
+  readonly visibility: SurfaceVisibilityClass;
   readonly allowWhenHiddenSampling: boolean;
 }
 
-export interface CompiledAgentPolicySurfaceVisibility {
-  readonly current: AgentPolicySurfaceVisibilityClass;
-  readonly preview: CompiledAgentPolicySurfacePreviewVisibility;
+export interface CompiledSurfaceVisibility {
+  readonly current: SurfaceVisibilityClass;
+  readonly preview: CompiledSurfacePreviewVisibility;
 }
 
 export interface CompiledCardMetadataEntry {
@@ -535,18 +535,18 @@ export interface CompiledEventAnnotationIndex {
   readonly entries: Readonly<Record<string, CompiledEventCardAnnotation>>;
 }
 
-export interface CompiledAgentPolicySurfaceCatalog {
-  readonly globalVars: Readonly<Record<string, CompiledAgentPolicySurfaceVisibility>>;
-  readonly perPlayerVars: Readonly<Record<string, CompiledAgentPolicySurfaceVisibility>>;
-  readonly derivedMetrics: Readonly<Record<string, CompiledAgentPolicySurfaceVisibility>>;
+export interface CompiledSurfaceCatalog {
+  readonly globalVars: Readonly<Record<string, CompiledSurfaceVisibility>>;
+  readonly perPlayerVars: Readonly<Record<string, CompiledSurfaceVisibility>>;
+  readonly derivedMetrics: Readonly<Record<string, CompiledSurfaceVisibility>>;
   readonly victory: {
-    readonly currentMargin: CompiledAgentPolicySurfaceVisibility;
-    readonly currentRank: CompiledAgentPolicySurfaceVisibility;
+    readonly currentMargin: CompiledSurfaceVisibility;
+    readonly currentRank: CompiledSurfaceVisibility;
   };
-  readonly activeCardIdentity: CompiledAgentPolicySurfaceVisibility;
-  readonly activeCardTag: CompiledAgentPolicySurfaceVisibility;
-  readonly activeCardMetadata: CompiledAgentPolicySurfaceVisibility;
-  readonly activeCardAnnotation: CompiledAgentPolicySurfaceVisibility;
+  readonly activeCardIdentity: CompiledSurfaceVisibility;
+  readonly activeCardTag: CompiledSurfaceVisibility;
+  readonly activeCardMetadata: CompiledSurfaceVisibility;
+  readonly activeCardAnnotation: CompiledSurfaceVisibility;
 }
 
 export interface CompiledAgentParameterDef {
@@ -676,7 +676,7 @@ export interface CompiledAgentProfile {
 export interface AgentPolicyCatalog {
   readonly schemaVersion: 2;
   readonly catalogFingerprint: string;
-  readonly surfaceVisibility: CompiledAgentPolicySurfaceCatalog;
+  readonly surfaceVisibility: CompiledSurfaceCatalog;
   readonly parameterDefs: Readonly<Record<string, CompiledAgentParameterDef>>;
   readonly candidateParamDefs: Readonly<Record<string, CompiledAgentCandidateParamDef>>;
   readonly library: CompiledAgentLibraryIndex;

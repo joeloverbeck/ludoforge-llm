@@ -1,18 +1,14 @@
 import { Container, Graphics, type FederatedPointerEvent } from 'pixi.js';
 
+import {
+  createDraggableHandle,
+  createMidpointHandle,
+  DOUBLE_CLICK_MS,
+} from './handle-graphics.js';
 import type { MapEditorStoreApi } from './map-editor-store.js';
 import type { Position } from './map-editor-types.js';
 
-const VERTEX_HANDLE_RADIUS = 7;
-const VERTEX_HANDLE_HOVER_RADIUS = 10;
-const VERTEX_GLOW_RADIUS = 14;
-const VERTEX_GLOW_ALPHA = 0.3;
-const MIDPOINT_HANDLE_RADIUS = 5;
-const VERTEX_HANDLE_COLOR = 0xf59e0b; // amber
-const MIDPOINT_HANDLE_COLOR = 0x60a5fa; // blue
-const MIDPOINT_HANDLE_ALPHA = 0.5;
 const MIN_VERTEX_COUNT = 3; // Cannot remove below 3 vertices.
-const DOUBLE_CLICK_MS = 300;
 
 export interface VertexHandleRenderer {
   destroy(): void;
@@ -66,7 +62,7 @@ export function createVertexHandleRenderer(
     for (let i = 0; i < pointCount; i++) {
       const vx = vertices[i * 2]!;
       const vy = vertices[i * 2 + 1]!;
-      const handle = createVertexHandle(vx + zonePos.x, vy + zonePos.y);
+      const handle = createDraggableHandle(vx + zonePos.x, vy + zonePos.y);
       const vertexIndex = i;
 
       attachDragHandlers(handle, dragSurface, zonePos, {
@@ -192,39 +188,3 @@ export function createVertexHandleRenderer(
   }
 }
 
-function drawVertexHandleState(g: Graphics, hovered: boolean): void {
-  g.clear();
-  if (hovered) {
-    g.circle(0, 0, VERTEX_GLOW_RADIUS)
-      .fill({ color: VERTEX_HANDLE_COLOR, alpha: VERTEX_GLOW_ALPHA });
-    g.circle(0, 0, VERTEX_HANDLE_HOVER_RADIUS)
-      .fill({ color: VERTEX_HANDLE_COLOR })
-      .stroke({ color: 0xffffff, width: 1.5 });
-  } else {
-    g.circle(0, 0, VERTEX_HANDLE_RADIUS)
-      .fill({ color: VERTEX_HANDLE_COLOR })
-      .stroke({ color: 0xffffff, width: 1.5 });
-  }
-}
-
-function createVertexHandle(x: number, y: number): Graphics {
-  const g = new Graphics();
-  drawVertexHandleState(g, false);
-  g.position.set(x, y);
-  g.eventMode = 'static';
-  g.cursor = 'grab';
-  g.on('pointerover', () => drawVertexHandleState(g, true));
-  g.on('pointerout', () => drawVertexHandleState(g, false));
-  return g;
-}
-
-function createMidpointHandle(x: number, y: number): Graphics {
-  const g = new Graphics();
-  g.circle(0, 0, MIDPOINT_HANDLE_RADIUS)
-    .fill({ color: MIDPOINT_HANDLE_COLOR, alpha: MIDPOINT_HANDLE_ALPHA })
-    .stroke({ color: 0xffffff, width: 1, alpha: 0.3 });
-  g.position.set(x, y);
-  g.eventMode = 'static';
-  g.cursor = 'pointer';
-  return g;
-}

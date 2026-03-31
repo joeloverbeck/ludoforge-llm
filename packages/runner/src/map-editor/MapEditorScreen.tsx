@@ -1,5 +1,5 @@
 import type { GameDef } from '@ludoforge/engine/runtime';
-import type { Container, FederatedPointerEvent } from 'pixi.js';
+import type { Container } from 'pixi.js';
 import type { TableBounds } from '../canvas/renderers/table-background-renderer.js';
 import { type ReactElement, useEffect, useRef, useState } from 'react';
 
@@ -18,11 +18,6 @@ import { attachZoneDragHandlers } from './map-editor-drag.js';
 import {
   buildEditorPresentationScene,
 } from './map-editor-presentation-adapter.js';
-import {
-  findNearestRouteSegment,
-  resolveRouteGeometry,
-} from './map-editor-route-geometry.js';
-import { resolveMapEditorZoneVisuals } from './map-editor-zone-visuals.js';
 import { MapEditorToolbar } from './map-editor-toolbar.js';
 import { createMapEditorStore, type MapEditorStoreApi } from './map-editor-store.js';
 import { createVertexHandleRenderer } from './vertex-handle-renderer.js';
@@ -188,9 +183,6 @@ export function MapEditorScreen({ gameId, onBack }: MapEditorScreenProps): React
           { dragSurface: canvas.viewport },
         );
 
-        const zoneVisuals = resolveMapEditorZoneVisuals(gameDef, visualConfigProvider);
-        const routeInteractionCleanups: Array<() => void> = [];
-
         const syncRenderers = (): void => {
           const state = store.getState();
           const scene = buildEditorPresentationScene({
@@ -213,12 +205,7 @@ export function MapEditorScreen({ gameId, onBack }: MapEditorScreenProps): React
           adjacencyRenderer.update(scene.adjacencies, state.zonePositions, scene.zones);
           routeRenderer.update(scene.connectionRoutes, scene.junctions, state.zonePositions);
 
-          wireRouteEditorInteractions(
-            routeRenderer.getContainerMap(),
-            store,
-            zoneVisuals,
-            routeInteractionCleanups,
-          );
+
         };
 
         syncRenderers();
@@ -253,9 +240,6 @@ export function MapEditorScreen({ gameId, onBack }: MapEditorScreenProps): React
         destroyRuntime = () => {
           removeWindowListeners();
           unsubscribeSync();
-          for (const cleanup of routeInteractionCleanups) {
-            cleanup();
-          }
           adjacencyRenderer.destroy();
           regionRenderer.destroy();
           vertexHandleRenderer.destroy();
@@ -453,9 +437,6 @@ function formatPosition(position: Position): string {
   return `(${Math.round(position.x)}, ${Math.round(position.y)})`;
 }
 
-const ROUTE_CURVE_SEGMENTS = 24;
-const ROUTE_HIT_AREA_PADDING = 12;
-
 function computeTableBounds(positions: ReadonlyMap<string, Position>): TableBounds {
   if (positions.size === 0) {
     return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
@@ -474,113 +455,4 @@ function computeTableBounds(positions: ReadonlyMap<string, Position>): TableBoun
   }
 
   return { minX, minY, maxX, maxY };
-}
-
-function wireRouteEditorInteractions(
-  routeContainers: ReadonlyMap<string, Container>,
-  store: MapEditorStoreApi,
-  zoneVisuals: ReadonlyMap<string, import('./map-editor-route-geometry.js').EditorRouteZoneVisual>,
-  cleanups: Array<() => void>,
-): void {
-  for (const cleanup of cleanups) {
-    cleanup();
-  }
-  cleanups.length = 0;
-
-  for (const [routeId, midpointContainer] of routeContainers) {
-    const curveGraphics = midpointContainer.parent?.children.find(
-      (child) => child !== midpointContainer && child.eventMode === 'static',
-    );
-    if (curveGraphics === undefined) {
-      continue;
-    }
-
-    const onDoubleClick = (event: FederatedPointerEvent): void => {
-      if (event.detail < 2) {
-        return;
-      }
-
-      const state = store.getState();
-      const route = state.connectionRoutes.get(routeId);
-      if (route === undefined) {
-        return;
-      }
-
-      const geometry = resolveRouteGeometry(
-        route,
-        state.zonePositions,
-        state.connectionAnchors,
-        zoneVisuals,
-        { curveSegments: ROUTE_CURVE_SEGMENTS, hitAreaPadding: ROUTE_HIT_AREA_PADDING },
-      );
-      if (geometry === null) {
-        return;
-      }
-
-      const localPosition = event.getLocalPosition(curveGraphics.parent ?? curveGraphics);
-      const match = findNearestRouteSegment(geometry, {
-        x: localPosition.x,
-        y: localPosition.y,
-      });
-      if (match === null) {
-        return;
-      }
-
-      state.insertWaypoint(routeId, match.segmentIndex, match.position);
-    };
-
-    const onRightClick = (event: FederatedPointerEvent): void => {
-      if (event.button !== 2) {
-        return;
-      }
-      event.stopPropagation();
-
-      const state = store.getState();
-      state.selectZone(null);
-      state.selectRoute(routeId);
-
-      const route = state.connectionRoutes.get(routeId);
-      if (route === undefined) {
-        return;
-      }
-
-      const geometry = resolveRouteGeometry(
-        route,
-        state.zonePositions,
-        state.connectionAnchors,
-        zoneVisuals,
-        { curveSegments: ROUTE_CURVE_SEGMENTS, hitAreaPadding: ROUTE_HIT_AREA_PADDING },
-      );
-      if (geometry === null) {
-        return;
-      }
-
-      const localPosition = event.getLocalPosition(curveGraphics.parent ?? curveGraphics);
-      const match = findNearestRouteSegment(geometry, {
-        x: localPosition.x,
-        y: localPosition.y,
-      });
-      if (match === null) {
-        return;
-      }
-
-      const segment = route.segments[match.segmentIndex];
-      if (segment === undefined) {
-        return;
-      }
-
-      state.convertSegment(
-        routeId,
-        match.segmentIndex,
-        segment.kind === 'straight' ? 'quadratic' : 'straight',
-      );
-    };
-
-    curveGraphics.on('pointertap', onDoubleClick);
-    curveGraphics.on('pointerdown', onRightClick);
-    cleanups.push(() => {
-      curveGraphics.off('pointertap', onDoubleClick);
-      curveGraphics.off('pointerdown', onRightClick);
-    });
-  }
 }

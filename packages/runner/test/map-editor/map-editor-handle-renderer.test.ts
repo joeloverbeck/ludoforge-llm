@@ -281,7 +281,8 @@ describe('createEditorHandleRenderer', () => {
     fixture.store.getState().selectRoute('route:road');
 
     const root = fixture.handleLayer.children[0] as InstanceType<typeof MockContainer>;
-    expect(root.children).toHaveLength(5);
+    // 1 tangent + 3 point handles + 1 control diamond + 2 midpoint circles = 7
+    expect(root.children).toHaveLength(7);
 
     const tangent = root.children[0] as InstanceType<typeof MockGraphics>;
     const zoneHandle = root.children[1] as InstanceType<typeof MockGraphics>;
@@ -330,14 +331,12 @@ describe('createEditorHandleRenderer', () => {
 
     const root = fixture.handleLayer.children[0] as InstanceType<typeof MockContainer>;
     const tangent = root.children[0] as InstanceType<typeof MockGraphics>;
-    const controlHandle = root.children[4] as InstanceType<typeof MockGraphics>;
 
     fixture.store.getState().beginInteraction();
     fixture.store.getState().setDragging(true);
     fixture.store.getState().previewControlPointMove('route:road', 0, { x: 30, y: 10 });
 
     expect(root.children[0]).toBe(tangent);
-    expect(root.children[4]).toBe(controlHandle);
     expect(tangent.moveToArgs).toEqual([[0, 0], [40, 20]]);
     expect(tangent.lineToArgs).toEqual([[30, 10], [30, 10]]);
   });
@@ -595,7 +594,7 @@ describe('createEditorHandleRenderer', () => {
     expect(angleLabel.renderable).toBe(false);
   });
 
-  it('removes only non-endpoint anchor waypoints on right-click', () => {
+  it('removes intermediate anchor waypoints on double-click', () => {
     const fixture = createFixture();
     createEditorHandleRenderer(
       fixture.handleLayer as unknown as Container,
@@ -608,7 +607,10 @@ describe('createEditorHandleRenderer', () => {
     fixture.store.getState().selectRoute('route:road');
     const root = fixture.handleLayer.children[0] as InstanceType<typeof MockContainer>;
     const anchorHandle = root.children[2] as InstanceType<typeof MockGraphics>;
-    anchorHandle.emit('pointerdown', { button: 2, stopPropagation() {} });
+
+    // Simulate double-click: two rapid left-clicks.
+    anchorHandle.emit('pointerdown', pointer(40, 20));
+    anchorHandle.emit('pointerdown', pointer(40, 20));
 
     expect(fixture.store.getState().connectionRoutes.get('route:road')).toEqual({
       points: [
@@ -620,7 +622,7 @@ describe('createEditorHandleRenderer', () => {
     expect(fixture.store.getState().connectionAnchors.has('anchor:mid')).toBe(false);
   });
 
-  it('does not remove endpoint handles on right-click', () => {
+  it('does not remove endpoint handles on double-click', () => {
     const fixture = createFixture({
       connectionRoutes: {
         'route:road': {
@@ -646,11 +648,13 @@ describe('createEditorHandleRenderer', () => {
     fixture.store.getState().selectRoute('route:road');
     const root = fixture.handleLayer.children[0] as InstanceType<typeof MockContainer>;
     const endpointHandle = root.children[0] as InstanceType<typeof MockGraphics>;
-    endpointHandle.emit('pointerdown', { button: 2, stopPropagation() {} });
+
+    // Double-click on endpoint: should NOT remove.
+    endpointHandle.emit('pointerdown', pointer(0, 0));
+    endpointHandle.emit('pointerdown', pointer(0, 0));
 
     expect(fixture.store.getState().connectionRoutes.get('route:road')?.points).toHaveLength(2);
     expect(fixture.store.getState().connectionAnchors.has('anchor:start')).toBe(true);
-
   });
 
   it('releases active drag listeners when rerender tears down handle interactions', () => {
@@ -739,6 +743,88 @@ describe('createEditorHandleRenderer', () => {
     renderer.destroy();
 
     expect(destroyManagedBitmapText).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders blue midpoint circles on each route segment when a route is selected', () => {
+    const fixture = createFixture();
+    createEditorHandleRenderer(
+      fixture.handleLayer as unknown as Container,
+      fixture.store,
+      fixture.gameDef,
+      fixture.provider,
+    );
+
+    fixture.store.getState().selectRoute('route:road');
+    const root = fixture.handleLayer.children[0] as InstanceType<typeof MockContainer>;
+    // Midpoint circles are the last 2 children (after tangent, point handles, control diamond).
+    const midpoint0 = root.children[5] as InstanceType<typeof MockGraphics>;
+    const midpoint1 = root.children[6] as InstanceType<typeof MockGraphics>;
+
+    expect(midpoint0.eventMode).toBe('static');
+    expect(midpoint0.cursor).toBe('pointer');
+    expect(midpoint1.eventMode).toBe('static');
+    expect(midpoint1.cursor).toBe('pointer');
+  });
+
+  it('inserts a waypoint when a midpoint circle is clicked', () => {
+    const fixture = createFixture();
+    createEditorHandleRenderer(
+      fixture.handleLayer as unknown as Container,
+      fixture.store,
+      fixture.gameDef,
+      fixture.provider,
+    );
+
+    fixture.store.getState().selectRoute('route:road');
+    const root = fixture.handleLayer.children[0] as InstanceType<typeof MockContainer>;
+    // Click the second midpoint (straight segment between anchor:mid and zone:b).
+    const midpoint1 = root.children[6] as InstanceType<typeof MockGraphics>;
+    midpoint1.emit('pointerdown', { stopPropagation() {} });
+
+    // After insertion, the route should have an additional waypoint.
+    const route = fixture.store.getState().connectionRoutes.get('route:road');
+    expect(route?.points).toHaveLength(4);
+  });
+
+  it('places midpoint of a straight segment at the average of start and end', () => {
+    const fixture = createFixture({
+      connectionRoutes: {
+        'route:road': {
+          points: [
+            { kind: 'zone', zoneId: 'zone:a' },
+            { kind: 'zone', zoneId: 'zone:b' },
+          ],
+          segments: [{ kind: 'straight' }],
+        },
+      },
+    });
+    createEditorHandleRenderer(
+      fixture.handleLayer as unknown as Container,
+      fixture.store,
+      fixture.gameDef,
+      fixture.provider,
+    );
+
+    fixture.store.getState().selectRoute('route:road');
+    const root = fixture.handleLayer.children[0] as InstanceType<typeof MockContainer>;
+    // With a straight-only route: 2 point handles + 1 midpoint circle = 3 children.
+    const midpointHandle = root.children[2] as InstanceType<typeof MockGraphics>;
+    // zone:a at (0,0), zone:b at (80,0) → midpoint at (40, 0).
+    expect(midpointHandle.position.x).toBe(40);
+    expect(midpointHandle.position.y).toBe(0);
+  });
+
+  it('does not render midpoint circles when no route is selected', () => {
+    const fixture = createFixture();
+    createEditorHandleRenderer(
+      fixture.handleLayer as unknown as Container,
+      fixture.store,
+      fixture.gameDef,
+      fixture.provider,
+    );
+
+    const root = fixture.handleLayer.children[0] as InstanceType<typeof MockContainer>;
+    expect(root.children).toHaveLength(0);
   });
 });
 

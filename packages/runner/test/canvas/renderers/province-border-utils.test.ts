@@ -300,6 +300,90 @@ describe('proximity gate', () => {
   });
 });
 
+describe('soft cone blending', () => {
+  // Province A at origin, Province B to the east. Bisector angle from A = 0 (east).
+  // FACING_CONE_HALF = π/3 (60°), BLEND_MARGIN = π/12 (15°).
+  // Blend zone: angleDiff ∈ [45°, 60°].
+  // Triangle at R=100 has area≈12990, effectiveRadius≈64. dist=140 → gap≈11 < 40.
+  const R = 100;
+  const dist = 140;
+
+  function vertexAt(angleDeg: number): [number, number] {
+    const rad = (angleDeg * Math.PI) / 180;
+    return [R * Math.cos(rad), R * Math.sin(rad)];
+  }
+
+  function buildTestPolygon(angleDegrees: number[]): readonly number[] {
+    const verts: number[] = [];
+    for (const deg of angleDegrees) {
+      const [x, y] = vertexAt(deg);
+      verts.push(x, y);
+    }
+    return verts;
+  }
+
+  function runBlendTest(angleDegrees: number[]) {
+    const verts = buildTestPolygon(angleDegrees);
+    const zones = [
+      makeProvinceZone('a', verts),
+      makeProvinceZone('b', verts),
+    ];
+    const positions = new Map([
+      ['a', { x: 0, y: 0 }],
+      ['b', { x: dist, y: 0 }],
+    ]);
+    const adjacencies = [makeAdj('a', 'b')];
+    return computeProvinceBorders(zones, positions, adjacencies).get('a')!;
+  }
+
+  it('vertex at cone center (0°): fully projected, isBorder: true', () => {
+    // Angles: 0° (facing B), 120°, 240° (both outside cone)
+    const poly = runBlendTest([0, 120, 240]);
+    expect(poly.segments[0]!.isBorder).toBe(true);
+    // Vertex should be moved toward bisector (x changed from 100)
+    const projX = poly.vertices[0]!;
+    expect(projX).not.toBeCloseTo(R, 0);
+  });
+
+  it('vertex deep in cone (30°): fully projected, isBorder: true', () => {
+    // 30° is well inside the 45° blend boundary
+    const poly = runBlendTest([30, 150, 270]);
+    expect(poly.segments[0]!.isBorder).toBe(true);
+  });
+
+  it('vertex in blend zone (52°): partially projected, isBorder: false', () => {
+    // 52° is inside the cone (< 60°) but inside the blend zone (> 45°)
+    const poly = runBlendTest([52, 180, 300]);
+    expect(poly.segments[0]!.isBorder).toBe(false);
+    // Position should be between original and fully projected
+    const blendedX = poly.vertices[0]!;
+    const originalX = vertexAt(52)[0];
+    // Not exactly the original position (some blending happened)
+    expect(blendedX).not.toBeCloseTo(originalX, 1);
+  });
+
+  it('vertex at cone edge (60°): blend ≈ 0, essentially original, isBorder: false', () => {
+    // 60° is exactly at the cone boundary — blend should be ~0
+    const poly = runBlendTest([60, 180, 300]);
+    expect(poly.segments[0]!.isBorder).toBe(false);
+    const blendedX = poly.vertices[0]!;
+    const originalX = vertexAt(60)[0];
+    // Should be very close to original position
+    expect(blendedX).toBeCloseTo(originalX, 0);
+  });
+
+  it('vertex outside cone (70°): not projected at all', () => {
+    // 70° is outside the ±60° cone entirely
+    const poly = runBlendTest([70, 190, 310]);
+    expect(poly.segments[0]!.isBorder).toBe(false);
+    const blendedX = poly.vertices[0]!;
+    const blendedY = poly.vertices[1]!;
+    const [origX, origY] = vertexAt(70);
+    expect(blendedX).toBeCloseTo(origX, 5);
+    expect(blendedY).toBeCloseTo(origY, 5);
+  });
+});
+
 describe('selectiveSmoothPolygon', () => {
   it('returns vertices unchanged when iterations is 0', () => {
     const polygon: ModifiedProvincePolygon = {

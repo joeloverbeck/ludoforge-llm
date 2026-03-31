@@ -1,6 +1,6 @@
 # PROVBORDER-003: Soft cone blending at facing-cone boundary
 
-**Status**: PENDING
+**Status**: DONE
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — runner-only

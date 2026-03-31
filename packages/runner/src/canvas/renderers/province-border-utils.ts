@@ -9,6 +9,8 @@ const FACING_CONE_HALF = Math.PI / 3; // ±60°
 const MAX_EXTRUSION_DISTANCE = 200;
 /** Maximum gap (pixels) between effective circles before border formation activates. */
 const PROXIMITY_THRESHOLD = 40;
+/** Angular margin (radians) for soft blending at cone boundary. */
+const BLEND_MARGIN = Math.PI / 12; // 15 degrees
 
 export interface ProvinceBorderSegment {
   /** If true, this vertex was projected onto a bisector (shared border). */
@@ -146,9 +148,23 @@ export function computeProvinceBorders(
         continue;
       }
 
-      // Convert back to local space.
-      modifiedVerts.push(projected.x - pos.x, projected.y - pos.y);
-      segments.push({ isBorder: true });
+      // Compute blend factor: smoothstep from 1 (deep in cone) to 0 (cone edge).
+      let blend = 1.0;
+      if (bestAngleDiff > FACING_CONE_HALF - BLEND_MARGIN) {
+        const t = (FACING_CONE_HALF - bestAngleDiff) / BLEND_MARGIN;
+        const clamped = Math.max(0, Math.min(1, t));
+        blend = clamped * clamped * (3 - 2 * clamped); // smoothstep
+      }
+
+      // Lerp between original and projected in local space.
+      const projLocalX = projected.x - pos.x;
+      const projLocalY = projected.y - pos.y;
+      modifiedVerts.push(
+        localX + (projLocalX - localX) * blend,
+        localY + (projLocalY - localY) * blend,
+      );
+      // Only mark as border if fully projected (blend >= 1).
+      segments.push({ isBorder: blend >= 1.0 });
     }
 
     results.set(zoneId, { vertices: modifiedVerts, segments });

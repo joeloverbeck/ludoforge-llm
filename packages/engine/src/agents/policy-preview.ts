@@ -52,6 +52,7 @@ export interface CreatePolicyPreviewRuntimeInput {
   readonly trustedMoveIndex: ReadonlyMap<string, TrustedExecutableMove>;
   readonly runtime?: GameDefRuntime;
   readonly dependencies?: PolicyPreviewDependencies;
+  readonly tolerateRngDivergence?: boolean;
 }
 
 export interface PolicyPreviewRuntime {
@@ -63,7 +64,7 @@ export interface PolicyPreviewRuntime {
 }
 
 export type PolicyPreviewUnavailabilityReason = 'random' | 'hidden' | 'unresolved' | 'failed';
-export type PolicyPreviewTraceOutcome = 'ready' | PolicyPreviewUnavailabilityReason;
+export type PolicyPreviewTraceOutcome = 'ready' | 'stochastic' | PolicyPreviewUnavailabilityReason;
 
 export type PolicyPreviewSurfaceResolution =
   | {
@@ -81,6 +82,13 @@ export type PolicyPreviewSurfaceResolution =
 type PreviewOutcome =
   | {
       readonly kind: 'ready';
+      readonly state: GameState;
+      readonly requiresHiddenSampling: boolean;
+      readonly metricCache: Map<string, number>;
+      victorySurface: PolicyVictorySurface | null;
+    }
+  | {
+      readonly kind: 'stochastic';
       readonly state: GameState;
       readonly requiresHiddenSampling: boolean;
       readonly metricCache: Map<string, number>;
@@ -109,7 +117,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
   return {
     resolveSurface(candidate, ref) {
       const preview = getPreviewOutcome(candidate);
-      if (preview.kind !== 'ready') {
+      if (preview.kind !== 'ready' && preview.kind !== 'stochastic') {
         return preview;
       }
       const visibility = input.def.agents === undefined ? null : getPolicySurfaceVisibility(input.def.agents.surfaceVisibility, ref);
@@ -203,6 +211,8 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
       return { kind: 'unknown', reason: 'failed' };
     }
 
+    const tolerateRng = input.tolerateRngDivergence === true;
+
     try {
       const previewState = deps.applyMove(
         input.def,
@@ -211,12 +221,15 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         undefined,
         input.runtime,
       ).state;
-      if (!rngStatesEqual(previewState.rng, input.state.rng)) {
+      const rngDiverged = !rngStatesEqual(previewState.rng, input.state.rng);
+
+      if (rngDiverged && !tolerateRng) {
         return { kind: 'unknown', reason: 'random' };
       }
+
       const observation = deps.derivePlayerObservation(input.def, previewState, input.playerId);
       return {
-        kind: 'ready',
+        kind: rngDiverged ? 'stochastic' : 'ready',
         state: previewState,
         requiresHiddenSampling: observation.requiresHiddenSampling,
         metricCache: new Map<string, number>(),
@@ -229,7 +242,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
 }
 
 function toPreviewTraceOutcome(outcome: PreviewOutcome): PolicyPreviewTraceOutcome {
-  return outcome.kind === 'ready' ? 'ready' : outcome.reason;
+  return outcome.kind === 'ready' ? 'ready' : outcome.kind === 'stochastic' ? 'stochastic' : outcome.reason;
 }
 
 function resolvePerPlayerTargetIndex(
@@ -262,7 +275,7 @@ function resolveSeatVarRef(
 
 function getVictorySurface(
   def: GameDef,
-  preview: Extract<PreviewOutcome, { readonly kind: 'ready' }>,
+  preview: Extract<PreviewOutcome, { readonly kind: 'ready' } | { readonly kind: 'stochastic' }>,
   runtime?: GameDefRuntime,
 ): PolicyVictorySurface {
   if (preview.victorySurface !== null) {

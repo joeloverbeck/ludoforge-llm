@@ -1276,6 +1276,7 @@ const PolicyCandidateDecisionTraceSchema = z
     unknownPreviewRefs: z.array(PolicyPreviewUnknownRefTraceSchema).optional(),
     previewOutcome: z.union([
       z.literal('ready'),
+      z.literal('stochastic'),
       z.literal('random'),
       z.literal('hidden'),
       z.literal('unresolved'),

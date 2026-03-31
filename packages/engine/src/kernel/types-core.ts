@@ -1396,7 +1396,7 @@ export interface PolicyCandidateDecisionTrace {
   readonly scoreContributions?: readonly AgentDecisionScoreContribution[];
   readonly previewRefIds?: readonly string[];
   readonly unknownPreviewRefs?: readonly PolicyPreviewUnknownRefTrace[];
-  readonly previewOutcome?: 'ready' | 'random' | 'hidden' | 'unresolved' | 'failed';
+  readonly previewOutcome?: 'ready' | 'stochastic' | 'random' | 'hidden' | 'unresolved' | 'failed';
 }
 
 export interface PolicyPruningStepTrace {

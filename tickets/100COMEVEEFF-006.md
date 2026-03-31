@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — agents (policy-runtime.ts), possibly policy-preview.ts
-**Deps**: `tickets/100COMEVEEFF-004.md`, `tickets/100COMEVEEFF-005.md`
+**Deps**: `tickets/100COMEVEEFF-004.md`, `archive/tickets/100COMEVEEFF-005.md`
 
 ## Problem
 

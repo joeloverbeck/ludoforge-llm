@@ -174,6 +174,43 @@ export function parseAuthoredPolicySurfaceRef(
     };
   }
 
+  if (refPath.startsWith('activeCard.annotation.')) {
+    const tail = refPath.slice('activeCard.annotation.'.length);
+    const segments = tail.split('.');
+    if (segments.length < 2 || segments.length > 3) {
+      return null;
+    }
+    const side = segments[0];
+    const metric = segments[1];
+    if ((side !== 'unshaded' && side !== 'shaded') || metric === undefined || metric.length === 0) {
+      return null;
+    }
+    const seatSegment = segments[2];
+    if (seatSegment !== undefined && seatSegment.length === 0) {
+      return null;
+    }
+    const id = seatSegment !== undefined ? `${side}.${metric}.${seatSegment}` : `${side}.${metric}`;
+    if (seatSegment !== undefined) {
+      const selector: CompiledAgentPolicySurfaceSelector =
+        seatSegment === 'self' || seatSegment === 'active'
+          ? { kind: 'player', player: seatSegment }
+          : { kind: 'role', seatToken: seatSegment };
+      return {
+        kind,
+        family: 'activeCardAnnotation',
+        id,
+        selector,
+        visibility: catalog.activeCardAnnotation,
+      };
+    }
+    return {
+      kind,
+      family: 'activeCardAnnotation',
+      id,
+      visibility: catalog.activeCardAnnotation,
+    };
+  }
+
   return null;
 }
 

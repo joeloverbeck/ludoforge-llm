@@ -4,7 +4,7 @@
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: None — data file only
-**Deps**: `tickets/100COMEVEEFF-005.md`
+**Deps**: `archive/tickets/100COMEVEEFF-005.md`
 
 ## Problem
 

@@ -1,6 +1,6 @@
 # 100COMEVEEFF-005: Add activeCardAnnotation surface ref parsing and visibility
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — agents (policy-surface.ts), compiler (compile-agents.ts)
@@ -118,3 +118,13 @@ Test visibility:
 1. `node --test packages/engine/dist/test/unit/agents/policy-surface-annotation.test.js`
 2. `pnpm turbo typecheck`
 3. `pnpm turbo test`
+
+## Outcome
+
+- **Completion date**: 2026-03-31
+- **What changed**:
+  - `packages/engine/src/agents/policy-surface.ts` — added `activeCard.annotation.*` branch to `parseAuthoredPolicySurfaceRef`, parsing `activeCard.annotation.{side}.{metric}` and `activeCard.annotation.{side}.{metric}.{seat}` paths into `CompiledAgentPolicySurfaceRef` with family `activeCardAnnotation`
+  - `packages/engine/test/unit/agents/policy-surface-annotation.test.ts` (new) — 15 tests covering seat-scoped refs, no-seat refs, preview scope, invalid paths, and visibility lookup
+- **Deviations from plan**:
+  - Items 2 (`getPolicySurfaceVisibility`), 3 (`lowerSurfaceVisibility`), and 4 (`resolveSurfaceRuntimeRef`) were already implemented in prior tickets (001-004). No additional changes were needed for those — only the parsing branch (item 1) and tests (item 5) were new work.
+- **Verification**: build ✅, typecheck ✅, 15/15 new tests pass, 5268/5268 full suite pass

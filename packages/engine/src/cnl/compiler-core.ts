@@ -46,6 +46,7 @@ import {
 } from './cross-validate-diagnostic-codes.js';
 import { crossValidateSpec } from './cross-validate.js';
 import { buildCardMetadataIndex, lowerEventDecks } from './compile-event-cards.js';
+import { buildEventAnnotationIndex } from './compile-event-annotations.js';
 import { resolveScenarioTableRefsInDoc } from './resolve-scenario-table-refs.js';
 import { buildSeatIdentityContract } from './seat-identity-contract.js';
 import {
@@ -729,6 +730,17 @@ function compileExpandedDoc(
     terminal,
     ...(sections.eventDecks === null ? {} : { eventDecks: sections.eventDecks }),
     ...(sections.eventDecks === null ? {} : { cardMetadataIndex: buildCardMetadataIndex(sections.eventDecks) }),
+    ...(sections.eventDecks === null ? {} : {
+      cardAnnotationIndex: buildEventAnnotationIndex(
+        sections.eventDecks,
+        {
+          globalVars: mergedGlobalVars,
+          perPlayerVars: perPlayerVars.value,
+          zones,
+          ...(derivedFromAssets.seats === null ? {} : { seats: derivedFromAssets.seats }),
+        },
+      ),
+    }),
     ...(sections.victoryStandings === null ? {} : { victoryStandings: sections.victoryStandings }),
     ...(sections.verbalization === null ? {} : { verbalization: sections.verbalization }),
   };

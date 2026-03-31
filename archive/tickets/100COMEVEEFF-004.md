@@ -1,6 +1,6 @@
 # 100COMEVEEFF-004: Wire annotation builder into compiler pipeline
 
-**Status**: PENDING
+**Status**: DONE
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — compiler core

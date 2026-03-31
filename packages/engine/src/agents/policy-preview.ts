@@ -1,4 +1,5 @@
 import { computeDerivedMetricValue } from '../kernel/derived-values.js';
+import { resolveCurrentEventCardState } from '../kernel/event-execution.js';
 import { derivePlayerObservation } from '../kernel/observation.js';
 import { applyTrustedMove } from '../kernel/apply-move.js';
 import { buildSeatResolutionIndex, resolvePlayerIndexForSeatValue, type SeatResolutionIndex } from '../kernel/identity.js';
@@ -6,6 +7,7 @@ import { classifyPlayableMoveCandidate, type PlayableCandidateClassification } f
 import type { PlayerId } from '../kernel/branded.js';
 import type {
   CompiledAgentPolicyPreviewSurfaceRef,
+  CompiledCardMetadataEntry,
   GameDef,
   GameState,
   Move,
@@ -177,6 +179,23 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         );
         return typeof value === 'number' ? { kind: 'value', value } : { kind: 'unavailable' };
       }
+      if (ref.family === 'activeCardIdentity' || ref.family === 'activeCardTag' || ref.family === 'activeCardMetadata') {
+        const entry = resolveActiveCardEntryFromState(input.def, preview.state);
+        if (entry === undefined) {
+          return { kind: 'unavailable' };
+        }
+        const resolved = resolveActiveCardFamilyValue(entry, ref.family, ref.id);
+        if (resolved === undefined) {
+          return { kind: 'unavailable' };
+        }
+        return typeof resolved === 'number'
+          ? { kind: 'value', value: resolved }
+          : typeof resolved === 'boolean'
+            ? { kind: 'value', value: resolved ? 1 : 0 }
+            : typeof resolved === 'string'
+              ? { kind: 'value', value: 0 }
+              : { kind: 'unavailable' };
+      }
       return { kind: 'unavailable' };
     },
     getOutcome(candidate) {
@@ -259,6 +278,32 @@ function resolvePerPlayerTargetIndex(
   return ref.selector.kind === 'player'
     ? (ref.selector.player === 'self' ? Number(actingPlayerId) : Number(state.activePlayer))
     : resolvePlayerIndexForSeatValue(resolvePolicyRoleSelector(def, state, ref.selector, seatId), seatResolutionIndex) ?? undefined;
+}
+
+function resolveActiveCardEntryFromState(
+  def: GameDef,
+  state: GameState,
+): CompiledCardMetadataEntry | undefined {
+  const current = resolveCurrentEventCardState(def, state);
+  if (current === null) {
+    return undefined;
+  }
+  return def.cardMetadataIndex?.entries[current.card.id];
+}
+
+function resolveActiveCardFamilyValue(
+  entry: CompiledCardMetadataEntry,
+  family: 'activeCardIdentity' | 'activeCardTag' | 'activeCardMetadata',
+  id: string,
+): string | number | boolean | undefined {
+  switch (family) {
+    case 'activeCardIdentity':
+      return id === 'id' ? entry.cardId : id === 'deckId' ? entry.deckId : undefined;
+    case 'activeCardTag':
+      return entry.tags.includes(id);
+    case 'activeCardMetadata':
+      return entry.metadata[id];
+  }
 }
 
 function resolveSeatVarRef(

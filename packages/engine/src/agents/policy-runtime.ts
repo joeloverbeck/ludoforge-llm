@@ -1,8 +1,10 @@
 import { computeDerivedMetricValue } from '../kernel/derived-values.js';
+import { resolveCurrentEventCardState } from '../kernel/event-execution.js';
 import { buildSeatResolutionIndex, resolvePlayerIndexForSeatValue, type SeatResolutionIndex } from '../kernel/identity.js';
 import { resolveTurnFlowActionClass } from '../kernel/turn-flow-action-class.js';
 import type { PlayerId } from '../kernel/branded.js';
 import type {
+  CompiledCardMetadataEntry,
   AgentParameterValue,
   AgentPolicyCatalog,
   ChoicePendingRequest,
@@ -110,6 +112,7 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
   });
   const metricCache = new Map<string, number>();
   let victorySurface: PolicyVictorySurface | null = null;
+  let activeCardEntry: CompiledCardMetadataEntry | undefined | null = null; // null = not yet resolved
 
   return {
     intrinsics: {
@@ -208,6 +211,15 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
         }
         if (ref.family === 'perPlayerVar') {
           return resolveSeatVarRef(input.state, ref, targetPlayerIndex);
+        }
+        if (ref.family === 'activeCardIdentity' || ref.family === 'activeCardTag' || ref.family === 'activeCardMetadata') {
+          if (activeCardEntry === null) {
+            activeCardEntry = resolveActiveCardEntry(input.def, input.state);
+          }
+          if (activeCardEntry === undefined) {
+            return undefined;
+          }
+          return resolveActiveCardFamily(activeCardEntry, ref.family, ref.id);
         }
         if ((input.def.terminal.margins ?? []).length === 0) {
           throw input.runtimeError(
@@ -314,4 +326,30 @@ function resolveSeatVarRef(
   }
   const value = state.perPlayerVars[playerIndex]?.[ref.id];
   return typeof value === 'number' ? value : undefined;
+}
+
+function resolveActiveCardEntry(
+  def: GameDef,
+  state: GameState,
+): CompiledCardMetadataEntry | undefined {
+  const current = resolveCurrentEventCardState(def, state);
+  if (current === null) {
+    return undefined;
+  }
+  return def.cardMetadataIndex?.entries[current.card.id];
+}
+
+function resolveActiveCardFamily(
+  entry: CompiledCardMetadataEntry,
+  family: 'activeCardIdentity' | 'activeCardTag' | 'activeCardMetadata',
+  id: string,
+): PolicyValue {
+  switch (family) {
+    case 'activeCardIdentity':
+      return id === 'id' ? entry.cardId : id === 'deckId' ? entry.deckId : undefined;
+    case 'activeCardTag':
+      return entry.tags.includes(id);
+    case 'activeCardMetadata':
+      return entry.metadata[id];
+  }
 }

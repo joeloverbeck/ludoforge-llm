@@ -1,6 +1,6 @@
 # 99EVECARPOLSUR-005: Implement active-card surface resolution at runtime
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — policy-runtime.ts (surface resolution)
@@ -92,3 +92,13 @@ Verify that the preview runtime's `resolveSurface` also dispatches through the s
 
 1. `pnpm -F @ludoforge/engine test -- --test-name-pattern "activeCard"` (targeted)
 2. `pnpm -F @ludoforge/engine build && pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+- **Completion date**: 2026-03-31
+- **What changed**:
+  - `packages/engine/src/agents/policy-runtime.ts` — Extended `resolveSurface` with three new active card family cases (`activeCardIdentity`, `activeCardTag`, `activeCardMetadata`). Added `resolveActiveCardEntry` helper with per-evaluation caching.
+  - `packages/engine/src/agents/policy-preview.ts` — Extended preview runtime's `resolveSurface` with the same three families resolving against preview state. Added `resolveActiveCardEntryFromState` and `resolveActiveCardFamilyValue` helpers.
+  - `packages/engine/test/unit/agents/policy-runtime.test.ts` — Added 9 new tests covering all acceptance criteria.
+- **Deviations**: None. Implementation matches ticket spec exactly.
+- **Verification**: Typecheck clean. 5199 tests pass, 0 failures.

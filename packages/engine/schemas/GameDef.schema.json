@@ -6947,6 +6947,255 @@
         "additionalProperties": false
       }
     },
+    "cardAnnotationIndex": {
+      "type": "object",
+      "properties": {
+        "entries": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "cardId": {
+                "type": "string"
+              },
+              "unshaded": {
+                "type": "object",
+                "properties": {
+                  "tokenPlacements": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "number"
+                    }
+                  },
+                  "tokenRemovals": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "number"
+                    }
+                  },
+                  "tokenCreations": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "number"
+                    }
+                  },
+                  "tokenDestructions": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "number"
+                    }
+                  },
+                  "markerModifications": {
+                    "type": "number"
+                  },
+                  "globalMarkerModifications": {
+                    "type": "number"
+                  },
+                  "globalVarModifications": {
+                    "type": "number"
+                  },
+                  "perPlayerVarModifications": {
+                    "type": "number"
+                  },
+                  "varTransfers": {
+                    "type": "number"
+                  },
+                  "drawCount": {
+                    "type": "number"
+                  },
+                  "shuffleCount": {
+                    "type": "number"
+                  },
+                  "grantsOperation": {
+                    "type": "boolean"
+                  },
+                  "grantOperationSeats": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "hasEligibilityOverride": {
+                    "type": "boolean"
+                  },
+                  "hasLastingEffect": {
+                    "type": "boolean"
+                  },
+                  "hasBranches": {
+                    "type": "boolean"
+                  },
+                  "hasPhaseControl": {
+                    "type": "boolean"
+                  },
+                  "hasDecisionPoints": {
+                    "type": "boolean"
+                  },
+                  "effectNodeCount": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "tokenPlacements",
+                  "tokenRemovals",
+                  "tokenCreations",
+                  "tokenDestructions",
+                  "markerModifications",
+                  "globalMarkerModifications",
+                  "globalVarModifications",
+                  "perPlayerVarModifications",
+                  "varTransfers",
+                  "drawCount",
+                  "shuffleCount",
+                  "grantsOperation",
+                  "grantOperationSeats",
+                  "hasEligibilityOverride",
+                  "hasLastingEffect",
+                  "hasBranches",
+                  "hasPhaseControl",
+                  "hasDecisionPoints",
+                  "effectNodeCount"
+                ],
+                "additionalProperties": false
+              },
+              "shaded": {
+                "type": "object",
+                "properties": {
+                  "tokenPlacements": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "number"
+                    }
+                  },
+                  "tokenRemovals": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "number"
+                    }
+                  },
+                  "tokenCreations": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "number"
+                    }
+                  },
+                  "tokenDestructions": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "number"
+                    }
+                  },
+                  "markerModifications": {
+                    "type": "number"
+                  },
+                  "globalMarkerModifications": {
+                    "type": "number"
+                  },
+                  "globalVarModifications": {
+                    "type": "number"
+                  },
+                  "perPlayerVarModifications": {
+                    "type": "number"
+                  },
+                  "varTransfers": {
+                    "type": "number"
+                  },
+                  "drawCount": {
+                    "type": "number"
+                  },
+                  "shuffleCount": {
+                    "type": "number"
+                  },
+                  "grantsOperation": {
+                    "type": "boolean"
+                  },
+                  "grantOperationSeats": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "hasEligibilityOverride": {
+                    "type": "boolean"
+                  },
+                  "hasLastingEffect": {
+                    "type": "boolean"
+                  },
+                  "hasBranches": {
+                    "type": "boolean"
+                  },
+                  "hasPhaseControl": {
+                    "type": "boolean"
+                  },
+                  "hasDecisionPoints": {
+                    "type": "boolean"
+                  },
+                  "effectNodeCount": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "tokenPlacements",
+                  "tokenRemovals",
+                  "tokenCreations",
+                  "tokenDestructions",
+                  "markerModifications",
+                  "globalMarkerModifications",
+                  "globalVarModifications",
+                  "perPlayerVarModifications",
+                  "varTransfers",
+                  "drawCount",
+                  "shuffleCount",
+                  "grantsOperation",
+                  "grantOperationSeats",
+                  "hasEligibilityOverride",
+                  "hasLastingEffect",
+                  "hasBranches",
+                  "hasPhaseControl",
+                  "hasDecisionPoints",
+                  "effectNodeCount"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "cardId"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "entries"
+      ],
+      "additionalProperties": false
+    },
     "stackingConstraints": {
       "type": "array",
       "items": {

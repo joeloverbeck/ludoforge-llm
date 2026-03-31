@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — compiler core
-**Deps**: `tickets/100COMEVEEFF-002.md`, `tickets/100COMEVEEFF-003.md`
+**Deps**: `archive/tickets/100COMEVEEFF-002.md`, `tickets/100COMEVEEFF-003.md`
 
 ## Problem
 

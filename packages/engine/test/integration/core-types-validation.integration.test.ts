@@ -103,6 +103,47 @@ describe('core-types validation integration', () => {
     );
   });
 
+  it('accepts a GameDef with a cardAnnotationIndex through schema validation', () => {
+    const base = createValidGameDef();
+    const def = asTaggedGameDef({
+      ...base,
+      cardAnnotationIndex: {
+        entries: {
+          'card-01': {
+            cardId: 'card-01',
+            unshaded: {
+              tokenPlacements: { guerrilla: 2 },
+              tokenRemovals: {},
+              tokenCreations: {},
+              tokenDestructions: {},
+              markerModifications: 1,
+              globalMarkerModifications: 0,
+              globalVarModifications: 0,
+              perPlayerVarModifications: 0,
+              varTransfers: 0,
+              drawCount: 0,
+              shuffleCount: 0,
+              grantsOperation: false,
+              grantOperationSeats: [],
+              hasEligibilityOverride: false,
+              hasLastingEffect: false,
+              hasBranches: false,
+              hasPhaseControl: false,
+              hasDecisionPoints: true,
+              effectNodeCount: 5,
+            },
+          },
+        },
+      },
+    });
+
+    const parsed = GameDefSchema.safeParse(def);
+    assert.equal(parsed.success, true, `Schema parse failed: ${JSON.stringify((parsed as { error?: unknown }).error)}`);
+
+    const diagnostics = validateGameDef(def);
+    assert.deepEqual(diagnostics, []);
+  });
+
   it('round-trips serialized traces deterministically through serde codecs', () => {
     const serializedTrace = readSerializedTraceFixture('valid-serialized-trace.json');
     const roundTripped = serializeTrace(deserializeTrace(serializedTrace));

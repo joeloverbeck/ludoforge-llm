@@ -1,6 +1,6 @@
 # 100COMEVEEFF-002: Add cardAnnotationIndex JSON Schema
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel schemas (`schemas-core.ts`)
@@ -89,3 +89,13 @@ Run `pnpm turbo schema:artifacts` to regenerate the JSON Schema artifact files.
 1. `pnpm turbo schema:artifacts`
 2. `pnpm turbo typecheck`
 3. `pnpm turbo test`
+
+## Outcome
+
+- **Completed**: 2026-03-31
+- **What changed**:
+  - `packages/engine/src/kernel/schemas-core.ts`: Added `CompiledEventSideAnnotationSchema`, `CompiledEventCardAnnotationSchema`, `CompiledEventAnnotationIndexSchema` Zod schemas; wired `cardAnnotationIndex` as optional property on `GameDefSchema`
+  - `packages/engine/test/integration/core-types-validation.integration.test.ts`: Added test validating a GameDef with `cardAnnotationIndex` passes both Zod and semantic validation
+  - `packages/engine/schemas/GameDef.schema.json`: Regenerated with 249 new lines for annotation schemas
+- **Deviations**: None. Ticket noted `cardMetadataIndex` as a schema template but no such schema existed; the pattern of optional fields on `GameDefSchema` was followed directly instead.
+- **Verification**: 5214 tests pass, typecheck clean, schema artifacts in sync

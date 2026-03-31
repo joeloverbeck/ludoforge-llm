@@ -894,6 +894,44 @@ const AgentPolicyCatalogSchema = z
   })
   .strict();
 
+const CompiledEventSideAnnotationSchema = z
+  .object({
+    tokenPlacements: z.record(StringSchema, NumberSchema),
+    tokenRemovals: z.record(StringSchema, NumberSchema),
+    tokenCreations: z.record(StringSchema, NumberSchema),
+    tokenDestructions: z.record(StringSchema, NumberSchema),
+    markerModifications: NumberSchema,
+    globalMarkerModifications: NumberSchema,
+    globalVarModifications: NumberSchema,
+    perPlayerVarModifications: NumberSchema,
+    varTransfers: NumberSchema,
+    drawCount: NumberSchema,
+    shuffleCount: NumberSchema,
+    grantsOperation: BooleanSchema,
+    grantOperationSeats: z.array(StringSchema),
+    hasEligibilityOverride: BooleanSchema,
+    hasLastingEffect: BooleanSchema,
+    hasBranches: BooleanSchema,
+    hasPhaseControl: BooleanSchema,
+    hasDecisionPoints: BooleanSchema,
+    effectNodeCount: NumberSchema,
+  })
+  .strict();
+
+const CompiledEventCardAnnotationSchema = z
+  .object({
+    cardId: StringSchema,
+    unshaded: CompiledEventSideAnnotationSchema.optional(),
+    shaded: CompiledEventSideAnnotationSchema.optional(),
+  })
+  .strict();
+
+const CompiledEventAnnotationIndexSchema = z
+  .object({
+    entries: z.record(StringSchema, CompiledEventCardAnnotationSchema),
+  })
+  .strict();
+
 export const GameDefSchema = z
   .object({
     metadata: z
@@ -923,6 +961,7 @@ export const GameDefSchema = z
     triggers: z.array(TriggerDefSchema),
     terminal: TerminalEvaluationDefSchema,
     eventDecks: z.array(EventDeckSchema).optional(),
+    cardAnnotationIndex: CompiledEventAnnotationIndexSchema.optional(),
     stackingConstraints: z.array(StackingConstraintSchema).optional(),
     markerLattices: z.array(SpaceMarkerLatticeSchema).optional(),
     globalMarkerLattices: z.array(GlobalMarkerLatticeSchema).optional(),

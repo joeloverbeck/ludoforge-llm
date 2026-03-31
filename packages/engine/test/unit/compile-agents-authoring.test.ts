@@ -68,6 +68,9 @@ function createVisibility(overrides: NonNullable<NonNullable<GameSpecDoc['agents
       },
       ...(overrides.victory?.currentRank === undefined ? {} : { currentRank: overrides.victory.currentRank }),
     },
+    ...(overrides.activeCardIdentity !== undefined ? { activeCardIdentity: overrides.activeCardIdentity } : {}),
+    ...(overrides.activeCardTag !== undefined ? { activeCardTag: overrides.activeCardTag } : {}),
+    ...(overrides.activeCardMetadata !== undefined ? { activeCardMetadata: overrides.activeCardMetadata } : {}),
   };
 }
 
@@ -1079,6 +1082,103 @@ describe('agents authoring surface', () => {
       ),
       false,
     );
+  });
+
+  it('compiles explicit activeCard visibility from authored YAML', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us', 'arvn'])],
+      agents: {
+        visibility: createVisibility({
+          activeCardIdentity: { current: 'public' },
+          activeCardTag: { current: 'seatVisible' },
+          activeCardMetadata: { current: 'hidden', preview: { visibility: 'public', allowWhenHiddenSampling: true } },
+        }),
+        library: {
+          stateFeatures: {},
+          completionScoreTerms: {},
+          tieBreakers: { stableMoveKey: { kind: 'stableMoveKey' } },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: { pruningRules: [], scoreTerms: [], completionScoreTerms: [], tieBreakers: ['stableMoveKey'] },
+          },
+        },
+        bindings: { us: 'baseline', arvn: 'baseline' },
+      },
+    });
+    assert.notEqual(result.gameDef, null);
+    const agents = result.gameDef!.agents!;
+    assert.deepEqual(agents.surfaceVisibility.activeCardIdentity, {
+      current: 'public',
+      preview: { visibility: 'public', allowWhenHiddenSampling: false },
+    });
+    assert.deepEqual(agents.surfaceVisibility.activeCardTag, {
+      current: 'seatVisible',
+      preview: { visibility: 'seatVisible', allowWhenHiddenSampling: false },
+    });
+    assert.deepEqual(agents.surfaceVisibility.activeCardMetadata, {
+      current: 'hidden',
+      preview: { visibility: 'public', allowWhenHiddenSampling: true },
+    });
+  });
+
+  it('defaults omitted activeCard visibility entries to hidden', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: {
+        visibility: createVisibility(),
+        library: {
+          stateFeatures: {},
+          completionScoreTerms: {},
+          tieBreakers: { stableMoveKey: { kind: 'stableMoveKey' } },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: { pruningRules: [], scoreTerms: [], completionScoreTerms: [], tieBreakers: ['stableMoveKey'] },
+          },
+        },
+        bindings: { us: 'baseline' },
+      },
+    });
+    assert.notEqual(result.gameDef, null);
+    const vis = result.gameDef!.agents!.surfaceVisibility;
+    const hiddenDefault = { current: 'hidden', preview: { visibility: 'hidden', allowWhenHiddenSampling: false } };
+    assert.deepEqual(vis.activeCardIdentity, hiddenDefault);
+    assert.deepEqual(vis.activeCardTag, hiddenDefault);
+    assert.deepEqual(vis.activeCardMetadata, hiddenDefault);
+  });
+
+  it('sets activeCard categories independently', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: {
+        visibility: createVisibility({
+          activeCardIdentity: { current: 'public' },
+        }),
+        library: {
+          stateFeatures: {},
+          completionScoreTerms: {},
+          tieBreakers: { stableMoveKey: { kind: 'stableMoveKey' } },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: { pruningRules: [], scoreTerms: [], completionScoreTerms: [], tieBreakers: ['stableMoveKey'] },
+          },
+        },
+        bindings: { us: 'baseline' },
+      },
+    });
+    assert.notEqual(result.gameDef, null);
+    const vis = result.gameDef!.agents!.surfaceVisibility;
+    assert.equal(vis.activeCardIdentity.current, 'public');
+    assert.equal(vis.activeCardTag.current, 'hidden');
+    assert.equal(vis.activeCardMetadata.current, 'hidden');
   });
 
   it('rejects refs whose shared visibility contract marks them hidden', () => {

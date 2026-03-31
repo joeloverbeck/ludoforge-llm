@@ -170,18 +170,24 @@ function lowerSurfaceVisibility(
         },
       ),
     },
-    activeCardIdentity: {
-      current: 'hidden',
-      preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
-    },
-    activeCardTag: {
-      current: 'hidden',
-      preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
-    },
-    activeCardMetadata: {
-      current: 'hidden',
-      preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
-    },
+    activeCardIdentity: lowerSurfaceVisibilityEntry(
+      visibility?.activeCardIdentity,
+      diagnostics,
+      'doc.agents.visibility.activeCardIdentity',
+      { current: 'hidden', preview: { visibility: 'hidden', allowWhenHiddenSampling: false } },
+    ),
+    activeCardTag: lowerSurfaceVisibilityEntry(
+      visibility?.activeCardTag,
+      diagnostics,
+      'doc.agents.visibility.activeCardTag',
+      { current: 'hidden', preview: { visibility: 'hidden', allowWhenHiddenSampling: false } },
+    ),
+    activeCardMetadata: lowerSurfaceVisibilityEntry(
+      visibility?.activeCardMetadata,
+      diagnostics,
+      'doc.agents.visibility.activeCardMetadata',
+      { current: 'hidden', preview: { visibility: 'hidden', allowWhenHiddenSampling: false } },
+    ),
   };
 }
 

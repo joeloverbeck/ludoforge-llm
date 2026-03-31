@@ -1,6 +1,6 @@
 # 99EVECARPOLSUR-004: Extend surface visibility catalog and compilation
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — types-core.ts (catalog type), compile-agents.ts (visibility lowering)
@@ -107,3 +107,13 @@ Ensure the three new families map to their catalog entries. This may already be 
 
 1. `pnpm -F @ludoforge/engine test -- --test-name-pattern "visibility"` (targeted)
 2. `pnpm -F @ludoforge/engine build && pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+- **Completion date**: 2026-03-31
+- **What changed**:
+  - `packages/engine/src/cnl/game-spec-doc.ts` — Extended `GameSpecAgentVisibilitySection` with `activeCardIdentity?`, `activeCardTag?`, `activeCardMetadata?` fields
+  - `packages/engine/src/cnl/compile-agents.ts` — Replaced hardcoded hidden defaults with `lowerSurfaceVisibilityEntry()` calls that parse authored YAML
+  - `packages/engine/test/unit/compile-agents-authoring.test.ts` — Updated `createVisibility` helper; added 3 tests (explicit values, defaults, independent categories)
+- **Deviations**: Type extension of `CompiledAgentPolicySurfaceCatalog` and `getPolicySurfaceVisibility` case arms were already implemented in ticket 003. This ticket's contribution was the authored YAML type and compiler wiring.
+- **Verification**: 712 engine tests pass, 0 failures. All 3 new tests pass.

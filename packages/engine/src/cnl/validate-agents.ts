@@ -16,7 +16,7 @@ import {
 
 const AGENTS_SECTION_KEYS = ['parameters', 'visibility', 'library', 'profiles', 'bindings'] as const;
 const AGENT_PARAMETER_KEYS = ['type', 'default', 'min', 'max', 'tunable', 'values', 'allowedIds'] as const;
-const AGENT_VISIBILITY_SECTION_KEYS = ['globalVars', 'perPlayerVars', 'derivedMetrics', 'victory', 'activeCardIdentity', 'activeCardTag', 'activeCardMetadata'] as const;
+const AGENT_VISIBILITY_SECTION_KEYS = ['globalVars', 'perPlayerVars', 'derivedMetrics', 'victory', 'activeCardIdentity', 'activeCardTag', 'activeCardMetadata', 'activeCardAnnotation'] as const;
 const AGENT_VISIBILITY_KEYS = ['current', 'preview'] as const;
 const AGENT_VISIBILITY_PREVIEW_KEYS = ['visibility', 'allowWhenHiddenSampling'] as const;
 const AGENT_VISIBILITY_VICTORY_KEYS = ['currentMargin', 'currentRank'] as const;
@@ -78,6 +78,7 @@ function validateVisibility(visibility: unknown, diagnostics: Diagnostic[]): voi
   validateVisibilityEntry(visibility.activeCardIdentity, 'doc.agents.visibility.activeCardIdentity', diagnostics);
   validateVisibilityEntry(visibility.activeCardTag, 'doc.agents.visibility.activeCardTag', diagnostics);
   validateVisibilityEntry(visibility.activeCardMetadata, 'doc.agents.visibility.activeCardMetadata', diagnostics);
+  validateVisibilityEntry(visibility.activeCardAnnotation, 'doc.agents.visibility.activeCardAnnotation', diagnostics);
 
   if (visibility.victory === undefined) {
     return;

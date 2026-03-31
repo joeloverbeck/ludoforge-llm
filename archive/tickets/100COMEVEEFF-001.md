@@ -1,6 +1,6 @@
 # 100COMEVEEFF-001: Add annotation types and GameDef field
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel types (`types-core.ts`)
@@ -126,3 +126,10 @@ Add an `activeCardAnnotation` visibility entry to the catalog type, following th
 
 1. `pnpm turbo typecheck`
 2. `pnpm turbo test`
+
+## Outcome
+
+- **Completion date**: 2026-03-31
+- **What changed**: Added `CompiledEventSideAnnotation`, `CompiledEventCardAnnotation`, `CompiledEventAnnotationIndex` interfaces to `types-core.ts`. Added `'activeCardAnnotation'` to `CompiledAgentPolicySurfaceRefFamily` union, `activeCardAnnotation` field to `CompiledAgentPolicySurfaceCatalog`, and `cardAnnotationIndex?` to `GameDef`. Updated all downstream source files (`compile-agents.ts`, `policy-surface.ts`, `policy-runtime.ts`, `policy-preview.ts`, `schemas-core.ts`, `validate-agents.ts`, `game-spec-doc.ts`) and 17 test files (28 catalog construction sites) plus 2 golden fixtures and 3 regenerated schema artifacts.
+- **Deviations**: Ticket stated "compile errors are expected and desirable until tickets 005/006" but also required existing tests to pass unchanged. Resolved by adding `activeCardAnnotation` entries to all catalog construction sites (source + tests + goldens) with default hidden visibility, rather than leaving compile errors.
+- **Verification**: `pnpm turbo typecheck` clean, `pnpm turbo lint` clean, `pnpm turbo test` 5213/5213 pass.

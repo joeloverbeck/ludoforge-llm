@@ -294,6 +294,7 @@ export const CompiledAgentPolicySurfaceCatalogSchema = z
     activeCardIdentity: CompiledAgentPolicySurfaceVisibilitySchema,
     activeCardTag: CompiledAgentPolicySurfaceVisibilitySchema,
     activeCardMetadata: CompiledAgentPolicySurfaceVisibilitySchema,
+    activeCardAnnotation: CompiledAgentPolicySurfaceVisibilitySchema,
   })
   .strict();
 

@@ -212,6 +212,9 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
         if (ref.family === 'perPlayerVar') {
           return resolveSeatVarRef(input.state, ref, targetPlayerIndex);
         }
+        if (ref.family === 'activeCardAnnotation') {
+          return undefined;
+        }
         if (ref.family === 'activeCardIdentity' || ref.family === 'activeCardTag' || ref.family === 'activeCardMetadata') {
           if (activeCardEntry === null) {
             activeCardEntry = resolveActiveCardEntry(input.def, input.state);

@@ -151,6 +151,10 @@ function buildGameDefWithAgentExpr(featureId: string, expr: Record<string, unkno
           current: 'hidden',
           preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
         },
+        activeCardAnnotation: {
+          current: 'hidden',
+          preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+        },
       },
       parameterDefs: {},
       candidateParamDefs: {},
@@ -317,6 +321,10 @@ describe('top-level runtime schemas', () => {
             current: 'hidden',
             preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
           },
+          activeCardAnnotation: {
+            current: 'hidden',
+            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+          },
         },
         parameterDefs: {
           passFloor: {
@@ -441,6 +449,10 @@ describe('top-level runtime schemas', () => {
             current: 'hidden',
             preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
           },
+          activeCardAnnotation: {
+            current: 'hidden',
+            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+          },
         },
         parameterDefs: {},
         candidateParamDefs: {},
@@ -523,6 +535,10 @@ describe('top-level runtime schemas', () => {
             preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
           },
           activeCardMetadata: {
+            current: 'hidden',
+            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+          },
+          activeCardAnnotation: {
             current: 'hidden',
             preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
           },
@@ -611,6 +627,10 @@ describe('top-level runtime schemas', () => {
             preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
           },
           activeCardMetadata: {
+            current: 'hidden',
+            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+          },
+          activeCardAnnotation: {
             current: 'hidden',
             preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
           },
@@ -791,6 +811,10 @@ describe('top-level runtime schemas', () => {
             current: 'hidden',
             preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
           },
+          activeCardAnnotation: {
+            current: 'hidden',
+            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+          },
         },
         parameterDefs: {},
         candidateParamDefs: {},
@@ -851,6 +875,10 @@ describe('top-level runtime schemas', () => {
             preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
           },
           activeCardMetadata: {
+            current: 'hidden',
+            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+          },
+          activeCardAnnotation: {
             current: 'hidden',
             preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
           },

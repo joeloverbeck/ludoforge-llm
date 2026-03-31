@@ -179,6 +179,9 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         );
         return typeof value === 'number' ? { kind: 'value', value } : { kind: 'unavailable' };
       }
+      if (ref.family === 'activeCardAnnotation') {
+        return { kind: 'unavailable' };
+      }
       if (ref.family === 'activeCardIdentity' || ref.family === 'activeCardTag' || ref.family === 'activeCardMetadata') {
         const entry = resolveActiveCardEntryFromState(input.def, preview.state);
         if (entry === undefined) {

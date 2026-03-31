@@ -198,6 +198,8 @@ export function getPolicySurfaceVisibility(
       return catalog.activeCardTag;
     case 'activeCardMetadata':
       return catalog.activeCardMetadata;
+    case 'activeCardAnnotation':
+      return catalog.activeCardAnnotation;
   }
 }
 

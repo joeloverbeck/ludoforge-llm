@@ -2237,6 +2237,61 @@
                 "preview"
               ],
               "additionalProperties": false
+            },
+            "activeCardAnnotation": {
+              "type": "object",
+              "properties": {
+                "current": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "const": "public"
+                    },
+                    {
+                      "type": "string",
+                      "const": "seatVisible"
+                    },
+                    {
+                      "type": "string",
+                      "const": "hidden"
+                    }
+                  ]
+                },
+                "preview": {
+                  "type": "object",
+                  "properties": {
+                    "visibility": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "const": "public"
+                        },
+                        {
+                          "type": "string",
+                          "const": "seatVisible"
+                        },
+                        {
+                          "type": "string",
+                          "const": "hidden"
+                        }
+                      ]
+                    },
+                    "allowWhenHiddenSampling": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "visibility",
+                    "allowWhenHiddenSampling"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "current",
+                "preview"
+              ],
+              "additionalProperties": false
             }
           },
           "required": [
@@ -2246,7 +2301,8 @@
             "victory",
             "activeCardIdentity",
             "activeCardTag",
-            "activeCardMetadata"
+            "activeCardMetadata",
+            "activeCardAnnotation"
           ],
           "additionalProperties": false
         },

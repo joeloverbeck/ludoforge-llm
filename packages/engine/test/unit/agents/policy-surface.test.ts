@@ -32,6 +32,7 @@ function createCatalog(overrides?: Partial<CompiledAgentPolicySurfaceCatalog>): 
     activeCardIdentity: publicVis,
     activeCardTag: publicVis,
     activeCardMetadata: publicVis,
+    activeCardAnnotation: publicVis,
     ...overrides,
   };
 }

@@ -654,6 +654,10 @@ describe('FITL policy agent integration', () => {
             current: 'hidden',
             preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
           },
+          activeCardAnnotation: {
+            current: 'hidden',
+            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+          },
         },
         profiles: {
           ...baseDef.agents.profiles,

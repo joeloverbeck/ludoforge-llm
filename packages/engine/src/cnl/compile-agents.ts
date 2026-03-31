@@ -188,6 +188,12 @@ function lowerSurfaceVisibility(
       'doc.agents.visibility.activeCardMetadata',
       { current: 'hidden', preview: { visibility: 'hidden', allowWhenHiddenSampling: false } },
     ),
+    activeCardAnnotation: lowerSurfaceVisibilityEntry(
+      visibility?.activeCardAnnotation,
+      diagnostics,
+      'doc.agents.visibility.activeCardAnnotation',
+      { current: 'hidden', preview: { visibility: 'hidden', allowWhenHiddenSampling: false } },
+    ),
   };
 }
 

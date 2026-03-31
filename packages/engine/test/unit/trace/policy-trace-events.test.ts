@@ -54,6 +54,10 @@ function createCatalog(): AgentPolicyCatalog {
         current: 'hidden',
         preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
       },
+      activeCardAnnotation: {
+        current: 'hidden',
+        preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+      },
     },
     parameterDefs: {},
     candidateParamDefs: {},

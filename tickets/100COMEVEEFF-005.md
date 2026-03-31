@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — agents (policy-surface.ts), compiler (compile-agents.ts)
-**Deps**: `tickets/100COMEVEEFF-001.md`
+**Deps**: `archive/tickets/100COMEVEEFF-001.md`
 
 ## Problem
 

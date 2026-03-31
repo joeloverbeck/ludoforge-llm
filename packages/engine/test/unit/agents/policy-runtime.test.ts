@@ -32,6 +32,7 @@ function createMinimalCatalog(overrides?: {
   readonly activeCardIdentity?: CompiledAgentPolicySurfaceVisibility;
   readonly activeCardTag?: CompiledAgentPolicySurfaceVisibility;
   readonly activeCardMetadata?: CompiledAgentPolicySurfaceVisibility;
+  readonly activeCardAnnotation?: CompiledAgentPolicySurfaceVisibility;
 }): AgentPolicyCatalog {
   const profile = {
     fingerprint: 'test-profile',
@@ -65,6 +66,7 @@ function createMinimalCatalog(overrides?: {
       activeCardIdentity: overrides?.activeCardIdentity ?? HIDDEN_VISIBILITY,
       activeCardTag: overrides?.activeCardTag ?? HIDDEN_VISIBILITY,
       activeCardMetadata: overrides?.activeCardMetadata ?? HIDDEN_VISIBILITY,
+      activeCardAnnotation: overrides?.activeCardAnnotation ?? HIDDEN_VISIBILITY,
     },
     parameterDefs: {},
     candidateParamDefs: {},

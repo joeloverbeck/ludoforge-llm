@@ -66,6 +66,7 @@ function makeCatalogWithHiddenCardVisibility(baseCatalog: AgentPolicyCatalog): A
       activeCardIdentity: makeHiddenVisibility(),
       activeCardTag: makeHiddenVisibility(),
       activeCardMetadata: makeHiddenVisibility(),
+      activeCardAnnotation: makeHiddenVisibility(),
     },
   };
 }

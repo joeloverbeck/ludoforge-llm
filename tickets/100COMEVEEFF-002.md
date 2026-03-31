@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel schemas (`schemas-core.ts`)
-**Deps**: `tickets/100COMEVEEFF-001.md`
+**Deps**: `archive/tickets/100COMEVEEFF-001.md`
 
 ## Problem
 

@@ -217,6 +217,13 @@
         "visibility": "hidden",
         "allowWhenHiddenSampling": false
       }
+    },
+    "activeCardAnnotation": {
+      "current": "hidden",
+      "preview": {
+        "visibility": "hidden",
+        "allowWhenHiddenSampling": false
+      }
     }
   },
   "parameterDefs": {},
@@ -927,5 +934,5 @@
   "bindingsBySeat": {
     "neutral": "baseline"
   },
-  "catalogFingerprint": "d65a35ef303e7203f5446b6b5bc19d2448e72fd977925392f2541987a1a1a57d"
+  "catalogFingerprint": "5725362875f869c739a89954da5cd5b4c04f01d1e5751e73ed3f9e8a1c3dcfe5"
 }

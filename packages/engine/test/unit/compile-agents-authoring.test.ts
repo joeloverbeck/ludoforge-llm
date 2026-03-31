@@ -71,6 +71,7 @@ function createVisibility(overrides: NonNullable<NonNullable<GameSpecDoc['agents
     ...(overrides.activeCardIdentity !== undefined ? { activeCardIdentity: overrides.activeCardIdentity } : {}),
     ...(overrides.activeCardTag !== undefined ? { activeCardTag: overrides.activeCardTag } : {}),
     ...(overrides.activeCardMetadata !== undefined ? { activeCardMetadata: overrides.activeCardMetadata } : {}),
+    ...(overrides.activeCardAnnotation !== undefined ? { activeCardAnnotation: overrides.activeCardAnnotation } : {}),
   };
 }
 
@@ -236,6 +237,10 @@ describe('agents authoring surface', () => {
         preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
       },
       activeCardMetadata: {
+        current: 'hidden',
+        preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+      },
+      activeCardAnnotation: {
         current: 'hidden',
         preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
       },
@@ -1093,6 +1098,7 @@ describe('agents authoring surface', () => {
           activeCardIdentity: { current: 'public' },
           activeCardTag: { current: 'seatVisible' },
           activeCardMetadata: { current: 'hidden', preview: { visibility: 'public', allowWhenHiddenSampling: true } },
+          activeCardAnnotation: { current: 'hidden', preview: { visibility: 'public', allowWhenHiddenSampling: true } },
         }),
         library: {
           stateFeatures: {},

@@ -343,7 +343,8 @@ export type CompiledAgentPolicySurfaceRefFamily =
   | 'victoryCurrentRank'
   | 'activeCardIdentity'
   | 'activeCardTag'
-  | 'activeCardMetadata';
+  | 'activeCardMetadata'
+  | 'activeCardAnnotation';
 export type CompiledAgentPolicySurfaceSelector =
   | {
       readonly kind: 'role';
@@ -497,6 +498,38 @@ export interface CompiledCardMetadataIndex {
   readonly entries: Readonly<Record<string, CompiledCardMetadataEntry>>;
 }
 
+export interface CompiledEventSideAnnotation {
+  readonly tokenPlacements: Readonly<Record<string, number>>;
+  readonly tokenRemovals: Readonly<Record<string, number>>;
+  readonly tokenCreations: Readonly<Record<string, number>>;
+  readonly tokenDestructions: Readonly<Record<string, number>>;
+  readonly markerModifications: number;
+  readonly globalMarkerModifications: number;
+  readonly globalVarModifications: number;
+  readonly perPlayerVarModifications: number;
+  readonly varTransfers: number;
+  readonly drawCount: number;
+  readonly shuffleCount: number;
+  readonly grantsOperation: boolean;
+  readonly grantOperationSeats: readonly string[];
+  readonly hasEligibilityOverride: boolean;
+  readonly hasLastingEffect: boolean;
+  readonly hasBranches: boolean;
+  readonly hasPhaseControl: boolean;
+  readonly hasDecisionPoints: boolean;
+  readonly effectNodeCount: number;
+}
+
+export interface CompiledEventCardAnnotation {
+  readonly cardId: string;
+  readonly unshaded?: CompiledEventSideAnnotation;
+  readonly shaded?: CompiledEventSideAnnotation;
+}
+
+export interface CompiledEventAnnotationIndex {
+  readonly entries: Readonly<Record<string, CompiledEventCardAnnotation>>;
+}
+
 export interface CompiledAgentPolicySurfaceCatalog {
   readonly globalVars: Readonly<Record<string, CompiledAgentPolicySurfaceVisibility>>;
   readonly perPlayerVars: Readonly<Record<string, CompiledAgentPolicySurfaceVisibility>>;
@@ -508,6 +541,7 @@ export interface CompiledAgentPolicySurfaceCatalog {
   readonly activeCardIdentity: CompiledAgentPolicySurfaceVisibility;
   readonly activeCardTag: CompiledAgentPolicySurfaceVisibility;
   readonly activeCardMetadata: CompiledAgentPolicySurfaceVisibility;
+  readonly activeCardAnnotation: CompiledAgentPolicySurfaceVisibility;
 }
 
 export interface CompiledAgentParameterDef {
@@ -662,6 +696,7 @@ export interface GameDef {
   readonly terminal: TerminalEvaluationDef;
   readonly eventDecks?: readonly EventDeckDef[];
   readonly cardMetadataIndex?: CompiledCardMetadataIndex;
+  readonly cardAnnotationIndex?: CompiledEventAnnotationIndex;
   readonly stackingConstraints?: readonly StackingConstraint[];
   readonly markerLattices?: readonly SpaceMarkerLatticeDef[];
   readonly globalMarkerLattices?: readonly GlobalMarkerLatticeDef[];

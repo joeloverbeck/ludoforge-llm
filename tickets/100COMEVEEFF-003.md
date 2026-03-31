@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — new compiler module
-**Deps**: `tickets/100COMEVEEFF-001.md`
+**Deps**: `archive/tickets/100COMEVEEFF-001.md`
 
 ## Problem
 

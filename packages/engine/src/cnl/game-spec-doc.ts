@@ -534,6 +534,7 @@ export interface GameSpecAgentVisibilitySection {
   readonly activeCardIdentity?: GameSpecPolicySurfaceVisibilityDef;
   readonly activeCardTag?: GameSpecPolicySurfaceVisibilityDef;
   readonly activeCardMetadata?: GameSpecPolicySurfaceVisibilityDef;
+  readonly activeCardAnnotation?: GameSpecPolicySurfaceVisibilityDef;
 }
 
 export type GameSpecPolicyExpr =

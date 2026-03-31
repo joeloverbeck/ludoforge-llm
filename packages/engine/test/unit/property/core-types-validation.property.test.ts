@@ -52,6 +52,10 @@ describe('core-types validation property-style checks', () => {
               current: 'hidden',
               preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
             },
+            activeCardAnnotation: {
+              current: 'hidden',
+              preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+            },
           },
           parameterDefs: {},
           candidateParamDefs: {},
@@ -152,6 +156,10 @@ describe('core-types validation property-style checks', () => {
             preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
           },
           activeCardMetadata: {
+            current: 'hidden',
+            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+          },
+          activeCardAnnotation: {
             current: 'hidden',
             preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
           },

@@ -12,68 +12,98 @@ All game behavior is encoded in GameSpecDoc YAML and compiled to GameDef JSON. T
 
 ## 2. Evolution-First Design
 
-**Evolution mutates YAML only. All game data required to compile and execute a game MUST be representable inside GameSpecDoc YAML.**
+**Evolution mutates YAML only. All rule-authoritative game data required to compile and execute the rules MUST be representable inside GameSpecDoc YAML.**
 
-The system exists so LLMs can evolve board games through optimization. GameSpecDoc is the unit of evolution — embedded `dataAssets` with `id`/`kind`/`payload` carry all game content. If it can't be expressed in YAML, it can't be evolved.
+The system exists so LLMs can evolve board games through optimization. GameSpecDoc is the unit of evolution — embedded `dataAssets` with `id`/`kind`/`payload` carry all semantics-affecting game content. Visual presentation, batch orchestration, and analytics configuration live in separate artifacts. If a datum can change legal actions, state transitions, observability, scoring, or terminal conditions, it belongs in GameSpecDoc.
 
 ## 3. Visual Separation
 
 **Game-specific visual presentation data SHALL live in `visual-config.yaml`, not in GameSpecDoc or the engine.**
 
-GameSpecDoc files contain game-specific data not related to visual presentation. The `visual-config.yaml` file in each game's `data/games/<game>/` directory contains all presentation data (layout, colors, shapes, token visuals, zone styles, animation config). The runner consumes visual config through `VisualConfigProvider` — a query-based API that resolves visuals generically without knowing which game it serves.
+GameSpecDoc contains rule-authoritative data only. The `visual-config.yaml` file in each game's `data/games/<game>/` directory contains presentation data only: layout, colors, shapes, token visuals, zone styles, animation config, and UI affordance hints. `visual-config.yaml` MUST NOT define legality, hidden-information policy, state transitions, or any other rule-authoritative behavior. The runner consumes visual config through `VisualConfigProvider` — a query-based projection layer over kernel state, not a second rules engine.
 
-## 4. Schema Ownership Stays Generic
+## 4. Authoritative State and Observer Views
+
+**The kernel owns one authoritative state; players, agents, and runners consume projections of that state according to visibility rules encoded in the spec.**
+
+Hidden and private information are first-class semantic concerns. Hands, decks, face-down pieces, secret objectives, simultaneous selections, and masked outcomes MUST be modelable without ad hoc game code or UI-only filtering. Non-omniscient runners and agents MUST NOT inspect full state except in explicit omniscient analysis modes.
+
+## 5. One Rules Protocol, Many Clients
+
+**The simulator, web runner, and AI agents MUST all use the same action, legality, and event protocol.**
+
+The kernel is the single source of truth for legal actions and state transitions. UI gestures map to generic actions; agents choose from the same legal action set; simulations advance through the same apply-action pipeline. No UI-only rule paths, no simulation-only shortcuts, and no duplicated legality logic outside the kernel.
+
+## 6. Schema Ownership Stays Generic
 
 **Payload schema and type contracts in shared compiler/kernel schemas MUST remain generic. No per-game schema files.**
 
 Do not create schema files that define one game's structure as a required execution contract. Game-specific structure is expressed through GameSpecDoc's generic `dataAssets` mechanism, not through dedicated type definitions.
 
-## 5. Determinism Is Sacred
+## 7. Specs Are Data, Not Code
 
-**Same seed + same actions = identical result. Always. No exceptions.**
+**Game specs are declarative data, never executable code.**
 
-The kernel is a pure, deterministic state machine. PRNG state lives in GameState (PCG-DXSM-128, bigint arithmetic). No floating-point math — all game values are integers, division uses `Math.trunc`. State serialization round-trips must be bit-identical. Zobrist hashing enables efficient state comparison.
+No `eval`, embedded scripts, runtime callbacks, plugin hooks, or arbitrary code generation inside GameSpecDoc, GameDef, visual config, or experiment artifacts. All extensibility must come through generic DSL constructs, compiler macros that lower to generic AST, or engine changes justified across multiple games. A spec must be safe to compile and run in untrusted environments.
 
-## 6. Bounded Computation
+## 8. Determinism Is Sacred
+
+**Same GameDef + same initial state + same seed + same actions = identical result. Always. No exceptions.**
+
+The kernel is a pure, deterministic state machine. PRNG state lives in GameState and uses a specified exact algorithm. Execution MUST NOT depend on wall-clock time, system locale, object key order, hash-map/set iteration order, or any other ambient process state. All rule-authoritative numeric operations MUST be exact. Today that means integers only, with division defined as `Math.trunc`; any future expansion of the numeric domain must preserve exactness and determinism. State serialization round-trips must be canonical and bit-identical. Hashes accelerate comparison; canonical serialized state remains the source of truth for equality.
+
+## 9. Replay, Telemetry, and Auditability
+
+**Every state transition MUST produce a structured, deterministic event record suitable for replay, debugging, and analytics.**
+
+The event stream, together with canonical snapshots when needed, must be sufficient to reconstruct games, drive the runner, explain outcomes, and compute statistics at scale. Analytics and fitness evaluation should consume generic events and state queries, not bespoke per-game instrumentation in engine code.
+
+## 10. Bounded Computation
 
 **All iteration MUST be bounded. No general recursion. All choices MUST be finite and enumerable.**
 
-`forEach` operates over finite collections. `repeat N` uses compile-time bounds. Trigger chains are capped at depth K (`maxTriggerDepth`, default 5). Legal moves must be listable — no free-text moves, no unbounded generation. Mechanics emerge from composition of a small instruction set, not bespoke primitives.
+`forEach` operates over finite collections. `repeat N` uses compile-time or validated runtime bounds. Trigger chains, reaction windows, and similar cascades are capped by configurable budgets. Legal moves must be finitely listable and emitted in stable deterministic order — no free-text moves, no unbounded generation. Mechanics emerge from composition of a small instruction set, not bespoke primitives.
 
-## 7. Immutability
+## 11. Immutability
 
 **All state transitions MUST return new objects. Never mutate.**
 
 Kernel effect handlers receive state and return new state. Use spread operators and immutable update patterns. The previous state is never modified — this enables determinism verification, undo/replay, and safe parallel reasoning about state.
 
-**Exception — Scoped internal mutation**: Within a single synchronous effect-execution scope (e.g., `applyEffectsWithBudgetState`), effect handlers MAY mutate a working copy of the state for performance. The working copy is created at scope entry (shallow clone) and is not observable by external code. The external contract is preserved: `applyMove(state) → newState` where the input `state` is never modified.
+**Exception — Scoped internal mutation**: Within a single synchronous effect-execution scope, the kernel MAY use a private draft state or copy-on-write working state for performance. That working state MUST be fully isolated from caller-visible state: no shared mutable descendants, no aliasing that can leak outside the scope, and no observation before finalization. The external contract remains `applyMove(state) -> newState`, where the input `state` is never modified. This guarantee MUST be enforced by regression tests.
 
-## 8. Compiler-Kernel Validation Boundary
+## 12. Compiler-Kernel Validation Boundary
 
-**The compiler validates structure and references. The kernel validates behavior and semantics.**
+**The compiler validates everything knowable from the spec alone. The kernel validates only state-dependent semantics and runtime invariants.**
 
-The compiler (CNL) is responsible for YAML syntax, field presence, reference resolution, macro expansion, and spec-level constraints. The kernel is responsible for effect AST semantics, condition arity, value expression type safety, and runtime contract enforcement. Neither layer encroaches on the other's responsibilities.
+The compiler is responsible for YAML syntax, field presence, reference resolution, macro expansion, static typing, effect/condition/value-expression arity and shape checks, boundedness checks, and any semantic constraint derivable without executing the game. The kernel is responsible for validating state-dependent preconditions, action legality in a concrete state, observability constraints, budget exhaustion, and runtime contract enforcement. Specs that can be proven invalid at compile time MUST fail compilation.
 
-## 9. No Backwards Compatibility
+## 13. Artifact Identity and Reproducibility
 
-**When a change breaks existing contracts, fix all breaks and test thoroughly. No alias paths, no shims, no deprecated fallbacks.**
+**Every compiled artifact, replay, and experiment result MUST carry enough identity to reproduce it exactly.**
 
-Do not maintain compatibility layers, re-export aliases, or `_legacy` suffixes. If a refactor changes an interface, every consumer is updated in the same change. Unused code is deleted, not commented out. The codebase reflects current truth, not historical archaeology.
+At minimum record the GameSpec hash, GameDef hash, compiler version, kernel version, scenario identifier or hash, and seed set. Historical runs are only meaningful if they can be tied back to the exact rules and binaries that produced them.
 
-## 10. Architectural Completeness
+## 14. No Backwards Compatibility
+
+**Do not keep compatibility shims in production code. When a change breaks existing contracts, migrate all owned artifacts in the same change and test thoroughly.**
+
+No alias paths, deprecated fallbacks, compatibility wrappers, or `_legacy` suffixes in runtime or compiler code. If a refactor changes an interface or schema, every repository-owned GameSpecDoc, GameDef, visual config, fixture, replay, and test is updated in the same change. Unused code is deleted, not commented out. Historical experiments must remain reproducible via migrated snapshots or explicit version pinning; reproducibility is non-negotiable even when compatibility layers are forbidden.
+
+## 15. Architectural Completeness
 
 **Every change MUST be architecturally comprehensive. No hacks, no patches, no shortcuts.**
 
-Solutions address root causes, not symptoms. If a problem reveals a design gap, the design is fixed — not papered over with a workaround. Specs and tickets must propose complete solutions that integrate cleanly with existing architecture. The 1-3-1 rule applies when blocked: 1 problem, 3 options, 1 recommendation — then wait for confirmation.
+Solutions address root causes, not symptoms. If a problem reveals a design gap, the design is fixed — not papered over with a workaround. Specs and tickets must propose complete solutions that integrate cleanly with existing architecture.
 
-## 11. Testing as Proof
+## 16. Testing as Proof
 
 **Architectural properties MUST be proven through automated tests, not assumed.**
 
-Determinism is proven by determinism tests (same seed + same actions = identical state hash). Correctness is proven by golden tests (known input to expected output). Robustness is proven by property tests (random play for N turns, no crashes, no invalid states). Game-agnosticism is proven by compiling and running multiple games (FITL, Texas Hold'em). Bugs are fixed through TDD: write the failing test first, then fix the code. Never adapt tests to match bugs.
+Compiler determinism is proven by compiling the same GameSpecDoc twice and asserting byte-identical GameDef. Runtime determinism is proven by replay tests that assert canonical serialized state equality for the same GameDef, initial state, seed, and actions; hashes may be used as accelerators or diagnostics, not as the sole oracle. Correctness is proven by golden tests. Robustness is proven by property tests and long-run simulation fuzzing. Game-agnosticism is proven by a conformance corpus spanning materially different game families: at minimum one perfect-information board game, one hidden-information card game, one stochastic game, and one asymmetric or phase-heavy game. Bugs are fixed through TDD: write the failing test first, then fix the code. Never adapt tests to preserve a bug.
 
-## 12. Branded Types Over Strings
+## 17. Strongly Typed Domain Identifiers
 
-**Domain identifiers (ZoneId, PlayerId, ActionId, TokenTypeId, etc.) MUST use branded types, not raw strings.**
+**Domain identifiers (ZoneId, PlayerId, ActionId, TokenTypeId, etc.) MUST be represented as distinct nominal types in implementation code, not interchangeable raw strings.**
 
-Branded types prevent accidental ID mixing at compile time. The kernel validates branded construction at runtime. This eliminates an entire class of bugs where IDs from different domains are accidentally interchanged.
+In TypeScript, this means branded types. The kernel validates identifier construction at runtime. Serialized YAML and JSON artifacts continue to use canonical string representations. This eliminates an entire class of bugs where identifiers from different domains are accidentally interchanged.

@@ -590,6 +590,8 @@ function lowerProfile(
     hasError = true;
   }
 
+  const preview = lowerPreviewConfig(profileId, profileDef, diagnostics);
+
   const plan = buildProfilePlan(profileId, use, library, diagnostics);
 
   if (hasError || diagnosticsContainProfileUseErrors(profileId, diagnostics) || plan === null) {
@@ -600,6 +602,7 @@ function lowerProfile(
     params: compiledParams,
     use,
     ...(completionGuidance == null ? {} : { completionGuidance }),
+    ...(preview == null ? {} : { preview }),
     plan,
   };
 }
@@ -672,6 +675,35 @@ function lowerCompletionGuidance(
   return {
     enabled,
     fallback,
+  };
+}
+
+function lowerPreviewConfig(
+  profileId: string,
+  profileDef: GameSpecAgentProfileDef,
+  diagnostics: Diagnostic[],
+): CompiledAgentProfile['preview'] | undefined {
+  const authored = profileDef.preview;
+  if (authored === undefined) {
+    return undefined;
+  }
+
+  const path = `doc.agents.profiles.${profileId}.preview`;
+  const tolerateRngDivergence = authored.tolerateRngDivergence;
+
+  if (tolerateRngDivergence !== undefined && typeof tolerateRngDivergence !== 'boolean') {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path: `${path}.tolerateRngDivergence`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.tolerateRngDivergence must be a boolean, got ${typeof tolerateRngDivergence}.`,
+      suggestion: 'Set preview.tolerateRngDivergence to true or false.',
+    });
+    return undefined;
+  }
+
+  return {
+    tolerateRngDivergence: tolerateRngDivergence ?? false,
   };
 }
 

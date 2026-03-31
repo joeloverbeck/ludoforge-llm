@@ -1,6 +1,6 @@
 # 98PREPIPRNGTOL-002: Compile and validate `preview.tolerateRngDivergence` from profile YAML
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — CNL compiler and validator
@@ -85,3 +85,14 @@ Add `preview?: { tolerateRngDivergence?: boolean }` to the authored profile type
 1. `pnpm -F @ludoforge/engine test -- --test-name-pattern 'compile.*agent'` (or equivalent targeted run)
 2. `pnpm turbo typecheck`
 3. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+- **Completion date**: 2026-03-31
+- **What changed**:
+  - `validate-agents.ts:23`: Added `'preview'` to `AGENT_PROFILE_KEYS`
+  - `game-spec-doc.ts:599`: Added `preview?: { tolerateRngDivergence?: boolean }` to `GameSpecAgentProfileDef`
+  - `compile-agents.ts`: Added `lowerPreviewConfig()` function mirroring `lowerCompletionGuidance`, wired into profile compilation return
+  - `compile-agents-authoring.test.ts`: Added 3 test cases (present, absent, invalid type)
+- **Deviations**: None. Test file was `compile-agents-authoring.test.ts` (not `cnl/compile-agents.test.ts` as suggested), per ticket's fallback clause.
+- **Verification**: `pnpm turbo typecheck` passes (3/3 packages). `pnpm -F @ludoforge/engine test` passes (704/704 tests).

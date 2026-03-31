@@ -20,7 +20,7 @@ const AGENT_VISIBILITY_SECTION_KEYS = ['globalVars', 'perPlayerVars', 'derivedMe
 const AGENT_VISIBILITY_KEYS = ['current', 'preview'] as const;
 const AGENT_VISIBILITY_PREVIEW_KEYS = ['visibility', 'allowWhenHiddenSampling'] as const;
 const AGENT_VISIBILITY_VICTORY_KEYS = ['currentMargin', 'currentRank'] as const;
-const AGENT_PROFILE_KEYS = ['params', 'use', 'completionGuidance'] as const;
+const AGENT_PROFILE_KEYS = ['params', 'use', 'completionGuidance', 'preview'] as const;
 type AgentProfileUseKey = typeof AGENT_POLICY_PROFILE_USE_BUCKETS[number];
 type AgentLibraryBucketMap = Partial<Record<AgentProfileUseKey, Record<string, unknown>>>;
 

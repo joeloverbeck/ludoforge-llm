@@ -603,6 +603,9 @@ export interface GameSpecAgentProfileDef {
     readonly enabled?: boolean;
     readonly fallback?: 'random' | 'first';
   };
+  readonly preview?: {
+    readonly tolerateRngDivergence?: boolean;
+  };
 }
 
 export type GameSpecSeatPolicyBindings = Readonly<Record<string, string>>;

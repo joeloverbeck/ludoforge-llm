@@ -773,6 +773,121 @@ describe('agents authoring surface', () => {
     assert.equal(result.gameDef?.agents?.profiles.baseline, undefined);
   });
 
+  it('compiles preview.tolerateRngDivergence from profile YAML into CompiledAgentProfile.preview', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: {
+        visibility: createVisibility(),
+        parameters: {},
+        library: {
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              scoreTerms: [],
+              completionScoreTerms: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+            preview: {
+              tolerateRngDivergence: true,
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      },
+    });
+
+    assert.equal(result.diagnostics.some((d) => d.severity === 'error'), false);
+    assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.preview, {
+      tolerateRngDivergence: true,
+    });
+  });
+
+  it('omits preview field when profile YAML has no preview section', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: {
+        visibility: createVisibility(),
+        parameters: {},
+        library: {
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              scoreTerms: [],
+              completionScoreTerms: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      },
+    });
+
+    assert.equal(result.diagnostics.some((d) => d.severity === 'error'), false);
+    assert.equal(result.gameDef?.agents?.profiles.baseline?.preview, undefined);
+  });
+
+  it('emits diagnostic when preview.tolerateRngDivergence is not a boolean', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: {
+        visibility: createVisibility(),
+        parameters: {},
+        library: {
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              scoreTerms: [],
+              completionScoreTerms: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+            preview: {
+              tolerateRngDivergence: 'yes' as unknown as boolean,
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      },
+    });
+
+    assert.equal(
+      result.diagnostics.some((d) => d.path === 'doc.agents.profiles.baseline.preview.tolerateRngDivergence'),
+      true,
+    );
+  });
+
   it('validates profile.use library references during authoring validation', () => {
     const diagnostics = validateGameSpec({
       ...createCompileReadyDoc(),

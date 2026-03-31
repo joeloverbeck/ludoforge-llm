@@ -390,29 +390,37 @@ function drawRouteCurve(
 function extendRouteEndpoints(
   points: readonly Position[],
   margin: number,
+  endpointKinds: { readonly first: 'zone' | 'anchor'; readonly last: 'zone' | 'anchor' },
 ): readonly Position[] {
   if (points.length < 2) {
     return points;
   }
   const result = [...points];
-  const first = points[0]!;
-  const second = points[1]!;
-  const len1 = Math.hypot(first.x - second.x, first.y - second.y);
-  if (len1 > 0) {
-    result[0] = {
-      x: first.x + ((first.x - second.x) / len1) * margin,
-      y: first.y + ((first.y - second.y) / len1) * margin,
-    };
+
+  if (endpointKinds.first === 'zone') {
+    const first = points[0]!;
+    const second = points[1]!;
+    const len1 = Math.hypot(first.x - second.x, first.y - second.y);
+    if (len1 > 0) {
+      result[0] = {
+        x: first.x + ((first.x - second.x) / len1) * margin,
+        y: first.y + ((first.y - second.y) / len1) * margin,
+      };
+    }
   }
-  const last = points[points.length - 1]!;
-  const prev = points[points.length - 2]!;
-  const len2 = Math.hypot(last.x - prev.x, last.y - prev.y);
-  if (len2 > 0) {
-    result[result.length - 1] = {
-      x: last.x + ((last.x - prev.x) / len2) * margin,
-      y: last.y + ((last.y - prev.y) / len2) * margin,
-    };
+
+  if (endpointKinds.last === 'zone') {
+    const last = points[points.length - 1]!;
+    const prev = points[points.length - 2]!;
+    const len2 = Math.hypot(last.x - prev.x, last.y - prev.y);
+    if (len2 > 0) {
+      result[result.length - 1] = {
+        x: last.x + ((last.x - prev.x) / len2) * margin,
+        y: last.y + ((last.y - prev.y) / len2) * margin,
+      };
+    }
   }
+
   return result;
 }
 
@@ -427,7 +435,10 @@ function resolveRouteGeometry(
 ): RouteGeometry {
   const { hitAreaPadding, curveSegments, wavySegments, stroke } = options;
   const routePoints = route.path.map((point) => point.position);
-  const extendedPoints = extendRouteEndpoints(routePoints, ROUTE_OVERLAP_MARGIN);
+  const extendedPoints = extendRouteEndpoints(routePoints, ROUTE_OVERLAP_MARGIN, {
+    first: route.path[0]?.kind ?? 'anchor',
+    last: route.path[route.path.length - 1]?.kind ?? 'anchor',
+  });
   const segmentCommands = buildSegmentCommands(route);
   const sampledPath = sampleResolvedRoutePath(extendedPoints, route.segments, curveSegments);
   const renderedPoints = stroke.wavy

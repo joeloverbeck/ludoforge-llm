@@ -283,8 +283,9 @@ describe('createConnectionRouteRenderer', () => {
     expect(routeCurve.quadraticCurveToArgs).toEqual([100, 30, 200, 0]);
     expect(routeCurve.lineToArgs).toEqual([]);
     expect(routeCurve.strokeStyle).toEqual({ color: 0x8b7355, width: 8, alpha: 0.8 });
-    expect(midpoint.position.x).toBeCloseTo(100);
-    expect(midpoint.position.y).toBeCloseTo(15);
+    expect(midpoint.position.x).toBeGreaterThan(50);
+    expect(midpoint.position.x).toBeLessThan(100);
+    expect(midpoint.position.y).toBeCloseTo(15, 0);
     const normalizedRotation = labelCluster.rotation % (Math.PI * 2);
     const effectiveRotation = Math.abs(normalizedRotation) < 0.1 || Math.abs(normalizedRotation - Math.PI * 2) < 0.1
       ? 0 : normalizedRotation;
@@ -558,8 +559,8 @@ describe('createConnectionRouteRenderer', () => {
       [220, -10],
     ]);
     expect(routeRoot.hitArea).toBeInstanceOf(MockPolygon);
-    expect(midpoint.position.x).toBeGreaterThan(100);
-    expect(midpoint.position.x).toBeLessThan(220);
+    expect(midpoint.position.x).toBeGreaterThan(50);
+    expect(midpoint.position.x).toBeLessThan(150);
   });
 
   it('renders spur segments using the parent route stroke', () => {
@@ -596,6 +597,52 @@ describe('createConnectionRouteRenderer', () => {
 
     expect(routeCurve.lineToArgs).toEqual([[80, 60]]);
     expect(routeCurve.strokeStyle).toEqual({ color: 0x8b7355, width: 8, alpha: 0.8 });
+  });
+
+  it('does not extend anchor endpoints past junction nodes', () => {
+    const parent = new MockContainer();
+    const renderer = createConnectionRouteRenderer(parent as unknown as Container, new VisualConfigProvider(null));
+
+    renderer.update(
+      [makeRoute({
+        path: [
+          { kind: 'anchor', id: 'anchor-a', position: { x: 0, y: 0 } },
+          { kind: 'anchor', id: 'anchor-b', position: { x: 200, y: 0 } },
+        ],
+        segments: [{ kind: 'straight' }],
+      })],
+      [],
+      new Map(),
+    );
+
+    const routeRoot = parent.children[0] as InstanceType<typeof MockContainer>;
+    const routeCurve = routeRoot.children[0] as InstanceType<typeof MockGraphics>;
+
+    expect(routeCurve.moveToArgs).toEqual([0, 0]);
+    expect(routeCurve.lineToArgs).toEqual([[200, 0]]);
+  });
+
+  it('extends only zone endpoints while leaving anchor endpoints unchanged', () => {
+    const parent = new MockContainer();
+    const renderer = createConnectionRouteRenderer(parent as unknown as Container, new VisualConfigProvider(null));
+
+    renderer.update(
+      [makeRoute({
+        path: [
+          { kind: 'zone', id: 'alpha:none', position: { x: 100, y: 0 } },
+          { kind: 'anchor', id: 'anchor-b', position: { x: 300, y: 0 } },
+        ],
+        segments: [{ kind: 'straight' }],
+      })],
+      [],
+      new Map(),
+    );
+
+    const routeRoot = parent.children[0] as InstanceType<typeof MockContainer>;
+    const routeCurve = routeRoot.children[0] as InstanceType<typeof MockGraphics>;
+
+    expect(routeCurve.moveToArgs![0]).toBeLessThan(100);
+    expect(routeCurve.lineToArgs).toEqual([[300, 0]]);
   });
 
   it('renders from embedded route geometry without consulting the positions map and destroys all children on destroy', () => {

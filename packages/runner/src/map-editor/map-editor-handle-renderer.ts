@@ -1,6 +1,7 @@
 import type { GameDef } from '@ludoforge/engine/runtime';
 import { Circle, Container, Graphics, Polygon } from 'pixi.js';
 
+import { quadraticBezierMidpoint } from '../canvas/geometry/bezier-utils.js';
 import { safeDestroyChildren, safeDestroyDisplayObject } from '../canvas/renderers/safe-destroy.js';
 import { resolveVisualDimensions } from '../canvas/renderers/shape-utils.js';
 import { STROKE_LABEL_FONT_NAME } from '../canvas/text/bitmap-font-registry.js';
@@ -10,6 +11,7 @@ import {
   ZONE_RENDER_HEIGHT,
   ZONE_RENDER_WIDTH,
 } from '../layout/layout-constants.js';
+import { createMidpointHandle, DOUBLE_CLICK_MS } from './handle-graphics.js';
 import type { MapEditorStoreApi } from './map-editor-store.js';
 import {
   attachAnchorDragHandlers,
@@ -68,6 +70,7 @@ export function createEditorHandleRenderer(
   });
   let cleanupDisposers: Array<() => void> = [];
   let tangentGraphics: Graphics[] = [];
+  let lastWaypointClickTime = 0;
 
   const releaseInteractionDisposers = (): void => {
     for (const dispose of cleanupDisposers) {
@@ -156,28 +159,35 @@ export function createEditorHandleRenderer(
             color: HANDLE_STROKE_COLOR,
             alpha: 1,
           });
+        // Double-click handler must be registered before drag handler so it
+        // can intercept the second click and prevent a drag start.
+        const isIntermediate = pointIndex > 0 && pointIndex < geometry.points.length - 1;
+        if (isIntermediate) {
+          const onWaypointDoubleClick = (event: { button?: number; stopPropagation?(): void; stopImmediatePropagation?(): void }): void => {
+            if (event.button !== undefined && event.button !== 0) {
+              return;
+            }
+            const now = Date.now();
+            if (now - lastWaypointClickTime < DOUBLE_CLICK_MS) {
+              event.stopPropagation?.();
+              event.stopImmediatePropagation?.();
+              lastWaypointClickTime = 0;
+              const state = store.getState();
+              state.selectZone(null);
+              state.selectRoute(routeId);
+              state.removeWaypoint(routeId, pointIndex);
+              return;
+            }
+            lastWaypointClickTime = now;
+          };
+          handle.on('pointerdown', onWaypointDoubleClick);
+          cleanupDisposers.push(() => {
+            handle.off('pointerdown', onWaypointDoubleClick);
+          });
+        }
         cleanupDisposers.push(
           attachAnchorDragHandlers(handle, routeId, point.endpoint.anchorId, dragSurface, store),
         );
-        const removeWaypointOnRightClick = (event: { button?: number; stopPropagation(): void }): void => {
-          if (event.button !== 2) {
-            return;
-          }
-
-          event.stopPropagation();
-          if (pointIndex <= 0 || pointIndex >= geometry.points.length - 1) {
-            return;
-          }
-
-          const state = store.getState();
-          state.selectZone(null);
-          state.selectRoute(routeId);
-          state.removeWaypoint(routeId, pointIndex);
-        };
-        handle.on('pointerdown', removeWaypointOnRightClick);
-        cleanupDisposers.push(() => {
-          handle.off('pointerdown', removeWaypointOnRightClick);
-        });
       }
 
       root.addChild(handle);
@@ -224,6 +234,30 @@ export function createEditorHandleRenderer(
         attachControlPointDragHandlers(control, routeId, segmentIndex, dragSurface, store),
       );
       root.addChild(control);
+    }
+
+    // Midpoint handles for inserting waypoints.
+    for (let segmentIndex = 0; segmentIndex < geometry.segments.length; segmentIndex += 1) {
+      const segment = geometry.segments[segmentIndex];
+      if (segment === undefined) {
+        continue;
+      }
+
+      const midpoint = segment.kind === 'quadratic'
+        ? quadraticBezierMidpoint(segment.start, segment.controlPoint.position, segment.end)
+        : { x: (segment.start.x + segment.end.x) / 2, y: (segment.start.y + segment.end.y) / 2 };
+
+      const midHandle = createMidpointHandle(midpoint.x, midpoint.y);
+      const capturedSegmentIndex = segmentIndex;
+      const onMidpointClick = (event: { stopPropagation?(): void }): void => {
+        event.stopPropagation?.();
+        store.getState().insertWaypoint(routeId, capturedSegmentIndex, midpoint);
+      };
+      midHandle.on('pointerdown', onMidpointClick);
+      cleanupDisposers.push(() => {
+        midHandle.off('pointerdown', onMidpointClick);
+      });
+      root.addChild(midHandle);
     }
   };
 

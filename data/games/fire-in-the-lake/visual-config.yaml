@@ -47,128 +47,128 @@ layout:
         position: e
     fixed:
       - zone: an-loc:none
-        x: 140
-        y: 1080
+        x: 157.33358015799172
+        y: -506.4753175056476
       - zone: ba-xuyen:none
-        x: -820.9421737300604
-        y: 3460.543542164606
+        x: -1078.5298592385416
+        y: 4150.641081309768
       - zone: binh-dinh:none
-        x: 2415.126330211469
-        y: -1970.6864561705293
+        x: 4311.792895152876
+        y: -5437.352911195816
       - zone: binh-tuy-binh-thuan:none
-        x: 2137.0080426772174
-        y: 2100.879301883406
+        x: 2769.4971488093242
+        y: 2783.2775920462077
       - zone: cam-ranh:none
-        x: 1825.9959417091295
-        y: 1140.8146641222907
+        x: 4763.922060069217
+        y: 1728.337421669432
       - zone: can-tho:none
-        x: -1013.1180588254532
-        y: 3188.8313079696836
+        x: -1060.988771719713
+        y: 3153.7527957671923
       - zone: central-laos:none
-        x: -146.06325133302244
-        y: -3274.7883367906024
+        x: -332.7298162744287
+        y: -5181.454841278144
       - zone: da-nang:none
-        x: 1101.6473813613854
-        y: -2516.7434719971047
+        x: 4779.169683454267
+        y: -3003.2637832148134
       - zone: hue:none
-        x: 420
-        y: -3700
+        x: 570.0003051757812
+        y: -5733.333370588558
       - zone: khanh-hoa:none
-        x: 2105.7827393520192
-        y: -194.65890082817577
+        x: 6041.671673908218
+        y: -820.0506717376918
       - zone: kien-giang-an-xuyen:none
-        x: -1545.009475275897
-        y: 3817.100851149218
+        x: -2511.159938291835
+        y: 4357.953515351515
       - zone: kien-hoa-vinh-binh:none
-        x: -330.7934277122748
-        y: 3350.2745585365633
+        x: 91.40952315971356
+        y: 3610.8971383974676
       - zone: kien-phong:none
-        x: -740.3475398956061
-        y: 2686.765227494292
+        x: -1077.2350156335242
+        y: 2297.3159442825904
       - zone: kontum:none
-        x: 513.3901726710391
-        y: -931.6052884680901
+        x: 2543.389867495258
+        y: -3184.9386520812013
       - zone: north-vietnam:none
-        x: -93.57179920321187
-        y: -4437.9335229670805
+        x: -603.5717992032119
+        y: -6441.266741918949
       - zone: northeast-cambodia:none
-        x: -280.4161444272213
-        y: -767.7119628325634
+        x: -1922.2221238191714
+        y: -5616.111517885454
       - zone: phu-bon-phu-yen:none
-        x: 2769.0596857113696
-        y: -954.2016974814859
+        x: 4889.05968571137
+        y: -4554.201888513593
       - zone: phuoc-long:none
-        x: 1571.7426489326135
-        y: 1854.8834958741013
+        x: 1971.9196514648152
+        y: -688.1462539805116
       - zone: pleiku-darlac:none
-        x: 1401.1260733711715
-        y: -899.3717701903806
+        x: 2681.126683722734
+        y: -4279.371357846389
       - zone: quang-duc-long-khanh:none
-        x: 3170.0256802000868
-        y: 1326.6032496278524
+        x: 3036.383569937223
+        y: 926.9093284484159
       - zone: quang-nam:none
-        x: 1092.5384255996473
-        y: -3091.6389085779642
+        x: 1349.2046853652723
+        y: -4701.638857530381
       - zone: quang-tin-quang-ngai:none
-        x: 1302.356341991041
-        y: -2165.6442623729763
+        x: 1937.6947649549788
+        y: -3536.486945082738
       - zone: quang-tri-thua-thien:none
-        x: 745.7140177606252
-        y: -3696.0968038224955
+        x: 2402.3805827020315
+        y: -5282.763471044028
       - zone: qui-nhon:none
-        x: 1776.402815096716
-        y: -831.8902814655199
+        x: 4303.0696852139035
+        y: -3021.890212028123
       - zone: saigon:none
-        x: 527.5773735290484
-        y: 2285.8892941374115
+        x: 956.9328820850644
+        y: 2666.828557476519
       - zone: sihanoukville:none
-        x: -1709.0247692238388
-        y: 2241.5662214574154
+        x: -2806.723769062669
+        y: 1934.8329149212184
       - zone: southern-laos:none
-        x: -577.0560673730795
-        y: -2170.776474719859
+        x: -687.5340342649222
+        y: -3741.0633068373363
       - zone: tay-ninh:none
-        x: 62.117113755525224
-        y: 2241.096965134705
+        x: 207.5905006625319
+        y: 1356.9463648969322
       - zone: the-fishhook:none
-        x: -762.3297071602306
-        y: 779.4046442964496
+        x: -1934.8923334997817
+        y: -1300.0274185788699
       - zone: the-parrots-beak:none
-        x: -1099.107592892767
-        y: 1587.963817433354
+        x: -1838.1729893461488
+        y: 611.1671286568492
       - zone: leader:none
-        x: 2225.9959417091295
-        y: -3780
+        x: 6441.671673908218
+        y: -6201.266741918949
       - zone: available-ARVN:none
-        x: 2225.9959417091295
-        y: -3020
+        x: 6441.671673908218
+        y: -5441.266741918949
       - zone: available-NVA:none
-        x: 2225.9959417091295
-        y: -2780
+        x: 6441.671673908218
+        y: -5201.266741918949
       - zone: available-US:none
-        x: 2225.9959417091295
-        y: -2540
+        x: 6441.671673908218
+        y: -4961.266741918949
       - zone: available-VC:none
-        x: 2225.9959417091295
-        y: -2300
+        x: 6441.671673908218
+        y: -4721.266741918949
       - zone: casualties-US:none
-        x: 2225.9959417091295
-        y: -2060
+        x: 6441.671673908218
+        y: -4481.266741918949
       - zone: out-of-play-ARVN:none
-        x: 2225.9959417091295
-        y: -1820
+        x: 6441.671673908218
+        y: -4241.266741918949
       - zone: out-of-play-NVA:none
-        x: 2225.9959417091295
-        y: -1580
+        x: 6441.671673908218
+        y: -4001.2667419189493
       - zone: out-of-play-US:none
-        x: 2225.9959417091295
-        y: -1340
+        x: 6441.671673908218
+        y: -3761.2667419189493
       - zone: out-of-play-VC:none
-        x: 2225.9959417091295
-        y: -1100
+        x: 6441.671673908218
+        y: -3521.2667419189493
       - zone: trucks-base-staging:none
-        x: 2225.9959417091295
-        y: -820
+        x: 6441.671673908218
+        y: -3241.2667419189493
 factions:
   us:
     color: "#808000"
@@ -209,20 +209,20 @@ zones:
       waveFrequency: 0.08
   connectionAnchors:
     an-loc:
-      x: 420
-      y: 250
+      x: 888.4603923328514
+      y: 251.96829100577827
     ban-me-thuot:
-      x: 560
-      y: 220
+      x: 1374.0896977666807
+      y: -14.56508651407205
     bac-lieu:
-      x: -1031.9196623496318
-      y: 3866.6538107891906
+      x: -1230.332008005821
+      y: 4222.231430665369
     chau-doc:
-      x: -1247.6016868198367
-      y: 2736.735919630959
+      x: -1822.0383421550205
+      y: 1583.906566200706
     da-lat:
-      x: 640
-      y: 360
+      x: 1782.7481967588315
+      y: 1136.401931142052
     dak-to:
       x: 531.8295401573785
       y: -1861.4532306383767
@@ -230,8 +230,41 @@ zones:
       x: -300
       y: -3660
     long-phu:
-      x: -556.9357381193425
-      y: 3720.189169836345
+      x: -115.02603032731542
+      y: 3884.3961810727455
+    loc-can-tho-bac-lieu:none:waypoint:2:
+      x: -2304.461636878811
+      y: 3802.0519052146983
+    loc-can-tho-long-phu:none:waypoint:1:
+      x: -908.3878647751201
+      y: 3961.5110728382656
+    loc-can-tho-chau-doc:none:waypoint:1:
+      x: -2346.5342705088515
+      y: 3502.4955223398993
+    loc-can-tho-chau-doc:none:waypoint:2:
+      x: -1567.314723775651
+      y: 2443.1663938548313
+    loc-saigon-can-tho:none:waypoint:1:
+      x: -703.5395883628794
+      y: 2656.2356505339317
+    loc-saigon-can-tho:none:waypoint:2:
+      x: 190.7721860374387
+      y: 3312.0315020478315
+    loc-saigon-an-loc-ban-me-thuot:none:waypoint:1:
+      x: 492.14108582534243
+      y: 1541.2379177945581
+    loc-saigon-cam-ranh:none:waypoint:1:
+      x: 1878.179021337486
+      y: 2776.2243838790973
+    loc-saigon-cam-ranh:none:waypoint:2:
+      x: 3398.835413896259
+      y: 2604.677146507708
+    loc-saigon-da-lat:none:waypoint:1:
+      x: 2003.177264048561
+      y: 2377.083089318856
+    loc-kontum-ban-me-thuot:none:waypoint:1:
+      x: 1268.6763388460354
+      y: -1005.9762666635627
   connectionRoutes:
     loc-ban-me-thuot-da-lat:none:
       points:
@@ -253,25 +286,39 @@ zones:
       points:
         - kind: zone
           zoneId: can-tho:none
+          anchor: 199.33042312462555
+        - kind: anchor
+          anchorId: loc-can-tho-bac-lieu:none:waypoint:2
         - kind: anchor
           anchorId: bac-lieu
       segments:
+        - kind: straight
         - kind: straight
     loc-can-tho-chau-doc:none:
       points:
         - kind: zone
           zoneId: can-tho:none
+          anchor: 182.95081363148512
+        - kind: anchor
+          anchorId: loc-can-tho-chau-doc:none:waypoint:1
+        - kind: anchor
+          anchorId: loc-can-tho-chau-doc:none:waypoint:2
         - kind: anchor
           anchorId: chau-doc
       segments:
+        - kind: straight
+        - kind: straight
         - kind: straight
     loc-can-tho-long-phu:none:
       points:
         - kind: zone
           zoneId: can-tho:none
         - kind: anchor
+          anchorId: loc-can-tho-long-phu:none:waypoint:1
+        - kind: anchor
           anchorId: long-phu
       segments:
+        - kind: straight
         - kind: straight
     loc-da-nang-dak-to:none:
       points:
@@ -316,8 +363,11 @@ zones:
         - kind: zone
           zoneId: kontum:none
         - kind: anchor
+          anchorId: loc-kontum-ban-me-thuot:none:waypoint:1
+        - kind: anchor
           anchorId: ban-me-thuot
       segments:
+        - kind: straight
         - kind: straight
     loc-kontum-dak-to:none:
       points:
@@ -348,10 +398,13 @@ zones:
         - kind: zone
           zoneId: saigon:none
         - kind: anchor
+          anchorId: loc-saigon-an-loc-ban-me-thuot:none:waypoint:1
+        - kind: anchor
           anchorId: an-loc
         - kind: anchor
           anchorId: ban-me-thuot
       segments:
+        - kind: straight
         - kind: straight
         - kind: quadratic
           control:
@@ -362,25 +415,40 @@ zones:
       points:
         - kind: zone
           zoneId: cam-ranh:none
+        - kind: anchor
+          anchorId: loc-saigon-cam-ranh:none:waypoint:2
+        - kind: anchor
+          anchorId: loc-saigon-cam-ranh:none:waypoint:1
         - kind: zone
           zoneId: saigon:none
       segments:
+        - kind: straight
+        - kind: straight
         - kind: straight
     loc-saigon-can-tho:none:
       points:
         - kind: zone
           zoneId: can-tho:none
+        - kind: anchor
+          anchorId: loc-saigon-can-tho:none:waypoint:1
+        - kind: anchor
+          anchorId: loc-saigon-can-tho:none:waypoint:2
         - kind: zone
           zoneId: saigon:none
       segments:
+        - kind: straight
+        - kind: straight
         - kind: straight
     loc-saigon-da-lat:none:
       points:
         - kind: zone
           zoneId: saigon:none
         - kind: anchor
+          anchorId: loc-saigon-da-lat:none:waypoint:1
+        - kind: anchor
           anchorId: da-lat
       segments:
+        - kind: straight
         - kind: straight
   attributeRules:
     - match:
@@ -453,16 +521,16 @@ zones:
       color: "#8ab050"
       strokeColor: "#6a8838"
       vertices:
-        - 244.6841407771774
-        - -160.8581481271417
-        - -22.023488732444775
-        - -275.0207384114283
+        - 309.62562281735063
+        - -165.7871764188012
+        - -13.778323165025313
+        - -384.72773211342655
         - -249.36466616021903
         - -100.82432637374359
-        - -147
-        - 344
-        - 256.49406739147275
-        - 417.82832772775237
+        - -240.68446538666103
+        - 589.7072752771951
+        - 409.54533790648384
+        - 551.6715562947661
       label: Ba Xuyen
     binh-dinh:none:
       shape: polygon
@@ -483,16 +551,16 @@ zones:
     binh-tuy-binh-thuan:none:
       shape: polygon
       vertices:
-        - 379
-        - -574
-        - -32
-        - -718
-        - -57
-        - -330
-        - -221
-        - 426
-        - 379
-        - 426
+        - 945.9034996233768
+        - -787.7735736970449
+        - -838.8620094129412
+        - -541.3223740763015
+        - -1126.8528897248393
+        - -115.74033192442857
+        - -950.6881360445027
+        - 102.7433936152529
+        - 944.8051756524837
+        - -95.07296100470376
       label: Binh Tuy Binh Thuan
     cam-ranh:none:
       label: Cam Ranh
@@ -535,56 +603,58 @@ zones:
       color: "#8ab050"
       strokeColor: "#6a8838"
       vertices:
-        - 163
-        - -1016
+        - 18.40309512265503
+        - -1069.0261541638324
+        - 288.47450251764053
+        - -948.1442260594081
         - 471.3877472617751
         - -673.4522555045055
-        - 379.6848894221173
-        - -259.64350829826526
-        - 561.3840104166802
-        - 39.58462356615837
+        - 246.78534900508657
+        - -377.05662017774284
+        - 285.6617711089657
+        - 100.34529281165669
         - 222.38192857861623
         - 363.03624020275674
         - -412.39797583852305
         - 428.12737896474755
         - -355.0837683978709
         - -216.08461547460183
-        - -183.14104113040298
-        - -571.4329422089945
+        - -318.26926127696015
+        - -548.4981130774968
         - -324.1340774897267
         - -746.814518461063
-        - -282
-        - -1019
+        - -247.46726621882317
+        - -1057.9639436935058
       label: Kien Giang An Xuyen
     kien-hoa-vinh-binh:none:
       shape: polygon
       color: "#8ab050"
       strokeColor: "#6a8838"
       vertices:
-        - 348.7421997759533
-        - -316.64371989771143
+        - 428.7277523491965
+        - -425.526937126388
         - -371.1247200323504
         - -301.74208730401915
-        - -178.54876054727322
-        - 287.44834109979774
-        - 302.89087580163675
-        - 371.12716736530183
+        - -305.25810608006907
+        - 488.8453655880717
+        - 498.7052267144571
+        - 557.2678777110182
       label: Kien Hoa Vinh Binh
     kien-phong:none:
       shape: polygon
       color: "#8ab050"
       strokeColor: "#6a8838"
       vertices:
-        - 148
-        - -265
-        - 456
-        - -111
-        - 448.79961276886706
-        - 323.9398449387854
+        - 150.32140342112325
+        - -223.131665583599
+        - 539.0850549817696
+        - -136.04856540634773
+        - 634.9981026983273
+        - 444.95937090636335
         - -410
         - 565
-        - -656
-        - 114
+        - -672.3028739432125
+        - -3.8689195245192423
         - -295.13939380239435
         - -189.59568092059226
       label: Kien Phong
@@ -667,18 +737,18 @@ zones:
       color: "#4a4a20"
       strokeColor: "#353518"
       vertices:
-        - -200
-        - -400
-        - 300
-        - -400
-        - 303
-        - 157
+        - -716.4164948874527
+        - -448.74153309665894
+        - 405.8877494792382
+        - -590.0843160853233
+        - 616.8687616472948
+        - 2.130476138084987
         - 49
         - 364
         - -732
         - 128
-        - -376
-        - -28
+        - -868.3074793030155
+        - -263.09717415412183
       label: Phuoc Long
     pleiku-darlac:none:
       shape: polygon
@@ -705,20 +775,22 @@ zones:
     quang-duc-long-khanh:none:
       shape: polygon
       vertices:
-        - -244
-        - -709
-        - 83
-        - -57
-        - 58
-        - 331
-        - -533
-        - 234
-        - -557
-        - 51
-        - -982
-        - -341
-        - -1069
-        - -667
+        - 312.59042667224276
+        - -795.1341422037638
+        - 668.2110277870029
+        - -163.99993585568814
+        - 356.9521705053626
+        - 232.02362347786584
+        - -412.81846766564877
+        - 373.2991511268906
+        - -1301.336306361566
+        - 412.887794241268
+        - -1395.879003096663
+        - -150.64885314155345
+        - -1334.145772629173
+        - -443.31811850820736
+        - -848.4220180008915
+        - -607.4376585026589
       label: Quang Duc Long Khanh
     quang-nam:none:
       shape: polygon
@@ -775,8 +847,8 @@ zones:
         - 256.38171873593956
         - 258
         - 570
-        - -278.31477754579396
-        - 480.3094872352549
+        - -338.8324366163356
+        - 598.8603963249973
       label: Sihanoukville
     southern-laos:none:
       shape: polygon
@@ -809,10 +881,12 @@ zones:
         - -174.12295004577481
         - 360
         - 420
-        - -72.79127832591303
-        - 622.8158685976086
-        - -580
-        - 91
+        - -352.3593175081601
+        - 460.4005905108511
+        - -533.5636959224224
+        - 29.50208953697529
+        - -431.39904651333836
+        - -732.1621723849057
       label: Tay Ninh
     the-fishhook:none:
       shape: polygon
@@ -821,12 +895,14 @@ zones:
         - -706.381536396758
         - 875.8902256605847
         - -902.5738022415663
-        - 1257.7266694155333
-        - -240.16107697387304
-        - 1359
-        - 368
-        - 1003
-        - 524
+        - 2020.6536882306164
+        - -829.7686746465365
+        - 2114.004073418044
+        - 39.08862571417012
+        - 1854.9547483273052
+        - 333.9859493842871
+        - 1013.7073937837231
+        - 618.6443587818003
         - 371.69705363633784
         - 780.8823177927139
         - -328.6881973141742
@@ -841,12 +917,14 @@ zones:
         - -221
         - 768.4219795007009
         - 361.28064655558023
-        - 492
-        - 902
-        - 47
-        - 899
+        - 579.1555790375255
+        - 947.2300449300708
+        - 384.4414220462527
+        - 1037.4244000756805
         - -302.0118600874673
         - 1105.6940037831328
+        - -457.2533853947016
+        - 455.18524104129665
       label: The Parrots Beak
   layoutRoles:
     available-ARVN:none: forcePool

@@ -1,3 +1,4 @@
+import { gsap } from 'gsap';
 import { Graphics, type Container } from 'pixi.js';
 
 import { buildDashedSegments } from '../geometry/dashed-segments.js';
@@ -23,6 +24,8 @@ const BRIDGE_CAPSULE_ALPHA = 0.7;
 const BRIDGE_CAPSULE_WIDTH = 14;
 const BRIDGE_CAPSULE_HIGHLIGHT_ALPHA = 1.0;
 const BRIDGE_CAPSULE_HIGHLIGHT_WIDTH = 18;
+const FADE_IN_DURATION = 0.15;
+const FADE_OUT_DURATION = 0.15;
 
 interface PairRenderState {
   readonly from: string;
@@ -41,6 +44,36 @@ export function createAdjacencyRenderer(
   options: AdjacencyRendererOptions,
 ): AdjacencyRenderer {
   const graphicsByPair = new Map<string, Graphics>();
+  const zonesByPair = new Map<string, readonly [string, string]>();
+  const activeTweens = new Map<string, gsap.core.Tween>();
+  let activeZoneId: string | null = null;
+
+  function pairInvolvesZone(pairKey: string, zoneId: string): boolean {
+    const zones = zonesByPair.get(pairKey);
+    return zones !== undefined && (zones[0] === zoneId || zones[1] === zoneId);
+  }
+
+  function tweenAlpha(pairKey: string, graphics: Graphics, targetAlpha: number): void {
+    const existing = activeTweens.get(pairKey);
+    if (existing !== undefined) {
+      existing.kill();
+      activeTweens.delete(pairKey);
+    }
+    if (Math.abs(graphics.alpha - targetAlpha) < 0.01) {
+      graphics.alpha = targetAlpha;
+      return;
+    }
+    const duration = targetAlpha > 0 ? FADE_IN_DURATION : FADE_OUT_DURATION;
+    const tween = gsap.to(graphics, {
+      alpha: targetAlpha,
+      duration,
+      ease: targetAlpha > 0 ? 'power2.out' : 'power2.in',
+      onComplete: () => {
+        activeTweens.delete(pairKey);
+      },
+    });
+    activeTweens.set(pairKey, tween);
+  }
 
   return {
     update(
@@ -70,8 +103,14 @@ export function createAdjacencyRenderer(
           continue;
         }
 
+        const existingTween = activeTweens.get(pairKey);
+        if (existingTween !== undefined) {
+          existingTween.kill();
+          activeTweens.delete(pairKey);
+        }
         options.disposalQueue.enqueue(graphics);
         graphicsByPair.delete(pairKey);
+        zonesByPair.delete(pairKey);
       }
 
       for (const [pairKey, adjacency] of nextPairs) {
@@ -88,11 +127,15 @@ export function createAdjacencyRenderer(
           continue;
         }
 
+        let isNew = false;
         if (graphics === undefined) {
+          isNew = true;
           graphics = new Graphics();
           graphicsByPair.set(pairKey, graphics);
           parentContainer.addChild(graphics);
         }
+
+        zonesByPair.set(pairKey, [adjacency.from, adjacency.to]);
 
         const bothProvincePolygons = isProvincePolygon(fromZone) && isProvincePolygon(toZone);
         if (bothProvincePolygons) {
@@ -100,14 +143,39 @@ export function createAdjacencyRenderer(
         } else {
           drawAdjacencyLine(graphics, fromPosition, toPosition, fromZone, toZone, adjacency, visualConfigProvider);
         }
+
+        if (isNew) {
+          const shouldBeVisible = activeZoneId !== null && pairInvolvesZone(pairKey, activeZoneId);
+          graphics.alpha = shouldBeVisible ? 1 : 0;
+        }
+      }
+    },
+
+    showForZone(zoneId: string | null): void {
+      if (zoneId === activeZoneId) {
+        return;
+      }
+      activeZoneId = zoneId;
+
+      for (const [pairKey, graphics] of graphicsByPair) {
+        if (zoneId !== null && pairInvolvesZone(pairKey, zoneId)) {
+          tweenAlpha(pairKey, graphics, 1);
+        } else if (graphics.alpha > 0 || activeTweens.has(pairKey)) {
+          tweenAlpha(pairKey, graphics, 0);
+        }
       }
     },
 
     destroy(): void {
+      for (const tween of activeTweens.values()) {
+        tween.kill();
+      }
+      activeTweens.clear();
       for (const graphics of graphicsByPair.values()) {
         options.disposalQueue.enqueue(graphics);
       }
       graphicsByPair.clear();
+      zonesByPair.clear();
     },
   };
 }

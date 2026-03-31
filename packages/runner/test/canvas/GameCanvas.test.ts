@@ -160,6 +160,7 @@ function createRuntimeFixture() {
 
   const adjacencyRenderer = {
     update: vi.fn(),
+    showForZone: vi.fn(),
     destroy: vi.fn(() => {
       lifecycle.push('adjacency-renderer-destroy');
     }),

@@ -255,11 +255,13 @@ export async function createGameCanvasRuntime(
   const canvasElement = gameCanvas.app.canvas as HTMLCanvasElement;
   let lastPointerScreenPosition: { x: number; y: number } | null = null;
   let publishHoverAnchor: () => void = () => {};
+  let onHoverTargetChanged: () => void = () => {};
   let stalenessGuard: ReturnType<typeof createHoverStalenessGuard> | null = null;
   const hoverTargetController = createHoverTargetController({
     onTargetChange: () => {
       publishHoverAnchor();
       stalenessGuard?.onHoverStateChanged();
+      onHoverTargetChanged();
     },
   });
   const onCanvasPointerMove = (event: PointerEvent): void => {
@@ -302,6 +304,10 @@ export async function createGameCanvasRuntime(
   const adjacencyRenderer = deps.createAdjacencyRenderer(gameCanvas.layers.adjacencyLayer, options.visualConfigProvider, {
     disposalQueue,
   });
+  onHoverTargetChanged = () => {
+    const target = hoverTargetController.getCurrentTarget();
+    adjacencyRenderer.showForZone(target?.kind === 'zone' ? target.id : null);
+  };
   const connectionRouteRenderer = deps.createConnectionRouteRenderer(
     gameCanvas.layers.connectionRouteLayer,
     options.visualConfigProvider,

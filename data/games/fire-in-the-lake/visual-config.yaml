@@ -50,23 +50,23 @@ layout:
         x: 140
         y: 1080
       - zone: ba-xuyen:none
-        x: -253.24334975270563
-        y: 3255.8494786720184
+        x: -820.9421737300604
+        y: 3460.543542164606
       - zone: binh-dinh:none
-        x: 1200
-        y: -1380
+        x: 2415.126330211469
+        y: -1970.6864561705293
       - zone: binh-tuy-binh-thuan:none
-        x: 1320.5950395663865
-        y: 1773.892063382643
+        x: 2137.0080426772174
+        y: 2100.879301883406
       - zone: cam-ranh:none
         x: 1825.9959417091295
         y: 1140.8146641222907
       - zone: can-tho:none
-        x: -423.7520293453216
-        y: 2619.681201178031
+        x: -1013.1180588254532
+        y: 3188.8313079696836
       - zone: central-laos:none
-        x: -749.3965338037254
-        y: -2901.4547609812466
+        x: -146.06325133302244
+        y: -3274.7883367906024
       - zone: da-nang:none
         x: 1101.6473813613854
         y: -2516.7434719971047
@@ -74,47 +74,47 @@ layout:
         x: 420
         y: -3700
       - zone: khanh-hoa:none
-        x: 1340
-        y: 280
+        x: 2105.7827393520192
+        y: -194.65890082817577
       - zone: kien-giang-an-xuyen:none
-        x: -975.3520847637932
-        y: 3241.1368920161412
+        x: -1545.009475275897
+        y: 3817.100851149218
       - zone: kien-hoa-vinh-binh:none
-        x: 277.88382681456244
-        y: 2784.009896338519
+        x: -330.7934277122748
+        y: 3350.2745585365633
       - zone: kien-phong:none
-        x: -155.74226718621478
-        y: 2111.330216835735
+        x: -740.3475398956061
+        y: 2686.765227494292
       - zone: kontum:none
         x: 513.3901726710391
         y: -931.6052884680901
       - zone: north-vietnam:none
-        x: -460
-        y: -4020
+        x: -93.57179920321187
+        y: -4437.9335229670805
       - zone: northeast-cambodia:none
-        x: -1046.2725947095018
-        y: -497.76612577397736
+        x: -280.4161444272213
+        y: -767.7119628325634
       - zone: phu-bon-phu-yen:none
-        x: 1465.3303939219816
-        y: -447.8990759464958
+        x: 2769.0596857113696
+        y: -954.2016974814859
       - zone: phuoc-long:none
-        x: 600
-        y: 800
+        x: 1571.7426489326135
+        y: 1854.8834958741013
       - zone: pleiku-darlac:none
-        x: 340
-        y: -180
+        x: 1401.1260733711715
+        y: -899.3717701903806
       - zone: quang-duc-long-khanh:none
-        x: 1205.988092757083
-        y: 1113.082198236745
+        x: 3170.0256802000868
+        y: 1326.6032496278524
       - zone: quang-nam:none
-        x: 217.45202860644866
-        y: -2453.042526949201
+        x: 1092.5384255996473
+        y: -3091.6389085779642
       - zone: quang-tin-quang-ngai:none
-        x: 1180
-        y: -1980
+        x: 1302.356341991041
+        y: -2165.6442623729763
       - zone: quang-tri-thua-thien:none
-        x: 100
-        y: -3160
+        x: 745.7140177606252
+        y: -3696.0968038224955
       - zone: qui-nhon:none
         x: 1776.402815096716
         y: -831.8902814655199
@@ -122,20 +122,20 @@ layout:
         x: 527.5773735290484
         y: 2285.8892941374115
       - zone: sihanoukville:none
-        x: -1492.1037117425562
-        y: 2101.0268952396473
+        x: -1709.0247692238388
+        y: 2241.5662214574154
       - zone: southern-laos:none
-        x: -920.4915503986673
-        y: -1690.0837187643233
+        x: -577.0560673730795
+        y: -2170.776474719859
       - zone: tay-ninh:none
-        x: 140
-        y: 1580
+        x: 62.117113755525224
+        y: 2241.096965134705
       - zone: the-fishhook:none
-        x: -1134.5763747049946
-        y: 404.4935595752164
+        x: -762.3297071602306
+        y: 779.4046442964496
       - zone: the-parrots-beak:none
-        x: -1303.6119935386898
-        y: 1322.958529343848
+        x: -1099.107592892767
+        y: 1587.963817433354
       - zone: leader:none
         x: 2225.9959417091295
         y: -3780
@@ -186,8 +186,8 @@ zones:
   categoryStyles:
     city:
       shape: circle
-      width: 160
-      height: 160
+      width: 320
+      height: 320
       color: "#5b7fa5"
     province:
       shape: rectangle
@@ -215,11 +215,11 @@ zones:
       x: 560
       y: 220
     bac-lieu:
-      x: -688.2524155538835
-      y: 3201.090345385517
+      x: -1031.9196623496318
+      y: 3866.6538107891906
     chau-doc:
-      x: -836.2225463876869
-      y: 2127.540527724862
+      x: -1247.6016868198367
+      y: 2736.735919630959
     da-lat:
       x: 640
       y: 360
@@ -230,8 +230,8 @@ zones:
       x: -300
       y: -3660
     long-phu:
-      x: 18.798184327553713
-      y: 2975.179536069467
+      x: -556.9357381193425
+      y: 3720.189169836345
   connectionRoutes:
     loc-ban-me-thuot-da-lat:none:
       points:
@@ -407,7 +407,6 @@ zones:
       style:
         color: "#5db85d"
         strokeColor: "#2d7a2d"
-    # Country-based terrain sub-variants (override base terrain colors)
     - match:
         category:
           - province
@@ -450,53 +449,145 @@ zones:
     an-loc:none:
       label: An Loc
     ba-xuyen:none:
-      label: Ba Xuyen
+      shape: polygon
       color: "#8ab050"
       strokeColor: "#6a8838"
-      shape: polygon
-      vertices: [453, -356, 266, -236, -361, -7, -147, 344, 453, 344]
+      vertices:
+        - 244.6841407771774
+        - -160.8581481271417
+        - -22.023488732444775
+        - -275.0207384114283
+        - -249.36466616021903
+        - -100.82432637374359
+        - -147
+        - 344
+        - 256.49406739147275
+        - 417.82832772775237
+      label: Ba Xuyen
     binh-dinh:none:
+      shape: polygon
+      vertices:
+        - 300
+        - -320
+        - -713
+        - -303
+        - -993
+        - 297
+        - -516
+        - 549
+        - -198
+        - 711
+        - 300
+        - 580
       label: Binh Dinh
-      shape: polygon
-      vertices: [300, -320, -713, -303, -993, 297, -516, 549, -198, 711, 300, 580]
     binh-tuy-binh-thuan:none:
-      label: Binh Tuy Binh Thuan
       shape: polygon
-      vertices: [379, -574, -32, -718, -57, -330, -221, 426, 379, 426]
+      vertices:
+        - 379
+        - -574
+        - -32
+        - -718
+        - -57
+        - -330
+        - -221
+        - 426
+        - 379
+        - 426
+      label: Binh Tuy Binh Thuan
     cam-ranh:none:
       label: Cam Ranh
     can-tho:none:
       label: Can Tho
     central-laos:none:
-      label: Central Laos
       shape: polygon
-      vertices: [-451, -599, 379, -459, 605, 63, 265, 553, -451, 501]
+      vertices:
+        - -451
+        - -599
+        - 235.2575850161079
+        - -315.4209557452241
+        - 605
+        - 63
+        - 487.0178834421713
+        - 639.0945787907995
+        - -561.6812588954745
+        - 588.3802315400344
+      label: Central Laos
     da-nang:none:
       label: Da Nang
     hue:none:
       label: Hue
     khanh-hoa:none:
+      shape: polygon
+      vertices:
+        - 360
+        - -380
+        - -292
+        - -396
+        - -378
+        - 124
+        - -51
+        - 776
+        - 360
+        - 820
       label: Khanh Hoa
-      shape: polygon
-      vertices: [360, -380, -292, -396, -378, 124, -51, 776, 360, 820]
     kien-giang-an-xuyen:none:
+      shape: polygon
+      color: "#8ab050"
+      strokeColor: "#6a8838"
+      vertices:
+        - 163
+        - -1016
+        - 471.3877472617751
+        - -673.4522555045055
+        - 379.6848894221173
+        - -259.64350829826526
+        - 561.3840104166802
+        - 39.58462356615837
+        - 222.38192857861623
+        - 363.03624020275674
+        - -412.39797583852305
+        - 428.12737896474755
+        - -355.0837683978709
+        - -216.08461547460183
+        - -183.14104113040298
+        - -571.4329422089945
+        - -324.1340774897267
+        - -746.814518461063
+        - -282
+        - -1019
       label: Kien Giang An Xuyen
-      color: "#8ab050"
-      strokeColor: "#6a8838"
-      shape: polygon
-      vertices: [163, -1016, 409, -565, 361, 8, 175, 359, -425, 359, -259, -570, -282, -1019]
     kien-hoa-vinh-binh:none:
+      shape: polygon
+      color: "#8ab050"
+      strokeColor: "#6a8838"
+      vertices:
+        - 348.7421997759533
+        - -316.64371989771143
+        - -371.1247200323504
+        - -301.74208730401915
+        - -178.54876054727322
+        - 287.44834109979774
+        - 302.89087580163675
+        - 371.12716736530183
       label: Kien Hoa Vinh Binh
-      color: "#8ab050"
-      strokeColor: "#6a8838"
-      shape: polygon
-      vertices: [322, -284, -217, -336, -265, 236, 322, 316]
     kien-phong:none:
-      label: Kien Phong
+      shape: polygon
       color: "#8ab050"
       strokeColor: "#6a8838"
-      shape: polygon
-      vertices: [148, -265, 456, -111, 217, 337, -410, 565, -656, 114, -284, -440]
+      vertices:
+        - 148
+        - -265
+        - 456
+        - -111
+        - 448.79961276886706
+        - 323.9398449387854
+        - -410
+        - 565
+        - -656
+        - 114
+        - -295.13939380239435
+        - -189.59568092059226
+      label: Kien Phong
     kontum:none:
       label: Kontum
     loc-ban-me-thuot-da-lat:none:
@@ -534,71 +625,229 @@ zones:
     loc-saigon-da-lat:none:
       label: Saigon-Da Lat
     north-vietnam:none:
+      shape: polygon
+      vertices:
+        - -347.92283552898107
+        - -231.76564351017714
+        - 452.638568472742
+        - -367.6075799301425
+        - 776.847747185489
+        - 172.137357040574
+        - 90
+        - 660
+        - -329.8105325460199
+        - 617.6988023716103
       label: North Vietnam
-      shape: polygon
-      vertices: [-340, -480, 660, -480, 660, 420, 90, 660, -340, 420]
     northeast-cambodia:none:
+      shape: polygon
+      vertices:
+        - -454
+        - -402
+        - 683.4230739584298
+        - -487.1689982483788
+        - 901.4671619033531
+        - 727.2281315742259
+        - -690.3248151500975
+        - 674.2485105969502
       label: Northeast Cambodia
-      shape: polygon
-      vertices: [-454, -402, 504, -291, 432, 407, -454, 398]
     phu-bon-phu-yen:none:
-      label: Phu Bon Phu Yen
       shape: polygon
-      vertices: [235, -252, -463, -221, -417, 332, 235, 348]
+      vertices:
+        - 235
+        - -252
+        - -463
+        - -221
+        - -417
+        - 332
+        - 235
+        - 348
+      label: Phu Bon Phu Yen
     phuoc-long:none:
-      label: Phuoc Long
+      shape: polygon
       color: "#4a4a20"
       strokeColor: "#353518"
-      shape: polygon
-      vertices: [-200, -400, 300, -400, 303, 157, 49, 364, -732, 128, -376, -28]
+      vertices:
+        - -200
+        - -400
+        - 300
+        - -400
+        - 303
+        - 157
+        - 49
+        - 364
+        - -732
+        - 128
+        - -376
+        - -28
+      label: Phuoc Long
     pleiku-darlac:none:
-      label: Pleiku Darlac
+      shape: polygon
       color: "#c08530"
       strokeColor: "#8a6020"
-      shape: polygon
-      vertices: [-133, -903, 344, -651, 662, -489, 708, 64, 622, 584, -203, 626, -954, 89, -882, -609]
+      vertices:
+        - -133
+        - -903
+        - 344
+        - -651
+        - 662
+        - -489
+        - 708
+        - 64
+        - 622
+        - 584
+        - -203
+        - 626
+        - -954
+        - 89
+        - -882
+        - -609
+      label: Pleiku Darlac
     quang-duc-long-khanh:none:
+      shape: polygon
+      vertices:
+        - -244
+        - -709
+        - 83
+        - -57
+        - 58
+        - 331
+        - -533
+        - 234
+        - -557
+        - 51
+        - -982
+        - -341
+        - -1069
+        - -667
       label: Quang Duc Long Khanh
-      shape: polygon
-      vertices: [-244, -709, 83, -57, 58, 331, -533, 234, -557, 51, -982, -341, -1069, -667]
     quang-nam:none:
+      shape: polygon
+      vertices:
+        - 483
+        - -347
+        - -361
+        - -385
+        - -701
+        - 105
+        - -398.8015917615676
+        - 677.4338039461904
+        - 483
+        - 353
       label: Quang Nam
-      shape: polygon
-      vertices: [483, -347, -361, -385, -701, 105, -58, 412, 483, 353]
     quang-tin-quang-ngai:none:
+      shape: polygon
+      vertices:
+        - 320
+        - -220
+        - -1021
+        - -61
+        - -693
+        - 297
+        - 320
+        - 280
       label: Quang Tin Quang Ngai
-      shape: polygon
-      vertices: [320, -220, -1021, -61, -693, 297, 320, 280]
     quang-tri-thua-thien:none:
-      label: Quang Tri
       shape: polygon
-      vertices: [400, -340, -470, -200, -244, 322, 400, 260]
+      vertices:
+        - 200.18974309555642
+        - -681.9952390636599
+        - -701.8003586236523
+        - -106.02578018686745
+        - -244
+        - 322
+        - 547.9448991038948
+        - 118.56597373242903
+      label: Quang Tri
     qui-nhon:none:
       label: Qui Nhon
     saigon:none:
       label: Saigon
     sihanoukville:none:
+      shape: polygon
+      vertices:
+        - -308
+        - -301
+        - -23.285664946042516
+        - -504.04028762571807
+        - 311.0511095648019
+        - -309.65839682381056
+        - 318.8263370377633
+        - 256.38171873593956
+        - 258
+        - 570
+        - -278.31477754579396
+        - 480.3094872352549
       label: Sihanoukville
-      shape: polygon
-      vertices: [-308, -301, 235, 121, 258, 570, -308, 399]
     southern-laos:none:
-      label: Southern Laos
       shape: polygon
-      vertices: [-480, -710, 436, -658, 1079, -351, 1407, 7, 1127, 607, 378, 901, -480, 790]
+      vertices:
+        - -122.50033581788853
+        - -334.78316886783114
+        - 448.20474909243467
+        - -480.9583091789623
+        - 1079
+        - -351
+        - 1188.4110172913256
+        - 200.1557530471132
+        - 1098.2179230224583
+        - 828.3978999726455
+        - 378
+        - 901
+        - -240.68456220239636
+        - 805.0722182933378
+      label: Southern Laos
     tay-ninh:none:
-      label: Tay Ninh
+      shape: polygon
       color: "#4a4a20"
       strokeColor: "#353518"
-      shape: polygon
-      vertices: [-272, -652, 509, -416, 533, -233, 360, 420, -148, 266, -580, 91, -906, -478]
+      vertices:
+        - -235.80150770482214
+        - -882.3118682785384
+        - 378.20368962240127
+        - -750.0924089225673
+        - 358.28010659436995
+        - -174.12295004577481
+        - 360
+        - 420
+        - -72.79127832591303
+        - 622.8158685976086
+        - -580
+        - 91
+      label: Tay Ninh
     the-fishhook:none:
+      shape: polygon
+      vertices:
+        - -254.85246037895126
+        - -706.381536396758
+        - 875.8902256605847
+        - -902.5738022415663
+        - 1257.7266694155333
+        - -240.16107697387304
+        - 1359
+        - 368
+        - 1003
+        - 524
+        - 371.69705363633784
+        - 780.8823177927139
+        - -328.6881973141742
+        - 563.594334712924
       label: The Fishhook
-      shape: polygon
-      vertices: [-365, -504, 521, -495, 1272, 42, 1359, 368, 1003, 524, 369, 698, -365, 496]
     the-parrots-beak:none:
-      label: The Parrots Beak
       shape: polygon
-      vertices: [-296, -423, 538, -221, 864, 348, 492, 902, 47, 899, -296, 477]
+      vertices:
+        - -412.6779704604776
+        - -204.28601558451123
+        - 538
+        - -221
+        - 768.4219795007009
+        - 361.28064655558023
+        - 492
+        - 902
+        - 47
+        - 899
+        - -302.0118600874673
+        - 1105.6940037831328
+      label: The Parrots Beak
   layoutRoles:
     available-ARVN:none: forcePool
     available-NVA:none: forcePool
@@ -782,9 +1031,9 @@ actions:
         label: Pacification Level
         prompt: Choose pacification level
         options:
-          1:
+          "1":
             displayName: 1 level
-          2:
+          "2":
             displayName: 2 levels
   patrol:
     choices:

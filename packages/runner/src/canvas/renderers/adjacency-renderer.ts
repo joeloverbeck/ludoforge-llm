@@ -1,7 +1,7 @@
 import { Graphics, type Container } from 'pixi.js';
 
 import { buildDashedSegments } from '../geometry/dashed-segments.js';
-import { getEdgePointAtAngle, type ShapeDimensions } from './shape-utils.js';
+import { closestPointsBetweenPolygons, getEdgePointAtAngle, type ShapeDimensions } from './shape-utils.js';
 import {
   DEFAULT_EDGE_STYLE,
   HIGHLIGHTED_EDGE_STYLE,
@@ -18,6 +18,9 @@ const DEFAULT_DASH_LENGTH = 10;
 const DEFAULT_GAP_LENGTH = 5;
 const HIGHLIGHTED_DASH_LENGTH = 12;
 const HIGHLIGHTED_GAP_LENGTH = 4;
+const BRIDGE_DOT_RADIUS = 8;
+const BRIDGE_DOT_COLOR = 0xffffff;
+const BRIDGE_DOT_ALPHA = 0.6;
 
 interface PairRenderState {
   readonly from: string;
@@ -60,14 +63,6 @@ export function createAdjacencyRenderer(
         });
       }
 
-      for (const [pairKey, adjacency] of nextPairs) {
-        const fromZone = zonesById.get(adjacency.from);
-        const toZone = zonesById.get(adjacency.to);
-        if (fromZone?.category === 'province' || toZone?.category === 'province') {
-          nextPairs.delete(pairKey);
-        }
-      }
-
       for (const [pairKey, graphics] of graphicsByPair) {
         if (nextPairs.has(pairKey)) {
           continue;
@@ -97,7 +92,12 @@ export function createAdjacencyRenderer(
           parentContainer.addChild(graphics);
         }
 
-        drawAdjacencyLine(graphics, fromPosition, toPosition, fromZone, toZone, adjacency, visualConfigProvider);
+        const bothProvincePolygons = isProvincePolygon(fromZone) && isProvincePolygon(toZone);
+        if (bothProvincePolygons) {
+          drawBridgeDot(graphics, fromPosition, toPosition, fromZone, toZone);
+        } else {
+          drawAdjacencyLine(graphics, fromPosition, toPosition, fromZone, toZone, adjacency, visualConfigProvider);
+        }
       }
     },
 
@@ -158,6 +158,48 @@ function toShapeDimensions(zone: Pick<PresentationZoneNode, 'visual'>): ShapeDim
 
 function computeAngleDegrees(from: Position, to: Position): number {
   return Math.atan2(from.y - to.y, to.x - from.x) * (180 / Math.PI);
+}
+
+function isProvincePolygon(zone: PresentationZoneNode): boolean {
+  return (
+    zone.category === 'province'
+    && zone.visual.shape === 'polygon'
+    && zone.visual.vertices !== null
+    && zone.visual.vertices.length >= 6
+  );
+}
+
+function drawBridgeDot(
+  graphics: Graphics,
+  fromPosition: Position,
+  toPosition: Position,
+  fromZone: PresentationZoneNode,
+  toZone: PresentationZoneNode,
+): void {
+  const fromVertices = fromZone.visual.vertices!;
+  const toVertices = toZone.visual.vertices!;
+
+  // Translate polygon vertices to world space (they are zone-local).
+  const fromWorld = offsetVertices(fromVertices, fromPosition);
+  const toWorld = offsetVertices(toVertices, toPosition);
+
+  const { pointA, pointB } = closestPointsBetweenPolygons(fromWorld, toWorld);
+  const midX = (pointA.x + pointB.x) / 2;
+  const midY = (pointA.y + pointB.y) / 2;
+
+  graphics.clear();
+  graphics.circle(midX, midY, BRIDGE_DOT_RADIUS);
+  graphics.fill({ color: BRIDGE_DOT_COLOR, alpha: BRIDGE_DOT_ALPHA });
+  graphics.visible = true;
+}
+
+function offsetVertices(vertices: readonly number[], offset: Position): number[] {
+  const result: number[] = new Array(vertices.length);
+  for (let i = 0; i < vertices.length; i += 2) {
+    result[i] = vertices[i]! + offset.x;
+    result[i + 1] = vertices[i + 1]! + offset.y;
+  }
+  return result;
 }
 
 function mergeCategory(left: string | null, right: string | null): string | null {

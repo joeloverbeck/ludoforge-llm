@@ -9,10 +9,6 @@ import {
   resolveVisualDimensions,
 } from './shape-utils';
 import {
-  selectiveSmoothPolygon,
-  type ModifiedProvincePolygon,
-} from './province-border-utils.js';
-import {
   createHiddenZoneStackVisual,
   updateHiddenZoneStackVisual,
   type HiddenZoneStackVisual,
@@ -75,7 +71,6 @@ export function createZoneRenderer(
     update(
       zones: readonly PresentationZoneNode[],
       positions: ReadonlyMap<string, Position>,
-      provinceBorders?: ReadonlyMap<string, ModifiedProvincePolygon>,
     ): void {
       const nextZoneIds = new Set(zones.map((zone) => zone.id));
 
@@ -157,7 +152,7 @@ export function createZoneRenderer(
           zoneContainer.position.set(position.x, position.y);
         }
 
-        updateZoneVisuals(visuals, zone, provinceBorders?.get(zone.id));
+        updateZoneVisuals(visuals, zone);
         const dimensions = resolveVisualDimensions(zone.visual, {
           width: ZONE_WIDTH,
           height: ZONE_HEIGHT,
@@ -252,14 +247,13 @@ function createBitmapLabel(
 function updateZoneVisuals(
   visuals: ZoneVisualElements,
   zone: PresentationZoneNode,
-  borderPolygon?: ModifiedProvincePolygon,
 ): void {
   const dimensions = resolveVisualDimensions(zone.visual, {
     width: ZONE_WIDTH,
     height: ZONE_HEIGHT,
   });
-  drawZoneBase(visuals.base, zone, borderPolygon);
-  drawHoverOverlay(visuals.hoverOverlay, zone, borderPolygon);
+  drawZoneBase(visuals.base, zone);
+  drawHoverOverlay(visuals.hoverOverlay, zone);
   updateHiddenZoneStackVisual(
     visuals.hiddenStack,
     zone.render.hiddenStackCount,
@@ -305,7 +299,6 @@ function drawLabelBackground(
 function drawZoneBase(
   base: Graphics,
   zone: PresentationZoneNode,
-  borderPolygon?: ModifiedProvincePolygon,
 ): void {
   const fill = parseHexColor(zone.render.fillColor ?? undefined) ?? 0x4d5c6d;
   const isDefaultStroke = zone.render.stroke.color === DEFAULT_STROKE_SIGNATURE.color
@@ -318,21 +311,14 @@ function drawZoneBase(
     width: ZONE_WIDTH,
     height: ZONE_HEIGHT,
   });
-  const shape = zone.visual.shape;
 
   base.clear();
 
-  if (borderPolygon !== undefined && shape === 'polygon') {
-    // Use selectively smoothed border polygon for provinces with shared borders.
-    const smoothed = selectiveSmoothPolygon(borderPolygon);
-    base.poly(smoothed);
-  } else {
-    drawZoneShape(base, shape, dimensions, {
-      rectangleCornerRadius: ZONE_CORNER_RADIUS,
-      lineCornerRadius: LINE_CORNER_RADIUS,
-      vertices: zone.visual.vertices ?? undefined,
-    });
-  }
+  drawZoneShape(base, zone.visual.shape, dimensions, {
+    rectangleCornerRadius: ZONE_CORNER_RADIUS,
+    lineCornerRadius: LINE_CORNER_RADIUS,
+    vertices: zone.visual.vertices ?? undefined,
+  });
 
   base.fill({ color: fill }).stroke({
     color: strokeColor,
@@ -344,7 +330,6 @@ function drawZoneBase(
 function drawHoverOverlay(
   overlay: Graphics | null,
   zone: PresentationZoneNode,
-  borderPolygon?: ModifiedProvincePolygon,
 ): void {
   if (overlay === null) {
     return;
@@ -354,20 +339,14 @@ function drawHoverOverlay(
     width: ZONE_WIDTH,
     height: ZONE_HEIGHT,
   });
-  const shape = zone.visual.shape;
 
   overlay.clear();
 
-  if (borderPolygon !== undefined && shape === 'polygon') {
-    const smoothed = selectiveSmoothPolygon(borderPolygon);
-    overlay.poly(smoothed);
-  } else {
-    drawZoneShape(overlay, shape, dimensions, {
-      rectangleCornerRadius: ZONE_CORNER_RADIUS,
-      lineCornerRadius: LINE_CORNER_RADIUS,
-      vertices: zone.visual.vertices ?? undefined,
-    });
-  }
+  drawZoneShape(overlay, zone.visual.shape, dimensions, {
+    rectangleCornerRadius: ZONE_CORNER_RADIUS,
+    lineCornerRadius: LINE_CORNER_RADIUS,
+    vertices: zone.visual.vertices ?? undefined,
+  });
 
   overlay
     .fill({ color: 0xffffff, alpha: ZONE_HOVER_OVERLAY_ALPHA })

@@ -7,7 +7,6 @@ import { getOrComputeLayout } from '../layout/layout-cache.js';
 import { resolveRunnerBootstrapByGameId } from '../bootstrap/runner-bootstrap.js';
 import { createAdjacencyRenderer } from '../canvas/renderers/adjacency-renderer.js';
 import { createConnectionRouteRenderer } from '../canvas/renderers/connection-route-renderer.js';
-import { computeProvinceBorders } from '../canvas/renderers/province-border-utils.js';
 import { createRegionBoundaryRenderer } from '../canvas/renderers/region-boundary-renderer.js';
 import { drawTableBackground } from '../canvas/renderers/table-background-renderer.js';
 import { createZoneRenderer } from '../canvas/renderers/zone-renderer.js';
@@ -210,12 +209,7 @@ export function MapEditorScreen({ gameId, onBack }: MapEditorScreenProps): React
 
           regionRenderer.update(scene.regions);
 
-          const provinceBorders = computeProvinceBorders(
-            scene.zones,
-            state.zonePositions,
-            scene.adjacencies,
-          );
-          zoneRenderer.update(scene.zones, state.zonePositions, provinceBorders);
+          zoneRenderer.update(scene.zones, state.zonePositions);
           adjacencyRenderer.update(scene.adjacencies, state.zonePositions, scene.zones);
           routeRenderer.update(scene.connectionRoutes, scene.junctions, state.zonePositions);
 

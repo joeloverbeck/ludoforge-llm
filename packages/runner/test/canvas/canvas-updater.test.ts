@@ -784,7 +784,6 @@ describe('createCanvasUpdater', () => {
         expect.objectContaining({ id: 'beta:none' }),
       ]),
       runtimeLayoutStore.getSnapshot().positions,
-      expect.any(Map),
     );
     expect(renderers.connectionRouteRenderer.update).toHaveBeenCalledWith(
       expect.arrayContaining([
@@ -895,7 +894,6 @@ describe('createCanvasUpdater', () => {
         }),
       ]),
       latestSnapshot.positions,
-      expect.any(Map),
     );
   });
 
@@ -1060,7 +1058,6 @@ describe('createCanvasUpdater', () => {
         }),
       ]),
       runtimeLayoutStore.getSnapshot().positions,
-      expect.any(Map),
     );
     expect(renderers.tokenRenderer.update).toHaveBeenCalledWith(
       expect.arrayContaining([

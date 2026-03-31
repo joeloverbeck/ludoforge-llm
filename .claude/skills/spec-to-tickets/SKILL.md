@@ -40,9 +40,10 @@ Read ALL of these files before any analysis:
 
 Before decomposing, validate the spec's assumptions against the actual codebase:
 
-- **Grep/Glob** for file paths mentioned in the spec — confirm they exist
+- **Grep/Glob** for file paths mentioned in the spec — confirm they exist. If Glob/Grep are unavailable (e.g., permission errors), use equivalent bash commands (`find`, `grep -rn`) to perform the same validations.
 - **Grep** for types, functions, and modules the spec references — confirm they are real and current
 - **Glob** for `tickets/<NAMESPACE>-*.md` — if any files with this namespace already exist, warn the user and ask whether to overwrite, continue numbering from the next available number, or abort
+- For each spec dependency listed in the target spec's **Dependencies** field, verify whether it lives in `specs/` or `archive/specs/` and record the correct path for use in ticket Deps fields
 - **Flag** any stale assumptions, missing files, or renamed entities
 - If you find discrepancies, present them to the user before proceeding
 
@@ -68,7 +69,7 @@ Analyze the spec and identify discrete work units:
 | ...
 ```
 
-Include a 1-line description of each ticket's scope.
+Include a 1-line description of each ticket's scope. Deps in the summary table are abbreviated for readability (e.g., `001`, `None`). Ticket files use full backtick-quoted paths.
 
 **Wait for user approval or adjustments.** Do not write files until the user confirms.
 
@@ -82,7 +83,7 @@ Every ticket MUST include:
 - **Priority**: HIGH / MEDIUM / LOW (based on dependency order and criticality)
 - **Effort**: Small / Medium / Large
 - **Engine Changes**: None or list of affected areas
-- **Deps**: Other tickets or specs this depends on
+- **Deps**: Backtick-quoted relative file paths to other tickets or specs (e.g., `` `tickets/FOO-001.md` ``, `` `specs/42-foo.md` ``, `` `archive/specs/40-bar.md` ``). The `check:ticket-deps` script validates these paths exist. Prose descriptions will fail validation.
 - **Problem**: What user-facing or architecture problem this solves
 - **Assumption Reassessment**: Assumptions validated against current code (use today's date)
 - **Architecture Check**: Why this approach is clean, how it preserves agnostic boundaries

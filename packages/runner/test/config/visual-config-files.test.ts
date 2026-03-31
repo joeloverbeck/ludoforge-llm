@@ -20,14 +20,25 @@ import { resolveConnectionRoutes } from '../../src/presentation/connection-route
 import type { ResolvedConnectionPoint } from '../../src/presentation/connection-route-resolver';
 
 const EXPECTED_FITL_CONNECTION_ANCHORS = {
-  'an-loc': { x: 420, y: 250 },
-  'ban-me-thuot': { x: 560, y: 220 },
-  'bac-lieu': { x: -1031.9196623496318, y: 3866.6538107891906 },
-  'chau-doc': { x: -1247.6016868198367, y: 2736.735919630959 },
-  'da-lat': { x: 640, y: 360 },
+  'an-loc': { x: 888.4603923328514, y: 251.96829100577827 },
+  'ban-me-thuot': { x: 1374.0896977666807, y: -14.56508651407205 },
+  'bac-lieu': { x: -1230.332008005821, y: 4222.231430665369 },
+  'chau-doc': { x: -1822.0383421550205, y: 1583.906566200706 },
+  'da-lat': { x: 1733.8451279451588, y: 812.1925968862913 },
   'dak-to': { x: 531.8295401573785, y: -1861.4532306383767 },
   'khe-sanh': { x: -300, y: -3660 },
-  'long-phu': { x: -556.9357381193425, y: 3720.189169836345 },
+  'long-phu': { x: -140.39328386217437, y: 3897.74726378688 },
+  'loc-can-tho-bac-lieu:none:waypoint:2': { x: -2304.461636878811, y: 3802.0519052146983 },
+  'loc-can-tho-long-phu:none:waypoint:1': { x: -1013.1750642713077, y: 3848.9583161750793 },
+  'loc-can-tho-chau-doc:none:waypoint:1': { x: -2346.5342705088515, y: 3502.4955223398993 },
+  'loc-can-tho-chau-doc:none:waypoint:2': { x: -1567.314723775651, y: 2443.1663938548313 },
+  'loc-saigon-can-tho:none:waypoint:1': { x: -712.8853221123832, y: 2582.804206671955 },
+  'loc-saigon-can-tho:none:waypoint:2': { x: 152.05384936512803, y: 3285.3292143860035 },
+  'loc-saigon-an-loc-ban-me-thuot:none:waypoint:1': { x: 492.14108582534243, y: 1541.2379177945581 },
+  'loc-saigon-cam-ranh:none:waypoint:1': { x: 1878.179021337486, y: 2776.2243838790973 },
+  'loc-saigon-cam-ranh:none:waypoint:2': { x: 3398.835413896259, y: 2604.677146507708 },
+  'loc-saigon-da-lat:none:waypoint:1': { x: 2003.177264048561, y: 2377.083089318856 },
+  'loc-kontum-ban-me-thuot:none:waypoint:1': { x: 1268.6763388460354, y: -1005.9762666635627 },
 } as const;
 
 const EXPECTED_FITL_CONNECTION_ROUTE_SHAPES = {
@@ -47,24 +58,28 @@ const EXPECTED_FITL_CONNECTION_ROUTE_SHAPES = {
   },
   'loc-can-tho-bac-lieu:none': {
     points: [
-      { kind: 'zone', zoneId: 'can-tho:none' },
+      { kind: 'zone', zoneId: 'can-tho:none', anchor: 199.33042312462555 },
+      { kind: 'anchor', anchorId: 'loc-can-tho-bac-lieu:none:waypoint:2' },
       { kind: 'anchor', anchorId: 'bac-lieu' },
     ],
-    segments: [{ kind: 'straight' }],
+    segments: [{ kind: 'straight' }, { kind: 'straight' }],
   },
   'loc-can-tho-chau-doc:none': {
     points: [
-      { kind: 'zone', zoneId: 'can-tho:none' },
+      { kind: 'zone', zoneId: 'can-tho:none', anchor: 182.95081363148512 },
+      { kind: 'anchor', anchorId: 'loc-can-tho-chau-doc:none:waypoint:1' },
+      { kind: 'anchor', anchorId: 'loc-can-tho-chau-doc:none:waypoint:2' },
       { kind: 'anchor', anchorId: 'chau-doc' },
     ],
-    segments: [{ kind: 'straight' }],
+    segments: [{ kind: 'straight' }, { kind: 'straight' }, { kind: 'straight' }],
   },
   'loc-can-tho-long-phu:none': {
     points: [
       { kind: 'zone', zoneId: 'can-tho:none' },
+      { kind: 'anchor', anchorId: 'loc-can-tho-long-phu:none:waypoint:1' },
       { kind: 'anchor', anchorId: 'long-phu' },
     ],
-    segments: [{ kind: 'straight' }],
+    segments: [{ kind: 'straight' }, { kind: 'straight' }],
   },
   'loc-da-nang-dak-to:none': {
     points: [
@@ -99,9 +114,10 @@ const EXPECTED_FITL_CONNECTION_ROUTE_SHAPES = {
   'loc-kontum-ban-me-thuot:none': {
     points: [
       { kind: 'zone', zoneId: 'kontum:none' },
+      { kind: 'anchor', anchorId: 'loc-kontum-ban-me-thuot:none:waypoint:1' },
       { kind: 'anchor', anchorId: 'ban-me-thuot' },
     ],
-    segments: [{ kind: 'straight' }],
+    segments: [{ kind: 'straight' }, { kind: 'straight' }],
   },
   'loc-kontum-dak-to:none': {
     points: [
@@ -127,10 +143,12 @@ const EXPECTED_FITL_CONNECTION_ROUTE_SHAPES = {
   'loc-saigon-an-loc-ban-me-thuot:none': {
     points: [
       { kind: 'zone', zoneId: 'saigon:none' },
+      { kind: 'anchor', anchorId: 'loc-saigon-an-loc-ban-me-thuot:none:waypoint:1' },
       { kind: 'anchor', anchorId: 'an-loc' },
       { kind: 'anchor', anchorId: 'ban-me-thuot' },
     ],
     segments: [
+      { kind: 'straight' },
       { kind: 'straight' },
       { kind: 'quadratic', control: { kind: 'curvature', offset: 0.26023445680592805, angle: 289.50202781725375 } },
     ],
@@ -138,23 +156,28 @@ const EXPECTED_FITL_CONNECTION_ROUTE_SHAPES = {
   'loc-saigon-cam-ranh:none': {
     points: [
       { kind: 'zone', zoneId: 'cam-ranh:none' },
+      { kind: 'anchor', anchorId: 'loc-saigon-cam-ranh:none:waypoint:2' },
+      { kind: 'anchor', anchorId: 'loc-saigon-cam-ranh:none:waypoint:1' },
       { kind: 'zone', zoneId: 'saigon:none' },
     ],
-    segments: [{ kind: 'straight' }],
+    segments: [{ kind: 'straight' }, { kind: 'straight' }, { kind: 'straight' }],
   },
   'loc-saigon-can-tho:none': {
     points: [
       { kind: 'zone', zoneId: 'can-tho:none' },
+      { kind: 'anchor', anchorId: 'loc-saigon-can-tho:none:waypoint:1' },
+      { kind: 'anchor', anchorId: 'loc-saigon-can-tho:none:waypoint:2' },
       { kind: 'zone', zoneId: 'saigon:none' },
     ],
-    segments: [{ kind: 'straight' }],
+    segments: [{ kind: 'straight' }, { kind: 'straight' }, { kind: 'straight' }],
   },
   'loc-saigon-da-lat:none': {
     points: [
       { kind: 'zone', zoneId: 'saigon:none' },
+      { kind: 'anchor', anchorId: 'loc-saigon-da-lat:none:waypoint:1' },
       { kind: 'anchor', anchorId: 'da-lat' },
     ],
-    segments: [{ kind: 'straight' }],
+    segments: [{ kind: 'straight' }, { kind: 'straight' }],
   },
 } as const satisfies Record<string, {
   readonly points: readonly (

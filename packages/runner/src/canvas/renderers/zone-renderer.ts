@@ -52,6 +52,7 @@ interface ZoneRendererOptions {
     zoneId: string,
     isSelectable: () => boolean,
   ) => () => void;
+  readonly onZoneHover?: (zoneId: string | null) => void;
 }
 
 export function createZoneRenderer(
@@ -124,9 +125,11 @@ export function createZoneRenderer(
             const container = zoneContainer;
             container.on('pointerover', () => {
               hoverOverlay.visible = true;
+              options.onZoneHover?.(zone.id);
             });
             container.on('pointerout', () => {
               hoverOverlay.visible = false;
+              options.onZoneHover?.(null);
             });
 
             selectionCleanupByZoneId.set(

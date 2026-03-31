@@ -140,16 +140,40 @@ export function MapEditorScreen({ gameId, onBack }: MapEditorScreenProps): React
             ? canvas.layers.provinceZoneLayer
             : canvas.layers.cityZoneLayer;
 
-        const zoneRenderer = createZoneRenderer(zoneLayerRouter, canvas.containerPool, {
-          bindSelection: (zoneContainer, zoneId) =>
-            attachZoneDragHandlers(zoneContainer, zoneId, canvas.viewport, store),
-        });
-
         const adjacencyRenderer = createAdjacencyRenderer(
           canvas.layers.adjacencyLayer,
           visualConfigProvider,
           { disposalQueue: canvas.disposalQueue },
         );
+
+        let hoveredZoneId: string | null = null;
+        let draggedZoneId: string | null = null;
+
+        const onZoneHover = (zoneId: string | null): void => {
+          hoveredZoneId = zoneId;
+          if (draggedZoneId === null) {
+            adjacencyRenderer.showForZone(hoveredZoneId);
+          }
+        };
+
+        const unsubscribeDrag = store.subscribe((state, prev) => {
+          if (state.isDragging === prev.isDragging) {
+            return;
+          }
+          if (state.isDragging) {
+            draggedZoneId = state.selectedZoneId;
+            adjacencyRenderer.showForZone(draggedZoneId);
+          } else {
+            draggedZoneId = null;
+            adjacencyRenderer.showForZone(hoveredZoneId);
+          }
+        });
+
+        const zoneRenderer = createZoneRenderer(zoneLayerRouter, canvas.containerPool, {
+          bindSelection: (zoneContainer, zoneId) =>
+            attachZoneDragHandlers(zoneContainer, zoneId, canvas.viewport, store),
+          onZoneHover,
+        });
 
         const routeRenderer = createConnectionRouteRenderer(
           canvas.layers.connectionRouteLayer,
@@ -239,6 +263,7 @@ export function MapEditorScreen({ gameId, onBack }: MapEditorScreenProps): React
 
         destroyRuntime = () => {
           removeWindowListeners();
+          unsubscribeDrag();
           unsubscribeSync();
           adjacencyRenderer.destroy();
           regionRenderer.destroy();

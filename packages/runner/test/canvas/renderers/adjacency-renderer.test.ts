@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Container } from 'pixi.js';
 import type { PresentationZoneNode } from '../../../src/presentation/presentation-scene';
 import type { ResolvedZoneVisual } from '../../../src/config/visual-config-provider';
@@ -13,6 +13,8 @@ const {
     parent: HoistedMockContainer | null = null;
 
     visible = true;
+
+    alpha = 1;
 
     addChild(...children: HoistedMockContainer[]): void {
       for (const child of children) {
@@ -98,6 +100,29 @@ vi.mock('pixi.js', () => ({
   Graphics: MockGraphics,
 }));
 
+const gsapTweens: Array<{ target: unknown; vars: Record<string, unknown>; killed: boolean }> = [];
+
+vi.mock('gsap', () => ({
+  gsap: {
+    to(target: unknown, vars: Record<string, unknown>) {
+      const tween = { target, vars: { ...vars }, killed: false };
+      gsapTweens.push(tween);
+      // Immediately apply the alpha to simulate instant tween completion.
+      if (typeof vars.alpha === 'number') {
+        (target as { alpha: number }).alpha = vars.alpha;
+      }
+      if (typeof vars.onComplete === 'function') {
+        (vars.onComplete as () => void)();
+      }
+      return {
+        kill() {
+          tween.killed = true;
+        },
+      };
+    },
+  },
+}));
+
 import { createAdjacencyRenderer } from '../../../src/canvas/renderers/adjacency-renderer';
 import { createDisposalQueue, type DisposalQueue } from '../../../src/canvas/renderers/disposal-queue';
 import type { Position } from '../../../src/canvas/geometry';
@@ -169,6 +194,10 @@ function createRenderer(
 }
 
 describe('createAdjacencyRenderer', () => {
+  beforeEach(() => {
+    gsapTweens.length = 0;
+  });
+
   it('update with empty array creates no graphics objects', () => {
     const parent = new MockContainer();
     const { renderer } = createRenderer(parent, new VisualConfigProvider(null));
@@ -736,5 +765,174 @@ describe('createAdjacencyRenderer', () => {
     disposalQueue.flush();
     expect(first.isDestroyed).toBe(true);
     expect(second.isDestroyed).toBe(true);
+  });
+
+  describe('showForZone hover behavior', () => {
+    function setupThreeZonePairs() {
+      const parent = new MockContainer();
+      const { renderer } = createRenderer(parent, new VisualConfigProvider(null));
+
+      renderer.update(
+        [
+          makeAdjacency({ from: 'zone:a', to: 'zone:b' }),
+          makeAdjacency({ from: 'zone:b', to: 'zone:c' }),
+          makeAdjacency({ from: 'zone:a', to: 'zone:c' }),
+        ],
+        createPositions([
+          ['zone:a', { x: 0, y: 0 }],
+          ['zone:b', { x: 100, y: 0 }],
+          ['zone:c', { x: 50, y: 100 }],
+        ]),
+        createZones([
+          ['zone:a'],
+          ['zone:b'],
+          ['zone:c'],
+        ]),
+      );
+
+      return { parent, renderer };
+    }
+
+    it('all graphics start with alpha 0 after update', () => {
+      const { parent } = setupThreeZonePairs();
+
+      for (const child of parent.children) {
+        expect((child as InstanceType<typeof MockGraphics>).alpha).toBe(0);
+      }
+    });
+
+    it('showForZone reveals only adjacencies involving that zone', () => {
+      const { parent, renderer } = setupThreeZonePairs();
+
+      renderer.showForZone('zone:a');
+
+      // zone:a is involved in a↔b and a↔c (2 out of 3 pairs).
+      const alphas = parent.children.map((c) => (c as InstanceType<typeof MockGraphics>).alpha);
+      const visibleCount = alphas.filter((a) => a === 1).length;
+      const hiddenCount = alphas.filter((a) => a === 0).length;
+      expect(visibleCount).toBe(2);
+      expect(hiddenCount).toBe(1);
+    });
+
+    it('showForZone(null) hides all adjacencies', () => {
+      const { parent, renderer } = setupThreeZonePairs();
+
+      renderer.showForZone('zone:a');
+      renderer.showForZone(null);
+
+      for (const child of parent.children) {
+        expect((child as InstanceType<typeof MockGraphics>).alpha).toBe(0);
+      }
+    });
+
+    it('switching zones hides previous and shows new adjacencies', () => {
+      const { parent, renderer } = setupThreeZonePairs();
+
+      renderer.showForZone('zone:a');
+      renderer.showForZone('zone:b');
+
+      // zone:b is involved in a↔b and b↔c (2 out of 3 pairs).
+      // zone:a-only pair (a↔c) should be hidden. Shared pair (a↔b) stays visible.
+      const alphas = parent.children.map((c) => (c as InstanceType<typeof MockGraphics>).alpha);
+      const visibleCount = alphas.filter((a) => a === 1).length;
+      const hiddenCount = alphas.filter((a) => a === 0).length;
+      expect(visibleCount).toBe(2);
+      expect(hiddenCount).toBe(1);
+    });
+
+    it('no-op when calling showForZone with the same zone', () => {
+      const { renderer } = setupThreeZonePairs();
+
+      renderer.showForZone('zone:a');
+      const tweenCountAfterFirst = gsapTweens.length;
+      renderer.showForZone('zone:a');
+
+      expect(gsapTweens.length).toBe(tweenCountAfterFirst);
+    });
+
+    it('newly created graphics respect activeZoneId', () => {
+      const parent = new MockContainer();
+      const { renderer } = createRenderer(parent, new VisualConfigProvider(null));
+
+      renderer.update(
+        [makeAdjacency({ from: 'zone:a', to: 'zone:b' })],
+        createPositions([
+          ['zone:a', { x: 0, y: 0 }],
+          ['zone:b', { x: 100, y: 0 }],
+        ]),
+        createZones([
+          ['zone:a'],
+          ['zone:b'],
+        ]),
+      );
+
+      renderer.showForZone('zone:a');
+
+      // Add a new adjacency while zone:a is active.
+      renderer.update(
+        [
+          makeAdjacency({ from: 'zone:a', to: 'zone:b' }),
+          makeAdjacency({ from: 'zone:a', to: 'zone:c' }),
+        ],
+        createPositions([
+          ['zone:a', { x: 0, y: 0 }],
+          ['zone:b', { x: 100, y: 0 }],
+          ['zone:c', { x: 50, y: 100 }],
+        ]),
+        createZones([
+          ['zone:a'],
+          ['zone:b'],
+          ['zone:c'],
+        ]),
+      );
+
+      // The new a↔c pair should be immediately visible (alpha=1) since zone:a is active.
+      for (const child of parent.children) {
+        expect((child as InstanceType<typeof MockGraphics>).alpha).toBe(1);
+      }
+    });
+
+    it('newly created graphics for unrelated zones start hidden', () => {
+      const parent = new MockContainer();
+      const { renderer } = createRenderer(parent, new VisualConfigProvider(null));
+
+      renderer.update(
+        [makeAdjacency({ from: 'zone:a', to: 'zone:b' })],
+        createPositions([
+          ['zone:a', { x: 0, y: 0 }],
+          ['zone:b', { x: 100, y: 0 }],
+        ]),
+        createZones([
+          ['zone:a'],
+          ['zone:b'],
+        ]),
+      );
+
+      renderer.showForZone('zone:a');
+
+      // Add an unrelated adjacency.
+      renderer.update(
+        [
+          makeAdjacency({ from: 'zone:a', to: 'zone:b' }),
+          makeAdjacency({ from: 'zone:c', to: 'zone:d' }),
+        ],
+        createPositions([
+          ['zone:a', { x: 0, y: 0 }],
+          ['zone:b', { x: 100, y: 0 }],
+          ['zone:c', { x: 200, y: 0 }],
+          ['zone:d', { x: 300, y: 0 }],
+        ]),
+        createZones([
+          ['zone:a'],
+          ['zone:b'],
+          ['zone:c'],
+          ['zone:d'],
+        ]),
+      );
+
+      // The c↔d pair should be hidden (alpha=0) since it doesn't involve zone:a.
+      const lastChild = parent.children.at(-1) as InstanceType<typeof MockGraphics>;
+      expect(lastChild.alpha).toBe(0);
+    });
   });
 });

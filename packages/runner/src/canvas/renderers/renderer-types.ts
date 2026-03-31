@@ -55,6 +55,7 @@ export interface AdjacencyRenderer {
     positions: ReadonlyMap<string, Position>,
     zones: readonly PresentationZoneNode[],
   ): void;
+  showForZone(zoneId: string | null): void;
   destroy(): void;
 }
 

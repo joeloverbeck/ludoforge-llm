@@ -290,6 +290,7 @@ function createRendererMocks() {
 
   const adjacencyRenderer: AdjacencyRenderer = {
     update: vi.fn(),
+    showForZone: vi.fn(),
     destroy: vi.fn(),
   };
 

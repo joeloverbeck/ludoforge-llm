@@ -62,6 +62,7 @@ describe('renderer-types', () => {
   it('accepts a mock AdjacencyRenderer contract', () => {
     const renderer: AdjacencyRenderer = {
       update: (_adjacencies: readonly RenderAdjacency[], _positions: ReadonlyMap<string, Position>) => {},
+      showForZone: (_zoneId: string | null) => {},
       destroy: () => {},
     };
 

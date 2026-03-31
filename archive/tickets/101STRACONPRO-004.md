@@ -1,6 +1,6 @@
 # 101STRACONPRO-004: Runtime evaluation & caching in policy-evaluation-core.ts
 
-**Status**: PENDING
+**Status**: DONE
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — agents policy-evaluation-core.ts

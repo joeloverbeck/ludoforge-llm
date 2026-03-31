@@ -201,6 +201,7 @@ export class PolicyEvaluationContext {
   private readonly stateFeatureCache = new Map<string, PolicyValue>();
   private readonly candidateFeatureCache = new Map<string, Map<string, PolicyValue>>();
   private readonly aggregateCache = new Map<string, PolicyValue>();
+  private readonly strategicConditionCache = new Map<string, PolicyValue>();
   private readonly runtimeProviders: PolicyRuntimeProviders;
   private zoneReadContext?: ReadContext;
   private currentCandidates: PolicyEvaluationCandidate[];
@@ -672,8 +673,46 @@ export class PolicyEvaluationContext {
       case 'previewSurface':
         return this.resolveSurfaceRef(ref, candidate);
       case 'strategicCondition':
-        return undefined;
+        return this.resolveStrategicConditionRef(ref.conditionId, ref.field);
     }
+  }
+
+  private resolveStrategicConditionRef(
+    conditionId: string,
+    field: 'satisfied' | 'proximity',
+  ): PolicyValue {
+    const cacheKey = `${conditionId}.${field}`;
+    if (this.strategicConditionCache.has(cacheKey)) {
+      return this.strategicConditionCache.get(cacheKey);
+    }
+
+    const condition = this.input.catalog.library.strategicConditions[conditionId];
+    if (condition === undefined) {
+      throw this.runtimeError(
+        'RUNTIME_EVALUATION_ERROR',
+        `Unknown strategic condition "${conditionId}".`,
+        { conditionId },
+      );
+    }
+
+    let value: PolicyValue;
+    if (field === 'satisfied') {
+      value = this.evaluateExpr(condition.target, undefined);
+    } else {
+      if (condition.proximity === undefined) {
+        value = undefined;
+      } else {
+        const current = this.evaluateExpr(condition.proximity.current, undefined);
+        if (typeof current !== 'number') {
+          value = undefined;
+        } else {
+          value = Math.min(Math.max(current / condition.proximity.threshold, 0), 1);
+        }
+      }
+    }
+
+    this.strategicConditionCache.set(cacheKey, value);
+    return value;
   }
 
   private resolvePolicyZoneId(

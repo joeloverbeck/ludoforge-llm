@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import {
   computeProvinceBorders,
+  effectiveRadius,
+  polygonArea,
   selectiveSmoothPolygon,
   type ModifiedProvincePolygon,
 } from '../../../src/canvas/renderers/province-border-utils';
@@ -123,6 +125,93 @@ describe('computeProvinceBorders', () => {
     for (const polygon of result.values()) {
       expect(polygon.segments.some((s) => s.isBorder)).toBe(true);
     }
+  });
+});
+
+describe('polygonArea', () => {
+  it('returns 0 for fewer than 3 vertices', () => {
+    expect(polygonArea([0, 0, 10, 10])).toBe(0);
+    expect(polygonArea([])).toBe(0);
+  });
+
+  it('computes correct area for a right triangle', () => {
+    // Triangle with vertices (0,0), (10,0), (0,10) → area = 50
+    expect(polygonArea([0, 0, 10, 0, 0, 10])).toBe(50);
+  });
+
+  it('computes correct area for a rectangle', () => {
+    // 100×200 rectangle → area = 20000
+    expect(polygonArea([0, 0, 100, 0, 100, 200, 0, 200])).toBe(20000);
+  });
+
+  it('returns positive area regardless of winding order', () => {
+    // CW winding
+    const cw = [0, 0, 0, 10, 10, 0];
+    // CCW winding
+    const ccw = [0, 0, 10, 0, 0, 10];
+    expect(polygonArea(cw)).toBe(polygonArea(ccw));
+  });
+});
+
+describe('effectiveRadius', () => {
+  it('returns 0 for area 0', () => {
+    expect(effectiveRadius(0)).toBe(0);
+  });
+
+  it('returns correct radius for a known area', () => {
+    // Circle with area π → radius = 1
+    expect(effectiveRadius(Math.PI)).toBeCloseTo(1, 10);
+  });
+
+  it('returns correct radius for area 100π', () => {
+    expect(effectiveRadius(100 * Math.PI)).toBeCloseTo(10, 10);
+  });
+});
+
+describe('weighted bisector', () => {
+  it('equal-area polygons produce midpoint bisector (t ≈ 0.5)', () => {
+    // Two identical diamonds at different positions.
+    const diamond = [0, -100, 100, 0, 0, 100, -100, 0];
+    const zones = [
+      makeProvinceZone('a', diamond),
+      makeProvinceZone('b', diamond),
+    ];
+    const positions = new Map([
+      ['a', { x: 0, y: 0 }],
+      ['b', { x: 300, y: 0 }],
+    ]);
+    const adjacencies = [makeAdj('a', 'b')];
+
+    const result = computeProvinceBorders(zones, positions, adjacencies);
+    const polyA = result.get('a')!;
+    // The facing vertex (index 1, at local +100,0) should project near x=150 (midpoint).
+    const projectedX = polyA.vertices[2]!;
+    // With equal areas, the bisector midpoint is at x=150. Inset by gap moves it slightly.
+    expect(projectedX).toBeGreaterThan(140);
+    expect(projectedX).toBeLessThan(155);
+  });
+
+  it('polygon A with 4x area shifts bisector toward B (t > 0.5)', () => {
+    // Province A: large diamond (scale 2x → area 4x)
+    const largeDiamond = [0, -200, 200, 0, 0, 200, -200, 0];
+    // Province B: small diamond
+    const smallDiamond = [0, -100, 100, 0, 0, 100, -100, 0];
+    const zones = [
+      makeProvinceZone('a', largeDiamond),
+      makeProvinceZone('b', smallDiamond),
+    ];
+    const positions = new Map([
+      ['a', { x: 0, y: 0 }],
+      ['b', { x: 400, y: 0 }],
+    ]);
+    const adjacencies = [makeAdj('a', 'b')];
+
+    const result = computeProvinceBorders(zones, positions, adjacencies);
+    const polyA = result.get('a')!;
+    // The facing vertex should project past the old midpoint (x=200).
+    // With t > 0.5, weighted midpoint shifts toward B.
+    const projectedX = polyA.vertices[2]!;
+    expect(projectedX).toBeGreaterThan(200);
   });
 });
 

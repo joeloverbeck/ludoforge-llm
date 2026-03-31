@@ -1,6 +1,6 @@
 # PROVBORDER-001: Weighted bisector using power-diagram formula
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — runner-only
@@ -84,3 +84,12 @@ Pass polygon vertices to compute effective radii before calling `computeWeighted
 
 1. `pnpm -F @ludoforge/runner test -- --grep "province-border"`
 2. `pnpm -F @ludoforge/runner typecheck && pnpm -F @ludoforge/runner lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-31
+- **What changed**:
+  - `province-border-utils.ts`: Added exported `polygonArea()` (shoelace formula) and `effectiveRadius()` helpers. Renamed `computeBisector` → `computeWeightedBisector` with `radiusA`/`radiusB` params using power-diagram formula `t = (d² + rA² - rB²) / (2d²)`, clamped to [0.1, 0.9]. Updated `computeProvinceBorders` neighbor loop to compute effective radii from polygon vertices.
+  - `province-border-utils.test.ts`: Added test suites for `polygonArea` (triangle, rectangle, winding invariance, degenerate input), `effectiveRadius` (zero, π, 100π), and weighted bisector (equal-area → midpoint, 4x area → shift toward smaller).
+- **Deviations**: None — implemented exactly as specified.
+- **Verification**: 2102 tests passed, typecheck clean, lint clean (0 warnings).

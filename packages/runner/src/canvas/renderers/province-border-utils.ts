@@ -79,14 +79,22 @@ export function computeProvinceBorders(
       continue;
     }
 
+    // Compute effective radius for this zone.
+    const zoneRadius = effectiveRadius(polygonArea(verts));
+
     // Build bisector info for each neighbor.
     const bisectors: BisectorInfo[] = [];
     for (const neighborId of neighbors) {
       const neighborPos = positions.get(neighborId);
-      if (neighborPos === undefined) {
+      const neighborZone = provinceZones.get(neighborId);
+      if (neighborPos === undefined || neighborZone === undefined) {
         continue;
       }
-      bisectors.push(computeBisector(pos, neighborPos));
+      const neighborVerts = neighborZone.visual.vertices;
+      const neighborRadius = neighborVerts !== null && neighborVerts !== undefined
+        ? effectiveRadius(polygonArea(neighborVerts))
+        : zoneRadius;
+      bisectors.push(computeWeightedBisector(pos, neighborPos, zoneRadius, neighborRadius));
     }
 
     // Process each vertex.
@@ -206,7 +214,7 @@ export function selectiveSmoothPolygon(
 // --- Internal helpers ---
 
 interface BisectorInfo {
-  /** Midpoint of the line between A and B centers. */
+  /** Weighted point on the line between A and B centers. */
   readonly midpoint: Position;
   /** Direction of the bisector line (perpendicular to A→B). */
   readonly direction: Position;
@@ -214,17 +222,27 @@ interface BisectorInfo {
   readonly angleFromA: number;
 }
 
-function computeBisector(aCenter: Position, bCenter: Position): BisectorInfo {
+function computeWeightedBisector(
+  aCenter: Position,
+  bCenter: Position,
+  radiusA: number,
+  radiusB: number,
+): BisectorInfo {
   const dx = bCenter.x - aCenter.x;
   const dy = bCenter.y - aCenter.y;
-  const length = Math.hypot(dx, dy);
+  const d2 = dx * dx + dy * dy;
+  const length = Math.sqrt(d2);
+  // Power-diagram weighted parameter: degrades to 0.5 when radii are equal.
+  const t = d2 > 0
+    ? Math.max(0.1, Math.min(0.9, (d2 + radiusA * radiusA - radiusB * radiusB) / (2 * d2)))
+    : 0.5;
   // Perpendicular direction (rotated 90° CCW).
   const perpX = length > 0 ? -dy / length : 0;
   const perpY = length > 0 ? dx / length : 1;
   return {
     midpoint: {
-      x: (aCenter.x + bCenter.x) / 2,
-      y: (aCenter.y + bCenter.y) / 2,
+      x: aCenter.x + t * dx,
+      y: aCenter.y + t * dy,
     },
     direction: { x: perpX, y: perpY },
     angleFromA: Math.atan2(dy, dx),
@@ -282,4 +300,28 @@ function getOrCreate(map: Map<string, string[]>, key: string): string[] {
 
 function buildUniformSegments(count: number, isBorder: boolean): ProvinceBorderSegment[] {
   return Array.from({ length: count }, () => ({ isBorder }));
+}
+
+/**
+ * Computes the area of a polygon from a flat vertex array [x1,y1,x2,y2,...]
+ * using the shoelace formula. Returns absolute area (always positive).
+ */
+export function polygonArea(vertices: readonly number[]): number {
+  const n = Math.trunc(vertices.length / 2);
+  if (n < 3) return 0;
+  let area = 0;
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    const xi = vertices[i * 2]!;
+    const yi = vertices[i * 2 + 1]!;
+    const xj = vertices[j * 2]!;
+    const yj = vertices[j * 2 + 1]!;
+    area += xi * yj - xj * yi;
+  }
+  return Math.abs(area) / 2;
+}
+
+/** Returns the radius of a circle with equivalent area. */
+export function effectiveRadius(area: number): number {
+  return Math.sqrt(area / Math.PI);
 }

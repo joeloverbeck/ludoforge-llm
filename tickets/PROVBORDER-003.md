@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — runner-only
-**Deps**: `tickets/PROVBORDER-001.md`, `tickets/PROVBORDER-002.md`
+**Deps**: `archive/tickets/PROVBORDER-001.md`, `tickets/PROVBORDER-002.md`
 
 ## Problem
 

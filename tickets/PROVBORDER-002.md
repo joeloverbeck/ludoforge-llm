@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — runner-only
-**Deps**: `tickets/PROVBORDER-001.md` (uses effective radii computed there)
+**Deps**: archive/tickets/PROVBORDER-001.md
 
 ## Problem
 

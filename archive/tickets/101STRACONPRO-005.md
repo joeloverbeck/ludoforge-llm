@@ -1,6 +1,6 @@
 # 101STRACONPRO-005: Cross-game validation & FITL integration test
 
-**Status**: PENDING
+**Status**: DONE
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — tests only

@@ -499,8 +499,6 @@ zones:
       vertices: [148, -265, 456, -111, 217, 337, -410, 565, -656, 114, -284, -440]
     kontum:none:
       label: Kontum
-      shape: polygon
-      vertices: [-313, -468, 287, -268, 187, 332, -213, 432, -413, 132]
     loc-ban-me-thuot-da-lat:none:
       label: Ban Me Thuot-Da Lat
     loc-cam-ranh-da-lat:none:
@@ -934,6 +932,7 @@ actionGroupPolicy:
   hide:
     - specialActivity
 regions:
+  enabled: false
   groupByAttribute: country
   padding: 40
   cornerRadius: 30

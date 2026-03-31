@@ -19,6 +19,20 @@ const {
     }
   }
 
+  const listenerStore = new WeakMap<
+    HoistedMockContainer,
+    Map<string, Array<(...args: unknown[]) => void>>
+  >();
+
+  function getListeners(target: HoistedMockContainer): Map<string, Array<(...args: unknown[]) => void>> {
+    let map = listenerStore.get(target);
+    if (map === undefined) {
+      map = new Map();
+      listenerStore.set(target, map);
+    }
+    return map;
+  }
+
   class HoistedMockContainer {
     children: HoistedMockContainer[] = [];
 
@@ -48,6 +62,40 @@ const {
 
     sortableChildren = false;
 
+    hitArea: unknown = undefined;
+
+    cursor: string = 'default';
+
+    on(event: string, fn: (...args: unknown[]) => void): this {
+      const listeners = getListeners(this);
+      let list = listeners.get(event);
+      if (list === undefined) {
+        list = [];
+        listeners.set(event, list);
+      }
+      list.push(fn);
+      return this;
+    }
+
+    off(event: string, fn: (...args: unknown[]) => void): this {
+      const listeners = getListeners(this);
+      const list = listeners.get(event);
+      if (list !== undefined) {
+        listeners.set(event, list.filter((f) => f !== fn));
+      }
+      return this;
+    }
+
+    emit(event: string, ...args: unknown[]): void {
+      const listeners = getListeners(this);
+      const list = listeners.get(event);
+      if (list !== undefined) {
+        for (const fn of list) {
+          fn(...args);
+        }
+      }
+    }
+
     addChild(...children: HoistedMockContainer[]): void {
       for (const child of children) {
         child.parent = this;
@@ -72,7 +120,9 @@ const {
       this.parent = null;
     }
 
-    removeAllListeners(): void {}
+    removeAllListeners(): void {
+      getListeners(this).clear();
+    }
 
     destroy(): void {
       this.removeFromParent();
@@ -741,6 +791,45 @@ describe('createZoneRenderer', () => {
 
     expect(markersLabel.text).toBe('Control:COIN');
     expect(markersLabel.text).not.toContain('Support');
+  });
+
+  it('creates hover overlay in editor mode and toggles visibility on pointer events', () => {
+    const bindSelection = vi.fn((_: Container, _zoneId: string) => vi.fn());
+    const { renderer } = createRendererHarness(new VisualConfigProvider(null), {
+      bindSelection: (
+        zoneContainer: Container,
+        zoneId: string,
+        _isSelectable: () => boolean,
+      ) => bindSelection(zoneContainer, zoneId),
+    });
+
+    renderer.update([makeZone({ id: 'zone:a' })], new Map());
+
+    const zoneContainer = renderer.getContainerMap().get('zone:a') as unknown as InstanceType<typeof MockContainer>;
+
+    // In editor mode, hover overlay is the second child (index 1), after base (index 0).
+    const hoverOverlay = zoneContainer.children[1] as InstanceType<typeof MockGraphics>;
+    expect(hoverOverlay).toBeDefined();
+    expect(hoverOverlay.visible).toBe(false);
+
+    // Simulate pointerover.
+    zoneContainer.emit('pointerover');
+    expect(hoverOverlay.visible).toBe(true);
+
+    // Simulate pointerout.
+    zoneContainer.emit('pointerout');
+    expect(hoverOverlay.visible).toBe(false);
+  });
+
+  it('does not create hover overlay in game canvas mode (no bindSelection)', () => {
+    const { renderer } = createRendererHarness();
+
+    renderer.update([makeZone({ id: 'zone:a' })], new Map());
+
+    const zoneContainer = renderer.getContainerMap().get('zone:a') as unknown as InstanceType<typeof MockContainer>;
+
+    // Without bindSelection, children count is 7 (no hover overlay).
+    expect(zoneContainer.children).toHaveLength(7);
   });
 
   it('dispatches all supported zone shapes from visual hints', () => {

@@ -43,7 +43,7 @@ Before decomposing, validate the spec's assumptions against the actual codebase:
 - **Grep/Glob** for file paths mentioned in the spec — confirm they exist. If Glob/Grep are unavailable (e.g., permission errors), use equivalent bash commands (`find`, `grep -rn`) to perform the same validations.
 - **Grep** for types, functions, and modules the spec references — confirm they are real and current
 - **Glob** for `tickets/<NAMESPACE>-*.md` — if any files with this namespace already exist, warn the user and ask whether to overwrite, continue numbering from the next available number, or abort
-- For each spec dependency listed in the target spec's **Dependencies** field, verify whether it lives in `specs/` or `archive/specs/` and record the correct path for use in ticket Deps fields
+- For each spec dependency listed in the target spec's **Dependencies** field, verify whether it lives in `specs/` or `archive/specs/` and record the correct path for use in ticket Deps fields. If Dependencies is `None`, skip this sub-step
 - **Flag** any stale assumptions, missing files, or renamed entities
 - If you find discrepancies, present them to the user before proceeding
 
@@ -69,13 +69,13 @@ Analyze the spec and identify discrete work units:
 | ...
 ```
 
-Include a 1-line description of each ticket's scope. Deps in the summary table are abbreviated for readability (e.g., `001`, `None`). Ticket files use full backtick-quoted paths.
+Include a 1-line scope description for each ticket as bullet text below the table. Deps in the summary table are abbreviated for readability (e.g., `001`, `None`). Ticket files use full backtick-quoted paths.
 
 **Wait for user approval or adjustments.** Do not write files until the user confirms.
 
 ### Step 5: Write Ticket Files
 
-For each approved ticket, write a file to `tickets/<NAMESPACE>-<NNN>.md` using the **exact structure** from `tickets/_TEMPLATE.md`.
+For each approved ticket, write a file to `tickets/<NAMESPACE>-<NNN>.md` using the **exact structure** from `tickets/_TEMPLATE.md`. Write all ticket files in parallel when possible — they are independent file creates.
 
 Every ticket MUST include:
 

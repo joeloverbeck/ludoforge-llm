@@ -1,6 +1,8 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import { hasBindingIdentifier, rankBindingIdentifierAlternatives } from '../contracts/index.js';
 import type {
+  CompiledCardMetadataEntry,
+  CompiledCardMetadataIndex,
   EventCardDef,
   EventDeckDef,
   EventEligibilityOverrideDef,
@@ -603,6 +605,31 @@ function lowerEventLastingEffects(
           }),
     };
   });
+}
+
+export function buildCardMetadataIndex(
+  eventDecks: readonly EventDeckDef[],
+): CompiledCardMetadataIndex {
+  const entries: Record<string, CompiledCardMetadataEntry> = {};
+  for (const deck of eventDecks) {
+    for (const card of deck.cards) {
+      const scalarMetadata: Record<string, string | number | boolean> = {};
+      if (card.metadata !== undefined) {
+        for (const [key, value] of Object.entries(card.metadata)) {
+          if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+            scalarMetadata[key] = value;
+          }
+        }
+      }
+      entries[card.id] = {
+        deckId: deck.id,
+        cardId: card.id,
+        tags: card.tags ?? [],
+        metadata: scalarMetadata,
+      };
+    }
+  }
+  return { entries };
 }
 
 function collectBindingScopeFromTargets(

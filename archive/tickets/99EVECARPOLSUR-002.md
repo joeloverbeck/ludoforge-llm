@@ -1,6 +1,6 @@
 # 99EVECARPOLSUR-002: Build card metadata index during event deck compilation
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — compile-event-cards.ts, compile-game-spec.ts (index construction and wiring)
@@ -98,3 +98,14 @@ In the top-level compilation function that assembles the `GameDef` object, call 
 
 1. `pnpm -F @ludoforge/engine test -- --test-name-pattern "cardMetadata"` (targeted)
 2. `pnpm -F @ludoforge/engine build && pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+- **Completion date**: 2026-03-31
+- **What changed**:
+  - Added `buildCardMetadataIndex` function to `packages/engine/src/cnl/compile-event-cards.ts` — iterates compiled event decks, extracts scalar-only metadata per card, returns `CompiledCardMetadataIndex`.
+  - Wired the index into the `GameDef` literal in `packages/engine/src/cnl/compiler-core.ts` — conditionally present when `eventDecks` is non-null.
+  - Added 9 unit tests in `packages/engine/test/unit/cnl/build-card-metadata-index.test.ts`.
+  - Added 2 integration tests in `packages/engine/test/integration/card-metadata-index-compilation.test.ts` (FITL has all cards indexed; Texas Hold'em has no index).
+- **Deviations**: Ticket referenced `compile-game-spec.ts` which does not exist; the actual wiring location is `compiler-core.ts` as the ticket's own guidance anticipated ("or equivalent top-level compiler").
+- **Verification**: 5171/5171 engine tests pass, lint 0 warnings, typecheck clean.

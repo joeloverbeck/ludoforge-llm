@@ -45,7 +45,7 @@ import {
   isCnlXrefDiagnosticCode,
 } from './cross-validate-diagnostic-codes.js';
 import { crossValidateSpec } from './cross-validate.js';
-import { lowerEventDecks } from './compile-event-cards.js';
+import { buildCardMetadataIndex, lowerEventDecks } from './compile-event-cards.js';
 import { resolveScenarioTableRefsInDoc } from './resolve-scenario-table-refs.js';
 import { buildSeatIdentityContract } from './seat-identity-contract.js';
 import {
@@ -728,6 +728,7 @@ function compileExpandedDoc(
     triggers: triggers.value,
     terminal,
     ...(sections.eventDecks === null ? {} : { eventDecks: sections.eventDecks }),
+    ...(sections.eventDecks === null ? {} : { cardMetadataIndex: buildCardMetadataIndex(sections.eventDecks) }),
     ...(sections.victoryStandings === null ? {} : { victoryStandings: sections.victoryStandings }),
     ...(sections.verbalization === null ? {} : { verbalization: sections.verbalization }),
   };

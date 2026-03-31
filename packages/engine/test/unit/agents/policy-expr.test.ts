@@ -93,6 +93,7 @@ describe('policy-expr analysis', () => {
         stateFeatures: ['currentMargin'],
         candidateFeatures: [],
         aggregates: ['bestProjectedMargin'],
+        strategicConditions: [],
       },
       isStaticallyZero: false,
     });
@@ -213,6 +214,7 @@ describe('policy-expr analysis', () => {
         stateFeatures: [],
         candidateFeatures: [],
         aggregates: [],
+        strategicConditions: [],
       },
       isStaticallyZero: false,
     });
@@ -403,6 +405,7 @@ describe('policy-expr analysis', () => {
         stateFeatures: [],
         candidateFeatures: [],
         aggregates: [],
+        strategicConditions: [],
       },
       isStaticallyZero: false,
     });
@@ -553,6 +556,7 @@ describe('policy-expr analysis', () => {
         stateFeatures: [],
         candidateFeatures: [],
         aggregates: [],
+        strategicConditions: [],
       },
       isStaticallyZero: false,
     });

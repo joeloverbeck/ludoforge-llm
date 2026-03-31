@@ -67,7 +67,7 @@ function createCatalog(): AgentPolicyCatalog {
           type: 'boolean',
           costClass: 'candidate',
           expr: opExpr('eq', refExpr({ kind: 'candidateIntrinsic', intrinsic: 'actionId' }), literal('event')),
-          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
         },
       },
       candidateAggregates: {},
@@ -77,13 +77,13 @@ function createCatalog(): AgentPolicyCatalog {
           costClass: 'candidate',
           weight: literal(10),
           value: opExpr('boolToNumber', refExpr({ kind: 'candidateIntrinsic', intrinsic: 'isPass' })),
-          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
         },
         preferEvent: {
           costClass: 'candidate',
           weight: literal(10),
           value: opExpr('boolToNumber', refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'isEvent' })),
-          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['isEvent'], aggregates: [] },
+          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['isEvent'], aggregates: [], strategicConditions: [] },
         },
       },
       completionScoreTerms: {},
@@ -91,9 +91,10 @@ function createCatalog(): AgentPolicyCatalog {
         stableMoveKey: {
           kind: 'stableMoveKey',
           costClass: 'state',
-          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
         },
       },
+      strategicConditions: {},
     },
     profiles: {
       passive: {

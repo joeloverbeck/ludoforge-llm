@@ -99,6 +99,7 @@ function createDef(): GameDef {
         scoreTerms: {},
         completionScoreTerms: {},
         tieBreakers: {},
+        strategicConditions: {},
       },
       profiles: {},
       bindingsBySeat: {},

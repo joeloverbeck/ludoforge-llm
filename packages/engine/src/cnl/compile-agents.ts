@@ -29,6 +29,7 @@ import type {
   CompiledAgentScoreTerm,
   CompiledAgentStateFeature,
   CompiledAgentTieBreaker,
+  CompiledStrategicCondition,
   GameDef,
 } from '../kernel/types.js';
 import type {
@@ -935,6 +936,7 @@ class AgentLibraryCompiler {
     readonly scoreTerms: Record<string, CompiledAgentScoreTerm>;
     readonly completionScoreTerms: Record<string, CompiledAgentScoreTerm>;
     readonly tieBreakers: Record<string, CompiledAgentTieBreaker>;
+    readonly strategicConditions: Record<string, CompiledStrategicCondition>;
   };
 
   private readonly stateFeatureStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
@@ -966,6 +968,7 @@ class AgentLibraryCompiler {
       scoreTerms: {},
       completionScoreTerms: {},
       tieBreakers: {},
+      strategicConditions: {},
     };
   }
 
@@ -2149,6 +2152,7 @@ function mergeDependencies(dependencies: readonly CompiledAgentDependencyRefs[])
     stateFeatures: uniqueSorted(dependencies.flatMap((entry) => entry.stateFeatures)),
     candidateFeatures: uniqueSorted(dependencies.flatMap((entry) => entry.candidateFeatures)),
     aggregates: uniqueSorted(dependencies.flatMap((entry) => entry.aggregates)),
+    strategicConditions: uniqueSorted(dependencies.flatMap((entry) => entry.strategicConditions)),
   };
 }
 
@@ -2158,6 +2162,7 @@ function emptyDependencies(): CompiledAgentDependencyRefs {
     stateFeatures: [],
     candidateFeatures: [],
     aggregates: [],
+    strategicConditions: [],
   };
 }
 

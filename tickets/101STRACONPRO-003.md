@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — agents policy-surface.ts
-**Deps**: `tickets/101STRACONPRO-001.md`
+**Deps**: `archive/tickets/101STRACONPRO-001.md`
 
 ## Problem
 

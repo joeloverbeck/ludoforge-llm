@@ -649,6 +649,11 @@ const CompiledAgentPolicyRefSchema = z.union([
     kind: z.literal('turnIntrinsic'),
     intrinsic: z.union([z.literal('phaseId'), z.literal('stepId'), z.literal('round')]),
   }).strict(),
+  z.object({
+    kind: z.literal('strategicCondition'),
+    conditionId: StringSchema,
+    field: z.union([z.literal('satisfied'), z.literal('proximity')]),
+  }).strict(),
 ]);
 
 const AgentPolicyTokenFilterSchema = z.object({
@@ -777,6 +782,7 @@ const CompiledAgentDependencyRefsSchema = z
     stateFeatures: z.array(StringSchema),
     candidateFeatures: z.array(StringSchema),
     aggregates: z.array(StringSchema),
+    strategicConditions: z.array(StringSchema),
   })
   .strict();
 
@@ -840,6 +846,19 @@ const CompiledAgentTieBreakerSchema = z
   })
   .strict();
 
+const CompiledStrategicConditionSchema = z
+  .object({
+    target: AgentPolicyExprSchema,
+    proximity: z
+      .object({
+        current: AgentPolicyExprSchema,
+        threshold: NumberSchema,
+      })
+      .strict()
+      .optional(),
+  })
+  .strict();
+
 const CompiledAgentLibraryIndexSchema = z
   .object({
     stateFeatures: z.record(StringSchema, CompiledAgentStateFeatureSchema),
@@ -849,6 +868,7 @@ const CompiledAgentLibraryIndexSchema = z
     scoreTerms: z.record(StringSchema, CompiledAgentScoreTermSchema),
     completionScoreTerms: z.record(StringSchema, CompiledAgentScoreTermSchema),
     tieBreakers: z.record(StringSchema, CompiledAgentTieBreakerSchema),
+    strategicConditions: z.record(StringSchema, CompiledStrategicConditionSchema),
   })
   .strict();
 

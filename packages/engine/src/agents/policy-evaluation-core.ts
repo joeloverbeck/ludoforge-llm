@@ -671,6 +671,8 @@ export class PolicyEvaluationContext {
       case 'currentSurface':
       case 'previewSurface':
         return this.resolveSurfaceRef(ref, candidate);
+      case 'strategicCondition':
+        return undefined;
     }
   }
 

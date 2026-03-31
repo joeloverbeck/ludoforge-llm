@@ -6,6 +6,7 @@ export const AGENT_POLICY_LIBRARY_BUCKETS = [
   'scoreTerms',
   'completionScoreTerms',
   'tieBreakers',
+  'strategicConditions',
 ] as const;
 
 export type AgentPolicyLibraryBucket = typeof AGENT_POLICY_LIBRARY_BUCKETS[number];

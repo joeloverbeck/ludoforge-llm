@@ -67,6 +67,7 @@ describe('core-types validation property-style checks', () => {
             scoreTerms: {},
             completionScoreTerms: {},
             tieBreakers: {},
+            strategicConditions: {},
           },
           profiles: {
             baseline: {
@@ -172,7 +173,7 @@ describe('core-types validation property-style checks', () => {
               type: 'number',
               costClass: 'state',
               expr: { ref: 'victory.currentMargin.us' },
-              dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+              dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
             },
           },
           candidateFeatures: {},
@@ -180,6 +181,7 @@ describe('core-types validation property-style checks', () => {
           pruningRules: {},
           scoreTerms: {},
           tieBreakers: {},
+          strategicConditions: {},
         },
         profiles: {},
         bindingsBySeat: {},

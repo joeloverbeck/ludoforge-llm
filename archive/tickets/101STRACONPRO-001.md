@@ -1,6 +1,6 @@
 # 101STRACONPRO-001: GameSpec & compiled types for strategic conditions
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel types-core.ts, cnl game-spec-doc.ts
@@ -126,3 +126,21 @@ Every place that constructs a `CompiledAgentDependencyRefs` or `CompiledAgentLib
 1. `pnpm turbo typecheck`
 2. `pnpm -F @ludoforge/engine test`
 3. `pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-31
+- **What changed**:
+  - `game-spec-doc.ts`: added `GameSpecStrategicConditionDef` interface and `strategicConditions` optional field on `GameSpecAgentLibrary`
+  - `types-core.ts`: added `CompiledStrategicCondition` interface, `strategicConditions` required field on `CompiledAgentLibraryIndex` and `CompiledAgentDependencyRefs`, `'strategicCondition'` variant on `CompiledAgentPolicyRef`
+  - `schemas-core.ts`: Zod schemas for all new types and fields
+  - `policy-contract.ts`: `'strategicConditions'` added to `AGENT_POLICY_LIBRARY_BUCKETS`
+  - `compile-agents.ts`: library compiler private type, init, `mergeDependencies`, `emptyDependencies` updated
+  - `policy-expr.ts`: `emptyDependencies` and `mergeDependencies` updated
+  - `policy-evaluation-core.ts`: `'strategicCondition'` case returns `undefined` in `resolveRef` switch (stub for ticket 004)
+  - ~20 test files and 2 golden fixture files updated for new required fields
+  - Schema artifacts regenerated (`GameDef.schema.json`)
+- **Deviations from plan**:
+  - Ticket omitted `schemas-core.ts`, `policy-contract.ts`, `policy-expr.ts`, and `policy-evaluation-core.ts` from "Files to Touch" — all required updating for typecheck to pass
+  - Golden fixture fingerprints changed due to new fields in compiled output
+- **Verification**: typecheck clean, 5317/5317 engine tests pass, lint clean

@@ -80,9 +80,10 @@ function createCatalog(): AgentPolicyCatalog {
         rng: {
           kind: 'rng',
           costClass: 'state',
-          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
         },
       },
+      strategicConditions: {},
     },
     profiles: {
       baseline: {

@@ -277,7 +277,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "facingBet": {
@@ -307,7 +308,8 @@
             "callAmount"
           ],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "potOddsFavorable": {
@@ -375,7 +377,8 @@
             "callAmount"
           ],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "handHighCard": {
@@ -392,7 +395,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "handLowCard": {
@@ -409,7 +413,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "premiumHand": {
@@ -439,7 +444,8 @@
             "handHighCard"
           ],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "isDealer": {
@@ -475,7 +481,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "hasPair": {
@@ -510,7 +517,8 @@
             "handLowCard"
           ],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       }
     },
@@ -539,7 +547,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "isCall": {
@@ -566,7 +575,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "isRaise": {
@@ -593,7 +603,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "isAllIn": {
@@ -620,7 +631,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "isFold": {
@@ -647,7 +659,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "raiseAmount": {
@@ -674,7 +687,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       }
     },
@@ -707,7 +721,8 @@
           "candidateFeatures": [
             "isCheck"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "preferCall": {
@@ -736,7 +751,8 @@
           "candidateFeatures": [
             "isCall"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "avoidFold": {
@@ -765,7 +781,8 @@
           "candidateFeatures": [
             "isFold"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "foldWhenBadPotOdds": {
@@ -825,7 +842,8 @@
           "candidateFeatures": [
             "isFold"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "alwaysRaise": {
@@ -854,7 +872,8 @@
           "candidateFeatures": [
             "isRaise"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "preferLargerRaise": {
@@ -877,7 +896,8 @@
           "candidateFeatures": [
             "raiseAmount"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       }
     },
@@ -890,10 +910,12 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       }
-    }
+    },
+    "strategicConditions": {}
   },
   "profiles": {
     "baseline": {
@@ -934,5 +956,5 @@
   "bindingsBySeat": {
     "neutral": "baseline"
   },
-  "catalogFingerprint": "5725362875f869c739a89954da5cd5b4c04f01d1e5751e73ed3f9e8a1c3dcfe5"
+  "catalogFingerprint": "7ac4397a1a338ae7aec924cc3c1b114632f827a98e7b09473fa71dae0624c88e"
 }

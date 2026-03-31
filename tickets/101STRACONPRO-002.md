@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — cnl compile-agents.ts
-**Deps**: `tickets/101STRACONPRO-001.md`
+**Deps**: `archive/tickets/101STRACONPRO-001.md`
 
 ## Problem
 

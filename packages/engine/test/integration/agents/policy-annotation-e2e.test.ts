@@ -145,6 +145,7 @@ function createCatalog(overrides?: {
       scoreTerms: {},
       completionScoreTerms: {},
       tieBreakers: {},
+      strategicConditions: {},
     },
     profiles: { 'test-profile': profile },
     bindingsBySeat: { us: 'test-profile', nva: 'test-profile', vc: 'test-profile' },

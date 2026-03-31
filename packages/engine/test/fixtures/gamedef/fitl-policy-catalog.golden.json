@@ -579,7 +579,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "selfResources": {
@@ -601,7 +602,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       }
     },
@@ -620,7 +622,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "isEvent": {
@@ -647,7 +650,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "projectedSelfMargin": {
@@ -685,7 +689,8 @@
             "selfMargin"
           ],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "isTrain": {
@@ -712,7 +717,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "isPatrol": {
@@ -739,7 +745,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "isAssault": {
@@ -766,7 +773,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "isAdvise": {
@@ -793,7 +801,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "isSweep": {
@@ -820,7 +829,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "isGovern": {
@@ -847,7 +857,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "isRally": {
@@ -874,7 +885,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "isMarch": {
@@ -901,7 +913,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "isAttack": {
@@ -928,7 +941,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "isTerror": {
@@ -955,7 +969,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "isTax": {
@@ -982,7 +997,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "isSubvert": {
@@ -1009,7 +1025,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "isInfiltrate": {
@@ -1036,7 +1053,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "isBombard": {
@@ -1063,7 +1081,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "targetSpacePopulation": {
@@ -1094,7 +1113,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       }
     },
@@ -1123,7 +1143,8 @@
           "candidateFeatures": [
             "isPass"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       }
     },
@@ -1160,7 +1181,8 @@
           ],
           "aggregates": [
             "hasNonPassAlternative"
-          ]
+          ],
+          "strategicConditions": []
         },
         "onEmpty": "skipRule"
       }
@@ -1188,7 +1210,8 @@
           "candidateFeatures": [
             "projectedSelfMargin"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "preserveResources": {
@@ -1213,7 +1236,8 @@
             "selfResources"
           ],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "preferEvent": {
@@ -1244,7 +1268,8 @@
           "candidateFeatures": [
             "isEvent"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "preferTrainAction": {
@@ -1273,7 +1298,8 @@
           "candidateFeatures": [
             "isTrain"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "preferPatrolAction": {
@@ -1302,7 +1328,8 @@
           "candidateFeatures": [
             "isPatrol"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "preferAssaultAction": {
@@ -1331,7 +1358,8 @@
           "candidateFeatures": [
             "isAssault"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "preferAdviseAction": {
@@ -1360,7 +1388,8 @@
           "candidateFeatures": [
             "isAdvise"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "preferSweepAction": {
@@ -1389,7 +1418,8 @@
           "candidateFeatures": [
             "isSweep"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "preferGovernAction": {
@@ -1418,7 +1448,8 @@
           "candidateFeatures": [
             "isGovern"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "preferRallyAction": {
@@ -1447,7 +1478,8 @@
           "candidateFeatures": [
             "isRally"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "preferRallyWeighted": {
@@ -1478,7 +1510,8 @@
           "candidateFeatures": [
             "isRally"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "preferMarchAction": {
@@ -1507,7 +1540,8 @@
           "candidateFeatures": [
             "isMarch"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "preferAttackAction": {
@@ -1536,7 +1570,8 @@
           "candidateFeatures": [
             "isAttack"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "preferTerrorAction": {
@@ -1565,7 +1600,8 @@
           "candidateFeatures": [
             "isTerror"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "preferTaxAction": {
@@ -1594,7 +1630,8 @@
           "candidateFeatures": [
             "isTax"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "preferTaxWeighted": {
@@ -1625,7 +1662,8 @@
           "candidateFeatures": [
             "isTax"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "preferSubvertAction": {
@@ -1654,7 +1692,8 @@
           "candidateFeatures": [
             "isSubvert"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "preferInfiltrateAction": {
@@ -1683,7 +1722,8 @@
           "candidateFeatures": [
             "isInfiltrate"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "preferBombardAction": {
@@ -1712,7 +1752,8 @@
           "candidateFeatures": [
             "isBombard"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       }
     },
@@ -1805,7 +1846,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       }
     },
@@ -1817,7 +1859,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "preferCheapTargetSpaces": {
@@ -1837,10 +1880,12 @@
           "candidateFeatures": [
             "targetSpacePopulation"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       }
-    }
+    },
+    "strategicConditions": {}
   },
   "profiles": {
     "us-baseline": {
@@ -2078,5 +2123,5 @@
     "nva": "nva-baseline",
     "vc": "vc-evolved"
   },
-  "catalogFingerprint": "7a21a87fb70844ed3e30deee0bad7bb3f4e7d4ff7e5f3b4d9a37930c3fde2d74"
+  "catalogFingerprint": "78df4d24c9b41393abd8d53bb78f3eded8238eb222323ca589f31610df8aaffa"
 }

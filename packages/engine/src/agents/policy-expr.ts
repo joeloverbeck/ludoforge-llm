@@ -269,7 +269,7 @@ function analyzeParamExpr(
     expr: { kind: 'param', id: expr },
     valueType: parameterTypeToValueType(parameterDef.type),
     costClass: 'state',
-    dependencies: { parameters: [expr], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+    dependencies: { parameters: [expr], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
     isStaticallyZero: false,
   };
 }
@@ -784,6 +784,7 @@ function mergeDependencies(dependencies: readonly CompiledAgentDependencyRefs[])
     stateFeatures: uniqueSorted(dependencies.flatMap((entry) => entry.stateFeatures)),
     candidateFeatures: uniqueSorted(dependencies.flatMap((entry) => entry.candidateFeatures)),
     aggregates: uniqueSorted(dependencies.flatMap((entry) => entry.aggregates)),
+    strategicConditions: uniqueSorted(dependencies.flatMap((entry) => entry.strategicConditions)),
   };
 }
 
@@ -793,6 +794,7 @@ function emptyDependencies(): CompiledAgentDependencyRefs {
     stateFeatures: [],
     candidateFeatures: [],
     aggregates: [],
+    strategicConditions: [],
   };
 }
 

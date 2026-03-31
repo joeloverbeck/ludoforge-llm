@@ -261,6 +261,7 @@ describe('agents authoring surface', () => {
             stateFeatures: [],
             candidateFeatures: [],
             aggregates: [],
+            strategicConditions: [],
           },
         },
       },
@@ -274,6 +275,7 @@ describe('agents authoring surface', () => {
             stateFeatures: [],
             candidateFeatures: [],
             aggregates: [],
+            strategicConditions: [],
           },
         },
         projectedMargin: {
@@ -289,6 +291,7 @@ describe('agents authoring surface', () => {
             stateFeatures: ['currentMargin'],
             candidateFeatures: ['isPass'],
             aggregates: [],
+            strategicConditions: [],
           },
         },
       },
@@ -304,6 +307,7 @@ describe('agents authoring surface', () => {
             stateFeatures: [],
             candidateFeatures: ['isPass', 'projectedMargin'],
             aggregates: [],
+            strategicConditions: [],
           },
         },
       },
@@ -324,6 +328,7 @@ describe('agents authoring surface', () => {
             stateFeatures: [],
             candidateFeatures: ['isPass'],
             aggregates: ['bestProjectedMargin'],
+            strategicConditions: [],
           },
           onEmpty: 'skipRule',
         },
@@ -338,6 +343,7 @@ describe('agents authoring surface', () => {
             stateFeatures: [],
             candidateFeatures: ['isPass'],
             aggregates: [],
+            strategicConditions: [],
           },
         },
       },
@@ -351,9 +357,11 @@ describe('agents authoring surface', () => {
             stateFeatures: [],
             candidateFeatures: [],
             aggregates: [],
+            strategicConditions: [],
           },
         },
       },
+      strategicConditions: {},
     });
     assert.deepEqual(baselineProfile.params, {
       passFloor: 0.5,
@@ -612,6 +620,7 @@ describe('agents authoring surface', () => {
         stateFeatures: [],
         candidateFeatures: [],
         aggregates: [],
+        strategicConditions: [],
       },
     });
     assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.use.completionScoreTerms, ['preferNamedOption']);
@@ -697,6 +706,7 @@ describe('agents authoring surface', () => {
         stateFeatures: [],
         candidateFeatures: [],
         aggregates: [],
+        strategicConditions: [],
       },
     });
   });

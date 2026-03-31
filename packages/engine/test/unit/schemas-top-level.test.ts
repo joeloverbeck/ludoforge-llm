@@ -170,6 +170,7 @@ function buildGameDefWithAgentExpr(featureId: string, expr: Record<string, unkno
               stateFeatures: [],
               candidateFeatures: [],
               aggregates: [],
+              strategicConditions: [],
             },
           },
         },
@@ -178,6 +179,7 @@ function buildGameDefWithAgentExpr(featureId: string, expr: Record<string, unkno
         scoreTerms: {},
         completionScoreTerms: {},
         tieBreakers: {},
+        strategicConditions: {},
       },
       profiles: {
         baseline: {
@@ -380,10 +382,12 @@ describe('top-level runtime schemas', () => {
                 stateFeatures: [],
                 candidateFeatures: [],
                 aggregates: [],
+                strategicConditions: [],
               },
             },
           },
           tieBreakers: {},
+          strategicConditions: {},
         },
         profiles: {
           baseline: {
@@ -471,6 +475,7 @@ describe('top-level runtime schemas', () => {
                 stateFeatures: [],
                 candidateFeatures: [],
                 aggregates: [],
+                strategicConditions: [],
               },
             },
           },
@@ -479,6 +484,7 @@ describe('top-level runtime schemas', () => {
           scoreTerms: {},
           completionScoreTerms: {},
           tieBreakers: {},
+          strategicConditions: {},
         },
         profiles: {
           baseline: {
@@ -563,6 +569,7 @@ describe('top-level runtime schemas', () => {
                 stateFeatures: [],
                 candidateFeatures: [],
                 aggregates: [],
+                strategicConditions: [],
               },
             },
           },
@@ -571,6 +578,7 @@ describe('top-level runtime schemas', () => {
           scoreTerms: {},
           completionScoreTerms: {},
           tieBreakers: {},
+          strategicConditions: {},
         },
         profiles: {
           baseline: {
@@ -656,6 +664,7 @@ describe('top-level runtime schemas', () => {
                 stateFeatures: [],
                 candidateFeatures: [],
                 aggregates: [],
+                strategicConditions: [],
               },
             },
           },
@@ -664,6 +673,7 @@ describe('top-level runtime schemas', () => {
           scoreTerms: {},
           completionScoreTerms: {},
           tieBreakers: {},
+          strategicConditions: {},
         },
         profiles: {
           baseline: {
@@ -829,6 +839,7 @@ describe('top-level runtime schemas', () => {
                 stateFeatures: [],
                 candidateFeatures: [],
                 aggregates: [],
+                strategicConditions: [],
               },
             },
           },
@@ -838,6 +849,7 @@ describe('top-level runtime schemas', () => {
           scoreTerms: {},
           completionScoreTerms: {},
           tieBreakers: {},
+          strategicConditions: {},
         },
         profiles: {},
         bindingsBySeat: {},
@@ -893,6 +905,7 @@ describe('top-level runtime schemas', () => {
           scoreTerms: {},
           completionScoreTerms: {},
           tieBreakers: {},
+          strategicConditions: {},
         },
         profiles: {
           baseline: {

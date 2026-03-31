@@ -78,6 +78,7 @@ function createMinimalCatalog(overrides?: {
       scoreTerms: {},
       completionScoreTerms: {},
       tieBreakers: {},
+      strategicConditions: {},
     },
     profiles: { 'test-profile': profile },
     bindingsBySeat: { us: 'test-profile' },

@@ -1,6 +1,6 @@
 # 98PREPIPRNGTOL-004: Thread `tolerateRngDivergence` from profile to preview runtime
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — agent policy-runtime wiring
@@ -91,3 +91,12 @@ Add `tolerateRngDivergence?: boolean` to `CreatePolicyRuntimeProvidersInput` and
 
 1. `pnpm turbo typecheck`
 2. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+- **Completion date**: 2026-03-31
+- **What changed**:
+  - `packages/engine/src/agents/policy-runtime.ts`: Added profile resolution from `catalog.bindingsBySeat[seatId]` → `catalog.profiles[profileId]`, passing `tolerateRngDivergence` to `createPolicyPreviewRuntime`. Defaults to `false` when no profile or no `preview` config.
+  - `packages/engine/test/unit/agents/policy-runtime.test.ts` (new): 3 tests covering profile with `tolerateRngDivergence: true`, profile without `preview`, and seat with no profile binding.
+- **Deviations from plan**: None. Used approach §1 (resolve profile directly in `createPolicyRuntimeProviders`) — no interface changes needed.
+- **Verification**: `pnpm turbo typecheck` passes (3/3 tasks). `pnpm -F @ludoforge/engine test` passes (5159/5159 tests, 0 failures).

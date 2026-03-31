@@ -97,12 +97,15 @@ export interface CreatePolicyRuntimeProvidersInput {
 export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProvidersInput): PolicyRuntimeProviders {
   const activeSeatId = input.def.seats?.[input.state.activePlayer]?.id ?? null;
   const seatResolutionIndex = buildSeatResolutionIndex(input.def, input.state.playerCount);
+  const activeProfileId = input.catalog.bindingsBySeat[input.seatId];
+  const activeProfile = activeProfileId !== undefined ? input.catalog.profiles[activeProfileId] : undefined;
   const previewRuntime = createPolicyPreviewRuntime({
     def: input.def,
     state: input.state,
     playerId: input.playerId,
     seatId: input.seatId,
     trustedMoveIndex: input.trustedMoveIndex,
+    tolerateRngDivergence: activeProfile?.preview?.tolerateRngDivergence ?? false,
     ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
   });
   const metricCache = new Map<string, number>();

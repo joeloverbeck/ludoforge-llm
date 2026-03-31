@@ -42,6 +42,18 @@ function createCatalog(): AgentPolicyCatalog {
         currentMargin: { current: 'public', preview: { visibility: 'public', allowWhenHiddenSampling: true } },
         currentRank: { current: 'public', preview: { visibility: 'public', allowWhenHiddenSampling: true } },
       },
+      activeCardIdentity: {
+        current: 'hidden',
+        preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+      },
+      activeCardTag: {
+        current: 'hidden',
+        preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+      },
+      activeCardMetadata: {
+        current: 'hidden',
+        preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+      },
     },
     parameterDefs: {},
     candidateParamDefs: {},
@@ -328,6 +340,18 @@ function createTemplatePreviewDef(): GameDef {
         victory: {
           currentMargin: { current: 'public', preview: { visibility: 'public', allowWhenHiddenSampling: true } },
           currentRank: { current: 'public', preview: { visibility: 'public', allowWhenHiddenSampling: true } },
+        },
+        activeCardIdentity: {
+          current: 'hidden',
+          preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+        },
+        activeCardTag: {
+          current: 'hidden',
+          preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+        },
+        activeCardMetadata: {
+          current: 'hidden',
+          preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
         },
       },
       parameterDefs: {},

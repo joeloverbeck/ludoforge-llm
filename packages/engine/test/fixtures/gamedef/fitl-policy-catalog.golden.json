@@ -385,6 +385,27 @@
           "allowWhenHiddenSampling": false
         }
       }
+    },
+    "activeCardIdentity": {
+      "current": "hidden",
+      "preview": {
+        "visibility": "hidden",
+        "allowWhenHiddenSampling": false
+      }
+    },
+    "activeCardTag": {
+      "current": "hidden",
+      "preview": {
+        "visibility": "hidden",
+        "allowWhenHiddenSampling": false
+      }
+    },
+    "activeCardMetadata": {
+      "current": "hidden",
+      "preview": {
+        "visibility": "hidden",
+        "allowWhenHiddenSampling": false
+      }
     }
   },
   "parameterDefs": {
@@ -2050,5 +2071,5 @@
     "nva": "nva-baseline",
     "vc": "vc-evolved"
   },
-  "catalogFingerprint": "ff17ebfcb46bf87cd3ddf7602ec9b0ddc5f59b115094b2c50327b25ab2a823f5"
+  "catalogFingerprint": "1aad45e73627951237ecc6395eb12e879aef7707fd1150615a41a7ab585b198f"
 }

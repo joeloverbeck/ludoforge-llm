@@ -224,6 +224,18 @@ describe('agents authoring surface', () => {
           },
         },
       },
+      activeCardIdentity: {
+        current: 'hidden',
+        preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+      },
+      activeCardTag: {
+        current: 'hidden',
+        preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+      },
+      activeCardMetadata: {
+        current: 'hidden',
+        preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+      },
     });
     assert.deepEqual(agents.library, {
       stateFeatures: {

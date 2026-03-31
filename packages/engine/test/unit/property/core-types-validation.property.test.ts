@@ -40,6 +40,18 @@ describe('core-types validation property-style checks', () => {
                 preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
               },
             },
+            activeCardIdentity: {
+              current: 'hidden',
+              preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+            },
+            activeCardTag: {
+              current: 'hidden',
+              preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+            },
+            activeCardMetadata: {
+              current: 'hidden',
+              preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+            },
           },
           parameterDefs: {},
           candidateParamDefs: {},
@@ -130,6 +142,18 @@ describe('core-types validation property-style checks', () => {
               current: 'hidden',
               preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
             },
+          },
+          activeCardIdentity: {
+            current: 'hidden',
+            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+          },
+          activeCardTag: {
+            current: 'hidden',
+            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+          },
+          activeCardMetadata: {
+            current: 'hidden',
+            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
           },
         },
         parameterDefs: {},

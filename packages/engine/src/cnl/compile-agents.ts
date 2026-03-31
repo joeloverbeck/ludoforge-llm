@@ -170,6 +170,18 @@ function lowerSurfaceVisibility(
         },
       ),
     },
+    activeCardIdentity: {
+      current: 'hidden',
+      preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+    },
+    activeCardTag: {
+      current: 'hidden',
+      preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+    },
+    activeCardMetadata: {
+      current: 'hidden',
+      preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+    },
   };
 }
 

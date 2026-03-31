@@ -196,6 +196,27 @@
           "allowWhenHiddenSampling": false
         }
       }
+    },
+    "activeCardIdentity": {
+      "current": "hidden",
+      "preview": {
+        "visibility": "hidden",
+        "allowWhenHiddenSampling": false
+      }
+    },
+    "activeCardTag": {
+      "current": "hidden",
+      "preview": {
+        "visibility": "hidden",
+        "allowWhenHiddenSampling": false
+      }
+    },
+    "activeCardMetadata": {
+      "current": "hidden",
+      "preview": {
+        "visibility": "hidden",
+        "allowWhenHiddenSampling": false
+      }
     }
   },
   "parameterDefs": {},
@@ -906,5 +927,5 @@
   "bindingsBySeat": {
     "neutral": "baseline"
   },
-  "catalogFingerprint": "b366c9abbcb189da7d13d30076e16eb802b771bd7a4c7cbcd3cef3d902d6abb4"
+  "catalogFingerprint": "d65a35ef303e7203f5446b6b5bc19d2448e72fd977925392f2541987a1a1a57d"
 }

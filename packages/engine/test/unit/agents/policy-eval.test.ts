@@ -161,6 +161,18 @@ function createCatalog(
           preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
         },
       },
+      activeCardIdentity: {
+        current: 'hidden',
+        preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+      },
+      activeCardTag: {
+        current: 'hidden',
+        preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+      },
+      activeCardMetadata: {
+        current: 'hidden',
+        preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+      },
     },
     parameterDefs: {
       passFloor: {

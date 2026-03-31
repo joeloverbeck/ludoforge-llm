@@ -291,6 +291,9 @@ export const CompiledAgentPolicySurfaceCatalogSchema = z
       currentMargin: CompiledAgentPolicySurfaceVisibilitySchema,
       currentRank: CompiledAgentPolicySurfaceVisibilitySchema,
     }).strict(),
+    activeCardIdentity: CompiledAgentPolicySurfaceVisibilitySchema,
+    activeCardTag: CompiledAgentPolicySurfaceVisibilitySchema,
+    activeCardMetadata: CompiledAgentPolicySurfaceVisibilitySchema,
   })
   .strict();
 

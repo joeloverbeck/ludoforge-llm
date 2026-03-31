@@ -1,6 +1,6 @@
 # 99EVECARPOLSUR-003: Add three active-card surface ref families and parsing
 
-**Status**: PENDING
+**Status**: DONE
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — types-core.ts (family union), policy-surface.ts (ref parsing)

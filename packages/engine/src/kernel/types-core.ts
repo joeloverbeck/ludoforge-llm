@@ -340,7 +340,10 @@ export type CompiledAgentPolicySurfaceRefFamily =
   | 'perPlayerVar'
   | 'derivedMetric'
   | 'victoryCurrentMargin'
-  | 'victoryCurrentRank';
+  | 'victoryCurrentRank'
+  | 'activeCardIdentity'
+  | 'activeCardTag'
+  | 'activeCardMetadata';
 export type CompiledAgentPolicySurfaceSelector =
   | {
       readonly kind: 'role';
@@ -502,6 +505,9 @@ export interface CompiledAgentPolicySurfaceCatalog {
     readonly currentMargin: CompiledAgentPolicySurfaceVisibility;
     readonly currentRank: CompiledAgentPolicySurfaceVisibility;
   };
+  readonly activeCardIdentity: CompiledAgentPolicySurfaceVisibility;
+  readonly activeCardTag: CompiledAgentPolicySurfaceVisibility;
+  readonly activeCardMetadata: CompiledAgentPolicySurfaceVisibility;
 }
 
 export interface CompiledAgentParameterDef {

@@ -130,6 +130,50 @@ export function parseAuthoredPolicySurfaceRef(
     };
   }
 
+  if (refPath === 'activeCard.id') {
+    return {
+      kind,
+      family: 'activeCardIdentity',
+      id: 'id',
+      visibility: catalog.activeCardIdentity,
+    };
+  }
+
+  if (refPath === 'activeCard.deckId') {
+    return {
+      kind,
+      family: 'activeCardIdentity',
+      id: 'deckId',
+      visibility: catalog.activeCardIdentity,
+    };
+  }
+
+  if (refPath.startsWith('activeCard.hasTag.')) {
+    const tagName = refPath.slice('activeCard.hasTag.'.length);
+    if (tagName.length === 0) {
+      return null;
+    }
+    return {
+      kind,
+      family: 'activeCardTag',
+      id: tagName,
+      visibility: catalog.activeCardTag,
+    };
+  }
+
+  if (refPath.startsWith('activeCard.metadata.')) {
+    const metadataKey = refPath.slice('activeCard.metadata.'.length);
+    if (metadataKey.length === 0) {
+      return null;
+    }
+    return {
+      kind,
+      family: 'activeCardMetadata',
+      id: metadataKey,
+      visibility: catalog.activeCardMetadata,
+    };
+  }
+
   return null;
 }
 
@@ -148,6 +192,12 @@ export function getPolicySurfaceVisibility(
       return catalog.victory.currentMargin;
     case 'victoryCurrentRank':
       return catalog.victory.currentRank;
+    case 'activeCardIdentity':
+      return catalog.activeCardIdentity;
+    case 'activeCardTag':
+      return catalog.activeCardTag;
+    case 'activeCardMetadata':
+      return catalog.activeCardMetadata;
   }
 }
 

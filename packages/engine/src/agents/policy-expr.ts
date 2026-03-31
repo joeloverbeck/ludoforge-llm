@@ -315,6 +315,8 @@ function analyzeRefExpr(
         return withResolvedRef(resolved, { ...dependencies, candidateFeatures: [resolved.dependency.id] });
       case 'aggregates':
         return withResolvedRef(resolved, { ...dependencies, aggregates: [resolved.dependency.id] });
+      case 'strategicConditions':
+        return withResolvedRef(resolved, { ...dependencies, strategicConditions: [resolved.dependency.id] });
     }
   }
   return withResolvedRef(resolved, dependencies);

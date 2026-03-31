@@ -48,7 +48,7 @@ import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 type ProfileUseKey = keyof CompiledAgentProfile['use'];
 type AggregateOp = 'max' | 'min' | 'count' | 'any' | 'all' | 'rankDense' | 'rankOrdinal';
 type TieBreakerKind = 'higherExpr' | 'lowerExpr' | 'preferredEnumOrder' | 'preferredIdOrder' | 'rng' | 'stableMoveKey';
-type LibraryRefScope = 'stateFeature' | 'candidateFeature' | 'aggregate' | 'rule' | 'scoreTerm' | 'completionScoreTerm' | 'tieBreaker';
+type LibraryRefScope = 'stateFeature' | 'candidateFeature' | 'aggregate' | 'rule' | 'scoreTerm' | 'completionScoreTerm' | 'tieBreaker' | 'strategicCondition';
 type LoweredAgentProfile = Omit<CompiledAgentProfile, 'fingerprint'>;
 
 const AGENT_PARAMETER_TYPES: readonly AgentParameterType[] = ['number', 'integer', 'boolean', 'enum', 'idOrder'];
@@ -946,10 +946,12 @@ class AgentLibraryCompiler {
   private readonly scoreTermStatus = new Map<string, 'done' | 'failed'>();
   private readonly completionScoreTermStatus = new Map<string, 'done' | 'failed'>();
   private readonly tieBreakerStatus = new Map<string, 'done' | 'failed'>();
+  private readonly strategicConditionStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
 
   private readonly stateFeatureStack: string[] = [];
   private readonly candidateFeatureStack: string[] = [];
   private readonly aggregateStack: string[] = [];
+  private readonly strategicConditionStack: string[] = [];
 
   constructor(
     authoredLibrary: GameSpecAgentLibrary | undefined,
@@ -995,6 +997,9 @@ class AgentLibraryCompiler {
     }
     for (const tieBreakerId of Object.keys(this.authoredLibrary.tieBreakers ?? {})) {
       this.compileTieBreaker(tieBreakerId);
+    }
+    for (const conditionId of Object.keys(this.authoredLibrary.strategicConditions ?? {})) {
+      this.compileStrategicCondition(conditionId);
     }
 
     return this.compiled;
@@ -1426,6 +1431,99 @@ class AgentLibraryCompiler {
     return compiled;
   }
 
+  private compileStrategicCondition(conditionId: string): CompiledStrategicCondition | null {
+    const status = this.strategicConditionStatus.get(conditionId);
+    if (status === 'done') {
+      return this.compiled.strategicConditions[conditionId] ?? null;
+    }
+    if (status === 'failed') {
+      return null;
+    }
+    if (status === 'compiling') {
+      this.reportCycle('strategicConditions', conditionId, this.strategicConditionStack);
+      this.strategicConditionStatus.set(conditionId, 'failed');
+      return null;
+    }
+
+    const def = this.authoredLibrary.strategicConditions?.[conditionId];
+    if (def === undefined) {
+      this.reportUnknownLibraryRef(`condition.${conditionId}`, `doc.agents.library.strategicConditions.${conditionId}`);
+      this.strategicConditionStatus.set(conditionId, 'failed');
+      return null;
+    }
+
+    this.strategicConditionStatus.set(conditionId, 'compiling');
+    this.strategicConditionStack.push(conditionId);
+    const basePath = `doc.agents.library.strategicConditions.${conditionId}`;
+    const context = this.createExprContext('strategicCondition');
+
+    const targetAnalysis = analyzePolicyExpr(def.target, context, this.diagnostics, `${basePath}.target`);
+    if (targetAnalysis === null) {
+      this.strategicConditionStack.pop();
+      this.strategicConditionStatus.set(conditionId, 'failed');
+      return null;
+    }
+    if (targetAnalysis.valueType !== 'boolean' && targetAnalysis.valueType !== 'unknown') {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_TYPE_INVALID,
+        path: `${basePath}.target`,
+        severity: 'error',
+        message: `Strategic condition "${conditionId}" target must be a boolean expression, got "${targetAnalysis.valueType}".`,
+        suggestion: 'Use a boolean comparison (gte, lte, eq, and, or, etc.) for the target expression.',
+      });
+      this.strategicConditionStack.pop();
+      this.strategicConditionStatus.set(conditionId, 'failed');
+      return null;
+    }
+
+    let proximityCompiled: CompiledStrategicCondition['proximity'];
+    if (def.proximity !== undefined) {
+      const currentAnalysis = analyzePolicyExpr(def.proximity.current, context, this.diagnostics, `${basePath}.proximity.current`);
+      if (currentAnalysis === null) {
+        this.strategicConditionStack.pop();
+        this.strategicConditionStatus.set(conditionId, 'failed');
+        return null;
+      }
+      if (currentAnalysis.valueType !== 'number' && currentAnalysis.valueType !== 'unknown') {
+        this.diagnostics.push({
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_TYPE_INVALID,
+          path: `${basePath}.proximity.current`,
+          severity: 'error',
+          message: `Strategic condition "${conditionId}" proximity.current must be a numeric expression, got "${currentAnalysis.valueType}".`,
+          suggestion: 'Use a numeric expression (add, sub, globalTokenAgg, etc.) for the proximity current value.',
+        });
+        this.strategicConditionStack.pop();
+        this.strategicConditionStatus.set(conditionId, 'failed');
+        return null;
+      }
+      if (def.proximity.threshold <= 0) {
+        this.diagnostics.push({
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_TYPE_INVALID,
+          path: `${basePath}.proximity.threshold`,
+          severity: 'error',
+          message: `Strategic condition "${conditionId}" proximity.threshold must be > 0, got ${def.proximity.threshold}.`,
+          suggestion: 'Set the threshold to a positive number representing the target value.',
+        });
+        this.strategicConditionStack.pop();
+        this.strategicConditionStatus.set(conditionId, 'failed');
+        return null;
+      }
+      proximityCompiled = {
+        current: currentAnalysis.expr,
+        threshold: def.proximity.threshold,
+      };
+    }
+
+    const compiled: CompiledStrategicCondition = {
+      target: targetAnalysis.expr,
+      ...(proximityCompiled !== undefined ? { proximity: proximityCompiled } : {}),
+    };
+    this.compiled.strategicConditions[conditionId] = compiled;
+    this.strategicConditionStack.pop();
+    this.strategicConditionStatus.set(conditionId, 'done');
+    return compiled;
+  }
+
   private createExprContext(scope: LibraryRefScope): AnalyzePolicyExprContext {
     return {
       parameterDefs: this.parameterDefs,
@@ -1521,6 +1619,41 @@ class AgentLibraryCompiler {
         costClass: aggregate.costClass,
         ref: { kind: 'library', refKind: 'aggregate', id: aggregateId },
         dependency: { kind: 'aggregates', id: aggregateId },
+      };
+    }
+
+    if (refPath.startsWith('condition.')) {
+      const rest = refPath.slice('condition.'.length);
+      const dotIndex = rest.indexOf('.');
+      if (dotIndex === -1 || rest.length === 0) {
+        this.reportUnknownLibraryRef(refPath, path);
+        return null;
+      }
+      const conditionId = rest.slice(0, dotIndex);
+      const field = rest.slice(dotIndex + 1);
+      if (field !== 'satisfied' && field !== 'proximity') {
+        this.reportUnknownLibraryRef(refPath, path);
+        return null;
+      }
+      const compiled = this.compileStrategicCondition(conditionId);
+      if (compiled === null) {
+        return null;
+      }
+      if (field === 'proximity' && compiled.proximity === undefined) {
+        this.diagnostics.push({
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_REF_UNKNOWN,
+          path,
+          severity: 'error',
+          message: `Strategic condition "${conditionId}" has no proximity defined, cannot reference "condition.${conditionId}.proximity".`,
+          suggestion: `Add a proximity section to strategicConditions.${conditionId} or use condition.${conditionId}.satisfied instead.`,
+        });
+        return null;
+      }
+      return {
+        type: field === 'satisfied' ? 'boolean' : 'number',
+        costClass: 'state',
+        ref: { kind: 'strategicCondition', conditionId, field },
+        dependency: { kind: 'strategicConditions', id: conditionId },
       };
     }
 

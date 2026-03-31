@@ -1,6 +1,6 @@
 # 101STRACONPRO-002: Compile strategic conditions in compile-agents.ts
 
-**Status**: PENDING
+**Status**: DONE
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — cnl compile-agents.ts

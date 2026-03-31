@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — new `validate-observers.ts`, modified `validate-agents.ts`
-**Deps**: `tickets/102SHAOBSMOD-002.md`, `specs/102-shared-observer-model.md`
+**Deps**: `archive/tickets/102SHAOBSMOD-002.md`, `specs/102-shared-observer-model.md`
 
 ## Problem
 

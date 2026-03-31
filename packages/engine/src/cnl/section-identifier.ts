@@ -20,6 +20,7 @@ export const CANONICAL_SECTION_KEYS = [
   'triggers',
   'effectMacros',
   'conditionMacros',
+  'observability',
   'agents',
   'phaseTemplates',
   'victoryStandings',
@@ -180,6 +181,9 @@ function identifyByFingerprint(value: Record<string, unknown>): CanonicalSection
   if (isTriggersShape(value)) {
     matches.push('triggers');
   }
+  if (isObservabilityShape(value)) {
+    matches.push('observability');
+  }
   if (isAgentsShape(value)) {
     matches.push('agents');
   }
@@ -242,6 +246,10 @@ function isActionPipelinesShape(value: Record<string, unknown>): boolean {
       (entry) => isRecord(entry) && typeof entry.id === 'string' && typeof entry.actionId === 'string',
     )
   );
+}
+
+function isObservabilityShape(value: Record<string, unknown>): boolean {
+  return isRecord(value.observers);
 }
 
 function isAgentsShape(value: Record<string, unknown>): boolean {

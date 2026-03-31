@@ -537,6 +537,42 @@ export interface GameSpecAgentVisibilitySection {
   readonly activeCardAnnotation?: GameSpecPolicySurfaceVisibilityDef;
 }
 
+// --- Observer profile types (Spec 102, Part B) ---
+
+export interface GameSpecObserverSurfaceEntryDef {
+  readonly current?: GameSpecPolicySurfaceVisibilityClass;
+  readonly preview?: GameSpecPolicySurfacePreviewVisibilityDef;
+}
+
+export type GameSpecObserverSurfaceValue =
+  | GameSpecPolicySurfaceVisibilityClass
+  | GameSpecObserverSurfaceEntryDef
+  | Readonly<Record<string, GameSpecPolicySurfaceVisibilityClass | GameSpecObserverSurfaceEntryDef>>;
+
+export interface GameSpecObserverSurfacesDef {
+  readonly globalVars?: GameSpecObserverSurfaceValue;
+  readonly perPlayerVars?: GameSpecObserverSurfaceValue;
+  readonly derivedMetrics?: GameSpecObserverSurfaceValue;
+  readonly victory?: {
+    readonly currentMargin?: GameSpecPolicySurfaceVisibilityClass | GameSpecObserverSurfaceEntryDef;
+    readonly currentRank?: GameSpecPolicySurfaceVisibilityClass | GameSpecObserverSurfaceEntryDef;
+  };
+  readonly activeCardIdentity?: GameSpecPolicySurfaceVisibilityClass | GameSpecObserverSurfaceEntryDef;
+  readonly activeCardTag?: GameSpecPolicySurfaceVisibilityClass | GameSpecObserverSurfaceEntryDef;
+  readonly activeCardMetadata?: GameSpecPolicySurfaceVisibilityClass | GameSpecObserverSurfaceEntryDef;
+  readonly activeCardAnnotation?: GameSpecPolicySurfaceVisibilityClass | GameSpecObserverSurfaceEntryDef;
+}
+
+export interface GameSpecObserverProfileDef {
+  readonly extends?: string;
+  readonly description?: string;
+  readonly surfaces?: GameSpecObserverSurfacesDef;
+}
+
+export interface GameSpecObservabilitySection {
+  readonly observers?: Readonly<Record<string, GameSpecObserverProfileDef>>;
+}
+
 export type GameSpecPolicyExpr =
   | string
   | number
@@ -655,6 +691,7 @@ export interface GameSpecDoc {
   readonly triggers: readonly GameSpecTriggerDef[] | null;
   readonly effectMacros: readonly EffectMacroDef[] | null;
   readonly conditionMacros: readonly ConditionMacroDef[] | null;
+  readonly observability: GameSpecObservabilitySection | null;
   readonly agents: GameSpecAgentsSection | null;
   readonly victoryStandings: VictoryStandingsDef | null;
   readonly verbalization: GameSpecVerbalization | null;
@@ -719,6 +756,7 @@ export function createEmptyGameSpecDoc(): GameSpecDoc {
     triggers: null,
     effectMacros: null,
     conditionMacros: null,
+    observability: null,
     agents: null,
     victoryStandings: null,
     verbalization: null,

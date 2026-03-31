@@ -1,6 +1,6 @@
 # 102SHAOBSMOD-002: Add observability section to GameSpecDoc schema
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — `game-spec-doc.ts`
@@ -116,3 +116,15 @@ In the parser/assembler that constructs `GameSpecDoc` from parsed YAML sections,
 
 1. `pnpm -F @ludoforge/engine test` — full engine test suite
 2. `pnpm turbo typecheck` — type correctness
+
+## Outcome
+
+- **Completion date**: 2026-04-01
+- **What changed**:
+  - Added 5 observer types (`GameSpecObserverSurfaceEntryDef`, `GameSpecObserverSurfaceValue`, `GameSpecObserverSurfacesDef`, `GameSpecObserverProfileDef`, `GameSpecObservabilitySection`) to `game-spec-doc.ts`
+  - Added `readonly observability: GameSpecObservabilitySection | null` to `GameSpecDoc` interface and `createEmptyGameSpecDoc()`
+  - Registered `observability` as a canonical singleton section in `section-identifier.ts`, `parser.ts`, `compose-gamespec.ts`, and `yaml-linter.ts`
+  - Created `parse-observability.test.ts` with 7 tests
+  - Updated golden fixture and existing parser/game-spec-doc tests
+- **Deviations**: None — implemented as specified
+- **Verification**: `pnpm turbo typecheck` passes, `pnpm turbo lint` passes, `pnpm -F @ludoforge/engine test` passes (5372/5372)

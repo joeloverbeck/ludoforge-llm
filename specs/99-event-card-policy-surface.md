@@ -41,7 +41,7 @@ interface EventCardDef {
 }
 ```
 
-And the kernel can resolve the current event card via `resolveCurrentEventCardState(def, state)`. But NONE of this information flows through the policy surface system into the policy evaluator.
+And the kernel can resolve the current event card via `resolveCurrentEventCardState(def, state)` (in `event-execution.ts:209-229`). But NONE of this information flows through the policy surface system into the policy evaluator.
 
 ## Goals
 
@@ -65,21 +65,24 @@ And the kernel can resolve the current event card via `resolveCurrentEventCardSt
 |-----------|-----------|
 | **1. Engine Agnosticism** | Reads generic `EventCardDef` fields (id, tags, metadata). No game-specific logic. Works for any game with event decks. |
 | **2. Evolution-First** | Card tags and metadata live in GameSpecDoc YAML. Policy scoring criteria live in YAML. All evolvable by LLMs. |
-| **4. Schema Ownership** | No per-game schema. Uses existing `EventCardDef` and `EventCardMetadata` interfaces. |
-| **5. Determinism** | Surface resolution is a pure lookup. Same state = same card = same surface values. |
-| **6. Bounded Computation** | O(1) card lookup + O(tags) tag check. No iteration over decks or cards. |
-| **7. Immutability** | Read-only access to compiled metadata index. No state mutation. |
-| **8. Compiler-Kernel Boundary** | Compiler builds the metadata index from YAML. Policy evaluator performs runtime lookup. |
-| **11. Testing as Proof** | Golden tests for compiled metadata index. Integration tests for FITL event card surface resolution. Cross-game test with Texas Hold'em (no event decks — graceful no-op). |
-| **12. Branded Types** | Card IDs should use a branded `EventCardId` type if not already branded. |
+| **6. Schema Ownership** | No per-game schema. Uses existing `EventCardDef` and `EventCardMetadata` interfaces. New surface families are generic (not card-specific types). |
+| **7. Specs Are Data** | Card metadata index is a compiled lookup table — no executable code, no eval. |
+| **8. Determinism** | Surface resolution is a pure lookup. Same state = same card = same surface values. |
+| **10. Bounded Computation** | O(1) card lookup via index + O(tags) tag membership check. No iteration over decks or cards at resolution time. |
+| **11. Immutability** | Read-only access to compiled metadata index. No state mutation. |
+| **12. Compiler-Kernel Boundary** | Compiler builds the metadata index from YAML. Agent compiler validates ref paths and visibility at compile time. Runtime performs state-dependent resolution. |
+| **15. Architectural Completeness** | Extends the existing surface family system rather than creating parallel ref kinds. Reuses all visibility, parsing, and resolution infrastructure without duplication. |
+| **16. Testing as Proof** | Golden tests for compiled metadata index. Integration tests for FITL event card surface resolution. Cross-game test with Texas Hold'em (no event decks — graceful no-op). |
+| **17. Branded Types** | Card IDs should use a branded `EventCardId` type if not already branded. |
 
 ## Design
 
 ### Part A: Compiled Card Metadata Index
 
-At compile time, the agent compiler builds a `CompiledCardMetadataIndex` from `GameDef.eventDecks`:
+At compile time, build a `CompiledCardMetadataIndex` from `GameDef.eventDecks`. This index lives on `GameDef` directly — it is game definition data derived from event deck compilation, not agent policy data.
 
 ```typescript
+// In types-core.ts
 interface CompiledCardMetadataEntry {
   readonly deckId: string;
   readonly cardId: string;
@@ -92,75 +95,131 @@ interface CompiledCardMetadataIndex {
   readonly entries: Readonly<Record<string, CompiledCardMetadataEntry>>;
   // keyed by cardId
 }
+
+// On GameDef:
+readonly cardMetadataIndex?: CompiledCardMetadataIndex;
 ```
 
-This index is stored in `GameDef.agents.cardMetadataIndex` and built by the compiler from the event deck definitions already present in the GameDef.
+**Compilation step** (in `compile-event-cards.ts`): After compiling event decks via `lowerEventDecks`, iterate `eventDecks[].cards[]` and extract `{ deckId, cardId, tags, metadata }` for each card. Flatten metadata to scalar values only (drop arrays — they're not addressable in policy expressions). Store as a lookup table keyed by `cardId`.
 
-**Compilation step** (in `compile-agents.ts`): After compiling library items and profiles, iterate `GameDef.eventDecks[].cards[]` and extract `{ deckId, cardId, tags, metadata }` for each card. Flatten metadata to scalar values only (drop arrays — they're not addressable in policy expressions). Store as a lookup table.
+**Rationale for location**: The card metadata index is derived from event deck definitions, not from authored agent policy YAML. Placing it on `GameDef` (not inside `AgentPolicyCatalog`) maintains clean separation: the agent compiler reads the index but doesn't own it.
 
 ### Part B: Active Card Resolution
 
-Add a runtime provider for the "current active card" — the top card of the event draw pile that drives the current turn in card-driven turn flows.
+The "active card" is the currently revealed event card — the top token in the event deck's **discard zone** (face-up after being drawn from the draw pile).
 
 **Resolution logic** (agent layer, not kernel):
-1. Find the event deck definition in `GameDef.eventDecks`
-2. Read the draw zone's token list from `GameState.zones[drawZone]`
-3. The top card token's `props.cardId` (or the token ID pattern) identifies the active card
-4. Look up the card in the `CompiledCardMetadataIndex`
+1. Call `resolveCurrentEventCardState(def, state)` from `event-execution.ts:209-229` — this iterates `GameDef.eventDecks`, checks `discardZone[0]` for each deck, extracts the `cardId` from the top token's props, and returns `{ deckId, card }` or `null`
+2. Look up the card's `cardId` in `GameDef.cardMetadataIndex.entries`
+3. Return `CompiledCardMetadataEntry | undefined`
 
-This is a read-only operation on existing game state. No kernel changes needed.
+This is a read-only operation on existing game state. No kernel changes needed. The resolution is O(decks) for finding the active card + O(1) for the index lookup.
 
-### Part C: Policy Surface References
+### Part C: Surface Family Extension
 
-Add new ref paths to the policy expression system (in `compile-agents.ts` → `resolveRuntimeRef`):
+Extend the existing surface family system with three new families. This reuses all visibility, parsing, and resolution infrastructure — no new ref kinds or switch cases in `resolveRef`.
 
-| Ref Path | Type | Description |
-|----------|------|-------------|
-| `activeCard.id` | `id` | Current event card ID (or `undefined` if no card-driven turn flow) |
-| `activeCard.deckId` | `id` | Deck that the current card belongs to |
-| `activeCard.hasTag.TAG` | `boolean` | Whether the card has the specified tag |
-| `activeCard.metadata.KEY` | `number` or `id` | Scalar metadata value by key |
-
-These are compiled as a new ref kind `activeCardRef` in the `CompiledAgentPolicyRef` union:
+**New families** (added to `CompiledAgentPolicySurfaceRefFamily` in `types-core.ts`):
 
 ```typescript
-| {
-    readonly kind: 'activeCardRef';
-    readonly field: 'id' | 'deckId';
-  }
-| {
-    readonly kind: 'activeCardTagRef';
-    readonly tag: string;
-  }
-| {
-    readonly kind: 'activeCardMetadataRef';
-    readonly key: string;
-  }
+export type CompiledAgentPolicySurfaceRefFamily =
+  | 'globalVar'
+  | 'perPlayerVar'
+  | 'derivedMetric'
+  | 'victoryCurrentMargin'
+  | 'victoryCurrentRank'
+  | 'activeCardIdentity'    // NEW: card id, deck id
+  | 'activeCardTag'         // NEW: tag membership check
+  | 'activeCardMetadata';   // NEW: scalar metadata value
 ```
 
-**Resolution at runtime** (in `policy-evaluation-core.ts` → `resolveRef`): Resolve the active card via the runtime provider (Part B), then read the requested field from the `CompiledCardMetadataIndex`.
+**Ref paths** (parsed by extended `parseAuthoredPolicySurfaceRef` in `policy-surface.ts`):
+
+| Ref Path | Family | ID | Compile-Time Type |
+|----------|--------|----|-------------------|
+| `activeCard.id` | `activeCardIdentity` | `'id'` | `id` |
+| `activeCard.deckId` | `activeCardIdentity` | `'deckId'` | `id` |
+| `activeCard.hasTag.TAG` | `activeCardTag` | tag name | `boolean` |
+| `activeCard.metadata.KEY` | `activeCardMetadata` | metadata key | `unknown` |
+
+Preview variants (`preview.activeCard.*`) are supported through the existing `resolvePreviewRuntimeRef` path in `compile-agents.ts`, which strips the `preview.` prefix and delegates to `resolveSurfaceRuntimeRef` with `preview: true`.
+
+**Type `unknown` for metadata**: Card metadata values are heterogeneous — `period` is a string, `vcFavorability` is a number. The compile-time type is `unknown` (matching the precedent set by `option.value` in completionScoreTerms). Authors wrap metadata refs in stateFeatures with explicit type annotations:
+
+```yaml
+stateFeatures:
+  cardPeriod:
+    type: id
+    expr:
+      ref: activeCard.metadata.period
+  cardFavorability:
+    type: number
+    expr:
+      coalesce:
+        - { ref: activeCard.metadata.vcFavorability }
+        - 0
+```
+
+**Resolution at runtime** (in `policy-runtime.ts` → surface resolution provider): The existing `resolveSurface` method dispatches on `ref.family`. Extend it to handle the three new families by calling the active card resolution logic from Part B, then extracting the requested field:
+
+- `activeCardIdentity` with `id: 'id'` → `entry.cardId`
+- `activeCardIdentity` with `id: 'deckId'` → `entry.deckId`
+- `activeCardTag` with `id: tagName` → `entry.tags.includes(tagName)`
+- `activeCardMetadata` with `id: key` → `entry.metadata[key]`
+
+If no active card exists (no event decks, empty discard zones), all refs return `undefined`. The `coalesce` operator (already implemented in `policy-evaluation-core.ts:460-467`) handles fallback values in expressions.
 
 ### Part D: Visibility Configuration
 
-Extend `agents.visibility` to support card surface visibility:
+Extend `CompiledAgentPolicySurfaceCatalog` with three new flat categories, consistent with the existing `globalVars`, `perPlayerVars`, `derivedMetrics`, and `victory` pattern:
+
+```typescript
+interface CompiledAgentPolicySurfaceCatalog {
+  // Existing:
+  readonly globalVars: Readonly<Record<string, CompiledAgentPolicySurfaceVisibility>>;
+  readonly perPlayerVars: Readonly<Record<string, CompiledAgentPolicySurfaceVisibility>>;
+  readonly derivedMetrics: Readonly<Record<string, CompiledAgentPolicySurfaceVisibility>>;
+  readonly victory: {
+    readonly currentMargin: CompiledAgentPolicySurfaceVisibility;
+    readonly currentRank: CompiledAgentPolicySurfaceVisibility;
+  };
+  // NEW — flat categories, not nested under a parent:
+  readonly activeCardIdentity: CompiledAgentPolicySurfaceVisibility;
+  readonly activeCardTag: CompiledAgentPolicySurfaceVisibility;
+  readonly activeCardMetadata: CompiledAgentPolicySurfaceVisibility;
+}
+```
+
+**YAML authoring** (in game agent profiles):
 
 ```yaml
 agents:
   visibility:
-    activeCard:
-      identity:
-        current: public
-      tags:
-        current: public
-      metadata:
-        current: public
+    activeCardIdentity:
+      current: public
+      preview:
+        visibility: public
+        allowWhenHiddenSampling: false
+    activeCardTag:
+      current: public
+      preview:
+        visibility: public
+        allowWhenHiddenSampling: false
+    activeCardMetadata:
+      current: public
+      preview:
+        visibility: public
+        allowWhenHiddenSampling: false
 ```
 
-This controls whether the policy evaluator can access card identity, tags, and metadata. Games with hidden event cards can set these to `hidden` or `seat`-restricted.
+Games with hidden event cards can set these to `hidden` or use `seatVisible` for seat-restricted access. Each category has independent visibility — a game might expose card identity but hide metadata.
+
+**Compilation** (in `compile-agents.ts` → `lowerSurfaceVisibility`): Parse the three new visibility entries from authored YAML and store them in the catalog. If omitted, default to `hidden` (opt-in visibility, matching the principle that surfaces must be explicitly declared).
 
 ### Part E: YAML Authoring Examples
 
-**State feature for pivotal card detection**:
+**State features for card tag detection** (wrapping boolean refs):
+
 ```yaml
 stateFeatures:
   currentCardIsPivotal:
@@ -174,7 +233,8 @@ stateFeatures:
       ref: activeCard.hasTag.momentum
 ```
 
-**Conditional event preference**:
+**Conditional event preference using card tags**:
+
 ```yaml
 scoreTerms:
   stronglyPreferPivotalEvents:
@@ -198,11 +258,20 @@ scoreTerms:
         ref: feature.isEvent
 ```
 
-**Metadata-based scoring** (e.g., if game authors add faction affinity metadata):
+**Metadata-based scoring with typed stateFeature wrappers**:
+
 ```yaml
 # In event card YAML:
 # metadata:
 #   vcFavorability: 3   # author-assigned score for VC
+
+stateFeatures:
+  cardFavorability:
+    type: number
+    expr:
+      coalesce:
+        - { ref: activeCard.metadata.vcFavorability }
+        - 0
 
 scoreTerms:
   preferFavorableEvents:
@@ -210,9 +279,7 @@ scoreTerms:
       ref: feature.isEvent
     weight: 1
     value:
-      coalesce:
-        - { ref: activeCard.metadata.vcFavorability }
-        - 0
+      ref: feature.cardFavorability
 ```
 
 ### Part F: Card Tag Enrichment (FITL-Specific, in Game Data)
@@ -232,17 +299,30 @@ This is a DATA change in `data/games/fire-in-the-lake/41-events/*.md`, not an en
 
 ## Testing Requirements
 
-1. **Compilation test**: `CompiledCardMetadataIndex` correctly extracts card IDs, tags, and scalar metadata from FITL event deck.
-2. **Surface resolution test**: `activeCard.id` resolves to the correct card ID given a known game state with a specific card on the draw pile.
+1. **Compilation test**: `CompiledCardMetadataIndex` correctly extracts card IDs, tags, and scalar metadata from FITL event deck. Array-valued metadata fields are excluded.
+2. **Surface resolution test**: `activeCard.id` resolves to the correct card ID given a known game state with a specific card token in the discard zone.
 3. **Tag resolution test**: `activeCard.hasTag.pivotal` returns `true` for pivotal event cards, `false` for non-pivotal.
-4. **Metadata resolution test**: `activeCard.metadata.period` returns the correct period string.
+4. **Metadata resolution test**: `activeCard.metadata.period` returns the correct period string via a stateFeature wrapper with `type: id`.
 5. **No-deck graceful degradation**: Games without event decks (Texas Hold'em) return `undefined` for all `activeCard.*` refs. Policy expressions using `coalesce` handle this cleanly.
-6. **Visibility test**: When `activeCard.identity.current` is set to `hidden`, refs return `undefined`.
-7. **Golden test**: FITL policy catalog golden includes the `cardMetadataIndex`.
-8. **Evolution integration test**: A policy profile with event tag scoring compiles and runs through the tournament harness.
+6. **Visibility test**: When `activeCardIdentity` visibility is set to `hidden`, card identity refs return `undefined`.
+7. **Preview test**: `preview.activeCard.id` resolves through the preview surface path, returning the active card in the previewed state.
+8. **Golden test**: FITL policy catalog golden fixture includes the `cardMetadataIndex` on GameDef and updated `surfaceVisibility` with card categories.
+9. **Evolution integration test**: A policy profile with event tag scoring compiles and runs through the tournament harness.
+
+## Files Modified
+
+| File | Change |
+|------|--------|
+| `packages/engine/src/kernel/types-core.ts` | Add `CompiledCardMetadataEntry`, `CompiledCardMetadataIndex` types. Add `cardMetadataIndex` to `GameDef`. Add 3 new families to `CompiledAgentPolicySurfaceRefFamily`. Extend `CompiledAgentPolicySurfaceCatalog` with 3 new visibility entries. |
+| `packages/engine/src/cnl/compile-event-cards.ts` | Build `CompiledCardMetadataIndex` after compiling event decks. |
+| `packages/engine/src/agents/policy-surface.ts` | Extend `parseAuthoredPolicySurfaceRef` for `activeCard.*` ref paths. Extend `getPolicySurfaceVisibility` for 3 new families. |
+| `packages/engine/src/agents/policy-runtime.ts` | Extend surface resolution provider to resolve active card families via `resolveCurrentEventCardState` + index lookup. |
+| `packages/engine/src/cnl/compile-agents.ts` | Extend `lowerSurfaceVisibility` to parse and compile new visibility categories from authored YAML. |
+| `data/games/fire-in-the-lake/92-agents.md` | Add visibility entries for `activeCardIdentity`, `activeCardTag`, `activeCardMetadata`. |
 
 ## Risks
 
 - **Metadata richness**: The raw `EventCardMetadata` may not contain enough strategic information for sophisticated scoring. Mitigation: Game authors can add arbitrary metadata fields in YAML. Spec 100 adds compiler-derived effect summaries.
-- **Active card resolution complexity**: Different games may structure their draw piles differently (tokens vs. dedicated state). Mitigation: Resolution logic uses the existing `EventDeckDef.drawZone` contract — the kernel already maintains this.
-- **Index size**: 130 FITL cards × ~5 fields each = small. No memory concern.
+- **Active card resolution complexity**: Different games may structure their draw/discard piles differently (tokens vs. dedicated state). Mitigation: Resolution logic uses the existing `resolveCurrentEventCardState` function which operates on the `EventDeckDef.discardZone` contract — the kernel already maintains this.
+- **Index size**: 130 FITL cards x ~5 fields each = small. No memory concern.
+- **Type safety of metadata**: Metadata refs are typed `unknown` at compile time, requiring stateFeature wrappers. This adds YAML verbosity but prevents type errors. Mitigation: The `coalesce` operator provides clean fallback patterns.

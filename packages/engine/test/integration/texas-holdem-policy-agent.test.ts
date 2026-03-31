@@ -110,6 +110,42 @@ describe('Texas Hold\'em policy agent integration', () => {
     assert.equal(right.agentDecision.resolvedProfileId, 'baseline');
   });
 
+  it('does not compile a preview tolerance config for the Texas profile (cross-game sanity)', () => {
+    const { compiled } = compileTexasProductionSpec();
+    const agents = compiled.gameDef?.agents;
+
+    assert.ok(agents);
+    assert.equal(agents.profiles['baseline']?.preview, undefined,
+      'Texas baseline profile should have no preview tolerance — its issues are hidden-info-based, not RNG');
+  });
+
+  it('keeps Texas preview outcomes as hidden (not affected by FITL RNG tolerance)', () => {
+    const { compiled } = compileTexasProductionSpec();
+    const def = assertValidatedGameDef(compiled.gameDef);
+    const runtime = createGameDefRuntime(def);
+    const seeded = initialState(def, 23, 4).state;
+    const state = advanceToDecisionPoint(def, seeded);
+    const moves = enumerateLegalMoves(def, state, undefined, runtime).moves;
+    const result = new PolicyAgent({ traceLevel: 'summary' }).chooseMove({
+      def,
+      state,
+      playerId: state.activePlayer,
+      legalMoves: moves,
+      rng: createRng(23n),
+      runtime,
+    });
+
+    assert.equal(result.agentDecision?.kind, 'policy');
+    if (result.agentDecision?.kind !== 'policy') {
+      assert.fail('expected policy trace metadata');
+    }
+    assert.equal(result.agentDecision.emergencyFallback, false);
+    const breakdown = result.agentDecision.previewUsage.outcomeBreakdown!;
+    assert.ok(breakdown);
+    assert.equal(breakdown.ready + breakdown.unknownRandom, 0,
+      'Texas should not produce ready or unknownRandom outcomes — it has no preview surface refs in its score terms');
+  });
+
   it('runs fixed-seed Texas policy self-play without fallback across symmetric players', () => {
     const { compiled } = compileTexasProductionSpec();
     const def = assertValidatedGameDef(compiled.gameDef);

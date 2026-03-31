@@ -2026,6 +2026,9 @@
         "enabled": true,
         "fallback": "random"
       },
+      "preview": {
+        "tolerateRngDivergence": true
+      },
       "plan": {
         "stateFeatures": [],
         "candidateFeatures": [
@@ -2038,7 +2041,7 @@
           "hasNonPassAlternative"
         ]
       },
-      "fingerprint": "a7fa46697e0f04ed916ab1e39e787646d39c01eea6d75b95aa25de24640337f7"
+      "fingerprint": "747b070ee705938fb256f9e7ada39c18d1e21dff8add7e343bdc0ec0f60ee65b"
     }
   },
   "bindingsBySeat": {
@@ -2047,5 +2050,5 @@
     "nva": "nva-baseline",
     "vc": "vc-evolved"
   },
-  "catalogFingerprint": "dbca786776520c5866189382f71292adc73ae8f3da3e4ae85c581ebda4ecfcd2"
+  "catalogFingerprint": "ff17ebfcb46bf87cd3ddf7602ec9b0ddc5f59b115094b2c50327b25ab2a823f5"
 }

@@ -401,6 +401,8 @@ agents:
           - stableMoveKey
 
     vc-evolved:
+      preview:
+        tolerateRngDivergence: true
       params:
         rallyWeight: 3
         taxWeight: 2

@@ -1,6 +1,6 @@
 # 98PREPIPRNGTOL-005: End-to-end tests, golden update, and FITL profile opt-in
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — test fixtures, golden files, FITL profile YAML
@@ -12,11 +12,12 @@ All the plumbing is in place, but there are no end-to-end tests proving the prev
 
 ## Assumption Reassessment (2026-03-31)
 
-1. `packages/engine/test/unit/agents/policy-preview.test.ts` exists — unit tests go here.
-2. `packages/engine/test/fixtures/trace/fitl-policy-summary.golden.json` exists — must be updated if preview outcome types change.
-3. FITL agent profiles live in `data/games/fire-in-the-lake/` YAML files — need to identify the specific profile file and add `preview: { tolerateRngDivergence: true }`.
-4. `packages/engine/test/unit/policy-production-golden.test.ts` runs the golden comparison.
-5. Texas Hold'em tests should remain unchanged (different failure mode — hidden information, not RNG).
+1. `packages/engine/test/unit/agents/policy-preview.test.ts` exists — unit tests go here. ✅ Many unit tests (stochastic trace, backward compat, surface resolution, trusted indexed stochastic) already added by tickets 003/004.
+2. `packages/engine/test/fixtures/trace/fitl-policy-summary.golden.json` exists — but the golden test uses US seat with `us-baseline` profile, so adding `tolerateRngDivergence` to VC profile won't change the summary golden. The **catalog** golden (`fitl-policy-catalog.golden.json`) WILL change.
+3. FITL agent profiles live in `data/games/fire-in-the-lake/92-agents.md`. The VC profile is named `vc-evolved` (not "vc-agent"), bound to `vc` seat. It already has `completionGuidance: { enabled: true, fallback: random }`.
+4. `packages/engine/test/unit/policy-production-golden.test.ts` runs the golden comparison. ✅
+5. Texas Hold'em tests should remain unchanged (different failure mode — hidden information, not RNG). ✅
+6. Compilation round-trip tests already exist at `packages/engine/test/unit/compile-agents-authoring.test.ts` (lines 776-886). ✅ No new compilation tests needed.
 
 ## Architecture Check
 
@@ -124,3 +125,23 @@ Verify Texas Hold'em preview behavior is unchanged — previews that fail due to
 4. `pnpm turbo typecheck`
 5. `pnpm turbo lint`
 6. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+**Completion date**: 2026-03-31
+
+**What changed**:
+- `packages/engine/test/unit/agents/policy-preview.test.ts` — added determinism test (3 repeated runs with same seed/state/tolerateRngDivergence assert identical results)
+- `data/games/fire-in-the-lake/92-agents.md` — added `preview: { tolerateRngDivergence: true }` to the `vc-evolved` profile
+- `packages/engine/test/integration/fitl-policy-agent.test.ts` — added compilation verification test (vc-evolved has preview config, other profiles do not) and stochastic preview outcome integration test (modified overlay with `allowWhenHiddenSampling: true` to observe stochastic outcomes)
+- `packages/engine/test/integration/texas-holdem-policy-agent.test.ts` — added cross-game sanity tests: Texas baseline has no preview config, preview behavior unchanged
+- `packages/engine/test/fixtures/gamedef/fitl-policy-catalog.golden.json` — regenerated to reflect new vc-evolved profile fingerprint with preview config
+- Compilation round-trip tests already existed from ticket 004 — no new compilation tests needed
+
+**Deviations from plan**:
+- Ticket referenced `packages/engine/test/unit/cnl/compile-agents.test.ts` — actual file is `packages/engine/test/unit/compile-agents-authoring.test.ts`. Compilation tests already existed there from prior tickets.
+- Ticket said "vc-agent" profile — actual profile name is `vc-evolved`.
+- FITL integration test adjusted: `vc-evolved` score terms don't use preview surface refs (they use `feature.isRally`/`feature.isTax`), so the stochastic outcome test overlays `preferProjectedSelfMargin` score term and sets `allowWhenHiddenSampling: true` to make stochastic outcomes observable. Without this, hidden sampling masks all preview outcomes as `'hidden'`.
+- Summary golden (`fitl-policy-summary.golden.json`) unchanged — it tests the US seat with `us-baseline` profile, which has no preview tolerance.
+
+**Verification**: 5160 engine tests pass, 0 failures. Typecheck and lint clean.

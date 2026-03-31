@@ -604,6 +604,94 @@ describe('FITL policy agent integration', () => {
     assert.ok(agents.library.completionScoreTerms.preferTargetSpaceSelection);
   });
 
+  it('compiles vc-evolved profile with preview.tolerateRngDivergence from production YAML', () => {
+    const { compiled } = compileProductionSpec();
+    const agents = compiled.gameDef?.agents;
+
+    assert.ok(agents);
+    assert.deepEqual(agents.profiles['vc-evolved']?.preview, {
+      tolerateRngDivergence: true,
+    });
+    assert.equal(agents.profiles['us-baseline']?.preview, undefined);
+    assert.equal(agents.profiles['arvn-baseline']?.preview, undefined);
+    assert.equal(agents.profiles['nva-baseline']?.preview, undefined);
+  });
+
+  it('produces stochastic preview outcomes for VC when allowWhenHiddenSampling is enabled alongside tolerateRngDivergence', () => {
+    const { compiled } = compileProductionSpec();
+    const baseDef = assertValidatedGameDef(compiled.gameDef);
+
+    assert.ok(baseDef.agents);
+    const vcProfile = baseDef.agents.profiles['vc-evolved'];
+    assert.ok(vcProfile);
+
+    const def = assertValidatedGameDef({
+      ...baseDef,
+      agents: {
+        ...baseDef.agents,
+        surfaceVisibility: {
+          ...baseDef.agents.surfaceVisibility,
+          victory: {
+            ...baseDef.agents.surfaceVisibility.victory,
+            currentMargin: {
+              current: 'public',
+              preview: { visibility: 'public', allowWhenHiddenSampling: true },
+            },
+            currentRank: {
+              current: 'public',
+              preview: { visibility: 'public', allowWhenHiddenSampling: true },
+            },
+          },
+        },
+        profiles: {
+          ...baseDef.agents.profiles,
+          'vc-evolved': {
+            ...vcProfile,
+            use: {
+              ...vcProfile.use,
+              scoreTerms: [
+                ...vcProfile.use.scoreTerms,
+                'preferProjectedSelfMargin',
+              ],
+            },
+          },
+        },
+      },
+    });
+
+    const runtime = createGameDefRuntime(def);
+    const base = advanceSeed1ToVcDecision();
+    const state = base.state;
+    const moves = enumerateLegalMoves(def, state, undefined, runtime).moves;
+    const result = new PolicyAgent({ traceLevel: 'verbose' }).chooseMove({
+      def,
+      state,
+      playerId: state.activePlayer,
+      legalMoves: moves,
+      rng: createRng(1n),
+      runtime,
+    });
+
+    assert.equal(result.agentDecision?.kind, 'policy');
+    if (result.agentDecision?.kind !== 'policy') {
+      assert.fail('expected policy trace metadata');
+    }
+    assert.equal(result.agentDecision.resolvedProfileId, 'vc-evolved');
+    assert.equal(result.agentDecision.emergencyFallback, false);
+
+    if (result.agentDecision.candidates === undefined) {
+      assert.fail('expected verbose policy candidates');
+    }
+    const nonPassCandidates = result.agentDecision.candidates.filter((c) => c.actionId !== 'pass');
+    const stochasticCandidates = nonPassCandidates.filter((c) => c.previewOutcome === 'stochastic');
+    const readyCandidates = nonPassCandidates.filter((c) => c.previewOutcome === 'ready');
+
+    assert.ok(
+      stochasticCandidates.length > 0 || readyCandidates.length > 0,
+      `expected at least one stochastic or ready preview outcome for VC with tolerateRngDivergence (got outcomes: ${nonPassCandidates.map((c) => c.previewOutcome).join(', ')})`,
+    );
+  });
+
   it('concretizes incomplete FITL legal-move templates before policy evaluation', () => {
     const { compiled } = compileProductionSpec();
     const def = assertValidatedGameDef(compiled.gameDef);

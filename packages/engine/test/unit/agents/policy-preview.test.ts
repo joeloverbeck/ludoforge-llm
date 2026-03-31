@@ -357,6 +357,53 @@ describe('policy-preview', () => {
     assert.equal(runtime.getOutcome(candidate), 'stochastic');
   });
 
+  it('produces identical preview values across 3 repeated runs (determinism)', () => {
+    const def = createDef();
+    const state = initialState(def, 1, 2).state;
+    const candidate = createCandidate();
+
+    function runPreview() {
+      const runtime = createPolicyPreviewRuntime({
+        def,
+        state,
+        playerId: asPlayerId(0),
+        seatId: 'us',
+        trustedMoveIndex: new Map(),
+        tolerateRngDivergence: true,
+        dependencies: {
+          classifyPlayableMoveCandidate: () => ({
+            kind: 'playableComplete',
+            move: createTrustedExecutableMove(candidate.move, state.stateHash, 'templateCompletion'),
+            warnings: [],
+          }),
+          applyMove: () => ({
+            state: {
+              ...state,
+              globalVars: { ...state.globalVars, score: 5 },
+              rng: {
+                ...state.rng,
+                state: [99n, 100n],
+              },
+            },
+          }),
+          derivePlayerObservation: () => createObservation(false),
+        },
+      });
+
+      return {
+        surface: runtime.resolveSurface(candidate, previewScoreRef),
+        outcome: runtime.getOutcome(candidate),
+      };
+    }
+
+    const results = [runPreview(), runPreview(), runPreview()];
+    for (let i = 1; i < results.length; i++) {
+      assert.deepEqual(results[i], results[0], `run ${i + 1} must match run 1`);
+    }
+    assert.deepEqual(results[0]!.surface, { kind: 'value', value: 5 });
+    assert.equal(results[0]!.outcome, 'stochastic');
+  });
+
   it('keeps safe preview refs available while masking unsafe refs when hidden sampling remains', () => {
     const def = createDef();
     const state = initialState(def, 1, 2).state;

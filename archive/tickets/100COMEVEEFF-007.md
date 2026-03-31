@@ -1,6 +1,6 @@
 # 100COMEVEEFF-007: Add FITL agent profile visibility entry
 
-**Status**: PENDING
+**Status**: DONE
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: None — data file only

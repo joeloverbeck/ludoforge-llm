@@ -35,6 +35,11 @@ agents:
       preview:
         visibility: public
         allowWhenHiddenSampling: false
+    activeCardAnnotation:
+      current: public
+      preview:
+        visibility: public
+        allowWhenHiddenSampling: false
 
   parameters:
     eventWeight:

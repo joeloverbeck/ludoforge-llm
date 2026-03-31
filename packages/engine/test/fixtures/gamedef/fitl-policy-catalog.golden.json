@@ -408,9 +408,9 @@
       }
     },
     "activeCardAnnotation": {
-      "current": "hidden",
+      "current": "public",
       "preview": {
-        "visibility": "hidden",
+        "visibility": "public",
         "allowWhenHiddenSampling": false
       }
     }
@@ -2078,5 +2078,5 @@
     "nva": "nva-baseline",
     "vc": "vc-evolved"
   },
-  "catalogFingerprint": "b387d4c77cdeeea493b0a3569bea94063fe21eb199b8a8deb723273007321248"
+  "catalogFingerprint": "7a21a87fb70844ed3e30deee0bad7bb3f4e7d4ff7e5f3b4d9a37930c3fde2d74"
 }

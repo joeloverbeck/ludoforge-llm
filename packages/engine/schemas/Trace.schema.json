@@ -2981,6 +2981,10 @@
                             },
                             {
                               "type": "string",
+                              "const": "stochastic"
+                            },
+                            {
+                              "type": "string",
                               "const": "random"
                             },
                             {

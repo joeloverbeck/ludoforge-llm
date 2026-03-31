@@ -1,4 +1,5 @@
 import { computeDerivedMetricValue } from '../kernel/derived-values.js';
+import { resolveCurrentEventCardState } from '../kernel/event-execution.js';
 import { derivePlayerObservation } from '../kernel/observation.js';
 import { applyTrustedMove } from '../kernel/apply-move.js';
 import { buildSeatResolutionIndex, resolvePlayerIndexForSeatValue, type SeatResolutionIndex } from '../kernel/identity.js';
@@ -6,6 +7,7 @@ import { classifyPlayableMoveCandidate, type PlayableCandidateClassification } f
 import type { PlayerId } from '../kernel/branded.js';
 import type {
   CompiledAgentPolicyPreviewSurfaceRef,
+  CompiledCardMetadataEntry,
   GameDef,
   GameState,
   Move,
@@ -20,6 +22,7 @@ import {
   resolvePolicyRoleSelector,
   type PolicyVictorySurface,
 } from './policy-surface.js';
+import { extractAnnotationValue as extractAnnotationValueForPreview } from './policy-annotation-resolve.js';
 
 export interface PolicyPreviewCandidate {
   readonly move: Move;
@@ -52,6 +55,7 @@ export interface CreatePolicyPreviewRuntimeInput {
   readonly trustedMoveIndex: ReadonlyMap<string, TrustedExecutableMove>;
   readonly runtime?: GameDefRuntime;
   readonly dependencies?: PolicyPreviewDependencies;
+  readonly tolerateRngDivergence?: boolean;
 }
 
 export interface PolicyPreviewRuntime {
@@ -63,7 +67,7 @@ export interface PolicyPreviewRuntime {
 }
 
 export type PolicyPreviewUnavailabilityReason = 'random' | 'hidden' | 'unresolved' | 'failed';
-export type PolicyPreviewTraceOutcome = 'ready' | PolicyPreviewUnavailabilityReason;
+export type PolicyPreviewTraceOutcome = 'ready' | 'stochastic' | PolicyPreviewUnavailabilityReason;
 
 export type PolicyPreviewSurfaceResolution =
   | {
@@ -81,6 +85,13 @@ export type PolicyPreviewSurfaceResolution =
 type PreviewOutcome =
   | {
       readonly kind: 'ready';
+      readonly state: GameState;
+      readonly requiresHiddenSampling: boolean;
+      readonly metricCache: Map<string, number>;
+      victorySurface: PolicyVictorySurface | null;
+    }
+  | {
+      readonly kind: 'stochastic';
       readonly state: GameState;
       readonly requiresHiddenSampling: boolean;
       readonly metricCache: Map<string, number>;
@@ -109,7 +120,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
   return {
     resolveSurface(candidate, ref) {
       const preview = getPreviewOutcome(candidate);
-      if (preview.kind !== 'ready') {
+      if (preview.kind !== 'ready' && preview.kind !== 'stochastic') {
         return preview;
       }
       const visibility = input.def.agents === undefined ? null : getPolicySurfaceVisibility(input.def.agents.surfaceVisibility, ref);
@@ -169,6 +180,43 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         );
         return typeof value === 'number' ? { kind: 'value', value } : { kind: 'unavailable' };
       }
+      if (ref.family === 'activeCardAnnotation') {
+        const current = resolveCurrentEventCardState(input.def, preview.state);
+        if (current === null) {
+          return { kind: 'unavailable' };
+        }
+        const annotation = input.def.cardAnnotationIndex?.entries[current.card.id];
+        if (annotation === undefined) {
+          return { kind: 'unavailable' };
+        }
+        const previewActiveSeatId = input.def.seats?.[preview.state.activePlayer]?.id;
+        const resolved = extractAnnotationValueForPreview(annotation, ref, input.seatId, previewActiveSeatId);
+        if (resolved === undefined) {
+          return { kind: 'unavailable' };
+        }
+        return typeof resolved === 'number'
+          ? { kind: 'value', value: resolved }
+          : typeof resolved === 'boolean'
+            ? { kind: 'value', value: resolved ? 1 : 0 }
+            : { kind: 'unavailable' };
+      }
+      if (ref.family === 'activeCardIdentity' || ref.family === 'activeCardTag' || ref.family === 'activeCardMetadata') {
+        const entry = resolveActiveCardEntryFromState(input.def, preview.state);
+        if (entry === undefined) {
+          return { kind: 'unavailable' };
+        }
+        const resolved = resolveActiveCardFamilyValue(entry, ref.family, ref.id);
+        if (resolved === undefined) {
+          return { kind: 'unavailable' };
+        }
+        return typeof resolved === 'number'
+          ? { kind: 'value', value: resolved }
+          : typeof resolved === 'boolean'
+            ? { kind: 'value', value: resolved ? 1 : 0 }
+            : typeof resolved === 'string'
+              ? { kind: 'value', value: 0 }
+              : { kind: 'unavailable' };
+      }
       return { kind: 'unavailable' };
     },
     getOutcome(candidate) {
@@ -203,6 +251,8 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
       return { kind: 'unknown', reason: 'failed' };
     }
 
+    const tolerateRng = input.tolerateRngDivergence === true;
+
     try {
       const previewState = deps.applyMove(
         input.def,
@@ -211,12 +261,15 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         undefined,
         input.runtime,
       ).state;
-      if (!rngStatesEqual(previewState.rng, input.state.rng)) {
+      const rngDiverged = !rngStatesEqual(previewState.rng, input.state.rng);
+
+      if (rngDiverged && !tolerateRng) {
         return { kind: 'unknown', reason: 'random' };
       }
+
       const observation = deps.derivePlayerObservation(input.def, previewState, input.playerId);
       return {
-        kind: 'ready',
+        kind: rngDiverged ? 'stochastic' : 'ready',
         state: previewState,
         requiresHiddenSampling: observation.requiresHiddenSampling,
         metricCache: new Map<string, number>(),
@@ -229,7 +282,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
 }
 
 function toPreviewTraceOutcome(outcome: PreviewOutcome): PolicyPreviewTraceOutcome {
-  return outcome.kind === 'ready' ? 'ready' : outcome.reason;
+  return outcome.kind === 'ready' ? 'ready' : outcome.kind === 'stochastic' ? 'stochastic' : outcome.reason;
 }
 
 function resolvePerPlayerTargetIndex(
@@ -248,6 +301,32 @@ function resolvePerPlayerTargetIndex(
     : resolvePlayerIndexForSeatValue(resolvePolicyRoleSelector(def, state, ref.selector, seatId), seatResolutionIndex) ?? undefined;
 }
 
+function resolveActiveCardEntryFromState(
+  def: GameDef,
+  state: GameState,
+): CompiledCardMetadataEntry | undefined {
+  const current = resolveCurrentEventCardState(def, state);
+  if (current === null) {
+    return undefined;
+  }
+  return def.cardMetadataIndex?.entries[current.card.id];
+}
+
+function resolveActiveCardFamilyValue(
+  entry: CompiledCardMetadataEntry,
+  family: 'activeCardIdentity' | 'activeCardTag' | 'activeCardMetadata',
+  id: string,
+): string | number | boolean | undefined {
+  switch (family) {
+    case 'activeCardIdentity':
+      return id === 'id' ? entry.cardId : id === 'deckId' ? entry.deckId : undefined;
+    case 'activeCardTag':
+      return entry.tags.includes(id);
+    case 'activeCardMetadata':
+      return entry.metadata[id];
+  }
+}
+
 function resolveSeatVarRef(
   state: GameState,
   ref: CompiledAgentPolicyPreviewSurfaceRef,
@@ -262,7 +341,7 @@ function resolveSeatVarRef(
 
 function getVictorySurface(
   def: GameDef,
-  preview: Extract<PreviewOutcome, { readonly kind: 'ready' }>,
+  preview: Extract<PreviewOutcome, { readonly kind: 'ready' } | { readonly kind: 'stochastic' }>,
   runtime?: GameDefRuntime,
 ): PolicyVictorySurface {
   if (preview.victorySurface !== null) {

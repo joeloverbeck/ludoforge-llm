@@ -8,6 +8,7 @@ import type {
   CompiledAgentPolicySurfaceCatalog,
   CompiledAgentPolicySurfaceSelector,
   CompiledAgentPolicySurfaceVisibility,
+  CompiledStrategicCondition,
   GameDef,
   GameState,
 } from '../kernel/types.js';
@@ -130,6 +131,87 @@ export function parseAuthoredPolicySurfaceRef(
     };
   }
 
+  if (refPath === 'activeCard.id') {
+    return {
+      kind,
+      family: 'activeCardIdentity',
+      id: 'id',
+      visibility: catalog.activeCardIdentity,
+    };
+  }
+
+  if (refPath === 'activeCard.deckId') {
+    return {
+      kind,
+      family: 'activeCardIdentity',
+      id: 'deckId',
+      visibility: catalog.activeCardIdentity,
+    };
+  }
+
+  if (refPath.startsWith('activeCard.hasTag.')) {
+    const tagName = refPath.slice('activeCard.hasTag.'.length);
+    if (tagName.length === 0) {
+      return null;
+    }
+    return {
+      kind,
+      family: 'activeCardTag',
+      id: tagName,
+      visibility: catalog.activeCardTag,
+    };
+  }
+
+  if (refPath.startsWith('activeCard.metadata.')) {
+    const metadataKey = refPath.slice('activeCard.metadata.'.length);
+    if (metadataKey.length === 0) {
+      return null;
+    }
+    return {
+      kind,
+      family: 'activeCardMetadata',
+      id: metadataKey,
+      visibility: catalog.activeCardMetadata,
+    };
+  }
+
+  if (refPath.startsWith('activeCard.annotation.')) {
+    const tail = refPath.slice('activeCard.annotation.'.length);
+    const segments = tail.split('.');
+    if (segments.length < 2 || segments.length > 3) {
+      return null;
+    }
+    const side = segments[0];
+    const metric = segments[1];
+    if ((side !== 'unshaded' && side !== 'shaded') || metric === undefined || metric.length === 0) {
+      return null;
+    }
+    const seatSegment = segments[2];
+    if (seatSegment !== undefined && seatSegment.length === 0) {
+      return null;
+    }
+    const id = seatSegment !== undefined ? `${side}.${metric}.${seatSegment}` : `${side}.${metric}`;
+    if (seatSegment !== undefined) {
+      const selector: CompiledAgentPolicySurfaceSelector =
+        seatSegment === 'self' || seatSegment === 'active'
+          ? { kind: 'player', player: seatSegment }
+          : { kind: 'role', seatToken: seatSegment };
+      return {
+        kind,
+        family: 'activeCardAnnotation',
+        id,
+        selector,
+        visibility: catalog.activeCardAnnotation,
+      };
+    }
+    return {
+      kind,
+      family: 'activeCardAnnotation',
+      id,
+      visibility: catalog.activeCardAnnotation,
+    };
+  }
+
   return null;
 }
 
@@ -148,6 +230,14 @@ export function getPolicySurfaceVisibility(
       return catalog.victory.currentMargin;
     case 'victoryCurrentRank':
       return catalog.victory.currentRank;
+    case 'activeCardIdentity':
+      return catalog.activeCardIdentity;
+    case 'activeCardTag':
+      return catalog.activeCardTag;
+    case 'activeCardMetadata':
+      return catalog.activeCardMetadata;
+    case 'activeCardAnnotation':
+      return catalog.activeCardAnnotation;
   }
 }
 
@@ -185,6 +275,61 @@ export function resolvePolicyRoleSelector(
     return def?.seats?.[state.activePlayer]?.id ?? actingSeatId;
   }
   return seatToken;
+}
+
+export type StrategicConditionRefField = 'satisfied' | 'proximity';
+
+export interface ParsedStrategicConditionRef {
+  readonly kind: 'strategicCondition';
+  readonly conditionId: string;
+  readonly field: StrategicConditionRefField;
+  readonly type: 'boolean' | 'number';
+}
+
+export type StrategicConditionParseError =
+  | { readonly code: 'missingField' }
+  | { readonly code: 'invalidField'; readonly field: string }
+  | { readonly code: 'unknownCondition'; readonly conditionId: string }
+  | { readonly code: 'noProximity'; readonly conditionId: string };
+
+/**
+ * Parses a `condition.COND_ID.FIELD` ref path and validates it against a
+ * strategic conditions catalog.  Returns `null` when the path does not start
+ * with `condition.` (i.e. it belongs to a different ref family).
+ */
+export function parseStrategicConditionRef(
+  refPath: string,
+  strategicConditions: Readonly<Record<string, CompiledStrategicCondition>>,
+): { readonly ok: true; readonly ref: ParsedStrategicConditionRef } | { readonly ok: false; readonly error: StrategicConditionParseError } | null {
+  if (!refPath.startsWith('condition.')) {
+    return null;
+  }
+  const rest = refPath.slice('condition.'.length);
+  const dotIndex = rest.indexOf('.');
+  if (dotIndex === -1 || rest.length === 0) {
+    return { ok: false, error: { code: 'missingField' } };
+  }
+  const conditionId = rest.slice(0, dotIndex);
+  const field = rest.slice(dotIndex + 1);
+  if (field !== 'satisfied' && field !== 'proximity') {
+    return { ok: false, error: { code: 'invalidField', field } };
+  }
+  const condition = strategicConditions[conditionId];
+  if (condition === undefined) {
+    return { ok: false, error: { code: 'unknownCondition', conditionId } };
+  }
+  if (field === 'proximity' && condition.proximity === undefined) {
+    return { ok: false, error: { code: 'noProximity', conditionId } };
+  }
+  return {
+    ok: true,
+    ref: {
+      kind: 'strategicCondition',
+      conditionId,
+      field,
+      type: field === 'satisfied' ? 'boolean' : 'number',
+    },
+  };
 }
 
 export function buildPolicyVictorySurface(

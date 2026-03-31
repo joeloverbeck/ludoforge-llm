@@ -50,6 +50,22 @@ function createCatalog(): AgentPolicyCatalog {
           preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
         },
       },
+      activeCardIdentity: {
+        current: 'hidden',
+        preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+      },
+      activeCardTag: {
+        current: 'hidden',
+        preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+      },
+      activeCardMetadata: {
+        current: 'hidden',
+        preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+      },
+      activeCardAnnotation: {
+        current: 'hidden',
+        preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+      },
     },
     parameterDefs: {},
     candidateParamDefs: {},
@@ -64,9 +80,10 @@ function createCatalog(): AgentPolicyCatalog {
         rng: {
           kind: 'rng',
           costClass: 'state',
-          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
         },
       },
+      strategicConditions: {},
     },
     profiles: {
       baseline: {

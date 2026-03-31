@@ -64,6 +64,22 @@ function createCatalog(
           preview: { visibility: 'public', allowWhenHiddenSampling: true },
         },
       },
+      activeCardIdentity: {
+        current: 'hidden',
+        preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+      },
+      activeCardTag: {
+        current: 'hidden',
+        preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+      },
+      activeCardMetadata: {
+        current: 'hidden',
+        preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+      },
+      activeCardAnnotation: {
+        current: 'hidden',
+        preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+      },
     },
     parameterDefs,
     candidateParamDefs: {},
@@ -75,6 +91,7 @@ function createCatalog(
       scoreTerms: {},
       completionScoreTerms,
       tieBreakers: {},
+      strategicConditions: {},
     },
     profiles: {
       baseline: {
@@ -161,7 +178,7 @@ describe('completion-guidance-eval', () => {
         when: literal(true),
         weight: literal(2),
         value: literal(3),
-        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
       },
     });
 
@@ -187,7 +204,7 @@ describe('completion-guidance-eval', () => {
         when: literal(false),
         weight: literal(9),
         value: literal(9),
-        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
       },
     });
 
@@ -213,7 +230,7 @@ describe('completion-guidance-eval', () => {
         when: opExpr('eq', refExpr({ kind: 'decisionIntrinsic', intrinsic: 'targetKind' }), literal('zone')),
         weight: literal(5),
         value: literal(1),
-        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
       },
     });
 
@@ -257,7 +274,7 @@ describe('completion-guidance-eval', () => {
           prop: 'strength',
           aggOp: 'sum',
         },
-        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
       },
     });
     const state = {
@@ -312,7 +329,7 @@ describe('completion-guidance-eval', () => {
           zone: refExpr({ kind: 'optionIntrinsic', intrinsic: 'value' }),
           prop: 'population',
         },
-        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
       },
       targetTerrain: {
         costClass: 'state',
@@ -324,7 +341,7 @@ describe('completion-guidance-eval', () => {
           prop: 'terrainTags',
         },
         unknownAs: 0,
-        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
       },
     });
     const def = {
@@ -378,7 +395,7 @@ describe('completion-guidance-eval', () => {
           aggOp: 'sum',
         },
         unknownAs: 7,
-        dependencies: { parameters: ['badZone'], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+        dependencies: { parameters: ['badZone'], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
       },
     }, {
       badZone: {
@@ -420,7 +437,7 @@ describe('completion-guidance-eval', () => {
             aggOp: 'sum',
           },
           unknownAs: 7,
-          dependencies: { parameters: ['badZone'], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          dependencies: { parameters: ['badZone'], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
         },
       },
       {
@@ -456,7 +473,7 @@ describe('completion-guidance-eval', () => {
         weight: literal(3),
         value: literal(4),
         clamp: { max: 10 },
-        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
       },
     });
 
@@ -482,14 +499,14 @@ describe('completion-guidance-eval', () => {
         when: literal(true),
         weight: literal(2),
         value: literal(3),
-        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
       },
       second: {
         costClass: 'state',
         when: literal(true),
         weight: literal(4),
         value: literal(1),
-        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
       },
     });
 
@@ -516,7 +533,7 @@ describe('completion-guidance-eval', () => {
           when: literal(true),
           weight: paramExpr('zoneWeight'),
           value: literal(2),
-          dependencies: { parameters: ['zoneWeight'], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          dependencies: { parameters: ['zoneWeight'], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
         },
       },
       {

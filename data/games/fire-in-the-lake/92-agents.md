@@ -20,6 +20,26 @@ agents:
         preview:
           visibility: public
           allowWhenHiddenSampling: false
+    activeCardIdentity:
+      current: public
+      preview:
+        visibility: public
+        allowWhenHiddenSampling: false
+    activeCardTag:
+      current: public
+      preview:
+        visibility: public
+        allowWhenHiddenSampling: false
+    activeCardMetadata:
+      current: public
+      preview:
+        visibility: public
+        allowWhenHiddenSampling: false
+    activeCardAnnotation:
+      current: public
+      preview:
+        visibility: public
+        allowWhenHiddenSampling: false
 
   parameters:
     eventWeight:
@@ -401,6 +421,8 @@ agents:
           - stableMoveKey
 
     vc-evolved:
+      preview:
+        tolerateRngDivergence: true
       params:
         rallyWeight: 3
         taxWeight: 2

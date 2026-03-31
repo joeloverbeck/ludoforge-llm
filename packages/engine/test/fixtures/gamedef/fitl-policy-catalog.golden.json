@@ -385,6 +385,34 @@
           "allowWhenHiddenSampling": false
         }
       }
+    },
+    "activeCardIdentity": {
+      "current": "public",
+      "preview": {
+        "visibility": "public",
+        "allowWhenHiddenSampling": false
+      }
+    },
+    "activeCardTag": {
+      "current": "public",
+      "preview": {
+        "visibility": "public",
+        "allowWhenHiddenSampling": false
+      }
+    },
+    "activeCardMetadata": {
+      "current": "public",
+      "preview": {
+        "visibility": "public",
+        "allowWhenHiddenSampling": false
+      }
+    },
+    "activeCardAnnotation": {
+      "current": "public",
+      "preview": {
+        "visibility": "public",
+        "allowWhenHiddenSampling": false
+      }
     }
   },
   "parameterDefs": {
@@ -551,7 +579,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "selfResources": {
@@ -573,7 +602,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       }
     },
@@ -592,7 +622,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "isEvent": {
@@ -619,7 +650,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "projectedSelfMargin": {
@@ -657,7 +689,8 @@
             "selfMargin"
           ],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "isTrain": {
@@ -684,7 +717,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "isPatrol": {
@@ -711,7 +745,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "isAssault": {
@@ -738,7 +773,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "isAdvise": {
@@ -765,7 +801,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "isSweep": {
@@ -792,7 +829,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "isGovern": {
@@ -819,7 +857,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "isRally": {
@@ -846,7 +885,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "isMarch": {
@@ -873,7 +913,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "isAttack": {
@@ -900,7 +941,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "isTerror": {
@@ -927,7 +969,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "isTax": {
@@ -954,7 +997,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "isSubvert": {
@@ -981,7 +1025,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "isInfiltrate": {
@@ -1008,7 +1053,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "isBombard": {
@@ -1035,7 +1081,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "targetSpacePopulation": {
@@ -1066,7 +1113,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       }
     },
@@ -1095,7 +1143,8 @@
           "candidateFeatures": [
             "isPass"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       }
     },
@@ -1132,7 +1181,8 @@
           ],
           "aggregates": [
             "hasNonPassAlternative"
-          ]
+          ],
+          "strategicConditions": []
         },
         "onEmpty": "skipRule"
       }
@@ -1160,7 +1210,8 @@
           "candidateFeatures": [
             "projectedSelfMargin"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "preserveResources": {
@@ -1185,7 +1236,8 @@
             "selfResources"
           ],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "preferEvent": {
@@ -1216,7 +1268,8 @@
           "candidateFeatures": [
             "isEvent"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "preferTrainAction": {
@@ -1245,7 +1298,8 @@
           "candidateFeatures": [
             "isTrain"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "preferPatrolAction": {
@@ -1274,7 +1328,8 @@
           "candidateFeatures": [
             "isPatrol"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "preferAssaultAction": {
@@ -1303,7 +1358,8 @@
           "candidateFeatures": [
             "isAssault"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "preferAdviseAction": {
@@ -1332,7 +1388,8 @@
           "candidateFeatures": [
             "isAdvise"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "preferSweepAction": {
@@ -1361,7 +1418,8 @@
           "candidateFeatures": [
             "isSweep"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "preferGovernAction": {
@@ -1390,7 +1448,8 @@
           "candidateFeatures": [
             "isGovern"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "preferRallyAction": {
@@ -1419,7 +1478,8 @@
           "candidateFeatures": [
             "isRally"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "preferRallyWeighted": {
@@ -1450,7 +1510,8 @@
           "candidateFeatures": [
             "isRally"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "preferMarchAction": {
@@ -1479,7 +1540,8 @@
           "candidateFeatures": [
             "isMarch"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "preferAttackAction": {
@@ -1508,7 +1570,8 @@
           "candidateFeatures": [
             "isAttack"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "preferTerrorAction": {
@@ -1537,7 +1600,8 @@
           "candidateFeatures": [
             "isTerror"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "preferTaxAction": {
@@ -1566,7 +1630,8 @@
           "candidateFeatures": [
             "isTax"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "preferTaxWeighted": {
@@ -1597,7 +1662,8 @@
           "candidateFeatures": [
             "isTax"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "preferSubvertAction": {
@@ -1626,7 +1692,8 @@
           "candidateFeatures": [
             "isSubvert"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "preferInfiltrateAction": {
@@ -1655,7 +1722,8 @@
           "candidateFeatures": [
             "isInfiltrate"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "preferBombardAction": {
@@ -1684,7 +1752,8 @@
           "candidateFeatures": [
             "isBombard"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       }
     },
@@ -1777,7 +1846,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       }
     },
@@ -1789,7 +1859,8 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       },
       "preferCheapTargetSpaces": {
@@ -1809,10 +1880,12 @@
           "candidateFeatures": [
             "targetSpacePopulation"
           ],
-          "aggregates": []
+          "aggregates": [],
+          "strategicConditions": []
         }
       }
-    }
+    },
+    "strategicConditions": {}
   },
   "profiles": {
     "us-baseline": {
@@ -2026,6 +2099,9 @@
         "enabled": true,
         "fallback": "random"
       },
+      "preview": {
+        "tolerateRngDivergence": true
+      },
       "plan": {
         "stateFeatures": [],
         "candidateFeatures": [
@@ -2038,7 +2114,7 @@
           "hasNonPassAlternative"
         ]
       },
-      "fingerprint": "a7fa46697e0f04ed916ab1e39e787646d39c01eea6d75b95aa25de24640337f7"
+      "fingerprint": "747b070ee705938fb256f9e7ada39c18d1e21dff8add7e343bdc0ec0f60ee65b"
     }
   },
   "bindingsBySeat": {
@@ -2047,5 +2123,5 @@
     "nva": "nva-baseline",
     "vc": "vc-evolved"
   },
-  "catalogFingerprint": "dbca786776520c5866189382f71292adc73ae8f3da3e4ae85c581ebda4ecfcd2"
+  "catalogFingerprint": "78df4d24c9b41393abd8d53bb78f3eded8238eb222323ca589f31610df8aaffa"
 }

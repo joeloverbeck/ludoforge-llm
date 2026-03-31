@@ -1,6 +1,6 @@
 # 98PREPIPRNGTOL-003: Add `stochastic` preview outcome and RNG tolerance logic
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — agent policy-preview module
@@ -126,3 +126,15 @@ Change `Extract<PreviewOutcome, { readonly kind: 'ready' }>` to accept both `'re
 1. `pnpm -F @ludoforge/engine test -- --test-name-pattern 'preview'`
 2. `pnpm turbo typecheck`
 3. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+- **Completion date**: 2026-03-31
+- **What changed**:
+  - `packages/engine/src/agents/policy-preview.ts`: Added `'stochastic'` to `PolicyPreviewTraceOutcome` and `PreviewOutcome` union, added `tolerateRngDivergence` to input, updated `tryApplyPreview`, `resolveSurface`, `toPreviewTraceOutcome`, and `getVictorySurface` to handle stochastic outcomes.
+  - `packages/engine/src/kernel/types-core.ts`: Added `'stochastic'` to `PolicyCandidateDecisionTrace.previewOutcome` literal union.
+  - `packages/engine/src/kernel/schemas-core.ts`: Added `z.literal('stochastic')` to previewOutcome schema.
+  - `packages/engine/schemas/Trace.schema.json`: Added `stochastic` const to previewOutcome enum.
+  - `packages/engine/test/unit/agents/policy-preview.test.ts`: Added 4 new tests covering stochastic tolerance enabled/disabled, ready-when-no-divergence, and trusted indexed moves.
+- **Deviations**: Ticket stated type/schema changes were out of scope (done in 001), but 001 only added `PreviewToleranceConfig` — the `'stochastic'` literal in the trace type and schema was missing. Fixed here to avoid build failure.
+- **Verification**: Build pass, typecheck pass, 708/708 tests pass, schema artifacts in sync.

@@ -42,6 +42,22 @@ function createCatalog(): AgentPolicyCatalog {
         currentMargin: { current: 'public', preview: { visibility: 'public', allowWhenHiddenSampling: true } },
         currentRank: { current: 'public', preview: { visibility: 'public', allowWhenHiddenSampling: true } },
       },
+      activeCardIdentity: {
+        current: 'hidden',
+        preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+      },
+      activeCardTag: {
+        current: 'hidden',
+        preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+      },
+      activeCardMetadata: {
+        current: 'hidden',
+        preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+      },
+      activeCardAnnotation: {
+        current: 'hidden',
+        preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+      },
     },
     parameterDefs: {},
     candidateParamDefs: {},
@@ -52,7 +68,7 @@ function createCatalog(): AgentPolicyCatalog {
           type: 'boolean',
           costClass: 'candidate',
           expr: opExpr('eq', refExpr({ kind: 'candidateIntrinsic', intrinsic: 'actionId' }), literal('event')),
-          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
         },
       },
       candidateAggregates: {},
@@ -62,7 +78,7 @@ function createCatalog(): AgentPolicyCatalog {
           costClass: 'candidate',
           weight: literal(10),
           value: opExpr('boolToNumber', refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'isEvent' })),
-          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['isEvent'], aggregates: [] },
+          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['isEvent'], aggregates: [], strategicConditions: [] },
         },
       },
       completionScoreTerms: {},
@@ -70,9 +86,10 @@ function createCatalog(): AgentPolicyCatalog {
         stableMoveKey: {
           kind: 'stableMoveKey',
           costClass: 'state',
-          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
         },
       },
+      strategicConditions: {},
     },
     profiles: {
       baseline: {

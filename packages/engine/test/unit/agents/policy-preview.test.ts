@@ -72,6 +72,22 @@ function createDef(): GameDef {
             preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
           },
         },
+        activeCardIdentity: {
+          current: 'hidden',
+          preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+        },
+        activeCardTag: {
+          current: 'hidden',
+          preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+        },
+        activeCardMetadata: {
+          current: 'hidden',
+          preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+        },
+        activeCardAnnotation: {
+          current: 'hidden',
+          preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+        },
       },
       parameterDefs: {},
       candidateParamDefs: {},
@@ -83,6 +99,7 @@ function createDef(): GameDef {
         scoreTerms: {},
         completionScoreTerms: {},
         tieBreakers: {},
+        strategicConditions: {},
       },
       profiles: {},
       bindingsBySeat: {},
@@ -219,6 +236,189 @@ describe('policy-preview', () => {
 
     assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), { kind: 'unknown', reason: 'random' });
     assert.equal(runtime.getOutcome(candidate), 'random');
+  });
+
+  it('returns stochastic outcome when rng diverges and tolerateRngDivergence is true', () => {
+    const def = createDef();
+    const state = initialState(def, 1, 2).state;
+    const candidate = createCandidate();
+    const runtime = createPolicyPreviewRuntime({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      seatId: 'us',
+      trustedMoveIndex: new Map(),
+      tolerateRngDivergence: true,
+      dependencies: {
+        classifyPlayableMoveCandidate: () => ({
+          kind: 'playableComplete',
+          move: createTrustedExecutableMove(candidate.move, state.stateHash, 'templateCompletion'),
+          warnings: [],
+        }),
+        applyMove: () => ({
+          state: {
+            ...state,
+            globalVars: { ...state.globalVars, score: 7 },
+            rng: {
+              ...state.rng,
+              state: [2n, 3n],
+            },
+          },
+        }),
+        derivePlayerObservation: () => createObservation(false),
+      },
+    });
+
+    assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), { kind: 'value', value: 7 });
+    assert.equal(runtime.getOutcome(candidate), 'stochastic');
+  });
+
+  it('returns ready outcome when rng does not diverge and tolerateRngDivergence is true', () => {
+    const def = createDef();
+    const state = initialState(def, 1, 2).state;
+    const candidate = createCandidate();
+    const runtime = createPolicyPreviewRuntime({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      seatId: 'us',
+      trustedMoveIndex: new Map(),
+      tolerateRngDivergence: true,
+      dependencies: {
+        classifyPlayableMoveCandidate: () => ({
+          kind: 'playableComplete',
+          move: createTrustedExecutableMove(candidate.move, state.stateHash, 'templateCompletion'),
+          warnings: [],
+        }),
+        applyMove: () => ({
+          state: {
+            ...state,
+            globalVars: { ...state.globalVars, score: 3 },
+          },
+        }),
+        derivePlayerObservation: () => createObservation(false),
+      },
+    });
+
+    assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), { kind: 'value', value: 3 });
+    assert.equal(runtime.getOutcome(candidate), 'ready');
+  });
+
+  it('returns unknown/random when rng diverges and tolerateRngDivergence is false', () => {
+    const def = createDef();
+    const state = initialState(def, 1, 2).state;
+    const candidate = createCandidate();
+    const runtime = createPolicyPreviewRuntime({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      seatId: 'us',
+      trustedMoveIndex: new Map(),
+      tolerateRngDivergence: false,
+      dependencies: {
+        classifyPlayableMoveCandidate: () => ({
+          kind: 'playableComplete',
+          move: createTrustedExecutableMove(candidate.move, state.stateHash, 'templateCompletion'),
+          warnings: [],
+        }),
+        applyMove: () => ({
+          state: {
+            ...state,
+            rng: {
+              ...state.rng,
+              state: [2n, 3n],
+            },
+          },
+        }),
+        derivePlayerObservation: () => createObservation(false),
+      },
+    });
+
+    assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), { kind: 'unknown', reason: 'random' });
+    assert.equal(runtime.getOutcome(candidate), 'random');
+  });
+
+  it('resolves stochastic trusted indexed preview with tolerateRngDivergence', () => {
+    const def = createDef();
+    const state = initialState(def, 1, 2).state;
+    const candidate = createCandidate();
+    const runtime = createPolicyPreviewRuntime({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      seatId: 'us',
+      tolerateRngDivergence: true,
+      trustedMoveIndex: new Map([[
+        candidate.stableMoveKey,
+        createTrustedExecutableMove(candidate.move, state.stateHash, 'templateCompletion'),
+      ]]),
+      dependencies: {
+        classifyPlayableMoveCandidate: () => {
+          assert.fail('trusted preview path should not fall back to classification');
+        },
+        applyMove: () => ({
+          state: {
+            ...state,
+            globalVars: { ...state.globalVars, score: 5 },
+            rng: {
+              ...state.rng,
+              state: [9n, 10n],
+            },
+          },
+        }),
+        derivePlayerObservation: () => createObservation(false),
+      },
+    });
+
+    assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), { kind: 'value', value: 5 });
+    assert.equal(runtime.getOutcome(candidate), 'stochastic');
+  });
+
+  it('produces identical preview values across 3 repeated runs (determinism)', () => {
+    const def = createDef();
+    const state = initialState(def, 1, 2).state;
+    const candidate = createCandidate();
+
+    function runPreview() {
+      const runtime = createPolicyPreviewRuntime({
+        def,
+        state,
+        playerId: asPlayerId(0),
+        seatId: 'us',
+        trustedMoveIndex: new Map(),
+        tolerateRngDivergence: true,
+        dependencies: {
+          classifyPlayableMoveCandidate: () => ({
+            kind: 'playableComplete',
+            move: createTrustedExecutableMove(candidate.move, state.stateHash, 'templateCompletion'),
+            warnings: [],
+          }),
+          applyMove: () => ({
+            state: {
+              ...state,
+              globalVars: { ...state.globalVars, score: 5 },
+              rng: {
+                ...state.rng,
+                state: [99n, 100n],
+              },
+            },
+          }),
+          derivePlayerObservation: () => createObservation(false),
+        },
+      });
+
+      return {
+        surface: runtime.resolveSurface(candidate, previewScoreRef),
+        outcome: runtime.getOutcome(candidate),
+      };
+    }
+
+    const results = [runPreview(), runPreview(), runPreview()];
+    for (let i = 1; i < results.length; i++) {
+      assert.deepEqual(results[i], results[0], `run ${i + 1} must match run 1`);
+    }
+    assert.deepEqual(results[0]!.surface, { kind: 'value', value: 5 });
+    assert.equal(results[0]!.outcome, 'stochastic');
   });
 
   it('keeps safe preview refs available while masking unsafe refs when hidden sampling remains', () => {

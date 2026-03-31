@@ -291,6 +291,10 @@ export const CompiledAgentPolicySurfaceCatalogSchema = z
       currentMargin: CompiledAgentPolicySurfaceVisibilitySchema,
       currentRank: CompiledAgentPolicySurfaceVisibilitySchema,
     }).strict(),
+    activeCardIdentity: CompiledAgentPolicySurfaceVisibilitySchema,
+    activeCardTag: CompiledAgentPolicySurfaceVisibilitySchema,
+    activeCardMetadata: CompiledAgentPolicySurfaceVisibilitySchema,
+    activeCardAnnotation: CompiledAgentPolicySurfaceVisibilitySchema,
   })
   .strict();
 
@@ -645,6 +649,11 @@ const CompiledAgentPolicyRefSchema = z.union([
     kind: z.literal('turnIntrinsic'),
     intrinsic: z.union([z.literal('phaseId'), z.literal('stepId'), z.literal('round')]),
   }).strict(),
+  z.object({
+    kind: z.literal('strategicCondition'),
+    conditionId: StringSchema,
+    field: z.union([z.literal('satisfied'), z.literal('proximity')]),
+  }).strict(),
 ]);
 
 const AgentPolicyTokenFilterSchema = z.object({
@@ -773,6 +782,7 @@ const CompiledAgentDependencyRefsSchema = z
     stateFeatures: z.array(StringSchema),
     candidateFeatures: z.array(StringSchema),
     aggregates: z.array(StringSchema),
+    strategicConditions: z.array(StringSchema),
   })
   .strict();
 
@@ -836,6 +846,19 @@ const CompiledAgentTieBreakerSchema = z
   })
   .strict();
 
+const CompiledStrategicConditionSchema = z
+  .object({
+    target: AgentPolicyExprSchema,
+    proximity: z
+      .object({
+        current: AgentPolicyExprSchema,
+        threshold: NumberSchema,
+      })
+      .strict()
+      .optional(),
+  })
+  .strict();
+
 const CompiledAgentLibraryIndexSchema = z
   .object({
     stateFeatures: z.record(StringSchema, CompiledAgentStateFeatureSchema),
@@ -845,6 +868,7 @@ const CompiledAgentLibraryIndexSchema = z
     scoreTerms: z.record(StringSchema, CompiledAgentScoreTermSchema),
     completionScoreTerms: z.record(StringSchema, CompiledAgentScoreTermSchema),
     tieBreakers: z.record(StringSchema, CompiledAgentTieBreakerSchema),
+    strategicConditions: z.record(StringSchema, CompiledStrategicConditionSchema),
   })
   .strict();
 
@@ -863,6 +887,9 @@ const CompiledAgentProfileSchema = z
     completionGuidance: z.object({
       enabled: BooleanSchema,
       fallback: z.enum(AGENT_POLICY_COMPLETION_GUIDANCE_FALLBACKS),
+    }).strict().optional(),
+    preview: z.object({
+      tolerateRngDivergence: BooleanSchema,
     }).strict().optional(),
     plan: z
       .object({
@@ -884,6 +911,44 @@ const AgentPolicyCatalogSchema = z
     library: CompiledAgentLibraryIndexSchema,
     profiles: z.record(StringSchema, CompiledAgentProfileSchema),
     bindingsBySeat: z.record(StringSchema, StringSchema),
+  })
+  .strict();
+
+const CompiledEventSideAnnotationSchema = z
+  .object({
+    tokenPlacements: z.record(StringSchema, NumberSchema),
+    tokenRemovals: z.record(StringSchema, NumberSchema),
+    tokenCreations: z.record(StringSchema, NumberSchema),
+    tokenDestructions: z.record(StringSchema, NumberSchema),
+    markerModifications: NumberSchema,
+    globalMarkerModifications: NumberSchema,
+    globalVarModifications: NumberSchema,
+    perPlayerVarModifications: NumberSchema,
+    varTransfers: NumberSchema,
+    drawCount: NumberSchema,
+    shuffleCount: NumberSchema,
+    grantsOperation: BooleanSchema,
+    grantOperationSeats: z.array(StringSchema),
+    hasEligibilityOverride: BooleanSchema,
+    hasLastingEffect: BooleanSchema,
+    hasBranches: BooleanSchema,
+    hasPhaseControl: BooleanSchema,
+    hasDecisionPoints: BooleanSchema,
+    effectNodeCount: NumberSchema,
+  })
+  .strict();
+
+const CompiledEventCardAnnotationSchema = z
+  .object({
+    cardId: StringSchema,
+    unshaded: CompiledEventSideAnnotationSchema.optional(),
+    shaded: CompiledEventSideAnnotationSchema.optional(),
+  })
+  .strict();
+
+const CompiledEventAnnotationIndexSchema = z
+  .object({
+    entries: z.record(StringSchema, CompiledEventCardAnnotationSchema),
   })
   .strict();
 
@@ -916,6 +981,7 @@ export const GameDefSchema = z
     triggers: z.array(TriggerDefSchema),
     terminal: TerminalEvaluationDefSchema,
     eventDecks: z.array(EventDeckSchema).optional(),
+    cardAnnotationIndex: CompiledEventAnnotationIndexSchema.optional(),
     stackingConstraints: z.array(StackingConstraintSchema).optional(),
     markerLattices: z.array(SpaceMarkerLatticeSchema).optional(),
     globalMarkerLattices: z.array(GlobalMarkerLatticeSchema).optional(),
@@ -1273,6 +1339,7 @@ const PolicyCandidateDecisionTraceSchema = z
     unknownPreviewRefs: z.array(PolicyPreviewUnknownRefTraceSchema).optional(),
     previewOutcome: z.union([
       z.literal('ready'),
+      z.literal('stochastic'),
       z.literal('random'),
       z.literal('hidden'),
       z.literal('unresolved'),

@@ -1,6 +1,6 @@
 # 98PREPIPRNGTOL-001: Add PreviewToleranceConfig type, schema, and contract constant
 
-**Status**: PENDING
+**Status**: DONE
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel types, schemas, and contracts

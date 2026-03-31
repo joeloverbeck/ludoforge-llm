@@ -1,6 +1,6 @@
 # Spec 98: Preview Pipeline RNG Tolerance
 
-**Status**: Draft
+**Status**: ✅ COMPLETED
 **Priority**: P1
 **Complexity**: M
 **Dependencies**: Spec 93 (completed), Spec 95 (completed)
@@ -253,3 +253,23 @@ The call site in the policy evaluation pipeline (`policy-agent.ts` or `policy-ev
 - **Stochastic preview accuracy**: For moves with `rollRandom` effects, the preview shows ONE possible outcome, not the expected value. The policy might overweight a lucky roll outcome. Mitigation: `tolerateRngDivergence` is opt-in per profile, and game authors can pair it with `completionGuidance.fallback: 'first'` to minimize random variation in completions.
 - **Performance**: No regression expected — same number of move applications, just different return type.
 - **V8 hidden class**: Adding a `'stochastic'` variant to `PreviewOutcome` could cause deoptimization if the object shape changes. Mitigation: `'stochastic'` uses the same shape as `'ready'` (state, requiresHiddenSampling, metricCache, victorySurface), only the `kind` tag differs.
+
+## Outcome
+
+**Completion date**: 2026-03-31
+
+**What changed** (across tickets 98PREPIPRNGTOL-001 through -005):
+- `PreviewToleranceConfig` interface and `preview?` field added to `CompiledAgentProfile` in `types-core.ts`
+- `preview` Zod schema added to `schemas-core.ts`
+- `compile-agents.ts` compiles `preview.tolerateRngDivergence` from authored YAML profiles
+- `validate-agents.ts` validates the new field
+- `policy-preview.ts` gained `'stochastic'` outcome type, `tolerateRngDivergence` input flag, and updated `tryApplyPreview`/`resolveSurface` logic
+- `policy-runtime.ts` threads `tolerateRngDivergence` from resolved profile to preview runtime
+- FITL `vc-evolved` profile in `92-agents.md` opted in with `preview: { tolerateRngDivergence: true }`
+- Golden files regenerated, comprehensive test suite added (determinism, backward compat, stochastic trace, compilation round-trip, FITL integration, cross-game sanity)
+
+**Deviations from plan**:
+- FITL preview outcomes remain masked as `'hidden'` in production because `allowWhenHiddenSampling: false` on victory margins. Stochastic outcomes are only observable when `allowWhenHiddenSampling` is also enabled. Integration tests verify this by overlaying the config.
+- `PolicyPreviewOutcomeBreakdownTrace` does not have a `stochastic` bucket — stochastic outcomes fall through to the `failed` counter in `summarizePreviewOutcomes`. Minor gap for future cleanup.
+
+**Verification**: 5160 engine tests pass, typecheck and lint clean.

@@ -6,6 +6,7 @@ export const AGENT_POLICY_LIBRARY_BUCKETS = [
   'scoreTerms',
   'completionScoreTerms',
   'tieBreakers',
+  'strategicConditions',
 ] as const;
 
 export type AgentPolicyLibraryBucket = typeof AGENT_POLICY_LIBRARY_BUCKETS[number];
@@ -27,6 +28,8 @@ export const AGENT_POLICY_PROFILE_USE_TO_LIBRARY_BUCKET = {
 } as const satisfies Record<AgentPolicyProfileUseBucket, AgentPolicyLibraryBucket>;
 
 export const AGENT_POLICY_COMPLETION_GUIDANCE_KEYS = ['enabled', 'fallback'] as const;
+
+export const AGENT_POLICY_PREVIEW_KEYS = ['tolerateRngDivergence'] as const;
 
 export const AGENT_POLICY_COMPLETION_GUIDANCE_FALLBACKS = ['random', 'first'] as const;
 

@@ -42,6 +42,22 @@ function createCatalog(): AgentPolicyCatalog {
         currentMargin: { current: 'public', preview: { visibility: 'public', allowWhenHiddenSampling: true } },
         currentRank: { current: 'public', preview: { visibility: 'public', allowWhenHiddenSampling: true } },
       },
+      activeCardIdentity: {
+        current: 'hidden',
+        preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+      },
+      activeCardTag: {
+        current: 'hidden',
+        preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+      },
+      activeCardMetadata: {
+        current: 'hidden',
+        preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+      },
+      activeCardAnnotation: {
+        current: 'hidden',
+        preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+      },
     },
     parameterDefs: {},
     candidateParamDefs: {},
@@ -52,7 +68,7 @@ function createCatalog(): AgentPolicyCatalog {
           type: 'boolean',
           costClass: 'candidate',
           expr: opExpr('eq', refExpr({ kind: 'candidateIntrinsic', intrinsic: 'actionId' }), literal('event')),
-          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
         },
       },
       candidateAggregates: {},
@@ -62,13 +78,13 @@ function createCatalog(): AgentPolicyCatalog {
           costClass: 'candidate',
           weight: literal(10),
           value: opExpr('boolToNumber', refExpr({ kind: 'candidateIntrinsic', intrinsic: 'isPass' })),
-          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
         },
         preferEvent: {
           costClass: 'candidate',
           weight: literal(10),
           value: opExpr('boolToNumber', refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'isEvent' })),
-          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['isEvent'], aggregates: [] },
+          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['isEvent'], aggregates: [], strategicConditions: [] },
         },
       },
       completionScoreTerms: {},
@@ -76,9 +92,10 @@ function createCatalog(): AgentPolicyCatalog {
         stableMoveKey: {
           kind: 'stableMoveKey',
           costClass: 'state',
-          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
         },
       },
+      strategicConditions: {},
     },
     profiles: {
       passive: {
@@ -179,7 +196,7 @@ function createTemplateDef(): GameDef {
             type: 'boolean',
             costClass: 'candidate',
             expr: opExpr('eq', refExpr({ kind: 'candidateParam', id: '$target' }), literal('gamma')),
-            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
           },
         },
         scoreTerms: {
@@ -187,7 +204,7 @@ function createTemplateDef(): GameDef {
             costClass: 'candidate',
             weight: literal(10),
             value: opExpr('boolToNumber', refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'prefersGamma' })),
-            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['prefersGamma'], aggregates: [] },
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['prefersGamma'], aggregates: [], strategicConditions: [] },
           },
         },
       },
@@ -237,14 +254,14 @@ function createGuidedTemplateDef(
             when: literal(true),
             weight: literal(10),
             value: opExpr('boolToNumber', opExpr('eq', refExpr({ kind: 'optionIntrinsic', intrinsic: 'value' }), literal('gamma'))),
-            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
           },
           noMatch: {
             costClass: 'state',
             when: literal(false),
             weight: literal(1),
             value: literal(100),
-            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
           },
         },
       },
@@ -329,6 +346,22 @@ function createTemplatePreviewDef(): GameDef {
           currentMargin: { current: 'public', preview: { visibility: 'public', allowWhenHiddenSampling: true } },
           currentRank: { current: 'public', preview: { visibility: 'public', allowWhenHiddenSampling: true } },
         },
+        activeCardIdentity: {
+          current: 'hidden',
+          preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+        },
+        activeCardTag: {
+          current: 'hidden',
+          preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+        },
+        activeCardMetadata: {
+          current: 'hidden',
+          preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+        },
+        activeCardAnnotation: {
+          current: 'hidden',
+          preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+        },
       },
       parameterDefs: {},
       candidateParamDefs: {
@@ -341,7 +374,7 @@ function createTemplatePreviewDef(): GameDef {
             type: 'number',
             costClass: 'preview',
             expr: refExpr({ kind: 'previewSurface', family: 'globalVar', id: 'usMargin' }),
-            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
           },
         },
         candidateAggregates: {},
@@ -351,7 +384,7 @@ function createTemplatePreviewDef(): GameDef {
             costClass: 'preview',
             weight: literal(1),
             value: refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'projectedMargin' }),
-            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['projectedMargin'], aggregates: [] },
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['projectedMargin'], aggregates: [], strategicConditions: [] },
           },
         },
         completionScoreTerms: {},
@@ -359,9 +392,10 @@ function createTemplatePreviewDef(): GameDef {
           stableMoveKey: {
             kind: 'stableMoveKey',
             costClass: 'state',
-            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
           },
         },
+        strategicConditions: {},
       },
       profiles: {
         passive: {

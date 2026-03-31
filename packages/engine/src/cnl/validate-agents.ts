@@ -16,11 +16,11 @@ import {
 
 const AGENTS_SECTION_KEYS = ['parameters', 'visibility', 'library', 'profiles', 'bindings'] as const;
 const AGENT_PARAMETER_KEYS = ['type', 'default', 'min', 'max', 'tunable', 'values', 'allowedIds'] as const;
-const AGENT_VISIBILITY_SECTION_KEYS = ['globalVars', 'perPlayerVars', 'derivedMetrics', 'victory'] as const;
+const AGENT_VISIBILITY_SECTION_KEYS = ['globalVars', 'perPlayerVars', 'derivedMetrics', 'victory', 'activeCardIdentity', 'activeCardTag', 'activeCardMetadata', 'activeCardAnnotation'] as const;
 const AGENT_VISIBILITY_KEYS = ['current', 'preview'] as const;
 const AGENT_VISIBILITY_PREVIEW_KEYS = ['visibility', 'allowWhenHiddenSampling'] as const;
 const AGENT_VISIBILITY_VICTORY_KEYS = ['currentMargin', 'currentRank'] as const;
-const AGENT_PROFILE_KEYS = ['params', 'use', 'completionGuidance'] as const;
+const AGENT_PROFILE_KEYS = ['params', 'use', 'completionGuidance', 'preview'] as const;
 type AgentProfileUseKey = typeof AGENT_POLICY_PROFILE_USE_BUCKETS[number];
 type AgentLibraryBucketMap = Partial<Record<AgentProfileUseKey, Record<string, unknown>>>;
 
@@ -75,6 +75,10 @@ function validateVisibility(visibility: unknown, diagnostics: Diagnostic[]): voi
   validateVisibilityMap(visibility.globalVars, 'doc.agents.visibility.globalVars', diagnostics);
   validateVisibilityMap(visibility.perPlayerVars, 'doc.agents.visibility.perPlayerVars', diagnostics);
   validateVisibilityMap(visibility.derivedMetrics, 'doc.agents.visibility.derivedMetrics', diagnostics);
+  validateVisibilityEntry(visibility.activeCardIdentity, 'doc.agents.visibility.activeCardIdentity', diagnostics);
+  validateVisibilityEntry(visibility.activeCardTag, 'doc.agents.visibility.activeCardTag', diagnostics);
+  validateVisibilityEntry(visibility.activeCardMetadata, 'doc.agents.visibility.activeCardMetadata', diagnostics);
+  validateVisibilityEntry(visibility.activeCardAnnotation, 'doc.agents.visibility.activeCardAnnotation', diagnostics);
 
   if (visibility.victory === undefined) {
     return;

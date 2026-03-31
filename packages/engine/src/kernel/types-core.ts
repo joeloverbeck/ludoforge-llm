@@ -340,7 +340,11 @@ export type CompiledAgentPolicySurfaceRefFamily =
   | 'perPlayerVar'
   | 'derivedMetric'
   | 'victoryCurrentMargin'
-  | 'victoryCurrentRank';
+  | 'victoryCurrentRank'
+  | 'activeCardIdentity'
+  | 'activeCardTag'
+  | 'activeCardMetadata'
+  | 'activeCardAnnotation';
 export type CompiledAgentPolicySurfaceSelector =
   | {
       readonly kind: 'role';
@@ -394,6 +398,11 @@ export type CompiledAgentPolicyRef =
   | {
       readonly kind: 'turnIntrinsic';
       readonly intrinsic: 'phaseId' | 'stepId' | 'round';
+    }
+  | {
+      readonly kind: 'strategicCondition';
+      readonly conditionId: string;
+      readonly field: 'satisfied' | 'proximity';
     };
 export type AgentPolicyZoneSource = string | AgentPolicyExpr;
 export interface AgentPolicyTokenFilter {
@@ -483,6 +492,49 @@ export interface CompiledAgentPolicySurfaceVisibility {
   readonly preview: CompiledAgentPolicySurfacePreviewVisibility;
 }
 
+export interface CompiledCardMetadataEntry {
+  readonly deckId: string;
+  readonly cardId: string;
+  readonly tags: readonly string[];
+  readonly metadata: Readonly<Record<string, string | number | boolean>>;
+}
+
+export interface CompiledCardMetadataIndex {
+  readonly entries: Readonly<Record<string, CompiledCardMetadataEntry>>;
+}
+
+export interface CompiledEventSideAnnotation {
+  readonly tokenPlacements: Readonly<Record<string, number>>;
+  readonly tokenRemovals: Readonly<Record<string, number>>;
+  readonly tokenCreations: Readonly<Record<string, number>>;
+  readonly tokenDestructions: Readonly<Record<string, number>>;
+  readonly markerModifications: number;
+  readonly globalMarkerModifications: number;
+  readonly globalVarModifications: number;
+  readonly perPlayerVarModifications: number;
+  readonly varTransfers: number;
+  readonly drawCount: number;
+  readonly shuffleCount: number;
+  readonly grantsOperation: boolean;
+  readonly grantOperationSeats: readonly string[];
+  readonly hasEligibilityOverride: boolean;
+  readonly hasLastingEffect: boolean;
+  readonly hasBranches: boolean;
+  readonly hasPhaseControl: boolean;
+  readonly hasDecisionPoints: boolean;
+  readonly effectNodeCount: number;
+}
+
+export interface CompiledEventCardAnnotation {
+  readonly cardId: string;
+  readonly unshaded?: CompiledEventSideAnnotation;
+  readonly shaded?: CompiledEventSideAnnotation;
+}
+
+export interface CompiledEventAnnotationIndex {
+  readonly entries: Readonly<Record<string, CompiledEventCardAnnotation>>;
+}
+
 export interface CompiledAgentPolicySurfaceCatalog {
   readonly globalVars: Readonly<Record<string, CompiledAgentPolicySurfaceVisibility>>;
   readonly perPlayerVars: Readonly<Record<string, CompiledAgentPolicySurfaceVisibility>>;
@@ -491,6 +543,10 @@ export interface CompiledAgentPolicySurfaceCatalog {
     readonly currentMargin: CompiledAgentPolicySurfaceVisibility;
     readonly currentRank: CompiledAgentPolicySurfaceVisibility;
   };
+  readonly activeCardIdentity: CompiledAgentPolicySurfaceVisibility;
+  readonly activeCardTag: CompiledAgentPolicySurfaceVisibility;
+  readonly activeCardMetadata: CompiledAgentPolicySurfaceVisibility;
+  readonly activeCardAnnotation: CompiledAgentPolicySurfaceVisibility;
 }
 
 export interface CompiledAgentParameterDef {
@@ -517,6 +573,7 @@ export interface CompiledAgentDependencyRefs {
   readonly stateFeatures: readonly string[];
   readonly candidateFeatures: readonly string[];
   readonly aggregates: readonly string[];
+  readonly strategicConditions: readonly string[];
 }
 
 export interface CompiledAgentStateFeature {
@@ -570,6 +627,14 @@ export interface CompiledAgentTieBreaker {
   readonly dependencies: CompiledAgentDependencyRefs;
 }
 
+export interface CompiledStrategicCondition {
+  readonly target: AgentPolicyExpr;
+  readonly proximity?: {
+    readonly current: AgentPolicyExpr;
+    readonly threshold: number;
+  };
+}
+
 export interface CompiledAgentLibraryIndex {
   readonly stateFeatures: Readonly<Record<string, CompiledAgentStateFeature>>;
   readonly candidateFeatures: Readonly<Record<string, CompiledAgentCandidateFeature>>;
@@ -578,11 +643,16 @@ export interface CompiledAgentLibraryIndex {
   readonly scoreTerms: Readonly<Record<string, CompiledAgentScoreTerm>>;
   readonly completionScoreTerms: Readonly<Record<string, CompiledAgentScoreTerm>>;
   readonly tieBreakers: Readonly<Record<string, CompiledAgentTieBreaker>>;
+  readonly strategicConditions: Readonly<Record<string, CompiledStrategicCondition>>;
 }
 
 export interface CompletionGuidanceConfig {
   readonly enabled: boolean;
   readonly fallback: AgentPolicyCompletionGuidanceFallback;
+}
+
+export interface PreviewToleranceConfig {
+  readonly tolerateRngDivergence: boolean;
 }
 
 export interface CompiledAgentProfile {
@@ -595,6 +665,7 @@ export interface CompiledAgentProfile {
     readonly tieBreakers: readonly string[];
   };
   readonly completionGuidance?: CompletionGuidanceConfig;
+  readonly preview?: PreviewToleranceConfig;
   readonly plan: {
     readonly stateFeatures: readonly string[];
     readonly candidateFeatures: readonly string[];
@@ -639,6 +710,8 @@ export interface GameDef {
   readonly triggers: readonly TriggerDef[];
   readonly terminal: TerminalEvaluationDef;
   readonly eventDecks?: readonly EventDeckDef[];
+  readonly cardMetadataIndex?: CompiledCardMetadataIndex;
+  readonly cardAnnotationIndex?: CompiledEventAnnotationIndex;
   readonly stackingConstraints?: readonly StackingConstraint[];
   readonly markerLattices?: readonly SpaceMarkerLatticeDef[];
   readonly globalMarkerLattices?: readonly GlobalMarkerLatticeDef[];
@@ -1391,7 +1464,7 @@ export interface PolicyCandidateDecisionTrace {
   readonly scoreContributions?: readonly AgentDecisionScoreContribution[];
   readonly previewRefIds?: readonly string[];
   readonly unknownPreviewRefs?: readonly PolicyPreviewUnknownRefTrace[];
-  readonly previewOutcome?: 'ready' | 'random' | 'hidden' | 'unresolved' | 'failed';
+  readonly previewOutcome?: 'ready' | 'stochastic' | 'random' | 'hidden' | 'unresolved' | 'failed';
 }
 
 export interface PolicyPruningStepTrace {

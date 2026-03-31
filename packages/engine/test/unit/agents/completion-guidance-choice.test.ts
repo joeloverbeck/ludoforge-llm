@@ -85,6 +85,22 @@ function createCatalog(
           preview: { visibility: 'public', allowWhenHiddenSampling: true },
         },
       },
+      activeCardIdentity: {
+        current: 'hidden',
+        preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+      },
+      activeCardTag: {
+        current: 'hidden',
+        preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+      },
+      activeCardMetadata: {
+        current: 'hidden',
+        preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+      },
+      activeCardAnnotation: {
+        current: 'hidden',
+        preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+      },
     },
     parameterDefs: {},
     candidateParamDefs: {},
@@ -96,6 +112,7 @@ function createCatalog(
       scoreTerms: {},
       completionScoreTerms,
       tieBreakers: {},
+      strategicConditions: {},
     },
     profiles: {
       baseline: profile,
@@ -219,7 +236,7 @@ describe('completion-guidance-choice', () => {
         when: literal(true),
         weight: literal(5),
         value: opExpr('boolToNumber', opExpr('eq', refExpr({ kind: 'optionIntrinsic', intrinsic: 'value' }), literal('zone-b'))),
-        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
       },
     }, createProfile({
       use: { pruningRules: [], scoreTerms: [], completionScoreTerms: ['preferZoneB'], tieBreakers: [] },
@@ -244,14 +261,14 @@ describe('completion-guidance-choice', () => {
         when: literal(true),
         weight: literal(3),
         value: opExpr('boolToNumber', opExpr('eq', refExpr({ kind: 'optionIntrinsic', intrinsic: 'value' }), literal('zone-a'))),
-        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
       },
       preferZoneB: {
         costClass: 'state',
         when: literal(true),
         weight: literal(10),
         value: opExpr('boolToNumber', opExpr('eq', refExpr({ kind: 'optionIntrinsic', intrinsic: 'value' }), literal('zone-b'))),
-        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
       },
     }, createProfile({
       use: { pruningRules: [], scoreTerms: [], completionScoreTerms: ['preferZoneA', 'preferZoneB'], tieBreakers: [] },
@@ -282,7 +299,7 @@ describe('completion-guidance-choice', () => {
         when: literal(false),
         weight: literal(1),
         value: literal(100),
-        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
       },
     }, createProfile({
       use: { pruningRules: [], scoreTerms: [], completionScoreTerms: ['noMatch'], tieBreakers: [] },
@@ -308,7 +325,7 @@ describe('completion-guidance-choice', () => {
         when: literal(false),
         weight: literal(1),
         value: literal(100),
-        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
       },
     }, createProfile({
       use: { pruningRules: [], scoreTerms: [], completionScoreTerms: ['noMatch'], tieBreakers: [] },
@@ -334,7 +351,7 @@ describe('completion-guidance-choice', () => {
         when: literal(true),
         weight: literal(5),
         value: opExpr('boolToNumber', opExpr('eq', refExpr({ kind: 'optionIntrinsic', intrinsic: 'value' }), literal('zone-b'))),
-        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
       },
     }, createProfile({
       use: { pruningRules: [], scoreTerms: [], completionScoreTerms: ['preferZoneB'], tieBreakers: [] },
@@ -364,14 +381,14 @@ describe('completion-guidance-choice', () => {
         when: literal(true),
         weight: literal(4),
         value: opExpr('boolToNumber', opExpr('eq', refExpr({ kind: 'optionIntrinsic', intrinsic: 'value' }), literal('zone-a'))),
-        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
       },
       preferZoneC: {
         costClass: 'state',
         when: literal(true),
         weight: literal(2),
         value: opExpr('boolToNumber', opExpr('eq', refExpr({ kind: 'optionIntrinsic', intrinsic: 'value' }), literal('zone-c'))),
-        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
       },
     }, createProfile({
       use: { pruningRules: [], scoreTerms: [], completionScoreTerms: ['preferZoneA', 'preferZoneC'], tieBreakers: [] },
@@ -396,7 +413,7 @@ describe('completion-guidance-choice', () => {
         when: literal(true),
         weight: literal(5),
         value: opExpr('boolToNumber', opExpr('eq', refExpr({ kind: 'optionIntrinsic', intrinsic: 'value' }), literal('zone-b'))),
-        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
       },
     }, createProfile({
       use: { pruningRules: [], scoreTerms: [], completionScoreTerms: ['preferZoneB'], tieBreakers: [] },
@@ -421,7 +438,7 @@ describe('completion-guidance-choice', () => {
         when: literal(false),
         weight: literal(1),
         value: literal(100),
-        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
       },
     }, createProfile({
       use: { pruningRules: [], scoreTerms: [], completionScoreTerms: ['noMatch'], tieBreakers: [] },

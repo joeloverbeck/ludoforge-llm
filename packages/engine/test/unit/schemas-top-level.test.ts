@@ -139,6 +139,22 @@ function buildGameDefWithAgentExpr(featureId: string, expr: Record<string, unkno
             preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
           },
         },
+        activeCardIdentity: {
+          current: 'hidden',
+          preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+        },
+        activeCardTag: {
+          current: 'hidden',
+          preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+        },
+        activeCardMetadata: {
+          current: 'hidden',
+          preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+        },
+        activeCardAnnotation: {
+          current: 'hidden',
+          preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+        },
       },
       parameterDefs: {},
       candidateParamDefs: {},
@@ -154,6 +170,7 @@ function buildGameDefWithAgentExpr(featureId: string, expr: Record<string, unkno
               stateFeatures: [],
               candidateFeatures: [],
               aggregates: [],
+              strategicConditions: [],
             },
           },
         },
@@ -162,6 +179,7 @@ function buildGameDefWithAgentExpr(featureId: string, expr: Record<string, unkno
         scoreTerms: {},
         completionScoreTerms: {},
         tieBreakers: {},
+        strategicConditions: {},
       },
       profiles: {
         baseline: {
@@ -293,6 +311,22 @@ describe('top-level runtime schemas', () => {
               preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
             },
           },
+          activeCardIdentity: {
+            current: 'hidden',
+            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+          },
+          activeCardTag: {
+            current: 'hidden',
+            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+          },
+          activeCardMetadata: {
+            current: 'hidden',
+            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+          },
+          activeCardAnnotation: {
+            current: 'hidden',
+            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+          },
         },
         parameterDefs: {
           passFloor: {
@@ -348,10 +382,12 @@ describe('top-level runtime schemas', () => {
                 stateFeatures: [],
                 candidateFeatures: [],
                 aggregates: [],
+                strategicConditions: [],
               },
             },
           },
           tieBreakers: {},
+          strategicConditions: {},
         },
         profiles: {
           baseline: {
@@ -405,6 +441,22 @@ describe('top-level runtime schemas', () => {
               preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
             },
           },
+          activeCardIdentity: {
+            current: 'hidden',
+            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+          },
+          activeCardTag: {
+            current: 'hidden',
+            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+          },
+          activeCardMetadata: {
+            current: 'hidden',
+            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+          },
+          activeCardAnnotation: {
+            current: 'hidden',
+            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+          },
         },
         parameterDefs: {},
         candidateParamDefs: {},
@@ -423,6 +475,7 @@ describe('top-level runtime schemas', () => {
                 stateFeatures: [],
                 candidateFeatures: [],
                 aggregates: [],
+                strategicConditions: [],
               },
             },
           },
@@ -431,6 +484,7 @@ describe('top-level runtime schemas', () => {
           scoreTerms: {},
           completionScoreTerms: {},
           tieBreakers: {},
+          strategicConditions: {},
         },
         profiles: {
           baseline: {
@@ -478,6 +532,22 @@ describe('top-level runtime schemas', () => {
               preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
             },
           },
+          activeCardIdentity: {
+            current: 'hidden',
+            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+          },
+          activeCardTag: {
+            current: 'hidden',
+            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+          },
+          activeCardMetadata: {
+            current: 'hidden',
+            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+          },
+          activeCardAnnotation: {
+            current: 'hidden',
+            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+          },
         },
         parameterDefs: {},
         candidateParamDefs: {},
@@ -499,6 +569,7 @@ describe('top-level runtime schemas', () => {
                 stateFeatures: [],
                 candidateFeatures: [],
                 aggregates: [],
+                strategicConditions: [],
               },
             },
           },
@@ -507,6 +578,7 @@ describe('top-level runtime schemas', () => {
           scoreTerms: {},
           completionScoreTerms: {},
           tieBreakers: {},
+          strategicConditions: {},
         },
         profiles: {
           baseline: {
@@ -554,6 +626,22 @@ describe('top-level runtime schemas', () => {
               preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
             },
           },
+          activeCardIdentity: {
+            current: 'hidden',
+            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+          },
+          activeCardTag: {
+            current: 'hidden',
+            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+          },
+          activeCardMetadata: {
+            current: 'hidden',
+            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+          },
+          activeCardAnnotation: {
+            current: 'hidden',
+            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+          },
         },
         parameterDefs: {},
         candidateParamDefs: {},
@@ -576,6 +664,7 @@ describe('top-level runtime schemas', () => {
                 stateFeatures: [],
                 candidateFeatures: [],
                 aggregates: [],
+                strategicConditions: [],
               },
             },
           },
@@ -584,6 +673,7 @@ describe('top-level runtime schemas', () => {
           scoreTerms: {},
           completionScoreTerms: {},
           tieBreakers: {},
+          strategicConditions: {},
         },
         profiles: {
           baseline: {
@@ -719,6 +809,22 @@ describe('top-level runtime schemas', () => {
               preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
             },
           },
+          activeCardIdentity: {
+            current: 'hidden',
+            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+          },
+          activeCardTag: {
+            current: 'hidden',
+            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+          },
+          activeCardMetadata: {
+            current: 'hidden',
+            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+          },
+          activeCardAnnotation: {
+            current: 'hidden',
+            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+          },
         },
         parameterDefs: {},
         candidateParamDefs: {},
@@ -733,6 +839,7 @@ describe('top-level runtime schemas', () => {
                 stateFeatures: [],
                 candidateFeatures: [],
                 aggregates: [],
+                strategicConditions: [],
               },
             },
           },
@@ -742,6 +849,7 @@ describe('top-level runtime schemas', () => {
           scoreTerms: {},
           completionScoreTerms: {},
           tieBreakers: {},
+          strategicConditions: {},
         },
         profiles: {},
         bindingsBySeat: {},
@@ -770,6 +878,22 @@ describe('top-level runtime schemas', () => {
               preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
             },
           },
+          activeCardIdentity: {
+            current: 'hidden',
+            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+          },
+          activeCardTag: {
+            current: 'hidden',
+            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+          },
+          activeCardMetadata: {
+            current: 'hidden',
+            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+          },
+          activeCardAnnotation: {
+            current: 'hidden',
+            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+          },
         },
         parameterDefs: {},
         candidateParamDefs: {},
@@ -781,6 +905,7 @@ describe('top-level runtime schemas', () => {
           scoreTerms: {},
           completionScoreTerms: {},
           tieBreakers: {},
+          strategicConditions: {},
         },
         profiles: {
           baseline: {

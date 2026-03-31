@@ -61,6 +61,22 @@ function createAggregationCatalog(expr: AgentPolicyExpr): AgentPolicyCatalog {
           preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
         },
       },
+      activeCardIdentity: {
+        current: 'hidden',
+        preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+      },
+      activeCardTag: {
+        current: 'hidden',
+        preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+      },
+      activeCardMetadata: {
+        current: 'hidden',
+        preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+      },
+      activeCardAnnotation: {
+        current: 'hidden',
+        preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+      },
     },
     parameterDefs: {},
     candidateParamDefs: {},
@@ -70,7 +86,7 @@ function createAggregationCatalog(expr: AgentPolicyExpr): AgentPolicyCatalog {
           type: 'number',
           costClass: 'state',
           expr,
-          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
         },
       },
       candidateFeatures: {},
@@ -81,7 +97,7 @@ function createAggregationCatalog(expr: AgentPolicyExpr): AgentPolicyCatalog {
           costClass: 'candidate',
           weight: literal(1),
           value: refStateFeature('metric'),
-          dependencies: { parameters: [], stateFeatures: ['metric'], candidateFeatures: [], aggregates: [] },
+          dependencies: { parameters: [], stateFeatures: ['metric'], candidateFeatures: [], aggregates: [], strategicConditions: [] },
         },
       },
       completionScoreTerms: {},
@@ -89,9 +105,10 @@ function createAggregationCatalog(expr: AgentPolicyExpr): AgentPolicyCatalog {
         stableMoveKey: {
           kind: 'stableMoveKey',
           costClass: 'candidate',
-          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
         },
       },
+      strategicConditions: {},
     },
     profiles: {
       baseline: {

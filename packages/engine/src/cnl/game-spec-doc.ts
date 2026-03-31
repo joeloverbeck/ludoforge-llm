@@ -531,6 +531,10 @@ export interface GameSpecAgentVisibilitySection {
     readonly currentMargin?: GameSpecPolicySurfaceVisibilityDef;
     readonly currentRank?: GameSpecPolicySurfaceVisibilityDef;
   };
+  readonly activeCardIdentity?: GameSpecPolicySurfaceVisibilityDef;
+  readonly activeCardTag?: GameSpecPolicySurfaceVisibilityDef;
+  readonly activeCardMetadata?: GameSpecPolicySurfaceVisibilityDef;
+  readonly activeCardAnnotation?: GameSpecPolicySurfaceVisibilityDef;
 }
 
 export type GameSpecPolicyExpr =
@@ -579,6 +583,15 @@ export interface GameSpecTieBreakerDef {
   readonly order?: readonly string[];
 }
 
+export interface GameSpecStrategicConditionDef {
+  readonly description?: string;
+  readonly target: GameSpecPolicyExpr;
+  readonly proximity?: {
+    readonly current: GameSpecPolicyExpr;
+    readonly threshold: number;
+  };
+}
+
 export interface GameSpecAgentLibrary {
   readonly stateFeatures?: Readonly<Record<string, GameSpecStateFeatureDef>>;
   readonly candidateFeatures?: Readonly<Record<string, GameSpecCandidateFeatureDef>>;
@@ -587,6 +600,7 @@ export interface GameSpecAgentLibrary {
   readonly scoreTerms?: Readonly<Record<string, GameSpecScoreTermDef>>;
   readonly completionScoreTerms?: Readonly<Record<string, GameSpecScoreTermDef>>;
   readonly tieBreakers?: Readonly<Record<string, GameSpecTieBreakerDef>>;
+  readonly strategicConditions?: Readonly<Record<string, GameSpecStrategicConditionDef>>;
 }
 
 export interface GameSpecAgentProfileUse {
@@ -602,6 +616,9 @@ export interface GameSpecAgentProfileDef {
   readonly completionGuidance?: {
     readonly enabled?: boolean;
     readonly fallback?: 'random' | 'first';
+  };
+  readonly preview?: {
+    readonly tolerateRngDivergence?: boolean;
   };
 }
 

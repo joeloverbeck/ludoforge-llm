@@ -48,6 +48,22 @@ function createCatalog(): AgentPolicyCatalog {
           preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
         },
       },
+      activeCardIdentity: {
+        current: 'hidden',
+        preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+      },
+      activeCardTag: {
+        current: 'hidden',
+        preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+      },
+      activeCardMetadata: {
+        current: 'hidden',
+        preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+      },
+      activeCardAnnotation: {
+        current: 'hidden',
+        preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+      },
     },
     parameterDefs: {},
     candidateParamDefs: {},
@@ -58,7 +74,7 @@ function createCatalog(): AgentPolicyCatalog {
           type: 'number',
           costClass: 'preview',
           expr: refExpr({ kind: 'previewSurface', family: 'globalVar', id: 'usMargin' }),
-          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
         },
       },
       candidateAggregates: {},
@@ -68,7 +84,7 @@ function createCatalog(): AgentPolicyCatalog {
           costClass: 'preview',
           weight: literal(1),
           value: refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'projectedMargin' }),
-          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['projectedMargin'], aggregates: [] },
+          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['projectedMargin'], aggregates: [], strategicConditions: [] },
         },
       },
       completionScoreTerms: {},
@@ -76,9 +92,10 @@ function createCatalog(): AgentPolicyCatalog {
         stableMoveKey: {
           kind: 'stableMoveKey',
           costClass: 'state',
-          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [] },
+          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
         },
       },
+      strategicConditions: {},
     },
     profiles: {
       baseline: {

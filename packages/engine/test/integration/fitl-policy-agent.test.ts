@@ -596,12 +596,12 @@ describe('FITL policy agent integration', () => {
       nva: 'nva-baseline',
       vc: 'vc-evolved',
     });
-    assert.deepEqual(agents.profiles['vc-evolved']?.use.completionScoreTerms, ['preferTargetSpaceSelection']);
+    assert.deepEqual(agents.profiles['vc-evolved']?.use.completionScoreTerms, ['preferPopulousTargets']);
     assert.deepEqual(agents.profiles['vc-evolved']?.completionGuidance, {
       enabled: true,
       fallback: 'random',
     });
-    assert.ok(agents.library.completionScoreTerms.preferTargetSpaceSelection);
+    assert.ok(agents.library.completionScoreTerms.preferPopulousTargets);
   });
 
   it('concretizes incomplete FITL legal-move templates before policy evaluation', () => {
@@ -760,7 +760,7 @@ describe('FITL policy agent integration', () => {
     }
   });
 
-  it('uses production VC guidance to fill the seed-11 free Rally target-space set instead of random undersampling', () => {
+  it('uses production VC guidance with preferPopulousTargets scoring on seed-11 free Rally target-space set', () => {
     const guided = advanceSeed11ToVcFreeRally();
     const unguidedDef = disableVcCompletionGuidance(guided.def);
     const unguidedRuntime = createGameDefRuntime(unguidedDef);
@@ -788,12 +788,7 @@ describe('FITL policy agent integration', () => {
     assert.equal(String(unguidedMove.move.move.actionId), 'rally');
     assert.deepEqual(
       guidedMove.move.move.params['decision:doc.actionPipelines.9.stages[0].effects.0.if.else.0.chooseN::$targetSpaces'],
-      [
-        'northeast-cambodia:none',
-        'sihanoukville:none',
-        'the-fishhook:none',
-        'the-parrots-beak:none',
-      ],
+      ['sihanoukville:none'],
     );
     assert.deepEqual(
       unguidedMove.move.move.params['decision:doc.actionPipelines.9.stages[0].effects.0.if.else.0.chooseN::$targetSpaces'],

@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — tests only
-**Deps**: `tickets/101STRACONPRO-002.md`, `tickets/101STRACONPRO-003.md`, `tickets/101STRACONPRO-004.md`
+**Deps**: `archive/tickets/101STRACONPRO-002.md`, `archive/tickets/101STRACONPRO-003.md`, `tickets/101STRACONPRO-004.md`
 
 ## Problem
 

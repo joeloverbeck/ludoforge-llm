@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — agents policy-evaluation-core.ts
-**Deps**: `archive/tickets/101STRACONPRO-001.md`, `tickets/101STRACONPRO-003.md`
+**Deps**: `archive/tickets/101STRACONPRO-001.md`, `archive/tickets/101STRACONPRO-003.md`
 
 ## Problem
 

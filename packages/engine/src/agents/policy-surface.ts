@@ -8,6 +8,7 @@ import type {
   CompiledAgentPolicySurfaceCatalog,
   CompiledAgentPolicySurfaceSelector,
   CompiledAgentPolicySurfaceVisibility,
+  CompiledStrategicCondition,
   GameDef,
   GameState,
 } from '../kernel/types.js';
@@ -274,6 +275,61 @@ export function resolvePolicyRoleSelector(
     return def?.seats?.[state.activePlayer]?.id ?? actingSeatId;
   }
   return seatToken;
+}
+
+export type StrategicConditionRefField = 'satisfied' | 'proximity';
+
+export interface ParsedStrategicConditionRef {
+  readonly kind: 'strategicCondition';
+  readonly conditionId: string;
+  readonly field: StrategicConditionRefField;
+  readonly type: 'boolean' | 'number';
+}
+
+export type StrategicConditionParseError =
+  | { readonly code: 'missingField' }
+  | { readonly code: 'invalidField'; readonly field: string }
+  | { readonly code: 'unknownCondition'; readonly conditionId: string }
+  | { readonly code: 'noProximity'; readonly conditionId: string };
+
+/**
+ * Parses a `condition.COND_ID.FIELD` ref path and validates it against a
+ * strategic conditions catalog.  Returns `null` when the path does not start
+ * with `condition.` (i.e. it belongs to a different ref family).
+ */
+export function parseStrategicConditionRef(
+  refPath: string,
+  strategicConditions: Readonly<Record<string, CompiledStrategicCondition>>,
+): { readonly ok: true; readonly ref: ParsedStrategicConditionRef } | { readonly ok: false; readonly error: StrategicConditionParseError } | null {
+  if (!refPath.startsWith('condition.')) {
+    return null;
+  }
+  const rest = refPath.slice('condition.'.length);
+  const dotIndex = rest.indexOf('.');
+  if (dotIndex === -1 || rest.length === 0) {
+    return { ok: false, error: { code: 'missingField' } };
+  }
+  const conditionId = rest.slice(0, dotIndex);
+  const field = rest.slice(dotIndex + 1);
+  if (field !== 'satisfied' && field !== 'proximity') {
+    return { ok: false, error: { code: 'invalidField', field } };
+  }
+  const condition = strategicConditions[conditionId];
+  if (condition === undefined) {
+    return { ok: false, error: { code: 'unknownCondition', conditionId } };
+  }
+  if (field === 'proximity' && condition.proximity === undefined) {
+    return { ok: false, error: { code: 'noProximity', conditionId } };
+  }
+  return {
+    ok: true,
+    ref: {
+      kind: 'strategicCondition',
+      conditionId,
+      field,
+      type: field === 'satisfied' ? 'boolean' : 'number',
+    },
+  };
 }
 
 export function buildPolicyVictorySurface(

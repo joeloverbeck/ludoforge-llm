@@ -1,6 +1,6 @@
 # 101STRACONPRO-003: Ref path parsing for `condition.*` in policy-surface.ts
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — agents policy-surface.ts
@@ -94,3 +94,13 @@ Strategic condition refs are state-scoped (evaluated once per decision point, sh
 2. `pnpm -F @ludoforge/engine test`
 3. `pnpm turbo typecheck`
 4. `pnpm turbo lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-31
+- **What changed**:
+  - `packages/engine/src/agents/policy-surface.ts` — added `parseStrategicConditionRef()` function with `ParsedStrategicConditionRef`, `StrategicConditionParseError`, `StrategicConditionRefField` types. Standalone function parsing `condition.COND_ID.FIELD` ref paths with full validation and type inference.
+  - `packages/engine/src/cnl/compile-agents.ts` — refactored inline `condition.*` parsing in `resolveRef` to call `parseStrategicConditionRef`, preserving lazy compilation.
+  - `packages/engine/test/unit/agents/policy-surface-strategic-condition.test.ts` — new test file covering all 6 acceptance criteria.
+- **Deviations from original plan**: Ticket described adding a branch inside `parseAuthoredPolicySurfaceRef`, but that function returns `ResolvedPolicySurfaceRef` (surface refs only), which cannot hold `{ kind: 'strategicCondition' }`. Per FOUNDATIONS.md #15 (Architectural Completeness), a new standalone `parseStrategicConditionRef` function was created instead. The existing inline parsing in `compile-agents.ts` (from ticket 002) was refactored to call it.
+- **Verification**: `pnpm turbo typecheck` pass, `pnpm turbo lint` pass, `pnpm -F @ludoforge/engine test` 5340/5340 pass.

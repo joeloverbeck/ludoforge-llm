@@ -1,5 +1,5 @@
 import { fingerprintPolicyIr } from '../agents/policy-ir.js';
-import { parseAuthoredPolicySurfaceRef } from '../agents/policy-surface.js';
+import { parseAuthoredPolicySurfaceRef, parseStrategicConditionRef } from '../agents/policy-surface.js';
 import { analyzePolicyExpr, type AnalyzePolicyExprContext, type ResolvedPolicyRef } from '../agents/policy-expr.js';
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import {
@@ -1623,37 +1623,36 @@ class AgentLibraryCompiler {
     }
 
     if (refPath.startsWith('condition.')) {
+      // Trigger lazy compilation for the referenced condition before parsing.
       const rest = refPath.slice('condition.'.length);
       const dotIndex = rest.indexOf('.');
-      if (dotIndex === -1 || rest.length === 0) {
+      if (dotIndex > 0) {
+        this.compileStrategicCondition(rest.slice(0, dotIndex));
+      }
+      const parsed = parseStrategicConditionRef(refPath, this.compiled.strategicConditions);
+      if (parsed === null) {
         this.reportUnknownLibraryRef(refPath, path);
         return null;
       }
-      const conditionId = rest.slice(0, dotIndex);
-      const field = rest.slice(dotIndex + 1);
-      if (field !== 'satisfied' && field !== 'proximity') {
-        this.reportUnknownLibraryRef(refPath, path);
-        return null;
-      }
-      const compiled = this.compileStrategicCondition(conditionId);
-      if (compiled === null) {
-        return null;
-      }
-      if (field === 'proximity' && compiled.proximity === undefined) {
-        this.diagnostics.push({
-          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_REF_UNKNOWN,
-          path,
-          severity: 'error',
-          message: `Strategic condition "${conditionId}" has no proximity defined, cannot reference "condition.${conditionId}.proximity".`,
-          suggestion: `Add a proximity section to strategicConditions.${conditionId} or use condition.${conditionId}.satisfied instead.`,
-        });
+      if (!parsed.ok) {
+        if (parsed.error.code === 'noProximity') {
+          this.diagnostics.push({
+            code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_REF_UNKNOWN,
+            path,
+            severity: 'error',
+            message: `Strategic condition "${parsed.error.conditionId}" has no proximity defined, cannot reference "condition.${parsed.error.conditionId}.proximity".`,
+            suggestion: `Add a proximity section to strategicConditions.${parsed.error.conditionId} or use condition.${parsed.error.conditionId}.satisfied instead.`,
+          });
+        } else {
+          this.reportUnknownLibraryRef(refPath, path);
+        }
         return null;
       }
       return {
-        type: field === 'satisfied' ? 'boolean' : 'number',
+        type: parsed.ref.type,
         costClass: 'state',
-        ref: { kind: 'strategicCondition', conditionId, field },
-        dependency: { kind: 'strategicConditions', id: conditionId },
+        ref: { kind: 'strategicCondition', conditionId: parsed.ref.conditionId, field: parsed.ref.field },
+        dependency: { kind: 'strategicConditions', id: parsed.ref.conditionId },
       };
     }
 

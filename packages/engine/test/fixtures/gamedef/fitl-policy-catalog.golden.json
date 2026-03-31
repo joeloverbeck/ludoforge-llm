@@ -387,23 +387,23 @@
       }
     },
     "activeCardIdentity": {
-      "current": "hidden",
+      "current": "public",
       "preview": {
-        "visibility": "hidden",
+        "visibility": "public",
         "allowWhenHiddenSampling": false
       }
     },
     "activeCardTag": {
-      "current": "hidden",
+      "current": "public",
       "preview": {
-        "visibility": "hidden",
+        "visibility": "public",
         "allowWhenHiddenSampling": false
       }
     },
     "activeCardMetadata": {
-      "current": "hidden",
+      "current": "public",
       "preview": {
-        "visibility": "hidden",
+        "visibility": "public",
         "allowWhenHiddenSampling": false
       }
     }
@@ -2071,5 +2071,5 @@
     "nva": "nva-baseline",
     "vc": "vc-evolved"
   },
-  "catalogFingerprint": "1aad45e73627951237ecc6395eb12e879aef7707fd1150615a41a7ab585b198f"
+  "catalogFingerprint": "a2b8e262d7ff44f4eb2ff2ecd126003c39e7e4f5c2d94154d8868ab13f3bc47e"
 }

@@ -1,6 +1,6 @@
 # Spec 99: Event Card Policy Surface
 
-**Status**: Draft
+**Status**: ✅ COMPLETED
 **Priority**: P1
 **Complexity**: L
 **Dependencies**: Spec 15 (completed — policy IR foundation)

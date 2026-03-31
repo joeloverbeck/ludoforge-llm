@@ -1,6 +1,6 @@
 # 99EVECARPOLSUR-007: Integration and golden tests
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — test-only
@@ -111,3 +111,17 @@ If a tournament harness test exists, verify that a policy profile with event tag
 1. `pnpm -F @ludoforge/engine test -- --test-name-pattern "card-surface"` (targeted)
 2. `pnpm -F @ludoforge/engine test` (full suite)
 3. `pnpm turbo test` (workspace-wide)
+
+## Outcome
+
+- **Completion date**: 2026-03-31
+- **What changed**:
+  - Created `packages/engine/test/integration/card-surface-resolution.test.ts` — 11 integration tests using FITL production spec (identity, deckId, tag true/false, metadata, hidden visibility suppression, no-active-card, preview path)
+  - Created `packages/engine/test/integration/card-surface-cross-game.test.ts` — 2 tests for Texas Hold'em graceful degradation (no cardMetadataIndex, all refs → undefined)
+  - Fixed `packages/engine/src/cnl/validate-agents.ts` — added `activeCardIdentity`, `activeCardTag`, `activeCardMetadata` to `AGENT_VISIBILITY_SECTION_KEYS` and added validation calls (pre-existing gap from 005/006)
+  - Regenerated `packages/engine/test/fixtures/gamedef/fitl-policy-catalog.golden.json` with updated catalog fingerprint
+- **Deviations from plan**:
+  - Test files placed in `packages/engine/test/integration/` (flat), not in an `agents/` subdirectory — matches existing integration test organization
+  - Validator fix was needed (not listed in ticket) because 005/006 added visibility keys without updating the validator's known-key list
+  - Evolution integration test (item 7) skipped — no tournament harness exists yet (ticket conditional: "if harness exists")
+- **Verification**: 5213 engine tests pass, lint clean, typecheck clean

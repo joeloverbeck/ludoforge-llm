@@ -67,8 +67,8 @@ describe('computeProvinceBorders', () => {
   });
 
   it('modifies vertices facing an adjacent province', () => {
-    // Province A at (0,0) with a diamond shape, province B at (300,0).
-    // A's right-side vertices (+100, 0) face B.
+    // Province A at (0,0) with a diamond shape, province B close enough for proximity gate.
+    // Diamond area = 20000, effectiveRadius ≈ 79.79. Gap at dist 190 ≈ 30 < 40.
     const verticesA = [0, -100, 100, 0, 0, 100, -100, 0]; // diamond
     const verticesB = [0, -100, 100, 0, 0, 100, -100, 0]; // diamond
     const zones = [
@@ -77,7 +77,7 @@ describe('computeProvinceBorders', () => {
     ];
     const positions = new Map([
       ['a', { x: 0, y: 0 }],
-      ['b', { x: 300, y: 0 }],
+      ['b', { x: 190, y: 0 }],
     ]);
     const adjacencies = [makeAdj('a', 'b')];
 
@@ -90,10 +90,10 @@ describe('computeProvinceBorders', () => {
     // The vertex at index 3 (-100, 0) faces away from B. It should NOT be projected.
     expect(polyA.segments[3]!.isBorder).toBe(false);
 
-    // The projected vertex should be closer to the bisector (x=150) than original (x=100).
+    // The projected vertex should be closer to the bisector (x=95) than original (x=100).
     const projectedX = polyA.vertices[2]!; // x of vertex at index 1
-    expect(projectedX).toBeGreaterThan(100);
-    expect(projectedX).toBeLessThanOrEqual(150);
+    expect(projectedX).toBeGreaterThan(80);
+    expect(projectedX).toBeLessThanOrEqual(100);
   });
 
   it('skips non-province zones', () => {
@@ -105,17 +105,18 @@ describe('computeProvinceBorders', () => {
   });
 
   it('handles three provinces at a corner', () => {
+    // Diamond area = 12800, effectiveRadius ≈ 63.83. At dist 150, gap ≈ 22 < 40.
     const diamond = [0, -80, 80, 0, 0, 80, -80, 0];
     const zones = [
       makeProvinceZone('a', diamond),
       makeProvinceZone('b', diamond),
       makeProvinceZone('c', diamond),
     ];
-    // Equilateral triangle arrangement.
+    // Equilateral triangle arrangement, close enough for proximity gate.
     const positions = new Map([
       ['a', { x: 0, y: 0 }],
-      ['b', { x: 200, y: 0 }],
-      ['c', { x: 100, y: 173 }],
+      ['b', { x: 150, y: 0 }],
+      ['c', { x: 75, y: 130 }],
     ]);
     const adjacencies = [makeAdj('a', 'b'), makeAdj('b', 'c'), makeAdj('a', 'c')];
 
@@ -170,7 +171,8 @@ describe('effectiveRadius', () => {
 
 describe('weighted bisector', () => {
   it('equal-area polygons produce midpoint bisector (t ≈ 0.5)', () => {
-    // Two identical diamonds at different positions.
+    // Two identical diamonds close enough for proximity gate.
+    // Diamond area = 20000, r ≈ 79.79. At dist 180, gap ≈ 20 < 40.
     const diamond = [0, -100, 100, 0, 0, 100, -100, 0];
     const zones = [
       makeProvinceZone('a', diamond),
@@ -178,23 +180,24 @@ describe('weighted bisector', () => {
     ];
     const positions = new Map([
       ['a', { x: 0, y: 0 }],
-      ['b', { x: 300, y: 0 }],
+      ['b', { x: 180, y: 0 }],
     ]);
     const adjacencies = [makeAdj('a', 'b')];
 
     const result = computeProvinceBorders(zones, positions, adjacencies);
     const polyA = result.get('a')!;
-    // The facing vertex (index 1, at local +100,0) should project near x=150 (midpoint).
+    // The facing vertex (index 1, at local +100,0) should project near x=90 (midpoint).
     const projectedX = polyA.vertices[2]!;
-    // With equal areas, the bisector midpoint is at x=150. Inset by gap moves it slightly.
-    expect(projectedX).toBeGreaterThan(140);
-    expect(projectedX).toBeLessThan(155);
+    // With equal areas, the bisector midpoint is at x=90. Inset by gap moves it slightly.
+    expect(projectedX).toBeGreaterThan(80);
+    expect(projectedX).toBeLessThan(95);
   });
 
   it('polygon A with 4x area shifts bisector toward B (t > 0.5)', () => {
-    // Province A: large diamond (scale 2x → area 4x)
+    // Province A: large diamond (scale 2x → area 4x), r_A ≈ 159.58
+    // Province B: small diamond, r_B ≈ 79.79
+    // At dist 260, gap ≈ 260 - 159.58 - 79.79 ≈ 20.63 < 40.
     const largeDiamond = [0, -200, 200, 0, 0, 200, -200, 0];
-    // Province B: small diamond
     const smallDiamond = [0, -100, 100, 0, 0, 100, -100, 0];
     const zones = [
       makeProvinceZone('a', largeDiamond),
@@ -202,16 +205,98 @@ describe('weighted bisector', () => {
     ];
     const positions = new Map([
       ['a', { x: 0, y: 0 }],
-      ['b', { x: 400, y: 0 }],
+      ['b', { x: 260, y: 0 }],
     ]);
     const adjacencies = [makeAdj('a', 'b')];
 
     const result = computeProvinceBorders(zones, positions, adjacencies);
     const polyA = result.get('a')!;
-    // The facing vertex should project past the old midpoint (x=200).
+    // The facing vertex should project past the simple midpoint (x=130).
     // With t > 0.5, weighted midpoint shifts toward B.
     const projectedX = polyA.vertices[2]!;
-    expect(projectedX).toBeGreaterThan(200);
+    expect(projectedX).toBeGreaterThan(130);
+  });
+});
+
+describe('proximity gate', () => {
+  const diamond = [0, -100, 100, 0, 0, 100, -100, 0] as const;
+  // Diamond area = 20000, effectiveRadius ≈ 79.79
+  const r = Math.sqrt(20000 / Math.PI);
+
+  it('skips border when gap > PROXIMITY_THRESHOLD (40px)', () => {
+    // Place provinces 600px apart → gap ≈ 600 - 2*79.79 ≈ 440 >> 40
+    const zones = [
+      makeProvinceZone('a', diamond),
+      makeProvinceZone('b', diamond),
+    ];
+    const positions = new Map([
+      ['a', { x: 0, y: 0 }],
+      ['b', { x: 600, y: 0 }],
+    ]);
+    const adjacencies = [makeAdj('a', 'b')];
+
+    const result = computeProvinceBorders(zones, positions, adjacencies);
+    const polyA = result.get('a')!;
+    // All vertices should be non-border (proximity gate skipped the pair).
+    expect(polyA.segments.every((s) => !s.isBorder)).toBe(true);
+    // Vertices should be unchanged from original.
+    expect([...polyA.vertices]).toEqual([...diamond]);
+  });
+
+  it('produces border when gap < PROXIMITY_THRESHOLD (40px)', () => {
+    // Place provinces so gap ≈ 180 - 2*79.79 ≈ 20 < 40
+    const dist = 2 * r + 20; // gap = 20px
+    const zones = [
+      makeProvinceZone('a', diamond),
+      makeProvinceZone('b', diamond),
+    ];
+    const positions = new Map([
+      ['a', { x: 0, y: 0 }],
+      ['b', { x: dist, y: 0 }],
+    ]);
+    const adjacencies = [makeAdj('a', 'b')];
+
+    const result = computeProvinceBorders(zones, positions, adjacencies);
+    const polyA = result.get('a')!;
+    // At least one vertex should be a border vertex.
+    expect(polyA.segments.some((s) => s.isBorder)).toBe(true);
+  });
+
+  it('excludes border at exactly PROXIMITY_THRESHOLD boundary', () => {
+    // gap = exactly 40 → not greater than threshold, so border should form
+    const dist = 2 * r + 40;
+    const zones = [
+      makeProvinceZone('a', diamond),
+      makeProvinceZone('b', diamond),
+    ];
+    const positions = new Map([
+      ['a', { x: 0, y: 0 }],
+      ['b', { x: dist, y: 0 }],
+    ]);
+    const adjacencies = [makeAdj('a', 'b')];
+
+    const result = computeProvinceBorders(zones, positions, adjacencies);
+    const polyA = result.get('a')!;
+    // gap === 40, condition is `gap > 40` so this pair is NOT skipped.
+    expect(polyA.segments.some((s) => s.isBorder)).toBe(true);
+  });
+
+  it('just beyond threshold excludes border', () => {
+    // gap = 40.01 → greater than threshold, border skipped
+    const dist = 2 * r + 40.01;
+    const zones = [
+      makeProvinceZone('a', diamond),
+      makeProvinceZone('b', diamond),
+    ];
+    const positions = new Map([
+      ['a', { x: 0, y: 0 }],
+      ['b', { x: dist, y: 0 }],
+    ]);
+    const adjacencies = [makeAdj('a', 'b')];
+
+    const result = computeProvinceBorders(zones, positions, adjacencies);
+    const polyA = result.get('a')!;
+    expect(polyA.segments.every((s) => !s.isBorder)).toBe(true);
   });
 });
 

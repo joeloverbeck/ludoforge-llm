@@ -7,6 +7,8 @@ const BORDER_GAP_HALF = 2;
 const FACING_CONE_HALF = Math.PI / 3; // ±60°
 /** Maximum distance a vertex can be extruded from its original position. */
 const MAX_EXTRUSION_DISTANCE = 200;
+/** Maximum gap (pixels) between effective circles before border formation activates. */
+const PROXIMITY_THRESHOLD = 40;
 
 export interface ProvinceBorderSegment {
   /** If true, this vertex was projected onto a bisector (shared border). */
@@ -94,6 +96,8 @@ export function computeProvinceBorders(
       const neighborRadius = neighborVerts !== null && neighborVerts !== undefined
         ? effectiveRadius(polygonArea(neighborVerts))
         : zoneRadius;
+      const gap = Math.hypot(neighborPos.x - pos.x, neighborPos.y - pos.y) - zoneRadius - neighborRadius;
+      if (gap > PROXIMITY_THRESHOLD) continue;
       bisectors.push(computeWeightedBisector(pos, neighborPos, zoneRadius, neighborRadius));
     }
 

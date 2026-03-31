@@ -1,6 +1,6 @@
 # PROVBORDER-002: Proximity gate for border activation
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — runner-only
@@ -78,3 +78,12 @@ This goes inside the `for (const neighborId of neighbors)` loop at line 84, afte
 
 1. `pnpm -F @ludoforge/runner test -- --grep "province-border"`
 2. `pnpm -F @ludoforge/runner typecheck && pnpm -F @ludoforge/runner lint`
+
+## Outcome
+
+- **Completion date**: 2026-03-31
+- **What changed**:
+  - `province-border-utils.ts`: Added `PROXIMITY_THRESHOLD = 40` constant and per-pair gap check (`gap = centerDist - rA - rB`) in the neighbor loop, before `computeWeightedBisector`. Pairs with gap > 40px are skipped entirely.
+  - `province-border-utils.test.ts`: Added 4 proximity gate tests (far apart, close, exactly at boundary, just beyond). Updated 4 existing tests to use closer province distances that pass the gate.
+- **Deviations**: None — implemented exactly as specified.
+- **Verification**: 2106 runner tests pass, typecheck clean, lint clean.

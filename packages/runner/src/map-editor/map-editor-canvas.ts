@@ -9,7 +9,7 @@ import type { MapEditorStoreApi } from './map-editor-store.js';
 import { createEditorGridRenderer } from './map-editor-grid-renderer.js';
 import type { EditorCanvas, EditorLayerSet, Position } from './map-editor-types.js';
 
-const EDITOR_BACKGROUND_COLOR = 0xf3efe4;
+const EDITOR_BACKGROUND_COLOR = 0x0b1020;
 const DEFAULT_WORLD_SPAN = 1000;
 const CONTENT_PADDING_X = Math.ceil(ZONE_RENDER_WIDTH / 2) + 80;
 const CONTENT_PADDING_Y = Math.ceil(ZONE_RENDER_HEIGHT / 2) + 80;

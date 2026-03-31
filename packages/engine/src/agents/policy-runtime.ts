@@ -30,6 +30,7 @@ import {
   resolvePolicyRoleSelector,
   type PolicyVictorySurface,
 } from './policy-surface.js';
+import { extractAnnotationValue } from './policy-annotation-resolve.js';
 
 export type PolicyValue = AgentParameterValue | undefined;
 
@@ -213,7 +214,15 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
           return resolveSeatVarRef(input.state, ref, targetPlayerIndex);
         }
         if (ref.family === 'activeCardAnnotation') {
-          return undefined;
+          const current = resolveCurrentEventCardState(input.def, input.state);
+          if (current === null) {
+            return undefined;
+          }
+          const annotation = input.def.cardAnnotationIndex?.entries[current.card.id];
+          if (annotation === undefined) {
+            return undefined;
+          }
+          return extractAnnotationValue(annotation, ref, input.seatId, activeSeatId ?? undefined);
         }
         if (ref.family === 'activeCardIdentity' || ref.family === 'activeCardTag' || ref.family === 'activeCardMetadata') {
           if (activeCardEntry === null) {
@@ -356,3 +365,4 @@ function resolveActiveCardFamily(
       return entry.metadata[id];
   }
 }
+

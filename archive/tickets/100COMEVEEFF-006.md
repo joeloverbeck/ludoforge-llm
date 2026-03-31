@@ -1,6 +1,6 @@
 # 100COMEVEEFF-006: Add activeCardAnnotation runtime resolution
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — agents (policy-runtime.ts), possibly policy-preview.ts
@@ -116,3 +116,17 @@ Test resolution scenarios:
 1. `node --test packages/engine/dist/test/unit/agents/policy-runtime-annotation.test.js`
 2. `pnpm turbo typecheck`
 3. `pnpm turbo test`
+
+## Outcome
+
+- **Completion date**: 2026-03-31
+- **What changed**:
+  - `packages/engine/src/agents/policy-annotation-resolve.ts` (new) — shared `extractAnnotationValue` helper extracted to avoid circular dependency between policy-runtime and policy-preview
+  - `packages/engine/src/agents/policy-runtime.ts` — replaced `return undefined` stub for `activeCardAnnotation` with full resolution via `extractAnnotationValue`
+  - `packages/engine/src/agents/policy-preview.ts` — replaced `return { kind: 'unavailable' }` stub with full resolution, converting numbers/booleans to preview `{ kind: 'value', value }` format
+  - `packages/engine/test/unit/agents/policy-runtime-annotation.test.ts` (new) — 24 tests covering per-seat numeric, self/active seat resolution, scalar metrics, boolean metrics, missing card/annotation/side, no annotation index, hidden visibility, preview path, and existing ref compatibility
+- **Deviations from plan**:
+  - `extractAnnotationValue` was placed in a new shared module (`policy-annotation-resolve.ts`) instead of inline in `policy-runtime.ts` to avoid a circular import (policy-runtime imports from policy-preview and vice versa)
+  - Added `activeSeatId` parameter to support the `active` player selector for per-seat Record metrics
+  - Per-seat Record lookups for missing seat keys return `0` (not `undefined`) — consistent with annotation semantics where absence means zero effect
+- **Verification**: typecheck 3/3 packages pass, 5292 engine tests pass (0 fail), 24 new annotation tests pass

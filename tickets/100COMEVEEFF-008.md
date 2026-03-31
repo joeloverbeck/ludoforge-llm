@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — tests only
-**Deps**: `tickets/100COMEVEEFF-004.md`, `tickets/100COMEVEEFF-006.md`
+**Deps**: `tickets/100COMEVEEFF-004.md`, `archive/tickets/100COMEVEEFF-006.md`
 
 ## Problem
 

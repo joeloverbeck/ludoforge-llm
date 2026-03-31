@@ -22,6 +22,7 @@ import {
   resolvePolicyRoleSelector,
   type PolicyVictorySurface,
 } from './policy-surface.js';
+import { extractAnnotationValue as extractAnnotationValueForPreview } from './policy-annotation-resolve.js';
 
 export interface PolicyPreviewCandidate {
   readonly move: Move;
@@ -180,7 +181,24 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         return typeof value === 'number' ? { kind: 'value', value } : { kind: 'unavailable' };
       }
       if (ref.family === 'activeCardAnnotation') {
-        return { kind: 'unavailable' };
+        const current = resolveCurrentEventCardState(input.def, preview.state);
+        if (current === null) {
+          return { kind: 'unavailable' };
+        }
+        const annotation = input.def.cardAnnotationIndex?.entries[current.card.id];
+        if (annotation === undefined) {
+          return { kind: 'unavailable' };
+        }
+        const previewActiveSeatId = input.def.seats?.[preview.state.activePlayer]?.id;
+        const resolved = extractAnnotationValueForPreview(annotation, ref, input.seatId, previewActiveSeatId);
+        if (resolved === undefined) {
+          return { kind: 'unavailable' };
+        }
+        return typeof resolved === 'number'
+          ? { kind: 'value', value: resolved }
+          : typeof resolved === 'boolean'
+            ? { kind: 'value', value: resolved ? 1 : 0 }
+            : { kind: 'unavailable' };
       }
       if (ref.family === 'activeCardIdentity' || ref.family === 'activeCardTag' || ref.family === 'activeCardMetadata') {
         const entry = resolveActiveCardEntryFromState(input.def, preview.state);

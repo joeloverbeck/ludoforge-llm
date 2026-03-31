@@ -4,6 +4,7 @@ import type { Position } from '../canvas/geometry.js';
 import type { VisualConfigProvider } from '../config/visual-config-provider.js';
 import type { ConnectionRouteDefinition } from '../config/visual-config-types.js';
 import { formatIdAsDisplayName } from '../utils/format-display-name.js';
+import { poleOfInaccessibility } from './polygon-centroid.js';
 import {
   resolveConnectionRoutes,
 } from '../presentation/connection-route-resolver.js';
@@ -130,7 +131,17 @@ function resolveEditorZoneRenderSpec(
   const bottomEdge = visual.shape === 'circle'
     ? Math.min(visual.width, visual.height) / 2
     : visual.height / 2;
-  const nameLabelY = labelInsideZone ? 0 : bottomEdge + LABEL_GAP;
+
+  let nameLabelX = 0;
+  let nameLabelY = labelInsideZone ? 0 : bottomEdge + LABEL_GAP;
+
+  // For polygons with explicit vertices, compute the pole of inaccessibility
+  // so the label is always inside the polygon — even for concave shapes.
+  if (visual.shape === 'polygon' && visual.vertices !== null && visual.vertices.length >= 6) {
+    const pole = poleOfInaccessibility(visual.vertices);
+    nameLabelX = pole.x;
+    nameLabelY = pole.y;
+  }
 
   return {
     fillColor: visual.color ?? '#4d5c6d',
@@ -138,7 +149,7 @@ function resolveEditorZoneRenderSpec(
     hiddenStackCount: 0,
     nameLabel: {
       text: displayName,
-      x: 0,
+      x: nameLabelX,
       y: nameLabelY,
       visible: true,
     },

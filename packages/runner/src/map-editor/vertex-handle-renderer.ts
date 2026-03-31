@@ -99,7 +99,8 @@ export function createVertexHandleRenderer(
       const midHandle = createMidpointHandle(mx, my);
       const afterIndex = i;
 
-      midHandle.on('pointerdown', (_event: FederatedPointerEvent) => {
+      midHandle.on('pointerdown', (event: FederatedPointerEvent) => {
+        event.stopPropagation?.();
         store.getState().addVertex(currentZoneId!, afterIndex);
         rebuild();
       });
@@ -112,7 +113,8 @@ export function createVertexHandleRenderer(
   const unsubscribe = store.subscribe((state, prevState) => {
     if (
       state.selectedZoneId !== prevState.selectedZoneId ||
-      state.zoneVertices !== prevState.zoneVertices
+      state.zoneVertices !== prevState.zoneVertices ||
+      state.zonePositions !== prevState.zonePositions
     ) {
       rebuild();
     }
@@ -169,7 +171,8 @@ export function createVertexHandleRenderer(
       surface.off('pointerupoutside', onDragEnd);
     };
 
-    handle.on('pointerdown', (_event: FederatedPointerEvent) => {
+    handle.on('pointerdown', (event: FederatedPointerEvent) => {
+      event.stopPropagation?.();
       const now = Date.now();
       if (now - lastClickTime < DOUBLE_CLICK_MS) {
         callbacks.onDoubleClick();

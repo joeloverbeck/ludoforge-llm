@@ -1,6 +1,6 @@
 # 99EVECARPOLSUR-006: Add FITL agent profile visibility entries
 
-**Status**: PENDING
+**Status**: DONE
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — game data only

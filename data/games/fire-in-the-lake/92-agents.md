@@ -20,6 +20,21 @@ agents:
         preview:
           visibility: public
           allowWhenHiddenSampling: false
+    activeCardIdentity:
+      current: public
+      preview:
+        visibility: public
+        allowWhenHiddenSampling: false
+    activeCardTag:
+      current: public
+      preview:
+        visibility: public
+        allowWhenHiddenSampling: false
+    activeCardMetadata:
+      current: public
+      preview:
+        visibility: public
+        allowWhenHiddenSampling: false
 
   parameters:
     eventWeight:

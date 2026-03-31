@@ -585,6 +585,10 @@ export interface CompletionGuidanceConfig {
   readonly fallback: AgentPolicyCompletionGuidanceFallback;
 }
 
+export interface PreviewToleranceConfig {
+  readonly tolerateRngDivergence: boolean;
+}
+
 export interface CompiledAgentProfile {
   readonly fingerprint: string;
   readonly params: Readonly<Record<string, AgentParameterValue>>;
@@ -595,6 +599,7 @@ export interface CompiledAgentProfile {
     readonly tieBreakers: readonly string[];
   };
   readonly completionGuidance?: CompletionGuidanceConfig;
+  readonly preview?: PreviewToleranceConfig;
   readonly plan: {
     readonly stateFeatures: readonly string[];
     readonly candidateFeatures: readonly string[];

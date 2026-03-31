@@ -28,6 +28,8 @@ export const AGENT_POLICY_PROFILE_USE_TO_LIBRARY_BUCKET = {
 
 export const AGENT_POLICY_COMPLETION_GUIDANCE_KEYS = ['enabled', 'fallback'] as const;
 
+export const AGENT_POLICY_PREVIEW_KEYS = ['tolerateRngDivergence'] as const;
+
 export const AGENT_POLICY_COMPLETION_GUIDANCE_FALLBACKS = ['random', 'first'] as const;
 
 export type AgentPolicyCompletionGuidanceFallback = typeof AGENT_POLICY_COMPLETION_GUIDANCE_FALLBACKS[number];

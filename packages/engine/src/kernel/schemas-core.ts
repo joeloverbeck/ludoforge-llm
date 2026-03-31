@@ -864,6 +864,9 @@ const CompiledAgentProfileSchema = z
       enabled: BooleanSchema,
       fallback: z.enum(AGENT_POLICY_COMPLETION_GUIDANCE_FALLBACKS),
     }).strict().optional(),
+    preview: z.object({
+      tolerateRngDivergence: BooleanSchema,
+    }).strict().optional(),
     plan: z
       .object({
         stateFeatures: z.array(StringSchema),

@@ -2983,6 +2983,18 @@
                 ],
                 "additionalProperties": false
               },
+              "preview": {
+                "type": "object",
+                "properties": {
+                  "tolerateRngDivergence": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "tolerateRngDivergence"
+                ],
+                "additionalProperties": false
+              },
               "plan": {
                 "type": "object",
                 "properties": {

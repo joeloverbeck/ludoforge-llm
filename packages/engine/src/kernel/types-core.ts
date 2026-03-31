@@ -483,6 +483,17 @@ export interface CompiledAgentPolicySurfaceVisibility {
   readonly preview: CompiledAgentPolicySurfacePreviewVisibility;
 }
 
+export interface CompiledCardMetadataEntry {
+  readonly deckId: string;
+  readonly cardId: string;
+  readonly tags: readonly string[];
+  readonly metadata: Readonly<Record<string, string | number | boolean>>;
+}
+
+export interface CompiledCardMetadataIndex {
+  readonly entries: Readonly<Record<string, CompiledCardMetadataEntry>>;
+}
+
 export interface CompiledAgentPolicySurfaceCatalog {
   readonly globalVars: Readonly<Record<string, CompiledAgentPolicySurfaceVisibility>>;
   readonly perPlayerVars: Readonly<Record<string, CompiledAgentPolicySurfaceVisibility>>;
@@ -644,6 +655,7 @@ export interface GameDef {
   readonly triggers: readonly TriggerDef[];
   readonly terminal: TerminalEvaluationDef;
   readonly eventDecks?: readonly EventDeckDef[];
+  readonly cardMetadataIndex?: CompiledCardMetadataIndex;
   readonly stackingConstraints?: readonly StackingConstraint[];
   readonly markerLattices?: readonly SpaceMarkerLatticeDef[];
   readonly globalMarkerLattices?: readonly GlobalMarkerLatticeDef[];

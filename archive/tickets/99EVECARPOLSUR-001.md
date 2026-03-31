@@ -1,6 +1,6 @@
 # 99EVECARPOLSUR-001: Add compiled card metadata types and GameDef field
 
-**Status**: PENDING
+**Status**: DONE
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — types-core.ts (new types, GameDef extension)

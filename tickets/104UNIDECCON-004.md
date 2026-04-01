@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — `game-spec-doc.ts`
-**Deps**: `tickets/104UNIDECCON-003.md`, `specs/104-unified-decision-context-considerations.md`
+**Deps**: `archive/tickets/104UNIDECCON-003.md`, `specs/104-unified-decision-context-considerations.md`
 
 ## Problem
 

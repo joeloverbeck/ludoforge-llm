@@ -3529,6 +3529,127 @@
                 "additionalProperties": false
               }
             },
+            "considerations": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "scopes": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "const": "move"
+                        },
+                        {
+                          "type": "string",
+                          "const": "completion"
+                        }
+                      ]
+                    }
+                  },
+                  "costClass": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "const": "state"
+                      },
+                      {
+                        "type": "string",
+                        "const": "candidate"
+                      },
+                      {
+                        "type": "string",
+                        "const": "preview"
+                      }
+                    ]
+                  },
+                  "when": {
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/anon_ceb19d52"
+                      }
+                    ]
+                  },
+                  "weight": {
+                    "$ref": "#/definitions/anon_ceb19d52"
+                  },
+                  "value": {
+                    "$ref": "#/definitions/anon_ceb19d52"
+                  },
+                  "unknownAs": {
+                    "type": "number"
+                  },
+                  "clamp": {
+                    "type": "object",
+                    "properties": {
+                      "min": {
+                        "type": "number"
+                      },
+                      "max": {
+                        "type": "number"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "dependencies": {
+                    "type": "object",
+                    "properties": {
+                      "parameters": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "stateFeatures": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "candidateFeatures": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "aggregates": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "strategicConditions": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": [
+                      "parameters",
+                      "stateFeatures",
+                      "candidateFeatures",
+                      "aggregates",
+                      "strategicConditions"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "costClass",
+                  "weight",
+                  "value",
+                  "dependencies"
+                ],
+                "additionalProperties": false
+              }
+            },
             "scoreTerms": {
               "type": "object",
               "propertyNames": {
@@ -3952,6 +4073,12 @@
               "use": {
                 "type": "object",
                 "properties": {
+                  "considerations": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
                   "pruningRules": {
                     "type": "array",
                     "items": {
@@ -4033,6 +4160,12 @@
                     }
                   },
                   "candidateAggregates": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "considerations": {
                     "type": "array",
                     "items": {
                       "type": "string"

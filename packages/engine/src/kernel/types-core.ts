@@ -691,7 +691,10 @@ export interface CompiledAgentLibraryIndex {
   readonly candidateFeatures: Readonly<Record<string, CompiledAgentCandidateFeature>>;
   readonly candidateAggregates: Readonly<Record<string, CompiledAgentAggregate>>;
   readonly pruningRules: Readonly<Record<string, CompiledAgentPruningRule>>;
+  readonly considerations?: Readonly<Record<string, CompiledAgentConsideration>>;
+  /** @deprecated Use considerations. Removed in ticket 005. */
   readonly scoreTerms: Readonly<Record<string, CompiledAgentScoreTerm>>;
+  /** @deprecated Use considerations. Removed in ticket 005. */
   readonly completionScoreTerms: Readonly<Record<string, CompiledAgentScoreTerm>>;
   readonly tieBreakers: Readonly<Record<string, CompiledAgentTieBreaker>>;
   readonly strategicConditions: Readonly<Record<string, CompiledStrategicCondition>>;
@@ -711,17 +714,22 @@ export interface CompiledAgentProfile {
   readonly observerName?: string;
   readonly params: Readonly<Record<string, AgentParameterValue>>;
   readonly use: {
+    readonly considerations?: readonly string[];
     readonly pruningRules: readonly string[];
+    /** @deprecated Use considerations. Removed in ticket 005. */
     readonly scoreTerms: readonly string[];
+    /** @deprecated Use considerations. Removed in ticket 005. */
     readonly completionScoreTerms: readonly string[];
     readonly tieBreakers: readonly string[];
   };
+  /** @deprecated Derived from completion-scoped considerations. Removed in ticket 006. */
   readonly completionGuidance?: CompletionGuidanceConfig;
   readonly preview?: PreviewToleranceConfig;
   readonly plan: {
     readonly stateFeatures: readonly string[];
     readonly candidateFeatures: readonly string[];
     readonly candidateAggregates: readonly string[];
+    readonly considerations?: readonly string[];
   };
 }
 

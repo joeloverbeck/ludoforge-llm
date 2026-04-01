@@ -924,6 +924,7 @@ const CompiledAgentLibraryIndexSchema = z
     candidateFeatures: z.record(StringSchema, CompiledAgentCandidateFeatureSchema),
     candidateAggregates: z.record(StringSchema, CompiledAgentAggregateSchema),
     pruningRules: z.record(StringSchema, CompiledAgentPruningRuleSchema),
+    considerations: z.record(StringSchema, CompiledAgentConsiderationSchema).optional(),
     scoreTerms: z.record(StringSchema, CompiledAgentScoreTermSchema),
     completionScoreTerms: z.record(StringSchema, CompiledAgentScoreTermSchema),
     tieBreakers: z.record(StringSchema, CompiledAgentTieBreakerSchema),
@@ -938,6 +939,7 @@ const CompiledAgentProfileSchema = z
     params: z.record(StringSchema, AgentParameterValueSchema),
     use: z
       .object({
+        considerations: z.array(StringSchema).optional(),
         pruningRules: z.array(StringSchema),
         scoreTerms: z.array(StringSchema),
         completionScoreTerms: z.array(StringSchema),
@@ -956,6 +958,7 @@ const CompiledAgentProfileSchema = z
         stateFeatures: z.array(StringSchema),
         candidateFeatures: z.array(StringSchema),
         candidateAggregates: z.array(StringSchema),
+        considerations: z.array(StringSchema).optional(),
       })
       .strict(),
   })

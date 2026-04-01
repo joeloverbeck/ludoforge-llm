@@ -14,13 +14,11 @@ import {
   validateUnknownKeys,
 } from './validate-spec-shared.js';
 
-const AGENTS_SECTION_KEYS = ['parameters', 'visibility', 'library', 'profiles', 'bindings'] as const;
+const AGENTS_SECTION_KEYS = ['parameters', 'library', 'profiles', 'bindings'] as const;
 const AGENT_PARAMETER_KEYS = ['type', 'default', 'min', 'max', 'tunable', 'values', 'allowedIds'] as const;
-const AGENT_VISIBILITY_SECTION_KEYS = ['globalVars', 'perPlayerVars', 'derivedMetrics', 'victory', 'activeCardIdentity', 'activeCardTag', 'activeCardMetadata', 'activeCardAnnotation'] as const;
-const AGENT_VISIBILITY_KEYS = ['current', 'preview'] as const;
-const AGENT_VISIBILITY_PREVIEW_KEYS = ['visibility', 'allowWhenHiddenSampling'] as const;
-const AGENT_VISIBILITY_VICTORY_KEYS = ['currentMargin', 'currentRank'] as const;
-const AGENT_PROFILE_KEYS = ['params', 'use', 'completionGuidance', 'preview'] as const;
+const AGENT_PROFILE_KEYS = ['observer', 'params', 'use', 'completionGuidance', 'preview'] as const;
+
+const BUILT_IN_OBSERVER_NAMES = new Set<string>(['omniscient', 'default']);
 type AgentProfileUseKey = typeof AGENT_POLICY_PROFILE_USE_BUCKETS[number];
 type AgentLibraryBucketMap = Partial<Record<AgentProfileUseKey, Record<string, unknown>>>;
 
@@ -60,97 +58,9 @@ export function validateAgents(doc: GameSpecDoc, diagnostics: Diagnostic[]): voi
   validateUnknownKeys(doc.agents, AGENTS_SECTION_KEYS, 'doc.agents', diagnostics, 'agents');
   const authoredLibrary = isRecord(doc.agents.library) ? doc.agents.library : undefined;
   validateNamedDefinitionMap(doc.agents.parameters, 'doc.agents.parameters', diagnostics, 'agents parameter map');
-  validateVisibility(doc.agents.visibility, diagnostics);
   validateLibrary(doc.agents.library, diagnostics);
-  validateProfiles(doc.agents.profiles, authoredLibrary, diagnostics);
+  validateProfiles(doc.agents.profiles, authoredLibrary, doc.observability, diagnostics);
   validateBindings(doc.agents.bindings, diagnostics);
-}
-
-function validateVisibility(visibility: unknown, diagnostics: Diagnostic[]): void {
-  if (!validateRecordMap(visibility, 'doc.agents.visibility', diagnostics, 'agents visibility')) {
-    return;
-  }
-
-  validateUnknownKeys(visibility, AGENT_VISIBILITY_SECTION_KEYS, 'doc.agents.visibility', diagnostics, 'agents visibility');
-  validateVisibilityMap(visibility.globalVars, 'doc.agents.visibility.globalVars', diagnostics);
-  validateVisibilityMap(visibility.perPlayerVars, 'doc.agents.visibility.perPlayerVars', diagnostics);
-  validateVisibilityMap(visibility.derivedMetrics, 'doc.agents.visibility.derivedMetrics', diagnostics);
-  validateVisibilityEntry(visibility.activeCardIdentity, 'doc.agents.visibility.activeCardIdentity', diagnostics);
-  validateVisibilityEntry(visibility.activeCardTag, 'doc.agents.visibility.activeCardTag', diagnostics);
-  validateVisibilityEntry(visibility.activeCardMetadata, 'doc.agents.visibility.activeCardMetadata', diagnostics);
-  validateVisibilityEntry(visibility.activeCardAnnotation, 'doc.agents.visibility.activeCardAnnotation', diagnostics);
-
-  if (visibility.victory === undefined) {
-    return;
-  }
-  if (!isRecord(visibility.victory)) {
-    diagnostics.push({
-      code: 'CNL_VALIDATOR_AGENTS_DEFINITION_INVALID',
-      path: 'doc.agents.visibility.victory',
-      severity: 'error',
-      message: 'agents visibility.victory must be an object.',
-      suggestion: 'Define victory visibility overrides as an object keyed by currentMargin/currentRank.',
-    });
-    return;
-  }
-  validateUnknownKeys(
-    visibility.victory,
-    AGENT_VISIBILITY_VICTORY_KEYS,
-    'doc.agents.visibility.victory',
-    diagnostics,
-    'agents visibility victory',
-  );
-  validateVisibilityEntry(visibility.victory.currentMargin, 'doc.agents.visibility.victory.currentMargin', diagnostics);
-  validateVisibilityEntry(visibility.victory.currentRank, 'doc.agents.visibility.victory.currentRank', diagnostics);
-}
-
-function validateVisibilityMap(value: unknown, path: string, diagnostics: Diagnostic[]): void {
-  if (!validateRecordMap(value, path, diagnostics, 'agents visibility map')) {
-    return;
-  }
-
-  for (const [entryId, entryValue] of Object.entries(value)) {
-    if (!isNonEmptyTrimmedString(entryId)) {
-      diagnostics.push({
-        code: 'CNL_VALIDATOR_AGENTS_ID_INVALID',
-        path: `${path}.${entryId}`,
-        severity: 'error',
-        message: 'agents visibility ids must be non-empty strings without surrounding whitespace.',
-        suggestion: 'Use trimmed surface ids for authored visibility entries.',
-      });
-    }
-    validateVisibilityEntry(entryValue, `${path}.${entryId}`, diagnostics);
-  }
-}
-
-function validateVisibilityEntry(value: unknown, path: string, diagnostics: Diagnostic[]): void {
-  if (value === undefined) {
-    return;
-  }
-  if (!isRecord(value)) {
-    diagnostics.push({
-      code: 'CNL_VALIDATOR_AGENTS_DEFINITION_INVALID',
-      path,
-      severity: 'error',
-      message: 'agents visibility entries must be objects.',
-      suggestion: 'Define visibility entries with current and/or preview fields.',
-    });
-    return;
-  }
-  validateUnknownKeys(value, AGENT_VISIBILITY_KEYS, path, diagnostics, 'agents visibility entry');
-  if (value.preview !== undefined) {
-    if (!isRecord(value.preview)) {
-      diagnostics.push({
-        code: 'CNL_VALIDATOR_AGENTS_DEFINITION_INVALID',
-        path: `${path}.preview`,
-        severity: 'error',
-        message: 'agents visibility preview entries must be objects.',
-        suggestion: 'Define preview visibility with visibility and/or allowWhenHiddenSampling.',
-      });
-      return;
-    }
-    validateUnknownKeys(value.preview, AGENT_VISIBILITY_PREVIEW_KEYS, `${path}.preview`, diagnostics, 'agents visibility preview');
-  }
 }
 
 function validateLibrary(library: unknown, diagnostics: Diagnostic[]): void {
@@ -165,7 +75,12 @@ function validateLibrary(library: unknown, diagnostics: Diagnostic[]): void {
   }
 }
 
-function validateProfiles(profiles: unknown, library: AgentLibraryBucketMap | undefined, diagnostics: Diagnostic[]): void {
+function validateProfiles(
+  profiles: unknown,
+  library: AgentLibraryBucketMap | undefined,
+  observability: GameSpecDoc['observability'],
+  diagnostics: Diagnostic[],
+): void {
   if (!validateRecordMap(profiles, 'doc.agents.profiles', diagnostics, 'agents profiles')) {
     return;
   }
@@ -194,10 +109,62 @@ function validateProfiles(profiles: unknown, library: AgentLibraryBucketMap | un
     }
 
     validateUnknownKeys(profileDef, AGENT_PROFILE_KEYS, profilePath, diagnostics, 'agents profile');
+    validateProfileObserverRef(profileDef.observer, observability, `${profilePath}.observer`, diagnostics);
     validateInlineProfileLogic(profileDef, profilePath, diagnostics);
     validateProfileParams(profileDef.params, `${profilePath}.params`, diagnostics);
     const useSummary = validateProfileUse(profileDef.use, `${profilePath}.use`, library, diagnostics);
     validateCompletionGuidance(profileDef.completionGuidance, `${profilePath}.completionGuidance`, diagnostics, useSummary);
+  }
+}
+
+function validateProfileObserverRef(
+  observer: unknown,
+  observability: GameSpecDoc['observability'],
+  path: string,
+  diagnostics: Diagnostic[],
+): void {
+  if (observer === undefined) {
+    return; // No observer specified — uses built-in default
+  }
+
+  if (typeof observer !== 'string' || observer.trim() === '') {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_AGENTS_PROFILE_OBSERVER_INVALID',
+      path,
+      severity: 'error',
+      message: 'agents profile observer must be a non-empty string.',
+      suggestion: 'Set observer to the name of an observer defined in observability.observers or a built-in name (omniscient, default).',
+    });
+    return;
+  }
+
+  // Built-in names are always valid
+  if (BUILT_IN_OBSERVER_NAMES.has(observer)) {
+    return;
+  }
+
+  // Check observability section exists
+  if (observability === null) {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_AGENTS_PROFILE_OBSERVER_NO_SECTION',
+      path,
+      severity: 'error',
+      message: `agents profile references observer "${observer}", but no observability section is defined.`,
+      suggestion: 'Add an observability section with observers, or use a built-in observer name (omniscient, default).',
+    });
+    return;
+  }
+
+  // Check observer exists in observability.observers
+  const observers = observability.observers;
+  if (observers === undefined || !(observer in observers)) {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_AGENTS_PROFILE_OBSERVER_UNKNOWN',
+      path,
+      severity: 'error',
+      message: `agents profile references unknown observer "${observer}".`,
+      suggestion: `Define "${observer}" in observability.observers or use a built-in name (omniscient, default).`,
+    });
   }
 }
 

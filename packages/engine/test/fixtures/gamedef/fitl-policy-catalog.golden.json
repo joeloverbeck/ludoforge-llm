@@ -1889,6 +1889,7 @@
   },
   "profiles": {
     "us-baseline": {
+      "observerName": "currentPlayer",
       "params": {
         "eventWeight": 2,
         "projectedMarginWeight": 1,
@@ -1930,9 +1931,10 @@
           "hasNonPassAlternative"
         ]
       },
-      "fingerprint": "f56eb52571e5999063a69b9b4e1c5b74d9fca778e3eb192eb2a64d581d1666d6"
+      "fingerprint": "01ab7714fab447df9d3c345ded6d0fffe86f0a55ce175ab3496fe73a25c6dab3"
     },
     "arvn-baseline": {
+      "observerName": "currentPlayer",
       "params": {
         "eventWeight": 1.5,
         "projectedMarginWeight": 1,
@@ -1976,9 +1978,10 @@
           "hasNonPassAlternative"
         ]
       },
-      "fingerprint": "727dba6dad13d82c02cb49c205bc6dadaacef96e2b8c7a54c0e1c12644990cce"
+      "fingerprint": "4659493437e935b67c9670893bf53cdc6c5c64f7123a60d6bbd0b91610335442"
     },
     "nva-baseline": {
+      "observerName": "currentPlayer",
       "params": {
         "eventWeight": 1.5,
         "projectedMarginWeight": 1,
@@ -2024,9 +2027,10 @@
           "hasNonPassAlternative"
         ]
       },
-      "fingerprint": "9e093a52c979750a8f805b9725bd00c78ab9ab8e05583b5f8f5a5a63622ed6d0"
+      "fingerprint": "bf43e3b1b8179d592d84e4bc70cce8f6370f6ba2aa1cad50005338bb7a348e52"
     },
     "vc-baseline": {
+      "observerName": "currentPlayer",
       "params": {
         "eventWeight": 1.5,
         "projectedMarginWeight": 1,
@@ -2072,9 +2076,10 @@
           "hasNonPassAlternative"
         ]
       },
-      "fingerprint": "b238c4cae57b27588ab970e9ab494d14359cb1dcf10c915190419859d9aab08b"
+      "fingerprint": "41fc089c64d8e2c6cd829223eab21e36f2156b16bba08960b0967567054804c8"
     },
     "vc-evolved": {
+      "observerName": "currentPlayer",
       "params": {
         "rallyWeight": 3,
         "taxWeight": 2
@@ -2114,7 +2119,7 @@
           "hasNonPassAlternative"
         ]
       },
-      "fingerprint": "747b070ee705938fb256f9e7ada39c18d1e21dff8add7e343bdc0ec0f60ee65b"
+      "fingerprint": "c9cb491af5560c4ff5d0faabff702d7ef303dc120434043f197e2f759e4c1df7"
     }
   },
   "bindingsBySeat": {
@@ -2123,5 +2128,5 @@
     "nva": "nva-baseline",
     "vc": "vc-evolved"
   },
-  "catalogFingerprint": "78df4d24c9b41393abd8d53bb78f3eded8238eb222323ca589f31610df8aaffa"
+  "catalogFingerprint": "145308ffd1f7bb7dbc19596b6c92c7088de6a1dd4b2d9a167749a900c4b7d18c"
 }

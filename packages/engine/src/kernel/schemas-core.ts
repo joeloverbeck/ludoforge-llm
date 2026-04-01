@@ -891,6 +891,7 @@ const CompiledAgentLibraryIndexSchema = z
 const CompiledAgentProfileSchema = z
   .object({
     fingerprint: StringSchema,
+    observerName: StringSchema.optional(),
     params: z.record(StringSchema, AgentParameterValueSchema),
     use: z
       .object({

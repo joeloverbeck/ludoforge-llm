@@ -3790,6 +3790,9 @@
               "fingerprint": {
                 "type": "string"
               },
+              "observerName": {
+                "type": "string"
+              },
               "params": {
                 "type": "object",
                 "propertyNames": {

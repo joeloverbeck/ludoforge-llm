@@ -675,6 +675,7 @@ export interface PreviewToleranceConfig {
 
 export interface CompiledAgentProfile {
   readonly fingerprint: string;
+  readonly observerName?: string;
   readonly params: Readonly<Record<string, AgentParameterValue>>;
   readonly use: {
     readonly pruningRules: readonly string[];

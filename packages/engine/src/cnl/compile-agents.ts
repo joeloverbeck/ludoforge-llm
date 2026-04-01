@@ -22,6 +22,7 @@ import type {
   CompiledAgentDependencyRefs,
   CompiledAgentLibraryIndex,
   CompiledAgentParameterDef,
+  CompiledObserverCatalog,
   CompiledSurfaceCatalog,
   CompiledSurfaceVisibility,
   CompiledAgentProfile,
@@ -72,6 +73,7 @@ export interface LowerAgentsOptions {
   readonly hasVictoryMargins?: boolean;
   readonly actionDefs?: GameDef['actions'];
   readonly actionPipelines?: GameDef['actionPipelines'];
+  readonly observerCatalog?: CompiledObserverCatalog;
 }
 
 export function lowerAgents(
@@ -83,7 +85,7 @@ export function lowerAgents(
     return undefined;
   }
 
-  const surfaceVisibility = lowerSurfaceVisibility(agents.visibility, diagnostics, options);
+  const surfaceVisibility = resolveSurfaceVisibilityFromObserverCatalog(agents.profiles, options);
   const parameterDefs = lowerParameterDefs(agents.parameters, diagnostics);
   const candidateParamDefs = lowerCandidateParamDefs(options.actionDefs, options.actionPipelines);
   const libraryCompiler = new AgentLibraryCompiler(
@@ -115,86 +117,59 @@ export function lowerAgents(
   } satisfies AgentPolicyCatalog;
 }
 
-function lowerSurfaceVisibility(
-  visibility: GameSpecAgentsSection['visibility'],
-  diagnostics: Diagnostic[],
+/**
+ * Resolves the catalog-level surfaceVisibility from the observer catalog.
+ *
+ * Strategy: if all profiles reference the same observer, use that observer's surfaces.
+ * Otherwise, use the catalog's default observer. When no observer catalog is provided,
+ * falls back to built-in defaults.
+ */
+function resolveSurfaceVisibilityFromObserverCatalog(
+  profiles: GameSpecAgentsSection['profiles'],
   options: LowerAgentsOptions,
 ): CompiledSurfaceCatalog {
+  const catalog = options.observerCatalog;
+  if (catalog !== undefined) {
+    // Determine which observer to use for the catalog-level surfaceVisibility field.
+    // Priority: 1) unanimous profile observer, 2) first user-defined observer, 3) catalog default.
+    // The catalog-level field is a shared field used by the library compiler and runtime.
+    const profileObserverNames = Object.values(profiles ?? {}).map((p) => p.observer);
+    const uniqueObservers = new Set(profileObserverNames.filter((name): name is string => name !== undefined));
+    let resolvedName: string;
+    if (uniqueObservers.size === 1) {
+      resolvedName = [...uniqueObservers][0]!;
+    } else {
+      // Use the first user-defined observer (not built-in), falling back to catalog default.
+      const userDefinedNames = Object.keys(catalog.observers).filter(
+        (name) => name !== 'omniscient' && name !== 'default',
+      );
+      resolvedName = userDefinedNames.length === 1 ? userDefinedNames[0]! : catalog.defaultObserverName;
+    }
+    const observer = catalog.observers[resolvedName];
+    if (observer !== undefined) {
+      return observer.surfaces;
+    }
+  }
+  // Fallback: build defaults inline (same as the old lowerSurfaceVisibility).
+  // This path is taken when there is no observability section.
+  const globalVarDefaults: CompiledSurfaceVisibility = { current: 'public', preview: { visibility: 'public', allowWhenHiddenSampling: true } };
+  const perPlayerVarDefaults: CompiledSurfaceVisibility = { current: 'seatVisible', preview: { visibility: 'seatVisible', allowWhenHiddenSampling: true } };
+  const hiddenDefaults: CompiledSurfaceVisibility = { current: 'hidden', preview: { visibility: 'hidden', allowWhenHiddenSampling: false } };
+  const globalVars: Record<string, CompiledSurfaceVisibility> = {};
+  for (const id of options.globalVarIds ?? []) { globalVars[id] = globalVarDefaults; }
+  const perPlayerVars: Record<string, CompiledSurfaceVisibility> = {};
+  for (const id of options.perPlayerVarIds ?? []) { perPlayerVars[id] = perPlayerVarDefaults; }
+  const derivedMetrics: Record<string, CompiledSurfaceVisibility> = {};
+  for (const id of options.policyMetricIds ?? []) { derivedMetrics[id] = hiddenDefaults; }
   return {
-    globalVars: lowerSurfaceVisibilityMap(
-      options.globalVarIds ?? [],
-      visibility?.globalVars,
-      diagnostics,
-      'doc.agents.visibility.globalVars',
-      {
-        current: 'public',
-        preview: { visibility: 'public', allowWhenHiddenSampling: true },
-      },
-    ),
-    perPlayerVars: lowerSurfaceVisibilityMap(
-      options.perPlayerVarIds ?? [],
-      visibility?.perPlayerVars,
-      diagnostics,
-      'doc.agents.visibility.perPlayerVars',
-      {
-        current: 'seatVisible',
-        preview: { visibility: 'seatVisible', allowWhenHiddenSampling: true },
-      },
-    ),
-    derivedMetrics: lowerSurfaceVisibilityMap(
-      options.policyMetricIds ?? [],
-      visibility?.derivedMetrics,
-      diagnostics,
-      'doc.agents.visibility.derivedMetrics',
-      {
-        current: 'hidden',
-        preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
-      },
-    ),
-    victory: {
-      currentMargin: lowerSurfaceVisibilityEntry(
-        visibility?.victory?.currentMargin,
-        diagnostics,
-        'doc.agents.visibility.victory.currentMargin',
-        {
-          current: 'hidden',
-          preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
-        },
-      ),
-      currentRank: lowerSurfaceVisibilityEntry(
-        visibility?.victory?.currentRank,
-        diagnostics,
-        'doc.agents.visibility.victory.currentRank',
-        {
-          current: 'hidden',
-          preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
-        },
-      ),
-    },
-    activeCardIdentity: lowerSurfaceVisibilityEntry(
-      visibility?.activeCardIdentity,
-      diagnostics,
-      'doc.agents.visibility.activeCardIdentity',
-      { current: 'hidden', preview: { visibility: 'hidden', allowWhenHiddenSampling: false } },
-    ),
-    activeCardTag: lowerSurfaceVisibilityEntry(
-      visibility?.activeCardTag,
-      diagnostics,
-      'doc.agents.visibility.activeCardTag',
-      { current: 'hidden', preview: { visibility: 'hidden', allowWhenHiddenSampling: false } },
-    ),
-    activeCardMetadata: lowerSurfaceVisibilityEntry(
-      visibility?.activeCardMetadata,
-      diagnostics,
-      'doc.agents.visibility.activeCardMetadata',
-      { current: 'hidden', preview: { visibility: 'hidden', allowWhenHiddenSampling: false } },
-    ),
-    activeCardAnnotation: lowerSurfaceVisibilityEntry(
-      visibility?.activeCardAnnotation,
-      diagnostics,
-      'doc.agents.visibility.activeCardAnnotation',
-      { current: 'hidden', preview: { visibility: 'hidden', allowWhenHiddenSampling: false } },
-    ),
+    globalVars,
+    perPlayerVars,
+    derivedMetrics,
+    victory: { currentMargin: hiddenDefaults, currentRank: hiddenDefaults },
+    activeCardIdentity: hiddenDefaults,
+    activeCardTag: hiddenDefaults,
+    activeCardMetadata: hiddenDefaults,
+    activeCardAnnotation: hiddenDefaults,
   };
 }
 
@@ -623,7 +598,11 @@ function lowerProfile(
     return null;
   }
 
+  // Resolve observer binding: set observerName if profile specifies an observer
+  const resolvedObserverName = profileDef.observer !== undefined ? profileDef.observer : undefined;
+
   return {
+    ...(resolvedObserverName !== undefined ? { observerName: resolvedObserverName } : {}),
     params: compiledParams,
     use,
     ...(completionGuidance == null ? {} : { completionGuidance }),

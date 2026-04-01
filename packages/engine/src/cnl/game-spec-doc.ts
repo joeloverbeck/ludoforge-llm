@@ -523,20 +523,6 @@ export interface GameSpecPolicySurfaceVisibilityDef {
   readonly preview?: GameSpecPolicySurfacePreviewVisibilityDef;
 }
 
-export interface GameSpecAgentVisibilitySection {
-  readonly globalVars?: Readonly<Record<string, GameSpecPolicySurfaceVisibilityDef>>;
-  readonly perPlayerVars?: Readonly<Record<string, GameSpecPolicySurfaceVisibilityDef>>;
-  readonly derivedMetrics?: Readonly<Record<string, GameSpecPolicySurfaceVisibilityDef>>;
-  readonly victory?: {
-    readonly currentMargin?: GameSpecPolicySurfaceVisibilityDef;
-    readonly currentRank?: GameSpecPolicySurfaceVisibilityDef;
-  };
-  readonly activeCardIdentity?: GameSpecPolicySurfaceVisibilityDef;
-  readonly activeCardTag?: GameSpecPolicySurfaceVisibilityDef;
-  readonly activeCardMetadata?: GameSpecPolicySurfaceVisibilityDef;
-  readonly activeCardAnnotation?: GameSpecPolicySurfaceVisibilityDef;
-}
-
 // --- Observer profile types (Spec 102, Part B) ---
 
 export interface GameSpecObserverSurfaceEntryDef {
@@ -647,6 +633,7 @@ export interface GameSpecAgentProfileUse {
 }
 
 export interface GameSpecAgentProfileDef {
+  readonly observer?: string;
   readonly params?: Readonly<Record<string, unknown>>;
   readonly use: GameSpecAgentProfileUse;
   readonly completionGuidance?: {
@@ -662,7 +649,6 @@ export type GameSpecSeatPolicyBindings = Readonly<Record<string, string>>;
 
 export interface GameSpecAgentsSection {
   readonly parameters?: Readonly<Record<string, GameSpecAgentParameterDef>>;
-  readonly visibility?: GameSpecAgentVisibilitySection;
   readonly library?: GameSpecAgentLibrary;
   readonly profiles?: Readonly<Record<string, GameSpecAgentProfileDef>>;
   readonly bindings?: GameSpecSeatPolicyBindings;

@@ -39,6 +39,7 @@ function createCompileReadyDoc(): GameSpecDoc {
   return {
     ...createEmptyGameSpecDoc(),
     metadata: { id: 'strat-cond-e2e', players: { min: 2, max: 2 } },
+    observability: { observers: { testObserver: { surfaces: { victory: { currentMargin: 'public' as const } } } } },
     zones: [
       { id: 'board', owner: 'none', visibility: 'public', ordering: 'set', attributes: {} },
     ],
@@ -81,20 +82,6 @@ function createSeatCatalogAsset(seatIds: readonly string[]) {
   };
 }
 
-function createVisibility(overrides: NonNullable<NonNullable<GameSpecDoc['agents']>['visibility']> = {}) {
-  return {
-    globalVars: overrides.globalVars ?? {},
-    perPlayerVars: overrides.perPlayerVars ?? {},
-    derivedMetrics: overrides.derivedMetrics ?? {},
-    victory: {
-      currentMargin: {
-        current: 'public' as const,
-        ...(overrides.victory?.currentMargin ?? {}),
-      },
-    },
-  };
-}
-
 function hasErrors(diagnostics: readonly { readonly severity: string }[]): boolean {
   return diagnostics.some((d) => d.severity === 'error');
 }
@@ -127,7 +114,6 @@ function compileWithConditions(
     ...createCompileReadyDoc(),
     dataAssets: [createSeatCatalogAsset(['p1', 'p2'])],
     agents: {
-      visibility: createVisibility(),
       library: buildLibrary(strategicConditions, extras?.library),
       profiles: {},
     },

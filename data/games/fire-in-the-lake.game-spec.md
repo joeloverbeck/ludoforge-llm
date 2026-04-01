@@ -12,4 +12,5 @@ imports:
   - ./fire-in-the-lake/90-terminal.md
   - ./fire-in-the-lake/91-victory-standings.md
   - ./fire-in-the-lake/92-agents.md
+  - ./fire-in-the-lake/93-observability.md
 ```

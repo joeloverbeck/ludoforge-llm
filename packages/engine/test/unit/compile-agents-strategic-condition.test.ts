@@ -2,12 +2,13 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { compileGameSpecToGameDef, createEmptyGameSpecDoc } from '../../src/cnl/index.js';
-import type { GameSpecDoc, GameSpecAgentLibrary } from '../../src/cnl/game-spec-doc.js';
+import type { GameSpecAgentLibrary } from '../../src/cnl/game-spec-doc.js';
 
 function createCompileReadyDoc() {
   return {
     ...createEmptyGameSpecDoc(),
     metadata: { id: 'strat-cond-demo', players: { min: 2, max: 2 } },
+    observability: { observers: { testObserver: { surfaces: { victory: { currentMargin: 'public' as const } } } } },
     zones: [{ id: 'board', owner: 'none', visibility: 'public', ordering: 'set', attributes: {} }],
     tokenTypes: [
       { id: 'soldier', props: {} },
@@ -47,20 +48,6 @@ function createSeatCatalogAsset(seatIds: readonly string[]) {
   };
 }
 
-function createVisibility(overrides: NonNullable<NonNullable<GameSpecDoc['agents']>['visibility']> = {}) {
-  return {
-    globalVars: overrides.globalVars ?? {},
-    perPlayerVars: overrides.perPlayerVars ?? {},
-    derivedMetrics: overrides.derivedMetrics ?? {},
-    victory: {
-      currentMargin: {
-        current: 'public' as const,
-        ...(overrides.victory?.currentMargin ?? {}),
-      },
-    },
-  };
-}
-
 function hasErrors(diagnostics: readonly { readonly severity: string }[]): boolean {
   return diagnostics.some((d) => d.severity === 'error');
 }
@@ -93,7 +80,6 @@ function compileWithConditions(
     ...createCompileReadyDoc(),
     dataAssets: [createSeatCatalogAsset(['p1', 'p2'])],
     agents: {
-      visibility: createVisibility(),
       library: buildLibrary(strategicConditions, extras?.library),
       profiles: {},
     },
@@ -374,7 +360,6 @@ describe('strategic condition compilation', () => {
       ...createCompileReadyDoc(),
       dataAssets: [createSeatCatalogAsset(['p1', 'p2'])],
       agents: {
-        visibility: createVisibility(),
         library: buildLibrary(undefined, {
           stateFeatures: {
             margin: {

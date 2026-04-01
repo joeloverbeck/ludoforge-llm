@@ -2,45 +2,6 @@
 
 ```yaml
 agents:
-  visibility:
-    perPlayerVars:
-      resources:
-        current: public
-        preview:
-          visibility: public
-          allowWhenHiddenSampling: false
-    victory:
-      currentMargin:
-        current: public
-        preview:
-          visibility: public
-          allowWhenHiddenSampling: false
-      currentRank:
-        current: public
-        preview:
-          visibility: public
-          allowWhenHiddenSampling: false
-    activeCardIdentity:
-      current: public
-      preview:
-        visibility: public
-        allowWhenHiddenSampling: false
-    activeCardTag:
-      current: public
-      preview:
-        visibility: public
-        allowWhenHiddenSampling: false
-    activeCardMetadata:
-      current: public
-      preview:
-        visibility: public
-        allowWhenHiddenSampling: false
-    activeCardAnnotation:
-      current: public
-      preview:
-        visibility: public
-        allowWhenHiddenSampling: false
-
   parameters:
     eventWeight:
       type: number
@@ -340,6 +301,7 @@ agents:
 
   profiles:
     us-baseline:
+      observer: currentPlayer
       params:
         eventWeight: 2
         projectedMarginWeight: 1
@@ -359,6 +321,7 @@ agents:
           - stableMoveKey
 
     arvn-baseline:
+      observer: currentPlayer
       params:
         eventWeight: 1.5
         projectedMarginWeight: 1
@@ -379,6 +342,7 @@ agents:
           - stableMoveKey
 
     nva-baseline:
+      observer: currentPlayer
       params:
         eventWeight: 1.5
         projectedMarginWeight: 1
@@ -400,6 +364,7 @@ agents:
           - stableMoveKey
 
     vc-baseline:
+      observer: currentPlayer
       params:
         eventWeight: 1.5
         projectedMarginWeight: 1
@@ -421,6 +386,7 @@ agents:
           - stableMoveKey
 
     vc-evolved:
+      observer: currentPlayer
       preview:
         tolerateRngDivergence: true
       params:

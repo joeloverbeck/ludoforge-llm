@@ -67,6 +67,7 @@ Structured workflow for ticket reassessment and implementation. This eliminates 
 - **Never silently skip deliverables** — if something seems wrong, present options (1-3-1 rule)
 - **Worktree discipline**: if working in a worktree, ALL file operations use the worktree root path
 - **Correct the ticket, not the code** when assumptions are wrong — the ticket is the source of truth for intent, the codebase is the source of truth for current state
+- **FOUNDATIONS.md overrides ticket scope**: if a ticket's scope boundary conflicts with `docs/FOUNDATIONS.md` (e.g., Foundation 14 requires migrating all owned artifacts in the same change, but the ticket defers migration to a later ticket), FOUNDATIONS.md takes precedence. Present the conflict and the Foundation-compliant resolution to the user before proceeding.
 - **Ticket fidelity**: every deliverable listed in the ticket must be addressed — either implemented, or flagged as blocked with the 1-3-1 rule
 
 ## Example Usage

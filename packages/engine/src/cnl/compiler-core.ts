@@ -709,6 +709,7 @@ function compileExpandedDoc(
             : { policyMetricIds: (resolvedTableRefDoc.derivedMetrics ?? []).map((metric) => metric.id) }
         ),
         ...{ hasVictoryMargins: (terminal?.margins?.length ?? 0) > 0 },
+        ...(sections.observers === null ? {} : { observerCatalog: sections.observers }),
       },
     ),
   );

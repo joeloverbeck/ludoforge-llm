@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — game data only
-**Deps**: `tickets/102SHAOBSMOD-006.md`, `specs/102-shared-observer-model.md`
+**Deps**: `archive/tickets/102SHAOBSMOD-006.md`, `specs/102-shared-observer-model.md`
 
 ## Problem
 

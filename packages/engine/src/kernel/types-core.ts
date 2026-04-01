@@ -550,14 +550,32 @@ export interface CompiledSurfaceCatalog {
 }
 
 // ---------------------------------------------------------------------------
-// Observer catalog (Spec 102 Part E)
+// Observer catalog (Spec 102 Part E, extended by Spec 106)
 // ---------------------------------------------------------------------------
+
+/** Visibility classification for zone tokens and order. */
+export type ZoneObserverVisibilityClass = 'public' | 'owner' | 'hidden';
+
+/** Per-zone observer visibility entry. */
+export interface CompiledZoneVisibilityEntry {
+  readonly tokens: ZoneObserverVisibilityClass;
+  readonly order: ZoneObserverVisibilityClass;
+}
+
+/**
+ * Zone visibility catalog for an observer profile.
+ * `entries` is keyed by zone base ID (not qualified ID).
+ * `defaultEntry` applies to zones not listed in `entries`.
+ */
+export interface CompiledZoneVisibilityCatalog {
+  readonly entries: Readonly<Record<string, CompiledZoneVisibilityEntry>>;
+  readonly defaultEntry?: CompiledZoneVisibilityEntry;
+}
 
 export interface CompiledObserverProfile {
   readonly fingerprint: string;
   readonly surfaces: CompiledSurfaceCatalog;
-  // RESERVED for Spec 106:
-  // readonly zones?: CompiledZoneVisibilityCatalog;
+  readonly zones?: CompiledZoneVisibilityCatalog;
 }
 
 export interface CompiledObserverCatalog {

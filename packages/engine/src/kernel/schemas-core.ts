@@ -298,10 +298,31 @@ export const CompiledSurfaceCatalogSchema = z
   })
   .strict();
 
+const ZoneObserverVisibilityClassSchema = z.union([
+  z.literal('public'),
+  z.literal('owner'),
+  z.literal('hidden'),
+]);
+
+const CompiledZoneVisibilityEntrySchema = z
+  .object({
+    tokens: ZoneObserverVisibilityClassSchema,
+    order: ZoneObserverVisibilityClassSchema,
+  })
+  .strict();
+
+const CompiledZoneVisibilityCatalogSchema = z
+  .object({
+    entries: z.record(StringSchema, CompiledZoneVisibilityEntrySchema),
+    defaultEntry: CompiledZoneVisibilityEntrySchema.optional(),
+  })
+  .strict();
+
 export const CompiledObserverProfileSchema = z
   .object({
     fingerprint: StringSchema,
     surfaces: CompiledSurfaceCatalogSchema,
+    zones: CompiledZoneVisibilityCatalogSchema.optional(),
   })
   .strict();
 

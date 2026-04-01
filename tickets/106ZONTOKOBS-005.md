@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `observation.ts`, `policy-preview.ts`
-**Deps**: `tickets/106ZONTOKOBS-001.md`, `specs/106-zone-token-observer-integration.md`
+**Deps**: `archive/tickets/106ZONTOKOBS-001.md`, `specs/106-zone-token-observer-integration.md`
 
 ## Problem
 

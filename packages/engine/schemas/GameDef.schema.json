@@ -2316,6 +2316,105 @@
                   "activeCardAnnotation"
                 ],
                 "additionalProperties": false
+              },
+              "zones": {
+                "type": "object",
+                "properties": {
+                  "entries": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "object",
+                      "properties": {
+                        "tokens": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "public"
+                            },
+                            {
+                              "type": "string",
+                              "const": "owner"
+                            },
+                            {
+                              "type": "string",
+                              "const": "hidden"
+                            }
+                          ]
+                        },
+                        "order": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "public"
+                            },
+                            {
+                              "type": "string",
+                              "const": "owner"
+                            },
+                            {
+                              "type": "string",
+                              "const": "hidden"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "tokens",
+                        "order"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "defaultEntry": {
+                    "type": "object",
+                    "properties": {
+                      "tokens": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "const": "public"
+                          },
+                          {
+                            "type": "string",
+                            "const": "owner"
+                          },
+                          {
+                            "type": "string",
+                            "const": "hidden"
+                          }
+                        ]
+                      },
+                      "order": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "const": "public"
+                          },
+                          {
+                            "type": "string",
+                            "const": "owner"
+                          },
+                          {
+                            "type": "string",
+                            "const": "hidden"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "tokens",
+                      "order"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "entries"
+                ],
+                "additionalProperties": false
               }
             },
             "required": [

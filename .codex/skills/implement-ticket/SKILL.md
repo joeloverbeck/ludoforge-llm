@@ -44,16 +44,20 @@ If a prior ticket in the same series was implemented earlier in the session, reu
    - decide whether the remaining deliverable boundary is still clear and implementable without a new product decision
    - treat extra adjacent files needed for Foundation 14 atomicity as required scope, not optional cleanup
    - call out the partial-migration state explicitly before coding
+10. If you rewrite or materially correct the ticket scope before implementation:
+   - re-extract the concrete files, acceptance criteria, invariants, and verification commands from the corrected ticket
+   - do not keep using the stale ticket's original verification surface by inertia
+   - treat the rewritten ticket as the authoritative implementation boundary for the rest of the task
 
 ### Phase 3: Resolve Before Coding
 
-10. If the ticket is factually wrong, stop and present the discrepancies before editing code.
-11. If the issue is not a factual error but a scope gap, implementation choice, dependency conflict, or ambiguous partial-migration boundary, apply the repository's `1-3-1` rule:
+11. If the ticket is factually wrong, stop and present the discrepancies before editing code.
+12. If the issue is not a factual error but a scope gap, implementation choice, dependency conflict, or ambiguous partial-migration boundary, apply the repository's `1-3-1` rule:
     - 1 clearly defined problem
     - 3 concrete options
     - 1 recommendation
-12. Do not proceed with implementation until the user confirms when a discrepancy or `1-3-1` decision is outstanding.
-13. If the ticket is accurate and no blocking decision remains, proceed.
+13. Do not proceed with implementation until the user confirms when a discrepancy or `1-3-1` decision is outstanding.
+14. If the ticket is accurate and no blocking decision remains, proceed.
 
 ## Implementation Rules
 
@@ -70,6 +74,12 @@ If a prior ticket in the same series was implemented earlier in the session, reu
   - any temporary compatibility or transitional surface you intentionally retain so nearby code and tests stay coherent
   Record that distinction in your working notes and final summary.
 - The ticket's `Files to Touch` list is a strong hint, not a hard limit. If coherent completion requires adjacent files for contracts, runtime consumers, schemas, fixtures, or tests, include them and explain why.
+- For schema or contract migrations, explicitly check whether the change needs updates across:
+  - authored schema/doc types
+  - compiled/kernel/runtime types
+  - Zod or JSON schemas
+  - diagnostics or debug snapshots
+  - fixtures, goldens, and tests
 
 ## Verification
 
@@ -83,6 +93,11 @@ Before claiming completion:
    - if tests depend on `dist`, run `typecheck` first and rebuild before trusting targeted test results
    - if the change affects generated artifacts or schemas, regenerate or validate them explicitly
 6. Prefer the narrowest commands that validate the real changed code path, not stale build output.
+7. If broader failing checks remain:
+   - determine whether they are inside the corrected ticket boundary or are owned by another active ticket
+   - if they are outside the corrected boundary and already covered by an active ticket, do not silently absorb that scope
+   - document the failure as residual risk or deferred verification and name the owning active ticket(s)
+   - if no active ticket owns the remaining failure, stop and resolve the boundary with the user
 
 Use the repo's standard commands from `AGENTS.md` when appropriate:
 
@@ -99,6 +114,7 @@ Prefer narrower package- or file-scoped checks when they fully cover the change.
 After implementation and verification:
 
 1. Summarize what changed, what was verified, and any residual risk.
+   - if any verification was intentionally deferred because an adjacent active ticket owns that scope, state that explicitly
 2. If the ticket appears complete, offer to archive it per `docs/archival-workflow.md`.
 3. If the user wants archival or a concrete follow-up review, hand off to `post-ticket-review`.
 

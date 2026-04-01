@@ -75,8 +75,7 @@ function createBaseDef(): GameDef {
         candidateFeatures: {},
         candidateAggregates: {},
         pruningRules: {},
-        scoreTerms: {},
-        completionScoreTerms: {},
+        considerations: {},
         tieBreakers: {
           rng: { kind: 'rng', costClass: 'state', dependencies: emptyDeps },
         },
@@ -86,8 +85,8 @@ function createBaseDef(): GameDef {
         baseline: {
           fingerprint: 'baseline',
           params: {},
-          use: { pruningRules: [], scoreTerms: [], completionScoreTerms: [], tieBreakers: ['rng'] },
-          plan: { stateFeatures: [], candidateFeatures: [], candidateAggregates: [] },
+          use: { pruningRules: [], considerations: [], tieBreakers: ['rng'] },
+          plan: { stateFeatures: [], candidateFeatures: [], candidateAggregates: [], considerations: [] },
         },
       },
       bindingsBySeat: { alpha: 'baseline' },

@@ -109,14 +109,14 @@ function createCatalog(overrides?: {
     params: {},
     use: {
       pruningRules: [],
-      scoreTerms: [],
-      completionScoreTerms: [],
+      considerations: [],
       tieBreakers: [],
     },
     plan: {
       stateFeatures: [],
       candidateFeatures: [],
       candidateAggregates: [],
+      considerations: [],
     },
   };
   return {
@@ -142,8 +142,7 @@ function createCatalog(overrides?: {
       candidateFeatures: {},
       candidateAggregates: {},
       pruningRules: {},
-      scoreTerms: {},
-      completionScoreTerms: {},
+      considerations: {},
       tieBreakers: {},
       strategicConditions: {},
     },

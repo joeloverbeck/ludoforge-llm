@@ -24,7 +24,6 @@ export interface PolicyDiagnosticsSnapshot {
     readonly candidateAggregates: readonly string[];
     readonly pruningRules: readonly string[];
     readonly considerations: readonly string[];
-    readonly scoreTerms: readonly string[];
     readonly tieBreakers: readonly string[];
   };
   readonly costTiers: {
@@ -61,7 +60,6 @@ export function buildPolicyDiagnosticsSnapshot(
         candidateAggregates: [],
         pruningRules: [],
         considerations: [],
-        scoreTerms: [],
         tieBreakers: [],
       },
       costTiers: {
@@ -91,8 +89,7 @@ export function buildPolicyDiagnosticsSnapshot(
       candidateFeatures: profile.plan.candidateFeatures,
       candidateAggregates: profile.plan.candidateAggregates,
       pruningRules: profile.use.pruningRules,
-      considerations: profile.use.considerations ?? [],
-      scoreTerms: profile.use.considerations ?? [],
+      considerations: profile.use.considerations,
       tieBreakers: profile.use.tieBreakers,
     },
     costTiers,

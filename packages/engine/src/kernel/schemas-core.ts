@@ -891,8 +891,6 @@ const CompiledAgentConsiderationSchema = z
   })
   .strict();
 
-const CompiledAgentScoreTermSchema = CompiledAgentConsiderationSchema;
-
 const CompiledAgentTieBreakerSchema = z
   .object({
     kind: StringSchema,
@@ -922,9 +920,7 @@ const CompiledAgentLibraryIndexSchema = z
     candidateFeatures: z.record(StringSchema, CompiledAgentCandidateFeatureSchema),
     candidateAggregates: z.record(StringSchema, CompiledAgentAggregateSchema),
     pruningRules: z.record(StringSchema, CompiledAgentPruningRuleSchema),
-    considerations: z.record(StringSchema, CompiledAgentConsiderationSchema).optional(),
-    scoreTerms: z.record(StringSchema, CompiledAgentScoreTermSchema),
-    completionScoreTerms: z.record(StringSchema, CompiledAgentScoreTermSchema),
+    considerations: z.record(StringSchema, CompiledAgentConsiderationSchema),
     tieBreakers: z.record(StringSchema, CompiledAgentTieBreakerSchema),
     strategicConditions: z.record(StringSchema, CompiledStrategicConditionSchema),
   })
@@ -937,17 +933,11 @@ const CompiledAgentProfileSchema = z
     params: z.record(StringSchema, AgentParameterValueSchema),
     use: z
       .object({
-        considerations: z.array(StringSchema).optional(),
+        considerations: z.array(StringSchema),
         pruningRules: z.array(StringSchema),
-        scoreTerms: z.array(StringSchema),
-        completionScoreTerms: z.array(StringSchema),
         tieBreakers: z.array(StringSchema),
       })
       .strict(),
-    completionGuidance: z.object({
-      enabled: BooleanSchema,
-      fallback: z.enum(['random', 'first']),
-    }).strict().optional(),
     preview: z.object({
       tolerateRngDivergence: BooleanSchema,
     }).strict().optional(),
@@ -956,7 +946,7 @@ const CompiledAgentProfileSchema = z
         stateFeatures: z.array(StringSchema),
         candidateFeatures: z.array(StringSchema),
         candidateAggregates: z.array(StringSchema),
-        considerations: z.array(StringSchema).optional(),
+        considerations: z.array(StringSchema),
       })
       .strict(),
   })

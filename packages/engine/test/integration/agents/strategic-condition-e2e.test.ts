@@ -182,8 +182,7 @@ function createBaseDef(overrides?: {
         candidateFeatures: {},
         candidateAggregates: {},
         pruningRules: {},
-        scoreTerms: {},
-        completionScoreTerms: {},
+        considerations: {},
         tieBreakers: {
           rng: { kind: 'rng', costClass: 'state', dependencies: emptyDeps },
         },
@@ -193,8 +192,8 @@ function createBaseDef(overrides?: {
         baseline: {
           fingerprint: 'baseline',
           params: {},
-          use: { pruningRules: [], scoreTerms: [], completionScoreTerms: [], tieBreakers: ['rng'] },
-          plan: { stateFeatures: [], candidateFeatures: [], candidateAggregates: [] },
+          use: { pruningRules: [], considerations: [], tieBreakers: ['rng'] },
+          plan: { stateFeatures: [], candidateFeatures: [], candidateAggregates: [], considerations: [] },
         },
       },
       bindingsBySeat: { p1: 'baseline' },
@@ -437,7 +436,7 @@ describe('strategic condition E2E — FITL integration (VC pivotal)', () => {
     assert.equal(satisfied, true, 'Should be satisfied at 16/15');
   });
 
-  it('score term using condition.vcPivotalReady.proximity produces correct scores', () => {
+  it('consideration using condition.vcPivotalReady.proximity produces correct scores', () => {
     const result = compileWithConditions(
       {
         vcPivotalReady: {
@@ -450,8 +449,9 @@ describe('strategic condition E2E — FITL integration (VC pivotal)', () => {
       },
       {
         library: {
-          scoreTerms: {
+          considerations: {
             rewardPivotalProgress: {
+              scopes: ['move'],
               weight: 2,
               value: {
                 sub: [1, { ref: 'condition.vcPivotalReady.proximity' }],
@@ -465,12 +465,12 @@ describe('strategic condition E2E — FITL integration (VC pivotal)', () => {
     assert.equal(hasErrors(result.diagnostics), false, `Unexpected errors: ${JSON.stringify(result.diagnostics)}`);
     assert.notEqual(result.gameDef, null);
 
-    const scoreTerm = result.gameDef!.agents!.library.scoreTerms['rewardPivotalProgress'];
-    assert.ok(scoreTerm, 'rewardPivotalProgress should exist in compiled output');
-    assert.deepStrictEqual(scoreTerm.weight, { kind: 'literal', value: 2 }, 'Weight should be literal 2');
+    const consideration = result.gameDef!.agents!.library.considerations['rewardPivotalProgress'];
+    assert.ok(consideration, 'rewardPivotalProgress should exist in compiled output');
+    assert.deepStrictEqual(consideration.weight, { kind: 'literal', value: 2 }, 'Weight should be literal 2');
     assert.ok(
-      scoreTerm.dependencies.strategicConditions.includes('vcPivotalReady'),
-      'Score term should depend on vcPivotalReady',
+      consideration.dependencies.strategicConditions.includes('vcPivotalReady'),
+      'Consideration should depend on vcPivotalReady',
     );
   });
 });
@@ -594,7 +594,7 @@ describe('strategic condition E2E — cross-condition references', () => {
 // ---------------------------------------------------------------------------
 
 describe('strategic condition E2E — dependency tracking', () => {
-  it('score term referencing condition.X.proximity has X in dependencies.strategicConditions', () => {
+  it('consideration referencing condition.X.proximity has X in dependencies.strategicConditions', () => {
     const result = compileWithConditions(
       {
         goalCondition: {
@@ -604,8 +604,9 @@ describe('strategic condition E2E — dependency tracking', () => {
       },
       {
         library: {
-          scoreTerms: {
+          considerations: {
             pivotalScore: {
+              scopes: ['move'],
               weight: 1,
               value: { ref: 'condition.goalCondition.proximity' },
             },
@@ -616,11 +617,11 @@ describe('strategic condition E2E — dependency tracking', () => {
 
     assert.equal(hasErrors(result.diagnostics), false, `Unexpected errors: ${JSON.stringify(result.diagnostics)}`);
     assert.notEqual(result.gameDef, null);
-    const scoreTerm = result.gameDef!.agents!.library.scoreTerms['pivotalScore'];
-    assert.ok(scoreTerm, 'pivotalScore should exist');
+    const consideration = result.gameDef!.agents!.library.considerations['pivotalScore'];
+    assert.ok(consideration, 'pivotalScore should exist');
     assert.ok(
-      scoreTerm.dependencies.strategicConditions.includes('goalCondition'),
-      `Score term deps should include goalCondition: ${JSON.stringify(scoreTerm.dependencies.strategicConditions)}`,
+      consideration.dependencies.strategicConditions.includes('goalCondition'),
+      `Consideration deps should include goalCondition: ${JSON.stringify(consideration.dependencies.strategicConditions)}`,
     );
   });
 

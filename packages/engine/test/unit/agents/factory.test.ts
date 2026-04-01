@@ -29,6 +29,14 @@ const opExpr = (op: Extract<AgentPolicyExpr, { readonly kind: 'op' }>['op'], ...
   args,
 });
 
+function moveConsiderations(
+  definitions: Record<string, Omit<AgentPolicyCatalog['library']['considerations'][string], 'scopes'>>,
+): AgentPolicyCatalog['library']['considerations'] {
+  return Object.fromEntries(
+    Object.entries(definitions).map(([id, definition]) => [id, { scopes: ['move'], ...definition }]),
+  );
+}
+
 function createCatalog(): AgentPolicyCatalog {
   return {
     schemaVersion: 2,
@@ -72,7 +80,7 @@ function createCatalog(): AgentPolicyCatalog {
       },
       candidateAggregates: {},
       pruningRules: {},
-      scoreTerms: {
+      considerations: moveConsiderations({
         preferPass: {
           costClass: 'candidate',
           weight: literal(10),
@@ -85,8 +93,7 @@ function createCatalog(): AgentPolicyCatalog {
           value: opExpr('boolToNumber', refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'isEvent' })),
           dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['isEvent'], aggregates: [], strategicConditions: [] },
         },
-      },
-      completionScoreTerms: {},
+      }),
       tieBreakers: {
         stableMoveKey: {
           kind: 'stableMoveKey',
@@ -102,14 +109,14 @@ function createCatalog(): AgentPolicyCatalog {
         params: {},
         use: {
           pruningRules: [],
-          scoreTerms: ['preferPass'],
-          completionScoreTerms: [],
+          considerations: ['preferPass'],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
           stateFeatures: [],
           candidateFeatures: [],
           candidateAggregates: [],
+          considerations: ['preferPass'],
         },
       },
       aggressive: {
@@ -117,14 +124,14 @@ function createCatalog(): AgentPolicyCatalog {
         params: {},
         use: {
           pruningRules: [],
-          scoreTerms: ['preferEvent'],
-          completionScoreTerms: [],
+          considerations: ['preferEvent'],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
           stateFeatures: [],
           candidateFeatures: ['isEvent'],
           candidateAggregates: [],
+          considerations: ['preferEvent'],
         },
       },
     },

@@ -585,15 +585,8 @@ function lowerProfile(
       ),
     ]),
   ) as Pick<CompiledAgentProfile['use'], 'considerations' | 'pruningRules' | 'tieBreakers'>;
-  const considerations = loweredUse.considerations ?? [];
   const use: CompiledAgentProfile['use'] = {
     ...loweredUse,
-    scoreTerms: considerations.filter(
-      (considerationId) => library.considerations?.[considerationId]?.scopes?.includes('move') === true,
-    ),
-    completionScoreTerms: considerations.filter(
-      (considerationId) => library.considerations?.[considerationId]?.scopes?.includes('completion') === true,
-    ),
   };
   const preview = lowerPreviewConfig(profileId, profileDef, diagnostics);
 
@@ -894,8 +887,6 @@ class AgentLibraryCompiler {
     readonly candidateAggregates: Record<string, CompiledAgentAggregate>;
     readonly pruningRules: Record<string, CompiledAgentPruningRule>;
     readonly considerations: Record<string, CompiledAgentConsideration>;
-    readonly scoreTerms: Record<string, CompiledAgentConsideration>;
-    readonly completionScoreTerms: Record<string, CompiledAgentConsideration>;
     readonly tieBreakers: Record<string, CompiledAgentTieBreaker>;
     readonly strategicConditions: Record<string, CompiledStrategicCondition>;
   };
@@ -928,8 +919,6 @@ class AgentLibraryCompiler {
       candidateAggregates: {},
       pruningRules: {},
       considerations: {},
-      scoreTerms: {},
-      completionScoreTerms: {},
       tieBreakers: {},
       strategicConditions: {},
     };
@@ -1283,12 +1272,6 @@ class AgentLibraryCompiler {
 
     this.validateConsiderationScopeRefs(considerationId, compiled, path);
     this.compiled.considerations[considerationId] = compiled;
-    if (compiled.scopes?.includes('move')) {
-      this.compiled.scoreTerms[considerationId] = compiled;
-    }
-    if (compiled.scopes?.includes('completion')) {
-      this.compiled.completionScoreTerms[considerationId] = compiled;
-    }
     this.considerationStatus.set(considerationId, 'done');
     return compiled;
   }

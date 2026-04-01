@@ -176,8 +176,7 @@ function buildGameDefWithAgentExpr(featureId: string, expr: Record<string, unkno
         },
         candidateAggregates: {},
         pruningRules: {},
-        scoreTerms: {},
-        completionScoreTerms: {},
+        considerations: {},
         tieBreakers: {},
         strategicConditions: {},
       },
@@ -187,8 +186,7 @@ function buildGameDefWithAgentExpr(featureId: string, expr: Record<string, unkno
           params: {},
           use: {
             pruningRules: [],
-            scoreTerms: [],
-            completionScoreTerms: [],
+            considerations: [],
             tieBreakers: [],
           },
           plan: {
@@ -397,8 +395,7 @@ describe('top-level runtime schemas', () => {
             },
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: ['preferNamedOption'],
+              considerations: ['preferNamedOption'],
               tieBreakers: ['stableMoveKey'],
             },
             completionGuidance: {
@@ -481,8 +478,7 @@ describe('top-level runtime schemas', () => {
           },
           candidateAggregates: {},
           pruningRules: {},
-          scoreTerms: {},
-          completionScoreTerms: {},
+          considerations: {},
           tieBreakers: {},
           strategicConditions: {},
         },
@@ -492,8 +488,7 @@ describe('top-level runtime schemas', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: [],
             },
             plan: {
@@ -575,8 +570,7 @@ describe('top-level runtime schemas', () => {
           },
           candidateAggregates: {},
           pruningRules: {},
-          scoreTerms: {},
-          completionScoreTerms: {},
+          considerations: {},
           tieBreakers: {},
           strategicConditions: {},
         },
@@ -586,8 +580,7 @@ describe('top-level runtime schemas', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: [],
             },
             plan: {
@@ -670,8 +663,7 @@ describe('top-level runtime schemas', () => {
           },
           candidateAggregates: {},
           pruningRules: {},
-          scoreTerms: {},
-          completionScoreTerms: {},
+          considerations: {},
           tieBreakers: {},
           strategicConditions: {},
         },
@@ -681,8 +673,7 @@ describe('top-level runtime schemas', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: [],
             },
             plan: {
@@ -846,8 +837,7 @@ describe('top-level runtime schemas', () => {
           candidateFeatures: {},
           candidateAggregates: {},
           pruningRules: {},
-          scoreTerms: {},
-          completionScoreTerms: {},
+          considerations: {},
           tieBreakers: {},
           strategicConditions: {},
         },
@@ -902,8 +892,7 @@ describe('top-level runtime schemas', () => {
           candidateFeatures: {},
           candidateAggregates: {},
           pruningRules: {},
-          scoreTerms: {},
-          completionScoreTerms: {},
+          considerations: {},
           tieBreakers: {},
           strategicConditions: {},
         },
@@ -912,8 +901,7 @@ describe('top-level runtime schemas', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
             plan: {

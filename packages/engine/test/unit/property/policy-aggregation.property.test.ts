@@ -43,6 +43,14 @@ function refStateFeature(id: string): Extract<AgentPolicyExpr, { readonly kind: 
   return { kind: 'ref', ref: { kind: 'library', refKind: 'stateFeature', id } };
 }
 
+function moveConsiderations(
+  definitions: Record<string, Omit<AgentPolicyCatalog['library']['considerations'][string], 'scopes'>>,
+): AgentPolicyCatalog['library']['considerations'] {
+  return Object.fromEntries(
+    Object.entries(definitions).map(([id, definition]) => [id, { scopes: ['move'], ...definition }]),
+  );
+}
+
 function createAggregationCatalog(expr: AgentPolicyExpr): AgentPolicyCatalog {
   return {
     schemaVersion: 2,
@@ -92,15 +100,14 @@ function createAggregationCatalog(expr: AgentPolicyExpr): AgentPolicyCatalog {
       candidateFeatures: {},
       candidateAggregates: {},
       pruningRules: {},
-      scoreTerms: {
+      considerations: moveConsiderations({
         metricScore: {
           costClass: 'candidate',
           weight: literal(1),
           value: refStateFeature('metric'),
           dependencies: { parameters: [], stateFeatures: ['metric'], candidateFeatures: [], aggregates: [], strategicConditions: [] },
         },
-      },
-      completionScoreTerms: {},
+      }),
       tieBreakers: {
         stableMoveKey: {
           kind: 'stableMoveKey',
@@ -116,14 +123,14 @@ function createAggregationCatalog(expr: AgentPolicyExpr): AgentPolicyCatalog {
         params: {},
         use: {
           pruningRules: [],
-          scoreTerms: ['metricScore'],
-          completionScoreTerms: [],
+          considerations: ['metricScore'],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
           stateFeatures: ['metric'],
           candidateFeatures: [],
           candidateAggregates: [],
+          considerations: ['metricScore'],
         },
       },
     },

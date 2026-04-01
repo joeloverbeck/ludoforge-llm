@@ -97,8 +97,6 @@ describe('compile considerations', () => {
 
     assert.equal(result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
     assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.use.considerations, ['moveOnly', 'completionOnly', 'both']);
-    assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.use.scoreTerms, ['moveOnly', 'both']);
-    assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.use.completionScoreTerms, ['completionOnly', 'both']);
     assert.deepEqual(result.gameDef?.agents?.library.considerations?.moveOnly?.scopes, ['move']);
     assert.deepEqual(result.gameDef?.agents?.library.considerations?.completionOnly?.scopes, ['completion']);
     assert.deepEqual(result.gameDef?.agents?.library.considerations?.both?.scopes, ['move', 'completion']);

@@ -25,6 +25,14 @@ const opExpr = (op: Extract<AgentPolicyExpr, { readonly kind: 'op' }>['op'], ...
   args,
 });
 
+function completionConsiderations(
+  definitions: Record<string, Omit<AgentPolicyCatalog['library']['considerations'][string], 'scopes'>>,
+): AgentPolicyCatalog['library']['considerations'] {
+  return Object.fromEntries(
+    Object.entries(definitions).map(([id, definition]) => [id, { scopes: ['completion'], ...definition }]),
+  );
+}
+
 function createAction(id: string): ActionDef {
   return {
     id: asActionId(id),
@@ -47,25 +55,21 @@ function createProfile(
     params: {},
     use: {
       pruningRules: [],
-      scoreTerms: [],
-      completionScoreTerms: ['preferTarget'],
+      considerations: ['preferTarget'],
       tieBreakers: [],
-    },
-    completionGuidance: {
-      enabled: true,
-      fallback: 'random',
     },
     plan: {
       stateFeatures: [],
       candidateFeatures: [],
       candidateAggregates: [],
+      considerations: ['preferTarget'],
     },
     ...overrides,
   };
 }
 
 function createCatalog(
-  completionScoreTerms: AgentPolicyCatalog['library']['completionScoreTerms'],
+  considerations: AgentPolicyCatalog['library']['considerations'],
   profile: CompiledAgentProfile = createProfile(),
 ): AgentPolicyCatalog {
   return {
@@ -109,8 +113,7 @@ function createCatalog(
       candidateFeatures: {},
       candidateAggregates: {},
       pruningRules: {},
-      scoreTerms: {},
-      completionScoreTerms,
+      considerations,
       tieBreakers: {},
       strategicConditions: {},
     },
@@ -180,10 +183,10 @@ function createChooseNRequest(overrides: Partial<ChoicePendingRequest> = {}): Ch
 }
 
 function createHarness(
-  completionScoreTerms: AgentPolicyCatalog['library']['completionScoreTerms'],
+  considerations: AgentPolicyCatalog['library']['considerations'],
   profile: CompiledAgentProfile = createProfile(),
 ) {
-  const catalog = createCatalog(completionScoreTerms, profile);
+  const catalog = createCatalog(considerations, profile);
   const def = createDef(catalog);
   return {
     catalog,
@@ -194,10 +197,10 @@ function createHarness(
 }
 
 describe('completion-guidance-choice', () => {
-  it('returns undefined when guidance is disabled', () => {
+  it('returns undefined when no completion-scoped considerations are configured', () => {
     const harness = createHarness({}, createProfile({
-      use: { pruningRules: [], scoreTerms: [], completionScoreTerms: [], tieBreakers: [] },
-      completionGuidance: { enabled: false, fallback: 'random' },
+      use: { pruningRules: [], considerations: [], tieBreakers: [] },
+      plan: { stateFeatures: [], candidateFeatures: [], candidateAggregates: [], considerations: [] },
     }));
 
     const choose = buildCompletionChooseCallback({
@@ -212,9 +215,10 @@ describe('completion-guidance-choice', () => {
     assert.equal(choose, undefined);
   });
 
-  it('returns undefined when no completion score terms are configured', () => {
+  it('returns undefined when the profile references no completion considerations', () => {
     const harness = createHarness({}, createProfile({
-      use: { pruningRules: [], scoreTerms: [], completionScoreTerms: [], tieBreakers: [] },
+      use: { pruningRules: [], considerations: [], tieBreakers: [] },
+      plan: { stateFeatures: [], candidateFeatures: [], candidateAggregates: [], considerations: [] },
     }));
 
     const choose = buildCompletionChooseCallback({
@@ -230,7 +234,7 @@ describe('completion-guidance-choice', () => {
   });
 
   it('returns the highest-scoring legal option', () => {
-    const harness = createHarness({
+    const harness = createHarness(completionConsiderations({
       preferZoneB: {
         costClass: 'state',
         when: literal(true),
@@ -238,8 +242,9 @@ describe('completion-guidance-choice', () => {
         value: opExpr('boolToNumber', opExpr('eq', refExpr({ kind: 'optionIntrinsic', intrinsic: 'value' }), literal('zone-b'))),
         dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
       },
-    }, createProfile({
-      use: { pruningRules: [], scoreTerms: [], completionScoreTerms: ['preferZoneB'], tieBreakers: [] },
+    }), createProfile({
+      use: { pruningRules: [], considerations: ['preferZoneB'], tieBreakers: [] },
+      plan: { stateFeatures: [], candidateFeatures: [], candidateAggregates: [], considerations: ['preferZoneB'] },
     }));
 
     const choose = buildCompletionChooseCallback({
@@ -255,7 +260,7 @@ describe('completion-guidance-choice', () => {
   });
 
   it('ignores illegal options when choosing', () => {
-    const harness = createHarness({
+    const harness = createHarness(completionConsiderations({
       preferZoneA: {
         costClass: 'state',
         when: literal(true),
@@ -270,8 +275,9 @@ describe('completion-guidance-choice', () => {
         value: opExpr('boolToNumber', opExpr('eq', refExpr({ kind: 'optionIntrinsic', intrinsic: 'value' }), literal('zone-b'))),
         dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
       },
-    }, createProfile({
-      use: { pruningRules: [], scoreTerms: [], completionScoreTerms: ['preferZoneA', 'preferZoneB'], tieBreakers: [] },
+    }), createProfile({
+      use: { pruningRules: [], considerations: ['preferZoneA', 'preferZoneB'], tieBreakers: [] },
+      plan: { stateFeatures: [], candidateFeatures: [], candidateAggregates: [], considerations: ['preferZoneA', 'preferZoneB'] },
     }));
 
     const choose = buildCompletionChooseCallback({
@@ -292,8 +298,8 @@ describe('completion-guidance-choice', () => {
     })), 'zone-a');
   });
 
-  it('returns the first legal option when fallback is first and no positive score exists', () => {
-    const harness = createHarness({
+  it('returns undefined when no positive completion score exists', () => {
+    const harness = createHarness(completionConsiderations({
       noMatch: {
         costClass: 'state',
         when: literal(false),
@@ -301,35 +307,9 @@ describe('completion-guidance-choice', () => {
         value: literal(100),
         dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
       },
-    }, createProfile({
-      use: { pruningRules: [], scoreTerms: [], completionScoreTerms: ['noMatch'], tieBreakers: [] },
-      completionGuidance: { enabled: true, fallback: 'first' },
-    }));
-
-    const choose = buildCompletionChooseCallback({
-      state: harness.state,
-      def: harness.def,
-      catalog: harness.catalog,
-      playerId: asPlayerId(0),
-      seatId: 'us',
-      profile: harness.profile,
-    });
-
-    assert.equal(choose?.(createChoiceRequest()), 'zone-a');
-  });
-
-  it('returns undefined when fallback is random and no positive score exists', () => {
-    const harness = createHarness({
-      noMatch: {
-        costClass: 'state',
-        when: literal(false),
-        weight: literal(1),
-        value: literal(100),
-        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
-      },
-    }, createProfile({
-      use: { pruningRules: [], scoreTerms: [], completionScoreTerms: ['noMatch'], tieBreakers: [] },
-      completionGuidance: { enabled: true, fallback: 'random' },
+    }), createProfile({
+      use: { pruningRules: [], considerations: ['noMatch'], tieBreakers: [] },
+      plan: { stateFeatures: [], candidateFeatures: [], candidateAggregates: [], considerations: ['noMatch'] },
     }));
 
     const choose = buildCompletionChooseCallback({
@@ -345,7 +325,7 @@ describe('completion-guidance-choice', () => {
   });
 
   it('scores unknown options when no legal options are available', () => {
-    const harness = createHarness({
+    const harness = createHarness(completionConsiderations({
       preferZoneB: {
         costClass: 'state',
         when: literal(true),
@@ -353,8 +333,9 @@ describe('completion-guidance-choice', () => {
         value: opExpr('boolToNumber', opExpr('eq', refExpr({ kind: 'optionIntrinsic', intrinsic: 'value' }), literal('zone-b'))),
         dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
       },
-    }, createProfile({
-      use: { pruningRules: [], scoreTerms: [], completionScoreTerms: ['preferZoneB'], tieBreakers: [] },
+    }), createProfile({
+      use: { pruningRules: [], considerations: ['preferZoneB'], tieBreakers: [] },
+      plan: { stateFeatures: [], candidateFeatures: [], candidateAggregates: [], considerations: ['preferZoneB'] },
     }));
 
     const choose = buildCompletionChooseCallback({
@@ -375,7 +356,7 @@ describe('completion-guidance-choice', () => {
   });
 
   it('returns a chooseN subset containing all positive-scoring options up to max', () => {
-    const harness = createHarness({
+    const harness = createHarness(completionConsiderations({
       preferZoneA: {
         costClass: 'state',
         when: literal(true),
@@ -390,8 +371,9 @@ describe('completion-guidance-choice', () => {
         value: opExpr('boolToNumber', opExpr('eq', refExpr({ kind: 'optionIntrinsic', intrinsic: 'value' }), literal('zone-c'))),
         dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
       },
-    }, createProfile({
-      use: { pruningRules: [], scoreTerms: [], completionScoreTerms: ['preferZoneA', 'preferZoneC'], tieBreakers: [] },
+    }), createProfile({
+      use: { pruningRules: [], considerations: ['preferZoneA', 'preferZoneC'], tieBreakers: [] },
+      plan: { stateFeatures: [], candidateFeatures: [], candidateAggregates: [], considerations: ['preferZoneA', 'preferZoneC'] },
     }));
 
     const choose = buildCompletionChooseCallback({
@@ -407,7 +389,7 @@ describe('completion-guidance-choice', () => {
   });
 
   it('pads chooseN selections up to min using highest-ranked remaining options', () => {
-    const harness = createHarness({
+    const harness = createHarness(completionConsiderations({
       preferZoneB: {
         costClass: 'state',
         when: literal(true),
@@ -415,8 +397,9 @@ describe('completion-guidance-choice', () => {
         value: opExpr('boolToNumber', opExpr('eq', refExpr({ kind: 'optionIntrinsic', intrinsic: 'value' }), literal('zone-b'))),
         dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
       },
-    }, createProfile({
-      use: { pruningRules: [], scoreTerms: [], completionScoreTerms: ['preferZoneB'], tieBreakers: [] },
+    }), createProfile({
+      use: { pruningRules: [], considerations: ['preferZoneB'], tieBreakers: [] },
+      plan: { stateFeatures: [], candidateFeatures: [], candidateAggregates: [], considerations: ['preferZoneB'] },
     }));
 
     const choose = buildCompletionChooseCallback({
@@ -431,8 +414,8 @@ describe('completion-guidance-choice', () => {
     assert.deepEqual(choose?.(createChooseNRequest({ min: 2, max: 2 })), ['zone-b', 'zone-a']);
   });
 
-  it('returns the first deterministic chooseN subset when fallback is first', () => {
-    const harness = createHarness({
+  it('returns undefined for chooseN when no option has a positive score', () => {
+    const harness = createHarness(completionConsiderations({
       noMatch: {
         costClass: 'state',
         when: literal(false),
@@ -440,9 +423,9 @@ describe('completion-guidance-choice', () => {
         value: literal(100),
         dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
       },
-    }, createProfile({
-      use: { pruningRules: [], scoreTerms: [], completionScoreTerms: ['noMatch'], tieBreakers: [] },
-      completionGuidance: { enabled: true, fallback: 'first' },
+    }), createProfile({
+      use: { pruningRules: [], considerations: ['noMatch'], tieBreakers: [] },
+      plan: { stateFeatures: [], candidateFeatures: [], candidateAggregates: [], considerations: ['noMatch'] },
     }));
 
     const choose = buildCompletionChooseCallback({
@@ -454,6 +437,6 @@ describe('completion-guidance-choice', () => {
       profile: harness.profile,
     });
 
-    assert.deepEqual(choose?.(createChooseNRequest({ min: 2, max: 3 })), ['zone-a', 'zone-b']);
+    assert.equal(choose?.(createChooseNRequest({ min: 2, max: 3 })), undefined);
   });
 });

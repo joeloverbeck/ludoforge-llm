@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — game data + tests
-**Deps**: `archive/tickets/104UNIDECCON-005.md`, `tickets/104UNIDECCON-006.md`, `specs/104-unified-decision-context-considerations.md`
+**Deps**: `archive/tickets/104UNIDECCON-005.md`, `archive/tickets/104UNIDECCON-006.md`, `specs/104-unified-decision-context-considerations.md`
 
 ## Problem
 

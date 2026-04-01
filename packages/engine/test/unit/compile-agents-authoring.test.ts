@@ -360,22 +360,6 @@ describe('agents authoring surface', () => {
           },
         },
       },
-      scoreTerms: {
-        preferEvents: {
-          scopes: ['move'],
-          costClass: 'candidate',
-          weight: literal(1),
-          value: opExpr('boolToNumber', refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'isPass' })),
-          dependencies: {
-            parameters: [],
-            stateFeatures: [],
-            candidateFeatures: ['isPass'],
-            aggregates: [],
-            strategicConditions: [],
-          },
-        },
-      },
-      completionScoreTerms: {},
       tieBreakers: {
         stableMoveKey: {
           kind: 'stableMoveKey',
@@ -397,10 +381,8 @@ describe('agents authoring surface', () => {
       tieOrder: ['stable', 'projected'],
     });
     assert.deepEqual(baselineProfile.use, {
-      considerations: ['preferEvents'],
       pruningRules: ['dropPassWhenStrongerMoveExists'],
-      scoreTerms: ['preferEvents'],
-      completionScoreTerms: [],
+      considerations: ['preferEvents'],
       tieBreakers: ['stableMoveKey'],
     });
     assert.deepEqual(baselineProfile.plan, {
@@ -455,13 +437,13 @@ describe('agents authoring surface', () => {
               expr: { ref: 'victory.currentMargin.us' },
             },
           },
-          scoreTerms: {
+          considerations: {
             preferEvents: {
+              scopes: ['move'],
               weight: 1,
               value: { boolToNumber: { ref: 'feature.isPass' } },
             },
           },
-          completionScoreTerms: {},
           tieBreakers: {
             stableMoveKey: {
               kind: 'stableMoveKey' as const,
@@ -478,8 +460,7 @@ describe('agents authoring surface', () => {
             },
             use: {
               pruningRules: [],
-              scoreTerms: ['preferEvents'],
-              completionScoreTerms: [],
+              considerations: ['preferEvents'],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -504,8 +485,7 @@ describe('agents authoring surface', () => {
             },
             use: {
               tieBreakers: ['stableMoveKey'],
-              scoreTerms: ['preferEvents'],
-              completionScoreTerms: [],
+              considerations: ['preferEvents'],
               pruningRules: [],
             },
           },
@@ -518,8 +498,9 @@ describe('agents authoring surface', () => {
               kind: 'stableMoveKey' as const,
             },
           },
-          scoreTerms: {
+          considerations: {
             preferEvents: {
+              scopes: ['move'],
               value: { boolToNumber: { ref: 'feature.isPass' } },
               weight: 1,
             },
@@ -648,7 +629,6 @@ describe('agents authoring surface', () => {
       },
     });
     assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.use.considerations, ['preferNamedOption']);
-    assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.use.completionScoreTerms, ['preferNamedOption']);
   });
 
   it('lowers dynamic zoneProp completion considerations through the shared expression pipeline', () => {
@@ -741,8 +721,9 @@ describe('agents authoring surface', () => {
               expr: { ref: 'candidate.paramCount' },
             },
           },
-          scoreTerms: {
+          considerations: {
             rewardLoadedMoves: {
+              scopes: ['move'],
               weight: 1,
               value: { ref: 'feature.paramLoad' },
             },
@@ -758,8 +739,7 @@ describe('agents authoring surface', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: ['rewardLoadedMoves'],
-              completionScoreTerms: [],
+              considerations: ['rewardLoadedMoves'],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -838,8 +818,7 @@ describe('agents authoring surface', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
             preview: {
@@ -877,8 +856,7 @@ describe('agents authoring surface', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -911,8 +889,7 @@ describe('agents authoring surface', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
             preview: {
@@ -1040,14 +1017,15 @@ describe('agents authoring surface', () => {
     );
   });
 
-  it('accepts valid completion guidance references without validator diagnostics', () => {
+  it('accepts valid completion-scoped considerations without validator diagnostics', () => {
     const diagnostics = validateGameSpec({
       ...createCompileReadyDoc(),
       dataAssets: [createSeatCatalogAsset(['us'])],
       agents: withObserver({
         library: {
-          completionScoreTerms: {
+          considerations: {
             preferNamedOption: {
+              scopes: ['completion'],
               when: { eq: [{ ref: 'decision.type' }, 'chooseOne'] },
               weight: 2,
               value: {
@@ -1070,13 +1048,8 @@ describe('agents authoring surface', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: ['preferNamedOption'],
+              considerations: ['preferNamedOption'],
               tieBreakers: ['stableMoveKey'],
-            },
-            completionGuidance: {
-              enabled: true,
-              fallback: 'first',
             },
           },
         },
@@ -1089,9 +1062,7 @@ describe('agents authoring surface', () => {
     assert.equal(
       diagnostics.some(
         (diagnostic) =>
-          diagnostic.code === 'CNL_VALIDATOR_AGENTS_PROFILE_USE_UNKNOWN_ID'
-          || diagnostic.code === 'CNL_VALIDATOR_AGENTS_COMPLETION_GUIDANCE_MISSING_TERMS'
-          || diagnostic.path === 'doc.agents.profiles.baseline.completionGuidance.fallback',
+          diagnostic.code === 'CNL_VALIDATOR_AGENTS_PROFILE_USE_UNKNOWN_ID',
       ),
       false,
     );
@@ -1121,7 +1092,7 @@ describe('agents authoring surface', () => {
         profiles: {
           baseline: {
             params: {},
-            use: { pruningRules: [], scoreTerms: [], completionScoreTerms: [], tieBreakers: ['stableMoveKey'] },
+            use: { pruningRules: [], considerations: [], tieBreakers: ['stableMoveKey'] },
           },
         },
         bindings: { us: 'baseline', arvn: 'baseline' },
@@ -1156,7 +1127,7 @@ describe('agents authoring surface', () => {
         profiles: {
           baseline: {
             params: {},
-            use: { pruningRules: [], scoreTerms: [], completionScoreTerms: [], tieBreakers: ['stableMoveKey'] },
+            use: { pruningRules: [], considerations: [], tieBreakers: ['stableMoveKey'] },
           },
         },
         bindings: { us: 'baseline' },
@@ -1191,7 +1162,7 @@ describe('agents authoring surface', () => {
         profiles: {
           baseline: {
             params: {},
-            use: { pruningRules: [], scoreTerms: [], completionScoreTerms: [], tieBreakers: ['stableMoveKey'] },
+            use: { pruningRules: [], considerations: [], tieBreakers: ['stableMoveKey'] },
           },
         },
         bindings: { us: 'baseline' },
@@ -1244,8 +1215,7 @@ describe('agents authoring surface', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -1356,8 +1326,7 @@ describe('agents authoring surface', () => {
             },
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -1391,8 +1360,7 @@ describe('agents authoring surface', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -1430,8 +1398,7 @@ describe('agents authoring surface', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -1479,8 +1446,7 @@ describe('agents authoring surface', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -1638,8 +1604,7 @@ describe('agents authoring surface', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -1701,8 +1666,7 @@ describe('agents authoring surface', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -1771,8 +1735,7 @@ describe('agents authoring surface', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -1832,8 +1795,7 @@ describe('agents authoring surface', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -1896,8 +1858,7 @@ describe('agents authoring surface', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -1974,8 +1935,7 @@ describe('agents authoring surface', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -2029,8 +1989,7 @@ describe('agents authoring surface', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -2087,8 +2046,7 @@ describe('agents authoring surface', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -2146,8 +2104,7 @@ describe('agents authoring surface', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
           },

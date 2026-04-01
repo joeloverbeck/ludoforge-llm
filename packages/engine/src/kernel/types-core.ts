@@ -666,9 +666,6 @@ export interface CompiledAgentConsideration {
   readonly dependencies: CompiledAgentDependencyRefs;
 }
 
-/** @deprecated Use CompiledAgentConsideration. Removed in ticket 003. */
-export type CompiledAgentScoreTerm = CompiledAgentConsideration;
-
 export interface CompiledAgentTieBreaker {
   readonly kind: string;
   readonly costClass: AgentPolicyCostClass;
@@ -690,18 +687,9 @@ export interface CompiledAgentLibraryIndex {
   readonly candidateFeatures: Readonly<Record<string, CompiledAgentCandidateFeature>>;
   readonly candidateAggregates: Readonly<Record<string, CompiledAgentAggregate>>;
   readonly pruningRules: Readonly<Record<string, CompiledAgentPruningRule>>;
-  readonly considerations?: Readonly<Record<string, CompiledAgentConsideration>>;
-  /** @deprecated Use considerations. */
-  readonly scoreTerms: Readonly<Record<string, CompiledAgentScoreTerm>>;
-  /** @deprecated Use considerations. */
-  readonly completionScoreTerms: Readonly<Record<string, CompiledAgentScoreTerm>>;
+  readonly considerations: Readonly<Record<string, CompiledAgentConsideration>>;
   readonly tieBreakers: Readonly<Record<string, CompiledAgentTieBreaker>>;
   readonly strategicConditions: Readonly<Record<string, CompiledStrategicCondition>>;
-}
-
-export interface CompletionGuidanceConfig {
-  readonly enabled: boolean;
-  readonly fallback: 'random' | 'first';
 }
 
 export interface PreviewToleranceConfig {
@@ -713,22 +701,16 @@ export interface CompiledAgentProfile {
   readonly observerName?: string;
   readonly params: Readonly<Record<string, AgentParameterValue>>;
   readonly use: {
-    readonly considerations?: readonly string[];
+    readonly considerations: readonly string[];
     readonly pruningRules: readonly string[];
-    /** @deprecated Use considerations. */
-    readonly scoreTerms: readonly string[];
-    /** @deprecated Use considerations. */
-    readonly completionScoreTerms: readonly string[];
     readonly tieBreakers: readonly string[];
   };
-  /** @deprecated Derived from completion-scoped considerations. */
-  readonly completionGuidance?: CompletionGuidanceConfig;
   readonly preview?: PreviewToleranceConfig;
   readonly plan: {
     readonly stateFeatures: readonly string[];
     readonly candidateFeatures: readonly string[];
     readonly candidateAggregates: readonly string[];
-    readonly considerations?: readonly string[] | undefined;
+    readonly considerations: readonly string[];
   };
 }
 

@@ -73,14 +73,14 @@ function createMinimalCatalog(overrides?: {
     params: {},
     use: {
       pruningRules: [],
-      scoreTerms: [],
-      completionScoreTerms: [],
+      considerations: [],
       tieBreakers: [],
     },
     plan: {
       stateFeatures: [],
       candidateFeatures: [],
       candidateAggregates: [],
+      considerations: [],
     },
   };
   return {
@@ -106,8 +106,7 @@ function createMinimalCatalog(overrides?: {
       candidateFeatures: {},
       candidateAggregates: {},
       pruningRules: {},
-      scoreTerms: {},
-      completionScoreTerms: {},
+      considerations: {},
       tieBreakers: {},
       strategicConditions: {},
     },

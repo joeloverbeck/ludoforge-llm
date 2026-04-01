@@ -258,8 +258,9 @@ describe('strategic condition compilation', () => {
               expr: { ref: 'condition.baseCondition.satisfied' },
             },
           },
-          scoreTerms: {
+          considerations: {
             useCondition: {
+              scopes: ['move'],
               weight: 1,
               value: { ref: 'condition.baseCondition.proximity' },
             },
@@ -280,9 +281,9 @@ describe('strategic condition compilation', () => {
       `stateFeature deps should include baseCondition: ${JSON.stringify(featureDeps.strategicConditions)}`,
     );
 
-    const useConditionTerm = catalog.library.scoreTerms['useCondition'];
-    assert.ok(useConditionTerm, 'useCondition score term should exist');
-    const scoreTermDeps = useConditionTerm.dependencies;
+    const useCondition = catalog.library.considerations['useCondition'];
+    assert.ok(useCondition, 'useCondition consideration should exist');
+    const scoreTermDeps = useCondition.dependencies;
     assert.ok(
       scoreTermDeps.strategicConditions.includes('baseCondition'),
       `scoreTerm deps should include baseCondition: ${JSON.stringify(scoreTermDeps.strategicConditions)}`,

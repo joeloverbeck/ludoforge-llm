@@ -39,14 +39,14 @@ function createMinimalCatalog(overrides?: {
     params: {},
     use: {
       pruningRules: [],
-      scoreTerms: [],
-      completionScoreTerms: [],
+      considerations: [],
       tieBreakers: [],
     },
     plan: {
       stateFeatures: [],
       candidateFeatures: [],
       candidateAggregates: [],
+      considerations: [],
     },
     ...(overrides?.tolerateRngDivergence !== undefined
       ? { preview: { tolerateRngDivergence: overrides.tolerateRngDivergence } }
@@ -75,8 +75,7 @@ function createMinimalCatalog(overrides?: {
       candidateFeatures: {},
       candidateAggregates: {},
       pruningRules: {},
-      scoreTerms: {},
-      completionScoreTerms: {},
+      considerations: {},
       tieBreakers: {},
       strategicConditions: {},
     },

@@ -743,7 +743,7 @@
         "onEmpty": "skipRule"
       }
     },
-    "scoreTerms": {
+    "considerations": {
       "preferProjectedSelfMargin": {
         "scopes": [
           "move"
@@ -1317,9 +1317,7 @@
           "aggregates": [],
           "strategicConditions": []
         }
-      }
-    },
-    "completionScoreTerms": {
+      },
       "preferPopulousTargets": {
         "scopes": [
           "completion"
@@ -1464,7 +1462,7 @@
         "pruningRules": [
           "dropPassWhenOtherMovesExist"
         ],
-        "scoreTerms": [
+        "considerations": [
           "preferProjectedSelfMargin",
           "preserveResources",
           "preferEvent",
@@ -1473,7 +1471,6 @@
           "preferAssaultAction",
           "preferAdviseAction"
         ],
-        "completionScoreTerms": [],
         "tieBreakers": [
           "stableMoveKey"
         ]
@@ -1488,9 +1485,18 @@
         ],
         "candidateAggregates": [
           "hasNonPassAlternative"
+        ],
+        "considerations": [
+          "preferProjectedSelfMargin",
+          "preserveResources",
+          "preferEvent",
+          "preferTrainAction",
+          "preferPatrolAction",
+          "preferAssaultAction",
+          "preferAdviseAction"
         ]
       },
-      "fingerprint": "26c2e0d761f746abbfce92b7cbf741bb38f63d6542537c6b6df5c1d86d53f660"
+      "fingerprint": "8ebafac94af1c30f14c39feac1b66ee61aa9c3232f16ca5ef8d6131c2c865f9a"
     },
     "arvn-baseline": {
       "observerName": "currentPlayer",
@@ -1503,7 +1509,7 @@
         "pruningRules": [
           "dropPassWhenOtherMovesExist"
         ],
-        "scoreTerms": [
+        "considerations": [
           "preferProjectedSelfMargin",
           "preserveResources",
           "preferEvent",
@@ -1513,7 +1519,6 @@
           "preferAssaultAction",
           "preferGovernAction"
         ],
-        "completionScoreTerms": [],
         "tieBreakers": [
           "stableMoveKey"
         ]
@@ -1528,9 +1533,19 @@
         ],
         "candidateAggregates": [
           "hasNonPassAlternative"
+        ],
+        "considerations": [
+          "preferProjectedSelfMargin",
+          "preserveResources",
+          "preferEvent",
+          "preferTrainAction",
+          "preferPatrolAction",
+          "preferSweepAction",
+          "preferAssaultAction",
+          "preferGovernAction"
         ]
       },
-      "fingerprint": "bff5c08e37a41208335a8334dd8a4b4fbec90372b0775c7f45c0b0392bb7cc43"
+      "fingerprint": "4747e24d00edf9fc2c5aa04d711a7892fc8d4ea4d202c825a56001a156b16ad1"
     },
     "nva-baseline": {
       "observerName": "currentPlayer",
@@ -1543,7 +1558,7 @@
         "pruningRules": [
           "dropPassWhenOtherMovesExist"
         ],
-        "scoreTerms": [
+        "considerations": [
           "preferProjectedSelfMargin",
           "preserveResources",
           "preferEvent",
@@ -1554,7 +1569,6 @@
           "preferInfiltrateAction",
           "preferBombardAction"
         ],
-        "completionScoreTerms": [],
         "tieBreakers": [
           "stableMoveKey"
         ]
@@ -1569,9 +1583,20 @@
         ],
         "candidateAggregates": [
           "hasNonPassAlternative"
+        ],
+        "considerations": [
+          "preferProjectedSelfMargin",
+          "preserveResources",
+          "preferEvent",
+          "preferRallyAction",
+          "preferMarchAction",
+          "preferAttackAction",
+          "preferTerrorAction",
+          "preferInfiltrateAction",
+          "preferBombardAction"
         ]
       },
-      "fingerprint": "0e0bb4c530f5b267f87195832d2c9638d79011c69d03a8fa5056bd14752e217e"
+      "fingerprint": "e3719ecdb5f09669df5b493ea6250e3f529ed09c9a4b05b11abe61de8a2362ad"
     },
     "vc-baseline": {
       "observerName": "currentPlayer",
@@ -1584,7 +1609,7 @@
         "pruningRules": [
           "dropPassWhenOtherMovesExist"
         ],
-        "scoreTerms": [
+        "considerations": [
           "preferProjectedSelfMargin",
           "preserveResources",
           "preferEvent",
@@ -1595,7 +1620,6 @@
           "preferTaxAction",
           "preferSubvertAction"
         ],
-        "completionScoreTerms": [],
         "tieBreakers": [
           "stableMoveKey"
         ]
@@ -1610,9 +1634,20 @@
         ],
         "candidateAggregates": [
           "hasNonPassAlternative"
+        ],
+        "considerations": [
+          "preferProjectedSelfMargin",
+          "preserveResources",
+          "preferEvent",
+          "preferRallyAction",
+          "preferMarchAction",
+          "preferAttackAction",
+          "preferTerrorAction",
+          "preferTaxAction",
+          "preferSubvertAction"
         ]
       },
-      "fingerprint": "d2ff8a30ebfc6a86e6714f9d24294200c9b4f739c0de9d5f7549a98a18748739"
+      "fingerprint": "65286dff64947980322f1872bab9297c80c0547fb7e8b3103f26163e376d0a31"
     },
     "vc-evolved": {
       "observerName": "currentPlayer",
@@ -1624,21 +1659,15 @@
         "pruningRules": [
           "dropPassWhenOtherMovesExist"
         ],
-        "scoreTerms": [
+        "considerations": [
           "preferRallyWeighted",
-          "preferTaxWeighted"
-        ],
-        "completionScoreTerms": [
+          "preferTaxWeighted",
           "preferPopulousTargets"
         ],
         "tieBreakers": [
           "preferCheapTargetSpaces",
           "stableMoveKey"
         ]
-      },
-      "completionGuidance": {
-        "enabled": true,
-        "fallback": "random"
       },
       "preview": {
         "tolerateRngDivergence": true
@@ -1650,9 +1679,14 @@
         ],
         "candidateAggregates": [
           "hasNonPassAlternative"
+        ],
+        "considerations": [
+          "preferRallyWeighted",
+          "preferTaxWeighted",
+          "preferPopulousTargets"
         ]
       },
-      "fingerprint": "8575e9c456b746171f95455df8bd1898e88b9f1d7091992491f1605ab097cb2e"
+      "fingerprint": "a2574770837aa8f2c8c28b2d5508e0c5b3d9a407ec81e37b4532c06bc83ade70"
     }
   },
   "bindingsBySeat": {
@@ -1661,5 +1695,5 @@
     "nva": "nva-baseline",
     "vc": "vc-evolved"
   },
-  "catalogFingerprint": "868b2e42f0e57c11d26d32ac2c8468398ca8c2c8c5298b729cc2048e5692732b"
+  "catalogFingerprint": "72774c526d660363e370eca450a71992450602faf3778f090daae7b8b4b1c9d8"
 }

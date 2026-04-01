@@ -76,108 +76,126 @@ agents:
             - { ref: aggregate.hasNonPassAlternative }
         onEmpty: skipRule
 
-    scoreTerms:
+    considerations:
       preferProjectedSelfMargin:
+        scopes: [move]
         weight:
           param: projectedMarginWeight
         value:
           ref: feature.projectedSelfMargin
       preserveResources:
+        scopes: [move]
         weight:
           param: resourceWeight
         value:
           ref: feature.selfResources
       preferEvent:
+        scopes: [move]
         weight:
           param: eventWeight
         value:
           boolToNumber:
             ref: candidate.tag.event-play
       preferTrainAction:
+        scopes: [move]
         weight: 1
         value:
           boolToNumber:
             ref: candidate.tag.train
       preferPatrolAction:
+        scopes: [move]
         weight: 1
         value:
           boolToNumber:
             ref: candidate.tag.patrol
       preferAssaultAction:
+        scopes: [move]
         weight: 1
         value:
           boolToNumber:
             ref: candidate.tag.assault
       preferAdviseAction:
+        scopes: [move]
         weight: 1
         value:
           boolToNumber:
             ref: candidate.tag.advise
       preferSweepAction:
+        scopes: [move]
         weight: 1
         value:
           boolToNumber:
             ref: candidate.tag.sweep
       preferGovernAction:
+        scopes: [move]
         weight: 1
         value:
           boolToNumber:
             ref: candidate.tag.govern
       preferRallyAction:
+        scopes: [move]
         weight: 1
         value:
           boolToNumber:
             ref: candidate.tag.rally
       preferRallyWeighted:
+        scopes: [move]
         weight:
           param: rallyWeight
         value:
           boolToNumber:
             ref: candidate.tag.rally
       preferMarchAction:
+        scopes: [move]
         weight: 1
         value:
           boolToNumber:
             ref: candidate.tag.march
       preferAttackAction:
+        scopes: [move]
         weight: 1
         value:
           boolToNumber:
             ref: candidate.tag.attack
       preferTerrorAction:
+        scopes: [move]
         weight: 1
         value:
           boolToNumber:
             ref: candidate.tag.terror
       preferTaxAction:
+        scopes: [move]
         weight: 1
         value:
           boolToNumber:
             ref: candidate.tag.tax
       preferTaxWeighted:
+        scopes: [move]
         weight:
           param: taxWeight
         value:
           boolToNumber:
             ref: candidate.tag.tax
       preferSubvertAction:
+        scopes: [move]
         weight: 1
         value:
           boolToNumber:
             ref: candidate.tag.subvert
       preferInfiltrateAction:
+        scopes: [move]
         weight: 1
         value:
           boolToNumber:
             ref: candidate.tag.infiltrate
       preferBombardAction:
+        scopes: [move]
         weight: 1
         value:
           boolToNumber:
             ref: candidate.tag.bombard
-
-    completionScoreTerms:
       preferPopulousTargets:
+        scopes: [completion]
         when:
           and:
             - eq:
@@ -215,7 +233,7 @@ agents:
       use:
         pruningRules:
           - dropPassWhenOtherMovesExist
-        scoreTerms:
+        considerations:
           - preferProjectedSelfMargin
           - preserveResources
           - preferEvent
@@ -235,7 +253,7 @@ agents:
       use:
         pruningRules:
           - dropPassWhenOtherMovesExist
-        scoreTerms:
+        considerations:
           - preferProjectedSelfMargin
           - preserveResources
           - preferEvent
@@ -256,7 +274,7 @@ agents:
       use:
         pruningRules:
           - dropPassWhenOtherMovesExist
-        scoreTerms:
+        considerations:
           - preferProjectedSelfMargin
           - preserveResources
           - preferEvent
@@ -278,7 +296,7 @@ agents:
       use:
         pruningRules:
           - dropPassWhenOtherMovesExist
-        scoreTerms:
+        considerations:
           - preferProjectedSelfMargin
           - preserveResources
           - preferEvent
@@ -301,17 +319,13 @@ agents:
       use:
         pruningRules:
           - dropPassWhenOtherMovesExist
-        scoreTerms:
+        considerations:
           - preferRallyWeighted
           - preferTaxWeighted
-        completionScoreTerms:
           - preferPopulousTargets
         tieBreakers:
           - preferCheapTargetSpaces
           - stableMoveKey
-      completionGuidance:
-        enabled: true
-        fallback: random
 
   bindings:
     us: us-baseline

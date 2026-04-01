@@ -1,14 +1,14 @@
-# 104UNIDECCON-008: Diagnostic codes, schema artifacts, golden fixtures, and full verification
+# 104UNIDECCON-008: Diagnostic codes, schema artifacts, and full verification
 
 **Status**: PENDING
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — `compiler-diagnostic-codes.ts`, schema artifacts
-**Deps**: `archive/tickets/104UNIDECCON-001.md`, `archive/tickets/104UNIDECCON-002.md`, `archive/tickets/104UNIDECCON-003.md`, `archive/tickets/104UNIDECCON-004.md`, `archive/tickets/104UNIDECCON-005.md`, `archive/tickets/104UNIDECCON-006.md`, `tickets/104UNIDECCON-007.md`, `specs/104-unified-decision-context-considerations.md`
+**Deps**: `archive/tickets/104UNIDECCON-001.md`, `archive/tickets/104UNIDECCON-002.md`, `archive/tickets/104UNIDECCON-003.md`, `archive/tickets/104UNIDECCON-004.md`, `archive/tickets/104UNIDECCON-005.md`, `archive/tickets/104UNIDECCON-006.md`, `archive/tickets/104UNIDECCON-007.md`, `specs/104-unified-decision-context-considerations.md`
 
 ## Problem
 
-New diagnostic codes used by consideration compilation and scope validation must be registered in the canonical registry. Schema artifacts must be regenerated and verified idempotent. Golden fixtures must be updated. Full verification must pass.
+New diagnostic codes used by consideration compilation and scope validation must be registered in the canonical registry. Schema artifacts must be regenerated and verified idempotent. Full verification must pass.
 
 ## Assumption Reassessment (2026-04-01)
 
@@ -39,24 +39,19 @@ If library shape change affects `CompileSectionResults`, update `compiler-struct
 
 ### 3. Regenerate schema artifacts
 
-### 4. Update golden fixtures
-
-Regenerate `fitl-policy-catalog.golden.json`, `texas-policy-catalog.golden.json`, `fitl-policy-summary.golden.json`, `texas-policy-summary.golden.json`.
-
-### 5. Full verification
+### 4. Full verification
 
 ## Files to Touch
 
 - `packages/engine/src/cnl/compiler-diagnostic-codes.ts` (modify)
 - `packages/engine/test/unit/compiler-structured-results.test.ts` (modify — if needed)
 - `packages/engine/schemas/GameDef.schema.json` (modify — regenerated)
-- `packages/engine/test/fixtures/gamedef/*.golden.json` (modify)
-- `packages/engine/test/fixtures/trace/*.golden.json` (modify)
 
 ## Out of Scope
 
 - New feature work
 - Runner or simulator changes
+- Golden fixture migration already completed in `archive/tickets/104UNIDECCON-007.md`
 
 ## Acceptance Criteria
 

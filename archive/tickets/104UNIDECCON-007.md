@@ -1,6 +1,6 @@
 # 104UNIDECCON-007: Migrate FITL and Texas Hold'em agent profiles
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — game data + tests
@@ -98,3 +98,18 @@ In `data/games/texas-holdem/92-agents.md`:
 1. `pnpm -F @ludoforge/engine test:e2e` — end-to-end
 2. `pnpm -F @ludoforge/engine test` — full suite
 3. `pnpm turbo typecheck`
+
+## Outcome
+
+Completed: 2026-04-01
+
+- Migrated FITL and Texas authored agent docs from `scoreTerms`/`completionScoreTerms` to unified `considerations`, adding explicit scopes and removing FITL authored `completionGuidance`.
+- Added `packages/engine/test/integration/considerations-e2e.test.ts` to verify authored migration, compiled output shape, and fixed-seed behavioral equivalence for FITL and Texas.
+- Regenerated the owned production policy catalog and summary golden fixtures to the unified consideration shape and updated profile/catalog fingerprints.
+- Adjusted the behavioral equivalence assertion to compare fixed-seed move-selection behavior and trace semantics rather than raw profile fingerprints, because the migration intentionally changes artifact identity while preserving decisions.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine typecheck`
+- `pnpm -F @ludoforge/engine build`
+- `node --test "dist/test/integration/considerations-e2e.test.js" "dist/test/unit/policy-production-golden.test.js" "dist/test/integration/cross-validate-production.test.js" "dist/test/integration/parse-validate-full-spec.test.js"` from `packages/engine`

@@ -554,7 +554,7 @@
     },
     "candidateAggregates": {},
     "pruningRules": {},
-    "scoreTerms": {
+    "considerations": {
       "preferCheck": {
         "scopes": [
           "move"
@@ -764,7 +764,6 @@
         }
       }
     },
-    "completionScoreTerms": {},
     "tieBreakers": {
       "stableMoveKey": {
         "kind": "stableMoveKey",
@@ -785,7 +784,7 @@
       "params": {},
       "use": {
         "pruningRules": [],
-        "scoreTerms": [
+        "considerations": [
           "preferCheck",
           "preferCall",
           "avoidFold",
@@ -793,7 +792,6 @@
           "alwaysRaise",
           "preferLargerRaise"
         ],
-        "completionScoreTerms": [],
         "tieBreakers": [
           "stableMoveKey"
         ]
@@ -807,13 +805,21 @@
         "candidateFeatures": [
           "raiseAmount"
         ],
-        "candidateAggregates": []
+        "candidateAggregates": [],
+        "considerations": [
+          "preferCheck",
+          "preferCall",
+          "avoidFold",
+          "foldWhenBadPotOdds",
+          "alwaysRaise",
+          "preferLargerRaise"
+        ]
       },
-      "fingerprint": "19862b7c92093a48390631dca24a5048068d041f69b1db443b58f357a9b33742"
+      "fingerprint": "02d4360b7936f5beb09850dab64d91e604a1f15c7497f621619b60fe2efde886"
     }
   },
   "bindingsBySeat": {
     "neutral": "baseline"
   },
-  "catalogFingerprint": "971f4aa78ec55bad0faf4ddd863959ab2249bc390a6cfdc7c93eb2af5a2a97a5"
+  "catalogFingerprint": "bc0896e0fbfa4cc742dec3922ff3b0fbcd6abe9624e17980f44a98e7e0313938"
 }

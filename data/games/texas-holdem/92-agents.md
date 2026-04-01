@@ -77,23 +77,27 @@ agents:
 
     pruningRules: {}
 
-    scoreTerms:
+    considerations:
       preferCheck:
+        scopes: [move]
         weight: 100
         value:
           boolToNumber:
             ref: candidate.tag.check
       preferCall:
+        scopes: [move]
         weight: 80
         value:
           boolToNumber:
             ref: candidate.tag.call
       avoidFold:
+        scopes: [move]
         weight: -100
         value:
           boolToNumber:
             ref: candidate.tag.fold
       foldWhenBadPotOdds:
+        scopes: [move]
         weight: 200
         value:
           boolToNumber:
@@ -102,11 +106,13 @@ agents:
               - { ref: feature.facingBet }
               - not: { ref: feature.potOddsFavorable }
       alwaysRaise:
+        scopes: [move]
         weight: 90
         value:
           boolToNumber:
             ref: candidate.tag.raise
       preferLargerRaise:
+        scopes: [move]
         weight: 0.002
         value:
           ref: feature.raiseAmount
@@ -120,7 +126,7 @@ agents:
       params: {}
       use:
         pruningRules: []
-        scoreTerms:
+        considerations:
           - preferCheck
           - preferCall
           - avoidFold

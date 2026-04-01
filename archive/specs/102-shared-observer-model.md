@@ -1,6 +1,6 @@
 # Spec 102: Shared Observer Model
 
-**Status**: Draft
+**Status**: ✅ COMPLETED
 **Priority**: P1
 **Complexity**: L
 **Dependencies**: None
@@ -382,3 +382,27 @@ This means different observers can see the same zone differently (e.g., `omnisci
 
 ### Phase 5: Follow-Up Spec
 1. Write Spec 106 (zone/token observer integration)
+
+## Outcome
+
+**Completion date**: 2026-04-01
+
+**Implemented via tickets**: 102SHAOBSMOD-001 through 102SHAOBSMOD-008
+
+**Summary of what was built**:
+- **Part A (Built-in observers)**: `omniscient` and `default` built-in observers synthesized in `compile-observers.ts`
+- **Part B (GameSpecDoc schema)**: `GameSpecObservabilitySection`, `GameSpecObserverProfileDef`, `GameSpecObserverSurfacesDef` types added to `game-spec-doc.ts` with shorthand, full syntax, per-variable override, and `extends` support
+- **Part C (Agent-observer binding)**: `observer` field on `GameSpecAgentProfileDef`, `observerName` on `CompiledAgentProfile`, `agents.visibility` removed entirely
+- **Part D (Type renames)**: All `AgentPolicy*` surface visibility types renamed to shared names (`SurfaceVisibilityClass`, `CompiledSurfaceVisibility`, `CompiledSurfaceCatalog`, etc.)
+- **Part E (Compiled IR)**: `CompiledObserverProfile`, `CompiledObserverCatalog` in `types-core.ts`, `observers` on `GameDef`
+- **Part F (Compilation pipeline)**: `validate-observers.ts` + `compile-observers.ts` wired into `compiler-core.ts` before `lowerAgents`; `AgentPolicyCatalog.surfaceVisibility` resolved from observer catalog
+- **Part G (Runtime)**: `policy-runtime.ts` unchanged — `input.catalog.surfaceVisibility` path works identically
+- **Part H (Zone/token)**: Reserved `zones` key in observer profiles — deferred to Spec 106
+- **Part I (Migration)**: FITL migrated to `93-observability.md` with `currentPlayer` observer; Texas Hold'em unchanged
+
+**Deviations from spec**:
+- Phases 1-4 were not executed as separate PRs — all tickets (001-008) implemented in a single session on main
+- FITL migration (Phase 4/ticket 007) was pulled into ticket 006 per Foundation 14 ("migrate all owned artifacts in the same change")
+- `resolveSurfaceVisibilityFromObserverCatalog` uses priority resolution (unanimous profile observer > sole user-defined observer > catalog default) rather than always using the catalog default, to correctly bridge the shared `surfaceVisibility` field with per-profile observer references
+
+**Verification**: 5432 engine tests pass, 0 failures. Build, typecheck, lint all clean.

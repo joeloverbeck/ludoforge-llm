@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `compile-agents.ts`, `policy-contract.ts`
-**Deps**: `archive/tickets/103ACTTAGCAN-003.md`, `tickets/103ACTTAGCAN-004.md`, `specs/103-action-tags-and-candidate-metadata.md`
+**Deps**: `archive/tickets/103ACTTAGCAN-003.md`, `archive/tickets/103ACTTAGCAN-004.md`, `specs/103-action-tags-and-candidate-metadata.md`
 
 ## Problem
 

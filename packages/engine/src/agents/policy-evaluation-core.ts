@@ -674,6 +674,15 @@ export class PolicyEvaluationContext {
         return this.resolveSurfaceRef(ref, candidate);
       case 'strategicCondition':
         return this.resolveStrategicConditionRef(ref.conditionId, ref.field);
+      case 'candidateTag': {
+        if (candidate === undefined) return undefined;
+        const tags = this.input.def.actionTagIndex?.byAction[candidate.actionId];
+        return tags !== undefined && tags.includes(ref.tagName);
+      }
+      case 'candidateTags': {
+        if (candidate === undefined) return undefined;
+        return this.input.def.actionTagIndex?.byAction[candidate.actionId] ?? [];
+      }
     }
   }
 

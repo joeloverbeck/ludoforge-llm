@@ -404,6 +404,13 @@ export type CompiledAgentPolicyRef =
       readonly kind: 'strategicCondition';
       readonly conditionId: string;
       readonly field: 'satisfied' | 'proximity';
+    }
+  | {
+      readonly kind: 'candidateTag';
+      readonly tagName: string;
+    }
+  | {
+      readonly kind: 'candidateTags';
     };
 export type AgentPolicyZoneSource = string | AgentPolicyExpr;
 export interface AgentPolicyTokenFilter {

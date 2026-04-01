@@ -1,5 +1,14 @@
 import type { PlayerId } from './branded.js';
-import type { GameDef, GameState, RevealGrant, Token, ZoneDef } from './types.js';
+import type {
+  CompiledObserverProfile,
+  CompiledZoneVisibilityEntry,
+  GameDef,
+  GameState,
+  RevealGrant,
+  Token,
+  ZoneDef,
+  ZoneObserverVisibilityClass,
+} from './types.js';
 import { matchesTokenFilterExpr } from './token-filter.js';
 
 // ---------------------------------------------------------------------------
@@ -18,6 +27,36 @@ export interface PlayerObservation {
 // Internals
 // ---------------------------------------------------------------------------
 
+const extractZoneBaseId = (qualifiedId: string): string => {
+  const colonIndex = qualifiedId.indexOf(':');
+  return colonIndex === -1 ? qualifiedId : qualifiedId.slice(0, colonIndex);
+};
+
+const resolveEffectiveZoneVisibility = (
+  zoneDef: ZoneDef,
+  observerProfile: CompiledObserverProfile | undefined,
+): { readonly tokens: ZoneObserverVisibilityClass; readonly order: ZoneObserverVisibilityClass } => {
+  if (observerProfile?.zones === undefined) {
+    return {
+      tokens: zoneDef.visibility as ZoneObserverVisibilityClass,
+      order: zoneDef.visibility as ZoneObserverVisibilityClass,
+    };
+  }
+
+  const baseId = extractZoneBaseId(zoneDef.id as string);
+  const entry: CompiledZoneVisibilityEntry | undefined =
+    observerProfile.zones.entries[baseId] ?? observerProfile.zones.defaultEntry;
+
+  if (entry === undefined) {
+    return {
+      tokens: zoneDef.visibility as ZoneObserverVisibilityClass,
+      order: zoneDef.visibility as ZoneObserverVisibilityClass,
+    };
+  }
+
+  return entry;
+};
+
 const isObserverGranted = (grant: RevealGrant, observer: PlayerId): boolean =>
   grant.observers === 'all' || grant.observers.includes(observer);
 
@@ -26,12 +65,13 @@ const computeVisibleTokens = (
   zoneDef: ZoneDef,
   observer: PlayerId,
   grants: readonly RevealGrant[],
+  effectiveTokensVisibility: ZoneObserverVisibilityClass,
 ): readonly Token[] => {
-  if (zoneDef.visibility === 'public') {
+  if (effectiveTokensVisibility === 'public') {
     return tokens;
   }
 
-  if (zoneDef.visibility === 'owner' && zoneDef.ownerPlayerIndex === (observer as number)) {
+  if (effectiveTokensVisibility === 'owner' && zoneDef.ownerPlayerIndex === (observer as number)) {
     return tokens;
   }
 
@@ -70,6 +110,7 @@ export const derivePlayerObservation = (
   def: GameDef,
   state: GameState,
   observer: PlayerId,
+  observerProfile?: CompiledObserverProfile,
 ): PlayerObservation => {
   const visibleTokenIdsByZone: Record<string, readonly string[]> = {};
   const visibleTokenOrderByZone: Record<string, readonly string[]> = {};
@@ -81,20 +122,28 @@ export const derivePlayerObservation = (
     const tokens = state.zones[zoneId] ?? [];
     const grants = state.reveals?.[zoneId] ?? [];
 
+    // Resolve effective zone visibility from observer profile or ZoneDef.visibility.
+    const effective = resolveEffectiveZoneVisibility(zoneDef, observerProfile);
+
     // Record observer-applicable grants for this zone.
     const observerGrants = grants.filter((g) => isObserverGranted(g, observer));
     if (observerGrants.length > 0) {
       visibleRevealsByZone[zoneId] = observerGrants;
     }
 
-    const visibleTokens = computeVisibleTokens(tokens, zoneDef, observer, grants);
+    const visibleTokens = computeVisibleTokens(tokens, zoneDef, observer, grants, effective.tokens);
     const visibleIds = visibleTokens.map((t) => t.id as string);
 
     visibleTokenIdsByZone[zoneId] = visibleIds;
 
-    // Ordering info is only meaningful for stack/queue zones.
+    // Ordering info: only for stack/queue zones, and only if order visibility permits.
     if (zoneDef.ordering === 'stack' || zoneDef.ordering === 'queue') {
-      visibleTokenOrderByZone[zoneId] = visibleIds;
+      const orderVisible =
+        effective.order === 'public' ||
+        (effective.order === 'owner' && zoneDef.ownerPlayerIndex === (observer as number));
+      if (orderVisible) {
+        visibleTokenOrderByZone[zoneId] = visibleIds;
+      }
     }
 
     if (visibleTokens.length < tokens.length) {

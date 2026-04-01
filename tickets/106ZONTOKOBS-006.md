@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — game data + tests
-**Deps**: `archive/tickets/106ZONTOKOBS-003.md`, `archive/tickets/106ZONTOKOBS-004.md`, `tickets/106ZONTOKOBS-005.md`, `specs/106-zone-token-observer-integration.md`
+**Deps**: `archive/tickets/106ZONTOKOBS-003.md`, `archive/tickets/106ZONTOKOBS-004.md`, `archive/tickets/106ZONTOKOBS-005.md`, `specs/106-zone-token-observer-integration.md`
 
 ## Problem
 

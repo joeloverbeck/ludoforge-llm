@@ -241,6 +241,7 @@ turnOrder:
 
 actions:
   - id: fold
+    tags: [fold]
     actor: active
     executor: actor
     phase: [preflop, flop, turn, river]
@@ -255,6 +256,7 @@ actions:
     limits: []
 
   - id: check
+    tags: [check]
     actor: active
     executor: actor
     phase: [preflop, flop, turn, river]
@@ -269,6 +271,7 @@ actions:
     limits: []
 
   - id: call
+    tags: [call]
     actor: active
     executor: actor
     phase: [preflop, flop, turn, river]
@@ -294,6 +297,7 @@ actions:
     limits: []
 
   - id: raise
+    tags: [raise]
     actor: active
     executor: actor
     phase: [preflop, flop, turn, river]
@@ -341,6 +345,7 @@ actions:
     limits: []
 
   - id: allIn
+    tags: [all-in]
     actor: active
     executor: actor
     phase: [preflop, flop, turn, river]

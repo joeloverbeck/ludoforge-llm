@@ -523,146 +523,6 @@
       }
     },
     "candidateFeatures": {
-      "isCheck": {
-        "type": "boolean",
-        "costClass": "candidate",
-        "expr": {
-          "kind": "op",
-          "op": "eq",
-          "args": [
-            {
-              "kind": "ref",
-              "ref": {
-                "kind": "candidateIntrinsic",
-                "intrinsic": "actionId"
-              }
-            },
-            {
-              "kind": "literal",
-              "value": "check"
-            }
-          ]
-        },
-        "dependencies": {
-          "parameters": [],
-          "stateFeatures": [],
-          "candidateFeatures": [],
-          "aggregates": [],
-          "strategicConditions": []
-        }
-      },
-      "isCall": {
-        "type": "boolean",
-        "costClass": "candidate",
-        "expr": {
-          "kind": "op",
-          "op": "eq",
-          "args": [
-            {
-              "kind": "ref",
-              "ref": {
-                "kind": "candidateIntrinsic",
-                "intrinsic": "actionId"
-              }
-            },
-            {
-              "kind": "literal",
-              "value": "call"
-            }
-          ]
-        },
-        "dependencies": {
-          "parameters": [],
-          "stateFeatures": [],
-          "candidateFeatures": [],
-          "aggregates": [],
-          "strategicConditions": []
-        }
-      },
-      "isRaise": {
-        "type": "boolean",
-        "costClass": "candidate",
-        "expr": {
-          "kind": "op",
-          "op": "eq",
-          "args": [
-            {
-              "kind": "ref",
-              "ref": {
-                "kind": "candidateIntrinsic",
-                "intrinsic": "actionId"
-              }
-            },
-            {
-              "kind": "literal",
-              "value": "raise"
-            }
-          ]
-        },
-        "dependencies": {
-          "parameters": [],
-          "stateFeatures": [],
-          "candidateFeatures": [],
-          "aggregates": [],
-          "strategicConditions": []
-        }
-      },
-      "isAllIn": {
-        "type": "boolean",
-        "costClass": "candidate",
-        "expr": {
-          "kind": "op",
-          "op": "eq",
-          "args": [
-            {
-              "kind": "ref",
-              "ref": {
-                "kind": "candidateIntrinsic",
-                "intrinsic": "actionId"
-              }
-            },
-            {
-              "kind": "literal",
-              "value": "allIn"
-            }
-          ]
-        },
-        "dependencies": {
-          "parameters": [],
-          "stateFeatures": [],
-          "candidateFeatures": [],
-          "aggregates": [],
-          "strategicConditions": []
-        }
-      },
-      "isFold": {
-        "type": "boolean",
-        "costClass": "candidate",
-        "expr": {
-          "kind": "op",
-          "op": "eq",
-          "args": [
-            {
-              "kind": "ref",
-              "ref": {
-                "kind": "candidateIntrinsic",
-                "intrinsic": "actionId"
-              }
-            },
-            {
-              "kind": "literal",
-              "value": "fold"
-            }
-          ]
-        },
-        "dependencies": {
-          "parameters": [],
-          "stateFeatures": [],
-          "candidateFeatures": [],
-          "aggregates": [],
-          "strategicConditions": []
-        }
-      },
       "raiseAmount": {
         "type": "number",
         "costClass": "candidate",
@@ -708,9 +568,8 @@
             {
               "kind": "ref",
               "ref": {
-                "kind": "library",
-                "refKind": "candidateFeature",
-                "id": "isCheck"
+                "kind": "candidateTag",
+                "tagName": "check"
               }
             }
           ]
@@ -718,9 +577,7 @@
         "dependencies": {
           "parameters": [],
           "stateFeatures": [],
-          "candidateFeatures": [
-            "isCheck"
-          ],
+          "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
         }
@@ -738,9 +595,8 @@
             {
               "kind": "ref",
               "ref": {
-                "kind": "library",
-                "refKind": "candidateFeature",
-                "id": "isCall"
+                "kind": "candidateTag",
+                "tagName": "call"
               }
             }
           ]
@@ -748,9 +604,7 @@
         "dependencies": {
           "parameters": [],
           "stateFeatures": [],
-          "candidateFeatures": [
-            "isCall"
-          ],
+          "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
         }
@@ -768,9 +622,8 @@
             {
               "kind": "ref",
               "ref": {
-                "kind": "library",
-                "refKind": "candidateFeature",
-                "id": "isFold"
+                "kind": "candidateTag",
+                "tagName": "fold"
               }
             }
           ]
@@ -778,9 +631,7 @@
         "dependencies": {
           "parameters": [],
           "stateFeatures": [],
-          "candidateFeatures": [
-            "isFold"
-          ],
+          "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
         }
@@ -802,9 +653,8 @@
                 {
                   "kind": "ref",
                   "ref": {
-                    "kind": "library",
-                    "refKind": "candidateFeature",
-                    "id": "isFold"
+                    "kind": "candidateTag",
+                    "tagName": "fold"
                   }
                 },
                 {
@@ -839,9 +689,7 @@
             "facingBet",
             "potOddsFavorable"
           ],
-          "candidateFeatures": [
-            "isFold"
-          ],
+          "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
         }
@@ -859,9 +707,8 @@
             {
               "kind": "ref",
               "ref": {
-                "kind": "library",
-                "refKind": "candidateFeature",
-                "id": "isRaise"
+                "kind": "candidateTag",
+                "tagName": "raise"
               }
             }
           ]
@@ -869,9 +716,7 @@
         "dependencies": {
           "parameters": [],
           "stateFeatures": [],
-          "candidateFeatures": [
-            "isRaise"
-          ],
+          "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
         }
@@ -942,19 +787,15 @@
           "potOddsFavorable"
         ],
         "candidateFeatures": [
-          "isCheck",
-          "isCall",
-          "isFold",
-          "isRaise",
           "raiseAmount"
         ],
         "candidateAggregates": []
       },
-      "fingerprint": "669a86537306635b7d5ed0d387e1cc5acc730b1db1740c297c5d55958aac62c0"
+      "fingerprint": "19862b7c92093a48390631dca24a5048068d041f69b1db443b58f357a9b33742"
     }
   },
   "bindingsBySeat": {
     "neutral": "baseline"
   },
-  "catalogFingerprint": "7ac4397a1a338ae7aec924cc3c1b114632f827a98e7b09473fa71dae0624c88e"
+  "catalogFingerprint": "1cfaf537e56bcfc388592e89500c982ac06483746ff055c788f969d00c97227d"
 }

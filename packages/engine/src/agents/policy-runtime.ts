@@ -1,7 +1,6 @@
 import { computeDerivedMetricValue } from '../kernel/derived-values.js';
 import { resolveCurrentEventCardState } from '../kernel/event-execution.js';
 import { buildSeatResolutionIndex, resolvePlayerIndexForSeatValue, type SeatResolutionIndex } from '../kernel/identity.js';
-import { resolveTurnFlowActionClass } from '../kernel/turn-flow-action-class.js';
 import type { PlayerId } from '../kernel/branded.js';
 import type {
   CompiledCardMetadataEntry,
@@ -138,11 +137,8 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
         if (intrinsic === 'stableMoveKey') {
           return candidate.stableMoveKey;
         }
-        if (intrinsic === 'paramCount') {
-          return Object.keys(candidate.move.params).length;
-        }
-        // isPass — will be removed in ticket 006 when game specs migrate to candidate.tag.pass
-        return candidate.actionId === 'pass' || resolveTurnFlowActionClass(input.def, candidate.move) === 'pass';
+        // paramCount — remaining case
+        return Object.keys(candidate.move.params).length;
       },
       resolveCandidateParam(candidate, paramId) {
         const candidateParamDef = input.catalog.candidateParamDefs[paramId];

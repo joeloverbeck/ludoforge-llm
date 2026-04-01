@@ -1682,13 +1682,6 @@ class AgentLibraryCompiler {
         },
       };
     }
-    if (refPath === 'candidate.isPass') {
-      if (scope === 'stateFeature') {
-        this.reportUnknownLibraryRef(refPath, path);
-        return null;
-      }
-      return { type: 'boolean', costClass: 'candidate', ref: { kind: 'candidateIntrinsic', intrinsic: 'isPass' } };
-    }
     if (refPath === 'candidate.paramCount') {
       if (scope === 'stateFeature') {
         this.reportUnknownLibraryRef(refPath, path);

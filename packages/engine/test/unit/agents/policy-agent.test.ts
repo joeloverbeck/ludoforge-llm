@@ -77,7 +77,7 @@ function createCatalog(): AgentPolicyCatalog {
         preferPass: {
           costClass: 'candidate',
           weight: literal(10),
-          value: opExpr('boolToNumber', refExpr({ kind: 'candidateIntrinsic', intrinsic: 'isPass' })),
+          value: opExpr('boolToNumber', refExpr({ kind: 'candidateTag', tagName: 'pass' })),
           dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
         },
         preferEvent: {
@@ -172,6 +172,10 @@ function createDef(overrides: Partial<GameDef> = {}): GameDef {
         limits: [],
       },
     ],
+    actionTagIndex: {
+      byAction: { pass: ['pass'], event: ['event'] },
+      byTag: { pass: ['pass'], event: ['event'] },
+    },
     triggers: [],
     terminal: { conditions: [] },
     ...overrides,

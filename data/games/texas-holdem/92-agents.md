@@ -4,36 +4,6 @@
 agents:
   library:
     candidateFeatures:
-      isCheck:
-        type: boolean
-        expr:
-          eq:
-            - { ref: candidate.actionId }
-            - check
-      isCall:
-        type: boolean
-        expr:
-          eq:
-            - { ref: candidate.actionId }
-            - call
-      isRaise:
-        type: boolean
-        expr:
-          eq:
-            - { ref: candidate.actionId }
-            - raise
-      isAllIn:
-        type: boolean
-        expr:
-          eq:
-            - { ref: candidate.actionId }
-            - allIn
-      isFold:
-        type: boolean
-        expr:
-          eq:
-            - { ref: candidate.actionId }
-            - fold
       raiseAmount:
         type: number
         expr:
@@ -112,30 +82,30 @@ agents:
         weight: 100
         value:
           boolToNumber:
-            ref: feature.isCheck
+            ref: candidate.tag.check
       preferCall:
         weight: 80
         value:
           boolToNumber:
-            ref: feature.isCall
+            ref: candidate.tag.call
       avoidFold:
         weight: -100
         value:
           boolToNumber:
-            ref: feature.isFold
+            ref: candidate.tag.fold
       foldWhenBadPotOdds:
         weight: 200
         value:
           boolToNumber:
             and:
-              - { ref: feature.isFold }
+              - { ref: candidate.tag.fold }
               - { ref: feature.facingBet }
               - not: { ref: feature.potOddsFavorable }
       alwaysRaise:
         weight: 90
         value:
           boolToNumber:
-            ref: feature.isRaise
+            ref: candidate.tag.raise
       preferLargerRaise:
         weight: 0.002
         value:

@@ -109,6 +109,10 @@ function createBaseDef(agents: AgentPolicyCatalog): GameDef {
       createAction('beta'),
       createAction('advance'),
     ],
+    actionTagIndex: {
+      byAction: { pass: ['pass'], event: ['event'] },
+      byTag: { pass: ['pass'], event: ['event'] },
+    },
     triggers: [],
     terminal: {
       conditions: [],
@@ -208,7 +212,7 @@ function createCatalog(
         isPass: {
           type: 'boolean',
           costClass: 'candidate',
-          expr: refExpr({ kind: 'candidateIntrinsic', intrinsic: 'isPass' }),
+          expr: refExpr({ kind: 'candidateTag', tagName: 'pass' }),
           dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
         },
         isEvent: {

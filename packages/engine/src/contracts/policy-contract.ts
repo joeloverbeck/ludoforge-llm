@@ -45,7 +45,6 @@ export function isAgentPolicyCompletionGuidanceFallback(
 export const AGENT_POLICY_CANDIDATE_INTRINSICS = [
   'actionId',
   'stableMoveKey',
-  'isPass',
   'paramCount',
 ] as const;
 

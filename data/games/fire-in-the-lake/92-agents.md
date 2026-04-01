@@ -46,106 +46,12 @@ agents:
           ref: var.player.self.resources
 
     candidateFeatures:
-      isPass:
-        type: boolean
-        expr:
-          ref: candidate.isPass
-      isEvent:
-        type: boolean
-        expr:
-          eq:
-            - { ref: candidate.actionId }
-            - event
       projectedSelfMargin:
         type: number
         expr:
           coalesce:
             - { ref: preview.victory.currentMargin.self }
             - { ref: feature.selfMargin }
-      isTrain:
-        type: boolean
-        expr:
-          eq:
-            - { ref: candidate.actionId }
-            - train
-      isPatrol:
-        type: boolean
-        expr:
-          eq:
-            - { ref: candidate.actionId }
-            - patrol
-      isAssault:
-        type: boolean
-        expr:
-          eq:
-            - { ref: candidate.actionId }
-            - assault
-      isAdvise:
-        type: boolean
-        expr:
-          eq:
-            - { ref: candidate.actionId }
-            - advise
-      isSweep:
-        type: boolean
-        expr:
-          eq:
-            - { ref: candidate.actionId }
-            - sweep
-      isGovern:
-        type: boolean
-        expr:
-          eq:
-            - { ref: candidate.actionId }
-            - govern
-      isRally:
-        type: boolean
-        expr:
-          eq:
-            - { ref: candidate.actionId }
-            - rally
-      isMarch:
-        type: boolean
-        expr:
-          eq:
-            - { ref: candidate.actionId }
-            - march
-      isAttack:
-        type: boolean
-        expr:
-          eq:
-            - { ref: candidate.actionId }
-            - attack
-      isTerror:
-        type: boolean
-        expr:
-          eq:
-            - { ref: candidate.actionId }
-            - terror
-      isTax:
-        type: boolean
-        expr:
-          eq:
-            - { ref: candidate.actionId }
-            - tax
-      isSubvert:
-        type: boolean
-        expr:
-          eq:
-            - { ref: candidate.actionId }
-            - subvert
-      isInfiltrate:
-        type: boolean
-        expr:
-          eq:
-            - { ref: candidate.actionId }
-            - infiltrate
-      isBombard:
-        type: boolean
-        expr:
-          eq:
-            - { ref: candidate.actionId }
-            - bombard
       targetSpacePopulation:
         type: number
         expr:
@@ -160,13 +66,13 @@ agents:
         op: any
         of:
           not:
-            ref: feature.isPass
+            ref: candidate.tag.pass
 
     pruningRules:
       dropPassWhenOtherMovesExist:
         when:
           and:
-            - { ref: feature.isPass }
+            - { ref: candidate.tag.pass }
             - { ref: aggregate.hasNonPassAlternative }
         onEmpty: skipRule
 
@@ -186,89 +92,89 @@ agents:
           param: eventWeight
         value:
           boolToNumber:
-            ref: feature.isEvent
+            ref: candidate.tag.event-play
       preferTrainAction:
         weight: 1
         value:
           boolToNumber:
-            ref: feature.isTrain
+            ref: candidate.tag.train
       preferPatrolAction:
         weight: 1
         value:
           boolToNumber:
-            ref: feature.isPatrol
+            ref: candidate.tag.patrol
       preferAssaultAction:
         weight: 1
         value:
           boolToNumber:
-            ref: feature.isAssault
+            ref: candidate.tag.assault
       preferAdviseAction:
         weight: 1
         value:
           boolToNumber:
-            ref: feature.isAdvise
+            ref: candidate.tag.advise
       preferSweepAction:
         weight: 1
         value:
           boolToNumber:
-            ref: feature.isSweep
+            ref: candidate.tag.sweep
       preferGovernAction:
         weight: 1
         value:
           boolToNumber:
-            ref: feature.isGovern
+            ref: candidate.tag.govern
       preferRallyAction:
         weight: 1
         value:
           boolToNumber:
-            ref: feature.isRally
+            ref: candidate.tag.rally
       preferRallyWeighted:
         weight:
           param: rallyWeight
         value:
           boolToNumber:
-            ref: feature.isRally
+            ref: candidate.tag.rally
       preferMarchAction:
         weight: 1
         value:
           boolToNumber:
-            ref: feature.isMarch
+            ref: candidate.tag.march
       preferAttackAction:
         weight: 1
         value:
           boolToNumber:
-            ref: feature.isAttack
+            ref: candidate.tag.attack
       preferTerrorAction:
         weight: 1
         value:
           boolToNumber:
-            ref: feature.isTerror
+            ref: candidate.tag.terror
       preferTaxAction:
         weight: 1
         value:
           boolToNumber:
-            ref: feature.isTax
+            ref: candidate.tag.tax
       preferTaxWeighted:
         weight:
           param: taxWeight
         value:
           boolToNumber:
-            ref: feature.isTax
+            ref: candidate.tag.tax
       preferSubvertAction:
         weight: 1
         value:
           boolToNumber:
-            ref: feature.isSubvert
+            ref: candidate.tag.subvert
       preferInfiltrateAction:
         weight: 1
         value:
           boolToNumber:
-            ref: feature.isInfiltrate
+            ref: candidate.tag.infiltrate
       preferBombardAction:
         weight: 1
         value:
           boolToNumber:
-            ref: feature.isBombard
+            ref: candidate.tag.bombard
 
     completionScoreTerms:
       preferPopulousTargets:

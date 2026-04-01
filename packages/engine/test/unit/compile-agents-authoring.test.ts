@@ -124,7 +124,7 @@ describe('agents authoring surface', () => {
           candidateFeatures: {
             isPass: {
               type: 'boolean',
-              expr: { ref: 'candidate.isPass' },
+              expr: { ref: 'candidate.tag.pass' },
             },
             projectedMargin: {
               type: 'number',
@@ -282,7 +282,7 @@ describe('agents authoring surface', () => {
         isPass: {
           type: 'boolean',
           costClass: 'candidate',
-          expr: refExpr({ kind: 'candidateIntrinsic', intrinsic: 'isPass' }),
+          expr: refExpr({ kind: 'candidateTag', tagName: 'pass' }),
           dependencies: {
             parameters: [],
             stateFeatures: [],
@@ -429,7 +429,7 @@ describe('agents authoring surface', () => {
             },
             isPass: {
               type: 'boolean' as const,
-              expr: { ref: 'candidate.isPass' },
+              expr: { ref: 'candidate.tag.pass' },
             },
           },
           stateFeatures: {
@@ -515,7 +515,7 @@ describe('agents authoring surface', () => {
           },
           candidateFeatures: {
             isPass: {
-              expr: { ref: 'candidate.isPass' },
+              expr: { ref: 'candidate.tag.pass' },
               type: 'boolean' as const,
             },
             projectedMargin: {
@@ -1537,7 +1537,7 @@ describe('agents authoring surface', () => {
           candidateFeatures: {
             isPass: {
               type: 'boolean',
-              expr: { ref: 'candidate.isPass' },
+              expr: { ref: 'candidate.tag.pass' },
             },
             badPreview: {
               type: 'number',

@@ -699,6 +699,13 @@ const CompiledAgentPolicyRefSchema = z.union([
     conditionId: StringSchema,
     field: z.union([z.literal('satisfied'), z.literal('proximity')]),
   }).strict(),
+  z.object({
+    kind: z.literal('candidateTag'),
+    tagName: StringSchema,
+  }).strict(),
+  z.object({
+    kind: z.literal('candidateTags'),
+  }).strict(),
 ]);
 
 const AgentPolicyTokenFilterSchema = z.object({

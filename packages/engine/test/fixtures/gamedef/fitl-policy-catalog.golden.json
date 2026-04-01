@@ -608,52 +608,6 @@
       }
     },
     "candidateFeatures": {
-      "isPass": {
-        "type": "boolean",
-        "costClass": "candidate",
-        "expr": {
-          "kind": "ref",
-          "ref": {
-            "kind": "candidateIntrinsic",
-            "intrinsic": "isPass"
-          }
-        },
-        "dependencies": {
-          "parameters": [],
-          "stateFeatures": [],
-          "candidateFeatures": [],
-          "aggregates": [],
-          "strategicConditions": []
-        }
-      },
-      "isEvent": {
-        "type": "boolean",
-        "costClass": "candidate",
-        "expr": {
-          "kind": "op",
-          "op": "eq",
-          "args": [
-            {
-              "kind": "ref",
-              "ref": {
-                "kind": "candidateIntrinsic",
-                "intrinsic": "actionId"
-              }
-            },
-            {
-              "kind": "literal",
-              "value": "event"
-            }
-          ]
-        },
-        "dependencies": {
-          "parameters": [],
-          "stateFeatures": [],
-          "candidateFeatures": [],
-          "aggregates": [],
-          "strategicConditions": []
-        }
-      },
       "projectedSelfMargin": {
         "type": "number",
         "costClass": "preview",
@@ -688,398 +642,6 @@
           "stateFeatures": [
             "selfMargin"
           ],
-          "candidateFeatures": [],
-          "aggregates": [],
-          "strategicConditions": []
-        }
-      },
-      "isTrain": {
-        "type": "boolean",
-        "costClass": "candidate",
-        "expr": {
-          "kind": "op",
-          "op": "eq",
-          "args": [
-            {
-              "kind": "ref",
-              "ref": {
-                "kind": "candidateIntrinsic",
-                "intrinsic": "actionId"
-              }
-            },
-            {
-              "kind": "literal",
-              "value": "train"
-            }
-          ]
-        },
-        "dependencies": {
-          "parameters": [],
-          "stateFeatures": [],
-          "candidateFeatures": [],
-          "aggregates": [],
-          "strategicConditions": []
-        }
-      },
-      "isPatrol": {
-        "type": "boolean",
-        "costClass": "candidate",
-        "expr": {
-          "kind": "op",
-          "op": "eq",
-          "args": [
-            {
-              "kind": "ref",
-              "ref": {
-                "kind": "candidateIntrinsic",
-                "intrinsic": "actionId"
-              }
-            },
-            {
-              "kind": "literal",
-              "value": "patrol"
-            }
-          ]
-        },
-        "dependencies": {
-          "parameters": [],
-          "stateFeatures": [],
-          "candidateFeatures": [],
-          "aggregates": [],
-          "strategicConditions": []
-        }
-      },
-      "isAssault": {
-        "type": "boolean",
-        "costClass": "candidate",
-        "expr": {
-          "kind": "op",
-          "op": "eq",
-          "args": [
-            {
-              "kind": "ref",
-              "ref": {
-                "kind": "candidateIntrinsic",
-                "intrinsic": "actionId"
-              }
-            },
-            {
-              "kind": "literal",
-              "value": "assault"
-            }
-          ]
-        },
-        "dependencies": {
-          "parameters": [],
-          "stateFeatures": [],
-          "candidateFeatures": [],
-          "aggregates": [],
-          "strategicConditions": []
-        }
-      },
-      "isAdvise": {
-        "type": "boolean",
-        "costClass": "candidate",
-        "expr": {
-          "kind": "op",
-          "op": "eq",
-          "args": [
-            {
-              "kind": "ref",
-              "ref": {
-                "kind": "candidateIntrinsic",
-                "intrinsic": "actionId"
-              }
-            },
-            {
-              "kind": "literal",
-              "value": "advise"
-            }
-          ]
-        },
-        "dependencies": {
-          "parameters": [],
-          "stateFeatures": [],
-          "candidateFeatures": [],
-          "aggregates": [],
-          "strategicConditions": []
-        }
-      },
-      "isSweep": {
-        "type": "boolean",
-        "costClass": "candidate",
-        "expr": {
-          "kind": "op",
-          "op": "eq",
-          "args": [
-            {
-              "kind": "ref",
-              "ref": {
-                "kind": "candidateIntrinsic",
-                "intrinsic": "actionId"
-              }
-            },
-            {
-              "kind": "literal",
-              "value": "sweep"
-            }
-          ]
-        },
-        "dependencies": {
-          "parameters": [],
-          "stateFeatures": [],
-          "candidateFeatures": [],
-          "aggregates": [],
-          "strategicConditions": []
-        }
-      },
-      "isGovern": {
-        "type": "boolean",
-        "costClass": "candidate",
-        "expr": {
-          "kind": "op",
-          "op": "eq",
-          "args": [
-            {
-              "kind": "ref",
-              "ref": {
-                "kind": "candidateIntrinsic",
-                "intrinsic": "actionId"
-              }
-            },
-            {
-              "kind": "literal",
-              "value": "govern"
-            }
-          ]
-        },
-        "dependencies": {
-          "parameters": [],
-          "stateFeatures": [],
-          "candidateFeatures": [],
-          "aggregates": [],
-          "strategicConditions": []
-        }
-      },
-      "isRally": {
-        "type": "boolean",
-        "costClass": "candidate",
-        "expr": {
-          "kind": "op",
-          "op": "eq",
-          "args": [
-            {
-              "kind": "ref",
-              "ref": {
-                "kind": "candidateIntrinsic",
-                "intrinsic": "actionId"
-              }
-            },
-            {
-              "kind": "literal",
-              "value": "rally"
-            }
-          ]
-        },
-        "dependencies": {
-          "parameters": [],
-          "stateFeatures": [],
-          "candidateFeatures": [],
-          "aggregates": [],
-          "strategicConditions": []
-        }
-      },
-      "isMarch": {
-        "type": "boolean",
-        "costClass": "candidate",
-        "expr": {
-          "kind": "op",
-          "op": "eq",
-          "args": [
-            {
-              "kind": "ref",
-              "ref": {
-                "kind": "candidateIntrinsic",
-                "intrinsic": "actionId"
-              }
-            },
-            {
-              "kind": "literal",
-              "value": "march"
-            }
-          ]
-        },
-        "dependencies": {
-          "parameters": [],
-          "stateFeatures": [],
-          "candidateFeatures": [],
-          "aggregates": [],
-          "strategicConditions": []
-        }
-      },
-      "isAttack": {
-        "type": "boolean",
-        "costClass": "candidate",
-        "expr": {
-          "kind": "op",
-          "op": "eq",
-          "args": [
-            {
-              "kind": "ref",
-              "ref": {
-                "kind": "candidateIntrinsic",
-                "intrinsic": "actionId"
-              }
-            },
-            {
-              "kind": "literal",
-              "value": "attack"
-            }
-          ]
-        },
-        "dependencies": {
-          "parameters": [],
-          "stateFeatures": [],
-          "candidateFeatures": [],
-          "aggregates": [],
-          "strategicConditions": []
-        }
-      },
-      "isTerror": {
-        "type": "boolean",
-        "costClass": "candidate",
-        "expr": {
-          "kind": "op",
-          "op": "eq",
-          "args": [
-            {
-              "kind": "ref",
-              "ref": {
-                "kind": "candidateIntrinsic",
-                "intrinsic": "actionId"
-              }
-            },
-            {
-              "kind": "literal",
-              "value": "terror"
-            }
-          ]
-        },
-        "dependencies": {
-          "parameters": [],
-          "stateFeatures": [],
-          "candidateFeatures": [],
-          "aggregates": [],
-          "strategicConditions": []
-        }
-      },
-      "isTax": {
-        "type": "boolean",
-        "costClass": "candidate",
-        "expr": {
-          "kind": "op",
-          "op": "eq",
-          "args": [
-            {
-              "kind": "ref",
-              "ref": {
-                "kind": "candidateIntrinsic",
-                "intrinsic": "actionId"
-              }
-            },
-            {
-              "kind": "literal",
-              "value": "tax"
-            }
-          ]
-        },
-        "dependencies": {
-          "parameters": [],
-          "stateFeatures": [],
-          "candidateFeatures": [],
-          "aggregates": [],
-          "strategicConditions": []
-        }
-      },
-      "isSubvert": {
-        "type": "boolean",
-        "costClass": "candidate",
-        "expr": {
-          "kind": "op",
-          "op": "eq",
-          "args": [
-            {
-              "kind": "ref",
-              "ref": {
-                "kind": "candidateIntrinsic",
-                "intrinsic": "actionId"
-              }
-            },
-            {
-              "kind": "literal",
-              "value": "subvert"
-            }
-          ]
-        },
-        "dependencies": {
-          "parameters": [],
-          "stateFeatures": [],
-          "candidateFeatures": [],
-          "aggregates": [],
-          "strategicConditions": []
-        }
-      },
-      "isInfiltrate": {
-        "type": "boolean",
-        "costClass": "candidate",
-        "expr": {
-          "kind": "op",
-          "op": "eq",
-          "args": [
-            {
-              "kind": "ref",
-              "ref": {
-                "kind": "candidateIntrinsic",
-                "intrinsic": "actionId"
-              }
-            },
-            {
-              "kind": "literal",
-              "value": "infiltrate"
-            }
-          ]
-        },
-        "dependencies": {
-          "parameters": [],
-          "stateFeatures": [],
-          "candidateFeatures": [],
-          "aggregates": [],
-          "strategicConditions": []
-        }
-      },
-      "isBombard": {
-        "type": "boolean",
-        "costClass": "candidate",
-        "expr": {
-          "kind": "op",
-          "op": "eq",
-          "args": [
-            {
-              "kind": "ref",
-              "ref": {
-                "kind": "candidateIntrinsic",
-                "intrinsic": "actionId"
-              }
-            },
-            {
-              "kind": "literal",
-              "value": "bombard"
-            }
-          ]
-        },
-        "dependencies": {
-          "parameters": [],
-          "stateFeatures": [],
           "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
@@ -1130,9 +692,8 @@
             {
               "kind": "ref",
               "ref": {
-                "kind": "library",
-                "refKind": "candidateFeature",
-                "id": "isPass"
+                "kind": "candidateTag",
+                "tagName": "pass"
               }
             }
           ]
@@ -1140,9 +701,7 @@
         "dependencies": {
           "parameters": [],
           "stateFeatures": [],
-          "candidateFeatures": [
-            "isPass"
-          ],
+          "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
         }
@@ -1158,9 +717,8 @@
             {
               "kind": "ref",
               "ref": {
-                "kind": "library",
-                "refKind": "candidateFeature",
-                "id": "isPass"
+                "kind": "candidateTag",
+                "tagName": "pass"
               }
             },
             {
@@ -1176,9 +734,7 @@
         "dependencies": {
           "parameters": [],
           "stateFeatures": [],
-          "candidateFeatures": [
-            "isPass"
-          ],
+          "candidateFeatures": [],
           "aggregates": [
             "hasNonPassAlternative"
           ],
@@ -1253,9 +809,8 @@
             {
               "kind": "ref",
               "ref": {
-                "kind": "library",
-                "refKind": "candidateFeature",
-                "id": "isEvent"
+                "kind": "candidateTag",
+                "tagName": "event-play"
               }
             }
           ]
@@ -1265,9 +820,7 @@
             "eventWeight"
           ],
           "stateFeatures": [],
-          "candidateFeatures": [
-            "isEvent"
-          ],
+          "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
         }
@@ -1285,9 +838,8 @@
             {
               "kind": "ref",
               "ref": {
-                "kind": "library",
-                "refKind": "candidateFeature",
-                "id": "isTrain"
+                "kind": "candidateTag",
+                "tagName": "train"
               }
             }
           ]
@@ -1295,9 +847,7 @@
         "dependencies": {
           "parameters": [],
           "stateFeatures": [],
-          "candidateFeatures": [
-            "isTrain"
-          ],
+          "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
         }
@@ -1315,9 +865,8 @@
             {
               "kind": "ref",
               "ref": {
-                "kind": "library",
-                "refKind": "candidateFeature",
-                "id": "isPatrol"
+                "kind": "candidateTag",
+                "tagName": "patrol"
               }
             }
           ]
@@ -1325,9 +874,7 @@
         "dependencies": {
           "parameters": [],
           "stateFeatures": [],
-          "candidateFeatures": [
-            "isPatrol"
-          ],
+          "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
         }
@@ -1345,9 +892,8 @@
             {
               "kind": "ref",
               "ref": {
-                "kind": "library",
-                "refKind": "candidateFeature",
-                "id": "isAssault"
+                "kind": "candidateTag",
+                "tagName": "assault"
               }
             }
           ]
@@ -1355,9 +901,7 @@
         "dependencies": {
           "parameters": [],
           "stateFeatures": [],
-          "candidateFeatures": [
-            "isAssault"
-          ],
+          "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
         }
@@ -1375,9 +919,8 @@
             {
               "kind": "ref",
               "ref": {
-                "kind": "library",
-                "refKind": "candidateFeature",
-                "id": "isAdvise"
+                "kind": "candidateTag",
+                "tagName": "advise"
               }
             }
           ]
@@ -1385,9 +928,7 @@
         "dependencies": {
           "parameters": [],
           "stateFeatures": [],
-          "candidateFeatures": [
-            "isAdvise"
-          ],
+          "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
         }
@@ -1405,9 +946,8 @@
             {
               "kind": "ref",
               "ref": {
-                "kind": "library",
-                "refKind": "candidateFeature",
-                "id": "isSweep"
+                "kind": "candidateTag",
+                "tagName": "sweep"
               }
             }
           ]
@@ -1415,9 +955,7 @@
         "dependencies": {
           "parameters": [],
           "stateFeatures": [],
-          "candidateFeatures": [
-            "isSweep"
-          ],
+          "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
         }
@@ -1435,9 +973,8 @@
             {
               "kind": "ref",
               "ref": {
-                "kind": "library",
-                "refKind": "candidateFeature",
-                "id": "isGovern"
+                "kind": "candidateTag",
+                "tagName": "govern"
               }
             }
           ]
@@ -1445,9 +982,7 @@
         "dependencies": {
           "parameters": [],
           "stateFeatures": [],
-          "candidateFeatures": [
-            "isGovern"
-          ],
+          "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
         }
@@ -1465,9 +1000,8 @@
             {
               "kind": "ref",
               "ref": {
-                "kind": "library",
-                "refKind": "candidateFeature",
-                "id": "isRally"
+                "kind": "candidateTag",
+                "tagName": "rally"
               }
             }
           ]
@@ -1475,9 +1009,7 @@
         "dependencies": {
           "parameters": [],
           "stateFeatures": [],
-          "candidateFeatures": [
-            "isRally"
-          ],
+          "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
         }
@@ -1495,9 +1027,8 @@
             {
               "kind": "ref",
               "ref": {
-                "kind": "library",
-                "refKind": "candidateFeature",
-                "id": "isRally"
+                "kind": "candidateTag",
+                "tagName": "rally"
               }
             }
           ]
@@ -1507,9 +1038,7 @@
             "rallyWeight"
           ],
           "stateFeatures": [],
-          "candidateFeatures": [
-            "isRally"
-          ],
+          "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
         }
@@ -1527,9 +1056,8 @@
             {
               "kind": "ref",
               "ref": {
-                "kind": "library",
-                "refKind": "candidateFeature",
-                "id": "isMarch"
+                "kind": "candidateTag",
+                "tagName": "march"
               }
             }
           ]
@@ -1537,9 +1065,7 @@
         "dependencies": {
           "parameters": [],
           "stateFeatures": [],
-          "candidateFeatures": [
-            "isMarch"
-          ],
+          "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
         }
@@ -1557,9 +1083,8 @@
             {
               "kind": "ref",
               "ref": {
-                "kind": "library",
-                "refKind": "candidateFeature",
-                "id": "isAttack"
+                "kind": "candidateTag",
+                "tagName": "attack"
               }
             }
           ]
@@ -1567,9 +1092,7 @@
         "dependencies": {
           "parameters": [],
           "stateFeatures": [],
-          "candidateFeatures": [
-            "isAttack"
-          ],
+          "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
         }
@@ -1587,9 +1110,8 @@
             {
               "kind": "ref",
               "ref": {
-                "kind": "library",
-                "refKind": "candidateFeature",
-                "id": "isTerror"
+                "kind": "candidateTag",
+                "tagName": "terror"
               }
             }
           ]
@@ -1597,9 +1119,7 @@
         "dependencies": {
           "parameters": [],
           "stateFeatures": [],
-          "candidateFeatures": [
-            "isTerror"
-          ],
+          "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
         }
@@ -1617,9 +1137,8 @@
             {
               "kind": "ref",
               "ref": {
-                "kind": "library",
-                "refKind": "candidateFeature",
-                "id": "isTax"
+                "kind": "candidateTag",
+                "tagName": "tax"
               }
             }
           ]
@@ -1627,9 +1146,7 @@
         "dependencies": {
           "parameters": [],
           "stateFeatures": [],
-          "candidateFeatures": [
-            "isTax"
-          ],
+          "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
         }
@@ -1647,9 +1164,8 @@
             {
               "kind": "ref",
               "ref": {
-                "kind": "library",
-                "refKind": "candidateFeature",
-                "id": "isTax"
+                "kind": "candidateTag",
+                "tagName": "tax"
               }
             }
           ]
@@ -1659,9 +1175,7 @@
             "taxWeight"
           ],
           "stateFeatures": [],
-          "candidateFeatures": [
-            "isTax"
-          ],
+          "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
         }
@@ -1679,9 +1193,8 @@
             {
               "kind": "ref",
               "ref": {
-                "kind": "library",
-                "refKind": "candidateFeature",
-                "id": "isSubvert"
+                "kind": "candidateTag",
+                "tagName": "subvert"
               }
             }
           ]
@@ -1689,9 +1202,7 @@
         "dependencies": {
           "parameters": [],
           "stateFeatures": [],
-          "candidateFeatures": [
-            "isSubvert"
-          ],
+          "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
         }
@@ -1709,9 +1220,8 @@
             {
               "kind": "ref",
               "ref": {
-                "kind": "library",
-                "refKind": "candidateFeature",
-                "id": "isInfiltrate"
+                "kind": "candidateTag",
+                "tagName": "infiltrate"
               }
             }
           ]
@@ -1719,9 +1229,7 @@
         "dependencies": {
           "parameters": [],
           "stateFeatures": [],
-          "candidateFeatures": [
-            "isInfiltrate"
-          ],
+          "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
         }
@@ -1739,9 +1247,8 @@
             {
               "kind": "ref",
               "ref": {
-                "kind": "library",
-                "refKind": "candidateFeature",
-                "id": "isBombard"
+                "kind": "candidateTag",
+                "tagName": "bombard"
               }
             }
           ]
@@ -1749,9 +1256,7 @@
         "dependencies": {
           "parameters": [],
           "stateFeatures": [],
-          "candidateFeatures": [
-            "isBombard"
-          ],
+          "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
         }
@@ -1919,19 +1424,13 @@
           "selfResources"
         ],
         "candidateFeatures": [
-          "isPass",
-          "projectedSelfMargin",
-          "isEvent",
-          "isTrain",
-          "isPatrol",
-          "isAssault",
-          "isAdvise"
+          "projectedSelfMargin"
         ],
         "candidateAggregates": [
           "hasNonPassAlternative"
         ]
       },
-      "fingerprint": "01ab7714fab447df9d3c345ded6d0fffe86f0a55ce175ab3496fe73a25c6dab3"
+      "fingerprint": "26c2e0d761f746abbfce92b7cbf741bb38f63d6542537c6b6df5c1d86d53f660"
     },
     "arvn-baseline": {
       "observerName": "currentPlayer",
@@ -1965,20 +1464,13 @@
           "selfResources"
         ],
         "candidateFeatures": [
-          "isPass",
-          "projectedSelfMargin",
-          "isEvent",
-          "isTrain",
-          "isPatrol",
-          "isSweep",
-          "isAssault",
-          "isGovern"
+          "projectedSelfMargin"
         ],
         "candidateAggregates": [
           "hasNonPassAlternative"
         ]
       },
-      "fingerprint": "4659493437e935b67c9670893bf53cdc6c5c64f7123a60d6bbd0b91610335442"
+      "fingerprint": "bff5c08e37a41208335a8334dd8a4b4fbec90372b0775c7f45c0b0392bb7cc43"
     },
     "nva-baseline": {
       "observerName": "currentPlayer",
@@ -2013,21 +1505,13 @@
           "selfResources"
         ],
         "candidateFeatures": [
-          "isPass",
-          "projectedSelfMargin",
-          "isEvent",
-          "isRally",
-          "isMarch",
-          "isAttack",
-          "isTerror",
-          "isInfiltrate",
-          "isBombard"
+          "projectedSelfMargin"
         ],
         "candidateAggregates": [
           "hasNonPassAlternative"
         ]
       },
-      "fingerprint": "bf43e3b1b8179d592d84e4bc70cce8f6370f6ba2aa1cad50005338bb7a348e52"
+      "fingerprint": "0e0bb4c530f5b267f87195832d2c9638d79011c69d03a8fa5056bd14752e217e"
     },
     "vc-baseline": {
       "observerName": "currentPlayer",
@@ -2062,21 +1546,13 @@
           "selfResources"
         ],
         "candidateFeatures": [
-          "isPass",
-          "projectedSelfMargin",
-          "isEvent",
-          "isRally",
-          "isMarch",
-          "isAttack",
-          "isTerror",
-          "isTax",
-          "isSubvert"
+          "projectedSelfMargin"
         ],
         "candidateAggregates": [
           "hasNonPassAlternative"
         ]
       },
-      "fingerprint": "41fc089c64d8e2c6cd829223eab21e36f2156b16bba08960b0967567054804c8"
+      "fingerprint": "d2ff8a30ebfc6a86e6714f9d24294200c9b4f739c0de9d5f7549a98a18748739"
     },
     "vc-evolved": {
       "observerName": "currentPlayer",
@@ -2110,16 +1586,13 @@
       "plan": {
         "stateFeatures": [],
         "candidateFeatures": [
-          "isPass",
-          "isRally",
-          "isTax",
           "targetSpacePopulation"
         ],
         "candidateAggregates": [
           "hasNonPassAlternative"
         ]
       },
-      "fingerprint": "c9cb491af5560c4ff5d0faabff702d7ef303dc120434043f197e2f759e4c1df7"
+      "fingerprint": "8575e9c456b746171f95455df8bd1898e88b9f1d7091992491f1605ab097cb2e"
     }
   },
   "bindingsBySeat": {
@@ -2128,5 +1601,5 @@
     "nva": "nva-baseline",
     "vc": "vc-evolved"
   },
-  "catalogFingerprint": "145308ffd1f7bb7dbc19596b6c92c7088de6a1dd4b2d9a167749a900c4b7d18c"
+  "catalogFingerprint": "61ecd697ff058ea8f0e780300b5cd2b2d6a25e4fc05b4898aabf43541cdf10e0"
 }

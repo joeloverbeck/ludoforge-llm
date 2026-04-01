@@ -1,6 +1,6 @@
 # 107STOSELMOD-002: Implement stochastic selection in policy evaluator
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — policy-eval, possibly policy-runtime and policy-contract
@@ -143,3 +143,20 @@ Update if needed, or document that no changes are required.
 
 1. `node --test packages/engine/dist/test/unit/agents/policy-eval.test.js`
 2. `pnpm turbo build && pnpm turbo test`
+
+## Outcome
+
+Completed: 2026-04-02
+
+- Implemented stochastic top-level move selection in `packages/engine/src/agents/policy-eval.ts` for `argmax`, `softmaxSample`, and `weightedSample`.
+- Added deterministic derived-seed sampling helpers and runtime validation for `softmaxSample` temperature.
+- Added focused runtime tests in `packages/engine/test/unit/agents/policy-eval.test.ts` covering argmax parity, deterministic sampling, temperature sensitivity, near-argmax convergence, weighted bias, and equal-score uniform fallback.
+- Verified `packages/engine/src/agents/policy-runtime.ts` and `packages/engine/src/contracts/policy-contract.ts`; no changes were required for this ticket boundary.
+- Deviation from the ticket's literal seed example: the final implementation derives the selection seed from authoritative RNG state plus `state.stateHash` and a selection salt, matching the user-confirmed Foundation 8 resolution while still not consuming the authoritative RNG stream.
+- Verification passed:
+  - `pnpm -F @ludoforge/engine typecheck`
+  - `pnpm -F @ludoforge/engine build`
+  - `node --test "dist/test/unit/agents/policy-eval.test.js"`
+  - `pnpm -F @ludoforge/engine test`
+  - `pnpm turbo build`
+  - `pnpm turbo test`

@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — types-core (trace types), policy-eval (trace recording), data files, test fixtures
-**Deps**: `tickets/107STOSELMOD-002.md`, `specs/107-stochastic-selection-modes.md`
+**Deps**: `archive/tickets/107STOSELMOD-002.md`, `specs/107-stochastic-selection-modes.md`
 
 ## Problem
 

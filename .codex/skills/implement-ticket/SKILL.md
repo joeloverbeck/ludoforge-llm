@@ -63,7 +63,11 @@ If a prior ticket in the same series was implemented earlier in the session, reu
     - 3 concrete options
     - 1 recommendation
 14. Do not proceed with implementation until the user confirms when a discrepancy or `1-3-1` decision is outstanding.
-15. If the ticket is accurate and no blocking decision remains, proceed.
+15. If the ticket boundary remains valid but one concrete implementation detail is ambiguous, under-specified, or conflicts with Foundations:
+    - resolve that detail with `1-3-1`
+    - after user confirmation, treat the confirmed interpretation as authoritative for the rest of the task
+    - do not force a ticket rewrite unless the implementation boundary itself changed
+16. If the ticket is accurate and no blocking decision remains, proceed.
 
 ## Implementation Rules
 
@@ -86,6 +90,10 @@ If a prior ticket in the same series was implemented earlier in the session, reu
   - Zod or JSON schemas
   - diagnostics or debug snapshots
   - fixtures, goldens, and tests
+- If the ticket names files to verify or inspect rather than definitely modify:
+  - read and assess them as part of the implementation boundary
+  - leave them unchanged when evidence shows no edit is required
+  - state that explicit no-change decision in the final summary
 - When a migration adds or removes a required compiled field, treat owned production goldens that snapshot compiled catalogs, summaries, or traces as expected update surfaces unless evidence shows unexpected behavioral drift.
 
 ## Verification
@@ -138,6 +146,7 @@ After implementation and verification:
 
 1. Summarize what changed, what was verified, and any residual risk.
    - if any verification was intentionally deferred because an adjacent active ticket owns that scope, state that explicitly
+   - if a user-confirmed `1-3-1` design resolution materially affected the implementation, include a short resolved-decision note
 2. If the ticket appears complete, offer to archive it per `docs/archival-workflow.md`.
 3. If the user wants archival or a concrete follow-up review, hand off to `post-ticket-review`.
 

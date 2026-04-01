@@ -368,6 +368,66 @@ function createInput(agents: AgentPolicyCatalog, legalMoves: readonly Move[], se
   } as const;
 }
 
+function createSelectionScoreCatalog(
+  selection: AgentPolicyCatalog['profiles']['baseline']['selection'] | undefined,
+  scores: Readonly<Record<string, number>>,
+): AgentPolicyCatalog {
+  const considerationEntries = Object.fromEntries(
+    Object.entries(scores).map(([actionId, score]) => [
+      `score_${actionId}`,
+      {
+        scopes: ['move'] as const,
+        costClass: 'candidate' as const,
+        weight: literal(score),
+        value: opExpr(
+          'boolToNumber',
+          opExpr('eq', refExpr({ kind: 'candidateIntrinsic', intrinsic: 'actionId' }), literal(actionId)),
+        ),
+        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
+      },
+    ]),
+  );
+  const considerationIds = Object.keys(considerationEntries);
+
+  return createCatalog(
+    {
+      considerations: considerationEntries,
+    },
+    {
+      use: {
+        pruningRules: [],
+        considerations: considerationIds,
+        tieBreakers: ['stableMoveKey'],
+      },
+      plan: {
+        stateFeatures: [],
+        candidateFeatures: [],
+        candidateAggregates: [],
+        considerations: considerationIds,
+      },
+      ...(selection === undefined ? {} : { selection }),
+    },
+  );
+}
+
+function countSelectionResults(
+  agents: AgentPolicyCatalog,
+  legalMoves: readonly Move[],
+  seeds: readonly bigint[],
+  inputRngSeedOffset = 0n,
+): Readonly<Record<string, number>> {
+  const counts = Object.fromEntries(legalMoves.map((move) => [String(move.actionId), 0])) as Record<string, number>;
+  for (const seed of seeds) {
+    const input = createInput(agents, legalMoves, seed);
+    const result = evaluatePolicyMove({
+      ...input,
+      rng: createRng(seed + inputRngSeedOffset),
+    });
+    counts[String(result.move.actionId)] = (counts[String(result.move.actionId)] ?? 0) + 1;
+  }
+  return counts;
+}
+
 function createChoiceRequest(overrides: Partial<ChoicePendingRequest> = {}): ChoicePendingRequest {
   return {
     kind: 'pending',
@@ -1462,6 +1522,87 @@ describe('policy-eval', () => {
       result.metadata.candidates.find((candidate) => candidate.actionId === 'event')?.score,
       10,
     );
+  });
+
+  describe('selection modes', () => {
+    const scoredMoves = createMoves('alpha', 'beta', 'advance');
+
+    it('keeps argmax behavior identical to the default profile selection', () => {
+      const defaultResult = evaluatePolicyMove(
+        createInput(createSelectionScoreCatalog(undefined, { alpha: 3, beta: 3, advance: 1 }), scoredMoves, 7n),
+      );
+      const explicitResult = evaluatePolicyMove(
+        createInput(createSelectionScoreCatalog({ mode: 'argmax' }, { alpha: 3, beta: 3, advance: 1 }), scoredMoves, 7n),
+      );
+
+      assert.deepEqual(explicitResult.move, defaultResult.move);
+      assert.deepEqual(explicitResult.rng, defaultResult.rng);
+      assert.equal(explicitResult.move.actionId, asActionId('alpha'));
+    });
+
+    it('uses a deterministic state-derived selection seed for softmaxSample without consuming input.rng', () => {
+      const agents = createSelectionScoreCatalog({ mode: 'softmaxSample', temperature: 0.5 }, { alpha: 10, beta: 5, advance: 1 });
+      const input = createInput(agents, scoredMoves, 7n);
+      const first = evaluatePolicyMove(input);
+      const second = evaluatePolicyMove({
+        ...input,
+        rng: createRng(999n),
+      });
+
+      assert.deepEqual(first.move, second.move);
+      assert.deepEqual(first.rng, input.rng);
+      assert.deepEqual(second.rng, createRng(999n));
+      assert.deepEqual(first.metadata.tieBreakChain, []);
+    });
+
+    it('softmaxSample favors the top score more strongly at lower temperatures', () => {
+      const seeds = Array.from({ length: 200 }, (_unused, index) => BigInt(index + 1));
+      const lowTemperatureCounts = countSelectionResults(
+        createSelectionScoreCatalog({ mode: 'softmaxSample', temperature: 0.25 }, { alpha: 10, beta: 5, advance: 1 }),
+        scoredMoves,
+        seeds,
+      );
+      const highTemperatureCounts = countSelectionResults(
+        createSelectionScoreCatalog({ mode: 'softmaxSample', temperature: 5 }, { alpha: 10, beta: 5, advance: 1 }),
+        scoredMoves,
+        seeds,
+      );
+
+      assert.ok((lowTemperatureCounts.alpha ?? 0) > (highTemperatureCounts.alpha ?? 0));
+      assert.ok((lowTemperatureCounts.advance ?? 0) < (highTemperatureCounts.advance ?? 0));
+    });
+
+    it('softmaxSample converges to argmax at very low temperatures', () => {
+      const seeds = Array.from({ length: 50 }, (_unused, index) => BigInt(index + 1));
+      const counts = countSelectionResults(
+        createSelectionScoreCatalog({ mode: 'softmaxSample', temperature: 0.001 }, { alpha: 10, beta: 5, advance: 1 }),
+        scoredMoves,
+        seeds,
+      );
+
+      assert.equal(counts.alpha, seeds.length);
+      assert.equal(counts.beta, 0);
+      assert.equal(counts.advance, 0);
+    });
+
+    it('weightedSample favors higher scores and falls back to uniform when all scores are equal', () => {
+      const seeds = Array.from({ length: 180 }, (_unused, index) => BigInt(index + 1));
+      const weightedCounts = countSelectionResults(
+        createSelectionScoreCatalog({ mode: 'weightedSample' }, { alpha: 10, beta: 5, advance: 1 }),
+        scoredMoves,
+        seeds,
+      );
+      const uniformCounts = countSelectionResults(
+        createSelectionScoreCatalog({ mode: 'weightedSample' }, { alpha: 5, beta: 5, advance: 5 }),
+        scoredMoves,
+        seeds,
+      );
+
+      assert.ok((weightedCounts.alpha ?? 0) > (weightedCounts.beta ?? 0));
+      assert.ok((weightedCounts.beta ?? 0) > (weightedCounts.advance ?? 0));
+      assert.ok(Math.max(uniformCounts.alpha ?? 0, uniformCounts.beta ?? 0, uniformCounts.advance ?? 0)
+        - Math.min(uniformCounts.alpha ?? 0, uniformCounts.beta ?? 0, uniformCounts.advance ?? 0) < 40);
+    });
   });
 
   it('treats skipRule pruning as non-destructive when it would empty the candidate set', () => {

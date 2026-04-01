@@ -1426,7 +1426,7 @@ class AgentLibraryCompiler {
       const scope = scopes[0];
       if (scope === 'move' && hasCompletionOnlyRefs) {
         this.diagnostics.push({
-          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_REF_UNKNOWN,
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_CONSIDERATION_SCOPE_VIOLATION,
           path,
           severity: 'error',
           message: `Consideration "${considerationId}" is move-scoped but references completion-only refs.`,
@@ -1435,7 +1435,7 @@ class AgentLibraryCompiler {
       }
       if (scope === 'completion' && hasMoveOnlyRefs) {
         this.diagnostics.push({
-          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_REF_UNKNOWN,
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_CONSIDERATION_SCOPE_VIOLATION,
           path,
           severity: 'error',
           message: `Consideration "${considerationId}" is completion-scoped but references move-only refs.`,
@@ -1447,7 +1447,7 @@ class AgentLibraryCompiler {
 
     if (scopes.length > 1 && (hasMoveOnlyRefs || hasCompletionOnlyRefs) && !refKinds.has('contextKind')) {
       this.diagnostics.push({
-        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_CONSIDERATION_SCOPE_WARNING,
         path,
         severity: 'warning',
         message: `Consideration "${considerationId}" spans move and completion scopes but does not visibly guard context-specific refs with context.kind.`,
@@ -2221,7 +2221,7 @@ function normalizeConsiderationScopes(
 ): readonly ConsiderationScope[] | null {
   if (!Array.isArray(value) || value.length === 0) {
     diagnostics.push({
-      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_CONSIDERATION_SCOPE_EMPTY,
       path,
       severity: 'error',
       message: 'Consideration scopes must be a non-empty array.',
@@ -2235,7 +2235,7 @@ function normalizeConsiderationScopes(
   for (const [index, entry] of value.entries()) {
     if (entry !== 'move' && entry !== 'completion') {
       diagnostics.push({
-        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_CONSIDERATION_SCOPE_INVALID,
         path: `${path}.${index}`,
         severity: 'error',
         message: `Unsupported consideration scope "${String(entry)}".`,

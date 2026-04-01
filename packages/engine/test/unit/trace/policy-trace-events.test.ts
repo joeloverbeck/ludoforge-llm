@@ -263,7 +263,7 @@ describe('policy trace events', () => {
     const snapshot = buildPolicyDiagnosticsSnapshot(def, evaluation.metadata, 'verbose');
 
     assert.deepEqual(snapshot.resolvedPlan.considerations, ['preferEvent']);
-    assert.deepEqual(snapshot.costTiers.candidate, ['candidateFeature:isEvent', 'scoreTerm:preferEvent']);
+    assert.deepEqual(snapshot.costTiers.candidate, ['candidateFeature:isEvent', 'consideration:preferEvent']);
     assert.deepEqual(snapshot.surfaceRefs.preview, []);
   });
 });

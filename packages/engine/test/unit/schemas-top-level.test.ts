@@ -193,6 +193,7 @@ function buildGameDefWithAgentExpr(featureId: string, expr: Record<string, unkno
             stateFeatures: [],
             candidateFeatures: [featureId],
             candidateAggregates: [],
+            considerations: [],
           },
         },
       },
@@ -346,9 +347,9 @@ describe('top-level runtime schemas', () => {
           candidateFeatures: {},
           candidateAggregates: {},
           pruningRules: {},
-          scoreTerms: {},
-          completionScoreTerms: {
+          considerations: {
             preferNamedOption: {
+              scopes: ['completion'],
               costClass: 'state',
               when: {
                 kind: 'op',
@@ -384,7 +385,19 @@ describe('top-level runtime schemas', () => {
               },
             },
           },
-          tieBreakers: {},
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+              costClass: 'candidate',
+              dependencies: {
+                parameters: [],
+                stateFeatures: [],
+                candidateFeatures: [],
+                aggregates: [],
+                strategicConditions: [],
+              },
+            },
+          },
           strategicConditions: {},
         },
         profiles: {
@@ -398,14 +411,11 @@ describe('top-level runtime schemas', () => {
               considerations: ['preferNamedOption'],
               tieBreakers: ['stableMoveKey'],
             },
-            completionGuidance: {
-              enabled: true,
-              fallback: 'first',
-            },
             plan: {
               stateFeatures: [],
               candidateFeatures: [],
               candidateAggregates: [],
+              considerations: ['preferNamedOption'],
             },
           },
         },
@@ -495,6 +505,7 @@ describe('top-level runtime schemas', () => {
               stateFeatures: [],
               candidateFeatures: [],
               candidateAggregates: [],
+              considerations: [],
             },
           },
         },
@@ -587,6 +598,7 @@ describe('top-level runtime schemas', () => {
               stateFeatures: [],
               candidateFeatures: [],
               candidateAggregates: [],
+              considerations: [],
             },
           },
         },
@@ -680,6 +692,7 @@ describe('top-level runtime schemas', () => {
               stateFeatures: [],
               candidateFeatures: ['frontierPopulation'],
               candidateAggregates: [],
+              considerations: [],
             },
           },
         },

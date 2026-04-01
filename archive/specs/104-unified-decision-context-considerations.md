@@ -1,6 +1,6 @@
 # Spec 104: Unified Decision-Context Considerations
 
-**Status**: Draft
+**Status**: COMPLETED
 **Priority**: P1
 **Complexity**: L
 **Dependencies**: Spec 102 (shared observer model — observer profiles referenced by agent profiles)
@@ -257,6 +257,22 @@ Completion guidance is implicitly enabled when a profile's `use.considerations` 
 3. `policy-evaluation-core.ts`:
    - Add `contextKind` ref kind handling: returns `'move'` or `'completion'` based on `this.input.completion` presence
    - `evaluateScoreTerm()` renamed to `evaluateConsideration()` (same logic, new name)
+
+## Outcome
+
+Completed: 2026-04-01
+
+- Implemented across tickets `104UNIDECCON-005` through `104UNIDECCON-008`.
+- The authored and compiled agent model now uses unified `considerations` with explicit `scopes`, `context.kind` is available in compiled/runtime policy refs, and completion guidance is derived from completion-scoped considerations rather than explicit profile config.
+- Repository-owned FITL and Texas agent docs, compiled/runtime contracts, schema artifacts, diagnostics, goldens, and tests were migrated to the unified shape.
+- Full repository verification passed after completing the migration and updating stale or brittle test expectations uncovered during the final verification pass.
+
+Verification:
+
+- `pnpm turbo build`
+- `pnpm turbo test`
+- `pnpm turbo lint`
+- `pnpm turbo typecheck`
 
 ### Part G: Scope Validation Rules
 

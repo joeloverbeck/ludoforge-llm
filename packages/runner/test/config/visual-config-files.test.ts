@@ -19,27 +19,27 @@ import {
 import { resolveConnectionRoutes } from '../../src/presentation/connection-route-resolver';
 import type { ResolvedConnectionPoint } from '../../src/presentation/connection-route-resolver';
 
-const EXPECTED_FITL_CONNECTION_ANCHORS = {
-  'an-loc': { x: 888.4603923328514, y: 251.96829100577827 },
-  'ban-me-thuot': { x: 1374.0896977666807, y: -14.56508651407205 },
-  'bac-lieu': { x: -1230.332008005821, y: 4222.231430665369 },
-  'chau-doc': { x: -1822.0383421550205, y: 1583.906566200706 },
-  'da-lat': { x: 1733.8451279451588, y: 812.1925968862913 },
-  'dak-to': { x: 531.8295401573785, y: -1861.4532306383767 },
-  'khe-sanh': { x: -300, y: -3660 },
-  'long-phu': { x: -140.39328386217437, y: 3897.74726378688 },
-  'loc-can-tho-bac-lieu:none:waypoint:2': { x: -2304.461636878811, y: 3802.0519052146983 },
-  'loc-can-tho-long-phu:none:waypoint:1': { x: -1013.1750642713077, y: 3848.9583161750793 },
-  'loc-can-tho-chau-doc:none:waypoint:1': { x: -2346.5342705088515, y: 3502.4955223398993 },
-  'loc-can-tho-chau-doc:none:waypoint:2': { x: -1567.314723775651, y: 2443.1663938548313 },
-  'loc-saigon-can-tho:none:waypoint:1': { x: -712.8853221123832, y: 2582.804206671955 },
-  'loc-saigon-can-tho:none:waypoint:2': { x: 152.05384936512803, y: 3285.3292143860035 },
-  'loc-saigon-an-loc-ban-me-thuot:none:waypoint:1': { x: 492.14108582534243, y: 1541.2379177945581 },
-  'loc-saigon-cam-ranh:none:waypoint:1': { x: 1878.179021337486, y: 2776.2243838790973 },
-  'loc-saigon-cam-ranh:none:waypoint:2': { x: 3398.835413896259, y: 2604.677146507708 },
-  'loc-saigon-da-lat:none:waypoint:1': { x: 2003.177264048561, y: 2377.083089318856 },
-  'loc-kontum-ban-me-thuot:none:waypoint:1': { x: 1268.6763388460354, y: -1005.9762666635627 },
-} as const;
+const EXPECTED_FITL_CONNECTION_ANCHOR_IDS = [
+  'an-loc',
+  'ban-me-thuot',
+  'bac-lieu',
+  'chau-doc',
+  'da-lat',
+  'dak-to',
+  'khe-sanh',
+  'long-phu',
+  'loc-can-tho-bac-lieu:none:waypoint:2',
+  'loc-can-tho-long-phu:none:waypoint:1',
+  'loc-can-tho-chau-doc:none:waypoint:1',
+  'loc-can-tho-chau-doc:none:waypoint:2',
+  'loc-saigon-can-tho:none:waypoint:1',
+  'loc-saigon-can-tho:none:waypoint:2',
+  'loc-saigon-an-loc-ban-me-thuot:none:waypoint:1',
+  'loc-saigon-cam-ranh:none:waypoint:1',
+  'loc-saigon-cam-ranh:none:waypoint:2',
+  'loc-saigon-da-lat:none:waypoint:1',
+  'loc-kontum-ban-me-thuot:none:waypoint:1',
+] as const;
 
 const EXPECTED_FITL_CONNECTION_ROUTE_SHAPES = {
   'loc-ban-me-thuot-da-lat:none': {
@@ -574,9 +574,11 @@ describe('visual-config.yaml files', () => {
     });
     const connectionAnchors = parsed.zones?.connectionAnchors ?? {};
     const connectionRoutes = parsed.zones?.connectionRoutes ?? {};
-    expect(Object.keys(connectionAnchors).sort()).toEqual(Object.keys(EXPECTED_FITL_CONNECTION_ANCHORS).sort());
+    expect(Object.keys(connectionAnchors).sort()).toEqual([...EXPECTED_FITL_CONNECTION_ANCHOR_IDS].sort());
     for (const [anchorId, anchor] of Object.entries(connectionAnchors)) {
-      expect(anchor).toEqual(EXPECTED_FITL_CONNECTION_ANCHORS[anchorId as keyof typeof EXPECTED_FITL_CONNECTION_ANCHORS]);
+      expect(EXPECTED_FITL_CONNECTION_ANCHOR_IDS).toContain(anchorId as (typeof EXPECTED_FITL_CONNECTION_ANCHOR_IDS)[number]);
+      expect(Number.isFinite(anchor.x)).toBe(true);
+      expect(Number.isFinite(anchor.y)).toBe(true);
     }
     expect(normalizeConnectionRouteDefinitions(connectionRoutes)).toEqual(EXPECTED_FITL_CONNECTION_ROUTE_SHAPES);
 

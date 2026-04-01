@@ -1,6 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import { CNL_COMPILER_DIAGNOSTIC_CODES } from '../../../src/cnl/compiler-diagnostic-codes.js';
 import { compileGameSpecToGameDef, createEmptyGameSpecDoc } from '../../../src/cnl/index.js';
 import type { GameSpecObservabilitySection } from '../../../src/cnl/game-spec-doc.js';
 
@@ -139,11 +140,17 @@ describe('compile considerations', () => {
     });
 
     assert.equal(
-      result.diagnostics.some((diagnostic) => diagnostic.path === 'doc.agents.library.considerations.emptyScopes.scopes'),
+      result.diagnostics.some((diagnostic) =>
+        diagnostic.code === CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_CONSIDERATION_SCOPE_EMPTY
+        && diagnostic.path === 'doc.agents.library.considerations.emptyScopes.scopes'
+      ),
       true,
     );
     assert.equal(
-      result.diagnostics.some((diagnostic) => diagnostic.path === 'doc.agents.library.considerations.invalidScope.scopes.1'),
+      result.diagnostics.some((diagnostic) =>
+        diagnostic.code === CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_CONSIDERATION_SCOPE_INVALID
+        && diagnostic.path === 'doc.agents.library.considerations.invalidScope.scopes.1'
+      ),
       true,
     );
   });
@@ -192,21 +199,24 @@ describe('compile considerations', () => {
 
     assert.equal(
       result.diagnostics.some((diagnostic) =>
-        diagnostic.severity === 'error'
+        diagnostic.code === CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_CONSIDERATION_SCOPE_VIOLATION
+        && diagnostic.severity === 'error'
         && diagnostic.path === 'doc.agents.library.considerations.moveRefInCompletion',
       ),
       true,
     );
     assert.equal(
       result.diagnostics.some((diagnostic) =>
-        diagnostic.severity === 'error'
+        diagnostic.code === CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_CONSIDERATION_SCOPE_VIOLATION
+        && diagnostic.severity === 'error'
         && diagnostic.path === 'doc.agents.library.considerations.completionRefInMove',
       ),
       true,
     );
     assert.equal(
       result.diagnostics.some((diagnostic) =>
-        diagnostic.severity === 'warning'
+        diagnostic.code === CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_CONSIDERATION_SCOPE_WARNING
+        && diagnostic.severity === 'warning'
         && diagnostic.path === 'doc.agents.library.considerations.dualWithoutGuard',
       ),
       true,

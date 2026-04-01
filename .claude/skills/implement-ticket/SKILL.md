@@ -24,6 +24,8 @@ Structured workflow for ticket reassessment and implementation. This eliminates 
 3. **Extract all references** from the ticket: file paths, function names, type names, module references, class names
 4. **Confirm project conventions** from CLAUDE.md (always available in system context)
 
+**Chaining note**: If a prior ticket in the same series was implemented earlier in this session, leverage already-verified context. Phase 2 reassessment should focus on new references introduced by this ticket, not re-verify artifacts confirmed by the prior ticket.
+
 ### Phase 2: Reassess Assumptions
 
 5. **Grep/Glob for every referenced artifact** in the ticket:
@@ -32,6 +34,8 @@ Structured workflow for ticket reassessment and implementation. This eliminates 
    - Module structures: does the code organization match what the ticket assumes?
    - Dependencies: are imported modules/packages available?
 6. **Build a discrepancy list**: anything the ticket states that doesn't match reality
+
+**Guard test note**: For tickets that modify shared types or interfaces (e.g., `GameDef`, `CompileSectionResults`), check for exhaustiveness tests, schema artifact checks, or diagnostic registry audits that may need updating alongside the main deliverables.
 
 ### Phase 3: Resolve Discrepancies (if needed)
 

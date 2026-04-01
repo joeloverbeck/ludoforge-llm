@@ -19,8 +19,8 @@ The argument is the skill directory path. The framework automatically resolves `
 
 ## Checklist
 
-1. **Read the target skill** — Read the SKILL.md file at the provided path. Parse its name, description, and full content. If the file does not exist or is not a skill file, stop and report the error.
-2. **Read alignment documents** — Read `docs/FOUNDATIONS.md` — skip only if explicitly read earlier in this session (not from memory or training knowledge). `CLAUDE.md` is always available via system context injection and does not need explicit reading.
+1. **Read the target skill** — The skill content may already be loaded by the command framework (visible above the `ARGUMENTS:` line). If not, read the SKILL.md file at the provided path. Parse its name, description, and full content. If the file does not exist or is not a skill file, stop and report the error.
+2. **Read alignment documents** — Read `docs/FOUNDATIONS.md` — skip if it was read via the Read tool earlier in this session. Do not rely on memory or training knowledge as a substitute. `CLAUDE.md` is always available via system context injection and does not need explicit reading.
 3. **Session reflection** — Review the current conversation context to identify:
    - Moments where the skill's instructions were unclear or ambiguous
    - Steps that were skipped, reordered, or worked around
@@ -85,6 +85,8 @@ Output this structure to the conversation (do not write to a file):
 ## Summary
 
 **Total**: N issues, N improvements, N features — N CRITICAL, N HIGH, N MEDIUM, N LOW
+
+[If all findings are LOW severity and the skill was already audited and updated earlier in this session, note: "The skill has converged — further auditing has diminishing returns."]
 ```
 
 ## Guardrails
@@ -94,5 +96,5 @@ Output this structure to the conversation (do not write to a file):
 - **FOUNDATIONS alignment is mandatory** — Any suggestion that would violate a principle in `docs/FOUNDATIONS.md` must be flagged and rejected, even if it would otherwise be an improvement.
 - **Scope discipline** — Do not propose expanding the skill's scope beyond its stated intent. The audit evaluates the skill as written, not what it could become.
 - **Session evidence required** — Every Issue and Improvement must cite specific session evidence (what happened, what was expected). Findings based purely on hypothetical scenarios belong in Features, not Issues.
-- **Follow-up implementation** — After the report is presented, the user may request implementation of specific suggestions. At that point, edit the target skill file directly — the "report only" guardrail applies only to the audit phase, not to user-directed follow-up. After making follow-up edits, re-read the modified sections to verify edits don't conflict with each other or with unchanged skill content.
+- **Follow-up implementation** — After the report is presented, the user may request implementation of specific suggestions. At that point, edit the target skill file directly — the "report only" guardrail applies only to the audit phase, not to user-directed follow-up. After making follow-up edits, re-read the modified sections to verify edits don't conflict with each other or with unchanged skill content. The user may run a subsequent `/skill-audit` on the same skill after edits to validate the changes — this is a normal audit-edit-reaudit workflow.
 - **Cross-skill consistency** — If the target skill is part of a multi-skill workflow (e.g., plan/implement/evaluate cycle), scan sibling skills for inconsistent file references, terminology, or shared constants. Report cross-skill inconsistencies as Issues.

@@ -1,6 +1,8 @@
 import { createHash } from 'node:crypto';
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import type {
+  CompiledObserverCatalog,
+  CompiledObserverProfile,
   CompiledSurfaceCatalog,
   CompiledSurfaceVisibility,
 } from '../kernel/types.js';
@@ -14,22 +16,7 @@ import type {
   GameSpecPolicySurfaceVisibilityDef,
 } from './game-spec-doc.js';
 import { lowerSurfaceVisibilityEntry } from './compile-agents.js';
-
-// ---------------------------------------------------------------------------
-// Types (will move to types-core.ts in ticket 005)
-// ---------------------------------------------------------------------------
-
-export interface CompiledObserverProfile {
-  readonly fingerprint: string;
-  readonly surfaces: CompiledSurfaceCatalog;
-}
-
-export interface CompiledObserverCatalog {
-  readonly schemaVersion: 1;
-  readonly catalogFingerprint: string;
-  readonly observers: Readonly<Record<string, CompiledObserverProfile>>;
-  readonly defaultObserverName: string;
-}
+import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 
 // ---------------------------------------------------------------------------
 // Options
@@ -87,7 +74,7 @@ export function lowerObservers(
   for (const name of Object.keys(userProfiles)) {
     if (BUILT_IN_OBSERVER_NAMES.has(name)) {
       diagnostics.push({
-        code: 'CNL_COMPILER_OBSERVER_BUILTIN_NAME_COLLISION',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_OBSERVER_BUILTIN_NAME_COLLISION,
         path: `doc.observability.observers.${name}`,
         severity: 'error',
         message: `Observer "${name}" collides with a built-in observer name.`,
@@ -158,7 +145,7 @@ function resolveBaseSurfaces(
   if (parentDef === undefined) {
     // Validator should have caught this; emit diagnostic and use defaults
     diagnostics.push({
-      code: 'CNL_COMPILER_OBSERVER_EXTENDS_MISSING',
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_OBSERVER_EXTENDS_MISSING,
       path: `doc.observability.observers.${name}.extends`,
       severity: 'error',
       message: `Observer "${name}" extends "${parentName}", which does not exist.`,

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `game-spec-doc.ts`, `compile-agents.ts`, `validate-agents.ts`, `types-core.ts`
-**Deps**: `tickets/102SHAOBSMOD-005.md`, `specs/102-shared-observer-model.md`
+**Deps**: `archive/tickets/102SHAOBSMOD-005.md`, `specs/102-shared-observer-model.md`
 
 ## Problem
 

@@ -298,6 +298,22 @@ export const CompiledSurfaceCatalogSchema = z
   })
   .strict();
 
+export const CompiledObserverProfileSchema = z
+  .object({
+    fingerprint: StringSchema,
+    surfaces: CompiledSurfaceCatalogSchema,
+  })
+  .strict();
+
+export const CompiledObserverCatalogSchema = z
+  .object({
+    schemaVersion: z.literal(1),
+    catalogFingerprint: StringSchema,
+    observers: z.record(StringSchema, CompiledObserverProfileSchema),
+    defaultObserverName: StringSchema,
+  })
+  .strict();
+
 export const TerminalEvaluationDefSchema = z
   .object({
     conditions: z.array(EndConditionSchema),
@@ -976,6 +992,7 @@ export const GameDefSchema = z
     turnOrder: TurnOrderSchema.optional(),
     actionPipelines: z.array(ActionPipelineSchema).optional(),
     derivedMetrics: z.array(DerivedMetricDefSchema).optional(),
+    observers: CompiledObserverCatalogSchema.optional(),
     agents: AgentPolicyCatalogSchema.optional(),
     actions: z.array(ActionDefSchema),
     triggers: z.array(TriggerDefSchema),

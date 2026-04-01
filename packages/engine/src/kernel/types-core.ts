@@ -549,6 +549,24 @@ export interface CompiledSurfaceCatalog {
   readonly activeCardAnnotation: CompiledSurfaceVisibility;
 }
 
+// ---------------------------------------------------------------------------
+// Observer catalog (Spec 102 Part E)
+// ---------------------------------------------------------------------------
+
+export interface CompiledObserverProfile {
+  readonly fingerprint: string;
+  readonly surfaces: CompiledSurfaceCatalog;
+  // RESERVED for Spec 106:
+  // readonly zones?: CompiledZoneVisibilityCatalog;
+}
+
+export interface CompiledObserverCatalog {
+  readonly schemaVersion: 1;
+  readonly catalogFingerprint: string;
+  readonly observers: Readonly<Record<string, CompiledObserverProfile>>;
+  readonly defaultObserverName: string;
+}
+
 export interface CompiledAgentParameterDef {
   readonly type: AgentParameterType;
   readonly required: boolean;
@@ -705,6 +723,7 @@ export interface GameDef {
   readonly turnOrder?: TurnOrderStrategy;
   readonly actionPipelines?: readonly ActionPipelineDef[];
   readonly derivedMetrics?: readonly DerivedMetricDef[];
+  readonly observers?: CompiledObserverCatalog;
   readonly agents?: AgentPolicyCatalog;
   readonly actions: readonly ActionDef[];
   readonly triggers: readonly TriggerDef[];

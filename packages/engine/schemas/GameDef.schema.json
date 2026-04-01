@@ -1757,6 +1757,586 @@
         "additionalProperties": false
       }
     },
+    "observers": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "type": "number",
+          "const": 1
+        },
+        "catalogFingerprint": {
+          "type": "string"
+        },
+        "observers": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "fingerprint": {
+                "type": "string"
+              },
+              "surfaces": {
+                "type": "object",
+                "properties": {
+                  "globalVars": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "object",
+                      "properties": {
+                        "current": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "public"
+                            },
+                            {
+                              "type": "string",
+                              "const": "seatVisible"
+                            },
+                            {
+                              "type": "string",
+                              "const": "hidden"
+                            }
+                          ]
+                        },
+                        "preview": {
+                          "type": "object",
+                          "properties": {
+                            "visibility": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "const": "public"
+                                },
+                                {
+                                  "type": "string",
+                                  "const": "seatVisible"
+                                },
+                                {
+                                  "type": "string",
+                                  "const": "hidden"
+                                }
+                              ]
+                            },
+                            "allowWhenHiddenSampling": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "visibility",
+                            "allowWhenHiddenSampling"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "current",
+                        "preview"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "perPlayerVars": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "object",
+                      "properties": {
+                        "current": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "public"
+                            },
+                            {
+                              "type": "string",
+                              "const": "seatVisible"
+                            },
+                            {
+                              "type": "string",
+                              "const": "hidden"
+                            }
+                          ]
+                        },
+                        "preview": {
+                          "type": "object",
+                          "properties": {
+                            "visibility": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "const": "public"
+                                },
+                                {
+                                  "type": "string",
+                                  "const": "seatVisible"
+                                },
+                                {
+                                  "type": "string",
+                                  "const": "hidden"
+                                }
+                              ]
+                            },
+                            "allowWhenHiddenSampling": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "visibility",
+                            "allowWhenHiddenSampling"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "current",
+                        "preview"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "derivedMetrics": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "object",
+                      "properties": {
+                        "current": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "public"
+                            },
+                            {
+                              "type": "string",
+                              "const": "seatVisible"
+                            },
+                            {
+                              "type": "string",
+                              "const": "hidden"
+                            }
+                          ]
+                        },
+                        "preview": {
+                          "type": "object",
+                          "properties": {
+                            "visibility": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "const": "public"
+                                },
+                                {
+                                  "type": "string",
+                                  "const": "seatVisible"
+                                },
+                                {
+                                  "type": "string",
+                                  "const": "hidden"
+                                }
+                              ]
+                            },
+                            "allowWhenHiddenSampling": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "visibility",
+                            "allowWhenHiddenSampling"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "current",
+                        "preview"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "victory": {
+                    "type": "object",
+                    "properties": {
+                      "currentMargin": {
+                        "type": "object",
+                        "properties": {
+                          "current": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "const": "public"
+                              },
+                              {
+                                "type": "string",
+                                "const": "seatVisible"
+                              },
+                              {
+                                "type": "string",
+                                "const": "hidden"
+                              }
+                            ]
+                          },
+                          "preview": {
+                            "type": "object",
+                            "properties": {
+                              "visibility": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "const": "public"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "seatVisible"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "hidden"
+                                  }
+                                ]
+                              },
+                              "allowWhenHiddenSampling": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "visibility",
+                              "allowWhenHiddenSampling"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": [
+                          "current",
+                          "preview"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "currentRank": {
+                        "type": "object",
+                        "properties": {
+                          "current": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "const": "public"
+                              },
+                              {
+                                "type": "string",
+                                "const": "seatVisible"
+                              },
+                              {
+                                "type": "string",
+                                "const": "hidden"
+                              }
+                            ]
+                          },
+                          "preview": {
+                            "type": "object",
+                            "properties": {
+                              "visibility": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "const": "public"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "seatVisible"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "hidden"
+                                  }
+                                ]
+                              },
+                              "allowWhenHiddenSampling": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "visibility",
+                              "allowWhenHiddenSampling"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": [
+                          "current",
+                          "preview"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": [
+                      "currentMargin",
+                      "currentRank"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "activeCardIdentity": {
+                    "type": "object",
+                    "properties": {
+                      "current": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "const": "public"
+                          },
+                          {
+                            "type": "string",
+                            "const": "seatVisible"
+                          },
+                          {
+                            "type": "string",
+                            "const": "hidden"
+                          }
+                        ]
+                      },
+                      "preview": {
+                        "type": "object",
+                        "properties": {
+                          "visibility": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "const": "public"
+                              },
+                              {
+                                "type": "string",
+                                "const": "seatVisible"
+                              },
+                              {
+                                "type": "string",
+                                "const": "hidden"
+                              }
+                            ]
+                          },
+                          "allowWhenHiddenSampling": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "visibility",
+                          "allowWhenHiddenSampling"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": [
+                      "current",
+                      "preview"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "activeCardTag": {
+                    "type": "object",
+                    "properties": {
+                      "current": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "const": "public"
+                          },
+                          {
+                            "type": "string",
+                            "const": "seatVisible"
+                          },
+                          {
+                            "type": "string",
+                            "const": "hidden"
+                          }
+                        ]
+                      },
+                      "preview": {
+                        "type": "object",
+                        "properties": {
+                          "visibility": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "const": "public"
+                              },
+                              {
+                                "type": "string",
+                                "const": "seatVisible"
+                              },
+                              {
+                                "type": "string",
+                                "const": "hidden"
+                              }
+                            ]
+                          },
+                          "allowWhenHiddenSampling": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "visibility",
+                          "allowWhenHiddenSampling"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": [
+                      "current",
+                      "preview"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "activeCardMetadata": {
+                    "type": "object",
+                    "properties": {
+                      "current": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "const": "public"
+                          },
+                          {
+                            "type": "string",
+                            "const": "seatVisible"
+                          },
+                          {
+                            "type": "string",
+                            "const": "hidden"
+                          }
+                        ]
+                      },
+                      "preview": {
+                        "type": "object",
+                        "properties": {
+                          "visibility": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "const": "public"
+                              },
+                              {
+                                "type": "string",
+                                "const": "seatVisible"
+                              },
+                              {
+                                "type": "string",
+                                "const": "hidden"
+                              }
+                            ]
+                          },
+                          "allowWhenHiddenSampling": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "visibility",
+                          "allowWhenHiddenSampling"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": [
+                      "current",
+                      "preview"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "activeCardAnnotation": {
+                    "type": "object",
+                    "properties": {
+                      "current": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "const": "public"
+                          },
+                          {
+                            "type": "string",
+                            "const": "seatVisible"
+                          },
+                          {
+                            "type": "string",
+                            "const": "hidden"
+                          }
+                        ]
+                      },
+                      "preview": {
+                        "type": "object",
+                        "properties": {
+                          "visibility": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "const": "public"
+                              },
+                              {
+                                "type": "string",
+                                "const": "seatVisible"
+                              },
+                              {
+                                "type": "string",
+                                "const": "hidden"
+                              }
+                            ]
+                          },
+                          "allowWhenHiddenSampling": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "visibility",
+                          "allowWhenHiddenSampling"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": [
+                      "current",
+                      "preview"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "globalVars",
+                  "perPlayerVars",
+                  "derivedMetrics",
+                  "victory",
+                  "activeCardIdentity",
+                  "activeCardTag",
+                  "activeCardMetadata",
+                  "activeCardAnnotation"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "fingerprint",
+              "surfaces"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "defaultObserverName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "catalogFingerprint",
+        "observers",
+        "defaultObserverName"
+      ],
+      "additionalProperties": false
+    },
     "agents": {
       "type": "object",
       "properties": {

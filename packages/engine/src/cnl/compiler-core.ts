@@ -55,7 +55,9 @@ import {
 } from './named-set-utils.js';
 import { compileVerbalization } from './compile-verbalization.js';
 import { validateAgents } from './validate-agents.js';
+import { validateObservers, type KnownSurfaceIds } from './validate-observers.js';
 import { lowerAgents } from './compile-agents.js';
+import { lowerObservers } from './compile-observers.js';
 
 export interface CompileLimits {
   readonly maxExpandedEffects: number;
@@ -82,6 +84,7 @@ export interface CompileSectionResults {
   readonly turnOrder: Exclude<GameDef['turnOrder'], undefined> | null;
   readonly actionPipelines: Exclude<GameDef['actionPipelines'], undefined> | null;
   readonly derivedMetrics: Exclude<GameDef['derivedMetrics'], undefined> | null;
+  readonly observers: Exclude<GameDef['observers'], undefined> | null;
   readonly agents: Exclude<GameDef['agents'], undefined> | null;
   readonly terminal: GameDef['terminal'] | null;
   readonly actions: GameDef['actions'] | null;
@@ -302,6 +305,7 @@ function compileExpandedDoc(
     turnOrder: null,
     actionPipelines: null,
     derivedMetrics: null,
+    observers: null,
     agents: null,
     terminal: null,
     actions: null,
@@ -668,6 +672,24 @@ function compileExpandedDoc(
   const mergedDerivedMetrics = [...(sections.derivedMetrics ?? []), ...synthesized];
   sections.derivedMetrics = mergedDerivedMetrics.length > 0 ? mergedDerivedMetrics : null;
 
+  // --- Observer validation + compilation (before agents, per Spec 102 Part F) ---
+  const knownSurfaceIds: KnownSurfaceIds = {
+    globalVars: new Set(mergedGlobalVars.map((v) => v.name)),
+    perPlayerVars: new Set(perPlayerVars.value.map((v) => v.name)),
+    derivedMetrics: new Set(
+      (resolvedTableRefDoc.derivedMetrics ?? []).map((m) => m.id),
+    ),
+  };
+  validateObservers(resolvedTableRefDoc.observability, knownSurfaceIds, diagnostics);
+  const observers = compileSection(diagnostics, () =>
+    lowerObservers(resolvedTableRefDoc.observability, diagnostics, {
+      knownGlobalVarIds: mergedGlobalVars.map((v) => v.name),
+      knownPerPlayerVarIds: perPlayerVars.value.map((v) => v.name),
+      knownDerivedMetricIds: (resolvedTableRefDoc.derivedMetrics ?? []).map((m) => m.id),
+    }),
+  );
+  sections.observers = observers.failed || observers.value === undefined ? null : observers.value;
+
   const agents = compileSection(diagnostics, () =>
     lowerAgents(
       resolvedTableRefDoc.agents,
@@ -724,6 +746,7 @@ function compileExpandedDoc(
     ...(sections.turnOrder === null ? {} : { turnOrder: sections.turnOrder }),
     ...(sections.actionPipelines === null ? {} : { actionPipelines: sections.actionPipelines }),
     ...(sections.derivedMetrics === null ? {} : { derivedMetrics: sections.derivedMetrics }),
+    ...(sections.observers === null ? {} : { observers: sections.observers }),
     ...(sections.agents === null ? {} : { agents: sections.agents }),
     actions,
     triggers: triggers.value,

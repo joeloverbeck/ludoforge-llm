@@ -15,6 +15,7 @@ import { annotateDiagnosticWithSourceSpans, capDiagnostics, dedupeDiagnostics, s
 import { expandEffectMacros } from './expand-effect-macros.js';
 import { expandConditionMacros } from './expand-condition-macros.js';
 import { expandTemplates } from './expand-templates.js';
+import { compileActionTagIndex } from './compile-action-tags.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 import {
   type EffectLoweringSharedContext,
@@ -557,6 +558,8 @@ function compileExpandedDoc(
     sections.actions = actionsSection.failed ? null : actionsSection.value;
   }
 
+  const actionTagIndex = actions !== null ? compileActionTagIndex(actions, diagnostics) : undefined;
+
   const triggers = compileSection(diagnostics, () =>
     lowerTriggers(
       resolvedTableRefDoc.triggers ?? [],
@@ -763,6 +766,7 @@ function compileExpandedDoc(
     ...(sections.observers === null ? {} : { observers: sections.observers }),
     ...(sections.agents === null ? {} : { agents: sections.agents }),
     actions,
+    ...(actionTagIndex !== undefined ? { actionTagIndex } : {}),
     triggers: triggers.value,
     terminal,
     ...(sections.eventDecks === null ? {} : { eventDecks: sections.eventDecks }),

@@ -698,6 +698,7 @@ function compileExpandedDoc(
       knownGlobalVarIds: mergedGlobalVars.map((v) => v.name),
       knownPerPlayerVarIds: perPlayerVars.value.map((v) => v.name),
       knownDerivedMetricIds: (resolvedTableRefDoc.derivedMetrics ?? []).map((m) => m.id),
+      ...(knownZoneInfo !== undefined ? { knownZoneBaseIds: [...knownZoneInfo.zoneBaseIds] } : {}),
     }),
   );
   sections.observers = observers.failed || observers.value === undefined ? null : observers.value;

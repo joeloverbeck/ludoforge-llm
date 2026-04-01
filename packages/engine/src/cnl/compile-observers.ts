@@ -5,6 +5,8 @@ import type {
   CompiledObserverProfile,
   CompiledSurfaceCatalog,
   CompiledSurfaceVisibility,
+  CompiledZoneVisibilityCatalog,
+  CompiledZoneVisibilityEntry,
 } from '../kernel/types.js';
 import type {
   GameSpecObservabilitySection,
@@ -12,6 +14,8 @@ import type {
   GameSpecObserverSurfaceEntryDef,
   GameSpecObserverSurfacesDef,
   GameSpecObserverSurfaceValue,
+  GameSpecObserverZoneEntryDef,
+  GameSpecObserverZonesDef,
   GameSpecPolicySurfaceVisibilityClass,
   GameSpecPolicySurfaceVisibilityDef,
 } from './game-spec-doc.js';
@@ -26,6 +30,7 @@ export interface LowerObserversOptions {
   readonly knownGlobalVarIds: readonly string[];
   readonly knownPerPlayerVarIds: readonly string[];
   readonly knownDerivedMetricIds: readonly string[];
+  readonly knownZoneBaseIds?: readonly string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -91,23 +96,28 @@ export function lowerObservers(
 
     const baseSurfaces = resolveBaseSurfaces(name, profileDef, userProfiles, options, diagnostics);
     const surfaces = resolveObserverSurfaces(profileDef.surfaces, baseSurfaces, options, diagnostics, `doc.observability.observers.${name}.surfaces`);
+    const baseZones = resolveBaseZones(name, profileDef, userProfiles, options, diagnostics);
+    const zones = resolveObserverZones(profileDef.zones, baseZones);
     observers[name] = {
-      fingerprint: fingerprintObserverIr(surfaces),
+      fingerprint: fingerprintObserverIr({ surfaces, zones }),
       surfaces,
+      ...(zones !== undefined ? { zones } : {}),
     };
   }
 
   // Built-in: omniscient
   const omniscientSurfaces = buildOmniscientSurfaces(options);
+  const omniscientZones = buildOmniscientZones();
   observers['omniscient'] = {
-    fingerprint: fingerprintObserverIr(omniscientSurfaces),
+    fingerprint: fingerprintObserverIr({ surfaces: omniscientSurfaces, zones: omniscientZones }),
     surfaces: omniscientSurfaces,
+    zones: omniscientZones,
   };
 
-  // Built-in: default
+  // Built-in: default (zones: undefined — defers to ZoneDef.visibility)
   const defaultSurfaces = buildDefaultSurfaces(options);
   observers['default'] = {
-    fingerprint: fingerprintObserverIr(defaultSurfaces),
+    fingerprint: fingerprintObserverIr({ surfaces: defaultSurfaces, zones: undefined }),
     surfaces: defaultSurfaces,
   };
 
@@ -252,6 +262,86 @@ function resolveObserverSurfaces(
 }
 
 // ---------------------------------------------------------------------------
+// Base zone resolution (handles extends)
+// ---------------------------------------------------------------------------
+
+function resolveBaseZones(
+  _name: string,
+  profileDef: GameSpecObserverProfileDef,
+  allProfiles: Readonly<Record<string, GameSpecObserverProfileDef>>,
+  _options: LowerObserversOptions,
+  _diagnostics: Diagnostic[],
+): CompiledZoneVisibilityCatalog | undefined {
+  if (profileDef.extends === undefined) {
+    return undefined;
+  }
+
+  const parentDef = allProfiles[profileDef.extends];
+  if (parentDef === undefined) {
+    return undefined; // extends target missing — already diagnosed
+  }
+
+  // Resolve parent zones (parent cannot itself extend)
+  return resolveObserverZones(parentDef.zones, undefined);
+}
+
+// ---------------------------------------------------------------------------
+// Zone resolution: applies overrides on top of base
+// ---------------------------------------------------------------------------
+
+function resolveObserverZones(
+  zones: GameSpecObserverZonesDef | undefined,
+  base: CompiledZoneVisibilityCatalog | undefined,
+): CompiledZoneVisibilityCatalog | undefined {
+  if (zones === undefined) {
+    return base;
+  }
+
+  const entries: Record<string, CompiledZoneVisibilityEntry> = {
+    ...(base?.entries ?? {}),
+  };
+  let defaultEntry: CompiledZoneVisibilityEntry | undefined = base?.defaultEntry;
+
+  for (const [key, entryDef] of Object.entries(zones)) {
+    const compiled = lowerZoneEntry(entryDef);
+    if (compiled === undefined) {
+      continue; // invalid entry — validation catches this
+    }
+    if (key === '_default') {
+      defaultEntry = compiled;
+    } else {
+      entries[key] = compiled;
+    }
+  }
+
+  // If nothing was set and no base, return undefined (no zone overrides)
+  if (Object.keys(entries).length === 0 && defaultEntry === undefined) {
+    return undefined;
+  }
+
+  return {
+    entries,
+    ...(defaultEntry !== undefined ? { defaultEntry } : {}),
+  };
+}
+
+function lowerZoneEntry(
+  entryDef: GameSpecObserverZoneEntryDef,
+): CompiledZoneVisibilityEntry | undefined {
+  const tokens = entryDef.tokens;
+  const order = entryDef.order;
+
+  if (tokens === undefined && order === undefined) {
+    return undefined;
+  }
+
+  return {
+    tokens: (tokens ?? order ?? 'public') as CompiledZoneVisibilityEntry['tokens'],
+    order: (order ?? tokens ?? 'public') as CompiledZoneVisibilityEntry['order'],
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Map-type surface compilation (globalVars, perPlayerVars, derivedMetrics)
 // ---------------------------------------------------------------------------
 
@@ -363,6 +453,13 @@ function buildDefaultSurfaces(options: LowerObserversOptions): CompiledSurfaceCa
     activeCardTag: SURFACE_DEFAULTS['activeCardTag']!,
     activeCardMetadata: SURFACE_DEFAULTS['activeCardMetadata']!,
     activeCardAnnotation: SURFACE_DEFAULTS['activeCardAnnotation']!,
+  };
+}
+
+function buildOmniscientZones(): CompiledZoneVisibilityCatalog {
+  return {
+    entries: {},
+    defaultEntry: { tokens: 'public', order: 'public' },
   };
 }
 

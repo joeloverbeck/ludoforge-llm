@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `compile-agents.ts` or new `compile-action-tags.ts`, `compiler-core.ts`
-**Deps**: `archive/tickets/103ACTTAGCAN-001.md`, `tickets/103ACTTAGCAN-002.md`, `specs/103-action-tags-and-candidate-metadata.md`
+**Deps**: `archive/tickets/103ACTTAGCAN-001.md`, `archive/tickets/103ACTTAGCAN-002.md`, `specs/103-action-tags-and-candidate-metadata.md`
 
 ## Problem
 

@@ -722,6 +722,13 @@ export interface AgentPolicyCatalog {
   readonly bindingsBySeat: Readonly<Record<string, string>>;
 }
 
+export interface CompiledActionTagIndex {
+  /** Maps each actionId to its set of tags (as a sorted readonly string array). */
+  readonly byAction: Readonly<Record<string, readonly string[]>>;
+  /** Maps each tag to the set of actionIds that carry it (as a sorted readonly string array). */
+  readonly byTag: Readonly<Record<string, readonly string[]>>;
+}
+
 export interface GameDef {
   readonly metadata: {
     readonly id: string;
@@ -746,6 +753,7 @@ export interface GameDef {
   readonly observers?: CompiledObserverCatalog;
   readonly agents?: AgentPolicyCatalog;
   readonly actions: readonly ActionDef[];
+  readonly actionTagIndex?: CompiledActionTagIndex;
   readonly triggers: readonly TriggerDef[];
   readonly terminal: TerminalEvaluationDef;
   readonly eventDecks?: readonly EventDeckDef[];

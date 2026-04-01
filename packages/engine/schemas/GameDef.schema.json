@@ -4292,6 +4292,40 @@
         "additionalProperties": false
       }
     },
+    "actionTagIndex": {
+      "type": "object",
+      "properties": {
+        "byAction": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "byTag": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "required": [
+        "byAction",
+        "byTag"
+      ],
+      "additionalProperties": false
+    },
     "triggers": {
       "type": "array",
       "items": {

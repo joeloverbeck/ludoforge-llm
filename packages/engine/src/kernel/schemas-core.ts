@@ -196,6 +196,13 @@ export const TurnStructureSchema = z
   })
   .strict();
 
+const CompiledActionTagIndexSchema = z
+  .object({
+    byAction: z.record(StringSchema, z.array(StringSchema)),
+    byTag: z.record(StringSchema, z.array(StringSchema)),
+  })
+  .strict();
+
 export const ActionDefSchema = z
   .object({
     id: StringSchema,
@@ -1018,6 +1025,7 @@ export const GameDefSchema = z
     observers: CompiledObserverCatalogSchema.optional(),
     agents: AgentPolicyCatalogSchema.optional(),
     actions: z.array(ActionDefSchema),
+    actionTagIndex: CompiledActionTagIndexSchema.optional(),
     triggers: z.array(TriggerDefSchema),
     terminal: TerminalEvaluationDefSchema,
     eventDecks: z.array(EventDeckSchema).optional(),

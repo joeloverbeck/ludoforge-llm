@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `types-core.ts`, `policy-expr.ts`
-**Deps**: `tickets/103ACTTAGCAN-002.md`, `specs/103-action-tags-and-candidate-metadata.md`
+**Deps**: `archive/tickets/103ACTTAGCAN-002.md`, `specs/103-action-tags-and-candidate-metadata.md`
 
 ## Problem
 

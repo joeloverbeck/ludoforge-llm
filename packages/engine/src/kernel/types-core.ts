@@ -411,6 +411,9 @@ export type CompiledAgentPolicyRef =
     }
   | {
       readonly kind: 'candidateTags';
+    }
+  | {
+      readonly kind: 'contextKind';
     };
 export type AgentPolicyZoneSource = string | AgentPolicyExpr;
 export interface AgentPolicyTokenFilter {

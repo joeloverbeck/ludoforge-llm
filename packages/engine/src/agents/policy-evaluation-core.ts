@@ -683,6 +683,8 @@ export class PolicyEvaluationContext {
         if (candidate === undefined) return undefined;
         return this.input.def.actionTagIndex?.byAction[candidate.actionId] ?? [];
       }
+      case 'contextKind':
+        return this.input.completion !== undefined ? 'completion' : 'move';
     }
   }
 

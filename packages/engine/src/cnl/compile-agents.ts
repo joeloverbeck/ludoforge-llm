@@ -1713,6 +1713,11 @@ class AgentLibraryCompiler {
       };
     }
 
+    // context.kind — evaluation context discriminator
+    if (refPath === 'context.kind') {
+      return { type: 'id', costClass: 'state', ref: { kind: 'contextKind' } };
+    }
+
     // candidate.tag.<tagName> — boolean tag membership check
     if (refPath.startsWith('candidate.tag.')) {
       if (scope === 'stateFeature') {

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `policy-eval.ts`, `completion-guidance-eval.ts`, `policy-evaluation-core.ts`
-**Deps**: `tickets/104UNIDECCON-003.md`, `tickets/104UNIDECCON-002.md`, `specs/104-unified-decision-context-considerations.md`
+**Deps**: `tickets/104UNIDECCON-003.md`, `archive/tickets/104UNIDECCON-002.md`, `specs/104-unified-decision-context-considerations.md`
 
 ## Problem
 

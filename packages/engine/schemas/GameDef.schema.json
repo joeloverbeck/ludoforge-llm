@@ -3171,7 +3171,7 @@
                     ]
                   },
                   "expr": {
-                    "$ref": "#/definitions/anon_ceb872b7"
+                    "$ref": "#/definitions/anon_ceb19d52"
                   },
                   "dependencies": {
                     "type": "object",
@@ -3271,7 +3271,7 @@
                     ]
                   },
                   "expr": {
-                    "$ref": "#/definitions/anon_ceb872b7"
+                    "$ref": "#/definitions/anon_ceb19d52"
                   },
                   "dependencies": {
                     "type": "object",
@@ -3374,12 +3374,12 @@
                     "type": "string"
                   },
                   "of": {
-                    "$ref": "#/definitions/anon_ceb872b7"
+                    "$ref": "#/definitions/anon_ceb19d52"
                   },
                   "where": {
                     "allOf": [
                       {
-                        "$ref": "#/definitions/anon_ceb872b7"
+                        "$ref": "#/definitions/anon_ceb19d52"
                       }
                     ]
                   },
@@ -3462,7 +3462,7 @@
                     ]
                   },
                   "when": {
-                    "$ref": "#/definitions/anon_ceb872b7"
+                    "$ref": "#/definitions/anon_ceb19d52"
                   },
                   "dependencies": {
                     "type": "object",
@@ -3572,15 +3572,15 @@
                   "when": {
                     "allOf": [
                       {
-                        "$ref": "#/definitions/anon_ceb872b7"
+                        "$ref": "#/definitions/anon_ceb19d52"
                       }
                     ]
                   },
                   "weight": {
-                    "$ref": "#/definitions/anon_ceb872b7"
+                    "$ref": "#/definitions/anon_ceb19d52"
                   },
                   "value": {
-                    "$ref": "#/definitions/anon_ceb872b7"
+                    "$ref": "#/definitions/anon_ceb19d52"
                   },
                   "unknownAs": {
                     "type": "number"
@@ -3693,15 +3693,15 @@
                   "when": {
                     "allOf": [
                       {
-                        "$ref": "#/definitions/anon_ceb872b7"
+                        "$ref": "#/definitions/anon_ceb19d52"
                       }
                     ]
                   },
                   "weight": {
-                    "$ref": "#/definitions/anon_ceb872b7"
+                    "$ref": "#/definitions/anon_ceb19d52"
                   },
                   "value": {
-                    "$ref": "#/definitions/anon_ceb872b7"
+                    "$ref": "#/definitions/anon_ceb19d52"
                   },
                   "unknownAs": {
                     "type": "number"
@@ -3801,7 +3801,7 @@
                   "value": {
                     "allOf": [
                       {
-                        "$ref": "#/definitions/anon_ceb872b7"
+                        "$ref": "#/definitions/anon_ceb19d52"
                       }
                     ]
                   },
@@ -3872,13 +3872,13 @@
                 "type": "object",
                 "properties": {
                   "target": {
-                    "$ref": "#/definitions/anon_ceb872b7"
+                    "$ref": "#/definitions/anon_ceb19d52"
                   },
                   "proximity": {
                     "type": "object",
                     "properties": {
                       "current": {
-                        "$ref": "#/definitions/anon_ceb872b7"
+                        "$ref": "#/definitions/anon_ceb19d52"
                       },
                       "threshold": {
                         "type": "number"
@@ -11702,7 +11702,7 @@
         }
       ]
     },
-    "anon_ceb872b7": {
+    "anon_ceb19d52": {
       "anyOf": [
         {
           "type": "object",
@@ -12175,6 +12175,19 @@
                     "kind"
                   ],
                   "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "contextKind"
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ],
+                  "additionalProperties": false
                 }
               ]
             }
@@ -12287,7 +12300,7 @@
             "args": {
               "type": "array",
               "items": {
-                "$ref": "#/definitions/anon_ceb872b7"
+                "$ref": "#/definitions/anon_ceb19d52"
               }
             }
           },
@@ -12311,7 +12324,7 @@
                   "type": "string"
                 },
                 {
-                  "$ref": "#/definitions/anon_ceb872b7"
+                  "$ref": "#/definitions/anon_ceb19d52"
                 }
               ]
             },
@@ -12695,7 +12708,7 @@
                   "type": "string"
                 },
                 {
-                  "$ref": "#/definitions/anon_ceb872b7"
+                  "$ref": "#/definitions/anon_ceb19d52"
                 }
               ]
             },

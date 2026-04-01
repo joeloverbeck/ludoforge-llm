@@ -706,6 +706,9 @@ const CompiledAgentPolicyRefSchema = z.union([
   z.object({
     kind: z.literal('candidateTags'),
   }).strict(),
+  z.object({
+    kind: z.literal('contextKind'),
+  }).strict(),
 ]);
 
 const AgentPolicyTokenFilterSchema = z.object({

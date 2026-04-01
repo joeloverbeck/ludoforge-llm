@@ -26,23 +26,11 @@ The `resolveRuntimeRef` method in `compile-agents.ts` must recognize `candidate.
 
 ## What to Change
 
-### 1. Remove `isPass` from `AGENT_POLICY_CANDIDATE_INTRINSICS`
+### 1. `isPass` intrinsic removal deferred to ticket 006
 
-In `policy-contract.ts`:
-```typescript
-export const AGENT_POLICY_CANDIDATE_INTRINSICS = [
-  'actionId',
-  'stableMoveKey',
-  // 'isPass' REMOVED — replaced by candidate.tag.pass
-  'paramCount',
-] as const;
-```
+Per Foundation 14, `isPass` removal must be atomic with game spec migration. The `isPass` intrinsic remains in `AGENT_POLICY_CANDIDATE_INTRINSICS` and `resolveRuntimeRef` for now. Ticket 006 removes it alongside the FITL/Texas Hold'em migration.
 
-### 2. Remove `isPass` case from `resolveRuntimeRef`
-
-Remove the `candidate.isPass` handling at ~line 1685 in `compile-agents.ts`.
-
-### 3. Add `candidate.tag.<tagName>` resolution
+### 2. Add `candidate.tag.<tagName>` resolution
 
 In `resolveRuntimeRef`, after candidate intrinsic handling:
 ```typescript

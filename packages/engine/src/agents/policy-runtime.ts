@@ -141,6 +141,7 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
         if (intrinsic === 'paramCount') {
           return Object.keys(candidate.move.params).length;
         }
+        // isPass — will be removed in ticket 006 when game specs migrate to candidate.tag.pass
         return candidate.actionId === 'pass' || resolveTurnFlowActionClass(input.def, candidate.move) === 'pass';
       },
       resolveCandidateParam(candidate, paramId) {

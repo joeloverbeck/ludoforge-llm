@@ -1718,6 +1718,35 @@ class AgentLibraryCompiler {
       };
     }
 
+    // candidate.tag.<tagName> — boolean tag membership check
+    if (refPath.startsWith('candidate.tag.')) {
+      if (scope === 'stateFeature') {
+        this.reportUnknownLibraryRef(refPath, path);
+        return null;
+      }
+      const tagName = refPath.slice('candidate.tag.'.length);
+      if (tagName.length === 0 || tagName.includes('.')) {
+        this.diagnostics.push({
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+          path,
+          severity: 'error',
+          message: `Invalid tag ref "${refPath}" — expected candidate.tag.<tagName>.`,
+          suggestion: 'Use candidate.tag.<kebab-case-tag-name> to check tag membership.',
+        });
+        return null;
+      }
+      return { type: 'boolean', costClass: 'candidate', ref: { kind: 'candidateTag', tagName } };
+    }
+
+    // candidate.tags — all tags on the candidate's action
+    if (refPath === 'candidate.tags') {
+      if (scope === 'stateFeature') {
+        this.reportUnknownLibraryRef(refPath, path);
+        return null;
+      }
+      return { type: 'idList', costClass: 'candidate', ref: { kind: 'candidateTags' } };
+    }
+
     const previewResolved = this.resolvePreviewRuntimeRef(scope, refPath, path);
     if (previewResolved !== null) {
       return previewResolved;

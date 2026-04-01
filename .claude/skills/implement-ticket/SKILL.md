@@ -37,6 +37,8 @@ Structured workflow for ticket reassessment and implementation. This eliminates 
 
 **Guard test note**: For tickets that modify shared types or interfaces (e.g., `GameDef`, `CompileSectionResults`), check for exhaustiveness tests, schema artifact checks, or diagnostic registry audits that may need updating alongside the main deliverables.
 
+**Foundation 14 atomicity note**: For tickets that remove or rename public APIs (intrinsics, type fields, exported functions), check whether downstream consumers (game specs, other tickets) still reference the removed artifact. If they do, Foundation 14 requires the removal to be atomic with migration — defer the removal to the migration ticket.
+
 ### Phase 3: Resolve Discrepancies (if needed)
 
 7. If discrepancies require **ticket corrections** (ticket states something factually wrong):

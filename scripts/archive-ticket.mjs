@@ -1,5 +1,9 @@
 import { lstatSync, readdirSync, readFileSync, renameSync, writeFileSync, writeSync } from 'node:fs';
 import { basename, dirname, relative, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+// Anchor to repo root (one level up from scripts/) so the script works from any cwd.
+const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 const ACTIVE_TICKETS_DIR = 'tickets';
 const ACTIVE_TICKET_SKIP_FILES = new Set(['README.md', '_TEMPLATE.md']);
@@ -23,7 +27,7 @@ function usage() {
 }
 
 function resolveDestination(sourcePath, destinationArg) {
-  const destinationInput = resolve(destinationArg);
+  const destinationInput = resolve(REPO_ROOT, destinationArg);
 
   if (pathExists(destinationInput)) {
     const destinationStat = lstatSync(destinationInput);
@@ -82,8 +86,8 @@ function main() {
     fail(usage());
   }
 
-  const rootDir = process.cwd();
-  const sourcePath = resolve(sourceArg);
+  const rootDir = REPO_ROOT;
+  const sourcePath = resolve(REPO_ROOT, sourceArg);
   if (!pathExists(sourcePath)) {
     fail(`Source path does not exist: ${sourcePath}`);
   }

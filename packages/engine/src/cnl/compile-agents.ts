@@ -198,7 +198,7 @@ function lowerSurfaceVisibility(
   };
 }
 
-function lowerSurfaceVisibilityMap(
+export function lowerSurfaceVisibilityMap(
   knownIds: readonly string[],
   overrides: Readonly<Record<string, GameSpecPolicySurfaceVisibilityDef>> | undefined,
   diagnostics: Diagnostic[],
@@ -225,7 +225,7 @@ function lowerSurfaceVisibilityMap(
   return compiled;
 }
 
-function lowerSurfaceVisibilityEntry(
+export function lowerSurfaceVisibilityEntry(
   entry: GameSpecPolicySurfaceVisibilityDef | undefined,
   diagnostics: Diagnostic[],
   path: string,

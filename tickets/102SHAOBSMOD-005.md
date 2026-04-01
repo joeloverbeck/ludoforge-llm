@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `types-core.ts`, `schemas-core.ts`, `compiler-core.ts`
-**Deps**: `tickets/102SHAOBSMOD-004.md`, `specs/102-shared-observer-model.md`
+**Deps**: `archive/tickets/102SHAOBSMOD-004.md`, `specs/102-shared-observer-model.md`
 
 ## Problem
 

@@ -549,10 +549,20 @@ export interface GameSpecObserverSurfacesDef {
   readonly activeCardAnnotation?: GameSpecPolicySurfaceVisibilityClass | GameSpecObserverSurfaceEntryDef;
 }
 
+export interface GameSpecObserverZoneEntryDef {
+  readonly tokens?: string; // 'public' | 'owner' | 'hidden'
+  readonly order?: string; // 'public' | 'owner' | 'hidden'
+}
+
+export type GameSpecObserverZonesDef = Readonly<
+  Record<string, GameSpecObserverZoneEntryDef>
+>;
+
 export interface GameSpecObserverProfileDef {
   readonly extends?: string;
   readonly description?: string;
   readonly surfaces?: GameSpecObserverSurfacesDef;
+  readonly zones?: GameSpecObserverZonesDef;
 }
 
 export interface GameSpecObservabilitySection {

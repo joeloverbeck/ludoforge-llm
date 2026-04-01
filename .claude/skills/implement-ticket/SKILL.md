@@ -56,10 +56,12 @@ Structured workflow for ticket reassessment and implementation. This eliminates 
     - The executing-plans skill may require worktree setup or branch creation — if working directly on main, confirm with the user before proceeding
     - Follow all project conventions (worktree discipline, immutability, TDD, etc.)
     - Run lint, typecheck, and tests before claiming completion (per Pre-Completion Verification rule)
+    - **Small ticket shortcut**: For tickets with Effort: Small and ≤3 deliverables, direct implementation is acceptable without the full executing-plans ceremony. Still follow all project conventions and run Pre-Completion Verification.
 
 ### Phase 5: Follow-Up
 
 11. After implementation is verified and the user confirms completion, offer to **archive the ticket** per `docs/archival-workflow.md`
+    - Archive command: `node scripts/archive-ticket.mjs tickets/<ID>.md archive/tickets/`
 
 ## Rules
 

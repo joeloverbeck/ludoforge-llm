@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — `compiler-diagnostic-codes.ts`, schema artifacts
-**Deps**: `archive/tickets/106ZONTOKOBS-001.md`, `tickets/106ZONTOKOBS-002.md`, `tickets/106ZONTOKOBS-003.md`, `tickets/106ZONTOKOBS-004.md`, `tickets/106ZONTOKOBS-005.md`, `tickets/106ZONTOKOBS-006.md`, `specs/106-zone-token-observer-integration.md`
+**Deps**: `archive/tickets/106ZONTOKOBS-001.md`, `archive/tickets/106ZONTOKOBS-002.md`, `tickets/106ZONTOKOBS-003.md`, `tickets/106ZONTOKOBS-004.md`, `tickets/106ZONTOKOBS-005.md`, `tickets/106ZONTOKOBS-006.md`, `specs/106-zone-token-observer-integration.md`
 
 ## Problem
 

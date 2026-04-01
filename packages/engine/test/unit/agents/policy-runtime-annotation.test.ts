@@ -72,6 +72,7 @@ function createMinimalCatalog(overrides?: {
     fingerprint: 'test-profile',
     params: {},
     preview: { mode: 'exactWorld' as const },
+    selection: { mode: 'argmax' as const },
     use: {
       pruningRules: [],
       considerations: [],

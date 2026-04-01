@@ -86,6 +86,7 @@ function createBaseDef(): GameDef {
           fingerprint: 'baseline',
           params: {},
           preview: { mode: 'exactWorld' },
+          selection: { mode: 'argmax' },
           use: { pruningRules: [], considerations: [], tieBreakers: ['rng'] },
           plan: { stateFeatures: [], candidateFeatures: [], candidateAggregates: [], considerations: [] },
         },

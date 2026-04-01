@@ -698,6 +698,13 @@ export interface CompiledAgentPreviewConfig {
   readonly mode: AgentPreviewMode;
 }
 
+export type AgentSelectionMode = 'argmax' | 'softmaxSample' | 'weightedSample';
+
+export interface CompiledAgentSelectionConfig {
+  readonly mode: AgentSelectionMode;
+  readonly temperature?: number;
+}
+
 export interface CompiledAgentProfile {
   readonly fingerprint: string;
   readonly observerName?: string;
@@ -708,6 +715,7 @@ export interface CompiledAgentProfile {
     readonly tieBreakers: readonly string[];
   };
   readonly preview: CompiledAgentPreviewConfig;
+  readonly selection: CompiledAgentSelectionConfig;
   readonly plan: {
     readonly stateFeatures: readonly string[];
     readonly candidateFeatures: readonly string[];

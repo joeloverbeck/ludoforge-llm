@@ -589,6 +589,7 @@ function lowerProfile(
     ...loweredUse,
   };
   const preview = lowerPreviewConfig(profileId, profileDef, diagnostics);
+  const selection = lowerSelectionConfig(profileId, profileDef, diagnostics);
 
   const plan = buildProfilePlan(profileId, use, library, diagnostics);
 
@@ -604,6 +605,7 @@ function lowerProfile(
     params: compiledParams,
     use,
     preview: preview ?? { mode: 'exactWorld' },
+    selection: selection ?? { mode: 'argmax' },
     plan,
   };
 }
@@ -701,6 +703,87 @@ function lowerPreviewConfig(
       suggestion: 'Use preview.mode exactWorld, tolerateStochastic, or disabled.',
     });
     return undefined;
+  }
+
+  return { mode };
+}
+
+function lowerSelectionConfig(
+  profileId: string,
+  profileDef: GameSpecAgentProfileDef,
+  diagnostics: Diagnostic[],
+): CompiledAgentProfile['selection'] | undefined {
+  const authored = profileDef.selection;
+  if (authored === undefined) {
+    return { mode: 'argmax' };
+  }
+
+  const path = `doc.agents.profiles.${profileId}.selection`;
+  const { mode, temperature } = authored;
+
+  if (mode === undefined) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_SELECTION_MODE_MISSING,
+      path: `${path}.mode`,
+      severity: 'error',
+      message: `Profile "${profileId}" selection.mode is required when selection is present.`,
+      suggestion: 'Set selection.mode to argmax, softmaxSample, or weightedSample.',
+    });
+    return undefined;
+  }
+  if (typeof mode !== 'string') {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_SELECTION_MODE_INVALID,
+      path: `${path}.mode`,
+      severity: 'error',
+      message: `Profile "${profileId}" selection.mode must be a string, got ${typeof mode}.`,
+      suggestion: 'Set selection.mode to argmax, softmaxSample, or weightedSample.',
+    });
+    return undefined;
+  }
+  if (mode === 'topKSample' || mode === 'epsilonGreedy') {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_SELECTION_MODE_RESERVED,
+      path: `${path}.mode`,
+      severity: 'error',
+      message: `Profile "${profileId}" selection.mode "${mode}" is reserved for future implementation and is not supported yet.`,
+      suggestion: 'Use selection.mode argmax, softmaxSample, or weightedSample.',
+    });
+    return undefined;
+  }
+  if (mode !== 'argmax' && mode !== 'softmaxSample' && mode !== 'weightedSample') {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_SELECTION_MODE_INVALID,
+      path: `${path}.mode`,
+      severity: 'error',
+      message: `Profile "${profileId}" selection.mode "${mode}" is invalid.`,
+      suggestion: 'Use selection.mode argmax, softmaxSample, or weightedSample.',
+    });
+    return undefined;
+  }
+
+  if (mode === 'softmaxSample') {
+    if (temperature === undefined) {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_SELECTION_TEMPERATURE_REQUIRED,
+        path: `${path}.temperature`,
+        severity: 'error',
+        message: `Profile "${profileId}" selection.temperature is required when selection.mode is "softmaxSample".`,
+        suggestion: 'Set selection.temperature to a positive number.',
+      });
+      return undefined;
+    }
+    if (typeof temperature !== 'number' || !Number.isFinite(temperature) || temperature <= 0) {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_SELECTION_TEMPERATURE_INVALID,
+        path: `${path}.temperature`,
+        severity: 'error',
+        message: `Profile "${profileId}" selection.temperature must be a positive finite number, got ${String(temperature)}.`,
+        suggestion: 'Set selection.temperature to a positive number.',
+      });
+      return undefined;
+    }
+    return { mode, temperature };
   }
 
   return { mode };

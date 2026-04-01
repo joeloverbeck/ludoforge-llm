@@ -799,6 +799,9 @@
       "preview": {
         "mode": "disabled"
       },
+      "selection": {
+        "mode": "argmax"
+      },
       "plan": {
         "stateFeatures": [
           "callAmount",
@@ -818,11 +821,11 @@
           "preferLargerRaise"
         ]
       },
-      "fingerprint": "c9416985cbe8a77567cb8d1d7acb68fe4b6a3a26922b760d882aab47eb3748a2"
+      "fingerprint": "1cac283d2d0eefe42aca8b6e3ddbc89942976367bcec0e523bb429b6916fd2f5"
     }
   },
   "bindingsBySeat": {
     "neutral": "baseline"
   },
-  "catalogFingerprint": "a01345b666a22fa323ba5a81c575770907d84ef3d320fc3f793a564795c2b089"
+  "catalogFingerprint": "cede6ca52dfa9a87ea64b70022bca57ff7c04932668deaa7eee4c2566fde0491"
 }

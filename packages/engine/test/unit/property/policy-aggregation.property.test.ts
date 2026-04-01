@@ -122,6 +122,7 @@ function createAggregationCatalog(expr: AgentPolicyExpr): AgentPolicyCatalog {
         fingerprint: 'baseline',
         params: {},
         preview: { mode: 'exactWorld' },
+        selection: { mode: 'argmax' },
         use: {
           pruningRules: [],
           considerations: ['metricScore'],

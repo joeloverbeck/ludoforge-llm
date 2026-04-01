@@ -943,6 +943,12 @@ const CompiledAgentProfileSchema = z
         mode: z.enum(['exactWorld', 'tolerateStochastic', 'disabled']),
       })
       .strict(),
+    selection: z
+      .object({
+        mode: z.enum(['argmax', 'softmaxSample', 'weightedSample']),
+        temperature: z.number().positive().optional(),
+      })
+      .strict(),
     plan: z
       .object({
         stateFeatures: z.array(StringSchema),

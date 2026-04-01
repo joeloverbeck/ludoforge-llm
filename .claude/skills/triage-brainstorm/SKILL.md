@@ -45,6 +45,15 @@ Also determine the **next available spec number**:
 
 Record this number — it will be used in Step 6 for auto-assigning spec numbers.
 
+**Re-triage detection**: If the brainstorming document already contains a "Spec Coverage Status" table (from a prior triage), switch to **re-triage mode**:
+1. Parse the existing table to extract prior verdicts, finding IDs, and spec references
+2. Update completed items' status (check if referenced specs are now in `archive/specs/`)
+3. In Step 2, reuse existing finding IDs rather than re-extracting from scratch
+4. In Steps 3-4, focus validation on **deferred items only** — check whether conditions for promotion have changed since the last triage
+5. In Step 5, present a **delta table** showing what changed vs. the prior triage, not a full re-presentation of already-resolved findings
+
+If the document has no existing status table, proceed with the standard fresh-triage flow below.
+
 ### Step 2: Extract Findings
 
 Parse the brainstorming document and identify every discrete finding — issues, improvements, and feature proposals. For each finding, record:
@@ -103,7 +112,7 @@ Present all findings in a structured triage table:
 1. **#N: <title>** — <1-2 sentence scope for the spec to be written>
 
 ### Deferred findings
-1. **#N: <title>** — <why deferred, what it's waiting for>
+1. **#N: <title>** — <why deferred, what it's waiting for>. **Promotion trigger**: <what would need to change for this to be re-evaluated>
 
 ### Rejected findings
 1. **#N: <title>** — <why rejected, correction to external claim if applicable>
@@ -120,6 +129,8 @@ Present all findings in a structured triage table:
 Do not proceed to Step 6 until the user has approved the triage table.
 
 If the user requests deeper analysis of a specific finding, perform the investigation using read-only tools and re-present the updated triage before asking for approval again.
+
+If the user requests analysis through a specific lens (e.g., "which deferred items would unblock evolution?", "which items affect imperfect-info games?"), perform a targeted investigation using Explore agents, then re-present the triage with updated verdicts. Findings may split during this process (e.g., one part of a deferred item promoted, rest still deferred) or change classification based on the new perspective. This is a normal part of the triage process.
 
 ### Step 6: Write Specs
 
@@ -172,6 +183,7 @@ Each spec MUST follow the project's standard format:
 ```
 
 **Spec quality requirements:**
+- Also check the most recent spec in `specs/` for format conventions — the template above is canonical, but recent specs may have refined section structure
 - Every type, file path, and function referenced in the spec must be validated against the actual codebase
 - The FOUNDATIONS.md Alignment table must reference every principle that the spec touches
 - The spec must be structured so `/reassess-spec` and `/spec-to-tickets` can consume it downstream
@@ -201,7 +213,9 @@ Reassessment notes:
 ---
 ```
 
-Insert this above the original document content. Preserve all existing content below the table.
+If the document **does not** have an existing status table, insert this above the original document content. Preserve all existing content below the table.
+
+If the document **already has** a Spec Coverage Status table (re-triage mode), update it in-place rather than prepending a duplicate. Update the date annotation (e.g., change `(2026-04-01)` to `(2026-04-01, revised 2026-04-02)`), update individual row statuses, and add new reassessment notes below the existing ones.
 
 ### Step 8: Final Summary
 

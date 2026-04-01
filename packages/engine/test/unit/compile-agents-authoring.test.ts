@@ -836,6 +836,9 @@ describe('agents authoring surface', () => {
     assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.preview, {
       mode: 'tolerateStochastic',
     });
+    assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.selection, {
+      mode: 'argmax',
+    });
   });
 
   it('defaults preview.mode to exactWorld when profile YAML has no preview section', () => {
@@ -871,6 +874,311 @@ describe('agents authoring surface', () => {
     assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.preview, {
       mode: 'exactWorld',
     });
+    assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.selection, {
+      mode: 'argmax',
+    });
+  });
+
+  it('compiles selection.mode from profile YAML into CompiledAgentProfile.selection', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: withObserver({
+        parameters: {},
+        library: {
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              considerations: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+            selection: {
+              mode: 'softmaxSample',
+              temperature: 0.5,
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      }),
+    });
+
+    assert.equal(result.diagnostics.some((d) => d.severity === 'error'), false);
+    assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.selection, {
+      mode: 'softmaxSample',
+      temperature: 0.5,
+    });
+  });
+
+  it('compiles weightedSample selection.mode from profile YAML', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: withObserver({
+        parameters: {},
+        library: {
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              considerations: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+            selection: {
+              mode: 'weightedSample',
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      }),
+    });
+
+    assert.equal(result.diagnostics.some((d) => d.severity === 'error'), false);
+    assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.selection, {
+      mode: 'weightedSample',
+    });
+  });
+
+  it('defaults selection.mode to argmax when profile YAML has no selection section', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: withObserver({
+        parameters: {},
+        library: {
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              considerations: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      }),
+    });
+
+    assert.equal(result.diagnostics.some((d) => d.severity === 'error'), false);
+    assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.selection, {
+      mode: 'argmax',
+    });
+  });
+
+  it('emits diagnostic when selection.mode is missing', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: withObserver({
+        parameters: {},
+        library: {
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              considerations: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+            selection: {},
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      }),
+    });
+
+    assert.equal(
+      result.diagnostics.some((d) => d.code === 'CNL_COMPILER_AGENT_SELECTION_MODE_MISSING' && d.path === 'doc.agents.profiles.baseline.selection.mode'),
+      true,
+    );
+  });
+
+  it('emits diagnostic when selection.mode is invalid', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: withObserver({
+        parameters: {},
+        library: {
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              considerations: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+            selection: {
+              mode: 'sometimes' as unknown as string,
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      }),
+    });
+
+    assert.equal(
+      result.diagnostics.some((d) => d.code === 'CNL_COMPILER_AGENT_SELECTION_MODE_INVALID' && d.path === 'doc.agents.profiles.baseline.selection.mode'),
+      true,
+    );
+  });
+
+  it('emits diagnostic when selection.mode is reserved', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: withObserver({
+        parameters: {},
+        library: {
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              considerations: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+            selection: {
+              mode: 'topKSample',
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      }),
+    });
+
+    assert.equal(
+      result.diagnostics.some((d) => d.code === 'CNL_COMPILER_AGENT_SELECTION_MODE_RESERVED' && d.path === 'doc.agents.profiles.baseline.selection.mode'),
+      true,
+    );
+  });
+
+  it('emits diagnostic when softmaxSample selection.temperature is missing', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: withObserver({
+        parameters: {},
+        library: {
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              considerations: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+            selection: {
+              mode: 'softmaxSample',
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      }),
+    });
+
+    assert.equal(
+      result.diagnostics.some((d) => d.code === 'CNL_COMPILER_AGENT_SELECTION_TEMPERATURE_REQUIRED' && d.path === 'doc.agents.profiles.baseline.selection.temperature'),
+      true,
+    );
+  });
+
+  it('emits diagnostic when softmaxSample selection.temperature is non-positive', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: withObserver({
+        parameters: {},
+        library: {
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              considerations: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+            selection: {
+              mode: 'softmaxSample',
+              temperature: 0,
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      }),
+    });
+
+    assert.equal(
+      result.diagnostics.some((d) => d.code === 'CNL_COMPILER_AGENT_SELECTION_TEMPERATURE_INVALID' && d.path === 'doc.agents.profiles.baseline.selection.temperature'),
+      true,
+    );
   });
 
   it('emits diagnostic when preview.mode is missing', () => {

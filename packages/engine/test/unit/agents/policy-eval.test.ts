@@ -150,6 +150,7 @@ function createCatalog(
     fingerprint: 'baseline',
     params: { passFloor: 0.5 },
     preview: { mode: 'exactWorld' },
+    selection: { mode: 'argmax' },
     use: {
       pruningRules: ['dropPassWhenMarginExists'],
       considerations: ['preferEvents'],

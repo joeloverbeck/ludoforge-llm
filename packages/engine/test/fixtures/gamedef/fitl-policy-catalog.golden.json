@@ -1478,6 +1478,9 @@
       "preview": {
         "mode": "exactWorld"
       },
+      "selection": {
+        "mode": "argmax"
+      },
       "plan": {
         "stateFeatures": [
           "selfMargin",
@@ -1499,7 +1502,7 @@
           "preferAdviseAction"
         ]
       },
-      "fingerprint": "3da08f4662f2601841a20c9f8aa2d25cfc631b449b83ae0755071ddf5dbcd81d"
+      "fingerprint": "3e00cb8e49737f68940ad2e0c114f644d94460f14ee3441d24c78a3ba7ecbc30"
     },
     "arvn-baseline": {
       "observerName": "currentPlayer",
@@ -1529,6 +1532,9 @@
       "preview": {
         "mode": "exactWorld"
       },
+      "selection": {
+        "mode": "argmax"
+      },
       "plan": {
         "stateFeatures": [
           "selfMargin",
@@ -1551,7 +1557,7 @@
           "preferGovernAction"
         ]
       },
-      "fingerprint": "3481dde323f41ff711659090b57af1c43cd341df3423a04bbb1665379a0a472b"
+      "fingerprint": "13a4d863b36067cfc6d61a2a01264d78918ab49630775d53c90c2b694bfbf775"
     },
     "nva-baseline": {
       "observerName": "currentPlayer",
@@ -1582,6 +1588,9 @@
       "preview": {
         "mode": "exactWorld"
       },
+      "selection": {
+        "mode": "argmax"
+      },
       "plan": {
         "stateFeatures": [
           "selfMargin",
@@ -1605,7 +1614,7 @@
           "preferBombardAction"
         ]
       },
-      "fingerprint": "caef0917aa0260f87803a5bd2daad3e8fcc2ccf9ab55eb59f658cf64aece3468"
+      "fingerprint": "9055bca195c7e60c2e08b74afce3699749102e0209839e8ffbd2564ac23c2598"
     },
     "vc-baseline": {
       "observerName": "currentPlayer",
@@ -1636,6 +1645,9 @@
       "preview": {
         "mode": "exactWorld"
       },
+      "selection": {
+        "mode": "argmax"
+      },
       "plan": {
         "stateFeatures": [
           "selfMargin",
@@ -1659,7 +1671,7 @@
           "preferSubvertAction"
         ]
       },
-      "fingerprint": "22e5ba64d555d7da2871c0fef32e710d13e4cd6677ee871c3aea769c92ba065c"
+      "fingerprint": "dfd0363cd14e834ce6cccf78729395cadb5c625eb1fca9dd92a05b5de0c8d763"
     },
     "vc-evolved": {
       "observerName": "currentPlayer",
@@ -1684,6 +1696,9 @@
       "preview": {
         "mode": "tolerateStochastic"
       },
+      "selection": {
+        "mode": "argmax"
+      },
       "plan": {
         "stateFeatures": [],
         "candidateFeatures": [
@@ -1698,7 +1713,7 @@
           "preferPopulousTargets"
         ]
       },
-      "fingerprint": "30560000d58dee9134c94a0b83399b6300b70cda3500919217e9beefbbc110c1"
+      "fingerprint": "ff97058a68f4f943f1189dc8ea7916a3e2c7d9988b28d3f5c93be0d8345da438"
     }
   },
   "bindingsBySeat": {
@@ -1707,5 +1722,5 @@
     "nva": "nva-baseline",
     "vc": "vc-evolved"
   },
-  "catalogFingerprint": "46303a97cbd580bb4cb005104f95933b119ad34232e31792cd3174c8546b02b4"
+  "catalogFingerprint": "f993df2549c4b2eb5e3e2e4918c09ef3f0f0bbde7c775d1bedca811c268cd98c"
 }

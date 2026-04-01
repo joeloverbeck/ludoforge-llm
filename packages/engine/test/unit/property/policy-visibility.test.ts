@@ -109,6 +109,7 @@ function createCatalog(): AgentPolicyCatalog {
         fingerprint: 'baseline',
         params: {},
         preview: { mode: 'exactWorld' },
+        selection: { mode: 'argmax' },
         use: {
           pruningRules: [],
           considerations: ['preferProjectedMargin'],

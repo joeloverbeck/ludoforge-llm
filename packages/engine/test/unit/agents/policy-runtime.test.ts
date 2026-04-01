@@ -7,6 +7,7 @@ import {
   asPlayerId,
   initialState,
   type AgentPolicyCatalog,
+  type CompiledAgentProfile,
   type CompiledSurfaceVisibility,
   type CompiledCardMetadataIndex,
   type GameDef,
@@ -34,7 +35,7 @@ function createMinimalCatalog(overrides?: {
   readonly activeCardMetadata?: CompiledSurfaceVisibility;
   readonly activeCardAnnotation?: CompiledSurfaceVisibility;
 }): AgentPolicyCatalog {
-  const profile = {
+  const profile: CompiledAgentProfile = {
     fingerprint: 'test-profile',
     params: {},
     use: {
@@ -49,6 +50,7 @@ function createMinimalCatalog(overrides?: {
       considerations: [],
     },
     preview: { mode: overrides?.previewMode ?? 'exactWorld' },
+    selection: { mode: 'argmax' as const },
   };
   return {
     schemaVersion: 2,

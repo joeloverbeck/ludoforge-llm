@@ -34,6 +34,7 @@ If a prior ticket in the same series was implemented earlier in the session, reu
    - Do named exports, functions, types, and signatures exist as described?
    - Does the module structure match the ticket?
    - Are required dependencies and scripts present?
+   - If a referenced file path is stale but the intended owned artifact is uniquely discoverable and the ticket boundary stays the same, treat the path as non-blocking and note the corrected live path in your working notes.
 7. Build a discrepancy list for anything the ticket states that does not match reality.
 8. Check for architectural constraints the ticket may have underspecified:
    - shared type or schema ripple effects
@@ -85,6 +86,7 @@ If a prior ticket in the same series was implemented earlier in the session, reu
   - Zod or JSON schemas
   - diagnostics or debug snapshots
   - fixtures, goldens, and tests
+- When a migration adds or removes a required compiled field, treat owned production goldens that snapshot compiled catalogs, summaries, or traces as expected update surfaces unless evidence shows unexpected behavioral drift.
 
 ## Verification
 
@@ -97,6 +99,7 @@ Before claiming completion:
 5. Confirm whether the package's test commands execute source files directly or built `dist` output:
    - if tests depend on `dist`, run `typecheck` first and rebuild before trusting targeted test results
    - if the change affects generated artifacts or schemas, regenerate or validate them explicitly
+   - do not run verification commands in parallel when they read from or rewrite the same generated output tree such as `dist/`
 6. Prefer the narrowest commands that validate the real changed code path, not stale build output.
 7. If broader failing checks remain:
    - determine whether they are inside the corrected ticket boundary or are owned by another active ticket
@@ -119,6 +122,15 @@ Use the repo's standard commands from `AGENTS.md` when appropriate:
 - `pnpm turbo schema:artifacts`
 
 Prefer narrower package- or file-scoped checks when they fully cover the change.
+
+Optional verification ordering for `dist`-driven packages:
+- `typecheck`
+- `build`
+- regenerate or check schema/artifacts
+- targeted `dist` tests for the changed surface
+- full package test suite
+- broader repo checks
+- keep commands that clean, rebuild, or regenerate the same output tree serialized rather than parallel
 
 ## Follow-Up
 

@@ -185,6 +185,7 @@ function buildGameDefWithAgentExpr(featureId: string, expr: Record<string, unkno
           fingerprint: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
           params: {},
           preview: { mode: 'exactWorld' },
+          selection: { mode: 'argmax' },
           use: {
             pruningRules: [],
             considerations: [],
@@ -408,6 +409,7 @@ describe('top-level runtime schemas', () => {
               passFloor: 0.5,
             },
             preview: { mode: 'exactWorld' },
+            selection: { mode: 'argmax' },
             use: {
               pruningRules: [],
               considerations: ['preferNamedOption'],
@@ -499,6 +501,7 @@ describe('top-level runtime schemas', () => {
             fingerprint: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
             params: {},
             preview: { mode: 'exactWorld' },
+            selection: { mode: 'argmax' },
             use: {
               pruningRules: [],
               considerations: [],
@@ -593,6 +596,7 @@ describe('top-level runtime schemas', () => {
             fingerprint: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
             params: {},
             preview: { mode: 'exactWorld' },
+            selection: { mode: 'argmax' },
             use: {
               pruningRules: [],
               considerations: [],
@@ -688,6 +692,7 @@ describe('top-level runtime schemas', () => {
             fingerprint: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
             params: {},
             preview: { mode: 'exactWorld' },
+            selection: { mode: 'argmax' },
             use: {
               pruningRules: [],
               considerations: [],
@@ -918,6 +923,7 @@ describe('top-level runtime schemas', () => {
           baseline: {
             params: {},
             preview: { mode: 'exactWorld' },
+            selection: { mode: 'argmax' },
             use: {
               pruningRules: [],
               considerations: [],

@@ -105,6 +105,7 @@ function createCatalog(
         fingerprint: 'baseline',
         params: {},
         preview: { mode: 'exactWorld' },
+        selection: { mode: 'argmax' },
         use: {
           pruningRules: [],
           considerations: Object.keys(considerations),

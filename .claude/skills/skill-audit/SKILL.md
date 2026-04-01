@@ -82,11 +82,15 @@ Output this structure to the conversation (do not write to a file):
    - **Why it fits**: <how this aligns with the skill's stated intent>
    - **Suggestion**: <proposed addition>
 
+## Not Exercised This Session
+
+[List skill steps that were not exercised during this session. Do not speculate about potential issues — just record for completeness.]
+
 ## Summary
 
 **Total**: N issues, N improvements, N features — N CRITICAL, N HIGH, N MEDIUM, N LOW
 
-[If all findings are LOW severity and the skill was already audited and updated earlier in this session, note: "The skill has converged — further auditing has diminishing returns."]
+[If all findings are LOW severity and *this specific skill* was already audited and updated earlier in this session, note: "The skill has converged — further auditing has diminishing returns." Convergence applies per-skill, not per-session — auditing a different skill is always valid even if another skill has converged.]
 ```
 
 ## Guardrails

@@ -1,6 +1,6 @@
 # 102SHAOBSMOD-007: Migrate FITL game spec to `observability:` section
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — game data only
@@ -93,3 +93,21 @@ Texas Hold'em profiles have no `observer` field → they use the built-in `defau
 1. `pnpm -F @ludoforge/engine test:e2e` — end-to-end compilation tests
 2. `pnpm -F @ludoforge/engine test` — full engine test suite
 3. `pnpm turbo build` — build succeeds
+
+## Outcome
+
+**Completion date**: 2026-04-01
+
+**What changed**:
+- All deliverables were completed as part of ticket 006 (102SHAOBSMOD-006), not as a separate change.
+- `data/games/fire-in-the-lake/93-observability.md` created with `currentPlayer` observer containing all FITL visibility overrides
+- `data/games/fire-in-the-lake/92-agents.md` had `agents.visibility` removed, `observer: currentPlayer` added to all 5 profiles
+- `data/games/fire-in-the-lake.game-spec.md` updated with `93-observability.md` import
+- Texas Hold'em compiles unchanged (no `observer` field, uses built-in `default`)
+
+**Deviations from plan**:
+- This ticket's scope was pulled entirely into ticket 006 per FOUNDATIONS.md #14 ("migrate all owned artifacts in the same change"). Removing the `agents.visibility` TypeScript type in ticket 006 required migrating FITL's YAML in the same change to avoid breaking tests. No additional implementation was needed for this ticket.
+
+**Verification**:
+- All acceptance criteria verified: FITL compiles, no `visibility:` under `agents:`, Texas Hold'em unchanged
+- `pnpm -F @ludoforge/engine test`: 5432 pass, 0 fail (verified during ticket 006)

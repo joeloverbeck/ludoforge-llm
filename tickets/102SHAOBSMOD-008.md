@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — schema artifacts, test fixtures
-**Deps**: `tickets/102SHAOBSMOD-007.md`, `specs/102-shared-observer-model.md`
+**Deps**: `archive/tickets/102SHAOBSMOD-007.md`, `specs/102-shared-observer-model.md`
 
 ## Problem
 

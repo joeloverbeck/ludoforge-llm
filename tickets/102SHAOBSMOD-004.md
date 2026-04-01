@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — new `compile-observers.ts`
-**Deps**: `tickets/102SHAOBSMOD-003.md`, `specs/102-shared-observer-model.md`
+**Deps**: `archive/tickets/102SHAOBSMOD-003.md`, `specs/102-shared-observer-model.md`
 
 ## Problem
 

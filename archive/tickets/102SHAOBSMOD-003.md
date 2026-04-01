@@ -1,6 +1,6 @@
 # 102SHAOBSMOD-003: Create observer validation (`validate-observers.ts`)
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — new `validate-observers.ts`, modified `validate-agents.ts`
@@ -91,3 +91,13 @@ If `validate-agents.ts` currently validates `agents.visibility` structure, extra
 1. `pnpm -F @ludoforge/engine test -- --test-name-pattern validate-observers` — targeted tests
 2. `pnpm -F @ludoforge/engine test` — full engine test suite
 3. `pnpm turbo typecheck` — type correctness
+
+## Outcome
+
+- **Completion date**: 2026-04-01
+- **What changed**:
+  - Created `packages/engine/src/cnl/validate-observers.ts` with `validateObservers(observability, knownSurfaceIds, diagnostics)` implementing all validation rules: surface family keys, visibility class values, `extends` validation (existence, depth-1, circular, built-in rejection), built-in name collision, reserved key `zones`, per-variable override validation, shorthand/full syntax, `_default` restriction to map-type surfaces
+  - Created `packages/engine/test/unit/cnl/validate-observers.test.ts` with 28 tests covering all 10 acceptance criteria, 3 invariants, and additional structural edge cases
+  - No extraction from `validate-agents.ts` — the existing `agents.visibility` validation uses a different schema format; the new observer validation handles the new `observability.observers` schema independently. `agents.visibility` removal is deferred to ticket 006.
+- **Deviations**: No code was extracted from `validate-agents.ts` because the old and new schemas are structurally different (no shared validation logic). This is a non-issue since ticket 006 will remove `agents.visibility` and its validation entirely.
+- **Verification**: `pnpm turbo typecheck` passes, `pnpm turbo lint` passes, `pnpm -F @ludoforge/engine test` passes (5405/5405)

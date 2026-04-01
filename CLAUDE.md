@@ -15,24 +15,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-LudoForge-LLM is a system for evolving board games using LLMs. LLMs produce **Structured Game Specifications** — a DSL embedded in Markdown with fenced YAML blocks — which compile into executable **GameDef JSON**. A deterministic kernel engine runs the games, bots enumerate legal moves and play, and an evaluation pipeline detects degeneracy and measures design quality. The evolution pipeline uses MAP-Elites for quality-diversity optimization.
+LudoForge-LLM is a system for evolving board games using LLMs. LLMs produce **Structured Game Specifications** — a DSL embedded in Markdown with fenced YAML blocks — which compile into executable **GameDef JSON**. A deterministic kernel engine runs the games, bots enumerate legal moves and play, and an evaluation pipeline detects degeneracy and measures design quality. The evolution pipeline uses MAP-Elites for quality-diversity optimization. **License**: GPL-3.0
 
-**License**: GPL-3.0
-
-## Status
-
-Active development. The core engine (kernel, compiler, agents, simulator) is implemented and tested. A browser-based game runner is under active development. Two test-case games validate the engine:
-
-1. **Fire in the Lake (FITL)** — a 4-faction COIN-series wargame. Event card encoding and game definition generation are complete. Remaining work: rules refinement (option matrix, monsoon effects, etc.) and E2E validation.
-2. **Texas Hold'em** — a no-limit poker tournament (2-10 players). Added as a second game to stress-test engine-agnosticism with hidden information, betting, and player elimination. Spec 33 completed and archived.
-
-- **Completed specs** (archived): 01 (scaffolding), 02 (core types), 03 (PRNG/Zobrist), 04 (eval), 05 (effects), 06 (game loop), 07 (spatial), 08a (parser), 08b (compiler), 09 (agents), 10 (simulator), FITL specs 15-30, 32, 33 (Texas Hold'em), plus frontend specs 35 (monorepo restructure), 36 (web worker bridge), 37 (state management & render model), 38 (PixiJS canvas foundation), 39 (React DOM UI layer), 40 (animation system), 41 (board layout engine), 42 (visual config & session management), 47 (FITL Section 6 rules gaps), 48 (FITL Section 5 rules gaps), 49 (FITL Section 7 rules gaps), 50 (event interactive choice protocol), 51 (cross-game primitive elevation), 79 (compiled effect path redesign)
-- **Completed ticket series** (archived): ENGINEAGNO, TEXHOLKERPRIGAMTOU, ARCHTRACE, MONOREPO, WRKBRIDGE, STATEMOD, PIXIFOUND, ENGINEARCH, REACTUI, ANIMSYS, AGNOSTIC, FRONTEND-F3, FITLCOUROUANDDATFIX, BOARDLAY, KERLEGCHO, FITLRULES2, FITLSEC6RULGAP, FITLSEC5RULGAP, FITLSEC7RULGAP, ANIMDIAG, 79COMEFFPATRED
-- **Active specs**: 59 (codebase health audit), 70 (bitmap font leak & init perf), 76 (ValueExpr type-tag discriminants), 77 (EffectContext static/dynamic split), 78 (draft state for effect execution), 80 (incremental Zobrist hashing), 81 (whole-sequence effect compilation), 82 (effect AST type tags), 87 (unified viability pipeline), 88 (phase-aware action filtering), 89 (scoped mutable execution context), 90 (compiled condition predicates), 91 (first-decision-domain compilation), 92 (enumeration-time state snapshot)
-- **Active tickets**: None
-- **Not yet started**: 11 (evaluator/degeneracy), 12 (CLI), 13 (mechanic bundle IR), 14 (evolution pipeline), 90 (compiled condition predicates), 91 (first-decision-domain compilation), 92 (enumeration-time state snapshot)
-- **Codebase size**: ~486 source files, ~703 test files
-- **Design specs**: `brainstorming/executable-board-game-kernel-cnl-rulebook.md`, `brainstorming/texas-hold-em-rules.md`, `brainstorming/browser-based-game-runner.md`
 
 ## Tech Stack
 
@@ -49,62 +33,7 @@ Active development. The core engine (kernel, compiler, agents, simulator) is imp
 
 ## Architecture
 
-Engine source modules are under `packages/engine/src/`, with a separate runner package under `packages/runner/`:
-
-| Directory | Purpose |
-|-----------|---------|
-| `packages/engine/src/kernel/` | Pure, deterministic game engine — state init, legal move enumeration, condition eval, effect application, trigger dispatch, terminal detection, spatial queries, derived values |
-| `packages/engine/src/cnl/` | Game Spec parsing (Markdown + YAML blocks, YAML 1.2 strict), validation, macro expansion (including board generation), compilation to GameDef JSON |
-| `packages/engine/src/agents/` | Bot implementations (RandomAgent, GreedyAgent) conforming to a strict `Agent` interface |
-| `packages/engine/src/sim/` | Simulation runner, trace logging, state delta engine |
-| `packages/engine/src/cli/` | Developer commands (stub — not yet implemented) |
-| `packages/engine/schemas/` | JSON Schemas for GameDef, Trace, EvalReport |
-| `packages/runner/src/worker/` | Web Worker running the kernel off-main-thread via Comlink |
-| `packages/runner/src/bridge/` | Game bridge connecting worker responses to store updates |
-| `packages/runner/src/store/` | Zustand game store with lifecycle state machine |
-| `packages/runner/src/model/` | Render model derivation — transforms GameState into UI-friendly structures |
-| `packages/runner/src/utils/` | Runner utilities (display name formatting, etc.) |
-| `packages/runner/src/canvas/` | PixiJS canvas layer — renderers (zone, token, adjacency), interactions (keyboard, pointer, ARIA), viewport (pan/zoom/clamp), position store, canvas updater |
-| `packages/runner/src/map-editor/` | Map editor screen, editor store, editor-specific renderers, and editor canvas wrapper built on shared canvas infrastructure |
-| `packages/runner/src/ui/` | React DOM UI layer — panels (scoreboard, choice, variables, events, hand, effects), overlays (terminal, AI turn, interrupt), toolbar, phase indicator, tooltip, error boundary |
-| `packages/runner/src/animation/` | GSAP animation system — controller, queue, presets, AI playback, reduced motion, timeline builder, trace-to-descriptor mapping |
-| `packages/runner/src/input/` | Keyboard coordinator — unified shortcut handling across canvas and DOM layers |
-| `packages/runner/src/types/` | Shared type declarations (CSS modules, etc.) |
-| `packages/runner/src/bootstrap/` | Default game definition for dev bootstrapping |
-| `packages/runner/src/` | React entry point (`App.tsx`, `main.tsx`) |
-| `data/` | Optional game reference artifacts and fixtures — `data/games/fire-in-the-lake/` and `data/games/texas-holdem/` (not required at runtime) |
-
-### Runner Rendering Architecture
-
-The runner has two screen-specific rendering flows mounted from [`App.tsx`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/src/App.tsx):
-
-- **Active game flow**: `sessionState.screen === 'activeGame'` mounts [`GameCanvas.tsx`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/src/canvas/GameCanvas.tsx), which creates [`createGameCanvasRuntime`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/src/canvas/game-canvas-runtime.ts) and drives renderer updates through [`createCanvasUpdater`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/src/canvas/canvas-updater.ts). Game renderers live under [`packages/runner/src/canvas/renderers/`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/src/canvas/renderers).
-- **Map editor flow**: `sessionState.screen === 'mapEditor'` mounts [`MapEditorScreen.tsx`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/src/map-editor/MapEditorScreen.tsx), which creates [`createEditorCanvas`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/src/map-editor/map-editor-canvas.ts) and wires editor-specific renderers from [`packages/runner/src/map-editor/`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/src/map-editor) via direct editor-store subscriptions.
-
-These flows are separate where debugging usually happens: renderer modules, screen logic, and store/runtime orchestration. A change to the game adjacency, zone, or route renderers will not change the map editor renderer behavior, and vice versa.
-
-They are not fully isolated stacks. Both flows reuse shared Pixi bootstrapping from [`create-app.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/src/canvas/create-app.ts), and the editor also reuses shared viewport setup from [`viewport-setup.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/runner/src/canvas/viewport-setup.ts). Changes in that shared canvas substrate can affect both flows.
-
-### Core Design Constraints
-
-- **Deterministic**: same seed + same actions = same result
-- **Enumerable**: legal moves must be listable (no free-text moves)
-- **Finite**: all choices bounded (tokens from zones, ints from ranges, enums)
-- **Bounded iteration only**: `forEach` over finite collections, `repeat N` with compile-time bounds, no general recursion, trigger chains capped at depth K
-- **Small instruction set**: mechanics emerge from composition, not bespoke primitives
-
-### Key Data Flow
-
-```
-Game Spec (Markdown+YAML) → parseGameSpec → validateGameSpec → expandMacros → compileGameSpecToGameDef → GameDef JSON
-GameDef JSON → validateGameDef → initialState(def, seed) → kernel loop (legalMoves → applyMove → dispatch triggers → terminalResult)
-```
-
-### Kernel DSL
-
-The kernel operates on ASTs for conditions, effects, and references. Core types: `ConditionAST`, `EffectAST`, `ValueExpr`, `PlayerSel`, `ZoneSel`, `TokenSel`. Effects use bounded iteration (`forEach` over finite collections) — no general recursion. Includes spatial support via board-as-graph (zone adjacency). See the brainstorming spec sections 3.1-3.6 for exact AST shapes.
-
-**Operation-context-only bindings**: `__freeOperation` and `__actionClass` are built-in bindings injected only during operation pipeline execution. They are NOT available in event card effects. Macros that reference them (directly or via sub-macros like `per-province-city-cost`) cannot be called from event cards without inlining the relevant logic. The compiler validates all branches statically — even unreachable ones will fail.
+Engine under `packages/engine/src/` (kernel, cnl, agents, sim), runner under `packages/runner/src/`. For the full module map, rendering pipelines, design constraints, data flow, and kernel DSL reference, see `docs/architecture.md`. For the directory tree, see `docs/project-structure.md`.
 
 ## Build & Test Commands
 
@@ -132,75 +61,9 @@ pnpm -F @ludoforge/runner dev
 **Important**: Use `pnpm turbo ...` as the canonical path so build ordering remains deterministic across packages. Engine tests run against compiled JS in `packages/engine/dist/`. Runner tests use Vitest and run against TypeScript source directly. When running `node --test` directly for engine, run `pnpm turbo build` first. Use `pnpm turbo test --force` to bypass Turbo cache for a guaranteed fresh run.
 **Important**: Do not use Jest-only CLI flags (for example `--testPathPattern` or `--testPathPatterns`) with engine `test:unit`; engine tests run with `node --test`, not Jest.
 
-## Project Structure
+## Testing
 
-```
-packages/
-  engine/
-    src/
-      kernel/      # Deterministic game engine
-      cnl/         # Parser, validator, compiler
-      agents/      # Bot implementations
-      sim/         # Simulator and trace
-      cli/         # CLI commands (stub)
-    test/
-      unit/        # Individual functions, utilities
-      integration/ # Cross-module interactions
-      e2e/         # Full pipeline (Game Spec -> compile -> run -> eval)
-      fixtures/    # Test fixture files (GameDef JSON, spec Markdown, golden outputs)
-      helpers/     # Shared test utilities
-      performance/ # Benchmarks
-      memory/      # Memory leak detection
-    schemas/       # JSON Schema artifacts
-    scripts/       # Schema artifact generation/check scripts
-  runner/
-    src/
-      worker/      # Web Worker (kernel off-main-thread via Comlink)
-      bridge/      # Game bridge (worker → store updates)
-      store/       # Zustand game store with lifecycle state machine
-      model/       # Render model derivation (GameState → UI)
-      utils/       # Display name formatting, helpers
-      canvas/      # PixiJS canvas layer (renderers, interactions, viewport)
-        renderers/ # Zone, token, adjacency rendering with container pooling
-        interactions/ # Keyboard nav, pointer selection, ARIA announcements
-      animation/   # GSAP animation system (controller, queue, presets, AI playback)
-      ui/          # React DOM UI panels, overlays, toolbar, indicators
-      input/       # Keyboard coordinator for unified shortcut handling
-      types/       # Shared type declarations (CSS modules)
-      bootstrap/   # Default game definition for dev bootstrapping
-    test/
-      worker/      # Worker and bridge tests
-      store/       # Store and lifecycle tests
-      model/       # Render model derivation tests
-      utils/       # Utility tests
-      canvas/      # Canvas layer tests (renderers, interactions, viewport)
-        renderers/ # Renderer unit tests
-        interactions/ # Interaction handler tests
-      animation/   # Animation system tests
-      ui/          # React DOM UI component tests
-      input/       # Keyboard coordinator tests
-      bootstrap/   # Bootstrap fixture and config tests
-    index.html     # Vite entrypoint
-    vite.config.ts # Vite + React config
-data/              # Optional game reference data
-docs/              # Design plans and technical documentation
-specs/             # Numbered implementation specs
-tickets/           # Active implementation tickets
-archive/           # Completed tickets, specs, brainstorming, reports
-brainstorming/     # Design documents
-reports/           # Analysis and evaluation reports
-```
-
-### Testing Requirements
-
-- **Determinism tests**: same seed + same move sequence = identical final state hash
-- **Property tests** (quickcheck style): applyMove never produces invalid var bounds, tokens never duplicate across zones, legalMoves pass preconditions, no crash on random play for N turns
-- **Golden tests**: known Game Spec -> expected JSON, known seed trace -> expected output
-- **FITL game-rule tests**: compile `data/games/fire-in-the-lake/*.md` via `compileProductionSpec()` from `packages/engine/test/helpers/production-spec-helpers.ts`. Do NOT create separate fixture files for FITL profiles, events, or special activities. Foundation fixtures (`fitl-foundation-inline-assets.md`, `fitl-foundation-coup-victory-inline-assets.md`) are kept for engine-level testing with minimal setups.
-- **FITL event-selector tests**: when legality depends on broad map predicates such as "any city", "supported spaces", or "outside Saigon", neutralize the relevant support/opposition slice first and then apply explicit overrides. Do not assume untouched production defaults outside the spaces under direct assertion.
-- **FITL event fidelity details**: treat rules phrases such as `piece`, `place`, and `toward Passive Support` / `toward Passive Opposition` as implementation constraints, not shorthand. Cover Base-as-piece cases, Rule 1.4.1 sourcing, stacking caps, and passive-target routing explicitly when relevant.
-- **FITL fidelity cross-checks**: `archive/specs/29-fitl-event-card-encoding.md` is acceptable as a historical cross-check for suspicious placeholder cards, but rules reports, playbook guidance, and `docs/fitl-event-authoring-cookbook.md` are the source of truth.
-- **Texas Hold'em tests**: compile `data/games/texas-holdem/*.md` similarly. Texas Hold'em serves as the engine-agnosticism validation game — tests should confirm that no FITL-specific logic leaks into the kernel.
+For test types, FITL/Texas Hold'em conventions, and test placement rules, see `docs/testing-guide.md`.
 
 ## Coding Conventions
 
@@ -223,11 +86,7 @@ When modifying specs or tickets, verify cross-spec references and ensure roadmap
 
 ## Pull Request Guidelines
 
-PRs should include:
-- A clear summary of changed files and why
-- Linked issue/spec section when applicable
-- Confirmation that references, numbering, and terminology are consistent across affected specs
-- Test plan with verification steps
+PRs should include a clear summary of changed files and why, linked issue/spec when applicable, confirmation that references and terminology are consistent, and a test plan with verification steps.
 
 ## Skill Invocation (MANDATORY)
 
@@ -243,21 +102,9 @@ When using Serena MCP for semantic code operations (symbol navigation, project m
 mcp__plugin_serena_serena__activate_project with project: "ludoforge-llm"
 ```
 
-Serena provides:
-- Symbol-level code navigation and refactoring
-- Project memory for cross-session context
-- Semantic search across the codebase
-- LSP-powered code understanding
+## Sub-Agent Permissions
 
-## Sub-Agent Web Research Permissions
-
-Sub-agents spawned via the `Task` tool **cannot prompt for interactive permission**. Any tool they need must be pre-approved in `.claude/settings.local.json` under `permissions.allow`. Without this, web search tools are silently auto-denied and sub-agents fall back to training knowledge only.
-
-**Required allow-list entries for web research**:
-- `WebSearch` and `WebFetch` — built-in fallback search tools
-- `mcp__tavily__tavily_search`, `mcp__tavily__tavily_extract`, `mcp__tavily__tavily_crawl`, `mcp__tavily__tavily_map`, `mcp__tavily__tavily_research` — Tavily MCP tools
-
-**Tavily API key**: Configured in `~/.claude.json` under `mcpServers.tavily.env.TAVILY_API_KEY`. Development keys (`tvly-dev-*`) have usage limits — upgrade at [app.tavily.com](https://app.tavily.com) if you hit HTTP 432 errors ("usage limit exceeded").
+For sub-agent web research permission setup, see `docs/sub-agent-permissions.md`.
 
 ## Archiving Tickets and Specs
 

@@ -650,7 +650,8 @@ export interface CompiledAgentPruningRule {
   readonly onEmpty: 'skipRule' | 'error';
 }
 
-export interface CompiledAgentScoreTerm {
+export interface CompiledAgentConsideration {
+  readonly scopes?: readonly ('move' | 'completion')[];
   readonly costClass: AgentPolicyCostClass;
   readonly when?: AgentPolicyExpr;
   readonly weight: AgentPolicyExpr;
@@ -662,6 +663,9 @@ export interface CompiledAgentScoreTerm {
   };
   readonly dependencies: CompiledAgentDependencyRefs;
 }
+
+/** @deprecated Use CompiledAgentConsideration. Removed in ticket 003. */
+export type CompiledAgentScoreTerm = CompiledAgentConsideration;
 
 export interface CompiledAgentTieBreaker {
   readonly kind: string;

@@ -876,8 +876,9 @@ const CompiledAgentPruningRuleSchema = z
   })
   .strict();
 
-const CompiledAgentScoreTermSchema = z
+const CompiledAgentConsiderationSchema = z
   .object({
+    scopes: z.array(z.union([z.literal('move'), z.literal('completion')])).min(1).optional(),
     costClass: AgentPolicyCostClassSchema,
     when: AgentPolicyExprSchema.optional(),
     weight: AgentPolicyExprSchema,
@@ -887,6 +888,9 @@ const CompiledAgentScoreTermSchema = z
     dependencies: CompiledAgentDependencyRefsSchema,
   })
   .strict();
+
+/** @deprecated Use CompiledAgentConsiderationSchema. Removed in ticket 003. */
+const CompiledAgentScoreTermSchema = CompiledAgentConsiderationSchema;
 
 const CompiledAgentTieBreakerSchema = z
   .object({

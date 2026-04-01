@@ -1283,6 +1283,7 @@ class AgentLibraryCompiler {
       return null;
     }
     const compiled: CompiledAgentScoreTerm = {
+      scopes: ['move'],
       costClass: maxCostClass(maxCostClass(weight.costClass, value.costClass), when?.costClass ?? 'state'),
       ...(def.when === undefined ? {} : { when: when!.expr }),
       weight: weight.expr,
@@ -1354,6 +1355,7 @@ class AgentLibraryCompiler {
       return null;
     }
     const compiled: CompiledAgentScoreTerm = {
+      scopes: ['completion'],
       costClass: maxCostClass(maxCostClass(weight.costClass, value.costClass), when?.costClass ?? 'state'),
       ...(def.when === undefined ? {} : { when: when!.expr }),
       weight: weight.expr,

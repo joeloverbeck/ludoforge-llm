@@ -142,6 +142,8 @@ After all findings are resolved and the user has approved the changes:
 
 If the user requests changes to the draft, incorporate them and re-present before writing.
 
+**Plan mode note**: If invoked during plan mode, Steps 1-6 proceed normally (read-only). Step 7 requires write access — exit plan mode before writing. Present the diff summary as the plan file content, then write the spec after plan approval.
+
 ### Step 8: Final Summary
 
 After writing the updated spec, present:

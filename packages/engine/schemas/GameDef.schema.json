@@ -3537,6 +3537,22 @@
               "additionalProperties": {
                 "type": "object",
                 "properties": {
+                  "scopes": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "const": "move"
+                        },
+                        {
+                          "type": "string",
+                          "const": "completion"
+                        }
+                      ]
+                    }
+                  },
                   "costClass": {
                     "anyOf": [
                       {
@@ -3642,6 +3658,22 @@
               "additionalProperties": {
                 "type": "object",
                 "properties": {
+                  "scopes": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "const": "move"
+                        },
+                        {
+                          "type": "string",
+                          "const": "completion"
+                        }
+                      ]
+                    }
+                  },
                   "costClass": {
                     "anyOf": [
                       {

@@ -745,6 +745,9 @@
     },
     "scoreTerms": {
       "preferProjectedSelfMargin": {
+        "scopes": [
+          "move"
+        ],
         "costClass": "preview",
         "weight": {
           "kind": "param",
@@ -771,6 +774,9 @@
         }
       },
       "preserveResources": {
+        "scopes": [
+          "move"
+        ],
         "costClass": "state",
         "weight": {
           "kind": "param",
@@ -797,6 +803,9 @@
         }
       },
       "preferEvent": {
+        "scopes": [
+          "move"
+        ],
         "costClass": "candidate",
         "weight": {
           "kind": "param",
@@ -826,6 +835,9 @@
         }
       },
       "preferTrainAction": {
+        "scopes": [
+          "move"
+        ],
         "costClass": "candidate",
         "weight": {
           "kind": "literal",
@@ -853,6 +865,9 @@
         }
       },
       "preferPatrolAction": {
+        "scopes": [
+          "move"
+        ],
         "costClass": "candidate",
         "weight": {
           "kind": "literal",
@@ -880,6 +895,9 @@
         }
       },
       "preferAssaultAction": {
+        "scopes": [
+          "move"
+        ],
         "costClass": "candidate",
         "weight": {
           "kind": "literal",
@@ -907,6 +925,9 @@
         }
       },
       "preferAdviseAction": {
+        "scopes": [
+          "move"
+        ],
         "costClass": "candidate",
         "weight": {
           "kind": "literal",
@@ -934,6 +955,9 @@
         }
       },
       "preferSweepAction": {
+        "scopes": [
+          "move"
+        ],
         "costClass": "candidate",
         "weight": {
           "kind": "literal",
@@ -961,6 +985,9 @@
         }
       },
       "preferGovernAction": {
+        "scopes": [
+          "move"
+        ],
         "costClass": "candidate",
         "weight": {
           "kind": "literal",
@@ -988,6 +1015,9 @@
         }
       },
       "preferRallyAction": {
+        "scopes": [
+          "move"
+        ],
         "costClass": "candidate",
         "weight": {
           "kind": "literal",
@@ -1015,6 +1045,9 @@
         }
       },
       "preferRallyWeighted": {
+        "scopes": [
+          "move"
+        ],
         "costClass": "candidate",
         "weight": {
           "kind": "param",
@@ -1044,6 +1077,9 @@
         }
       },
       "preferMarchAction": {
+        "scopes": [
+          "move"
+        ],
         "costClass": "candidate",
         "weight": {
           "kind": "literal",
@@ -1071,6 +1107,9 @@
         }
       },
       "preferAttackAction": {
+        "scopes": [
+          "move"
+        ],
         "costClass": "candidate",
         "weight": {
           "kind": "literal",
@@ -1098,6 +1137,9 @@
         }
       },
       "preferTerrorAction": {
+        "scopes": [
+          "move"
+        ],
         "costClass": "candidate",
         "weight": {
           "kind": "literal",
@@ -1125,6 +1167,9 @@
         }
       },
       "preferTaxAction": {
+        "scopes": [
+          "move"
+        ],
         "costClass": "candidate",
         "weight": {
           "kind": "literal",
@@ -1152,6 +1197,9 @@
         }
       },
       "preferTaxWeighted": {
+        "scopes": [
+          "move"
+        ],
         "costClass": "candidate",
         "weight": {
           "kind": "param",
@@ -1181,6 +1229,9 @@
         }
       },
       "preferSubvertAction": {
+        "scopes": [
+          "move"
+        ],
         "costClass": "candidate",
         "weight": {
           "kind": "literal",
@@ -1208,6 +1259,9 @@
         }
       },
       "preferInfiltrateAction": {
+        "scopes": [
+          "move"
+        ],
         "costClass": "candidate",
         "weight": {
           "kind": "literal",
@@ -1235,6 +1289,9 @@
         }
       },
       "preferBombardAction": {
+        "scopes": [
+          "move"
+        ],
         "costClass": "candidate",
         "weight": {
           "kind": "literal",
@@ -1264,6 +1321,9 @@
     },
     "completionScoreTerms": {
       "preferPopulousTargets": {
+        "scopes": [
+          "completion"
+        ],
         "costClass": "state",
         "when": {
           "kind": "op",
@@ -1601,5 +1661,5 @@
     "nva": "nva-baseline",
     "vc": "vc-evolved"
   },
-  "catalogFingerprint": "61ecd697ff058ea8f0e780300b5cd2b2d6a25e4fc05b4898aabf43541cdf10e0"
+  "catalogFingerprint": "868b2e42f0e57c11d26d32ac2c8468398ca8c2c8c5298b729cc2048e5692732b"
 }

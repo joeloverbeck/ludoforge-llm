@@ -556,6 +556,9 @@
     "pruningRules": {},
     "scoreTerms": {
       "preferCheck": {
+        "scopes": [
+          "move"
+        ],
         "costClass": "candidate",
         "weight": {
           "kind": "literal",
@@ -583,6 +586,9 @@
         }
       },
       "preferCall": {
+        "scopes": [
+          "move"
+        ],
         "costClass": "candidate",
         "weight": {
           "kind": "literal",
@@ -610,6 +616,9 @@
         }
       },
       "avoidFold": {
+        "scopes": [
+          "move"
+        ],
         "costClass": "candidate",
         "weight": {
           "kind": "literal",
@@ -637,6 +646,9 @@
         }
       },
       "foldWhenBadPotOdds": {
+        "scopes": [
+          "move"
+        ],
         "costClass": "candidate",
         "weight": {
           "kind": "literal",
@@ -695,6 +707,9 @@
         }
       },
       "alwaysRaise": {
+        "scopes": [
+          "move"
+        ],
         "costClass": "candidate",
         "weight": {
           "kind": "literal",
@@ -722,6 +737,9 @@
         }
       },
       "preferLargerRaise": {
+        "scopes": [
+          "move"
+        ],
         "costClass": "candidate",
         "weight": {
           "kind": "literal",
@@ -797,5 +815,5 @@
   "bindingsBySeat": {
     "neutral": "baseline"
   },
-  "catalogFingerprint": "1cfaf537e56bcfc388592e89500c982ac06483746ff055c788f969d00c97227d"
+  "catalogFingerprint": "971f4aa78ec55bad0faf4ddd863959ab2249bc390a6cfdc7c93eb2af5a2a97a5"
 }

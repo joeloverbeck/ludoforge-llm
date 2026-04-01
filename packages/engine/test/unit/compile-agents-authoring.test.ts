@@ -348,6 +348,7 @@ describe('agents authoring surface', () => {
       },
       scoreTerms: {
         preferEvents: {
+          scopes: ['move'],
           costClass: 'candidate',
           weight: literal(1),
           value: opExpr('boolToNumber', refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'isPass' })),
@@ -616,6 +617,7 @@ describe('agents authoring surface', () => {
     assert.equal(result.gameDef === null, false);
     assert.equal(result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
     assert.deepEqual(result.gameDef?.agents?.library.completionScoreTerms.preferNamedOption, {
+      scopes: ['completion'],
       costClass: 'state',
       when: opExpr('eq', refExpr({ kind: 'decisionIntrinsic', intrinsic: 'type' }), literal('chooseOne')),
       weight: literal(2),
@@ -698,6 +700,7 @@ describe('agents authoring surface', () => {
     assert.equal(result.gameDef === null, false);
     assert.equal(result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
     assert.deepEqual(result.gameDef?.agents?.library.completionScoreTerms.preferHigherPopulation, {
+      scopes: ['completion'],
       costClass: 'state',
       when: opExpr('eq', refExpr({ kind: 'decisionIntrinsic', intrinsic: 'type' }), literal('chooseOne')),
       weight: literal(1),

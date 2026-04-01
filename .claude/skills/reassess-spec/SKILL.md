@@ -25,7 +25,7 @@ If the argument is missing, ask the user to provide it before proceeding.
 
 ## Worktree Awareness
 
-If working inside a worktree (e.g., `.claude/worktrees/<name>/`), **all file paths in this skill** — reads, writes, globs, greps — must be prefixed with the worktree root. The default working directory is the main repo root; paths without an explicit worktree prefix will silently operate on main, not the worktree. This applies to every path reference below.
+If working inside a worktree (e.g., `.claude/worktrees/<name>/`), **all file paths in this skill** — reads, writes, globs, greps — must be prefixed with the worktree root. The default working directory is the main repo root; paths without an explicit worktree prefix will silently operate on main, not the worktree. This applies to every path reference below, including paths passed to Explore agents.
 
 ## Process
 
@@ -40,7 +40,9 @@ Read ALL of these files before any analysis:
 
 Parse the spec's metadata: Status, Priority, Dependencies, Goals, Non-Goals, FOUNDATIONS.md Alignment table (if present), and all implementation sections.
 
-### Step 2: Extract References
+### Step 2: Extract and Validate References
+
+This step combines reference extraction and codebase validation into a single pass.
 
 From the spec, extract every concrete codebase reference:
 
@@ -52,24 +54,20 @@ From the spec, extract every concrete codebase reference:
 - **Test file paths or test names** referenced
 - **Other specs or tickets** listed in Dependencies
 
-Build a checklist of every reference to validate in Step 3.
-
-### Step 3: Codebase Validation
-
-For every reference extracted in Step 2, validate against the actual codebase:
+For each reference, validate against the actual codebase:
 
 1. **File paths**: Glob/Grep to confirm they exist at the stated location. If a file was moved, renamed, or deleted, record the discrepancy and the actual location (if found).
 2. **Types and interfaces**: Grep for each type name. Confirm it exists, check its current shape (fields, members). If the spec assumes a field that does not exist or has a different name/type, record the discrepancy.
 3. **Functions and methods**: Grep for each function. Confirm signature, module location, and export status. Note any signature differences from what the spec assumes.
 4. **Dependencies (specs/tickets)**: For each dependency, verify whether it lives in `specs/`, `archive/specs/`, `tickets/`, or `archive/tickets/`. Record the correct path. If a dependency is listed as incomplete but has since been implemented, note this.
 5. **YAML/config fields**: Grep for field names in schema files, type definitions, and example YAML files. Confirm the spec's assumptions about available fields.
-6. **Downstream consumers**: For types or interfaces the spec proposes to modify, grep for all import sites and usage points. Record the blast radius — files that would need updating.
+6. **Downstream consumers (blast radius)**: For types or interfaces the spec proposes to modify, grep for all import sites and usage points. Record the blast radius — files that would need updating.
 
-For specs with many references (>5 types/functions/paths), use an Explore agent to validate all references in parallel rather than sequential grep/glob calls. Steps 2 and 3 are read-only — agent-based exploration is safe and significantly faster.
+For specs with many references (>5 types/functions/paths), use an Explore agent to perform extraction and validation in a single pass. Include the spec content in the agent prompt so it can both identify references and validate them. Explicitly request blast radius analysis — the agent should grep for all import sites and consumer files of any type or interface the spec proposes to modify. This is read-only — agent-based exploration is safe and significantly faster.
 
-Do not present findings yet. Collect everything for Step 4.
+Do not present findings yet. Collect everything for Step 3.
 
-### Step 4: FOUNDATIONS.md Alignment Check
+### Step 3: FOUNDATIONS.md Alignment Check
 
 Review each section of the spec against `docs/FOUNDATIONS.md`:
 
@@ -83,9 +81,9 @@ Review each section of the spec against `docs/FOUNDATIONS.md`:
    - **Foundation 15** (Architectural Completeness) — does the spec patch a symptom instead of fixing root cause?
 3. Record each alignment issue with the specific Foundation number and what conflicts.
 
-### Step 5: Classify Findings
+### Step 4: Classify Findings
 
-Organize all findings from Steps 3 and 4 into three categories:
+Organize all findings from Steps 2 and 3 into three categories:
 
 - **Issues**: Something in the spec is factually wrong, stale, or violates FOUNDATIONS.md. The spec cannot go to tickets without fixing this.
 - **Improvements**: The spec is not wrong, but a refinement would make the implementation cleaner, safer, or more aligned with existing patterns.
@@ -96,7 +94,7 @@ For each finding, record:
 - What the codebase actually has (with file paths and line references)
 - The recommended change to the spec
 
-### Step 6: Present Findings
+### Step 5: Present Findings
 
 Present all findings to the user in a structured report:
 
@@ -125,13 +123,15 @@ Present all findings to the user in a structured report:
 
 **Question discipline**: Ask at most 3 questions in this initial report. If you have more than 3, prioritize the ones that block further reassessment and defer the rest to a follow-up round after the user responds.
 
-**Wait for user response.** Do not proceed to Step 7 until the user has:
+**Wait for user response.** Do not proceed to Step 6 until the user has:
 - Approved, rejected, or modified each finding
 - Answered all questions
 
 If the user's answers raise new questions or invalidate previous findings, present a follow-up round (same format, same question limit). Repeat until all findings are resolved.
 
-### Step 7: Write the Updated Spec
+If the user requests deeper analysis of a specific finding before deciding, perform the investigation using read-only tools (reading additional source files, tracing call chains, etc.) and present updated findings before re-asking for approval. This investigation round does not count toward the follow-up question limit — it is resolution of the original question, not a new question.
+
+### Step 6: Write the Updated Spec
 
 After all findings are resolved and the user has approved the changes:
 
@@ -142,9 +142,9 @@ After all findings are resolved and the user has approved the changes:
 
 If the user requests changes to the draft, incorporate them and re-present before writing.
 
-**Plan mode note**: If invoked during plan mode, Steps 1-6 proceed normally (read-only). Step 7 requires write access — exit plan mode before writing. Present the diff summary as the plan file content, then write the spec after plan approval.
+**Plan mode note**: If invoked during plan mode, Steps 1-5 proceed normally (read-only). Step 6 requires write access — exit plan mode before writing. Write a plan file with: (a) **Context** — why the spec is being updated, (b) **Changes** — the numbered diff summary list, (c) **Verification** — confirmation that no implementation will happen. Then call ExitPlanMode. After approval, proceed with writing the updated spec.
 
-### Step 8: Final Summary
+### Step 7: Final Summary
 
 After writing the updated spec, present:
 
@@ -163,4 +163,5 @@ Do NOT commit. Leave the file for user review.
 - **No scope creep**: The deliverable is the updated spec file. Do not write design docs, create tickets, or start implementation.
 - **No approach proposals**: This is reassessment, not greenfield design. Do not propose 2-3 alternative architectures. The spec already has a design — validate and refine it.
 - **Preserve spec voice**: When editing, match the spec's existing writing style. Do not rewrite unchanged sections for stylistic preferences.
+- **Preserve downstream structure**: When writing the updated spec, preserve all metadata fields (Status, Priority, Complexity, Dependencies, etc.) and section headings that downstream skills (e.g., spec-to-tickets) may depend on. Do not rename or remove standard sections.
 - **Worktree discipline**: If working in a worktree, ALL file operations use the worktree root path.

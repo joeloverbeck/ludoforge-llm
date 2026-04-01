@@ -45,7 +45,7 @@ The external review recommended replacing this with explicit preview mode declar
 | **2. Evolution-First** | Preview mode lives in GameSpecDoc YAML. Evolution can select different modes. |
 | **7. Specs Are Data** | Preview mode is a declarative enum, no code. |
 | **8. Determinism** | Same profile + same state + same seed = same preview outcomes. Preview uses a derived seed, never the authoritative RNG. Mode selection is static. |
-| **9. Replay and Auditability** | Traces record preview mode and outcome classification. |
+| **9. Replay and Auditability** | Traces record preview mode and outcome classification via `PolicyPreviewUsageTrace.mode`. |
 | **10. Bounded Computation** | Preview is single-ply application of one candidate. Bounded by candidate count. |
 | **12. Compiler-Kernel Boundary** | Mode validation at compile time. Runtime enforces mode semantics. |
 | **14. No Backwards Compatibility** | `tolerateRngDivergence` removed. All profiles migrated. |
@@ -65,13 +65,18 @@ type AgentPreviewMode =
 // | 'enumeratePublicChance' // Enumerate public chance outcomes, weight by probability
 ```
 
-Mode semantics:
+Mode semantics — **scope of `preview.mode`**:
 
-| Mode | RNG Divergence | Hidden Info | Unresolved Decisions | Behavior |
-|------|---------------|-------------|---------------------|----------|
-| `exactWorld` | Returns `unknown` | Returns `unknown` | Returns `unknown` | Strictest — only fully deterministic previews produce values |
-| `tolerateStochastic` | Accepts, marks `stochastic` | Returns `unknown` | Accepts, marks `unresolved` | Current behavior when `tolerateRngDivergence: true` |
-| `disabled` | N/A | N/A | N/A | All `preview.*` refs evaluate to `unknown` (coalesce fallbacks used) |
+The mode governs RNG divergence handling inside `tryApplyPreview()`. Hidden-information filtering and unresolved-decision detection are handled at different architectural layers and are **not** affected by mode selection:
+
+- **Hidden info**: Handled per-ref in `resolveSurface()` (`policy-preview.ts`) via `requiresHiddenSampling` + surface visibility checks. Returns `unknown/hidden` regardless of mode.
+- **Unresolved decisions**: Handled in `classifyPreviewOutcome()` before `tryApplyPreview` is called. Returns `unknown/unresolved` regardless of mode.
+
+| Mode | RNG Divergence | Behavior |
+|------|---------------|----------|
+| `exactWorld` | Returns `unknown`, reason: `random` | Strictest — only fully deterministic previews produce values |
+| `tolerateStochastic` | Accepts, marks `stochastic` | Current behavior when `tolerateRngDivergence: true` |
+| `disabled` | N/A | All `preview.*` refs evaluate to `unknown` (coalesce fallbacks used) |
 
 ### Part B: GameSpecDoc Schema
 
@@ -97,6 +102,7 @@ agents:
 - `preview.mode` is required if `preview` is present
 - `tolerateRngDivergence` is removed from the schema
 - Reserved modes (`infoSetSample`, `enumeratePublicChance`) produce a compile error with a message explaining they are not yet implemented
+- If `preview` is present but `mode` is missing, the compiler emits a diagnostic error
 
 ### Part C: Compiled IR
 
@@ -106,7 +112,7 @@ interface CompiledAgentPreviewConfig {
 }
 
 interface CompiledAgentProfile {
-  readonly observerName: string;         // from Spec 102
+  readonly observerName?: string;         // from Spec 102 (optional — not all profiles use observation)
   readonly preview: CompiledAgentPreviewConfig;  // replaces tolerateRngDivergence
   readonly params: Readonly<Record<string, CompiledAgentParameterValue>>;
   readonly use: CompiledAgentProfileUse;
@@ -132,29 +138,38 @@ switch (profile.preview.mode) {
 
   case 'exactWorld':
     → if rngDiverged → return unknown, reason: 'random'
-    → if hiddenInfoAccessed → return unknown, reason: 'hidden'
-    → if unresolvedDecision → return unknown, reason: 'unresolved'
     → return value, outcome: 'ready'
 
   case 'tolerateStochastic':
     → if rngDiverged → return value, outcome: 'stochastic'
-    → if hiddenInfoAccessed → return unknown, reason: 'hidden'
-    → if unresolvedDecision → return value, outcome: 'unresolved'
     → return value, outcome: 'ready'
 }
 ```
 
 The `disabled` mode is an optimization: when preview is disabled, the entire preview pipeline is skipped. All `preview.*` refs evaluate to `unknown`, and `coalesce` fallbacks provide default values.
 
+Hidden-info filtering (`resolveSurface` → `requiresHiddenSampling` check) and unresolved-decision detection (`classifyPreviewOutcome`) continue to operate at their existing layers, independent of mode.
+
 ### Part E: Trace Recording
 
-Preview traces already record the outcome type. This spec adds the mode:
+Preview traces already record the outcome type. This spec adds the mode to the per-evaluation summary and a stochastic count to the outcome breakdown:
 
 ```typescript
-interface PolicyPreviewTraceEntry {
-  readonly mode: AgentPreviewMode;           // NEW — which contract was in effect
-  readonly outcome: PolicyPreviewTraceOutcome;  // existing — what actually happened
-  readonly reason?: string;                     // existing — why unknown was returned
+interface PolicyPreviewUsageTrace {
+  readonly mode: AgentPreviewMode;                  // NEW — which contract was in effect
+  readonly evaluatedCandidateCount: number;         // existing
+  readonly refIds: readonly string[];               // existing
+  readonly unknownRefs: readonly PolicyPreviewUnknownRefTrace[];  // existing
+  readonly outcomeBreakdown?: PolicyPreviewOutcomeBreakdownTrace; // existing
+}
+
+interface PolicyPreviewOutcomeBreakdownTrace {
+  readonly ready: number;              // existing
+  readonly stochastic: number;         // NEW — previews accepted despite RNG divergence
+  readonly unknownRandom: number;      // existing
+  readonly unknownHidden: number;      // existing
+  readonly unknownUnresolved: number;  // existing
+  readonly unknownFailed: number;      // existing
 }
 ```
 
@@ -172,10 +187,11 @@ This is a **behavioral change** from the current default (which is `tolerateRngD
 2. **Disabled mode test**: all `preview.*` refs return unknown, preview pipeline is not invoked
 3. **exactWorld mode test**: RNG divergence returns unknown; deterministic preview returns value
 4. **tolerateStochastic mode test**: RNG divergence returns value with `stochastic` outcome
-5. **Trace recording test**: trace entries include `mode` field
+5. **Trace recording test**: trace entries include `mode` field and `stochastic` count in breakdown
 6. **Default mode test**: omitted `preview` → `exactWorld` behavior
 7. **Behavioral equivalence test**: FITL with `tolerateStochastic` produces same move selections as current `tolerateRngDivergence: true`
 8. **Golden tests**: updated compiled GameDef and trace output
+9. **Missing mode diagnostic test**: `preview` present without `mode` → compile error
 
 ## Migration
 
@@ -184,7 +200,8 @@ This is a **behavioral change** from the current default (which is `tolerateRngD
 Current:
 ```yaml
 profiles:
-  us-baseline:
+  vc-evolved:
+    observer: currentPlayer
     preview:
       tolerateRngDivergence: true
 ```
@@ -192,7 +209,7 @@ profiles:
 After:
 ```yaml
 profiles:
-  us-baseline:
+  vc-evolved:
     observer: currentPlayer
     preview:
       mode: tolerateStochastic
@@ -214,15 +231,20 @@ profiles:
 ## Migration Checklist
 
 - [ ] Add `AgentPreviewMode` type to `types-core.ts`
-- [ ] Add `CompiledAgentPreviewConfig` type
-- [ ] Remove `tolerateRngDivergence` from profile schema
+- [ ] Add `CompiledAgentPreviewConfig` type to `types-core.ts`
+- [ ] Remove `PreviewToleranceConfig` and `tolerateRngDivergence` from `types-core.ts`
 - [ ] Add `preview.mode` to profile schema in `game-spec-doc.ts`
-- [ ] Update `compile-agents.ts` profile lowering: validate mode, reject reserved modes
-- [ ] Update `policy-preview.ts`: mode-based evaluation logic
+- [ ] Remove `tolerateRngDivergence` from profile schema in `game-spec-doc.ts`
+- [ ] Add new diagnostic codes to `compiler-diagnostic-codes.ts`: invalid mode value, reserved mode rejection, `preview` without `mode`
+- [ ] Update `compile-agents.ts` profile lowering: validate mode, reject reserved modes, error on missing mode
+- [ ] Update `policy-contract.ts`: change `AGENT_POLICY_PREVIEW_KEYS` from `['tolerateRngDivergence']` to `['mode']`
+- [ ] Update `policy-preview.ts`: mode-based evaluation logic in `tryApplyPreview()`
 - [ ] Add `disabled` mode fast-path (skip preview pipeline)
-- [ ] Update trace types to include `mode`
-- [ ] Migrate FITL `92-agents.md`
-- [ ] Migrate Texas Hold'em `92-agents.md`
-- [ ] Update GameDef JSON schema
+- [ ] Update `policy-runtime.ts`: pass mode instead of boolean
+- [ ] Update `policy-evaluation-core.ts`: consume mode from compiled profile
+- [ ] Update trace types: add `mode` to `PolicyPreviewUsageTrace`, add `stochastic` to `PolicyPreviewOutcomeBreakdownTrace`
+- [ ] Migrate FITL `92-agents.md` (`vc-evolved` profile)
+- [ ] Migrate Texas Hold'em `92-agents.md` (add `preview: { mode: disabled }`)
+- [ ] Update GameDef JSON schema (`GameDef.schema.json`)
 - [ ] Update all affected tests and fixtures
 - [ ] Run `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`

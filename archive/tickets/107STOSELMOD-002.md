@@ -147,12 +147,14 @@ Update if needed, or document that no changes are required.
 ## Outcome
 
 Completed: 2026-04-02
+Outcome amended: 2026-04-02
 
 - Implemented stochastic top-level move selection in `packages/engine/src/agents/policy-eval.ts` for `argmax`, `softmaxSample`, and `weightedSample`.
 - Added deterministic derived-seed sampling helpers and runtime validation for `softmaxSample` temperature.
 - Added focused runtime tests in `packages/engine/test/unit/agents/policy-eval.test.ts` covering argmax parity, deterministic sampling, temperature sensitivity, near-argmax convergence, weighted bias, and equal-score uniform fallback.
 - Verified `packages/engine/src/agents/policy-runtime.ts` and `packages/engine/src/contracts/policy-contract.ts`; no changes were required for this ticket boundary.
-- Deviation from the ticket's literal seed example: the final implementation derives the selection seed from authoritative RNG state plus `state.stateHash` and a selection salt, matching the user-confirmed Foundation 8 resolution while still not consuming the authoritative RNG stream.
+- Deviation from the ticket's literal seed example: the initial implementation derived the selection seed from authoritative RNG state plus `state.stateHash` and a selection salt, matching the user-confirmed Foundation 8 resolution while still not consuming the authoritative RNG stream.
+- Post-completion refinement in `107STOSELMOD-003`: the seed derivation was corrected to use observer-visible policy inputs rather than acting-seat-invisible hidden authoritative state, so the archived 002 outcome should be read as superseded by the later Foundation-4 correction rather than as the final long-term seed policy.
 - Verification passed:
   - `pnpm -F @ludoforge/engine typecheck`
   - `pnpm -F @ludoforge/engine build`

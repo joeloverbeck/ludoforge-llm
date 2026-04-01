@@ -86,6 +86,7 @@ If a prior ticket in the same series was implemented earlier in the session, reu
 - The ticket's `Files to Touch` list is a strong hint, not a hard limit. If coherent completion requires adjacent files for contracts, runtime consumers, schemas, fixtures, or tests, include them and explain why.
 - For schema or contract migrations, explicitly check whether the change needs updates across:
   - authored schema/doc types
+  - authored-shape validators and unknown-key allowlists
   - compiled/kernel/runtime types
   - Zod or JSON schemas
   - diagnostics or debug snapshots
@@ -120,6 +121,7 @@ Before claiming completion:
 9. If `node --test` or another runner reports only a top-level file failure:
    - rerun the failing file as narrowly as possible
    - use test-name filtering or direct helper reproduction when needed to isolate the failing assertion before editing code
+   - if Node still collapses nested suite failures, run the built test module directly to expose nested subtest output before changing code
 
 Use the repo's standard commands from `AGENTS.md` when appropriate:
 
@@ -149,6 +151,7 @@ After implementation and verification:
    - if a user-confirmed `1-3-1` design resolution materially affected the implementation, include a short resolved-decision note
 2. If the ticket appears complete, offer to archive it per `docs/archival-workflow.md`.
 3. If the user wants archival or a concrete follow-up review, hand off to `post-ticket-review`.
+4. If this implementation materially superseded semantics recorded in a recently archived sibling ticket, call that out in the handoff so archival review can amend or clarify the archive trail.
 
 Optional series consistency pass after a ticket rewrite:
 - inspect sibling active tickets in the same series for overlap or stale staged ownership

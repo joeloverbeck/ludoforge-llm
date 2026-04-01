@@ -14,7 +14,7 @@ import {
 
 const AGENTS_SECTION_KEYS = ['parameters', 'library', 'profiles', 'bindings'] as const;
 const AGENT_PARAMETER_KEYS = ['type', 'default', 'min', 'max', 'tunable', 'values', 'allowedIds'] as const;
-const AGENT_PROFILE_KEYS = ['observer', 'params', 'use', 'preview'] as const;
+const AGENT_PROFILE_KEYS = ['observer', 'params', 'use', 'preview', 'selection'] as const;
 
 const BUILT_IN_OBSERVER_NAMES = new Set<string>(['omniscient', 'default']);
 type AgentProfileUseKey = typeof AGENT_POLICY_PROFILE_USE_BUCKETS[number];

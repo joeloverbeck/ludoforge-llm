@@ -1,5 +1,7 @@
 # GameSpec Agent Policy IR: External Review Brief
 
+**Status**: COMPLETED
+
 ## Purpose
 
 This report provides the context an external LLM reviewer would need to critique [`specs/15-gamespec-agent-policy-ir.md`](/home/joeloverbeck/projects/ludoforge-llm/specs/15-gamespec-agent-policy-ir.md), identify design flaws, propose improvements, and suggest missing features.
@@ -451,3 +453,12 @@ This spec is intentionally trying to create a clean boundary:
 - future evolution mutates bounded policy IR.
 
 The external review should stress-test whether that boundary is the right one and whether the proposed IR is the right size and shape to make the long-term architecture cleaner instead of just moving complexity around.
+
+## Outcome
+
+Completed: 2026-04-02
+
+- This external-review brief was exploited as upstream reference context for the GameSpec agent-policy IR work that has now been implemented and archived through the 15/102/103/104/105/107 series.
+- Its role is complete; the live repository now contains the implemented policy authoring/runtime architecture and the archived ticket/spec trail that supersedes this review prompt as an active working artifact.
+- Deviation from original plan: none; the document remained a review brief and was not converted into a normative spec.
+- Verification result: downstream implementation and migration work completed with repo-wide verification passing via `pnpm turbo build`, `pnpm turbo test`, `pnpm turbo lint`, and `pnpm turbo typecheck`.

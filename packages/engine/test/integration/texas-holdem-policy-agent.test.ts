@@ -24,6 +24,10 @@ describe('Texas Hold\'em policy agent integration', () => {
     assert.deepEqual(agents.bindingsBySeat, {
       neutral: 'baseline',
     });
+    assert.deepEqual(agents.profiles.baseline?.selection, {
+      mode: 'softmaxSample',
+      temperature: 0.5,
+    });
   });
 
   it('chooses only legal production Texas moves through the generic PolicyAgent', () => {
@@ -110,13 +114,14 @@ describe('Texas Hold\'em policy agent integration', () => {
     assert.equal(right.agentDecision.resolvedProfileId, 'baseline');
   });
 
-  it('compiles the Texas profile with disabled preview mode (cross-game sanity)', () => {
+  it('compiles the Texas profile with disabled preview mode and authored stochastic selection', () => {
     const { compiled } = compileTexasProductionSpec();
     const agents = compiled.gameDef?.agents;
 
     assert.ok(agents);
     assert.deepEqual(agents.profiles['baseline']?.preview, { mode: 'disabled' },
       'Texas baseline profile should explicitly disable preview because the game relies on hidden information');
+    assert.deepEqual(agents.profiles['baseline']?.selection, { mode: 'softmaxSample', temperature: 0.5 });
   });
 
   it('keeps Texas preview outcomes as hidden (not affected by FITL RNG tolerance)', () => {
@@ -163,5 +168,27 @@ describe('Texas Hold\'em policy agent integration', () => {
       assert.equal(move.agentDecision.resolvedProfileId, 'baseline');
       assert.equal(move.agentDecision.emergencyFallback, false);
     }
+  });
+
+  it('produces non-trivial Texas policy action distributions across repeated seeds', () => {
+    const { compiled } = compileTexasProductionSpec();
+    const def = assertValidatedGameDef(compiled.gameDef);
+    const counts = new Map<string, number>();
+
+    for (let seed = 1; seed <= 10; seed += 1) {
+      const trace = runGame(
+        def,
+        seed,
+        [new PolicyAgent(), new PolicyAgent(), new PolicyAgent(), new PolicyAgent()],
+        6,
+        4,
+      );
+
+      for (const move of trace.moves) {
+        counts.set(String(move.move.actionId), (counts.get(String(move.move.actionId)) ?? 0) + 1);
+      }
+    }
+
+    assert.equal(counts.size > 1, true, `expected multiple Texas action ids across seeds, got ${JSON.stringify([...counts.entries()])}`);
   });
 });

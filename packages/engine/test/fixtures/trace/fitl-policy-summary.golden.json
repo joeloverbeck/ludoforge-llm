@@ -72,6 +72,11 @@
         "unknownFailed": 0
       }
     },
+    "selection": {
+      "mode": "argmax",
+      "candidateCount": 18,
+      "selectedIndex": 6
+    },
     "emergencyFallback": false,
     "failure": null
   }

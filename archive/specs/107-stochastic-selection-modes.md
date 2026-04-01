@@ -1,6 +1,6 @@
 # Spec 107: Stochastic Selection Modes
 
-**Status**: Draft
+**Status**: COMPLETED
 **Priority**: P2
 **Complexity**: M
 **Dependencies**: Spec 104 (unified considerations — selection operates on scored candidates from the consideration pipeline)
@@ -220,3 +220,16 @@ No migration needed. FITL profiles use `argmax` (the default when `selection` is
 - [ ] Update `GameDef.schema.json`
 - [ ] Update all affected tests and fixtures
 - [ ] Run `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Completed: 2026-04-02
+
+- Implemented the full 107 series across archived tickets `107STOSELMOD-001.md`, `107STOSELMOD-002.md`, and `107STOSELMOD-003.md`.
+- Added authored and compiled selection configuration, compiler validation and diagnostics, runtime stochastic selection, trace recording, Texas Hold'em migration to `softmaxSample`, and the required schema/fixture/test updates.
+- Deviation from the spec’s original runtime example: the final seed derivation was refined during implementation so stochastic selection is derived from observer-visible policy inputs rather than full authoritative hidden state, preserving Foundation 4 while remaining deterministic and non-consuming.
+- Verification passed through the final repo-wide gates:
+  - `pnpm turbo build`
+  - `pnpm turbo test`
+  - `pnpm turbo lint`
+  - `pnpm turbo typecheck`

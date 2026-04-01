@@ -2843,6 +2843,40 @@
                     ],
                     "additionalProperties": false
                   },
+                  "selection": {
+                    "type": "object",
+                    "properties": {
+                      "mode": {
+                        "type": "string",
+                        "enum": [
+                          "argmax",
+                          "softmaxSample",
+                          "weightedSample"
+                        ]
+                      },
+                      "temperature": {
+                        "type": "number"
+                      },
+                      "candidateCount": {
+                        "type": "number"
+                      },
+                      "samplingProbabilities": {
+                        "type": "array",
+                        "items": {
+                          "type": "number"
+                        }
+                      },
+                      "selectedIndex": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "mode",
+                      "candidateCount",
+                      "selectedIndex"
+                    ],
+                    "additionalProperties": false
+                  },
                   "emergencyFallback": {
                     "type": "boolean"
                   },

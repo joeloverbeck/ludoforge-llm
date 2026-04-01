@@ -2,6 +2,7 @@ import type { PlayerId } from '../kernel/branded.js';
 import { toMoveIdentityKey } from '../kernel/move-identity.js';
 import type {
   AgentPreviewMode,
+  AgentSelectionMode,
   AgentPolicyCatalog,
   CompiledAgentTieBreaker,
   GameDef,
@@ -23,6 +24,8 @@ import { resolvePolicyBindingSeatId } from './policy-profile-resolution.js';
 const SELECTION_SALT = 0x73656c656374696f6e5f6d6f64655f7274n;
 const SELECTION_SEED_MIX = 0x9e3779b97f4a7c15f39cc0605cedc835n;
 const TWO_TO_53 = 9007199254740992;
+const FNV_OFFSET_BASIS_64 = 0xcbf29ce484222325n;
+const FNV_PRIME_64 = 0x100000001b3n;
 
 export interface PolicyPreviewUnknownRef {
   readonly refId: string;
@@ -79,6 +82,14 @@ export interface PolicyEvaluationPreviewUsage {
   readonly outcomeBreakdown: PolicyPreviewOutcomeBreakdownTrace;
 }
 
+export interface PolicyEvaluationSelectionTrace {
+  readonly mode: AgentSelectionMode;
+  readonly temperature?: number;
+  readonly candidateCount: number;
+  readonly samplingProbabilities?: readonly number[];
+  readonly selectedIndex: number;
+}
+
 export interface PolicyEvaluationMetadata {
   readonly seatId: string | null;
   readonly requestedProfileId: string | null;
@@ -89,6 +100,7 @@ export interface PolicyEvaluationMetadata {
   readonly pruningSteps: readonly PolicyEvaluationPruningStep[];
   readonly tieBreakChain: readonly PolicyEvaluationTieBreakStep[];
   readonly previewUsage: PolicyEvaluationPreviewUsage;
+  readonly selection?: PolicyEvaluationSelectionTrace;
   readonly completionStatistics?: PolicyCompletionStatistics;
   readonly selectedStableMoveKey: string | null;
   readonly finalScore: number | null;
@@ -197,13 +209,32 @@ function applyTieBreaker(
   }
 }
 
-function deriveSelectionRng(state: GameState): Rng {
-  const serialized = state.rng;
-  let seed = state.stateHash ^ SELECTION_SALT ^ BigInt(serialized.version);
-  for (const word of serialized.state) {
-    seed = (seed * SELECTION_SEED_MIX) ^ word;
+function hashString64(input: string): bigint {
+  let hash = FNV_OFFSET_BASIS_64;
+  for (let index = 0; index < input.length; index += 1) {
+    hash ^= BigInt(input.charCodeAt(index));
+    hash = (hash * FNV_PRIME_64) & ((1n << 64n) - 1n);
   }
-  return createRng(seed);
+  return hash;
+}
+
+function deriveVisibleSelectionSeed(
+  profileFingerprint: string,
+  candidates: readonly CandidateEntry[],
+): bigint {
+  let seed = SELECTION_SALT ^ hashString64(profileFingerprint);
+  for (const candidate of candidates) {
+    seed = (seed * SELECTION_SEED_MIX) ^ hashString64(candidate.stableMoveKey);
+    seed = (seed * SELECTION_SEED_MIX) ^ hashString64(candidate.score.toString());
+  }
+  return seed;
+}
+
+function deriveSelectionRngFromVisiblePolicyInputs(
+  profileFingerprint: string,
+  candidates: readonly CandidateEntry[],
+): Rng {
+  return createRng(deriveVisibleSelectionSeed(profileFingerprint, candidates));
 }
 
 function drawUnitInterval(rng: Rng): { readonly value: number; readonly rng: Rng } {
@@ -443,6 +474,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
     }
     let rng = input.rng;
     let selected: CandidateEntry | undefined;
+    let selectionTrace: PolicyEvaluationSelectionTrace | undefined;
     switch (profile.selection.mode) {
       case 'argmax': {
         const bestScore = activeCandidates.reduce((best, candidate) => Math.max(best, candidate.score), Number.NEGATIVE_INFINITY);
@@ -464,6 +496,11 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
         }
 
         selected = bestCandidates[0] ?? activeCandidates[0];
+        selectionTrace = {
+          mode: 'argmax',
+          candidateCount: activeCandidates.length,
+          selectedIndex: Math.max(0, activeCandidates.findIndex((candidate) => candidate.stableMoveKey === selected?.stableMoveKey)),
+        };
         break;
       }
       case 'softmaxSample': {
@@ -476,12 +513,33 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
           });
         }
         const probabilities = computeSoftmaxProbabilities(activeCandidates, temperature);
-        selected = sampleCandidateByProbabilities(activeCandidates, probabilities, deriveSelectionRng(input.state)).selected;
+        selected = sampleCandidateByProbabilities(
+          activeCandidates,
+          probabilities,
+          deriveSelectionRngFromVisiblePolicyInputs(profile.fingerprint, activeCandidates),
+        ).selected;
+        selectionTrace = {
+          mode: 'softmaxSample',
+          temperature,
+          candidateCount: activeCandidates.length,
+          samplingProbabilities: probabilities,
+          selectedIndex: Math.max(0, activeCandidates.findIndex((candidate) => candidate.stableMoveKey === selected?.stableMoveKey)),
+        };
         break;
       }
       case 'weightedSample': {
         const probabilities = computeWeightedSampleProbabilities(activeCandidates);
-        selected = sampleCandidateByProbabilities(activeCandidates, probabilities, deriveSelectionRng(input.state)).selected;
+        selected = sampleCandidateByProbabilities(
+          activeCandidates,
+          probabilities,
+          deriveSelectionRngFromVisiblePolicyInputs(profile.fingerprint, activeCandidates),
+        ).selected;
+        selectionTrace = {
+          mode: 'weightedSample',
+          candidateCount: activeCandidates.length,
+          samplingProbabilities: probabilities,
+          selectedIndex: Math.max(0, activeCandidates.findIndex((candidate) => candidate.stableMoveKey === selected?.stableMoveKey)),
+        };
         break;
       }
     }
@@ -507,6 +565,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
         pruningSteps,
         tieBreakChain,
         previewUsage: summarizePreviewUsage(candidates, profile.preview.mode),
+        ...(selectionTrace === undefined ? {} : { selection: selectionTrace }),
         ...(input.completionStatistics === undefined ? {} : { completionStatistics: input.completionStatistics }),
         selectedStableMoveKey: selected.stableMoveKey,
         finalScore: Number.isFinite(selected.score) ? selected.score : null,

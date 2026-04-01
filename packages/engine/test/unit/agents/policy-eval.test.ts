@@ -410,24 +410,6 @@ function createSelectionScoreCatalog(
   );
 }
 
-function countSelectionResults(
-  agents: AgentPolicyCatalog,
-  legalMoves: readonly Move[],
-  seeds: readonly bigint[],
-  inputRngSeedOffset = 0n,
-): Readonly<Record<string, number>> {
-  const counts = Object.fromEntries(legalMoves.map((move) => [String(move.actionId), 0])) as Record<string, number>;
-  for (const seed of seeds) {
-    const input = createInput(agents, legalMoves, seed);
-    const result = evaluatePolicyMove({
-      ...input,
-      rng: createRng(seed + inputRngSeedOffset),
-    });
-    counts[String(result.move.actionId)] = (counts[String(result.move.actionId)] ?? 0) + 1;
-  }
-  return counts;
-}
-
 function createChoiceRequest(overrides: Partial<ChoicePendingRequest> = {}): ChoicePendingRequest {
   return {
     kind: 'pending',
@@ -1538,9 +1520,15 @@ describe('policy-eval', () => {
       assert.deepEqual(explicitResult.move, defaultResult.move);
       assert.deepEqual(explicitResult.rng, defaultResult.rng);
       assert.equal(explicitResult.move.actionId, asActionId('alpha'));
+      assert.equal(defaultResult.metadata.selection?.mode, 'argmax');
+      assert.equal(defaultResult.metadata.selection?.candidateCount, 3);
+      assert.equal(
+        defaultResult.metadata.candidates[defaultResult.metadata.selection?.selectedIndex ?? -1]?.stableMoveKey,
+        defaultResult.metadata.selectedStableMoveKey,
+      );
     });
 
-    it('uses a deterministic state-derived selection seed for softmaxSample without consuming input.rng', () => {
+    it('uses a deterministic visible-input-derived selection seed for softmaxSample without consuming input.rng', () => {
       const agents = createSelectionScoreCatalog({ mode: 'softmaxSample', temperature: 0.5 }, { alpha: 10, beta: 5, advance: 1 });
       const input = createInput(agents, scoredMoves, 7n);
       const first = evaluatePolicyMove(input);
@@ -1553,55 +1541,134 @@ describe('policy-eval', () => {
       assert.deepEqual(first.rng, input.rng);
       assert.deepEqual(second.rng, createRng(999n));
       assert.deepEqual(first.metadata.tieBreakChain, []);
+      assert.deepEqual(first.metadata.selection, {
+        mode: 'softmaxSample',
+        temperature: 0.5,
+        candidateCount: 3,
+        samplingProbabilities: first.metadata.selection?.samplingProbabilities,
+        selectedIndex: first.metadata.selection?.selectedIndex ?? -1,
+      });
+      assert.ok(first.metadata.selection?.samplingProbabilities);
+      assert.equal(first.metadata.selection?.samplingProbabilities?.length, 3);
+      assert.equal(first.metadata.selection?.selectedIndex !== undefined, true);
+      assert.deepEqual(first.metadata.selection, second.metadata.selection);
     });
 
     it('softmaxSample favors the top score more strongly at lower temperatures', () => {
-      const seeds = Array.from({ length: 200 }, (_unused, index) => BigInt(index + 1));
-      const lowTemperatureCounts = countSelectionResults(
-        createSelectionScoreCatalog({ mode: 'softmaxSample', temperature: 0.25 }, { alpha: 10, beta: 5, advance: 1 }),
-        scoredMoves,
-        seeds,
+      const lowTemperature = evaluatePolicyMove(
+        createInput(
+          createSelectionScoreCatalog({ mode: 'softmaxSample', temperature: 0.25 }, { alpha: 10, beta: 5, advance: 1 }),
+          scoredMoves,
+          7n,
+        ),
       );
-      const highTemperatureCounts = countSelectionResults(
-        createSelectionScoreCatalog({ mode: 'softmaxSample', temperature: 5 }, { alpha: 10, beta: 5, advance: 1 }),
-        scoredMoves,
-        seeds,
+      const highTemperature = evaluatePolicyMove(
+        createInput(
+          createSelectionScoreCatalog({ mode: 'softmaxSample', temperature: 5 }, { alpha: 10, beta: 5, advance: 1 }),
+          scoredMoves,
+          7n,
+        ),
       );
+      const lowProbabilityByActionId = Object.fromEntries(
+        lowTemperature.metadata.candidates.map((candidate, index) => [
+          candidate.actionId,
+          lowTemperature.metadata.selection?.samplingProbabilities?.[index] ?? null,
+        ]),
+      ) as Record<string, number | null>;
+      const highProbabilityByActionId = Object.fromEntries(
+        highTemperature.metadata.candidates.map((candidate, index) => [
+          candidate.actionId,
+          highTemperature.metadata.selection?.samplingProbabilities?.[index] ?? null,
+        ]),
+      ) as Record<string, number | null>;
 
-      assert.ok((lowTemperatureCounts.alpha ?? 0) > (highTemperatureCounts.alpha ?? 0));
-      assert.ok((lowTemperatureCounts.advance ?? 0) < (highTemperatureCounts.advance ?? 0));
+      assert.ok((lowProbabilityByActionId.alpha ?? 0) > (highProbabilityByActionId.alpha ?? 0));
+      assert.ok((lowProbabilityByActionId.advance ?? 0) < (highProbabilityByActionId.advance ?? 0));
     });
 
     it('softmaxSample converges to argmax at very low temperatures', () => {
-      const seeds = Array.from({ length: 50 }, (_unused, index) => BigInt(index + 1));
-      const counts = countSelectionResults(
-        createSelectionScoreCatalog({ mode: 'softmaxSample', temperature: 0.001 }, { alpha: 10, beta: 5, advance: 1 }),
-        scoredMoves,
-        seeds,
+      const result = evaluatePolicyMove(
+        createInput(
+          createSelectionScoreCatalog({ mode: 'softmaxSample', temperature: 0.001 }, { alpha: 10, beta: 5, advance: 1 }),
+          scoredMoves,
+          7n,
+        ),
       );
 
-      assert.equal(counts.alpha, seeds.length);
-      assert.equal(counts.beta, 0);
-      assert.equal(counts.advance, 0);
+      assert.equal(result.move.actionId, asActionId('alpha'));
+      const probabilityByActionId = Object.fromEntries(
+        result.metadata.candidates.map((candidate, index) => [
+          candidate.actionId,
+          result.metadata.selection?.samplingProbabilities?.[index] ?? null,
+        ]),
+      ) as Record<string, number | null>;
+      assert.ok((probabilityByActionId.alpha ?? 0) > 0.999);
+      assert.ok((probabilityByActionId.beta ?? 0) < 0.001);
+      assert.ok((probabilityByActionId.advance ?? 0) < 0.001);
     });
 
     it('weightedSample favors higher scores and falls back to uniform when all scores are equal', () => {
-      const seeds = Array.from({ length: 180 }, (_unused, index) => BigInt(index + 1));
-      const weightedCounts = countSelectionResults(
-        createSelectionScoreCatalog({ mode: 'weightedSample' }, { alpha: 10, beta: 5, advance: 1 }),
-        scoredMoves,
-        seeds,
+      const weightedResult = evaluatePolicyMove(
+        createInput(
+          createSelectionScoreCatalog({ mode: 'weightedSample' }, { alpha: 10, beta: 5, advance: 1 }),
+          scoredMoves,
+          7n,
+        ),
       );
-      const uniformCounts = countSelectionResults(
-        createSelectionScoreCatalog({ mode: 'weightedSample' }, { alpha: 5, beta: 5, advance: 5 }),
-        scoredMoves,
-        seeds,
+      const uniformResult = evaluatePolicyMove(
+        createInput(
+          createSelectionScoreCatalog({ mode: 'weightedSample' }, { alpha: 5, beta: 5, advance: 5 }),
+          scoredMoves,
+          7n,
+        ),
+      );
+      const weightedProbabilityByActionId = Object.fromEntries(
+        weightedResult.metadata.candidates.map((candidate, index) => [
+          candidate.actionId,
+          weightedResult.metadata.selection?.samplingProbabilities?.[index] ?? null,
+        ]),
+      ) as Record<string, number | null>;
+      const uniformProbabilityByActionId = Object.fromEntries(
+        uniformResult.metadata.candidates.map((candidate, index) => [
+          candidate.actionId,
+          uniformResult.metadata.selection?.samplingProbabilities?.[index] ?? null,
+        ]),
+      ) as Record<string, number | null>;
+
+      assert.ok((weightedProbabilityByActionId.alpha ?? 0) > (weightedProbabilityByActionId.beta ?? 0));
+      assert.ok((weightedProbabilityByActionId.beta ?? 0) > (weightedProbabilityByActionId.advance ?? 0));
+      assert.deepEqual(uniformProbabilityByActionId, {
+        advance: 1 / 3,
+        alpha: 1 / 3,
+        beta: 1 / 3,
+      });
+    });
+
+    it('records weightedSample probabilities in selection metadata', () => {
+      const result = evaluatePolicyMove(
+        createInput(createSelectionScoreCatalog({ mode: 'weightedSample' }, { alpha: 10, beta: 5, advance: 1 }), scoredMoves, 7n),
       );
 
-      assert.ok((weightedCounts.alpha ?? 0) > (weightedCounts.beta ?? 0));
-      assert.ok((weightedCounts.beta ?? 0) > (weightedCounts.advance ?? 0));
-      assert.ok(Math.max(uniformCounts.alpha ?? 0, uniformCounts.beta ?? 0, uniformCounts.advance ?? 0)
-        - Math.min(uniformCounts.alpha ?? 0, uniformCounts.beta ?? 0, uniformCounts.advance ?? 0) < 40);
+      assert.deepEqual(result.metadata.selection, {
+        mode: 'weightedSample',
+        candidateCount: 3,
+        samplingProbabilities: result.metadata.selection?.samplingProbabilities,
+        selectedIndex: result.metadata.selection?.selectedIndex ?? -1,
+      });
+      assert.ok(result.metadata.selection?.samplingProbabilities);
+      assert.equal(
+        result.metadata.selection?.samplingProbabilities?.reduce((sum, value) => sum + value, 0),
+        1,
+      );
+      const probabilityByActionId = Object.fromEntries(
+        result.metadata.candidates.map((candidate, index) => [
+          candidate.actionId,
+          result.metadata.selection?.samplingProbabilities?.[index] ?? null,
+        ]),
+      ) as Record<string, number | null>;
+      assert.equal(probabilityByActionId.alpha, 9 / 13);
+      assert.equal(probabilityByActionId.beta, 4 / 13);
+      assert.equal(probabilityByActionId.advance, 0);
     });
   });
 

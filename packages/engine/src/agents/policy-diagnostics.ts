@@ -118,6 +118,7 @@ export function buildPolicyAgentDecisionTrace(
     pruningSteps: metadata.pruningSteps,
     tieBreakChain: metadata.tieBreakChain,
     previewUsage: metadata.previewUsage,
+    ...(metadata.selection === undefined ? {} : { selection: metadata.selection }),
     emergencyFallback: metadata.usedFallback,
     failure: metadata.failure === null ? null : { code: metadata.failure.code, message: metadata.failure.message },
     ...(traceLevel === 'verbose'

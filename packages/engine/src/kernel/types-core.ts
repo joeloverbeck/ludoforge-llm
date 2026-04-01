@@ -1547,6 +1547,14 @@ export interface PolicyPreviewUsageTrace {
   readonly outcomeBreakdown?: PolicyPreviewOutcomeBreakdownTrace;
 }
 
+export interface PolicySelectionTrace {
+  readonly mode: AgentSelectionMode;
+  readonly temperature?: number;
+  readonly candidateCount: number;
+  readonly samplingProbabilities?: readonly number[];
+  readonly selectedIndex: number;
+}
+
 export interface PolicyPreviewOutcomeBreakdownTrace {
   readonly ready: number;
   readonly stochastic: number;
@@ -1587,6 +1595,7 @@ export interface PolicyAgentDecisionTrace {
   readonly pruningSteps: readonly PolicyPruningStepTrace[];
   readonly tieBreakChain: readonly PolicyTieBreakStepTrace[];
   readonly previewUsage: PolicyPreviewUsageTrace;
+  readonly selection?: PolicySelectionTrace;
   readonly emergencyFallback: boolean;
   readonly failure: AgentDecisionFailureSummary | null;
   readonly completionStatistics?: PolicyCompletionStatistics;

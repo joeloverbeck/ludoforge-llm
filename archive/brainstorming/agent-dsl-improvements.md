@@ -1,5 +1,7 @@
 # Agent Policies DSL Review and vNext Proposal
 
+**Status**: COMPLETED
+
 ## Spec Coverage Status (2026-04-01, revised)
 
 This document was produced by an external reviewer (ChatGPT Pro) without codebase access. After reassessing each claim against the actual codebase and `docs/FOUNDATIONS.md`, the following specs were created:
@@ -484,3 +486,12 @@ The DSL should become a declarative decision program over:
 - and optional mixed-strategy output.
 
 Make those changes and the system becomes a real general agent DSL. Keep extending the current design organically and it will calcify into a FITL-specific utility scorer with poker-shaped exceptions.
+
+## Outcome
+
+Completed: 2026-04-02
+
+- This brainstorming document was exploited to derive and track the agent-policy architecture follow-up set, including the now-implemented Specs 102, 103, 104, 105, and 107.
+- The remaining deferred ideas stay documented here historically, but this file is no longer an active planning artifact because the concrete implemented work has been migrated into specs, tickets, and code.
+- Deviation from original plan: the stochastic-selection concern was split into Spec 107 during reassessment rather than remaining bundled as a single future enhancement.
+- Verification result: the implemented downstream work completed and passed repo-wide verification, including `pnpm turbo build`, `pnpm turbo test`, `pnpm turbo lint`, and `pnpm turbo typecheck`.

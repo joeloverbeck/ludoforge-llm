@@ -4194,6 +4194,12 @@
               "minLength": 1
             }
           },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "params": {
             "type": "array",
             "items": {

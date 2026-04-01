@@ -203,6 +203,7 @@ export const ActionDefSchema = z
     executor: ActionExecutorSelSchema,
     phase: z.array(StringSchema).min(1),
     capabilities: z.array(StringSchema.min(1)).optional(),
+    tags: z.array(StringSchema).optional(),
     params: z.array(ParamDefSchema),
     pre: ConditionASTSchema.nullable(),
     cost: z.array(EffectASTSchema),

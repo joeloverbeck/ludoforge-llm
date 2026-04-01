@@ -186,6 +186,7 @@ export interface ActionDef {
   readonly executor: ActionExecutorSel;
   readonly phase: readonly PhaseId[];
   readonly capabilities?: readonly string[];
+  readonly tags?: readonly string[];
   readonly params: readonly ParamDef[];
   readonly pre: ConditionAST | null;
   readonly cost: readonly EffectAST[];

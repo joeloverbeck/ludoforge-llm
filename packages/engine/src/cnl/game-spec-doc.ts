@@ -179,6 +179,7 @@ export interface GameSpecActionDef {
   readonly executor: unknown;
   readonly phase: readonly string[];
   readonly capabilities?: readonly string[];
+  readonly tags?: readonly string[];
   readonly params: readonly unknown[];
   readonly pre: unknown | null;
   readonly cost: readonly unknown[];

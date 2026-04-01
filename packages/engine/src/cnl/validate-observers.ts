@@ -23,9 +23,7 @@ const VISIBILITY_PREVIEW_KEYS = new Set<string>(['visibility', 'allowWhenHiddenS
 
 const BUILT_IN_OBSERVER_NAMES = new Set<string>(['omniscient', 'default']);
 
-const RESERVED_PROFILE_KEYS = new Set<string>(['zones']);
-
-const OBSERVER_PROFILE_KEYS = new Set<string>(['extends', 'description', 'surfaces']);
+const OBSERVER_PROFILE_KEYS = new Set<string>(['extends', 'description', 'surfaces', 'zones']);
 
 /**
  * Known surface IDs passed from the game spec for per-variable override validation.
@@ -38,6 +36,15 @@ export interface KnownSurfaceIds {
 }
 
 /**
+ * Known zone info passed from compiled zone definitions for zone visibility validation.
+ */
+export interface KnownZoneInfo {
+  readonly zoneBaseIds: ReadonlySet<string>;
+  readonly zoneOrderingByBase: Readonly<Record<string, string>>; // 'stack' | 'queue' | 'set'
+  readonly zoneOwnershipByBase: Readonly<Record<string, string>>; // 'none' | 'player' | 'mixed'
+}
+
+/**
  * Validates the `observability` section of a GameSpecDoc.
  *
  * Pure function — no side effects, no mutation of inputs.
@@ -45,6 +52,7 @@ export interface KnownSurfaceIds {
 export function validateObservers(
   observability: GameSpecObservabilitySection | null,
   knownSurfaceIds: KnownSurfaceIds,
+  knownZoneInfo: KnownZoneInfo | undefined,
   diagnostics: Diagnostic[],
 ): void {
   if (observability === null) {
@@ -79,7 +87,7 @@ export function validateObservers(
   }
 
   for (const [name, profile] of Object.entries(observers)) {
-    validateObserverProfile(name, profile, observers, knownSurfaceIds, diagnostics);
+    validateObserverProfile(name, profile, observers, knownSurfaceIds, knownZoneInfo, diagnostics);
   }
 }
 
@@ -88,6 +96,7 @@ function validateObserverProfile(
   profile: unknown,
   allObservers: Record<string, unknown>,
   knownSurfaceIds: KnownSurfaceIds,
+  knownZoneInfo: KnownZoneInfo | undefined,
   diagnostics: Diagnostic[],
 ): void {
   const basePath = `doc.observability.observers.${name}`;
@@ -114,23 +123,15 @@ function validateObserverProfile(
     return;
   }
 
-  // Check for reserved keys
+  // Check for unknown keys
   for (const key of Object.keys(profile)) {
-    if (RESERVED_PROFILE_KEYS.has(key)) {
-      diagnostics.push({
-        code: 'CNL_VALIDATOR_OBSERVER_RESERVED_KEY',
-        path: `${basePath}.${key}`,
-        severity: 'error',
-        message: `Observer "${name}" uses reserved key "${key}".`,
-        suggestion: `Remove "${key}" — it is reserved for future use (Spec 106).`,
-      });
-    } else if (!OBSERVER_PROFILE_KEYS.has(key)) {
+    if (!OBSERVER_PROFILE_KEYS.has(key)) {
       diagnostics.push({
         code: 'CNL_VALIDATOR_OBSERVER_UNKNOWN_KEY',
         path: `${basePath}.${key}`,
         severity: 'warning',
         message: `Unknown key "${key}" in observer "${name}".`,
-        suggestion: 'Supported keys are: extends, description, surfaces.',
+        suggestion: 'Supported keys are: extends, description, surfaces, zones.',
       });
     }
   }
@@ -143,6 +144,11 @@ function validateObserverProfile(
   // Validate surfaces
   if (profile.surfaces !== undefined) {
     validateSurfaces(name, profile.surfaces, knownSurfaceIds, `${basePath}.surfaces`, diagnostics);
+  }
+
+  // Validate zones
+  if (profile.zones !== undefined) {
+    validateZones(name, profile.zones, knownZoneInfo, `${basePath}.zones`, diagnostics);
   }
 }
 
@@ -212,6 +218,145 @@ function validateExtends(
       message: `Observer "${name}" extends "${extendsValue}", which itself uses extends. Max extends depth is 1.`,
       suggestion: `Remove extends from either "${name}" or "${extendsValue}".`,
     });
+  }
+}
+
+const ZONE_VISIBILITY_CLASS_VALUES = new Set<string>(['public', 'owner', 'hidden']);
+
+const ZONE_ENTRY_KEYS = new Set<string>(['tokens', 'order']);
+
+function validateZones(
+  observerName: string,
+  zones: unknown,
+  knownZoneInfo: KnownZoneInfo | undefined,
+  basePath: string,
+  diagnostics: Diagnostic[],
+): void {
+  if (!isRecord(zones)) {
+    diagnostics.push({
+      code: 'CNL_VALIDATOR_OBSERVER_ZONES_INVALID',
+      path: basePath,
+      severity: 'error',
+      message: `Observer "${observerName}" zones must be an object.`,
+      suggestion: 'Define zones as an object keyed by zone base IDs.',
+    });
+    return;
+  }
+
+  for (const [key, entry] of Object.entries(zones)) {
+    const entryPath = `${basePath}.${key}`;
+
+    // Validate zone base ID (skip _default)
+    if (key !== '_default' && knownZoneInfo !== undefined && !knownZoneInfo.zoneBaseIds.has(key)) {
+      diagnostics.push({
+        code: 'CNL_VALIDATOR_OBSERVER_ZONE_UNKNOWN_BASE',
+        path: entryPath,
+        severity: 'error',
+        message: `Observer "${observerName}" references unknown zone base ID "${key}".`,
+        suggestion: `Use a zone base ID from the game spec's zone definitions. Known: ${[...knownZoneInfo.zoneBaseIds].sort().join(', ')}.`,
+      });
+    }
+
+    if (!isRecord(entry)) {
+      diagnostics.push({
+        code: 'CNL_VALIDATOR_OBSERVER_ZONE_ENTRY_INVALID',
+        path: entryPath,
+        severity: 'error',
+        message: `Observer "${observerName}" zone entry "${key}" must be an object with tokens and/or order.`,
+        suggestion: 'Define each zone entry as { tokens: ..., order: ... }.',
+      });
+      continue;
+    }
+
+    // Check for unknown keys
+    for (const entryKey of Object.keys(entry)) {
+      if (!ZONE_ENTRY_KEYS.has(entryKey)) {
+        diagnostics.push({
+          code: 'CNL_VALIDATOR_OBSERVER_ZONE_ENTRY_UNKNOWN_KEY',
+          path: `${entryPath}.${entryKey}`,
+          severity: 'warning',
+          message: `Unknown key "${entryKey}" in observer "${observerName}" zone entry "${key}".`,
+          suggestion: 'Supported zone entry keys: tokens, order.',
+        });
+      }
+    }
+
+    // Must have at least one of tokens or order
+    if (entry.tokens === undefined && entry.order === undefined) {
+      diagnostics.push({
+        code: 'CNL_VALIDATOR_OBSERVER_ZONE_ENTRY_EMPTY',
+        path: entryPath,
+        severity: 'error',
+        message: `Observer "${observerName}" zone entry "${key}" must specify at least one of tokens or order.`,
+        suggestion: 'Add tokens and/or order with values: public, owner, or hidden.',
+      });
+      continue;
+    }
+
+    // Validate tokens
+    if (entry.tokens !== undefined) {
+      if (typeof entry.tokens !== 'string' || !ZONE_VISIBILITY_CLASS_VALUES.has(entry.tokens)) {
+        diagnostics.push({
+          code: 'CNL_VALIDATOR_OBSERVER_ZONE_VISIBILITY_INVALID',
+          path: `${entryPath}.tokens`,
+          severity: 'error',
+          message: `Observer "${observerName}" zone "${key}" tokens has invalid visibility class "${String(entry.tokens)}".`,
+          suggestion: 'Use one of: public, owner, hidden.',
+        });
+      }
+    }
+
+    // Validate order
+    if (entry.order !== undefined) {
+      if (typeof entry.order !== 'string' || !ZONE_VISIBILITY_CLASS_VALUES.has(entry.order)) {
+        diagnostics.push({
+          code: 'CNL_VALIDATOR_OBSERVER_ZONE_VISIBILITY_INVALID',
+          path: `${entryPath}.order`,
+          severity: 'error',
+          message: `Observer "${observerName}" zone "${key}" order has invalid visibility class "${String(entry.order)}".`,
+          suggestion: 'Use one of: public, owner, hidden.',
+        });
+      }
+    }
+
+    // Warning: order differs from tokens on set-type zone
+    if (
+      key !== '_default' &&
+      knownZoneInfo !== undefined &&
+      knownZoneInfo.zoneOrderingByBase[key] === 'set' &&
+      entry.order !== undefined &&
+      entry.tokens !== undefined &&
+      typeof entry.order === 'string' &&
+      typeof entry.tokens === 'string' &&
+      entry.order !== entry.tokens
+    ) {
+      diagnostics.push({
+        code: 'CNL_VALIDATOR_OBSERVER_ZONE_ORDER_SET_WARNING',
+        path: `${entryPath}.order`,
+        severity: 'warning',
+        message: `Observer "${observerName}" zone "${key}" is a set zone — order has no effect. order="${entry.order}" differs from tokens="${entry.tokens}".`,
+        suggestion: 'Set zones have no meaningful ordering. Remove order or match it to tokens.',
+      });
+    }
+
+    // Warning: owner visibility on non-owned zone
+    if (
+      key !== '_default' &&
+      knownZoneInfo !== undefined &&
+      knownZoneInfo.zoneOwnershipByBase[key] === 'none'
+    ) {
+      const tokensIsOwner = typeof entry.tokens === 'string' && entry.tokens === 'owner';
+      const orderIsOwner = typeof entry.order === 'string' && entry.order === 'owner';
+      if (tokensIsOwner || orderIsOwner) {
+        diagnostics.push({
+          code: 'CNL_VALIDATOR_OBSERVER_ZONE_OWNER_NONE_WARNING',
+          path: entryPath,
+          severity: 'warning',
+          message: `Observer "${observerName}" zone "${key}" has owner: 'none' — "owner" visibility is equivalent to "hidden".`,
+          suggestion: 'Use "hidden" instead of "owner" for zones with no owner.',
+        });
+      }
+    }
   }
 }
 

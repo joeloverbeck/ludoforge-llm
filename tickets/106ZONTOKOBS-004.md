@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `compile-observers.ts`, `compiler-core.ts`
-**Deps**: `archive/tickets/106ZONTOKOBS-001.md`, `archive/tickets/106ZONTOKOBS-002.md`, `tickets/106ZONTOKOBS-003.md`, `specs/106-zone-token-observer-integration.md`
+**Deps**: `archive/tickets/106ZONTOKOBS-001.md`, `archive/tickets/106ZONTOKOBS-002.md`, `archive/tickets/106ZONTOKOBS-003.md`, `specs/106-zone-token-observer-integration.md`
 
 ## Problem
 

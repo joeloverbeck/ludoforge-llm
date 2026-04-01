@@ -28,19 +28,19 @@ const EMPTY_KNOWN_IDS: KnownSurfaceIds = {
 describe('validateObservers', () => {
   it('accepts null observability with no diagnostics', () => {
     const diagnostics: Diagnostic[] = [];
-    validateObservers(null, DEFAULT_KNOWN_IDS, diagnostics);
+    validateObservers(null, DEFAULT_KNOWN_IDS, undefined, diagnostics);
     assert.equal(diagnostics.length, 0);
   });
 
   it('accepts empty observers map with no diagnostics', () => {
     const diagnostics: Diagnostic[] = [];
-    validateObservers({ observers: {} }, DEFAULT_KNOWN_IDS, diagnostics);
+    validateObservers({ observers: {} }, DEFAULT_KNOWN_IDS, undefined, diagnostics);
     assert.equal(diagnostics.length, 0);
   });
 
   it('accepts undefined observers with no diagnostics', () => {
     const diagnostics: Diagnostic[] = [];
-    validateObservers({} as GameSpecObservabilitySection, DEFAULT_KNOWN_IDS, diagnostics);
+    validateObservers({} as GameSpecObservabilitySection, DEFAULT_KNOWN_IDS, undefined, diagnostics);
     assert.equal(diagnostics.length, 0);
   });
 
@@ -61,6 +61,7 @@ describe('validateObservers', () => {
         },
       },
       DEFAULT_KNOWN_IDS,
+      undefined,
       diagnostics,
     );
     assert.equal(errors(diagnostics).length, 0, `unexpected errors: ${JSON.stringify(errors(diagnostics))}`);
@@ -82,6 +83,7 @@ describe('validateObservers', () => {
         },
       },
       DEFAULT_KNOWN_IDS,
+      undefined,
       diagnostics,
     );
     assert.equal(errors(diagnostics).length, 0, `unexpected errors: ${JSON.stringify(errors(diagnostics))}`);
@@ -103,6 +105,7 @@ describe('validateObservers', () => {
         },
       },
       DEFAULT_KNOWN_IDS,
+      undefined,
       diagnostics,
     );
     assert.equal(errors(diagnostics).length, 0, `unexpected errors: ${JSON.stringify(errors(diagnostics))}`);
@@ -123,6 +126,7 @@ describe('validateObservers', () => {
         },
       },
       DEFAULT_KNOWN_IDS,
+      undefined,
       diagnostics,
     );
     assert.equal(errors(diagnostics).length, 0, `unexpected errors: ${JSON.stringify(errors(diagnostics))}`);
@@ -144,6 +148,7 @@ describe('validateObservers', () => {
         },
       },
       DEFAULT_KNOWN_IDS,
+      undefined,
       diagnostics,
     );
     assert.equal(errors(diagnostics).length, 0, `unexpected errors: ${JSON.stringify(errors(diagnostics))}`);
@@ -163,6 +168,7 @@ describe('validateObservers', () => {
         },
       },
       DEFAULT_KNOWN_IDS,
+      undefined,
       diagnostics,
     );
     const errs = errors(diagnostics);
@@ -186,6 +192,7 @@ describe('validateObservers', () => {
         },
       },
       DEFAULT_KNOWN_IDS,
+      undefined,
       diagnostics,
     );
     const errs = errors(diagnostics);
@@ -209,6 +216,7 @@ describe('validateObservers', () => {
         },
       },
       DEFAULT_KNOWN_IDS,
+      undefined,
       diagnostics,
     );
     const errs = errors(diagnostics);
@@ -231,6 +239,7 @@ describe('validateObservers', () => {
         },
       },
       DEFAULT_KNOWN_IDS,
+      undefined,
       diagnostics,
     );
     const errs = errors(diagnostics);
@@ -250,6 +259,7 @@ describe('validateObservers', () => {
         },
       },
       DEFAULT_KNOWN_IDS,
+      undefined,
       diagnostics,
     );
     const errs = errors(diagnostics);
@@ -275,6 +285,7 @@ describe('validateObservers', () => {
         },
       },
       DEFAULT_KNOWN_IDS,
+      undefined,
       diagnostics,
     );
     const errs = errors(diagnostics);
@@ -297,6 +308,7 @@ describe('validateObservers', () => {
         },
       },
       DEFAULT_KNOWN_IDS,
+      undefined,
       diagnostics,
     );
     const errs = errors(diagnostics);
@@ -315,6 +327,7 @@ describe('validateObservers', () => {
         },
       },
       DEFAULT_KNOWN_IDS,
+      undefined,
       diagnostics,
     );
     const errs = errors(diagnostics);
@@ -333,6 +346,7 @@ describe('validateObservers', () => {
         },
       },
       DEFAULT_KNOWN_IDS,
+      undefined,
       diagnostics,
     );
     const errs = errors(diagnostics);
@@ -340,23 +354,23 @@ describe('validateObservers', () => {
     assert.ok(errs.some((d) => d.message.includes('default')));
   });
 
-  // --- Acceptance Criterion 8: Reserved key zones ---
-  it('rejects "zones" key in observer profile', () => {
+  // --- Acceptance Criterion 8: zones key is now accepted (no longer reserved) ---
+  it('accepts "zones" key in observer profile without reserved-key error', () => {
     const diagnostics: Diagnostic[] = [];
     validateObservers(
       {
         observers: {
           player: {
-            zones: { deck: 'hidden' },
-          } as never,
+            zones: { deck: { tokens: 'hidden', order: 'hidden' } },
+          },
         },
-      },
+      } as never,
       DEFAULT_KNOWN_IDS,
+      undefined,
       diagnostics,
     );
     const errs = errors(diagnostics);
-    assert.ok(errs.some((d) => d.code === 'CNL_VALIDATOR_OBSERVER_RESERVED_KEY'));
-    assert.ok(errs.some((d) => d.message.includes('zones')));
+    assert.ok(!errs.some((d) => d.code === 'CNL_VALIDATOR_OBSERVER_RESERVED_KEY'));
   });
 
   // --- Acceptance Criterion 9: Per-variable override referencing non-existent globalVar ---
@@ -376,6 +390,7 @@ describe('validateObservers', () => {
         },
       },
       DEFAULT_KNOWN_IDS,
+      undefined,
       diagnostics,
     );
     const errs = errors(diagnostics);
@@ -398,6 +413,7 @@ describe('validateObservers', () => {
         },
       },
       DEFAULT_KNOWN_IDS,
+      undefined,
       diagnostics,
     );
     const errs = errors(diagnostics);
@@ -421,6 +437,7 @@ describe('validateObservers', () => {
         },
       },
       DEFAULT_KNOWN_IDS,
+      undefined,
       diagnostics,
     );
     const errs = errors(diagnostics);
@@ -439,7 +456,7 @@ describe('validateObservers', () => {
     };
     const snapshot = JSON.stringify(observability);
     const diagnostics: Diagnostic[] = [];
-    validateObservers(observability, DEFAULT_KNOWN_IDS, diagnostics);
+    validateObservers(observability, DEFAULT_KNOWN_IDS, undefined, diagnostics);
     assert.equal(JSON.stringify(observability), snapshot);
   });
 
@@ -457,6 +474,7 @@ describe('validateObservers', () => {
         },
       },
       DEFAULT_KNOWN_IDS,
+      undefined,
       diagnostics,
     );
     for (const d of diagnostics) {
@@ -470,7 +488,7 @@ describe('validateObservers', () => {
   // --- Additional structural checks ---
   it('rejects non-object observability section', () => {
     const diagnostics: Diagnostic[] = [];
-    validateObservers('not-an-object' as never, DEFAULT_KNOWN_IDS, diagnostics);
+    validateObservers('not-an-object' as never, DEFAULT_KNOWN_IDS, undefined, diagnostics);
     const errs = errors(diagnostics);
     assert.equal(errs.length, 1);
     assert.ok(errs[0]!.code === 'CNL_VALIDATOR_OBSERVERS_SECTION_INVALID');
@@ -478,7 +496,7 @@ describe('validateObservers', () => {
 
   it('rejects non-object observers map', () => {
     const diagnostics: Diagnostic[] = [];
-    validateObservers({ observers: 'bad' } as never, DEFAULT_KNOWN_IDS, diagnostics);
+    validateObservers({ observers: 'bad' } as never, DEFAULT_KNOWN_IDS, undefined, diagnostics);
     const errs = errors(diagnostics);
     assert.equal(errs.length, 1);
     assert.ok(errs[0]!.code === 'CNL_VALIDATOR_OBSERVERS_MAP_REQUIRED');
@@ -486,7 +504,7 @@ describe('validateObservers', () => {
 
   it('rejects non-object observer profile', () => {
     const diagnostics: Diagnostic[] = [];
-    validateObservers({ observers: { bad: 'not-an-object' } } as never, DEFAULT_KNOWN_IDS, diagnostics);
+    validateObservers({ observers: { bad: 'not-an-object' } } as never, DEFAULT_KNOWN_IDS, undefined, diagnostics);
     const errs = errors(diagnostics);
     assert.ok(errs.some((d) => d.code === 'CNL_VALIDATOR_OBSERVER_PROFILE_INVALID'));
   });
@@ -506,6 +524,7 @@ describe('validateObservers', () => {
         },
       },
       DEFAULT_KNOWN_IDS,
+      undefined,
       diagnostics,
     );
     const errs = errors(diagnostics);
@@ -523,6 +542,7 @@ describe('validateObservers', () => {
         },
       },
       DEFAULT_KNOWN_IDS,
+      undefined,
       diagnostics,
     );
     const errs = errors(diagnostics);
@@ -540,6 +560,7 @@ describe('validateObservers', () => {
         },
       },
       DEFAULT_KNOWN_IDS,
+      undefined,
       diagnostics,
     );
     const warns = warnings(diagnostics);
@@ -557,6 +578,7 @@ describe('validateObservers', () => {
         },
       },
       DEFAULT_KNOWN_IDS,
+      undefined,
       diagnostics,
     );
     const errs = errors(diagnostics);
@@ -582,6 +604,7 @@ describe('validateObservers', () => {
         },
       },
       DEFAULT_KNOWN_IDS,
+      undefined,
       diagnostics,
     );
     assert.equal(errors(diagnostics).length, 0, `unexpected errors: ${JSON.stringify(errors(diagnostics))}`);
@@ -600,6 +623,7 @@ describe('validateObservers', () => {
         },
       },
       EMPTY_KNOWN_IDS,
+      undefined,
       diagnostics,
     );
     assert.equal(errors(diagnostics).length, 0);
@@ -627,6 +651,7 @@ describe('validateObservers', () => {
         },
       },
       customIds,
+      undefined,
       diagnostics,
     );
     const errs = errors(diagnostics);

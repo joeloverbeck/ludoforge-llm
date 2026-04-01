@@ -55,7 +55,7 @@ import {
 } from './named-set-utils.js';
 import { compileVerbalization } from './compile-verbalization.js';
 import { validateAgents } from './validate-agents.js';
-import { validateObservers, type KnownSurfaceIds } from './validate-observers.js';
+import { validateObservers, type KnownSurfaceIds, type KnownZoneInfo } from './validate-observers.js';
 import { lowerAgents } from './compile-agents.js';
 import { lowerObservers } from './compile-observers.js';
 
@@ -680,7 +680,19 @@ function compileExpandedDoc(
       (resolvedTableRefDoc.derivedMetrics ?? []).map((m) => m.id),
     ),
   };
-  validateObservers(resolvedTableRefDoc.observability, knownSurfaceIds, diagnostics);
+  const knownZoneInfo: KnownZoneInfo | undefined =
+    effectiveZones !== null
+      ? {
+          zoneBaseIds: new Set(
+            (effectiveZones as readonly GameSpecZoneDef[]).map((z) => z.id),
+          ),
+          zoneOrderingByBase: Object.fromEntries(
+            (effectiveZones as readonly GameSpecZoneDef[]).map((z) => [z.id, z.ordering]),
+          ),
+          zoneOwnershipByBase: ownershipByBase,
+        }
+      : undefined;
+  validateObservers(resolvedTableRefDoc.observability, knownSurfaceIds, knownZoneInfo, diagnostics);
   const observers = compileSection(diagnostics, () =>
     lowerObservers(resolvedTableRefDoc.observability, diagnostics, {
       knownGlobalVarIds: mergedGlobalVars.map((v) => v.name),

@@ -88,6 +88,7 @@ function createCatalog(): AgentPolicyCatalog {
       baseline: {
         fingerprint: 'baseline',
         params: {},
+        preview: { mode: 'exactWorld' },
         use: {
           pruningRules: [],
           considerations: [],

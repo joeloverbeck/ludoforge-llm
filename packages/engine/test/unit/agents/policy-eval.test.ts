@@ -149,6 +149,7 @@ function createCatalog(
   const defaultProfile: AgentPolicyCatalog['profiles']['baseline'] = {
     fingerprint: 'baseline',
     params: { passFloor: 0.5 },
+    preview: { mode: 'exactWorld' },
     use: {
       pruningRules: ['dropPassWhenMarginExists'],
       considerations: ['preferEvents'],

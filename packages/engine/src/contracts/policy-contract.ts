@@ -24,7 +24,7 @@ export const AGENT_POLICY_PROFILE_USE_TO_LIBRARY_BUCKET = {
   tieBreakers: 'tieBreakers',
 } as const satisfies Record<AgentPolicyProfileUseBucket, AgentPolicyLibraryBucket>;
 
-export const AGENT_POLICY_PREVIEW_KEYS = ['tolerateRngDivergence'] as const;
+export const AGENT_POLICY_PREVIEW_KEYS = ['mode'] as const;
 
 export const AGENT_POLICY_CANDIDATE_INTRINSICS = [
   'actionId',

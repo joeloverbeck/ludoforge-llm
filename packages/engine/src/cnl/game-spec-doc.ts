@@ -658,7 +658,7 @@ export interface GameSpecAgentProfileDef {
   readonly params?: Readonly<Record<string, unknown>>;
   readonly use: GameSpecAgentProfileUse;
   readonly preview?: {
-    readonly tolerateRngDivergence?: boolean;
+    readonly mode?: string;
   };
 }
 

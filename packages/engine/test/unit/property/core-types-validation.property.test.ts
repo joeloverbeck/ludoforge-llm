@@ -72,6 +72,7 @@ describe('core-types validation property-style checks', () => {
             baseline: {
               fingerprint: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
               params: {},
+              preview: { mode: 'exactWorld' },
               use: {
                 pruningRules: [],
                 considerations: [],

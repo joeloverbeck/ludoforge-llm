@@ -796,6 +796,9 @@
           "stableMoveKey"
         ]
       },
+      "preview": {
+        "mode": "disabled"
+      },
       "plan": {
         "stateFeatures": [
           "callAmount",
@@ -815,11 +818,11 @@
           "preferLargerRaise"
         ]
       },
-      "fingerprint": "02d4360b7936f5beb09850dab64d91e604a1f15c7497f621619b60fe2efde886"
+      "fingerprint": "c9416985cbe8a77567cb8d1d7acb68fe4b6a3a26922b760d882aab47eb3748a2"
     }
   },
   "bindingsBySeat": {
     "neutral": "baseline"
   },
-  "catalogFingerprint": "bc0896e0fbfa4cc742dec3922ff3b0fbcd6abe9624e17980f44a98e7e0313938"
+  "catalogFingerprint": "a01345b666a22fa323ba5a81c575770907d84ef3d320fc3f793a564795c2b089"
 }

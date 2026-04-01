@@ -102,6 +102,7 @@ function createCatalog(): AgentPolicyCatalog {
       baseline: {
         fingerprint: 'baseline-fingerprint',
         params: {},
+        preview: { mode: 'exactWorld' },
         use: {
           pruningRules: [],
           considerations: ['preferEvent'],
@@ -201,10 +202,12 @@ describe('policy trace events', () => {
     assert.equal(summaryDecision.profileFingerprint, 'baseline-fingerprint');
     assert.equal(summaryDecision.initialCandidateCount, 2);
     assert.equal(summaryDecision.selectedStableMoveKey !== null, true);
+    assert.equal(summaryDecision.previewUsage.mode, 'exactWorld');
     assert.deepEqual(summaryDecision.previewUsage.refIds, []);
     assert.deepEqual(summaryDecision.previewUsage.unknownRefs, []);
     assert.deepEqual(summaryDecision.previewUsage.outcomeBreakdown, {
       ready: 0,
+      stochastic: 0,
       unknownRandom: 0,
       unknownHidden: 0,
       unknownUnresolved: 0,
@@ -216,6 +219,7 @@ describe('policy trace events', () => {
 
     assert.deepEqual(verboseDecision.previewUsage.outcomeBreakdown, {
       ready: 0,
+      stochastic: 0,
       unknownRandom: 0,
       unknownHidden: 0,
       unknownUnresolved: 0,

@@ -28,7 +28,7 @@ const HIDDEN_VISIBILITY: CompiledSurfaceVisibility = {
 };
 
 function createMinimalCatalog(overrides?: {
-  readonly tolerateRngDivergence?: boolean;
+  readonly previewMode?: 'exactWorld' | 'tolerateStochastic' | 'disabled';
   readonly activeCardIdentity?: CompiledSurfaceVisibility;
   readonly activeCardTag?: CompiledSurfaceVisibility;
   readonly activeCardMetadata?: CompiledSurfaceVisibility;
@@ -48,9 +48,7 @@ function createMinimalCatalog(overrides?: {
       candidateAggregates: [],
       considerations: [],
     },
-    ...(overrides?.tolerateRngDivergence !== undefined
-      ? { preview: { tolerateRngDivergence: overrides.tolerateRngDivergence } }
-      : {}),
+    preview: { mode: overrides?.previewMode ?? 'exactWorld' },
   };
   return {
     schemaVersion: 2,
@@ -111,8 +109,8 @@ function createDef(catalog: AgentPolicyCatalog, extras?: {
 }
 
 describe('createPolicyRuntimeProviders', () => {
-  it('constructs providers when profile has preview.tolerateRngDivergence = true', () => {
-    const catalog = createMinimalCatalog({ tolerateRngDivergence: true });
+  it('constructs providers when profile uses tolerateStochastic preview mode', () => {
+    const catalog = createMinimalCatalog({ previewMode: 'tolerateStochastic' });
     const def = createDef(catalog);
     const state = initialState(def, 1, 2).state;
 
@@ -132,7 +130,7 @@ describe('createPolicyRuntimeProviders', () => {
     assert.ok(providers.currentSurface, 'currentSurface provider must be present');
   });
 
-  it('constructs providers when profile lacks preview config', () => {
+  it('constructs providers when profile uses the default exactWorld preview mode', () => {
     const catalog = createMinimalCatalog();
     const def = createDef(catalog);
     const state = initialState(def, 1, 2).state;
@@ -151,7 +149,7 @@ describe('createPolicyRuntimeProviders', () => {
   });
 
   it('constructs providers when seatId has no profile binding', () => {
-    const catalog = createMinimalCatalog({ tolerateRngDivergence: true });
+    const catalog = createMinimalCatalog({ previewMode: 'tolerateStochastic' });
     const def = createDef(catalog);
     const state = initialState(def, 1, 2).state;
 

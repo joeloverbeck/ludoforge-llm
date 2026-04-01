@@ -1475,6 +1475,9 @@
           "stableMoveKey"
         ]
       },
+      "preview": {
+        "mode": "exactWorld"
+      },
       "plan": {
         "stateFeatures": [
           "selfMargin",
@@ -1496,7 +1499,7 @@
           "preferAdviseAction"
         ]
       },
-      "fingerprint": "8ebafac94af1c30f14c39feac1b66ee61aa9c3232f16ca5ef8d6131c2c865f9a"
+      "fingerprint": "3da08f4662f2601841a20c9f8aa2d25cfc631b449b83ae0755071ddf5dbcd81d"
     },
     "arvn-baseline": {
       "observerName": "currentPlayer",
@@ -1523,6 +1526,9 @@
           "stableMoveKey"
         ]
       },
+      "preview": {
+        "mode": "exactWorld"
+      },
       "plan": {
         "stateFeatures": [
           "selfMargin",
@@ -1545,7 +1551,7 @@
           "preferGovernAction"
         ]
       },
-      "fingerprint": "4747e24d00edf9fc2c5aa04d711a7892fc8d4ea4d202c825a56001a156b16ad1"
+      "fingerprint": "3481dde323f41ff711659090b57af1c43cd341df3423a04bbb1665379a0a472b"
     },
     "nva-baseline": {
       "observerName": "currentPlayer",
@@ -1573,6 +1579,9 @@
           "stableMoveKey"
         ]
       },
+      "preview": {
+        "mode": "exactWorld"
+      },
       "plan": {
         "stateFeatures": [
           "selfMargin",
@@ -1596,7 +1605,7 @@
           "preferBombardAction"
         ]
       },
-      "fingerprint": "e3719ecdb5f09669df5b493ea6250e3f529ed09c9a4b05b11abe61de8a2362ad"
+      "fingerprint": "caef0917aa0260f87803a5bd2daad3e8fcc2ccf9ab55eb59f658cf64aece3468"
     },
     "vc-baseline": {
       "observerName": "currentPlayer",
@@ -1624,6 +1633,9 @@
           "stableMoveKey"
         ]
       },
+      "preview": {
+        "mode": "exactWorld"
+      },
       "plan": {
         "stateFeatures": [
           "selfMargin",
@@ -1647,7 +1659,7 @@
           "preferSubvertAction"
         ]
       },
-      "fingerprint": "65286dff64947980322f1872bab9297c80c0547fb7e8b3103f26163e376d0a31"
+      "fingerprint": "22e5ba64d555d7da2871c0fef32e710d13e4cd6677ee871c3aea769c92ba065c"
     },
     "vc-evolved": {
       "observerName": "currentPlayer",
@@ -1670,7 +1682,7 @@
         ]
       },
       "preview": {
-        "tolerateRngDivergence": true
+        "mode": "tolerateStochastic"
       },
       "plan": {
         "stateFeatures": [],
@@ -1686,7 +1698,7 @@
           "preferPopulousTargets"
         ]
       },
-      "fingerprint": "a2574770837aa8f2c8c28b2d5508e0c5b3d9a407ec81e37b4532c06bc83ade70"
+      "fingerprint": "30560000d58dee9134c94a0b83399b6300b70cda3500919217e9beefbbc110c1"
     }
   },
   "bindingsBySeat": {
@@ -1695,5 +1707,5 @@
     "nva": "nva-baseline",
     "vc": "vc-evolved"
   },
-  "catalogFingerprint": "72774c526d660363e370eca450a71992450602faf3778f090daae7b8b4b1c9d8"
+  "catalogFingerprint": "46303a97cbd580bb4cb005104f95933b119ad34232e31792cd3174c8546b02b4"
 }

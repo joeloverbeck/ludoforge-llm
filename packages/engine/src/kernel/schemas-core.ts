@@ -938,9 +938,11 @@ const CompiledAgentProfileSchema = z
         tieBreakers: z.array(StringSchema),
       })
       .strict(),
-    preview: z.object({
-      tolerateRngDivergence: BooleanSchema,
-    }).strict().optional(),
+    preview: z
+      .object({
+        mode: z.enum(['exactWorld', 'tolerateStochastic', 'disabled']),
+      })
+      .strict(),
     plan: z
       .object({
         stateFeatures: z.array(StringSchema),
@@ -1420,6 +1422,7 @@ const PolicyTieBreakStepTraceSchema = z
 const PolicyPreviewOutcomeBreakdownTraceSchema = z
   .object({
     ready: NumberSchema,
+    stochastic: NumberSchema,
     unknownRandom: NumberSchema,
     unknownHidden: NumberSchema,
     unknownUnresolved: NumberSchema,
@@ -1441,6 +1444,7 @@ const PolicyCompletionStatisticsSchema = z
 
 const PolicyPreviewUsageTraceSchema = z
   .object({
+    mode: z.enum(['exactWorld', 'tolerateStochastic', 'disabled']),
     evaluatedCandidateCount: NumberSchema,
     refIds: z.array(StringSchema),
     unknownRefs: z.array(PolicyPreviewUnknownRefTraceSchema),

@@ -184,6 +184,7 @@ function buildGameDefWithAgentExpr(featureId: string, expr: Record<string, unkno
         baseline: {
           fingerprint: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
           params: {},
+          preview: { mode: 'exactWorld' },
           use: {
             pruningRules: [],
             considerations: [],
@@ -406,6 +407,7 @@ describe('top-level runtime schemas', () => {
             params: {
               passFloor: 0.5,
             },
+            preview: { mode: 'exactWorld' },
             use: {
               pruningRules: [],
               considerations: ['preferNamedOption'],
@@ -496,6 +498,7 @@ describe('top-level runtime schemas', () => {
           baseline: {
             fingerprint: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
             params: {},
+            preview: { mode: 'exactWorld' },
             use: {
               pruningRules: [],
               considerations: [],
@@ -589,6 +592,7 @@ describe('top-level runtime schemas', () => {
           baseline: {
             fingerprint: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
             params: {},
+            preview: { mode: 'exactWorld' },
             use: {
               pruningRules: [],
               considerations: [],
@@ -683,6 +687,7 @@ describe('top-level runtime schemas', () => {
           baseline: {
             fingerprint: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
             params: {},
+            preview: { mode: 'exactWorld' },
             use: {
               pruningRules: [],
               considerations: [],
@@ -912,6 +917,7 @@ describe('top-level runtime schemas', () => {
         profiles: {
           baseline: {
             params: {},
+            preview: { mode: 'exactWorld' },
             use: {
               pruningRules: [],
               considerations: [],

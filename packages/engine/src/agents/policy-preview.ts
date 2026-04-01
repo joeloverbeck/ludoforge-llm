@@ -6,6 +6,7 @@ import { buildSeatResolutionIndex, resolvePlayerIndexForSeatValue, type SeatReso
 import { classifyPlayableMoveCandidate, type PlayableCandidateClassification } from '../kernel/playable-candidate.js';
 import type { PlayerId } from '../kernel/branded.js';
 import type {
+  AgentPreviewMode,
   CompiledPreviewSurfaceRef,
   CompiledCardMetadataEntry,
   GameDef,
@@ -55,7 +56,7 @@ export interface CreatePolicyPreviewRuntimeInput {
   readonly trustedMoveIndex: ReadonlyMap<string, TrustedExecutableMove>;
   readonly runtime?: GameDefRuntime;
   readonly dependencies?: PolicyPreviewDependencies;
-  readonly tolerateRngDivergence?: boolean;
+  readonly previewMode: AgentPreviewMode;
 }
 
 export interface PolicyPreviewRuntime {
@@ -229,6 +230,11 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
     if (cached !== undefined) {
       return cached;
     }
+    if (input.previewMode === 'disabled') {
+      const disabledOutcome: PreviewOutcome = { kind: 'unknown', reason: 'failed' };
+      cache.set(candidate.stableMoveKey, disabledOutcome);
+      return disabledOutcome;
+    }
 
     const trustedMove = input.trustedMoveIndex.get(candidate.stableMoveKey);
     const outcome = trustedMove === undefined
@@ -251,8 +257,6 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
       return { kind: 'unknown', reason: 'failed' };
     }
 
-    const tolerateRng = input.tolerateRngDivergence === true;
-
     try {
       const previewState = deps.applyMove(
         input.def,
@@ -263,7 +267,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
       ).state;
       const rngDiverged = !rngStatesEqual(previewState.rng, input.state.rng);
 
-      if (rngDiverged && !tolerateRng) {
+      if (rngDiverged && input.previewMode === 'exactWorld') {
         return { kind: 'unknown', reason: 'random' };
       }
 

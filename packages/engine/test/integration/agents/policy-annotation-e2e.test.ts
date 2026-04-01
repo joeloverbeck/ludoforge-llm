@@ -107,6 +107,7 @@ function createCatalog(overrides?: {
   const profile = {
     fingerprint: 'test-profile',
     params: {},
+    preview: { mode: 'exactWorld' as const },
     use: {
       pruningRules: [],
       considerations: [],

@@ -116,6 +116,7 @@ function createCatalog(): AgentPolicyCatalog {
       passive: {
         fingerprint: 'passive-fingerprint',
         params: {},
+        preview: { mode: 'exactWorld' },
         use: {
           pruningRules: [],
           considerations: ['preferPass'],
@@ -131,6 +132,7 @@ function createCatalog(): AgentPolicyCatalog {
       aggressive: {
         fingerprint: 'aggressive-fingerprint',
         params: {},
+        preview: { mode: 'exactWorld' },
         use: {
           pruningRules: [],
           considerations: ['preferEvent'],
@@ -231,6 +233,7 @@ function createTemplateDef(): GameDef {
         passive: {
           fingerprint: 'passive-fingerprint',
           params: {},
+          preview: { mode: 'exactWorld' },
           use: {
             pruningRules: [],
             considerations: ['preferGamma'],
@@ -288,6 +291,7 @@ function createGuidedTemplateDef(
         passive: {
           fingerprint: 'guided-template-profile',
           params: {},
+          preview: { mode: 'exactWorld' },
           use: {
             pruningRules: [],
             considerations: ['preferGamma'],
@@ -415,6 +419,7 @@ function createTemplatePreviewDef(): GameDef {
         passive: {
           fingerprint: 'template-preview-profile',
           params: {},
+          preview: { mode: 'exactWorld' },
           use: {
             pruningRules: [],
             considerations: ['preferProjectedMargin'],
@@ -686,10 +691,12 @@ describe('PolicyAgent', () => {
       assert.fail('expected policy decision trace');
     }
     assert.equal(result.agentDecision.emergencyFallback, false);
+    assert.equal(result.agentDecision.previewUsage.mode, 'exactWorld');
     assert.deepEqual(result.agentDecision.previewUsage.refIds, ['globalVar.usMargin']);
     assert.equal(result.agentDecision.previewUsage.evaluatedCandidateCount, 2);
     assert.deepEqual(result.agentDecision.previewUsage.outcomeBreakdown, {
       ready: 2,
+      stochastic: 0,
       unknownRandom: 0,
       unknownHidden: 0,
       unknownUnresolved: 0,

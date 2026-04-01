@@ -53,6 +53,7 @@ function createProfile(
   return {
     fingerprint: 'baseline',
     params: {},
+    preview: { mode: 'exactWorld' },
     use: {
       pruningRules: [],
       considerations: ['preferTarget'],

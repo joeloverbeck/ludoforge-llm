@@ -124,6 +124,8 @@ agents:
   profiles:
     baseline:
       params: {}
+      preview:
+        mode: disabled
       use:
         pruningRules: []
         considerations:

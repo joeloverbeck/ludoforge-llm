@@ -156,9 +156,9 @@ function compileFitlPolicyOverlay(
           ...baseProfile,
           params: { ...(baseProfile.params ?? {}) },
           use: {
-            pruningRules: [...(baseProfile.use.pruningRules ?? [])],
-            considerations: [...(baseProfile.use.considerations ?? []), ...considerationIds],
-            tieBreakers: [...(baseProfile.use.tieBreakers ?? [])],
+            pruningRules: [],
+            considerations: considerationIds,
+            tieBreakers: [],
           },
         },
       },
@@ -533,7 +533,7 @@ describe('FITL policy agent integration', () => {
             ],
           },
           value: {
-            boolToNumber: { ref: 'feature.isRally' },
+            boolToNumber: { ref: 'candidate.tag.rally' },
           },
         },
         preferTaxWhenManyBases: {
@@ -545,7 +545,7 @@ describe('FITL policy agent integration', () => {
             ],
           },
           value: {
-            boolToNumber: { ref: 'feature.isTax' },
+            boolToNumber: { ref: 'candidate.tag.tax' },
           },
         },
       },
@@ -619,20 +619,20 @@ describe('FITL policy agent integration', () => {
     assert.deepEqual(agents.library.considerations.preferPopulousTargets?.scopes, ['completion']);
   });
 
-  it('compiles vc-evolved profile with preview.tolerateRngDivergence from production YAML', () => {
+  it('compiles vc-evolved profile with preview.mode from production YAML', () => {
     const { compiled } = compileProductionSpec();
     const agents = compiled.gameDef?.agents;
 
     assert.ok(agents);
     assert.deepEqual(agents.profiles['vc-evolved']?.preview, {
-      tolerateRngDivergence: true,
+      mode: 'tolerateStochastic',
     });
-    assert.equal(agents.profiles['us-baseline']?.preview, undefined);
-    assert.equal(agents.profiles['arvn-baseline']?.preview, undefined);
-    assert.equal(agents.profiles['nva-baseline']?.preview, undefined);
+    assert.deepEqual(agents.profiles['us-baseline']?.preview, { mode: 'exactWorld' });
+    assert.deepEqual(agents.profiles['arvn-baseline']?.preview, { mode: 'exactWorld' });
+    assert.deepEqual(agents.profiles['nva-baseline']?.preview, { mode: 'exactWorld' });
   });
 
-  it('produces stochastic preview outcomes for VC when allowWhenHiddenSampling is enabled alongside tolerateRngDivergence', () => {
+  it('produces stochastic preview outcomes for VC when allowWhenHiddenSampling is enabled alongside preview.mode tolerateStochastic', () => {
     const { compiled } = compileProductionSpec();
     const baseDef = assertValidatedGameDef(compiled.gameDef);
 
@@ -719,7 +719,7 @@ describe('FITL policy agent integration', () => {
 
     assert.ok(
       stochasticCandidates.length > 0 || readyCandidates.length > 0,
-      `expected at least one stochastic or ready preview outcome for VC with tolerateRngDivergence (got outcomes: ${nonPassCandidates.map((c) => c.previewOutcome).join(', ')})`,
+      `expected at least one stochastic or ready preview outcome for VC with preview.mode tolerateStochastic (got outcomes: ${nonPassCandidates.map((c) => c.previewOutcome).join(', ')})`,
     );
   });
 
@@ -813,12 +813,14 @@ describe('FITL policy agent integration', () => {
       assert.fail('expected policy trace metadata');
     }
     assert.equal(result.agentDecision.emergencyFallback, false);
+    assert.equal(result.agentDecision.previewUsage.mode, 'exactWorld');
     assert.deepEqual(result.agentDecision.previewUsage.refIds, ['victoryCurrentMargin.currentMargin.self']);
     assert.deepEqual(result.agentDecision.previewUsage.unknownRefs, [
       { refId: 'victoryCurrentMargin.currentMargin.self', reason: 'hidden' },
     ]);
     assert.deepEqual(result.agentDecision.previewUsage.outcomeBreakdown, {
       ready: 0,
+      stochastic: 0,
       unknownRandom: 0,
       unknownHidden: 18,
       unknownUnresolved: 0,

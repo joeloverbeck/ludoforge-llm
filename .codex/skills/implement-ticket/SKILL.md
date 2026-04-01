@@ -48,16 +48,21 @@ If a prior ticket in the same series was implemented earlier in the session, reu
    - re-extract the concrete files, acceptance criteria, invariants, and verification commands from the corrected ticket
    - do not keep using the stale ticket's original verification surface by inertia
    - treat the rewritten ticket as the authoritative implementation boundary for the rest of the task
+11. If correcting one active ticket materially changes ownership within an active ticket series:
+   - inspect the remaining active sibling tickets in that series before coding
+   - update or defer overlapping sibling tickets so they do not still claim invalid staged ownership
+   - keep dependency references and status values coherent across the series
+   - run the repo's ticket dependency checker after the series rewrite when available
 
 ### Phase 3: Resolve Before Coding
 
-11. If the ticket is factually wrong, stop and present the discrepancies before editing code.
-12. If the issue is not a factual error but a scope gap, implementation choice, dependency conflict, or ambiguous partial-migration boundary, apply the repository's `1-3-1` rule:
+12. If the ticket is factually wrong, stop and present the discrepancies before editing code.
+13. If the issue is not a factual error but a scope gap, implementation choice, dependency conflict, or ambiguous partial-migration boundary, apply the repository's `1-3-1` rule:
     - 1 clearly defined problem
     - 3 concrete options
     - 1 recommendation
-13. Do not proceed with implementation until the user confirms when a discrepancy or `1-3-1` decision is outstanding.
-14. If the ticket is accurate and no blocking decision remains, proceed.
+14. Do not proceed with implementation until the user confirms when a discrepancy or `1-3-1` decision is outstanding.
+15. If the ticket is accurate and no blocking decision remains, proceed.
 
 ## Implementation Rules
 
@@ -98,6 +103,12 @@ Before claiming completion:
    - if they are outside the corrected boundary and already covered by an active ticket, do not silently absorb that scope
    - document the failure as residual risk or deferred verification and name the owning active ticket(s)
    - if no active ticket owns the remaining failure, stop and resolve the boundary with the user
+8. If focused checks pass but a broader suite fails:
+   - inspect shared test helpers, fixtures, and goldens for assumptions that the focused tests did not exercise
+   - do not assume the failure is a product regression until helper-level assumptions are ruled out
+9. If `node --test` or another runner reports only a top-level file failure:
+   - rerun the failing file as narrowly as possible
+   - use test-name filtering or direct helper reproduction when needed to isolate the failing assertion before editing code
 
 Use the repo's standard commands from `AGENTS.md` when appropriate:
 
@@ -117,6 +128,11 @@ After implementation and verification:
    - if any verification was intentionally deferred because an adjacent active ticket owns that scope, state that explicitly
 2. If the ticket appears complete, offer to archive it per `docs/archival-workflow.md`.
 3. If the user wants archival or a concrete follow-up review, hand off to `post-ticket-review`.
+
+Optional series consistency pass after a ticket rewrite:
+- inspect sibling active tickets in the same series for overlap or stale staged ownership
+- update statuses, deps, and scope text so the active series remains internally coherent
+- run `pnpm run check:ticket-deps` when the repo provides it
 
 ## Codex Adaptation Notes
 

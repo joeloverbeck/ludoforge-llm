@@ -312,7 +312,7 @@ agents:
     vc-evolved:
       observer: currentPlayer
       preview:
-        tolerateRngDivergence: true
+        mode: tolerateStochastic
       params:
         rallyWeight: 3
         taxWeight: 2

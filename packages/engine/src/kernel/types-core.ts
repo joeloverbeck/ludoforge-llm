@@ -692,8 +692,10 @@ export interface CompiledAgentLibraryIndex {
   readonly strategicConditions: Readonly<Record<string, CompiledStrategicCondition>>;
 }
 
-export interface PreviewToleranceConfig {
-  readonly tolerateRngDivergence: boolean;
+export type AgentPreviewMode = 'exactWorld' | 'tolerateStochastic' | 'disabled';
+
+export interface CompiledAgentPreviewConfig {
+  readonly mode: AgentPreviewMode;
 }
 
 export interface CompiledAgentProfile {
@@ -705,7 +707,7 @@ export interface CompiledAgentProfile {
     readonly pruningRules: readonly string[];
     readonly tieBreakers: readonly string[];
   };
-  readonly preview?: PreviewToleranceConfig;
+  readonly preview: CompiledAgentPreviewConfig;
   readonly plan: {
     readonly stateFeatures: readonly string[];
     readonly candidateFeatures: readonly string[];
@@ -1530,6 +1532,7 @@ export interface PolicyTieBreakStepTrace {
 }
 
 export interface PolicyPreviewUsageTrace {
+  readonly mode: AgentPreviewMode;
   readonly evaluatedCandidateCount: number;
   readonly refIds: readonly string[];
   readonly unknownRefs: readonly PolicyPreviewUnknownRefTrace[];
@@ -1538,6 +1541,7 @@ export interface PolicyPreviewUsageTrace {
 
 export interface PolicyPreviewOutcomeBreakdownTrace {
   readonly ready: number;
+  readonly stochastic: number;
   readonly unknownRandom: number;
   readonly unknownHidden: number;
   readonly unknownUnresolved: number;

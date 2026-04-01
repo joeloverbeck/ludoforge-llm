@@ -603,7 +603,7 @@ function lowerProfile(
     ...(resolvedObserverName !== undefined ? { observerName: resolvedObserverName } : {}),
     params: compiledParams,
     use,
-    ...(preview == null ? {} : { preview }),
+    preview: preview ?? { mode: 'exactWorld' },
     plan,
   };
 }
@@ -656,26 +656,54 @@ function lowerPreviewConfig(
 ): CompiledAgentProfile['preview'] | undefined {
   const authored = profileDef.preview;
   if (authored === undefined) {
-    return undefined;
+    return { mode: 'exactWorld' };
   }
 
   const path = `doc.agents.profiles.${profileId}.preview`;
-  const tolerateRngDivergence = authored.tolerateRngDivergence;
+  const { mode } = authored;
 
-  if (tolerateRngDivergence !== undefined && typeof tolerateRngDivergence !== 'boolean') {
+  if (mode === undefined) {
     diagnostics.push({
-      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
-      path: `${path}.tolerateRngDivergence`,
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_MODE_MISSING,
+      path: `${path}.mode`,
       severity: 'error',
-      message: `Profile "${profileId}" preview.tolerateRngDivergence must be a boolean, got ${typeof tolerateRngDivergence}.`,
-      suggestion: 'Set preview.tolerateRngDivergence to true or false.',
+      message: `Profile "${profileId}" preview.mode is required when preview is present.`,
+      suggestion: 'Set preview.mode to exactWorld, tolerateStochastic, or disabled.',
+    });
+    return undefined;
+  }
+  if (typeof mode !== 'string') {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_MODE_INVALID,
+      path: `${path}.mode`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.mode must be a string, got ${typeof mode}.`,
+      suggestion: 'Set preview.mode to exactWorld, tolerateStochastic, or disabled.',
+    });
+    return undefined;
+  }
+  if (mode === 'infoSetSample' || mode === 'enumeratePublicChance') {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_MODE_RESERVED,
+      path: `${path}.mode`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.mode "${mode}" is reserved for future implementation and is not supported yet.`,
+      suggestion: 'Use preview.mode exactWorld, tolerateStochastic, or disabled.',
+    });
+    return undefined;
+  }
+  if (mode !== 'exactWorld' && mode !== 'tolerateStochastic' && mode !== 'disabled') {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_MODE_INVALID,
+      path: `${path}.mode`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.mode "${mode}" is invalid.`,
+      suggestion: 'Use preview.mode exactWorld, tolerateStochastic, or disabled.',
     });
     return undefined;
   }
 
-  return {
-    tolerateRngDivergence: tolerateRngDivergence ?? false,
-  };
+  return { mode };
 }
 
 function buildProfilePlan(

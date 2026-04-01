@@ -800,7 +800,7 @@ describe('agents authoring surface', () => {
     assert.equal(result.gameDef?.agents?.profiles.baseline, undefined);
   });
 
-  it('compiles preview.tolerateRngDivergence from profile YAML into CompiledAgentProfile.preview', () => {
+  it('compiles preview.mode from profile YAML into CompiledAgentProfile.preview', () => {
     const result = compileGameSpecToGameDef({
       ...createCompileReadyDoc(),
       dataAssets: [createSeatCatalogAsset(['us'])],
@@ -822,7 +822,7 @@ describe('agents authoring surface', () => {
               tieBreakers: ['stableMoveKey'],
             },
             preview: {
-              tolerateRngDivergence: true,
+              mode: 'tolerateStochastic',
             },
           },
         },
@@ -834,11 +834,11 @@ describe('agents authoring surface', () => {
 
     assert.equal(result.diagnostics.some((d) => d.severity === 'error'), false);
     assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.preview, {
-      tolerateRngDivergence: true,
+      mode: 'tolerateStochastic',
     });
   });
 
-  it('omits preview field when profile YAML has no preview section', () => {
+  it('defaults preview.mode to exactWorld when profile YAML has no preview section', () => {
     const result = compileGameSpecToGameDef({
       ...createCompileReadyDoc(),
       dataAssets: [createSeatCatalogAsset(['us'])],
@@ -868,10 +868,12 @@ describe('agents authoring surface', () => {
     });
 
     assert.equal(result.diagnostics.some((d) => d.severity === 'error'), false);
-    assert.equal(result.gameDef?.agents?.profiles.baseline?.preview, undefined);
+    assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.preview, {
+      mode: 'exactWorld',
+    });
   });
 
-  it('emits diagnostic when preview.tolerateRngDivergence is not a boolean', () => {
+  it('emits diagnostic when preview.mode is missing', () => {
     const result = compileGameSpecToGameDef({
       ...createCompileReadyDoc(),
       dataAssets: [createSeatCatalogAsset(['us'])],
@@ -893,7 +895,6 @@ describe('agents authoring surface', () => {
               tieBreakers: ['stableMoveKey'],
             },
             preview: {
-              tolerateRngDivergence: 'yes' as unknown as boolean,
             },
           },
         },
@@ -904,7 +905,83 @@ describe('agents authoring surface', () => {
     });
 
     assert.equal(
-      result.diagnostics.some((d) => d.path === 'doc.agents.profiles.baseline.preview.tolerateRngDivergence'),
+      result.diagnostics.some((d) => d.code === 'CNL_COMPILER_AGENT_PREVIEW_MODE_MISSING' && d.path === 'doc.agents.profiles.baseline.preview.mode'),
+      true,
+    );
+  });
+
+  it('emits diagnostic when preview.mode is invalid', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: withObserver({
+        parameters: {},
+        library: {
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              considerations: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+            preview: {
+              mode: 'sometimes' as unknown as string,
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      }),
+    });
+
+    assert.equal(
+      result.diagnostics.some((d) => d.code === 'CNL_COMPILER_AGENT_PREVIEW_MODE_INVALID' && d.path === 'doc.agents.profiles.baseline.preview.mode'),
+      true,
+    );
+  });
+
+  it('emits diagnostic when preview.mode is reserved', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: withObserver({
+        parameters: {},
+        library: {
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              considerations: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+            preview: {
+              mode: 'infoSetSample',
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      }),
+    });
+
+    assert.equal(
+      result.diagnostics.some((d) => d.code === 'CNL_COMPILER_AGENT_PREVIEW_MODE_RESERVED' && d.path === 'doc.agents.profiles.baseline.preview.mode'),
       true,
     );
   });

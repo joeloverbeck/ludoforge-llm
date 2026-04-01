@@ -107,7 +107,7 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
     playerId: input.playerId,
     seatId: input.seatId,
     trustedMoveIndex: input.trustedMoveIndex,
-    tolerateRngDivergence: activeProfile?.preview?.tolerateRngDivergence ?? false,
+    previewMode: activeProfile?.preview.mode ?? 'exactWorld',
     ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
   });
   const metricCache = new Map<string, number>();
@@ -362,4 +362,3 @@ function resolveActiveCardFamily(
       return entry.metadata[id];
   }
 }
-

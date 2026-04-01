@@ -146,6 +146,7 @@ describe('policy-preview', () => {
       playerId: asPlayerId(0),
       seatId: 'us',
       trustedMoveIndex: new Map(),
+      previewMode: 'exactWorld',
       dependencies: {
         classifyPlayableMoveCandidate: () => {
           probeCalls += 1;
@@ -189,6 +190,7 @@ describe('policy-preview', () => {
       playerId: asPlayerId(0),
       seatId: 'us',
       trustedMoveIndex: new Map(),
+      previewMode: 'exactWorld',
       dependencies: {
         classifyPlayableMoveCandidate: () => ({ kind: 'rejected', move: candidate.move, rejection: 'notDecisionComplete' }),
         applyMove: () => {
@@ -214,6 +216,7 @@ describe('policy-preview', () => {
       playerId: asPlayerId(0),
       seatId: 'us',
       trustedMoveIndex: new Map(),
+      previewMode: 'exactWorld',
       dependencies: {
         classifyPlayableMoveCandidate: () => ({
           kind: 'playableComplete',
@@ -237,7 +240,7 @@ describe('policy-preview', () => {
     assert.equal(runtime.getOutcome(candidate), 'random');
   });
 
-  it('returns stochastic outcome when rng diverges and tolerateRngDivergence is true', () => {
+  it('skips preview evaluation entirely when preview mode is disabled', () => {
     const def = createDef();
     const state = initialState(def, 1, 2).state;
     const candidate = createCandidate();
@@ -247,7 +250,33 @@ describe('policy-preview', () => {
       playerId: asPlayerId(0),
       seatId: 'us',
       trustedMoveIndex: new Map(),
-      tolerateRngDivergence: true,
+      previewMode: 'disabled',
+      dependencies: {
+        classifyPlayableMoveCandidate: () => {
+          assert.fail('disabled preview mode should not classify moves');
+        },
+        applyMove: () => {
+          assert.fail('disabled preview mode should not apply moves');
+        },
+        derivePlayerObservation: () => createObservation(false),
+      },
+    });
+
+    assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), { kind: 'unknown', reason: 'failed' });
+    assert.equal(runtime.getOutcome(candidate), 'failed');
+  });
+
+  it('returns stochastic outcome when rng diverges and preview mode is tolerateStochastic', () => {
+    const def = createDef();
+    const state = initialState(def, 1, 2).state;
+    const candidate = createCandidate();
+    const runtime = createPolicyPreviewRuntime({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      seatId: 'us',
+      trustedMoveIndex: new Map(),
+      previewMode: 'tolerateStochastic',
       dependencies: {
         classifyPlayableMoveCandidate: () => ({
           kind: 'playableComplete',
@@ -272,7 +301,7 @@ describe('policy-preview', () => {
     assert.equal(runtime.getOutcome(candidate), 'stochastic');
   });
 
-  it('returns ready outcome when rng does not diverge and tolerateRngDivergence is true', () => {
+  it('returns ready outcome when rng does not diverge and preview mode is tolerateStochastic', () => {
     const def = createDef();
     const state = initialState(def, 1, 2).state;
     const candidate = createCandidate();
@@ -282,7 +311,7 @@ describe('policy-preview', () => {
       playerId: asPlayerId(0),
       seatId: 'us',
       trustedMoveIndex: new Map(),
-      tolerateRngDivergence: true,
+      previewMode: 'tolerateStochastic',
       dependencies: {
         classifyPlayableMoveCandidate: () => ({
           kind: 'playableComplete',
@@ -303,7 +332,7 @@ describe('policy-preview', () => {
     assert.equal(runtime.getOutcome(candidate), 'ready');
   });
 
-  it('returns unknown/random when rng diverges and tolerateRngDivergence is false', () => {
+  it('returns unknown/random when rng diverges and preview mode is exactWorld', () => {
     const def = createDef();
     const state = initialState(def, 1, 2).state;
     const candidate = createCandidate();
@@ -313,7 +342,7 @@ describe('policy-preview', () => {
       playerId: asPlayerId(0),
       seatId: 'us',
       trustedMoveIndex: new Map(),
-      tolerateRngDivergence: false,
+      previewMode: 'exactWorld',
       dependencies: {
         classifyPlayableMoveCandidate: () => ({
           kind: 'playableComplete',
@@ -337,7 +366,7 @@ describe('policy-preview', () => {
     assert.equal(runtime.getOutcome(candidate), 'random');
   });
 
-  it('resolves stochastic trusted indexed preview with tolerateRngDivergence', () => {
+  it('resolves stochastic trusted indexed preview with tolerateStochastic mode', () => {
     const def = createDef();
     const state = initialState(def, 1, 2).state;
     const candidate = createCandidate();
@@ -346,7 +375,7 @@ describe('policy-preview', () => {
       state,
       playerId: asPlayerId(0),
       seatId: 'us',
-      tolerateRngDivergence: true,
+      previewMode: 'tolerateStochastic',
       trustedMoveIndex: new Map([[
         candidate.stableMoveKey,
         createTrustedExecutableMove(candidate.move, state.stateHash, 'templateCompletion'),
@@ -385,7 +414,7 @@ describe('policy-preview', () => {
         playerId: asPlayerId(0),
         seatId: 'us',
         trustedMoveIndex: new Map(),
-        tolerateRngDivergence: true,
+        previewMode: 'tolerateStochastic',
         dependencies: {
           classifyPlayableMoveCandidate: () => ({
             kind: 'playableComplete',
@@ -445,6 +474,7 @@ describe('policy-preview', () => {
       playerId: asPlayerId(0),
       seatId: 'us',
       trustedMoveIndex: new Map(),
+      previewMode: 'exactWorld',
       dependencies: {
         classifyPlayableMoveCandidate: () => ({
           kind: 'playableComplete',
@@ -489,6 +519,7 @@ describe('policy-preview', () => {
       playerId: asPlayerId(1),
       seatId: 'neutral',
       trustedMoveIndex: new Map(),
+      previewMode: 'exactWorld',
       dependencies: {
         classifyPlayableMoveCandidate: () => ({
           kind: 'playableComplete',
@@ -516,6 +547,7 @@ describe('policy-preview', () => {
       playerId: asPlayerId(0),
       seatId: 'us',
       trustedMoveIndex: new Map([[candidate.stableMoveKey, trustedMove]]),
+      previewMode: 'exactWorld',
       dependencies: {
         classifyPlayableMoveCandidate: () => {
           probeCalls += 1;
@@ -556,6 +588,7 @@ describe('policy-preview', () => {
         candidate.stableMoveKey,
         createTrustedExecutableMove(candidate.move, state.stateHash, 'templateCompletion'),
       ]]),
+      previewMode: 'exactWorld',
       dependencies: {
         classifyPlayableMoveCandidate: () => {
           probeCalls += 1;
@@ -594,6 +627,7 @@ describe('policy-preview', () => {
         candidate.stableMoveKey,
         createTrustedExecutableMove(candidate.move, state.stateHash, 'templateCompletion'),
       ]]),
+      previewMode: 'exactWorld',
       dependencies: {
         classifyPlayableMoveCandidate: () => {
           probeCalls += 1;
@@ -639,6 +673,7 @@ describe('policy-preview', () => {
         candidate.stableMoveKey,
         createTrustedExecutableMove(candidate.move, state.stateHash + 1n, 'templateCompletion'),
       ]]),
+      previewMode: 'exactWorld',
       dependencies: {
         classifyPlayableMoveCandidate: () => {
           assert.fail('trusted preview path should not fall back to classification');
@@ -668,6 +703,7 @@ describe('policy-preview', () => {
       playerId: asPlayerId(0),
       seatId: 'us',
       trustedMoveIndex: new Map(),
+      previewMode: 'exactWorld',
       dependencies: {
         classifyPlayableMoveCandidate: () => {
           probeCalls += 1;

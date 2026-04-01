@@ -3859,12 +3859,17 @@
               "preview": {
                 "type": "object",
                 "properties": {
-                  "tolerateRngDivergence": {
-                    "type": "boolean"
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "exactWorld",
+                      "tolerateStochastic",
+                      "disabled"
+                    ]
                   }
                 },
                 "required": [
-                  "tolerateRngDivergence"
+                  "mode"
                 ],
                 "additionalProperties": false
               },
@@ -3909,6 +3914,7 @@
               "fingerprint",
               "params",
               "use",
+              "preview",
               "plan"
             ],
             "additionalProperties": false

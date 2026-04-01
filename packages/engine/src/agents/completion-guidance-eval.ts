@@ -22,12 +22,13 @@ export function scoreCompletionOption(
   parameterValues: Readonly<Record<string, AgentParameterValue>>,
   request: ChoicePendingRequest,
   optionValue: MoveParamValue,
-  scoreTermIds: readonly string[],
+  considerationIds: readonly string[],
   runtime?: GameDefRuntime,
 ): number {
-  if (scoreTermIds.length === 0) {
+  if (considerationIds.length === 0) {
     return 0;
   }
+  const considerations = catalog.library.considerations ?? {};
 
   const evaluation = new PolicyEvaluationContext({
     def,
@@ -44,8 +45,8 @@ export function scoreCompletionOption(
     ...(runtime === undefined ? {} : { runtime }),
   }, []);
 
-  return scoreTermIds.reduce(
-    (total, scoreTermId) => total + evaluation.evaluateScoreTerm(catalog.library.completionScoreTerms, scoreTermId, undefined),
+  return considerationIds.reduce(
+    (total, considerationId) => total + evaluation.evaluateConsideration(considerations, considerationId, undefined),
     0,
   );
 }

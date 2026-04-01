@@ -1,0 +1,7 @@
+interface:
+  display_name: "Implement Ticket"
+  short_description: "Implement repository tickets with reassessment"
+  default_prompt: "Use $implement-ticket to implement a ticket after validating it against the current codebase."
+
+policy:
+  allow_implicit_invocation: true

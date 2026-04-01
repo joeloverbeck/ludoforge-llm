@@ -23,6 +23,7 @@ export interface PolicyDiagnosticsSnapshot {
     readonly candidateFeatures: readonly string[];
     readonly candidateAggregates: readonly string[];
     readonly pruningRules: readonly string[];
+    readonly considerations: readonly string[];
     readonly scoreTerms: readonly string[];
     readonly tieBreakers: readonly string[];
   };
@@ -59,6 +60,7 @@ export function buildPolicyDiagnosticsSnapshot(
         candidateFeatures: [],
         candidateAggregates: [],
         pruningRules: [],
+        considerations: [],
         scoreTerms: [],
         tieBreakers: [],
       },
@@ -89,7 +91,8 @@ export function buildPolicyDiagnosticsSnapshot(
       candidateFeatures: profile.plan.candidateFeatures,
       candidateAggregates: profile.plan.candidateAggregates,
       pruningRules: profile.use.pruningRules,
-      scoreTerms: profile.use.scoreTerms,
+      considerations: profile.use.considerations ?? [],
+      scoreTerms: profile.use.considerations ?? [],
       tieBreakers: profile.use.tieBreakers,
     },
     costTiers,
@@ -181,10 +184,11 @@ function collectCostTiers(
       push(rule.costClass, `pruningRule:${ruleId}`);
     }
   }
-  for (const termId of profile.use.scoreTerms) {
-    const term = catalog.library.scoreTerms[termId];
-    if (term !== undefined) {
-      push(term.costClass, `scoreTerm:${termId}`);
+  const considerations = catalog.library.considerations ?? {};
+  for (const considerationId of profile.use.considerations ?? []) {
+    const consideration = considerations[considerationId];
+    if (consideration !== undefined) {
+      push(consideration.costClass, `consideration:${considerationId}`);
     }
   }
   for (const tieBreakerId of profile.use.tieBreakers) {
@@ -283,14 +287,15 @@ function collectSurfaceRefs(
       walkExpr(rule.when, visitRef);
     }
   }
-  for (const termId of profile.use.scoreTerms) {
-    const term = catalog.library.scoreTerms[termId];
-    if (term !== undefined) {
-      if (term.when !== undefined) {
-        walkExpr(term.when, visitRef);
+  const considerations = catalog.library.considerations ?? {};
+  for (const considerationId of profile.use.considerations ?? []) {
+    const consideration = considerations[considerationId];
+    if (consideration !== undefined) {
+      if (consideration.when !== undefined) {
+        walkExpr(consideration.when, visitRef);
       }
-      walkExpr(term.weight, visitRef);
-      walkExpr(term.value, visitRef);
+      walkExpr(consideration.weight, visitRef);
+      walkExpr(consideration.value, visitRef);
     }
   }
   for (const tieBreakerId of profile.use.tieBreakers) {

@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import {
   AGENT_POLICY_CANDIDATE_INTRINSICS,
-  AGENT_POLICY_COMPLETION_GUIDANCE_FALLBACKS,
   AGENT_POLICY_DECISION_INTRINSICS,
   AGENT_POLICY_OPTION_INTRINSICS,
   AGENT_POLICY_ZONE_AGG_SOURCES,
@@ -892,7 +891,6 @@ const CompiledAgentConsiderationSchema = z
   })
   .strict();
 
-/** @deprecated Use CompiledAgentConsiderationSchema. Removed in ticket 003. */
 const CompiledAgentScoreTermSchema = CompiledAgentConsiderationSchema;
 
 const CompiledAgentTieBreakerSchema = z
@@ -948,7 +946,7 @@ const CompiledAgentProfileSchema = z
       .strict(),
     completionGuidance: z.object({
       enabled: BooleanSchema,
-      fallback: z.enum(AGENT_POLICY_COMPLETION_GUIDANCE_FALLBACKS),
+      fallback: z.enum(['random', 'first']),
     }).strict().optional(),
     preview: z.object({
       tolerateRngDivergence: BooleanSchema,

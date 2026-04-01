@@ -337,14 +337,18 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
       });
     }
 
+    const considerations = catalog.library.considerations ?? {};
+    const moveConsiderationIds = (profile.use.considerations ?? []).filter(
+      (considerationId) => considerations[considerationId]?.scopes?.includes('move') === true,
+    );
     for (const candidate of activeCandidates) {
-      candidate.score = profile.use.scoreTerms.reduce((total, scoreTermId) => (
-        total + evaluation.evaluateScoreTerm(
-          catalog.library.scoreTerms,
-          scoreTermId,
+      candidate.score = moveConsiderationIds.reduce((total, considerationId) => (
+        total + evaluation.evaluateConsideration(
+          considerations,
+          considerationId,
           candidate,
           (contribution) => {
-            candidate.scoreContributions.push({ termId: scoreTermId, contribution });
+            candidate.scoreContributions.push({ termId: considerationId, contribution });
           },
         )
       ), 0);

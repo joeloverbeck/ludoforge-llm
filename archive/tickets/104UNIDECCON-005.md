@@ -1,6 +1,6 @@
 # 104UNIDECCON-005: Implement `compileConsideration()`, remove `compileScoreTerm()`/`compileCompletionScoreTerm()`
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `compile-agents.ts`, `validate-agents.ts`, `compiler-core.ts`
@@ -98,3 +98,10 @@ Wire `considerations` through the compilation pipeline.
 1. `pnpm -F @ludoforge/engine test -- --test-name-pattern compile-considerations` — targeted
 2. `pnpm -F @ludoforge/engine test` — full suite
 3. `pnpm turbo typecheck`
+
+## Outcome
+
+- Completion date: 2026-04-01
+- What changed: replaced split score-term compilation with unified consideration compilation in the agents compiler; added authored/compiled consideration validation and profile lowering; updated move/completion evaluation to consume scoped considerations; added focused consideration tests and updated compiler authoring tests to use the new API.
+- Deviations from original plan: `compiler-core.ts` did not need direct edits; runtime and compatibility surfaces were updated here to keep the migration coherent and preserve existing compiled/test consumers while the authored API moved to `considerations`.
+- Verification results: `pnpm -F @ludoforge/engine typecheck`; `pnpm -F @ludoforge/engine build`; `node --test "dist/test/unit/cnl/compile-considerations.test.js" "dist/test/unit/compile-agents-authoring.test.js"` from `packages/engine`.

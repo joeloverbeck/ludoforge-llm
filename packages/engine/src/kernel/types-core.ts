@@ -48,7 +48,6 @@ import type { ScopedVarEndpointContract, ScopedVarPayloadContract } from './scop
 import type { DecisionKey } from './decision-scope.js';
 import type {
   AgentPolicyCandidateIntrinsic,
-  AgentPolicyCompletionGuidanceFallback,
   AgentPolicyDecisionIntrinsic,
   AgentPolicyOptionIntrinsic,
   AgentPolicyZoneAggSource,
@@ -692,9 +691,9 @@ export interface CompiledAgentLibraryIndex {
   readonly candidateAggregates: Readonly<Record<string, CompiledAgentAggregate>>;
   readonly pruningRules: Readonly<Record<string, CompiledAgentPruningRule>>;
   readonly considerations?: Readonly<Record<string, CompiledAgentConsideration>>;
-  /** @deprecated Use considerations. Removed in ticket 005. */
+  /** @deprecated Use considerations. */
   readonly scoreTerms: Readonly<Record<string, CompiledAgentScoreTerm>>;
-  /** @deprecated Use considerations. Removed in ticket 005. */
+  /** @deprecated Use considerations. */
   readonly completionScoreTerms: Readonly<Record<string, CompiledAgentScoreTerm>>;
   readonly tieBreakers: Readonly<Record<string, CompiledAgentTieBreaker>>;
   readonly strategicConditions: Readonly<Record<string, CompiledStrategicCondition>>;
@@ -702,7 +701,7 @@ export interface CompiledAgentLibraryIndex {
 
 export interface CompletionGuidanceConfig {
   readonly enabled: boolean;
-  readonly fallback: AgentPolicyCompletionGuidanceFallback;
+  readonly fallback: 'random' | 'first';
 }
 
 export interface PreviewToleranceConfig {
@@ -716,20 +715,20 @@ export interface CompiledAgentProfile {
   readonly use: {
     readonly considerations?: readonly string[];
     readonly pruningRules: readonly string[];
-    /** @deprecated Use considerations. Removed in ticket 005. */
+    /** @deprecated Use considerations. */
     readonly scoreTerms: readonly string[];
-    /** @deprecated Use considerations. Removed in ticket 005. */
+    /** @deprecated Use considerations. */
     readonly completionScoreTerms: readonly string[];
     readonly tieBreakers: readonly string[];
   };
-  /** @deprecated Derived from completion-scoped considerations. Removed in ticket 006. */
+  /** @deprecated Derived from completion-scoped considerations. */
   readonly completionGuidance?: CompletionGuidanceConfig;
   readonly preview?: PreviewToleranceConfig;
   readonly plan: {
     readonly stateFeatures: readonly string[];
     readonly candidateFeatures: readonly string[];
     readonly candidateAggregates: readonly string[];
-    readonly considerations?: readonly string[];
+    readonly considerations?: readonly string[] | undefined;
   };
 }
 

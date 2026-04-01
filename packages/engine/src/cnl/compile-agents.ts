@@ -5,7 +5,6 @@ import type { Diagnostic } from '../kernel/diagnostics.js';
 import {
   AGENT_POLICY_PROFILE_USE_BUCKETS,
   AGENT_POLICY_PROFILE_USE_TO_LIBRARY_BUCKET,
-  isAgentPolicyCompletionGuidanceFallback,
 } from '../contracts/index.js';
 import { collectChoiceBindingSpecs } from '../kernel/move-runtime-bindings.js';
 import { inferQueryRuntimeShapes } from '../kernel/query-shape-inference.js';
@@ -18,6 +17,7 @@ import type {
   AgentPolicyValueType,
   CompiledAgentAggregate,
   CompiledAgentCandidateParamDef,
+  CompiledAgentConsideration,
   CompiledAgentCandidateFeature,
   CompiledAgentDependencyRefs,
   CompiledAgentLibraryIndex,
@@ -27,7 +27,6 @@ import type {
   CompiledSurfaceVisibility,
   CompiledAgentProfile,
   CompiledAgentPruningRule,
-  CompiledAgentScoreTerm,
   CompiledAgentStateFeature,
   CompiledAgentTieBreaker,
   CompiledStrategicCondition,
@@ -49,7 +48,8 @@ import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 type ProfileUseKey = keyof CompiledAgentProfile['use'];
 type AggregateOp = 'max' | 'min' | 'count' | 'any' | 'all' | 'rankDense' | 'rankOrdinal';
 type TieBreakerKind = 'higherExpr' | 'lowerExpr' | 'preferredEnumOrder' | 'preferredIdOrder' | 'rng' | 'stableMoveKey';
-type LibraryRefScope = 'stateFeature' | 'candidateFeature' | 'aggregate' | 'rule' | 'scoreTerm' | 'completionScoreTerm' | 'tieBreaker' | 'strategicCondition';
+type ConsiderationScope = 'move' | 'completion';
+type LibraryRefScope = 'stateFeature' | 'candidateFeature' | 'aggregate' | 'rule' | 'consideration' | 'tieBreaker' | 'strategicCondition';
 type LoweredAgentProfile = Omit<CompiledAgentProfile, 'fingerprint'>;
 
 const AGENT_PARAMETER_TYPES: readonly AgentParameterType[] = ['number', 'integer', 'boolean', 'enum', 'idOrder'];
@@ -573,7 +573,7 @@ function lowerProfile(
     hasError = true;
   }
 
-  const use = Object.fromEntries(
+  const loweredUse = Object.fromEntries(
     AGENT_POLICY_PROFILE_USE_BUCKETS.map((key) => [
       key,
       lowerProfileUseIds(
@@ -584,12 +584,17 @@ function lowerProfile(
         diagnostics,
       ),
     ]),
-  ) as CompiledAgentProfile['use'];
-  const completionGuidance = lowerCompletionGuidance(profileId, profileDef, diagnostics);
-  if (completionGuidance === null) {
-    hasError = true;
-  }
-
+  ) as Pick<CompiledAgentProfile['use'], 'considerations' | 'pruningRules' | 'tieBreakers'>;
+  const considerations = loweredUse.considerations ?? [];
+  const use: CompiledAgentProfile['use'] = {
+    ...loweredUse,
+    scoreTerms: considerations.filter(
+      (considerationId) => library.considerations?.[considerationId]?.scopes?.includes('move') === true,
+    ),
+    completionScoreTerms: considerations.filter(
+      (considerationId) => library.considerations?.[considerationId]?.scopes?.includes('completion') === true,
+    ),
+  };
   const preview = lowerPreviewConfig(profileId, profileDef, diagnostics);
 
   const plan = buildProfilePlan(profileId, use, library, diagnostics);
@@ -605,7 +610,6 @@ function lowerProfile(
     ...(resolvedObserverName !== undefined ? { observerName: resolvedObserverName } : {}),
     params: compiledParams,
     use,
-    ...(completionGuidance == null ? {} : { completionGuidance }),
     ...(preview == null ? {} : { preview }),
     plan,
   };
@@ -652,36 +656,6 @@ function lowerProfileUseIds(
   return lowered;
 }
 
-function lowerCompletionGuidance(
-  profileId: string,
-  profileDef: GameSpecAgentProfileDef,
-  diagnostics: Diagnostic[],
-): CompiledAgentProfile['completionGuidance'] | null {
-  const authored = profileDef.completionGuidance;
-  if (authored === undefined) {
-    return undefined;
-  }
-
-  const path = `doc.agents.profiles.${profileId}.completionGuidance`;
-  const enabled = authored.enabled ?? false;
-  const fallback = authored.fallback ?? 'random';
-  if (!isAgentPolicyCompletionGuidanceFallback(fallback)) {
-    diagnostics.push({
-      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
-      path: `${path}.fallback`,
-      severity: 'error',
-      message: `Profile "${profileId}" completionGuidance fallback "${String(authored.fallback)}" is invalid.`,
-      suggestion: 'Use completionGuidance.fallback = "random" or "first".',
-    });
-    return undefined;
-  }
-
-  return {
-    enabled,
-    fallback,
-  };
-}
-
 function lowerPreviewConfig(
   profileId: string,
   profileDef: GameSpecAgentProfileDef,
@@ -723,6 +697,8 @@ function buildProfilePlan(
   const stateSeen = new Set<string>();
   const candidateSeen = new Set<string>();
   const aggregateSeen = new Set<string>();
+  const considerationSeen = new Set<string>();
+  const considerations: string[] = [];
   let hasError = false;
 
   const visitStateFeature = (featureId: string): void => {
@@ -823,13 +799,17 @@ function buildProfilePlan(
     }
     addDependencies(rule.dependencies);
   }
-  for (const scoreTermId of use.scoreTerms) {
-    const scoreTerm = library.scoreTerms[scoreTermId];
-    if (scoreTerm === undefined) {
+  for (const considerationId of use.considerations ?? []) {
+    const consideration = library.considerations?.[considerationId];
+    if (consideration === undefined) {
       hasError = true;
       continue;
     }
-    addDependencies(scoreTerm.dependencies);
+    addDependencies(consideration.dependencies);
+    if (!considerationSeen.has(considerationId)) {
+      considerationSeen.add(considerationId);
+      considerations.push(considerationId);
+    }
   }
   for (const tieBreakerId of use.tieBreakers) {
     const tieBreaker = library.tieBreakers[tieBreakerId];
@@ -848,6 +828,7 @@ function buildProfilePlan(
     stateFeatures,
     candidateFeatures,
     candidateAggregates,
+    considerations,
   };
 }
 
@@ -912,8 +893,9 @@ class AgentLibraryCompiler {
     readonly candidateFeatures: Record<string, CompiledAgentCandidateFeature>;
     readonly candidateAggregates: Record<string, CompiledAgentAggregate>;
     readonly pruningRules: Record<string, CompiledAgentPruningRule>;
-    readonly scoreTerms: Record<string, CompiledAgentScoreTerm>;
-    readonly completionScoreTerms: Record<string, CompiledAgentScoreTerm>;
+    readonly considerations: Record<string, CompiledAgentConsideration>;
+    readonly scoreTerms: Record<string, CompiledAgentConsideration>;
+    readonly completionScoreTerms: Record<string, CompiledAgentConsideration>;
     readonly tieBreakers: Record<string, CompiledAgentTieBreaker>;
     readonly strategicConditions: Record<string, CompiledStrategicCondition>;
   };
@@ -922,8 +904,7 @@ class AgentLibraryCompiler {
   private readonly candidateFeatureStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
   private readonly aggregateStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
   private readonly pruningRuleStatus = new Map<string, 'done' | 'failed'>();
-  private readonly scoreTermStatus = new Map<string, 'done' | 'failed'>();
-  private readonly completionScoreTermStatus = new Map<string, 'done' | 'failed'>();
+  private readonly considerationStatus = new Map<string, 'done' | 'failed'>();
   private readonly tieBreakerStatus = new Map<string, 'done' | 'failed'>();
   private readonly strategicConditionStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
 
@@ -946,6 +927,7 @@ class AgentLibraryCompiler {
       candidateFeatures: {},
       candidateAggregates: {},
       pruningRules: {},
+      considerations: {},
       scoreTerms: {},
       completionScoreTerms: {},
       tieBreakers: {},
@@ -968,11 +950,8 @@ class AgentLibraryCompiler {
     for (const ruleId of Object.keys(this.authoredLibrary.pruningRules ?? {})) {
       this.compilePruningRule(ruleId);
     }
-    for (const scoreTermId of Object.keys(this.authoredLibrary.scoreTerms ?? {})) {
-      this.compileScoreTerm(scoreTermId);
-    }
-    for (const scoreTermId of Object.keys(this.authoredLibrary.completionScoreTerms ?? {})) {
-      this.compileCompletionScoreTerm(scoreTermId);
+    for (const considerationId of Object.keys(this.authoredLibrary.considerations ?? {})) {
+      this.compileConsideration(considerationId);
     }
     for (const tieBreakerId of Object.keys(this.authoredLibrary.tieBreakers ?? {})) {
       this.compileTieBreaker(tieBreakerId);
@@ -1226,99 +1205,35 @@ class AgentLibraryCompiler {
     return compiled;
   }
 
-  private compileScoreTerm(scoreTermId: string): CompiledAgentScoreTerm | null {
-    const status = this.scoreTermStatus.get(scoreTermId);
+  private compileConsideration(considerationId: string): CompiledAgentConsideration | null {
+    const status = this.considerationStatus.get(considerationId);
     if (status === 'done') {
-      return this.compiled.scoreTerms[scoreTermId] ?? null;
+      return this.compiled.considerations[considerationId] ?? null;
     }
     if (status === 'failed') {
       return null;
     }
-    const def = this.authoredLibrary.scoreTerms?.[scoreTermId];
+    const def = this.authoredLibrary.considerations?.[considerationId];
     if (def === undefined) {
-      this.scoreTermStatus.set(scoreTermId, 'failed');
+      this.considerationStatus.set(considerationId, 'failed');
       return null;
     }
-    const context = this.createExprContext('scoreTerm');
-    const when = def.when === undefined
-      ? null
-      : analyzePolicyExpr(def.when, context, this.diagnostics, `doc.agents.library.scoreTerms.${scoreTermId}.when`);
-    const weight = analyzePolicyExpr(def.weight, context, this.diagnostics, `doc.agents.library.scoreTerms.${scoreTermId}.weight`);
-    const value = analyzePolicyExpr(def.value, context, this.diagnostics, `doc.agents.library.scoreTerms.${scoreTermId}.value`);
-    if (weight === null || value === null || (def.when !== undefined && when === null)) {
-      this.scoreTermStatus.set(scoreTermId, 'failed');
-      return null;
-    }
-    if (when !== null && when.valueType !== 'boolean') {
-      this.diagnostics.push({
-        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_TYPE_INVALID,
-        path: `doc.agents.library.scoreTerms.${scoreTermId}.when`,
-        severity: 'error',
-        message: `Score term "${scoreTermId}" when clauses must compile to boolean.`,
-        suggestion: 'Use a boolean policy expression for scoreTerm.when.',
-      });
-      this.scoreTermStatus.set(scoreTermId, 'failed');
-      return null;
-    }
-    if (weight.valueType !== 'number' || value.valueType !== 'number') {
-      this.diagnostics.push({
-        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_TYPE_INVALID,
-        path: `doc.agents.library.scoreTerms.${scoreTermId}`,
-        severity: 'error',
-        message: `Score term "${scoreTermId}" weight and value must both compile to number.`,
-        suggestion: 'Use numeric policy expressions for scoreTerm.weight and scoreTerm.value.',
-      });
-      this.scoreTermStatus.set(scoreTermId, 'failed');
-      return null;
-    }
-    if (def.clamp !== undefined && def.clamp.min !== undefined && def.clamp.max !== undefined && def.clamp.min > def.clamp.max) {
-      this.diagnostics.push({
-        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
-        path: `doc.agents.library.scoreTerms.${scoreTermId}.clamp`,
-        severity: 'error',
-        message: `Score term "${scoreTermId}" clamp min must be less than or equal to max.`,
-        suggestion: 'Swap or correct the clamp bounds so min <= max.',
-      });
-      this.scoreTermStatus.set(scoreTermId, 'failed');
-      return null;
-    }
-    const compiled: CompiledAgentScoreTerm = {
-      scopes: ['move'],
-      costClass: maxCostClass(maxCostClass(weight.costClass, value.costClass), when?.costClass ?? 'state'),
-      ...(def.when === undefined ? {} : { when: when!.expr }),
-      weight: weight.expr,
-      value: value.expr,
-      ...(def.unknownAs === undefined ? {} : { unknownAs: def.unknownAs }),
-      ...(def.clamp === undefined ? {} : { clamp: def.clamp }),
-      dependencies: mergeDependencies([when?.dependencies ?? emptyDependencies(), weight.dependencies, value.dependencies]),
-    };
-    this.compiled.scoreTerms[scoreTermId] = compiled;
-    this.scoreTermStatus.set(scoreTermId, 'done');
-    return compiled;
-  }
 
-  private compileCompletionScoreTerm(scoreTermId: string): CompiledAgentScoreTerm | null {
-    const status = this.completionScoreTermStatus.get(scoreTermId);
-    if (status === 'done') {
-      return this.compiled.completionScoreTerms[scoreTermId] ?? null;
-    }
-    if (status === 'failed') {
+    const path = `doc.agents.library.considerations.${considerationId}`;
+    const scopes = normalizeConsiderationScopes(def.scopes, `${path}.scopes`, this.diagnostics);
+    if (scopes === null) {
+      this.considerationStatus.set(considerationId, 'failed');
       return null;
     }
-    const def = this.authoredLibrary.completionScoreTerms?.[scoreTermId];
-    if (def === undefined) {
-      this.completionScoreTermStatus.set(scoreTermId, 'failed');
-      return null;
-    }
-    const context = this.createExprContext('completionScoreTerm');
-    const path = `doc.agents.library.completionScoreTerms.${scoreTermId}`;
+
+    const context = this.createExprContext('consideration');
     const when = def.when === undefined
       ? null
       : analyzePolicyExpr(def.when, context, this.diagnostics, `${path}.when`);
     const weight = analyzePolicyExpr(def.weight, context, this.diagnostics, `${path}.weight`);
     const value = analyzePolicyExpr(def.value, context, this.diagnostics, `${path}.value`);
     if (weight === null || value === null || (def.when !== undefined && when === null)) {
-      this.completionScoreTermStatus.set(scoreTermId, 'failed');
+      this.considerationStatus.set(considerationId, 'failed');
       return null;
     }
     if (when !== null && when.valueType !== 'boolean') {
@@ -1326,10 +1241,10 @@ class AgentLibraryCompiler {
         code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_TYPE_INVALID,
         path: `${path}.when`,
         severity: 'error',
-        message: `Completion score term "${scoreTermId}" when clauses must compile to boolean.`,
-        suggestion: 'Use a boolean policy expression for completionScoreTerm.when.',
+        message: `Consideration "${considerationId}" when clauses must compile to boolean.`,
+        suggestion: 'Use a boolean policy expression for consideration.when.',
       });
-      this.completionScoreTermStatus.set(scoreTermId, 'failed');
+      this.considerationStatus.set(considerationId, 'failed');
       return null;
     }
     if (weight.valueType !== 'number' || value.valueType !== 'number') {
@@ -1337,10 +1252,10 @@ class AgentLibraryCompiler {
         code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_TYPE_INVALID,
         path,
         severity: 'error',
-        message: `Completion score term "${scoreTermId}" weight and value must both compile to number.`,
-        suggestion: 'Use numeric policy expressions for completionScoreTerm.weight and completionScoreTerm.value.',
+        message: `Consideration "${considerationId}" weight and value must both compile to number.`,
+        suggestion: 'Use numeric policy expressions for consideration.weight and consideration.value.',
       });
-      this.completionScoreTermStatus.set(scoreTermId, 'failed');
+      this.considerationStatus.set(considerationId, 'failed');
       return null;
     }
     if (def.clamp !== undefined && def.clamp.min !== undefined && def.clamp.max !== undefined && def.clamp.min > def.clamp.max) {
@@ -1348,14 +1263,15 @@ class AgentLibraryCompiler {
         code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
         path: `${path}.clamp`,
         severity: 'error',
-        message: `Completion score term "${scoreTermId}" clamp min must be less than or equal to max.`,
+        message: `Consideration "${considerationId}" clamp min must be less than or equal to max.`,
         suggestion: 'Swap or correct the clamp bounds so min <= max.',
       });
-      this.completionScoreTermStatus.set(scoreTermId, 'failed');
+      this.considerationStatus.set(considerationId, 'failed');
       return null;
     }
-    const compiled: CompiledAgentScoreTerm = {
-      scopes: ['completion'],
+
+    const compiled: CompiledAgentConsideration = {
+      scopes,
       costClass: maxCostClass(maxCostClass(weight.costClass, value.costClass), when?.costClass ?? 'state'),
       ...(def.when === undefined ? {} : { when: when!.expr }),
       weight: weight.expr,
@@ -1364,8 +1280,16 @@ class AgentLibraryCompiler {
       ...(def.clamp === undefined ? {} : { clamp: def.clamp }),
       dependencies: mergeDependencies([when?.dependencies ?? emptyDependencies(), weight.dependencies, value.dependencies]),
     };
-    this.compiled.completionScoreTerms[scoreTermId] = compiled;
-    this.completionScoreTermStatus.set(scoreTermId, 'done');
+
+    this.validateConsiderationScopeRefs(considerationId, compiled, path);
+    this.compiled.considerations[considerationId] = compiled;
+    if (compiled.scopes?.includes('move')) {
+      this.compiled.scoreTerms[considerationId] = compiled;
+    }
+    if (compiled.scopes?.includes('completion')) {
+      this.compiled.completionScoreTerms[considerationId] = compiled;
+    }
+    this.considerationStatus.set(considerationId, 'done');
     return compiled;
   }
 
@@ -1505,6 +1429,50 @@ class AgentLibraryCompiler {
     return compiled;
   }
 
+  private validateConsiderationScopeRefs(
+    considerationId: string,
+    consideration: CompiledAgentConsideration,
+    path: string,
+  ): void {
+    const scopes = consideration.scopes ?? [];
+    const refKinds = collectConsiderationRefKinds(consideration);
+    const hasMoveOnlyRefs = refKinds.has('candidate') || refKinds.has('preview');
+    const hasCompletionOnlyRefs = refKinds.has('decision');
+
+    if (scopes.length === 1) {
+      const scope = scopes[0];
+      if (scope === 'move' && hasCompletionOnlyRefs) {
+        this.diagnostics.push({
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_REF_UNKNOWN,
+          path,
+          severity: 'error',
+          message: `Consideration "${considerationId}" is move-scoped but references completion-only refs.`,
+          suggestion: 'Remove decision./option. refs or add the completion scope.',
+        });
+      }
+      if (scope === 'completion' && hasMoveOnlyRefs) {
+        this.diagnostics.push({
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_REF_UNKNOWN,
+          path,
+          severity: 'error',
+          message: `Consideration "${considerationId}" is completion-scoped but references move-only refs.`,
+          suggestion: 'Remove candidate./preview. refs or add the move scope.',
+        });
+      }
+      return;
+    }
+
+    if (scopes.length > 1 && (hasMoveOnlyRefs || hasCompletionOnlyRefs) && !refKinds.has('contextKind')) {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+        path,
+        severity: 'warning',
+        message: `Consideration "${considerationId}" spans move and completion scopes but does not visibly guard context-specific refs with context.kind.`,
+        suggestion: 'Guard move-only and completion-only refs with context.kind in when/value/weight logic.',
+      });
+    }
+  }
+
   private createExprContext(scope: LibraryRefScope): AnalyzePolicyExprContext {
     return {
       parameterDefs: this.parameterDefs,
@@ -1514,10 +1482,6 @@ class AgentLibraryCompiler {
 
   private resolveRef(scope: LibraryRefScope, refPath: string, path: string): ResolvedPolicyRef | null {
     if (refPath.startsWith('feature.')) {
-      if (scope === 'completionScoreTerm') {
-        this.reportUnknownLibraryRef(refPath, path);
-        return null;
-      }
       const featureId = refPath.slice('feature.'.length);
       if (featureId.length === 0) {
         this.reportUnknownLibraryRef(refPath, path);
@@ -1576,10 +1540,6 @@ class AgentLibraryCompiler {
     }
 
     if (refPath.startsWith('aggregate.')) {
-      if (scope === 'completionScoreTerm') {
-        this.reportUnknownLibraryRef(refPath, path);
-        return null;
-      }
       if (scope === 'stateFeature' || scope === 'candidateFeature') {
         this.diagnostics.push({
           code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_REF_UNKNOWN,
@@ -1641,17 +1601,11 @@ class AgentLibraryCompiler {
   }
 
   private resolveRuntimeRef(scope: LibraryRefScope, refPath: string, path: string): ResolvedPolicyRef | null {
-    if (scope === 'completionScoreTerm') {
+    if (scope === 'consideration') {
       const completionResolved = this.resolveCompletionRuntimeRef(refPath);
       if (completionResolved !== null) {
         return completionResolved;
       }
-      const surfaceResolved = this.resolveSurfaceRuntimeRef(refPath, path, false);
-      if (surfaceResolved !== null) {
-        return { type: 'number', costClass: 'state', ref: surfaceResolved.ref };
-      }
-      this.reportUnknownLibraryRef(refPath, path);
-      return null;
     }
     if (refPath === 'seat.self' || refPath === 'seat.active') {
       return {
@@ -2277,6 +2231,95 @@ function isPolicyValueType(value: unknown): value is AgentPolicyValueType {
   return typeof value === 'string' && POLICY_VALUE_TYPES.includes(value as AgentPolicyValueType);
 }
 
+function normalizeConsiderationScopes(
+  value: readonly string[] | undefined,
+  path: string,
+  diagnostics: Diagnostic[],
+): readonly ConsiderationScope[] | null {
+  if (!Array.isArray(value) || value.length === 0) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path,
+      severity: 'error',
+      message: 'Consideration scopes must be a non-empty array.',
+      suggestion: 'Use scopes: ["move"], scopes: ["completion"], or both.',
+    });
+    return null;
+  }
+
+  const normalized: ConsiderationScope[] = [];
+  const seen = new Set<ConsiderationScope>();
+  for (const [index, entry] of value.entries()) {
+    if (entry !== 'move' && entry !== 'completion') {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+        path: `${path}.${index}`,
+        severity: 'error',
+        message: `Unsupported consideration scope "${String(entry)}".`,
+        suggestion: 'Use only "move" and "completion" scopes.',
+      });
+      continue;
+    }
+    if (seen.has(entry)) {
+      continue;
+    }
+    seen.add(entry);
+    normalized.push(entry);
+  }
+
+  return normalized.length === 0 ? null : normalized;
+}
+
+function collectConsiderationRefKinds(
+  consideration: CompiledAgentConsideration,
+): ReadonlySet<'candidate' | 'preview' | 'decision' | 'contextKind'> {
+  const kinds = new Set<'candidate' | 'preview' | 'decision' | 'contextKind'>();
+  const visitRef = (ref: import('../kernel/types.js').CompiledAgentPolicyRef): void => {
+    switch (ref.kind) {
+      case 'candidateIntrinsic':
+      case 'candidateParam':
+      case 'candidateTag':
+      case 'candidateTags':
+        kinds.add('candidate');
+        return;
+      case 'previewSurface':
+        kinds.add('preview');
+        return;
+      case 'decisionIntrinsic':
+      case 'optionIntrinsic':
+        kinds.add('decision');
+        return;
+      case 'contextKind':
+        kinds.add('contextKind');
+        return;
+      default:
+        return;
+    }
+  };
+
+  const visitExpr = (expr: import('../kernel/types.js').AgentPolicyExpr): void => {
+    if (expr.kind === 'ref') {
+      visitRef(expr.ref);
+      return;
+    }
+    if (expr.kind === 'op') {
+      for (const arg of expr.args) {
+        visitExpr(arg);
+      }
+      return;
+    }
+    if ((expr.kind === 'zoneProp' || expr.kind === 'zoneTokenAgg') && typeof expr.zone !== 'string') {
+      visitExpr(expr.zone);
+    }
+  };
+
+  if (consideration.when !== undefined) {
+    visitExpr(consideration.when);
+  }
+  visitExpr(consideration.weight);
+  visitExpr(consideration.value);
+  return kinds;
+}
 
 function diagnosticsContainProfileUseErrors(profileId: string, diagnostics: readonly Diagnostic[]): boolean {
   return diagnostics.some(

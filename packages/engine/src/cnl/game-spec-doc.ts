@@ -643,9 +643,9 @@ export interface GameSpecAgentLibrary {
   readonly candidateAggregates?: Readonly<Record<string, GameSpecCandidateAggregateDef>>;
   readonly pruningRules?: Readonly<Record<string, GameSpecPruningRuleDef>>;
   readonly considerations?: Readonly<Record<string, GameSpecConsiderationDef>>;
-  /** @deprecated Use considerations. Removed in ticket 005. */
+  /** @deprecated Use considerations. */
   readonly scoreTerms?: Readonly<Record<string, GameSpecScoreTermDef>>;
-  /** @deprecated Use considerations. Removed in ticket 005. */
+  /** @deprecated Use considerations. */
   readonly completionScoreTerms?: Readonly<Record<string, GameSpecScoreTermDef>>;
   readonly tieBreakers?: Readonly<Record<string, GameSpecTieBreakerDef>>;
   readonly strategicConditions?: Readonly<Record<string, GameSpecStrategicConditionDef>>;
@@ -654,9 +654,9 @@ export interface GameSpecAgentLibrary {
 export interface GameSpecAgentProfileUse {
   readonly considerations?: readonly string[];
   readonly pruningRules?: readonly string[];
-  /** @deprecated Use considerations. Removed in ticket 005. */
+  /** @deprecated Use considerations. */
   readonly scoreTerms?: readonly string[];
-  /** @deprecated Use considerations. Removed in ticket 005. */
+  /** @deprecated Use considerations. */
   readonly completionScoreTerms?: readonly string[];
   readonly tieBreakers?: readonly string[];
 }
@@ -665,6 +665,7 @@ export interface GameSpecAgentProfileDef {
   readonly observer?: string;
   readonly params?: Readonly<Record<string, unknown>>;
   readonly use: GameSpecAgentProfileUse;
+  /** @deprecated Derived from completion-scoped considerations. */
   readonly completionGuidance?: {
     readonly enabled?: boolean;
     readonly fallback?: 'random' | 'first';

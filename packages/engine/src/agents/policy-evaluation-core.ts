@@ -12,9 +12,9 @@ import type {
   AgentPolicyTokenFilter,
   AgentPolicyZoneFilter,
   ChoicePendingRequest,
+  CompiledAgentConsideration,
   CompiledAgentPolicyRef,
   CompiledSurfaceRef,
-  CompiledAgentScoreTerm,
   GameDef,
   GameState,
   MoveParamValue,
@@ -337,39 +337,39 @@ export class PolicyEvaluationContext {
     return value;
   }
 
-  evaluateScoreTerm(
-    scoreTerms: Readonly<Record<string, CompiledAgentScoreTerm>>,
-    scoreTermId: string,
+  evaluateConsideration(
+    considerations: Readonly<Record<string, CompiledAgentConsideration>>,
+    considerationId: string,
     candidate: PolicyEvaluationCandidate | undefined,
     onContribution?: (contribution: number) => void,
   ): number {
-    const scoreTerm = scoreTerms[scoreTermId];
-    if (scoreTerm === undefined) {
-      throw this.runtimeError('RUNTIME_EVALUATION_ERROR', `Unknown score term "${scoreTermId}".`, { scoreTermId });
+    const consideration = considerations[considerationId];
+    if (consideration === undefined) {
+      throw this.runtimeError('RUNTIME_EVALUATION_ERROR', `Unknown consideration "${considerationId}".`, { considerationId });
     }
 
-    if (scoreTerm.when !== undefined) {
-      const when = this.evaluateExpr(scoreTerm.when, candidate);
+    if (consideration.when !== undefined) {
+      const when = this.evaluateExpr(consideration.when, candidate);
       if (when !== true) {
         return 0;
       }
     }
 
-    const weight = this.evaluateExpr(scoreTerm.weight, candidate);
-    const value = this.evaluateExpr(scoreTerm.value, candidate);
+    const weight = this.evaluateExpr(consideration.weight, candidate);
+    const value = this.evaluateExpr(consideration.value, candidate);
     if (typeof weight !== 'number' || typeof value !== 'number') {
-      const contribution = scoreTerm.unknownAs ?? 0;
+      const contribution = consideration.unknownAs ?? 0;
       onContribution?.(contribution);
       return contribution;
     }
 
     let contribution = weight * value;
-    if (scoreTerm.clamp !== undefined) {
-      if (scoreTerm.clamp.min !== undefined) {
-        contribution = Math.max(scoreTerm.clamp.min, contribution);
+    if (consideration.clamp !== undefined) {
+      if (consideration.clamp.min !== undefined) {
+        contribution = Math.max(consideration.clamp.min, contribution);
       }
-      if (scoreTerm.clamp.max !== undefined) {
-        contribution = Math.min(scoreTerm.clamp.max, contribution);
+      if (consideration.clamp.max !== undefined) {
+        contribution = Math.min(consideration.clamp.max, contribution);
       }
     }
     onContribution?.(contribution);

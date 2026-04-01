@@ -86,8 +86,7 @@ describe('resolveSectionsFromBlock', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -108,8 +107,7 @@ describe('resolveSectionsFromBlock', () => {
           params: {},
           use: {
             pruningRules: [],
-            scoreTerms: [],
-            completionScoreTerms: [],
+            considerations: [],
             tieBreakers: ['stableMoveKey'],
           },
         },

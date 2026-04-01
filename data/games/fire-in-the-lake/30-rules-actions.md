@@ -156,8 +156,8 @@ turnOrder:
 # - Canonical "$..." identifiers are still required on binder declaration/contract surfaces (for example effect/query bind fields).
 
 actions:
-  - { id: pass, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: event, actor: active, executor: 'actor', phase: [main], capabilities: [cardEvent], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: pass, tags: [pass], actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: event, tags: [event-play], actor: active, executor: 'actor', phase: [main], capabilities: [cardEvent], params: [], pre: null, cost: [], effects: [], limits: [] }
   - id: coupVictoryCheck
     actor: active
     executor: 'actor'
@@ -1175,26 +1175,26 @@ actions:
                       from: leader:none
                       to: played:none
     limits: []
-  - { id: train, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: patrol, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: sweep, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: assault, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: rally, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: march, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: attack, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: terror, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: advise, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: airLift, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: airStrike, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: govern, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: transport, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: raid, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: infiltrate, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: bombard, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: ambushNva, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: tax, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: subvert, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: ambushVc, actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: train, tags: [train, coin-operation, placement], actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: patrol, tags: [patrol, coin-operation, movement], actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: sweep, tags: [sweep, coin-operation, combat], actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: assault, tags: [assault, coin-operation, combat], actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: rally, tags: [rally, insurgent-operation, placement], actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: march, tags: [march, insurgent-operation, movement], actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: attack, tags: [attack, insurgent-operation, combat], actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: terror, tags: [terror, insurgent-operation, destabilize], actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: advise, tags: [advise, coin-operation, support], actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: airLift, tags: [air-lift, coin-special-activity], actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: airStrike, tags: [air-strike, coin-special-activity], actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: govern, tags: [govern, coin-operation, governance], actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: transport, tags: [transport, coin-special-activity], actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: raid, tags: [raid, insurgent-special-activity], actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: infiltrate, tags: [infiltrate, insurgent-special-activity], actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: bombard, tags: [bombard, coin-special-activity], actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: ambushNva, tags: [ambush-nva, insurgent-special-activity], actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: tax, tags: [tax, coin-operation, economic], actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: subvert, tags: [subvert, insurgent-special-activity], actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - { id: ambushVc, tags: [ambush-vc, insurgent-special-activity], actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
   - id: nvaTransferResources
     actor: active
     executor: 'actor'

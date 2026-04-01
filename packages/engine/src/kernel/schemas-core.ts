@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import {
   AGENT_POLICY_CANDIDATE_INTRINSICS,
-  AGENT_POLICY_COMPLETION_GUIDANCE_FALLBACKS,
   AGENT_POLICY_DECISION_INTRINSICS,
   AGENT_POLICY_OPTION_INTRINSICS,
   AGENT_POLICY_ZONE_AGG_SOURCES,
@@ -196,6 +195,13 @@ export const TurnStructureSchema = z
   })
   .strict();
 
+const CompiledActionTagIndexSchema = z
+  .object({
+    byAction: z.record(StringSchema, z.array(StringSchema)),
+    byTag: z.record(StringSchema, z.array(StringSchema)),
+  })
+  .strict();
+
 export const ActionDefSchema = z
   .object({
     id: StringSchema,
@@ -203,6 +209,7 @@ export const ActionDefSchema = z
     executor: ActionExecutorSelSchema,
     phase: z.array(StringSchema).min(1),
     capabilities: z.array(StringSchema.min(1)).optional(),
+    tags: z.array(StringSchema).optional(),
     params: z.array(ParamDefSchema),
     pre: ConditionASTSchema.nullable(),
     cost: z.array(EffectASTSchema),
@@ -295,6 +302,43 @@ export const CompiledSurfaceCatalogSchema = z
     activeCardTag: CompiledSurfaceVisibilitySchema,
     activeCardMetadata: CompiledSurfaceVisibilitySchema,
     activeCardAnnotation: CompiledSurfaceVisibilitySchema,
+  })
+  .strict();
+
+const ZoneObserverVisibilityClassSchema = z.union([
+  z.literal('public'),
+  z.literal('owner'),
+  z.literal('hidden'),
+]);
+
+const CompiledZoneVisibilityEntrySchema = z
+  .object({
+    tokens: ZoneObserverVisibilityClassSchema,
+    order: ZoneObserverVisibilityClassSchema,
+  })
+  .strict();
+
+const CompiledZoneVisibilityCatalogSchema = z
+  .object({
+    entries: z.record(StringSchema, CompiledZoneVisibilityEntrySchema),
+    defaultEntry: CompiledZoneVisibilityEntrySchema.optional(),
+  })
+  .strict();
+
+export const CompiledObserverProfileSchema = z
+  .object({
+    fingerprint: StringSchema,
+    surfaces: CompiledSurfaceCatalogSchema,
+    zones: CompiledZoneVisibilityCatalogSchema.optional(),
+  })
+  .strict();
+
+export const CompiledObserverCatalogSchema = z
+  .object({
+    schemaVersion: z.literal(1),
+    catalogFingerprint: StringSchema,
+    observers: z.record(StringSchema, CompiledObserverProfileSchema),
+    defaultObserverName: StringSchema,
   })
   .strict();
 
@@ -654,6 +698,16 @@ const CompiledAgentPolicyRefSchema = z.union([
     conditionId: StringSchema,
     field: z.union([z.literal('satisfied'), z.literal('proximity')]),
   }).strict(),
+  z.object({
+    kind: z.literal('candidateTag'),
+    tagName: StringSchema,
+  }).strict(),
+  z.object({
+    kind: z.literal('candidateTags'),
+  }).strict(),
+  z.object({
+    kind: z.literal('contextKind'),
+  }).strict(),
 ]);
 
 const AgentPolicyTokenFilterSchema = z.object({
@@ -824,8 +878,9 @@ const CompiledAgentPruningRuleSchema = z
   })
   .strict();
 
-const CompiledAgentScoreTermSchema = z
+const CompiledAgentConsiderationSchema = z
   .object({
+    scopes: z.array(z.union([z.literal('move'), z.literal('completion')])).min(1).optional(),
     costClass: AgentPolicyCostClassSchema,
     when: AgentPolicyExprSchema.optional(),
     weight: AgentPolicyExprSchema,
@@ -865,8 +920,7 @@ const CompiledAgentLibraryIndexSchema = z
     candidateFeatures: z.record(StringSchema, CompiledAgentCandidateFeatureSchema),
     candidateAggregates: z.record(StringSchema, CompiledAgentAggregateSchema),
     pruningRules: z.record(StringSchema, CompiledAgentPruningRuleSchema),
-    scoreTerms: z.record(StringSchema, CompiledAgentScoreTermSchema),
-    completionScoreTerms: z.record(StringSchema, CompiledAgentScoreTermSchema),
+    considerations: z.record(StringSchema, CompiledAgentConsiderationSchema),
     tieBreakers: z.record(StringSchema, CompiledAgentTieBreakerSchema),
     strategicConditions: z.record(StringSchema, CompiledStrategicConditionSchema),
   })
@@ -875,27 +929,26 @@ const CompiledAgentLibraryIndexSchema = z
 const CompiledAgentProfileSchema = z
   .object({
     fingerprint: StringSchema,
+    observerName: StringSchema.optional(),
     params: z.record(StringSchema, AgentParameterValueSchema),
     use: z
       .object({
+        considerations: z.array(StringSchema),
         pruningRules: z.array(StringSchema),
-        scoreTerms: z.array(StringSchema),
-        completionScoreTerms: z.array(StringSchema),
         tieBreakers: z.array(StringSchema),
       })
       .strict(),
-    completionGuidance: z.object({
-      enabled: BooleanSchema,
-      fallback: z.enum(AGENT_POLICY_COMPLETION_GUIDANCE_FALLBACKS),
-    }).strict().optional(),
-    preview: z.object({
-      tolerateRngDivergence: BooleanSchema,
-    }).strict().optional(),
+    preview: z
+      .object({
+        mode: z.enum(['exactWorld', 'tolerateStochastic', 'disabled']),
+      })
+      .strict(),
     plan: z
       .object({
         stateFeatures: z.array(StringSchema),
         candidateFeatures: z.array(StringSchema),
         candidateAggregates: z.array(StringSchema),
+        considerations: z.array(StringSchema),
       })
       .strict(),
   })
@@ -976,8 +1029,10 @@ export const GameDefSchema = z
     turnOrder: TurnOrderSchema.optional(),
     actionPipelines: z.array(ActionPipelineSchema).optional(),
     derivedMetrics: z.array(DerivedMetricDefSchema).optional(),
+    observers: CompiledObserverCatalogSchema.optional(),
     agents: AgentPolicyCatalogSchema.optional(),
     actions: z.array(ActionDefSchema),
+    actionTagIndex: CompiledActionTagIndexSchema.optional(),
     triggers: z.array(TriggerDefSchema),
     terminal: TerminalEvaluationDefSchema,
     eventDecks: z.array(EventDeckSchema).optional(),
@@ -1367,6 +1422,7 @@ const PolicyTieBreakStepTraceSchema = z
 const PolicyPreviewOutcomeBreakdownTraceSchema = z
   .object({
     ready: NumberSchema,
+    stochastic: NumberSchema,
     unknownRandom: NumberSchema,
     unknownHidden: NumberSchema,
     unknownUnresolved: NumberSchema,
@@ -1388,6 +1444,7 @@ const PolicyCompletionStatisticsSchema = z
 
 const PolicyPreviewUsageTraceSchema = z
   .object({
+    mode: z.enum(['exactWorld', 'tolerateStochastic', 'disabled']),
     evaluatedCandidateCount: NumberSchema,
     refIds: z.array(StringSchema),
     unknownRefs: z.array(PolicyPreviewUnknownRefTraceSchema),

@@ -22,6 +22,14 @@ const phaseId = asPhaseId('main');
 const literal = (value: AgentPolicyLiteral): AgentPolicyExpr => ({ kind: 'literal', value });
 const refExpr = (ref: CompiledAgentPolicyRef): AgentPolicyExpr => ({ kind: 'ref', ref });
 
+function moveConsiderations(
+  definitions: Record<string, Omit<AgentPolicyCatalog['library']['considerations'][string], 'scopes'>>,
+): AgentPolicyCatalog['library']['considerations'] {
+  return Object.fromEntries(
+    Object.entries(definitions).map(([id, definition]) => [id, { scopes: ['move'], ...definition }]),
+  );
+}
+
 function createCatalog(): AgentPolicyCatalog {
   return {
     schemaVersion: 2,
@@ -79,15 +87,14 @@ function createCatalog(): AgentPolicyCatalog {
       },
       candidateAggregates: {},
       pruningRules: {},
-      scoreTerms: {
+      considerations: moveConsiderations({
         preferProjectedMargin: {
           costClass: 'preview',
           weight: literal(1),
           value: refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'projectedMargin' }),
           dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['projectedMargin'], aggregates: [], strategicConditions: [] },
         },
-      },
-      completionScoreTerms: {},
+      }),
       tieBreakers: {
         stableMoveKey: {
           kind: 'stableMoveKey',
@@ -101,16 +108,17 @@ function createCatalog(): AgentPolicyCatalog {
       baseline: {
         fingerprint: 'baseline',
         params: {},
+        preview: { mode: 'exactWorld' },
         use: {
           pruningRules: [],
-          scoreTerms: ['preferProjectedMargin'],
-          completionScoreTerms: [],
+          considerations: ['preferProjectedMargin'],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
           stateFeatures: [],
           candidateFeatures: ['projectedMargin'],
           candidateAggregates: [],
+          considerations: ['preferProjectedMargin'],
         },
       },
     },

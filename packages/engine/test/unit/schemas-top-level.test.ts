@@ -176,8 +176,7 @@ function buildGameDefWithAgentExpr(featureId: string, expr: Record<string, unkno
         },
         candidateAggregates: {},
         pruningRules: {},
-        scoreTerms: {},
-        completionScoreTerms: {},
+        considerations: {},
         tieBreakers: {},
         strategicConditions: {},
       },
@@ -185,16 +184,17 @@ function buildGameDefWithAgentExpr(featureId: string, expr: Record<string, unkno
         baseline: {
           fingerprint: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
           params: {},
+          preview: { mode: 'exactWorld' },
           use: {
             pruningRules: [],
-            scoreTerms: [],
-            completionScoreTerms: [],
+            considerations: [],
             tieBreakers: [],
           },
           plan: {
             stateFeatures: [],
             candidateFeatures: [featureId],
             candidateAggregates: [],
+            considerations: [],
           },
         },
       },
@@ -348,9 +348,9 @@ describe('top-level runtime schemas', () => {
           candidateFeatures: {},
           candidateAggregates: {},
           pruningRules: {},
-          scoreTerms: {},
-          completionScoreTerms: {
+          considerations: {
             preferNamedOption: {
+              scopes: ['completion'],
               costClass: 'state',
               when: {
                 kind: 'op',
@@ -386,7 +386,19 @@ describe('top-level runtime schemas', () => {
               },
             },
           },
-          tieBreakers: {},
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+              costClass: 'candidate',
+              dependencies: {
+                parameters: [],
+                stateFeatures: [],
+                candidateFeatures: [],
+                aggregates: [],
+                strategicConditions: [],
+              },
+            },
+          },
           strategicConditions: {},
         },
         profiles: {
@@ -395,20 +407,17 @@ describe('top-level runtime schemas', () => {
             params: {
               passFloor: 0.5,
             },
+            preview: { mode: 'exactWorld' },
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: ['preferNamedOption'],
+              considerations: ['preferNamedOption'],
               tieBreakers: ['stableMoveKey'],
-            },
-            completionGuidance: {
-              enabled: true,
-              fallback: 'first',
             },
             plan: {
               stateFeatures: [],
               candidateFeatures: [],
               candidateAggregates: [],
+              considerations: ['preferNamedOption'],
             },
           },
         },
@@ -481,8 +490,7 @@ describe('top-level runtime schemas', () => {
           },
           candidateAggregates: {},
           pruningRules: {},
-          scoreTerms: {},
-          completionScoreTerms: {},
+          considerations: {},
           tieBreakers: {},
           strategicConditions: {},
         },
@@ -490,16 +498,17 @@ describe('top-level runtime schemas', () => {
           baseline: {
             fingerprint: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
             params: {},
+            preview: { mode: 'exactWorld' },
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: [],
             },
             plan: {
               stateFeatures: [],
               candidateFeatures: [],
               candidateAggregates: [],
+              considerations: [],
             },
           },
         },
@@ -575,8 +584,7 @@ describe('top-level runtime schemas', () => {
           },
           candidateAggregates: {},
           pruningRules: {},
-          scoreTerms: {},
-          completionScoreTerms: {},
+          considerations: {},
           tieBreakers: {},
           strategicConditions: {},
         },
@@ -584,16 +592,17 @@ describe('top-level runtime schemas', () => {
           baseline: {
             fingerprint: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
             params: {},
+            preview: { mode: 'exactWorld' },
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: [],
             },
             plan: {
               stateFeatures: [],
               candidateFeatures: [],
               candidateAggregates: [],
+              considerations: [],
             },
           },
         },
@@ -670,8 +679,7 @@ describe('top-level runtime schemas', () => {
           },
           candidateAggregates: {},
           pruningRules: {},
-          scoreTerms: {},
-          completionScoreTerms: {},
+          considerations: {},
           tieBreakers: {},
           strategicConditions: {},
         },
@@ -679,16 +687,17 @@ describe('top-level runtime schemas', () => {
           baseline: {
             fingerprint: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
             params: {},
+            preview: { mode: 'exactWorld' },
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: [],
             },
             plan: {
               stateFeatures: [],
               candidateFeatures: ['frontierPopulation'],
               candidateAggregates: [],
+              considerations: [],
             },
           },
         },
@@ -846,8 +855,7 @@ describe('top-level runtime schemas', () => {
           candidateFeatures: {},
           candidateAggregates: {},
           pruningRules: {},
-          scoreTerms: {},
-          completionScoreTerms: {},
+          considerations: {},
           tieBreakers: {},
           strategicConditions: {},
         },
@@ -902,18 +910,17 @@ describe('top-level runtime schemas', () => {
           candidateFeatures: {},
           candidateAggregates: {},
           pruningRules: {},
-          scoreTerms: {},
-          completionScoreTerms: {},
+          considerations: {},
           tieBreakers: {},
           strategicConditions: {},
         },
         profiles: {
           baseline: {
             params: {},
+            preview: { mode: 'exactWorld' },
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
             plan: {

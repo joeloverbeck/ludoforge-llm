@@ -29,12 +29,11 @@ export function buildCompletionChooseCallback(
   input: BuildCompletionChooseCallbackInput,
 ): ((request: ChoicePendingRequest) => MoveParamValue | undefined) | undefined {
   const { profile } = input;
-  if (profile.completionGuidance?.enabled !== true) {
-    return undefined;
-  }
-
-  const scoreTermIds = profile.use.completionScoreTerms;
-  if (scoreTermIds.length === 0) {
+  const considerations = input.catalog.library.considerations ?? {};
+  const completionConsiderationIds = (profile.use.considerations ?? []).filter(
+    (considerationId) => considerations[considerationId]?.scopes?.includes('completion') === true,
+  );
+  if (completionConsiderationIds.length === 0) {
     return undefined;
   }
 
@@ -43,7 +42,7 @@ export function buildCompletionChooseCallback(
       const selectableValues = selectUniqueChoiceOptionValuesByLegalityPrecedence(request);
       const optionCount = selectableValues.length;
       if (optionCount === 0) {
-        return profile.completionGuidance?.fallback === 'first' ? [] : undefined;
+        return undefined;
       }
 
       const min = request.min ?? 0;
@@ -65,7 +64,7 @@ export function buildCompletionChooseCallback(
           profile.params,
           request,
           value,
-          scoreTermIds,
+          completionConsiderationIds,
           input.runtime,
         ),
       }));
@@ -88,9 +87,7 @@ export function buildCompletionChooseCallback(
         return [...selected, ...supplement];
       }
 
-      return profile.completionGuidance?.fallback === 'first'
-        ? rankedValues.slice(0, min).map((entry) => entry.value as MoveParamScalar)
-        : undefined;
+      return undefined;
     }
 
     const selectableOptions = selectChoiceOptionsByLegalityPrecedence(request);
@@ -110,7 +107,7 @@ export function buildCompletionChooseCallback(
         profile.params,
         request,
         option.value,
-        scoreTermIds,
+        completionConsiderationIds,
         input.runtime,
       );
       if (score > bestScore) {
@@ -122,8 +119,6 @@ export function buildCompletionChooseCallback(
     if (bestScore > 0) {
       return bestValue;
     }
-    return profile.completionGuidance?.fallback === 'first'
-      ? selectableOptions[0]?.value
-      : undefined;
+    return undefined;
   };
 }

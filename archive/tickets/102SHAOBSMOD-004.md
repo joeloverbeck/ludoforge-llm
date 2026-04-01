@@ -1,10 +1,10 @@
 # 102SHAOBSMOD-004: Create observer compilation (`compile-observers.ts`)
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — new `compile-observers.ts`
-**Deps**: `tickets/102SHAOBSMOD-003.md`, `specs/102-shared-observer-model.md`
+**Deps**: `archive/tickets/102SHAOBSMOD-003.md`, `specs/102-shared-observer-model.md`
 
 ## Problem
 
@@ -105,3 +105,23 @@ If `lowerSurfaceVisibilityEntry` is not already exported, export it so `compile-
 1. `pnpm -F @ludoforge/engine test -- --test-name-pattern compile-observers` — targeted tests
 2. `pnpm -F @ludoforge/engine test` — full engine test suite
 3. `pnpm turbo typecheck` — type correctness
+
+## Outcome
+
+**Completion date**: 2026-04-01
+
+**What changed**:
+- Created `packages/engine/src/cnl/compile-observers.ts` with `lowerObservers()` entry point
+- Exported `lowerSurfaceVisibilityEntry` and `lowerSurfaceVisibilityMap` from `compile-agents.ts`
+- Created `packages/engine/test/unit/cnl/compile-observers.test.ts` with 19 tests
+
+**Deviations from plan**:
+- `CompiledObserverCatalog` and `CompiledObserverProfile` types defined locally in `compile-observers.ts` (not in `types-core.ts`) since ticket 005 owns that migration. Exported for downstream use.
+- Used a dedicated `fingerprintObserverIr` function with `observer-ir-v1` prefix instead of reusing `fingerprintPolicyIr` to maintain namespace separation.
+- Did not export `normalizeSurfaceVisibilityClass` — not needed; observer shorthand normalization handled by a local `normalizeToSurfaceVisibilityDef` helper.
+
+**Verification**:
+- `pnpm -F @ludoforge/engine build`: pass
+- `pnpm turbo typecheck`: pass
+- `pnpm turbo lint`: pass (0 warnings)
+- `pnpm -F @ludoforge/engine test`: 709 pass, 0 fail (19 new tests)

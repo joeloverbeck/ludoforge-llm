@@ -1,0 +1,7 @@
+interface:
+  display_name: "Skill Audit"
+  short_description: "Audit a skill against real session evidence"
+  default_prompt: "Use $skill-audit to review a skill against the current session and report issues, improvements, and features."
+
+policy:
+  allow_implicit_invocation: true

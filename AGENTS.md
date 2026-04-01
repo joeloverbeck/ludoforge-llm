@@ -11,85 +11,51 @@
 - Concurrent Session Awareness: If the worktree already contains unrelated edits or build failures, assume another session or user may be active. Do not overwrite or "clean up" those changes. Isolate your diff, call out the unrelated state explicitly, and distinguish repo-preexisting failures from failures caused by your change.
 - Ticket Fidelity: Never silently skip or rationalize away explicit ticket deliverables. If a ticket says to touch a file or produce an artifact, do it. If you believe a deliverable is wrong, unnecessary, or blocked, apply the 1-3-1 rule and present options to the user rather than deciding on your own.
 
-## Project Structure & Module Organization
-This repository contains both implementation code and design artifacts.
-- `packages/engine/src/`: TypeScript engine modules (`kernel`, `cnl`, `agents`, `sim`, `cli`).
-- `packages/engine/schemas/`: JSON schema artifacts (`GameDef`, `Trace`, `EvalReport`).
-- `packages/engine/test/`: `unit`, `integration`, `e2e`, plus `fixtures`, `helpers`, `memory`, and `performance`.
-- `packages/runner/`: Vite + React runner app, including UI, bridge, and worker modules.
-- `specs/`: canonical numbered implementation specs.
-- `tickets/`: active implementation tickets.
-- `archive/`: completed or retired `tickets`, `specs`, `brainstorming`, and reports.
-- `docs/`, `brainstorming/`, `reports/`, `README.md`, `CLAUDE.md`: design context and constraints.
-
 ## Build, Test, and Development Commands
-Primary workflow commands:
-- `pnpm turbo build`: build all workspace packages in dependency order.
-- `pnpm turbo test`: run workspace tests with build preconditions (Turbo may return cached results when inputs are unchanged).
-- `pnpm turbo lint`: run lint tasks across packages.
-- `pnpm turbo typecheck`: run type checks across packages.
-- `pnpm turbo schema:artifacts`: regenerate/check engine schema artifacts.
-- `pnpm -F @ludoforge/engine test`: run engine unit + integration tests.
-- `pnpm -F @ludoforge/engine test:e2e`: run engine e2e tests.
-- `pnpm -F @ludoforge/engine test:all`: run full engine suite (unit + integration + e2e).
-- `pnpm -F @ludoforge/runner dev`: start runner Vite dev server.
-- `pnpm -F @ludoforge/runner test`: run runner tests (Vitest).
-- `pnpm -F @ludoforge/runner lint`: run runner lint checks.
-- `pnpm -F @ludoforge/runner typecheck`: run runner TypeScript checks.
 
-Important command-shape rule:
-- This repo does not use Jest for engine tests; it uses Node's test runner (`node --test`).
-- Do not pass Jest-only flags such as `--testPathPattern` / `--testPathPatterns` to `test:unit`.
-- For focused engine runs, execute a concrete test file path (for example `node --test packages/engine/dist/test/unit/<file>.test.js`) after `pnpm turbo build`.
+```bash
+# Canonical root workflow (Turborepo-ordered)
+pnpm turbo build
+pnpm turbo test
+pnpm turbo lint
+pnpm turbo typecheck
+pnpm turbo schema:artifacts
 
-Useful repo-navigation commands:
+# Package-filtered checks
+pnpm -F @ludoforge/engine test        # engine unit + integration
+pnpm -F @ludoforge/engine test:e2e    # engine e2e
+pnpm -F @ludoforge/engine test:all    # full engine suite
+pnpm -F @ludoforge/runner dev         # runner Vite dev server
+pnpm -F @ludoforge/runner test        # runner tests (Vitest)
+```
+
+**Important**: Engine tests use Node's test runner (`node --test`), NOT Jest. Do not pass Jest-only flags like `--testPathPattern`. For focused engine runs, execute a concrete test file path after `pnpm turbo build`.
+
+## Repo Navigation (Codex tips)
+
 - `rg --files`: list tracked files quickly.
 - `rg "Spec [0-9]+" specs/`: find spec references.
 - `git log --oneline`: review recent commit style.
 
-## Coding Style & Naming Conventions
-For documentation updates:
-- Use concise Markdown with clear headings and short sections.
-- Keep spec filenames numeric and ordered (example: `specs/08b-game-spec-compiler.md`).
-- Preserve deterministic terminology (`GameDef`, `GameSpecDoc`, `GameTrace`) exactly.
-- For Fire in the Lake event authoring guidance, use `docs/fitl-event-authoring-cookbook.md`; treat `archive/specs/29-fitl-event-card-encoding.md` as historical implementation tracking, not the living authoring guide.
+## Reference Docs
 
-For TypeScript code:
-- strict TypeScript, immutable state updates, side-effect-free kernel logic.
-- prefer feature/domain-oriented modules over broad utility dumps.
-- keep schema/type changes synchronized across `packages/engine/src/kernel`, `packages/engine/schemas`, and tests.
+For detailed information, read these on demand:
+- **Architecture** (module map, rendering pipelines, design constraints, kernel DSL): `docs/architecture.md`
+- **Project structure** (directory tree): `docs/project-structure.md`
+- **Testing guide** (test types, FITL/Texas Hold'em conventions): `docs/testing-guide.md`
+- **FITL event authoring**: `docs/fitl-event-authoring-cookbook.md`
+- **Archival workflow**: `docs/archival-workflow.md`
 
-## Testing Guidelines
-For docs/spec/ticket changes:
-- verify cross-spec references and dependency links.
-- ensure roadmap and individual specs do not conflict.
+## Coding Style
 
-For code changes:
-- place tests in the relevant `packages/engine/test/` domain (`unit`, `integration`, `e2e`, `memory`, or `performance`).
-- place runner tests in `packages/runner/test/` (covers `canvas/`, `model/`, `store/`, `utils/`, and `worker/` domains).
-- run targeted tests when possible (example: `node --test packages/engine/dist/test/unit/<file>.test.js`).
-- if running `node --test` directly, run `pnpm turbo build` first so `packages/engine/dist/` is up to date.
-- run at least `pnpm turbo test` before finalizing; include `pnpm -F @ludoforge/engine test:e2e` when behavior spans CLI/pipeline flows.
-- for runner changes, run at least `pnpm -F @ludoforge/runner test`.
-- when you need a guaranteed fresh engine test execution, prefer `pnpm -F @ludoforge/engine test` (or `test:all`) or run `pnpm turbo test --force` to bypass Turbo cache.
-- for FITL event-selector legality tests, normalize the relevant support/opposition board slice first (for example all cities or all populated spaces) before applying explicit overrides; do not rely on untouched production defaults outside the spaces you assert about.
-- for FITL event fidelity work, treat rules phrases such as `piece`, `place`, and `toward Passive Support` / `toward Passive Opposition` as implementation constraints, not shorthand; cover Base-as-piece cases, Rule 1.4.1 sourcing, stacking caps, and passive-target routing explicitly when relevant.
-- for FITL event fidelity work, `archive/specs/29-fitl-event-card-encoding.md` may be used as a cross-check, but rules reports, playbook notes, and `docs/fitl-event-authoring-cookbook.md` remain authoritative.
+- Strict TypeScript, immutable state updates, side-effect-free kernel logic.
+- Prefer feature/domain-oriented modules over broad utility dumps.
+- Keep schema/type changes synchronized across `packages/engine/src/kernel`, `packages/engine/schemas`, and tests.
+- Use `GameDef`, `GameSpecDoc`, `GameTrace` exactly as defined.
+- File size: 200-400 lines typical, 800 max. Many small files over few large files.
 
-## Commit & Pull Request Guidelines
-Keep commit subjects short and imperative. Common patterns in this repo include:
-- `docs: add Spec 12 — CLI`
-- `Implemented CORTYPSCHVAL-008`
-- `Added linting.`
+## Commit & PR Guidelines
 
-PRs should include:
-- a clear summary of changed files and why.
-- linked issue/spec section when applicable.
-- rendered-output screenshots only when formatting/layout is important.
-- confirmation that references, numbering, and terminology are consistent across affected specs.
+Commit subjects: short, imperative. Common patterns: `docs: add Spec 12 — CLI`, `Implemented CORTYPSCHVAL-008`.
 
-## Archiving Tickets and Specs
-
-Follow the canonical archival policy in `docs/archival-workflow.md`.
-
-Do not duplicate or drift this procedure in other files; update `docs/archival-workflow.md` as the source of truth.
+PRs should include a clear summary of changed files and why, linked issue/spec when applicable, confirmation that references and terminology are consistent, and a test plan with verification steps.

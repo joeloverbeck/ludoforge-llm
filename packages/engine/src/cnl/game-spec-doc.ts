@@ -179,6 +179,7 @@ export interface GameSpecActionDef {
   readonly executor: unknown;
   readonly phase: readonly string[];
   readonly capabilities?: readonly string[];
+  readonly tags?: readonly string[];
   readonly params: readonly unknown[];
   readonly pre: unknown | null;
   readonly cost: readonly unknown[];
@@ -523,18 +524,50 @@ export interface GameSpecPolicySurfaceVisibilityDef {
   readonly preview?: GameSpecPolicySurfacePreviewVisibilityDef;
 }
 
-export interface GameSpecAgentVisibilitySection {
-  readonly globalVars?: Readonly<Record<string, GameSpecPolicySurfaceVisibilityDef>>;
-  readonly perPlayerVars?: Readonly<Record<string, GameSpecPolicySurfaceVisibilityDef>>;
-  readonly derivedMetrics?: Readonly<Record<string, GameSpecPolicySurfaceVisibilityDef>>;
+// --- Observer profile types (Spec 102, Part B) ---
+
+export interface GameSpecObserverSurfaceEntryDef {
+  readonly current?: GameSpecPolicySurfaceVisibilityClass;
+  readonly preview?: GameSpecPolicySurfacePreviewVisibilityDef;
+}
+
+export type GameSpecObserverSurfaceValue =
+  | GameSpecPolicySurfaceVisibilityClass
+  | GameSpecObserverSurfaceEntryDef
+  | Readonly<Record<string, GameSpecPolicySurfaceVisibilityClass | GameSpecObserverSurfaceEntryDef>>;
+
+export interface GameSpecObserverSurfacesDef {
+  readonly globalVars?: GameSpecObserverSurfaceValue;
+  readonly perPlayerVars?: GameSpecObserverSurfaceValue;
+  readonly derivedMetrics?: GameSpecObserverSurfaceValue;
   readonly victory?: {
-    readonly currentMargin?: GameSpecPolicySurfaceVisibilityDef;
-    readonly currentRank?: GameSpecPolicySurfaceVisibilityDef;
+    readonly currentMargin?: GameSpecPolicySurfaceVisibilityClass | GameSpecObserverSurfaceEntryDef;
+    readonly currentRank?: GameSpecPolicySurfaceVisibilityClass | GameSpecObserverSurfaceEntryDef;
   };
-  readonly activeCardIdentity?: GameSpecPolicySurfaceVisibilityDef;
-  readonly activeCardTag?: GameSpecPolicySurfaceVisibilityDef;
-  readonly activeCardMetadata?: GameSpecPolicySurfaceVisibilityDef;
-  readonly activeCardAnnotation?: GameSpecPolicySurfaceVisibilityDef;
+  readonly activeCardIdentity?: GameSpecPolicySurfaceVisibilityClass | GameSpecObserverSurfaceEntryDef;
+  readonly activeCardTag?: GameSpecPolicySurfaceVisibilityClass | GameSpecObserverSurfaceEntryDef;
+  readonly activeCardMetadata?: GameSpecPolicySurfaceVisibilityClass | GameSpecObserverSurfaceEntryDef;
+  readonly activeCardAnnotation?: GameSpecPolicySurfaceVisibilityClass | GameSpecObserverSurfaceEntryDef;
+}
+
+export interface GameSpecObserverZoneEntryDef {
+  readonly tokens?: string; // 'public' | 'owner' | 'hidden'
+  readonly order?: string; // 'public' | 'owner' | 'hidden'
+}
+
+export type GameSpecObserverZonesDef = Readonly<
+  Record<string, GameSpecObserverZoneEntryDef>
+>;
+
+export interface GameSpecObserverProfileDef {
+  readonly extends?: string;
+  readonly description?: string;
+  readonly surfaces?: GameSpecObserverSurfacesDef;
+  readonly zones?: GameSpecObserverZonesDef;
+}
+
+export interface GameSpecObservabilitySection {
+  readonly observers?: Readonly<Record<string, GameSpecObserverProfileDef>>;
 }
 
 export type GameSpecPolicyExpr =
@@ -577,6 +610,18 @@ export interface GameSpecScoreTermDef {
   };
 }
 
+export interface GameSpecConsiderationDef {
+  readonly scopes?: readonly string[]; // validated at compile time: 'move' | 'completion'
+  readonly when?: GameSpecPolicyExpr;
+  readonly weight: GameSpecPolicyExpr;
+  readonly value: GameSpecPolicyExpr;
+  readonly unknownAs?: number;
+  readonly clamp?: {
+    readonly min?: number;
+    readonly max?: number;
+  };
+}
+
 export interface GameSpecTieBreakerDef {
   readonly kind: string;
   readonly value?: GameSpecPolicyExpr;
@@ -597,28 +642,23 @@ export interface GameSpecAgentLibrary {
   readonly candidateFeatures?: Readonly<Record<string, GameSpecCandidateFeatureDef>>;
   readonly candidateAggregates?: Readonly<Record<string, GameSpecCandidateAggregateDef>>;
   readonly pruningRules?: Readonly<Record<string, GameSpecPruningRuleDef>>;
-  readonly scoreTerms?: Readonly<Record<string, GameSpecScoreTermDef>>;
-  readonly completionScoreTerms?: Readonly<Record<string, GameSpecScoreTermDef>>;
+  readonly considerations?: Readonly<Record<string, GameSpecConsiderationDef>>;
   readonly tieBreakers?: Readonly<Record<string, GameSpecTieBreakerDef>>;
   readonly strategicConditions?: Readonly<Record<string, GameSpecStrategicConditionDef>>;
 }
 
 export interface GameSpecAgentProfileUse {
+  readonly considerations?: readonly string[];
   readonly pruningRules?: readonly string[];
-  readonly scoreTerms?: readonly string[];
-  readonly completionScoreTerms?: readonly string[];
   readonly tieBreakers?: readonly string[];
 }
 
 export interface GameSpecAgentProfileDef {
+  readonly observer?: string;
   readonly params?: Readonly<Record<string, unknown>>;
   readonly use: GameSpecAgentProfileUse;
-  readonly completionGuidance?: {
-    readonly enabled?: boolean;
-    readonly fallback?: 'random' | 'first';
-  };
   readonly preview?: {
-    readonly tolerateRngDivergence?: boolean;
+    readonly mode?: string;
   };
 }
 
@@ -626,7 +666,6 @@ export type GameSpecSeatPolicyBindings = Readonly<Record<string, string>>;
 
 export interface GameSpecAgentsSection {
   readonly parameters?: Readonly<Record<string, GameSpecAgentParameterDef>>;
-  readonly visibility?: GameSpecAgentVisibilitySection;
   readonly library?: GameSpecAgentLibrary;
   readonly profiles?: Readonly<Record<string, GameSpecAgentProfileDef>>;
   readonly bindings?: GameSpecSeatPolicyBindings;
@@ -655,6 +694,7 @@ export interface GameSpecDoc {
   readonly triggers: readonly GameSpecTriggerDef[] | null;
   readonly effectMacros: readonly EffectMacroDef[] | null;
   readonly conditionMacros: readonly ConditionMacroDef[] | null;
+  readonly observability: GameSpecObservabilitySection | null;
   readonly agents: GameSpecAgentsSection | null;
   readonly victoryStandings: VictoryStandingsDef | null;
   readonly verbalization: GameSpecVerbalization | null;
@@ -719,6 +759,7 @@ export function createEmptyGameSpecDoc(): GameSpecDoc {
     triggers: null,
     effectMacros: null,
     conditionMacros: null,
+    observability: null,
     agents: null,
     victoryStandings: null,
     verbalization: null,

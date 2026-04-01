@@ -1,10 +1,10 @@
 # 102SHAOBSMOD-005: Add CompiledObserverCatalog types and wire into GameDef
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `types-core.ts`, `schemas-core.ts`, `compiler-core.ts`
-**Deps**: `tickets/102SHAOBSMOD-004.md`, `specs/102-shared-observer-model.md`
+**Deps**: `archive/tickets/102SHAOBSMOD-004.md`, `specs/102-shared-observer-model.md`
 
 ## Problem
 
@@ -104,3 +104,30 @@ The compiler must gather known variable IDs from the spec (globalVars, perPlayer
 1. `pnpm -F @ludoforge/engine test` — full engine test suite
 2. `pnpm turbo typecheck` — type correctness
 3. `pnpm turbo build` — build succeeds
+
+## Outcome
+
+**Completion date**: 2026-04-01
+
+**What changed**:
+- Added `CompiledObserverProfile` and `CompiledObserverCatalog` to `types-core.ts`
+- Added `observers?: CompiledObserverCatalog` to `GameDef`
+- Added Zod schemas `CompiledObserverProfileSchema` and `CompiledObserverCatalogSchema` to `schemas-core.ts`
+- Wired `validateObservers()` and `lowerObservers()` into `compiler-core.ts` before `lowerAgents()`
+- Added `observers` to `CompileSectionResults`
+- Registered `CNL_COMPILER_OBSERVER_BUILTIN_NAME_COLLISION` and `CNL_COMPILER_OBSERVER_EXTENDS_MISSING` in canonical diagnostic codes
+- Removed local type definitions from `compile-observers.ts` (now imports from `types-core.ts`)
+- Regenerated `GameDef.schema.json`
+- Created `observer-compilation-e2e.test.ts` with 8 integration tests
+- Updated `compiler-structured-results.test.ts` key exhaustiveness check
+
+**Deviations from plan**:
+- Also wired `validateObservers()` into the pipeline (not explicitly listed in ticket but required for correctness — validation must precede compilation).
+- Added observer diagnostic codes to canonical registry (required by diagnostic registry audit test).
+- Ticket suggested `compiler-core-observers.test.ts` as unit test; implemented as `observer-compilation-e2e.test.ts` integration test instead, which better exercises the full pipeline.
+
+**Verification**:
+- `pnpm -F @ludoforge/engine build`: pass
+- `pnpm turbo typecheck`: pass (all 3 packages)
+- `pnpm turbo lint`: pass (0 warnings)
+- `pnpm -F @ludoforge/engine test`: 5432 pass, 0 fail (8 new)

@@ -5,7 +5,7 @@ import { PolicyAgent } from '../../src/agents/policy-agent.js';
 import { evaluatePolicyMove } from '../../src/agents/policy-eval.js';
 import { preparePlayableMoves } from '../../src/agents/prepare-playable-moves.js';
 import { compileGameSpecToGameDef, validateGameSpec } from '../../src/cnl/index.js';
-import type { GameSpecScoreTermDef, GameSpecStateFeatureDef } from '../../src/cnl/game-spec-doc.js';
+import type { GameSpecConsiderationDef, GameSpecStateFeatureDef } from '../../src/cnl/game-spec-doc.js';
 import { applyTrustedMove } from '../../src/kernel/apply-move.js';
 import {
   applyMove,
@@ -65,12 +65,24 @@ function advanceSeed11ToVcFreeRally() {
   } as const;
 }
 
+function moveConsiderationDefs(
+  definitions: Readonly<Record<string, Omit<GameSpecConsiderationDef, 'scopes'>>>,
+): Readonly<Record<string, GameSpecConsiderationDef>> {
+  return Object.fromEntries(
+    Object.entries(definitions).map(([id, definition]) => [id, { scopes: ['move'], ...definition }]),
+  );
+}
+
 function disableVcCompletionGuidance(def: ReturnType<typeof assertValidatedGameDef>) {
   const vcProfile = def.agents?.profiles['vc-evolved'];
   assert.ok(vcProfile, 'expected vc-evolved profile in FITL production catalog');
   if (vcProfile === undefined || def.agents === undefined) {
     throw new Error('Expected vc-evolved policy profile');
   }
+  const catalogConsiderations = def.agents.library.considerations;
+  const moveOnlyConsiderations = vcProfile.use.considerations.filter(
+    (considerationId) => catalogConsiderations[considerationId]?.scopes?.includes('completion') !== true,
+  );
 
   return assertValidatedGameDef({
     ...def,
@@ -82,11 +94,7 @@ function disableVcCompletionGuidance(def: ReturnType<typeof assertValidatedGameD
           ...vcProfile,
           use: {
             ...vcProfile.use,
-            completionScoreTerms: [],
-          },
-          completionGuidance: {
-            enabled: false,
-            fallback: 'random',
+            considerations: moveOnlyConsiderations,
           },
         },
       },
@@ -98,7 +106,7 @@ function compileFitlPolicyOverlay(
   seat: 'us' | 'vc',
   overlay: {
     readonly stateFeatures?: Readonly<Record<string, GameSpecStateFeatureDef>>;
-    readonly scoreTerms?: Readonly<Record<string, GameSpecScoreTermDef>>;
+    readonly considerations?: Readonly<Record<string, Omit<GameSpecConsiderationDef, 'scopes'>>>;
     readonly profileId?: string;
   },
 ): GameDef {
@@ -114,35 +122,46 @@ function compileFitlPolicyOverlay(
     throw new Error('Expected FITL agent library authoring');
   }
 
+  const baseProfileId = doc.agents.bindings?.[seat];
+  assert.ok(baseProfileId, `expected authored binding for seat "${seat}"`);
+  if (baseProfileId === undefined) {
+    throw new Error(`Expected authored binding for seat "${seat}"`);
+  }
+  const baseProfile = doc.agents.profiles?.[baseProfileId];
+  assert.ok(baseProfile, `expected authored profile "${baseProfileId}" for seat "${seat}"`);
+  if (baseProfile === undefined) {
+    throw new Error(`Expected authored profile "${baseProfileId}"`);
+  }
+
   const profileId = overlay.profileId ?? `${seat}-aggregation-test`;
-  const scoreTermIds = Object.keys(overlay.scoreTerms ?? {});
+  const considerationIds = Object.keys(overlay.considerations ?? {});
   const overlaidDoc = {
     ...doc,
     agents: {
       ...doc.agents,
       library: {
         ...doc.agents.library,
-      stateFeatures: {
-        ...doc.agents.library.stateFeatures,
-        ...(overlay.stateFeatures ?? {}),
-      },
-      scoreTerms: {
-        ...doc.agents.library.scoreTerms,
-        ...(overlay.scoreTerms ?? {}),
-      },
-    },
-    profiles: {
-      ...doc.agents.profiles,
-      [profileId]: {
-        params: {},
-        use: {
-          pruningRules: [],
-          scoreTerms: scoreTermIds,
-          completionScoreTerms: [],
-          tieBreakers: ['stableMoveKey'],
+        stateFeatures: {
+          ...doc.agents.library.stateFeatures,
+          ...(overlay.stateFeatures ?? {}),
+        },
+        considerations: {
+          ...doc.agents.library.considerations,
+          ...moveConsiderationDefs(overlay.considerations ?? {}),
         },
       },
-    },
+      profiles: {
+        ...doc.agents.profiles,
+        [profileId]: {
+          ...baseProfile,
+          params: { ...(baseProfile.params ?? {}) },
+          use: {
+            pruningRules: [],
+            considerations: considerationIds,
+            tieBreakers: [],
+          },
+        },
+      },
       bindings: {
         ...doc.agents.bindings,
         [seat]: profileId,
@@ -318,7 +337,7 @@ describe('FITL policy agent integration', () => {
           },
         },
       },
-      scoreTerms: {
+      considerations: {
         reportVcBaseCount: {
           weight: 1,
           value: { ref: 'feature.vcBaseCount' },
@@ -331,7 +350,7 @@ describe('FITL policy agent integration', () => {
     assert.equal(def.agents?.library.stateFeatures.vcBaseCount?.expr.kind, 'globalTokenAgg');
     assert.equal(def.agents?.library.stateFeatures.totalProvinceOpposition?.expr.kind, 'globalZoneAgg');
     assert.equal(def.agents?.library.stateFeatures.usTroopsNearSaigon?.expr.kind, 'adjacentTokenAgg');
-    assert.deepEqual(profile?.use.scoreTerms, ['reportVcBaseCount']);
+    assert.deepEqual(profile?.use.considerations, ['reportVcBaseCount']);
   });
 
   it('evaluates authored globalTokenAgg against a manual FITL board count', () => {
@@ -352,7 +371,7 @@ describe('FITL policy agent integration', () => {
           },
         },
       },
-      scoreTerms: {
+      considerations: {
         reportVcBaseCount: {
           weight: 1,
           value: { ref: 'feature.vcBaseCount' },
@@ -401,7 +420,7 @@ describe('FITL policy agent integration', () => {
           },
         },
       },
-      scoreTerms: {
+      considerations: {
         reportProvinceOpposition: {
           weight: 1,
           value: { ref: 'feature.totalProvinceOpposition' },
@@ -446,7 +465,7 @@ describe('FITL policy agent integration', () => {
           },
         },
       },
-      scoreTerms: {
+      considerations: {
         reportUsTroopsNearSaigon: {
           weight: 1,
           value: { ref: 'feature.usTroopsNearSaigon' },
@@ -486,7 +505,7 @@ describe('FITL policy agent integration', () => {
     assert.equal(actual, 3);
   });
 
-  it('activates aggregation-driven scoreTerms at the intended VC base threshold', () => {
+  it('activates aggregation-driven considerations at the intended VC base threshold', () => {
     const def = compileFitlPolicyOverlay('vc', {
       stateFeatures: {
         selfBaseCount: {
@@ -504,7 +523,7 @@ describe('FITL policy agent integration', () => {
           },
         },
       },
-      scoreTerms: {
+      considerations: {
         preferRallyWhenFewBases: {
           weight: 5,
           when: {
@@ -514,7 +533,7 @@ describe('FITL policy agent integration', () => {
             ],
           },
           value: {
-            boolToNumber: { ref: 'feature.isRally' },
+            boolToNumber: { ref: 'candidate.tag.rally' },
           },
         },
         preferTaxWhenManyBases: {
@@ -526,7 +545,7 @@ describe('FITL policy agent integration', () => {
             ],
           },
           value: {
-            boolToNumber: { ref: 'feature.isTax' },
+            boolToNumber: { ref: 'candidate.tag.tax' },
           },
         },
       },
@@ -596,28 +615,24 @@ describe('FITL policy agent integration', () => {
       nva: 'nva-baseline',
       vc: 'vc-evolved',
     });
-    assert.deepEqual(agents.profiles['vc-evolved']?.use.completionScoreTerms, ['preferPopulousTargets']);
-    assert.deepEqual(agents.profiles['vc-evolved']?.completionGuidance, {
-      enabled: true,
-      fallback: 'random',
-    });
-    assert.ok(agents.library.completionScoreTerms.preferPopulousTargets);
+    assert.ok(agents.library.considerations.preferPopulousTargets);
+    assert.deepEqual(agents.library.considerations.preferPopulousTargets?.scopes, ['completion']);
   });
 
-  it('compiles vc-evolved profile with preview.tolerateRngDivergence from production YAML', () => {
+  it('compiles vc-evolved profile with preview.mode from production YAML', () => {
     const { compiled } = compileProductionSpec();
     const agents = compiled.gameDef?.agents;
 
     assert.ok(agents);
     assert.deepEqual(agents.profiles['vc-evolved']?.preview, {
-      tolerateRngDivergence: true,
+      mode: 'tolerateStochastic',
     });
-    assert.equal(agents.profiles['us-baseline']?.preview, undefined);
-    assert.equal(agents.profiles['arvn-baseline']?.preview, undefined);
-    assert.equal(agents.profiles['nva-baseline']?.preview, undefined);
+    assert.deepEqual(agents.profiles['us-baseline']?.preview, { mode: 'exactWorld' });
+    assert.deepEqual(agents.profiles['arvn-baseline']?.preview, { mode: 'exactWorld' });
+    assert.deepEqual(agents.profiles['nva-baseline']?.preview, { mode: 'exactWorld' });
   });
 
-  it('produces stochastic preview outcomes for VC when allowWhenHiddenSampling is enabled alongside tolerateRngDivergence', () => {
+  it('produces stochastic preview outcomes for VC when allowWhenHiddenSampling is enabled alongside preview.mode tolerateStochastic', () => {
     const { compiled } = compileProductionSpec();
     const baseDef = assertValidatedGameDef(compiled.gameDef);
 
@@ -665,8 +680,8 @@ describe('FITL policy agent integration', () => {
             ...vcProfile,
             use: {
               ...vcProfile.use,
-              scoreTerms: [
-                ...vcProfile.use.scoreTerms,
+              considerations: [
+                ...vcProfile.use.considerations,
                 'preferProjectedSelfMargin',
               ],
             },
@@ -704,7 +719,7 @@ describe('FITL policy agent integration', () => {
 
     assert.ok(
       stochasticCandidates.length > 0 || readyCandidates.length > 0,
-      `expected at least one stochastic or ready preview outcome for VC with tolerateRngDivergence (got outcomes: ${nonPassCandidates.map((c) => c.previewOutcome).join(', ')})`,
+      `expected at least one stochastic or ready preview outcome for VC with preview.mode tolerateStochastic (got outcomes: ${nonPassCandidates.map((c) => c.previewOutcome).join(', ')})`,
     );
   });
 
@@ -798,12 +813,14 @@ describe('FITL policy agent integration', () => {
       assert.fail('expected policy trace metadata');
     }
     assert.equal(result.agentDecision.emergencyFallback, false);
+    assert.equal(result.agentDecision.previewUsage.mode, 'exactWorld');
     assert.deepEqual(result.agentDecision.previewUsage.refIds, ['victoryCurrentMargin.currentMargin.self']);
     assert.deepEqual(result.agentDecision.previewUsage.unknownRefs, [
       { refId: 'victoryCurrentMargin.currentMargin.self', reason: 'hidden' },
     ]);
     assert.deepEqual(result.agentDecision.previewUsage.outcomeBreakdown, {
       ready: 0,
+      stochastic: 0,
       unknownRandom: 0,
       unknownHidden: 18,
       unknownUnresolved: 0,

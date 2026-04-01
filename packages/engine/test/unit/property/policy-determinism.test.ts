@@ -74,8 +74,7 @@ function createCatalog(): AgentPolicyCatalog {
       candidateFeatures: {},
       candidateAggregates: {},
       pruningRules: {},
-      scoreTerms: {},
-      completionScoreTerms: {},
+      considerations: {},
       tieBreakers: {
         rng: {
           kind: 'rng',
@@ -89,16 +88,17 @@ function createCatalog(): AgentPolicyCatalog {
       baseline: {
         fingerprint: 'baseline',
         params: {},
+        preview: { mode: 'exactWorld' },
         use: {
           pruningRules: [],
-          scoreTerms: [],
-          completionScoreTerms: [],
+          considerations: [],
           tieBreakers: ['rng'],
         },
         plan: {
           stateFeatures: [],
           candidateFeatures: [],
           candidateAggregates: [],
+          considerations: [],
         },
       },
     },

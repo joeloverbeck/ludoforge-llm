@@ -110,13 +110,13 @@ describe('Texas Hold\'em policy agent integration', () => {
     assert.equal(right.agentDecision.resolvedProfileId, 'baseline');
   });
 
-  it('does not compile a preview tolerance config for the Texas profile (cross-game sanity)', () => {
+  it('compiles the Texas profile with disabled preview mode (cross-game sanity)', () => {
     const { compiled } = compileTexasProductionSpec();
     const agents = compiled.gameDef?.agents;
 
     assert.ok(agents);
-    assert.equal(agents.profiles['baseline']?.preview, undefined,
-      'Texas baseline profile should have no preview tolerance — its issues are hidden-info-based, not RNG');
+    assert.deepEqual(agents.profiles['baseline']?.preview, { mode: 'disabled' },
+      'Texas baseline profile should explicitly disable preview because the game relies on hidden information');
   });
 
   it('keeps Texas preview outcomes as hidden (not affected by FITL RNG tolerance)', () => {

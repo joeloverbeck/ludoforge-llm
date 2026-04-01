@@ -30,6 +30,22 @@ const opExpr = (op: Extract<AgentPolicyExpr, { readonly kind: 'op' }>['op'], ...
   args,
 });
 
+function moveConsiderations(
+  definitions: Record<string, Omit<AgentPolicyCatalog['library']['considerations'][string], 'scopes'>>,
+): AgentPolicyCatalog['library']['considerations'] {
+  return Object.fromEntries(
+    Object.entries(definitions).map(([id, definition]) => [id, { scopes: ['move'], ...definition }]),
+  );
+}
+
+function completionConsiderations(
+  definitions: Record<string, Omit<AgentPolicyCatalog['library']['considerations'][string], 'scopes'>>,
+): AgentPolicyCatalog['library']['considerations'] {
+  return Object.fromEntries(
+    Object.entries(definitions).map(([id, definition]) => [id, { scopes: ['completion'], ...definition }]),
+  );
+}
+
 function createCatalog(): AgentPolicyCatalog {
   return {
     schemaVersion: 2,
@@ -73,11 +89,11 @@ function createCatalog(): AgentPolicyCatalog {
       },
       candidateAggregates: {},
       pruningRules: {},
-      scoreTerms: {
+      considerations: moveConsiderations({
         preferPass: {
           costClass: 'candidate',
           weight: literal(10),
-          value: opExpr('boolToNumber', refExpr({ kind: 'candidateIntrinsic', intrinsic: 'isPass' })),
+          value: opExpr('boolToNumber', refExpr({ kind: 'candidateTag', tagName: 'pass' })),
           dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
         },
         preferEvent: {
@@ -86,8 +102,7 @@ function createCatalog(): AgentPolicyCatalog {
           value: opExpr('boolToNumber', refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'isEvent' })),
           dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['isEvent'], aggregates: [], strategicConditions: [] },
         },
-      },
-      completionScoreTerms: {},
+      }),
       tieBreakers: {
         stableMoveKey: {
           kind: 'stableMoveKey',
@@ -101,31 +116,33 @@ function createCatalog(): AgentPolicyCatalog {
       passive: {
         fingerprint: 'passive-fingerprint',
         params: {},
+        preview: { mode: 'exactWorld' },
         use: {
           pruningRules: [],
-          scoreTerms: ['preferPass'],
-          completionScoreTerms: [],
+          considerations: ['preferPass'],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
           stateFeatures: [],
           candidateFeatures: [],
           candidateAggregates: [],
+          considerations: ['preferPass'],
         },
       },
       aggressive: {
         fingerprint: 'aggressive-fingerprint',
         params: {},
+        preview: { mode: 'exactWorld' },
         use: {
           pruningRules: [],
-          scoreTerms: ['preferEvent'],
-          completionScoreTerms: [],
+          considerations: ['preferEvent'],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
           stateFeatures: [],
           candidateFeatures: ['isEvent'],
           candidateAggregates: [],
+          considerations: ['preferEvent'],
         },
       },
     },
@@ -172,6 +189,10 @@ function createDef(overrides: Partial<GameDef> = {}): GameDef {
         limits: [],
       },
     ],
+    actionTagIndex: {
+      byAction: { pass: ['pass'], event: ['event'] },
+      byTag: { pass: ['pass'], event: ['event'] },
+    },
     triggers: [],
     terminal: { conditions: [] },
     ...overrides,
@@ -199,29 +220,30 @@ function createTemplateDef(): GameDef {
             dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
           },
         },
-        scoreTerms: {
+        considerations: moveConsiderations({
           preferGamma: {
             costClass: 'candidate',
             weight: literal(10),
             value: opExpr('boolToNumber', refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'prefersGamma' })),
             dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['prefersGamma'], aggregates: [], strategicConditions: [] },
           },
-        },
+        }),
       },
       profiles: {
         passive: {
           fingerprint: 'passive-fingerprint',
           params: {},
+          preview: { mode: 'exactWorld' },
           use: {
             pruningRules: [],
-            scoreTerms: ['preferGamma'],
-            completionScoreTerms: [],
+            considerations: ['preferGamma'],
             tieBreakers: ['stableMoveKey'],
           },
           plan: {
             stateFeatures: [],
             candidateFeatures: ['prefersGamma'],
             candidateAggregates: [],
+            considerations: ['preferGamma'],
           },
         },
       },
@@ -248,7 +270,7 @@ function createGuidedTemplateDef(
       ...catalog,
       library: {
         ...catalog.library,
-        completionScoreTerms: {
+        considerations: completionConsiderations({
           preferGamma: {
             costClass: 'state',
             when: literal(true),
@@ -263,26 +285,23 @@ function createGuidedTemplateDef(
             value: literal(100),
             dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
           },
-        },
+        }),
       },
       profiles: {
         passive: {
           fingerprint: 'guided-template-profile',
           params: {},
+          preview: { mode: 'exactWorld' },
           use: {
             pruningRules: [],
-            scoreTerms: [],
-            completionScoreTerms: ['preferGamma'],
+            considerations: ['preferGamma'],
             tieBreakers: ['stableMoveKey'],
-          },
-          completionGuidance: {
-            enabled: true,
-            fallback,
           },
           plan: {
             stateFeatures: [],
             candidateFeatures: [],
             candidateAggregates: [],
+            considerations: ['preferGamma'],
           },
         },
       },
@@ -379,15 +398,14 @@ function createTemplatePreviewDef(): GameDef {
         },
         candidateAggregates: {},
         pruningRules: {},
-        scoreTerms: {
+        considerations: moveConsiderations({
           preferProjectedMargin: {
             costClass: 'preview',
             weight: literal(1),
             value: refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'projectedMargin' }),
             dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['projectedMargin'], aggregates: [], strategicConditions: [] },
           },
-        },
-        completionScoreTerms: {},
+        }),
         tieBreakers: {
           stableMoveKey: {
             kind: 'stableMoveKey',
@@ -401,16 +419,17 @@ function createTemplatePreviewDef(): GameDef {
         passive: {
           fingerprint: 'template-preview-profile',
           params: {},
+          preview: { mode: 'exactWorld' },
           use: {
             pruningRules: [],
-            scoreTerms: ['preferProjectedMargin'],
-            completionScoreTerms: [],
+            considerations: ['preferProjectedMargin'],
             tieBreakers: ['stableMoveKey'],
           },
           plan: {
             stateFeatures: [],
             candidateFeatures: ['projectedMargin'],
             candidateAggregates: [],
+            considerations: ['preferProjectedMargin'],
           },
         },
       },
@@ -672,10 +691,12 @@ describe('PolicyAgent', () => {
       assert.fail('expected policy decision trace');
     }
     assert.equal(result.agentDecision.emergencyFallback, false);
+    assert.equal(result.agentDecision.previewUsage.mode, 'exactWorld');
     assert.deepEqual(result.agentDecision.previewUsage.refIds, ['globalVar.usMargin']);
     assert.equal(result.agentDecision.previewUsage.evaluatedCandidateCount, 2);
     assert.deepEqual(result.agentDecision.previewUsage.outcomeBreakdown, {
       ready: 2,
+      stochastic: 0,
       unknownRandom: 0,
       unknownHidden: 0,
       unknownUnresolved: 0,

@@ -12,6 +12,7 @@ const SINGLETON_SECTIONS = [
   'turnStructure',
   'turnOrder',
   'terminal',
+  'observability',
   'agents',
   'victoryStandings',
   'verbalization',
@@ -403,6 +404,9 @@ function assignSingletonSection(
       break;
     case 'terminal':
       mutable.terminal = value as MutableGameSpecDoc['terminal'];
+      break;
+    case 'observability':
+      mutable.observability = value as MutableGameSpecDoc['observability'];
       break;
     case 'agents':
       mutable.agents = value as MutableGameSpecDoc['agents'];

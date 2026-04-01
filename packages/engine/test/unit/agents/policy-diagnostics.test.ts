@@ -36,11 +36,13 @@ function createMetadata(): PolicyEvaluationMetadata {
     pruningSteps: [{ ruleId: 'dropPass', remainingCandidateCount: 1, skippedBecauseEmpty: false }],
     tieBreakChain: [],
     previewUsage: {
+      mode: 'exactWorld',
       evaluatedCandidateCount: 2,
       refIds: ['globalVar.usMargin'],
       unknownRefs: [{ refId: 'globalVar.usMargin', reason: 'hidden' }],
       outcomeBreakdown: {
         ready: 1,
+        stochastic: 0,
         unknownRandom: 0,
         unknownHidden: 1,
         unknownUnresolved: 0,
@@ -69,6 +71,7 @@ describe('policy-diagnostics', () => {
 
     assert.deepEqual(trace.previewUsage.outcomeBreakdown, {
       ready: 1,
+      stochastic: 0,
       unknownRandom: 0,
       unknownHidden: 1,
       unknownUnresolved: 0,

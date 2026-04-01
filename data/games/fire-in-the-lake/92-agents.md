@@ -2,45 +2,6 @@
 
 ```yaml
 agents:
-  visibility:
-    perPlayerVars:
-      resources:
-        current: public
-        preview:
-          visibility: public
-          allowWhenHiddenSampling: false
-    victory:
-      currentMargin:
-        current: public
-        preview:
-          visibility: public
-          allowWhenHiddenSampling: false
-      currentRank:
-        current: public
-        preview:
-          visibility: public
-          allowWhenHiddenSampling: false
-    activeCardIdentity:
-      current: public
-      preview:
-        visibility: public
-        allowWhenHiddenSampling: false
-    activeCardTag:
-      current: public
-      preview:
-        visibility: public
-        allowWhenHiddenSampling: false
-    activeCardMetadata:
-      current: public
-      preview:
-        visibility: public
-        allowWhenHiddenSampling: false
-    activeCardAnnotation:
-      current: public
-      preview:
-        visibility: public
-        allowWhenHiddenSampling: false
-
   parameters:
     eventWeight:
       type: number
@@ -85,106 +46,12 @@ agents:
           ref: var.player.self.resources
 
     candidateFeatures:
-      isPass:
-        type: boolean
-        expr:
-          ref: candidate.isPass
-      isEvent:
-        type: boolean
-        expr:
-          eq:
-            - { ref: candidate.actionId }
-            - event
       projectedSelfMargin:
         type: number
         expr:
           coalesce:
             - { ref: preview.victory.currentMargin.self }
             - { ref: feature.selfMargin }
-      isTrain:
-        type: boolean
-        expr:
-          eq:
-            - { ref: candidate.actionId }
-            - train
-      isPatrol:
-        type: boolean
-        expr:
-          eq:
-            - { ref: candidate.actionId }
-            - patrol
-      isAssault:
-        type: boolean
-        expr:
-          eq:
-            - { ref: candidate.actionId }
-            - assault
-      isAdvise:
-        type: boolean
-        expr:
-          eq:
-            - { ref: candidate.actionId }
-            - advise
-      isSweep:
-        type: boolean
-        expr:
-          eq:
-            - { ref: candidate.actionId }
-            - sweep
-      isGovern:
-        type: boolean
-        expr:
-          eq:
-            - { ref: candidate.actionId }
-            - govern
-      isRally:
-        type: boolean
-        expr:
-          eq:
-            - { ref: candidate.actionId }
-            - rally
-      isMarch:
-        type: boolean
-        expr:
-          eq:
-            - { ref: candidate.actionId }
-            - march
-      isAttack:
-        type: boolean
-        expr:
-          eq:
-            - { ref: candidate.actionId }
-            - attack
-      isTerror:
-        type: boolean
-        expr:
-          eq:
-            - { ref: candidate.actionId }
-            - terror
-      isTax:
-        type: boolean
-        expr:
-          eq:
-            - { ref: candidate.actionId }
-            - tax
-      isSubvert:
-        type: boolean
-        expr:
-          eq:
-            - { ref: candidate.actionId }
-            - subvert
-      isInfiltrate:
-        type: boolean
-        expr:
-          eq:
-            - { ref: candidate.actionId }
-            - infiltrate
-      isBombard:
-        type: boolean
-        expr:
-          eq:
-            - { ref: candidate.actionId }
-            - bombard
       targetSpacePopulation:
         type: number
         expr:
@@ -199,118 +66,136 @@ agents:
         op: any
         of:
           not:
-            ref: feature.isPass
+            ref: candidate.tag.pass
 
     pruningRules:
       dropPassWhenOtherMovesExist:
         when:
           and:
-            - { ref: feature.isPass }
+            - { ref: candidate.tag.pass }
             - { ref: aggregate.hasNonPassAlternative }
         onEmpty: skipRule
 
-    scoreTerms:
+    considerations:
       preferProjectedSelfMargin:
+        scopes: [move]
         weight:
           param: projectedMarginWeight
         value:
           ref: feature.projectedSelfMargin
       preserveResources:
+        scopes: [move]
         weight:
           param: resourceWeight
         value:
           ref: feature.selfResources
       preferEvent:
+        scopes: [move]
         weight:
           param: eventWeight
         value:
           boolToNumber:
-            ref: feature.isEvent
+            ref: candidate.tag.event-play
       preferTrainAction:
+        scopes: [move]
         weight: 1
         value:
           boolToNumber:
-            ref: feature.isTrain
+            ref: candidate.tag.train
       preferPatrolAction:
+        scopes: [move]
         weight: 1
         value:
           boolToNumber:
-            ref: feature.isPatrol
+            ref: candidate.tag.patrol
       preferAssaultAction:
+        scopes: [move]
         weight: 1
         value:
           boolToNumber:
-            ref: feature.isAssault
+            ref: candidate.tag.assault
       preferAdviseAction:
+        scopes: [move]
         weight: 1
         value:
           boolToNumber:
-            ref: feature.isAdvise
+            ref: candidate.tag.advise
       preferSweepAction:
+        scopes: [move]
         weight: 1
         value:
           boolToNumber:
-            ref: feature.isSweep
+            ref: candidate.tag.sweep
       preferGovernAction:
+        scopes: [move]
         weight: 1
         value:
           boolToNumber:
-            ref: feature.isGovern
+            ref: candidate.tag.govern
       preferRallyAction:
+        scopes: [move]
         weight: 1
         value:
           boolToNumber:
-            ref: feature.isRally
+            ref: candidate.tag.rally
       preferRallyWeighted:
+        scopes: [move]
         weight:
           param: rallyWeight
         value:
           boolToNumber:
-            ref: feature.isRally
+            ref: candidate.tag.rally
       preferMarchAction:
+        scopes: [move]
         weight: 1
         value:
           boolToNumber:
-            ref: feature.isMarch
+            ref: candidate.tag.march
       preferAttackAction:
+        scopes: [move]
         weight: 1
         value:
           boolToNumber:
-            ref: feature.isAttack
+            ref: candidate.tag.attack
       preferTerrorAction:
+        scopes: [move]
         weight: 1
         value:
           boolToNumber:
-            ref: feature.isTerror
+            ref: candidate.tag.terror
       preferTaxAction:
+        scopes: [move]
         weight: 1
         value:
           boolToNumber:
-            ref: feature.isTax
+            ref: candidate.tag.tax
       preferTaxWeighted:
+        scopes: [move]
         weight:
           param: taxWeight
         value:
           boolToNumber:
-            ref: feature.isTax
+            ref: candidate.tag.tax
       preferSubvertAction:
+        scopes: [move]
         weight: 1
         value:
           boolToNumber:
-            ref: feature.isSubvert
+            ref: candidate.tag.subvert
       preferInfiltrateAction:
+        scopes: [move]
         weight: 1
         value:
           boolToNumber:
-            ref: feature.isInfiltrate
+            ref: candidate.tag.infiltrate
       preferBombardAction:
+        scopes: [move]
         weight: 1
         value:
           boolToNumber:
-            ref: feature.isBombard
-
-    completionScoreTerms:
+            ref: candidate.tag.bombard
       preferPopulousTargets:
+        scopes: [completion]
         when:
           and:
             - eq:
@@ -340,6 +225,7 @@ agents:
 
   profiles:
     us-baseline:
+      observer: currentPlayer
       params:
         eventWeight: 2
         projectedMarginWeight: 1
@@ -347,7 +233,7 @@ agents:
       use:
         pruningRules:
           - dropPassWhenOtherMovesExist
-        scoreTerms:
+        considerations:
           - preferProjectedSelfMargin
           - preserveResources
           - preferEvent
@@ -359,6 +245,7 @@ agents:
           - stableMoveKey
 
     arvn-baseline:
+      observer: currentPlayer
       params:
         eventWeight: 1.5
         projectedMarginWeight: 1
@@ -366,7 +253,7 @@ agents:
       use:
         pruningRules:
           - dropPassWhenOtherMovesExist
-        scoreTerms:
+        considerations:
           - preferProjectedSelfMargin
           - preserveResources
           - preferEvent
@@ -379,6 +266,7 @@ agents:
           - stableMoveKey
 
     nva-baseline:
+      observer: currentPlayer
       params:
         eventWeight: 1.5
         projectedMarginWeight: 1
@@ -386,7 +274,7 @@ agents:
       use:
         pruningRules:
           - dropPassWhenOtherMovesExist
-        scoreTerms:
+        considerations:
           - preferProjectedSelfMargin
           - preserveResources
           - preferEvent
@@ -400,6 +288,7 @@ agents:
           - stableMoveKey
 
     vc-baseline:
+      observer: currentPlayer
       params:
         eventWeight: 1.5
         projectedMarginWeight: 1
@@ -407,7 +296,7 @@ agents:
       use:
         pruningRules:
           - dropPassWhenOtherMovesExist
-        scoreTerms:
+        considerations:
           - preferProjectedSelfMargin
           - preserveResources
           - preferEvent
@@ -421,25 +310,22 @@ agents:
           - stableMoveKey
 
     vc-evolved:
+      observer: currentPlayer
       preview:
-        tolerateRngDivergence: true
+        mode: tolerateStochastic
       params:
         rallyWeight: 3
         taxWeight: 2
       use:
         pruningRules:
           - dropPassWhenOtherMovesExist
-        scoreTerms:
+        considerations:
           - preferRallyWeighted
           - preferTaxWeighted
-        completionScoreTerms:
           - preferPopulousTargets
         tieBreakers:
           - preferCheapTargetSpaces
           - stableMoveKey
-      completionGuidance:
-        enabled: true
-        fallback: random
 
   bindings:
     us: us-baseline

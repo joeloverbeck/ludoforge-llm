@@ -3,8 +3,7 @@ export const AGENT_POLICY_LIBRARY_BUCKETS = [
   'candidateFeatures',
   'candidateAggregates',
   'pruningRules',
-  'scoreTerms',
-  'completionScoreTerms',
+  'considerations',
   'tieBreakers',
   'strategicConditions',
 ] as const;
@@ -13,8 +12,7 @@ export type AgentPolicyLibraryBucket = typeof AGENT_POLICY_LIBRARY_BUCKETS[numbe
 
 export const AGENT_POLICY_PROFILE_USE_BUCKETS = [
   'pruningRules',
-  'scoreTerms',
-  'completionScoreTerms',
+  'considerations',
   'tieBreakers',
 ] as const;
 
@@ -22,30 +20,15 @@ export type AgentPolicyProfileUseBucket = typeof AGENT_POLICY_PROFILE_USE_BUCKET
 
 export const AGENT_POLICY_PROFILE_USE_TO_LIBRARY_BUCKET = {
   pruningRules: 'pruningRules',
-  scoreTerms: 'scoreTerms',
-  completionScoreTerms: 'completionScoreTerms',
+  considerations: 'considerations',
   tieBreakers: 'tieBreakers',
 } as const satisfies Record<AgentPolicyProfileUseBucket, AgentPolicyLibraryBucket>;
 
-export const AGENT_POLICY_COMPLETION_GUIDANCE_KEYS = ['enabled', 'fallback'] as const;
-
-export const AGENT_POLICY_PREVIEW_KEYS = ['tolerateRngDivergence'] as const;
-
-export const AGENT_POLICY_COMPLETION_GUIDANCE_FALLBACKS = ['random', 'first'] as const;
-
-export type AgentPolicyCompletionGuidanceFallback = typeof AGENT_POLICY_COMPLETION_GUIDANCE_FALLBACKS[number];
-
-export function isAgentPolicyCompletionGuidanceFallback(
-  value: unknown,
-): value is AgentPolicyCompletionGuidanceFallback {
-  return typeof value === 'string'
-    && AGENT_POLICY_COMPLETION_GUIDANCE_FALLBACKS.includes(value as AgentPolicyCompletionGuidanceFallback);
-}
+export const AGENT_POLICY_PREVIEW_KEYS = ['mode'] as const;
 
 export const AGENT_POLICY_CANDIDATE_INTRINSICS = [
   'actionId',
   'stableMoveKey',
-  'isPass',
   'paramCount',
 ] as const;
 

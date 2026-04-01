@@ -30,6 +30,14 @@ const opExpr = (op: Extract<AgentPolicyExpr, { readonly kind: 'op' }>['op'], ...
   args,
 });
 
+function moveConsiderations(
+  definitions: Record<string, Omit<AgentPolicyCatalog['library']['considerations'][string], 'scopes'>>,
+): AgentPolicyCatalog['library']['considerations'] {
+  return Object.fromEntries(
+    Object.entries(definitions).map(([id, definition]) => [id, { scopes: ['move'], ...definition }]),
+  );
+}
+
 function createCatalog(): AgentPolicyCatalog {
   return {
     schemaVersion: 2,
@@ -73,15 +81,14 @@ function createCatalog(): AgentPolicyCatalog {
       },
       candidateAggregates: {},
       pruningRules: {},
-      scoreTerms: {
+      considerations: moveConsiderations({
         preferEvent: {
           costClass: 'candidate',
           weight: literal(10),
           value: opExpr('boolToNumber', refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'isEvent' })),
           dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['isEvent'], aggregates: [], strategicConditions: [] },
         },
-      },
-      completionScoreTerms: {},
+      }),
       tieBreakers: {
         stableMoveKey: {
           kind: 'stableMoveKey',
@@ -95,16 +102,17 @@ function createCatalog(): AgentPolicyCatalog {
       baseline: {
         fingerprint: 'baseline-fingerprint',
         params: {},
+        preview: { mode: 'exactWorld' },
         use: {
           pruningRules: [],
-          scoreTerms: ['preferEvent'],
-          completionScoreTerms: [],
+          considerations: ['preferEvent'],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
           stateFeatures: [],
           candidateFeatures: ['isEvent'],
           candidateAggregates: [],
+          considerations: ['preferEvent'],
         },
       },
     },
@@ -194,10 +202,12 @@ describe('policy trace events', () => {
     assert.equal(summaryDecision.profileFingerprint, 'baseline-fingerprint');
     assert.equal(summaryDecision.initialCandidateCount, 2);
     assert.equal(summaryDecision.selectedStableMoveKey !== null, true);
+    assert.equal(summaryDecision.previewUsage.mode, 'exactWorld');
     assert.deepEqual(summaryDecision.previewUsage.refIds, []);
     assert.deepEqual(summaryDecision.previewUsage.unknownRefs, []);
     assert.deepEqual(summaryDecision.previewUsage.outcomeBreakdown, {
       ready: 0,
+      stochastic: 0,
       unknownRandom: 0,
       unknownHidden: 0,
       unknownUnresolved: 0,
@@ -209,6 +219,7 @@ describe('policy trace events', () => {
 
     assert.deepEqual(verboseDecision.previewUsage.outcomeBreakdown, {
       ready: 0,
+      stochastic: 0,
       unknownRandom: 0,
       unknownHidden: 0,
       unknownUnresolved: 0,
@@ -255,8 +266,8 @@ describe('policy trace events', () => {
     });
     const snapshot = buildPolicyDiagnosticsSnapshot(def, evaluation.metadata, 'verbose');
 
-    assert.deepEqual(snapshot.resolvedPlan.scoreTerms, ['preferEvent']);
-    assert.deepEqual(snapshot.costTiers.candidate, ['candidateFeature:isEvent', 'scoreTerm:preferEvent']);
+    assert.deepEqual(snapshot.resolvedPlan.considerations, ['preferEvent']);
+    assert.deepEqual(snapshot.costTiers.candidate, ['candidateFeature:isEvent', 'consideration:preferEvent']);
     assert.deepEqual(snapshot.surfaceRefs.preview, []);
   });
 });

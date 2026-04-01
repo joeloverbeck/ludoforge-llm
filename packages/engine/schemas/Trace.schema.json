@@ -2749,6 +2749,14 @@
                   "previewUsage": {
                     "type": "object",
                     "properties": {
+                      "mode": {
+                        "type": "string",
+                        "enum": [
+                          "exactWorld",
+                          "tolerateStochastic",
+                          "disabled"
+                        ]
+                      },
                       "evaluatedCandidateCount": {
                         "type": "number"
                       },
@@ -2800,6 +2808,9 @@
                           "ready": {
                             "type": "number"
                           },
+                          "stochastic": {
+                            "type": "number"
+                          },
                           "unknownRandom": {
                             "type": "number"
                           },
@@ -2815,6 +2826,7 @@
                         },
                         "required": [
                           "ready",
+                          "stochastic",
                           "unknownRandom",
                           "unknownHidden",
                           "unknownUnresolved",
@@ -2824,6 +2836,7 @@
                       }
                     },
                     "required": [
+                      "mode",
                       "evaluatedCandidateCount",
                       "refIds",
                       "unknownRefs"

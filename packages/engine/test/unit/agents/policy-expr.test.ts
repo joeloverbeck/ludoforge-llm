@@ -17,11 +17,11 @@ function createContext(parameterDefs: Readonly<Record<string, CompiledAgentParam
     parameterDefs,
     resolveRef(refPath: string) {
       switch (refPath) {
-        case 'candidate.isPass':
+        case 'candidate.tag.pass':
           return {
             type: 'boolean' as const,
             costClass: 'candidate' as const,
-            ref: { kind: 'candidateIntrinsic' as const, intrinsic: 'isPass' as const },
+            ref: { kind: 'candidateTag' as const, tagName: 'pass' },
           };
         case 'candidate.param.eventCardId':
           return {
@@ -68,7 +68,7 @@ describe('policy-expr analysis', () => {
     const analysis = analyzePolicyExpr(
       {
         if: [
-          { ref: 'candidate.isPass' },
+          { ref: 'candidate.tag.pass' },
           { ref: 'feature.currentMargin' },
           { coalesce: [{ ref: 'aggregate.bestProjectedMargin' }, 0] },
         ],
@@ -82,7 +82,7 @@ describe('policy-expr analysis', () => {
     assert.deepEqual(analysis, {
       expr: opExpr(
         'if',
-        refExpr({ kind: 'candidateIntrinsic', intrinsic: 'isPass' }),
+        refExpr({ kind: 'candidateTag', tagName: 'pass' }),
         refExpr({ kind: 'library', refKind: 'stateFeature', id: 'currentMargin' }),
         opExpr('coalesce', refExpr({ kind: 'library', refKind: 'aggregate', id: 'bestProjectedMargin' }), literal(0)),
       ),

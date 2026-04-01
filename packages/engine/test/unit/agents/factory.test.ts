@@ -29,6 +29,14 @@ const opExpr = (op: Extract<AgentPolicyExpr, { readonly kind: 'op' }>['op'], ...
   args,
 });
 
+function moveConsiderations(
+  definitions: Record<string, Omit<AgentPolicyCatalog['library']['considerations'][string], 'scopes'>>,
+): AgentPolicyCatalog['library']['considerations'] {
+  return Object.fromEntries(
+    Object.entries(definitions).map(([id, definition]) => [id, { scopes: ['move'], ...definition }]),
+  );
+}
+
 function createCatalog(): AgentPolicyCatalog {
   return {
     schemaVersion: 2,
@@ -72,11 +80,11 @@ function createCatalog(): AgentPolicyCatalog {
       },
       candidateAggregates: {},
       pruningRules: {},
-      scoreTerms: {
+      considerations: moveConsiderations({
         preferPass: {
           costClass: 'candidate',
           weight: literal(10),
-          value: opExpr('boolToNumber', refExpr({ kind: 'candidateIntrinsic', intrinsic: 'isPass' })),
+          value: opExpr('boolToNumber', refExpr({ kind: 'candidateTag', tagName: 'pass' })),
           dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
         },
         preferEvent: {
@@ -85,8 +93,7 @@ function createCatalog(): AgentPolicyCatalog {
           value: opExpr('boolToNumber', refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'isEvent' })),
           dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['isEvent'], aggregates: [], strategicConditions: [] },
         },
-      },
-      completionScoreTerms: {},
+      }),
       tieBreakers: {
         stableMoveKey: {
           kind: 'stableMoveKey',
@@ -100,31 +107,33 @@ function createCatalog(): AgentPolicyCatalog {
       passive: {
         fingerprint: 'passive-fingerprint',
         params: {},
+        preview: { mode: 'exactWorld' },
         use: {
           pruningRules: [],
-          scoreTerms: ['preferPass'],
-          completionScoreTerms: [],
+          considerations: ['preferPass'],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
           stateFeatures: [],
           candidateFeatures: [],
           candidateAggregates: [],
+          considerations: ['preferPass'],
         },
       },
       aggressive: {
         fingerprint: 'aggressive-fingerprint',
         params: {},
+        preview: { mode: 'exactWorld' },
         use: {
           pruningRules: [],
-          scoreTerms: ['preferEvent'],
-          completionScoreTerms: [],
+          considerations: ['preferEvent'],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
           stateFeatures: [],
           candidateFeatures: ['isEvent'],
           candidateAggregates: [],
+          considerations: ['preferEvent'],
         },
       },
     },
@@ -171,6 +180,10 @@ function createDef(): GameDef {
         limits: [],
       },
     ],
+    actionTagIndex: {
+      byAction: { pass: ['pass'], event: ['event'] },
+      byTag: { pass: ['pass'], event: ['event'] },
+    },
     triggers: [],
     terminal: { conditions: [] },
   };

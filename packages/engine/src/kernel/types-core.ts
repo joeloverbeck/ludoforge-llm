@@ -48,7 +48,6 @@ import type { ScopedVarEndpointContract, ScopedVarPayloadContract } from './scop
 import type { DecisionKey } from './decision-scope.js';
 import type {
   AgentPolicyCandidateIntrinsic,
-  AgentPolicyCompletionGuidanceFallback,
   AgentPolicyDecisionIntrinsic,
   AgentPolicyOptionIntrinsic,
   AgentPolicyZoneAggSource,
@@ -186,6 +185,7 @@ export interface ActionDef {
   readonly executor: ActionExecutorSel;
   readonly phase: readonly PhaseId[];
   readonly capabilities?: readonly string[];
+  readonly tags?: readonly string[];
   readonly params: readonly ParamDef[];
   readonly pre: ConditionAST | null;
   readonly cost: readonly EffectAST[];
@@ -403,6 +403,16 @@ export type CompiledAgentPolicyRef =
       readonly kind: 'strategicCondition';
       readonly conditionId: string;
       readonly field: 'satisfied' | 'proximity';
+    }
+  | {
+      readonly kind: 'candidateTag';
+      readonly tagName: string;
+    }
+  | {
+      readonly kind: 'candidateTags';
+    }
+  | {
+      readonly kind: 'contextKind';
     };
 export type AgentPolicyZoneSource = string | AgentPolicyExpr;
 export interface AgentPolicyTokenFilter {
@@ -549,6 +559,42 @@ export interface CompiledSurfaceCatalog {
   readonly activeCardAnnotation: CompiledSurfaceVisibility;
 }
 
+// ---------------------------------------------------------------------------
+// Observer catalog (Spec 102 Part E, extended by Spec 106)
+// ---------------------------------------------------------------------------
+
+/** Visibility classification for zone tokens and order. */
+export type ZoneObserverVisibilityClass = 'public' | 'owner' | 'hidden';
+
+/** Per-zone observer visibility entry. */
+export interface CompiledZoneVisibilityEntry {
+  readonly tokens: ZoneObserverVisibilityClass;
+  readonly order: ZoneObserverVisibilityClass;
+}
+
+/**
+ * Zone visibility catalog for an observer profile.
+ * `entries` is keyed by zone base ID (not qualified ID).
+ * `defaultEntry` applies to zones not listed in `entries`.
+ */
+export interface CompiledZoneVisibilityCatalog {
+  readonly entries: Readonly<Record<string, CompiledZoneVisibilityEntry>>;
+  readonly defaultEntry?: CompiledZoneVisibilityEntry;
+}
+
+export interface CompiledObserverProfile {
+  readonly fingerprint: string;
+  readonly surfaces: CompiledSurfaceCatalog;
+  readonly zones?: CompiledZoneVisibilityCatalog;
+}
+
+export interface CompiledObserverCatalog {
+  readonly schemaVersion: 1;
+  readonly catalogFingerprint: string;
+  readonly observers: Readonly<Record<string, CompiledObserverProfile>>;
+  readonly defaultObserverName: string;
+}
+
 export interface CompiledAgentParameterDef {
   readonly type: AgentParameterType;
   readonly required: boolean;
@@ -606,7 +652,8 @@ export interface CompiledAgentPruningRule {
   readonly onEmpty: 'skipRule' | 'error';
 }
 
-export interface CompiledAgentScoreTerm {
+export interface CompiledAgentConsideration {
+  readonly scopes?: readonly ('move' | 'completion')[];
   readonly costClass: AgentPolicyCostClass;
   readonly when?: AgentPolicyExpr;
   readonly weight: AgentPolicyExpr;
@@ -640,36 +687,32 @@ export interface CompiledAgentLibraryIndex {
   readonly candidateFeatures: Readonly<Record<string, CompiledAgentCandidateFeature>>;
   readonly candidateAggregates: Readonly<Record<string, CompiledAgentAggregate>>;
   readonly pruningRules: Readonly<Record<string, CompiledAgentPruningRule>>;
-  readonly scoreTerms: Readonly<Record<string, CompiledAgentScoreTerm>>;
-  readonly completionScoreTerms: Readonly<Record<string, CompiledAgentScoreTerm>>;
+  readonly considerations: Readonly<Record<string, CompiledAgentConsideration>>;
   readonly tieBreakers: Readonly<Record<string, CompiledAgentTieBreaker>>;
   readonly strategicConditions: Readonly<Record<string, CompiledStrategicCondition>>;
 }
 
-export interface CompletionGuidanceConfig {
-  readonly enabled: boolean;
-  readonly fallback: AgentPolicyCompletionGuidanceFallback;
-}
+export type AgentPreviewMode = 'exactWorld' | 'tolerateStochastic' | 'disabled';
 
-export interface PreviewToleranceConfig {
-  readonly tolerateRngDivergence: boolean;
+export interface CompiledAgentPreviewConfig {
+  readonly mode: AgentPreviewMode;
 }
 
 export interface CompiledAgentProfile {
   readonly fingerprint: string;
+  readonly observerName?: string;
   readonly params: Readonly<Record<string, AgentParameterValue>>;
   readonly use: {
+    readonly considerations: readonly string[];
     readonly pruningRules: readonly string[];
-    readonly scoreTerms: readonly string[];
-    readonly completionScoreTerms: readonly string[];
     readonly tieBreakers: readonly string[];
   };
-  readonly completionGuidance?: CompletionGuidanceConfig;
-  readonly preview?: PreviewToleranceConfig;
+  readonly preview: CompiledAgentPreviewConfig;
   readonly plan: {
     readonly stateFeatures: readonly string[];
     readonly candidateFeatures: readonly string[];
     readonly candidateAggregates: readonly string[];
+    readonly considerations: readonly string[];
   };
 }
 
@@ -682,6 +725,13 @@ export interface AgentPolicyCatalog {
   readonly library: CompiledAgentLibraryIndex;
   readonly profiles: Readonly<Record<string, CompiledAgentProfile>>;
   readonly bindingsBySeat: Readonly<Record<string, string>>;
+}
+
+export interface CompiledActionTagIndex {
+  /** Maps each actionId to its set of tags (as a sorted readonly string array). */
+  readonly byAction: Readonly<Record<string, readonly string[]>>;
+  /** Maps each tag to the set of actionIds that carry it (as a sorted readonly string array). */
+  readonly byTag: Readonly<Record<string, readonly string[]>>;
 }
 
 export interface GameDef {
@@ -705,8 +755,10 @@ export interface GameDef {
   readonly turnOrder?: TurnOrderStrategy;
   readonly actionPipelines?: readonly ActionPipelineDef[];
   readonly derivedMetrics?: readonly DerivedMetricDef[];
+  readonly observers?: CompiledObserverCatalog;
   readonly agents?: AgentPolicyCatalog;
   readonly actions: readonly ActionDef[];
+  readonly actionTagIndex?: CompiledActionTagIndex;
   readonly triggers: readonly TriggerDef[];
   readonly terminal: TerminalEvaluationDef;
   readonly eventDecks?: readonly EventDeckDef[];
@@ -1480,6 +1532,7 @@ export interface PolicyTieBreakStepTrace {
 }
 
 export interface PolicyPreviewUsageTrace {
+  readonly mode: AgentPreviewMode;
   readonly evaluatedCandidateCount: number;
   readonly refIds: readonly string[];
   readonly unknownRefs: readonly PolicyPreviewUnknownRefTrace[];
@@ -1488,6 +1541,7 @@ export interface PolicyPreviewUsageTrace {
 
 export interface PolicyPreviewOutcomeBreakdownTrace {
   readonly ready: number;
+  readonly stochastic: number;
   readonly unknownRandom: number;
   readonly unknownHidden: number;
   readonly unknownUnresolved: number;

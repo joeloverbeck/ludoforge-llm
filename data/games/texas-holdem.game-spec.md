@@ -10,4 +10,5 @@ imports:
   - ./texas-holdem/40-content-data-assets.md
   - ./texas-holdem/90-terminal.md
   - ./texas-holdem/92-agents.md
+  - ./texas-holdem/93-observability.md
 ```

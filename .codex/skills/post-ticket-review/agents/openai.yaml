@@ -1,0 +1,7 @@
+interface:
+  display_name: "Post Ticket Review"
+  short_description: "Review finished ticket work and create follow-ups"
+  default_prompt: "Use $post-ticket-review on a completed ticket to check architecture, create warranted follow-up tickets, and archive it when appropriate."
+
+policy:
+  allow_implicit_invocation: true

@@ -51,6 +51,19 @@ const opExpr = (op: Extract<AgentPolicyExpr, { readonly kind: 'op' }>['op'], ...
 });
 const paramExpr = (id: string): AgentPolicyExpr => ({ kind: 'param', id });
 
+function moveConsiderations(
+  definitions: Record<string, Omit<AgentPolicyCatalog['library']['considerations'][string], 'scopes'>>,
+): AgentPolicyCatalog['library']['considerations'] {
+  return Object.fromEntries(
+    Object.entries(definitions).map(([id, definition]) => [id, { scopes: ['move'], ...definition }]),
+  );
+}
+
+type CatalogOverrides = Partial<Omit<AgentPolicyCatalog['library'], 'considerations'>> & {
+  readonly considerations?: AgentPolicyCatalog['library']['considerations'];
+  readonly scoreTerms?: Record<string, Omit<AgentPolicyCatalog['library']['considerations'][string], 'scopes'>>;
+};
+
 function createAction(id: string, params: ActionDef['params'] = []): ActionDef {
   return {
     id: asActionId(id),
@@ -109,6 +122,10 @@ function createBaseDef(agents: AgentPolicyCatalog): GameDef {
       createAction('beta'),
       createAction('advance'),
     ],
+    actionTagIndex: {
+      byAction: { pass: ['pass'], event: ['event'] },
+      byTag: { pass: ['pass'], event: ['event'] },
+    },
     triggers: [],
     terminal: {
       conditions: [],
@@ -125,10 +142,39 @@ function createBaseDef(agents: AgentPolicyCatalog): GameDef {
 }
 
 function createCatalog(
-  overrides: Partial<AgentPolicyCatalog['library']> = {},
+  overrides: CatalogOverrides = {},
   profileOverrides?: Partial<AgentPolicyCatalog['profiles']['baseline']>,
   candidateParamDefs: AgentPolicyCatalog['candidateParamDefs'] = {},
 ): AgentPolicyCatalog {
+  const defaultProfile: AgentPolicyCatalog['profiles']['baseline'] = {
+    fingerprint: 'baseline',
+    params: { passFloor: 0.5 },
+    preview: { mode: 'exactWorld' },
+    use: {
+      pruningRules: ['dropPassWhenMarginExists'],
+      considerations: ['preferEvents'],
+      tieBreakers: ['stableMoveKey'],
+    },
+    plan: {
+      stateFeatures: ['currentMargin'],
+      candidateFeatures: ['isPass', 'isEvent'],
+      candidateAggregates: ['bestNonPassMargin'],
+      considerations: ['preferEvents'],
+    },
+  };
+  const resolvedProfile: AgentPolicyCatalog['profiles']['baseline'] = {
+    ...defaultProfile,
+    ...profileOverrides,
+    use: {
+      ...defaultProfile.use,
+      ...(profileOverrides?.use ?? {}),
+    },
+    plan: {
+      ...defaultProfile.plan,
+      ...(profileOverrides?.plan ?? {}),
+      considerations: profileOverrides?.plan?.considerations ?? defaultProfile.plan.considerations,
+    },
+  };
   return {
     schemaVersion: 2,
     catalogFingerprint: 'catalog',
@@ -208,7 +254,7 @@ function createCatalog(
         isPass: {
           type: 'boolean',
           costClass: 'candidate',
-          expr: refExpr({ kind: 'candidateIntrinsic', intrinsic: 'isPass' }),
+          expr: refExpr({ kind: 'candidateTag', tagName: 'pass' }),
           dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
         },
         isEvent: {
@@ -262,7 +308,8 @@ function createCatalog(
         },
         ...(overrides.pruningRules ?? {}),
       },
-      scoreTerms: {
+      considerations: {
+        ...moveConsiderations({
         preferEvents: {
           costClass: 'candidate',
           weight: literal(10),
@@ -270,8 +317,9 @@ function createCatalog(
           dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['isEvent'], aggregates: [], strategicConditions: [] },
         },
         ...(overrides.scoreTerms ?? {}),
+        }),
+        ...(overrides.considerations ?? {}),
       },
-      completionScoreTerms: {},
       tieBreakers: {
         stableMoveKey: {
           kind: 'stableMoveKey',
@@ -288,22 +336,7 @@ function createCatalog(
       strategicConditions: {},
     },
     profiles: {
-      baseline: {
-        fingerprint: 'baseline',
-        params: { passFloor: 0.5 },
-        use: {
-          pruningRules: ['dropPassWhenMarginExists'],
-          scoreTerms: ['preferEvents'],
-          completionScoreTerms: [],
-          tieBreakers: ['stableMoveKey'],
-        },
-        plan: {
-          stateFeatures: ['currentMargin'],
-          candidateFeatures: ['isPass', 'isEvent'],
-          candidateAggregates: ['bestNonPassMargin'],
-        },
-        ...profileOverrides,
-      },
+      baseline: resolvedProfile,
     },
     bindingsBySeat: {
       us: 'baseline',
@@ -433,7 +466,7 @@ function createStateFeatureScoreCatalog(
           dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
         }]),
       ),
-      scoreTerms: {
+      considerations: moveConsiderations({
         scoreStateFeatures: {
           costClass: 'candidate',
           weight: literal(1),
@@ -441,19 +474,19 @@ function createStateFeatureScoreCatalog(
           ...(unknownAs === undefined ? {} : { unknownAs }),
           dependencies: { parameters: [], stateFeatures: stateFeatureIds, candidateFeatures: [], aggregates: [], strategicConditions: [] },
         },
-      },
+      }),
     },
     {
       use: {
         pruningRules: [],
-        scoreTerms: ['scoreStateFeatures'],
-        completionScoreTerms: [],
+        considerations: ['scoreStateFeatures'],
         tieBreakers: ['stableMoveKey'],
       },
       plan: {
         stateFeatures: stateFeatureIds,
         candidateFeatures: [],
         candidateAggregates: [],
+        considerations: ['scoreStateFeatures'],
       },
     },
   );
@@ -1445,14 +1478,14 @@ describe('policy-eval', () => {
       {
         use: {
           pruningRules: ['pruneEverything'],
-          scoreTerms: [],
-          completionScoreTerms: [],
+          considerations: [],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
           stateFeatures: [],
           candidateFeatures: [],
           candidateAggregates: [],
+        considerations: [],
         },
       },
     );
@@ -1482,14 +1515,14 @@ describe('policy-eval', () => {
       {
         use: {
           pruningRules: ['pruneEverything'],
-          scoreTerms: [],
-          completionScoreTerms: [],
+          considerations: [],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
           stateFeatures: [],
           candidateFeatures: [],
           candidateAggregates: [],
+        considerations: [],
         },
       },
     );
@@ -1554,14 +1587,14 @@ describe('policy-eval', () => {
       {
         use: {
           pruningRules: [],
-          scoreTerms: ['preferProjectedMargin', 'reinforceProjectedMargin', 'ignoreMaskedStanding'],
-          completionScoreTerms: [],
+          considerations: ['preferProjectedMargin', 'reinforceProjectedMargin', 'ignoreMaskedStanding'],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
           stateFeatures: [],
           candidateFeatures: ['projectedMargin', 'maskedProjectedStanding'],
           candidateAggregates: [],
+        considerations: [],
         },
       },
     );
@@ -1629,14 +1662,14 @@ describe('policy-eval', () => {
       {
         use: {
           pruningRules: [],
-          scoreTerms: ['preferProjectedMargin'],
-          completionScoreTerms: [],
+          considerations: ['preferProjectedMargin'],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
           stateFeatures: [],
           candidateFeatures: ['projectedMargin'],
           candidateAggregates: [],
+        considerations: [],
         },
       },
     );
@@ -1700,14 +1733,14 @@ describe('policy-eval', () => {
       {
         use: {
           pruningRules: [],
-          scoreTerms: ['preferMetric'],
-          completionScoreTerms: [],
+          considerations: ['preferMetric'],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
           stateFeatures: ['unsupportedMetric'],
           candidateFeatures: [],
           candidateAggregates: [],
+        considerations: [],
         },
       },
     );
@@ -1743,14 +1776,14 @@ describe('policy-eval', () => {
       {
         use: {
           pruningRules: [],
-          scoreTerms: ['preferUnknownSurface'],
-          completionScoreTerms: [],
+          considerations: ['preferUnknownSurface'],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
           stateFeatures: ['unknownSurface'],
           candidateFeatures: [],
           candidateAggregates: [],
+        considerations: [],
         },
       },
     );
@@ -1799,14 +1832,14 @@ describe('policy-eval', () => {
       {
         use: {
           pruningRules: [],
-          scoreTerms: ['preferMatchingCard', 'preferHigherTargetCount'],
-          completionScoreTerms: [],
+          considerations: ['preferMatchingCard', 'preferHigherTargetCount'],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
           stateFeatures: [],
           candidateFeatures: ['cardMatch', 'targetCount'],
           candidateAggregates: [],
+        considerations: [],
         },
       },
       {
@@ -1861,14 +1894,14 @@ describe('policy-eval', () => {
       {
         use: {
           pruningRules: [],
-          scoreTerms: ['preferStaticZone'],
-          completionScoreTerms: [],
+          considerations: ['preferStaticZone'],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
           stateFeatures: [],
           candidateFeatures: ['staticZoneLoad'],
           candidateAggregates: [],
+        considerations: [],
         },
       },
     );
@@ -1941,14 +1974,14 @@ describe('policy-eval', () => {
       {
         use: {
           pruningRules: [],
-          scoreTerms: ['preferHigherPopulation'],
-          completionScoreTerms: [],
+          considerations: ['preferHigherPopulation'],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
           stateFeatures: [],
           candidateFeatures: ['frontierPopulation', 'targetCategoryMatches'],
           candidateAggregates: [],
+        considerations: [],
         },
       },
     );
@@ -2008,14 +2041,14 @@ describe('policy-eval', () => {
       {
         use: {
           pruningRules: [],
-          scoreTerms: ['preferKnownPopulation', 'rejectNonScalarZoneProp'],
-          completionScoreTerms: [],
+          considerations: ['preferKnownPopulation', 'rejectNonScalarZoneProp'],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
           stateFeatures: [],
           candidateFeatures: ['targetPopulation', 'nonScalarZoneProp'],
           candidateAggregates: [],
+        considerations: [],
         },
       },
       {
@@ -2079,14 +2112,14 @@ describe('policy-eval', () => {
       {
         use: {
           pruningRules: [],
-          scoreTerms: ['preferLoadedZone'],
-          completionScoreTerms: [],
+          considerations: ['preferLoadedZone'],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
           stateFeatures: [],
           candidateFeatures: ['zoneLoad'],
           candidateAggregates: [],
+        considerations: [],
         },
       },
       {
@@ -2156,14 +2189,14 @@ describe('policy-eval', () => {
       {
         use: {
           pruningRules: [],
-          scoreTerms: ['preferLoadedZone'],
-          completionScoreTerms: [],
+          considerations: ['preferLoadedZone'],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
           stateFeatures: [],
           candidateFeatures: ['zoneLoad'],
           candidateAggregates: [],
+        considerations: [],
         },
       },
       {
@@ -2233,14 +2266,14 @@ describe('policy-eval', () => {
       {
         use: {
           pruningRules: [],
-          scoreTerms: ['preferActiveZone'],
-          completionScoreTerms: [],
+          considerations: ['preferActiveZone'],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
           stateFeatures: [],
           candidateFeatures: ['activeZoneLoad'],
           candidateAggregates: [],
+        considerations: [],
         },
       },
     );
@@ -2299,14 +2332,14 @@ describe('policy-eval', () => {
       {
         use: {
           pruningRules: [],
-          scoreTerms: ['preferKnownZone'],
-          completionScoreTerms: [],
+          considerations: ['preferKnownZone'],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
           stateFeatures: [],
           candidateFeatures: ['badZoneLoad'],
           candidateAggregates: [],
+        considerations: [],
         },
       },
     );
@@ -2355,14 +2388,14 @@ describe('policy-eval', () => {
       {
         use: {
           pruningRules: [],
-          scoreTerms: ['preferKnownZone'],
-          completionScoreTerms: [],
+          considerations: ['preferKnownZone'],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
           stateFeatures: [],
           candidateFeatures: ['badZoneLoad'],
           candidateAggregates: [],
+        considerations: [],
         },
       },
       {
@@ -2412,14 +2445,14 @@ describe('policy-eval', () => {
       {
         use: {
           pruningRules: [],
-          scoreTerms: ['preferExplicitOwnerZone'],
-          completionScoreTerms: [],
+          considerations: ['preferExplicitOwnerZone'],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
           stateFeatures: [],
           candidateFeatures: ['explicitOwnerZoneLoad'],
           candidateAggregates: [],
+        considerations: [],
         },
       },
     );
@@ -2470,14 +2503,14 @@ describe('policy-eval', () => {
       {
         use: {
           pruningRules: [],
-          scoreTerms: ['preferZoneA'],
-          completionScoreTerms: [],
+          considerations: ['preferZoneA'],
           tieBreakers: ['stableMoveKey'],
         },
         plan: {
           stateFeatures: [],
           candidateFeatures: ['targetsZoneA'],
           candidateAggregates: [],
+        considerations: [],
         },
       },
       {

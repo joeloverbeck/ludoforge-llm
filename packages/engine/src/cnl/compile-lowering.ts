@@ -815,12 +815,15 @@ export function lowerActions(
       continue;
     }
 
+    const tags = Array.isArray(action.tags) ? (action.tags as readonly string[]).filter((t) => typeof t === 'string') : undefined;
+
     lowered.push({
       id: asActionId(action.id),
       actor: actor.value,
       executor: executor.value,
       phase: phases.value,
       ...(capabilities.length === 0 ? {} : { capabilities }),
+      ...(tags !== undefined && tags.length > 0 ? { tags } : {}),
       params: params.value,
       pre: pre ?? null,
       cost,

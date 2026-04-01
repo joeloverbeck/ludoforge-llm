@@ -1,10 +1,10 @@
 # 102SHAOBSMOD-006: Agent-observer binding (profile `observer` field, remove `agents.visibility`)
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `game-spec-doc.ts`, `compile-agents.ts`, `validate-agents.ts`, `types-core.ts`
-**Deps**: `tickets/102SHAOBSMOD-005.md`, `specs/102-shared-observer-model.md`
+**Deps**: `archive/tickets/102SHAOBSMOD-005.md`, `specs/102-shared-observer-model.md`
 
 ## Problem
 
@@ -106,3 +106,29 @@ Add `readonly observerName?: string;` — key into `GameDef.observers`. `undefin
 1. `pnpm -F @ludoforge/engine test` — full engine test suite
 2. `pnpm turbo typecheck` — type correctness
 3. `pnpm turbo lint` — lint compliance
+
+## Outcome
+
+**Completion date**: 2026-04-01
+
+**What changed**:
+- Added `observer?: string` to `GameSpecAgentProfileDef`, `observerName?: string` to `CompiledAgentProfile`
+- Removed `GameSpecAgentVisibilitySection` type and `visibility` field from `GameSpecAgentsSection` (zero grep hits)
+- Replaced `lowerSurfaceVisibility(agents.visibility, ...)` with `resolveSurfaceVisibilityFromObserverCatalog()` — resolves from observer catalog when available, falls back to system defaults
+- Removed all visibility validation from `validate-agents.ts`, added `validateProfileObserverRef()` for observer name validation
+- Added `observerCatalog` to `LowerAgentsOptions`, wired through `compiler-core.ts`
+- Updated Zod schema and regenerated `GameDef.schema.json`
+- **FITL migration (Foundation 14 compliance)**: created `93-observability.md` with `currentPlayer` observer, removed `agents.visibility` from `92-agents.md`, added `observer: currentPlayer` to all 5 profiles, updated entrypoint imports
+- Updated all test fixtures: removed `createVisibility()` helpers, added `createTestObservability()` + `withObserver()`, regenerated golden fixtures
+
+**Deviations from plan**:
+- Ticket scoped FITL migration to ticket 007, but Foundation 14 ("migrate all owned artifacts in the same change") required migrating FITL alongside the type removal. Ticket 007's FITL migration scope is now complete.
+- `resolveSurfaceVisibilityFromObserverCatalog` resolves the catalog-level `surfaceVisibility` using priority: unanimous profile observer > sole user-defined observer > catalog default. This was needed to correctly bridge the catalog-level field with per-profile observer references.
+- Dedicated test files `compile-agents-observer.test.ts` and `validate-agents-observer.test.ts` (listed in ticket test plan) were not created separately — observer binding is tested through the existing authoring tests (which now use `withObserver`), the strategic condition tests, the integration e2e tests, and the observer-compilation-e2e tests from ticket 005.
+
+**Verification**:
+- `pnpm -F @ludoforge/engine build`: pass
+- `pnpm turbo typecheck`: pass
+- `pnpm turbo lint`: pass (0 warnings)
+- `pnpm -F @ludoforge/engine test`: 5432 pass, 0 fail
+- `GameSpecAgentVisibilitySection`: 0 grep hits (fully removed)

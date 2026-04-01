@@ -4,36 +4,6 @@
 agents:
   library:
     candidateFeatures:
-      isCheck:
-        type: boolean
-        expr:
-          eq:
-            - { ref: candidate.actionId }
-            - check
-      isCall:
-        type: boolean
-        expr:
-          eq:
-            - { ref: candidate.actionId }
-            - call
-      isRaise:
-        type: boolean
-        expr:
-          eq:
-            - { ref: candidate.actionId }
-            - raise
-      isAllIn:
-        type: boolean
-        expr:
-          eq:
-            - { ref: candidate.actionId }
-            - allIn
-      isFold:
-        type: boolean
-        expr:
-          eq:
-            - { ref: candidate.actionId }
-            - fold
       raiseAmount:
         type: number
         expr:
@@ -107,36 +77,42 @@ agents:
 
     pruningRules: {}
 
-    scoreTerms:
+    considerations:
       preferCheck:
+        scopes: [move]
         weight: 100
         value:
           boolToNumber:
-            ref: feature.isCheck
+            ref: candidate.tag.check
       preferCall:
+        scopes: [move]
         weight: 80
         value:
           boolToNumber:
-            ref: feature.isCall
+            ref: candidate.tag.call
       avoidFold:
+        scopes: [move]
         weight: -100
         value:
           boolToNumber:
-            ref: feature.isFold
+            ref: candidate.tag.fold
       foldWhenBadPotOdds:
+        scopes: [move]
         weight: 200
         value:
           boolToNumber:
             and:
-              - { ref: feature.isFold }
+              - { ref: candidate.tag.fold }
               - { ref: feature.facingBet }
               - not: { ref: feature.potOddsFavorable }
       alwaysRaise:
+        scopes: [move]
         weight: 90
         value:
           boolToNumber:
-            ref: feature.isRaise
+            ref: candidate.tag.raise
       preferLargerRaise:
+        scopes: [move]
         weight: 0.002
         value:
           ref: feature.raiseAmount
@@ -148,9 +124,11 @@ agents:
   profiles:
     baseline:
       params: {}
+      preview:
+        mode: disabled
       use:
         pruningRules: []
-        scoreTerms:
+        considerations:
           - preferCheck
           - preferCall
           - avoidFold

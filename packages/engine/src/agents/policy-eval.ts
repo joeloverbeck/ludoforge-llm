@@ -1,6 +1,7 @@
 import type { PlayerId } from '../kernel/branded.js';
 import { toMoveIdentityKey } from '../kernel/move-identity.js';
 import type {
+  AgentPreviewMode,
   AgentPolicyCatalog,
   CompiledAgentTieBreaker,
   GameDef,
@@ -66,6 +67,7 @@ export interface PolicyEvaluationTieBreakStep {
 }
 
 export interface PolicyEvaluationPreviewUsage {
+  readonly mode: AgentPreviewMode;
   readonly evaluatedCandidateCount: number;
   readonly refIds: readonly string[];
   readonly unknownRefs: readonly PolicyPreviewUnknownRef[];
@@ -211,7 +213,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
         candidates: [],
         pruningSteps: [],
         tieBreakChain: [],
-        previewUsage: emptyPreviewUsage(),
+        previewUsage: emptyPreviewUsage('exactWorld'),
         ...(input.completionStatistics === undefined ? {} : { completionStatistics: input.completionStatistics }),
         selectedStableMoveKey: null,
         finalScore: null,
@@ -337,14 +339,18 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
       });
     }
 
+    const considerations = catalog.library.considerations ?? {};
+    const moveConsiderationIds = (profile.use.considerations ?? []).filter(
+      (considerationId) => considerations[considerationId]?.scopes?.includes('move') === true,
+    );
     for (const candidate of activeCandidates) {
-      candidate.score = profile.use.scoreTerms.reduce((total, scoreTermId) => (
-        total + evaluation.evaluateScoreTerm(
-          catalog.library.scoreTerms,
-          scoreTermId,
+      candidate.score = moveConsiderationIds.reduce((total, considerationId) => (
+        total + evaluation.evaluateConsideration(
+          considerations,
+          considerationId,
           candidate,
           (contribution) => {
-            candidate.scoreContributions.push({ termId: scoreTermId, contribution });
+            candidate.scoreContributions.push({ termId: considerationId, contribution });
           },
         )
       ), 0);
@@ -389,7 +395,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
         candidates: candidates.map(candidateMetadata),
         pruningSteps,
         tieBreakChain,
-        previewUsage: summarizePreviewUsage(candidates),
+        previewUsage: summarizePreviewUsage(candidates, profile.preview.mode),
         ...(input.completionStatistics === undefined ? {} : { completionStatistics: input.completionStatistics }),
         selectedStableMoveKey: selected.stableMoveKey,
         finalScore: Number.isFinite(selected.score) ? selected.score : null,
@@ -454,7 +460,7 @@ function failureWithMetadata(
       candidates: candidates.map(candidateMetadata),
       pruningSteps: [],
       tieBreakChain: [],
-      previewUsage: summarizePreviewUsage(candidates),
+      previewUsage: summarizePreviewUsage(candidates, 'exactWorld'),
       ...(completionStatistics === undefined ? {} : { completionStatistics }),
       selectedStableMoveKey: null,
       finalScore: null,
@@ -494,7 +500,7 @@ function candidateMetadata(candidate: CandidateEntry): PolicyEvaluationCandidate
   };
 }
 
-function summarizePreviewUsage(candidates: readonly CandidateEntry[]): PolicyEvaluationPreviewUsage {
+function summarizePreviewUsage(candidates: readonly CandidateEntry[], mode: AgentPreviewMode): PolicyEvaluationPreviewUsage {
   const refIds = new Set<string>();
   const unknownRefs = new Map<string, PolicyPreviewUnavailabilityReason>();
   const evaluatedCandidates = candidates.filter((candidate) => candidate.previewRefIds.size > 0);
@@ -503,6 +509,7 @@ function summarizePreviewUsage(candidates: readonly CandidateEntry[]): PolicyEva
     candidate.unknownPreviewRefs.forEach((reason, refId) => unknownRefs.set(refId, reason));
   }
   return {
+    mode,
     evaluatedCandidateCount: evaluatedCandidates.length,
     refIds: [...refIds].sort(),
     unknownRefs: [...unknownRefs.entries()]
@@ -512,13 +519,15 @@ function summarizePreviewUsage(candidates: readonly CandidateEntry[]): PolicyEva
   };
 }
 
-function emptyPreviewUsage(): PolicyEvaluationPreviewUsage {
+function emptyPreviewUsage(mode: AgentPreviewMode): PolicyEvaluationPreviewUsage {
   return {
+    mode,
     evaluatedCandidateCount: 0,
     refIds: [],
     unknownRefs: [],
     outcomeBreakdown: {
       ready: 0,
+      stochastic: 0,
       unknownRandom: 0,
       unknownHidden: 0,
       unknownUnresolved: 0,
@@ -531,6 +540,7 @@ function summarizePreviewOutcomes(evaluatedCandidates: readonly CandidateEntry[]
   if (evaluatedCandidates.length === 0) {
     return {
       ready: 0,
+      stochastic: 0,
       unknownRandom: 0,
       unknownHidden: 0,
       unknownUnresolved: 0,
@@ -539,6 +549,7 @@ function summarizePreviewOutcomes(evaluatedCandidates: readonly CandidateEntry[]
   }
 
   let ready = 0;
+  let stochastic = 0;
   let random = 0;
   let hidden = 0;
   let unresolved = 0;
@@ -548,6 +559,10 @@ function summarizePreviewOutcomes(evaluatedCandidates: readonly CandidateEntry[]
     const outcome = candidate.previewOutcome;
     if (outcome === 'ready') {
       ready += 1;
+      continue;
+    }
+    if (outcome === 'stochastic') {
+      stochastic += 1;
       continue;
     }
     if (outcome === 'random') {
@@ -567,6 +582,7 @@ function summarizePreviewOutcomes(evaluatedCandidates: readonly CandidateEntry[]
 
   return {
     ready,
+    stochastic,
     unknownRandom: random,
     unknownHidden: hidden,
     unknownUnresolved: unresolved,

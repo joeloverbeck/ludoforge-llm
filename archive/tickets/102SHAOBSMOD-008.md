@@ -1,10 +1,10 @@
 # 102SHAOBSMOD-008: Schema artifacts, golden tests, and cross-game verification
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — schema artifacts, test fixtures
-**Deps**: `tickets/102SHAOBSMOD-007.md`, `specs/102-shared-observer-model.md`
+**Deps**: `archive/tickets/102SHAOBSMOD-007.md`, `specs/102-shared-observer-model.md`
 
 ## Problem
 
@@ -101,3 +101,26 @@ Update any existing golden fixtures that include `GameDef` JSON to reflect:
 2. `pnpm -F @ludoforge/engine test` — full engine test suite
 3. `pnpm -F @ludoforge/engine test:e2e` — end-to-end cross-game tests
 4. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck` — full verification
+
+## Outcome
+
+**Completion date**: 2026-04-01
+
+**What changed**:
+- All deliverables were completed as part of tickets 004-006, not as a separate change.
+- `GameDef.schema.json` regenerated in tickets 005 and 006 — includes `observers` with `CompiledObserverCatalog` structure
+- Observer compilation golden tests: `observer-compilation-e2e.test.ts` (8 tests, ticket 005)
+- Fingerprint determinism tests: `compile-observers.test.ts` tests 9-10 (ticket 004), `observer-compilation-e2e.test.ts` test 8 (ticket 005)
+- Cross-game: FITL compiles with observers, Texas Hold'em compiles unchanged
+- Golden fixtures: `fitl-policy-catalog.golden.json` and `fitl-policy-summary.golden.json` regenerated (ticket 006)
+- Schema artifacts idempotent: `schema:artifacts:check` passes
+
+**Deviations from plan**:
+- No separate `observer-golden.test.ts` or `observer-fingerprint.test.ts` files created. Coverage is provided by `observer-compilation-e2e.test.ts` (golden structure + Zod validation) and `compile-observers.test.ts` (fingerprint determinism). Different file names, same coverage.
+- No additional implementation needed — this ticket was a verification/artifact-sync ticket whose deliverables were absorbed by the implementation tickets (004-006) that preceded it.
+
+**Verification**:
+- `pnpm -F @ludoforge/engine run schema:artifacts:check`: pass (idempotent)
+- `pnpm -F @ludoforge/engine test`: 5432 pass, 0 fail
+- `pnpm turbo typecheck`: pass
+- `pnpm turbo lint`: pass (0 warnings)

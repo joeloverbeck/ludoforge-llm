@@ -29,6 +29,14 @@ const opExpr = (op: Extract<AgentPolicyExpr, { readonly kind: 'op' }>['op'], ...
 });
 const paramExpr = (id: string): AgentPolicyExpr => ({ kind: 'param', id });
 
+function completionConsiderations(
+  definitions: Record<string, Omit<AgentPolicyCatalog['library']['considerations'][string], 'scopes'>>,
+): AgentPolicyCatalog['library']['considerations'] {
+  return Object.fromEntries(
+    Object.entries(definitions).map(([id, definition]) => [id, { scopes: ['completion'], ...definition }]),
+  );
+}
+
 function createAction(id: string): ActionDef {
   return {
     id: asActionId(id),
@@ -44,7 +52,7 @@ function createAction(id: string): ActionDef {
 }
 
 function createCatalog(
-  completionScoreTerms: AgentPolicyCatalog['library']['completionScoreTerms'],
+  considerations: AgentPolicyCatalog['library']['considerations'],
   parameterDefs: AgentPolicyCatalog['parameterDefs'] = {},
 ): AgentPolicyCatalog {
   return {
@@ -88,8 +96,7 @@ function createCatalog(
       candidateFeatures: {},
       candidateAggregates: {},
       pruningRules: {},
-      scoreTerms: {},
-      completionScoreTerms,
+      considerations,
       tieBreakers: {},
       strategicConditions: {},
     },
@@ -97,16 +104,17 @@ function createCatalog(
       baseline: {
         fingerprint: 'baseline',
         params: {},
+        preview: { mode: 'exactWorld' },
         use: {
           pruningRules: [],
-          scoreTerms: [],
-          completionScoreTerms: Object.keys(completionScoreTerms),
+          considerations: Object.keys(considerations),
           tieBreakers: [],
         },
         plan: {
           stateFeatures: [],
           candidateFeatures: [],
           candidateAggregates: [],
+          considerations: Object.keys(considerations),
         },
       },
     },
@@ -155,10 +163,10 @@ function createChoiceRequest(overrides: Partial<ChoicePendingRequest> = {}): Cho
 }
 
 function createHarness(
-  completionScoreTerms: AgentPolicyCatalog['library']['completionScoreTerms'],
+  considerations: AgentPolicyCatalog['library']['considerations'],
   parameterDefs: AgentPolicyCatalog['parameterDefs'] = {},
 ) {
-  const catalog = createCatalog(completionScoreTerms, parameterDefs);
+  const catalog = createCatalog(considerations, parameterDefs);
   const def = createDef(catalog);
   const state = initialState(def, 7, 2).state;
   return {
@@ -172,7 +180,7 @@ function createHarness(
 
 describe('completion-guidance-eval', () => {
   it('scores a single completion term when its predicate matches', () => {
-    const harness = createHarness({
+    const harness = createHarness(completionConsiderations({
       constant: {
         costClass: 'state',
         when: literal(true),
@@ -180,7 +188,7 @@ describe('completion-guidance-eval', () => {
         value: literal(3),
         dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
       },
-    });
+    }));
 
     const score = scoreCompletionOption(
       harness.state,
@@ -198,7 +206,7 @@ describe('completion-guidance-eval', () => {
   });
 
   it('returns zero when the completion term predicate does not match', () => {
-    const harness = createHarness({
+    const harness = createHarness(completionConsiderations({
       gated: {
         costClass: 'state',
         when: literal(false),
@@ -206,7 +214,7 @@ describe('completion-guidance-eval', () => {
         value: literal(9),
         dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
       },
-    });
+    }));
 
     const score = scoreCompletionOption(
       harness.state,

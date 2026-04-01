@@ -2,7 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { compileGameSpecToGameDef, createEmptyGameSpecDoc, validateGameSpec } from '../../src/cnl/index.js';
-import type { GameSpecDoc } from '../../src/cnl/game-spec-doc.js';
+import type { GameSpecDoc, GameSpecObservabilitySection } from '../../src/cnl/game-spec-doc.js';
 import type { AgentPolicyExpr, AgentPolicyLiteral, CompiledAgentPolicyRef } from '../../src/kernel/types.js';
 
 const literal = (value: AgentPolicyLiteral): AgentPolicyExpr => ({ kind: 'literal', value });
@@ -14,10 +14,33 @@ const opExpr = (op: Extract<AgentPolicyExpr, { readonly kind: 'op' }>['op'], ...
 });
 const paramExpr = (id: string): AgentPolicyExpr => ({ kind: 'param', id });
 
+/** Observer that makes victory.currentMargin public (equivalent to old agents.visibility). */
+function createTestObservability(overrides?: GameSpecObservabilitySection['observers']): GameSpecObservabilitySection {
+  const base = {
+    testObserver: {
+      surfaces: {
+        victory: {
+          currentMargin: 'public' as const,
+        },
+      },
+    },
+  };
+  if (overrides === undefined) {
+    return { observers: base };
+  }
+  // Merge: override observers take precedence, but we always keep testObserver
+  const merged: Record<string, unknown> = { ...base };
+  for (const [name, def] of Object.entries(overrides)) {
+    merged[name] = def;
+  }
+  return { observers: merged } as GameSpecObservabilitySection;
+}
+
 function createCompileReadyDoc() {
   return {
     ...createEmptyGameSpecDoc(),
     metadata: { id: 'agents-demo', players: { min: 2, max: 2 } },
+    observability: createTestObservability(),
     zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack', attributes: { population: 0 } }],
     turnStructure: { phases: [{ id: 'main' }] },
     actions: [
@@ -56,23 +79,14 @@ function createSeatCatalogAsset(seatIds: readonly string[]) {
   };
 }
 
-function createVisibility(overrides: NonNullable<NonNullable<GameSpecDoc['agents']>['visibility']> = {}) {
-  return {
-    globalVars: overrides.globalVars ?? {},
-    perPlayerVars: overrides.perPlayerVars ?? {},
-    derivedMetrics: overrides.derivedMetrics ?? {},
-    victory: {
-      currentMargin: {
-        current: 'public' as const,
-        ...(overrides.victory?.currentMargin ?? {}),
-      },
-      ...(overrides.victory?.currentRank === undefined ? {} : { currentRank: overrides.victory.currentRank }),
-    },
-    ...(overrides.activeCardIdentity !== undefined ? { activeCardIdentity: overrides.activeCardIdentity } : {}),
-    ...(overrides.activeCardTag !== undefined ? { activeCardTag: overrides.activeCardTag } : {}),
-    ...(overrides.activeCardMetadata !== undefined ? { activeCardMetadata: overrides.activeCardMetadata } : {}),
-    ...(overrides.activeCardAnnotation !== undefined ? { activeCardAnnotation: overrides.activeCardAnnotation } : {}),
-  };
+/** Injects `observer: 'testObserver'` into every profile in an agents section. */
+function withObserver(agents: Record<string, unknown>): any {
+  if (agents.profiles === undefined) { return agents; }
+  const patched: Record<string, unknown> = {};
+  for (const [id, profile] of Object.entries(agents.profiles as Record<string, unknown>)) {
+    patched[id] = { observer: 'testObserver', ...(profile as Record<string, unknown>) };
+  }
+  return { ...agents, profiles: patched };
 }
 
 describe('agents authoring surface', () => {
@@ -80,8 +94,7 @@ describe('agents authoring surface', () => {
     const result = compileGameSpecToGameDef({
       ...createCompileReadyDoc(),
       dataAssets: [createSeatCatalogAsset(['us', 'arvn'])],
-      agents: {
-        visibility: createVisibility(),
+      agents: withObserver({
         parameters: {
           passFloor: {
             type: 'number',
@@ -111,7 +124,7 @@ describe('agents authoring surface', () => {
           candidateFeatures: {
             isPass: {
               type: 'boolean',
-              expr: { ref: 'candidate.isPass' },
+              expr: { ref: 'candidate.tag.pass' },
             },
             projectedMargin: {
               type: 'number',
@@ -141,13 +154,13 @@ describe('agents authoring surface', () => {
               onEmpty: 'skipRule',
             },
           },
-          scoreTerms: {
+          considerations: {
             preferEvents: {
+              scopes: ['move'],
               weight: 1,
               value: { boolToNumber: { ref: 'feature.isPass' } },
             },
           },
-          completionScoreTerms: {},
           tieBreakers: {
             stableMoveKey: {
               kind: 'stableMoveKey',
@@ -163,8 +176,7 @@ describe('agents authoring surface', () => {
             },
             use: {
               pruningRules: ['dropPassWhenStrongerMoveExists'],
-              scoreTerms: ['preferEvents'],
-              completionScoreTerms: [],
+              considerations: ['preferEvents'],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -172,7 +184,7 @@ describe('agents authoring surface', () => {
         bindings: {
           us: 'baseline',
         },
-      },
+      }),
     });
 
     assert.equal(result.gameDef === null, false);
@@ -269,7 +281,7 @@ describe('agents authoring surface', () => {
         isPass: {
           type: 'boolean',
           costClass: 'candidate',
-          expr: refExpr({ kind: 'candidateIntrinsic', intrinsic: 'isPass' }),
+          expr: refExpr({ kind: 'candidateTag', tagName: 'pass' }),
           dependencies: {
             parameters: [],
             stateFeatures: [],
@@ -333,8 +345,9 @@ describe('agents authoring surface', () => {
           onEmpty: 'skipRule',
         },
       },
-      scoreTerms: {
+      considerations: {
         preferEvents: {
+          scopes: ['move'],
           costClass: 'candidate',
           weight: literal(1),
           value: opExpr('boolToNumber', refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'isPass' })),
@@ -347,7 +360,6 @@ describe('agents authoring surface', () => {
           },
         },
       },
-      completionScoreTerms: {},
       tieBreakers: {
         stableMoveKey: {
           kind: 'stableMoveKey',
@@ -370,14 +382,14 @@ describe('agents authoring surface', () => {
     });
     assert.deepEqual(baselineProfile.use, {
       pruningRules: ['dropPassWhenStrongerMoveExists'],
-      scoreTerms: ['preferEvents'],
-      completionScoreTerms: [],
+      considerations: ['preferEvents'],
       tieBreakers: ['stableMoveKey'],
     });
     assert.deepEqual(baselineProfile.plan, {
       stateFeatures: ['currentMargin'],
       candidateFeatures: ['isPass', 'projectedMargin'],
       candidateAggregates: ['bestProjectedMargin'],
+      considerations: ['preferEvents'],
     });
     assert.deepEqual(agents.bindingsBySeat, {
       us: 'baseline',
@@ -388,8 +400,7 @@ describe('agents authoring surface', () => {
     const baseDoc = {
       ...createCompileReadyDoc(),
       dataAssets: [createSeatCatalogAsset(['us'])],
-      agents: {
-        visibility: createVisibility(),
+      agents: withObserver({
         parameters: {
           mode: {
             type: 'enum' as const,
@@ -417,7 +428,7 @@ describe('agents authoring surface', () => {
             },
             isPass: {
               type: 'boolean' as const,
-              expr: { ref: 'candidate.isPass' },
+              expr: { ref: 'candidate.tag.pass' },
             },
           },
           stateFeatures: {
@@ -426,13 +437,13 @@ describe('agents authoring surface', () => {
               expr: { ref: 'victory.currentMargin.us' },
             },
           },
-          scoreTerms: {
+          considerations: {
             preferEvents: {
+              scopes: ['move'],
               weight: 1,
               value: { boolToNumber: { ref: 'feature.isPass' } },
             },
           },
-          completionScoreTerms: {},
           tieBreakers: {
             stableMoveKey: {
               kind: 'stableMoveKey' as const,
@@ -449,8 +460,7 @@ describe('agents authoring surface', () => {
             },
             use: {
               pruningRules: [],
-              scoreTerms: ['preferEvents'],
-              completionScoreTerms: [],
+              considerations: ['preferEvents'],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -458,13 +468,12 @@ describe('agents authoring surface', () => {
         bindings: {
           us: 'baseline',
         },
-      },
+      }),
     };
     const reorderedDoc = {
       ...createCompileReadyDoc(),
       dataAssets: [createSeatCatalogAsset(['us'])],
-      agents: {
-        visibility: createVisibility(),
+      agents: withObserver({
         bindings: {
           us: 'baseline',
         },
@@ -476,8 +485,7 @@ describe('agents authoring surface', () => {
             },
             use: {
               tieBreakers: ['stableMoveKey'],
-              scoreTerms: ['preferEvents'],
-              completionScoreTerms: [],
+              considerations: ['preferEvents'],
               pruningRules: [],
             },
           },
@@ -490,8 +498,9 @@ describe('agents authoring surface', () => {
               kind: 'stableMoveKey' as const,
             },
           },
-          scoreTerms: {
+          considerations: {
             preferEvents: {
+              scopes: ['move'],
               value: { boolToNumber: { ref: 'feature.isPass' } },
               weight: 1,
             },
@@ -504,7 +513,7 @@ describe('agents authoring surface', () => {
           },
           candidateFeatures: {
             isPass: {
-              expr: { ref: 'candidate.isPass' },
+              expr: { ref: 'candidate.tag.pass' },
               type: 'boolean' as const,
             },
             projectedMargin: {
@@ -532,7 +541,7 @@ describe('agents authoring surface', () => {
             type: 'enum' as const,
           },
         },
-      },
+      }),
     };
 
     const first = compileGameSpecToGameDef(baseDoc);
@@ -555,16 +564,16 @@ describe('agents authoring surface', () => {
     );
   });
 
-  it('lowers completion guidance authoring into compiled completion score terms and profile config', () => {
+  it('lowers completion-scoped considerations into compiled completion score terms and profile use', () => {
     const result = compileGameSpecToGameDef({
       ...createCompileReadyDoc(),
       dataAssets: [createSeatCatalogAsset(['us'])],
-      agents: {
-        visibility: createVisibility(),
+      agents: withObserver({
         parameters: {},
         library: {
-          completionScoreTerms: {
+          considerations: {
             preferNamedOption: {
+              scopes: ['completion'],
               when: { eq: [{ ref: 'decision.type' }, 'chooseOne'] },
               weight: 2,
               value: {
@@ -587,25 +596,21 @@ describe('agents authoring surface', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: ['preferNamedOption'],
+              considerations: ['preferNamedOption'],
               tieBreakers: ['stableMoveKey'],
-            },
-            completionGuidance: {
-              enabled: true,
-              fallback: 'first',
             },
           },
         },
         bindings: {
           us: 'baseline',
         },
-      },
+      }),
     });
 
     assert.equal(result.gameDef === null, false);
     assert.equal(result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
-    assert.deepEqual(result.gameDef?.agents?.library.completionScoreTerms.preferNamedOption, {
+    assert.deepEqual(result.gameDef?.agents?.library.considerations?.preferNamedOption, {
+      scopes: ['completion'],
       costClass: 'state',
       when: opExpr('eq', refExpr({ kind: 'decisionIntrinsic', intrinsic: 'type' }), literal('chooseOne')),
       weight: literal(2),
@@ -623,14 +628,10 @@ describe('agents authoring surface', () => {
         strategicConditions: [],
       },
     });
-    assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.use.completionScoreTerms, ['preferNamedOption']);
-    assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.completionGuidance, {
-      enabled: true,
-      fallback: 'first',
-    });
+    assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.use.considerations, ['preferNamedOption']);
   });
 
-  it('lowers dynamic zoneProp completion guidance terms through the shared expression pipeline', () => {
+  it('lowers dynamic zoneProp completion considerations through the shared expression pipeline', () => {
     const result = compileGameSpecToGameDef({
       ...createCompileReadyDoc(),
       zones: [
@@ -638,12 +639,12 @@ describe('agents authoring surface', () => {
         { id: 'target-b:none', owner: 'none', visibility: 'public', ordering: 'set', category: 'province', attributes: { population: 1 } },
       ],
       dataAssets: [createSeatCatalogAsset(['us'])],
-      agents: {
-        visibility: createVisibility(),
+      agents: withObserver({
         parameters: {},
         library: {
-          completionScoreTerms: {
+          considerations: {
             preferHigherPopulation: {
+              scopes: ['completion'],
               when: { eq: [{ ref: 'decision.type' }, 'chooseOne'] },
               weight: 1,
               value: {
@@ -670,25 +671,21 @@ describe('agents authoring surface', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: ['preferHigherPopulation'],
+              considerations: ['preferHigherPopulation'],
               tieBreakers: ['stableMoveKey'],
-            },
-            completionGuidance: {
-              enabled: true,
-              fallback: 'first',
             },
           },
         },
         bindings: {
           us: 'baseline',
         },
-      },
+      }),
     });
 
     assert.equal(result.gameDef === null, false);
     assert.equal(result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
-    assert.deepEqual(result.gameDef?.agents?.library.completionScoreTerms.preferHigherPopulation, {
+    assert.deepEqual(result.gameDef?.agents?.library.considerations?.preferHigherPopulation, {
+      scopes: ['completion'],
       costClass: 'state',
       when: opExpr('eq', refExpr({ kind: 'decisionIntrinsic', intrinsic: 'type' }), literal('chooseOne')),
       weight: literal(1),
@@ -715,8 +712,7 @@ describe('agents authoring surface', () => {
     const result = compileGameSpecToGameDef({
       ...createCompileReadyDoc(),
       dataAssets: [createSeatCatalogAsset(['us'])],
-      agents: {
-        visibility: createVisibility(),
+      agents: withObserver({
         parameters: {},
         library: {
           candidateFeatures: {
@@ -725,8 +721,9 @@ describe('agents authoring surface', () => {
               expr: { ref: 'candidate.paramCount' },
             },
           },
-          scoreTerms: {
+          considerations: {
             rewardLoadedMoves: {
+              scopes: ['move'],
               weight: 1,
               value: { ref: 'feature.paramLoad' },
             },
@@ -742,8 +739,7 @@ describe('agents authoring surface', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: ['rewardLoadedMoves'],
-              completionScoreTerms: [],
+              considerations: ['rewardLoadedMoves'],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -751,7 +747,7 @@ describe('agents authoring surface', () => {
         bindings: {
           us: 'baseline',
         },
-      },
+      }),
     });
 
     assert.equal(result.gameDef === null, false);
@@ -764,14 +760,20 @@ describe('agents authoring surface', () => {
     });
   });
 
-  it('rejects invalid completion guidance fallback values', () => {
+  it('rejects invalid consideration scopes', () => {
     const result = compileGameSpecToGameDef({
       ...createCompileReadyDoc(),
       dataAssets: [createSeatCatalogAsset(['us'])],
-      agents: {
-        visibility: createVisibility(),
+      agents: withObserver({
         parameters: {},
         library: {
+          considerations: {
+            badScope: {
+              scopes: ['last' as 'move'],
+              weight: 1,
+              value: 1,
+            },
+          },
           tieBreakers: {
             stableMoveKey: {
               kind: 'stableMoveKey',
@@ -783,32 +785,26 @@ describe('agents authoring surface', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: ['badScope'],
               tieBreakers: ['stableMoveKey'],
-            },
-            completionGuidance: {
-              enabled: true,
-              fallback: 'last' as 'random',
             },
           },
         },
         bindings: {
           us: 'baseline',
         },
-      },
+      }),
     });
 
-    assert.equal(result.diagnostics.some((diagnostic) => diagnostic.path === 'doc.agents.profiles.baseline.completionGuidance.fallback'), true);
+    assert.equal(result.diagnostics.some((diagnostic) => diagnostic.path === 'doc.agents.library.considerations.badScope.scopes.0'), true);
     assert.equal(result.gameDef?.agents?.profiles.baseline, undefined);
   });
 
-  it('compiles preview.tolerateRngDivergence from profile YAML into CompiledAgentProfile.preview', () => {
+  it('compiles preview.mode from profile YAML into CompiledAgentProfile.preview', () => {
     const result = compileGameSpecToGameDef({
       ...createCompileReadyDoc(),
       dataAssets: [createSeatCatalogAsset(['us'])],
-      agents: {
-        visibility: createVisibility(),
+      agents: withObserver({
         parameters: {},
         library: {
           tieBreakers: {
@@ -822,33 +818,31 @@ describe('agents authoring surface', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
             preview: {
-              tolerateRngDivergence: true,
+              mode: 'tolerateStochastic',
             },
           },
         },
         bindings: {
           us: 'baseline',
         },
-      },
+      }),
     });
 
     assert.equal(result.diagnostics.some((d) => d.severity === 'error'), false);
     assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.preview, {
-      tolerateRngDivergence: true,
+      mode: 'tolerateStochastic',
     });
   });
 
-  it('omits preview field when profile YAML has no preview section', () => {
+  it('defaults preview.mode to exactWorld when profile YAML has no preview section', () => {
     const result = compileGameSpecToGameDef({
       ...createCompileReadyDoc(),
       dataAssets: [createSeatCatalogAsset(['us'])],
-      agents: {
-        visibility: createVisibility(),
+      agents: withObserver({
         parameters: {},
         library: {
           tieBreakers: {
@@ -862,8 +856,7 @@ describe('agents authoring surface', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -871,19 +864,20 @@ describe('agents authoring surface', () => {
         bindings: {
           us: 'baseline',
         },
-      },
+      }),
     });
 
     assert.equal(result.diagnostics.some((d) => d.severity === 'error'), false);
-    assert.equal(result.gameDef?.agents?.profiles.baseline?.preview, undefined);
+    assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.preview, {
+      mode: 'exactWorld',
+    });
   });
 
-  it('emits diagnostic when preview.tolerateRngDivergence is not a boolean', () => {
+  it('emits diagnostic when preview.mode is missing', () => {
     const result = compileGameSpecToGameDef({
       ...createCompileReadyDoc(),
       dataAssets: [createSeatCatalogAsset(['us'])],
-      agents: {
-        visibility: createVisibility(),
+      agents: withObserver({
         parameters: {},
         library: {
           tieBreakers: {
@@ -897,33 +891,106 @@ describe('agents authoring surface', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
             preview: {
-              tolerateRngDivergence: 'yes' as unknown as boolean,
             },
           },
         },
         bindings: {
           us: 'baseline',
         },
-      },
+      }),
     });
 
     assert.equal(
-      result.diagnostics.some((d) => d.path === 'doc.agents.profiles.baseline.preview.tolerateRngDivergence'),
+      result.diagnostics.some((d) => d.code === 'CNL_COMPILER_AGENT_PREVIEW_MODE_MISSING' && d.path === 'doc.agents.profiles.baseline.preview.mode'),
       true,
     );
   });
 
-  it('validates profile.use library references during authoring validation', () => {
+  it('emits diagnostic when preview.mode is invalid', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: withObserver({
+        parameters: {},
+        library: {
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              considerations: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+            preview: {
+              mode: 'sometimes' as unknown as string,
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      }),
+    });
+
+    assert.equal(
+      result.diagnostics.some((d) => d.code === 'CNL_COMPILER_AGENT_PREVIEW_MODE_INVALID' && d.path === 'doc.agents.profiles.baseline.preview.mode'),
+      true,
+    );
+  });
+
+  it('emits diagnostic when preview.mode is reserved', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: withObserver({
+        parameters: {},
+        library: {
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              considerations: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+            preview: {
+              mode: 'infoSetSample',
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      }),
+    });
+
+    assert.equal(
+      result.diagnostics.some((d) => d.code === 'CNL_COMPILER_AGENT_PREVIEW_MODE_RESERVED' && d.path === 'doc.agents.profiles.baseline.preview.mode'),
+      true,
+    );
+  });
+
+  it('validates profile.use consideration references during authoring validation', () => {
     const diagnostics = validateGameSpec({
       ...createCompileReadyDoc(),
       dataAssets: [createSeatCatalogAsset(['us'])],
-      agents: {
-        visibility: createVisibility(),
+      agents: withObserver({
         library: {
           pruningRules: {
             knownPrune: {
@@ -931,14 +998,9 @@ describe('agents authoring surface', () => {
               onEmpty: 'skipRule',
             },
           },
-          scoreTerms: {
-            knownScore: {
-              weight: 1,
-              value: 1,
-            },
-          },
-          completionScoreTerms: {
-            knownCompletion: {
+          considerations: {
+            knownConsideration: {
+              scopes: ['move'],
               weight: 1,
               value: 1,
             },
@@ -954,8 +1016,7 @@ describe('agents authoring surface', () => {
             params: {},
             use: {
               pruningRules: ['missingPrune'],
-              scoreTerms: ['missingScore'],
-              completionScoreTerms: ['missingCompletion'],
+              considerations: ['missingConsideration'],
               tieBreakers: ['missingTieBreaker'],
             },
           },
@@ -963,7 +1024,7 @@ describe('agents authoring surface', () => {
         bindings: {
           us: 'baseline',
         },
-      },
+      }),
     });
 
     assert.ok(
@@ -977,14 +1038,7 @@ describe('agents authoring surface', () => {
       diagnostics.some(
         (diagnostic) =>
           diagnostic.code === 'CNL_VALIDATOR_AGENTS_PROFILE_USE_UNKNOWN_ID'
-          && diagnostic.path === 'doc.agents.profiles.baseline.use.scoreTerms.0',
-      ),
-    );
-    assert.ok(
-      diagnostics.some(
-        (diagnostic) =>
-          diagnostic.code === 'CNL_VALIDATOR_AGENTS_PROFILE_USE_UNKNOWN_ID'
-          && diagnostic.path === 'doc.agents.profiles.baseline.use.completionScoreTerms.0',
+          && diagnostic.path === 'doc.agents.profiles.baseline.use.considerations.0',
       ),
     );
     assert.ok(
@@ -996,14 +1050,19 @@ describe('agents authoring surface', () => {
     );
   });
 
-  it('warns when completion guidance is enabled without valid completion score terms', () => {
+  it('validates authored consideration scopes during validation', () => {
     const diagnostics = validateGameSpec({
       ...createCompileReadyDoc(),
       dataAssets: [createSeatCatalogAsset(['us'])],
-      agents: {
-        visibility: createVisibility(),
+      agents: withObserver({
         library: {
-          completionScoreTerms: {},
+          considerations: {
+            invalid: {
+              scopes: [],
+              weight: 1,
+              value: 1,
+            },
+          },
           tieBreakers: {
             stableMoveKey: {
               kind: 'stableMoveKey',
@@ -1015,41 +1074,35 @@ describe('agents authoring surface', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: ['invalid'],
               tieBreakers: ['stableMoveKey'],
-            },
-            completionGuidance: {
-              enabled: true,
-              fallback: 'first',
             },
           },
         },
         bindings: {
           us: 'baseline',
         },
-      },
+      }),
     });
 
     assert.ok(
       diagnostics.some(
         (diagnostic) =>
-          diagnostic.code === 'CNL_VALIDATOR_AGENTS_COMPLETION_GUIDANCE_MISSING_TERMS'
-          && diagnostic.path === 'doc.agents.profiles.baseline.completionGuidance'
-          && diagnostic.severity === 'warning',
+          diagnostic.path === 'doc.agents.library.considerations.invalid.scopes'
+          && diagnostic.severity === 'error',
       ),
     );
   });
 
-  it('accepts valid completion guidance references without validator diagnostics', () => {
+  it('accepts valid completion-scoped considerations without validator diagnostics', () => {
     const diagnostics = validateGameSpec({
       ...createCompileReadyDoc(),
       dataAssets: [createSeatCatalogAsset(['us'])],
-      agents: {
-        visibility: createVisibility(),
+      agents: withObserver({
         library: {
-          completionScoreTerms: {
+          considerations: {
             preferNamedOption: {
+              scopes: ['completion'],
               when: { eq: [{ ref: 'decision.type' }, 'chooseOne'] },
               weight: 2,
               value: {
@@ -1072,28 +1125,21 @@ describe('agents authoring surface', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: ['preferNamedOption'],
+              considerations: ['preferNamedOption'],
               tieBreakers: ['stableMoveKey'],
-            },
-            completionGuidance: {
-              enabled: true,
-              fallback: 'first',
             },
           },
         },
         bindings: {
           us: 'baseline',
         },
-      },
+      }),
     });
 
     assert.equal(
       diagnostics.some(
         (diagnostic) =>
-          diagnostic.code === 'CNL_VALIDATOR_AGENTS_PROFILE_USE_UNKNOWN_ID'
-          || diagnostic.code === 'CNL_VALIDATOR_AGENTS_COMPLETION_GUIDANCE_MISSING_TERMS'
-          || diagnostic.path === 'doc.agents.profiles.baseline.completionGuidance.fallback',
+          diagnostic.code === 'CNL_VALIDATOR_AGENTS_PROFILE_USE_UNKNOWN_ID',
       ),
       false,
     );
@@ -1102,14 +1148,19 @@ describe('agents authoring surface', () => {
   it('compiles explicit activeCard visibility from authored YAML', () => {
     const result = compileGameSpecToGameDef({
       ...createCompileReadyDoc(),
+      observability: createTestObservability({
+        testObserver: {
+          surfaces: {
+            victory: { currentMargin: 'public' },
+            activeCardIdentity: { current: 'public' },
+            activeCardTag: { current: 'seatVisible' },
+            activeCardMetadata: { current: 'hidden', preview: { visibility: 'public', allowWhenHiddenSampling: true } },
+            activeCardAnnotation: { current: 'hidden', preview: { visibility: 'public', allowWhenHiddenSampling: true } },
+          },
+        },
+      }),
       dataAssets: [createSeatCatalogAsset(['us', 'arvn'])],
-      agents: {
-        visibility: createVisibility({
-          activeCardIdentity: { current: 'public' },
-          activeCardTag: { current: 'seatVisible' },
-          activeCardMetadata: { current: 'hidden', preview: { visibility: 'public', allowWhenHiddenSampling: true } },
-          activeCardAnnotation: { current: 'hidden', preview: { visibility: 'public', allowWhenHiddenSampling: true } },
-        }),
+      agents: withObserver({
         library: {
           stateFeatures: {},
           completionScoreTerms: {},
@@ -1118,11 +1169,11 @@ describe('agents authoring surface', () => {
         profiles: {
           baseline: {
             params: {},
-            use: { pruningRules: [], scoreTerms: [], completionScoreTerms: [], tieBreakers: ['stableMoveKey'] },
+            use: { pruningRules: [], considerations: [], tieBreakers: ['stableMoveKey'] },
           },
         },
         bindings: { us: 'baseline', arvn: 'baseline' },
-      },
+      }),
     });
     assert.notEqual(result.gameDef, null);
     const agents = result.gameDef!.agents!;
@@ -1144,8 +1195,7 @@ describe('agents authoring surface', () => {
     const result = compileGameSpecToGameDef({
       ...createCompileReadyDoc(),
       dataAssets: [createSeatCatalogAsset(['us'])],
-      agents: {
-        visibility: createVisibility(),
+      agents: withObserver({
         library: {
           stateFeatures: {},
           completionScoreTerms: {},
@@ -1154,11 +1204,11 @@ describe('agents authoring surface', () => {
         profiles: {
           baseline: {
             params: {},
-            use: { pruningRules: [], scoreTerms: [], completionScoreTerms: [], tieBreakers: ['stableMoveKey'] },
+            use: { pruningRules: [], considerations: [], tieBreakers: ['stableMoveKey'] },
           },
         },
         bindings: { us: 'baseline' },
-      },
+      }),
     });
     assert.notEqual(result.gameDef, null);
     const vis = result.gameDef!.agents!.surfaceVisibility;
@@ -1171,11 +1221,16 @@ describe('agents authoring surface', () => {
   it('sets activeCard categories independently', () => {
     const result = compileGameSpecToGameDef({
       ...createCompileReadyDoc(),
+      observability: createTestObservability({
+        testObserver: {
+          surfaces: {
+            victory: { currentMargin: 'public' },
+            activeCardIdentity: { current: 'public' },
+          },
+        },
+      }),
       dataAssets: [createSeatCatalogAsset(['us'])],
-      agents: {
-        visibility: createVisibility({
-          activeCardIdentity: { current: 'public' },
-        }),
+      agents: withObserver({
         library: {
           stateFeatures: {},
           completionScoreTerms: {},
@@ -1184,11 +1239,11 @@ describe('agents authoring surface', () => {
         profiles: {
           baseline: {
             params: {},
-            use: { pruningRules: [], scoreTerms: [], completionScoreTerms: [], tieBreakers: ['stableMoveKey'] },
+            use: { pruningRules: [], considerations: [], tieBreakers: ['stableMoveKey'] },
           },
         },
         bindings: { us: 'baseline' },
-      },
+      }),
     });
     assert.notEqual(result.gameDef, null);
     const vis = result.gameDef!.agents!.surfaceVisibility;
@@ -1217,14 +1272,7 @@ describe('agents authoring surface', () => {
           },
         },
       ],
-      agents: {
-        visibility: createVisibility({
-          derivedMetrics: {
-            knownMetric: {
-              current: 'hidden',
-            },
-          },
-        }),
+      agents: withObserver({
         library: {
           stateFeatures: {
             hiddenMetric: {
@@ -1244,8 +1292,7 @@ describe('agents authoring surface', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -1253,7 +1300,7 @@ describe('agents authoring surface', () => {
         bindings: {
           us: 'baseline',
         },
-      },
+      }),
     });
 
     assert.equal(compiled.gameDef, null);
@@ -1269,7 +1316,7 @@ describe('agents authoring surface', () => {
   it('rejects malformed collection shapes, inline profile logic, and non-map bindings in validation and compile flows', () => {
     const doc = {
       ...createCompileReadyDoc(),
-      agents: {
+      agents: withObserver({
         parameters: [],
         profiles: {
           baseline: {
@@ -1286,7 +1333,7 @@ describe('agents authoring surface', () => {
           },
         },
         bindings: ['baseline'],
-      },
+      }),
     } as unknown as GameSpecDoc;
 
     const validationDiagnostics = validateGameSpec(doc);
@@ -1318,7 +1365,7 @@ describe('agents authoring surface', () => {
   it('rejects invalid parameter defaults and profile overrides during lowering', () => {
     const compiled = compileGameSpecToGameDef({
       ...createCompileReadyDoc(),
-      agents: {
+      agents: withObserver({
         parameters: {
           requiredBias: {
             type: 'integer',
@@ -1356,8 +1403,7 @@ describe('agents authoring surface', () => {
             },
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -1365,7 +1411,7 @@ describe('agents authoring surface', () => {
         bindings: {
           us: 'baseline',
         },
-      },
+      }),
     });
 
     assert.equal(compiled.gameDef, null);
@@ -1378,7 +1424,7 @@ describe('agents authoring surface', () => {
   it('rejects bindings when canonical seat ids cannot be resolved from data assets', () => {
     const compiled = compileGameSpecToGameDef({
       ...createCompileReadyDoc(),
-      agents: {
+      agents: withObserver({
         library: {
           tieBreakers: {
             stableMoveKey: {
@@ -1391,8 +1437,7 @@ describe('agents authoring surface', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -1400,7 +1445,7 @@ describe('agents authoring surface', () => {
         bindings: {
           us: 'baseline',
         },
-      },
+      }),
     });
 
     assert.equal(compiled.gameDef, null);
@@ -1417,7 +1462,7 @@ describe('agents authoring surface', () => {
     const compiled = compileGameSpecToGameDef({
       ...createCompileReadyDoc(),
       dataAssets: [createSeatCatalogAsset(['us', 'arvn'])],
-      agents: {
+      agents: withObserver({
         library: {
           tieBreakers: {
             stableMoveKey: {
@@ -1430,8 +1475,7 @@ describe('agents authoring surface', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -1439,7 +1483,7 @@ describe('agents authoring surface', () => {
         bindings: {
           vc: 'baseline',
         },
-      },
+      }),
     });
 
     assert.equal(compiled.gameDef, null);
@@ -1456,7 +1500,7 @@ describe('agents authoring surface', () => {
     const compiled = compileGameSpecToGameDef({
       ...createCompileReadyDoc(),
       dataAssets: [createSeatCatalogAsset(['us'])],
-      agents: {
+      agents: withObserver({
         library: {
           candidateFeatures: {
             presentationLeak: {
@@ -1479,8 +1523,7 @@ describe('agents authoring surface', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -1488,7 +1531,7 @@ describe('agents authoring surface', () => {
         bindings: {
           us: 'baseline',
         },
-      },
+      }),
     });
 
     assert.equal(compiled.gameDef, null);
@@ -1512,7 +1555,7 @@ describe('agents authoring surface', () => {
     const compiled = compileGameSpecToGameDef({
       ...createCompileReadyDoc(),
       dataAssets: [createSeatCatalogAsset(['us'])],
-      agents: {
+      agents: withObserver({
         parameters: {
           mode: {
             type: 'enum',
@@ -1534,7 +1577,7 @@ describe('agents authoring surface', () => {
           candidateFeatures: {
             isPass: {
               type: 'boolean',
-              expr: { ref: 'candidate.isPass' },
+              expr: { ref: 'candidate.tag.pass' },
             },
             badPreview: {
               type: 'number',
@@ -1551,13 +1594,13 @@ describe('agents authoring surface', () => {
               of: { ref: 'feature.isPass' },
             },
           },
-          scoreTerms: {
+          considerations: {
             divideByZero: {
+              scopes: ['move'],
               weight: 1,
               value: { div: [1, 0] },
             },
           },
-          completionScoreTerms: {},
           tieBreakers: {
             stableMoveKey: {
               kind: 'stableMoveKey',
@@ -1569,8 +1612,7 @@ describe('agents authoring surface', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: ['divideByZero'],
-              completionScoreTerms: [],
+              considerations: ['divideByZero'],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -1578,7 +1620,7 @@ describe('agents authoring surface', () => {
         bindings: {
           us: 'baseline',
         },
-      },
+      }),
     });
 
     assert.equal(compiled.gameDef, null);
@@ -1586,7 +1628,7 @@ describe('agents authoring surface', () => {
     assert.ok(compiled.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_AGENT_POLICY_PREVIEW_NESTED' && diagnostic.path === 'doc.agents.library.candidateFeatures.badPreview.expr.ref'));
     assert.ok(compiled.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_AGENT_CANDIDATE_PARAM_REF_INVALID' && diagnostic.path === 'doc.agents.library.candidateFeatures.badCandidateParam.expr.ref'));
     assert.ok(compiled.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_AGENT_AGGREGATE_INPUT_INVALID' && diagnostic.path === 'doc.agents.library.candidateAggregates.badAggregate.of'));
-    assert.ok(compiled.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_AGENT_POLICY_DIVIDE_BY_ZERO' && diagnostic.path === 'doc.agents.library.scoreTerms.divideByZero.value'));
+    assert.ok(compiled.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_AGENT_POLICY_DIVIDE_BY_ZERO' && diagnostic.path === 'doc.agents.library.considerations.divideByZero.value'));
   });
 
   it('derives candidate.param refs from concrete action params instead of agents parameters', () => {
@@ -1609,7 +1651,7 @@ describe('agents authoring surface', () => {
           limits: [],
         },
       ],
-      agents: {
+      agents: withObserver({
         parameters: {
           tuningMode: {
             type: 'enum',
@@ -1639,8 +1681,7 @@ describe('agents authoring surface', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -1648,7 +1689,7 @@ describe('agents authoring surface', () => {
         bindings: {
           us: 'baseline',
         },
-      },
+      }),
     });
 
     assert.equal(compiled.gameDef === null, false);
@@ -1676,7 +1717,7 @@ describe('agents authoring surface', () => {
           limits: [],
         },
       ],
-      agents: {
+      agents: withObserver({
         parameters: {
           tuningMode: {
             type: 'enum',
@@ -1702,8 +1743,7 @@ describe('agents authoring surface', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -1711,7 +1751,7 @@ describe('agents authoring surface', () => {
         bindings: {
           us: 'baseline',
         },
-      },
+      }),
     });
 
     assert.equal(compiled.gameDef, null);
@@ -1752,7 +1792,7 @@ describe('agents authoring surface', () => {
           limits: [],
         },
       ],
-      agents: {
+      agents: withObserver({
         parameters: {},
         library: {
           candidateFeatures: {
@@ -1772,8 +1812,7 @@ describe('agents authoring surface', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -1781,7 +1820,7 @@ describe('agents authoring surface', () => {
         bindings: {
           us: 'baseline',
         },
-      },
+      }),
     });
 
     assert.equal(compiled.gameDef, null);
@@ -1813,7 +1852,7 @@ describe('agents authoring surface', () => {
           limits: [],
         },
       ],
-      agents: {
+      agents: withObserver({
         parameters: {},
         library: {
           candidateFeatures: {
@@ -1833,8 +1872,7 @@ describe('agents authoring surface', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -1842,7 +1880,7 @@ describe('agents authoring surface', () => {
         bindings: {
           us: 'baseline',
         },
-      },
+      }),
     });
 
     assert.equal(compiled.gameDef === null, false);
@@ -1877,14 +1915,7 @@ describe('agents authoring surface', () => {
           limits: [],
         },
       ],
-      agents: {
-        visibility: createVisibility({
-          derivedMetrics: {
-            knownMetric: {
-              current: 'public',
-            },
-          },
-        }),
+      agents: withObserver({
         parameters: {},
         library: {
           candidateFeatures: {
@@ -1904,8 +1935,7 @@ describe('agents authoring surface', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -1913,7 +1943,7 @@ describe('agents authoring surface', () => {
         bindings: {
           us: 'baseline',
         },
-      },
+      }),
     });
 
     assert.equal(compiled.gameDef, null);
@@ -1929,6 +1959,18 @@ describe('agents authoring surface', () => {
   it('rejects metric refs whose ids are not declared in authored derivedMetrics', () => {
     const compiled = compileGameSpecToGameDef({
       ...createCompileReadyDoc(),
+      observability: createTestObservability({
+        testObserver: {
+          surfaces: {
+            victory: { currentMargin: 'public' },
+            derivedMetrics: {
+              knownMetric: {
+                current: 'public',
+              },
+            },
+          },
+        },
+      }),
       dataAssets: [createSeatCatalogAsset(['us'])],
       derivedMetrics: [
         {
@@ -1946,14 +1988,7 @@ describe('agents authoring surface', () => {
           },
         },
       ],
-      agents: {
-        visibility: createVisibility({
-          derivedMetrics: {
-            knownMetric: {
-              current: 'public',
-            },
-          },
-        }),
+      agents: withObserver({
         parameters: {},
         library: {
           stateFeatures: {
@@ -1977,8 +2012,7 @@ describe('agents authoring surface', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -1986,7 +2020,7 @@ describe('agents authoring surface', () => {
         bindings: {
           us: 'baseline',
         },
-      },
+      }),
     });
 
     assert.equal(compiled.gameDef, null);
@@ -2012,8 +2046,7 @@ describe('agents authoring surface', () => {
     const result = compileGameSpecToGameDef({
       ...createCompileReadyDoc(),
       dataAssets: [createSeatCatalogAsset(['us'])],
-      agents: {
-        visibility: createVisibility(),
+      agents: withObserver({
         parameters: {},
         library: {
           candidateFeatures: {
@@ -2033,8 +2066,7 @@ describe('agents authoring surface', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -2042,7 +2074,7 @@ describe('agents authoring surface', () => {
         bindings: {
           us: 'baseline',
         },
-      },
+      }),
     });
 
     assert.equal(result.gameDef === null, false);
@@ -2057,16 +2089,21 @@ describe('agents authoring surface', () => {
   it('lowers explicit player-scoped per-player refs into player selectors', () => {
     const result = compileGameSpecToGameDef({
       ...createCompileReadyDoc(),
-      perPlayerVars: [{ name: 'resources', type: 'int', init: 0, min: 0, max: 10 }],
-      dataAssets: [createSeatCatalogAsset(['us', 'arvn'])],
-      agents: {
-        visibility: createVisibility({
-          perPlayerVars: {
-            resources: {
-              current: 'public',
+      observability: createTestObservability({
+        testObserver: {
+          surfaces: {
+            victory: { currentMargin: 'public' },
+            perPlayerVars: {
+              resources: {
+                current: 'public',
+              },
             },
           },
-        }),
+        },
+      }),
+      perPlayerVars: [{ name: 'resources', type: 'int', init: 0, min: 0, max: 10 }],
+      dataAssets: [createSeatCatalogAsset(['us', 'arvn'])],
+      agents: withObserver({
         parameters: {},
         library: {
           stateFeatures: {
@@ -2086,8 +2123,7 @@ describe('agents authoring surface', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -2095,7 +2131,7 @@ describe('agents authoring surface', () => {
         bindings: {
           us: 'baseline',
         },
-      },
+      }),
     });
 
     assert.equal(result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
@@ -2110,17 +2146,22 @@ describe('agents authoring surface', () => {
   it('rejects role-scoped per-player refs when the spec can instantiate duplicate runtime roles', () => {
     const result = compileGameSpecToGameDef({
       ...createCompileReadyDoc(),
+      observability: createTestObservability({
+        testObserver: {
+          surfaces: {
+            victory: { currentMargin: 'public' },
+            perPlayerVars: {
+              tempo: {
+                current: 'public',
+              },
+            },
+          },
+        },
+      }),
       metadata: { id: 'agents-demo-symmetric', players: { min: 2, max: 4 } },
       perPlayerVars: [{ name: 'tempo', type: 'int', init: 0, min: 0, max: 10 }],
       dataAssets: [createSeatCatalogAsset(['neutral'])],
-      agents: {
-        visibility: createVisibility({
-          perPlayerVars: {
-            tempo: {
-              current: 'public',
-            },
-          },
-        }),
+      agents: withObserver({
         parameters: {},
         library: {
           stateFeatures: {
@@ -2140,8 +2181,7 @@ describe('agents authoring surface', () => {
             params: {},
             use: {
               pruningRules: [],
-              scoreTerms: [],
-              completionScoreTerms: [],
+              considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -2149,7 +2189,7 @@ describe('agents authoring surface', () => {
         bindings: {
           neutral: 'baseline',
         },
-      },
+      }),
     });
 
     assert.equal(result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), true);

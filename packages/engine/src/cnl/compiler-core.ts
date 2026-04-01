@@ -15,6 +15,7 @@ import { annotateDiagnosticWithSourceSpans, capDiagnostics, dedupeDiagnostics, s
 import { expandEffectMacros } from './expand-effect-macros.js';
 import { expandConditionMacros } from './expand-condition-macros.js';
 import { expandTemplates } from './expand-templates.js';
+import { compileActionTagIndex } from './compile-action-tags.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 import {
   type EffectLoweringSharedContext,
@@ -55,7 +56,9 @@ import {
 } from './named-set-utils.js';
 import { compileVerbalization } from './compile-verbalization.js';
 import { validateAgents } from './validate-agents.js';
+import { validateObservers, type KnownSurfaceIds, type KnownZoneInfo } from './validate-observers.js';
 import { lowerAgents } from './compile-agents.js';
+import { lowerObservers } from './compile-observers.js';
 
 export interface CompileLimits {
   readonly maxExpandedEffects: number;
@@ -82,6 +85,7 @@ export interface CompileSectionResults {
   readonly turnOrder: Exclude<GameDef['turnOrder'], undefined> | null;
   readonly actionPipelines: Exclude<GameDef['actionPipelines'], undefined> | null;
   readonly derivedMetrics: Exclude<GameDef['derivedMetrics'], undefined> | null;
+  readonly observers: Exclude<GameDef['observers'], undefined> | null;
   readonly agents: Exclude<GameDef['agents'], undefined> | null;
   readonly terminal: GameDef['terminal'] | null;
   readonly actions: GameDef['actions'] | null;
@@ -302,6 +306,7 @@ function compileExpandedDoc(
     turnOrder: null,
     actionPipelines: null,
     derivedMetrics: null,
+    observers: null,
     agents: null,
     terminal: null,
     actions: null,
@@ -553,6 +558,8 @@ function compileExpandedDoc(
     sections.actions = actionsSection.failed ? null : actionsSection.value;
   }
 
+  const actionTagIndex = actions !== null ? compileActionTagIndex(actions, diagnostics) : undefined;
+
   const triggers = compileSection(diagnostics, () =>
     lowerTriggers(
       resolvedTableRefDoc.triggers ?? [],
@@ -668,6 +675,37 @@ function compileExpandedDoc(
   const mergedDerivedMetrics = [...(sections.derivedMetrics ?? []), ...synthesized];
   sections.derivedMetrics = mergedDerivedMetrics.length > 0 ? mergedDerivedMetrics : null;
 
+  // --- Observer validation + compilation (before agents, per Spec 102 Part F) ---
+  const knownSurfaceIds: KnownSurfaceIds = {
+    globalVars: new Set(mergedGlobalVars.map((v) => v.name)),
+    perPlayerVars: new Set(perPlayerVars.value.map((v) => v.name)),
+    derivedMetrics: new Set(
+      (resolvedTableRefDoc.derivedMetrics ?? []).map((m) => m.id),
+    ),
+  };
+  const knownZoneInfo: KnownZoneInfo | undefined =
+    effectiveZones !== null
+      ? {
+          zoneBaseIds: new Set(
+            (effectiveZones as readonly GameSpecZoneDef[]).map((z) => z.id),
+          ),
+          zoneOrderingByBase: Object.fromEntries(
+            (effectiveZones as readonly GameSpecZoneDef[]).map((z) => [z.id, z.ordering]),
+          ),
+          zoneOwnershipByBase: ownershipByBase,
+        }
+      : undefined;
+  validateObservers(resolvedTableRefDoc.observability, knownSurfaceIds, knownZoneInfo, diagnostics);
+  const observers = compileSection(diagnostics, () =>
+    lowerObservers(resolvedTableRefDoc.observability, diagnostics, {
+      knownGlobalVarIds: mergedGlobalVars.map((v) => v.name),
+      knownPerPlayerVarIds: perPlayerVars.value.map((v) => v.name),
+      knownDerivedMetricIds: (resolvedTableRefDoc.derivedMetrics ?? []).map((m) => m.id),
+      ...(knownZoneInfo !== undefined ? { knownZoneBaseIds: [...knownZoneInfo.zoneBaseIds] } : {}),
+    }),
+  );
+  sections.observers = observers.failed || observers.value === undefined ? null : observers.value;
+
   const agents = compileSection(diagnostics, () =>
     lowerAgents(
       resolvedTableRefDoc.agents,
@@ -687,6 +725,7 @@ function compileExpandedDoc(
             : { policyMetricIds: (resolvedTableRefDoc.derivedMetrics ?? []).map((metric) => metric.id) }
         ),
         ...{ hasVictoryMargins: (terminal?.margins?.length ?? 0) > 0 },
+        ...(sections.observers === null ? {} : { observerCatalog: sections.observers }),
       },
     ),
   );
@@ -724,8 +763,10 @@ function compileExpandedDoc(
     ...(sections.turnOrder === null ? {} : { turnOrder: sections.turnOrder }),
     ...(sections.actionPipelines === null ? {} : { actionPipelines: sections.actionPipelines }),
     ...(sections.derivedMetrics === null ? {} : { derivedMetrics: sections.derivedMetrics }),
+    ...(sections.observers === null ? {} : { observers: sections.observers }),
     ...(sections.agents === null ? {} : { agents: sections.agents }),
     actions,
+    ...(actionTagIndex !== undefined ? { actionTagIndex } : {}),
     triggers: triggers.value,
     terminal,
     ...(sections.eventDecks === null ? {} : { eventDecks: sections.eventDecks }),

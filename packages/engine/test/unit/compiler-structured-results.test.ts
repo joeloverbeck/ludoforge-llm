@@ -1658,6 +1658,7 @@ describe('compiler structured section results', () => {
       | 'turnOrder'
       | 'actionPipelines'
       | 'derivedMetrics'
+      | 'observers'
       | 'agents'
       | 'terminal'
       | 'actions'

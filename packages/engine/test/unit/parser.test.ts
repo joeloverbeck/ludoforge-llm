@@ -30,6 +30,7 @@ describe('parseGameSpec API shape', () => {
       triggers: null,
       effectMacros: null,
       conditionMacros: null,
+      observability: null,
       agents: null,
       victoryStandings: null,
       verbalization: null,

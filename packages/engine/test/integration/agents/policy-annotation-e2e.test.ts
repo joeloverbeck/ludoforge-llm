@@ -107,16 +107,17 @@ function createCatalog(overrides?: {
   const profile = {
     fingerprint: 'test-profile',
     params: {},
+    preview: { mode: 'exactWorld' as const },
     use: {
       pruningRules: [],
-      scoreTerms: [],
-      completionScoreTerms: [],
+      considerations: [],
       tieBreakers: [],
     },
     plan: {
       stateFeatures: [],
       candidateFeatures: [],
       candidateAggregates: [],
+      considerations: [],
     },
   };
   return {
@@ -142,8 +143,7 @@ function createCatalog(overrides?: {
       candidateFeatures: {},
       candidateAggregates: {},
       pruningRules: {},
-      scoreTerms: {},
-      completionScoreTerms: {},
+      considerations: {},
       tieBreakers: {},
       strategicConditions: {},
     },

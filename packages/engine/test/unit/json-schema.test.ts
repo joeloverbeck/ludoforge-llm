@@ -398,6 +398,7 @@ describe('json schema artifacts', () => {
     const baseSerializedTrace = serializeTrace(validRuntimeTrace);
     const fixture = readTraceFixture<PolicyDecisionGolden>('fitl-policy-summary.golden.json');
     const previewUsageWithoutBreakdown = {
+      mode: fixture.agentDecision.previewUsage.mode,
       evaluatedCandidateCount: fixture.agentDecision.previewUsage.evaluatedCandidateCount,
       refIds: fixture.agentDecision.previewUsage.refIds,
       unknownRefs: fixture.agentDecision.previewUsage.unknownRefs,

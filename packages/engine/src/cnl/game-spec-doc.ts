@@ -610,6 +610,18 @@ export interface GameSpecScoreTermDef {
   };
 }
 
+export interface GameSpecConsiderationDef {
+  readonly scopes?: readonly string[]; // validated at compile time: 'move' | 'completion'
+  readonly when?: GameSpecPolicyExpr;
+  readonly weight: GameSpecPolicyExpr;
+  readonly value: GameSpecPolicyExpr;
+  readonly unknownAs?: number;
+  readonly clamp?: {
+    readonly min?: number;
+    readonly max?: number;
+  };
+}
+
 export interface GameSpecTieBreakerDef {
   readonly kind: string;
   readonly value?: GameSpecPolicyExpr;
@@ -630,15 +642,21 @@ export interface GameSpecAgentLibrary {
   readonly candidateFeatures?: Readonly<Record<string, GameSpecCandidateFeatureDef>>;
   readonly candidateAggregates?: Readonly<Record<string, GameSpecCandidateAggregateDef>>;
   readonly pruningRules?: Readonly<Record<string, GameSpecPruningRuleDef>>;
+  readonly considerations?: Readonly<Record<string, GameSpecConsiderationDef>>;
+  /** @deprecated Use considerations. Removed in ticket 005. */
   readonly scoreTerms?: Readonly<Record<string, GameSpecScoreTermDef>>;
+  /** @deprecated Use considerations. Removed in ticket 005. */
   readonly completionScoreTerms?: Readonly<Record<string, GameSpecScoreTermDef>>;
   readonly tieBreakers?: Readonly<Record<string, GameSpecTieBreakerDef>>;
   readonly strategicConditions?: Readonly<Record<string, GameSpecStrategicConditionDef>>;
 }
 
 export interface GameSpecAgentProfileUse {
+  readonly considerations?: readonly string[];
   readonly pruningRules?: readonly string[];
+  /** @deprecated Use considerations. Removed in ticket 005. */
   readonly scoreTerms?: readonly string[];
+  /** @deprecated Use considerations. Removed in ticket 005. */
   readonly completionScoreTerms?: readonly string[];
   readonly tieBreakers?: readonly string[];
 }

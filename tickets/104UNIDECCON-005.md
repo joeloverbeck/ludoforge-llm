@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `compile-agents.ts`, `validate-agents.ts`, `compiler-core.ts`
-**Deps**: `archive/tickets/104UNIDECCON-003.md`, `tickets/104UNIDECCON-004.md`, `archive/tickets/104UNIDECCON-002.md`, `specs/104-unified-decision-context-considerations.md`
+**Deps**: `archive/tickets/104UNIDECCON-003.md`, `archive/tickets/104UNIDECCON-004.md`, `archive/tickets/104UNIDECCON-002.md`, `specs/104-unified-decision-context-considerations.md`
 
 ## Problem
 

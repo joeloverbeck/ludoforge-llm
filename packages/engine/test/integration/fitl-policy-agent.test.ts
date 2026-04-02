@@ -804,7 +804,7 @@ describe('FITL policy agent integration', () => {
     const observation = derivePlayerObservation(def, previewState, state.activePlayer);
 
     assert.equal(rngStatesEqual(previewState.rng, state.rng), true);
-    assert.equal(observation.requiresHiddenSampling, true);
+    assert.equal(observation.hiddenSamplingZones.length > 0, true);
 
     const result = new PolicyAgent({ traceLevel: 'verbose' }).chooseMove(input);
 

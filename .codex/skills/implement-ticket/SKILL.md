@@ -69,6 +69,7 @@ If a prior ticket in the same series was implemented earlier in the session, reu
     - resolve that detail with `1-3-1`
     - after user confirmation, treat the confirmed interpretation as authoritative for the rest of the task
     - do not force a ticket rewrite unless the implementation boundary itself changed
+    - if the conflict is that a ticket or spec uses raw strings for an identifier that already has a branded domain type in the repo, preserve the ticket boundary, raise the Foundation conflict explicitly, and prefer the existing branded type once confirmed
 16. If the ticket is accurate and no blocking decision remains, proceed.
 
 ## Implementation Rules
@@ -172,8 +173,10 @@ Optional seed-state discovery for behavior-driven game tests:
 After implementation and verification:
 
 1. Summarize what changed, what was verified, and any residual risk.
+   - if you audited schema, artifact, or generated-surface ripple effects and concluded none were needed, state that explicitly for runtime-only tickets
    - if any verification was intentionally deferred because an adjacent active ticket owns that scope, state that explicitly
    - if a user-confirmed `1-3-1` design resolution materially affected the implementation, include a short resolved-decision note
+   - if the main resolved decision was preserving Foundation type discipline over a raw ticket or spec example, say so explicitly
    - if local rulebook extracts or rules reports were necessary to justify a game-specific legality correction, include a short rules-evidence note
 2. If the ticket appears complete, offer to archive it per `docs/archival-workflow.md`.
 3. If the user wants archival or a concrete follow-up review, hand off to `post-ticket-review`.

@@ -42,7 +42,7 @@ Follow these steps in order. Do not skip any step.
    - **File references**: Specific engine files, game-spec files, or test files mentioned
    - **Prior investigation**: What was already tried and what evidence exists
 
-4. Locate the game's entrypoint: `data/games/<game>.game-spec.md` (the file that `loadGameSpecBundleFromEntrypoint` reads). Verify it exists.
+4. Locate the game's entrypoint: `data/games/<game>.game-spec.md` (at repo root level in `data/games/`, not inside the game subdirectory — this is the file that `loadGameSpecBundleFromEntrypoint` reads). Verify it exists.
 
 ### Step 2: Traceability Assessment
 
@@ -57,8 +57,10 @@ Before diagnosing the game regression, verify that the game produces sufficient 
 
    # If no runner: write a minimal diagnostic script that:
    # - Compiles the game spec
-   # - Runs runGame() for seed 1000 with PolicyAgents at traceLevel: 'detailed'
-   # - Dumps trace to a temporary JSON file
+   # - Runs runGame() for seed 1000 with PolicyAgents at traceLevel: 'verbose'
+   # - Dumps trace to a temporary JSON file with minimum schema:
+   #   { seed, stopReason, turnsCount, totalMoves, result,
+   #     evolvedMoves: [{ move, legalMoveCount, agentDecision }] }
    ```
 
 3. **Assess trace quality**. The trace MUST capture (check each):
@@ -70,17 +72,22 @@ Before diagnosing the game regression, verify that the game produces sufficient 
    - [ ] Victory margin at game end (or at truncation for maxTurns games)
    - [ ] Stop reason: why the game ended (victory, maxTurns, noLegalMoves, etc.)
 
+   **Verify trace level**: If per-candidate `candidates[]` arrays are missing from agent decision traces, the trace level may be defaulting to `'summary'`. The engine accepts `'verbose'` for full per-candidate breakdowns (the only valid levels are `'summary' | 'verbose'`). Record any trace-level mismatch as a traceability gap finding.
+
 4. **If ANY trace quality check fails**:
    - Record the gap (e.g., "no per-candidate score breakdown available")
-   - This becomes a **traceability ticket** — the highest-priority output of this skill
-   - Traceability tickets unblock diagnosis; produce them BEFORE any fix tickets
+   - Classify the gap: does it **block** root cause identification for any finding (CRITICAL priority, must be first output), or is it **inconvenient** but diagnosis can proceed with reduced confidence (HIGH priority, produced alongside other tickets)?
    - Continue diagnosis with whatever trace data IS available, but note which findings are uncertain due to trace gaps
 
 5. **If all checks pass**: Record "traceability sufficient" and proceed.
 
 ### Step 3: Diagnostic Simulation Analysis
 
-Parse the trace from Step 2 to identify anomalies. For each decision point of the affected agent:
+Parse the trace from Step 2 to identify anomalies. If Step 2 identified a per-candidate score breakdown gap, perform analysis using summary-level data only. Note which anomaly checks cannot be fully evaluated due to missing detail, and tag those findings with "uncertain — trace gap."
+
+**Profile analysis**: Before parsing decisions, read the affected agent's compiled profile (from the game spec's agents section). Catalog: how many considerations, what refs they use (`candidate.tag.*`, `preview.*`, `feature.*`), which pruning rules, which tie-breakers. Compare against the baseline profile for the same seat. Flag significant gaps (e.g., evolved profile has 3 considerations vs baseline's 9, evolved profile references no preview surfaces while baseline does).
+
+For each decision point of the affected agent:
 
 1. **Suboptimal action selection**: Did the agent choose a clearly worse action? (e.g., pass instead of agitate, no-op instead of Rally)
 2. **Surface/feature anomalies**: Are any surfaces returning unexpected values?
@@ -100,6 +107,8 @@ Record each anomaly with:
 ### Step 4: Root Cause Analysis
 
 For each anomaly from Step 3, trace through the codebase to find the root cause. Use Explore agents for specs with many anomalies (>3).
+
+If root cause analysis was performed during planning (e.g., via Explore agents validating report claims before the simulation), record those findings here rather than repeating the investigation. Step 4 should validate prior findings against the fresh trace data, not necessarily re-derive them from scratch.
 
 For each anomaly, determine:
 
@@ -170,7 +179,7 @@ Determine the next available spec number by scanning `specs/` and `archive/specs
 
 **For data fixes and traceability gaps** (→ tickets):
 
-Ask the user for a ticket namespace (e.g., `DIAGFITL`). Write tickets to `tickets/<NS>-<NNN>.md` following `tickets/_TEMPLATE.md` exactly:
+Ask the user for a ticket namespace if ambiguous. If the game name and diagnosis context make the namespace obvious (e.g., `DIAGFITL` for a FITL diagnosis), propose it and proceed unless the user objects. Write tickets to `tickets/<NS>-<NNN>.md` following `tickets/_TEMPLATE.md` exactly:
 
 - Status: PENDING
 - All required sections: Problem, Assumption Reassessment, Architecture Check, What to Change, Files to Touch, Out of Scope, Acceptance Criteria, Test Plan

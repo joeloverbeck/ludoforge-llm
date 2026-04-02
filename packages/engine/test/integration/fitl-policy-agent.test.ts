@@ -40,11 +40,11 @@ function createPolicyAgents(count: number): PolicyAgent[] {
   return Array.from({ length: count }, () => new PolicyAgent());
 }
 
-function advanceSeed11ToVcFreeRally() {
+function advanceSeed6ToVcFreeRally() {
   const { compiled } = compileProductionSpec();
   const def = assertValidatedGameDef(compiled.gameDef);
   const runtime = createGameDefRuntime(def);
-  let state = initialState(def, 11, 4).state;
+  let state = initialState(def, 6, 4).state;
   const openingAgent = new PolicyAgent();
   const openingLegalMoves = enumerateLegalMoves(def, state, undefined, runtime).moves;
   const openingMove = openingAgent.chooseMove({
@@ -52,7 +52,7 @@ function advanceSeed11ToVcFreeRally() {
     state,
     playerId: state.activePlayer,
     legalMoves: openingLegalMoves,
-    rng: createRng(11n),
+    rng: createRng(6n),
     runtime,
   });
 
@@ -267,17 +267,17 @@ function countAdjacentTokens(
   return total;
 }
 
-function advanceSeed1ToVcDecision() {
+function advanceSeed6ToVcDecision() {
   const { compiled } = compileProductionSpec();
   const def = assertValidatedGameDef(compiled.gameDef);
   const runtime = createGameDefRuntime(def);
-  const initial = initialState(def, 1, 4).state;
+  const initial = initialState(def, 6, 4).state;
   const openingChoice = new PolicyAgent().chooseMove({
     def,
     state: initial,
     playerId: initial.activePlayer,
     legalMoves: enumerateLegalMoves(def, initial, undefined, runtime).moves,
-    rng: createRng(1n),
+    rng: createRng(6n),
     runtime,
   });
   const state = applyMove(def, initial, openingChoice.move, undefined, runtime).state;
@@ -551,7 +551,7 @@ describe('FITL policy agent integration', () => {
       },
     });
     const runtime = createGameDefRuntime(def);
-    const base = advanceSeed1ToVcDecision();
+    const base = advanceSeed6ToVcDecision();
     const fewBasesState: GameState = {
       ...base.state,
       zones: {
@@ -691,7 +691,7 @@ describe('FITL policy agent integration', () => {
     });
 
     const runtime = createGameDefRuntime(def);
-    const base = advanceSeed1ToVcDecision();
+    const base = advanceSeed6ToVcDecision();
     const state = base.state;
     const moves = enumerateLegalMoves(def, state, undefined, runtime).moves;
     const result = new PolicyAgent({ traceLevel: 'verbose' }).chooseMove({
@@ -776,7 +776,7 @@ describe('FITL policy agent integration', () => {
     assert.equal(selected.agentDecision.emergencyFallback, false);
   });
 
-  it('keeps FITL preview margins unknown in the fixed-seed opening because post-move observation still requires hidden sampling', () => {
+  it('evaluates FITL preview margins in the fixed-seed opening because victory preview allows hidden sampling', () => {
     const { compiled } = compileProductionSpec();
     const def = assertValidatedGameDef(compiled.gameDef);
     const runtime = createGameDefRuntime(def);
@@ -815,14 +815,12 @@ describe('FITL policy agent integration', () => {
     assert.equal(result.agentDecision.emergencyFallback, false);
     assert.equal(result.agentDecision.previewUsage.mode, 'exactWorld');
     assert.deepEqual(result.agentDecision.previewUsage.refIds, ['victoryCurrentMargin.currentMargin.self']);
-    assert.deepEqual(result.agentDecision.previewUsage.unknownRefs, [
-      { refId: 'victoryCurrentMargin.currentMargin.self', reason: 'hidden' },
-    ]);
+    assert.deepEqual(result.agentDecision.previewUsage.unknownRefs, []);
     assert.deepEqual(result.agentDecision.previewUsage.outcomeBreakdown, {
-      ready: 0,
+      ready: 18,
       stochastic: 0,
       unknownRandom: 0,
-      unknownHidden: 18,
+      unknownHidden: 0,
       unknownUnresolved: 0,
       unknownFailed: 0,
     });
@@ -833,11 +831,8 @@ describe('FITL policy agent integration', () => {
     const evaluatedNonPassCandidate = result.agentDecision.candidates.find((candidate) => candidate.actionId !== 'pass');
 
     assert.ok(evaluatedNonPassCandidate, 'expected at least one evaluated non-pass candidate');
-    assert.equal(evaluatedNonPassCandidate?.previewOutcome, 'hidden');
-    assert.deepEqual(
-      evaluatedNonPassCandidate?.unknownPreviewRefs,
-      [{ refId: 'victoryCurrentMargin.currentMargin.self', reason: 'hidden' }],
-    );
+    assert.equal(evaluatedNonPassCandidate?.previewOutcome, 'ready');
+    assert.deepEqual(evaluatedNonPassCandidate?.unknownPreviewRefs, []);
   });
 
   it('runs fixed-seed FITL policy self-play without runtime failures or fallback', () => {
@@ -881,8 +876,8 @@ describe('FITL policy agent integration', () => {
     }
   });
 
-  it('uses production VC guidance with preferPopulousTargets scoring on seed-11 free Rally target-space set', () => {
-    const guided = advanceSeed11ToVcFreeRally();
+  it('uses production VC guidance with preferPopulousTargets scoring on seed-6 free Rally target-space set', () => {
+    const guided = advanceSeed6ToVcFreeRally();
     const unguidedDef = disableVcCompletionGuidance(guided.def);
     const unguidedRuntime = createGameDefRuntime(unguidedDef);
     const guidedAgent = new PolicyAgent();
@@ -909,16 +904,16 @@ describe('FITL policy agent integration', () => {
     assert.equal(String(unguidedMove.move.move.actionId), 'rally');
     assert.deepEqual(
       guidedMove.move.move.params['decision:doc.actionPipelines.9.stages[0].effects.0.if.else.0.chooseN::$targetSpaces'],
-      ['sihanoukville:none'],
+      ['binh-dinh:none', 'hue:none', 'kien-giang-an-xuyen:none', 'kien-phong:none', 'quang-tin-quang-ngai:none'],
     );
     assert.deepEqual(
       unguidedMove.move.move.params['decision:doc.actionPipelines.9.stages[0].effects.0.if.else.0.chooseN::$targetSpaces'],
-      ['sihanoukville:none'],
+      ['binh-dinh:none'],
     );
   });
 
   it('does not mutate the external pre-move snapshot while guided completion runs', () => {
-    const guided = advanceSeed11ToVcFreeRally();
+    const guided = advanceSeed6ToVcFreeRally();
     const snapshot = structuredClone(guided.state);
 
     void new PolicyAgent().chooseMove({

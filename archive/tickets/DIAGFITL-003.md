@@ -1,6 +1,6 @@
 # DIAGFITL-003: Set allowWhenHiddenSampling to true for FITL victory preview surfaces
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — game-spec data only
@@ -10,9 +10,9 @@
 
 FITL's observability config (`data/games/fire-in-the-lake/93-observability.md`) sets `allowWhenHiddenSampling: false` for victory preview surfaces (`victory.currentMargin` and `victory.currentRank`). Combined with the whole-state `requiresHiddenSampling` flag (always `true` in FITL because the deck has hidden token order), this blocks ALL preview access to victory surfaces.
 
-As a result, the `projectedSelfMargin` candidate feature (and any consideration referencing `preview.victory.currentMargin.self`) always falls back to the coalesce default, providing zero differentiation across candidates. This was the #1 lever for making VC competitive — without it, the agent cannot score moves by their projected impact on the victory formula.
+As a result, the `projectedSelfMargin` candidate feature always falls back to the coalesce default for the existing FITL baseline profiles that already reference `preview.victory.currentMargin.self`. That removes projected-margin differentiation across candidates even though the authored policy surface is supposed to support it.
 
-Evidence from seed 1000 trace: `previewUsage.evaluatedCandidateCount: 0` across all 5 VC decisions. The current vc-evolved profile doesn't reference preview surfaces, but this fix is required before any preview-based consideration can work.
+Evidence from the fixed-seed FITL policy traces: `previewUsage.refIds` includes `victoryCurrentMargin.currentMargin.self`, but `unknownRefs` reports `{ reason: 'hidden' }` and the outcome breakdown counts those preview evaluations as `unknownHidden`.
 
 This is a **workaround** — the architectural root cause (whole-state `requiresHiddenSampling`) is addressed by Spec 108. This ticket unblocks the preview system immediately.
 
@@ -20,8 +20,9 @@ This is a **workaround** — the architectural root cause (whole-state `requires
 
 1. `93-observability.md:21`: `allowWhenHiddenSampling: false` for `victory.currentMargin` — confirmed
 2. `93-observability.md:26`: `allowWhenHiddenSampling: false` for `victory.currentRank` — confirmed
-3. Victory margin computation does NOT depend on hidden information (deck order) — it reads zone token counts and global vars, all public — confirmed by reading terminal condition definitions
-4. `policy-preview.ts:146-148`: the hidden-sampling check returns `hidden` when `allowWhenHiddenSampling: false` — confirmed
+3. FITL baseline profiles (`us-baseline`, `arvn-baseline`, `nva-baseline`, `vc-baseline`) already use `projectedSelfMargin`, which references `preview.victory.currentMargin.self` — confirmed in `92-agents.md`
+4. Victory margin computation does NOT depend on hidden information (deck order) — it reads zone token counts and global vars, all public — confirmed by reading terminal condition definitions
+5. `policy-preview.ts:146-148`: the hidden-sampling check returns `hidden` when `allowWhenHiddenSampling: false` — confirmed
 
 ## Architecture Check
 
@@ -72,7 +73,7 @@ After modifying the game spec:
 ### Tests That Must Pass
 
 1. Compile FITL game spec — no compiler errors
-2. When a vc-evolved profile consideration references `preview.victory.currentMargin.self`, the preview resolves to a numeric value (not `hidden`)
+2. For an existing FITL profile that uses `projectedSelfMargin`, `preview.victory.currentMargin.self` resolves to a numeric value (not `hidden`)
 3. Existing suite: `pnpm -F @ludoforge/engine test`
 
 ### Invariants
@@ -84,10 +85,27 @@ After modifying the game spec:
 
 ### New/Modified Tests
 
-1. `packages/engine/test/unit/cnl/compile-observers.test.ts` — if it asserts on `allowWhenHiddenSampling` values, update expectations
+1. Update the smallest owned FITL production golden and/or policy integration tests that currently expect `victoryCurrentMargin.currentMargin.self` to resolve as `hidden`
 
 ### Commands
 
 1. `pnpm -F @ludoforge/engine build`
 2. `pnpm -F @ludoforge/engine test`
 3. `pnpm turbo typecheck`
+
+## Outcome
+
+Completed: 2026-04-02
+
+- Updated `data/games/fire-in-the-lake/93-observability.md` so FITL victory preview surfaces (`currentMargin` and `currentRank`) allow hidden sampling.
+- Regenerated the owned FITL policy catalog and summary goldens to reflect that `preview.victory.currentMargin.self` now evaluates as ready rather than hidden for existing baseline profiles that use `projectedSelfMargin`.
+- Updated the FITL integration expectations and one adjacent seed-based helper regression so the verification surface matches the current deterministic FITL seeded states after the observability change.
+- The ticket boundary was corrected before implementation: the live production profile surface exercising this path was the existing FITL baseline profiles, not `vc-evolved`.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build`
+- `node --test "dist/test/unit/policy-production-golden.test.js" "dist/test/integration/fitl-policy-agent.test.js"`
+- `node --test "dist/test/unit/prepare-playable-moves.test.js"`
+- `pnpm turbo typecheck`
+- `pnpm -F @ludoforge/engine test`

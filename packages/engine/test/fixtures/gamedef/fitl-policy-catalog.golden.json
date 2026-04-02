@@ -375,14 +375,14 @@
         "current": "public",
         "preview": {
           "visibility": "public",
-          "allowWhenHiddenSampling": false
+          "allowWhenHiddenSampling": true
         }
       },
       "currentRank": {
         "current": "public",
         "preview": {
           "visibility": "public",
-          "allowWhenHiddenSampling": false
+          "allowWhenHiddenSampling": true
         }
       }
     },
@@ -1722,5 +1722,5 @@
     "nva": "nva-baseline",
     "vc": "vc-evolved"
   },
-  "catalogFingerprint": "f993df2549c4b2eb5e3e2e4918c09ef3f0f0bbde7c775d1bedca811c268cd98c"
+  "catalogFingerprint": "26cf74152d7878507c6dcdaa34bcc47e71045171daeb55cb1dd4191f8159a8e4"
 }

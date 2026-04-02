@@ -4,7 +4,7 @@
 **Priority**: LOW
 **Effort**: Medium
 **Engine Changes**: Possibly — depends on investigation outcome
-**Deps**: `archive/tickets/DIAGFITL-002.md`, `tickets/DIAGFITL-003.md`
+**Deps**: `archive/tickets/DIAGFITL-002.md`, `archive/tickets/DIAGFITL-003.md`
 
 ## Problem
 

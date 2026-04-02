@@ -18,12 +18,12 @@ observability:
             current: public
             preview:
               visibility: public
-              allowWhenHiddenSampling: false
+              allowWhenHiddenSampling: true
           currentRank:
             current: public
             preview:
               visibility: public
-              allowWhenHiddenSampling: false
+              allowWhenHiddenSampling: true
         activeCardIdentity:
           current: public
           preview:

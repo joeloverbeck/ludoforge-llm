@@ -97,6 +97,7 @@ If a prior ticket in the same series was implemented earlier in the session, reu
   - leave them unchanged when evidence shows no edit is required
   - state that explicit no-change decision in the final summary
 - When a migration adds or removes a required compiled field, treat owned production goldens that snapshot compiled catalogs, summaries, or traces as expected update surfaces unless evidence shows unexpected behavioral drift.
+- When a change alters observability, preview readiness, scoring inputs, or other behavior that can legitimately change deterministic move choice, treat owned production goldens and fixed-seed summaries as expected update surfaces unless evidence shows unexpected drift outside the ticket boundary.
 
 ## Verification
 
@@ -119,6 +120,8 @@ Before claiming completion:
 8. If focused checks pass but a broader suite fails:
    - inspect shared test helpers, fixtures, and goldens for assumptions that the focused tests did not exercise
    - do not assume the failure is a product regression until helper-level assumptions are ruled out
+   - if the change affects observability, scoring, or move selection, explicitly check whether seed-specific helper states or turn-position fixtures have gone stale
+   - when a seeded helper no longer reaches the intended semantic state, retarget it to a current deterministic seed or turn that still exercises the same invariant rather than weakening the assertion
 9. If `node --test` or another runner reports only a top-level file failure:
    - rerun the failing file as narrowly as possible
    - use test-name filtering or direct helper reproduction when needed to isolate the failing assertion before editing code
@@ -153,6 +156,12 @@ Optional generated-artifact freshness check:
 - artifact path matches the producing command's write target
 - artifact timestamp or size changed as expected
 - inspect contents only after freshness is confirmed
+
+Optional seed-state discovery for behavior-driven game tests:
+- confirm the old seeded scenario no longer reaches the intended semantic state
+- search a bounded seed and turn window for a current deterministic reproduction
+- preserve the original invariant and update only the helper state or seed
+- rename helper functions or comments so they describe the new reproduction accurately
 
 ## Follow-Up
 

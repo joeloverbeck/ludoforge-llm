@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — game-spec data only
-**Deps**: `tickets/DIAGFITL-002.md`
+**Deps**: `archive/tickets/DIAGFITL-002.md`
 
 ## Problem
 

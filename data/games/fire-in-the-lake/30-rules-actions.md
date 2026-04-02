@@ -182,6 +182,7 @@ actions:
       - macro: coup-casualties-aid
     limits: [{ scope: phase, max: 1 }]
   - id: coupPacifyPass
+    tags: [pass]
     actor: active
     executor: 'actor'
     phase: [coupSupport]
@@ -194,6 +195,7 @@ actions:
     effects: []
     limits: []
   - id: coupAgitatePass
+    tags: [pass]
     actor: active
     executor: 'actor'
     phase: [coupSupport]
@@ -999,6 +1001,7 @@ actions:
                 to: { zoneExpr: { ref: binding, name: targetSpace } }
     limits: []
   - id: coupRedeployPass
+    tags: [pass]
     actor: active
     executor: 'actor'
     phase: [coupRedeploy]
@@ -1008,6 +1011,7 @@ actions:
     effects: []
     limits: []
   - id: coupCommitmentPass
+    tags: [pass]
     actor: active
     executor: 'actor'
     phase: [coupCommitment]

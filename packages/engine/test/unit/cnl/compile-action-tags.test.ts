@@ -162,4 +162,26 @@ describe('compileActionTagIndex', () => {
     assert.deepEqual(result.byAction['pass'], ['pass']);
     assert.deepEqual(result.byTag['pass'], ['pass']);
   });
+
+  it('indexes FITL coup-phase pass actions under the pass tag', () => {
+    const diagnostics: Diagnostic[] = [];
+    const result = compileActionTagIndex(
+      [
+        mkAction('coupPacifyPass', ['pass']),
+        mkAction('coupAgitatePass', ['pass']),
+        mkAction('coupRedeployPass', ['pass']),
+        mkAction('coupCommitmentPass', ['pass']),
+      ],
+      diagnostics,
+    );
+
+    assert.equal(errors(diagnostics).length, 0);
+    assert.ok(result !== undefined);
+    assert.deepEqual(result.byTag['pass'], [
+      'coupAgitatePass',
+      'coupCommitmentPass',
+      'coupPacifyPass',
+      'coupRedeployPass',
+    ]);
+  });
 });

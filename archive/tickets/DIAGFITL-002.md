@@ -1,6 +1,6 @@
 # DIAGFITL-002: Add pass tags to coup-phase pass actions
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — game-spec data only
@@ -111,3 +111,17 @@ After modifying the game spec:
 1. `pnpm -F @ludoforge/engine build`
 2. `pnpm -F @ludoforge/engine test`
 3. `pnpm turbo typecheck`
+
+## Outcome
+
+Completed: 2026-04-02
+
+Added `tags: [pass]` to the four FITL coup-phase pass actions in `data/games/fire-in-the-lake/30-rules-actions.md`: `coupPacifyPass`, `coupAgitatePass`, `coupRedeployPass`, and `coupCommitmentPass`. Also added focused regression coverage in `packages/engine/test/unit/cnl/compile-action-tags.test.ts` so these actions remain indexed under the compiled `pass` tag.
+
+Deviation from original plan: no owned goldens required regeneration. The tag change was fully covered by the targeted compile-action-tags regression and the existing engine suite.
+
+Verification:
+- `pnpm -F @ludoforge/engine build`
+- `node --test "dist/test/unit/cnl/compile-action-tags.test.js"` from `packages/engine`
+- `pnpm -F @ludoforge/engine test`
+- `pnpm turbo typecheck`

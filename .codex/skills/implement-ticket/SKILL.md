@@ -49,6 +49,7 @@ If a prior ticket in the same series was implemented earlier in the session, reu
    - re-extract the concrete files, acceptance criteria, invariants, and verification commands from the corrected ticket
    - do not keep using the stale ticket's original verification surface by inertia
    - treat the rewritten ticket as the authoritative implementation boundary for the rest of the task
+   - if later verification disproves the premise for that rewrite, promptly restore the original ticket boundary and note why the rewrite was rolled back
 11. If correcting one active ticket materially changes ownership within an active ticket series:
    - inspect the remaining active sibling tickets in that series before coding
    - update or defer overlapping sibling tickets so they do not still claim invalid staged ownership
@@ -122,6 +123,11 @@ Before claiming completion:
    - rerun the failing file as narrowly as possible
    - use test-name filtering or direct helper reproduction when needed to isolate the failing assertion before editing code
    - if Node still collapses nested suite failures, run the built test module directly to expose nested subtest output before changing code
+10. If acceptance depends on a generated artifact such as a trace, golden, schema, or report:
+   - confirm the command that produces it has actually exited before diagnosing the artifact contents
+   - confirm the artifact path matches the command's real write target
+   - check a freshness signal such as timestamp or file size before treating missing fields or stale output as a real discrepancy
+   - only then compare the artifact against the ticket's acceptance criteria
 
 Use the repo's standard commands from `AGENTS.md` when appropriate:
 
@@ -141,6 +147,12 @@ Optional verification ordering for `dist`-driven packages:
 - full package test suite
 - broader repo checks
 - keep commands that clean, rebuild, or regenerate the same output tree serialized rather than parallel
+
+Optional generated-artifact freshness check:
+- producing command has exited
+- artifact path matches the producing command's write target
+- artifact timestamp or size changed as expected
+- inspect contents only after freshness is confirmed
 
 ## Follow-Up
 

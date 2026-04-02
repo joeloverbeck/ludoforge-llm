@@ -184,4 +184,23 @@ describe('compileActionTagIndex', () => {
       'coupRedeployPass',
     ]);
   });
+
+  it('indexes FITL coup-phase non-pass actions under semantic tags', () => {
+    const diagnostics: Diagnostic[] = [];
+    const result = compileActionTagIndex(
+      [
+        mkAction('coupPacifyUS', ['pacify']),
+        mkAction('coupPacifyARVN', ['pacify']),
+        mkAction('coupAgitateVC', ['agitate']),
+        mkAction('coupCommitmentResolve', ['commitment']),
+      ],
+      diagnostics,
+    );
+
+    assert.equal(errors(diagnostics).length, 0);
+    assert.ok(result !== undefined);
+    assert.deepEqual(result.byTag.agitate, ['coupAgitateVC']);
+    assert.deepEqual(result.byTag.commitment, ['coupCommitmentResolve']);
+    assert.deepEqual(result.byTag.pacify, ['coupPacifyARVN', 'coupPacifyUS']);
+  });
 });

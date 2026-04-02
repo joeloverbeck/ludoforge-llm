@@ -126,6 +126,9 @@ describe('FITL production data integration compilation', () => {
       true,
       'Expected synthesized card-driven event action in production GameDef',
     );
+    assert.deepEqual(compiled.gameDef!.actionTagIndex?.byTag.agitate, ['coupAgitateVC']);
+    assert.deepEqual(compiled.gameDef!.actionTagIndex?.byTag.commitment, ['coupCommitmentResolve']);
+    assert.deepEqual(compiled.gameDef!.actionTagIndex?.byTag.pacify, ['coupPacifyARVN', 'coupPacifyUS']);
     const pivotalAction = compiled.gameDef!.actions.find((action) => String(action.id) === 'pivotalEvent');
     assert.ok(pivotalAction, 'Expected pivotalEvent action in production GameDef');
     assert.deepEqual(pivotalAction.executor, 'actor');

@@ -205,6 +205,7 @@ actions:
     effects: []
     limits: []
   - id: coupPacifyUS
+    tags: [pacify]
     actor: active
     executor: 'actor'
     phase: [coupSupport, honoluluPacify]
@@ -326,6 +327,7 @@ actions:
       - setMarker: { space: { zoneExpr: { ref: binding, name: targetSpace } }, marker: coupPacifySpaceUsage, state: used }
     limits: []
   - id: coupPacifyARVN
+    tags: [pacify]
     actor: active
     executor: 'actor'
     phase: [coupSupport, honoluluPacify]
@@ -468,6 +470,7 @@ actions:
       - setMarker: { space: { zoneExpr: { ref: binding, name: targetSpace } }, marker: coupPacifyArvnSpaceUsage, state: used }
     limits: []
   - id: coupAgitateVC
+    tags: [agitate]
     actor: active
     executor: 'actor'
     phase: [coupSupport]
@@ -1021,6 +1024,7 @@ actions:
     effects: []
     limits: []
   - id: coupCommitmentResolve
+    tags: [commitment]
     actor: active
     executor: 'actor'
     phase: [coupCommitment]

@@ -882,6 +882,13 @@ describe('FITL policy agent integration', () => {
     const unguidedRuntime = createGameDefRuntime(unguidedDef);
     const guidedAgent = new PolicyAgent();
     const unguidedAgent = new PolicyAgent();
+    const targetSpacesDecisionId = 'decision:doc.actionPipelines.9.stages[0].effects.0.if.else.0.chooseN::$targetSpaces';
+    const totalPopulation = (zoneIds: readonly unknown[], def: GameDef): number =>
+      zoneIds.reduce<number>((sum, zoneId) => {
+        const zone = def.zones.find((entry) => String(entry.id) === String(zoneId));
+        const population = typeof zone?.attributes?.population === 'number' ? zone.attributes.population : 0;
+        return sum + population;
+      }, 0);
 
     const guidedMove = guidedAgent.chooseMove({
       def: guided.def,
@@ -902,13 +909,24 @@ describe('FITL policy agent integration', () => {
 
     assert.equal(String(guidedMove.move.move.actionId), 'rally');
     assert.equal(String(unguidedMove.move.move.actionId), 'rally');
+    const guidedTargetSpaces = guidedMove.move.move.params[targetSpacesDecisionId];
+    const unguidedTargetSpaces = unguidedMove.move.move.params[targetSpacesDecisionId];
+    assert.ok(Array.isArray(guidedTargetSpaces));
+    assert.ok(Array.isArray(unguidedTargetSpaces));
     assert.deepEqual(
-      guidedMove.move.move.params['decision:doc.actionPipelines.9.stages[0].effects.0.if.else.0.chooseN::$targetSpaces'],
+      guidedTargetSpaces,
       ['binh-dinh:none', 'hue:none', 'kien-giang-an-xuyen:none', 'kien-phong:none', 'quang-tin-quang-ngai:none'],
     );
-    assert.deepEqual(
-      unguidedMove.move.move.params['decision:doc.actionPipelines.9.stages[0].effects.0.if.else.0.chooseN::$targetSpaces'],
-      ['binh-dinh:none'],
+    assert.notDeepEqual(
+      unguidedTargetSpaces,
+      guidedTargetSpaces,
+      'unguided selection should differ once completion scoring is removed',
+    );
+    assert.equal(unguidedTargetSpaces.length > 0, true, 'unguided VC Rally should still select at least one target space');
+    assert.equal(
+      totalPopulation(guidedTargetSpaces, guided.def) > totalPopulation(unguidedTargetSpaces, guided.def),
+      true,
+      'guided VC Rally should target a higher-population set than the unguided fallback',
     );
   });
 

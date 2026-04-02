@@ -1199,6 +1199,7 @@ effectMacros:
   - id: insurgent-rally-select-spaces
     params:
       - { name: resourceVar, type: string }
+      - { name: minTargetSpaces, type: value }
     exports: [$targetSpaces]
     effects:
       - if:
@@ -1216,7 +1217,7 @@ effectMacros:
                         set: ['province', 'city']
                       - { op: '!=', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: 'passiveSupport' }
                       - { op: '!=', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: 'activeSupport' }
-                min: 0
+                min: { param: minTargetSpaces }
                 max: 1
           else:
             - chooseN:
@@ -1231,7 +1232,7 @@ effectMacros:
                         set: ['province', 'city']
                       - { op: '!=', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: 'passiveSupport' }
                       - { op: '!=', left: { ref: markerState, space: $zone, marker: supportOpposition }, right: 'activeSupport' }
-                min: 0
+                min: { param: minTargetSpaces }
                 max:
                   if:
                     when: { op: '==', left: { ref: binding, name: __freeOperation }, right: true }

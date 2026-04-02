@@ -40,6 +40,7 @@ If a prior ticket in the same series was implemented earlier in the session, reu
    - shared type or schema ripple effects
    - Foundation 14 atomic migrations for removals or renames
    - required test, schema, or fixture updates
+   - when the ticket disputes whether a game-specific move, phase, or action should be legal, consult any local rulebook extracts or rules reports referenced by the repo before deciding whether the fix is policy-only or a legality correction
 9. If the codebase is already mid-migration:
    - distinguish between the ticket's intended end state and migration work that has already landed
    - decide whether the remaining deliverable boundary is still clear and implementable without a new product decision
@@ -92,6 +93,9 @@ If a prior ticket in the same series was implemented earlier in the session, reu
   - Zod or JSON schemas
   - diagnostics or debug snapshots
   - fixtures, goldens, and tests
+- When tightening authored `chooseN` minimums or other decision cardinality constraints:
+  - check whether runtime `max` can drop below the new minimum because of resources, grants, action class, or other state-dependent caps
+  - if `max < min` can occur, update legality or cost-validation in the same change so the move becomes cleanly illegal instead of failing at runtime
 - If the ticket names files to verify or inspect rather than definitely modify:
   - read and assess them as part of the implementation boundary
   - leave them unchanged when evidence shows no edit is required
@@ -170,6 +174,7 @@ After implementation and verification:
 1. Summarize what changed, what was verified, and any residual risk.
    - if any verification was intentionally deferred because an adjacent active ticket owns that scope, state that explicitly
    - if a user-confirmed `1-3-1` design resolution materially affected the implementation, include a short resolved-decision note
+   - if local rulebook extracts or rules reports were necessary to justify a game-specific legality correction, include a short rules-evidence note
 2. If the ticket appears complete, offer to archive it per `docs/archival-workflow.md`.
 3. If the user wants archival or a concrete follow-up review, hand off to `post-ticket-review`.
 4. If this implementation materially superseded semantics recorded in a recently archived sibling ticket, call that out in the handoff so archival review can amend or clarify the archive trail.

@@ -3073,6 +3073,7 @@ actionPipelines:
           - macro: insurgent-rally-select-spaces
             args:
               resourceVar: nvaResources
+              minTargetSpaces: 0
       - stage: resolve-per-space
         effects:
           - forEach:
@@ -3230,8 +3231,16 @@ actionPipelines:
   - id: rally-vc-profile
     actionId: rally
     applicability: { op: '==', left: { ref: activePlayer }, right: 3 }
-    legality: true
-    costValidation: null
+    legality:
+      op: or
+      args:
+        - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
+        - { op: '>=', left: { ref: gvar, var: vcResources }, right: 1 }
+    costValidation:
+      op: or
+      args:
+        - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
+        - { op: '>=', left: { ref: gvar, var: vcResources }, right: 1 }
     costEffects: []
     targeting: {}
     stages:
@@ -3240,6 +3249,7 @@ actionPipelines:
           - macro: insurgent-rally-select-spaces
             args:
               resourceVar: vcResources
+              minTargetSpaces: 1
       - stage: resolve-per-space
         effects:
           - forEach:

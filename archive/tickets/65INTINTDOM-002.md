@@ -1,6 +1,6 @@
 # 65INTINTDOM-002: ZoneId branded type migration (string → number)
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — branded.ts (ZoneId type), all kernel/cnl modules that reference ZoneId
@@ -98,3 +98,21 @@ Modify compiler modules that emit ZoneId values to use the intern table from tic
 1. `pnpm turbo typecheck`
 2. `pnpm -F @ludoforge/engine test`
 3. `pnpm turbo test`
+
+## Outcome
+
+- Completed: 2026-04-04
+- What changed:
+  - Preserved canonical string `ZoneId` at the serialized `GameDef` boundary per `docs/FOUNDATIONS.md` instead of changing `ZoneId` itself to `Brand<number>`.
+  - Added a runtime-only branded numeric `RuntimeZoneId` plus the new zone normalization layer in `packages/engine/src/kernel/runtime-zone-index.ts`.
+  - Updated `packages/engine/src/kernel/spatial.ts` to build numeric runtime adjacency from the normalized zone index while preserving the outward canonical-string graph API used by existing kernel callers.
+  - Extended `GameDefRuntime` with `zoneRuntimeIndex` and exported the new runtime layer from the kernel index.
+  - Added focused unit coverage for runtime zone indexing and numeric adjacency storage, and updated one hand-built `GameDefRuntime` test fixture to include the new required runtime field.
+- Deviations from original plan:
+  - The original ticket boundary was not Foundation-compliant as written. `ZoneId` did not change from `Brand<string>` to `Brand<number>`, compiler output did not switch serialized zone ids to integers, and no repo-wide atomic `ZoneId` migration was performed.
+  - Instead, the implemented boundary used a separate runtime-only numeric zone identifier layer inside `GameDefRuntime`, which preserves Foundation 17 while still delivering the intended runtime zone-indexing step ahead of `65INTINTDOM-003`.
+- Verification results:
+  - `pnpm -F @ludoforge/engine build`
+  - `node --test dist/test/unit/spatial-graph.test.js dist/test/unit/kernel/runtime-zone-index.test.js dist/test/unit/kernel/condition-annotator.test.js`
+  - `pnpm -F @ludoforge/engine test`
+  - `pnpm turbo typecheck`

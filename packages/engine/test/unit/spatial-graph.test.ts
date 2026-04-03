@@ -1,7 +1,14 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { asZoneId, buildAdjacencyGraph, type ZoneDef, validateAdjacency } from '../../src/kernel/index.js';
+import {
+  asRuntimeZoneId,
+  asZoneId,
+  buildAdjacencyGraph,
+  type GameDef,
+  type ZoneDef,
+  validateAdjacency,
+} from '../../src/kernel/index.js';
 
 type ZoneAdjacencyInput =
   | string
@@ -46,6 +53,35 @@ const fitlMapPayload: FitlMapPayload = {
 const loadFitlMapZones = (): readonly ZoneDef[] => {
   return fitlMapPayload.spaces.map((space) => zone(space.id, space.adjacentTo));
 };
+
+const makeGraphDef = (): GameDef => ({
+  metadata: { id: 'spatial-graph-test', players: { min: 1, max: 2 } },
+  internTable: {
+    zones: ['b:none', 'a:none', 'c:none'],
+    actions: [],
+    tokenTypes: [],
+    seats: [],
+    players: ['0', '1'],
+    phases: [],
+    globalVars: [],
+    perPlayerVars: [],
+    zoneVars: [],
+  },
+  constants: {},
+  globalVars: [],
+  perPlayerVars: [],
+  zones: [
+    zone('a:none', ['b:none', 'c:none']),
+    zone('b:none', ['a:none']),
+    zone('c:none', ['a:none']),
+  ],
+  tokenTypes: [],
+  setup: [],
+  turnStructure: { phases: [] },
+  actions: [],
+  triggers: [],
+  terminal: { conditions: [] },
+});
 
 describe('spatial adjacency graph', () => {
   it('preserves symmetric declarations', () => {
@@ -168,5 +204,16 @@ describe('spatial adjacency graph', () => {
       diagnostics.some((diag) => diag.severity === 'error' && diag.code.startsWith('SPATIAL_')),
       false,
     );
+  });
+
+  it('stores runtime adjacency by numeric zone id while preserving canonical outward neighbors', () => {
+    const def = makeGraphDef();
+
+    const graph = buildAdjacencyGraph(def);
+
+    assert.deepEqual(graph.neighbors['a:none'], [asZoneId('b:none'), asZoneId('c:none')]);
+    assert.deepEqual(graph.runtimeNeighbors['a:none'], [asRuntimeZoneId(0), asRuntimeZoneId(2)]);
+    assert.equal(graph.zoneRuntimeIndex.canonicalIdByRuntimeId[0], asZoneId('b:none'));
+    assert.equal(graph.runtimeNeighborSets['a:none']?.has(asRuntimeZoneId(0)), true);
   });
 });

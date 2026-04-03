@@ -1,6 +1,7 @@
 type Brand<TBase, TBrand extends string> = TBase & { readonly __brand: TBrand };
 
 export type PlayerId = Brand<number, 'PlayerId'>;
+export type RuntimeZoneId = Brand<number, 'RuntimeZoneId'>;
 export type ZoneId = Brand<string, 'ZoneId'>;
 export type TokenId = Brand<string, 'TokenId'>;
 export type ActionId = Brand<string, 'ActionId'>;
@@ -9,6 +10,7 @@ export type TriggerId = Brand<string, 'TriggerId'>;
 export type SeatId = Brand<string, 'SeatId'>;
 
 export const asPlayerId = (value: number): PlayerId => value as PlayerId;
+export const asRuntimeZoneId = (value: number): RuntimeZoneId => value as RuntimeZoneId;
 export const asZoneId = (value: string): ZoneId => value as ZoneId;
 export const asTokenId = (value: string): TokenId => value as TokenId;
 export const asActionId = (value: string): ActionId => value as ActionId;
@@ -17,6 +19,7 @@ export const asTriggerId = (value: string): TriggerId => value as TriggerId;
 export const asSeatId = (value: string): SeatId => value as SeatId;
 
 export const isPlayerId = (value: unknown): value is PlayerId => typeof value === 'number';
+export const isRuntimeZoneId = (value: unknown): value is RuntimeZoneId => typeof value === 'number';
 export const isZoneId = (value: unknown): value is ZoneId => typeof value === 'string';
 export const isTokenId = (value: unknown): value is TokenId => typeof value === 'string';
 export const isActionId = (value: unknown): value is ActionId => typeof value === 'string';

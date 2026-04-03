@@ -1,12 +1,21 @@
 import type { Diagnostic } from './diagnostics.js';
-import type { ZoneId } from './branded.js';
+import type { RuntimeZoneId, ZoneId } from './branded.js';
 import { evalCondition } from './eval-condition.js';
 import type { ReadContext } from './eval-context.js';
-import type { ConditionAST, GameState, Token, ZoneDef } from './types.js';
+import {
+  buildZoneRuntimeIndex,
+  externRuntimeZoneId,
+  internRuntimeZoneId,
+  type ZoneRuntimeIndex,
+} from './runtime-zone-index.js';
+import type { ConditionAST, GameDef, GameState, Token, ZoneDef } from './types.js';
 
 export interface AdjacencyGraph {
   readonly neighbors: Readonly<Record<string, readonly ZoneId[]>>;
   readonly neighborSets: Readonly<Record<string, ReadonlySet<ZoneId>>>;
+  readonly runtimeNeighbors: Readonly<Record<string, readonly RuntimeZoneId[]>>;
+  readonly runtimeNeighborSets: Readonly<Record<string, ReadonlySet<RuntimeZoneId>>>;
+  readonly zoneRuntimeIndex: ZoneRuntimeIndex;
   readonly zoneCount: number;
 }
 
@@ -16,25 +25,37 @@ export interface ConnectedQueryOptions {
   readonly maxDepth?: number;
 }
 
-const adjacencyGraphCache = new WeakMap<readonly ZoneDef[], AdjacencyGraph>();
+type AdjacencyGraphSource = GameDef | readonly ZoneDef[];
 
-export function buildAdjacencyGraph(zones: readonly ZoneDef[]): AdjacencyGraph {
-  const cached = adjacencyGraphCache.get(zones);
+const adjacencyGraphCache = new WeakMap<object, AdjacencyGraph>();
+
+function adjacencyGraphCacheKey(source: AdjacencyGraphSource): object {
+  return source;
+}
+
+function getZoneRuntimeIndex(source: AdjacencyGraphSource): ZoneRuntimeIndex {
+  return buildZoneRuntimeIndex(source);
+}
+
+export function buildAdjacencyGraph(source: AdjacencyGraphSource): AdjacencyGraph {
+  const cacheKey = adjacencyGraphCacheKey(source);
+  const cached = adjacencyGraphCache.get(cacheKey);
   if (cached !== undefined) {
     return cached;
   }
 
-  const zoneIds = new Set<ZoneId>(zones.map((zone) => zone.id));
-  const normalizedNeighbors = new Map<ZoneId, Set<ZoneId>>();
+  const zoneRuntimeIndex = getZoneRuntimeIndex(source);
+  const runtimeZoneIds = new Set<RuntimeZoneId>(zoneRuntimeIndex.zoneIds);
+  const normalizedNeighbors = new Map<RuntimeZoneId, Set<RuntimeZoneId>>();
 
-  zones.forEach((zone) => {
-    normalizedNeighbors.set(zone.id, new Set<ZoneId>());
+  zoneRuntimeIndex.zones.forEach((zone) => {
+    normalizedNeighbors.set(zone.id, new Set<RuntimeZoneId>());
   });
 
-  zones.forEach((zone) => {
+  zoneRuntimeIndex.zones.forEach((zone) => {
     zone.adjacentTo?.forEach((adjacency) => {
       const adjacentZoneId = adjacency.to;
-      if (adjacentZoneId === zone.id || !zoneIds.has(adjacentZoneId)) {
+      if (adjacentZoneId === zone.id || !runtimeZoneIds.has(adjacentZoneId)) {
         return;
       }
 
@@ -45,22 +66,32 @@ export function buildAdjacencyGraph(zones: readonly ZoneDef[]): AdjacencyGraph {
     });
   });
 
-  const sortedZoneIds = [...normalizedNeighbors.keys()].sort((left, right) => left.localeCompare(right));
+  const sortedZoneIds = [...normalizedNeighbors.keys()].sort((left, right) => left - right);
   const neighbors: Record<string, readonly ZoneId[]> = {};
   const neighborSets: Record<string, ReadonlySet<ZoneId>> = {};
+  const runtimeNeighbors: Record<string, readonly RuntimeZoneId[]> = {};
+  const runtimeNeighborSets: Record<string, ReadonlySet<RuntimeZoneId>> = {};
 
-  sortedZoneIds.forEach((zoneId) => {
-    const entries = normalizedNeighbors.get(zoneId) ?? new Set<ZoneId>();
-    neighbors[zoneId] = [...entries].sort((left, right) => left.localeCompare(right));
-    neighborSets[zoneId] = entries;
+  sortedZoneIds.forEach((runtimeZoneId) => {
+    const canonicalZoneId = externRuntimeZoneId(runtimeZoneId, zoneRuntimeIndex);
+    const entries = normalizedNeighbors.get(runtimeZoneId) ?? new Set<RuntimeZoneId>();
+    const sortedEntries = [...entries].sort((left, right) => left - right);
+    runtimeNeighbors[canonicalZoneId] = sortedEntries;
+    runtimeNeighborSets[canonicalZoneId] = entries;
+    const canonicalNeighbors = sortedEntries.map((neighborZoneId) => externRuntimeZoneId(neighborZoneId, zoneRuntimeIndex));
+    neighbors[canonicalZoneId] = canonicalNeighbors;
+    neighborSets[canonicalZoneId] = new Set(canonicalNeighbors);
   });
 
   const result: AdjacencyGraph = {
     neighbors,
     neighborSets,
-    zoneCount: zones.length,
+    runtimeNeighbors,
+    runtimeNeighborSets,
+    zoneRuntimeIndex,
+    zoneCount: zoneRuntimeIndex.zones.length,
   };
-  adjacencyGraphCache.set(zones, result);
+  adjacencyGraphCache.set(cacheKey, result);
   return result;
 }
 
@@ -196,6 +227,11 @@ function getNeighbors(graph: AdjacencyGraph, zone: ZoneId): readonly ZoneId[] {
   return graph.neighbors[String(zone)] ?? [];
 }
 
+function getRuntimeNeighbors(graph: AdjacencyGraph, zone: RuntimeZoneId): readonly RuntimeZoneId[] {
+  const canonicalZoneId = externRuntimeZoneId(zone, graph.zoneRuntimeIndex);
+  return graph.runtimeNeighbors[canonicalZoneId] ?? [];
+}
+
 function normalizeMaxDepth(maxDepth: number | undefined, graph: AdjacencyGraph): number {
   if (maxDepth === undefined) {
     return Math.max(0, graph.zoneCount - 1);
@@ -237,9 +273,13 @@ export function queryTokensInAdjacentZones(
   state: GameState,
   zone: ZoneId,
 ): readonly Token[] {
+  const runtimeZoneId = internRuntimeZoneId(zone, graph.zoneRuntimeIndex);
+  if (runtimeZoneId === undefined) {
+    return [];
+  }
   const tokens: Token[] = [];
-  for (const neighborZone of getNeighbors(graph, zone)) {
-    const zoneTokens = state.zones[String(neighborZone)] ?? [];
+  for (const neighborZone of getRuntimeNeighbors(graph, runtimeZoneId)) {
+    const zoneTokens = state.zones[externRuntimeZoneId(neighborZone, graph.zoneRuntimeIndex)] ?? [];
     tokens.push(...zoneTokens);
   }
   return tokens;
@@ -256,10 +296,14 @@ export function queryConnectedZones(
   const includeStart = options?.includeStart ?? false;
   const allowTargetOutsideVia = options?.allowTargetOutsideVia ?? false;
   const maxDepth = normalizeMaxDepth(options?.maxDepth, graph);
+  const startZone = internRuntimeZoneId(zone, graph.zoneRuntimeIndex);
+  if (startZone === undefined) {
+    return [];
+  }
 
   const discovered: ZoneId[] = [];
-  const visited = new Set<ZoneId>([zone]);
-  const queue: Array<{ readonly zone: ZoneId; readonly depth: number }> = [{ zone, depth: 0 }];
+  const visited = new Set<RuntimeZoneId>([startZone]);
+  const queue: Array<{ readonly zone: RuntimeZoneId; readonly depth: number }> = [{ zone: startZone, depth: 0 }];
   let cursor = 0;
 
   if (includeStart) {
@@ -274,18 +318,19 @@ export function queryConnectedZones(
       continue;
     }
 
-    for (const neighborZone of getNeighbors(graph, entry.zone)) {
+    for (const neighborZone of getRuntimeNeighbors(graph, entry.zone)) {
       if (visited.has(neighborZone)) {
         continue;
       }
 
-      const passesVia = evaluateVia(via, neighborZone, state, evalCtx);
+      const canonicalNeighborZone = externRuntimeZoneId(neighborZone, graph.zoneRuntimeIndex);
+      const passesVia = evaluateVia(via, canonicalNeighborZone, state, evalCtx);
       if (!passesVia && !allowTargetOutsideVia) {
         continue;
       }
 
       visited.add(neighborZone);
-      discovered.push(neighborZone);
+      discovered.push(canonicalNeighborZone);
       if (passesVia) {
         queue.push({ zone: neighborZone, depth: entry.depth + 1 });
       }

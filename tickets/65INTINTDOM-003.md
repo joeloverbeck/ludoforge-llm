@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — types-core.ts (GameState.zones type), all kernel zone access sites, resolve-selectors.ts (sortAndDedupeZones)
-**Deps**: `tickets/65INTINTDOM-002.md`
+**Deps**: `archive/tickets/65INTINTDOM-002.md`
 
 ## Problem
 

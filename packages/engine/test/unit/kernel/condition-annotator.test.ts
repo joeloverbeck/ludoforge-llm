@@ -8,6 +8,7 @@ import {
   asZoneId,
   buildAdjacencyGraph,
   buildRuntimeTableIndex,
+  buildZoneRuntimeIndex,
   compileGameDefFirstDecisionDomains,
   createZobristTable,
   describeAction,
@@ -100,7 +101,8 @@ const makeState = (overrides: Partial<GameState> = {}): GameState => ({
 });
 
 const makeRuntime = (def: GameDef): GameDefRuntime => ({
-  adjacencyGraph: buildAdjacencyGraph(def.zones),
+  adjacencyGraph: buildAdjacencyGraph(def),
+  zoneRuntimeIndex: buildZoneRuntimeIndex(def),
   runtimeTableIndex: buildRuntimeTableIndex(def),
   zobristTable: createZobristTable(def),
   alwaysCompleteActionIds: new Set(),

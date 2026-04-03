@@ -3,6 +3,8 @@ import { buildAdjacencyGraph } from './spatial.js';
 import type { RuntimeTableIndex } from './runtime-table-index.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import type { ActionId } from './branded.js';
+import type { ZoneRuntimeIndex } from './runtime-zone-index.js';
+import { buildZoneRuntimeIndex } from './runtime-zone-index.js';
 import type { ZobristTable, GameDef } from './types.js';
 import { createZobristTable } from './zobrist.js';
 import type { RuleCard } from './tooltip-rule-card.js';
@@ -27,6 +29,7 @@ import { compileGameDefFirstDecisionDomains, type FirstDecisionRuntimeCompilatio
  */
 export interface GameDefRuntime {
   readonly adjacencyGraph: AdjacencyGraph;
+  readonly zoneRuntimeIndex: ZoneRuntimeIndex;
   readonly runtimeTableIndex: RuntimeTableIndex;
   readonly zobristTable: ZobristTable;
   readonly alwaysCompleteActionIds: ReadonlySet<ActionId>;
@@ -39,8 +42,10 @@ export function createGameDefRuntime(def: GameDef): GameDefRuntime {
   const compiledLifecycleEffects = compileAllLifecycleEffects(def);
   const alwaysCompleteActionIds = computeAlwaysCompleteActionIds(def);
   const firstDecisionDomains = compileGameDefFirstDecisionDomains(def);
+  const zoneRuntimeIndex = buildZoneRuntimeIndex(def);
   return {
-    adjacencyGraph: buildAdjacencyGraph(def.zones),
+    adjacencyGraph: buildAdjacencyGraph(def),
+    zoneRuntimeIndex,
     runtimeTableIndex: buildRuntimeTableIndex(def),
     zobristTable: createZobristTable(def),
     alwaysCompleteActionIds,

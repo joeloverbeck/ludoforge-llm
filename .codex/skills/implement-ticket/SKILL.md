@@ -97,6 +97,7 @@ If that earlier ticket introduced production-corpus traversal, fixture readers, 
   - the new authoritative authored/runtime path you are moving toward
   - any temporary compatibility or transitional surface you intentionally retain so nearby code and tests stay coherent
   Record that distinction in your working notes and final summary.
+- If Foundations require serialized/artifact-facing identifiers to remain canonical strings, but the ticket still needs numeric or otherwise changed identifier semantics in implementation code, introduce a separate runtime-only branded identifier type rather than redefining the artifact-facing domain id in place.
 - For additive compiled-field migrations, it can be valid to require the new field in compiler-owned artifacts and schemas while temporarily leaving handwritten in-memory TypeScript fixtures optional, so long as that distinction is explicit, Foundation-compliant, and verified.
 - The ticket's `Files to Touch` list is a strong hint, not a hard limit. If coherent completion requires adjacent files for contracts, runtime consumers, schemas, fixtures, or tests, include them and explain why.
 - If sibling tickets in the same active series contain stale assumptions that are informative but non-blocking for the current ticket, note the drift in your working notes and final summary without absorbing that sibling's scope unless ownership or correctness actually conflicts.
@@ -107,6 +108,7 @@ If that earlier ticket introduced production-corpus traversal, fixture readers, 
   - Zod or JSON schemas
   - diagnostics or debug snapshots
   - fixtures, goldens, and tests
+  - manually constructed shared runtime/test fixtures such as `GameDefRuntime` or other kernel context objects
 - When tightening authored `chooseN` minimums or other decision cardinality constraints:
   - check whether runtime `max` can drop below the new minimum because of resources, grants, action class, or other state-dependent caps
   - if `max < min` can occur, update legality or cost-validation in the same change so the move becomes cleanly illegal instead of failing at runtime

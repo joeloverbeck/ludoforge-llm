@@ -1,10 +1,10 @@
 # 63PROFSPR-001: Profile remaining spread overhead with perf
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — profiling only, no code changes
-**Deps**: `specs/63-scoped-draft-state.md`
+**Deps**: `archive/specs/63-scoped-draft-state.md`
 
 ## Problem
 
@@ -57,7 +57,7 @@ Map each spread builtin caller to one of the 4 categories:
 
 ### 4. Apply spec gate
 
-If no single category exceeds 2% CPU: close the spec as "not actionable" and archive `specs/63-scoped-draft-state.md`.
+If no single category exceeds 2% CPU: close the spec as "not actionable" and archive `archive/specs/63-scoped-draft-state.md`.
 
 If apply-move hash assignment exceeds 2%: proceed to `63PROFSPR-002`.
 
@@ -98,3 +98,25 @@ If phase-advance turnOrderState exceeds 3%: flag `63PROFSPR-003` as actionable.
 
 1. `perf record -g -o /tmp/perf-spread-audit.data -- node --perf-basic-prof campaigns/fitl-perf-optimization/run-benchmark.mjs --seeds 1 --players 4 --max-turns 200`
 2. `perf report -i /tmp/perf-spread-audit.data --stdio --sort=symbol --no-children`
+
+## Outcome
+
+- Completion date: 2026-04-03
+- What actually changed:
+  - rebuilt `@ludoforge/engine` so the dist-backed FITL benchmark matched the runtime surface used by `campaigns/fitl-perf-optimization/run-benchmark.mjs`;
+  - captured `/tmp/perf-spread-audit.data` with `perf record -g --perf-basic-prof` for a focused one-seed, 200-turn FITL run;
+  - attributed the remaining spread-builtin cost to live JS caller chains and used that result to close the dependent spec as not actionable.
+- Attribution table:
+  - apply-move hash assignment: `<0.01%` CPU in the focused report; the `applyMoveCore` / simultaneous-hash sites did not appear above the report floor.
+  - phase-advance turnOrderState: `<0.01%` CPU in the focused report; the `advancePhase` / `advanceToDecisionPoint` spread sites did not appear above the report floor.
+  - effects-control `PartialEffectResult`: `~1.6%` CPU, primarily the `applyIf` return-object path in `effects-control.ts`, with only trace amounts from `applyLet` and similar small-object sites.
+  - EffectCursor spreading: `~1.8%` CPU from the dominant `applyEffectsWithBudgetState` chain in `effect-dispatch.ts`, derived from the direct `CloneObjectIC_Slow` + `CreateDataProperty` children on that path rather than the function's total self time.
+  - Other: dominant remainder of spread-builtin cost, concentrated in query / condition-evaluation chains such as `queryConnectedZones`, `evalCondition`, `evalQuery`, and `resolveRef`.
+- Deviations from original plan:
+  - the profiling result did not support the spec's suspicion that `apply-move.ts` or `phase-advance.ts` were the main remaining spread hot spots;
+  - the ticket therefore closed the spec and demoted its staged follow-up tickets instead of proceeding into kernel mutation work.
+- Verification results:
+  - `pnpm -F @ludoforge/engine build`
+  - `perf record -g -o /tmp/perf-spread-audit.data -- node --perf-basic-prof campaigns/fitl-perf-optimization/run-benchmark.mjs --seeds 1 --players 4 --max-turns 200`
+  - `perf report -i /tmp/perf-spread-audit.data --stdio --sort=symbol --no-children`
+  - `perf report -i /tmp/perf-spread-audit.data --stdio --sort=symbol --children`

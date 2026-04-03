@@ -1,14 +1,18 @@
 # 63PROFSPR-002: Eliminate GameState spreads in apply-move.ts hash assignment
 
-**Status**: PENDING
+**Status**: 🚫 NOT IMPLEMENTED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel apply-move return path
-**Deps**: `tickets/63PROFSPR-001.md`, `specs/63-scoped-draft-state.md`
+**Deps**: `archive/tickets/63PROFSPR-001.md`, `archive/specs/63-scoped-draft-state.md`
 
 ## Problem
 
 Two sites in `apply-move.ts` spread the entire `GameState` (~19 top-level fields) just to assign 1-2 hash fields. This runs once per move (200+ times per game), creating unnecessary allocation pressure and GC load.
+
+## Gate Result (2026-04-03)
+
+`63PROFSPR-001` completed the required perf attribution and did not find the `apply-move.ts` hash-assignment spreads above the focused report floor. This ticket is therefore not actionable and should not proceed unless a future profiling run produces stronger contrary evidence.
 
 ```typescript
 // Line ~1355: applyTrustedMove return path

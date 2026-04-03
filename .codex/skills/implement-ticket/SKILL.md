@@ -7,6 +7,8 @@ description: Read, reassess, and implement a repository ticket when the user ask
 
 Use this skill when the user asks to implement a ticket, gives a ticket file path, or clearly wants ticket-driven execution.
 
+This skill covers both code-changing tickets and ticket-owned execution work whose primary deliverable is a measured decision, archival update, or series-status correction rather than runtime source edits.
+
 ## Required Inputs
 
 - A ticket path, glob, or enough context to locate the ticket
@@ -56,26 +58,32 @@ If a prior ticket in the same series was implemented earlier in the session, reu
    - update or defer overlapping sibling tickets so they do not still claim invalid staged ownership
    - keep dependency references and status values coherent across the series
    - run the repo's ticket dependency checker after the series rewrite when available
+12. If the ticket is a profiling, audit, benchmark, investigation, or other gate-setting ticket:
+   - identify the explicit threshold, decision gate, or downstream trigger owned by the ticket
+   - verify which sibling tickets, specs, or reports depend on that gate
+   - treat closure of downstream work as part of the implementation boundary when the measured result invalidates that work
+   - distinguish runtime/code changes from repository-owned deliverables such as ticket outcomes, archived specs, dependency rewrites, and status updates
 
 ### Phase 3: Resolve Before Coding
 
-12. If the ticket is factually wrong, stop and present the discrepancies before editing code.
-13. If the issue is not a factual error but a scope gap, implementation choice, dependency conflict, or ambiguous partial-migration boundary, apply the repository's `1-3-1` rule:
+13. If the ticket is factually wrong, stop and present the discrepancies before editing code.
+14. If the issue is not a factual error but a scope gap, implementation choice, dependency conflict, or ambiguous partial-migration boundary, apply the repository's `1-3-1` rule:
     - 1 clearly defined problem
     - 3 concrete options
     - 1 recommendation
-14. Do not proceed with implementation until the user confirms when a discrepancy or `1-3-1` decision is outstanding.
-15. If the ticket boundary remains valid but one concrete implementation detail is ambiguous, under-specified, or conflicts with Foundations:
+15. Do not proceed with implementation until the user confirms when a discrepancy or `1-3-1` decision is outstanding.
+16. If the ticket boundary remains valid but one concrete implementation detail is ambiguous, under-specified, or conflicts with Foundations:
     - resolve that detail with `1-3-1`
     - after user confirmation, treat the confirmed interpretation as authoritative for the rest of the task
     - do not force a ticket rewrite unless the implementation boundary itself changed
     - if the conflict is that a ticket or spec uses raw strings for an identifier that already has a branded domain type in the repo, preserve the ticket boundary, raise the Foundation conflict explicitly, and prefer the existing branded type once confirmed
-16. If the ticket is accurate and no blocking decision remains, proceed.
+17. If the ticket is accurate and no blocking decision remains, proceed.
 
 ## Implementation Rules
 
 - Implement every explicit ticket deliverable. Do not silently skip items.
 - Prefer minimal, architecture-consistent changes over local patches.
+- For profiling, audit, benchmark, or investigation tickets, a complete implementation may legitimately end in "do not change runtime code" when the measured result closes the proposed follow-up as not actionable. In those cases, still complete every owned repository deliverable: update the ticket outcome, archive or amend the deciding spec/report when required, and reconcile dependent ticket statuses.
 - Follow TDD for bug fixes: write the failing test first, then fix the code.
 - Never adapt tests to preserve a bug.
 - Respect worktree discipline:
@@ -101,8 +109,10 @@ If a prior ticket in the same series was implemented earlier in the session, reu
   - read and assess them as part of the implementation boundary
   - leave them unchanged when evidence shows no edit is required
   - state that explicit no-change decision in the final summary
+- If the ticket says "no code changes", interpret that as "no production/runtime behavior changes" unless the ticket explicitly forbids repo artifact edits. Ticket/spec outcome sections, archival moves, dependency rewrites, and sibling-ticket status updates are still required when they are the owned deliverable.
 - When a migration adds or removes a required compiled field, treat owned production goldens that snapshot compiled catalogs, summaries, or traces as expected update surfaces unless evidence shows unexpected behavioral drift.
 - When a change alters observability, preview readiness, scoring inputs, or other behavior that can legitimately change deterministic move choice, treat owned production goldens and fixed-seed summaries as expected update surfaces unless evidence shows unexpected drift outside the ticket boundary.
+- When a completed gate ticket proves downstream active tickets are not actionable, update those sibling tickets in the same turn so their status, deps, and scope text no longer advertise invalid work. Do not leave the series in a partially-invalid staged state.
 
 ## Verification
 
@@ -136,6 +146,11 @@ Before claiming completion:
    - confirm the artifact path matches the command's real write target
    - check a freshness signal such as timestamp or file size before treating missing fields or stale output as a real discrepancy
    - only then compare the artifact against the ticket's acceptance criteria
+11. For profiling, benchmark, or audit tickets that set a decision gate:
+   - capture the exact command, measured surface, and threshold comparison used to make the decision
+   - confirm whether the result crossed the ticket's action threshold
+   - if it did not, treat closure of the proposed follow-up work as part of verification
+   - if the ticket owns an attribution table or measurement summary, record it in the ticket outcome rather than only in the final chat response
 
 Use the repo's standard commands from `AGENTS.md` when appropriate:
 
@@ -162,6 +177,13 @@ Optional generated-artifact freshness check:
 - artifact timestamp or size changed as expected
 - inspect contents only after freshness is confirmed
 
+Optional measured-gate outcome template:
+- measured surface: what was profiled, benchmarked, or audited
+- command(s): exact producing command(s)
+- decisive result: the metric or attribution table that matters
+- threshold comparison: why the result did or did not cross the ticket gate
+- downstream action: which spec, ticket, or report was archived, amended, deferred, or marked not actionable
+
 Optional seed-state discovery for behavior-driven game tests:
 - confirm the old seeded scenario no longer reaches the intended semantic state
 - search a bounded seed and turn window for a current deterministic reproduction
@@ -185,6 +207,12 @@ After implementation and verification:
 Optional series consistency pass after a ticket rewrite:
 - inspect sibling active tickets in the same series for overlap or stale staged ownership
 - update statuses, deps, and scope text so the active series remains internally coherent
+- run `pnpm run check:ticket-deps` when the repo provides it
+
+Optional series consistency pass after a completed gate ticket:
+- inspect downstream sibling tickets whose premise depended on the measured result
+- mark them completed, deferred, or not implemented when the gate outcome settles their status
+- update deps if the deciding spec/report was archived
 - run `pnpm run check:ticket-deps` when the repo provides it
 
 ## Codex Adaptation Notes

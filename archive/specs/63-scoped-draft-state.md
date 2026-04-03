@@ -1,8 +1,6 @@
 # Spec 63 — Profile-Gated Spread Reduction Audit
 
-## Status
-
-Proposed
+**Status**: 🚫 NOT IMPLEMENTED
 
 ## Dependencies
 
@@ -140,3 +138,15 @@ If profiling shows < 3%: close Phase 3 as not actionable.
 Conservative: 1-3% reduction in `combined_duration_ms`. The two `apply-move.ts` spreads are per-move costs that copy ~19 fields unnecessarily. Eliminating them saves ~400 bytes of allocation per move × 600 moves = ~240KB of avoided allocation per benchmark run, plus reduced GC pressure.
 
 The remaining ~12% of spread-attributed CPU is likely irreducible — distributed across many small, efficient spreads that V8 handles well (global lesson: "V8 JIT optimizes object spreads efficiently").
+
+## Resolution
+
+- Resolution date: 2026-04-03
+- Result: closed as not actionable after `perf record --perf-basic-prof` attribution against the FITL benchmark.
+- Profiling summary:
+  - `apply-move.ts` hash-assignment spreads did not appear above the focused report floor and are below the ticket gate for follow-up work.
+  - `phase-advance.ts` turn-order spreads likewise did not appear above the focused report floor and are below the conditional gate for follow-up work.
+  - remaining spread-builtin time is dominated by other call chains centered on query and condition evaluation rather than the spec's proposed mutation sites.
+- Decision:
+  - do not proceed with the scoped direct-mutation changes proposed here;
+  - archive this spec and leave `63PROFSPR-002` / `63PROFSPR-003` inactive unless a future profiling pass with stronger evidence reopens them.

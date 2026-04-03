@@ -1,10 +1,10 @@
 # 63PROFSPR-003: Conditional — reduce phase-advance.ts turnOrderState spreads
 
-**Status**: PENDING
+**Status**: 🚫 NOT IMPLEMENTED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — kernel phase-advance state construction
-**Deps**: `tickets/63PROFSPR-001.md`, `specs/63-scoped-draft-state.md`
+**Deps**: `archive/tickets/63PROFSPR-001.md`, `archive/specs/63-scoped-draft-state.md`
 
 ## Problem
 
@@ -17,6 +17,10 @@
 Each spread copies the entire `GameState` (~19 fields) plus the nested `turnOrderState` and `runtime` objects. These run per phase advance (per decision point).
 
 **This ticket is CONDITIONAL**: only actionable if `63PROFSPR-001` profiling shows `phase-advance.ts` turnOrderState spreads exceed 3% CPU. If profiling shows < 3%, close this ticket as "not actionable."
+
+## Gate Result (2026-04-03)
+
+`63PROFSPR-001` completed the required perf attribution and did not find the `phase-advance.ts` turn-order spreads above the focused report floor. This ticket is therefore not actionable and should not proceed unless a future profiling run produces stronger contrary evidence.
 
 ## Assumption Reassessment (2026-04-03)
 

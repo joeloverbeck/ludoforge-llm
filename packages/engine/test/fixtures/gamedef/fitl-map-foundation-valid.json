@@ -6,6 +6,24 @@
       "max": 4
     }
   },
+  "internTable": {
+    "zones": [
+      "cambodia:none",
+      "hue:none",
+      "laos:none",
+      "loc_ho_chi_minh_trail:none",
+      "north_vietnam:none",
+      "south_vietnam:none"
+    ],
+    "actions": [],
+    "tokenTypes": [],
+    "seats": [],
+    "players": ["0", "1", "2", "3"],
+    "phases": [],
+    "globalVars": [],
+    "perPlayerVars": [],
+    "zoneVars": []
+  },
   "constants": {},
   "globalVars": [],
   "perPlayerVars": [],

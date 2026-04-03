@@ -742,6 +742,18 @@ export interface CompiledActionTagIndex {
   readonly byTag: Readonly<Record<string, readonly string[]>>;
 }
 
+export interface InternTable {
+  readonly zones: readonly string[];
+  readonly actions: readonly string[];
+  readonly tokenTypes: readonly string[];
+  readonly seats: readonly string[];
+  readonly players: readonly string[];
+  readonly phases: readonly string[];
+  readonly globalVars: readonly string[];
+  readonly perPlayerVars: readonly string[];
+  readonly zoneVars: readonly string[];
+}
+
 export interface GameDef {
   readonly metadata: {
     readonly id: string;
@@ -750,6 +762,7 @@ export interface GameDef {
     readonly players: { readonly min: number; readonly max: number };
     readonly maxTriggerDepth?: number;
   };
+  readonly internTable?: InternTable;
   readonly constants: Readonly<Record<string, number>>;
   readonly globalVars: readonly VariableDef[];
   readonly perPlayerVars: readonly VariableDef[];

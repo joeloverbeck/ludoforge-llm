@@ -6,8 +6,8 @@ Proposed
 
 ## Dependencies
 
-- **Independent of Spec 63 (Draft State)**: Can be implemented in any order.
-- **Should precede or be concurrent with Spec 64 (Compiled Expressions)**: If integer IDs land first, compiled expressions can generate integer comparisons directly, maximizing the combined benefit. If Spec 64 lands first, it would need a follow-up pass to switch from string to integer comparisons.
+- **Independent of Spec 63** (`archive/specs/63-scoped-draft-state.md`, tickets `63PROFSPR-*`): Archived. Can be implemented in any order.
+- **Independent of Spec 64** (`archive/specs/64-compiled-expression-evaluation.md`, tickets `64COMEXPEVA-*`): Archived. If Spec 64 tickets land first, compiled expressions initially use string comparisons; a follow-up pass switches to integer comparisons after this spec lands. If this spec lands first, compiled expressions generate integer comparisons directly. Either order works.
 
 ## Problem
 
@@ -27,6 +27,29 @@ CPU profiling of FITL simulations shows:
 Additionally, `Builtins_ArrayTimSort` at 1.83% comes from `sortAndDedupeZones` which sorts zone IDs by `localeCompare` — unnecessary with integer IDs (integer sort is trivial).
 
 FITL has ~50 zone IDs (e.g., `kien-giang-an-xuyen:none`, `northeast-cambodia:none`), ~20 action IDs, ~15 token type IDs, and ~4 seat IDs. Each zone ID is 15-30 characters. V8's string comparison is O(length) — integer comparison is O(1).
+
+## Codebase Status
+
+Existing infrastructure relevant to this spec:
+
+- **`PlayerId` is already `Brand<number, 'PlayerId'>`** (`branded.ts:3`). This serves as proof-of-concept for integer domain IDs. The existing `asPlayerId`/`isPlayerId` constructors already handle numbers. `PlayerId` does NOT need type migration — it just needs an intern table entry for string↔number conversion at I/O boundaries.
+- **`eval-query.ts` already uses `String(zoneId)` casts** (lines 519, 829), showing awareness of potential zone ID type changes. These casts will need updating.
+- **`compiler.ts` is a 10-line re-export** from `compiler-core.ts`, which is the actual compiler implementation with 89 sub-modules across `packages/engine/src/cnl/`.
+- **`TokenTypeId` does not exist as a branded type**. Token types use plain `string` (`tokenType.id`). Creating a branded `TokenTypeId` type is out of scope for this spec.
+- **Runner directly imports engine branded types**: `ZoneId`, `ActionId`, `SeatId` are imported in 10 runner files (45 occurrences). The runner is NOT isolated from engine type changes.
+
+### ID Scope
+
+| ID Type | Current | Target | Notes |
+|---------|---------|--------|-------|
+| `ZoneId` | `Brand<string>` | `Brand<number>` | Phase 1 — highest-frequency lookups |
+| `ActionId` | `Brand<string>` | `Brand<number>` | Phase 2 |
+| `PhaseId` | `Brand<string>` | `Brand<number>` | Phase 2 |
+| `SeatId` | `Brand<string>` | `Brand<number>` | Phase 2 |
+| `PlayerId` | `Brand<number>` | `Brand<number>` | Already integer — add intern table entry only |
+| `TokenId` | `Brand<string>` | `Brand<string>` | Remains string — unique per-instance, not domain enum |
+| `TriggerId` | `Brand<string>` | `Brand<string>` | Remains string — unique per definition, not domain enum |
+| `TokenTypeId` | plain `string` | excluded | Not a branded type; creating one is out of scope |
 
 ## FOUNDATIONS Alignment
 
@@ -138,32 +161,60 @@ The `localeCompare` sort (1.38% CPU) is eliminated entirely. For deterministic o
 ## Scope
 
 ### Mutable (nearly everything)
-- `packages/engine/src/kernel/types-core.ts` — branded type definitions
-- `packages/engine/src/kernel/branded.ts` — branded type constructors
+- `packages/engine/src/kernel/types-core.ts` — branded type definitions, `GameState.zones` type, `GameDef` (add `InternTable`)
+- `packages/engine/src/kernel/branded.ts` — branded type constructors (`asZoneId` etc. change from string to number)
 - All kernel modules — ID comparisons change from string to number
-- `packages/engine/src/cnl/compiler.ts` — intern table generation
-- `packages/engine/src/cnl/` — all compiler modules that emit IDs
-- `packages/engine/src/sim/` — trace serialization
+- `packages/engine/src/cnl/compiler-core.ts` + sub-modules — intern table generation, ID emission
+- `packages/engine/src/sim/` — trace serialization (integer → string at output boundary)
 - `packages/engine/src/agents/` — agent decision output
+- `packages/runner/src/` — directly imports engine branded types (45 occurrences across 10 files):
+  - `canvas/renderers/zone-renderer.ts`, `canvas/renderers/adjacency-renderer.ts`
+  - `layout/compute-layout.ts`, `layout/layout-cache.ts`, `layout/layout-helpers.ts`
+  - `animation/animation-controller.ts`, `animation/animation-types.ts`, `animation/trace-to-descriptors.ts`, `animation/timeline-builder.ts`
+  - `config/validate-visual-config-refs.ts`
 - All test files — fixture IDs change type
 - All golden fixtures — re-generated with integer IDs
-- `packages/engine/schemas/` — schema updates
+- `packages/engine/schemas/` — schema updates (add `internTable` to GameDef schema)
 
 ### Immutable
 - Game spec data (`data/games/*`) — specs stay in string IDs
 - `docs/FOUNDATIONS.md`
-- `packages/runner/` — consumes serialized string IDs from traces (no change needed if the runner reads from serialized output)
 
 ## Migration Strategy
 
-Foundation 14 requires same-change migration. Given the scope (~200+ files), the migration should be:
+Each phase is independently atomic per Foundation 14 — committed as one change with all tests passing. No string/integer coexistence in any committed state. The phased approach is a development workflow; each phase is a complete, self-consistent migration of a specific ID domain.
 
-1. **Phase 1**: Add `InternTable` to `GameDef` and compiler. Both string and integer paths coexist during migration.
-2. **Phase 2**: Migrate kernel modules one at a time (zone operations, then token operations, then var operations, etc.). Each module change includes its test updates.
-3. **Phase 3**: Remove string-based paths. Delete backwards-compatibility code. Update all remaining fixtures.
-4. **Phase 4**: Verify with full test suite + benchmark.
+### Phase 1: Zone ID Interning (primary win)
 
-Despite the phased approach, all phases are committed together (Foundation 14: "migrate all owned artifacts in the same change").
+**Profiling gate**: Must show measurable improvement on FITL 3-seed benchmark. If not, stop.
+
+- Add `InternTable` type and `GameDef.internTable` field
+- Implement intern table generation in `compiler-core.ts`
+- Migrate `ZoneId` from `Brand<string>` to `Brand<number>`
+- Change `GameState.zones` from `Record<string, Token[]>` to `(readonly Token[])[]`
+- Zone indices MUST be contiguous 0-based (0..N-1, no gaps). Compiler assigns indices sequentially.
+- Replace `sortAndDedupeZones` (localeCompare) with `dedupeZones` (integer Set dedup)
+- Migrate all kernel zone operations, tests, and golden fixtures
+- Migrate runner zone access (10 files, 45 occurrences)
+- Add `extern`/`intern` functions for zone IDs at serialization boundaries
+- Add `PlayerId` entry to intern table (already integer — I/O boundary conversion only)
+
+### Phase 2: Other Domain ID Interning
+
+**Profiling gate**: Must show measurable improvement. If Phase 1 showed no improvement, skip.
+
+- Migrate `ActionId`, `PhaseId`, `SeatId` from `Brand<string>` to `Brand<number>`
+- Migrate all kernel, compiler, sim, agent, and runner references
+- Update tests and golden fixtures
+- Mechanical — same pattern as Phase 1 but smaller scope per type
+
+### Phase 3: Variable Name Interning
+
+**Profiling gate**: Must show measurable improvement. Gated on Phases 1-2 results.
+
+- Migrate `globalVars`, `perPlayerVars`, `zoneVars` from `Map<string, T>` to array-indexed
+- Different mechanical pattern from Phases 1-2 (Map → array vs branded type change)
+- Update all kernel variable access sites, tests, and fixtures
 
 ## Testing Strategy
 
@@ -175,11 +226,19 @@ Despite the phased approach, all phases are committed together (Foundation 14: "
 
 ## Expected Impact
 
-5-9% reduction in `combined_duration_ms`. String comparison (3.5%) is nearly eliminated. Hash-based lookups (5.7%) become faster with integer keys. Sort overhead (1.83%) is eliminated. Megamorphic access (partially string-caused) may also improve as integer-indexed arrays are monomorphic.
+- **Phase 1 (Zone IDs)**: 3-5% reduction — zones are the highest-frequency domain lookup. `sortAndDedupeZones` localeCompare (1.38%) eliminated. Zone `Record` → array eliminates megamorphic property access for zones.
+- **Phase 2 (Other IDs)**: 2-3% — remaining `StringEqual` (2.12%) and hash lookups reduced.
+- **Phase 3 (Variable names)**: 1-2% — `FindOrderedHashMapEntry` (2.52%) partially reduced for variable Maps.
+- **Combined**: 6-10% with profiling gates per phase. Each phase stops if no measurable improvement.
 
 ## Risk Assessment
 
-**High migration cost, moderate execution risk.** The scope is very large (~200+ files) but the transformation is mechanical (string → number at every ID site). TypeScript's type system catches most errors. The risk is in subtle behavioral differences:
-- Integer `Set` iteration order differs from string `Set` iteration order → determinism must be re-verified
-- Integer `0` is falsy in JS → defensive checks like `if (zoneId)` break for zone index 0
-- JSON serialization of integer IDs produces numbers, not strings → serialization boundary must be comprehensive
+**High migration cost, moderate execution risk.** The scope is very large (~200+ files including runner) but the transformation is mechanical (string → number at every ID site). TypeScript's type system catches most errors at compile time. Per-phase profiling gates limit wasted effort.
+
+Specific risks:
+- **Integer `Set` iteration order differs from string `Set` iteration order** → determinism must be re-verified via replay tests (Foundation 8, Foundation 16)
+- **Integer `0` is falsy in JS** → defensive checks like `if (zoneId)` break for zone index 0. Grep for all bare truthiness checks on ID types and fix to explicit `!== undefined` / `!== -1` checks.
+- **JSON serialization of integer IDs produces numbers, not strings** → serialization boundary must be comprehensive. All trace output, runner display, agent traces, and diagnostic messages must use `extern*()` functions.
+- **Runner migration** → 10 files, 45 occurrences of engine branded type imports. Layout, rendering, and animation code all directly use `ZoneId`. Must be migrated in the same phase as the engine type change.
+- **`String(zoneId)` casts in `eval-query.ts`** (lines 519, 829) → these explicit casts will need updating to direct array index access. They serve as markers for sites that are already "type-aware."
+- **V8 JIT sensitivity** → the fitl-perf-optimization campaign demonstrated that V8 aggressively deoptimizes modified kernel functions. Per-phase profiling gates will catch any deoptimization regressions.

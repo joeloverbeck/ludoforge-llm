@@ -76,6 +76,7 @@ If that earlier ticket introduced production-corpus traversal, fixture readers, 
 16. If the ticket boundary remains valid but one concrete implementation detail is ambiguous, under-specified, or conflicts with Foundations:
     - resolve that detail with `1-3-1`
     - after user confirmation, treat the confirmed interpretation as authoritative for the rest of the task
+    - continue reassessment after that confirmation until no further boundary-affecting discrepancies remain, even if the same ticket requires multiple sequential `1-3-1` rounds
     - do not force a ticket rewrite unless the implementation boundary itself changed
     - if the conflict is that a ticket or spec uses raw strings for an identifier that already has a branded domain type in the repo, preserve the ticket boundary, raise the Foundation conflict explicitly, and prefer the existing branded type once confirmed
     - if the mismatch is a narrow factual detail inside an otherwise valid ticket boundary, treat it as a bounded discrepancy plus `1-3-1`, not an automatic ticket rewrite
@@ -96,6 +97,7 @@ If that earlier ticket introduced production-corpus traversal, fixture readers, 
   - the new authoritative authored/runtime path you are moving toward
   - any temporary compatibility or transitional surface you intentionally retain so nearby code and tests stay coherent
   Record that distinction in your working notes and final summary.
+- For additive compiled-field migrations, it can be valid to require the new field in compiler-owned artifacts and schemas while temporarily leaving handwritten in-memory TypeScript fixtures optional, so long as that distinction is explicit, Foundation-compliant, and verified.
 - The ticket's `Files to Touch` list is a strong hint, not a hard limit. If coherent completion requires adjacent files for contracts, runtime consumers, schemas, fixtures, or tests, include them and explain why.
 - If sibling tickets in the same active series contain stale assumptions that are informative but non-blocking for the current ticket, note the drift in your working notes and final summary without absorbing that sibling's scope unless ownership or correctness actually conflicts.
 - For schema or contract migrations, explicitly check whether the change needs updates across:

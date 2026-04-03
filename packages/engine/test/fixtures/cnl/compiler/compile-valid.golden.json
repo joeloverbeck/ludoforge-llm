@@ -7,6 +7,28 @@
         "max": 2
       }
     },
+    "internTable": {
+      "zones": [
+        "deck:none",
+        "hand:0",
+        "hand:1"
+      ],
+      "actions": [
+        "drawEach"
+      ],
+      "tokenTypes": [],
+      "seats": [],
+      "players": [
+        "0",
+        "1"
+      ],
+      "phases": [
+        "main"
+      ],
+      "globalVars": [],
+      "perPlayerVars": [],
+      "zoneVars": []
+    },
     "constants": {},
     "globalVars": [],
     "perPlayerVars": [],

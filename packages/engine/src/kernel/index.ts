@@ -89,6 +89,7 @@ export * from './zone-address.js';
 export * from './runtime-table-index.js';
 export * from './runtime-table-lookup-plan.js';
 export * from './identity.js';
+export * from './intern.js';
 export * from './schema-artifacts.js';
 export * from './schemas.js';
 export * from './serde.js';

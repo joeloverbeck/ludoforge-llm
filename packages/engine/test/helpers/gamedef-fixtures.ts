@@ -16,6 +16,17 @@ export const readGameDefFixture = (fixtureName: string): GameDef => tagEffectAst
 export const createValidGameDef = (): GameDef =>
   asTaggedGameDef({
     metadata: { id: 'test-game', players: { min: 2, max: 4 } },
+    internTable: {
+      zones: ['deck:none', 'market:none'],
+      actions: ['playCard'],
+      tokenTypes: ['card'],
+      seats: [],
+      players: ['0', '1', '2', '3'],
+      phases: ['main'],
+      globalVars: ['money'],
+      perPlayerVars: ['vp'],
+      zoneVars: [],
+    },
     constants: {},
     globalVars: [{ name: 'money', type: 'int', init: 0, min: 0, max: 99 }],
     perPlayerVars: [{ name: 'vp', type: 'int', init: 0, min: 0, max: 100 }],

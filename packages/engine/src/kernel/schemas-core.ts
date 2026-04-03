@@ -360,6 +360,20 @@ export const RuntimeDataAssetSchema = z
   })
   .strict();
 
+export const InternTableSchema = z
+  .object({
+    zones: z.array(StringSchema),
+    actions: z.array(StringSchema),
+    tokenTypes: z.array(StringSchema),
+    seats: z.array(StringSchema),
+    players: z.array(StringSchema),
+    phases: z.array(StringSchema),
+    globalVars: z.array(StringSchema),
+    perPlayerVars: z.array(StringSchema),
+    zoneVars: z.array(StringSchema),
+  })
+  .strict();
+
 export const RuntimeTableFieldContractSchema = z
   .object({
     field: StringSchema,
@@ -1022,6 +1036,7 @@ export const GameDefSchema = z
         maxTriggerDepth: NumberSchema.optional(),
       })
       .strict(),
+    internTable: InternTableSchema,
     constants: z.record(StringSchema, NumberSchema),
     globalVars: z.array(VariableDefSchema),
     perPlayerVars: z.array(VariableDefSchema),

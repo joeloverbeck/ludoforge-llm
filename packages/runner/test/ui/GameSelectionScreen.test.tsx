@@ -100,11 +100,14 @@ describe('GameSelectionScreen', () => {
     expect(screen.getByText('Fire in the Lake')).toBeTruthy();
     expect(screen.getByText("Texas Hold'em")).toBeTruthy();
     expect(screen.getByText('A 4-faction COIN-series wargame set in the Vietnam War')).toBeTruthy();
-    expect(screen.getByText('Players: 4-4')).toBeTruthy();
+    expect(screen.getByText('4 players')).toBeTruthy();
+    expect(screen.getByText('4 factions')).toBeTruthy();
+    expect(screen.getByText('2 games ready')).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: 'Configure Game' })).toHaveLength(2);
     expect(screen.queryByTestId('select-game-default')).toBeNull();
 
     await waitFor(() => {
-      expect(screen.getByText('No saved games')).toBeTruthy();
+      expect(screen.getByText('No saved games yet')).toBeTruthy();
     });
   });
 

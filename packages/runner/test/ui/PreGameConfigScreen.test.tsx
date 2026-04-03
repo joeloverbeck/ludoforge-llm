@@ -14,12 +14,11 @@ afterEach(() => {
 });
 
 describe('PreGameConfigScreen', () => {
-  it('renders player count slider bounds from descriptor metadata', () => {
+  it('renders a fixed player count card instead of a slider when the game has fixed seats', () => {
     renderScreen();
 
-    const slider = screen.getByTestId('pre-game-player-count');
-    expect(slider.getAttribute('min')).toBe('4');
-    expect(slider.getAttribute('max')).toBe('4');
+    expect(screen.getByTestId('pre-game-player-count-fixed').textContent).toMatch(/Fixed at 4 players/u);
+    expect(screen.queryByTestId('pre-game-player-count')).toBeNull();
   });
 
   it('renders seat rows for fixed FITL player count', () => {
@@ -56,7 +55,58 @@ describe('PreGameConfigScreen', () => {
     expect(screen.getByTestId('pre-game-seat-label-1').textContent).toBe('North Vietnam');
 
     fireEvent.change(screen.getByTestId('pre-game-player-count'), { target: { value: '3' } });
-    expect(screen.getByTestId('pre-game-seat-label-2').textContent).toBe('Player 2');
+    expect(screen.getByTestId('pre-game-seat-label-2').textContent).toBe('Seat 3');
+  });
+
+  it('explains mixed named and generic seats when player count exceeds named roles', () => {
+    renderScreen({
+      gameMetadata: {
+        name: 'Table Roles',
+        description: '',
+        playerMin: 2,
+        playerMax: 4,
+        factionIds: ['neutral'],
+      },
+      resolveVisualConfigYaml: () => ({
+        version: 1,
+        factions: {
+          neutral: { displayName: 'Neutral' },
+        },
+      }),
+    });
+
+    fireEvent.change(screen.getByTestId('pre-game-player-count'), { target: { value: '3' } });
+
+    expect(screen.getByTestId('pre-game-seat-model-note').textContent).toMatch(/generic table positions/u);
+    expect(screen.getByTestId('pre-game-seat-label-0').textContent).toBe('Neutral');
+    expect(screen.getByText('Named role from game metadata')).toBeTruthy();
+    expect(screen.getByTestId('pre-game-seat-label-1').textContent).toBe('Seat 2');
+    expect(screen.getAllByText('Generic table position')).toHaveLength(2);
+  });
+
+  it('uses the metadata display name in the page hero instead of the raw game id', () => {
+    renderScreen();
+
+    expect(screen.getByTestId('pre-game-selected-id').textContent).toBe('Fire in the Lake');
+    expect(screen.getByText(/full-table asymmetric sessions/i)).toBeTruthy();
+    expect(screen.queryByText(/^Game: fitl$/u)).toBeNull();
+  });
+
+  it('renders a variable player count slider when the descriptor allows a range', () => {
+    renderScreen({
+      gameMetadata: {
+        name: 'Variable Seats',
+        description: '',
+        playerMin: 2,
+        playerMax: 4,
+        factionIds: ['south_vietnam', 'northVietnam'],
+      },
+      resolveVisualConfigYaml: () => ({ version: 1 }),
+    });
+
+    const slider = screen.getByTestId('pre-game-player-count');
+    expect(slider.getAttribute('min')).toBe('2');
+    expect(slider.getAttribute('max')).toBe('4');
   });
 
   it('includes controller kind options', () => {

@@ -1,6 +1,6 @@
 # 64COMEXPEVA-002: Integrate compiled token filters into kernel evaluation path
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel token-filter.ts evaluation path
@@ -95,3 +95,20 @@ Create a test that compiles the FITL GameDef, extracts all token filter expressi
 1. `pnpm -F @ludoforge/engine build && pnpm -F @ludoforge/engine test`
 2. `pnpm -F @ludoforge/engine test:e2e`
 3. `pnpm turbo test`
+
+## Outcome
+
+- Completion date: 2026-04-03
+- What actually changed:
+  - added the compiled token-filter fast path to `packages/engine/src/kernel/token-filter.ts` when evaluation uses the default literal resolver without an overlay;
+  - tightened `packages/engine/src/kernel/token-filter-compiler.ts` so malformed boolean token-filter shapes return `null` and preserve interpreter-side validation/runtime-boundary behavior;
+  - added fallback coverage in `packages/engine/test/unit/token-filter.test.ts`;
+  - extracted shared FITL token-filter corpus helpers into `packages/engine/test/helpers/token-filter-production-helpers.ts`;
+  - added integration parity coverage in `packages/engine/test/integration/token-filter-compilation.test.ts` and updated compiler tests in `packages/engine/test/unit/kernel/token-filter-compiler.test.ts`.
+- Deviations from original plan:
+  - the ticket claimed `matchesTokenFilterExpr` was the sole kernel token-filter entry point, but `packages/engine/src/kernel/token-view.ts` still folds token filters directly for token-interpretation visibility work; this was informative but non-blocking for `002` because the ticket boundary only owned `token-filter.ts` integration;
+  - the final implementation intentionally did not require `resolveField === undefined` in the compiled-path guard because the compiled compiler already returns `null` for resolver-dependent field kinds (`tokenZone`, `zoneProp`), so semantics remain unchanged.
+- Verification results:
+  - `pnpm -F @ludoforge/engine build`
+  - `node --test "dist/test/unit/token-filter.test.js" "dist/test/unit/kernel/token-filter-compiler.test.js" "dist/test/integration/token-filter-compilation.test.js" "dist/test/e2e/fitl-playbook-golden.test.js"`
+  - `pnpm -F @ludoforge/engine test`

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — profiling only
-**Deps**: `tickets/64COMEXPEVA-002.md`, `specs/64-compiled-expression-evaluation.md`
+**Deps**: `archive/tickets/64COMEXPEVA-002.md`, `specs/64-compiled-expression-evaluation.md`
 
 ## Problem
 

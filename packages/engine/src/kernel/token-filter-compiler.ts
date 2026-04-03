@@ -164,6 +164,10 @@ export const tryCompileTokenFilter = (
     return (token) => !compiledArg(token);
   }
 
+  if ((expr.op !== 'and' && expr.op !== 'or') || expr.args.length === 0) {
+    return null;
+  }
+
   const compiledArgs: CompiledTokenFilterFn[] = [];
   for (const arg of expr.args) {
     const compiledArg = tryCompileTokenFilter(arg);

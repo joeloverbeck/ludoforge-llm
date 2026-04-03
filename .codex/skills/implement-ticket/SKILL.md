@@ -28,6 +28,7 @@ This skill covers both code-changing tickets and ticket-owned execution work who
    - tests, scripts, and artifacts the ticket expects
 
 If a prior ticket in the same series was implemented earlier in the session, reuse already-verified context and only reassess newly introduced references.
+If that earlier ticket introduced production-corpus traversal, fixture readers, or verification scaffolding for the same feature area, prefer reusing or extracting those helpers over duplicating the logic in the follow-on ticket.
 
 ### Phase 2: Reassess Assumptions
 
@@ -139,6 +140,7 @@ Before claiming completion:
    - do not assume the failure is a product regression until helper-level assumptions are ruled out
    - if the change affects observability, scoring, or move selection, explicitly check whether seed-specific helper states or turn-position fixtures have gone stale
    - when a seeded helper no longer reaches the intended semantic state, retarget it to a current deterministic seed or turn that still exercises the same invariant rather than weakening the assertion
+   - when a compiled fast path is added in front of an interpreter, explicitly test malformed and unsupported shapes to confirm the compiler falls back cleanly instead of swallowing existing validator or runtime-boundary behavior
 9. If `node --test` or another runner reports only a top-level file failure:
    - rerun the failing file as narrowly as possible
    - use test-name filtering or direct helper reproduction when needed to isolate the failing assertion before editing code

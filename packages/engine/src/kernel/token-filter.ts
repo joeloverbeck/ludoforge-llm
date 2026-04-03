@@ -1,4 +1,5 @@
 import { matchesResolvedPredicate, type PredicateValue } from './query-predicate.js';
+import { getCompiledTokenFilter } from './compiled-token-filter-cache.js';
 import type { FreeOperationExecutionOverlay } from './free-operation-overlay.js';
 import type { Token, TokenFilterExpr, TokenFilterPredicate } from './types.js';
 import { foldTokenFilterExpr } from './token-filter-expr-utils.js';
@@ -92,6 +93,13 @@ export function matchesTokenFilterExpr(
   overlay?: FreeOperationExecutionOverlay,
   resolveField?: TokenFilterFieldResolver,
 ): boolean {
+  if (resolveValue === resolveLiteralTokenFilterValue && overlay === undefined) {
+    const compiled = getCompiledTokenFilter(expr);
+    if (compiled !== null) {
+      return compiled(token);
+    }
+  }
+
   try {
     return foldTokenFilterExpr(expr, {
       predicate: (predicate) => matchesTokenFilterPredicate(token, predicate, resolveValue, overlay, resolveField),

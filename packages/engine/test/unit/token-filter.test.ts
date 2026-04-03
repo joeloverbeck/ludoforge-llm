@@ -176,6 +176,49 @@ describe('token-filter', () => {
     assert.equal(matchesTokenFilterExpr(token, expression), true);
   });
 
+  it('falls back to the interpreter when a custom value resolver is provided', () => {
+    const token = makeToken('custom-resolver', { faction: 'VC' });
+    const expr: TokenFilterExpr = {
+      prop: 'faction',
+      op: 'eq',
+      value: { _t: 2 as const, ref: 'binding', name: '$faction' },
+    };
+
+    assert.equal(
+      matchesTokenFilterExpr(
+        token,
+        expr,
+        (value) => (typeof value === 'object' && value !== null && 'ref' in value ? 'VC' : null),
+      ),
+      true,
+    );
+  });
+
+  it('falls back to the interpreter when an overlay is provided', () => {
+    const token = makeToken('overlay-token', { faction: 'ARVN' });
+    const expr: TokenFilterExpr = {
+      prop: 'faction',
+      op: 'eq',
+      value: 'US',
+    };
+    const overlay: FreeOperationExecutionOverlay = {
+      tokenInterpretations: [
+        {
+          when: {
+            prop: 'faction',
+            op: 'eq',
+            value: 'ARVN',
+          },
+          assign: {
+            faction: 'US',
+          },
+        },
+      ],
+    };
+
+    assert.equal(matchesTokenFilterExpr(token, expr, undefined, overlay), true);
+  });
+
   it('rejects zero-arity boolean token filter expressions', () => {
     const token = makeToken('a', { suit: 'hearts' });
 

@@ -56,6 +56,7 @@ Analyze the spec and identify discrete work units:
 - Determine **priority ordering** (what to implement first)
 - Ensure **every spec deliverable is covered** — no silent skipping. If a deliverable seems wrong or unnecessary, flag it to the user using the 1-3-1 rule instead of omitting it
 - Consider natural boundaries: type changes, new modules, test suites, integration points
+- **Gate tickets**: For specs with profiling gates or conditional phases, create explicit gate tickets. Downstream tickets that depend on the gate's outcome should note the condition in their Deps field (e.g., `` `tickets/FOO-003.md` `` (gate — close if profiling fails)). In the Step 7 dependency graph, annotate gate edges to distinguish them from hard dependencies (e.g., `003 (gate) → 004`)
 
 ### Step 4: Present Summary for Approval
 

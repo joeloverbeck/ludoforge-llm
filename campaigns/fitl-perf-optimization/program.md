@@ -89,6 +89,26 @@ resolvers, agent evaluation, or any other hot path. The only requirements are:
 hypothesis is not backed by profiling data identifying the specific hot path,
 add profiling instrumentation before implementing the optimization.
 
+### Profiling Tool Hierarchy
+
+1. **`perf` (preferred)**: Use `perf record` / `perf report` for CPU-sample-level
+   profiling to identify hot functions and call chains. This gives an unbiased,
+   system-level view of where wall-clock time is actually spent — no manual
+   instrumentation needed, no blind spots from uninstrumented code paths.
+   Typical workflow:
+   ```
+   perf record -g node harness.mjs
+   perf report --sort=dso,symbol
+   ```
+2. **Manual `profiler` instrumentation (fallback)**: Use the opt-in
+   `perfStart`/`perfEnd` hooks when `perf` is unavailable, when you need
+   finer-grained measurement within a known hot function, or when you need
+   per-invocation timing that `perf` sampling cannot provide (e.g., measuring
+   the cost of a single `terminalResult` call vs. aggregate).
+
+Use `perf` first to discover WHERE time is spent, then add manual
+instrumentation to understand WHY a specific function is slow.
+
 ## Immutable System
 
 - All GameSpecDoc data (`data/games/*`) — the game rules are fixed

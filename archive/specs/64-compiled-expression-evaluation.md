@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+🚫 NOT IMPLEMENTED
 
 ## Dependencies
 
@@ -170,3 +170,7 @@ The existing `condition-compiler.ts` and `compiled-condition-cache.ts` cover pip
 ## Expected Impact
 
 Phase 1 (token filters): 3-5% reduction — entirely uncompiled today, high call frequency. Phase 2 (conditions/values): 1-3% — extending existing coverage to more call sites. Combined: 4-8% reduction, with profiling gates ensuring no regression.
+
+## Resolution (2026-04-03)
+
+Phase 1 infrastructure and integration landed through archived tickets `64COMEXPEVA-001` and `64COMEXPEVA-002`, but the Phase 1 profiling gate in `64COMEXPEVA-003` did not justify continuing the series. The measured `foldTokenFilterExpr` CPU share moved from `4.63%` to `4.53%`, while the 3-seed benchmark improved from `115150ms` to `113544.62ms`. That wall-clock gain was real but the profiler delta was too small to support the spec's planned Phase 2 expansion, so tickets `64COMEXPEVA-004` and `64COMEXPEVA-005` were closed as not actionable and this spec was archived without full implementation.

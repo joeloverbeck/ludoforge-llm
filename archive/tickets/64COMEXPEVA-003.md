@@ -1,6 +1,6 @@
 # 64COMEXPEVA-003: Profiling gate — measure Phase 1 token filter impact
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — profiling only
@@ -83,3 +83,23 @@ Compare `combined_duration_ms` against the current best (115150ms).
 
 1. `perf record -g -o /tmp/perf-tokenfilter-compiled.data -- node --perf-basic-prof campaigns/fitl-perf-optimization/run-benchmark.mjs --seeds 1 --players 4 --max-turns 200`
 2. `node campaigns/fitl-perf-optimization/run-benchmark.mjs --seeds 3 --players 4 --max-turns 200`
+
+## Outcome
+
+- Completion date: 2026-04-03
+- What actually changed:
+  - ran the Phase 1 perf capture against the implemented token-filter compiler/integration from `64COMEXPEVA-001/002`;
+  - compared the live `foldTokenFilterExpr` CPU share against the spec/ticket baseline;
+  - measured the live 3-seed FITL benchmark and used the result to decide the series gate;
+  - closed downstream tickets `64COMEXPEVA-004` and `64COMEXPEVA-005` as not actionable and archived the originating spec.
+- Deviations from original plan:
+  - the repo no longer carried a persisted benchmark row in `campaigns/fitl-perf-optimization/results.tsv`, so the wall-clock comparison used the ticket's recorded baseline (`115150ms`) rather than a live checked-in results table;
+  - the gate was applied using the ticket/spec's direct CPU-share wording: `foldTokenFilterExpr` improved from `4.63%` to `4.53%`, a `0.10` percentage-point drop, which does not satisfy the required `>=2%` profiler gate for continuing the series.
+- Verification results:
+  - `pnpm -F @ludoforge/engine build`
+  - `perf record -g -o /tmp/perf-tokenfilter-compiled.data -- node --perf-basic-prof campaigns/fitl-perf-optimization/run-benchmark.mjs --seeds 1 --players 4 --max-turns 200`
+  - `perf report -i /tmp/perf-tokenfilter-compiled.data --stdio --sort=symbol --no-children`
+  - `node campaigns/fitl-perf-optimization/run-benchmark.mjs --seeds 3 --players 4 --max-turns 200`
+  - decisive results:
+    - `foldTokenFilterExpr`: `4.63%` baseline -> `4.53%` measured
+    - 3-seed benchmark: `115150ms` baseline -> `113544.62ms` measured

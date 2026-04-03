@@ -1,14 +1,15 @@
 # 64COMEXPEVA-005: Profiling gate — measure Phase 2 condition/value impact
 
-**Status**: PENDING
+**Status**: 🚫 NOT IMPLEMENTED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — profiling only
-**Deps**: `tickets/64COMEXPEVA-004.md`, `specs/64-compiled-expression-evaluation.md`
+**Deps**: `archive/tickets/64COMEXPEVA-004.md`, `specs/64-compiled-expression-evaluation.md`
 
 ## Problem
 
 The condition/value compiler extensions (004) must demonstrate measurable improvement. If extending the compiler doesn't reduce `evalCondition` + `resolveRef` CPU by ≥2%, the extensions should be reverted.
+`64COMEXPEVA-004` was closed as not actionable after the Phase 1 profiling gate in `64COMEXPEVA-003` failed, so this Phase 2 profiling ticket was never reached.
 
 ## Assumption Reassessment (2026-04-03)
 

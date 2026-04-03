@@ -1,16 +1,17 @@
 # 64COMEXPEVA-004: Extend condition/value compiler coverage to general evaluation sites
 
-**Status**: PENDING
+**Status**: 🚫 NOT IMPLEMENTED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — kernel condition-compiler and eval-condition integration
-**Deps**: `tickets/64COMEXPEVA-003.md`, `specs/64-compiled-expression-evaluation.md`
+**Deps**: `archive/tickets/64COMEXPEVA-003.md`, `specs/64-compiled-expression-evaluation.md`
 
 ## Problem
 
 The existing condition compiler (`condition-compiler.ts`) only covers pipeline legality/cost-validation predicates via `evaluateCompiledPredicate` in `pipeline-viability-policy.ts`. Action preconditions (`action.pre`), trigger conditions, and general `evalCondition` call sites still go through the interpreter — contributing to the 6.40% CPU from `evalCondition` and 7.88% from `resolveRef`.
 
 This ticket is **conditional on 64COMEXPEVA-003**: only proceed if the Phase 1 profiling gate passes.
+That gate did not pass on 2026-04-03 (`foldTokenFilterExpr` moved from `4.63%` to `4.53%`, below the required profiler threshold), so this ticket was closed without implementation.
 
 ## Assumption Reassessment (2026-04-03)
 

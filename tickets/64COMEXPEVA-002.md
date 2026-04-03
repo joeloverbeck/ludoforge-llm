@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel token-filter.ts evaluation path
-**Deps**: `tickets/64COMEXPEVA-001.md`, `specs/64-compiled-expression-evaluation.md`
+**Deps**: `archive/tickets/64COMEXPEVA-001.md`, `specs/64-compiled-expression-evaluation.md`
 
 ## Problem
 

@@ -1,6 +1,6 @@
 # 64COMEXPEVA-001: Token filter compiler and cache infrastructure
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — new kernel modules for token filter compilation
@@ -112,3 +112,19 @@ WeakMap keyed on the `TokenFilterExpr` reference. Since filter expressions come 
 
 1. `pnpm -F @ludoforge/engine build && pnpm -F @ludoforge/engine test`
 2. `pnpm turbo test`
+
+## Outcome
+
+- Completion date: 2026-04-03
+- What actually changed:
+  - added `packages/engine/src/kernel/token-filter-compiler.ts` with conservative token-filter compilation for token-local predicate shapes only;
+  - added `packages/engine/src/kernel/compiled-token-filter-cache.ts` with WeakMap caching by stable `TokenFilterExpr` reference;
+  - exported the new compiler/cache surface from `packages/engine/src/kernel/index.ts`;
+  - added unit coverage for compilable and non-compilable shapes plus FITL production-corpus parity and cache behavior.
+- Deviations from original plan:
+  - the ticket text assumed `field.kind === 'tokenZone'` could compile via `token.zone`, but the live `Token` type has no zone field and token-zone resolution still depends on external runtime context; that case was left on the fallback path alongside `zoneProp`;
+  - verification used the existing engine package test surface (`packages/engine/test/unit/...`) rather than introducing new path conventions beyond the touched feature area.
+- Verification results:
+  - `pnpm -F @ludoforge/engine build`
+  - `node --test "dist/test/unit/kernel/token-filter-compiler.test.js" "dist/test/unit/kernel/compiled-token-filter-cache.test.js" "dist/test/unit/token-filter.test.js" "dist/test/unit/kernel/condition-compiler.test.js" "dist/test/unit/kernel/compiled-condition-cache.test.js"`
+  - `pnpm -F @ludoforge/engine test`

@@ -77,6 +77,7 @@ If a prior ticket in the same series was implemented earlier in the session, reu
     - after user confirmation, treat the confirmed interpretation as authoritative for the rest of the task
     - do not force a ticket rewrite unless the implementation boundary itself changed
     - if the conflict is that a ticket or spec uses raw strings for an identifier that already has a branded domain type in the repo, preserve the ticket boundary, raise the Foundation conflict explicitly, and prefer the existing branded type once confirmed
+    - if the mismatch is a narrow factual detail inside an otherwise valid ticket boundary, treat it as a bounded discrepancy plus `1-3-1`, not an automatic ticket rewrite
 17. If the ticket is accurate and no blocking decision remains, proceed.
 
 ## Implementation Rules
@@ -95,6 +96,7 @@ If a prior ticket in the same series was implemented earlier in the session, reu
   - any temporary compatibility or transitional surface you intentionally retain so nearby code and tests stay coherent
   Record that distinction in your working notes and final summary.
 - The ticket's `Files to Touch` list is a strong hint, not a hard limit. If coherent completion requires adjacent files for contracts, runtime consumers, schemas, fixtures, or tests, include them and explain why.
+- If sibling tickets in the same active series contain stale assumptions that are informative but non-blocking for the current ticket, note the drift in your working notes and final summary without absorbing that sibling's scope unless ownership or correctness actually conflicts.
 - For schema or contract migrations, explicitly check whether the change needs updates across:
   - authored schema/doc types
   - authored-shape validators and unknown-key allowlists

@@ -1676,14 +1676,20 @@
     "vc-evolved": {
       "observerName": "currentPlayer",
       "params": {
+        "projectedMarginWeight": 5,
+        "eventWeight": 3,
         "rallyWeight": 3,
-        "taxWeight": 2
+        "taxWeight": 2,
+        "resourceWeight": 0.03
       },
       "use": {
         "pruningRules": [
           "dropPassWhenOtherMovesExist"
         ],
         "considerations": [
+          "preferProjectedSelfMargin",
+          "preserveResources",
+          "preferEvent",
           "preferRallyWeighted",
           "preferTaxWeighted",
           "preferPopulousTargets"
@@ -1700,20 +1706,27 @@
         "mode": "argmax"
       },
       "plan": {
-        "stateFeatures": [],
+        "stateFeatures": [
+          "selfMargin",
+          "selfResources"
+        ],
         "candidateFeatures": [
+          "projectedSelfMargin",
           "targetSpacePopulation"
         ],
         "candidateAggregates": [
           "hasNonPassAlternative"
         ],
         "considerations": [
+          "preferProjectedSelfMargin",
+          "preserveResources",
+          "preferEvent",
           "preferRallyWeighted",
           "preferTaxWeighted",
           "preferPopulousTargets"
         ]
       },
-      "fingerprint": "ff97058a68f4f943f1189dc8ea7916a3e2c7d9988b28d3f5c93be0d8345da438"
+      "fingerprint": "68cca33c9b26be24b9199dc0061878a644d620666bc2f5ea36e85c2ffa2fddb3"
     }
   },
   "bindingsBySeat": {
@@ -1722,5 +1735,5 @@
     "nva": "nva-baseline",
     "vc": "vc-evolved"
   },
-  "catalogFingerprint": "26cf74152d7878507c6dcdaa34bcc47e71045171daeb55cb1dd4191f8159a8e4"
+  "catalogFingerprint": "07ccaf531029b3891d78fdb90cbb040dc2fa9f668db07d8f142107b00a873014"
 }

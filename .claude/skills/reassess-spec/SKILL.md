@@ -59,9 +59,10 @@ For each reference, validate against the actual codebase:
 1. **File paths**: Glob/Grep to confirm they exist at the stated location. If a file was moved, renamed, or deleted, record the discrepancy and the actual location (if found).
 2. **Types and interfaces**: Grep for each type name. Confirm it exists, check its current shape (fields, members). If the spec assumes a field that does not exist or has a different name/type, record the discrepancy.
 3. **Functions and methods**: Grep for each function. Confirm signature, module location, and export status. Note any signature differences from what the spec assumes.
-4. **Dependencies (specs/tickets)**: For each dependency, verify whether it lives in `specs/`, `archive/specs/`, `tickets/`, or `archive/tickets/`. Record the correct path. If a dependency is listed as incomplete but has since been implemented, note this.
+4. **Dependencies (specs/tickets)**: For each dependency, verify whether it lives in `specs/`, `archive/specs/`, `tickets/`, or `archive/tickets/`. Record the correct path. If a dependency is listed as incomplete but has since been implemented, note this. For specs that list the assessed spec as a dependency, verify their assumptions about the assessed spec's deliverables are still valid. If the assessed spec's scope changes, flag impacted downstream specs.
 5. **YAML/config fields**: Grep for field names in schema files, type definitions, and example YAML files. Confirm the spec's assumptions about available fields.
 6. **Downstream consumers (blast radius)**: For types or interfaces the spec proposes to modify, grep for all import sites and usage points. Record the blast radius — files that would need updating.
+7. **Existing implementations**: For each major proposed artifact (new types, new files, new patterns), search the codebase for existing implementations with similar names or functionality. Check whether the proposal duplicates existing infrastructure. This catches specs whose premise has been overtaken by prior work.
 
 For specs with many references (>5 types/functions/paths), use an Explore agent to perform extraction and validation in a single pass. Include the spec content in the agent prompt so it can both identify references and validate them. Explicitly request blast radius analysis — the agent should grep for all import sites and consumer files of any type or interface the spec proposes to modify. This is read-only — agent-based exploration is safe and significantly faster.
 
@@ -86,6 +87,7 @@ Review each section of the spec against `docs/FOUNDATIONS.md`:
 Organize all findings from Steps 2 and 3 into three categories:
 
 - **Issues**: Something in the spec is factually wrong, stale, or violates FOUNDATIONS.md. The spec cannot go to tickets without fixing this.
+- **Obsolescence**: The spec's core proposal is already implemented, superseded, or invalidated by codebase evolution. The entire premise needs rethinking, not just refinement.
 - **Improvements**: The spec is not wrong, but a refinement would make the implementation cleaner, safer, or more aligned with existing patterns.
 - **Additions**: A feature or deliverable not in the spec that would be beneficial and aligns with the spec's stated goals. Apply YAGNI ruthlessly — only propose additions that are natural extensions of the spec's scope, not tangential features.
 
@@ -94,6 +96,8 @@ For each finding, record:
 - What the codebase actually has (with file paths and line references)
 - The recommended change to the spec
 
+**Handling Obsolescence**: When a spec's core proposal is already implemented or superseded, present two options: (a) archive the spec as completed/superseded, (b) rewrite with a narrower scope targeting the remaining gap. Wait for user direction before proceeding to Step 6. If the user chooses rewrite, the Step 6 output may be a substantially new spec rather than a refinement of the existing one.
+
 ### Step 5: Present Findings
 
 Present all findings to the user in a structured report:
@@ -101,9 +105,17 @@ Present all findings to the user in a structured report:
 ```
 ## Reassessment: <spec-name>
 
+### Codebase Status
+[Optional — include when the spec's proposal overlaps with existing infrastructure.]
+<Brief summary of what already exists in the codebase that is relevant to the spec's proposal. Helps contextualize all subsequent findings.>
+
 ### Issues (must fix)
 [If none: "No issues found."]
 1. **<title>** — <what the spec says> vs. <what the codebase has>. Recommendation: <change>.
+
+### Obsolescence (premise invalidated)
+[If none: omit this section entirely.]
+1. **<title>** — <what the spec proposes> is already implemented / superseded by <what exists>. Options: (a) archive the spec, (b) rewrite with a new scope targeting <remaining gap>.
 
 ### Improvements (should fix)
 [If none: "No improvements found."]
@@ -142,7 +154,7 @@ After all findings are resolved and the user has approved the changes:
 
 If the user requests changes to the draft, incorporate them and re-present before writing.
 
-**Plan mode note**: If invoked during plan mode, Steps 1-5 proceed normally (read-only). Step 6 requires write access — exit plan mode before writing. Write a plan file with: (a) **Context** — why the spec is being updated, (b) **Changes** — the numbered diff summary list, (c) **Verification** — confirmation that no implementation will happen. Then call ExitPlanMode. After approval, proceed with writing the updated spec.
+**Plan mode note**: If invoked during plan mode, Steps 1-5 proceed normally (read-only). Step 6 (writing the updated spec) is deferred until plan mode is exited. Record the approved changes in the system-provided plan file following the plan-mode workflow, then execute Step 6 after the user approves the plan and plan mode is exited.
 
 ### Step 7: Final Summary
 

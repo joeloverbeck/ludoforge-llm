@@ -1,4 +1,4 @@
-# Spec 63 — Scoped Draft State for Effect Execution
+# Spec 63 — Profile-Gated Spread Reduction Audit
 
 ## Status
 
@@ -6,17 +6,13 @@ Proposed
 
 ## Dependencies
 
-None. This spec is independent and should be implemented before Spec 64 (Compiled Expression Evaluation), because the interpreter's overhead profile will change once allocation pressure from object spreads is eliminated.
+None. This spec is independent and should be implemented before Spec 64 (Compiled Expression Evaluation), because the interpreter's overhead profile will change once allocation pressure from remaining object spreads is reduced.
 
 ## Problem
 
-Kernel effect handlers create new state objects via object spreads on every state transition:
+The scoped draft state infrastructure already exists in `packages/engine/src/kernel/state-draft.ts` (`MutableGameState`, `DraftTracker`, `createMutableState`, `freezeState`, copy-on-write helpers). It is adopted across all hot-path effect handlers (effects-token.ts, effects-var.ts, effects-choice.ts, effects-resource.ts, effects-reveal.ts) via the `EffectCursor.tracker` field in `effect-dispatch.ts`.
 
-```typescript
-return { ...state, zones: { ...state.zones, [zoneId]: newTokens } };
-```
-
-A single Rally action touching 4 zones creates ~12 intermediate state copies, most immediately discarded. CPU profiling (`perf record --perf-basic-prof`) of FITL simulations shows:
+Despite this, CPU profiling (`perf record --perf-basic-prof`) of FITL simulations still shows significant spread overhead:
 
 | V8 Builtin | % of CPU | Cause |
 |------------|----------|-------|
@@ -26,90 +22,121 @@ A single Rally action touching 4 zones creates ~12 intermediate state copies, mo
 | `ScavengerCollector::CollectGarbage` | 3.80% | GC pressure from short-lived copies |
 | **Total** | **~15%** | |
 
-These are V8-internal costs that cannot be reduced by modifying JS code patterns — the engine already uses optimal spread syntax. The only way to eliminate them is to stop creating intermediate copies.
+The remaining overhead is NOT from effect handlers — those already use the mutable draft. It comes from spread sites OUTSIDE the effect execution scope:
+
+1. **`apply-move.ts` final state assembly** (lines 1355-1359, 1561-1564): Spreads the entire `GameState` (~19 top-level fields) per move just to assign 1-2 hash fields (`stateHash`, `_runningHash`).
+2. **`phase-advance.ts` nested turnOrderState construction** (14 sites): Multiple nested spreads (`{ ...state, turnOrderState: { ...runtime, ... } }`) per phase advance.
+3. **`effects-control.ts` PartialEffectResult assembly** (40+ sites): Conditional field spreads per effect handler return, though these are small objects (3-5 fields).
+4. **`EffectCursor` spreading** (55+ sites): Already optimized to 5-field spreads, but still numerous.
+
+## Non-Goals
+
+- **Do NOT change EffectCursor shape** — Global lessons prove that adding fields to EffectCursor causes V8 hidden class deoptimization (4-7% regression across 5 experiments in prior campaigns).
+- **Do NOT eliminate small-object spreads** (PartialEffectResult, EffectCursor) — Global lessons prove V8 JIT optimizes 3-5 field spreads efficiently; micro-optimizations that try to avoid them are consistently SLOWER.
+- **Do NOT remove dead fallback branches** in effects-token.ts — The immutable fallback paths in token handlers are dead code (DraftTracker is always set by `applyEffectsWithBudgetState`). Removing dead code is a cleanup concern, not a performance concern.
+- **Do NOT introduce a new DraftGameState type** — `MutableGameState` from `state-draft.ts` already serves this purpose.
 
 ## FOUNDATIONS Alignment
 
 Foundation 11 (Immutability) explicitly permits scoped internal mutation:
 
-> "Within a single synchronous effect-execution scope, the kernel MAY use a private draft state or copy-on-write working state for performance. That working state MUST be fully isolated from caller-visible state: no shared mutable descendants, no aliasing that can leak outside the scope, and no observation before finalization. The external contract remains `applyMove(state) -> newState`, where the input `state` is never modified. This guarantee MUST be enforced by regression tests."
+> "Within a single synchronous effect-execution scope, the kernel MAY use a private draft state or copy-on-write working state for performance. That working state MUST be fully isolated from caller-visible state."
 
-This spec implements the Foundation 11 carve-out.
+The existing `state-draft.ts` + `EffectCursor.tracker` infrastructure already implements this carve-out. This spec extends the same principle to the `applyMove` return path: `progressedState` at line 1355 is a fresh object produced within `applyTrustedMove`'s scope — assigning hash fields directly on it before return is a scoped internal mutation with no aliasing risk.
+
+Foundation 8 (Determinism): No behavioral change — same state, same hash, same output.
+
+Foundation 15 (Architectural Completeness): Addresses the root cause (unnecessary full-object spreads for field assignment) rather than patching symptoms.
 
 ## Proposed Design
 
-### Draft State Wrapper
+### Phase 1: Profiling Baseline (no code changes)
 
-Introduce a `DraftGameState` that wraps a `GameState` reference and tracks mutations:
+Run `perf record --perf-basic-prof` on the FITL 3-seed benchmark. Use `perf report` with call-graph annotation to attribute the remaining `CreateDataProperty` / `CloneObjectIC` CPU to specific call sites.
+
+**Deliverable**: A table mapping each spread category (apply-move hash assignment, phase-advance turnOrderState, effects-control result, EffectCursor) to measured CPU %.
+
+**Gate**: If no single category exceeds 2% CPU, CLOSE the spec as "not actionable — remaining overhead is distributed across many small efficient spreads."
+
+### Phase 2: apply-move.ts hash assignment (targeted fix)
+
+**Problem**: Two sites in `apply-move.ts` spread the entire `GameState` to add hash fields:
 
 ```typescript
-interface DraftGameState {
-  // Read: delegates to the original state or local override
-  readonly zones: DraftZoneMap;
-  readonly globalVars: DraftVarMap;
-  readonly perPlayerVars: DraftPerPlayerVarMap;
-  // ... all GameState fields
+// Line 1355-1359: applyTrustedMove return path
+const stateWithHash = {
+  ...progressedState,
+  stateHash: reconciledHash,
+  _runningHash: reconciledHash,
+};
 
-  // Finalize: produce a new frozen GameState from accumulated mutations
-  finalize(): GameState;
-}
+// Line 1561-1564: commitSimultaneousMoves return path
+const finalState = {
+  ...progressedState,
+  stateHash: computeFullHash(table, progressedState),
+};
 ```
 
-**Key properties:**
-- **Copy-on-write zones**: `zones[zoneId]` returns the original array until a mutation targets that zone. On first write, the array is shallow-copied into the draft. Subsequent writes to the same zone mutate the draft copy.
-- **Copy-on-write vars**: Global/per-player/zone variables follow the same pattern — original values are read through until a write occurs.
-- **Finalization**: Produces a new `GameState` object with only the modified branches replaced. Unmodified branches share references with the original state (structural sharing).
-- **Isolation**: The draft is never exposed outside the effect execution scope. The original `GameState` is never modified.
+Each spread copies ~19 top-level fields to assign 1-2. This runs once per move (200+ times per game).
 
-### Integration Points
+**Fix**: Cast `progressedState` to `MutableGameState` (imported from `state-draft.ts`) and assign hash fields directly. This is safe because `progressedState` is a fresh object produced within the current scope — it is not the caller's input state and has no external aliases:
 
-1. **`applyEffectsWithBudgetState`** (effect-dispatch.ts): Creates a `DraftGameState` at scope entry. All effect handlers receive the draft instead of creating new state copies. On scope exit, calls `draft.finalize()` to produce the output state.
+```typescript
+import type { MutableGameState } from './state-draft.js';
 
-2. **Effect handlers** (effects-token.ts, effects-var.ts, effects-marker.ts, etc.): Change from `return { ...state, zones: { ...state.zones, ... } }` to `draft.zones[zoneId] = newTokens; return draft;`. The handler signature changes from `(state: GameState) => GameState` to `(draft: DraftGameState) => void`.
+// Line 1355-1359: replace spread with direct assignment
+const stateWithHash = progressedState as MutableGameState;
+stateWithHash.stateHash = reconciledHash;
+stateWithHash._runningHash = reconciledHash;
 
-3. **Read operations** during effect execution: `evalCondition`, `resolveRef`, `evalValue` read from the draft. Since the draft exposes the same `ReadContext` interface (def, state, zones, vars), no changes are needed to the read path — the draft IS the state from the reader's perspective.
+// Line 1561-1564: same pattern
+const finalState = progressedState as MutableGameState;
+finalState.stateHash = computeFullHash(table, progressedState);
+```
 
-4. **Nested scopes**: `forEach`, `if/else`, `let` blocks create nested effect scopes. The draft is threaded through — nested scopes mutate the same draft. This is safe because effect execution is synchronous and single-threaded.
+**Safety justification**:
+- `progressedState` is returned by `advanceToDecisionPoint` → fresh object, not caller's input
+- The mutation occurs immediately before return — no intermediate readers observe the pre-hash state
+- `MutableGameState` is the same type as `GameState` with `readonly` removed — no hidden class change
+- Foundation 11 permits this: scoped mutation, isolated, immediately before finalization
 
-### What Does NOT Change
+### Phase 3: Conditional — phase-advance.ts turnOrderState (profile-gated)
 
-- **External contract**: `applyMove(state) → newState` remains immutable. Input state is never modified.
-- **`ReadContext` interface**: Condition evaluation, value evaluation, reference resolution — all unchanged.
-- **GameState serialization**: The finalized state is structurally identical to spread-produced states.
-- **Determinism**: Same effects applied in the same order produce identical draft mutations → identical finalized state.
-- **Zobrist hashing**: Hash is computed from the finalized state, same as today.
+If Phase 1 profiling shows `phase-advance.ts` turnOrderState spreads exceed 3% CPU:
 
-### V8 Optimization Considerations
+- Evaluate whether phase-advance functions can receive `MutableGameState` from their callers (they already receive state that has passed through mutable scopes)
+- If so, assign turnOrderState fields directly instead of spreading nested objects
+- Same benchmark gate applies
 
-The draft object has a FIXED shape (same properties as GameState). V8 creates a single hidden class for it. All effect handlers access the same properties on the same type → monomorphic access. This is MORE V8-friendly than the current pattern where spreads create objects with varying property orders.
-
-**Risk**: If the draft object's hidden class differs from `GameState`'s hidden class, and read-path functions receive both types, V8 sees polymorphic call sites → megamorphic deopt. Mitigation: the draft MUST produce objects with identical hidden class to `GameState` during finalization. During execution, the draft should implement the `ReadContext` interface through a proxy or property delegation that V8 can inline.
+If profiling shows < 3%: close Phase 3 as not actionable.
 
 ## Scope
 
 ### Mutable
-- `packages/engine/src/kernel/effect-dispatch.ts` — scope entry/exit with draft
-- `packages/engine/src/kernel/effects-token.ts` — token move/create/remove handlers
-- `packages/engine/src/kernel/effects-var.ts` — variable set/add handlers
-- `packages/engine/src/kernel/effects-marker.ts` — marker state handlers
-- `packages/engine/src/kernel/effects-control.ts` — forEach/if/let scope threading
-- `packages/engine/src/kernel/effects-choice.ts` — chooseOne/chooseN handlers
-- New file: `packages/engine/src/kernel/draft-state.ts` — DraftGameState implementation
-- All tests that assert effect handler return values
+- `packages/engine/src/kernel/apply-move.ts` — lines 1355-1359 and 1561-1564 (Phase 2)
+- `packages/engine/src/kernel/phase-advance.ts` — conditional (Phase 3 only, if profiling warrants)
 
 ### Immutable
-- `packages/engine/src/kernel/eval-condition.ts` — reads only, no change
-- `packages/engine/src/kernel/eval-value.ts` — reads only, no change
-- `packages/engine/src/kernel/resolve-ref.ts` — reads only, no change
+- `packages/engine/src/kernel/state-draft.ts` — existing infrastructure, no changes needed
+- `packages/engine/src/kernel/effects-token.ts` — already uses mutable path
+- `packages/engine/src/kernel/effects-var.ts` — already uses mutable path
+- `packages/engine/src/kernel/effects-choice.ts` — already uses mutable path
+- `packages/engine/src/kernel/effects-control.ts` — small-object spreads, V8-efficient
+- `packages/engine/src/kernel/effect-dispatch.ts` — cursor reuse already optimal
+- `packages/engine/src/kernel/eval-condition.ts` — reads only
+- `packages/engine/src/kernel/eval-value.ts` — reads only
+- `packages/engine/src/kernel/resolve-ref.ts` — reads only
 - Game spec data (`data/games/*`)
 
 ## Testing Strategy
 
-1. **Isolation regression test**: Apply a move, verify the original state is byte-identical before and after (Foundation 11 contract).
-2. **Determinism test**: Apply the same move sequence with spread-based and draft-based execution, assert identical finalized states (Foundation 8).
-3. **Replay test**: Full game replay produces identical traces with draft execution (Foundation 9).
-4. **Benchmark gate**: Draft execution must be faster than spread execution on the FITL 3-seed benchmark. If not, the spec is rejected.
+1. **Isolation regression test**: Apply a move, verify the input state is reference-identical before and after (Foundation 11 contract — the caller's state must not be modified).
+2. **Determinism test**: Apply the same move sequence, assert identical finalized states including hash values (Foundation 8).
+3. **Replay test**: Full game replay produces identical traces (Foundation 9).
+4. **Benchmark gate**: FITL 3-seed benchmark must show measurable improvement. If Phase 2 does not improve the metric, revert and close the spec.
 
 ## Expected Impact
 
-10-15% reduction in `combined_duration_ms` on the FITL benchmark. The 15% CPU currently spent on `CreateDataProperty`, `CloneObjectIC`, and GC would be nearly eliminated, replaced by O(modified branches) structural sharing during finalization.
+Conservative: 1-3% reduction in `combined_duration_ms`. The two `apply-move.ts` spreads are per-move costs that copy ~19 fields unnecessarily. Eliminating them saves ~400 bytes of allocation per move × 600 moves = ~240KB of avoided allocation per benchmark run, plus reduced GC pressure.
+
+The remaining ~12% of spread-attributed CPU is likely irreducible — distributed across many small, efficient spreads that V8 handles well (global lesson: "V8 JIT optimizes object spreads efficiently").

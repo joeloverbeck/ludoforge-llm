@@ -186,7 +186,7 @@ for (let seedOffset = 0; seedOffset < SEED_COUNT; seedOffset++) {
 
   try {
     const agents = seatProfiles.map(
-      (profileId) => new PolicyAgent({ profileId, traceLevel: 'detailed' }),
+      (profileId) => new PolicyAgent({ profileId, traceLevel: 'verbose' }),
     );
 
     const trace = runGame(def, seed, agents, MAX_TURNS, PLAYER_COUNT, undefined, runtime);

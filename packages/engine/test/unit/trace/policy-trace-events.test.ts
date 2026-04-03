@@ -103,6 +103,7 @@ function createCatalog(): AgentPolicyCatalog {
         fingerprint: 'baseline-fingerprint',
         params: {},
         preview: { mode: 'exactWorld' },
+        selection: { mode: 'argmax' },
         use: {
           pruningRules: [],
           considerations: ['preferEvent'],
@@ -119,6 +120,28 @@ function createCatalog(): AgentPolicyCatalog {
     bindingsBySeat: {
       us: 'baseline',
       arvn: 'baseline',
+    },
+  };
+}
+
+function createSoftmaxCatalog(): AgentPolicyCatalog {
+  const catalog = createCatalog();
+  const baseline = catalog.profiles.baseline;
+  assert.ok(baseline);
+  const softmaxBaseline: AgentPolicyCatalog['profiles']['baseline'] = {
+    fingerprint: baseline.fingerprint,
+    ...(baseline.observerName === undefined ? {} : { observerName: baseline.observerName }),
+    params: baseline.params,
+    preview: baseline.preview,
+    selection: { mode: 'softmaxSample', temperature: 0.5 },
+    use: baseline.use,
+    plan: baseline.plan,
+  };
+  return {
+    ...catalog,
+    profiles: {
+      ...catalog.profiles,
+      baseline: softmaxBaseline,
     },
   };
 }
@@ -165,6 +188,13 @@ function createDef(): GameDef {
   };
 }
 
+function createSoftmaxDef(): GameDef {
+  return {
+    ...createDef(),
+    agents: createSoftmaxCatalog(),
+  };
+}
+
 function createInput(def: GameDef): Parameters<PolicyAgent['chooseMove']>[0] {
   const state = initialState(def, 5, 2).state;
   const legalMoves: readonly Move[] = [
@@ -203,6 +233,11 @@ describe('policy trace events', () => {
     assert.equal(summaryDecision.initialCandidateCount, 2);
     assert.equal(summaryDecision.selectedStableMoveKey !== null, true);
     assert.equal(summaryDecision.previewUsage.mode, 'exactWorld');
+    assert.deepEqual(summaryDecision.selection, {
+      mode: 'argmax',
+      candidateCount: 2,
+      selectedIndex: 0,
+    });
     assert.deepEqual(summaryDecision.previewUsage.refIds, []);
     assert.deepEqual(summaryDecision.previewUsage.unknownRefs, []);
     assert.deepEqual(summaryDecision.previewUsage.outcomeBreakdown, {
@@ -239,6 +274,25 @@ describe('policy trace events', () => {
     const firstVerboseCandidate = verboseDecision.candidates?.[0];
     assert.ok(firstVerboseCandidate);
     assert.equal('previewOutcome' in (firstVerboseCandidate as unknown as Record<string, unknown>), false);
+  });
+
+  it('records stochastic selection details in policy decision traces', () => {
+    const def = createSoftmaxDef();
+    const result = new PolicyAgent({ traceLevel: 'summary' }).chooseMove(createInput(def));
+
+    assert.equal(result.agentDecision?.kind, 'policy');
+    if (result.agentDecision?.kind !== 'policy') {
+      assert.fail('expected policy decision trace');
+    }
+
+    assert.deepEqual(result.agentDecision.selection, {
+      mode: 'softmaxSample',
+      temperature: 0.5,
+      candidateCount: 2,
+      samplingProbabilities: result.agentDecision.selection?.samplingProbabilities,
+      selectedIndex: result.agentDecision.selection?.selectedIndex ?? -1,
+    });
+    assert.equal(result.agentDecision.selection?.samplingProbabilities?.length, 2);
   });
 
   it('threads policy agent decision metadata into simulator move logs', () => {

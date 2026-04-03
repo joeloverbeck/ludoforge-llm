@@ -1530,7 +1530,10 @@ phase: [asPhaseId('main')],
     );
   });
 
-  it('15. malformed decision-path expressions are fatal during template satisfiability checks', () => {
+  it('15. pipeline templates with malformed decision-paths are deferred to classification', () => {
+    // Pipeline templates skip the decision-sequence satisfiability probe during
+    // raw enumeration (legalMoves). Malformed references are caught later during
+    // classification (enumerateLegalMoves → probeMoveViability).
     const action: ActionDef = {
       id: asActionId('brokenDecisionPathOp'),
 actor: 'active',
@@ -1568,7 +1571,12 @@ phase: [asPhaseId('main')],
     const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
     const state = makeBaseState();
 
-    assert.throws(() => legalMoves(def, state));
+    // Raw enumeration (legalMoves) pushes the template without error.
+    const moves = legalMoves(def, state);
+    assert.deepEqual(moves, [{ actionId: asActionId('brokenDecisionPathOp'), params: {} }]);
+
+    // Classification (enumerateLegalMoves) catches the error during probing.
+    assert.throws(() => enumerateLegalMoves(def, state));
   });
 
   it('16. malformed free-operation zone filters fail with typed diagnostics during template variant generation', () => {
@@ -2132,7 +2140,11 @@ phase: [asPhaseId('main')],
     });
 
     assert.deepEqual(result.moves.map(({ move }) => move), [{ actionId: asActionId('needsDecision'), params: {} }]);
-    assert.equal(result.warnings.some((warning) => warning.code === 'MOVE_ENUM_DECISION_PROBE_STEP_BUDGET_EXCEEDED'), true);
+    // Pipeline template moves skip the decision-sequence satisfiability probe,
+    // so budget warnings from that probe are no longer surfaced for pipeline
+    // actions. The template is pushed based on pipeline predicate eligibility
+    // alone. Budget warnings still fire for non-pipeline actions and free-op
+    // enumeration paths that still run the full probe.
   });
 
   it('24b. preserves free-operation variants when decision satisfiability is unknown', () => {
@@ -2375,7 +2387,10 @@ phase: [asPhaseId('main')],
       atomicity: 'partial',
     };
 
-    assert.throws(() => legalMoves(makeBaseDef({ actions: [action], actionPipelines: [profile] }), makeBaseState()));
+    // Pipeline template moves skip the decision-sequence probe, so the error
+    // from the missing gvar reference is deferred to completion time.
+    const result = enumerateLegalMoves(makeBaseDef({ actions: [action], actionPipelines: [profile] }), makeBaseState());
+    assert.deepEqual(result.moves.map(({ move }) => move), [{ actionId: action.id, params: {} }]);
   });
 
   it('24f. admits free-operation variants when decision probing hits deferrable missing bindings', () => {
@@ -3616,22 +3631,10 @@ phase: [asPhaseId('main')],
       true,
       'event-path admission must use canonical helper with legalMoves.eventDecisionSequence context',
     );
-    assert.equal(
-      helperCalls.some((call) => {
-        if (call.arguments.length < 4) {
-          return false;
-        }
-        const contextArg = unwrapTypeScriptExpression(call.arguments[3]!);
-        return (
-          ts.isPropertyAccessExpression(contextArg) &&
-          ts.isIdentifier(contextArg.expression) &&
-          contextArg.expression.text === 'MISSING_BINDING_POLICY_CONTEXTS' &&
-          contextArg.name.text === 'LEGAL_MOVES_PIPELINE_DECISION_SEQUENCE'
-        );
-      }),
-      true,
-      'pipeline-path admission must use canonical helper with legalMoves.pipelineDecisionSequence context',
-    );
+    // Pipeline-path decision admission is intentionally skipped — pipeline
+    // template moves trust the compiled first-decision domain check and defer
+    // full satisfiability to agent template completion. Only the event-path
+    // call is required.
 
     const classifyCalls = collectCallExpressionsByIdentifier(sourceFile, 'classifyMoveDecisionSequenceSatisfiability');
     assert.equal(
@@ -4038,11 +4041,9 @@ describe('legalMoves plain-action feasibility probe', () => {
       true,
       'event admission should receive cachedDiscover for root-state enumeration reuse',
     );
-    assert.equal(
-      hasRootStateDiscoverer('LEGAL_MOVES_PIPELINE_DECISION_SEQUENCE'),
-      true,
-      'pipeline admission should receive cachedDiscover for root-state enumeration reuse',
-    );
+    // Pipeline admission is intentionally skipped — pipeline template moves
+    // defer satisfiability to agent completion, so the discoverer is not
+    // threaded through a pipeline-path admission call.
 
     assert.equal(
       helperCalls.some((call) =>

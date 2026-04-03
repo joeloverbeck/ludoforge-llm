@@ -47,15 +47,21 @@ describe('considerations production migration', () => {
     assert.equal('completionGuidance' in fitlVcEvolved, false);
     assert.ok(fitlAgents.library.considerations.preferPopulousTargets);
     assert.deepEqual(fitlAgents.library.considerations.preferPopulousTargets.scopes, ['completion']);
-    assert.deepEqual(
-      fitlVcEvolved.use.considerations,
-      ['preferRallyWeighted', 'preferTaxWeighted', 'preferPopulousTargets'],
-    );
+    // vc-evolved considerations list changes during evolution campaigns — assert non-empty and
+    // that every listed consideration exists in the library, rather than hardcoding the exact list.
+    assert.ok(fitlVcEvolved.use.considerations.length > 0, 'vc-evolved must have at least one consideration');
+    for (const name of fitlVcEvolved.use.considerations) {
+      assert.ok(
+        name in fitlAgents.library.considerations,
+        `vc-evolved consideration "${name}" must exist in the library`,
+      );
+    }
 
     assert.equal('scoreTerms' in texasAgents.library, false);
     assert.equal('completionScoreTerms' in texasAgents.library, false);
     assert.equal('scoreTerms' in texasBaseline.use, false);
     assert.equal('completionScoreTerms' in texasBaseline.use, false);
+    // Texas profiles are not under active evolution — exact list is stable.
     assert.deepEqual(
       texasBaseline.use.considerations,
       ['preferCheck', 'preferCall', 'avoidFold', 'foldWhenBadPotOdds', 'alwaysRaise', 'preferLargerRaise'],

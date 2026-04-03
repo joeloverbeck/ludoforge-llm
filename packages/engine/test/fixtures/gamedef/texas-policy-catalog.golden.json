@@ -799,6 +799,10 @@
       "preview": {
         "mode": "disabled"
       },
+      "selection": {
+        "mode": "softmaxSample",
+        "temperature": 0.5
+      },
       "plan": {
         "stateFeatures": [
           "callAmount",
@@ -818,11 +822,11 @@
           "preferLargerRaise"
         ]
       },
-      "fingerprint": "c9416985cbe8a77567cb8d1d7acb68fe4b6a3a26922b760d882aab47eb3748a2"
+      "fingerprint": "b9fcfb4a3b4636428377a55de123bdf5d2365d3c4074b036d52660ce28ffcced"
     }
   },
   "bindingsBySeat": {
     "neutral": "baseline"
   },
-  "catalogFingerprint": "a01345b666a22fa323ba5a81c575770907d84ef3d320fc3f793a564795c2b089"
+  "catalogFingerprint": "c402148f18fe696292587126fb01bc36fc515fcd2d41eef2c12539bab0654024"
 }

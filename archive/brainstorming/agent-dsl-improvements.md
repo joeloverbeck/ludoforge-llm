@@ -1,26 +1,31 @@
 # Agent Policies DSL Review and vNext Proposal
 
-## Spec Coverage Status (2026-04-01)
+**Status**: COMPLETED
+
+## Spec Coverage Status (2026-04-01, revised)
 
 This document was produced by an external reviewer (ChatGPT Pro) without codebase access. After reassessing each claim against the actual codebase and `docs/FOUNDATIONS.md`, the following specs were created:
 
 | Issue | Status | Spec |
 |-------|--------|------|
-| #1 Observability in wrong layer | **Spec'd** | Spec 102 — Shared Observer Model |
-| #2 Two policy languages | **Spec'd** | Spec 104 — Unified Decision-Context Considerations |
-| #3 Preview semantics too loose | **Spec'd** | Spec 105 — Explicit Preview Contracts |
-| #4 Surface growth / special-case accretion | **Deferred** | Action tags (Spec 103) address the worst symptom; generic query IR deferred |
-| #5 Additive scoring too primitive | **Deferred** | Enhancement, not a current blocker |
-| #6 Numeric domain / floats | **Deferred** | Needs policy decision on rule-authoritativeness of agent scoring |
-| #7 Action modelling too low-level | **Spec'd** | Spec 103 — Action Tags and Candidate Metadata |
-| #8 StrategicConditions too weak | **Deferred** | Spec 101 just landed; works for current needs |
+| #1 Observability in wrong layer | **Completed** | Spec 102 — Shared Observer Model (archived) |
+| #2 Two policy languages | **Completed** | Spec 104 — Unified Decision-Context Considerations (archived) |
+| #3 Preview semantics too loose | **In Progress** | Spec 105 — Explicit Preview Contracts (tickets created) |
+| #4 Surface growth / special-case accretion | **Deferred** | Action tags (Spec 103, archived) address the worst symptom; generic query IR deferred |
+| #5a Stochastic selection modes | **Spec'd** | Spec 107 — Stochastic Selection Modes |
+| #5b Transforms, tiers, veto/gate | **Deferred** | Enhancement — weight tuning approximates; revisit when authoring friction is acute |
+| #6 Numeric domain / floats | **Deferred** | No determinism issues observed in practice; revisit if complex scoring formulas adopted |
+| #7 Action modelling too low-level | **Completed** | Spec 103 — Action Tags and Candidate Metadata (archived) |
+| #8 StrategicConditions too weak | **Deferred** | Spec 101 delivered boolean + proximity; extensions not needed by current games |
 | #9 Evolutionary genotype implicit | **Deferred** | Evolution pipeline (Spec 14) not started |
 | #10 Bounded search layer | **Deferred** | Single-ply sufficient for current games |
 
-Reassessment notes:
+Reassessment notes (2026-04-01 revisit after specs 102-105 landed):
+- Specs 102, 103, 104 are now implemented and archived. Spec 105 has tickets in progress.
+- Claim #5 was split during re-triage: stochastic selection modes (#5a) are a real architectural ceiling — Texas Hold'em (imperfect-info) fundamentally cannot express mixed strategies with argmax-only selection, and MAP-Elites diversity is limited. Promoted to Spec 107. Transforms, tiers, and veto/gate (#5b) remain deferred as enhancements.
+- Claims #4, #6, #8, #9, #10 were re-evaluated and remain correctly deferred — YAGNI still applies. None are blocking current games or evolution readiness.
 - Claim #3 was partially overstated — the codebase already distinguishes 6 preview outcome types. Spec 105 formalizes the profile-level contract.
 - Claim #4 is real but large. Spec 103 (action tags) kills the most visible pain (boolean forest). The full generic query IR remains a candidate for future work.
-- Claims #5, #6, #8, #9, #10 are valid directionally but not blocking current development. Revisit after specs 102-105 land.
 
 ---
 
@@ -481,3 +486,12 @@ The DSL should become a declarative decision program over:
 - and optional mixed-strategy output.
 
 Make those changes and the system becomes a real general agent DSL. Keep extending the current design organically and it will calcify into a FITL-specific utility scorer with poker-shaped exceptions.
+
+## Outcome
+
+Completed: 2026-04-02
+
+- This brainstorming document was exploited to derive and track the agent-policy architecture follow-up set, including the now-implemented Specs 102, 103, 104, 105, and 107.
+- The remaining deferred ideas stay documented here historically, but this file is no longer an active planning artifact because the concrete implemented work has been migrated into specs, tickets, and code.
+- Deviation from original plan: the stochastic-selection concern was split into Spec 107 during reassessment rather than remaining bundled as a single future enhancement.
+- Verification result: the implemented downstream work completed and passed repo-wide verification, including `pnpm turbo build`, `pnpm turbo test`, `pnpm turbo lint`, and `pnpm turbo typecheck`.

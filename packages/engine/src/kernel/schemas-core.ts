@@ -943,6 +943,12 @@ const CompiledAgentProfileSchema = z
         mode: z.enum(['exactWorld', 'tolerateStochastic', 'disabled']),
       })
       .strict(),
+    selection: z
+      .object({
+        mode: z.enum(['argmax', 'softmaxSample', 'weightedSample']),
+        temperature: z.number().positive().optional(),
+      })
+      .strict(),
     plan: z
       .object({
         stateFeatures: z.array(StringSchema),
@@ -1452,6 +1458,16 @@ const PolicyPreviewUsageTraceSchema = z
   })
   .strict();
 
+const PolicySelectionTraceSchema = z
+  .object({
+    mode: z.enum(['argmax', 'softmaxSample', 'weightedSample']),
+    temperature: NumberSchema.optional(),
+    candidateCount: NumberSchema,
+    samplingProbabilities: z.array(NumberSchema).optional(),
+    selectedIndex: NumberSchema,
+  })
+  .strict();
+
 const AgentDecisionTraceSchema = z.union([
   z
     .object({
@@ -1476,6 +1492,7 @@ const AgentDecisionTraceSchema = z.union([
       pruningSteps: z.array(PolicyPruningStepTraceSchema),
       tieBreakChain: z.array(PolicyTieBreakStepTraceSchema),
       previewUsage: PolicyPreviewUsageTraceSchema,
+      selection: PolicySelectionTraceSchema.optional(),
       emergencyFallback: BooleanSchema,
       failure: AgentDecisionFailureSummarySchema.nullable(),
       completionStatistics: PolicyCompletionStatisticsSchema.optional(),

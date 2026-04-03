@@ -2,6 +2,7 @@ import type { PlayerId } from '../kernel/branded.js';
 import { toMoveIdentityKey } from '../kernel/move-identity.js';
 import type {
   AgentPreviewMode,
+  AgentSelectionMode,
   AgentPolicyCatalog,
   CompiledAgentTieBreaker,
   GameDef,
@@ -13,11 +14,18 @@ import type {
   TrustedExecutableMove,
 } from '../kernel/types.js';
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
+import { createRng, stepRng } from '../kernel/prng.js';
 import { pickRandom } from './agent-move-selection.js';
 import type { PolicyPreviewTraceOutcome, PolicyPreviewUnavailabilityReason } from './policy-preview.js';
 import { type PolicyValue } from './policy-runtime.js';
 import { PolicyEvaluationContext, type PolicyEvaluationCandidate, PolicyRuntimeError } from './policy-evaluation-core.js';
 import { resolvePolicyBindingSeatId } from './policy-profile-resolution.js';
+
+const SELECTION_SALT = 0x73656c656374696f6e5f6d6f64655f7274n;
+const SELECTION_SEED_MIX = 0x9e3779b97f4a7c15f39cc0605cedc835n;
+const TWO_TO_53 = 9007199254740992;
+const FNV_OFFSET_BASIS_64 = 0xcbf29ce484222325n;
+const FNV_PRIME_64 = 0x100000001b3n;
 
 export interface PolicyPreviewUnknownRef {
   readonly refId: string;
@@ -74,6 +82,14 @@ export interface PolicyEvaluationPreviewUsage {
   readonly outcomeBreakdown: PolicyPreviewOutcomeBreakdownTrace;
 }
 
+export interface PolicyEvaluationSelectionTrace {
+  readonly mode: AgentSelectionMode;
+  readonly temperature?: number;
+  readonly candidateCount: number;
+  readonly samplingProbabilities?: readonly number[];
+  readonly selectedIndex: number;
+}
+
 export interface PolicyEvaluationMetadata {
   readonly seatId: string | null;
   readonly requestedProfileId: string | null;
@@ -84,6 +100,7 @@ export interface PolicyEvaluationMetadata {
   readonly pruningSteps: readonly PolicyEvaluationPruningStep[];
   readonly tieBreakChain: readonly PolicyEvaluationTieBreakStep[];
   readonly previewUsage: PolicyEvaluationPreviewUsage;
+  readonly selection?: PolicyEvaluationSelectionTrace;
   readonly completionStatistics?: PolicyCompletionStatistics;
   readonly selectedStableMoveKey: string | null;
   readonly finalScore: number | null;
@@ -190,6 +207,106 @@ function applyTieBreaker(
         detail: { tieBreakerId, kind: tieBreaker.kind },
       });
   }
+}
+
+function hashString64(input: string): bigint {
+  let hash = FNV_OFFSET_BASIS_64;
+  for (let index = 0; index < input.length; index += 1) {
+    hash ^= BigInt(input.charCodeAt(index));
+    hash = (hash * FNV_PRIME_64) & ((1n << 64n) - 1n);
+  }
+  return hash;
+}
+
+function deriveVisibleSelectionSeed(
+  profileFingerprint: string,
+  candidates: readonly CandidateEntry[],
+): bigint {
+  let seed = SELECTION_SALT ^ hashString64(profileFingerprint);
+  for (const candidate of candidates) {
+    seed = (seed * SELECTION_SEED_MIX) ^ hashString64(candidate.stableMoveKey);
+    seed = (seed * SELECTION_SEED_MIX) ^ hashString64(candidate.score.toString());
+  }
+  return seed;
+}
+
+function deriveSelectionRngFromVisiblePolicyInputs(
+  profileFingerprint: string,
+  candidates: readonly CandidateEntry[],
+): Rng {
+  return createRng(deriveVisibleSelectionSeed(profileFingerprint, candidates));
+}
+
+function drawUnitInterval(rng: Rng): { readonly value: number; readonly rng: Rng } {
+  const [raw, nextRng] = stepRng(rng);
+  return {
+    value: Number(raw >> 11n) / TWO_TO_53,
+    rng: nextRng,
+  };
+}
+
+function sampleCandidateByProbabilities(
+  candidates: readonly CandidateEntry[],
+  probabilities: readonly number[],
+  rng: Rng,
+): { readonly selected: CandidateEntry; readonly rng: Rng } {
+  if (candidates.length === 0) {
+    throw new PolicyRuntimeError({
+      code: 'RUNTIME_EVALUATION_ERROR',
+      message: 'Cannot sample from an empty candidate set.',
+    });
+  }
+  if (candidates.length !== probabilities.length) {
+    throw new PolicyRuntimeError({
+      code: 'RUNTIME_EVALUATION_ERROR',
+      message: 'Candidate/probability cardinality mismatch during policy selection.',
+      detail: {
+        candidateCount: candidates.length,
+        probabilityCount: probabilities.length,
+      },
+    });
+  }
+  if (candidates.length === 1) {
+    return { selected: candidates[0]!, rng };
+  }
+
+  const { value, rng: nextRng } = drawUnitInterval(rng);
+  let cumulative = 0;
+  for (const [index, candidate] of candidates.entries()) {
+    cumulative += probabilities[index] ?? 0;
+    if (value < cumulative || index === candidates.length - 1) {
+      return { selected: candidate, rng: nextRng };
+    }
+  }
+
+  return { selected: candidates[candidates.length - 1]!, rng: nextRng };
+}
+
+function computeSoftmaxProbabilities(
+  candidates: readonly CandidateEntry[],
+  temperature: number,
+): readonly number[] {
+  const maxScore = candidates.reduce((best, candidate) => Math.max(best, candidate.score), Number.NEGATIVE_INFINITY);
+  const weights = candidates.map((candidate) => Math.exp((candidate.score - maxScore) / temperature));
+  const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+  if (!Number.isFinite(totalWeight) || totalWeight <= 0) {
+    throw new PolicyRuntimeError({
+      code: 'RUNTIME_EVALUATION_ERROR',
+      message: 'Softmax selection produced an invalid probability distribution.',
+      detail: { temperature, weights },
+    });
+  }
+  return weights.map((weight) => weight / totalWeight);
+}
+
+function computeWeightedSampleProbabilities(candidates: readonly CandidateEntry[]): readonly number[] {
+  const minScore = candidates.reduce((best, candidate) => Math.min(best, candidate.score), Number.POSITIVE_INFINITY);
+  const weights = candidates.map((candidate) => Math.max(0, candidate.score - minScore));
+  const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+  if (totalWeight <= 0) {
+    return candidates.map(() => 1 / candidates.length);
+  }
+  return weights.map((weight) => weight / totalWeight);
 }
 
 export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEvaluationCoreResult {
@@ -355,26 +472,78 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
         )
       ), 0);
     }
-    const bestScore = activeCandidates.reduce((best, candidate) => Math.max(best, candidate.score), Number.NEGATIVE_INFINITY);
-    let bestCandidates = activeCandidates.filter((candidate) => candidate.score === bestScore);
-
     let rng = input.rng;
-    for (const tieBreakerId of profile.use.tieBreakers) {
-      if (bestCandidates.length <= 1) {
+    let selected: CandidateEntry | undefined;
+    let selectionTrace: PolicyEvaluationSelectionTrace | undefined;
+    switch (profile.selection.mode) {
+      case 'argmax': {
+        const bestScore = activeCandidates.reduce((best, candidate) => Math.max(best, candidate.score), Number.NEGATIVE_INFINITY);
+        let bestCandidates = activeCandidates.filter((candidate) => candidate.score === bestScore);
+
+        for (const tieBreakerId of profile.use.tieBreakers) {
+          if (bestCandidates.length <= 1) {
+            break;
+          }
+          const candidateCountBefore = bestCandidates.length;
+          const tieBreakResult = applyTieBreaker(evaluation, catalog, bestCandidates, tieBreakerId, rng);
+          bestCandidates = [...tieBreakResult.candidates];
+          rng = tieBreakResult.rng;
+          tieBreakChain.push({
+            tieBreakerId,
+            candidateCountBefore,
+            candidateCountAfter: bestCandidates.length,
+          });
+        }
+
+        selected = bestCandidates[0] ?? activeCandidates[0];
+        selectionTrace = {
+          mode: 'argmax',
+          candidateCount: activeCandidates.length,
+          selectedIndex: Math.max(0, activeCandidates.findIndex((candidate) => candidate.stableMoveKey === selected?.stableMoveKey)),
+        };
         break;
       }
-      const candidateCountBefore = bestCandidates.length;
-      const tieBreakResult = applyTieBreaker(evaluation, catalog, bestCandidates, tieBreakerId, rng);
-      bestCandidates = [...tieBreakResult.candidates];
-      rng = tieBreakResult.rng;
-      tieBreakChain.push({
-        tieBreakerId,
-        candidateCountBefore,
-        candidateCountAfter: bestCandidates.length,
-      });
+      case 'softmaxSample': {
+        const temperature = profile.selection.temperature;
+        if (temperature === undefined) {
+          throw new PolicyRuntimeError({
+            code: 'RUNTIME_EVALUATION_ERROR',
+            message: `Profile "${profileId}" selection.mode "softmaxSample" requires temperature at runtime.`,
+            detail: { profileId },
+          });
+        }
+        const probabilities = computeSoftmaxProbabilities(activeCandidates, temperature);
+        selected = sampleCandidateByProbabilities(
+          activeCandidates,
+          probabilities,
+          deriveSelectionRngFromVisiblePolicyInputs(profile.fingerprint, activeCandidates),
+        ).selected;
+        selectionTrace = {
+          mode: 'softmaxSample',
+          temperature,
+          candidateCount: activeCandidates.length,
+          samplingProbabilities: probabilities,
+          selectedIndex: Math.max(0, activeCandidates.findIndex((candidate) => candidate.stableMoveKey === selected?.stableMoveKey)),
+        };
+        break;
+      }
+      case 'weightedSample': {
+        const probabilities = computeWeightedSampleProbabilities(activeCandidates);
+        selected = sampleCandidateByProbabilities(
+          activeCandidates,
+          probabilities,
+          deriveSelectionRngFromVisiblePolicyInputs(profile.fingerprint, activeCandidates),
+        ).selected;
+        selectionTrace = {
+          mode: 'weightedSample',
+          candidateCount: activeCandidates.length,
+          samplingProbabilities: probabilities,
+          selectedIndex: Math.max(0, activeCandidates.findIndex((candidate) => candidate.stableMoveKey === selected?.stableMoveKey)),
+        };
+        break;
+      }
     }
 
-    const selected = bestCandidates[0] ?? activeCandidates[0];
     if (selected === undefined) {
       throw new PolicyRuntimeError({
         code: 'RUNTIME_EVALUATION_ERROR',
@@ -396,6 +565,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
         pruningSteps,
         tieBreakChain,
         previewUsage: summarizePreviewUsage(candidates, profile.preview.mode),
+        ...(selectionTrace === undefined ? {} : { selection: selectionTrace }),
         ...(input.completionStatistics === undefined ? {} : { completionStatistics: input.completionStatistics }),
         selectedStableMoveKey: selected.stableMoveKey,
         finalScore: Number.isFinite(selected.score) ? selected.score : null,

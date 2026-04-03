@@ -1,5 +1,7 @@
 # Agent Policies DSL: Comprehensive Technical Report
 
+**Status**: COMPLETED
+
 **Project**: LudoForge-LLM
 **Date**: 2026-03-31
 **Purpose**: Self-sufficient reference document for external deep research review
@@ -1835,3 +1837,12 @@ agents:
 | `data/games/texas-holdem/92-agents.md` | Texas Hold'em agent policies |
 | `docs/FOUNDATIONS.md` | Architectural commandments |
 | `specs/15-gamespec-agent-policy-ir.md` | Binding specification |
+
+## Outcome
+
+Completed: 2026-04-02
+
+- This report's architecture and reference material were exploited during the delivered agent-policy workstream, including the implemented observer, action-tag, unified considerations, explicit preview-contract, and stochastic-selection changes.
+- The report is no longer an active working artifact; the authoritative implemented behavior now lives in repository code, archived specs, and archived tickets.
+- Deviation from original plan: none; the document served as reference material rather than as a directly implemented spec.
+- Verification result: the related implementation stream has been completed and repo verification passed through `pnpm turbo build`, `pnpm turbo test`, `pnpm turbo lint`, and `pnpm turbo typecheck`.

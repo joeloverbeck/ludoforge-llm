@@ -314,12 +314,18 @@ agents:
       preview:
         mode: tolerateStochastic
       params:
+        projectedMarginWeight: 5
+        eventWeight: 3
         rallyWeight: 3
         taxWeight: 2
+        resourceWeight: 0.03
       use:
         pruningRules:
           - dropPassWhenOtherMovesExist
         considerations:
+          - preferProjectedSelfMargin
+          - preserveResources
+          - preferEvent
           - preferRallyWeighted
           - preferTaxWeighted
           - preferPopulousTargets

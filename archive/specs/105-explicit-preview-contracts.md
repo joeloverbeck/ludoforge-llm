@@ -1,6 +1,6 @@
 # Spec 105: Explicit Preview Contracts
 
-**Status**: Draft
+**Status**: COMPLETED
 **Priority**: P2
 **Complexity**: M
 **Dependencies**: Spec 102 (shared observer model — preview operates over observer-projected state), Spec 104 (unified considerations — replaces scoreTerms)
@@ -248,3 +248,27 @@ profiles:
 - [ ] Update GameDef JSON schema (`GameDef.schema.json`)
 - [ ] Update all affected tests and fixtures
 - [ ] Run `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Completed: 2026-04-01
+
+What changed:
+1. The repo now uses explicit `preview.mode` end to end across authored YAML, compiler lowering, compiled/kernel types, runtime preview execution, trace summaries, generated schemas, fixtures, and tests.
+2. Compiler diagnostics now reject missing, invalid, and reserved preview modes, and the legacy `tolerateRngDivergence` contract was removed from owned source, data, schemas, and tests.
+3. FITL production profiles were migrated to `tolerateStochastic`, Texas Hold'em baseline was migrated to `disabled`, and preview traces now record both `mode` and `stochastic` outcome counts.
+
+Deviations from original plan:
+1. The implementation work was consolidated into the atomic owner ticket `105EXPPRECON-001` after the original staged ticket split was found to violate `docs/FOUNDATIONS.md` principle 14.
+2. The migration also included broader test/helper cleanup discovered during full verification so the final suite validated the real preview-contract semantics.
+
+Verification:
+1. `pnpm -F @ludoforge/engine typecheck`
+2. `pnpm -F @ludoforge/engine build`
+3. `pnpm -F @ludoforge/engine run schema:artifacts`
+4. `pnpm -F @ludoforge/engine run schema:artifacts:check`
+5. Focused engine `node --test` coverage for compile/runtime/trace/golden/FITL/Texas paths
+6. `pnpm turbo build`
+7. `pnpm turbo test`
+8. `pnpm turbo lint`
+9. `pnpm turbo typecheck`

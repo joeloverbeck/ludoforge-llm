@@ -1,4 +1,4 @@
-import type { PlayerId } from './branded.js';
+import type { PlayerId, ZoneId } from './branded.js';
 import type {
   CompiledObserverProfile,
   CompiledZoneVisibilityEntry,
@@ -20,7 +20,7 @@ export interface PlayerObservation {
   readonly visibleTokenIdsByZone: Readonly<Record<string, readonly string[]>>;
   readonly visibleTokenOrderByZone: Readonly<Record<string, readonly string[]>>;
   readonly visibleRevealsByZone: Readonly<Record<string, readonly RevealGrant[]>>;
-  readonly requiresHiddenSampling: boolean;
+  readonly hiddenSamplingZones: readonly ZoneId[];
 }
 
 // ---------------------------------------------------------------------------
@@ -115,7 +115,7 @@ export const derivePlayerObservation = (
   const visibleTokenIdsByZone: Record<string, readonly string[]> = {};
   const visibleTokenOrderByZone: Record<string, readonly string[]> = {};
   const visibleRevealsByZone: Record<string, readonly RevealGrant[]> = {};
-  let requiresHiddenSampling = false;
+  const hiddenSamplingZones = new Set<ZoneId>();
 
   for (const zoneDef of def.zones) {
     const zoneId = zoneDef.id as string;
@@ -147,7 +147,7 @@ export const derivePlayerObservation = (
     }
 
     if (visibleTokens.length < tokens.length) {
-      requiresHiddenSampling = true;
+      hiddenSamplingZones.add(zoneDef.id);
     }
   }
 
@@ -156,6 +156,6 @@ export const derivePlayerObservation = (
     visibleTokenIdsByZone,
     visibleTokenOrderByZone,
     visibleRevealsByZone,
-    requiresHiddenSampling,
+    hiddenSamplingZones: [...hiddenSamplingZones].sort(),
   };
 };

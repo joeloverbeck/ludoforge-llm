@@ -72,75 +72,129 @@ export function GameSelectionScreen({
 
   return (
     <main className={styles.screen} data-testid="game-selection-screen">
-      <section className={styles.gamesSection} aria-labelledby="available-games-heading">
-        <h1 id="available-games-heading">Choose a Game</h1>
-        <ul className={styles.gameList}>
+      <section className={styles.hero} aria-labelledby="available-games-heading">
+        <p className={styles.eyebrow}>Runner Shell</p>
+        <h1 id="available-games-heading" className={styles.title}>Choose a Game</h1>
+        <p className={styles.lead}>
+          Launch a fresh table, inspect the available games, or continue a saved session from the runner shell.
+        </p>
+        <div className={styles.heroFacts}>
+          <span className={styles.heroBadge}>{`${gameDescriptors.length} games ready`}</span>
+          <span className={styles.heroBadge}>{formatSavedSummary(savedGamesStatus, savedGames.length)}</span>
+          <span className={styles.heroBadge}>{formatMapWorkspaceSummary(mapEditorSupport)}</span>
+        </div>
+      </section>
+
+      <div className={styles.layout}>
+        <section className={styles.gamesSection} aria-labelledby="game-library-heading">
+          <div className={styles.sectionHeader}>
+            <div>
+              <p className={styles.sectionEyebrow}>Game Library</p>
+              <h2 id="game-library-heading" className={styles.sectionTitle}>Available Games</h2>
+            </div>
+            <p className={styles.sectionCopy}>
+              Compare each table at a glance, then move straight into setup before the live surface loads.
+            </p>
+          </div>
+          <ul className={styles.gameList}>
           {gameDescriptors.map((descriptor) => {
             const metadata = descriptor.gameMetadata;
             const supportsMapEditor = mapEditorSupport.get(descriptor.id) === true;
             return (
               <li key={descriptor.id} className={styles.gameCard}>
-                <button
-                  type="button"
-                  className={styles.gameCardButton}
-                  data-testid={`select-game-${descriptor.id}`}
-                  onClick={() => {
-                    onSelectGame(descriptor.id);
-                  }}
-                >
-                  <span className={styles.gameName}>{metadata.name}</span>
-                  <span className={styles.gameDescription}>{metadata.description}</span>
-                  <span className={styles.playerRange}>
-                    Players: {metadata.playerMin}-{metadata.playerMax}
-                  </span>
-                </button>
-                {supportsMapEditor
-                  ? (
-                    <div className={styles.gameActions}>
-                      <button
-                        type="button"
-                        data-testid={`edit-map-${descriptor.id}`}
-                        onClick={() => {
-                          onEditMap?.(descriptor.id);
-                        }}
-                        disabled={onEditMap === undefined}
-                      >
-                        Edit Map
-                      </button>
+                <article className={styles.gameCardPanel}>
+                  <div className={styles.gameCardBody}>
+                    <div className={styles.gameCardHeader}>
+                      <div>
+                        <h3 className={styles.gameName}>{metadata.name}</h3>
+                        <p className={styles.gameDescription}>{metadata.description}</p>
+                      </div>
+                      <div className={styles.metaGroup}>
+                        <span className={styles.metaBadge}>{formatPlayerSummary(metadata.playerMin, metadata.playerMax)}</span>
+                        {metadata.factionIds.length > 1
+                          ? <span className={styles.metaBadge}>{formatFactionSummary(metadata.factionIds.length)}</span>
+                          : null}
+                      </div>
                     </div>
-                  )
-                  : null}
+                  </div>
+                  <div className={styles.gameActions}>
+                    <button
+                      type="button"
+                      className={styles.primaryAction}
+                      data-testid={`select-game-${descriptor.id}`}
+                      onClick={() => {
+                        onSelectGame(descriptor.id);
+                      }}
+                    >
+                      Configure Game
+                    </button>
+                    {supportsMapEditor
+                      ? (
+                        <button
+                          type="button"
+                          className={styles.secondaryAction}
+                          data-testid={`edit-map-${descriptor.id}`}
+                          onClick={() => {
+                            onEditMap?.(descriptor.id);
+                          }}
+                          disabled={onEditMap === undefined}
+                        >
+                          Edit Map
+                        </button>
+                      )
+                      : null}
+                  </div>
+                </article>
               </li>
             );
           })}
-        </ul>
-      </section>
+          </ul>
+        </section>
 
-      <section className={styles.savedSection} aria-labelledby="saved-games-heading">
-        <h2 id="saved-games-heading">Saved Games</h2>
+        <section className={styles.savedSection} aria-labelledby="saved-games-heading">
+          <div className={styles.sectionHeader}>
+            <div>
+              <p className={styles.sectionEyebrow}>Continuity</p>
+              <h2 id="saved-games-heading" className={styles.sectionTitle}>Saved Games</h2>
+            </div>
+            <p className={styles.sectionCopy}>
+              Return to unfinished tables, revisit completed runs, or keep a replay-ready archive close at hand.
+            </p>
+          </div>
         {savedGamesStatus === 'loading'
-          ? <p className={styles.savedEmpty}>Loading saved games...</p>
+          ? <p className={styles.savedEmpty}>Loading your saved sessions...</p>
           : null}
         {savedGamesStatus === 'ready' && savedGames.length === 0
-          ? <p className={styles.savedEmpty}>No saved games</p>
+          ? (
+            <div className={styles.savedEmptyState}>
+              <p className={styles.savedEmptyTitle}>No saved games yet</p>
+              <p className={styles.savedEmpty}>
+                Start a new game from the library above. Saved sessions and completed tables will appear here.
+              </p>
+            </div>
+          )
           : null}
         {savedGamesStatus === 'ready' && savedGames.length > 0
           ? (
             <ul className={styles.savedList}>
               {savedGames.map((savedGame) => (
                 <li key={savedGame.id} className={styles.savedRow}>
-                  <div>
-                    <p className={styles.savedTitle}>{savedGame.displayName}</p>
+                  <div className={styles.savedBody}>
+                    <div className={styles.savedHeader}>
+                      <p className={styles.savedTitle}>{savedGame.displayName}</p>
+                      {savedGame.isTerminal
+                        ? <p className={styles.savedTerminal}>Completed</p>
+                        : <p className={styles.savedLive}>In progress</p>}
+                    </div>
+                    <p className={styles.savedMeta}>{savedGame.gameName}</p>
                     <p className={styles.savedMeta}>
-                      {savedGame.gameName} | {formatTimestamp(savedGame.timestamp)} | {savedGame.moveCount} moves
+                      {formatTimestamp(savedGame.timestamp)} · {savedGame.moveCount} moves
                     </p>
-                    {savedGame.isTerminal
-                      ? <p className={styles.savedTerminal}>Completed</p>
-                      : null}
                   </div>
                   <div className={styles.savedActions}>
                     <button
                       type="button"
+                      className={styles.primaryAction}
                       onClick={() => {
                         void onResumeSavedGame?.(savedGame.id);
                       }}
@@ -150,6 +204,7 @@ export function GameSelectionScreen({
                     </button>
                     <button
                       type="button"
+                      className={styles.secondaryAction}
                       onClick={() => {
                         void onReplaySavedGame?.(savedGame.id);
                       }}
@@ -159,6 +214,7 @@ export function GameSelectionScreen({
                     </button>
                     <button
                       type="button"
+                      className={styles.ghostAction}
                       disabled={onDeleteSavedGame === undefined || pendingDeleteId === savedGame.id}
                       onClick={() => {
                         void (async () => {
@@ -183,7 +239,8 @@ export function GameSelectionScreen({
             </ul>
           )
           : null}
-      </section>
+        </section>
+      </div>
     </main>
   );
 }
@@ -194,4 +251,41 @@ function formatTimestamp(timestamp: number): string {
   }
 
   return new Date(timestamp).toLocaleString();
+}
+
+function formatPlayerSummary(playerMin: number, playerMax: number): string {
+  if (playerMin === playerMax) {
+    return `${playerMin} players`;
+  }
+
+  return `${playerMin}-${playerMax} players`;
+}
+
+function formatFactionSummary(factionCount: number): string {
+  if (factionCount === 1) {
+    return '1 faction';
+  }
+
+  return `${factionCount} factions`;
+}
+
+function formatSavedSummary(status: 'loading' | 'ready', savedCount: number): string {
+  if (status === 'loading') {
+    return 'Scanning saved sessions';
+  }
+
+  if (savedCount === 0) {
+    return 'No saved sessions yet';
+  }
+
+  return `${savedCount} saved session${savedCount === 1 ? '' : 's'}`;
+}
+
+function formatMapWorkspaceSummary(mapEditorSupport: ReadonlyMap<string, boolean>): string {
+  const count = Array.from(mapEditorSupport.values()).filter(Boolean).length;
+  if (count === 0) {
+    return 'Map workspace on select titles';
+  }
+
+  return `${count} map workspace${count === 1 ? '' : 's'} ready`;
 }

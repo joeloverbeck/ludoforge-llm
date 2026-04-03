@@ -108,6 +108,7 @@ function createCatalog(): AgentPolicyCatalog {
         fingerprint: 'passive-fingerprint',
         params: {},
         preview: { mode: 'exactWorld' },
+        selection: { mode: 'argmax' },
         use: {
           pruningRules: [],
           considerations: ['preferPass'],
@@ -124,6 +125,7 @@ function createCatalog(): AgentPolicyCatalog {
         fingerprint: 'aggressive-fingerprint',
         params: {},
         preview: { mode: 'exactWorld' },
+        selection: { mode: 'argmax' },
         use: {
           pruningRules: [],
           considerations: ['preferEvent'],

@@ -4,7 +4,7 @@ import { derivePlayerObservation } from '../kernel/observation.js';
 import { applyTrustedMove } from '../kernel/apply-move.js';
 import { buildSeatResolutionIndex, resolvePlayerIndexForSeatValue, type SeatResolutionIndex } from '../kernel/identity.js';
 import { classifyPlayableMoveCandidate, type PlayableCandidateClassification } from '../kernel/playable-candidate.js';
-import type { PlayerId } from '../kernel/branded.js';
+import type { PlayerId, ZoneId } from '../kernel/branded.js';
 import type {
   AgentPreviewMode,
   CompiledPreviewSurfaceRef,
@@ -87,14 +87,14 @@ type PreviewOutcome =
   | {
       readonly kind: 'ready';
       readonly state: GameState;
-      readonly requiresHiddenSampling: boolean;
+      readonly hiddenSamplingZones: readonly ZoneId[];
       readonly metricCache: Map<string, number>;
       victorySurface: PolicyVictorySurface | null;
     }
   | {
       readonly kind: 'stochastic';
       readonly state: GameState;
-      readonly requiresHiddenSampling: boolean;
+      readonly hiddenSamplingZones: readonly ZoneId[];
       readonly metricCache: Map<string, number>;
       victorySurface: PolicyVictorySurface | null;
     }
@@ -143,7 +143,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
       )) {
         return { kind: 'unavailable' };
       }
-      if (preview.requiresHiddenSampling && !visibility.preview.allowWhenHiddenSampling) {
+      if (preview.hiddenSamplingZones.length > 0 && !visibility.preview.allowWhenHiddenSampling) {
         return { kind: 'unknown', reason: 'hidden' };
       }
       if (ref.family === 'derivedMetric') {
@@ -275,7 +275,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
       return {
         kind: rngDiverged ? 'stochastic' : 'ready',
         state: previewState,
-        requiresHiddenSampling: observation.requiresHiddenSampling,
+        hiddenSamplingZones: observation.hiddenSamplingZones,
         metricCache: new Map<string, number>(),
         victorySurface: null,
       };

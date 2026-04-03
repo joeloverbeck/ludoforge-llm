@@ -1,6 +1,6 @@
 # Spec 99 — Map Editor Renderer Unification
 
-## Status: Draft
+**Status**: ✅ COMPLETED
 
 ## Problem
 
@@ -214,3 +214,17 @@ pnpm -F @ludoforge/runner lint
 | F9: No Backwards Compatibility | Editor renderers are deleted, not wrapped or shimmed. |
 | F10: Architectural Completeness | One rendering pipeline instead of two parallel ones. Root cause (duplication) is eliminated, not papered over. |
 | F11: Testing as Proof | Adapter unit tests prove correct field mapping. Visual parity proven by construction (same code path). |
+
+## Outcome
+
+- Completion date: 2026-04-03
+- What actually changed:
+  - shared route geometry and stroke helpers were extracted into `packages/runner/src/rendering/polyline-utils.ts` and `packages/runner/src/rendering/route-stroke-utils.ts`, with the runner test suite updated to cover the shared modules directly;
+  - the map editor canvas and screen wiring were aligned to the game canvas layer/runtime structure, including `ContainerPool`, `DisposalQueue`, editor-to-`PresentationScene` adaptation, region rendering, and table background rendering;
+  - `MapEditorScreen.tsx` now drives the existing game canvas zone, adjacency, and connection-route renderers from editor state, and the old editor-specific base-map renderers plus their tests were removed as dead code.
+- Deviations from original plan:
+  - the implementation kept `map-editor-zone-visuals.ts` because it still serves live editor code outside the deleted renderer path;
+  - several spec assumptions were tightened during implementation, including the actual `zoneVertices` storage shape and the shared route-label rotation helper signature.
+- Verification results:
+  - archived implementation tickets record passing runner verification for typecheck, lint, and test coverage across the delivery sequence;
+  - `pnpm run check:ticket-deps`

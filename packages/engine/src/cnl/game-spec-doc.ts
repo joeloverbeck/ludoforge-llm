@@ -660,6 +660,10 @@ export interface GameSpecAgentProfileDef {
   readonly preview?: {
     readonly mode?: string;
   };
+  readonly selection?: {
+    readonly mode?: string;
+    readonly temperature?: number;
+  };
 }
 
 export type GameSpecSeatPolicyBindings = Readonly<Record<string, string>>;

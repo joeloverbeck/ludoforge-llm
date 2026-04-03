@@ -128,6 +128,7 @@ describe('derivePlayerObservation — observer profile zone overrides', () => {
     });
     const obs = derivePlayerObservation(def, state, pid(0), profile);
     assert.deepEqual(obs.visibleTokenIdsByZone['deck:none'], ['t1', 't2']);
+    assert.deepEqual(obs.hiddenSamplingZones, []);
   });
 
   // --- AC 3: Observer tokens: hidden on public zone hides all tokens ---

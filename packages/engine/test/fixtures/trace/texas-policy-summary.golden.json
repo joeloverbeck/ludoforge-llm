@@ -11,7 +11,7 @@
     "seatId": "neutral",
     "requestedProfileId": null,
     "resolvedProfileId": "baseline",
-    "profileFingerprint": "c9416985cbe8a77567cb8d1d7acb68fe4b6a3a26922b760d882aab47eb3748a2",
+    "profileFingerprint": "b9fcfb4a3b4636428377a55de123bdf5d2365d3c4074b036d52660ce28ffcced",
     "initialCandidateCount": 12,
     "selectedStableMoveKey": "fold|{}|false|unclassified",
     "finalScore": 100,
@@ -30,6 +30,26 @@
         "unknownUnresolved": 0,
         "unknownFailed": 0
       }
+    },
+    "selection": {
+      "mode": "softmaxSample",
+      "temperature": 0.5,
+      "candidateCount": 12,
+      "samplingProbabilities": [
+        4.248353323605286e-18,
+        0.999999780694771,
+        1.1253515003970686e-7,
+        3.330976877709268e-9,
+        5.276513816597439e-9,
+        2.418785652263331e-9,
+        2.428480170983781e-9,
+        1.1327864978858758e-8,
+        2.6202392165746383e-9,
+        2.4319186766007295e-8,
+        2.8384712575300257e-9,
+        5.220955988297319e-8
+      ],
+      "selectedIndex": 1
     },
     "emergencyFallback": false,
     "failure": null

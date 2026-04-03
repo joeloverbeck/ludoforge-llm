@@ -54,6 +54,7 @@ function createProfile(
     fingerprint: 'baseline',
     params: {},
     preview: { mode: 'exactWorld' },
+    selection: { mode: 'argmax' },
     use: {
       pruningRules: [],
       considerations: ['preferTarget'],

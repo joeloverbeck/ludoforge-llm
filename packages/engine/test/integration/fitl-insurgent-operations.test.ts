@@ -2227,7 +2227,7 @@ describe('FITL insurgent operations integration', () => {
     assert.equal(final.globalVars.trail, 2, 'VC rally should not include trail-improvement behavior');
   });
 
-  it('applies VC rally space filter, free-op cost skip, and LimOp max=1', () => {
+  it('applies VC rally legality, space filter, free-op cost skip, and LimOp max=1', () => {
     const { compiled } = FITL_PRODUCTION_FIXTURE;
     assert.notEqual(compiled.gameDef, null);
     const def = compiled.gameDef!;
@@ -2265,6 +2265,32 @@ describe('FITL insurgent operations integration', () => {
         type: 'vc-guerrillas',
         props: { faction: 'VC', type: 'guerrilla', activity: 'underground' },
       },
+    );
+
+    assert.throws(
+      () =>
+        applyMoveWithResolvedDecisionIds(def, vcWithAvailable, {
+          actionId: asActionId('rally'),
+          params: { $targetSpaces: [] },
+        }),
+      /(?:Illegal move|choiceRuntimeValidationFailed|outside options domain)/,
+      'VC rally should reject empty target selection',
+    );
+
+    assert.throws(
+      () =>
+        applyMoveWithResolvedDecisionIds(def, {
+          ...vcWithAvailable,
+          globalVars: {
+            ...vcWithAvailable.globalVars,
+            vcResources: 0,
+          },
+        }, {
+          actionId: asActionId('rally'),
+          params: { $targetSpaces: [RALLY_SPACE_2], $noBaseChoice: 'place-guerrilla' },
+        }),
+      /(?:Illegal move|costValidationFailed|choiceRuntimeValidationFailed|outside options domain)/,
+      'Paid VC rally should be illegal at zero resources',
     );
 
     assert.throws(

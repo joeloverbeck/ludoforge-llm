@@ -153,8 +153,8 @@ describe('derivePlayerObservation', () => {
     assert.deepStrictEqual(obs.visibleTokenIdsByZone['hidden'], ['red1', 'red2']);
   });
 
-  // AC 6: requiresHiddenSampling is false for fully public state
-  it('sets requiresHiddenSampling to false for fully public state', () => {
+  // AC 6: hiddenSamplingZones is empty for fully public state
+  it('sets hiddenSamplingZones to [] for fully public state', () => {
     const zones = [
       mkZoneDef({ id: 'a', visibility: 'public' }),
       mkZoneDef({ id: 'b', visibility: 'public' }),
@@ -163,20 +163,21 @@ describe('derivePlayerObservation', () => {
     const state = mkState({ 'a': [mkToken('t1')], 'b': [mkToken('t2')] });
 
     const obs = derivePlayerObservation(def, state, pid(0));
-    assert.strictEqual(obs.requiresHiddenSampling, false);
+    assert.deepStrictEqual(obs.hiddenSamplingZones, []);
   });
 
-  // AC 7: requiresHiddenSampling is true when hidden/owner zones with tokens exist
-  it('sets requiresHiddenSampling to true when hidden tokens exist', () => {
+  // AC 7: hiddenSamplingZones is sorted when hidden/owner zones with tokens exist
+  it('sets hiddenSamplingZones to the sorted hidden zone ids when hidden tokens exist', () => {
     const zones = [
-      mkZoneDef({ id: 'pub', visibility: 'public' }),
       mkZoneDef({ id: 'deck', visibility: 'hidden' }),
+      mkZoneDef({ id: 'hand', visibility: 'hidden' }),
+      mkZoneDef({ id: 'pub', visibility: 'public' }),
     ];
     const def = mkDef(zones);
-    const state = mkState({ 'pub': [mkToken('t1')], 'deck': [mkToken('d1')] });
+    const state = mkState({ 'pub': [mkToken('t1')], 'deck': [mkToken('d1')], 'hand': [mkToken('h1')] });
 
     const obs = derivePlayerObservation(def, state, pid(0));
-    assert.strictEqual(obs.requiresHiddenSampling, true);
+    assert.deepStrictEqual(obs.hiddenSamplingZones, ['deck', 'hand']);
   });
 
   // AC 8: Ordering info preserved for stack/queue zones
@@ -237,7 +238,7 @@ describe('derivePlayerObservation', () => {
 
     const obs = derivePlayerObservation(def, state, pid(0));
     assert.deepStrictEqual(obs.visibleTokenIdsByZone['empty'], []);
-    assert.strictEqual(obs.requiresHiddenSampling, false);
+    assert.deepStrictEqual(obs.hiddenSamplingZones, []);
   });
 
   // Owner zone with grant for non-owner

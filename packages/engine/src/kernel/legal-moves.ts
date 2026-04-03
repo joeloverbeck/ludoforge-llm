@@ -1339,22 +1339,15 @@ const enumerateRawLegalMoves = (
         continue;
       }
 
-      if (
-        !isMoveDecisionSequenceAdmittedForLegalMove(
-          def,
-          state,
-          { actionId: action.id, params: {} },
-          MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_PIPELINE_DECISION_SEQUENCE,
-          {
-            budgets: enumeration.budgets,
-            onWarning: (warning) => emitEnumerationWarning(enumeration, warning),
-            discoverer: cachedDiscover,
-          },
-          runtime,
-        )
-      ) {
-        continue;
-      }
+      // Skip the expensive decision-sequence satisfiability probe for pipeline
+      // template moves. The compiled first-decision domain check above already
+      // rejects templates whose first decision has zero options (when compilable).
+      // For state-dependent first decisions (compilable: false, e.g. mapSpaces
+      // queries), the probe was the costliest call in the pipeline enumeration
+      // path — executing effects (applyChooseN, evalQuery, filterTokensByExpr)
+      // just to verify satisfiability. The agent handles unsatisfiable templates
+      // gracefully via templateCompletionUnsatisfiable, making the enumeration-time
+      // probe redundant safety overhead.
 
       tryPushOptionMatrixFilteredMove(enumeration, def, state, { actionId: action.id, params: {} }, action);
       continue;

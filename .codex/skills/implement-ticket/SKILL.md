@@ -34,11 +34,13 @@ If a prior ticket in the same series was implemented earlier in the session, reu
    - Do named exports, functions, types, and signatures exist as described?
    - Does the module structure match the ticket?
    - Are required dependencies and scripts present?
+   - If a referenced file path is stale but the intended owned artifact is uniquely discoverable and the ticket boundary stays the same, treat the path as non-blocking and note the corrected live path in your working notes.
 7. Build a discrepancy list for anything the ticket states that does not match reality.
 8. Check for architectural constraints the ticket may have underspecified:
    - shared type or schema ripple effects
    - Foundation 14 atomic migrations for removals or renames
    - required test, schema, or fixture updates
+   - when the ticket disputes whether a game-specific move, phase, or action should be legal, consult any local rulebook extracts or rules reports referenced by the repo before deciding whether the fix is policy-only or a legality correction
 9. If the codebase is already mid-migration:
    - distinguish between the ticket's intended end state and migration work that has already landed
    - decide whether the remaining deliverable boundary is still clear and implementable without a new product decision
@@ -48,6 +50,7 @@ If a prior ticket in the same series was implemented earlier in the session, reu
    - re-extract the concrete files, acceptance criteria, invariants, and verification commands from the corrected ticket
    - do not keep using the stale ticket's original verification surface by inertia
    - treat the rewritten ticket as the authoritative implementation boundary for the rest of the task
+   - if later verification disproves the premise for that rewrite, promptly restore the original ticket boundary and note why the rewrite was rolled back
 11. If correcting one active ticket materially changes ownership within an active ticket series:
    - inspect the remaining active sibling tickets in that series before coding
    - update or defer overlapping sibling tickets so they do not still claim invalid staged ownership
@@ -62,7 +65,12 @@ If a prior ticket in the same series was implemented earlier in the session, reu
     - 3 concrete options
     - 1 recommendation
 14. Do not proceed with implementation until the user confirms when a discrepancy or `1-3-1` decision is outstanding.
-15. If the ticket is accurate and no blocking decision remains, proceed.
+15. If the ticket boundary remains valid but one concrete implementation detail is ambiguous, under-specified, or conflicts with Foundations:
+    - resolve that detail with `1-3-1`
+    - after user confirmation, treat the confirmed interpretation as authoritative for the rest of the task
+    - do not force a ticket rewrite unless the implementation boundary itself changed
+    - if the conflict is that a ticket or spec uses raw strings for an identifier that already has a branded domain type in the repo, preserve the ticket boundary, raise the Foundation conflict explicitly, and prefer the existing branded type once confirmed
+16. If the ticket is accurate and no blocking decision remains, proceed.
 
 ## Implementation Rules
 
@@ -81,10 +89,20 @@ If a prior ticket in the same series was implemented earlier in the session, reu
 - The ticket's `Files to Touch` list is a strong hint, not a hard limit. If coherent completion requires adjacent files for contracts, runtime consumers, schemas, fixtures, or tests, include them and explain why.
 - For schema or contract migrations, explicitly check whether the change needs updates across:
   - authored schema/doc types
+  - authored-shape validators and unknown-key allowlists
   - compiled/kernel/runtime types
   - Zod or JSON schemas
   - diagnostics or debug snapshots
   - fixtures, goldens, and tests
+- When tightening authored `chooseN` minimums or other decision cardinality constraints:
+  - check whether runtime `max` can drop below the new minimum because of resources, grants, action class, or other state-dependent caps
+  - if `max < min` can occur, update legality or cost-validation in the same change so the move becomes cleanly illegal instead of failing at runtime
+- If the ticket names files to verify or inspect rather than definitely modify:
+  - read and assess them as part of the implementation boundary
+  - leave them unchanged when evidence shows no edit is required
+  - state that explicit no-change decision in the final summary
+- When a migration adds or removes a required compiled field, treat owned production goldens that snapshot compiled catalogs, summaries, or traces as expected update surfaces unless evidence shows unexpected behavioral drift.
+- When a change alters observability, preview readiness, scoring inputs, or other behavior that can legitimately change deterministic move choice, treat owned production goldens and fixed-seed summaries as expected update surfaces unless evidence shows unexpected drift outside the ticket boundary.
 
 ## Verification
 
@@ -97,6 +115,7 @@ Before claiming completion:
 5. Confirm whether the package's test commands execute source files directly or built `dist` output:
    - if tests depend on `dist`, run `typecheck` first and rebuild before trusting targeted test results
    - if the change affects generated artifacts or schemas, regenerate or validate them explicitly
+   - do not run verification commands in parallel when they read from or rewrite the same generated output tree such as `dist/`
 6. Prefer the narrowest commands that validate the real changed code path, not stale build output.
 7. If broader failing checks remain:
    - determine whether they are inside the corrected ticket boundary or are owned by another active ticket
@@ -106,9 +125,17 @@ Before claiming completion:
 8. If focused checks pass but a broader suite fails:
    - inspect shared test helpers, fixtures, and goldens for assumptions that the focused tests did not exercise
    - do not assume the failure is a product regression until helper-level assumptions are ruled out
+   - if the change affects observability, scoring, or move selection, explicitly check whether seed-specific helper states or turn-position fixtures have gone stale
+   - when a seeded helper no longer reaches the intended semantic state, retarget it to a current deterministic seed or turn that still exercises the same invariant rather than weakening the assertion
 9. If `node --test` or another runner reports only a top-level file failure:
    - rerun the failing file as narrowly as possible
    - use test-name filtering or direct helper reproduction when needed to isolate the failing assertion before editing code
+   - if Node still collapses nested suite failures, run the built test module directly to expose nested subtest output before changing code
+10. If acceptance depends on a generated artifact such as a trace, golden, schema, or report:
+   - confirm the command that produces it has actually exited before diagnosing the artifact contents
+   - confirm the artifact path matches the command's real write target
+   - check a freshness signal such as timestamp or file size before treating missing fields or stale output as a real discrepancy
+   - only then compare the artifact against the ticket's acceptance criteria
 
 Use the repo's standard commands from `AGENTS.md` when appropriate:
 
@@ -120,14 +147,40 @@ Use the repo's standard commands from `AGENTS.md` when appropriate:
 
 Prefer narrower package- or file-scoped checks when they fully cover the change.
 
+Optional verification ordering for `dist`-driven packages:
+- `typecheck`
+- `build`
+- regenerate or check schema/artifacts
+- targeted `dist` tests for the changed surface
+- full package test suite
+- broader repo checks
+- keep commands that clean, rebuild, or regenerate the same output tree serialized rather than parallel
+
+Optional generated-artifact freshness check:
+- producing command has exited
+- artifact path matches the producing command's write target
+- artifact timestamp or size changed as expected
+- inspect contents only after freshness is confirmed
+
+Optional seed-state discovery for behavior-driven game tests:
+- confirm the old seeded scenario no longer reaches the intended semantic state
+- search a bounded seed and turn window for a current deterministic reproduction
+- preserve the original invariant and update only the helper state or seed
+- rename helper functions or comments so they describe the new reproduction accurately
+
 ## Follow-Up
 
 After implementation and verification:
 
 1. Summarize what changed, what was verified, and any residual risk.
+   - if you audited schema, artifact, or generated-surface ripple effects and concluded none were needed, state that explicitly for runtime-only tickets
    - if any verification was intentionally deferred because an adjacent active ticket owns that scope, state that explicitly
+   - if a user-confirmed `1-3-1` design resolution materially affected the implementation, include a short resolved-decision note
+   - if the main resolved decision was preserving Foundation type discipline over a raw ticket or spec example, say so explicitly
+   - if local rulebook extracts or rules reports were necessary to justify a game-specific legality correction, include a short rules-evidence note
 2. If the ticket appears complete, offer to archive it per `docs/archival-workflow.md`.
 3. If the user wants archival or a concrete follow-up review, hand off to `post-ticket-review`.
+4. If this implementation materially superseded semantics recorded in a recently archived sibling ticket, call that out in the handoff so archival review can amend or clarify the archive trail.
 
 Optional series consistency pass after a ticket rewrite:
 - inspect sibling active tickets in the same series for overlap or stale staged ownership

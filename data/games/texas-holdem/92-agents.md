@@ -126,6 +126,9 @@ agents:
       params: {}
       preview:
         mode: disabled
+      selection:
+        mode: softmaxSample
+        temperature: 0.5
       use:
         pruningRules: []
         considerations:

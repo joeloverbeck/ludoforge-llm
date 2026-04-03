@@ -182,6 +182,7 @@ actions:
       - macro: coup-casualties-aid
     limits: [{ scope: phase, max: 1 }]
   - id: coupPacifyPass
+    tags: [pass]
     actor: active
     executor: 'actor'
     phase: [coupSupport]
@@ -194,6 +195,7 @@ actions:
     effects: []
     limits: []
   - id: coupAgitatePass
+    tags: [pass]
     actor: active
     executor: 'actor'
     phase: [coupSupport]
@@ -203,6 +205,7 @@ actions:
     effects: []
     limits: []
   - id: coupPacifyUS
+    tags: [pacify]
     actor: active
     executor: 'actor'
     phase: [coupSupport, honoluluPacify]
@@ -324,6 +327,7 @@ actions:
       - setMarker: { space: { zoneExpr: { ref: binding, name: targetSpace } }, marker: coupPacifySpaceUsage, state: used }
     limits: []
   - id: coupPacifyARVN
+    tags: [pacify]
     actor: active
     executor: 'actor'
     phase: [coupSupport, honoluluPacify]
@@ -466,6 +470,7 @@ actions:
       - setMarker: { space: { zoneExpr: { ref: binding, name: targetSpace } }, marker: coupPacifyArvnSpaceUsage, state: used }
     limits: []
   - id: coupAgitateVC
+    tags: [agitate]
     actor: active
     executor: 'actor'
     phase: [coupSupport]
@@ -999,6 +1004,7 @@ actions:
                 to: { zoneExpr: { ref: binding, name: targetSpace } }
     limits: []
   - id: coupRedeployPass
+    tags: [pass]
     actor: active
     executor: 'actor'
     phase: [coupRedeploy]
@@ -1008,6 +1014,7 @@ actions:
     effects: []
     limits: []
   - id: coupCommitmentPass
+    tags: [pass]
     actor: active
     executor: 'actor'
     phase: [coupCommitment]
@@ -1017,6 +1024,7 @@ actions:
     effects: []
     limits: []
   - id: coupCommitmentResolve
+    tags: [commitment]
     actor: active
     executor: 'actor'
     phase: [coupCommitment]
@@ -3065,6 +3073,7 @@ actionPipelines:
           - macro: insurgent-rally-select-spaces
             args:
               resourceVar: nvaResources
+              minTargetSpaces: 0
       - stage: resolve-per-space
         effects:
           - forEach:
@@ -3222,8 +3231,16 @@ actionPipelines:
   - id: rally-vc-profile
     actionId: rally
     applicability: { op: '==', left: { ref: activePlayer }, right: 3 }
-    legality: true
-    costValidation: null
+    legality:
+      op: or
+      args:
+        - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
+        - { op: '>=', left: { ref: gvar, var: vcResources }, right: 1 }
+    costValidation:
+      op: or
+      args:
+        - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
+        - { op: '>=', left: { ref: gvar, var: vcResources }, right: 1 }
     costEffects: []
     targeting: {}
     stages:
@@ -3232,6 +3249,7 @@ actionPipelines:
           - macro: insurgent-rally-select-spaces
             args:
               resourceVar: vcResources
+              minTargetSpaces: 1
       - stage: resolve-per-space
         effects:
           - forEach:

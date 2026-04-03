@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import { createPolicyPreviewRuntime } from '../../../src/agents/policy-preview.js';
 import {
   asActionId,
+  asZoneId,
   createTrustedExecutableMove,
   asPhaseId,
   asPlayerId,
@@ -121,7 +122,7 @@ function createObservation(hidden: boolean): PlayerObservation {
     visibleTokenIdsByZone: {},
     visibleTokenOrderByZone: {},
     visibleRevealsByZone: {},
-    requiresHiddenSampling: hidden,
+    hiddenSamplingZones: hidden ? [asZoneId('some-zone')] : [],
   };
 }
 

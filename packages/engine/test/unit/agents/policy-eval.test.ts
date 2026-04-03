@@ -150,6 +150,7 @@ function createCatalog(
     fingerprint: 'baseline',
     params: { passFloor: 0.5 },
     preview: { mode: 'exactWorld' },
+    selection: { mode: 'argmax' },
     use: {
       pruningRules: ['dropPassWhenMarginExists'],
       considerations: ['preferEvents'],
@@ -365,6 +366,48 @@ function createInput(agents: AgentPolicyCatalog, legalMoves: readonly Move[], se
     trustedMoveIndex: new Map(),
     rng: createRng(seed),
   } as const;
+}
+
+function createSelectionScoreCatalog(
+  selection: AgentPolicyCatalog['profiles']['baseline']['selection'] | undefined,
+  scores: Readonly<Record<string, number>>,
+): AgentPolicyCatalog {
+  const considerationEntries = Object.fromEntries(
+    Object.entries(scores).map(([actionId, score]) => [
+      `score_${actionId}`,
+      {
+        scopes: ['move'] as const,
+        costClass: 'candidate' as const,
+        weight: literal(score),
+        value: opExpr(
+          'boolToNumber',
+          opExpr('eq', refExpr({ kind: 'candidateIntrinsic', intrinsic: 'actionId' }), literal(actionId)),
+        ),
+        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
+      },
+    ]),
+  );
+  const considerationIds = Object.keys(considerationEntries);
+
+  return createCatalog(
+    {
+      considerations: considerationEntries,
+    },
+    {
+      use: {
+        pruningRules: [],
+        considerations: considerationIds,
+        tieBreakers: ['stableMoveKey'],
+      },
+      plan: {
+        stateFeatures: [],
+        candidateFeatures: [],
+        candidateAggregates: [],
+        considerations: considerationIds,
+      },
+      ...(selection === undefined ? {} : { selection }),
+    },
+  );
 }
 
 function createChoiceRequest(overrides: Partial<ChoicePendingRequest> = {}): ChoicePendingRequest {
@@ -1461,6 +1504,172 @@ describe('policy-eval', () => {
       result.metadata.candidates.find((candidate) => candidate.actionId === 'event')?.score,
       10,
     );
+  });
+
+  describe('selection modes', () => {
+    const scoredMoves = createMoves('alpha', 'beta', 'advance');
+
+    it('keeps argmax behavior identical to the default profile selection', () => {
+      const defaultResult = evaluatePolicyMove(
+        createInput(createSelectionScoreCatalog(undefined, { alpha: 3, beta: 3, advance: 1 }), scoredMoves, 7n),
+      );
+      const explicitResult = evaluatePolicyMove(
+        createInput(createSelectionScoreCatalog({ mode: 'argmax' }, { alpha: 3, beta: 3, advance: 1 }), scoredMoves, 7n),
+      );
+
+      assert.deepEqual(explicitResult.move, defaultResult.move);
+      assert.deepEqual(explicitResult.rng, defaultResult.rng);
+      assert.equal(explicitResult.move.actionId, asActionId('alpha'));
+      assert.equal(defaultResult.metadata.selection?.mode, 'argmax');
+      assert.equal(defaultResult.metadata.selection?.candidateCount, 3);
+      assert.equal(
+        defaultResult.metadata.candidates[defaultResult.metadata.selection?.selectedIndex ?? -1]?.stableMoveKey,
+        defaultResult.metadata.selectedStableMoveKey,
+      );
+    });
+
+    it('uses a deterministic visible-input-derived selection seed for softmaxSample without consuming input.rng', () => {
+      const agents = createSelectionScoreCatalog({ mode: 'softmaxSample', temperature: 0.5 }, { alpha: 10, beta: 5, advance: 1 });
+      const input = createInput(agents, scoredMoves, 7n);
+      const first = evaluatePolicyMove(input);
+      const second = evaluatePolicyMove({
+        ...input,
+        rng: createRng(999n),
+      });
+
+      assert.deepEqual(first.move, second.move);
+      assert.deepEqual(first.rng, input.rng);
+      assert.deepEqual(second.rng, createRng(999n));
+      assert.deepEqual(first.metadata.tieBreakChain, []);
+      assert.deepEqual(first.metadata.selection, {
+        mode: 'softmaxSample',
+        temperature: 0.5,
+        candidateCount: 3,
+        samplingProbabilities: first.metadata.selection?.samplingProbabilities,
+        selectedIndex: first.metadata.selection?.selectedIndex ?? -1,
+      });
+      assert.ok(first.metadata.selection?.samplingProbabilities);
+      assert.equal(first.metadata.selection?.samplingProbabilities?.length, 3);
+      assert.equal(first.metadata.selection?.selectedIndex !== undefined, true);
+      assert.deepEqual(first.metadata.selection, second.metadata.selection);
+    });
+
+    it('softmaxSample favors the top score more strongly at lower temperatures', () => {
+      const lowTemperature = evaluatePolicyMove(
+        createInput(
+          createSelectionScoreCatalog({ mode: 'softmaxSample', temperature: 0.25 }, { alpha: 10, beta: 5, advance: 1 }),
+          scoredMoves,
+          7n,
+        ),
+      );
+      const highTemperature = evaluatePolicyMove(
+        createInput(
+          createSelectionScoreCatalog({ mode: 'softmaxSample', temperature: 5 }, { alpha: 10, beta: 5, advance: 1 }),
+          scoredMoves,
+          7n,
+        ),
+      );
+      const lowProbabilityByActionId = Object.fromEntries(
+        lowTemperature.metadata.candidates.map((candidate, index) => [
+          candidate.actionId,
+          lowTemperature.metadata.selection?.samplingProbabilities?.[index] ?? null,
+        ]),
+      ) as Record<string, number | null>;
+      const highProbabilityByActionId = Object.fromEntries(
+        highTemperature.metadata.candidates.map((candidate, index) => [
+          candidate.actionId,
+          highTemperature.metadata.selection?.samplingProbabilities?.[index] ?? null,
+        ]),
+      ) as Record<string, number | null>;
+
+      assert.ok((lowProbabilityByActionId.alpha ?? 0) > (highProbabilityByActionId.alpha ?? 0));
+      assert.ok((lowProbabilityByActionId.advance ?? 0) < (highProbabilityByActionId.advance ?? 0));
+    });
+
+    it('softmaxSample converges to argmax at very low temperatures', () => {
+      const result = evaluatePolicyMove(
+        createInput(
+          createSelectionScoreCatalog({ mode: 'softmaxSample', temperature: 0.001 }, { alpha: 10, beta: 5, advance: 1 }),
+          scoredMoves,
+          7n,
+        ),
+      );
+
+      assert.equal(result.move.actionId, asActionId('alpha'));
+      const probabilityByActionId = Object.fromEntries(
+        result.metadata.candidates.map((candidate, index) => [
+          candidate.actionId,
+          result.metadata.selection?.samplingProbabilities?.[index] ?? null,
+        ]),
+      ) as Record<string, number | null>;
+      assert.ok((probabilityByActionId.alpha ?? 0) > 0.999);
+      assert.ok((probabilityByActionId.beta ?? 0) < 0.001);
+      assert.ok((probabilityByActionId.advance ?? 0) < 0.001);
+    });
+
+    it('weightedSample favors higher scores and falls back to uniform when all scores are equal', () => {
+      const weightedResult = evaluatePolicyMove(
+        createInput(
+          createSelectionScoreCatalog({ mode: 'weightedSample' }, { alpha: 10, beta: 5, advance: 1 }),
+          scoredMoves,
+          7n,
+        ),
+      );
+      const uniformResult = evaluatePolicyMove(
+        createInput(
+          createSelectionScoreCatalog({ mode: 'weightedSample' }, { alpha: 5, beta: 5, advance: 5 }),
+          scoredMoves,
+          7n,
+        ),
+      );
+      const weightedProbabilityByActionId = Object.fromEntries(
+        weightedResult.metadata.candidates.map((candidate, index) => [
+          candidate.actionId,
+          weightedResult.metadata.selection?.samplingProbabilities?.[index] ?? null,
+        ]),
+      ) as Record<string, number | null>;
+      const uniformProbabilityByActionId = Object.fromEntries(
+        uniformResult.metadata.candidates.map((candidate, index) => [
+          candidate.actionId,
+          uniformResult.metadata.selection?.samplingProbabilities?.[index] ?? null,
+        ]),
+      ) as Record<string, number | null>;
+
+      assert.ok((weightedProbabilityByActionId.alpha ?? 0) > (weightedProbabilityByActionId.beta ?? 0));
+      assert.ok((weightedProbabilityByActionId.beta ?? 0) > (weightedProbabilityByActionId.advance ?? 0));
+      assert.deepEqual(uniformProbabilityByActionId, {
+        advance: 1 / 3,
+        alpha: 1 / 3,
+        beta: 1 / 3,
+      });
+    });
+
+    it('records weightedSample probabilities in selection metadata', () => {
+      const result = evaluatePolicyMove(
+        createInput(createSelectionScoreCatalog({ mode: 'weightedSample' }, { alpha: 10, beta: 5, advance: 1 }), scoredMoves, 7n),
+      );
+
+      assert.deepEqual(result.metadata.selection, {
+        mode: 'weightedSample',
+        candidateCount: 3,
+        samplingProbabilities: result.metadata.selection?.samplingProbabilities,
+        selectedIndex: result.metadata.selection?.selectedIndex ?? -1,
+      });
+      assert.ok(result.metadata.selection?.samplingProbabilities);
+      assert.equal(
+        result.metadata.selection?.samplingProbabilities?.reduce((sum, value) => sum + value, 0),
+        1,
+      );
+      const probabilityByActionId = Object.fromEntries(
+        result.metadata.candidates.map((candidate, index) => [
+          candidate.actionId,
+          result.metadata.selection?.samplingProbabilities?.[index] ?? null,
+        ]),
+      ) as Record<string, number | null>;
+      assert.equal(probabilityByActionId.alpha, 9 / 13);
+      assert.equal(probabilityByActionId.beta, 4 / 13);
+      assert.equal(probabilityByActionId.advance, 0);
+    });
   });
 
   it('treats skipRule pruning as non-destructive when it would empty the candidate set', () => {

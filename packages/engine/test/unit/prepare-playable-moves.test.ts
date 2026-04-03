@@ -229,34 +229,35 @@ describe('preparePlayableMoves', () => {
      * selections.  preparePlayableMoves must fall through to the template
      * completion path instead of discarding the move.
      *
-     * Reproduces with FITL seed 11: turn 0 plays the Sihanouk shaded event,
-     * turn 1 grants VC a free Rally in Cambodia.  The rally template (empty
-     * params, freeOperation=true) must survive filtering and be completable.
+     * Reproduces with FITL seed 12 after two agent turns. The rally template
+     * (empty params, freeOperation=true) must survive filtering and be
+     * completable.
      */
     it('does not discard free-operation templates whose zone filter is unevaluable on incomplete moves', () => {
       const { compiled } = compileProductionSpec();
       const def = assertValidatedGameDef(compiled.gameDef);
       const runtime = createGameDefRuntime(def);
 
-      // Advance to the game state where the bug manifested (seed 11, turn 1).
-      let state = initialState(def, 11, 4, undefined, runtime).state;
+      // Advance to the game state where the bug manifests (seed 12, turn 2).
+      let state = initialState(def, 12, 4, undefined, runtime).state;
       const agent = new PolicyAgent();
       const AGENT_RNG_MIX = 0x9e3779b97f4a7c15n;
       const agentRngs = Array.from(
         { length: 4 },
-        (_, i) => createRng(BigInt(11) ^ (BigInt(i + 1) * AGENT_RNG_MIX)),
+        (_, i) => createRng(BigInt(12) ^ (BigInt(i + 1) * AGENT_RNG_MIX)),
       );
 
-      // Execute turn 0 (ARVN plays event).
-      const legal0 = enumerateLegalMoves(def, state, undefined, runtime).moves;
-      const player0 = state.activePlayer;
-      const selected0 = agent.chooseMove({
-        def, state, playerId: player0,
-        legalMoves: legal0, rng: agentRngs[player0]!, runtime,
-      });
-      state = applyMove(def, state, selected0.move, undefined, runtime).state;
+      for (let turn = 0; turn < 2; turn += 1) {
+        const legal = enumerateLegalMoves(def, state, undefined, runtime).moves;
+        const player = state.activePlayer;
+        const selected = agent.chooseMove({
+          def, state, playerId: player,
+          legalMoves: legal, rng: agentRngs[player]!, runtime,
+        });
+        state = applyMove(def, state, selected.move, undefined, runtime).state;
+      }
 
-      // Turn 1: VC should have a free-operation rally template.
+      // Turn 2: VC should have a free-operation rally template.
       const enumerated1 = enumerateLegalMoves(def, state, undefined, runtime);
       const classifiedFreeOpMove = enumerated1.moves.find(({ move }) => move.freeOperation === true);
       assert.ok(classifiedFreeOpMove, 'expected a classified free-operation move in enumerated legal moves');

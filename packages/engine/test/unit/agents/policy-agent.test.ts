@@ -117,6 +117,7 @@ function createCatalog(): AgentPolicyCatalog {
         fingerprint: 'passive-fingerprint',
         params: {},
         preview: { mode: 'exactWorld' },
+        selection: { mode: 'argmax' },
         use: {
           pruningRules: [],
           considerations: ['preferPass'],
@@ -133,6 +134,7 @@ function createCatalog(): AgentPolicyCatalog {
         fingerprint: 'aggressive-fingerprint',
         params: {},
         preview: { mode: 'exactWorld' },
+        selection: { mode: 'argmax' },
         use: {
           pruningRules: [],
           considerations: ['preferEvent'],
@@ -234,6 +236,7 @@ function createTemplateDef(): GameDef {
           fingerprint: 'passive-fingerprint',
           params: {},
           preview: { mode: 'exactWorld' },
+          selection: { mode: 'argmax' },
           use: {
             pruningRules: [],
             considerations: ['preferGamma'],
@@ -292,6 +295,7 @@ function createGuidedTemplateDef(
           fingerprint: 'guided-template-profile',
           params: {},
           preview: { mode: 'exactWorld' },
+          selection: { mode: 'argmax' },
           use: {
             pruningRules: [],
             considerations: ['preferGamma'],
@@ -420,6 +424,7 @@ function createTemplatePreviewDef(): GameDef {
           fingerprint: 'template-preview-profile',
           params: {},
           preview: { mode: 'exactWorld' },
+          selection: { mode: 'argmax' },
           use: {
             pruningRules: [],
             considerations: ['preferProjectedMargin'],

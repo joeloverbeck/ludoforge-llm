@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None
-**Deps**: `tickets/65INTINTDOM-005.md`
+**Deps**: `archive/tickets/65INTINTDOM-005.md`
 
 ## Problem
 

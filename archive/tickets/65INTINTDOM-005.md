@@ -1,6 +1,6 @@
 # 65INTINTDOM-005: Runner zone and ID migration
 
-**Status**: PENDING
+**Status**: 🚫 NOT IMPLEMENTED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — runner-only
@@ -101,3 +101,20 @@ Fix all runner test files that construct or compare ZoneId values. Runner uses V
 1. `pnpm -F @ludoforge/runner typecheck`
 2. `pnpm -F @ludoforge/runner test`
 3. `pnpm turbo test`
+
+## Outcome
+
+Completed: 2026-04-04
+
+What changed:
+- No runner code changes were made for this ticket.
+- The ticket was closed after reassessment against the corrected `65INTINTDOM-002/003/004` architecture and the live runner codebase.
+
+Deviations from original plan:
+- The ticket's core premise did not hold. `ZoneId` did not become numeric in the engine or runner-facing type surface; only runtime-local numeric identifiers were introduced behind the engine runtime seam.
+- The runner no longer has the claimed zone-migration surface. Live runner references are already string-based for zones and visual-config refs, and current branded-id usage is limited to other ids such as `ActionId`.
+
+Verification results:
+- Re-read the corrected active and archived `65INTINTDOM` series context.
+- Verified the current engine branded-id definitions and runner call sites.
+- Confirmed that runner zone rendering, layout, and visual-config validation surfaces already operate on canonical string zone ids rather than a numeric `ZoneId` migration target.

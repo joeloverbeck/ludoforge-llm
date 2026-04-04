@@ -106,7 +106,7 @@ are always welcome. Tier 4 only when absolutely necessary.
 
 ## Immutable System
 
-- `campaigns/fitl-vc-agent-evolution/harness.sh`
+- `campaigns/fitl-vc-agent-evolution/harness.sh` (seed count read from seed-tier.txt; do not modify harness logic)
 - `campaigns/fitl-vc-agent-evolution/run-tournament.mjs`
 - All test files under `packages/engine/test/` (except when DSL changes in
   Tier 2 require corresponding test updates)
@@ -265,13 +265,55 @@ PIVOT_CHECK_INTERVAL = 10       # PROCEED/REFINE/PIVOT every 10 experiments
 ## Configuration
 
 ```
-HARNESS_RUNS = 1                # single run per experiment (15 seeds average variance)
-HARNESS_SEEDS = 1               # seeds handled internally by run-tournament.mjs (15 seeds)
+HARNESS_RUNS = 1                # single run per experiment
+HARNESS_SEEDS = 1               # seeds handled internally by run-tournament.mjs (progressive)
 meta_improvement = false        # meta-loop disabled for this campaign
 METRIC_DIRECTION = higher-is-better  # maximize compositeScore
 MAX_ITERATIONS = unlimited      # run until externally interrupted
 CHECKS_TIMEOUT = 120            # 2 minutes for correctness checks
+INITIAL_SEED_TIER = 1           # start with 1 seed; progressive protocol advances
 ```
+
+## Progressive Seed Protocol
+
+The campaign uses progressive seed expansion to keep early experiments fast.
+FITL games can hit 500 turns when the agent is weak (~3-5 min per game).
+Running 15 seeds from the start means 40+ minute experiments. Progressive
+seeds keep early experiments under 5 minutes.
+
+### Seed Tier State
+
+- Current tier stored in `seed-tier.txt` (integer, default 1)
+- Harness reads this file to determine SEED_COUNT
+- Seeds are always 1000 through 1000+tier-1
+- Tier NEVER drops back — it ratchets up only (REJECT/rollback preserves tier)
+
+### Phase A: Win-Gated Ramp-Up (tier < 15)
+
+During ramp-up, the standard `compositeScore` accept/reject logic is
+**suspended**. Instead:
+
+```
+IF wins >= best_wins at this tier AND avgMargin >= best_avgMargin - 0.05:
+    ACCEPT
+ELSE:
+    REJECT
+```
+
+**Tier advance**: After an ACCEPT where `wins == current_tier` (all seeds
+won), write `tier + 1` to `seed-tier.txt`. The next experiment runs at the
+new tier. Re-measure `best_wins` and `best_avgMargin` at the new tier
+(baseline run at new tier before continuing experiments).
+
+Simplification accepts (same wins, same margin, fewer lines) follow the
+same logic as the standard protocol.
+
+### Phase B: CompositeScore Optimization (tier == 15)
+
+Once tier reaches 15, switch to the standard `compositeScore`-based
+Accept/Reject Logic defined in the Accept/Reject Logic section above. This
+is the fine-tuning phase where margins are maximized across all 15 diverse
+seeds to prevent overfitting to early seeds.
 
 ## OBSERVE Phase Protocol (Trace-Driven)
 

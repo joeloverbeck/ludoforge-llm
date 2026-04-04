@@ -183,16 +183,54 @@ function parentPathAtDepth(astPath: string, targetDepth: number): string {
 /**
  * Derive a semantic sub-step header from the first message in a group.
  */
+/**
+ * Extract a short, readable context label from a filter string for use in step headers.
+ * Extracts the key noun from common filter patterns rather than showing the full predicate.
+ */
+function extractShortFilterContext(filter: string): string | undefined {
+  // "number of X pieces > 0" → "X"
+  const piecesMatch = filter.match(/number of (.+?) pieces/i);
+  if (piecesMatch !== null) return humanizeIdentifier(piecesMatch[1]!);
+
+  // "Faction is X" → "X"
+  const factionMatch = filter.match(/Faction is (\w+)/i);
+  if (factionMatch !== null) return humanizeIdentifier(factionMatch[1]!);
+
+  // "zone Category is X" or "zone Category in X" → "X" (e.g., "Line of Communication")
+  const categoryMatch = filter.match(/Category (?:is|in) (.+?)(?:\s+and\s|$)/i);
+  if (categoryMatch !== null) {
+    const value = categoryMatch[1]!;
+    return value.length > 30 ? `${value.slice(0, 27)}...` : value;
+  }
+
+  // Fallback: first segment before " and ", truncated
+  const firstSegment = filter.split(' and ')[0]!;
+  const trimmed = firstSegment.length > 30 ? `${firstSegment.slice(0, 27)}...` : firstSegment;
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
 function deriveSubStepHeader(messages: readonly TooltipMessage[], index: number): string {
   if (messages.length > 0) {
     const first = messages[0]!;
     if (first.kind === 'summary' && first.macroClass !== undefined) {
       return humanizeIdentifier(first.macroClass);
     }
-    // For select messages, use target to diversify headers beyond generic "Select spaces"
+    // For select messages, diversify headers using available metadata
     if (first.kind === 'select') {
-      const target = (first as SelectMessage).target;
-      return `Select ${humanizeIdentifier(target)}`;
+      const sel = first as SelectMessage;
+      // Prefer choiceBranchLabel (authored game data) when available
+      if (sel.choiceBranchLabel !== undefined) {
+        return humanizeIdentifier(sel.choiceBranchLabel);
+      }
+      const baseHeader = `Select ${humanizeIdentifier(sel.target)}`;
+      // Append filter context when available to differentiate consecutive same-target sub-steps
+      if (sel.filter !== undefined) {
+        const context = extractShortFilterContext(sel.filter);
+        if (context !== undefined) {
+          return `${baseHeader} (${context})`;
+        }
+      }
+      return baseHeader;
     }
     const semantic = SUB_STEP_HEADER_BY_KIND[first.kind];
     if (semantic !== undefined) return semantic;

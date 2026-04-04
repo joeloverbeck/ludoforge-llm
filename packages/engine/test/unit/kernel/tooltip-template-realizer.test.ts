@@ -725,10 +725,11 @@ describe('realizeContentPlan', () => {
       assert.equal(result.steps[0]!.lines[0]!.text, 'same text');
     });
 
-    it('shows just condition when description is empty', () => {
+    it('suppresses modifier line when description is empty', () => {
       const msg: TooltipMessage = { kind: 'modifier', astPath: 'r', condition: 'monsoon', description: '' };
       const result = realizeContentPlan(plan([msg]), undefined);
-      assert.equal(result.steps[0]!.lines[0]!.text, 'monsoon');
+      // Empty-description modifiers are suppressed — the Modifiers section shows capability effects
+      assert.equal(result.steps[0]!.lines.length, 0);
     });
   });
 

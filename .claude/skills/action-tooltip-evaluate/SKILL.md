@@ -194,6 +194,8 @@ When stagnation is detected, note it explicitly and suggest that the `action-too
 
 If any individual metric has a delta of 0 (unchanged score) for 3+ consecutive evaluations, note this in the recommendations section as per-metric stagnation — even if the issue is not the top recommendation and the overall average is improving. Example: "Terminology Consistency has been unchanged at 4 for 3 evaluations — consider focused attention in the next plan."
 
+When multiple metrics stagnate simultaneously and all share the same layer dependency (e.g., all require runner-layer changes but only engine-layer changes have been made), note this pattern explicitly and recommend a layer shift in the next plan iteration.
+
 ### Oscillation
 
 If the Score Trend shows oscillation (alternating positive/negative deltas for 4+ evaluations), this suggests fixes are introducing regressions. Note this pattern and recommend a more cautious, incremental implementation approach.

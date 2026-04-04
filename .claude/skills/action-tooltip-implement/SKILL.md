@@ -160,6 +160,7 @@ Changes to this interface affect both packages — the engine produces it, the r
 - **Magic number normalization**: "99" and "999" are sentinel values for "unlimited". These are normalized in `realizeSelect()` in the realizer, where bounds formatting logic lives.
 - **Step header diversity**: The `SUB_STEP_HEADER_BY_KIND` map in the content planner maps message kinds to headers. Multiple consecutive messages of the same kind produce identical headers. The fix should diversify headers based on context, not just kind.
 - **Integration test fragility**: `tooltip-pipeline-integration.test.ts` and `tooltip-cross-game-properties.test.ts` test full pipeline output. Changes to humanization, headers, or text templates will break golden assertions in these tests. Update them to match the new output.
+- **No-hardcoded-FITL audit**: The `no-hardcoded-fitl-audit.test.ts` test scans ALL engine source files (including comments) for FITL-specific strings like "ARVN", "NVA", "Saigon", etc. Even code comments must not contain game-specific identifiers. Use generic examples in comments.
 
 ### Runner-Side
 

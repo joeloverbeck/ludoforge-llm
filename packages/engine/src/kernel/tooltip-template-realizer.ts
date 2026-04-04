@@ -271,11 +271,65 @@ const DOLLAR_VAR_PATTERN = /\$([a-zA-Z_]\w*)/g;
 const humanizeDollarVars = (text: string): string =>
   text.replace(DOLLAR_VAR_PATTERN, (_match, name: string) => humanizeIdentifier(name));
 
+/**
+ * Detect lines that are humanized capability-ID noise or identifier-only summaries.
+ * Matches:
+ * - Lines starting with "Cap " (capability prefix)
+ * - Lines that are 3+ Title Case words with no numbers, operators, or natural verbs
+ *   (e.g., "Sweep Loc Hop", "Place From Available Or Map")
+ */
+const NOISE_IDENTIFIER_PATTERN = /^(?:[A-Z][a-zA-Z]*\s+){2,}[A-Z][a-zA-Z]*$/;
+const ACTION_STARTS = /^(?:Select|Pay|Gain|Move|Place|Remove|Activate|Deactivate|Create|Destroy|Reveal|Draw|Shuffle|Set|Choose|Roll|Transfer|Shift|Toggle|Advance|Grant|Conceal)\b/;
+
+const isNoiseLine = (text: string): boolean => {
+  if (/^Cap\s+[A-Z]/.test(text)) return true;
+  if (NOISE_IDENTIFIER_PATTERN.test(text) && !ACTION_STARTS.test(text)) return true;
+  return false;
+};
+
+/**
+ * Simplify common condition/filter patterns in realized text to be more natural.
+ * Transforms technical predicates into prepositional phrases.
+ */
+const simplifyConditionText = (text: string): string => {
+  let result = text;
+  // "number of X pieces > 0" → "with X"
+  result = result.replace(/number of (.+?) pieces > 0/gi, 'with $1');
+  // "Faction is X and type in Y" → "X Y" (only when at the start of a filter expression)
+  result = result.replace(/Faction is (\w+) and type in ([^,]+(?:,\s*[^,]+)*)/gi, '$1 $2');
+  // "zone Category in X" → "in X" (space category filter)
+  result = result.replace(/zone Category (?:is|in) /gi, 'in ');
+  // "zone Country is not X" → "not in X"
+  result = result.replace(/zone Country is not /gi, 'not in ');
+  // Suppress internal state tracking: "X moved is true" → remove
+  result = result.replace(/\s+and\s+\w+patrol moved is true/gi, '');
+  result = result.replace(/^\w+patrol moved is true$/gi, '');
+  // "zone Id in Target Spaces and not" → "in selected spaces, not"
+  result = result.replace(/zone Id in Target Spaces(?:\s+and\s+not)?/gi, 'in selected spaces');
+  // Clean up "Terrain Tags includes X" → "without X terrain"
+  result = result.replace(/Terrain Tags includes (\w+)/gi, 'without $1 terrain');
+  // Humanize dot-separated property chains: "X.Y" → "X Y"
+  result = result.replace(/\b([A-Za-z]+)\.([A-Za-z]\w*)\b/g, '$1 $2');
+  // Suppress "Moved to true/false" internal state
+  result = result.replace(/\s*Moved to (?:true|false)\s*/gi, ' ');
+  // Strip trailing arithmetic: "X * -1", "X * -4 or -3"
+  result = result.replace(/ \* -?\d+(?:\s+or\s+-?\d+)?/g, '');
+  // Strip standalone arithmetic expressions: "1 * -4 or -3" → ""
+  result = result.replace(/^\d+\s*\*\s*-?\d+(?:\s+or\s+-?\d+)?$/, '');
+  // Replace "Sub Space" jargon with natural language
+  result = result.replace(/\bSub Space\b/g, 'this space');
+  // Clean up excess whitespace
+  result = result.replace(/\s{2,}/g, ' ').trim();
+  return result;
+};
+
 const realizeModifier = (msg: ModifierMessage): string => {
   const condition = humanizeKebabTokens(msg.condition);
   const description = humanizeKebabTokens(msg.description);
-  // When description is empty (no pre-authored effect text), render just the condition
-  if (description.length === 0) return condition;
+  // When description is empty (no pre-authored effect text), suppress the line entirely.
+  // The Modifiers section at the bottom already shows capability effects with descriptive text —
+  // inline lines with no description are pure noise (e.g., "Cap Assault Cobras Shaded Cost").
+  if (description.length === 0) return '';
   // When description duplicates the condition, render just once
   if (description === condition) return description;
   // Render "condition: effect description" (no "If " prefix — condition is already clean)
@@ -378,9 +432,15 @@ const realizeStep = (
   for (const m of planStep.messages) {
     const raw = realizeMessage(m, ctx);
     if (raw.length > 0) {
-      // Post-realization pass: humanize $variables and kebab-case tokens
-      const text = humanizeKebabTokens(humanizeDollarVars(raw));
-      lines.push({ text, astPath: m.astPath });
+      // Post-realization pass: humanize, simplify, and suppress noise
+      const cleaned = simplifyConditionText(humanizeKebabTokens(humanizeDollarVars(raw)));
+      if (cleaned.length > 0
+        && !isNoiseLine(cleaned)
+        // Suppress summary-kind messages that are purely identifier text (no numbers or operators)
+        && !(m.kind === 'summary' && NOISE_IDENTIFIER_PATTERN.test(cleaned))
+      ) {
+        lines.push({ text: cleaned, astPath: m.astPath });
+      }
     }
   }
   const subSteps = planStep.subSteps !== undefined

@@ -11,6 +11,8 @@ import { useResolvedFloatingAnchor } from './useResolvedFloatingAnchor.js';
 import type { TooltipCompanionGroup } from './tooltip-companion-actions.js';
 import styles from './ActionTooltip.module.css';
 
+const COST_HEADERS = new Set(['Pay resources', 'Gain resources', 'Transfer resources']);
+
 function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
@@ -97,20 +99,28 @@ export function ActionTooltip({
                     )}
                     {step.subSteps !== undefined && step.subSteps.length > 0 && (
                       <ol className={styles.subSteps}>
-                        {step.subSteps.map((sub) => (
-                          <li key={sub.stepNumber} className={styles.stepItem}>
-                            <span className={styles.stepHeader}>{sub.header}</span>
-                            {sub.lines.length > 0 && (
-                              <ul className={styles.stepLines}>
-                                {sub.lines.map((line, li) => (
-                                  <li key={`sub-${sub.stepNumber}-${li}`} className={styles.stepLine}>
-                                    {line.text}
-                                  </li>
-                                ))}
-                              </ul>
-                            )}
-                          </li>
-                        ))}
+                        {step.subSteps.map((sub, si) => {
+                          const isCost = COST_HEADERS.has(sub.header);
+                          const itemClass = isCost
+                            ? `${styles.stepItem} ${styles.costStep}`
+                            : styles.stepItem;
+                          return (
+                            <li key={sub.stepNumber} className={itemClass}>
+                              <details open={si < 3} className={styles.stepDetails}>
+                                <summary className={styles.stepSummary}>{sub.header}</summary>
+                                {sub.lines.length > 0 && (
+                                  <ul className={styles.stepLines}>
+                                    {sub.lines.map((line, li) => (
+                                      <li key={`sub-${sub.stepNumber}-${li}`} className={styles.stepLine}>
+                                        {line.text}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </details>
+                            </li>
+                          );
+                        })}
                       </ol>
                     )}
                   </details>

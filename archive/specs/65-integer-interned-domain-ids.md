@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Archived
 
 ## Dependencies
 
@@ -242,3 +242,12 @@ Specific risks:
 - **Runner migration** → 10 files, 45 occurrences of engine branded type imports. Layout, rendering, and animation code all directly use `ZoneId`. Must be migrated in the same phase as the engine type change.
 - **`String(zoneId)` casts in `eval-query.ts`** (lines 519, 829) → these explicit casts will need updating to direct array index access. They serve as markers for sites that are already "type-aware."
 - **V8 JIT sensitivity** → the fitl-perf-optimization campaign demonstrated that V8 aggressively deoptimizes modified kernel functions. Per-phase profiling gates will catch any deoptimization regressions.
+
+## Outcome
+
+- Archived: 2026-04-04
+- Phase 1 infrastructure and runtime experiments from `65INTINTDOM-001` through `65INTINTDOM-003` were implemented on corrected Foundation-aligned boundaries, then measured by `65INTINTDOM-006`.
+- The corrected profiling gate failed: the preserved FITL baseline median was `120835.42ms`, while the measured post-implementation median was `123340.12ms`, about `+2.07%` slower.
+- `perf` inspection did not show a compensating hot-path win strong enough to justify continuing the series.
+- The code and generated artifacts introduced by the implemented Phase 1 tickets were rolled back to the pre-`65INTINTDOM` baseline.
+- `65INTINTDOM-004` and `65INTINTDOM-005` were already closed as not actionable under the corrected architecture, and `65INTINTDOM-007` through `65INTINTDOM-010` were closed as not implemented after the profiling gate failed.

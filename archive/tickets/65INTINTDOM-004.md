@@ -106,3 +106,7 @@ Verification results:
 - Re-read the corrected active and archived `65INTINTDOM` series context.
 - Verified current trace, snapshot, delta, and policy-trace surfaces in the live codebase.
 - Confirmed that key outward surfaces already remain string-oriented, including effect traces, selector traces, policy seat ids, and state-delta zone paths.
+
+Outcome amended: 2026-04-04
+
+The subsequent rollback after `65INTINTDOM-006` does not change this conclusion. No code had landed for this ticket, and no serialization-boundary follow-up remained necessary once the overall experiment was reverted.

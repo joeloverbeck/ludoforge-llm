@@ -1,5 +1,5 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
-import type { EffectAST, EventDeckDef, GameDef, InternTable, NumericTrackDef, RuntimeTableContract, TokenTypeDef, VariableDef, ZoneDef } from '../kernel/types.js';
+import type { EffectAST, EventDeckDef, GameDef, NumericTrackDef, RuntimeTableContract, TokenTypeDef, VariableDef, ZoneDef } from '../kernel/types.js';
 import { createToken, draw, moveAll, shuffle } from '../kernel/ast-builders.js';
 import type { TypeInferenceContext } from './type-inference.js';
 import { asActionId, asZoneId } from '../kernel/branded.js';
@@ -740,21 +740,8 @@ function compileExpandedDoc(
     return { gameDef: null, sections };
   }
 
-  const internTable = buildInternTable({
-    zones,
-    actions,
-    tokenTypes: tokenTypes.value,
-    seats: derivedFromAssets.seats ?? [],
-    playerCount: runtimeMetadata.players.max,
-    turnStructure,
-    globalVars: mergedGlobalVars,
-    perPlayerVars: perPlayerVars.value,
-    zoneVars: sections.zoneVars ?? [],
-  });
-
   const gameDef: GameDef = {
     metadata: runtimeMetadata,
-    internTable,
     constants: constants.value,
     globalVars: mergedGlobalVars,
     perPlayerVars: perPlayerVars.value,
@@ -800,42 +787,6 @@ function compileExpandedDoc(
   };
 
   return { gameDef, sections };
-}
-
-function buildInternTable(input: {
-  readonly zones: GameDef['zones'];
-  readonly actions: GameDef['actions'];
-  readonly tokenTypes: GameDef['tokenTypes'];
-  readonly seats: readonly { readonly id: string }[];
-  readonly playerCount: number;
-  readonly turnStructure: GameDef['turnStructure'];
-  readonly globalVars: GameDef['globalVars'];
-  readonly perPlayerVars: GameDef['perPlayerVars'];
-  readonly zoneVars: Exclude<GameDef['zoneVars'], undefined>;
-}): InternTable {
-  const playerEntries =
-    input.seats.length > 0
-      ? input.seats.map((seat) => seat.id)
-      : Array.from({ length: input.playerCount }, (_, index) => String(index));
-
-  return {
-    zones: sortedUniqueStrings(input.zones.map((zone) => String(zone.id))),
-    actions: sortedUniqueStrings(input.actions.map((action) => String(action.id))),
-    tokenTypes: sortedUniqueStrings(input.tokenTypes.map((tokenType) => tokenType.id)),
-    seats: sortedUniqueStrings(input.seats.map((seat) => seat.id)),
-    players: playerEntries,
-    phases: sortedUniqueStrings([
-      ...input.turnStructure.phases.map((phase) => String(phase.id)),
-      ...(input.turnStructure.interrupts?.map((phase) => String(phase.id)) ?? []),
-    ]),
-    globalVars: sortedUniqueStrings(input.globalVars.map((variable) => variable.name)),
-    perPlayerVars: sortedUniqueStrings(input.perPlayerVars.map((variable) => variable.name)),
-    zoneVars: sortedUniqueStrings(input.zoneVars.map((variable) => variable.name)),
-  };
-}
-
-function sortedUniqueStrings(values: readonly string[]): readonly string[] {
-  return [...new Set(values)].sort((left, right) => left.localeCompare(right));
 }
 
 function compileSection<T>(

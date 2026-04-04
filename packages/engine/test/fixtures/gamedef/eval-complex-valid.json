@@ -1,16 +1,5 @@
 {
   "metadata": { "id": "eval-complex-valid", "players": { "min": 2, "max": 2 } },
-  "internTable": {
-    "zones": ["deck:none", "hand:0", "hand:1"],
-    "actions": [],
-    "tokenTypes": ["card"],
-    "seats": [],
-    "players": ["0", "1"],
-    "phases": ["main"],
-    "globalVars": ["threat"],
-    "perPlayerVars": ["money"],
-    "zoneVars": []
-  },
   "constants": {},
   "globalVars": [{ "name": "threat", "type": "int", "init": 0, "min": 0, "max": 20 }],
   "perPlayerVars": [{ "name": "money", "type": "int", "init": 0, "min": 0, "max": 20 }],

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — types-core.ts (InternTable type, GameDef field), compiler-core.ts (intern table generation), GameDef.schema.json
-**Deps**: `specs/65-integer-interned-domain-ids.md`
+**Deps**: `archive/specs/65-integer-interned-domain-ids.md`
 
 ## Problem
 
@@ -105,6 +105,7 @@ Create `intern`/`extern` helper functions (not yet integrated — just defined a
 - Completed: 2026-04-04
 - Added `InternTable`, compiler generation, schema support, raw string/index `intern*` and `extern*` codecs, and fixture/golden/test coverage for the new compiled field.
 - Deviation from original plan: compiled artifacts and `GameDef` schema now require `internTable`, but the TypeScript `GameDef` field remains temporarily optional by confirmed design decision so handwritten in-memory fixtures outside the compiler-owned artifact path did not need a repo-wide migration in this ticket.
+- Outcome amended: 2026-04-04 — the experimental `65INTINTDOM` implementation was later rolled back after `65INTINTDOM-006` measured the corrected Phase 1 subset at `123340.12ms` versus the preserved `120835.42ms` FITL baseline, about `+2.07%` slower. The code and generated artifacts introduced by tickets `001-003` were restored to the pre-`65INTINTDOM` baseline; this archived ticket remains as the audit trail for the attempted experiment.
 - Verification:
   - `pnpm -F @ludoforge/engine build`
   - `pnpm -F @ludoforge/engine test`

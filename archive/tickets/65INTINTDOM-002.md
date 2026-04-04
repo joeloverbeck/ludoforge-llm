@@ -108,6 +108,7 @@ Modify compiler modules that emit ZoneId values to use the intern table from tic
   - Updated `packages/engine/src/kernel/spatial.ts` to build numeric runtime adjacency from the normalized zone index while preserving the outward canonical-string graph API used by existing kernel callers.
   - Extended `GameDefRuntime` with `zoneRuntimeIndex` and exported the new runtime layer from the kernel index.
   - Added focused unit coverage for runtime zone indexing and numeric adjacency storage, and updated one hand-built `GameDefRuntime` test fixture to include the new required runtime field.
+- Outcome amended: 2026-04-04 — the experimental runtime-only numeric zone layer was later rolled back after `65INTINTDOM-006` showed the corrected Phase 1 subset was slower overall (`123340.12ms` median versus `120835.42ms` baseline, about `+2.07%`). The runtime-zone indexing code introduced here was removed when the engine was restored to the pre-`65INTINTDOM` baseline.
 - Deviations from original plan:
   - The original ticket boundary was not Foundation-compliant as written. `ZoneId` did not change from `Brand<string>` to `Brand<number>`, compiler output did not switch serialized zone ids to integers, and no repo-wide atomic `ZoneId` migration was performed.
   - Instead, the implemented boundary used a separate runtime-only numeric zone identifier layer inside `GameDefRuntime`, which preserves Foundation 17 while still delivering the intended runtime zone-indexing step ahead of `65INTINTDOM-003`.

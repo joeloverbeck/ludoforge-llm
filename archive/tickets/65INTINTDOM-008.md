@@ -1,10 +1,10 @@
 # 65INTINTDOM-008: Phase 2 profiling gate
 
-**Status**: PENDING
+**Status**: 🚫 NOT IMPLEMENTED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None
-**Deps**: `tickets/65INTINTDOM-007.md`
+**Deps**: `archive/tickets/65INTINTDOM-007.md`
 
 ## Problem
 
@@ -70,3 +70,9 @@ None — measurement ticket.
 1. `pnpm turbo test`
 2. Benchmark harness run
 3. `perf record --perf-basic-prof` profiling run
+
+## Outcome
+
+Completed: 2026-04-04
+
+This ticket was closed because `65INTINTDOM-007` was closed as not actionable after `65INTINTDOM-006` failed the corrected Phase 1 profiling gate.

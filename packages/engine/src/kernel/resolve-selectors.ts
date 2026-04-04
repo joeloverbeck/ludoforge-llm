@@ -1,7 +1,6 @@
 import { asPlayerId, asZoneId, isPlayerId, type PlayerId, type ZoneId } from './branded.js';
 import type { ReadContext } from './eval-context.js';
 import { EVAL_ERROR_DEFER_CLASS } from './eval-error-defer-class.js';
-import { buildZoneRuntimeIndex, internRuntimeZoneId } from './runtime-zone-index.js';
 import {
   missingBindingError,
   missingVarError,
@@ -14,12 +13,12 @@ import {
   selectorCardinalityPlayerResolvedContext,
   selectorCardinalityZoneResolvedContext,
 } from './selector-cardinality-context.js';
-import type { PlayerSel, ZoneSel } from './types.js';
+import type { PlayerSel, ZoneDef, ZoneSel } from './types.js';
 import { toOwnedZoneId } from './zone-address.js';
 
 const OWNER_SPEC_SEPARATOR = ':';
 
-const zoneIdListCache = new WeakMap<ReadContext['def'], readonly ZoneId[]>();
+const zoneIdListCache = new WeakMap<readonly ZoneDef[], readonly ZoneId[]>();
 
 // Cache player list per playerCount — pure function of a small integer, safe to share.
 const playerListByCount = new Map<number, readonly PlayerId[]>();
@@ -34,16 +33,8 @@ function listPlayers(ctx: Pick<ReadContext, 'state'>): readonly PlayerId[] {
   return cached;
 }
 
-function dedupeZones(zones: readonly ZoneId[], ctx: Pick<ReadContext, 'def'>): readonly ZoneId[] {
-  const zoneRuntimeIndex = buildZoneRuntimeIndex(ctx.def);
-  return [...new Set(zones)].sort((left, right) => {
-    const leftRuntimeId = internRuntimeZoneId(left, zoneRuntimeIndex);
-    const rightRuntimeId = internRuntimeZoneId(right, zoneRuntimeIndex);
-    if (leftRuntimeId === undefined || rightRuntimeId === undefined) {
-      return left.localeCompare(right);
-    }
-    return leftRuntimeId - rightRuntimeId;
-  });
+function sortAndDedupeZones(zones: readonly ZoneId[]): readonly ZoneId[] {
+  return [...new Set(zones)].sort((left, right) => left.localeCompare(right));
 }
 
 function assertKnownPlayer(player: PlayerId, ctx: ReadContext, source: PlayerSel): void {
@@ -92,12 +83,12 @@ function parseOwnerSpec(ownerSpec: string): PlayerSel | null {
 }
 
 function listZoneIds(ctx: Pick<ReadContext, 'def'>): readonly ZoneId[] {
-  const cached = zoneIdListCache.get(ctx.def);
+  const cached = zoneIdListCache.get(ctx.def.zones);
   if (cached !== undefined) {
     return cached;
   }
-  const result = dedupeZones(ctx.def.zones.map((zone) => zone.id), ctx);
-  zoneIdListCache.set(ctx.def, result);
+  const result = sortAndDedupeZones(ctx.def.zones.map((zone) => zone.id));
+  zoneIdListCache.set(ctx.def.zones, result);
   return result;
 }
 
@@ -283,7 +274,7 @@ function resolveZoneSelCore(sel: ZoneSel, ctx: ReadContext): readonly ZoneId[] {
         validateKnownZone(zoneId);
         resolved.push(zoneId);
       }
-      return dedupeZones(resolved, ctx);
+      return sortAndDedupeZones(resolved);
     }
 
     throw typeMismatchError(`Zone binding ${sel} must resolve to a zone id string or array of zone ids`, {
@@ -333,7 +324,7 @@ function resolveZoneSelCore(sel: ZoneSel, ctx: ReadContext): readonly ZoneId[] {
       });
     }
 
-    return dedupeZones(resolved, ctx);
+    return sortAndDedupeZones(resolved);
   }
 
   const parsedOwner = parseOwnerSpec(ownerSpec);
@@ -362,7 +353,7 @@ function resolveZoneSelCore(sel: ZoneSel, ctx: ReadContext): readonly ZoneId[] {
     });
   }
 
-  return dedupeZones(resolved, ctx);
+  return sortAndDedupeZones(resolved);
 }
 
 export function resolveZoneSel(sel: ZoneSel, ctx: ReadContext): readonly ZoneId[] {

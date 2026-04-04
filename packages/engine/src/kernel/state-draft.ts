@@ -11,7 +11,6 @@
  */
 
 import type { GameState, Token } from './types.js';
-import { invalidateRuntimeZoneStateCache } from './runtime-zone-state.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -135,7 +134,6 @@ export function ensureZoneCloned(
   if (!tracker.zones.has(zoneId)) {
     (state.zones as Record<string, Token[]>)[zoneId] =
       [...(state.zones[zoneId] ?? [])];
-    invalidateRuntimeZoneStateCache(state);
     tracker.zones.add(zoneId);
   }
 }

@@ -40,77 +40,6 @@
       ],
       "additionalProperties": false
     },
-    "internTable": {
-      "type": "object",
-      "properties": {
-        "zones": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "actions": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "tokenTypes": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "seats": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "players": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "phases": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "globalVars": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "perPlayerVars": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "zoneVars": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        }
-      },
-      "required": [
-        "zones",
-        "actions",
-        "tokenTypes",
-        "seats",
-        "players",
-        "phases",
-        "globalVars",
-        "perPlayerVars",
-        "zoneVars"
-      ],
-      "additionalProperties": false
-    },
     "constants": {
       "type": "object",
       "propertyNames": {
@@ -8815,7 +8744,6 @@
   },
   "required": [
     "metadata",
-    "internTable",
     "constants",
     "globalVars",
     "perPlayerVars",

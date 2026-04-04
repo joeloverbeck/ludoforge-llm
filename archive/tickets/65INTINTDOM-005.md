@@ -118,3 +118,7 @@ Verification results:
 - Re-read the corrected active and archived `65INTINTDOM` series context.
 - Verified the current engine branded-id definitions and runner call sites.
 - Confirmed that runner zone rendering, layout, and visual-config validation surfaces already operate on canonical string zone ids rather than a numeric `ZoneId` migration target.
+
+Outcome amended: 2026-04-04
+
+The later rollback after `65INTINTDOM-006` leaves this closure unchanged. No runner code had landed for this ticket, and no runner migration was needed once the series was rejected.

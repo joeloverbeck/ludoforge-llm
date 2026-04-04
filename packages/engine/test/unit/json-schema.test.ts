@@ -36,17 +36,6 @@ const gameDefSchema = readSchema('GameDef.schema.json');
 
 const fullGameDef: GameDef = {
   metadata: { id: 'full-game', players: { min: 2, max: 4 }, maxTriggerDepth: 5 },
-  internTable: {
-    zones: ['deck:none', 'discard:none'],
-    actions: ['playCard'],
-    tokenTypes: ['card'],
-    seats: [],
-    players: ['0', '1', '2', '3'],
-    phases: ['main'],
-    globalVars: ['flag', 'round'],
-    perPlayerVars: ['eligible', 'vp'],
-    zoneVars: [],
-  },
   constants: { startGold: 3 },
   globalVars: [
     { name: 'round', type: 'int', init: 1, min: 0, max: 99 },

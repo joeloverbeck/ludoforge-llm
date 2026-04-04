@@ -1,6 +1,4 @@
 import type { PlayerId, ZoneId } from './branded.js';
-import { buildZoneRuntimeIndex } from './runtime-zone-index.js';
-import { getZoneTokensByCanonicalId } from './runtime-zone-state.js';
 import type {
   CompiledObserverProfile,
   CompiledZoneVisibilityEntry,
@@ -118,11 +116,10 @@ export const derivePlayerObservation = (
   const visibleTokenOrderByZone: Record<string, readonly string[]> = {};
   const visibleRevealsByZone: Record<string, readonly RevealGrant[]> = {};
   const hiddenSamplingZones = new Set<ZoneId>();
-  const zoneRuntimeIndex = buildZoneRuntimeIndex(def);
 
   for (const zoneDef of def.zones) {
     const zoneId = zoneDef.id as string;
-    const tokens = getZoneTokensByCanonicalId(state, zoneDef.id, zoneRuntimeIndex) ?? [];
+    const tokens = state.zones[zoneId] ?? [];
     const grants = state.reveals?.[zoneId] ?? [];
 
     // Resolve effective zone visibility from observer profile or ZoneDef.visibility.

@@ -122,6 +122,7 @@ What changed:
 - Implemented the ticket on a corrected Foundation-aligned boundary: outward `GameState.zones` remained the canonical string-keyed record, while hot runtime zone access moved behind a new array-backed runtime cache in `packages/engine/src/kernel/runtime-zone-state.ts`.
 - Updated hot zone-read paths in kernel and agent evaluation code to consume the runtime zone-state layer, and wired cache invalidation into mutable zone/token write paths.
 - Replaced selector dedupe ordering with runtime zone order derived from the runtime zone index instead of `localeCompare`, with targeted coverage for the new ordering and cache behavior.
+- Outcome amended: 2026-04-04 — this runtime-only zone-state cache was later rolled back with the rest of the Phase 1 experiment after `65INTINTDOM-006` showed the series regressed the preserved FITL benchmark by about `+2.07%`. The engine now uses the pre-`65INTINTDOM` zone-state path again.
 
 Deviations from original plan:
 - `GameState.zones` itself did not migrate to an array, and no serialized state, trace, or outward state contract changed in this ticket.

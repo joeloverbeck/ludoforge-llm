@@ -1,6 +1,6 @@
 # 65INTINTDOM-006: Phase 1 profiling gate
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None
@@ -74,3 +74,30 @@ None — this is a profiling/measurement ticket.
 1. `pnpm turbo test` (verify correctness)
 2. Benchmark harness run (3-seed FITL simulation, before/after comparison)
 3. `perf record --perf-basic-prof` profiling run
+
+## Outcome
+
+Completed: 2026-04-04
+
+What changed:
+- Ran the corrected profiling gate for the actually landed Phase 1 subset: `65INTINTDOM-001`, `65INTINTDOM-002`, and `65INTINTDOM-003`, with `65INTINTDOM-004/005` already closed as not actionable under the corrected architecture.
+- Used the preserved `fitl-perf-optimization` campaign runner logs as the historical baseline because `campaigns/fitl-perf-optimization/results.tsv` no longer contains the benchmark rows.
+- Closed downstream tickets `65INTINTDOM-007` through `65INTINTDOM-010` as not actionable because the gate failed.
+
+Deviations from original plan:
+- "Phase 1" was measured against the corrected landed subset, not the original `001-005` plan, because the series boundary changed after reassessment of `002` through `005`.
+- The usable baseline came from `campaigns/fitl-perf-optimization/run.log.runner.{1,2,3}` rather than `results.tsv`.
+
+Verification results:
+- Preserved baseline median from campaign logs: `120835.42ms`
+- Current harness median from `bash campaigns/fitl-perf-optimization/harness.sh`: `123340.12ms`
+- Net result versus baseline: about `+2.07%` slower, so the `>1%` improvement gate failed
+- Current median breakdown:
+  - `compilation_ms=1714.78`
+  - `legalMoves_ms=91396.05`
+  - `applyMove_ms=1049.76`
+  - `agentChooseMove_ms=28500.29`
+  - `computeDeltas_ms=0.38`
+- `perf` capture command:
+  - `perf record -g -o /tmp/fitl-intintdom-006.perf.data node --perf-basic-prof campaigns/fitl-perf-optimization/run-benchmark.mjs --seeds 3 --players 4 --max-turns 200`
+- Current `perf` attribution still concentrated in query/selector/ref stacks rather than showing a decisive zone-storage win, including visible hot entries for `evalQuery`, `resolveRef`, `resolveZoneRef`, `resolveZoneSelCore`, and `Builtins_LoadIC_Megamorphic`

@@ -1,10 +1,10 @@
 # 65INTINTDOM-007: ActionId, PhaseId, SeatId migration
 
-**Status**: PENDING
+**Status**: 🚫 NOT IMPLEMENTED
 **Priority**: MEDIUM
 **Effort**: Large
 **Engine Changes**: Yes — branded.ts (3 ID types), all kernel/cnl/sim/agents/runner modules referencing these types
-**Deps**: `tickets/65INTINTDOM-006.md`
+**Deps**: `archive/tickets/65INTINTDOM-006.md`
 
 ## Problem
 
@@ -102,3 +102,9 @@ All test files constructing or comparing these ID types update to integer values
 2. `pnpm -F @ludoforge/engine test`
 3. `pnpm -F @ludoforge/runner test`
 4. `pnpm turbo test`
+
+## Outcome
+
+Completed: 2026-04-04
+
+This ticket was closed after `65INTINTDOM-006` failed the corrected Phase 1 profiling gate. The measured result was about `+2.07%` slower than the preserved FITL baseline (`123340.12ms` current median versus `120835.42ms` baseline), so the remaining integer-ID migration work was not justified.

@@ -1,10 +1,10 @@
 # 65INTINTDOM-009: Variable name interning (globalVars, perPlayerVars, zoneVars)
 
-**Status**: PENDING
+**Status**: 🚫 NOT IMPLEMENTED
 **Priority**: LOW
 **Effort**: Large
 **Engine Changes**: Yes — types-core.ts (GameState variable storage types), all kernel variable access sites
-**Deps**: `tickets/65INTINTDOM-008.md`
+**Deps**: `archive/tickets/65INTINTDOM-008.md`
 
 ## Problem
 
@@ -101,3 +101,9 @@ All tests constructing or querying GameState variables update to integer-indexed
 1. `pnpm turbo typecheck`
 2. `pnpm -F @ludoforge/engine test`
 3. `pnpm turbo test`
+
+## Outcome
+
+Completed: 2026-04-04
+
+This ticket was closed because `65INTINTDOM-006` failed the corrected Phase 1 profiling gate, so the remaining Phase 2 and Phase 3 migration work was not justified.

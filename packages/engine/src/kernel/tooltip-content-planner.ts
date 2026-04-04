@@ -8,7 +8,8 @@
  * The template realizer converts ContentPlan → RuleCard.
  */
 
-import type { TooltipMessage, ModifierMessage } from './tooltip-ir.js';
+import type { TooltipMessage, ModifierMessage, SelectMessage } from './tooltip-ir.js';
+import { humanizeIdentifier } from './tooltip-humanizer.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -186,7 +187,12 @@ function deriveSubStepHeader(messages: readonly TooltipMessage[], index: number)
   if (messages.length > 0) {
     const first = messages[0]!;
     if (first.kind === 'summary' && first.macroClass !== undefined) {
-      return first.macroClass;
+      return humanizeIdentifier(first.macroClass);
+    }
+    // For select messages, use target to diversify headers beyond generic "Select spaces"
+    if (first.kind === 'select') {
+      const target = (first as SelectMessage).target;
+      return `Select ${humanizeIdentifier(target)}`;
     }
     const semantic = SUB_STEP_HEADER_BY_KIND[first.kind];
     if (semantic !== undefined) return semantic;

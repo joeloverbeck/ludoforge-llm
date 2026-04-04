@@ -300,7 +300,8 @@ describe('realizeContentPlan', () => {
     it('realizes select with target: values', () => {
       const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'values', bounds: { min: 0, max: 100 } };
       const result = realizeContentPlan(plan([msg]), undefined);
-      assert.equal(result.steps[0]!.lines[0]!.text, 'Select up to 100 values');
+      // max >= 99 is treated as unlimited — upper bound omitted
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select values');
     });
 
     it('realizes select with target: markers', () => {

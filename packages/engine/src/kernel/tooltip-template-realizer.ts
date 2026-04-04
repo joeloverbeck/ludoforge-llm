@@ -39,6 +39,7 @@ import type { VerbalizationDef } from './verbalization-types.js';
 import type { LabelContext } from './tooltip-label-resolver.js';
 import { buildLabelContext, resolveLabel, resolveSentencePlan } from './tooltip-label-resolver.js';
 import { humanizeConditionWithLabels } from './tooltip-modifier-humanizer.js';
+import { humanizeIdentifier } from './tooltip-humanizer.js';
 
 // ---------------------------------------------------------------------------
 // Template functions — one per message kind
@@ -65,6 +66,11 @@ const resolveSelectFilter = (msg: SelectMessage, ctx: LabelContext, count?: numb
   return undefined;
 };
 
+/** Sentinel threshold: bounds >= this value mean "unlimited". */
+const UNLIMITED_SENTINEL = 99;
+
+const isUnlimited = (n: number): boolean => n >= UNLIMITED_SENTINEL;
+
 const realizeSelect = (msg: SelectMessage, ctx: LabelContext): string => {
   // When optionHints exist and there are few options, show them as choices
   if (msg.optionHints !== undefined && msg.optionHints.length > 0 && msg.optionHints.length <= 5) {
@@ -72,8 +78,11 @@ const realizeSelect = (msg: SelectMessage, ctx: LabelContext): string => {
     // When bounds are present with 'items' target, include hints as context
     if (msg.bounds !== undefined && msg.target === 'items') {
       const { min, max } = msg.bounds;
+      if (min === 0 && max === 0) return '';
+      if (isUnlimited(max)) return `Select from: ${options}`;
       if (min === max) return `Select ${min} from: ${options}`;
       if (min === 0) return `Select up to ${max} from: ${options}`;
+      if (min > max) return `Select ${min} from: ${options}`;
       return `Select ${min}-${max} from: ${options}`;
     }
     return `Choose from: ${options}`;
@@ -100,8 +109,24 @@ const realizeSelect = (msg: SelectMessage, ctx: LabelContext): string => {
 
   const { min, max } = msg.bounds;
 
+  // Suppress zero-selection lines (select 0 of 0 is a no-op)
+  if (min === 0 && max === 0) return '';
+
   const hasFilter = msg.conditionAST !== undefined || msg.filter !== undefined;
   const hasContext = branchResolved !== undefined || hasFilter;
+
+  // Unlimited upper bound: omit the count
+  if (isUnlimited(max)) {
+    return `Select ${targetLabel}${hintSuffix ?? ''}`;
+  }
+
+  // Inverted range (min > max): use min as single value
+  if (min > max) {
+    const label = hasContext
+      ? (branchResolved ?? resolveSelectFilter(msg, ctx, min) ?? msg.target)
+      : min === 1 ? singularTarget(msg.target) : msg.target;
+    return `Select ${min} ${label}${hintSuffix ?? ''}`;
+  }
 
   if (min === max) {
     const label = hasContext
@@ -230,13 +255,25 @@ const realizeChoose = (msg: ChooseMessage, ctx: LabelContext): string => {
 const realizeRoll = (msg: RollMessage): string =>
   `Roll ${msg.range.min}-${msg.range.max}`;
 
+/**
+ * Detect kebab-case tokens (3+ segments) and humanize them.
+ * Matches patterns like "Cap-assault-cobras-shaded-cost", "Sweep-loc-hop",
+ * "Place-from-available-or-map" but avoids short hyphenated words.
+ */
+const KEBAB_PATTERN = /\b[A-Za-z]+-[a-z]+-[a-z]+(?:-[a-z]+)*/g;
+
+const humanizeKebabTokens = (text: string): string =>
+  text.replace(KEBAB_PATTERN, (match) => humanizeIdentifier(match));
+
 const realizeModifier = (msg: ModifierMessage): string => {
+  const condition = humanizeKebabTokens(msg.condition);
+  const description = humanizeKebabTokens(msg.description);
   // When description is empty (no pre-authored effect text), render just the condition
-  if (msg.description.length === 0) return msg.condition;
+  if (description.length === 0) return condition;
   // When description duplicates the condition, render just once
-  if (msg.description === msg.condition) return msg.description;
+  if (description === condition) return description;
   // Render "condition: effect description" (no "If " prefix — condition is already clean)
-  return `${msg.condition}: ${msg.description}`;
+  return `${condition}: ${description}`;
 };
 
 const realizeBlocker = (msg: BlockerMessage): string =>
@@ -333,8 +370,10 @@ const realizeStep = (
 ): ContentStep => {
   const lines: RealizedLine[] = [];
   for (const m of planStep.messages) {
-    const text = realizeMessage(m, ctx);
-    if (text.length > 0) {
+    const raw = realizeMessage(m, ctx);
+    if (raw.length > 0) {
+      // Post-realization pass: humanize any remaining kebab-case tokens
+      const text = humanizeKebabTokens(raw);
       lines.push({ text, astPath: m.astPath });
     }
   }

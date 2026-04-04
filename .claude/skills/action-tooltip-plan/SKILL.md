@@ -11,14 +11,14 @@ Read the latest evaluation, analyze root causes across the engine tooltip pipeli
 
 ## Checklist
 
-1. Read `reports/action-tooltip-evaluation.md` — focus on the latest EVALUATION #N. Note the scores, CRITICAL/HIGH recommendations, and any recurring or stagnating issues. Determine the iteration number: `max(latest_evaluation_number, latest_plan_iteration_number) + 1`. **Large file handling**: If the file exceeds read limits, use `offset` to read from the end — evaluations are appended chronologically.
+1. Read `reports/action-tooltip-evaluation.md` — focus on the latest EVALUATION #N. Note the scores, CRITICAL/HIGH recommendations, and any recurring or stagnating issues. Determine the iteration number: for the first plan (no prior plan exists), use `latest_evaluation_number`. Otherwise: `max(latest_evaluation_number, latest_plan_iteration_number) + 1`. **Large file handling**: If the file exceeds read limits, use `offset` to read from the end — evaluations are appended chronologically.
 2. Read `docs/FOUNDATIONS.md` — **all proposals must align** with these principles. Pay special attention to:
    - **Foundation #1** (Engine Agnosticism): Engine tooltip fixes must be game-agnostic
    - **Foundation #3** (Visual Separation): Presentation styling in runner only
    - **Foundation #5** (One Rules Protocol): RuleCard is the shared tooltip protocol
    - **Foundation #10** (Architectural Completeness): Solutions address root causes
    - **Foundation #14** (No Backwards Compatibility): No shims when changing RuleCard interface
-3. Identify the CRITICAL and HIGH recommendations from the evaluation. If none exist, target the top 2-3 MEDIUM recommendations.
+3. Identify the CRITICAL and HIGH recommendations from the evaluation. If none exist, target the top 2-3 MEDIUM recommendations. When multiple CRITICALs exist, prioritize by feasibility within the same severity tier. It is acceptable to defer a high-complexity CRITICAL to a future iteration in favor of completing a lower-complexity CRITICAL plus HIGH items — delivering measurable improvement per iteration is more valuable than attempting everything at once. Document the scoping rationale in the Context section.
 4. **Stalled iteration check**: If the previous evaluation shows no progress since the evaluation before it, check whether the previous plan was implemented. If not, decide whether to carry forward, supersede, or incorporate its recommendations. Note the decision in the Context section. Also review the previous plan's Deferred Items section (if present) and carry forward any items that are still relevant.
 5. **Layer triage**: For each identified problem, determine which layer owns the fix using the Layer Decision Framework below. This is the critical planning step — misattributing a problem to the wrong layer wastes an iteration.
 6. Read the relevant source files for the identified problems (see Key Files). Extract: key type definitions with line numbers, function signatures that will be modified, data flow through the tooltip pipeline. Scope exploration to the specific problems identified in step 3.
@@ -33,7 +33,9 @@ Read the latest evaluation, analyze root causes across the engine tooltip pipeli
 
 ## Layer Decision Framework
 
-Each tooltip readability problem has a root cause in either the engine, the runner, or both. Use this framework to assign fixes correctly:
+Each tooltip readability problem has a root cause in either the engine, the runner, or both. Use this framework to assign fixes correctly.
+
+**Important**: Fix locations below are starting points for investigation, not prescriptions. The plan step must verify the actual root cause location by reading the source files (step 6) before committing to a fix location. Document deviations from the framework in the Layer Triage section.
 
 ### Engine Layer (packages/engine/src/kernel/tooltip-*.ts)
 
@@ -115,12 +117,12 @@ For each problem, document the layer assignment decision:
 
 ## Current Code Architecture (reference for implementer)
 
-Document the exact interfaces, function signatures, and data flow relevant to the
-problems targeted. Include:
-- Key type/interface definitions with file paths and line numbers
+Make the plan self-sufficient — an implementer reading only this file should not need
+to re-explore the codebase. Include:
+- Key type/interface definitions with file paths and approximate line numbers (they may shift between sessions)
 - Function signatures that will be modified
 - Data flow through the tooltip pipeline: message IR → planner → realizer → RuleCard → renderer
-- Current code snippets showing what will change (before state)
+- Code snippets are preferred for complex transforms but prose descriptions suffice when the change is straightforward (e.g., adding a conditional check)
 
 ## Problem 1: [Problem title from evaluation]
 

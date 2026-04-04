@@ -7,6 +7,15 @@ description: Use when new action tooltip screenshots have been captured and need
 
 Score the current action tooltip rendering from screenshots and append a structured evaluation to the report.
 
+## Baseline Evaluation (EVALUATION #1)
+
+When performing the first evaluation (no prior evaluations exist):
+- **Verify Screenshot Reference**: After discovering screenshots via glob, check that the Screenshot Reference section in the rubric header matches the actual files. Update it if inaccurate (e.g., if the rubric says `fitl-train.png` but the actual files are `fitl-train-1.png` and `fitl-train-2.png`).
+- **Deltas**: Use `—` for all Previous and Delta columns.
+- **Resolved Since Previous**: Write "No previous evaluation exists — this is the baseline evaluation."
+- **Recurring Issue Tracking**: Skip — all issues are new by definition.
+- **Score Trend**: Skip — requires 3+ evaluations.
+
 ## Checklist
 
 1. Read `reports/action-tooltip-evaluation.md` — absorb the rubric and the last 2-3 evaluations. The file grows with each evaluation; use this strategy:
@@ -17,6 +26,7 @@ Score the current action tooltip rendering from screenshots and append a structu
 2. Discover and read all current screenshots:
    - Glob `screenshots/action-tooltips/*.png` to find all current screenshots.
    - Read all discovered screenshots in **parallel** (all Read tool calls in a single message).
+   - **Baseline only**: Verify the Screenshot Reference section in the rubric header matches the discovered files. Update if inaccurate.
 3. Determine the next evaluation number from the last `## EVALUATION #N` heading.
 4. **If the screenshot count changed** from the previous evaluation, note this prominently. Explain what new screenshots capture, add a comparability caveat (see Screenshot Set Changes below), and update the **Screenshot Reference** section at the top of the report file to describe all current screenshots.
 5. For each screenshot, write a paragraph describing what's shown and listing specific issues related to the 8 metrics. Focus on:
@@ -25,10 +35,11 @@ Score the current action tooltip rendering from screenshots and append a structu
    - Are step headers descriptive or generic?
    - Are costs, optional steps, and mandatory steps visually distinguishable?
    - Can the tooltip be understood in 5 seconds of scanning?
+   - **Multi-screenshot tooltips**: When multiple screenshots capture the same tooltip at different scroll positions (e.g., `fitl-train-1.png` and `fitl-train-2.png`), analyze them as a single combined entry with a header like `fitl-train-1.png + fitl-train-2.png — Train Tooltip`. Deduplicate observations — list each issue once with a note about which screenshot(s) show it.
 6. Score all 8 metrics (1-10) with brief justification per metric.
 7. Compute score deltas from the previous evaluation. "Previous evaluation" means the most recent *scored* evaluation — skip any No Change stubs when looking up previous scores. For the first evaluation, use `—` for Previous and Delta columns.
 8. List resolved issues from the previous evaluation (see template). For the first evaluation, write: "No previous evaluation exists — this is the baseline evaluation."
-9. Write prioritized recommendations tagged CRITICAL / HIGH / MEDIUM / LOW.
+9. Write prioritized recommendations tagged CRITICAL / HIGH / MEDIUM / LOW. Recommendations should describe the **observable problem** and its impact on the player experience. Do not include root cause analysis or file-level attributions — that is the `action-tooltip-plan` skill's responsibility. Example: write "Filter predicates shown as raw text to the player" not "tooltip-template-realizer.ts serializes filter AST".
 10. Flag recurring issues — note how many consecutive evaluations each issue has persisted.
 11. If 3+ evaluations exist, include a Score Trend table (see template).
 12. Append the complete evaluation section to `reports/action-tooltip-evaluation.md`.
@@ -53,6 +64,10 @@ For each screenshot analyzed, add a section:
 #### [screenshot-filename] — [Action Name] Tooltip
 **What's shown**: [1-2 sentences describing the tooltip state — action type, step count, scroll length]
 **Issues observed**: [bullet list of specific issues related to the 8 metrics]
+
+### Cross-Tooltip Consistency
+
+[Note any inconsistencies in how the same structural element is rendered across different action tooltips. Examples: costs appearing at different step positions, step headers using different labeling conventions, optionality markers present in some tooltips but not others, modifier display varying between tooltips. If all tooltips are consistent, write: "Structural elements are consistent across all analyzed tooltips."]
 
 ### Resolved Since Previous
 

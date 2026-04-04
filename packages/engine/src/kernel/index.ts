@@ -79,6 +79,8 @@ export { tagEffectAsts } from './tag-effect-asts.js';
 export * from './interpreter-mode.js';
 export * from './value-membership.js';
 export * from './token-filter.js';
+export * from './compiled-token-filter-cache.js';
+export * from './token-filter-compiler.js';
 export * from './prng.js';
 export * from './resolve-ref.js';
 export * from './resolve-selectors.js';

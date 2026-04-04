@@ -38,6 +38,7 @@ If that earlier ticket introduced production-corpus traversal, fixture readers, 
    - Does the module structure match the ticket?
    - Are required dependencies and scripts present?
    - If a referenced file path is stale but the intended owned artifact is uniquely discoverable and the ticket boundary stays the same, treat the path as non-blocking and note the corrected live path in your working notes.
+   - If a referenced test file path is stale, prefer the live test surface that actually owns the behavior rather than forcing edits into the obsolete path, unless the ticket explicitly requires a new dedicated test file.
 7. Build a discrepancy list for anything the ticket states that does not match reality.
 8. Check for architectural constraints the ticket may have underspecified:
    - shared type or schema ripple effects
@@ -110,6 +111,7 @@ If that earlier ticket introduced production-corpus traversal, fixture readers, 
   - diagnostics or debug snapshots
   - fixtures, goldens, and tests
   - manually constructed shared runtime/test fixtures such as `GameDefRuntime` or other kernel context objects
+  - if a new UI/store/model context field exists mainly to support one feature path, consider whether it should stay optional on local test-helper contracts to avoid unnecessary fixture churn, so long as production code still supplies it explicitly and the distinction is verified
 - When tightening authored `chooseN` minimums or other decision cardinality constraints:
   - check whether runtime `max` can drop below the new minimum because of resources, grants, action class, or other state-dependent caps
   - if `max < min` can occur, update legality or cost-validation in the same change so the move becomes cleanly illegal instead of failing at runtime

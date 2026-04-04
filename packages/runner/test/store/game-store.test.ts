@@ -193,6 +193,9 @@ function createBridgeStub(overrides: BridgeOverrides): GameWorkerAPI {
   const resolveOverride = <K extends keyof GameWorkerAPI>(key: K): GameWorkerAPI[K] => {
     const override = overrides[key];
     if (override === undefined) {
+      if (key === 'describeAction') {
+        return (async () => null) as GameWorkerAPI[K];
+      }
       return fallbackError as GameWorkerAPI[K];
     }
     return (async (...args: Parameters<GameWorkerAPI[K]>) => {
@@ -312,6 +315,47 @@ describe('createGameStore', () => {
     expect(state.choiceStack).toEqual([]);
     expect(state.choicePending?.kind).toBe('pending');
     expect(state.choicePending?.type).toBe('chooseOne');
+  });
+
+  it('selectAction rejects blocked actions before entering the choice flow', async () => {
+    const def = compileStoreFixture(5);
+    const legalChoices = vi.fn<GameWorkerAPI['legalChoices']>(async () => ({ kind: 'complete', complete: true }));
+    const bridge = createBridgeStub({
+      init: () => initialState(def, 31, 2),
+      enumerateLegalMoves: () => toLegalMoveResult([{ actionId: asActionId('tick'), params: {} }]),
+      describeAction: async () => ({
+        sections: [],
+        limitUsage: [],
+        tooltipPayload: {
+          ruleCard: {
+            title: 'Tick',
+            synopsis: '',
+            steps: [],
+            modifiers: [],
+          },
+          ruleState: {
+            available: false,
+            blockers: [{ summary: 'Need Event Card Id = Card 121' }],
+            activeModifierIndices: [],
+          },
+        },
+      } as unknown as Awaited<ReturnType<GameWorkerAPI['describeAction']>>),
+      terminalResult: () => null,
+      legalChoices,
+    });
+    const store = createStoreWithDefaultVisuals(bridge);
+
+    await store.getState().initGame(def, 31, TWO_PLAYER_CONFIG);
+    await store.getState().selectAction(asActionId('tick'));
+
+    expect(legalChoices).not.toHaveBeenCalled();
+    expect(store.getState().selectedAction).toBeNull();
+    expect(store.getState().partialMove).toBeNull();
+    expect(store.getState().choicePending).toBeNull();
+    expect(store.getState().error).toMatchObject({
+      code: 'ILLEGAL_MOVE',
+      message: 'Blocked action: tick',
+    });
   });
 
   it('real-worker mixed progressive flow advances through chooseOne -> chooseN and stores decisionKey-keyed params', async () => {

@@ -52,6 +52,7 @@ interface GameStoreState {
   readonly orchestrationDiagnostic: OrchestrationDiagnostic | null;
   readonly orchestrationDiagnosticSequence: number;
   readonly legalMoveResult: LegalMoveEnumerationResult | null;
+  readonly actionAvailabilityById: ReadonlyMap<string, boolean>;
   readonly choicePending: ChoicePendingRequest | null;
   readonly effectTrace: readonly EffectTraceEntry[];
   readonly triggerFirings: readonly TriggerLogEntry[];
@@ -147,6 +148,7 @@ interface RenderDerivationInputs {
   readonly gameState: GameState | null;
   readonly playerID: PlayerId | null;
   readonly legalMoveResult: LegalMoveEnumerationResult | null;
+  readonly actionAvailabilityById: ReadonlyMap<string, boolean>;
   readonly choicePending: ChoicePendingRequest | null;
   readonly selectedAction: ActionId | null;
   readonly partialMove: Move | null;
@@ -158,6 +160,7 @@ interface RenderDerivationInputs {
 interface MutationTransitionInputs {
   readonly gameState: GameState;
   readonly legalMoveResult: LegalMoveEnumerationResult;
+  readonly actionAvailabilityById: ReadonlyMap<string, boolean>;
   readonly terminal: TerminalResult | null;
 }
 
@@ -200,6 +203,7 @@ const INITIAL_STATE: Omit<GameStoreState, 'playerSeats'> = {
   orchestrationDiagnostic: null,
   orchestrationDiagnosticSequence: 0,
   legalMoveResult: null,
+  actionAvailabilityById: new Map<string, boolean>(),
   choicePending: null,
   effectTrace: [],
   triggerFirings: [],
@@ -235,6 +239,7 @@ function resetSessionState(): Pick<
   | 'orchestrationDiagnostic'
   | 'orchestrationDiagnosticSequence'
   | 'legalMoveResult'
+  | 'actionAvailabilityById'
   | 'choicePending'
   | 'effectTrace'
   | 'triggerFirings'
@@ -254,6 +259,7 @@ function resetSessionState(): Pick<
     orchestrationDiagnostic: null,
     orchestrationDiagnosticSequence: 0,
     legalMoveResult: null,
+    actionAvailabilityById: new Map<string, boolean>(),
     choicePending: null,
     effectTrace: [],
     triggerFirings: [],
@@ -273,6 +279,7 @@ function buildInitSuccessState(
   gameState: GameState,
   playerConfig: readonly PlayerSeatConfig[],
   legalMoveResult: LegalMoveEnumerationResult,
+  actionAvailabilityById: ReadonlyMap<string, boolean>,
   terminal: TerminalResult | null,
   lifecycle: GameLifecycle,
   setupTrace: readonly EffectTraceEntry[],
@@ -283,6 +290,7 @@ function buildInitSuccessState(
     gameState,
     playerID: humanSeat !== undefined ? asPlayerId(humanSeat.playerId) : null,
     legalMoveResult,
+    actionAvailabilityById,
     terminal,
     gameLifecycle: lifecycle,
     error: null,
@@ -313,6 +321,7 @@ function resetMoveConstructionState(): Pick<GameStoreState, 'selectedAction' | '
 function buildStateMutationState(
   gameState: GameState,
   legalMoveResult: LegalMoveEnumerationResult,
+  actionAvailabilityById: ReadonlyMap<string, boolean>,
   terminal: TerminalResult | null,
   lifecycle: GameLifecycle,
   effectTrace: readonly EffectTraceEntry[],
@@ -321,6 +330,7 @@ function buildStateMutationState(
   return {
     gameState,
     legalMoveResult,
+    actionAvailabilityById,
     terminal,
     gameLifecycle: lifecycle,
     effectTrace,
@@ -498,6 +508,7 @@ function toRenderContext(inputs: RenderDerivationInputs): RenderContext | null {
   return {
     playerID: inputs.playerID,
     legalMoveResult: inputs.legalMoveResult,
+    actionAvailabilityById: inputs.actionAvailabilityById,
     choicePending: inputs.choicePending,
     selectedAction: inputs.selectedAction,
     partialMove: inputs.partialMove,
@@ -538,6 +549,7 @@ function toRenderDerivationInputs(state: MutableGameStoreState): RenderDerivatio
     gameState: state.gameState,
     playerID: state.playerID,
     legalMoveResult: state.legalMoveResult,
+    actionAvailabilityById: state.actionAvailabilityById,
     choicePending: state.choicePending,
     selectedAction: state.selectedAction,
     partialMove: state.partialMove,
@@ -558,6 +570,7 @@ function snapshotMutableState(state: GameStore): MutableGameStoreState {
     orchestrationDiagnostic: state.orchestrationDiagnostic,
     orchestrationDiagnosticSequence: state.orchestrationDiagnosticSequence,
     legalMoveResult: state.legalMoveResult,
+    actionAvailabilityById: state.actionAvailabilityById,
     choicePending: state.choicePending,
     effectTrace: state.effectTrace,
     triggerFirings: state.triggerFirings,
@@ -624,6 +637,46 @@ function emitMoveAppliedTrace(
       turnCount: mutationInputs.gameState.turnCount,
     });
   }
+}
+
+async function deriveActionAvailabilityById(
+  bridge: GameWorkerAPI,
+  gameState: GameState,
+  legalMoveResult: LegalMoveEnumerationResult,
+): Promise<ReadonlyMap<string, boolean>> {
+  const actionIds = Array.from(new Set(legalMoveResult.moves.map(({ move }) => String(move.actionId))));
+  if (actionIds.length === 0) {
+    return new Map<string, boolean>();
+  }
+
+  const described = await Promise.all(
+    actionIds.map(async (actionId) => ({
+      actionId,
+      description: await bridge.describeAction(actionId, { actorPlayer: gameState.activePlayer }),
+    })),
+  );
+
+  const availabilityByActionId = new Map<string, boolean>();
+  for (const { actionId, description } of described) {
+    availabilityByActionId.set(actionId, description?.tooltipPayload?.ruleState.available ?? true);
+  }
+  return availabilityByActionId;
+}
+
+function toBlockedActionError(
+  actionId: ActionId,
+  description: Awaited<ReturnType<GameWorkerAPI['describeAction']>>,
+): WorkerError {
+  return {
+    code: 'ILLEGAL_MOVE',
+    message: `Blocked action: ${String(actionId)}`,
+    details: {
+      actionId: String(actionId),
+      ...(description?.tooltipPayload?.ruleState === undefined
+        ? {}
+        : { ruleState: description.tooltipPayload.ruleState }),
+    },
+  };
 }
 
 export function createGameStore(
@@ -736,10 +789,12 @@ export function createGameStore(
 
       const deriveMutationInputs = async (gameState: GameState): Promise<MutationTransitionInputs> => {
         const legalMoveResult = await bridge.enumerateLegalMoves();
+        const actionAvailabilityById = await deriveActionAvailabilityById(bridge, gameState, legalMoveResult);
         const terminal = await bridge.terminalResult();
         return {
           gameState,
           legalMoveResult,
+          actionAvailabilityById,
           terminal,
         };
       };
@@ -903,6 +958,7 @@ export function createGameStore(
           ...buildStateMutationState(
             mutationInputs.gameState,
             mutationInputs.legalMoveResult,
+            mutationInputs.actionAvailabilityById,
             mutationInputs.terminal,
             lifecycle,
             result.effectTrace ?? [],
@@ -939,6 +995,7 @@ export function createGameStore(
           try {
             const { state: gameState, setupTrace } = await bridge.init(def, seed, { playerCount: playerConfig.length }, toOperationStamp(operation));
             const legalMoveResult = await bridge.enumerateLegalMoves();
+            const actionAvailabilityById = await deriveActionAvailabilityById(bridge, gameState, legalMoveResult);
             const terminal = await bridge.terminalResult();
             agentTurnOrchestrator.initializeSession({ def, seed, playerCount: gameState.playerCount });
             const lifecycle = assertLifecycleTransition(
@@ -946,7 +1003,10 @@ export function createGameStore(
               lifecycleFromTerminal(terminal),
               'initGame:success',
             );
-            guardSetAndDerive(operation, buildInitSuccessState(def, gameState, playerConfig, legalMoveResult, terminal, lifecycle, setupTrace));
+            guardSetAndDerive(
+              operation,
+              buildInitSuccessState(def, gameState, playerConfig, legalMoveResult, actionAvailabilityById, terminal, lifecycle, setupTrace),
+            );
 
             if (options?.traceBus !== undefined) {
               options.traceBus.emit({
@@ -981,6 +1041,7 @@ export function createGameStore(
             }
             const gameState = await bridge.getState();
             const legalMoveResult = await bridge.enumerateLegalMoves();
+            const actionAvailabilityById = await deriveActionAvailabilityById(bridge, gameState, legalMoveResult);
             const terminal = await bridge.terminalResult();
             agentTurnOrchestrator.initializeSession({ def, seed, playerCount: gameState.playerCount });
             const lifecycle = assertLifecycleTransition(
@@ -988,7 +1049,10 @@ export function createGameStore(
               lifecycleFromTerminal(terminal),
               'initGameFromHistory:success',
             );
-            guardSetAndDerive(operation, buildInitSuccessState(def, gameState, playerConfig, legalMoveResult, terminal, lifecycle, []));
+            guardSetAndDerive(
+              operation,
+              buildInitSuccessState(def, gameState, playerConfig, legalMoveResult, actionAvailabilityById, terminal, lifecycle, []),
+            );
           } catch (error) {
             const lifecycle = assertLifecycleTransition(get().gameLifecycle, 'idle', 'initGameFromHistory:failure');
             guardSetAndDerive(operation, buildInitFailureState(error, lifecycle));
@@ -1008,6 +1072,7 @@ export function createGameStore(
             buildStateMutationState(
               gameState,
               legalMoveResult,
+              get().actionAvailabilityById,
               terminal,
               lifecycle,
               effectTrace,
@@ -1024,6 +1089,21 @@ export function createGameStore(
 
         async selectAction(actionId, actionClass) {
           await runActionOperation(async (ctx) => {
+            const state = get();
+            if (state.gameState === null) {
+              return;
+            }
+            const description = await bridge.describeAction(String(actionId), {
+              actorPlayer: state.gameState.activePlayer,
+            });
+            if (description?.tooltipPayload?.ruleState.available === false) {
+              guardSetAndDerive(ctx, {
+                error: toBlockedActionError(actionId, description),
+                ...resetMoveConstructionState(),
+              });
+              return;
+            }
+
             const baseMove: Move = {
               actionId,
               params: {},
@@ -1084,6 +1164,7 @@ export function createGameStore(
               ...buildStateMutationState(
                 mutationInputs.gameState,
                 mutationInputs.legalMoveResult,
+                mutationInputs.actionAvailabilityById,
                 mutationInputs.terminal,
                 lifecycle,
                 result.effectTrace ?? [],
@@ -1185,6 +1266,7 @@ export function createGameStore(
               ...buildStateMutationState(
                 mutationInputs.gameState,
                 mutationInputs.legalMoveResult,
+                mutationInputs.actionAvailabilityById,
                 mutationInputs.terminal,
                 lifecycle,
                 [],

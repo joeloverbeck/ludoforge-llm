@@ -39,7 +39,7 @@ When performing the first evaluation (no prior evaluations exist):
 6. Score all 8 metrics (1-10) with brief justification per metric.
 7. Compute score deltas from the previous evaluation. "Previous evaluation" means the most recent *scored* evaluation — skip any No Change stubs when looking up previous scores. For the first evaluation, use `—` for Previous and Delta columns.
 8. List resolved issues from the previous evaluation (see template). For the first evaluation, write: "No previous evaluation exists — this is the baseline evaluation."
-9. Write prioritized recommendations tagged CRITICAL / HIGH / MEDIUM / LOW. Recommendations should describe the **observable problem** and its impact on the player experience. Do not include root cause analysis or file-level attributions — that is the `action-tooltip-plan` skill's responsibility. Example: write "Filter predicates shown as raw text to the player" not "tooltip-template-realizer.ts serializes filter AST".
+9. Write prioritized recommendations tagged CRITICAL / HIGH / MEDIUM / LOW. Recommendations should describe **what the player sees** and **why it's a problem**, not how to fix it. Do not include root cause analysis, file-level attributions, or implementation approach suggestions (e.g., "via verbalization data", "by target type"). The `action-tooltip-plan` skill determines the how. Example: write "Filter predicates shown as raw text to the player" not "tooltip-template-realizer.ts serializes filter AST" and not "resolve via verbalization labels".
 10. Flag recurring issues — note how many consecutive evaluations each issue has persisted.
 11. If 3+ evaluations exist, include a Score Trend table (see template).
 12. Append the complete evaluation section to `reports/action-tooltip-evaluation.md`.
@@ -67,7 +67,7 @@ For each screenshot analyzed, add a section:
 
 ### Cross-Tooltip Consistency
 
-[Note any inconsistencies in how the same structural element is rendered across different action tooltips. Examples: costs appearing at different step positions, step headers using different labeling conventions, optionality markers present in some tooltips but not others, modifier display varying between tooltips. If all tooltips are consistent, write: "Structural elements are consistent across all analyzed tooltips."]
+[Check these elements for cross-tooltip consistency: step header conventions, cost positioning, optionality markers, modifier display, identifier humanization. Note any inconsistencies — e.g., costs at step 5 in one tooltip but step 8 in another, or different header styles for semantically similar steps. If all tooltips are consistent, write: "Structural elements are consistent across all analyzed tooltips."]
 
 ### Resolved Since Previous
 
@@ -126,6 +126,8 @@ If the user disputes part of an already-appended evaluation:
 - **6-7**: Adequate — mostly readable, occasional jargon leaks, step grouping could be clearer, costs not visually prominent
 - **8-9**: Good — reads like a board game reference card, clear step headers, prominent costs, optional steps marked, minimal technical artifacts
 - **10**: Excellent — indistinguishable from a professionally written game manual tooltip, perfect visual hierarchy, instant scannability
+
+When an issue is partially resolved, score based on the **current player experience**, not on the effort applied. A humanized-but-meaningless string ("Cap Assault Cobras Shaded Cost") is better than a raw identifier ("Cap-assault-cobras-shaded-cost") but still fails the "reads like a game manual" test — score accordingly.
 
 ## What to Look For
 

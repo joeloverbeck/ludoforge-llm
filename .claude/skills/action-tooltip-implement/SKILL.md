@@ -31,6 +31,7 @@ Improve action tooltip readability based on the latest plan's recommendations, i
    - Grep engine test files for the function/constant name
    - Grep runner test files for any imports from modified engine modules
    - Classify hits as golden assertions (must update) vs independent fixtures (leave alone)
+   - For small changes (1-3 source files), the build-test-fix cycle may be faster than formal grep-based analysis. Use formal analysis when changes affect interfaces, constants shared across many tests, or when the plan notes HIGH test churn risk.
 9. Update test assertions based on the impact analysis from Step 8.
 10. Run verification:
     - `pnpm turbo typecheck` — must pass (both packages)
@@ -155,8 +156,8 @@ Changes to this interface affect both packages — the engine produces it, the r
 ### Engine-Side
 
 - **Game-specific humanization**: Don't add FITL-specific string replacements in the humanizer. Use the `VerbalizationDef` and label resolver for game-specific terms — the humanizer must stay game-agnostic.
-- **Filter predicate text**: The template realizer's `realizeSelect()` currently stringifies filter conditions directly. Improving this requires understanding the filter AST structure — don't just regex-replace the output string.
-- **Magic number normalization**: "99" and "999" are sentinel values for "unlimited" in the engine's select/choose message bounds. Normalize these in the content planner, not the realizer.
+- **Filter predicate text**: Token filter stringification happens in `tooltip-value-stringifier.ts` (`stringifyTokenFilter()`), not in the realizer. The realizer consumes pre-stringified filter strings. Fix filter syntax at the source (stringifier), not via regex post-processing in the realizer.
+- **Magic number normalization**: "99" and "999" are sentinel values for "unlimited". These are normalized in `realizeSelect()` in the realizer, where bounds formatting logic lives.
 - **Step header diversity**: The `SUB_STEP_HEADER_BY_KIND` map in the content planner maps message kinds to headers. Multiple consecutive messages of the same kind produce identical headers. The fix should diversify headers based on context, not just kind.
 - **Integration test fragility**: `tooltip-pipeline-integration.test.ts` and `tooltip-cross-game-properties.test.ts` test full pipeline output. Changes to humanization, headers, or text templates will break golden assertions in these tests. Update them to match the new output.
 

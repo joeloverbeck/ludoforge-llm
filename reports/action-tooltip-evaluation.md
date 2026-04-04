@@ -143,3 +143,110 @@ No previous evaluation exists — this is the baseline evaluation.
 8. **[MEDIUM]** Improve cost transparency — add a dedicated "Cost" section or visually highlight cost lines rather than burying them as regular bullets.
 
 9. **[LOW]** Systematic optional/mandatory distinction — extend the "(optional)" text marker that exists in Train to all tooltips, and add visual styling (dimmed, italicized, or marked with an icon).
+
+---
+
+## EVALUATION #2
+
+**Date**: 2026-04-04
+**Screenshots analyzed**: fitl-assault.png, fitl-patrol.png, fitl-sweep.png, fitl-train-1.png, fitl-train-2.png
+
+### Screenshot Analysis
+
+#### fitl-assault.png — Assault Tooltip
+**What's shown**: Assault operation tooltip with synopsis, collapsible "Step 1" containing 7 sub-steps (down from 8 — zero-selection suppressed), modifiers (0 active), availability indicator, Raw AST toggle.
+**Issues observed**:
+- **Resolved**: "Select 0 Target Spaces" line is gone (zero-selection suppressed)
+- **Resolved**: "Select 1-0 number of..." inverted range no longer appears — step 7 now shows "Select 1 number of..."
+- **Improved**: "Cap Assault Cobras Shaded Cost" and "Cap Assault M48 Unshaded Bonus Removal" — kebab-case humanized to Title Case. Still semantically opaque to players but no longer looks like an internal ID
+- **Partially improved**: Step 5 header is now "Select items" instead of "Select spaces" — but steps 1, 2, 4, 6, 7 are still all "Select spaces"
+- **Persists**: Filter predicates still raw: "number of US Troops pieces > 0 and number of NVA/VC pieces > 0"
+- **Persists**: "zone Id in Target Spaces and not Terrain Tags includes Lowland" — raw filter with internal field names
+- **Persists**: No visual hierarchy — costs, selections, conditions all same style
+
+#### fitl-patrol.png — Patrol Tooltip
+**What's shown**: Patrol operation tooltip with synopsis, collapsible "Step 1" and 8 sub-steps, modifiers (expanded, 1 active), availability indicator.
+**Issues observed**:
+- **Resolved**: "Select 1-99" magic number gone — step 2 now shows "Select zone Category is Line of Communication" (unlimited, no count)
+- **Resolved**: "Select 0 Faction eq us..." line suppressed — gone from step 3
+- **Resolved**: "Select up to 99 Faction eq arvn..." gone — step 7 now shows "Select Faction eq arvn and type in troops, police"
+- **Improved**: "Cap Patrol M48 Shaded Moved Cube Penalty" — humanized from kebab-case
+- **Improved**: Steps 3, 5, 7, 8 now show "Select zones" instead of "Select spaces" — some diversification
+- **Persists**: Steps 1, 2 still "Select spaces"; steps 5, 7, 8 all "Select zones" — still repetitive within target type
+- **Persists**: "$cube" variable in "Move Cube from Zone of $cube to Loc"
+- **Persists**: "Set Cube.m48patrol Moved to true" — raw property chain
+- **Persists**: "Faction eq us and type in troops, police and m48patrol Moved eq true" — filter predicate
+
+#### fitl-sweep.png — Sweep Tooltip
+**What's shown**: Sweep operation tooltip with synopsis, collapsible "Step 1" with 4 bullet items (down from 6 — zero-selections suppressed) plus 5 sub-steps, modifiers (collapsed), availability, Raw AST toggle.
+**Issues observed**:
+- **Resolved**: "Select 0 Faction eq us and type eq troops" line suppressed — gone
+- **Resolved**: "Select 0 Faction eq arvn and type eq troops" line suppressed — gone
+- **Resolved**: "Select up to 99 spaces" magic number gone — step 4 now shows "Select spaces" (unlimited, no count)
+- **Improved**: "Cap Sweep Cobras Unshaded Removal" and "Cap Sweep Booby Traps Shaded Cost" — humanized from kebab-case
+- **Improved**: "Sweep Loc Hop" — humanized from "Sweep-loc-hop"
+- **Persists**: "$troop" variable: "Move Troop from Zone of $troop to Space"
+- **Persists**: Long filter: "Select 1 zone Category in Province or City and zone Country is not North Vietnam"
+- **Persists**: Step 4 "Select spaces" with child "Select spaces" — header and content say the same thing
+
+#### fitl-train-1.png + fitl-train-2.png — Train Tooltip
+**What's shown**: Train operation tooltip spanning 2 screenshots. Synopsis, collapsible "Step 1" with ~10 bullet items (down from ~12 — zero-selections suppressed), sub-steps 1-7. Requires significant scrolling.
+**Issues observed**:
+- **Resolved**: "Select 1-99" magic numbers gone — unlimited selections now show without count
+- **Improved**: "Place From Available Or Map" — humanized from "Place-from-available-or-map" (in Summary sub-step)
+- **Persists**: "$transferAmount" variable: "Set Patronage to $transferAmount * -1", "Set ARVN Resources to $transferAmount"
+- **Persists**: "$pacLevels" variable: "Set ARVN Resources to $pacLevels * -4 or -3", "Shift Support/Opposition by $pacLevels"
+- **Persists**: Confusing arithmetic: "Set ARVN Resources to 1 * -4 or -3"
+- **Persists**: Filter predicates: "zone Category in City or Province and number of US pieces > 0"
+- **Persists**: "Remove Cube from Sub Space to ARVN Available Forces" — "Sub Space" jargon
+- **Persists**: Tooltip still spans 2 screens with no progressive disclosure
+- **Positive**: Sub-step headers remain diverse (Summary, Choose option, Pay resources, Set values, Shift markers, Remove pieces)
+
+### Cross-Tooltip Consistency
+
+- **Kebab-case humanization is consistent**: All tooltips now show Title Case versions of former kebab-case IDs
+- **Magic number handling is consistent**: All tooltips suppress zero-selections and omit unlimited bounds
+- **Step header inconsistency**: Assault uses "Select items" for one step; Patrol uses "Select zones" for zone-target steps; Sweep uses "Select spaces" for all. The diversification is target-type-based, producing different headers across tooltips for semantically similar steps
+- **Cost positioning inconsistent**: Costs appear at step 5/7 in Assault, step 6/8 in Patrol, step 5/5 in Sweep — no dedicated cost section
+
+### Resolved Since Previous
+
+- **"Select 0 Target Spaces" and zero-selection lines** — was [CRITICAL-adjacent, part of HIGH #5] in Eval #1, now suppressed. Zero-count selection lines no longer appear.
+- **Magic number "99" in bounds** — was [HIGH #5] in Eval #1, now fixed. "Select 1-99" and "Select up to 99" no longer appear; unlimited bounds omit the count.
+- **Inverted range "1-0"** — was [HIGH #5] in Eval #1, now fixed. Inverted min>max ranges handled gracefully.
+- **Kebab-case capability IDs** — was [CRITICAL #3] in Eval #1, partially fixed. IDs like "Cap-assault-cobras-shaded-cost" now humanized to "Cap Assault Cobras Shaded Cost". Still semantically opaque but no longer looks like an internal identifier.
+- **Repetitive "Select spaces" headers** — was [HIGH #4] in Eval #1, partially improved. Target-based diversification produces "Select zones", "Select items", "Select spaces" depending on target type. Repetition within same target type persists.
+
+### Scores
+
+| # | Metric | Score | Previous | Delta | Justification |
+|---|--------|-------|----------|-------|---------------|
+| 1 | Language Naturalness | 3 | 2 | +1 | Magic numbers and zero-selections eliminated. But filter predicates ("Faction eq us and type in troops"), $variables ($cube, $troop, $transferAmount), property chains ("Cube.m48patrol Moved"), and arithmetic ("1 * -4 or -3") persist. Improvement is real but constrained by deferred CRITICALs. |
+| 2 | Step Semantic Clarity | 4 | 3 | +1 | Headers diversified by target type: "Select zones", "Select items", "Select spaces". Better than uniform "Select spaces" x7, but still repetitive within target type (e.g., "Select spaces" x4 in Sweep). macroClass humanized ("Place From Available Or Map"). |
+| 3 | Information Hierarchy | 3 | 3 | 0 | No visual/presentation changes this iteration. All text still same monospace weight. Costs still buried as regular bullets. |
+| 4 | Terminology Consistency | 3 | 2 | +1 | Kebab-case IDs humanized to Title Case ("Cap Assault Cobras Shaded Cost" vs "Cap-assault-cobras-shaded-cost"). Visually no longer looks like an internal ID. But semantically still opaque — players don't know what "Cap Assault Cobras Shaded Cost" means. Filter predicates and property names still leak. |
+| 5 | Progressive Disclosure | 3 | 3 | 0 | No changes — Train still spans 2 screens. Fewer bullet items in Step 1 due to zero-suppression (minor improvement, not enough to move the score). |
+| 6 | Visual Scannability | 4 | 4 | 0 | No visual changes. Fewer lines due to zero-suppression makes tooltips slightly less dense, but typography and spacing unchanged. |
+| 7 | Cost Transparency | 4 | 4 | 0 | No changes to cost display. Costs still buried as regular bullets at various step positions. |
+| 8 | Optional/Mandatory Distinction | 3 | 3 | 0 | No changes. One "(optional)" marker in Train persists. |
+| | **Average** | **3.4** | **3.0** | **+0.4** | |
+
+### Prioritized Recommendations
+
+1. **[CRITICAL]** Filter predicates displayed as raw text to the player — "Faction eq us and type in troops, police", "zone Category in Province or City and zone Country is not North Vietnam". These read like database queries and are the largest remaining readability barrier. *(Recurring: 2 consecutive evaluations, metric: Language Naturalness improving +1 but still at 3)*
+
+2. **[CRITICAL]** Raw `$variable` references and arithmetic expressions shown to the player — "$cube", "$troop", "$transferAmount", "$pacLevels", "1 * -4 or -3" are meaningless to players. Suppressing or resolving these would significantly improve Language Naturalness. *(Recurring: 2 consecutive evaluations)*
+
+3. **[HIGH]** Humanized capability IDs are Title Case but still semantically meaningless — "Cap Assault Cobras Shaded Cost" tells the player nothing about what the capability does. These need to be resolved to descriptive text (e.g., "Cobras (unshaded): remove 1 extra piece") via verbalization data or suppressed entirely if no description is available. *(New — upgraded from partial CRITICAL #3 resolution)*
+
+4. **[HIGH]** Step headers still repetitive within the same target type — Patrol has 3x "Select zones", Assault has 4x "Select spaces". Diversification by target type helped but didn't solve the core issue of consecutive identical headers. *(Recurring: 2 consecutive evaluations, metric: Step Semantic Clarity improving +1 but still at 4)*
+
+5. **[MEDIUM]** No visual hierarchy — all text still uniform monospace. Costs, conditions, and choices are indistinguishable from action steps. No runner-layer presentation changes have been made yet. *(Recurring: 2 consecutive evaluations, metric: Information Hierarchy unchanged at 3)*
+
+6. **[MEDIUM]** Train tooltip still requires 2 screens of scrolling with no collapsible sub-sections. *(Recurring: 2 consecutive evaluations, metric: Progressive Disclosure unchanged at 3)*
+
+7. **[MEDIUM]** Costs buried as regular bullets at inconsistent step positions across tooltips. *(Recurring: 2 consecutive evaluations, metric: Cost Transparency unchanged at 4)*
+
+8. **[LOW]** Raw property chains visible — "Set Cube.m48patrol Moved to true", "Sub Space" jargon. *(Recurring: 2 consecutive evaluations)*
+
+9. **[LOW]** Optional/mandatory distinction limited to one "(optional)" marker in Train. *(Recurring: 2 consecutive evaluations, metric unchanged at 3)*

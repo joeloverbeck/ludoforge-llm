@@ -149,9 +149,23 @@ export const stringifyScopedVarNameExpr = (expr: ScopedVarNameExpr): string => {
 // Token filter stringification (moved from tooltip-normalizer-compound.ts)
 // ---------------------------------------------------------------------------
 
-const stringifyPredicateValue = (value: ValueExpr | readonly (string | number | boolean)[]): string => {
-  if (Array.isArray(value)) return (value as readonly (string | number | boolean)[]).join(', ');
+const humanizePredicateValue = (value: ValueExpr | readonly (string | number | boolean)[]): string => {
+  if (Array.isArray(value)) return (value as readonly (string | number | boolean)[]).map((v) => humanizeIdentifier(String(v))).join(', ');
+  if (typeof value === 'string') return humanizeIdentifier(value);
   return stringifyValueExpr(value as ValueExpr);
+};
+
+const humanizeFilterOp = (op: string): string => {
+  switch (op) {
+    case 'eq': return 'is';
+    case 'ne': return 'is not';
+    case 'in': return 'in';
+    case 'gt': return '>';
+    case 'lt': return '<';
+    case 'gte': return '\u2265';
+    case 'lte': return '\u2264';
+    default: return op;
+  }
 };
 
 export const stringifyTokenFilter = (filter: TokenFilterExpr): string => {
@@ -160,10 +174,10 @@ export const stringifyTokenFilter = (filter: TokenFilterExpr): string => {
       filter.prop
       ?? (filter.field?.kind === 'prop' ? filter.field.prop : filter.field?.kind)
       ?? '<field>';
-    return `${field} ${filter.op} ${stringifyPredicateValue(filter.value)}`;
+    return `${humanizeIdentifier(field)} ${humanizeFilterOp(filter.op)} ${humanizePredicateValue(filter.value)}`;
   }
-  if (filter.op === 'not') return `NOT ${stringifyTokenFilter(filter.arg)}`;
-  return filter.args.map(stringifyTokenFilter).join(` ${filter.op.toUpperCase()} `);
+  if (filter.op === 'not') return `not ${stringifyTokenFilter(filter.arg)}`;
+  return filter.args.map(stringifyTokenFilter).join(` ${filter.op} `);
 };
 
 // ---------------------------------------------------------------------------

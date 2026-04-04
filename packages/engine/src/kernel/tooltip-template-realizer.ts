@@ -265,6 +265,12 @@ const KEBAB_PATTERN = /\b[A-Za-z]+-[a-z]+-[a-z]+(?:-[a-z]+)*/g;
 const humanizeKebabTokens = (text: string): string =>
   text.replace(KEBAB_PATTERN, (match) => humanizeIdentifier(match));
 
+/** Detect $variableName references and humanize them (strip $ and title-case). */
+const DOLLAR_VAR_PATTERN = /\$([a-zA-Z_]\w*)/g;
+
+const humanizeDollarVars = (text: string): string =>
+  text.replace(DOLLAR_VAR_PATTERN, (_match, name: string) => humanizeIdentifier(name));
+
 const realizeModifier = (msg: ModifierMessage): string => {
   const condition = humanizeKebabTokens(msg.condition);
   const description = humanizeKebabTokens(msg.description);
@@ -372,8 +378,8 @@ const realizeStep = (
   for (const m of planStep.messages) {
     const raw = realizeMessage(m, ctx);
     if (raw.length > 0) {
-      // Post-realization pass: humanize any remaining kebab-case tokens
-      const text = humanizeKebabTokens(raw);
+      // Post-realization pass: humanize $variables and kebab-case tokens
+      const text = humanizeKebabTokens(humanizeDollarVars(raw));
       lines.push({ text, astPath: m.astPath });
     }
   }

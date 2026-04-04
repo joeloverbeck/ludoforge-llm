@@ -1298,7 +1298,7 @@ describe('tooltip-normalizer', () => {
       if (msg.kind === 'select') {
         assert.equal(msg.target, 'zones');
         assert.ok(msg.filter !== undefined);
-        assert.ok(msg.filter!.includes('type'));
+        assert.ok(msg.filter!.includes('Type'));
       }
     });
 

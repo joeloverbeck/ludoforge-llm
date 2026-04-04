@@ -1,197 +1,143 @@
-# Action Tooltip Plan — Iteration 2
+# Action Tooltip Plan — Iteration 3
 
 **Date**: 2026-04-04
-**Based on**: EVALUATION #1 (average score: 3.0)
-**Problems targeted**: CRITICAL #3 (kebab-case capability IDs), HIGH #5 (magic numbers), HIGH #4 (repetitive step headers)
+**Based on**: EVALUATION #2 (average score: 3.4)
+**Problems targeted**: CRITICAL #1 (filter predicates as raw text), CRITICAL #2 (raw $variable references and arithmetic)
 
 ## Context
 
-Baseline evaluation scored 3.0/10 — tooltips are in the "unusable" range. Three CRITICAL and two HIGH issues were identified. This first implementation iteration targets the three most feasible fixes that collectively impact 6 of 8 metrics. The two hardest CRITICALs (#1 filter predicates, #2 $variables) are deferred — they require deeper investigation of the filter AST and binding resolution pipelines.
+Evaluation #2 improved from 3.0 to 3.4 after fixing magic numbers, step headers, and kebab-case IDs. The two remaining CRITICALs — filter predicates and $variable references — are the last major engine-layer data quality blockers, both recurring for 2 consecutive evaluations. These jointly affect Language Naturalness (currently 3/10) and Terminology Consistency (3/10). Fixing both should push the average toward 4.5-5.0, moving out of the "unusable" range. Both CRITICALs are addressed this iteration because they share a common fix pattern (post-realization text cleanup) and can be implemented independently.
 
 ## Deferred Items
 
 | Item | First recommended | Deferred since | Target iteration |
 |------|-------------------|---------------|-----------------|
-| Humanize filter predicates (CRITICAL #1) | Eval #1 | Iteration 2 | Iteration 3 |
-| Remove raw $variable references (CRITICAL #2) | Eval #1 | Iteration 2 | Iteration 3 |
-| Add visual hierarchy via CSS (MEDIUM #6) | Eval #1 | Iteration 2 | no target yet |
-| Progressive disclosure for long tooltips (MEDIUM #7) | Eval #1 | Iteration 2 | no target yet |
-| Cost transparency improvements (MEDIUM #8) | Eval #1 | Iteration 2 | no target yet |
+| Humanized capability IDs still semantically meaningless (HIGH #3) | Eval #2 | Iteration 3 | Iteration 4 |
+| Step headers still repetitive within same target type (HIGH #4) | Eval #2 | Iteration 3 | Iteration 4 |
+| Visual hierarchy via CSS (MEDIUM #5) | Eval #1 | Iteration 2 | no target yet |
+| Progressive disclosure for long tooltips (MEDIUM #6) | Eval #1 | Iteration 2 | no target yet |
+| Cost transparency improvements (MEDIUM #7) | Eval #1 | Iteration 2 | no target yet |
 | Optional/mandatory distinction (LOW #9) | Eval #1 | Iteration 2 | no target yet |
 
 ## Foundations Alignment
 
 | Foundation | Relevance | How This Plan Respects It |
 |-----------|-----------|--------------------------|
-| #1 Engine Agnosticism | Always relevant | All fixes are game-agnostic — humanizeIdentifier works on any string, magic number normalization uses no game-specific constants, header diversification is based on generic message metadata |
+| #1 Engine Agnosticism | Always relevant | All fixes are game-agnostic — pattern-based text humanization uses no game-specific constants. Label resolution via VerbalizationDef handles game-specific terms. |
 | #3 Visual Separation | Always relevant | No runner/presentation changes this iteration — all fixes are in the engine tooltip pipeline |
-| #5 One Rules Protocol | Not relevant | RuleCard interface is unchanged — only the text content of existing fields changes |
-| #10 Architectural Completeness | Always relevant | Each fix addresses root cause: humanizer not applied to capability IDs, planner not normalizing sentinel bounds, planner using single kind→header map |
-| #14 No Backwards Compat | Not relevant | No interface changes — only behavioral changes in text generation |
+| #5 One Rules Protocol | Not relevant | RuleCard interface unchanged — only the text content of existing string fields changes |
+| #10 Architectural Completeness | Always relevant | Each fix addresses root cause: normalizer pre-stringifies values without label context, token filter stringifier uses raw operator syntax |
+| #14 No Backwards Compat | Not relevant | No interface changes — behavioral changes in text generation only |
 
 ## Layer Triage
 
 | Problem | Layer | Reasoning |
 |---------|-------|-----------|
-| Kebab-case capability IDs ("Cap-assault-cobras-shaded-cost") | Engine | Data quality: modifier condition strings and inline capability references are not routed through humanizeIdentifier before being emitted in RuleCard text |
-| Magic numbers ("Select up to 99", "Select 1-0", "Select 0") | Engine | Data quality: content planner passes raw min/max bounds to the realizer without normalizing sentinel values (99→unlimited, 0→omit, inverted ranges) |
-| Repetitive "Select spaces" headers | Engine | Data quality: content planner maps message kind→header via SUB_STEP_HEADER_BY_KIND, but consecutive messages of the same kind produce identical headers |
+| Filter predicates ("Faction eq us and type in troops, police") | Engine | Data quality: `stringifyTokenFilter()` in `tooltip-value-stringifier.ts` produces raw operator syntax ("eq", "in") instead of natural language. Token query normalization in `tooltip-normalizer-compound.ts` stores only the pre-stringified filter, unlike space queries which store `conditionAST` for humanization. |
+| $variable references ("$cube", "$transferAmount * -1") | Engine | Data quality: normalizer pre-stringifies values via `stringifyValueExpr()` / `stringifyNumericExpr()` into `msg.value`, `msg.amountExpr`, `msg.deltaExpr`. These contain raw binding names ($-prefixed) and arithmetic expressions. The humanized alternative `humanizeValueExpr()` exists but requires `LabelContext` which is only available in the realizer. |
 
 ## Current Code Architecture (reference for implementer)
 
-### Magic number sentinels
+### Filter predicate flow
 
-`tooltip-template-realizer.ts` line ~95-109: `realizeSelect()` receives `msg.min` and `msg.max` from the TooltipMessage. These come from the compiler's action bounds and are raw integers. `99` and `999` are sentinel values meaning "unlimited". `0` means "zero items required" (which should either be suppressed or reworded). Inverted ranges like `1-0` occur when max < min.
+1. **Normalizer** (`tooltip-normalizer-compound.ts` ~line 68-95): Token queries call `stringifyTokenFilter(filter)` which produces `"Faction eq us and type in troops, police"`
+2. **Stringifier** (`tooltip-value-stringifier.ts` ~line 157-167): `stringifyTokenFilter()` concatenates `field`, `op`, and `value` as raw strings. Operators are raw: "eq", "in", "not", "and", "or"
+3. **Realizer** (`tooltip-template-realizer.ts` ~line 61-67): `resolveSelectFilter()` checks `msg.conditionAST` first (returns humanized), falls back to `resolveLabel(msg.filter)` which does label resolution but doesn't fix operator syntax
+4. Space queries provide `conditionAST` → humanizer produces "is" instead of "eq". Token queries don't provide `conditionAST` → raw "eq" syntax leaks through.
 
-The realizer formats bounds as:
-- `"Select N"` when min === max
-- `"Select N-M"` when min < max
-- `"Select up to M"` when min === 0
+### $variable reference flow
 
-No sentinel detection exists.
+1. **Normalizer** (`tooltip-normalizer.ts` ~line 108-134): Calls `stringifyValueExpr(value)` or `stringifyNumericExpr(delta)` to pre-stringify values into strings. Binding refs become "$varName". Arithmetic becomes "$a * -1".
+2. **IR types** (`tooltip-ir.ts`): `SetMessage.value: string`, `TransferMessage.amountExpr?: string`, `ShiftMessage.deltaExpr?: string` — all pre-stringified
+3. **Realizer** (`tooltip-template-realizer.ts`): Emits `msg.value`, `msg.amountExpr`, `msg.deltaExpr` directly into output text
+4. **Alternative**: `humanizeValueExpr(expr, ctx)` in `tooltip-value-stringifier.ts` resolves labels and humanizes identifiers, but requires `LabelContext` + raw `ValueExpr` AST — neither available when the realizer processes pre-stringified strings
 
-### Kebab-case capability IDs
+### Existing humanization infrastructure
 
-Two leak paths:
+- `humanizeIdentifier()` (tooltip-humanizer.ts): Splits camelCase/kebab-case, strips "$" prefix, title-cases. "$transferAmount" → "Transfer Amount"
+- `humanizeValueExpr()` (tooltip-value-stringifier.ts): Full label-aware humanization of ValueExpr AST. Handles all 12 ref types, arithmetic, arrays.
+- `humanizeConditionWithLabels()` (tooltip-modifier-humanizer.ts): Humanizes ConditionAST with label resolution. Produces "is" instead of "eq".
+- `humanizeKebabTokens()` (tooltip-template-realizer.ts): Post-realization regex pass for kebab-case tokens (added in iteration 2).
 
-1. **Modifier conditions** (`tooltip-template-realizer.ts` line ~233-240): `realizeModifier()` receives pre-stringified `msg.condition` and `msg.description` strings. These are already humanized by `resolveModifierEffect()` in `tooltip-modifier-humanizer.ts` — but only when `modifierEffects` entries exist in the game's verbalization data. When no pre-authored text exists, the fallback is `humanizeCondition()` which handles the ConditionAST but NOT kebab-case inline strings.
+## Problem 1: Filter predicates displayed as raw text
 
-2. **Inline capability references** in step lines: These appear as raw strings in realized lines (e.g., `"Cap-assault-cobras-shaded-cost"`) when the message's content includes capability identifiers that aren't routed through any humanization.
-
-The existing `humanizeIdentifier()` in `tooltip-humanizer.ts` already handles kebab-case splitting and title-casing. The issue is that capability ID strings bypass this function.
-
-### Step header generation
-
-`tooltip-content-planner.ts` line ~185-195: `deriveSubStepHeader()` maps message kind → header via `SUB_STEP_HEADER_BY_KIND` constant. When consecutive sub-steps have the same kind (e.g., 6 `select` messages), they all get "Select spaces" as the header. The function has a secondary path: if the first message is `kind === 'summary'` with a `macroClass`, the macroClass is used — but this can also leak raw identifiers.
-
-The message objects carry metadata that could diversify headers:
-- `msg.target` — what is being selected (e.g., "spaces", "pieces", "zone")
-- `msg.role` — the message's role in the action pipeline (e.g., "targetSpaces", "filter")
-- `msg.filter` — the filter string (e.g., "Category is Line of Communication")
-- `msg.kind` — the message kind (select, place, move, etc.)
-
-## Problem 1: Kebab-case capability IDs exposed in tooltip text
-
-**Evaluation score**: Terminology Consistency = 2/10
-**Root cause**: Capability ID strings (e.g., "Cap-assault-cobras-shaded-cost") appear in RuleCard text because they are rendered as inline content in realized lines without humanization. The modifier humanizer handles ConditionAST but not these inline string references.
+**Evaluation score**: Language Naturalness = 3/10, Terminology Consistency = 3/10
+**Root cause**: Token query filters are pre-stringified by `stringifyTokenFilter()` using raw operator syntax ("eq", "in") before reaching the realizer. Unlike space queries, token queries don't store the raw AST for humanization.
 **Layer**: Engine
 
 ### Approaches Considered
 
-1. **Post-process all realized lines through humanizeIdentifier**: After `realizeMessage()` produces text, scan for kebab-case patterns and humanize them.
-   - Feasibility: MEDIUM — requires regex detection of kebab-case tokens in arbitrary text
-   - Readability impact: HIGH — catches all leak paths
-   - Risk: Could over-humanize intentional kebab-case in legitimate text (unlikely in tooltip context)
-   - Foundation alignment: Game-agnostic regex, no concerns
+1. **Store `TokenFilterExpr` AST on SelectMessage, humanize in realizer**: Add optional `tokenFilterAST` field to `SelectMessage`. In normalizer-compound, store the raw AST alongside the stringified filter. In the realizer, write a `humanizeTokenFilter()` function that produces natural language from the AST.
+   - Feasibility: LOW — changes the IR interface, requires updating all SelectMessage constructors across the normalizer, and requires writing a new humanization function for TokenFilterExpr (different type from ConditionAST)
+   - Readability impact: HIGH — produces fully context-aware humanized text
+   - Risk: HIGH — IR interface change affects many files and tests; TokenFilterExpr humanization is non-trivial
+   - Foundation alignment: F#14 concern — IR interface change requires updating all consumers
 
-2. **Suppress lines containing only capability IDs**: If a realized line's text matches a capability ID pattern (`/^[A-Z][a-z]+-[a-z]+-/` or similar), suppress the entire line.
-   - Feasibility: HIGH — simple pattern match and filter
-   - Readability impact: MEDIUM — removes jargon but also removes the information
-   - Risk: Loses potentially useful information about what capabilities are active
+2. **Humanize `stringifyTokenFilter()` output directly**: Modify `stringifyTokenFilter()` to produce human-readable text instead of raw syntax. Change operators: "eq" → "is", "!=" → "is not". Humanize field names and values via `humanizeIdentifier()`.
+   - Feasibility: HIGH — localized change in one function (`stringifyTokenFilter` in tooltip-value-stringifier.ts)
+   - Readability impact: MEDIUM-HIGH — "Faction is US and type in Troops, Police" is much better than "Faction eq us and type in troops, police", though not as good as full label-resolved text
+   - Risk: LOW — `stringifyTokenFilter` is only used in tooltip context, not in game logic
+   - Foundation alignment: Game-agnostic (operator humanization is universal)
 
-3. **Add a dedicated capability ID humanization step in the content planner**: Before messages are realized, scan for capability IDs in message content fields and either resolve them via verbalization labels or humanize via `humanizeIdentifier()`.
-   - Feasibility: MEDIUM — requires identifying which message fields contain capability IDs
-   - Readability impact: HIGH — humanized at the source
-   - Risk: LOW — only transforms identified capability ID fields
+3. **Post-realization regex cleanup of filter syntax**: Add a cleanup pass in the realizer (like `humanizeKebabTokens`) that replaces "eq" → "is", "in" → "includes", and humanizes field/value identifiers in the realized text.
+   - Feasibility: HIGH — extends the existing post-realization pattern
+   - Readability impact: MEDIUM — regex-based replacement is fragile for complex expressions but handles the common cases
+   - Risk: MEDIUM — could over-replace "eq" or "in" in non-filter contexts; needs careful word-boundary matching
 
-### Recommendation: Approach 3 (source-level humanization) with Approach 2 as fallback
+### Recommendation: Approach 2 (humanize `stringifyTokenFilter()` directly)
 
-**Why**: Humanizing at the source preserves information (the player sees "Cobras Shaded Cost" instead of nothing). For any remaining leaks, a post-realization scan (simplified Approach 1) catches stragglers. Approach 2's suppression is too aggressive.
+**Why**: This is the source-level fix — the function exists specifically for tooltip rendering. It's localized (one function), low risk (no interface changes), and produces good output. The deviation from the Layer Decision Framework's suggested fix location (realizer) is justified because `stringifyTokenFilter()` is the actual source of raw syntax — fixing it at the source is more complete than regex post-processing in the realizer. The function can use `humanizeIdentifier()` for field names and values without needing `LabelContext` (which it doesn't have). Approach 1 is better in theory but too risky for one iteration.
 
-## Problem 2: Magic numbers in select bounds
+## Problem 2: Raw $variable references and arithmetic expressions
 
-**Evaluation score**: Language Naturalness = 2/10, Step Semantic Clarity = 3/10
-**Root cause**: The realizer formats raw min/max bounds without detecting sentinel values. `99`/`999` should mean "unlimited", `0` in min position should be suppressed, and inverted ranges (max < min) should be handled gracefully.
+**Evaluation score**: Language Naturalness = 3/10
+**Root cause**: The normalizer pre-stringifies `ValueExpr` ASTs via `stringifyValueExpr()` / `stringifyNumericExpr()` into strings stored on messages (`msg.value`, `msg.amountExpr`, `msg.deltaExpr`). These include raw "$varName" binding references and arithmetic like "$transferAmount * -1". The realizer emits these strings directly.
 **Layer**: Engine
 
 ### Approaches Considered
 
-1. **Normalize bounds in the content planner before realization**: Add a pre-processing step that transforms sentinel bounds in TooltipMessage objects before they reach the realizer.
-   - Feasibility: HIGH — centralized, single location
-   - Readability impact: HIGH — "Select up to 99" → "Select any number of"
-   - Risk: LOW — sentinel detection is straightforward (values ≥ 99 or ≥ 999)
-   - Foundation alignment: No concerns
+1. **Store raw `ValueExpr` AST on messages, humanize in realizer**: Add optional `valueAST`, `amountAST`, `deltaAST` fields to `SetMessage`, `TransferMessage`, `ShiftMessage`. Normalizer stores raw AST alongside strings. Realizer calls `humanizeValueExpr(ast, ctx)` when AST is available.
+   - Feasibility: LOW-MEDIUM — changes 3 IR interfaces, requires updating normalizer emission sites, realizer consumption sites, and all test fixtures that construct these message types
+   - Readability impact: HIGH — `humanizeValueExpr` produces fully label-resolved text
+   - Risk: HIGH — IR interface changes affect many files
+   - Foundation alignment: F#14 concern — interface changes
 
-2. **Normalize bounds in the realizer's formatting logic**: Modify `realizeSelect()` to detect sentinels when formatting the bounds string.
-   - Feasibility: HIGH — localized change in one function
-   - Readability impact: HIGH — same as approach 1
-   - Risk: LOW — same sentinel detection
-   - Foundation alignment: No concerns
+2. **Post-realization cleanup of $variable patterns**: Add to the existing post-realization pass in `realizeStep()` a regex that detects `$varName` patterns and humanizes them via `humanizeIdentifier()`. Also detect arithmetic expressions and simplify them.
+   - Feasibility: HIGH — extends existing `humanizeKebabTokens` pattern
+   - Readability impact: MEDIUM — "$transferAmount" → "Transfer Amount" (good), "$pacLevels * -4 or -3" → "Pac Levels * -4 or -3" (arithmetic still visible but variable name is readable)
+   - Risk: LOW — regex with word boundaries is safe; only matches $-prefixed identifiers
+   - Foundation alignment: Game-agnostic
 
-3. **Suppress bounds entirely for sentinel values**: When max ≥ 99, omit the count entirely (just "Select spaces" instead of "Select up to 99 spaces").
-   - Feasibility: HIGH — simplest
-   - Readability impact: MEDIUM — removes confusing numbers but also removes useful "up to" phrasing
-   - Risk: LOW — just omission
+3. **Suppress lines containing only internal computations**: When a realized line contains only `$variables` and arithmetic (e.g., "Set ARVN Resources to $pacLevels * -4 or -3"), suppress the entire line as it conveys internal computation details that don't help the player.
+   - Feasibility: HIGH — pattern match and filter
+   - Readability impact: MEDIUM — removes confusing content but also removes information about what changes
+   - Risk: MEDIUM — may suppress lines that contain useful information alongside variables
 
-### Recommendation: Approach 2 (realizer-level normalization)
+### Recommendation: Approach 2 (post-realization $variable cleanup)
 
-**Why**: The realizer is where formatting happens — it's the natural place to format bounds intelligently. Approach 1 would require the planner to know about presentation, which is the realizer's job. Specific normalizations:
-- `max ≥ 99` → omit upper bound or use "any number of"
-- `min === 0 && max === 0` → suppress the line entirely (zero-item selections are no-ops)
-- `min > max` (inverted) → treat as `min` (single value)
-- `min === 0 && max > 0 && max < 99` → "Select up to {max}"
-
-## Problem 3: Repetitive "Select spaces" step headers
-
-**Evaluation score**: Step Semantic Clarity = 3/10
-**Root cause**: `deriveSubStepHeader()` uses a static kind→header map. All `select` messages get "Select spaces" regardless of what they're selecting or why.
-**Layer**: Engine
-
-### Approaches Considered
-
-1. **Use message target to diversify headers**: Instead of `SUB_STEP_HEADER_BY_KIND['select']` → "Select spaces", use `"Select " + humanizeIdentifier(msg.target)` to produce "Select Target Spaces", "Select Forces", etc.
-   - Feasibility: HIGH — `msg.target` is already available
-   - Readability impact: MEDIUM — better than "Select spaces" x7 but still generic
-   - Risk: LOW — if target is undefined, fall back to current behavior
-   - Foundation alignment: Game-agnostic (uses generic target metadata)
-
-2. **Use message role/context to generate contextual headers**: Inspect `msg.role`, `msg.filter`, or position in the action pipeline to generate headers like "Choose target provinces", "Select forces to move".
-   - Feasibility: MEDIUM — requires understanding role semantics
-   - Readability impact: HIGH — truly descriptive headers
-   - Risk: MEDIUM — role semantics may not always produce good headers
-   - Foundation alignment: Must remain game-agnostic
-
-3. **Collapse consecutive same-header sub-steps**: Instead of showing 6 "Select spaces" sub-steps, merge them into a single "Select spaces" step with combined content.
-   - Feasibility: MEDIUM — requires merging logic in the planner
-   - Readability impact: MEDIUM — reduces repetition but loses step-by-step structure
-   - Risk: MEDIUM — could collapse steps that should be separate
-
-### Recommendation: Approach 1 (target-based diversification)
-
-**Why**: Simplest, lowest risk, and produces immediate improvement. The target field is always present on select messages and provides meaningful differentiation. Can be enhanced with Approach 2 in future iterations. Specific implementation:
-- Use `humanizeIdentifier(msg.target)` when `msg.target` is not "spaces" or generic
-- For `msg.kind !== 'select'`, keep current `SUB_STEP_HEADER_BY_KIND` mapping (already diverse)
-- For duplicate consecutive headers, append a sequence number: "Select Spaces (1)", "Select Spaces (2)"
+**Why**: Extends the proven post-realization pattern from iteration 2 (kebab-case humanization). Low risk, high feasibility, and produces meaningful improvement — "$transferAmount" → "Transfer Amount" makes the text readable even if the arithmetic context remains. The more ambitious Approach 1 (AST storage) can be done in a future iteration if the regex approach proves insufficient. Approach 3 is too aggressive — it removes information the player might need.
 
 ## Implementation Steps
 
-1. **Normalize magic number bounds in realizeSelect()** — **Layer**: Engine — **File**: `packages/engine/src/kernel/tooltip-template-realizer.ts` — **Depends on**: none
-   - Add sentinel detection at the top of `realizeSelect()`:
-     - `max >= 99` → treat as unlimited (omit upper bound)
-     - `min === 0 && max === 0` → suppress line (return empty/null)
-     - `min > max` → use `min` as single value
-   - Update bounds formatting to produce:
-     - "Select any number of {target}" when unlimited
-     - "Select up to {N} {target}" when bounded
-     - "Select {N} {target}" when exact
+1. **Humanize `stringifyTokenFilter()` to produce readable text** — **Layer**: Engine — **File**: `packages/engine/src/kernel/tooltip-value-stringifier.ts` — **Depends on**: none
+   - In `stringifyTokenFilter()`: replace raw operators with natural language: "eq" → "is", "!=" → "is not", keep "in" as "in" (already natural), "and" → "and", "or" → "or", "not" → "not"
+   - Humanize field names via `humanizeIdentifier()`: "faction" → "Faction", "type" → "Type"
+   - Humanize predicate values via `humanizeIdentifier()`: "us" → "US" (with acronym detection), "troops" → "Troops"
+   - Import `humanizeIdentifier` and `buildAcronymSet` from `tooltip-humanizer.ts`
 
-2. **Diversify step headers using message target** — **Layer**: Engine — **File**: `packages/engine/src/kernel/tooltip-content-planner.ts` — **Depends on**: none
-   - Modify `deriveSubStepHeader()` to use `msg.target` when available:
-     - If `msg.kind === 'select'` and `msg.target` is not generic ("spaces", "items"), use `"Select " + humanizeIdentifier(msg.target)`
-     - For other kinds, keep current `SUB_STEP_HEADER_BY_KIND` mapping
-   - Add deduplication: if consecutive sub-steps would get the same header, append context from `msg.filter` or `msg.role` to differentiate
+2. **Add $variable humanization to post-realization pass** — **Layer**: Engine — **File**: `packages/engine/src/kernel/tooltip-template-realizer.ts` — **Depends on**: none
+   - Add a `humanizeDollarVars()` function using regex `/\$([a-zA-Z_]\w*)/g` that captures binding names and humanizes them via `humanizeIdentifier()`
+   - Call it in the existing post-realization pass in `realizeStep()` alongside `humanizeKebabTokens()`
+   - Compose: `humanizeKebabTokens(humanizeDollarVars(raw))`
 
-3. **Humanize capability ID strings in modifier and inline content** — **Layer**: Engine — **File**: `packages/engine/src/kernel/tooltip-template-realizer.ts` — **Depends on**: none
-   - In `realizeModifier()`: route `msg.condition` and `msg.description` through `humanizeIdentifier()` when they match kebab-case patterns (`/^[A-Za-z]+-[a-z]+-/`)
-   - Add a post-realization pass: scan all `RealizedLine.text` values for kebab-case tokens and humanize them via `humanizeIdentifier()`
+3. **Update unit tests for `stringifyTokenFilter()`** — **Layer**: Engine — **File**: `packages/engine/test/unit/kernel/tooltip-value-stringifier.test.ts` — **Depends on**: Step 1
+   - Update golden assertions for `stringifyTokenFilter` to expect humanized operator syntax and cased field names
 
-4. **Update engine tooltip tests** — **Layer**: Engine — **File**: `packages/engine/test/unit/kernel/tooltip-template-realizer.test.ts`, `tooltip-content-planner.test.ts` — **Depends on**: Steps 1, 2, 3
-   - Update golden assertions in `tooltip-template-realizer.test.ts` for changed bounds formatting
-   - Update golden assertions in `tooltip-content-planner.test.ts` for changed step headers
-   - Add new test cases for sentinel detection and kebab-case humanization
+4. **Update integration tests** — **Layer**: Engine — **Files**: `packages/engine/test/integration/tooltip-pipeline-integration.test.ts`, `tooltip-cross-game-properties.test.ts` — **Depends on**: Steps 1, 2
+   - Update end-to-end golden assertions that match on filter text or $variable output
 
-5. **Update integration tests** — **Layer**: Engine — **File**: `packages/engine/test/integration/tooltip-pipeline-integration.test.ts`, `tooltip-cross-game-properties.test.ts` — **Depends on**: Steps 1, 2, 3
-   - Update end-to-end golden assertions that match on step headers, bounds text, or modifier strings
+5. **Update realizer tests for $variable cleanup** — **Layer**: Engine — **File**: `packages/engine/test/unit/kernel/tooltip-template-realizer.test.ts` — **Depends on**: Step 2
+   - Add test cases for $variable humanization in realized lines
 
 ## Verification
 
@@ -199,40 +145,37 @@ The message objects carry metadata that could diversify headers:
 2. `pnpm -F @ludoforge/engine test` — must pass
 3. `pnpm -F @ludoforge/runner test` — must pass
 4. Visual check: run `pnpm -F @ludoforge/runner dev`, hover over each action button, verify:
-   - No "99" or "1-99" magic numbers in bounds
-   - No "Select 0" lines
-   - Step headers more diverse than "Select spaces" x7
-   - No kebab-case capability IDs (Cap-*, Sweep-loc-hop, Place-from-available-or-map)
+   - No "Faction eq us" filter syntax — should show "Faction is US" or similar
+   - No "$cube", "$troop", "$transferAmount" — should show "Cube", "Troop", "Transfer Amount"
+   - Arithmetic expressions like "$pacLevels * -4 or -3" should show "Pac Levels * -4 or -3"
 
 ## Risks and Mitigations
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|------------|
-| Over-humanization of kebab-case strings that should stay as-is | LOW | Tooltip text has unexpected formatting | Limit regex to known capability ID patterns; add tests for edge cases |
-| Sentinel threshold too aggressive (some games use 99 as a real bound) | LOW | Real bounds treated as unlimited | Use ≥99 threshold; if games need higher real bounds, increase threshold |
-| Step header diversification produces awkward text from generic targets | MEDIUM | Headers like "Select Items" instead of useful descriptions | Fall back to current "Select spaces" when target is too generic; improve in future iteration |
-| Integration test churn | HIGH | Many golden assertions need updating | Pre-flight grep for affected patterns; update systematically |
+| `stringifyTokenFilter` humanization breaks non-tooltip consumers | LOW | Other code paths use raw filter strings | Verify `stringifyTokenFilter` is only used in tooltip context (grep for callers); the function is in `tooltip-value-stringifier.ts` which is tooltip-scoped |
+| $variable regex over-matches legitimate text containing "$" | LOW | Non-variable text gets mangled | Use strict regex: `$` followed by `[a-zA-Z_]` and `\w*` — matches programming-style identifiers only |
+| Humanized filter operators produce awkward phrasing for complex conditions | MEDIUM | "Type in Troops, Police" vs "Type includes Troops or Police" | Start with simple operator mapping; complex phrasing improvements can be iterated |
+| Integration test churn | HIGH | Many golden assertions need updating | Pre-flight grep for affected patterns in test files |
 
 ## Implementation Verification Checklist
 
-- [ ] `tooltip-template-realizer.ts`: `realizeSelect()` detects `max >= 99` and omits upper bound
-- [ ] `tooltip-template-realizer.ts`: `realizeSelect()` suppresses `min === 0 && max === 0` lines
-- [ ] `tooltip-template-realizer.ts`: `realizeSelect()` handles `min > max` gracefully
-- [ ] `tooltip-content-planner.ts`: `deriveSubStepHeader()` uses `msg.target` for select messages
-- [ ] `tooltip-template-realizer.ts`: `realizeModifier()` humanizes kebab-case condition/description strings
-- [ ] `tooltip-template-realizer.ts`: Post-realization pass humanizes remaining kebab-case tokens in line text
+- [ ] `tooltip-value-stringifier.ts`: `stringifyTokenFilter()` uses "is" instead of "eq" for equality
+- [ ] `tooltip-value-stringifier.ts`: `stringifyTokenFilter()` humanizes field names (e.g., "faction" → "Faction")
+- [ ] `tooltip-value-stringifier.ts`: `stringifyTokenFilter()` humanizes predicate values
+- [ ] `tooltip-template-realizer.ts`: Post-realization pass humanizes `$varName` patterns
+- [ ] `tooltip-template-realizer.ts`: `$cube` → "Cube", `$transferAmount` → "Transfer Amount" in output
 - [ ] All engine unit tests pass
 - [ ] All engine integration tests pass
 
 ## Test Impact
 
-- `packages/engine/test/unit/kernel/tooltip-template-realizer.test.ts` — bounds formatting assertions, modifier rendering assertions
-- `packages/engine/test/unit/kernel/tooltip-content-planner.test.ts` — step header assertions
-- `packages/engine/test/unit/kernel/tooltip-humanizer.test.ts` — may need new kebab-case test cases
+- `packages/engine/test/unit/kernel/tooltip-value-stringifier.test.ts` — `stringifyTokenFilter` assertions
+- `packages/engine/test/unit/kernel/tooltip-template-realizer.test.ts` — realized text containing filter syntax or $variables
 - `packages/engine/test/integration/tooltip-pipeline-integration.test.ts` — end-to-end golden assertions
-- `packages/engine/test/integration/tooltip-cross-game-properties.test.ts` — cross-game golden assertions
-- `packages/engine/test/unit/tooltip-humanization.test.ts` — humanization integration tests
+- `packages/engine/test/integration/tooltip-cross-game-properties.test.ts` — cross-game assertions
+- `packages/engine/test/unit/tooltip-humanization.test.ts` — may need new cases
 
 ## Research Sources
 
-- No external research needed — all solutions extend existing patterns in the codebase (humanizeIdentifier, realizeSelect bounds formatting, deriveSubStepHeader)
+- No external research needed — all solutions extend existing codebase patterns (`humanizeIdentifier`, `humanizeKebabTokens` post-realization pass)

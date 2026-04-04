@@ -31,6 +31,8 @@ import { filterTokensByExpr } from './token-filter.js';
 import { planAssetRowsLookup } from './runtime-table-lookup-plan.js';
 import { hasTokenRuntimeShapeKeys } from './token-shape.js';
 import { getTokenStateIndex } from './token-state-index.js';
+import { getZoneTokensByCanonicalId } from './runtime-zone-state.js';
+import { internRuntimeZoneId } from './runtime-zone-index.js';
 import { getZoneMap } from './def-lookup.js';
 import type { AssetRowPredicate, NumericValueExpr, OptionsQuery, Token, TokenFilterExpr } from './types.js';
 
@@ -504,7 +506,15 @@ function evalMapSpacesQuery(
 ): readonly ZoneId[] {
   const mapSpaceZones = [...ctx.def.zones]
     .filter((zone) => zone.zoneKind === 'board')
-    .sort((left, right) => left.id.localeCompare(right.id));
+    .sort((left, right) => {
+      const zoneRuntimeIndex = ctx.adjacencyGraph.zoneRuntimeIndex;
+      const leftRuntimeId = internRuntimeZoneId(left.id, zoneRuntimeIndex);
+      const rightRuntimeId = internRuntimeZoneId(right.id, zoneRuntimeIndex);
+      if (leftRuntimeId === undefined || rightRuntimeId === undefined) {
+        return left.id.localeCompare(right.id);
+      }
+      return leftRuntimeId - rightRuntimeId;
+    });
   return applyZonesFilter(mapSpaceZones, query.filter, ctx);
 }
 
@@ -514,9 +524,19 @@ function evalTokensInMapSpacesQuery(
 ): readonly Token[] {
   const mapSpaceZones = [...ctx.def.zones]
     .filter((zone) => zone.zoneKind === 'board')
-    .sort((left, right) => left.id.localeCompare(right.id));
+    .sort((left, right) => {
+      const zoneRuntimeIndex = ctx.adjacencyGraph.zoneRuntimeIndex;
+      const leftRuntimeId = internRuntimeZoneId(left.id, zoneRuntimeIndex);
+      const rightRuntimeId = internRuntimeZoneId(right.id, zoneRuntimeIndex);
+      if (leftRuntimeId === undefined || rightRuntimeId === undefined) {
+        return left.id.localeCompare(right.id);
+      }
+      return leftRuntimeId - rightRuntimeId;
+    });
   const selectedZones = applyZonesFilter(mapSpaceZones, query.spaceFilter, ctx);
-  const zoneTokens = selectedZones.flatMap((zoneId) => [...(ctx.state.zones[String(zoneId)] ?? [])]);
+  const zoneTokens = selectedZones.flatMap((zoneId) => [
+    ...(getZoneTokensByCanonicalId(ctx.state, zoneId, ctx.adjacencyGraph.zoneRuntimeIndex) ?? []),
+  ]);
   return query.filter !== undefined ? applyTokenFilter(zoneTokens, query.filter, ctx) : zoneTokens;
 }
 
@@ -826,7 +846,7 @@ export function evalQuery(query: OptionsQuery, ctx: ReadContext): readonly Query
     }
     case 'tokensInZone': {
       const zoneId = resolveZoneRef(query.zone, ctx);
-      const zoneTokens = ctx.state.zones[String(zoneId)];
+      const zoneTokens = getZoneTokensByCanonicalId(ctx.state, zoneId, ctx.adjacencyGraph.zoneRuntimeIndex);
       if (zoneTokens === undefined) {
         throw missingVarError(`Zone state not found for selector result: ${zoneId}`, {
           query,

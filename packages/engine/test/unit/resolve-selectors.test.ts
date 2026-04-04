@@ -40,6 +40,21 @@ const makeDef = (): GameDef => ({
   terminal: { conditions: [] },
 });
 
+const makeDefWithInternTable = (): GameDef => ({
+  ...makeDef(),
+  internTable: {
+    zones: ['hand:2', 'deck:none', 'hand:0', 'bench:1', 'hand:1'],
+    actions: [],
+    tokenTypes: [],
+    seats: [],
+    players: ['0', '1', '2', '3'],
+    phases: [],
+    globalVars: [],
+    perPlayerVars: [],
+    zoneVars: [],
+  },
+});
+
 const makeState = (playerCount: number): GameState => ({
   globalVars: {},
   perPlayerVars: {},
@@ -172,6 +187,15 @@ describe('resolveZoneSel', () => {
 
     const arrayCtx = makeCtx({ bindings: { $zones: ['hand:2', 'hand:0', 'hand:2'] } });
     assert.deepEqual(resolveZoneSel('$zones', arrayCtx), ['hand:0', 'hand:2']);
+  });
+
+  it('orders deduped zone results by runtime zone order when internTable is present', () => {
+    const ctx = makeCtx({
+      def: makeDefWithInternTable(),
+      bindings: { $zones: ['bench:1', 'hand:0', 'deck:none', 'hand:2', 'deck:none'] },
+    });
+
+    assert.deepEqual(resolveZoneSel('$zones', ctx), ['hand:2', 'deck:none', 'hand:0', 'bench:1']);
   });
 
   it('requires exact binding keys without alias fallback', () => {

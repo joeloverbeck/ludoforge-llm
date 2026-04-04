@@ -18,6 +18,7 @@ import type { EffectCursor, EffectEnv, MutableReadScope, PartialEffectResult } f
 import type { EffectBudgetState } from './effects-control.js';
 import type { ApplyEffectsWithBudget } from './effect-registry.js';
 import { ensureZoneCloned, type MutableGameState } from './state-draft.js';
+import { invalidateRuntimeZoneStateCache } from './runtime-zone-state.js';
 import { updateZoneTokenHash } from './zobrist-token-hash.js';
 import type { EffectAST, GameState, Rng, Token, TokenTypeDef, ZoneDef } from './types.js';
 
@@ -36,6 +37,7 @@ const writeZoneMutations = (
       ensureZoneCloned(ms, cursor.tracker, zoneId);
       (ms.zones as Record<string, Token[]>)[zoneId] = mutations[zoneId] as Token[];
     }
+    invalidateRuntimeZoneStateCache(cursor.state);
     invalidateTokenStateIndex(cursor.state);
     return cursor.state;
   }
@@ -566,6 +568,7 @@ export const applyCreateToken = (
     ensureZoneCloned(ms, cursor.tracker, zoneId);
     (ms.zones as Record<string, Token[]>)[zoneId] = zoneAfterCreation;
     ms.nextTokenOrdinal = ordinal + 1;
+    invalidateRuntimeZoneStateCache(cursor.state);
     invalidateTokenStateIndex(cursor.state);
     return { state: cursor.state, rng: cursor.rng };
   }
@@ -810,6 +813,7 @@ export const applyDraw = (
         ensureZoneCloned(ms, cursor.tracker, reshuffleZoneId);
         (ms.zones as Record<string, Token[]>)[fromZoneId] = shuffled.tokens as Token[];
         (ms.zones as Record<string, Token[]>)[reshuffleZoneId] = [];
+        invalidateRuntimeZoneStateCache(currentState);
         invalidateTokenStateIndex(currentState);
       } else {
         currentState = {
@@ -930,6 +934,7 @@ export const applyDraw = (
     ensureZoneCloned(ms, cursor.tracker, toZoneId);
     (ms.zones as Record<string, Token[]>)[fromZoneId] = sourceAfter as Token[];
     (ms.zones as Record<string, Token[]>)[toZoneId] = destinationAfter;
+    invalidateRuntimeZoneStateCache(currentState);
     invalidateTokenStateIndex(currentState);
     return {
       state: currentState,

@@ -8,6 +8,7 @@ import {
   internRuntimeZoneId,
   type ZoneRuntimeIndex,
 } from './runtime-zone-index.js';
+import { getZoneTokensByRuntimeId } from './runtime-zone-state.js';
 import type { ConditionAST, GameDef, GameState, Token, ZoneDef } from './types.js';
 
 export interface AdjacencyGraph {
@@ -279,7 +280,7 @@ export function queryTokensInAdjacentZones(
   }
   const tokens: Token[] = [];
   for (const neighborZone of getRuntimeNeighbors(graph, runtimeZoneId)) {
-    const zoneTokens = state.zones[externRuntimeZoneId(neighborZone, graph.zoneRuntimeIndex)] ?? [];
+    const zoneTokens = getZoneTokensByRuntimeId(state, neighborZone, graph.zoneRuntimeIndex) ?? [];
     tokens.push(...zoneTokens);
   }
   return tokens;

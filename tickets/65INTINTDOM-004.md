@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — sim/ (trace output), agents/ (decision traces), kernel diagnostics
-**Deps**: `tickets/65INTINTDOM-003.md`
+**Deps**: `archive/tickets/65INTINTDOM-003.md`
 
 ## Problem
 

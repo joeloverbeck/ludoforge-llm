@@ -97,6 +97,7 @@ If that earlier ticket introduced production-corpus traversal, fixture readers, 
   - the new authoritative authored/runtime path you are moving toward
   - any temporary compatibility or transitional surface you intentionally retain so nearby code and tests stay coherent
   Record that distinction in your working notes and final summary.
+- If a ticket proposes an internal storage optimization that would otherwise change canonical outward state or serialized shape, prefer a runtime-only storage layer behind the existing outward contract unless the ticket explicitly owns that state-boundary migration too.
 - If Foundations require serialized/artifact-facing identifiers to remain canonical strings, but the ticket still needs numeric or otherwise changed identifier semantics in implementation code, introduce a separate runtime-only branded identifier type rather than redefining the artifact-facing domain id in place.
 - For additive compiled-field migrations, it can be valid to require the new field in compiler-owned artifacts and schemas while temporarily leaving handwritten in-memory TypeScript fixtures optional, so long as that distinction is explicit, Foundation-compliant, and verified.
 - The ticket's `Files to Touch` list is a strong hint, not a hard limit. If coherent completion requires adjacent files for contracts, runtime consumers, schemas, fixtures, or tests, include them and explain why.
@@ -145,6 +146,7 @@ Before claiming completion:
    - if the change affects observability, scoring, or move selection, explicitly check whether seed-specific helper states or turn-position fixtures have gone stale
    - when a seeded helper no longer reaches the intended semantic state, retarget it to a current deterministic seed or turn that still exercises the same invariant rather than weakening the assertion
    - when a compiled fast path is added in front of an interpreter, explicitly test malformed and unsupported shapes to confirm the compiler falls back cleanly instead of swallowing existing validator or runtime-boundary behavior
+   - when a new runtime fast path depends on enriched context objects, caches, or prebuilt runtime indexes, explicitly check callers that still construct minimal or partial runtime contexts so the fast path falls back cleanly instead of breaking helper-built tests
 9. If `node --test` or another runner reports only a top-level file failure:
    - rerun the failing file as narrowly as possible
    - use test-name filtering or direct helper reproduction when needed to isolate the failing assertion before editing code

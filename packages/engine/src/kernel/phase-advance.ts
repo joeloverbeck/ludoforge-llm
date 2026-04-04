@@ -1,4 +1,4 @@
-import { asPlayerId } from './branded.js';
+import { asPlayerId, asZoneId } from './branded.js';
 import { applyBoundaryExpiry } from './boundary-expiry.js';
 import { resetPhaseUsage, resetTurnUsage } from './action-usage.js';
 import { reconcileRunningHash } from './zobrist-phase-hash.js';
@@ -13,6 +13,8 @@ import { requireCardDrivenActiveSeat } from './turn-flow-runtime-invariants.js';
 import { kernelRuntimeError } from './runtime-error.js';
 import { createEvalRuntimeResources, type EvalRuntimeResources } from './eval-context.js';
 import { assertEvalRuntimeResourcesContract } from './eval-runtime-resources-contract.js';
+import { buildZoneRuntimeIndex } from './runtime-zone-index.js';
+import { getZoneTokensByCanonicalId } from './runtime-zone-state.js';
 import {
   createSeatResolutionContext,
   resolvePlayerIndexForTurnFlowSeat,
@@ -173,7 +175,8 @@ const resolveCardDrivenCoupContext = (
   }
 
   const cardLifecycle = def.turnOrder.config.turnFlow.cardLifecycle;
-  const playedTop = state.zones[cardLifecycle.played]?.[0];
+  const zoneRuntimeIndex = buildZoneRuntimeIndex(def);
+  const playedTop = getZoneTokensByCanonicalId(state, asZoneId(cardLifecycle.played), zoneRuntimeIndex)?.[0];
   const playedProps = playedTop?.props as Readonly<Record<string, unknown>> | undefined;
   const isCoup = playedProps?.isCoup === true;
 
@@ -185,14 +188,14 @@ const resolveCardDrivenCoupContext = (
     return { coupPhaseIds, coupActive: false, finalCoupRound: false };
   }
 
-  const lookaheadEmpty = (state.zones[cardLifecycle.lookahead]?.length ?? 0) === 0;
+  const lookaheadEmpty = (getZoneTokensByCanonicalId(state, asZoneId(cardLifecycle.lookahead), zoneRuntimeIndex)?.length ?? 0) === 0;
   const slotIds = new Set([cardLifecycle.played, cardLifecycle.lookahead, cardLifecycle.leader]);
   const drawPileIds = def.zones
     .filter((zone) => zone.ordering === 'stack' && !slotIds.has(String(zone.id)))
     .map((zone) => String(zone.id));
   const drawPileEmpty =
     drawPileIds.length === 1
-      ? (state.zones[drawPileIds[0]!] ?? []).length === 0
+      ? (getZoneTokensByCanonicalId(state, asZoneId(drawPileIds[0]!), zoneRuntimeIndex)?.length ?? 0) === 0
       : true;
 
   return {

@@ -4,6 +4,8 @@ import { createEvalContext, createEvalRuntimeResources, type ReadContext } from 
 import { resolveZoneRefWithOwnerFallback } from '../kernel/resolve-zone-ref.js';
 import { buildRuntimeTableIndex } from '../kernel/runtime-table-index.js';
 import { buildAdjacencyGraph, queryAdjacentZones } from '../kernel/spatial.js';
+import { buildZoneRuntimeIndex } from '../kernel/runtime-zone-index.js';
+import { getZoneTokensByCanonicalId } from '../kernel/runtime-zone-state.js';
 import type {
   AttributeValue,
   AgentParameterValue,
@@ -525,7 +527,8 @@ export class PolicyEvaluationContext {
     if (zoneId === undefined) {
       return undefined;
     }
-    const tokens = this.input.state.zones[zoneId];
+    const zoneRuntimeIndex = this.input.runtime?.zoneRuntimeIndex ?? buildZoneRuntimeIndex(this.input.def);
+    const tokens = getZoneTokensByCanonicalId(this.input.state, zoneId, zoneRuntimeIndex);
     if (tokens === undefined || tokens.length === 0) {
       return expr.aggOp === 'count' ? 0 : expr.aggOp === 'sum' ? 0 : undefined;
     }
@@ -747,9 +750,10 @@ export class PolicyEvaluationContext {
   ): PolicyValue {
     let count = 0;
     let aggregate: number | undefined;
+    const zoneRuntimeIndex = this.input.runtime?.zoneRuntimeIndex ?? buildZoneRuntimeIndex(this.input.def);
 
     for (const zoneId of zoneIds) {
-      const tokens = this.input.state.zones[zoneId] ?? [];
+      const tokens = getZoneTokensByCanonicalId(this.input.state, zoneId as ZoneId, zoneRuntimeIndex) ?? [];
       for (const token of tokens) {
         if (!matchesTokenFilter(token, resolvedFilter)) {
           continue;

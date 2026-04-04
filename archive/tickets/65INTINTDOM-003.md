@@ -1,6 +1,6 @@
 # 65INTINTDOM-003: GameState.zones array migration and zone access
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — types-core.ts (GameState.zones type), all kernel zone access sites, resolve-selectors.ts (sortAndDedupeZones)
@@ -113,3 +113,22 @@ All golden fixtures containing `zones: { "zone-name": [...] }` change to `zones:
 1. `pnpm turbo typecheck`
 2. `pnpm -F @ludoforge/engine test`
 3. `pnpm turbo test`
+
+## Outcome
+
+Completed: 2026-04-04
+
+What changed:
+- Implemented the ticket on a corrected Foundation-aligned boundary: outward `GameState.zones` remained the canonical string-keyed record, while hot runtime zone access moved behind a new array-backed runtime cache in `packages/engine/src/kernel/runtime-zone-state.ts`.
+- Updated hot zone-read paths in kernel and agent evaluation code to consume the runtime zone-state layer, and wired cache invalidation into mutable zone/token write paths.
+- Replaced selector dedupe ordering with runtime zone order derived from the runtime zone index instead of `localeCompare`, with targeted coverage for the new ordering and cache behavior.
+
+Deviations from original plan:
+- `GameState.zones` itself did not migrate to an array, and no serialized state, trace, or outward state contract changed in this ticket.
+- The ticket's direct `GameState.zones` type change was superseded by the corrected runtime-only storage boundary required to stay aligned with `docs/FOUNDATIONS.md` and the already-corrected `65INTINTDOM-002` runtime zone-id seam.
+
+Verification results:
+- `pnpm -F @ludoforge/engine build`
+- targeted `node --test` runs for the new runtime-zone-state and affected query/selector/ref surfaces
+- `pnpm turbo typecheck`
+- `pnpm -F @ludoforge/engine test` with `469/469` passing

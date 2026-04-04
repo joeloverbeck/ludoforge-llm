@@ -17,6 +17,7 @@ import {
 } from './runtime-table-eval-errors.js';
 import { resolveRuntimeTokenBindingValue } from './token-binding.js';
 import { resolveTokenViewFieldValue } from './token-view.js';
+import { getZoneTokensByCanonicalId } from './runtime-zone-state.js';
 import type { Reference, ScalarArrayValue, Token } from './types.js';
 
 function isScalarValue(value: unknown): value is number | boolean | string {
@@ -199,7 +200,7 @@ export function resolveRef(ref: Reference, ctx: ReadContext): number | boolean |
 
   if (ref.ref === 'zoneCount') {
     const zoneId = resolveSingleZoneSel(ref.zone, ctx);
-    const zoneTokens = ctx.state.zones[String(zoneId)];
+    const zoneTokens = getZoneTokensByCanonicalId(ctx.state, zoneId, ctx.adjacencyGraph.zoneRuntimeIndex);
     if (zoneTokens === undefined) {
       throw missingVarError(`Zone state not found for selector result: ${zoneId}`, {
         reference: ref,

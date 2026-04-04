@@ -88,6 +88,7 @@ export * from './resolve-zone-ref.js';
 export * from './zone-address.js';
 export * from './runtime-table-index.js';
 export * from './runtime-table-lookup-plan.js';
+export * from './runtime-zone-state.js';
 export * from './runtime-zone-index.js';
 export * from './identity.js';
 export * from './intern.js';

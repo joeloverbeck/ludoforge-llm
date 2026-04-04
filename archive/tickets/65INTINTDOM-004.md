@@ -1,6 +1,6 @@
 # 65INTINTDOM-004: Serialization boundary (extern/intern functions)
 
-**Status**: PENDING
+**Status**: 🚫 NOT IMPLEMENTED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — sim/ (trace output), agents/ (decision traces), kernel diagnostics
@@ -89,3 +89,20 @@ Ensure serialized traces use string zone names (via extern), not integer indices
 
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo test`
+
+## Outcome
+
+Completed: 2026-04-04
+
+What changed:
+- No runtime code changes were made for this ticket.
+- The ticket was closed after reassessment against the corrected `65INTINTDOM-002/003` implementation boundary.
+
+Deviations from original plan:
+- The ticket's core premise did not hold in the live architecture. `ZoneId` remained canonical-string in implementation and outward trace/diagnostic-facing types, while only `RuntimeZoneId` became numeric inside the runtime seam.
+- As a result, the expected "extern integer ZoneIds back to strings at all output boundaries" migration was not an actual remaining deliverable.
+
+Verification results:
+- Re-read the corrected active and archived `65INTINTDOM` series context.
+- Verified current trace, snapshot, delta, and policy-trace surfaces in the live codebase.
+- Confirmed that key outward surfaces already remain string-oriented, including effect traces, selector traces, policy seat ids, and state-delta zone paths.

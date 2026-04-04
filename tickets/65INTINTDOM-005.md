@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — runner-only
-**Deps**: `tickets/65INTINTDOM-004.md`
+**Deps**: `archive/tickets/65INTINTDOM-004.md`
 
 ## Problem
 

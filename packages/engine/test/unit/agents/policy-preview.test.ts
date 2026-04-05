@@ -213,8 +213,13 @@ describe('policy-preview', () => {
       },
     });
 
-    assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), { kind: 'unknown', reason: 'unresolved' });
+    assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), {
+      kind: 'unknown',
+      reason: 'unresolved',
+      failureReason: 'notDecisionComplete',
+    });
     assert.equal(runtime.getOutcome(candidate), 'unresolved');
+    assert.equal(runtime.getFailureReason(candidate), 'notDecisionComplete');
     assert.equal(applyCalls, 0);
   });
 
@@ -274,8 +279,44 @@ describe('policy-preview', () => {
       },
     });
 
-    assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), { kind: 'unknown', reason: 'failed' });
+    assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), {
+      kind: 'unknown',
+      reason: 'failed',
+    });
     assert.equal(runtime.getOutcome(candidate), 'failed');
+    assert.equal(runtime.getFailureReason(candidate), undefined);
+  });
+
+  it('records a preview failure reason when trusted move application throws', () => {
+    const def = createDef();
+    const state = initialState(def, 1, 2).state;
+    const candidate = createCandidate();
+    const runtime = createPolicyPreviewRuntime({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      seatId: 'us',
+      trustedMoveIndex: new Map([
+        [
+          candidate.stableMoveKey,
+          createTrustedExecutableMove(candidate.move, state.stateHash, 'templateCompletion'),
+        ],
+      ]),
+      previewMode: 'exactWorld',
+      dependencies: {
+        applyMove: () => {
+          throw new Error('preview explosion for test');
+        },
+      },
+    });
+
+    assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), {
+      kind: 'unknown',
+      reason: 'failed',
+      failureReason: 'preview explosion for test',
+    });
+    assert.equal(runtime.getOutcome(candidate), 'failed');
+    assert.equal(runtime.getFailureReason(candidate), 'preview explosion for test');
   });
 
   it('returns stochastic outcome when rng diverges and preview mode is tolerateStochastic', () => {
@@ -698,8 +739,13 @@ describe('policy-preview', () => {
       },
     });
 
-    assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), { kind: 'unknown', reason: 'failed' });
+    assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), {
+      kind: 'unknown',
+      reason: 'failed',
+      failureReason: 'sourceStateHashMismatch',
+    });
     assert.equal(runtime.getOutcome(candidate), 'failed');
+    assert.equal(runtime.getFailureReason(candidate), 'sourceStateHashMismatch');
     assert.equal(applyCalls, 0);
   });
 

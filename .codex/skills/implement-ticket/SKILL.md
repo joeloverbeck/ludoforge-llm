@@ -112,6 +112,7 @@ If that earlier ticket introduced production-corpus traversal, fixture readers, 
   - compiled/kernel/runtime types
   - Zod or JSON schemas
   - diagnostics or debug snapshots
+  - exported provider interfaces and adapter wrappers that mirror shared runtime helpers or services
   - fixtures, goldens, and tests
   - manually constructed shared runtime/test fixtures such as `GameDefRuntime` or other kernel context objects
   - if a new UI/store/model context field exists mainly to support one feature path, consider whether it should stay optional on local test-helper contracts to avoid unnecessary fixture churn, so long as production code still supplies it explicitly and the distinction is verified
@@ -128,6 +129,7 @@ If that earlier ticket introduced production-corpus traversal, fixture readers, 
 - If a diagnostic or audit ticket requires written findings but does not name a specific file, prefer an existing repo-owned report surface such as `reports/` over ephemeral local notes or ad hoc scratch files, and reference that report in the final summary.
 - When a migration adds or removes a required compiled field, treat owned production goldens that snapshot compiled catalogs, summaries, or traces as expected update surfaces unless evidence shows unexpected behavioral drift.
 - When a change alters observability, preview readiness, scoring inputs, or other behavior that can legitimately change deterministic move choice, treat owned production goldens and fixed-seed summaries as expected update surfaces unless evidence shows unexpected drift outside the ticket boundary.
+- When enriching diagnostics or trace output, prefer preserving the existing coarse summary field and adding an optional detail field unless the ticket explicitly owns a breaking schema redesign.
 - When a completed gate ticket proves downstream active tickets are not actionable, update those sibling tickets in the same turn so their status, deps, and scope text no longer advertise invalid work. Do not leave the series in a partially-invalid staged state.
 
 ## Verification

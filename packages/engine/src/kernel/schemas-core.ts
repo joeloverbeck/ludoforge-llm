@@ -1406,6 +1406,7 @@ const PolicyCandidateDecisionTraceSchema = z
       z.literal('unresolved'),
       z.literal('failed'),
     ]).optional(),
+    previewFailureReason: StringSchema.optional(),
   })
   .strict();
 

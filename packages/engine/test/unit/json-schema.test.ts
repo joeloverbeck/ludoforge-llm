@@ -383,6 +383,18 @@ describe('json schema artifacts', () => {
                 ],
                 previewOutcome: 'hidden',
               },
+              {
+                actionId: 'event',
+                stableMoveKey: 'event|{}|false|event',
+                score: -2,
+                prunedBy: [],
+                previewRefIds: ['victoryCurrentMargin.currentMargin.self'],
+                unknownPreviewRefs: [
+                  { refId: 'victoryCurrentMargin.currentMargin.self', reason: 'unresolved' },
+                ],
+                previewOutcome: 'unresolved',
+                previewFailureReason: 'completionUnsatisfiable',
+              },
             ],
           },
         },

@@ -51,6 +51,7 @@ export interface PolicyEvaluationCandidate extends PolicyRuntimeCandidate {
   readonly previewRefIds: Set<string>;
   readonly unknownPreviewRefs: Map<string, PolicyPreviewUnavailabilityReason>;
   previewOutcome?: PolicyPreviewTraceOutcome;
+  previewFailureReason?: string;
 }
 
 export interface CreatePolicyEvaluationContextInput {
@@ -811,11 +812,18 @@ export class PolicyEvaluationContext {
       const resolution = this.runtimeProviders.previewSurface.resolveSurface(candidate, ref);
       if (resolution.kind === 'unknown') {
         candidate.previewOutcome = resolution.reason;
+        if (resolution.failureReason !== undefined) {
+          candidate.previewFailureReason = resolution.failureReason;
+        }
         candidate.unknownPreviewRefs.set(refId, resolution.reason);
         return undefined;
       }
       if (candidate.previewOutcome === undefined) {
         candidate.previewOutcome = this.runtimeProviders.previewSurface.getOutcome(candidate);
+        const previewFailureReason = this.runtimeProviders.previewSurface.getFailureReason(candidate);
+        if (previewFailureReason !== undefined) {
+          candidate.previewFailureReason = previewFailureReason;
+        }
       }
       return resolution.kind === 'value' ? resolution.value : undefined;
     }

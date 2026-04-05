@@ -65,6 +65,7 @@ export interface PolicyPreviewRuntime {
     ref: CompiledPreviewSurfaceRef,
   ): PolicyPreviewSurfaceResolution;
   getOutcome(candidate: PolicyPreviewCandidate): PolicyPreviewTraceOutcome;
+  getFailureReason(candidate: PolicyPreviewCandidate): string | undefined;
 }
 
 export type PolicyPreviewUnavailabilityReason = 'random' | 'hidden' | 'unresolved' | 'failed';
@@ -78,6 +79,7 @@ export type PolicyPreviewSurfaceResolution =
   | {
       readonly kind: 'unknown';
       readonly reason: PolicyPreviewUnavailabilityReason;
+      readonly failureReason?: string;
     }
   | {
       readonly kind: 'unavailable';
@@ -101,6 +103,7 @@ type PreviewOutcome =
   | {
       readonly kind: 'unknown';
       readonly reason: PolicyPreviewUnavailabilityReason;
+      readonly failureReason?: string;
     };
 
 const defaultDependencies = {
@@ -223,6 +226,10 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
     getOutcome(candidate) {
       return toPreviewTraceOutcome(getPreviewOutcome(candidate));
     },
+    getFailureReason(candidate) {
+      const outcome = getPreviewOutcome(candidate);
+      return outcome.kind === 'unknown' ? outcome.failureReason : undefined;
+    },
   };
 
   function getPreviewOutcome(candidate: PolicyPreviewCandidate): PreviewOutcome {
@@ -246,7 +253,11 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
 
   function classifyPreviewOutcome(classification: PlayableCandidateClassification): PreviewOutcome {
     if (classification.kind !== 'playableComplete') {
-      return { kind: 'unknown', reason: 'unresolved' };
+      return {
+        kind: 'unknown',
+        reason: 'unresolved',
+        ...(classification.kind === 'rejected' ? { failureReason: classification.rejection } : {}),
+      };
     }
 
     return tryApplyPreview(classification.move);
@@ -254,7 +265,11 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
 
   function tryApplyPreview(trustedMove: TrustedExecutableMove): PreviewOutcome {
     if (trustedMove.sourceStateHash !== input.state.stateHash) {
-      return { kind: 'unknown', reason: 'failed' };
+      return {
+        kind: 'unknown',
+        reason: 'failed',
+        failureReason: 'sourceStateHashMismatch',
+      };
     }
 
     try {
@@ -279,8 +294,12 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         metricCache: new Map<string, number>(),
         victorySurface: null,
       };
-    } catch {
-      return { kind: 'unknown', reason: 'failed' };
+    } catch (error) {
+      return {
+        kind: 'unknown',
+        reason: 'failed',
+        failureReason: truncatePreviewFailureReason(error),
+      };
     }
   }
 }
@@ -360,4 +379,9 @@ function rngStatesEqual(left: RngState, right: RngState): boolean {
     && left.version === right.version
     && left.state.length === right.state.length
     && left.state.every((entry, index) => entry === right.state[index]);
+}
+
+function truncatePreviewFailureReason(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.length <= 160 ? message : `${message.slice(0, 157)}...`;
 }

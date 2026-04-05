@@ -1525,6 +1525,7 @@ export interface PolicyCandidateDecisionTrace {
   readonly previewRefIds?: readonly string[];
   readonly unknownPreviewRefs?: readonly PolicyPreviewUnknownRefTrace[];
   readonly previewOutcome?: 'ready' | 'stochastic' | 'random' | 'hidden' | 'unresolved' | 'failed';
+  readonly previewFailureReason?: string;
 }
 
 export interface PolicyMovePreparationTrace {

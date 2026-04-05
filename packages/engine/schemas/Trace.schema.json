@@ -3165,6 +3165,9 @@
                               "const": "failed"
                             }
                           ]
+                        },
+                        "previewFailureReason": {
+                          "type": "string"
                         }
                       },
                       "required": [

@@ -1,6 +1,6 @@
 # 109AGEPREAUD-004: Enrich preview failure diagnostics in trace output
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — policy-preview.ts, policy-diagnostics.ts, types-core.ts (trace types)
@@ -86,3 +86,26 @@ Add the new optional fields to `PolicyCandidateDecisionTrace` in `types-core.ts`
 1. `pnpm -F @ludoforge/engine run schema:artifacts`
 2. `pnpm -F @ludoforge/engine test`
 3. `pnpm turbo test`
+
+## Outcome
+
+Completed: 2026-04-05
+
+The trace observability gap was real. `previewOutcome` remained too coarse to explain why unresolved or failed preview candidates stopped at the preview boundary, so this ticket added an additive detail field without changing preview behavior.
+
+What changed:
+- added optional `previewFailureReason` to verbose policy candidate traces
+- threaded preview-boundary failure detail through `policy-preview`, `policy-runtime`, `policy-evaluation-core`, and `policy-eval`
+- updated `types-core.ts`, `schemas-core.ts`, and regenerated `packages/engine/schemas/Trace.schema.json`
+- added focused coverage in `policy-preview.test.ts`, `policy-diagnostics.test.ts`, and `json-schema.test.ts`
+
+Deviations from original plan:
+- no golden fixture regeneration was needed because the touched test/schema surface was fully covered by focused assertions and schema validation
+- `policy-diagnostics.ts` itself did not require code changes; the trace builder already forwarded candidate metadata once the new field existed
+
+Verification:
+- `pnpm -F @ludoforge/engine build`
+- `pnpm -F @ludoforge/engine run schema:artifacts`
+- `node --test dist/test/unit/agents/policy-preview.test.js dist/test/unit/agents/policy-diagnostics.test.js dist/test/unit/json-schema.test.js` (run from `packages/engine`)
+- `pnpm -F @ludoforge/engine test`
+- `pnpm turbo test`

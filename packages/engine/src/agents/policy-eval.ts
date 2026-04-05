@@ -61,6 +61,7 @@ export interface PolicyEvaluationCandidateMetadata {
   readonly previewRefIds: readonly string[];
   readonly unknownPreviewRefs: readonly PolicyPreviewUnknownRef[];
   readonly previewOutcome?: PolicyPreviewTraceOutcome;
+  readonly previewFailureReason?: string;
 }
 
 export interface PolicyEvaluationPruningStep {
@@ -151,6 +152,7 @@ interface CandidateEntry extends PolicyEvaluationCandidate {
   readonly prunedBy: string[];
   readonly scoreContributions: { readonly termId: string; readonly contribution: number }[];
   previewOutcome?: PolicyPreviewTraceOutcome;
+  previewFailureReason?: string;
   score: number;
 }
 
@@ -686,6 +688,7 @@ function candidateMetadata(candidate: CandidateEntry): PolicyEvaluationCandidate
       .sort(([leftId], [rightId]) => leftId.localeCompare(rightId))
       .map(([refId, reason]) => ({ refId, reason })),
     ...(candidate.previewOutcome === undefined ? {} : { previewOutcome: candidate.previewOutcome }),
+    ...(candidate.previewFailureReason === undefined ? {} : { previewFailureReason: candidate.previewFailureReason }),
   };
 }
 

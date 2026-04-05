@@ -13,11 +13,9 @@ import {
   createGameDefRuntime,
   createRng,
   initialState,
-  legalMoves,
   type ClassifiedMove,
   type GameDef,
   type GameState,
-  type Move,
   type PlayerId,
   type TrustedExecutableMove,
 } from '../../../src/kernel/index.js';

@@ -42,8 +42,6 @@ import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
 
 const SIHANOUK_CARD_ID = 'card-75';
 const TAY_NINH = 'tay-ninh:none';
-const FISHHOOK = 'the-fishhook:none';
-
 const makeFitlToken = (
   id: string,
   type: string,

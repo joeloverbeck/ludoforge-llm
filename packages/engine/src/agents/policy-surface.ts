@@ -40,6 +40,20 @@ export function parseAuthoredPolicySurfaceRef(
     };
   }
 
+  if (refPath.startsWith('globalMarker.')) {
+    const markerId = refPath.slice('globalMarker.'.length);
+    if (markerId.length === 0) {
+      return null;
+    }
+    const visibility = catalog.globalMarkers[markerId];
+    return visibility === undefined ? null : {
+      kind,
+      family: 'globalMarker',
+      id: markerId,
+      visibility,
+    };
+  }
+
   if (refPath.startsWith('var.seat.')) {
     const parts = refPath.split('.');
     if (parts.length !== 4) {
@@ -222,6 +236,8 @@ export function getPolicySurfaceVisibility(
   switch (ref.family) {
     case 'globalVar':
       return catalog.globalVars[ref.id] ?? null;
+    case 'globalMarker':
+      return catalog.globalMarkers[ref.id] ?? null;
     case 'perPlayerVar':
       return catalog.perPlayerVars[ref.id] ?? null;
     case 'derivedMetric':

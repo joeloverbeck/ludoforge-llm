@@ -164,6 +164,7 @@ function createBaseDef(overrides?: {
       catalogFingerprint: 'test',
       surfaceVisibility: {
         globalVars: {},
+        globalMarkers: {},
         perPlayerVars: {},
         derivedMetrics: {},
         victory: {

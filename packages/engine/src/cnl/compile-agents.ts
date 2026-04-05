@@ -68,6 +68,7 @@ export interface LowerAgentsOptions {
   readonly referenceSeatIds?: readonly string[];
   readonly playerCountMax?: number;
   readonly globalVarIds?: readonly string[];
+  readonly globalMarkerIds?: readonly string[];
   readonly perPlayerVarIds?: readonly string[];
   readonly policyMetricIds?: readonly string[];
   readonly hasVictoryMargins?: boolean;
@@ -153,16 +154,23 @@ function resolveSurfaceVisibilityFromObserverCatalog(
   // Fallback: build defaults inline (same as the old lowerSurfaceVisibility).
   // This path is taken when there is no observability section.
   const globalVarDefaults: CompiledSurfaceVisibility = { current: 'public', preview: { visibility: 'public', allowWhenHiddenSampling: true } };
+  const globalMarkerDefaults: CompiledSurfaceVisibility = {
+    current: 'public',
+    preview: { visibility: 'public', allowWhenHiddenSampling: false },
+  };
   const perPlayerVarDefaults: CompiledSurfaceVisibility = { current: 'seatVisible', preview: { visibility: 'seatVisible', allowWhenHiddenSampling: true } };
   const hiddenDefaults: CompiledSurfaceVisibility = { current: 'hidden', preview: { visibility: 'hidden', allowWhenHiddenSampling: false } };
   const globalVars: Record<string, CompiledSurfaceVisibility> = {};
   for (const id of options.globalVarIds ?? []) { globalVars[id] = globalVarDefaults; }
+  const globalMarkers: Record<string, CompiledSurfaceVisibility> = {};
+  for (const id of options.globalMarkerIds ?? []) { globalMarkers[id] = globalMarkerDefaults; }
   const perPlayerVars: Record<string, CompiledSurfaceVisibility> = {};
   for (const id of options.perPlayerVarIds ?? []) { perPlayerVars[id] = perPlayerVarDefaults; }
   const derivedMetrics: Record<string, CompiledSurfaceVisibility> = {};
   for (const id of options.policyMetricIds ?? []) { derivedMetrics[id] = hiddenDefaults; }
   return {
     globalVars,
+    globalMarkers,
     perPlayerVars,
     derivedMetrics,
     victory: { currentMargin: hiddenDefaults, currentRank: hiddenDefaults },
@@ -1802,7 +1810,14 @@ class AgentLibraryCompiler {
 
     const surfaceResolved = this.resolveSurfaceRuntimeRef(refPath, path, false);
     if (surfaceResolved !== null) {
-      return { type: 'number', costClass: 'state', ref: surfaceResolved.ref };
+      const ref = surfaceResolved.ref as { readonly family?: string };
+      const surfaceType = ref.family === 'globalMarker'
+        || ref.family === 'activeCardIdentity'
+        ? 'id' as const
+        : ref.family === 'activeCardMetadata'
+          ? 'unknown' as const
+          : 'number' as const;
+      return { type: surfaceType, costClass: 'state', ref: surfaceResolved.ref };
     }
 
     this.reportUnknownLibraryRef(refPath, path);
@@ -1841,9 +1856,37 @@ class AgentLibraryCompiler {
       return null;
     }
     const nestedPath = refPath.slice('preview.'.length);
+    if (nestedPath.startsWith('feature.')) {
+      const featureId = nestedPath.slice('feature.'.length);
+      if (featureId.length === 0) {
+        this.reportUnknownLibraryRef(refPath, path);
+        return null;
+      }
+      if (this.authoredLibrary.stateFeatures?.[featureId] === undefined) {
+        this.reportUnknownLibraryRef(refPath, path);
+        return null;
+      }
+      const feature = this.compileStateFeature(featureId);
+      if (feature === null) {
+        return null;
+      }
+      return {
+        type: feature.type,
+        costClass: 'preview',
+        ref: { kind: 'library', refKind: 'previewStateFeature', id: featureId },
+        dependency: { kind: 'stateFeatures', id: featureId },
+      };
+    }
     const resolved = this.resolveSurfaceRuntimeRef(nestedPath, path, true);
     if (resolved !== null) {
-      return { type: 'number', costClass: 'preview', ref: resolved.ref };
+      const ref = resolved.ref as { readonly family?: string };
+      const previewSurfaceType = ref.family === 'globalMarker'
+        || ref.family === 'activeCardIdentity'
+        ? 'id' as const
+        : ref.family === 'activeCardMetadata'
+          ? 'unknown' as const
+          : 'number' as const;
+      return { type: previewSurfaceType, costClass: 'preview', ref: resolved.ref };
     }
     this.reportUnknownLibraryRef(refPath, path);
     return null;

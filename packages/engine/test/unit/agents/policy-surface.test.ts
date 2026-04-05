@@ -23,6 +23,7 @@ const publicVis: CompiledSurfaceVisibility = {
 function createCatalog(overrides?: Partial<CompiledSurfaceCatalog>): CompiledSurfaceCatalog {
   return {
     globalVars: { score: publicVis },
+    globalMarkers: { cap_boobyTraps: publicVis },
     perPlayerVars: { tempo: publicVis },
     derivedMetrics: { aggro: publicVis },
     victory: {
@@ -146,6 +147,29 @@ describe('parseAuthoredPolicySurfaceRef', () => {
       assert.equal(result?.id, 'score');
     });
 
+    it('parses globalMarker.cap_boobyTraps', () => {
+      const catalog = createCatalog();
+      const result = parseAuthoredPolicySurfaceRef(catalog, 'globalMarker.cap_boobyTraps', 'current');
+      assert.deepStrictEqual(result, {
+        kind: 'currentSurface',
+        family: 'globalMarker',
+        id: 'cap_boobyTraps',
+        visibility: publicVis,
+      });
+    });
+
+    it('returns null for globalMarker. with an empty marker id', () => {
+      const catalog = createCatalog();
+      const result = parseAuthoredPolicySurfaceRef(catalog, 'globalMarker.', 'current');
+      assert.equal(result, null);
+    });
+
+    it('returns null for unknown globalMarker ids', () => {
+      const catalog = createCatalog();
+      const result = parseAuthoredPolicySurfaceRef(catalog, 'globalMarker.cap_unknown', 'current');
+      assert.equal(result, null);
+    });
+
     it('parses metric.aggro', () => {
       const catalog = createCatalog();
       const result = parseAuthoredPolicySurfaceRef(catalog, 'metric.aggro', 'current');
@@ -182,6 +206,16 @@ describe('getPolicySurfaceVisibility', () => {
       kind: 'currentSurface',
       family: 'activeCardMetadata',
       id: 'period',
+    });
+    assert.deepStrictEqual(result, publicVis);
+  });
+
+  it('returns visibility for globalMarker', () => {
+    const catalog = createCatalog();
+    const result = getPolicySurfaceVisibility(catalog, {
+      kind: 'currentSurface',
+      family: 'globalMarker',
+      id: 'cap_boobyTraps',
     });
     assert.deepStrictEqual(result, publicVis);
   });

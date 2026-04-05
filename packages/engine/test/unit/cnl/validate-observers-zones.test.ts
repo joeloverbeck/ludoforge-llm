@@ -18,6 +18,7 @@ function warnings(diagnostics: readonly Diagnostic[]): readonly Diagnostic[] {
 
 const DEFAULT_KNOWN_IDS: KnownSurfaceIds = {
   globalVars: new Set(['score']),
+  globalMarkers: new Set(),
   perPlayerVars: new Set(['health']),
   derivedMetrics: new Set(),
 };

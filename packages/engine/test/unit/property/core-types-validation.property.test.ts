@@ -28,6 +28,7 @@ describe('core-types validation property-style checks', () => {
           catalogFingerprint: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
           surfaceVisibility: {
             globalVars: {},
+            globalMarkers: {},
             perPlayerVars: {},
             derivedMetrics: {},
             victory: {
@@ -137,6 +138,7 @@ describe('core-types validation property-style checks', () => {
         catalogFingerprint: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
         surfaceVisibility: {
           globalVars: {},
+          globalMarkers: {},
           perPlayerVars: {},
           derivedMetrics: {},
           victory: {

@@ -57,6 +57,7 @@ function createBaseDef(): GameDef {
           progress: { current: 'public', preview: { visibility: 'public', allowWhenHiddenSampling: true } },
           threshold: { current: 'public', preview: { visibility: 'public', allowWhenHiddenSampling: true } },
         },
+        globalMarkers: {},
         perPlayerVars: {},
         derivedMetrics: {},
         victory: {

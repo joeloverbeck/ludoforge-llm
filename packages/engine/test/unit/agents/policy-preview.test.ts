@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { createPolicyPreviewRuntime } from '../../../src/agents/policy-preview.js';
+import { createPolicyPreviewRuntime, type PolicyPreviewDependencies } from '../../../src/agents/policy-preview.js';
 import {
   asActionId,
   asZoneId,
@@ -56,6 +56,7 @@ function createDef(): GameDef {
             preview: { visibility: 'public', allowWhenHiddenSampling: true },
           },
         },
+        globalMarkers: {},
         perPlayerVars: {
           tempo: {
             current: 'seatVisible',
@@ -141,6 +142,43 @@ function createEventCandidate(
   return {
     move: { actionId: asActionId('event'), params },
     stableMoveKey: `event|${JSON.stringify(params)}|false|event`,
+  };
+}
+
+function createEventAnnotationIndex(
+  grants: Readonly<{
+    readonly cardId: string;
+    readonly side: 'shaded' | 'unshaded';
+    readonly seats: readonly string[];
+  }>,
+): NonNullable<GameDef['cardAnnotationIndex']> {
+  return {
+    entries: {
+      [grants.cardId]: {
+        cardId: grants.cardId,
+        [grants.side]: {
+          tokenPlacements: {},
+          tokenRemovals: {},
+          tokenCreations: {},
+          tokenDestructions: {},
+          markerModifications: 0,
+          globalMarkerModifications: 0,
+          globalVarModifications: 0,
+          perPlayerVarModifications: 0,
+          varTransfers: 0,
+          drawCount: 0,
+          shuffleCount: 0,
+          grantsOperation: true,
+          grantOperationSeats: grants.seats,
+          hasEligibilityOverride: false,
+          hasLastingEffect: false,
+          hasBranches: false,
+          hasPhaseControl: false,
+          hasDecisionPoints: false,
+          effectNodeCount: 0,
+        },
+      },
+    },
   };
 }
 
@@ -317,6 +355,45 @@ describe('policy-preview', () => {
     });
     assert.equal(runtime.getOutcome(candidate), 'failed');
     assert.equal(runtime.getFailureReason(candidate), 'preview explosion for test');
+  });
+
+  it('accepts an optional evaluateGrantedOperation callback without changing current preview behavior', () => {
+    const def = createDef();
+    const state = initialState(def, 1, 2).state;
+    const candidate = createCandidate();
+    let callbackCalls = 0;
+    const dependencies: PolicyPreviewDependencies = {
+      classifyPlayableMoveCandidate: () => ({
+        kind: 'playableComplete',
+        move: createTrustedExecutableMove(candidate.move, state.stateHash, 'templateCompletion'),
+        warnings: [],
+      }),
+      applyMove: () => ({
+        state: {
+          ...state,
+          globalVars: { ...state.globalVars, score: 6 },
+        },
+      }),
+      derivePlayerObservation: () => createObservation(false),
+      evaluateGrantedOperation: () => {
+        callbackCalls += 1;
+        return undefined;
+      },
+    };
+
+    const runtime = createPolicyPreviewRuntime({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      seatId: 'us',
+      trustedMoveIndex: new Map(),
+      previewMode: 'exactWorld',
+      dependencies,
+    });
+
+    assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), { kind: 'value', value: 6 });
+    assert.equal(runtime.getOutcome(candidate), 'ready');
+    assert.equal(callbackCalls, 0);
   });
 
   it('returns stochastic outcome when rng diverges and preview mode is tolerateStochastic', () => {
@@ -899,5 +976,254 @@ describe('policy-preview', () => {
 
     assert.deepEqual(runtime.resolveSurface(stochasticEvent, previewScoreRef), { kind: 'value', value: 7 });
     assert.equal(runtime.getOutcome(stochasticEvent), 'stochastic');
+  });
+
+  it('simulates a granted operation for a trusted granting event when the acting seat is a grantee', () => {
+    const cardId = 'card-grant';
+    const def = {
+      ...createDef(),
+      cardAnnotationIndex: createEventAnnotationIndex({ cardId, side: 'shaded', seats: ['us'] }),
+    };
+    const state = initialState(def, 1, 2).state;
+    const eventCandidate = createEventCandidate('shaded', { eventCardId: cardId, eventDeckId: 'main' });
+    const operationMove: Move = { actionId: asActionId('rally'), params: { target: 'alpha:none' } };
+    let callbackCalls = 0;
+    let classifyCalls = 0;
+    let applyCalls = 0;
+    const runtime = createPolicyPreviewRuntime({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      seatId: 'us',
+      trustedMoveIndex: new Map([
+        [eventCandidate.stableMoveKey, createTrustedExecutableMove(eventCandidate.move, state.stateHash, 'templateCompletion')],
+      ]),
+      previewMode: 'exactWorld',
+      dependencies: {
+        classifyPlayableMoveCandidate: (_def, currentState, move) => {
+          classifyCalls += 1;
+          if (currentState === state) {
+            assert.fail('trusted event preview should not reclassify the outer event candidate');
+          }
+          assert.deepEqual(move, operationMove);
+          return {
+            kind: 'playableComplete',
+            move: createTrustedExecutableMove(move, currentState.stateHash, 'templateCompletion'),
+            warnings: [],
+          };
+        },
+        evaluateGrantedOperation: (_def, postEventState, seatId) => {
+          callbackCalls += 1;
+          assert.equal(seatId, 'us');
+          assert.equal(postEventState.globalVars.score, 4);
+          return { move: operationMove, score: 11 };
+        },
+        applyMove: (_def, currentState, trustedMove) => {
+          applyCalls += 1;
+          return {
+            state: {
+              ...currentState,
+              globalVars: {
+                ...currentState.globalVars,
+                score: trustedMove.move.actionId === asActionId('event') ? 4 : 9,
+              },
+            },
+          };
+        },
+        derivePlayerObservation: () => createObservation(false),
+      },
+    });
+
+    assert.deepEqual(runtime.resolveSurface(eventCandidate, previewScoreRef), { kind: 'value', value: 9 });
+    assert.equal(runtime.getOutcome(eventCandidate), 'ready');
+    assert.equal(callbackCalls, 1);
+    assert.equal(classifyCalls, 1);
+    assert.equal(applyCalls, 2);
+  });
+
+  it('does not simulate a granted operation when the acting seat is not a grantee', () => {
+    const cardId = 'card-opponent-grant';
+    const def = {
+      ...createDef(),
+      cardAnnotationIndex: createEventAnnotationIndex({ cardId, side: 'shaded', seats: ['arvn'] }),
+    };
+    const state = initialState(def, 1, 2).state;
+    const eventCandidate = createEventCandidate('shaded', { eventCardId: cardId, eventDeckId: 'main' });
+    let callbackCalls = 0;
+    let applyCalls = 0;
+    const runtime = createPolicyPreviewRuntime({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      seatId: 'us',
+      trustedMoveIndex: new Map([
+        [eventCandidate.stableMoveKey, createTrustedExecutableMove(eventCandidate.move, state.stateHash, 'templateCompletion')],
+      ]),
+      previewMode: 'exactWorld',
+      dependencies: {
+        classifyPlayableMoveCandidate: () => {
+          assert.fail('trusted event preview should not reclassify the outer event candidate');
+        },
+        evaluateGrantedOperation: () => {
+          callbackCalls += 1;
+          return undefined;
+        },
+        applyMove: (_def, currentState) => {
+          applyCalls += 1;
+          return {
+            state: {
+              ...currentState,
+              globalVars: { ...currentState.globalVars, score: 3 },
+            },
+          };
+        },
+        derivePlayerObservation: () => createObservation(false),
+      },
+    });
+
+    assert.deepEqual(runtime.resolveSurface(eventCandidate, previewScoreRef), { kind: 'value', value: 3 });
+    assert.equal(runtime.getOutcome(eventCandidate), 'ready');
+    assert.equal(callbackCalls, 0);
+    assert.equal(applyCalls, 1);
+  });
+
+  it('treats self grantOperationSeats entries as the acting seat', () => {
+    const cardId = 'card-self-grant';
+    const def = {
+      ...createDef(),
+      cardAnnotationIndex: createEventAnnotationIndex({ cardId, side: 'shaded', seats: ['self'] }),
+    };
+    const state = initialState(def, 1, 2).state;
+    const eventCandidate = createEventCandidate('shaded', { eventCardId: cardId, eventDeckId: 'main' });
+    let callbackCalls = 0;
+    const runtime = createPolicyPreviewRuntime({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      seatId: 'us',
+      trustedMoveIndex: new Map([
+        [eventCandidate.stableMoveKey, createTrustedExecutableMove(eventCandidate.move, state.stateHash, 'templateCompletion')],
+      ]),
+      previewMode: 'exactWorld',
+      dependencies: {
+        classifyPlayableMoveCandidate: (_def, currentState, move) => ({
+          kind: 'playableComplete',
+          move: createTrustedExecutableMove(move, currentState.stateHash, 'templateCompletion'),
+          warnings: [],
+        }),
+        evaluateGrantedOperation: () => {
+          callbackCalls += 1;
+          return { move: { actionId: asActionId('rally'), params: {} }, score: 5 };
+        },
+        applyMove: (_def, currentState, trustedMove) => ({
+          state: {
+            ...currentState,
+            globalVars: {
+              ...currentState.globalVars,
+              score: trustedMove.move.actionId === asActionId('event') ? 2 : 8,
+            },
+          },
+        }),
+        derivePlayerObservation: () => createObservation(false),
+      },
+    });
+
+    assert.deepEqual(runtime.resolveSurface(eventCandidate, previewScoreRef), { kind: 'value', value: 8 });
+    assert.equal(callbackCalls, 1);
+  });
+
+  it('falls back to the post-event state when the granted operation callback returns undefined', () => {
+    const cardId = 'card-no-op';
+    const def = {
+      ...createDef(),
+      cardAnnotationIndex: createEventAnnotationIndex({ cardId, side: 'shaded', seats: ['us'] }),
+    };
+    const state = initialState(def, 1, 2).state;
+    const eventCandidate = createEventCandidate('shaded', { eventCardId: cardId, eventDeckId: 'main' });
+    let callbackCalls = 0;
+    let applyCalls = 0;
+    const runtime = createPolicyPreviewRuntime({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      seatId: 'us',
+      trustedMoveIndex: new Map([
+        [eventCandidate.stableMoveKey, createTrustedExecutableMove(eventCandidate.move, state.stateHash, 'templateCompletion')],
+      ]),
+      previewMode: 'exactWorld',
+      dependencies: {
+        classifyPlayableMoveCandidate: () => {
+          assert.fail('no granted operation move should be classified when the callback returns undefined');
+        },
+        evaluateGrantedOperation: () => {
+          callbackCalls += 1;
+          return undefined;
+        },
+        applyMove: (_def, currentState) => {
+          applyCalls += 1;
+          return {
+            state: {
+              ...currentState,
+              globalVars: { ...currentState.globalVars, score: 4 },
+            },
+          };
+        },
+        derivePlayerObservation: () => createObservation(false),
+      },
+    });
+
+    assert.deepEqual(runtime.resolveSurface(eventCandidate, previewScoreRef), { kind: 'value', value: 4 });
+    assert.equal(callbackCalls, 1);
+    assert.equal(applyCalls, 1);
+  });
+
+  it('caps granted-operation preview depth at one additional applied move', () => {
+    const cardId = 'card-depth-cap';
+    const def = {
+      ...createDef(),
+      cardAnnotationIndex: createEventAnnotationIndex({ cardId, side: 'shaded', seats: ['us'] }),
+    };
+    const state = initialState(def, 1, 2).state;
+    const eventCandidate = createEventCandidate('shaded', { eventCardId: cardId, eventDeckId: 'main' });
+    let callbackCalls = 0;
+    let applyCalls = 0;
+    const runtime = createPolicyPreviewRuntime({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      seatId: 'us',
+      trustedMoveIndex: new Map([
+        [eventCandidate.stableMoveKey, createTrustedExecutableMove(eventCandidate.move, state.stateHash, 'templateCompletion')],
+      ]),
+      previewMode: 'exactWorld',
+      dependencies: {
+        classifyPlayableMoveCandidate: (_def, currentState, move) => ({
+          kind: 'playableComplete',
+          move: createTrustedExecutableMove(move, currentState.stateHash, 'templateCompletion'),
+          warnings: [],
+        }),
+        evaluateGrantedOperation: () => {
+          callbackCalls += 1;
+          return { move: { actionId: asActionId('rally'), params: { step: 'granted' } }, score: 7 };
+        },
+        applyMove: (_def, currentState, trustedMove) => {
+          applyCalls += 1;
+          return {
+            state: {
+              ...currentState,
+              globalVars: {
+                ...currentState.globalVars,
+                score: trustedMove.move.actionId === asActionId('event') ? 2 : 5,
+              },
+            },
+          };
+        },
+        derivePlayerObservation: () => createObservation(false),
+      },
+    });
+
+    assert.deepEqual(runtime.resolveSurface(eventCandidate, previewScoreRef), { kind: 'value', value: 5 });
+    assert.equal(callbackCalls, 1);
+    assert.equal(applyCalls, 2);
   });
 });

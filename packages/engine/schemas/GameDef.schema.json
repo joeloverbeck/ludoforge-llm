@@ -1842,6 +1842,67 @@
                       "additionalProperties": false
                     }
                   },
+                  "globalMarkers": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "object",
+                      "properties": {
+                        "current": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "public"
+                            },
+                            {
+                              "type": "string",
+                              "const": "seatVisible"
+                            },
+                            {
+                              "type": "string",
+                              "const": "hidden"
+                            }
+                          ]
+                        },
+                        "preview": {
+                          "type": "object",
+                          "properties": {
+                            "visibility": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "const": "public"
+                                },
+                                {
+                                  "type": "string",
+                                  "const": "seatVisible"
+                                },
+                                {
+                                  "type": "string",
+                                  "const": "hidden"
+                                }
+                              ]
+                            },
+                            "allowWhenHiddenSampling": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "visibility",
+                            "allowWhenHiddenSampling"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "current",
+                        "preview"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
                   "perPlayerVars": {
                     "type": "object",
                     "propertyNames": {
@@ -2307,6 +2368,7 @@
                 },
                 "required": [
                   "globalVars",
+                  "globalMarkers",
                   "perPlayerVars",
                   "derivedMetrics",
                   "victory",
@@ -2450,6 +2512,67 @@
           "type": "object",
           "properties": {
             "globalVars": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "current": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "const": "public"
+                      },
+                      {
+                        "type": "string",
+                        "const": "seatVisible"
+                      },
+                      {
+                        "type": "string",
+                        "const": "hidden"
+                      }
+                    ]
+                  },
+                  "preview": {
+                    "type": "object",
+                    "properties": {
+                      "visibility": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "const": "public"
+                          },
+                          {
+                            "type": "string",
+                            "const": "seatVisible"
+                          },
+                          {
+                            "type": "string",
+                            "const": "hidden"
+                          }
+                        ]
+                      },
+                      "allowWhenHiddenSampling": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "visibility",
+                      "allowWhenHiddenSampling"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "current",
+                  "preview"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "globalMarkers": {
               "type": "object",
               "propertyNames": {
                 "type": "string"
@@ -2975,6 +3098,7 @@
           },
           "required": [
             "globalVars",
+            "globalMarkers",
             "perPlayerVars",
             "derivedMetrics",
             "victory",
@@ -3171,7 +3295,7 @@
                     ]
                   },
                   "expr": {
-                    "$ref": "#/definitions/anon_4ca43a02"
+                    "$ref": "#/definitions/anon_46cd64a7"
                   },
                   "dependencies": {
                     "type": "object",
@@ -3271,7 +3395,7 @@
                     ]
                   },
                   "expr": {
-                    "$ref": "#/definitions/anon_4ca43a02"
+                    "$ref": "#/definitions/anon_46cd64a7"
                   },
                   "dependencies": {
                     "type": "object",
@@ -3374,12 +3498,12 @@
                     "type": "string"
                   },
                   "of": {
-                    "$ref": "#/definitions/anon_4ca43a02"
+                    "$ref": "#/definitions/anon_46cd64a7"
                   },
                   "where": {
                     "allOf": [
                       {
-                        "$ref": "#/definitions/anon_4ca43a02"
+                        "$ref": "#/definitions/anon_46cd64a7"
                       }
                     ]
                   },
@@ -3462,7 +3586,7 @@
                     ]
                   },
                   "when": {
-                    "$ref": "#/definitions/anon_4ca43a02"
+                    "$ref": "#/definitions/anon_46cd64a7"
                   },
                   "dependencies": {
                     "type": "object",
@@ -3572,15 +3696,15 @@
                   "when": {
                     "allOf": [
                       {
-                        "$ref": "#/definitions/anon_4ca43a02"
+                        "$ref": "#/definitions/anon_46cd64a7"
                       }
                     ]
                   },
                   "weight": {
-                    "$ref": "#/definitions/anon_4ca43a02"
+                    "$ref": "#/definitions/anon_46cd64a7"
                   },
                   "value": {
-                    "$ref": "#/definitions/anon_4ca43a02"
+                    "$ref": "#/definitions/anon_46cd64a7"
                   },
                   "unknownAs": {
                     "type": "number"
@@ -3680,7 +3804,7 @@
                   "value": {
                     "allOf": [
                       {
-                        "$ref": "#/definitions/anon_4ca43a02"
+                        "$ref": "#/definitions/anon_46cd64a7"
                       }
                     ]
                   },
@@ -3751,13 +3875,13 @@
                 "type": "object",
                 "properties": {
                   "target": {
-                    "$ref": "#/definitions/anon_4ca43a02"
+                    "$ref": "#/definitions/anon_46cd64a7"
                   },
                   "proximity": {
                     "type": "object",
                     "properties": {
                       "current": {
-                        "$ref": "#/definitions/anon_4ca43a02"
+                        "$ref": "#/definitions/anon_46cd64a7"
                       },
                       "threshold": {
                         "type": "number"
@@ -10016,7 +10140,7 @@
         }
       ]
     },
-    "anon_4ca43a02": {
+    "anon_46cd64a7": {
       "anyOf": [
         {
           "type": "object",
@@ -10100,6 +10224,10 @@
                         {
                           "type": "string",
                           "const": "aggregate"
+                        },
+                        {
+                          "type": "string",
+                          "const": "previewStateFeature"
                         }
                       ]
                     },
@@ -10126,6 +10254,10 @@
                         {
                           "type": "string",
                           "const": "globalVar"
+                        },
+                        {
+                          "type": "string",
+                          "const": "globalMarker"
                         },
                         {
                           "type": "string",
@@ -10215,6 +10347,10 @@
                         {
                           "type": "string",
                           "const": "globalVar"
+                        },
+                        {
+                          "type": "string",
+                          "const": "globalMarker"
                         },
                         {
                           "type": "string",
@@ -10614,7 +10750,7 @@
             "args": {
               "type": "array",
               "items": {
-                "$ref": "#/definitions/anon_4ca43a02"
+                "$ref": "#/definitions/anon_46cd64a7"
               }
             }
           },
@@ -10638,7 +10774,7 @@
                   "type": "string"
                 },
                 {
-                  "$ref": "#/definitions/anon_4ca43a02"
+                  "$ref": "#/definitions/anon_46cd64a7"
                 }
               ]
             },
@@ -10955,7 +11091,7 @@
                   "type": "string"
                 },
                 {
-                  "$ref": "#/definitions/anon_4ca43a02"
+                  "$ref": "#/definitions/anon_46cd64a7"
                 }
               ]
             },
@@ -11029,7 +11165,7 @@
                   "type": "string"
                 },
                 {
-                  "$ref": "#/definitions/anon_4ca43a02"
+                  "$ref": "#/definitions/anon_46cd64a7"
                 }
               ]
             },

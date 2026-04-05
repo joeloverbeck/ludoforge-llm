@@ -29,7 +29,12 @@ import {
   type PolicyRuntimeProviders,
   type PolicyValue,
 } from './policy-runtime.js';
-import type { PolicyPreviewTraceOutcome, PolicyPreviewUnavailabilityReason } from './policy-preview.js';
+import type {
+  PolicyPreviewDependencies,
+  PolicyPreviewGrantedOperation,
+  PolicyPreviewTraceOutcome,
+  PolicyPreviewUnavailabilityReason,
+} from './policy-preview.js';
 
 export interface PolicyRuntimeFailure {
   readonly code: string;
@@ -52,6 +57,7 @@ export interface PolicyEvaluationCandidate extends PolicyRuntimeCandidate {
   readonly unknownPreviewRefs: Map<string, PolicyPreviewUnavailabilityReason>;
   previewOutcome?: PolicyPreviewTraceOutcome;
   previewFailureReason?: string;
+  grantedOperation?: PolicyPreviewGrantedOperation;
 }
 
 export interface CreatePolicyEvaluationContextInput {
@@ -62,6 +68,7 @@ export interface CreatePolicyEvaluationContextInput {
   readonly catalog: AgentPolicyCatalog;
   readonly parameterValues: Readonly<Record<string, AgentParameterValue>>;
   readonly trustedMoveIndex: ReadonlyMap<string, TrustedExecutableMove>;
+  readonly previewDependencies?: PolicyPreviewDependencies;
   readonly runtime?: GameDefRuntime;
   readonly completion?: {
     readonly request: ChoicePendingRequest;
@@ -72,12 +79,13 @@ export interface CreatePolicyEvaluationContextInput {
 function resolveZoneTokenAggOwner(
   owner: AgentPolicyZoneTokenAggOwner,
   input: CreatePolicyEvaluationContextInput,
+  state: GameState,
 ): 'none' | PlayerId | undefined {
   if (owner === 'self') {
     return input.playerId;
   }
   if (owner === 'active') {
-    return input.state.activePlayer;
+    return state.activePlayer;
   }
   if (owner === 'none') {
     return 'none';
@@ -199,19 +207,21 @@ export function matchesZoneFilter(
 }
 
 export class PolicyEvaluationContext {
-  private readonly stateFeatureCache = new Map<string, PolicyValue>();
+  private readonly stateFeatureCacheByState = new Map<bigint, Map<string, PolicyValue>>();
   private readonly candidateFeatureCache = new Map<string, Map<string, PolicyValue>>();
   private readonly aggregateCache = new Map<string, PolicyValue>();
   private readonly strategicConditionCache = new Map<string, PolicyValue>();
   private readonly runtimeProviders: PolicyRuntimeProviders;
-  private zoneReadContext?: ReadContext;
+  private readonly zoneReadContextsByState = new Map<bigint, ReadContext>();
   private currentCandidates: PolicyEvaluationCandidate[];
+  private activeState: GameState;
 
   constructor(
     private readonly input: CreatePolicyEvaluationContextInput,
     candidates: PolicyEvaluationCandidate[],
   ) {
     this.currentCandidates = candidates;
+    this.activeState = input.state;
     this.runtimeProviders = createPolicyRuntimeProviders({
       def: input.def,
       state: input.state,
@@ -219,6 +229,7 @@ export class PolicyEvaluationContext {
       seatId: input.seatId,
       trustedMoveIndex: input.trustedMoveIndex,
       catalog: input.catalog,
+      ...(input.previewDependencies === undefined ? {} : { previewDependencies: input.previewDependencies }),
       runtimeError: (code, message, detail) => this.runtimeError(code, message, detail),
       ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
       ...(input.completion === undefined ? {} : { completion: input.completion }),
@@ -236,7 +247,11 @@ export class PolicyEvaluationContext {
 
   getEvaluatedStateFeatures(): Readonly<Record<string, number | string | boolean>> {
     const result: Record<string, number | string | boolean> = {};
-    for (const [id, value] of this.stateFeatureCache) {
+    const cache = this.stateFeatureCacheByState.get(this.input.state.stateHash);
+    if (cache === undefined) {
+      return result;
+    }
+    for (const [id, value] of cache) {
       if (typeof value === 'number' || typeof value === 'string' || typeof value === 'boolean') {
         result[id] = value;
       }
@@ -245,16 +260,7 @@ export class PolicyEvaluationContext {
   }
 
   evaluateStateFeature(featureId: string): PolicyValue {
-    if (this.stateFeatureCache.has(featureId)) {
-      return this.stateFeatureCache.get(featureId);
-    }
-    const feature = this.input.catalog.library.stateFeatures[featureId];
-    if (feature === undefined) {
-      throw this.runtimeError('RUNTIME_EVALUATION_ERROR', `Unknown state feature "${featureId}".`, { featureId });
-    }
-    const value = this.evaluateExpr(feature.expr, undefined);
-    this.stateFeatureCache.set(featureId, value);
-    return value;
+    return this.evaluateStateFeatureAgainstState(featureId, this.activeState);
   }
 
   evaluateCandidateFeature(candidate: PolicyEvaluationCandidate, featureId: string): PolicyValue {
@@ -528,7 +534,8 @@ export class PolicyEvaluationContext {
     expr: Extract<AgentPolicyExpr, { readonly kind: 'zoneTokenAgg' }>,
     candidate: PolicyEvaluationCandidate | undefined,
   ): PolicyValue {
-    const resolvedOwner = resolveZoneTokenAggOwner(expr.owner, this.input);
+    const currentState = this.activeState;
+    const resolvedOwner = resolveZoneTokenAggOwner(expr.owner, this.input, currentState);
     if (resolvedOwner === undefined) {
       return undefined;
     }
@@ -536,7 +543,7 @@ export class PolicyEvaluationContext {
     if (zoneId === undefined) {
       return undefined;
     }
-    const tokens = this.input.state.zones[zoneId];
+    const tokens = currentState.zones[zoneId];
     if (tokens === undefined || tokens.length === 0) {
       return expr.aggOp === 'count' ? 0 : expr.aggOp === 'sum' ? 0 : undefined;
     }
@@ -565,14 +572,15 @@ export class PolicyEvaluationContext {
   private evaluateGlobalTokenAggregate(
     expr: Extract<AgentPolicyExpr, { readonly kind: 'globalTokenAgg' }>,
   ): PolicyValue {
-    const resolvedFilter = resolveTokenFilter(expr.tokenFilter, this.input.playerId, this.input.state);
+    const currentState = this.activeState;
+    const resolvedFilter = resolveTokenFilter(expr.tokenFilter, this.input.playerId, currentState);
     const zoneIds: string[] = [];
 
     for (const zoneDef of this.input.def.zones) {
       if (!matchesZoneScope(zoneDef, expr.zoneScope)) {
         continue;
       }
-      if (!matchesZoneFilter(zoneDef, expr.zoneFilter, this.input.state)) {
+      if (!matchesZoneFilter(zoneDef, expr.zoneFilter, currentState)) {
         continue;
       }
       zoneIds.push(String(zoneDef.id));
@@ -584,6 +592,7 @@ export class PolicyEvaluationContext {
   private evaluateGlobalZoneAggregate(
     expr: Extract<AgentPolicyExpr, { readonly kind: 'globalZoneAgg' }>,
   ): PolicyValue {
+    const currentState = this.activeState;
     let count = 0;
     let aggregate: number | undefined;
 
@@ -591,7 +600,7 @@ export class PolicyEvaluationContext {
       if (!matchesZoneScope(zoneDef, expr.zoneScope)) {
         continue;
       }
-      if (!matchesZoneFilter(zoneDef, expr.zoneFilter, this.input.state)) {
+      if (!matchesZoneFilter(zoneDef, expr.zoneFilter, currentState)) {
         continue;
       }
 
@@ -601,7 +610,7 @@ export class PolicyEvaluationContext {
       }
 
       const rawValue = expr.source === 'variable'
-        ? this.input.state.zoneVars[String(zoneDef.id)]?.[expr.field]
+        ? currentState.zoneVars[String(zoneDef.id)]?.[expr.field]
         : scalarZonePropValue(zoneDef.attributes?.[expr.field]);
       if (typeof rawValue !== 'number') {
         continue;
@@ -634,13 +643,14 @@ export class PolicyEvaluationContext {
     expr: Extract<AgentPolicyExpr, { readonly kind: 'adjacentTokenAgg' }>,
     candidate: PolicyEvaluationCandidate | undefined,
   ): PolicyValue {
+    const currentState = this.activeState;
     const anchorZoneId = this.resolvePolicyZoneId(expr.anchorZone, 'none', candidate);
     if (anchorZoneId === undefined) {
       return undefined;
     }
     const adjacencyGraph = this.input.runtime?.adjacencyGraph ?? buildAdjacencyGraph(this.input.def.zones);
     const adjacentZoneIds = queryAdjacentZones(adjacencyGraph, anchorZoneId);
-    const resolvedFilter = resolveTokenFilter(expr.tokenFilter, this.input.playerId, this.input.state);
+    const resolvedFilter = resolveTokenFilter(expr.tokenFilter, this.input.playerId, currentState);
     return this.aggregateTokensAcrossZones(adjacentZoneIds, expr, resolvedFilter);
   }
 
@@ -667,11 +677,14 @@ export class PolicyEvaluationContext {
         if (ref.refKind === 'candidateFeature') {
           return candidate === undefined ? undefined : this.evaluateCandidateFeature(candidate, ref.id);
         }
+        if (ref.refKind === 'previewStateFeature') {
+          return this.resolvePreviewStateFeatureRef(ref.id, candidate);
+        }
         return this.evaluateStateFeature(ref.id);
       case 'seatIntrinsic':
-        return this.runtimeProviders.intrinsics.resolveSeatIntrinsic(ref.intrinsic);
+        return this.runtimeProviders.intrinsics.resolveSeatIntrinsic(ref.intrinsic, this.activeState);
       case 'turnIntrinsic':
-        return this.runtimeProviders.intrinsics.resolveTurnIntrinsic(ref.intrinsic);
+        return this.runtimeProviders.intrinsics.resolveTurnIntrinsic(ref.intrinsic, this.activeState);
       case 'candidateIntrinsic':
         return candidate === undefined ? undefined : this.runtimeProviders.candidates.resolveCandidateIntrinsic(candidate, ref.intrinsic);
       case 'candidateParam':
@@ -756,11 +769,12 @@ export class PolicyEvaluationContext {
     expr: Pick<Extract<AgentPolicyExpr, { readonly kind: 'globalTokenAgg' | 'adjacentTokenAgg' }>, 'aggOp' | 'prop'>,
     resolvedFilter: ResolvedTokenFilter | undefined,
   ): PolicyValue {
+    const currentState = this.activeState;
     let count = 0;
     let aggregate: number | undefined;
 
     for (const zoneId of zoneIds) {
-      const tokens = this.input.state.zones[zoneId] ?? [];
+      const tokens = currentState.zones[zoneId] ?? [];
       for (const token of tokens) {
         if (!matchesTokenFilter(token, resolvedFilter)) {
           continue;
@@ -815,6 +829,10 @@ export class PolicyEvaluationContext {
         if (resolution.failureReason !== undefined) {
           candidate.previewFailureReason = resolution.failureReason;
         }
+        const grantedOperation = this.runtimeProviders.previewSurface.getGrantedOperation(candidate);
+        if (grantedOperation !== undefined) {
+          candidate.grantedOperation = grantedOperation;
+        }
         candidate.unknownPreviewRefs.set(refId, resolution.reason);
         return undefined;
       }
@@ -824,28 +842,114 @@ export class PolicyEvaluationContext {
         if (previewFailureReason !== undefined) {
           candidate.previewFailureReason = previewFailureReason;
         }
+        const grantedOperation = this.runtimeProviders.previewSurface.getGrantedOperation(candidate);
+        if (grantedOperation !== undefined) {
+          candidate.grantedOperation = grantedOperation;
+        }
       }
       return resolution.kind === 'value' ? resolution.value : undefined;
     }
-    return this.runtimeProviders.currentSurface.resolveSurface(ref);
+    return this.runtimeProviders.currentSurface.resolveSurface(ref, this.activeState);
   }
 
   private getZoneReadContext(): ReadContext {
-    if (this.zoneReadContext !== undefined) {
-      return this.zoneReadContext;
+    const currentState = this.activeState;
+    const cached = this.zoneReadContextsByState.get(currentState.stateHash);
+    if (cached !== undefined) {
+      return cached;
     }
     const resources = createEvalRuntimeResources();
-    this.zoneReadContext = createEvalContext({
+    const context = createEvalContext({
       def: this.input.def,
       adjacencyGraph: this.input.runtime?.adjacencyGraph ?? buildAdjacencyGraph(this.input.def.zones),
-      state: this.input.state,
-      activePlayer: this.input.state.activePlayer,
+      state: currentState,
+      activePlayer: currentState.activePlayer,
       actorPlayer: this.input.playerId,
       bindings: {},
       runtimeTableIndex: this.input.runtime?.runtimeTableIndex ?? buildRuntimeTableIndex(this.input.def),
       resources,
     });
-    return this.zoneReadContext;
+    this.zoneReadContextsByState.set(currentState.stateHash, context);
+    return context;
+  }
+
+  private resolvePreviewStateFeatureRef(
+    featureId: string,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): PolicyValue {
+    if (candidate === undefined) {
+      return undefined;
+    }
+    const refId = `feature.${featureId}`;
+    candidate.previewRefIds.add(refId);
+    this.syncPreviewMetadata(candidate);
+    const previewOutcome = candidate.previewOutcome;
+    if (previewOutcome !== 'ready' && previewOutcome !== 'stochastic') {
+      if (previewOutcome !== undefined) {
+        candidate.unknownPreviewRefs.set(refId, previewOutcome);
+      }
+      return undefined;
+    }
+    const previewState = this.runtimeProviders.previewSurface.getPreviewState(candidate);
+    if (previewState === undefined) {
+      candidate.unknownPreviewRefs.set(refId, 'failed');
+      if (candidate.previewOutcome === undefined) {
+        candidate.previewOutcome = 'failed';
+      }
+      return undefined;
+    }
+    return this.evaluateStateFeatureAgainstState(featureId, previewState);
+  }
+
+  private syncPreviewMetadata(candidate: PolicyEvaluationCandidate): void {
+    if (candidate.previewOutcome === undefined) {
+      candidate.previewOutcome = this.runtimeProviders.previewSurface.getOutcome(candidate);
+    }
+    if (candidate.previewFailureReason === undefined) {
+      const previewFailureReason = this.runtimeProviders.previewSurface.getFailureReason(candidate);
+      if (previewFailureReason !== undefined) {
+        candidate.previewFailureReason = previewFailureReason;
+      }
+    }
+    if (candidate.grantedOperation === undefined) {
+      const grantedOperation = this.runtimeProviders.previewSurface.getGrantedOperation(candidate);
+      if (grantedOperation !== undefined) {
+        candidate.grantedOperation = grantedOperation;
+      }
+    }
+  }
+
+  private evaluateStateFeatureAgainstState(featureId: string, state: GameState): PolicyValue {
+    const cache = this.getStateFeatureCache(state);
+    if (cache.has(featureId)) {
+      return cache.get(featureId);
+    }
+    const feature = this.input.catalog.library.stateFeatures[featureId];
+    if (feature === undefined) {
+      throw this.runtimeError('RUNTIME_EVALUATION_ERROR', `Unknown state feature "${featureId}".`, { featureId });
+    }
+    const value = this.withEvaluationState(state, () => this.evaluateExpr(feature.expr, undefined));
+    cache.set(featureId, value);
+    return value;
+  }
+
+  private getStateFeatureCache(state: GameState): Map<string, PolicyValue> {
+    let cache = this.stateFeatureCacheByState.get(state.stateHash);
+    if (cache === undefined) {
+      cache = new Map<string, PolicyValue>();
+      this.stateFeatureCacheByState.set(state.stateHash, cache);
+    }
+    return cache;
+  }
+
+  private withEvaluationState<T>(state: GameState, evaluate: () => T): T {
+    const previousState = this.activeState;
+    this.activeState = state;
+    try {
+      return evaluate();
+    } finally {
+      this.activeState = previousState;
+    }
   }
 
   private runtimeError(

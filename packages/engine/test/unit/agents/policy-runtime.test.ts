@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import { createPolicyRuntimeProviders } from '../../../src/agents/policy-runtime.js';
 import {
+  asActionId,
   asPhaseId,
   asPlayerId,
   initialState,
@@ -34,6 +35,7 @@ function createMinimalCatalog(overrides?: {
   readonly activeCardTag?: CompiledSurfaceVisibility;
   readonly activeCardMetadata?: CompiledSurfaceVisibility;
   readonly activeCardAnnotation?: CompiledSurfaceVisibility;
+  readonly globalMarkers?: Readonly<Record<string, CompiledSurfaceVisibility>>;
 }): AgentPolicyCatalog {
   const profile: CompiledAgentProfile = {
     fingerprint: 'test-profile',
@@ -57,6 +59,7 @@ function createMinimalCatalog(overrides?: {
     catalogFingerprint: 'test-catalog',
     surfaceVisibility: {
       globalVars: {},
+      globalMarkers: overrides?.globalMarkers ?? {},
       perPlayerVars: {},
       derivedMetrics: {},
       victory: {
@@ -88,6 +91,7 @@ function createDef(catalog: AgentPolicyCatalog, extras?: {
   readonly eventDecks?: readonly EventDeckDef[];
   readonly cardMetadataIndex?: CompiledCardMetadataIndex;
   readonly extraZones?: readonly string[];
+  readonly globalMarkerLattices?: GameDef['globalMarkerLattices'];
 }): GameDef {
   const zoneIds = ['event-draw:none', 'event-discard:none', ...(extras?.extraZones ?? [])];
   return {
@@ -107,6 +111,7 @@ function createDef(catalog: AgentPolicyCatalog, extras?: {
     terminal: { conditions: [] },
     ...(extras?.eventDecks !== undefined ? { eventDecks: extras.eventDecks } : {}),
     ...(extras?.cardMetadataIndex !== undefined ? { cardMetadataIndex: extras.cardMetadataIndex } : {}),
+    ...(extras?.globalMarkerLattices !== undefined ? { globalMarkerLattices: extras.globalMarkerLattices } : {}),
   };
 }
 
@@ -167,6 +172,53 @@ describe('createPolicyRuntimeProviders', () => {
     });
 
     assert.ok(providers.previewSurface, 'previewSurface provider must be present even without profile binding');
+  });
+
+  it('exposes cached preview state through the preview provider only for resolved previews', () => {
+    const catalog = createMinimalCatalog();
+    const def = {
+      ...createDef(catalog),
+      globalVars: [{ name: 'score', type: 'int' as const, init: 1, min: -10, max: 10 }],
+      actions: [{
+        id: asActionId('advance'),
+        actor: 'active' as const,
+        executor: 'actor' as const,
+        phase: [phaseId],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      }],
+    };
+    const state = initialState(def, 1, 2).state;
+    const candidate = {
+      move: { actionId: asActionId('advance'), params: {} },
+      stableMoveKey: 'advance|{}|false|unclassified',
+      actionId: 'advance',
+    };
+    const providers = createPolicyRuntimeProviders({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      seatId: 'us',
+      trustedMoveIndex: new Map(),
+      catalog,
+      previewDependencies: {
+        applyMove: (_def, baseState) => ({
+          state: {
+            ...baseState,
+            globalVars: { ...baseState.globalVars, score: 4 },
+          },
+        }),
+      },
+      runtimeError: (code, message) => new Error(`${code}: ${message}`),
+    });
+
+    const previewState = providers.previewSurface.getPreviewState(candidate);
+
+    assert.equal(previewState?.globalVars.score, 4);
+    assert.equal(providers.previewSurface.getOutcome(candidate), 'ready');
   });
 });
 
@@ -380,5 +432,86 @@ describe('activeCard surface resolution', () => {
       providers.currentSurface.resolveSurface({ kind: 'currentSurface', family: 'activeCardIdentity', id: 'id' }),
       undefined,
     );
+  });
+});
+
+describe('globalMarker surface resolution', () => {
+  const globalMarkerLattices: NonNullable<GameDef['globalMarkerLattices']> = [
+    {
+      id: 'cap_boobyTraps',
+      states: ['inactive', 'shaded', 'unshaded'],
+      defaultState: 'inactive',
+    },
+  ];
+
+  function makeProviders(
+    state: GameState,
+    def: GameDef,
+    catalog: AgentPolicyCatalog,
+  ) {
+    return createPolicyRuntimeProviders({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      seatId: 'us',
+      trustedMoveIndex: new Map(),
+      catalog,
+      runtimeError: (code, message) => new Error(`${code}: ${message}`),
+    });
+  }
+
+  it('returns the current global marker state when present in state', () => {
+    const catalog = createMinimalCatalog({
+      globalMarkers: { cap_boobyTraps: PUBLIC_VISIBILITY },
+    });
+    const def = createDef(catalog, { globalMarkerLattices });
+    const baseState = initialState(def, 1, 2).state;
+    const state: GameState = {
+      ...baseState,
+      globalMarkers: { cap_boobyTraps: 'shaded' },
+    };
+    const providers = makeProviders(state, def, catalog);
+
+    const result = providers.currentSurface.resolveSurface({
+      kind: 'currentSurface',
+      family: 'globalMarker',
+      id: 'cap_boobyTraps',
+    });
+
+    assert.equal(result, 'shaded');
+  });
+
+  it('falls back to the lattice defaultState when the marker is unset in state', () => {
+    const catalog = createMinimalCatalog({
+      globalMarkers: { cap_boobyTraps: PUBLIC_VISIBILITY },
+    });
+    const def = createDef(catalog, { globalMarkerLattices });
+    const state = initialState(def, 1, 2).state;
+    const providers = makeProviders(state, def, catalog);
+
+    const result = providers.currentSurface.resolveSurface({
+      kind: 'currentSurface',
+      family: 'globalMarker',
+      id: 'cap_boobyTraps',
+    });
+
+    assert.equal(result, 'inactive');
+  });
+
+  it('returns undefined when the marker id is unknown to the lattices', () => {
+    const catalog = createMinimalCatalog({
+      globalMarkers: { cap_unknown: PUBLIC_VISIBILITY },
+    });
+    const def = createDef(catalog, { globalMarkerLattices });
+    const state = initialState(def, 1, 2).state;
+    const providers = makeProviders(state, def, catalog);
+
+    const result = providers.currentSurface.resolveSurface({
+      kind: 'currentSurface',
+      family: 'globalMarker',
+      id: 'cap_unknown',
+    });
+
+    assert.equal(result, undefined);
   });
 });

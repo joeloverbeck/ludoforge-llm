@@ -4,15 +4,22 @@ import { describe, it } from 'node:test';
 import { PolicyAgent } from '../../src/agents/policy-agent.js';
 import { evaluatePolicyMove } from '../../src/agents/policy-eval.js';
 import { preparePlayableMoves } from '../../src/agents/prepare-playable-moves.js';
+import type { PolicyPreviewDependencies } from '../../src/agents/policy-preview.js';
+import { buildCompletionChooseCallback } from '../../src/agents/completion-guidance-choice.js';
+import { resolveEffectivePolicyProfile } from '../../src/agents/policy-profile-resolution.js';
+import { buildPolicyVictorySurface } from '../../src/agents/policy-surface.js';
 import { compileGameSpecToGameDef, validateGameSpec } from '../../src/cnl/index.js';
 import type { GameSpecConsiderationDef, GameSpecStateFeatureDef } from '../../src/cnl/game-spec-doc.js';
 import { applyTrustedMove } from '../../src/kernel/apply-move.js';
+import { toMoveIdentityKey } from '../../src/kernel/move-identity.js';
 import {
   applyMove,
   asPlayerId,
+  asTokenId,
   asZoneId,
   assertValidatedGameDef,
   classifyPlayableMoveCandidate,
+  type ClassifiedMove,
   createRng,
   createGameDefRuntime,
   enumerateLegalMoves,
@@ -22,12 +29,33 @@ import {
   probeMoveViability,
   type GameDef,
   type GameState,
+  type Move,
   type PlayerId,
+  type Token,
 } from '../../src/kernel/index.js';
 import { derivePlayerObservation } from '../../src/kernel/observation.js';
 import { queryAdjacentZones } from '../../src/kernel/spatial.js';
 import { runGame } from '../../src/sim/simulator.js';
+import { clearAllZones } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
+import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
+
+const SIHANOUK_CARD_ID = 'card-75';
+const TAY_NINH = 'tay-ninh:none';
+const makeFitlToken = (
+  id: string,
+  type: string,
+  faction: string,
+  extraProps?: Readonly<Record<string, string | number | boolean>>,
+): Token => ({
+  id: asTokenId(id),
+  type,
+  props: {
+    faction,
+    type,
+    ...(extraProps ?? {}),
+  },
+});
 
 function rngStatesEqual(left: { readonly algorithm: string; readonly version: number; readonly state: readonly bigint[] }, right: { readonly algorithm: string; readonly version: number; readonly state: readonly bigint[] }): boolean {
   return left.algorithm === right.algorithm
@@ -63,6 +91,157 @@ function advanceSeed6ToVcFreeRally() {
     state,
     legalMoves: enumerateLegalMoves(def, state, undefined, runtime).moves,
   } as const;
+}
+
+function createSihanoukVcGrantState() {
+  const { compiled } = compileProductionSpec();
+  const def = assertValidatedGameDef(compiled.gameDef);
+  const runtime = createGameDefRuntime(def);
+  const base = clearAllZones(initialState(def, 75003, 4).state);
+  const cardDrivenRuntime = requireCardDrivenRuntime(base);
+  const eventDeck = def.eventDecks?.[0];
+  assert.notEqual(eventDeck, undefined, 'expected FITL event deck');
+
+  const state: GameState = {
+    ...base,
+    activePlayer: asPlayerId(3),
+    globalVars: {
+      ...base.globalVars,
+      nvaResources: 5,
+      vcResources: 5,
+      trail: 1,
+    },
+    turnOrderState: {
+      type: 'cardDriven',
+      runtime: {
+        ...cardDrivenRuntime,
+        currentCard: {
+          ...cardDrivenRuntime.currentCard,
+          firstEligible: 'vc',
+          secondEligible: 'nva',
+          actedSeats: [],
+          passedSeats: [],
+          nonPassCount: 0,
+          firstActionClass: null,
+        },
+      },
+    },
+    zones: {
+      ...base.zones,
+      [eventDeck!.discardZone]: [makeFitlToken(SIHANOUK_CARD_ID, 'card', 'none')],
+      [TAY_NINH]: [makeFitlToken('sihanouk-vc-outside', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' })],
+      'available-VC:none': [makeFitlToken('sihanouk-vc-rally', 'guerrilla', 'VC', { type: 'guerrilla', activity: 'underground' })],
+      'available-NVA:none': [makeFitlToken('sihanouk-nva-rally', 'guerrilla', 'NVA', { type: 'guerrilla', activity: 'underground' })],
+    },
+  };
+
+  return {
+    def,
+    runtime,
+    state,
+    legalMoves: enumerateLegalMoves(def, state, undefined, runtime).moves,
+  } as const;
+}
+
+function evaluatePreparedPolicyDecision(
+  def: GameDef,
+  state: GameState,
+  legalMoves: readonly ClassifiedMove[],
+  runtime: ReturnType<typeof createGameDefRuntime>,
+  previewDependencies?: PolicyPreviewDependencies,
+) {
+  const resolvedProfile = resolveEffectivePolicyProfile(def, state.activePlayer);
+  const choose = resolvedProfile === null
+    ? undefined
+    : buildCompletionChooseCallback({
+        state,
+        def,
+        catalog: resolvedProfile.catalog,
+        playerId: state.activePlayer,
+        seatId: resolvedProfile.seatId,
+        profile: resolvedProfile.profile,
+        runtime,
+      });
+  const prepared = preparePlayableMoves({
+    def,
+    state,
+    legalMoves,
+    rng: createRng(12n),
+    runtime,
+  }, {
+    pendingTemplateCompletions: 3,
+    ...(choose === undefined ? {} : { choose }),
+  });
+  const playableMoves = prepared.completedMoves.length > 0 ? prepared.completedMoves : prepared.stochasticMoves;
+  const trustedMoveIndex = new Map(
+    playableMoves.map((trustedMove) => [toMoveIdentityKey(def, trustedMove.move), trustedMove] as const),
+  );
+
+  return evaluatePolicyMove({
+    def,
+    state,
+    playerId: state.activePlayer,
+    legalMoves: playableMoves.map((trustedMove) => trustedMove.move),
+    trustedMoveIndex,
+    rng: prepared.rng,
+    runtime,
+    completionStatistics: prepared.statistics,
+    movePreparations: prepared.movePreparations,
+    ...(previewDependencies === undefined ? {} : { previewDependencies }),
+  });
+}
+
+function selectPreparedGrantedOperation(
+  def: GameDef,
+  postEventState: GameState,
+  runtime: ReturnType<typeof createGameDefRuntime>,
+): { move: Move; score: number } | undefined {
+  const resolvedProfile = resolveEffectivePolicyProfile(def, postEventState.activePlayer);
+  const choose = resolvedProfile === null
+    ? undefined
+    : buildCompletionChooseCallback({
+        state: postEventState,
+        def,
+        catalog: resolvedProfile.catalog,
+        playerId: postEventState.activePlayer,
+        seatId: resolvedProfile.seatId,
+        profile: resolvedProfile.profile,
+        runtime,
+      });
+  const prepared = preparePlayableMoves({
+    def,
+    state: postEventState,
+    legalMoves: enumerateLegalMoves(def, postEventState, undefined, runtime).moves,
+    rng: createRng(13n),
+    runtime,
+  }, {
+    pendingTemplateCompletions: 3,
+    ...(choose === undefined ? {} : { choose }),
+  });
+  const playableMoves = prepared.completedMoves.length > 0 ? prepared.completedMoves : prepared.stochasticMoves;
+  const actingSeatId = def.seats?.[Number(postEventState.activePlayer)]?.id;
+  if (actingSeatId === undefined || playableMoves.length === 0) {
+    return undefined;
+  }
+
+  const preMargin = buildPolicyVictorySurface(def, postEventState, runtime).marginBySeat.get(actingSeatId) ?? 0;
+  let bestPlayable = playableMoves[0]!;
+  let bestScore = Number.NEGATIVE_INFINITY;
+
+  for (const candidate of playableMoves) {
+    const afterState = applyMove(def, postEventState, candidate.move, undefined, runtime).state;
+    const postMargin = buildPolicyVictorySurface(def, afterState, runtime).marginBySeat.get(actingSeatId) ?? preMargin;
+    const score = postMargin - preMargin;
+    if (score > bestScore) {
+      bestPlayable = candidate;
+      bestScore = score;
+    }
+  }
+
+  return {
+    move: bestPlayable.move,
+    score: bestScore,
+  };
 }
 
 function moveConsiderationDefs(
@@ -331,8 +510,10 @@ function projectedSelfMarginContribution(candidate: {
   if (scoreContributions === undefined) {
     assert.fail(`expected score contributions for ${candidate.stableMoveKey}`);
   }
-  const contribution = scoreContributions.find((entry) => entry.termId === 'preferProjectedSelfMargin');
-  assert.notEqual(contribution, undefined, `expected preferProjectedSelfMargin contribution for ${candidate.stableMoveKey}`);
+  const contribution = scoreContributions.find((entry) =>
+    entry.termId === 'preferProjectedSelfMargin' || entry.termId === 'preferNormalizedMargin',
+  );
+  assert.notEqual(contribution, undefined, `expected margin contribution (preferProjectedSelfMargin or preferNormalizedMargin) for ${candidate.stableMoveKey}`);
   return contribution!.contribution;
 }
 
@@ -1004,6 +1185,57 @@ describe('FITL policy agent integration', () => {
     assert.equal(unguidedMove.agentDecision?.kind, 'policy');
     assert.equal(guidedMove.agentDecision?.emergencyFallback, false);
     assert.equal(unguidedMove.agentDecision?.emergencyFallback, false);
+  });
+
+  it('exposes granted-operation trace metadata on a production Sihanouk VC decision state without perturbing non-event candidate scores', () => {
+    const guided = createSihanoukVcGrantState();
+    const enabled = evaluatePreparedPolicyDecision(
+      guided.def,
+      guided.state,
+      guided.legalMoves,
+      guided.runtime,
+      {
+        evaluateGrantedOperation: (def, postEventState) => selectPreparedGrantedOperation(def, postEventState, guided.runtime),
+      },
+    );
+    const disabled = evaluatePreparedPolicyDecision(
+      guided.def,
+      guided.state,
+      guided.legalMoves,
+      guided.runtime,
+      { evaluateGrantedOperation: () => undefined },
+    );
+
+    const enabledGrantingCandidate = enabled.metadata.candidates.find((candidate) => candidate.grantedOperationSimulated === true);
+    assert.notEqual(enabledGrantingCandidate, undefined, 'expected a granting event candidate in the Sihanouk VC decision state');
+
+    const disabledGrantingCandidate = disabled.metadata.candidates.find(
+      (candidate) => candidate.stableMoveKey === enabledGrantingCandidate!.stableMoveKey,
+    );
+    assert.notEqual(disabledGrantingCandidate, undefined, 'expected the same candidate under single-step preview');
+
+    assert.equal(enabledGrantingCandidate!.actionId, 'event');
+    assert.notEqual(enabledGrantingCandidate!.grantedOperationMove, undefined, 'expected granted-operation trace details');
+    assert.equal(
+      typeof enabledGrantingCandidate!.grantedOperationMarginDelta === 'number',
+      true,
+      'expected granted-operation margin delta',
+    );
+    assert.equal(typeof enabledGrantingCandidate!.score, 'number');
+    assert.equal(typeof disabledGrantingCandidate!.score, 'number');
+
+    const enabledNonEvents = new Map(
+      enabled.metadata.candidates
+        .filter((candidate) => candidate.actionId !== 'event')
+        .map((candidate) => [candidate.stableMoveKey, candidate.score] as const),
+    );
+    const disabledNonEvents = new Map(
+      disabled.metadata.candidates
+        .filter((candidate) => candidate.actionId !== 'event')
+        .map((candidate) => [candidate.stableMoveKey, candidate.score] as const),
+    );
+
+    assert.deepEqual(enabledNonEvents, disabledNonEvents, 'expected non-event candidate scores to remain unchanged');
   });
 
   it('does not mutate the external pre-move snapshot while guided completion runs', () => {

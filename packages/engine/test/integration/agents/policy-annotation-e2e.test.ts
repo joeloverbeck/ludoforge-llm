@@ -126,6 +126,7 @@ function createCatalog(overrides?: {
     catalogFingerprint: 'e2e-catalog',
     surfaceVisibility: {
       globalVars: {},
+      globalMarkers: {},
       perPlayerVars: {},
       derivedMetrics: {},
       victory: {

@@ -32,6 +32,7 @@ The library defines reusable building blocks. Profiles select which blocks to us
 | `victory.currentRank.self` | number | own current ranking position (1 = winning) |
 | `victory.currentRank.active` | number | active player's ranking |
 | `var.global.<id>` | number | global game variable |
+| `globalMarker.<id>` | string | current state of a global marker lattice (e.g., `"shaded"`, `"inactive"`) |
 | `var.player.self.<id>` | number | own per-player variable (e.g., resources) |
 | `var.player.active.<id>` | number | active player's variable |
 | `var.seat.<seatName>.<id>` | number | specific seat's variable by seat name (e.g., `var.seat.us.resources`) |
@@ -79,8 +80,25 @@ These are publicly visible (per observability config). Use in state features or 
 |------|---------|-------|
 | `preview.victory.currentMargin.self` | number | projected margin AFTER this move |
 | `preview.var.player.self.<id>` | number | projected variable after move |
+| `preview.feature.<id>` | varies | authored state feature evaluated on the preview state |
 
 Preview refs require `preview.mode: tolerateStochastic` (or `exactWorld`) on the profile. They evaluate the game state after applying the candidate move. If preview can't evaluate (stochastic outcome, template move), falls back to `undefined` — always wrap in `coalesce`.
+
+`preview.feature.*` reuses the authored `stateFeatures` library. There is no separate preview-feature namespace to declare. One feature definition can be read in two contexts:
+- `feature.<id>` for the current state
+- `preview.feature.<id>` for the post-move preview state
+
+Pattern:
+
+```yaml
+candidateFeatures:
+  projectedVcGuerrillaCount:
+    type: number
+    expr:
+      coalesce:
+        - { ref: preview.feature.vcGuerrillaCount }
+        - { ref: feature.vcGuerrillaCount }
+```
 
 ### Completion References (inside `scopes: [completion]`)
 
@@ -197,7 +215,7 @@ stateFeatures:
 
 **Field name note:** `globalTokenAgg` and `globalZoneAgg` use `aggOp:` for the operation field. `zoneTokenAgg` uses `op:`. This is an inconsistency in the DSL — use the correct field name for each operator.
 
-**Zone scope** (optional): `board` (play area only), `aux` (off-board), `all` (default).
+**Zone scope** (optional): `board` (default, play area only), `aux` (off-board), `all` (everything).
 
 ### Counting Zones with `globalZoneAgg`
 
@@ -248,6 +266,26 @@ stateFeatures:
 ```
 
 **Owner values:** `self`, `active`, `none`, or numeric player ID (e.g., `"0"`).
+
+`zoneTokenAgg` also accepts an optional `tokenFilter` (same shape as `globalTokenAgg`) to restrict which tokens are counted:
+
+```yaml
+candidateFeatures:
+  vcGuerrillasInTargetZone:
+    type: number
+    expr:
+      coalesce:
+        - zoneTokenAgg:
+            zone: { ref: option.value }
+            owner: none
+            prop: type
+            op: count
+            tokenFilter:
+              props:
+                faction: { eq: VC }
+                type: { eq: guerrilla }
+        - 0
+```
 
 ### Adjacent Zone Token Counts with `adjacentTokenAgg`
 
@@ -571,6 +609,82 @@ profiles:
 | `adjacentTokenAgg` | see above | number | tokens in adjacent zones |
 | `zoneProp` | see above | varies | zone attribute/property access |
 
+## Signal Normalization
+
+### Why normalize?
+
+Scoring uses a linear weighted sum: `totalScore = Σ (weight × value)`. When signals operate on different scales, the larger-scale signal dominates regardless of weights:
+
+| Signal | Raw range | Weight 5 contribution |
+|--------|-----------|----------------------|
+| Projected margin | -40 to +10 | -200 to +50 |
+| Capability gain | 0 or 1 | 0 or 5 |
+
+A capability bonus of +5 can never compete with a margin difference of ±50. **This is a mathematical property, not a tuning problem.**
+
+### The fix: normalize to [0,1] using min/max aggregates
+
+Use `candidateAggregates` to compute the range across all candidates, then normalize in the consideration's `value` expression:
+
+```yaml
+candidateAggregates:
+  maxMarginScore:
+    op: max
+    of: { ref: feature.projectedSelfMargin }
+  minMarginScore:
+    op: min
+    of: { ref: feature.projectedSelfMargin }
+
+considerations:
+  preferNormalizedMargin:
+    scopes: [move]
+    weight: 5
+    value:
+      div:
+        - sub:
+            - { ref: feature.projectedSelfMargin }
+            - { ref: aggregate.minMarginScore }
+        - max:
+            - 1    # prevent division by zero when all candidates score equally
+            - sub:
+                - { ref: aggregate.maxMarginScore }
+                - { ref: aggregate.minMarginScore }
+```
+
+Now margin contributes 0-5 points. A capability gain at weight 3 contributes 0-3 points. The signals compete fairly.
+
+### When to normalize
+
+- **Required**: when mixing preview margin with any secondary signal (capabilities, resource features, card annotations, board-state heuristics)
+- **Not needed**: when using only one signal type (pure margin scoring, or pure action-tag scoring)
+
+### Important: normalize in considerations, not candidateFeatures
+
+`candidateFeatures` cannot reference `aggregate.*` (dependency ordering constraint). Put the normalization formula in the consideration's `value` expression, which CAN reference both candidate features and aggregates.
+
+### Worked example
+
+Without normalization (prior campaign ceiling):
+```
+Terror:     5 × (-4 margin) + 3 × 1 (rally=no) + 0 (no capability) = -17
+Capability: 5 × (-8 margin) + 3 × 0             + 5 × 1           = -35
+→ Terror always wins (20-point gap)
+```
+
+With normalization (margin range [-8, -4]):
+```
+Terror:     5 × 1.0 (best margin) + 3 × 0 + 0 = 5.0
+Capability: 5 × 0.0 (worst margin) + 3 × 0 + 3 × 1 (capability gain) = 3.0
+→ Terror still wins, but only by 2 points — secondary signals CAN compete
+```
+
+If the capability is highly valuable (weight 6+), it can overtake:
+```
+Capability: 5 × 0.0 + 6 × 1 = 6.0 > Terror: 5 × 1.0 = 5.0
+```
+
+This is the correct behavior: the agent trades a small margin advantage for a large strategic gain, just like a human player would.
+
 ## Common Patterns
 
 ### "Prefer action X when condition Y"
@@ -638,12 +752,11 @@ scoreTerm:
 
 ### "React to the active event card"
 
-Event cards are often the most strategically important decisions in a game. The 1-move preview captures immediate state changes (opposition shifts, token movements) but **cannot capture multi-turn strategic value** from:
-- **Granted operations** — events that give the player a free extra action
+Event cards are often the most strategically important decisions in a game. The preview now captures immediate state changes and can automatically simulate one granted follow-up operation for the evaluating seat, but it still cannot capture every longer-horizon effect from:
 - **Capability cards** — events that permanently modify game rules
 - **Resource transfers** — events that shift economic balance
 
-Use card annotations to supplement preview scoring. Annotations are compiled from the event's effect AST and provide a numeric feature vector per card side.
+Use card annotations to supplement preview scoring. They remain especially useful for effects whose value is spread across later turns or does not show up as an immediate projected-margin change. Annotations are compiled from the event's effect AST and provide a numeric feature vector per card side.
 
 #### Available annotation metrics
 
@@ -665,7 +778,7 @@ Access via `activeCard.annotation.<side>.<metric>` (e.g., `activeCard.annotation
 
 #### Pattern: Prefer events that grant operations
 
-Events that grant a free operation are worth an **entire extra turn**. The preview only evaluates the event's immediate effect, not the granted operation's value.
+Events that grant a free operation now benefit from automatic multi-step preview: if the evaluating seat is the grantee, preview simulates the event and then the best follow-up operation chosen by the same policy profile. Annotation bonuses are still useful when you want to weight the structural importance of the event beyond what the bounded preview can see.
 
 **Note**: Annotation refs and tag refs compile to `number` (0/1), not `boolean`. Use `type: number` for features, `gt: [ref, 0]` for `when` clauses, and `coalesce` with `0` (not `false`).
 
@@ -728,6 +841,28 @@ considerations:
           - { ref: candidate.tag.pivotal-event }
 ```
 
+#### Pattern: Value a specific capability state directly
+
+`globalMarker.*` returns the marker's current lattice state as a string. Compare it with `eq`, then convert the result with `boolToNumber` when you want a numeric feature for scoring.
+
+```yaml
+stateFeatures:
+  boobyTrapsActive:
+    type: number
+    expr:
+      boolToNumber:
+        eq:
+          - { ref: globalMarker.cap_boobyTraps }
+          - "shaded"
+
+considerations:
+  valueCapabilities:
+    scopes: [move]
+    weight: { param: capabilityWeight }
+    value:
+      ref: feature.boobyTrapsActive
+```
+
 #### Pattern: Score events by marker impact
 
 Events with more marker modifications directly affect victory-relevant zone states (opposition, support, control). Higher `markerModifications` correlates with higher immediate strategic impact.
@@ -756,20 +891,20 @@ Events that grant operations to opponent seats are strategically dangerous. Use 
 
 ```yaml
 stateFeatures:
-  # Check if unshaded side grants ops to an opponent seat
+  # Check if unshaded side grants ops (0 or 1)
   unshadedGrantsOpToOpponent:
-    type: boolean
+    type: number
     expr:
       coalesce:
         - { ref: activeCard.annotation.unshaded.grantsOperation }
-        - false
-  # If you're VC, check if unshaded grants to US
+        - 0
+  # If you're VC, check if unshaded grants to US (0 or 1)
   unshadedGrantsToUs:
-    type: boolean
+    type: number
     expr:
       coalesce:
         - { ref: activeCard.annotation.unshaded.grantOperationSeats.us }
-        - false
+        - 0
 ```
 
 **Important**: The exact field paths for per-seat grant detection depend on how `grantOperationSeats` is indexed. Check the compiled annotation structure for your game.
@@ -780,8 +915,8 @@ The preview system evaluates the immediate game state after applying the event. 
 - Events that directly move tokens or shift markers (preview sees the margin change)
 - Events with simple, immediate effects
 
-But preview **undervalues** or **misses**:
-- **Granted operations** — preview doesn't simulate the free action that follows
+But preview can still **undervalue** or **miss**:
+- **Granted operations with longer-term value** — preview only simulates one bounded follow-up action
 - **Capability effects** — setting a global marker has zero immediate margin impact
 - **Resource transfers** — changing resources doesn't affect the current margin
 - **Lasting effects** — modifying future game rules is invisible to 1-move lookahead

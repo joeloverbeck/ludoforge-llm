@@ -79,6 +79,7 @@ function createCatalog(
     catalogFingerprint: 'completion-guidance-choice-catalog',
     surfaceVisibility: {
       globalVars: {},
+      globalMarkers: {},
       perPlayerVars: {},
       derivedMetrics: {},
       victory: {

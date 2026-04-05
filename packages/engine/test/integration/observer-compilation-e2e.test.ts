@@ -57,6 +57,37 @@ describe('observer compilation end-to-end', () => {
     assert.equal(player.surfaces.activeCardIdentity.current, 'public');
   });
 
+  it('observer compilation wires known global marker ids through the full pipeline', () => {
+    const result = compileGameSpecToGameDef({
+      ...minimalSpec(),
+      globalMarkerLattices: [
+        {
+          id: 'cap_boobyTraps',
+          states: ['inactive', 'shaded', 'unshaded'],
+          defaultState: 'inactive',
+        },
+      ],
+      observability: obs({
+        observers: {
+          player: {
+            surfaces: {
+              globalMarkers: {
+                cap_boobyTraps: 'hidden',
+              },
+            },
+          },
+        },
+      }),
+    });
+    assertNoErrors(result);
+    assert.ok(result.gameDef?.observers);
+
+    const player = result.gameDef.observers.observers['player']!;
+    assert.equal(player.surfaces.globalMarkers['cap_boobyTraps']!.current, 'hidden');
+    assert.equal(result.gameDef.observers.observers['default']!.surfaces.globalMarkers['cap_boobyTraps']!.current, 'public');
+    assert.equal(result.gameDef.observers.observers['omniscient']!.surfaces.globalMarkers['cap_boobyTraps']!.current, 'public');
+  });
+
   it('spec without observability section produces GameDef without observers field', () => {
     const result = compileGameSpecToGameDef(minimalSpec());
     assertNoErrors(result);

@@ -81,6 +81,7 @@ const mkState = (
 
 const EMPTY_SURFACES: CompiledSurfaceCatalog = {
   globalVars: {},
+  globalMarkers: {},
   perPlayerVars: {},
   derivedMetrics: {},
   victory: {

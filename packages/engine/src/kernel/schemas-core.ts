@@ -292,6 +292,7 @@ export const CompiledSurfaceVisibilitySchema = z
 export const CompiledSurfaceCatalogSchema = z
   .object({
     globalVars: z.record(StringSchema, CompiledSurfaceVisibilitySchema),
+    globalMarkers: z.record(StringSchema, CompiledSurfaceVisibilitySchema),
     perPlayerVars: z.record(StringSchema, CompiledSurfaceVisibilitySchema),
     derivedMetrics: z.record(StringSchema, CompiledSurfaceVisibilitySchema),
     victory: z.object({
@@ -637,6 +638,7 @@ const AgentPolicyLiteralSchema = z.union([
 const CompiledSurfaceRefBaseSchema = {
   family: z.union([
     z.literal('globalVar'),
+    z.literal('globalMarker'),
     z.literal('perPlayerVar'),
     z.literal('derivedMetric'),
     z.literal('victoryCurrentMargin'),
@@ -658,7 +660,12 @@ const CompiledSurfaceRefBaseSchema = {
 const CompiledAgentPolicyRefSchema = z.union([
   z.object({
     kind: z.literal('library'),
-    refKind: z.union([z.literal('stateFeature'), z.literal('candidateFeature'), z.literal('aggregate')]),
+    refKind: z.union([
+      z.literal('stateFeature'),
+      z.literal('candidateFeature'),
+      z.literal('aggregate'),
+      z.literal('previewStateFeature'),
+    ]),
     id: StringSchema,
   }).strict(),
   z.object({
@@ -1406,6 +1413,12 @@ const PolicyCandidateDecisionTraceSchema = z
       z.literal('unresolved'),
       z.literal('failed'),
     ]).optional(),
+    grantedOperationSimulated: BooleanSchema.optional(),
+    grantedOperationMove: z.object({
+      actionId: StringSchema,
+      params: z.record(z.string(), z.unknown()),
+    }).strict().optional(),
+    grantedOperationMarginDelta: NumberSchema.optional(),
     previewFailureReason: StringSchema.optional(),
   })
   .strict();

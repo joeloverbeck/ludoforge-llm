@@ -222,6 +222,7 @@ describe('agents authoring surface', () => {
     assert.deepEqual(agents.candidateParamDefs, {});
     assert.deepEqual(agents.surfaceVisibility, {
       globalVars: {},
+      globalMarkers: {},
       perPlayerVars: {},
       derivedMetrics: {},
       victory: {
@@ -1621,6 +1622,112 @@ describe('agents authoring surface', () => {
     );
   });
 
+  it('includes globalMarkers in the fallback surface visibility catalog when no observer catalog exists', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      observability: null,
+      globalMarkerLattices: [
+        { id: 'cap_boobyTraps', states: ['inactive', 'unshaded', 'shaded'], defaultState: 'inactive' },
+        { id: 'cap_cadres', states: ['inactive', 'unshaded', 'shaded'], defaultState: 'inactive' },
+      ],
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: {
+        library: {
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              considerations: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      },
+    });
+
+    assert.notEqual(result.gameDef, null);
+    assert.deepEqual(result.gameDef!.agents!.surfaceVisibility.globalMarkers, {
+      cap_boobyTraps: {
+        current: 'public',
+        preview: {
+          visibility: 'public',
+          allowWhenHiddenSampling: false,
+        },
+      },
+      cap_cadres: {
+        current: 'public',
+        preview: {
+          visibility: 'public',
+          allowWhenHiddenSampling: false,
+        },
+      },
+    });
+  });
+
+  it('rejects unknown globalMarker refs during agent compilation', () => {
+    const compiled = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      globalMarkerLattices: [
+        { id: 'cap_boobyTraps', states: ['inactive', 'unshaded', 'shaded'], defaultState: 'inactive' },
+      ],
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: withObserver({
+        library: {
+          stateFeatures: {
+            unknownMarker: {
+              type: 'number',
+              expr: {
+                boolToNumber: {
+                  eq: [
+                    { ref: 'globalMarker.cap_unknown' },
+                    'shaded',
+                  ],
+                },
+              },
+            },
+          },
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              considerations: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      }),
+    });
+
+    assert.equal(compiled.gameDef, null);
+    assert.ok(
+      compiled.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_AGENT_POLICY_REF_UNKNOWN'
+          && diagnostic.path === 'doc.agents.library.stateFeatures.unknownMarker.expr.boolToNumber.eq.0.ref',
+      ),
+    );
+  });
+
   it('rejects malformed collection shapes, inline profile logic, and non-map bindings in validation and compile flows', () => {
     const doc = {
       ...createCompileReadyDoc(),
@@ -2353,14 +2460,53 @@ describe('agents authoring surface', () => {
   it('lowers preview authored refs into preview surface variants', () => {
     const result = compileGameSpecToGameDef({
       ...createCompileReadyDoc(),
+      observability: createTestObservability({
+        testObserver: {
+          surfaces: {
+            victory: { currentMargin: 'public' },
+            perPlayerVars: {
+              resources: {
+                current: 'public',
+              },
+            },
+            globalMarkers: {
+              cap_boobyTraps: {
+                current: 'public',
+              },
+            },
+          },
+        },
+      }),
+      perPlayerVars: [{ name: 'resources', type: 'int', init: 0, min: 0, max: 10 }],
+      globalMarkerLattices: [
+        { id: 'cap_boobyTraps', states: ['inactive', 'unshaded', 'shaded'], defaultState: 'inactive' },
+      ],
       dataAssets: [createSeatCatalogAsset(['us'])],
       agents: withObserver({
         parameters: {},
         library: {
+          stateFeatures: {
+            currentMargin: {
+              type: 'number',
+              expr: { ref: 'victory.currentMargin.us' },
+            },
+          },
           candidateFeatures: {
             projectedMargin: {
               type: 'number',
               expr: { ref: 'preview.victory.currentMargin.us' },
+            },
+            projectedCurrentMarginFeature: {
+              type: 'number',
+              expr: { ref: 'preview.feature.currentMargin' },
+            },
+            projectedResources: {
+              type: 'number',
+              expr: { ref: 'preview.var.player.self.resources' },
+            },
+            projectedBoobyTraps: {
+              type: 'id',
+              expr: { ref: 'preview.globalMarker.cap_boobyTraps' },
             },
           },
           tieBreakers: {
@@ -2392,6 +2538,68 @@ describe('agents authoring surface', () => {
       id: 'currentMargin',
       selector: { kind: 'role', seatToken: 'us' },
     }));
+    assert.deepEqual(result.gameDef?.agents?.library.candidateFeatures.projectedCurrentMarginFeature?.expr, refExpr({
+      kind: 'library',
+      refKind: 'previewStateFeature',
+      id: 'currentMargin',
+    }));
+    assert.deepEqual(result.gameDef?.agents?.library.candidateFeatures.projectedResources?.expr, refExpr({
+      kind: 'previewSurface',
+      family: 'perPlayerVar',
+      id: 'resources',
+      selector: { kind: 'player', player: 'self' },
+    }));
+    assert.deepEqual(result.gameDef?.agents?.library.candidateFeatures.projectedBoobyTraps?.expr, refExpr({
+      kind: 'previewSurface',
+      family: 'globalMarker',
+      id: 'cap_boobyTraps',
+    }));
+  });
+
+  it('rejects unknown preview feature refs during agent compilation', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: withObserver({
+        parameters: {},
+        library: {
+          candidateFeatures: {
+            projectedMissingFeature: {
+              type: 'number',
+              expr: { ref: 'preview.feature.missingFeature' },
+            },
+          },
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              considerations: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      }),
+    });
+
+    assert.equal(result.gameDef, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_AGENT_POLICY_REF_UNKNOWN'
+          && diagnostic.path === 'doc.agents.library.candidateFeatures.projectedMissingFeature.expr.ref',
+      ),
+      true,
+    );
   });
 
   it('lowers explicit player-scoped per-player refs into player selectors', () => {

@@ -62,6 +62,23 @@ agents:
               props:
                 faction: { eq: VC }
                 type: { eq: base }
+      vcFriendlyCapCount:
+        type: number
+        expr:
+          add:
+            - boolToNumber:
+                eq:
+                  - { ref: globalMarker.cap_boobyTraps }
+                  - { const: "shaded" }
+            - add:
+                - boolToNumber:
+                    eq:
+                      - { ref: globalMarker.cap_mainForceBns }
+                      - { const: "shaded" }
+                - boolToNumber:
+                    eq:
+                      - { ref: globalMarker.cap_cadres }
+                      - { const: "shaded" }
       turnRound:
         type: number
         expr:
@@ -74,6 +91,16 @@ agents:
           coalesce:
             - { ref: preview.victory.currentMargin.self }
             - { ref: feature.selfMargin }
+      projectedCapabilityGain:
+        type: number
+        expr:
+          coalesce:
+            - sub:
+                - coalesce:
+                    - { ref: preview.feature.vcFriendlyCapCount }
+                    - { ref: feature.vcFriendlyCapCount }
+                - { ref: feature.vcFriendlyCapCount }
+            - 0
       targetSpacePopulation:
         type: number
         expr:
@@ -89,6 +116,14 @@ agents:
         of:
           not:
             ref: candidate.tag.pass
+      maxMarginScore:
+        op: max
+        of:
+          ref: feature.projectedSelfMargin
+      minMarginScore:
+        op: min
+        of:
+          ref: feature.projectedSelfMargin
 
     pruningRules:
       dropPassWhenOtherMovesExist:
@@ -237,6 +272,24 @@ agents:
                 prop: population
             - 0
 
+      preferNormalizedMargin:
+        scopes: [move]
+        weight: 5
+        value:
+          div:
+            - sub:
+                - { ref: feature.projectedSelfMargin }
+                - { ref: aggregate.minMarginScore }
+            - max:
+                - 1
+                - sub:
+                    - { ref: aggregate.maxMarginScore }
+                    - { ref: aggregate.minMarginScore }
+      valueCapabilityGain:
+        scopes: [move]
+        weight: 3
+        value:
+          ref: feature.projectedCapabilityGain
       penalizeAttack:
         scopes: [move]
         weight: -0.1
@@ -360,8 +413,9 @@ agents:
         pruningRules:
           - dropPassWhenOtherMovesExist
         considerations:
-          - preferProjectedSelfMargin
+          - preferNormalizedMargin
           - preferRallyWeighted
+          - valueCapabilityGain
           - penalizeAttack
           - preferPopulousTargets
           - observeGameState

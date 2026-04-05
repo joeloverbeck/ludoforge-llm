@@ -360,6 +360,155 @@
         }
       }
     },
+    "globalMarkers": {
+      "cap_topGun": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "cap_arcLight": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "cap_abrams": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "cap_cobras": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "cap_m48Patton": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "cap_caps": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "cap_cords": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "cap_lgbs": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "cap_searchAndDestroy": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "cap_aaa": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "cap_longRangeGuns": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "cap_migs": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "cap_sa2s": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "cap_pt76": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "cap_armoredCavalry": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "cap_mandateOfHeaven": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "cap_boobyTraps": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "cap_mainForceBns": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "cap_cadres": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "activeLeader": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "leaderFlipped": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      }
+    },
     "perPlayerVars": {
       "resources": {
         "current": "public",
@@ -658,6 +807,101 @@
           "strategicConditions": []
         }
       },
+      "vcFriendlyCapCount": {
+        "type": "number",
+        "costClass": "state",
+        "expr": {
+          "kind": "op",
+          "op": "add",
+          "args": [
+            {
+              "kind": "op",
+              "op": "boolToNumber",
+              "args": [
+                {
+                  "kind": "op",
+                  "op": "eq",
+                  "args": [
+                    {
+                      "kind": "ref",
+                      "ref": {
+                        "kind": "currentSurface",
+                        "family": "globalMarker",
+                        "id": "cap_boobyTraps"
+                      }
+                    },
+                    {
+                      "kind": "literal",
+                      "value": "shaded"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "kind": "op",
+              "op": "add",
+              "args": [
+                {
+                  "kind": "op",
+                  "op": "boolToNumber",
+                  "args": [
+                    {
+                      "kind": "op",
+                      "op": "eq",
+                      "args": [
+                        {
+                          "kind": "ref",
+                          "ref": {
+                            "kind": "currentSurface",
+                            "family": "globalMarker",
+                            "id": "cap_mainForceBns"
+                          }
+                        },
+                        {
+                          "kind": "literal",
+                          "value": "shaded"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "kind": "op",
+                  "op": "boolToNumber",
+                  "args": [
+                    {
+                      "kind": "op",
+                      "op": "eq",
+                      "args": [
+                        {
+                          "kind": "ref",
+                          "ref": {
+                            "kind": "currentSurface",
+                            "family": "globalMarker",
+                            "id": "cap_cadres"
+                          }
+                        },
+                        {
+                          "kind": "literal",
+                          "value": "shaded"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
       "turnRound": {
         "type": "number",
         "costClass": "state",
@@ -711,6 +955,65 @@
           "parameters": [],
           "stateFeatures": [
             "selfMargin"
+          ],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "projectedCapabilityGain": {
+        "type": "number",
+        "costClass": "preview",
+        "expr": {
+          "kind": "op",
+          "op": "coalesce",
+          "args": [
+            {
+              "kind": "op",
+              "op": "sub",
+              "args": [
+                {
+                  "kind": "op",
+                  "op": "coalesce",
+                  "args": [
+                    {
+                      "kind": "ref",
+                      "ref": {
+                        "kind": "library",
+                        "refKind": "previewStateFeature",
+                        "id": "vcFriendlyCapCount"
+                      }
+                    },
+                    {
+                      "kind": "ref",
+                      "ref": {
+                        "kind": "library",
+                        "refKind": "stateFeature",
+                        "id": "vcFriendlyCapCount"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "kind": "ref",
+                  "ref": {
+                    "kind": "library",
+                    "refKind": "stateFeature",
+                    "id": "vcFriendlyCapCount"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "literal",
+              "value": 0
+            }
+          ]
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [
+            "vcFriendlyCapCount"
           ],
           "candidateFeatures": [],
           "aggregates": [],
@@ -772,6 +1075,50 @@
           "parameters": [],
           "stateFeatures": [],
           "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "maxMarginScore": {
+        "type": "number",
+        "costClass": "preview",
+        "op": "max",
+        "of": {
+          "kind": "ref",
+          "ref": {
+            "kind": "library",
+            "refKind": "candidateFeature",
+            "id": "projectedSelfMargin"
+          }
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [
+            "projectedSelfMargin"
+          ],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "minMarginScore": {
+        "type": "number",
+        "costClass": "preview",
+        "op": "min",
+        "of": {
+          "kind": "ref",
+          "ref": {
+            "kind": "library",
+            "refKind": "candidateFeature",
+            "id": "projectedSelfMargin"
+          }
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [
+            "projectedSelfMargin"
+          ],
           "aggregates": [],
           "strategicConditions": []
         }
@@ -1483,6 +1830,115 @@
           "strategicConditions": []
         }
       },
+      "preferNormalizedMargin": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "preview",
+        "weight": {
+          "kind": "literal",
+          "value": 5
+        },
+        "value": {
+          "kind": "op",
+          "op": "div",
+          "args": [
+            {
+              "kind": "op",
+              "op": "sub",
+              "args": [
+                {
+                  "kind": "ref",
+                  "ref": {
+                    "kind": "library",
+                    "refKind": "candidateFeature",
+                    "id": "projectedSelfMargin"
+                  }
+                },
+                {
+                  "kind": "ref",
+                  "ref": {
+                    "kind": "library",
+                    "refKind": "aggregate",
+                    "id": "minMarginScore"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "op",
+              "op": "max",
+              "args": [
+                {
+                  "kind": "literal",
+                  "value": 1
+                },
+                {
+                  "kind": "op",
+                  "op": "sub",
+                  "args": [
+                    {
+                      "kind": "ref",
+                      "ref": {
+                        "kind": "library",
+                        "refKind": "aggregate",
+                        "id": "maxMarginScore"
+                      }
+                    },
+                    {
+                      "kind": "ref",
+                      "ref": {
+                        "kind": "library",
+                        "refKind": "aggregate",
+                        "id": "minMarginScore"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [
+            "projectedSelfMargin"
+          ],
+          "aggregates": [
+            "maxMarginScore",
+            "minMarginScore"
+          ],
+          "strategicConditions": []
+        }
+      },
+      "valueCapabilityGain": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "preview",
+        "weight": {
+          "kind": "literal",
+          "value": 3
+        },
+        "value": {
+          "kind": "ref",
+          "ref": {
+            "kind": "library",
+            "refKind": "candidateFeature",
+            "id": "projectedCapabilityGain"
+          }
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [
+            "projectedCapabilityGain"
+          ],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
       "penalizeAttack": {
         "scopes": [
           "move"
@@ -1856,8 +2312,9 @@
           "dropPassWhenOtherMovesExist"
         ],
         "considerations": [
-          "preferProjectedSelfMargin",
+          "preferNormalizedMargin",
           "preferRallyWeighted",
+          "valueCapabilityGain",
           "penalizeAttack",
           "preferPopulousTargets",
           "observeGameState"
@@ -1876,6 +2333,7 @@
       "plan": {
         "stateFeatures": [
           "selfMargin",
+          "vcFriendlyCapCount",
           "selfResources",
           "turnRound",
           "vcBaseCount",
@@ -1883,20 +2341,24 @@
         ],
         "candidateFeatures": [
           "projectedSelfMargin",
+          "projectedCapabilityGain",
           "targetSpacePopulation"
         ],
         "candidateAggregates": [
-          "hasNonPassAlternative"
+          "hasNonPassAlternative",
+          "maxMarginScore",
+          "minMarginScore"
         ],
         "considerations": [
-          "preferProjectedSelfMargin",
+          "preferNormalizedMargin",
           "preferRallyWeighted",
+          "valueCapabilityGain",
           "penalizeAttack",
           "preferPopulousTargets",
           "observeGameState"
         ]
       },
-      "fingerprint": "bca64570620afb148ce5b5abf723519284684ca3c1eae3f0fd878aa2535f841a"
+      "fingerprint": "b8221970dda957ee9c567a5851fa54d4a7bb0243e31904d0fc10150baccbdcf1"
     }
   },
   "bindingsBySeat": {
@@ -1905,5 +2367,5 @@
     "nva": "nva-baseline",
     "vc": "vc-evolved"
   },
-  "catalogFingerprint": "34c287c6546377b22a89cad6956958d765baad02a2296c21324b05381d3ce4e1"
+  "catalogFingerprint": "89240cf260bf4deed8fe275a91503a040895e11bf24fa5776682bba01a5a8fd8"
 }

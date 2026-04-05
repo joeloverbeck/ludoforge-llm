@@ -1,0 +1,183 @@
+# Spec 113 — Preview-State Policy Surface
+
+## Status
+
+COMPLETED
+
+## Priority
+
+Medium
+
+## Complexity
+
+Medium
+
+## Dependencies
+
+- `specs/15-gamespec-agent-policy-ir.md`
+- `archive/specs/111-multi-step-preview-for-granted-operations.md`
+- `archive/specs/112-global-marker-policy-surface.md`
+
+## Problem
+
+The policy preview system can already simulate a candidate move and resolve a narrow set of post-move references:
+
+- `preview.victory.currentMargin.*`
+- `preview.victory.currentRank.*`
+- `preview.var.global.*`
+- `preview.var.player.*`
+- preview-visible derived metrics
+- preview-visible active-card metadata and annotations
+
+That is enough when the move's value appears immediately in victory margin or a small number of exposed vars.
+
+It is not enough when the move's value is expressed through broader post-move board state:
+
+- extra guerrillas or bases placed by a granted Rally
+- changed token posture after March, Infiltrate, Air Lift, or Sweep/Assault sequences
+- marker state changes that become meaningful only when combined with other state features
+- any authored policy state feature that is meaningful on the previewed state but currently only exists for the current state
+
+This surfaced during Spec 111 validation. Multi-step granted-operation preview now works mechanically, but several real FITL granting-event candidates still score identically to the single-step baseline because the policy profile cannot reuse its authored board-state heuristics against the previewed post-event-plus-operation state.
+
+The current gap is therefore not only "preview depth"; it is also "preview-observable policy surface."
+
+## Goals
+
+1. Let policy scoring reuse authored state features against previewed post-move state
+2. Keep the mechanism generic and game-agnostic
+3. Preserve determinism and bounded computation
+4. Avoid duplicating the expression system with separate preview-only DSL constructs
+
+## Non-Goals
+
+- No arbitrary N-step planning beyond the bounded preview systems that already exist
+- No game-specific heuristics in engine code
+- No implicit strategy changes; profiles still decide what to value
+- No backwards-compatibility shim layer for old preview refs
+
+## FOUNDATIONS Alignment
+
+| Foundation | Alignment |
+|-----------|-----------|
+| 1 — Engine Agnosticism | Generic preview-state observation for any game, not FITL-specific |
+| 2 — Evolution-First | Lets evolution attach weights to meaningful post-move state features |
+| 8 — Determinism | Preview-state feature evaluation remains a pure function of preview state |
+| 10 — Bounded Computation | Reuses existing bounded feature evaluation; no unbounded search |
+| 15 — Architectural Completeness | Closes the gap where preview simulates the move correctly but scoring cannot observe the resulting board state |
+
+## Scope
+
+### What to Change
+
+**1. Add preview-scoped state-feature references**
+
+Extend the policy surface so candidate expressions can reference authored library state features against the previewed state:
+
+```yaml
+candidateFeatures:
+  projectedVcGuerrillaCount:
+    type: number
+    expr:
+      coalesce:
+        - { ref: preview.feature.vcGuerrillaCount }
+        - { ref: feature.vcGuerrillaCount }
+```
+
+This reuses the already-authored `stateFeatures` library instead of inventing parallel preview-only aggregates.
+
+**2. Evaluate referenced state features against the preview state**
+
+When a candidate expression references `preview.feature.<id>`, evaluate the corresponding compiled state-feature expression using the previewed post-move state, not the current state.
+
+This should support the same expression power the feature already has today, including:
+
+- token aggregates
+- zone properties
+- global and per-player vars
+- derived metrics
+- current-turn metadata
+- future `globalMarker.*` refs from Spec 112
+
+**3. Keep visibility and preview failure semantics consistent**
+
+If preview cannot resolve because the move is stochastic, hidden, unresolved, or failed, `preview.feature.<id>` should resolve like existing preview refs do today:
+
+- unavailable preview -> `undefined`
+- profile authors use `coalesce` explicitly
+- no silent fallback inside the engine
+
+**4. Keep feature ownership DRY**
+
+Do not require authors to define both:
+
+- `feature.vcGuerrillaCount`
+- `preview.feature.vcGuerrillaCount`
+
+There should be one authored feature definition and two evaluation contexts:
+
+- current state
+- preview state
+
+**5. Extend compiled ref kind and compile `preview.feature.*` refs**
+
+Add `'previewStateFeature'` to `CompiledAgentPolicyLibraryRefKind` (`types-core.ts:337`), currently `'stateFeature' | 'candidateFeature' | 'aggregate'`. This new variant tells `resolveRef()` to evaluate the state feature against the preview state instead of the current state.
+
+In `compile-agents.ts`, extend `resolvePreviewRuntimeRef()` (line 1837) to detect the `preview.feature.` prefix. Strip the prefix, look up the feature ID in the state feature library, and compile as `{ kind: 'library', refKind: 'previewStateFeature', id: featureId }`.
+
+**6. Namespace preview-feature cache keys**
+
+The evaluation context uses `stateFeatureCache: Map<string, PolicyValue>` (`policy-evaluation-core.ts:209`). Since `feature.vcGuerrillaCount` (current state) and `preview.feature.vcGuerrillaCount` (preview state) may both be evaluated for the same candidate, their cache keys must not collide. Use a `preview:` prefix for preview-feature cache keys, or use a separate cache map.
+
+**7. Thread the new family through diagnostics**
+
+Preview usage and unknown-preview reporting should include preview-feature refs just like existing preview ref families, so the trace surface stays audit-friendly.
+
+## Mutable Files
+
+- `packages/engine/src/cnl/compile-agents.ts` (modify) — primary: extend `resolvePreviewRuntimeRef()` to handle `preview.feature.*` prefix, compile as `previewStateFeature` ref kind
+- `packages/engine/src/agents/policy-evaluation-core.ts` (modify) — add `previewStateFeature` case to `resolveRef()`, extend `evaluateStateFeature()` to accept optional preview state, namespace cache keys
+- `packages/engine/src/agents/policy-runtime.ts` (modify) — thread preview state into evaluation context for preview-feature evaluation
+- `packages/engine/src/agents/policy-preview.ts` (modify) — provide preview-state access for feature evaluation
+- `packages/engine/src/kernel/types-core.ts` (modify) — extend `CompiledAgentPolicyLibraryRefKind` with `'previewStateFeature'`
+- `packages/engine/src/kernel/schemas-core.ts` (modify) — update ref kind schema
+- `packages/engine/src/agents/policy-expr.ts` (modify, if needed) — expression validation for preview-feature refs
+- `packages/engine/src/agents/policy-surface.ts` (modify, if needed) — extend surface-family typing
+- `docs/agent-dsl-cookbook.md` (modify) — document `preview.feature.*` syntax and patterns
+
+## Testing Strategy
+
+1. Unit test: `preview.feature.<id>` compiles when `<id>` is an authored state feature
+2. Unit test: unknown preview feature id is rejected
+3. Unit test: preview feature evaluates the same expression on preview state, not current state
+4. Unit test: preview-feature refs respect existing unknown/unresolved preview semantics
+5. Integration test: a production FITL granting-event candidate can improve score via a preview-visible board-state feature even when immediate victory margin is unchanged
+
+## Expected Impact
+
+Spec 111 makes granted-operation preview mechanically correct. Spec 112 makes capability-state deltas observable. This spec closes the remaining gap for board-state valuation by letting policies observe their own authored state features on previewed post-move state.
+
+Together, these three specs make event and granted-operation evaluation far more faithful without hard-coding any game strategy into the engine.
+
+## Outcome
+
+Completed: 2026-04-05
+
+- Added the new compiled ref family for preview-state features by extending `CompiledAgentPolicyLibraryRefKind` with `previewStateFeature` in `packages/engine/src/kernel/types-core.ts` and `packages/engine/src/kernel/schemas-core.ts`.
+- Implemented compiler lowering for `preview.feature.<id>` in `packages/engine/src/cnl/compile-agents.ts`, with validation against the authored `stateFeatures` library and the corresponding `GameDef.schema.json` update.
+- Implemented runtime evaluation against preview state in `packages/engine/src/agents/policy-evaluation-core.ts`, `packages/engine/src/agents/policy-runtime.ts`, and `packages/engine/src/agents/policy-preview.ts`, including state-scoped evaluation/caching so authored feature expressions read the previewed state rather than leaking back to the current state.
+- Extended diagnostics and documentation in `packages/engine/src/agents/policy-diagnostics.ts` and `docs/agent-dsl-cookbook.md`, and added FITL-backed proof coverage in `packages/engine/test/integration/agents/preview-feature-surface.test.ts`.
+
+Deviations from original plan:
+
+- The generic trace plumbing for `previewRefIds` and `unknownPreviewRefs` was already satisfied by ticket `113PREVSTPOLSUR-003`; ticket `004` only needed to close the remaining snapshot/cookbook/proof gap.
+- The production proof used a narrow in-memory FITL overlay rather than editing production authored YAML, which kept the test focused on the generic preview-state policy surface.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine run schema:artifacts`
+- `pnpm -F @ludoforge/engine build`
+- `node --test packages/engine/dist/test/unit/compile-agents-authoring.test.js`
+- `node --test packages/engine/dist/test/unit/agents/policy-eval.test.js packages/engine/dist/test/unit/agents/policy-runtime.test.js`
+- `node --test packages/engine/dist/test/unit/agents/policy-diagnostics.test.js packages/engine/dist/test/integration/agents/preview-feature-surface.test.js`
+- `pnpm -F @ludoforge/engine test`

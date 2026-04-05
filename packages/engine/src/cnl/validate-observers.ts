@@ -4,6 +4,7 @@ import { isRecord } from './validate-spec-shared.js';
 
 const OBSERVER_SURFACE_FAMILY_KEYS = [
   'globalVars',
+  'globalMarkers',
   'perPlayerVars',
   'derivedMetrics',
   'victory',
@@ -13,7 +14,7 @@ const OBSERVER_SURFACE_FAMILY_KEYS = [
   'activeCardAnnotation',
 ] as const;
 
-const MAP_TYPE_SURFACE_FAMILIES = new Set<string>(['globalVars', 'perPlayerVars', 'derivedMetrics']);
+const MAP_TYPE_SURFACE_FAMILIES = new Set<string>(['globalVars', 'globalMarkers', 'perPlayerVars', 'derivedMetrics']);
 
 const VISIBILITY_CLASS_VALUES = new Set<string>(['public', 'seatVisible', 'hidden']);
 
@@ -31,6 +32,7 @@ const OBSERVER_PROFILE_KEYS = new Set<string>(['extends', 'description', 'surfac
  */
 export interface KnownSurfaceIds {
   readonly globalVars: ReadonlySet<string>;
+  readonly globalMarkers: ReadonlySet<string>;
   readonly perPlayerVars: ReadonlySet<string>;
   readonly derivedMetrics: ReadonlySet<string>;
 }
@@ -551,12 +553,12 @@ function validateScalarSurfaceValue(
   const topFamily = surfaceLabel.split('.')[0] ?? '';
   if ('_default' in value && !MAP_TYPE_SURFACE_FAMILIES.has(topFamily)) {
     diagnostics.push({
-      code: 'CNL_VALIDATOR_OBSERVER_DEFAULT_IN_SCALAR',
-      path: `${path}._default`,
-      severity: 'error',
-      message: `Observer "${observerName}" surface "${surfaceLabel}" uses "_default" which is only valid in map-type surfaces.`,
-      suggestion: '_default is only valid in globalVars, perPlayerVars, and derivedMetrics.',
-    });
+        code: 'CNL_VALIDATOR_OBSERVER_DEFAULT_IN_SCALAR',
+        path: `${path}._default`,
+        severity: 'error',
+        message: `Observer "${observerName}" surface "${surfaceLabel}" uses "_default" which is only valid in map-type surfaces.`,
+        suggestion: '_default is only valid in globalVars, globalMarkers, perPlayerVars, and derivedMetrics.',
+      });
   }
 
   validateFullSyntaxEntry(observerName, surfaceLabel, value, path, diagnostics);

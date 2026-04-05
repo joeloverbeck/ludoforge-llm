@@ -3166,6 +3166,32 @@
                             }
                           ]
                         },
+                        "grantedOperationSimulated": {
+                          "type": "boolean"
+                        },
+                        "grantedOperationMove": {
+                          "type": "object",
+                          "properties": {
+                            "actionId": {
+                              "type": "string"
+                            },
+                            "params": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {}
+                            }
+                          },
+                          "required": [
+                            "actionId",
+                            "params"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "grantedOperationMarginDelta": {
+                          "type": "number"
+                        },
                         "previewFailureReason": {
                           "type": "string"
                         }

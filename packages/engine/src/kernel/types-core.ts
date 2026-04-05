@@ -334,9 +334,10 @@ export type AgentPolicyOperator =
   | 'not'
   | 'or'
   | 'sub';
-export type CompiledAgentPolicyLibraryRefKind = 'stateFeature' | 'candidateFeature' | 'aggregate';
+export type CompiledAgentPolicyLibraryRefKind = 'stateFeature' | 'candidateFeature' | 'aggregate' | 'previewStateFeature';
 export type SurfaceRefFamily =
   | 'globalVar'
+  | 'globalMarker'
   | 'perPlayerVar'
   | 'derivedMetric'
   | 'victoryCurrentMargin'
@@ -547,6 +548,7 @@ export interface CompiledEventAnnotationIndex {
 
 export interface CompiledSurfaceCatalog {
   readonly globalVars: Readonly<Record<string, CompiledSurfaceVisibility>>;
+  readonly globalMarkers: Readonly<Record<string, CompiledSurfaceVisibility>>;
   readonly perPlayerVars: Readonly<Record<string, CompiledSurfaceVisibility>>;
   readonly derivedMetrics: Readonly<Record<string, CompiledSurfaceVisibility>>;
   readonly victory: {
@@ -1525,6 +1527,12 @@ export interface PolicyCandidateDecisionTrace {
   readonly previewRefIds?: readonly string[];
   readonly unknownPreviewRefs?: readonly PolicyPreviewUnknownRefTrace[];
   readonly previewOutcome?: 'ready' | 'stochastic' | 'random' | 'hidden' | 'unresolved' | 'failed';
+  readonly grantedOperationSimulated?: boolean;
+  readonly grantedOperationMove?: {
+    readonly actionId: string;
+    readonly params: Readonly<Record<string, unknown>>;
+  };
+  readonly grantedOperationMarginDelta?: number;
   readonly previewFailureReason?: string;
 }
 

@@ -1483,6 +1483,36 @@
           "strategicConditions": []
         }
       },
+      "penalizeAttack": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "candidate",
+        "weight": {
+          "kind": "literal",
+          "value": -0.1
+        },
+        "value": {
+          "kind": "op",
+          "op": "boolToNumber",
+          "args": [
+            {
+              "kind": "ref",
+              "ref": {
+                "kind": "candidateTag",
+                "tagName": "attack"
+              }
+            }
+          ]
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
       "observeGameState": {
         "scopes": [
           "move"
@@ -1828,6 +1858,7 @@
         "considerations": [
           "preferProjectedSelfMargin",
           "preferRallyWeighted",
+          "penalizeAttack",
           "preferPopulousTargets",
           "observeGameState"
         ],
@@ -1860,11 +1891,12 @@
         "considerations": [
           "preferProjectedSelfMargin",
           "preferRallyWeighted",
+          "penalizeAttack",
           "preferPopulousTargets",
           "observeGameState"
         ]
       },
-      "fingerprint": "17f6a2830faf2e4afc15bc557be643df5a89d3c23ab150d86482c0dc21c721c7"
+      "fingerprint": "bca64570620afb148ce5b5abf723519284684ca3c1eae3f0fd878aa2535f841a"
     }
   },
   "bindingsBySeat": {
@@ -1873,5 +1905,5 @@
     "nva": "nva-baseline",
     "vc": "vc-evolved"
   },
-  "catalogFingerprint": "18dbaae8d7eb4f738f2298ed6ed1d76c60e4c8163355b80c2fb842d8d6323ca5"
+  "catalogFingerprint": "34c287c6546377b22a89cad6956958d765baad02a2296c21324b05381d3ce4e1"
 }

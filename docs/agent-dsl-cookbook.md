@@ -637,27 +637,156 @@ scoreTerm:
 ```
 
 ### "React to the active event card"
+
+Event cards are often the most strategically important decisions in a game. The 1-move preview captures immediate state changes (opposition shifts, token movements) but **cannot capture multi-turn strategic value** from:
+- **Granted operations** — events that give the player a free extra action
+- **Capability cards** — events that permanently modify game rules
+- **Resource transfers** — events that shift economic balance
+
+Use card annotations to supplement preview scoring. Annotations are compiled from the event's effect AST and provide a numeric feature vector per card side.
+
+#### Available annotation metrics
+
+| Metric | Type | Meaning |
+|--------|------|---------|
+| `markerModifications` | number | count of zone marker changes (opposition/support shifts) |
+| `globalMarkerModifications` | number | count of global marker changes (capabilities, leader effects) |
+| `grantsOperation` | boolean | whether the event gives a player a free operation |
+| `grantOperationSeats` | varies | which seats get the granted operation (`self`, seat IDs) |
+| `hasLastingEffect` | boolean | whether the event has effects beyond the immediate resolution |
+| `hasDecisionPoints` | boolean | whether the event requires player choices |
+| `effectNodeCount` | number | complexity of the event's effect tree |
+| `globalVarModifications` | number | count of global variable changes |
+| `perPlayerVarModifications` | number | count of per-player variable changes (e.g., resources) |
+| `tokenPlacements` | record | token placement counts by type |
+| `tokenRemovals` | record | token removal counts by type |
+
+Access via `activeCard.annotation.<side>.<metric>` (e.g., `activeCard.annotation.shaded.grantsOperation`).
+
+#### Pattern: Prefer events that grant operations
+
+Events that grant a free operation are worth an **entire extra turn**. The preview only evaluates the event's immediate effect, not the granted operation's value.
+
+**Note**: Annotation refs and tag refs compile to `number` (0/1), not `boolean`. Use `type: number` for features, `gt: [ref, 0]` for `when` clauses, and `coalesce` with `0` (not `false`).
+
 ```yaml
 stateFeatures:
-  # Check if the active card has a capability tag
-  isCapabilityCard:
-    type: boolean
+  # Does the shaded side grant a free operation? (0 or 1)
+  shadedGrantsOp:
+    type: number
     expr:
-      ref: activeCard.hasTag.capability
+      coalesce:
+        - { ref: activeCard.annotation.shaded.grantsOperation }
+        - 0
+  # Does the unshaded side grant a free operation? (0 or 1)
+  unshadedGrantsOp:
+    type: number
+    expr:
+      coalesce:
+        - { ref: activeCard.annotation.unshaded.grantsOperation }
+        - 0
 
 considerations:
-  # Prefer events when the card is a capability (long-term value)
-  preferCapabilityEvents:
+  # Strongly prefer playing events that grant free operations
+  preferGrantingEvents:
     scopes: [move]
     when:
-      ref: feature.isCapabilityCard
-    weight: 5
+      gt:
+        - add:
+            - { ref: feature.shadedGrantsOp }
+            - { ref: feature.unshadedGrantsOp }
+        - 0
+    weight: 3
     value:
       boolToNumber:
         or:
           - { ref: candidate.tag.event-play }
           - { ref: candidate.tag.pivotal-event }
 ```
+
+#### Pattern: Prefer capability cards (long-term rule changes)
+
+Capability cards modify game rules permanently (e.g., making sweeps risky, limiting ambushes). Their value is spread across all future turns — impossible to capture with any depth of preview.
+
+```yaml
+stateFeatures:
+  isCapabilityCard:
+    type: number    # hasTag compiles to number (0/1), not boolean
+    expr:
+      ref: activeCard.hasTag.capability
+
+considerations:
+  preferCapabilityEvents:
+    scopes: [move]
+    when:
+      gt: [{ ref: feature.isCapabilityCard }, 0]
+    weight: 3
+    value:
+      boolToNumber:
+        or:
+          - { ref: candidate.tag.event-play }
+          - { ref: candidate.tag.pivotal-event }
+```
+
+#### Pattern: Score events by marker impact
+
+Events with more marker modifications directly affect victory-relevant zone states (opposition, support, control). Higher `markerModifications` correlates with higher immediate strategic impact.
+
+```yaml
+stateFeatures:
+  shadedMarkerImpact:
+    type: number
+    expr:
+      coalesce:
+        - { ref: activeCard.annotation.shaded.markerModifications }
+        - 0
+  unshadedMarkerImpact:
+    type: number
+    expr:
+      coalesce:
+        - { ref: activeCard.annotation.unshaded.markerModifications }
+        - 0
+```
+
+These can be used in `when` clauses to conditionally boost events with high marker impact, or as values in considerations to weight events proportionally to their effect.
+
+#### Pattern: Avoid events that help opponents
+
+Events that grant operations to opponent seats are strategically dangerous. Use per-seat annotation variants to detect this.
+
+```yaml
+stateFeatures:
+  # Check if unshaded side grants ops to an opponent seat
+  unshadedGrantsOpToOpponent:
+    type: boolean
+    expr:
+      coalesce:
+        - { ref: activeCard.annotation.unshaded.grantsOperation }
+        - false
+  # If you're VC, check if unshaded grants to US
+  unshadedGrantsToUs:
+    type: boolean
+    expr:
+      coalesce:
+        - { ref: activeCard.annotation.unshaded.grantOperationSeats.us }
+        - false
+```
+
+**Important**: The exact field paths for per-seat grant detection depend on how `grantOperationSeats` is indexed. Check the compiled annotation structure for your game.
+
+#### Why preview alone isn't enough for events
+
+The preview system evaluates the immediate game state after applying the event. This works well for:
+- Events that directly move tokens or shift markers (preview sees the margin change)
+- Events with simple, immediate effects
+
+But preview **undervalues** or **misses**:
+- **Granted operations** — preview doesn't simulate the free action that follows
+- **Capability effects** — setting a global marker has zero immediate margin impact
+- **Resource transfers** — changing resources doesn't affect the current margin
+- **Lasting effects** — modifying future game rules is invisible to 1-move lookahead
+
+Use annotation-based considerations alongside preview to capture these multi-turn effects. The annotations provide the "what does this card do?" signal that preview can't compute.
 
 ### "Distinguish move vs completion evaluation context"
 ```yaml

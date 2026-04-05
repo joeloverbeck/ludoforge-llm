@@ -237,6 +237,12 @@ agents:
                 prop: population
             - 0
 
+      penalizeAttack:
+        scopes: [move]
+        weight: -0.1
+        value:
+          boolToNumber:
+            ref: candidate.tag.attack
       observeGameState:
         scopes: [move]
         weight: 0
@@ -356,6 +362,7 @@ agents:
         considerations:
           - preferProjectedSelfMargin
           - preferRallyWeighted
+          - penalizeAttack
           - preferPopulousTargets
           - observeGameState
         tieBreakers:

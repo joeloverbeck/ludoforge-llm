@@ -43,7 +43,7 @@ Before decomposing, validate the spec's assumptions against the actual codebase:
 - **Validate** that file paths mentioned in the spec exist in the codebase (use Grep, Glob, or bash equivalents as available).
 - **Grep** for types, functions, and modules the spec references — confirm they are real and current
 - **Glob** for `tickets/<NAMESPACE>-*.md` — if any files with this namespace already exist, warn the user and ask whether to overwrite, continue numbering from the next available number, or abort
-- For each spec dependency listed in the target spec's **Dependencies** field, verify whether it lives in `specs/` or `archive/specs/` and record the correct path for use in ticket Deps fields. If Dependencies is `None`, skip this sub-step
+- For each spec dependency listed in the target spec's **Dependencies** field, verify whether it lives in `specs/` or `archive/specs/` and record the correct path for use in ticket Deps fields. If the Dependencies field indicates no dependencies (e.g., `None`, `None (...)`, or equivalent), skip this sub-step
 - **Flag** any stale assumptions, missing files, or renamed entities
 - If you find discrepancies, present them to the user before proceeding
 

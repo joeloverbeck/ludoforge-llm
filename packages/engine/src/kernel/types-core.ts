@@ -1525,6 +1525,12 @@ export interface PolicyCandidateDecisionTrace {
   readonly previewRefIds?: readonly string[];
   readonly unknownPreviewRefs?: readonly PolicyPreviewUnknownRefTrace[];
   readonly previewOutcome?: 'ready' | 'stochastic' | 'random' | 'hidden' | 'unresolved' | 'failed';
+  readonly grantedOperationSimulated?: boolean;
+  readonly grantedOperationMove?: {
+    readonly actionId: string;
+    readonly params: Readonly<Record<string, unknown>>;
+  };
+  readonly grantedOperationMarginDelta?: number;
   readonly previewFailureReason?: string;
 }
 

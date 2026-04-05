@@ -133,6 +133,7 @@ If that earlier ticket introduced production-corpus traversal, fixture readers, 
 - When a migration adds or removes a required compiled field, treat owned production goldens that snapshot compiled catalogs, summaries, or traces as expected update surfaces unless evidence shows unexpected behavioral drift.
 - When a change alters observability, preview readiness, scoring inputs, or other behavior that can legitimately change deterministic move choice, treat owned production goldens and fixed-seed summaries as expected update surfaces unless evidence shows unexpected drift outside the ticket boundary.
 - When enriching diagnostics or trace output, prefer preserving the existing coarse summary field and adding an optional detail field unless the ticket explicitly owns a breaking schema redesign.
+- Preparatory tickets may legitimately add optional schema, trace, or contract fields ahead of the later logic tickets that will populate them, so long as the ticket explicitly owns that groundwork boundary and verification proves the artifact surfaces remain in sync.
 - When a completed gate ticket proves downstream active tickets are not actionable, update those sibling tickets in the same turn so their status, deps, and scope text no longer advertise invalid work. Do not leave the series in a partially-invalid staged state.
 
 ## Verification
@@ -170,6 +171,7 @@ Before claiming completion:
    - confirm the command that produces it has actually exited before diagnosing the artifact contents
    - confirm the artifact path matches the command's real write target
    - check a freshness signal such as timestamp or file size before treating missing fields or stale output as a real discrepancy
+   - when a shared generator rewrites multiple artifacts, identify which generated files actually encode the changed contract and summarize those ticket-owned artifacts specifically in the final response
    - only then compare the artifact against the ticket's acceptance criteria
 11. For profiling, benchmark, or audit tickets that set a decision gate:
    - capture the exact command, measured surface, and threshold comparison used to make the decision

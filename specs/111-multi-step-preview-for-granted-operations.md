@@ -61,6 +61,7 @@ The current workaround is to use `activeCard.annotation.<side>.grantsOperation` 
 | 1 — Engine Agnosticism | The mechanism is generic: any game with events that grant operations benefits. The engine detects granted operations from the compiled annotation, not from game-specific logic |
 | 8 — Determinism | Multi-step preview is deterministic: same event + same state + same agent profile = same preview result |
 | 11 — Immutability | Preview already creates temporary state copies; the second step does the same |
+| 10 — Bounded Computation | Multi-step depth is capped at 1 (event → granted operation). No unbounded recursion. |
 | 15 — Architectural Completeness | Closes the gap where the preview system ignores a known follow-up action that the game rules guarantee will happen |
 
 ## Scope
@@ -69,29 +70,45 @@ The current workaround is to use `activeCard.annotation.<side>.grantsOperation` 
 
 **1. Detect granted operations during preview evaluation**
 
-In the preview evaluation path (`packages/engine/src/agents/policy-evaluation-core.ts`), after simulating an event candidate:
-- Check if the event's compiled annotation indicates `grantsOperation === true`
-- If yes, identify which seat(s) receive the granted operation
-- If the evaluating agent's seat is among the grantees, proceed to step 2
+In the preview simulation path (`packages/engine/src/agents/policy-preview.ts`), after `tryApplyPreview()` (line 266) applies the event move and produces a post-event state:
+- Extract the event card ID and side from the candidate's move parameters: `cardId = candidate.move.params.eventCardId`, `side = candidate.move.params.side`
+- Look up the annotation: `def.cardAnnotationIndex?.entries[cardId]?.[side]`
+- Check if `annotation.grantsOperation === true`
+- If yes, check if the evaluating agent's seat is among `annotation.grantOperationSeats` (resolving `"self"` to the agent's seat ID at runtime)
+- If the agent is a grantee, proceed to step 2
 
-The annotation is already available at compile time via `gameDef.cardAnnotationIndex.entries[cardId][side].grantsOperation` and `.grantOperationSeats`.
+**2. Add evaluator callback to preview dependencies**
 
-**2. Simulate the granted operation as a second preview step**
+Add an optional `evaluateGrantedOperation` callback to `PolicyPreviewDependencies` (policy-preview.ts:33). This follows the existing dependency injection pattern used by `applyMove`, `classifyPlayableMoveCandidate`, and `derivePlayerObservation`. The callback signature:
 
-After the event preview produces a post-event state:
-- Enumerate legal moves for the granted operation in the post-event state
-- Use the agent's PolicyAgent profile to evaluate and select the best granted move (same scoring logic as normal move selection)
-- Apply the selected granted move to produce a post-event-plus-operation state
+```typescript
+readonly evaluateGrantedOperation?: (
+  def: GameDef,
+  postEventState: GameState,
+  agentSeatId: string,
+  runtime?: GameDefRuntime,
+) => { move: Move; score: number } | undefined;
+```
+
+The caller (`policy-eval.ts`) injects a function that enumerates legal moves in the post-event state, evaluates them using the agent's PolicyAgent profile, selects the best via argmax, and returns it. The preview module stays decoupled — it calls the callback without depending on the evaluation pipeline.
+
+**3. Simulate the granted operation as a second preview step**
+
+After the event preview produces a post-event state and the annotation check identifies a granted operation for the agent's seat:
+- Call `deps.evaluateGrantedOperation(def, postEventState, agentSeatId, runtime)`
+- If the callback returns a move, apply it via `deps.applyMove()` to produce a post-event-plus-operation state
 - Use THIS state for the final margin evaluation (instead of the post-event-only state)
+- If the callback returns `undefined` (no legal moves for granted operation), fall back to post-event-only state
 
-**3. Handle edge cases**
+**4. Handle edge cases**
 
 - If the granted operation has no legal moves (all actions blocked), fall back to the post-event-only state
-- If `grantOperationSeats` contains `self`, resolve to the evaluating agent's seat at runtime
+- If `grantOperationSeats` contains `self`, resolve to the evaluating agent's seat ID at runtime
 - If `grantOperationSeats` contains opponent seats only (the event helps an opponent, not the evaluating agent), do NOT extend the preview — the opponent's granted action is adversarial
-- Budget: the second step adds one more `runGame` simulation per event candidate that grants operations. This is bounded by the number of such candidates (typically 1-2 per decision point)
+- **Recursion depth cap**: Multi-step preview depth is capped at 1 (event → granted operation). If the granted operation itself would trigger further events or grant additional operations, stop after the first granted operation. The `evaluateGrantedOperation` callback must not recursively invoke multi-step preview. (Foundation 10: Bounded Computation.)
+- **Budget**: The second step enumerates legal moves in the post-event state, evaluates them using the agent's profile, selects the best via argmax, and applies it. This is bounded by: (a) the number of event candidates with `grantsOperation` (typically 1-2 per decision point), and (b) the legal move count for the granted operation (same order as a normal agent decision).
 
-**4. Diagnostic enrichment**
+**5. Diagnostic enrichment**
 
 Add to the preview trace output:
 - `grantedOperationSimulated: true/false` — whether multi-step preview was used
@@ -100,8 +117,9 @@ Add to the preview trace output:
 
 ### Mutable Files
 
-- `packages/engine/src/agents/policy-evaluation-core.ts` (modify) — extend preview evaluation for granted operations
-- `packages/engine/src/agents/policy-eval.ts` (modify) — pass annotation index to evaluation context
+- `packages/engine/src/agents/policy-preview.ts` (modify) — primary: add multi-step logic in `tryApplyPreview()`, extend `PolicyPreviewDependencies` with `evaluateGrantedOperation` callback
+- `packages/engine/src/agents/policy-eval.ts` (modify) — inject `evaluateGrantedOperation` callback when constructing preview dependencies
+- `packages/engine/src/agents/policy-evaluation-core.ts` (modify) — wiring changes to pass agent seat context to preview
 - `packages/engine/src/agents/policy-diagnostics.ts` (modify) — add granted operation trace fields
 - `packages/engine/src/kernel/types-core.ts` (modify) — extend preview trace types
 
@@ -124,7 +142,9 @@ Add to the preview trace output:
 
 5. **Integration test: FITL VC agent prefers operation-granting events** — Run a game evaluation where the active card grants VC a free Rally. Verify the event candidate scores higher than it would with single-step preview.
 
-6. **Regression test: existing FITL golden traces** — Verify no changes to games that don't involve operation-granting events at agent decision points.
+6. **Unit test: recursion depth capped at 1** — Create a scenario where a granted operation could itself trigger another event. Verify the preview stops after the first granted operation (no recursive multi-step). (Foundation 10.)
+
+7. **Regression test: existing FITL golden traces** — Verify no changes to games that don't involve operation-granting events at agent decision points.
 
 ## Expected Impact
 

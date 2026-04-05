@@ -1406,6 +1406,12 @@ const PolicyCandidateDecisionTraceSchema = z
       z.literal('unresolved'),
       z.literal('failed'),
     ]).optional(),
+    grantedOperationSimulated: BooleanSchema.optional(),
+    grantedOperationMove: z.object({
+      actionId: StringSchema,
+      params: z.record(z.string(), z.unknown()),
+    }).strict().optional(),
+    grantedOperationMarginDelta: NumberSchema.optional(),
     previewFailureReason: StringSchema.optional(),
   })
   .strict();

@@ -46,9 +46,7 @@ Parse into logical blocks:
 - **Instruction lists**: Bullet points, numbered lists, inline directives
 - **Guardrails**: Typically the final section with constraint bullets
 
-Count:
-- Total lines (including blank lines)
-- Unique instructions (distinct semantic directives, regardless of where they appear)
+Count total lines (including blank lines). During redundancy detection (Step 2), note instruction clusters rather than a discrete unique-instruction count.
 
 ---
 

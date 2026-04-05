@@ -1,6 +1,6 @@
 # 113PREVSTPOLSUR-002: Compile `preview.feature.*` refs in compile-agents
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — CNL agent compiler
@@ -91,3 +91,24 @@ if (nestedPath.startsWith('feature.')) {
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/cnl/compile-agents-preview-feature.test.js`
 2. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+Completed: 2026-04-05
+
+- Extended `resolvePreviewRuntimeRef()` in `packages/engine/src/cnl/compile-agents.ts` so `preview.feature.<id>` now lowers to `{ kind: 'library', refKind: 'previewStateFeature', id }` when `<id>` is a declared state feature.
+- Preserved the existing preview-surface lowering paths for `preview.victory.*`, `preview.var.*`, and `preview.globalMarker.*`.
+- Added coverage in the live owning test module `packages/engine/test/unit/compile-agents-authoring.test.ts` rather than the stale dedicated test path named in the ticket.
+- Regenerated schema artifacts; `packages/engine/schemas/GameDef.schema.json` changed as ticket-owned fallout from the widened lowered ref shape.
+
+Deviations from original plan:
+
+- The ticket's test file path was stale. The implementation extended the existing preview-ref authoring coverage in `packages/engine/test/unit/compile-agents-authoring.test.ts`.
+- The ticket did not call out a generated schema artifact, but `GameDef.schema.json` needed regeneration after the compiler change.
+
+Verification:
+
+1. `pnpm -F @ludoforge/engine build`
+2. `pnpm -F @ludoforge/engine run schema:artifacts`
+3. `node --test packages/engine/dist/test/unit/compile-agents-authoring.test.js`
+4. `pnpm -F @ludoforge/engine test`

@@ -2460,14 +2460,53 @@ describe('agents authoring surface', () => {
   it('lowers preview authored refs into preview surface variants', () => {
     const result = compileGameSpecToGameDef({
       ...createCompileReadyDoc(),
+      observability: createTestObservability({
+        testObserver: {
+          surfaces: {
+            victory: { currentMargin: 'public' },
+            perPlayerVars: {
+              resources: {
+                current: 'public',
+              },
+            },
+            globalMarkers: {
+              cap_boobyTraps: {
+                current: 'public',
+              },
+            },
+          },
+        },
+      }),
+      perPlayerVars: [{ name: 'resources', type: 'int', init: 0, min: 0, max: 10 }],
+      globalMarkerLattices: [
+        { id: 'cap_boobyTraps', states: ['inactive', 'unshaded', 'shaded'], defaultState: 'inactive' },
+      ],
       dataAssets: [createSeatCatalogAsset(['us'])],
       agents: withObserver({
         parameters: {},
         library: {
+          stateFeatures: {
+            currentMargin: {
+              type: 'number',
+              expr: { ref: 'victory.currentMargin.us' },
+            },
+          },
           candidateFeatures: {
             projectedMargin: {
               type: 'number',
               expr: { ref: 'preview.victory.currentMargin.us' },
+            },
+            projectedCurrentMarginFeature: {
+              type: 'number',
+              expr: { ref: 'preview.feature.currentMargin' },
+            },
+            projectedResources: {
+              type: 'number',
+              expr: { ref: 'preview.var.player.self.resources' },
+            },
+            projectedBoobyTraps: {
+              type: 'number',
+              expr: { ref: 'preview.globalMarker.cap_boobyTraps' },
             },
           },
           tieBreakers: {
@@ -2499,6 +2538,68 @@ describe('agents authoring surface', () => {
       id: 'currentMargin',
       selector: { kind: 'role', seatToken: 'us' },
     }));
+    assert.deepEqual(result.gameDef?.agents?.library.candidateFeatures.projectedCurrentMarginFeature?.expr, refExpr({
+      kind: 'library',
+      refKind: 'previewStateFeature',
+      id: 'currentMargin',
+    }));
+    assert.deepEqual(result.gameDef?.agents?.library.candidateFeatures.projectedResources?.expr, refExpr({
+      kind: 'previewSurface',
+      family: 'perPlayerVar',
+      id: 'resources',
+      selector: { kind: 'player', player: 'self' },
+    }));
+    assert.deepEqual(result.gameDef?.agents?.library.candidateFeatures.projectedBoobyTraps?.expr, refExpr({
+      kind: 'previewSurface',
+      family: 'globalMarker',
+      id: 'cap_boobyTraps',
+    }));
+  });
+
+  it('rejects unknown preview feature refs during agent compilation', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: withObserver({
+        parameters: {},
+        library: {
+          candidateFeatures: {
+            projectedMissingFeature: {
+              type: 'number',
+              expr: { ref: 'preview.feature.missingFeature' },
+            },
+          },
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              considerations: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      }),
+    });
+
+    assert.equal(result.gameDef, null);
+    assert.equal(
+      result.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_AGENT_POLICY_REF_UNKNOWN'
+          && diagnostic.path === 'doc.agents.library.candidateFeatures.projectedMissingFeature.expr.ref',
+      ),
+      true,
+    );
   });
 
   it('lowers explicit player-scoped per-player refs into player selectors', () => {

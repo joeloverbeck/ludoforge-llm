@@ -142,7 +142,7 @@ When a ticket change affects other active tickets in the same series:
 7. **Broader failures**: Determine whether they are inside the corrected ticket boundary or owned by another active ticket. Do not silently absorb out-of-boundary scope. Document as residual risk if covered by another ticket; stop and resolve with the user if not.
 8. **Test helper staleness**: If focused checks pass but a broader suite fails, inspect shared test helpers, fixtures, and goldens for stale assumptions. Check whether seed-specific helper states or turn-position fixtures have gone stale. Retarget to a current seed/turn that exercises the same invariant. When a compiled fast path is added, test malformed and unsupported shapes for clean fallback. When a new fast path depends on enriched context objects, check callers that construct minimal contexts.
 9. **Non-functional regression clauses**: If a ticket includes a vague "no performance regression" clause without naming a benchmark surface, baseline, threshold, or command, resolve with 1-3-1 or satisfy through the nearest existing regression suite.
-10. **Isolating test failures**: If `node --test` reports only a top-level file failure, rerun the failing file narrowly. Use test-name filtering or direct helper reproduction. Run the built test module directly to expose nested subtest output.
+10. **Isolating test failures**: If `node --test` reports only a top-level file failure, rerun the failing file narrowly. Use test-name filtering or direct helper reproduction. Run the built test module directly to expose nested subtest output. For compiler or schema authoring tests, it is also valid to reproduce the minimal compile input directly against the built module to inspect diagnostics and lowered output when the test runner still hides the failing subtest.
 
 ### Generated Artifact Checks
 
@@ -151,6 +151,7 @@ When acceptance depends on traces, goldens, schemas, or reports:
 - Confirm the artifact path matches the command's real write target.
 - Check freshness (timestamp or file size) before treating missing fields as real discrepancies.
 - When a touched source file contributes to exported contracts or schema surfaces, expect generator-backed artifact checks even if the ticket didn't name a generated file.
+- When a compiler ticket introduces a new lowered ref kind or expression variant, assume `GameDef.schema.json` may drift even if the immediate code edits are outside `schemas-core.ts`.
 - When a shared generator rewrites multiple artifacts, identify which encode the changed contract and summarize those specifically.
 - If regeneration was required but leaves no persisted diff, state explicitly that the surface was checked and remained in sync.
 

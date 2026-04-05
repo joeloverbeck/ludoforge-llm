@@ -1849,6 +1849,27 @@ class AgentLibraryCompiler {
       return null;
     }
     const nestedPath = refPath.slice('preview.'.length);
+    if (nestedPath.startsWith('feature.')) {
+      const featureId = nestedPath.slice('feature.'.length);
+      if (featureId.length === 0) {
+        this.reportUnknownLibraryRef(refPath, path);
+        return null;
+      }
+      if (this.authoredLibrary.stateFeatures?.[featureId] === undefined) {
+        this.reportUnknownLibraryRef(refPath, path);
+        return null;
+      }
+      const feature = this.compileStateFeature(featureId);
+      if (feature === null) {
+        return null;
+      }
+      return {
+        type: feature.type,
+        costClass: 'preview',
+        ref: { kind: 'library', refKind: 'previewStateFeature', id: featureId },
+        dependency: { kind: 'stateFeatures', id: featureId },
+      };
+    }
     const resolved = this.resolveSurfaceRuntimeRef(nestedPath, path, true);
     if (resolved !== null) {
       return { type: 'number', costClass: 'preview', ref: resolved.ref };

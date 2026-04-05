@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — agent evaluation core, agent runtime, agent preview
-**Deps**: `tickets/113PREVSTPOLSUR-002.md`, `specs/113-preview-state-policy-surface.md`
+**Deps**: `archive/tickets/113PREVSTPOLSUR-002.md`, `specs/113-preview-state-policy-surface.md`
 
 ## Problem
 

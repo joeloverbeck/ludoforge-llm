@@ -23,6 +23,7 @@ const publicVis: CompiledSurfaceVisibility = {
 function createCatalog(overrides?: Partial<CompiledSurfaceCatalog>): CompiledSurfaceCatalog {
   return {
     globalVars: { score: publicVis },
+    globalMarkers: {},
     perPlayerVars: { tempo: publicVis },
     derivedMetrics: { aggro: publicVis },
     victory: {

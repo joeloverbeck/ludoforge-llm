@@ -127,6 +127,7 @@ function buildGameDefWithAgentExpr(featureId: string, expr: Record<string, unkno
       catalogFingerprint: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
       surfaceVisibility: {
         globalVars: {},
+        globalMarkers: {},
         perPlayerVars: {},
         derivedMetrics: {},
         victory: {
@@ -300,6 +301,7 @@ describe('top-level runtime schemas', () => {
         catalogFingerprint: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
         surfaceVisibility: {
           globalVars: {},
+          globalMarkers: {},
           perPlayerVars: {},
           derivedMetrics: {},
           victory: {
@@ -440,6 +442,7 @@ describe('top-level runtime schemas', () => {
         catalogFingerprint: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
         surfaceVisibility: {
           globalVars: {},
+          globalMarkers: {},
           perPlayerVars: {},
           derivedMetrics: {},
           victory: {
@@ -532,6 +535,7 @@ describe('top-level runtime schemas', () => {
         catalogFingerprint: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
         surfaceVisibility: {
           globalVars: {},
+          globalMarkers: {},
           perPlayerVars: {},
           derivedMetrics: {},
           victory: {
@@ -627,6 +631,7 @@ describe('top-level runtime schemas', () => {
         catalogFingerprint: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
         surfaceVisibility: {
           globalVars: {},
+          globalMarkers: {},
           perPlayerVars: {},
           derivedMetrics: {},
           victory: {
@@ -823,6 +828,7 @@ describe('top-level runtime schemas', () => {
         catalogFingerprint: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
         surfaceVisibility: {
           globalVars: {},
+          globalMarkers: {},
           perPlayerVars: {},
           derivedMetrics: {},
           victory: {
@@ -891,6 +897,7 @@ describe('top-level runtime schemas', () => {
         schemaVersion: 2,
         surfaceVisibility: {
           globalVars: {},
+          globalMarkers: {},
           perPlayerVars: {},
           derivedMetrics: {},
           victory: {

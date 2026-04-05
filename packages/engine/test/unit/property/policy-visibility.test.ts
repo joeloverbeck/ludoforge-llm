@@ -44,6 +44,7 @@ function createCatalog(): AgentPolicyCatalog {
           },
         },
       },
+      globalMarkers: {},
       perPlayerVars: {},
       derivedMetrics: {},
       victory: {

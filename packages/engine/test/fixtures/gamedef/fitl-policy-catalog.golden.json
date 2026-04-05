@@ -360,6 +360,7 @@
         }
       }
     },
+    "globalMarkers": {},
     "perPlayerVars": {
       "resources": {
         "current": "public",
@@ -1905,5 +1906,5 @@
     "nva": "nva-baseline",
     "vc": "vc-evolved"
   },
-  "catalogFingerprint": "34c287c6546377b22a89cad6956958d765baad02a2296c21324b05381d3ce4e1"
+  "catalogFingerprint": "c78b5cf5f152b9f6573a503c11eb41acc3429db64ad9863ae2d55b30d4686b18"
 }

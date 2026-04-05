@@ -117,6 +117,7 @@ If that earlier ticket introduced production-corpus traversal, fixture readers, 
   - compiled/kernel/runtime types
   - Zod or JSON schemas
   - when a compiled DSL or AST field widens, both the schema-definition source file and any generated schema artifacts that encode that shape
+  - when an earlier ticket has already made a field required, any empty or default placeholders needed across constructors, defaults, fixtures, or goldens for atomicity, without assuming that semantic ownership of later population work moved into the current ticket
   - diagnostics or debug snapshots
   - exported provider interfaces and adapter wrappers that mirror shared runtime helpers or services
   - when a ticket adds an injected callback or service at a top-level orchestration file, the lower provider/runtime factory layers where that dependency is actually constructed and threaded
@@ -155,6 +156,7 @@ Before claiming completion:
 4. Report unrelated pre-existing failures separately from failures caused by your changes.
 5. Confirm whether the package's test commands execute source files directly or built `dist` output:
    - if tests depend on `dist`, run `typecheck` first and rebuild before trusting targeted test results
+   - if a focused `dist` check fails with module-resolution, missing-file, or obviously stale-artifact symptoms before the owning build has fully completed, treat that as a likely ordering or freshness problem first and rerun after the serialized build finishes
    - if the change affects generated artifacts or schemas, regenerate or validate them explicitly
    - do not run verification commands in parallel when they read from or rewrite the same generated output tree such as `dist/`
 6. Prefer the narrowest commands that validate the real changed code path, not stale build output.

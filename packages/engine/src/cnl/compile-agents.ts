@@ -163,6 +163,7 @@ function resolveSurfaceVisibilityFromObserverCatalog(
   for (const id of options.policyMetricIds ?? []) { derivedMetrics[id] = hiddenDefaults; }
   return {
     globalVars,
+    globalMarkers: {},
     perPlayerVars,
     derivedMetrics,
     victory: { currentMargin: hiddenDefaults, currentRank: hiddenDefaults },

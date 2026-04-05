@@ -222,6 +222,7 @@ describe('agents authoring surface', () => {
     assert.deepEqual(agents.candidateParamDefs, {});
     assert.deepEqual(agents.surfaceVisibility, {
       globalVars: {},
+      globalMarkers: {},
       perPlayerVars: {},
       derivedMetrics: {},
       victory: {

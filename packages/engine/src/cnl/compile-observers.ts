@@ -198,6 +198,7 @@ function resolveObserverSurfaces(
       diagnostics,
       `${path}.globalVars`,
     ),
+    globalMarkers: base.globalMarkers,
     perPlayerVars: lowerObserverMapTypeSurface(
       options.knownPerPlayerVarIds,
       surfaces.perPlayerVars,
@@ -443,6 +444,7 @@ function normalizeToSurfaceVisibilityDef(
 function buildDefaultSurfaces(options: LowerObserversOptions): CompiledSurfaceCatalog {
   return {
     globalVars: expandMapDefaults(options.knownGlobalVarIds, SURFACE_DEFAULTS['globalVars']!),
+    globalMarkers: {},
     perPlayerVars: expandMapDefaults(options.knownPerPlayerVarIds, SURFACE_DEFAULTS['perPlayerVars']!),
     derivedMetrics: expandMapDefaults(options.knownDerivedMetricIds, SURFACE_DEFAULTS['derivedMetrics']!),
     victory: {
@@ -470,6 +472,7 @@ function buildOmniscientSurfaces(options: LowerObserversOptions): CompiledSurfac
   };
   return {
     globalVars: expandMapDefaults(options.knownGlobalVarIds, allPublic),
+    globalMarkers: {},
     perPlayerVars: expandMapDefaults(options.knownPerPlayerVarIds, allPublic),
     derivedMetrics: expandMapDefaults(options.knownDerivedMetricIds, allPublic),
     victory: {

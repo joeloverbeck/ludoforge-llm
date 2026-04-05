@@ -1,6 +1,6 @@
 # 112GLBMRKPOLSUR-002: Parse and resolve globalMarker refs in policy surface
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — agent policy surface, agent policy runtime
@@ -116,3 +116,24 @@ Test resolution: returns current state from `state.globalMarkers`, falls back to
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/agents/policy-surface-global-marker.test.js`
 2. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+Completed: 2026-04-05
+
+What changed:
+- Added `globalMarker.*` parsing and visibility lookup in `packages/engine/src/agents/policy-surface.ts`.
+- Added runtime resolution for `globalMarker` refs in `packages/engine/src/agents/policy-runtime.ts`, using `state.globalMarkers[id]` first and `def.globalMarkerLattices[].defaultState` as fallback.
+- Extended the live owning tests in `packages/engine/test/unit/agents/policy-surface.test.ts` and `packages/engine/test/unit/agents/policy-runtime.test.ts` instead of creating the stale dedicated test path named in the ticket.
+- Updated the schema and owned compiled-catalog goldens to reflect the now-required `globalMarkers` catalog field.
+
+Deviations from original plan:
+- The ticket's proposed dedicated test file path was stale; the implementation extended the existing owning unit test modules instead.
+- Because `archive/tickets/112GLBMRKPOLSUR-001.md` had already made `CompiledSurfaceCatalog.globalMarkers` required, this ticket also had to add atomicity-only empty `globalMarkers: {}` placeholders in adjacent compiler defaults, test helpers, and catalog goldens. That did not pull forward the later `112` tickets' real marker-population work.
+
+Verification results:
+- `pnpm -F @ludoforge/engine build`
+- `pnpm -F @ludoforge/engine run schema:artifacts`
+- `pnpm -F @ludoforge/engine run schema:artifacts:check`
+- `node --test packages/engine/dist/test/unit/agents/policy-surface.test.js packages/engine/dist/test/unit/agents/policy-runtime.test.js`
+- `pnpm -F @ludoforge/engine test`

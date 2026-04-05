@@ -90,6 +90,7 @@ function createMinimalCatalog(overrides?: {
     catalogFingerprint: 'test-catalog',
     surfaceVisibility: {
       globalVars: {},
+      globalMarkers: {},
       perPlayerVars: {},
       derivedMetrics: {},
       victory: {

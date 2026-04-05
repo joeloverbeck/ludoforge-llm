@@ -52,6 +52,7 @@ function createCatalog(): AgentPolicyCatalog {
     catalogFingerprint: 'catalog',
     surfaceVisibility: {
       globalVars: {},
+      globalMarkers: {},
       perPlayerVars: {},
       derivedMetrics: {},
       victory: {
@@ -363,6 +364,7 @@ function createTemplatePreviewDef(): GameDef {
             preview: { visibility: 'public', allowWhenHiddenSampling: true },
           },
         },
+        globalMarkers: {},
         perPlayerVars: {},
         derivedMetrics: {},
         victory: {

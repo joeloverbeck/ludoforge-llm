@@ -115,6 +115,7 @@
         }
       }
     },
+    "globalMarkers": {},
     "perPlayerVars": {
       "chipStack": {
         "current": "seatVisible",
@@ -828,5 +829,5 @@
   "bindingsBySeat": {
     "neutral": "baseline"
   },
-  "catalogFingerprint": "c402148f18fe696292587126fb01bc36fc515fcd2d41eef2c12539bab0654024"
+  "catalogFingerprint": "c020b0df2f801b0c22faa9a3a7b5934880cbafdfcaf15f3b7b037570a11b4212"
 }

@@ -72,6 +72,7 @@ function createCatalog(): AgentPolicyCatalog {
           preview: { visibility: 'public', allowWhenHiddenSampling: true },
         },
       },
+      globalMarkers: {},
       perPlayerVars: {},
       derivedMetrics: {},
       victory: {

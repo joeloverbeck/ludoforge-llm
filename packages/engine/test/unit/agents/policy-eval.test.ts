@@ -186,6 +186,7 @@ function createCatalog(
           preview: { visibility: 'public', allowWhenHiddenSampling: true },
         },
       },
+      globalMarkers: {},
       perPlayerVars: {
         tempo: {
           current: 'seatVisible',

@@ -44,6 +44,7 @@ function createCatalog(): AgentPolicyCatalog {
     catalogFingerprint: 'catalog',
     surfaceVisibility: {
       globalVars: {},
+      globalMarkers: {},
       perPlayerVars: {},
       derivedMetrics: {},
       victory: {

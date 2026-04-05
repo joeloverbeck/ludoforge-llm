@@ -57,6 +57,7 @@ function createAggregationCatalog(expr: AgentPolicyExpr): AgentPolicyCatalog {
     catalogFingerprint: 'policy-aggregation-property',
     surfaceVisibility: {
       globalVars: {},
+      globalMarkers: {},
       perPlayerVars: {},
       derivedMetrics: {},
       victory: {

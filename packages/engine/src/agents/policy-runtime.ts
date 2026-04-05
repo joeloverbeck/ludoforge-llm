@@ -213,6 +213,14 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
           const value = input.state.globalVars[ref.id];
           return typeof value === 'number' ? value : undefined;
         }
+        if (ref.family === 'globalMarker') {
+          const markerState = input.state.globalMarkers?.[ref.id];
+          if (markerState !== undefined) {
+            return markerState;
+          }
+          const lattice = input.def.globalMarkerLattices?.find((entry) => entry.id === ref.id);
+          return lattice?.defaultState;
+        }
         if (ref.family === 'perPlayerVar') {
           return resolveSeatVarRef(input.state, ref, targetPlayerIndex);
         }

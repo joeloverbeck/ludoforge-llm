@@ -21,7 +21,7 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
 3. Read referenced specs, docs, and `Deps`. Read `AGENTS.md` and respect worktree discipline (all reads, edits, greps, moves, and verification commands use the worktree root when the ticket lives under `.claude/worktrees/<name>/`; isolate your diff from unrelated edits).
 4. Extract all concrete references: file paths, functions, types, classes, modules, tests, scripts, and artifacts the ticket expects.
 
-**Session continuity**: If a prior ticket in the same series was implemented earlier in this session, reuse already-verified context. Prefer reusing or extracting helpers introduced by that earlier ticket over duplicating logic.
+**Session continuity**: If a prior ticket in the same series was implemented earlier in this session, reuse already-verified context. Prefer reusing or extracting helpers introduced by that earlier ticket over duplicating logic. If that freshly completed sibling already satisfied part of the current ticket's original deliverable, anchor reassessment to the remaining owned gap rather than treating the broader stale wording as a new discrepancy by default.
 
 ### Phase 2: Reassess Assumptions
 
@@ -128,6 +128,7 @@ When a ticket change affects other active tickets in the same series:
 - For proof/regression tickets, prefer extending the live test module that already owns the contract under audit before creating new files solely to match stale ticket test paths.
 - If cited production examples, cards, or seeds are stale, prefer a current deterministic reproducer or synthetic proof fixture.
 - For production-proof tickets validating live authored data, run a bounded seed/turn/trace scan to discover a current reproducer, then encode it into owned integration tests.
+- When a proof needs live authored behavior plus a small test-only policy or authoring hook, it is valid to compile the production spec with a narrow in-memory overlay rather than editing production data solely to make the invariant testable.
 - If the ticket names files to inspect rather than modify, read and assess them; leave unchanged when evidence shows no edit is needed; state the no-change decision explicitly.
 - If a ticket names an authored data file as an optional surface tweak, verify whether compiled defaults already satisfy the contract before editing.
 

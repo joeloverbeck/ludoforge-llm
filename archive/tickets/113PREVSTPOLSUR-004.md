@@ -1,6 +1,6 @@
 # 113PREVSTPOLSUR-004: Diagnostics, cookbook, and integration test
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — agent diagnostics; documentation and tests
@@ -103,3 +103,23 @@ Create a test that:
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/integration/agents/preview-feature-surface.test.js`
 2. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+Completed: 2026-04-05
+
+- `packages/engine/src/agents/policy-diagnostics.ts` now reports `previewStateFeature` usage through `surfaceRefs.preview` as `feature.<id>`, closing the remaining diagnostics gap after ticket `003`.
+- `docs/agent-dsl-cookbook.md` now documents `preview.feature.<id>` in the Preview References table and shows the intended `coalesce` reuse pattern against the authored `stateFeatures` library.
+- Added `packages/engine/test/integration/agents/preview-feature-surface.test.ts` to prove the live FITL path with a narrow in-memory overlay: prepared preview reports `preview.feature.vcGuerrillaCount` in trace metadata and affects scoring, while unresolved raw preview still surfaces the same ref through `unknownPreviewRefs`.
+- Extended `packages/engine/test/unit/agents/policy-diagnostics.test.ts` so diagnostics snapshots also expose `preview.feature.*` refs under `surfaceRefs.preview`.
+
+Deviations from original plan:
+
+- No change was needed in `packages/engine/src/agents/policy-evaluation-core.ts`; ticket `003` had already made `previewRefIds` and `unknownPreviewRefs` work for `preview.feature.*`.
+- The production proof used a compiled FITL overlay rather than editing production YAML, which kept the test generic and avoided unnecessary authored-data changes.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build`
+- `node --test packages/engine/dist/test/unit/agents/policy-diagnostics.test.js packages/engine/dist/test/integration/agents/preview-feature-surface.test.js`
+- `pnpm -F @ludoforge/engine test` (`469/469` passing)

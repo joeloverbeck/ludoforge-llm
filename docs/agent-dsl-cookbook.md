@@ -80,8 +80,25 @@ These are publicly visible (per observability config). Use in state features or 
 |------|---------|-------|
 | `preview.victory.currentMargin.self` | number | projected margin AFTER this move |
 | `preview.var.player.self.<id>` | number | projected variable after move |
+| `preview.feature.<id>` | varies | authored state feature evaluated on the preview state |
 
 Preview refs require `preview.mode: tolerateStochastic` (or `exactWorld`) on the profile. They evaluate the game state after applying the candidate move. If preview can't evaluate (stochastic outcome, template move), falls back to `undefined` — always wrap in `coalesce`.
+
+`preview.feature.*` reuses the authored `stateFeatures` library. There is no separate preview-feature namespace to declare. One feature definition can be read in two contexts:
+- `feature.<id>` for the current state
+- `preview.feature.<id>` for the post-move preview state
+
+Pattern:
+
+```yaml
+candidateFeatures:
+  projectedVcGuerrillaCount:
+    type: number
+    expr:
+      coalesce:
+        - { ref: preview.feature.vcGuerrillaCount }
+        - { ref: feature.vcGuerrillaCount }
+```
 
 ### Completion References (inside `scopes: [completion]`)
 
@@ -198,7 +215,7 @@ stateFeatures:
 
 **Field name note:** `globalTokenAgg` and `globalZoneAgg` use `aggOp:` for the operation field. `zoneTokenAgg` uses `op:`. This is an inconsistency in the DSL — use the correct field name for each operator.
 
-**Zone scope** (optional): `board` (play area only), `aux` (off-board), `all` (default).
+**Zone scope** (optional): `board` (default, play area only), `aux` (off-board), `all` (everything).
 
 ### Counting Zones with `globalZoneAgg`
 
@@ -249,6 +266,26 @@ stateFeatures:
 ```
 
 **Owner values:** `self`, `active`, `none`, or numeric player ID (e.g., `"0"`).
+
+`zoneTokenAgg` also accepts an optional `tokenFilter` (same shape as `globalTokenAgg`) to restrict which tokens are counted:
+
+```yaml
+candidateFeatures:
+  vcGuerrillasInTargetZone:
+    type: number
+    expr:
+      coalesce:
+        - zoneTokenAgg:
+            zone: { ref: option.value }
+            owner: none
+            prop: type
+            op: count
+            tokenFilter:
+              props:
+                faction: { eq: VC }
+                type: { eq: guerrilla }
+        - 0
+```
 
 ### Adjacent Zone Token Counts with `adjacentTokenAgg`
 
@@ -778,20 +815,20 @@ Events that grant operations to opponent seats are strategically dangerous. Use 
 
 ```yaml
 stateFeatures:
-  # Check if unshaded side grants ops to an opponent seat
+  # Check if unshaded side grants ops (0 or 1)
   unshadedGrantsOpToOpponent:
-    type: boolean
+    type: number
     expr:
       coalesce:
         - { ref: activeCard.annotation.unshaded.grantsOperation }
-        - false
-  # If you're VC, check if unshaded grants to US
+        - 0
+  # If you're VC, check if unshaded grants to US (0 or 1)
   unshadedGrantsToUs:
-    type: boolean
+    type: number
     expr:
       coalesce:
         - { ref: activeCard.annotation.unshaded.grantOperationSeats.us }
-        - false
+        - 0
 ```
 
 **Important**: The exact field paths for per-seat grant detection depend on how `grantOperationSeats` is indexed. Check the compiled annotation structure for your game.

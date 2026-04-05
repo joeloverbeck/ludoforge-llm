@@ -1,8 +1,9 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { buildPolicyAgentDecisionTrace } from '../../../src/agents/policy-diagnostics.js';
+import { buildPolicyAgentDecisionTrace, buildPolicyDiagnosticsSnapshot } from '../../../src/agents/policy-diagnostics.js';
 import type { PolicyEvaluationMetadata } from '../../../src/agents/policy-eval.js';
+import type { GameDef } from '../../../src/kernel/index.js';
 
 function createMetadata(): PolicyEvaluationMetadata {
   return {
@@ -146,5 +147,108 @@ describe('policy-diagnostics', () => {
     assert.equal(trace.candidates?.[0]?.previewFailureReason, undefined);
     assert.equal(trace.candidates?.[2]?.previewOutcome, 'unresolved');
     assert.equal(trace.candidates?.[2]?.previewFailureReason, 'completionUnsatisfiable');
+  });
+
+  it('includes preview-state feature refs in snapshot preview surface reporting', () => {
+    const metadata: PolicyEvaluationMetadata = {
+      ...createMetadata(),
+      previewUsage: {
+        ...createMetadata().previewUsage,
+        refIds: ['feature.vcGuerrillaCount'],
+        unknownRefs: [{ refId: 'feature.vcGuerrillaCount', reason: 'unresolved' }],
+      },
+      candidates: [{
+        ...createMetadata().candidates[0]!,
+        previewRefIds: ['feature.vcGuerrillaCount'],
+        unknownPreviewRefs: [{ refId: 'feature.vcGuerrillaCount', reason: 'unresolved' }],
+        previewOutcome: 'unresolved',
+      }],
+    };
+    const def: GameDef = {
+      metadata: { id: 'policy-diagnostics-preview-feature', players: { min: 2, max: 2 } },
+      constants: {},
+      globalVars: [],
+      perPlayerVars: [],
+      zones: [],
+      derivedMetrics: [],
+      seats: [{ id: 'us' }, { id: 'arvn' }],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: 'main' as never }] },
+      agents: {
+        schemaVersion: 2,
+        catalogFingerprint: 'preview-feature-catalog',
+        surfaceVisibility: {
+          globalVars: {},
+          globalMarkers: {},
+          perPlayerVars: {},
+          derivedMetrics: {},
+          victory: {
+            currentMargin: { current: 'public', preview: { visibility: 'public', allowWhenHiddenSampling: true } },
+            currentRank: { current: 'public', preview: { visibility: 'public', allowWhenHiddenSampling: true } },
+          },
+          activeCardIdentity: { current: 'hidden', preview: { visibility: 'hidden', allowWhenHiddenSampling: false } },
+          activeCardTag: { current: 'hidden', preview: { visibility: 'hidden', allowWhenHiddenSampling: false } },
+          activeCardMetadata: { current: 'hidden', preview: { visibility: 'hidden', allowWhenHiddenSampling: false } },
+          activeCardAnnotation: { current: 'hidden', preview: { visibility: 'hidden', allowWhenHiddenSampling: false } },
+        },
+        parameterDefs: {},
+        candidateParamDefs: {},
+        library: {
+          stateFeatures: {
+            vcGuerrillaCount: {
+              type: 'number',
+              costClass: 'state',
+              expr: { kind: 'literal', value: 0 },
+              dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
+            },
+          },
+          candidateFeatures: {
+            projectedVcGuerrillaCount: {
+              type: 'number',
+              costClass: 'preview',
+              expr: { kind: 'ref', ref: { kind: 'library', refKind: 'previewStateFeature', id: 'vcGuerrillaCount' } },
+              dependencies: { parameters: [], stateFeatures: ['vcGuerrillaCount'], candidateFeatures: [], aggregates: [], strategicConditions: [] },
+            },
+          },
+          candidateAggregates: {},
+          pruningRules: {},
+          considerations: {
+            preferProjectedCount: {
+              scopes: ['move'],
+              costClass: 'preview',
+              weight: { kind: 'literal', value: 1 },
+              value: { kind: 'ref', ref: { kind: 'library', refKind: 'candidateFeature', id: 'projectedVcGuerrillaCount' } },
+              dependencies: { parameters: [], stateFeatures: ['vcGuerrillaCount'], candidateFeatures: ['projectedVcGuerrillaCount'], aggregates: [], strategicConditions: [] },
+            },
+          },
+          tieBreakers: {},
+          strategicConditions: {},
+        },
+        profiles: {
+          baseline: {
+            fingerprint: 'baseline',
+            params: {},
+            preview: { mode: 'exactWorld' },
+            selection: { mode: 'argmax' },
+            use: { pruningRules: [], considerations: ['preferProjectedCount'], tieBreakers: [] },
+            plan: {
+              stateFeatures: ['vcGuerrillaCount'],
+              candidateFeatures: ['projectedVcGuerrillaCount'],
+              candidateAggregates: [],
+              considerations: ['preferProjectedCount'],
+            },
+          },
+        },
+        bindingsBySeat: { us: 'baseline' },
+      },
+      actions: [],
+      triggers: [],
+      terminal: { conditions: [] },
+    };
+
+    const snapshot = buildPolicyDiagnosticsSnapshot(def, metadata, 'verbose');
+
+    assert.deepEqual(snapshot.surfaceRefs.preview, ['feature.vcGuerrillaCount']);
   });
 });

@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+COMPLETED
 
 ## Priority
 
@@ -158,3 +158,26 @@ Preview usage and unknown-preview reporting should include preview-feature refs 
 Spec 111 makes granted-operation preview mechanically correct. Spec 112 makes capability-state deltas observable. This spec closes the remaining gap for board-state valuation by letting policies observe their own authored state features on previewed post-move state.
 
 Together, these three specs make event and granted-operation evaluation far more faithful without hard-coding any game strategy into the engine.
+
+## Outcome
+
+Completed: 2026-04-05
+
+- Added the new compiled ref family for preview-state features by extending `CompiledAgentPolicyLibraryRefKind` with `previewStateFeature` in `packages/engine/src/kernel/types-core.ts` and `packages/engine/src/kernel/schemas-core.ts`.
+- Implemented compiler lowering for `preview.feature.<id>` in `packages/engine/src/cnl/compile-agents.ts`, with validation against the authored `stateFeatures` library and the corresponding `GameDef.schema.json` update.
+- Implemented runtime evaluation against preview state in `packages/engine/src/agents/policy-evaluation-core.ts`, `packages/engine/src/agents/policy-runtime.ts`, and `packages/engine/src/agents/policy-preview.ts`, including state-scoped evaluation/caching so authored feature expressions read the previewed state rather than leaking back to the current state.
+- Extended diagnostics and documentation in `packages/engine/src/agents/policy-diagnostics.ts` and `docs/agent-dsl-cookbook.md`, and added FITL-backed proof coverage in `packages/engine/test/integration/agents/preview-feature-surface.test.ts`.
+
+Deviations from original plan:
+
+- The generic trace plumbing for `previewRefIds` and `unknownPreviewRefs` was already satisfied by ticket `113PREVSTPOLSUR-003`; ticket `004` only needed to close the remaining snapshot/cookbook/proof gap.
+- The production proof used a narrow in-memory FITL overlay rather than editing production authored YAML, which kept the test focused on the generic preview-state policy surface.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine run schema:artifacts`
+- `pnpm -F @ludoforge/engine build`
+- `node --test packages/engine/dist/test/unit/compile-agents-authoring.test.js`
+- `node --test packages/engine/dist/test/unit/agents/policy-eval.test.js packages/engine/dist/test/unit/agents/policy-runtime.test.js`
+- `node --test packages/engine/dist/test/unit/agents/policy-diagnostics.test.js packages/engine/dist/test/integration/agents/preview-feature-surface.test.js`
+- `pnpm -F @ludoforge/engine test`

@@ -248,6 +248,10 @@ function collectSurfaceRefs(
         }
         break;
       }
+      case 'previewStateFeature': {
+        preview.add(`feature.${ref.id}`);
+        break;
+      }
       case 'candidateFeature': {
         const feature = catalog.library.candidateFeatures[ref.id];
         if (feature !== undefined) {

@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+✅ COMPLETED
 
 ## Priority
 
@@ -131,3 +131,23 @@ candidateFeatures:
 ## Expected Impact
 
 Enables generic threat-assessment features that work across all zones without hardcoding. Agents can evaluate "is this target zone safe?" dynamically per candidate, unlocking a major dimension of strategic reasoning for zone-targeting decisions.
+
+## Outcome
+
+Completed on 2026-04-05.
+
+What changed:
+- `110DYNZONINADJ-001` widened `adjacentTokenAgg.anchorZone` to the shared dynamic zone-source shape in the engine compiler/types/schema path.
+- `110DYNZONINADJ-002` updated [agent-dsl-cookbook.md](/home/joeloverbeck/projects/ludoforge-llm/docs/agent-dsl-cookbook.md) with a dynamic `adjacentTokenAgg` example and a matching common-pattern snippet.
+
+Deviations from the original plan:
+- The runtime path already handled expression-resolved anchor zones, so the implementation stayed on the compiler/types/schema surface.
+- The cookbook update landed in the existing owning sections rather than creating any new doc structure.
+
+Verification:
+- `pnpm -F @ludoforge/engine build`
+- `pnpm -F @ludoforge/engine run schema:artifacts`
+- `pnpm -F @ludoforge/engine test`
+- `pnpm turbo test`
+- direct inspection of the updated cookbook sections
+- `pnpm run check:ticket-deps`

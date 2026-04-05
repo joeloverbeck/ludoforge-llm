@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+✅ COMPLETED
 
 ## Priority
 
@@ -155,3 +155,26 @@ After the fix, the VC agent will be able to evaluate "is the shaded or unshaded 
 This unlocks a major strategic dimension that was previously invisible to the agent, potentially improving win rates on seeds where event card choices are decisive.
 
 **Note**: Events whose shaded and unshaded effects genuinely produce the same margin change will correctly continue to score identically after the fix. The fix targets silent preview failures, not genuinely equivalent outcomes.
+
+## Outcome
+
+Completed on 2026-04-05.
+
+What changed:
+- `109AGEPREAUD-001` added structured verbose trace diagnostics for move preparation and produced the audit report [109-agent-preview-audit.md](/home/joeloverbeck/projects/ludoforge-llm/reports/109-agent-preview-audit.md).
+- `109AGEPREAUD-002` completed as proof/regression coverage after the original downstream bug hypothesis no longer had a verified reproducer.
+- `109AGEPREAUD-003` completed as an audit-plus-proof ticket: no `legal-moves` runtime bug was found, and the missing side-aware regression test was added instead.
+- `109AGEPREAUD-004` added additive `previewFailureReason` observability to verbose candidate traces without changing preview behavior.
+- `109AGEPREAUD-005` added production FITL integration proofs for trusted event preview differentiation and non-event regression coverage.
+
+Deviations from the original plan:
+- The central original hypothesis, that event moves broadly failed to enter `trustedMoveIndex`, was disproved by the audit in ticket `001`.
+- The series therefore shifted from speculative bug-fix implementation toward audit, proof, and observability work on the live preview pipeline.
+- Capability and momentum cards were confirmed to remain valid same-margin cases when the projected state does not immediately change scoring.
+
+Verification:
+- `pnpm -F @ludoforge/engine build`
+- `pnpm -F @ludoforge/engine run schema:artifacts`
+- `pnpm -F @ludoforge/engine test`
+- `pnpm turbo test`
+- `pnpm run check:ticket-deps`

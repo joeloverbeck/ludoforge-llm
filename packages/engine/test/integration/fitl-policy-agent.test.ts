@@ -510,8 +510,10 @@ function projectedSelfMarginContribution(candidate: {
   if (scoreContributions === undefined) {
     assert.fail(`expected score contributions for ${candidate.stableMoveKey}`);
   }
-  const contribution = scoreContributions.find((entry) => entry.termId === 'preferProjectedSelfMargin');
-  assert.notEqual(contribution, undefined, `expected preferProjectedSelfMargin contribution for ${candidate.stableMoveKey}`);
+  const contribution = scoreContributions.find((entry) =>
+    entry.termId === 'preferProjectedSelfMargin' || entry.termId === 'preferNormalizedMargin',
+  );
+  assert.notEqual(contribution, undefined, `expected margin contribution (preferProjectedSelfMargin or preferNormalizedMargin) for ${candidate.stableMoveKey}`);
   return contribution!.contribution;
 }
 

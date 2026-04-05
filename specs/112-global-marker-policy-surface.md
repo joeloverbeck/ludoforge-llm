@@ -10,7 +10,7 @@ High
 
 ## Complexity
 
-Small
+Medium
 
 ## Dependencies
 
@@ -125,18 +125,18 @@ stateFeatures:
           - "shaded"
 ```
 
-**4. Resolve `globalMarker` refs at runtime** (`policy-evaluation-core.ts` or the ref resolution module)
+**4. Resolve `globalMarker` refs at runtime** (`policy-runtime.ts:180-262`)
 
-When evaluating a `globalMarker` ref:
+In the `currentSurface.resolveSurface` switch statement, add a case for `'globalMarker'`:
 ```typescript
 case 'globalMarker':
-  return state.globalMarkers?.[ref.id]
-    ?? def.globalMarkerLattices?.find(l => l.id === ref.id)?.defaultState;
+  return input.state.globalMarkers?.[ref.id]
+    ?? input.def.globalMarkerLattices?.find(l => l.id === ref.id)?.defaultState;
 ```
 
-Returns the string state value. Follows the same pattern as `resolve-ref.ts:428-444` in the kernel.
+Returns the string state value. Follows the same pattern as `resolve-ref.ts:428-444` in the kernel. This is the same function that resolves `globalVar`, `perPlayerVar`, and other surface families.
 
-**5. Add observability defaults** (`compile-agents.ts:160-177`)
+**5. Add observability defaults and observer compilation** (`compile-agents.ts`, `compile-observers.ts`, `validate-observers.ts`, `compiler-core.ts`)
 
 Default visibility for global markers: `public` (most games treat the capability track as open information). Override via observability config:
 
@@ -151,9 +151,15 @@ observability:
             current: hidden
 ```
 
-**6. Update schema validation** (`schemas-core.ts:637-656`)
+Updates required across 4 files:
+- `compile-agents.ts:153-177`: Add `globalMarkerIds` to `LowerAgentsOptions`, add defaults construction loop, add `globalMarkers` field to returned catalog
+- `compile-observers.ts:29-50,181-484`: Add `knownGlobalMarkerIds` to `LowerObserversOptions`, add `globalMarkers` to `SURFACE_DEFAULTS`, `buildDefaultSurfaces`, `buildOmniscientSurfaces`, and `resolveObserverSurfaces`
+- `validate-observers.ts:5-36`: Add `'globalMarkers'` to `OBSERVER_SURFACE_FAMILY_KEYS` and `MAP_TYPE_SURFACE_FAMILIES`, add `globalMarkers` to `KnownSurfaceIds`
+- `compiler-core.ts:700-731`: Pass `knownGlobalMarkerIds` to `lowerObservers` call and `globalMarkerIds` to `lowerAgents` call
 
-Add `z.literal('globalMarker')` to `CompiledSurfaceRefBaseSchema.family` union.
+**6. Update schema validation** (`schemas-core.ts`)
+
+Add `z.literal('globalMarker')` to `CompiledSurfaceRefBaseSchema.family` union (line 637). Also add `globalMarkers: z.record(StringSchema, CompiledSurfaceVisibilitySchema)` to `CompiledSurfaceCatalogSchema` (line 292).
 
 **7. Update compile-agents ref validation** (`compile-agents.ts`)
 
@@ -162,11 +168,13 @@ During compilation, validate that `globalMarker.<markerId>` references an actual
 ### Mutable Files
 
 - `packages/engine/src/kernel/types-core.ts` (modify) — `SurfaceRefFamily` union, `CompiledSurfaceCatalog` interface
-- `packages/engine/src/kernel/schemas-core.ts` (modify) — schema validation for new family
-- `packages/engine/src/agents/policy-surface.ts` (modify) — parse `globalMarker.*` refs
-- `packages/engine/src/agents/policy-evaluation-core.ts` (modify) — resolve `globalMarker` refs at runtime
-- `packages/engine/src/cnl/compile-agents.ts` (modify) — validate marker IDs, add observability defaults
-- `packages/engine/src/contracts/policy-contract.ts` (modify, if surface families are enumerated there)
+- `packages/engine/src/kernel/schemas-core.ts` (modify) — `CompiledSurfaceRefBaseSchema` family union, `CompiledSurfaceCatalogSchema` field
+- `packages/engine/src/agents/policy-surface.ts` (modify) — parse `globalMarker.*` refs, `getPolicySurfaceVisibility`
+- `packages/engine/src/agents/policy-runtime.ts` (modify) — resolve `globalMarker` refs at runtime in `currentSurface.resolveSurface`
+- `packages/engine/src/cnl/compile-agents.ts` (modify) — `LowerAgentsOptions`, default catalog construction
+- `packages/engine/src/cnl/compile-observers.ts` (modify) — `SURFACE_DEFAULTS`, `LowerObserversOptions`, `buildDefaultSurfaces`, `buildOmniscientSurfaces`, `resolveObserverSurfaces`
+- `packages/engine/src/cnl/validate-observers.ts` (modify) — `OBSERVER_SURFACE_FAMILY_KEYS`, `MAP_TYPE_SURFACE_FAMILIES`, `KnownSurfaceIds`
+- `packages/engine/src/cnl/compiler-core.ts` (modify) — pass `knownGlobalMarkerIds` to lowerObservers and lowerAgents
 - `docs/agent-dsl-cookbook.md` (modify) — document `globalMarker.*` reference family
 
 ### Immutable

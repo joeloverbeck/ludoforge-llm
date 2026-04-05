@@ -337,6 +337,7 @@ export type AgentPolicyOperator =
 export type CompiledAgentPolicyLibraryRefKind = 'stateFeature' | 'candidateFeature' | 'aggregate';
 export type SurfaceRefFamily =
   | 'globalVar'
+  | 'globalMarker'
   | 'perPlayerVar'
   | 'derivedMetric'
   | 'victoryCurrentMargin'
@@ -547,6 +548,7 @@ export interface CompiledEventAnnotationIndex {
 
 export interface CompiledSurfaceCatalog {
   readonly globalVars: Readonly<Record<string, CompiledSurfaceVisibility>>;
+  readonly globalMarkers: Readonly<Record<string, CompiledSurfaceVisibility>>;
   readonly perPlayerVars: Readonly<Record<string, CompiledSurfaceVisibility>>;
   readonly derivedMetrics: Readonly<Record<string, CompiledSurfaceVisibility>>;
   readonly victory: {

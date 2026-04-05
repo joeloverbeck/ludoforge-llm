@@ -50,6 +50,7 @@ If that earlier ticket introduced production-corpus traversal, fixture readers, 
    - decide whether the remaining deliverable boundary is still clear and implementable without a new product decision
    - treat extra adjacent files needed for Foundation 14 atomicity as required scope, not optional cleanup
    - call out the partial-migration state explicitly before coding
+   - when a referenced spec is already dirty but the current ticket does not own spec edits, treat that spec as read-only context and call out the unrelated worktree state explicitly rather than trying to sync it in the same turn
 10. If you rewrite or materially correct the ticket scope before implementation:
    - re-extract the concrete files, acceptance criteria, invariants, and verification commands from the corrected ticket
    - do not keep using the stale ticket's original verification surface by inertia
@@ -181,6 +182,7 @@ Before claiming completion:
    - check a freshness signal such as timestamp or file size before treating missing fields or stale output as a real discrepancy
    - when a touched source file contributes to exported engine contracts or introspected schema surfaces, expect that a generator-backed artifact check may still be required even if the ticket did not name a generated file explicitly
    - when a shared generator rewrites multiple artifacts, identify which generated files actually encode the changed contract and summarize those ticket-owned artifacts specifically in the final response
+   - if regeneration was required but leaves no persisted diff, still state explicitly in the final summary that the generator-backed contract surface was checked and remained in sync
    - only then compare the artifact against the ticket's acceptance criteria
 11. For profiling, benchmark, or audit tickets that set a decision gate:
    - capture the exact command, measured surface, and threshold comparison used to make the decision

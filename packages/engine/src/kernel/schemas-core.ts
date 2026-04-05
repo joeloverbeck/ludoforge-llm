@@ -292,6 +292,7 @@ export const CompiledSurfaceVisibilitySchema = z
 export const CompiledSurfaceCatalogSchema = z
   .object({
     globalVars: z.record(StringSchema, CompiledSurfaceVisibilitySchema),
+    globalMarkers: z.record(StringSchema, CompiledSurfaceVisibilitySchema),
     perPlayerVars: z.record(StringSchema, CompiledSurfaceVisibilitySchema),
     derivedMetrics: z.record(StringSchema, CompiledSurfaceVisibilitySchema),
     victory: z.object({
@@ -637,6 +638,7 @@ const AgentPolicyLiteralSchema = z.union([
 const CompiledSurfaceRefBaseSchema = {
   family: z.union([
     z.literal('globalVar'),
+    z.literal('globalMarker'),
     z.literal('perPlayerVar'),
     z.literal('derivedMetric'),
     z.literal('victoryCurrentMargin'),

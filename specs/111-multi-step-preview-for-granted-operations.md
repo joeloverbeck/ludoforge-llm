@@ -16,6 +16,8 @@ Medium
 
 None (the annotation system and preview system already exist).
 
+**Related spec**: `specs/112-global-marker-policy-surface.md` — Spec 112 exposes global marker states to the agent policy surface. Together, these two specs address the event card valuation gap: Spec 111 fixes operation-granting events (preview depth), Spec 112 fixes capability-setting events (observation). They are independent and can be implemented in either order, but together provide complete event card coverage.
+
 ## Problem
 
 The PolicyAgent preview system evaluates candidates by simulating one move ahead and measuring the projected margin. For most actions, this captures the strategic value correctly — terror increases opposition, rally places guerrillas, attack removes enemies.
@@ -128,4 +130,6 @@ Add to the preview trace output:
 
 Events that grant operations to the evaluating agent will be correctly valued as "event effect + best available follow-up action." This should increase event play rates from ~37% to significantly higher for operation-granting events, particularly in COIN-series games where half the strategic depth is in event card decisions.
 
-The annotation-based workaround (cookbook pattern) will remain useful for capability cards and other events whose value can't be captured by any preview depth. Multi-step preview complements rather than replaces annotation scoring.
+The annotation-based workaround (cookbook pattern) will remain useful for events whose value can't be captured by preview depth alone. Multi-step preview complements rather than replaces annotation scoring.
+
+For capability-setting events (which don't grant operations), see Spec 112 (`specs/112-global-marker-policy-surface.md`) — it enables agents to observe and value global marker state changes, addressing the other half of the event card valuation gap.

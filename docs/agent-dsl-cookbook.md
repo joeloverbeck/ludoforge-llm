@@ -267,6 +267,22 @@ stateFeatures:
             type: { eq: troops }
 ```
 
+Use a dynamic zone expression when the anchor should vary per candidate.
+
+```yaml
+candidateFeatures:
+  enemyTroopsNearTarget:
+    type: number
+    expr:
+      adjacentTokenAgg:
+        anchorZone: { ref: candidate.param.targetSpace }
+        aggOp: count
+        tokenFilter:
+          props:
+            faction: { eq: US }
+            type: { eq: troops }
+```
+
 **Required**: `anchorZone` (zone ID or expression). **Optional**: `tokenFilter`, `prop` (required when aggOp != count).
 
 ### Strategic Conditions
@@ -594,6 +610,19 @@ scoreTerm:
           zone: { ref: option.value }
           prop: population
       - 0
+```
+
+### "Evaluate threat near target zone"
+```yaml
+candidateFeature:
+  type: number
+  expr:
+    adjacentTokenAgg:
+      anchorZone: { ref: candidate.param.targetSpace }
+      aggOp: count
+      tokenFilter:
+        props:
+          faction: { eq: US }
 ```
 
 ### "Restrict scoring to a specific action"

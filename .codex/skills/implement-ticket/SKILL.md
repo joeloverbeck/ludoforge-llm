@@ -148,6 +148,7 @@ Before claiming completion:
    - if the change affects generated artifacts or schemas, regenerate or validate them explicitly
    - do not run verification commands in parallel when they read from or rewrite the same generated output tree such as `dist/`
 6. Prefer the narrowest commands that validate the real changed code path, not stale build output.
+   - for documentation-only follow-up tickets whose examples depend on behavior already verified by an archived or completed prerequisite ticket, direct artifact inspection plus dependency-integrity checks may be sufficient unless the doc change itself introduces a new executable artifact
 7. If broader failing checks remain:
    - determine whether they are inside the corrected ticket boundary or are owned by another active ticket
    - if they are outside the corrected boundary and already covered by an active ticket, do not silently absorb that scope
@@ -244,6 +245,7 @@ Optional series consistency pass after a completed gate ticket:
 - This skill replaces Claude-specific invocation arguments with normal Codex conversation context.
 - Do not rely on Claude-only skills or slash-command behavior.
 - Execute the implementation directly once the ticket is verified and no blocking discrepancy remains.
+- When inspecting markdown from the shell, avoid unescaped backticks in search patterns; prefer plain-string anchors or direct file reads for markdown sections that include inline code.
 
 ## Example Prompts
 

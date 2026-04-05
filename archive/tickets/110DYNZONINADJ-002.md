@@ -1,6 +1,6 @@
 # 110DYNZONINADJ-002: Update cookbook with dynamic adjacentTokenAgg example
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — documentation only
@@ -90,3 +90,15 @@ None — documentation ticket.
 ### Commands
 
 None.
+
+## Outcome
+
+Completed on 2026-04-05.
+
+Added the dynamic `adjacentTokenAgg` cookbook example to the existing "Adjacent Zone Token Counts" section in [docs/agent-dsl-cookbook.md](/home/joeloverbeck/projects/ludoforge-llm/docs/agent-dsl-cookbook.md) and added the "Evaluate threat near target zone" common pattern using `anchorZone: { ref: candidate.param.targetSpace }`.
+
+No engine or schema changes were needed in this ticket because the underlying behavior had already been implemented and verified by `110DYNZONINADJ-001`.
+
+Verification:
+- direct inspection of the updated cookbook sections in `docs/agent-dsl-cookbook.md`
+- `pnpm run check:ticket-deps`

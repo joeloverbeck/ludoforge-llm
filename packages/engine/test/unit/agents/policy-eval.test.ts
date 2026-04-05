@@ -1299,7 +1299,7 @@ describe('policy-eval', () => {
       assert.equal(result.metadata.candidates[0]?.score, 6);
     });
 
-    it('preserves empty extrema semantics for adjacent aggregates', () => {
+  it('preserves empty extrema semantics for adjacent aggregates', () => {
       const agents = createStateFeatureScoreCatalog(
         {
           missingAdjacentMax: {
@@ -1350,6 +1350,83 @@ describe('policy-eval', () => {
 
       assert.equal(result.metadata.candidates[0]?.score, -3);
     });
+  });
+
+  it('evaluates dynamic adjacentTokenAgg anchors through candidate zone refs', () => {
+    const agents = createCatalog(
+      {
+        candidateFeatures: {
+          nearbyTroops: {
+            type: 'number',
+            costClass: 'candidate',
+            expr: {
+              kind: 'adjacentTokenAgg',
+              anchorZone: refExpr({ kind: 'candidateParam', id: 'targetSpace' }),
+              tokenFilter: { type: 'troop' },
+              aggOp: 'count',
+            },
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
+          },
+        },
+        scoreTerms: {
+          preferSaferTarget: {
+            costClass: 'candidate',
+            weight: literal(-1),
+            value: refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'nearbyTroops' }),
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['nearbyTroops'], aggregates: [], strategicConditions: [] },
+          },
+        },
+      },
+      {
+        use: {
+          pruningRules: [],
+          considerations: ['preferSaferTarget'],
+          tieBreakers: ['stableMoveKey'],
+        },
+        plan: {
+          stateFeatures: [],
+          candidateFeatures: ['nearbyTroops'],
+          candidateAggregates: [],
+          considerations: [],
+        },
+      },
+      {
+        targetSpace: { type: 'id' },
+      },
+    );
+    const baseInput = createInput(agents, [
+      { actionId: asActionId('alpha'), params: { targetSpace: 'frontier:none' } },
+      { actionId: asActionId('beta'), params: { targetSpace: 'rear:none' } },
+    ]);
+    const input = {
+      ...baseInput,
+      def: withAdjacency(baseInput.def),
+      state: {
+        ...baseInput.state,
+        zones: {
+          ...baseInput.state.zones,
+          'target-a:none': [
+            { id: asTokenId('adj-troop-a'), type: 'troop', props: { strength: 4 } },
+            { id: asTokenId('adj-troop-b'), type: 'troop', props: { strength: 2 } },
+          ],
+          'target-b:none': [
+            { id: asTokenId('rear-adj-troop'), type: 'troop', props: { strength: 1 } },
+          ],
+        },
+      },
+    } as const;
+
+    const result = evaluatePolicyMove(input);
+
+    assert.equal(result.move.actionId, asActionId('beta'));
+    assert.equal(
+      result.metadata.candidates.find((candidate) => candidate.actionId === 'alpha')?.score,
+      -3,
+    );
+    assert.equal(
+      result.metadata.candidates.find((candidate) => candidate.actionId === 'beta')?.score,
+      0,
+    );
   });
 
   it('routes intrinsic, candidate, current, preview, and completion reads through explicit runtime providers', () => {

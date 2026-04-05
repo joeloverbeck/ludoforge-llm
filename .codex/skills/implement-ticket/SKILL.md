@@ -60,6 +60,7 @@ If that earlier ticket introduced production-corpus traversal, fixture readers, 
    - update or defer overlapping sibling tickets so they do not still claim invalid staged ownership
    - keep dependency references and status values coherent across the series
    - run the repo's ticket dependency checker after the series rewrite when available
+   - if the referenced spec still mentions a deliverable that is already split into a later active sibling ticket, keep implementation anchored to the current active ticket boundary and verify that sibling ownership instead of re-absorbing the broader spec scope
 12. If the ticket is a profiling, audit, benchmark, investigation, or other gate-setting ticket:
    - identify the explicit threshold, decision gate, or downstream trigger owned by the ticket
    - verify which sibling tickets, specs, or reports depend on that gate
@@ -111,6 +112,7 @@ If that earlier ticket introduced production-corpus traversal, fixture readers, 
   - authored-shape validators and unknown-key allowlists
   - compiled/kernel/runtime types
   - Zod or JSON schemas
+  - when a compiled DSL or AST field widens, both the schema-definition source file and any generated schema artifacts that encode that shape
   - diagnostics or debug snapshots
   - exported provider interfaces and adapter wrappers that mirror shared runtime helpers or services
   - fixtures, goldens, and tests

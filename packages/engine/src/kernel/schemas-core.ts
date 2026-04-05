@@ -804,7 +804,7 @@ const AgentPolicyExprSchema: z.ZodTypeAny = z.lazy(() =>
     }).strict(),
     z.object({
       kind: z.literal('adjacentTokenAgg'),
-      anchorZone: StringSchema,
+      anchorZone: z.union([StringSchema, AgentPolicyExprSchema]),
       tokenFilter: AgentPolicyTokenFilterSchema.optional(),
       aggOp: z.enum(AGENT_POLICY_ZONE_TOKEN_AGG_OPS),
       prop: StringSchema.optional(),

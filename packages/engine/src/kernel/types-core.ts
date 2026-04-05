@@ -481,7 +481,7 @@ export type AgentPolicyExpr =
     }
   | {
       readonly kind: 'adjacentTokenAgg';
-      readonly anchorZone: string;
+      readonly anchorZone: AgentPolicyZoneSource;
       readonly tokenFilter?: AgentPolicyTokenFilter;
       readonly aggOp: AgentPolicyZoneTokenAggOp;
       readonly prop?: string;

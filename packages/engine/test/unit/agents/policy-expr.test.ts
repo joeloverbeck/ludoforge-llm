@@ -29,6 +29,12 @@ function createContext(parameterDefs: Readonly<Record<string, CompiledAgentParam
             costClass: 'candidate' as const,
             ref: { kind: 'candidateParam' as const, id: 'eventCardId' },
           };
+        case 'candidate.param.targetSpace':
+          return {
+            type: 'id' as const,
+            costClass: 'candidate' as const,
+            ref: { kind: 'candidateParam' as const, id: 'targetSpace' },
+          };
         case 'candidate.param.$targets':
           return {
             type: 'idList' as const,
@@ -664,6 +670,31 @@ describe('policy-expr analysis', () => {
     assert.equal(analysis?.costClass, 'state');
   });
 
+  it('analyzes dynamic adjacentTokenAgg anchorZone expressions through the shared zone path', () => {
+    const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
+    const analysis = analyzePolicyExpr(
+      {
+        adjacentTokenAgg: {
+          anchorZone: { ref: 'candidate.param.targetSpace' },
+          tokenFilter: { type: 'troop' },
+          aggOp: 'count',
+        },
+      },
+      createContext(),
+      diagnostics,
+      'expr',
+    );
+
+    assert.deepEqual(diagnostics, []);
+    assert.deepEqual(analysis?.expr, {
+      kind: 'adjacentTokenAgg',
+      anchorZone: refExpr({ kind: 'candidateParam', id: 'targetSpace' }),
+      tokenFilter: { type: 'troop' },
+      aggOp: 'count',
+    });
+    assert.equal(analysis?.costClass, 'candidate');
+  });
+
   it('analyzes adjacentTokenAgg expressions with numeric props', () => {
     const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
     const analysis = analyzePolicyExpr(
@@ -705,8 +736,7 @@ describe('policy-expr analysis', () => {
 
     assert.equal(analysis, null);
     assert.ok(diagnostics.some((diagnostic) =>
-      diagnostic.path === 'expr.adjacentTokenAgg.anchorZone'
-      && diagnostic.message.includes('non-empty string')));
+      diagnostic.path === 'expr.adjacentTokenAgg.anchorZone'));
   });
 
   it('rejects adjacentTokenAgg sum expressions without prop', () => {
@@ -747,6 +777,26 @@ describe('policy-expr analysis', () => {
     assert.ok(diagnostics.some((diagnostic) =>
       diagnostic.path === 'expr.adjacentTokenAgg.aggOp'
       && diagnostic.message.includes('must be one of')));
+  });
+
+  it('rejects dynamic adjacentTokenAgg anchorZone expressions that do not resolve to ids', () => {
+    const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
+    const analysis = analyzePolicyExpr(
+      {
+        adjacentTokenAgg: {
+          anchorZone: { ref: 'feature.currentMargin' },
+          aggOp: 'count',
+        },
+      },
+      createContext(),
+      diagnostics,
+      'expr',
+    );
+
+    assert.equal(analysis, null);
+    assert.ok(diagnostics.some((diagnostic) =>
+      diagnostic.code === 'CNL_COMPILER_AGENT_POLICY_TYPE_INVALID'
+      && diagnostic.path === 'expr.adjacentTokenAgg.anchorZone'));
   });
 
   it('rejects dynamic zoneTokenAgg zones that do not resolve to ids', () => {

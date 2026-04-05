@@ -134,6 +134,7 @@ If that earlier ticket introduced production-corpus traversal, fixture readers, 
   - read and assess them as part of the implementation boundary
   - leave them unchanged when evidence shows no edit is required
   - state that explicit no-change decision in the final summary
+- If a ticket names an authored data or config file as an optional explicit-surface tweak, verify whether existing compiled defaults already satisfy the contract before editing that file; when they do, skip the data edit and call out the no-change decision explicitly in the final summary.
 - For proof/regression tickets, prefer extending the live test module that already owns the contract under audit before creating new files solely to match stale ticket test paths.
 - If a ticket's cited production examples, cards, scenarios, or seeds are stale but the contract under audit is still valid, prefer a current deterministic reproducer or a synthetic proof fixture over forcing the obsolete example back into service.
 - For production-proof tickets that must validate behavior on live authored data, it is valid to run a bounded seed, turn, or trace scan to discover a current deterministic reproducer, then encode that discovered reproduction directly into the owned integration tests.
@@ -265,6 +266,7 @@ Optional series consistency pass after a completed gate ticket:
 - Do not rely on Claude-only skills or slash-command behavior.
 - Execute the implementation directly once the ticket is verified and no blocking discrepancy remains.
 - When inspecting markdown from the shell, avoid unescaped backticks in search patterns; prefer plain-string anchors or direct file reads for markdown sections that include inline code.
+- When checking touched-file scope or summarizing the final diff, remember that untracked new files may not appear in `git diff --name-only`; include them explicitly instead of relying only on tracked-file diffs.
 
 ## Example Prompts
 

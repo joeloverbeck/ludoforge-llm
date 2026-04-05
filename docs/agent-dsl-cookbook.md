@@ -32,6 +32,7 @@ The library defines reusable building blocks. Profiles select which blocks to us
 | `victory.currentRank.self` | number | own current ranking position (1 = winning) |
 | `victory.currentRank.active` | number | active player's ranking |
 | `var.global.<id>` | number | global game variable |
+| `globalMarker.<id>` | string | current state of a global marker lattice (e.g., `"shaded"`, `"inactive"`) |
 | `var.player.self.<id>` | number | own per-player variable (e.g., resources) |
 | `var.player.active.<id>` | number | active player's variable |
 | `var.seat.<seatName>.<id>` | number | specific seat's variable by seat name (e.g., `var.seat.us.resources`) |
@@ -725,6 +726,28 @@ considerations:
         or:
           - { ref: candidate.tag.event-play }
           - { ref: candidate.tag.pivotal-event }
+```
+
+#### Pattern: Value a specific capability state directly
+
+`globalMarker.*` returns the marker's current lattice state as a string. Compare it with `eq`, then convert the result with `boolToNumber` when you want a numeric feature for scoring.
+
+```yaml
+stateFeatures:
+  boobyTrapsActive:
+    type: number
+    expr:
+      boolToNumber:
+        eq:
+          - { ref: globalMarker.cap_boobyTraps }
+          - "shaded"
+
+considerations:
+  valueCapabilities:
+    scopes: [move]
+    weight: { param: capabilityWeight }
+    value:
+      ref: feature.boobyTrapsActive
 ```
 
 #### Pattern: Score events by marker impact

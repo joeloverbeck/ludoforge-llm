@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Completed
 
 ## Priority
 
@@ -250,3 +250,24 @@ With preview: when the agent evaluates "play Booby Traps shaded," the preview si
 ## Expected Impact
 
 Enables agents to observe and value global marker state changes. Combined with tunable parameters and evolution, agents can learn which capabilities are worth acquiring — matching how human players use pattern recognition on the capability track. This is the observation-based complement to Spec 111's preview-depth improvement for granted operations: Spec 112 lets agents value capability-setting events, while Spec 111 lets agents value operation-granting events.
+
+## Outcome
+
+Completed on 2026-04-05.
+
+What changed:
+- `globalMarker.<id>` was added as a policy-surface reference family in the shared compiler/runtime contracts
+- compiled surface catalogs now carry `globalMarkers` visibility, with observer-side and agent-side defaults wired through compilation
+- policy runtime resolution now reads current global marker state and falls back to lattice defaults
+- the cookbook now documents `globalMarker.<id>` and includes a capability-state scoring pattern
+- FITL production proof coverage now verifies compiled `globalMarkers` visibility and runtime resolution through `packages/engine/test/integration/agents/global-marker-surface.test.ts`
+
+Deviations from original plan:
+- FITL authored observability data did not need an explicit `globalMarkers` section; the default public visibility path already satisfied the production proof boundary
+- the broader capability-valuation goal remains partially dependent on the preview-surface follow-up in `specs/113-preview-state-policy-surface.md`, because capability state is now observable but many post-preview board-state effects still need richer preview-visible policy surfaces
+
+Verification results:
+1. `pnpm -F @ludoforge/engine build`
+2. `node --test packages/engine/dist/test/integration/agents/global-marker-surface.test.js`
+3. `pnpm -F @ludoforge/engine test`
+4. `pnpm run check:ticket-deps`

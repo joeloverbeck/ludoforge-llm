@@ -1,6 +1,6 @@
 # 112GLBMRKPOLSUR-005: Cookbook documentation and FITL integration test
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — documentation and tests only
@@ -105,3 +105,21 @@ Add `globalMarkers` section to `data/games/fire-in-the-lake/93-observability.md`
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/integration/agents/global-marker-surface.test.js`
 2. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+Completed on 2026-04-05.
+
+Implemented the cookbook and production-proof boundary without any engine runtime changes:
+- `docs/agent-dsl-cookbook.md` now documents `globalMarker.<id>` in the reference-path table
+- the cookbook now includes a capability-state scoring pattern using `eq` plus `boolToNumber`
+- `packages/engine/test/integration/agents/global-marker-surface.test.ts` now proves the production FITL path compiles `globalMarkers` visibility and resolves `globalMarker.cap_boobyTraps` from both explicit state and the lattice default
+
+Deviations from the original plan:
+- `data/games/fire-in-the-lake/93-observability.md` did not need editing; reassessment showed FITL already gets the required `globalMarkers` visibility through the default public observer behavior
+- the dedicated production proof used the live `packages/engine/test/integration/agents/` surface and existing production-spec helpers
+
+Verification run:
+1. `pnpm -F @ludoforge/engine build`
+2. `node --test packages/engine/dist/test/integration/agents/global-marker-surface.test.js`
+3. `pnpm -F @ludoforge/engine test`

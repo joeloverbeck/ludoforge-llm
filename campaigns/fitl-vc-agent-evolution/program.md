@@ -305,6 +305,22 @@ won), write `tier + 1` to `seed-tier.txt`. The next experiment runs at the
 new tier. Re-measure `best_wins` and `best_avgMargin` at the new tier
 (baseline run at new tier before continuing experiments).
 
+**Unwinnable seed escape**: Some seeds may be structurally unwinnable due
+to game conditions (e.g., VC gets only 2 decisions before an opponent wins
+on the first Coup). If a seed is identified as unwinnable after exhausting
+experiments (hitting PLATEAU_THRESHOLD consecutive rejects at this tier
+without improving wins), the agent should:
+1. Document the unwinnable seed in musings.md with evidence (trace analysis)
+2. Advance the tier anyway: write `tier + 1` to `seed-tier.txt`
+3. The unwinnable seed remains in the seed set — it contributes a negative
+   margin that the agent must overcome on other seeds
+4. The accept logic (`wins >= best_wins`) naturally handles this: the
+   unwinnable seed's loss is baked into `best_wins`
+
+This prevents the campaign from getting stuck at a tier with a genuinely
+unwinnable seed while still penalizing the agent for that loss in the
+composite metric.
+
 Simplification accepts (same wins, same margin, fewer lines) follow the
 same logic as the standard protocol.
 

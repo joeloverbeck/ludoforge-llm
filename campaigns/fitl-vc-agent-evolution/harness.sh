@@ -48,7 +48,6 @@ node "$SCRIPT_DIR/run-tournament.mjs" \
   --players "$PLAYER_COUNT" \
   --evolved-seat "$EVOLVED_SEAT" \
   --max-turns "$MAX_TURNS" \
-  --trace-seed 1000 \
   > "$RUNNER_LOG" 2>&1
 RUNNER_EXIT=$?
 set -e

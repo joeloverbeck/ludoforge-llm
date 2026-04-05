@@ -1495,6 +1495,7 @@ const AgentDecisionTraceSchema = z.union([
       selection: PolicySelectionTraceSchema.optional(),
       emergencyFallback: BooleanSchema,
       failure: AgentDecisionFailureSummarySchema.nullable(),
+      stateFeatures: z.record(z.string(), z.union([NumberSchema, StringSchema, BooleanSchema])).optional(),
       completionStatistics: PolicyCompletionStatisticsSchema.optional(),
       candidates: z.array(PolicyCandidateDecisionTraceSchema).optional(),
     })

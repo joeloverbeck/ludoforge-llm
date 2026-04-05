@@ -2903,6 +2903,25 @@
                       }
                     ]
                   },
+                  "stateFeatures": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "boolean"
+                        }
+                      ]
+                    }
+                  },
                   "completionStatistics": {
                     "type": "object",
                     "properties": {

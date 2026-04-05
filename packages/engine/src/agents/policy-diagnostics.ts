@@ -121,6 +121,7 @@ export function buildPolicyAgentDecisionTrace(
     ...(metadata.selection === undefined ? {} : { selection: metadata.selection }),
     emergencyFallback: metadata.usedFallback,
     failure: metadata.failure === null ? null : { code: metadata.failure.code, message: metadata.failure.message },
+    ...(metadata.stateFeatures !== undefined ? { stateFeatures: metadata.stateFeatures } : {}),
     ...(traceLevel === 'verbose'
       ? {
           candidates: metadata.candidates,

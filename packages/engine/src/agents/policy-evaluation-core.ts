@@ -233,6 +233,16 @@ export class PolicyEvaluationContext {
     this.invalidateAggregates();
   }
 
+  getEvaluatedStateFeatures(): Readonly<Record<string, number | string | boolean>> {
+    const result: Record<string, number | string | boolean> = {};
+    for (const [id, value] of this.stateFeatureCache) {
+      if (typeof value === 'number' || typeof value === 'string' || typeof value === 'boolean') {
+        result[id] = value;
+      }
+    }
+    return result;
+  }
+
   evaluateStateFeature(featureId: string): PolicyValue {
     if (this.stateFeatureCache.has(featureId)) {
       return this.stateFeatureCache.get(featureId);

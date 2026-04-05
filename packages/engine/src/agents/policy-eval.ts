@@ -102,6 +102,7 @@ export interface PolicyEvaluationMetadata {
   readonly previewUsage: PolicyEvaluationPreviewUsage;
   readonly selection?: PolicyEvaluationSelectionTrace;
   readonly completionStatistics?: PolicyCompletionStatistics;
+  readonly stateFeatures?: Readonly<Record<string, number | string | boolean>>;
   readonly selectedStableMoveKey: string | null;
   readonly finalScore: number | null;
   readonly usedFallback: boolean;
@@ -551,6 +552,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
       });
     }
 
+    const stateFeatures = evaluation.getEvaluatedStateFeatures();
     return {
       kind: 'success',
       move: selected.move,
@@ -567,6 +569,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
         previewUsage: summarizePreviewUsage(candidates, profile.preview.mode),
         ...(selectionTrace === undefined ? {} : { selection: selectionTrace }),
         ...(input.completionStatistics === undefined ? {} : { completionStatistics: input.completionStatistics }),
+        ...(Object.keys(stateFeatures).length > 0 ? { stateFeatures } : {}),
         selectedStableMoveKey: selected.stableMoveKey,
         finalScore: Number.isFinite(selected.score) ? selected.score : null,
         usedFallback: false,

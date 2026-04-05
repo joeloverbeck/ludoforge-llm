@@ -605,6 +605,76 @@
           "aggregates": [],
           "strategicConditions": []
         }
+      },
+      "vcGuerrillaCount": {
+        "type": "number",
+        "costClass": "state",
+        "expr": {
+          "kind": "globalTokenAgg",
+          "tokenFilter": {
+            "props": {
+              "faction": {
+                "eq": "VC"
+              },
+              "type": {
+                "eq": "guerrilla"
+              }
+            }
+          },
+          "aggOp": "count",
+          "zoneScope": "board"
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "vcBaseCount": {
+        "type": "number",
+        "costClass": "state",
+        "expr": {
+          "kind": "globalTokenAgg",
+          "tokenFilter": {
+            "props": {
+              "faction": {
+                "eq": "VC"
+              },
+              "type": {
+                "eq": "base"
+              }
+            }
+          },
+          "aggOp": "count",
+          "zoneScope": "board"
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "turnRound": {
+        "type": "number",
+        "costClass": "state",
+        "expr": {
+          "kind": "ref",
+          "ref": {
+            "kind": "turnIntrinsic",
+            "intrinsic": "round"
+          }
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
       }
     },
     "candidateFeatures": {
@@ -1412,6 +1482,78 @@
           "aggregates": [],
           "strategicConditions": []
         }
+      },
+      "observeGameState": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "state",
+        "weight": {
+          "kind": "literal",
+          "value": 0
+        },
+        "value": {
+          "kind": "op",
+          "op": "add",
+          "args": [
+            {
+              "kind": "ref",
+              "ref": {
+                "kind": "library",
+                "refKind": "stateFeature",
+                "id": "selfResources"
+              }
+            },
+            {
+              "kind": "op",
+              "op": "add",
+              "args": [
+                {
+                  "kind": "ref",
+                  "ref": {
+                    "kind": "library",
+                    "refKind": "stateFeature",
+                    "id": "vcGuerrillaCount"
+                  }
+                },
+                {
+                  "kind": "op",
+                  "op": "add",
+                  "args": [
+                    {
+                      "kind": "ref",
+                      "ref": {
+                        "kind": "library",
+                        "refKind": "stateFeature",
+                        "id": "vcBaseCount"
+                      }
+                    },
+                    {
+                      "kind": "ref",
+                      "ref": {
+                        "kind": "library",
+                        "refKind": "stateFeature",
+                        "id": "turnRound"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [
+            "selfResources",
+            "turnRound",
+            "vcBaseCount",
+            "vcGuerrillaCount"
+          ],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
       }
     },
     "tieBreakers": {
@@ -1677,10 +1819,7 @@
       "observerName": "currentPlayer",
       "params": {
         "projectedMarginWeight": 5,
-        "eventWeight": 3,
-        "rallyWeight": 3,
-        "taxWeight": 2,
-        "resourceWeight": 0.03
+        "rallyWeight": 3
       },
       "use": {
         "pruningRules": [
@@ -1688,11 +1827,9 @@
         ],
         "considerations": [
           "preferProjectedSelfMargin",
-          "preserveResources",
-          "preferEvent",
           "preferRallyWeighted",
-          "preferTaxWeighted",
-          "preferPopulousTargets"
+          "preferPopulousTargets",
+          "observeGameState"
         ],
         "tieBreakers": [
           "preferCheapTargetSpaces",
@@ -1708,7 +1845,10 @@
       "plan": {
         "stateFeatures": [
           "selfMargin",
-          "selfResources"
+          "selfResources",
+          "turnRound",
+          "vcBaseCount",
+          "vcGuerrillaCount"
         ],
         "candidateFeatures": [
           "projectedSelfMargin",
@@ -1719,14 +1859,12 @@
         ],
         "considerations": [
           "preferProjectedSelfMargin",
-          "preserveResources",
-          "preferEvent",
           "preferRallyWeighted",
-          "preferTaxWeighted",
-          "preferPopulousTargets"
+          "preferPopulousTargets",
+          "observeGameState"
         ]
       },
-      "fingerprint": "68cca33c9b26be24b9199dc0061878a644d620666bc2f5ea36e85c2ffa2fddb3"
+      "fingerprint": "17f6a2830faf2e4afc15bc557be643df5a89d3c23ab150d86482c0dc21c721c7"
     }
   },
   "bindingsBySeat": {
@@ -1735,5 +1873,5 @@
     "nva": "nva-baseline",
     "vc": "vc-evolved"
   },
-  "catalogFingerprint": "07ccaf531029b3891d78fdb90cbb040dc2fa9f668db07d8f142107b00a873014"
+  "catalogFingerprint": "18dbaae8d7eb4f738f2298ed6ed1d76c60e4c8163355b80c2fb842d8d6323ca5"
 }

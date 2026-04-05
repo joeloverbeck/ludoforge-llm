@@ -1598,6 +1598,7 @@ export interface PolicyAgentDecisionTrace {
   readonly selection?: PolicySelectionTrace;
   readonly emergencyFallback: boolean;
   readonly failure: AgentDecisionFailureSummary | null;
+  readonly stateFeatures?: Readonly<Record<string, number | string | boolean>>;
   readonly completionStatistics?: PolicyCompletionStatistics;
   readonly candidates?: readonly PolicyCandidateDecisionTrace[];
 }

@@ -1,6 +1,6 @@
 # 109AGEPREAUD-005: Integration tests — FITL production proof for event preview contracts
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — test files only
@@ -94,3 +94,22 @@ Run a PolicyAgent evaluation on a state with Rally/Terror/Attack candidates and 
 
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo test`
+
+## Outcome
+
+Completed: 2026-04-05
+
+- Added [event-preview-differentiation.test.ts](/home/joeloverbeck/projects/ludoforge-llm/packages/engine/test/integration/event-preview-differentiation.test.ts) as the production FITL proof surface for event preview contracts.
+- Extended [fitl-policy-agent.test.ts](/home/joeloverbeck/projects/ludoforge-llm/packages/engine/test/integration/fitl-policy-agent.test.ts) with a non-event regression check on the existing policy trace surface.
+- Used current deterministic production reproducers instead of the stale motivating examples:
+  - seed `1`, ply `2`: `card-68` (`Green Berets`) proves side-specific projected-margin differentiation and independently previewed branches
+  - seed `1`, ply `8`: `card-116` (`Cadres`) proves capability previews stay `ready` even when immediate projected margin remains equal
+  - seed `1`, ply `1`: VC `rally` / `terror` / `attack` candidates retain differentiated preview-backed scoring
+- Deviation from original plan: no standalone performance baseline harness was added. The ticket stayed a test-only proof ticket and used the existing regression suites as the authoritative non-event guardrail.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build`
+- `node --test dist/test/integration/event-preview-differentiation.test.js dist/test/integration/fitl-policy-agent.test.js`
+- `pnpm -F @ludoforge/engine test`
+- `pnpm turbo test`

@@ -34,7 +34,7 @@ If any source file does not exist at the expected path, search for it (it may ha
 
 ### Step 2: Extract DSL Truth from Source
 
-From each source file, extract the complete set of DSL capabilities:
+From each source file, extract the complete set of DSL capabilities. For efficiency, use an Explore agent to extract DSL truth from all 4 source files in a single pass — provide the file paths and extraction targets in the agent prompt. The source files are large (1000-2000+ lines each) and parallel extraction is significantly faster than sequential inline reads.
 
 **From `policy-expr.ts`:**
 - All values in `KnownOperator` type/set — these are every expression operator the DSL supports
@@ -105,6 +105,10 @@ Present findings in this structure:
 ### Quality Gaps
 [List quality improvements needed]
 1. **<gap>** — <what's missing and why it matters for LLM agent evolution>.
+
+### Proposed Changes
+N additions, N corrections, N quality improvements:
+- [Brief list of what will be added/changed in each cookbook section]
 
 ### Current Coverage
 - Operators: N/M documented (N%)

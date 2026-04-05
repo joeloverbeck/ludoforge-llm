@@ -29,7 +29,11 @@ import {
   type PolicyRuntimeProviders,
   type PolicyValue,
 } from './policy-runtime.js';
-import type { PolicyPreviewTraceOutcome, PolicyPreviewUnavailabilityReason } from './policy-preview.js';
+import type {
+  PolicyPreviewDependencies,
+  PolicyPreviewTraceOutcome,
+  PolicyPreviewUnavailabilityReason,
+} from './policy-preview.js';
 
 export interface PolicyRuntimeFailure {
   readonly code: string;
@@ -62,6 +66,7 @@ export interface CreatePolicyEvaluationContextInput {
   readonly catalog: AgentPolicyCatalog;
   readonly parameterValues: Readonly<Record<string, AgentParameterValue>>;
   readonly trustedMoveIndex: ReadonlyMap<string, TrustedExecutableMove>;
+  readonly previewDependencies?: PolicyPreviewDependencies;
   readonly runtime?: GameDefRuntime;
   readonly completion?: {
     readonly request: ChoicePendingRequest;
@@ -219,6 +224,7 @@ export class PolicyEvaluationContext {
       seatId: input.seatId,
       trustedMoveIndex: input.trustedMoveIndex,
       catalog: input.catalog,
+      ...(input.previewDependencies === undefined ? {} : { previewDependencies: input.previewDependencies }),
       runtimeError: (code, message, detail) => this.runtimeError(code, message, detail),
       ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
       ...(input.completion === undefined ? {} : { completion: input.completion }),

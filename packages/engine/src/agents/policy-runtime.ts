@@ -19,6 +19,7 @@ import type {
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
 import {
   createPolicyPreviewRuntime,
+  type PolicyPreviewDependencies,
   type PolicyPreviewTraceOutcome,
   type PolicyPreviewSurfaceResolution,
 } from './policy-preview.js';
@@ -89,6 +90,7 @@ export interface CreatePolicyRuntimeProvidersInput {
   readonly seatId: string;
   readonly trustedMoveIndex: ReadonlyMap<string, TrustedExecutableMove>;
   readonly catalog: AgentPolicyCatalog;
+  readonly previewDependencies?: PolicyPreviewDependencies;
   readonly runtime?: GameDefRuntime;
   readonly completion?: {
     readonly request: ChoicePendingRequest;
@@ -109,6 +111,7 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
     seatId: input.seatId,
     trustedMoveIndex: input.trustedMoveIndex,
     previewMode: activeProfile?.preview.mode ?? 'exactWorld',
+    ...(input.previewDependencies === undefined ? {} : { dependencies: input.previewDependencies }),
     ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
   });
   const metricCache = new Map<string, number>();

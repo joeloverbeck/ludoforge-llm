@@ -1,4 +1,6 @@
-import type { PlayerId } from '../kernel/branded.js';
+import { asPlayerId, type PlayerId } from '../kernel/branded.js';
+import { buildSeatResolutionIndex, resolvePlayerIndexForSeatValue } from '../kernel/identity.js';
+import { legalMoves } from '../kernel/legal-moves.js';
 import { toMoveIdentityKey } from '../kernel/move-identity.js';
 import type {
   AgentPreviewMode,
@@ -17,7 +19,11 @@ import type {
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
 import { createRng, stepRng } from '../kernel/prng.js';
 import { pickRandom } from './agent-move-selection.js';
-import type { PolicyPreviewTraceOutcome, PolicyPreviewUnavailabilityReason } from './policy-preview.js';
+import type {
+  PolicyPreviewDependencies,
+  PolicyPreviewTraceOutcome,
+  PolicyPreviewUnavailabilityReason,
+} from './policy-preview.js';
 import { type PolicyValue } from './policy-runtime.js';
 import { PolicyEvaluationContext, type PolicyEvaluationCandidate, PolicyRuntimeError } from './policy-evaluation-core.js';
 import { resolvePolicyBindingSeatId } from './policy-profile-resolution.js';
@@ -155,6 +161,8 @@ interface CandidateEntry extends PolicyEvaluationCandidate {
   previewFailureReason?: string;
   score: number;
 }
+
+const EMPTY_TRUSTED_MOVE_INDEX = new Map<string, TrustedExecutableMove>();
 
 function applyTieBreaker(
   evaluation: PolicyEvaluationContext,
@@ -386,6 +394,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
   }
 
   try {
+    const previewDependencies = createGrantedOperationPreviewDependencies(input.def, profileId);
     const evaluation = new PolicyEvaluationContext({
       def: input.def,
       state: input.state,
@@ -394,6 +403,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
       catalog,
       parameterValues: profile.params,
       trustedMoveIndex: input.trustedMoveIndex,
+      previewDependencies,
       ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
     }, candidates);
     let activeCandidates = [...candidates];
@@ -601,6 +611,56 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
       input.movePreparations,
     );
   }
+}
+
+function createGrantedOperationPreviewDependencies(
+  def: GameDef,
+  profileId: string,
+): PolicyPreviewDependencies {
+  return {
+    evaluateGrantedOperation: (
+      currentDef,
+      postEventState,
+      agentSeatId,
+      runtime,
+    ) => {
+      const seatResolutionIndex = buildSeatResolutionIndex(currentDef, postEventState.playerCount);
+      const grantedPlayerIndex = resolvePlayerIndexForSeatValue(agentSeatId, seatResolutionIndex);
+      if (grantedPlayerIndex === null) {
+        return undefined;
+      }
+
+      const activeSeatId = resolvePolicyBindingSeatId(currentDef, postEventState.activePlayer);
+      if (activeSeatId !== agentSeatId) {
+        return undefined;
+      }
+
+      const availableMoves = legalMoves(currentDef, postEventState, undefined, runtime);
+      if (availableMoves.length === 0) {
+        return undefined;
+      }
+
+      const result = evaluatePolicyMoveCore({
+        def: currentDef,
+        state: postEventState,
+        playerId: asPlayerId(grantedPlayerIndex),
+        legalMoves: availableMoves,
+        trustedMoveIndex: EMPTY_TRUSTED_MOVE_INDEX,
+        rng: { state: postEventState.rng },
+        profileIdOverride: profileId,
+        ...(runtime === undefined ? {} : { runtime }),
+      });
+
+      if (result.kind !== 'success') {
+        return undefined;
+      }
+
+      return {
+        move: result.move,
+        score: result.metadata.finalScore ?? 0,
+      };
+    },
+  };
 }
 
 export function evaluatePolicyMove(input: EvaluatePolicyMoveInput): PolicyEvaluationResult {

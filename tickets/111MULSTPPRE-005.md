@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — agent diagnostics, trace types
-**Deps**: `tickets/111MULSTPPRE-004.md`, `specs/111-multi-step-preview-for-granted-operations.md`
+**Deps**: `archive/tickets/111MULSTPPRE-004.md`, `specs/111-multi-step-preview-for-granted-operations.md`
 
 ## Problem
 

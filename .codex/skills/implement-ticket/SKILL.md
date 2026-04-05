@@ -117,10 +117,12 @@ If that earlier ticket introduced production-corpus traversal, fixture readers, 
   - when a compiled DSL or AST field widens, both the schema-definition source file and any generated schema artifacts that encode that shape
   - diagnostics or debug snapshots
   - exported provider interfaces and adapter wrappers that mirror shared runtime helpers or services
+  - when a ticket adds an injected callback or service at a top-level orchestration file, the lower provider/runtime factory layers where that dependency is actually constructed and threaded
   - fixtures, goldens, and tests
   - manually constructed shared runtime/test fixtures such as `GameDefRuntime` or other kernel context objects
   - if a new UI/store/model context field exists mainly to support one feature path, consider whether it should stay optional on local test-helper contracts to avoid unnecessary fixture churn, so long as production code still supplies it explicitly and the distinction is verified
 - When one ticket stage selects or returns a plain domain object but the next stage can only execute a wrapped, trusted, or otherwise validated form of that object, treat that conversion boundary as an explicit contract check and resolve ownership with `1-3-1` before coding rather than silently shifting the contract.
+- When a ticket introduces callback-driven recursive evaluation on a derived state, explicitly verify that the inner pass resolves actor or seat identity and sources RNG from the derived state itself rather than reusing outer-evaluation assumptions.
 - When tightening authored `chooseN` minimums or other decision cardinality constraints:
   - check whether runtime `max` can drop below the new minimum because of resources, grants, action class, or other state-dependent caps
   - if `max < min` can occur, update legality or cost-validation in the same change so the move becomes cleanly illegal instead of failing at runtime

@@ -1,6 +1,6 @@
 # 111MULSTPPRE-004: Wire evaluator callback from policy-eval into preview
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — agent evaluation pipeline
@@ -93,3 +93,22 @@ The callback continues to return a plain `Move`. Ticket 003 now classifies that 
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/agents/policy-eval-granted-op.test.js`
 2. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+Completed on 2026-04-05.
+
+`policy-eval.ts` now injects a real `evaluateGrantedOperation` callback for preview. The callback enumerates legal moves in the post-event state, resolves the granted seat to the correct player, confirms the derived state's active seat still matches the granted seat, recursively evaluates the available moves through the normal policy scoring pipeline, and returns the best plain `Move` plus score. The recursive inner pass intentionally omits `evaluateGrantedOperation`, so multi-step preview stays capped at depth 1.
+
+To make that callback reachable from the real preview path, the implementation also threaded optional preview dependencies through `packages/engine/src/agents/policy-evaluation-core.ts` and `packages/engine/src/agents/policy-runtime.ts`. No schema, DSL, or trace-surface changes were needed for this ticket.
+
+Implementation notes:
+- Reused the corrected contract from ticket 003: the callback still returns a plain `Move`, and `policy-preview.ts` still owns the `Move -> TrustedExecutableMove` trust conversion before applying the granted operation.
+- The actual dependency-injection seam extended below `policy-eval.ts` into the provider/runtime factory layers, so adjacent contract files were updated even though the top-level ticket primarily named `policy-eval.ts`.
+- Used a dedicated live unit test file at `packages/engine/test/unit/agents/policy-eval-granted-op.test.ts` rather than the stale path named in the ticket.
+- The “no legal moves” proof was implemented as “no granted-operation moves available to the evaluating seat” so the derived post-event state remains previewable while still forcing the callback to return `undefined`.
+
+Verification:
+- `pnpm -F @ludoforge/engine build`
+- `node packages/engine/dist/test/unit/agents/policy-eval-granted-op.test.js`
+- `pnpm -F @ludoforge/engine test`

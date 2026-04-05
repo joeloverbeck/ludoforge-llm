@@ -1,6 +1,6 @@
 # 109AGEPREAUD-003: Audit enumeration-time event filter
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — legal-moves.ts (if fix needed)
@@ -75,3 +75,23 @@ If the filter correctly rejects truly unsatisfiable moves:
 
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo test`
+
+## Outcome
+
+Completed: 2026-04-05
+
+The live audit showed `enumerateCurrentEventMoves` already passes the full side-aware event move into `isMoveDecisionSequenceAdmittedForLegalMove`, and the satisfiability probe path remained side-aware through `legalChoicesDiscover`. No kernel fix was needed in `legal-moves.ts`.
+
+What changed:
+- added a dual-sided regression in `packages/engine/test/unit/kernel/legal-moves.test.ts`
+- proved only the satisfiable side of a dual-sided event is admitted when the two sides expose different decision domains
+
+Deviations from original plan:
+- no runtime source file changed
+- the ticket completed as an audit-plus-proof implementation rather than a kernel bug fix
+
+Verification:
+- `pnpm -F @ludoforge/engine build`
+- `node --test packages/engine/dist/test/unit/kernel/legal-moves.test.js`
+- `pnpm -F @ludoforge/engine test`
+- `pnpm turbo test`

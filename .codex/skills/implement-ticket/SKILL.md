@@ -65,6 +65,7 @@ If that earlier ticket introduced production-corpus traversal, fixture readers, 
    - verify which sibling tickets, specs, or reports depend on that gate
    - treat closure of downstream work as part of the implementation boundary when the measured result invalidates that work
    - distinguish runtime/code changes from repository-owned deliverables such as ticket outcomes, archived specs, dependency rewrites, and status updates
+   - when the diagnostic result materially disproves the stated premise of active sibling tickets, update those sibling tickets in the same turn so the active series no longer advertises invalid work
 
 ### Phase 3: Resolve Before Coding
 
@@ -120,6 +121,7 @@ If that earlier ticket introduced production-corpus traversal, fixture readers, 
   - leave them unchanged when evidence shows no edit is required
   - state that explicit no-change decision in the final summary
 - If the ticket says "no code changes", interpret that as "no production/runtime behavior changes" unless the ticket explicitly forbids repo artifact edits. Ticket/spec outcome sections, archival moves, dependency rewrites, and sibling-ticket status updates are still required when they are the owned deliverable.
+- If a diagnostic or audit ticket requires written findings but does not name a specific file, prefer an existing repo-owned report surface such as `reports/` over ephemeral local notes or ad hoc scratch files, and reference that report in the final summary.
 - When a migration adds or removes a required compiled field, treat owned production goldens that snapshot compiled catalogs, summaries, or traces as expected update surfaces unless evidence shows unexpected behavioral drift.
 - When a change alters observability, preview readiness, scoring inputs, or other behavior that can legitimately change deterministic move choice, treat owned production goldens and fixed-seed summaries as expected update surfaces unless evidence shows unexpected drift outside the ticket boundary.
 - When a completed gate ticket proves downstream active tickets are not actionable, update those sibling tickets in the same turn so their status, deps, and scope text no longer advertise invalid work. Do not leave the series in a partially-invalid staged state.

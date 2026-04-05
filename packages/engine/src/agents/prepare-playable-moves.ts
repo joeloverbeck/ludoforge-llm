@@ -1,5 +1,6 @@
 import { perfStart, perfDynEnd, type PerfProfiler } from '../kernel/perf-profiler.js';
 import { evaluatePlayableMoveCandidate } from '../kernel/playable-candidate.js';
+import { toMoveIdentityKey } from '../kernel/move-identity.js';
 import type {
   Agent,
   ChoicePendingRequest,
@@ -7,6 +8,7 @@ import type {
   Move,
   MoveParamValue,
   PolicyCompletionStatistics,
+  PolicyMovePreparationTrace,
   Rng,
   TrustedExecutableMove,
 } from '../kernel/types.js';
@@ -50,6 +52,15 @@ export interface PreparedPlayableMoves {
   readonly stochasticMoves: readonly TrustedExecutableMove[];
   readonly rng: Rng;
   readonly statistics: PolicyCompletionStatistics;
+  readonly movePreparations: readonly PolicyMovePreparationTrace[];
+}
+
+interface TemplateCompletionTrace {
+  readonly finalClassification: PolicyMovePreparationTrace['finalClassification'];
+  readonly enteredTrustedMoveIndex: boolean;
+  readonly templateCompletionAttempts: number;
+  readonly templateCompletionOutcome: NonNullable<PolicyMovePreparationTrace['templateCompletionOutcome']>;
+  readonly rejection?: PolicyMovePreparationTrace['rejection'];
 }
 
 export function preparePlayableMoves(
@@ -65,11 +76,13 @@ export function preparePlayableMoves(
   let templateCompletionAttempts = 0;
   let templateCompletionSuccesses = 0;
   let templateCompletionUnsatisfiable = 0;
+  const movePreparations: PolicyMovePreparationTrace[] = [];
   let rng = input.rng;
   const pendingTemplateCompletions = options.pendingTemplateCompletions ?? 1;
 
   for (const classified of input.legalMoves) {
     const { move, viability } = classified;
+    const stableMoveKey = toMoveIdentityKey(input.def, move);
     if (!viability.viable) {
       // Zone-filter mismatches on free-operation templates are not definitive
       // rejections — the zone filter cannot be evaluated until target zones are
@@ -91,8 +104,27 @@ export function preparePlayableMoves(
         templateCompletionAttempts += completion.templateCompletionAttempts;
         templateCompletionSuccesses += completion.templateCompletionSuccesses;
         templateCompletionUnsatisfiable += completion.templateCompletionUnsatisfiable;
+        movePreparations.push({
+          actionId: String(move.actionId),
+          stableMoveKey,
+          initialClassification: 'rejected',
+          finalClassification: completion.trace.finalClassification,
+          enteredTrustedMoveIndex: completion.trace.enteredTrustedMoveIndex,
+          templateCompletionAttempts: completion.trace.templateCompletionAttempts,
+          templateCompletionOutcome: completion.trace.templateCompletionOutcome,
+          ...(completion.trace.rejection === undefined ? {} : { rejection: completion.trace.rejection }),
+          fellThroughFromZoneFilterMismatch: true,
+        });
       } else {
         rejectedNotViable += 1;
+        movePreparations.push({
+          actionId: String(move.actionId),
+          stableMoveKey,
+          initialClassification: 'rejected',
+          finalClassification: 'rejected',
+          enteredTrustedMoveIndex: false,
+          rejection: 'notViable',
+        });
       }
       continue;
     }
@@ -102,6 +134,13 @@ export function preparePlayableMoves(
       }
       completedMoves.push(classified.trustedMove);
       completedCount += 1;
+      movePreparations.push({
+        actionId: String(move.actionId),
+        stableMoveKey,
+        initialClassification: 'complete',
+        finalClassification: 'complete',
+        enteredTrustedMoveIndex: true,
+      });
       continue;
     }
     if (viability.stochasticDecision !== undefined) {
@@ -110,6 +149,13 @@ export function preparePlayableMoves(
       }
       stochasticMoves.push(classified.trustedMove);
       stochasticCount += 1;
+      movePreparations.push({
+        actionId: String(move.actionId),
+        stableMoveKey,
+        initialClassification: 'stochastic',
+        finalClassification: 'stochastic',
+        enteredTrustedMoveIndex: true,
+      });
       continue;
     }
 
@@ -129,12 +175,23 @@ export function preparePlayableMoves(
     templateCompletionAttempts += completion.templateCompletionAttempts;
     templateCompletionSuccesses += completion.templateCompletionSuccesses;
     templateCompletionUnsatisfiable += completion.templateCompletionUnsatisfiable;
+    movePreparations.push({
+      actionId: String(move.actionId),
+      stableMoveKey,
+      initialClassification: 'pending',
+      finalClassification: completion.trace.finalClassification,
+      enteredTrustedMoveIndex: completion.trace.enteredTrustedMoveIndex,
+      templateCompletionAttempts: completion.trace.templateCompletionAttempts,
+      templateCompletionOutcome: completion.trace.templateCompletionOutcome,
+      ...(completion.trace.rejection === undefined ? {} : { rejection: completion.trace.rejection }),
+    });
   }
 
   return {
     completedMoves,
     stochasticMoves,
     rng,
+    movePreparations,
     statistics: {
       totalClassifiedMoves: input.legalMoves.length,
       completedCount,
@@ -167,12 +224,15 @@ function attemptTemplateCompletion(
   readonly templateCompletionAttempts: number;
   readonly templateCompletionSuccesses: number;
   readonly templateCompletionUnsatisfiable: number;
+  readonly trace: TemplateCompletionTrace;
 } {
   let currentRng = initialRng;
   let stochasticCount = 0;
   let templateCompletionAttempts = 0;
   let templateCompletionSuccesses = 0;
   let templateCompletionUnsatisfiable = 0;
+  let sawCompletedMove = false;
+  let rejection: PolicyMovePreparationTrace['rejection'] | undefined;
   for (let attempt = 0; attempt < pendingTemplateCompletions; attempt += 1) {
     templateCompletionAttempts += 1;
     const t0_epc = perfStart(profiler);
@@ -189,23 +249,48 @@ function attemptTemplateCompletion(
     if (result.kind === 'playableComplete') {
       completedMoves.push(result.move);
       templateCompletionSuccesses += 1;
+      sawCompletedMove = true;
       continue;
     }
     if (result.kind === 'playableStochastic') {
       stochasticMoves.push(result.move);
       stochasticCount += 1;
+      rejection = undefined;
       break;
     }
+    rejection = result.rejection;
     if (result.rejection === 'completionUnsatisfiable') {
       templateCompletionUnsatisfiable += 1;
       break;
     }
   }
+  const trace: TemplateCompletionTrace = stochasticCount > 0
+    ? {
+        finalClassification: 'stochastic',
+        enteredTrustedMoveIndex: true,
+        templateCompletionAttempts,
+        templateCompletionOutcome: 'stochastic',
+      }
+    : sawCompletedMove
+      ? {
+          finalClassification: 'complete',
+          enteredTrustedMoveIndex: true,
+          templateCompletionAttempts,
+          templateCompletionOutcome: 'complete',
+        }
+      : {
+          finalClassification: 'rejected',
+          enteredTrustedMoveIndex: false,
+          templateCompletionAttempts,
+          templateCompletionOutcome: 'failed',
+          ...(rejection === undefined ? {} : { rejection }),
+        };
   return {
     rng: currentRng,
     stochasticCount,
     templateCompletionAttempts,
     templateCompletionSuccesses,
     templateCompletionUnsatisfiable,
+    trace,
   };
 }

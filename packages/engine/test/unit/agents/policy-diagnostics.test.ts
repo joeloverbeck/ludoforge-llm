@@ -58,6 +58,25 @@ function createMetadata(): PolicyEvaluationMetadata {
       templateCompletionSuccesses: 1,
       templateCompletionUnsatisfiable: 1,
     },
+    movePreparations: [
+      {
+        actionId: 'advance',
+        stableMoveKey: 'alpha',
+        initialClassification: 'complete',
+        finalClassification: 'complete',
+        enteredTrustedMoveIndex: true,
+      },
+      {
+        actionId: 'pass',
+        stableMoveKey: 'beta',
+        initialClassification: 'pending',
+        finalClassification: 'rejected',
+        enteredTrustedMoveIndex: false,
+        templateCompletionAttempts: 2,
+        templateCompletionOutcome: 'failed',
+        rejection: 'completionUnsatisfiable',
+      },
+    ],
     selectedStableMoveKey: 'alpha',
     finalScore: 7,
     usedFallback: false,
@@ -78,6 +97,7 @@ describe('policy-diagnostics', () => {
       unknownFailed: 0,
     });
     assert.equal(trace.completionStatistics, undefined);
+    assert.equal(trace.movePreparations, undefined);
     assert.equal(trace.candidates, undefined);
   });
 
@@ -93,6 +113,9 @@ describe('policy-diagnostics', () => {
       templateCompletionSuccesses: 1,
       templateCompletionUnsatisfiable: 1,
     });
+    assert.equal(trace.movePreparations?.length, 2);
+    assert.equal(trace.movePreparations?.[1]?.templateCompletionOutcome, 'failed');
+    assert.equal(trace.movePreparations?.[1]?.rejection, 'completionUnsatisfiable');
     assert.equal(trace.candidates?.length, 2);
     assert.equal(trace.candidates?.[0]?.previewOutcome, 'ready');
     assert.equal(trace.candidates?.[1]?.previewOutcome, 'hidden');

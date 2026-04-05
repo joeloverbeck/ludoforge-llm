@@ -1409,6 +1409,37 @@ const PolicyCandidateDecisionTraceSchema = z
   })
   .strict();
 
+const PolicyMovePreparationTraceSchema = z
+  .object({
+    actionId: StringSchema,
+    stableMoveKey: StringSchema,
+    initialClassification: z.union([
+      z.literal('complete'),
+      z.literal('stochastic'),
+      z.literal('pending'),
+      z.literal('rejected'),
+    ]),
+    finalClassification: z.union([
+      z.literal('complete'),
+      z.literal('stochastic'),
+      z.literal('rejected'),
+    ]),
+    enteredTrustedMoveIndex: BooleanSchema,
+    templateCompletionAttempts: NumberSchema.optional(),
+    templateCompletionOutcome: z.union([
+      z.literal('complete'),
+      z.literal('stochastic'),
+      z.literal('failed'),
+    ]).optional(),
+    rejection: z.union([
+      z.literal('completionUnsatisfiable'),
+      z.literal('notViable'),
+      z.literal('notDecisionComplete'),
+    ]).optional(),
+    fellThroughFromZoneFilterMismatch: BooleanSchema.optional(),
+  })
+  .strict();
+
 const PolicyPruningStepTraceSchema = z
   .object({
     ruleId: StringSchema,
@@ -1497,6 +1528,7 @@ const AgentDecisionTraceSchema = z.union([
       failure: AgentDecisionFailureSummarySchema.nullable(),
       stateFeatures: z.record(z.string(), z.union([NumberSchema, StringSchema, BooleanSchema])).optional(),
       completionStatistics: PolicyCompletionStatisticsSchema.optional(),
+      movePreparations: z.array(PolicyMovePreparationTraceSchema).optional(),
       candidates: z.array(PolicyCandidateDecisionTraceSchema).optional(),
     })
     .strict(),

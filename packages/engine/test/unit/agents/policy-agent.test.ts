@@ -716,6 +716,20 @@ describe('PolicyAgent', () => {
       templateCompletionSuccesses: 3,
       templateCompletionUnsatisfiable: 0,
     });
+    assert.equal(result.agentDecision.movePreparations?.length, 2);
+    const directPreparation = result.agentDecision.movePreparations?.find((entry) => entry.actionId === 'pass');
+    assert.ok(directPreparation);
+    assert.equal(directPreparation?.initialClassification, 'complete');
+    assert.equal(directPreparation?.finalClassification, 'complete');
+    assert.equal(directPreparation?.enteredTrustedMoveIndex, true);
+    assert.match(directPreparation?.stableMoveKey ?? '', /^pass\|/);
+    const completedPreparation = result.agentDecision.movePreparations?.find((entry) => entry.actionId === 'chooseTarget');
+    assert.ok(completedPreparation);
+    assert.equal(completedPreparation?.initialClassification, 'pending');
+    assert.equal(completedPreparation?.finalClassification, 'complete');
+    assert.equal(completedPreparation?.enteredTrustedMoveIndex, true);
+    assert.equal(completedPreparation?.templateCompletionAttempts, 3);
+    assert.equal(completedPreparation?.templateCompletionOutcome, 'complete');
     if (result.agentDecision.candidates === undefined) {
       assert.fail('expected verbose policy candidates');
     }

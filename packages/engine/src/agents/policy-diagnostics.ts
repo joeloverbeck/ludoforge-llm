@@ -126,6 +126,7 @@ export function buildPolicyAgentDecisionTrace(
       ? {
           candidates: metadata.candidates,
           ...(metadata.completionStatistics === undefined ? {} : { completionStatistics: metadata.completionStatistics }),
+          ...(metadata.movePreparations === undefined ? {} : { movePreparations: metadata.movePreparations }),
         }
       : {}),
   };

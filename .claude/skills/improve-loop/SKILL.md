@@ -168,7 +168,7 @@ Set `WT` = the worktree root path. Every file path in every tool call below is p
 4. Identify the **mutable files** from program.md. Read each one into context.
 5. Identify the **root causes to seed** from program.md as the initial hypothesis queue.
 6. Read all configuration keys from program.md (see table above). Apply defaults for any missing keys.
-7. Ensure `$WT/campaigns/<campaign>/musings.md` exists (create with `# Musings` header if missing).
+7. Ensure `$WT/campaigns/<campaign>/musings.md` exists (create with `# Musings` header if missing). If results.tsv has only the header row AND this is a new worktree (not resuming a prior session), clear musings.md to the header only — prior campaign history belongs in `campaigns/lessons-global.jsonl`, not carried forward in musings.
 8. Initialize strategy state: `strategy = "normal"`, `consecutive_rejects = 0`, `total_accepts = 0`.
 9. Read `campaigns/lessons-global.jsonl` if it exists — inject relevant global lessons into context alongside the instruction spec.
 10. Read `$WT/campaigns/<campaign>/lessons.jsonl` if resuming — prune lessons with `decay_weight < 0.3`. For lessons lacking a `type` field (backward compatibility), treat as `finding` (if `polarity: positive`) or `negative` (if `polarity: negative`).
@@ -440,7 +440,14 @@ After a successful harness run (non-crash, non-abort), apply these guards:
 
 ### Step 6: DECIDE
 
-Apply the accept/reject logic from program.md. **If program.md defines its own accept/reject conditions** (thresholds, noise tolerance, complexity penalties), use those EXCLUSIVELY. The defaults below apply ONLY when program.md does not specify its own logic:
+Apply the accept/reject logic from program.md. **If program.md defines its own accept/reject conditions** (thresholds, noise tolerance, complexity penalties), use those EXCLUSIVELY. The defaults below apply ONLY when program.md does not specify its own logic.
+
+**Phase-dependent accept/reject logic**: Some campaigns define multiple evaluation phases with different accept/reject conditions (e.g., win-gated ramp-up followed by compositeScore optimization). When program.md defines phase transitions:
+1. Follow the current phase's accept/reject logic exclusively
+2. When a phase transition triggers (e.g., tier advance, seed count change), re-run the harness as a baseline for the new phase
+3. Reset `best_metric` / `best_wins` / any phase-specific tracking variables to the new baseline values
+4. Log the phase transition in musings: `**PHASE TRANSITION**: <old phase> → <new phase>. New baseline: <metric>.`
+5. The transition itself is not an experiment — do not log it in results.tsv as an experiment row
 
 **CRASH/FAIL:**
 - **Fixture sync crash**: If the error is a golden/snapshot test failure immediately after mutable file changes, this is a dependent fixture issue — follow the "Dependent Fixture Updates" protocol. This does NOT count toward the 3-retry limit.
@@ -587,8 +594,11 @@ Go back to Step 1. Do NOT stop.
 | BACKTRACK | `git reset --hard <checkpoint-commit>` |
 | SUSPICIOUS_ACCEPT | Same as ACCEPT but with warning in musings |
 | META-REVIEW revert | Restore program.md from program.md.backup |
+| Infrastructure (Tier 3+) | `git add <files>` + `git commit -m "infra: <description>"` — committable at any time during OBSERVE |
 
 `results.tsv`, `musings.md`, `checkpoints.jsonl`, `lessons.jsonl`, `intermediates.jsonl`, and `run.log` are untracked (gitignored) — they persist across accepts and rejects but are not committed.
+
+**Infrastructure commits outside experiments**: Tier 3 (observability) and campaign infrastructure changes (trace improvements, harness updates, documentation) can be committed at any point during the OBSERVE phase, not only during the IMPLEMENT→DECIDE cycle. Use commit messages prefixed with `infra:` and log in musings, but do NOT log in results.tsv (they are not experiments).
 
 **Exception**: `campaigns/lessons-global.jsonl` is NOT gitignored — it MUST be committed during campaign completion (see below).
 

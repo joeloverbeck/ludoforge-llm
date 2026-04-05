@@ -1622,6 +1622,112 @@ describe('agents authoring surface', () => {
     );
   });
 
+  it('includes globalMarkers in the fallback surface visibility catalog when no observer catalog exists', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      observability: null,
+      globalMarkerLattices: [
+        { id: 'cap_boobyTraps', states: ['inactive', 'unshaded', 'shaded'], defaultState: 'inactive' },
+        { id: 'cap_cadres', states: ['inactive', 'unshaded', 'shaded'], defaultState: 'inactive' },
+      ],
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: {
+        library: {
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              considerations: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      },
+    });
+
+    assert.notEqual(result.gameDef, null);
+    assert.deepEqual(result.gameDef!.agents!.surfaceVisibility.globalMarkers, {
+      cap_boobyTraps: {
+        current: 'public',
+        preview: {
+          visibility: 'public',
+          allowWhenHiddenSampling: false,
+        },
+      },
+      cap_cadres: {
+        current: 'public',
+        preview: {
+          visibility: 'public',
+          allowWhenHiddenSampling: false,
+        },
+      },
+    });
+  });
+
+  it('rejects unknown globalMarker refs during agent compilation', () => {
+    const compiled = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      globalMarkerLattices: [
+        { id: 'cap_boobyTraps', states: ['inactive', 'unshaded', 'shaded'], defaultState: 'inactive' },
+      ],
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: withObserver({
+        library: {
+          stateFeatures: {
+            unknownMarker: {
+              type: 'number',
+              expr: {
+                boolToNumber: {
+                  eq: [
+                    { ref: 'globalMarker.cap_unknown' },
+                    'shaded',
+                  ],
+                },
+              },
+            },
+          },
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              considerations: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      }),
+    });
+
+    assert.equal(compiled.gameDef, null);
+    assert.ok(
+      compiled.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_AGENT_POLICY_REF_UNKNOWN'
+          && diagnostic.path === 'doc.agents.library.stateFeatures.unknownMarker.expr.boolToNumber.eq.0.ref',
+      ),
+    );
+  });
+
   it('rejects malformed collection shapes, inline profile logic, and non-map bindings in validation and compile flows', () => {
     const doc = {
       ...createCompileReadyDoc(),

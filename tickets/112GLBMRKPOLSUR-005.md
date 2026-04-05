@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — documentation and tests only
-**Deps**: `tickets/112GLBMRKPOLSUR-004.md`, `specs/112-global-marker-policy-surface.md`
+**Deps**: `archive/tickets/112GLBMRKPOLSUR-004.md`, `specs/112-global-marker-policy-surface.md`
 
 ## Problem
 

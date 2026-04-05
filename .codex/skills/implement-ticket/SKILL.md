@@ -143,6 +143,7 @@ If that earlier ticket introduced production-corpus traversal, fixture readers, 
 - When a migration adds or removes a required compiled field, treat owned production goldens that snapshot compiled catalogs, summaries, or traces as expected update surfaces unless evidence shows unexpected behavioral drift.
 - When earlier groundwork introduced a required placeholder field and the current ticket begins populating it with real compiled data, expect owned production goldens to drift from empty maps or stubs to populated values, and treat that as normal ticket-owned fallout unless evidence shows unrelated behavioral change.
 - When a change alters observability, preview readiness, scoring inputs, or other behavior that can legitimately change deterministic move choice, treat owned production goldens and fixed-seed summaries as expected update surfaces unless evidence shows unexpected drift outside the ticket boundary.
+- When a nearby golden or artifact looks like an expected drift surface because of prior groundwork, it is still valid to probe it explicitly and conclude "no ticket-owned diff" if the live compilation path already sources the populated data elsewhere.
 - When enriching diagnostics or trace output, prefer preserving the existing coarse summary field and adding an optional detail field unless the ticket explicitly owns a breaking schema redesign.
 - Preparatory tickets may legitimately add optional schema, trace, or contract fields ahead of the later logic tickets that will populate them, so long as the ticket explicitly owns that groundwork boundary and verification proves the artifact surfaces remain in sync.
 - When a completed gate ticket proves downstream active tickets are not actionable, update those sibling tickets in the same turn so their status, deps, and scope text no longer advertise invalid work. Do not leave the series in a partially-invalid staged state.
@@ -163,6 +164,7 @@ Before claiming completion:
    - do not run verification commands in parallel when they read from or rewrite the same generated output tree such as `dist/`
 6. Prefer the narrowest commands that validate the real changed code path, not stale build output.
    - for documentation-only follow-up tickets whose examples depend on behavior already verified by an archived or completed prerequisite ticket, direct artifact inspection plus dependency-integrity checks may be sufficient unless the doc change itself introduces a new executable artifact
+   - when a ticket changes a fallback compilation or runtime path, verify that fallback-owned path directly and also check the primary production path for non-regression, because the main path may bypass the changed code entirely
 7. If broader failing checks remain:
    - determine whether they are inside the corrected ticket boundary or are owned by another active ticket
    - if they are outside the corrected boundary and already covered by an active ticket, do not silently absorb that scope

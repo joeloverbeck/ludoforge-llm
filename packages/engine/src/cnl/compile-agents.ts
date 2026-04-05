@@ -68,6 +68,7 @@ export interface LowerAgentsOptions {
   readonly referenceSeatIds?: readonly string[];
   readonly playerCountMax?: number;
   readonly globalVarIds?: readonly string[];
+  readonly globalMarkerIds?: readonly string[];
   readonly perPlayerVarIds?: readonly string[];
   readonly policyMetricIds?: readonly string[];
   readonly hasVictoryMargins?: boolean;
@@ -153,17 +154,23 @@ function resolveSurfaceVisibilityFromObserverCatalog(
   // Fallback: build defaults inline (same as the old lowerSurfaceVisibility).
   // This path is taken when there is no observability section.
   const globalVarDefaults: CompiledSurfaceVisibility = { current: 'public', preview: { visibility: 'public', allowWhenHiddenSampling: true } };
+  const globalMarkerDefaults: CompiledSurfaceVisibility = {
+    current: 'public',
+    preview: { visibility: 'public', allowWhenHiddenSampling: false },
+  };
   const perPlayerVarDefaults: CompiledSurfaceVisibility = { current: 'seatVisible', preview: { visibility: 'seatVisible', allowWhenHiddenSampling: true } };
   const hiddenDefaults: CompiledSurfaceVisibility = { current: 'hidden', preview: { visibility: 'hidden', allowWhenHiddenSampling: false } };
   const globalVars: Record<string, CompiledSurfaceVisibility> = {};
   for (const id of options.globalVarIds ?? []) { globalVars[id] = globalVarDefaults; }
+  const globalMarkers: Record<string, CompiledSurfaceVisibility> = {};
+  for (const id of options.globalMarkerIds ?? []) { globalMarkers[id] = globalMarkerDefaults; }
   const perPlayerVars: Record<string, CompiledSurfaceVisibility> = {};
   for (const id of options.perPlayerVarIds ?? []) { perPlayerVars[id] = perPlayerVarDefaults; }
   const derivedMetrics: Record<string, CompiledSurfaceVisibility> = {};
   for (const id of options.policyMetricIds ?? []) { derivedMetrics[id] = hiddenDefaults; }
   return {
     globalVars,
-    globalMarkers: {},
+    globalMarkers,
     perPlayerVars,
     derivedMetrics,
     victory: { currentMargin: hiddenDefaults, currentRank: hiddenDefaults },

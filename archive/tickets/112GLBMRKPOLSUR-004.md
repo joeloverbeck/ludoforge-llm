@@ -1,6 +1,6 @@
 # 112GLBMRKPOLSUR-004: Compile-agents defaults and agent compiler-core wiring
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — CNL agent compiler, compiler core agent wiring
@@ -93,3 +93,26 @@ When a `globalMarker.*` ref is encountered during agent compilation, verify the 
 
 1. `pnpm -F @ludoforge/engine build`
 2. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+Completed on 2026-04-05.
+
+Implemented the missing agent-side half of the `globalMarkers` policy-surface compilation path:
+- `compile-agents.ts` now accepts `globalMarkerIds` in `LowerAgentsOptions`
+- the no-observer fallback `surfaceVisibility` catalog now populates `globalMarkers` entries with the same public/current and public/preview defaults used on the observer side
+- `compiler-core.ts` now passes `sections.globalMarkerLattices` IDs into `lowerAgents(...)`
+
+Focused proof coverage was added in the live owning test module:
+- `compile-agents-authoring.test.ts` now proves fallback catalogs include populated `globalMarkers`
+- the same test module now proves unknown `globalMarker.*` refs fail compilation with `CNL_COMPILER_AGENT_POLICY_REF_UNKNOWN`
+
+Deviations from the original plan:
+- No separate ref-validation branch was needed in `compile-agents.ts`; the existing `parseAuthoredPolicySurfaceRef(...)` path already handled unknown marker IDs once the fallback catalog received real marker entries.
+- I explicitly checked the nearby FITL policy catalog golden, but it required no update because the primary production path already sourced populated marker visibility through the observer-derived catalog rather than the fallback path changed in this ticket.
+
+Verification run:
+1. `pnpm -F @ludoforge/engine build`
+2. `node --test packages/engine/dist/test/unit/compile-agents-authoring.test.js`
+3. `node packages/engine/dist/test/unit/policy-production-golden.test.js`
+4. `pnpm -F @ludoforge/engine test`

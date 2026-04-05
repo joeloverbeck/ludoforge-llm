@@ -3549,6 +3549,47 @@ phase: [asPhaseId('main')],
     assert.deepEqual(legalMoves(def, state), []);
   });
 
+  it('28a. admits only the satisfiable side of a dual-sided event when decision domains differ by side', () => {
+    const { def, state, actionId } = makeEventLegalMovesFixture({
+      id: 'event-dual-side-aware-admission',
+      title: 'Dual side-aware admission',
+      sideMode: 'dual',
+      unshaded: {
+        effects: [
+          eff({
+            chooseOne: {
+              internalDecisionId: 'decision:$target',
+              bind: '$target',
+              options: { query: 'enums', values: ['keep-me'] },
+            },
+          }) as GameDef['actions'][number]['effects'][number],
+        ],
+      },
+      shaded: {
+        effects: [
+          eff({
+            chooseOne: {
+              internalDecisionId: 'decision:$target',
+              bind: '$target',
+              options: { query: 'enums', values: [] },
+            },
+          }) as GameDef['actions'][number]['effects'][number],
+        ],
+      },
+    });
+
+    assert.deepEqual(legalMoves(def, state), [
+      {
+        actionId,
+        params: {
+          eventCardId: 'event-dual-side-aware-admission',
+          eventDeckId: 'deck',
+          side: 'unshaded',
+        },
+      },
+    ]);
+  });
+
   it('29. rethrows non-deferrable event decision-sequence errors', () => {
     const { def, state } = makeEventLegalMovesFixture({
       id: 'event-nondeferrable-error',

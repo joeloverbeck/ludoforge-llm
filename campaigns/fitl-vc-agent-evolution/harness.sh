@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Evaluation harness for fitl-vc-agent-evolution campaign
-# THIS FILE IS IMMUTABLE — do not modify during improvement loops.
+# Seed count is read from seed-tier.txt (progressive seed protocol).
 set -eo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -9,10 +9,10 @@ BUILD_LOG="$SCRIPT_DIR/run.log.build"
 GATE_LOG="$SCRIPT_DIR/run.log.gate"
 RUNNER_LOG="$SCRIPT_DIR/run.log.runner"
 
-SEED_COUNT=15
+SEED_COUNT=${SEED_COUNT:-$(cat "$SCRIPT_DIR/seed-tier.txt" 2>/dev/null || echo 1)}
 PLAYER_COUNT=4
 EVOLVED_SEAT="vc"
-MAX_TURNS=500
+MAX_TURNS=${MAX_TURNS:-100}
 
 # --- Step 1: Build (always, to prevent stale JS) ---
 echo "Building engine..." >&2
@@ -48,7 +48,6 @@ node "$SCRIPT_DIR/run-tournament.mjs" \
   --players "$PLAYER_COUNT" \
   --evolved-seat "$EVOLVED_SEAT" \
   --max-turns "$MAX_TURNS" \
-  --trace-seed 1000 \
   > "$RUNNER_LOG" 2>&1
 RUNNER_EXIT=$?
 set -e

@@ -21,6 +21,7 @@ export interface PartialChoice {
 export interface RenderContext {
   readonly playerID: PlayerId;
   readonly legalMoveResult: LegalMoveEnumerationResult | null;
+  readonly actionAvailabilityById?: ReadonlyMap<string, boolean>;
   readonly choicePending: ChoicePendingRequest | null;
   readonly selectedAction: ActionId | null;
   readonly partialMove: Move | null;

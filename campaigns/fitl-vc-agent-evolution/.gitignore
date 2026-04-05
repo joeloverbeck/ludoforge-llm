@@ -5,3 +5,5 @@ checkpoints.jsonl
 lessons.jsonl
 intermediates.jsonl
 program.md.backup
+seed-tier.txt
+traces/

@@ -52,6 +52,11 @@
       "selectedIndex": 1
     },
     "emergencyFallback": false,
-    "failure": null
+    "failure": null,
+    "stateFeatures": {
+      "callAmount": 20,
+      "facingBet": true,
+      "potOddsFavorable": false
+    }
   }
 }

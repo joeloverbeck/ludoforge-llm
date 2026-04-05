@@ -38,6 +38,7 @@ If that earlier ticket introduced production-corpus traversal, fixture readers, 
    - Does the module structure match the ticket?
    - Are required dependencies and scripts present?
    - If a referenced file path is stale but the intended owned artifact is uniquely discoverable and the ticket boundary stays the same, treat the path as non-blocking and note the corrected live path in your working notes.
+   - If a referenced test file path is stale, prefer the live test surface that actually owns the behavior rather than forcing edits into the obsolete path, unless the ticket explicitly requires a new dedicated test file.
 7. Build a discrepancy list for anything the ticket states that does not match reality.
 8. Check for architectural constraints the ticket may have underspecified:
    - shared type or schema ripple effects
@@ -59,11 +60,13 @@ If that earlier ticket introduced production-corpus traversal, fixture readers, 
    - update or defer overlapping sibling tickets so they do not still claim invalid staged ownership
    - keep dependency references and status values coherent across the series
    - run the repo's ticket dependency checker after the series rewrite when available
+   - if the referenced spec still mentions a deliverable that is already split into a later active sibling ticket, keep implementation anchored to the current active ticket boundary and verify that sibling ownership instead of re-absorbing the broader spec scope
 12. If the ticket is a profiling, audit, benchmark, investigation, or other gate-setting ticket:
    - identify the explicit threshold, decision gate, or downstream trigger owned by the ticket
    - verify which sibling tickets, specs, or reports depend on that gate
    - treat closure of downstream work as part of the implementation boundary when the measured result invalidates that work
    - distinguish runtime/code changes from repository-owned deliverables such as ticket outcomes, archived specs, dependency rewrites, and status updates
+   - when the diagnostic result materially disproves the stated premise of active sibling tickets, update those sibling tickets in the same turn so the active series no longer advertises invalid work
 
 ### Phase 3: Resolve Before Coding
 
@@ -80,6 +83,8 @@ If that earlier ticket introduced production-corpus traversal, fixture readers, 
     - do not force a ticket rewrite unless the implementation boundary itself changed
     - if the conflict is that a ticket or spec uses raw strings for an identifier that already has a branded domain type in the repo, preserve the ticket boundary, raise the Foundation conflict explicitly, and prefer the existing branded type once confirmed
     - if the mismatch is a narrow factual detail inside an otherwise valid ticket boundary, treat it as a bounded discrepancy plus `1-3-1`, not an automatic ticket rewrite
+    - if the original bug claim is no longer reproducible but the intended invariant is still worth proving, it is valid to convert the ticket into a proof/regression-only implementation after user confirmation rather than forcing speculative runtime code changes or closing it as not actionable
+    - if a ticket names a suspected buggy module but the live audit shows that surface already satisfies the intended invariant, it is valid to complete the ticket as an audit-plus-proof implementation with tests only and an explicit no-runtime-change outcome after user confirmation
 17. If the ticket is accurate and no blocking decision remains, proceed.
 
 ## Implementation Rules
@@ -107,9 +112,12 @@ If that earlier ticket introduced production-corpus traversal, fixture readers, 
   - authored-shape validators and unknown-key allowlists
   - compiled/kernel/runtime types
   - Zod or JSON schemas
+  - when a compiled DSL or AST field widens, both the schema-definition source file and any generated schema artifacts that encode that shape
   - diagnostics or debug snapshots
+  - exported provider interfaces and adapter wrappers that mirror shared runtime helpers or services
   - fixtures, goldens, and tests
   - manually constructed shared runtime/test fixtures such as `GameDefRuntime` or other kernel context objects
+  - if a new UI/store/model context field exists mainly to support one feature path, consider whether it should stay optional on local test-helper contracts to avoid unnecessary fixture churn, so long as production code still supplies it explicitly and the distinction is verified
 - When tightening authored `chooseN` minimums or other decision cardinality constraints:
   - check whether runtime `max` can drop below the new minimum because of resources, grants, action class, or other state-dependent caps
   - if `max < min` can occur, update legality or cost-validation in the same change so the move becomes cleanly illegal instead of failing at runtime
@@ -117,9 +125,14 @@ If that earlier ticket introduced production-corpus traversal, fixture readers, 
   - read and assess them as part of the implementation boundary
   - leave them unchanged when evidence shows no edit is required
   - state that explicit no-change decision in the final summary
+- For proof/regression tickets, prefer extending the live test module that already owns the contract under audit before creating new files solely to match stale ticket test paths.
+- If a ticket's cited production examples, cards, scenarios, or seeds are stale but the contract under audit is still valid, prefer a current deterministic reproducer or a synthetic proof fixture over forcing the obsolete example back into service.
+- For production-proof tickets that must validate behavior on live authored data, it is valid to run a bounded seed, turn, or trace scan to discover a current deterministic reproducer, then encode that discovered reproduction directly into the owned integration tests.
 - If the ticket says "no code changes", interpret that as "no production/runtime behavior changes" unless the ticket explicitly forbids repo artifact edits. Ticket/spec outcome sections, archival moves, dependency rewrites, and sibling-ticket status updates are still required when they are the owned deliverable.
+- If a diagnostic or audit ticket requires written findings but does not name a specific file, prefer an existing repo-owned report surface such as `reports/` over ephemeral local notes or ad hoc scratch files, and reference that report in the final summary.
 - When a migration adds or removes a required compiled field, treat owned production goldens that snapshot compiled catalogs, summaries, or traces as expected update surfaces unless evidence shows unexpected behavioral drift.
 - When a change alters observability, preview readiness, scoring inputs, or other behavior that can legitimately change deterministic move choice, treat owned production goldens and fixed-seed summaries as expected update surfaces unless evidence shows unexpected drift outside the ticket boundary.
+- When enriching diagnostics or trace output, prefer preserving the existing coarse summary field and adding an optional detail field unless the ticket explicitly owns a breaking schema redesign.
 - When a completed gate ticket proves downstream active tickets are not actionable, update those sibling tickets in the same turn so their status, deps, and scope text no longer advertise invalid work. Do not leave the series in a partially-invalid staged state.
 
 ## Verification
@@ -135,6 +148,7 @@ Before claiming completion:
    - if the change affects generated artifacts or schemas, regenerate or validate them explicitly
    - do not run verification commands in parallel when they read from or rewrite the same generated output tree such as `dist/`
 6. Prefer the narrowest commands that validate the real changed code path, not stale build output.
+   - for documentation-only follow-up tickets whose examples depend on behavior already verified by an archived or completed prerequisite ticket, direct artifact inspection plus dependency-integrity checks may be sufficient unless the doc change itself introduces a new executable artifact
 7. If broader failing checks remain:
    - determine whether they are inside the corrected ticket boundary or are owned by another active ticket
    - if they are outside the corrected boundary and already covered by an active ticket, do not silently absorb that scope
@@ -147,6 +161,7 @@ Before claiming completion:
    - when a seeded helper no longer reaches the intended semantic state, retarget it to a current deterministic seed or turn that still exercises the same invariant rather than weakening the assertion
    - when a compiled fast path is added in front of an interpreter, explicitly test malformed and unsupported shapes to confirm the compiler falls back cleanly instead of swallowing existing validator or runtime-boundary behavior
    - when a new runtime fast path depends on enriched context objects, caches, or prebuilt runtime indexes, explicitly check callers that still construct minimal or partial runtime contexts so the fast path falls back cleanly instead of breaking helper-built tests
+   - if a primarily test-only ticket includes a vague non-functional regression clause such as "no performance regression" but does not name an owned benchmark surface, baseline artifact, threshold, or command, do not invent an ad hoc harness by default; either resolve the clause with `1-3-1` or satisfy it through the nearest existing regression suite the repo already treats as authoritative
 9. If `node --test` or another runner reports only a top-level file failure:
    - rerun the failing file as narrowly as possible
    - use test-name filtering or direct helper reproduction when needed to isolate the failing assertion before editing code
@@ -230,6 +245,7 @@ Optional series consistency pass after a completed gate ticket:
 - This skill replaces Claude-specific invocation arguments with normal Codex conversation context.
 - Do not rely on Claude-only skills or slash-command behavior.
 - Execute the implementation directly once the ticket is verified and no blocking discrepancy remains.
+- When inspecting markdown from the shell, avoid unescaped backticks in search patterns; prefer plain-string anchors or direct file reads for markdown sections that include inline code.
 
 ## Example Prompts
 

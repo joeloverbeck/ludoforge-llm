@@ -12,7 +12,7 @@
  * Output (stdout, last line): JSON with { compositeScore, avgMargin, winRate, ... }
  */
 
-import { existsSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -68,6 +68,7 @@ const SEED_COUNT = Number(getArg('seeds', '3'));
 const PLAYER_COUNT = Number(getArg('players', '4'));
 const EVOLVED_SEAT = getArg('evolved-seat', 'vc');
 const MAX_TURNS = Number(getArg('max-turns', '500'));
+const TRACE_ALL = getArg('trace-all', 'true') === 'true';
 const TRACE_SEED = getArg('trace-seed', null);
 
 // ---------------------------------------------------------------------------
@@ -180,6 +181,7 @@ let truncated = 0;
 let errors = 0;
 let totalMargin = 0;
 let traceSaved = false;
+const traceDir = join(HERE, 'traces');
 
 for (let seedOffset = 0; seedOffset < SEED_COUNT; seedOffset++) {
   const seed = 1000 + seedOffset;
@@ -227,8 +229,11 @@ for (let seedOffset = 0; seedOffset < SEED_COUNT; seedOffset++) {
       `won=${vcWon}, stop=${trace.stopReason}\n`,
     );
 
-    // Save trace for one representative game (for OBSERVE phase analysis)
-    if (TRACE_SEED !== null && seed === Number(TRACE_SEED) && !traceSaved) {
+    // Save trace — all seeds when TRACE_ALL, or single seed via --trace-seed
+    const shouldSaveTrace = TRACE_ALL ||
+      (TRACE_SEED !== null && seed === Number(TRACE_SEED) && !traceSaved);
+
+    if (shouldSaveTrace) {
       const evolvedMoves = trace.moves
         .filter((m) => Number(m.player) === evolvedPlayerIndex)
         .map((m) => ({
@@ -255,9 +260,13 @@ for (let seedOffset = 0; seedOffset < SEED_COUNT; seedOffset++) {
         evolvedMoves,
       };
 
-      const tracePath = join(HERE, 'last-trace.json');
-      writeFileSync(tracePath, JSON.stringify(traceSummary, null, 2));
-      traceSaved = true;
+      if (TRACE_ALL) {
+        mkdirSync(traceDir, { recursive: true });
+        writeFileSync(join(traceDir, `trace-${seed}.json`), JSON.stringify(traceSummary, null, 2));
+      } else {
+        writeFileSync(join(HERE, 'last-trace.json'), JSON.stringify(traceSummary, null, 2));
+        traceSaved = true;
+      }
     }
   } catch (err) {
     process.stderr.write(`Seed ${seed} error: ${err.message}\n`);

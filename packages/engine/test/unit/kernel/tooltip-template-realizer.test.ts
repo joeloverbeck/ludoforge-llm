@@ -300,7 +300,8 @@ describe('realizeContentPlan', () => {
     it('realizes select with target: values', () => {
       const msg: TooltipMessage = { kind: 'select', astPath: 'r', target: 'values', bounds: { min: 0, max: 100 } };
       const result = realizeContentPlan(plan([msg]), undefined);
-      assert.equal(result.steps[0]!.lines[0]!.text, 'Select up to 100 values');
+      // max >= 99 is treated as unlimited — upper bound omitted
+      assert.equal(result.steps[0]!.lines[0]!.text, 'Select values');
     });
 
     it('realizes select with target: markers', () => {
@@ -724,10 +725,11 @@ describe('realizeContentPlan', () => {
       assert.equal(result.steps[0]!.lines[0]!.text, 'same text');
     });
 
-    it('shows just condition when description is empty', () => {
+    it('suppresses modifier line when description is empty', () => {
       const msg: TooltipMessage = { kind: 'modifier', astPath: 'r', condition: 'monsoon', description: '' };
       const result = realizeContentPlan(plan([msg]), undefined);
-      assert.equal(result.steps[0]!.lines[0]!.text, 'monsoon');
+      // Empty-description modifiers are suppressed — the Modifiers section shows capability effects
+      assert.equal(result.steps[0]!.lines.length, 0);
     });
   });
 

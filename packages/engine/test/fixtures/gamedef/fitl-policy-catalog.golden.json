@@ -605,6 +605,76 @@
           "aggregates": [],
           "strategicConditions": []
         }
+      },
+      "vcGuerrillaCount": {
+        "type": "number",
+        "costClass": "state",
+        "expr": {
+          "kind": "globalTokenAgg",
+          "tokenFilter": {
+            "props": {
+              "faction": {
+                "eq": "VC"
+              },
+              "type": {
+                "eq": "guerrilla"
+              }
+            }
+          },
+          "aggOp": "count",
+          "zoneScope": "board"
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "vcBaseCount": {
+        "type": "number",
+        "costClass": "state",
+        "expr": {
+          "kind": "globalTokenAgg",
+          "tokenFilter": {
+            "props": {
+              "faction": {
+                "eq": "VC"
+              },
+              "type": {
+                "eq": "base"
+              }
+            }
+          },
+          "aggOp": "count",
+          "zoneScope": "board"
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "turnRound": {
+        "type": "number",
+        "costClass": "state",
+        "expr": {
+          "kind": "ref",
+          "ref": {
+            "kind": "turnIntrinsic",
+            "intrinsic": "round"
+          }
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
       }
     },
     "candidateFeatures": {
@@ -1412,6 +1482,108 @@
           "aggregates": [],
           "strategicConditions": []
         }
+      },
+      "penalizeAttack": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "candidate",
+        "weight": {
+          "kind": "literal",
+          "value": -0.1
+        },
+        "value": {
+          "kind": "op",
+          "op": "boolToNumber",
+          "args": [
+            {
+              "kind": "ref",
+              "ref": {
+                "kind": "candidateTag",
+                "tagName": "attack"
+              }
+            }
+          ]
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "observeGameState": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "state",
+        "weight": {
+          "kind": "literal",
+          "value": 0
+        },
+        "value": {
+          "kind": "op",
+          "op": "add",
+          "args": [
+            {
+              "kind": "ref",
+              "ref": {
+                "kind": "library",
+                "refKind": "stateFeature",
+                "id": "selfResources"
+              }
+            },
+            {
+              "kind": "op",
+              "op": "add",
+              "args": [
+                {
+                  "kind": "ref",
+                  "ref": {
+                    "kind": "library",
+                    "refKind": "stateFeature",
+                    "id": "vcGuerrillaCount"
+                  }
+                },
+                {
+                  "kind": "op",
+                  "op": "add",
+                  "args": [
+                    {
+                      "kind": "ref",
+                      "ref": {
+                        "kind": "library",
+                        "refKind": "stateFeature",
+                        "id": "vcBaseCount"
+                      }
+                    },
+                    {
+                      "kind": "ref",
+                      "ref": {
+                        "kind": "library",
+                        "refKind": "stateFeature",
+                        "id": "turnRound"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [
+            "selfResources",
+            "turnRound",
+            "vcBaseCount",
+            "vcGuerrillaCount"
+          ],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
       }
     },
     "tieBreakers": {
@@ -1677,10 +1849,7 @@
       "observerName": "currentPlayer",
       "params": {
         "projectedMarginWeight": 5,
-        "eventWeight": 3,
-        "rallyWeight": 3,
-        "taxWeight": 2,
-        "resourceWeight": 0.03
+        "rallyWeight": 3
       },
       "use": {
         "pruningRules": [
@@ -1688,11 +1857,10 @@
         ],
         "considerations": [
           "preferProjectedSelfMargin",
-          "preserveResources",
-          "preferEvent",
           "preferRallyWeighted",
-          "preferTaxWeighted",
-          "preferPopulousTargets"
+          "penalizeAttack",
+          "preferPopulousTargets",
+          "observeGameState"
         ],
         "tieBreakers": [
           "preferCheapTargetSpaces",
@@ -1708,7 +1876,10 @@
       "plan": {
         "stateFeatures": [
           "selfMargin",
-          "selfResources"
+          "selfResources",
+          "turnRound",
+          "vcBaseCount",
+          "vcGuerrillaCount"
         ],
         "candidateFeatures": [
           "projectedSelfMargin",
@@ -1719,14 +1890,13 @@
         ],
         "considerations": [
           "preferProjectedSelfMargin",
-          "preserveResources",
-          "preferEvent",
           "preferRallyWeighted",
-          "preferTaxWeighted",
-          "preferPopulousTargets"
+          "penalizeAttack",
+          "preferPopulousTargets",
+          "observeGameState"
         ]
       },
-      "fingerprint": "68cca33c9b26be24b9199dc0061878a644d620666bc2f5ea36e85c2ffa2fddb3"
+      "fingerprint": "bca64570620afb148ce5b5abf723519284684ca3c1eae3f0fd878aa2535f841a"
     }
   },
   "bindingsBySeat": {
@@ -1735,5 +1905,5 @@
     "nva": "nva-baseline",
     "vc": "vc-evolved"
   },
-  "catalogFingerprint": "07ccaf531029b3891d78fdb90cbb040dc2fa9f668db07d8f142107b00a873014"
+  "catalogFingerprint": "34c287c6546377b22a89cad6956958d765baad02a2296c21324b05381d3ce4e1"
 }

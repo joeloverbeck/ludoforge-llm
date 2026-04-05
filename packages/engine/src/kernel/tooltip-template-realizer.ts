@@ -39,6 +39,7 @@ import type { VerbalizationDef } from './verbalization-types.js';
 import type { LabelContext } from './tooltip-label-resolver.js';
 import { buildLabelContext, resolveLabel, resolveSentencePlan } from './tooltip-label-resolver.js';
 import { humanizeConditionWithLabels } from './tooltip-modifier-humanizer.js';
+import { humanizeIdentifier } from './tooltip-humanizer.js';
 
 // ---------------------------------------------------------------------------
 // Template functions — one per message kind
@@ -65,6 +66,11 @@ const resolveSelectFilter = (msg: SelectMessage, ctx: LabelContext, count?: numb
   return undefined;
 };
 
+/** Sentinel threshold: bounds >= this value mean "unlimited". */
+const UNLIMITED_SENTINEL = 99;
+
+const isUnlimited = (n: number): boolean => n >= UNLIMITED_SENTINEL;
+
 const realizeSelect = (msg: SelectMessage, ctx: LabelContext): string => {
   // When optionHints exist and there are few options, show them as choices
   if (msg.optionHints !== undefined && msg.optionHints.length > 0 && msg.optionHints.length <= 5) {
@@ -72,8 +78,11 @@ const realizeSelect = (msg: SelectMessage, ctx: LabelContext): string => {
     // When bounds are present with 'items' target, include hints as context
     if (msg.bounds !== undefined && msg.target === 'items') {
       const { min, max } = msg.bounds;
+      if (min === 0 && max === 0) return '';
+      if (isUnlimited(max)) return `Select from: ${options}`;
       if (min === max) return `Select ${min} from: ${options}`;
       if (min === 0) return `Select up to ${max} from: ${options}`;
+      if (min > max) return `Select ${min} from: ${options}`;
       return `Select ${min}-${max} from: ${options}`;
     }
     return `Choose from: ${options}`;
@@ -100,8 +109,24 @@ const realizeSelect = (msg: SelectMessage, ctx: LabelContext): string => {
 
   const { min, max } = msg.bounds;
 
+  // Suppress zero-selection lines (select 0 of 0 is a no-op)
+  if (min === 0 && max === 0) return '';
+
   const hasFilter = msg.conditionAST !== undefined || msg.filter !== undefined;
   const hasContext = branchResolved !== undefined || hasFilter;
+
+  // Unlimited upper bound: omit the count
+  if (isUnlimited(max)) {
+    return `Select ${targetLabel}${hintSuffix ?? ''}`;
+  }
+
+  // Inverted range (min > max): use min as single value
+  if (min > max) {
+    const label = hasContext
+      ? (branchResolved ?? resolveSelectFilter(msg, ctx, min) ?? msg.target)
+      : min === 1 ? singularTarget(msg.target) : msg.target;
+    return `Select ${min} ${label}${hintSuffix ?? ''}`;
+  }
 
   if (min === max) {
     const label = hasContext
@@ -230,13 +255,85 @@ const realizeChoose = (msg: ChooseMessage, ctx: LabelContext): string => {
 const realizeRoll = (msg: RollMessage): string =>
   `Roll ${msg.range.min}-${msg.range.max}`;
 
+/**
+ * Detect kebab-case tokens (3+ segments) and humanize them.
+ * Matches patterns like "Cap-assault-cobras-shaded-cost", "Sweep-loc-hop",
+ * "Place-from-available-or-map" but avoids short hyphenated words.
+ */
+const KEBAB_PATTERN = /\b[A-Za-z]+-[a-z]+-[a-z]+(?:-[a-z]+)*/g;
+
+const humanizeKebabTokens = (text: string): string =>
+  text.replace(KEBAB_PATTERN, (match) => humanizeIdentifier(match));
+
+/** Detect $variableName references and humanize them (strip $ and title-case). */
+const DOLLAR_VAR_PATTERN = /\$([a-zA-Z_]\w*)/g;
+
+const humanizeDollarVars = (text: string): string =>
+  text.replace(DOLLAR_VAR_PATTERN, (_match, name: string) => humanizeIdentifier(name));
+
+/**
+ * Detect lines that are humanized capability-ID noise or identifier-only summaries.
+ * Matches:
+ * - Lines starting with "Cap " (capability prefix)
+ * - Lines that are 3+ Title Case words with no numbers, operators, or natural verbs
+ *   (e.g., "Sweep Loc Hop", "Place From Available Or Map")
+ */
+const NOISE_IDENTIFIER_PATTERN = /^(?:[A-Z][a-zA-Z]*\s+){2,}[A-Z][a-zA-Z]*$/;
+const ACTION_STARTS = /^(?:Select|Pay|Gain|Move|Place|Remove|Activate|Deactivate|Create|Destroy|Reveal|Draw|Shuffle|Set|Choose|Roll|Transfer|Shift|Toggle|Advance|Grant|Conceal)\b/;
+
+const isNoiseLine = (text: string): boolean => {
+  if (/^Cap\s+[A-Z]/.test(text)) return true;
+  if (NOISE_IDENTIFIER_PATTERN.test(text) && !ACTION_STARTS.test(text)) return true;
+  return false;
+};
+
+/**
+ * Simplify common condition/filter patterns in realized text to be more natural.
+ * Transforms technical predicates into prepositional phrases.
+ */
+const simplifyConditionText = (text: string): string => {
+  let result = text;
+  // "number of X pieces > 0" → "with X"
+  result = result.replace(/number of (.+?) pieces > 0/gi, 'with $1');
+  // "Faction is X and type in Y" → "X Y" (only when at the start of a filter expression)
+  result = result.replace(/Faction is (\w+) and type in ([^,]+(?:,\s*[^,]+)*)/gi, '$1 $2');
+  // "zone Category in X" → "in X" (space category filter)
+  result = result.replace(/zone Category (?:is|in) /gi, 'in ');
+  // "zone Country is not X" → "not in X"
+  result = result.replace(/zone Country is not /gi, 'not in ');
+  // Suppress internal state tracking: "X moved is true" → remove
+  result = result.replace(/\s+and\s+\w+patrol moved is true/gi, '');
+  result = result.replace(/^\w+patrol moved is true$/gi, '');
+  // "zone Id in Target Spaces and not" → "in selected spaces, not"
+  result = result.replace(/zone Id in Target Spaces(?:\s+and\s+not)?/gi, 'in selected spaces');
+  // Clean up "Terrain Tags includes X" → "without X terrain"
+  result = result.replace(/Terrain Tags includes (\w+)/gi, 'without $1 terrain');
+  // Humanize dot-separated property chains: "X.Y" → "X Y"
+  result = result.replace(/\b([A-Za-z]+)\.([A-Za-z]\w*)\b/g, '$1 $2');
+  // Suppress "Moved to true/false" internal state
+  result = result.replace(/\s*Moved to (?:true|false)\s*/gi, ' ');
+  // Strip trailing arithmetic: "X * -1", "X * -4 or -3"
+  result = result.replace(/ \* -?\d+(?:\s+or\s+-?\d+)?/g, '');
+  // Strip standalone arithmetic expressions: "1 * -4 or -3" → ""
+  result = result.replace(/^\d+\s*\*\s*-?\d+(?:\s+or\s+-?\d+)?$/, '');
+  // Replace "Sub Space" jargon with natural language
+  result = result.replace(/\bSub Space\b/g, 'this space');
+  // Clean up excess whitespace
+  result = result.replace(/\s{2,}/g, ' ').trim();
+  return result;
+};
+
 const realizeModifier = (msg: ModifierMessage): string => {
-  // When description is empty (no pre-authored effect text), render just the condition
-  if (msg.description.length === 0) return msg.condition;
+  const condition = humanizeKebabTokens(msg.condition);
+  const description = humanizeKebabTokens(msg.description);
+  // When description is empty (no pre-authored effect text), suppress the line entirely.
+  // The Modifiers section at the bottom already shows capability effects with descriptive text —
+  // inline lines with no description are pure noise (e.g., "Cap Assault Cobras Shaded Cost").
+  if (description.length === 0) return '';
   // When description duplicates the condition, render just once
-  if (msg.description === msg.condition) return msg.description;
+  if (description === condition) return description;
   // Render "condition: effect description" (no "If " prefix — condition is already clean)
-  return `${msg.condition}: ${msg.description}`;
+  return `${condition}: ${description}`;
 };
 
 const realizeBlocker = (msg: BlockerMessage): string =>
@@ -333,9 +430,17 @@ const realizeStep = (
 ): ContentStep => {
   const lines: RealizedLine[] = [];
   for (const m of planStep.messages) {
-    const text = realizeMessage(m, ctx);
-    if (text.length > 0) {
-      lines.push({ text, astPath: m.astPath });
+    const raw = realizeMessage(m, ctx);
+    if (raw.length > 0) {
+      // Post-realization pass: humanize, simplify, and suppress noise
+      const cleaned = simplifyConditionText(humanizeKebabTokens(humanizeDollarVars(raw)));
+      if (cleaned.length > 0
+        && !isNoiseLine(cleaned)
+        // Suppress summary-kind messages that are purely identifier text (no numbers or operators)
+        && !(m.kind === 'summary' && NOISE_IDENTIFIER_PATTERN.test(cleaned))
+      ) {
+        lines.push({ text: cleaned, astPath: m.astPath });
+      }
     }
   }
   const subSteps = planStep.subSteps !== undefined

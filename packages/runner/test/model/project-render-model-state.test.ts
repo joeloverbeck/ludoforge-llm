@@ -144,6 +144,7 @@ function makeRenderContext(
   return {
     playerID,
     legalMoveResult: { moves: [], warnings: [] },
+    actionAvailabilityById: new Map<string, boolean>(),
     choicePending: null,
     selectedAction: null,
     partialMove: null,

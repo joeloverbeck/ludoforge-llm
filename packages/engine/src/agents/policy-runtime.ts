@@ -62,6 +62,7 @@ export interface PolicyPreviewSurfaceProvider {
     ref: CompiledPreviewSurfaceRef,
   ): PolicyPreviewSurfaceResolution;
   getOutcome(candidate: PolicyRuntimeCandidate): PolicyPreviewTraceOutcome;
+  getFailureReason(candidate: PolicyRuntimeCandidate): string | undefined;
 }
 
 export interface PolicyCompletionProvider {
@@ -261,6 +262,9 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
       },
       getOutcome(candidate) {
         return previewRuntime.getOutcome(candidate);
+      },
+      getFailureReason(candidate) {
+        return previewRuntime.getFailureReason(candidate);
       },
     },
     ...(input.completion === undefined

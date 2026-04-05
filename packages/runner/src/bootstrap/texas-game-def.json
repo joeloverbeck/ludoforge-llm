@@ -12906,6 +12906,731 @@
   "turnOrder": {
     "type": "roundRobin"
   },
+  "observers": {
+    "schemaVersion": 1,
+    "observers": {
+      "currentPlayer": {
+        "fingerprint": "0b0a763858f7d2c7e71fb6b8deb9a399e837893bc14a71681fdd4f9de640fda3",
+        "surfaces": {
+          "globalVars": {
+            "pot": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "currentBet": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "lastRaiseSize": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "dealerSeat": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "smallBlind": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "bigBlind": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "ante": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "blindLevel": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "handsPlayed": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "handPhase": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "activePlayers": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "actingPosition": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "bettingClosed": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "preflopBigBlindSeat": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "preflopBigBlindOptionOpen": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "oddChipRemainder": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": true
+              }
+            }
+          },
+          "perPlayerVars": {
+            "chipStack": {
+              "current": "seatVisible",
+              "preview": {
+                "visibility": "seatVisible",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "streetBet": {
+              "current": "seatVisible",
+              "preview": {
+                "visibility": "seatVisible",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "totalBet": {
+              "current": "seatVisible",
+              "preview": {
+                "visibility": "seatVisible",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "handActive": {
+              "current": "seatVisible",
+              "preview": {
+                "visibility": "seatVisible",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "allIn": {
+              "current": "seatVisible",
+              "preview": {
+                "visibility": "seatVisible",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "actedSinceLastFullRaise": {
+              "current": "seatVisible",
+              "preview": {
+                "visibility": "seatVisible",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "eliminated": {
+              "current": "seatVisible",
+              "preview": {
+                "visibility": "seatVisible",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "seatIndex": {
+              "current": "seatVisible",
+              "preview": {
+                "visibility": "seatVisible",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "showdownScore": {
+              "current": "seatVisible",
+              "preview": {
+                "visibility": "seatVisible",
+                "allowWhenHiddenSampling": true
+              }
+            }
+          },
+          "derivedMetrics": {},
+          "victory": {
+            "currentMargin": {
+              "current": "hidden",
+              "preview": {
+                "visibility": "hidden",
+                "allowWhenHiddenSampling": false
+              }
+            },
+            "currentRank": {
+              "current": "hidden",
+              "preview": {
+                "visibility": "hidden",
+                "allowWhenHiddenSampling": false
+              }
+            }
+          },
+          "activeCardIdentity": {
+            "current": "hidden",
+            "preview": {
+              "visibility": "hidden",
+              "allowWhenHiddenSampling": false
+            }
+          },
+          "activeCardTag": {
+            "current": "hidden",
+            "preview": {
+              "visibility": "hidden",
+              "allowWhenHiddenSampling": false
+            }
+          },
+          "activeCardMetadata": {
+            "current": "hidden",
+            "preview": {
+              "visibility": "hidden",
+              "allowWhenHiddenSampling": false
+            }
+          },
+          "activeCardAnnotation": {
+            "current": "hidden",
+            "preview": {
+              "visibility": "hidden",
+              "allowWhenHiddenSampling": false
+            }
+          }
+        },
+        "zones": {
+          "entries": {
+            "hand": {
+              "tokens": "owner",
+              "order": "owner"
+            },
+            "deck": {
+              "tokens": "hidden",
+              "order": "hidden"
+            },
+            "community": {
+              "tokens": "public",
+              "order": "public"
+            },
+            "burn": {
+              "tokens": "hidden",
+              "order": "hidden"
+            },
+            "muck": {
+              "tokens": "hidden",
+              "order": "hidden"
+            }
+          }
+        }
+      },
+      "omniscient": {
+        "fingerprint": "46409e518ac4630241c5123fae833448d56b75ac5738cfc50f91c4e02d12901e",
+        "surfaces": {
+          "globalVars": {
+            "pot": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": false
+              }
+            },
+            "currentBet": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": false
+              }
+            },
+            "lastRaiseSize": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": false
+              }
+            },
+            "dealerSeat": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": false
+              }
+            },
+            "smallBlind": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": false
+              }
+            },
+            "bigBlind": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": false
+              }
+            },
+            "ante": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": false
+              }
+            },
+            "blindLevel": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": false
+              }
+            },
+            "handsPlayed": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": false
+              }
+            },
+            "handPhase": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": false
+              }
+            },
+            "activePlayers": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": false
+              }
+            },
+            "actingPosition": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": false
+              }
+            },
+            "bettingClosed": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": false
+              }
+            },
+            "preflopBigBlindSeat": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": false
+              }
+            },
+            "preflopBigBlindOptionOpen": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": false
+              }
+            },
+            "oddChipRemainder": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": false
+              }
+            }
+          },
+          "perPlayerVars": {
+            "chipStack": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": false
+              }
+            },
+            "streetBet": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": false
+              }
+            },
+            "totalBet": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": false
+              }
+            },
+            "handActive": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": false
+              }
+            },
+            "allIn": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": false
+              }
+            },
+            "actedSinceLastFullRaise": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": false
+              }
+            },
+            "eliminated": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": false
+              }
+            },
+            "seatIndex": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": false
+              }
+            },
+            "showdownScore": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": false
+              }
+            }
+          },
+          "derivedMetrics": {},
+          "victory": {
+            "currentMargin": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": false
+              }
+            },
+            "currentRank": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": false
+              }
+            }
+          },
+          "activeCardIdentity": {
+            "current": "public",
+            "preview": {
+              "visibility": "public",
+              "allowWhenHiddenSampling": false
+            }
+          },
+          "activeCardTag": {
+            "current": "public",
+            "preview": {
+              "visibility": "public",
+              "allowWhenHiddenSampling": false
+            }
+          },
+          "activeCardMetadata": {
+            "current": "public",
+            "preview": {
+              "visibility": "public",
+              "allowWhenHiddenSampling": false
+            }
+          },
+          "activeCardAnnotation": {
+            "current": "public",
+            "preview": {
+              "visibility": "public",
+              "allowWhenHiddenSampling": false
+            }
+          }
+        },
+        "zones": {
+          "entries": {},
+          "defaultEntry": {
+            "tokens": "public",
+            "order": "public"
+          }
+        }
+      },
+      "default": {
+        "fingerprint": "d7c0f2e377d7867ff304fbe19b30b01136ded443ae94cbeae38c9e9e8874553a",
+        "surfaces": {
+          "globalVars": {
+            "pot": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "currentBet": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "lastRaiseSize": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "dealerSeat": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "smallBlind": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "bigBlind": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "ante": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "blindLevel": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "handsPlayed": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "handPhase": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "activePlayers": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "actingPosition": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "bettingClosed": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "preflopBigBlindSeat": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "preflopBigBlindOptionOpen": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "oddChipRemainder": {
+              "current": "public",
+              "preview": {
+                "visibility": "public",
+                "allowWhenHiddenSampling": true
+              }
+            }
+          },
+          "perPlayerVars": {
+            "chipStack": {
+              "current": "seatVisible",
+              "preview": {
+                "visibility": "seatVisible",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "streetBet": {
+              "current": "seatVisible",
+              "preview": {
+                "visibility": "seatVisible",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "totalBet": {
+              "current": "seatVisible",
+              "preview": {
+                "visibility": "seatVisible",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "handActive": {
+              "current": "seatVisible",
+              "preview": {
+                "visibility": "seatVisible",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "allIn": {
+              "current": "seatVisible",
+              "preview": {
+                "visibility": "seatVisible",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "actedSinceLastFullRaise": {
+              "current": "seatVisible",
+              "preview": {
+                "visibility": "seatVisible",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "eliminated": {
+              "current": "seatVisible",
+              "preview": {
+                "visibility": "seatVisible",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "seatIndex": {
+              "current": "seatVisible",
+              "preview": {
+                "visibility": "seatVisible",
+                "allowWhenHiddenSampling": true
+              }
+            },
+            "showdownScore": {
+              "current": "seatVisible",
+              "preview": {
+                "visibility": "seatVisible",
+                "allowWhenHiddenSampling": true
+              }
+            }
+          },
+          "derivedMetrics": {},
+          "victory": {
+            "currentMargin": {
+              "current": "hidden",
+              "preview": {
+                "visibility": "hidden",
+                "allowWhenHiddenSampling": false
+              }
+            },
+            "currentRank": {
+              "current": "hidden",
+              "preview": {
+                "visibility": "hidden",
+                "allowWhenHiddenSampling": false
+              }
+            }
+          },
+          "activeCardIdentity": {
+            "current": "hidden",
+            "preview": {
+              "visibility": "hidden",
+              "allowWhenHiddenSampling": false
+            }
+          },
+          "activeCardTag": {
+            "current": "hidden",
+            "preview": {
+              "visibility": "hidden",
+              "allowWhenHiddenSampling": false
+            }
+          },
+          "activeCardMetadata": {
+            "current": "hidden",
+            "preview": {
+              "visibility": "hidden",
+              "allowWhenHiddenSampling": false
+            }
+          },
+          "activeCardAnnotation": {
+            "current": "hidden",
+            "preview": {
+              "visibility": "hidden",
+              "allowWhenHiddenSampling": false
+            }
+          }
+        }
+      }
+    },
+    "defaultObserverName": "default",
+    "catalogFingerprint": "000aee60773c0c3b22bf0ec25cf5f1e2cc7ff9a679b718e8e0aee7cf734d968c"
+  },
   "agents": {
     "schemaVersion": 2,
     "surfaceVisibility": {
@@ -13104,6 +13829,34 @@
             "allowWhenHiddenSampling": false
           }
         }
+      },
+      "activeCardIdentity": {
+        "current": "hidden",
+        "preview": {
+          "visibility": "hidden",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "activeCardTag": {
+        "current": "hidden",
+        "preview": {
+          "visibility": "hidden",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "activeCardMetadata": {
+        "current": "hidden",
+        "preview": {
+          "visibility": "hidden",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "activeCardAnnotation": {
+        "current": "hidden",
+        "preview": {
+          "visibility": "hidden",
+          "allowWhenHiddenSampling": false
+        }
       }
     },
     "parameterDefs": {},
@@ -13157,7 +13910,8 @@
             "parameters": [],
             "stateFeatures": [],
             "candidateFeatures": [],
-            "aggregates": []
+            "aggregates": [],
+            "strategicConditions": []
           }
         },
         "facingBet": {
@@ -13187,7 +13941,8 @@
               "callAmount"
             ],
             "candidateFeatures": [],
-            "aggregates": []
+            "aggregates": [],
+            "strategicConditions": []
           }
         },
         "potOddsFavorable": {
@@ -13255,7 +14010,8 @@
               "callAmount"
             ],
             "candidateFeatures": [],
-            "aggregates": []
+            "aggregates": [],
+            "strategicConditions": []
           }
         },
         "handHighCard": {
@@ -13272,7 +14028,8 @@
             "parameters": [],
             "stateFeatures": [],
             "candidateFeatures": [],
-            "aggregates": []
+            "aggregates": [],
+            "strategicConditions": []
           }
         },
         "handLowCard": {
@@ -13289,7 +14046,8 @@
             "parameters": [],
             "stateFeatures": [],
             "candidateFeatures": [],
-            "aggregates": []
+            "aggregates": [],
+            "strategicConditions": []
           }
         },
         "premiumHand": {
@@ -13319,7 +14077,8 @@
               "handHighCard"
             ],
             "candidateFeatures": [],
-            "aggregates": []
+            "aggregates": [],
+            "strategicConditions": []
           }
         },
         "isDealer": {
@@ -13355,7 +14114,8 @@
             "parameters": [],
             "stateFeatures": [],
             "candidateFeatures": [],
-            "aggregates": []
+            "aggregates": [],
+            "strategicConditions": []
           }
         },
         "hasPair": {
@@ -13390,146 +14150,12 @@
               "handLowCard"
             ],
             "candidateFeatures": [],
-            "aggregates": []
+            "aggregates": [],
+            "strategicConditions": []
           }
         }
       },
       "candidateFeatures": {
-        "isCheck": {
-          "type": "boolean",
-          "costClass": "candidate",
-          "expr": {
-            "kind": "op",
-            "op": "eq",
-            "args": [
-              {
-                "kind": "ref",
-                "ref": {
-                  "kind": "candidateIntrinsic",
-                  "intrinsic": "actionId"
-                }
-              },
-              {
-                "kind": "literal",
-                "value": "check"
-              }
-            ]
-          },
-          "dependencies": {
-            "parameters": [],
-            "stateFeatures": [],
-            "candidateFeatures": [],
-            "aggregates": []
-          }
-        },
-        "isCall": {
-          "type": "boolean",
-          "costClass": "candidate",
-          "expr": {
-            "kind": "op",
-            "op": "eq",
-            "args": [
-              {
-                "kind": "ref",
-                "ref": {
-                  "kind": "candidateIntrinsic",
-                  "intrinsic": "actionId"
-                }
-              },
-              {
-                "kind": "literal",
-                "value": "call"
-              }
-            ]
-          },
-          "dependencies": {
-            "parameters": [],
-            "stateFeatures": [],
-            "candidateFeatures": [],
-            "aggregates": []
-          }
-        },
-        "isRaise": {
-          "type": "boolean",
-          "costClass": "candidate",
-          "expr": {
-            "kind": "op",
-            "op": "eq",
-            "args": [
-              {
-                "kind": "ref",
-                "ref": {
-                  "kind": "candidateIntrinsic",
-                  "intrinsic": "actionId"
-                }
-              },
-              {
-                "kind": "literal",
-                "value": "raise"
-              }
-            ]
-          },
-          "dependencies": {
-            "parameters": [],
-            "stateFeatures": [],
-            "candidateFeatures": [],
-            "aggregates": []
-          }
-        },
-        "isAllIn": {
-          "type": "boolean",
-          "costClass": "candidate",
-          "expr": {
-            "kind": "op",
-            "op": "eq",
-            "args": [
-              {
-                "kind": "ref",
-                "ref": {
-                  "kind": "candidateIntrinsic",
-                  "intrinsic": "actionId"
-                }
-              },
-              {
-                "kind": "literal",
-                "value": "allIn"
-              }
-            ]
-          },
-          "dependencies": {
-            "parameters": [],
-            "stateFeatures": [],
-            "candidateFeatures": [],
-            "aggregates": []
-          }
-        },
-        "isFold": {
-          "type": "boolean",
-          "costClass": "candidate",
-          "expr": {
-            "kind": "op",
-            "op": "eq",
-            "args": [
-              {
-                "kind": "ref",
-                "ref": {
-                  "kind": "candidateIntrinsic",
-                  "intrinsic": "actionId"
-                }
-              },
-              {
-                "kind": "literal",
-                "value": "fold"
-              }
-            ]
-          },
-          "dependencies": {
-            "parameters": [],
-            "stateFeatures": [],
-            "candidateFeatures": [],
-            "aggregates": []
-          }
-        },
         "raiseAmount": {
           "type": "number",
           "costClass": "candidate",
@@ -13554,14 +14180,18 @@
             "parameters": [],
             "stateFeatures": [],
             "candidateFeatures": [],
-            "aggregates": []
+            "aggregates": [],
+            "strategicConditions": []
           }
         }
       },
       "candidateAggregates": {},
       "pruningRules": {},
-      "scoreTerms": {
+      "considerations": {
         "preferCheck": {
+          "scopes": [
+            "move"
+          ],
           "costClass": "candidate",
           "weight": {
             "kind": "literal",
@@ -13574,9 +14204,8 @@
               {
                 "kind": "ref",
                 "ref": {
-                  "kind": "library",
-                  "refKind": "candidateFeature",
-                  "id": "isCheck"
+                  "kind": "candidateTag",
+                  "tagName": "check"
                 }
               }
             ]
@@ -13584,13 +14213,15 @@
           "dependencies": {
             "parameters": [],
             "stateFeatures": [],
-            "candidateFeatures": [
-              "isCheck"
-            ],
-            "aggregates": []
+            "candidateFeatures": [],
+            "aggregates": [],
+            "strategicConditions": []
           }
         },
         "preferCall": {
+          "scopes": [
+            "move"
+          ],
           "costClass": "candidate",
           "weight": {
             "kind": "literal",
@@ -13603,9 +14234,8 @@
               {
                 "kind": "ref",
                 "ref": {
-                  "kind": "library",
-                  "refKind": "candidateFeature",
-                  "id": "isCall"
+                  "kind": "candidateTag",
+                  "tagName": "call"
                 }
               }
             ]
@@ -13613,13 +14243,15 @@
           "dependencies": {
             "parameters": [],
             "stateFeatures": [],
-            "candidateFeatures": [
-              "isCall"
-            ],
-            "aggregates": []
+            "candidateFeatures": [],
+            "aggregates": [],
+            "strategicConditions": []
           }
         },
         "avoidFold": {
+          "scopes": [
+            "move"
+          ],
           "costClass": "candidate",
           "weight": {
             "kind": "literal",
@@ -13632,9 +14264,8 @@
               {
                 "kind": "ref",
                 "ref": {
-                  "kind": "library",
-                  "refKind": "candidateFeature",
-                  "id": "isFold"
+                  "kind": "candidateTag",
+                  "tagName": "fold"
                 }
               }
             ]
@@ -13642,13 +14273,15 @@
           "dependencies": {
             "parameters": [],
             "stateFeatures": [],
-            "candidateFeatures": [
-              "isFold"
-            ],
-            "aggregates": []
+            "candidateFeatures": [],
+            "aggregates": [],
+            "strategicConditions": []
           }
         },
         "foldWhenBadPotOdds": {
+          "scopes": [
+            "move"
+          ],
           "costClass": "candidate",
           "weight": {
             "kind": "literal",
@@ -13665,9 +14298,8 @@
                   {
                     "kind": "ref",
                     "ref": {
-                      "kind": "library",
-                      "refKind": "candidateFeature",
-                      "id": "isFold"
+                      "kind": "candidateTag",
+                      "tagName": "fold"
                     }
                   },
                   {
@@ -13702,13 +14334,15 @@
               "facingBet",
               "potOddsFavorable"
             ],
-            "candidateFeatures": [
-              "isFold"
-            ],
-            "aggregates": []
+            "candidateFeatures": [],
+            "aggregates": [],
+            "strategicConditions": []
           }
         },
         "alwaysRaise": {
+          "scopes": [
+            "move"
+          ],
           "costClass": "candidate",
           "weight": {
             "kind": "literal",
@@ -13721,9 +14355,8 @@
               {
                 "kind": "ref",
                 "ref": {
-                  "kind": "library",
-                  "refKind": "candidateFeature",
-                  "id": "isRaise"
+                  "kind": "candidateTag",
+                  "tagName": "raise"
                 }
               }
             ]
@@ -13731,13 +14364,15 @@
           "dependencies": {
             "parameters": [],
             "stateFeatures": [],
-            "candidateFeatures": [
-              "isRaise"
-            ],
-            "aggregates": []
+            "candidateFeatures": [],
+            "aggregates": [],
+            "strategicConditions": []
           }
         },
         "preferLargerRaise": {
+          "scopes": [
+            "move"
+          ],
           "costClass": "candidate",
           "weight": {
             "kind": "literal",
@@ -13757,11 +14392,11 @@
             "candidateFeatures": [
               "raiseAmount"
             ],
-            "aggregates": []
+            "aggregates": [],
+            "strategicConditions": []
           }
         }
       },
-      "completionScoreTerms": {},
       "tieBreakers": {
         "stableMoveKey": {
           "kind": "stableMoveKey",
@@ -13770,17 +14405,19 @@
             "parameters": [],
             "stateFeatures": [],
             "candidateFeatures": [],
-            "aggregates": []
+            "aggregates": [],
+            "strategicConditions": []
           }
         }
-      }
+      },
+      "strategicConditions": {}
     },
     "profiles": {
       "baseline": {
         "params": {},
         "use": {
           "pruningRules": [],
-          "scoreTerms": [
+          "considerations": [
             "preferCheck",
             "preferCall",
             "avoidFold",
@@ -13788,10 +14425,16 @@
             "alwaysRaise",
             "preferLargerRaise"
           ],
-          "completionScoreTerms": [],
           "tieBreakers": [
             "stableMoveKey"
           ]
+        },
+        "preview": {
+          "mode": "disabled"
+        },
+        "selection": {
+          "mode": "softmaxSample",
+          "temperature": 0.5
         },
         "plan": {
           "stateFeatures": [
@@ -13800,21 +14443,25 @@
             "potOddsFavorable"
           ],
           "candidateFeatures": [
-            "isCheck",
-            "isCall",
-            "isFold",
-            "isRaise",
             "raiseAmount"
           ],
-          "candidateAggregates": []
+          "candidateAggregates": [],
+          "considerations": [
+            "preferCheck",
+            "preferCall",
+            "avoidFold",
+            "foldWhenBadPotOdds",
+            "alwaysRaise",
+            "preferLargerRaise"
+          ]
         },
-        "fingerprint": "669a86537306635b7d5ed0d387e1cc5acc730b1db1740c297c5d55958aac62c0"
+        "fingerprint": "b9fcfb4a3b4636428377a55de123bdf5d2365d3c4074b036d52660ce28ffcced"
       }
     },
     "bindingsBySeat": {
       "neutral": "baseline"
     },
-    "catalogFingerprint": "b366c9abbcb189da7d13d30076e16eb802b771bd7a4c7cbcd3cef3d902d6abb4"
+    "catalogFingerprint": "c402148f18fe696292587126fb01bc36fc515fcd2d41eef2c12539bab0654024"
   },
   "actions": [
     {
@@ -13826,6 +14473,9 @@
         "flop",
         "turn",
         "river"
+      ],
+      "tags": [
+        "fold"
       ],
       "params": [],
       "pre": null,
@@ -13880,6 +14530,9 @@
         "turn",
         "river"
       ],
+      "tags": [
+        "check"
+      ],
       "params": [],
       "pre": {
         "op": "==",
@@ -13918,6 +14571,9 @@
         "flop",
         "turn",
         "river"
+      ],
+      "tags": [
+        "call"
       ],
       "params": [],
       "pre": {
@@ -14039,6 +14695,9 @@
         "flop",
         "turn",
         "river"
+      ],
+      "tags": [
+        "raise"
       ],
       "params": [
         {
@@ -14392,6 +15051,9 @@
         "turn",
         "river"
       ],
+      "tags": [
+        "all-in"
+      ],
       "params": [],
       "pre": {
         "op": "and",
@@ -14708,6 +15370,42 @@
       "limits": []
     }
   ],
+  "actionTagIndex": {
+    "byAction": {
+      "fold": [
+        "fold"
+      ],
+      "check": [
+        "check"
+      ],
+      "call": [
+        "call"
+      ],
+      "raise": [
+        "raise"
+      ],
+      "allIn": [
+        "all-in"
+      ]
+    },
+    "byTag": {
+      "all-in": [
+        "allIn"
+      ],
+      "call": [
+        "call"
+      ],
+      "check": [
+        "check"
+      ],
+      "fold": [
+        "fold"
+      ],
+      "raise": [
+        "raise"
+      ]
+    }
+  },
   "triggers": [],
   "terminal": {
     "conditions": [

@@ -2903,6 +2903,25 @@
                       }
                     ]
                   },
+                  "stateFeatures": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "boolean"
+                        }
+                      ]
+                    }
+                  },
                   "completionStatistics": {
                     "type": "object",
                     "properties": {
@@ -2938,6 +2957,105 @@
                       "templateCompletionUnsatisfiable"
                     ],
                     "additionalProperties": false
+                  },
+                  "movePreparations": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "actionId": {
+                          "type": "string"
+                        },
+                        "stableMoveKey": {
+                          "type": "string"
+                        },
+                        "initialClassification": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "complete"
+                            },
+                            {
+                              "type": "string",
+                              "const": "stochastic"
+                            },
+                            {
+                              "type": "string",
+                              "const": "pending"
+                            },
+                            {
+                              "type": "string",
+                              "const": "rejected"
+                            }
+                          ]
+                        },
+                        "finalClassification": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "complete"
+                            },
+                            {
+                              "type": "string",
+                              "const": "stochastic"
+                            },
+                            {
+                              "type": "string",
+                              "const": "rejected"
+                            }
+                          ]
+                        },
+                        "enteredTrustedMoveIndex": {
+                          "type": "boolean"
+                        },
+                        "templateCompletionAttempts": {
+                          "type": "number"
+                        },
+                        "templateCompletionOutcome": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "complete"
+                            },
+                            {
+                              "type": "string",
+                              "const": "stochastic"
+                            },
+                            {
+                              "type": "string",
+                              "const": "failed"
+                            }
+                          ]
+                        },
+                        "rejection": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "completionUnsatisfiable"
+                            },
+                            {
+                              "type": "string",
+                              "const": "notViable"
+                            },
+                            {
+                              "type": "string",
+                              "const": "notDecisionComplete"
+                            }
+                          ]
+                        },
+                        "fellThroughFromZoneFilterMismatch": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "actionId",
+                        "stableMoveKey",
+                        "initialClassification",
+                        "finalClassification",
+                        "enteredTrustedMoveIndex"
+                      ],
+                      "additionalProperties": false
+                    }
                   },
                   "candidates": {
                     "type": "array",
@@ -3047,6 +3165,9 @@
                               "const": "failed"
                             }
                           ]
+                        },
+                        "previewFailureReason": {
+                          "type": "string"
                         }
                       },
                       "required": [

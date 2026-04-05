@@ -230,7 +230,7 @@ export function analyzePolicyExpr(
     case 'globalZoneAgg':
       return analyzeGlobalZoneAggOperator(value, diagnostics, path);
     case 'adjacentTokenAgg':
-      return analyzeAdjacentTokenAggOperator(value, diagnostics, path);
+      return analyzeAdjacentTokenAggOperator(value, context, diagnostics, path);
     case 'zoneTokenAgg':
       return analyzeZoneTokenAggOperator(value, context, diagnostics, path);
   }
@@ -856,7 +856,7 @@ function analyzeZoneSource(
   context: AnalyzePolicyExprContext,
   diagnostics: Diagnostic[],
   path: string,
-  operatorName: 'zoneProp' | 'zoneTokenAgg',
+  operatorName: 'zoneProp' | 'zoneTokenAgg' | 'adjacentTokenAgg',
 ): { zoneExpr: string | AgentPolicyExpr; zoneAnalysis: PolicyExprAnalysis | null } | null {
   if (typeof zone === 'string') {
     if (zone.length === 0) {
@@ -864,7 +864,7 @@ function analyzeZoneSource(
         code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
         path,
         severity: 'error',
-        message: `${operatorName}.zone must be a non-empty string zone id or policy expression.`,
+        message: `${operatorName}.${operatorName === 'adjacentTokenAgg' ? 'anchorZone' : 'zone'} must be a non-empty string zone id or policy expression.`,
         suggestion: 'Set zone to a declared zone id (e.g., "hand", "community") or an id-valued policy expression.',
       });
       return null;
@@ -881,7 +881,7 @@ function analyzeZoneSource(
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_TYPE_INVALID,
       path,
       severity: 'error',
-      message: `${operatorName}.zone expressions must resolve to an id value.`,
+      message: `${operatorName}.${operatorName === 'adjacentTokenAgg' ? 'anchorZone' : 'zone'} expressions must resolve to an id value.`,
       suggestion: 'Use a string literal zone id or an id-valued ref/expression such as { ref: "option.value" }.',
     });
     return null;
@@ -1171,6 +1171,7 @@ function analyzeGlobalZoneAggSource(
 
 function analyzeAdjacentTokenAggOperator(
   expr: GameSpecPolicyExpr,
+  context: AnalyzePolicyExprContext,
   diagnostics: Diagnostic[],
   path: string,
 ): PolicyExprAnalysis | null {
@@ -1190,17 +1191,13 @@ function analyzeAdjacentTokenAggOperator(
   const aggOp = obj['aggOp'];
   const prop = obj['prop'];
   const tokenFilter = analyzeGlobalTokenAggTokenFilter(obj['tokenFilter'], diagnostics, `${path}.adjacentTokenAgg.tokenFilter`);
-
-  if (typeof anchorZone !== 'string' || anchorZone.length === 0) {
-    diagnostics.push({
-      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
-      path: `${path}.adjacentTokenAgg.anchorZone`,
-      severity: 'error',
-      message: 'adjacentTokenAgg.anchorZone must be a non-empty string zone reference.',
-      suggestion: 'Set anchorZone to a concrete zone id or owned zone reference such as "frontier:self".',
-    });
-    return null;
-  }
+  const zoneSource = analyzeZoneSource(
+    anchorZone,
+    context,
+    diagnostics,
+    `${path}.adjacentTokenAgg.anchorZone`,
+    'adjacentTokenAgg',
+  );
 
   if (typeof aggOp !== 'string' || !isAgentPolicyZoneTokenAggOp(aggOp)) {
     diagnostics.push({
@@ -1235,21 +1232,21 @@ function analyzeAdjacentTokenAggOperator(
     return null;
   }
 
-  if (tokenFilter === null) {
+  if (tokenFilter === null || zoneSource === null) {
     return null;
   }
 
   return {
     expr: {
       kind: 'adjacentTokenAgg',
-      anchorZone,
+      anchorZone: zoneSource.zoneExpr,
       ...(tokenFilter === undefined ? {} : { tokenFilter }),
       aggOp,
       ...(prop === undefined ? {} : { prop }),
     },
     valueType: 'number',
-    costClass: 'state',
-    dependencies: emptyDependencies(),
+    costClass: zoneSource.zoneAnalysis?.costClass ?? 'state',
+    dependencies: zoneSource.zoneAnalysis?.dependencies ?? emptyDependencies(),
     isStaticallyZero: false,
   };
 }

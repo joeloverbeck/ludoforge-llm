@@ -58,6 +58,10 @@
       "selectedIndex": 15
     },
     "emergencyFallback": false,
-    "failure": null
+    "failure": null,
+    "stateFeatures": {
+      "selfMargin": -12,
+      "selfResources": 20
+    }
   }
 }

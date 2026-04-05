@@ -57,6 +57,7 @@ function createGameStoreFixture(playerId: number | null, lifecycle: GameStore['g
     orchestrationDiagnostic: null,
     orchestrationDiagnosticSequence: 0,
     legalMoveResult: null,
+    actionAvailabilityById: new Map(),
     choicePending: null,
     effectTrace: [],
     triggerFirings: [],

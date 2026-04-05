@@ -77,6 +77,7 @@ export class PolicyAgent implements Agent {
       trustedMoveIndex,
       rng: prepared.rng,
       completionStatistics: prepared.statistics,
+      movePreparations: prepared.movePreparations,
       ...(this.profileId === undefined ? {} : { profileIdOverride: this.profileId }),
       ...(this.fallbackOnError === undefined ? {} : { fallbackOnError: this.fallbackOnError }),
     });

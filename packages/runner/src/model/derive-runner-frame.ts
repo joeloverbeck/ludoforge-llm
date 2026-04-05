@@ -131,7 +131,10 @@ export function deriveRunnerFrame(
     isInInterrupt: interruptStack.length > 0,
     phaseName: String(state.currentPhase),
     eventDecks,
-    actionGroups: deriveActionGroups((context.legalMoveResult?.moves ?? []).map(({ move }) => move)),
+    actionGroups: deriveActionGroups(
+      (context.legalMoveResult?.moves ?? []).map(({ move }) => move),
+      context.actionAvailabilityById,
+    ),
     choiceBreadcrumb: deriveChoiceBreadcrumb(context, zonesById),
     selectedActionId: context.selectedAction ?? null,
     choiceContext,
@@ -1164,9 +1167,11 @@ function normalizeIndex(index: number, playerCount: number): number {
   return normalized < 0 ? normalized + playerCount : normalized;
 }
 
-function deriveActionGroups(
+export function deriveActionGroups(
   moves: readonly Move[],
+  availabilityByActionId: ReadonlyMap<string, boolean> | undefined,
 ): readonly RunnerActionGroup[] {
+  const availability = availabilityByActionId ?? new Map<string, boolean>();
   const groupsByClass = new Map<string, Map<string, RunnerAction>>();
 
   const ensureGroup = (key: string): Map<string, RunnerAction> => {
@@ -1186,7 +1191,11 @@ function deriveActionGroups(
     const groupKey = ac ?? 'Actions';
     const group = ensureGroup(groupKey);
     if (!group.has(actionId)) {
-      group.set(actionId, { actionId, isAvailable: true, ...(ac !== null ? { actionClass: ac } : {}) });
+      group.set(actionId, {
+        actionId,
+        isAvailable: availability.get(actionId) ?? true,
+        ...(ac !== null ? { actionClass: ac } : {}),
+      });
     }
   }
 

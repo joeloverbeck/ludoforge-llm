@@ -63,6 +63,20 @@
   padding-left: var(--space-md);
 }
 
+.costStep {
+  border-left: 3px solid #f59e0b;
+  padding-left: var(--space-xs);
+  margin-left: calc(-1 * var(--space-xs));
+}
+
+.costStep .stepSummary {
+  color: #f59e0b;
+}
+
+.costStep .stepHeader {
+  color: #f59e0b;
+}
+
 .companionSection {
   margin-top: var(--space-sm);
   padding-top: var(--space-sm);

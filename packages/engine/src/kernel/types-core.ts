@@ -481,7 +481,7 @@ export type AgentPolicyExpr =
     }
   | {
       readonly kind: 'adjacentTokenAgg';
-      readonly anchorZone: string;
+      readonly anchorZone: AgentPolicyZoneSource;
       readonly tokenFilter?: AgentPolicyTokenFilter;
       readonly aggOp: AgentPolicyZoneTokenAggOp;
       readonly prop?: string;
@@ -1525,6 +1525,19 @@ export interface PolicyCandidateDecisionTrace {
   readonly previewRefIds?: readonly string[];
   readonly unknownPreviewRefs?: readonly PolicyPreviewUnknownRefTrace[];
   readonly previewOutcome?: 'ready' | 'stochastic' | 'random' | 'hidden' | 'unresolved' | 'failed';
+  readonly previewFailureReason?: string;
+}
+
+export interface PolicyMovePreparationTrace {
+  readonly actionId: string;
+  readonly stableMoveKey: string;
+  readonly initialClassification: 'complete' | 'stochastic' | 'pending' | 'rejected';
+  readonly finalClassification: 'complete' | 'stochastic' | 'rejected';
+  readonly enteredTrustedMoveIndex: boolean;
+  readonly templateCompletionAttempts?: number;
+  readonly templateCompletionOutcome?: 'complete' | 'stochastic' | 'failed';
+  readonly rejection?: 'completionUnsatisfiable' | 'notViable' | 'notDecisionComplete';
+  readonly fellThroughFromZoneFilterMismatch?: boolean;
 }
 
 export interface PolicyPruningStepTrace {
@@ -1598,7 +1611,9 @@ export interface PolicyAgentDecisionTrace {
   readonly selection?: PolicySelectionTrace;
   readonly emergencyFallback: boolean;
   readonly failure: AgentDecisionFailureSummary | null;
+  readonly stateFeatures?: Readonly<Record<string, number | string | boolean>>;
   readonly completionStatistics?: PolicyCompletionStatistics;
+  readonly movePreparations?: readonly PolicyMovePreparationTrace[];
   readonly candidates?: readonly PolicyCandidateDecisionTrace[];
 }
 

@@ -765,9 +765,21 @@ describe('top-level runtime schemas', () => {
       },
       aggOp: 'count',
     }));
+    const dynamicAdjacentTokenAggResult = GameDefSchema.safeParse(buildGameDefWithAgentExpr('threatNearTarget', {
+      kind: 'adjacentTokenAgg',
+      anchorZone: {
+        kind: 'ref',
+        ref: { kind: 'candidateParam', id: 'targetSpace' },
+      },
+      tokenFilter: {
+        type: 'troop',
+      },
+      aggOp: 'count',
+    }));
 
     assert.equal(globalZoneAggResult.success, true);
     assert.equal(adjacentTokenAggResult.success, true);
+    assert.equal(dynamicAdjacentTokenAggResult.success, true);
   });
 
   it('rejects compiled aggregation expressions with non-canonical scope, source, or filter operators', () => {

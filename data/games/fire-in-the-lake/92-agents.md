@@ -44,6 +44,28 @@ agents:
         type: number
         expr:
           ref: var.player.self.resources
+      vcGuerrillaCount:
+        type: number
+        expr:
+          globalTokenAgg:
+            aggOp: count
+            tokenFilter:
+              props:
+                faction: { eq: VC }
+                type: { eq: guerrilla }
+      vcBaseCount:
+        type: number
+        expr:
+          globalTokenAgg:
+            aggOp: count
+            tokenFilter:
+              props:
+                faction: { eq: VC }
+                type: { eq: base }
+      turnRound:
+        type: number
+        expr:
+          ref: turn.round
 
     candidateFeatures:
       projectedSelfMargin:
@@ -215,6 +237,24 @@ agents:
                 prop: population
             - 0
 
+      penalizeAttack:
+        scopes: [move]
+        weight: -0.1
+        value:
+          boolToNumber:
+            ref: candidate.tag.attack
+      observeGameState:
+        scopes: [move]
+        weight: 0
+        value:
+          add:
+            - { ref: feature.selfResources }
+            - add:
+                - { ref: feature.vcGuerrillaCount }
+                - add:
+                    - { ref: feature.vcBaseCount }
+                    - { ref: feature.turnRound }
+
     tieBreakers:
       stableMoveKey:
         kind: stableMoveKey
@@ -315,20 +355,16 @@ agents:
         mode: tolerateStochastic
       params:
         projectedMarginWeight: 5
-        eventWeight: 3
         rallyWeight: 3
-        taxWeight: 2
-        resourceWeight: 0.03
       use:
         pruningRules:
           - dropPassWhenOtherMovesExist
         considerations:
           - preferProjectedSelfMargin
-          - preserveResources
-          - preferEvent
           - preferRallyWeighted
-          - preferTaxWeighted
+          - penalizeAttack
           - preferPopulousTargets
+          - observeGameState
         tieBreakers:
           - preferCheapTargetSpaces
           - stableMoveKey

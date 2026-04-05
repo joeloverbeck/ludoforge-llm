@@ -10,7 +10,7 @@ function createMetadata(): PolicyEvaluationMetadata {
     requestedProfileId: 'baseline',
     profileId: 'baseline',
     profileFingerprint: 'baseline-fingerprint',
-    canonicalOrder: ['alpha', 'beta'],
+    canonicalOrder: ['alpha', 'beta', 'gamma'],
     candidates: [
       {
         actionId: 'advance',
@@ -32,12 +32,23 @@ function createMetadata(): PolicyEvaluationMetadata {
         unknownPreviewRefs: [{ refId: 'globalVar.usMargin', reason: 'hidden' }],
         previewOutcome: 'hidden',
       },
+      {
+        actionId: 'event',
+        stableMoveKey: 'gamma',
+        score: -2,
+        prunedBy: [],
+        scoreContributions: [{ termId: 'preferAdvance', contribution: -2 }],
+        previewRefIds: ['globalVar.usMargin'],
+        unknownPreviewRefs: [{ refId: 'globalVar.usMargin', reason: 'unresolved' }],
+        previewOutcome: 'unresolved',
+        previewFailureReason: 'completionUnsatisfiable',
+      },
     ],
-    pruningSteps: [{ ruleId: 'dropPass', remainingCandidateCount: 1, skippedBecauseEmpty: false }],
+    pruningSteps: [{ ruleId: 'dropPass', remainingCandidateCount: 2, skippedBecauseEmpty: false }],
     tieBreakChain: [],
     previewUsage: {
       mode: 'exactWorld',
-      evaluatedCandidateCount: 2,
+      evaluatedCandidateCount: 3,
       refIds: ['globalVar.usMargin'],
       unknownRefs: [{ refId: 'globalVar.usMargin', reason: 'hidden' }],
       outcomeBreakdown: {
@@ -58,6 +69,25 @@ function createMetadata(): PolicyEvaluationMetadata {
       templateCompletionSuccesses: 1,
       templateCompletionUnsatisfiable: 1,
     },
+    movePreparations: [
+      {
+        actionId: 'advance',
+        stableMoveKey: 'alpha',
+        initialClassification: 'complete',
+        finalClassification: 'complete',
+        enteredTrustedMoveIndex: true,
+      },
+      {
+        actionId: 'pass',
+        stableMoveKey: 'beta',
+        initialClassification: 'pending',
+        finalClassification: 'rejected',
+        enteredTrustedMoveIndex: false,
+        templateCompletionAttempts: 2,
+        templateCompletionOutcome: 'failed',
+        rejection: 'completionUnsatisfiable',
+      },
+    ],
     selectedStableMoveKey: 'alpha',
     finalScore: 7,
     usedFallback: false,
@@ -78,6 +108,7 @@ describe('policy-diagnostics', () => {
       unknownFailed: 0,
     });
     assert.equal(trace.completionStatistics, undefined);
+    assert.equal(trace.movePreparations, undefined);
     assert.equal(trace.candidates, undefined);
   });
 
@@ -93,8 +124,14 @@ describe('policy-diagnostics', () => {
       templateCompletionSuccesses: 1,
       templateCompletionUnsatisfiable: 1,
     });
-    assert.equal(trace.candidates?.length, 2);
+    assert.equal(trace.movePreparations?.length, 2);
+    assert.equal(trace.movePreparations?.[1]?.templateCompletionOutcome, 'failed');
+    assert.equal(trace.movePreparations?.[1]?.rejection, 'completionUnsatisfiable');
+    assert.equal(trace.candidates?.length, 3);
     assert.equal(trace.candidates?.[0]?.previewOutcome, 'ready');
     assert.equal(trace.candidates?.[1]?.previewOutcome, 'hidden');
+    assert.equal(trace.candidates?.[0]?.previewFailureReason, undefined);
+    assert.equal(trace.candidates?.[2]?.previewOutcome, 'unresolved');
+    assert.equal(trace.candidates?.[2]?.previewFailureReason, 'completionUnsatisfiable');
   });
 });

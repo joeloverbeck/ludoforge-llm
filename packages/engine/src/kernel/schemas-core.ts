@@ -804,7 +804,7 @@ const AgentPolicyExprSchema: z.ZodTypeAny = z.lazy(() =>
     }).strict(),
     z.object({
       kind: z.literal('adjacentTokenAgg'),
-      anchorZone: StringSchema,
+      anchorZone: z.union([StringSchema, AgentPolicyExprSchema]),
       tokenFilter: AgentPolicyTokenFilterSchema.optional(),
       aggOp: z.enum(AGENT_POLICY_ZONE_TOKEN_AGG_OPS),
       prop: StringSchema.optional(),
@@ -1406,6 +1406,38 @@ const PolicyCandidateDecisionTraceSchema = z
       z.literal('unresolved'),
       z.literal('failed'),
     ]).optional(),
+    previewFailureReason: StringSchema.optional(),
+  })
+  .strict();
+
+const PolicyMovePreparationTraceSchema = z
+  .object({
+    actionId: StringSchema,
+    stableMoveKey: StringSchema,
+    initialClassification: z.union([
+      z.literal('complete'),
+      z.literal('stochastic'),
+      z.literal('pending'),
+      z.literal('rejected'),
+    ]),
+    finalClassification: z.union([
+      z.literal('complete'),
+      z.literal('stochastic'),
+      z.literal('rejected'),
+    ]),
+    enteredTrustedMoveIndex: BooleanSchema,
+    templateCompletionAttempts: NumberSchema.optional(),
+    templateCompletionOutcome: z.union([
+      z.literal('complete'),
+      z.literal('stochastic'),
+      z.literal('failed'),
+    ]).optional(),
+    rejection: z.union([
+      z.literal('completionUnsatisfiable'),
+      z.literal('notViable'),
+      z.literal('notDecisionComplete'),
+    ]).optional(),
+    fellThroughFromZoneFilterMismatch: BooleanSchema.optional(),
   })
   .strict();
 
@@ -1495,7 +1527,9 @@ const AgentDecisionTraceSchema = z.union([
       selection: PolicySelectionTraceSchema.optional(),
       emergencyFallback: BooleanSchema,
       failure: AgentDecisionFailureSummarySchema.nullable(),
+      stateFeatures: z.record(z.string(), z.union([NumberSchema, StringSchema, BooleanSchema])).optional(),
       completionStatistics: PolicyCompletionStatisticsSchema.optional(),
+      movePreparations: z.array(PolicyMovePreparationTraceSchema).optional(),
       candidates: z.array(PolicyCandidateDecisionTraceSchema).optional(),
     })
     .strict(),

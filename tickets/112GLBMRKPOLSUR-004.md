@@ -1,26 +1,26 @@
-# 112GLBMRKPOLSUR-004: Compile-agents defaults and compiler-core wiring
+# 112GLBMRKPOLSUR-004: Compile-agents defaults and agent compiler-core wiring
 
 **Status**: PENDING
 **Priority**: HIGH
 **Effort**: Small
-**Engine Changes**: Yes — CNL agent compiler, compiler core
-**Deps**: `tickets/112GLBMRKPOLSUR-003.md`, `specs/112-global-marker-policy-surface.md`
+**Engine Changes**: Yes — CNL agent compiler, compiler core agent wiring
+**Deps**: `archive/tickets/112GLBMRKPOLSUR-003.md`, `specs/112-global-marker-policy-surface.md`
 
 ## Problem
 
-When no observer catalog is available, `compile-agents.ts` builds a fallback default catalog that currently omits `globalMarkers`. Also, `compiler-core.ts` doesn't pass `knownGlobalMarkerIds` to the `lowerObservers` or `lowerAgents` calls, so the compilation pipeline can't populate the catalog with the game's actual marker IDs.
+When no observer catalog is available, `compile-agents.ts` builds a fallback default catalog that currently omits `globalMarkers`. Also, the agent-side `lowerAgents` call in `compiler-core.ts` still does not pass `globalMarkerIds`, so the agent compilation pipeline cannot populate the fallback catalog with the game's actual marker IDs.
 
 ## Assumption Reassessment (2026-04-05)
 
 1. Fallback catalog construction at `compile-agents.ts:153-173` — confirmed, builds 8-family catalog.
 2. `LowerAgentsOptions` — confirmed, has `globalVarIds`, `perPlayerVarIds`, `policyMetricIds`.
-3. `lowerObservers` call at `compiler-core.ts:700-706` — confirmed, passes 3 known ID arrays.
-4. `lowerAgents` call at `compiler-core.ts:709-731` — confirmed, passes ID arrays.
+3. `lowerAgents` call at `compiler-core.ts:709-731` — confirmed, still passes no `globalMarkerIds`.
+4. Observer-side `compiler-core.ts` wiring for `knownGlobalMarkerIds` is already owned by and implemented in ticket `003`.
 5. `sections.globalMarkerLattices` is available in compiler-core.ts after line 360 — confirmed.
 
 ## Architecture Check
 
-1. Follows the exact `globalVarIds` pattern: add to options, build defaults, pass from compiler-core. No new patterns.
+1. Follows the exact `globalVarIds` pattern on the agent side: add to options, build defaults, pass from the `lowerAgents` call in `compiler-core`. No new patterns.
 2. Marker IDs are derived from `sections.globalMarkerLattices.map(m => m.id)` — same pattern as global vars using `mergedGlobalVars.map(v => v.name)`.
 3. Engine-agnostic: passes whatever marker IDs the game spec defines, no hardcoded names.
 
@@ -53,13 +53,7 @@ Add `globalMarkers` to the returned catalog object.
 globalMarkerIds: (sections.globalMarkerLattices ?? []).map((m) => m.id),
 ```
 
-### 4. Add `knownGlobalMarkerIds` to `lowerObservers` call in `compiler-core.ts` (~line 700-706)
-
-```typescript
-knownGlobalMarkerIds: (sections.globalMarkerLattices ?? []).map((m) => m.id),
-```
-
-### 5. Validate unknown marker IDs in compile-agents ref validation
+### 4. Validate unknown marker IDs in compile-agents ref validation
 
 When a `globalMarker.*` ref is encountered during agent compilation, verify the marker ID exists in `globalMarkerIds`. Emit a diagnostic if unknown. This is handled by the existing validation in `parseAuthoredPolicySurfaceRef` returning `undefined` for unknown IDs (the catalog won't contain the ID).
 
@@ -70,7 +64,7 @@ When a `globalMarker.*` ref is encountered during agent compilation, verify the 
 
 ## Out of Scope
 
-- No changes to observer compilation (ticket 003)
+- No changes to observer compilation or observer-side `compiler-core` wiring (ticket 003)
 - No changes to policy-surface.ts or policy-runtime.ts (ticket 002)
 - No game data or cookbook changes
 

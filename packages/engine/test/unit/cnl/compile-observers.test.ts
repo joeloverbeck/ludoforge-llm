@@ -11,12 +11,14 @@ function errors(diagnostics: readonly Diagnostic[]): readonly Diagnostic[] {
 
 const DEFAULT_OPTIONS: LowerObserversOptions = {
   knownGlobalVarIds: ['score', 'round'],
+  knownGlobalMarkerIds: ['cap_boobyTraps', 'cap_cadres'],
   knownPerPlayerVarIds: ['health', 'resources'],
   knownDerivedMetricIds: ['totalScore'],
 };
 
 const EMPTY_OPTIONS: LowerObserversOptions = {
   knownGlobalVarIds: [],
+  knownGlobalMarkerIds: [],
   knownPerPlayerVarIds: [],
   knownDerivedMetricIds: [],
 };
@@ -80,6 +82,31 @@ describe('lowerObservers', () => {
         current: 'public',
         preview: { visibility: 'public', allowWhenHiddenSampling: true },
       }, `globalVars.${id} should be public with default preview`);
+    }
+  });
+
+  it('expands shorthand globalMarkers: "public" to full form for all known IDs', () => {
+    const diagnostics: Diagnostic[] = [];
+    const result = lowerObservers(
+      {
+        observers: {
+          open: {
+            surfaces: { globalMarkers: 'public' },
+          },
+        },
+      },
+      diagnostics,
+      DEFAULT_OPTIONS,
+    );
+    assert.ok(result);
+    assert.equal(errors(diagnostics).length, 0);
+
+    const profile = result.observers['open']!;
+    for (const id of DEFAULT_OPTIONS.knownGlobalMarkerIds) {
+      assert.deepStrictEqual(profile.surfaces.globalMarkers[id], {
+        current: 'public',
+        preview: { visibility: 'public', allowWhenHiddenSampling: false },
+      }, `globalMarkers.${id} should be public with default preview`);
     }
   });
 
@@ -213,6 +240,12 @@ describe('lowerObservers', () => {
     for (const id of DEFAULT_OPTIONS.knownPerPlayerVarIds) {
       assert.equal(omniscient.surfaces.perPlayerVars[id]!.current, 'public');
     }
+
+    for (const id of DEFAULT_OPTIONS.knownGlobalMarkerIds) {
+      assert.equal(omniscient.surfaces.globalMarkers[id]!.current, 'public');
+      assert.equal(omniscient.surfaces.globalMarkers[id]!.preview.visibility, 'public');
+      assert.equal(omniscient.surfaces.globalMarkers[id]!.preview.allowWhenHiddenSampling, false);
+    }
   });
 
   // -----------------------------------------------------------------------
@@ -247,6 +280,14 @@ describe('lowerObservers', () => {
       assert.deepStrictEqual(def.surfaces.derivedMetrics[id], {
         current: 'hidden',
         preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+      });
+    }
+
+    // globalMarkers: public, preview public, allowWhenHiddenSampling false
+    for (const id of DEFAULT_OPTIONS.knownGlobalMarkerIds) {
+      assert.deepStrictEqual(def.surfaces.globalMarkers[id], {
+        current: 'public',
+        preview: { visibility: 'public', allowWhenHiddenSampling: false },
       });
     }
 
@@ -426,8 +467,35 @@ describe('lowerObservers', () => {
     assert.ok(result);
 
     assert.deepStrictEqual(result.observers['default']!.surfaces.globalVars, {});
+    assert.deepStrictEqual(result.observers['default']!.surfaces.globalMarkers, {});
     assert.deepStrictEqual(result.observers['default']!.surfaces.perPlayerVars, {});
     assert.deepStrictEqual(result.observers['default']!.surfaces.derivedMetrics, {});
+  });
+
+  it('expands _default + per-id overrides for globalMarkers', () => {
+    const diagnostics: Diagnostic[] = [];
+    const result = lowerObservers(
+      {
+        observers: {
+          mixed: {
+            surfaces: {
+              globalMarkers: {
+                _default: 'public',
+                cap_boobyTraps: 'hidden',
+              } as unknown as GameSpecObservabilitySection['observers'],
+            },
+          },
+        },
+      } as unknown as GameSpecObservabilitySection,
+      diagnostics,
+      DEFAULT_OPTIONS,
+    );
+    assert.ok(result);
+    assert.equal(errors(diagnostics).length, 0);
+
+    const profile = result.observers['mixed']!;
+    assert.equal(profile.surfaces.globalMarkers['cap_boobyTraps']!.current, 'hidden');
+    assert.equal(profile.surfaces.globalMarkers['cap_cadres']!.current, 'public');
   });
 
   // -----------------------------------------------------------------------

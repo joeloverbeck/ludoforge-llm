@@ -678,6 +678,7 @@ function compileExpandedDoc(
   // --- Observer validation + compilation (before agents, per Spec 102 Part F) ---
   const knownSurfaceIds: KnownSurfaceIds = {
     globalVars: new Set(mergedGlobalVars.map((v) => v.name)),
+    globalMarkers: new Set((sections.globalMarkerLattices ?? []).map((m) => m.id)),
     perPlayerVars: new Set(perPlayerVars.value.map((v) => v.name)),
     derivedMetrics: new Set(
       (resolvedTableRefDoc.derivedMetrics ?? []).map((m) => m.id),
@@ -699,6 +700,7 @@ function compileExpandedDoc(
   const observers = compileSection(diagnostics, () =>
     lowerObservers(resolvedTableRefDoc.observability, diagnostics, {
       knownGlobalVarIds: mergedGlobalVars.map((v) => v.name),
+      knownGlobalMarkerIds: (sections.globalMarkerLattices ?? []).map((m) => m.id),
       knownPerPlayerVarIds: perPlayerVars.value.map((v) => v.name),
       knownDerivedMetricIds: (resolvedTableRefDoc.derivedMetrics ?? []).map((m) => m.id),
       ...(knownZoneInfo !== undefined ? { knownZoneBaseIds: [...knownZoneInfo.zoneBaseIds] } : {}),

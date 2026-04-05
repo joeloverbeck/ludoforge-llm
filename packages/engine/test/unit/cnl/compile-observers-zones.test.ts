@@ -7,6 +7,7 @@ import { lowerObservers, type LowerObserversOptions } from '../../../src/cnl/com
 
 const DEFAULT_OPTIONS: LowerObserversOptions = {
   knownGlobalVarIds: ['score'],
+  knownGlobalMarkerIds: [],
   knownPerPlayerVarIds: ['health'],
   knownDerivedMetricIds: [],
   knownZoneBaseIds: ['hand', 'deck', 'board'],

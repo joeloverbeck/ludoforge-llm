@@ -15,12 +15,14 @@ function warnings(diagnostics: readonly Diagnostic[]): readonly Diagnostic[] {
 
 const DEFAULT_KNOWN_IDS: KnownSurfaceIds = {
   globalVars: new Set(['score', 'round']),
+  globalMarkers: new Set(['cap_boobyTraps', 'cap_cadres']),
   perPlayerVars: new Set(['health', 'resources']),
   derivedMetrics: new Set(['totalScore']),
 };
 
 const EMPTY_KNOWN_IDS: KnownSurfaceIds = {
   globalVars: new Set(),
+  globalMarkers: new Set(),
   perPlayerVars: new Set(),
   derivedMetrics: new Set(),
 };
@@ -99,6 +101,28 @@ describe('validateObservers', () => {
               globalVars: {
                 _default: 'public',
                 score: 'hidden',
+              },
+            },
+          },
+        },
+      },
+      DEFAULT_KNOWN_IDS,
+      undefined,
+      diagnostics,
+    );
+    assert.equal(errors(diagnostics).length, 0, `unexpected errors: ${JSON.stringify(errors(diagnostics))}`);
+  });
+
+  it('accepts globalMarkers as a valid map-type surface family', () => {
+    const diagnostics: Diagnostic[] = [];
+    validateObservers(
+      {
+        observers: {
+          currentPlayer: {
+            surfaces: {
+              globalMarkers: {
+                _default: 'public',
+                cap_boobyTraps: 'hidden',
               },
             },
           },
@@ -421,6 +445,29 @@ describe('validateObservers', () => {
     assert.ok(errs.some((d) => d.message.includes('notAVar')));
   });
 
+  it('rejects per-variable override in globalMarkers referencing non-existent marker', () => {
+    const diagnostics: Diagnostic[] = [];
+    validateObservers(
+      {
+        observers: {
+          player: {
+            surfaces: {
+              globalMarkers: {
+                cap_unknown: 'public',
+              },
+            },
+          },
+        },
+      },
+      DEFAULT_KNOWN_IDS,
+      undefined,
+      diagnostics,
+    );
+    const errs = errors(diagnostics);
+    assert.ok(errs.some((d) => d.code === 'CNL_VALIDATOR_OBSERVER_UNKNOWN_VARIABLE'));
+    assert.ok(errs.some((d) => d.message.includes('cap_unknown')));
+  });
+
   // --- Acceptance Criterion 10: _default in non-map surface ---
   it('rejects _default key in a non-map surface', () => {
     const diagnostics: Diagnostic[] = [];
@@ -633,6 +680,7 @@ describe('validateObservers', () => {
   it('validates against passed knownSurfaceIds only', () => {
     const customIds: KnownSurfaceIds = {
       globalVars: new Set(['customVar']),
+      globalMarkers: new Set(),
       perPlayerVars: new Set(),
       derivedMetrics: new Set(),
     };

@@ -28,6 +28,7 @@ import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 
 export interface LowerObserversOptions {
   readonly knownGlobalVarIds: readonly string[];
+  readonly knownGlobalMarkerIds: readonly string[];
   readonly knownPerPlayerVarIds: readonly string[];
   readonly knownDerivedMetricIds: readonly string[];
   readonly knownZoneBaseIds?: readonly string[];
@@ -39,6 +40,7 @@ export interface LowerObserversOptions {
 
 const SURFACE_DEFAULTS: Readonly<Record<string, CompiledSurfaceVisibility>> = {
   globalVars: { current: 'public', preview: { visibility: 'public', allowWhenHiddenSampling: true } },
+  globalMarkers: { current: 'public', preview: { visibility: 'public', allowWhenHiddenSampling: false } },
   perPlayerVars: { current: 'seatVisible', preview: { visibility: 'seatVisible', allowWhenHiddenSampling: true } },
   derivedMetrics: { current: 'hidden', preview: { visibility: 'hidden', allowWhenHiddenSampling: false } },
   'victory.currentMargin': { current: 'hidden', preview: { visibility: 'hidden', allowWhenHiddenSampling: false } },
@@ -198,7 +200,14 @@ function resolveObserverSurfaces(
       diagnostics,
       `${path}.globalVars`,
     ),
-    globalMarkers: base.globalMarkers,
+    globalMarkers: lowerObserverMapTypeSurface(
+      options.knownGlobalMarkerIds,
+      surfaces.globalMarkers,
+      base.globalMarkers,
+      SURFACE_DEFAULTS['globalMarkers']!,
+      diagnostics,
+      `${path}.globalMarkers`,
+    ),
     perPlayerVars: lowerObserverMapTypeSurface(
       options.knownPerPlayerVarIds,
       surfaces.perPlayerVars,
@@ -444,7 +453,7 @@ function normalizeToSurfaceVisibilityDef(
 function buildDefaultSurfaces(options: LowerObserversOptions): CompiledSurfaceCatalog {
   return {
     globalVars: expandMapDefaults(options.knownGlobalVarIds, SURFACE_DEFAULTS['globalVars']!),
-    globalMarkers: {},
+    globalMarkers: expandMapDefaults(options.knownGlobalMarkerIds, SURFACE_DEFAULTS['globalMarkers']!),
     perPlayerVars: expandMapDefaults(options.knownPerPlayerVarIds, SURFACE_DEFAULTS['perPlayerVars']!),
     derivedMetrics: expandMapDefaults(options.knownDerivedMetricIds, SURFACE_DEFAULTS['derivedMetrics']!),
     victory: {
@@ -472,7 +481,7 @@ function buildOmniscientSurfaces(options: LowerObserversOptions): CompiledSurfac
   };
   return {
     globalVars: expandMapDefaults(options.knownGlobalVarIds, allPublic),
-    globalMarkers: {},
+    globalMarkers: expandMapDefaults(options.knownGlobalMarkerIds, allPublic),
     perPlayerVars: expandMapDefaults(options.knownPerPlayerVarIds, allPublic),
     derivedMetrics: expandMapDefaults(options.knownDerivedMetricIds, allPublic),
     victory: {

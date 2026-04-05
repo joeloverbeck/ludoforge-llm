@@ -113,6 +113,7 @@ If that earlier ticket introduced production-corpus traversal, fixture readers, 
 - If sibling tickets in the same active series contain stale assumptions that are informative but non-blocking for the current ticket, note the drift in your working notes and final summary without absorbing that sibling's scope unless ownership or correctness actually conflicts.
 - For schema or contract migrations, explicitly check whether the change needs updates across:
   - authored schema/doc types
+  - authored source-shape or parser-facing doc types when the ticket adds a new authored config key, section field, or surface family, even if the ticket only names the lowering or validator files
   - authored-shape validators and unknown-key allowlists
   - compiled/kernel/runtime types
   - Zod or JSON schemas
@@ -140,6 +141,7 @@ If that earlier ticket introduced production-corpus traversal, fixture readers, 
 - If a diagnostic or audit ticket requires written findings but does not name a specific file, prefer an existing repo-owned report surface such as `reports/` over ephemeral local notes or ad hoc scratch files, and reference that report in the final summary.
 - If reassessment reveals a generic architectural limitation broader than the current ticket's owned boundary, prefer creating or extending a follow-up spec in the same turn instead of burying the design gap in ticket-only notes.
 - When a migration adds or removes a required compiled field, treat owned production goldens that snapshot compiled catalogs, summaries, or traces as expected update surfaces unless evidence shows unexpected behavioral drift.
+- When earlier groundwork introduced a required placeholder field and the current ticket begins populating it with real compiled data, expect owned production goldens to drift from empty maps or stubs to populated values, and treat that as normal ticket-owned fallout unless evidence shows unrelated behavioral change.
 - When a change alters observability, preview readiness, scoring inputs, or other behavior that can legitimately change deterministic move choice, treat owned production goldens and fixed-seed summaries as expected update surfaces unless evidence shows unexpected drift outside the ticket boundary.
 - When enriching diagnostics or trace output, prefer preserving the existing coarse summary field and adding an optional detail field unless the ticket explicitly owns a breaking schema redesign.
 - Preparatory tickets may legitimately add optional schema, trace, or contract fields ahead of the later logic tickets that will populate them, so long as the ticket explicitly owns that groundwork boundary and verification proves the artifact surfaces remain in sync.

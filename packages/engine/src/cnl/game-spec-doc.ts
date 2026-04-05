@@ -538,6 +538,7 @@ export type GameSpecObserverSurfaceValue =
 
 export interface GameSpecObserverSurfacesDef {
   readonly globalVars?: GameSpecObserverSurfaceValue;
+  readonly globalMarkers?: GameSpecObserverSurfaceValue;
   readonly perPlayerVars?: GameSpecObserverSurfaceValue;
   readonly derivedMetrics?: GameSpecObserverSurfaceValue;
   readonly victory?: {

@@ -360,7 +360,155 @@
         }
       }
     },
-    "globalMarkers": {},
+    "globalMarkers": {
+      "cap_topGun": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "cap_arcLight": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "cap_abrams": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "cap_cobras": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "cap_m48Patton": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "cap_caps": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "cap_cords": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "cap_lgbs": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "cap_searchAndDestroy": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "cap_aaa": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "cap_longRangeGuns": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "cap_migs": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "cap_sa2s": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "cap_pt76": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "cap_armoredCavalry": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "cap_mandateOfHeaven": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "cap_boobyTraps": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "cap_mainForceBns": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "cap_cadres": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "activeLeader": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "leaderFlipped": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      }
+    },
     "perPlayerVars": {
       "resources": {
         "current": "public",
@@ -1906,5 +2054,5 @@
     "nva": "nva-baseline",
     "vc": "vc-evolved"
   },
-  "catalogFingerprint": "c78b5cf5f152b9f6573a503c11eb41acc3429db64ad9863ae2d55b30d4686b18"
+  "catalogFingerprint": "a313f4b1013fd48a7321ef3fdb23fac2523a374ac9112a45a56a9bda8a145940"
 }

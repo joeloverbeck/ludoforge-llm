@@ -1,6 +1,6 @@
 # 112GLBMRKPOLSUR-003: Observer compilation and validation for globalMarkers
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — CNL observer compiler, observer validator
@@ -109,3 +109,30 @@ readonly globalMarkers: ReadonlySet<string>;
 
 1. `pnpm -F @ludoforge/engine build`
 2. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+Completed on 2026-04-05.
+
+Implemented the observer-side `globalMarkers` compilation boundary end to end:
+- `compile-observers.ts` now treats `globalMarkers` as a real map-type observer surface family, including defaults, omniscient expansion, and override lowering.
+- `validate-observers.ts` now recognizes `globalMarkers` as a supported map-type family and validates marker IDs.
+- `compiler-core.ts` now passes known global marker IDs into observer validation and lowering.
+- `game-spec-doc.ts` now includes `observability.observers.*.surfaces.globalMarkers` in the authored source shape.
+
+Tests and fixtures were updated on the live owning surfaces:
+- observer unit tests now cover `globalMarkers` defaults, omniscient expansion, empty-known-ID behavior, accepted config, and unknown-ID rejection
+- observer compilation end-to-end coverage now proves authored `globalMarkers` visibility survives compilation
+- the FITL policy catalog golden was refreshed because the earlier placeholder `globalMarkers: {}` field now contains real compiled observer visibility data
+
+Corrected boundary notes:
+- The original ticket said `compiler-core.ts` was out of scope, but after reassessment that observer-side wiring was pulled into this ticket via confirmed `1-3-1` because it is part of the real observer compilation boundary.
+- The authored source-shape file `game-spec-doc.ts` also needed updating even though it was not named in the original file list.
+
+Verification run:
+1. `pnpm -F @ludoforge/engine build`
+2. `pnpm -F @ludoforge/engine run schema:artifacts:check`
+3. `node --test packages/engine/dist/test/unit/cnl/compile-observers.test.js packages/engine/dist/test/unit/cnl/compile-observers-zones.test.js packages/engine/dist/test/unit/cnl/validate-observers.test.js packages/engine/dist/test/unit/cnl/validate-observers-zones.test.js packages/engine/dist/test/integration/observer-compilation-e2e.test.js`
+4. `node packages/engine/dist/test/unit/policy-production-golden.test.js`
+5. `pnpm -F @ludoforge/engine test`
+6. `pnpm run check:ticket-deps`

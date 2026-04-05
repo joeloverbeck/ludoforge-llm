@@ -1,6 +1,6 @@
 # 109AGEPREAUD-002: Fix downstream event preview differentiation after trusted preparation
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — policy-preview.ts, policy-eval.ts, preview surface / scoring path as indicated by audit
@@ -103,3 +103,26 @@ Events with `rollRandom` in their effect tree: under `tolerateStochastic` mode, 
 
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo test`
+
+## Outcome
+
+Completion date: 2026-04-05
+
+What actually changed:
+- Reassessed the ticket after ticket 001's audit and confirmed the claimed downstream preview bug no longer had a verified reproducer in the live repo.
+- Added proof/regression coverage in `packages/engine/test/unit/agents/policy-preview.test.ts` instead of changing runtime preview code.
+- Proved three behaviors on the existing trusted preview path:
+  - trusted dual-sided event previews preserve side-specific projected values when the projected state differs
+  - capability-style trusted event previews remain `ready` even when immediate margin does not change
+  - trusted event previews return `stochastic` under `tolerateStochastic` when RNG diverges
+
+Deviations from original plan:
+- No engine runtime files were changed.
+- The implementation did not create the ticket's originally named new test files. The proof landed in the live owning preview test module instead.
+- The ticket's original "fix downstream collapse" premise was corrected to a proof-only boundary because the current audited examples did not demonstrate an actual downstream collapse bug.
+
+Verification results:
+- `pnpm -F @ludoforge/engine build`
+- `node --test packages/engine/dist/test/unit/agents/policy-preview.test.js`
+- `pnpm -F @ludoforge/engine test`
+- `pnpm turbo test`

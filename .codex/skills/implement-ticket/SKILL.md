@@ -82,6 +82,7 @@ If that earlier ticket introduced production-corpus traversal, fixture readers, 
     - do not force a ticket rewrite unless the implementation boundary itself changed
     - if the conflict is that a ticket or spec uses raw strings for an identifier that already has a branded domain type in the repo, preserve the ticket boundary, raise the Foundation conflict explicitly, and prefer the existing branded type once confirmed
     - if the mismatch is a narrow factual detail inside an otherwise valid ticket boundary, treat it as a bounded discrepancy plus `1-3-1`, not an automatic ticket rewrite
+    - if the original bug claim is no longer reproducible but the intended invariant is still worth proving, it is valid to convert the ticket into a proof/regression-only implementation after user confirmation rather than forcing speculative runtime code changes or closing it as not actionable
 17. If the ticket is accurate and no blocking decision remains, proceed.
 
 ## Implementation Rules
@@ -120,6 +121,7 @@ If that earlier ticket introduced production-corpus traversal, fixture readers, 
   - read and assess them as part of the implementation boundary
   - leave them unchanged when evidence shows no edit is required
   - state that explicit no-change decision in the final summary
+- For proof/regression tickets, prefer extending the live test module that already owns the contract under audit before creating new files solely to match stale ticket test paths.
 - If the ticket says "no code changes", interpret that as "no production/runtime behavior changes" unless the ticket explicitly forbids repo artifact edits. Ticket/spec outcome sections, archival moves, dependency rewrites, and sibling-ticket status updates are still required when they are the owned deliverable.
 - If a diagnostic or audit ticket requires written findings but does not name a specific file, prefer an existing repo-owned report surface such as `reports/` over ephemeral local notes or ad hoc scratch files, and reference that report in the final summary.
 - When a migration adds or removes a required compiled field, treat owned production goldens that snapshot compiled catalogs, summaries, or traces as expected update surfaces unless evidence shows unexpected behavioral drift.

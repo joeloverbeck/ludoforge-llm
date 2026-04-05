@@ -133,6 +133,17 @@ function createCandidate(): { readonly move: Move; readonly stableMoveKey: strin
   };
 }
 
+function createEventCandidate(
+  side: 'shaded' | 'unshaded',
+  extras?: Readonly<Record<string, string>>,
+): { readonly move: Move; readonly stableMoveKey: string } {
+  const params = extras === undefined ? { side } : { side, ...extras };
+  return {
+    move: { actionId: asActionId('event'), params },
+    stableMoveKey: `event|${JSON.stringify(params)}|false|event`,
+  };
+}
+
 describe('policy-preview', () => {
   it('caches preview application per candidate', () => {
     const def = createDef();
@@ -733,5 +744,114 @@ describe('policy-preview', () => {
     assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), { kind: 'value', value: 5 });
     assert.equal(probeCalls, 1);
     assert.equal(applyCalls, 1);
+  });
+
+  it('preserves side-specific projected margins for trusted dual-sided event previews', () => {
+    const def = createDef();
+    const state = initialState(def, 1, 2).state;
+    const shaded = createEventCandidate('shaded');
+    const unshaded = createEventCandidate('unshaded');
+    const runtime = createPolicyPreviewRuntime({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      seatId: 'us',
+      trustedMoveIndex: new Map([
+        [shaded.stableMoveKey, createTrustedExecutableMove(shaded.move, state.stateHash, 'templateCompletion')],
+        [unshaded.stableMoveKey, createTrustedExecutableMove(unshaded.move, state.stateHash, 'templateCompletion')],
+      ]),
+      previewMode: 'exactWorld',
+      dependencies: {
+        classifyPlayableMoveCandidate: () => {
+          assert.fail('trusted event preview should not reclassify candidates');
+        },
+        applyMove: (_def, currentState, trustedMove) => ({
+          state: {
+            ...currentState,
+            globalVars: {
+              ...currentState.globalVars,
+              score: trustedMove.move.params.side === 'shaded' ? 6 : -2,
+            },
+          },
+        }),
+        derivePlayerObservation: () => createObservation(false),
+      },
+    });
+
+    assert.deepEqual(runtime.resolveSurface(shaded, previewScoreRef), { kind: 'value', value: 6 });
+    assert.deepEqual(runtime.resolveSurface(unshaded, previewScoreRef), { kind: 'value', value: -2 });
+    assert.equal(runtime.getOutcome(shaded), 'ready');
+    assert.equal(runtime.getOutcome(unshaded), 'ready');
+  });
+
+  it('keeps capability-style trusted event previews ready even when immediate margin does not change', () => {
+    const def = createDef();
+    const state = initialState(def, 1, 2).state;
+    const capability = createEventCandidate('unshaded', { cardId: 'cap-cadres' });
+    let applyCalls = 0;
+    const runtime = createPolicyPreviewRuntime({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      seatId: 'us',
+      trustedMoveIndex: new Map([[
+        capability.stableMoveKey,
+        createTrustedExecutableMove(capability.move, state.stateHash, 'templateCompletion'),
+      ]]),
+      previewMode: 'exactWorld',
+      dependencies: {
+        classifyPlayableMoveCandidate: () => {
+          assert.fail('trusted capability preview should not reclassify candidates');
+        },
+        applyMove: () => {
+          applyCalls += 1;
+          return { state };
+        },
+        derivePlayerObservation: () => createObservation(false),
+      },
+    });
+
+    assert.deepEqual(runtime.resolveSurface(capability, previewScoreRef), { kind: 'value', value: 1 });
+    assert.equal(runtime.getOutcome(capability), 'ready');
+    assert.equal(applyCalls, 1);
+  });
+
+  it('returns stochastic for trusted event previews under tolerateStochastic when rng diverges', () => {
+    const def = createDef();
+    const state = initialState(def, 1, 2).state;
+    const stochasticEvent = createEventCandidate('shaded', { cardId: 'card-random' });
+    const runtime = createPolicyPreviewRuntime({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      seatId: 'us',
+      trustedMoveIndex: new Map([[
+        stochasticEvent.stableMoveKey,
+        createTrustedExecutableMove(stochasticEvent.move, state.stateHash, 'templateCompletion'),
+      ]]),
+      previewMode: 'tolerateStochastic',
+      dependencies: {
+        classifyPlayableMoveCandidate: () => {
+          assert.fail('trusted stochastic preview should not reclassify candidates');
+        },
+        applyMove: () => ({
+          state: {
+            ...state,
+            globalVars: {
+              ...state.globalVars,
+              score: 7,
+            },
+            rng: {
+              ...state.rng,
+              state: [11n, 12n],
+            },
+          },
+        }),
+        derivePlayerObservation: () => createObservation(false),
+      },
+    });
+
+    assert.deepEqual(runtime.resolveSurface(stochasticEvent, previewScoreRef), { kind: 'value', value: 7 });
+    assert.equal(runtime.getOutcome(stochasticEvent), 'stochastic');
   });
 });

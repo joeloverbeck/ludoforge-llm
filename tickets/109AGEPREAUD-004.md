@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — policy-preview.ts, policy-diagnostics.ts, types-core.ts (trace types)
-**Deps**: `tickets/109AGEPREAUD-002.md`
+**Deps**: `archive/tickets/109AGEPREAUD-002.md`
 
 ## Problem
 

@@ -1,6 +1,6 @@
 # 113PREVSTPOLSUR-001: Add previewStateFeature ref kind to types and schemas
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel types, Zod schemas
@@ -73,6 +73,24 @@ Run `pnpm -F @ludoforge/engine run schema:artifacts`.
 1. No new test files — pure type/schema change verified by compilation and schema artifact checks.
 
 ### Commands
+
+1. `pnpm -F @ludoforge/engine run schema:artifacts`
+2. `pnpm -F @ludoforge/engine run schema:artifacts:check`
+3. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+Completed: 2026-04-05
+
+- Added `'previewStateFeature'` to `CompiledAgentPolicyLibraryRefKind` in `packages/engine/src/kernel/types-core.ts`.
+- Updated the matching Zod union in `packages/engine/src/kernel/schemas-core.ts` so the compiled ref-kind schema stays aligned with the TypeScript contract.
+- Regenerated the engine schema artifacts to verify the generator-backed contract surface remained in sync; no persisted diff under `packages/engine/schemas/` was required.
+
+Deviations from original plan:
+
+- None. The ticket boundary remained accurate and stayed a pure additive type/schema groundwork step.
+
+Verification:
 
 1. `pnpm -F @ludoforge/engine run schema:artifacts`
 2. `pnpm -F @ludoforge/engine run schema:artifacts:check`

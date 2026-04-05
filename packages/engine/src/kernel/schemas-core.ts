@@ -660,7 +660,12 @@ const CompiledSurfaceRefBaseSchema = {
 const CompiledAgentPolicyRefSchema = z.union([
   z.object({
     kind: z.literal('library'),
-    refKind: z.union([z.literal('stateFeature'), z.literal('candidateFeature'), z.literal('aggregate')]),
+    refKind: z.union([
+      z.literal('stateFeature'),
+      z.literal('candidateFeature'),
+      z.literal('aggregate'),
+      z.literal('previewStateFeature'),
+    ]),
     id: StringSchema,
   }).strict(),
   z.object({

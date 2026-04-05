@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — CNL agent compiler
-**Deps**: `tickets/113PREVSTPOLSUR-001.md`, `specs/113-preview-state-policy-surface.md`
+**Deps**: `archive/tickets/113PREVSTPOLSUR-001.md`, `specs/113-preview-state-policy-surface.md`
 
 ## Problem
 

@@ -334,7 +334,7 @@ export type AgentPolicyOperator =
   | 'not'
   | 'or'
   | 'sub';
-export type CompiledAgentPolicyLibraryRefKind = 'stateFeature' | 'candidateFeature' | 'aggregate';
+export type CompiledAgentPolicyLibraryRefKind = 'stateFeature' | 'candidateFeature' | 'aggregate' | 'previewStateFeature';
 export type SurfaceRefFamily =
   | 'globalVar'
   | 'globalMarker'

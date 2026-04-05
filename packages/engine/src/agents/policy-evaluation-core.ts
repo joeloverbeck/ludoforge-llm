@@ -31,6 +31,7 @@ import {
 } from './policy-runtime.js';
 import type {
   PolicyPreviewDependencies,
+  PolicyPreviewGrantedOperation,
   PolicyPreviewTraceOutcome,
   PolicyPreviewUnavailabilityReason,
 } from './policy-preview.js';
@@ -56,6 +57,7 @@ export interface PolicyEvaluationCandidate extends PolicyRuntimeCandidate {
   readonly unknownPreviewRefs: Map<string, PolicyPreviewUnavailabilityReason>;
   previewOutcome?: PolicyPreviewTraceOutcome;
   previewFailureReason?: string;
+  grantedOperation?: PolicyPreviewGrantedOperation;
 }
 
 export interface CreatePolicyEvaluationContextInput {
@@ -821,6 +823,10 @@ export class PolicyEvaluationContext {
         if (resolution.failureReason !== undefined) {
           candidate.previewFailureReason = resolution.failureReason;
         }
+        const grantedOperation = this.runtimeProviders.previewSurface.getGrantedOperation(candidate);
+        if (grantedOperation !== undefined) {
+          candidate.grantedOperation = grantedOperation;
+        }
         candidate.unknownPreviewRefs.set(refId, resolution.reason);
         return undefined;
       }
@@ -829,6 +835,10 @@ export class PolicyEvaluationContext {
         const previewFailureReason = this.runtimeProviders.previewSurface.getFailureReason(candidate);
         if (previewFailureReason !== undefined) {
           candidate.previewFailureReason = previewFailureReason;
+        }
+        const grantedOperation = this.runtimeProviders.previewSurface.getGrantedOperation(candidate);
+        if (grantedOperation !== undefined) {
+          candidate.grantedOperation = grantedOperation;
         }
       }
       return resolution.kind === 'value' ? resolution.value : undefined;

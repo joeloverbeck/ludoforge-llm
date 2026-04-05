@@ -21,6 +21,12 @@ function createMetadata(): PolicyEvaluationMetadata {
         previewRefIds: ['globalVar.usMargin'],
         unknownPreviewRefs: [],
         previewOutcome: 'ready',
+        grantedOperationSimulated: true,
+        grantedOperationMove: {
+          actionId: 'rally',
+          params: { zone: 'tay-ninh' },
+        },
+        grantedOperationMarginDelta: 3,
       },
       {
         actionId: 'pass',
@@ -129,7 +135,14 @@ describe('policy-diagnostics', () => {
     assert.equal(trace.movePreparations?.[1]?.rejection, 'completionUnsatisfiable');
     assert.equal(trace.candidates?.length, 3);
     assert.equal(trace.candidates?.[0]?.previewOutcome, 'ready');
+    assert.equal(trace.candidates?.[0]?.grantedOperationSimulated, true);
+    assert.deepEqual(trace.candidates?.[0]?.grantedOperationMove, {
+      actionId: 'rally',
+      params: { zone: 'tay-ninh' },
+    });
+    assert.equal(trace.candidates?.[0]?.grantedOperationMarginDelta, 3);
     assert.equal(trace.candidates?.[1]?.previewOutcome, 'hidden');
+    assert.equal(trace.candidates?.[1]?.grantedOperationSimulated, undefined);
     assert.equal(trace.candidates?.[0]?.previewFailureReason, undefined);
     assert.equal(trace.candidates?.[2]?.previewOutcome, 'unresolved');
     assert.equal(trace.candidates?.[2]?.previewFailureReason, 'completionUnsatisfiable');

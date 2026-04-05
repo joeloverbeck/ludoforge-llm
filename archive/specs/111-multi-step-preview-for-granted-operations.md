@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+COMPLETED
 
 ## Priority
 
@@ -16,7 +16,9 @@ Medium
 
 None (the annotation system and preview system already exist).
 
-**Related spec**: `specs/112-global-marker-policy-surface.md` — Spec 112 exposes global marker states to the agent policy surface. Together, these two specs address the event card valuation gap: Spec 111 fixes operation-granting events (preview depth), Spec 112 fixes capability-setting events (observation). They are independent and can be implemented in either order, but together provide complete event card coverage.
+**Related specs**:
+- `specs/112-global-marker-policy-surface.md` — Spec 112 exposes global marker states to the agent policy surface. Together, these two specs address the event card valuation gap: Spec 111 fixes operation-granting events (preview depth), Spec 112 fixes capability-setting events (observation).
+- `specs/113-preview-state-policy-surface.md` — Spec 113 broadens what policy scoring can observe from previewed post-move state. The Spec 111 implementation is complete, but audit evidence showed that many real granting-event follow-ups still land at zero immediate margin delta because the preview-visible scoring surface is narrower than the preview execution path.
 
 ## Problem
 
@@ -153,3 +155,25 @@ Events that grant operations to the evaluating agent will be correctly valued as
 The annotation-based workaround (cookbook pattern) will remain useful for events whose value can't be captured by preview depth alone. Multi-step preview complements rather than replaces annotation scoring.
 
 For capability-setting events (which don't grant operations), see Spec 112 (`specs/112-global-marker-policy-surface.md`) — it enables agents to observe and value global marker state changes, addressing the other half of the event card valuation gap.
+
+## Outcome
+
+Completed: 2026-04-05
+
+What changed:
+- implemented bounded multi-step preview for granted operations in the policy preview pipeline
+- added injected granted-operation evaluation from policy evaluation into preview
+- extended verbose trace and diagnostics with `grantedOperationSimulated`, `grantedOperationMove`, and `grantedOperationMarginDelta`
+- added unit and production FITL proof coverage
+
+Deviations from original plan:
+- the original production acceptance claim, that a granting-event candidate would necessarily score higher than under single-step preview, did not hold up under live FITL audit
+- real production candidates do simulate the granted follow-up correctly, but several land at `grantedOperationMarginDelta === 0` under the current preview-visible scoring surfaces
+- that broader valuation limitation was split into follow-up `specs/113-preview-state-policy-surface.md` rather than reopening Spec 111
+
+Verification:
+- `pnpm -F @ludoforge/engine build`
+- `node --test packages/engine/dist/test/integration/fitl-policy-agent.test.js`
+- `node --test packages/engine/dist/test/unit/agents/policy-diagnostics.test.js packages/engine/dist/test/unit/trace/policy-trace-events.test.js`
+- `pnpm -F @ludoforge/engine test`
+- `pnpm run check:ticket-deps`

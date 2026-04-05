@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — agent evaluation pipeline
-**Deps**: `archive/tickets/111MULSTPPRE-003.md`, `specs/111-multi-step-preview-for-granted-operations.md`
+**Deps**: `archive/tickets/111MULSTPPRE-003.md`, `archive/specs/111-multi-step-preview-for-granted-operations.md`
 
 ## Problem
 

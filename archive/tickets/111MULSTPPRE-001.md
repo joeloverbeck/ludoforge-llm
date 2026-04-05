@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel types, Zod schemas
-**Deps**: `specs/111-multi-step-preview-for-granted-operations.md`
+**Deps**: `archive/specs/111-multi-step-preview-for-granted-operations.md`
 
 ## Problem
 

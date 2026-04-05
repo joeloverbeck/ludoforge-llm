@@ -72,6 +72,7 @@ export interface PolicyPreviewRuntime {
   ): PolicyPreviewSurfaceResolution;
   getOutcome(candidate: PolicyPreviewCandidate): PolicyPreviewTraceOutcome;
   getFailureReason(candidate: PolicyPreviewCandidate): string | undefined;
+  getGrantedOperation(candidate: PolicyPreviewCandidate): PolicyPreviewGrantedOperation | undefined;
 }
 
 export type PolicyPreviewUnavailabilityReason = 'random' | 'hidden' | 'unresolved' | 'failed';
@@ -91,6 +92,13 @@ export type PolicyPreviewSurfaceResolution =
       readonly kind: 'unavailable';
     };
 
+export interface PolicyPreviewGrantedOperation {
+  readonly move: Move;
+  readonly score: number;
+  readonly preEventMargin?: number;
+  readonly postEventPlusOpMargin?: number;
+}
+
 type PreviewOutcome =
   | {
       readonly kind: 'ready';
@@ -98,12 +106,7 @@ type PreviewOutcome =
       readonly hiddenSamplingZones: readonly ZoneId[];
       readonly metricCache: Map<string, number>;
       victorySurface: PolicyVictorySurface | null;
-      readonly grantedOperation?: {
-        readonly move: Move;
-        readonly score: number;
-        readonly preEventMargin?: number;
-        readonly postEventPlusOpMargin?: number;
-      };
+      readonly grantedOperation?: PolicyPreviewGrantedOperation;
     }
   | {
       readonly kind: 'stochastic';
@@ -111,12 +114,7 @@ type PreviewOutcome =
       readonly hiddenSamplingZones: readonly ZoneId[];
       readonly metricCache: Map<string, number>;
       victorySurface: PolicyVictorySurface | null;
-      readonly grantedOperation?: {
-        readonly move: Move;
-        readonly score: number;
-        readonly preEventMargin?: number;
-        readonly postEventPlusOpMargin?: number;
-      };
+      readonly grantedOperation?: PolicyPreviewGrantedOperation;
     }
   | {
       readonly kind: 'unknown';
@@ -249,6 +247,12 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
       const outcome = getPreviewOutcome(candidate);
       return outcome.kind === 'unknown' ? outcome.failureReason : undefined;
     },
+    getGrantedOperation(candidate) {
+      const outcome = getPreviewOutcome(candidate);
+      return outcome.kind === 'ready' || outcome.kind === 'stochastic'
+        ? outcome.grantedOperation
+        : undefined;
+    },
   };
 
   function getPreviewOutcome(candidate: PolicyPreviewCandidate): PreviewOutcome {
@@ -331,12 +335,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
     previewState: GameState,
   ): {
     readonly state: GameState;
-    readonly grantedOperation: {
-      readonly move: Move;
-      readonly score: number;
-      readonly preEventMargin?: number;
-      readonly postEventPlusOpMargin?: number;
-    };
+    readonly grantedOperation: PolicyPreviewGrantedOperation;
   } | undefined {
     const eventCardId = trustedMove.move.params.eventCardId;
     const sideParam = trustedMove.move.params.side;

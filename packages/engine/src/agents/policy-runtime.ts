@@ -20,6 +20,7 @@ import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
 import {
   createPolicyPreviewRuntime,
   type PolicyPreviewDependencies,
+  type PolicyPreviewGrantedOperation,
   type PolicyPreviewTraceOutcome,
   type PolicyPreviewSurfaceResolution,
 } from './policy-preview.js';
@@ -64,6 +65,7 @@ export interface PolicyPreviewSurfaceProvider {
   ): PolicyPreviewSurfaceResolution;
   getOutcome(candidate: PolicyRuntimeCandidate): PolicyPreviewTraceOutcome;
   getFailureReason(candidate: PolicyRuntimeCandidate): string | undefined;
+  getGrantedOperation(candidate: PolicyRuntimeCandidate): PolicyPreviewGrantedOperation | undefined;
 }
 
 export interface PolicyCompletionProvider {
@@ -268,6 +270,9 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
       },
       getFailureReason(candidate) {
         return previewRuntime.getFailureReason(candidate);
+      },
+      getGrantedOperation(candidate) {
+        return previewRuntime.getGrantedOperation(candidate);
       },
     },
     ...(input.completion === undefined

@@ -87,6 +87,7 @@ If that earlier ticket introduced production-corpus traversal, fixture readers, 
     - if the mismatch is a narrow factual detail inside an otherwise valid ticket boundary, treat it as a bounded discrepancy plus `1-3-1`, not an automatic ticket rewrite
     - if the original bug claim is no longer reproducible but the intended invariant is still worth proving, it is valid to convert the ticket into a proof/regression-only implementation after user confirmation rather than forcing speculative runtime code changes or closing it as not actionable
     - if a ticket names a suspected buggy module but the live audit shows that surface already satisfies the intended invariant, it is valid to complete the ticket as an audit-plus-proof implementation with tests only and an explicit no-runtime-change outcome after user confirmation
+    - if the implementation is valid but one specific acceptance claim no longer has a verified reproducer, it is valid to preserve the working feature and correct the ticket to the strongest evidenced acceptance boundary after `1-3-1` rather than treating the whole ticket as failed
 17. If the ticket is accurate and no blocking decision remains, proceed.
 
 ## Implementation Rules
@@ -135,11 +136,13 @@ If that earlier ticket introduced production-corpus traversal, fixture readers, 
 - For production-proof tickets that must validate behavior on live authored data, it is valid to run a bounded seed, turn, or trace scan to discover a current deterministic reproducer, then encode that discovered reproduction directly into the owned integration tests.
 - If the ticket says "no code changes", interpret that as "no production/runtime behavior changes" unless the ticket explicitly forbids repo artifact edits. Ticket/spec outcome sections, archival moves, dependency rewrites, and sibling-ticket status updates are still required when they are the owned deliverable.
 - If a diagnostic or audit ticket requires written findings but does not name a specific file, prefer an existing repo-owned report surface such as `reports/` over ephemeral local notes or ad hoc scratch files, and reference that report in the final summary.
+- If reassessment reveals a generic architectural limitation broader than the current ticket's owned boundary, prefer creating or extending a follow-up spec in the same turn instead of burying the design gap in ticket-only notes.
 - When a migration adds or removes a required compiled field, treat owned production goldens that snapshot compiled catalogs, summaries, or traces as expected update surfaces unless evidence shows unexpected behavioral drift.
 - When a change alters observability, preview readiness, scoring inputs, or other behavior that can legitimately change deterministic move choice, treat owned production goldens and fixed-seed summaries as expected update surfaces unless evidence shows unexpected drift outside the ticket boundary.
 - When enriching diagnostics or trace output, prefer preserving the existing coarse summary field and adding an optional detail field unless the ticket explicitly owns a breaking schema redesign.
 - Preparatory tickets may legitimately add optional schema, trace, or contract fields ahead of the later logic tickets that will populate them, so long as the ticket explicitly owns that groundwork boundary and verification proves the artifact surfaces remain in sync.
 - When a completed gate ticket proves downstream active tickets are not actionable, update those sibling tickets in the same turn so their status, deps, and scope text no longer advertise invalid work. Do not leave the series in a partially-invalid staged state.
+- When a new follow-up spec changes the framing around an adjacent active spec without invalidating that spec's core scope, prefer a small relationship or cross-reference update over rewriting the adjacent spec's problem statement.
 
 ## Verification
 

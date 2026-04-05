@@ -638,12 +638,11 @@ scoreTerm:
 
 ### "React to the active event card"
 
-Event cards are often the most strategically important decisions in a game. The 1-move preview captures immediate state changes (opposition shifts, token movements) but **cannot capture multi-turn strategic value** from:
-- **Granted operations** — events that give the player a free extra action
+Event cards are often the most strategically important decisions in a game. The preview now captures immediate state changes and can automatically simulate one granted follow-up operation for the evaluating seat, but it still cannot capture every longer-horizon effect from:
 - **Capability cards** — events that permanently modify game rules
 - **Resource transfers** — events that shift economic balance
 
-Use card annotations to supplement preview scoring. Annotations are compiled from the event's effect AST and provide a numeric feature vector per card side.
+Use card annotations to supplement preview scoring. They remain especially useful for effects whose value is spread across later turns or does not show up as an immediate projected-margin change. Annotations are compiled from the event's effect AST and provide a numeric feature vector per card side.
 
 #### Available annotation metrics
 
@@ -665,7 +664,7 @@ Access via `activeCard.annotation.<side>.<metric>` (e.g., `activeCard.annotation
 
 #### Pattern: Prefer events that grant operations
 
-Events that grant a free operation are worth an **entire extra turn**. The preview only evaluates the event's immediate effect, not the granted operation's value.
+Events that grant a free operation now benefit from automatic multi-step preview: if the evaluating seat is the grantee, preview simulates the event and then the best follow-up operation chosen by the same policy profile. Annotation bonuses are still useful when you want to weight the structural importance of the event beyond what the bounded preview can see.
 
 **Note**: Annotation refs and tag refs compile to `number` (0/1), not `boolean`. Use `type: number` for features, `gt: [ref, 0]` for `when` clauses, and `coalesce` with `0` (not `false`).
 
@@ -780,8 +779,8 @@ The preview system evaluates the immediate game state after applying the event. 
 - Events that directly move tokens or shift markers (preview sees the margin change)
 - Events with simple, immediate effects
 
-But preview **undervalues** or **misses**:
-- **Granted operations** — preview doesn't simulate the free action that follows
+But preview can still **undervalue** or **miss**:
+- **Granted operations with longer-term value** — preview only simulates one bounded follow-up action
 - **Capability effects** — setting a global marker has zero immediate margin impact
 - **Resource transfers** — changing resources doesn't affect the current margin
 - **Lasting effects** — modifying future game rules is invisible to 1-move lookahead

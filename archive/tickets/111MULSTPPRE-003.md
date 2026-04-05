@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — agent preview logic
-**Deps**: `archive/tickets/111MULSTPPRE-002.md`, `specs/111-multi-step-preview-for-granted-operations.md`
+**Deps**: `archive/tickets/111MULSTPPRE-002.md`, `archive/specs/111-multi-step-preview-for-granted-operations.md`
 
 ## Problem
 

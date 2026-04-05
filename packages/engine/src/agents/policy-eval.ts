@@ -21,6 +21,7 @@ import { createRng, stepRng } from '../kernel/prng.js';
 import { pickRandom } from './agent-move-selection.js';
 import type {
   PolicyPreviewDependencies,
+  PolicyPreviewGrantedOperation,
   PolicyPreviewTraceOutcome,
   PolicyPreviewUnavailabilityReason,
 } from './policy-preview.js';
@@ -67,6 +68,12 @@ export interface PolicyEvaluationCandidateMetadata {
   readonly previewRefIds: readonly string[];
   readonly unknownPreviewRefs: readonly PolicyPreviewUnknownRef[];
   readonly previewOutcome?: PolicyPreviewTraceOutcome;
+  readonly grantedOperationSimulated?: boolean;
+  readonly grantedOperationMove?: {
+    readonly actionId: string;
+    readonly params: Readonly<Record<string, unknown>>;
+  };
+  readonly grantedOperationMarginDelta?: number;
   readonly previewFailureReason?: string;
 }
 
@@ -136,6 +143,7 @@ export interface EvaluatePolicyMoveInput {
   readonly movePreparations?: readonly PolicyMovePreparationTrace[];
   readonly fallbackOnError?: boolean;
   readonly profileIdOverride?: string;
+  readonly previewDependencies?: PolicyPreviewDependencies;
 }
 
 export type PolicyEvaluationCoreResult =
@@ -159,6 +167,7 @@ interface CandidateEntry extends PolicyEvaluationCandidate {
   readonly scoreContributions: { readonly termId: string; readonly contribution: number }[];
   previewOutcome?: PolicyPreviewTraceOutcome;
   previewFailureReason?: string;
+  grantedOperation?: PolicyPreviewGrantedOperation;
   score: number;
 }
 
@@ -394,7 +403,10 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
   }
 
   try {
-    const previewDependencies = createGrantedOperationPreviewDependencies(input.def, profileId);
+    const previewDependencies = {
+      ...createGrantedOperationPreviewDependencies(input.def, profileId),
+      ...input.previewDependencies,
+    } satisfies PolicyPreviewDependencies;
     const evaluation = new PolicyEvaluationContext({
       def: input.def,
       state: input.state,
@@ -737,6 +749,7 @@ function canonicalizeCandidates(def: GameDef, legalMoves: readonly Move[]): Cand
 }
 
 function candidateMetadata(candidate: CandidateEntry): PolicyEvaluationCandidateMetadata {
+  const grantedOperationMetadata = traceGrantedOperation(candidate.grantedOperation);
   return {
     actionId: candidate.actionId,
     stableMoveKey: candidate.stableMoveKey,
@@ -748,7 +761,30 @@ function candidateMetadata(candidate: CandidateEntry): PolicyEvaluationCandidate
       .sort(([leftId], [rightId]) => leftId.localeCompare(rightId))
       .map(([refId, reason]) => ({ refId, reason })),
     ...(candidate.previewOutcome === undefined ? {} : { previewOutcome: candidate.previewOutcome }),
+    ...(grantedOperationMetadata ?? {}),
     ...(candidate.previewFailureReason === undefined ? {} : { previewFailureReason: candidate.previewFailureReason }),
+  };
+}
+
+function traceGrantedOperation(
+  grantedOperation: PolicyPreviewGrantedOperation | undefined,
+): Pick<
+  PolicyEvaluationCandidateMetadata,
+  'grantedOperationSimulated' | 'grantedOperationMove' | 'grantedOperationMarginDelta'
+> | undefined {
+  if (grantedOperation === undefined) {
+    return undefined;
+  }
+
+  return {
+    grantedOperationSimulated: true,
+    grantedOperationMove: {
+      actionId: String(grantedOperation.move.actionId),
+      params: grantedOperation.move.params,
+    },
+    ...(grantedOperation.preEventMargin === undefined || grantedOperation.postEventPlusOpMargin === undefined
+      ? {}
+      : { grantedOperationMarginDelta: grantedOperation.postEventPlusOpMargin - grantedOperation.preEventMargin }),
   };
 }
 

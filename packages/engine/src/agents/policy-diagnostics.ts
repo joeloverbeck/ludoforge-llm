@@ -102,6 +102,14 @@ export function buildPolicyAgentDecisionTrace(
   metadata: PolicyEvaluationMetadata,
   traceLevel: PolicyDecisionTraceLevel = 'summary',
 ): PolicyAgentDecisionTrace {
+  const verboseCandidates = metadata.candidates.map((candidate) => ({
+    ...candidate,
+    ...(candidate.grantedOperationSimulated === undefined ? {} : { grantedOperationSimulated: candidate.grantedOperationSimulated }),
+    ...(candidate.grantedOperationMove === undefined ? {} : { grantedOperationMove: candidate.grantedOperationMove }),
+    ...(candidate.grantedOperationMarginDelta === undefined ? {} : { grantedOperationMarginDelta: candidate.grantedOperationMarginDelta }),
+    ...(candidate.previewFailureReason === undefined ? {} : { previewFailureReason: candidate.previewFailureReason }),
+  }));
+
   return {
     kind: 'policy',
     agent: {
@@ -124,7 +132,7 @@ export function buildPolicyAgentDecisionTrace(
     ...(metadata.stateFeatures !== undefined ? { stateFeatures: metadata.stateFeatures } : {}),
     ...(traceLevel === 'verbose'
       ? {
-          candidates: metadata.candidates,
+          candidates: verboseCandidates,
           ...(metadata.completionStatistics === undefined ? {} : { completionStatistics: metadata.completionStatistics }),
           ...(metadata.movePreparations === undefined ? {} : { movePreparations: metadata.movePreparations }),
         }

@@ -16,6 +16,10 @@ Small
 
 None.
 
+**Related specs**:
+- `archive/specs/111-multi-step-preview-for-granted-operations.md` — adds bounded second-step preview for granted operations
+- `specs/113-preview-state-policy-surface.md` — broadens what policy scoring can observe from previewed post-move state beyond immediate margin and vars
+
 ## Problem
 
 The Agent Policy DSL exposes global variables (`var.global.*`), per-player variables (`var.player.*`), victory metrics, active card properties, zone properties, and token aggregations. It does NOT expose **global marker states** — the lattice-based state values that represent capabilities, leader effects, and other persistent game-rule modifiers.
@@ -26,7 +30,7 @@ The agent cannot observe global marker states because `globalMarker.*` is not a 
 
 1. **The agent cannot define state features based on capability state.** It can't express "how many VC-favorable capabilities are active?" or "is Booby Traps currently shaded?"
 
-2. **The preview cannot capture the delta from setting a capability.** When the preview simulates an event that sets a global marker, the margin doesn't change (capabilities affect future rules, not immediate state). Without a global-marker-based state feature, no consideration sees any change.
+2. **The preview cannot capture the delta from setting a capability.** When the preview simulates an event that sets a global marker, the margin doesn't change (capabilities affect future rules, not immediate state). Without a global-marker-based state feature, no consideration sees any change. This is the capability-specific subset of the broader preview-surface observability gap described in `specs/113-preview-state-policy-surface.md`.
 
 3. **Evolution cannot learn capability values.** Even with tunable parameters, the agent has no observable signal to attach weights to. You can't learn the value of something you can't see.
 

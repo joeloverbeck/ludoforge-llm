@@ -1,6 +1,6 @@
 # 111MULSTPPRE-003: Implement multi-step preview in tryApplyPreview
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — agent preview logic
@@ -117,3 +117,22 @@ This metadata flows through to diagnostic enrichment (ticket 005).
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/agents/policy-preview-granted-op.test.js`
 2. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+Completed on 2026-04-05.
+
+`policy-preview.ts` now performs the granted-operation second step for trusted event previews. After the event applies, preview checks compiled card annotations, confirms the acting preview seat is a grantee, calls `evaluateGrantedOperation(...)`, classifies the returned plain `Move` in the post-event state, and applies one additional move when that classified result is playable. The second-step preview remains bounded at depth 1 and falls back cleanly to the post-event-only state when the callback returns `undefined`, the seat is not a grantee, classification rejects the move, or the second apply fails.
+
+The implementation also extended the internal `PreviewOutcome` metadata with optional granted-operation detail for later trace enrichment work, and the live owning test surface in `packages/engine/test/unit/agents/policy-preview.test.ts` now covers activation, opponent-only skip, `"self"` seat resolution, undefined-callback fallback, and the one-step depth cap.
+
+Implementation notes:
+- Reused the existing preview `seatId` input instead of introducing a duplicate `agentSeatId` field.
+- Kept the callback contract returning a plain `Move`; `policy-preview.ts` now owns the `Move -> TrustedExecutableMove` classification boundary before applying the granted operation.
+- Extended the existing owning test module instead of creating the stale dedicated file named in the ticket.
+- Updated active sibling `tickets/111MULSTPPRE-004.md` in the same turn so the next ticket matches the corrected contract boundary.
+
+Verification:
+- `pnpm -F @ludoforge/engine build`
+- `node --test packages/engine/dist/test/unit/agents/policy-preview.test.js`
+- `pnpm -F @ludoforge/engine test`

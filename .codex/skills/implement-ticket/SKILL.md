@@ -61,6 +61,7 @@ If that earlier ticket introduced production-corpus traversal, fixture readers, 
    - keep dependency references and status values coherent across the series
    - run the repo's ticket dependency checker after the series rewrite when available
    - if the referenced spec still mentions a deliverable that is already split into a later active sibling ticket, keep implementation anchored to the current active ticket boundary and verify that sibling ownership instead of re-absorbing the broader spec scope
+   - if a user-confirmed `1-3-1` resolution changes the contract between consecutive active tickets, update the downstream sibling ticket in the same turn so staged ownership and interface assumptions remain coherent
 12. If the ticket is a profiling, audit, benchmark, investigation, or other gate-setting ticket:
    - identify the explicit threshold, decision gate, or downstream trigger owned by the ticket
    - verify which sibling tickets, specs, or reports depend on that gate
@@ -119,6 +120,7 @@ If that earlier ticket introduced production-corpus traversal, fixture readers, 
   - fixtures, goldens, and tests
   - manually constructed shared runtime/test fixtures such as `GameDefRuntime` or other kernel context objects
   - if a new UI/store/model context field exists mainly to support one feature path, consider whether it should stay optional on local test-helper contracts to avoid unnecessary fixture churn, so long as production code still supplies it explicitly and the distinction is verified
+- When one ticket stage selects or returns a plain domain object but the next stage can only execute a wrapped, trusted, or otherwise validated form of that object, treat that conversion boundary as an explicit contract check and resolve ownership with `1-3-1` before coding rather than silently shifting the contract.
 - When tightening authored `chooseN` minimums or other decision cardinality constraints:
   - check whether runtime `max` can drop below the new minimum because of resources, grants, action class, or other state-dependent caps
   - if `max < min` can occur, update legality or cost-validation in the same change so the move becomes cleanly illegal instead of failing at runtime

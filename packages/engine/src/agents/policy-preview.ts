@@ -98,6 +98,12 @@ type PreviewOutcome =
       readonly hiddenSamplingZones: readonly ZoneId[];
       readonly metricCache: Map<string, number>;
       victorySurface: PolicyVictorySurface | null;
+      readonly grantedOperation?: {
+        readonly move: Move;
+        readonly score: number;
+        readonly preEventMargin?: number;
+        readonly postEventPlusOpMargin?: number;
+      };
     }
   | {
       readonly kind: 'stochastic';
@@ -105,6 +111,12 @@ type PreviewOutcome =
       readonly hiddenSamplingZones: readonly ZoneId[];
       readonly metricCache: Map<string, number>;
       victorySurface: PolicyVictorySurface | null;
+      readonly grantedOperation?: {
+        readonly move: Move;
+        readonly score: number;
+        readonly preEventMargin?: number;
+        readonly postEventPlusOpMargin?: number;
+      };
     }
   | {
       readonly kind: 'unknown';
@@ -287,19 +299,23 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         undefined,
         input.runtime,
       ).state;
-      const rngDiverged = !rngStatesEqual(previewState.rng, input.state.rng);
+      const eventRngDiverged = !rngStatesEqual(previewState.rng, input.state.rng);
 
-      if (rngDiverged && input.previewMode === 'exactWorld') {
+      if (eventRngDiverged && input.previewMode === 'exactWorld') {
         return { kind: 'unknown', reason: 'random' };
       }
 
-      const observation = deps.derivePlayerObservation(input.def, previewState, input.playerId);
+      const grantedOperationResult = tryApplyGrantedOperationPreview(trustedMove, previewState);
+      const finalState = grantedOperationResult?.state ?? previewState;
+      const rngDiverged = !rngStatesEqual(finalState.rng, input.state.rng);
+      const observation = deps.derivePlayerObservation(input.def, finalState, input.playerId);
       return {
         kind: rngDiverged ? 'stochastic' : 'ready',
-        state: previewState,
+        state: finalState,
         hiddenSamplingZones: observation.hiddenSamplingZones,
         metricCache: new Map<string, number>(),
         victorySurface: null,
+        ...(grantedOperationResult === undefined ? {} : { grantedOperation: grantedOperationResult.grantedOperation }),
       };
     } catch (error) {
       return {
@@ -307,6 +323,80 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         reason: 'failed',
         failureReason: truncatePreviewFailureReason(error),
       };
+    }
+  }
+
+  function tryApplyGrantedOperationPreview(
+    trustedMove: TrustedExecutableMove,
+    previewState: GameState,
+  ): {
+    readonly state: GameState;
+    readonly grantedOperation: {
+      readonly move: Move;
+      readonly score: number;
+      readonly preEventMargin?: number;
+      readonly postEventPlusOpMargin?: number;
+    };
+  } | undefined {
+    const eventCardId = trustedMove.move.params.eventCardId;
+    const sideParam = trustedMove.move.params.side;
+    if (typeof eventCardId !== 'string') {
+      return undefined;
+    }
+
+    let eventSide: 'shaded' | 'unshaded';
+    if (sideParam === 'shaded') {
+      eventSide = 'shaded';
+    } else if (sideParam === 'unshaded') {
+      eventSide = 'unshaded';
+    } else {
+      return undefined;
+    }
+
+    const annotation = input.def.cardAnnotationIndex?.entries[eventCardId]?.[eventSide];
+    if (annotation === undefined || !annotation.grantsOperation) {
+      return undefined;
+    }
+
+    const isGrantee = annotation.grantOperationSeats.includes('self')
+      || annotation.grantOperationSeats.includes(input.seatId);
+    if (!isGrantee) {
+      return undefined;
+    }
+
+    const selected = deps.evaluateGrantedOperation(input.def, previewState, input.seatId, input.runtime);
+    if (selected === undefined) {
+      return undefined;
+    }
+
+    const classification = deps.classifyPlayableMoveCandidate(input.def, previewState, selected.move, input.runtime);
+    if (classification.kind !== 'playableComplete' && classification.kind !== 'playableStochastic') {
+      return undefined;
+    }
+
+    try {
+      const postEventPlusOpState = deps.applyMove(
+        input.def,
+        previewState,
+        classification.move,
+        undefined,
+        input.runtime,
+      ).state;
+      return {
+        state: postEventPlusOpState,
+        grantedOperation: {
+          move: selected.move,
+          score: selected.score,
+          ...(getSeatMargin(input.def, previewState, input.seatId, input.runtime) === undefined
+            ? {}
+            : { preEventMargin: getSeatMargin(input.def, previewState, input.seatId, input.runtime)! }),
+          ...(getSeatMargin(input.def, postEventPlusOpState, input.seatId, input.runtime) === undefined
+            ? {}
+            : { postEventPlusOpMargin: getSeatMargin(input.def, postEventPlusOpState, input.seatId, input.runtime)! }),
+        },
+      };
+    } catch {
+      return undefined;
     }
   }
 }
@@ -379,6 +469,15 @@ function getVictorySurface(
   }
   preview.victorySurface = buildPolicyVictorySurface(def, preview.state, runtime);
   return preview.victorySurface;
+}
+
+function getSeatMargin(
+  def: GameDef,
+  state: GameState,
+  seatId: string,
+  runtime?: GameDefRuntime,
+): number | undefined {
+  return buildPolicyVictorySurface(def, state, runtime).marginBySeat.get(seatId);
 }
 
 function rngStatesEqual(left: RngState, right: RngState): boolean {

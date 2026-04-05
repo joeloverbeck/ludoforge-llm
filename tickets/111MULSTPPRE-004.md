@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — agent evaluation pipeline
-**Deps**: `tickets/111MULSTPPRE-003.md`, `specs/111-multi-step-preview-for-granted-operations.md`
+**Deps**: `archive/tickets/111MULSTPPRE-003.md`, `specs/111-multi-step-preview-for-granted-operations.md`
 
 ## Problem
 
@@ -46,13 +46,13 @@ evaluateGrantedOperation: (def, postEventState, agentSeatId, runtime) => {
 },
 ```
 
-### 3. Pass agent seat ID to preview input
+### 3. Reuse the existing preview `seatId` input
 
-Ensure the `agentSeatId` field (added in ticket 002) is populated when constructing the preview input. The seat ID is available from the evaluation context.
+Ticket 002 kept the existing `seatId` field instead of adding a duplicate `agentSeatId`. Ticket 004 should therefore use the existing preview/runtime seat identity already threaded through the evaluation context.
 
-### 4. Handle the granted operation move as a TrustedExecutableMove
+### 4. Return a `Move`; preview handles trust conversion
 
-The callback returns a `Move`. To apply it via `deps.applyMove()` in the preview, it needs to be a `TrustedExecutableMove`. The callback implementation should classify the move (using `classifyPlayableMoveCandidate` or equivalent) before returning, or the preview should handle classification.
+The callback continues to return a plain `Move`. Ticket 003 now classifies that move inside `policy-preview.ts` before applying it, so ticket 004 should focus on selecting the best granted-operation move and returning `{ move, score }`, not on constructing a `TrustedExecutableMove` itself.
 
 ## Files to Touch
 
@@ -74,7 +74,7 @@ The callback returns a `Move`. To apply it via `deps.applyMove()` in the preview
 2. Callback uses the agent's scoring profile (considerations, features, pruning) to select the best move
 3. Callback does NOT use multi-step preview in its inner evaluation (recursion guard)
 4. Callback returns `undefined` when no legal moves are available
-5. Agent seat ID is correctly passed through to the preview system
+5. The existing preview `seatId` is correctly passed through to the callback
 6. Existing suite: `pnpm -F @ludoforge/engine test`
 
 ### Invariants

@@ -153,3 +153,24 @@ No previous evaluation exists — this is the baseline evaluation.
 | 7 | Cost Transparency | 4 | 4 | 0 | No changes. |
 | 8 | Optional/Mandatory Distinction | 3 | 3 | 0 | No changes. |
 | | **Average** | **3.4** | **3.0** | **+0.4** | |
+
+---
+
+## EVALUATION #3
+
+**Date**: 2026-04-04
+**Screenshots analyzed**: fitl-assault.png, fitl-patrol.png, fitl-sweep.png, fitl-train-1.png, fitl-train-2.png
+
+### Scores
+
+| # | Metric | Score | Previous | Delta | Justification |
+|---|--------|-------|----------|-------|---------------|
+| 1 | Language Naturalness | 4 | 3 | +1 | $variables humanized, filter operators humanized ("is" vs "eq"). Condition expressions still technical. |
+| 2 | Step Semantic Clarity | 4 | 4 | 0 | No step header changes. |
+| 3 | Information Hierarchy | 3 | 3 | 0 | No visual changes. |
+| 4 | Terminology Consistency | 4 | 3 | +1 | $variables no longer leak. Filter operators humanized. |
+| 5 | Progressive Disclosure | 3 | 3 | 0 | No changes. |
+| 6 | Visual Scannability | 4 | 4 | 0 | No visual changes. |
+| 7 | Cost Transparency | 4 | 4 | 0 | No changes. |
+| 8 | Optional/Mandatory Distinction | 3 | 3 | 0 | No changes. |
+| | **Average** | **3.6** | **3.4** | **+0.2** | |

@@ -37,118 +37,6 @@ Average score reaches **8.0+** with no CRITICAL or HIGH recommendations remainin
 
 ---
 
-## EVALUATION #3
-
-**Date**: 2026-04-04
-**Screenshots analyzed**: fitl-assault.png, fitl-patrol.png, fitl-sweep.png, fitl-train-1.png, fitl-train-2.png
-
-### Screenshot Analysis
-
-#### fitl-assault.png — Assault Tooltip
-**What's shown**: Assault operation tooltip with synopsis, collapsible "Step 1" containing 7 sub-steps, modifiers (0 active), availability indicator, Raw AST toggle.
-**Issues observed**:
-- Steps 1, 2, 4, 6, 7 still all "Select spaces" — repetitive headers persist
-- "number of US Troops pieces > 0 and number of NVA/VC pieces > 0" — condition filter still reads as a technical expression (though these are ConditionAST-based, already humanized to some degree)
-- "zone Id in Target Spaces and not Terrain Tags includes Lowland" — raw field names ("zone Id", "Terrain Tags") still technical
-- "Cap Assault Cobras Shaded Cost" and "Cap Assault M48-Unshaded Bonus Removal" — humanized from kebab-case but semantically meaningless to players
-- No visual hierarchy — costs, conditions, selections all same style
-- Positive: No $variables visible. No magic numbers. No raw kebab-case IDs.
-
-#### fitl-patrol.png — Patrol Tooltip
-**What's shown**: Patrol operation with synopsis, collapsible "Step 1" and 8 sub-steps, modifiers (1 active), availability indicator.
-**Issues observed**:
-- **Improved**: "Faction is us" (was "Faction eq us") — filter operators humanized
-- **Improved**: "Move Cube from Zone of Cube to Loc" (was "$cube") — $variable humanized
-- **Persists**: "m48patrol moved is true" — property name "m48patrol" still raw (not a $variable, so the $var regex doesn't catch it)
-- **Persists**: "Faction is us and type in troops, police" — operators humanized ("is" instead of "eq") but the overall expression still reads as a technical filter, not natural language
-- **Persists**: "Cap Patrol M48-Shaded Moved Cube Penalty" — partially humanized (M48-Shaded still has a hyphen)
-- Steps 1, 2 "Select spaces"; steps 3, 5, 7, 8 "Select zones" — still repetitive within target type
-- "Set Cube.m48patrol Moved to true" — raw property chain persists
-
-#### fitl-sweep.png — Sweep Tooltip
-**What's shown**: Sweep operation with synopsis, collapsible "Step 1" with 4 bullet items plus 5 sub-steps, modifiers (collapsed), availability, Raw AST toggle.
-**Issues observed**:
-- **Improved**: "Move Troop from Zone of Troop to Space" (was "$troop") — $variable humanized
-- **Persists**: "Select 1 zone Category in Province or City and zone Country is not North Vietnam" — condition filter still reads as a technical predicate
-- "Cap Sweep Cobras Unshaded Removal", "Cap Sweep Booby Traps Shaded Cost" — humanized but meaningless
-- "Sweep Loc Hop" — humanized but meaningless
-- Step 4 "Select spaces" with child "Select spaces" — redundant header and content
-- No visual hierarchy
-
-#### fitl-train-1.png + fitl-train-2.png — Train Tooltip
-**What's shown**: Train operation spanning 2 screenshots. Synopsis, collapsible "Step 1" with ~10 bullet items, sub-steps 1-7.
-**Issues observed**:
-- **Improved**: "Set Patronage to Transfer Amount * -1" (was "$transferAmount") — $variable humanized
-- **Improved**: "Set ARVN Resources to Transfer Amount" (was "$transferAmount") — $variable humanized
-- **Improved**: "Set ARVN Resources to Pac Levels * -4 or -3" (was "$pacLevels") — $variable humanized
-- **Improved**: "Shift Support/Opposition by Pac Levels" (was "$pacLevels") — $variable humanized
-- **Persists**: Arithmetic expressions "Transfer Amount * -1" and "1 * -4 or -3" still visible — more readable with humanized variable names but the math itself is still confusing to players
-- **Persists**: "Remove Cube from Sub Space to ARVN Available Forces" — "Sub Space" jargon
-- **Persists**: Tooltip still spans 2 screens with no progressive disclosure
-- **Persists**: Condition filters in Step 1 bullets still technical
-- Positive: Sub-step headers remain diverse and meaningful
-
-### Cross-Tooltip Consistency
-
-- **Filter operator humanization is consistent**: All tooltips now show "is" instead of "eq" for equality operators
-- **$variable humanization is consistent**: All $variables replaced with Title Case names across all tooltips
-- **Kebab-case humanization consistent**: All tooltips show Title Case
-- **Step header inconsistency persists**: Assault uses "Select spaces" x4 and "Select items" x1; Patrol uses "Select spaces" x2 and "Select zones" x4; inconsistent labeling for semantically similar steps
-- **Cost positioning still inconsistent**: Costs at step 5 (Assault), step 6 (Patrol), step 5 (Sweep), step 3 (Train)
-
-### Resolved Since Previous
-
-- **Raw `$variable` references** — was [CRITICAL #2] in Eval #2, now resolved. "$cube" → "Cube", "$troop" → "Troop", "$transferAmount" → "Transfer Amount", "$pacLevels" → "Pac Levels".
-- **Filter operator "eq" syntax** — was part of [CRITICAL #1] in Eval #2, partially resolved. "eq" → "is", "ne" → "is not". The operators are now natural language, but the overall filter expression structure ("Faction is us and type in troops, police") still reads as a technical predicate rather than a game manual sentence.
-
-### Scores
-
-| # | Metric | Score | Previous | Delta | Justification |
-|---|--------|-------|----------|-------|---------------|
-| 1 | Language Naturalness | 4 | 3 | +1 | $variables replaced with readable names ("Transfer Amount", "Pac Levels", "Cube"). Filter operators humanized ("is" vs "eq"). But condition expressions still read as technical predicates ("Faction is us and type in troops, police"), arithmetic persists ("1 * -4 or -3"), and property chains ("Cube.m48patrol Moved") remain. Crossing from unusable (3) into poor (4). |
-| 2 | Step Semantic Clarity | 4 | 4 | 0 | No changes to step headers this iteration. Still "Select spaces" x4 in Assault, "Select zones" x4 in Patrol. |
-| 3 | Information Hierarchy | 3 | 3 | 0 | No visual/presentation changes. All text still same monospace weight. |
-| 4 | Terminology Consistency | 4 | 3 | +1 | $variables no longer leak raw binding names. Filter operators no longer use "eq"/"ne" syntax. Property name "m48patrol" still leaks. Humanized capability IDs ("Cap Assault Cobras Shaded Cost") still semantically opaque but no longer look like internal identifiers. |
-| 5 | Progressive Disclosure | 3 | 3 | 0 | No changes. Train still spans 2 screens. |
-| 6 | Visual Scannability | 4 | 4 | 0 | No visual changes. Slightly improved text quality makes scanning marginally easier but not enough to move the score. |
-| 7 | Cost Transparency | 4 | 4 | 0 | No changes to cost display. |
-| 8 | Optional/Mandatory Distinction | 3 | 3 | 0 | No changes. |
-| | **Average** | **3.6** | **3.4** | **+0.2** | |
-
-### Score Trend
-
-| Eval | Avg | Delta |
-|------|-----|-------|
-| #1   | 3.0 | — |
-| #2   | 3.4 | +0.4 |
-| #3   | 3.6 | +0.2 |
-
-The trend shows consistent positive improvement but with diminishing returns. Engine-layer data quality fixes are reaching their limit — the remaining gains require either deeper engine changes (condition expression rewriting) or runner-layer presentation improvements (visual hierarchy, progressive disclosure).
-
-### Prioritized Recommendations
-
-1. **[HIGH]** Condition expressions still read as technical predicates — "Faction is us and type in troops, police", "number of US Troops pieces > 0 and number of NVA/VC pieces > 0", "zone Category in Province or City and zone Country is not North Vietnam". The operators are humanized but the overall sentence structure is still a filter expression, not natural language. *(Recurring: 3 consecutive evaluations, metric: Language Naturalness improving but still at 4 — approaching per-metric stagnation)*
-
-2. **[HIGH]** Humanized capability IDs still semantically meaningless to players — "Cap Assault Cobras Shaded Cost", "Cap Sweep Booby Traps Shaded Cost", "Sweep Loc Hop" tell the player nothing about what these capabilities do. Players need descriptive text or these should be suppressed. *(Recurring: 2 consecutive evaluations, metric: Terminology Consistency at 4)*
-
-3. **[HIGH]** Step headers still repetitive within the same target type — 4x "Select spaces" in Assault, 4x "Select zones" in Patrol. *(Recurring: 3 consecutive evaluations, metric: Step Semantic Clarity unchanged at 4 for 2 evaluations — per-metric stagnation)*
-
-4. **[MEDIUM]** No visual hierarchy — all text uniform monospace. Costs, conditions, and choices indistinguishable from action steps. Runner-layer presentation changes have not been attempted yet. *(Recurring: 3 consecutive evaluations, metric: Information Hierarchy unchanged at 3 for 3 evaluations — per-metric stagnation)*
-
-5. **[MEDIUM]** Train tooltip still requires 2 screens of scrolling with no collapsible sub-sections. *(Recurring: 3 consecutive evaluations, metric: Progressive Disclosure unchanged at 3 for 3 evaluations — per-metric stagnation)*
-
-6. **[MEDIUM]** Arithmetic expressions visible to players — "Transfer Amount * -1", "Pac Levels * -4 or -3", "1 * -4 or -3". Variable names are readable now but the arithmetic itself is meaningless to players. *(Recurring: 3 consecutive evaluations)*
-
-7. **[MEDIUM]** Costs buried as regular bullets at inconsistent step positions. *(Recurring: 3 consecutive evaluations, metric: Cost Transparency unchanged at 4 for 3 evaluations — per-metric stagnation)*
-
-8. **[LOW]** Raw property chains visible — "Set Cube.m48patrol Moved to true", "Sub Space" jargon. *(Recurring: 3 consecutive evaluations)*
-
-9. **[LOW]** Optional/mandatory distinction limited to one "(optional)" marker. *(Recurring: 3 consecutive evaluations, metric unchanged at 3 for 3 evaluations — per-metric stagnation)*
-
-**Per-metric stagnation notes**: Information Hierarchy (3), Progressive Disclosure (3), Cost Transparency (4), Step Semantic Clarity (4), and Optional/Mandatory Distinction (3) have all been unchanged for 3 consecutive evaluations. The first three have never changed from baseline — they require runner-layer presentation changes that have not been attempted. Step Semantic Clarity improved once (Eval #1→#2) but has stagnated since. Consider shifting focus to runner-layer improvements in the next iteration.
-
----
-
 ## EVALUATION #4
 
 **Date**: 2026-04-04
@@ -543,3 +431,99 @@ Second-largest single-iteration improvement (+0.7, after Eval #4's +0.9 runner-l
 5. **[LOW]** Optional/mandatory distinction limited to one "(optional)" text marker. *(Recurring: 7 consecutive evaluations, metric unchanged at 3 for 7 evaluations — per-metric stagnation. This is the longest-running stagnation in the pipeline.)*
 
 **Notable**: No HIGH or CRITICAL recommendations remain. All remaining issues are MEDIUM or LOW. The pipeline has transitioned from fixing fundamental readability blockers to polishing edge cases.
+
+---
+
+## EVALUATION #8
+
+**Date**: 2026-04-04
+**Screenshots analyzed**: fitl-assault.png, fitl-patrol.png, fitl-sweep.png, fitl-train-1.png, fitl-train-2.png
+
+### Screenshot Analysis
+
+#### fitl-assault.png — Assault Tooltip
+**What's shown**: Assault operation with 7 collapsible sub-steps. Clean, concise text. Modifiers section expanded showing 2 descriptive capability effects.
+**Issues observed**:
+- Assault tooltip is now very readable — "Select 1 with US Troops and with NVA/VC", "Select up to 2 in selected spaces without Lowland terrain", "Select 1 with ARVN Troops/Police and with NVA/VC"
+- Steps 1+2 still both "(us troops)" and steps 6+7 both "(arvn troops/police)" — identical consecutive headers
+- Step 3 "Roll dice" with only "Roll 1-6" — clean
+- Positive: No arithmetic, no noise identifiers, no jargon
+
+#### fitl-patrol.png — Patrol Tooltip
+**What's shown**: Patrol with 8 collapsible sub-steps. Cost step 6 amber-highlighted. Clean text.
+**Issues observed**:
+- "Set Cube m48patrol" — still somewhat cryptic but much better than original "Set Cube.m48patrol Moved to true"
+- Steps 1+2 "(line of communication)" — identical consecutive headers
+- "Select up to 2 us troops, police" and "Select arvn troops, police" — readable faction/type selections
+- Positive: No arithmetic, no noise, costs highlighted
+
+#### fitl-sweep.png — Sweep Tooltip
+**What's shown**: Sweep with 5 sub-steps. Entire tooltip fits in one screen. Very clean — 2 Step 1 bullets, 5 concise sub-steps, modifiers with descriptive text. This is the best-looking tooltip.
+**Issues observed**:
+- Step 4 "Select spaces" with child "Select spaces" — redundant (header = content)
+- Otherwise exemplary: clean, scannable, one-screen, cost-highlighted
+
+#### fitl-train-1.png + fitl-train-2.png — Train Tooltip
+**What's shown**: Train spanning 2 screenshots. Sub-steps 1-7 collapsible. Cost step 3 amber-highlighted. Modifiers with 3 descriptive entries.
+**Issues observed**:
+- **Improved**: "Set Patronage to Transfer Amount" (was "Transfer Amount * -1") — arithmetic stripped
+- **Improved**: "Set ARVN Resources to 1" (was "1 * -4 or -3") — arithmetic stripped
+- **Improved**: "Set ARVN Resources to Pac Levels" (was "Pac Levels * -4 or -3") — arithmetic stripped
+- **Improved**: "Remove Cube from this space to ARVN Available Forces" (was "Sub Space") — natural
+- **Improved**: "Place From Available Or Map" line GONE — Summary sub-step now empty (just header "Summary")
+- Summary sub-step 1 has collapsed header "Summary" but no visible content — the noise line was the only content. Consider whether an empty sub-step should be suppressed entirely.
+- Tooltip still spans 2 screens when fully expanded
+
+### Cross-Tooltip Consistency
+
+- **Arithmetic stripping consistent**: All tooltips free of " * -N" arithmetic
+- **"this space" consistent**: Train's Remove step uses natural phrasing
+- **Cost highlighting consistent**: Amber borders on all "Pay resources" steps
+- **Collapsibility consistent**: All sub-steps have ▼ markers
+- **Empty sub-step inconsistency**: Train's Summary sub-step has a header but no content lines after noise suppression — other tooltips don't have empty sub-steps
+
+### Resolved Since Previous
+
+- **Arithmetic expressions visible to players** — was [MEDIUM #2] in Eval #7 (recurring 7 evals), now resolved. "Transfer Amount * -1" → "Transfer Amount", "1 * -4 or -3" → "1", "Pac Levels * -4 or -3" → "Pac Levels". Trailing arithmetic operators and constants stripped.
+- **"Place From Available Or Map" noise** — was [MEDIUM #1] in Eval #7, now resolved. Summary-kind noise line suppressed.
+- **"Sub Space" jargon** — was [MEDIUM #3] in Eval #7 (recurring 7 evals), now resolved. Replaced with "this space" — natural language.
+
+### Scores
+
+| # | Metric | Score | Previous | Delta | Justification |
+|---|--------|-------|----------|-------|---------------|
+| 1 | Language Naturalness | 7 | 7 | 0 | Arithmetic stripped improves edge cases but the overall language quality was already at 7 from iteration 7's condition simplification. "this space" is a minor improvement. No new text quality breakthrough. |
+| 2 | Step Semantic Clarity | 6 | 6 | 0 | No step header changes. Identical consecutive headers persist ("(us troops)" x2, "(line of communication)" x2). |
+| 3 | Information Hierarchy | 5 | 5 | 0 | No visual changes. Cost highlighting and collapsibility maintained. |
+| 4 | Terminology Consistency | 7 | 6 | +1 | All remaining noise identifiers gone ("Place From Available Or Map" suppressed). "Sub Space" replaced with natural "this space". Only "m48patrol" and "Cube" remain as slightly technical terms — but these are game-specific token/property names that may be intentional. |
+| 5 | Progressive Disclosure | 6 | 6 | 0 | No changes. Collapsibility maintained. Sweep fits in one screen. |
+| 6 | Visual Scannability | 7 | 7 | 0 | No visual changes. Fewer noise lines marginally improves density but not enough to change score. |
+| 7 | Cost Transparency | 6 | 6 | 0 | No changes. Cost highlighting maintained. |
+| 8 | Optional/Mandatory Distinction | 3 | 3 | 0 | No changes. One "(optional)" marker in Train. |
+| | **Average** | **5.9** | **5.8** | **+0.1** | |
+
+### Score Trend
+
+| Eval | Avg | Delta |
+|------|-----|-------|
+| #4   | 4.5 | +0.9 |
+| #5   | 4.8 | +0.3 |
+| #6   | 5.1 | +0.3 |
+| #7   | 5.8 | +0.7 |
+| #8   | 5.9 | +0.1 |
+
+Diminishing returns — the +0.1 delta is the smallest improvement yet. The pipeline is reaching the practical limit of engine-layer post-realization cleanup. Future improvements require either runner-layer visual changes or deeper architectural work (RuleCard interface changes for optional/mandatory, AST-level condition rewriting).
+
+### Prioritized Recommendations
+
+1. **[MEDIUM]** Consecutive identical step headers — steps 1+2 "(us troops)" in Assault, steps 1+2 "(line of communication)" in Patrol, steps 6+7 "(arvn troops/police)" in Assault. Players see duplicate header text for adjacent steps. *(Recurring: reduced in severity but present for 5+ evals)*
+
+2. **[MEDIUM]** Empty Summary sub-step in Train — the noise suppression removed the only content line, leaving a collapsible header "Summary" with nothing inside. An empty sub-step is confusing. *(New)*
+
+3. **[LOW]** "Set Cube m48patrol" in Patrol — cryptic but may be an intentional game-specific token/property reference. *(Recurring: 8 consecutive evaluations but severity reduced — only 1 instance remaining)*
+
+4. **[LOW]** Optional/mandatory distinction limited to one "(optional)" text marker. *(Recurring: 8 consecutive evaluations, metric unchanged at 3 for 8 evaluations — per-metric stagnation. Longest-running stagnation in the pipeline.)*
+
+5. **[LOW]** Train tooltip still spans 2 screens when fully expanded, though collapsible. *(Recurring: reduced severity since collapsibility was added in Eval #4)*
+
+**Diminishing returns note**: The average improved by only +0.1 this iteration. The remaining issues are either low-severity edge cases or require architectural changes (RuleCard interface for optional/mandatory). The pipeline may be approaching its practical ceiling without deeper structural work. Consider pausing the pipeline and evaluating cost-benefit of further iterations.

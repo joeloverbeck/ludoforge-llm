@@ -609,6 +609,82 @@ profiles:
 | `adjacentTokenAgg` | see above | number | tokens in adjacent zones |
 | `zoneProp` | see above | varies | zone attribute/property access |
 
+## Signal Normalization
+
+### Why normalize?
+
+Scoring uses a linear weighted sum: `totalScore = Σ (weight × value)`. When signals operate on different scales, the larger-scale signal dominates regardless of weights:
+
+| Signal | Raw range | Weight 5 contribution |
+|--------|-----------|----------------------|
+| Projected margin | -40 to +10 | -200 to +50 |
+| Capability gain | 0 or 1 | 0 or 5 |
+
+A capability bonus of +5 can never compete with a margin difference of ±50. **This is a mathematical property, not a tuning problem.**
+
+### The fix: normalize to [0,1] using min/max aggregates
+
+Use `candidateAggregates` to compute the range across all candidates, then normalize in the consideration's `value` expression:
+
+```yaml
+candidateAggregates:
+  maxMarginScore:
+    op: max
+    of: { ref: feature.projectedSelfMargin }
+  minMarginScore:
+    op: min
+    of: { ref: feature.projectedSelfMargin }
+
+considerations:
+  preferNormalizedMargin:
+    scopes: [move]
+    weight: 5
+    value:
+      div:
+        - sub:
+            - { ref: feature.projectedSelfMargin }
+            - { ref: aggregate.minMarginScore }
+        - max:
+            - 1    # prevent division by zero when all candidates score equally
+            - sub:
+                - { ref: aggregate.maxMarginScore }
+                - { ref: aggregate.minMarginScore }
+```
+
+Now margin contributes 0-5 points. A capability gain at weight 3 contributes 0-3 points. The signals compete fairly.
+
+### When to normalize
+
+- **Required**: when mixing preview margin with any secondary signal (capabilities, resource features, card annotations, board-state heuristics)
+- **Not needed**: when using only one signal type (pure margin scoring, or pure action-tag scoring)
+
+### Important: normalize in considerations, not candidateFeatures
+
+`candidateFeatures` cannot reference `aggregate.*` (dependency ordering constraint). Put the normalization formula in the consideration's `value` expression, which CAN reference both candidate features and aggregates.
+
+### Worked example
+
+Without normalization (prior campaign ceiling):
+```
+Terror:     5 × (-4 margin) + 3 × 1 (rally=no) + 0 (no capability) = -17
+Capability: 5 × (-8 margin) + 3 × 0             + 5 × 1           = -35
+→ Terror always wins (20-point gap)
+```
+
+With normalization (margin range [-8, -4]):
+```
+Terror:     5 × 1.0 (best margin) + 3 × 0 + 0 = 5.0
+Capability: 5 × 0.0 (worst margin) + 3 × 0 + 3 × 1 (capability gain) = 3.0
+→ Terror still wins, but only by 2 points — secondary signals CAN compete
+```
+
+If the capability is highly valuable (weight 6+), it can overtake:
+```
+Capability: 5 × 0.0 + 6 × 1 = 6.0 > Terror: 5 × 1.0 = 5.0
+```
+
+This is the correct behavior: the agent trades a small margin advantage for a large strategic gain, just like a human player would.
+
 ## Common Patterns
 
 ### "Prefer action X when condition Y"

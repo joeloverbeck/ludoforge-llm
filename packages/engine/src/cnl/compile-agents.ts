@@ -1810,7 +1810,14 @@ class AgentLibraryCompiler {
 
     const surfaceResolved = this.resolveSurfaceRuntimeRef(refPath, path, false);
     if (surfaceResolved !== null) {
-      return { type: 'number', costClass: 'state', ref: surfaceResolved.ref };
+      const ref = surfaceResolved.ref as { readonly family?: string };
+      const surfaceType = ref.family === 'globalMarker'
+        || ref.family === 'activeCardIdentity'
+        ? 'id' as const
+        : ref.family === 'activeCardMetadata'
+          ? 'unknown' as const
+          : 'number' as const;
+      return { type: surfaceType, costClass: 'state', ref: surfaceResolved.ref };
     }
 
     this.reportUnknownLibraryRef(refPath, path);
@@ -1872,7 +1879,14 @@ class AgentLibraryCompiler {
     }
     const resolved = this.resolveSurfaceRuntimeRef(nestedPath, path, true);
     if (resolved !== null) {
-      return { type: 'number', costClass: 'preview', ref: resolved.ref };
+      const ref = resolved.ref as { readonly family?: string };
+      const previewSurfaceType = ref.family === 'globalMarker'
+        || ref.family === 'activeCardIdentity'
+        ? 'id' as const
+        : ref.family === 'activeCardMetadata'
+          ? 'unknown' as const
+          : 'number' as const;
+      return { type: previewSurfaceType, costClass: 'preview', ref: resolved.ref };
     }
     this.reportUnknownLibraryRef(refPath, path);
     return null;

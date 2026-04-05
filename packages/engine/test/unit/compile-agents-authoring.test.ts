@@ -2505,7 +2505,7 @@ describe('agents authoring surface', () => {
               expr: { ref: 'preview.var.player.self.resources' },
             },
             projectedBoobyTraps: {
-              type: 'number',
+              type: 'id',
               expr: { ref: 'preview.globalMarker.cap_boobyTraps' },
             },
           },

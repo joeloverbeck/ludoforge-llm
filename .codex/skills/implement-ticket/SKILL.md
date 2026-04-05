@@ -125,6 +125,7 @@ If that earlier ticket introduced production-corpus traversal, fixture readers, 
   - state that explicit no-change decision in the final summary
 - For proof/regression tickets, prefer extending the live test module that already owns the contract under audit before creating new files solely to match stale ticket test paths.
 - If a ticket's cited production examples, cards, scenarios, or seeds are stale but the contract under audit is still valid, prefer a current deterministic reproducer or a synthetic proof fixture over forcing the obsolete example back into service.
+- For production-proof tickets that must validate behavior on live authored data, it is valid to run a bounded seed, turn, or trace scan to discover a current deterministic reproducer, then encode that discovered reproduction directly into the owned integration tests.
 - If the ticket says "no code changes", interpret that as "no production/runtime behavior changes" unless the ticket explicitly forbids repo artifact edits. Ticket/spec outcome sections, archival moves, dependency rewrites, and sibling-ticket status updates are still required when they are the owned deliverable.
 - If a diagnostic or audit ticket requires written findings but does not name a specific file, prefer an existing repo-owned report surface such as `reports/` over ephemeral local notes or ad hoc scratch files, and reference that report in the final summary.
 - When a migration adds or removes a required compiled field, treat owned production goldens that snapshot compiled catalogs, summaries, or traces as expected update surfaces unless evidence shows unexpected behavioral drift.
@@ -157,6 +158,7 @@ Before claiming completion:
    - when a seeded helper no longer reaches the intended semantic state, retarget it to a current deterministic seed or turn that still exercises the same invariant rather than weakening the assertion
    - when a compiled fast path is added in front of an interpreter, explicitly test malformed and unsupported shapes to confirm the compiler falls back cleanly instead of swallowing existing validator or runtime-boundary behavior
    - when a new runtime fast path depends on enriched context objects, caches, or prebuilt runtime indexes, explicitly check callers that still construct minimal or partial runtime contexts so the fast path falls back cleanly instead of breaking helper-built tests
+   - if a primarily test-only ticket includes a vague non-functional regression clause such as "no performance regression" but does not name an owned benchmark surface, baseline artifact, threshold, or command, do not invent an ad hoc harness by default; either resolve the clause with `1-3-1` or satisfy it through the nearest existing regression suite the repo already treats as authoritative
 9. If `node --test` or another runner reports only a top-level file failure:
    - rerun the failing file as narrowly as possible
    - use test-name filtering or direct helper reproduction when needed to isolate the failing assertion before editing code

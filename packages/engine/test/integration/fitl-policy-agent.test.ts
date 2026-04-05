@@ -292,6 +292,50 @@ function advanceSeed6ToVcDecision() {
   return { def, state, legalMoveCandidates };
 }
 
+function traceSeedDecision(seed: number, targetPly: number) {
+  const { compiled } = compileProductionSpec();
+  const def = assertValidatedGameDef(compiled.gameDef);
+  const runtime = createGameDefRuntime(def);
+  const agents = createPolicyAgents(4).map(() => new PolicyAgent({ traceLevel: 'verbose' }));
+  let state = initialState(def, seed, 4).state;
+
+  for (let ply = 0; ply <= targetPly; ply += 1) {
+    const legalMoveCandidates = enumerateLegalMoves(def, state, undefined, runtime).moves;
+    const result = agents[Number(state.activePlayer)]!.chooseMove({
+      def,
+      state,
+      playerId: state.activePlayer,
+      legalMoves: legalMoveCandidates,
+      rng: createRng(BigInt(seed * 1000 + ply)),
+      runtime,
+    });
+
+    if (ply === targetPly) {
+      return { def, state, result };
+    }
+
+    state = applyMove(def, state, result.move, undefined, runtime).state;
+  }
+
+  assert.fail(`Expected to reach seed ${seed} ply ${targetPly}`);
+}
+
+function projectedSelfMarginContribution(candidate: {
+  readonly stableMoveKey: string;
+  readonly scoreContributions?: readonly {
+    readonly termId: string;
+    readonly contribution: number;
+  }[];
+}): number {
+  const scoreContributions = candidate.scoreContributions;
+  if (scoreContributions === undefined) {
+    assert.fail(`expected score contributions for ${candidate.stableMoveKey}`);
+  }
+  const contribution = scoreContributions.find((entry) => entry.termId === 'preferProjectedSelfMargin');
+  assert.notEqual(contribution, undefined, `expected preferProjectedSelfMargin contribution for ${candidate.stableMoveKey}`);
+  return contribution!.contribution;
+}
+
 describe('FITL policy agent integration', () => {
   it('compiles FITL-derived authored policy overlays with global and adjacent aggregation expressions', () => {
     const def = compileFitlPolicyOverlay('us', {
@@ -833,6 +877,43 @@ describe('FITL policy agent integration', () => {
     assert.ok(evaluatedNonPassCandidate, 'expected at least one evaluated non-pass candidate');
     assert.equal(evaluatedNonPassCandidate?.previewOutcome, 'ready');
     assert.deepEqual(evaluatedNonPassCandidate?.unknownPreviewRefs, []);
+  });
+
+  it('keeps non-event preview differentiation intact on a VC decision with rally, terror, and attack candidates', () => {
+    const { result } = traceSeedDecision(1, 1);
+
+    assert.equal(result.agentDecision?.kind, 'policy');
+    if (result.agentDecision?.kind !== 'policy') {
+      assert.fail('expected policy trace metadata');
+    }
+    if (result.agentDecision.candidates === undefined) {
+      assert.fail('expected verbose policy candidates');
+    }
+
+    const relevant = result.agentDecision.candidates.filter(
+      (candidate) => candidate.actionId === 'rally' || candidate.actionId === 'terror' || candidate.actionId === 'attack',
+    );
+    const firstByAction = new Map<string, typeof relevant[number]>();
+    for (const candidate of relevant) {
+      if (!firstByAction.has(candidate.actionId)) {
+        firstByAction.set(candidate.actionId, candidate);
+      }
+    }
+    const projected = [...firstByAction.values()].map(projectedSelfMarginContribution);
+
+    assert.equal(firstByAction.has('rally'), true, 'expected a rally candidate');
+    assert.equal(firstByAction.has('terror'), true, 'expected a terror candidate');
+    assert.equal(firstByAction.has('attack'), true, 'expected an attack candidate');
+    assert.equal(
+      [...firstByAction.values()].every((candidate) => candidate.previewOutcome === 'ready'),
+      true,
+      'expected non-event candidates to keep ready preview evaluation',
+    );
+    assert.equal(
+      new Set(projected).size > 1,
+      true,
+      'expected non-event action types to retain differentiated projected margins',
+    );
   });
 
   it('runs fixed-seed FITL policy self-play without runtime failures or fallback', () => {

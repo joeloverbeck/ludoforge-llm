@@ -343,6 +343,7 @@ During OBSERVE, the agent MUST:
 3. Check whether the needed strategy can be expressed in current YAML DSL
 4. If not, plan a compound experiment: DSL extension (Tier 2) + policy change
 5. Review `results.tsv` and `lessons.jsonl` for patterns in what works
+6. Read `docs/agent-dsl-cookbook.md` to understand what the Agent DSL can express. Before proposing DSL extensions (Tier 2), verify the existing DSL surface cannot already achieve the needed strategy through Tier 1 YAML changes.
 
 The agent SHOULD also:
 - Check near-miss stashes (`git stash list`) for combinable ideas

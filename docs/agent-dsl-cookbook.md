@@ -6,16 +6,17 @@ Quick reference for writing PolicyAgent profiles in GameSpecDoc YAML. All exampl
 
 ```
 agents:
-  parameters:     # tunable knobs (shared across profiles)
+  parameters:           # tunable knobs (shared across profiles)
   library:
     stateFeatures:        # game-state variables evaluated once per decision
     candidateFeatures:    # per-candidate variables (may use preview)
-    candidateAggregates:  # cross-candidate boolean aggregations
+    candidateAggregates:  # cross-candidate aggregations (any, all, count, rank)
     pruningRules:         # eliminate bad candidates before scoring
     considerations:       # score terms (move or completion scope)
     tieBreakers:          # break ties after scoring
-  profiles:       # per-seat configurations referencing library items
-  bindings:       # seat → profile mapping
+    strategicConditions:  # boolean conditions with proximity metrics
+  profiles:             # per-seat configurations referencing library items
+  bindings:             # seat → profile mapping
 ```
 
 The library defines reusable building blocks. Profiles select which blocks to use and override parameter values. Bindings map game seats to profiles.
@@ -26,18 +27,40 @@ The library defines reusable building blocks. Profiles select which blocks to us
 
 | Path | Returns | Example |
 |------|---------|---------|
-| `victory.currentMargin.self` | number | VC's distance from victory threshold |
+| `victory.currentMargin.self` | number | own distance from victory threshold |
 | `victory.currentMargin.active` | number | active player's margin |
-| `victory.currentRank.self` | number | current ranking position |
+| `victory.currentRank.self` | number | own current ranking position (1 = winning) |
+| `victory.currentRank.active` | number | active player's ranking |
 | `var.global.<id>` | number | global game variable |
 | `var.player.self.<id>` | number | own per-player variable (e.g., resources) |
 | `var.player.active.<id>` | number | active player's variable |
+| `var.seat.<seatName>.<id>` | number | specific seat's variable by seat name (e.g., `var.seat.us.resources`) |
 | `metric.<id>` | number | derived metric defined in observability |
 | `turn.round` | number | current turn/round count |
 | `turn.phaseId` | string | current game phase ID |
+| `turn.stepId` | string | step within the current phase |
 | `seat.self` | string | own seat ID |
 | `seat.active` | string | active player's seat ID |
-| `feature.<id>` | varies | evaluated state feature from library |
+| `context.kind` | string | `'move'` or `'completion'` — which evaluation scope is active |
+| `feature.<id>` | varies | evaluated state feature from library (must be declared in `stateFeatures`) |
+| `aggregate.<id>` | varies | evaluated candidate aggregate from library (must be declared in `candidateAggregates`) |
+| `condition.<id>.satisfied` | boolean | whether a strategic condition is currently met |
+| `condition.<id>.proximity` | number | how close a strategic condition is to being satisfied (0-1) |
+
+### Active Card References
+
+| Path | Returns | Example |
+|------|---------|---------|
+| `activeCard.id` | string | ID of the currently active event card |
+| `activeCard.deckId` | string | which deck the card came from |
+| `activeCard.hasTag.<tag>` | boolean | whether the card has a specific tag (e.g., `capability`) |
+| `activeCard.metadata.<key>` | varies | card metadata (e.g., `period`, `seatOrder`) |
+| `activeCard.annotation.<side>.<metric>` | number | card annotation by side (`shaded`/`unshaded`) and metric name |
+| `activeCard.annotation.<side>.<metric>.<seat>` | number | per-seat card annotation |
+
+These are publicly visible (per observability config). Use in state features or `when` clauses to make event card decisions based on card properties.
+
+**Important**: `feature.*` and `aggregate.*` refs resolve to library-declared items. You must define a `stateFeature` or `candidateAggregate` in the library before referencing it. Using `feature.unknownId` without a declaration will cause a compilation error.
 
 ### Candidate References
 
@@ -45,6 +68,7 @@ The library defines reusable building blocks. Profiles select which blocks to us
 |------|---------|---------|
 | `candidate.actionId` | string | action ID of the move |
 | `candidate.tag.<name>` | boolean | whether action has a specific tag |
+| `candidate.tags` | idList | all tags on the action (use with `in` operator) |
 | `candidate.param.<name>` | varies | resolved move parameter value |
 | `candidate.paramCount` | number | count of resolved parameters |
 | `candidate.stableMoveKey` | string | deterministic move identity |
@@ -70,7 +94,9 @@ Preview refs require `preview.mode: tolerateStochastic` (or `exactWorld`) on the
 
 ## Parameters
 
-Define tunable numeric knobs in the `parameters:` section. Profiles override with `params:`.
+Define tunable knobs in the `parameters:` section. Profiles override with `params:`.
+
+**Parameter types**: `number` (float), `integer`, `boolean`, `enum` (string from a fixed set), `idOrder` (ordered list of IDs).
 
 ```yaml
 parameters:
@@ -223,6 +249,41 @@ stateFeatures:
 
 **Owner values:** `self`, `active`, `none`, or numeric player ID (e.g., `"0"`).
 
+### Adjacent Zone Token Counts with `adjacentTokenAgg`
+
+Count tokens in zones adjacent to an anchor zone.
+
+```yaml
+stateFeatures:
+  enemyTroopsNearCapital:
+    type: number
+    expr:
+      adjacentTokenAgg:
+        anchorZone: saigon:none
+        aggOp: count
+        tokenFilter:
+          props:
+            faction: { eq: US }
+            type: { eq: troops }
+```
+
+**Required**: `anchorZone` (zone ID or expression). **Optional**: `tokenFilter`, `prop` (required when aggOp != count).
+
+### Strategic Conditions
+
+The `strategicConditions` library bucket defines boolean conditions with a proximity metric. Reference via `condition.<id>.satisfied` (boolean) and `condition.<id>.proximity` (0-1 number).
+
+```yaml
+strategicConditions:
+  nearVictory:
+    expr:
+      gte:
+        - { ref: victory.currentMargin.self }
+        - -3
+```
+
+Use in `when` clauses: `when: { ref: condition.nearVictory.satisfied }`.
+
 ## Candidate Features
 
 Evaluated per candidate move. Use for preview-based or parameter-based scoring.
@@ -252,7 +313,9 @@ Always wrap `preview.*` and `candidate.param.*` refs in `coalesce` — they may 
 
 ## Candidate Aggregates
 
-Boolean aggregations across all candidates. Used in pruning rule conditions.
+Aggregations across all candidates at a decision point. Used in pruning rules and `when` clauses. Reference via `aggregate.<id>`.
+
+**Aggregate ops**: `any` (boolean OR), `all` (boolean AND), `count`, `min`, `max`, `rankDense` (dense ranking), `rankOrdinal` (ordinal ranking).
 
 ```yaml
 candidateAggregates:
@@ -261,6 +324,13 @@ candidateAggregates:
     of:
       not:
         ref: candidate.tag.pass
+
+  # Count how many candidates are rally actions
+  rallyOptionCount:
+    op: count
+    of:
+      boolToNumber:
+        ref: candidate.tag.rally
 ```
 
 ## Pruning Rules
@@ -382,6 +452,8 @@ The `when` clause restricts which decision types this applies to. Without it, th
 
 Applied after scoring when candidates tie. Evaluated in order; first to break tie wins.
 
+**Tie-breaker kinds**: `lowerExpr` (lower value wins), `higherExpr` (higher value wins), `preferredEnumOrder` (ranked by enum value list), `preferredIdOrder` (ranked by ID list), `rng` (random), `stableMoveKey` (deterministic lexicographic order).
+
 ```yaml
 tieBreakers:
   # Lower expression value wins
@@ -389,6 +461,16 @@ tieBreakers:
     kind: lowerExpr
     value:
       ref: feature.targetSpacePopulation
+
+  # Higher expression value wins
+  preferHighPopulation:
+    kind: higherExpr
+    value:
+      ref: feature.targetSpacePopulation
+
+  # Random tiebreaker (non-deterministic — use with caution)
+  randomize:
+    kind: rng
 
   # Deterministic lexicographic order (always last)
   stableMoveKey:
@@ -436,7 +518,7 @@ profiles:
 
 **Preview modes:** `disabled` (no preview), `tolerateStochastic` (evaluate even with randomness), `exactWorld` (only deterministic outcomes).
 
-**Selection modes:** `argmax` (default — highest score wins), `softmaxSample` (probabilistic selection with temperature).
+**Selection modes:** `argmax` (default — highest score wins), `softmaxSample` (probabilistic selection with temperature), `weightedSample` (sample proportional to scores).
 
 ## Expression Operators Reference
 
@@ -523,6 +605,42 @@ scoreTerm:
   weight: -2
   value:
     ref: feature.targetSpacePopulation
+```
+
+### "React to the active event card"
+```yaml
+stateFeatures:
+  # Check if the active card has a capability tag
+  isCapabilityCard:
+    type: boolean
+    expr:
+      ref: activeCard.hasTag.capability
+
+considerations:
+  # Prefer events when the card is a capability (long-term value)
+  preferCapabilityEvents:
+    scopes: [move]
+    when:
+      ref: feature.isCapabilityCard
+    weight: 5
+    value:
+      boolToNumber:
+        or:
+          - { ref: candidate.tag.event-play }
+          - { ref: candidate.tag.pivotal-event }
+```
+
+### "Distinguish move vs completion evaluation context"
+```yaml
+scoreTerm:
+  scopes: [move, completion]
+  weight:
+    if:
+      cond: { eq: [{ ref: context.kind }, move] }
+      then: 5
+      else: 2
+  value:
+    ref: feature.projectedSelfMargin
 ```
 
 ## Debugging Tips

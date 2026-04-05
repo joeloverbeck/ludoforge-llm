@@ -334,6 +334,8 @@ Run this loop INDEFINITELY (or until `MAX_ITERATIONS` reached). Never stop. Neve
   - `ablation`: Review recent accepted commits, propose removing complexity from one of them.
   - `radical`: Propose a fundamentally different approach — different algorithm, restructured data flow, etc.
 
+- **DSL awareness (agent evolution campaigns):** Before proposing a DSL extension (Tier 2), consult `docs/agent-dsl-cookbook.md` to verify the existing DSL cannot already express the needed strategy. The cookbook documents all available operators, reference paths, intrinsics, and common patterns.
+
 - If stuck in `normal` mode: re-read all mutable files carefully, combine ideas from near-misses, try radical alternatives, look for patterns in what worked vs. what failed. Consult lessons for unexplored angles.
 
 - **Partial signal guidance:** If recent experiments show partial signals in `intermediates.jsonl` (some intermediate metrics improved while others regressed), focus the hypothesis on extending the improvement to the regressing subset. Example: "Tests 1-5 got faster but tests 6-10 got slower — investigate what's different about tests 6-10."

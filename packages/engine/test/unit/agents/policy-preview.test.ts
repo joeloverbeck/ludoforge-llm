@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { createPolicyPreviewRuntime } from '../../../src/agents/policy-preview.js';
+import { createPolicyPreviewRuntime, type PolicyPreviewDependencies } from '../../../src/agents/policy-preview.js';
 import {
   asActionId,
   asZoneId,
@@ -317,6 +317,45 @@ describe('policy-preview', () => {
     });
     assert.equal(runtime.getOutcome(candidate), 'failed');
     assert.equal(runtime.getFailureReason(candidate), 'preview explosion for test');
+  });
+
+  it('accepts an optional evaluateGrantedOperation callback without changing current preview behavior', () => {
+    const def = createDef();
+    const state = initialState(def, 1, 2).state;
+    const candidate = createCandidate();
+    let callbackCalls = 0;
+    const dependencies: PolicyPreviewDependencies = {
+      classifyPlayableMoveCandidate: () => ({
+        kind: 'playableComplete',
+        move: createTrustedExecutableMove(candidate.move, state.stateHash, 'templateCompletion'),
+        warnings: [],
+      }),
+      applyMove: () => ({
+        state: {
+          ...state,
+          globalVars: { ...state.globalVars, score: 6 },
+        },
+      }),
+      derivePlayerObservation: () => createObservation(false),
+      evaluateGrantedOperation: () => {
+        callbackCalls += 1;
+        return undefined;
+      },
+    };
+
+    const runtime = createPolicyPreviewRuntime({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      seatId: 'us',
+      trustedMoveIndex: new Map(),
+      previewMode: 'exactWorld',
+      dependencies,
+    });
+
+    assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), { kind: 'value', value: 6 });
+    assert.equal(runtime.getOutcome(candidate), 'ready');
+    assert.equal(callbackCalls, 0);
   });
 
   it('returns stochastic outcome when rng diverges and preview mode is tolerateStochastic', () => {

@@ -45,6 +45,12 @@ export interface PolicyPreviewDependencies {
     runtime?: GameDefRuntime,
   ) => { readonly state: GameState };
   readonly derivePlayerObservation?: typeof derivePlayerObservation;
+  readonly evaluateGrantedOperation?: (
+    def: GameDef,
+    postEventState: GameState,
+    agentSeatId: string,
+    runtime?: GameDefRuntime,
+  ) => { move: Move; score: number } | undefined;
   readonly computeDerivedMetricValue?: typeof computeDerivedMetricValue;
 }
 
@@ -110,6 +116,7 @@ const defaultDependencies = {
   classifyPlayableMoveCandidate,
   applyMove: applyTrustedMove,
   derivePlayerObservation,
+  evaluateGrantedOperation: () => undefined,
   computeDerivedMetricValue,
 } satisfies Required<PolicyPreviewDependencies>;
 

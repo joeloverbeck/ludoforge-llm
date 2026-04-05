@@ -1,6 +1,6 @@
 # 111MULSTPPRE-002: Add evaluateGrantedOperation callback to PolicyPreviewDependencies
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — agent preview interface
@@ -92,3 +92,24 @@ Write a test confirming that constructing preview without `evaluateGrantedOperat
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/agents/policy-preview-granted-op.test.js`
 2. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+Completed on 2026-04-05.
+
+What changed:
+- Added the optional `evaluateGrantedOperation` callback to [`PolicyPreviewDependencies`](/home/joeloverbeck/projects/ludoforge-llm/packages/engine/src/agents/policy-preview.ts).
+- Added the default no-op dependency implementation in the preview runtime setup so existing callers remain behaviorally unchanged.
+- Extended the live owning test module [policy-preview.test.ts](/home/joeloverbeck/projects/ludoforge-llm/packages/engine/test/unit/agents/policy-preview.test.ts) with a callback-optional regression test.
+- Regenerated the engine trace schema surface in [Trace.schema.json](/home/joeloverbeck/projects/ludoforge-llm/packages/engine/schemas/Trace.schema.json) to keep the shared generator outputs in sync.
+
+Deviations from the original plan:
+- Did not add `agentSeatId` to the preview input because the live runtime already carries the needed actor seat as `seatId`; duplicating that identity would have introduced two parallel fields for the same concept.
+- Did not create the stale dedicated test file named in the ticket; the regression landed in the existing owning preview test module instead.
+
+Verification:
+- `pnpm -F @ludoforge/engine build`
+- `node --test packages/engine/dist/test/unit/agents/policy-preview.test.js`
+- `pnpm -F @ludoforge/engine run schema:artifacts`
+- `pnpm -F @ludoforge/engine run schema:artifacts:check`
+- `pnpm -F @ludoforge/engine test`

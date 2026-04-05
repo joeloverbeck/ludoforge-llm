@@ -82,6 +82,7 @@ If that earlier ticket introduced production-corpus traversal, fixture readers, 
     - continue reassessment after that confirmation until no further boundary-affecting discrepancies remain, even if the same ticket requires multiple sequential `1-3-1` rounds
     - do not force a ticket rewrite unless the implementation boundary itself changed
     - if the conflict is that a ticket or spec uses raw strings for an identifier that already has a branded domain type in the repo, preserve the ticket boundary, raise the Foundation conflict explicitly, and prefer the existing branded type once confirmed
+    - if a ticket proposes a new field whose meaning is already covered by an existing live contract field, treat it as a bounded discrepancy plus `1-3-1` and prefer reusing the existing field rather than introducing parallel names for the same concept
     - if the mismatch is a narrow factual detail inside an otherwise valid ticket boundary, treat it as a bounded discrepancy plus `1-3-1`, not an automatic ticket rewrite
     - if the original bug claim is no longer reproducible but the intended invariant is still worth proving, it is valid to convert the ticket into a proof/regression-only implementation after user confirmation rather than forcing speculative runtime code changes or closing it as not actionable
     - if a ticket names a suspected buggy module but the live audit shows that surface already satisfies the intended invariant, it is valid to complete the ticket as an audit-plus-proof implementation with tests only and an explicit no-runtime-change outcome after user confirmation
@@ -171,6 +172,7 @@ Before claiming completion:
    - confirm the command that produces it has actually exited before diagnosing the artifact contents
    - confirm the artifact path matches the command's real write target
    - check a freshness signal such as timestamp or file size before treating missing fields or stale output as a real discrepancy
+   - when a touched source file contributes to exported engine contracts or introspected schema surfaces, expect that a generator-backed artifact check may still be required even if the ticket did not name a generated file explicitly
    - when a shared generator rewrites multiple artifacts, identify which generated files actually encode the changed contract and summarize those ticket-owned artifacts specifically in the final response
    - only then compare the artifact against the ticket's acceptance criteria
 11. For profiling, benchmark, or audit tickets that set a decision gate:

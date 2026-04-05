@@ -1,6 +1,6 @@
 # 113PREVSTPOLSUR-003: Evaluate preview-feature refs against preview state
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — agent evaluation core, agent runtime, agent preview
@@ -118,12 +118,13 @@ Add a `getPreviewState(candidate)` method to the preview runtime interface that 
 
 1. `preview.feature.vcGuerrillaCount` evaluates against preview state (returns different value from `feature.vcGuerrillaCount` when preview state differs)
 2. Cache isolation: `feature.X` and `preview.feature.X` return different cached values when states differ
-3. Preview unavailable (stochastic/failed) → returns `undefined`, tracked in `unknownPreviewRefs`
-4. Preview available → tracked in `previewRefIds`
-5. Same candidate evaluated twice → second call returns cached value
-6. No candidate context (state-feature scope, not candidate scope) → returns `undefined` (preview requires a candidate)
-7. Existing `feature.*` evaluation unchanged (regression)
-8. Existing suite: `pnpm -F @ludoforge/engine test`
+3. Preview unavailable (`random`/`hidden`/`unresolved`/`failed`) → returns `undefined`, tracked in `unknownPreviewRefs`
+4. `tolerateStochastic` preview still evaluates `preview.feature.*` against the stochastic preview state and records `previewOutcome: 'stochastic'`
+5. Preview available → tracked in `previewRefIds`
+6. Same candidate evaluated twice → second call returns cached value
+7. No candidate context (state-feature scope, not candidate scope) → returns `undefined` (preview requires a candidate)
+8. Existing `feature.*` evaluation unchanged (regression)
+9. Existing suite: `pnpm -F @ludoforge/engine test`
 
 ### Invariants
 
@@ -136,9 +137,25 @@ Add a `getPreviewState(candidate)` method to the preview runtime interface that 
 
 ### New/Modified Tests
 
-1. `packages/engine/test/agents/policy-preview-feature-eval.test.ts` — preview-feature evaluation: different results on different states, cache isolation, unavailable preview, regression for non-preview features
+1. Extend the live owning unit test surfaces under `packages/engine/test/unit/agents/` for preview-feature evaluation: different results on different states, cache isolation, unavailable preview, tolerated stochastic preview, and regression for non-preview features
 
 ### Commands
 
-1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/agents/policy-preview-feature-eval.test.js`
+1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/unit/agents/policy-eval.test.js packages/engine/dist/test/unit/agents/policy-runtime.test.js`
 2. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+- Completed: 2026-04-05
+- What changed:
+  - `previewStateFeature` refs now evaluate authored state features against the resolved preview state in `policy-evaluation-core.ts`.
+  - Preview-state evaluation is state-scoped end to end: state-feature caches, zone read contexts, current-surface resolution, and turn/seat intrinsics now follow the active evaluation state rather than always reading the base state.
+  - `policy-preview.ts` and `policy-runtime.ts` now expose preview state for resolved candidates so preview-feature evaluation can reuse the existing preview cache.
+  - The live owning tests in `packages/engine/test/unit/agents/policy-eval.test.ts` and `packages/engine/test/unit/agents/policy-runtime.test.ts` now cover preview-state feature evaluation, unavailable preview handling, and tolerated stochastic preview.
+- Deviations from original plan:
+  - The ticket's original acceptance text treated stochastic preview as unavailable. Reassessment against `docs/FOUNDATIONS.md`, the live preview contract, and Spec 113 corrected the boundary: `preview.feature.*` remains value-bearing for `stochastic` preview in `tolerateStochastic` mode, and only `random`/`hidden`/`unresolved`/`failed` are unavailable.
+  - The ticket's named new test file was stale; implementation extended the existing owning unit test modules instead.
+- Verification:
+  - `pnpm -F @ludoforge/engine build`
+  - `node --test packages/engine/dist/test/unit/agents/policy-eval.test.js packages/engine/dist/test/unit/agents/policy-runtime.test.js`
+  - `pnpm -F @ludoforge/engine test` (`468/468` passing)

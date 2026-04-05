@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — agent diagnostics; documentation and tests
-**Deps**: `tickets/113PREVSTPOLSUR-003.md`, `specs/113-preview-state-policy-surface.md`
+**Deps**: `archive/tickets/113PREVSTPOLSUR-003.md`, `specs/113-preview-state-policy-surface.md`
 
 ## Problem
 

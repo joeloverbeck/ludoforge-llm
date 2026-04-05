@@ -1900,6 +1900,190 @@ describe('policy-eval', () => {
     );
   });
 
+  it('evaluates preview-state feature refs against preview state without polluting current-state feature evaluation', () => {
+    const agents = createCatalog(
+      {
+        stateFeatures: {
+          currentMargin: {
+            type: 'number',
+            costClass: 'state',
+            expr: refExpr({ kind: 'currentSurface', family: 'globalVar', id: 'usMargin' }),
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
+          },
+        },
+        scoreTerms: {
+          preferCurrentMargin: {
+            costClass: 'state',
+            weight: literal(1),
+            value: refExpr({ kind: 'library', refKind: 'stateFeature', id: 'currentMargin' }),
+            dependencies: { parameters: [], stateFeatures: ['currentMargin'], candidateFeatures: [], aggregates: [], strategicConditions: [] },
+          },
+          preferPreviewMargin: {
+            costClass: 'preview',
+            weight: literal(1),
+            value: refExpr({ kind: 'library', refKind: 'previewStateFeature', id: 'currentMargin' }),
+            dependencies: { parameters: [], stateFeatures: ['currentMargin'], candidateFeatures: [], aggregates: [], strategicConditions: [] },
+          },
+        },
+      },
+      {
+        use: {
+          pruningRules: [],
+          considerations: ['preferCurrentMargin', 'preferPreviewMargin'],
+          tieBreakers: ['stableMoveKey'],
+        },
+        plan: {
+          stateFeatures: ['currentMargin'],
+          candidateFeatures: [],
+          candidateAggregates: [],
+          considerations: [],
+        },
+      },
+    );
+    const input = createInput(agents, createMoves('alpha', 'advance'));
+
+    const result = evaluatePolicyMove(input);
+
+    assert.equal(result.move.actionId, asActionId('advance'));
+    assert.equal(result.metadata.stateFeatures?.currentMargin, 1);
+    assert.equal(
+      result.metadata.candidates.find((candidate) => candidate.actionId === 'advance')?.score,
+      5,
+    );
+    assert.equal(
+      result.metadata.candidates.find((candidate) => candidate.actionId === 'alpha')?.score,
+      2,
+    );
+    assert.deepEqual(
+      result.metadata.candidates.find((candidate) => candidate.actionId === 'advance')?.previewRefIds,
+      ['feature.currentMargin'],
+    );
+    assert.deepEqual(
+      result.metadata.candidates.find((candidate) => candidate.actionId === 'advance')?.unknownPreviewRefs,
+      [],
+    );
+  });
+
+  it('treats preview-state feature refs as unknown when exact-world preview becomes random', () => {
+    const agents = createCatalog(
+      {
+        stateFeatures: {
+          currentMargin: {
+            type: 'number',
+            costClass: 'state',
+            expr: refExpr({ kind: 'currentSurface', family: 'globalVar', id: 'usMargin' }),
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
+          },
+        },
+        scoreTerms: {
+          preferPreviewMargin: {
+            costClass: 'preview',
+            weight: literal(1),
+            value: refExpr({ kind: 'library', refKind: 'previewStateFeature', id: 'currentMargin' }),
+            unknownAs: 0,
+            dependencies: { parameters: [], stateFeatures: ['currentMargin'], candidateFeatures: [], aggregates: [], strategicConditions: [] },
+          },
+        },
+      },
+      {
+        use: {
+          pruningRules: [],
+          considerations: ['preferPreviewMargin'],
+          tieBreakers: ['stableMoveKey'],
+        },
+        plan: {
+          stateFeatures: [],
+          candidateFeatures: [],
+          candidateAggregates: [],
+          considerations: [],
+        },
+      },
+    );
+    const input = createInput(agents, createMoves('alpha'));
+
+    const result = evaluatePolicyMove({
+      ...input,
+      previewDependencies: {
+        applyMove: (_def, state) => ({
+          state: {
+            ...state,
+            globalVars: {
+              ...state.globalVars,
+              usMargin: 4,
+            },
+            rng: createRng(999n).state,
+          },
+        }),
+      },
+    });
+
+    const candidate = result.metadata.candidates[0];
+    assert.equal(candidate?.score, 0);
+    assert.equal(candidate?.previewOutcome, 'random');
+    assert.deepEqual(candidate?.previewRefIds, ['feature.currentMargin']);
+    assert.deepEqual(candidate?.unknownPreviewRefs, [{ refId: 'feature.currentMargin', reason: 'random' }]);
+  });
+
+  it('keeps preview-state feature refs value-bearing under tolerateStochastic preview mode', () => {
+    const agents = createCatalog(
+      {
+        stateFeatures: {
+          currentMargin: {
+            type: 'number',
+            costClass: 'state',
+            expr: refExpr({ kind: 'currentSurface', family: 'globalVar', id: 'usMargin' }),
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
+          },
+        },
+        scoreTerms: {
+          preferPreviewMargin: {
+            costClass: 'preview',
+            weight: literal(1),
+            value: refExpr({ kind: 'library', refKind: 'previewStateFeature', id: 'currentMargin' }),
+            dependencies: { parameters: [], stateFeatures: ['currentMargin'], candidateFeatures: [], aggregates: [], strategicConditions: [] },
+          },
+        },
+      },
+      {
+        preview: { mode: 'tolerateStochastic' },
+        use: {
+          pruningRules: [],
+          considerations: ['preferPreviewMargin'],
+          tieBreakers: ['stableMoveKey'],
+        },
+        plan: {
+          stateFeatures: [],
+          candidateFeatures: [],
+          candidateAggregates: [],
+          considerations: [],
+        },
+      },
+    );
+    const input = createInput(agents, createMoves('alpha'));
+
+    const result = evaluatePolicyMove({
+      ...input,
+      previewDependencies: {
+        applyMove: (_def, state) => ({
+          state: {
+            ...state,
+            globalVars: {
+              ...state.globalVars,
+              usMargin: 4,
+            },
+            rng: createRng(999n).state,
+          },
+        }),
+      },
+    });
+
+    const candidate = result.metadata.candidates[0];
+    assert.equal(candidate?.score, 4);
+    assert.equal(candidate?.previewOutcome, 'stochastic');
+    assert.deepEqual(candidate?.previewRefIds, ['feature.currentMargin']);
+    assert.deepEqual(candidate?.unknownPreviewRefs, []);
+  });
+
   it('evaluates preview-backed score terms for trusted completed moves that are already indexed', () => {
     const chooseTargetAction = {
       id: asActionId('chooseTarget'),

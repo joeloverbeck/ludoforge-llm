@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import { createPolicyRuntimeProviders } from '../../../src/agents/policy-runtime.js';
 import {
+  asActionId,
   asPhaseId,
   asPlayerId,
   initialState,
@@ -171,6 +172,53 @@ describe('createPolicyRuntimeProviders', () => {
     });
 
     assert.ok(providers.previewSurface, 'previewSurface provider must be present even without profile binding');
+  });
+
+  it('exposes cached preview state through the preview provider only for resolved previews', () => {
+    const catalog = createMinimalCatalog();
+    const def = {
+      ...createDef(catalog),
+      globalVars: [{ name: 'score', type: 'int' as const, init: 1, min: -10, max: 10 }],
+      actions: [{
+        id: asActionId('advance'),
+        actor: 'active' as const,
+        executor: 'actor' as const,
+        phase: [phaseId],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      }],
+    };
+    const state = initialState(def, 1, 2).state;
+    const candidate = {
+      move: { actionId: asActionId('advance'), params: {} },
+      stableMoveKey: 'advance|{}|false|unclassified',
+      actionId: 'advance',
+    };
+    const providers = createPolicyRuntimeProviders({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      seatId: 'us',
+      trustedMoveIndex: new Map(),
+      catalog,
+      previewDependencies: {
+        applyMove: (_def, baseState) => ({
+          state: {
+            ...baseState,
+            globalVars: { ...baseState.globalVars, score: 4 },
+          },
+        }),
+      },
+      runtimeError: (code, message) => new Error(`${code}: ${message}`),
+    });
+
+    const previewState = providers.previewSurface.getPreviewState(candidate);
+
+    assert.equal(previewState?.globalVars.score, 4);
+    assert.equal(providers.previewSurface.getOutcome(candidate), 'ready');
   });
 });
 

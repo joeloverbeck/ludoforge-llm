@@ -70,6 +70,7 @@ export interface PolicyPreviewRuntime {
     candidate: PolicyPreviewCandidate,
     ref: CompiledPreviewSurfaceRef,
   ): PolicyPreviewSurfaceResolution;
+  getPreviewState(candidate: PolicyPreviewCandidate): GameState | undefined;
   getOutcome(candidate: PolicyPreviewCandidate): PolicyPreviewTraceOutcome;
   getFailureReason(candidate: PolicyPreviewCandidate): string | undefined;
   getGrantedOperation(candidate: PolicyPreviewCandidate): PolicyPreviewGrantedOperation | undefined;
@@ -239,6 +240,12 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
               : { kind: 'unavailable' };
       }
       return { kind: 'unavailable' };
+    },
+    getPreviewState(candidate) {
+      const outcome = getPreviewOutcome(candidate);
+      return outcome.kind === 'ready' || outcome.kind === 'stochastic'
+        ? outcome.state
+        : undefined;
     },
     getOutcome(candidate) {
       return toPreviewTraceOutcome(getPreviewOutcome(candidate));

@@ -42,8 +42,14 @@ export interface PolicyRuntimeCandidate {
 }
 
 export interface PolicyIntrinsicProvider {
-  resolveSeatIntrinsic(intrinsic: Extract<CompiledAgentPolicyRef, { readonly kind: 'seatIntrinsic' }>['intrinsic']): PolicyValue;
-  resolveTurnIntrinsic(intrinsic: Extract<CompiledAgentPolicyRef, { readonly kind: 'turnIntrinsic' }>['intrinsic']): PolicyValue;
+  resolveSeatIntrinsic(
+    intrinsic: Extract<CompiledAgentPolicyRef, { readonly kind: 'seatIntrinsic' }>['intrinsic'],
+    stateOverride?: GameState,
+  ): PolicyValue;
+  resolveTurnIntrinsic(
+    intrinsic: Extract<CompiledAgentPolicyRef, { readonly kind: 'turnIntrinsic' }>['intrinsic'],
+    stateOverride?: GameState,
+  ): PolicyValue;
 }
 
 export interface PolicyCandidateProvider {
@@ -55,7 +61,7 @@ export interface PolicyCandidateProvider {
 }
 
 export interface PolicyCurrentSurfaceProvider {
-  resolveSurface(ref: CompiledCurrentSurfaceRef): PolicyValue;
+  resolveSurface(ref: CompiledCurrentSurfaceRef, stateOverride?: GameState): PolicyValue;
 }
 
 export interface PolicyPreviewSurfaceProvider {
@@ -63,6 +69,7 @@ export interface PolicyPreviewSurfaceProvider {
     candidate: PolicyRuntimeCandidate,
     ref: CompiledPreviewSurfaceRef,
   ): PolicyPreviewSurfaceResolution;
+  getPreviewState(candidate: PolicyRuntimeCandidate): GameState | undefined;
   getOutcome(candidate: PolicyRuntimeCandidate): PolicyPreviewTraceOutcome;
   getFailureReason(candidate: PolicyRuntimeCandidate): string | undefined;
   getGrantedOperation(candidate: PolicyRuntimeCandidate): PolicyPreviewGrantedOperation | undefined;
@@ -116,23 +123,54 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
     ...(input.previewDependencies === undefined ? {} : { dependencies: input.previewDependencies }),
     ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
   });
-  const metricCache = new Map<string, number>();
-  let victorySurface: PolicyVictorySurface | null = null;
-  let activeCardEntry: CompiledCardMetadataEntry | undefined | null = null; // null = not yet resolved
+  const metricCacheByState = new Map<bigint, Map<string, number>>();
+  const victorySurfaceByState = new Map<bigint, PolicyVictorySurface>();
+  const activeCardEntryByState = new Map<bigint, CompiledCardMetadataEntry | undefined>();
+
+  function getMetricCache(state: GameState): Map<string, number> {
+    let cache = metricCacheByState.get(state.stateHash);
+    if (cache === undefined) {
+      cache = new Map<string, number>();
+      metricCacheByState.set(state.stateHash, cache);
+    }
+    return cache;
+  }
+
+  function getVictorySurface(state: GameState): PolicyVictorySurface {
+    let surface = victorySurfaceByState.get(state.stateHash);
+    if (surface !== undefined) {
+      return surface;
+    }
+    surface = buildPolicyVictorySurface(input.def, state, input.runtime);
+    victorySurfaceByState.set(state.stateHash, surface);
+    return surface;
+  }
+
+  function getActiveCardEntry(state: GameState): CompiledCardMetadataEntry | undefined {
+    if (activeCardEntryByState.has(state.stateHash)) {
+      return activeCardEntryByState.get(state.stateHash);
+    }
+    const entry = resolveActiveCardEntry(input.def, state);
+    activeCardEntryByState.set(state.stateHash, entry);
+    return entry;
+  }
 
   return {
     intrinsics: {
-      resolveSeatIntrinsic(intrinsic) {
-        return intrinsic === 'self' ? input.seatId : activeSeatId ?? undefined;
+      resolveSeatIntrinsic(intrinsic, stateOverride) {
+        const state = stateOverride ?? input.state;
+        const activeSeat = input.def.seats?.[state.activePlayer]?.id ?? null;
+        return intrinsic === 'self' ? input.seatId : activeSeat ?? undefined;
       },
-      resolveTurnIntrinsic(intrinsic) {
+      resolveTurnIntrinsic(intrinsic, stateOverride) {
+        const state = stateOverride ?? input.state;
         if (intrinsic === 'phaseId') {
-          return String(input.state.currentPhase);
+          return String(state.currentPhase);
         }
         if (intrinsic === 'stepId') {
           return undefined;
         }
-        return input.state.turnCount;
+        return state.turnCount;
       },
     },
     candidates: {
@@ -177,7 +215,8 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
       },
     },
     currentSurface: {
-      resolveSurface(ref) {
+      resolveSurface(ref, stateOverride) {
+        const state = stateOverride ?? input.state;
         const visibility = getPolicySurfaceVisibility(input.catalog.surfaceVisibility, ref);
         if (visibility === null) {
           throw input.runtimeError(
@@ -187,11 +226,11 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
           );
         }
         const targetPlayerIndex = ref.family === 'perPlayerVar'
-          ? resolvePerPlayerTargetIndex(input.def, input.state, ref, input.playerId, input.seatId, seatResolutionIndex)
+          ? resolvePerPlayerTargetIndex(input.def, state, ref, input.playerId, input.seatId, seatResolutionIndex)
           : undefined;
         const resolvedSeatId = ref.selector?.kind !== 'role'
           ? undefined
-          : resolvePolicyRoleSelector(input.def, input.state, ref.selector, input.seatId);
+          : resolvePolicyRoleSelector(input.def, state, ref.selector, input.seatId);
         if (!isSurfaceVisibilityAccessible(
           visibility.current,
           input.seatId,
@@ -202,19 +241,20 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
           return undefined;
         }
         if (ref.family === 'derivedMetric') {
+          const metricCache = getMetricCache(state);
           if (metricCache.has(ref.id)) {
             return metricCache.get(ref.id);
           }
-          const value = computeDerivedMetricValue(input.def, input.state, ref.id);
+          const value = computeDerivedMetricValue(input.def, state, ref.id);
           metricCache.set(ref.id, value);
           return value;
         }
         if (ref.family === 'globalVar') {
-          const value = input.state.globalVars[ref.id];
+          const value = state.globalVars[ref.id];
           return typeof value === 'number' ? value : undefined;
         }
         if (ref.family === 'globalMarker') {
-          const markerState = input.state.globalMarkers?.[ref.id];
+          const markerState = state.globalMarkers?.[ref.id];
           if (markerState !== undefined) {
             return markerState;
           }
@@ -222,10 +262,10 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
           return lattice?.defaultState;
         }
         if (ref.family === 'perPlayerVar') {
-          return resolveSeatVarRef(input.state, ref, targetPlayerIndex);
+          return resolveSeatVarRef(state, ref, targetPlayerIndex);
         }
         if (ref.family === 'activeCardAnnotation') {
-          const current = resolveCurrentEventCardState(input.def, input.state);
+          const current = resolveCurrentEventCardState(input.def, state);
           if (current === null) {
             return undefined;
           }
@@ -233,12 +273,11 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
           if (annotation === undefined) {
             return undefined;
           }
-          return extractAnnotationValue(annotation, ref, input.seatId, activeSeatId ?? undefined);
+          const activeSeat = input.def.seats?.[state.activePlayer]?.id ?? null;
+          return extractAnnotationValue(annotation, ref, input.seatId, activeSeat ?? undefined);
         }
         if (ref.family === 'activeCardIdentity' || ref.family === 'activeCardTag' || ref.family === 'activeCardMetadata') {
-          if (activeCardEntry === null) {
-            activeCardEntry = resolveActiveCardEntry(input.def, input.state);
-          }
+          const activeCardEntry = getActiveCardEntry(state);
           if (activeCardEntry === undefined) {
             return undefined;
           }
@@ -250,20 +289,19 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
             'victory.currentMargin/currentRank refs require def.terminal.margins to be defined.',
           );
         }
-        if (victorySurface === null) {
-          try {
-            victorySurface = buildPolicyVictorySurface(input.def, input.state, input.runtime);
-          } catch (error) {
-            throw input.runtimeError(
-              'RUNTIME_EVALUATION_ERROR',
-              error instanceof Error ? error.message : 'Unknown victory surface evaluation failure.',
-            );
-          }
+        let victorySurface: PolicyVictorySurface;
+        try {
+          victorySurface = getVictorySurface(state);
+        } catch (error) {
+          throw input.runtimeError(
+            'RUNTIME_EVALUATION_ERROR',
+            error instanceof Error ? error.message : 'Unknown victory surface evaluation failure.',
+          );
         }
         if (ref.selector?.kind !== 'role') {
           return undefined;
         }
-        const seatId = resolvePolicyRoleSelector(input.def, input.state, ref.selector, input.seatId);
+        const seatId = resolvePolicyRoleSelector(input.def, state, ref.selector, input.seatId);
         return ref.family === 'victoryCurrentMargin'
           ? victorySurface.marginBySeat.get(seatId)
           : victorySurface.rankBySeat.get(seatId);
@@ -272,6 +310,9 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
     previewSurface: {
       resolveSurface(candidate, ref) {
         return previewRuntime.resolveSurface(candidate, ref);
+      },
+      getPreviewState(candidate) {
+        return previewRuntime.getPreviewState(candidate);
       },
       getOutcome(candidate) {
         return previewRuntime.getOutcome(candidate);

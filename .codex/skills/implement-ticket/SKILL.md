@@ -58,6 +58,7 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
 | Audit shows the suspected surface already satisfies the invariant | Complete as audit-plus-proof with tests only |
 | Acceptance claim lacks a verified reproducer | Correct to strongest evidenced boundary |
 | Conversion boundary between plain domain object and trusted/validated form | Resolve ownership explicitly |
+| Ticket narrows semantics for one member of an existing shared surface family | Prefer the already-landed shared family contract unless the ticket owns a family-wide redesign |
 
 14. If the ticket is accurate and no blocking decision remains, proceed.
 
@@ -90,6 +91,7 @@ Additional migration guidelines:
 - Prefer a runtime-only storage layer behind the existing outward contract when an optimization would otherwise change canonical outward state or serialized shape.
 - If Foundations require artifact-facing identifiers to remain canonical strings, introduce a separate runtime-only branded type rather than redefining the artifact-facing domain ID.
 - When a ticket introduces callback-driven recursive evaluation on a derived state, verify that the inner pass resolves actor/seat identity and sources RNG from the derived state itself.
+- When a ticket evaluates existing authored expressions against a derived state, audit the full expression subtree for hidden reads of the original state and migrate caches/helpers to be state-scoped, not just the top-level resolver.
 - When tightening authored `chooseN` minimums: check whether runtime `max` can drop below the new `min`; if so, update legality/cost-validation in the same change.
 
 ### Golden & Fixture Drift

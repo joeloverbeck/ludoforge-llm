@@ -16,7 +16,7 @@ Medium
 
 - `specs/15-gamespec-agent-policy-ir.md`
 - `archive/specs/111-multi-step-preview-for-granted-operations.md`
-- `specs/112-global-marker-policy-surface.md`
+- `archive/specs/112-global-marker-policy-surface.md`
 
 ## Problem
 
@@ -119,19 +119,31 @@ There should be one authored feature definition and two evaluation contexts:
 - current state
 - preview state
 
-**5. Thread the new family through diagnostics**
+**5. Extend compiled ref kind and compile `preview.feature.*` refs**
+
+Add `'previewStateFeature'` to `CompiledAgentPolicyLibraryRefKind` (`types-core.ts:337`), currently `'stateFeature' | 'candidateFeature' | 'aggregate'`. This new variant tells `resolveRef()` to evaluate the state feature against the preview state instead of the current state.
+
+In `compile-agents.ts`, extend `resolvePreviewRuntimeRef()` (line 1837) to detect the `preview.feature.` prefix. Strip the prefix, look up the feature ID in the state feature library, and compile as `{ kind: 'library', refKind: 'previewStateFeature', id: featureId }`.
+
+**6. Namespace preview-feature cache keys**
+
+The evaluation context uses `stateFeatureCache: Map<string, PolicyValue>` (`policy-evaluation-core.ts:209`). Since `feature.vcGuerrillaCount` (current state) and `preview.feature.vcGuerrillaCount` (preview state) may both be evaluated for the same candidate, their cache keys must not collide. Use a `preview:` prefix for preview-feature cache keys, or use a separate cache map.
+
+**7. Thread the new family through diagnostics**
 
 Preview usage and unknown-preview reporting should include preview-feature refs just like existing preview ref families, so the trace surface stays audit-friendly.
 
 ## Mutable Files
 
-- `packages/engine/src/agents/policy-expr.ts` — parse `preview.feature.<id>`
-- `packages/engine/src/agents/policy-evaluation-core.ts` — evaluate preview-feature refs against preview state
-- `packages/engine/src/agents/policy-preview.ts` — provide preview-state feature evaluation support
-- `packages/engine/src/agents/policy-surface.ts` or adjacent policy-contract files — extend surface-family typing if needed
-- `packages/engine/src/kernel/types-core.ts`
-- `packages/engine/src/kernel/schemas-core.ts`
-- `docs/agent-dsl-cookbook.md`
+- `packages/engine/src/cnl/compile-agents.ts` (modify) — primary: extend `resolvePreviewRuntimeRef()` to handle `preview.feature.*` prefix, compile as `previewStateFeature` ref kind
+- `packages/engine/src/agents/policy-evaluation-core.ts` (modify) — add `previewStateFeature` case to `resolveRef()`, extend `evaluateStateFeature()` to accept optional preview state, namespace cache keys
+- `packages/engine/src/agents/policy-runtime.ts` (modify) — thread preview state into evaluation context for preview-feature evaluation
+- `packages/engine/src/agents/policy-preview.ts` (modify) — provide preview-state access for feature evaluation
+- `packages/engine/src/kernel/types-core.ts` (modify) — extend `CompiledAgentPolicyLibraryRefKind` with `'previewStateFeature'`
+- `packages/engine/src/kernel/schemas-core.ts` (modify) — update ref kind schema
+- `packages/engine/src/agents/policy-expr.ts` (modify, if needed) — expression validation for preview-feature refs
+- `packages/engine/src/agents/policy-surface.ts` (modify, if needed) — extend surface-family typing
+- `docs/agent-dsl-cookbook.md` (modify) — document `preview.feature.*` syntax and patterns
 
 ## Testing Strategy
 

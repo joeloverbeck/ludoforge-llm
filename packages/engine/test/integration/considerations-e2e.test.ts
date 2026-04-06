@@ -34,26 +34,26 @@ describe('considerations production migration', () => {
     assert.ok(fitlAgents);
     assert.ok(texasAgents);
     const fitlUsBaseline = fitlAgents.profiles['us-baseline'];
-    const fitlVcEvolved = fitlAgents.profiles['vc-evolved'];
+    const fitlVcBaseline = fitlAgents.profiles['vc-baseline'];
     const texasBaseline = texasAgents.profiles.baseline;
     assert.ok(fitlUsBaseline);
-    assert.ok(fitlVcEvolved);
+    assert.ok(fitlVcBaseline);
     assert.ok(texasBaseline);
 
     assert.equal('scoreTerms' in fitlAgents.library, false);
     assert.equal('completionScoreTerms' in fitlAgents.library, false);
     assert.equal('scoreTerms' in fitlUsBaseline.use, false);
-    assert.equal('completionScoreTerms' in fitlVcEvolved.use, false);
-    assert.equal('completionGuidance' in fitlVcEvolved, false);
+    assert.equal('completionScoreTerms' in fitlVcBaseline.use, false);
+    assert.equal('completionGuidance' in fitlVcBaseline, false);
     assert.ok(fitlAgents.library.considerations.preferPopulousTargets);
     assert.deepEqual(fitlAgents.library.considerations.preferPopulousTargets.scopes, ['completion']);
-    // vc-evolved considerations list changes during evolution campaigns — assert non-empty and
+    // vc-baseline considerations list changes during evolution campaigns — assert non-empty and
     // that every listed consideration exists in the library, rather than hardcoding the exact list.
-    assert.ok(fitlVcEvolved.use.considerations.length > 0, 'vc-evolved must have at least one consideration');
-    for (const name of fitlVcEvolved.use.considerations) {
+    assert.ok(fitlVcBaseline.use.considerations.length > 0, 'vc-baseline must have at least one consideration');
+    for (const name of fitlVcBaseline.use.considerations) {
       assert.ok(
         name in fitlAgents.library.considerations,
-        `vc-evolved consideration "${name}" must exist in the library`,
+        `vc-baseline consideration "${name}" must exist in the library`,
       );
     }
 

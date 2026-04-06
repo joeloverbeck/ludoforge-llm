@@ -12910,7 +12910,7 @@
     "schemaVersion": 1,
     "observers": {
       "currentPlayer": {
-        "fingerprint": "0b0a763858f7d2c7e71fb6b8deb9a399e837893bc14a71681fdd4f9de640fda3",
+        "fingerprint": "2f6282b35448aa55a5ce3c28d5b46f44b5d92ea3a98c94eb36fcfda69137e06f",
         "surfaces": {
           "globalVars": {
             "pot": {
@@ -13026,6 +13026,7 @@
               }
             }
           },
+          "globalMarkers": {},
           "perPlayerVars": {
             "chipStack": {
               "current": "seatVisible",
@@ -13163,7 +13164,7 @@
         }
       },
       "omniscient": {
-        "fingerprint": "46409e518ac4630241c5123fae833448d56b75ac5738cfc50f91c4e02d12901e",
+        "fingerprint": "8c7136a80498258fb7f1ad71d85f6f5bea3abcbe03538e327d126804c274803c",
         "surfaces": {
           "globalVars": {
             "pot": {
@@ -13279,6 +13280,7 @@
               }
             }
           },
+          "globalMarkers": {},
           "perPlayerVars": {
             "chipStack": {
               "current": "public",
@@ -13399,7 +13401,7 @@
         }
       },
       "default": {
-        "fingerprint": "d7c0f2e377d7867ff304fbe19b30b01136ded443ae94cbeae38c9e9e8874553a",
+        "fingerprint": "81e5c8acd7150a83ddd0b6d7956676192222ce9da51b99ccc437b80aeb3716d4",
         "surfaces": {
           "globalVars": {
             "pot": {
@@ -13515,6 +13517,7 @@
               }
             }
           },
+          "globalMarkers": {},
           "perPlayerVars": {
             "chipStack": {
               "current": "seatVisible",
@@ -13629,7 +13632,7 @@
       }
     },
     "defaultObserverName": "default",
-    "catalogFingerprint": "000aee60773c0c3b22bf0ec25cf5f1e2cc7ff9a679b718e8e0aee7cf734d968c"
+    "catalogFingerprint": "b2969df240a282d81ecafb1179750b9a474a05646c0116a6d29d267016beac2e"
   },
   "agents": {
     "schemaVersion": 2,
@@ -13748,6 +13751,7 @@
           }
         }
       },
+      "globalMarkers": {},
       "perPlayerVars": {
         "chipStack": {
           "current": "seatVisible",
@@ -14461,7 +14465,7 @@
     "bindingsBySeat": {
       "neutral": "baseline"
     },
-    "catalogFingerprint": "c402148f18fe696292587126fb01bc36fc515fcd2d41eef2c12539bab0654024"
+    "catalogFingerprint": "c020b0df2f801b0c22faa9a3a7b5934880cbafdfcaf15f3b7b037570a11b4212"
   },
   "actions": [
     {

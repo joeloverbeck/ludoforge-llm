@@ -31,7 +31,7 @@ Implements Karpathy's iterative improvement pattern as an autonomous optimizatio
 experiment_id	metric_value	lines_delta	category	status	description
 ```
 
-The `metric_value` column holds the primary metric from the harness (identified by `PRIMARY_METRIC_KEY`). The column name is generic — the actual metric name is defined in program.md.
+The `metric_value` column holds the primary metric from the harness (identified by `PRIMARY_METRIC_KEY`). For clarity, use the `PRIMARY_METRIC_KEY` name as the column header (e.g., `compositeScore`) instead of the generic `metric_value`.
 
 Status values: `ACCEPT`, `REJECT`, `NEAR_MISS`, `EARLY_ABORT`, `CRASH`, `SUSPICIOUS_ACCEPT`, `BACKTRACK`
 
@@ -189,8 +189,9 @@ Set `WT` = the worktree root path. Every file path in every tool call below is p
 5. Set `best_metric` = `baseline_metric`.
 6. Commit current state as baseline:
    ```bash
-   cd $WT && git add -A && git commit --allow-empty -m "improve-loop: baseline (${PRIMARY_METRIC_KEY}=${baseline_metric})"
+   cd $WT && git add <mutable-files> && git commit --allow-empty -m "improve-loop: baseline (${PRIMARY_METRIC_KEY}=${baseline_metric})"
    ```
+   Use specific file paths (not `git add -A`) to avoid accidentally staging unrelated files.
 7. Append to results.tsv:
    ```
    baseline	<baseline_metric>	0	baseline	ACCEPT	baseline measurement
@@ -236,6 +237,11 @@ Run this loop INDEFINITELY (or until `MAX_ITERATIONS` reached). Never stop. Neve
   - If already tried ablation → switch to `radical` (large structural changes, rethink approach)
   - If already tried radical → switch to `backtrack` (see Step 1d)
 - After any ACCEPT, reset `strategy = "normal"` and `consecutive_rejects = 0`.
+- After any **tier/phase advance** (including unwinnable seed escape), reset `consecutive_rejects = 0` and `strategy = "normal"`. The new tier is a fresh optimization context.
+
+**Early structural diagnosis**: If trace analysis proves a seed is structurally unwinnable BEFORE hitting PLATEAU_THRESHOLD (e.g., the player gets fewer than 3 decisions before an opponent wins, with a deficit no single action can overcome), document the specific evidence in musings (number of decisions, margin gap, why no policy change bridges it) and advance the tier immediately. Do not require PLATEAU_THRESHOLD futile experiments — that wastes iteration budget on provably impossible targets.
+
+**Rapid tier advancement**: If a new tier's baseline wins ALL new seeds without any policy changes (wins == tier), skip the improvement loop for that tier and advance immediately. Repeat until a tier introduces a new non-winning seed. Log the rapid advancement batch in musings.
 
 ### Step 1c: COMPUTE UCB1 CATEGORY SCORES
 
@@ -280,9 +286,10 @@ Run this loop INDEFINITELY (or until `MAX_ITERATIONS` reached). Never stop. Neve
      **Recommended next steps**: <specs, infrastructure changes, or scope adjustments>
      ```
   2. Append to results.tsv: `ceiling-NNN	<best_metric>	0	ceiling	REJECT	hard ceiling reached after N experiments`
-  3. **Pause for human input**: Present the ceiling report to the user and wait for direction. This is NOT "stopping the loop" — it is a structured handoff when the mutable system is proven incapable of further improvement within the current architectural constraints.
-  4. If the human provides a `next-idea.md`, resume the loop with that hypothesis.
-  5. If the human says to stop, proceed to "After Campaign Completes."
+  3. **Pause for human input**: Present the ceiling report to the user and wait for direction. This is NOT "stopping the loop" — it is a structured handoff when the mutable system is proven incapable of further improvement within the current architectural constraints. Present the following options:
+     - **Option A**: Human provides a `next-idea.md` → resume the loop with that hypothesis.
+     - **Option B**: Human says to stop → proceed to "After Campaign Completes."
+     - **Option C**: **Program.md amendment** — if the ceiling is caused by program.md's accept/reject logic being structurally incompatible with the optimization trajectory (e.g., a flat AND rule that blocks clearly beneficial tradeoffs), propose a specific amendment with reasoning. Present as a 1-3-1 option: the problem, 3 alternative rule formulations, and a recommendation. Apply only with human approval.
 
 ### Step 1g: META-REVIEW (Self-Improving program.md)
 
@@ -377,6 +384,10 @@ Apply these consistently throughout. Never hardcode a comparison direction.
 ### Step 4: EXECUTE
 
 - Read `HARNESS_RUNS` from program.md (default: 1).
+- **Fixture sync**: If `$WT/campaigns/<campaign>/sync-fixtures.sh` exists, run it before the harness to prevent stale-fixture CRASH failures:
+  ```bash
+  cd $WT && bash campaigns/<campaign>/sync-fixtures.sh
+  ```
 - Run the harness:
   ```bash
   cd $WT && bash campaigns/<campaign>/harness.sh
@@ -451,6 +462,12 @@ Apply the accept/reject logic from program.md. **If program.md defines its own a
 4. Log the phase transition in musings: `**PHASE TRANSITION**: <old phase> → <new phase>. New baseline: <metric>.`
 5. The transition itself is not an experiment — do not log it in results.tsv as an experiment row
 
+**Multi-metric phase accept logic guidance**: When a ramp-up phase tracks both a primary count (e.g., wins) and a secondary continuous metric (e.g., avgMargin), the accept rule must handle the case where the primary count INCREASES but the secondary metric REGRESSES. Recommended two-case pattern:
+- **Primary count increased**: Use the composite metric (e.g., `compositeScore`) as the arbiter. The composite already weights the count heavily (e.g., 10× per win). Accept if `new_compositeScore > best_compositeScore + NOISE_TOLERANCE`.
+- **Primary count unchanged**: Use the secondary metric as the arbiter. Accept if secondary improved or if it's equal with lines_delta < 0 (simplification).
+
+A flat AND rule (`wins >= best AND margin >= best - tolerance`) blocks clearly beneficial changes where an extra win (+10/N compositeScore) is gained at the cost of small margin regression. Campaign authors should use the two-case pattern to avoid this trap.
+
 **CRASH/FAIL:**
 - **Fixture sync crash**: If the error is a golden/snapshot test failure immediately after mutable file changes, this is a dependent fixture issue — follow the "Dependent Fixture Updates" protocol. This does NOT count toward the 3-retry limit.
 - If the error is trivial (typo, missing import, off-by-one), fix and retry (up to 3 times).
@@ -523,6 +540,8 @@ Append a row to `$WT/campaigns/<campaign>/results.tsv`:
 ```
 
 Use a sequential experiment ID: `exp-001`, `exp-002`, etc. (continue from where results.tsv left off).
+
+**IMPORTANT**: After logging results.tsv, ALWAYS proceed to Step 7.5 (musings) then Step 7.6 (lesson extraction). Do not skip to Step 8.
 
 ### Step 7.5: RECORD LEARNING (Structured Reflection)
 
@@ -611,7 +630,8 @@ When the human decides to stop the loop (or `MAX_ITERATIONS` is reached):
 2. Promote high-confidence lessons to global store (if not already done by Step 7.6).
 3. **Commit `campaigns/lessons-global.jsonl`** with `git add -f campaigns/lessons-global.jsonl && git commit -m "chore: promote global lessons from <campaign>"`. This file persists across campaigns — without this commit, lessons are lost when the worktree is removed.
 4. Squash-merge into main: `git merge --squash improve/<campaign>`
-5. Remove the worktree: `git worktree remove .claude/worktrees/improve-<campaign>`
+5. If `sync-fixtures.sh` exists, run it after the squash-merge (before committing) to ensure fixtures match the merged state. Verify with a quick build+test.
+6. Remove the worktree: `git worktree remove .claude/worktrees/improve-<campaign>`
 
 ## Important Rules
 

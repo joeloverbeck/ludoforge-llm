@@ -1860,6 +1860,35 @@ describe('compile-effects lowering', () => {
     ]));
   });
 
+  it('lowers skipIfNoLegalCompletion grantFreeOperation effects with explicit postResolutionTurnFlow', () => {
+    const result = lowerEffectArray(
+      [
+        {
+          grantFreeOperation: {
+            seat: '1',
+            operationClass: 'operation',
+            completionPolicy: 'skipIfNoLegalCompletion',
+            postResolutionTurnFlow: 'resumeCardFlow',
+          },
+        },
+      ],
+      context,
+      'doc.actions.0.effects',
+    );
+
+    assertNoDiagnostics(result);
+    assert.deepEqual(result.value, tagEffectAsts([
+      {
+        grantFreeOperation: {
+          seat: '1',
+          operationClass: 'operation',
+          completionPolicy: 'skipIfNoLegalCompletion',
+          postResolutionTurnFlow: 'resumeCardFlow',
+        },
+      },
+    ]));
+  });
+
   it('emits warning diagnostics for risky free-operation sequence transitions', () => {
     const result = lowerEffectArray(
       [

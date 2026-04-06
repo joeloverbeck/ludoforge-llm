@@ -29,8 +29,10 @@ The library defines reusable building blocks. Profiles select which blocks to us
 |------|---------|---------|
 | `victory.currentMargin.self` | number | own distance from victory threshold |
 | `victory.currentMargin.active` | number | active player's margin |
+| `victory.currentMargin.<seatName>` | number | specific seat's margin by name (e.g., `victory.currentMargin.us`) |
 | `victory.currentRank.self` | number | own current ranking position (1 = winning) |
 | `victory.currentRank.active` | number | active player's ranking |
+| `victory.currentRank.<seatName>` | number | specific seat's ranking by name |
 | `var.global.<id>` | number | global game variable |
 | `globalMarker.<id>` | string | current state of a global marker lattice (e.g., `"shaded"`, `"inactive"`) |
 | `var.player.self.<id>` | number | own per-player variable (e.g., resources) |
@@ -78,7 +80,10 @@ These are publicly visible (per observability config). Use in state features or 
 
 | Path | Returns | Notes |
 |------|---------|-------|
-| `preview.victory.currentMargin.self` | number | projected margin AFTER this move |
+| `preview.victory.currentMargin.self` | number | projected own margin AFTER this move |
+| `preview.victory.currentMargin.<seatName>` | number | projected opponent margin AFTER this move (e.g., `preview.victory.currentMargin.us`) |
+| `preview.victory.currentRank.self` | number | projected own ranking AFTER this move (1 = winning) |
+| `preview.victory.currentRank.<seatName>` | number | projected opponent ranking AFTER this move |
 | `preview.var.player.self.<id>` | number | projected variable after move |
 | `preview.feature.<id>` | varies | authored state feature evaluated on the preview state |
 
@@ -936,6 +941,110 @@ scoreTerm:
     ref: feature.projectedSelfMargin
 ```
 
+## Opponent Awareness
+
+The policy DSL supports reading opponent state through seat-specific refs. This enables **reactive defensive play** — choosing actions that degrade an opponent's position — without multi-turn search. The agent reacts to observable game state, not simulated futures.
+
+### Opponent margin monitoring
+
+Track how close opponents are to their victory thresholds:
+
+```yaml
+stateFeatures:
+  usMargin:
+    type: number
+    expr:
+      ref: victory.currentMargin.us
+  nvaMargin:
+    type: number
+    expr:
+      ref: victory.currentMargin.nva
+```
+
+### Prefer actions that reduce opponent projected margin
+
+Use `preview.victory.currentMargin.<seat>` to evaluate whether a candidate action worsens an opponent's position:
+
+```yaml
+candidateFeatures:
+  projectedUsMargin:
+    type: number
+    expr:
+      coalesce:
+        - { ref: preview.victory.currentMargin.us }
+        - { ref: feature.usMargin }
+
+considerations:
+  # Prefer actions that reduce US margin (lower US margin = better for non-US)
+  reduceUsMargin:
+    scopes: [move]
+    weight: 2
+    value:
+      neg:
+        ref: feature.projectedUsMargin
+```
+
+### Defensive play when opponent is near victory
+
+```yaml
+strategicConditions:
+  usNearVictory:
+    expr:
+      gte:
+        - { ref: victory.currentMargin.us }
+        - -3
+
+considerations:
+  # When US is close to winning, prefer actions that hurt US
+  defensiveAgainstUs:
+    scopes: [move]
+    when: { ref: condition.usNearVictory.satisfied }
+    weight: 5
+    value:
+      sub:
+        - { ref: feature.usMargin }
+        - coalesce:
+            - { ref: preview.victory.currentMargin.us }
+            - { ref: feature.usMargin }
+```
+
+**Important**: Opponent refs are subject to observability visibility. If `victory.currentMargin` is configured as `public` in the observer profile, opponent margins are accessible. If `seatVisible` or `private`, only own-seat margin is available.
+
+## Rank-Based Normalization
+
+### Problem: min-max normalization instability
+
+`preferNormalizedMargin` uses `(value - min) / (max - min)` normalization. When most candidates produce similar margins, `max - min` approaches 0, compressing all values to near-equal scores. This makes secondary signals (Rally bonus, capability gain) dominate, regardless of their actual importance.
+
+### Alternative: rank-based scoring with `rankDense`
+
+Use `candidateAggregates` with `rankDense` to rank candidates by projected margin. The rank is bounded (1 to N candidates) and preserves ordering without the instability of min-max normalization.
+
+```yaml
+candidateAggregates:
+  marginRank:
+    op: rankDense
+    of: { ref: feature.projectedSelfMargin }
+
+considerations:
+  # Higher rank = better margin. rankDense gives 1 to best, N to worst.
+  # Negate so higher margin gets higher score.
+  preferHighMarginRank:
+    scopes: [move]
+    weight: 3
+    value:
+      neg:
+        ref: aggregate.marginRank
+```
+
+### When to use which normalization
+
+| Approach | Best when | Risk |
+|----------|-----------|------|
+| Min-max (`preferNormalizedMargin`) | Candidates have diverse margins; want Rally bonus to compete fairly | Instability when margins cluster |
+| Raw (`preferProjectedSelfMargin`) | Single dominant signal; no secondary bonuses needed | Unbounded range drowns secondary signals |
+| Rank-based (`rankDense`) | Mixed signals; want stable relative ordering | Loses magnitude information (rank 1 vs 2 could be 1-point or 10-point gap) |
+
 ## Debugging Tips
 
 - Set `traceLevel: 'verbose'` on the PolicyAgent to see all candidates with scores and contributions
@@ -944,3 +1053,4 @@ scoreTerm:
 - `coalesce` is essential for preview refs and candidate params — they may be undefined
 - Token `props` filtering uses the token's actual property values (e.g., `faction: VC`, `type: guerrilla`)
 - The `self` keyword in token filters resolves to the acting player's ID, not a literal string
+- Opponent margin refs (e.g., `victory.currentMargin.us`) resolve literal seat names — the engine looks up the seat ID directly

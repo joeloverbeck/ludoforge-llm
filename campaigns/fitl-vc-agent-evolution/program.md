@@ -291,19 +291,44 @@ seeds keep early experiments under 5 minutes.
 ### Phase A: Win-Gated Ramp-Up (tier < 15)
 
 During ramp-up, the standard `compositeScore` accept/reject logic is
-**suspended**. Instead:
+**suspended**. Instead, use this two-case logic:
 
 ```
-IF wins >= best_wins at this tier AND avgMargin >= best_avgMargin - 0.05:
+IF wins > best_wins:
+    # More wins: use compositeScore as the arbiter.
+    # compositeScore = avgMargin + 10 * winRate already encodes the
+    # wins-vs-margin tradeoff (10× weight for wins vs 1× for margin).
+    # Some margin regression is expected and acceptable when gaining wins.
+    best_compositeScore = best_avgMargin + 10 * (best_wins / current_tier)
+    new_compositeScore  = avgMargin + 10 * (wins / current_tier)
+    IF new_compositeScore > best_compositeScore + NOISE_TOLERANCE:
+        ACCEPT
+    ELSE:
+        REJECT
+
+IF wins == best_wins AND avgMargin >= best_avgMargin - NOISE_TOLERANCE:
     ACCEPT
-ELSE:
+
+IF wins == best_wins AND avgMargin within NOISE_TOLERANCE of best (equal):
+    IF lines_delta < 0: ACCEPT (simplification)
+    ELSE: REJECT (near-miss)
+
+IF wins < best_wins:
     REJECT
 ```
 
+**Rationale**: The original rule (`wins >= best AND margin >= best - 0.05`)
+treated "same wins" and "more wins" identically. This blocked clearly
+beneficial changes where an extra win (+10/N compositeScore) was gained at
+the cost of small margin regression (-0.4 compositeScore). The two-case
+logic preserves margin protection when wins are unchanged but delegates to
+compositeScore (which already weights wins 10×) when wins increase.
+
 **Tier advance**: After an ACCEPT where `wins == current_tier` (all seeds
 won), write `tier + 1` to `seed-tier.txt`. The next experiment runs at the
-new tier. Re-measure `best_wins` and `best_avgMargin` at the new tier
-(baseline run at new tier before continuing experiments).
+new tier. Re-measure `best_wins`, `best_avgMargin`, and
+`best_compositeScore` at the new tier (baseline run at new tier before
+continuing experiments).
 
 **Unwinnable seed escape**: Some seeds may be structurally unwinnable due
 to game conditions (e.g., VC gets only 2 decisions before an opponent wins

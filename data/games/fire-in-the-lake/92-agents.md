@@ -382,33 +382,11 @@ agents:
 
     vc-baseline:
       observer: currentPlayer
-      params:
-        eventWeight: 1.5
-        projectedMarginWeight: 1
-        resourceWeight: 0.03
-      use:
-        pruningRules:
-          - dropPassWhenOtherMovesExist
-        considerations:
-          - preferProjectedSelfMargin
-          - preserveResources
-          - preferEvent
-          - preferRallyAction
-          - preferMarchAction
-          - preferAttackAction
-          - preferTerrorAction
-          - preferTaxAction
-          - preferSubvertAction
-        tieBreakers:
-          - stableMoveKey
-
-    vc-evolved:
-      observer: currentPlayer
       preview:
         mode: tolerateStochastic
       params:
         projectedMarginWeight: 5
-        rallyWeight: 3
+        rallyWeight: 5
       use:
         pruningRules:
           - dropPassWhenOtherMovesExist
@@ -416,16 +394,13 @@ agents:
           - preferNormalizedMargin
           - preferRallyWeighted
           - valueCapabilityGain
-          - penalizeAttack
           - preferPopulousTargets
-          - observeGameState
         tieBreakers:
-          - preferCheapTargetSpaces
           - stableMoveKey
 
   bindings:
     us: us-baseline
     arvn: arvn-baseline
     nva: nva-baseline
-    vc: vc-evolved
+    vc: vc-baseline
 ```

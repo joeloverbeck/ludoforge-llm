@@ -23,6 +23,7 @@ import {
 import {
   grantActionIds,
   isPendingFreeOperationGrantSequenceReady,
+  resolveAuthorizedPendingFreeOperationGrants,
 } from './free-operation-grant-authorization.js';
 import { resolveTurnFlowDefaultFreeOperationActionDomain } from './free-operation-action-domain.js';
 import {
@@ -32,12 +33,12 @@ import {
 import {
   isFreeOperationApplicableForMove,
   isFreeOperationGrantedForMove,
+  resolveFreeOperationDiscoveryAnalysis,
 } from './free-operation-discovery-analysis.js';
 import {
   canResolveAmbiguousFreeOperationOverlapInCurrentState,
   hasLegalCompletedFreeOperationMoveInCurrentState,
 } from './free-operation-viability.js';
-import { resolveStrongestRequiredFreeOperationOutcomeGrant } from './free-operation-outcome-policy.js';
 import { resolveTurnFlowActionClass } from './turn-flow-action-class.js';
 import { isTurnFlowErrorCode } from './turn-flow-error.js';
 import type { TurnFlowActionClass } from './types-turn-flow.js';
@@ -63,7 +64,7 @@ import type { GameDefRuntime } from './gamedef-runtime.js';
 import type { FreeOperationExecutionOverlay } from './free-operation-overlay.js';
 import { computeAlwaysCompleteActionIds } from './always-complete-actions.js';
 import { probeMoveViability } from './apply-move.js';
-import { kernelRuntimeError } from './runtime-error.js';
+import { isKernelErrorCode, kernelRuntimeError } from './runtime-error.js';
 import { createSeatResolutionContext } from './identity.js';
 import { createTrustedExecutableMove } from './trusted-move.js';
 import { requireCardDrivenActiveSeat, validateTurnFlowRuntimeStateInvariants } from './turn-flow-runtime-invariants.js';
@@ -638,11 +639,50 @@ function enumeratePendingFreeOperationMoves(
     if (!isFreeOperationApplicableForMove(def, candidateState, candidateMove, seatResolution)) {
       return false;
     }
+    const discovery = resolveFreeOperationDiscoveryAnalysis(
+      def,
+      candidateState,
+      candidateMove,
+      seatResolution,
+      { zoneFilterErrorSurface: 'turnFlowEligibility' },
+    );
+    if (discovery.denial.cause === 'ambiguousOverlap') {
+      return canResolveAmbiguousFreeOperationOverlapInCurrentState(def, candidateState, candidateMove, seatResolution);
+    }
     if (!isFreeOperationGrantedForMove(def, candidateState, candidateMove, seatResolution)) {
-      if (!canResolveAmbiguousFreeOperationOverlapInCurrentState(def, candidateState, candidateMove, seatResolution)) {
-        return false;
+      return false;
+    }
+    let authorizedGrant: TurnFlowPendingFreeOperationGrant | null = null;
+    if (candidateState.turnOrderState.type === 'cardDriven') {
+      try {
+        authorizedGrant = resolveAuthorizedPendingFreeOperationGrants(
+          def,
+          candidateState,
+          candidateState.turnOrderState.runtime.pendingFreeOperationGrants ?? [],
+          activeSeat,
+          candidateMove,
+        ).canonicalGrant;
+      } catch (error) {
+        if (isTurnFlowErrorCode(error, 'FREE_OPERATION_ZONE_FILTER_EVALUATION_FAILED')) {
+          return true;
+        }
+        if (
+          isKernelErrorCode(error, 'RUNTIME_CONTRACT_INVALID')
+          && error.message.startsWith('Ambiguous overlapping free-operation grants matched actionId=')
+        ) {
+          return false;
+        }
+        throw error;
       }
     }
+    // Required grants must always be surfaced so the obligation is visible;
+    // apply-move.ts `validateFreeOperationOutcomePolicy` enforces outcome policy.
+    const needsCompletionProof = authorizedGrant !== null
+      && authorizedGrant.completionPolicy !== 'required'
+      && (
+        authorizedGrant.completionPolicy === 'skipIfNoLegalCompletion'
+        || authorizedGrant.outcomePolicy === 'mustChangeGameplayState'
+      );
     const decisionSequenceClassification = classifyMoveDecisionSequenceAdmissionForLegalMove(
       def,
       candidateState,
@@ -656,30 +696,10 @@ function enumeratePendingFreeOperationMoves(
     if (decisionSequenceClassification === 'unsatisfiable') {
       return false;
     }
-    if (decisionSequenceClassification !== 'satisfiable') {
+    if (!needsCompletionProof && decisionSequenceClassification !== 'satisfiable') {
       return true;
     }
-    if (
-      candidateState.turnOrderState.type !== 'cardDriven'
-      || !(candidateState.turnOrderState.runtime.pendingFreeOperationGrants ?? []).some((grant) => grant.outcomePolicy === 'mustChangeGameplayState')
-    ) {
-      return true;
-    }
-    let strongestOutcomeGrant: TurnFlowPendingFreeOperationGrant | null;
-    try {
-      strongestOutcomeGrant = resolveStrongestRequiredFreeOperationOutcomeGrant(def, candidateState, candidateMove, seatResolution);
-      if (strongestOutcomeGrant === null) {
-        return true;
-      }
-    } catch (error) {
-      if (isTurnFlowErrorCode(error, 'FREE_OPERATION_ZONE_FILTER_EVALUATION_FAILED')) {
-        return true;
-      }
-      throw error;
-    }
-    // Required grants must always be surfaced so the obligation is visible;
-    // apply-move.ts `validateFreeOperationOutcomePolicy` enforces outcome policy.
-    if (strongestOutcomeGrant.completionPolicy === 'required') {
+    if (!needsCompletionProof || candidateState.turnOrderState.type !== 'cardDriven') {
       return true;
     }
     return hasLegalCompletedFreeOperationMoveInCurrentState(

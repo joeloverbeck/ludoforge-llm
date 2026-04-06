@@ -2945,6 +2945,9 @@
                       },
                       "templateCompletionUnsatisfiable": {
                         "type": "number"
+                      },
+                      "duplicatesRemoved": {
+                        "type": "number"
                       }
                     },
                     "required": [
@@ -2954,7 +2957,8 @@
                       "rejectedNotViable",
                       "templateCompletionAttempts",
                       "templateCompletionSuccesses",
-                      "templateCompletionUnsatisfiable"
+                      "templateCompletionUnsatisfiable",
+                      "duplicatesRemoved"
                     ],
                     "additionalProperties": false
                   },
@@ -3006,6 +3010,9 @@
                           ]
                         },
                         "enteredTrustedMoveIndex": {
+                          "type": "boolean"
+                        },
+                        "skippedAsDuplicate": {
                           "type": "boolean"
                         },
                         "templateCompletionAttempts": {
@@ -3979,6 +3986,206 @@
                               "postResolutionTurnFlow"
                             ],
                             "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "grantId": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "seat": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "executeAsSeat": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "operationClass": {
+                                "type": "string",
+                                "enum": [
+                                  "pass",
+                                  "event",
+                                  "operation",
+                                  "limitedOperation",
+                                  "operationPlusSpecialActivity",
+                                  "specialActivity"
+                                ]
+                              },
+                              "actionIds": {
+                                "minItems": 1,
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1
+                                }
+                              },
+                              "zoneFilter": {
+                                "allOf": [
+                                  {
+                                    "$ref": "#/definitions/anon_436b4eb2"
+                                  }
+                                ]
+                              },
+                              "tokenInterpretations": {
+                                "minItems": 1,
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "when": {
+                                      "$ref": "#/definitions/anon_68302db6"
+                                    },
+                                    "assign": {
+                                      "type": "object",
+                                      "propertyNames": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "additionalProperties": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string"
+                                          },
+                                          {
+                                            "type": "integer",
+                                            "minimum": -9007199254740991,
+                                            "maximum": 9007199254740991
+                                          },
+                                          {
+                                            "type": "boolean"
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "when",
+                                    "assign"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "moveZoneBindings": {
+                                "minItems": 1,
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1
+                                }
+                              },
+                              "moveZoneProbeBindings": {
+                                "minItems": 1,
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1
+                                }
+                              },
+                              "allowDuringMonsoon": {
+                                "type": "boolean"
+                              },
+                              "viabilityPolicy": {
+                                "type": "string",
+                                "enum": [
+                                  "emitAlways",
+                                  "requireUsableAtIssue",
+                                  "requireUsableForEventPlay"
+                                ]
+                              },
+                              "outcomePolicy": {
+                                "type": "string",
+                                "enum": [
+                                  "mustChangeGameplayState"
+                                ]
+                              },
+                              "remainingUses": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 9007199254740991
+                              },
+                              "sequenceBatchId": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "sequenceIndex": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "sequenceContext": {
+                                "type": "object",
+                                "properties": {
+                                  "captureMoveZoneCandidatesAs": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "requireMoveZoneCandidatesFrom": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "executionContext": {
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "additionalProperties": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    {
+                                      "type": "boolean"
+                                    },
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string"
+                                          },
+                                          {
+                                            "type": "integer",
+                                            "minimum": -9007199254740991,
+                                            "maximum": 9007199254740991
+                                          },
+                                          {
+                                            "type": "boolean"
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              "completionPolicy": {
+                                "type": "string",
+                                "const": "skipIfNoLegalCompletion"
+                              },
+                              "postResolutionTurnFlow": {
+                                "type": "string",
+                                "const": "resumeCardFlow"
+                              }
+                            },
+                            "required": [
+                              "grantId",
+                              "seat",
+                              "operationClass",
+                              "remainingUses",
+                              "completionPolicy",
+                              "postResolutionTurnFlow"
+                            ],
+                            "additionalProperties": false
                           }
                         ]
                       }
@@ -4049,7 +4256,7 @@
                           "effects": {
                             "type": "array",
                             "items": {
-                              "$ref": "#/definitions/anon_31d9d274"
+                              "$ref": "#/definitions/anon_05210e19"
                             }
                           },
                           "moveParams": {
@@ -4372,13 +4579,13 @@
               "setupEffects": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/definitions/anon_31d9d274"
+                  "$ref": "#/definitions/anon_05210e19"
                 }
               },
               "teardownEffects": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/definitions/anon_31d9d274"
+                  "$ref": "#/definitions/anon_05210e19"
                 }
               },
               "actionRestrictions": {
@@ -4694,7 +4901,7 @@
   ],
   "additionalProperties": false,
   "definitions": {
-    "anon_31d9d274": {
+    "anon_05210e19": {
       "anyOf": [
         {
           "type": "object",
@@ -6544,13 +6751,13 @@
                 "then": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_31d9d274"
+                    "$ref": "#/definitions/anon_05210e19"
                   }
                 },
                 "else": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_31d9d274"
+                    "$ref": "#/definitions/anon_05210e19"
                   }
                 }
               },
@@ -6604,7 +6811,7 @@
                 "effects": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_31d9d274"
+                    "$ref": "#/definitions/anon_05210e19"
                   }
                 },
                 "limit": {
@@ -6621,7 +6828,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_31d9d274"
+                    "$ref": "#/definitions/anon_05210e19"
                   }
                 }
               },
@@ -6729,7 +6936,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_31d9d274"
+                    "$ref": "#/definitions/anon_05210e19"
                   }
                 }
               },
@@ -6851,7 +7058,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_31d9d274"
+                    "$ref": "#/definitions/anon_05210e19"
                   }
                 },
                 "macroOrigin": {
@@ -6905,7 +7112,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_31d9d274"
+                    "$ref": "#/definitions/anon_05210e19"
                   }
                 },
                 "macroOrigin": {
@@ -7011,7 +7218,7 @@
                 "compute": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_31d9d274"
+                    "$ref": "#/definitions/anon_05210e19"
                   }
                 },
                 "scoreExpr": {
@@ -7028,7 +7235,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_31d9d274"
+                    "$ref": "#/definitions/anon_05210e19"
                   }
                 },
                 "macroOrigin": {
@@ -7460,7 +7667,7 @@
                 "in": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/anon_31d9d274"
+                    "$ref": "#/definitions/anon_05210e19"
                   }
                 },
                 "macroOrigin": {
@@ -8018,6 +8225,175 @@
                     "completionPolicy": {
                       "type": "string",
                       "const": "required"
+                    },
+                    "postResolutionTurnFlow": {
+                      "type": "string",
+                      "const": "resumeCardFlow"
+                    }
+                  },
+                  "required": [
+                    "seat",
+                    "operationClass",
+                    "completionPolicy",
+                    "postResolutionTurnFlow"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "seat": {
+                      "type": "string"
+                    },
+                    "executeAsSeat": {
+                      "type": "string"
+                    },
+                    "operationClass": {
+                      "type": "string",
+                      "enum": [
+                        "pass",
+                        "event",
+                        "operation",
+                        "limitedOperation",
+                        "operationPlusSpecialActivity",
+                        "specialActivity"
+                      ]
+                    },
+                    "actionIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "zoneFilter": {
+                      "allOf": [
+                        {
+                          "$ref": "#/definitions/anon_436b4eb2"
+                        }
+                      ]
+                    },
+                    "tokenInterpretations": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "when": {
+                            "$ref": "#/definitions/anon_68302db6"
+                          },
+                          "assign": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "boolean"
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "when",
+                          "assign"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "moveZoneBindings": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "moveZoneProbeBindings": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "allowDuringMonsoon": {
+                      "type": "boolean"
+                    },
+                    "uses": {
+                      "type": "number"
+                    },
+                    "viabilityPolicy": {
+                      "type": "string",
+                      "enum": [
+                        "emitAlways",
+                        "requireUsableAtIssue",
+                        "requireUsableForEventPlay"
+                      ]
+                    },
+                    "outcomePolicy": {
+                      "type": "string",
+                      "enum": [
+                        "mustChangeGameplayState"
+                      ]
+                    },
+                    "sequence": {
+                      "type": "object",
+                      "properties": {
+                        "batch": {
+                          "type": "string"
+                        },
+                        "step": {
+                          "type": "number"
+                        },
+                        "progressionPolicy": {
+                          "type": "string",
+                          "enum": [
+                            "strictInOrder",
+                            "implementWhatCanInOrder"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "batch",
+                        "step"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "sequenceContext": {
+                      "type": "object",
+                      "properties": {
+                        "captureMoveZoneCandidatesAs": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "requireMoveZoneCandidatesFrom": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "executionContext": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "$ref": "#/definitions/anon_ea1e71ed"
+                      }
+                    },
+                    "completionPolicy": {
+                      "type": "string",
+                      "const": "skipIfNoLegalCompletion"
                     },
                     "postResolutionTurnFlow": {
                       "type": "string",

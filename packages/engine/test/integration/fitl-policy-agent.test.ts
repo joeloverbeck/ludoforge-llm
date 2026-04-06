@@ -191,6 +191,37 @@ function evaluatePreparedPolicyDecision(
   });
 }
 
+function prepareGuidedPolicyMoves(
+  def: GameDef,
+  state: GameState,
+  legalMoves: readonly ClassifiedMove[],
+  runtime: ReturnType<typeof createGameDefRuntime>,
+  seed: bigint,
+) {
+  const resolvedProfile = resolveEffectivePolicyProfile(def, state.activePlayer);
+  const choose = resolvedProfile === null
+    ? undefined
+    : buildCompletionChooseCallback({
+        state,
+        def,
+        catalog: resolvedProfile.catalog,
+        playerId: state.activePlayer,
+        seatId: resolvedProfile.seatId,
+        profile: resolvedProfile.profile,
+        runtime,
+      });
+  return preparePlayableMoves({
+    def,
+    state,
+    legalMoves,
+    rng: createRng(seed),
+    runtime,
+  }, {
+    pendingTemplateCompletions: 3,
+    ...(choose === undefined ? {} : { choose }),
+  });
+}
+
 function selectPreparedGrantedOperation(
   def: GameDef,
   postEventState: GameState,
@@ -253,10 +284,10 @@ function moveConsiderationDefs(
 }
 
 function disableVcCompletionGuidance(def: ReturnType<typeof assertValidatedGameDef>) {
-  const vcProfile = def.agents?.profiles['vc-evolved'];
-  assert.ok(vcProfile, 'expected vc-evolved profile in FITL production catalog');
+  const vcProfile = def.agents?.profiles['vc-baseline'];
+  assert.ok(vcProfile, 'expected vc-baseline profile in FITL production catalog');
   if (vcProfile === undefined || def.agents === undefined) {
-    throw new Error('Expected vc-evolved policy profile');
+    throw new Error('Expected vc-baseline policy profile');
   }
   const catalogConsiderations = def.agents.library.considerations;
   const moveOnlyConsiderations = vcProfile.use.considerations.filter(
@@ -269,7 +300,7 @@ function disableVcCompletionGuidance(def: ReturnType<typeof assertValidatedGameD
       ...def.agents,
       profiles: {
         ...def.agents.profiles,
-        'vc-evolved': {
+        'vc-baseline': {
           ...vcProfile,
           use: {
             ...vcProfile.use,
@@ -515,6 +546,10 @@ function projectedSelfMarginContribution(candidate: {
   );
   assert.notEqual(contribution, undefined, `expected margin contribution (preferProjectedSelfMargin or preferNormalizedMargin) for ${candidate.stableMoveKey}`);
   return contribution!.contribution;
+}
+
+function duplicateKeyCount(keys: readonly string[]): number {
+  return keys.length - new Set(keys).size;
 }
 
 describe('FITL policy agent integration', () => {
@@ -838,18 +873,18 @@ describe('FITL policy agent integration', () => {
       us: 'us-baseline',
       arvn: 'arvn-baseline',
       nva: 'nva-baseline',
-      vc: 'vc-evolved',
+      vc: 'vc-baseline',
     });
     assert.ok(agents.library.considerations.preferPopulousTargets);
     assert.deepEqual(agents.library.considerations.preferPopulousTargets?.scopes, ['completion']);
   });
 
-  it('compiles vc-evolved profile with preview.mode from production YAML', () => {
+  it('compiles vc-baseline profile with preview.mode from production YAML', () => {
     const { compiled } = compileProductionSpec();
     const agents = compiled.gameDef?.agents;
 
     assert.ok(agents);
-    assert.deepEqual(agents.profiles['vc-evolved']?.preview, {
+    assert.deepEqual(agents.profiles['vc-baseline']?.preview, {
       mode: 'tolerateStochastic',
     });
     assert.deepEqual(agents.profiles['us-baseline']?.preview, { mode: 'exactWorld' });
@@ -862,7 +897,7 @@ describe('FITL policy agent integration', () => {
     const baseDef = assertValidatedGameDef(compiled.gameDef);
 
     assert.ok(baseDef.agents);
-    const vcProfile = baseDef.agents.profiles['vc-evolved'];
+    const vcProfile = baseDef.agents.profiles['vc-baseline'];
     assert.ok(vcProfile);
 
     const def = assertValidatedGameDef({
@@ -901,7 +936,7 @@ describe('FITL policy agent integration', () => {
         },
         profiles: {
           ...baseDef.agents.profiles,
-          'vc-evolved': {
+          'vc-baseline': {
             ...vcProfile,
             use: {
               ...vcProfile.use,
@@ -932,7 +967,7 @@ describe('FITL policy agent integration', () => {
     if (result.agentDecision?.kind !== 'policy') {
       assert.fail('expected policy trace metadata');
     }
-    assert.equal(result.agentDecision.resolvedProfileId, 'vc-evolved');
+    assert.equal(result.agentDecision.resolvedProfileId, 'vc-baseline');
     assert.equal(result.agentDecision.emergencyFallback, false);
 
     if (result.agentDecision.candidates === undefined) {
@@ -1060,6 +1095,22 @@ describe('FITL policy agent integration', () => {
     assert.deepEqual(evaluatedNonPassCandidate?.unknownPreviewRefs, []);
   });
 
+  it('deduplicates post-template-completion playable outputs on the seed-6 VC decision reproducer', () => {
+    const guided = advanceSeed6ToVcFreeRally();
+    const prepared = prepareGuidedPolicyMoves(
+      guided.def,
+      guided.state,
+      guided.legalMoves,
+      guided.runtime,
+      6001n,
+    );
+    const completedKeys = prepared.completedMoves.map((candidate) => toMoveIdentityKey(guided.def, candidate.move));
+
+    assert.ok(completedKeys.length > 0, 'expected completed FITL candidates on the VC decision state');
+    assert.equal(duplicateKeyCount(completedKeys), 0, 'expected completed playable outputs to be unique by stableMoveKey');
+    assert.equal(prepared.statistics.duplicatesRemoved, 10, 'expected the seed-6 VC reproducer to remove the known duplicate playable outputs');
+  });
+
   it('keeps non-event preview differentiation intact on a VC decision with rally, terror, and attack candidates', () => {
     const { result } = traceSeedDecision(1, 1);
 
@@ -1115,7 +1166,7 @@ describe('FITL policy agent integration', () => {
         move.agentDecision.resolvedProfileId === 'us-baseline'
           || move.agentDecision.resolvedProfileId === 'arvn-baseline'
           || move.agentDecision.resolvedProfileId === 'nva-baseline'
-          || move.agentDecision.resolvedProfileId === 'vc-evolved',
+          || move.agentDecision.resolvedProfileId === 'vc-baseline',
       );
     }
   });
@@ -1142,7 +1193,7 @@ describe('FITL policy agent integration', () => {
     // Verify that both guided and unguided agents produce valid, executable
     // moves at the seed-6 free-rally decision point. This test is deliberately
     // profile-evolution-resilient: it does not assert specific action choices
-    // or target spaces, since the vc-evolved profile's move-level scoring
+    // or target spaces, since the vc-baseline profile's move-level scoring
     // (e.g. preferProjectedSelfMargin) may legitimately favor different actions
     // as the profile evolves.
     const guided = advanceSeed6ToVcFreeRally();

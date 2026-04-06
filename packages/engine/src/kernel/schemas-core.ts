@@ -1439,6 +1439,7 @@ const PolicyMovePreparationTraceSchema = z
       z.literal('rejected'),
     ]),
     enteredTrustedMoveIndex: BooleanSchema,
+    skippedAsDuplicate: BooleanSchema.optional(),
     templateCompletionAttempts: NumberSchema.optional(),
     templateCompletionOutcome: z.union([
       z.literal('complete'),
@@ -1490,6 +1491,7 @@ const PolicyCompletionStatisticsSchema = z
     templateCompletionAttempts: NumberSchema,
     templateCompletionSuccesses: NumberSchema,
     templateCompletionUnsatisfiable: NumberSchema,
+    duplicatesRemoved: NumberSchema,
   })
   .strict();
 

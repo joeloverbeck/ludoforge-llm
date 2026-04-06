@@ -20,6 +20,7 @@ export const isTurnFlowFreeOperationGrantViabilityPolicy = (
 
 export const TURN_FLOW_FREE_OPERATION_GRANT_COMPLETION_POLICY_VALUES = [
   'required',
+  'skipIfNoLegalCompletion',
 ] as const;
 
 export type TurnFlowFreeOperationGrantCompletionPolicy =
@@ -124,7 +125,11 @@ export const turnFlowFreeOperationGrantPolicyRank = (
     'completionPolicy' | 'outcomePolicy' | 'postResolutionTurnFlow'
   >,
 ): readonly [number, number, number] => [
-  grant.completionPolicy === 'required' ? 1 : 0,
+  grant.completionPolicy === 'required'
+    ? 2
+    : grant.completionPolicy === 'skipIfNoLegalCompletion'
+      ? 1
+      : 0,
   grant.outcomePolicy === 'mustChangeGameplayState' ? 1 : 0,
   grant.postResolutionTurnFlow === 'resumeCardFlow' ? 1 : 0,
 ];
@@ -308,11 +313,14 @@ export const collectTurnFlowFreeOperationGrantContractViolations = (
     });
   }
 
-  if (grant.completionPolicy === 'required' && grant.postResolutionTurnFlow === undefined) {
+  if (
+    (grant.completionPolicy === 'required' || grant.completionPolicy === 'skipIfNoLegalCompletion')
+    && grant.postResolutionTurnFlow === undefined
+  ) {
     violations.push({
       code: 'requiredPostResolutionTurnFlowMissing',
       path: ['postResolutionTurnFlow'],
-      message: 'postResolutionTurnFlow is required when completionPolicy is required.',
+      message: 'postResolutionTurnFlow is required when completionPolicy is required or skipIfNoLegalCompletion.',
     });
   }
 
@@ -320,11 +328,12 @@ export const collectTurnFlowFreeOperationGrantContractViolations = (
     grant.postResolutionTurnFlow !== undefined
     && grant.postResolutionTurnFlow !== null
     && grant.completionPolicy !== 'required'
+    && grant.completionPolicy !== 'skipIfNoLegalCompletion'
   ) {
     violations.push({
       code: 'postResolutionTurnFlowRequiresRequiredCompletionPolicy',
       path: ['completionPolicy'],
-      message: 'postResolutionTurnFlow requires completionPolicy: required.',
+      message: 'postResolutionTurnFlow requires completionPolicy: required or skipIfNoLegalCompletion.',
     });
   }
 

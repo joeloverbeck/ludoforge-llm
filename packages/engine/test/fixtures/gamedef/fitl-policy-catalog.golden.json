@@ -2247,65 +2247,8 @@
     "vc-baseline": {
       "observerName": "currentPlayer",
       "params": {
-        "eventWeight": 1.5,
-        "projectedMarginWeight": 1,
-        "resourceWeight": 0.03
-      },
-      "use": {
-        "pruningRules": [
-          "dropPassWhenOtherMovesExist"
-        ],
-        "considerations": [
-          "preferProjectedSelfMargin",
-          "preserveResources",
-          "preferEvent",
-          "preferRallyAction",
-          "preferMarchAction",
-          "preferAttackAction",
-          "preferTerrorAction",
-          "preferTaxAction",
-          "preferSubvertAction"
-        ],
-        "tieBreakers": [
-          "stableMoveKey"
-        ]
-      },
-      "preview": {
-        "mode": "exactWorld"
-      },
-      "selection": {
-        "mode": "argmax"
-      },
-      "plan": {
-        "stateFeatures": [
-          "selfMargin",
-          "selfResources"
-        ],
-        "candidateFeatures": [
-          "projectedSelfMargin"
-        ],
-        "candidateAggregates": [
-          "hasNonPassAlternative"
-        ],
-        "considerations": [
-          "preferProjectedSelfMargin",
-          "preserveResources",
-          "preferEvent",
-          "preferRallyAction",
-          "preferMarchAction",
-          "preferAttackAction",
-          "preferTerrorAction",
-          "preferTaxAction",
-          "preferSubvertAction"
-        ]
-      },
-      "fingerprint": "dfd0363cd14e834ce6cccf78729395cadb5c625eb1fca9dd92a05b5de0c8d763"
-    },
-    "vc-evolved": {
-      "observerName": "currentPlayer",
-      "params": {
         "projectedMarginWeight": 5,
-        "rallyWeight": 3
+        "rallyWeight": 5
       },
       "use": {
         "pruningRules": [
@@ -2315,12 +2258,9 @@
           "preferNormalizedMargin",
           "preferRallyWeighted",
           "valueCapabilityGain",
-          "penalizeAttack",
-          "preferPopulousTargets",
-          "observeGameState"
+          "preferPopulousTargets"
         ],
         "tieBreakers": [
-          "preferCheapTargetSpaces",
           "stableMoveKey"
         ]
       },
@@ -2333,16 +2273,11 @@
       "plan": {
         "stateFeatures": [
           "selfMargin",
-          "vcFriendlyCapCount",
-          "selfResources",
-          "turnRound",
-          "vcBaseCount",
-          "vcGuerrillaCount"
+          "vcFriendlyCapCount"
         ],
         "candidateFeatures": [
           "projectedSelfMargin",
-          "projectedCapabilityGain",
-          "targetSpacePopulation"
+          "projectedCapabilityGain"
         ],
         "candidateAggregates": [
           "hasNonPassAlternative",
@@ -2353,19 +2288,17 @@
           "preferNormalizedMargin",
           "preferRallyWeighted",
           "valueCapabilityGain",
-          "penalizeAttack",
-          "preferPopulousTargets",
-          "observeGameState"
+          "preferPopulousTargets"
         ]
       },
-      "fingerprint": "b8221970dda957ee9c567a5851fa54d4a7bb0243e31904d0fc10150baccbdcf1"
+      "fingerprint": "b32e74e7268fb9cf5d7966805b6e1041bcf0ea84c22460ce4d4cf3129fe9e528"
     }
   },
   "bindingsBySeat": {
     "us": "us-baseline",
     "arvn": "arvn-baseline",
     "nva": "nva-baseline",
-    "vc": "vc-evolved"
+    "vc": "vc-baseline"
   },
-  "catalogFingerprint": "89240cf260bf4deed8fe275a91503a040895e11bf24fa5776682bba01a5a8fd8"
+  "catalogFingerprint": "c2fd7e69671ad2e61999109d909e8e61df9d3edd3c7908d794f90a287439d103"
 }

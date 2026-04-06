@@ -1293,8 +1293,8 @@ describe('buildAdvancePhaseRequest', () => {
   });
 });
 
-describe('advanceToDecisionPoint — unfulfillable required free-operation grant expiry', () => {
-  it('auto-expires an unfulfillable required grant so that pass becomes legal', () => {
+describe('advanceToDecisionPoint — free-operation completion policy handling', () => {
+  it('leaves an unfulfillable required grant pending at the decision point', () => {
     const def: GameDef = {
       metadata: { id: 'grant-expiry-test', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
       seats: [{ id: '0' }, { id: '1' }],
@@ -1381,14 +1381,109 @@ describe('advanceToDecisionPoint — unfulfillable required free-operation grant
       markers: {},
     };
 
-    // Without the fix, this would throw STALL_LOOP_DETECTED because the
-    // required grant blocks pass and no free operations exist.
     const next = advanceToDecisionPoint(def, state);
 
-    // Grant should be expired — state should be at the same phase with legal moves
     assert.equal(next.currentPhase, asPhaseId('main'));
     const runtime = requireCardDrivenRuntime(next);
     const grants = runtime.pendingFreeOperationGrants ?? [];
-    assert.equal(grants.length, 0, 'unfulfillable grant should have been expired');
+    assert.equal(grants.length, 1, 'required unfulfillable grant should remain pending');
+    assert.equal(grants[0]?.grantId, 'unfulfillable-grant-1');
+  });
+
+  it('skips an uncompletable skipIfNoLegalCompletion grant before returning the decision point', () => {
+    const def: GameDef = {
+      metadata: { id: 'grant-skip-test', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+      seats: [{ id: '0' }, { id: '1' }],
+      constants: {},
+      globalVars: [],
+      perPlayerVars: [],
+      zones: [
+        { id: asZoneId('deck:none'), owner: 'none', visibility: 'hidden', ordering: 'stack' },
+        { id: asZoneId('played:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+        { id: asZoneId('lookahead:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+        { id: asZoneId('leader:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+      ],
+      tokenTypes: [{ id: 'card', props: { isCoup: 'boolean' } }],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'] },
+            windows: [],
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+            actionClassByActionId: { pass: 'pass', operation: 'operation' },
+            freeOperationActionIds: ['operation'],
+          },
+        },
+      },
+      actions: [
+        {
+          id: asActionId('pass'),
+          actor: 'active',
+          executor: 'actor',
+          phase: [asPhaseId('main')],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      terminal: { conditions: [] },
+    } as unknown as GameDef;
+
+    const state: GameState = {
+      ...createState({
+        currentPhase: asPhaseId('main'),
+        zones: {
+          'deck:none': [],
+          'played:none': [{ id: asTokenId('tok_card_0'), type: 'card', props: { isCoup: false } }],
+          'lookahead:none': [{ id: asTokenId('tok_card_1'), type: 'card', props: { isCoup: false } }],
+          'leader:none': [],
+        },
+      }),
+      globalVars: {},
+      actionUsage: {},
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          seatOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: '1',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
+          pendingFreeOperationGrants: [
+            {
+              grantId: 'skippable-grant-1',
+              seat: '0',
+              operationClass: 'operation',
+              actionIds: ['operation'],
+              completionPolicy: 'skipIfNoLegalCompletion',
+              postResolutionTurnFlow: 'resumeCardFlow',
+              remainingUses: 1,
+            },
+          ],
+        },
+      },
+      markers: {},
+    };
+
+    const next = advanceToDecisionPoint(def, state);
+
+    assert.equal(next.currentPhase, asPhaseId('main'));
+    const runtime = requireCardDrivenRuntime(next);
+    assert.equal(runtime.pendingFreeOperationGrants, undefined);
   });
 });

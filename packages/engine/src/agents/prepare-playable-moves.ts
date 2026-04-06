@@ -1,6 +1,9 @@
 import { perfStart, perfDynEnd, type PerfProfiler } from '../kernel/perf-profiler.js';
+import { createSeatResolutionContext } from '../kernel/identity.js';
 import { evaluatePlayableMoveCandidate } from '../kernel/playable-candidate.js';
+import { resolveLegalCompletedFreeOperationMoveInCurrentState } from '../kernel/free-operation-viability.js';
 import { toMoveIdentityKey } from '../kernel/move-identity.js';
+import { createTrustedExecutableMove } from '../kernel/trusted-move.js';
 import type {
   Agent,
   ChoicePendingRequest,
@@ -58,6 +61,7 @@ export interface PreparedPlayableMoves {
 interface TemplateCompletionTrace {
   readonly finalClassification: PolicyMovePreparationTrace['finalClassification'];
   readonly enteredTrustedMoveIndex: boolean;
+  readonly skippedAsDuplicate?: boolean;
   readonly templateCompletionAttempts: number;
   readonly templateCompletionOutcome: NonNullable<PolicyMovePreparationTrace['templateCompletionOutcome']>;
   readonly rejection?: PolicyMovePreparationTrace['rejection'];
@@ -76,13 +80,46 @@ export function preparePlayableMoves(
   let templateCompletionAttempts = 0;
   let templateCompletionSuccesses = 0;
   let templateCompletionUnsatisfiable = 0;
+  let duplicatesRemoved = 0;
   const movePreparations: PolicyMovePreparationTrace[] = [];
+  const seenMoveKeys = new Set<string>();
+  const emittedPlayableMoveKeys = new Set<string>();
   let rng = input.rng;
   const pendingTemplateCompletions = options.pendingTemplateCompletions ?? 1;
+  const recordPlayableMove = (
+    trustedMove: TrustedExecutableMove,
+    classification: 'complete' | 'stochastic',
+  ): boolean => {
+    const emittedStableMoveKey = toMoveIdentityKey(input.def, trustedMove.move);
+    if (emittedPlayableMoveKeys.has(emittedStableMoveKey)) {
+      duplicatesRemoved += 1;
+      return false;
+    }
+    emittedPlayableMoveKeys.add(emittedStableMoveKey);
+    if (classification === 'complete') {
+      completedMoves.push(trustedMove);
+    } else {
+      stochasticMoves.push(trustedMove);
+    }
+    return true;
+  };
 
   for (const classified of input.legalMoves) {
     const { move, viability } = classified;
     const stableMoveKey = toMoveIdentityKey(input.def, move);
+    if (seenMoveKeys.has(stableMoveKey)) {
+      duplicatesRemoved += 1;
+      movePreparations.push({
+        actionId: String(move.actionId),
+        stableMoveKey,
+        initialClassification: 'rejected',
+        finalClassification: 'rejected',
+        enteredTrustedMoveIndex: false,
+        skippedAsDuplicate: true,
+      });
+      continue;
+    }
+    seenMoveKeys.add(stableMoveKey);
     if (!viability.viable) {
       // Zone-filter mismatches on free-operation templates are not definitive
       // rejections — the zone filter cannot be evaluated until target zones are
@@ -95,8 +132,7 @@ export function preparePlayableMoves(
           rng,
           pendingTemplateCompletions,
           options.choose,
-          completedMoves,
-          stochasticMoves,
+          recordPlayableMove,
           profiler,
         );
         rng = completion.rng;
@@ -110,6 +146,7 @@ export function preparePlayableMoves(
           initialClassification: 'rejected',
           finalClassification: completion.trace.finalClassification,
           enteredTrustedMoveIndex: completion.trace.enteredTrustedMoveIndex,
+          ...(completion.trace.skippedAsDuplicate === true ? { skippedAsDuplicate: true } : {}),
           templateCompletionAttempts: completion.trace.templateCompletionAttempts,
           templateCompletionOutcome: completion.trace.templateCompletionOutcome,
           ...(completion.trace.rejection === undefined ? {} : { rejection: completion.trace.rejection }),
@@ -132,14 +169,17 @@ export function preparePlayableMoves(
       if (classified.trustedMove === undefined) {
         throw new Error(`complete classified move ${String(move.actionId)} is missing trusted execution metadata`);
       }
-      completedMoves.push(classified.trustedMove);
-      completedCount += 1;
+      const enteredTrustedMoveIndex = recordPlayableMove(classified.trustedMove, 'complete');
+      if (enteredTrustedMoveIndex) {
+        completedCount += 1;
+      }
       movePreparations.push({
         actionId: String(move.actionId),
         stableMoveKey,
         initialClassification: 'complete',
-        finalClassification: 'complete',
-        enteredTrustedMoveIndex: true,
+        finalClassification: enteredTrustedMoveIndex ? 'complete' : 'rejected',
+        enteredTrustedMoveIndex,
+        ...(enteredTrustedMoveIndex ? {} : { skippedAsDuplicate: true }),
       });
       continue;
     }
@@ -147,14 +187,17 @@ export function preparePlayableMoves(
       if (classified.trustedMove === undefined) {
         throw new Error(`stochastic classified move ${String(move.actionId)} is missing trusted execution metadata`);
       }
-      stochasticMoves.push(classified.trustedMove);
-      stochasticCount += 1;
+      const enteredTrustedMoveIndex = recordPlayableMove(classified.trustedMove, 'stochastic');
+      if (enteredTrustedMoveIndex) {
+        stochasticCount += 1;
+      }
       movePreparations.push({
         actionId: String(move.actionId),
         stableMoveKey,
         initialClassification: 'stochastic',
-        finalClassification: 'stochastic',
-        enteredTrustedMoveIndex: true,
+        finalClassification: enteredTrustedMoveIndex ? 'stochastic' : 'rejected',
+        enteredTrustedMoveIndex,
+        ...(enteredTrustedMoveIndex ? {} : { skippedAsDuplicate: true }),
       });
       continue;
     }
@@ -166,8 +209,7 @@ export function preparePlayableMoves(
       rng,
       pendingTemplateCompletions,
       options.choose,
-      completedMoves,
-      stochasticMoves,
+      recordPlayableMove,
       profiler,
     );
     rng = completion.rng;
@@ -181,6 +223,7 @@ export function preparePlayableMoves(
       initialClassification: 'pending',
       finalClassification: completion.trace.finalClassification,
       enteredTrustedMoveIndex: completion.trace.enteredTrustedMoveIndex,
+      ...(completion.trace.skippedAsDuplicate === true ? { skippedAsDuplicate: true } : {}),
       templateCompletionAttempts: completion.trace.templateCompletionAttempts,
       templateCompletionOutcome: completion.trace.templateCompletionOutcome,
       ...(completion.trace.rejection === undefined ? {} : { rejection: completion.trace.rejection }),
@@ -200,6 +243,7 @@ export function preparePlayableMoves(
       templateCompletionAttempts,
       templateCompletionSuccesses,
       templateCompletionUnsatisfiable,
+      duplicatesRemoved,
     },
   };
 }
@@ -215,8 +259,7 @@ function attemptTemplateCompletion(
   initialRng: Rng,
   pendingTemplateCompletions: number,
   choose: ((request: ChoicePendingRequest) => MoveParamValue | undefined) | undefined,
-  completedMoves: TrustedExecutableMove[],
-  stochasticMoves: TrustedExecutableMove[],
+  recordPlayableMove: (trustedMove: TrustedExecutableMove, classification: 'complete' | 'stochastic') => boolean,
   profiler: PerfProfiler | undefined,
 ): {
   readonly rng: Rng;
@@ -226,12 +269,51 @@ function attemptTemplateCompletion(
   readonly templateCompletionUnsatisfiable: number;
   readonly trace: TemplateCompletionTrace;
 } {
+  if (move.freeOperation === true) {
+    const seatResolution = createSeatResolutionContext(input.def, input.state.playerCount);
+    const completedMove = resolveLegalCompletedFreeOperationMoveInCurrentState(
+      input.def,
+      input.state,
+      move,
+      seatResolution,
+    );
+    if (completedMove !== null) {
+      const trustedMove = createTrustedExecutableMove(
+        completedMove,
+        input.state.stateHash,
+        'templateCompletion',
+      );
+      const enteredTrustedMoveIndex = recordPlayableMove(trustedMove, 'complete');
+      return {
+        rng: initialRng,
+        stochasticCount: 0,
+        templateCompletionAttempts: 1,
+        templateCompletionSuccesses: enteredTrustedMoveIndex ? 1 : 0,
+        templateCompletionUnsatisfiable: 0,
+        trace: enteredTrustedMoveIndex
+          ? {
+              finalClassification: 'complete',
+              enteredTrustedMoveIndex: true,
+              templateCompletionAttempts: 1,
+              templateCompletionOutcome: 'complete',
+            }
+          : {
+              finalClassification: 'rejected',
+              enteredTrustedMoveIndex: false,
+              skippedAsDuplicate: true,
+              templateCompletionAttempts: 1,
+              templateCompletionOutcome: 'complete',
+            },
+      };
+    }
+  }
   let currentRng = initialRng;
   let stochasticCount = 0;
   let templateCompletionAttempts = 0;
   let templateCompletionSuccesses = 0;
   let templateCompletionUnsatisfiable = 0;
   let sawCompletedMove = false;
+  let duplicateOutputOutcome: TemplateCompletionTrace['templateCompletionOutcome'] | undefined;
   let rejection: PolicyMovePreparationTrace['rejection'] | undefined;
   for (let attempt = 0; attempt < pendingTemplateCompletions; attempt += 1) {
     templateCompletionAttempts += 1;
@@ -247,14 +329,20 @@ function attemptTemplateCompletion(
     perfDynEnd(profiler, 'agent:evaluatePlayableCandidate', t0_epc);
     currentRng = result.rng;
     if (result.kind === 'playableComplete') {
-      completedMoves.push(result.move);
       templateCompletionSuccesses += 1;
-      sawCompletedMove = true;
+      if (recordPlayableMove(result.move, 'complete')) {
+        sawCompletedMove = true;
+      } else {
+        duplicateOutputOutcome = 'complete';
+      }
       continue;
     }
     if (result.kind === 'playableStochastic') {
-      stochasticMoves.push(result.move);
-      stochasticCount += 1;
+      if (recordPlayableMove(result.move, 'stochastic')) {
+        stochasticCount += 1;
+      } else {
+        duplicateOutputOutcome = 'stochastic';
+      }
       rejection = undefined;
       break;
     }
@@ -274,10 +362,18 @@ function attemptTemplateCompletion(
     : sawCompletedMove
       ? {
           finalClassification: 'complete',
-          enteredTrustedMoveIndex: true,
-          templateCompletionAttempts,
-          templateCompletionOutcome: 'complete',
-        }
+        enteredTrustedMoveIndex: true,
+        templateCompletionAttempts,
+        templateCompletionOutcome: 'complete',
+      }
+      : duplicateOutputOutcome !== undefined
+        ? {
+            finalClassification: 'rejected',
+            enteredTrustedMoveIndex: false,
+            skippedAsDuplicate: true,
+            templateCompletionAttempts,
+            templateCompletionOutcome: duplicateOutputOutcome,
+          }
       : {
           finalClassification: 'rejected',
           enteredTrustedMoveIndex: false,

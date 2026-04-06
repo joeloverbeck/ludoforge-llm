@@ -1098,7 +1098,7 @@ phase: [asPhaseId('main')],
     assert.deepStrictEqual(moves[0]?.params, {});
   });
 
-  it('enumerates required free-operation templates even when outcome policy cannot be satisfied so the obligation remains visible', () => {
+  it('omits required free-operation templates when no legal completion satisfies the outcome policy', () => {
     const action: ActionDef = {
       id: asActionId('freeOp'),
       actor: 'active',
@@ -1146,8 +1146,7 @@ phase: [asPhaseId('main')],
     });
 
     const moves = legalMoves(def, state);
-    assert.equal(moves.length > 0, true, 'required grants must surface their moves so the obligation is visible');
-    assert.equal(moves.every((m) => m.freeOperation === true), true, 'all surfaced moves should be free operations');
+    assert.equal(moves.length, 0);
   });
 
   it('6. limited operations produce template moves when within limits', () => {
@@ -3300,6 +3299,81 @@ phase: [asPhaseId('main')],
         actionClass: 'operation',
       },
     ]);
+  });
+
+  it('does not surface uncompletable required free-operation templates as legal moves', () => {
+    const action: ActionDef = {
+      id: asActionId('operation'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [{ name: 'target', domain: { query: 'intsInRange', min: 1, max: 1 } }],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'operation-no-completion',
+      actionId: asActionId('operation'),
+      legality: {
+        op: 'in',
+        item: { _t: 2, ref: 'binding', name: 'target' },
+        set: { _t: 2, ref: 'grantContext', key: 'allowedTargets' },
+      },
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [{ effects: [] }],
+      atomicity: 'atomic',
+    };
+
+    const def = asTaggedGameDef({
+      ...makeBaseDef({ actions: [action], actionPipelines: [profile] }),
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'] },
+            windows: [],
+            optionMatrix: [],
+            passRewards: [],
+            freeOperationActionIds: ['operation'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+            actionClassByActionId: { pass: 'pass', operation: 'operation' },
+          },
+        },
+      },
+    });
+
+    const state = makeCardDrivenState({
+      currentCard: {
+        firstEligible: '0',
+        secondEligible: null,
+        actedSeats: ['0'],
+        passedSeats: [],
+        nonPassCount: 1,
+        firstActionClass: 'event',
+      },
+      pendingFreeOperationGrants: [
+        {
+          grantId: 'grant-impossible-required',
+          seat: '0',
+          operationClass: 'operation',
+          actionIds: ['operation'],
+          completionPolicy: 'required',
+          postResolutionTurnFlow: 'resumeCardFlow',
+          executionContext: { allowedTargets: [] },
+          remainingUses: 1,
+        },
+      ],
+    });
+
+    const moves = legalMoves(def, state);
+    assert.equal(moves.some((move) => String(move.actionId) === 'operation' && move.freeOperation === true), false);
+    assert.equal(moves.some((move) => String(move.actionId) === 'pass'), false);
   });
 
   it('keeps staged pending grants locked to the current ready pipeline step', () => {

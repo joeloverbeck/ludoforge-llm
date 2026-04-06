@@ -1542,6 +1542,7 @@ export interface PolicyMovePreparationTrace {
   readonly initialClassification: 'complete' | 'stochastic' | 'pending' | 'rejected';
   readonly finalClassification: 'complete' | 'stochastic' | 'rejected';
   readonly enteredTrustedMoveIndex: boolean;
+  readonly skippedAsDuplicate?: boolean;
   readonly templateCompletionAttempts?: number;
   readonly templateCompletionOutcome?: 'complete' | 'stochastic' | 'failed';
   readonly rejection?: 'completionUnsatisfiable' | 'notViable' | 'notDecisionComplete';
@@ -1593,6 +1594,7 @@ export interface PolicyCompletionStatistics {
   readonly templateCompletionAttempts: number;
   readonly templateCompletionSuccesses: number;
   readonly templateCompletionUnsatisfiable: number;
+  readonly duplicatesRemoved: number;
 }
 
 export interface BuiltinAgentDecisionTrace {

@@ -675,11 +675,14 @@ function enumeratePendingFreeOperationMoves(
         throw error;
       }
     }
-    const needsCompletionProof = authorizedGrant !== null && (
-      authorizedGrant.completionPolicy === 'required'
-      || authorizedGrant.completionPolicy === 'skipIfNoLegalCompletion'
-      || authorizedGrant.outcomePolicy === 'mustChangeGameplayState'
-    );
+    // Required grants must always be surfaced so the obligation is visible;
+    // apply-move.ts `validateFreeOperationOutcomePolicy` enforces outcome policy.
+    const needsCompletionProof = authorizedGrant !== null
+      && authorizedGrant.completionPolicy !== 'required'
+      && (
+        authorizedGrant.completionPolicy === 'skipIfNoLegalCompletion'
+        || authorizedGrant.outcomePolicy === 'mustChangeGameplayState'
+      );
     const decisionSequenceClassification = classifyMoveDecisionSequenceAdmissionForLegalMove(
       def,
       candidateState,

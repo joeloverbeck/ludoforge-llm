@@ -54,6 +54,15 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
 14. For scope gaps, implementation choices, dependency conflicts, or ambiguous boundaries, apply the **1-3-1 rule** (1 problem, 3 options, 1 recommendation). Do not proceed until the user confirms.
 15. Continue reassessment after each confirmation until no boundary-affecting discrepancies remain — multiple sequential 1-3-1 rounds are normal.
 
+**Stale ticket boundary triage**:
+- If the ticket wording is stale but the owned problem boundary is still valid, keep the boundary, correct the stale claims explicitly, and resolve the implementation direction via 1-3-1 before coding.
+- If the reported incidence is stale but the underlying invariant or failure mechanism is still relevant, treat this as a proof-boundary decision, not an automatic ticket invalidation.
+- If reassessment shows the ticket's owned boundary is itself wrong, stop and resolve whether to rewrite, narrow, or supersede the ticket before coding.
+
+**Post-confirmation architecture reset**:
+- When a user-confirmed 1-3-1 decision broadens or reframes the solution beyond the original ticket wording, restate the new authoritative boundary in working notes before coding.
+- Re-extract owned deliverables, affected files, and proof obligations from that confirmed boundary rather than continuing from the original stale phrasing.
+
 **1-3-1 edge cases** (all resolve via 1-3-1 before coding):
 
 | Situation | Preferred resolution |
@@ -155,6 +164,7 @@ When a ticket change affects other active tickets in the same series:
 8. **Test helper staleness**: If focused checks pass but a broader suite fails, inspect shared test helpers, fixtures, and goldens for stale assumptions. Check whether seed-specific helper states or turn-position fixtures have gone stale. Retarget to a current seed/turn that exercises the same invariant. When a compiled fast path is added, test malformed and unsupported shapes for clean fallback. When a new fast path depends on enriched context objects, check callers that construct minimal contexts.
 9. **Non-functional regression clauses**: If a ticket includes a vague "no performance regression" clause without naming a benchmark surface, baseline, threshold, or command, resolve with 1-3-1 or satisfy through the nearest existing regression suite.
 10. **Isolating test failures**: If `node --test` reports only a top-level file failure, rerun the failing file narrowly. Use test-name filtering or direct helper reproduction. Run the built test module directly to expose nested subtest output. For compiler or schema authoring tests, it is also valid to reproduce the minimal compile input directly against the built module to inspect diagnostics and lowered output when the test runner still hides the failing subtest.
+11. **Raw-vs-classified debugging**: When debugging legality, completion, or policy-preparation regressions, compare the raw `legalMoves(...)` output, the classified `enumerateLegalMoves(...)` result, and any downstream agent preparation surface separately. Do not assume a mismatch at one layer identifies the owning bug.
 
 ### Generated Artifact Checks
 
@@ -162,6 +172,7 @@ When acceptance depends on traces, goldens, schemas, or reports:
 - Confirm the producing command has exited before diagnosing contents.
 - Confirm the artifact path matches the command's real write target.
 - Check freshness (timestamp or file size) before treating missing fields as real discrepancies.
+- If a build or package script cleans `dist` before rebuilding it, do not run any `dist`-reading verification command until that build exits successfully. Treat transient module-resolution errors during a concurrent clean/rebuild as an ordering failure first.
 - When a touched source file contributes to exported contracts or schema surfaces, expect generator-backed artifact checks even if the ticket didn't name a generated file.
 - When a compiler ticket introduces a new lowered ref kind or expression variant, assume `GameDef.schema.json` may drift even if the immediate code edits are outside `schemas-core.ts`.
 - When a shared generator rewrites multiple artifacts, identify which encode the changed contract and summarize those specifically.

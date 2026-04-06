@@ -6055,6 +6055,24 @@ describe('validateGameDef free-operation sequence-context linkage diagnostics', 
     );
   });
 
+  it('accepts event freeOperationGrants with completionPolicy skipIfNoLegalCompletion and explicit postResolutionTurnFlow', () => {
+    const def = withEventCardSideConfig({
+      freeOperationGrants: [
+        {
+          seat: '0',
+          sequence: { batch: 'ctx-chain', step: 0 },
+          operationClass: 'operation',
+          actionIds: ['playCard'],
+          completionPolicy: 'skipIfNoLegalCompletion',
+          postResolutionTurnFlow: 'resumeCardFlow',
+        },
+      ],
+    });
+
+    const diagnostics = validateGameDef(def);
+    assert.equal(diagnostics.length, 0);
+  });
+
   it('rejects mixed progressionPolicy values within one declarative free-operation batch', () => {
     const def = withEventFreeOperationGrants([
       {

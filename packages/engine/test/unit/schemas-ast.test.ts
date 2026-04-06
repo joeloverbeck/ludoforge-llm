@@ -513,6 +513,18 @@ describe('AST and selector schemas', () => {
       assert.deepEqual(EventCardFreeOperationGrantSchema.parse(grant), grant);
     });
 
+    it('parses event-card freeOperationGrants with skipIfNoLegalCompletion and explicit postResolutionTurnFlow', () => {
+      const grant = {
+        seat: '3',
+        operationClass: 'operation',
+        sequence: { batch: 'ctx-chain', step: 0 },
+        completionPolicy: 'skipIfNoLegalCompletion',
+        postResolutionTurnFlow: 'resumeCardFlow',
+      } as const;
+
+      assert.deepEqual(EventCardFreeOperationGrantSchema.parse(grant), grant);
+    });
+
     it('parses progressionPolicy on event-card and effect-issued free-operation sequences', () => {
       const policies = ['strictInOrder', 'implementWhatCanInOrder'] as const;
 

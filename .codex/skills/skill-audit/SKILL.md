@@ -23,6 +23,7 @@ Use this skill to evaluate a target skill against the work done in the current C
    - places where Codex had to improvise because the skill lacked guidance
    - outcomes that diverged from the skill's stated intent
    - steps not exercised in this session
+   - if the target skill was modified earlier in the same session, whether each finding applies to the pre-edit version, the current version, or both
 5. Cross-check each finding against:
    - `docs/FOUNDATIONS.md`
    - `AGENTS.md`
@@ -81,6 +82,12 @@ Output the audit in the conversation, not in a file.
    - **What's missing**: <gap description>
    - **Why it fits**: <why this matches the skill's intent>
    - **Suggestion**: <proposed addition>
+
+## Not Exercised
+
+[Optional. Use only when specific parts of the target skill were not exercised in this session.]
+
+- <step or area> — not exercised this session
 
 ## Summary
 

@@ -1,6 +1,6 @@
 # FREOPSKIP-001: Add skipIfNoLegalCompletion policy for free operation grants
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel turn-flow-eligibility, contracts, compiler validation, game spec encoding
@@ -137,3 +137,22 @@ Ensure the new policy value is accepted during compilation. If there's a validat
 2. `pnpm turbo typecheck` (type safety after contract changes)
 3. `pnpm turbo lint` (lint compliance)
 4. Campaign harness: `bash campaigns/fitl-vc-agent-evolution/harness.sh` with seed 1009 — verify game no longer stalls
+
+## Outcome
+
+- **Completion date**: 2026-04-06
+- **What actually changed**:
+  - Added `skipIfNoLegalCompletion` as a first-class free-operation completion policy in contracts, compiler lowering, and runtime schema validation.
+  - Moved completion-feasibility ownership into the kernel so pending free-operation grants gate legality and turn-flow consistently across move enumeration, agent preparation, and decision-point advancement.
+  - Replaced the earlier implicit expiry path for unusable required grants with explicit policy behavior: `required` remains blocking, while `skipIfNoLegalCompletion` is auto-skipped only when the kernel proves no legal completion exists.
+  - Updated FITL Card 75 shaded VC/NVA March grants to `skipIfNoLegalCompletion`.
+  - Added/updated unit and integration coverage for completion-policy parsing, schema acceptance, legality gating, phase advance, Card 75 behavior, and the seed `1009` regression.
+- **Deviations from original plan**:
+  - The fix did not add simulator-side special handling in `simulator.ts`. Instead, the root cause was resolved in kernel legality and turn-flow ownership so the simulator no longer needs to treat agent preparation failure as rules flow.
+  - The review of other FITL `completionPolicy: required` grants was not broadened into a larger authoring audit because concrete evidence in this ticket only supported changing Card 75.
+  - Verification used focused build-and-test commands rather than `pnpm -F @ludoforge/engine test`, `pnpm turbo typecheck`, `pnpm turbo lint`, or the campaign harness.
+- **Verification results**:
+  - `pnpm -F @ludoforge/engine build`
+  - `pnpm -F @ludoforge/engine exec node --test /home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/test/unit/kernel/legal-moves.test.js /home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/test/unit/phase-advance.test.js`
+  - `pnpm -F @ludoforge/engine exec node --test /home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/test/integration/fitl-events-sihanouk.test.js /home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/test/integration/fitl-events-tutorial-medium.test.js`
+  - `pnpm -F @ludoforge/engine exec node --test /home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/test/unit/compile-effects.test.js /home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/test/unit/validate-gamedef.test.js /home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/test/unit/schemas-ast.test.js`

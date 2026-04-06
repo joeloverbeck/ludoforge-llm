@@ -23,7 +23,7 @@ const PREFLIGHT_CONTRACT_VIOLATION_CODES = new Set<TurnFlowFreeOperationGrantCon
 export const createTurnFlowFreeOperationGrantSchema = <Shape extends z.ZodRawShape>(
   shape: Shape,
 ): z.ZodTypeAny => {
-  const structuralSchema = z.union([
+const structuralSchema = z.union([
     z
       .object({
         ...shape,
@@ -33,6 +33,13 @@ export const createTurnFlowFreeOperationGrantSchema = <Shape extends z.ZodRawSha
       .object({
         ...shape,
         completionPolicy: z.literal(REQUIRED_COMPLETION_POLICY),
+        postResolutionTurnFlow: z.literal(REQUIRED_POST_RESOLUTION_TURN_FLOW),
+      })
+      .strict(),
+    z
+      .object({
+        ...shape,
+        completionPolicy: z.literal('skipIfNoLegalCompletion'),
         postResolutionTurnFlow: z.literal(REQUIRED_POST_RESOLUTION_TURN_FLOW),
       })
       .strict(),

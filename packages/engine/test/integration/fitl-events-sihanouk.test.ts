@@ -3,8 +3,10 @@ import { describe, it } from 'node:test';
 
 import {
   applyMove,
+  assertValidatedGameDef,
   asPlayerId,
   asTokenId,
+  createGameDefRuntime,
   createSeatResolutionContext,
   enumerateLegalMoves,
   hasLegalCompletedFreeOperationMoveInCurrentState,
@@ -15,6 +17,8 @@ import {
   type Move,
   type Token,
 } from '../../src/kernel/index.js';
+import { PolicyAgent } from '../../src/agents/policy-agent.js';
+import { runGame } from '../../src/sim/simulator.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { clearAllZones } from '../helpers/isolated-state-helpers.js';
@@ -478,6 +482,21 @@ describe('FITL card-75 Sihanouk', () => {
       countTokens(final, SOUTHERN_LAOS, (token) => token.id === asTokenId('sihanouk-nva-skip-vc')),
       1,
       'NVA should still resolve the exact Rally -> March sequence after the unusable VC batch is skipped',
+    );
+  });
+
+  it('seed 1009 no longer stalls after the VC Rally when the shaded March is uncompletable', () => {
+    const validatedDef = assertValidatedGameDef(compileDef());
+    const runtime = createGameDefRuntime(validatedDef);
+    const agents = Array.from({ length: 4 }, () => new PolicyAgent());
+
+    const trace = runGame(validatedDef, 1009, agents, 20, 4, undefined, runtime);
+
+    assert.equal(trace.moves.length > 3, true, 'Expected the seed-1009 run to continue beyond the VC Rally');
+    assert.notEqual(
+      trace.stopReason === 'noLegalMoves' && trace.moves.length === 3,
+      true,
+      'The run must not terminate immediately after the uncompletable shaded March window',
     );
   });
 });

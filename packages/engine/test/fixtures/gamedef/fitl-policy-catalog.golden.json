@@ -2305,7 +2305,7 @@
       "observerName": "currentPlayer",
       "params": {
         "projectedMarginWeight": 5,
-        "rallyWeight": 3
+        "rallyWeight": 5
       },
       "use": {
         "pruningRules": [
@@ -2315,12 +2315,9 @@
           "preferNormalizedMargin",
           "preferRallyWeighted",
           "valueCapabilityGain",
-          "penalizeAttack",
-          "preferPopulousTargets",
-          "observeGameState"
+          "preferPopulousTargets"
         ],
         "tieBreakers": [
-          "preferCheapTargetSpaces",
           "stableMoveKey"
         ]
       },
@@ -2333,16 +2330,11 @@
       "plan": {
         "stateFeatures": [
           "selfMargin",
-          "vcFriendlyCapCount",
-          "selfResources",
-          "turnRound",
-          "vcBaseCount",
-          "vcGuerrillaCount"
+          "vcFriendlyCapCount"
         ],
         "candidateFeatures": [
           "projectedSelfMargin",
-          "projectedCapabilityGain",
-          "targetSpacePopulation"
+          "projectedCapabilityGain"
         ],
         "candidateAggregates": [
           "hasNonPassAlternative",
@@ -2353,12 +2345,10 @@
           "preferNormalizedMargin",
           "preferRallyWeighted",
           "valueCapabilityGain",
-          "penalizeAttack",
-          "preferPopulousTargets",
-          "observeGameState"
+          "preferPopulousTargets"
         ]
       },
-      "fingerprint": "b8221970dda957ee9c567a5851fa54d4a7bb0243e31904d0fc10150baccbdcf1"
+      "fingerprint": "b32e74e7268fb9cf5d7966805b6e1041bcf0ea84c22460ce4d4cf3129fe9e528"
     }
   },
   "bindingsBySeat": {
@@ -2367,5 +2357,5 @@
     "nva": "nva-baseline",
     "vc": "vc-evolved"
   },
-  "catalogFingerprint": "89240cf260bf4deed8fe275a91503a040895e11bf24fa5776682bba01a5a8fd8"
+  "catalogFingerprint": "36c1a46667640949fdf961d43e28269d3805446c1d2a2f9db306b067f1eabe03"
 }

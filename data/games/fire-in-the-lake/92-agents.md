@@ -408,7 +408,7 @@ agents:
         mode: tolerateStochastic
       params:
         projectedMarginWeight: 5
-        rallyWeight: 3
+        rallyWeight: 5
       use:
         pruningRules:
           - dropPassWhenOtherMovesExist
@@ -416,11 +416,8 @@ agents:
           - preferNormalizedMargin
           - preferRallyWeighted
           - valueCapabilityGain
-          - penalizeAttack
           - preferPopulousTargets
-          - observeGameState
         tieBreakers:
-          - preferCheapTargetSpaces
           - stableMoveKey
 
   bindings:

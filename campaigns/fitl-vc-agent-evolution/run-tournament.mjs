@@ -113,6 +113,35 @@ function computeSeatMargin(def, runtime, state, seatId) {
 }
 
 // ---------------------------------------------------------------------------
+// Compute all-seat margins from game state
+// ---------------------------------------------------------------------------
+function computeAllSeatMargins(def, runtime, state) {
+  const margins = {};
+  for (const seat of def.seats ?? []) {
+    margins[seat.id.toLowerCase()] = computeSeatMargin(def, runtime, state, seat.id);
+  }
+  return margins;
+}
+
+// ---------------------------------------------------------------------------
+// Summarize all moves: group by seat, count actions
+// ---------------------------------------------------------------------------
+function summarizeAllMoves(trace, def) {
+  const bySeat = {};
+  for (const seat of def.seats ?? []) {
+    bySeat[seat.id.toLowerCase()] = {};
+  }
+  for (const m of trace.moves) {
+    const playerIdx = Number(m.player);
+    const seatId = def.seats?.[playerIdx]?.id?.toLowerCase() ?? `p${playerIdx}`;
+    const actionId = m.move?.actionId ?? 'unknown';
+    bySeat[seatId] = bySeat[seatId] ?? {};
+    bySeat[seatId][actionId] = (bySeat[seatId][actionId] ?? 0) + 1;
+  }
+  return bySeat;
+}
+
+// ---------------------------------------------------------------------------
 // Step 1: Compile the FITL spec
 // ---------------------------------------------------------------------------
 const entrypoint = join(REPO_ROOT, 'data', 'games', 'fire-in-the-lake.game-spec.md');
@@ -224,8 +253,11 @@ for (let seedOffset = 0; seedOffset < SEED_COUNT; seedOffset++) {
     }
     totalMargin += vcMargin;
 
+    // Compute all-seat margins for diagnostic output
+    const allMargins = computeAllSeatMargins(def, runtime, trace.finalState);
+    const marginStr = Object.entries(allMargins).map(([s, m]) => `${s}=${m}`).join(', ');
     process.stderr.write(
-      `  seed ${seed}: ${trace.moves.length} moves, VC margin=${vcMargin}, ` +
+      `  seed ${seed}: ${trace.moves.length} moves, margins=[${marginStr}], ` +
       `won=${vcWon}, stop=${trace.stopReason}\n`,
     );
 
@@ -242,6 +274,21 @@ for (let seedOffset = 0; seedOffset < SEED_COUNT; seedOffset++) {
           agentDecision: m.agentDecision ?? null,
         }));
 
+      // Enriched: all-seat margins at game end
+      const allSeatMargins = computeAllSeatMargins(def, runtime, trace.finalState);
+
+      // Enriched: per-seat action summaries (opponent visibility)
+      const movesBySeat = summarizeAllMoves(trace, def);
+
+      // Enriched: opponent moves (non-evolved) with action summaries
+      const opponentMoves = trace.moves
+        .filter((m) => Number(m.player) !== evolvedPlayerIndex)
+        .map((m) => ({
+          seat: def.seats?.[Number(m.player)]?.id?.toLowerCase() ?? `p${m.player}`,
+          actionId: m.move?.actionId ?? 'unknown',
+          actionClass: m.move?.actionClass,
+        }));
+
       const traceSummary = {
         seed,
         stopReason: trace.stopReason,
@@ -256,8 +303,12 @@ for (let seedOffset = 0; seedOffset < SEED_COUNT; seedOffset++) {
         evolvedSeat: EVOLVED_SEAT,
         evolvedPlayerIndex,
         vcMargin,
+        allSeatMargins,
+        movesBySeat,
         evolvedMoveCount: evolvedMoves.length,
         evolvedMoves,
+        opponentMoveCount: opponentMoves.length,
+        opponentMoves,
       };
 
       if (TRACE_ALL) {

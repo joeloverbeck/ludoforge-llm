@@ -71,6 +71,7 @@ describe('preparePlayableMoves', () => {
       templateCompletionAttempts: 0,
       templateCompletionSuccesses: 0,
       templateCompletionUnsatisfiable: 0,
+      duplicatesRemoved: 0,
     });
   });
 
@@ -138,6 +139,7 @@ describe('preparePlayableMoves', () => {
       templateCompletionAttempts: 2,
       templateCompletionSuccesses: 1,
       templateCompletionUnsatisfiable: 1,
+      duplicatesRemoved: 0,
     });
   });
 
@@ -168,7 +170,7 @@ describe('preparePlayableMoves', () => {
       pendingTemplateCompletions: 3,
     });
 
-    assert.equal(prepared.completedMoves.length, 3);
+    assert.equal(prepared.completedMoves.length, 2);
     assert.equal(prepared.stochasticMoves.length, 0);
     assert.deepEqual(prepared.statistics, {
       totalClassifiedMoves: 1,
@@ -178,7 +180,62 @@ describe('preparePlayableMoves', () => {
       templateCompletionAttempts: 3,
       templateCompletionSuccesses: 3,
       templateCompletionUnsatisfiable: 0,
+      duplicatesRemoved: 1,
     });
+  });
+
+  it('deduplicates repeated stableMoveKeys while preserving the first occurrence', () => {
+    const completeMove: Move = { actionId: asActionId('repeat'), params: { zone: 'alpha' } };
+    const def = assertValidatedGameDef({
+      metadata: { id: 'prepare-playable-dedup', players: { min: 2, max: 2 } },
+      constants: {},
+      globalVars: [],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      actions: [createTemplateChooseOneAction(asActionId('repeat'), asPhaseId('main'))],
+      actionPipelines: [createTemplateChooseOneProfile(asActionId('repeat'))] as readonly ActionPipelineDef[],
+      triggers: [],
+      terminal: { conditions: [] },
+    });
+    const state = initialState(def, 5, 2).state;
+    const duplicateComplete = completeClassifiedMove(completeMove, state.stateHash);
+    const firstPending = pendingClassifiedMove(completeMove);
+    const secondPending = pendingClassifiedMove(completeMove);
+
+    const prepared = preparePlayableMoves({
+      def,
+      state,
+      legalMoves: [duplicateComplete, firstPending, secondPending],
+      rng: createRng(7n),
+    }, {
+      pendingTemplateCompletions: 2,
+    });
+
+    assert.equal(prepared.completedMoves.length, 1);
+    assert.deepEqual(prepared.completedMoves[0]?.move, completeMove);
+    assert.equal(prepared.stochasticMoves.length, 0);
+    assert.deepEqual(prepared.statistics, {
+      totalClassifiedMoves: 3,
+      completedCount: 1,
+      stochasticCount: 0,
+      rejectedNotViable: 0,
+      templateCompletionAttempts: 0,
+      templateCompletionSuccesses: 0,
+      templateCompletionUnsatisfiable: 0,
+      duplicatesRemoved: 2,
+    });
+    assert.equal(prepared.movePreparations.length, 3);
+    assert.equal(prepared.movePreparations[0]?.skippedAsDuplicate, undefined);
+    assert.equal(prepared.movePreparations[1]?.skippedAsDuplicate, true);
+    assert.equal(prepared.movePreparations[1]?.initialClassification, 'rejected');
+    assert.equal(prepared.movePreparations[1]?.finalClassification, 'rejected');
+    assert.equal(prepared.movePreparations[1]?.enteredTrustedMoveIndex, false);
+    assert.equal(prepared.movePreparations[2]?.skippedAsDuplicate, true);
+    assert.equal(prepared.movePreparations[1]?.stableMoveKey, prepared.movePreparations[0]?.stableMoveKey);
+    assert.equal(prepared.movePreparations[2]?.stableMoveKey, prepared.movePreparations[0]?.stableMoveKey);
   });
 
   it('forwards choose across repeated template completions', () => {
@@ -216,7 +273,7 @@ describe('preparePlayableMoves', () => {
     assert.equal(chooseCalls, 3);
     assert.deepEqual(
       prepared.completedMoves.map((candidate) => candidate.move.params.$target),
-      ['gamma', 'gamma', 'gamma'],
+      ['gamma'],
     );
   });
 

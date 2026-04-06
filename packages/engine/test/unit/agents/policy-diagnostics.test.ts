@@ -75,6 +75,7 @@ function createMetadata(): PolicyEvaluationMetadata {
       templateCompletionAttempts: 2,
       templateCompletionSuccesses: 1,
       templateCompletionUnsatisfiable: 1,
+      duplicatesRemoved: 0,
     },
     movePreparations: [
       {
@@ -130,6 +131,7 @@ describe('policy-diagnostics', () => {
       templateCompletionAttempts: 2,
       templateCompletionSuccesses: 1,
       templateCompletionUnsatisfiable: 1,
+      duplicatesRemoved: 0,
     });
     assert.equal(trace.movePreparations?.length, 2);
     assert.equal(trace.movePreparations?.[1]?.templateCompletionOutcome, 'failed');

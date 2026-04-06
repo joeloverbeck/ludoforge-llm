@@ -37,15 +37,22 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
    - Foundation 14 atomic migrations for removals or renames
    - Required test, schema, or fixture updates
    - When the ticket disputes game-specific legality, consult local rulebook extracts or rules reports before deciding whether the fix is policy-only or a legality correction.
-8. **Mid-migration awareness**: If the codebase is already mid-migration, distinguish the ticket's intended end state from work already landed. Treat extra files needed for Foundation 14 atomicity as required scope. Call out partial-migration state before coding. When a referenced spec is already dirty but the current ticket does not own spec edits, treat it as read-only context.
-9. **Ticket rewrites**: If you materially correct the ticket scope before implementation, re-extract files, acceptance criteria, invariants, and verification commands from the corrected ticket. Treat the rewritten ticket as authoritative. If later verification disproves the rewrite premise, restore the original boundary and note why.
-10. **Sibling ticket coherence**: If correcting one ticket changes ownership within an active series, inspect remaining siblings, update or defer overlapping tickets, keep deps and status coherent, and run the ticket dependency checker. If a user-confirmed 1-3-1 resolution changes inter-ticket contracts, update the downstream sibling in the same turn.
+8. When a ticket claims a live bug, measured runtime symptom, or concrete production evidence (counts, seeds, traces, campaign observations), classify what you verified before coding:
+   - **Incidence verified**: you reproduced the claimed current-case symptom in the live codebase
+   - **Mechanism verified**: you proved the current code still permits the claimed failure mode or invariant violation
+   - **Both verified**
+   - **Neither verified**
+   Record this explicitly in working notes and use it to decide whether implementation can proceed.
+9. **Mid-migration awareness**: If the codebase is already mid-migration, distinguish the ticket's intended end state from work already landed. Treat extra files needed for Foundation 14 atomicity as required scope. Call out partial-migration state before coding. When a referenced spec is already dirty but the current ticket does not own spec edits, treat it as read-only context.
+10. **Ticket rewrites**: If you materially correct the ticket scope before implementation, re-extract files, acceptance criteria, invariants, and verification commands from the corrected ticket. Treat the rewritten ticket as authoritative. If later verification disproves the rewrite premise, restore the original boundary and note why. When the rewrite disproves an active spec's stated root cause, fix point, or owned boundary, update that spec in the same turn unless another active ticket explicitly owns that correction.
+11. **Sibling ticket coherence**: If correcting one ticket changes ownership within an active series, inspect remaining siblings, update or defer overlapping tickets, keep deps and status coherent, and run the ticket dependency checker. If a user-confirmed 1-3-1 resolution changes inter-ticket contracts, update the downstream sibling in the same turn. Explicitly note which earlier sibling outcomes remain authoritative, which were superseded by the correction, and which shared contracts or helpers are being reused unchanged.
 
 ### Phase 3: Resolve Before Coding
 
-11. If the ticket is factually wrong, stop and present discrepancies before editing code.
-12. For scope gaps, implementation choices, dependency conflicts, or ambiguous boundaries, apply the **1-3-1 rule** (1 problem, 3 options, 1 recommendation). Do not proceed until the user confirms.
-13. Continue reassessment after each confirmation until no boundary-affecting discrepancies remain — multiple sequential 1-3-1 rounds are normal.
+12. If the ticket is factually wrong, stop and present discrepancies before editing code.
+13. If a ticket's bug claim or measured symptom is not currently reproducible, or only the mechanism is verified while the claimed incidence remains unproven, stop and resolve that boundary before coding. Apply the **1-3-1 rule** to choose between proof-only, proof-plus-fix, or ticket-scope correction. Do not proceed until the user confirms.
+14. For scope gaps, implementation choices, dependency conflicts, or ambiguous boundaries, apply the **1-3-1 rule** (1 problem, 3 options, 1 recommendation). Do not proceed until the user confirms.
+15. Continue reassessment after each confirmation until no boundary-affecting discrepancies remain — multiple sequential 1-3-1 rounds are normal.
 
 **1-3-1 edge cases** (all resolve via 1-3-1 before coding):
 
@@ -60,7 +67,7 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
 | Conversion boundary between plain domain object and trusted/validated form | Resolve ownership explicitly |
 | Ticket narrows semantics for one member of an existing shared surface family | Prefer the already-landed shared family contract unless the ticket owns a family-wide redesign |
 
-14. If the ticket is accurate and no blocking decision remains, proceed.
+16. If the ticket is accurate and no blocking decision remains, proceed.
 
 ## Implementation Rules
 
@@ -128,6 +135,8 @@ When a ticket change affects other active tickets in the same series:
 - For proof/regression tickets, prefer extending the live test module that already owns the contract under audit before creating new files solely to match stale ticket test paths.
 - If cited production examples, cards, or seeds are stale, prefer a current deterministic reproducer or synthetic proof fixture.
 - For production-proof tickets validating live authored data, run a bounded seed/turn/trace scan to discover a current reproducer, then encode it into owned integration tests.
+- For bug tickets backed by concrete production evidence, distinguish clearly between **incidence proof** (the cited repro still happens now) and **mechanism proof** (the code still permits the failure). If incidence remains unverified, do not silently treat mechanism proof as equivalent; resolve via 1-3-1 first.
+- When you reproduce a live measured symptom before fixing it, record the exact pre-fix evidence in a durable owned surface before the implementation overwrites that state. Prefer the rewritten ticket, active spec, or implementation notes for counts, seeds, traces, and other decisive measurements.
 - When a proof needs live authored behavior plus a small test-only policy or authoring hook, it is valid to compile the production spec with a narrow in-memory overlay rather than editing production data solely to make the invariant testable.
 - If the ticket names files to inspect rather than modify, read and assess them; leave unchanged when evidence shows no edit is needed; state the no-change decision explicitly.
 - If a ticket names an authored data file as an optional surface tweak, verify whether compiled defaults already satisfy the contract before editing.
@@ -178,6 +187,7 @@ Prefer narrower package- or file-scoped checks when they fully cover the change.
 
 1. Summarize what changed, what was verified, and any residual risk.
    - State explicitly: audited schema/artifact ripple effects (even if none needed), deferred verification owned by another ticket, resolved 1-3-1 decisions (especially Foundation type discipline), rules-evidence notes for game-specific legality corrections.
+   - State explicitly: any ticket premise that remained unverified in this turn, especially claimed repro seeds, counts, traces, or production observations.
 2. If the ticket appears complete, offer to archive per `docs/archival-workflow.md`.
 3. If the user wants archival or follow-up review, hand off to `post-ticket-review`. If this implementation superseded semantics in a recently archived sibling, call that out in the handoff.
 

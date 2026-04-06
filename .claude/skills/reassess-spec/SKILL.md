@@ -68,6 +68,8 @@ For specs with many references (>5 types/functions/paths), use an Explore agent 
 
 **Blast radius is mandatory**: The agent prompt MUST explicitly request blast radius analysis — grep for all import sites and consumer files of any type or interface the spec proposes to modify. This is the highest-value output from the Explore agent and must not be omitted.
 
+After the Explore agent returns, you may need to read specific files in full to understand control flow or logic that the agent's summary-level output doesn't capture. This is expected — the agent handles breadth (types, signatures, blast radius), you handle depth (code flow, pseudocode accuracy, insertion points).
+
 Do not present findings yet. Collect everything for Step 3.
 
 ### Step 3: FOUNDATIONS.md Alignment Check
@@ -141,6 +143,8 @@ Present all findings to the user in a structured report:
 - Approved, rejected, or modified each finding
 - Answered all questions
 
+**Plan mode**: Use `AskUserQuestion` to get user approval of findings — inline text questions won't block in plan mode.
+
 If the user's answers raise new questions or invalidate previous findings, present a follow-up round (same format, same question limit). Repeat until all findings are resolved.
 
 If the user defers a decision back to you (e.g., "you decide", "reassess based on FOUNDATIONS"), analyze the question against `docs/FOUNDATIONS.md` principles, present your recommendation with the specific Foundation justification, and treat it as approved unless the user objects. For architectural or design questions with multiple alternatives, provide a brief comparison of alternatives against FOUNDATIONS.md principles before presenting the recommendation. For simple factual questions, a one-line Foundation reference suffices.
@@ -158,7 +162,7 @@ After all findings are resolved and the user has approved the changes:
 
 If the user requests changes to the draft, incorporate them and re-present before writing.
 
-**Plan mode note**: If invoked during plan mode, Steps 1-5 proceed normally (read-only). Step 6 (writing the updated spec) is deferred until plan mode is exited. Record the approved changes in the system-provided plan file following the plan-mode workflow, then execute Step 6 after the user approves the plan and plan mode is exited. In plan mode, present findings as text (Step 5), but use `AskUserQuestion` for any questions that require user response before proceeding — inline text questions won't block execution in plan mode.
+**Plan mode note**: If invoked during plan mode, Steps 1-5 proceed normally (read-only). Step 6 (writing the updated spec) is deferred until plan mode is exited. Record the approved changes in the system-provided plan file (including the diff summary), then call ExitPlanMode. ExitPlanMode approval covers both the plan and the diff summary — a separate Step 6 approval is not needed. Execute Step 6 after the user approves the plan and plan mode is exited. In plan mode, present findings as text (Step 5), but use `AskUserQuestion` for any questions that require user response before proceeding — inline text questions won't block execution in plan mode.
 
 ### Step 7: Final Summary
 

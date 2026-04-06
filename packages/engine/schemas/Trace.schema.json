@@ -2945,6 +2945,9 @@
                       },
                       "templateCompletionUnsatisfiable": {
                         "type": "number"
+                      },
+                      "duplicatesRemoved": {
+                        "type": "number"
                       }
                     },
                     "required": [
@@ -2954,7 +2957,8 @@
                       "rejectedNotViable",
                       "templateCompletionAttempts",
                       "templateCompletionSuccesses",
-                      "templateCompletionUnsatisfiable"
+                      "templateCompletionUnsatisfiable",
+                      "duplicatesRemoved"
                     ],
                     "additionalProperties": false
                   },
@@ -3006,6 +3010,9 @@
                           ]
                         },
                         "enteredTrustedMoveIndex": {
+                          "type": "boolean"
+                        },
+                        "skippedAsDuplicate": {
                           "type": "boolean"
                         },
                         "templateCompletionAttempts": {

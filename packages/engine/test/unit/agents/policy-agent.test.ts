@@ -717,6 +717,7 @@ describe('PolicyAgent', () => {
       templateCompletionAttempts: 3,
       templateCompletionSuccesses: 3,
       templateCompletionUnsatisfiable: 0,
+      duplicatesRemoved: 2,
     });
     assert.equal(result.agentDecision.movePreparations?.length, 2);
     const directPreparation = result.agentDecision.movePreparations?.find((entry) => entry.actionId === 'pass');

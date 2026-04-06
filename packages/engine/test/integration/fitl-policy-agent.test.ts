@@ -191,6 +191,37 @@ function evaluatePreparedPolicyDecision(
   });
 }
 
+function prepareGuidedPolicyMoves(
+  def: GameDef,
+  state: GameState,
+  legalMoves: readonly ClassifiedMove[],
+  runtime: ReturnType<typeof createGameDefRuntime>,
+  seed: bigint,
+) {
+  const resolvedProfile = resolveEffectivePolicyProfile(def, state.activePlayer);
+  const choose = resolvedProfile === null
+    ? undefined
+    : buildCompletionChooseCallback({
+        state,
+        def,
+        catalog: resolvedProfile.catalog,
+        playerId: state.activePlayer,
+        seatId: resolvedProfile.seatId,
+        profile: resolvedProfile.profile,
+        runtime,
+      });
+  return preparePlayableMoves({
+    def,
+    state,
+    legalMoves,
+    rng: createRng(seed),
+    runtime,
+  }, {
+    pendingTemplateCompletions: 3,
+    ...(choose === undefined ? {} : { choose }),
+  });
+}
+
 function selectPreparedGrantedOperation(
   def: GameDef,
   postEventState: GameState,
@@ -515,6 +546,10 @@ function projectedSelfMarginContribution(candidate: {
   );
   assert.notEqual(contribution, undefined, `expected margin contribution (preferProjectedSelfMargin or preferNormalizedMargin) for ${candidate.stableMoveKey}`);
   return contribution!.contribution;
+}
+
+function duplicateKeyCount(keys: readonly string[]): number {
+  return keys.length - new Set(keys).size;
 }
 
 describe('FITL policy agent integration', () => {
@@ -1058,6 +1093,22 @@ describe('FITL policy agent integration', () => {
     assert.ok(evaluatedNonPassCandidate, 'expected at least one evaluated non-pass candidate');
     assert.equal(evaluatedNonPassCandidate?.previewOutcome, 'ready');
     assert.deepEqual(evaluatedNonPassCandidate?.unknownPreviewRefs, []);
+  });
+
+  it('deduplicates post-template-completion playable outputs on the seed-6 VC decision reproducer', () => {
+    const guided = advanceSeed6ToVcFreeRally();
+    const prepared = prepareGuidedPolicyMoves(
+      guided.def,
+      guided.state,
+      guided.legalMoves,
+      guided.runtime,
+      6001n,
+    );
+    const completedKeys = prepared.completedMoves.map((candidate) => toMoveIdentityKey(guided.def, candidate.move));
+
+    assert.ok(completedKeys.length > 0, 'expected completed FITL candidates on the VC decision state');
+    assert.equal(duplicateKeyCount(completedKeys), 0, 'expected completed playable outputs to be unique by stableMoveKey');
+    assert.equal(prepared.statistics.duplicatesRemoved, 10, 'expected the seed-6 VC reproducer to remove the known duplicate playable outputs');
   });
 
   it('keeps non-event preview differentiation intact on a VC decision with rally, terror, and attack candidates', () => {

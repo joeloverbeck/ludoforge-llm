@@ -269,6 +269,7 @@ describe('policy trace events', () => {
       templateCompletionAttempts: 0,
       templateCompletionSuccesses: 0,
       templateCompletionUnsatisfiable: 0,
+      duplicatesRemoved: 0,
     });
     assert.equal(Array.isArray(verboseDecision.candidates), true);
     assert.equal(verboseDecision.candidates?.length, 2);

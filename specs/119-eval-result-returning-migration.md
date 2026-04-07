@@ -19,11 +19,12 @@ Spec 118 centralized the catch-classify-defer pattern with `probeWith<T>` and mi
 |--------|-------|
 | `evalCondition` call sites | 31 |
 | `evalQuery` call sites | 20 |
-| Sites with no error handling (normal execution) | 47 |
+| Sites with no error handling (normal execution) | 44 |
 | Sites with try-catch or probeWith (probe execution) | 4 |
-| Files consuming eval functions | ~24 |
+| Sites with try-catch for graceful degradation (condition-annotator) | 3 |
+| Files consuming eval functions | ~26 |
 
-The 47 unwrapped sites never handle errors because in their context, errors should not occur. The 4 wrapped sites exist because probes can trigger evaluation failures that are expected, not exceptional.
+The 44 unwrapped sites never handle errors because in their context, errors should not occur. The 4 probe-context wrapped sites exist because probes can trigger evaluation failures that are expected, not exceptional. An additional 3 sites in `condition-annotator.ts` use try-catch for graceful UI degradation — they return fallback annotations on eval failure rather than propagating errors.
 
 **Why this matters**: FOUNDATIONS F15 (Architectural Completeness) requires solutions that address root causes. The root cause is that `evalCondition`/`evalQuery` lack a result-type return path. Every new probe feature must rediscover the try-catch pattern. Making eval functions result-returning eliminates the entire class of probe-context catch blocks and unblocks the choice validation migration (Spec 120).
 
@@ -52,8 +53,11 @@ All changes are in the generic kernel eval subsystem. No game-specific identifie
 
 New file: `packages/engine/src/kernel/eval-result.ts`
 
+Prerequisite: export `QueryResult` from `eval-query.ts` (currently a local type at line 39).
+
 ```typescript
 import type { QueryResult } from './eval-query.js';
+import type { EvalError } from './eval-error.js';
 
 /** Discriminated union for evalCondition outcomes. */
 export type EvalConditionResult =
@@ -65,28 +69,10 @@ export type EvalQueryResult =
   | { readonly outcome: 'success'; readonly value: readonly QueryResult[] }
   | { readonly outcome: 'error'; readonly error: EvalError }
 
-/** Structured eval error — replaces thrown exceptions. */
-export type EvalError = {
-  readonly code: EvalErrorCode
-  readonly message: string
-  readonly context?: Readonly<Record<string, unknown>>
-}
-
-/** Typed error codes for eval failures. */
-export type EvalErrorCode =
-  | 'MISSING_BINDING'
-  | 'TYPE_MISMATCH'
-  | 'INVALID_REFERENCE'
-  | 'TRAVERSAL_ERROR'
-
-// Factory functions
+// Factory function
 export function evalSuccess<T extends boolean | readonly QueryResult[]>(
   value: T
 ): { readonly outcome: 'success'; readonly value: T };
-
-export function evalError(
-  code: EvalErrorCode, message: string, context?: Readonly<Record<string, unknown>>
-): { readonly outcome: 'error'; readonly error: EvalError };
 
 // Unwrap helpers for normal execution contexts
 export function unwrapEvalCondition(result: EvalConditionResult): boolean;
@@ -95,9 +81,10 @@ export function unwrapEvalQuery(result: EvalQueryResult): readonly QueryResult[]
 
 Design choices:
 - `outcome` discriminator matches `ProbeResult<T>` convention from Spec 116
-- Factory functions follow `zoneFilterResolved()`/`zoneFilterFailed()` pattern from Spec 117
+- Reuses existing `EvalError<C>` class from `eval-error.ts` — no new error types. Internal eval code continues using `createEvalError()`/`missingBindingError()`/`typeMismatchError()` etc. to build error instances, but returns them in result wrappers instead of throwing
+- Existing `isEvalErrorCode()` infrastructure works directly on `result.error` for classification in probe contexts
 - `unwrapEval*` throws `KernelRuntimeError` on error — preserves bug-detection semantics for normal callers
-- `EvalErrorCode` is a string union (not enum) consistent with existing error code patterns
+- No `evalError()` factory needed — existing factories in `eval-error.ts` suffice
 
 ### 2. Change evalCondition Signature
 
@@ -112,7 +99,7 @@ export function evalCondition(cond: ConditionAST, ctx: ReadContext): EvalConditi
 ```
 
 Internal changes:
-- Replace `throw new KernelRuntimeError(...)` with `return evalError(code, message)`
+- Replace `throw new EvalError(...)` / `throw createEvalError(...)` with `return { outcome: 'error', error: createEvalError(code, message, context) }`
 - Propagate result through recursive calls (`and`, `or`, `not` branches): short-circuit on error
 - `evalConditionTraced` gains matching signature change
 
@@ -130,7 +117,7 @@ export function evalQuery(query: OptionsQuery, ctx: ReadContext): EvalQueryResul
 
 Same internal pattern: replace throws with result returns, propagate through recursive calls.
 
-### 4. Migrate Normal Execution Call Sites (47 sites)
+### 4. Migrate Normal Execution Call Sites (44 sites)
 
 Mechanical transformation:
 
@@ -160,7 +147,7 @@ return probeWith(() => evalCondition(condition, ctx), classifier)
 
 // AFTER
 const result = evalCondition(condition, ctx);
-if (result.outcome === 'error') return classifyEvalError(result.error);
+if (result.outcome === 'error') return classifier(result.error);
 return { outcome: 'legal', value: result.value };
 ```
 
@@ -176,23 +163,40 @@ if (result.outcome === 'error') { /* handle */ }
 return result.value;
 ```
 
+### 5b. Migrate condition-annotator Graceful-Degradation Catch Sites (3 sites)
+
+`condition-annotator.ts` has 3 try-catch-wrapped `evalCondition` calls (lines 66, 310, 459) that serve UI graceful degradation — they return fallback annotation values on eval failure, not probe error classification. These sites use result-type pattern-matching to return defaults, NOT `unwrapEval*` (which would throw):
+
+```typescript
+// BEFORE (condition-annotator.ts:66)
+try {
+  const passed = evalCondition(cond, evalCtx);
+  return passed ? { result: 'pass', text: '✓' } : { result: 'fail', text: '✗' };
+} catch { return { result: 'fail', text: '?' }; }
+
+// AFTER
+const result = evalCondition(cond, evalCtx);
+if (result.outcome === 'error') return { result: 'fail', text: '?' };
+return result.value ? { result: 'pass', text: '✓' } : { result: 'fail', text: '✗' };
+```
+
 ### 6. Eliminate Group C Catch Blocks (2 sites from Spec 118)
 
 **free-operation-zone-filter-probe.ts:43-49**: Replace MISSING_BINDING catch with result pattern-match on `evalCondition` result.
 
 **free-operation-grant-authorization.ts:209-212**: Replace catch block with result pattern-match.
 
-### 7. Update probeWith if Needed
+### 7. probeWith Stays
 
-If `probeWith` in `probe-result.ts` is still used by non-eval call sites, it stays. If all its callers are now migrated, delete it.
+`probeWith` in `probe-result.ts` has 4 active callers. Only 1 (`action-pipeline-predicates.ts`) wraps `evalCondition` directly and is migrated by this spec. The other 3 callers (`legal-choices.ts` x2, `pipeline-viability-policy.ts`, `move-decision-sequence.ts`) wrap higher-level operations unrelated to eval signatures. `probeWith` is NOT deleted by this spec.
 
 ## Files Modified
 
 | File | Change Type | Sites |
 |------|-------------|-------|
-| `eval-result.ts` | NEW | Types, factories, unwrap helpers |
+| `eval-result.ts` | NEW | Result types, `evalSuccess` factory, unwrap helpers |
 | `eval-condition.ts` | Signature change | Core + recursive |
-| `eval-query.ts` | Signature change | Core + recursive |
+| `eval-query.ts` | Signature change + export `QueryResult` | Core + recursive |
 | `eval-value.ts` | unwrapEvalQuery | 4 |
 | `effects-choice.ts` | unwrapEvalQuery | 3 |
 | `effects-control.ts` | unwrapEvalCondition + unwrapEvalQuery | 3 |
@@ -203,7 +207,7 @@ If `probeWith` in `probe-result.ts` is still used by non-eval call sites, it sta
 | `terminal.ts` | unwrapEvalCondition | 3 |
 | `action-pipeline-predicates.ts` | Result pattern-match | 2 |
 | `apply-move-pipeline.ts` | Result pattern-match | 1 |
-| `condition-annotator.ts` | Mixed (1 catch + 3 unwrap) | 4 |
+| `condition-annotator.ts` | Mixed (3 catch→result-match + 1 unwrap) | 4 evalCondition sites |
 | `effect-compiler-codegen.ts` | unwrapEvalCondition + unwrapEvalQuery | 5 |
 | `event-execution.ts` | unwrapEvalCondition | 1 |
 | `free-operation-grant-authorization.ts` | Result pattern-match (Group C) | 1 |
@@ -213,7 +217,7 @@ If `probeWith` in `probe-result.ts` is still used by non-eval call sites, it sta
 | `effects-subset.ts` | unwrapEvalQuery | 1 |
 | `first-decision-compiler.ts` | unwrapEvalQuery | 1 |
 | `spatial.ts` | unwrapEvalCondition | 1 |
-| `probe-result.ts` | Review probeWith usage | — |
+| `probe-result.ts` | No change — probeWith stays (3 non-eval callers remain) | — |
 
 ## Verification
 

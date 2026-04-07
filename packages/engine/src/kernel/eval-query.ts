@@ -36,7 +36,7 @@ import { getZoneMap } from './def-lookup.js';
 import type { AssetRowPredicate, NumericValueExpr, OptionsQuery, Token, TokenFilterExpr } from './types.js';
 
 type AssetRow = Readonly<Record<string, unknown>>;
-type QueryResult = Token | AssetRow | number | string | boolean | PlayerId | ZoneId;
+export type QueryResult = Token | AssetRow | number | string | boolean | PlayerId | ZoneId;
 type RuntimeQueryShape = 'token' | 'object' | 'number' | 'string' | 'boolean' | 'empty' | 'mixed';
 
 function resolveIntDomainBound(bound: NumericValueExpr, ctx: ReadContext): number | null {

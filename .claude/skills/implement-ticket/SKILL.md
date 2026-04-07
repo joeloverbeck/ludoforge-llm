@@ -38,7 +38,7 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
 
 **Artifact verification**
 
-If the ticket was produced by `/spec-to-tickets` in this same session and all artifacts were validated during that workflow, abbreviate artifact verification to: confirm target files still exist, check for new dirty state from concurrent work, and verify no codebase changes occurred since the spec-to-tickets run. Skip re-grepping for types and functions already confirmed.
+If the ticket was produced by `/spec-to-tickets` in this same session (with or without a preceding `/reassess-spec` that validated artifacts), abbreviate artifact verification to: confirm target files still exist, check for new dirty state from concurrent work, and verify no codebase changes occurred since the spec-to-tickets run. Skip re-grepping for types and functions already confirmed.
 
 5. Verify every referenced artifact against the live codebase with targeted reads and Grep:
    - File existence and path accuracy

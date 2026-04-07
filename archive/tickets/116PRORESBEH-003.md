@@ -1,6 +1,6 @@
 # 116PRORESBEH-003: Migrate complex consumers to resolveProbeResult and verify complete migration
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — kernel consumer refactoring (3 files, 9 sites)
@@ -118,3 +118,18 @@ No new test files. Existing tests validate behavioral identity. The final grep v
 2. `pnpm turbo typecheck` — verify type correctness
 3. `pnpm -F @ludoforge/engine test:e2e` — determinism canary seeds
 4. `grep -rn "outcome === 'inconclusive'" packages/engine/src/kernel/ --include="*.ts" | grep -v probe-result.ts` — should return zero results
+
+## Outcome
+
+**Completed**: 2026-04-07
+
+**What changed**:
+- `packages/engine/src/kernel/legal-choices.ts` — Migrated 4 `outcome === 'inconclusive'` sites (lines 472, 491, 662, 678) + 3 `.value!` sites (lines 1013, 1045, 1068) to `resolveProbeResult()` inline policies.
+- `packages/engine/src/kernel/choose-n-option-resolution.ts` — Migrated 4 `outcome === 'inconclusive'` sites (lines 327, 357, 486, 507) to `resolveProbeResult()` inline policies.
+- `packages/engine/src/kernel/legal-moves.ts` — Migrated 1 `outcome === 'inconclusive'` site (line 547) + 1 `.value!` site (line 465) to `resolveProbeResult()` inline policies.
+- `packages/engine/src/kernel/probe-result.ts` — Removed `value?: never` migration bridge from `ProbeResultIllegal` and `ProbeResultInconclusive`.
+
+**Deviations from ticket**:
+- Ticket listed 9 inconclusive sites. Bridge removal exposed 4 additional `.value!` access sites (3 in legal-choices.ts using `outcome === 'illegal'` guards, 1 in legal-moves.ts with no guard) that also needed migration. Total: 13 sites migrated.
+
+**Verification**: Build passes. 5599/5599 unit tests pass. 36/36 e2e tests pass. Zero `outcome === 'inconclusive'` in kernel consumer files. Zero `.value!` assertions on ProbeResult in consumer files. `value?: never` bridge removed.

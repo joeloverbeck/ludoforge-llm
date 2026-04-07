@@ -50,7 +50,7 @@ import {
 import { MISSING_BINDING_POLICY_CONTEXTS, classifyMissingBindingProbeError } from './missing-binding-policy.js';
 import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
 import { toMoveIdentityKey } from './move-identity.js';
-import type { ProbeResult } from './probe-result.js';
+import { resolveProbeResult, type ProbeResult } from './probe-result.js';
 import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { selectorInvalidSpecError } from './selector-runtime-contract.js';
@@ -462,7 +462,11 @@ function enumerateParams(
   };
 
   if (paramIndex >= action.params.length) {
-    const executionPlayer = resolveExecutionPlayerForBindings(false).value!;
+    const executionPlayer = resolveProbeResult(resolveExecutionPlayerForBindings(false), {
+      onLegal: (value) => value,
+      onIllegal: () => null,
+      onInconclusive: () => null,
+    });
     if (executionPlayer === null) {
       return;
     }
@@ -544,9 +548,11 @@ function enumerateParams(
   }
 
   const executionPlayerResult = resolveExecutionPlayerForBindings(true);
-  const executionPlayer = executionPlayerResult.outcome === 'inconclusive'
-    ? state.activePlayer
-    : executionPlayerResult.value!;
+  const executionPlayer = resolveProbeResult(executionPlayerResult, {
+    onLegal: (value) => value,
+    onIllegal: () => state.activePlayer,
+    onInconclusive: () => state.activePlayer,
+  });
   if (executionPlayer === null) {
     return;
   }

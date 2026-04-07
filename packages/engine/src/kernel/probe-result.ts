@@ -25,16 +25,12 @@ export interface ProbeResultLegal<T> {
 export interface ProbeResultIllegal {
   readonly outcome: 'illegal';
   readonly reason?: ProbeInconclusiveReason;
-  /** Always undefined — present for union-compatible access before full migration. */
-  readonly value?: never;
 }
 
 /** Probe outcome: the probe could not resolve definitively. */
 export interface ProbeResultInconclusive {
   readonly outcome: 'inconclusive';
   readonly reason?: ProbeInconclusiveReason;
-  /** Always undefined — present for union-compatible access before full migration. */
-  readonly value?: never;
 }
 
 /** A probe result is one of three discriminated outcomes. */

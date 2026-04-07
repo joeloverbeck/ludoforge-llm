@@ -50,7 +50,7 @@ import { isCardEventActionId } from './action-capabilities.js';
 import { evalCondition } from './eval-condition.js';
 import { findPhaseDef } from './phase-lookup.js';
 import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-overlay.js';
-import type { ProbeResult } from './probe-result.js';
+import { resolveProbeResult, type ProbeResult } from './probe-result.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import type {
   ActionDef,
@@ -469,7 +469,12 @@ const resolveChooseNOptionsExhaustive = (
         },
       };
       const probedResult = probeChoiceRequest(evaluateProbeMove, probeMove);
-      if (probedResult.outcome === 'inconclusive') {
+      const probed = resolveProbeResult(probedResult, {
+        onLegal: (value) => value,
+        onIllegal: () => null,
+        onInconclusive: () => null,
+      });
+      if (probed === null) {
         for (const option of additionalSelected) {
           const key = optionKey(option);
           const status = optionLegalityByKey.get(key);
@@ -480,19 +485,17 @@ const resolveChooseNOptionsExhaustive = (
         }
         return;
       }
-      const probed = probedResult.value!;
 
       let classification: DecisionSequenceSatisfiability | null = null;
       if (probed.kind === 'pending') {
-        const classificationResult = probeDecisionSequenceSatisfiability(
-          classifyProbeMoveSatisfiability,
-          probeMove,
+        classification = resolveProbeResult(
+          probeDecisionSequenceSatisfiability(classifyProbeMoveSatisfiability, probeMove),
+          {
+            onLegal: (value) => value,
+            onIllegal: () => 'unknown' as DecisionSequenceSatisfiability,
+            onInconclusive: () => 'unknown' as DecisionSequenceSatisfiability,
+          },
         );
-        if (classificationResult.outcome === 'inconclusive') {
-          classification = 'unknown';
-        } else {
-          classification = classificationResult.value!;
-        }
       }
 
       for (const option of additionalSelected) {
@@ -659,7 +662,12 @@ const mapOptionsForPendingChoice = (
       },
     };
     const probedResult = probeChoiceRequest(evaluateProbeMove, probeMove);
-    if (probedResult.outcome === 'inconclusive') {
+    const probed = resolveProbeResult(probedResult, {
+      onLegal: (value) => value,
+      onIllegal: () => null,
+      onInconclusive: () => null,
+    });
+    if (probed === null) {
       return {
         value: option.value,
         legality: 'unknown',
@@ -667,19 +675,17 @@ const mapOptionsForPendingChoice = (
         resolution: 'exact' as const,
       };
     }
-    const probed = probedResult.value!;
 
     let classification: DecisionSequenceSatisfiability | null = null;
     if (probed.kind === 'pending') {
-      const classificationResult = probeDecisionSequenceSatisfiability(
-        classifyProbeMoveSatisfiability,
-        probeMove,
+      classification = resolveProbeResult(
+        probeDecisionSequenceSatisfiability(classifyProbeMoveSatisfiability, probeMove),
+        {
+          onLegal: (value) => value,
+          onIllegal: () => 'unknown' as DecisionSequenceSatisfiability,
+          onInconclusive: () => 'unknown' as DecisionSequenceSatisfiability,
+        },
       );
-      if (classificationResult.outcome === 'inconclusive') {
-        classification = 'unknown';
-      } else {
-        classification = classificationResult.value!;
-      }
     }
     const legality = classifyProbeOutcomeLegality(probed, classification);
     return {
@@ -1000,11 +1006,15 @@ const legalChoicesWithPreparedContextInternal = (
         continue;
       }
       const stageResult = executeDiscoveryEffects(stage.effects, stageEvalCtx, partialMove, options);
-      if (stageResult.outcome === 'illegal') {
+      const resolvedStageResult = resolveProbeResult(stageResult, {
+        onLegal: (value) => value,
+        onIllegal: () => null,
+        onInconclusive: () => null,
+      });
+      if (resolvedStageResult === null) {
         recordPipeline();
         return finalizeRequest(toPipelineLegalityFailedRequest());
       }
-      const resolvedStageResult = stageResult.value!;
       stageState = resolvedStageResult.state;
       stageBindings = resolvedStageResult.bindings;
       if (!shouldEvaluateOptionLegality || resolvedStageResult.request.kind !== 'pending') {
@@ -1032,11 +1042,16 @@ const legalChoicesWithPreparedContextInternal = (
       bindings: stageBindings,
     };
     const eventResult = executeDiscoveryEffects(eventEffects, eventEvalCtx, partialMove);
-    if (eventResult.outcome === 'illegal') {
+    const resolvedEventResult = resolveProbeResult(eventResult, {
+      onLegal: (value) => value,
+      onIllegal: () => null,
+      onInconclusive: () => null,
+    });
+    if (resolvedEventResult === null) {
       recordPipeline();
       return finalizeRequest(toPipelineLegalityFailedRequest());
     }
-    const request = eventResult.value!.request;
+    const request = resolvedEventResult.request;
     if (!shouldEvaluateOptionLegality || request.kind !== 'pending') {
       recordPipeline();
       return finalizeRequest(request);
@@ -1055,11 +1070,16 @@ const legalChoicesWithPreparedContextInternal = (
     partialMove,
     options,
   );
-  if (rootResult.outcome === 'illegal') {
+  const resolvedRootResult = resolveProbeResult(rootResult, {
+    onLegal: (value) => value,
+    onIllegal: () => null,
+    onInconclusive: () => null,
+  });
+  if (resolvedRootResult === null) {
     recordPipeline();
     return finalizeRequest(toPipelineLegalityFailedRequest());
   }
-  const request = rootResult.value!.request;
+  const request = resolvedRootResult.request;
   if (!shouldEvaluateOptionLegality || request.kind !== 'pending') {
     recordPipeline();
     return finalizeRequest(request);

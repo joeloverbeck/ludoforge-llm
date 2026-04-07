@@ -15,7 +15,7 @@ import { validateChooseNSelectedSequence } from './choose-n-selected-validation.
 import { isEffectRuntimeReason } from './effect-error.js';
 import { optionKey } from './legal-choices.js';
 import type { PrioritizedTierEntry } from './prioritized-tier-legality.js';
-import type { ProbeResult } from './probe-result.js';
+import { resolveProbeResult, type ProbeResult } from './probe-result.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import type { DecisionSequenceSatisfiability } from './decision-sequence-satisfiability.js';
 import type {
@@ -324,7 +324,12 @@ export const runSingletonProbePass = (
     let probed: ChoiceRequest;
     try {
       const probedResult = probeChoiceRequest(evaluateProbeMove, probeMove);
-      if (probedResult.outcome === 'inconclusive') {
+      const resolved = resolveProbeResult(probedResult, {
+        onLegal: (value) => value,
+        onIllegal: () => null,
+        onInconclusive: () => null,
+      });
+      if (resolved === null) {
         resultByKey.set(key, {
           legality: 'unknown',
           illegalReason: null,
@@ -332,7 +337,7 @@ export const runSingletonProbePass = (
         });
         continue;
       }
-      probed = probedResult.value!;
+      probed = resolved;
     } catch (error: unknown) {
       // Cardinality mismatch: probe selection is below min or above max.
       // This means the option is not confirmable at this singleton size → unresolved.
@@ -350,15 +355,14 @@ export const runSingletonProbePass = (
     // Classify future satisfiability only when the probe returns pending.
     let classification: DecisionSequenceSatisfiability | null = null;
     if (probed.kind === 'pending') {
-      const classificationResult = probeDecisionSequenceSatisfiability(
-        classifyProbeMoveSatisfiability,
-        probeMove,
+      classification = resolveProbeResult(
+        probeDecisionSequenceSatisfiability(classifyProbeMoveSatisfiability, probeMove),
+        {
+          onLegal: (value) => value,
+          onIllegal: () => 'unknown' as DecisionSequenceSatisfiability,
+          onInconclusive: () => 'unknown' as DecisionSequenceSatisfiability,
+        },
       );
-      if (classificationResult.outcome === 'inconclusive') {
-        classification = 'unknown';
-      } else {
-        classification = classificationResult.value!;
-      }
     }
 
     const outcome = classifySingletonProbe(probed, classification, request.decisionKey);
@@ -483,12 +487,17 @@ const probeAndClassifySelection = (
   let probed: ChoiceRequest;
   try {
     const probedResult = probeChoiceRequest(evaluateProbeMove, probeMove);
-    if (probedResult.outcome === 'inconclusive') {
+    const resolved = resolveProbeResult(probedResult, {
+      onLegal: (value) => value,
+      onIllegal: () => null,
+      onInconclusive: () => null,
+    });
+    if (resolved === null) {
       const outcome: SingletonProbeOutcome = { kind: 'ambiguous' };
       probeCache.set(cacheKey, outcome);
       return { outcome, cached: false };
     }
-    probed = probedResult.value!;
+    probed = resolved;
   } catch (error: unknown) {
     if (isEffectRuntimeReason(error, EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED)) {
       const outcome: SingletonProbeOutcome = { kind: 'unresolved' };
@@ -500,15 +509,14 @@ const probeAndClassifySelection = (
 
   let classification: DecisionSequenceSatisfiability | null = null;
   if (probed.kind === 'pending') {
-    const classificationResult = probeDecisionSequenceSatisfiability(
-      classifyProbeMoveSatisfiability,
-      probeMove,
+    classification = resolveProbeResult(
+      probeDecisionSequenceSatisfiability(classifyProbeMoveSatisfiability, probeMove),
+      {
+        onLegal: (value) => value,
+        onIllegal: () => 'unknown' as DecisionSequenceSatisfiability,
+        onInconclusive: () => 'unknown' as DecisionSequenceSatisfiability,
+      },
     );
-    if (classificationResult.outcome === 'inconclusive') {
-      classification = 'unknown';
-    } else {
-      classification = classificationResult.value!;
-    }
   }
 
   const outcome = classifySingletonProbe(probed, classification, decisionKey);

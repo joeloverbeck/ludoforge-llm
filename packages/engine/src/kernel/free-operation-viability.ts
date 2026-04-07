@@ -70,6 +70,7 @@ const toPendingFreeOperationGrant = (
   executionContext?: TurnFlowPendingFreeOperationGrant['executionContext'],
 ): TurnFlowPendingFreeOperationGrant => ({
   grantId,
+  phase: grant.sequence?.step === undefined || grant.sequence.step === 0 ? 'ready' : 'sequenceWaiting',
   seat: grant.seat,
   ...(grant.executeAsSeat === undefined ? {} : { executeAsSeat: grant.executeAsSeat }),
   operationClass: grant.operationClass,

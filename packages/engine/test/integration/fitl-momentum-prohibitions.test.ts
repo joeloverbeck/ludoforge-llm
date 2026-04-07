@@ -55,6 +55,7 @@ const withPendingFreeGrant = (
           ...(state.turnOrderState.runtime.pendingFreeOperationGrants ?? []),
           {
             grantId: `test-free-grant-${actionId}`,
+            phase: 'ready',
             seat: activeSeat,
             operationClass,
             actionIds: [actionId],

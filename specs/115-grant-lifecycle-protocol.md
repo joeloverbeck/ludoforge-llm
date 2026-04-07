@@ -8,7 +8,7 @@
 
 ## Problem
 
-The free-operation grant system is a 3,500+ line cross-cutting concern spread across 35 files with 55+ exported functions. It has 8 explicit workarounds for problems that shouldn't exist if the abstraction were right. The root cause: grants have an implicit state machine whose transitions are scattered across 6+ subsystems (legal-moves, turn-flow-eligibility, apply-move, phase-advance, free-operation-viability, simulator). Each subsystem computes grant readiness, eligibility, and viability from scratch. Fixing a bug in one subsystem breaks another because there is no single source of truth for grant state.
+The free-operation grant system is a 3,500+ line cross-cutting concern spread across 36 kernel files, with grant state computed across 6+ subsystems. It has 8 explicit workarounds for problems that shouldn't exist if the abstraction were right. The root cause: grants have an implicit state machine whose transitions are scattered across 6+ subsystems (legal-moves, turn-flow-eligibility, apply-move, phase-advance, free-operation-viability, simulator). Each subsystem computes grant readiness, eligibility, and viability from scratch. Fixing a bug in one subsystem breaks another because there is no single source of truth for grant state.
 
 **Evidence**:
 - FREOPSKIP-001 changed 11 engine files and broke determinism (FOUNDATIONS §8)
@@ -101,10 +101,15 @@ Currently `hasLegalCompletedFreeOperationMoveInCurrentState` is called ad-hoc. I
 - `packages/engine/src/kernel/legal-moves.ts` — read phase instead of computing readiness
 - `packages/engine/src/kernel/phase-advance.ts` — drive transitions instead of calling scattered functions
 - `packages/engine/src/kernel/apply-move.ts` — call `consumeUse` transition
-- `packages/engine/src/kernel/free-operation-viability.ts` — fold into lifecycle transitions
+- `packages/engine/src/kernel/free-operation-viability.ts` — the lifecycle module imports and calls `hasLegalCompletedFreeOperationMoveInCurrentState` during the `ready → offered` transition; ad-hoc callers of this function for grant decisions are removed; the file itself is not refactored
 - `packages/engine/src/kernel/free-operation-grant-authorization.ts` — simplify authorization using phase
-- `packages/engine/src/kernel/types.ts` — add `phase` to grant type
-- `packages/engine/src/sim/simulator.ts` — remove grant-specific error recovery
+- `packages/engine/src/kernel/types-turn-flow.ts` — add `phase: GrantLifecyclePhase` to `TurnFlowPendingFreeOperationGrant` (line 184)
+- `packages/engine/src/kernel/free-operation-discovery-analysis.ts` — imports `isPendingFreeOperationGrantSequenceReady`, replace with phase read
+- `packages/engine/src/kernel/free-operation-grant-bindings.ts` — constructs grant objects, must include `phase` field
+- `packages/engine/src/kernel/effects-turn-flow.ts` — creates grant objects, must set initial `phase` (e.g., `sequenceWaiting` or `ready`)
+- `packages/engine/src/kernel/free-operation-sequence-progression.ts` — reads grant type, may need phase-aware updates
+- `packages/engine/src/kernel/turn-flow-free-operation-grant-contract.ts` — needs `GrantLifecyclePhase` validation or type updates
+- `packages/engine/src/sim/simulator.ts` — remove the catch-and-recover block (lines 151-168) that calls `skipPendingSkippableFreeOperationGrants`; the `NoPlayableMovesAfterPreparationError` class (defined in `agents/no-playable-move.ts`) is NOT deleted — agents may still throw it for diagnostics
 
 **Delete** (after migration):
 - `expireUnfulfillableRequiredFreeOperationGrants` (replaced by `expireGrant` transition)
@@ -144,6 +149,17 @@ Currently `hasLegalCompletedFreeOperationMoveInCurrentState` is called ad-hoc. I
 ### New Tests
 - `packages/engine/test/unit/kernel/grant-lifecycle.test.ts` — lifecycle state machine transitions
 - Update `packages/engine/test/determinism/fitl-policy-agent-canary.test.ts` if needed
+
+### Test Migration (existing tests requiring `phase` field addition)
+- `packages/engine/test/helpers/turn-order-helpers.ts`
+- `packages/engine/test/integration/fitl-event-free-operation-grants.test.ts`
+- `packages/engine/test/integration/fitl-events-sihanouk.test.ts`
+- `packages/engine/test/unit/kernel/apply-move.test.ts`
+- `packages/engine/test/unit/kernel/free-operation-grant-bindings.test.ts`
+- `packages/engine/test/unit/kernel/free-operation-grant-sequence-readiness.test.ts` — directly tests `isPendingFreeOperationGrantSequenceReady`, needs significant refactoring
+- `packages/engine/test/unit/kernel/free-operation-viability-export-surface-guard.test.ts`
+- `packages/engine/test/unit/phase-advance.test.ts`
+- `packages/engine/test/unit/kernel/runtime-error-contracts.test.ts`
 
 ### Existing Tests (must all pass)
 - `pnpm -F @ludoforge/engine test` (full default suite)

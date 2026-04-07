@@ -149,6 +149,7 @@ describe('free-operation grant bindings', () => {
     };
     const grant: TurnFlowPendingFreeOperationGrant = {
       grantId: 'grant-context-binding',
+      phase: 'ready',
       seat: 'US',
       operationClass: 'operation',
       actionIds: ['operation'],
@@ -194,11 +195,13 @@ describe('free-operation grant test helpers', () => {
       remainingUses: 2,
       sequenceBatchId: 'batch-0',
       sequenceIndex: 0,
+      phase: 'ready',
     });
     const grants = requireCardDrivenRuntime(result).pendingFreeOperationGrants ?? [];
     assert.equal(grants.length, 1);
     const grant = grants[0]!;
     assert.equal(grant.grantId, 'test-full-grant');
+    assert.equal(grant.phase, 'ready');
     assert.equal(grant.seat, 'NVA');
     assert.equal(grant.operationClass, 'limitedOperation');
     assert.deepEqual(grant.actionIds, ['operation']);

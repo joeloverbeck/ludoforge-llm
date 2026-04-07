@@ -1347,6 +1347,7 @@ capabilities: ['cardEvent'],
           pendingFreeOperationGrants: [
             {
               grantId: 'grant-0',
+              phase: 'ready',
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
@@ -1433,6 +1434,7 @@ capabilities: ['cardEvent'],
           pendingFreeOperationGrants: [
             {
               grantId: 'grant-step-0',
+              phase: 'ready',
               seat: '0',
               operationClass: 'limitedOperation',
               actionIds: ['wrongPhase'],
@@ -1442,6 +1444,7 @@ capabilities: ['cardEvent'],
             },
             {
               grantId: 'grant-step-1',
+              phase: 'sequenceWaiting',
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],

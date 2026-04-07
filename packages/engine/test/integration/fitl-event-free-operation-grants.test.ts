@@ -3941,6 +3941,7 @@ describe('event free-operation grants integration', () => {
           pendingFreeOperationGrants: [
             {
               grantId: 'execution-context-monsoon',
+              phase: 'ready',
               seat: 'US',
               operationClass: 'operation',
               actionIds: ['operation'],

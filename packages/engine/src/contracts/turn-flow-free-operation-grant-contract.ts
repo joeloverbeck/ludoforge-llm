@@ -84,6 +84,25 @@ export const isTurnFlowFreeOperationGrantProgressionPolicy = (
 ): value is TurnFlowFreeOperationGrantProgressionPolicy =>
   TURN_FLOW_FREE_OPERATION_GRANT_PROGRESSION_POLICY_SET.has(value);
 
+export const GRANT_LIFECYCLE_PHASE_VALUES = [
+  'sequenceWaiting',
+  'ready',
+  'offered',
+  'consumed',
+  'exhausted',
+  'skipped',
+  'expired',
+] as const;
+
+export type GrantLifecyclePhase = (typeof GRANT_LIFECYCLE_PHASE_VALUES)[number];
+
+const GRANT_LIFECYCLE_PHASE_SET = new Set<string>(GRANT_LIFECYCLE_PHASE_VALUES);
+
+export const isGrantLifecyclePhase = (
+  value: string,
+): value is GrantLifecyclePhase =>
+  GRANT_LIFECYCLE_PHASE_SET.has(value);
+
 export type TurnFlowFreeOperationGrantContractCandidate = {
   readonly operationClass?: string;
   readonly uses?: number;

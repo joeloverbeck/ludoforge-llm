@@ -2624,6 +2624,7 @@ phase: [asPhaseId('main')],
             pendingFreeOperationGrants: [
               {
                 grantId: 'grant-0',
+                phase: 'ready',
                 seat: '0',
                 operationClass: 'operation',
                 actionIds: ['operation'],
@@ -2697,6 +2698,7 @@ phase: [asPhaseId('main')],
             pendingFreeOperationGrants: [
               {
                 grantId: 'grant-0',
+                phase: 'ready',
                 seat: '0',
                 operationClass: 'operation',
                 actionIds: ['operation'],
@@ -2786,6 +2788,7 @@ phase: [asPhaseId('main')],
             pendingFreeOperationGrants: [
               {
                 grantId: 'grant-0',
+                phase: 'ready',
                 seat: '0',
                 operationClass: 'operation',
                 actionIds: ['operation'],
@@ -2888,6 +2891,7 @@ phase: [asPhaseId('main')],
             pendingFreeOperationGrants: [
               {
                 grantId: 'grant-0',
+                phase: 'ready',
                 seat: '0',
                 operationClass: 'operation',
                 actionIds: ['operation'],
@@ -2984,6 +2988,7 @@ phase: [asPhaseId('main')],
             pendingFreeOperationGrants: [
               {
                 grantId: 'grant-0',
+                phase: 'ready',
                 seat: '0',
                 executeAsSeat: '1',
                 operationClass: 'operation',
@@ -3073,6 +3078,7 @@ phase: [asPhaseId('main')],
             pendingFreeOperationGrants: [
               {
                 grantId: 'grant-0',
+                phase: 'ready',
                 seat: '0',
                 operationClass: 'operation',
                 actionIds: ['operation'],
@@ -3152,6 +3158,7 @@ phase: [asPhaseId('main')],
             pendingFreeOperationGrants: [
               {
                 grantId: 'grant-0',
+                phase: 'ready',
                 seat: '0',
                 operationClass: 'operation',
                 actionIds: ['operation-alt'],
@@ -3223,6 +3230,7 @@ phase: [asPhaseId('main')],
             pendingFreeOperationGrants: [
               {
                 grantId: 'grant-0',
+                phase: 'ready',
                 seat: '0',
                 operationClass: 'operation',
                 actionIds: ['operation'],
@@ -3346,6 +3354,7 @@ phase: [asPhaseId('main')],
             pendingFreeOperationGrants: [
               {
                 grantId: 'grant-0',
+                phase: 'ready',
                 seat: '1',
                 operationClass: 'operation',
                 actionIds: ['operation'],
@@ -3413,6 +3422,7 @@ phase: [asPhaseId('main')],
             pendingFreeOperationGrants: [
               {
                 grantId: 'grant-blocker',
+                phase: 'ready',
                 seat: '1',
                 operationClass: 'operation',
                 actionIds: ['operation'],
@@ -3422,6 +3432,7 @@ phase: [asPhaseId('main')],
               },
               {
                 grantId: 'grant-active-seat',
+                phase: 'sequenceWaiting',
                 seat: '0',
                 operationClass: 'operation',
                 actionIds: ['operation'],
@@ -3491,6 +3502,7 @@ phase: [asPhaseId('main')],
             pendingFreeOperationGrants: [
               {
                 grantId: 'grant-0',
+                phase: 'ready',
                 seat: '0',
                 operationClass: 'limitedOperation',
                 actionIds: ['operation'],

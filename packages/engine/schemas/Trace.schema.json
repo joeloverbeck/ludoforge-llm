@@ -3604,6 +3604,18 @@
                                 "type": "string",
                                 "minLength": 1
                               },
+                              "phase": {
+                                "type": "string",
+                                "enum": [
+                                  "sequenceWaiting",
+                                  "ready",
+                                  "offered",
+                                  "consumed",
+                                  "exhausted",
+                                  "skipped",
+                                  "expired"
+                                ]
+                              },
                               "seat": {
                                 "type": "string",
                                 "minLength": 1
@@ -3781,6 +3793,7 @@
                             },
                             "required": [
                               "grantId",
+                              "phase",
                               "seat",
                               "operationClass",
                               "remainingUses"
@@ -3793,6 +3806,18 @@
                               "grantId": {
                                 "type": "string",
                                 "minLength": 1
+                              },
+                              "phase": {
+                                "type": "string",
+                                "enum": [
+                                  "sequenceWaiting",
+                                  "ready",
+                                  "offered",
+                                  "consumed",
+                                  "exhausted",
+                                  "skipped",
+                                  "expired"
+                                ]
                               },
                               "seat": {
                                 "type": "string",
@@ -3979,6 +4004,7 @@
                             },
                             "required": [
                               "grantId",
+                              "phase",
                               "seat",
                               "operationClass",
                               "remainingUses",
@@ -3993,6 +4019,18 @@
                               "grantId": {
                                 "type": "string",
                                 "minLength": 1
+                              },
+                              "phase": {
+                                "type": "string",
+                                "enum": [
+                                  "sequenceWaiting",
+                                  "ready",
+                                  "offered",
+                                  "consumed",
+                                  "exhausted",
+                                  "skipped",
+                                  "expired"
+                                ]
                               },
                               "seat": {
                                 "type": "string",
@@ -4179,6 +4217,7 @@
                             },
                             "required": [
                               "grantId",
+                              "phase",
                               "seat",
                               "operationClass",
                               "remainingUses",

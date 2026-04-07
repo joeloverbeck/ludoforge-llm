@@ -10,6 +10,7 @@ const makeGrant = (
   sequenceIndex: number,
 ): TurnFlowPendingFreeOperationGrant => ({
   grantId,
+  phase: sequenceIndex === 0 ? 'ready' : 'sequenceWaiting',
   seat: sequenceIndex === 0 ? 'us' : 'arvn',
   operationClass: 'specialActivity',
   actionIds: sequenceIndex === 0 ? ['airLift'] : ['transport'],

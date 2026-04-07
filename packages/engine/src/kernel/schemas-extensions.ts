@@ -14,6 +14,7 @@ import {
 import {
   TURN_FLOW_INTERRUPT_SELECTOR_EMPTY_MESSAGE,
   TURN_FLOW_ACTION_CLASS_VALUES,
+  GRANT_LIFECYCLE_PHASE_VALUES,
   TURN_FLOW_FREE_OPERATION_GRANT_OUTCOME_POLICY_VALUES,
   TURN_FLOW_FREE_OPERATION_GRANT_PROGRESSION_POLICY_VALUES,
   TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES,
@@ -562,6 +563,7 @@ export const TurnFlowRuntimeStateSchema = z
       .array(
         createTurnFlowFreeOperationGrantSchema({
           grantId: StringSchema.min(1),
+          phase: z.enum(GRANT_LIFECYCLE_PHASE_VALUES),
           seat: StringSchema.min(1),
           executeAsSeat: StringSchema.min(1).optional(),
           operationClass: TurnFlowActionClassSchema,

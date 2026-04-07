@@ -322,6 +322,7 @@ export const applyGrantFreeOperation = (
 
   const appended: TurnFlowPendingFreeOperationGrant = {
     grantId,
+    phase: sequenceIndex === undefined || sequenceIndex === 0 ? 'ready' : 'sequenceWaiting',
     seat,
     ...(executeAsSeat === undefined ? {} : { executeAsSeat }),
     operationClass: grant.operationClass,

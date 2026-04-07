@@ -63,6 +63,7 @@ export const createSequenceContextMismatchTurnOrderState = (): Extract<GameState
     pendingFreeOperationGrants: [
       {
         grantId: 'grant-0',
+        phase: 'ready',
         seat: '0',
         operationClass: 'operation',
         actionIds: ['operation'],

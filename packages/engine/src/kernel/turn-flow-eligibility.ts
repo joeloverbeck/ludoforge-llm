@@ -17,14 +17,15 @@ import { createDeferredLifecycleTraceEntry } from './turn-flow-deferred-lifecycl
 import {
   collectGrantMoveZoneCandidates,
   doesGrantPotentiallyAuthorizeMove,
-  isPendingFreeOperationGrantSequenceReady,
   resolveAuthorizedPendingFreeOperationGrants,
 } from './free-operation-grant-authorization.js';
 import {
   appendSkippedSequenceStep,
   ensureFreeOperationSequenceBatchContext,
+  resolvePendingFreeOperationGrantSequenceStatus,
   resolveSequenceProgressionPolicy,
 } from './free-operation-sequence-progression.js';
+import { advanceToReady, consumeUse } from './grant-lifecycle.js';
 import { resolveFreeOperationGrantSeatToken } from './free-operation-seat-resolution.js';
 import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
 import { buildAdjacencyGraph } from './spatial.js';
@@ -129,21 +130,20 @@ const computeCandidates = (
   };
 };
 
-const isRequiredPendingFreeOperationGrant = (
+const isBlockingPendingFreeOperationGrant = (
   grant: TurnFlowPendingFreeOperationGrant,
-): boolean => grant.completionPolicy === 'required' || grant.completionPolicy === 'skipIfNoLegalCompletion';
+): boolean =>
+  (grant.phase === 'ready' || grant.phase === 'offered')
+  && (grant.completionPolicy === 'required' || grant.completionPolicy === 'skipIfNoLegalCompletion');
 
-const resolveReadyRequiredFreeOperationGrantSeats = (
+const resolveReadyPendingFreeOperationGrantSeats = (
   pending: readonly TurnFlowPendingFreeOperationGrant[],
-  sequenceContexts: TurnFlowRuntimeState['freeOperationSequenceContexts'] | undefined,
   seatOrder: readonly string[],
 ): { readonly first: string | null; readonly second: string | null } => {
   const readySeats = new Set(
     pending
       .filter(
-        (grant) =>
-          isRequiredPendingFreeOperationGrant(grant)
-          && isPendingFreeOperationGrantSequenceReady(pending, grant, sequenceContexts),
+        (grant) => grant.phase === 'ready' && isBlockingPendingFreeOperationGrant(grant),
       )
       .map((grant) => grant.seat),
   );
@@ -154,13 +154,12 @@ const resolveReadyRequiredFreeOperationGrantSeats = (
   };
 };
 
-const withRequiredGrantCandidates = (
+const withReadyGrantCandidates = (
   pending: readonly TurnFlowPendingFreeOperationGrant[],
-  sequenceContexts: TurnFlowRuntimeState['freeOperationSequenceContexts'] | undefined,
   seatOrder: readonly string[],
   currentCard: TurnFlowRuntimeCardState,
 ): TurnFlowRuntimeCardState => {
-  const required = resolveReadyRequiredFreeOperationGrantSeats(pending, sequenceContexts, seatOrder);
+  const required = resolveReadyPendingFreeOperationGrantSeats(pending, seatOrder);
   if (required.first === null && required.second === null) {
     return currentCard;
   }
@@ -171,15 +170,38 @@ const withRequiredGrantCandidates = (
   };
 };
 
-const hasReadyRequiredPendingFreeOperationGrantForSeat = (
+const hasReadyPendingFreeOperationGrantForSeat = (
   pending: readonly TurnFlowPendingFreeOperationGrant[],
-  sequenceContexts: TurnFlowRuntimeState['freeOperationSequenceContexts'] | undefined,
   seat: string,
 ): boolean =>
   pending.some((grant) =>
     grant.seat === seat
-    && isRequiredPendingFreeOperationGrant(grant)
-    && isPendingFreeOperationGrantSequenceReady(pending, grant, sequenceContexts));
+    && grant.phase === 'ready'
+    && isBlockingPendingFreeOperationGrant(grant));
+
+const advanceSequenceReadyPendingFreeOperationGrants = (
+  pending: readonly TurnFlowPendingFreeOperationGrant[],
+  sequenceContexts: TurnFlowRuntimeState['freeOperationSequenceContexts'] | undefined,
+): {
+  readonly grants: readonly TurnFlowPendingFreeOperationGrant[];
+  readonly traceEntries: readonly TriggerLogEntry[];
+} => {
+  const traceEntries: TriggerLogEntry[] = [];
+  let changed = false;
+  const grants = pending.map((grant) => {
+    if (grant.phase !== 'sequenceWaiting') {
+      return grant;
+    }
+    if (!resolvePendingFreeOperationGrantSequenceStatus(pending, grant, sequenceContexts).ready) {
+      return grant;
+    }
+    changed = true;
+    const transitioned = advanceToReady(grant);
+    traceEntries.push(transitioned.traceEntry);
+    return transitioned.grant;
+  });
+  return changed ? { grants, traceEntries } : { grants: pending, traceEntries };
+};
 
 const cardSnapshot = (card: TurnFlowRuntimeCardState): Pick<TurnFlowRuntimeCardState, 'firstEligible' | 'secondEligible' | 'actedSeats' | 'passedSeats' | 'nonPassCount' | 'firstActionClass'> => ({
   firstEligible: card.firstEligible,
@@ -865,9 +887,8 @@ export const isActiveSeatEligibleForTurnFlow = (
   return (
     activeSeat === runtime.currentCard.firstEligible ||
     activeSeat === runtime.currentCard.secondEligible ||
-    hasReadyRequiredPendingFreeOperationGrantForSeat(
+    hasReadyPendingFreeOperationGrantForSeat(
       runtime.pendingFreeOperationGrants ?? [],
-      runtime.freeOperationSequenceContexts,
       activeSeat,
     )
   );
@@ -888,9 +909,8 @@ export const hasActiveSeatRequiredPendingFreeOperationGrant = (
     TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.ELIGIBILITY_CHECK,
     seatResolution,
   );
-  return hasReadyRequiredPendingFreeOperationGrantForSeat(
+  return hasReadyPendingFreeOperationGrantForSeat(
     runtime.pendingFreeOperationGrants ?? [],
-    runtime.freeOperationSequenceContexts,
     activeSeat,
   );
 };
@@ -922,7 +942,7 @@ export const expireUnfulfillableRequiredFreeOperationGrants = (
     TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.ELIGIBILITY_CHECK,
     seatResolution,
   );
-  if (!hasReadyRequiredPendingFreeOperationGrantForSeat(pending, runtime.freeOperationSequenceContexts, activeSeat)) {
+  if (!hasReadyPendingFreeOperationGrantForSeat(pending, activeSeat)) {
     return null;
   }
 
@@ -931,8 +951,8 @@ export const expireUnfulfillableRequiredFreeOperationGrants = (
     pending
       .filter((grant) =>
         grant.seat === activeSeat
-        && isRequiredPendingFreeOperationGrant(grant)
-        && isPendingFreeOperationGrantSequenceReady(pending, grant, runtime.freeOperationSequenceContexts),
+        && grant.phase === 'ready'
+        && isBlockingPendingFreeOperationGrant(grant),
       )
       .map((grant) => grant.grantId),
   );
@@ -984,7 +1004,7 @@ export const skipPendingSkippableFreeOperationGrants = (
   const skippableGrants = pending.filter((grant) =>
     grant.seat === activeSeat
     && grant.completionPolicy === 'skipIfNoLegalCompletion'
-    && isPendingFreeOperationGrantSequenceReady(pending, grant, runtime.freeOperationSequenceContexts),
+    && grant.phase === 'ready',
   );
   if (skippableGrants.length === 0) {
     return null;
@@ -1021,7 +1041,7 @@ export const isMoveAllowedByRequiredPendingFreeOperationGrant = (
     seatResolution,
   );
   const pending = runtime.pendingFreeOperationGrants ?? [];
-  if (!hasReadyRequiredPendingFreeOperationGrantForSeat(pending, runtime.freeOperationSequenceContexts, activeSeat)) {
+  if (!hasReadyPendingFreeOperationGrantForSeat(pending, activeSeat)) {
     return true;
   }
   if (move.freeOperation !== true) {
@@ -1029,7 +1049,7 @@ export const isMoveAllowedByRequiredPendingFreeOperationGrant = (
   }
   return pending.some((grant) =>
     grant.seat === activeSeat
-    && isRequiredPendingFreeOperationGrant(grant)
+    && isBlockingPendingFreeOperationGrant(grant)
     && doesGrantPotentiallyAuthorizeMove(def, state, pending, grant, move));
 };
 
@@ -1071,14 +1091,19 @@ export const applyTurnFlowEligibilityAfterMove = (
   );
   const effectiveEligibility = applyEligibilityOverrides(runtime.eligibility, immediateOverrides);
   const pendingOverrides = [...(runtime.pendingEligibilityOverrides ?? []), ...deferredOverrides];
-  const pendingFreeOperationGrants = [
+  const combinedPendingFreeOperationGrants = [
     ...existingPendingFreeOperationGrants,
     ...newFreeOpGrants.grants,
   ];
   const nextSequenceContexts = trimFreeOperationSequenceContextsToPendingBatches(
     newFreeOpGrants.sequenceContexts,
-    pendingFreeOperationGrants,
+    combinedPendingFreeOperationGrants,
   );
+  const sequenceAdvanced = advanceSequenceReadyPendingFreeOperationGrants(
+    combinedPendingFreeOperationGrants,
+    nextSequenceContexts,
+  );
+  const pendingFreeOperationGrants = sequenceAdvanced.grants;
   const deferredRequiredBatchIds = uniqueBatchIds(newFreeOpGrants.grants);
   const deferredCandidate = deferredEventEffect === undefined
     ? undefined
@@ -1131,9 +1156,8 @@ export const applyTurnFlowEligibilityAfterMove = (
           ...runtime,
           eligibility: effectiveEligibility,
           pendingEligibilityOverrides: pendingOverrides,
-          currentCard: withRequiredGrantCandidates(
+          currentCard: withReadyGrantCandidates(
             pendingFreeOperationGrants,
-            runtime.freeOperationSequenceContexts,
             runtime.seatOrder,
             runtime.currentCard,
           ),
@@ -1197,7 +1221,7 @@ export const applyTurnFlowEligibilityAfterMove = (
     (before.nonPassCount === 0 && moveClass !== 'pass' ? normalizeFirstActionClass(moveClass) : null);
 
   const activeCardCandidates = computeCandidates(runtime.seatOrder, effectiveEligibility, acted);
-  const currentCard = withRequiredGrantCandidates(pendingFreeOperationGrants, runtime.freeOperationSequenceContexts, runtime.seatOrder, {
+  const currentCard = withReadyGrantCandidates(pendingFreeOperationGrants, runtime.seatOrder, {
     firstEligible: activeCardCandidates.first,
     secondEligible: activeCardCandidates.second,
     actedSeats: [...acted],
@@ -1221,6 +1245,7 @@ export const applyTurnFlowEligibilityAfterMove = (
         };
 
   const traceEntries: TriggerLogEntry[] = [
+    ...sequenceAdvanced.traceEntries,
     {
       kind: 'turnFlowEligibility',
       step,
@@ -1254,9 +1279,8 @@ export const applyTurnFlowEligibilityAfterMove = (
   }
 
   let endedReason: 'rightmostPass' | 'twoNonPass' | undefined;
-  const requiredGrantCandidates = resolveReadyRequiredFreeOperationGrantSeats(
+  const requiredGrantCandidates = resolveReadyPendingFreeOperationGrantSeats(
     pendingFreeOperationGrants,
-    runtime.freeOperationSequenceContexts,
     runtime.seatOrder,
   );
   const hasRequiredGrantWindow = requiredGrantCandidates.first !== null || requiredGrantCandidates.second !== null;
@@ -1387,15 +1411,12 @@ export const consumeTurnFlowFreeOperationGrant = (
     );
   }
   const consumed = runtimePending[consumedIndex]!;
-  const decremented = consumed.remainingUses - 1;
-  const nextPending = decremented <= 0
+  const consumedTransition = consumeUse(consumed);
+  const nextPending = consumedTransition.grant.phase === 'exhausted'
     ? [...runtimePending.slice(0, consumedIndex), ...runtimePending.slice(consumedIndex + 1)]
     : [
         ...runtimePending.slice(0, consumedIndex),
-        {
-          ...consumed,
-          remainingUses: decremented,
-        },
+        consumedTransition.grant,
         ...runtimePending.slice(consumedIndex + 1),
       ];
   const captureKey = consumed.sequenceContext?.captureMoveZoneCandidatesAs;
@@ -1415,11 +1436,22 @@ export const consumeTurnFlowFreeOperationGrant = (
           skippedStepIndices: baseSequenceContexts?.[capturedBatchId]?.skippedStepIndices ?? [],
         },
       }, nextPending);
-  const splitDeferred = splitReadyDeferredEventEffects(runtime.pendingDeferredEventEffects ?? [], nextPending);
-  const normalizedPendingFreeOperationGrants = toPendingFreeOperationGrants(nextPending);
+  const sequenceAdvanced = advanceSequenceReadyPendingFreeOperationGrants(
+    nextPending,
+    nextSequenceContexts,
+  );
+  const splitDeferred = splitReadyDeferredEventEffects(
+    runtime.pendingDeferredEventEffects ?? [],
+    sequenceAdvanced.grants,
+  );
+  const normalizedPendingFreeOperationGrants = toPendingFreeOperationGrants(sequenceAdvanced.grants);
   const normalizedPendingDeferredEventEffects = toPendingDeferredEventEffects(splitDeferred.remaining);
-  const traceEntries = splitDeferred.ready.map<TriggerLogEntry>((released) =>
-    createDeferredLifecycleTraceEntry('released', released));
+  const traceEntries: TriggerLogEntry[] = [
+    consumedTransition.traceEntry,
+    ...sequenceAdvanced.traceEntries,
+    ...splitDeferred.ready.map<TriggerLogEntry>((released) =>
+      createDeferredLifecycleTraceEntry('released', released)),
+  ];
   return {
     state: {
       ...state,

@@ -35,7 +35,10 @@ import { resolveGrantFreeOperationActionDomain } from './free-operation-action-d
 import { resolveFreeOperationExecutionContext } from './free-operation-execution-context.js';
 import { doesMaterialGameplayStateChange, resolveStrongestRequiredFreeOperationOutcomeGrant } from './free-operation-outcome-policy.js';
 import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-overlay.js';
-import { resolveSequenceProgressionPolicy } from './free-operation-sequence-progression.js';
+import {
+  resolvePendingFreeOperationGrantSequenceStatus,
+  resolveSequenceProgressionPolicy,
+} from './free-operation-sequence-progression.js';
 import {
   buildMoveRuntimeBindings,
   deriveDecisionBindingsFromMoveParams,
@@ -133,6 +136,23 @@ const toResolvedProbePendingGrant = (
     seat: resolvedSeats.seat,
     ...(resolvedSeats.executeAsSeat === undefined ? {} : { executeAsSeat: resolvedSeats.executeAsSeat }),
   };
+};
+
+const resolveProbeGrantPhase = (
+  runtime: CardDrivenRuntime,
+  pending: readonly TurnFlowPendingFreeOperationGrant[],
+  grant: TurnFlowPendingFreeOperationGrant,
+): TurnFlowPendingFreeOperationGrant['phase'] => {
+  if (grant.phase !== 'sequenceWaiting') {
+    return grant.phase;
+  }
+  return resolvePendingFreeOperationGrantSequenceStatus(
+    pending,
+    grant,
+    runtime.freeOperationSequenceContexts,
+  ).ready
+    ? 'ready'
+    : grant.phase;
 };
 
 const resolveUnusableSequenceProbeBlockers = (
@@ -784,6 +804,15 @@ export const isFreeOperationGrantUsableInCurrentState = (
     options?.evalContext,
   );
   const pendingProbeGrants = [...probeBlockers, probeGrant];
+  const probeGrantPhase = resolveProbeGrantPhase(runtime, pendingProbeGrants, probeGrant);
+  const authorizedProbeGrant = probeGrantPhase === probeGrant.phase
+    ? probeGrant
+    : {
+      ...probeGrant,
+      phase: probeGrantPhase,
+    };
+  const authorizedPendingProbeGrants = pendingProbeGrants.map((pendingGrant) =>
+    pendingGrant.grantId === probeGrant.grantId ? authorizedProbeGrant : pendingGrant);
   const probeActivePlayerIndex = resolvePlayerIndexForTurnFlowSeat(seat, seatResolution.index);
   const authorizationState: GameState = {
     ...state,
@@ -801,7 +830,7 @@ export const isFreeOperationGrantUsableInCurrentState = (
           nonPassCount: 0,
           firstActionClass: null,
         },
-        pendingFreeOperationGrants: pendingProbeGrants,
+        pendingFreeOperationGrants: authorizedPendingProbeGrants,
       },
     },
   };

@@ -22,7 +22,6 @@ import {
 } from './legal-moves-turn-order.js';
 import {
   grantActionIds,
-  isPendingFreeOperationGrantSequenceReady,
 } from './free-operation-grant-authorization.js';
 import { resolveTurnFlowDefaultFreeOperationActionDomain } from './free-operation-action-domain.js';
 import {
@@ -613,7 +612,7 @@ function enumeratePendingFreeOperationMoves(
   const readyGrants = pending.filter(
     (grant) =>
       grant.seat === activeSeat &&
-      isPendingFreeOperationGrantSequenceReady(pending, grant, runtime.freeOperationSequenceContexts),
+      grant.phase !== 'sequenceWaiting',
   );
   if (readyGrants.length === 0) {
     return;

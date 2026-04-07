@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel viability integration, simulator cleanup, apply-move wiring
-**Deps**: `tickets/115GRALIFPRO-004.md`
+**Deps**: `archive/tickets/115GRALIFPRO-004.md`
 
 ## Problem
 
@@ -23,6 +23,7 @@ Two critical grant-lifecycle behaviors remain outside the lifecycle module:
 3. `NoPlayableMovesAfterPreparationError` is defined in `agents/no-playable-move.ts` — agents still throw it — confirmed. The class is NOT deleted.
 4. `consumeTurnFlowFreeOperationGrant` is called from `apply-move.ts:1279` — confirmed.
 5. `skipPendingSkippableFreeOperationGrants` and `expireUnfulfillableRequiredFreeOperationGrants` are exported from `turn-flow-eligibility.ts` — after this ticket, both are replaced by lifecycle transitions and can be deleted.
+6. Ticket `004` already absorbed the runtime `consumeUse` transition inside `consumeTurnFlowFreeOperationGrant` and now immediately promotes newly unblocked sequenced grants after a free-operation use is consumed. This ticket should not re-claim that landed behavior; the remaining owned work is deleting the wrapper/export boundary and finishing the lifecycle-owned call sites.
 
 ## Architecture Check
 
@@ -42,7 +43,7 @@ In `grant-lifecycle.ts` or the calling site in `phase-advance.ts`/`legal-moves.t
 
 ### 2. Wire `consumeUse` in `apply-move.ts`
 
-Replace the direct call to `consumeTurnFlowFreeOperationGrant` at line 1279 with a call to the lifecycle `consumeUse` transition. The lifecycle function handles `remainingUses` decrement and exhaustion.
+Replace the direct call to `consumeTurnFlowFreeOperationGrant` at line 1279 by inlining or relocating the remaining wrapper-owned orchestration onto the lifecycle-owned path. Do not re-implement the already-landed `consumeUse` decrement/promotion behavior from ticket `004`; finish the boundary cleanup by removing the extra wrapper/export if the call-site shape allows it.
 
 ### 3. Wire `expireGrant` in `phase-advance.ts`
 
@@ -75,6 +76,7 @@ Remove all now-unused imports in files that referenced these functions.
 - Refactoring `free-operation-viability.ts` internally (spec decision: file stays as-is)
 - Deleting `NoPlayableMovesAfterPreparationError` class (agents still use it)
 - Test fixture migration (ticket 006)
+- Re-doing the consume-path promotion behavior already landed in ticket `004`
 
 ## Acceptance Criteria
 

@@ -1,6 +1,6 @@
 # 115GRALIFPRO-004: Replace scattered predicates with phase reads
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel predicate refactoring
@@ -88,3 +88,23 @@ The `isPendingFreeOperationGrantSequenceReady` export can be removed or reduced 
 1. `pnpm turbo typecheck`
 2. `pnpm turbo build`
 3. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+Completed: 2026-04-07
+
+What changed:
+- Replaced `isPendingFreeOperationGrantSequenceReady` call sites in the live readiness/authorization surfaces with `phase` reads and removed the export from `free-operation-grant-authorization.ts`.
+- Reworked `turn-flow-eligibility.ts` to treat grant `phase` as the live readiness source, including explicit `advanceToReady` promotion for newly unblocked sequenced grants.
+- Updated issue-time probe handling in `free-operation-viability.ts` so probe grants derive readiness from canonical sequence status without reintroducing the removed predicate export.
+- Refactored `free-operation-grant-sequence-readiness.test.ts` to assert lifecycle-driven phase promotion and sequence-status behavior.
+
+Deviations from original plan:
+- The ticket's cited `free-operation-grant-bindings.ts` and `phase-advance.ts` surfaces were stale for the live implementation and were not edited.
+- The confirmed runtime boundary required one additional owned fix beyond the original ticket slice: free-operation consumption now uses lifecycle `consumeUse` inside `consumeTurnFlowFreeOperationGrant`, and post-consumption staged grants are promoted immediately when they become unblocked. This partially absorbed originally deferred consume-path work from ticket `005`.
+- `free-operation-viability.ts` required a probe-path fix so later staged grants could be tested under phase-based readiness during issue-time viability checks.
+
+Verification:
+- `pnpm turbo typecheck`
+- `pnpm turbo build`
+- `pnpm -F @ludoforge/engine test`

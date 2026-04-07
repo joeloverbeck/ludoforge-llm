@@ -10,7 +10,6 @@ import {
   evaluateZoneFilterForMove,
   grantActionIds,
   isGrantOperationClassCompatible,
-  isPendingFreeOperationGrantSequenceReady,
   moveOperationClass,
   resolveAuthorizedPendingFreeOperationGrantOverlapAmbiguity,
 } from './free-operation-grant-authorization.js';
@@ -73,12 +72,7 @@ const analyzeFreeOperationGrantMatch = (
   const actionId = String(move.actionId);
   const pending = runtime.pendingFreeOperationGrants ?? [];
   const activeGrants = pending.filter((grant) => grant.seat === activeSeat);
-  const sequenceReadyGrants = activeGrants.filter((grant) =>
-    isPendingFreeOperationGrantSequenceReady(
-      pending,
-      grant,
-      runtime.freeOperationSequenceContexts,
-    ));
+  const sequenceReadyGrants = activeGrants.filter((grant) => grant.phase !== 'sequenceWaiting');
   const actionClassMatchedGrants = sequenceReadyGrants.filter((grant) => isGrantOperationClassCompatible(grant.operationClass, actionClass));
   const actionMatchedGrants = actionClassMatchedGrants.filter((grant) => grantActionIds(def, grant).includes(actionId));
   const contextMatchedGrants = actionMatchedGrants.filter((grant) => doesGrantRequireSequenceContextMatch(

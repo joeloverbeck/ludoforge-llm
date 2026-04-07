@@ -46,7 +46,7 @@ Parse into logical blocks:
 - **Instruction lists**: Bullet points, numbered lists, inline directives
 - **Guardrails**: Typically the final section with constraint bullets
 
-Count total lines (including blank lines). During redundancy detection (Step 2), note instruction clusters rather than a discrete unique-instruction count.
+Count total lines (including blank lines).
 
 ---
 
@@ -80,6 +80,8 @@ For each fragmented topic:
 5. **Record** the regrouping for the diff summary
 
 Do not change the overall section ordering (workflow phases stay in sequence). Only move content within or between sections.
+
+When a topic spans multiple workflow phases, prefer adding cross-references between phases rather than moving content out of its phase. Moving content across phases is only valid when the instruction has no phase-specific context.
 
 ---
 
@@ -143,7 +145,9 @@ After writing, present a structured summary in the conversation:
 ```
 ## Consolidation Summary: <skill-name>
 
-**Lines**: <before> → <after> (<reduction>%)
+**Lines**: <before> → <after> (<delta>%)
+
+If the file grew, state the increase with a brief justification (e.g., readability sub-headings outweigh dedup savings). Net growth is acceptable when structural improvements reduce cognitive load more than dedup reduces line count.
 
 ### Redundancies Merged (<count>)
 - "<instruction summary>" — was in <N> locations, canonical: <section name>
@@ -159,6 +163,9 @@ After writing, present a structured summary in the conversation:
 
 ### Wording Tightened
 - <N> instructions shortened for conciseness (no semantic changes)
+
+### Observations (if any)
+- Gaps noticed but not filled (per no-scope-expansion guardrail). Omit this section if there are none.
 ```
 
 Do NOT commit. Leave the file for user review via `git diff`.

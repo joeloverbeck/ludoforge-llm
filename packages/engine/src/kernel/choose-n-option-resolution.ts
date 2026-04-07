@@ -13,8 +13,9 @@
  */
 import { validateChooseNSelectedSequence } from './choose-n-selected-validation.js';
 import { isEffectRuntimeReason } from './effect-error.js';
-import { optionKey, isChoiceDecisionOwnerMismatchDuringProbe } from './legal-choices.js';
+import { optionKey } from './legal-choices.js';
 import type { PrioritizedTierEntry } from './prioritized-tier-legality.js';
+import type { ProbeResult } from './probe-result.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import type { DecisionSequenceSatisfiability } from './decision-sequence-satisfiability.js';
 import type {
@@ -136,6 +137,52 @@ export type SingletonProbeOutcome =
 export interface SingletonProbeBudget {
   remaining: number;
 }
+
+const OWNER_MISMATCH_PROBE_RESULT: ProbeResult<never> = {
+  outcome: 'inconclusive',
+  reason: 'ownerMismatch',
+};
+
+const classifyOwnerMismatchProbeError = (error: unknown): ProbeResult<never> | null =>
+  isEffectRuntimeReason(error, EFFECT_RUNTIME_REASONS.CHOICE_PROBE_AUTHORITY_MISMATCH)
+    ? OWNER_MISMATCH_PROBE_RESULT
+    : null;
+
+const probeChoiceRequest = (
+  evaluateProbeMove: (move: Move) => ChoiceRequest,
+  move: Move,
+): ProbeResult<ChoiceRequest> => {
+  try {
+    return {
+      outcome: 'legal',
+      value: evaluateProbeMove(move),
+    };
+  } catch (error: unknown) {
+    const classified = classifyOwnerMismatchProbeError(error);
+    if (classified !== null) {
+      return classified;
+    }
+    throw error;
+  }
+};
+
+const probeDecisionSequenceSatisfiability = (
+  classifyProbeMoveSatisfiability: (move: Move) => DecisionSequenceSatisfiability,
+  move: Move,
+): ProbeResult<DecisionSequenceSatisfiability> => {
+  try {
+    return {
+      outcome: 'legal',
+      value: classifyProbeMoveSatisfiability(move),
+    };
+  } catch (error: unknown) {
+    const classified = classifyOwnerMismatchProbeError(error);
+    if (classified !== null) {
+      return classified;
+    }
+    throw error;
+  }
+};
 
 // ── Singleton probe classification ─────────────────────────────────────
 
@@ -276,9 +323,8 @@ export const runSingletonProbePass = (
 
     let probed: ChoiceRequest;
     try {
-      probed = evaluateProbeMove(probeMove);
-    } catch (error: unknown) {
-      if (isChoiceDecisionOwnerMismatchDuringProbe(error)) {
+      const probedResult = probeChoiceRequest(evaluateProbeMove, probeMove);
+      if (probedResult.outcome === 'inconclusive') {
         resultByKey.set(key, {
           legality: 'unknown',
           illegalReason: null,
@@ -286,6 +332,8 @@ export const runSingletonProbePass = (
         });
         continue;
       }
+      probed = probedResult.value!;
+    } catch (error: unknown) {
       // Cardinality mismatch: probe selection is below min or above max.
       // This means the option is not confirmable at this singleton size → unresolved.
       if (isEffectRuntimeReason(error, EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED)) {
@@ -302,13 +350,14 @@ export const runSingletonProbePass = (
     // Classify future satisfiability only when the probe returns pending.
     let classification: DecisionSequenceSatisfiability | null = null;
     if (probed.kind === 'pending') {
-      try {
-        classification = classifyProbeMoveSatisfiability(probeMove);
-      } catch (error: unknown) {
-        if (!isChoiceDecisionOwnerMismatchDuringProbe(error)) {
-          throw error;
-        }
+      const classificationResult = probeDecisionSequenceSatisfiability(
+        classifyProbeMoveSatisfiability,
+        probeMove,
+      );
+      if (classificationResult.outcome === 'inconclusive') {
         classification = 'unknown';
+      } else {
+        classification = classificationResult.value!;
       }
     }
 
@@ -433,13 +482,14 @@ const probeAndClassifySelection = (
 
   let probed: ChoiceRequest;
   try {
-    probed = evaluateProbeMove(probeMove);
-  } catch (error: unknown) {
-    if (isChoiceDecisionOwnerMismatchDuringProbe(error)) {
+    const probedResult = probeChoiceRequest(evaluateProbeMove, probeMove);
+    if (probedResult.outcome === 'inconclusive') {
       const outcome: SingletonProbeOutcome = { kind: 'ambiguous' };
       probeCache.set(cacheKey, outcome);
       return { outcome, cached: false };
     }
+    probed = probedResult.value!;
+  } catch (error: unknown) {
     if (isEffectRuntimeReason(error, EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED)) {
       const outcome: SingletonProbeOutcome = { kind: 'unresolved' };
       probeCache.set(cacheKey, outcome);
@@ -450,13 +500,14 @@ const probeAndClassifySelection = (
 
   let classification: DecisionSequenceSatisfiability | null = null;
   if (probed.kind === 'pending') {
-    try {
-      classification = classifyProbeMoveSatisfiability(probeMove);
-    } catch (error: unknown) {
-      if (!isChoiceDecisionOwnerMismatchDuringProbe(error)) {
-        throw error;
-      }
+    const classificationResult = probeDecisionSequenceSatisfiability(
+      classifyProbeMoveSatisfiability,
+      probeMove,
+    );
+    if (classificationResult.outcome === 'inconclusive') {
       classification = 'unknown';
+    } else {
+      classification = classificationResult.value!;
     }
   }
 

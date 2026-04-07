@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — kernel export cleanup + new guard test
-**Deps**: `archive/tickets/63PRORESABS-002.md`, `tickets/63PRORESABS-003.md`
+**Deps**: `archive/tickets/63PRORESABS-002.md`, `archive/tickets/63PRORESABS-003.md`
 
 ## Problem
 

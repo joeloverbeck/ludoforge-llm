@@ -50,7 +50,7 @@ import { isCardEventActionId } from './action-capabilities.js';
 import { evalCondition } from './eval-condition.js';
 import { findPhaseDef } from './phase-lookup.js';
 import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-overlay.js';
-import { resolveProbeResult, type ProbeResult } from './probe-result.js';
+import { probeWith, resolveProbeResult, type ProbeResult } from './probe-result.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import type {
   ActionDef,
@@ -265,23 +265,17 @@ const executeDiscoveryEffectsStrict = (
   options?: LegalChoicesInternalOptions,
 ): ProbeResult<DiscoveryEffectExecutionResult> => {
   const baseContext = buildDiscoveryEffectContextBase(evalCtx, move, options);
-  try {
-    const result = applyEffects(effects, createDiscoveryStrictEffectContext(baseContext));
-    return {
-      outcome: 'legal',
-      value: {
+  return probeWith(
+    () => {
+      const result = applyEffects(effects, createDiscoveryStrictEffectContext(baseContext));
+      return {
         request: result.pendingChoice ?? COMPLETE,
         state: result.state,
         bindings: result.bindings ?? evalCtx.bindings,
-      },
-    };
-  } catch (error: unknown) {
-    const classified = classifyDiscoveryProbeError(error);
-    if (classified !== null) {
-      return classified;
-    }
-    throw error;
-  }
+      };
+    },
+    classifyDiscoveryProbeError,
+  );
 };
 
 const executeDiscoveryEffectsProbe = (
@@ -291,23 +285,17 @@ const executeDiscoveryEffectsProbe = (
   options?: LegalChoicesInternalOptions,
 ): ProbeResult<DiscoveryEffectExecutionResult> => {
   const baseContext = buildDiscoveryEffectContextBase(evalCtx, move, options);
-  try {
-    const result = applyEffects(effects, createDiscoveryProbeEffectContext(baseContext));
-    return {
-      outcome: 'legal',
-      value: {
+  return probeWith(
+    () => {
+      const result = applyEffects(effects, createDiscoveryProbeEffectContext(baseContext));
+      return {
         request: result.pendingChoice ?? COMPLETE,
         state: result.state,
         bindings: result.bindings ?? evalCtx.bindings,
-      },
-    };
-  } catch (error: unknown) {
-    const classified = classifyDiscoveryProbeError(error);
-    if (classified !== null) {
-      return classified;
-    }
-    throw error;
-  }
+      };
+    },
+    classifyDiscoveryProbeError,
+  );
 };
 
 export const optionKey = (value: unknown): string => JSON.stringify([typeof value, value]);
@@ -321,38 +309,14 @@ const classifyChoiceProbeError = (error: unknown): ProbeResult<never> | null =>
 const probeChoiceRequest = (
   evaluateProbeMove: (move: Move) => ChoiceRequest,
   move: Move,
-): ProbeResult<ChoiceRequest> => {
-  try {
-    return {
-      outcome: 'legal',
-      value: evaluateProbeMove(move),
-    };
-  } catch (error: unknown) {
-    const classified = classifyChoiceProbeError(error);
-    if (classified !== null) {
-      return classified;
-    }
-    throw error;
-  }
-};
+): ProbeResult<ChoiceRequest> =>
+  probeWith(() => evaluateProbeMove(move), classifyChoiceProbeError);
 
 const probeDecisionSequenceSatisfiability = (
   classifyProbeMoveSatisfiability: (move: Move) => DecisionSequenceSatisfiability,
   move: Move,
-): ProbeResult<DecisionSequenceSatisfiability> => {
-  try {
-    return {
-      outcome: 'legal',
-      value: classifyProbeMoveSatisfiability(move),
-    };
-  } catch (error: unknown) {
-    const classified = classifyChoiceProbeError(error);
-    if (classified !== null) {
-      return classified;
-    }
-    throw error;
-  }
-};
+): ProbeResult<DecisionSequenceSatisfiability> =>
+  probeWith(() => classifyProbeMoveSatisfiability(move), classifyChoiceProbeError);
 
 const countCombinationsCapped = (n: number, k: number, cap: number): number => {
   if (k < 0 || k > n) {

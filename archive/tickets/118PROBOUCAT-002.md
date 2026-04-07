@@ -1,6 +1,6 @@
 # 118PROBOUCAT-002: Migrate `legal-choices.ts` 4 catch blocks to `probeWith`
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel legal-choices module
@@ -85,3 +85,12 @@ Preserve the exact inner function call from each site — only the try-catch wra
 
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo test --force`
+
+## Outcome
+
+- **Completion date**: 2026-04-07
+- **What changed**:
+  - `packages/engine/src/kernel/legal-choices.ts` — replaced 4 try-catch-classify blocks with `probeWith` one-liners; added `probeWith` to import
+  - `packages/engine/test/unit/kernel/probe-result-export-surface-guard.test.ts` — added `probeWith` to allowed export surface list (guard failed because 001 added the export)
+- **Deviations**: Export surface guard update not listed in ticket but required by the architecture guard test suite.
+- **Verification**: Build clean, 5618/5618 engine tests pass (0 fail)

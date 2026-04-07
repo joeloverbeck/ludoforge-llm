@@ -15,6 +15,7 @@ const expectedProbeResultExports = [
   'ProbeResult',
   'ProbeResultPolicy',
   'resolveProbeResult',
+  'probeWith',
 ] as const;
 
 describe('probe-result export surface architecture guard', () => {

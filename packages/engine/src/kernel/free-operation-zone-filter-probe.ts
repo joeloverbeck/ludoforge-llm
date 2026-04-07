@@ -1,5 +1,7 @@
+import type { EvalError } from './eval-error.js';
 import { isEvalErrorCode } from './eval-error.js';
 import type { ZoneId } from './branded.js';
+import type { EvalConditionResult } from './eval-result.js';
 import type { ConditionAST } from './types.js';
 import {
   zoneFilterResolved,
@@ -13,6 +15,7 @@ export interface FreeOperationZoneFilterProbeInput {
   readonly baseBindings: Readonly<Record<string, unknown>>;
   readonly rebindableAliases: ReadonlySet<string>;
   readonly evaluateWithBindings: (bindings: Readonly<Record<string, unknown>>) => boolean;
+  readonly evaluateWithBindingsResult: (bindings: Readonly<Record<string, unknown>>) => EvalConditionResult;
 }
 
 export const collectFreeOperationZoneFilterProbeRebindableAliases = (
@@ -40,34 +43,35 @@ export const evaluateFreeOperationZoneFilterProbe = (
   };
   const reboundAliases = new Set<string>();
   while (true) {
-    try {
-      return zoneFilterResolved(input.evaluateWithBindings(bindings));
-    } catch (error) {
-      if (!isEvalErrorCode(error, 'MISSING_BINDING')) {
-        // Non-MISSING_BINDING errors cannot be retried — return as failed
-        // so the caller can apply surface-aware deferral policy.
-        return zoneFilterFailed(error);
-      }
-      const missingBinding = error.context?.binding;
-      if (
-        typeof missingBinding !== 'string' ||
-        missingBinding.length === 0 ||
-        missingBinding === '$zone' ||
-        !rebindableAliases.has(missingBinding) ||
-        Object.prototype.hasOwnProperty.call(bindings, missingBinding)
-      ) {
-        // Non-rebindable MISSING_BINDING — return as failed so the caller
-        // can apply surface-aware deferral policy.
-        return zoneFilterFailed(error);
-      }
-      if (reboundAliases.has(missingBinding)) {
-        return zoneFilterFailed(error);
-      }
-      reboundAliases.add(missingBinding);
-      bindings = {
-        ...bindings,
-        [missingBinding]: input.zoneId,
-      };
+    const result = input.evaluateWithBindingsResult(bindings);
+    if (result.outcome === 'success') {
+      return zoneFilterResolved(result.value);
     }
+    const error: EvalError = result.error;
+    if (!isEvalErrorCode(error, 'MISSING_BINDING')) {
+      // Non-MISSING_BINDING errors cannot be retried — return as failed
+      // so the caller can apply surface-aware deferral policy.
+      return zoneFilterFailed(error);
+    }
+    const missingBinding = error.context?.binding;
+    if (
+      typeof missingBinding !== 'string' ||
+      missingBinding.length === 0 ||
+      missingBinding === '$zone' ||
+      !rebindableAliases.has(missingBinding) ||
+      Object.prototype.hasOwnProperty.call(bindings, missingBinding)
+    ) {
+      // Non-rebindable MISSING_BINDING — return as failed so the caller
+      // can apply surface-aware deferral policy.
+      return zoneFilterFailed(error);
+    }
+    if (reboundAliases.has(missingBinding)) {
+      return zoneFilterFailed(error);
+    }
+    reboundAliases.add(missingBinding);
+    bindings = {
+      ...bindings,
+      [missingBinding]: input.zoneId,
+    };
   }
 };

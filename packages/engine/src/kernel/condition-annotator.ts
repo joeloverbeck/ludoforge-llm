@@ -64,14 +64,11 @@ const tryEvalCondition = (
   cond: ConditionAST,
   evalCtx: ReadContext,
 ): { readonly result: 'pass' | 'fail'; readonly text: string } => {
-  try {
-    const passed = evalCondition(cond, evalCtx);
-    return passed
-      ? { result: 'pass', text: '\u2713' }
-      : { result: 'fail', text: '\u2717' };
-  } catch {
-    return { result: 'fail', text: 'depends on choice' };
-  }
+  const condResult = evalCondition(cond, evalCtx);
+  if (condResult.outcome === 'error') return { result: 'fail', text: 'depends on choice' };
+  return condResult.value
+    ? { result: 'pass', text: '\u2713' }
+    : { result: 'fail', text: '\u2717' };
 };
 
 interface ComparisonCondition {
@@ -308,11 +305,9 @@ const pipelineApplicabilityPasses = (
   evalCtx: ReadContext,
 ): boolean => {
   if (pipeline.applicability === undefined) return true;
-  try {
-    return unwrapEvalCondition(evalCondition(pipeline.applicability, evalCtx));
-  } catch {
-    return false;
-  }
+  const result = evalCondition(pipeline.applicability, evalCtx);
+  if (result.outcome === 'error') return false;
+  return result.value;
 };
 
 const collectRuleCardEffects = (
@@ -457,12 +452,10 @@ const buildRuleState = (
   for (let i = 0; i < ruleCard.modifiers.length; i++) {
     const mod = ruleCard.modifiers[i]!;
     if (mod.conditionAST !== undefined) {
-      try {
-        if (evalCondition(mod.conditionAST, evalCtx)) {
-          activeModifierIndices.push(i);
-        }
-      } catch {
-        // Condition depends on runtime bindings — skip
+      const modResult = evalCondition(mod.conditionAST, evalCtx);
+      // Skip modifiers whose condition depends on runtime bindings (error result)
+      if (modResult.outcome === 'success' && modResult.value) {
+        activeModifierIndices.push(i);
       }
     }
   }

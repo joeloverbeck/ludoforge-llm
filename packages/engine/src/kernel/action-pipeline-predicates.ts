@@ -1,8 +1,7 @@
 import { evalCondition } from './eval-condition.js';
-import { unwrapEvalCondition } from './eval-result.js';
 import type { ReadContext } from './eval-context.js';
 import { MISSING_BINDING_POLICY_CONTEXTS, classifyMissingBindingProbeError } from './missing-binding-policy.js';
-import { probeWith, resolveProbeResult, type ProbeResult } from './probe-result.js';
+import { resolveProbeResult, type ProbeResult } from './probe-result.js';
 import { pipelinePredicateEvaluationError } from './runtime-error.js';
 import type { ActionDef, ConditionAST } from './types.js';
 
@@ -15,18 +14,18 @@ const probeDiscoveryPredicateEvaluation = (
   predicate: PipelinePredicateName,
   condition: ConditionAST,
   ctx: ReadContext,
-): ProbeResult<boolean> =>
-  probeWith(
-    () => unwrapEvalCondition(evalCondition(condition, ctx)),
-    (error) => {
-      const classified = classifyMissingBindingProbeError(
-        error,
-        MISSING_BINDING_POLICY_CONTEXTS.PIPELINE_DISCOVERY_PREDICATE,
-      );
-      if (classified !== null) return classified;
-      throw pipelinePredicateEvaluationError(action, profileId, predicate, error);
-    },
-  );
+): ProbeResult<boolean> => {
+  const result = evalCondition(condition, ctx);
+  if (result.outcome === 'error') {
+    const classified = classifyMissingBindingProbeError(
+      result.error,
+      MISSING_BINDING_POLICY_CONTEXTS.PIPELINE_DISCOVERY_PREDICATE,
+    );
+    if (classified !== null) return classified;
+    throw pipelinePredicateEvaluationError(action, profileId, predicate, result.error);
+  }
+  return { outcome: 'legal', value: result.value };
+};
 
 export const evalActionPipelinePredicate = (
   action: ActionDef,
@@ -35,11 +34,11 @@ export const evalActionPipelinePredicate = (
   condition: ConditionAST,
   ctx: ReadContext,
 ): boolean => {
-  try {
-    return unwrapEvalCondition(evalCondition(condition, ctx));
-  } catch (error) {
-    throw pipelinePredicateEvaluationError(action, profileId, predicate, error);
+  const result = evalCondition(condition, ctx);
+  if (result.outcome === 'error') {
+    throw pipelinePredicateEvaluationError(action, profileId, predicate, result.error);
   }
+  return result.value;
 };
 
 export const evalActionPipelinePredicateForDiscovery = (

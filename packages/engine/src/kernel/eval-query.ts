@@ -427,6 +427,10 @@ const evaluateFreeOperationZoneFilterForZone = (
       ...ctx,
       bindings,
     })),
+    evaluateWithBindingsResult: (bindings) => evalCondition(freeOperationZoneFilter, {
+      ...ctx,
+      bindings,
+    }),
   });
 };
 

@@ -1,6 +1,6 @@
 # 119EVARESRET-004: Migrate probe and graceful-degradation catch sites to result pattern-matching
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — 7 catch/probeWith sites replaced with result pattern-matching across 4 files
@@ -121,3 +121,20 @@ Lines 310 and 459 follow similar patterns with their respective fallback values.
 1. `pnpm -F @ludoforge/engine build && pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck && pnpm turbo test`
 3. Verify: `grep -n 'try {' packages/engine/src/kernel/action-pipeline-predicates.ts packages/engine/src/kernel/free-operation-zone-filter-probe.ts packages/engine/src/kernel/free-operation-grant-authorization.ts` — should find no eval-related catches
+
+## Outcome
+
+**Completed**: 2026-04-07
+
+**What changed**:
+- `action-pipeline-predicates.ts`: replaced `probeWith`/try-catch with direct `evalCondition` result pattern-matching. Removed `probeWith` and `unwrapEvalCondition` imports.
+- `free-operation-zone-filter-probe.ts`: added `evaluateWithBindingsResult` to probe interface, replaced try-catch loop with result pattern-matching. Zero try-catch blocks remain.
+- `free-operation-grant-authorization.ts`: added `evaluateWithBindingsResult` function, replaced try-catch with result-returning call. Passed result callback to probe.
+- `eval-query.ts`: added `evaluateWithBindingsResult` callback to probe input.
+- `condition-annotator.ts`: replaced 3 try-catch graceful-degradation sites with result pattern-matching (tryEvalCondition, applicability, modifier evaluation). Fixed 2 bare `evalCondition()` calls in boolean contexts that were silently truthy.
+
+**Deviations**:
+- `free-operation-zone-filter-probe.ts` interface change (`evaluateWithBindingsResult` added) rippled to `eval-query.ts` caller — not in ticket's Files to Touch but required for F14 atomicity
+- condition-annotator had 2 additional bare `evalCondition` calls (from ticket 002 intermediate migration) that were truthy objects — fixed as part of this ticket
+
+**Verification**: Build pass, typecheck pass (3/3), 119/119 targeted tests pass, zero eval-related try-catch in probe files, `probeWith` import removed from action-pipeline-predicates.

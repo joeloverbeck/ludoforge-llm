@@ -1,6 +1,6 @@
 # Spec 119 — evalCondition/evalQuery Result-Returning Migration
 
-**Status**: DRAFT
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — kernel eval subsystem signature change + all consumers

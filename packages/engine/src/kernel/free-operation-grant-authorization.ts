@@ -189,6 +189,14 @@ export const evaluateZoneFilterForMove = (
     evalContext.bindings = bindings;
     return unwrapEvalCondition(evalCondition(zoneFilter, evalContext));
   };
+  const evaluateWithBindingsResult = (bindings: Readonly<Record<string, unknown>>): ZoneFilterEvaluationResult => {
+    evalContext.bindings = bindings;
+    const result = evalCondition(zoneFilter, evalContext);
+    if (result.outcome === 'error') {
+      return classifyError(result.error);
+    }
+    return zoneFilterResolved(result.value);
+  };
   const classifyError = (cause: unknown, candidateZone?: string): ZoneFilterEvaluationResult => {
     if (shouldDeferFreeOperationZoneFilterFailure(surface, cause)) {
       return zoneFilterDeferred(isEvalErrorCode(cause, 'MISSING_VAR') ? 'missingVar' : 'missingBinding');
@@ -207,11 +215,7 @@ export const evaluateZoneFilterForMove = (
     if (grant.moveZoneBindings !== undefined && grant.moveZoneBindings.length > 0) {
       return zoneFilterResolved(surface === 'legalChoices');
     }
-    try {
-      return zoneFilterResolved(evaluateWithBindings(baseBindings));
-    } catch (cause) {
-      return classifyError(cause);
-    }
+    return evaluateWithBindingsResult(baseBindings);
   }
   for (const zone of zones) {
     const probeResult = evaluateFreeOperationZoneFilterProbe({
@@ -219,6 +223,10 @@ export const evaluateZoneFilterForMove = (
       baseBindings,
       rebindableAliases,
       evaluateWithBindings,
+      evaluateWithBindingsResult: (bindings) => {
+        evalContext.bindings = bindings;
+        return evalCondition(zoneFilter, evalContext);
+      },
     });
     if (probeResult.status === 'failed') {
       return classifyError(probeResult.error, zone);

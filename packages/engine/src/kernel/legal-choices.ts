@@ -50,6 +50,7 @@ import { isCardEventActionId } from './action-capabilities.js';
 import { evalCondition } from './eval-condition.js';
 import { findPhaseDef } from './phase-lookup.js';
 import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-overlay.js';
+import { probeWith, resolveProbeResult, type ProbeResult } from './probe-result.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import type {
   ActionDef,
@@ -220,6 +221,16 @@ interface DiscoveryEffectExecutionResult {
   readonly bindings: Readonly<Record<string, unknown>>;
 }
 
+const STACKING_VIOLATION_PROBE_RESULT: ProbeResult<never> = {
+  outcome: 'illegal',
+  reason: 'stackingViolation',
+};
+
+const OWNER_MISMATCH_PROBE_RESULT: ProbeResult<never> = {
+  outcome: 'inconclusive',
+  reason: 'ownerMismatch',
+};
+
 const buildDiscoveryEffectContextBase = (
   evalCtx: ReadContext,
   move: Move,
@@ -252,25 +263,19 @@ const executeDiscoveryEffectsStrict = (
   evalCtx: ReadContext,
   move: Move,
   options?: LegalChoicesInternalOptions,
-): DiscoveryEffectExecutionResult => {
+): ProbeResult<DiscoveryEffectExecutionResult> => {
   const baseContext = buildDiscoveryEffectContextBase(evalCtx, move, options);
-  try {
-    const result = applyEffects(effects, createDiscoveryStrictEffectContext(baseContext));
-    return {
-      request: result.pendingChoice ?? COMPLETE,
-      state: result.state,
-      bindings: result.bindings ?? evalCtx.bindings,
-    };
-  } catch (error: unknown) {
-    if (isEffectErrorCode(error, 'STACKING_VIOLATION')) {
+  return probeWith(
+    () => {
+      const result = applyEffects(effects, createDiscoveryStrictEffectContext(baseContext));
       return {
-        request: { kind: 'illegal', complete: false, reason: 'pipelineLegalityFailed' },
-        state: evalCtx.state,
-        bindings: evalCtx.bindings,
+        request: result.pendingChoice ?? COMPLETE,
+        state: result.state,
+        bindings: result.bindings ?? evalCtx.bindings,
       };
-    }
-    throw error;
-  }
+    },
+    classifyDiscoveryProbeError,
+  );
 };
 
 const executeDiscoveryEffectsProbe = (
@@ -278,32 +283,40 @@ const executeDiscoveryEffectsProbe = (
   evalCtx: ReadContext,
   move: Move,
   options?: LegalChoicesInternalOptions,
-): DiscoveryEffectExecutionResult => {
+): ProbeResult<DiscoveryEffectExecutionResult> => {
   const baseContext = buildDiscoveryEffectContextBase(evalCtx, move, options);
-  try {
-    const result = applyEffects(effects, createDiscoveryProbeEffectContext(baseContext));
-    return {
-      request: result.pendingChoice ?? COMPLETE,
-      state: result.state,
-      bindings: result.bindings ?? evalCtx.bindings,
-    };
-  } catch (error: unknown) {
-    if (isEffectErrorCode(error, 'STACKING_VIOLATION')) {
+  return probeWith(
+    () => {
+      const result = applyEffects(effects, createDiscoveryProbeEffectContext(baseContext));
       return {
-        request: { kind: 'illegal', complete: false, reason: 'pipelineLegalityFailed' },
-        state: evalCtx.state,
-        bindings: evalCtx.bindings,
+        request: result.pendingChoice ?? COMPLETE,
+        state: result.state,
+        bindings: result.bindings ?? evalCtx.bindings,
       };
-    }
-    throw error;
-  }
+    },
+    classifyDiscoveryProbeError,
+  );
 };
 
 export const optionKey = (value: unknown): string => JSON.stringify([typeof value, value]);
 
-export const isChoiceDecisionOwnerMismatchDuringProbe = (error: unknown): boolean => {
-  return isEffectRuntimeReason(error, EFFECT_RUNTIME_REASONS.CHOICE_PROBE_AUTHORITY_MISMATCH);
-};
+const classifyDiscoveryProbeError = (error: unknown): ProbeResult<never> | null =>
+  isEffectErrorCode(error, 'STACKING_VIOLATION') ? STACKING_VIOLATION_PROBE_RESULT : null;
+
+const classifyChoiceProbeError = (error: unknown): ProbeResult<never> | null =>
+  isEffectRuntimeReason(error, EFFECT_RUNTIME_REASONS.CHOICE_PROBE_AUTHORITY_MISMATCH) ? OWNER_MISMATCH_PROBE_RESULT : null;
+
+const probeChoiceRequest = (
+  evaluateProbeMove: (move: Move) => ChoiceRequest,
+  move: Move,
+): ProbeResult<ChoiceRequest> =>
+  probeWith(() => evaluateProbeMove(move), classifyChoiceProbeError);
+
+const probeDecisionSequenceSatisfiability = (
+  classifyProbeMoveSatisfiability: (move: Move) => DecisionSequenceSatisfiability,
+  move: Move,
+): ProbeResult<DecisionSequenceSatisfiability> =>
+  probeWith(() => classifyProbeMoveSatisfiability(move), classifyChoiceProbeError);
 
 const countCombinationsCapped = (n: number, k: number, cap: number): number => {
   if (k < 0 || k > n) {
@@ -412,21 +425,20 @@ const resolveChooseNOptionsExhaustive = (
         return;
       }
       const selectedChoice = [...request.selected, ...additionalSelected] as Move['params'][string];
-      let probed: ChoiceRequest;
-      try {
-        probed = evaluateProbeMove(
-          {
-            ...partialMove,
-            params: {
-              ...partialMove.params,
-              [request.decisionKey]: selectedChoice,
-            },
-          },
-        );
-      } catch (error: unknown) {
-        if (!isChoiceDecisionOwnerMismatchDuringProbe(error)) {
-          throw error;
-        }
+      const probeMove = {
+        ...partialMove,
+        params: {
+          ...partialMove.params,
+          [request.decisionKey]: selectedChoice,
+        },
+      };
+      const probedResult = probeChoiceRequest(evaluateProbeMove, probeMove);
+      const probed = resolveProbeResult(probedResult, {
+        onLegal: (value) => value,
+        onIllegal: () => null,
+        onInconclusive: () => null,
+      });
+      if (probed === null) {
         for (const option of additionalSelected) {
           const key = optionKey(option);
           const status = optionLegalityByKey.get(key);
@@ -440,22 +452,14 @@ const resolveChooseNOptionsExhaustive = (
 
       let classification: DecisionSequenceSatisfiability | null = null;
       if (probed.kind === 'pending') {
-        try {
-          classification = classifyProbeMoveSatisfiability(
-            {
-              ...partialMove,
-              params: {
-                ...partialMove.params,
-                [request.decisionKey]: selectedChoice,
-              },
-            },
-          );
-        } catch (error: unknown) {
-          if (!isChoiceDecisionOwnerMismatchDuringProbe(error)) {
-            throw error;
-          }
-          classification = 'unknown';
-        }
+        classification = resolveProbeResult(
+          probeDecisionSequenceSatisfiability(classifyProbeMoveSatisfiability, probeMove),
+          {
+            onLegal: (value) => value,
+            onIllegal: () => 'unknown' as DecisionSequenceSatisfiability,
+            onInconclusive: () => 'unknown' as DecisionSequenceSatisfiability,
+          },
+        );
       }
 
       for (const option of additionalSelected) {
@@ -614,21 +618,20 @@ const mapOptionsForPendingChoice = (
   }
 
   return request.options.map((option) => {
-    let probed: ChoiceRequest;
-    try {
-      probed = evaluateProbeMove(
-        {
-          ...partialMove,
-          params: {
-            ...partialMove.params,
-            [request.decisionKey]: option.value,
-          },
-        },
-      );
-    } catch (error: unknown) {
-      if (!isChoiceDecisionOwnerMismatchDuringProbe(error)) {
-        throw error;
-      }
+    const probeMove = {
+      ...partialMove,
+      params: {
+        ...partialMove.params,
+        [request.decisionKey]: option.value,
+      },
+    };
+    const probedResult = probeChoiceRequest(evaluateProbeMove, probeMove);
+    const probed = resolveProbeResult(probedResult, {
+      onLegal: (value) => value,
+      onIllegal: () => null,
+      onInconclusive: () => null,
+    });
+    if (probed === null) {
       return {
         value: option.value,
         legality: 'unknown',
@@ -639,22 +642,14 @@ const mapOptionsForPendingChoice = (
 
     let classification: DecisionSequenceSatisfiability | null = null;
     if (probed.kind === 'pending') {
-      try {
-        classification = classifyProbeMoveSatisfiability(
-          {
-            ...partialMove,
-            params: {
-                ...partialMove.params,
-                [request.decisionKey]: option.value,
-              },
-            },
-          );
-      } catch (error: unknown) {
-        if (!isChoiceDecisionOwnerMismatchDuringProbe(error)) {
-          throw error;
-        }
-        classification = 'unknown';
-      }
+      classification = resolveProbeResult(
+        probeDecisionSequenceSatisfiability(classifyProbeMoveSatisfiability, probeMove),
+        {
+          onLegal: (value) => value,
+          onIllegal: () => 'unknown' as DecisionSequenceSatisfiability,
+          onInconclusive: () => 'unknown' as DecisionSequenceSatisfiability,
+        },
+      );
     }
     const legality = classifyProbeOutcomeLegality(probed, classification);
     return {
@@ -734,7 +729,7 @@ type ExecuteDiscoveryEffects = (
   evalCtx: ReadContext,
   move: Move,
   options?: LegalChoicesInternalOptions,
-) => DiscoveryEffectExecutionResult;
+) => ProbeResult<DiscoveryEffectExecutionResult>;
 
 type ProbeLegalityEvaluator = (move: Move, options?: LegalChoicesRuntimeOptions) => ChoiceRequest;
 
@@ -768,6 +763,12 @@ const mapPendingChoiceOptions = (
     request,
     diagnostics,
   );
+
+const toPipelineLegalityFailedRequest = (): ChoiceIllegalRequest => ({
+  kind: 'illegal',
+  complete: false,
+  reason: 'pipelineLegalityFailed',
+});
 
 const legalChoicesWithPreparedContextInternal = (
   context: LegalChoicesPreparedContext,
@@ -969,18 +970,33 @@ const legalChoicesWithPreparedContextInternal = (
         continue;
       }
       const stageResult = executeDiscoveryEffects(stage.effects, stageEvalCtx, partialMove, options);
-      stageState = stageResult.state;
-      stageBindings = stageResult.bindings;
-      if (!shouldEvaluateOptionLegality || stageResult.request.kind !== 'pending') {
-        if (stageResult.request.kind !== 'complete') {
+      const resolvedStageResult = resolveProbeResult(stageResult, {
+        onLegal: (value) => value,
+        onIllegal: () => null,
+        onInconclusive: () => null,
+      });
+      if (resolvedStageResult === null) {
+        recordPipeline();
+        return finalizeRequest(toPipelineLegalityFailedRequest());
+      }
+      stageState = resolvedStageResult.state;
+      stageBindings = resolvedStageResult.bindings;
+      if (!shouldEvaluateOptionLegality || resolvedStageResult.request.kind !== 'pending') {
+        if (resolvedStageResult.request.kind !== 'complete') {
           recordPipeline();
-          return finalizeRequest(stageResult.request);
+          return finalizeRequest(resolvedStageResult.request);
         }
       } else {
         recordPipeline();
         return finalizeRequest({
-          ...stageResult.request,
-          options: mapPendingChoiceOptions(partialMove, stageResult.request, options, evaluateProbeLegality, options?._diagnosticsAccumulator),
+          ...resolvedStageResult.request,
+          options: mapPendingChoiceOptions(
+            partialMove,
+            resolvedStageResult.request,
+            options,
+            evaluateProbeLegality,
+            options?._diagnosticsAccumulator,
+          ),
         });
       }
     }
@@ -989,7 +1005,17 @@ const legalChoicesWithPreparedContextInternal = (
       state: stageState,
       bindings: stageBindings,
     };
-    const request = executeDiscoveryEffects(eventEffects, eventEvalCtx, partialMove).request;
+    const eventResult = executeDiscoveryEffects(eventEffects, eventEvalCtx, partialMove);
+    const resolvedEventResult = resolveProbeResult(eventResult, {
+      onLegal: (value) => value,
+      onIllegal: () => null,
+      onInconclusive: () => null,
+    });
+    if (resolvedEventResult === null) {
+      recordPipeline();
+      return finalizeRequest(toPipelineLegalityFailedRequest());
+    }
+    const request = resolvedEventResult.request;
     if (!shouldEvaluateOptionLegality || request.kind !== 'pending') {
       recordPipeline();
       return finalizeRequest(request);
@@ -1002,12 +1028,22 @@ const legalChoicesWithPreparedContextInternal = (
     });
   }
 
-  const request = executeDiscoveryEffects(
+  const rootResult = executeDiscoveryEffects(
     [...action.effects, ...eventEffects],
     evalCtx,
     partialMove,
     options,
-  ).request;
+  );
+  const resolvedRootResult = resolveProbeResult(rootResult, {
+    onLegal: (value) => value,
+    onIllegal: () => null,
+    onInconclusive: () => null,
+  });
+  if (resolvedRootResult === null) {
+    recordPipeline();
+    return finalizeRequest(toPipelineLegalityFailedRequest());
+  }
+  const request = resolvedRootResult.request;
   if (!shouldEvaluateOptionLegality || request.kind !== 'pending') {
     recordPipeline();
     return finalizeRequest(request);

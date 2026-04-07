@@ -68,7 +68,7 @@ const makeChooseNRequest = (opts: {
 
 const alwaysSatisfiable = (_move: Move): DecisionSequenceSatisfiability => 'satisfiable';
 
-/** Creates an authority-mismatch error that `isChoiceDecisionOwnerMismatchDuringProbe` recognizes. */
+/** Creates an authority-mismatch error recognized by the probe classification pipeline. */
 const makeAuthorityMismatchError = (): Error =>
   effectRuntimeError(
     EFFECT_RUNTIME_REASONS.CHOICE_PROBE_AUTHORITY_MISMATCH,

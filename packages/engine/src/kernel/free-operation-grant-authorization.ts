@@ -1,4 +1,5 @@
 import { asZoneId } from './branded.js';
+import { isEvalErrorCode } from './eval-error.js';
 import { compareTurnFlowFreeOperationGrantPriority, isTurnFlowActionClass } from '../contracts/index.js';
 import { createCollector } from './execution-collector.js';
 import { evalCondition } from './eval-condition.js';
@@ -20,6 +21,12 @@ import { shouldDeferFreeOperationZoneFilterFailure } from './missing-binding-pol
 import { kernelRuntimeError } from './runtime-error.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { freeOperationZoneFilterEvaluationError } from './turn-flow-error.js';
+import {
+  zoneFilterResolved,
+  zoneFilterDeferred,
+  zoneFilterFailed,
+  type ZoneFilterEvaluationResult,
+} from './zone-filter-evaluation-result.js';
 import type {
   ConditionAST,
   GameDef,
@@ -151,9 +158,7 @@ export const evaluateZoneFilterForMove = (
   >,
   zoneFilter: ConditionAST,
   surface: FreeOperationZoneFilterSurface,
-): boolean => {
-  const shouldDeferZoneFilterFailure = (cause: unknown): boolean =>
-    shouldDeferFreeOperationZoneFilterFailure(surface, cause);
+): ZoneFilterEvaluationResult => {
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
   const baseBindings = resolveGrantAwareMoveRuntimeBindings(def, state, move, grant);
   const capturedSequenceZonesByKey = resolveCapturedSequenceZonesByKey(state, grant);
@@ -183,52 +188,60 @@ export const evaluateZoneFilterForMove = (
     evalContext.bindings = bindings;
     return evalCondition(zoneFilter, evalContext);
   };
+  const classifyError = (cause: unknown, candidateZone?: string): ZoneFilterEvaluationResult => {
+    if (shouldDeferFreeOperationZoneFilterFailure(surface, cause)) {
+      return zoneFilterDeferred(isEvalErrorCode(cause, 'MISSING_VAR') ? 'missingVar' : 'missingBinding');
+    }
+    return zoneFilterFailed(freeOperationZoneFilterEvaluationError({
+      surface,
+      actionId: String(move.actionId),
+      moveParams: move.params,
+      zoneFilter,
+      candidateZones: zones,
+      ...(candidateZone !== undefined ? { candidateZone } : {}),
+      cause,
+    }));
+  };
   if (zones.length === 0) {
     if (grant.moveZoneBindings !== undefined && grant.moveZoneBindings.length > 0) {
-      return surface === 'legalChoices';
+      return zoneFilterResolved(surface === 'legalChoices');
     }
     try {
-      return evaluateWithBindings(baseBindings);
+      return zoneFilterResolved(evaluateWithBindings(baseBindings));
     } catch (cause) {
-      if (shouldDeferZoneFilterFailure(cause)) {
-        return true;
-      }
-      throw freeOperationZoneFilterEvaluationError({
-        surface,
-        actionId: String(move.actionId),
-        moveParams: move.params,
-        zoneFilter,
-        candidateZones: zones,
-        cause,
-      });
+      return classifyError(cause);
     }
   }
   for (const zone of zones) {
-    try {
-      if (evaluateFreeOperationZoneFilterProbe({
-        zoneId: asZoneId(zone),
-        baseBindings,
-        rebindableAliases,
-        evaluateWithBindings,
-      })) {
-        return true;
-      }
-    } catch (cause) {
-      if (shouldDeferZoneFilterFailure(cause)) {
-        return true;
-      }
-      throw freeOperationZoneFilterEvaluationError({
-        surface,
-        actionId: String(move.actionId),
-        moveParams: move.params,
-        zoneFilter,
-        candidateZones: zones,
-        candidateZone: zone,
-        cause,
-      });
+    const probeResult = evaluateFreeOperationZoneFilterProbe({
+      zoneId: asZoneId(zone),
+      baseBindings,
+      rebindableAliases,
+      evaluateWithBindings,
+    });
+    if (probeResult.status === 'failed') {
+      return classifyError(probeResult.error, zone);
+    }
+    if (probeResult.status === 'deferred') {
+      return probeResult;
+    }
+    if (probeResult.matched) {
+      return zoneFilterResolved(true);
     }
   }
-  return false;
+  return zoneFilterResolved(false);
+};
+
+/**
+ * Interpret a zone-filter result as a boolean for grant authorization.
+ * - `resolved` → use `matched`
+ * - `deferred` → treat as `true` (preserves pre-result-type behavior)
+ * - `failed` → re-throw so callers can handle non-deferrable errors
+ */
+const unwrapZoneFilterResult = (result: ZoneFilterEvaluationResult): boolean => {
+  if (result.status === 'resolved') return result.matched;
+  if (result.status === 'deferred') return true;
+  throw result.error;
 };
 
 export const doesGrantAuthorizeMove = (
@@ -243,7 +256,7 @@ export const doesGrantAuthorizeMove = (
   doesGrantSatisfySequenceContext(def, state, grant, move) &&
   (
     grant.zoneFilter === undefined
-    || evaluateZoneFilterForMove(def, state, move, grant, grant.zoneFilter, 'turnFlowEligibility')
+    || unwrapZoneFilterResult(evaluateZoneFilterForMove(def, state, move, grant, grant.zoneFilter, 'turnFlowEligibility'))
   );
 
 export const doesGrantPotentiallyAuthorizeMove = (
@@ -259,7 +272,7 @@ export const doesGrantPotentiallyAuthorizeMove = (
   (
     grant.zoneFilter === undefined
     || collectGrantMoveZoneCandidates(def, state, move, grant).length === 0
-    || evaluateZoneFilterForMove(def, state, move, grant, grant.zoneFilter, 'turnFlowEligibility')
+    || unwrapZoneFilterResult(evaluateZoneFilterForMove(def, state, move, grant, grant.zoneFilter, 'turnFlowEligibility'))
   );
 
 export const doesGrantRequireSequenceContextMatch = doesGrantSatisfySequenceContext;

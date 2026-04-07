@@ -40,6 +40,8 @@ Read ALL of these files before any analysis:
 
 Before decomposing, validate the spec's assumptions against the actual codebase:
 
+If the spec was reassessed in this same session (e.g., via `/reassess-spec`), the full codebase validation from that skill satisfies this step. Perform only the namespace collision check and dependency path resolution below. Skip re-validating file paths, types, and functions that were already confirmed.
+
 - **Validate** that file paths mentioned in the spec exist in the codebase (use Grep, Glob, or bash equivalents as available).
 - **Grep** for types, functions, and modules the spec references — confirm they are real and current
 - **Glob** for `tickets/<NAMESPACE>-*.md` — if any files with this namespace already exist, warn the user and ask whether to overwrite, continue numbering from the next available number, or abort
@@ -49,7 +51,7 @@ Before decomposing, validate the spec's assumptions against the actual codebase:
 
 ### Step 3: Decompose the Spec
 
-Analyze the spec and identify discrete work units:
+Analyze the spec and identify discrete work units. If the spec includes a Ticket Decomposition Guidance section (or equivalent), use it as the starting point for decomposition. Validate that the spec's suggested breakdown produces reviewable diffs and has correct dependency ordering, but do not ignore it in favor of a from-scratch decomposition.
 
 - Each ticket must represent a **reviewable diff** — small enough for comfortable manual review
 - Map **dependencies** between tickets (which must be done before which)
@@ -114,7 +116,7 @@ Do NOT commit. Leave files for user review.
 
 ### Step 8: Spec Back-Link (Optional)
 
-If the spec does not already have a "Tickets" section, offer to append one listing the generated ticket IDs and their titles. This aids traceability when multiple specs are active.
+If the spec does not already have a section listing the actual generated ticket IDs (as distinct from a decomposition *guidance* section with suggested prefixes), offer to append or update one with the generated ticket IDs and their titles. This aids traceability when multiple specs are active.
 
 ## Constraints
 

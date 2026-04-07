@@ -7,7 +7,8 @@ import { getCompiledPipelinePredicates } from './compiled-condition-cache.js';
 import { toApplyMoveIllegalMetadataCode, type ApplyMoveIllegalMetadataCode } from './legality-outcome.js';
 import type { EnumerationStateSnapshot } from './enumeration-snapshot.js';
 import type { ReadContext } from './eval-context.js';
-import { MISSING_BINDING_POLICY_CONTEXTS, shouldDeferMissingBinding } from './missing-binding-policy.js';
+import { MISSING_BINDING_POLICY_CONTEXTS, classifyMissingBindingProbeError } from './missing-binding-policy.js';
+import { probeWith, resolveProbeResult, type ProbeResult } from './probe-result.js';
 import { pipelinePredicateEvaluationError } from './runtime-error.js';
 import type { ActionDef, ActionPipelineDef, ActionResolutionStageDef, ConditionAST } from './types.js';
 
@@ -98,6 +99,26 @@ const evaluatePredicate = (
   return evalActionPipelinePredicate(action, profileId, predicate, condition, evalCtx);
 };
 
+const evaluateCompiledDiscoveryPredicate = (
+  action: ActionDef,
+  profileId: string,
+  predicate: PipelinePredicateName,
+  condition: Exclude<ConditionAST, boolean>,
+  evalCtx: ReadContext,
+  snapshot?: EnumerationStateSnapshot,
+): ProbeResult<boolean | undefined> =>
+  probeWith(
+    () => evaluateCompiledPredicate(condition, evalCtx, snapshot),
+    (error) => {
+      const classified = classifyMissingBindingProbeError(
+        error,
+        MISSING_BINDING_POLICY_CONTEXTS.PIPELINE_DISCOVERY_PREDICATE,
+      );
+      if (classified !== null) return classified;
+      throw pipelinePredicateEvaluationError(action, profileId, predicate, error);
+    },
+  );
+
 const evaluateDiscoveryPredicate = (
   action: ActionDef,
   profileId: string,
@@ -113,19 +134,14 @@ const evaluateDiscoveryPredicate = (
     return condition ? 'passed' : 'failed';
   }
 
-  try {
-    const compiledResult = evaluateCompiledPredicate(condition, evalCtx, snapshot);
-    if (compiledResult !== undefined) {
-      return compiledResult ? 'passed' : 'failed';
-    }
-  } catch (error) {
-    if (shouldDeferMissingBinding(error, MISSING_BINDING_POLICY_CONTEXTS.PIPELINE_DISCOVERY_PREDICATE)) {
-      return 'deferred';
-    }
-    throw pipelinePredicateEvaluationError(action, profileId, predicate, error);
-  }
-
-  return evalActionPipelinePredicateForDiscovery(action, profileId, predicate, condition, evalCtx);
+  const compiledResult = evaluateCompiledDiscoveryPredicate(action, profileId, predicate, condition, evalCtx, snapshot);
+  return resolveProbeResult(compiledResult, {
+    onLegal: (value) => value !== undefined
+      ? (value ? 'passed' : 'failed')
+      : evalActionPipelinePredicateForDiscovery(action, profileId, predicate, condition, evalCtx),
+    onIllegal: () => evalActionPipelinePredicateForDiscovery(action, profileId, predicate, condition, evalCtx),
+    onInconclusive: () => 'deferred',
+  });
 };
 
 const evaluateCheckpointPredicateStatus = (

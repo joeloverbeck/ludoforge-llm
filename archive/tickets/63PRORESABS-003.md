@@ -1,10 +1,10 @@
 # 63PRORESABS-003: Migrate `choose-n-option-resolution.ts` probe catch blocks to `ProbeResult`
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel choose-n-option-resolution refactoring
-**Deps**: `tickets/63PRORESABS-001.md`
+**Deps**: `archive/tickets/63PRORESABS-001.md`
 
 ## Problem
 
@@ -95,3 +95,14 @@ After all 4 catch blocks are replaced, the import from `./legal-choices.js` is n
 2. `pnpm -F @ludoforge/engine test:determinism`
 3. `pnpm turbo typecheck`
 4. `pnpm turbo lint`
+
+## Outcome
+
+- Completed: 2026-04-07
+- Changed `packages/engine/src/kernel/choose-n-option-resolution.ts` to route choose-N probe evaluation and satisfiability classification through local `ProbeResult` wrappers, removing the ticket-owned owner-mismatch catch classification sites and the `isChoiceDecisionOwnerMismatchDuringProbe` import from this file.
+- Deviation from original plan: none. The reassessment-confirmed local-wrapper path was the needed implementation because this file's probe callbacks were not already `ProbeResult`-returning.
+- Verification:
+  - `pnpm turbo typecheck`
+  - `pnpm turbo lint`
+  - `pnpm -F @ludoforge/engine test`
+  - `pnpm -F @ludoforge/engine test:determinism`

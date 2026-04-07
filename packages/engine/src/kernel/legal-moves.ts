@@ -6,6 +6,7 @@ import { resolveDeclaredActionParamDomainOptions } from './declared-action-param
 import { createEnumerationSnapshot, type EnumerationStateSnapshot } from './enumeration-snapshot.js';
 import type { ReadContext, EvalRuntimeResources } from './eval-context.js';
 import { createEvalRuntimeResources } from './eval-context.js';
+import { isRecoverableEvalResolutionError } from './eval-error-classification.js';
 import { resolveCapturedSequenceZonesByKey } from './free-operation-captured-sequence-zones.js';
 import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-overlay.js';
 import {
@@ -47,9 +48,10 @@ import {
   decideDiscoveryLegalMovesPipelineViability,
   evaluateDiscoveryPipelinePredicateStatus,
 } from './pipeline-viability-policy.js';
-import { MISSING_BINDING_POLICY_CONTEXTS, shouldDeferMissingBinding } from './missing-binding-policy.js';
+import { MISSING_BINDING_POLICY_CONTEXTS, classifyMissingBindingProbeError } from './missing-binding-policy.js';
 import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
 import { toMoveIdentityKey } from './move-identity.js';
+import { resolveProbeResult, type ProbeResult } from './probe-result.js';
 import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { selectorInvalidSpecError } from './selector-runtime-contract.js';
@@ -382,8 +384,14 @@ const isCompiledFirstDecisionRejected = (
 
   try {
     return !compiled.check(ctx).admissible;
-  } catch {
-    return false;
+  } catch (error) {
+    // The compiled first-decision domain check evaluates evalQuery and
+    // resolveChooseNCardinality, both of which may throw recoverable eval
+    // errors (MISSING_BINDING, MISSING_VAR, DIVISION_BY_ZERO) when bindings
+    // are not yet resolved during discovery.  Treat these as "cannot
+    // determine admissibility" → not rejected (false).
+    if (isRecoverableEvalResolutionError(error)) return false;
+    throw error;
   }
 };
 
@@ -426,9 +434,11 @@ function enumerateParams(
     options,
   );
 
-  const resolveExecutionPlayerForBindings = (allowPendingBinding: boolean): GameState['activePlayer'] | null => {
+  const resolveExecutionPlayerForBindings = (
+    allowPendingBinding: boolean,
+  ): ProbeResult<GameState['activePlayer'] | null> => {
     if (options?.executionPlayerOverride !== undefined) {
-      return options.executionPlayerOverride;
+      return { outcome: 'legal', value: options.executionPlayerOverride };
     }
     const resolution = resolveActionExecutor({
       def,
@@ -441,25 +451,29 @@ function enumerateParams(
       evalRuntimeResources,
     });
     if (resolution.kind === 'notApplicable') {
-      return null;
+      return { outcome: 'legal', value: null };
     }
     if (resolution.kind === 'invalidSpec') {
-      if (
-        allowPendingBinding &&
-        shouldDeferMissingBinding(
+      if (allowPendingBinding) {
+        const classified = classifyMissingBindingProbeError(
           resolution.error,
           MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_EXECUTOR_DURING_PARAM_ENUMERATION,
-        )
-      ) {
-        return state.activePlayer;
+        );
+        if (classified !== null) {
+          return classified;
+        }
       }
       throw selectorInvalidSpecError('legalMoves', 'executor', action, resolution.error);
     }
-    return resolution.executionPlayer;
+    return { outcome: 'legal', value: resolution.executionPlayer };
   };
 
   if (paramIndex >= action.params.length) {
-    const executionPlayer = resolveExecutionPlayerForBindings(false);
+    const executionPlayer = resolveProbeResult(resolveExecutionPlayerForBindings(false), {
+      onLegal: (value) => value,
+      onIllegal: () => null,
+      onInconclusive: () => null,
+    });
     if (executionPlayer === null) {
       return;
     }
@@ -521,9 +535,13 @@ function enumerateParams(
           return;
         }
       } catch {
-        // Plain actions may have effects that reference runtime state not
-        // available during discovery (missing vars, unresolvable selectors).
-        // Any probe error is treated as "unknown" — keep the move.
+        // Intentional bare catch — discovery-time safety net for plain actions.
+        // The decision-sequence evaluation chain can throw diverse error classes
+        // (eval errors, effect errors, stacking violations, choice probe errors)
+        // when effects reference runtime state not available during discovery.
+        // Typed classification is infeasible here because the error surface spans
+        // the full effect/choice/selector execution stack.  Any probe error is
+        // treated as "viability unknown" → keep the move.
       }
     }
 
@@ -540,7 +558,12 @@ function enumerateParams(
     return;
   }
 
-  const executionPlayer = resolveExecutionPlayerForBindings(true);
+  const executionPlayerResult = resolveExecutionPlayerForBindings(true);
+  const executionPlayer = resolveProbeResult(executionPlayerResult, {
+    onLegal: (value) => value,
+    onIllegal: () => state.activePlayer,
+    onInconclusive: () => state.activePlayer,
+  });
   if (executionPlayer === null) {
     return;
   }
@@ -671,6 +694,11 @@ function enumeratePendingFreeOperationMoves(
         return true;
       }
     } catch (error) {
+      // Zone-filter evaluation during outcome-grant resolution can throw
+      // FREE_OPERATION_ZONE_FILTER_EVALUATION_FAILED when evalCondition
+      // encounters unresolvable bindings.  The upstream still throws (Group C
+      // deferred — evalCondition has no result-returning variant yet).  Treat
+      // the failure as "grant not determinable" → keep the move (return true).
       if (isTurnFlowErrorCode(error, 'FREE_OPERATION_ZONE_FILTER_EVALUATION_FAILED')) {
         return true;
       }

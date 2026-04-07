@@ -1,10 +1,10 @@
 # 63PRORESABS-004: Migrate missing-binding deferral sites to `ProbeResult`
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — kernel probe deferral refactoring across 4 files
-**Deps**: `tickets/63PRORESABS-001.md`
+**Deps**: `archive/tickets/63PRORESABS-001.md`
 
 ## Problem
 
@@ -94,3 +94,17 @@ After catch blocks are replaced, the imports of `shouldDeferMissingBinding` and 
 2. `pnpm -F @ludoforge/engine test:determinism`
 3. `pnpm turbo typecheck`
 4. `pnpm turbo lint`
+
+## Outcome
+
+- Completed: 2026-04-07
+- What changed:
+  - Added shared missing-binding probe classification in `packages/engine/src/kernel/missing-binding-policy.ts` via `classifyMissingBindingProbeError`, mapping probe-time missing binding and deferrable selector-cardinality cases to `ProbeResult`.
+  - Migrated the ticket-owned probe classification sites in `packages/engine/src/kernel/action-pipeline-predicates.ts`, `packages/engine/src/kernel/pipeline-viability-policy.ts`, `packages/engine/src/kernel/move-decision-sequence.ts`, and `packages/engine/src/kernel/legal-moves.ts` to read `ProbeResult` outcomes instead of using `shouldDeferMissingBinding` catch classification.
+- Deviations from original plan:
+  - The ticket's import-removal claim for `MISSING_BINDING_POLICY_CONTEXTS` in all four files was stale. `packages/engine/src/kernel/legal-moves.ts` still legitimately uses `MISSING_BINDING_POLICY_CONTEXTS` at non-owned call sites, so only `shouldDeferMissingBinding` was removed there.
+- Verification results:
+  - `pnpm turbo typecheck` ✅
+  - `pnpm turbo lint` ✅
+  - `pnpm -F @ludoforge/engine test` ✅
+  - `pnpm -F @ludoforge/engine test:determinism` ✅

@@ -1,6 +1,6 @@
 # 63PRORESABS-001: Introduce `ProbeOutcome` and `ProbeResult` types
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — new kernel type module + index re-export
@@ -98,3 +98,16 @@ export type { ProbeOutcome, ProbeInconclusiveReason, ProbeResult } from './probe
 1. `pnpm turbo typecheck`
 2. `pnpm turbo lint`
 3. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+- Completed: 2026-04-07
+- What changed:
+  - Added `packages/engine/src/kernel/probe-result.ts` with the `ProbeOutcome`, `ProbeInconclusiveReason`, and generic `ProbeResult<T = void>` type definitions.
+  - Re-exported those types from `packages/engine/src/kernel/index.ts`.
+- Deviations from original plan:
+  - None. The ticket remained a narrow additive type-only slice of the broader Spec 63 series.
+- Verification results:
+  - `pnpm turbo typecheck` ✅
+  - `pnpm turbo lint` ✅
+  - `pnpm -F @ludoforge/engine test` ✅

@@ -8,6 +8,7 @@ import {
   collectFreeOperationZoneFilterProbeRebindableAliases,
   evaluateFreeOperationZoneFilterProbe,
 } from './free-operation-zone-filter-probe.js';
+import type { ZoneFilterEvaluationResult } from './zone-filter-evaluation-result.js';
 import { resolveBindingTemplate } from './binding-template.js';
 import { resolvePlayerSel } from './resolve-selectors.js';
 import { resolveZoneRef } from './resolve-zone-ref.js';
@@ -415,7 +416,7 @@ const evaluateFreeOperationZoneFilterForZone = (
   rebindableAliases: ReadonlySet<string>,
   zoneId: ZoneId,
   ctx: ReadContext,
-): boolean => {
+): ZoneFilterEvaluationResult => {
   return evaluateFreeOperationZoneFilterProbe({
     zoneId,
     baseBindings: ctx.bindings,
@@ -468,25 +469,29 @@ function applyZonesFilter(
   if (freeOperationZoneFilter !== undefined) {
     const rebindableAliases = collectFreeOperationZoneFilterProbeRebindableAliases(freeOperationZoneFilter);
     filteredZones = filteredZones.filter((zone) => {
-      try {
-        return evaluateFreeOperationZoneFilterForZone(freeOperationZoneFilter, rebindableAliases, zone.id, ctx);
-      } catch (cause) {
-        const diagnostics = ctx.freeOperationOverlay?.zoneFilterDiagnostics;
-        if (diagnostics !== undefined) {
-          if (shouldDeferFreeOperationZoneFilterFailure(diagnostics.source, cause)) {
-            return true;
-          }
-          throw freeOperationZoneFilterEvaluationError({
-            surface: diagnostics.source,
-            actionId: diagnostics.actionId,
-            moveParams: diagnostics.moveParams,
-            zoneFilter: freeOperationZoneFilter,
-            candidateZone: zone.id,
-            cause,
-          });
-        }
-        throw cause;
+      const result = evaluateFreeOperationZoneFilterForZone(freeOperationZoneFilter, rebindableAliases, zone.id, ctx);
+      if (result.status === 'resolved') {
+        return result.matched;
       }
+      if (result.status === 'deferred') {
+        return true;
+      }
+      // status === 'failed': apply surface-aware deferral policy
+      const diagnostics = ctx.freeOperationOverlay?.zoneFilterDiagnostics;
+      if (diagnostics !== undefined) {
+        if (shouldDeferFreeOperationZoneFilterFailure(diagnostics.source, result.error)) {
+          return true;
+        }
+        throw freeOperationZoneFilterEvaluationError({
+          surface: diagnostics.source,
+          actionId: diagnostics.actionId,
+          moveParams: diagnostics.moveParams,
+          zoneFilter: freeOperationZoneFilter,
+          candidateZone: zone.id,
+          cause: result.error,
+        });
+      }
+      throw result.error;
     });
   }
 

@@ -1,10 +1,10 @@
 # 63PRORESABS-005: Delete `isChoiceDecisionOwnerMismatchDuringProbe` and add export surface guard
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — kernel export cleanup + new guard test
-**Deps**: `tickets/63PRORESABS-002.md`, `tickets/63PRORESABS-003.md`
+**Deps**: `archive/tickets/63PRORESABS-002.md`, `archive/tickets/63PRORESABS-003.md`
 
 ## Problem
 
@@ -86,3 +86,25 @@ Run a grep across the 6 migrated files for the pattern `catch (error` followed b
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`
 3. `pnpm turbo lint`
+
+## Outcome
+
+**Completed**: 2026-04-07
+
+### What changed
+
+1. **Deleted `isChoiceDecisionOwnerMismatchDuringProbe`** from `packages/engine/src/kernel/legal-choices.ts`. Inlined its body (`isEffectRuntimeReason(error, EFFECT_RUNTIME_REASONS.CHOICE_PROBE_AUTHORITY_MISMATCH)`) into the sole internal caller `classifyChoiceProbeError`.
+2. **No barrel change needed** — `isChoiceDecisionOwnerMismatchDuringProbe` was not re-exported from `kernel/index.ts`.
+3. **Updated stale comment** in `packages/engine/test/unit/kernel/choose-n-stochastic-ambiguous.test.ts` referencing the deleted function.
+4. **Created export surface guard** at `packages/engine/test/unit/kernel/probe-result-export-surface-guard.test.ts` — locks `probe-result.ts` exports to `ProbeOutcome`, `ProbeInconclusiveReason`, `ProbeResult`.
+
+### Deviations
+
+- Ticket expected a possible `kernel/index.ts` re-export removal. Grep confirmed none existed — no change needed.
+
+### Verification
+
+- `pnpm -F @ludoforge/engine test`: 5592/5592 pass
+- `pnpm turbo typecheck`: clean
+- `pnpm turbo lint`: clean
+- Grep for `isChoiceDecisionOwnerMismatchDuringProbe` across `packages/engine/`: zero matches

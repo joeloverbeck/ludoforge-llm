@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel predicate refactoring
-**Deps**: `tickets/115GRALIFPRO-002.md`, `archive/tickets/115GRALIFPRO-003.md`
+**Deps**: `archive/tickets/115GRALIFPRO-002.md`, `archive/tickets/115GRALIFPRO-003.md`
 
 ## Problem
 

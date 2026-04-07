@@ -35,6 +35,7 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
 6. Build a discrepancy list for anything the ticket states that does not match reality.
 7. Check architectural constraints the ticket may have underspecified:
    - Shared type or schema ripple effects
+   - Cross-package fallout for shared exported unions, serialized trace kinds, and exhaustiveness-based consumers (translators, adapters, viewers, switch statements)
    - Foundation 14 atomic migrations for removals or renames
    - Required test, schema, or fixture updates
    - When the ticket disputes game-specific legality, consult local rulebook extracts or rules reports before deciding whether the fix is policy-only or a legality correction.
@@ -167,13 +168,21 @@ When a ticket change affects other active tickets in the same series:
 3. Report unrelated pre-existing failures separately from failures caused by your changes.
 4. **Build ordering**: If tests depend on `dist`, run typecheck and rebuild first. If a focused `dist` check fails with module-resolution symptoms before the build completes, treat as an ordering problem and rerun after the serialized build finishes. Do not run verification commands in parallel when they read from or write the same generated output tree.
 5. Prefer the narrowest commands that validate the real changed code path. For documentation-only tickets whose examples depend on already-verified prerequisite behavior, artifact inspection plus dependency-integrity checks may suffice.
-6. When a ticket changes a fallback compilation or runtime path, verify that fallback path directly AND check the primary production path for non-regression.
-7. **Broader failures**: Determine whether they are inside the corrected ticket boundary or owned by another active ticket. Do not silently absorb out-of-boundary scope. Document as residual risk if covered by another ticket; stop and resolve with the user if not.
-8. **Test helper staleness**: If focused checks pass but a broader suite fails, inspect shared test helpers, fixtures, and goldens for stale assumptions. Check whether seed-specific helper states or turn-position fixtures have gone stale. Retarget to a current seed/turn that exercises the same invariant. When a compiled fast path is added, test malformed and unsupported shapes for clean fallback. When a new fast path depends on enriched context objects, check callers that construct minimal contexts.
-9. **Non-functional regression clauses**: If a ticket includes a vague "no performance regression" clause without naming a benchmark surface, baseline, threshold, or command, resolve with 1-3-1 or satisfy through the nearest existing regression suite.
-10. **Isolating test failures**: If `node --test` reports only a top-level file failure, rerun the failing file narrowly. Use test-name filtering or direct helper reproduction. Run the built test module directly to expose nested subtest output. For compiler or schema authoring tests, it is also valid to reproduce the minimal compile input directly against the built module to inspect diagnostics and lowered output when the test runner still hides the failing subtest.
-11. **Schema/runtime shape changes**: If you changed runtime Zod/object schemas or shared serialized contract shapes, assume schema artifact regeneration is part of verification before interpreting schema-test failures. Regenerate first, then rerun the focused schema lane.
-12. **Raw-vs-classified debugging**: When debugging legality, completion, or policy-preparation regressions, compare the raw `legalMoves(...)` output, the classified `enumerateLegalMoves(...)` result, and any downstream agent preparation surface separately. Do not assume a mismatch at one layer identifies the owning bug.
+6. **Ticket-named commands are authoritative**: If the ticket explicitly names verification commands in acceptance criteria or test plan, run them before declaring completion unless reassessment proves they are stale, invalid, or superseded. Narrower checks may be used first for fast feedback, but they do not replace ticket-explicit commands.
+7. **Command substitution**: If a ticket's example command conflicts with live repo tooling conventions (for example, Jest-style flags in a Node test-runner package), use the current repo-approved equivalent that proves the same behavior. State the substitution explicitly in working notes and final verification.
+8. **Verification escalation ladder**: Default order is:
+   1. focused test or reproducer for the touched behavior
+   2. touched package typecheck/build/lint or equivalent
+   3. required artifact regeneration for schema/contract changes
+   4. ticket-explicit broader package or root commands
+   Escalate sooner if shared exported contracts or cross-package consumers are in play.
+9. When a ticket changes a fallback compilation or runtime path, verify that fallback path directly AND check the primary production path for non-regression.
+10. **Broader failures**: Determine whether they are inside the corrected ticket boundary or owned by another active ticket. Do not silently absorb out-of-boundary scope. If the failure is repo-owned fallout from a changed shared exported contract or union, treat the minimal downstream fix as required scope for coherent completion. Document as residual risk if covered by another ticket; stop and resolve with the user if not.
+11. **Test helper staleness**: If focused checks pass but a broader suite fails, inspect shared test helpers, fixtures, and goldens for stale assumptions. Check whether seed-specific helper states or turn-position fixtures have gone stale. Retarget to a current seed/turn that exercises the same invariant. When a compiled fast path is added, test malformed and unsupported shapes for clean fallback. When a new fast path depends on enriched context objects, check callers that construct minimal contexts.
+12. **Non-functional regression clauses**: If a ticket includes a vague "no performance regression" clause without naming a benchmark surface, baseline, threshold, or command, resolve with 1-3-1 or satisfy through the nearest existing regression suite.
+13. **Isolating test failures**: If `node --test` reports only a top-level file failure, rerun the failing file narrowly. Use test-name filtering or direct helper reproduction. Run the built test module directly to expose nested subtest output. For compiler or schema authoring tests, it is also valid to reproduce the minimal compile input directly against the built module to inspect diagnostics and lowered output when the test runner still hides the failing subtest.
+14. **Schema/runtime shape changes**: If you changed runtime Zod/object schemas or shared serialized contract shapes, assume schema artifact regeneration is part of verification before interpreting schema-test failures. Regenerate first, then rerun the focused schema lane.
+15. **Raw-vs-classified debugging**: When debugging legality, completion, or policy-preparation regressions, compare the raw `legalMoves(...)` output, the classified `enumerateLegalMoves(...)` result, and any downstream agent preparation surface separately. Do not assume a mismatch at one layer identifies the owning bug.
 
 ### Generated Artifact Checks
 

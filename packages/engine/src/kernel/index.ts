@@ -57,6 +57,8 @@ export * from './effect-error.js';
 export * from './free-operation-denial-contract.js';
 export * from './free-operation-discovery-analysis.js';
 export * from './free-operation-viability.js';
+export * from './grant-lifecycle-trace.js';
+export * from './grant-lifecycle.js';
 export * from './runtime-error.js';
 export * from './runtime-reasons.js';
 export * from './execution-collector.js';

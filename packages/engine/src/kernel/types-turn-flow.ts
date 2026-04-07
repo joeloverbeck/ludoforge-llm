@@ -310,6 +310,25 @@ export interface TurnFlowLifecycleTraceEntry {
   };
 }
 
+export type GrantLifecycleTransitionStep =
+  | 'advanceToReady'
+  | 'markOffered'
+  | 'consumeUse'
+  | 'skipGrant'
+  | 'expireGrant';
+
+export interface TurnFlowGrantLifecycleTraceEntry {
+  readonly kind: 'turnFlowGrantLifecycle';
+  readonly step: GrantLifecycleTransitionStep;
+  readonly grantId: string;
+  readonly fromPhase: GrantLifecyclePhase;
+  readonly toPhase: GrantLifecyclePhase;
+  readonly seat: string;
+  readonly operationClass: TurnFlowActionClass;
+  readonly remainingUsesBefore: number;
+  readonly remainingUsesAfter: number;
+}
+
 export interface TurnFlowEligibilityTraceEntry {
   readonly kind: 'turnFlowEligibility';
   readonly step: 'candidateScan' | 'passChain' | 'cardEnd' | 'overrideCreate';

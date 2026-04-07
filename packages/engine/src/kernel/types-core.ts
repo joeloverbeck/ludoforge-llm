@@ -28,6 +28,7 @@ import type {
 } from './types-operations.js';
 import type { VerbalizationDef } from './verbalization-types.js';
 import type {
+  TurnFlowGrantLifecycleTraceEntry,
   TurnFlowDeferredEventLifecycleTraceEntry,
   SimultaneousCommitTraceEntry,
   SimultaneousSubmissionTraceEntry,
@@ -1253,6 +1254,7 @@ export type TriggerLogEntry =
   | TriggerFiring
   | TriggerTruncated
   | TurnFlowLifecycleTraceEntry
+  | TurnFlowGrantLifecycleTraceEntry
   | TurnFlowEligibilityTraceEntry
   | TurnFlowDeferredEventLifecycleTraceEntry
   | SimultaneousSubmissionTraceEntry

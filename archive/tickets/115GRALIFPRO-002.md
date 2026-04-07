@@ -1,6 +1,6 @@
 # 115GRALIFPRO-002: Create `grant-lifecycle.ts` transition functions and trace module
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — new kernel modules
@@ -105,3 +105,24 @@ Test each transition:
 1. `pnpm -F @ludoforge/engine test -- --test-name-pattern="grant-lifecycle"`
 2. `pnpm turbo typecheck`
 3. `pnpm turbo lint`
+
+## Outcome
+
+- Completed: 2026-04-07
+- What changed:
+  - Added the new lifecycle transition module at `packages/engine/src/kernel/grant-lifecycle.ts`.
+  - Added the trace factory at `packages/engine/src/kernel/grant-lifecycle-trace.ts`.
+  - Extended the shared trigger-log type/schema surfaces so `turnFlowGrantLifecycle` is a first-class trace entry.
+  - Exported the new lifecycle modules from the kernel index.
+  - Added focused lifecycle unit coverage in `packages/engine/test/unit/kernel/grant-lifecycle.test.ts`.
+- Deviations from original plan:
+  - The ticket's focused test command used a Jest-style `--test-name-pattern` example. The repo's engine tests run on Node's test runner, so verification used the built concrete test file path instead.
+  - Root `pnpm turbo typecheck` surfaced one repo-owned fallout item outside the ticket's listed files: `packages/runner/src/model/translate-effect-trace.ts` needed a new exhaustiveness case for the added `turnFlowGrantLifecycle` union member. That adapter update was included to keep the repo coherent.
+- Verification:
+  - `pnpm -F @ludoforge/engine typecheck`
+  - `pnpm -F @ludoforge/engine build`
+  - `pnpm -F @ludoforge/engine schema:artifacts`
+  - `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/grant-lifecycle.test.js`
+  - `pnpm -F @ludoforge/engine lint`
+  - `pnpm turbo typecheck`
+  - `pnpm turbo lint`

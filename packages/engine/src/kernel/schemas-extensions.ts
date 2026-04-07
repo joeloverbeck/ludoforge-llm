@@ -691,6 +691,28 @@ export const TurnFlowLifecycleTraceEntrySchema = z
   })
   .strict();
 
+export const GrantLifecycleTransitionStepSchema = z.union([
+  z.literal('advanceToReady'),
+  z.literal('markOffered'),
+  z.literal('consumeUse'),
+  z.literal('skipGrant'),
+  z.literal('expireGrant'),
+]);
+
+export const TurnFlowGrantLifecycleTraceEntrySchema = z
+  .object({
+    kind: z.literal('turnFlowGrantLifecycle'),
+    step: GrantLifecycleTransitionStepSchema,
+    grantId: StringSchema.min(1),
+    fromPhase: z.enum(GRANT_LIFECYCLE_PHASE_VALUES),
+    toPhase: z.enum(GRANT_LIFECYCLE_PHASE_VALUES),
+    seat: StringSchema.min(1),
+    operationClass: TurnFlowActionClassSchema,
+    remainingUsesBefore: IntegerSchema.min(0),
+    remainingUsesAfter: IntegerSchema.min(0),
+  })
+  .strict();
+
 
 export const TurnFlowEligibilityTraceEntrySchema = z
   .object({

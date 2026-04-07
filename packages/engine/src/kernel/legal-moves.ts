@@ -6,6 +6,7 @@ import { resolveDeclaredActionParamDomainOptions } from './declared-action-param
 import { createEnumerationSnapshot, type EnumerationStateSnapshot } from './enumeration-snapshot.js';
 import type { ReadContext, EvalRuntimeResources } from './eval-context.js';
 import { createEvalRuntimeResources } from './eval-context.js';
+import { isRecoverableEvalResolutionError } from './eval-error-classification.js';
 import { resolveCapturedSequenceZonesByKey } from './free-operation-captured-sequence-zones.js';
 import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-overlay.js';
 import {
@@ -383,8 +384,14 @@ const isCompiledFirstDecisionRejected = (
 
   try {
     return !compiled.check(ctx).admissible;
-  } catch {
-    return false;
+  } catch (error) {
+    // The compiled first-decision domain check evaluates evalQuery and
+    // resolveChooseNCardinality, both of which may throw recoverable eval
+    // errors (MISSING_BINDING, MISSING_VAR, DIVISION_BY_ZERO) when bindings
+    // are not yet resolved during discovery.  Treat these as "cannot
+    // determine admissibility" → not rejected (false).
+    if (isRecoverableEvalResolutionError(error)) return false;
+    throw error;
   }
 };
 
@@ -528,9 +535,13 @@ function enumerateParams(
           return;
         }
       } catch {
-        // Plain actions may have effects that reference runtime state not
-        // available during discovery (missing vars, unresolvable selectors).
-        // Any probe error is treated as "unknown" — keep the move.
+        // Intentional bare catch — discovery-time safety net for plain actions.
+        // The decision-sequence evaluation chain can throw diverse error classes
+        // (eval errors, effect errors, stacking violations, choice probe errors)
+        // when effects reference runtime state not available during discovery.
+        // Typed classification is infeasible here because the error surface spans
+        // the full effect/choice/selector execution stack.  Any probe error is
+        // treated as "viability unknown" → keep the move.
       }
     }
 
@@ -683,6 +694,11 @@ function enumeratePendingFreeOperationMoves(
         return true;
       }
     } catch (error) {
+      // Zone-filter evaluation during outcome-grant resolution can throw
+      // FREE_OPERATION_ZONE_FILTER_EVALUATION_FAILED when evalCondition
+      // encounters unresolvable bindings.  The upstream still throws (Group C
+      // deferred — evalCondition has no result-returning variant yet).  Treat
+      // the failure as "grant not determinable" → keep the move (return true).
       if (isTurnFlowErrorCode(error, 'FREE_OPERATION_ZONE_FILTER_EVALUATION_FAILED')) {
         return true;
       }

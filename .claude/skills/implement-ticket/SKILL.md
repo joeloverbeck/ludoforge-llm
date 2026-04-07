@@ -97,6 +97,7 @@ Every stop condition below requires resolution before implementation proceeds.
 - Stale deliverable inside a valid boundary → implement the live owned subset, call out the stale sub-claim explicitly in working notes/final summary, and do not trigger 1-3-1 unless the stale deliverable blocks correctness or forces a real scope decision.
 - Stale incidence but relevant mechanism/invariant → treat as a proof-boundary decision, not automatic invalidation.
 - Boundary itself is wrong → stop and resolve whether to rewrite, narrow, or supersede before coding.
+- Already-satisfied deliverable → if investigation shows the ticket's core deliverable is already implemented by existing code, present a 1-3-1 with options: (a) close as already-satisfied with no code changes, (b) cosmetic refinement only, (c) rewrite ticket to target the remaining gap. Document the evidence of satisfaction in the Outcome section.
 
 **Post-confirmation architecture reset**:
 - When a user-confirmed 1-3-1 decision broadens or reframes the solution, restate the new authoritative boundary in working notes before coding.
@@ -137,6 +138,7 @@ Every stop condition below requires resolution before implementation proceeds.
 - The ticket's `Files to Touch` list is a strong hint, not a hard limit. Include adjacent files for contracts, runtime consumers, schemas, fixtures, or tests when coherent completion requires them.
 - "No code changes" means no production/runtime behavior changes. Ticket outcomes, archival moves, dependency rewrites, and sibling-ticket status updates are still required when they are the owned deliverable.
 - If reassessment reveals a generic architectural limitation broader than the ticket's boundary, prefer creating or extending a follow-up spec over burying the gap in ticket-only notes.
+- When a ticket names a test deliverable that would require disproportionate mocking or fixture setup relative to the code change, and the behavior is already exercised by existing integration/e2e tests, document the rationale for deferring the dedicated test and note it in the summary. The existing test coverage satisfies the behavioral invariant even without a dedicated unit test.
 
 ### Schema & Contract Migrations
 

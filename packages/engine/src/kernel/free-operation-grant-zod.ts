@@ -7,7 +7,8 @@ import {
   TURN_FLOW_FREE_OPERATION_GRANT_POST_RESOLUTION_TURN_FLOW_VALUES,
 } from '../contracts/index.js';
 
-const REQUIRED_COMPLETION_POLICY = TURN_FLOW_FREE_OPERATION_GRANT_COMPLETION_POLICY_VALUES[0];
+const REQUIRED_COMPLETION_POLICY = TURN_FLOW_FREE_OPERATION_GRANT_COMPLETION_POLICY_VALUES[0] satisfies 'required';
+const SKIP_IF_NO_LEGAL_COMPLETION_POLICY = TURN_FLOW_FREE_OPERATION_GRANT_COMPLETION_POLICY_VALUES[1] satisfies 'skipIfNoLegalCompletion';
 const REQUIRED_POST_RESOLUTION_TURN_FLOW = TURN_FLOW_FREE_OPERATION_GRANT_POST_RESOLUTION_TURN_FLOW_VALUES[0];
 const PREFLIGHT_CONTRACT_VIOLATION_CODES = new Set<TurnFlowFreeOperationGrantContractViolationCode>([
   'completionPolicyInvalid',
@@ -23,7 +24,7 @@ const PREFLIGHT_CONTRACT_VIOLATION_CODES = new Set<TurnFlowFreeOperationGrantCon
 export const createTurnFlowFreeOperationGrantSchema = <Shape extends z.ZodRawShape>(
   shape: Shape,
 ): z.ZodTypeAny => {
-const structuralSchema = z.union([
+  const structuralSchema = z.union([
     z
       .object({
         ...shape,
@@ -39,7 +40,7 @@ const structuralSchema = z.union([
     z
       .object({
         ...shape,
-        completionPolicy: z.literal('skipIfNoLegalCompletion'),
+        completionPolicy: z.literal(SKIP_IF_NO_LEGAL_COMPLETION_POLICY),
         postResolutionTurnFlow: z.literal(REQUIRED_POST_RESOLUTION_TURN_FLOW),
       })
       .strict(),

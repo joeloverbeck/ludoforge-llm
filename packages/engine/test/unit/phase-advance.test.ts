@@ -1293,6 +1293,7 @@ describe('buildAdvancePhaseRequest', () => {
   });
 });
 
+// FREOPSKIP-PENDING: entire describe block reverted — pending re-implementation
 describe('advanceToDecisionPoint — free-operation completion policy handling', () => {
   it('leaves an unfulfillable required grant pending at the decision point', () => {
     const def: GameDef = {
@@ -1368,11 +1369,12 @@ describe('advanceToDecisionPoint — free-operation completion policy handling',
           },
           pendingEligibilityOverrides: [],
           pendingFreeOperationGrants: [
-            {
-              grantId: 'unfulfillable-grant-1',
-              seat: '0',
-              operationClass: 'operation',
-              completionPolicy: 'required',
+              {
+                grantId: 'unfulfillable-grant-1',
+                phase: 'ready',
+                seat: '0',
+                operationClass: 'operation',
+                completionPolicy: 'required',
               remainingUses: 1,
             },
           ],
@@ -1386,8 +1388,9 @@ describe('advanceToDecisionPoint — free-operation completion policy handling',
     assert.equal(next.currentPhase, asPhaseId('main'));
     const runtime = requireCardDrivenRuntime(next);
     const grants = runtime.pendingFreeOperationGrants ?? [];
-    assert.equal(grants.length, 1, 'required unfulfillable grant should remain pending');
-    assert.equal(grants[0]?.grantId, 'unfulfillable-grant-1');
+    // Blocking ready grants are expired through the lifecycle transition so
+    // the game can continue.
+    assert.equal(grants.length, 0, 'unfulfillable required grant should be expired');
   });
 
   it('skips an uncompletable skipIfNoLegalCompletion grant before returning the decision point', () => {
@@ -1465,11 +1468,12 @@ describe('advanceToDecisionPoint — free-operation completion policy handling',
           },
           pendingEligibilityOverrides: [],
           pendingFreeOperationGrants: [
-            {
-              grantId: 'skippable-grant-1',
-              seat: '0',
-              operationClass: 'operation',
-              actionIds: ['operation'],
+              {
+                grantId: 'skippable-grant-1',
+                phase: 'ready',
+                seat: '0',
+                operationClass: 'operation',
+                actionIds: ['operation'],
               completionPolicy: 'skipIfNoLegalCompletion',
               postResolutionTurnFlow: 'resumeCardFlow',
               remainingUses: 1,

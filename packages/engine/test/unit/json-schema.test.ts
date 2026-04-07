@@ -452,6 +452,7 @@ describe('json schema artifacts', () => {
             pendingFreeOperationGrants: [
               {
                 grantId: 'grant-1',
+                phase: 'ready',
                 seat: '0',
                 operationClass: 'operation',
                 completionPolicy: 'required',
@@ -486,6 +487,7 @@ describe('json schema artifacts', () => {
             pendingFreeOperationGrants: [
               {
                 grantId: 'grant-ctx',
+                phase: 'ready',
                 seat: '0',
                 operationClass: 'operation',
                 executionContext: {
@@ -522,6 +524,7 @@ describe('json schema artifacts', () => {
             pendingFreeOperationGrants: [
               {
                 grantId: 'grant-1',
+                phase: 'ready',
                 seat: '0',
                 operationClass: 'operation',
                 completionPolicy: 'required',
@@ -555,6 +558,7 @@ describe('json schema artifacts', () => {
             pendingFreeOperationGrants: [
               {
                 grantId: 'grant-1',
+                phase: 'ready',
                 seat: '0',
                 operationClass: 'operation',
                 postResolutionTurnFlow: 'resumeCardFlow',

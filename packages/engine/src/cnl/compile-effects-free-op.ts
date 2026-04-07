@@ -10,7 +10,6 @@ import {
   TURN_FLOW_FREE_OPERATION_GRANT_POST_RESOLUTION_TURN_FLOW_VALUES,
   TURN_FLOW_FREE_OPERATION_GRANT_VIABILITY_POLICY_VALUES,
   isTurnFlowActionClass,
-  isTurnFlowFreeOperationGrantCompletionPolicy,
   isTurnFlowFreeOperationGrantProgressionPolicy,
   isTurnFlowFreeOperationGrantViabilityPolicy,
 } from '../contracts/index.js';
@@ -154,10 +153,8 @@ export function lowerGrantFreeOperationEffect(
   let completionPolicy: import('../contracts/index.js').TurnFlowFreeOperationGrantCompletionPolicy | undefined;
   if (
     source.completionPolicy !== undefined
-    && (
-      typeof source.completionPolicy !== 'string'
-      || !isTurnFlowFreeOperationGrantCompletionPolicy(source.completionPolicy)
-    )
+    && (typeof source.completionPolicy !== 'string'
+      || (source.completionPolicy !== 'required' && source.completionPolicy !== 'skipIfNoLegalCompletion'))
   ) {
     diagnostics.push(...missingCapability(
       `${path}.completionPolicy`,
@@ -166,7 +163,7 @@ export function lowerGrantFreeOperationEffect(
       [...TURN_FLOW_FREE_OPERATION_GRANT_COMPLETION_POLICY_VALUES],
     ).diagnostics);
   } else if (typeof source.completionPolicy === 'string') {
-    completionPolicy = source.completionPolicy;
+    completionPolicy = source.completionPolicy as import('../contracts/index.js').TurnFlowFreeOperationGrantCompletionPolicy;
   }
 
   let outcomePolicy: import('../contracts/index.js').TurnFlowFreeOperationGrantOutcomePolicy | undefined;

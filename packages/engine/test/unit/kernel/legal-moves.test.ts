@@ -775,9 +775,10 @@ phase: [asPhaseId('main')],
           },
           pendingEligibilityOverrides: [],
           pendingFreeOperationGrants: [
-            {
-              grantId: 'required-op',
-              seat: '0',
+        {
+          grantId: 'required-op',
+          phase: 'ready',
+          seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
               completionPolicy: 'required',
@@ -847,6 +848,7 @@ phase: [asPhaseId('main')],
       pendingFreeOperationGrants: [
         {
           grantId: 'required-infiltrate',
+          phase: 'ready',
           seat: '0',
           operationClass: 'specialActivity',
           actionIds: ['infiltrate'],
@@ -1098,7 +1100,7 @@ phase: [asPhaseId('main')],
     assert.deepStrictEqual(moves[0]?.params, {});
   });
 
-  it('omits required free-operation templates when no legal completion satisfies the outcome policy', () => {
+  it('enumerates required free-operation templates even when outcome policy cannot be satisfied so the obligation remains visible', () => {
     const action: ActionDef = {
       id: asActionId('freeOp'),
       actor: 'active',
@@ -1134,6 +1136,7 @@ phase: [asPhaseId('main')],
       pendingFreeOperationGrants: [
         {
           grantId: 'grant-required-outcome',
+          phase: 'ready',
           seat: '0',
           operationClass: 'operation',
           actionIds: ['freeOp'],
@@ -1146,7 +1149,8 @@ phase: [asPhaseId('main')],
     });
 
     const moves = legalMoves(def, state);
-    assert.equal(moves.length, 0);
+    assert.equal(moves.length > 0, true, 'required grants must surface their moves so the obligation is visible');
+    assert.equal(moves.every((m) => m.freeOperation === true), true, 'all surfaced moves should be free operations');
   });
 
   it('6. limited operations produce template moves when within limits', () => {
@@ -1652,6 +1656,7 @@ phase: [asPhaseId('main')],
           pendingFreeOperationGrants: [
             {
               grantId: 'grant-0',
+              phase: 'ready',
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
@@ -1762,6 +1767,7 @@ phase: [asPhaseId('main')],
           pendingFreeOperationGrants: [
             {
               grantId: 'grant-0',
+              phase: 'ready',
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
@@ -1866,6 +1872,7 @@ phase: [asPhaseId('main')],
           pendingFreeOperationGrants: [
             {
               grantId: 'grant-0',
+              phase: 'ready',
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
@@ -2206,6 +2213,7 @@ phase: [asPhaseId('main')],
       pendingFreeOperationGrants: [
         {
           grantId: 'grant-0',
+          phase: 'ready',
           seat: '0',
           operationClass: 'operation',
           actionIds: ['operation'],
@@ -2284,6 +2292,7 @@ phase: [asPhaseId('main')],
       pendingFreeOperationGrants: [
         {
           grantId: 'grant-0',
+          phase: 'ready',
           seat: '0',
           operationClass: 'operation',
           actionIds: ['operation'],
@@ -2443,6 +2452,7 @@ phase: [asPhaseId('main')],
       pendingFreeOperationGrants: [
         {
           grantId: 'grant-deferrable',
+          phase: 'ready',
           seat: '0',
           operationClass: 'operation',
           actionIds: ['freeOpDeferrableMissingBinding'],
@@ -2509,6 +2519,7 @@ phase: [asPhaseId('main')],
       pendingFreeOperationGrants: [
         {
           grantId: 'grant-nondeferrable',
+          phase: 'ready',
           seat: '0',
           operationClass: 'operation',
           actionIds: ['freeOpNonDeferrableError'],
@@ -2571,6 +2582,7 @@ phase: [asPhaseId('main')],
           pendingFreeOperationGrants: [
             {
               grantId: 'grant-op',
+              phase: 'ready',
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
@@ -2578,6 +2590,7 @@ phase: [asPhaseId('main')],
             },
             {
               grantId: 'grant-lim-op',
+              phase: 'ready',
               seat: '0',
               operationClass: 'limitedOperation',
               actionIds: ['operation'],
@@ -2644,6 +2657,7 @@ phase: [asPhaseId('main')],
       pendingFreeOperationGrants: [
         {
           grantId: 'grant-invalid-first',
+          phase: 'ready',
           seat: '0',
           executeAsSeat: '0',
           operationClass: 'operation',
@@ -2652,6 +2666,7 @@ phase: [asPhaseId('main')],
         },
         {
           grantId: 'grant-valid-second',
+          phase: 'ready',
           seat: '0',
           executeAsSeat: '1',
           operationClass: 'operation',
@@ -2718,6 +2733,7 @@ phase: [asPhaseId('main')],
           pendingFreeOperationGrants: [
             {
               grantId: 'grant-empty-domain',
+              phase: 'ready',
               seat: '0',
               operationClass: 'operation',
               remainingUses: 1,
@@ -2782,6 +2798,7 @@ phase: [asPhaseId('main')],
           pendingFreeOperationGrants: [
             {
               grantId: 'grant-default-domain',
+              phase: 'ready',
               seat: '0',
               operationClass: 'operation',
               remainingUses: 1,
@@ -2846,6 +2863,7 @@ phase: [asPhaseId('main')],
           pendingFreeOperationGrants: [
             {
               grantId: 'grant-a',
+              phase: 'ready',
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
@@ -2853,6 +2871,7 @@ phase: [asPhaseId('main')],
             },
             {
               grantId: 'grant-b',
+              phase: 'ready',
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
@@ -2952,6 +2971,7 @@ phase: [asPhaseId('main')],
           pendingFreeOperationGrants: [
             {
               grantId: 'grant-board',
+              phase: 'ready',
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
@@ -2960,6 +2980,7 @@ phase: [asPhaseId('main')],
             },
             {
               grantId: 'grant-city',
+              phase: 'ready',
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
@@ -3057,6 +3078,7 @@ phase: [asPhaseId('main')],
           pendingFreeOperationGrants: [
             {
               grantId: 'grant-board',
+              phase: 'ready',
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
@@ -3065,6 +3087,7 @@ phase: [asPhaseId('main')],
             },
             {
               grantId: 'grant-city',
+              phase: 'ready',
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
@@ -3136,6 +3159,7 @@ phase: [asPhaseId('main')],
       pendingFreeOperationGrants: [
         {
           grantId: 'grant-required',
+          phase: 'ready',
           seat: '0',
           operationClass: 'operation',
           actionIds: ['operation'],
@@ -3197,6 +3221,7 @@ phase: [asPhaseId('main')],
       pendingFreeOperationGrants: [
         {
           grantId: 'grant-required',
+          phase: 'ready',
           seat: '0',
           operationClass: 'operation',
           actionIds: ['operation'],
@@ -3279,6 +3304,7 @@ phase: [asPhaseId('main')],
       pendingFreeOperationGrants: [
         {
           grantId: 'grant-context',
+          phase: 'ready',
           seat: '0',
           operationClass: 'operation',
           actionIds: ['operation'],
@@ -3360,6 +3386,7 @@ phase: [asPhaseId('main')],
       pendingFreeOperationGrants: [
         {
           grantId: 'grant-impossible-required',
+          phase: 'ready',
           seat: '0',
           operationClass: 'operation',
           actionIds: ['operation'],
@@ -3449,6 +3476,7 @@ phase: [asPhaseId('main')],
       pendingFreeOperationGrants: [
         {
           grantId: 'grant-airlift',
+          phase: 'ready',
           seat: '0',
           operationClass: 'operation',
           actionIds: ['airLift'],
@@ -3459,6 +3487,7 @@ phase: [asPhaseId('main')],
         },
         {
           grantId: 'grant-sweep',
+          phase: 'sequenceWaiting',
           seat: '0',
           operationClass: 'operation',
           actionIds: ['sweep'],
@@ -4510,6 +4539,7 @@ describe('legalMoves seat-resolution lifecycle architecture guard', () => {
             pendingFreeOperationGrants: [
               {
                 grantId: allowDuringMonsoon === true ? 'grant-allow' : 'grant-blocked',
+                phase: 'ready',
                 seat: '0',
                 operationClass: 'operation',
                 actionIds: ['operation'],

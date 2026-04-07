@@ -28,6 +28,7 @@ export function requireCardDrivenRuntime(state: GameState) {
  */
 export interface FreeOperationGrantOverrides {
   readonly grantId?: string;
+  readonly phase?: TurnFlowPendingFreeOperationGrant['phase'];
   readonly seat?: string;
   readonly operationClass?: TurnFlowPendingFreeOperationGrant['operationClass'];
   readonly actionIds?: readonly string[];
@@ -56,6 +57,7 @@ function buildGrant(
   const activeSeat = runtime.seatOrder[Number(activePlayer)] ?? String(activePlayer);
   return {
     grantId: grant?.grantId ?? `test-grant-${nextIndex}`,
+    phase: grant?.phase ?? 'ready',
     seat: grant?.seat ?? activeSeat,
     operationClass: grant?.operationClass ?? 'operation',
     ...(grant?.actionIds === undefined ? {} : { actionIds: [...grant.actionIds] }),

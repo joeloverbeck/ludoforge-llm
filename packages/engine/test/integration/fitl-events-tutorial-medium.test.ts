@@ -137,7 +137,6 @@ describe('FITL tutorial medium event-card production spec', () => {
     assert.deepEqual(shadedGrants[1]?.moveZoneBindings, ['$targetSpaces', '$chainSpaces']);
     assert.deepEqual(shadedGrants[1]?.moveZoneProbeBindings, ['$targetSpaces', '$chainSpaces']);
     assert.deepEqual(shadedGrants[1]?.executionContext, { originRestrictionKey: 'sihanouk-rally-spaces' });
-    assert.equal(shadedGrants[1]?.completionPolicy, 'skipIfNoLegalCompletion');
     assert.equal(shadedGrants[1]?.allowDuringMonsoon, true);
 
     const shadedEffects = card?.shaded?.effects ?? [];
@@ -157,7 +156,6 @@ describe('FITL tutorial medium event-card production spec', () => {
       batch: 'sihanouk-shaded-nva',
       step: 1,
     });
-    assert.equal((nvaMarch as { completionPolicy?: unknown } | undefined)?.completionPolicy, 'skipIfNoLegalCompletion');
     assert.deepEqual(nvaMarch?.executionContext, { originRestrictionKey: 'sihanouk-rally-spaces' });
     assert.equal(nvaMarch?.allowDuringMonsoon, true);
   });

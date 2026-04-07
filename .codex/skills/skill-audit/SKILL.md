@@ -24,6 +24,7 @@ Use this skill to evaluate a target skill against the work done in the current C
    - outcomes that diverged from the skill's stated intent
    - steps not exercised in this session
    - if the target skill was modified earlier in the same session, whether each finding applies to the pre-edit version, the current version, or both
+   - if the same target was already audited earlier in the same session, which findings are newly resolved, which remain, and which are new
 5. Cross-check each finding against:
    - `docs/FOUNDATIONS.md`
    - `AGENTS.md`
@@ -62,6 +63,8 @@ Output the audit in the conversation, not in a file.
 
 1. **[SEVERITY]** <title>
    - **What happened**: <session evidence>
+   - **Applies to**: <pre-edit / current / both> [optional when the target changed earlier in the same session]
+   - **Evidence**: <brief session moment reference> [optional]
    - **Skill gap**: <what the skill says or fails to say>
    - **Suggestion**: <how to fix the skill>
 
@@ -71,6 +74,8 @@ Output the audit in the conversation, not in a file.
 
 1. **[SEVERITY]** <title>
    - **Current behavior**: <what the skill currently says>
+   - **Applies to**: <pre-edit / current / both> [optional when the target changed earlier in the same session]
+   - **Evidence**: <brief session moment reference> [optional]
    - **Why improve**: <session evidence or reasoning>
    - **Suggestion**: <proposed change>
 
@@ -80,6 +85,7 @@ Output the audit in the conversation, not in a file.
 
 1. **[SEVERITY]** <title>
    - **What's missing**: <gap description>
+   - **Evidence**: <brief session moment reference> [optional]
    - **Why it fits**: <why this matches the skill's intent>
    - **Suggestion**: <proposed addition>
 
@@ -104,6 +110,7 @@ Output the audit in the conversation, not in a file.
 - Stay within the target skill's stated scope. Do not expand the audit into a redesign of a different skill.
 - Every `Issue` and `Improvement` must be grounded in actual session evidence. Pure hypotheticals belong in `Features` or should be omitted.
 - If the target skill is part of a multi-skill workflow, report terminology or reference drift across sibling skills as issues when it affects correctness or usability.
+- When re-auditing the same target within one session, prefer delta-oriented findings: note what was fixed since the last audit before repeating older items that still remain.
 
 ## Codex Adaptation Notes
 

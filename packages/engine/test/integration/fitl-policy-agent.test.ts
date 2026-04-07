@@ -871,7 +871,7 @@ describe('FITL policy agent integration', () => {
     assert.ok(agents);
     assert.deepEqual(agents.bindingsBySeat, {
       us: 'us-baseline',
-      arvn: 'arvn-baseline',
+      arvn: 'arvn-evolved',
       nva: 'nva-baseline',
       vc: 'vc-baseline',
     });
@@ -1164,7 +1164,7 @@ describe('FITL policy agent integration', () => {
       assert.equal(move.agentDecision.emergencyFallback, false);
       assert.ok(
         move.agentDecision.resolvedProfileId === 'us-baseline'
-          || move.agentDecision.resolvedProfileId === 'arvn-baseline'
+          || move.agentDecision.resolvedProfileId === 'arvn-evolved'
           || move.agentDecision.resolvedProfileId === 'nva-baseline'
           || move.agentDecision.resolvedProfileId === 'vc-baseline',
       );

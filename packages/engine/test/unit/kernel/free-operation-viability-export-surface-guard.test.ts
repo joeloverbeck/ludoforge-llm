@@ -15,7 +15,6 @@ const expectedViabilityExports = [
   'canResolveAmbiguousFreeOperationOverlapInCurrentState',
   'hasLegalCompletedFreeOperationMoveInCurrentState',
   'isFreeOperationGrantUsableInCurrentState',
-  'resolveLegalCompletedFreeOperationMoveInCurrentState',
 ] as const;
 
 describe('free-operation viability export surface architecture guard', () => {

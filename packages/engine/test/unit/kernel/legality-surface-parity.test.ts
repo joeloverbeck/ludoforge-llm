@@ -346,6 +346,7 @@ describe('legality surface parity', () => {
               pendingFreeOperationGrants: [
                 {
                   grantId: 'grant-1',
+                  phase: 'ready',
                   seat: '1',
                   operationClass: 'operation',
                   actionIds: ['operation'],
@@ -377,6 +378,7 @@ describe('legality surface parity', () => {
               pendingFreeOperationGrants: [
                 {
                   grantId: 'grant-blocker',
+                  phase: 'ready',
                   seat: '1',
                   operationClass: 'operation',
                   actionIds: ['operation'],
@@ -386,6 +388,7 @@ describe('legality surface parity', () => {
                 },
                 {
                   grantId: 'grant-active-seat',
+                  phase: 'sequenceWaiting',
                   seat: '0',
                   operationClass: 'operation',
                   actionIds: ['operation'],
@@ -419,6 +422,7 @@ describe('legality surface parity', () => {
               pendingFreeOperationGrants: [
                 {
                   grantId: 'grant-0',
+                  phase: 'ready',
                   seat: '0',
                   operationClass: 'limitedOperation',
                   actionIds: ['operation'],
@@ -450,6 +454,7 @@ describe('legality surface parity', () => {
               pendingFreeOperationGrants: [
                 {
                   grantId: 'grant-0',
+                  phase: 'ready',
                   seat: '0',
                   operationClass: 'operation',
                   actionIds: ['operation-alt'],
@@ -482,6 +487,7 @@ describe('legality surface parity', () => {
               pendingFreeOperationGrants: [
                 {
                   grantId: 'grant-0',
+                  phase: 'ready',
                   seat: '0',
                   operationClass: 'operation',
                   actionIds: ['operation'],
@@ -518,6 +524,7 @@ describe('legality surface parity', () => {
               pendingFreeOperationGrants: [
                 {
                   grantId: 'grant-a',
+                  phase: 'ready',
                   seat: '0',
                   operationClass: 'operation',
                   actionIds: ['operation'],
@@ -525,6 +532,7 @@ describe('legality surface parity', () => {
                 },
                 {
                   grantId: 'grant-b',
+                  phase: 'ready',
                   seat: '0',
                   operationClass: 'operation',
                   actionIds: ['operation'],
@@ -666,6 +674,7 @@ describe('legality surface parity', () => {
           pendingFreeOperationGrants: [
             {
               grantId: 'grant-board',
+              phase: 'ready',
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
@@ -674,6 +683,7 @@ describe('legality surface parity', () => {
             },
             {
               grantId: 'grant-city',
+              phase: 'ready',
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
@@ -722,6 +732,7 @@ describe('legality surface parity', () => {
           pendingFreeOperationGrants: [
             {
               grantId: 'grant-board',
+              phase: 'ready',
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
@@ -730,6 +741,7 @@ describe('legality surface parity', () => {
             },
             {
               grantId: 'grant-city',
+              phase: 'ready',
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
@@ -825,6 +837,7 @@ describe('legality surface parity', () => {
           pendingFreeOperationGrants: [
             {
               grantId: 'grant-board',
+              phase: 'ready',
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
@@ -833,6 +846,7 @@ describe('legality surface parity', () => {
             },
             {
               grantId: 'grant-city',
+              phase: 'ready',
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
@@ -905,6 +919,7 @@ describe('legality surface parity', () => {
           pendingFreeOperationGrants: [
             {
               grantId: 'grant-0',
+              phase: 'ready',
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation-alt'],
@@ -1022,6 +1037,7 @@ describe('legality surface parity', () => {
           pendingFreeOperationGrants: [
             {
               grantId: 'grant-0',
+              phase: 'ready',
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],

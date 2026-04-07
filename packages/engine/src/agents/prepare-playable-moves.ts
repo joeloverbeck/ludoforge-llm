@@ -1,9 +1,6 @@
 import { perfStart, perfDynEnd, type PerfProfiler } from '../kernel/perf-profiler.js';
-import { createSeatResolutionContext } from '../kernel/identity.js';
 import { evaluatePlayableMoveCandidate } from '../kernel/playable-candidate.js';
-import { resolveLegalCompletedFreeOperationMoveInCurrentState } from '../kernel/free-operation-viability.js';
 import { toMoveIdentityKey } from '../kernel/move-identity.js';
-import { createTrustedExecutableMove } from '../kernel/trusted-move.js';
 import type {
   Agent,
   ChoicePendingRequest,
@@ -269,44 +266,6 @@ function attemptTemplateCompletion(
   readonly templateCompletionUnsatisfiable: number;
   readonly trace: TemplateCompletionTrace;
 } {
-  if (move.freeOperation === true) {
-    const seatResolution = createSeatResolutionContext(input.def, input.state.playerCount);
-    const completedMove = resolveLegalCompletedFreeOperationMoveInCurrentState(
-      input.def,
-      input.state,
-      move,
-      seatResolution,
-    );
-    if (completedMove !== null) {
-      const trustedMove = createTrustedExecutableMove(
-        completedMove,
-        input.state.stateHash,
-        'templateCompletion',
-      );
-      const enteredTrustedMoveIndex = recordPlayableMove(trustedMove, 'complete');
-      return {
-        rng: initialRng,
-        stochasticCount: 0,
-        templateCompletionAttempts: 1,
-        templateCompletionSuccesses: enteredTrustedMoveIndex ? 1 : 0,
-        templateCompletionUnsatisfiable: 0,
-        trace: enteredTrustedMoveIndex
-          ? {
-              finalClassification: 'complete',
-              enteredTrustedMoveIndex: true,
-              templateCompletionAttempts: 1,
-              templateCompletionOutcome: 'complete',
-            }
-          : {
-              finalClassification: 'rejected',
-              enteredTrustedMoveIndex: false,
-              skippedAsDuplicate: true,
-              templateCompletionAttempts: 1,
-              templateCompletionOutcome: 'complete',
-            },
-      };
-    }
-  }
   let currentRng = initialRng;
   let stochasticCount = 0;
   let templateCompletionAttempts = 0;
@@ -317,15 +276,27 @@ function attemptTemplateCompletion(
   let rejection: PolicyMovePreparationTrace['rejection'] | undefined;
   for (let attempt = 0; attempt < pendingTemplateCompletions; attempt += 1) {
     templateCompletionAttempts += 1;
+    const attemptRng = currentRng;
     const t0_epc = perfStart(profiler);
-    const result = evaluatePlayableMoveCandidate(
+    let result = evaluatePlayableMoveCandidate(
       input.def,
       input.state,
       move,
-      currentRng,
+      attemptRng,
       input.runtime,
       choose === undefined ? undefined : { choose },
     );
+    if (choose !== undefined && result.kind === 'rejected') {
+      // Completion guidance is advisory. If a guided completion path dead-ends,
+      // retry the same template without guidance before discarding the move.
+      result = evaluatePlayableMoveCandidate(
+        input.def,
+        input.state,
+        move,
+        attemptRng,
+        input.runtime,
+      );
+    }
     perfDynEnd(profiler, 'agent:evaluatePlayableCandidate', t0_epc);
     currentRng = result.rng;
     if (result.kind === 'playableComplete') {

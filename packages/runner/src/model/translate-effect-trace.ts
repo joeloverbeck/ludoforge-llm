@@ -299,6 +299,20 @@ function translateTriggerEntry(
         zoneIds: [],
         tokenIds: [],
       };
+
+    case 'turnFlowGrantLifecycle':
+      return {
+        ...base,
+        kind: 'lifecycle',
+        message:
+          `Grant ${formatIdAsDisplayName(entry.grantId)} ${formatIdAsDisplayName(entry.step)}` +
+          ` (${formatIdAsDisplayName(entry.fromPhase)} -> ${formatIdAsDisplayName(entry.toPhase)})` +
+          ` for ${resolveFactionName(entry.seat, visualConfig)}.`,
+        depth: 0,
+        zoneIds: [],
+        tokenIds: [],
+        ...optionalPlayerId(lookup.playerByFaction.get(entry.seat)),
+      };
   }
 
   return assertNever(entry);

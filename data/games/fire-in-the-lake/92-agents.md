@@ -358,6 +358,27 @@ agents:
         tieBreakers:
           - stableMoveKey
 
+    arvn-evolved:
+      observer: currentPlayer
+      params:
+        eventWeight: 1.5
+        projectedMarginWeight: 1
+        resourceWeight: 0.02
+      use:
+        pruningRules:
+          - dropPassWhenOtherMovesExist
+        considerations:
+          - preferProjectedSelfMargin
+          - preserveResources
+          - preferEvent
+          - preferTrainAction
+          - preferPatrolAction
+          - preferSweepAction
+          - preferAssaultAction
+          - preferGovernAction
+        tieBreakers:
+          - stableMoveKey
+
     nva-baseline:
       observer: currentPlayer
       params:
@@ -400,7 +421,7 @@ agents:
 
   bindings:
     us: us-baseline
-    arvn: arvn-baseline
+    arvn: arvn-evolved
     nva: nva-baseline
     vc: vc-baseline
 ```

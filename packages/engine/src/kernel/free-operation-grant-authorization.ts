@@ -10,7 +10,6 @@ import {
   resolveGrantAwareMoveRuntimeBindings,
 } from './free-operation-grant-bindings.js';
 import { pendingFreeOperationGrantEquivalenceKey } from './free-operation-grant-overlap.js';
-import { resolvePendingFreeOperationGrantSequenceStatus } from './free-operation-sequence-progression.js';
 import { resolveTurnFlowActionClass } from './turn-flow-action-class.js';
 import type { FreeOperationZoneFilterSurface } from './free-operation-zone-filter-contract.js';
 import {
@@ -27,7 +26,6 @@ import type {
   GameState,
   Move,
   TurnFlowPendingFreeOperationGrant,
-  TurnFlowRuntimeState,
 } from './types.js';
 
 interface MutableGrantZoneFilterEvalContext {
@@ -73,14 +71,6 @@ export const moveOperationClass = (
     return resolved;
   }
   return 'operation';
-};
-
-export const isPendingFreeOperationGrantSequenceReady = (
-  pending: readonly TurnFlowPendingFreeOperationGrant[],
-  grant: TurnFlowPendingFreeOperationGrant,
-  sequenceContexts?: TurnFlowRuntimeState['freeOperationSequenceContexts'],
-): boolean => {
-  return resolvePendingFreeOperationGrantSequenceStatus(pending, grant, sequenceContexts).ready;
 };
 
 export const isGrantOperationClassCompatible = (
@@ -244,15 +234,11 @@ export const evaluateZoneFilterForMove = (
 export const doesGrantAuthorizeMove = (
   def: GameDef,
   state: GameState,
-  pending: readonly TurnFlowPendingFreeOperationGrant[],
+  _pending: readonly TurnFlowPendingFreeOperationGrant[],
   grant: TurnFlowPendingFreeOperationGrant,
   move: Move,
 ): boolean =>
-  isPendingFreeOperationGrantSequenceReady(
-    pending,
-    grant,
-    state.turnOrderState.type === 'cardDriven' ? state.turnOrderState.runtime.freeOperationSequenceContexts : undefined,
-  ) &&
+  grant.phase !== 'sequenceWaiting' &&
   doesGrantApplyToMove(def, grant, move) &&
   doesGrantSatisfySequenceContext(def, state, grant, move) &&
   (
@@ -263,15 +249,11 @@ export const doesGrantAuthorizeMove = (
 export const doesGrantPotentiallyAuthorizeMove = (
   def: GameDef,
   state: GameState,
-  pending: readonly TurnFlowPendingFreeOperationGrant[],
+  _pending: readonly TurnFlowPendingFreeOperationGrant[],
   grant: TurnFlowPendingFreeOperationGrant,
   move: Move,
 ): boolean =>
-  isPendingFreeOperationGrantSequenceReady(
-    pending,
-    grant,
-    state.turnOrderState.type === 'cardDriven' ? state.turnOrderState.runtime.freeOperationSequenceContexts : undefined,
-  ) &&
+  grant.phase !== 'sequenceWaiting' &&
   doesGrantApplyToMove(def, grant, move) &&
   doesGrantSatisfySequenceContext(def, state, grant, move, { allowUnresolvedMoveZones: true }) &&
   (

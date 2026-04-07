@@ -1,7 +1,7 @@
 import { isFreeOperationAllowedDuringMonsoonForMove } from './free-operation-discovery-analysis.js';
 import { resolveTurnFlowActionClass } from './turn-flow-action-class.js';
 import {
-  hasActiveSeatCompletionPendingFreeOperationGrant,
+  hasActiveSeatRequiredPendingFreeOperationGrant,
   isMoveAllowedByRequiredPendingFreeOperationGrant,
   isEventMovePlayableUnderGrantViabilityPolicy,
 } from './turn-flow-eligibility.js';
@@ -51,7 +51,7 @@ export function isMoveAllowedByTurnFlowOptionMatrix(def: GameDef, state: GameSta
   if (move.freeOperation === true && state.turnOrderState.type === 'cardDriven') {
     const seatResolution = createSeatResolutionContext(def, state.playerCount);
     if (
-      hasActiveSeatCompletionPendingFreeOperationGrant(def, state, seatResolution)
+      hasActiveSeatRequiredPendingFreeOperationGrant(def, state, seatResolution)
       && isMoveAllowedByRequiredPendingFreeOperationGrant(def, state, move, seatResolution)
     ) {
       return true;

@@ -61,8 +61,9 @@ For each reference, validate against the actual codebase:
 3. **Functions and methods**: Grep for each function. Confirm signature, module location, and export status. Note any signature differences from what the spec assumes.
 4. **Dependencies (specs/tickets)**: For each dependency, verify whether it lives in `specs/`, `archive/specs/`, `tickets/`, or `archive/tickets/`. Record the correct path. If a dependency is listed as incomplete but has since been implemented, note this. For archived dependencies, also check for associated active ticket series (`tickets/<NAMESPACE>-*`) and note them — they indicate whether the dependency's work is in progress or completed. For specs that list the assessed spec as a dependency, verify their assumptions about the assessed spec's deliverables are still valid. If the assessed spec's scope changes, flag impacted downstream specs. **Related specs**: For specs listed as "Related" (not dependencies), verify that the assessed spec's proposed changes don't invalidate assumptions in the related spec. Flag if a scope change would require updating the related spec.
 5. **YAML/config fields**: Grep for field names in schema files, type definitions, and example YAML files. Confirm the spec's assumptions about available fields.
-6. **Downstream consumers (blast radius)**: For types or interfaces the spec proposes to modify, grep for all import sites and usage points. Record the blast radius — files that would need updating.
+6. **Downstream consumers (blast radius)**: For types or interfaces the spec proposes to modify, grep for all import sites and usage points **in both source and test files**. Record the blast radius separately for source files (which need code changes) and test files (which need fixture/construction updates). Test migration scope is frequently underestimated in specs — flag it explicitly.
 7. **Existing implementations**: For each major proposed artifact (new types, new files, new patterns), search the codebase for existing implementations with similar names or functionality. Check whether the proposal duplicates existing infrastructure. This catches specs whose premise has been overtaken by prior work. Search using both exact names from the spec AND broader patterns (e.g., if the spec proposes `CompiledTokenFilter`, also search for `tryCompile*`, `*compiler.ts`, `Compiled*` to find related infrastructure that the spec may not reference). **Short-circuit**: If the initial exact-name search returns zero matches, note "no existing implementation found" and skip the broader pattern search — the proposal is genuinely novel.
+8. **Quantitative claims**: If the spec states numeric metrics (file counts, function counts, workaround counts), verify them against codebase grep/glob results. Correct inaccurate numbers in the updated spec.
 
 For specs with many references (>5 types/functions/paths), use an Explore agent to perform extraction and validation in a single pass. Include the spec content in the agent prompt so it can both identify references and validate them. This is read-only — agent-based exploration is safe and significantly faster.
 
@@ -110,7 +111,7 @@ Present all findings to the user in a structured report:
 ## Reassessment: <spec-name>
 
 ### Codebase Status
-[Optional — include when the spec's proposal overlaps with existing infrastructure.]
+[Optional — include when the spec's proposal overlaps with existing infrastructure, or when confirming the absence of prior implementation is itself informative.]
 <Brief summary of what already exists in the codebase that is relevant to the spec's proposal. Helps contextualize all subsequent findings.>
 
 ### Issues (must fix)
@@ -147,7 +148,10 @@ Present all findings to the user in a structured report:
 
 If the user's answers raise new questions or invalidate previous findings, present a follow-up round (same format, same question limit). Repeat until all findings are resolved.
 
-If the user defers a decision back to you (e.g., "you decide", "reassess based on FOUNDATIONS"), analyze the question against `docs/FOUNDATIONS.md` principles, present your recommendation with the specific Foundation justification, and treat it as approved unless the user objects. For architectural or design questions with multiple alternatives, provide a brief comparison of alternatives against FOUNDATIONS.md principles before presenting the recommendation. For simple factual questions, a one-line Foundation reference suffices.
+If the user defers a decision back to you (e.g., "you decide", "reassess based on FOUNDATIONS"), analyze the question against `docs/FOUNDATIONS.md` principles, present your recommendation with the specific Foundation justification, and treat it as approved unless the user objects. Scale the analysis depth to the question type:
+- **Simple factual questions**: A one-line Foundation reference suffices.
+- **Design questions with a clear FOUNDATIONS answer**: Provide a focused paragraph — state the recommendation, cite the Foundation(s), and briefly explain the implementation consequence. Do not enumerate alternatives.
+- **Architectural questions with multiple viable alternatives**: Provide a brief comparison of alternatives against FOUNDATIONS.md principles before presenting the recommendation.
 
 If the user requests deeper analysis of a specific finding before deciding, perform the investigation using read-only tools (reading additional source files, tracing call chains, etc.) and present updated findings before re-asking for approval. This investigation round does not count toward the follow-up question limit — it is resolution of the original question, not a new question.
 

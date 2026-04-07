@@ -1,6 +1,7 @@
 import { asPlayerId } from './branded.js';
 import { applyBoundaryExpiry } from './boundary-expiry.js';
 import { resetPhaseUsage, resetTurnUsage } from './action-usage.js';
+import { expireGrant } from './grant-lifecycle.js';
 import { reconcileRunningHash } from './zobrist-phase-hash.js';
 import { resolveBoundaryDurationsAtTurnEnd } from './event-execution.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
@@ -21,11 +22,6 @@ import {
 import { terminalResult } from './terminal.js';
 import type { GameDef, GameState, TriggerLogEntry } from './types.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';
-import {
-  hasActiveSeatRequiredPendingFreeOperationGrant,
-  hasActiveSeatSkippablePendingFreeOperationGrant,
-  skipUncompletablePendingFreeOperationGrants,
-} from './turn-flow-eligibility.js';
 
 const firstPhaseId = (def: GameDef): GameState['currentPhase'] => {
   const phaseId = def.turnStructure.phases.at(0)?.id;
@@ -98,6 +94,65 @@ const resolveCurrentCoupSeat = (
     TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.COUP_SEAT_RESOLUTION,
     seatResolution,
   );
+};
+
+const expireBlockingPendingFreeOperationGrants = (
+  def: GameDef,
+  state: GameState,
+  seatResolution: SeatResolutionContext,
+  triggerLogCollector?: TriggerLogEntry[],
+): GameState | null => {
+  if (state.turnOrderState.type !== 'cardDriven') {
+    return null;
+  }
+  const runtime = state.turnOrderState.runtime;
+  const pending = runtime.pendingFreeOperationGrants ?? [];
+  if (pending.length === 0) {
+    return null;
+  }
+
+  const activeSeat = requireCardDrivenActiveSeat(
+    def,
+    state,
+    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.ELIGIBILITY_CHECK,
+    seatResolution,
+  );
+  const remainingGrants = pending.flatMap((grant) => {
+    if (
+      grant.seat !== activeSeat
+      || grant.phase !== 'ready'
+      || (
+        grant.completionPolicy !== 'required'
+        && grant.completionPolicy !== 'skipIfNoLegalCompletion'
+      )
+    ) {
+      return [grant];
+    }
+    const expired = expireGrant(grant);
+    triggerLogCollector?.push(expired.traceEntry);
+    return [];
+  });
+
+  if (remainingGrants.length === pending.length) {
+    return null;
+  }
+  const { pendingFreeOperationGrants, ...runtimeWithoutPendingGrants } = runtime;
+  void pendingFreeOperationGrants;
+
+  return {
+    ...state,
+    turnOrderState: {
+      type: 'cardDriven',
+      runtime: remainingGrants.length === 0
+        ? {
+            ...runtimeWithoutPendingGrants,
+          }
+        : {
+            ...runtime,
+            pendingFreeOperationGrants: remainingGrants,
+          },
+    },
+  };
 };
 
 /**
@@ -490,34 +545,28 @@ export const advanceToDecisionPoint = (
   while (terminalResult(def, nextState, cachedRuntime) === null) {
     const isInterruptPhase = hasInterrupts && interrupts!.some((phase) => phase.id === nextState.currentPhase);
     const phaseValid = isInterruptPhase || effectiveTurnPhases(def, nextState).some((phase) => phase.id === nextState.currentPhase);
+    // Skip grants with skipIfNoLegalCompletion when the grant's free-op
+    // moves have no viable completions.  This runs BEFORE hasLegal because
+    // the broadened isRequiredPendingFreeOperationGrant predicate makes
+    // skippable grants surface as legal moves — if we don't remove them
+    // first, hasLegal would break and the agent would deadlock trying to
+    // complete an uncompletable free-op template.
+    const t0_lm = perfStart(profiler);
+    const hasLegal = phaseValid && legalMoves(def, nextState, { earlyExitAfterFirst: true }, cachedRuntime).length > 0;
+    perfDynEnd(profiler, 'adp:legalMoves', t0_lm);
+    if (hasLegal) {
+      break;
+    }
+
+    // If a blocking free-operation grant leaves the state with no legal moves,
+    // expire it through the lifecycle transition and re-check legal moves.
     if (phaseValid) {
-      const hasRequiredGrant = hasActiveSeatRequiredPendingFreeOperationGrant(def, nextState, seatResolution);
-      const hasSkippableGrant = !hasRequiredGrant && hasActiveSeatSkippablePendingFreeOperationGrant(def, nextState, seatResolution);
-      if (hasSkippableGrant) {
-        const t0_lm = perfStart(profiler);
-        const legal = legalMoves(def, nextState, undefined, cachedRuntime);
-        perfDynEnd(profiler, 'adp:legalMoves', t0_lm);
-        if (!legal.some((move) => move.freeOperation === true)) {
-          const skipped = skipUncompletablePendingFreeOperationGrants(def, nextState, seatResolution);
-          if (skipped !== null) {
-            const tableExp = cachedRuntime?.zobristTable;
-            nextState = tableExp
-              ? { ...skipped.state, _runningHash: reconcileRunningHash(tableExp, nextState, skipped.state) }
-              : skipped.state;
-            advances += 1;
-            continue;
-          }
-        }
-        if (legal.length > 0) {
-          break;
-        }
-      } else {
-        const t0_lm = perfStart(profiler);
-        const hasLegal = legalMoves(def, nextState, { earlyExitAfterFirst: true }, cachedRuntime).length > 0;
-        perfDynEnd(profiler, 'adp:legalMoves', t0_lm);
-        if (hasLegal || hasRequiredGrant) {
-          break;
-        }
+      const expired = expireBlockingPendingFreeOperationGrants(def, nextState, seatResolution, triggerLogCollector);
+      if (expired !== null) {
+        const tableExp = cachedRuntime?.zobristTable;
+        nextState = tableExp ? { ...expired, _runningHash: reconcileRunningHash(tableExp, nextState, expired) } : expired;
+        advances += 1;
+        continue;
       }
     }
 

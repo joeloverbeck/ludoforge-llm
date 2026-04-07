@@ -27,6 +27,7 @@ import {
 } from './move-runtime-bindings.js';
 import { EFFECT_RUNTIME_REASONS, ILLEGAL_MOVE_REASONS } from './runtime-reasons.js';
 import { advanceToDecisionPoint } from './phase-advance.js';
+import { consumeUse } from './grant-lifecycle.js';
 import {
   illegalMoveError,
   isKernelErrorCode,
@@ -39,23 +40,39 @@ import {
 } from './runtime-error.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import {
+  advanceSequenceReadyPendingFreeOperationGrants,
   applyTurnFlowEligibilityAfterMove,
-  consumeTurnFlowFreeOperationGrant,
-  hasActiveSeatCompletionPendingFreeOperationGrant,
+  hasActiveSeatRequiredPendingFreeOperationGrant,
   isMoveAllowedByRequiredPendingFreeOperationGrant,
+  splitReadyDeferredEventEffects,
+  toPendingDeferredEventEffects,
+  toPendingFreeOperationGrants,
+  trimFreeOperationSequenceContextsToPendingBatches,
+  withFreeOperationSequenceContexts,
+  withPendingDeferredEventEffects,
+  withPendingFreeOperationGrants,
+  withSuspendedCardEnd,
 } from './turn-flow-eligibility.js';
 import { resolveFreeOperationDiscoveryAnalysis } from './free-operation-discovery-analysis.js';
+import {
+  collectGrantMoveZoneCandidates,
+  resolveAuthorizedPendingFreeOperationGrants,
+} from './free-operation-grant-authorization.js';
 import { resolveTurnFlowActionClassMismatch } from './turn-flow-action-class.js';
 import { toFreeOperationDeniedCauseForLegality } from './free-operation-legality-policy.js';
 import { applyTurnFlowWindowFilters, isMoveAllowedByTurnFlowOptionMatrix } from './legal-moves-turn-order.js';
 import { isTurnFlowErrorCode } from './turn-flow-error.js';
 import { dispatchTriggers } from './trigger-dispatch.js';
+import {
+  authorizedFreeOperationGrantMissingInvariantMessage,
+  makeAuthorizedFreeOperationGrantMissingInvariantContext,
+} from './turn-flow-invariant-contracts.js';
 import { selectorInvalidSpecError } from './selector-runtime-contract.js';
 import { findPhaseDef } from './phase-lookup.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { toMoveExecutionPolicy } from './execution-policy.js';
 import { createSeatResolutionContext } from './identity.js';
-import { validateTurnFlowRuntimeStateInvariants } from './turn-flow-runtime-invariants.js';
+import { requireCardDrivenActiveSeat, validateTurnFlowRuntimeStateInvariants } from './turn-flow-runtime-invariants.js';
 import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
 import { createDeferredLifecycleTraceEntry } from './turn-flow-deferred-lifecycle-trace.js';
 import { createExecutionEffectContext, type PhaseTransitionBudget } from './effect-context.js';
@@ -116,6 +133,134 @@ const runtimeBindingsForMove = (
   actionPipeline: ActionPipelineDef | undefined,
 ): Readonly<Record<string, MoveParamValue | boolean | string>> =>
   buildMoveRuntimeBindings(move, decisionBindingsForMove(actionPipeline, move.params));
+
+interface FreeOperationGrantConsumptionResult {
+  readonly state: GameState;
+  readonly traceEntries: readonly TriggerLogEntry[];
+  readonly releasedDeferredEventEffects: readonly TurnFlowReleasedDeferredEventEffect[];
+  readonly consumedGrant?: {
+    readonly postResolutionTurnFlow?: 'resumeCardFlow' | 'endCardNow';
+  };
+}
+
+export const consumeAuthorizedFreeOperationGrant = (
+  def: GameDef,
+  authorizationState: GameState,
+  state: GameState,
+  move: Move,
+  seatResolution: ReturnType<typeof createSeatResolutionContext>,
+): FreeOperationGrantConsumptionResult => {
+  if (move.freeOperation !== true || state.turnOrderState.type !== 'cardDriven') {
+    return { state, traceEntries: [], releasedDeferredEventEffects: [] };
+  }
+  const runtime = state.turnOrderState.runtime;
+  const authorizationRuntime =
+    authorizationState.turnOrderState.type === 'cardDriven'
+      ? authorizationState.turnOrderState.runtime
+      : null;
+  if (authorizationRuntime === null) {
+    return { state, traceEntries: [], releasedDeferredEventEffects: [] };
+  }
+  const activeSeat = requireCardDrivenActiveSeat(
+    def,
+    authorizationState,
+    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.FREE_OPERATION_GRANT_CONSUMPTION,
+    seatResolution,
+  );
+  const authorizationPending = authorizationRuntime.pendingFreeOperationGrants ?? [];
+  const authorizedGrant = resolveAuthorizedPendingFreeOperationGrants(
+    def,
+    authorizationState,
+    authorizationPending,
+    activeSeat,
+    move,
+  ).canonicalGrant;
+  if (authorizedGrant === null) {
+    return { state, traceEntries: [], releasedDeferredEventEffects: [] };
+  }
+
+  const runtimePending = runtime.pendingFreeOperationGrants ?? [];
+  const consumedIndex = runtimePending.findIndex((grant) => grant.grantId === authorizedGrant.grantId);
+  if (consumedIndex < 0) {
+    const context = makeAuthorizedFreeOperationGrantMissingInvariantContext({
+      actionId: String(move.actionId),
+      activeSeat,
+      authorizedGrantId: authorizedGrant.grantId,
+      authorizationPendingGrantIds: authorizationPending.map((grant) => grant.grantId),
+      runtimePendingGrantIds: runtimePending.map((grant) => grant.grantId),
+    });
+    throw kernelRuntimeError(
+      'RUNTIME_CONTRACT_INVALID',
+      authorizedFreeOperationGrantMissingInvariantMessage(context),
+      context,
+    );
+  }
+
+  const consumedGrant = runtimePending[consumedIndex]!;
+  const consumedTransition = consumeUse(consumedGrant);
+  const nextPending = consumedTransition.grant.phase === 'exhausted'
+    ? [...runtimePending.slice(0, consumedIndex), ...runtimePending.slice(consumedIndex + 1)]
+    : [
+        ...runtimePending.slice(0, consumedIndex),
+        consumedTransition.grant,
+        ...runtimePending.slice(consumedIndex + 1),
+      ];
+  const captureKey = consumedGrant.sequenceContext?.captureMoveZoneCandidatesAs;
+  const capturedZones = captureKey === undefined
+    ? []
+    : collectGrantMoveZoneCandidates(def, authorizationState, move, consumedGrant);
+  const capturedBatchId = consumedGrant.sequenceBatchId;
+  const baseSequenceContexts = runtime.freeOperationSequenceContexts;
+  const nextSequenceContexts = captureKey === undefined || capturedBatchId === undefined
+    ? trimFreeOperationSequenceContextsToPendingBatches(baseSequenceContexts, nextPending)
+    : trimFreeOperationSequenceContextsToPendingBatches({
+        ...(baseSequenceContexts ?? {}),
+        [capturedBatchId]: {
+          capturedMoveZonesByKey: {
+            ...(baseSequenceContexts?.[capturedBatchId]?.capturedMoveZonesByKey ?? {}),
+            [captureKey]: [...capturedZones],
+          },
+          progressionPolicy: baseSequenceContexts?.[capturedBatchId]?.progressionPolicy ?? 'strictInOrder',
+          skippedStepIndices: baseSequenceContexts?.[capturedBatchId]?.skippedStepIndices ?? [],
+        },
+      }, nextPending);
+  const sequenceAdvanced = advanceSequenceReadyPendingFreeOperationGrants(
+    nextPending,
+    nextSequenceContexts,
+  );
+  const splitDeferred = splitReadyDeferredEventEffects(
+    runtime.pendingDeferredEventEffects ?? [],
+    sequenceAdvanced.grants,
+  );
+  const traceEntries: TriggerLogEntry[] = [
+    consumedTransition.traceEntry,
+    ...sequenceAdvanced.traceEntries,
+    ...splitDeferred.ready.map<TriggerLogEntry>((released) =>
+      createDeferredLifecycleTraceEntry('released', released)),
+  ];
+
+  return {
+    state: {
+      ...state,
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: withPendingDeferredEventEffects(
+          withFreeOperationSequenceContexts(
+            withPendingFreeOperationGrants(
+              withSuspendedCardEnd({ ...runtime }, runtime.suspendedCardEnd),
+              toPendingFreeOperationGrants(sequenceAdvanced.grants),
+            ),
+            nextSequenceContexts,
+          ),
+          toPendingDeferredEventEffects(splitDeferred.remaining),
+        ),
+      },
+    },
+    traceEntries,
+    releasedDeferredEventEffects: splitDeferred.ready,
+    consumedGrant,
+  };
+};
 
 const canonicalTurnFlowMove = (
   move: Move,
@@ -708,7 +853,7 @@ const validateMove = (
     });
   }
   if (
-    hasActiveSeatCompletionPendingFreeOperationGrant(def, state, seatResolution)
+    hasActiveSeatRequiredPendingFreeOperationGrant(def, state, seatResolution)
     && !isMoveAllowedByRequiredPendingFreeOperationGrant(def, state, move, seatResolution)
   ) {
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE, {
@@ -1276,7 +1421,7 @@ const applyMoveCore = (
   const t0_turnFlow = perfStart(profiler);
   const turnFlowResult = move.freeOperation === true
     ? (() => {
-      const consumed = consumeTurnFlowFreeOperationGrant(def, state, executed.stateWithRng, move, seatResolution);
+      const consumed = consumeAuthorizedFreeOperationGrant(def, state, executed.stateWithRng, move, seatResolution);
       if (consumed.consumedGrant?.postResolutionTurnFlow !== 'resumeCardFlow') {
         return {
           state: consumed.state,
@@ -1683,7 +1828,7 @@ export const probeMoveViability = (
       });
     }
     if (
-      hasActiveSeatCompletionPendingFreeOperationGrant(def, state, seatResolution)
+      hasActiveSeatRequiredPendingFreeOperationGrant(def, state, seatResolution)
       && !isMoveAllowedByRequiredPendingFreeOperationGrant(def, state, move, seatResolution)
     ) {
       throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE, {

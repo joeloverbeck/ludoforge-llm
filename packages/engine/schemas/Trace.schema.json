@@ -564,6 +564,104 @@
                   "properties": {
                     "kind": {
                       "type": "string",
+                      "const": "turnFlowGrantLifecycle"
+                    },
+                    "step": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "const": "advanceToReady"
+                        },
+                        {
+                          "type": "string",
+                          "const": "markOffered"
+                        },
+                        {
+                          "type": "string",
+                          "const": "consumeUse"
+                        },
+                        {
+                          "type": "string",
+                          "const": "skipGrant"
+                        },
+                        {
+                          "type": "string",
+                          "const": "expireGrant"
+                        }
+                      ]
+                    },
+                    "grantId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "fromPhase": {
+                      "type": "string",
+                      "enum": [
+                        "sequenceWaiting",
+                        "ready",
+                        "offered",
+                        "consumed",
+                        "exhausted",
+                        "skipped",
+                        "expired"
+                      ]
+                    },
+                    "toPhase": {
+                      "type": "string",
+                      "enum": [
+                        "sequenceWaiting",
+                        "ready",
+                        "offered",
+                        "consumed",
+                        "exhausted",
+                        "skipped",
+                        "expired"
+                      ]
+                    },
+                    "seat": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "operationClass": {
+                      "type": "string",
+                      "enum": [
+                        "pass",
+                        "event",
+                        "operation",
+                        "limitedOperation",
+                        "operationPlusSpecialActivity",
+                        "specialActivity"
+                      ]
+                    },
+                    "remainingUsesBefore": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "remainingUsesAfter": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "step",
+                    "grantId",
+                    "fromPhase",
+                    "toPhase",
+                    "seat",
+                    "operationClass",
+                    "remainingUsesBefore",
+                    "remainingUsesAfter"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
                       "const": "turnFlowEligibility"
                     },
                     "step": {
@@ -3604,6 +3702,18 @@
                                 "type": "string",
                                 "minLength": 1
                               },
+                              "phase": {
+                                "type": "string",
+                                "enum": [
+                                  "sequenceWaiting",
+                                  "ready",
+                                  "offered",
+                                  "consumed",
+                                  "exhausted",
+                                  "skipped",
+                                  "expired"
+                                ]
+                              },
                               "seat": {
                                 "type": "string",
                                 "minLength": 1
@@ -3781,6 +3891,7 @@
                             },
                             "required": [
                               "grantId",
+                              "phase",
                               "seat",
                               "operationClass",
                               "remainingUses"
@@ -3793,6 +3904,18 @@
                               "grantId": {
                                 "type": "string",
                                 "minLength": 1
+                              },
+                              "phase": {
+                                "type": "string",
+                                "enum": [
+                                  "sequenceWaiting",
+                                  "ready",
+                                  "offered",
+                                  "consumed",
+                                  "exhausted",
+                                  "skipped",
+                                  "expired"
+                                ]
                               },
                               "seat": {
                                 "type": "string",
@@ -3979,6 +4102,7 @@
                             },
                             "required": [
                               "grantId",
+                              "phase",
                               "seat",
                               "operationClass",
                               "remainingUses",
@@ -3993,6 +4117,18 @@
                               "grantId": {
                                 "type": "string",
                                 "minLength": 1
+                              },
+                              "phase": {
+                                "type": "string",
+                                "enum": [
+                                  "sequenceWaiting",
+                                  "ready",
+                                  "offered",
+                                  "consumed",
+                                  "exhausted",
+                                  "skipped",
+                                  "expired"
+                                ]
                               },
                               "seat": {
                                 "type": "string",
@@ -4179,6 +4315,7 @@
                             },
                             "required": [
                               "grantId",
+                              "phase",
                               "seat",
                               "operationClass",
                               "remainingUses",

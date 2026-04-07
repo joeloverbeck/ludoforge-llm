@@ -36,6 +36,12 @@ Follow these steps in order. Do not skip any step.
 
 ### Step 1: DISCOVER — Find and Rank Forks
 
+0. **Detect upstream default branch** before any compare calls:
+   ```bash
+   gh api repos/karpathy/autoresearch --jq '.default_branch' 2>/dev/null
+   ```
+   Store the result (e.g., `master`) and use it in all subsequent compare API calls. Do not assume `main`.
+
 1. **List forks** using the GitHub API:
    ```bash
    gh api repos/karpathy/autoresearch/forks --paginate --jq '.[] | {full_name, stargazers_count, pushed_at, default_branch}' 2>/dev/null
@@ -44,9 +50,9 @@ Follow these steps in order. Do not skip any step.
 
 2. **For each fork**, fetch how many commits it is ahead of upstream:
    ```bash
-   gh api repos/karpathy/autoresearch/compare/main...<fork-owner>:<fork-default-branch> --jq '.ahead_by' 2>/dev/null
+   gh api repos/karpathy/autoresearch/compare/<upstream-branch>...<fork-owner>:<fork-default-branch> --jq '.ahead_by' 2>/dev/null
    ```
-   If the compare API fails (e.g., diverged too far), fall back to checking the fork's commit count and last push date as proxies.
+   where `<upstream-branch>` is the value detected in step 0. If the compare API fails (e.g., diverged too far), fall back to checking the fork's commit count and last push date as proxies.
 
 3. **Score each fork** using the composite formula:
    ```
@@ -57,7 +63,7 @@ Follow these steps in order. Do not skip any step.
 
 4. **Filter**: Remove forks with 0 commits ahead (exact mirrors with no changes).
 
-5. **Rank**: Sort by composite score descending. Take the top 15.
+5. **Rank**: Sort by composite score descending. Break ties by commits_ahead (more = higher), then by pushed_at (more recent = higher). Take the top 15.
 
 6. **Baseline tracking**: Read any existing `reports/upstream-sync-*.md` files (glob for them). Extract the fork URLs listed under `## Findings` sections. For each top-15 fork that appeared in the most recent prior report:
    - If the fork's `pushed_at` is unchanged since that report's date, mark it as "no new changes" and skip detailed analysis (but still list it in the report's `## Previously Reviewed` section).
@@ -79,13 +85,13 @@ Present the ranked fork list to the user before proceeding to analysis. Format:
 
 For each fork marked NEW or UPDATED:
 
-1. **Fetch the diff** against upstream:
+1. **Fetch the diff** against upstream (use the branch detected in Step 1.0):
    ```bash
-   gh api repos/karpathy/autoresearch/compare/main...<fork-owner>:<fork-default-branch> --jq '.commits[].commit.message' 2>/dev/null
+   gh api repos/karpathy/autoresearch/compare/<upstream-branch>...<fork-owner>:<fork-default-branch> --jq '.commits[].commit.message' 2>/dev/null
    ```
-   Also fetch the file-level diff summary:
+   Also fetch the file-level diff summary, excluding lock files and generated files to avoid context bloat:
    ```bash
-   gh api repos/karpathy/autoresearch/compare/main...<fork-owner>:<fork-default-branch> --jq '.files[] | {filename, status, additions, deletions, patch}' 2>/dev/null
+   gh api repos/karpathy/autoresearch/compare/<upstream-branch>...<fork-owner>:<fork-default-branch> --jq '[.files[] | select(.filename | test("\\.(lock|sum)$") | not) | {filename, status, additions, deletions, patch}]' 2>/dev/null
    ```
    For forks with many commits, focus on the most impactful files (highest additions + deletions).
 
@@ -132,6 +138,8 @@ For each conceptual change from Step 2:
 ### Step 4: REPORT — Write Triage Report
 
 Write the report to `reports/upstream-sync-YYYY-MM-DD.md` using today's date.
+
+**Template flexibility:** When all findings are Not Applicable / Skip, you may group findings thematically (e.g., "Hardware Ports", "Process Changes", "Documentation") instead of using the Bug Fix / Improvement / New Feature buckets, as long as all required fields per finding are preserved.
 
 **Report template:**
 
@@ -189,14 +197,16 @@ After writing the report:
    - Then: all "Adapt" recommendations
    - Finally: "Skip" recommendations (brief summary only)
 
-2. **Ask the user** which findings to apply. Use a multi-select question listing all Adopt and Adapt findings by their ID and title.
+2. **If all findings are Skip**: Skip the multi-select question. Present the Skip summary, offer to commit just the report file, and note the recommended next sync date (2-4 weeks).
 
-3. **For each approved finding**, edit the appropriate target file(s):
+3. **Otherwise, ask the user** which findings to apply. Use a multi-select question listing all Adopt and Adapt findings by their ID and title.
+
+4. **For each approved finding**, edit the appropriate target file(s):
    - Process/structural changes (new steps, modified logic, new config keys) → `.claude/skills/improve-loop/SKILL.md`
    - Conceptual/theoretical changes (new principles, revised abstractions) → `reports/iterative-improvement-logic.md`
    - Some findings may require changes to both files
 
-4. **After all edits**, present a summary of changes made and offer to commit:
+5. **After all edits**, present a summary of changes made and offer to commit:
    ```bash
    git add .claude/skills/improve-loop/SKILL.md reports/iterative-improvement-logic.md reports/upstream-sync-YYYY-MM-DD.md
    git commit -m "upstream-sync: apply N findings from autoresearch forks (YYYY-MM-DD)"

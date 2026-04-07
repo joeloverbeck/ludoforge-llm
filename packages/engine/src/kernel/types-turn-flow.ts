@@ -15,6 +15,8 @@ export type TurnFlowFreeOperationGrantPostResolutionTurnFlow =
   import('../contracts/index.js').TurnFlowFreeOperationGrantPostResolutionTurnFlow;
 export type TurnFlowFreeOperationGrantProgressionPolicy =
   import('../contracts/index.js').TurnFlowFreeOperationGrantProgressionPolicy;
+export type GrantLifecyclePhase =
+  import('../contracts/index.js').GrantLifecyclePhase;
 
 export interface TurnFlowFreeOperationGrantContract {
   readonly id?: string;
@@ -183,6 +185,7 @@ export interface TurnFlowPendingEligibilityOverride {
 
 export interface TurnFlowPendingFreeOperationGrant {
   readonly grantId: string;
+  readonly phase: GrantLifecyclePhase;
   readonly seat: string;
   readonly executeAsSeat?: string;
   readonly operationClass: TurnFlowActionClass;
@@ -305,6 +308,25 @@ export interface TurnFlowLifecycleTraceEntry {
     readonly lookaheadCardId: string | null;
     readonly leaderCardId: string | null;
   };
+}
+
+export type GrantLifecycleTransitionStep =
+  | 'advanceToReady'
+  | 'markOffered'
+  | 'consumeUse'
+  | 'skipGrant'
+  | 'expireGrant';
+
+export interface TurnFlowGrantLifecycleTraceEntry {
+  readonly kind: 'turnFlowGrantLifecycle';
+  readonly step: GrantLifecycleTransitionStep;
+  readonly grantId: string;
+  readonly fromPhase: GrantLifecyclePhase;
+  readonly toPhase: GrantLifecyclePhase;
+  readonly seat: string;
+  readonly operationClass: TurnFlowActionClass;
+  readonly remainingUsesBefore: number;
+  readonly remainingUsesAfter: number;
 }
 
 export interface TurnFlowEligibilityTraceEntry {

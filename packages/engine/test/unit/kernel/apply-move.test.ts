@@ -959,6 +959,7 @@ phase: [asPhaseId('main')],
           pendingFreeOperationGrants: [
             {
               grantId: 'grant-0',
+              phase: 'ready',
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
@@ -1051,6 +1052,7 @@ phase: [asPhaseId('main')],
           pendingFreeOperationGrants: [
             {
               grantId: 'grant-0',
+              phase: 'ready',
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
@@ -1093,6 +1095,7 @@ describe('applyMove() required free-operation grant enforcement', () => {
     [
       {
         grantId: 'grant-weaker',
+        phase: 'ready',
         seat: '0',
         operationClass: 'operation',
         actionIds: ['operation'],
@@ -1100,6 +1103,7 @@ describe('applyMove() required free-operation grant enforcement', () => {
       },
       {
         grantId: 'grant-required-outcome',
+        phase: 'ready',
         seat: '0',
         operationClass: 'operation',
         actionIds: ['operation'],
@@ -1112,6 +1116,7 @@ describe('applyMove() required free-operation grant enforcement', () => {
     [
       {
         grantId: 'grant-required-outcome',
+        phase: 'ready',
         seat: '0',
         operationClass: 'operation',
         actionIds: ['operation'],
@@ -1122,6 +1127,7 @@ describe('applyMove() required free-operation grant enforcement', () => {
       },
       {
         grantId: 'grant-weaker',
+        phase: 'ready',
         seat: '0',
         operationClass: 'operation',
         actionIds: ['operation'],
@@ -1181,6 +1187,7 @@ describe('applyMove() required free-operation grant enforcement', () => {
           pendingFreeOperationGrants: [
             {
               grantId: 'grant-required-outcome',
+              phase: 'ready',
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
@@ -1263,6 +1270,7 @@ describe('applyMove() required free-operation grant enforcement', () => {
           pendingFreeOperationGrants: [
             {
               grantId: 'grant-required-outcome',
+              phase: 'ready',
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
@@ -1343,6 +1351,7 @@ describe('applyMove() required free-operation grant enforcement', () => {
           pendingFreeOperationGrants: [
             {
               grantId: 'grant-required-outcome',
+              phase: 'ready',
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
@@ -1577,6 +1586,7 @@ describe('applyMove() required free-operation grant enforcement', () => {
           pendingFreeOperationGrants: [
             {
               grantId: 'grant-a',
+              phase: 'ready',
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
@@ -1584,6 +1594,7 @@ describe('applyMove() required free-operation grant enforcement', () => {
             },
             {
               grantId: 'grant-b',
+              phase: 'ready',
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
@@ -1660,6 +1671,7 @@ describe('applyMove() required free-operation grant enforcement', () => {
           pendingFreeOperationGrants: [
             {
               grantId: 'grant-board',
+              phase: 'ready',
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
@@ -1668,6 +1680,7 @@ describe('applyMove() required free-operation grant enforcement', () => {
             },
             {
               grantId: 'grant-city',
+              phase: 'ready',
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
@@ -1753,6 +1766,7 @@ describe('applyMove() required free-operation grant enforcement', () => {
           pendingFreeOperationGrants: [
             {
               grantId: 'grant-a',
+              phase: 'ready',
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
@@ -1760,6 +1774,7 @@ describe('applyMove() required free-operation grant enforcement', () => {
             },
             {
               grantId: 'grant-b',
+              phase: 'ready',
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
@@ -1841,6 +1856,7 @@ describe('applyMove() required free-operation grant enforcement', () => {
           pendingFreeOperationGrants: [
             {
               grantId: 'grant-required',
+              phase: 'ready',
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
@@ -1917,6 +1933,7 @@ describe('applyMove() required free-operation grant enforcement', () => {
           pendingFreeOperationGrants: [
             {
               grantId: 'grant-required-open-card',
+              phase: 'ready',
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
@@ -2096,6 +2113,7 @@ phase: [asPhaseId('main')],
           pendingFreeOperationGrants: [
             {
               grantId: 'grant-0',
+              phase: 'ready',
               seat: '0',
               executeAsSeat: '1',
               operationClass: 'operation',
@@ -2180,6 +2198,7 @@ phase: [asPhaseId('main')],
           pendingFreeOperationGrants: [
             {
               grantId: 'grant-0',
+              phase: 'ready',
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation-alt'],
@@ -2278,6 +2297,7 @@ phase: [asPhaseId('main')],
           pendingFreeOperationGrants: [
             {
               grantId: 'grant-0',
+              phase: 'ready',
               seat: '0',
               operationClass: 'operation',
               actionIds: ['operation'],
@@ -2359,6 +2379,7 @@ describe('applyMove() compound special-activity free-operation pipeline overlay 
           pendingFreeOperationGrants: [
             {
               grantId: 'grant-0',
+              phase: 'ready',
               seat: '0',
               operationClass: 'operation',
               actionIds: ['special'],

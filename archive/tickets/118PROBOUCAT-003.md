@@ -1,6 +1,6 @@
 # 118PROBOUCAT-003: Migrate `pipeline-viability-policy.ts`, `action-pipeline-predicates.ts`, `move-decision-sequence.ts` to `probeWith`
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel pipeline-viability-policy, action-pipeline-predicates, move-decision-sequence modules
@@ -98,3 +98,13 @@ return probeWith(
 
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo test --force`
+
+## Outcome
+
+- **Completion date**: 2026-04-07
+- **What changed**:
+  - `packages/engine/src/kernel/action-pipeline-predicates.ts` — replaced catch block with `probeWith`; classifier closure throws `pipelinePredicateEvaluationError` for unclassified errors
+  - `packages/engine/src/kernel/pipeline-viability-policy.ts` — same pattern as above
+  - `packages/engine/src/kernel/move-decision-sequence.ts` — replaced catch block with `probeWith` using curried `classifyMissingBindingProbeError` (clean re-throw)
+- **Deviations**: Two sites had error-wrapping re-throw paths (`pipelinePredicateEvaluationError`), handled by having the classifier closure throw the wrapped error. Behavior preserved exactly.
+- **Verification**: Build clean, 5618/5618 engine tests pass (0 fail)

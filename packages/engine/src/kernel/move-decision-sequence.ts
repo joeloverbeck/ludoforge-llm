@@ -9,7 +9,7 @@ import { pickDeterministicChoiceValue } from './choice-option-policy.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
 import { classifyMissingBindingProbeError, type MissingBindingPolicyContext } from './missing-binding-policy.js';
 import { resolveMoveEnumerationBudgets, type MoveEnumerationBudgets } from './move-enumeration-budgets.js';
-import { resolveProbeResult, type ProbeResult } from './probe-result.js';
+import { probeWith, resolveProbeResult, type ProbeResult } from './probe-result.js';
 import type {
   ChoiceIllegalRequest,
   ChoicePendingRequest,
@@ -59,20 +59,11 @@ const probeMoveDecisionSequenceAdmissionClassification = (
   context: MissingBindingPolicyContext,
   options?: MoveDecisionSequenceSatisfiabilityOptions,
   runtime?: GameDefRuntime,
-): ProbeResult<MoveDecisionSequenceSatisfiabilityResult['classification']> => {
-  try {
-    return {
-      outcome: 'legal',
-      value: classifyMoveDecisionSequenceSatisfiability(def, state, baseMove, options, runtime).classification,
-    };
-  } catch (error) {
-    const classified = classifyMissingBindingProbeError(error, context);
-    if (classified !== null) {
-      return classified;
-    }
-    throw error;
-  }
-};
+): ProbeResult<MoveDecisionSequenceSatisfiabilityResult['classification']> =>
+  probeWith(
+    () => classifyMoveDecisionSequenceSatisfiability(def, state, baseMove, options, runtime).classification,
+    (e) => classifyMissingBindingProbeError(e, context),
+  );
 
 export const resolveMoveDecisionSequence = (
   def: GameDef,

@@ -8,7 +8,7 @@ import { toApplyMoveIllegalMetadataCode, type ApplyMoveIllegalMetadataCode } fro
 import type { EnumerationStateSnapshot } from './enumeration-snapshot.js';
 import type { ReadContext } from './eval-context.js';
 import { MISSING_BINDING_POLICY_CONTEXTS, classifyMissingBindingProbeError } from './missing-binding-policy.js';
-import { resolveProbeResult, type ProbeResult } from './probe-result.js';
+import { probeWith, resolveProbeResult, type ProbeResult } from './probe-result.js';
 import { pipelinePredicateEvaluationError } from './runtime-error.js';
 import type { ActionDef, ActionPipelineDef, ActionResolutionStageDef, ConditionAST } from './types.js';
 
@@ -106,23 +106,18 @@ const evaluateCompiledDiscoveryPredicate = (
   condition: Exclude<ConditionAST, boolean>,
   evalCtx: ReadContext,
   snapshot?: EnumerationStateSnapshot,
-): ProbeResult<boolean | undefined> => {
-  try {
-    return {
-      outcome: 'legal',
-      value: evaluateCompiledPredicate(condition, evalCtx, snapshot),
-    };
-  } catch (error) {
-    const classified = classifyMissingBindingProbeError(
-      error,
-      MISSING_BINDING_POLICY_CONTEXTS.PIPELINE_DISCOVERY_PREDICATE,
-    );
-    if (classified !== null) {
-      return classified;
-    }
-    throw pipelinePredicateEvaluationError(action, profileId, predicate, error);
-  }
-};
+): ProbeResult<boolean | undefined> =>
+  probeWith(
+    () => evaluateCompiledPredicate(condition, evalCtx, snapshot),
+    (error) => {
+      const classified = classifyMissingBindingProbeError(
+        error,
+        MISSING_BINDING_POLICY_CONTEXTS.PIPELINE_DISCOVERY_PREDICATE,
+      );
+      if (classified !== null) return classified;
+      throw pipelinePredicateEvaluationError(action, profileId, predicate, error);
+    },
+  );
 
 const evaluateDiscoveryPredicate = (
   action: ActionDef,

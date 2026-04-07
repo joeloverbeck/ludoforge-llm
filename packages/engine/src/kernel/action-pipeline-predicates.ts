@@ -1,7 +1,7 @@
 import { evalCondition } from './eval-condition.js';
 import type { ReadContext } from './eval-context.js';
 import { MISSING_BINDING_POLICY_CONTEXTS, classifyMissingBindingProbeError } from './missing-binding-policy.js';
-import { resolveProbeResult, type ProbeResult } from './probe-result.js';
+import { probeWith, resolveProbeResult, type ProbeResult } from './probe-result.js';
 import { pipelinePredicateEvaluationError } from './runtime-error.js';
 import type { ActionDef, ConditionAST } from './types.js';
 
@@ -14,23 +14,18 @@ const probeDiscoveryPredicateEvaluation = (
   predicate: PipelinePredicateName,
   condition: ConditionAST,
   ctx: ReadContext,
-): ProbeResult<boolean> => {
-  try {
-    return {
-      outcome: 'legal',
-      value: evalCondition(condition, ctx),
-    };
-  } catch (error) {
-    const classified = classifyMissingBindingProbeError(
-      error,
-      MISSING_BINDING_POLICY_CONTEXTS.PIPELINE_DISCOVERY_PREDICATE,
-    );
-    if (classified !== null) {
-      return classified;
-    }
-    throw pipelinePredicateEvaluationError(action, profileId, predicate, error);
-  }
-};
+): ProbeResult<boolean> =>
+  probeWith(
+    () => evalCondition(condition, ctx),
+    (error) => {
+      const classified = classifyMissingBindingProbeError(
+        error,
+        MISSING_BINDING_POLICY_CONTEXTS.PIPELINE_DISCOVERY_PREDICATE,
+      );
+      if (classified !== null) return classified;
+      throw pipelinePredicateEvaluationError(action, profileId, predicate, error);
+    },
+  );
 
 export const evalActionPipelinePredicate = (
   action: ActionDef,

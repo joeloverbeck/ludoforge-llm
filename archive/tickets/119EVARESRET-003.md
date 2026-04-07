@@ -1,6 +1,6 @@
 # 119EVARESRET-003: Change evalQuery to result-returning + migrate all consumers
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `evalQuery` signature change, ~20 consumer sites across ~10 files
@@ -107,3 +107,20 @@ Each migrated file needs `import { unwrapEvalQuery } from './eval-result.js'`.
 
 1. `pnpm -F @ludoforge/engine build && pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck && pnpm turbo test`
+
+## Outcome
+
+**Completed**: 2026-04-07
+
+**What changed**:
+- `eval-query.ts`: added `evalQuery` wrapper returning `EvalQueryResult` via try-catch, renamed core to `evalQueryRaw` (exported), fixed 3 internal recursive calls + 2 internal `evalCondition` filter calls missed by ticket 002
+- 7 source files migrated with `unwrapEvalQuery` wrapping (17 call sites total)
+- 3 test files migrated: `eval-query.test.ts` (86 tests, `evalQueryRaw` for throws), `eval.property.test.ts`, `spatial-kernel-integration.test.ts`
+
+**Deviations**:
+- Used wrapper+raw split (same as 002) instead of inline throw-to-return replacement
+- `evalQueryRaw` exported for kernel-internal + test use (not in ticket but required by same pattern as 002's `evalConditionRaw`)
+- Found 2 `evalCondition` calls inside eval-query.ts helpers that ticket 002 missed — wrapped with `unwrapEvalCondition` to fix silent behavioral regression
+- Test error validators updated to check `.cause` for `KernelRuntimeError`-wrapped `EvalError`
+
+**Verification**: Build pass, typecheck pass (3/3), eval-query tests 86/86 pass.

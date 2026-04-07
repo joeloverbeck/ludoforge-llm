@@ -1,4 +1,5 @@
 import { evalQuery, isInIntRangeDomain } from './eval-query.js';
+import { unwrapEvalQuery } from './eval-result.js';
 import type { ReadContext } from './eval-context.js';
 import { moveParamValuesEqual, normalizeMoveParamValue } from './move-param-normalization.js';
 import type { ActionDef, MoveParamValue } from './types.js';
@@ -16,7 +17,7 @@ export const resolveDeclaredActionParamDomainOptions = (
   param: ActionDef['params'][number],
   evalCtx: ReadContext,
 ): DeclaredActionParamDomainOptionsResolution => {
-  const options = evalQuery(param.domain, evalCtx);
+  const options = unwrapEvalQuery(evalQuery(param.domain, evalCtx));
   const normalizedOptions: MoveParamValue[] = [];
   for (const [index, value] of options.entries()) {
     const normalized = normalizeMoveParamValue(value);

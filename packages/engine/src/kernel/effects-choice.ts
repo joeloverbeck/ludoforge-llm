@@ -1,5 +1,6 @@
 import { getLatticeMap } from './def-lookup.js';
 import { evalQuery } from './eval-query.js';
+import { unwrapEvalQuery } from './eval-result.js';
 import { evalCondition, evalConditionRaw } from './eval-condition.js';
 import { evalValue } from './eval-value.js';
 import { advanceScope, type DecisionKey } from './decision-scope.js';
@@ -62,7 +63,7 @@ const resolvePrioritizedTierEntries = (
   }
 
   return query.tiers.map((tierQuery, tierIndex) => {
-    const tierResults = evalQuery(tierQuery, evalCtx);
+    const tierResults = unwrapEvalQuery(evalQuery(tierQuery, evalCtx));
     const normalizedTier = normalizeChoiceDomain(tierResults, (issue) => {
       throw effectRuntimeError(
         EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
@@ -619,7 +620,7 @@ export const applyChooseOne = (
   const chooser = effect.chooseOne.chooser ?? 'active';
   const choiceDecisionPlayer = resolveChoiceDecisionPlayer('chooseOne', chooser, evalCtx, resolvedBind, decisionKey);
   const providedDecisionPlayer = env.decisionAuthority.player;
-  const options = evalQuery(effect.chooseOne.options, evalCtx);
+  const options = unwrapEvalQuery(evalQuery(effect.chooseOne.options, evalCtx));
   const normalizedOptions = normalizeChoiceDomain(options, (issue) => {
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `chooseOne options domain item is not move-param encodable: ${resolvedBind}`, {
       effectType: 'chooseOne',
@@ -790,7 +791,7 @@ export const applyChooseN = (
     });
   });
 
-  const options = evalQuery(chooseN.options, evalCtx);
+  const options = unwrapEvalQuery(evalQuery(chooseN.options, evalCtx));
   const normalizedOptions = normalizeChoiceDomain(options, (issue) => {
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `chooseN options domain item is not move-param encodable: ${bind}`, {
       effectType: 'chooseN',

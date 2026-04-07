@@ -10,7 +10,7 @@ import {
   asZoneId,
   buildAdjacencyGraph,
   evalCondition,
-  evalQuery,
+  evalQueryRaw,
   initialState,
   legalMoves,
   validateGameDef,
@@ -122,7 +122,7 @@ describe('spatial kernel integration', () => {
   it('evaluates spatial query and spatial condition together via runtime context', () => {
     const ctx = makeEvalCtx();
 
-    const connected = evalQuery(
+    const connected = evalQueryRaw(
       {
         query: 'connectedZones',
         zone: 'a:none',

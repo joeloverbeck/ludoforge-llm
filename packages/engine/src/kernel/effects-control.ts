@@ -1,5 +1,6 @@
 import { evalCondition, evalConditionTraced } from './eval-condition.js';
 import { evalQuery } from './eval-query.js';
+import { unwrapEvalQuery } from './eval-result.js';
 import { evalValue } from './eval-value.js';
 import { rebaseIterationPath, withIterationSegment } from './decision-scope.js';
 import { resolveControlFlowIterationLimit } from './control-flow-limit.js';
@@ -157,7 +158,7 @@ export const applyForEach = (
     });
   });
 
-  const queryResult = evalQuery(effect.forEach.over, evalCtx);
+  const queryResult = unwrapEvalQuery(evalQuery(effect.forEach.over, evalCtx));
 
   const boundedItems = queryResult.slice(0, limit);
 
@@ -272,7 +273,7 @@ export const applyReduce = (
       limit: evaluatedLimit,
     });
   });
-  const queryResult = evalQuery(effect.reduce.over, evalCtx);
+  const queryResult = unwrapEvalQuery(evalQuery(effect.reduce.over, evalCtx));
   const boundedItems = queryResult.slice(0, limit);
 
   let accumulator = evalValue(effect.reduce.initial, evalCtx);
@@ -384,7 +385,7 @@ export const applyRemoveByPriority = (
       });
       scope.state = currentState;
       scope.bindings = resolvedGroupBindings;
-      const queried = evalQuery(group.over, scope);
+      const queried = unwrapEvalQuery(evalQuery(group.over, scope));
       const bounded = queried.slice(0, remainingBudget);
 
       for (const item of bounded) {

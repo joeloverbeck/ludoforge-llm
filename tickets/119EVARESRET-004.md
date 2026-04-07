@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — 7 catch/probeWith sites replaced with result pattern-matching across 4 files
-**Deps**: `archive/tickets/119EVARESRET-002.md`, `tickets/119EVARESRET-003.md`
+**Deps**: `archive/tickets/119EVARESRET-002.md`, `archive/tickets/119EVARESRET-003.md`
 
 ## Problem
 

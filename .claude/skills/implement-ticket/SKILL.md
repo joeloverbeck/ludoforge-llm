@@ -56,6 +56,7 @@ If the ticket was produced by `/spec-to-tickets` in this same session (with or w
    - Cross-package fallout for shared exported unions, serialized trace kinds, and exhaustiveness-based consumers (translators, adapters, viewers, switch statements)
    - Foundation 14 atomic migrations for removals or renames
    - Return type changes on shared exported functions: all callers must be migrated atomically (Foundation 14). If a sibling ticket owns caller migration but the current ticket changes the return type, flag the scope overlap before coding — the sibling's work must be absorbed.
+   - **Primitive-to-object return type migrations**: When a function's return type changes from a primitive (`boolean`, `number`, `string`) to a result object, TypeScript will NOT catch same-file callers that use the return value in boolean/truthy contexts (if-conditions, filter callbacks, logical operators) — the result object is always truthy. After migration, grep the modified file for all remaining call sites of the changed function and verify each one handles the new return type correctly. Do not rely solely on the type checker.
    - Required test, schema, or fixture updates
    - When the ticket disputes game-specific legality, consult local rulebook extracts or rules reports before deciding whether the fix is policy-only or a legality correction.
 

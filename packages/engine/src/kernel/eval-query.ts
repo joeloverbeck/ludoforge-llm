@@ -1,8 +1,9 @@
 import { getMaxQueryResults, type ReadContext } from './eval-context.js';
 import { isRecoverableEvalResolutionError } from './eval-error-classification.js';
-import { missingVarError, queryBoundsExceededError, typeMismatchError } from './eval-error.js';
+import { isEvalError, missingVarError, queryBoundsExceededError, typeMismatchError } from './eval-error.js';
 import { evalCondition } from './eval-condition.js';
-import { unwrapEvalCondition } from './eval-result.js';
+import type { EvalQueryResult } from './eval-result.js';
+import { evalSuccess, unwrapEvalCondition } from './eval-result.js';
 import { evalValue } from './eval-value.js';
 import { shouldDeferFreeOperationZoneFilterFailure } from './missing-binding-policy.js';
 import {
@@ -457,13 +458,13 @@ function applyZonesFilter(
 
   if (queryCondition !== undefined) {
     filteredZones = filteredZones.filter((zone) => {
-      return evalCondition(queryCondition, {
+      return unwrapEvalCondition(evalCondition(queryCondition, {
         ...ctx,
         bindings: {
           ...ctx.bindings,
           $zone: zone.id,
         },
-      });
+      }));
     });
   }
 
@@ -577,7 +578,7 @@ function evalNextInOrderByConditionQuery(
   query: Extract<OptionsQuery, { readonly query: 'nextInOrderByCondition' }>,
   ctx: ReadContext,
 ): readonly QueryResult[] {
-  const sourceOrder = evalQuery(query.source, ctx);
+  const sourceOrder = evalQueryRaw(query.source, ctx);
   if (sourceOrder.length === 0) {
     return [];
   }
@@ -600,13 +601,13 @@ function evalNextInOrderByConditionQuery(
   const startOffset = query.includeFrom === true ? 0 : 1;
   for (let offset = 0; offset < sourceOrder.length; offset += 1) {
     const candidate = sourceOrder[normalizeOrderIndex(anchorIndex + startOffset + offset, sourceOrder.length)]!;
-    const matches = evalCondition(query.where, {
+    const matches = unwrapEvalCondition(evalCondition(query.where, {
       ...ctx,
       bindings: {
         ...ctx.bindings,
         [query.bind]: candidate,
       },
-    });
+    }));
     if (matches) {
       return [candidate];
     }
@@ -754,7 +755,7 @@ function evalHomogeneousRecursiveQuery(
 
   for (let childIndex = 0; childIndex < children.length; childIndex += 1) {
     const child = children[childIndex]!;
-    const childItems = evalQuery(child, ctx);
+    const childItems = evalQueryRaw(child, ctx);
     const childShape = classifyQueryResults(childItems);
     if (childShape === 'mixed') {
       throw typeMismatchError(`${query.query} ${labels.child} produced mixed item shapes`, {
@@ -783,7 +784,21 @@ function evalHomogeneousRecursiveQuery(
   return combined;
 }
 
-export function evalQuery(query: OptionsQuery, ctx: ReadContext): readonly QueryResult[] {
+/**
+ * Result-returning public API. Catches EvalError from the core logic and
+ * returns it as an error result. Non-EvalError exceptions (genuine bugs)
+ * still throw.
+ */
+export function evalQuery(query: OptionsQuery, ctx: ReadContext): EvalQueryResult {
+  try {
+    return evalSuccess(evalQueryRaw(query, ctx));
+  } catch (error) {
+    if (isEvalError(error)) return { outcome: 'error', error };
+    throw error;
+  }
+}
+
+export function evalQueryRaw(query: OptionsQuery, ctx: ReadContext): readonly QueryResult[] {
   const maxQueryResults = getMaxQueryResults(ctx);
 
   switch (query.query) {
@@ -792,7 +807,7 @@ export function evalQuery(query: OptionsQuery, ctx: ReadContext): readonly Query
     case 'prioritized':
       return evalHomogeneousRecursiveQuery(query, query.tiers, ctx, { child: 'tier', children: 'tiers' });
     case 'tokenZones': {
-      const sourceItems = evalQuery(query.source, ctx);
+      const sourceItems = evalQueryRaw(query.source, ctx);
       const tokenStateIndex = getTokenStateIndex(ctx.state);
       const knownTokenIds = new Set(tokenStateIndex.keys());
 

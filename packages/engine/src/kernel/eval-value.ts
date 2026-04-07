@@ -2,6 +2,7 @@ import type { ReadContext } from './eval-context.js';
 import { evalCondition } from './eval-condition.js';
 import { divisionByZeroError, typeMismatchError } from './eval-error.js';
 import { evalQuery } from './eval-query.js';
+import { unwrapEvalQuery } from './eval-result.js';
 import { computeTierAdmissibility } from './prioritized-tier-legality.js';
 import { resolveRef } from './resolve-ref.js';
 import { VALUE_EXPR_TAG } from './types.js';
@@ -33,16 +34,16 @@ function countAggregateItems(
 ): number {
   const query = aggregate.query;
   if (query.query !== 'prioritized') {
-    return evalQuery(query, ctx).length;
+    return unwrapEvalQuery(evalQuery(query, ctx)).length;
   }
 
   if (query.qualifierKey === undefined) {
-    return evalQuery(query, ctx).length;
+    return unwrapEvalQuery(evalQuery(query, ctx)).length;
   }
   const qualifierKey: string = query.qualifierKey;
 
   const prioritizedEntries = query.tiers.map((tier, tierIndex) =>
-    evalQuery(tier, ctx).map((item, itemIndex) => {
+    unwrapEvalQuery(evalQuery(tier, ctx)).map((item, itemIndex) => {
       if (!isTokenQueryResult(item)) {
         throw typeMismatchError('Aggregate count on prioritized qualifierKey requires token results', {
           aggregate,
@@ -158,7 +159,7 @@ function evalAggregate(expr: Extract<ValueExpr, { readonly _t: 5 }>, ctx: ReadCo
     return countAggregateItems(aggregate, ctx);
   }
 
-  const items = evalQuery(aggregate.query, ctx);
+  const items = unwrapEvalQuery(evalQuery(aggregate.query, ctx));
 
   if (items.length === 0) {
     return 0;

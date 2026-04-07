@@ -1,5 +1,6 @@
 import { countCombinations, combinations } from './combinatorics.js';
 import { evalQuery } from './eval-query.js';
+import { unwrapEvalQuery } from './eval-result.js';
 import { evalValue } from './eval-value.js';
 import { effectRuntimeError } from './effect-error.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
@@ -42,7 +43,7 @@ export const applyEvaluateSubset = (
   const evaluateSubset = effect.evaluateSubset;
   updateReadScope(scope, cursor, env);
   const evalCtx = scope;
-  const items = evalQuery(evaluateSubset.source, evalCtx);
+  const items = unwrapEvalQuery(evalQuery(evaluateSubset.source, evalCtx));
   const subsetSize = resolveSubsetSize(evalValue(evaluateSubset.subsetSize, evalCtx));
 
   if (subsetSize < 0 || subsetSize > items.length) {

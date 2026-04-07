@@ -2,6 +2,7 @@ import type { ActionId } from './branded.js';
 import { canConfirmChooseNSelection, resolveChooseNCardinality } from './choose-n-cardinality.js';
 import type { ReadContext } from './eval-context.js';
 import { evalQuery } from './eval-query.js';
+import { unwrapEvalQuery } from './eval-result.js';
 import { EFFECT_KIND_TAG, type ActionPipelineDef, type ConditionAST, type EffectAST, type GameDef, type OptionsQuery } from './types.js';
 
 export interface FirstDecisionNode {
@@ -242,7 +243,7 @@ const compileDirectFirstDecisionNode = (
     compilable: true,
     description: `direct:${options.query}`,
     check: (ctx) => {
-      const optionCount = evalQuery(options, ctx).length;
+      const optionCount = unwrapEvalQuery(evalQuery(options, ctx)).length;
       if (optionCount > 0) {
         return { admissible: true };
       }

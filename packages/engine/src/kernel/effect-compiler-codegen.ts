@@ -4,7 +4,7 @@ import { createMutableReadScope } from './effect-context.js';
 import type { EffectCursor, MutableReadScope, NormalizedEffectResult, PartialEffectResult } from './effect-context.js';
 import { createEvalContext } from './eval-context.js';
 import { evalCondition } from './eval-condition.js';
-import { unwrapEvalCondition } from './eval-result.js';
+import { unwrapEvalCondition, unwrapEvalQuery } from './eval-result.js';
 import { evalQuery } from './eval-query.js';
 import { evalValue } from './eval-value.js';
 import { typeMismatchError } from './eval-error.js';
@@ -672,7 +672,7 @@ export const compileForEach = (
           limit: evaluatedLimit,
         });
       });
-      const queryResult = evalQuery(desc.over, evalCtx);
+      const queryResult = unwrapEvalQuery(evalQuery(desc.over, evalCtx));
       const boundedItems = queryResult.slice(0, limit);
 
       let currentState = state;
@@ -776,7 +776,7 @@ export const compileReduce = (
           limit: evaluatedLimit,
         });
       });
-      const queryResult = evalQuery(desc.payload.over, evalCtx);
+      const queryResult = unwrapEvalQuery(evalQuery(desc.payload.over, evalCtx));
       const boundedItems = queryResult.slice(0, limit);
 
       let accumulator = evalCompiledValue(desc.payload.initial, state, bindings, ctx);
@@ -895,7 +895,7 @@ export const compileRemoveByPriority = (
         let removedInGroup = 0;
 
         if (remainingBudget > 0) {
-          const queried = evalQuery(group.over, createCompiledEvalContext(currentState, bindings, ctx));
+          const queried = unwrapEvalQuery(evalQuery(group.over, createCompiledEvalContext(currentState, bindings, ctx)));
           const bounded = queried.slice(0, remainingBudget);
 
           for (const item of bounded) {
@@ -1196,7 +1196,7 @@ export const compileEvaluateSubset = (
     execute: (state, rng, bindings, ctx) => {
       consumeEffectBudget(ctx.effectBudget, 'evaluateSubset');
 
-      const items = evalQuery(desc.payload.source, createCompiledEvalContext(state, bindings, ctx));
+      const items = unwrapEvalQuery(evalQuery(desc.payload.source, createCompiledEvalContext(state, bindings, ctx)));
       const subsetSize = expectSafeInteger(evalCompiledValue(desc.payload.subsetSize, state, bindings, ctx), 'evaluateSubset', 'subsetSize');
       if (subsetSize < 0 || subsetSize > items.length) {
         throw effectRuntimeError(

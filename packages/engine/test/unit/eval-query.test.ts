@@ -10,6 +10,7 @@ import {
   asTokenId,
   asZoneId,
   evalQuery,
+  evalQueryRaw,
   isEvalErrorCode,
   type ReadContext,
   type GameDef,
@@ -140,7 +141,7 @@ describe('evalQuery', () => {
   it('returns tokensInZone in state container order and without mutating zone arrays', () => {
     const ctx = makeCtx();
 
-    const result = evalQuery({ query: 'tokensInZone', zone: 'deck:none' }, ctx);
+    const result = evalQueryRaw({ query: 'tokensInZone', zone: 'deck:none' }, ctx);
     assert.deepEqual(
       result.map((token) => (token as Token).id),
       [asTokenId('deck-1'), asTokenId('deck-2')],
@@ -156,7 +157,7 @@ describe('evalQuery', () => {
       bindings: { $targetZone: 'hand:1' },
     });
 
-    const result = evalQuery(
+    const result = evalQueryRaw(
       { query: 'tokensInZone', zone: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$targetZone' } } },
       ctx,
     );
@@ -170,9 +171,9 @@ describe('evalQuery', () => {
   it('evaluates intsInRange edge cases', () => {
     const ctx = makeCtx();
 
-    assert.deepEqual(evalQuery({ query: 'intsInRange', min: 1, max: 5 }, ctx), [1, 2, 3, 4, 5]);
-    assert.deepEqual(evalQuery({ query: 'intsInRange', min: 3, max: 3 }, ctx), [3]);
-    assert.deepEqual(evalQuery({ query: 'intsInRange', min: 5, max: 3 }, ctx), []);
+    assert.deepEqual(evalQueryRaw({ query: 'intsInRange', min: 1, max: 5 }, ctx), [1, 2, 3, 4, 5]);
+    assert.deepEqual(evalQueryRaw({ query: 'intsInRange', min: 3, max: 3 }, ctx), [3]);
+    assert.deepEqual(evalQueryRaw({ query: 'intsInRange', min: 5, max: 3 }, ctx), []);
   });
 
   it('evaluates intsInRange with dynamic ValueExpr bounds', () => {
@@ -181,7 +182,7 @@ describe('evalQuery', () => {
     });
 
     assert.deepEqual(
-      evalQuery(
+      evalQueryRaw(
         {
           query: 'intsInRange',
           min: { _t: 2 as const, ref: 'binding', name: '$min' },
@@ -196,7 +197,7 @@ describe('evalQuery', () => {
   it('returns empty domain when dynamic intsInRange bounds are invalid', () => {
     const nonInteger = makeCtx({ bindings: { $min: 1.5, $max: 4 } });
     assert.deepEqual(
-      evalQuery(
+      evalQueryRaw(
         {
           query: 'intsInRange',
           min: { _t: 2 as const, ref: 'binding', name: '$min' },
@@ -209,7 +210,7 @@ describe('evalQuery', () => {
 
     const nonNumeric = makeCtx({ bindings: { $min: 'x', $max: 4 } });
     assert.deepEqual(
-      evalQuery(
+      evalQueryRaw(
         {
           query: 'intsInRange',
           min: { _t: 2 as const, ref: 'binding', name: '$min' },
@@ -222,7 +223,7 @@ describe('evalQuery', () => {
 
     const nonFinite = makeCtx({ bindings: { $min: 1 } });
     assert.deepEqual(
-      evalQuery(
+      evalQueryRaw(
         {
           query: 'intsInRange',
           min: { _t: 2 as const, ref: 'binding', name: '$min' },
@@ -238,7 +239,7 @@ describe('evalQuery', () => {
     const ctx = makeCtx();
 
     assert.deepEqual(
-      evalQuery(
+      evalQueryRaw(
         {
           query: 'intsInRange',
           min: 1,
@@ -251,7 +252,7 @@ describe('evalQuery', () => {
     );
 
     assert.deepEqual(
-      evalQuery(
+      evalQueryRaw(
         {
           query: 'intsInRange',
           min: 1,
@@ -269,7 +270,7 @@ describe('evalQuery', () => {
     const ctx = makeCtx();
 
     assert.deepEqual(
-      evalQuery(
+      evalQueryRaw(
         {
           query: 'intsInRange',
           min: 1,
@@ -288,7 +289,7 @@ describe('evalQuery', () => {
     const ctx = makeCtx({ maxQueryResults: 3 });
 
     assert.deepEqual(
-      evalQuery(
+      evalQueryRaw(
         {
           query: 'intsInRange',
           min: 1,
@@ -305,7 +306,7 @@ describe('evalQuery', () => {
     const ctx = makeCtx({ bindings: { $badStep: 0, $badMaxResults: 1, $nonInt: 2.5 } });
 
     assert.deepEqual(
-      evalQuery(
+      evalQueryRaw(
         {
           query: 'intsInRange',
           min: 1,
@@ -318,7 +319,7 @@ describe('evalQuery', () => {
     );
 
     assert.deepEqual(
-      evalQuery(
+      evalQueryRaw(
         {
           query: 'intsInRange',
           min: 1,
@@ -331,7 +332,7 @@ describe('evalQuery', () => {
     );
 
     assert.deepEqual(
-      evalQuery(
+      evalQueryRaw(
         {
           query: 'intsInRange',
           min: 1,
@@ -356,13 +357,13 @@ describe('evalQuery', () => {
       },
     });
 
-    assert.deepEqual(evalQuery({ query: 'intsInVarRange', var: 'resourcePool' }, ctx), [0, 1, 2, 3, 4, 5]);
-    assert.deepEqual(evalQuery({ query: 'intsInVarRange', var: 'resourcePool', min: 1 }, ctx), [1, 2, 3, 4, 5]);
-    assert.deepEqual(evalQuery({ query: 'intsInVarRange', var: 'resourcePool', min: -3, max: 99 }, ctx), [0, 1, 2, 3, 4, 5]);
-    assert.deepEqual(evalQuery({ query: 'intsInVarRange', scope: 'perPlayer', var: 'budget', max: 1 }, ctx), [0, 1]);
-    assert.deepEqual(evalQuery({ query: 'intsInVarRange', var: 'resourcePool', min: 0, max: 5, step: 2 }, ctx), [0, 2, 4, 5]);
+    assert.deepEqual(evalQueryRaw({ query: 'intsInVarRange', var: 'resourcePool' }, ctx), [0, 1, 2, 3, 4, 5]);
+    assert.deepEqual(evalQueryRaw({ query: 'intsInVarRange', var: 'resourcePool', min: 1 }, ctx), [1, 2, 3, 4, 5]);
+    assert.deepEqual(evalQueryRaw({ query: 'intsInVarRange', var: 'resourcePool', min: -3, max: 99 }, ctx), [0, 1, 2, 3, 4, 5]);
+    assert.deepEqual(evalQueryRaw({ query: 'intsInVarRange', scope: 'perPlayer', var: 'budget', max: 1 }, ctx), [0, 1]);
+    assert.deepEqual(evalQueryRaw({ query: 'intsInVarRange', var: 'resourcePool', min: 0, max: 5, step: 2 }, ctx), [0, 2, 4, 5]);
     assert.deepEqual(
-      evalQuery({ query: 'intsInVarRange', var: 'resourcePool', min: 0, max: 5, step: 2, alwaysInclude: [1], maxResults: 4 }, ctx),
+      evalQueryRaw({ query: 'intsInVarRange', var: 'resourcePool', min: 0, max: 5, step: 2, alwaysInclude: [1], maxResults: 4 }, ctx),
       [0, 1, 2, 5],
     );
   });
@@ -380,19 +381,19 @@ describe('evalQuery', () => {
       freeOperationOverlay: { grantContext: { selectedVar: 'resourcePool', nonIntVar: 'flag' } },
     });
 
-    assert.deepEqual(evalQuery({ query: 'intsInVarRange', var: { ref: 'binding', name: '$resourceVar' } }, ctx), [0, 1, 2, 3, 4, 5]);
-    assert.deepEqual(evalQuery({ query: 'intsInVarRange', var: { ref: 'grantContext', key: 'selectedVar' } }, ctx), [0, 1, 2, 3, 4, 5]);
+    assert.deepEqual(evalQueryRaw({ query: 'intsInVarRange', var: { ref: 'binding', name: '$resourceVar' } }, ctx), [0, 1, 2, 3, 4, 5]);
+    assert.deepEqual(evalQueryRaw({ query: 'intsInVarRange', var: { ref: 'grantContext', key: 'selectedVar' } }, ctx), [0, 1, 2, 3, 4, 5]);
 
     assert.throws(
-      () => evalQuery({ query: 'intsInVarRange', var: { ref: 'binding', name: '$missingVar' } }, ctx),
+      () => evalQueryRaw({ query: 'intsInVarRange', var: { ref: 'binding', name: '$missingVar' } }, ctx),
       (error: unknown) => isEvalErrorCode(error, 'MISSING_VAR'),
     );
     assert.throws(
-      () => evalQuery({ query: 'intsInVarRange', var: { ref: 'binding', name: '$badVar' } }, ctx),
+      () => evalQueryRaw({ query: 'intsInVarRange', var: { ref: 'binding', name: '$badVar' } }, ctx),
       (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
     );
     assert.throws(
-      () => evalQuery({ query: 'intsInVarRange', var: { ref: 'grantContext', key: 'nonIntVar' } }, ctx),
+      () => evalQueryRaw({ query: 'intsInVarRange', var: { ref: 'grantContext', key: 'nonIntVar' } }, ctx),
       (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
     );
   });
@@ -407,17 +408,17 @@ describe('evalQuery', () => {
       bindings: { $badMax: 1.5 },
     });
 
-    assert.deepEqual(evalQuery({ query: 'intsInVarRange', var: 'missing' }, ctx), []);
-    assert.deepEqual(evalQuery({ query: 'intsInVarRange', var: 'flag' }, ctx), []);
-    assert.deepEqual(evalQuery({ query: 'intsInVarRange', var: 'missing', min: 1, max: { _t: 2 as const, ref: 'binding', name: '$badMax' } }, ctx), []);
-    assert.deepEqual(evalQuery({ query: 'intsInVarRange', var: 'missing', step: 0 }, ctx), []);
+    assert.deepEqual(evalQueryRaw({ query: 'intsInVarRange', var: 'missing' }, ctx), []);
+    assert.deepEqual(evalQueryRaw({ query: 'intsInVarRange', var: 'flag' }, ctx), []);
+    assert.deepEqual(evalQueryRaw({ query: 'intsInVarRange', var: 'missing', min: 1, max: { _t: 2 as const, ref: 'binding', name: '$badMax' } }, ctx), []);
+    assert.deepEqual(evalQueryRaw({ query: 'intsInVarRange', var: 'missing', step: 0 }, ctx), []);
   });
 
   it('echoes enums and returns players sorted ascending', () => {
     const ctx = makeCtx();
 
-    assert.deepEqual(evalQuery({ query: 'enums', values: ['red', 'blue', 'green'] }, ctx), ['red', 'blue', 'green']);
-    assert.deepEqual(evalQuery({ query: 'players' }, ctx), [asPlayerId(0), asPlayerId(1), asPlayerId(2)]);
+    assert.deepEqual(evalQueryRaw({ query: 'enums', values: ['red', 'blue', 'green'] }, ctx), ['red', 'blue', 'green']);
+    assert.deepEqual(evalQueryRaw({ query: 'players' }, ctx), [asPlayerId(0), asPlayerId(1), asPlayerId(2)]);
   });
 
   it('evaluates nextInOrderByCondition with wrap-around and per-player predicates', () => {
@@ -467,7 +468,7 @@ describe('evalQuery', () => {
       state,
     });
 
-    const result = evalQuery(
+    const result = evalQueryRaw(
       {
         query: 'nextInOrderByCondition',
                 source: { query: 'players' },
@@ -490,7 +491,7 @@ describe('evalQuery', () => {
 
   it('returns empty array when nextInOrderByCondition finds no match', () => {
     const ctx = makeCtx();
-    const result = evalQuery(
+    const result = evalQueryRaw(
       {
         query: 'nextInOrderByCondition',
                 source: { query: 'players' },
@@ -506,7 +507,7 @@ describe('evalQuery', () => {
   it('respects includeFrom for nextInOrderByCondition', () => {
     const ctx = makeCtx();
 
-    const includeFrom = evalQuery(
+    const includeFrom = evalQueryRaw(
       {
         query: 'nextInOrderByCondition',
                 source: { query: 'players' },
@@ -523,7 +524,7 @@ describe('evalQuery', () => {
       },
       ctx,
     );
-    const excludeFrom = evalQuery(
+    const excludeFrom = evalQueryRaw(
       {
         query: 'nextInOrderByCondition',
                 source: { query: 'players' },
@@ -547,7 +548,7 @@ describe('evalQuery', () => {
 
   it('uses first matching anchor when source order contains duplicate values', () => {
     const ctx = makeCtx();
-    const result = evalQuery(
+    const result = evalQueryRaw(
       {
         query: 'nextInOrderByCondition',
         source: { query: 'enums', values: ['anchor', 'x', 'anchor', 'y'] },
@@ -570,7 +571,7 @@ describe('evalQuery', () => {
 
   it('applies includeFrom traversal from first matching anchor when source has duplicates', () => {
     const ctx = makeCtx();
-    const result = evalQuery(
+    const result = evalQueryRaw(
       {
         query: 'nextInOrderByCondition',
         source: { query: 'enums', values: ['anchor', 'x', 'anchor', 'y'] },
@@ -593,7 +594,7 @@ describe('evalQuery', () => {
 
   it('supports non-player explicit order domains for nextInOrderByCondition', () => {
     const ctx = makeCtx();
-    const result = evalQuery(
+    const result = evalQueryRaw(
       {
         query: 'nextInOrderByCondition',
                 source: { query: 'enums', values: ['preflop', 'flop', 'turn', 'river'] },
@@ -613,7 +614,7 @@ describe('evalQuery', () => {
 
   it('returns empty array when nextInOrderByCondition anchor is absent from source order', () => {
     const ctx = makeCtx();
-    const result = evalQuery(
+    const result = evalQueryRaw(
       {
         query: 'nextInOrderByCondition',
                 source: { query: 'players' },
@@ -628,7 +629,7 @@ describe('evalQuery', () => {
 
   it('returns empty array when nextInOrderByCondition from has missing binding', () => {
     const ctx = makeCtx();
-    const result = evalQuery(
+    const result = evalQueryRaw(
       {
         query: 'nextInOrderByCondition',
         source: { query: 'players' },
@@ -643,7 +644,7 @@ describe('evalQuery', () => {
 
   it('returns empty array when nextInOrderByCondition from has missing var', () => {
     const ctx = makeCtx();
-    const result = evalQuery(
+    const result = evalQueryRaw(
       {
         query: 'nextInOrderByCondition',
         source: { query: 'players' },
@@ -658,7 +659,7 @@ describe('evalQuery', () => {
 
   it('returns empty array when nextInOrderByCondition from divides by zero', () => {
     const ctx = makeCtx();
-    const result = evalQuery(
+    const result = evalQueryRaw(
       {
         query: 'nextInOrderByCondition',
         source: { query: 'players' },
@@ -675,7 +676,7 @@ describe('evalQuery', () => {
     const ctx = makeCtx();
     assert.throws(
       () =>
-        evalQuery(
+        evalQueryRaw(
           {
             query: 'nextInOrderByCondition',
             source: { query: 'players' },
@@ -692,8 +693,8 @@ describe('evalQuery', () => {
   it('returns zones sorted, and filter.owner=actor resolves correctly', () => {
     const ctx = makeCtx();
 
-    assert.deepEqual(evalQuery({ query: 'zones' }, ctx), ['battlefield:none', 'bench:1', 'deck:none', 'hand:0', 'hand:1', 'tableau:2']);
-    assert.deepEqual(evalQuery({ query: 'zones', filter: { owner: 'actor' } }, ctx), ['bench:1', 'hand:1']);
+    assert.deepEqual(evalQueryRaw({ query: 'zones' }, ctx), ['battlefield:none', 'bench:1', 'deck:none', 'hand:0', 'hand:1', 'tableau:2']);
+    assert.deepEqual(evalQueryRaw({ query: 'zones', filter: { owner: 'actor' } }, ctx), ['bench:1', 'hand:1']);
   });
 
   it('evaluates assetRows using runtimeDataAssets and preserves table order', () => {
@@ -730,13 +731,13 @@ describe('evalQuery', () => {
       },
     });
 
-    const rows = evalQuery({ query: 'assetRows', tableId: 'tournament-standard::blindSchedule.levels' }, ctx);
+    const rows = evalQueryRaw({ query: 'assetRows', tableId: 'tournament-standard::blindSchedule.levels' }, ctx);
     assert.deepEqual(
       rows.map((row) => (row as Record<string, unknown>).smallBlind),
       [10, 20, 40],
     );
 
-    const filtered = evalQuery(
+    const filtered = evalQueryRaw(
       {
         query: 'assetRows',
         tableId: 'tournament-standard::blindSchedule.levels',
@@ -789,7 +790,7 @@ describe('evalQuery', () => {
       },
     });
 
-    const filtered = evalQuery(
+    const filtered = evalQueryRaw(
       {
         query: 'assetRows',
         tableId: 'tournament-standard::blindSchedule.levels',
@@ -838,7 +839,7 @@ describe('evalQuery', () => {
       },
     });
 
-    const filtered = evalQuery(
+    const filtered = evalQueryRaw(
       {
         query: 'assetRows',
         tableId: 'tournament-standard::blindSchedule.levels',
@@ -895,20 +896,20 @@ describe('evalQuery', () => {
     });
 
     assert.throws(
-      () => evalQuery({ query: 'assetRows', tableId: 'missing-asset::blindSchedule.levels' }, ctx),
+      () => evalQueryRaw({ query: 'assetRows', tableId: 'missing-asset::blindSchedule.levels' }, ctx),
       (error: unknown) =>
         isEvalErrorCode(error, 'DATA_ASSET_RUNTIME_ASSET_MISSING') &&
         error.context?.tableId === 'missing-asset::blindSchedule.levels' &&
         error.context?.assetId === 'missing',
     );
     assert.throws(
-      () => evalQuery({ query: 'assetRows', tableId: 'missing-contract' }, ctx),
+      () => evalQueryRaw({ query: 'assetRows', tableId: 'missing-contract' }, ctx),
       (error: unknown) =>
         isEvalErrorCode(error, 'DATA_ASSET_TABLE_CONTRACT_MISSING') &&
         error.context?.tableId === 'missing-contract',
     );
     assert.throws(
-      () => evalQuery({ query: 'assetRows', tableId: 'tournament-standard::blindSchedule' }, ctx),
+      () => evalQueryRaw({ query: 'assetRows', tableId: 'tournament-standard::blindSchedule' }, ctx),
       (error: unknown) =>
         isEvalErrorCode(error, 'DATA_ASSET_TABLE_TYPE_INVALID') &&
         error.context?.tableId === 'tournament-standard::blindSchedule' &&
@@ -944,7 +945,7 @@ describe('evalQuery', () => {
 
     assert.throws(
       () =>
-        evalQuery(
+        evalQueryRaw(
           {
             query: 'assetRows',
             tableId: 'tournament-standard::blindSchedule.levels',
@@ -993,7 +994,7 @@ describe('evalQuery', () => {
       },
     });
 
-    const exactlyOne = evalQuery(
+    const exactlyOne = evalQueryRaw(
       {
         query: 'assetRows',
         tableId: 'tournament-standard::blindSchedule.levels',
@@ -1007,7 +1008,7 @@ describe('evalQuery', () => {
 
     assert.throws(
       () =>
-        evalQuery(
+        evalQueryRaw(
           {
             query: 'assetRows',
             tableId: 'tournament-standard::blindSchedule.levels',
@@ -1024,7 +1025,7 @@ describe('evalQuery', () => {
 
     assert.throws(
       () =>
-        evalQuery(
+        evalQueryRaw(
           {
             query: 'assetRows',
             tableId: 'tournament-standard::blindSchedule.levels',
@@ -1039,7 +1040,7 @@ describe('evalQuery', () => {
         error.context?.actualMatchCount === 2,
     );
 
-    const zeroOrOne = evalQuery(
+    const zeroOrOne = evalQueryRaw(
       {
         query: 'assetRows',
         tableId: 'tournament-standard::blindSchedule.levels',
@@ -1052,7 +1053,7 @@ describe('evalQuery', () => {
 
     assert.throws(
       () =>
-        evalQuery(
+        evalQueryRaw(
           {
             query: 'assetRows',
             tableId: 'tournament-standard::blindSchedule.levels',
@@ -1104,7 +1105,7 @@ describe('evalQuery', () => {
 
     assert.throws(
       () =>
-        evalQuery(
+        evalQueryRaw(
           {
             query: 'assetRows',
             tableId: 'tournament-standard::blindSchedule.levels',
@@ -1119,7 +1120,7 @@ describe('evalQuery', () => {
 
     assert.throws(
       () =>
-        evalQuery(
+        evalQueryRaw(
           {
             query: 'assetRows',
             tableId: 'tournament-standard::blindSchedule.levels',
@@ -1150,7 +1151,7 @@ describe('evalQuery', () => {
       },
     });
 
-    const exactlyOne = evalQuery(
+    const exactlyOne = evalQueryRaw(
       {
         query: 'assetRows',
         tableId: 'tournament-standard::blindSchedule.levels',
@@ -1161,7 +1162,7 @@ describe('evalQuery', () => {
     assert.equal(exactlyOne.length, 1);
     assert.equal((exactlyOne[0] as Record<string, unknown>).smallBlind, 40);
 
-    const zeroOrOne = evalQuery(
+    const zeroOrOne = evalQueryRaw(
       {
         query: 'assetRows',
         tableId: 'tournament-standard::blindSchedule.levels',
@@ -1191,7 +1192,7 @@ describe('evalQuery', () => {
 
     assert.throws(
       () =>
-        evalQuery(
+        evalQueryRaw(
           {
             query: 'assetRows',
             tableId: 'tournament-standard::blindSchedule.levels',
@@ -1205,7 +1206,7 @@ describe('evalQuery', () => {
     );
 
     assert.deepEqual(
-      evalQuery(
+      evalQueryRaw(
         {
           query: 'assetRows',
           tableId: 'tournament-standard::blindSchedule.levels',
@@ -1254,7 +1255,7 @@ describe('evalQuery', () => {
       runtimeTableIndex: buildRuntimeTableIndex(def),
     });
 
-    const indexed = evalQuery(
+    const indexed = evalQueryRaw(
       {
         query: 'assetRows',
         tableId: 'tournament-standard::blindSchedule.levels',
@@ -1262,7 +1263,7 @@ describe('evalQuery', () => {
       },
       ctx,
     );
-    const fallback = evalQuery(
+    const fallback = evalQueryRaw(
       {
         query: 'assetRows',
         tableId: 'tournament-standard::blindSchedule.levels',
@@ -1317,7 +1318,7 @@ describe('evalQuery', () => {
 
     const assertMultipleMatches = (query: Extract<Parameters<typeof evalQuery>[0], { query: 'assetRows' }>): void => {
       assert.throws(
-        () => evalQuery(query, ctx),
+        () => evalQueryRaw(query, ctx),
         (error: unknown) =>
           isEvalErrorCode(error, 'DATA_ASSET_CARDINALITY_MULTIPLE_MATCHES') &&
           error.context?.tableId === 'tournament-standard::blindSchedule.levels' &&
@@ -1347,7 +1348,7 @@ describe('evalQuery', () => {
     });
 
     assert.deepEqual(
-      evalQuery(
+      evalQueryRaw(
         {
           query: 'zones',
           filter: {
@@ -1364,7 +1365,7 @@ describe('evalQuery', () => {
     );
 
     assert.deepEqual(
-      evalQuery(
+      evalQueryRaw(
         {
           query: 'zones',
           filter: {
@@ -1391,7 +1392,7 @@ describe('evalQuery', () => {
     });
 
     assert.deepEqual(
-      evalQuery({ query: 'binding', name: '$choices@{$space}' }, ctx),
+      evalQueryRaw({ query: 'binding', name: '$choices@{$space}' }, ctx),
       ['hand:0', 'hand:1'],
     );
   });
@@ -1399,7 +1400,7 @@ describe('evalQuery', () => {
   it('resolves tokenZones from token query sources with default dedupe', () => {
     const ctx = makeCtx();
 
-    const zones = evalQuery(
+    const zones = evalQueryRaw(
       {
         query: 'tokenZones',
         source: { query: 'tokensInZone', zone: 'hand:0' },
@@ -1413,7 +1414,7 @@ describe('evalQuery', () => {
   it('supports tokenZones without dedupe when requested', () => {
     const ctx = makeCtx();
 
-    const zones = evalQuery(
+    const zones = evalQueryRaw(
       {
         query: 'tokenZones',
         source: { query: 'tokensInZone', zone: 'hand:0' },
@@ -1450,7 +1451,7 @@ describe('evalQuery', () => {
       },
     });
 
-    const result = evalQuery(
+    const result = evalQueryRaw(
       {
         query: 'tokenZones',
         source: {
@@ -1497,8 +1498,8 @@ describe('evalQuery', () => {
     });
 
     const query = { query: 'tokenZones' as const, source: { query: 'tokensInZone' as const, zone: 'hand:0' as const } };
-    assert.deepEqual(evalQuery(query, ctx), ['hand:0']);
-    assert.deepEqual(evalQuery(query, ctx), ['hand:0']);
+    assert.deepEqual(evalQueryRaw(query, ctx), ['hand:0']);
+    assert.deepEqual(evalQueryRaw(query, ctx), ['hand:0']);
     assert.ok(tokenIdReads <= 120, `Expected <= 120 token id reads, received ${String(tokenIdReads)}`);
   });
 
@@ -1525,8 +1526,8 @@ describe('evalQuery', () => {
       bindings: { $tokenIds: [movedToken.id] },
     });
 
-    assert.deepEqual(evalQuery(query, firstCtx), ['hand:0']);
-    assert.deepEqual(evalQuery(query, secondCtx), ['bench:1']);
+    assert.deepEqual(evalQueryRaw(query, firstCtx), ['hand:0']);
+    assert.deepEqual(evalQueryRaw(query, secondCtx), ['bench:1']);
   });
 
   it('reuses token zone lookup across separate contexts sharing the same state object', () => {
@@ -1555,8 +1556,8 @@ describe('evalQuery', () => {
     const firstCtx = makeCtx({ state });
     const secondCtx = makeCtx({ state });
 
-    assert.deepEqual(evalQuery(query, firstCtx), ['hand:0']);
-    assert.deepEqual(evalQuery(query, secondCtx), ['hand:0']);
+    assert.deepEqual(evalQueryRaw(query, firstCtx), ['hand:0']);
+    assert.deepEqual(evalQueryRaw(query, secondCtx), ['hand:0']);
     assert.equal(tokenIdReads, 3);
   });
 
@@ -1586,8 +1587,8 @@ describe('evalQuery', () => {
     const firstCtx = makeCtx({ state });
     const secondCtx = makeCtx({ state });
 
-    assert.deepEqual(evalQuery(query, firstCtx), ['hand:0']);
-    assert.deepEqual(evalQuery(query, secondCtx), ['hand:0']);
+    assert.deepEqual(evalQueryRaw(query, firstCtx), ['hand:0']);
+    assert.deepEqual(evalQueryRaw(query, secondCtx), ['hand:0']);
     assert.equal(tokenIdReads, 3);
   });
 
@@ -1596,7 +1597,7 @@ describe('evalQuery', () => {
 
     assert.throws(
       () =>
-        evalQuery(
+        evalQueryRaw(
           {
             query: 'tokenZones',
             source: { query: 'zones' },
@@ -1612,7 +1613,7 @@ describe('evalQuery', () => {
 
     assert.throws(
       () =>
-        evalQuery(
+        evalQueryRaw(
           {
             query: 'tokenZones',
             source: { query: 'zones' },
@@ -1640,7 +1641,7 @@ describe('evalQuery', () => {
 
     assert.throws(
       () =>
-        evalQuery(
+        evalQueryRaw(
           {
             query: 'tokenZones',
             source: { query: 'binding', name: '$malformedTokenLike' },
@@ -1662,7 +1663,7 @@ describe('evalQuery', () => {
   it('concatenates query sources left-to-right and preserves duplicates', () => {
     const ctx = makeCtx();
 
-    const result = evalQuery(
+    const result = evalQueryRaw(
       {
         query: 'concat',
         sources: [
@@ -1683,7 +1684,7 @@ describe('evalQuery', () => {
   it('concatenates prioritized tiers left-to-right and preserves duplicates', () => {
     const ctx = makeCtx();
 
-    const result = evalQuery(
+    const result = evalQueryRaw(
       {
         query: 'prioritized',
         qualifierKey: 'type',
@@ -1705,7 +1706,7 @@ describe('evalQuery', () => {
   it('tolerates empty-result prioritized tiers and preserves the remaining tier order', () => {
     const ctx = makeCtx();
 
-    const result = evalQuery(
+    const result = evalQueryRaw(
       {
         query: 'prioritized',
         tiers: [
@@ -1726,14 +1727,14 @@ describe('evalQuery', () => {
   it('treats a single-tier prioritized query as a passthrough and ignores qualifierKey during evaluation', () => {
     const ctx = makeCtx();
 
-    const withoutQualifier = evalQuery(
+    const withoutQualifier = evalQueryRaw(
       {
         query: 'prioritized',
         tiers: [{ query: 'tokensInZone', zone: 'hand:0' }],
       },
       ctx,
     );
-    const withQualifier = evalQuery(
+    const withQualifier = evalQueryRaw(
       {
         query: 'prioritized',
         qualifierKey: 'faction',
@@ -1742,7 +1743,7 @@ describe('evalQuery', () => {
       ctx,
     );
 
-    assert.deepEqual(withoutQualifier, evalQuery({ query: 'tokensInZone', zone: 'hand:0' }, ctx));
+    assert.deepEqual(withoutQualifier, evalQueryRaw({ query: 'tokensInZone', zone: 'hand:0' }, ctx));
     assert.deepEqual(withQualifier, withoutQualifier);
   });
 
@@ -1755,7 +1756,7 @@ describe('evalQuery', () => {
 
     assert.throws(
       () =>
-        evalQuery(
+        evalQueryRaw(
           {
             query: 'concat',
             sources: [
@@ -1778,7 +1779,7 @@ describe('evalQuery', () => {
 
     assert.throws(
       () =>
-        evalQuery(
+        evalQueryRaw(
           {
             query: 'prioritized',
             tiers: [
@@ -1801,7 +1802,7 @@ describe('evalQuery', () => {
 
     assert.throws(
       () =>
-        evalQuery(
+        evalQueryRaw(
           {
             query: 'concat',
             sources: [{ query: 'binding', name: '$mixed' }],
@@ -1841,7 +1842,7 @@ describe('evalQuery', () => {
     });
 
     assert.deepEqual(
-      evalQuery(
+      evalQueryRaw(
         {
           query: 'mapSpaces',
           filter: {
@@ -1887,7 +1888,7 @@ describe('evalQuery', () => {
     });
 
     assert.deepEqual(
-      evalQuery(
+      evalQueryRaw(
         {
           query: 'tokensInMapSpaces',
           spaceFilter: {
@@ -1912,7 +1913,7 @@ describe('evalQuery', () => {
       },
     });
 
-    const tokens = evalQuery(
+    const tokens = evalQueryRaw(
       {
         query: 'tokensInZone',
         zone: 'battlefield:none',
@@ -1951,7 +1952,7 @@ describe('evalQuery', () => {
       },
     });
 
-    const tokens = evalQuery(
+    const tokens = evalQueryRaw(
       {
         query: 'tokensInZone',
         zone: 'battlefield:none',
@@ -1981,7 +1982,7 @@ describe('evalQuery', () => {
       adjacencyGraph: buildAdjacencyGraph(defWithUncategorizedBoard.zones),
     });
 
-    assert.deepEqual(evalQuery({ query: 'mapSpaces' }, ctx), ['battlefield:none']);
+    assert.deepEqual(evalQueryRaw({ query: 'mapSpaces' }, ctx), ['battlefield:none']);
   });
 
   it('mapSpaces excludes aux zones even when category is present', () => {
@@ -2003,7 +2004,7 @@ describe('evalQuery', () => {
       adjacencyGraph: buildAdjacencyGraph(defWithCategorizedAuxZone.zones),
     });
 
-    assert.deepEqual(evalQuery({ query: 'mapSpaces' }, ctx), []);
+    assert.deepEqual(evalQueryRaw({ query: 'mapSpaces' }, ctx), []);
   });
 
   it('tokensInMapSpaces mirrors zoneKind-based board selection', () => {
@@ -2038,7 +2039,7 @@ describe('evalQuery', () => {
     });
 
     assert.deepEqual(
-      evalQuery({ query: 'tokensInMapSpaces' }, ctx).map((token) => (token as Token).id),
+      evalQueryRaw({ query: 'tokensInMapSpaces' }, ctx).map((token) => (token as Token).id),
       [
         asTokenId('us-troop-1'),
         asTokenId('us-troop-2'),
@@ -2066,7 +2067,7 @@ describe('evalQuery', () => {
 
     assert.throws(
       () =>
-        evalQuery(
+        evalQueryRaw(
           {
             query: 'zones',
             filter: {
@@ -2079,7 +2080,9 @@ describe('evalQuery', () => {
           },
           ctx,
         ),
-      (error: unknown) => isEvalErrorCode(error, 'ZONE_PROP_NOT_FOUND'),
+      (error: unknown) =>
+        isEvalErrorCode(error, 'ZONE_PROP_NOT_FOUND') ||
+        isEvalErrorCode((error as Error & { cause?: unknown })?.cause, 'ZONE_PROP_NOT_FOUND'),
     );
   });
 
@@ -2109,7 +2112,7 @@ describe('evalQuery', () => {
       },
     });
 
-    assert.deepEqual(evalQuery({ query: 'zones' }, ctx), [
+    assert.deepEqual(evalQueryRaw({ query: 'zones' }, ctx), [
       'battlefield:none',
       'bench:1',
       'deck:none',
@@ -2118,22 +2121,22 @@ describe('evalQuery', () => {
       'hand:1',
       'tableau:2',
     ]);
-    assert.deepEqual(evalQuery({ query: 'zones', filter: { owner: 'actor' } }, ctx), ['bench:1', 'hand:1']);
+    assert.deepEqual(evalQueryRaw({ query: 'zones', filter: { owner: 'actor' } }, ctx), ['bench:1', 'hand:1']);
   });
 
   it('evaluates spatial query variants with deterministic ordering', () => {
     const ctx = makeCtx();
 
-    assert.deepEqual(evalQuery({ query: 'adjacentZones', zone: 'deck:none' }, ctx), [
+    assert.deepEqual(evalQueryRaw({ query: 'adjacentZones', zone: 'deck:none' }, ctx), [
       asZoneId('hand:0'),
       asZoneId('hand:1'),
     ]);
     assert.deepEqual(
-      evalQuery({ query: 'tokensInAdjacentZones', zone: 'deck:none' }, ctx).map((token) => (token as Token).id),
+      evalQueryRaw({ query: 'tokensInAdjacentZones', zone: 'deck:none' }, ctx).map((token) => (token as Token).id),
       [asTokenId('hand-0'), asTokenId('hand-0b'), asTokenId('hand-1')],
     );
     assert.deepEqual(
-      evalQuery(
+      evalQueryRaw(
         {
           query: 'connectedZones',
           zone: 'deck:none',
@@ -2164,15 +2167,15 @@ describe('evalQuery', () => {
     });
 
     assert.deepEqual(
-      evalQuery({ query: 'adjacentZones', zone: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$origin' } } }, ctx),
+      evalQueryRaw({ query: 'adjacentZones', zone: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$origin' } } }, ctx),
       [asZoneId('hand:0'), asZoneId('hand:1')],
     );
     assert.deepEqual(
-      evalQuery({ query: 'tokensInAdjacentZones', zone: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$origin' } } }, ctx).map((token) => (token as Token).id),
+      evalQueryRaw({ query: 'tokensInAdjacentZones', zone: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$origin' } } }, ctx).map((token) => (token as Token).id),
       [asTokenId('hand-0'), asTokenId('hand-0b'), asTokenId('hand-1')],
     );
     assert.deepEqual(
-      evalQuery(
+      evalQueryRaw(
         {
           query: 'connectedZones',
           zone: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$origin' } },
@@ -2197,7 +2200,7 @@ describe('evalQuery', () => {
     });
 
     assert.deepEqual(
-      evalQuery(
+      evalQueryRaw(
         {
           query: 'connectedZones',
           zone: { zoneExpr: { _t: 2 as const, ref: 'binding', name: '$origin' } },
@@ -2217,14 +2220,14 @@ describe('evalQuery', () => {
   it('tokensInZone with no filter returns all tokens (backward-compatible)', () => {
     const ctx = makeCtx();
 
-    const result = evalQuery({ query: 'tokensInZone', zone: 'battlefield:none' }, ctx);
+    const result = evalQueryRaw({ query: 'tokensInZone', zone: 'battlefield:none' }, ctx);
     assert.equal(result.length, 5);
   });
 
   it('tokensInZone with filter op=eq returns only matching tokens', () => {
     const ctx = makeCtx();
 
-    const result = evalQuery(
+    const result = evalQueryRaw(
       { query: 'tokensInZone', zone: 'battlefield:none', filter: { op: 'and', args: [{ prop: 'faction', op: 'eq', value: 'US' }] } },
       ctx,
     );
@@ -2237,7 +2240,7 @@ describe('evalQuery', () => {
   it('tokensInZone filter supports token identity via prop=id', () => {
     const ctx = makeCtx();
 
-    const result = evalQuery(
+    const result = evalQueryRaw(
       { query: 'tokensInZone', zone: 'battlefield:none', filter: { op: 'and', args: [{ prop: 'id', op: 'eq', value: 'nva-guerrilla-1' }] } },
       ctx,
     );
@@ -2250,7 +2253,7 @@ describe('evalQuery', () => {
   it('tokensInZone with filter op=neq returns non-matching tokens', () => {
     const ctx = makeCtx();
 
-    const result = evalQuery(
+    const result = evalQueryRaw(
       { query: 'tokensInZone', zone: 'battlefield:none', filter: { op: 'and', args: [{ prop: 'faction', op: 'neq', value: 'US' }] } },
       ctx,
     );
@@ -2263,7 +2266,7 @@ describe('evalQuery', () => {
   it('tokensInZone with filter op=in returns tokens matching any value in array', () => {
     const ctx = makeCtx();
 
-    const result = evalQuery(
+    const result = evalQueryRaw(
       {
         query: 'tokensInZone',
         zone: 'battlefield:none',
@@ -2280,7 +2283,7 @@ describe('evalQuery', () => {
   it('tokensInZone with filter op=notIn returns tokens not matching any value in array', () => {
     const ctx = makeCtx();
 
-    const result = evalQuery(
+    const result = evalQueryRaw(
       {
         query: 'tokensInZone',
         zone: 'battlefield:none',
@@ -2297,7 +2300,7 @@ describe('evalQuery', () => {
   it('tokensInZone with filter on missing token prop returns empty array', () => {
     const ctx = makeCtx();
 
-    const result = evalQuery(
+    const result = evalQueryRaw(
       {
         query: 'tokensInZone',
         zone: 'battlefield:none',
@@ -2312,7 +2315,7 @@ describe('evalQuery', () => {
     const collector = createCollector();
     const ctx = makeCtx({ collector });
 
-    const result = evalQuery(
+    const result = evalQueryRaw(
       {
         query: 'tokensInZone',
         zone: 'battlefield:none',
@@ -2342,7 +2345,7 @@ describe('evalQuery', () => {
 
     // Tokens have only 'faction' prop, so filter on faction=US AND faction!=ARVN
     // Both US troops match faction=US AND faction!=ARVN
-    const result = evalQuery(
+    const result = evalQueryRaw(
       {
         query: 'tokensInZone',
         zone: 'battlefield:none',
@@ -2407,8 +2410,10 @@ describe('evalQuery', () => {
 
     for (const testCase of cases) {
       assert.throws(
-        () => evalQuery(testCase.query, testCase.ctx),
-        (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+        () => evalQueryRaw(testCase.query, testCase.ctx),
+        (error: unknown) =>
+          isEvalErrorCode(error, 'TYPE_MISMATCH') ||
+          isEvalErrorCode((error as Error & { cause?: unknown })?.cause, 'TYPE_MISMATCH'),
         `Expected TYPE_MISMATCH for ${testCase.name}`,
       );
     }
@@ -2485,8 +2490,10 @@ describe('evalQuery', () => {
 
     for (const testCase of cases) {
       assert.throws(
-        () => evalQuery(testCase.query, testCase.ctx),
-        (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+        () => evalQueryRaw(testCase.query, testCase.ctx),
+        (error: unknown) =>
+          isEvalErrorCode(error, 'TYPE_MISMATCH') ||
+          isEvalErrorCode((error as Error & { cause?: unknown })?.cause, 'TYPE_MISMATCH'),
         `Expected TYPE_MISMATCH for ${testCase.name}`,
       );
     }
@@ -2497,7 +2504,7 @@ describe('evalQuery', () => {
 
     assert.throws(
       () =>
-        evalQuery(
+        evalQueryRaw(
           {
             query: 'tokensInZone',
             zone: 'battlefield:none',
@@ -2519,7 +2526,7 @@ describe('evalQuery', () => {
 
     assert.throws(
       () =>
-        evalQuery(
+        evalQueryRaw(
           { query: 'tokensInZone', zone: 'battlefield:none', filter: { op: 'and', args: [{ prop: 'faction', op: 'in', value: 'US' }] } },
           ctx,
         ),
@@ -2532,7 +2539,7 @@ describe('evalQuery', () => {
 
     assert.throws(
       () =>
-        evalQuery(
+        evalQueryRaw(
           {
             query: 'tokensInZone',
             zone: 'battlefield:none',
@@ -2549,7 +2556,7 @@ describe('evalQuery', () => {
 
     assert.throws(
       () =>
-        evalQuery(
+        evalQueryRaw(
           {
             query: 'tokensInZone',
             zone: 'battlefield:none',
@@ -2566,7 +2573,7 @@ describe('evalQuery', () => {
 
     assert.throws(
       () =>
-        evalQuery(
+        evalQueryRaw(
           { query: 'tokensInZone', zone: 'deck:none', filter: { op: 'and', args: [{ prop: 'cost', op: 'in', value: ['1'] }] } },
           ctx,
         ),
@@ -2605,7 +2612,7 @@ describe('evalQuery', () => {
 
     assert.throws(
       () =>
-        evalQuery(
+        evalQueryRaw(
           {
             query: 'assetRows',
             tableId: 'tournament-standard::blindSchedule.levels',
@@ -2648,7 +2655,7 @@ describe('evalQuery', () => {
 
     assert.throws(
       () =>
-        evalQuery(
+        evalQueryRaw(
           {
             query: 'assetRows',
             tableId: 'tournament-standard::blindSchedule.levels',
@@ -2696,7 +2703,7 @@ describe('evalQuery', () => {
 
     assert.throws(
       () =>
-        evalQuery(
+        evalQueryRaw(
           {
             query: 'assetRows',
             tableId: 'tournament-standard::blindSchedule.levels',
@@ -2717,7 +2724,7 @@ describe('evalQuery', () => {
 
     assert.throws(
       () =>
-        evalQuery(
+        evalQueryRaw(
           {
             query: 'tokensInZone',
             zone: 'battlefield:none',
@@ -2733,16 +2740,16 @@ describe('evalQuery', () => {
     const ctx = makeCtx({ maxQueryResults: 3 });
 
     assert.throws(
-      () => evalQuery({ query: 'intsInRange', min: 1, max: 10 }, ctx),
+      () => evalQueryRaw({ query: 'intsInRange', min: 1, max: 10 }, ctx),
       (error: unknown) => isEvalErrorCode(error, 'QUERY_BOUNDS_EXCEEDED'),
     );
     assert.throws(
-      () => evalQuery({ query: 'adjacentZones', zone: 'deck:none' }, makeCtx({ maxQueryResults: 1 })),
+      () => evalQueryRaw({ query: 'adjacentZones', zone: 'deck:none' }, makeCtx({ maxQueryResults: 1 })),
       (error: unknown) => isEvalErrorCode(error, 'QUERY_BOUNDS_EXCEEDED'),
     );
     assert.throws(
       () =>
-        evalQuery(
+        evalQueryRaw(
           {
             query: 'concat',
             sources: [
@@ -2756,7 +2763,7 @@ describe('evalQuery', () => {
     );
     assert.throws(
       () =>
-        evalQuery(
+        evalQueryRaw(
           {
             query: 'prioritized',
             qualifierKey: 'faction',

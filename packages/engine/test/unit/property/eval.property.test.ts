@@ -7,6 +7,7 @@ import {
   deserializeGameState,
   evalCondition,
   evalQuery,
+  evalQueryRaw,
   evalValue,
   isEvalErrorCode,
   type ConditionAST,
@@ -90,7 +91,7 @@ describe('evaluation property-style checks', () => {
 
     for (let min = -5; min <= 5; min += 1) {
       for (let max = min; max <= min + 5; max += 1) {
-        const result = evalQuery({ query: 'intsInRange', min, max }, ctx);
+        const result = evalQueryRaw({ query: 'intsInRange', min, max }, ctx);
         assert.equal(result.length, max - min + 1);
       }
     }
@@ -106,12 +107,12 @@ describe('evaluation property-style checks', () => {
     ];
 
     boundedQueries.forEach((query) => {
-      const result = evalQuery(query, withinBoundsCtx);
+      const result = evalQueryRaw(query, withinBoundsCtx);
       assert.equal(result.length <= 3, true);
     });
 
     assert.throws(
-      () => evalQuery({ query: 'intsInRange', min: 0, max: 4 }, withinBoundsCtx),
+      () => evalQueryRaw({ query: 'intsInRange', min: 0, max: 4 }, withinBoundsCtx),
       (error: unknown) => isEvalErrorCode(error, 'QUERY_BOUNDS_EXCEEDED'),
     );
   });

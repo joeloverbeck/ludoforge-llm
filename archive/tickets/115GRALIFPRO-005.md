@@ -1,6 +1,6 @@
 # 115GRALIFPRO-005: Move viability check into lifecycle and remove simulator error recovery
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel viability integration, simulator cleanup, apply-move wiring
@@ -107,3 +107,24 @@ Remove all now-unused imports in files that referenced these functions.
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`
 3. `pnpm turbo lint`
+
+## Outcome
+
+Completed: 2026-04-07
+
+What changed:
+- Moved skip-if-no-legal-completion admission behind lifecycle-owned candidate transitions in `packages/engine/src/kernel/grant-lifecycle.ts` and `packages/engine/src/kernel/legal-moves.ts`.
+- Replaced the old free-operation consumption wrapper with `consumeAuthorizedFreeOperationGrant(...)` in `packages/engine/src/kernel/apply-move.ts` and deleted the legacy grant-consumption/skip/expire exports from `packages/engine/src/kernel/turn-flow-eligibility.ts`.
+- Replaced phase-advance's blocking-grant expiry path with lifecycle `expireGrant(...)` handling in `packages/engine/src/kernel/phase-advance.ts`.
+- Removed simulator-side grant-specific recovery from `packages/engine/src/sim/simulator.ts`.
+- Updated owned tests in `packages/engine/test/unit/kernel/grant-lifecycle.test.ts`, `packages/engine/test/unit/phase-advance.test.ts`, and `packages/engine/test/integration/fitl-event-free-operation-grants.test.ts`.
+
+Deviations from original plan:
+- The live codebase still needed candidate-specific viability handling inside legal-move enumeration, so the implemented boundary became “lifecycle-owned normalization for ready grants while preserving per-candidate viability semantics,” not a one-time grant-level `ready -> offered/skip` pre-pass.
+- `apply-move.ts` now calls `consumeAuthorizedFreeOperationGrant(...)` rather than calling raw `consumeUse(...)` directly, because the remaining authorization/missing-grant invariant and deferred-release orchestration still had to live at the apply-move boundary after the legacy wrapper export was deleted.
+
+Verification results:
+- `pnpm -F @ludoforge/engine test` passed.
+- `pnpm turbo typecheck` passed.
+- `pnpm turbo lint` passed.
+- `pnpm turbo build` passed.

@@ -3,10 +3,17 @@ import { describe, it } from 'node:test';
 
 import {
   advanceToReady,
+  asActionId,
+  asPhaseId,
+  asPlayerId,
   consumeUse,
+  createSeatResolutionContext,
   expireGrant,
   markOffered,
   skipGrant,
+  transitionReadyGrantForCandidateMove,
+  type GameDef,
+  type GameState,
   type TurnFlowPendingFreeOperationGrant,
 } from '../../../src/kernel/index.js';
 
@@ -21,6 +28,85 @@ const makeGrant = (
   remainingUses: 2,
   ...overrides,
 });
+
+const createLifecycleState = (
+  grant: TurnFlowPendingFreeOperationGrant,
+): GameState => ({
+  globalVars: {},
+  perPlayerVars: {},
+  zoneVars: {},
+  playerCount: 2,
+  zones: {},
+  nextTokenOrdinal: 0,
+  currentPhase: asPhaseId('main'),
+  activePlayer: asPlayerId(0),
+  turnCount: 0,
+  rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [1n, 2n] },
+  stateHash: 0n,
+  _runningHash: 0n,
+  actionUsage: {},
+  turnOrderState: {
+    type: 'cardDriven',
+    runtime: {
+      seatOrder: ['0', '1'],
+      eligibility: { '0': true, '1': true },
+      currentCard: {
+        firstEligible: '0',
+        secondEligible: '1',
+        actedSeats: [],
+        passedSeats: [],
+        nonPassCount: 0,
+        firstActionClass: null,
+      },
+      pendingEligibilityOverrides: [],
+      pendingFreeOperationGrants: [grant],
+    },
+  },
+  markers: {},
+});
+
+const createLifecycleDef = (operationLegal: boolean): GameDef =>
+  ({
+    metadata: { id: 'grant-lifecycle-test', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
+    seats: [{ id: '0' }, { id: '1' }],
+    constants: {},
+    globalVars: [],
+    perPlayerVars: [],
+    zones: [],
+    tokenTypes: [],
+    setup: [],
+    turnStructure: { phases: [{ id: asPhaseId('main') }, { id: asPhaseId('other') }] },
+    turnOrder: {
+      type: 'cardDriven',
+      config: {
+        turnFlow: {
+          cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+          eligibility: { seats: ['0', '1'] },
+          windows: [],
+          optionMatrix: [],
+          passRewards: [],
+          durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          actionClassByActionId: { operation: 'operation' },
+          freeOperationActionIds: ['operation'],
+        },
+      },
+    },
+    actions: [
+      {
+        id: asActionId('operation'),
+        actor: 'active',
+        executor: 'actor',
+        phase: [operationLegal ? asPhaseId('main') : asPhaseId('other')],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      },
+    ],
+    triggers: [],
+    terminal: { conditions: [] },
+  }) as unknown as GameDef;
 
 describe('grant lifecycle transitions', () => {
   it('advanceToReady moves sequenceWaiting grants to ready and emits a trace entry', () => {
@@ -105,6 +191,53 @@ describe('grant lifecycle transitions', () => {
     assert.equal(result.traceEntry.step, 'expireGrant');
     assert.equal(result.traceEntry.fromPhase, 'ready');
     assert.equal(result.traceEntry.toPhase, 'expired');
+  });
+
+  it('transitions ready skipIfNoLegalCompletion grants to skipped when no legal completion exists', () => {
+    const grant = makeGrant({
+      completionPolicy: 'skipIfNoLegalCompletion',
+      postResolutionTurnFlow: 'resumeCardFlow',
+    });
+    const def = createLifecycleDef(false);
+    const state = createLifecycleState(grant);
+
+    const result = transitionReadyGrantForCandidateMove(
+      def,
+      state,
+      grant,
+      { actionId: asActionId('operation'), params: {}, freeOperation: true },
+      createSeatResolutionContext(def, state.playerCount),
+      {
+        resolveDecisionSequence: (move) => ({
+          complete: false,
+          move,
+          warnings: [],
+        }),
+      },
+    );
+
+    assert.equal(result.traceEntry.step, 'skipGrant');
+    assert.equal(result.grant.phase, 'skipped');
+  });
+
+  it('transitions ready skipIfNoLegalCompletion grants to offered when a legal completion exists', () => {
+    const grant = makeGrant({
+      completionPolicy: 'skipIfNoLegalCompletion',
+      postResolutionTurnFlow: 'resumeCardFlow',
+    });
+    const def = createLifecycleDef(true);
+    const state = createLifecycleState(grant);
+
+    const result = transitionReadyGrantForCandidateMove(
+      def,
+      state,
+      grant,
+      { actionId: asActionId('operation'), params: {}, freeOperation: true },
+      createSeatResolutionContext(def, state.playerCount),
+    );
+
+    assert.equal(result.traceEntry.step, 'markOffered');
+    assert.equal(result.grant.phase, 'offered');
   });
 
   it('throws runtime contract errors for invalid source phases', () => {

@@ -1,7 +1,17 @@
 import { createGrantLifecycleTraceEntry } from './grant-lifecycle-trace.js';
+import {
+  hasLegalCompletedFreeOperationMoveInCurrentState,
+} from './free-operation-viability.js';
 import { kernelRuntimeError } from './runtime-error.js';
+import type { SeatResolutionContext } from './identity.js';
+import type { ResolveMoveDecisionSequenceResult } from './move-decision-sequence.js';
+import type { MoveEnumerationBudgets } from './move-enumeration-budgets.js';
 import type {
+  GameDef,
+  GameState,
   GrantLifecyclePhase,
+  Move,
+  RuntimeWarning,
   TurnFlowPendingFreeOperationGrant,
   TurnFlowGrantLifecycleTraceEntry,
 } from './types.js';
@@ -120,4 +130,32 @@ export const expireGrant = (
     ...grant,
     phase: 'expired',
   });
+};
+
+export const transitionReadyGrantForCandidateMove = (
+  def: GameDef,
+  state: GameState,
+  grant: TurnFlowPendingFreeOperationGrant,
+  baseMove: Move,
+  seatResolution: SeatResolutionContext,
+  options?: {
+    readonly budgets?: Partial<MoveEnumerationBudgets>;
+    readonly onWarning?: (warning: RuntimeWarning) => void;
+    readonly resolveDecisionSequence?: (
+      move: Move,
+      options?: {
+        readonly budgets?: Partial<MoveEnumerationBudgets>;
+        readonly onWarning?: (warning: RuntimeWarning) => void;
+      },
+    ) => ResolveMoveDecisionSequenceResult;
+  },
+): GrantLifecycleTransitionResult => {
+  assertPhase('transitionReadyGrantForCandidateMove', grant, ['ready']);
+  if (
+    grant.completionPolicy === 'skipIfNoLegalCompletion'
+    && !hasLegalCompletedFreeOperationMoveInCurrentState(def, state, baseMove, seatResolution, options)
+  ) {
+    return skipGrant(grant);
+  }
+  return markOffered(grant);
 };

@@ -1,7 +1,5 @@
-import { applyTrustedMove, createGameDefRuntime, createRng, enumerateLegalMoves, initialState, terminalResult, advanceToDecisionPoint } from '../kernel/index.js';
+import { applyTrustedMove, createGameDefRuntime, createRng, enumerateLegalMoves, initialState, terminalResult } from '../kernel/index.js';
 import { assertValidatedGameDef } from '../kernel/index.js';
-import { createSeatResolutionContext } from '../kernel/identity.js';
-import { skipPendingSkippableFreeOperationGrants } from '../kernel/turn-flow-eligibility.js';
 import { perfStart, perfEnd } from '../kernel/perf-profiler.js';
 import type {
   Agent,
@@ -15,7 +13,6 @@ import type {
   TerminalResult,
   ValidatedGameDef,
 } from '../kernel/index.js';
-import { isNoPlayableMovesAfterPreparationError } from '../agents/no-playable-move.js';
 import { computeDeltas } from './delta.js';
 import type { SimulationOptions } from './sim-options.js';
 import { extractDecisionPointSnapshot } from './snapshot.js';
@@ -139,33 +136,14 @@ export const runGame = (
       ? undefined
       : extractDecisionPointSnapshot(validatedDef, state, resolvedRuntime, snapshotDepth);
     const t0_agent = perfStart(profiler);
-    try {
-      selected = agent.chooseMove({
-        def: validatedDef,
-        state,
-        playerId: player,
-        legalMoves: legalMoveResult.moves,
-        rng: agentRng,
-        runtime: resolvedRuntime,
-      });
-    } catch (error) {
-      perfEnd(profiler, 'simAgentChooseMove', t0_agent);
-      if (isNoPlayableMovesAfterPreparationError(error)) {
-        // If a skipIfNoLegalCompletion grant is pending, skip it and retry.
-        // The grant surfaced as a legal move (via the broadened
-        // isRequiredPendingFreeOperationGrant predicate) but the agent
-        // couldn't complete it — remove the grant and re-enumerate.
-        const seatResolution = createSeatResolutionContext(validatedDef, state.playerCount);
-        const skippedState = skipPendingSkippableFreeOperationGrants(validatedDef, state, seatResolution);
-        if (skippedState !== null) {
-          state = advanceToDecisionPoint(validatedDef, skippedState, undefined, undefined, undefined, resolvedRuntime);
-          continue;
-        }
-        stopReason = 'noLegalMoves';
-        break;
-      }
-      throw error;
-    }
+    selected = agent.chooseMove({
+      def: validatedDef,
+      state,
+      playerId: player,
+      legalMoves: legalMoveResult.moves,
+      rng: agentRng,
+      runtime: resolvedRuntime,
+    });
     perfEnd(profiler, 'simAgentChooseMove', t0_agent);
     agentRngByPlayer[player] = selected.rng;
 

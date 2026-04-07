@@ -1,6 +1,7 @@
 import { asPlayerId } from './branded.js';
 import { applyBoundaryExpiry } from './boundary-expiry.js';
 import { resetPhaseUsage, resetTurnUsage } from './action-usage.js';
+import { expireGrant } from './grant-lifecycle.js';
 import { reconcileRunningHash } from './zobrist-phase-hash.js';
 import { resolveBoundaryDurationsAtTurnEnd } from './event-execution.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
@@ -21,7 +22,6 @@ import {
 import { terminalResult } from './terminal.js';
 import type { GameDef, GameState, TriggerLogEntry } from './types.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';
-import { expireUnfulfillableRequiredFreeOperationGrants } from './turn-flow-eligibility.js';
 
 const firstPhaseId = (def: GameDef): GameState['currentPhase'] => {
   const phaseId = def.turnStructure.phases.at(0)?.id;
@@ -94,6 +94,65 @@ const resolveCurrentCoupSeat = (
     TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.COUP_SEAT_RESOLUTION,
     seatResolution,
   );
+};
+
+const expireBlockingPendingFreeOperationGrants = (
+  def: GameDef,
+  state: GameState,
+  seatResolution: SeatResolutionContext,
+  triggerLogCollector?: TriggerLogEntry[],
+): GameState | null => {
+  if (state.turnOrderState.type !== 'cardDriven') {
+    return null;
+  }
+  const runtime = state.turnOrderState.runtime;
+  const pending = runtime.pendingFreeOperationGrants ?? [];
+  if (pending.length === 0) {
+    return null;
+  }
+
+  const activeSeat = requireCardDrivenActiveSeat(
+    def,
+    state,
+    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.ELIGIBILITY_CHECK,
+    seatResolution,
+  );
+  const remainingGrants = pending.flatMap((grant) => {
+    if (
+      grant.seat !== activeSeat
+      || grant.phase !== 'ready'
+      || (
+        grant.completionPolicy !== 'required'
+        && grant.completionPolicy !== 'skipIfNoLegalCompletion'
+      )
+    ) {
+      return [grant];
+    }
+    const expired = expireGrant(grant);
+    triggerLogCollector?.push(expired.traceEntry);
+    return [];
+  });
+
+  if (remainingGrants.length === pending.length) {
+    return null;
+  }
+  const { pendingFreeOperationGrants, ...runtimeWithoutPendingGrants } = runtime;
+  void pendingFreeOperationGrants;
+
+  return {
+    ...state,
+    turnOrderState: {
+      type: 'cardDriven',
+      runtime: remainingGrants.length === 0
+        ? {
+            ...runtimeWithoutPendingGrants,
+          }
+        : {
+            ...runtime,
+            pendingFreeOperationGrants: remainingGrants,
+          },
+    },
+  };
 };
 
 /**
@@ -499,10 +558,10 @@ export const advanceToDecisionPoint = (
       break;
     }
 
-    // If a required free-operation grant blocks all moves but no free ops are
-    // legal, expire the unfulfillable grant and re-check legal moves.
+    // If a blocking free-operation grant leaves the state with no legal moves,
+    // expire it through the lifecycle transition and re-check legal moves.
     if (phaseValid) {
-      const expired = expireUnfulfillableRequiredFreeOperationGrants(def, nextState, seatResolution);
+      const expired = expireBlockingPendingFreeOperationGrants(def, nextState, seatResolution, triggerLogCollector);
       if (expired !== null) {
         const tableExp = cachedRuntime?.zobristTable;
         nextState = tableExp ? { ...expired, _runningHash: reconcileRunningHash(tableExp, nextState, expired) } : expired;

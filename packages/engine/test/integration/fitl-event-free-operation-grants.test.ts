@@ -11,7 +11,7 @@ import {
   initialState,
   isKernelErrorCode,
   legalMoves,
-  consumeTurnFlowFreeOperationGrant,
+  consumeAuthorizedFreeOperationGrant,
   createSeatResolutionContext,
   type EventCardDef,
   type EventDeckDef,
@@ -2392,7 +2392,7 @@ describe('event free-operation grants integration', () => {
 
     assert.throws(
       () =>
-        consumeTurnFlowFreeOperationGrant(
+        consumeAuthorizedFreeOperationGrant(
           def,
           authorizationState,
           corruptedPostActionState,

@@ -15,9 +15,7 @@ import {
 } from './identity.js';
 import { createDeferredLifecycleTraceEntry } from './turn-flow-deferred-lifecycle-trace.js';
 import {
-  collectGrantMoveZoneCandidates,
   doesGrantPotentiallyAuthorizeMove,
-  resolveAuthorizedPendingFreeOperationGrants,
 } from './free-operation-grant-authorization.js';
 import {
   appendSkippedSequenceStep,
@@ -25,7 +23,7 @@ import {
   resolvePendingFreeOperationGrantSequenceStatus,
   resolveSequenceProgressionPolicy,
 } from './free-operation-sequence-progression.js';
-import { advanceToReady, consumeUse } from './grant-lifecycle.js';
+import { advanceToReady } from './grant-lifecycle.js';
 import { resolveFreeOperationGrantSeatToken } from './free-operation-seat-resolution.js';
 import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
 import { buildAdjacencyGraph } from './spatial.js';
@@ -36,10 +34,6 @@ import {
   assertCardMetadataSeatOrderRuntimeInvariant,
   requireCardDrivenActiveSeat,
 } from './turn-flow-runtime-invariants.js';
-import {
-  authorizedFreeOperationGrantMissingInvariantMessage,
-  makeAuthorizedFreeOperationGrantMissingInvariantContext,
-} from './turn-flow-invariant-contracts.js';
 import {
   grantRequiresUsableProbe,
   isFreeOperationGrantUsableInCurrentState,
@@ -67,13 +61,6 @@ interface TurnFlowTransitionResult {
   readonly traceEntries: readonly TriggerLogEntry[];
   readonly boundaryDurations?: readonly TurnFlowDuration[];
   readonly releasedDeferredEventEffects?: readonly TurnFlowReleasedDeferredEventEffect[];
-}
-
-interface FreeOperationGrantConsumptionResult {
-  readonly state: GameState;
-  readonly traceEntries: readonly TriggerLogEntry[];
-  readonly releasedDeferredEventEffects: readonly TurnFlowReleasedDeferredEventEffect[];
-  readonly consumedGrant?: TurnFlowPendingFreeOperationGrant;
 }
 
 type CardDrivenConfig = NonNullable<Extract<GameDef['turnOrder'], { readonly type: 'cardDriven' }>['config']>;
@@ -179,7 +166,7 @@ const hasReadyPendingFreeOperationGrantForSeat = (
     && grant.phase === 'ready'
     && isBlockingPendingFreeOperationGrant(grant));
 
-const advanceSequenceReadyPendingFreeOperationGrants = (
+export const advanceSequenceReadyPendingFreeOperationGrants = (
   pending: readonly TurnFlowPendingFreeOperationGrant[],
   sequenceContexts: TurnFlowRuntimeState['freeOperationSequenceContexts'] | undefined,
 ): {
@@ -492,17 +479,17 @@ const extractPendingFreeOperationGrants = (
   };
 };
 
-const toPendingFreeOperationGrants = (
+export const toPendingFreeOperationGrants = (
   grants: readonly TurnFlowPendingFreeOperationGrant[],
 ): readonly TurnFlowPendingFreeOperationGrant[] | undefined =>
   grants.length === 0 ? undefined : grants;
 
-const toPendingDeferredEventEffects = (
+export const toPendingDeferredEventEffects = (
   deferred: readonly TurnFlowPendingDeferredEventEffect[],
 ): readonly TurnFlowPendingDeferredEventEffect[] | undefined =>
   deferred.length === 0 ? undefined : deferred;
 
-const withPendingFreeOperationGrants = (
+export const withPendingFreeOperationGrants = (
   runtime: TurnFlowRuntimeState,
   grants: readonly TurnFlowPendingFreeOperationGrant[] | undefined,
 ): TurnFlowRuntimeState => {
@@ -516,7 +503,7 @@ const withPendingFreeOperationGrants = (
   return nextRuntime;
 };
 
-const withPendingDeferredEventEffects = (
+export const withPendingDeferredEventEffects = (
   runtime: TurnFlowRuntimeState,
   deferred: readonly TurnFlowPendingDeferredEventEffect[] | undefined,
 ): TurnFlowRuntimeState => {
@@ -530,7 +517,7 @@ const withPendingDeferredEventEffects = (
   return nextRuntime;
 };
 
-const withSuspendedCardEnd = (
+export const withSuspendedCardEnd = (
   runtime: TurnFlowRuntimeState,
   suspendedCardEnd: TurnFlowRuntimeState['suspendedCardEnd'] | undefined,
 ): TurnFlowRuntimeState => {
@@ -544,7 +531,7 @@ const withSuspendedCardEnd = (
   return nextRuntime;
 };
 
-const withFreeOperationSequenceContexts = (
+export const withFreeOperationSequenceContexts = (
   runtime: TurnFlowRuntimeState,
   contexts: TurnFlowRuntimeState['freeOperationSequenceContexts'] | undefined,
 ): TurnFlowRuntimeState => {
@@ -558,7 +545,7 @@ const withFreeOperationSequenceContexts = (
   return nextRuntime;
 };
 
-const trimFreeOperationSequenceContextsToPendingBatches = (
+export const trimFreeOperationSequenceContextsToPendingBatches = (
   contexts: TurnFlowRuntimeState['freeOperationSequenceContexts'] | undefined,
   pending: readonly TurnFlowPendingFreeOperationGrant[],
 ): TurnFlowRuntimeState['freeOperationSequenceContexts'] | undefined => {
@@ -603,7 +590,7 @@ const makeUniqueDeferredEventEffectId = (
   return candidate;
 };
 
-const splitReadyDeferredEventEffects = (
+export const splitReadyDeferredEventEffects = (
   deferred: readonly TurnFlowPendingDeferredEventEffect[],
   pendingGrants: readonly TurnFlowPendingFreeOperationGrant[],
 ): {
@@ -913,115 +900,6 @@ export const hasActiveSeatRequiredPendingFreeOperationGrant = (
     runtime.pendingFreeOperationGrants ?? [],
     activeSeat,
   );
-};
-
-/**
- * When the active seat has a required pending free-operation grant but no legal
- * free-operation moves exist to fulfill it, the grant blocks all moves (including
- * pass), violating the kernel contract that every non-terminal state has at least
- * one legal move.  This function detects that scenario and removes the
- * unfulfillable required grants, returning the updated state.  Returns `null` if
- * no unfulfillable grants are present.
- */
-export const expireUnfulfillableRequiredFreeOperationGrants = (
-  def: GameDef,
-  state: GameState,
-  seatResolution: SeatResolutionContext,
-): GameState | null => {
-  const runtime = cardDrivenRuntime(state);
-  if (runtime === null) {
-    return null;
-  }
-  const pending = runtime.pendingFreeOperationGrants ?? [];
-  if (pending.length === 0) {
-    return null;
-  }
-  const activeSeat = requireCardDrivenActiveSeat(
-    def,
-    state,
-    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.ELIGIBILITY_CHECK,
-    seatResolution,
-  );
-  if (!hasReadyPendingFreeOperationGrantForSeat(pending, activeSeat)) {
-    return null;
-  }
-
-  // Filter out the ready required grants for the active seat.
-  const expiredGrantIds = new Set(
-    pending
-      .filter((grant) =>
-        grant.seat === activeSeat
-        && grant.phase === 'ready'
-        && isBlockingPendingFreeOperationGrant(grant),
-      )
-      .map((grant) => grant.grantId),
-  );
-  if (expiredGrantIds.size === 0) {
-    return null;
-  }
-  const remainingGrants = pending.filter((grant) => !expiredGrantIds.has(grant.grantId));
-  return {
-    ...state,
-    turnOrderState: {
-      type: 'cardDriven',
-      runtime: withPendingFreeOperationGrants(
-        runtime,
-        remainingGrants.length === 0 ? undefined : remainingGrants,
-      ),
-    },
-  };
-};
-
-/**
- * When the active seat has a pending `skipIfNoLegalCompletion` grant but no
- * legal free-operation moves exist to fulfill it, remove the grant so the
- * game can advance.  Returns `null` if no skippable grants exist.
- *
- * This parallels `expireUnfulfillableRequiredFreeOperationGrants` but only
- * targets `skipIfNoLegalCompletion` grants.  Required grants are handled by
- * the existing expiry function.
- */
-export const skipPendingSkippableFreeOperationGrants = (
-  def: GameDef,
-  state: GameState,
-  seatResolution: SeatResolutionContext,
-): GameState | null => {
-  const runtime = cardDrivenRuntime(state);
-  if (runtime === null) {
-    return null;
-  }
-  const pending = runtime.pendingFreeOperationGrants ?? [];
-  if (pending.length === 0) {
-    return null;
-  }
-  const activeSeat = requireCardDrivenActiveSeat(
-    def,
-    state,
-    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.ELIGIBILITY_CHECK,
-    seatResolution,
-  );
-
-  const skippableGrants = pending.filter((grant) =>
-    grant.seat === activeSeat
-    && grant.completionPolicy === 'skipIfNoLegalCompletion'
-    && grant.phase === 'ready',
-  );
-  if (skippableGrants.length === 0) {
-    return null;
-  }
-
-  const skippedIds = new Set(skippableGrants.map((g) => g.grantId));
-  const remainingGrants = pending.filter((g) => !skippedIds.has(g.grantId));
-  return {
-    ...state,
-    turnOrderState: {
-      type: 'cardDriven',
-      runtime: withPendingFreeOperationGrants(
-        runtime,
-        remainingGrants.length === 0 ? undefined : remainingGrants,
-      ),
-    },
-  };
 };
 
 export const isMoveAllowedByRequiredPendingFreeOperationGrant = (
@@ -1356,123 +1234,5 @@ export const applyTurnFlowEligibilityAfterMove = (
       : withActiveFromFirstEligible(stateWithTurnFlow, currentCard.firstEligible, seatResolution),
     traceEntries,
     ...(releasedDeferredEventEffects.length === 0 ? {} : { releasedDeferredEventEffects }),
-  };
-};
-
-export const consumeTurnFlowFreeOperationGrant = (
-  def: GameDef,
-  authorizationState: GameState,
-  state: GameState,
-  move: Move,
-  seatResolution: SeatResolutionContext,
-): FreeOperationGrantConsumptionResult => {
-  if (move.freeOperation !== true || state.turnOrderState.type !== 'cardDriven') {
-    return { state, traceEntries: [], releasedDeferredEventEffects: [] };
-  }
-  const runtime = state.turnOrderState.runtime;
-  const authorizationRuntime =
-    authorizationState.turnOrderState.type === 'cardDriven'
-      ? authorizationState.turnOrderState.runtime
-      : null;
-  if (authorizationRuntime === null) {
-    return { state, traceEntries: [], releasedDeferredEventEffects: [] };
-  }
-  const activeSeat = requireCardDrivenActiveSeat(
-    def,
-    authorizationState,
-    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.FREE_OPERATION_GRANT_CONSUMPTION,
-    seatResolution,
-  );
-  const pending = authorizationRuntime.pendingFreeOperationGrants ?? [];
-  const authorizedGrant = resolveAuthorizedPendingFreeOperationGrants(
-    def,
-    authorizationState,
-    pending,
-    activeSeat,
-    move,
-  ).canonicalGrant;
-  if (authorizedGrant === null) {
-    return { state, traceEntries: [], releasedDeferredEventEffects: [] };
-  }
-  const runtimePending = runtime.pendingFreeOperationGrants ?? [];
-  const consumedIndex = runtimePending.findIndex((grant) => grant.grantId === authorizedGrant.grantId);
-  if (consumedIndex < 0) {
-    const context = makeAuthorizedFreeOperationGrantMissingInvariantContext({
-      actionId: String(move.actionId),
-      activeSeat,
-      authorizedGrantId: authorizedGrant.grantId,
-      authorizationPendingGrantIds: pending.map((grant) => grant.grantId),
-      runtimePendingGrantIds: runtimePending.map((grant) => grant.grantId),
-    });
-    throw kernelRuntimeError(
-      'RUNTIME_CONTRACT_INVALID',
-      authorizedFreeOperationGrantMissingInvariantMessage(context),
-      context,
-    );
-  }
-  const consumed = runtimePending[consumedIndex]!;
-  const consumedTransition = consumeUse(consumed);
-  const nextPending = consumedTransition.grant.phase === 'exhausted'
-    ? [...runtimePending.slice(0, consumedIndex), ...runtimePending.slice(consumedIndex + 1)]
-    : [
-        ...runtimePending.slice(0, consumedIndex),
-        consumedTransition.grant,
-        ...runtimePending.slice(consumedIndex + 1),
-      ];
-  const captureKey = consumed.sequenceContext?.captureMoveZoneCandidatesAs;
-  const capturedZones = captureKey === undefined ? [] : collectGrantMoveZoneCandidates(def, authorizationState, move, consumed);
-  const capturedBatchId = consumed.sequenceBatchId;
-  const baseSequenceContexts = runtime.freeOperationSequenceContexts;
-  const nextSequenceContexts = captureKey === undefined || capturedBatchId === undefined
-    ? trimFreeOperationSequenceContextsToPendingBatches(baseSequenceContexts, nextPending)
-    : trimFreeOperationSequenceContextsToPendingBatches({
-        ...(baseSequenceContexts ?? {}),
-        [capturedBatchId]: {
-          capturedMoveZonesByKey: {
-            ...(baseSequenceContexts?.[capturedBatchId]?.capturedMoveZonesByKey ?? {}),
-            [captureKey]: [...capturedZones],
-          },
-          progressionPolicy: baseSequenceContexts?.[capturedBatchId]?.progressionPolicy ?? 'strictInOrder',
-          skippedStepIndices: baseSequenceContexts?.[capturedBatchId]?.skippedStepIndices ?? [],
-        },
-      }, nextPending);
-  const sequenceAdvanced = advanceSequenceReadyPendingFreeOperationGrants(
-    nextPending,
-    nextSequenceContexts,
-  );
-  const splitDeferred = splitReadyDeferredEventEffects(
-    runtime.pendingDeferredEventEffects ?? [],
-    sequenceAdvanced.grants,
-  );
-  const normalizedPendingFreeOperationGrants = toPendingFreeOperationGrants(sequenceAdvanced.grants);
-  const normalizedPendingDeferredEventEffects = toPendingDeferredEventEffects(splitDeferred.remaining);
-  const traceEntries: TriggerLogEntry[] = [
-    consumedTransition.traceEntry,
-    ...sequenceAdvanced.traceEntries,
-    ...splitDeferred.ready.map<TriggerLogEntry>((released) =>
-      createDeferredLifecycleTraceEntry('released', released)),
-  ];
-  return {
-    state: {
-      ...state,
-      turnOrderState: {
-        type: 'cardDriven',
-        runtime: withPendingDeferredEventEffects(
-          withFreeOperationSequenceContexts(
-            withPendingFreeOperationGrants(
-              withSuspendedCardEnd({
-                ...runtime,
-              }, runtime.suspendedCardEnd),
-              normalizedPendingFreeOperationGrants,
-            ),
-            nextSequenceContexts,
-          ),
-          normalizedPendingDeferredEventEffects,
-        ),
-      },
-    },
-    traceEntries,
-    releasedDeferredEventEffects: splitDeferred.ready,
-    consumedGrant: consumed,
   };
 };

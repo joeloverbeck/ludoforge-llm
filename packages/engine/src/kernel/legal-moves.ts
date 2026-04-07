@@ -34,8 +34,8 @@ import {
 } from './free-operation-discovery-analysis.js';
 import {
   canResolveAmbiguousFreeOperationOverlapInCurrentState,
-  hasLegalCompletedFreeOperationMoveInCurrentState,
 } from './free-operation-viability.js';
+import { transitionReadyGrantForCandidateMove } from './grant-lifecycle.js';
 import { resolveStrongestRequiredFreeOperationOutcomeGrant } from './free-operation-outcome-policy.js';
 import { resolveTurnFlowActionClass } from './turn-flow-action-class.js';
 import { isTurnFlowErrorCode } from './turn-flow-error.js';
@@ -681,16 +681,20 @@ function enumeratePendingFreeOperationMoves(
     if (strongestOutcomeGrant.completionPolicy === 'required') {
       return true;
     }
-    return hasLegalCompletedFreeOperationMoveInCurrentState(
+    if (strongestOutcomeGrant.phase !== 'ready') {
+      return strongestOutcomeGrant.phase === 'offered';
+    }
+    return transitionReadyGrantForCandidateMove(
       def,
       candidateState,
+      strongestOutcomeGrant,
       candidateMove,
       seatResolution,
       {
         budgets: enumeration.budgets,
         onWarning: (warning) => emitEnumerationWarning(enumeration, warning),
       },
-    );
+    ).grant.phase === 'offered';
   };
   const collectViableNonExecutionContextReadyGrantIds = (candidateMove: Move): readonly string[] =>
     readyGrants

@@ -1388,8 +1388,8 @@ describe('advanceToDecisionPoint — free-operation completion policy handling',
     assert.equal(next.currentPhase, asPhaseId('main'));
     const runtime = requireCardDrivenRuntime(next);
     const grants = runtime.pendingFreeOperationGrants ?? [];
-    // Pre-FREOPSKIP behavior: unfulfillable required grants are expired by
-    // expireUnfulfillableRequiredFreeOperationGrants so the game can continue.
+    // Blocking ready grants are expired through the lifecycle transition so
+    // the game can continue.
     assert.equal(grants.length, 0, 'unfulfillable required grant should be expired');
   });
 

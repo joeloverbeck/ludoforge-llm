@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — test fixtures and verification
-**Deps**: `tickets/115GRALIFPRO-005.md`
+**Deps**: `archive/tickets/115GRALIFPRO-005.md`
 
 ## Problem
 
@@ -19,13 +19,14 @@ After tickets 001-005 refactor the grant system, 9+ test files construct `TurnFl
    - `test/unit/kernel/apply-move.test.ts`
    - `test/unit/kernel/free-operation-grant-bindings.test.ts`
    - `test/unit/kernel/free-operation-grant-sequence-readiness.test.ts`
-   - `test/unit/kernel/free-operation-viability-export-surface-guard.test.ts`
    - `test/unit/phase-advance.test.ts`
    - `test/unit/kernel/runtime-error-contracts.test.ts`
 2. Determinism canary test exists at `test/determinism/fitl-policy-agent-canary.test.ts` — confirmed.
 3. Test lanes exist: `test:determinism`, `test:integration:fitl-events` — confirmed in `package.json`.
 4. Seed 1009 and Card 75 Sihanouk tests exist in `fitl-events-sihanouk.test.ts` — confirmed.
 5. Ticket 001 already updated core repo-owned typed helpers and a broad set of inline fixtures to keep the required `phase` field migration atomic. This ticket should not re-advertise already-landed fixture work.
+6. Ticket 005 already updated `fitl-event-free-operation-grants.test.ts` and `phase-advance.test.ts` for the lifecycle/export boundary cleanup. Any remaining work in those files must be limited to unresolved phase-fixture or verification gaps, not the already-landed wrapper-removal assertions.
+7. `test/unit/kernel/free-operation-viability-export-surface-guard.test.ts` does not construct pending grant fixtures in the live codebase and should not remain in the file list for this ticket.
 
 ## Architecture Check
 
@@ -45,7 +46,7 @@ In `fitl-event-free-operation-grants.test.ts` and `fitl-events-sihanouk.test.ts`
 
 ### 3. Update unit test fixtures
 
-In `apply-move.test.ts`, `free-operation-grant-bindings.test.ts`, `free-operation-viability-export-surface-guard.test.ts`, `phase-advance.test.ts`, and `runtime-error-contracts.test.ts`, add `phase` to all grant object literals.
+In `apply-move.test.ts`, `free-operation-grant-bindings.test.ts`, `phase-advance.test.ts`, and `runtime-error-contracts.test.ts`, add `phase` to all remaining grant object literals that still lack it after tickets 001-005.
 
 ### 4. Refactor `free-operation-grant-sequence-readiness.test.ts`
 
@@ -69,7 +70,6 @@ Execute all test lanes and verify:
 - `packages/engine/test/unit/kernel/apply-move.test.ts` (modify)
 - `packages/engine/test/unit/kernel/free-operation-grant-bindings.test.ts` (modify)
 - `packages/engine/test/unit/kernel/free-operation-grant-sequence-readiness.test.ts` (modify — significant refactoring)
-- `packages/engine/test/unit/kernel/free-operation-viability-export-surface-guard.test.ts` (modify)
 - `packages/engine/test/unit/phase-advance.test.ts` (modify)
 - `packages/engine/test/unit/kernel/runtime-error-contracts.test.ts` (modify)
 
@@ -107,9 +107,8 @@ Execute all test lanes and verify:
 4. `packages/engine/test/unit/kernel/apply-move.test.ts` — add `phase` to fixtures
 5. `packages/engine/test/unit/kernel/free-operation-grant-bindings.test.ts` — add `phase` to fixtures
 6. `packages/engine/test/unit/kernel/free-operation-grant-sequence-readiness.test.ts` — refactor for lifecycle-based readiness
-7. `packages/engine/test/unit/kernel/free-operation-viability-export-surface-guard.test.ts` — add `phase` to fixtures
-8. `packages/engine/test/unit/phase-advance.test.ts` — add `phase` to fixtures
-9. `packages/engine/test/unit/kernel/runtime-error-contracts.test.ts` — add `phase` to fixtures
+7. `packages/engine/test/unit/phase-advance.test.ts` — add `phase` to any remaining direct fixtures
+8. `packages/engine/test/unit/kernel/runtime-error-contracts.test.ts` — add `phase` to any remaining direct fixtures
 
 ### Commands
 

@@ -47,9 +47,10 @@ import {
   decideDiscoveryLegalMovesPipelineViability,
   evaluateDiscoveryPipelinePredicateStatus,
 } from './pipeline-viability-policy.js';
-import { MISSING_BINDING_POLICY_CONTEXTS, shouldDeferMissingBinding } from './missing-binding-policy.js';
+import { MISSING_BINDING_POLICY_CONTEXTS, classifyMissingBindingProbeError } from './missing-binding-policy.js';
 import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
 import { toMoveIdentityKey } from './move-identity.js';
+import type { ProbeResult } from './probe-result.js';
 import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { selectorInvalidSpecError } from './selector-runtime-contract.js';
@@ -426,9 +427,11 @@ function enumerateParams(
     options,
   );
 
-  const resolveExecutionPlayerForBindings = (allowPendingBinding: boolean): GameState['activePlayer'] | null => {
+  const resolveExecutionPlayerForBindings = (
+    allowPendingBinding: boolean,
+  ): ProbeResult<GameState['activePlayer'] | null> => {
     if (options?.executionPlayerOverride !== undefined) {
-      return options.executionPlayerOverride;
+      return { outcome: 'legal', value: options.executionPlayerOverride };
     }
     const resolution = resolveActionExecutor({
       def,
@@ -441,25 +444,25 @@ function enumerateParams(
       evalRuntimeResources,
     });
     if (resolution.kind === 'notApplicable') {
-      return null;
+      return { outcome: 'legal', value: null };
     }
     if (resolution.kind === 'invalidSpec') {
-      if (
-        allowPendingBinding &&
-        shouldDeferMissingBinding(
+      if (allowPendingBinding) {
+        const classified = classifyMissingBindingProbeError(
           resolution.error,
           MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_EXECUTOR_DURING_PARAM_ENUMERATION,
-        )
-      ) {
-        return state.activePlayer;
+        );
+        if (classified !== null) {
+          return classified;
+        }
       }
       throw selectorInvalidSpecError('legalMoves', 'executor', action, resolution.error);
     }
-    return resolution.executionPlayer;
+    return { outcome: 'legal', value: resolution.executionPlayer };
   };
 
   if (paramIndex >= action.params.length) {
-    const executionPlayer = resolveExecutionPlayerForBindings(false);
+    const executionPlayer = resolveExecutionPlayerForBindings(false).value!;
     if (executionPlayer === null) {
       return;
     }
@@ -540,7 +543,10 @@ function enumerateParams(
     return;
   }
 
-  const executionPlayer = resolveExecutionPlayerForBindings(true);
+  const executionPlayerResult = resolveExecutionPlayerForBindings(true);
+  const executionPlayer = executionPlayerResult.outcome === 'inconclusive'
+    ? state.activePlayer
+    : executionPlayerResult.value!;
   if (executionPlayer === null) {
     return;
   }

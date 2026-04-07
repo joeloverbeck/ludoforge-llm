@@ -7,8 +7,9 @@ import {
 import { createMoveDecisionSequenceChoiceDiscoverer } from './move-decision-discoverer.js';
 import { pickDeterministicChoiceValue } from './choice-option-policy.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
-import { shouldDeferMissingBinding, type MissingBindingPolicyContext } from './missing-binding-policy.js';
+import { classifyMissingBindingProbeError, type MissingBindingPolicyContext } from './missing-binding-policy.js';
 import { resolveMoveEnumerationBudgets, type MoveEnumerationBudgets } from './move-enumeration-budgets.js';
+import type { ProbeResult } from './probe-result.js';
 import type {
   ChoiceIllegalRequest,
   ChoicePendingRequest,
@@ -50,6 +51,28 @@ export type MoveDecisionSequenceSatisfiabilityResult = DecisionSequenceSatisfiab
 
 const defaultChoose = (request: ChoicePendingRequest): MoveParamValue | undefined =>
   pickDeterministicChoiceValue(request);
+
+const probeMoveDecisionSequenceAdmissionClassification = (
+  def: GameDef,
+  state: GameState,
+  baseMove: Move,
+  context: MissingBindingPolicyContext,
+  options?: MoveDecisionSequenceSatisfiabilityOptions,
+  runtime?: GameDefRuntime,
+): ProbeResult<MoveDecisionSequenceSatisfiabilityResult['classification']> => {
+  try {
+    return {
+      outcome: 'legal',
+      value: classifyMoveDecisionSequenceSatisfiability(def, state, baseMove, options, runtime).classification,
+    };
+  } catch (error) {
+    const classified = classifyMissingBindingProbeError(error, context);
+    if (classified !== null) {
+      return classified;
+    }
+    throw error;
+  }
+};
 
 export const resolveMoveDecisionSequence = (
   def: GameDef,
@@ -168,14 +191,15 @@ export const classifyMoveDecisionSequenceAdmissionForLegalMove = (
   options?: MoveDecisionSequenceSatisfiabilityOptions,
   runtime?: GameDefRuntime,
 ): MoveDecisionSequenceSatisfiabilityResult['classification'] => {
-  try {
-    return classifyMoveDecisionSequenceSatisfiability(def, state, baseMove, options, runtime).classification;
-  } catch (error) {
-    if (shouldDeferMissingBinding(error, context)) {
-      return 'unknown';
-    }
-    throw error;
-  }
+  const result = probeMoveDecisionSequenceAdmissionClassification(
+    def,
+    state,
+    baseMove,
+    context,
+    options,
+    runtime,
+  );
+  return result.outcome === 'inconclusive' ? 'unknown' : result.value!;
 };
 
 export const isMoveDecisionSequenceAdmittedForLegalMove = (

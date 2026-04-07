@@ -83,6 +83,7 @@ Every stop condition below requires resolution before implementation proceeds.
 
 **Stale ticket boundary triage**:
 - Stale wording but valid boundary → keep the boundary, correct stale claims, resolve implementation direction via 1-3-1.
+- Stale deliverable inside a valid boundary → implement the live owned subset, call out the stale sub-claim explicitly in working notes/final summary, and do not trigger 1-3-1 unless the stale deliverable blocks correctness or forces a real scope decision.
 - Stale incidence but relevant mechanism/invariant → treat as a proof-boundary decision, not automatic invalidation.
 - Boundary itself is wrong → stop and resolve whether to rewrite, narrow, or supersede before coding.
 

@@ -41,7 +41,7 @@ import { buildAdjacencyGraph } from './spatial.js';
 import {
   applyTurnFlowEligibilityAfterMove,
   consumeTurnFlowFreeOperationGrant,
-  hasActiveSeatCompletionPendingFreeOperationGrant,
+  hasActiveSeatRequiredPendingFreeOperationGrant,
   isMoveAllowedByRequiredPendingFreeOperationGrant,
 } from './turn-flow-eligibility.js';
 import { resolveFreeOperationDiscoveryAnalysis } from './free-operation-discovery-analysis.js';
@@ -708,7 +708,7 @@ const validateMove = (
     });
   }
   if (
-    hasActiveSeatCompletionPendingFreeOperationGrant(def, state, seatResolution)
+    hasActiveSeatRequiredPendingFreeOperationGrant(def, state, seatResolution)
     && !isMoveAllowedByRequiredPendingFreeOperationGrant(def, state, move, seatResolution)
   ) {
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE, {
@@ -1683,7 +1683,7 @@ export const probeMoveViability = (
       });
     }
     if (
-      hasActiveSeatCompletionPendingFreeOperationGrant(def, state, seatResolution)
+      hasActiveSeatRequiredPendingFreeOperationGrant(def, state, seatResolution)
       && !isMoveAllowedByRequiredPendingFreeOperationGrant(def, state, move, seatResolution)
     ) {
       throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE, {

@@ -125,11 +125,7 @@ export const turnFlowFreeOperationGrantPolicyRank = (
     'completionPolicy' | 'outcomePolicy' | 'postResolutionTurnFlow'
   >,
 ): readonly [number, number, number] => [
-  grant.completionPolicy === 'required'
-    ? 2
-    : grant.completionPolicy === 'skipIfNoLegalCompletion'
-      ? 1
-      : 0,
+  grant.completionPolicy === 'required' ? 1 : 0,
   grant.outcomePolicy === 'mustChangeGameplayState' ? 1 : 0,
   grant.postResolutionTurnFlow === 'resumeCardFlow' ? 1 : 0,
 ];
@@ -313,14 +309,11 @@ export const collectTurnFlowFreeOperationGrantContractViolations = (
     });
   }
 
-  if (
-    (grant.completionPolicy === 'required' || grant.completionPolicy === 'skipIfNoLegalCompletion')
-    && grant.postResolutionTurnFlow === undefined
-  ) {
+  if (grant.completionPolicy === 'required' && grant.postResolutionTurnFlow === undefined) {
     violations.push({
       code: 'requiredPostResolutionTurnFlowMissing',
       path: ['postResolutionTurnFlow'],
-      message: 'postResolutionTurnFlow is required when completionPolicy is required or skipIfNoLegalCompletion.',
+      message: 'postResolutionTurnFlow is required when completionPolicy is required.',
     });
   }
 

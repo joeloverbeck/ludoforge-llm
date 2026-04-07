@@ -573,7 +573,7 @@ export const doesCompletedProbeMoveChangeGameplayState = (
   return doesMaterialGameplayStateChange(def, state, afterActionState);
 };
 
-const resolveLegalCompletedProbeMove = (
+const hasLegalCompletedProbeMove = (
   def: GameDef,
   explorationState: GameState,
   authorizationState: GameState,
@@ -585,7 +585,7 @@ const resolveLegalCompletedProbeMove = (
     readonly selectionGrant?: TurnFlowPendingFreeOperationGrant | null;
     readonly resolveDecisionSequence?: FreeOperationDecisionSequenceResolver;
   },
-): Move | null => {
+): boolean => {
   const budgets = resolveMoveEnumerationBudgets({
     ...STRICT_FREE_OPERATION_PROBE_BUDGETS,
     ...(options?.budgets ?? {}),
@@ -604,9 +604,9 @@ const resolveLegalCompletedProbeMove = (
       },
     ));
 
-  const visit = (move: Move): Move | null => {
+  const visit = (move: Move): boolean => {
     if (decisionProbeSteps >= budgets.maxDecisionProbeSteps || paramExpansions > budgets.maxParamExpansions) {
-      return null;
+      return false;
     }
     decisionProbeSteps += 1;
 
@@ -626,33 +626,30 @@ const resolveLegalCompletedProbeMove = (
         )
         || !isCompletedProbeMoveCurrentlyLegal(def, authorizationState, request.move, seatResolution)
       ) {
-        return null;
+        return false;
       }
       if (resolveStrongestRequiredFreeOperationOutcomeGrant(def, authorizationState, request.move, seatResolution) !== null) {
-        return doesCompletedProbeMoveChangeGameplayState(def, authorizationState, request.move, seatResolution)
-          ? request.move
-          : null;
+        return doesCompletedProbeMoveChangeGameplayState(def, authorizationState, request.move, seatResolution);
       }
-      return request.move;
+      return true;
     }
     if (request.illegal !== undefined || request.stochasticDecision !== undefined) {
-      return null;
+      return false;
     }
     if (!isFreeOperationPotentiallyGrantedForMove(def, authorizationState, request.move, seatResolution)) {
-      return null;
+      return false;
     }
 
     const nextDecision = request.nextDecision;
     if (nextDecision === undefined) {
-      return null;
+      return false;
     }
 
     const probeGrant = options?.selectionGrant
       ?? (authorizationState.turnOrderState.type === 'cardDriven'
         ? authorizationState.turnOrderState.runtime.pendingFreeOperationGrants?.find((grant) => grant.grantId === '__probe__') ?? null
         : null);
-    let resolvedMove: Move | null = null;
-    const foundMove = visitSelectableDecisionValues(
+    return visitSelectableDecisionValues(
       def,
       authorizationState,
       probeGrant,
@@ -663,17 +660,15 @@ const resolveLegalCompletedProbeMove = (
         if (paramExpansions > budgets.maxParamExpansions) {
           return false;
         }
-        resolvedMove = visit({
+        return visit({
           ...request.move,
           params: {
             ...request.move.params,
             [nextDecision.decisionKey]: selection,
           },
         });
-        return resolvedMove !== null;
       },
     );
-    return foundMove ? resolvedMove : null;
   };
 
   return visit(baseMove);
@@ -706,7 +701,7 @@ export const canResolveAmbiguousFreeOperationOverlapInCurrentState = (
       ?? null
     : null;
 
-  return resolveLegalCompletedProbeMove(
+  return hasLegalCompletedProbeMove(
     def,
     state,
     state,
@@ -717,7 +712,7 @@ export const canResolveAmbiguousFreeOperationOverlapInCurrentState = (
       selectionGrant,
       ...(options?.resolveDecisionSequence === undefined ? {} : { resolveDecisionSequence: options.resolveDecisionSequence }),
     },
-  ) !== null;
+  );
 };
 
 export const hasLegalCompletedFreeOperationMoveInCurrentState = (
@@ -730,26 +725,7 @@ export const hasLegalCompletedFreeOperationMoveInCurrentState = (
     readonly onWarning?: (warning: RuntimeWarning) => void;
     readonly resolveDecisionSequence?: FreeOperationDecisionSequenceResolver;
   },
-): boolean => resolveLegalCompletedProbeMove(
-  def,
-  state,
-  state,
-  baseMove,
-  seatResolution,
-  options,
-) !== null;
-
-export const resolveLegalCompletedFreeOperationMoveInCurrentState = (
-  def: GameDef,
-  state: GameState,
-  baseMove: Move,
-  seatResolution: SeatResolutionContext,
-  options?: {
-    readonly budgets?: Partial<ReturnType<typeof resolveMoveEnumerationBudgets>>;
-    readonly onWarning?: (warning: RuntimeWarning) => void;
-    readonly resolveDecisionSequence?: FreeOperationDecisionSequenceResolver;
-  },
-): Move | null => resolveLegalCompletedProbeMove(
+): boolean => hasLegalCompletedProbeMove(
   def,
   state,
   state,
@@ -869,9 +845,9 @@ export const isFreeOperationGrantUsableInCurrentState = (
     if (!isFreeOperationApplicableForMove(def, explorationState, probeMove, seatResolution)) {
       continue;
     }
-    if (resolveLegalCompletedProbeMove(def, explorationState, authorizationState, probeMove, seatResolution, {
+    if (hasLegalCompletedProbeMove(def, explorationState, authorizationState, probeMove, seatResolution, {
       ...(options?.budgets === undefined ? {} : { budgets: options.budgets }),
-    }) !== null) {
+    })) {
       return true;
     }
   }

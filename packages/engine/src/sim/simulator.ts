@@ -1,5 +1,7 @@
-import { applyTrustedMove, createGameDefRuntime, createRng, enumerateLegalMoves, initialState, terminalResult } from '../kernel/index.js';
+import { applyTrustedMove, createGameDefRuntime, createRng, enumerateLegalMoves, initialState, terminalResult, advanceToDecisionPoint } from '../kernel/index.js';
 import { assertValidatedGameDef } from '../kernel/index.js';
+import { createSeatResolutionContext } from '../kernel/identity.js';
+import { skipPendingSkippableFreeOperationGrants } from '../kernel/turn-flow-eligibility.js';
 import { perfStart, perfEnd } from '../kernel/perf-profiler.js';
 import type {
   Agent,
@@ -149,6 +151,16 @@ export const runGame = (
     } catch (error) {
       perfEnd(profiler, 'simAgentChooseMove', t0_agent);
       if (isNoPlayableMovesAfterPreparationError(error)) {
+        // If a skipIfNoLegalCompletion grant is pending, skip it and retry.
+        // The grant surfaced as a legal move (via the broadened
+        // isRequiredPendingFreeOperationGrant predicate) but the agent
+        // couldn't complete it — remove the grant and re-enumerate.
+        const seatResolution = createSeatResolutionContext(validatedDef, state.playerCount);
+        const skippedState = skipPendingSkippableFreeOperationGrants(validatedDef, state, seatResolution);
+        if (skippedState !== null) {
+          state = advanceToDecisionPoint(validatedDef, skippedState, undefined, undefined, undefined, resolvedRuntime);
+          continue;
+        }
         stopReason = 'noLegalMoves';
         break;
       }

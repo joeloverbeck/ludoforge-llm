@@ -131,17 +131,9 @@ const computeCandidates = (
 
 const isRequiredPendingFreeOperationGrant = (
   grant: TurnFlowPendingFreeOperationGrant,
-): boolean => grant.completionPolicy === 'required';
+): boolean => grant.completionPolicy === 'required' || grant.completionPolicy === 'skipIfNoLegalCompletion';
 
-const isSkippablePendingFreeOperationGrant = (
-  grant: TurnFlowPendingFreeOperationGrant,
-): boolean => grant.completionPolicy === 'skipIfNoLegalCompletion';
-
-const isCompletionGatedPendingFreeOperationGrant = (
-  grant: TurnFlowPendingFreeOperationGrant,
-): boolean => isRequiredPendingFreeOperationGrant(grant) || isSkippablePendingFreeOperationGrant(grant);
-
-const resolveReadyCompletionFreeOperationGrantSeats = (
+const resolveReadyRequiredFreeOperationGrantSeats = (
   pending: readonly TurnFlowPendingFreeOperationGrant[],
   sequenceContexts: TurnFlowRuntimeState['freeOperationSequenceContexts'] | undefined,
   seatOrder: readonly string[],
@@ -150,7 +142,7 @@ const resolveReadyCompletionFreeOperationGrantSeats = (
     pending
       .filter(
         (grant) =>
-          isCompletionGatedPendingFreeOperationGrant(grant)
+          isRequiredPendingFreeOperationGrant(grant)
           && isPendingFreeOperationGrantSequenceReady(pending, grant, sequenceContexts),
       )
       .map((grant) => grant.seat),
@@ -162,20 +154,20 @@ const resolveReadyCompletionFreeOperationGrantSeats = (
   };
 };
 
-const withCompletionGrantCandidates = (
+const withRequiredGrantCandidates = (
   pending: readonly TurnFlowPendingFreeOperationGrant[],
   sequenceContexts: TurnFlowRuntimeState['freeOperationSequenceContexts'] | undefined,
   seatOrder: readonly string[],
   currentCard: TurnFlowRuntimeCardState,
 ): TurnFlowRuntimeCardState => {
-  const completionGated = resolveReadyCompletionFreeOperationGrantSeats(pending, sequenceContexts, seatOrder);
-  if (completionGated.first === null && completionGated.second === null) {
+  const required = resolveReadyRequiredFreeOperationGrantSeats(pending, sequenceContexts, seatOrder);
+  if (required.first === null && required.second === null) {
     return currentCard;
   }
   return {
     ...currentCard,
-    firstEligible: completionGated.first,
-    secondEligible: completionGated.second,
+    firstEligible: required.first,
+    secondEligible: required.second,
   };
 };
 
@@ -187,16 +179,6 @@ const hasReadyRequiredPendingFreeOperationGrantForSeat = (
   pending.some((grant) =>
     grant.seat === seat
     && isRequiredPendingFreeOperationGrant(grant)
-    && isPendingFreeOperationGrantSequenceReady(pending, grant, sequenceContexts));
-
-const hasReadyCompletionPendingFreeOperationGrantForSeat = (
-  pending: readonly TurnFlowPendingFreeOperationGrant[],
-  sequenceContexts: TurnFlowRuntimeState['freeOperationSequenceContexts'] | undefined,
-  seat: string,
-): boolean =>
-  pending.some((grant) =>
-    grant.seat === seat
-    && isCompletionGatedPendingFreeOperationGrant(grant)
     && isPendingFreeOperationGrantSequenceReady(pending, grant, sequenceContexts));
 
 const cardSnapshot = (card: TurnFlowRuntimeCardState): Pick<TurnFlowRuntimeCardState, 'firstEligible' | 'secondEligible' | 'actedSeats' | 'passedSeats' | 'nonPassCount' | 'firstActionClass'> => ({
@@ -882,33 +864,11 @@ export const isActiveSeatEligibleForTurnFlow = (
   return (
     activeSeat === runtime.currentCard.firstEligible ||
     activeSeat === runtime.currentCard.secondEligible ||
-    hasReadyCompletionPendingFreeOperationGrantForSeat(
+    hasReadyRequiredPendingFreeOperationGrantForSeat(
       runtime.pendingFreeOperationGrants ?? [],
       runtime.freeOperationSequenceContexts,
       activeSeat,
     )
-  );
-};
-
-export const hasActiveSeatCompletionPendingFreeOperationGrant = (
-  def: GameDef,
-  state: GameState,
-  seatResolution: SeatResolutionContext,
-): boolean => {
-  const runtime = cardDrivenRuntime(state);
-  if (runtime === null) {
-    return false;
-  }
-  const activeSeat = requireCardDrivenActiveSeat(
-    def,
-    state,
-    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.ELIGIBILITY_CHECK,
-    seatResolution,
-  );
-  return hasReadyCompletionPendingFreeOperationGrantForSeat(
-    runtime.pendingFreeOperationGrants ?? [],
-    runtime.freeOperationSequenceContexts,
-    activeSeat,
   );
 };
 
@@ -934,36 +894,19 @@ export const hasActiveSeatRequiredPendingFreeOperationGrant = (
   );
 };
 
-export const hasActiveSeatSkippablePendingFreeOperationGrant = (
+/**
+ * When the active seat has a required pending free-operation grant but no legal
+ * free-operation moves exist to fulfill it, the grant blocks all moves (including
+ * pass), violating the kernel contract that every non-terminal state has at least
+ * one legal move.  This function detects that scenario and removes the
+ * unfulfillable required grants, returning the updated state.  Returns `null` if
+ * no unfulfillable grants are present.
+ */
+export const expireUnfulfillableRequiredFreeOperationGrants = (
   def: GameDef,
   state: GameState,
   seatResolution: SeatResolutionContext,
-): boolean => {
-  const runtime = cardDrivenRuntime(state);
-  if (runtime === null) {
-    return false;
-  }
-  const activeSeat = requireCardDrivenActiveSeat(
-    def,
-    state,
-    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.ELIGIBILITY_CHECK,
-    seatResolution,
-  );
-  return (runtime.pendingFreeOperationGrants ?? []).some((grant) =>
-    grant.seat === activeSeat
-    && isSkippablePendingFreeOperationGrant(grant)
-    && isPendingFreeOperationGrantSequenceReady(
-      runtime.pendingFreeOperationGrants ?? [],
-      grant,
-      runtime.freeOperationSequenceContexts,
-    ));
-};
-
-export const skipUncompletablePendingFreeOperationGrants = (
-  def: GameDef,
-  state: GameState,
-  seatResolution: SeatResolutionContext,
-): TurnFlowTransitionResult | null => {
+): GameState | null => {
   const runtime = cardDrivenRuntime(state);
   if (runtime === null) {
     return null;
@@ -978,59 +921,85 @@ export const skipUncompletablePendingFreeOperationGrants = (
     TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.ELIGIBILITY_CHECK,
     seatResolution,
   );
-  const readyPending = pending.filter((grant) =>
+  if (!hasReadyRequiredPendingFreeOperationGrantForSeat(pending, runtime.freeOperationSequenceContexts, activeSeat)) {
+    return null;
+  }
+
+  // Filter out the ready required grants for the active seat.
+  const expiredGrantIds = new Set(
+    pending
+      .filter((grant) =>
+        grant.seat === activeSeat
+        && isRequiredPendingFreeOperationGrant(grant)
+        && isPendingFreeOperationGrantSequenceReady(pending, grant, runtime.freeOperationSequenceContexts),
+      )
+      .map((grant) => grant.grantId),
+  );
+  if (expiredGrantIds.size === 0) {
+    return null;
+  }
+  const remainingGrants = pending.filter((grant) => !expiredGrantIds.has(grant.grantId));
+  return {
+    ...state,
+    turnOrderState: {
+      type: 'cardDriven',
+      runtime: withPendingFreeOperationGrants(
+        runtime,
+        remainingGrants.length === 0 ? undefined : remainingGrants,
+      ),
+    },
+  };
+};
+
+/**
+ * When the active seat has a pending `skipIfNoLegalCompletion` grant but no
+ * legal free-operation moves exist to fulfill it, remove the grant so the
+ * game can advance.  Returns `null` if no skippable grants exist.
+ *
+ * This parallels `expireUnfulfillableRequiredFreeOperationGrants` but only
+ * targets `skipIfNoLegalCompletion` grants.  Required grants are handled by
+ * the existing expiry function.
+ */
+export const skipPendingSkippableFreeOperationGrants = (
+  def: GameDef,
+  state: GameState,
+  seatResolution: SeatResolutionContext,
+): GameState | null => {
+  const runtime = cardDrivenRuntime(state);
+  if (runtime === null) {
+    return null;
+  }
+  const pending = runtime.pendingFreeOperationGrants ?? [];
+  if (pending.length === 0) {
+    return null;
+  }
+  const activeSeat = requireCardDrivenActiveSeat(
+    def,
+    state,
+    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.ELIGIBILITY_CHECK,
+    seatResolution,
+  );
+
+  const skippableGrants = pending.filter((grant) =>
     grant.seat === activeSeat
+    && grant.completionPolicy === 'skipIfNoLegalCompletion'
     && isPendingFreeOperationGrantSequenceReady(pending, grant, runtime.freeOperationSequenceContexts),
   );
-  if (readyPending.length === 0 || readyPending.some((grant) => isRequiredPendingFreeOperationGrant(grant))) {
+  if (skippableGrants.length === 0) {
     return null;
   }
-  const skipped = readyPending.filter((grant) => isSkippablePendingFreeOperationGrant(grant));
-  if (skipped.length === 0) {
-    return null;
-  }
-  const skippedGrantIds = new Set(skipped.map((grant) => grant.grantId));
-  const remainingGrants = pending.filter((grant) => !skippedGrantIds.has(grant.grantId));
-  let nextSequenceContexts = runtime.freeOperationSequenceContexts;
-  for (const grant of skipped) {
-    if (grant.sequenceBatchId === undefined || grant.sequenceIndex === undefined) {
-      continue;
-    }
-    const progressionPolicy = runtime.freeOperationSequenceContexts?.[grant.sequenceBatchId]?.progressionPolicy;
-    if (progressionPolicy === 'implementWhatCanInOrder') {
-      nextSequenceContexts = appendSkippedSequenceStep(
-        nextSequenceContexts,
-        grant.sequenceBatchId,
-        progressionPolicy,
-        grant.sequenceIndex,
-      );
-    }
-  }
-  nextSequenceContexts = trimFreeOperationSequenceContextsToPendingBatches(nextSequenceContexts, remainingGrants);
-  const splitDeferred = splitReadyDeferredEventEffects(runtime.pendingDeferredEventEffects ?? [], remainingGrants);
-  const traceEntries = splitDeferred.ready.map<TriggerLogEntry>((released) =>
-    createDeferredLifecycleTraceEntry('released', released));
+
+  const skippedIds = new Set(skippableGrants.map((g) => g.grantId));
+  const remainingGrants = pending.filter((g) => !skippedIds.has(g.grantId));
   return {
-    state: {
-      ...state,
-      turnOrderState: {
-        type: 'cardDriven',
-        runtime: withPendingDeferredEventEffects(
-          withFreeOperationSequenceContexts(
-            withPendingFreeOperationGrants(
-              withSuspendedCardEnd({
-                ...runtime,
-              }, runtime.suspendedCardEnd),
-              toPendingFreeOperationGrants(remainingGrants),
-            ),
-            nextSequenceContexts,
-          ),
-          toPendingDeferredEventEffects(splitDeferred.remaining),
-        ),
-      },
+    ...state,
+    turnOrderState: {
+      type: 'cardDriven',
+      runtime: withPendingFreeOperationGrants(
+        runtime,
+        remainingGrants.length === 0 ? undefined : remainingGrants,
+      ),
     },
-    traceEntries,
-    releasedDeferredEventEffects: splitDeferred.ready,
   };
 };
 
@@ -1051,7 +1020,7 @@ export const isMoveAllowedByRequiredPendingFreeOperationGrant = (
     seatResolution,
   );
   const pending = runtime.pendingFreeOperationGrants ?? [];
-  if (!hasReadyCompletionPendingFreeOperationGrantForSeat(pending, runtime.freeOperationSequenceContexts, activeSeat)) {
+  if (!hasReadyRequiredPendingFreeOperationGrantForSeat(pending, runtime.freeOperationSequenceContexts, activeSeat)) {
     return true;
   }
   if (move.freeOperation !== true) {
@@ -1059,7 +1028,7 @@ export const isMoveAllowedByRequiredPendingFreeOperationGrant = (
   }
   return pending.some((grant) =>
     grant.seat === activeSeat
-    && isCompletionGatedPendingFreeOperationGrant(grant)
+    && isRequiredPendingFreeOperationGrant(grant)
     && doesGrantPotentiallyAuthorizeMove(def, state, pending, grant, move));
 };
 
@@ -1161,7 +1130,7 @@ export const applyTurnFlowEligibilityAfterMove = (
           ...runtime,
           eligibility: effectiveEligibility,
           pendingEligibilityOverrides: pendingOverrides,
-          currentCard: withCompletionGrantCandidates(
+          currentCard: withRequiredGrantCandidates(
             pendingFreeOperationGrants,
             runtime.freeOperationSequenceContexts,
             runtime.seatOrder,
@@ -1227,7 +1196,7 @@ export const applyTurnFlowEligibilityAfterMove = (
     (before.nonPassCount === 0 && moveClass !== 'pass' ? normalizeFirstActionClass(moveClass) : null);
 
   const activeCardCandidates = computeCandidates(runtime.seatOrder, effectiveEligibility, acted);
-  const currentCard = withCompletionGrantCandidates(pendingFreeOperationGrants, runtime.freeOperationSequenceContexts, runtime.seatOrder, {
+  const currentCard = withRequiredGrantCandidates(pendingFreeOperationGrants, runtime.freeOperationSequenceContexts, runtime.seatOrder, {
     firstEligible: activeCardCandidates.first,
     secondEligible: activeCardCandidates.second,
     actedSeats: [...acted],
@@ -1284,7 +1253,7 @@ export const applyTurnFlowEligibilityAfterMove = (
   }
 
   let endedReason: 'rightmostPass' | 'twoNonPass' | undefined;
-  const requiredGrantCandidates = resolveReadyCompletionFreeOperationGrantSeats(
+  const requiredGrantCandidates = resolveReadyRequiredFreeOperationGrantSeats(
     pendingFreeOperationGrants,
     runtime.freeOperationSequenceContexts,
     runtime.seatOrder,

@@ -1098,7 +1098,7 @@ phase: [asPhaseId('main')],
     assert.deepStrictEqual(moves[0]?.params, {});
   });
 
-  it('omits required free-operation templates when no legal completion satisfies the outcome policy', () => {
+  it('enumerates required free-operation templates even when outcome policy cannot be satisfied so the obligation remains visible', () => {
     const action: ActionDef = {
       id: asActionId('freeOp'),
       actor: 'active',
@@ -1146,7 +1146,8 @@ phase: [asPhaseId('main')],
     });
 
     const moves = legalMoves(def, state);
-    assert.equal(moves.length, 0);
+    assert.equal(moves.length > 0, true, 'required grants must surface their moves so the obligation is visible');
+    assert.equal(moves.every((m) => m.freeOperation === true), true, 'all surfaced moves should be free operations');
   });
 
   it('6. limited operations produce template moves when within limits', () => {

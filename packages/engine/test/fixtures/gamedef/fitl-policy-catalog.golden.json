@@ -2187,6 +2187,61 @@
       },
       "fingerprint": "13a4d863b36067cfc6d61a2a01264d78918ab49630775d53c90c2b694bfbf775"
     },
+    "arvn-evolved": {
+      "observerName": "currentPlayer",
+      "params": {
+        "eventWeight": 1.5,
+        "projectedMarginWeight": 1,
+        "resourceWeight": 0.02
+      },
+      "use": {
+        "pruningRules": [
+          "dropPassWhenOtherMovesExist"
+        ],
+        "considerations": [
+          "preferProjectedSelfMargin",
+          "preserveResources",
+          "preferEvent",
+          "preferTrainAction",
+          "preferPatrolAction",
+          "preferSweepAction",
+          "preferAssaultAction",
+          "preferGovernAction"
+        ],
+        "tieBreakers": [
+          "stableMoveKey"
+        ]
+      },
+      "preview": {
+        "mode": "exactWorld"
+      },
+      "selection": {
+        "mode": "argmax"
+      },
+      "plan": {
+        "stateFeatures": [
+          "selfMargin",
+          "selfResources"
+        ],
+        "candidateFeatures": [
+          "projectedSelfMargin"
+        ],
+        "candidateAggregates": [
+          "hasNonPassAlternative"
+        ],
+        "considerations": [
+          "preferProjectedSelfMargin",
+          "preserveResources",
+          "preferEvent",
+          "preferTrainAction",
+          "preferPatrolAction",
+          "preferSweepAction",
+          "preferAssaultAction",
+          "preferGovernAction"
+        ]
+      },
+      "fingerprint": "13a4d863b36067cfc6d61a2a01264d78918ab49630775d53c90c2b694bfbf775"
+    },
     "nva-baseline": {
       "observerName": "currentPlayer",
       "params": {
@@ -2296,9 +2351,9 @@
   },
   "bindingsBySeat": {
     "us": "us-baseline",
-    "arvn": "arvn-baseline",
+    "arvn": "arvn-evolved",
     "nva": "nva-baseline",
     "vc": "vc-baseline"
   },
-  "catalogFingerprint": "c2fd7e69671ad2e61999109d909e8e61df9d3edd3c7908d794f90a287439d103"
+  "catalogFingerprint": "e12811b96dfc12d67820dd070906e4e961927c733f9f9b9f45b0165052746325"
 }

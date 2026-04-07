@@ -1,0 +1,44 @@
+name: Engine Grant Determinism Canary
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/engine/src/kernel/**'
+      - 'packages/engine/src/cnl/**'
+      - 'packages/engine/src/contracts/**'
+      - 'packages/engine/src/agents/**'
+      - 'packages/engine/src/sim/**'
+      - 'packages/engine/test/determinism/**'
+      - 'data/games/**'
+      - '.github/workflows/engine-grant-determinism.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/engine/src/kernel/**'
+      - 'packages/engine/src/cnl/**'
+      - 'packages/engine/src/contracts/**'
+      - 'packages/engine/src/agents/**'
+      - 'packages/engine/src/sim/**'
+      - 'packages/engine/test/determinism/**'
+      - 'data/games/**'
+      - '.github/workflows/engine-grant-determinism.yml'
+
+concurrency:
+  group: grant-determinism-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  grant-determinism:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -F @ludoforge/engine build
+      - run: pnpm -F @ludoforge/engine exec node --test dist/test/determinism/fitl-policy-agent-canary.test.js

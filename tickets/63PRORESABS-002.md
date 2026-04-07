@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel legal-choices refactoring
-**Deps**: `tickets/63PRORESABS-001.md`
+**Deps**: `archive/tickets/63PRORESABS-001.md`
 
 ## Problem
 

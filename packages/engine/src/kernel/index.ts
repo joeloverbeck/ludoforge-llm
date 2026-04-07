@@ -13,6 +13,7 @@ export * from './initial-state.js';
 export * from './legal-choices.js';
 export * from './legality-reasons.js';
 export * from './legality-outcome.js';
+export type { ProbeOutcome, ProbeInconclusiveReason, ProbeResult } from './probe-result.js';
 export * from './pipeline-viability-policy.js';
 export * from './missing-binding-policy.js';
 export * from './legal-moves.js';

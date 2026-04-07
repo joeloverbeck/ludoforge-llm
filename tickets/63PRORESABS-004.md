@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — kernel probe deferral refactoring across 4 files
-**Deps**: `tickets/63PRORESABS-001.md`
+**Deps**: `archive/tickets/63PRORESABS-001.md`
 
 ## Problem
 

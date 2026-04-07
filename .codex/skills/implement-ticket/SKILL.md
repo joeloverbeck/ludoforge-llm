@@ -19,9 +19,12 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
 1. Read `docs/FOUNDATIONS.md` before planning or coding.
 2. Read the ticket file(s) matching the provided path or glob.
 3. Read referenced specs, docs, and `Deps`. Read `AGENTS.md` and respect worktree discipline (all reads, edits, greps, moves, and verification commands use the worktree root when the ticket lives under `.claude/worktrees/<name>/`; isolate your diff from unrelated edits).
-4. Extract all concrete references: file paths, functions, types, classes, modules, tests, scripts, and artifacts the ticket expects.
+4. Before editing, inspect repo state (for example `git status --short`) and call out unrelated dirty files, pre-existing failures, or evidence of concurrent work. Do this early enough that your diff can be isolated from repo-preexisting state.
+5. Extract all concrete references: file paths, functions, types, classes, modules, tests, scripts, and artifacts the ticket expects.
 
 **Session continuity**: If a prior ticket in the same series was implemented earlier in this session, reuse already-verified context. Prefer reusing or extracting helpers from that earlier ticket over duplicating logic. If the completed sibling already satisfied part of the current ticket's deliverable, anchor reassessment to the remaining owned gap rather than treating broader stale wording as a new discrepancy.
+
+**Series slice discipline**: When a referenced spec is broader than the current ticket, treat the ticket as the implementation boundary unless verified evidence shows that slice is stale, internally inconsistent, or impossible to satisfy without broader owned fallout. Confirm which broader spec work is deferred to siblings before coding.
 
 ### Phase 2: Reassess Assumptions
 
@@ -72,6 +75,7 @@ Every stop condition below requires resolution before implementation proceeds.
 13. **Unverifiable bug claim**: If a ticket's bug claim or measured symptom is not currently reproducible, or only the mechanism is verified while claimed incidence remains unproven, stop and resolve the boundary. Apply the **1-3-1 rule** to choose between proof-only, proof-plus-fix, or ticket-scope correction.
 14. **Scope gaps or ambiguity**: For scope gaps, implementation choices, dependency conflicts, or ambiguous boundaries, apply the **1-3-1 rule** (1 problem, 3 options, 1 recommendation).
 15. Continue reassessment after each confirmation until no boundary-affecting discrepancies remain — multiple sequential 1-3-1 rounds are normal.
+16. Before coding, restate the authoritative boundary in working notes and confirm explicitly that there are no blocking discrepancies remaining.
 
 **Confirmation semantics**:
 - If the user explicitly authorizes reassessment and instructs you to proceed with the best `FOUNDATIONS.md`-compliant option after you have already presented the discrepancy and choices, treat that as confirmation for the recommended option. Restate the authoritative boundary, then continue without forcing an extra round.
@@ -99,7 +103,7 @@ Every stop condition below requires resolution before implementation proceeds.
 | Conversion boundary between plain domain object and trusted/validated form | Resolve ownership explicitly |
 | Ticket narrows semantics for one member of an existing shared surface family | Prefer the already-landed shared family contract unless the ticket owns a family-wide redesign |
 
-16. If the ticket is accurate and no blocking decision remains, proceed.
+17. If the ticket is accurate and no blocking decision remains, proceed.
 
 ## Implementation Rules
 

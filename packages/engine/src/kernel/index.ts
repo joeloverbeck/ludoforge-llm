@@ -22,7 +22,7 @@ export type {
   ProbeResult,
   ProbeResultPolicy,
 } from './probe-result.js';
-export { resolveProbeResult } from './probe-result.js';
+export { resolveProbeResult, probeWith } from './probe-result.js';
 export type {
   ZoneFilterEvaluationResult,
   ZoneFilterEvaluationResolved,

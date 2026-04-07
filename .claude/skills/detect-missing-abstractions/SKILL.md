@@ -15,7 +15,7 @@ Analyze engine code exercised by a test suite to find implicit state machines an
 
 **Parameter**: Path to a test file or directory that exercises the engine area to analyze.
 
-**Output**: Structured report at `reports/missing-abstractions-<date>-<context>.md`.
+**Output**: Structured report at `reports/missing-abstractions-<date>-<context>.md`. `<context>` is derived from the input: for a test file, strip the path prefix and `.test.ts`/`.test.js` suffix (e.g., `fitl-policy-agent-canary`); for a directory, use the directory name.
 
 ## Background
 
@@ -47,7 +47,8 @@ Within the exercised modules, find cross-cutting concept clusters:
 2. Search for recurring concept-name fragments (e.g., `freeOperation`, `turnFlow`, `grant`) across exported symbols using Grep. Identify fragments that appear in 3+ files.
 3. Group functions by shared concept fragments
 4. Name each cluster by its dominant fragment (e.g., "freeOperation" cluster, "turnFlow" cluster)
-5. Filter to clusters exceeding the file-count threshold: >10% of analyzed files, or 8+ files, whichever is larger. For small analyses (<50 modules), use 5+ files as the floor. **File count** = files that *define* (export) symbols matching the concept fragment, not files that merely import/consume those symbols. Track consumer count separately for reference — it indicates coupling breadth — but the threshold applies to defining files.
+5. Filter to clusters exceeding the file-count threshold: >10% of analyzed files, or 8+ files, whichever is larger. For small analyses (<50 modules), use 5+ files as the floor. When >80% of exercised modules come from barrel re-exports rather than direct imports, apply the 10% threshold against only the modules *directly reachable* from the test's non-barrel imports and their transitive dependencies — or use a fixed floor of 8 files, whichever is larger. **File count** = files that *define* (export) symbols matching the concept fragment, not files that merely import/consume those symbols. Consumer files are not counted but may be noted for coupling context if relevant.
+6. If two clusters share >50% of their defining files, merge them into a single cluster named by the broader concept. Track the sub-concepts as facets within the merged cluster. This prevents double-counting and focuses diagnosis on the shared root cause.
 
 **Tool usage**: Grep for `export (const|function|type|interface)` across exercised files.
 
@@ -58,13 +59,13 @@ For each concept cluster exceeding the file-count threshold from Phase 2, comput
 | Metric | How to measure |
 |--------|---------------|
 | **File count** | Distinct files containing the concept |
-| **Function count** | Exported functions matching the concept |
-| **Workaround count** | Primary signals: (1) catch blocks that return fallback values instead of re-throwing, (2) functions named with `fallback`, `defer`, `recover`, `retry` in their identifiers, (3) `\|\|` conditions with 3+ disjuncts. Secondary signals: comments containing "workaround", "hack", "safety net", "fallback", "broadened". Comment-based detection alone is unreliable — most workarounds are uncommented. |
+| **Function count** (optional) | Exported functions matching the concept. Include when function-to-file ratio is diagnostically relevant (e.g., very high ratio may indicate God files). |
+| **Workaround count** | Primary signals: (1) catch blocks that return fallback values instead of re-throwing, (2) functions named with `fallback`, `defer`, `recover`, `retry` in their identifiers. Secondary signals: (3) `\|\|` conditions with 3+ disjuncts that check *concept-specific readiness/eligibility/authorization* (not type-discriminant unions or enum-exhaustiveness checks), (4) comments containing "workaround", "hack", "safety net", "fallback", "broadened". Comment-based detection alone is unreliable — most workarounds are uncommented. |
 | **Predicate broadening** | Conditions using `\|\|` that grew over time (check inline comments/annotations first, then git blame for multi-commit additions if comments are absent) |
 | **Redundant checks** | Same semantic check (e.g., "is this grant ready?") computed in 2+ locations |
 | **Simulator special cases** | Error handlers in `sim/` that compensate for kernel gaps. Zero `sim/` compensation handlers is a positive signal — the kernel/sim boundary is clean (FOUNDATIONS §5 satisfied). Report this finding either way. |
 
-**Tool usage**: Grep for patterns, Read specific functions, Bash for git blame on key predicates.
+**Tool usage**: Grep for patterns, Read specific functions, Bash for git blame on key predicates. For clusters with >20 defining files, delegate workaround scanning to 1-3 parallel Explore sub-agents. Each agent scans a subset of the cluster's files for the workaround patterns listed above.
 
 ### Phase 4: DIAGNOSE
 
@@ -113,7 +114,7 @@ Write to `reports/missing-abstractions-<date>-<context>.md`:
 
 ## Concept Clusters
 
-### <Cluster Name> (Files: N, Functions: N, Workarounds: N)
+### <Cluster Name> (Files: N, Workarounds: N)
 
 **Modules**: <list of files>
 

@@ -61,3 +61,27 @@ export const resolveProbeResult = <T, TFallback>(
     case 'inconclusive': return policy.onInconclusive(result.reason);
   }
 };
+
+// ---------------------------------------------------------------------------
+// Try-catch-classify wrapper
+// ---------------------------------------------------------------------------
+
+/**
+ * Execute `fn` inside a try-catch that classifies thrown errors via
+ * `classifier`.  If `fn` succeeds, the result is wrapped in a `legal`
+ * ProbeResult.  If `fn` throws and the classifier recognises the error,
+ * the classifier's ProbeResult is returned.  Unrecognised errors are
+ * re-thrown unchanged.
+ */
+export const probeWith = <T>(
+  fn: () => T,
+  classifier: (error: unknown) => ProbeResult<never> | null,
+): ProbeResult<T> => {
+  try {
+    return { outcome: 'legal', value: fn() };
+  } catch (error: unknown) {
+    const classified = classifier(error);
+    if (classified !== null) return classified;
+    throw error;
+  }
+};

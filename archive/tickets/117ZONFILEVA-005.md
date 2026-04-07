@@ -1,10 +1,10 @@
 # 117ZONFILEVA-005: Migrate test assertions and run determinism canary
 
-**Status**: PENDING
+**Status**: NOT IMPLEMENTED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — test-only changes
-**Deps**: `tickets/117ZONFILEVA-004.md`
+**Deps**: `archive/tickets/117ZONFILEVA-004.md`
 
 ## Problem
 
@@ -90,3 +90,9 @@ Run the FITL playbook golden test and verify identical trace output.
 2. `pnpm -F @ludoforge/engine test:e2e`
 3. `pnpm turbo test --force`
 4. `pnpm turbo typecheck`
+
+## Outcome
+
+**Not Implemented**: 2026-04-07
+
+**Reason**: Ticket 004 (dependency) was closed as NOT IMPLEMENTED — `FREE_OPERATION_ZONE_FILTER_EVALUATION_FAILED` error code was not removed because it is still structurally needed. The 4 test assertions that check for this error code still test valid behavior and should not be migrated.

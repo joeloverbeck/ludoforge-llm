@@ -1,6 +1,6 @@
 # 117ZONFILEVA-004: Remove dead catch blocks and error wrapper
 
-**Status**: PENDING
+**Status**: NOT IMPLEMENTED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — kernel legal-moves, apply-move, turn-flow-error
@@ -78,3 +78,11 @@ In `turn-flow-error.ts`:
 1. `pnpm turbo build`
 2. `pnpm turbo typecheck`
 3. `grep -r 'FREE_OPERATION_ZONE_FILTER_EVALUATION_FAILED' packages/engine/src/` — expect zero matches
+
+## Outcome
+
+**Not Implemented**: 2026-04-07
+
+**Reason**: Ticket 002's implementation preserved `freeOperationZoneFilterEvaluationError()` wrapping for non-deferrable errors in the `failed` result path. `classifyError` in `evaluateZoneFilterForMove()` wraps raw eval errors with the factory and stores them in `zoneFilterFailed(wrappedError)`. `unwrapZoneFilterResult` re-throws the wrapped error from `doesGrantAuthorizeMove()`. The downstream catch blocks in `legal-moves.ts:686` and `apply-move.ts:542` still catch this error — they are NOT dead code. The error factory, error code, and all catch sites are structurally needed.
+
+**FOUNDATIONS assessment**: The remaining error throws are architecturally correct (Foundation 15). Non-deferrable zone-filter failures are genuine exceptional conditions that should unwind the call stack — not control flow decisions. The spec's goal of eliminating exception-based *control flow* was achieved by ticket 002 (deferral decisions are now expressed via the result type). The *error propagation* path is a separate concern and removing it would require cascading result types through the entire authorization pipeline — a scope expansion not justified by the current architecture.

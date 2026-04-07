@@ -276,15 +276,27 @@ function attemptTemplateCompletion(
   let rejection: PolicyMovePreparationTrace['rejection'] | undefined;
   for (let attempt = 0; attempt < pendingTemplateCompletions; attempt += 1) {
     templateCompletionAttempts += 1;
+    const attemptRng = currentRng;
     const t0_epc = perfStart(profiler);
-    const result = evaluatePlayableMoveCandidate(
+    let result = evaluatePlayableMoveCandidate(
       input.def,
       input.state,
       move,
-      currentRng,
+      attemptRng,
       input.runtime,
       choose === undefined ? undefined : { choose },
     );
+    if (choose !== undefined && result.kind === 'rejected') {
+      // Completion guidance is advisory. If a guided completion path dead-ends,
+      // retry the same template without guidance before discarding the move.
+      result = evaluatePlayableMoveCandidate(
+        input.def,
+        input.state,
+        move,
+        attemptRng,
+        input.runtime,
+      );
+    }
     perfDynEnd(profiler, 'agent:evaluatePlayableCandidate', t0_epc);
     currentRng = result.rng;
     if (result.kind === 'playableComplete') {

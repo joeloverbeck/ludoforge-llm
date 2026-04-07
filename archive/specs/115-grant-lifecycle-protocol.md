@@ -1,6 +1,6 @@
 # Spec 115 — Grant Lifecycle Protocol
 
-**Status**: PROPOSED
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — kernel turn-flow subsystem refactoring
@@ -167,3 +167,21 @@ Currently `hasLegalCompletedFreeOperationMoveInCurrentState` is called ad-hoc. I
 - `pnpm -F @ludoforge/engine test:integration:fitl-events` (event integration lane)
 - `pnpm turbo typecheck`
 - `pnpm turbo lint`
+
+## Outcome
+
+- Completed: 2026-04-07
+- What actually changed:
+  - Added explicit `GrantLifecyclePhase` and required `phase` on pending free-operation grants.
+  - Introduced lifecycle transition and trace modules, migrated readiness/authorization/expiry/consumption flows to phase-based ownership, and removed the simulator's grant-specific recovery path.
+  - Completed the verification/closure pass for the series, including a live fix in `packages/engine/src/agents/prepare-playable-moves.ts` so guided completion falls back to unguided completion before rejecting a playable free-operation template.
+- Deviations from original plan:
+  - The work was delivered as an atomic multi-ticket series (`115GRALIFPRO-001` through `115GRALIFPRO-006`) rather than a single change, with ticket boundaries corrected as live codebase state evolved.
+  - The final closure ticket (`006`) did not perform the originally advertised broad fixture migration because that migration had already landed earlier in the series; instead it corrected stale ticket assumptions and fixed the one verification-discovered regression.
+- Verification results:
+  - `pnpm -F @ludoforge/engine build`
+  - `pnpm -F @ludoforge/engine test:determinism`
+  - `pnpm -F @ludoforge/engine test:integration:fitl-events`
+  - `pnpm -F @ludoforge/engine test`
+  - `pnpm turbo typecheck`
+  - `pnpm turbo lint`

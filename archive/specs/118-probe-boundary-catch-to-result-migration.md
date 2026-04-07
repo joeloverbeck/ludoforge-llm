@@ -1,6 +1,6 @@
 # Spec 118 — Probe Boundary Catch-to-Result Migration
 
-**Status**: DRAFT
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Large
 **Engine Changes**: Yes — kernel probe subsystem refactoring
@@ -209,3 +209,17 @@ Suggested ticket series prefix: `PROBOUND` (Probe Boundary)
 | PROBOUND-004 | Internalize `eval-query.ts` 2 catch blocks into result-returning functions | B |
 | PROBOUND-005 | Investigate + migrate `legal-moves.ts` 3 catch blocks (lines 386, 530, 685) | B |
 | PROBOUND-006 | Investigate `hasTransportLikeStateChangeFallback` viability probe restructuring | D |
+
+## Outcome
+
+- **Completion date**: 2026-04-07
+- **Ticket series**: 118PROBOUCAT-001 through 118PROBOUCAT-006 (all archived)
+- **What changed**:
+  - Added `probeWith<T>` helper to `probe-result.ts` — centralizes the try-catch-classify pattern
+  - Migrated 8 catch blocks across 5 files to use `probeWith` (Groups A: 7 sites in `legal-choices.ts`, `pipeline-viability-policy.ts`, `action-pipeline-predicates.ts`, `move-decision-sequence.ts`; Group B: 1 site in `legal-moves.ts` typed with `isRecoverableEvalResolutionError`)
+  - Documented 2 intentional bare catches in `legal-moves.ts` with detailed justification comments
+  - Documented 1 Group C deferred catch in `legal-moves.ts` (blocked on `evalCondition` result-returning)
+  - Group B `eval-query.ts` sites (004) closed as already-satisfied — catch blocks were already internalized in private result-returning helpers
+  - Group D investigation (006): `hasTransportLikeStateChangeFallback` found to be deterministic, bounded, and empirically sound — no action recommended; revisit when Group C lands
+- **Deferred**: Group C (2 sites in `free-operation-zone-filter-probe.ts` and `free-operation-grant-authorization.ts`) — blocked on `evalCondition` gaining a result-returning variant
+- **Finding report**: `reports/118PROBOUCAT-006-viability-heuristic-investigation.md`

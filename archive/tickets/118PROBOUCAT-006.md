@@ -1,6 +1,6 @@
 # 118PROBOUCAT-006: Investigate `hasTransportLikeStateChangeFallback` viability probe restructuring
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: LOW
 **Effort**: Medium
 **Engine Changes**: None — investigation only, may produce a follow-up spec
@@ -85,3 +85,14 @@ Write a finding report to `reports/` summarizing answers to the 3 questions and 
 ### Commands
 
 1. `pnpm -F @ludoforge/engine test` (verify no unintended changes)
+
+## Outcome
+
+- **Completion date**: 2026-04-07
+- **What changed**: No code changes. Finding report written to `reports/118PROBOUCAT-006-viability-heuristic-investigation.md`.
+- **Deviations**: Empirical measurement (running canary seeds with heuristic disabled) was not performed — would require temporary code modification, out of scope for investigation-only ticket. Structural analysis substituted.
+- **Findings**:
+  - Q1 (partial effect execution): Not feasible without significant new infrastructure
+  - Q2 (empirical correctness): Structurally sound, conservative (false positives safe, no false negatives identified)
+  - Q3 (recoverable choice validation): Blocked on Group C migration (evalCondition result-returning)
+- **Recommendation**: No action. Revisit when Group C lands.

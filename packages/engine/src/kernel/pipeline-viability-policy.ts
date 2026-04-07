@@ -8,7 +8,7 @@ import { toApplyMoveIllegalMetadataCode, type ApplyMoveIllegalMetadataCode } fro
 import type { EnumerationStateSnapshot } from './enumeration-snapshot.js';
 import type { ReadContext } from './eval-context.js';
 import { MISSING_BINDING_POLICY_CONTEXTS, classifyMissingBindingProbeError } from './missing-binding-policy.js';
-import type { ProbeResult } from './probe-result.js';
+import { resolveProbeResult, type ProbeResult } from './probe-result.js';
 import { pipelinePredicateEvaluationError } from './runtime-error.js';
 import type { ActionDef, ActionPipelineDef, ActionResolutionStageDef, ConditionAST } from './types.js';
 
@@ -140,14 +140,13 @@ const evaluateDiscoveryPredicate = (
   }
 
   const compiledResult = evaluateCompiledDiscoveryPredicate(action, profileId, predicate, condition, evalCtx, snapshot);
-  if (compiledResult.outcome === 'inconclusive') {
-    return 'deferred';
-  }
-  if (compiledResult.value !== undefined) {
-    return compiledResult.value ? 'passed' : 'failed';
-  }
-
-  return evalActionPipelinePredicateForDiscovery(action, profileId, predicate, condition, evalCtx);
+  return resolveProbeResult(compiledResult, {
+    onLegal: (value) => value !== undefined
+      ? (value ? 'passed' : 'failed')
+      : evalActionPipelinePredicateForDiscovery(action, profileId, predicate, condition, evalCtx),
+    onIllegal: () => evalActionPipelinePredicateForDiscovery(action, profileId, predicate, condition, evalCtx),
+    onInconclusive: () => 'deferred',
+  });
 };
 
 const evaluateCheckpointPredicateStatus = (

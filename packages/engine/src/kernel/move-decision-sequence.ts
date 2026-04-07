@@ -9,7 +9,7 @@ import { pickDeterministicChoiceValue } from './choice-option-policy.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
 import { classifyMissingBindingProbeError, type MissingBindingPolicyContext } from './missing-binding-policy.js';
 import { resolveMoveEnumerationBudgets, type MoveEnumerationBudgets } from './move-enumeration-budgets.js';
-import type { ProbeResult } from './probe-result.js';
+import { resolveProbeResult, type ProbeResult } from './probe-result.js';
 import type {
   ChoiceIllegalRequest,
   ChoicePendingRequest,
@@ -199,7 +199,11 @@ export const classifyMoveDecisionSequenceAdmissionForLegalMove = (
     options,
     runtime,
   );
-  return result.outcome === 'inconclusive' ? 'unknown' : result.value!;
+  return resolveProbeResult(result, {
+    onLegal: (value) => value,
+    onIllegal: () => 'unknown',
+    onInconclusive: () => 'unknown',
+  });
 };
 
 export const isMoveDecisionSequenceAdmittedForLegalMove = (

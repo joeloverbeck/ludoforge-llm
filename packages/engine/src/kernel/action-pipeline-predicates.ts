@@ -1,7 +1,7 @@
 import { evalCondition } from './eval-condition.js';
 import type { ReadContext } from './eval-context.js';
 import { MISSING_BINDING_POLICY_CONTEXTS, classifyMissingBindingProbeError } from './missing-binding-policy.js';
-import type { ProbeResult } from './probe-result.js';
+import { resolveProbeResult, type ProbeResult } from './probe-result.js';
 import { pipelinePredicateEvaluationError } from './runtime-error.js';
 import type { ActionDef, ConditionAST } from './types.js';
 
@@ -54,8 +54,9 @@ export const evalActionPipelinePredicateForDiscovery = (
   ctx: ReadContext,
 ): DiscoveryPredicateState => {
   const result = probeDiscoveryPredicateEvaluation(action, profileId, predicate, condition, ctx);
-  if (result.outcome === 'inconclusive') {
-    return 'deferred';
-  }
-  return result.value ? 'passed' : 'failed';
+  return resolveProbeResult(result, {
+    onLegal: (value) => value ? 'passed' : 'failed',
+    onIllegal: () => 'failed',
+    onInconclusive: () => 'deferred',
+  });
 };

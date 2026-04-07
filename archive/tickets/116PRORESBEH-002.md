@@ -1,6 +1,6 @@
 # 116PRORESBEH-002: Migrate simple consumers to resolveProbeResult
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — kernel consumer refactoring (3 files, 3 sites)
@@ -113,3 +113,16 @@ No new test files. Existing tests validate behavioral identity.
 1. `pnpm -F @ludoforge/engine test --force` — full engine test suite
 2. `pnpm turbo typecheck` — verify type correctness
 3. `grep -rn "outcome === 'inconclusive'" packages/engine/src/kernel/move-decision-sequence.ts packages/engine/src/kernel/action-pipeline-predicates.ts packages/engine/src/kernel/pipeline-viability-policy.ts` — should return zero results
+
+## Outcome
+
+**Completed**: 2026-04-07
+
+**What changed**:
+- `packages/engine/src/kernel/move-decision-sequence.ts` — Replaced ternary `result.outcome === 'inconclusive' ? 'unknown' : result.value!` with `resolveProbeResult()` inline policy. `onIllegal: () => 'unknown'` (unreachable — probe only returns legal/inconclusive).
+- `packages/engine/src/kernel/action-pipeline-predicates.ts` — Replaced if-block with `resolveProbeResult()` inline policy. `onIllegal: () => 'failed'` (unreachable).
+- `packages/engine/src/kernel/pipeline-viability-policy.ts` — Replaced if-block + value-check with `resolveProbeResult()` inline policy preserving existing two-stage evaluation fallback for undefined values.
+
+**Deviations from ticket**: None — all 3 sites migrated exactly as described.
+
+**Verification**: Build passes. 5599/5599 tests pass. Zero `outcome === 'inconclusive'` in all three files.

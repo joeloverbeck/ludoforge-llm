@@ -3,6 +3,7 @@ import { chooseOne, chooseN, forEach } from './ast-builders.js';
 import { applyEffects } from './effects.js';
 import { createExecutionEffectContext } from './effect-context.js';
 import { evalCondition, evalConditionTraced } from './eval-condition.js';
+import { unwrapEvalCondition } from './eval-result.js';
 import { createEvalContext, createEvalRuntimeResources } from './eval-context.js';
 import { createCollector } from './execution-collector.js';
 import { isCardEventMove } from './action-capabilities.js';
@@ -77,7 +78,7 @@ const evaluateEligibilityOverrideCondition = (
   if (override.when === undefined) {
     return true;
   }
-  return evalCondition(override.when, createEvalContext({
+  return unwrapEvalCondition(evalCondition(override.when, createEvalContext({
     def,
     adjacencyGraph: buildAdjacencyGraph(def.zones),
     runtimeTableIndex: buildRuntimeTableIndex(def),
@@ -86,7 +87,7 @@ const evaluateEligibilityOverrideCondition = (
     actorPlayer: state.activePlayer,
     bindings: { ...move.params },
     resources: createEvalRuntimeResources({ collector: createCollector() }),
-  }));
+  })));
 };
 
 export const resolveEventTargetDefs = (
@@ -390,7 +391,7 @@ const isPlayableEventContext = (
   }
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
   const runtimeTableIndex = buildRuntimeTableIndex(def);
-  return evalConditionTraced(
+  return unwrapEvalCondition(evalConditionTraced(
     context.card.playCondition,
     createEvalContext({
       def,
@@ -409,7 +410,7 @@ const isPlayableEventContext = (
       actionId: String(move.actionId),
       effectPath: 'playCondition',
     },
-  );
+  ));
 };
 
 const resolvePlayableEventExecutionContext = (

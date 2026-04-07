@@ -1,6 +1,7 @@
 import type { Diagnostic } from './diagnostics.js';
 import type { ZoneId } from './branded.js';
 import { evalCondition } from './eval-condition.js';
+import { unwrapEvalCondition } from './eval-result.js';
 import type { ReadContext } from './eval-context.js';
 import type { ConditionAST, GameState, Token, ZoneDef } from './types.js';
 
@@ -218,14 +219,14 @@ function evaluateVia(
     return true;
   }
 
-  return evalCondition(via, {
+  return unwrapEvalCondition(evalCondition(via, {
     ...evalCtx,
     state,
     bindings: {
       ...evalCtx.bindings,
       $zone: candidateZone,
     },
-  });
+  }));
 }
 
 export function queryAdjacentZones(graph: AdjacencyGraph, zone: ZoneId): readonly ZoneId[] {

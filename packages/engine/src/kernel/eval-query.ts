@@ -2,6 +2,7 @@ import { getMaxQueryResults, type ReadContext } from './eval-context.js';
 import { isRecoverableEvalResolutionError } from './eval-error-classification.js';
 import { missingVarError, queryBoundsExceededError, typeMismatchError } from './eval-error.js';
 import { evalCondition } from './eval-condition.js';
+import { unwrapEvalCondition } from './eval-result.js';
 import { evalValue } from './eval-value.js';
 import { shouldDeferFreeOperationZoneFilterFailure } from './missing-binding-policy.js';
 import {
@@ -421,10 +422,10 @@ const evaluateFreeOperationZoneFilterForZone = (
     zoneId,
     baseBindings: ctx.bindings,
     rebindableAliases,
-    evaluateWithBindings: (bindings) => evalCondition(freeOperationZoneFilter, {
+    evaluateWithBindings: (bindings) => unwrapEvalCondition(evalCondition(freeOperationZoneFilter, {
       ...ctx,
       bindings,
-    }),
+    })),
   });
 };
 

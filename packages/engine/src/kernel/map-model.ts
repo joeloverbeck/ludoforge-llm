@@ -1,6 +1,6 @@
 import type { Diagnostic } from './diagnostics.js';
 import { createEvalContext, createEvalRuntimeResources } from './eval-context.js';
-import { evalCondition } from './eval-condition.js';
+import { evalConditionRaw } from './eval-condition.js';
 import { MapPayloadSchema } from './schemas.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { findSpaceMarkerConstraintViolation } from './space-marker-rules.js';
@@ -260,7 +260,7 @@ export function validateMapPayload(
       const key = `${space.id}::${lattice.id}`;
       const state = markerValues.get(key) ?? lattice.defaultState;
       try {
-        const violation = findSpaceMarkerConstraintViolation(lattice, space.id, state, markerEvalCtx, evalCondition);
+        const violation = findSpaceMarkerConstraintViolation(lattice, space.id, state, markerEvalCtx, evalConditionRaw);
         if (violation === null) {
           return;
         }

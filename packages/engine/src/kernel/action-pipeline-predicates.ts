@@ -1,4 +1,5 @@
 import { evalCondition } from './eval-condition.js';
+import { unwrapEvalCondition } from './eval-result.js';
 import type { ReadContext } from './eval-context.js';
 import { MISSING_BINDING_POLICY_CONTEXTS, classifyMissingBindingProbeError } from './missing-binding-policy.js';
 import { probeWith, resolveProbeResult, type ProbeResult } from './probe-result.js';
@@ -16,7 +17,7 @@ const probeDiscoveryPredicateEvaluation = (
   ctx: ReadContext,
 ): ProbeResult<boolean> =>
   probeWith(
-    () => evalCondition(condition, ctx),
+    () => unwrapEvalCondition(evalCondition(condition, ctx)),
     (error) => {
       const classified = classifyMissingBindingProbeError(
         error,
@@ -35,7 +36,7 @@ export const evalActionPipelinePredicate = (
   ctx: ReadContext,
 ): boolean => {
   try {
-    return evalCondition(condition, ctx);
+    return unwrapEvalCondition(evalCondition(condition, ctx));
   } catch (error) {
     throw pipelinePredicateEvaluationError(action, profileId, predicate, error);
   }

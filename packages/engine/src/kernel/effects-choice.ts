@@ -1,6 +1,6 @@
 import { getLatticeMap } from './def-lookup.js';
 import { evalQuery } from './eval-query.js';
-import { evalCondition } from './eval-condition.js';
+import { evalCondition, evalConditionRaw } from './eval-condition.js';
 import { evalValue } from './eval-value.js';
 import { advanceScope, type DecisionKey } from './decision-scope.js';
 import { createChooseNTemplate } from './choose-n-session.js';
@@ -1150,7 +1150,7 @@ export const applySetMarker = (
     });
   }
 
-  const setViolation = findSpaceMarkerConstraintViolation(lattice, String(spaceId), evaluatedState, evalCtx, evalCondition);
+  const setViolation = findSpaceMarkerConstraintViolation(lattice, String(spaceId), evaluatedState, evalCtx, evalConditionRaw);
   if (setViolation !== null) {
     throw effectRuntimeError(
       EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
@@ -1233,7 +1233,7 @@ export const applyShiftMarker = (
   const spaceMarkers = cursor.state.markers[String(spaceId)] ?? {};
   let resolution;
   try {
-    resolution = resolveSpaceMarkerShift(lattice, String(spaceId), evaluatedDelta, evalCtx, evalCondition);
+    resolution = resolveSpaceMarkerShift(lattice, String(spaceId), evaluatedDelta, evalCtx, evalConditionRaw);
   } catch (error) {
     throw effectRuntimeError(
       EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,

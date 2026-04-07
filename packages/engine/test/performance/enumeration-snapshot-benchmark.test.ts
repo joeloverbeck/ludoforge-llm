@@ -10,6 +10,7 @@ import {
   createEnumerationSnapshot,
   evalCondition,
   isEvalErrorCode,
+  unwrapEvalCondition,
   tryCompileCondition,
   type CompiledConditionPredicate,
   type GameDef,
@@ -103,7 +104,7 @@ const buildProductionGroups = (): readonly BenchmarkGroup[] => {
       activePlayer: sample.ctx.activePlayer,
       bindings: sample.bindings,
       compiled: sample.compiled,
-      interpret: () => evalCondition(sample.entry.condition, sample.ctx),
+      interpret: () => unwrapEvalCondition(evalCondition(sample.entry.condition, sample.ctx)),
     };
 
     if (existing === undefined) {
@@ -204,7 +205,7 @@ const buildFocusedGroups = (): readonly BenchmarkGroup[] => {
     });
 
     const buildInterpreter = (condition: typeof pvarCondition | typeof aggregateCondition, evalCtx: ReadContext) =>
-      (): boolean => evalCondition(condition, evalCtx);
+      (): boolean => unwrapEvalCondition(evalCondition(condition, evalCtx));
 
     return {
       label: `focused:r${resourceCount}:t${tokenCount}`,

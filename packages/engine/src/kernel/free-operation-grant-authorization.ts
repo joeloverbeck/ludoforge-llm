@@ -3,6 +3,7 @@ import { isEvalErrorCode } from './eval-error.js';
 import { compareTurnFlowFreeOperationGrantPriority, isTurnFlowActionClass } from '../contracts/index.js';
 import { createCollector } from './execution-collector.js';
 import { evalCondition } from './eval-condition.js';
+import { unwrapEvalCondition } from './eval-result.js';
 import { createEvalRuntimeResources, type EvalRuntimeResources, type ReadContext } from './eval-context.js';
 import { resolveCapturedSequenceZonesByKey } from './free-operation-captured-sequence-zones.js';
 import { resolveGrantFreeOperationActionDomain } from './free-operation-action-domain.js';
@@ -186,7 +187,7 @@ export const evaluateZoneFilterForMove = (
   };
   const evaluateWithBindings = (bindings: Readonly<Record<string, unknown>>): boolean => {
     evalContext.bindings = bindings;
-    return evalCondition(zoneFilter, evalContext);
+    return unwrapEvalCondition(evalCondition(zoneFilter, evalContext));
   };
   const classifyError = (cause: unknown, candidateZone?: string): ZoneFilterEvaluationResult => {
     if (shouldDeferFreeOperationZoneFilterFailure(surface, cause)) {

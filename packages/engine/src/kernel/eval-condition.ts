@@ -1,7 +1,9 @@
 import type { ReadContext } from './eval-context.js';
 import { getLatticeMap, getZoneMap } from './def-lookup.js';
-import { missingVarError, typeMismatchError, zonePropNotFoundError } from './eval-error.js';
+import { isEvalError, missingVarError, typeMismatchError, zonePropNotFoundError } from './eval-error.js';
 import { booleanArityMessage, isNonEmptyArray } from './boolean-arity-policy.js';
+import type { EvalConditionResult } from './eval-result.js';
+import { evalSuccess } from './eval-result.js';
 import { evalValue } from './eval-value.js';
 import { emitConditionTrace } from './execution-collector.js';
 import { resolvePredicateValue } from './predicate-value-resolution.js';
@@ -28,7 +30,26 @@ function expectOrderingNumber(
   return value;
 }
 
-export function evalCondition(cond: ConditionAST, ctx: ReadContext): boolean {
+/**
+ * Result-returning public API. Catches EvalError from the core logic and
+ * returns it as an error result. Non-EvalError exceptions (genuine bugs)
+ * still throw.
+ */
+export function evalCondition(cond: ConditionAST, ctx: ReadContext): EvalConditionResult {
+  try {
+    return evalSuccess(evalConditionRaw(cond, ctx));
+  } catch (error) {
+    if (isEvalError(error)) return { outcome: 'error', error };
+    throw error;
+  }
+}
+
+/**
+ * Core boolean-returning implementation. Used internally for recursive calls
+ * and as a callback to helpers that expect a boolean return.
+ * Throws EvalError on failure (not result-returning).
+ */
+export function evalConditionRaw(cond: ConditionAST, ctx: ReadContext): boolean {
   if (typeof cond === 'boolean') return cond;
   switch (cond.op) {
     case 'and':
@@ -36,7 +57,7 @@ export function evalCondition(cond: ConditionAST, ctx: ReadContext): boolean {
         throw typeMismatchError(booleanArityMessage('condition', 'and'), { cond });
       }
       for (const arg of cond.args) {
-        if (!evalCondition(arg, ctx)) {
+        if (!evalConditionRaw(arg, ctx)) {
           return false;
         }
       }
@@ -47,14 +68,14 @@ export function evalCondition(cond: ConditionAST, ctx: ReadContext): boolean {
         throw typeMismatchError(booleanArityMessage('condition', 'or'), { cond });
       }
       for (const arg of cond.args) {
-        if (evalCondition(arg, ctx)) {
+        if (evalConditionRaw(arg, ctx)) {
           return true;
         }
       }
       return false;
 
     case 'not':
-      return !evalCondition(cond.arg, ctx);
+      return !evalConditionRaw(cond.arg, ctx);
 
     case '==':
       return evalValue(cond.left, ctx) === evalValue(cond.right, ctx);
@@ -189,7 +210,7 @@ export function evalCondition(cond: ConditionAST, ctx: ReadContext): boolean {
         return false;
       }
 
-      return isSpaceMarkerStateAllowed(lattice, String(spaceId), candidateState, ctx, evalCondition);
+      return isSpaceMarkerStateAllowed(lattice, String(spaceId), candidateState, ctx, evalConditionRaw);
     }
 
     case 'markerShiftAllowed': {
@@ -212,7 +233,7 @@ export function evalCondition(cond: ConditionAST, ctx: ReadContext): boolean {
         });
       }
 
-      const resolution = resolveSpaceMarkerShift(lattice, String(spaceId), evaluatedDelta, ctx, evalCondition);
+      const resolution = resolveSpaceMarkerShift(lattice, String(spaceId), evaluatedDelta, ctx, evalConditionRaw);
       return resolution.changed && resolution.allowed;
     }
 
@@ -232,12 +253,12 @@ export function evalConditionTraced(
   ctx: ReadContext,
   traceContext: ConditionTraceEntry['context'],
   provenance: EffectTraceProvenance,
-): boolean {
+): EvalConditionResult {
   const result = evalCondition(cond, ctx);
   emitConditionTrace(ctx.collector, {
     kind: 'conditionEval',
     condition: cond,
-    result,
+    result: result.outcome === 'success' ? result.value : false,
     context: traceContext,
     provenance,
   });

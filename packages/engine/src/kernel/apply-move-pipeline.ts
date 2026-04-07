@@ -1,5 +1,6 @@
 import { getActionPipelinesForAction } from './action-pipeline-lookup.js';
 import { evalCondition } from './eval-condition.js';
+import { unwrapEvalCondition } from './eval-result.js';
 import type { ReadContext } from './eval-context.js';
 import { pipelineApplicabilityEvaluationError } from './runtime-error.js';
 import type { ActionDef, ActionPipelineDef, ActionResolutionStageDef, ConditionAST, EffectAST, GameDef } from './types.js';
@@ -28,7 +29,7 @@ export const resolveActionPipelineDispatch = (
       return true;
     }
     try {
-      return evalCondition(profile.applicability, ctx);
+      return unwrapEvalCondition(evalCondition(profile.applicability, ctx));
     } catch (error) {
       throw pipelineApplicabilityEvaluationError(action, profile.id, error);
     }

@@ -16,6 +16,7 @@ import {
   effectToDisplayNodes,
 } from './ast-to-display.js';
 import { evalCondition } from './eval-condition.js';
+import { unwrapEvalCondition } from './eval-result.js';
 import { evalValue } from './eval-value.js';
 import { createEvalContext, createEvalRuntimeResources, type ReadContext } from './eval-context.js';
 import type { ActionDef, ActionUsageRecord, ConditionAST, GameDef, GameState, ValueExpr } from './types.js';
@@ -308,7 +309,7 @@ const pipelineApplicabilityPasses = (
 ): boolean => {
   if (pipeline.applicability === undefined) return true;
   try {
-    return evalCondition(pipeline.applicability, evalCtx);
+    return unwrapEvalCondition(evalCondition(pipeline.applicability, evalCtx));
   } catch {
     return false;
   }
@@ -444,7 +445,7 @@ const buildRuleState = (
   if (action.pre !== null) {
     const blockerInfo = extractBlockers(
       action.pre,
-      (c) => evalCondition(c, evalCtx),
+      (c) => unwrapEvalCondition(evalCondition(c, evalCtx)),
       def.verbalization,
     );
     available = blockerInfo.satisfied;

@@ -5,6 +5,7 @@ import {
   createEnumerationSnapshot,
   evalCondition,
   isEvalErrorCode,
+  unwrapEvalCondition,
   MISSING_BINDING_POLICY_CONTEXTS,
   shouldDeferMissingBinding,
 } from '../../src/kernel/index.js';
@@ -80,7 +81,7 @@ describe('compiled FITL production predicate equivalence', () => {
       let interpretedResult: boolean | undefined;
       let interpretedError: unknown;
       try {
-        interpretedResult = evalCondition(sample.entry.condition, sample.ctx);
+        interpretedResult = unwrapEvalCondition(evalCondition(sample.entry.condition, sample.ctx));
       } catch (error) {
         interpretedError = error;
       }

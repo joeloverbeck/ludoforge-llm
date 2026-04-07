@@ -7,7 +7,9 @@ import {
   asPlayerId,
   asZoneId,
   evalCondition,
+  evalConditionRaw,
   isEvalErrorCode,
+  unwrapEvalCondition,
   type ReadContext,
   type GameDef,
   type GameState,
@@ -67,41 +69,41 @@ describe('evalCondition', () => {
   it('evaluates comparison operators', () => {
     const ctx = makeCtx();
 
-    assert.equal(evalCondition({ op: '==', left: 3, right: 3 }, ctx), true);
-    assert.equal(evalCondition({ op: '==', left: 3, right: 4 }, ctx), false);
-    assert.equal(evalCondition({ op: '!=', left: 3, right: 4 }, ctx), true);
-    assert.equal(evalCondition({ op: '<', left: 3, right: 5 }, ctx), true);
-    assert.equal(evalCondition({ op: '<', left: 5, right: 3 }, ctx), false);
-    assert.equal(evalCondition({ op: '<=', left: 3, right: 3 }, ctx), true);
-    assert.equal(evalCondition({ op: '>', left: 5, right: 3 }, ctx), true);
-    assert.equal(evalCondition({ op: '>=', left: 3, right: 3 }, ctx), true);
+    assert.equal(unwrapEvalCondition(evalCondition({ op: '==', left: 3, right: 3 }, ctx)), true);
+    assert.equal(unwrapEvalCondition(evalCondition({ op: '==', left: 3, right: 4 }, ctx)), false);
+    assert.equal(unwrapEvalCondition(evalCondition({ op: '!=', left: 3, right: 4 }, ctx)), true);
+    assert.equal(unwrapEvalCondition(evalCondition({ op: '<', left: 3, right: 5 }, ctx)), true);
+    assert.equal(unwrapEvalCondition(evalCondition({ op: '<', left: 5, right: 3 }, ctx)), false);
+    assert.equal(unwrapEvalCondition(evalCondition({ op: '<=', left: 3, right: 3 }, ctx)), true);
+    assert.equal(unwrapEvalCondition(evalCondition({ op: '>', left: 5, right: 3 }, ctx)), true);
+    assert.equal(unwrapEvalCondition(evalCondition({ op: '>=', left: 3, right: 3 }, ctx)), true);
   });
 
   it('evaluates boolean logic and rejects zero-arity and/or', () => {
     const ctx = makeCtx();
 
-    assert.equal(evalCondition({ op: 'and', args: [{ op: '==', left: 1, right: 1 }] }, ctx), true);
+    assert.equal(unwrapEvalCondition(evalCondition({ op: 'and', args: [{ op: '==', left: 1, right: 1 }] }, ctx)), true);
     assert.equal(
-      evalCondition({ op: 'and', args: [{ op: '==', left: 1, right: 1 }, { op: '==', left: 1, right: 2 }] }, ctx),
+      unwrapEvalCondition(evalCondition({ op: 'and', args: [{ op: '==', left: 1, right: 1 }, { op: '==', left: 1, right: 2 }] }, ctx)),
       false,
     );
     assert.equal(
-      evalCondition({ op: 'or', args: [{ op: '==', left: 1, right: 2 }, { op: '==', left: 2, right: 2 }] }, ctx),
+      unwrapEvalCondition(evalCondition({ op: 'or', args: [{ op: '==', left: 1, right: 2 }, { op: '==', left: 2, right: 2 }] }, ctx)),
       true,
     );
     assert.equal(
-      evalCondition({ op: 'or', args: [{ op: '==', left: 1, right: 2 }, { op: '==', left: 2, right: 3 }] }, ctx),
+      unwrapEvalCondition(evalCondition({ op: 'or', args: [{ op: '==', left: 1, right: 2 }, { op: '==', left: 2, right: 3 }] }, ctx)),
       false,
     );
-    assert.equal(evalCondition({ op: 'not', arg: { op: '==', left: 1, right: 1 } }, ctx), false);
-    assert.equal(evalCondition({ op: 'not', arg: { op: '==', left: 1, right: 2 } }, ctx), true);
+    assert.equal(unwrapEvalCondition(evalCondition({ op: 'not', arg: { op: '==', left: 1, right: 1 } }, ctx)), false);
+    assert.equal(unwrapEvalCondition(evalCondition({ op: 'not', arg: { op: '==', left: 1, right: 2 } }, ctx)), true);
 
     assert.throws(
-      () => evalCondition({ op: 'and', args: [] } as unknown as (Parameters<typeof evalCondition>[0]), ctx),
+      () => evalConditionRaw({ op: 'and', args: [] } as unknown as (Parameters<typeof evalCondition>[0]), ctx),
       (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
     );
     assert.throws(
-      () => evalCondition({ op: 'or', args: [] } as unknown as (Parameters<typeof evalCondition>[0]), ctx),
+      () => evalConditionRaw({ op: 'or', args: [] } as unknown as (Parameters<typeof evalCondition>[0]), ctx),
       (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
     );
   });
@@ -122,14 +124,14 @@ describe('evalCondition', () => {
       ],
     } as const;
 
-    assert.equal(evalCondition(condition, ctx), true);
+    assert.equal(unwrapEvalCondition(evalCondition(condition, ctx)), true);
   });
 
   it('short-circuits and/or evaluation', () => {
     const ctx = makeCtx();
 
     assert.equal(
-      evalCondition(
+      unwrapEvalCondition(evalCondition(
         {
           op: 'and',
           args: [
@@ -138,12 +140,12 @@ describe('evalCondition', () => {
           ],
         },
         ctx,
-      ),
+      )),
       false,
     );
 
     assert.equal(
-      evalCondition(
+      unwrapEvalCondition(evalCondition(
         {
           op: 'or',
           args: [
@@ -152,7 +154,7 @@ describe('evalCondition', () => {
           ],
         },
         ctx,
-      ),
+      )),
       true,
     );
   });
@@ -160,7 +162,7 @@ describe('evalCondition', () => {
   it('throws TYPE_MISMATCH for non-numeric ordering comparisons', () => {
     const ctx = makeCtx();
     assert.throws(
-      () => evalCondition({ op: '<', left: 1, right: 'bad' }, ctx),
+      () => evalConditionRaw({ op: '<', left: 1, right: 'bad' }, ctx),
       (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
     );
   });
@@ -168,14 +170,14 @@ describe('evalCondition', () => {
   it('supports in membership against bound collections', () => {
     const ctx = makeCtx({ bindings: { '$set': [1, 3, 5] } });
 
-    assert.equal(evalCondition({ op: 'in', item: 3, set: { _t: 2 as const, ref: 'binding', name: '$set' } }, ctx), true);
-    assert.equal(evalCondition({ op: 'in', item: 2, set: { _t: 2 as const, ref: 'binding', name: '$set' } }, ctx), false);
+    assert.equal(unwrapEvalCondition(evalCondition({ op: 'in', item: 3, set: { _t: 2 as const, ref: 'binding', name: '$set' } }, ctx)), true);
+    assert.equal(unwrapEvalCondition(evalCondition({ op: 'in', item: 2, set: { _t: 2 as const, ref: 'binding', name: '$set' } }, ctx)), false);
   });
 
   it('throws TYPE_MISMATCH when in set is not a collection', () => {
     const ctx = makeCtx({ bindings: { '$set': 3 } });
     assert.throws(
-      () => evalCondition({ op: 'in', item: 3, set: { _t: 2 as const, ref: 'binding', name: '$set' } }, ctx),
+      () => evalConditionRaw({ op: 'in', item: 3, set: { _t: 2 as const, ref: 'binding', name: '$set' } }, ctx),
       (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
     );
   });
@@ -183,7 +185,7 @@ describe('evalCondition', () => {
   it('throws TYPE_MISMATCH when in set mixes scalar types', () => {
     const ctx = makeCtx({ bindings: { '$set': [1, '2', 3] } });
     assert.throws(
-      () => evalCondition({ op: 'in', item: 3, set: { _t: 2 as const, ref: 'binding', name: '$set' } }, ctx),
+      () => evalConditionRaw({ op: 'in', item: 3, set: { _t: 2 as const, ref: 'binding', name: '$set' } }, ctx),
       (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
     );
   });
@@ -191,7 +193,7 @@ describe('evalCondition', () => {
   it('throws TYPE_MISMATCH when in item and set scalar types do not match', () => {
     const ctx = makeCtx({ bindings: { '$set': [1, 2, 3] } });
     assert.throws(
-      () => evalCondition({ op: 'in', item: '3', set: { _t: 2 as const, ref: 'binding', name: '$set' } }, ctx),
+      () => evalConditionRaw({ op: 'in', item: '3', set: { _t: 2 as const, ref: 'binding', name: '$set' } }, ctx),
       (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
     );
   });
@@ -200,7 +202,7 @@ describe('evalCondition', () => {
     const ctx = makeCtx();
 
     assert.throws(
-      () => evalCondition({ op: 'in', item: 3, set: { _t: 2 as const, ref: 'binding', name: '$missingSet' } }, ctx),
+      () => evalConditionRaw({ op: 'in', item: 3, set: { _t: 2 as const, ref: 'binding', name: '$missingSet' } }, ctx),
       (error: unknown) => isEvalErrorCode(error, 'MISSING_BINDING'),
     );
   });
@@ -208,7 +210,7 @@ describe('evalCondition', () => {
   it('treats missing grantContext membership refs as an empty set', () => {
     const ctx = makeCtx();
 
-    assert.equal(evalCondition({ op: 'in', item: 3, set: { _t: 2 as const, ref: 'grantContext', key: 'allowedTargets' } }, ctx), false);
+    assert.equal(unwrapEvalCondition(evalCondition({ op: 'in', item: 3, set: { _t: 2 as const, ref: 'grantContext', key: 'allowedTargets' } }, ctx)), false);
   });
 
   it('throws TYPE_MISMATCH when in grantContext set resolves to a scalar', () => {
@@ -221,7 +223,7 @@ describe('evalCondition', () => {
     });
 
     assert.throws(
-      () => evalCondition({ op: 'in', item: 3, set: { _t: 2 as const, ref: 'grantContext', key: 'allowedTargets' } }, ctx),
+      () => evalConditionRaw({ op: 'in', item: 3, set: { _t: 2 as const, ref: 'grantContext', key: 'allowedTargets' } }, ctx),
       (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
     );
   });
@@ -236,7 +238,7 @@ describe('evalCondition', () => {
     });
 
     assert.throws(
-      () => evalCondition({ op: 'in', item: 3, set: { _t: 2 as const, ref: 'grantContext', key: 'allowedTargets' } }, ctx),
+      () => evalConditionRaw({ op: 'in', item: 3, set: { _t: 2 as const, ref: 'grantContext', key: 'allowedTargets' } }, ctx),
       (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
     );
   });
@@ -260,11 +262,11 @@ describe('evalCondition', () => {
     });
 
     assert.equal(
-      evalCondition({ op: 'zonePropIncludes', zone: 'quang-tri', prop: 'terrainTags', value: 'highland' }, ctx),
+      unwrapEvalCondition(evalCondition({ op: 'zonePropIncludes', zone: 'quang-tri', prop: 'terrainTags', value: 'highland' }, ctx)),
       true,
     );
     assert.equal(
-      evalCondition({ op: 'zonePropIncludes', zone: 'quang-tri', prop: 'terrainTags', value: 'coastal' }, ctx),
+      unwrapEvalCondition(evalCondition({ op: 'zonePropIncludes', zone: 'quang-tri', prop: 'terrainTags', value: 'coastal' }, ctx)),
       false,
     );
   });
@@ -287,7 +289,7 @@ describe('evalCondition', () => {
       },
     });
     assert.throws(
-      () => evalCondition({ op: 'zonePropIncludes', zone: 'hue', prop: 'population', value: 2 }, ctx),
+      () => evalConditionRaw({ op: 'zonePropIncludes', zone: 'hue', prop: 'population', value: 2 }, ctx),
       (error: unknown) =>
         isEvalErrorCode(error, 'TYPE_MISMATCH') &&
         typeof error.context === 'object' &&
@@ -299,7 +301,7 @@ describe('evalCondition', () => {
   it('throws ZONE_PROP_NOT_FOUND when zonePropIncludes zone not found', () => {
     const ctx = makeCtx();
     assert.throws(
-      () => evalCondition({ op: 'zonePropIncludes', zone: 'unknown', prop: 'terrainTags', value: 'highland' }, ctx),
+      () => evalConditionRaw({ op: 'zonePropIncludes', zone: 'unknown', prop: 'terrainTags', value: 'highland' }, ctx),
       (error: unknown) =>
         isEvalErrorCode(error, 'ZONE_PROP_NOT_FOUND') &&
         error.context?.zoneId === 'unknown',
@@ -308,20 +310,20 @@ describe('evalCondition', () => {
 
   it('evaluates boolean literal true as truthy', () => {
     const ctx = makeCtx({});
-    assert.equal(evalCondition(true, ctx), true);
+    assert.equal(unwrapEvalCondition(evalCondition(true, ctx)), true);
   });
 
   it('evaluates boolean literal false as falsy', () => {
     const ctx = makeCtx({});
-    assert.equal(evalCondition(false, ctx), false);
+    assert.equal(unwrapEvalCondition(evalCondition(false, ctx)), false);
   });
 
   it('supports boolean literals inside compound conditions (and/or)', () => {
     const ctx = makeCtx({});
-    assert.equal(evalCondition({ op: 'and', args: [true, true] }, ctx), true);
-    assert.equal(evalCondition({ op: 'and', args: [true, false] }, ctx), false);
-    assert.equal(evalCondition({ op: 'or', args: [false, true] }, ctx), true);
-    assert.equal(evalCondition({ op: 'or', args: [false, false] }, ctx), false);
+    assert.equal(unwrapEvalCondition(evalCondition({ op: 'and', args: [true, true] }, ctx)), true);
+    assert.equal(unwrapEvalCondition(evalCondition({ op: 'and', args: [true, false] }, ctx)), false);
+    assert.equal(unwrapEvalCondition(evalCondition({ op: 'or', args: [false, true] }, ctx)), true);
+    assert.equal(unwrapEvalCondition(evalCondition({ op: 'or', args: [false, false] }, ctx)), false);
   });
 
 });

@@ -1,6 +1,6 @@
 # 119EVARESRET-002: Change evalCondition to result-returning + migrate all consumers
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `evalCondition` / `evalConditionTraced` signature change, ~31 consumer sites across ~15 files
@@ -128,3 +128,19 @@ Each migrated file needs `import { unwrapEvalCondition } from './eval-result.js'
 
 1. `pnpm -F @ludoforge/engine build && pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck && pnpm turbo test`
+
+## Outcome
+
+**Completed**: 2026-04-07
+
+**What changed**:
+- `eval-condition.ts`: extracted `evalConditionRaw` (boolean-returning, exported for kernel-internal callbacks), new `evalCondition` wrapper returns `EvalConditionResult` via try-catch, `evalConditionTraced` also returns `EvalConditionResult`
+- 10 source files migrated with `unwrapEvalCondition` wrapping
+- 3 source files migrated with `evalConditionRaw` callback replacement (`effects-choice.ts`, `map-model.ts`, `validate-gamedef-structure.ts`)
+- 3 test files updated: `eval-condition.test.ts` (21 assert.equal + 11 assert.throws migrated), `compiled-condition-equivalence.test.ts`, `enumeration-snapshot-benchmark.test.ts`
+
+**Deviations**:
+- Ticket listed ~15 files; actual migration touched 16 source files (TypeScript caught `free-operation-viability.ts` which was listed but `validate-gamedef-structure.ts` and `map-model.ts` were not — both pass `evalCondition` as a callback and needed `evalConditionRaw`)
+- Implementation used wrapper + raw split instead of inline throw-to-return replacement — architecturally equivalent, lower risk
+
+**Verification**: Build pass, typecheck pass (3/3), eval unit tests 33/33 pass. Runner test failures pre-existing (game-store lifecycle, unrelated).

@@ -4,6 +4,7 @@ import { createMutableReadScope } from './effect-context.js';
 import type { EffectCursor, MutableReadScope, NormalizedEffectResult, PartialEffectResult } from './effect-context.js';
 import { createEvalContext } from './eval-context.js';
 import { evalCondition } from './eval-condition.js';
+import { unwrapEvalCondition } from './eval-result.js';
 import { evalQuery } from './eval-query.js';
 import { evalValue } from './eval-value.js';
 import { typeMismatchError } from './eval-error.js';
@@ -482,7 +483,7 @@ const compileLogicalCondition = (pattern: LogicalConditionPattern): CompiledCond
 };
 
 const compileGenericCondition = (pattern: GenericConditionPattern): CompiledConditionEvaluator =>
-  (state, bindings, ctx) => evalCondition(pattern.condition, createCompiledEvalContext(state, bindings, ctx));
+  (state, bindings, ctx) => unwrapEvalCondition(evalCondition(pattern.condition, createCompiledEvalContext(state, bindings, ctx)));
 
 export const compileConditionEvaluator = (
   pattern: CompilableConditionPattern,

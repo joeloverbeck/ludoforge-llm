@@ -1,7 +1,7 @@
 import type { Diagnostic } from './diagnostics.js';
 import { attributeValueEquals } from './attribute-value-equals.js';
 import { createEvalContext, createEvalRuntimeResources } from './eval-context.js';
-import { evalCondition } from './eval-condition.js';
+import { evalConditionRaw } from './eval-condition.js';
 import { RUNTIME_RESERVED_MOVE_BINDING_NAMES } from './move-runtime-bindings.js';
 import { resolveRuntimeTableRowsByPath } from './runtime-table-path.js';
 import { findSpaceMarkerConstraintViolation } from './space-marker-rules.js';
@@ -1087,7 +1087,7 @@ export const validateSpaceMarkerLattices = (
       const zoneIndex = def.zones.indexOf(zone);
       const state = markerValues.get(`${zone.id}::${lattice.id}`) ?? lattice.defaultState;
       try {
-        const violation = findSpaceMarkerConstraintViolation(lattice, zone.id, state, evalCtx, evalCondition);
+        const violation = findSpaceMarkerConstraintViolation(lattice, zone.id, state, evalCtx, evalConditionRaw);
         if (violation === null) {
           return;
         }

@@ -1,6 +1,6 @@
 # 63PRORESABS-002: Migrate `legal-choices.ts` probe catch blocks to `ProbeResult`
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel legal-choices refactoring
@@ -87,3 +87,18 @@ The function is still imported by `choose-n-option-resolution.ts`. Do NOT delete
 2. `pnpm -F @ludoforge/engine test:determinism`
 3. `pnpm turbo typecheck`
 4. `pnpm turbo lint`
+
+## Outcome
+
+- Completed: 2026-04-07
+- What changed:
+  - Refactored `packages/engine/src/kernel/legal-choices.ts` so the local discovery-effect wrappers return `ProbeResult<DiscoveryEffectExecutionResult>` instead of classifying stacking violations via direct catch blocks.
+  - Added local probe helpers for exact `legal-choices.ts` option probing so owner-mismatch classification is expressed through `ProbeResult` reads instead of the four direct catch sites in this file.
+  - Updated the pipeline and root discovery-effect callers in `legal-choices.ts` to consume `ProbeResult` and preserve the existing `pipelineLegalityFailed` translation.
+- Deviations from original plan:
+  - The ticket remained scoped to `legal-choices.ts`. Large-domain `choose-n-option-resolution.ts` catch migration, missing-binding deferral migration, and export cleanup remain owned by tickets 003-005.
+- Verification results:
+  - `pnpm turbo typecheck` ✅
+  - `pnpm turbo lint` ✅
+  - `pnpm -F @ludoforge/engine test` ✅
+  - `pnpm -F @ludoforge/engine test:determinism` ✅

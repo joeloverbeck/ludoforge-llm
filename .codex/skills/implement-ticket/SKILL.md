@@ -202,6 +202,7 @@ When a ticket change affects other active tickets in the same series:
 4. Prefer the narrowest commands that validate the real changed code path. For documentation-only tickets whose examples depend on already-verified behavior, artifact inspection plus dependency-integrity checks may suffice.
 5. **Ticket-named commands are authoritative**: Run them before declaring completion unless reassessment proves them stale or superseded. Narrower checks provide fast feedback but do not replace ticket-explicit commands.
 6. **Command substitution**: If a ticket's example command conflicts with live repo tooling (e.g., Jest flags in a Node test-runner package), use the repo-approved equivalent. State substitutions explicitly.
+7. **Long-running authoritative commands**: Some ticket-required verification commands may run for minutes with sparse or bursty output (for example determinism lanes or large property suites). Treat that as normal when consistent with repo history, keep the command running, and provide periodic progress updates rather than substituting a narrower check.
 
 ### Build Ordering & Output Contention
 

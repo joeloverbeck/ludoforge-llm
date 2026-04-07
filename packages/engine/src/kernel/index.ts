@@ -23,6 +23,20 @@ export type {
   ProbeResultPolicy,
 } from './probe-result.js';
 export { resolveProbeResult } from './probe-result.js';
+export type {
+  ZoneFilterEvaluationResult,
+  ZoneFilterEvaluationResolved,
+  ZoneFilterEvaluationDeferred,
+  ZoneFilterEvaluationFailed,
+  ZoneFilterDeferralReason,
+  ZoneFilterEvaluationResultPolicy,
+} from './zone-filter-evaluation-result.js';
+export {
+  zoneFilterResolved,
+  zoneFilterDeferred,
+  zoneFilterFailed,
+  resolveZoneFilterEvaluationResult,
+} from './zone-filter-evaluation-result.js';
 export * from './pipeline-viability-policy.js';
 export * from './missing-binding-policy.js';
 export * from './legal-moves.js';

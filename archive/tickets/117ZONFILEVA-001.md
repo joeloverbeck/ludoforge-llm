@@ -1,6 +1,6 @@
 # 117ZONFILEVA-001: Define `ZoneFilterEvaluationResult` type and unit tests
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — new kernel type module
@@ -91,3 +91,16 @@ Create `packages/engine/test/unit/kernel/zone-filter-evaluation-result.test.ts` 
 
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`
+
+## Outcome
+
+**Completed**: 2026-04-07
+
+**What changed**:
+- Created `packages/engine/src/kernel/zone-filter-evaluation-result.ts` — discriminated union with 3 named interface variants (`ZoneFilterEvaluationResolved`, `ZoneFilterEvaluationDeferred`, `ZoneFilterEvaluationFailed`), factory functions (`zoneFilterResolved`, `zoneFilterDeferred`, `zoneFilterFailed`), and a resolution utility (`resolveZoneFilterEvaluationResult` with `ZoneFilterEvaluationResultPolicy`). Follows the `ProbeResult` pattern in `probe-result.ts`.
+- Updated `packages/engine/src/kernel/index.ts` — re-exports all types and value-level functions.
+- Created `packages/engine/test/unit/kernel/zone-filter-evaluation-result.test.ts` — 12 tests covering factory construction, discriminated union type narrowing, and the resolution utility.
+
+**Deviations**: None. Implementation matches ticket exactly.
+
+**Verification**: `pnpm turbo build` clean, `pnpm turbo typecheck` clean, `pnpm -F @ludoforge/engine test` — 5613/5613 pass (0 failures).

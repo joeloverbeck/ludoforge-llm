@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel free-operation-grant-authorization, free-operation-zone-filter-probe
-**Deps**: `tickets/117ZONFILEVA-001.md`
+**Deps**: `archive/tickets/117ZONFILEVA-001.md`
 
 ## Problem
 

@@ -1,6 +1,6 @@
 # 118PROBOUCAT-004: Internalize `eval-query.ts` 2 catch blocks into result-returning functions
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — kernel eval-query module
@@ -98,3 +98,10 @@ Test each wrapper:
 
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo test --force`
+
+## Outcome
+
+- **Completion date**: 2026-04-07
+- **What changed**: No code changes.
+- **Deviations**: Both catch blocks were already internalized inside private result-returning functions (`resolveIntDomainBound` returns `number | null`, `evalNextInOrderByConditionQuery` returns `[]`). Callers consume fallback values directly without try-catch. The ticket's stated architecture goal — "internalize catch blocks into result-returning functions" — describes the existing code. Closed as already-satisfied per user confirmation.
+- **Verification**: Existing tests pass (verified during sibling ticket runs in this session)

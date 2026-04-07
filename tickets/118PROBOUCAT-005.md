@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — kernel legal-moves module
-**Deps**: `archive/tickets/118PROBOUCAT-001.md`, `tickets/118PROBOUCAT-004.md`
+**Deps**: `archive/tickets/118PROBOUCAT-001.md`, `archive/tickets/118PROBOUCAT-004.md`
 
 ## Problem
 

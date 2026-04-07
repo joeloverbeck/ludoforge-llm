@@ -9,7 +9,7 @@
 
 ## Problem
 
-`effects-choice.ts` contains 32 throw sites for `CHOICE_RUNTIME_VALIDATION_FAILED`. These throws occur during choice domain evaluation — normalizing tier items, validating encodability, checking cardinality — deep inside the choice resolution chain. When these throws propagate to `doesCompletedProbeMoveChangeGameplayState` in `free-operation-viability.ts`, the caller catches them and falls back to `hasTransportLikeStateChangeFallback` — a 68-line heuristic (lines 348-415) that guesses state-change potential from move params.
+`effects-choice.ts` contains 32 throw sites for `CHOICE_RUNTIME_VALIDATION_FAILED`. These throws occur during choice domain evaluation — normalizing tier items, validating encodability, checking cardinality — deep inside the choice resolution chain. When these throws propagate to `doesCompletedProbeMoveChangeGameplayState` in `free-operation-viability.ts`, the caller catches them and falls back to `hasTransportLikeStateChangeFallback` — a 68-line heuristic that guesses state-change potential from move params.
 
 The heuristic is deterministic, bounded, and empirically correct for the current game set. But it is a workaround (F15 violation): it exists because choice validation communicates errors by throwing, and the caller cannot distinguish "validation genuinely failed" from "speculative probe hit an expected boundary."
 
@@ -20,9 +20,9 @@ With Spec 119 complete, `evalCondition`/`evalQuery` return result types. The cho
 | Metric | Count |
 |--------|-------|
 | `CHOICE_RUNTIME_VALIDATION_FAILED` throw sites in effects-choice.ts | 32 |
-| Catch sites for this error | 2 (free-operation-viability.ts, apply-move.ts) |
-| Heuristic lines to delete | 68 (lines 348-415 of free-operation-viability.ts) |
-| Files in choice resolution chain | 3 (effects-choice.ts, choose-n-option-resolution.ts, effects.ts) |
+| Catch sites for this error | 4 (free-operation-viability.ts, apply-move.ts, choose-n-option-resolution.ts ×2) |
+| Heuristic lines to delete (`hasTransportLikeStateChangeFallback`) | 68 |
+| Files in choice resolution chain | 3 (effects-choice.ts, choose-n-option-resolution.ts, effect-dispatch.ts) |
 
 **Why this matters**: The heuristic is the most visible F15 strain in the kernel. Eliminating it completes the throw-to-result migration started in Spec 118 and continued in Spec 119. After this spec, zero probe-context catch blocks remain for eval or choice validation errors.
 
@@ -48,12 +48,12 @@ All changes are in the generic kernel choice subsystem. No game-specific identif
 
 ### 1. Define Choice Validation Result Type
 
-New type (can be in `effects-choice.ts` or a dedicated file):
+New type (can be in `effects-choice.ts` or a dedicated file), following the established `EvalConditionResult`/`EvalQueryResult` pattern in `eval-result.ts`:
 
 ```typescript
 export type ChoiceValidationResult<T> =
   | { readonly outcome: 'success'; readonly value: T }
-  | { readonly outcome: 'choiceValidationFailed'; readonly error: ChoiceValidationError }
+  | { readonly outcome: 'error'; readonly error: ChoiceValidationError }
 
 export type ChoiceValidationError = {
   readonly code: 'CHOICE_RUNTIME_VALIDATION_FAILED'
@@ -62,7 +62,7 @@ export type ChoiceValidationError = {
 }
 ```
 
-Design choice: `'choiceValidationFailed'` outcome (not generic `'error'`) because choice validation failure has specific semantic meaning in the probe context — it means "this move requires a sub-decision whose domain cannot be resolved in the current state," which is distinct from a genuine error.
+Design choice: Uses `outcome: 'error'` (not a custom discriminant like `'choiceValidationFailed'`) to stay consistent with the existing result type family. The `code` field on the error object carries the specific `CHOICE_RUNTIME_VALIDATION_FAILED` reason, which callers can inspect when they need to distinguish choice-validation errors from other error kinds.
 
 ### 2. Convert 32 Throw Sites in effects-choice.ts
 
@@ -70,7 +70,7 @@ Each throw site:
 
 ```typescript
 // BEFORE
-throw createEffectRuntimeError('CHOICE_RUNTIME_VALIDATION_FAILED', message)
+throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, message)
 
 // AFTER
 return choiceValidationFailed(message)
@@ -80,50 +80,64 @@ This changes the return types of internal choice resolution functions. The propa
 
 ### 3. Propagate Through Choice Resolution Chain
 
-**choose-n-option-resolution.ts**: Functions that call choice validation must handle the result type and propagate it.
+**choose-n-option-resolution.ts**: Functions that call choice validation must handle the result type and propagate it. This includes 2 internal catch sites that currently catch `CHOICE_RUNTIME_VALIDATION_FAILED`:
 
-**effects.ts**: The effect dispatcher must handle choice validation results from choice-processing effects.
+- **Line ~344** (stochastic cardinality validation): Currently catches the error and marks the option as `{ resolution: 'provisional' }`. After migration, this switches from try/catch to pattern-matching on the result type — when `outcome === 'error'`, the same `'provisional'` marking applies.
+- **Line ~502** (singleton probe caching): Currently catches the error and returns `{ outcome: { kind: 'unresolved' }, cached: false }`. After migration, pattern-match the result and produce the same `'unresolved'` outcome.
+
+**effect-dispatch.ts**: The effect dispatcher must handle choice validation results from choice-processing effects.
+
+### 3b. PartialEffectResult Integration
+
+All choice effect handlers (`applyChooseOne`, `applyChooseN`, `applyRollRandom`, `applySetMarker`, `applyShiftMarker`, `applySetGlobalMarker`, `applyShiftGlobalMarker`, `applyFlipGlobalMarker`) currently return `PartialEffectResult` and throw on validation failure. Converting throws to returns means the handler return type changes.
+
+The `EffectHandler` signature in `effect-registry.ts` defines the contract: `(...) => PartialEffectResult`. Two integration strategies:
+
+- **(a) Extend PartialEffectResult** with a validation-failed variant so the dispatch layer can propagate choice validation failures without throwing.
+- **(b) Wrap at the dispatch boundary** — internal choice functions return `ChoiceValidationResult`, but the top-level handler unwraps success or re-packages failure before returning to the dispatcher.
+
+The chosen strategy must preserve the probe path's ability to observe validation failures without catching exceptions.
 
 ### 4. Update doesCompletedProbeMoveChangeGameplayState
 
 **File**: `packages/engine/src/kernel/free-operation-viability.ts`
 
 ```typescript
-// BEFORE (line ~470)
-try {
-  // execute effects and compare state
+// BEFORE (line ~588)
 } catch (error) {
-  if (isEffectRuntimeReason(error, 'CHOICE_RUNTIME_VALIDATION_FAILED')) {
-    return hasTransportLikeStateChangeFallback(move, state)
+  if (isEffectRuntimeReason(error, EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED)) {
+    return hasTransportLikeStateChangeFallback(def, state, move)
   }
   throw error
 }
 
 // AFTER
 const result = executeEffectsForProbe(move, state)
-if (result.outcome === 'choiceValidationFailed') {
-  // Choice couldn't be resolved — the move's viability is inconclusive
-  // but the result type carries enough info to decide without a heuristic
-  return result // or map to appropriate viability result
+if (result.outcome === 'error' && result.error.code === 'CHOICE_RUNTIME_VALIDATION_FAILED') {
+  // Choice couldn't be resolved in probe context — conservatively assume
+  // the move could change state, keeping it viable.
+  return true
 }
 return doesMaterialGameplayStateChange(result.value.before, result.value.after)
 ```
 
+The conservative `return true` matches the heuristic's intent (keep the move viable when resolution is inconclusive) without the heuristic's 68-line implementation.
+
 ### 5. Delete hasTransportLikeStateChangeFallback
 
-Remove lines 348-415 of `free-operation-viability.ts`. This is the 68-line heuristic that becomes unnecessary.
+Remove the `hasTransportLikeStateChangeFallback` function (currently lines ~348-415 of `free-operation-viability.ts`). This is the 68-line heuristic that becomes unnecessary.
 
 ### 6. Update apply-move.ts Call Site
 
-**apply-move.ts:1908**: Same pattern — replace catch + fallback with result pattern-match.
+**apply-move.ts:529**: Same pattern — replace catch + fallback with result pattern-match.
 
 ## Files Modified
 
 | File | Change Type | Sites |
 |------|-------------|-------|
 | `effects-choice.ts` | throw → return (32 sites) + internal return type changes | 32 |
-| `choose-n-option-resolution.ts` | Result propagation | Multiple |
-| `effects.ts` | Result propagation from choice effects | Multiple |
+| `choose-n-option-resolution.ts` | Result propagation + 2 catch site migrations | Multiple |
+| `effect-dispatch.ts` | Result propagation from choice effects | Multiple |
 | `free-operation-viability.ts` | Delete heuristic (68 lines) + result handling | 2 |
 | `apply-move.ts` | Result handling at call site | 1 |
 

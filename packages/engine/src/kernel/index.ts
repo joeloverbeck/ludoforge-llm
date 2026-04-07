@@ -94,6 +94,7 @@ export * from './eval-context.js';
 export * from './eval-runtime-resources-contract.js';
 export * from './eval-error-defer-class.js';
 export * from './eval-error.js';
+export * from './choice-validation-result.js';
 export * from './eval-error-classification.js';
 export * from './eval-query.js';
 export * from './eval-result.js';

@@ -1,10 +1,10 @@
 # 117ZONFILEVA-003: Migrate caller catch blocks to pattern-match on result status
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED (absorbed by 117ZONFILEVA-002 — Foundation 14 atomicity required all callers to be migrated in the same change as the return type conversion)
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel free-operation-discovery-analysis, eval-query
-**Deps**: `tickets/117ZONFILEVA-002.md`
+**Deps**: `archive/tickets/117ZONFILEVA-002.md`
 
 ## Problem
 
@@ -87,3 +87,11 @@ return result.matched;
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`
 3. `pnpm turbo test --force`
+
+## Outcome
+
+**Completed**: 2026-04-07
+
+**What changed**: All deliverables absorbed by `archive/archive/tickets/117ZONFILEVA-002.md` — Foundation 14 atomicity required caller migration in the same change as the return type conversion. No separate implementation needed.
+
+**Deviations**: Entire scope absorbed by sibling ticket 002.

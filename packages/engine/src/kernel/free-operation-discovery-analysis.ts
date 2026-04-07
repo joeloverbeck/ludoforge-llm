@@ -89,19 +89,31 @@ const analyzeFreeOperationGrantMatch = (
           if (grant.zoneFilter === undefined) {
             return true;
           }
-          try {
-            return evaluateZoneFilterForMove(
-              def,
-              state,
-              move,
-              grant,
-              grant.zoneFilter,
-              options.zoneFilterErrorSurface ?? 'turnFlowEligibility',
-            );
-          } catch (cause) {
-            const underlyingCause = isTurnFlowErrorCode(cause, 'FREE_OPERATION_ZONE_FILTER_EVALUATION_FAILED')
-              ? (cause as Error & { cause?: unknown }).cause
-              : cause;
+          const result = evaluateZoneFilterForMove(
+            def,
+            state,
+            move,
+            grant,
+            grant.zoneFilter,
+            options.zoneFilterErrorSurface ?? 'turnFlowEligibility',
+          );
+          if (result.status === 'resolved') {
+            return result.matched;
+          }
+          if (result.status === 'deferred') {
+            // Deferred zone-filter evaluation: treat the grant as matching
+            // (conservative — will be re-evaluated once bindings resolve).
+            return true;
+          }
+          // status === 'failed': check if this is a MISSING_BINDING on the
+          // turnFlowEligibility surface that should be treated as unresolved
+          // (second-level handling for errors that evaluateZoneFilterForMove
+          // did not defer because the surface doesn't defer).
+          {
+            const wrappedError = result.error;
+            const underlyingCause = isTurnFlowErrorCode(wrappedError, 'FREE_OPERATION_ZONE_FILTER_EVALUATION_FAILED')
+              ? (wrappedError as Error & { cause?: unknown }).cause
+              : wrappedError;
             if (
               isEvalErrorCode(underlyingCause, 'MISSING_BINDING')
               && collectGrantMoveZoneCandidates(def, state, move, grant).length === 0
@@ -109,8 +121,8 @@ const analyzeFreeOperationGrantMatch = (
               unresolvedZoneFilterGrants.push(grant);
               return false;
             }
-            throw cause;
           }
+          throw result.error;
         },
       )
     : actionMatchedGrants;

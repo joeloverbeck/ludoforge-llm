@@ -53,6 +53,7 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
    - Shared type or schema ripple effects
    - Cross-package fallout for shared exported unions, serialized trace kinds, and exhaustiveness-based consumers (translators, adapters, viewers, switch statements)
    - Foundation 14 atomic migrations for removals or renames
+   - Return type changes on shared exported functions: all callers must be migrated atomically (Foundation 14). If a sibling ticket owns caller migration but the current ticket changes the return type, flag the scope overlap before coding — the sibling's work must be absorbed.
    - Required test, schema, or fixture updates
    - When the ticket disputes game-specific legality, consult local rulebook extracts or rules reports before deciding whether the fix is policy-only or a legality correction.
 

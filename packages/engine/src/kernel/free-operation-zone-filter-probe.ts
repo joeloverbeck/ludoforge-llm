@@ -1,6 +1,11 @@
 import { isEvalErrorCode } from './eval-error.js';
 import type { ZoneId } from './branded.js';
 import type { ConditionAST } from './types.js';
+import {
+  zoneFilterResolved,
+  zoneFilterFailed,
+  type ZoneFilterEvaluationResult,
+} from './zone-filter-evaluation-result.js';
 import { collectZoneSelectorAliasesFromCondition } from './zone-selector-aliases.js';
 
 export interface FreeOperationZoneFilterProbeInput {
@@ -27,7 +32,7 @@ export const collectFreeOperationZoneFilterProbeRebindableAliases = (
  */
 export const evaluateFreeOperationZoneFilterProbe = (
   input: FreeOperationZoneFilterProbeInput,
-): boolean => {
+): ZoneFilterEvaluationResult => {
   const rebindableAliases = input.rebindableAliases;
   let bindings: Readonly<Record<string, unknown>> = {
     ...input.baseBindings,
@@ -36,10 +41,12 @@ export const evaluateFreeOperationZoneFilterProbe = (
   const reboundAliases = new Set<string>();
   while (true) {
     try {
-      return input.evaluateWithBindings(bindings);
+      return zoneFilterResolved(input.evaluateWithBindings(bindings));
     } catch (error) {
       if (!isEvalErrorCode(error, 'MISSING_BINDING')) {
-        throw error;
+        // Non-MISSING_BINDING errors cannot be retried — return as failed
+        // so the caller can apply surface-aware deferral policy.
+        return zoneFilterFailed(error);
       }
       const missingBinding = error.context?.binding;
       if (
@@ -49,10 +56,12 @@ export const evaluateFreeOperationZoneFilterProbe = (
         !rebindableAliases.has(missingBinding) ||
         Object.prototype.hasOwnProperty.call(bindings, missingBinding)
       ) {
-        throw error;
+        // Non-rebindable MISSING_BINDING — return as failed so the caller
+        // can apply surface-aware deferral policy.
+        return zoneFilterFailed(error);
       }
       if (reboundAliases.has(missingBinding)) {
-        throw error;
+        return zoneFilterFailed(error);
       }
       reboundAliases.add(missingBinding);
       bindings = {

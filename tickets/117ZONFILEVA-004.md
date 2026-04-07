@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — kernel legal-moves, apply-move, turn-flow-error
-**Deps**: `tickets/117ZONFILEVA-003.md`
+**Deps**: `archive/tickets/117ZONFILEVA-002.md`
 
 ## Problem
 

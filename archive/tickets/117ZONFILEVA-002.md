@@ -1,6 +1,6 @@
 # 117ZONFILEVA-002: Convert `evaluateZoneFilterForMove()` and probe to return result type
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel free-operation-grant-authorization, free-operation-zone-filter-probe
@@ -90,3 +90,17 @@ This preserves the semantic that when evaluation can't determine zone-filter mat
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`
 3. `pnpm turbo test --force`
+
+## Outcome
+
+**Completed**: 2026-04-07
+
+**What changed**:
+- `free-operation-grant-authorization.ts` — `evaluateZoneFilterForMove()` returns `ZoneFilterEvaluationResult` instead of `boolean`. Internal catch blocks replaced with `classifyError` helper. New `unwrapZoneFilterResult` helper for `doesGrantAuthorizeMove()` and `doesGrantPotentiallyAuthorizeMove()`.
+- `free-operation-zone-filter-probe.ts` — `evaluateFreeOperationZoneFilterProbe()` returns `ZoneFilterEvaluationResult`. Internal retry loop preserved. Non-retryable errors returned as `failed`.
+- `free-operation-discovery-analysis.ts` — Catch block at line 93 replaced with result pattern-match (absorbed from ticket 003).
+- `eval-query.ts` — `evaluateFreeOperationZoneFilterForZone()` returns `ZoneFilterEvaluationResult`. Catch block replaced with result pattern-match (absorbed from ticket 003).
+
+**Deviations**: Absorbed ticket 003's scope (migrate caller catch blocks) due to Foundation 14 atomicity — changing the return type required all callers to be migrated in the same change. Ticket 003 marked COMPLETED as absorbed. Ticket 004 deps updated to depend on 002 directly.
+
+**Verification**: `pnpm turbo build` clean, `pnpm turbo typecheck` clean, `pnpm turbo test --force` — 5613/5613 pass (0 failures).

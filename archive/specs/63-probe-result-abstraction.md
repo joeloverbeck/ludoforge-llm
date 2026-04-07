@@ -1,6 +1,6 @@
 # Spec 63 — Probe Result Abstraction
 
-**Status**: PROPOSED
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium (3-5 days)
 **Engine Changes**: Yes — kernel probe/legality subsystem refactoring
@@ -192,3 +192,17 @@ Add `ProbeResult`, `ProbeOutcome`, and `ProbeInconclusiveReason` to `packages/en
 - `pnpm -F @ludoforge/engine test:determinism`
 - `pnpm turbo typecheck`
 - `pnpm turbo lint`
+
+## Outcome
+
+**Completed**: 2026-04-07
+
+Implemented across tickets 63PRORESABS-001 through 63PRORESABS-005:
+
+1. **001**: Introduced `ProbeResult`, `ProbeOutcome`, `ProbeInconclusiveReason` types in `probe-result.ts`. Re-exported from `kernel/index.ts`. Migrated `legal-choices.ts` catch blocks to use centralized `classifyDiscoveryProbeError` and `classifyChoiceProbeError` classifiers returning `ProbeResult`.
+2. **002**: Migrated catch blocks in `choose-n-option-resolution.ts`, `pipeline-viability-policy.ts`, `action-pipeline-predicates.ts`, and `move-decision-sequence.ts` to use `ProbeResult`-based classification.
+3. **003**: Migrated `legal-moves.ts` catch block for `shouldDeferMissingBinding` and consolidated error classification into `classifyDiscoveryProbeError`.
+4. **004**: Added architecture guard tests proving zero probe-classification catch patterns remain across the 6 migrated files.
+5. **005**: Deleted `isChoiceDecisionOwnerMismatchDuringProbe` (no remaining callers). Added export surface guard for `probe-result.ts`.
+
+All acceptance criteria met: zero probe-classification catch blocks remain, `ProbeResult` is the sole probe outcome contract, full test suite passes, typecheck and lint clean.

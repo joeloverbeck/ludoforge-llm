@@ -312,15 +312,11 @@ const executeDiscoveryEffectsProbe = (
 
 export const optionKey = (value: unknown): string => JSON.stringify([typeof value, value]);
 
-export const isChoiceDecisionOwnerMismatchDuringProbe = (error: unknown): boolean => {
-  return isEffectRuntimeReason(error, EFFECT_RUNTIME_REASONS.CHOICE_PROBE_AUTHORITY_MISMATCH);
-};
-
 const classifyDiscoveryProbeError = (error: unknown): ProbeResult<never> | null =>
   isEffectErrorCode(error, 'STACKING_VIOLATION') ? STACKING_VIOLATION_PROBE_RESULT : null;
 
 const classifyChoiceProbeError = (error: unknown): ProbeResult<never> | null =>
-  isChoiceDecisionOwnerMismatchDuringProbe(error) ? OWNER_MISMATCH_PROBE_RESULT : null;
+  isEffectRuntimeReason(error, EFFECT_RUNTIME_REASONS.CHOICE_PROBE_AUTHORITY_MISMATCH) ? OWNER_MISMATCH_PROBE_RESULT : null;
 
 const probeChoiceRequest = (
   evaluateProbeMove: (move: Move) => ChoiceRequest,

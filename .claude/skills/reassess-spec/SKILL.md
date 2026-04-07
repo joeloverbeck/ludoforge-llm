@@ -65,7 +65,7 @@ For each reference, validate against the actual codebase:
 7. **Existing implementations**: For each major proposed artifact (new types, new files, new patterns), search the codebase for existing implementations with similar names or functionality. Check whether the proposal duplicates existing infrastructure. This catches specs whose premise has been overtaken by prior work. Search using both exact names from the spec AND broader patterns (e.g., if the spec proposes `CompiledTokenFilter`, also search for `tryCompile*`, `*compiler.ts`, `Compiled*` to find related infrastructure that the spec may not reference). **Short-circuit**: If the initial exact-name search returns zero matches, note "no existing implementation found" and skip the broader pattern search — the proposal is genuinely novel.
 8. **Quantitative claims**: If the spec states numeric metrics (file counts, function counts, workaround counts), verify them against codebase grep/glob results. Correct inaccurate numbers in the updated spec.
 
-For specs with many references (>5 types/functions/paths), use an Explore agent to perform extraction and validation in a single pass. Include the spec content in the agent prompt so it can both identify references and validate them. This is read-only — agent-based exploration is safe and significantly faster.
+For specs with many references (>5 types/functions/paths), use an Explore agent to perform extraction and validation in a single pass. Include the full spec content in the agent prompt so it can both identify references and validate them — summarizing references risks missing implied or embedded references that only appear in prose context. This is read-only — agent-based exploration is safe and significantly faster.
 
 **Blast radius is mandatory**: The agent prompt MUST explicitly request blast radius analysis — grep for all import sites and consumer files of any type or interface the spec proposes to modify. This is the highest-value output from the Explore agent and must not be omitted.
 
@@ -148,7 +148,7 @@ Present all findings to the user in a structured report:
 
 If the user's answers raise new questions or invalidate previous findings, present a follow-up round (same format, same question limit). Repeat until all findings are resolved.
 
-If the user defers a decision back to you (e.g., "you decide", "reassess based on FOUNDATIONS"), analyze the question against `docs/FOUNDATIONS.md` principles, present your recommendation with the specific Foundation justification, and treat it as approved unless the user objects. Scale the analysis depth to the question type:
+If the user defers a decision back to you (e.g., "you decide", "reassess based on FOUNDATIONS"), analyze the question against `docs/FOUNDATIONS.md` principles, present your recommendation with the specific Foundation justification, and treat it as approved unless the user objects. If the recommendation expands the spec's scope (e.g., adding a prerequisite refactor justified by Foundation 15), re-assess the blast radius for the expanded scope before treating the recommendation as approved — add any newly-affected files to the findings. Scale the analysis depth to the question type:
 - **Simple factual questions**: A one-line Foundation reference suffices.
 - **Design questions with a clear FOUNDATIONS answer**: Provide a focused paragraph — state the recommendation, cite the Foundation(s), and briefly explain the implementation consequence. Do not enumerate alternatives.
 - **Architectural questions with multiple viable alternatives**: Provide a brief comparison of alternatives against FOUNDATIONS.md principles before presenting the recommendation.
@@ -166,7 +166,7 @@ After all findings are resolved and the user has approved the changes:
 
 If the user requests changes to the draft, incorporate them and re-present before writing.
 
-**Plan mode note**: If invoked during plan mode, Steps 1-5 proceed normally (read-only). Step 6 (writing the updated spec) is deferred until plan mode is exited. Record the approved changes in the system-provided plan file (including the diff summary), then call ExitPlanMode. ExitPlanMode approval covers both the plan and the diff summary — a separate Step 6 approval is not needed. Execute Step 6 after the user approves the plan and plan mode is exited. In plan mode, present findings as text (Step 5), but use `AskUserQuestion` for any questions that require user response before proceeding — inline text questions won't block execution in plan mode.
+**Plan mode note**: If invoked during plan mode, Steps 1-5 proceed normally (read-only). Step 6 (writing the updated spec) is deferred until plan mode is exited. Record the approved changes in the system-provided plan file (including the diff summary), then call ExitPlanMode. The plan file version of the diff summary should be at least as detailed as the inline presentation — the plan file is the durable artifact. ExitPlanMode approval covers both the plan and the diff summary — a separate Step 6 approval is not needed. Execute Step 6 after the user approves the plan and plan mode is exited. In plan mode, present findings as text (Step 5), but use `AskUserQuestion` for any questions that require user response before proceeding — inline text questions won't block execution in plan mode.
 
 ### Step 7: Final Summary
 
@@ -185,7 +185,7 @@ Do NOT commit. Leave the file for user review.
 - **One question at a time in follow-ups**: After the initial report (which may have up to 3 questions), follow-up rounds ask one question at a time to avoid overwhelming the user.
 - **YAGNI ruthlessly**: Additions must be natural extensions of the spec's scope. Do not propose features that "might be nice" but are not aligned with the spec's stated goals.
 - **No scope creep**: The deliverable is the updated spec file. Do not write design docs, create tickets, or start implementation.
-- **No approach proposals**: This is reassessment, not greenfield design. Do not propose 2-3 alternative architectures. The spec already has a design — validate and refine it.
+- **No approach proposals**: This is reassessment, not greenfield design. Do not propose 2-3 alternative architectures. The spec already has a design — validate and refine it. Exception: when a user-deferred decision is resolved via FOUNDATIONS.md analysis and the recommended fix requires expanding the spec's scope to address a root cause (Foundation 15), present the scope expansion as an Addition finding with explicit Foundation justification.
 - **Preserve spec voice**: When editing, match the spec's existing writing style. Do not rewrite unchanged sections for stylistic preferences.
 - **Preserve downstream structure**: When writing the updated spec, preserve all metadata fields (Status, Priority, Complexity, Dependencies, etc.) and section headings that downstream skills (e.g., spec-to-tickets) may depend on. Do not rename or remove standard sections.
 - **Worktree discipline**: If working in a worktree, ALL file operations use the worktree root path.

@@ -83,7 +83,7 @@ Every stop condition below requires resolution before implementation proceeds.
 13. **Unverifiable bug claim**: If a ticket's bug claim or measured symptom is not currently reproducible, or only the mechanism is verified while claimed incidence remains unproven, stop and resolve the boundary. Apply the **1-3-1 rule** to choose between proof-only, proof-plus-fix, or ticket-scope correction.
 14. **Scope gaps or ambiguity**: For scope gaps, implementation choices, dependency conflicts, or ambiguous boundaries, apply the **1-3-1 rule** (1 problem, 3 options, 1 recommendation).
 15. Continue reassessment after each confirmation until no boundary-affecting discrepancies remain — multiple sequential 1-3-1 rounds are normal.
-16. Before coding, restate the authoritative boundary in working notes and confirm explicitly that there are no blocking discrepancies remaining.
+16. Before coding, restate the authoritative boundary in the conversation (one sentence summarizing the corrected scope if any corrections were made) and confirm explicitly that there are no blocking discrepancies remaining. Skip the restatement if no corrections were made — the original ticket boundary is implicitly authoritative.
 
 **Confirmation semantics**:
 - If the user explicitly authorizes reassessment and instructs you to proceed with the best `FOUNDATIONS.md`-compliant option after you have already presented the discrepancy and choices, treat that as confirmation for the recommended option. Restate the authoritative boundary, then continue without forcing an extra round.
@@ -161,6 +161,10 @@ When a change touches schemas or contracts, check updates across these layers:
 - Do not preserve a ticket's original slice when doing so would leave the repository in a knowingly broken mid-migration state. `FOUNDATIONS.md` §14 and §15 override that slicing.
 - When a user-confirmed reassessment establishes a broader boundary, minimal repo-owned fallout may absorb work a later sibling originally claimed if necessary to make the confirmed boundary true in live runtime. Call out the absorbed sibling boundary explicitly.
 - When tightening authored `chooseN` minimums: check whether runtime `max` can drop below the new `min`; if so, update legality/cost-validation in the same change.
+
+**Union-variant migrations**:
+- When refactoring a flat interface to a discriminated union and removing optional fields from specific variants would break consumer compilation, add `readonly field?: never` to non-owning variants as a migration bridge. This preserves compilation (existing `result.field!` patterns still type-check because `never` is assignable to any type) while enabling DU narrowing in the owning variant. Consumer tickets then replace `!` assertions with proper narrowing and the `never` field is removed.
+- When a flat interface had an optional field used across multiple outcome branches (e.g., `reason?` on both `illegal` and `inconclusive`), keep the field on all variants that construct it — grep for construction sites before deciding which variants own the field.
 
 **Runtime & identity boundaries**:
 - Prefer a runtime-only storage layer behind the existing outward contract when an optimization would otherwise change canonical outward state or serialized shape.

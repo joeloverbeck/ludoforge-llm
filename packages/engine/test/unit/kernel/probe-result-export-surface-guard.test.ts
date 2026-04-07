@@ -9,7 +9,12 @@ const probeResultModule = 'src/kernel/probe-result.ts';
 const expectedProbeResultExports = [
   'ProbeOutcome',
   'ProbeInconclusiveReason',
+  'ProbeResultLegal',
+  'ProbeResultIllegal',
+  'ProbeResultInconclusive',
   'ProbeResult',
+  'ProbeResultPolicy',
+  'resolveProbeResult',
 ] as const;
 
 describe('probe-result export surface architecture guard', () => {

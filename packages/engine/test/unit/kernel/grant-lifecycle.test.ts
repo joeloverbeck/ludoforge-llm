@@ -6,9 +6,15 @@ import {
   asActionId,
   asPhaseId,
   asPlayerId,
+  advanceSequenceGrants,
   consumeUse,
+  consumeGrantUse,
   createSeatResolutionContext,
+  createProbeOverlay,
   expireGrant,
+  expireGrantsForSeat,
+  insertGrant,
+  insertGrantBatch,
   markOffered,
   skipGrant,
   transitionReadyGrantForCandidateMove,
@@ -272,5 +278,246 @@ describe('grant lifecycle transitions', () => {
         && 'code' in error
         && (error as Error & { readonly code?: string }).code === 'RUNTIME_CONTRACT_INVALID',
     );
+  });
+});
+
+describe('grant lifecycle array operations', () => {
+  it('insertGrant appends a grant, emits no trace, and does not mutate the input array', () => {
+    const existing = [makeGrant()];
+    const inserted = makeGrant({ grantId: 'grant-1', seat: '1' });
+
+    const result = insertGrant(existing, inserted);
+
+    assert.deepEqual(result.grants, [existing[0], inserted]);
+    assert.deepEqual(result.trace, []);
+    assert.deepEqual(existing, [makeGrant()]);
+  });
+
+  it('insertGrant rejects duplicate grant ids', () => {
+    assert.throws(
+      () => insertGrant([makeGrant()], makeGrant()),
+      (error: unknown) =>
+        error instanceof Error
+        && 'code' in error
+        && (error as Error & { readonly code?: string }).code === 'RUNTIME_CONTRACT_INVALID',
+    );
+  });
+
+  it('insertGrantBatch preserves ordered batches, emits no trace, and does not mutate inputs', () => {
+    const existing = [makeGrant()];
+    const batch = [
+      makeGrant({
+        grantId: 'grant-1',
+        phase: 'sequenceWaiting',
+        sequenceBatchId: 'batch-0',
+        sequenceIndex: 0,
+      }),
+      makeGrant({
+        grantId: 'grant-2',
+        phase: 'sequenceWaiting',
+        sequenceBatchId: 'batch-0',
+        sequenceIndex: 1,
+      }),
+    ];
+
+    const result = insertGrantBatch(existing, batch);
+
+    assert.deepEqual(result.grants, [existing[0], ...batch]);
+    assert.deepEqual(result.trace, []);
+    assert.deepEqual(existing, [makeGrant()]);
+    assert.deepEqual(batch, [
+      makeGrant({
+        grantId: 'grant-1',
+        phase: 'sequenceWaiting',
+        sequenceBatchId: 'batch-0',
+        sequenceIndex: 0,
+      }),
+      makeGrant({
+        grantId: 'grant-2',
+        phase: 'sequenceWaiting',
+        sequenceBatchId: 'batch-0',
+        sequenceIndex: 1,
+      }),
+    ]);
+  });
+
+  it('insertGrantBatch rejects duplicate grant ids across existing grants and the batch', () => {
+    assert.throws(
+      () => insertGrantBatch([makeGrant()], [makeGrant({ grantId: 'grant-0' })]),
+      (error: unknown) =>
+        error instanceof Error
+        && 'code' in error
+        && (error as Error & { readonly code?: string }).code === 'RUNTIME_CONTRACT_INVALID',
+    );
+  });
+
+  it('insertGrantBatch rejects out-of-order sequence batches', () => {
+    assert.throws(
+      () => insertGrantBatch([], [
+        makeGrant({
+          grantId: 'grant-1',
+          phase: 'sequenceWaiting',
+          sequenceBatchId: 'batch-0',
+          sequenceIndex: 1,
+        }),
+        makeGrant({
+          grantId: 'grant-2',
+          phase: 'sequenceWaiting',
+          sequenceBatchId: 'batch-0',
+          sequenceIndex: 0,
+        }),
+      ]),
+      (error: unknown) =>
+        error instanceof Error
+        && 'code' in error
+        && (error as Error & { readonly code?: string }).code === 'RUNTIME_CONTRACT_INVALID',
+    );
+  });
+
+  it('insertGrantBatch treats an empty batch as a content-preserving no-op', () => {
+    const existing = [makeGrant()];
+
+    const result = insertGrantBatch(existing, []);
+
+    assert.deepEqual(result.grants, existing);
+    assert.deepEqual(result.trace, []);
+    assert.deepEqual(existing, [makeGrant()]);
+  });
+
+  it('consumeGrantUse decrements remaining uses, emits a trace entry, and does not mutate the input array', () => {
+    const existing = [makeGrant({ phase: 'offered', remainingUses: 2 })];
+
+    const result = consumeGrantUse(existing, 'grant-0');
+
+    assert.deepEqual(result.grants, [
+      makeGrant({ phase: 'ready', remainingUses: 1 }),
+    ]);
+    assert.equal(result.consumed.phase, 'ready');
+    assert.equal(result.consumed.remainingUses, 1);
+    assert.equal(result.wasExhausted, false);
+    assert.deepEqual(result.trace, [{
+      kind: 'turnFlowGrantLifecycle',
+      step: 'consumeUse',
+      grantId: 'grant-0',
+      fromPhase: 'offered',
+      toPhase: 'ready',
+      seat: '0',
+      operationClass: 'operation',
+      remainingUsesBefore: 2,
+      remainingUsesAfter: 1,
+    }]);
+    assert.deepEqual(existing, [makeGrant({ phase: 'offered', remainingUses: 2 })]);
+  });
+
+  it('consumeGrantUse removes exhausted grants', () => {
+    const result = consumeGrantUse([makeGrant({ remainingUses: 1 })], 'grant-0');
+
+    assert.deepEqual(result.grants, []);
+    assert.equal(result.consumed.phase, 'exhausted');
+    assert.equal(result.consumed.remainingUses, 0);
+    assert.equal(result.wasExhausted, true);
+    assert.equal(result.trace[0]?.toPhase, 'exhausted');
+  });
+
+  it('consumeGrantUse rejects unknown grant ids', () => {
+    assert.throws(
+      () => consumeGrantUse([makeGrant()], 'missing-grant'),
+      (error: unknown) =>
+        error instanceof Error
+        && 'code' in error
+        && (error as Error & { readonly code?: string }).code === 'RUNTIME_CONTRACT_INVALID',
+    );
+  });
+
+  it('expireGrantsForSeat expires only ready or offered grants for the requested seat', () => {
+    const existing = [
+      makeGrant({ grantId: 'grant-0', seat: '0', phase: 'ready', completionPolicy: 'required' }),
+      makeGrant({ grantId: 'grant-1', seat: '0', phase: 'offered', completionPolicy: 'skipIfNoLegalCompletion' }),
+      makeGrant({ grantId: 'grant-2', seat: '0', phase: 'sequenceWaiting' }),
+      makeGrant({ grantId: 'grant-3', seat: '1', phase: 'ready', completionPolicy: 'required' }),
+    ];
+
+    const result = expireGrantsForSeat(existing, '0');
+
+    assert.deepEqual(result.grants, [
+      existing[2],
+      existing[3],
+    ]);
+    assert.equal(result.trace.length, 2);
+    assert.deepEqual(result.trace.map((entry) => entry.grantId), ['grant-0', 'grant-1']);
+    assert.deepEqual(existing, [
+      makeGrant({ grantId: 'grant-0', seat: '0', phase: 'ready', completionPolicy: 'required' }),
+      makeGrant({ grantId: 'grant-1', seat: '0', phase: 'offered', completionPolicy: 'skipIfNoLegalCompletion' }),
+      makeGrant({ grantId: 'grant-2', seat: '0', phase: 'sequenceWaiting' }),
+      makeGrant({ grantId: 'grant-3', seat: '1', phase: 'ready', completionPolicy: 'required' }),
+    ]);
+  });
+
+  it('advanceSequenceGrants advances only ready batch ids and does not mutate the input array', () => {
+    const existing = [
+      makeGrant({
+        grantId: 'grant-0',
+        phase: 'sequenceWaiting',
+        sequenceBatchId: 'batch-0',
+        sequenceIndex: 0,
+      }),
+      makeGrant({
+        grantId: 'grant-1',
+        phase: 'sequenceWaiting',
+        sequenceBatchId: 'batch-1',
+        sequenceIndex: 0,
+      }),
+      makeGrant({
+        grantId: 'grant-2',
+        phase: 'ready',
+        sequenceBatchId: 'batch-0',
+        sequenceIndex: 1,
+      }),
+    ];
+
+    const result = advanceSequenceGrants(existing, new Set(['batch-0']));
+
+    assert.deepEqual(result.grants, [
+      makeGrant({
+        grantId: 'grant-0',
+        phase: 'ready',
+        sequenceBatchId: 'batch-0',
+        sequenceIndex: 0,
+      }),
+      existing[1],
+      existing[2],
+    ]);
+    assert.deepEqual(result.trace.map((entry) => entry.grantId), ['grant-0']);
+    assert.deepEqual(existing, [
+      makeGrant({
+        grantId: 'grant-0',
+        phase: 'sequenceWaiting',
+        sequenceBatchId: 'batch-0',
+        sequenceIndex: 0,
+      }),
+      makeGrant({
+        grantId: 'grant-1',
+        phase: 'sequenceWaiting',
+        sequenceBatchId: 'batch-1',
+        sequenceIndex: 0,
+      }),
+      makeGrant({
+        grantId: 'grant-2',
+        phase: 'ready',
+        sequenceBatchId: 'batch-0',
+        sequenceIndex: 1,
+      }),
+    ]);
+  });
+
+  it('createProbeOverlay concatenates the overlay without mutating either input array', () => {
+    const existing = [makeGrant()];
+    const probes = [makeGrant({ grantId: 'probe-0', seat: '1' })];
+
+    const result = createProbeOverlay(existing, probes);
+
+    assert.deepEqual(result, [existing[0], probes[0]]);
+    assert.deepEqual(existing, [makeGrant()]);
+    assert.deepEqual(probes, [makeGrant({ grantId: 'probe-0', seat: '1' })]);
   });
 });

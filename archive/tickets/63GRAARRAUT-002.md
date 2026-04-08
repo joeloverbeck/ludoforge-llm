@@ -1,6 +1,6 @@
 # 63GRAARRAUT-002: Unit tests for array-level grant API
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — test/unit/kernel/grant-lifecycle.test.ts
@@ -102,3 +102,19 @@ The new array-level grant API from ticket 001 needs comprehensive unit tests pro
 
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm -F @ludoforge/engine build`
+
+## Outcome
+
+**Completed**: 2026-04-08
+
+Added unit coverage for the array-level grant API in `packages/engine/test/unit/kernel/grant-lifecycle.test.ts`. The new tests cover happy-path, error-path, and immutability expectations for `insertGrant`, `insertGrantBatch`, `consumeGrantUse`, `expireGrantsForSeat`, `advanceSequenceGrants`, and `createProbeOverlay`.
+
+**Deviations from original plan**
+
+- The ticket originally described the empty-batch case as "returns original array". During implementation, this was reassessed against `archive/tickets/63GRAARRAUT-001.md` and `specs/63-grant-array-authority.md`, which establish content-preserving immutability but not same-reference identity preservation. The landed test therefore verifies that an empty batch is a content-preserving no-op rather than asserting referential equality.
+
+**Verification**
+
+- `pnpm -F @ludoforge/engine build`
+- `node --test dist/test/unit/kernel/grant-lifecycle.test.js`
+- `pnpm -F @ludoforge/engine test`

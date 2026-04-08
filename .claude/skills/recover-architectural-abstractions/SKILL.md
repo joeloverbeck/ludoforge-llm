@@ -15,7 +15,7 @@ Given a complex test suite, recover the as-built architecture of the exercised a
 
 **Parameter**: Path to a test file or directory that exercises the engine area to analyze.
 
-**Optional**: `--prior-reports` — paths to earlier `missing-abstractions` or `architectural-abstractions` reports. The skill builds on previous analysis rather than rediscovering known issues.
+**Optional**: `--prior-reports` — paths to earlier `missing-abstractions` or `architectural-abstractions` reports **in `reports/`**. The skill builds on previous analysis rather than rediscovering known issues. **Never use reports from `archive/`** — archived reports are already exploited and no longer reflect current code; including them muddies the current assessment.
 
 **Output**: Structured report at `reports/architectural-abstractions-<date>-<context>.md`. `<context>` is derived from the input: for a test file, strip the path prefix and `.test.ts`/`.test.js` suffix; for a directory, use the directory name.
 
@@ -27,6 +27,8 @@ These fractures manifest as: fixing a bug in subsystem A requires compensating c
 
 ## Methodology
 
+**Phase dependency graph**: Phases 1-3 are parallelizable — launch sub-agents for all three simultaneously. Phase 4 requires all three to complete. Phases 5-6 are sequential after Phase 4.
+
 ### Phase 1: GATHER
 
 Starting from the test file(s), build a dependency graph of engine source modules:
@@ -36,11 +38,11 @@ Starting from the test file(s), build a dependency graph of engine source module
 3. Continue 2-3 levels deep until reaching leaf modules or modules outside `packages/engine/src/`. Barrel/index re-export files count as zero depth.
 4. Produce a list of all engine source files exercised by the test suite
 5. Read `docs/FOUNDATIONS.md` — hold it for Phase 6 validation. Do NOT apply it yet.
-6. Read any `prior_reports` if provided — note already-identified issues to avoid rediscovery.
+6. Read any `prior_reports` if provided — note already-identified issues to avoid rediscovery. Produce a numbered exclusion list of known findings with one-line summaries. Include this list verbatim in all sub-agent prompts for Phases 2-4. **Reject any prior report whose path starts with `archive/`** — these are already exploited and must not influence the current analysis. Do NOT proactively search `archive/` for old reports.
 7. Check for existing coverage/trace artifacts in the repo. Use them if present.
-8. Run bounded git history: `git log --since="6 months ago" --name-only` on exercised files to identify temporal coupling (files that frequently change together across commits). Parse the output to identify **commit clusters** — sets of 3+ exercised files that appear together in 2+ commits. Report the top 5 most frequent clusters by co-occurrence count. Filter the git log to only commits touching 2+ of the exercised files, then count pairwise co-occurrences. The goal is a ranked list of file-pairs/groups that change together, not a raw commit dump.
+8. Run bounded git history: `git log --since="6 months ago" --name-only --pretty=format:"COMMIT:%H" -- <exercised-file-paths>` to identify temporal coupling (files that frequently change together across commits). Parse the output to identify **commit clusters** — sets of 3+ exercised files that appear together in 2+ commits. Report the top 5 most frequent clusters by co-occurrence count. Filter the git log to only commits touching 2+ of the exercised files, then count pairwise co-occurrences. The goal is a ranked list of file-pairs/groups that change together, not a raw commit dump. For >30 exercised files, delegate git parsing to a separate sub-agent to keep the main context clean.
 
-**Sub-agent delegation**: For large test suites (>20 direct imports or barrel re-exports), delegate import tracing to 1-3 parallel Explore sub-agents. Each agent traces a subset of the import tree. Merge their deduplicated file lists. Also delegate git history analysis to a separate sub-agent if the file list exceeds 30 modules.
+**Sub-agent delegation**: For large test suites (>20 direct imports or barrel re-exports), delegate import tracing to 1-3 parallel Explore sub-agents. Each agent traces a subset of the import tree. Merge their deduplicated file lists (take the union). If agents report conflicting facts about the same file (e.g., different import counts), re-read the file directly to resolve. Note any reconciliation in the Traceability Summary. Also delegate git history analysis to a separate sub-agent if the file list exceeds 30 modules.
 
 ### Phase 2: SCENARIO MAP
 
@@ -61,6 +63,8 @@ Then cluster tests into **scenario families** — named behavioral groups. Examp
 - "ownership transfer"
 - "decision resolution and override"
 - "capability cost enforcement"
+
+Target 5-12 scenario families for a 50-100 test suite. Each family should map to a distinct domain protocol or lifecycle, not just a shared implementation detail. When in doubt, keep families separate — they can be merged in the report table.
 
 Every later architectural inference must be tied back to scenario families. A finding not grounded in test behavior is speculation.
 
@@ -93,7 +97,7 @@ Scan the exercised code for these 8 fracture types:
 |---|--------------|-----------------|
 | 1 | **Split protocol** | The legal sequence of interactions is spread across multiple modules/layers. Module A decides "what", module B decides "when", module C decides "whether". |
 | 2 | **Authority leak** | Multiple modules write the same truth. Two or more places create/mutate/invalidate the same piece of state. |
-| 3 | **Projection drift** | Derived summaries or cached computations are recomputed everywhere. No single module owns the projection. **Distinguisher from single-concept scatter**: projection drift requires the duplicated computation to be consumed by modules in **different architectural layers or subsystems** (e.g., legal-moves + apply-move + turn-flow). If all consumers are within one logical subsystem, treat it as single-concept scatter and defer to `detect-missing-abstractions`. |
+| 3 | **Projection drift** | Derived summaries or cached computations are recomputed everywhere. No single module owns the projection. **Distinguisher from single-concept scatter**: projection drift requires the duplicated computation to be consumed by modules in **different architectural layers or subsystems** (e.g., legal-moves + apply-move + turn-flow). If all consumers are within one logical subsystem, treat it as single-concept scatter and defer to `detect-missing-abstractions`. Within a monolithic package like `kernel/`, treat functional areas (turn-flow, effects, legal-moves, free-operation) as distinct subsystems for this fracture type. |
 | 4 | **Boundary inversion** | Higher layers own rules that belong in lower layers. The simulator enforces what the kernel should prevent. |
 | 5 | **Concept aliasing** | The same domain concept exists under different names/types in neighboring subsystems (e.g., "grant" in one module, "capability window" in another, same semantic role). |
 | 6 | **Hidden seam** | Files across nominal module boundaries repeatedly change together in git history, suggesting they belong in the same module. |
@@ -215,14 +219,15 @@ List them with the one signal found and what second signal to look for.>
 
 ## Hard Rules
 
-1. **No pattern theater.** Never recommend a pattern name unless it corresponds to owned truth and a real boundary. "Strategy pattern" or "Observer pattern" without naming what truth is owned is not a finding.
-2. **No abstraction without authority.** If the proposal cannot say who owns the truth, it is not ready. Move it to "Needs investigation."
-3. **No wrapper-only recommendations.** "Create a helper/service/interface" is not sufficient unless it relocates invariant ownership. The question is always: what truth moves, and who gains authority?
-4. **Read-only.** Do not modify any source files. Do not run tests. Static analysis and git history only.
-5. **Do not invent problems.** "Acceptable complexity" must remain a valid and prominent outcome. If no fractures are found, say so clearly. An analysis that finds nothing wrong is a useful analysis.
-6. **Every finding needs counter-evidence.** The report must say what would falsify each hypothesis. A finding without counter-evidence is an assertion, not an analysis.
-7. **Recovery first, judgement second.** Build the scenario map and detect fractures BEFORE applying FOUNDATIONS principles. Do not let architectural ideals bias what you observe.
-8. **Two-signal minimum.** No fracture is reported in the main findings unless supported by at least two independent evidence sources. Single-signal observations go in "Needs investigation."
+1. **No archived prior reports.** Never read, search for, or use reports from `archive/`. Archived reports are already exploited and no longer represent current architecture. Only reports in `reports/` may be used as prior reports. Do not proactively scan `archive/` for context.
+2. **No pattern theater.** Never recommend a pattern name unless it corresponds to owned truth and a real boundary. "Strategy pattern" or "Observer pattern" without naming what truth is owned is not a finding.
+3. **No abstraction without authority.** If the proposal cannot say who owns the truth, it is not ready. Move it to "Needs investigation."
+4. **No wrapper-only recommendations.** "Create a helper/service/interface" is not sufficient unless it relocates invariant ownership. The question is always: what truth moves, and who gains authority?
+5. **Read-only.** Do not modify any source files. Do not run tests. Static analysis and git history only.
+6. **Do not invent problems.** "Acceptable complexity" must remain a valid and prominent outcome. If no fractures are found, say so clearly. An analysis that finds nothing wrong is a useful analysis.
+7. **Every finding needs counter-evidence.** The report must say what would falsify each hypothesis. A finding without counter-evidence is an assertion, not an analysis.
+8. **Recovery first, judgement second.** Build the scenario map and detect fractures BEFORE applying FOUNDATIONS principles. Do not let architectural ideals bias what you observe.
+9. **Two-signal minimum.** No fracture is reported in the main findings unless supported by at least two independent evidence sources. Single-signal observations go in "Needs investigation."
 
 ## Important Rules
 

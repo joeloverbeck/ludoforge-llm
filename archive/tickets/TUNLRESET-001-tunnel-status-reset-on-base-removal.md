@@ -102,6 +102,8 @@ Grep for all `moveToken` effects that target `available-` zones and verify no tu
 
 ## Outcome
 
+Outcome amended: 2026-04-08
+
 **Completion date**: 2026-03-15
 
 ### What actually changed

@@ -706,32 +706,6 @@ export const isEventMovePlayableUnderGrantViabilityPolicy = (
   return !isEventMoveBlockedByGrantViabilityPolicy(def, state, move, activeSeat, runtime.seatOrder, seatResolution);
 };
 
-export const resolveEventFreeOperationGrants = (
-  def: GameDef,
-  state: GameState,
-  move: Move,
-): readonly EventFreeOperationGrantDef[] => {
-  const context = resolvePlayableEventExecutionContext(def, state, move);
-  if (context === null) {
-    return [];
-  }
-  return collectFreeOperationGrants(context);
-};
-
-export const resolveEventEligibilityOverrides = (
-  def: GameDef,
-  state: GameState,
-  move: Move,
-): readonly EventEligibilityOverrideDef[] => {
-  const context = resolvePlayableEventExecutionContext(def, state, move);
-  if (context === null) {
-    return [];
-  }
-  return collectEligibilityOverrides(context).filter((override) =>
-    evaluateEligibilityOverrideCondition(def, state, move, override)
-  );
-};
-
 export const expireLastingEffectsAtBoundaries = (
   def: GameDef,
   state: GameState,

@@ -3,13 +3,11 @@ import { describe, it } from 'node:test';
 
 import {
   executeEventMove,
-  resolveEventEligibilityOverrides,
   asPhaseId,
   asPlayerId,
   asTokenId,
   asZoneId,
   resolveEventEffectList,
-  resolveEventFreeOperationGrants,
   resolveEventTargetDefs,
   shouldDeferIncompleteDecisionValidationForMove,
   synthesizeEventTargetEffects,
@@ -365,8 +363,6 @@ describe('event playability context parity', () => {
       globalVars: { canPlay: 1, resolved: 0 },
     });
 
-    assert.deepEqual(resolveEventFreeOperationGrants(def, state, move), []);
-    assert.deepEqual(resolveEventEligibilityOverrides(def, state, move), []);
     assert.equal(shouldDeferIncompleteDecisionValidationForMove(def, state, move), false);
 
     const result = executeEventMove(def, state, { state: state.rng }, move);
@@ -392,8 +388,6 @@ describe('event playability context parity', () => {
       globalVars: { canPlay: 0, resolved: 0 },
     });
 
-    assert.deepEqual(resolveEventFreeOperationGrants(def, state, move), []);
-    assert.deepEqual(resolveEventEligibilityOverrides(def, state, move), []);
     assert.equal(shouldDeferIncompleteDecisionValidationForMove(def, state, move), false);
 
     const result = executeEventMove(def, state, { state: state.rng }, move);
@@ -419,16 +413,18 @@ describe('event playability context parity', () => {
       globalVars: { canPlay: 1, resolved: 0 },
     });
 
-    const grants = resolveEventFreeOperationGrants(def, state, move);
-    const overrides = resolveEventEligibilityOverrides(def, state, move);
-    assert.equal(grants.length, 1);
-    assert.equal(overrides.length, 1);
     assert.equal(shouldDeferIncompleteDecisionValidationForMove(def, state, move), true);
 
     const result = executeEventMove(def, state, { state: state.rng }, move);
     assert.equal(result.state.globalVars.resolved, 0);
-    assert.deepEqual(result.sideEffectManifest.grants, grants);
-    assert.deepEqual(result.sideEffectManifest.overrides, overrides);
+    assert.equal(result.sideEffectManifest.grants.length, 1);
+    assert.equal(result.sideEffectManifest.overrides.length, 1);
+    assert.deepEqual(result.sideEffectManifest.grants, [
+      { seat: '0', sequence: { batch: 'seq', step: 0 }, operationClass: 'operation', actionIds: ['operation'] },
+    ]);
+    assert.deepEqual(result.sideEffectManifest.overrides, [
+      { target: { kind: 'active' }, eligible: true, windowId: 'window-a' },
+    ]);
     assert.equal(result.sideEffectManifest.deferredEventEffect?.effects.length, 1);
     assert.equal(result.sideEffectManifest.deferredEventEffect?.actionId, 'event');
   });
@@ -475,7 +471,6 @@ describe('event playability context parity', () => {
         windowId: 'window-a',
       },
     ];
-    assert.deepEqual(resolveEventEligibilityOverrides(def, state, move), expectedOverrides);
     const result = executeEventMove(def, state, { state: state.rng }, move);
     assert.deepEqual(result.sideEffectManifest.overrides, expectedOverrides);
   });

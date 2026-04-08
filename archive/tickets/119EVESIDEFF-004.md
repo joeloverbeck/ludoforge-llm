@@ -1,6 +1,6 @@
 # 119EVESIDEFF-004: Remove resolve function exports and migrate test files
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel exports and test migration
@@ -90,3 +90,19 @@ Add a focused unit test (can be in the migrated `event-execution-targets.test.ts
 1. `pnpm -F @ludoforge/engine test` — full engine test suite
 2. `pnpm turbo typecheck` — type safety across packages
 3. `pnpm turbo lint` — no new lint violations
+
+## Outcome
+
+- Completed: 2026-04-09
+- What changed:
+  - Removed `resolveEventFreeOperationGrants` and `resolveEventEligibilityOverrides` from `packages/engine/src/kernel/event-execution.ts`.
+  - Replaced the broad `event-execution` barrel re-export in `packages/engine/src/kernel/index.ts` with explicit exports that keep the manifest-era public surface while excluding the removed helpers.
+  - Migrated `packages/engine/test/integration/fitl-events-1968-nva.test.ts` and `packages/engine/test/unit/kernel/event-execution-targets.test.ts` to assert through `executeEventMove(...).sideEffectManifest`.
+- Deviations from original plan:
+  - No material deviation. The manifest structure coverage was satisfied inside the migrated `event-execution-targets` unit surface rather than a separate new test file.
+- Verification results:
+  - Passed `pnpm -F @ludoforge/engine build`
+  - Passed `pnpm turbo typecheck`
+  - Passed `pnpm turbo lint`
+  - Passed `pnpm -F @ludoforge/engine test`
+  - Passed `pnpm run check:ticket-deps`

@@ -6,9 +6,9 @@ import {
   asActionId,
   asPlayerId,
   asTokenId,
+  executeEventMove,
   initialState,
   legalMoves,
-  resolveEventEligibilityOverrides,
   resolveMoveDecisionSequence,
   type GameDef,
   type GameState,
@@ -760,7 +760,8 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
       },
     });
     const nvaMove = { actionId: asActionId('event'), params: { eventCardId: 'card-60', side: 'shaded' } } as const;
-    assert.deepEqual(resolveEventEligibilityOverrides(def, nvaSetup, nvaMove), [
+    const nvaResult = executeEventMove(def, nvaSetup, { state: nvaSetup.rng }, nvaMove);
+    assert.deepEqual(nvaResult.sideEffectManifest.overrides, [
       {
         target: { kind: 'active' },
         when: { op: '==', left: { _t: 2, ref: 'activeSeat' }, right: 'NVA' },
@@ -778,6 +779,7 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
       },
     });
     const arvnMove = { actionId: asActionId('event'), params: { eventCardId: 'card-60', side: 'shaded' } } as const;
-    assert.deepEqual(resolveEventEligibilityOverrides(def, arvnSetup, arvnMove), []);
+    const arvnResult = executeEventMove(def, arvnSetup, { state: arvnSetup.rng }, arvnMove);
+    assert.deepEqual(arvnResult.sideEffectManifest.overrides, []);
   });
 });

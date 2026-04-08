@@ -12,6 +12,7 @@
  * This module keeps the growing resolver logic out of legal-choices.ts.
  */
 import { validateChooseNSelectedSequence } from './choose-n-selected-validation.js';
+import type { ChoiceValidationResult } from './choice-validation-result.js';
 import { isEffectRuntimeReason } from './effect-error.js';
 import { optionKey } from './legal-choices.js';
 import type { PrioritizedTierEntry } from './prioritized-tier-legality.js';
@@ -138,6 +139,8 @@ export interface SingletonProbeBudget {
   remaining: number;
 }
 
+type ProbeChoiceRequestValue = ChoiceRequest | ChoiceValidationResult<ChoiceRequest>;
+
 const OWNER_MISMATCH_PROBE_RESULT: ProbeResult<never> = {
   outcome: 'inconclusive',
   reason: 'ownerMismatch',
@@ -148,10 +151,18 @@ const classifyOwnerMismatchProbeError = (error: unknown): ProbeResult<never> | n
     ? OWNER_MISMATCH_PROBE_RESULT
     : null;
 
+const isChoiceValidationResult = (
+  value: ProbeChoiceRequestValue,
+): value is ChoiceValidationResult<ChoiceRequest> =>
+  typeof value === 'object'
+  && value !== null
+  && 'outcome' in value
+  && (value.outcome === 'success' || value.outcome === 'error');
+
 const probeChoiceRequest = (
-  evaluateProbeMove: (move: Move) => ChoiceRequest,
+  evaluateProbeMove: (move: Move) => ProbeChoiceRequestValue,
   move: Move,
-): ProbeResult<ChoiceRequest> => {
+): ProbeResult<ProbeChoiceRequestValue> => {
   try {
     return {
       outcome: 'legal',
@@ -263,7 +274,7 @@ const classifySingletonProbe = (
  * - Budget is count-based and deterministic.
  */
 export const runSingletonProbePass = (
-  evaluateProbeMove: (move: Move) => ChoiceRequest,
+  evaluateProbeMove: (move: Move) => ProbeChoiceRequestValue,
   classifyProbeMoveSatisfiability: (move: Move) => DecisionSequenceSatisfiability,
   partialMove: Move,
   request: ChoicePendingChooseNRequest,
@@ -321,36 +332,29 @@ export const runSingletonProbePass = (
       },
     };
 
-    let probed: ChoiceRequest;
-    try {
-      const probedResult = probeChoiceRequest(evaluateProbeMove, probeMove);
-      const resolved = resolveProbeResult(probedResult, {
-        onLegal: (value) => value,
-        onIllegal: () => null,
-        onInconclusive: () => null,
+    const probedResult = probeChoiceRequest(evaluateProbeMove, probeMove);
+    const resolved = resolveProbeResult(probedResult, {
+      onLegal: (value) => value,
+      onIllegal: () => null,
+      onInconclusive: () => null,
+    });
+    if (resolved === null) {
+      resultByKey.set(key, {
+        legality: 'unknown',
+        illegalReason: null,
+        resolution: 'ambiguous',
       });
-      if (resolved === null) {
-        resultByKey.set(key, {
-          legality: 'unknown',
-          illegalReason: null,
-          resolution: 'ambiguous',
-        });
-        continue;
-      }
-      probed = resolved;
-    } catch (error: unknown) {
-      // Cardinality mismatch: probe selection is below min or above max.
-      // This means the option is not confirmable at this singleton size → unresolved.
-      if (isEffectRuntimeReason(error, EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED)) {
-        resultByKey.set(key, {
-          legality: 'unknown',
-          illegalReason: null,
-          resolution: 'provisional',
-        });
-        continue;
-      }
-      throw error;
+      continue;
     }
+    if (isChoiceValidationResult(resolved) && resolved.outcome === 'error') {
+      resultByKey.set(key, {
+        legality: 'unknown',
+        illegalReason: null,
+        resolution: 'provisional',
+      });
+      continue;
+    }
+    const probed = isChoiceValidationResult(resolved) ? resolved.value : resolved;
 
     // Classify future satisfiability only when the probe returns pending.
     let classification: DecisionSequenceSatisfiability | null = null;
@@ -450,7 +454,7 @@ const selectionCacheKey = (selection: readonly unknown[]): string =>
  * Uses cache to avoid re-probing the same selection.
  */
 const probeAndClassifySelection = (
-  evaluateProbeMove: (move: Move) => ChoiceRequest,
+  evaluateProbeMove: (move: Move) => ProbeChoiceRequestValue,
   classifyProbeMoveSatisfiability: (move: Move) => DecisionSequenceSatisfiability,
   partialMove: Move,
   decisionKey: string,
@@ -484,28 +488,23 @@ const probeAndClassifySelection = (
     },
   };
 
-  let probed: ChoiceRequest;
-  try {
-    const probedResult = probeChoiceRequest(evaluateProbeMove, probeMove);
-    const resolved = resolveProbeResult(probedResult, {
-      onLegal: (value) => value,
-      onIllegal: () => null,
-      onInconclusive: () => null,
-    });
-    if (resolved === null) {
-      const outcome: SingletonProbeOutcome = { kind: 'ambiguous' };
-      probeCache.set(cacheKey, outcome);
-      return { outcome, cached: false };
-    }
-    probed = resolved;
-  } catch (error: unknown) {
-    if (isEffectRuntimeReason(error, EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED)) {
-      const outcome: SingletonProbeOutcome = { kind: 'unresolved' };
-      probeCache.set(cacheKey, outcome);
-      return { outcome, cached: false };
-    }
-    throw error;
+  const probedResult = probeChoiceRequest(evaluateProbeMove, probeMove);
+  const resolved = resolveProbeResult(probedResult, {
+    onLegal: (value) => value,
+    onIllegal: () => null,
+    onInconclusive: () => null,
+  });
+  if (resolved === null) {
+    const outcome: SingletonProbeOutcome = { kind: 'ambiguous' };
+    probeCache.set(cacheKey, outcome);
+    return { outcome, cached: false };
   }
+  if (isChoiceValidationResult(resolved) && resolved.outcome === 'error') {
+    const outcome: SingletonProbeOutcome = { kind: 'unresolved' };
+    probeCache.set(cacheKey, outcome);
+    return { outcome, cached: false };
+  }
+  const probed = isChoiceValidationResult(resolved) ? resolved.value : resolved;
 
   let classification: DecisionSequenceSatisfiability | null = null;
   if (probed.kind === 'pending') {
@@ -537,7 +536,7 @@ type WitnessOutcome = 'witness' | 'exhausted' | 'budget';
  * Stops as soon as one witness is found or the subtree/budget is exhausted.
  */
 const witnessSearchForOption = (
-  evaluateProbeMove: (move: Move) => ChoiceRequest,
+  evaluateProbeMove: (move: Move) => ProbeChoiceRequestValue,
   classifyProbeMoveSatisfiability: (move: Move) => DecisionSequenceSatisfiability,
   partialMove: Move,
   decisionKey: string,
@@ -635,7 +634,7 @@ const witnessSearchForOption = (
  * - enumerateCombinations() and countCombinationsCapped() are NOT deleted — kept as oracle.
  */
 export const runWitnessSearch = (
-  evaluateProbeMove: (move: Move) => ChoiceRequest,
+  evaluateProbeMove: (move: Move) => ProbeChoiceRequestValue,
   classifyProbeMoveSatisfiability: (move: Move) => DecisionSequenceSatisfiability,
   partialMove: Move,
   request: ChoicePendingChooseNRequest,

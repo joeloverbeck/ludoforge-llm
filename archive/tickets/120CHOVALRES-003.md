@@ -1,6 +1,6 @@
 # 120CHOVALRES-003: Migrate choose-n-option-resolution.ts catch sites to result pattern-matching
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel choice option resolution
@@ -109,3 +109,22 @@ if (resolved.outcome === 'error') {
 
 1. `pnpm -F @ludoforge/engine test -- --test-name-pattern "choose-n"`
 2. `pnpm turbo typecheck && pnpm turbo test`
+
+## Outcome
+
+- Completed: 2026-04-08
+- What changed:
+  - Removed the two `CHOICE_RUNTIME_VALIDATION_FAILED` catch sites from `packages/engine/src/kernel/choose-n-option-resolution.ts` and replaced them with result pattern-matching that preserves the same `provisional` and cached-`unresolved` behavior.
+  - Added a narrow adapter in `packages/engine/src/kernel/legal-choices.ts` that converts probe-time `CHOICE_RUNTIME_VALIDATION_FAILED` throws into `ChoiceValidationResult` before they reach the choose-n resolver, keeping the migration scoped to this ticket while preserving `004`'s broader caller work.
+  - Added direct resolver-seam regression coverage in `packages/engine/test/unit/kernel/choose-n-option-resolution.test.ts` for singleton and witness-probe validation failures.
+- Deviations from original plan:
+  - Live code after ticket `002` still rethrew `choiceValidationError` at the dispatcher boundary, so the resolver did not yet receive result-returning probe callbacks directly. The owned fix was a narrow `legal-choices.ts` adapter rather than a broader execution-path migration.
+  - The ticket's `Files to Touch` list named only `choose-n-option-resolution.ts`, but adjacent `legal-choices.ts` changes were required to satisfy the live boundary without absorbing `004`.
+  - The ticket's example `pnpm -F @ludoforge/engine test -- --test-name-pattern "choose-n"` command traversed the full engine package suite under the current Node test-runner setup rather than only the named slice.
+- Verification:
+  - `grep -rn "CHOICE_RUNTIME_VALIDATION_FAILED" packages/engine/src/kernel/choose-n-option-resolution.ts`
+  - `pnpm -F @ludoforge/engine build`
+  - `node packages/engine/dist/test/unit/kernel/choose-n-option-resolution.test.js`
+  - `pnpm -F @ludoforge/engine test -- --test-name-pattern "choose-n"` (passed; exercised the full engine package suite, 733 passing tests)
+  - `pnpm turbo typecheck`
+  - `pnpm turbo test`

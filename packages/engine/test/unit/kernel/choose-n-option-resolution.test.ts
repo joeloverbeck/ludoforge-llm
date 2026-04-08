@@ -16,11 +16,15 @@ import {
   type Move,
 } from '../../../src/kernel/index.js';
 import {
+  runSingletonProbePass,
   runWitnessSearch,
   type WitnessSearchBudget,
   type WitnessSearchStats,
   type WitnessSearchTierContext,
 } from '../../../src/kernel/choose-n-option-resolution.js';
+import {
+  choiceValidationFailed,
+} from '../../../src/kernel/choice-validation-result.js';
 import type { ChoicePendingChooseNRequest, ChoiceRequest, MoveParamScalar } from '../../../src/kernel/types.js';
 import type { DecisionSequenceSatisfiability } from '../../../src/kernel/decision-sequence-satisfiability.js';
 import { eff } from '../../helpers/effect-tag-helper.js';
@@ -358,6 +362,45 @@ describe('chooseN option resolution field', () => {
         assert.equal(option.resolution, 'exact', `${String(option.value)} should be exact`);
       }
     });
+
+    it('marks validation-failed singleton probes as provisional without throwing', () => {
+      const request: ChoicePendingChooseNRequest = {
+        kind: 'pending',
+        complete: false,
+        decisionKey: asDecisionKey('$pick'),
+        name: 'pick',
+        type: 'chooseN',
+        options: [
+          { value: 'A', legality: 'unknown', illegalReason: null },
+          { value: 'B', legality: 'unknown', illegalReason: null },
+        ],
+        targetKinds: [],
+        min: 2,
+        max: 2,
+        selected: [],
+        canConfirm: false,
+      };
+
+      const probeMove: Move = {
+        actionId: asActionId('singletonValidation'),
+        params: {} as Move['params'],
+      };
+
+      const result = runSingletonProbePass(
+        (_move) => choiceValidationFailed('singleton below min'),
+        (_move) => 'satisfiable',
+        probeMove,
+        request,
+        ['A', 'B'] as Move['params'][string][],
+        new Set<string>(),
+        { remaining: 10 },
+      );
+
+      for (const option of result) {
+        assert.equal(option.legality, 'unknown');
+        assert.equal(option.resolution, 'provisional');
+      }
+    });
   });
 
   describe('legalChoicesEvaluate (chooseOne path)', () => {
@@ -577,5 +620,39 @@ describe('runWitnessSearch with tierContext pruning', () => {
     assert.ok(optionB);
     assert.equal(optionB.legality, 'illegal', 'B should be illegal (tier-blocked)');
     assert.equal(optionB.resolution, 'exact');
+  });
+
+  it('keeps options provisional when witness probes fail choice validation under bounded search', () => {
+    const domain: MoveParamScalar[] = ['A', 'B', 'C'];
+    const request = makeChooseNRequest({
+      decisionKey: '$pick',
+      domain,
+      selected: [],
+      min: 2,
+      max: 3,
+    });
+
+    const singletonResults = domain.map((v) => ({
+      value: v,
+      legality: 'unknown' as const,
+      illegalReason: null,
+      resolution: 'provisional' as const,
+    }));
+
+    const result = runWitnessSearch(
+      (_move) => choiceValidationFailed('witness validation failed'),
+      (_move) => 'satisfiable',
+      dummyMove,
+      request,
+      singletonResults,
+      [...domain] as Move['params'][string][],
+      new Set<string>(),
+      { remaining: 1 },
+    );
+
+    for (const option of result) {
+      assert.equal(option.legality, 'unknown');
+      assert.equal(option.resolution, 'provisional');
+    }
   });
 });

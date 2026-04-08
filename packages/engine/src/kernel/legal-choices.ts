@@ -1,4 +1,9 @@
 import {
+  choiceValidationFailed,
+  choiceValidationSuccess,
+  type ChoiceValidationResult,
+} from './choice-validation-result.js';
+import {
   runSingletonProbePass,
   runWitnessSearch,
   createDiagnosticsAccumulator,
@@ -307,6 +312,20 @@ const classifyDiscoveryProbeError = (error: unknown): ProbeResult<never> | null 
 const classifyChoiceProbeError = (error: unknown): ProbeResult<never> | null =>
   isEffectRuntimeReason(error, EFFECT_RUNTIME_REASONS.CHOICE_PROBE_AUTHORITY_MISMATCH) ? OWNER_MISMATCH_PROBE_RESULT : null;
 
+const evaluateProbeMoveWithChoiceValidationResult = (
+  evaluateProbeMove: (move: Move) => ChoiceRequest,
+  move: Move,
+): ChoiceValidationResult<ChoiceRequest> => {
+  try {
+    return choiceValidationSuccess(evaluateProbeMove(move));
+  } catch (error: unknown) {
+    if (isEffectRuntimeReason(error, EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED)) {
+      return choiceValidationFailed(error.message, error.context);
+    }
+    throw error;
+  }
+};
+
 const probeChoiceRequest = (
   evaluateProbeMove: (move: Move) => ChoiceRequest,
   move: Move,
@@ -567,7 +586,7 @@ const mapChooseNOptions = (
       // then witness search for unresolved candidates.
       const singletonBudget: SingletonProbeBudget = { remaining: MAX_CHOOSE_N_TOTAL_PROBE_BUDGET };
       const singletonResults = runSingletonProbePass(
-        evaluateProbeMove,
+        (probeMove) => evaluateProbeMoveWithChoiceValidationResult(evaluateProbeMove, probeMove),
         classifyProbeMoveSatisfiability,
         partialMove,
         request,
@@ -581,7 +600,7 @@ const mapChooseNOptions = (
       const witnessBudget: WitnessSearchBudget = { remaining: MAX_CHOOSE_N_TOTAL_WITNESS_NODES };
       const witnessStats = diagnostics !== undefined ? { cacheHits: 0, nodesVisited: 0 } : undefined;
       return runWitnessSearch(
-        evaluateProbeMove,
+        (probeMove) => evaluateProbeMoveWithChoiceValidationResult(evaluateProbeMove, probeMove),
         classifyProbeMoveSatisfiability,
         partialMove,
         request,

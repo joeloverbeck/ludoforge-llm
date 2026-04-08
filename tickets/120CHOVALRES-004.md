@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel viability probe, move application
-**Deps**: `archive/tickets/120CHOVALRES-002.md`, `tickets/120CHOVALRES-003.md`
+**Deps**: `archive/tickets/120CHOVALRES-002.md`, `archive/tickets/120CHOVALRES-003.md`
 
 ## Problem
 

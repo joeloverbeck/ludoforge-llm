@@ -87,6 +87,16 @@ const applyEffectWithBudget = (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const result = (handler as any)(effect, env, cursor, scope, budget, applyEffectsWithBudgetState) as PartialEffectResult;
   perfDynEnd(profiler, `effect:${kind}`, t0);
+  // Choice validation failure: re-throw to preserve existing caller catch sites.
+  // Tickets 003/004 will remove this re-throw and propagate via result type.
+  if (result.choiceValidationError !== undefined) {
+    const ctx = result.choiceValidationError.context as Record<string, unknown> | undefined;
+    throw effectRuntimeError(
+      EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+      result.choiceValidationError.message,
+      ctx as { readonly effectType: string } & Record<string, unknown>,
+    );
+  }
   // Normalize result: use shared empty array to avoid per-call allocation,
   // apply defaults for bindings/decisionScope only when handler omitted them.
   const emitted = result.emittedEvents ?? EMPTY_EVENTS;

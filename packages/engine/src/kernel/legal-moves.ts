@@ -479,12 +479,16 @@ function enumerateParams(
     }
     const ctx = updateMutableEnumerationReadContext(readScope, state, executionPlayer, bindings);
     if (currentPhaseDef?.actionDefaults?.pre !== undefined) {
-      if (!evalCondition(currentPhaseDef.actionDefaults.pre, ctx)) {
+      const preResult = evalCondition(currentPhaseDef.actionDefaults.pre, ctx);
+      if (preResult.outcome === 'error' || !preResult.value) {
         return;
       }
     }
-    if (action.pre !== null && !evalCondition(action.pre, ctx)) {
-      return;
+    if (action.pre !== null) {
+      const preResult = evalCondition(action.pre, ctx);
+      if (preResult.outcome === 'error' || !preResult.value) {
+        return;
+      }
     }
 
     if (options?.pipeline !== undefined) {

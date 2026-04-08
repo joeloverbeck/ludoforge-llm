@@ -48,6 +48,7 @@ import {
 import { validateTurnFlowRuntimeStateInvariants } from './turn-flow-runtime-invariants.js';
 import { isCardEventActionId } from './action-capabilities.js';
 import { evalCondition } from './eval-condition.js';
+import { unwrapEvalCondition } from './eval-result.js';
 import { findPhaseDef } from './phase-lookup.js';
 import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-overlay.js';
 import { probeWith, resolveProbeResult, type ProbeResult } from './probe-result.js';
@@ -894,7 +895,7 @@ const legalChoicesWithPreparedContextInternal = (
   // and validateMove (apply-move.ts:742).
   const currentPhaseDef = findPhaseDef(def, state.currentPhase);
   if (currentPhaseDef?.actionDefaults?.pre !== undefined) {
-    if (!evalCondition(currentPhaseDef.actionDefaults.pre, evalCtx)) {
+    if (!unwrapEvalCondition(evalCondition(currentPhaseDef.actionDefaults.pre, evalCtx))) {
       return finalizeRequest({
         kind: 'illegal',
         complete: false,
@@ -902,7 +903,7 @@ const legalChoicesWithPreparedContextInternal = (
       });
     }
   }
-  if (action.pre !== null && !evalCondition(action.pre, evalCtx)) {
+  if (action.pre !== null && !unwrapEvalCondition(evalCondition(action.pre, evalCtx))) {
     return finalizeRequest({
       kind: 'illegal',
       complete: false,

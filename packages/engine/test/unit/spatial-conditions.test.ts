@@ -7,6 +7,7 @@ import {
   asZoneId,
   buildAdjacencyGraph,
   evalCondition,
+  unwrapEvalCondition,
   type ReadContext,
   type GameDef,
   type GameState,
@@ -89,15 +90,15 @@ describe('spatial condition runtime', () => {
   it('evaluates adjacent true and false cases', () => {
     const ctx = makeCtx();
 
-    assert.equal(evalCondition({ op: 'adjacent', left: 'a:none', right: 'b:none' }, ctx), true);
-    assert.equal(evalCondition({ op: 'adjacent', left: 'a:none', right: 'e:none' }, ctx), false);
+    assert.equal(unwrapEvalCondition(evalCondition({ op: 'adjacent', left: 'a:none', right: 'b:none' }, ctx)), true);
+    assert.equal(unwrapEvalCondition(evalCondition({ op: 'adjacent', left: 'a:none', right: 'e:none' }, ctx)), false);
   });
 
   it('evaluates connected true and false cases', () => {
     const ctx = makeCtx();
 
-    assert.equal(evalCondition({ op: 'connected', from: 'a:none', to: 'e:none' }, ctx), true);
-    assert.equal(evalCondition({ op: 'connected', from: 'a:none', to: 'f:none' }, ctx), false);
+    assert.equal(unwrapEvalCondition(evalCondition({ op: 'connected', from: 'a:none', to: 'e:none' }, ctx)), true);
+    assert.equal(unwrapEvalCondition(evalCondition({ op: 'connected', from: 'a:none', to: 'f:none' }, ctx)), false);
   });
 
   it('evaluates connected with via filter pass/fail', () => {
@@ -110,15 +111,15 @@ describe('spatial condition runtime', () => {
       via: { op: 'in', item: { _t: 2 as const, ref: 'binding', name: '$zone' }, set: { _t: 2 as const, ref: 'binding', name: '$allowed' } },
     } as const;
 
-    assert.equal(evalCondition(condition, passCtx), true);
-    assert.equal(evalCondition(condition, failCtx), false);
+    assert.equal(unwrapEvalCondition(evalCondition(condition, passCtx)), true);
+    assert.equal(unwrapEvalCondition(evalCondition(condition, failCtx)), false);
   });
 
   it('evaluates connected maxDepth boundary behavior', () => {
     const ctx = makeCtx();
 
-    assert.equal(evalCondition({ op: 'connected', from: 'a:none', to: 'd:none', maxDepth: 1 }, ctx), false);
-    assert.equal(evalCondition({ op: 'connected', from: 'a:none', to: 'd:none', maxDepth: 2 }, ctx), true);
+    assert.equal(unwrapEvalCondition(evalCondition({ op: 'connected', from: 'a:none', to: 'd:none', maxDepth: 1 }, ctx)), false);
+    assert.equal(unwrapEvalCondition(evalCondition({ op: 'connected', from: 'a:none', to: 'd:none', maxDepth: 2 }, ctx)), true);
   });
 
   it('evaluates markerShiftAllowed for legal shifts, edge no-ops, and constraint failures', () => {
@@ -143,15 +144,15 @@ describe('spatial condition runtime', () => {
     });
 
     assert.equal(
-      evalCondition({ op: 'markerShiftAllowed', space: 'a:none', marker: 'supportOpposition', delta: 1 }, legalCtx),
+      unwrapEvalCondition(evalCondition({ op: 'markerShiftAllowed', space: 'a:none', marker: 'supportOpposition', delta: 1 }, legalCtx)),
       true,
     );
     assert.equal(
-      evalCondition({ op: 'markerShiftAllowed', space: 'a:none', marker: 'supportOpposition', delta: 1 }, noopCtx),
+      unwrapEvalCondition(evalCondition({ op: 'markerShiftAllowed', space: 'a:none', marker: 'supportOpposition', delta: 1 }, noopCtx)),
       false,
     );
     assert.equal(
-      evalCondition({ op: 'markerShiftAllowed', space: 'c:none', marker: 'supportOpposition', delta: 1 }, illegalCtx),
+      unwrapEvalCondition(evalCondition({ op: 'markerShiftAllowed', space: 'c:none', marker: 'supportOpposition', delta: 1 }, illegalCtx)),
       false,
     );
   });

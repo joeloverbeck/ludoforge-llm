@@ -6,6 +6,7 @@ import {
   asPlayerId,
   deserializeGameState,
   evalCondition,
+  unwrapEvalCondition,
   evalQuery,
   evalQueryRaw,
   evalValue,
@@ -60,7 +61,7 @@ describe('evaluation property-style checks', () => {
     const bindingCtx = makeCtx({ bindings: { '$set': [1, 2, 3] } });
 
     conditions.forEach((cond) => {
-      const value = evalCondition(cond, bindingCtx);
+      const value = unwrapEvalCondition(evalCondition(cond, bindingCtx));
       assert.equal(typeof value, 'boolean');
     });
   });

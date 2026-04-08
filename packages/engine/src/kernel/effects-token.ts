@@ -2,6 +2,7 @@ import { asTokenId } from './branded.js';
 import { moveToken as moveTokenBuilder } from './ast-builders.js';
 import { getZoneMap } from './def-lookup.js';
 import { evalCondition } from './eval-condition.js';
+import { unwrapEvalCondition } from './eval-result.js';
 import type { ReadContext } from './eval-context.js';
 import { evalValue } from './eval-value.js';
 import { emitTrace } from './execution-collector.js';
@@ -1003,7 +1004,7 @@ export const applyMoveAll = (
         $token: token,
       };
 
-      if (evalCondition(effect.moveAll.filter, scope)) {
+      if (unwrapEvalCondition(evalCondition(effect.moveAll.filter, scope))) {
         filteredMoved.push(token);
       } else {
         filteredRemaining.push(token);

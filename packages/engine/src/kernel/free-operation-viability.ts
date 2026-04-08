@@ -5,6 +5,7 @@ import { asActionId, asPlayerId } from './branded.js';
 import { selectChoiceOptionValuesByLegalityPrecedence, selectUniqueChoiceOptionValuesByLegalityPrecedence } from './choice-option-policy.js';
 import { isDeclaredActionParamValueInDomain } from './declared-action-param-domain.js';
 import { evalCondition } from './eval-condition.js';
+import { unwrapEvalCondition } from './eval-result.js';
 import { createEvalRuntimeResources, type ReadContext } from './eval-context.js';
 import { createExecutionEffectContext } from './effect-context.js';
 import { applyEffects } from './effects.js';
@@ -450,7 +451,7 @@ const isCompletedProbeMoveCurrentlyLegal = (
     return false;
   }
 
-  if (action.pre !== null && !evalCondition(action.pre, preflight.evalCtx)) {
+  if (action.pre !== null && !unwrapEvalCondition(evalCondition(action.pre, preflight.evalCtx))) {
     return false;
   }
 

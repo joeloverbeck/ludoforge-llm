@@ -1,4 +1,5 @@
 import type { PlayerId } from './branded.js';
+import type { ChoiceValidationError } from './choice-validation-result.js';
 import type { ChooseNTemplate } from './choose-n-session.js';
 import { emptyScope, type DecisionScope } from './decision-scope.js';
 import type { DraftTracker } from './state-draft.js';
@@ -93,6 +94,7 @@ export interface PartialEffectResult {
   readonly bindings?: Readonly<Record<string, unknown>>;
   readonly pendingChoice?: ChoicePendingRequest | ChoiceStochasticPendingRequest;
   readonly decisionScope?: DecisionScope;
+  readonly choiceValidationError?: ChoiceValidationError;
 }
 
 export interface NormalizedEffectResult {
@@ -102,6 +104,7 @@ export interface NormalizedEffectResult {
   readonly bindings: Readonly<Record<string, unknown>>;
   readonly pendingChoice?: ChoicePendingRequest | ChoiceStochasticPendingRequest;
   readonly decisionScope: DecisionScope;
+  readonly choiceValidationError?: ChoiceValidationError;
 }
 
 interface RuntimeEffectContextOptions extends Omit<

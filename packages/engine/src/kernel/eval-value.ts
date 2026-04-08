@@ -1,5 +1,6 @@
 import type { ReadContext } from './eval-context.js';
 import { evalCondition } from './eval-condition.js';
+import { unwrapEvalCondition } from './eval-result.js';
 import { divisionByZeroError, typeMismatchError } from './eval-error.js';
 import { evalQuery } from './eval-query.js';
 import { unwrapEvalQuery } from './eval-result.js';
@@ -252,7 +253,7 @@ export function evalValue(expr: ValueExpr, ctx: ReadContext): ScalarValue | Scal
     case VALUE_EXPR_TAG.CONCAT: return evalConcat(expr as Extract<ValueExpr, { readonly _t: 3 }>, ctx);
     case VALUE_EXPR_TAG.IF: {
       const ifExpr = (expr as Extract<ValueExpr, { readonly _t: 4 }>).if;
-      return evalCondition(ifExpr.when, ctx) ? evalValue(ifExpr.then, ctx) : evalValue(ifExpr.else, ctx);
+      return unwrapEvalCondition(evalCondition(ifExpr.when, ctx)) ? evalValue(ifExpr.then, ctx) : evalValue(ifExpr.else, ctx);
     }
     case VALUE_EXPR_TAG.AGGREGATE: return evalAggregate(expr as Extract<ValueExpr, { readonly _t: 5 }>, ctx);
     case VALUE_EXPR_TAG.OP: return evalArithmetic(expr as Extract<ValueExpr, { readonly _t: 6 }>, ctx);

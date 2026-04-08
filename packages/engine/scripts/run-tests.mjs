@@ -1,9 +1,12 @@
 import { spawnSync } from 'node:child_process';
+import { globSync } from 'node:fs';
+import { availableParallelism } from 'node:os';
 import { basename } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { ALL_DETERMINISM_TESTS, listE2eTestsForLane, listIntegrationTestsForLane, toDistTestPath } from './test-lane-manifest.mjs';
 
 const DEFAULT_DETERMINISM_TIMEOUT_MS = 20 * 60 * 1000;
+const DEFAULT_TEST_CONCURRENCY = Math.max(1, Math.floor(availableParallelism() / 3));
 const KILL_SIGNAL = 'SIGTERM';
 
 const laneConfigs = {
@@ -22,6 +25,10 @@ const laneConfigs = {
   'integration:texas-cross-game': {
     execution: 'batched',
     patterns: listIntegrationTestsForLane('integration:texas-cross-game').map(toDistTestPath),
+  },
+  'integration:slow-core': {
+    execution: 'batched',
+    patterns: listIntegrationTestsForLane('integration:slow-core').map(toDistTestPath),
   },
   determinism: {
     execution: 'sequential',
@@ -127,7 +134,11 @@ export function runExecutionPlan(plan, options = {}) {
   const now = options.now ?? (() => Date.now());
 
   if (plan.execution === 'batched') {
-    const result = spawnSyncImpl(execPath, ['--test', ...plan.patterns], {
+    const resolvedFiles = plan.patterns.flatMap((pattern) =>
+      pattern.includes('*') ? globSync(pattern).sort() : [pattern],
+    );
+    const concurrency = plan.concurrency ?? DEFAULT_TEST_CONCURRENCY;
+    const result = spawnSyncImpl(execPath, ['--test', `--test-concurrency=${concurrency}`, ...resolvedFiles], {
       stdio: 'inherit',
       env,
     });

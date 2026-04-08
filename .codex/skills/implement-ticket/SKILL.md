@@ -18,7 +18,7 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
 
 1. Read `docs/FOUNDATIONS.md` before planning or coding.
 2. Read the ticket file(s) matching the provided path or glob.
-3. Read referenced specs, docs, and `Deps`. Read `AGENTS.md` and respect worktree discipline (all reads, edits, greps, moves, and verification commands use the worktree root when the ticket lives under `.claude/worktrees/<name>/`; isolate your diff from unrelated edits).
+3. Read referenced specs, docs, `AGENTS.md`, and `Deps`. Respect worktree discipline (all reads, edits, greps, moves, and verification commands use the worktree root when the ticket lives under `.claude/worktrees/<name>/`; isolate your diff from unrelated edits).
 4. Before editing, inspect repo state (for example `git status --short`) and call out unrelated dirty files, pre-existing failures, or evidence of concurrent work. Do this early enough that your diff can be isolated from repo-preexisting state.
 5. Extract all concrete references: file paths, functions, types, classes, modules, tests, scripts, and artifacts the ticket expects.
 
@@ -30,7 +30,7 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
 
 **Artifact verification**
 
-5. Verify every referenced artifact against the live codebase with targeted reads and `rg`:
+5. Verify every referenced artifact against the live codebase with targeted reads and search:
    - File existence and path accuracy
    - Named exports, functions, types, and signatures
    - Module structure and required dependencies/scripts
@@ -45,6 +45,8 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
    - Shared type or schema ripple effects
    - Cross-package fallout for shared exported unions, serialized trace kinds, and exhaustiveness-based consumers (translators, adapters, viewers, switch statements)
    - Foundation 14 atomic migrations for removals or renames
+   - Return type changes on shared exported functions: all callers must be migrated atomically (Foundation 14). If a sibling ticket owns caller migration but the current ticket changes the return type, flag the scope overlap before coding — the sibling's work must be absorbed.
+   - **Primitive-to-object return type migrations**: When a function's return type changes from a primitive (`boolean`, `number`, `string`) to a result object, TypeScript will NOT catch same-file callers that use the return value in boolean/truthy contexts (if-conditions, filter callbacks, logical operators) — the result object is always truthy. After migration, grep the modified file for all remaining call sites of the changed function and verify each one handles the new return type correctly. Do not rely solely on the type checker.
    - Required test, schema, or fixture updates
    - When the ticket disputes game-specific legality, consult local rulebook extracts or rules reports before deciding whether the fix is policy-only or a legality correction.
 
@@ -75,7 +77,7 @@ Every stop condition below requires resolution before implementation proceeds.
 13. **Unverifiable bug claim**: If a ticket's bug claim or measured symptom is not currently reproducible, or only the mechanism is verified while claimed incidence remains unproven, stop and resolve the boundary. Apply the **1-3-1 rule** to choose between proof-only, proof-plus-fix, or ticket-scope correction.
 14. **Scope gaps or ambiguity**: For scope gaps, implementation choices, dependency conflicts, or ambiguous boundaries, apply the **1-3-1 rule** (1 problem, 3 options, 1 recommendation).
 15. Continue reassessment after each confirmation until no boundary-affecting discrepancies remain — multiple sequential 1-3-1 rounds are normal.
-16. Before coding, restate the authoritative boundary in working notes and confirm explicitly that there are no blocking discrepancies remaining.
+16. Before coding, restate the authoritative boundary in working notes (one sentence summarizing the corrected scope if any corrections were made) and confirm explicitly that there are no blocking discrepancies remaining. Skip the restatement if no corrections were made — the original ticket boundary is implicitly authoritative.
 
 **Confirmation semantics**:
 - If the user explicitly authorizes reassessment and instructs you to proceed with the best `FOUNDATIONS.md`-compliant option after you have already presented the discrepancy and choices, treat that as confirmation for the recommended option. Restate the authoritative boundary, then continue without forcing an extra round.
@@ -86,6 +88,7 @@ Every stop condition below requires resolution before implementation proceeds.
 - Stale deliverable inside a valid boundary → implement the live owned subset, call out the stale sub-claim explicitly in working notes/final summary, and do not trigger 1-3-1 unless the stale deliverable blocks correctness or forces a real scope decision.
 - Stale incidence but relevant mechanism/invariant → treat as a proof-boundary decision, not automatic invalidation.
 - Boundary itself is wrong → stop and resolve whether to rewrite, narrow, or supersede before coding.
+- Already-satisfied deliverable → if investigation shows the ticket's core deliverable is already implemented by existing code, present a 1-3-1 with options: (a) close as already-satisfied with no code changes, (b) cosmetic refinement only, (c) rewrite ticket to target the remaining gap. Document the evidence of satisfaction in the Outcome section.
 
 **Post-confirmation architecture reset**:
 - When a user-confirmed 1-3-1 decision broadens or reframes the solution, restate the new authoritative boundary in working notes before coding.
@@ -106,6 +109,15 @@ Every stop condition below requires resolution before implementation proceeds.
 
 17. If the ticket is accurate and no blocking decision remains, proceed.
 
+### Phase 4: Implement
+
+18. Implement the corrected ticket directly, following all project conventions:
+    - Worktree discipline: if working in a worktree, ALL file operations use the worktree root path
+    - Immutability: always create new objects, never mutate
+    - TDD for bug fixes: write the failing test first, then fix the code
+    - Never adapt tests to preserve a bug
+    - Run lint, typecheck, and tests before claiming completion (per Pre-Completion Verification rule)
+
 ## Implementation Rules
 
 ### General Principles
@@ -117,6 +129,7 @@ Every stop condition below requires resolution before implementation proceeds.
 - The ticket's `Files to Touch` list is a strong hint, not a hard limit. Include adjacent files for contracts, runtime consumers, schemas, fixtures, or tests when coherent completion requires them.
 - "No code changes" means no production/runtime behavior changes. Ticket outcomes, archival moves, dependency rewrites, and sibling-ticket status updates are still required when they are the owned deliverable.
 - If reassessment reveals a generic architectural limitation broader than the ticket's boundary, prefer creating or extending a follow-up spec over burying the gap in ticket-only notes.
+- When a ticket names a test deliverable that would require disproportionate mocking or fixture setup relative to the code change, and the behavior is already exercised by existing integration/e2e tests, document the rationale for deferring the dedicated test and note it in the summary. The existing test coverage satisfies the behavioral invariant even without a dedicated unit test.
 
 ### Schema & Contract Migrations
 
@@ -144,6 +157,10 @@ When a change touches schemas or contracts, check updates across these layers:
 - Do not preserve a ticket's original slice when doing so would leave the repository in a knowingly broken mid-migration state. `FOUNDATIONS.md` §14 and §15 override that slicing.
 - When a user-confirmed reassessment establishes a broader boundary, minimal repo-owned fallout may absorb work a later sibling originally claimed if necessary to make the confirmed boundary true in live runtime. Call out the absorbed sibling boundary explicitly.
 - When tightening authored `chooseN` minimums: check whether runtime `max` can drop below the new `min`; if so, update legality/cost-validation in the same change.
+
+**Union-variant migrations**:
+- When refactoring a flat interface to a discriminated union and removing optional fields from specific variants would break consumer compilation, add `readonly field?: never` to non-owning variants as a migration bridge. This preserves compilation (existing `result.field!` patterns still type-check because `never` is assignable to any type) while enabling DU narrowing in the owning variant. Consumer tickets then replace `!` assertions with proper narrowing and the `never` field is removed.
+- When a flat interface had an optional field used across multiple outcome branches (e.g., `reason?` on both `illegal` and `inconclusive`), keep the field on all variants that construct it — grep for construction sites before deciding which variants own the field.
 
 **Runtime & identity boundaries**:
 - Prefer a runtime-only storage layer behind the existing outward contract when an optimization would otherwise change canonical outward state or serialized shape.
@@ -267,6 +284,7 @@ pnpm turbo schema:artifacts
    - State explicitly: audited schema/artifact ripple effects (even if none needed), deferred verification owned by another ticket, resolved 1-3-1 decisions (especially Foundation type discipline), rules-evidence notes for game-specific legality corrections.
    - State explicitly: any ticket premise that remained unverified, especially claimed repro seeds, counts, traces, or production observations.
 2. If the ticket appears complete, offer to archive per `docs/archival-workflow.md`.
+   - Archive command: `node scripts/archive-ticket.mjs tickets/<ID>.md archive/tickets/`
 3. If the user wants archival or follow-up review, hand off to `post-ticket-review`. If this implementation superseded semantics in a recently archived sibling, call that out in the handoff.
 
 ## Codex Adaptation Notes

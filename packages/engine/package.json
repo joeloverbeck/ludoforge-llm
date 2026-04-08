@@ -43,6 +43,7 @@
     "test:integration:fitl-events": "node scripts/run-tests.mjs --lane integration:fitl-events",
     "test:integration:fitl-rules": "node scripts/run-tests.mjs --lane integration:fitl-rules",
     "test:integration:texas-cross-game": "node scripts/run-tests.mjs --lane integration:texas-cross-game",
+    "test:integration:slow-core": "node scripts/run-tests.mjs --lane integration:slow-core",
     "test:performance": "node --test \"dist/test/performance/**/*.test.js\"",
     "test:memory": "node --expose-gc --test \"dist/test/memory/**/*.test.js\"",
     "test:e2e": "node scripts/run-tests.mjs --lane e2e",

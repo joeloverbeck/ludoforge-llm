@@ -1,6 +1,7 @@
 import { applyEffects } from './effects.js';
 import { createExecutionEffectContext } from './effect-context.js';
 import { evalConditionTraced } from './eval-condition.js';
+import { unwrapEvalCondition } from './eval-result.js';
 import { createEvalRuntimeResources, type EvalRuntimeResources } from './eval-context.js';
 import { assertEvalRuntimeResourcesContract } from './eval-runtime-resources-contract.js';
 import { kernelRuntimeError } from './runtime-error.js';
@@ -113,11 +114,11 @@ export const dispatchTriggers = (request: DispatchTriggersRequest): DispatchTrig
       effectPath: `${effectPathRoot}.trigger:${trigger.id}`,
     };
 
-    if (trigger.match !== undefined && !evalConditionTraced(trigger.match, evalCtx, 'triggerMatch', triggerProvenance)) {
+    if (trigger.match !== undefined && !unwrapEvalCondition(evalConditionTraced(trigger.match, evalCtx, 'triggerMatch', triggerProvenance))) {
       continue;
     }
 
-    if (trigger.when !== undefined && !evalConditionTraced(trigger.when, evalCtx, 'triggerWhen', triggerProvenance)) {
+    if (trigger.when !== undefined && !unwrapEvalCondition(evalConditionTraced(trigger.when, evalCtx, 'triggerWhen', triggerProvenance))) {
       continue;
     }
 

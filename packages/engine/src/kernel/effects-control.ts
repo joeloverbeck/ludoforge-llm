@@ -59,9 +59,11 @@ export const applyIf = (
   updateReadScope(scope, cursor, env);
   const evalCtx = scope;
   // Skip trace provenance construction when condition tracing is disabled (saves ~131K object allocations)
-  const predicate = env.collector.conditionTrace !== null
+  const predicateResult = env.collector.conditionTrace !== null
     ? evalConditionTraced(effect.if.when, evalCtx, 'ifBranch', envCursorProvenance(env, cursor))
     : evalCondition(effect.if.when, evalCtx);
+  if (predicateResult.outcome === 'error') throw predicateResult.error;
+  const predicate = predicateResult.value;
 
   if (predicate) {
     const thenResult = applyEffectsWithBudget(effect.if.then, env, withCursorTrace(env, cursor, '.if.then'), budget);

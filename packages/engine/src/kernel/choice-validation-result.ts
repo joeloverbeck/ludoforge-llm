@@ -11,9 +11,12 @@ export type ChoiceValidationResult<T> =
   | { readonly outcome: 'success'; readonly value: T }
   | { readonly outcome: 'error'; readonly error: ChoiceValidationError };
 
+/** Constant for the choice validation error code. */
+export const CHOICE_VALIDATION_ERROR_CODE = 'CHOICE_RUNTIME_VALIDATION_FAILED' as const;
+
 /** Structured error for choice validation failures. */
 export type ChoiceValidationError = {
-  readonly code: 'CHOICE_RUNTIME_VALIDATION_FAILED';
+  readonly code: typeof CHOICE_VALIDATION_ERROR_CODE;
   readonly message: string;
   readonly context?: Readonly<Record<string, unknown>>;
 };
@@ -31,7 +34,7 @@ export const choiceValidationFailed = (
 ): ChoiceValidationResult<never> => ({
   outcome: 'error',
   error: {
-    code: 'CHOICE_RUNTIME_VALIDATION_FAILED',
+    code: CHOICE_VALIDATION_ERROR_CODE,
     message,
     ...(context !== undefined ? { context } : {}),
   },

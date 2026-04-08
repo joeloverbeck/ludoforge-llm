@@ -6,6 +6,7 @@ import {
   asPlayerId,
   deserializeGameState,
   evalCondition,
+  unwrapEvalCondition,
   serializeGameState,
   type ConditionAST,
   type ReadContext,
@@ -44,7 +45,7 @@ describe('evaluation integration - complex scenario', () => {
     };
 
     const before = serializeGameState(state);
-    const result = evalCondition(condition, ctx);
+    const result = unwrapEvalCondition(evalCondition(condition, ctx));
     const after = serializeGameState(state);
 
     assert.equal(result, true);

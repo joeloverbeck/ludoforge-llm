@@ -9,6 +9,7 @@ import {
   buildAdjacencyGraph,
   createExecutionEffectContext,
   evalCondition,
+  unwrapEvalCondition,
   initialState,
   validateMapPayload,
   type ConditionAST,
@@ -96,8 +97,8 @@ describe('space marker lattice rules', () => {
       state: 'activeSupport',
     };
 
-    assert.equal(evalCondition(legalCondition, ctx), true);
-    assert.equal(evalCondition(illegalCondition, ctx), false);
+    assert.equal(unwrapEvalCondition(evalCondition(legalCondition, ctx)), true);
+    assert.equal(unwrapEvalCondition(evalCondition(illegalCondition, ctx)), false);
   });
 
   it('evaluates markerShiftAllowed with the same transition semantics as shiftMarker', () => {
@@ -122,15 +123,15 @@ describe('space marker lattice rules', () => {
     });
 
     assert.equal(
-      evalCondition({ op: 'markerShiftAllowed', space: 'saigon:none', marker: 'supportOpposition', delta: 1 }, evalCtx),
+      unwrapEvalCondition(evalCondition({ op: 'markerShiftAllowed', space: 'saigon:none', marker: 'supportOpposition', delta: 1 }, evalCtx)),
       false,
     );
     assert.equal(
-      evalCondition({ op: 'markerShiftAllowed', space: 'saigon:none', marker: 'supportOpposition', delta: -1 }, evalCtx),
+      unwrapEvalCondition(evalCondition({ op: 'markerShiftAllowed', space: 'saigon:none', marker: 'supportOpposition', delta: -1 }, evalCtx)),
       true,
     );
     assert.equal(
-      evalCondition({ op: 'markerShiftAllowed', space: 'central-laos:none', marker: 'supportOpposition', delta: 1 }, evalCtx),
+      unwrapEvalCondition(evalCondition({ op: 'markerShiftAllowed', space: 'central-laos:none', marker: 'supportOpposition', delta: 1 }, evalCtx)),
       false,
     );
 

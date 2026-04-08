@@ -10,6 +10,7 @@ import {
   asZoneId,
   buildAdjacencyGraph,
   evalCondition,
+  unwrapEvalCondition,
   evalQueryRaw,
   initialState,
   legalMoves,
@@ -130,7 +131,7 @@ describe('spatial kernel integration', () => {
       },
       ctx,
     );
-    const isConnected = evalCondition({ op: 'connected', from: 'a:none', to: 'b:none' }, ctx);
+    const isConnected = unwrapEvalCondition(evalCondition({ op: 'connected', from: 'a:none', to: 'b:none' }, ctx));
 
     assert.deepEqual(connected, [asZoneId('b:none')]);
     assert.equal(isConnected, true);

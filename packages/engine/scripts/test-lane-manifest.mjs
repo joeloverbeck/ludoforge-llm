@@ -30,6 +30,19 @@ export const E2E_SLOW_EXACT_TESTS = [
   'texas-holdem-tournament.test.ts',
 ];
 
+export const SLOW_CORE_EXACT_TESTS = [
+  'compile-event-annotations-golden.test.ts',
+  'compile-event-annotations-integration.test.ts',
+  'compiled-condition-equivalence.test.ts',
+  'effect-kind-tag-invariants.test.ts',
+  'event-preview-differentiation.test.ts',
+  'first-decision-runtime-parity.test.ts',
+  'json-schema.test.ts',
+  'observer-zone-e2e.test.ts',
+  'policy-production-golden.test.ts',
+  'prepare-playable-moves.test.ts',
+];
+
 function collectTestFiles(dir) {
   const entries = readdirSync(dir, { withFileTypes: true });
   const files = [];
@@ -65,6 +78,14 @@ export function isGamePackageIntegrationTest(sourcePath) {
   );
 }
 
+const slowCoreTests = new Set(SLOW_CORE_EXACT_TESTS);
+
+export function isSlowCoreTest(sourcePath) {
+  const normalized = sourcePath.replaceAll('\\', '/');
+  const baseName = normalized.split('/').at(-1) ?? normalized;
+  return slowCoreTests.has(baseName);
+}
+
 export function isFitlEventCardTest(sourcePath) {
   const normalized = sourcePath.replaceAll('\\', '/');
   const baseName = normalized.split('/').at(-1) ?? normalized;
@@ -77,7 +98,11 @@ export function listIntegrationTestsForLane(lane) {
       return [...ALL_INTEGRATION_TESTS];
     case 'integration:core':
       return ALL_INTEGRATION_TESTS.filter(
-        (sourcePath) => !isGamePackageIntegrationTest(sourcePath) || gamePackageSmokeTests.has(sourcePath),
+        (sourcePath) => (!isGamePackageIntegrationTest(sourcePath) || gamePackageSmokeTests.has(sourcePath)) && !isSlowCoreTest(sourcePath),
+      );
+    case 'integration:slow-core':
+      return ALL_INTEGRATION_TESTS.filter(
+        (sourcePath) => (!isGamePackageIntegrationTest(sourcePath) || gamePackageSmokeTests.has(sourcePath)) && isSlowCoreTest(sourcePath),
       );
     case 'integration:game-packages':
       return ALL_INTEGRATION_TESTS.filter(

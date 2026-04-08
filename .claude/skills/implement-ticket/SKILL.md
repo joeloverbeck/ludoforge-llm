@@ -26,7 +26,7 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
 
 1. Read `docs/FOUNDATIONS.md` before planning or coding.
 2. Read the ticket file(s) matching the provided path or glob.
-3. Read referenced specs, docs, and `Deps`. Respect worktree discipline (all reads, edits, greps, moves, and verification commands use the worktree root when the ticket lives under `.claude/worktrees/<name>/`; isolate your diff from unrelated edits).
+3. Read referenced specs, docs, `AGENTS.md`, and `Deps`. Respect worktree discipline (all reads, edits, greps, moves, and verification commands use the worktree root when the ticket lives under `.claude/worktrees/<name>/`; isolate your diff from unrelated edits).
 4. Before editing, inspect repo state (for example `git status --short`) and call out unrelated dirty files, pre-existing failures, or evidence of concurrent work. Do this early enough that your diff can be isolated from repo-preexisting state.
 5. Extract all concrete references: file paths, functions, types, classes, modules, tests, scripts, and artifacts the ticket expects.
 
@@ -40,7 +40,7 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
 
 If the ticket was produced by `/spec-to-tickets` in this same session (with or without a preceding `/reassess-spec` that validated artifacts), abbreviate artifact verification to: confirm target files still exist, check for new dirty state from concurrent work, and verify no codebase changes occurred since the spec-to-tickets run. Skip re-grepping for types and functions already confirmed.
 
-5. Verify every referenced artifact against the live codebase with targeted reads and Grep:
+5. Verify every referenced artifact against the live codebase with targeted reads and search:
    - File existence and path accuracy
    - Named exports, functions, types, and signatures
    - Module structure and required dependencies/scripts
@@ -87,7 +87,7 @@ Every stop condition below requires resolution before implementation proceeds.
 13. **Unverifiable bug claim**: If a ticket's bug claim or measured symptom is not currently reproducible, or only the mechanism is verified while claimed incidence remains unproven, stop and resolve the boundary. Apply the **1-3-1 rule** to choose between proof-only, proof-plus-fix, or ticket-scope correction.
 14. **Scope gaps or ambiguity**: For scope gaps, implementation choices, dependency conflicts, or ambiguous boundaries, apply the **1-3-1 rule** (1 problem, 3 options, 1 recommendation).
 15. Continue reassessment after each confirmation until no boundary-affecting discrepancies remain — multiple sequential 1-3-1 rounds are normal.
-16. Before coding, restate the authoritative boundary in the conversation (one sentence summarizing the corrected scope if any corrections were made) and confirm explicitly that there are no blocking discrepancies remaining. Skip the restatement if no corrections were made — the original ticket boundary is implicitly authoritative.
+16. Before coding, restate the authoritative boundary in working notes (one sentence summarizing the corrected scope if any corrections were made) and confirm explicitly that there are no blocking discrepancies remaining. Skip the restatement if no corrections were made — the original ticket boundary is implicitly authoritative.
 
 **Confirmation semantics**:
 - If the user explicitly authorizes reassessment and instructs you to proceed with the best `FOUNDATIONS.md`-compliant option after you have already presented the discrepancy and choices, treat that as confirmation for the recommended option. Restate the authoritative boundary, then continue without forcing an extra round.

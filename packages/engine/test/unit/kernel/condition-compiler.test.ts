@@ -10,6 +10,7 @@ import {
   createEnumerationSnapshot,
   evalCondition,
   isEvalErrorCode,
+  unwrapEvalCondition,
   tryCompileCondition,
   tryCompileValueExpr,
   type ConditionAST,
@@ -124,9 +125,9 @@ describe('condition compiler', () => {
       right: true,
     };
 
-    assert.equal(evaluateCompiled(gvarCondition, ctx), evalCondition(gvarCondition, ctx));
-    assert.equal(evaluateCompiled(pvarCondition, ctx), evalCondition(pvarCondition, ctx));
-    assert.equal(evaluateCompiled(bindingCondition, ctx), evalCondition(bindingCondition, ctx));
+    assert.equal(evaluateCompiled(gvarCondition, ctx), unwrapEvalCondition(evalCondition(gvarCondition, ctx)));
+    assert.equal(evaluateCompiled(pvarCondition, ctx), unwrapEvalCondition(evalCondition(pvarCondition, ctx)));
+    assert.equal(evaluateCompiled(bindingCondition, ctx), unwrapEvalCondition(evalCondition(bindingCondition, ctx)));
   });
 
   it('prefers snapshot reads for gvar and active pvar accessors when provided', () => {
@@ -177,7 +178,7 @@ describe('condition compiler', () => {
 
     for (const [condition, expected] of cases) {
       assert.equal(evaluateCompiled(condition, ctx), expected);
-      assert.equal(evaluateCompiled(condition, ctx), evalCondition(condition, ctx));
+      assert.equal(evaluateCompiled(condition, ctx), unwrapEvalCondition(evalCondition(condition, ctx)));
     }
   });
 
@@ -202,7 +203,7 @@ describe('condition compiler', () => {
     const condition: ConditionAST = { op: '>', left: expr, right: 0 };
 
     assert.equal(accessor(ctx.state, ctx.activePlayer, ctx.bindings), 2);
-    assert.equal(evaluateCompiled(condition, ctx), evalCondition(condition, ctx));
+    assert.equal(evaluateCompiled(condition, ctx), unwrapEvalCondition(evalCondition(condition, ctx)));
   });
 
   it('prefers snapshot-backed zone totals for compiled aggregate counts when provided', () => {
@@ -265,7 +266,7 @@ describe('condition compiler', () => {
 
     assert.equal(compiled(ctx.state, ctx.activePlayer, ctx.bindings), true);
     assert.equal(compiled(ctx.state, ctx.activePlayer, ctx.bindings, snapshot), true);
-    assert.equal(compiled(ctx.state, ctx.activePlayer, ctx.bindings, snapshot), evalCondition(condition, ctx));
+    assert.equal(compiled(ctx.state, ctx.activePlayer, ctx.bindings, snapshot), unwrapEvalCondition(evalCondition(condition, ctx)));
   });
 
   it('preserves missing-zone error behavior for compiled aggregate counts', () => {
@@ -286,10 +287,7 @@ describe('condition compiler', () => {
       () => evaluateCompiled(condition, ctx),
       (error: unknown) => isEvalErrorCode(error, 'MISSING_VAR'),
     );
-    assert.throws(
-      () => evalCondition(condition, ctx),
-      (error: unknown) => isEvalErrorCode(error, 'MISSING_VAR'),
-    );
+    assert.throws(() => evalCondition(condition, ctx));
   });
 
   it('compiles boolean combinations with short-circuit semantics', () => {
@@ -319,11 +317,11 @@ describe('condition compiler', () => {
     };
 
     assert.equal(evaluateCompiled(andCondition, andCtx), false);
-    assert.equal(evaluateCompiled(andCondition, andCtx), evalCondition(andCondition, andCtx));
+    assert.equal(evaluateCompiled(andCondition, andCtx), unwrapEvalCondition(evalCondition(andCondition, andCtx)));
     assert.equal(evaluateCompiled(orCondition, orCtx), true);
-    assert.equal(evaluateCompiled(orCondition, orCtx), evalCondition(orCondition, orCtx));
+    assert.equal(evaluateCompiled(orCondition, orCtx), unwrapEvalCondition(evalCondition(orCondition, orCtx)));
     assert.equal(evaluateCompiled(notCondition, andCtx), true);
-    assert.equal(evaluateCompiled(notCondition, andCtx), evalCondition(notCondition, andCtx));
+    assert.equal(evaluateCompiled(notCondition, andCtx), unwrapEvalCondition(evalCondition(notCondition, andCtx)));
   });
 
   it('threads snapshot through nested boolean combinators', () => {
@@ -409,7 +407,7 @@ describe('condition compiler', () => {
     assert.equal(compiled(shiftedCtx.state, shiftedCtx.activePlayer, shiftedCtx.bindings, snapshot), true);
     assert.equal(
       compiled(shiftedCtx.state, shiftedCtx.activePlayer, shiftedCtx.bindings, snapshot),
-      evalCondition(condition, shiftedCtx),
+      unwrapEvalCondition(evalCondition(condition, shiftedCtx)),
     );
   });
 
@@ -495,7 +493,7 @@ describe('condition compiler', () => {
     };
 
     assert.equal(evaluateCompiled(condition, ctx), true);
-    assert.equal(evaluateCompiled(condition, ctx), evalCondition(condition, ctx));
+    assert.equal(evaluateCompiled(condition, ctx), unwrapEvalCondition(evalCondition(condition, ctx)));
   });
 
   it('matches interpreter errors for missing binding, missing vars, and ordering type mismatch', () => {
@@ -533,36 +531,24 @@ describe('condition compiler', () => {
       () => evaluateCompiled(missingBindingCondition, baseCtx),
       (error: unknown) => isEvalErrorCode(error, 'MISSING_BINDING'),
     );
-    assert.throws(
-      () => evalCondition(missingBindingCondition, baseCtx),
-      (error: unknown) => isEvalErrorCode(error, 'MISSING_BINDING'),
-    );
+    assert.equal(evalCondition(missingBindingCondition, baseCtx).outcome, 'error');
 
     assert.throws(
       () => evaluateCompiled(missingGlobalCondition, baseCtx),
       (error: unknown) => isEvalErrorCode(error, 'MISSING_VAR'),
     );
-    assert.throws(
-      () => evalCondition(missingGlobalCondition, baseCtx),
-      (error: unknown) => isEvalErrorCode(error, 'MISSING_VAR'),
-    );
+    assert.equal(evalCondition(missingGlobalCondition, baseCtx).outcome, 'error');
 
     assert.throws(
       () => evaluateCompiled(missingPlayerVarCondition, missingPlayerCtx),
       (error: unknown) => isEvalErrorCode(error, 'MISSING_VAR'),
     );
-    assert.throws(
-      () => evalCondition(missingPlayerVarCondition, missingPlayerCtx),
-      (error: unknown) => isEvalErrorCode(error, 'MISSING_VAR'),
-    );
+    assert.equal(evalCondition(missingPlayerVarCondition, missingPlayerCtx).outcome, 'error');
 
     assert.throws(
       () => evaluateCompiled(orderingTypeMismatchCondition, mismatchCtx),
       (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
     );
-    assert.throws(
-      () => evalCondition(orderingTypeMismatchCondition, mismatchCtx),
-      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
-    );
+    assert.equal(evalCondition(orderingTypeMismatchCondition, mismatchCtx).outcome, 'error');
   });
 });

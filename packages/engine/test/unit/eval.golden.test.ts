@@ -6,6 +6,7 @@ import {
   asPlayerId,
   deserializeGameState,
   evalCondition,
+  unwrapEvalCondition,
   evalValue,
   type ConditionAST,
   type ReadContext,
@@ -47,7 +48,7 @@ describe('evaluation golden outputs', () => {
       ],
     };
 
-    assert.equal(evalCondition(condition, ctx), true);
+    assert.equal(unwrapEvalCondition(evalCondition(condition, ctx)), true);
   });
 
   it('fixed state + aggregate expression yields stable expected number', () => {

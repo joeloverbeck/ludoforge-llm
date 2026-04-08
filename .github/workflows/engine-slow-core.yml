@@ -1,0 +1,46 @@
+name: Engine Slow Core
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/engine/**'
+      - 'data/games/**'
+      - 'scripts/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'turbo.json'
+      - 'tsconfig.base.json'
+      - 'eslint.config.js'
+      - '.github/workflows/engine-slow-core.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/engine/**'
+      - 'data/games/**'
+      - 'scripts/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'turbo.json'
+      - 'tsconfig.base.json'
+      - 'eslint.config.js'
+      - '.github/workflows/engine-slow-core.yml'
+  workflow_dispatch:
+concurrency:
+  group: engine-slow-core-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  engine-slow-core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm guard:worktree-pointers
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -F @ludoforge/engine build
+      - run: pnpm -F @ludoforge/engine test:integration:slow-core

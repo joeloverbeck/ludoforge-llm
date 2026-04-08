@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None
-**Deps**: `tickets/README.md`, `data/games/fire-in-the-lake/20-macros.md`, `data/games/fire-in-the-lake/41-content-event-decks.md`, `reports/fire-in-the-lake-rules-section-6.md`
+**Deps**: `tickets/README.md`, `data/games/fire-in-the-lake/20-macros.md`, `data/games/fire-in-the-lake/41-content-event-decks.md`, `rules/fire-in-the-lake/fire-in-the-lake-rules-section-6.md`
 
 ## Problem
 
@@ -13,7 +13,7 @@
 ## Assumption Reassessment (2026-03-10)
 
 1. Current production data for `card-58` routes ARVN Police through `fitl-space-coin-controlled` in `data/games/fire-in-the-lake/41-content-event-decks.md`.
-2. `reports/fire-in-the-lake-rules-section-6.md` section 6.4.2 confirms the baseline redeploy destinations for ARVN Police: South Vietnam LoCs or COIN Controlled spaces. No repo-local playbook artifact currently documents the narrower `US`/`ARVN`-only interpretation for `card-58`, so this ticket should record that interpretation explicitly rather than implying an existing repository citation.
+2. `rules/fire-in-the-lake/fire-in-the-lake-rules-section-6.md` section 6.4.2 confirms the baseline redeploy destinations for ARVN Police: South Vietnam LoCs or COIN Controlled spaces. No repo-local playbook artifact currently documents the narrower `US`/`ARVN`-only interpretation for `card-58`, so this ticket should record that interpretation explicitly rather than implying an existing repository citation.
 3. Existing integration coverage in `packages/engine/test/integration/fitl-events-pathet-lao.test.ts` already proves most shaded redeploy behavior, including legal LoC and ARVN-Troop destination handling. The missing regression is the negative case where ARVN Police are incorrectly allowed into a South Vietnam space controlled only by `VC`.
 4. The mismatch is in FITL game data semantics, not in the agnostic engine. The correction belongs in FITL GameSpecDoc data, optionally with a new FITL macro if that is the cleanest reuse point.
 

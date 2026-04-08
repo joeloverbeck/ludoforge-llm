@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: No engine changes expected unless reassessment proves a real architecture gap beyond current data-authored event primitives
-**Deps**: `tickets/README.md`, `reports/fire-in-the-lake-rules-section-5.md`, `reports/fire-in-the-lake-rules-section-6.md`, `data/games/fire-in-the-lake/41-events/065-096.md`, `packages/engine/test/integration/fitl-commitment-phase.test.ts`, `packages/engine/test/integration/fitl-events-1965-arvn.test.ts`, `packages/engine/test/integration/fitl-events-text-only-behavior-backfill.test.ts`, `archive/tickets/ENGINEARCH-152-legal-moves-choiceful-event-discoverability-contract.md`
+**Deps**: `tickets/README.md`, `rules/fire-in-the-lake/fire-in-the-lake-rules-section-5.md`, `rules/fire-in-the-lake/fire-in-the-lake-rules-section-6.md`, `data/games/fire-in-the-lake/41-events/065-096.md`, `packages/engine/test/integration/fitl-commitment-phase.test.ts`, `packages/engine/test/integration/fitl-events-1965-arvn.test.ts`, `packages/engine/test/integration/fitl-events-text-only-behavior-backfill.test.ts`, `archive/tickets/ENGINEARCH-152-legal-moves-choiceful-event-discoverability-contract.md`
 
 ## Problem
 

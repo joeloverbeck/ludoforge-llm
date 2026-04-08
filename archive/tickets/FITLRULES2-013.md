@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — CNL cross-validation semantic invariants and shared turn-flow mapping rules
-**Deps**: `specs/00-fitl-implementation-order.md`, `reports/fire-in-the-lake-rules-section-2.md`
+**Deps**: `specs/00-fitl-implementation-order.md`, `rules/fire-in-the-lake/fire-in-the-lake-rules-section-2.md`
 
 ## Problem
 

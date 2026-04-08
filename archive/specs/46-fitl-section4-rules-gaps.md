@@ -5,7 +5,7 @@
 **Complexity**: M
 **Dependencies**: Spec 26 (operations), Spec 27 (SAs)
 **Estimated effort**: 3-4 days
-**Source sections**: Rules Section 4 gap analysis (`reports/fire-in-the-lake-rules-section-4.md`)
+**Source sections**: Rules Section 4 gap analysis (`rules/fire-in-the-lake/fire-in-the-lake-rules-section-4.md`)
 
 ## Overview
 

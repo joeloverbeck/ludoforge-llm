@@ -5,7 +5,7 @@
 **Priority**: HIGH
 **Effort**: Reassessment only
 **Engine Changes**: No
-**Deps**: `tickets/README.md`, `archive/tickets/FREEOP/FREEOP-002-partially-implementable-sequence-batches.md`, `reports/fire-in-the-lake-rules-section-5.md`, `data/games/fire-in-the-lake/41-events/065-096.md`, `packages/engine/test/integration/fitl-events-macv.test.ts`, `packages/engine/test/integration/fitl-events-1965-arvn.test.ts`, `packages/engine/test/integration/fitl-events-text-only-behavior-backfill.test.ts`
+**Deps**: `tickets/README.md`, `archive/tickets/FREEOP/FREEOP-002-partially-implementable-sequence-batches.md`, `rules/fire-in-the-lake/fire-in-the-lake-rules-section-5.md`, `data/games/fire-in-the-lake/41-events/065-096.md`, `packages/engine/test/integration/fitl-events-macv.test.ts`, `packages/engine/test/integration/fitl-events-1965-arvn.test.ts`, `packages/engine/test/integration/fitl-events-text-only-behavior-backfill.test.ts`
 
 ## Reassessment Summary
 

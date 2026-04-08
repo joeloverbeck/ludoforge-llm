@@ -4,7 +4,7 @@
 **Priority**: HIGH  
 **Effort**: Medium  
 **Engine Changes**: Compiler + kernel + tests  
-**Dependencies**: `specs/44-fitl-section2-scenario-deck-and-pivotal-tracking.md`, `reports/fire-in-the-lake-rules-section-2.md`
+**Dependencies**: `specs/44-fitl-section2-scenario-deck-and-pivotal-tracking.md`, `rules/fire-in-the-lake/fire-in-the-lake-rules-section-2.md`
 
 ## Original Assumption and Discrepancy
 

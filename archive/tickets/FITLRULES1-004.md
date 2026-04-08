@@ -58,7 +58,7 @@ Check all call sites of `place-from-available-or-map` macro to ensure the `piece
 
 ### Confirmed assumptions
 
-1. Rule 1.4.1 in `reports/fire-in-the-lake-rules-section-1.md` explicitly allows US-led Irregulars to be sourced from the map when none are Available.
+1. Rule 1.4.1 in `rules/fire-in-the-lake/fire-in-the-lake-rules-section-1.md` explicitly allows US-led Irregulars to be sourced from the map when none are Available.
 2. The current macro blocks all US map sourcing via:
    ```yaml
    - { op: '!=', left: { param: faction }, right: 'US' }

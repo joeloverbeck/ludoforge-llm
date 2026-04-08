@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: No (GameSpecDoc/macros + integration tests)
-**Deps**: specs/29-fitl-event-card-encoding.md, data/games/fire-in-the-lake/20-macros.md, data/games/fire-in-the-lake/41-content-event-decks.md, reports/fire-in-the-lake-rules-section-6.md
+**Deps**: specs/29-fitl-event-card-encoding.md, data/games/fire-in-the-lake/20-macros.md, data/games/fire-in-the-lake/41-content-event-decks.md, rules/fire-in-the-lake/fire-in-the-lake-rules-section-6.md
 
 ## Problem
 
@@ -22,7 +22,7 @@ Canonical card-90 behavior should be:
 
 1. The previous ticket assumption (canonicalize existing source/destination relocation structure) is superseded by a rules mismatch: behavior itself is wrong, not just encoding style.
 2. Existing tests for card-90 are structural-only and do not execute runtime semantics for either side.
-3. Rules reference for the shaded redeploy clause is immediate ARVN troop redeploy semantics from Rule `6.4.2` (`reports/fire-in-the-lake-rules-section-6.md`), with the card-specific override "as if no Bases".
+3. Rules reference for the shaded redeploy clause is immediate ARVN troop redeploy semantics from Rule `6.4.2` (`rules/fire-in-the-lake/fire-in-the-lake-rules-section-6.md`), with the card-specific override "as if no Bases".
 4. Architecture target is still data-driven and generic-engine: implement via declarative event effects + reusable condition macros; no card-specific kernel branching.
 
 ## Architecture Decision

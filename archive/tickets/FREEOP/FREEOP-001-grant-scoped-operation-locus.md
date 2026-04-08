@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: No
-**Deps**: `data/games/fire-in-the-lake/41-content-event-decks.md`, `reports/fire-in-the-lake-rules-section-5.md`, `reports/fire-in-the-lake-rules-section-6.md`, `archive/tickets/FREEOP-001-grant-scoped-action-context.md`
+**Deps**: `data/games/fire-in-the-lake/41-content-event-decks.md`, `rules/fire-in-the-lake/fire-in-the-lake-rules-section-5.md`, `rules/fire-in-the-lake/fire-in-the-lake-rules-section-6.md`, `archive/tickets/FREEOP-001-grant-scoped-action-context.md`
 
 ## Problem Reassessment
 

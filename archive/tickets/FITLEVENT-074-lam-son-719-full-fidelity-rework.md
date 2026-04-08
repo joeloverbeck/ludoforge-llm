@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: No direct new architecture in this ticket; consumes generic engine work from dependent tickets
-**Deps**: `tickets/README.md`, `archive/tickets/ENGINEARCH-160-first-class-required-cross-seat-free-operation-resolution-windows.md`, `archive/tickets/ENGINEARCH-161-unify-target-bound-free-operation-viability-and-issuance-contracts.md`, `reports/fire-in-the-lake-rules-section-5.md`, `data/games/fire-in-the-lake/41-events/065-096.md`, `packages/engine/test/integration/fitl-events-lam-son-719.test.ts`
+**Deps**: `tickets/README.md`, `archive/tickets/ENGINEARCH-160-first-class-required-cross-seat-free-operation-resolution-windows.md`, `archive/tickets/ENGINEARCH-161-unify-target-bound-free-operation-viability-and-issuance-contracts.md`, `rules/fire-in-the-lake/fire-in-the-lake-rules-section-5.md`, `data/games/fire-in-the-lake/41-events/065-096.md`, `packages/engine/test/integration/fitl-events-lam-son-719.test.ts`
 
 ## Problem
 

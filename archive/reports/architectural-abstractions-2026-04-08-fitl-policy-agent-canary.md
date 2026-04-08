@@ -1,3 +1,5 @@
+**Status**: ❌ REJECTED
+
 # Architectural Abstraction Recovery: fitl-policy-agent-canary
 
 **Date**: 2026-04-08

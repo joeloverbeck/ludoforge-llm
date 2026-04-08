@@ -546,10 +546,10 @@ diagnostic sequence:
 
 | Source | Location | Content |
 |--------|----------|---------|
-| FITL Rules Section 8 | `reports/fire-in-the-lake-rules-section-8.md` | Non-player flowcharts: operation priorities, space selection, piece placement |
+| FITL Rules Section 8 | `rules/fire-in-the-lake/fire-in-the-lake-rules-section-8.md` | Non-player flowcharts: operation priorities, space selection, piece placement |
 | Victory Standings | `data/games/fire-in-the-lake/91-victory-standings.md` | Victory formulas: thresholds, scoring functions per faction |
 | Terminal Conditions | `data/games/fire-in-the-lake/90-terminal.md` | Game-ending conditions |
-| Rules Sections 1-7 | `reports/fire-in-the-lake-rules-section-*.md` | Core rules: operations, special activities, events |
+| Rules Sections 1-7 | `rules/fire-in-the-lake/fire-in-the-lake-rules-section-*.md` | Core rules: operations, special activities, events |
 
 ### 7.2 Knowledge Extraction Process
 

@@ -275,7 +275,14 @@ const executeDiscoveryEffectsStrict = (
     () => {
       const result = applyEffects(effects, createDiscoveryStrictEffectContext(baseContext));
       return {
-        request: result.pendingChoice ?? COMPLETE,
+        request: result.choiceValidationError === undefined
+          ? result.pendingChoice ?? COMPLETE
+          : {
+            kind: 'illegal',
+            complete: false,
+            reason: 'choiceValidationFailed',
+            detail: result.choiceValidationError.message,
+          },
         state: result.state,
         bindings: result.bindings ?? evalCtx.bindings,
       };
@@ -295,7 +302,14 @@ const executeDiscoveryEffectsProbe = (
     () => {
       const result = applyEffects(effects, createDiscoveryProbeEffectContext(baseContext));
       return {
-        request: result.pendingChoice ?? COMPLETE,
+        request: result.choiceValidationError === undefined
+          ? result.pendingChoice ?? COMPLETE
+          : {
+            kind: 'illegal',
+            complete: false,
+            reason: 'choiceValidationFailed',
+            detail: result.choiceValidationError.message,
+          },
         state: result.state,
         bindings: result.bindings ?? evalCtx.bindings,
       };
@@ -317,7 +331,11 @@ const evaluateProbeMoveWithChoiceValidationResult = (
   move: Move,
 ): ChoiceValidationResult<ChoiceRequest> => {
   try {
-    return choiceValidationSuccess(evaluateProbeMove(move));
+    const request = evaluateProbeMove(move);
+    if (request.kind === 'illegal' && request.reason === 'choiceValidationFailed') {
+      return choiceValidationFailed(request.detail ?? request.reason);
+    }
+    return choiceValidationSuccess(request);
   } catch (error: unknown) {
     if (isEffectRuntimeReason(error, EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED)) {
       return choiceValidationFailed(error.message, error.context);

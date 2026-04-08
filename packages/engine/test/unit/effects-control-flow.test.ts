@@ -918,7 +918,7 @@ describe('effects control-flow handlers', () => {
     assert.notDeepEqual(result.rng.state.state, ctx.rng.state.state);
   });
 
-  it('rollRandom throws when min > max', () => {
+  it('rollRandom returns a validation result when min > max', () => {
     const ctx = makeCtx();
     const effect: EffectAST = eff({
       rollRandom: {
@@ -929,10 +929,9 @@ describe('effects control-flow handlers', () => {
       },
     });
 
-    assert.throws(
-      () => applyEffect(effect, ctx),
-      (error: unknown) => error instanceof EffectRuntimeError && String(error).includes('min <= max'),
-    );
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.choiceValidationError?.code, 'CHOICE_RUNTIME_VALIDATION_FAILED');
+    assert.match(result.choiceValidationError?.message ?? '', /min <= max/);
   });
 
   it('rollRandom binding is only available inside in-scope', () => {

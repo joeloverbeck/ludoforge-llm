@@ -16,9 +16,18 @@ describe('engine test lane taxonomy policy', () => {
     const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8')) as EnginePackageJson;
 
     assert.equal(packageJson.scripts?.test, 'pnpm run schema:artifacts:check && node scripts/run-tests.mjs --lane default');
-    assert.equal(packageJson.scripts?.['test:e2e'], 'node scripts/run-tests.mjs --lane e2e');
-    assert.equal(packageJson.scripts?.['test:e2e:slow'], 'RUN_SLOW_E2E=1 node scripts/run-tests.mjs --lane e2e:slow');
-    assert.equal(packageJson.scripts?.['test:e2e:all'], 'RUN_SLOW_E2E=1 node scripts/run-tests.mjs --lane e2e:all');
+    assert.equal(
+      packageJson.scripts?.['test:e2e'],
+      'node scripts/run-with-dist-lock.mjs "node scripts/run-tests.mjs --lane e2e"',
+    );
+    assert.equal(
+      packageJson.scripts?.['test:e2e:slow'],
+      'RUN_SLOW_E2E=1 node scripts/run-with-dist-lock.mjs "node scripts/run-tests.mjs --lane e2e:slow"',
+    );
+    assert.equal(
+      packageJson.scripts?.['test:e2e:all'],
+      'RUN_SLOW_E2E=1 node scripts/run-with-dist-lock.mjs "node scripts/run-tests.mjs --lane e2e:all"',
+    );
     assert.equal(packageJson.scripts?.['test:integration'], 'node scripts/run-tests.mjs --lane integration');
     assert.equal(packageJson.scripts?.['test:integration:core'], 'node scripts/run-tests.mjs --lane integration:core');
     assert.equal(
@@ -201,5 +210,25 @@ describe('engine test lane taxonomy policy', () => {
     const expectedUnion = new Set([...fastLane, ...slowLane]);
     assert.deepEqual(new Set(allLane), expectedUnion);
     assert.equal(existsSync(e2eRoot), true);
+  });
+
+  it('routes e2e lanes through the dist lock so dist readers do not race concurrent builds', async () => {
+    const thisDir = dirname(fileURLToPath(import.meta.url));
+    const packageJsonPath = findEnginePackageJson(thisDir);
+    const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8')) as EnginePackageJson;
+
+    for (const scriptName of ['test:e2e', 'test:e2e:slow', 'test:e2e:all'] as const) {
+      const script = packageJson.scripts?.[scriptName] ?? '';
+      assert.match(
+        script,
+        /run-with-dist-lock\.mjs/u,
+        `${scriptName} must hold the engine dist lock before reading dist artifacts`,
+      );
+      assert.match(
+        script,
+        /run-tests\.mjs --lane e2e/u,
+        `${scriptName} must continue delegating to the e2e lane runner`,
+      );
+    }
   });
 });

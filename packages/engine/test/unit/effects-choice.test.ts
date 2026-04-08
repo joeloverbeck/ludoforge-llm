@@ -140,6 +140,14 @@ const invokeChoiceHandler = (
   );
 };
 
+const assertChoiceValidationMessage = (
+  result: ReturnType<typeof applyEffect> | ReturnType<typeof applyEffects>,
+  pattern: RegExp,
+): void => {
+  assert.equal(result.choiceValidationError?.code, 'CHOICE_RUNTIME_VALIDATION_FAILED');
+  assert.match(result.choiceValidationError?.message ?? '', pattern);
+};
+
 describe('effects choice assertions', () => {
   it('chooseOne succeeds when selected move param is in evaluated domain', () => {
     const ctx = makeCtx({ moveParams: { '$choice': 'beta' } });
@@ -156,7 +164,7 @@ describe('effects choice assertions', () => {
     assert.equal(result.rng, ctx.rng);
   });
 
-  it('chooseOne throws when move param binding is missing', () => {
+  it('chooseOne returns a validation result when move param binding is missing', () => {
     const ctx = makeCtx();
     const effect: EffectAST = eff({
       chooseOne: {
@@ -166,9 +174,8 @@ describe('effects choice assertions', () => {
       },
     });
 
-    assert.throws(() => applyEffect(effect, ctx), (error: unknown) => {
-      return isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('missing move param binding');
-    });
+    const result = applyEffect(effect, ctx);
+    assertChoiceValidationMessage(result, /missing move param binding/);
   });
 
   it('chooseOne returns pending choice in discovery mode when move param binding is missing', () => {
@@ -312,7 +319,7 @@ describe('effects choice assertions', () => {
     assert.equal(result.bindings['$choice@saigon:none'], 'beta');
   });
 
-  it('chooseOne threads scope across sequential effects and requires #2 for the second occurrence', () => {
+  it('chooseOne returns a validation result when sequential scope requires #2 for the second occurrence', () => {
     const ctx = makeCtx({
       moveParams: {
         '$choice': 'alpha',
@@ -335,10 +342,8 @@ describe('effects choice assertions', () => {
       }),
     ];
 
-    assert.throws(() => applyEffects(effects, ctx), (error: unknown) => {
-      return isEffectErrorCode(error, 'EFFECT_RUNTIME')
-        && String(error).includes('$choice#2');
-    });
+    const result = applyEffects(effects, ctx);
+    assertChoiceValidationMessage(result, /\$choice#2/);
   });
 
   it('chooseOne starts from a fresh scope on separate top-level calls', () => {
@@ -363,7 +368,7 @@ describe('effects choice assertions', () => {
     assert.equal(second.pendingChoice.decisionKey, '$choice');
   });
 
-  it('chooseOne throws when selected value is outside domain', () => {
+  it('chooseOne returns a validation result when selected value is outside domain', () => {
     const ctx = makeCtx({ moveParams: { '$choice': 'delta' } });
     const effect: EffectAST = eff({
       chooseOne: {
@@ -373,9 +378,8 @@ describe('effects choice assertions', () => {
       },
     });
 
-    assert.throws(() => applyEffect(effect, ctx), (error: unknown) => {
-      return isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('outside options domain');
-    });
+    const result = applyEffect(effect, ctx);
+    assertChoiceValidationMessage(result, /outside options domain/);
   });
 
   it('chooseOne owner mismatch emits strict validation reason in strict discovery contexts', () => {
@@ -494,9 +498,8 @@ describe('effects choice assertions', () => {
       },
     });
 
-    assert.throws(() => applyEffect(effect, ctx), (error: unknown) => {
-      return isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('not move-param encodable');
-    });
+    const result = applyEffect(effect, ctx);
+    assertChoiceValidationMessage(result, /not move-param encodable/);
   });
 
   it('chooseN succeeds for exact-length unique in-domain array', () => {
@@ -513,6 +516,22 @@ describe('effects choice assertions', () => {
     const result = applyEffect(effect, ctx);
     assert.equal(result.state, ctx.state);
     assert.equal(result.rng, ctx.rng);
+  });
+
+  it('chooseN returns a validation result through public applyEffect dispatch', () => {
+    const ctx = makeCtx({ moveParams: { '$picks': ['alpha', 'beta', 'gamma'] } });
+    const effect: EffectAST = eff({
+      chooseN: {
+        internalDecisionId: 'decision:$picks',
+        bind: '$picks',
+        options: { query: 'enums', values: ['alpha', 'beta', 'gamma'] },
+        max: 2,
+      },
+    });
+
+    const result = applyEffect(effect, ctx);
+    assert.equal(result.choiceValidationError?.code, 'CHOICE_RUNTIME_VALIDATION_FAILED');
+    assert.match(result.choiceValidationError?.message ?? '', /cardinality mismatch/);
   });
 
   it('chooseN returns a validation result for non-encodable selections when invoked directly', () => {
@@ -631,7 +650,7 @@ describe('effects choice assertions', () => {
     assert.equal(followupResult.state.globalVars.score, 4);
   });
 
-  it('chooseOne rejects domains with ambiguous comparable collisions', () => {
+  it('chooseOne returns a validation result for domains with ambiguous comparable collisions', () => {
     const tokenA: Token = { id: asTokenId('tok-1'), type: 'piece', props: { value: 4 } };
     const tokenB: Token = { id: asTokenId('tok-1'), type: 'piece', props: { value: 5 } };
     const baseState = makeState();
@@ -657,13 +676,11 @@ describe('effects choice assertions', () => {
       },
     });
 
-    assert.throws(
-      () => applyEffect(effect, ctx),
-      (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('ambiguous comparable values'),
-    );
+    const result = applyEffect(effect, ctx);
+    assertChoiceValidationMessage(result, /ambiguous comparable values/);
   });
 
-  it('chooseN rejects domains with ambiguous comparable collisions', () => {
+  it('chooseN returns a validation result for domains with ambiguous comparable collisions', () => {
     const tokenA: Token = { id: asTokenId('tok-1'), type: 'piece', props: { value: 4 } };
     const tokenB: Token = { id: asTokenId('tok-1'), type: 'piece', props: { value: 5 } };
     const baseState = makeState();
@@ -690,10 +707,8 @@ describe('effects choice assertions', () => {
       },
     });
 
-    assert.throws(
-      () => applyEffect(effect, ctx),
-      (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('ambiguous comparable values'),
-    );
+    const result = applyEffect(effect, ctx);
+    assertChoiceValidationMessage(result, /ambiguous comparable values/);
   });
 
   it('chooseN appends iterationPath to templated decision IDs in discovery mode', () => {
@@ -756,7 +771,7 @@ describe('effects choice assertions', () => {
     assert.deepEqual(result.bindings.$picks, ['alpha']);
   });
 
-  it('chooseN throws on duplicate selections', () => {
+  it('chooseN returns a validation result on duplicate selections', () => {
     const ctx = makeCtx({ moveParams: { '$picks': ['alpha', 'alpha'] } });
     const effect: EffectAST = eff({
       chooseN: {
@@ -767,12 +782,11 @@ describe('effects choice assertions', () => {
       },
     });
 
-    assert.throws(() => applyEffect(effect, ctx), (error: unknown) => {
-      return isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('must be unique');
-    });
+    const result = applyEffect(effect, ctx);
+    assertChoiceValidationMessage(result, /must be unique/);
   });
 
-  it('chooseN throws on wrong cardinality', () => {
+  it('chooseN returns a validation result on wrong cardinality', () => {
     const ctx = makeCtx({ moveParams: { '$picks': ['alpha'] } });
     const effect: EffectAST = eff({
       chooseN: {
@@ -783,12 +797,11 @@ describe('effects choice assertions', () => {
       },
     });
 
-    assert.throws(() => applyEffect(effect, ctx), (error: unknown) => {
-      return isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('cardinality mismatch');
-    });
+    const result = applyEffect(effect, ctx);
+    assertChoiceValidationMessage(result, /cardinality mismatch/);
   });
 
-  it('chooseN throws on out-of-domain selections', () => {
+  it('chooseN returns a validation result on out-of-domain selections', () => {
     const ctx = makeCtx({ moveParams: { '$picks': ['alpha', 'delta'] } });
     const effect: EffectAST = eff({
       chooseN: {
@@ -799,12 +812,11 @@ describe('effects choice assertions', () => {
       },
     });
 
-    assert.throws(() => applyEffect(effect, ctx), (error: unknown) => {
-      return isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('outside options domain');
-    });
+    const result = applyEffect(effect, ctx);
+    assertChoiceValidationMessage(result, /outside options domain/);
   });
 
-  it('chooseN rejects prioritized selections that skip an earlier tier', () => {
+  it('chooseN returns a validation result when prioritized selections skip an earlier tier', () => {
     const ctx = makeCtx({ moveParams: { '$picks': ['reserve-a'] } });
     const effect: EffectAST = eff({
       chooseN: {
@@ -821,10 +833,8 @@ describe('effects choice assertions', () => {
       },
     });
 
-    assert.throws(() => applyEffect(effect, ctx), (error: unknown) => {
-      return isEffectErrorCode(error, 'EFFECT_RUNTIME')
-        && String(error).includes('violates prioritized tier ordering');
-    });
+    const result = applyEffect(effect, ctx);
+    assertChoiceValidationMessage(result, /violates prioritized tier ordering/);
   });
 
   it('chooseN accepts prioritized selections that exhaust earlier tiers first', () => {
@@ -889,10 +899,8 @@ describe('effects choice assertions', () => {
       },
     });
 
-    assert.throws(() => applyEffect(effect, ctx), (error: unknown) => {
-      return isEffectErrorCode(error, 'EFFECT_RUNTIME')
-        && String(error).includes('violates prioritized tier ordering');
-    });
+    const result = applyEffect(effect, ctx);
+    assertChoiceValidationMessage(result, /violates prioritized tier ordering/);
   });
 
   it('chooseN leaves non-prioritized selections unchanged', () => {
@@ -1127,7 +1135,7 @@ describe('effects choice assertions', () => {
     assert.deepEqual(result.bindings?.['$picks@hand:0'], ['alpha']);
   });
 
-  it('chooseN throws when expression-valued bounds evaluate to non-integers', () => {
+  it('chooseN returns a validation result when expression-valued bounds evaluate to non-integers', () => {
     const ctx = makeCtx({ moveParams: { '$picks': ['alpha'] } });
     const effect: EffectAST = eff({
       chooseN: {
@@ -1138,13 +1146,11 @@ describe('effects choice assertions', () => {
       },
     });
 
-    assert.throws(
-      () => applyEffect(effect, ctx),
-      (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('must evaluate to a non-negative integer'),
-    );
+    const result = applyEffect(effect, ctx);
+    assertChoiceValidationMessage(result, /must evaluate to a non-negative integer/);
   });
 
-  it('chooseN range throws when selected count is outside min..max', () => {
+  it('chooseN returns a validation result when selected count is outside min..max', () => {
     const ctx = makeCtx({ moveParams: { '$picks': [] } });
     const effect: EffectAST = eff({
       chooseN: {
@@ -1156,49 +1162,46 @@ describe('effects choice assertions', () => {
       },
     });
 
-    assert.throws(() => applyEffect(effect, ctx), (error: unknown) => {
-      return isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('cardinality mismatch');
-    });
+    const result = applyEffect(effect, ctx);
+    assertChoiceValidationMessage(result, /cardinality mismatch/);
   });
 
-  it('chooseN throws when n is negative or non-integer', () => {
+  it('chooseN returns a validation result when n is negative or non-integer', () => {
     const negativeCtx = makeCtx({ moveParams: { '$picks': [] } });
     const nonIntegerCtx = makeCtx({ moveParams: { '$picks': ['alpha'] } });
 
-    assert.throws(
-      () =>
-        applyEffect(
-          eff({
-            chooseN: {
-              internalDecisionId: 'decision:$picks',
-              bind: '$picks',
-              options: { query: 'enums', values: ['alpha'] },
-              n: -1,
-            },
-          }),
-          negativeCtx,
-        ),
-      (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('non-negative integer'),
+    assertChoiceValidationMessage(
+      applyEffect(
+        eff({
+          chooseN: {
+            internalDecisionId: 'decision:$picks',
+            bind: '$picks',
+            options: { query: 'enums', values: ['alpha'] },
+            n: -1,
+          },
+        }),
+        negativeCtx,
+      ),
+      /non-negative integer/,
     );
 
-    assert.throws(
-      () =>
-        applyEffect(
-          eff({
-            chooseN: {
-              internalDecisionId: 'decision:$picks',
-              bind: '$picks',
-              options: { query: 'enums', values: ['alpha'] },
-              n: 1.5,
-            },
-          }),
-          nonIntegerCtx,
-        ),
-      (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('non-negative integer'),
+    assertChoiceValidationMessage(
+      applyEffect(
+        eff({
+          chooseN: {
+            internalDecisionId: 'decision:$picks',
+            bind: '$picks',
+            options: { query: 'enums', values: ['alpha'] },
+            n: 1.5,
+          },
+        }),
+        nonIntegerCtx,
+      ),
+      /non-negative integer/,
     );
   });
 
-  it('chooseN throws when cardinality declaration mixes n with max', () => {
+  it('chooseN returns a validation result when cardinality declaration mixes n with max', () => {
     const ctx = makeCtx({ moveParams: { '$picks': ['alpha'] } });
     const effect = eff({
       chooseN: {
@@ -1210,10 +1213,8 @@ describe('effects choice assertions', () => {
       },
     } as never);
 
-    assert.throws(
-      () => applyEffect(effect, ctx),
-      (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('either exact n or range'),
-    );
+    const result = applyEffect(effect, ctx);
+    assertChoiceValidationMessage(result, /either exact n or range/);
   });
 
   it('bindings shadow moveParams in options query evaluation for chooseOne', () => {
@@ -1279,7 +1280,7 @@ describe('effects choice assertions', () => {
     assert.equal(collector.decisionTrace?.[0]?.provenance.effectPath, 'test.effects[4]');
   });
 
-  it('setMarker throws when marker lattice is missing', () => {
+  it('setMarker returns a validation result when marker lattice is missing', () => {
     const ctx = makeCtx();
     const effect: EffectAST = eff({
       setMarker: {
@@ -1289,13 +1290,11 @@ describe('effects choice assertions', () => {
       },
     });
 
-    assert.throws(
-      () => applyEffect(effect, ctx),
-      (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('Unknown marker lattice'),
-    );
+    const result = applyEffect(effect, ctx);
+    assertChoiceValidationMessage(result, /Unknown marker lattice/);
   });
 
-  it('shiftMarker throws when marker lattice is missing', () => {
+  it('shiftMarker returns a validation result when marker lattice is missing', () => {
     const ctx = makeCtx();
     const effect: EffectAST = eff({
       shiftMarker: {
@@ -1305,10 +1304,8 @@ describe('effects choice assertions', () => {
       },
     });
 
-    assert.throws(
-      () => applyEffect(effect, ctx),
-      (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('Unknown marker lattice'),
-    );
+    const result = applyEffect(effect, ctx);
+    assertChoiceValidationMessage(result, /Unknown marker lattice/);
   });
 
   it('setMarker normalizes unresolved space selector bindings to effect runtime errors', () => {

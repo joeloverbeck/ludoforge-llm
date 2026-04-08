@@ -1222,6 +1222,7 @@ export interface ChoiceIllegalRequest {
   readonly options?: readonly MoveParamValue[];
   readonly min?: number;
   readonly max?: number;
+  readonly detail?: string;
   readonly reason: ChoiceIllegalReason;
 }
 

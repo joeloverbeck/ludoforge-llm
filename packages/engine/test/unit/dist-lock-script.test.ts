@@ -164,4 +164,29 @@ describe('run-with-dist-lock script', () => {
     assert.equal(waitingResult.code, 1);
     assert.match(waitingResult.stderr, /Timed out waiting for dist lock/u);
   });
+
+  it('does not reclaim a fresh heartbeat lock owned by an unverifiable process', async () => {
+    mkdirSync(tmpDir, { recursive: true });
+    const lockName = `.dist-lock-test-${randomUUID()}`;
+    const lockPath = join(lockRoot, lockName);
+    cleanupPaths.push(lockPath);
+
+    writeFileSync(
+      lockPath,
+      JSON.stringify({
+        pid: 999_999_999,
+        command: 'active elsewhere',
+        createdAt: Date.now(),
+        heartbeatAt: Date.now(),
+      }),
+      'utf8',
+    );
+
+    const waitingResult = await runWithLockResult('node -e "process.exit(0)"', lockName, {
+      ENGINE_DIST_LOCK_MAX_WAIT_MS: '100',
+    });
+
+    assert.equal(waitingResult.code, 1);
+    assert.match(waitingResult.stderr, /Timed out waiting for dist lock/u);
+  });
 });

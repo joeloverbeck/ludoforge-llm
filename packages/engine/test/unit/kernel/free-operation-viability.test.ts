@@ -6,6 +6,7 @@ import {
   asPhaseId,
   asPlayerId,
   createSeatResolutionContext,
+  doesCompletedProbeMoveChangeGameplayState,
   isFreeOperationGrantUsableInCurrentState,
   type ActionDef,
   type ActionPipelineDef,
@@ -86,6 +87,45 @@ const makeBaseState = (): GameState => ({
 });
 
 describe('free-operation viability runtime', () => {
+  it('treats choice validation failures as conservatively gameplay-changing in completed probe execution', () => {
+    const action: ActionDef = {
+      id: asActionId('operation'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [
+        eff({
+          chooseOne: {
+            internalDecisionId: 'decision:$delta',
+            bind: '$delta',
+            options: { query: 'enums', values: ['alpha', 'beta'] },
+          },
+        }) as ActionDef['effects'][number],
+      ],
+      limits: [],
+    };
+
+    const def = makeBaseDef({
+      actions: [action],
+      actionPipelines: [],
+    });
+    const state = makeBaseState();
+    const changed = doesCompletedProbeMoveChangeGameplayState(
+      def,
+      state,
+      {
+        actionId: asActionId('operation'),
+        params: { '$delta': 'gamma' },
+      },
+      createSeatResolutionContext(def, state.playerCount),
+    );
+
+    assert.equal(changed, true);
+  });
+
   it('caps high-cardinality chooseN viability probes before materializing the full search tree', () => {
     const action: ActionDef = {
       id: asActionId('operation'),

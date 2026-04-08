@@ -217,12 +217,12 @@ describe('prioritized chooseN integration', () => {
     const state = makeState(def);
     const move = makeMove();
 
-    assert.throws(
-      () => resolveMoveDecisionSequence(def, state, move, {
-        choose: (request) => (request.type === 'chooseN' ? ['board-red'] : undefined),
-      }),
-      /violates prioritized tier ordering/,
-    );
+    const invalid = resolveMoveDecisionSequence(def, state, move, {
+      choose: (request) => (request.type === 'chooseN' ? ['board-red'] : undefined),
+    });
+    assert.equal(invalid.complete, false);
+    assert.equal(invalid.illegal?.reason, 'choiceValidationFailed');
+    assert.match(invalid.illegal?.detail ?? '', /violates prioritized tier ordering/);
 
     const resolved = resolveMoveDecisionSequence(def, state, move, {
       choose: (request) => (request.type === 'chooseN' ? ['board-blue'] : undefined),

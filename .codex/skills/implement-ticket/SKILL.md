@@ -225,6 +225,7 @@ When a ticket change affects other active tickets in the same series:
 1. Run the most relevant tests for the touched area.
 2. Run required typecheck, lint, or artifact-generation commands. If a full repo-wide command is too expensive, explain what was run and what remains unverified.
 3. Report unrelated pre-existing failures separately from failures caused by your changes.
+   - Do not label a failure unrelated or pre-existing until you have ruled out local verification instability. If the failure mentions missing build outputs, generated artifacts, or `dist` modules/files, rerun the lane after a completed serialized build first.
 4. Prefer the narrowest commands that validate the real changed code path. For documentation-only tickets whose examples depend on already-verified behavior, artifact inspection plus dependency-integrity checks may suffice.
    - Repo-specific example: if `AGENTS.md` says focused engine runs should execute a concrete built test file path after build, prefer that focused file-path command over a ticket's `--test-name-pattern` example unless the broader command is itself an explicit deliverable.
 5. **Ticket-named commands are authoritative**: Run them before declaring completion unless reassessment proves them stale or superseded. Narrower checks provide fast feedback but do not replace ticket-explicit commands.
@@ -236,9 +237,11 @@ When a ticket change affects other active tickets in the same series:
 
 Tests depending on `dist` require typecheck/rebuild first. Module-resolution errors during concurrent clean/rebuild are ordering failures — rerun after the serialized build finishes.
 
+For dist-backed verification lanes, distinguish product failures from orchestration failures before classifying scope. Missing compiled test files, missing generated modules, or partial `dist` import graphs usually indicate an unstable build/output state, not a trustworthy product regression.
+
 Before running broader commands, check whether they share generated output trees, caches, or clean steps. Commands that run `clean`, write `dist`, regenerate schemas, or depend on built test files must finish before another command touching the same tree starts.
 
-**In this repo**: `pnpm -F @ludoforge/engine build`, `pnpm -F @ludoforge/engine test`, `pnpm turbo build`, and `pnpm turbo typecheck` all contend on `packages/engine/dist` — run them serially even when they all appear in the ticket's acceptance list.
+**In this repo**: `pnpm -F @ludoforge/engine build`, `pnpm -F @ludoforge/engine test`, `pnpm -F @ludoforge/engine test:e2e`, `pnpm -F @ludoforge/engine test:e2e:slow`, `pnpm turbo build`, and `pnpm turbo typecheck` all contend on `packages/engine/dist` — run them serially even when they all appear in the ticket's acceptance list.
 
 ### Escalation Ladder
 
@@ -253,6 +256,7 @@ Escalate sooner for shared exported contracts or cross-package consumers.
 ### Failure Isolation
 
 - **Broader failures**: Determine whether they are inside the corrected ticket boundary or owned by another active ticket. Do not silently absorb out-of-boundary scope. Minimal downstream fixes for shared exported contract fallout are required scope. Document as residual risk if covered by another ticket; stop and resolve with the user if not.
+  - Before calling a broader failure unrelated, rerun it in isolation under stable prerequisites and note whether it still fails. For dist-backed lanes, this means after the relevant serialized build/output-producing command has completed.
 - **Test helper staleness**: Inspect shared test helpers, fixtures, and goldens for stale assumptions. Check seed-specific helper states or turn-position fixtures. Retarget to a current seed/turn exercising the same invariant. Test malformed and unsupported shapes for clean fallback on new fast paths. Check callers constructing minimal contexts when a new fast path depends on enriched context objects.
 - **Isolating `node --test` failures**: If only a top-level file failure appears, rerun narrowly with test-name filtering or direct helper reproduction. Run built test modules directly for nested subtest output. For compiler/schema tests, reproduce minimal compile input against the built module.
 - **Raw-vs-classified debugging**: Compare raw `legalMoves(...)`, classified `enumerateLegalMoves(...)`, and downstream agent preparation surfaces separately. For agent-driven regressions, inspect the preparation layer (e.g., `preparePlayableMoves(...)`) before assuming the bug belongs to legality or move enumeration.

@@ -1,6 +1,6 @@
 # 120CHOVALRES-004: Update probe and apply-move callers, delete heuristic
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel viability probe, move application
@@ -121,3 +121,25 @@ if (result.outcome === 'error' && result.error.code === 'CHOICE_RUNTIME_VALIDATI
 1. `pnpm -F @ludoforge/engine test -- --test-name-pattern "viability"`
 2. `pnpm -F @ludoforge/engine test:e2e`
 3. `pnpm turbo typecheck && pnpm turbo test`
+
+## Outcome
+
+- Completed: 2026-04-08
+- What changed:
+  - Migrated public effect dispatch and its probe/apply-move callers to preserve choice validation failures as structured results instead of rethrow-driven control flow.
+  - Deleted `hasTransportLikeStateChangeFallback` and replaced the free-operation viability fallback with conservative result-based handling.
+  - Updated legal-choice and apply-move bridges so choice validation failures still surface as `choiceValidationFailed` / `MOVE_PARAMS_INVALID` where the public contract requires them.
+  - Added and updated unit/integration coverage for choice-validation result propagation, probe viability behavior, and related legality surfaces.
+  - Post-implementation review also fixed the adjacent engine dist-lock race that could make `test:e2e` report missing compiled Texas Hold'em files during concurrent builds by routing e2e lanes through the dist lock and making lock ownership heartbeat-based.
+- Deviations from original plan:
+  - The live code boundary required updating `effect-dispatch.ts` and legal-choice bridges in addition to the two files named in the ticket because earlier slices had left the public dispatcher rethrow in place.
+  - `pnpm -F @ludoforge/engine test:e2e` was not a stable signal until the adjacent dist-lock cleanup landed; the final verified state is green.
+- Verification results:
+  - `grep -r "hasTransportLikeStateChangeFallback" packages/engine/src/` returned no hits.
+  - `grep -rn "CHOICE_RUNTIME_VALIDATION_FAILED" packages/engine/src/kernel/free-operation-viability.ts` returned no hits.
+  - `grep -rn "CHOICE_RUNTIME_VALIDATION_FAILED" packages/engine/src/kernel/apply-move.ts` returned no hits.
+  - `pnpm -F @ludoforge/engine build` passed.
+  - Focused built tests for the touched unit/integration files passed, including `free-operation-viability`, `effects-choice`, `apply-move`, `legal-choices`, `choice-membership-parity`, `prioritized-choose-n`, and `space-marker-rules`.
+  - `pnpm -F @ludoforge/engine test:e2e` passed after the dist-lock cleanup.
+  - `pnpm turbo typecheck` passed.
+  - `pnpm turbo test` passed.

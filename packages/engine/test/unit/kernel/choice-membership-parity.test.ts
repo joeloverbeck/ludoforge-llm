@@ -119,14 +119,17 @@ describe('choice membership parity', () => {
     const def = makeDef([chooseOneEffect]);
     const state = makeState();
 
-    assert.throws(
-      () => legalChoicesDiscover(def, state, makeMove({ '$token': asTokenId('tok-missing') })),
-      (error: unknown) => error instanceof Error && error.message.includes('invalid selection for chooseOne'),
+    assert.deepEqual(
+      legalChoicesDiscover(def, state, makeMove({ '$token': asTokenId('tok-missing') })),
+      {
+        kind: 'illegal',
+        complete: false,
+        reason: 'choiceValidationFailed',
+        detail: 'invalid selection for chooseOne "$token" ($token): outside options domain',
+      },
     );
 
-    assert.throws(
-      () => applyEffect(chooseOneEffect, makeEffectContext({ '$token': asTokenId('tok-missing') })),
-      (error: unknown) => isEffectErrorCode(error, 'EFFECT_RUNTIME') && String(error).includes('outside options domain'),
-    );
+    const effectResult = applyEffect(chooseOneEffect, makeEffectContext({ '$token': asTokenId('tok-missing') }));
+    assert.match(effectResult.choiceValidationError?.message ?? '', /outside options domain/);
   });
 });

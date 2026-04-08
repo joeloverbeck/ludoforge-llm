@@ -181,16 +181,14 @@ describe('space marker lattice rules', () => {
       }).resources,
     });
 
-    assert.throws(
-      () => applyEffects([eff({
-        setMarker: {
-          space: 'central-laos:none',
-          marker: 'supportOpposition',
-          state: 'activeSupport',
-        },
-      })], setCtx),
-      /illegal for lattice "supportOpposition"/,
-    );
+    const setResult = applyEffects([eff({
+      setMarker: {
+        space: 'central-laos:none',
+        marker: 'supportOpposition',
+        state: 'activeSupport',
+      },
+    })], setCtx);
+    assert.match(setResult.choiceValidationError?.message ?? '', /illegal for lattice "supportOpposition"/);
 
     // shiftMarker on a constrained space is a no-op (not an error) — the
     // marker stays at its current state when the destination violates a

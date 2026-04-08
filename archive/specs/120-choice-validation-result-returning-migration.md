@@ -1,6 +1,6 @@
 # Spec 120 — Choice Validation Result-Returning Migration
 
-**Status**: DRAFT
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — kernel choice subsystem + viability probe heuristic elimination
@@ -155,3 +155,23 @@ Remove the `hasTransportLikeStateChangeFallback` function (currently lines ~348-
 - Other throw sites outside the choice validation pipeline (e.g., `ILLEGAL_MOVE`, `BUDGET_EXHAUSTED`) — these are genuine runtime errors, not control-flow
 - Changes to the choice domain compilation pipeline (compile-time validation) — out of scope
 - Performance optimization of the probe path — out of scope unless regression is detected
+
+## Outcome
+
+- Completed: 2026-04-08
+- What changed:
+  - Implemented the migration in the intended ticket series: `120CHOVALRES-002`, `120CHOVALRES-003`, and `120CHOVALRES-004`.
+  - Choice validation in the runtime choice pipeline now propagates as structured result data rather than throw-driven control flow through the public effect-dispatch / legality / apply-move boundaries that this spec targeted.
+  - Deleted `hasTransportLikeStateChangeFallback` from `free-operation-viability.ts` and replaced it with conservative result-based viability handling.
+  - Updated adjacent legality and move-application callers so choice validation failures still surface through the existing illegal-move and discovery contracts where required.
+  - Post-implementation refinement fixed the engine dist-lock race that could make `test:e2e` report missing compiled Texas Hold'em files during concurrent builds; the e2e lanes now hold the dist lock and the lock script uses heartbeat-based ownership.
+- Deviations from original plan:
+  - The live code boundary required a `PartialEffectResult`-style integration through `effect-dispatch.ts` and nearby legal-choice adapters rather than a narrower two-file caller migration.
+  - The migration was completed across the ticket series rather than as a single direct change set on the spec itself, but the architectural end state described here was achieved.
+- Verification results:
+  - `grep -r "hasTransportLikeStateChangeFallback" packages/engine/src/` returned no hits.
+  - `grep -rn "throw.*CHOICE_RUNTIME_VALIDATION_FAILED" packages/engine/src/kernel/effects-choice.ts` returned no hits.
+  - `pnpm -F @ludoforge/engine build` passed.
+  - `pnpm -F @ludoforge/engine test:e2e` passed.
+  - `pnpm turbo typecheck` passed.
+  - `pnpm turbo test` passed.

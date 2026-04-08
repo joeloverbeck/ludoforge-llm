@@ -1,5 +1,5 @@
 import { closeSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 
@@ -10,6 +10,7 @@ const lockPath = join(lockRoot, lockName);
 const pollMs = 200;
 const staleMs = 30 * 60 * 1000;
 const maxWaitMs = Number.parseInt(process.env.ENGINE_DIST_LOCK_MAX_WAIT_MS ?? '', 10) || 5 * 60 * 1000;
+const heartbeatMs = 1000;
 
 const command = process.argv.slice(2).join(' ').trim();
 
@@ -95,6 +96,9 @@ const isExpectedLockOwnerProcess = (pid, startedAtTicks) => {
 const isStale = (metadataRaw) => {
   try {
     const metadata = JSON.parse(metadataRaw);
+    if (typeof metadata?.heartbeatAt === 'number') {
+      return (Date.now() - metadata.heartbeatAt) > staleMs;
+    }
     const staleByAge = typeof metadata?.createdAt === 'number' && (Date.now() - metadata.createdAt) > staleMs;
     const staleByPid = typeof metadata?.pid === 'number'
       && !isExpectedLockOwnerProcess(metadata.pid, metadata.startedAtTicks);
@@ -135,6 +139,7 @@ const tryAcquire = () => {
           command,
           createdAt: Date.now(),
           startedAtTicks: selfStartTicks,
+          heartbeatAt: Date.now(),
         }),
         'utf8',
       );
@@ -158,6 +163,20 @@ const tryAcquire = () => {
 
 const release = () => {
   rmSync(lockPath, { recursive: true, force: true });
+};
+
+const refreshHeartbeat = () => {
+  writeFileSync(
+    lockPath,
+    JSON.stringify({
+      pid: process.pid,
+      command,
+      createdAt: Date.now(),
+      startedAtTicks: selfStartTicks,
+      heartbeatAt: Date.now(),
+    }),
+    'utf8',
+  );
 };
 
 const acquire = async () => {
@@ -186,21 +205,42 @@ process.on('SIGTERM', () => {
   process.exit(143);
 });
 
+let activeChild = null;
+
 try {
-  const result = spawnSync(command, {
-    stdio: 'inherit',
-    env: {
-      ...process.env,
-      ENGINE_DIST_LOCK_HELD: '1',
-    },
-    shell: true,
+  const heartbeatTimer = setInterval(() => {
+    try {
+      refreshHeartbeat();
+    } catch {
+      // If the lock file is unexpectedly removed, the child process will still finish;
+      // cleanup will attempt to remove the path again.
+    }
+  }, heartbeatMs);
+  heartbeatTimer.unref?.();
+
+  const result = await new Promise((resolvePromise, rejectPromise) => {
+    activeChild = spawn(command, {
+      stdio: 'inherit',
+      env: {
+        ...process.env,
+        ENGINE_DIST_LOCK_HELD: '1',
+      },
+      shell: true,
+    });
+
+    activeChild.on('error', rejectPromise);
+    activeChild.on('exit', (code, signal) => {
+      resolvePromise({ code, signal });
+    });
   });
 
-  if (result.error) {
-    throw result.error;
-  }
+  clearInterval(heartbeatTimer);
+  activeChild = null;
 
-  process.exitCode = result.status ?? 1;
+  process.exitCode = result.code ?? (result.signal === null ? 1 : 1);
 } finally {
+  if (activeChild !== null) {
+    activeChild.kill('SIGTERM');
+  }
   cleanup();
 }

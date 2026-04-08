@@ -694,7 +694,7 @@ phase: [asPhaseId('main')],
     assert.equal(result.canConfirm, false);
   });
 
-  it('3c. chooseN throws when expression-valued max is non-integer or negative', () => {
+  it('3c. chooseN returns illegal choiceValidationFailed when expression-valued max is non-integer or negative', () => {
     const action: ActionDef = {
       id: asActionId('badDynamicBounds'),
 actor: 'active',
@@ -719,9 +719,9 @@ phase: [asPhaseId('main')],
     const def = makeBaseDef({ actions: [action] });
     const state = makeBaseState();
 
-    assert.throws(
-      () => legalChoicesDiscover(def, state, makeMove('badDynamicBounds')),
-      (error: unknown) => error instanceof Error && error.message.includes('maximum cardinality must evaluate'),
+    assert.deepStrictEqual(
+      legalChoicesDiscover(def, state, makeMove('badDynamicBounds')),
+      { kind: 'illegal', complete: false, reason: 'choiceValidationFailed', detail: 'chooseN maximum cardinality must evaluate to a non-negative integer' },
     );
   });
 
@@ -779,7 +779,7 @@ phase: [asPhaseId('main')],
     assert.deepStrictEqual(r3, { kind: 'complete', complete: true });
   });
 
-  it('5. invalid selection in params throws descriptive error', () => {
+  it('5. invalid selection in params returns illegal choiceValidationFailed with detail', () => {
     const action: ActionDef = {
       id: asActionId('pickColor'),
 actor: 'active',
@@ -803,12 +803,13 @@ phase: [asPhaseId('main')],
     const def = makeBaseDef({ actions: [action] });
     const state = makeBaseState();
 
-    assert.throws(
-      () => legalChoicesDiscover(def, state, makeMove('pickColor', { '$color': 'purple' })),
-      (err: Error) => {
-        assert.ok(err.message.includes('invalid selection'));
-        assert.ok(err.message.includes('$color'));
-        return true;
+    assert.deepStrictEqual(
+      legalChoicesDiscover(def, state, makeMove('pickColor', { '$color': 'purple' })),
+      {
+        kind: 'illegal',
+        complete: false,
+        reason: 'choiceValidationFailed',
+        detail: 'invalid selection for chooseOne "$color" ($color): outside options domain',
       },
     );
   });
@@ -858,9 +859,9 @@ phase: [asPhaseId('main')],
     ];
 
     const state = makeBaseState();
-    assert.throws(
-      () => legalChoicesDiscover(def, state, makeMove('pickScheduleRow')),
-      (error: unknown) => error instanceof Error && error.message.includes('not move-param encodable'),
+    assert.deepStrictEqual(
+      legalChoicesDiscover(def, state, makeMove('pickScheduleRow')),
+      { kind: 'illegal', complete: false, reason: 'choiceValidationFailed', detail: 'chooseOne options domain item is not move-param encodable: $row' },
     );
   });
 

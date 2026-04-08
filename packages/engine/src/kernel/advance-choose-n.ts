@@ -41,11 +41,17 @@ const findPendingChooseN = (
   if (request.kind === 'illegal') {
     throw kernelRuntimeError(
       'LEGAL_CHOICES_VALIDATION_FAILED',
-      `advanceChooseN: current selection is illegal for ${decisionKey}`,
+      request.reason === 'choiceValidationFailed'
+        ? request.detail ?? `advanceChooseN: current selection is illegal for ${decisionKey}`
+        : `advanceChooseN: current selection is illegal for ${decisionKey}`,
       {
         actionId: partialMove.actionId,
         param: String(decisionKey),
-        value: { currentSelected, reason: request.reason },
+        value: {
+          currentSelected,
+          reason: request.reason,
+          ...(request.detail === undefined ? {} : { detail: request.detail }),
+        },
       },
     );
   }

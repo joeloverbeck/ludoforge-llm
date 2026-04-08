@@ -352,7 +352,9 @@ describe('effect error context contracts', () => {
     );
 
     const applyMoveSource = readKernelSource('src/kernel/apply-move.ts');
-    assert.match(applyMoveSource, /isEffectRuntimeReason\(\s*err,\s*EFFECT_RUNTIME_REASONS\.CHOICE_RUNTIME_VALIDATION_FAILED\s*\)/u);
+    assert.match(applyMoveSource, /result\.illegal\?\.reason\s*===\s*'choiceValidationFailed'/u);
+    assert.match(applyMoveSource, /sequence\.illegal\?\.reason\s*===\s*'choiceValidationFailed'/u);
+    assert.doesNotMatch(applyMoveSource, /CHOICE_RUNTIME_VALIDATION_FAILED/u);
     assert.doesNotMatch(applyMoveSource, /context\?\.reason\s*===\s*'choiceRuntimeValidationFailed'/u);
 
     const legalChoicesSource = readKernelSource('src/kernel/legal-choices.ts');

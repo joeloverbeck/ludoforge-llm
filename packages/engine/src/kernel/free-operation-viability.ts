@@ -9,7 +9,6 @@ import { unwrapEvalCondition } from './eval-result.js';
 import { createEvalRuntimeResources, type ReadContext } from './eval-context.js';
 import { createExecutionEffectContext } from './effect-context.js';
 import { applyEffects } from './effects.js';
-import { isEffectRuntimeReason } from './effect-error.js';
 import {
   collectGrantAwareMoveZoneCandidates,
   resolveGrantMoveActionClassOverride,
@@ -47,7 +46,6 @@ import {
 } from './move-runtime-bindings.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { buildAdjacencyGraph } from './spatial.js';
-import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import type {
   ActionPipelineDef,
   ChoicePendingRequest,
@@ -346,75 +344,6 @@ const decisionBindingsForMove = (
     : resolvePipelineDecisionBindingsForMove(pipeline, moveParams);
 };
 
-const hasTransportLikeStateChangeFallback = (
-  def: GameDef,
-  state: GameState,
-  move: Move,
-): boolean => {
-  const zoneIds = new Set(def.zones.map((zone) => String(zone.id)));
-  const tokenZoneById = new Map<string, string>(
-    Object.entries(state.zones).flatMap(([zoneId, tokens]) => tokens.map((token) => [String(token.id), zoneId] as const)),
-  );
-  let sawExplicitDestinationBinding = false;
-
-  for (const [paramName, value] of Object.entries(move.params)) {
-    if (typeof value !== 'string' || !zoneIds.has(value)) {
-      continue;
-    }
-    const delimiter = paramName.lastIndexOf('@');
-    if (delimiter < 0 || delimiter === paramName.length - 1) {
-      continue;
-    }
-    sawExplicitDestinationBinding = true;
-    const tokenId = paramName.slice(delimiter + 1);
-    const currentZone = tokenZoneById.get(tokenId);
-    if (currentZone !== undefined && currentZone !== value) {
-      return true;
-    }
-  }
-  if (sawExplicitDestinationBinding) {
-    return false;
-  }
-
-  const tokenIds = new Set(tokenZoneById.keys());
-  const selectedZones = new Set<string>();
-  let selectedTokens = 0;
-
-  const visitValue = (value: MoveParamValue | undefined): void => {
-    if (value === undefined) {
-      return;
-    }
-    if (typeof value === 'string') {
-      if (zoneIds.has(value)) {
-        selectedZones.add(value);
-      }
-      if (tokenIds.has(value)) {
-        selectedTokens += 1;
-      }
-      return;
-    }
-    if (Array.isArray(value)) {
-      for (const entry of value) {
-        if (typeof entry !== 'string') {
-          continue;
-        }
-        if (zoneIds.has(entry)) {
-          selectedZones.add(entry);
-        }
-        if (tokenIds.has(entry)) {
-          selectedTokens += 1;
-        }
-      }
-    }
-  };
-
-  for (const value of Object.values(move.params)) {
-    visitValue(value);
-  }
-
-  return selectedTokens > 0 && selectedZones.size > 1;
-};
-
 const isCompletedProbeMoveCurrentlyLegal = (
   def: GameDef,
   state: GameState,
@@ -536,60 +465,60 @@ export const doesCompletedProbeMoveChangeGameplayState = (
   } as const;
 
   let afterActionState: GameState;
-  try {
-    afterActionState = executionProfile === undefined
-      ? applyEffects(action.effects, createExecutionEffectContext({
+  if (executionProfile === undefined) {
+    const result = applyEffects(action.effects, createExecutionEffectContext({
+      ...effectCtxBase,
+      traceContext: {
+        eventContext: 'actionEffect',
+        actionId: String(action.id),
+        effectPathRoot: `action:${String(action.id)}.effects`,
+      },
+      effectPath: '',
+    }));
+    if (result.choiceValidationError !== undefined) {
+      return true;
+    }
+    afterActionState = result.state;
+  } else {
+    let currentState = state;
+    let currentBindings: Readonly<Record<string, unknown>> = effectCtxBase.bindings;
+    for (const [stageIdx, stage] of executionProfile.resolutionStages.entries()) {
+      const stageEvalCtx = {
+        ...preflight.evalCtx,
+        state: currentState,
+        bindings: currentBindings,
+      };
+      const status = evaluateStagePredicateStatus(
+        action,
+        executionProfile.profileId,
+        stage,
+        executionProfile.partialMode,
+        stageEvalCtx,
+        { includeCostValidation: move.freeOperation !== true },
+      );
+      const viability = decideApplyMovePipelineViability(status, { isFreeOperation: move.freeOperation === true });
+      if (viability.kind === 'illegalMove' || !viability.costValidationPassed) {
+        continue;
+      }
+      const result = applyEffects(stage.effects, createExecutionEffectContext({
         ...effectCtxBase,
+        bindings: currentBindings,
+        state: currentState,
+        rng: { state: currentState.rng },
         traceContext: {
           eventContext: 'actionEffect',
           actionId: String(action.id),
-          effectPathRoot: `action:${String(action.id)}.effects`,
+          effectPathRoot: `action:${String(action.id)}.stages[${stageIdx}]`,
         },
         effectPath: '',
-      })).state
-      : (() => {
-        let currentState = state;
-        let currentBindings: Readonly<Record<string, unknown>> = effectCtxBase.bindings;
-        for (const [stageIdx, stage] of executionProfile.resolutionStages.entries()) {
-          const stageEvalCtx = {
-            ...preflight.evalCtx,
-            state: currentState,
-            bindings: currentBindings,
-          };
-          const status = evaluateStagePredicateStatus(
-            action,
-            executionProfile.profileId,
-            stage,
-            executionProfile.partialMode,
-            stageEvalCtx,
-            { includeCostValidation: move.freeOperation !== true },
-          );
-          const viability = decideApplyMovePipelineViability(status, { isFreeOperation: move.freeOperation === true });
-          if (viability.kind === 'illegalMove' || !viability.costValidationPassed) {
-            continue;
-          }
-          const result = applyEffects(stage.effects, createExecutionEffectContext({
-            ...effectCtxBase,
-            bindings: currentBindings,
-            state: currentState,
-            rng: { state: currentState.rng },
-            traceContext: {
-              eventContext: 'actionEffect',
-              actionId: String(action.id),
-              effectPathRoot: `action:${String(action.id)}.stages[${stageIdx}]`,
-            },
-            effectPath: '',
-          }));
-          currentState = result.state;
-          currentBindings = result.bindings ?? currentBindings;
-        }
-        return currentState;
-      })();
-  } catch (error) {
-    if (isEffectRuntimeReason(error, EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED)) {
-      return hasTransportLikeStateChangeFallback(def, state, move);
+      }));
+      if (result.choiceValidationError !== undefined) {
+        return true;
+      }
+      currentState = result.state;
+      currentBindings = result.bindings ?? currentBindings;
     }
-    throw error;
+    afterActionState = currentState;
   }
 
   return doesMaterialGameplayStateChange(def, state, afterActionState);

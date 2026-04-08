@@ -2,7 +2,6 @@ import { incrementActionUsage } from './action-usage.js';
 import { perfStart, perfEnd, type PerfProfiler } from './perf-profiler.js';
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
 import { applyBoundaryExpiry } from './boundary-expiry.js';
-import { isEffectRuntimeReason } from './effect-error.js';
 import { applyEffects } from './effects.js';
 import {
   executeEventMove,
@@ -26,7 +25,7 @@ import {
   deriveDecisionBindingsFromMoveParams,
   resolvePipelineDecisionBindingsForMove,
 } from './move-runtime-bindings.js';
-import { EFFECT_RUNTIME_REASONS, ILLEGAL_MOVE_REASONS } from './runtime-reasons.js';
+import { ILLEGAL_MOVE_REASONS } from './runtime-reasons.js';
 import { advanceToDecisionPoint } from './phase-advance.js';
 import { consumeUse } from './grant-lifecycle.js';
 import {
@@ -506,6 +505,11 @@ const validateDecisionSequenceForMove = (
     const result = resolveMoveDecisionSequence(def, state, move, {
       choose: () => undefined,
     }, runtime);
+    if (result.illegal?.reason === 'choiceValidationFailed') {
+      throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_PARAMS_INVALID, {
+        detail: result.illegal.detail ?? result.illegal.reason,
+      });
+    }
     if (result.complete) {
       return;
     }
@@ -527,11 +531,6 @@ const validateDecisionSequenceForMove = (
       ...(result.stochasticDecision === undefined ? {} : { decisionUncertaintySource: result.stochasticDecision.source }),
     });
   } catch (err) {
-    if (isEffectRuntimeReason(err, EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED)) {
-      throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_PARAMS_INVALID, {
-        detail: err.message,
-      });
-    }
     if (isKernelErrorCode(err, 'LEGAL_CHOICES_VALIDATION_FAILED')) {
       throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_PARAMS_INVALID, {
         detail: err.message,
@@ -1877,6 +1876,11 @@ export const probeMoveViability = (
       },
       runtime,
     );
+    if (sequence.illegal?.reason === 'choiceValidationFailed') {
+      throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_PARAMS_INVALID, {
+        detail: sequence.illegal.detail ?? sequence.illegal.reason,
+      });
+    }
     if (sequence.illegal !== undefined) {
       throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE, {
         detail: sequence.illegal.reason,

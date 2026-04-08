@@ -581,28 +581,24 @@ describe('effects setMarker', () => {
     assert.equal(result.state.markers['deck:none']?.['support'], 'activeSupport');
   });
 
-  it('throws for invalid marker state', () => {
+  it('returns a validation result for invalid marker state', () => {
     const ctx = makeMarkerCtx();
     const effect: EffectAST = eff({
       setMarker: { space: 'deck:none', marker: 'support', state: 'invalidState' },
     });
 
-    assert.throws(
-      () => applyEffect(effect, ctx),
-      (error: unknown) => error instanceof EffectRuntimeError && String(error).includes('invalidState'),
-    );
+    const result = applyEffect(effect, ctx);
+    assert.match(result.choiceValidationError?.message ?? '', /invalidState/);
   });
 
-  it('throws for unknown marker lattice', () => {
+  it('returns a validation result for unknown marker lattice', () => {
     const ctx = makeMarkerCtx();
     const effect: EffectAST = eff({
       setMarker: { space: 'deck:none', marker: 'nonexistent', state: 'neutral' },
     });
 
-    assert.throws(
-      () => applyEffect(effect, ctx),
-      (error: unknown) => error instanceof EffectRuntimeError && String(error).includes('nonexistent'),
-    );
+    const result = applyEffect(effect, ctx);
+    assert.match(result.choiceValidationError?.message ?? '', /nonexistent/);
   });
 
   it('overwrites existing marker state', () => {
@@ -713,16 +709,14 @@ describe('effects shiftMarker', () => {
     assert.equal(result.rng, ctx.rng);
   });
 
-  it('throws for unknown marker lattice', () => {
+  it('returns a validation result for unknown marker lattice', () => {
     const ctx = makeMarkerCtx();
     const effect: EffectAST = eff({
       shiftMarker: { space: 'deck:none', marker: 'unknown', delta: 1 },
     });
 
-    assert.throws(
-      () => applyEffect(effect, ctx),
-      (error: unknown) => error instanceof EffectRuntimeError && String(error).includes('unknown'),
-    );
+    const result = applyEffect(effect, ctx);
+    assert.match(result.choiceValidationError?.message ?? '', /unknown/);
   });
 });
 
@@ -785,7 +779,7 @@ describe('effects global marker lifecycle', () => {
     assert.equal(result.state.globalMarkers?.cap_topGun, 'shaded');
   });
 
-  it('flipGlobalMarker throws when current marker state is outside flip pair', () => {
+  it('flipGlobalMarker returns a validation result when current marker state is outside flip pair', () => {
     const ctx = makeMarkerCtx({
       def: {
         ...makeMarkerDef(),
@@ -805,9 +799,7 @@ describe('effects global marker lifecycle', () => {
       },
     });
 
-    assert.throws(
-      () => applyEffect(effect, ctx),
-      (error: unknown) => error instanceof EffectRuntimeError && String(error).includes('not flippable'),
-    );
+    const result = applyEffect(effect, ctx);
+    assert.match(result.choiceValidationError?.message ?? '', /not flippable/);
   });
 });

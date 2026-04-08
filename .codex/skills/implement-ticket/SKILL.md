@@ -73,6 +73,7 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
 **Sibling coherence**
 
 11. If correcting one ticket changes ownership within an active series, inspect remaining siblings, update or defer overlapping tickets, keep deps and status coherent, and run the ticket dependency checker. If a user-confirmed 1-3-1 resolution changes inter-ticket contracts, update the downstream sibling in the same turn. Note which earlier sibling outcomes remain authoritative, which were superseded, and which shared contracts or helpers are reused unchanged. See also [Series Consistency](#series-consistency) for implementation-phase rules.
+    - Before creating a new ticket or materially extending an active one, read `tickets/README.md` and `tickets/_TEMPLATE.md` unless they were already loaded in the current task. Apply repo-local ticket authoring and dependency rules instead of improvising markdown structure.
 
 ### Phase 3: Resolve Before Coding
 
@@ -92,10 +93,12 @@ Every stop condition below requires resolution before implementation proceeds.
 - Stale wording but valid boundary → keep the boundary, correct stale claims, resolve implementation direction via 1-3-1.
 - Stale deliverable inside a valid boundary → implement the live owned subset, call out the stale sub-claim explicitly in working notes/final summary, and do not trigger 1-3-1 unless the stale deliverable blocks correctness or forces a real scope decision.
 - Stale incidence but relevant mechanism/invariant → treat as a proof-boundary decision, not automatic invalidation.
+- Active ticket mostly collapsed by earlier sibling work but a concrete owned invariant still remains → rewrite the ticket around that residual live boundary instead of archiving as a no-op or absorbing unrelated sibling scope.
 - Boundary itself is wrong → stop and resolve whether to rewrite, narrow, or supersede before coding.
 
 **Post-confirmation architecture reset**:
 - When a user-confirmed 1-3-1 decision broadens or reframes the solution, restate the new authoritative boundary in working notes before coding.
+- If the confirmed resolution changes the active ticket's owned boundary, amend the active ticket first, then update affected siblings before coding.
 - Re-extract owned deliverables, affected files, and proof obligations from the confirmed boundary rather than continuing from stale phrasing.
 
 **1-3-1 edge cases** (all resolve via 1-3-1 before coding):
@@ -165,6 +168,7 @@ When a change touches schemas or contracts, check updates across these layers:
 - Do not preserve a ticket's original slice when doing so would leave the repository in a knowingly broken mid-migration state. `FOUNDATIONS.md` §14 and §15 override that slicing.
 - When a user-confirmed reassessment establishes a broader boundary, minimal repo-owned fallout may absorb work a later sibling originally claimed if necessary to make the confirmed boundary true in live runtime. Call out the absorbed sibling boundary explicitly.
 - When tightening authored `chooseN` minimums: check whether runtime `max` can drop below the new `min`; if so, update legality/cost-validation in the same change.
+- When centralizing or hoisting derived data into an earlier phase, compare the old consumer evaluation point against the new computation point and preserve any timing-sensitive filtering, state reads, or post-effect semantics.
 
 **Runtime & identity boundaries**:
 - Prefer a runtime-only storage layer behind the existing outward contract when an optimization would otherwise change canonical outward state or serialized shape.
@@ -192,12 +196,22 @@ For tickets whose primary deliverable is a measured decision:
 5. Distinguish runtime/code changes from repository-owned deliverables (ticket outcomes, archived specs, dependency rewrites, status updates).
 6. If a diagnostic report has no named output file, prefer `reports/` over ephemeral scratch files.
 
+### Investigation Tickets
+
+For tickets whose primary deliverable is a verdict rather than a production code change:
+1. Capture the decisive evidence directly in the owned ticket or other explicitly owned artifact.
+2. If the verdict warrants downstream implementation, create or extend the follow-up ticket in the same turn and keep deps/status consistent.
+3. After the verdict and any required follow-up artifact are in place, decide whether the investigation ticket is now archive-ready.
+4. If archival is the obvious next state, either complete the archival steps in the same turn when the user asked for full closeout or explicitly hand off that closeout to `post-ticket-review`.
+5. Distinguish clearly between ticket-owned deliverables (verdict text, follow-up ticket, dependency updates, archival readiness) and runtime/code changes, which may remain out of scope.
+
 ### Series Consistency
 
 When a ticket change affects other active tickets in the same series:
 - Inspect siblings for overlap, stale staged ownership, or stale assumptions.
 - Update statuses, deps, and scope text so the active series stays coherent.
 - Run `pnpm run check:ticket-deps` when available.
+- If a downstream sibling already cleanly owns the remaining fallout after reassessment, leave that sibling unchanged and just validate that deps/status still reflect the corrected boundary.
 - If sibling drift is informative but non-blocking, note it in working notes and final summary without absorbing that sibling's scope.
 - If a referenced spec mentions a deliverable split into a later sibling, keep implementation anchored to the current ticket boundary.
 - When a new follow-up spec changes framing around an adjacent active spec, prefer a small cross-reference update over rewriting the adjacent spec's problem statement.
@@ -230,7 +244,9 @@ For preparatory tickets that intentionally land shared helpers, contracts, or AP
 2. Run required typecheck, lint, or artifact-generation commands. If a full repo-wide command is too expensive, explain what was run and what remains unverified.
 3. Report unrelated pre-existing failures separately from failures caused by your changes.
 4. Prefer the narrowest commands that validate the real changed code path. For documentation-only tickets whose examples depend on already-verified behavior, artifact inspection plus dependency-integrity checks may suffice.
+   - When selecting a focused verification command for a package, inspect that package's `package.json` or existing test lanes first if the best narrow proof command is not already obvious.
 5. **Ticket-named commands are authoritative**: Run them before declaring completion unless reassessment proves them stale or superseded. Narrower checks provide fast feedback but do not replace ticket-explicit commands.
+   - Focused proof commands may run before ticket-authoritative commands for fast feedback, but they do not satisfy the ticket on their own.
 6. **Command substitution**: If a ticket's example command conflicts with live repo tooling (e.g., Jest flags in a Node test-runner package), use the repo-approved equivalent. State substitutions explicitly.
 7. **Long-running authoritative commands**: Some ticket-required verification commands may run for minutes with sparse or bursty output (for example determinism lanes or large property suites). Treat that as normal when consistent with repo history, keep the command running, and provide periodic progress updates rather than substituting a narrower check.
 

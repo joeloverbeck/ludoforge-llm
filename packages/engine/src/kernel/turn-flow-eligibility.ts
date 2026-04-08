@@ -1,10 +1,6 @@
 import { asPlayerId } from './branded.js';
 import { createEvalContext, createEvalRuntimeResources } from './eval-context.js';
-import {
-  resolveBoundaryDurationsAtTurnEnd,
-  resolveEventEligibilityOverrides,
-  resolveEventFreeOperationGrants,
-} from './event-execution.js';
+import { resolveBoundaryDurationsAtTurnEnd } from './event-execution.js';
 import { resolveFreeOperationExecutionContext } from './free-operation-execution-context.js';
 import { kernelRuntimeError } from './runtime-error.js';
 import {
@@ -30,6 +26,7 @@ import {
   insertGrantBatch,
   withPendingFreeOperationGrants,
 } from './grant-lifecycle.js';
+import { buildPendingFreeOperationGrant } from './pending-free-operation-grant-builder.js';
 import { resolveFreeOperationGrantSeatToken } from './free-operation-seat-resolution.js';
 import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
 import { buildAdjacencyGraph } from './spatial.js';
@@ -43,17 +40,16 @@ import {
 import {
   grantRequiresUsableProbe,
   isFreeOperationGrantUsableInCurrentState,
-  resolveFreeOperationGrantViabilityPolicy,
 } from './free-operation-viability.js';
 import type {
+  EventEligibilityOverrideDef,
+  EventSideEffectManifest,
   EventFreeOperationGrantDef,
   GameDef,
   GameState,
   Move,
-  TurnFlowFreeOperationGrantContract,
   TriggerLogEntry,
   TurnFlowDuration,
-  TurnFlowDeferredEventEffectPayload,
   TurnFlowPendingDeferredEventEffect,
   TurnFlowPendingEligibilityOverride,
   TurnFlowPendingFreeOperationGrant,
@@ -212,63 +208,15 @@ const resolveSeatId = (
   return seatOrder.includes(seat) ? seat : null;
 };
 
-const isEventMoveBlockedByGrantViabilityPolicy = (
-  def: GameDef,
-  state: GameState,
-  move: Move,
-  activeSeat: string,
-  seatOrder: readonly string[],
-  seatResolution: SeatResolutionContext,
-): boolean => {
-  const grantEvalContext = createEvalContext({
-    def,
-    adjacencyGraph: buildAdjacencyGraph(def.zones),
-    state,
-    activePlayer: state.activePlayer,
-    actorPlayer: state.activePlayer,
-    bindings: buildMoveRuntimeBindings(move),
-    resources: createEvalRuntimeResources(),
-  });
-  for (const grant of resolveEventFreeOperationGrants(def, state, move)) {
-    if (resolveFreeOperationGrantViabilityPolicy(grant) !== 'requireUsableForEventPlay') {
-      continue;
-    }
-    if (!isFreeOperationGrantUsableInCurrentState(def, state, grant, activeSeat, seatOrder, seatResolution, { evalContext: grantEvalContext })) {
-      return true;
-    }
-  }
-  return false;
-};
-
-export const isEventMovePlayableUnderGrantViabilityPolicy = (
-  def: GameDef,
-  state: GameState,
-  move: Move,
-  seatResolution: SeatResolutionContext,
-): boolean => {
-  const runtime = cardDrivenRuntime(state);
-  if (runtime === null) {
-    return true;
-  }
-  const activeSeat = requireCardDrivenActiveSeat(
-    def,
-    state,
-    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.WINDOW_FILTER_APPLICATION,
-    seatResolution,
-  );
-  return !isEventMoveBlockedByGrantViabilityPolicy(def, state, move, activeSeat, runtime.seatOrder, seatResolution);
-};
-
 const extractPendingEligibilityOverrides = (
   def: GameDef,
-  state: GameState,
-  move: Move,
+  declarations: readonly EventEligibilityOverrideDef[],
   activeSeat: string,
   seatOrder: readonly string[],
 ): readonly TurnFlowPendingEligibilityOverride[] => {
   const windowById = indexOverrideWindows(def);
   const overrides: TurnFlowPendingEligibilityOverride[] = [];
-  for (const declaration of resolveEventEligibilityOverrides(def, state, move)) {
+  for (const declaration of declarations) {
     const seat =
       declaration.target.kind === 'active'
         ? activeSeat
@@ -301,34 +249,6 @@ const applyEligibilityOverrides = (
   }
   return nextEligibility;
 };
-
-const toPendingFreeOperationGrant = (
-  grant: TurnFlowFreeOperationGrantContract,
-  grantId: string,
-  sequenceBatchId: string | undefined,
-  executionContext?: TurnFlowPendingFreeOperationGrant['executionContext'],
-): TurnFlowPendingFreeOperationGrant => ({
-  grantId,
-  phase: grant.sequence?.step === undefined || grant.sequence.step === 0 ? 'ready' : 'sequenceWaiting',
-  seat: grant.seat,
-  ...(grant.executeAsSeat === undefined ? {} : { executeAsSeat: grant.executeAsSeat }),
-  operationClass: grant.operationClass,
-  ...(grant.actionIds === undefined ? {} : { actionIds: [...grant.actionIds] }),
-  ...(grant.zoneFilter === undefined ? {} : { zoneFilter: grant.zoneFilter }),
-  ...(grant.tokenInterpretations === undefined ? {} : { tokenInterpretations: grant.tokenInterpretations }),
-  ...(grant.moveZoneBindings === undefined ? {} : { moveZoneBindings: [...grant.moveZoneBindings] }),
-  ...(grant.moveZoneProbeBindings === undefined ? {} : { moveZoneProbeBindings: [...grant.moveZoneProbeBindings] }),
-  ...(grant.allowDuringMonsoon === undefined ? {} : { allowDuringMonsoon: grant.allowDuringMonsoon }),
-  ...(grant.sequenceContext === undefined ? {} : { sequenceContext: grant.sequenceContext }),
-  ...(executionContext === undefined ? {} : { executionContext }),
-  ...(grant.viabilityPolicy === undefined ? {} : { viabilityPolicy: grant.viabilityPolicy }),
-  ...(grant.completionPolicy === undefined ? {} : { completionPolicy: grant.completionPolicy }),
-  ...(grant.outcomePolicy === undefined ? {} : { outcomePolicy: grant.outcomePolicy }),
-  ...(grant.postResolutionTurnFlow === undefined ? {} : { postResolutionTurnFlow: grant.postResolutionTurnFlow }),
-  remainingUses: grant.uses ?? 1,
-  ...(sequenceBatchId === undefined ? {} : { sequenceBatchId }),
-  ...(grant.sequence === undefined ? {} : { sequenceIndex: grant.sequence.step }),
-});
 
 const pendingFreeOperationGrantBaseId = (
   state: GameState,
@@ -365,6 +285,7 @@ const extractPendingFreeOperationGrants = (
   def: GameDef,
   state: GameState,
   move: Move,
+  declaredGrants: readonly EventFreeOperationGrantDef[],
   activeSeat: string,
   seatOrder: readonly string[],
   seatResolution: SeatResolutionContext,
@@ -378,7 +299,6 @@ const extractPendingFreeOperationGrants = (
   let sequenceContexts = existingSequenceContexts;
   const blockedStrictSequenceBatchIds = new Set<string>();
   const emittedBatchBaseId = pendingFreeOperationGrantBatchBaseId(state, move);
-  const declaredGrants = resolveEventFreeOperationGrants(def, state, move);
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
   const grantEvalContext = createEvalContext({
     def,
@@ -456,16 +376,14 @@ const extractPendingFreeOperationGrants = (
       [...existingPendingFreeOperationGrants, ...extracted],
       baseId,
     );
-    extracted = insertGrant(extracted, {
-      ...toPendingFreeOperationGrant(
-        grant,
-        grantId,
-        sequenceBatchId,
-        resolveFreeOperationExecutionContext(grant.executionContext, grantEvalContext),
-      ),
+    const executionContext = resolveFreeOperationExecutionContext(grant.executionContext, grantEvalContext);
+    extracted = insertGrant(extracted, buildPendingFreeOperationGrant(grant, {
+      grantId,
       seat,
       ...(executeAsSeat === undefined ? {} : { executeAsSeat }),
-    }).grants;
+      ...(sequenceBatchId === undefined ? {} : { sequenceBatchId }),
+      ...(executionContext === undefined ? {} : { executionContext }),
+    })).grants;
     if (sequenceBatchId !== undefined) {
       sequenceContexts = ensureFreeOperationSequenceBatchContext(
         sequenceContexts,
@@ -922,7 +840,7 @@ export const applyTurnFlowEligibilityAfterMove = (
   def: GameDef,
   state: GameState,
   move: Move,
-  deferredEventEffect?: TurnFlowDeferredEventEffectPayload,
+  sideEffectManifest?: EventSideEffectManifest,
   options?: {
     readonly originatingPhase?: GameState['currentPhase'];
   },
@@ -941,13 +859,16 @@ export const applyTurnFlowEligibilityAfterMove = (
   );
   const existingPendingFreeOperationGrants = runtime.pendingFreeOperationGrants ?? [];
   const existingPendingDeferredEventEffects = runtime.pendingDeferredEventEffects ?? [];
-  const newOverrides = extractPendingEligibilityOverrides(def, state, move, activeSeat, runtime.seatOrder);
+  const manifestOverrides = sideEffectManifest?.overrides ?? [];
+  const manifestGrants = sideEffectManifest?.grants ?? [];
+  const newOverrides = extractPendingEligibilityOverrides(def, manifestOverrides, activeSeat, runtime.seatOrder);
   const immediateOverrides = newOverrides.filter((override) => override.duration === 'turn');
   const deferredOverrides = newOverrides.filter((override) => override.duration === 'nextTurn');
   const newFreeOpGrants = extractPendingFreeOperationGrants(
     def,
     state,
     move,
+    manifestGrants,
     activeSeat,
     runtime.seatOrder,
     seatResolution,
@@ -970,6 +891,7 @@ export const applyTurnFlowEligibilityAfterMove = (
   );
   const pendingFreeOperationGrants = sequenceAdvanced.grants;
   const deferredRequiredBatchIds = uniqueBatchIds(newFreeOpGrants.grants);
+  const deferredEventEffect = sideEffectManifest?.deferredEventEffect;
   const deferredCandidate = deferredEventEffect === undefined
     ? undefined
     : {

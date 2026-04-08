@@ -5,9 +5,17 @@ import { createExecutionEffectContext } from './effect-context.js';
 import { evalCondition, evalConditionTraced } from './eval-condition.js';
 import { createEvalContext, createEvalRuntimeResources } from './eval-context.js';
 import { createCollector } from './execution-collector.js';
+import { cardDrivenRuntime } from './card-driven-accessors.js';
 import { isCardEventMove } from './action-capabilities.js';
+import {
+  isFreeOperationGrantUsableInCurrentState,
+  resolveFreeOperationGrantViabilityPolicy,
+} from './free-operation-viability.js';
+import type { SeatResolutionContext } from './identity.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { omitOptionalStateKey } from './state-shape.js';
+import { requireCardDrivenActiveSeat } from './turn-flow-runtime-invariants.js';
+import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';
 import type {
   ActiveLastingEffect,
@@ -18,6 +26,7 @@ import type {
   EventEffectTiming,
   EventEligibilityOverrideDef,
   EventFreeOperationGrantDef,
+  EventSideEffectManifest,
   EventTargetDef,
   ExecutionCollector,
   GameDef,
@@ -31,11 +40,17 @@ import type {
   TurnFlowDuration,
 } from './types.js';
 
-interface LastingEffectApplyResult {
+interface EventMoveExecutionResult {
   readonly state: GameState;
   readonly rng: Rng;
   readonly emittedEvents: readonly TriggerEvent[];
-  readonly deferredEventEffect?: TurnFlowDeferredEventEffectPayload;
+  readonly sideEffectManifest: EventSideEffectManifest;
+}
+
+interface ExecutionStateResult {
+  readonly state: GameState;
+  readonly rng: Rng;
+  readonly emittedEvents: readonly TriggerEvent[];
 }
 
 interface EventExecutionContext {
@@ -67,6 +82,16 @@ const collectEligibilityOverrides = (context: EventExecutionContext): readonly E
   }
   return overrides;
 };
+
+const createEventSideEffectManifest = (
+  grants: readonly EventFreeOperationGrantDef[] = [],
+  overrides: readonly EventEligibilityOverrideDef[] = [],
+  deferredEventEffect?: TurnFlowDeferredEventEffectPayload,
+): EventSideEffectManifest => ({
+  grants,
+  overrides,
+  ...(deferredEventEffect === undefined ? {} : { deferredEventEffect }),
+});
 
 const evaluateEligibilityOverrideCondition = (
   def: GameDef,
@@ -495,7 +520,7 @@ const applyEffectList = (
   actionId: string,
   effectPathRoot: string,
   policy?: MoveExecutionPolicy,
-): LastingEffectApplyResult => {
+): ExecutionStateResult => {
   const runtimeTableIndex = buildRuntimeTableIndex(def);
   const runtimeResources = createEvalRuntimeResources({
     ...(collector === undefined ? {} : { collector }),
@@ -538,10 +563,15 @@ export const executeEventMove = (
   policy?: MoveExecutionPolicy,
   collector?: ExecutionCollector,
   actionId = String(move.actionId),
-): LastingEffectApplyResult => {
+): EventMoveExecutionResult => {
   const context = resolvePlayableEventExecutionContext(def, state, move);
   if (context === null) {
-    return { state, rng, emittedEvents: [] };
+    return {
+      state,
+      rng,
+      emittedEvents: [],
+      sideEffectManifest: createEventSideEffectManifest(),
+    };
   }
 
   const eventEffects = collectEventEffects(context);
@@ -549,10 +579,7 @@ export const executeEventMove = (
     ...(context.side.lastingEffects ?? []),
     ...(context.branch?.lastingEffects ?? []),
   ];
-
-  if (eventEffects.length === 0 && lastingEffects.length === 0) {
-    return { state, rng, emittedEvents: [] };
-  }
+  const grants = collectFreeOperationGrants(context);
 
   let nextState = state;
   let nextRng = rng;
@@ -612,39 +639,71 @@ export const executeEventMove = (
       ...durationCounters(lastingEffect.duration),
     });
   }
+  const finalState = withActiveLastingEffects(nextState, activeEffects);
+  const overrides = collectEligibilityOverrides(context).filter((override) =>
+    evaluateEligibilityOverrideCondition(def, finalState, move, override)
+  );
 
   return {
-    state: withActiveLastingEffects(nextState, activeEffects),
+    state: finalState,
     rng: nextRng,
     emittedEvents,
-    ...(deferredEventEffect === undefined ? {} : { deferredEventEffect }),
+    sideEffectManifest: createEventSideEffectManifest(grants, overrides, deferredEventEffect),
   };
 };
 
-export const resolveEventFreeOperationGrants = (
+const isEventMoveBlockedByGrantViabilityPolicy = (
   def: GameDef,
   state: GameState,
   move: Move,
-): readonly EventFreeOperationGrantDef[] => {
+  activeSeat: string,
+  seatOrder: readonly string[],
+  seatResolution: SeatResolutionContext,
+): boolean => {
   const context = resolvePlayableEventExecutionContext(def, state, move);
   if (context === null) {
-    return [];
+    return false;
   }
-  return collectFreeOperationGrants(context);
+  const grantEvalContext = createEvalContext({
+    def,
+    adjacencyGraph: buildAdjacencyGraph(def.zones),
+    runtimeTableIndex: buildRuntimeTableIndex(def),
+    state,
+    activePlayer: state.activePlayer,
+    actorPlayer: state.activePlayer,
+    bindings: { ...move.params },
+    resources: createEvalRuntimeResources(),
+  });
+  for (const grant of collectFreeOperationGrants(context)) {
+    if (resolveFreeOperationGrantViabilityPolicy(grant) !== 'requireUsableForEventPlay') {
+      continue;
+    }
+    if (!isFreeOperationGrantUsableInCurrentState(def, state, grant, activeSeat, seatOrder, seatResolution, {
+      evalContext: grantEvalContext,
+    })) {
+      return true;
+    }
+  }
+  return false;
 };
 
-export const resolveEventEligibilityOverrides = (
+export const isEventMovePlayableUnderGrantViabilityPolicy = (
   def: GameDef,
   state: GameState,
   move: Move,
-): readonly EventEligibilityOverrideDef[] => {
-  const context = resolvePlayableEventExecutionContext(def, state, move);
-  if (context === null) {
-    return [];
+  seatResolution: SeatResolutionContext,
+): boolean => {
+  const runtime = cardDrivenRuntime(state);
+  if (runtime === null) {
+    return true;
   }
-  return collectEligibilityOverrides(context).filter((override) =>
-    evaluateEligibilityOverrideCondition(def, state, move, override)
+  const activeSeat = requireCardDrivenActiveSeat(
+    def,
+    state,
+    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.WINDOW_FILTER_APPLICATION,
+    seatResolution,
   );
+  return !isEventMoveBlockedByGrantViabilityPolicy(def, state, move, activeSeat, runtime.seatOrder, seatResolution);
 };
 
 export const expireLastingEffectsAtBoundaries = (
@@ -654,7 +713,7 @@ export const expireLastingEffectsAtBoundaries = (
   boundaries: readonly TurnFlowDuration[],
   policy?: MoveExecutionPolicy,
   collector?: ExecutionCollector,
-): LastingEffectApplyResult => {
+): ExecutionStateResult => {
   const activeEffects = state.activeLastingEffects;
   if (activeEffects === undefined || activeEffects.length === 0 || boundaries.length === 0) {
     return { state, rng, emittedEvents: [] };

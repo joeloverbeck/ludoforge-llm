@@ -1,9 +1,9 @@
+import { isEventMovePlayableUnderGrantViabilityPolicy } from './event-execution.js';
 import { isFreeOperationAllowedDuringMonsoonForMove } from './free-operation-discovery-analysis.js';
 import { resolveTurnFlowActionClass } from './turn-flow-action-class.js';
 import {
   hasActiveSeatRequiredPendingFreeOperationGrant,
   isMoveAllowedByRequiredPendingFreeOperationGrant,
-  isEventMovePlayableUnderGrantViabilityPolicy,
 } from './turn-flow-eligibility.js';
 import type { GameDef, GameState, Move, MoveParamValue } from './types.js';
 import type { ActionRestrictionDef, TurnFlowActionClass, TurnFlowInterruptMoveSelectorDef } from './types-turn-flow.js';

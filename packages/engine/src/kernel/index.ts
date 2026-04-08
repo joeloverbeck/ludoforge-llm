@@ -89,7 +89,19 @@ export * from './runtime-reasons.js';
 export * from './execution-collector.js';
 export * from './execution-policy.js';
 export * from './effects.js';
-export * from './event-execution.js';
+export {
+  executeEventMove,
+  expireLastingEffectsAtBoundaries,
+  isEventMovePlayableUnderGrantViabilityPolicy,
+  resolveBoundaryDurationsAtTurnEnd,
+  resolveCurrentEventCardState,
+  resolveEventCardPendingChoice,
+  resolveEventEffectList,
+  resolveEventEffectTimingForMove,
+  resolveEventTargetDefs,
+  shouldDeferIncompleteDecisionValidationForMove,
+  synthesizeEventTargetEffects,
+} from './event-execution.js';
 export * from './eval-condition.js';
 export * from './eval-context.js';
 export * from './eval-runtime-resources-contract.js';

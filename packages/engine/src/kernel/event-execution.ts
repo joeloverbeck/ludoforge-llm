@@ -5,9 +5,17 @@ import { createExecutionEffectContext } from './effect-context.js';
 import { evalCondition, evalConditionTraced } from './eval-condition.js';
 import { createEvalContext, createEvalRuntimeResources } from './eval-context.js';
 import { createCollector } from './execution-collector.js';
+import { cardDrivenRuntime } from './card-driven-accessors.js';
 import { isCardEventMove } from './action-capabilities.js';
+import {
+  isFreeOperationGrantUsableInCurrentState,
+  resolveFreeOperationGrantViabilityPolicy,
+} from './free-operation-viability.js';
+import type { SeatResolutionContext } from './identity.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { omitOptionalStateKey } from './state-shape.js';
+import { requireCardDrivenActiveSeat } from './turn-flow-runtime-invariants.js';
+import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';
 import type {
   ActiveLastingEffect,
@@ -642,6 +650,60 @@ export const executeEventMove = (
     emittedEvents,
     sideEffectManifest: createEventSideEffectManifest(grants, overrides, deferredEventEffect),
   };
+};
+
+const isEventMoveBlockedByGrantViabilityPolicy = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+  activeSeat: string,
+  seatOrder: readonly string[],
+  seatResolution: SeatResolutionContext,
+): boolean => {
+  const context = resolvePlayableEventExecutionContext(def, state, move);
+  if (context === null) {
+    return false;
+  }
+  const grantEvalContext = createEvalContext({
+    def,
+    adjacencyGraph: buildAdjacencyGraph(def.zones),
+    runtimeTableIndex: buildRuntimeTableIndex(def),
+    state,
+    activePlayer: state.activePlayer,
+    actorPlayer: state.activePlayer,
+    bindings: { ...move.params },
+    resources: createEvalRuntimeResources(),
+  });
+  for (const grant of collectFreeOperationGrants(context)) {
+    if (resolveFreeOperationGrantViabilityPolicy(grant) !== 'requireUsableForEventPlay') {
+      continue;
+    }
+    if (!isFreeOperationGrantUsableInCurrentState(def, state, grant, activeSeat, seatOrder, seatResolution, {
+      evalContext: grantEvalContext,
+    })) {
+      return true;
+    }
+  }
+  return false;
+};
+
+export const isEventMovePlayableUnderGrantViabilityPolicy = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+  seatResolution: SeatResolutionContext,
+): boolean => {
+  const runtime = cardDrivenRuntime(state);
+  if (runtime === null) {
+    return true;
+  }
+  const activeSeat = requireCardDrivenActiveSeat(
+    def,
+    state,
+    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.WINDOW_FILTER_APPLICATION,
+    seatResolution,
+  );
+  return !isEventMoveBlockedByGrantViabilityPolicy(def, state, move, activeSeat, runtime.seatOrder, seatResolution);
 };
 
 export const resolveEventFreeOperationGrants = (

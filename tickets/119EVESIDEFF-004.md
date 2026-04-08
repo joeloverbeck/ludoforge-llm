@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel exports and test migration
-**Deps**: `tickets/119EVESIDEFF-003.md`
+**Deps**: `archive/tickets/119EVESIDEFF-003.md`
 
 ## Problem
 

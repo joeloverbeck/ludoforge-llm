@@ -93,6 +93,7 @@ Every stop condition below requires resolution before implementation proceeds.
 - Stale wording but valid boundary → keep the boundary, correct stale claims, resolve implementation direction via 1-3-1.
 - Stale deliverable inside a valid boundary → implement the live owned subset, call out the stale sub-claim explicitly in working notes/final summary, and do not trigger 1-3-1 unless the stale deliverable blocks correctness or forces a real scope decision.
 - Stale incidence but relevant mechanism/invariant → treat as a proof-boundary decision, not automatic invalidation.
+- Active ticket mostly collapsed by earlier sibling work but a concrete owned invariant still remains → rewrite the ticket around that residual live boundary instead of archiving as a no-op or absorbing unrelated sibling scope.
 - Boundary itself is wrong → stop and resolve whether to rewrite, narrow, or supersede before coding.
 
 **Post-confirmation architecture reset**:
@@ -210,6 +211,7 @@ When a ticket change affects other active tickets in the same series:
 - Inspect siblings for overlap, stale staged ownership, or stale assumptions.
 - Update statuses, deps, and scope text so the active series stays coherent.
 - Run `pnpm run check:ticket-deps` when available.
+- If a downstream sibling already cleanly owns the remaining fallout after reassessment, leave that sibling unchanged and just validate that deps/status still reflect the corrected boundary.
 - If sibling drift is informative but non-blocking, note it in working notes and final summary without absorbing that sibling's scope.
 - If a referenced spec mentions a deliverable split into a later sibling, keep implementation anchored to the current ticket boundary.
 - When a new follow-up spec changes framing around an adjacent active spec, prefer a small cross-reference update over rewriting the adjacent spec's problem statement.

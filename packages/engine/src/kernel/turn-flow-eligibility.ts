@@ -1,9 +1,6 @@
 import { asPlayerId } from './branded.js';
 import { createEvalContext, createEvalRuntimeResources } from './eval-context.js';
-import {
-  resolveBoundaryDurationsAtTurnEnd,
-  resolveEventFreeOperationGrants,
-} from './event-execution.js';
+import { resolveBoundaryDurationsAtTurnEnd } from './event-execution.js';
 import { resolveFreeOperationExecutionContext } from './free-operation-execution-context.js';
 import { kernelRuntimeError } from './runtime-error.js';
 import {
@@ -43,7 +40,6 @@ import {
 import {
   grantRequiresUsableProbe,
   isFreeOperationGrantUsableInCurrentState,
-  resolveFreeOperationGrantViabilityPolicy,
 } from './free-operation-viability.js';
 import type {
   EventEligibilityOverrideDef,
@@ -210,53 +206,6 @@ const resolveSeatId = (
   seatOrder: readonly string[],
 ): string | null => {
   return seatOrder.includes(seat) ? seat : null;
-};
-
-const isEventMoveBlockedByGrantViabilityPolicy = (
-  def: GameDef,
-  state: GameState,
-  move: Move,
-  activeSeat: string,
-  seatOrder: readonly string[],
-  seatResolution: SeatResolutionContext,
-): boolean => {
-  const grantEvalContext = createEvalContext({
-    def,
-    adjacencyGraph: buildAdjacencyGraph(def.zones),
-    state,
-    activePlayer: state.activePlayer,
-    actorPlayer: state.activePlayer,
-    bindings: buildMoveRuntimeBindings(move),
-    resources: createEvalRuntimeResources(),
-  });
-  for (const grant of resolveEventFreeOperationGrants(def, state, move)) {
-    if (resolveFreeOperationGrantViabilityPolicy(grant) !== 'requireUsableForEventPlay') {
-      continue;
-    }
-    if (!isFreeOperationGrantUsableInCurrentState(def, state, grant, activeSeat, seatOrder, seatResolution, { evalContext: grantEvalContext })) {
-      return true;
-    }
-  }
-  return false;
-};
-
-export const isEventMovePlayableUnderGrantViabilityPolicy = (
-  def: GameDef,
-  state: GameState,
-  move: Move,
-  seatResolution: SeatResolutionContext,
-): boolean => {
-  const runtime = cardDrivenRuntime(state);
-  if (runtime === null) {
-    return true;
-  }
-  const activeSeat = requireCardDrivenActiveSeat(
-    def,
-    state,
-    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.WINDOW_FILTER_APPLICATION,
-    seatResolution,
-  );
-  return !isEventMoveBlockedByGrantViabilityPolicy(def, state, move, activeSeat, runtime.seatOrder, seatResolution);
 };
 
 const extractPendingEligibilityOverrides = (

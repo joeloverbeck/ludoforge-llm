@@ -1,6 +1,6 @@
 # 63GRAARRAUT-003: Migrate effects-turn-flow.ts to use insertGrant/insertGrantBatch
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel/effects-turn-flow.ts
@@ -69,3 +69,19 @@ None — existing tests cover grant creation behavior. Correctness is verified b
 
 1. `pnpm -F @ludoforge/engine build`
 2. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+**Completed**: 2026-04-08
+
+Updated `packages/engine/src/kernel/effects-turn-flow.ts` so `applyGrantFreeOperation()` delegates grant insertion to `insertGrant()` from `grant-lifecycle.ts` instead of directly appending to the pending grants array. Grant construction, sequence-context handling, and runtime state updates remain otherwise unchanged.
+
+**Deviations from original plan**
+
+- The ticket phrasing referenced both `insertGrant` and `insertGrantBatch`, but the live `applyGrantFreeOperation()` path materializes one grant at a time and had no concrete batch insertion path to migrate.
+- The ticket also mentioned merging `GrantArrayResult.trace` into function trace output, but this function does not currently produce a trace field and `insertGrant()` emits an empty trace by design. No trace behavior change was required to satisfy the live boundary.
+
+**Verification**
+
+- `pnpm -F @ludoforge/engine build`
+- `pnpm -F @ludoforge/engine test`

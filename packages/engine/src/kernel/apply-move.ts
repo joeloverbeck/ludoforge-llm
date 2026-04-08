@@ -27,7 +27,7 @@ import {
 } from './move-runtime-bindings.js';
 import { EFFECT_RUNTIME_REASONS, ILLEGAL_MOVE_REASONS } from './runtime-reasons.js';
 import { advanceToDecisionPoint } from './phase-advance.js';
-import { consumeUse, withPendingFreeOperationGrants } from './grant-lifecycle.js';
+import { consumeGrantUse, withPendingFreeOperationGrants } from './grant-lifecycle.js';
 import {
   illegalMoveError,
   isKernelErrorCode,
@@ -196,14 +196,8 @@ export const consumeAuthorizedFreeOperationGrant = (
   }
 
   const consumedGrant = runtimePending[consumedIndex]!;
-  const consumedTransition = consumeUse(consumedGrant);
-  const nextPending = consumedTransition.grant.phase === 'exhausted'
-    ? [...runtimePending.slice(0, consumedIndex), ...runtimePending.slice(consumedIndex + 1)]
-    : [
-        ...runtimePending.slice(0, consumedIndex),
-        consumedTransition.grant,
-        ...runtimePending.slice(consumedIndex + 1),
-      ];
+  const consumedTransition = consumeGrantUse(runtimePending, consumedGrant.grantId);
+  const nextPending = consumedTransition.grants;
   const captureKey = consumedGrant.sequenceContext?.captureMoveZoneCandidatesAs;
   const capturedZones = captureKey === undefined
     ? []
@@ -232,7 +226,7 @@ export const consumeAuthorizedFreeOperationGrant = (
     sequenceAdvanced.grants,
   );
   const traceEntries: TriggerLogEntry[] = [
-    consumedTransition.traceEntry,
+    ...consumedTransition.trace,
     ...sequenceAdvanced.traceEntries,
     ...splitDeferred.ready.map<TriggerLogEntry>((released) =>
       createDeferredLifecycleTraceEntry('released', released)),

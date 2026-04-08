@@ -1,6 +1,6 @@
 # 63GRAARRAUT-005: Migrate apply-move.ts to use consumeGrantUse
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel/apply-move.ts
@@ -69,3 +69,10 @@ None — existing tests cover grant consumption behavior. Correctness is verifie
 
 1. `pnpm -F @ludoforge/engine build`
 2. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+- Completed: 2026-04-08
+- Changed `packages/engine/src/kernel/apply-move.ts` so `consumeAuthorizedFreeOperationGrant()` now delegates grant consumption/removal to `consumeGrantUse`, uses the returned grants array directly, and merges the returned lifecycle trace entries.
+- Deviations from original plan: none.
+- Verification: `pnpm -F @ludoforge/engine build`; `pnpm -F @ludoforge/engine test` (474 tests passed).

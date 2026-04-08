@@ -18,6 +18,7 @@ import {
   insertGrantBatch,
   markOffered,
   skipGrant,
+  stripZoneFilterFromProbeGrant,
   transitionReadyGrantForCandidateMove,
   type GameDef,
   type GameState,
@@ -545,5 +546,23 @@ describe('grant lifecycle array operations', () => {
     assert.deepEqual(result, [existing[0], probes[0]]);
     assert.deepEqual(existing, [makeGrant()]);
     assert.deepEqual(probes, [makeGrant({ grantId: 'probe-0', seat: '1' })]);
+  });
+
+  it('stripZoneFilterFromProbeGrant removes zoneFilter from only the targeted probe grant', () => {
+    const existing = [
+      makeGrant({ grantId: 'grant-0', zoneFilter: { op: '==', left: 1, right: 1 } }),
+      makeGrant({ grantId: 'probe-0', seat: '1', zoneFilter: { op: '==', left: 2, right: 2 } }),
+    ];
+
+    const result = stripZoneFilterFromProbeGrant(existing, 'probe-0');
+
+    assert.deepEqual(result, [
+      existing[0],
+      makeGrant({ grantId: 'probe-0', seat: '1' }),
+    ]);
+    assert.deepEqual(existing, [
+      makeGrant({ grantId: 'grant-0', zoneFilter: { op: '==', left: 1, right: 1 } }),
+      makeGrant({ grantId: 'probe-0', seat: '1', zoneFilter: { op: '==', left: 2, right: 2 } }),
+    ]);
   });
 });

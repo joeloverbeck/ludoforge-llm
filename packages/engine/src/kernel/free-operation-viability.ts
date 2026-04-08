@@ -39,6 +39,7 @@ import {
   resolvePendingFreeOperationGrantSequenceStatus,
   resolveSequenceProgressionPolicy,
 } from './free-operation-sequence-progression.js';
+import { createProbeOverlay, stripZoneFilterFromProbeGrant } from './grant-lifecycle.js';
 import {
   buildMoveRuntimeBindings,
   deriveDecisionBindingsFromMoveParams,
@@ -799,7 +800,7 @@ export const isFreeOperationGrantUsableInCurrentState = (
     options?.sequenceProbeCandidates ?? [],
     options?.evalContext,
   );
-  const pendingProbeGrants = [...probeBlockers, probeGrant];
+  const pendingProbeGrants = createProbeOverlay(probeBlockers, [probeGrant]);
   const probeGrantPhase = resolveProbeGrantPhase(runtime, pendingProbeGrants, probeGrant);
   const authorizedProbeGrant = probeGrantPhase === probeGrant.phase
     ? probeGrant
@@ -807,8 +808,7 @@ export const isFreeOperationGrantUsableInCurrentState = (
       ...probeGrant,
       phase: probeGrantPhase,
     };
-  const authorizedPendingProbeGrants = pendingProbeGrants.map((pendingGrant) =>
-    pendingGrant.grantId === probeGrant.grantId ? authorizedProbeGrant : pendingGrant);
+  const authorizedPendingProbeGrants = createProbeOverlay(probeBlockers, [authorizedProbeGrant]);
   const probeActivePlayerIndex = resolvePlayerIndexForTurnFlowSeat(seat, seatResolution.index);
   const authorizationState: GameState = {
     ...state,
@@ -845,14 +845,10 @@ export const isFreeOperationGrantUsableInCurrentState = (
         ...(authorizationRuntime.pendingFreeOperationGrants === undefined
           ? {}
           : {
-            pendingFreeOperationGrants: authorizationRuntime.pendingFreeOperationGrants.map((pendingGrant: TurnFlowPendingFreeOperationGrant) => {
-              if (pendingGrant.grantId !== '__probe__') {
-                return pendingGrant;
-              }
-              const probeGrantWithoutZoneFilter = { ...pendingGrant };
-              delete probeGrantWithoutZoneFilter.zoneFilter;
-              return probeGrantWithoutZoneFilter;
-            }),
+            pendingFreeOperationGrants: stripZoneFilterFromProbeGrant(
+              authorizationRuntime.pendingFreeOperationGrants,
+              '__probe__',
+            ),
           }),
       },
     },

@@ -36,7 +36,7 @@ import {
 import {
   canResolveAmbiguousFreeOperationOverlapInCurrentState,
 } from './free-operation-viability.js';
-import { transitionReadyGrantForCandidateMove } from './grant-lifecycle.js';
+import { createProbeOverlay, transitionReadyGrantForCandidateMove } from './grant-lifecycle.js';
 import { resolveStrongestRequiredFreeOperationOutcomeGrant } from './free-operation-outcome-policy.js';
 import { resolveTurnFlowActionClass } from './turn-flow-action-class.js';
 import { isTurnFlowErrorCode } from './turn-flow-error.js';
@@ -644,15 +644,22 @@ function enumeratePendingFreeOperationMoves(
   const seenGrantMoveKeys = new Set<string>();
   const defaultActionDomain = resolveTurnFlowDefaultFreeOperationActionDomain(def);
   const isCurrentReadyGrant = (grantId: string): boolean => readyGrants.some((grant) => grant.grantId === grantId);
+  const nonCurrentReadyGrants = pending.filter(
+    (pendingGrant) => !isCurrentReadyGrant(pendingGrant.grantId),
+  );
+  const createReadyGrantScopedGrants = (
+    grantIds: readonly string[],
+  ): readonly TurnFlowPendingFreeOperationGrant[] => createProbeOverlay(
+    nonCurrentReadyGrants,
+    pending.filter((pendingGrant) => grantIds.includes(pendingGrant.grantId)),
+  );
   const createReadyGrantScopedState = (grantIds: readonly string[]): GameState => ({
     ...state,
     turnOrderState: {
       type: 'cardDriven',
       runtime: {
         ...runtime,
-        pendingFreeOperationGrants: pending.filter(
-          (pendingGrant) => grantIds.includes(pendingGrant.grantId) || !isCurrentReadyGrant(pendingGrant.grantId),
-        ),
+        pendingFreeOperationGrants: createReadyGrantScopedGrants(grantIds),
       },
     },
   });
@@ -1049,18 +1056,7 @@ function enumeratePendingFreeOperationMoves(
           if (toMoveIdentityKey(def, candidateMove) !== toMoveIdentityKey(def, baseMove)) {
             return false;
           }
-          const candidateScopedState: GameState = {
-            ...state,
-            turnOrderState: {
-              type: 'cardDriven',
-              runtime: {
-                ...runtime,
-                pendingFreeOperationGrants: pending.filter(
-                  (pendingGrant) => pendingGrant.grantId === candidateGrant.grantId || !isCurrentReadyGrant(pendingGrant.grantId),
-                ),
-              },
-            },
-          };
+          const candidateScopedState = createReadyGrantScopedState([candidateGrant.grantId]);
           if (!isFreeOperationApplicableForMove(def, candidateScopedState, candidateMove, seatResolution)) {
             return false;
           }

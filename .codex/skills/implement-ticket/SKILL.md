@@ -120,6 +120,7 @@ Every stop condition below requires resolution before implementation proceeds.
 - Implement every explicit ticket deliverable. Do not silently skip items.
 - Prefer minimal, architecture-consistent changes over local patches.
 - If an existing authority/helper API is broader than the caller's verified live contract, prefer adding the narrowest authority-level helper that preserves semantics over embedding a caller-local workaround or silently widening behavior.
+- When consolidating logic into a shared authority module, inspect the current import direction first and prefer helper placement that preserves an acyclic dependency graph.
 - Follow TDD for bug fixes: write the failing test first, then fix the code. Never adapt tests to preserve a bug.
 - Treat `docs/FOUNDATIONS.md` as higher priority than ticket wording. Surface conflicts and propose Foundation-compliant resolutions before continuing.
 - The ticket's `Files to Touch` list is a strong hint, not a hard limit. Include adjacent files for contracts, runtime consumers, schemas, fixtures, or tests when coherent completion requires them.
@@ -133,6 +134,7 @@ For tickets whose primary deliverable is a mechanical extraction, rename, dedupl
 - Prove the duplication or stale local surface exists before editing.
 - In the named module, scan private helper functions as well as exported entry points for the same class of write, mutation, alias, or local rebuild the ticket is trying to eliminate. Same-file helper fallout is usually in-scope, not a separate boundary expansion.
 - Extract or consolidate the shared surface with the narrowest architecture-consistent module or helper.
+- If the ticket's named shared helper covers only part of the live write pattern, compose it with the smallest additional authority helper needed to eliminate the remaining caller-local transform instead of leaving a special case behind.
 - Immediately scan touched files for dangling references to removed local aliases, helpers, or imports before running broader verification.
 - Prefer acceptance proof based on three things: the old local surfaces are gone, consumers now reference the shared surface, and authoritative non-regression commands pass.
 - If verification exposes a nearby dangling symbol, import, or signature ripple that is necessary to make the refactor complete, treat it as in-scope fallout rather than a separate discrepancy.

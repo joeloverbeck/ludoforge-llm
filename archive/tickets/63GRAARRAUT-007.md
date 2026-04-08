@@ -1,6 +1,6 @@
 # 63GRAARRAUT-007: Migrate legal-moves.ts and free-operation-viability.ts to use createProbeOverlay
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel/legal-moves.ts, kernel/free-operation-viability.ts
@@ -72,3 +72,20 @@ None — existing tests cover legal-move enumeration and viability analysis. Cor
 
 1. `pnpm -F @ludoforge/engine build`
 2. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+Implemented the probe-overlay migration in the two owned caller modules and added one narrow authority helper needed to preserve the live exploration contract.
+
+- `packages/engine/src/kernel/legal-moves.ts` now uses `createProbeOverlay()` for both ready-grant scoped probe states instead of directly rebuilding `pendingFreeOperationGrants` with `filter(...)`.
+- `packages/engine/src/kernel/free-operation-viability.ts` now uses `createProbeOverlay()` for the authorization probe overlays. The exploration-only `zoneFilter` stripping path moved into a new authority helper, `stripZoneFilterFromProbeGrant()`, in `packages/engine/src/kernel/grant-lifecycle.ts`.
+- `packages/engine/test/unit/kernel/grant-lifecycle.test.ts` now includes a focused proof test for `stripZoneFilterFromProbeGrant()` to lock down the non-mutating exploration rewrite.
+
+This was a small deviation from the ticket's literal mechanism: `createProbeOverlay()` alone was not sufficient for the `free-operation-viability.ts` exploration path because that path also rewrites the probe grant payload by removing `zoneFilter`. Centralizing that rewrite in a narrow authority helper preserved the live behavior without leaving a caller-local special case behind.
+
+Verification run:
+
+1. `pnpm -F @ludoforge/engine build`
+2. `pnpm -F @ludoforge/engine test`
+
+Result: passed (`474` tests passed). `schema:artifacts:check` ran as part of the engine test command and remained in sync; no generated artifact changes were needed.

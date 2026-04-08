@@ -328,6 +328,18 @@ export const createProbeOverlay = (
   ...probeGrants,
 ];
 
+export const stripZoneFilterFromProbeGrant = (
+  grants: readonly TurnFlowPendingFreeOperationGrant[],
+  grantId: string,
+): readonly TurnFlowPendingFreeOperationGrant[] => grants.map((grant) => {
+  if (grant.grantId !== grantId || grant.zoneFilter === undefined) {
+    return grant;
+  }
+  const grantWithoutZoneFilter = { ...grant };
+  delete grantWithoutZoneFilter.zoneFilter;
+  return grantWithoutZoneFilter;
+});
+
 export const withPendingFreeOperationGrants = (
   runtime: TurnFlowRuntimeState,
   grants: readonly TurnFlowPendingFreeOperationGrant[] | undefined,

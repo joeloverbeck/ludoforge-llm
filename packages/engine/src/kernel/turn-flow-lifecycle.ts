@@ -1,3 +1,4 @@
+import { cardDrivenConfig, cardDrivenRuntime } from './card-driven-accessors.js';
 import type { GameDef, GameState, Token, TriggerLogEntry, TurnFlowLifecycleStep } from './types.js';
 import { resolveTokenViewFieldValue } from './token-view.js';
 
@@ -11,15 +12,6 @@ interface LifecycleResult {
   readonly state: GameState;
   readonly traceEntries: readonly TriggerLogEntry[];
 }
-
-type CardDrivenConfig = NonNullable<Extract<GameDef['turnOrder'], { readonly type: 'cardDriven' }>['config']>;
-type CardDrivenRuntime = Extract<GameState['turnOrderState'], { readonly type: 'cardDriven' }>['runtime'];
-
-const cardDrivenConfig = (def: GameDef): CardDrivenConfig | null =>
-  def.turnOrder?.type === 'cardDriven' ? def.turnOrder.config : null;
-
-const cardDrivenRuntime = (state: GameState): CardDrivenRuntime | null =>
-  state.turnOrderState.type === 'cardDriven' ? state.turnOrderState.runtime : null;
 
 const topCardId = (state: GameState, zoneId: string): string | null => state.zones[zoneId]?.[0]?.id ?? null;
 

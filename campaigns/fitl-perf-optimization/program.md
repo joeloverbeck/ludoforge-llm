@@ -247,6 +247,9 @@ HARNESS_RUNS = 3                # 3 runs per experiment, take median
 HARNESS_SEEDS = 1               # seeds handled internally by run-benchmark.mjs
 meta_improvement = false        # meta-loop disabled for this campaign
 METRIC_DIRECTION = lower-is-better  # minimize combined_duration_ms
+PRIMARY_METRIC_KEY = combined_duration_ms  # key name parsed from harness output
+CEILING_THRESHOLD = 10          # 2 * PLATEAU_THRESHOLD — consecutive non-accepts before ceiling report
+CHECKS_TIMEOUT = 120            # timeout in seconds for checks.sh correctness guard
 ```
 
 ## OBSERVE Phase Protocol (profiling-first)

@@ -47,6 +47,7 @@ import {
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
+import { cardDrivenRuntime, type CardDrivenRuntime } from './card-driven-accessors.js';
 import type {
   ActionPipelineDef,
   ChoicePendingRequest,
@@ -58,13 +59,8 @@ import type {
   RuntimeWarning,
   TurnFlowFreeOperationGrantContract,
   TurnFlowFreeOperationGrantViabilityPolicy,
- TurnFlowPendingFreeOperationGrant,
+  TurnFlowPendingFreeOperationGrant,
 } from './types.js';
-
-type CardDrivenRuntime = Extract<GameState['turnOrderState'], { readonly type: 'cardDriven' }>['runtime'];
-
-const cardDrivenRuntime = (state: GameState): CardDrivenRuntime | null =>
-  state.turnOrderState.type === 'cardDriven' ? state.turnOrderState.runtime : null;
 
 const toPendingFreeOperationGrant = (
   grant: TurnFlowFreeOperationGrantContract,

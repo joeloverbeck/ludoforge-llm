@@ -38,7 +38,7 @@ Starting from the test file(s), build a dependency graph of engine source module
 5. Read `docs/FOUNDATIONS.md` — hold it for Phase 6 validation. Do NOT apply it yet.
 6. Read any `prior_reports` if provided — note already-identified issues to avoid rediscovery.
 7. Check for existing coverage/trace artifacts in the repo. Use them if present.
-8. Run bounded git history: `git log --since="6 months ago" --name-only` on exercised files to identify temporal coupling (files that frequently change together across commits).
+8. Run bounded git history: `git log --since="6 months ago" --name-only` on exercised files to identify temporal coupling (files that frequently change together across commits). Parse the output to identify **commit clusters** — sets of 3+ exercised files that appear together in 2+ commits. Report the top 5 most frequent clusters by co-occurrence count. Filter the git log to only commits touching 2+ of the exercised files, then count pairwise co-occurrences. The goal is a ranked list of file-pairs/groups that change together, not a raw commit dump.
 
 **Sub-agent delegation**: For large test suites (>20 direct imports or barrel re-exports), delegate import tracing to 1-3 parallel Explore sub-agents. Each agent traces a subset of the import tree. Merge their deduplicated file lists. Also delegate git history analysis to a separate sub-agent if the file list exceeds 30 modules.
 
@@ -64,6 +64,8 @@ Then cluster tests into **scenario families** — named behavioral groups. Examp
 
 Every later architectural inference must be tied back to scenario families. A finding not grounded in test behavior is speculation.
 
+Canary and integration tests may produce only 1-3 scenario families. This is expected — the value shifts from scenario-level precision to broad cross-subsystem coverage. Do not inflate scenario families to fill the table.
+
 **Sub-agent delegation**: For large test directories (>30 test files), delegate scenario extraction to 2-3 parallel Explore sub-agents, each handling a subset. Merge and deduplicate scenario families.
 
 ### Phase 3: TRACE
@@ -81,6 +83,8 @@ Each traceability link gets a confidence tag (high/medium/low) and a brief reaso
 
 The purpose of multi-strategy tracing is to catch hidden dependencies that imports alone miss — registry/dispatch patterns, builder indirection, and temporal coupling are the most common sources of invisible links in this codebase.
 
+If import analysis + temporal coupling from Phase 1 already achieve high confidence for all exercised modules, the additional strategies (static call graph, naming similarity) may be deferred. Note which strategies were used and which were skipped in the Traceability Summary.
+
 ### Phase 4: DETECT FRACTURES
 
 Scan the exercised code for these 8 fracture types:
@@ -89,7 +93,7 @@ Scan the exercised code for these 8 fracture types:
 |---|--------------|-----------------|
 | 1 | **Split protocol** | The legal sequence of interactions is spread across multiple modules/layers. Module A decides "what", module B decides "when", module C decides "whether". |
 | 2 | **Authority leak** | Multiple modules write the same truth. Two or more places create/mutate/invalidate the same piece of state. |
-| 3 | **Projection drift** | Derived summaries or cached computations are recomputed everywhere. No single module owns the projection. |
+| 3 | **Projection drift** | Derived summaries or cached computations are recomputed everywhere. No single module owns the projection. **Distinguisher from single-concept scatter**: projection drift requires the duplicated computation to be consumed by modules in **different architectural layers or subsystems** (e.g., legal-moves + apply-move + turn-flow). If all consumers are within one logical subsystem, treat it as single-concept scatter and defer to `detect-missing-abstractions`. |
 | 4 | **Boundary inversion** | Higher layers own rules that belong in lower layers. The simulator enforces what the kernel should prevent. |
 | 5 | **Concept aliasing** | The same domain concept exists under different names/types in neighboring subsystems (e.g., "grant" in one module, "capability window" in another, same semantic role). |
 | 6 | **Hidden seam** | Files across nominal module boundaries repeatedly change together in git history, suggesting they belong in the same module. |
@@ -157,9 +161,11 @@ How many candidates survived validation?>
 
 ## Traceability Summary
 
+For large module sets (>30 files), group by module cluster (e.g., "legal-moves + 40 deps") rather than listing individual files.
+
 | Module | Scenario Families | Confidence | Strategy |
 |--------|------------------|------------|----------|
-| <file> | <families> | High/Med/Low | <import/naming/temporal/...> |
+| <file or cluster> | <families> | High/Med/Low | <import/naming/temporal/...> |
 
 ## Fracture Summary
 

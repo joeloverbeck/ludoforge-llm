@@ -7,18 +7,10 @@ import {
 } from './turn-flow-eligibility.js';
 import type { GameDef, GameState, Move, MoveParamValue } from './types.js';
 import type { ActionRestrictionDef, TurnFlowActionClass, TurnFlowInterruptMoveSelectorDef } from './types-turn-flow.js';
+import { cardDrivenConfig, cardDrivenRuntime } from './card-driven-accessors.js';
 import { createSeatResolutionContext, type SeatResolutionContext } from './identity.js';
 import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
 import { requireCardDrivenActiveSeat } from './turn-flow-runtime-invariants.js';
-
-type CardDrivenConfig = NonNullable<Extract<GameDef['turnOrder'], { readonly type: 'cardDriven' }>['config']>;
-type CardDrivenRuntime = Extract<GameState['turnOrderState'], { readonly type: 'cardDriven' }>['runtime'];
-
-const cardDrivenConfig = (def: GameDef): CardDrivenConfig | null =>
-  def.turnOrder?.type === 'cardDriven' ? def.turnOrder.config : null;
-
-const cardDrivenRuntime = (state: GameState): CardDrivenRuntime | null =>
-  state.turnOrderState.type === 'cardDriven' ? state.turnOrderState.runtime : null;
 
 export function resolveConstrainedSecondEligibleActionClasses(
   def: GameDef,

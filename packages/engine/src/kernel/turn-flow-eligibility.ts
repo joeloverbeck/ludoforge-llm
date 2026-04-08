@@ -14,6 +14,7 @@ import {
   type SeatResolutionContext,
 } from './identity.js';
 import { createDeferredLifecycleTraceEntry } from './turn-flow-deferred-lifecycle-trace.js';
+import { cardDrivenConfig, cardDrivenRuntime } from './card-driven-accessors.js';
 import {
   doesGrantPotentiallyAuthorizeMove,
 } from './free-operation-grant-authorization.js';
@@ -63,17 +64,8 @@ interface TurnFlowTransitionResult {
   readonly releasedDeferredEventEffects?: readonly TurnFlowReleasedDeferredEventEffect[];
 }
 
-type CardDrivenConfig = NonNullable<Extract<GameDef['turnOrder'], { readonly type: 'cardDriven' }>['config']>;
-type CardDrivenRuntime = Extract<GameState['turnOrderState'], { readonly type: 'cardDriven' }>['runtime'];
-
 const isPassAction = (def: GameDef, move: Move): boolean =>
   String(move.actionId) === 'pass' || resolveTurnFlowActionClass(def, move) === 'pass';
-
-const cardDrivenConfig = (def: GameDef): CardDrivenConfig | null =>
-  def.turnOrder?.type === 'cardDriven' ? def.turnOrder.config : null;
-
-const cardDrivenRuntime = (state: GameState): CardDrivenRuntime | null =>
-  state.turnOrderState.type === 'cardDriven' ? state.turnOrderState.runtime : null;
 
 const normalizeFirstActionClass = (
   actionClass: ReturnType<typeof resolveTurnFlowActionClass>,

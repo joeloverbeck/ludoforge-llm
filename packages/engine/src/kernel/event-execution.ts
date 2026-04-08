@@ -18,6 +18,7 @@ import type {
   EventEffectTiming,
   EventEligibilityOverrideDef,
   EventFreeOperationGrantDef,
+  EventSideEffectManifest,
   EventTargetDef,
   ExecutionCollector,
   GameDef,
@@ -31,10 +32,14 @@ import type {
   TurnFlowDuration,
 } from './types.js';
 
-interface LastingEffectApplyResult {
+interface EventMoveExecutionResult {
   readonly state: GameState;
   readonly rng: Rng;
   readonly emittedEvents: readonly TriggerEvent[];
+  readonly sideEffectManifest: EventSideEffectManifest;
+}
+
+interface LastingEffectApplyResult extends Omit<EventMoveExecutionResult, 'sideEffectManifest'> {
   readonly deferredEventEffect?: TurnFlowDeferredEventEffectPayload;
 }
 

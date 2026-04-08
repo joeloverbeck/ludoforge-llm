@@ -61,7 +61,8 @@ export interface EventSideEffectManifest {
   readonly grants: readonly EventFreeOperationGrantDef[];
   /** Eligibility overrides declared by the event card side + branch, filtered by condition. */
   readonly overrides: readonly EventEligibilityOverrideDef[];
-  /** Deferred effect payload when effectTiming is 'afterGrants'. Undefined if effects execute immediately. */
+  /** Deferred effect payload when effectTiming is 'afterGrants'. Undefined if effects execute immediately.
+   *  Defined in `types-turn-flow.ts` (re-exported via barrel `types.ts`). */
   readonly deferredEventEffect?: TurnFlowDeferredEventEffectPayload;
 }
 ```
@@ -92,7 +93,7 @@ interface EventMoveExecutionResult {
 }
 ```
 
-`executeEventMove` already resolves the event context. It will additionally call `collectFreeOperationGrants()` and `collectEligibilityOverrides()` (already internal functions) to populate the manifest, applying the eligibility override condition filter.
+`executeEventMove` already resolves the event context. It will additionally call `collectFreeOperationGrants()` and `collectEligibilityOverrides()` (already internal functions) to populate the manifest. The `overrides` field must contain **post-filter** results: `collectEligibilityOverrides()` output must be filtered through `evaluateEligibilityOverrideCondition()` (as `resolveEventEligibilityOverrides` currently does at line 645-647) before being placed in the manifest.
 
 ### Modified: `applyTurnFlowEligibilityAfterMove`
 
@@ -146,10 +147,10 @@ applyTurnFlowEligibilityAfterMove(def, state, move, result.sideEffectManifest, .
 ### Functions That Become Internal-Only
 
 After this change, these exported functions are no longer needed by external callers:
-- `resolveEventFreeOperationGrants` — only called by `turn-flow-eligibility.ts`, replaced by manifest
-- `resolveEventEligibilityOverrides` — only called by `turn-flow-eligibility.ts`, replaced by manifest
+- `resolveEventFreeOperationGrants` — called by `turn-flow-eligibility.ts` (source) and `event-execution-targets.test.ts` (test), replaced by manifest
+- `resolveEventEligibilityOverrides` — called by `turn-flow-eligibility.ts` (source), `fitl-events-1968-nva.test.ts` (test), and `event-execution-targets.test.ts` (test), replaced by manifest
 
-Verify no other callers exist before removing exports. If other callers exist, keep exports but document that the manifest is the preferred path.
+Remove exports and migrate the 2 test files to assert against the manifest produced by `executeEventMove` instead of calling the resolve functions directly.
 
 ## FOUNDATIONS Alignment
 
@@ -163,20 +164,29 @@ Verify no other callers exist before removing exports. If other callers exist, k
 
 This approach would be wrong if:
 - **Conditional coupling exists**: If `turn-flow-eligibility.ts` needs to filter or transform grants/overrides based on state that changed between `executeEventMove` and `applyTurnFlowEligibilityAfterMove` (e.g., if grant installation can fail and overrides should only apply when grants succeed). Currently no evidence of such coupling — the re-derivation appears incidental.
-- **Other callers need the resolution functions**: If modules beyond `turn-flow-eligibility.ts` call `resolveEventFreeOperationGrants` or `resolveEventEligibilityOverrides`, the manifest may not cover all use cases. Verify before removing exports.
+- **Other callers need the resolution functions**: If modules beyond `turn-flow-eligibility.ts` call `resolveEventFreeOperationGrants` or `resolveEventEligibilityOverrides`, the manifest may not cover all use cases. Verified: only `turn-flow-eligibility.ts` (source) and 2 test files call these — both test files will be migrated.
+
+Note: `shouldDeferIncompleteDecisionValidationForMove()` (event-execution.ts:464-485) is a 4th caller of `resolvePlayableEventExecutionContext`, but it is internal to `event-execution.ts` and operates before event execution to check deferral eligibility. It does not produce side-effects and is unaffected by the manifest refactor.
 
 ## Migration Strategy
 
-1. Add `EventSideEffectManifest` type
-2. Modify `executeEventMove` to produce it (additive — old return fields still present during transition)
-3. Modify `applyTurnFlowEligibilityAfterMove` to accept it
-4. Modify `apply-move.ts` to thread it
-5. Remove old `deferredEventEffect` threading from `apply-move.ts`
-6. Remove or internalize `resolveEventFreeOperationGrants` and `resolveEventEligibilityOverrides` exports (after verifying no other callers)
+All changes are atomic per Foundation 14 (No Backwards Compatibility) — no transitional state.
+
+1. Add `EventSideEffectManifest` type to `types-events.ts`
+2. Modify `executeEventMove` to return `EventMoveExecutionResult` with `sideEffectManifest` instead of bare `deferredEventEffect`
+3. Modify `applyTurnFlowEligibilityAfterMove` to accept `EventSideEffectManifest` instead of `TurnFlowDeferredEventEffectPayload`
+4. Modify `apply-move.ts` to thread `result.sideEffectManifest` instead of `result.deferredEventEffect`
+5. Remove `resolveEventFreeOperationGrants` and `resolveEventEligibilityOverrides` exports; migrate 2 test files (`fitl-events-1968-nva.test.ts`, `event-execution-targets.test.ts`) to assert against the manifest
 
 ## Test Strategy
 
-**No behavioral changes.** All existing event card tests (~100 files in `packages/engine/test/integration/fitl-events*`) should continue passing with zero modifications. The manifest is an internal refactor — the same side-effects are produced, just computed once instead of three times.
+**No behavioral changes.** The manifest is an internal refactor — the same side-effects are produced, just computed once instead of three times. The ~114 existing event card test files in `packages/engine/test/integration/fitl-events*` should continue passing without modifications.
+
+**Test migration required**: 2 test files directly import the resolve functions being removed:
+- `packages/engine/test/integration/fitl-events-1968-nva.test.ts` — imports `resolveEventEligibilityOverrides`
+- `packages/engine/test/unit/kernel/event-execution-targets.test.ts` — imports both `resolveEventFreeOperationGrants` and `resolveEventEligibilityOverrides`
+
+These tests must be migrated to assert against the manifest produced by `executeEventMove` instead of calling the resolve functions directly.
 
 ### Verification
 

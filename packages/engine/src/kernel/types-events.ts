@@ -1,6 +1,7 @@
 import type { ConditionAST, EffectAST, OptionsQuery } from './types-ast.js';
 import type {
   ActionRestrictionDef,
+  TurnFlowDeferredEventEffectPayload,
   TurnFlowDuration,
   TurnFlowFreeOperationGrantContract,
 } from './types-turn-flow.js';
@@ -60,6 +61,15 @@ export interface EventEligibilityOverrideDef {
   readonly when?: ConditionAST;
   readonly eligible: boolean;
   readonly windowId: string;
+}
+
+export interface EventSideEffectManifest {
+  /** Free operation grants declared by the event card side + branch. */
+  readonly grants: readonly EventFreeOperationGrantDef[];
+  /** Eligibility overrides declared by the event card side + branch, post-condition-filter. */
+  readonly overrides: readonly EventEligibilityOverrideDef[];
+  /** Deferred effect payload when effectTiming is 'afterGrants'. Undefined if effects execute immediately. */
+  readonly deferredEventEffect?: TurnFlowDeferredEventEffectPayload;
 }
 
 export type EventEffectTiming = 'beforeGrants' | 'afterGrants';

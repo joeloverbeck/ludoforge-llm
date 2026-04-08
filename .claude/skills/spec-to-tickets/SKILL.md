@@ -74,6 +74,8 @@ Analyze the spec and identify discrete work units. If the spec includes a Ticket
 
 Include a 1-line scope description for each ticket as bullet text below the table. Deps in the summary table are abbreviated for readability (e.g., `001`, `None`). Ticket files use full backtick-quoted paths.
 
+If multiple tickets share the same dependency set and can be implemented in parallel, note this below the summary table (e.g., "003-007 are independent and can be implemented in parallel after 001").
+
 **Wait for user approval or adjustments.** Do not write files until the user confirms.
 
 ### Step 5: Write Ticket Files
@@ -114,9 +116,9 @@ After writing all files, list:
 
 Do NOT commit. Leave files for user review.
 
-### Step 8: Spec Back-Link (Optional)
+### Step 8: Spec Back-Link
 
-If the spec does not already have a section listing the actual generated ticket IDs (as distinct from a decomposition *guidance* section with suggested prefixes), offer to append or update one with the generated ticket IDs and their titles. This aids traceability when multiple specs are active.
+If the spec does not already have a section listing the actual generated ticket IDs (as distinct from a decomposition *guidance* section with suggested prefixes), offer to append or update one with the generated ticket IDs and their titles. This aids traceability when multiple specs are active. If the user declines, skip.
 
 ## Constraints
 

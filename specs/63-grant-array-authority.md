@@ -8,9 +8,11 @@
 
 ## Overview
 
-The `pendingFreeOperationGrants` array within `TurnFlowRuntimeState` is the kernel's most mutation-heavy shared data structure. Five modules currently write it independently, each responsible for splicing transitioned grant objects back into the array and maintaining array-level invariants (uniqueness, ordering, probe isolation). `grant-lifecycle.ts` owns the individual object state machine transitions but does NOT own array management — callers handle that themselves.
+The `pendingFreeOperationGrants` array within `TurnFlowRuntimeState` is the kernel's most mutation-heavy shared data structure. Six modules currently write it independently, each responsible for splicing transitioned grant objects back into the array and maintaining array-level invariants (uniqueness, ordering, probe isolation). `grant-lifecycle.ts` owns the individual object state machine transitions but does NOT own array management — callers handle that themselves.
 
 This split authority is **actively harmful**: commit `8669140e` ("Fix FREOPSKIP-001 determinism regression") required coordinated changes across `apply-move.ts`, `phase-advance.ts`, and `turn-flow-eligibility.ts` to fix a grant-handling bug. The current architecture makes such bugs likely and their fixes fragile.
+
+> **Note on test blast radius**: 47 test files reference `pendingFreeOperationGrants`, but the vast majority are fixture setup (constructing initial state). Since this spec does not change the `TurnFlowPendingFreeOperationGrant` type shape, only test files that directly call the array-manipulation functions being migrated need updates — not every file that constructs grant fixtures.
 
 This spec consolidates all array-level grant operations into a single authority module so that the grant array's invariants are enforced in one place.
 
@@ -19,7 +21,7 @@ This spec consolidates all array-level grant operations into a single authority 
 ### In Scope
 
 - Expand `grant-lifecycle.ts` (or create `grant-array.ts`) to own array-level operations: insert, consume-and-remove, expire-and-remove, advance-batch, probe-overlay
-- Delegate all `pendingFreeOperationGrants` array writes from the 4 caller modules to the authority module
+- Delegate all `pendingFreeOperationGrants` array writes from the 6 caller modules to the authority module
 - Formalize the grant state machine and array-level invariants
 - Absorb the `withPendingFreeOperationGrants()` helper from `turn-flow-eligibility.ts`
 
@@ -37,10 +39,11 @@ This spec consolidates all array-level grant operations into a single authority 
 | Module | Operation | Mechanism |
 |--------|-----------|-----------|
 | `effects-turn-flow.ts` | **Create** grants from effect declarations | `applyGrantFreeOperation()` constructs grant objects, appends to array, updates runtime |
-| `turn-flow-eligibility.ts` | **Extract** grants from event card effects; **advance** sequenceWaiting grants to ready; **orchestrate** post-move grant state | `extractPendingFreeOperationGrants()`, `advanceSequenceReadyPendingFreeOperationGrants()`, `applyTurnFlowEligibilityAfterMove()` |
-| `apply-move.ts` | **Consume** grants (ready/offered to exhausted) and remove from array | `consumeFreeOperationGrant()` calls `consumeUse()` then splices |
-| `phase-advance.ts` | **Expire** grants at phase boundaries | `expireRequiredPendingFreeOperationGrants()` calls `expireGrant()` then filters |
-| `legal-moves.ts` | **Probe** grants during enumeration (temporary overlays) | `pendingFreeOperationGrants:` in probe state overlays |
+| `turn-flow-eligibility.ts` | **Advance** sequenceWaiting grants to ready; **orchestrate** post-move grant state; **helper** for runtime update | `advanceSequenceReadyPendingFreeOperationGrants()`, `applyTurnFlowEligibilityAfterMove()`, `withPendingFreeOperationGrants()` |
+| `apply-move.ts` | **Consume** grants (ready/offered to exhausted) and remove from array | `consumeAuthorizedFreeOperationGrant()` calls `consumeUse()` then splices |
+| `phase-advance.ts` | **Expire** grants at phase boundaries | `expireBlockingPendingFreeOperationGrants()` calls `expireGrant()` then filters |
+| `legal-moves.ts` | **Probe** grants during enumeration (temporary overlays) | `pendingFreeOperationGrants:` in probe state overlays (lines 653, 1058) |
+| `free-operation-viability.ts` | **Probe** overlay construction and grant mapping | Constructs new state with modified `pendingFreeOperationGrants` (lines 829, 848) |
 
 ### The Authority Module Today
 
@@ -56,7 +59,7 @@ All return `GrantLifecycleTransitionResult` (the transitioned grant + trace entr
 
 ### Helper
 
-`withPendingFreeOperationGrants(runtime, grants)` in `turn-flow-eligibility.ts:492-504` is the only centralized setter — but not all writers use it.
+`withPendingFreeOperationGrants(runtime, grants)` in `turn-flow-eligibility.ts:484-496` is a centralized setter used internally within `turn-flow-eligibility.ts` itself (no other module imports it).
 
 ## Proposed Design
 
@@ -111,13 +114,18 @@ createProbeOverlay(
 ```typescript
 interface GrantArrayResult {
   readonly grants: readonly TurnFlowPendingFreeOperationGrant[];
-  readonly trace: readonly TraceEntry[];
+  readonly trace: readonly TurnFlowGrantLifecycleTraceEntry[];
 }
 
 interface GrantArrayConsumeResult extends GrantArrayResult {
   readonly consumed: TurnFlowPendingFreeOperationGrant;  // the grant after transition
   readonly wasExhausted: boolean;
 }
+
+// Note: GrantArrayResult.trace is a plural array of TurnFlowGrantLifecycleTraceEntry,
+// unlike the singular GrantLifecycleTransitionResult.traceEntry used by individual
+// transition functions. This is deliberate — array-level operations may produce
+// multiple trace entries (e.g., expireGrantsForSeat expires N grants).
 ```
 
 ### Invariants
@@ -159,8 +167,10 @@ packages/engine/src/kernel/
   apply-move.ts                   # MODIFY — delegate grant consumption
   phase-advance.ts                # MODIFY — delegate grant expiry
   effects-turn-flow.ts            # MODIFY — delegate grant creation
+  legal-moves.ts                  # MODIFY — delegate probe overlay filtering
+  free-operation-viability.ts     # MODIFY — delegate probe overlay construction
 
-packages/engine/test/kernel/
+packages/engine/test/unit/kernel/
   grant-lifecycle.test.ts         # MODIFY — add array-level operation tests
 ```
 
@@ -197,6 +207,8 @@ packages/engine/test/kernel/
 - [ ] `apply-move.ts` no longer directly splices grants from the array
 - [ ] `phase-advance.ts` no longer directly filters/rebuilds the grants array
 - [ ] `effects-turn-flow.ts` no longer directly appends to the grants array
+- [ ] `legal-moves.ts` no longer directly filters the grants array
+- [ ] `free-operation-viability.ts` no longer directly constructs probe overlay grants
 - [ ] `withPendingFreeOperationGrants()` helper absorbed into or replaced by the authority module
 - [ ] Array-level invariants (uniqueness, ordering) enforced with assertions in the authority module
 - [ ] All grant mutations produce trace entries through the authority module

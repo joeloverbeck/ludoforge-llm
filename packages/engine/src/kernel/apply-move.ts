@@ -27,7 +27,7 @@ import {
 } from './move-runtime-bindings.js';
 import { EFFECT_RUNTIME_REASONS, ILLEGAL_MOVE_REASONS } from './runtime-reasons.js';
 import { advanceToDecisionPoint } from './phase-advance.js';
-import { consumeUse } from './grant-lifecycle.js';
+import { consumeUse, withPendingFreeOperationGrants } from './grant-lifecycle.js';
 import {
   illegalMoveError,
   isKernelErrorCode,
@@ -50,7 +50,6 @@ import {
   trimFreeOperationSequenceContextsToPendingBatches,
   withFreeOperationSequenceContexts,
   withPendingDeferredEventEffects,
-  withPendingFreeOperationGrants,
   withSuspendedCardEnd,
 } from './turn-flow-eligibility.js';
 import { resolveFreeOperationDiscoveryAnalysis } from './free-operation-discovery-analysis.js';

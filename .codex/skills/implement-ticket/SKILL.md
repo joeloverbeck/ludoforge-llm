@@ -122,6 +122,7 @@ Every stop condition below requires resolution before implementation proceeds.
 - Follow TDD for bug fixes: write the failing test first, then fix the code. Never adapt tests to preserve a bug.
 - Treat `docs/FOUNDATIONS.md` as higher priority than ticket wording. Surface conflicts and propose Foundation-compliant resolutions before continuing.
 - The ticket's `Files to Touch` list is a strong hint, not a hard limit. Include adjacent files for contracts, runtime consumers, schemas, fixtures, or tests when coherent completion requires them.
+- When a ticket moves, consolidates, or re-exports an existing helper/symbol, minimal consumer import fallout required to keep the repository building is in-scope even if the ticket named only the owning file. Treat these as behavior-preserving completion edits, not a boundary expansion.
 - "No code changes" means no production/runtime behavior changes. Ticket outcomes, archival moves, dependency rewrites, and sibling-ticket status updates are still required when they are the owned deliverable.
 - If reassessment reveals a generic architectural limitation broader than the ticket's boundary, prefer creating or extending a follow-up spec over burying the gap in ticket-only notes.
 
@@ -196,6 +197,14 @@ When a ticket change affects other active tickets in the same series:
 - If sibling drift is informative but non-blocking, note it in working notes and final summary without absorbing that sibling's scope.
 - If a referenced spec mentions a deliverable split into a later sibling, keep implementation anchored to the current ticket boundary.
 - When a new follow-up spec changes framing around an adjacent active spec, prefer a small cross-reference update over rewriting the adjacent spec's problem statement.
+
+### Groundwork Tickets
+
+For preparatory tickets that intentionally land shared helpers, contracts, or APIs ahead of caller migration:
+- Implement the owned groundwork fully even when no live caller adopts it yet.
+- Keep broader behavioral adoption anchored to the sibling tickets that own it.
+- In the final summary, explicitly separate what landed now from what remains deferred to later siblings.
+- Treat deferred adoption as residual risk only when callers still rely on older paths after the groundwork lands.
 
 ### Production-Proof & Regression Tickets
 
@@ -283,6 +292,12 @@ pnpm turbo schema:artifacts
 1. Summarize what changed, what was verified, and any residual risk.
    - State explicitly: audited schema/artifact ripple effects (even if none needed), deferred verification owned by another ticket, resolved 1-3-1 decisions (especially Foundation type discipline), rules-evidence notes for game-specific legality corrections.
    - State explicitly: any ticket premise that remained unverified, especially claimed repro seeds, counts, traces, or production observations.
+   - Closeout checklist:
+     - what landed in this ticket
+     - which verification commands ran
+     - whether schema/artifact surfaces were checked and whether they changed
+     - what scope remains deferred to sibling tickets, if any
+     - any unverified ticket premise or residual risk
 2. If the ticket appears complete, offer to archive per `docs/archival-workflow.md`.
 3. If the user wants archival or follow-up review, hand off to `post-ticket-review`. If this implementation superseded semantics in a recently archived sibling, call that out in the handoff.
 

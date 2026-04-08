@@ -24,7 +24,7 @@ import {
   resolvePendingFreeOperationGrantSequenceStatus,
   resolveSequenceProgressionPolicy,
 } from './free-operation-sequence-progression.js';
-import { advanceToReady } from './grant-lifecycle.js';
+import { advanceToReady, withPendingFreeOperationGrants } from './grant-lifecycle.js';
 import { resolveFreeOperationGrantSeatToken } from './free-operation-seat-resolution.js';
 import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
 import { buildAdjacencyGraph } from './spatial.js';
@@ -480,20 +480,6 @@ export const toPendingDeferredEventEffects = (
   deferred: readonly TurnFlowPendingDeferredEventEffect[],
 ): readonly TurnFlowPendingDeferredEventEffect[] | undefined =>
   deferred.length === 0 ? undefined : deferred;
-
-export const withPendingFreeOperationGrants = (
-  runtime: TurnFlowRuntimeState,
-  grants: readonly TurnFlowPendingFreeOperationGrant[] | undefined,
-): TurnFlowRuntimeState => {
-  const nextRuntime = {
-    ...runtime,
-    ...(grants === undefined ? {} : { pendingFreeOperationGrants: grants }),
-  };
-  if (grants === undefined) {
-    delete (nextRuntime as { pendingFreeOperationGrants?: readonly TurnFlowPendingFreeOperationGrant[] }).pendingFreeOperationGrants;
-  }
-  return nextRuntime;
-};
 
 export const withPendingDeferredEventEffects = (
   runtime: TurnFlowRuntimeState,

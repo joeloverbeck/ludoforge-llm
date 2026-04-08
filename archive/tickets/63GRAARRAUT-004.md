@@ -1,6 +1,6 @@
 # 63GRAARRAUT-004: Migrate turn-flow-eligibility.ts to use array-level API and absorb withPendingFreeOperationGrants
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel/turn-flow-eligibility.ts
@@ -75,3 +75,10 @@ None — existing tests cover eligibility and advancement behavior. Correctness 
 
 1. `pnpm -F @ludoforge/engine build`
 2. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+- Completed: 2026-04-08
+- Changed `packages/engine/src/kernel/turn-flow-eligibility.ts` to delegate sequence advancement to `advanceSequenceGrants`, emitted-grant accumulation to `insertGrant`, and post-move pending-grant merging to `insertGrantBatch`.
+- Deviation from original plan: the ticket's local `withPendingFreeOperationGrants` deletion step was already satisfied by archived ticket 001 before implementation began, so no local helper remained to remove.
+- Verification: `pnpm -F @ludoforge/engine build`; `pnpm -F @ludoforge/engine test` (474 tests passed).

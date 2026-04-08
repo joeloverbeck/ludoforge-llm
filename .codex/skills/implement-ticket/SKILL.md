@@ -130,6 +130,7 @@ Every stop condition below requires resolution before implementation proceeds.
 
 For tickets whose primary deliverable is a mechanical extraction, rename, deduplication, or import cleanup with no intended behavior change:
 - Prove the duplication or stale local surface exists before editing.
+- In the named module, scan private helper functions as well as exported entry points for the same class of write, mutation, alias, or local rebuild the ticket is trying to eliminate. Same-file helper fallout is usually in-scope, not a separate boundary expansion.
 - Extract or consolidate the shared surface with the narrowest architecture-consistent module or helper.
 - Immediately scan touched files for dangling references to removed local aliases, helpers, or imports before running broader verification.
 - Prefer acceptance proof based on three things: the old local surfaces are gone, consumers now reference the shared surface, and authoritative non-regression commands pass.
@@ -235,6 +236,8 @@ For preparatory tickets that intentionally land shared helpers, contracts, or AP
 Tests depending on `dist` require typecheck/rebuild first. Module-resolution errors during concurrent clean/rebuild are ordering failures — rerun after the serialized build finishes.
 
 Before running broader commands, check whether they share generated output trees, caches, or clean steps. Commands that run `clean`, write `dist`, regenerate schemas, or depend on built test files must finish before another command touching the same tree starts.
+
+Do not launch authoritative commands that share those outputs in the same parallel tool batch, even when batching other read-only checks around them would otherwise be convenient.
 
 **In this repo**: `pnpm -F @ludoforge/engine build`, `pnpm -F @ludoforge/engine test`, `pnpm turbo build`, and `pnpm turbo typecheck` all contend on `packages/engine/dist` — run them serially even when they all appear in the ticket's acceptance list.
 

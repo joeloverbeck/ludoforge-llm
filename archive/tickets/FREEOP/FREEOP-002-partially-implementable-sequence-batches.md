@@ -5,7 +5,7 @@
 **Priority**: HIGH
 **Effort**: Reassessment only
 **Engine Changes**: No
-**Deps**: `tickets/README.md`, `reports/fire-in-the-lake-rules-section-5.md`, `packages/engine/src/kernel/turn-flow-eligibility.ts`, `packages/engine/src/kernel/free-operation-grant-authorization.ts`, `packages/engine/src/kernel/free-operation-viability.ts`, `packages/engine/src/kernel/free-operation-discovery-analysis.ts`, `packages/engine/src/kernel/legal-moves.ts`, `packages/engine/test/integration/fitl-event-free-operation-grants.test.ts`, `packages/engine/test/integration/fitl-events-macv.test.ts`, `packages/engine/test/unit/validate-gamedef.test.ts`, `archive/tickets/FREEOP/FREEOP-001-grant-scoped-action-context.md`
+**Deps**: `tickets/README.md`, `rules/fire-in-the-lake/fire-in-the-lake-rules-section-5.md`, `packages/engine/src/kernel/turn-flow-eligibility.ts`, `packages/engine/src/kernel/free-operation-grant-authorization.ts`, `packages/engine/src/kernel/free-operation-viability.ts`, `packages/engine/src/kernel/free-operation-discovery-analysis.ts`, `packages/engine/src/kernel/legal-moves.ts`, `packages/engine/test/integration/fitl-event-free-operation-grants.test.ts`, `packages/engine/test/integration/fitl-events-macv.test.ts`, `packages/engine/test/unit/validate-gamedef.test.ts`, `archive/tickets/FREEOP/FREEOP-001-grant-scoped-action-context.md`
 
 ## Reassessment Summary
 

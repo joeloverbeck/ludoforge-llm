@@ -14,7 +14,7 @@ Reassess and align scope to current architecture before any implementation.
 
 References used for reassessment:
 - `specs/00-fitl-implementation-order.md` (Spec 28 milestone expectation: marker-driven RVN leader effects)
-- `reports/fire-in-the-lake-rules-section-2.md` (Rule 2.4.1 source text)
+- `rules/fire-in-the-lake/fire-in-the-lake-rules-section-2.md` (Rule 2.4.1 source text)
 
 ## Assumption Reassessment
 

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — YAML event/macro definitions, possibly kernel effect helpers
-**Deps**: `data/games/fire-in-the-lake/41-events/033-064.md`, `data/games/fire-in-the-lake/41-events/065-096.md`, `data/games/fire-in-the-lake/20-macros.md`, `reports/fire-in-the-lake-rules-section-1.md`
+**Deps**: `data/games/fire-in-the-lake/41-events/033-064.md`, `data/games/fire-in-the-lake/41-events/065-096.md`, `data/games/fire-in-the-lake/20-macros.md`, `rules/fire-in-the-lake/fire-in-the-lake-rules-section-1.md`
 
 ## Problem
 

@@ -16,7 +16,7 @@ In Medium and Full scenarios, pivotal event cards (card-121 through card-124) ar
 2. Medium scenario `deckComposition` in the same file currently has `pileCount: 3`, `eventsPerPile: 12`, `coupsPerPile: 1`, and **no** `excludedCardIds` — confirmed.
 3. Short scenario deck exclusions are already implemented (including `card-129`) and covered by `packages/engine/test/integration/fitl-scenario-deck-exclusions.test.ts`; this ticket must not duplicate or alter Short behavior.
 4. `ScenarioDeckCompositionSchema` and `ScenarioDeckComposition` already support `excludedCardIds`; compiler/runtime already validate and materialize these filters. No schema/engine code changes are needed.
-5. Rules references in `reports/fire-in-the-lake-rules-section-2.md` confirm Pivotal Events are distributed to factions in Medium/Full setup and therefore should not be in the shuffled deck.
+5. Rules references in `rules/fire-in-the-lake/fire-in-the-lake-rules-section-2.md` confirm Pivotal Events are distributed to factions in Medium/Full setup and therefore should not be in the shuffled deck.
 
 ## Architecture Check
 

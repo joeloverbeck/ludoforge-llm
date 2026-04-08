@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — discovery semantics in effect execution plus stochastic pending contract propagation
-**Deps**: archive/tickets/FITLEVENTARCH-002-choice-validation-error-classification.md, specs/29-fitl-event-card-encoding.md, reports/fire-in-the-lake-rules-section-5.md
+**Deps**: archive/tickets/FITLEVENTARCH-002-choice-validation-error-classification.md, specs/29-fitl-event-card-encoding.md, rules/fire-in-the-lake/fire-in-the-lake-rules-section-5.md
 
 ## Problem
 

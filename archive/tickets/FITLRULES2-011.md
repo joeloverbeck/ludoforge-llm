@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — move legality/apply paths and turn-flow class resolution
-**Deps**: `specs/00-fitl-implementation-order.md`, `reports/fire-in-the-lake-rules-section-2.md`
+**Deps**: `specs/00-fitl-implementation-order.md`, `rules/fire-in-the-lake/fire-in-the-lake-rules-section-2.md`
 
 ## Problem
 

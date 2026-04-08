@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — the review uncovered one remaining generic strict-sequence emission gap, and the final fix combines a small engine correction with a reviewed card-75 data rework
-**Deps**: `tickets/README.md`, `archive/tickets/ENGINEARCH-209-sequence-captured-zone-sets-for-later-grant-evaluation.md`, `archive/tickets/FITLEVENTARCH-018-card-75-sihanouk-exact-reencoding-on-sequence-zone-context.md`, `data/games/fire-in-the-lake/41-events/065-096.md`, `packages/engine/test/integration/fitl-events-tutorial-medium.test.ts`, `reports/fire-in-the-lake-rules-section-3.md`, `reports/fire-in-the-lake-rules-section-5.md`
+**Deps**: `tickets/README.md`, `archive/tickets/ENGINEARCH-209-sequence-captured-zone-sets-for-later-grant-evaluation.md`, `archive/tickets/FITLEVENTARCH-018-card-75-sihanouk-exact-reencoding-on-sequence-zone-context.md`, `data/games/fire-in-the-lake/41-events/065-096.md`, `packages/engine/test/integration/fitl-events-tutorial-medium.test.ts`, `rules/fire-in-the-lake/fire-in-the-lake-rules-section-3.md`, `rules/fire-in-the-lake/fire-in-the-lake-rules-section-5.md`
 
 ## Problem
 

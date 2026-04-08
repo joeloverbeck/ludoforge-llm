@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: No kernel changes expected; FITL GameSpecDoc + integration-test rework
-**Deps**: archive/tickets/LEGACTTOO/LEGACTTOO-028-free-operation-execute-as-seat-special-activity-parity.md, tickets/README.md, reports/fire-in-the-lake-rules-section-1.md, reports/fire-in-the-lake-rules-section-4.md, data/games/fire-in-the-lake/41-content-event-decks.md, data/games/fire-in-the-lake/30-rules-actions.md, data/games/fire-in-the-lake/10-vocabulary.md, data/games/fire-in-the-lake/20-macros.md
+**Deps**: archive/tickets/LEGACTTOO/LEGACTTOO-028-free-operation-execute-as-seat-special-activity-parity.md, tickets/README.md, rules/fire-in-the-lake/fire-in-the-lake-rules-section-1.md, rules/fire-in-the-lake/fire-in-the-lake-rules-section-4.md, data/games/fire-in-the-lake/41-content-event-decks.md, data/games/fire-in-the-lake/30-rules-actions.md, data/games/fire-in-the-lake/10-vocabulary.md, data/games/fire-in-the-lake/20-macros.md
 
 ## Problem
 
@@ -19,7 +19,7 @@ We need to rework card-30 to the proper grant-driven model once execute-as parit
 
 ## Assumption Reassessment (2026-03-07)
 
-1. Rules references for coastal scope and Air Strike behavior are already available in `reports/fire-in-the-lake-rules-section-1.md` (1.3.7) and `reports/fire-in-the-lake-rules-section-4.md` (4.2.3). **Confirmed.**
+1. Rules references for coastal scope and Air Strike behavior are already available in `rules/fire-in-the-lake/fire-in-the-lake-rules-section-1.md` (1.3.7) and `rules/fire-in-the-lake/fire-in-the-lake-rules-section-4.md` (4.2.3). **Confirmed.**
 2. Current card-30 data in `41-content-event-decks.md` is implemented as direct effects, not free-operation grants. **Confirmed.**
 3. Execute-as grant parity in kernel is already available and verified by archived `LEGACTTOO-028`; this ticket must not add card-specific kernel logic. **Confirmed.**
 4. A grant-window pattern exists in production (for example card-6 Aces) to temporarily alter Air Strike targeting/effects in `30-rules-actions.md`. **Confirmed.**

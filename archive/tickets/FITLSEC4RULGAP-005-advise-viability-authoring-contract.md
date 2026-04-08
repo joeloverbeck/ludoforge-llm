@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: No expected engine changes; regression coverage only unless a generic contract gap is proven
-**Deps**: reports/fire-in-the-lake-rules-section-4.md, reports/fire-in-the-lake-rules-section-5.md, data/games/fire-in-the-lake/20-macros.md, data/games/fire-in-the-lake/30-rules-actions.md
+**Deps**: rules/fire-in-the-lake/fire-in-the-lake-rules-section-4.md, rules/fire-in-the-lake/fire-in-the-lake-rules-section-5.md, data/games/fire-in-the-lake/20-macros.md, data/games/fire-in-the-lake/30-rules-actions.md
 
 ## Problem
 

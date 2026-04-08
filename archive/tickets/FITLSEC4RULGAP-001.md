@@ -5,7 +5,7 @@
 **Effort**: Small
 **Engine Changes**: None — data + integration tests
 **Deps**: Spec 46 (`specs/46-fitl-section4-rules-gaps.md`)
-**Refs**: `reports/fire-in-the-lake-rules-section-4.md`
+**Refs**: `rules/fire-in-the-lake/fire-in-the-lake-rules-section-4.md`
 
 ## Problem
 

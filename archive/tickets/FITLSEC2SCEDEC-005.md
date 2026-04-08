@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — schema/type contract extension in `packages/engine/src/kernel/`
-**Deps**: `specs/44-fitl-section2-scenario-deck-and-pivotal-tracking.md`, `reports/fire-in-the-lake-rules-section-2.md`, `reports/fire-in-the-lake-rules-section-6.md`
+**Deps**: `specs/44-fitl-section2-scenario-deck-and-pivotal-tracking.md`, `rules/fire-in-the-lake/fire-in-the-lake-rules-section-2.md`, `rules/fire-in-the-lake/fire-in-the-lake-rules-section-6.md`
 
 ## Problem
 

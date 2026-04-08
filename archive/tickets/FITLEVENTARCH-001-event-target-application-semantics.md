@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — event target contracts, event execution lowering, FITL card-41 migration, target-lowering tests
-**Deps**: specs/29-fitl-event-card-encoding.md, reports/fire-in-the-lake-rules-section-5.md
+**Deps**: specs/29-fitl-event-card-encoding.md, rules/fire-in-the-lake/fire-in-the-lake-rules-section-5.md
 
 ## Problem
 

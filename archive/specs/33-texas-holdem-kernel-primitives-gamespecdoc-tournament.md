@@ -5,7 +5,7 @@
 **Complexity**: XL
 **Dependencies**: Core engine (specs 01-10 complete), FITL patterns as reference
 **Estimated effort**: 8-12 days
-**Source**: brainstorming/texas-hold-em-rules.md
+**Source**: rules/texas-hold-em/texas-hold-em-rules.md
 
 ## Context
 

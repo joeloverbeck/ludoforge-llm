@@ -1,7 +1,7 @@
 import { asPlayerId } from './branded.js';
 import { applyBoundaryExpiry } from './boundary-expiry.js';
 import { resetPhaseUsage, resetTurnUsage } from './action-usage.js';
-import { expireGrant } from './grant-lifecycle.js';
+import { expireReadyBlockingGrantsForSeat } from './grant-lifecycle.js';
 import { reconcileRunningHash } from './zobrist-phase-hash.js';
 import { resolveBoundaryDurationsAtTurnEnd } from './event-execution.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
@@ -117,21 +117,9 @@ const expireBlockingPendingFreeOperationGrants = (
     TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.ELIGIBILITY_CHECK,
     seatResolution,
   );
-  const remainingGrants = pending.flatMap((grant) => {
-    if (
-      grant.seat !== activeSeat
-      || grant.phase !== 'ready'
-      || (
-        grant.completionPolicy !== 'required'
-        && grant.completionPolicy !== 'skipIfNoLegalCompletion'
-      )
-    ) {
-      return [grant];
-    }
-    const expired = expireGrant(grant);
-    triggerLogCollector?.push(expired.traceEntry);
-    return [];
-  });
+  const expired = expireReadyBlockingGrantsForSeat(pending, activeSeat);
+  const remainingGrants = expired.grants;
+  triggerLogCollector?.push(...expired.trace);
 
   if (remainingGrants.length === pending.length) {
     return null;

@@ -1293,7 +1293,6 @@ describe('buildAdvancePhaseRequest', () => {
   });
 });
 
-// FREOPSKIP-PENDING: entire describe block reverted — pending re-implementation
 describe('advanceToDecisionPoint — free-operation completion policy handling', () => {
   it('leaves an unfulfillable required grant pending at the decision point', () => {
     const def: GameDef = {
@@ -1393,7 +1392,7 @@ describe('advanceToDecisionPoint — free-operation completion policy handling',
     assert.equal(grants.length, 0, 'unfulfillable required grant should be expired');
   });
 
-  it('skips an uncompletable skipIfNoLegalCompletion grant before returning the decision point', () => {
+  it('deterministically skips an uncompletable skipIfNoLegalCompletion grant before returning the decision point', () => {
     const def: GameDef = {
       metadata: { id: 'grant-skip-test', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
       seats: [{ id: '0' }, { id: '1' }],
@@ -1485,8 +1484,10 @@ describe('advanceToDecisionPoint — free-operation completion policy handling',
     };
 
     const next = advanceToDecisionPoint(def, state);
+    const replay = advanceToDecisionPoint(def, state);
 
     assert.equal(next.currentPhase, asPhaseId('main'));
+    assert.deepEqual(replay, next);
     const runtime = requireCardDrivenRuntime(next);
     assert.equal(runtime.pendingFreeOperationGrants, undefined);
   });

@@ -1,9 +1,5 @@
+import { cardDrivenConfig } from './card-driven-accessors.js';
 import type { GameDef } from './types.js';
-
-type CardDrivenConfig = NonNullable<Extract<GameDef['turnOrder'], { readonly type: 'cardDriven' }>['config']>;
-
-const cardDrivenConfig = (def: GameDef): CardDrivenConfig | null =>
-  def.turnOrder?.type === 'cardDriven' ? def.turnOrder.config : null;
 
 export const resolveEffectiveFreeOperationActionDomain = (
   actionIds: readonly string[] | undefined,

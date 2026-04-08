@@ -14,6 +14,7 @@ import {
   type SeatResolutionContext,
 } from './identity.js';
 import { createDeferredLifecycleTraceEntry } from './turn-flow-deferred-lifecycle-trace.js';
+import { cardDrivenConfig, cardDrivenRuntime } from './card-driven-accessors.js';
 import {
   doesGrantPotentiallyAuthorizeMove,
 } from './free-operation-grant-authorization.js';
@@ -23,7 +24,12 @@ import {
   resolvePendingFreeOperationGrantSequenceStatus,
   resolveSequenceProgressionPolicy,
 } from './free-operation-sequence-progression.js';
-import { advanceToReady } from './grant-lifecycle.js';
+import {
+  advanceSequenceGrants,
+  insertGrant,
+  insertGrantBatch,
+  withPendingFreeOperationGrants,
+} from './grant-lifecycle.js';
 import { resolveFreeOperationGrantSeatToken } from './free-operation-seat-resolution.js';
 import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
 import { buildAdjacencyGraph } from './spatial.js';
@@ -63,17 +69,8 @@ interface TurnFlowTransitionResult {
   readonly releasedDeferredEventEffects?: readonly TurnFlowReleasedDeferredEventEffect[];
 }
 
-type CardDrivenConfig = NonNullable<Extract<GameDef['turnOrder'], { readonly type: 'cardDriven' }>['config']>;
-type CardDrivenRuntime = Extract<GameState['turnOrderState'], { readonly type: 'cardDriven' }>['runtime'];
-
 const isPassAction = (def: GameDef, move: Move): boolean =>
   String(move.actionId) === 'pass' || resolveTurnFlowActionClass(def, move) === 'pass';
-
-const cardDrivenConfig = (def: GameDef): CardDrivenConfig | null =>
-  def.turnOrder?.type === 'cardDriven' ? def.turnOrder.config : null;
-
-const cardDrivenRuntime = (state: GameState): CardDrivenRuntime | null =>
-  state.turnOrderState.type === 'cardDriven' ? state.turnOrderState.runtime : null;
 
 const normalizeFirstActionClass = (
   actionClass: ReturnType<typeof resolveTurnFlowActionClass>,
@@ -173,21 +170,25 @@ export const advanceSequenceReadyPendingFreeOperationGrants = (
   readonly grants: readonly TurnFlowPendingFreeOperationGrant[];
   readonly traceEntries: readonly TriggerLogEntry[];
 } => {
-  const traceEntries: TriggerLogEntry[] = [];
-  let changed = false;
-  const grants = pending.map((grant) => {
-    if (grant.phase !== 'sequenceWaiting') {
-      return grant;
+  const readySequenceBatchIds = new Set<string>();
+  for (const grant of pending) {
+    if (
+      grant.phase !== 'sequenceWaiting'
+      || grant.sequenceBatchId === undefined
+      || !resolvePendingFreeOperationGrantSequenceStatus(pending, grant, sequenceContexts).ready
+    ) {
+      continue;
     }
-    if (!resolvePendingFreeOperationGrantSequenceStatus(pending, grant, sequenceContexts).ready) {
-      return grant;
-    }
-    changed = true;
-    const transitioned = advanceToReady(grant);
-    traceEntries.push(transitioned.traceEntry);
-    return transitioned.grant;
-  });
-  return changed ? { grants, traceEntries } : { grants: pending, traceEntries };
+    readySequenceBatchIds.add(grant.sequenceBatchId);
+  }
+  if (readySequenceBatchIds.size === 0) {
+    return { grants: pending, traceEntries: [] };
+  }
+  const advanced = advanceSequenceGrants(pending, readySequenceBatchIds);
+  return {
+    grants: advanced.grants,
+    traceEntries: advanced.trace,
+  };
 };
 
 const cardSnapshot = (card: TurnFlowRuntimeCardState): Pick<TurnFlowRuntimeCardState, 'firstEligible' | 'secondEligible' | 'actedSeats' | 'passedSeats' | 'nonPassCount' | 'firstActionClass'> => ({
@@ -373,7 +374,7 @@ const extractPendingFreeOperationGrants = (
   readonly grants: readonly TurnFlowPendingFreeOperationGrant[];
   readonly sequenceContexts: TurnFlowRuntimeState['freeOperationSequenceContexts'] | undefined;
 } => {
-  const extracted: TurnFlowPendingFreeOperationGrant[] = [];
+  let extracted: readonly TurnFlowPendingFreeOperationGrant[] = [];
   let sequenceContexts = existingSequenceContexts;
   const blockedStrictSequenceBatchIds = new Set<string>();
   const emittedBatchBaseId = pendingFreeOperationGrantBatchBaseId(state, move);
@@ -455,7 +456,7 @@ const extractPendingFreeOperationGrants = (
       [...existingPendingFreeOperationGrants, ...extracted],
       baseId,
     );
-    extracted.push({
+    extracted = insertGrant(extracted, {
       ...toPendingFreeOperationGrant(
         grant,
         grantId,
@@ -464,7 +465,7 @@ const extractPendingFreeOperationGrants = (
       ),
       seat,
       ...(executeAsSeat === undefined ? {} : { executeAsSeat }),
-    });
+    }).grants;
     if (sequenceBatchId !== undefined) {
       sequenceContexts = ensureFreeOperationSequenceBatchContext(
         sequenceContexts,
@@ -488,20 +489,6 @@ export const toPendingDeferredEventEffects = (
   deferred: readonly TurnFlowPendingDeferredEventEffect[],
 ): readonly TurnFlowPendingDeferredEventEffect[] | undefined =>
   deferred.length === 0 ? undefined : deferred;
-
-export const withPendingFreeOperationGrants = (
-  runtime: TurnFlowRuntimeState,
-  grants: readonly TurnFlowPendingFreeOperationGrant[] | undefined,
-): TurnFlowRuntimeState => {
-  const nextRuntime = {
-    ...runtime,
-    ...(grants === undefined ? {} : { pendingFreeOperationGrants: grants }),
-  };
-  if (grants === undefined) {
-    delete (nextRuntime as { pendingFreeOperationGrants?: readonly TurnFlowPendingFreeOperationGrant[] }).pendingFreeOperationGrants;
-  }
-  return nextRuntime;
-};
 
 export const withPendingDeferredEventEffects = (
   runtime: TurnFlowRuntimeState,
@@ -969,10 +956,10 @@ export const applyTurnFlowEligibilityAfterMove = (
   );
   const effectiveEligibility = applyEligibilityOverrides(runtime.eligibility, immediateOverrides);
   const pendingOverrides = [...(runtime.pendingEligibilityOverrides ?? []), ...deferredOverrides];
-  const combinedPendingFreeOperationGrants = [
-    ...existingPendingFreeOperationGrants,
-    ...newFreeOpGrants.grants,
-  ];
+  const combinedPendingFreeOperationGrants = insertGrantBatch(
+    existingPendingFreeOperationGrants,
+    newFreeOpGrants.grants,
+  ).grants;
   const nextSequenceContexts = trimFreeOperationSequenceContextsToPendingBatches(
     newFreeOpGrants.sequenceContexts,
     combinedPendingFreeOperationGrants,

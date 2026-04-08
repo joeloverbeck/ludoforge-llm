@@ -24,6 +24,7 @@ import {
   ensureFreeOperationSequenceBatchContext,
   resolveSequenceProgressionPolicy,
 } from './free-operation-sequence-progression.js';
+import { insertGrant } from './grant-lifecycle.js';
 import { resolveFreeOperationGrantSeatToken } from './free-operation-seat-resolution.js';
 import { resolveFreeOperationExecutionContext } from './free-operation-execution-context.js';
 import { toMoveExecutionPolicy, type MoveExecutionPolicy } from './execution-policy.js';
@@ -343,7 +344,7 @@ export const applyGrantFreeOperation = (
     ...(sequenceIndex === undefined ? {} : { sequenceIndex }),
   };
 
-  const nextPending = [...existing, appended];
+  const nextPending = insertGrant(existing, appended).grants;
   const nextSequenceContexts = sequenceBatchId === undefined
     ? runtime.freeOperationSequenceContexts
     : ensureFreeOperationSequenceBatchContext(

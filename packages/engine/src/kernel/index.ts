@@ -47,6 +47,7 @@ export * from './move-completion.js';
 export * from './playable-candidate.js';
 export * from './move-equivalence.js';
 export * from './move-runtime-bindings.js';
+export * from './move-context.js';
 export * from './trusted-move.js';
 export * from './apply-move.js';
 export * from './trigger-dispatch.js';

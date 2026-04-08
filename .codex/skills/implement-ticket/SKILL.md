@@ -12,6 +12,12 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
 - A ticket path, glob, or enough context to locate the ticket
 - Any extra constraints from the user
 
+## Working Notes
+
+- In Codex sessions, use concise `commentary` updates as the default working-notes surface unless the ticket explicitly requires a durable repo artifact.
+- Working notes should capture reassessment outcomes that affect implementation correctness: discrepancy lists, evidence classification, authoritative boundary restatements, and verification-owned scope corrections.
+- Do not create scratch files solely to satisfy the "working notes" requirement unless the ticket itself requires a persisted artifact.
+
 ## Workflow
 
 ### Phase 1: Read and Understand
@@ -19,6 +25,7 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
 1. Read `docs/FOUNDATIONS.md` before planning or coding.
 2. Read the ticket file(s) matching the provided path or glob.
 3. Read referenced specs, docs, and `Deps`. Read `AGENTS.md` and respect worktree discipline (all reads, edits, greps, moves, and verification commands use the worktree root when the ticket lives under `.claude/worktrees/<name>/`; isolate your diff from unrelated edits).
+   - If equivalent `AGENTS.md` instructions are already present in the session context, you may rely on that context for behavior, but still prefer opening the file when repo-local details might differ or when the ticket references on-disk policy.
 4. Before editing, inspect repo state (for example `git status --short`) and call out unrelated dirty files, pre-existing failures, or evidence of concurrent work. Do this early enough that your diff can be isolated from repo-preexisting state.
 5. Extract all concrete references: file paths, functions, types, classes, modules, tests, scripts, and artifacts the ticket expects.
 
@@ -112,11 +119,25 @@ Every stop condition below requires resolution before implementation proceeds.
 
 - Implement every explicit ticket deliverable. Do not silently skip items.
 - Prefer minimal, architecture-consistent changes over local patches.
+- If an existing authority/helper API is broader than the caller's verified live contract, prefer adding the narrowest authority-level helper that preserves semantics over embedding a caller-local workaround or silently widening behavior.
+- When consolidating logic into a shared authority module, inspect the current import direction first and prefer helper placement that preserves an acyclic dependency graph.
 - Follow TDD for bug fixes: write the failing test first, then fix the code. Never adapt tests to preserve a bug.
 - Treat `docs/FOUNDATIONS.md` as higher priority than ticket wording. Surface conflicts and propose Foundation-compliant resolutions before continuing.
 - The ticket's `Files to Touch` list is a strong hint, not a hard limit. Include adjacent files for contracts, runtime consumers, schemas, fixtures, or tests when coherent completion requires them.
+- When a ticket moves, consolidates, or re-exports an existing helper/symbol, minimal consumer import fallout required to keep the repository building is in-scope even if the ticket named only the owning file. Treat these as behavior-preserving completion edits, not a boundary expansion.
 - "No code changes" means no production/runtime behavior changes. Ticket outcomes, archival moves, dependency rewrites, and sibling-ticket status updates are still required when they are the owned deliverable.
 - If reassessment reveals a generic architectural limitation broader than the ticket's boundary, prefer creating or extending a follow-up spec over burying the gap in ticket-only notes.
+
+### Mechanical Refactors
+
+For tickets whose primary deliverable is a mechanical extraction, rename, deduplication, or import cleanup with no intended behavior change:
+- Prove the duplication or stale local surface exists before editing.
+- In the named module, scan private helper functions as well as exported entry points for the same class of write, mutation, alias, or local rebuild the ticket is trying to eliminate. Same-file helper fallout is usually in-scope, not a separate boundary expansion.
+- Extract or consolidate the shared surface with the narrowest architecture-consistent module or helper.
+- If the ticket's named shared helper covers only part of the live write pattern, compose it with the smallest additional authority helper needed to eliminate the remaining caller-local transform instead of leaving a special case behind.
+- Immediately scan touched files for dangling references to removed local aliases, helpers, or imports before running broader verification.
+- Prefer acceptance proof based on three things: the old local surfaces are gone, consumers now reference the shared surface, and authoritative non-regression commands pass.
+- If verification exposes a nearby dangling symbol, import, or signature ripple that is necessary to make the refactor complete, treat it as in-scope fallout rather than a separate discrepancy.
 
 ### Schema & Contract Migrations
 
@@ -181,6 +202,14 @@ When a ticket change affects other active tickets in the same series:
 - If a referenced spec mentions a deliverable split into a later sibling, keep implementation anchored to the current ticket boundary.
 - When a new follow-up spec changes framing around an adjacent active spec, prefer a small cross-reference update over rewriting the adjacent spec's problem statement.
 
+### Groundwork Tickets
+
+For preparatory tickets that intentionally land shared helpers, contracts, or APIs ahead of caller migration:
+- Implement the owned groundwork fully even when no live caller adopts it yet.
+- Keep broader behavioral adoption anchored to the sibling tickets that own it.
+- In the final summary, explicitly separate what landed now from what remains deferred to later siblings.
+- Treat deferred adoption as residual risk only when callers still rely on older paths after the groundwork lands.
+
 ### Production-Proof & Regression Tickets
 
 - For proof/regression tickets, prefer extending the live test module that already owns the contract under audit before creating new files solely to match stale ticket test paths.
@@ -211,6 +240,8 @@ Tests depending on `dist` require typecheck/rebuild first. Module-resolution err
 
 Before running broader commands, check whether they share generated output trees, caches, or clean steps. Commands that run `clean`, write `dist`, regenerate schemas, or depend on built test files must finish before another command touching the same tree starts.
 
+Do not launch authoritative commands that share those outputs in the same parallel tool batch, even when batching other read-only checks around them would otherwise be convenient.
+
 **In this repo**: `pnpm -F @ludoforge/engine build`, `pnpm -F @ludoforge/engine test`, `pnpm turbo build`, and `pnpm turbo typecheck` all contend on `packages/engine/dist` — run them serially even when they all appear in the ticket's acceptance list.
 
 ### Escalation Ladder
@@ -226,7 +257,8 @@ Escalate sooner for shared exported contracts or cross-package consumers.
 ### Failure Isolation
 
 - **Broader failures**: Determine whether they are inside the corrected ticket boundary or owned by another active ticket. Do not silently absorb out-of-boundary scope. Minimal downstream fixes for shared exported contract fallout are required scope. Document as residual risk if covered by another ticket; stop and resolve with the user if not.
-- **Test helper staleness**: Inspect shared test helpers, fixtures, and goldens for stale assumptions. Check seed-specific helper states or turn-position fixtures. Retarget to a current seed/turn exercising the same invariant. Test malformed and unsupported shapes for clean fallback on new fast paths. Check callers constructing minimal contexts when a new fast path depends on enriched context objects.
+- **Mechanical-refactor fallout**: After removing local aliases or helpers, scan the touched files for remaining references in type annotations, return types, overloads, test seams, and import lists before assuming a later `typecheck` failure is broader fallout.
+- **Test helper staleness**: Inspect shared test helpers, fixtures, and goldens for stale assumptions. Check seed-specific helper states or turn-position fixtures. Retarget to a current seed/turn exercising the same invariant. Test malformed and unsupported shapes for clean fallback on new fast paths. Check callers constructing minimal contexts when a new fast path depends on enriched context objects. With `exactOptionalPropertyTypes`, model "field absent" by omitting the optional field rather than assigning `undefined`.
 - **Isolating `node --test` failures**: If only a top-level file failure appears, rerun narrowly with test-name filtering or direct helper reproduction. Run built test modules directly for nested subtest output. For compiler/schema tests, reproduce minimal compile input against the built module.
 - **Raw-vs-classified debugging**: Compare raw `legalMoves(...)`, classified `enumerateLegalMoves(...)`, and downstream agent preparation surfaces separately. For agent-driven regressions, inspect the preparation layer (e.g., `preparePlayableMoves(...)`) before assuming the bug belongs to legality or move enumeration.
 - **Fallback paths**: When a ticket changes a fallback compilation or runtime path, verify that path directly AND check the primary production path for non-regression.
@@ -266,6 +298,12 @@ pnpm turbo schema:artifacts
 1. Summarize what changed, what was verified, and any residual risk.
    - State explicitly: audited schema/artifact ripple effects (even if none needed), deferred verification owned by another ticket, resolved 1-3-1 decisions (especially Foundation type discipline), rules-evidence notes for game-specific legality corrections.
    - State explicitly: any ticket premise that remained unverified, especially claimed repro seeds, counts, traces, or production observations.
+   - Closeout checklist:
+     - what landed in this ticket
+     - which verification commands ran
+     - whether schema/artifact surfaces were checked and whether they changed
+     - what scope remains deferred to sibling tickets, if any
+     - any unverified ticket premise or residual risk
 2. If the ticket appears complete, offer to archive per `docs/archival-workflow.md`.
 3. If the user wants archival or follow-up review, hand off to `post-ticket-review`. If this implementation superseded semantics in a recently archived sibling, call that out in the handoff.
 

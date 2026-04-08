@@ -1,12 +1,18 @@
-import { applyTrustedMove, createGameDefRuntime, createRng, enumerateLegalMoves, initialState, terminalResult } from '../kernel/index.js';
+import {
+  applyTrustedMove,
+  createGameDefRuntime,
+  createRng,
+  enumerateLegalMoves,
+  extractMoveContext,
+  initialState,
+  terminalResult,
+} from '../kernel/index.js';
 import { assertValidatedGameDef } from '../kernel/index.js';
 import { perfStart, perfEnd } from '../kernel/perf-profiler.js';
 import type {
   Agent,
   GameDefRuntime,
   GameTrace,
-  Move,
-  MoveContext,
   MoveLog,
   Rng,
   SimulationStopReason,
@@ -32,33 +38,6 @@ const validateMaxTurns = (maxTurns: number): void => {
   if (maxTurns < 0) {
     throw new RangeError(`maxTurns must be a non-negative safe integer, received ${String(maxTurns)}`);
   }
-};
-
-const captureMoveContext = (move: Move): MoveContext | undefined => {
-  const actionId = String(move.actionId);
-  const eventSide = actionId.includes('shaded')
-    ? 'shaded'
-    : actionId.includes('unshaded')
-      ? 'unshaded'
-      : undefined;
-  const currentCardId = typeof move.params['$cardId'] === 'string'
-    ? move.params['$cardId']
-    : typeof move.params['cardId'] === 'string'
-      ? move.params['cardId']
-      : undefined;
-  const turnFlowWindow = typeof move.params['__windowId'] === 'string'
-    ? move.params['__windowId']
-    : undefined;
-
-  if (eventSide === undefined && currentCardId === undefined && turnFlowWindow === undefined) {
-    return undefined;
-  }
-
-  return {
-    ...(currentCardId !== undefined ? { currentCardId } : {}),
-    ...(eventSide !== undefined ? { eventSide } : {}),
-    ...(turnFlowWindow !== undefined ? { turnFlowWindow } : {}),
-  };
 };
 
 const createAgentRngByPlayer = (seed: number, playerCount: number): readonly Rng[] =>
@@ -148,7 +127,7 @@ export const runGame = (
     agentRngByPlayer[player] = selected.rng;
 
     const preState = state;
-    const moveContext = captureMoveContext(selected.move.move);
+    const moveContext = extractMoveContext(selected.move.move);
     const t0_apply = perfStart(profiler);
     const applied = applyTrustedMove(validatedDef, state, selected.move, kernelOptions, resolvedRuntime);
     perfEnd(profiler, 'simApplyMove', t0_apply);

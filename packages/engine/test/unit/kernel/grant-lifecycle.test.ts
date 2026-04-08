@@ -12,6 +12,7 @@ import {
   createSeatResolutionContext,
   createProbeOverlay,
   expireGrant,
+  expireReadyBlockingGrantsForSeat,
   expireGrantsForSeat,
   insertGrant,
   insertGrantBatch,
@@ -449,6 +450,31 @@ describe('grant lifecycle array operations', () => {
       makeGrant({ grantId: 'grant-0', seat: '0', phase: 'ready', completionPolicy: 'required' }),
       makeGrant({ grantId: 'grant-1', seat: '0', phase: 'offered', completionPolicy: 'skipIfNoLegalCompletion' }),
       makeGrant({ grantId: 'grant-2', seat: '0', phase: 'sequenceWaiting' }),
+      makeGrant({ grantId: 'grant-3', seat: '1', phase: 'ready', completionPolicy: 'required' }),
+    ]);
+  });
+
+  it('expireReadyBlockingGrantsForSeat expires only ready blocking grants for the requested seat', () => {
+    const existing = [
+      makeGrant({ grantId: 'grant-0', seat: '0', phase: 'ready', completionPolicy: 'required' }),
+      makeGrant({ grantId: 'grant-1', seat: '0', phase: 'offered', completionPolicy: 'skipIfNoLegalCompletion' }),
+      makeGrant({ grantId: 'grant-2', seat: '0', phase: 'ready' }),
+      makeGrant({ grantId: 'grant-3', seat: '1', phase: 'ready', completionPolicy: 'required' }),
+    ];
+
+    const result = expireReadyBlockingGrantsForSeat(existing, '0');
+
+    assert.deepEqual(result.grants, [
+      existing[1],
+      existing[2],
+      existing[3],
+    ]);
+    assert.equal(result.trace.length, 1);
+    assert.deepEqual(result.trace.map((entry) => entry.grantId), ['grant-0']);
+    assert.deepEqual(existing, [
+      makeGrant({ grantId: 'grant-0', seat: '0', phase: 'ready', completionPolicy: 'required' }),
+      makeGrant({ grantId: 'grant-1', seat: '0', phase: 'offered', completionPolicy: 'skipIfNoLegalCompletion' }),
+      makeGrant({ grantId: 'grant-2', seat: '0', phase: 'ready' }),
       makeGrant({ grantId: 'grant-3', seat: '1', phase: 'ready', completionPolicy: 'required' }),
     ]);
   });

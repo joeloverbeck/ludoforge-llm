@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — test/unit/kernel/grant-lifecycle.test.ts
-**Deps**: `archive/tickets/63GRAARRAUT-002.md`, `archive/tickets/63GRAARRAUT-003.md`, `archive/tickets/63GRAARRAUT-004.md`, `archive/tickets/63GRAARRAUT-005.md`, `tickets/63GRAARRAUT-006.md`, `tickets/63GRAARRAUT-007.md`
+**Deps**: `archive/tickets/63GRAARRAUT-002.md`, `archive/tickets/63GRAARRAUT-003.md`, `archive/tickets/63GRAARRAUT-004.md`, `archive/tickets/63GRAARRAUT-005.md`, `archive/tickets/63GRAARRAUT-006.md`, `tickets/63GRAARRAUT-007.md`
 
 ## Problem
 

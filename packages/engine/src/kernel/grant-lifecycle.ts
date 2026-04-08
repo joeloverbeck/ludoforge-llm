@@ -271,6 +271,33 @@ export const expireGrantsForSeat = (
   };
 };
 
+export const expireReadyBlockingGrantsForSeat = (
+  grants: readonly TurnFlowPendingFreeOperationGrant[],
+  seat: string,
+): GrantArrayResult => {
+  const nextGrants: TurnFlowPendingFreeOperationGrant[] = [];
+  const trace: TurnFlowGrantLifecycleTraceEntry[] = [];
+  for (const grant of grants) {
+    if (
+      grant.seat !== seat
+      || grant.phase !== 'ready'
+      || (
+        grant.completionPolicy !== 'required'
+        && grant.completionPolicy !== 'skipIfNoLegalCompletion'
+      )
+    ) {
+      nextGrants.push(grant);
+      continue;
+    }
+    const transitioned = expireGrant(grant);
+    trace.push(transitioned.traceEntry);
+  }
+  return {
+    grants: nextGrants,
+    trace,
+  };
+};
+
 export const advanceSequenceGrants = (
   grants: readonly TurnFlowPendingFreeOperationGrant[],
   readySequenceBatchIds: ReadonlySet<string>,

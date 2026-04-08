@@ -1,6 +1,6 @@
 # 63GRAARRAUT-006: Migrate phase-advance.ts to use expireGrantsForSeat
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel/phase-advance.ts
@@ -69,3 +69,20 @@ None — existing tests cover phase-advance expiry behavior. Correctness is veri
 
 1. `pnpm -F @ludoforge/engine build`
 2. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+Implemented with a narrow authority-level helper instead of the ticket's literal `expireGrantsForSeat` swap.
+
+- Added `expireReadyBlockingGrantsForSeat()` in `packages/engine/src/kernel/grant-lifecycle.ts` so `phase-advance.ts` can delegate the write while preserving the live contract: only `ready` grants for the active seat with blocking completion policies expire at this boundary.
+- Updated `packages/engine/src/kernel/phase-advance.ts` to use that helper and merge its lifecycle trace entries, removing the local expire-and-filter rebuild logic.
+- Added a focused proof test in `packages/engine/test/unit/kernel/grant-lifecycle.test.ts` covering the corrected boundary: `offered` grants and non-blocking `ready` grants are preserved.
+
+This intentionally deviated from the ticket's original mechanism because `expireGrantsForSeat()` also expires `offered` grants, which would have changed behavior and conflicted with the live contract and `docs/FOUNDATIONS.md`.
+
+Verification run:
+
+1. `pnpm -F @ludoforge/engine build`
+2. `pnpm -F @ludoforge/engine test`
+
+Result: passed (`474` tests passed).

@@ -119,6 +119,7 @@ Every stop condition below requires resolution before implementation proceeds.
 
 - Implement every explicit ticket deliverable. Do not silently skip items.
 - Prefer minimal, architecture-consistent changes over local patches.
+- If an existing authority/helper API is broader than the caller's verified live contract, prefer adding the narrowest authority-level helper that preserves semantics over embedding a caller-local workaround or silently widening behavior.
 - Follow TDD for bug fixes: write the failing test first, then fix the code. Never adapt tests to preserve a bug.
 - Treat `docs/FOUNDATIONS.md` as higher priority than ticket wording. Surface conflicts and propose Foundation-compliant resolutions before continuing.
 - The ticket's `Files to Touch` list is a strong hint, not a hard limit. Include adjacent files for contracts, runtime consumers, schemas, fixtures, or tests when coherent completion requires them.
@@ -255,7 +256,7 @@ Escalate sooner for shared exported contracts or cross-package consumers.
 
 - **Broader failures**: Determine whether they are inside the corrected ticket boundary or owned by another active ticket. Do not silently absorb out-of-boundary scope. Minimal downstream fixes for shared exported contract fallout are required scope. Document as residual risk if covered by another ticket; stop and resolve with the user if not.
 - **Mechanical-refactor fallout**: After removing local aliases or helpers, scan the touched files for remaining references in type annotations, return types, overloads, test seams, and import lists before assuming a later `typecheck` failure is broader fallout.
-- **Test helper staleness**: Inspect shared test helpers, fixtures, and goldens for stale assumptions. Check seed-specific helper states or turn-position fixtures. Retarget to a current seed/turn exercising the same invariant. Test malformed and unsupported shapes for clean fallback on new fast paths. Check callers constructing minimal contexts when a new fast path depends on enriched context objects.
+- **Test helper staleness**: Inspect shared test helpers, fixtures, and goldens for stale assumptions. Check seed-specific helper states or turn-position fixtures. Retarget to a current seed/turn exercising the same invariant. Test malformed and unsupported shapes for clean fallback on new fast paths. Check callers constructing minimal contexts when a new fast path depends on enriched context objects. With `exactOptionalPropertyTypes`, model "field absent" by omitting the optional field rather than assigning `undefined`.
 - **Isolating `node --test` failures**: If only a top-level file failure appears, rerun narrowly with test-name filtering or direct helper reproduction. Run built test modules directly for nested subtest output. For compiler/schema tests, reproduce minimal compile input against the built module.
 - **Raw-vs-classified debugging**: Compare raw `legalMoves(...)`, classified `enumerateLegalMoves(...)`, and downstream agent preparation surfaces separately. For agent-driven regressions, inspect the preparation layer (e.g., `preparePlayableMoves(...)`) before assuming the bug belongs to legality or move enumeration.
 - **Fallback paths**: When a ticket changes a fallback compilation or runtime path, verify that path directly AND check the primary production path for non-regression.

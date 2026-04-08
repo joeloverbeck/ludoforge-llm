@@ -85,6 +85,7 @@ import type {
   ApplyMoveResult,
   ChoicePendingRequest,
   ChoiceStochasticPendingRequest,
+  EventSideEffectManifest,
   ExecutionOptions,
   GameDef,
   GameState,
@@ -94,7 +95,6 @@ import type {
   Rng,
   RuntimeWarning,
   TrustedExecutableMove,
-  TurnFlowDeferredEventEffectPayload,
   TurnFlowReleasedDeferredEventEffect,
   TriggerLogEntry,
   TriggerEvent,
@@ -914,7 +914,7 @@ interface SharedMoveExecutionContext {
 interface MoveActionExecutionResult {
   readonly stateWithRng: GameState;
   readonly triggerFirings: readonly TriggerLogEntry[];
-  readonly deferredEventEffect?: TurnFlowDeferredEventEffectPayload;
+  readonly sideEffectManifest?: EventSideEffectManifest;
 }
 
 interface MoveExecutionRuntime {
@@ -1285,9 +1285,7 @@ const executeMoveAction = (
       rng: triggerResult.rng.state,
     },
     triggerFirings: [...executionTraceEntries, ...triggerResult.triggerLog],
-    ...(lastingActivation.deferredEventEffect === undefined
-      ? {}
-      : { deferredEventEffect: lastingActivation.deferredEventEffect }),
+    sideEffectManifest: lastingActivation.sideEffectManifest,
   };
 };
 
@@ -1436,7 +1434,7 @@ const applyMoveCore = (
         ],
       };
     })()
-    : applyTurnFlowEligibilityAfterMove(def, executed.stateWithRng, move, executed.deferredEventEffect, {
+    : applyTurnFlowEligibilityAfterMove(def, executed.stateWithRng, move, executed.sideEffectManifest, {
       originatingPhase: state.currentPhase,
     });
   perfEnd(profiler, 'applyTurnFlowEligibility', t0_turnFlow);

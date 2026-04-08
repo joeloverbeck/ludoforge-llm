@@ -4,85 +4,32 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel move application and turn-flow eligibility
-**Deps**: `tickets/119EVESIDEFF-002.md`
+**Deps**: `archive/tickets/119EVESIDEFF-002.md`
 
 ## Problem
 
-`apply-move.ts` manually threads `deferredEventEffect` from `executeEventMove` to `applyTurnFlowEligibilityAfterMove` via optional properties and conditional spreads. `turn-flow-eligibility.ts` re-resolves the event card to extract grants and overrides independently. After ticket 002, `executeEventMove` returns a manifest — this ticket updates both consumers to use it.
+The minimal manifest-threading consumer migration was absorbed into ticket 002 to keep the repository atomic under Foundations 14. This ticket now owns the remaining cleanup and hardening work after the manifest is already threaded through `apply-move.ts` and `turn-flow-eligibility.ts`.
 
-## Assumption Reassessment (2026-04-08)
+## Assumption Reassessment (2026-04-09)
 
-1. `apply-move.ts` threads `deferredEventEffect` at lines 1288-1290 (conditional spread) and line 1439 (passed to `applyTurnFlowEligibilityAfterMove`) — confirmed.
-2. `applyTurnFlowEligibilityAfterMove` signature at `turn-flow-eligibility.ts:891-899` accepts `deferredEventEffect?: TurnFlowDeferredEventEffectPayload` as 4th parameter — confirmed.
-3. `extractPendingFreeOperationGrants` (line 336) calls `resolveEventFreeOperationGrants` at line 353 — confirmed.
-4. `extractPendingEligibilityOverrides` (line 262) calls `resolveEventEligibilityOverrides` at line 271 — confirmed.
-5. `turn-flow-eligibility.ts` imports `resolveEventEligibilityOverrides` and `resolveEventFreeOperationGrants` from `./event-execution.js` at lines 3-7 — confirmed.
+1. Ticket 002 now owns the atomic `EventMoveExecutionResult` migration plus the minimal `apply-move.ts` / `turn-flow-eligibility.ts` consumer threading required to keep the repo buildable — confirmed by user-approved boundary rewrite on 2026-04-09.
+2. After that migration lands, the remaining direct-manifest cleanup is primarily export/test fallout and any residual redundant helper surface — confirmed from spec + active ticket review.
 
 ## Architecture Check
 
-1. Threading the manifest instead of the bare deferred effect eliminates the implicit protocol between modules. The typed contract makes the data flow explicit and type-safe.
-2. Game-agnostic — `EventSideEffectManifest` contains generic types, no game-specific logic.
-3. No backwards compatibility — the old `deferredEventEffect` parameter is replaced atomically, not aliased.
+1. Keeping ticket 003 focused on post-threading cleanup avoids overlapping active ownership after the ticket-002 boundary rewrite.
+2. Game-agnostic — remaining cleanup still concerns generic manifest plumbing and public surface discipline only.
+3. No backwards compatibility — ticket 002 performs the atomic signature change; this ticket must not reintroduce transitional aliases.
 
 ## What to Change
 
-### 1. Update `apply-move.ts` to thread the manifest
+### 1. Remove obsolete helper/export surface after manifest threading
 
-Replace the `deferredEventEffect` conditional spread (lines 1288-1290) with manifest threading. Where the code currently does:
+Once ticket 002 lands, audit `turn-flow-eligibility.ts` and `event-execution.ts` for helper paths that became dead or redundant because the manifest is now threaded directly.
 
-```typescript
-...(lastingActivation.deferredEventEffect === undefined
-  ? {}
-  : { deferredEventEffect: lastingActivation.deferredEventEffect }),
-```
+### 2. Keep downstream cleanup scoped to the post-threading state
 
-Replace with threading `lastingActivation.sideEffectManifest` through to `applyTurnFlowEligibilityAfterMove`.
-
-At line 1439, change:
-
-```typescript
-applyTurnFlowEligibilityAfterMove(def, executed.stateWithRng, move, executed.deferredEventEffect, ...)
-```
-
-to:
-
-```typescript
-applyTurnFlowEligibilityAfterMove(def, executed.stateWithRng, move, executed.sideEffectManifest, ...)
-```
-
-Search for any other references to `deferredEventEffect` in `apply-move.ts` and update them similarly.
-
-### 2. Update `applyTurnFlowEligibilityAfterMove` signature
-
-Change the 4th parameter from:
-
-```typescript
-deferredEventEffect?: TurnFlowDeferredEventEffectPayload
-```
-
-to:
-
-```typescript
-sideEffectManifest?: EventSideEffectManifest
-```
-
-Add the `EventSideEffectManifest` import from `./types-events.js` (or the barrel).
-
-### 3. Update `extractPendingFreeOperationGrants` to receive grants from manifest
-
-Instead of calling `resolveEventFreeOperationGrants(def, state, move)` internally, receive the grants array as a parameter. Pass `manifest?.grants ?? []` from the caller.
-
-### 4. Update `extractPendingEligibilityOverrides` to receive overrides from manifest
-
-Instead of calling `resolveEventEligibilityOverrides(def, state, move)` internally, receive the overrides array as a parameter. Pass `manifest?.overrides ?? []` from the caller.
-
-### 5. Update deferred effect consumption
-
-Where `turn-flow-eligibility.ts` currently uses the `deferredEventEffect` parameter, change to `sideEffectManifest?.deferredEventEffect`.
-
-### 6. Remove unused imports
-
-Remove the `resolveEventFreeOperationGrants` and `resolveEventEligibilityOverrides` imports from `turn-flow-eligibility.ts` (lines 3-7). The `resolveBoundaryDurationsAtTurnEnd` import on the same line should be kept if still used.
+Do not re-open the atomic signature migration already owned by ticket 002. This ticket should only own cleanup that is provably still necessary after that migration.
 
 ## Files to Touch
 
@@ -91,8 +38,9 @@ Remove the `resolveEventFreeOperationGrants` and `resolveEventEligibilityOverrid
 
 ## Out of Scope
 
-- Removing `resolveEventFreeOperationGrants`/`resolveEventEligibilityOverrides` exports from `event-execution.ts` — that is ticket 004
-- Modifying test files — that is ticket 004
+- The atomic `executeEventMove` return-type migration and manifest consumer threading now owned by ticket 002
+- Removing `resolveEventFreeOperationGrants`/`resolveEventEligibilityOverrides` exports from `event-execution.ts` — that remains ticket 004
+- Modifying test files — that remains ticket 004 unless required by later reassessment
 
 ## Acceptance Criteria
 

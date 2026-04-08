@@ -39,8 +39,10 @@ interface EventMoveExecutionResult {
   readonly sideEffectManifest: EventSideEffectManifest;
 }
 
-interface LastingEffectApplyResult extends Omit<EventMoveExecutionResult, 'sideEffectManifest'> {
-  readonly deferredEventEffect?: TurnFlowDeferredEventEffectPayload;
+interface ExecutionStateResult {
+  readonly state: GameState;
+  readonly rng: Rng;
+  readonly emittedEvents: readonly TriggerEvent[];
 }
 
 interface EventExecutionContext {
@@ -72,6 +74,16 @@ const collectEligibilityOverrides = (context: EventExecutionContext): readonly E
   }
   return overrides;
 };
+
+const createEventSideEffectManifest = (
+  grants: readonly EventFreeOperationGrantDef[] = [],
+  overrides: readonly EventEligibilityOverrideDef[] = [],
+  deferredEventEffect?: TurnFlowDeferredEventEffectPayload,
+): EventSideEffectManifest => ({
+  grants,
+  overrides,
+  ...(deferredEventEffect === undefined ? {} : { deferredEventEffect }),
+});
 
 const evaluateEligibilityOverrideCondition = (
   def: GameDef,
@@ -500,7 +512,7 @@ const applyEffectList = (
   actionId: string,
   effectPathRoot: string,
   policy?: MoveExecutionPolicy,
-): LastingEffectApplyResult => {
+): ExecutionStateResult => {
   const runtimeTableIndex = buildRuntimeTableIndex(def);
   const runtimeResources = createEvalRuntimeResources({
     ...(collector === undefined ? {} : { collector }),
@@ -543,10 +555,15 @@ export const executeEventMove = (
   policy?: MoveExecutionPolicy,
   collector?: ExecutionCollector,
   actionId = String(move.actionId),
-): LastingEffectApplyResult => {
+): EventMoveExecutionResult => {
   const context = resolvePlayableEventExecutionContext(def, state, move);
   if (context === null) {
-    return { state, rng, emittedEvents: [] };
+    return {
+      state,
+      rng,
+      emittedEvents: [],
+      sideEffectManifest: createEventSideEffectManifest(),
+    };
   }
 
   const eventEffects = collectEventEffects(context);
@@ -554,10 +571,7 @@ export const executeEventMove = (
     ...(context.side.lastingEffects ?? []),
     ...(context.branch?.lastingEffects ?? []),
   ];
-
-  if (eventEffects.length === 0 && lastingEffects.length === 0) {
-    return { state, rng, emittedEvents: [] };
-  }
+  const grants = collectFreeOperationGrants(context);
 
   let nextState = state;
   let nextRng = rng;
@@ -617,12 +631,16 @@ export const executeEventMove = (
       ...durationCounters(lastingEffect.duration),
     });
   }
+  const finalState = withActiveLastingEffects(nextState, activeEffects);
+  const overrides = collectEligibilityOverrides(context).filter((override) =>
+    evaluateEligibilityOverrideCondition(def, finalState, move, override)
+  );
 
   return {
-    state: withActiveLastingEffects(nextState, activeEffects),
+    state: finalState,
     rng: nextRng,
     emittedEvents,
-    ...(deferredEventEffect === undefined ? {} : { deferredEventEffect }),
+    sideEffectManifest: createEventSideEffectManifest(grants, overrides, deferredEventEffect),
   };
 };
 
@@ -659,7 +677,7 @@ export const expireLastingEffectsAtBoundaries = (
   boundaries: readonly TurnFlowDuration[],
   policy?: MoveExecutionPolicy,
   collector?: ExecutionCollector,
-): LastingEffectApplyResult => {
+): ExecutionStateResult => {
   const activeEffects = state.activeLastingEffects;
   if (activeEffects === undefined || activeEffects.length === 0 || boundaries.length === 0) {
     return { state, rng, emittedEvents: [] };

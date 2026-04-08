@@ -97,6 +97,7 @@ Every stop condition below requires resolution before implementation proceeds.
 
 **Post-confirmation architecture reset**:
 - When a user-confirmed 1-3-1 decision broadens or reframes the solution, restate the new authoritative boundary in working notes before coding.
+- If the confirmed resolution changes the active ticket's owned boundary, amend the active ticket first, then update affected siblings before coding.
 - Re-extract owned deliverables, affected files, and proof obligations from the confirmed boundary rather than continuing from stale phrasing.
 
 **1-3-1 edge cases** (all resolve via 1-3-1 before coding):
@@ -166,6 +167,7 @@ When a change touches schemas or contracts, check updates across these layers:
 - Do not preserve a ticket's original slice when doing so would leave the repository in a knowingly broken mid-migration state. `FOUNDATIONS.md` §14 and §15 override that slicing.
 - When a user-confirmed reassessment establishes a broader boundary, minimal repo-owned fallout may absorb work a later sibling originally claimed if necessary to make the confirmed boundary true in live runtime. Call out the absorbed sibling boundary explicitly.
 - When tightening authored `chooseN` minimums: check whether runtime `max` can drop below the new `min`; if so, update legality/cost-validation in the same change.
+- When centralizing or hoisting derived data into an earlier phase, compare the old consumer evaluation point against the new computation point and preserve any timing-sensitive filtering, state reads, or post-effect semantics.
 
 **Runtime & identity boundaries**:
 - Prefer a runtime-only storage layer behind the existing outward contract when an optimization would otherwise change canonical outward state or serialized shape.
@@ -242,6 +244,7 @@ For preparatory tickets that intentionally land shared helpers, contracts, or AP
 4. Prefer the narrowest commands that validate the real changed code path. For documentation-only tickets whose examples depend on already-verified behavior, artifact inspection plus dependency-integrity checks may suffice.
    - When selecting a focused verification command for a package, inspect that package's `package.json` or existing test lanes first if the best narrow proof command is not already obvious.
 5. **Ticket-named commands are authoritative**: Run them before declaring completion unless reassessment proves them stale or superseded. Narrower checks provide fast feedback but do not replace ticket-explicit commands.
+   - Focused proof commands may run before ticket-authoritative commands for fast feedback, but they do not satisfy the ticket on their own.
 6. **Command substitution**: If a ticket's example command conflicts with live repo tooling (e.g., Jest flags in a Node test-runner package), use the repo-approved equivalent. State substitutions explicitly.
 7. **Long-running authoritative commands**: Some ticket-required verification commands may run for minutes with sparse or bursty output (for example determinism lanes or large property suites). Treat that as normal when consistent with repo history, keep the command running, and provide periodic progress updates rather than substituting a narrower check.
 

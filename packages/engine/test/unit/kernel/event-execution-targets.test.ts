@@ -373,7 +373,10 @@ describe('event playability context parity', () => {
     assert.equal(result.state, state);
     assert.equal(result.rng.state, state.rng);
     assert.deepEqual(result.emittedEvents, []);
-    assert.equal(result.deferredEventEffect, undefined);
+    assert.deepEqual(result.sideEffectManifest, {
+      grants: [],
+      overrides: [],
+    });
   });
 
   it('returns no grants/overrides, no deferred leniency, and no event execution when playCondition is false', () => {
@@ -397,7 +400,10 @@ describe('event playability context parity', () => {
     assert.equal(result.state, state);
     assert.equal(result.rng.state, state.rng);
     assert.deepEqual(result.emittedEvents, []);
-    assert.equal(result.deferredEventEffect, undefined);
+    assert.deepEqual(result.sideEffectManifest, {
+      grants: [],
+      overrides: [],
+    });
   });
 
   it('returns grants/overrides and enables deferred leniency for playable afterGrants event moves', () => {
@@ -421,8 +427,10 @@ describe('event playability context parity', () => {
 
     const result = executeEventMove(def, state, { state: state.rng }, move);
     assert.equal(result.state.globalVars.resolved, 0);
-    assert.equal(result.deferredEventEffect?.effects.length, 1);
-    assert.equal(result.deferredEventEffect?.actionId, 'event');
+    assert.deepEqual(result.sideEffectManifest.grants, grants);
+    assert.deepEqual(result.sideEffectManifest.overrides, overrides);
+    assert.equal(result.sideEffectManifest.deferredEventEffect?.effects.length, 1);
+    assert.equal(result.sideEffectManifest.deferredEventEffect?.actionId, 'event');
   });
 
   it('filters conditional eligibility overrides using activeSeat', () => {
@@ -459,13 +467,16 @@ describe('event playability context parity', () => {
       globalVars: { canPlay: 1, resolved: 0 },
     });
 
-    assert.deepEqual(resolveEventEligibilityOverrides(def, state, move), [
+    const expectedOverrides = [
       {
         target: { kind: 'active' },
         when: { op: '==', left: { _t: 2, ref: 'activeSeat' }, right: '0' },
         eligible: true,
         windowId: 'window-a',
       },
-    ]);
+    ];
+    assert.deepEqual(resolveEventEligibilityOverrides(def, state, move), expectedOverrides);
+    const result = executeEventMove(def, state, { state: state.rng }, move);
+    assert.deepEqual(result.sideEffectManifest.overrides, expectedOverrides);
   });
 });

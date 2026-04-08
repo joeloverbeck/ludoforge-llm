@@ -1,6 +1,6 @@
 # Spec 63: Grant Array Authority Consolidation
 
-**Status**: Draft
+**Status**: COMPLETED
 **Priority**: P1
 **Complexity**: L
 **Dependencies**: None
@@ -214,3 +214,25 @@ packages/engine/test/unit/kernel/
 - [ ] All grant mutations produce trace entries through the authority module
 - [ ] Existing test suite passes with zero regressions
 - [ ] Determinism canary passes on seeds 1001-1004
+
+## Outcome
+
+Completed on 2026-04-08.
+
+What changed:
+- `grant-lifecycle.ts` now owns the array-level grant operations introduced by this spec: insertion, batch insertion, consumption/removal, expiry/removal, sequence advancement, probe overlays, and the centralized runtime setter helper.
+- All six writer modules named in the spec were migrated across tickets `63GRAARRAUT-001` through `63GRAARRAUT-007`: `effects-turn-flow.ts`, `turn-flow-eligibility.ts`, `apply-move.ts`, `phase-advance.ts`, `legal-moves.ts`, and `free-operation-viability.ts`.
+- The proof ticket `63GRAARRAUT-008` landed the integration-style array-authority composition tests, restored the live FREOPSKIP runtime regression proof on `phase-advance.test.ts`, and re-verified the FITL policy-agent determinism canary.
+
+Deviations from original plan:
+- The `phase-advance.ts` migration did not use `expireGrantsForSeat()` directly. A narrower authority helper, `expireReadyBlockingGrantsForSeat()`, was added instead to preserve the live ready-only blocking-expiry contract.
+- The probe-overlay migration needed one additional narrow authority helper, `stripZoneFilterFromProbeGrant()`, because `createProbeOverlay()` alone did not cover the live exploration-state probe rewrite in `free-operation-viability.ts`.
+- The final proof work used the repo-correct built determinism canary command (`node --test dist/test/determinism/fitl-policy-agent-canary.test.js`) rather than the source `.ts` path referenced earlier in the spec/ticket text.
+- The broad acceptance phrasing about “no direct pendingFreeOperationGrants array manipulation anywhere in kernel source files” was narrowed in practice to the migrated writer modules; legitimate non-writer reads and helper construction paths remain out of scope.
+
+Verification results:
+- `pnpm -F @ludoforge/engine build`
+- `pnpm -F @ludoforge/engine test`
+- `node --test dist/test/determinism/fitl-policy-agent-canary.test.js`
+
+Result: passed. The engine suite reported `474` passing tests, and the direct determinism canary probe passed on seeds `1001`-`1004`.

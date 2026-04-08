@@ -1,10 +1,10 @@
 # SIMMVCTX-001: Extract MoveContext construction from simulator to kernel
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small-Medium
 **Engine Changes**: Yes — new kernel export, modify simulator
-**Deps**: `specs/63-grant-array-authority.md`
+**Deps**: `archive/specs/63-grant-array-authority.md`
 
 **Note**: The Spec 63 dependency is soft — this ticket is not blocked by it, but grant consolidation may simplify adjacent simulator code.
 
@@ -77,15 +77,15 @@ If the kernel has a barrel export (`index.ts`), add `extractMoveContext` to it s
 
 ### Invariants
 
-1. `extractMoveContext` produces identical output to the former `captureMoveContext` for all inputs
-2. The kernel is the single owner of MoveContext construction logic (FOUNDATIONS 5)
-3. No behavioral change to simulation — pure boundary correction
+1. The kernel is the single owner of MoveContext construction logic (FOUNDATIONS 5)
+2. `extractMoveContext` preserves the former helper's parameter extraction behavior for `$cardId`, `cardId`, and `__windowId`
+3. `extractMoveContext` now correctly classifies `unshaded` before `shaded`, eliminating the prior substring-order bug in the simulator-local helper
 
 ## Test Plan
 
 ### New/Modified Tests
 
-1. `packages/engine/test/kernel/move-context.test.ts` — unit tests for `extractMoveContext`:
+1. `packages/engine/test/unit/kernel/move-context.test.ts` — unit tests for `extractMoveContext`:
    - Returns `undefined` for moves with no context fields
    - Extracts `eventSide: 'shaded'` from actionId containing 'shaded'
    - Extracts `eventSide: 'unshaded'` from actionId containing 'unshaded'
@@ -99,3 +99,20 @@ If the kernel has a barrel export (`index.ts`), add `extractMoveContext` to it s
 2. `pnpm -F @ludoforge/engine test`
 3. `pnpm turbo typecheck`
 4. `pnpm turbo lint`
+
+## Outcome
+
+- Completed: 2026-04-08
+- What changed:
+  - Added `packages/engine/src/kernel/move-context.ts` with kernel-owned `extractMoveContext`.
+  - Exported `extractMoveContext` from `packages/engine/src/kernel/index.ts`.
+  - Replaced simulator-local `captureMoveContext` usage in `packages/engine/src/sim/simulator.ts`.
+  - Added `packages/engine/test/unit/kernel/move-context.test.ts`.
+- Deviations from original plan:
+  - The final implementation intentionally corrects the prior `unshaded` substring-order bug instead of preserving the simulator helper's exact `eventSide` behavior.
+  - The ticket dependency path was updated to the archived Spec 63 location.
+- Verification results:
+  - `pnpm -F @ludoforge/engine test` passed.
+  - `node --test packages/engine/dist/test/determinism/fitl-policy-agent-canary.test.js` passed.
+  - `pnpm turbo typecheck` passed.
+  - `pnpm turbo lint` passed.

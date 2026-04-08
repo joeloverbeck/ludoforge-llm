@@ -565,4 +565,90 @@ describe('grant lifecycle array operations', () => {
       makeGrant({ grantId: 'probe-0', seat: '1', zoneFilter: { op: '==', left: 2, right: 2 } }),
     ]);
   });
+
+  it('composes insert, advance, and consume operations into a full grant lifecycle round-trip', () => {
+    const inserted = insertGrant([], makeGrant({
+      phase: 'sequenceWaiting',
+      sequenceBatchId: 'batch-0',
+      sequenceIndex: 0,
+      remainingUses: 2,
+    }));
+
+    const advanced = advanceSequenceGrants(inserted.grants, new Set(['batch-0']));
+    const firstUse = consumeGrantUse(advanced.grants, 'grant-0');
+    const secondUse = consumeGrantUse(firstUse.grants, 'grant-0');
+
+    assert.deepEqual(inserted.trace, []);
+    assert.deepEqual(advanced.trace.map((entry) => entry.step), ['advanceToReady']);
+    assert.deepEqual(firstUse.trace.map((entry) => entry.step), ['consumeUse']);
+    assert.deepEqual(secondUse.trace.map((entry) => entry.step), ['consumeUse']);
+    assert.equal(firstUse.wasExhausted, false);
+    assert.equal(secondUse.wasExhausted, true);
+    assert.deepEqual(secondUse.grants, []);
+    assert.deepEqual(
+      [
+        ...inserted.trace,
+        ...advanced.trace,
+        ...firstUse.trace,
+        ...secondUse.trace,
+      ].map((entry) => entry.step),
+      ['advanceToReady', 'consumeUse', 'consumeUse'],
+    );
+  });
+
+  it('composes inserted grants with ready-only blocking expiry without mutating the base array', () => {
+    const existing = [makeGrant({ grantId: 'grant-0', seat: '1', phase: 'ready', completionPolicy: 'required' })];
+    const withBlockingReady = insertGrant(existing, makeGrant({
+      grantId: 'grant-1',
+      seat: '0',
+      phase: 'ready',
+      completionPolicy: 'required',
+    }));
+    const withOffered = insertGrant(withBlockingReady.grants, makeGrant({
+      grantId: 'grant-2',
+      seat: '0',
+      phase: 'offered',
+      completionPolicy: 'skipIfNoLegalCompletion',
+    }));
+
+    const expired = expireReadyBlockingGrantsForSeat(withOffered.grants, '0');
+
+    assert.deepEqual(expired.grants, [
+      existing[0],
+      makeGrant({
+        grantId: 'grant-2',
+        seat: '0',
+        phase: 'offered',
+        completionPolicy: 'skipIfNoLegalCompletion',
+      }),
+    ]);
+    assert.deepEqual(expired.trace.map((entry) => entry.grantId), ['grant-1']);
+    assert.deepEqual(existing, [
+      makeGrant({ grantId: 'grant-0', seat: '1', phase: 'ready', completionPolicy: 'required' }),
+    ]);
+  });
+
+  it('keeps probe overlays transient across authorization and exploration variants', () => {
+    const existing = [makeGrant({ grantId: 'grant-0', zoneFilter: { op: '==', left: 1, right: 1 } })];
+    const probeGrant = makeGrant({
+      grantId: 'probe-0',
+      seat: '1',
+      zoneFilter: { op: '==', left: 2, right: 2 },
+    });
+
+    const authorizationOverlay = createProbeOverlay(existing, [probeGrant]);
+    const explorationOverlay = stripZoneFilterFromProbeGrant(authorizationOverlay, 'probe-0');
+
+    assert.deepEqual(existing, [
+      makeGrant({ grantId: 'grant-0', zoneFilter: { op: '==', left: 1, right: 1 } }),
+    ]);
+    assert.deepEqual(authorizationOverlay, [
+      existing[0],
+      probeGrant,
+    ]);
+    assert.deepEqual(explorationOverlay, [
+      existing[0],
+      makeGrant({ grantId: 'probe-0', seat: '1' }),
+    ]);
+  });
 });

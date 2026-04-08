@@ -1,5 +1,6 @@
 # Architectural Abstraction Recovery: fitl-events
 
+**Status**: COMPLETED
 **Date**: 2026-04-08
 **Input**: `packages/engine/test/integration/fitl-events*` (101 test files)
 **Engine modules analyzed**: 373 (234 kernel + 89 cnl + 18 contracts + 13 sim + 19 shared)
@@ -144,3 +145,19 @@ The free-operation bypass (`move.freeOperation === true`) is implemented indepen
 - **Spec-worthy**: Event Side-Effect Manifest — the re-derivation pattern between event-execution and turn-flow-eligibility is a genuine protocol gap that will become more fragile as new side-effect categories are added. A spec should define the manifest type and the single-computation-point contract.
 - **Acceptable**: Eligibility override lifecycle, lasting effect lifecycle, grant lifecycle state machine, effect system dispatch, deck structural validation.
 - **Needs investigation**: Dual momentum enforcement pathway (verify whether gvar guards and actionRestrictions overlap for the same card), decision resolution caller complexity (verify non-test consumer patterns), toPendingFreeOperationGrant triplication (defer to detect-missing-abstractions).
+
+## Outcome
+
+- Completed: 2026-04-09
+- What actually changed:
+  - The report’s primary recommendation was implemented through the full 119 series: spec 119 was written and archived, tickets 001-004 were completed and archived, and the engine now computes event grants, overrides, and deferred payloads once through `EventSideEffectManifest`.
+  - `executeEventMove` became the single authority for event side-effect resolution, `apply-move.ts` and turn-flow eligibility now consume the manifest contract, and the obsolete resolve-helper exports and direct test imports were removed.
+- Deviations from original plan:
+  - The recommendation landed as a staged ticket series rather than a single change. During implementation, ticket 002 had to absorb minimal consumer migration work originally deferred to ticket 003 to preserve an atomic Foundations-aligned boundary, and ticket 003 was then narrowed to the remaining runtime cleanup.
+  - The report’s “Needs investigation” items were not all pursued as part of this exploitation pass; only the Event Side-Effect Manifest recommendation was fully executed.
+- Verification results:
+  - Passed `pnpm -F @ludoforge/engine build`
+  - Passed `pnpm turbo typecheck`
+  - Passed `pnpm turbo lint`
+  - Passed `pnpm -F @ludoforge/engine test`
+  - Passed `pnpm run check:ticket-deps`

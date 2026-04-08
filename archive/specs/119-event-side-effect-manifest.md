@@ -1,6 +1,6 @@
 # Spec 119: Event Side-Effect Manifest
 
-**Status**: Draft
+**Status**: COMPLETED
 **Priority**: P1
 **Complexity**: M
 **Dependencies**: None
@@ -197,3 +197,19 @@ These tests must be migrated to assert against the manifest produced by `execute
 ### Additional Tests
 
 Consider adding a focused unit test verifying that `executeEventMove` produces a manifest with the expected structure for a representative event card (e.g., one with grants, overrides, and deferred effects).
+
+## Outcome
+
+- Completed: 2026-04-09
+- What changed:
+  - Added `EventSideEffectManifest` as the shared event side-effect contract and introduced the internal `EventMoveExecutionResult` shape in the kernel event types and execution path.
+  - Threaded the manifest through `executeEventMove`, `apply-move.ts`, and turn-flow eligibility handling so event grants, overrides, and deferred payloads are computed once and consumed from a single contract.
+  - Removed the obsolete resolve-helper public surface and migrated the direct test consumers to assert against `executeEventMove(...).sideEffectManifest`.
+- Deviations from original plan:
+  - The implementation landed as a staged ticket series. Ticket 002 had to absorb the minimal consumer migration originally deferred to ticket 003 to preserve an atomic Foundations-aligned boundary, and ticket 003 was rewritten to own the remaining runtime cleanup before ticket 004 removed exports and test imports.
+- Verification results:
+  - Passed `pnpm -F @ludoforge/engine build`
+  - Passed `pnpm turbo typecheck`
+  - Passed `pnpm turbo lint`
+  - Passed `pnpm -F @ludoforge/engine test`
+  - Passed `pnpm run check:ticket-deps`

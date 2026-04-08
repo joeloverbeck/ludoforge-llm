@@ -3,10 +3,8 @@ import { describe, it } from 'node:test';
 
 import {
   applyMove,
-  asActionId,
   asPlayerId,
   asTokenId,
-  executeEventMove,
   initialState,
   legalMoves,
   resolveMoveDecisionSequence,
@@ -751,35 +749,98 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
 
   it('resolves War Photographer shaded stay-eligible only for NVA executors', () => {
     const def = compileDef();
-    const nvaSetup = setupWarPhotographerState(def, {
-      activePlayer: 0,
-      firstEligible: 'NVA',
-      secondEligible: 'VC',
-      zoneTokens: {
-        'available-NVA:none': [makeToken('wp-cond-nva', 'troops', 'NVA')],
+    const base = clearAllZones(initialState(def, 196860, 4).state);
+    const baseRuntime = requireCardDrivenRuntime(base);
+    const eventDeck = def.eventDecks?.[0];
+    assert.notEqual(eventDeck, undefined, 'Expected at least one event deck');
+
+    // Seat order matching game seat indices: US=0, ARVN=1, NVA=2, VC=3.
+    // Uppercase to match the card's compiled activeSeat condition (right: 'NVA').
+    const gameSeatOrder = ['US', 'ARVN', 'NVA', 'VC'] as const;
+    const allEligible = { US: true, ARVN: true, NVA: true, VC: true };
+
+    const sharedOverrides: readonly DecisionOverrideRule[] = [
+      {
+        when: matchesDecisionRequest({ baseIdPattern: /distributeTokens\.selectTokens$/u }),
+        value: [asTokenId('wp-cond-1'), asTokenId('wp-cond-2')],
+      },
+      { when: (request) => request.decisionKey.endsWith('chooseDestination[0]'), value: 'north-vietnam:none' },
+      { when: (request) => request.decisionKey.endsWith('chooseDestination[1]'), value: 'north-vietnam:none' },
+    ];
+
+    const buildCardDrivenState = (
+      activePlayer: 0 | 1 | 2 | 3,
+      firstEligible: string,
+      secondEligible: string,
+    ): GameState => ({
+      ...base,
+      activePlayer: asPlayerId(activePlayer),
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          ...baseRuntime,
+          seatOrder: [...gameSeatOrder],
+          eligibility: { ...allEligible },
+          currentCard: {
+            ...baseRuntime.currentCard,
+            firstEligible,
+            secondEligible,
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+        },
+      },
+      zones: {
+        ...base.zones,
+        [eventDeck!.discardZone]: [makeToken('card-60', 'card', 'none')],
+        'available-NVA:none': [
+          makeToken('wp-cond-1', 'troops', 'NVA'),
+          makeToken('wp-cond-2', 'troops', 'NVA'),
+        ],
       },
     });
-    const nvaMove = { actionId: asActionId('event'), params: { eventCardId: 'card-60', side: 'shaded' } } as const;
-    const nvaResult = executeEventMove(def, nvaSetup, { state: nvaSetup.rng }, nvaMove);
-    assert.deepEqual(nvaResult.sideEffectManifest.overrides, [
-      {
-        target: { kind: 'active' },
-        when: { op: '==', left: { _t: 2, ref: 'activeSeat' }, right: 'NVA' },
-        eligible: true,
-        windowId: 'remain-eligible',
-      },
+
+    // --- NVA executor (player 2): conditional override should apply ---
+    const nvaSetup = buildCardDrivenState(2, 'NVA', 'VC');
+    const nvaMove = findWarPhotographerMove(def, nvaSetup, 'shaded');
+    assert.notEqual(nvaMove, undefined, 'Expected War Photographer shaded move for NVA executor');
+
+    const nvaBeforeResources = Number(nvaSetup.globalVars.nvaResources ?? 0);
+    const nvaFinal = applyMoveWithResolvedDecisionIds(def, nvaSetup, nvaMove!, { overrides: sharedOverrides }).state;
+
+    // Effects executed: troops placed and resources gained
+    assert.equal(
+      countTokens(nvaFinal, 'north-vietnam:none', (token) => token.props.faction === 'NVA' && token.type === 'troops'),
+      2,
+      'NVA troops should be placed in North Vietnam',
+    );
+    assert.equal(Number(nvaFinal.globalVars.nvaResources) - nvaBeforeResources, 6, 'Shaded should add 6 NVA Resources');
+
+    // Eligibility override applied: NVA stays eligible via remain-eligible (nextTurn)
+    const nvaRuntime = requireCardDrivenRuntime(nvaFinal);
+    assert.deepEqual(nvaRuntime.pendingEligibilityOverrides ?? [], [
+      { seat: 'NVA', eligible: true, windowId: 'remain-eligible', duration: 'nextTurn' },
     ]);
 
-    const arvnSetup = setupWarPhotographerState(def, {
-      activePlayer: 2,
-      firstEligible: 'ARVN',
-      secondEligible: 'US',
-      zoneTokens: {
-        'available-NVA:none': [makeToken('wp-cond-arvn', 'troops', 'NVA')],
-      },
-    });
-    const arvnMove = { actionId: asActionId('event'), params: { eventCardId: 'card-60', side: 'shaded' } } as const;
-    const arvnResult = executeEventMove(def, arvnSetup, { state: arvnSetup.rng }, arvnMove);
-    assert.deepEqual(arvnResult.sideEffectManifest.overrides, []);
+    // --- ARVN executor (player 1): conditional override should NOT apply ---
+    const arvnSetup = buildCardDrivenState(1, 'ARVN', 'US');
+    const arvnMove = findWarPhotographerMove(def, arvnSetup, 'shaded');
+    assert.notEqual(arvnMove, undefined, 'Expected War Photographer shaded move for ARVN executor');
+
+    const arvnFinal = applyMoveWithResolvedDecisionIds(def, arvnSetup, arvnMove!, { overrides: sharedOverrides }).state;
+
+    // Effects still execute for ARVN (troops placed, resources gained)
+    assert.equal(
+      countTokens(arvnFinal, 'north-vietnam:none', (token) => token.props.faction === 'NVA' && token.type === 'troops'),
+      2,
+      'NVA troops should still be placed even when ARVN executes',
+    );
+    assert.equal(Number(arvnFinal.globalVars.nvaResources) - Number(arvnSetup.globalVars.nvaResources ?? 0), 6);
+
+    // No eligibility override: ARVN does not match the when condition
+    const arvnRuntime = requireCardDrivenRuntime(arvnFinal);
+    assert.deepEqual(arvnRuntime.pendingEligibilityOverrides ?? [], []);
   });
 });

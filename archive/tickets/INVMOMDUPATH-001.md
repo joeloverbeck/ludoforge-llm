@@ -1,6 +1,6 @@
 # INVMOMDUPATH-001: Investigate dual momentum enforcement pathway
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — investigation only
@@ -78,3 +78,55 @@ Document findings in a brief report section appended to this ticket:
 ### Commands
 
 1. None — static analysis only
+
+## Verdict (2026-04-08)
+
+**Rejected**. The investigated momentum cards do not enforce the same blocking behavior through both pathways.
+
+### Corrected live card identities
+
+The ticket's example card ids were partly stale against the live FITL production data:
+
+1. Rolling Thunder is `card-10`, not `card-41`
+2. Claymores is `card-17`
+3. General Lansdale is `card-78`, not `card-30`
+
+### Compiled evidence
+
+Using `compileProductionSpec()` against the live FITL production spec:
+
+1. **Rolling Thunder (`card-10`)**
+   - Shaded lasting effect `mom-rolling-thunder` exists
+   - Its compiled lasting effect has **no** `actionRestrictions`
+   - The `air-strike-profile` legality still references `gvar.mom_rollingThunder` with the usual `__freeOperation` bypass
+
+2. **Claymores (`card-17`)**
+   - Unshaded lasting effect `mom-claymores` exists
+   - Its compiled lasting effect has **no** `actionRestrictions`
+   - The `nva-ambush-profile` and `vc-ambush-profile` legalities still reference `gvar.mom_claymores` with the usual `__freeOperation` bypass
+
+3. **General Lansdale (`card-78`)**
+   - Shaded lasting effect `mom-general-landsdale` exists
+   - Its compiled lasting effect has **no** `actionRestrictions`
+   - The `assault-us-profile` legality still references `gvar.mom_generalLansdale` with the usual `__freeOperation` bypass
+
+### Interpretation
+
+For the three cards named by this ticket, the enforcement style is consistent: momentum is enforced through pipeline legality guards keyed off `mom_*` globals, not through `activeLastingEffects[].actionRestrictions`.
+
+`actionRestrictions` does exist elsewhere in FITL, but it appears on different event surfaces such as Typhoon Kate's unshaded lasting effect rather than on these investigated momentum cards. That means the suspected fracture was not "the same card blocks the same action through both a gvar legality guard and a lasting-effect action restriction." Instead, FITL currently uses different enforcement styles for different cards.
+
+## Outcome
+
+- **Completed**: 2026-04-08
+- **What changed**:
+  - Investigated the named dual-path momentum enforcement hypothesis against the live compiled FITL `GameDef`
+  - Corrected the stale example card ids in the verdict evidence
+  - Rejected the same-card dual-enforcement premise for the named cards
+- **Follow-up ticket**: None
+- **Deviations from ticket**:
+  - The ticket's exemplar card ids for Rolling Thunder and General Lansdale were stale in live production data
+  - No Spec 120 follow-up was created because the investigation rejected the premise that these cards enforce the same block through both pathways
+- **Verification**:
+  - Direct read of `packages/engine/src/kernel/legal-moves-turn-order.ts`
+  - Compiled FITL production inspection via `compileProductionSpec()`

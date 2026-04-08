@@ -73,6 +73,7 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
 **Sibling coherence**
 
 11. If correcting one ticket changes ownership within an active series, inspect remaining siblings, update or defer overlapping tickets, keep deps and status coherent, and run the ticket dependency checker. If a user-confirmed 1-3-1 resolution changes inter-ticket contracts, update the downstream sibling in the same turn. Note which earlier sibling outcomes remain authoritative, which were superseded, and which shared contracts or helpers are reused unchanged. See also [Series Consistency](#series-consistency) for implementation-phase rules.
+    - Before creating a new ticket or materially extending an active one, read `tickets/README.md` and `tickets/_TEMPLATE.md` unless they were already loaded in the current task. Apply repo-local ticket authoring and dependency rules instead of improvising markdown structure.
 
 ### Phase 3: Resolve Before Coding
 
@@ -192,6 +193,15 @@ For tickets whose primary deliverable is a measured decision:
 5. Distinguish runtime/code changes from repository-owned deliverables (ticket outcomes, archived specs, dependency rewrites, status updates).
 6. If a diagnostic report has no named output file, prefer `reports/` over ephemeral scratch files.
 
+### Investigation Tickets
+
+For tickets whose primary deliverable is a verdict rather than a production code change:
+1. Capture the decisive evidence directly in the owned ticket or other explicitly owned artifact.
+2. If the verdict warrants downstream implementation, create or extend the follow-up ticket in the same turn and keep deps/status consistent.
+3. After the verdict and any required follow-up artifact are in place, decide whether the investigation ticket is now archive-ready.
+4. If archival is the obvious next state, either complete the archival steps in the same turn when the user asked for full closeout or explicitly hand off that closeout to `post-ticket-review`.
+5. Distinguish clearly between ticket-owned deliverables (verdict text, follow-up ticket, dependency updates, archival readiness) and runtime/code changes, which may remain out of scope.
+
 ### Series Consistency
 
 When a ticket change affects other active tickets in the same series:
@@ -230,6 +240,7 @@ For preparatory tickets that intentionally land shared helpers, contracts, or AP
 2. Run required typecheck, lint, or artifact-generation commands. If a full repo-wide command is too expensive, explain what was run and what remains unverified.
 3. Report unrelated pre-existing failures separately from failures caused by your changes.
 4. Prefer the narrowest commands that validate the real changed code path. For documentation-only tickets whose examples depend on already-verified behavior, artifact inspection plus dependency-integrity checks may suffice.
+   - When selecting a focused verification command for a package, inspect that package's `package.json` or existing test lanes first if the best narrow proof command is not already obvious.
 5. **Ticket-named commands are authoritative**: Run them before declaring completion unless reassessment proves them stale or superseded. Narrower checks provide fast feedback but do not replace ticket-explicit commands.
 6. **Command substitution**: If a ticket's example command conflicts with live repo tooling (e.g., Jest flags in a Node test-runner package), use the repo-approved equivalent. State substitutions explicitly.
 7. **Long-running authoritative commands**: Some ticket-required verification commands may run for minutes with sparse or bursty output (for example determinism lanes or large property suites). Treat that as normal when consistent with repo history, keep the command running, and provide periodic progress updates rather than substituting a narrower check.

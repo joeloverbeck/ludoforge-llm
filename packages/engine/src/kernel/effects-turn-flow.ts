@@ -25,6 +25,7 @@ import {
   resolveSequenceProgressionPolicy,
 } from './free-operation-sequence-progression.js';
 import { insertGrant } from './grant-lifecycle.js';
+import { buildPendingFreeOperationGrant } from './pending-free-operation-grant-builder.js';
 import { resolveFreeOperationGrantSeatToken } from './free-operation-seat-resolution.js';
 import { resolveFreeOperationExecutionContext } from './free-operation-execution-context.js';
 import { toMoveExecutionPolicy, type MoveExecutionPolicy } from './execution-policy.js';
@@ -321,28 +322,16 @@ export const applyGrantFreeOperation = (
     };
   }
 
-  const appended: TurnFlowPendingFreeOperationGrant = {
+  const appended = buildPendingFreeOperationGrant(grant, {
     grantId,
-    phase: sequenceIndex === undefined || sequenceIndex === 0 ? 'ready' : 'sequenceWaiting',
     seat,
     ...(executeAsSeat === undefined ? {} : { executeAsSeat }),
-    operationClass: grant.operationClass,
-    ...(grant.actionIds === undefined ? {} : { actionIds: [...grant.actionIds] }),
     ...(resolvedZoneFilter === undefined ? {} : { zoneFilter: resolvedZoneFilter }),
-    ...(grant.tokenInterpretations === undefined ? {} : { tokenInterpretations: grant.tokenInterpretations }),
-    ...(grant.moveZoneBindings === undefined ? {} : { moveZoneBindings: [...grant.moveZoneBindings] }),
-    ...(grant.moveZoneProbeBindings === undefined ? {} : { moveZoneProbeBindings: [...grant.moveZoneProbeBindings] }),
-    ...(grant.sequenceContext === undefined ? {} : { sequenceContext: grant.sequenceContext }),
     ...(resolvedExecutionContext === undefined ? {} : { executionContext: resolvedExecutionContext }),
-    ...(grant.allowDuringMonsoon === undefined ? {} : { allowDuringMonsoon: grant.allowDuringMonsoon }),
-    ...(grant.viabilityPolicy === undefined ? {} : { viabilityPolicy: grant.viabilityPolicy }),
-    ...(grant.completionPolicy === undefined ? {} : { completionPolicy: grant.completionPolicy }),
-    ...(grant.outcomePolicy === undefined ? {} : { outcomePolicy: grant.outcomePolicy }),
-    ...(grant.postResolutionTurnFlow === undefined ? {} : { postResolutionTurnFlow: grant.postResolutionTurnFlow }),
     remainingUses: uses,
     ...(sequenceBatchId === undefined ? {} : { sequenceBatchId }),
     ...(sequenceIndex === undefined ? {} : { sequenceIndex }),
-  };
+  });
 
   const nextPending = insertGrant(existing, appended).grants;
   const nextSequenceContexts = sequenceBatchId === undefined

@@ -40,6 +40,7 @@ import {
   resolveSequenceProgressionPolicy,
 } from './free-operation-sequence-progression.js';
 import { createProbeOverlay, stripZoneFilterFromProbeGrant } from './grant-lifecycle.js';
+import { buildPendingFreeOperationGrant } from './pending-free-operation-grant-builder.js';
 import {
   buildMoveRuntimeBindings,
   deriveDecisionBindingsFromMoveParams,
@@ -62,34 +63,6 @@ import type {
   TurnFlowFreeOperationGrantViabilityPolicy,
   TurnFlowPendingFreeOperationGrant,
 } from './types.js';
-
-const toPendingFreeOperationGrant = (
-  grant: TurnFlowFreeOperationGrantContract,
-  grantId: string,
-  sequenceBatchId: string | undefined,
-  executionContext?: TurnFlowPendingFreeOperationGrant['executionContext'],
-): TurnFlowPendingFreeOperationGrant => ({
-  grantId,
-  phase: grant.sequence?.step === undefined || grant.sequence.step === 0 ? 'ready' : 'sequenceWaiting',
-  seat: grant.seat,
-  ...(grant.executeAsSeat === undefined ? {} : { executeAsSeat: grant.executeAsSeat }),
-  operationClass: grant.operationClass,
-  ...(grant.actionIds === undefined ? {} : { actionIds: [...grant.actionIds] }),
-  ...(grant.zoneFilter === undefined ? {} : { zoneFilter: grant.zoneFilter }),
-  ...(grant.tokenInterpretations === undefined ? {} : { tokenInterpretations: grant.tokenInterpretations }),
-  ...(grant.moveZoneBindings === undefined ? {} : { moveZoneBindings: [...grant.moveZoneBindings] }),
-  ...(grant.moveZoneProbeBindings === undefined ? {} : { moveZoneProbeBindings: [...grant.moveZoneProbeBindings] }),
-  ...(grant.sequenceContext === undefined ? {} : { sequenceContext: grant.sequenceContext }),
-  ...(executionContext === undefined ? {} : { executionContext }),
-  ...(grant.allowDuringMonsoon === undefined ? {} : { allowDuringMonsoon: grant.allowDuringMonsoon }),
-  ...(grant.viabilityPolicy === undefined ? {} : { viabilityPolicy: grant.viabilityPolicy }),
-  ...(grant.completionPolicy === undefined ? {} : { completionPolicy: grant.completionPolicy }),
-  ...(grant.outcomePolicy === undefined ? {} : { outcomePolicy: grant.outcomePolicy }),
-  ...(grant.postResolutionTurnFlow === undefined ? {} : { postResolutionTurnFlow: grant.postResolutionTurnFlow }),
-  remainingUses: grant.uses ?? 1,
-  ...(sequenceBatchId === undefined ? {} : { sequenceBatchId }),
-  ...(grant.sequence?.step === undefined ? {} : { sequenceIndex: grant.sequence.step }),
-});
 
 const resolveProbeGrantSeats = (
   grant: TurnFlowFreeOperationGrantContract,
@@ -123,16 +96,16 @@ const toResolvedProbePendingGrant = (
   if (resolvedSeats === null) {
     return null;
   }
-  return {
-    ...toPendingFreeOperationGrant(
-      grant,
-      grantId,
-      grant.sequence === undefined ? undefined : '__probeBatch__',
-      evalContext === undefined ? undefined : resolveFreeOperationExecutionContext(grant.executionContext, evalContext),
-    ),
+  const executionContext = evalContext === undefined
+    ? undefined
+    : resolveFreeOperationExecutionContext(grant.executionContext, evalContext);
+  return buildPendingFreeOperationGrant(grant, {
+    grantId,
     seat: resolvedSeats.seat,
     ...(resolvedSeats.executeAsSeat === undefined ? {} : { executeAsSeat: resolvedSeats.executeAsSeat }),
-  };
+    ...(grant.sequence === undefined ? {} : { sequenceBatchId: '__probeBatch__' }),
+    ...(executionContext === undefined ? {} : { executionContext }),
+  });
 };
 
 const resolveProbeGrantPhase = (
@@ -776,19 +749,17 @@ export const isFreeOperationGrantUsableInCurrentState = (
     return false;
   }
   const { seat, executeAsSeat } = resolvedSeats;
+  const executionContext = options?.evalContext === undefined
+    ? undefined
+    : resolveFreeOperationExecutionContext(grant.executionContext, options.evalContext);
 
-  const probeGrant: TurnFlowPendingFreeOperationGrant = {
-    ...toPendingFreeOperationGrant(
-      grant,
-      '__probe__',
-      grant.sequence === undefined ? undefined : '__probeBatch__',
-      options?.evalContext === undefined
-        ? undefined
-        : resolveFreeOperationExecutionContext(grant.executionContext, options.evalContext),
-    ),
+  const probeGrant = buildPendingFreeOperationGrant(grant, {
+    grantId: '__probe__',
     seat,
     ...(executeAsSeat === undefined ? {} : { executeAsSeat }),
-  };
+    ...(grant.sequence === undefined ? {} : { sequenceBatchId: '__probeBatch__' }),
+    ...(executionContext === undefined ? {} : { executionContext }),
+  });
   const probeBlockers = resolveUnusableSequenceProbeBlockers(
     def,
     state,

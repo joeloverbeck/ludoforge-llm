@@ -30,6 +30,7 @@ import {
   insertGrantBatch,
   withPendingFreeOperationGrants,
 } from './grant-lifecycle.js';
+import { buildPendingFreeOperationGrant } from './pending-free-operation-grant-builder.js';
 import { resolveFreeOperationGrantSeatToken } from './free-operation-seat-resolution.js';
 import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
 import { buildAdjacencyGraph } from './spatial.js';
@@ -50,7 +51,6 @@ import type {
   GameDef,
   GameState,
   Move,
-  TurnFlowFreeOperationGrantContract,
   TriggerLogEntry,
   TurnFlowDuration,
   TurnFlowDeferredEventEffectPayload,
@@ -302,34 +302,6 @@ const applyEligibilityOverrides = (
   return nextEligibility;
 };
 
-const toPendingFreeOperationGrant = (
-  grant: TurnFlowFreeOperationGrantContract,
-  grantId: string,
-  sequenceBatchId: string | undefined,
-  executionContext?: TurnFlowPendingFreeOperationGrant['executionContext'],
-): TurnFlowPendingFreeOperationGrant => ({
-  grantId,
-  phase: grant.sequence?.step === undefined || grant.sequence.step === 0 ? 'ready' : 'sequenceWaiting',
-  seat: grant.seat,
-  ...(grant.executeAsSeat === undefined ? {} : { executeAsSeat: grant.executeAsSeat }),
-  operationClass: grant.operationClass,
-  ...(grant.actionIds === undefined ? {} : { actionIds: [...grant.actionIds] }),
-  ...(grant.zoneFilter === undefined ? {} : { zoneFilter: grant.zoneFilter }),
-  ...(grant.tokenInterpretations === undefined ? {} : { tokenInterpretations: grant.tokenInterpretations }),
-  ...(grant.moveZoneBindings === undefined ? {} : { moveZoneBindings: [...grant.moveZoneBindings] }),
-  ...(grant.moveZoneProbeBindings === undefined ? {} : { moveZoneProbeBindings: [...grant.moveZoneProbeBindings] }),
-  ...(grant.allowDuringMonsoon === undefined ? {} : { allowDuringMonsoon: grant.allowDuringMonsoon }),
-  ...(grant.sequenceContext === undefined ? {} : { sequenceContext: grant.sequenceContext }),
-  ...(executionContext === undefined ? {} : { executionContext }),
-  ...(grant.viabilityPolicy === undefined ? {} : { viabilityPolicy: grant.viabilityPolicy }),
-  ...(grant.completionPolicy === undefined ? {} : { completionPolicy: grant.completionPolicy }),
-  ...(grant.outcomePolicy === undefined ? {} : { outcomePolicy: grant.outcomePolicy }),
-  ...(grant.postResolutionTurnFlow === undefined ? {} : { postResolutionTurnFlow: grant.postResolutionTurnFlow }),
-  remainingUses: grant.uses ?? 1,
-  ...(sequenceBatchId === undefined ? {} : { sequenceBatchId }),
-  ...(grant.sequence === undefined ? {} : { sequenceIndex: grant.sequence.step }),
-});
-
 const pendingFreeOperationGrantBaseId = (
   state: GameState,
   move: Move,
@@ -456,16 +428,14 @@ const extractPendingFreeOperationGrants = (
       [...existingPendingFreeOperationGrants, ...extracted],
       baseId,
     );
-    extracted = insertGrant(extracted, {
-      ...toPendingFreeOperationGrant(
-        grant,
-        grantId,
-        sequenceBatchId,
-        resolveFreeOperationExecutionContext(grant.executionContext, grantEvalContext),
-      ),
+    const executionContext = resolveFreeOperationExecutionContext(grant.executionContext, grantEvalContext);
+    extracted = insertGrant(extracted, buildPendingFreeOperationGrant(grant, {
+      grantId,
       seat,
       ...(executeAsSeat === undefined ? {} : { executeAsSeat }),
-    }).grants;
+      ...(sequenceBatchId === undefined ? {} : { sequenceBatchId }),
+      ...(executionContext === undefined ? {} : { executionContext }),
+    })).grants;
     if (sequenceBatchId !== undefined) {
       sequenceContexts = ensureFreeOperationSequenceBatchContext(
         sequenceContexts,

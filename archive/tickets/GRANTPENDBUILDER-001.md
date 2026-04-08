@@ -1,6 +1,6 @@
 # GRANTPENDBUILDER-001: Consolidate pending free-operation grant builder
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: Yes — kernel grant construction helper extraction
@@ -86,3 +86,16 @@ Run the narrowest engine verification that exercises the touched files and confi
 
 1. `pnpm -F @ludoforge/engine build`
 2. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+Completed: 2026-04-08
+
+Extracted a single kernel-local pending free-operation grant builder and migrated the three owned construction sites in `turn-flow-eligibility.ts`, `free-operation-viability.ts`, and `effects-turn-flow.ts` to use it. The duplicated local builders were removed, and the shared helper accepts caller-owned resolved overrides for seat, execute-as seat, zone filter, execution context, remaining uses, sequence batch id, and sequence index so behavior remains unchanged while the duplication is eliminated.
+
+Deviation from original plan: `packages/engine/src/kernel/index.ts` did not need modification because the new helper remains an internal kernel implementation detail rather than part of the public engine export surface. Existing focused tests were sufficient, so no test files changed.
+
+Verification results:
+- `pnpm -F @ludoforge/engine build`
+- `node --test dist/test/unit/effects-turn-flow.test.js dist/test/unit/kernel/free-operation-viability.test.js dist/test/integration/fitl-eligibility-window.test.js`
+- `pnpm -F @ludoforge/engine test`
